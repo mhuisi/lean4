@@ -12,12 +12,12 @@ Author: Leonardo de Moura
 #else
 #include <pthread.h>
 #endif
-#include "config.h" // NOLINT
-#include "runtime/thread.h"
-#include "runtime/interrupt.h"
-#include "runtime/exception.h"
-#include "runtime/alloc.h"
-#include "runtime/stack_overflow.h"
+#include <lean/config.h>
+#include <lean/thread.h>
+#include <lean/interrupt.h>
+#include <lean/exception.h>
+#include <lean/alloc.h>
+#include <lean/stack_overflow.h>
 
 #ifndef LEAN_DEFAULT_THREAD_STACK_SIZE
 #define LEAN_DEFAULT_THREAD_STACK_SIZE 8*1024*1024 // 8Mb

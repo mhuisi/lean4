@@ -10,10 +10,10 @@ Author: Leonardo de Moura
 #include <stdio.h>
 #include <utility>
 #include <ios>
-#include "runtime/exception.h"
-#include "runtime/serializer.h"
-#include "runtime/object.h"
-#include "runtime/mpz.h"
+#include <lean/exception.h>
+#include <lean/serializer.h>
+#include <lean/object.h>
+#include <lean/mpz.h>
 
 namespace lean {
 void initialize_serializer() {

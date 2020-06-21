@@ -76,9 +76,6 @@ option(RUNTIME_STATS       "RUNTIME_STATS" OFF)
 # development-specific options
 option(CHECK_OLEAN_VERSION "Only load .olean files compiled with the current version of Lean" ON)
 
-# library dir
-set(LIBRARY_DIR           "lib/lean"                   CACHE STRING "library dir")
-set(INCLUDE_DIR           "include"                    CACHE STRING "include dir")
 set(LEAN_EXTRA_MAKE_OPTS  ""                           CACHE STRING "extra options to lean --make")
 set(MINGW_LOCAL_DIR       "C:/msys64/mingw64/bin"      CACHE STRING "where to find MSYS2 required DLLs and binaries")
 
@@ -174,9 +171,6 @@ if (NOT("${CHECK_OLEAN_VERSION}" MATCHES "ON"))
   set(LEAN_EXTRA_CXX_FLAGS "${LEAN_EXTRA_CXX_FLAGS} -D LEAN_IGNORE_OLEAN_VERSION")
 endif()
 
-message(STATUS "Lean library will be installed at "
-  "${CMAKE_INSTALL_PREFIX}/${LIBRARY_DIR}")
-
 if("${CMAKE_C_COMPILER}" MATCHES "emcc")
     set(EMSCRIPTEN ON)
     set(MULTI_THREAD OFF)
@@ -221,12 +215,6 @@ else()
   message(WARNING "Disabling JSON support, compile server will not be available")
 endif()
 
-if(MINGW AND CMAKE_COMPILER_IS_GNUCXX)
-  # See https://github.com/leanprover/lean/issues/930#issuecomment-172555475
-  message(STATUS "Set _GLIBCXX_USE_CXX11_ABI = 0 for a system using MSYS2 + g++")
-  set(LEAN_EXTRA_CXX_FLAGS "${LEAN_EXTRA_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
-endif()
-
 if(NOT MULTI_THREAD)
   message(STATUS "Disabled multi-thread support, it will not be safe to run multiple threads in parallel")
   set(AUTO_THREAD_FINALIZATION OFF)
@@ -256,15 +244,20 @@ if(LLVM)
   #   that we wish to use and define llvm_libs
   llvm_map_components_to_libnames(llvm_libs nativecodegen)
 else()
-  message(WARNING "Disabling LLVM support.  JIT compilation will not be available")
+  #message(WARNING "Disabling LLVM support.  JIT compilation will not be available")
 endif()
 
 if(STATIC)
-  message(STATUS "Creating a static executable")
-  if (MULTI_THREAD AND ${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-    set(LEAN_EXTRA_LINKER_FLAGS "${LEAN_EXTRA_LINKER_FLAGS} -Wl,--whole-archive -lpthread -Wl,--no-whole-archive")
+  # Creating a fully static executable is a bad idea in general when linking against libc and specifically
+  # with our dlopen shenanigans
+  message(STATUS "Linking libraries statically where possible")
+  if(NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+    set(LEAN_EXTRA_LINKER_FLAGS "${LEAN_EXTRA_LINKER_FLAGS} -static-libgcc -static-libstdc++")
   endif()
-  set(LEAN_EXTRA_LINKER_FLAGS "${LEAN_EXTRA_LINKER_FLAGS} -static")
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+  if (MULTI_THREAD AND ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+    set(LEAN_EXTRA_LINKER_FLAGS "${LEAN_EXTRA_LINKER_FLAGS} -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive,-Bdynamic")
+  endif()
 endif()
 
 # Set Module Path
@@ -485,10 +478,10 @@ endif ()
 
 # Version
 configure_file("${LEAN_SOURCE_DIR}/version.h.in" "${LEAN_BINARY_DIR}/version.h")
-configure_file("${LEAN_SOURCE_DIR}/config.h.in" "${LEAN_BINARY_DIR}/include/config.h")
-install(FILES "${LEAN_BINARY_DIR}/include/config.h" DESTINATION "${INCLUDE_DIR}")
-configure_file("${LEAN_SOURCE_DIR}/Makefile.in" "${LEAN_BINARY_DIR}/share/lean/Makefile")
-install(FILES "${LEAN_BINARY_DIR}/share/lean/Makefile" DESTINATION "share/lean")
+configure_file("${LEAN_SOURCE_DIR}/config.h.in" "${LEAN_BINARY_DIR}/include/lean/config.h")
+install(DIRECTORY ${LEAN_BINARY_DIR}/include/lean DESTINATION include)
+configure_file(${LEAN_SOURCE_DIR}/lean.mk.in ${LEAN_BINARY_DIR}/share/lean/lean.mk)
+install(DIRECTORY ${LEAN_BINARY_DIR}/share/lean DESTINATION share)
 
 if(EMSCRIPTEN)
     set(LEAN_LIBRARY_TYPE SHARED)
@@ -541,15 +534,27 @@ install(FILES ${CMAKE_BINARY_DIR}/lib/lean/libleancpp.a DESTINATION lib/lean)
 
 if(${STAGE} EQUAL 0)
   add_library(Init STATIC $<TARGET_OBJECTS:stage0>)
+  add_library(Std STATIC $<TARGET_OBJECTS:stage0>)
+  add_library(Lean STATIC $<TARGET_OBJECTS:stage0>)
 else()
 # created by the previous stage
   add_library(Init STATIC IMPORTED)
   set_target_properties(Init PROPERTIES
     IMPORTED_LOCATION "${PREV_STAGE}/lib/lean/libInit.a")
+
+  add_library(Std STATIC IMPORTED)
+  set_target_properties(Std PROPERTIES
+    IMPORTED_LOCATION "${PREV_STAGE}/lib/lean/libStd.a")
+
+  add_library(Lean STATIC IMPORTED)
+  set_target_properties(Lean PROPERTIES
+    IMPORTED_LOCATION "${PREV_STAGE}/lib/lean/libLean.a")
 endif()
 # leancpp and Init are cyclically dependent
 target_link_libraries(Init INTERFACE leancpp)
-target_link_libraries(leancpp INTERFACE Init ${EXTRA_LIBS})
+target_link_libraries(Std INTERFACE leancpp Init)
+target_link_libraries(Lean INTERFACE leancpp Std Init)
+target_link_libraries(leancpp INTERFACE Init Std Lean ${EXTRA_LIBS})
 
 if(LLVM)
   target_link_libraries(leancpp INTERFACE ${llvm_libs})
@@ -557,10 +562,10 @@ endif()
 
 add_custom_target(update-stage0
   COMMAND cmake -E env LIB=${CMAKE_BINARY_DIR}/lib bash script/update-stage0
-  DEPENDS Init
+  DEPENDS Init Std Lean
   WORKING_DIRECTORY "${LIB_SOURCE_DIR}/..")
 
-configure_file("${LEAN_SOURCE_DIR}/bin/leanc.in" "${CMAKE_BINARY_DIR}/bin/leanc")
+configure_file("${LEAN_SOURCE_DIR}/bin/leanc.in" "${CMAKE_BINARY_DIR}/bin/leanc" @ONLY)
 install(FILES "${CMAKE_BINARY_DIR}/bin/leanc"
   DESTINATION bin
   PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
@@ -612,15 +617,15 @@ add_custom_target(clean-stdlib
 add_custom_target(clean-olean
   DEPENDS clean-stdlib)
 
-install(DIRECTORY "${CMAKE_BINARY_DIR}/lib/lean" DESTINATION "${LIBRARY_DIR}")
+install(DIRECTORY "${CMAKE_BINARY_DIR}/lib/lean" DESTINATION lib)
 
-install(DIRECTORY "${CMAKE_SOURCE_DIR}" DESTINATION "${LIBRARY_DIR}/lean"
+install(DIRECTORY "${CMAKE_SOURCE_DIR}" DESTINATION lib/lean
         FILES_MATCHING
         PATTERN "*.lean"
         PATTERN "*.md")
 
-file(COPY ${CMAKE_SOURCE_DIR}/runtime/lean.h DESTINATION ${CMAKE_BINARY_DIR}/include/runtime)
-install(FILES "${CMAKE_SOURCE_DIR}/runtime/lean.h" DESTINATION "${INCLUDE_DIR}/runtime")
+file(COPY ${CMAKE_SOURCE_DIR}/include/lean DESTINATION ${CMAKE_BINARY_DIR}/include
+  FILES_MATCHING PATTERN "*.h")
 
 if("${INCLUDE_MSYS2_DLLS}" MATCHES "ON")
   # TODO(Leo): do not use hardlinks to required DLLs.

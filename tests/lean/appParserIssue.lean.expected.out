@@ -1,5 +1,5 @@
-appParserIssue.lean:5:11: error: unexpected token; expected '(' or longestMatch: empty list
-f 1 (λ (x : Nat), x) : Nat
-f 1 (λ (x : Nat), x) : Nat
-appParserIssue.lean:12:13: error: unexpected token
-f 1 (λ (x : Nat), x) : Nat
+f 1 (fun (x : Nat) => x) : Nat
+f 1 (fun (x : Nat) => x) : Nat
+f 1 (fun (x : Nat) => x) : Nat
+f 1 (fun (x : Nat) => x) : Nat
+f 1 (fun (x : Nat) => x) : Nat

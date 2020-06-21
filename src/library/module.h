@@ -9,8 +9,8 @@ Authors: Leonardo de Moura, Gabriel Ebner, Sebastian Ullrich
 #include <iostream>
 #include <utility>
 #include <vector>
-#include "runtime/serializer.h"
-#include "runtime/optional.h"
+#include <lean/serializer.h>
+#include <lean/optional.h>
 #include "library/io_state.h"
 #include "kernel/environment.h"
 

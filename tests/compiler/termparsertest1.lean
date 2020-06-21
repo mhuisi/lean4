@@ -1,4 +1,4 @@
-import Init.Lean.Parser.Term
+import Lean
 open Lean
 open Lean.Parser
 
@@ -57,7 +57,7 @@ test [
 "{ x // p x 10 }",
 "{ x : Nat // p x 10 }",
 "{ .. }",
-"{ Prod . fst := 10, .. }",
+"{ fst := 10, .. : Nat × Nat }",
 "a[i]",
 "f [10, 20]",
 "g a[x+2]",

@@ -1,4 +1,4 @@
-import Init.Lean.Elab
+import Lean.Elab
 open Lean
 open Lean.Elab
 
@@ -199,8 +199,9 @@ f a
 #eval run "variables {β σ} universes w1 w2 /-- Testing axiom -/ unsafe axiom Nat.aux.{u, v} (γ : Type w1) (v : Nat) : β → (α : Type _) → v = zero /- Nat.zero -/ → Array α #check @Nat.aux"
 #eval run "def x : Nat := Nat.zero #check x"
 #eval run "def x := Nat.zero #check x"
-#eval run "open Lean.Parser def x := parser! symbol \"foo\" 10 #check x"
-#eval run "open Lean.Parser def x := tparser! symbol \"foo\" 0 #check x"
+#eval run "open Lean.Parser def x := parser! symbol \"foo\" #check x"
+#eval run "open Lean.Parser def x := parser!:50 symbol \"foo\" #check x"
+#eval run "open Lean.Parser def x := tparser! symbol \"foo\" #check x"
 #eval run "def x : Nat := 1 #check x"
 
 

@@ -10,9 +10,9 @@
 #include <utility>
 #include <vector>
 #include <unordered_map>
-#include "runtime/interrupt.h"
-#include "runtime/sstream.h"
-#include "runtime/hash.h"
+#include <lean/interrupt.h>
+#include <lean/sstream.h>
+#include <lean/hash.h>
 #include "util/options.h"
 #include "util/option_declarations.h"
 #include "util/format.h"

@@ -1,6 +1,6 @@
 add_executable(lean lean.cpp)
 set_target_properties(lean PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-target_link_libraries(lean leancpp Init)
+target_link_libraries(lean leancpp Init Std Lean)
 
 # create import library on Windows to link plugins against
 set_target_properties(lean PROPERTIES ENABLE_EXPORTS ON)
@@ -26,7 +26,6 @@ add_custom_target(make_stdlib ALL
   # for a parallelized nested build, but CMake doesn't let us do that.
   COMMAND $(MAKE) -f ${CMAKE_BINARY_DIR}/stdlib.make
   DEPENDS lean)
-install(FILES ${CMAKE_BINARY_DIR}/lib/lean/libInit.a DESTINATION lib)
 
 # add_test(example1_stdin1 ${LEAN_SOURCE_DIR}/cmake/redirect.sh ${CMAKE_BINARY_DIR}/bin/lean "${LEAN_SOURCE_DIR}/../tests/lean/single.lean")
 # add_test(lean_export ${CMAKE_BINARY_DIR}/bin/lean "-o simple.olean" "${LEAN_SOURCE_DIR}/../tests/lean/run/simple.lean")
@@ -83,6 +82,13 @@ FOREACH(T ${LEANCOMPTESTS})
            WORKING_DIRECTORY "${LEAN_SOURCE_DIR}/../tests/compiler"
            COMMAND bash -c "PATH=${LEAN_BIN}:$PATH ./test_single.sh ${T_NAME}")
 ENDFOREACH(T)
+
+add_test(NAME leancomptest_foreign
+         WORKING_DIRECTORY "${LEAN_SOURCE_DIR}/../tests/compiler/foreign"
+         COMMAND bash -c "${LEAN_BIN}/leanmake && ./build/bin/test")
+add_test(NAME leancomptest_doc_example
+         WORKING_DIRECTORY "${LEAN_SOURCE_DIR}/../doc/examples/compiler"
+         COMMAND bash -c "${LEAN_BIN}/leanmake bin && ./build/bin/test hello world")
 
 # LEAN INTERPRETER TESTS
 file(GLOB LEANINTERPTESTS "${LEAN_SOURCE_DIR}/../tests/compiler/*.lean")

@@ -11,6 +11,7 @@ Author: Leonardo de Moura
 #include "frontends/lean/util.h"
 #include "frontends/lean/tokens.h"
 #include "frontends/lean/structure_instance.h"
+#include "frontends/lean/typed_expr.h"
 
 namespace lean {
 /* Parse rest of the subtype expression prefix '{' id ':' expr '\\' ... */
@@ -79,14 +80,10 @@ static expr parse_structure_instance_core(parser & p, optional<expr> const & src
     while (!p.curr_is_token(get_rcurly_tk())) {
         if (p.curr_is_token(get_dotdot_tk())) {
             p.next();
-            if (p.curr_is_token(get_rcurly_tk())) {
-                // ", ...}"
-                catchall = true;
-                break;
-            }
-            // ", ...src"
-            sources.push_back(p.parse_expr());
-            read_source = true;
+            catchall = true;
+            break;
+        } else if (p.curr_is_token(get_colon_tk())) {
+            break;
         } else if (!read_source) {
             fns.push_back(p.check_id_next("invalid structure instance, identifier expected"));
             p.check_token_next(get_assign_tk(), "invalid structure instance, ':=' expected");
@@ -101,14 +98,17 @@ static expr parse_structure_instance_core(parser & p, optional<expr> const & src
             break;
         }
     }
+    optional<expr> expected_type;
+    if (p.curr_is_token(get_colon_tk())) {
+        p.next();
+        expected_type = p.parse_expr();
+    }
     p.check_token_next(get_rcurly_tk(), "invalid structure instance, '}' expected");
-    return mk_structure_instance(S, fns, fvs, sources, catchall);
-}
-
-/* Parse rest of the qualified structure instance prefix '{' S '.' ... */
-static expr parse_qualified_structure_instance(parser & p, name S, pos_info const & S_pos) {
-    S = p.to_constant(S, "invalid structure name", S_pos);
-    return parse_structure_instance_core(p, none_expr(), S);
+    expr r = mk_structure_instance(S, fns, fvs, sources, catchall);
+    if (expected_type)
+        return copy_pos(r, mk_typed_expr(*expected_type, r));
+    else
+        return r;
 }
 
 /* Parse rest of the structure instance prefix '{' fname ... */
@@ -159,9 +159,6 @@ expr parse_curly_bracket(parser & p, unsigned, expr const *, pos_info const & po
                 p.check_token_next(get_dslash_tk(), "invalid expression, '//' or '|' expected");
                 return parse_subtype(p, pos, local);
             }
-        } else if (p.curr_is_token(get_period_tk())) {
-            p.next();
-            return parse_qualified_structure_instance(p, id, id_pos);
         } else if (p.curr_is_token(get_assign_tk())) {
             return parse_structure_instance(p, id);
         } else if (p.curr_is_token(get_membership_tk()) || p.curr_is_token(get_in_tk())) {
@@ -180,6 +177,8 @@ expr parse_curly_bracket(parser & p, unsigned, expr const *, pos_info const & po
         p.check_token_next(get_rcurly_tk(), "invalid empty structure instance, '}' expected");
         return p.save_pos(mk_structure_instance(), pos);
     } else if (p.curr_is_token(get_dotdot_tk())) {
+        return parse_structure_instance_core(p);
+    } else if (p.curr_is_token(get_colon_tk())) {
         return parse_structure_instance_core(p);
     } else {
         e = p.parse_expr();

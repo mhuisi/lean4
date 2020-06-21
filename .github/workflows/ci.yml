@@ -12,11 +12,17 @@ on:
 jobs:
   Build:
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: ${{ matrix.shell || 'nix-shell --run "bash -euo pipefail {0}"' }}
     strategy:
       matrix:
-        # NOTE: must list all targets in `include` here to activate them
-        name: [Linux, "Linux Debug", "Linux fsanitize", "Linux LLVM=ON", macOS, Windows]
         include:
+          # portable release build: link most libraries statically and use channel with older glibc (2.27; LLVM 7)
+          - name: Linux release
+            os: ubuntu-latest
+            CMAKE_OPTIONS: -DSTATIC=ON
+            shell: nix-shell --arg pkgs "import (fetchTarball \"channel:nixos-19.03\") {{}}" --run "bash -euo pipefail {0}"
           - name: Linux
             os: ubuntu-latest
             check-stage3: true
@@ -28,14 +34,13 @@ jobs:
             os: ubuntu-latest
             # turn off custom allocator to make LSAN do its magic
             CMAKE_OPTIONS: -DLEAN_EXTRA_CXX_FLAGS=-fsanitize=address,undefined -DLEANC_EXTRA_FLAGS=-fsanitize=address,undefined -DSMALL_ALLOCATOR=OFF
-          - name: Linux LLVM=ON
-            os: ubuntu-latest
-            CMAKE_OPTIONS: -DLLVM=ON
           - name: macOS
             os: macos-latest
+            CMAKE_OPTIONS: -DSTATIC=ON
           - name: Windows
             os: windows-latest
-            CMAKE_OPTIONS: -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles" -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+            shell: msys2 {0}
+            CMAKE_OPTIONS: -G "Unix Makefiles" -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DSTATIC=ON
       # complete all jobs
       fail-fast: false
     env:
@@ -44,19 +49,17 @@ jobs:
       CCACHE_COMPRESS: true
       # current cache limit
       CCACHE_MAXSIZE: 200M
-      CMAKE_OPTIONS: ${{ matrix.CMAKE_OPTIONS }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Install Nix
-        uses: cachix/install-nix-action@v8
+        uses: cachix/install-nix-action@v9
         if: matrix.os != 'windows-latest'
       - name: Install MSYS2
-        uses: numworks/setup-msys2@v1
-        if: matrix.os == 'windows-latest'
-      # binaries segfault without this step (?!), must be separate step because it might update the MSYS2 runtime
-      - name: Update MSYS2
-        run: msys2do pacman -Syu --noconfirm
+        uses: eine/setup-msys2@v1
+        with:
+          cache: true
+          install: make python mingw-w64-x86_64-cmake mingw-w64-x86_64-clang mingw-w64-x86_64-ccache git diffutils
         if: matrix.os == 'windows-latest'
       - name: Cache
         uses: actions/cache@v1
@@ -68,41 +71,58 @@ jobs:
             ${{ matrix.name }}-build
       - name: Setup
         run: |
-          # open shell once for initial setup
-          nix-shell --run true
+          # open nix-shell once for initial setup
+          true
         if: matrix.os != 'windows-latest'
-      - name: Setup
-        run: msys2do pacman --noconfirm -S make python mingw-w64-x86_64-cmake mingw-w64-x86_64-clang mingw-w64-x86_64-ccache git diffutils
-        if: matrix.os == 'windows-latest'
       # remove problematic tests for sanitized build
       - name: Pre build
         run: rm tests/compiler/StackOverflow.lean tests/compiler/StackOverflowTask.lean
         if: matrix.name == 'Linux fsanitize'
       - name: Build
-        run: nix-shell --run ./script/ci.sh
-        if: matrix.os != 'windows-latest'
-      - name: Build
-        run: msys2do ./script/ci.sh
-        if: matrix.os == 'windows-latest'
+        run: |
+          mkdir build
+          cd build
+          cmake .. ${{ matrix.CMAKE_OPTIONS }}
+          make -j4
+      # de-Nix-ify binary
+      - name: Patch
+        run: patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --remove-rpath build/stage0.5/bin/lean
+        if: matrix.name == 'Linux release'
+      - name: Patch
+        run: |
+          for lib in $(otool -L build/stage0.5/bin/lean | tail -n +2 | cut -d' ' -f1); do
+            install_name_tool -change "$lib" "/usr/lib/$(basename $lib | sed 's/libc++\.1\.0/libc++.1/')" build/stage0.5/bin/lean
+          done
+        if: matrix.name == 'macOS'
+      - name: Pack
+        run: cd build/stage0.5; cpack
+      - uses: actions/upload-artifact@v2
+        with:
+          name: build-${{ matrix.name }}
+          path: build/stage0.5/lean-*
       - name: Test
-        run: nix-shell --run "cd build/stage0.5; ctest -j4 --output-on-failure < /dev/null"
-        if: matrix.os != 'windows-latest'
-      - name: Test
-        run: msys2do cd build/stage0.5; ctest -j4 --output-on-failure ^< /dev/null
-        shell: cmd
-        if: matrix.os == 'windows-latest'
+        run: |
+          cd build/stage0.5
+          ctest -j4 --output-on-failure < /dev/null
       - name: Build Stage 2
-        run: nix-shell --run "cd build; make -j4 stage2"
+        run: |
+          cd build
+          make -j4 stage2
         if: matrix.build-stage2 || matrix.check-stage3
       - name: Check Stage 3
-        run: nix-shell --run "cd build; make -j4 check-stage3"
+        run: |
+          cd build
+          make -j4 check-stage3
         if: matrix.check-stage3
       - name: Test Speedcenter Benchmarks
-        run: PATH=$(realpath build/stage0.5/bin):$PATH nix-shell --run 'cd tests/bench; temci exec --config speedcenter.yaml --runs 1'
+        run: |
+          export PATH=$PWD/build/stage0.5/bin:$PATH
+          cd tests/bench; temci exec --config speedcenter.yaml --runs 1
         if: matrix.test-speedcenter
+      - name: Check rebootstrap
+        run: |
+          cd build
+          make update-stage0 && make -j4
+        if: matrix.name == 'Linux'
       - name: CCache stats
-        run: nix-shell --run "ccache -s"
-        if: matrix.os != 'windows-latest'
-      - name: CCache stats
-        run: msys2do ccache -s
-        if: matrix.os == 'windows-latest'
+        run: ccache -s

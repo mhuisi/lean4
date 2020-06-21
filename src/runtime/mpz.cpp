@@ -6,9 +6,9 @@ Author: Leonardo de Moura
 */
 #include <memory>
 #include <string>
-#include "runtime/sstream.h"
-#include "runtime/thread.h"
-#include "runtime/mpz.h"
+#include <lean/sstream.h>
+#include <lean/thread.h>
+#include <lean/mpz.h>
 
 namespace lean {
 mpz::mpz(uint64 v):

@@ -1,4 +1,4 @@
-import Init.Lean
+import Lean
 open Lean
 open Lean.Elab
 
@@ -13,15 +13,20 @@ do env  ← MetaIO.getEnv;
 
 open Lean.Parser
 
-@[termParser] def tst := parser! "(|" >> termParser >> optional (symbolAux ", " >> termParser) >> "|)"
+@[termParser] def tst := parser! "(|" >> termParser >> optional (symbol ", " >> termParser) >> "|)"
+
+def tst2 : Parser := symbol "(||" >> termParser >> symbol "||)"
 
 @[termParser] def boo : ParserDescr :=
-ParserDescr.node `boo
+ParserDescr.node `boo 10
   (ParserDescr.andthen
-    (ParserDescr.symbol "[|" (some 0))
+    (ParserDescr.symbol "[|")
     (ParserDescr.andthen
-      (ParserDescr.parser `term 0)
-      (ParserDescr.symbol "|]" (some 0))))
+      (ParserDescr.cat `term 0)
+      (ParserDescr.symbol "|]")))
+
+@[termParser] def boo2 : ParserDescr :=
+ParserDescr.node `boo2 10 (ParserDescr.parser `tst2)
 
 open Lean.Elab.Term
 
@@ -34,8 +39,16 @@ adaptExpander $ fun stx => match_syntax stx with
 fun stx expected? =>
   elabTerm (stx.getArg 1) expected?
 
+@[termElab boo2] def elabBool2 : TermElab :=
+adaptExpander $ fun stx => match_syntax stx with
+ | `((|| $e ||)) => `($e + 1)
+ | _             => throwUnsupportedSyntax
+
 #eval run "#check [| @id.{1} Nat |]"
 #eval run "#check (| id 1 |)"
+#eval run "#check (|| id 1 ||)"
+
+
 -- #eval run "#check (| id 1, id 1 |)" -- it will fail
 
 @[termElab tst] def elabTst2 : TermElab :=
@@ -60,8 +73,8 @@ syntax [tst3] "FOO " foo : term
 
 macro_rules
 | `(FOO ⟨| $t |⟩) => `($t+1)
-| `(FOO $t) => `($t)
-| `(FOO $t >>> $r) => `($t * $r)
+| `(FOO $t:term) => `($t)
+| `(FOO $t:term >>> $r) => `($t * $r)
 
 #check FOO ⟨| id 1 |⟩
 #check FOO 1
