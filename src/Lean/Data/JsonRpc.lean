@@ -49,7 +49,7 @@ instance requestIDFromJson : HasFromJson RequestID :=
 ⟨fun j => match j with 
   | str s => RequestID.str s
   | num n => RequestID.num n
-  | _          => none⟩
+  | _     => none⟩
 
 instance structuredToJson : HasToJson Structured :=
 ⟨fun s => match s with
@@ -59,7 +59,7 @@ instance structuredFromJson : HasFromJson Structured :=
 ⟨fun j => match j with
   | arr a => Structured.arr a
   | obj o => Structured.obj o
-  | _          => none⟩
+  | _     => none⟩
 
 instance messageToJson : HasToJson Message :=
 ⟨fun m =>   
@@ -75,29 +75,34 @@ instance messageToJson : HasToJson Message :=
      ⟨"error", mkObj $ 
        [⟨"code", toJson code⟩, ⟨"message", message⟩] ++ opt "data" data?⟩]⟩
 
+def aux1 (j : Json) : Option Message := do
+id ← j.getObjValAs? RequestID "id";
+method ← j.getObjValAs? String "method";
+let params? := j.getObjValAs? Structured "params";
+pure (Message.request id method params?)
+
+def aux2 (j : Json) : Option Message := do
+method ← j.getObjValAs? String "method";
+let params? := j.getObjValAs? Structured "params";
+pure (Message.requestNotification method params?)
+
+def aux3 (j : Json) : Option Message := do
+id ← j.getObjValAs? RequestID "id";
+result ← j.getObjVal? "result";
+pure (Message.response id result)
+
+def aux4 (j : Json) : Option Message := do
+id ← j.getObjValAs? RequestID "id";
+err ← j.getObjVal? "error";
+code ← err.getObjValAs? JsonNumber "code";
+message ← err.getObjValAs? String "message";
+let data? := err.getObjVal? "data";
+pure (Message.responseError id code message data?)
+
 instance messageFromJson : HasFromJson Message :=
 ⟨fun j => do
   "2.0" ← j.getObjVal? "jsonrpc" | none;
-  (do 
-    id ← j.getObjValAs? RequestID "id";
-    method ← j.getObjValAs? String "method";
-    let params? := j.getObjValAs? Structured "params";
-    pure (Message.request id method params?)) <|>
-  (do
-    method ← j.getObjValAs? String "method";
-    let params? := j.getObjValAs? Structured "params";
-    pure (Message.requestNotification method params?)) <|>
-  (do 
-    id ← j.getObjValAs? RequestID "id";
-    result ← j.getObjVal? "result";
-    pure (Message.response id result)) <|>
-  (do
-    id ← j.getObjValAs? RequestID "id";
-    err ← j.getObjVal? "error";
-    code ← err.getObjValAs? JsonNumber "code";
-    message ← err.getObjValAs? String "message";
-    let data? := err.getObjVal? "data";
-    pure (Message.responseError id code message data?))⟩
+  aux1 j <|> aux2 j <|> aux3 j <|> aux4 j⟩
 
 end Lean.JsonRpc
 
@@ -111,7 +116,7 @@ def readMessage (h : FS.Handle) (nBytes : Nat) : IO Message := do
 j ← h.readJson nBytes;
 match fromJson? j with
 | some m => pure m
-| none   => throw (userError "json did not have the format of a jsonrpc message")
+| none   => throw (userError ("json '" ++ j.compress ++ "' did not have the format of a jsonrpc message"))
 
 def readRequestAs (h : FS.Handle) (nBytes : Nat) (expectedMethod : String) (α : Type*) [HasFromJson α] : IO (Request α) := do
 m ← h.readMessage nBytes;
@@ -120,9 +125,10 @@ match m with
   if method = expectedMethod then
     match params? with
     | some params => 
-      match fromJson? (toJson params) with
+      let j := toJson params;
+      match fromJson? j with
       | some v => pure ⟨id, v⟩
-      | none   => throw (userError ("unexpected param for method '" ++ expectedMethod ++ "'"))
+      | none   => throw (userError ("unexpected param '" ++ j.compress  ++ "' for method '" ++ expectedMethod ++ "'"))
     | none => throw (userError ("unexpected lack of param for method '" ++ expectedMethod ++ "'"))
   else
     throw (userError ("expected method '" ++ expectedMethod ++ "', got method '" ++ method ++ "'"))
@@ -135,9 +141,10 @@ match m with
   if method = expectedMethod then
     match params? with
     | some params => 
-      match fromJson? (toJson params) with
+      let j := toJson params;
+      match fromJson? j with
       | some v => pure v
-      | none   => throw (userError ("unexpected param for method '" ++ expectedMethod ++ "'"))
+      | none   => throw (userError ("unexpected param '" ++ j.compress  ++ "' for method '" ++ expectedMethod ++ "'"))
     | none => throw (userError ("unexpected lack of param for method '" ++ expectedMethod ++ "'"))
   else
     throw (userError ("expected method '" ++ expectedMethod ++ "', got method '" ++ method ++ "'"))

@@ -1,3 +1,9 @@
+from subprocess import Popen, PIPE, STDOUT
+from concurrent.futures import ThreadPoolExecutor
+from json import dumps
+import re
+
+text = """
 prelude
 import Lean.Environment
 import Lean.Elab.Frontend
@@ -43,7 +49,7 @@ match Parser.parseHeader {const2ModIdx := {}, constants := {}, extensions := #[]
 def updateFrontend (env : Environment) (input : String) : IO (Environment × MessageLog) := do
 let inputCtx := Parser.mkInputContext input "<input>";
 parserStateRef ← IO.mkRef ({} : Parser.ModuleParserState);
-cmdStateRef    ← IO.mkRef $ Command.mkState env;
+cmdStateRef    ← IO.mkRef $ Command.mkState env; -- TODO: use different env (processHeader)
 IO.processCommands inputCtx parserStateRef cmdStateRef;
 cmdState ← cmdStateRef.get;
 pure (cmdState.env, cmdState.messages)
@@ -102,9 +108,9 @@ else c.forM $ fun change =>
     s.sendDiagnostics d.uri newDoc msgLog
   | TextDocumentContentChangeEvent.fullChange (text : String) => throw (userError "got content change that replaces the full document (not supported)") 
 
-def handleNotification (s : ServerState) (method : String) (params : Json) : IO Unit := do
-let h := (fun paramType [HasFromJson paramType] (handler : ServerState → paramType → IO Unit) => 
-  parseParams paramType params >>= handler s);
+def handleNotification (s : ServerState) (method : String) (params : Json) : IO Unit :=
+let h := fun paramType [HasFromJson paramType] (handler : ServerState → paramType → IO Unit) => 
+  parseParams paramType params >>= handler s;
 match method with
 | "textDocument/didOpen"   => h DidOpenTextDocumentParams handleDidOpen
 | "textDocument/didChange" => h DidChangeTextDocumentParams handleDidChange
@@ -126,7 +132,7 @@ def initialize (i o : FS.Handle) : IO Unit := do
 -- ignore InitializeParams for MWE
 r ← readLspRequestAs i "initialize" InitializeParams;
 writeLspResponse o r.id mkLeanServerCapabilities;
-_ ← readLspRequestNotificationAs i "initialized" Initialized;
+_ ← readLspRequestAs i "initialized" Initialized;
 openDocumentsRef ← IO.mkRef (RBMap.empty : DocumentMap);
 ServerState.mainLoop ⟨i, o, openDocumentsRef⟩
 
@@ -135,5 +141,45 @@ end Lean.Server
 def main (n : List String) : IO UInt32 := do
 i ← IO.stdin;
 o ← IO.stdout;
-catch (Lean.Server.initialize i o) (fun err => o.putStrLn (toString err));
+Lean.Server.initialize i o -- intentional error to test diagnostics
 pure 0
+"""
+
+initialize = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"capabilities": {}}}
+initialized = {"jsonrpc": "2.0", "method": "initialized", "params": {}}
+open1 = {"jsonrpc": "2.0", "method": "textDocument/didOpen", "params": {
+  "textDocument": {
+    "uri": "file:///Users/mhuisi/lean4/src/Lean/Server/Server.lean",
+    "languageId": "lean",
+    "version": 1,
+    "text": text
+  }
+}}
+
+p = Popen(['/home/mhuisi/lean4/src/Lean/Server/build/bin/Server'], bufsize=2, stdout=PIPE, stdin=PIPE, stderr=PIPE)
+
+def read():
+    header = p.stdout.readline().decode()
+    m = re.match(r"Content-Length: ([0-9]+)\r\n", header)
+    if m == None:
+        print("error: %s" % header)
+        return
+    n = int(m.group(1))
+    p.stdout.readline() # header/payload separator
+    payload = p.stdout.read(n)
+    print(payload)
+
+def send(obj):
+    msg = dumps(obj)
+    size = len(msg)
+    p.stdin.write(("Content-Length: %d\r\n\r\n%s" % (size, msg)).encode())
+
+send(initialize)
+read()
+send(initialized)
+print("sending open1")
+send(open1)
+read()
+read()
+read()
+print(p.wait())

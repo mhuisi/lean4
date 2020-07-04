@@ -11,10 +11,12 @@ open IO
 
 def readJson (h : FS.Handle) (nBytes : Nat) : IO Json := do
 bytes ← h.read nBytes;
-j ← ofExcept (Json.parse (toString bytes));
+some s ← pure bytes.utf8ToString | throw (userError ("got non-utf8 string '" ++ toString bytes ++ "'"));
+j ← ofExcept (Json.parse s);
 pure j
 
-def writeJson (h : FS.Handle) (j : Json) : IO Unit :=
-h.putStr j.compress
+def writeJson (h : FS.Handle) (j : Json) : IO Unit := do
+h.putStr j.compress;
+h.flush
 
 end IO.FS.Handle

@@ -9,10 +9,10 @@ open Lean
 open Lean.JsonRpc
 
 private def parseHeaderField (s : String) : Option (String × String) :=
-if s = "" ∨ s.back ≠ '\x0d' then
+if s = "" ∨ s.takeRight 2 ≠ "\r\n" then
   none
 else
-  let xs := (s.drop 1).splitOn ": ";
+  let xs := (s.dropRight 2).splitOn ": ";
   match xs with
   | []  => none
   | [_] => none
@@ -23,7 +23,7 @@ else
 private partial def readHeaderFields : FS.Handle → IO (List (String × String))
 | h => do
   l ← h.getLine;
-  if l = "\x0d" then
+  if l = "\r\n" then
     pure []
   else
     match parseHeaderField l with
@@ -37,8 +37,8 @@ fields ← readHeaderFields h;
 match fields.lookup "Content-Length" with
 | some length => match length.toNat? with
   | some n => pure n
-  | none   => throw (userError "Content-Length header value is not a Nat")
-| none => throw (userError "no Content-Length header")
+  | none   => throw (userError ("Content-Length header value '" ++ length ++ "' is not a Nat"))
+| none => throw (userError ("no Content-Length header in header fields " ++ toString fields))
 
 def readLspMessage (h : FS.Handle) : IO Message := do
 nBytes ← readLspHeader h;
@@ -48,12 +48,19 @@ def readLspRequestAs (h : FS.Handle) (expectedMethod : String) (α : Type*) [Lea
 nBytes ← readLspHeader h;
 h.readRequestAs nBytes expectedMethod α
 
+def readLspRequestNotificationAs (h : FS.Handle) (expectedMethod : String) (α : Type*) [Lean.HasFromJson α] : IO α := do
+nBytes ← readLspHeader h;
+h.readRequestNotificationAs nBytes expectedMethod α
+
 def writeLspMessage (h : FS.Handle) (m : Message) : IO Unit := do
 -- inlined implementation instead of using jsonrpc's writeMessage
 -- to maintain the atomicity of putStr
 let j := (toJson m).compress;
 let header := "Content-Length: " ++ toString j.utf8ByteSize ++ "\r\n\r\n";
-h.putStr (header ++ j)
+h.putStr (header ++ j);
+IO.println "starting to flush now";
+h.flush;
+IO.println "flushed"
 
 def writeLspResponse {α : Type*} [Lean.HasToJson α] (h : FS.Handle) (id : RequestID) (r : α) : IO Unit :=
 writeLspMessage h (Message.response id (toJson r))
