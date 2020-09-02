@@ -26,6 +26,9 @@ instance ClientInfo.hasFromJson : HasFromJson ClientInfo :=
   let version? := j.getObjValAs? String "version";
   pure ⟨name, version?⟩⟩
 
+instance ClientInfo.hasToJson : HasToJson ClientInfo :=
+⟨fun o => mkObj $ ⟨"name", o.name⟩ :: opt "version" o.version?⟩ 
+
 inductive Trace
 | off
 | messages
@@ -37,6 +40,12 @@ instance Trace.hasFromJson : HasFromJson Trace :=
   | some "messages" => Trace.messages
   | some "verbose"  => Trace.verbose
   | _               => none⟩
+
+instance Trace.hasToJson : HasToJson Trace :=
+⟨fun o => match o with
+  | Trace.off => "off"
+  | Trace.messages => "messages"
+  | Trace.verbose => "verbose"⟩
 
 structure InitializeParams :=
 (processId? : Option Int := none)
@@ -67,6 +76,16 @@ instance InitializeParams.hasFromJson : HasFromJson InitializeParams :=
   let trace := (j.getObjValAs? Trace "trace").getD Trace.off;
   let workspaceFolders? := j.getObjValAs? (Array WorkspaceFolder) "workspaceFolders";
   pure ⟨processId?, clientInfo?, rootUri?, initializationOptions?, capabilities, trace, workspaceFolders?⟩⟩
+
+instance InitializeParams.hasToJson : HasToJson InitializeParams :=
+⟨fun o => mkObj $
+  opt "processId" o.processId? ++ 
+  opt "clientInfo" o.clientInfo? ++
+  opt "rootUri" o.rootUri? ++
+  opt "initializationOptions" o.initializationOptions? ++
+  [⟨"capabilities", toJson o.capabilities⟩] ++
+  [⟨"trace", toJson o.trace⟩] ++
+  opt "workspaceFolders" o.workspaceFolders?⟩
 
 inductive InitializedParams | mk
 
