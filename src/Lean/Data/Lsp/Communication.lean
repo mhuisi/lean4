@@ -68,14 +68,17 @@ let header := "Content-Length: " ++ toString j.utf8ByteSize ++ "\r\n\r\n";
 h.putStr (header ++ j);
 h.flush
 
+def writeLspRequest {α : Type*} [HasToJson α] (h : FS.Stream) (id : RequestID) (method : String) (params : α) : IO Unit :=
+writeLspMessage h (Message.request id method (fromJson? (toJson params)))
+
+def writeLspNotification {α : Type*} [HasToJson α] (h : FS.Stream) (method : String) (r : α) : IO Unit :=
+writeLspMessage h (Message.notification method (fromJson? (toJson r)))
+
 def writeLspResponse {α : Type*} [HasToJson α] (h : FS.Stream) (id : RequestID) (r : α) : IO Unit :=
 writeLspMessage h (Message.response id (toJson r))
 
-def writeLspNotification {α : Type*} [HasToJson α] (h : FS.Stream) (method : String) (r : α) : IO Unit :=
-match toJson r with
-| Json.obj o => writeLspMessage h (Message.notification method o)
-| Json.arr a => writeLspMessage h (Message.notification method a)
-| _          => throw (userError "internal server error in Lean.Lsp.writeLspNotification: tried to write LSP notification that is neither a JSON object nor a JSON array")
+def writeLspResponseError {α : Type*} [HasToJson α] (h : FS.Stream) (id : RequestID) (code : ErrorCode) (message : String) (data : α) : IO Unit := 
+writeLspMessage h (Message.responseError id code message (toJson data))
 
 end Lsp
 end Lean

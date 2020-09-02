@@ -64,6 +64,11 @@ instance TextDocumentContentChangeEvent.hasFromJson : HasFromJson TextDocumentCo
     pure $ TextDocumentContentChangeEvent.rangeChange range text) <|>
   (TextDocumentContentChangeEvent.fullChange <$> j.getObjValAs? String "text")⟩
 
+instance TextDocumentContentChangeEvent.hasToJson : HasToJson TextDocumentContentChangeEvent :=
+⟨fun o => mkObj $ match o with
+| TextDocumentContentChangeEvent.rangeChange range text => [⟨"range", toJson range⟩, ⟨"text", toJson text⟩]
+| TextDocumentContentChangeEvent.fullChange text => [⟨"text", toJson text⟩]⟩
+
 structure DidChangeTextDocumentParams :=
 (textDocument : VersionedTextDocumentIdentifier)
 (contentChanges : Array TextDocumentContentChangeEvent)
@@ -73,6 +78,9 @@ instance DidChangeTextDocumentParams.hasFromJson : HasFromJson DidChangeTextDocu
   textDocument ← j.getObjValAs? VersionedTextDocumentIdentifier "textDocument";
   contentChanges ← j.getObjValAs? (Array TextDocumentContentChangeEvent) "contentChanges";
   pure ⟨textDocument, contentChanges⟩⟩
+
+instance DidChangeTextDocumentParams.hasToJson : HasToJson DidChangeTextDocumentParams :=
+⟨fun o => mkObj $ [⟨"textDocument", toJson o.textDocument⟩, ⟨"contentChanges", toJson o.contentChanges⟩]⟩
 
 -- TODO: missing:
 -- WillSaveTextDocumentParams, TextDocumentSaveReason,
@@ -87,6 +95,9 @@ structure DidCloseTextDocumentParams := (textDocument : TextDocumentIdentifier)
 
 instance DidCloseTextDocumentParams.hasFromJson : HasFromJson DidCloseTextDocumentParams :=
 ⟨fun j => DidCloseTextDocumentParams.mk <$> j.getObjValAs? TextDocumentIdentifier "textDocument"⟩
+
+instance DidCloseTextDocumentParams.hasToJson : HasToJson DidCloseTextDocumentParams :=
+⟨fun o => mkObj $ [⟨"textDocument", toJson o.textDocument⟩]⟩
 
 -- TODO: TextDocumentSyncClientCapabilities
 
