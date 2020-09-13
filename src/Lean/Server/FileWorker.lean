@@ -12,13 +12,9 @@ import Lean.Server.Snapshots
 import Lean.Data.Lsp
 import Lean.Data.Json.FromToJson
 
-namespace Lean
-namespace Server
-
-/-
-Each file worker process manages a single file. File workers are launched and terminated
-by a watchdog process. See Watchdog.lean for a description of how file workers are expected
-to interact with the watchdog process.
+/-!
+For general server architecture, see `README.md`. For details of IPC communication, see `Watchdog.lean`.
+This module implements per-file worker processes.
 
 File processing and requests+notifications against a file should be concurrent for two reasons:
 - By the LSP standard, requests should be cancellable.
@@ -37,6 +33,9 @@ In order to not block the main thread, this is done in a request task.
 If a task that the request task waits for is terminated, a change occured somewhere before the
 command that the request is looking for and the request sends a "content changed" error.
 -/
+
+namespace Lean
+namespace Server
 
 open Lsp
 open IO
