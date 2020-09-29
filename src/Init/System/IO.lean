@@ -131,7 +131,7 @@ constant cancel {α : Type} : @& Task α → IO Unit := arbitrary _
 
 /-- Check if the task has finished execution, at which point calling `Task.get` will return immediately. -/
 @[extern "lean_io_has_finished"]
-constant hasFinished {α : Type} : @& Task α → IO Unit := arbitrary _
+constant hasFinished {α : Type} : @& Task α → IO Bool := arbitrary _
 
 /-- Wait for the task to finish, then return its result. -/
 @[extern "lean_io_wait"]
