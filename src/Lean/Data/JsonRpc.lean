@@ -85,7 +85,24 @@ structure Error := (id : RequestID) (code : JsonNumber) (message : String) (data
 instance stringToRequestID : HasCoe String RequestID := ⟨RequestID.str⟩
 instance numToRequestID : HasCoe JsonNumber RequestID := ⟨RequestID.num⟩
 
-instance RequestId.hasFromJson : HasFromJson RequestID :=
+private def RequestID.lt : RequestID → RequestID → Bool
+| RequestID.str a, RequestID.str b            => a < b
+| RequestID.num a, RequestID.num b            => a < b
+| RequestID.null,  RequestID.num _            => true
+| RequestID.null,  RequestID.str _            => true
+| RequestID.num _, RequestID.str _            => true
+| _, _ /- str < *, num < null, null < null -/ => false
+
+private def RequestID.ltProp : HasLess RequestID :=
+⟨fun a b => RequestID.lt a b = true⟩
+
+instance RequestID.hasLess : HasLess RequestID :=
+RequestID.ltProp
+
+instance RequestID.hasDecidableLess : DecidableRel (@HasLess.Less RequestID RequestID.ltProp) :=
+inferInstanceAs (DecidableRel (fun a b => RequestID.lt a b = true))
+
+instance RequestID.hasFromJson : HasFromJson RequestID :=
 ⟨fun j => match j with
   | str s => RequestID.str s
   | num n => RequestID.num n
