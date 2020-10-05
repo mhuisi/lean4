@@ -82,7 +82,11 @@ def writeLspResponse {α : Type*} [HasToJson α] (h : FS.Stream)
   (id : RequestID) (r : α) : m Unit :=
 writeLspMessage h (Message.response id (toJson r))
 
-def writeLspResponseError {α : Type*} [HasToJson α] (h : FS.Stream)
+def writeLspResponseError (h : FS.Stream)
+  (id : RequestID) (code : ErrorCode) (message : String) : m Unit :=
+writeLspMessage h (Message.responseError id code message none)
+
+def writeLspResponseErrorWithData {α : Type*} [HasToJson α] (h : FS.Stream)
   (id : RequestID) (code : ErrorCode) (message : String) (data : α) : m Unit :=
 writeLspMessage h (Message.responseError id code message (toJson data))
 
