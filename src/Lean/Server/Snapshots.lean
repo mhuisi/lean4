@@ -67,6 +67,12 @@ pure { beginPos := 0,
        data := SnapshotData.headerData headerEnv msgLog opts
      }
 
+def reparseHeader (contents : String) (header : Snapshot) (opts : Options := {}) : IO Snapshot := do
+let inputCtx := Parser.mkInputContext contents "<input>";
+emptyEnv ← mkEmptyEnvironment;
+let (_, newHeaderParserState, _) := Parser.parseHeader emptyEnv inputCtx;
+pure { header with mpState := newHeaderParserState }
+
 private def ioErrorFromEmpty (ex : Empty) : IO.Error :=
 Empty.rec _ ex
 
