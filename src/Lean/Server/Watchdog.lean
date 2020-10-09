@@ -65,6 +65,7 @@ open IO
 open Std (RBMap RBMap.empty)
 open Lsp
 open JsonRpc
+open System.FilePath
 
 structure OpenDocument :=
 (version : Nat)
@@ -202,7 +203,7 @@ def startFileWorker (uri : DocumentUri) (version : Nat) (text : FileMap) : Serve
 st ← read;
 headerAst ← monadLift $ parseHeaderAst text.source;
 let doc : OpenDocument := ⟨version, text, headerAst⟩;
-workerProc ← monadLift $ Process.spawn {workerCfg with cmd := st.workerPath};
+workerProc ← monadLift $ Process.spawn {workerCfg with cmd := "rr", args := #["record", st.workerPath]};
 pendingRequestsRef ← IO.mkRef (RBMap.empty : PendingRequestMap);
 -- the task will never access itself, so this is fine
 let commTaskFw : FileWorker := ⟨doc, workerProc, Task.pure WorkerEvent.terminated, WorkerState.running, pendingRequestsRef⟩;
@@ -401,8 +402,8 @@ catch
   (fun err => do shutdown; throw err)
 
 def initAndRunWatchdog (i o : FS.Stream) : IO Unit := do
-some workerPath ← IO.getEnv "LEAN_WORKER_PATH"
-  | throw $ userError "You need to specify LEAN_WORKER_PATH in the environment.";
+appDir ← IO.appDir;
+let workerPath := appDir ++ pathSeparator.toString ++ "FileWorker" ++ exeSuffix;
 fileWorkersRef ← IO.mkRef (RBMap.empty : FileWorkerMap);
 
 initRequest ← readLspRequestAs i "initialize" InitializeParams;

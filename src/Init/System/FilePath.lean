@@ -34,6 +34,9 @@ s.split (fun c => searchPathSeparators.elem c)
 def extSeparator : Char :=
 '.'
 
+def exeSuffix : String :=
+if isWindows then ".exe" else ""
+
 /-- Case-insensitive file system -/
 def isCaseInsensitive : Bool :=
 isWindows || isOSX
