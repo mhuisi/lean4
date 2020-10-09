@@ -64,31 +64,35 @@ def readLspNotificationAs (h : FS.Stream) (expectedMethod : String)
 nBytes ← liftIO $ readLspHeader h;
 liftIO $ h.readNotificationAs nBytes expectedMethod α
 
-def writeLspMessage (h : FS.Stream) (msg : Message) : m Unit := do
+def writeLspMessage (h : FS.Stream) (msg : Message) (logStderr : Bool := false) : m Unit := do
 let j := (toJson msg).compress;
 let header := "Content-Length: " ++ toString j.utf8ByteSize ++ "\r\n\r\n";
 liftIO $ h.putStr (header ++ j);
+e ← IO.getStderr;
+if logStderr then
+  liftIO $ e.putStr (header ++ j)
+else pure ();
 liftIO $ h.flush
 
 def writeLspRequest {α : Type*} [HasToJson α] (h : FS.Stream)
-  (id : RequestID) (method : String) (params : α) : m Unit :=
-writeLspMessage h (Message.request id method (fromJson? (toJson params)))
+  (id : RequestID) (method : String) (params : α) (logStderr : Bool := false) : m Unit :=
+writeLspMessage h (Message.request id method (fromJson? (toJson params))) logStderr
 
 def writeLspNotification {α : Type*} [HasToJson α] (h : FS.Stream)
-  (method : String) (r : α) : m Unit :=
-writeLspMessage h (Message.notification method (fromJson? (toJson r)))
+  (method : String) (r : α) (logStderr : Bool := false) : m Unit  :=
+writeLspMessage h (Message.notification method (fromJson? (toJson r))) logStderr
 
 def writeLspResponse {α : Type*} [HasToJson α] (h : FS.Stream)
-  (id : RequestID) (r : α) : m Unit :=
-writeLspMessage h (Message.response id (toJson r))
+  (id : RequestID) (r : α) (logStderr : Bool := false) : m Unit :=
+writeLspMessage h (Message.response id (toJson r)) logStderr
 
 def writeLspResponseError (h : FS.Stream)
-  (id : RequestID) (code : ErrorCode) (message : String) : m Unit :=
-writeLspMessage h (Message.responseError id code message none)
+  (id : RequestID) (code : ErrorCode) (message : String) (logStderr : Bool := false) : m Unit :=
+writeLspMessage h (Message.responseError id code message none) logStderr
 
 def writeLspResponseErrorWithData {α : Type*} [HasToJson α] (h : FS.Stream)
-  (id : RequestID) (code : ErrorCode) (message : String) (data : α) : m Unit :=
-writeLspMessage h (Message.responseError id code message (toJson data))
+  (id : RequestID) (code : ErrorCode) (message : String) (data : α) (logStderr : Bool := false) : m Unit :=
+writeLspMessage h (Message.responseError id code message (toJson data)) logStderr
 
 end Lsp
 end Lean

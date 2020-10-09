@@ -50,8 +50,13 @@ Lsp.writeLspNotification h "textDocument/publishDiagnostics"
     version? := version,
     diagnostics := diagnostics.toArray : PublishDiagnosticsParams }
 
+private def log (msg : String) : IO Unit := do
+IO.eprintln msg;
+e ← IO.getStderr;
+e.flush
+
 private def logSnapContent (s : Snapshot) (text : FileMap) : IO Unit :=
-IO.eprintln $ "`" ++ text.source.extract s.beginPos (s.endPos-1) ++ "`"
+log $ "`" ++ text.source.extract s.beginPos (s.endPos-1) ++ "`"
 
 inductive TaskError
 | aborted
@@ -65,7 +70,7 @@ inductive ElabTask
 namespace ElabTask
 
 private def runTask (act : IO (Except TaskError ElabTask)) : IO (Task (Except TaskError ElabTask)) := do
-t ← asTask act;
+t ← asTask act Task.Priority.dedicated;
 pure $ t.map $ fun error => match error with
 | Except.ok e => e
 | Except.error ioError => Except.error (TaskError.ioError ioError)
@@ -77,7 +82,8 @@ private partial def runCore (h : FS.Stream) (uri : DocumentUri) (version : Nat) 
   | Sum.inl snap => do
     -- TODO(MH): check for interrupt with increased precision
     canceled ← checkCanceled;
-    if canceled then
+    if canceled then do
+      log $ "aborted";
       pure (Except.error TaskError.aborted)
     else do
       -- NOTE(MH): This relies on the client discarding old diagnostics upon receiving new ones
@@ -94,7 +100,8 @@ private partial def runCore (h : FS.Stream) (uri : DocumentUri) (version : Nat) 
       pure (Except.ok ⟨snap, t⟩)
   | Sum.inr msgLog => do
     canceled ← checkCanceled;
-    if canceled then
+    if canceled then do
+      log $ "aborted";
       pure (Except.error TaskError.aborted)
     else do
       sendDiagnosticsCore h uri version contents msgLog;
@@ -112,7 +119,7 @@ partial def branchOffAt (h : FS.Stream) (uri : DocumentUri) (version : Nat) (con
     match nextTask.get with
     | Except.ok (next@⟨nextSnap, _⟩) => do
        logSnapContent nextSnap contents;
-       IO.eprintln ("ver: " ++ (toString version) ++ "; changePos: " ++ (toString changePos) ++ "; endpos: " ++ (toString nextSnap.endPos));
+       log ("ver: " ++ (toString version) ++ "; changePos: " ++ (toString changePos) ++ "; endpos: " ++ (toString nextSnap.endPos));
        -- if next contains the change ...
        -- (it will never be the header snap because the
        -- watchdog will never send didChange notifs with
@@ -133,6 +140,7 @@ partial def branchOffAt (h : FS.Stream) (uri : DocumentUri) (version : Nat) (con
         pure new
       | TaskError.ioError ioError => throw ioError
   else do
+    log "not finished";
     new ← run h uri version contents snap;
     -- we do not need to cancel the old task explicitly since tasks without refs are marked as cancelled by the GC
     pure new
@@ -231,7 +239,7 @@ if newVersion <= oldDoc.version then do
   throw (userError "got outdated version number")
 else if not changes.isEmpty then do
   let (newDocText, minStartOff) := foldDocumentChanges changes oldDoc.text;
-  IO.eprintln newDocText.source;
+  monadLift $ log newDocText.source;
   st ← read;
   newDoc ← monadLift $
     updateDocument st.hOut docId.uri oldDoc minStartOff newVersion newDocText;
@@ -330,3 +338,13 @@ catch
   (Lean.Server.initAndRunWorker i o)
   (fun err => e.putStrLn (toString err));
 pure 0
+
+def runWithInputFile (fn : String) (searchPath : Option String := none) : IO Unit := do
+o ← IO.getStdout;
+e ← IO.getStderr;
+IO.FS.withFile fn IO.FS.Mode.read (fun hFile => do
+  Lean.initSearchPath searchPath;
+  catch
+    (Lean.Server.initAndRunWorker (IO.FS.Stream.ofHandle hFile) o)
+    (fun err => e.putStrLn (toString err)))
+

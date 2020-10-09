@@ -118,14 +118,14 @@ match msg with
 | _ => pure ();
 pure msg
 
-def writeMessage (fw : FileWorker) (msg : JsonRpc.Message) : m Unit :=
-writeLspMessage fw.stdin msg
+def writeMessage (fw : FileWorker) (msg : JsonRpc.Message) (logStderr : Bool := false) : m Unit :=
+writeLspMessage fw.stdin msg logStderr
 
-def writeNotification {α : Type*} [HasToJson α] (fw : FileWorker) (method : String) (param : α) : m Unit :=
-writeLspNotification fw.stdin method param
+def writeNotification {α : Type*} [HasToJson α] (fw : FileWorker) (method : String) (param : α) (logStderr : Bool := false) : m Unit :=
+writeLspNotification fw.stdin method param logStderr
 
-def writeRequest {α : Type*} [HasToJson α] (fw : FileWorker) (id : RequestID) (method : String) (param : α) : m Unit := do
-writeLspRequest fw.stdin id method param;
+def writeRequest {α : Type*} [HasToJson α] (fw : FileWorker) (id : RequestID) (method : String) (param : α) (logStderr : Bool := false) : m Unit := do
+writeLspRequest fw.stdin id method param logStderr;
 liftIO $ fw.pendingRequestsRef.modify $ fun pendingRequests =>
   pendingRequests.insert id (Message.request id method (fromJson? (toJson param)))
 
@@ -208,8 +208,8 @@ pendingRequestsRef ← IO.mkRef (RBMap.empty : PendingRequestMap);
 let commTaskFw : FileWorker := ⟨doc, workerProc, Task.pure WorkerEvent.terminated, WorkerState.running, pendingRequestsRef⟩;
 commTask ← fwdMsgTask commTaskFw;
 let fw : FileWorker := {commTaskFw with commTask := commTask};
-writeLspRequest fw.stdin (0 : Nat) "initialize" st.initParams;
-fw.writeNotification "textDocument/didOpen" (DidOpenTextDocumentParams.mk ⟨uri, "lean", version, text.source⟩);
+writeLspRequest fw.stdin (0 : Nat) "initialize" st.initParams true;
+fw.writeNotification "textDocument/didOpen" (DidOpenTextDocumentParams.mk ⟨uri, "lean", version, text.source⟩) true;
 updateFileWorkers uri fw
 
 def terminateFileWorker (uri : DocumentUri) : ServerM Unit := do
@@ -220,7 +220,7 @@ fw ← findFileWorker uri;
 -- when the header changed we'll start a new one right after
 -- anyways and when we're shutting down the server
 -- it's over either way.)
-catch (fw.writeMessage (Message.notification "exit" none)) (fun err => pure ());
+catch (fw.writeMessage (Message.notification "exit" none) true) (fun err => pure ());
 eraseFileWorker uri
 
 def parseParams (paramType : Type*) [HasFromJson paramType] (params : Json) : ServerM paramType :=
@@ -239,7 +239,7 @@ newFw ← findFileWorker uri;
 let tryDischargeQueuedMsgs : Array JsonRpc.Message → JsonRpc.Message → ServerM (Array JsonRpc.Message) :=
   fun crashedMsgs m => catch
     (do
-      newFw.writeMessage m;
+      newFw.writeMessage m true;
       pure crashedMsgs)
     (fun err => pure (crashedMsgs.push m));
 crashedMsgs ← queuedMsgs.foldlM tryDischargeQueuedMsgs #[];
@@ -269,7 +269,7 @@ else if not changes.isEmpty then do
   let (newDocText, _) := foldDocumentChanges changes oldDoc.text;
   newHeaderAst ← liftIO $ parseHeaderAst newDocText.source;
   if newHeaderAst != oldDoc.headerAst then do
-    log "restarting file worker";
+    --log "restarting file worker";
     -- TODO(WN): we should amortize this somehow;
     -- when the user is typing in an import, this
     -- may rapidly destroy/create new processes
@@ -284,7 +284,7 @@ else if not changes.isEmpty then do
     | WorkerState.crashed queuedMsgs => restartCrashedFileWorker doc.uri newFw (queuedMsgs.push msg)
     | WorkerState.running =>
       -- looks like it crashed now!
-      catch (fw.writeNotification "textDocument/didChange" p)
+      catch (fw.writeNotification "textDocument/didChange" p true)
             (fun err => handleCrash doc.uri newFw #[msg])
 else pure ()
 
@@ -294,7 +294,7 @@ terminateFileWorker p.textDocument.uri
 def handleCancelRequest (p : CancelParams) : ServerM Unit := do
 st ← read;
 fileWorkers ← st.fileWorkersRef.get;
-fileWorkers.forM (fun _ fw => fw.writeNotification "$/cancelRequest" p)
+fileWorkers.forM (fun _ fw => fw.writeNotification "$/cancelRequest" p true)
 
 def handleRequest (id : RequestID) (method : String) (params : Json) : ServerM Unit := do
 let h := (fun α [HasFromJson α] [HasToJson α] [HasFileSource α] => do
