@@ -54,6 +54,9 @@ instance Structured.hasToJson : HasToJson Structured :=
   | Structured.arr a => arr a
   | Structured.obj o => obj o⟩
 
+def toStructured? {α : Type*} [HasToJson α] (v : α) : Option Structured :=
+fromJson? (toJson v)
+
 def getObjValAs? (j : Json) (α : Type u) [HasFromJson α] (k : String) : Option α :=
 (j.getObjVal? k).bind fromJson?
 
