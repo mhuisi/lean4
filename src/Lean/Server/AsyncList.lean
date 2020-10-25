@@ -1,4 +1,3 @@
-#lang lean4
 /-
 Copyright (c) 2020 Wojciech Nawrocki. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
@@ -14,10 +13,10 @@ universes u v
 /-- An async IO list is like a lazy list but instead of being *unevaluated* `Thunk`s,
 lazy tails are `Task`s *being evaluated asynchronously*. A tail can signal the end
 of computation (successful or due to a failure) with a terminating value of type `ε`. -/
-inductive AsyncList (ε : Type u) (α : Type v)
-| cons (hd : α) (tl : AsyncList ε α)
-| asyncCons (hd : α) (tl : Task $ Except ε $ AsyncList ε α)
-| nil
+inductive AsyncList (ε : Type u) (α : Type v) :=
+  | cons (hd : α) (tl : AsyncList ε α)
+  | asyncCons (hd : α) (tl : Task $ Except ε $ AsyncList ε α)
+  | nil
 
 namespace AsyncList
 
@@ -32,7 +31,7 @@ partial def append : AsyncList ε α → AsyncList ε α → AsyncList ε α
   | asyncCons hd ttl, s => asyncCons hd (ttl.map $ Except.map (append · s))
   | nil, s => s
 
-instance : HasAppend (AsyncList ε α) := ⟨append⟩
+instance : Append (AsyncList ε α) := ⟨append⟩
 
 def ofList : List α → AsyncList ε α :=
   List.foldr AsyncList.cons AsyncList.nil

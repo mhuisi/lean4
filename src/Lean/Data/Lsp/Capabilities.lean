@@ -23,7 +23,7 @@ inductive ClientCapabilities :=
 instance : FromJson ClientCapabilities :=
   ⟨fun j => ClientCapabilities.mk⟩
 
-instance ClientCapabilities.hasToJson : HasToJson ClientCapabilities :=
+instance ClientCapabilities.hasToJson : ToJson ClientCapabilities :=
 ⟨fun o => mkObj []⟩
 
 -- TODO largely unimplemented

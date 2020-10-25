@@ -9,39 +9,39 @@ import Lean.Data.Lsp
 namespace Lean
 namespace Lsp
 
-class HasFileSource (α : Type*) :=
-(fileSource : α → DocumentUri)
+class HasFileSource (α : Type) :=
+  (fileSource : α → DocumentUri)
 export HasFileSource (fileSource)
 
 instance Location.hasFileSource : HasFileSource Location :=
-⟨fun l => l.uri⟩
+  ⟨fun l => l.uri⟩
 
 instance TextDocumentIdentifier.hasFileSource : HasFileSource TextDocumentIdentifier :=
-⟨fun i => i.uri⟩
+  ⟨fun i => i.uri⟩
 
 instance VersionedTextDocumentIdentifier.hasFileSource : HasFileSource VersionedTextDocumentIdentifier :=
-⟨fun i => i.uri⟩
+  ⟨fun i => i.uri⟩
 
 instance TextDocumentEdit.hasFileSource : HasFileSource TextDocumentEdit :=
-⟨fun e => fileSource e.textDocument⟩
+  ⟨fun e => fileSource e.textDocument⟩
 
 instance TextDocumentItem.hasFileSource : HasFileSource TextDocumentItem :=
-⟨fun i => i.uri⟩
+  ⟨fun i => i.uri⟩
 
 instance TextDocumentPositionParams.hasFileSource : HasFileSource TextDocumentPositionParams :=
-⟨fun p => fileSource p.textDocument⟩
+  ⟨fun p => fileSource p.textDocument⟩
 
 instance DidOpenTextDocumentParams.hasFileSource : HasFileSource DidOpenTextDocumentParams :=
-⟨fun p => fileSource p.textDocument⟩
+  ⟨fun p => fileSource p.textDocument⟩
 
 instance DidChangeTextDocumentParams.hasFileSource : HasFileSource DidChangeTextDocumentParams :=
-⟨fun p => fileSource p.textDocument⟩
+  ⟨fun p => fileSource p.textDocument⟩
 
 instance DidCloseTextDocumentParams.hasFileSource : HasFileSource DidCloseTextDocumentParams :=
-⟨fun p => fileSource p.textDocument⟩
+  ⟨fun p => fileSource p.textDocument⟩
 
 instance HoverParams.hasFileSource : HasFileSource HoverParams :=
-⟨fun h => fileSource h.toTextDocumentPositionParams⟩
+  ⟨fun h => fileSource h.toTextDocumentPositionParams⟩
 
 end Lsp
 end Lean

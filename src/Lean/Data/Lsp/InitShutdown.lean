@@ -25,8 +25,8 @@ instance : FromJson ClientInfo := ⟨fun j => do
   let version? := j.getObjValAs? String "version"
   pure ⟨name, version?⟩⟩
 
-instance ClientInfo.hasToJson : HasToJson ClientInfo :=
-⟨fun o => mkObj $ ⟨"name", o.name⟩ :: opt "version" o.version?⟩ 
+instance ClientInfo.hasToJson : ToJson ClientInfo :=
+⟨fun o => mkObj $ ⟨"name", o.name⟩ :: opt "version" o.version?⟩
 
 inductive Trace :=
   | off
@@ -40,7 +40,7 @@ instance : FromJson Trace := ⟨fun j =>
   | some "verbose"  => Trace.verbose
   | _               => none⟩
 
-instance Trace.hasToJson : HasToJson Trace :=
+instance Trace.hasToJson : ToJson Trace :=
 ⟨fun o => match o with
   | Trace.off => "off"
   | Trace.messages => "messages"
@@ -75,13 +75,9 @@ instance : FromJson InitializeParams := ⟨fun j => do
   let workspaceFolders? := j.getObjValAs? (Array WorkspaceFolder) "workspaceFolders"
   pure ⟨processId?, clientInfo?, rootUri?, initializationOptions?, capabilities, trace, workspaceFolders?⟩⟩
 
-<<<<<<< HEAD
-inductive InitializedParams :=
-  | mk
-=======
-instance InitializeParams.hasToJson : HasToJson InitializeParams :=
+instance : ToJson InitializeParams :=
 ⟨fun o => mkObj $
-  opt "processId" o.processId? ++ 
+  opt "processId" o.processId? ++
   opt "clientInfo" o.clientInfo? ++
   opt "rootUri" o.rootUri? ++
   opt "initializationOptions" o.initializationOptions? ++
@@ -89,8 +85,8 @@ instance InitializeParams.hasToJson : HasToJson InitializeParams :=
   [⟨"trace", toJson o.trace⟩] ++
   opt "workspaceFolders" o.workspaceFolders?⟩
 
-inductive InitializedParams | mk
->>>>>>> f08bb25c14 (feat: initial multiprocess watchdog arch)
+inductive InitializedParams :=
+  | mk
 
 instance : FromJson InitializedParams :=
   ⟨fun j => InitializedParams.mk⟩
