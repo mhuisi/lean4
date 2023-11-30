@@ -160,19 +160,12 @@ PATH and inside your editor.</p>
 powershell -f elan-init.ps1 --default-toolchain none
 del elan-init.ps1
 </code></pre>
-<p>You can use <code>elan toolchain link</code> to give a specific stage build
-directory a reference name, then use <code>elan override set</code> to associate
-such a name to the current directory. We usually want to use <code>stage0</code>
-for editing files in <code>src</code> and <code>stage1</code> for everything else (e.g.
-tests).</p>
+<p>The <code>lean-toolchain</code> files in the Lean 4 repository are set up to use the <code>lean4-stage0</code>
+toolchain for editing files in <code>src</code> and the <code>lean4</code> toolchain for editing files in <code>tests</code>.</p>
+<p>Run the following commands to make <code>lean4</code> point at <code>stage1</code> and <code>lean4-stage0</code> point at <code>stage0</code>:</p>
 <pre><code class="language-bash"># in the Lean rootdir
 elan toolchain link lean4 build/release/stage1
 elan toolchain link lean4-stage0 build/release/stage0
-# make `lean` etc. point to stage1 in the rootdir and subdirs
-elan override set lean4
-cd src
-# make `lean` etc. point to stage0 anywhere inside `src`
-elan override set lean4-stage0
 </code></pre>
 <p>You can also use the <code>+toolchain</code> shorthand (e.g. <code>lean +lean4-debug</code>) to switch
 toolchains on the spot. <code>lean4-mode</code> will automatically use the <code>lean</code> executable
@@ -190,6 +183,12 @@ simply by pushing a tag to your fork of the Lean 4 github repository
 If you push <code>my-tag</code> to a fork in your github account <code>my_name</code>,
 you can then put <code>my_name/lean4:my-tag</code> in your <code>lean-toolchain</code> file in a project using <code>lake</code>.
 (You must use a tag name that does not start with a numeral, or contain <code>_</code>).</p>
+<h3 id="vs-code"><a class="header" href="#vs-code">VS Code</a></h3>
+<p>There is a <code>lean.code-workspace</code> file that correctly sets up VS Code with workspace roots for the stage0/stage1 setup described above as well as with other settings.
+You should always load it when working on Lean, such as by invoking</p>
+<pre><code>code lean.code-workspace
+</code></pre>
+<p>on the command line.</p>
 <h3 id="ccache"><a class="header" href="#ccache"><code>ccache</code></a></h3>
 <p>Lean's build process uses <a href="https://ccache.dev/"><code>ccache</code></a> if it is
 installed to speed up recompilation of the generated C code. Without
