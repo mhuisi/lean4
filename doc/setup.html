@@ -180,9 +180,9 @@ Foo.lean       # main file, import via `import Foo`
 Foo/
   A.lean       # further files, import via e.g. `import Foo.A`
   A/...        # further nesting
-build/         # `lake` build output directory
+.lake/         # `lake` build output directory
 </code></pre>
-<p>After running <code>lake build</code> you will see a binary named <code>./build/bin/foo</code> and when you run it you should see the output:</p>
+<p>After running <code>lake build</code> you will see a binary named <code>./.lake/build/bin/foo</code> and when you run it you should see the output:</p>
 <pre><code>Hello, world!
 </code></pre>
 <h2 id="editing"><a class="header" href="#editing">Editing</a></h2>
