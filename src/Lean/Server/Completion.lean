@@ -618,12 +618,14 @@ private def fieldIdCompletion
     (params     : CompletionParams)
     (ctx        : ContextInfo)
     (lctx       : LocalContext)
-    (id         : Name)
+    (id         : Option Name)
     (structName : Name)
     : IO (Option CompletionList) :=
+  dbg_trace structName
   runM params ctx lctx do
-    let idStr := id.toString
+    let idStr := id.map (·.toString) |>.getD ""
     let fieldNames := getStructureFieldsFlattened (← getEnv) structName (includeSubobjectFields := false)
+    dbg_trace fieldNames
     for fieldName in fieldNames do
       let .str _ fieldName := fieldName | continue
       let some score := fuzzyMatchScoreWithThreshold? idStr fieldName | continue
@@ -919,6 +921,7 @@ where
   | .hole .. =>
     none
 
+
 private def findSyntheticTacticCompletion?
     (fileMap  : FileMap)
     (hoverPos : String.Pos)
@@ -931,19 +934,67 @@ private def findSyntheticTacticCompletion?
   -- Neither `HoverInfo` nor the syntax in `.tactic` are important for tactic completion.
   return (HoverInfo.after, ctx, .tactic .missing)
 
+private def findExpectedTypeAt (infoTree : InfoTree) (hoverPos : String.Pos) : Option (ContextInfo × Expr) := do
+  let (ctx, .ofTermInfo i) ← infoTree.smallestInfo? fun i => Id.run do
+      let some pos := i.pos?
+        | return false
+      let some tailPos := i.tailPos?
+        | return false
+      let .ofTermInfo ti := i
+        | return false
+      return ti.expectedType?.isSome && pos <= hoverPos && hoverPos < tailPos
+    | none
+  (ctx, i.expectedType?.get!)
+
+
+private def isSyntheticFieldCompletion
+  (hoverPos : String.Pos)
+  (cmdStx   : Syntax)
+  : Bool :=
+  Option.isSome <| cmdStx.find? fun stx => Id.run do
+    dbg_trace stx
+    dbg_trace stx matches `(Parser.Command.whereStructInst|where)
+    dbg_trace stx.getTailPos? (canonicalOnly := true)
+    dbg_trace "----"
+    if !(stx matches `(Parser.Command.whereStructInst|where)) then
+      return false
+    let some tailPos := stx.getTailPos? (canonicalOnly := true)
+      | return false
+    return tailPos <= hoverPos && hoverPos.byteIdx < tailPos.byteIdx + stx.getTrailingSize
+
+private def findSyntheticFieldCompletion?
+  (hoverPos : String.Pos)
+  (cmdStx   : Syntax)
+  (infoTree : InfoTree)
+  : Option (HoverInfo × ContextInfo × CompletionInfo) := do
+  if ! isSyntheticFieldCompletion hoverPos cmdStx then
+    dbg_trace "1"
+    none
+  let (ctx, expectedType) ← findExpectedTypeAt infoTree hoverPos
+  let .const typeName _ := expectedType.getAppFn
+    | dbg_trace "2"; none
+  if ! isStructure ctx.env typeName then
+    dbg_trace "3"; none
+  dbg_trace "4"
+  return (HoverInfo.after, ctx, .fieldId .missing none .empty typeName)
+
+
 private def findCompletionInfoAt?
     (fileMap  : FileMap)
     (hoverPos : String.Pos)
     (cmdStx   : Syntax)
     (infoTree : InfoTree)
     : Option (HoverInfo × ContextInfo × CompletionInfo) :=
+  dbg_trace hoverPos
   let ⟨hoverLine, _⟩ := fileMap.toPosition hoverPos
   match infoTree.foldInfo (init := none) (choose hoverLine) with
   | some (hoverInfo, ctx, Info.ofCompletionInfo info) =>
     some (hoverInfo, ctx, info)
   | _ =>
     findSyntheticTacticCompletion? fileMap hoverPos cmdStx infoTree <|>
+      findSyntheticFieldCompletion? hoverPos cmdStx infoTree <|>
       findSyntheticIdentifierCompletion? hoverPos infoTree
+
 where
   choose
       (hoverLine : Nat)

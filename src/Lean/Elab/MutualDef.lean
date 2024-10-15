@@ -275,7 +275,7 @@ private partial def withFunLocalDecls {α} (headers : Array DefViewElabHeader) (
   loop 0 #[]
 
 private def expandWhereStructInst : Macro
-  | `(Parser.Command.whereStructInst|where $[$decls:letDecl];* $[$whereDecls?:whereDecls]?) => do
+  | whereStx@`(Parser.Command.whereStructInst|where%$whereTk $[$decls:letDecl];* $[$whereDecls?:whereDecls]?) => do
     let letIdDecls ← decls.mapM fun stx => match stx with
       | `(letDecl|$_decl:letPatDecl) => Macro.throwErrorAt stx "patterns are not allowed here"
       | `(letDecl|$decl:letEqnsDecl) => expandLetEqnsDecl decl (useExplicit := false)
@@ -292,7 +292,27 @@ private def expandWhereStructInst : Macro
         `(structInstField|$id:ident := $val)
       | stx@`(letIdDecl|_ $_* $[: $_]? := $_) => Macro.throwErrorAt stx "'_' is not allowed here"
       | _ => Macro.throwUnsupported
-    let body ← `(structInst| { $structInstFields,* })
+    let startOfStructureTkInfo : SourceInfo :=
+      match whereTk.getPos? with
+      | some pos => .synthetic pos ⟨pos.byteIdx + 1⟩ true
+      | none => .none
+    let startOfStructureTk : Syntax := .atom startOfStructureTkInfo "{"
+    let structureStxTailInfo :=
+      whereStx[1]?.bind (·.getTailInfo?)
+      <|> whereStx[0]?.bind (·.getTailInfo?)
+    let endOfStructureTkInfo : SourceInfo :=
+      match structureStxTailInfo with
+      | some (SourceInfo.original _ _ trailing _) =>
+        let tokenPos := trailing.str.prev trailing.stopPos
+        let tokenEndPos := trailing.stopPos
+        .synthetic tokenPos tokenEndPos true
+      | _ => .none
+    let endOfStructureTk : Syntax := .atom endOfStructureTkInfo "}"
+    let body ← `(structInst| {%$startOfStructureTk $structInstFields,* }%$endOfStructureTk)
+    let body := body.raw.setInfo <|
+      match startOfStructureTkInfo.getPos?, endOfStructureTkInfo.getTailPos? with
+      | some startPos, some endPos => .synthetic startPos endPos true
+      | _, _ => .none
     match whereDecls? with
     | some whereDecls => expandWhereDecls whereDecls body
     | none => return body

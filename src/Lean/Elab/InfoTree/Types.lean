@@ -79,7 +79,7 @@ inductive CompletionInfo where
   | dot (termInfo : TermInfo) (expectedType? : Option Expr)
   | id (stx : Syntax) (id : Name) (danglingDot : Bool) (lctx : LocalContext) (expectedType? : Option Expr)
   | dotId (stx : Syntax) (id : Name) (lctx : LocalContext) (expectedType? : Option Expr)
-  | fieldId (stx : Syntax) (id : Name) (lctx : LocalContext) (structName : Name)
+  | fieldId (stx : Syntax) (id : Option Name) (lctx : LocalContext) (structName : Name)
   | namespaceId (stx : Syntax)
   | option (stx : Syntax)
   | endSection (stx : Syntax) (scopeNames : List String)
