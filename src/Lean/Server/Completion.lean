@@ -865,7 +865,7 @@ where
     let tactics := tacticsNode.getArgs
     -- We want to provide completions in the case of `skip;<CURSOR>`, so the cursor must only be on
     -- whitespace, not in proper whitespace.
-    return isCursorOnWhitspace && tactics.any fun tactic => Id.run do
+    return isCursorOnWhitespace && tactics.any fun tactic => Id.run do
       let some tailPos := tactic.getTailPos?
         | return false
       let isCursorAfterSemicolon :=
@@ -885,7 +885,7 @@ where
   isCompletionInEmptyTacticBlock (stx : Syntax) : Bool :=
     isCursorInProperWhitespace && isEmptyTacticBlock stx
 
-  isCursorOnWhitspace : Bool :=
+  isCursorOnWhitespace : Bool :=
     fileMap.source.atEnd hoverPos || (fileMap.source.get hoverPos).isWhitespace
 
   isCursorInProperWhitespace : Bool :=
@@ -948,26 +948,67 @@ private def findExpectedTypeAt (infoTree : InfoTree) (hoverPos : String.Pos) : O
 
 
 private def isSyntheticFieldCompletion
+  (fileMap  : FileMap)
   (hoverPos : String.Pos)
   (cmdStx   : Syntax)
-  : Bool :=
-  Option.isSome <| cmdStx.find? fun stx => Id.run do
-    dbg_trace stx
-    dbg_trace stx matches `(Parser.Command.whereStructInst|where)
-    dbg_trace stx.getTailPos? (canonicalOnly := true)
-    dbg_trace "----"
-    if !(stx matches `(Parser.Command.whereStructInst|where)) then
-      return false
-    let some tailPos := stx.getTailPos? (canonicalOnly := true)
+  : Bool := Id.run do
+  if ! isCursorOnWhitespace then
+    return false
+  let hoverFilePos := fileMap.toPosition hoverPos
+  let mut hoverLineIndentation := getIndentationAmount fileMap hoverFilePos.line
+  if hoverFilePos.column < hoverLineIndentation then
+    -- Ignore trailing whitespace after the cursor
+    hoverLineIndentation := hoverFilePos.column
+  return Option.isSome <| cmdStx.find? fun stx => Id.run do
+    let `(Parser.Command.whereStructInst|where $structFields:whereStructField;* $[$whereDecls?:whereDecls]?) :=
+        stx
       | return false
-    return tailPos <= hoverPos && hoverPos.byteIdx < tailPos.byteIdx + stx.getTrailingSize
+    let isEmptyStructureCompletion := Id.run do
+      if ! (stx matches `(Parser.Command.whereStructInst|where)) then
+        return false
+      let some tailPos := stx.getTailPos? (canonicalOnly := true)
+        | return false
+      return tailPos <= hoverPos && hoverPos.byteIdx < tailPos.byteIdx + stx.getTrailingSize
+    if isEmptyStructureCompletion then
+      return true
+    let isCompletionAfterSemicolon := structFields.elemsAndSeps.any fun fieldOrSep => Id.run do
+      if ! fieldOrSep.isToken ";" then
+        return false
+      let some sepTailPos := fieldOrSep.getTailPos?
+        | return false
+      return sepTailPos <= hoverPos && hoverPos.byteIdx < sepTailPos.byteIdx + fieldOrSep.getTrailingSize
+    if isCompletionAfterSemicolon then
+      return true
+    let isCompletionOnWhereBlockIndentation := Id.run do
+      if ! isCursorInProperWhitespace then
+        return false
+      let isCursorInIndentation := hoverFilePos.column <= hoverLineIndentation
+      if ! isCursorInIndentation then
+        return false
+      let some firstFieldPos := stx[1].getPos?
+        | return false
+      let firstFieldLine := fileMap.toPosition firstFieldPos |>.line
+      let firstFieldIndentation := getIndentationAmount fileMap firstFieldLine
+      let isCursorInWhereBlock := hoverLineIndentation == firstFieldIndentation
+      return isCursorInWhereBlock
+    return isCompletionOnWhereBlockIndentation
+
+where
+
+  isCursorOnWhitespace : Bool :=
+    fileMap.source.atEnd hoverPos || (fileMap.source.get hoverPos).isWhitespace
+
+  isCursorInProperWhitespace : Bool :=
+    (fileMap.source.atEnd hoverPos || (fileMap.source.get hoverPos).isWhitespace)
+      && (fileMap.source.get (hoverPos - ⟨1⟩)).isWhitespace
 
 private def findSyntheticFieldCompletion?
+  (fileMap  : FileMap)
   (hoverPos : String.Pos)
   (cmdStx   : Syntax)
   (infoTree : InfoTree)
   : Option (HoverInfo × ContextInfo × CompletionInfo) := do
-  if ! isSyntheticFieldCompletion hoverPos cmdStx then
+  if ! isSyntheticFieldCompletion fileMap hoverPos cmdStx then
     dbg_trace "1"
     none
   let (ctx, expectedType) ← findExpectedTypeAt infoTree hoverPos
@@ -992,7 +1033,7 @@ private def findCompletionInfoAt?
     some (hoverInfo, ctx, info)
   | _ =>
     findSyntheticTacticCompletion? fileMap hoverPos cmdStx infoTree <|>
-      findSyntheticFieldCompletion? hoverPos cmdStx infoTree <|>
+      findSyntheticFieldCompletion? fileMap hoverPos cmdStx infoTree <|>
       findSyntheticIdentifierCompletion? hoverPos infoTree
 
 where
