@@ -66,7 +66,7 @@ structure ElabInfo where
 structure TermInfo extends ElabInfo where
   lctx : LocalContext -- The local context when the term was elaborated.
   expectedType? : Option Expr
-  expr : Expr
+  expr? : Option Expr
   isBinder : Bool := false
   deriving Inhabited
 
@@ -165,6 +165,8 @@ regular delaboration settings.
 structure OmissionInfo extends TermInfo where
   reason : String
 
+structure ChoiceInfo extends ElabInfo where
+
 /-- Header information for a node in `InfoTree`. -/
 inductive Info where
   | ofTacticInfo (i : TacticInfo)
@@ -179,6 +181,7 @@ inductive Info where
   | ofFVarAliasInfo (i : FVarAliasInfo)
   | ofFieldRedeclInfo (i : FieldRedeclInfo)
   | ofOmissionInfo (i : OmissionInfo)
+  | ofChoiceInfo (i : ChoiceInfo)
   deriving Inhabited
 
 /-- The InfoTree is a structure that is generated during elaboration and used

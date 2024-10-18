@@ -139,11 +139,16 @@ def TermInfo.runMetaM (info : TermInfo) (ctx : ContextInfo) (x : MetaM α) : IO 
 
 def TermInfo.format (ctx : ContextInfo) (info : TermInfo) : IO Format := do
   info.runMetaM ctx do
-    let ty : Format ← try
-      Meta.ppExpr (← Meta.inferType info.expr)
-    catch _ =>
-      pure "<failed-to-infer-type>"
-    return f!"{← Meta.ppExpr info.expr} {if info.isBinder then "(isBinder := true) " else ""}: {ty} @ {formatElabInfo ctx info.toElabInfo}"
+    let exprInfo : Format ← do
+      let some expr := info.expr?
+        | return f!"<missing expr>"
+      let ty : Format ←
+        try
+          Meta.ppExpr (← Meta.inferType expr)
+        catch _ =>
+          pure "<failed-to-infer-type>"
+      pure f!"{← Meta.ppExpr expr} {if info.isBinder then "(isBinder := true) " else ""}: {ty}"
+    return f!"{exprInfo} @ {formatElabInfo ctx info.toElabInfo}"
 
 def CompletionInfo.format (ctx : ContextInfo) (info : CompletionInfo) : IO Format :=
   match info with
@@ -191,6 +196,9 @@ def FieldRedeclInfo.format (ctx : ContextInfo) (info : FieldRedeclInfo) : Format
 def OmissionInfo.format (ctx : ContextInfo) (info : OmissionInfo) : IO Format := do
   return f!"Omission @ {← TermInfo.format ctx info.toTermInfo}\nReason: {info.reason}"
 
+def ChoiceInfo.format (ctx : ContextInfo) (info : ChoiceInfo) : Format :=
+  f!"Choice @ {formatElabInfo ctx info.toElabInfo}"
+
 def Info.format (ctx : ContextInfo) : Info → IO Format
   | ofTacticInfo i         => i.format ctx
   | ofTermInfo i           => i.format ctx
@@ -204,6 +212,7 @@ def Info.format (ctx : ContextInfo) : Info → IO Format
   | ofFVarAliasInfo i      => pure <| i.format
   | ofFieldRedeclInfo i    => pure <| i.format ctx
   | ofOmissionInfo i       => i.format ctx
+  | ofChoiceInfo i         => pure <| i.format ctx
 
 def Info.toElabInfo? : Info → Option ElabInfo
   | ofTacticInfo i         => some i.toElabInfo
@@ -218,6 +227,7 @@ def Info.toElabInfo? : Info → Option ElabInfo
   | ofFVarAliasInfo _      => none
   | ofFieldRedeclInfo _    => none
   | ofOmissionInfo i       => some i.toElabInfo
+  | ofChoiceInfo i         => some i.toElabInfo
 
 /--
   Helper function for propagating the tactic metavariable context to its children nodes.
@@ -279,7 +289,7 @@ def addConstInfo [MonadEnv m] [MonadError m]
   pushInfoLeaf <| .ofTermInfo {
     elaborator := .anonymous
     lctx := .empty
-    expr := (← mkConstWithLevelParams n)
+    expr? := (← mkConstWithLevelParams n)
     stx
     expectedType?
   }

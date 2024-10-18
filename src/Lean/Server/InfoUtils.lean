@@ -146,6 +146,7 @@ def Info.stx : Info → Syntax
   | ofFVarAliasInfo _      => .missing
   | ofFieldRedeclInfo i    => i.stx
   | ofOmissionInfo i       => i.stx
+  | ofChoiceInfo i         => i.stx
 
 def Info.lctx : Info → LocalContext
   | .ofTermInfo i           => i.lctx

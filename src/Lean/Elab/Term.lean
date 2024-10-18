@@ -493,6 +493,8 @@ def observing (x : TermElabM α) : TermElabM (TermElabResult α) := do
   catch
     | ex@(.error ..) =>
       let sNew ← saveState
+      let foo ← sNew.meta.core.infoState.trees.mapM (fun tree => InfoTree.format tree)
+      dbg_trace foo.toArray
       s.restore (restoreInfo := true)
       return .error ex sNew
     | ex@(.internal id _) =>
@@ -1271,7 +1273,7 @@ def mkTermInfo (elaborator : Name) (stx : Syntax) (e : Expr) (expectedType? : Op
   | some mvarId => return Sum.inr mvarId
   | none =>
     let e := removeSaveInfoAnnotation e
-    return Sum.inl <| Info.ofTermInfo { elaborator, lctx := lctx?.getD (← getLCtx), expr := e, stx, expectedType?, isBinder }
+    return Sum.inl <| Info.ofTermInfo { elaborator, lctx := lctx?.getD (← getLCtx), expr? := e, stx, expectedType?, isBinder }
 
 /--
 Pushes a new leaf node to the info tree associating the expression `e` to the syntax `stx`.
@@ -1360,6 +1362,7 @@ private def elabUsingElabFnsAux (s : SavedState) (stx : Syntax) (expectedType? :
               throw ex)
     catch ex => match ex with
       | .internal id _ =>
+        dbg_trace "internal exception"
         if id == unsupportedSyntaxExceptionId then
           s.restore  -- also removes the info tree created above
           elabUsingElabFnsAux s stx expectedType? catchExPostpone elabFns
@@ -1734,7 +1737,7 @@ private partial def elabTermAux (expectedType? : Option Expr) (catchExPostpone :
 
 /-- Store in the `InfoTree` that `e` is a "dot"-completion target. `stx` should cover the entire term. -/
 def addDotCompletionInfo (stx : Syntax) (e : Expr) (expectedType? : Option Expr) : TermElabM Unit := do
-  addCompletionInfo <| CompletionInfo.dot { expr := e, stx, lctx := (← getLCtx), elaborator := .anonymous, expectedType? } (expectedType? := expectedType?)
+  addCompletionInfo <| CompletionInfo.dot { expr? := e, stx, lctx := (← getLCtx), elaborator := .anonymous, expectedType? } (expectedType? := expectedType?)
 
 /--
   Main function for elaborating terms.

@@ -195,7 +195,7 @@ where
     stx := stx,
     lctx := (← getLCtx),
     expectedType? := none,
-    expr := e,
+    expr? := e,
     isBinder := isBinder
  }
 
