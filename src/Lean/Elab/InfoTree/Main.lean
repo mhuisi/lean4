@@ -139,16 +139,15 @@ def TermInfo.runMetaM (info : TermInfo) (ctx : ContextInfo) (x : MetaM α) : IO 
 
 def TermInfo.format (ctx : ContextInfo) (info : TermInfo) : IO Format := do
   info.runMetaM ctx do
-    let exprInfo : Format ← do
-      let some expr := info.expr?
-        | return f!"<missing expr>"
-      let ty : Format ←
-        try
-          Meta.ppExpr (← Meta.inferType expr)
-        catch _ =>
-          pure "<failed-to-infer-type>"
-      pure f!"{← Meta.ppExpr expr} {if info.isBinder then "(isBinder := true) " else ""}: {ty}"
-    return f!"{exprInfo} @ {formatElabInfo ctx info.toElabInfo}"
+    let ty : Format ←
+      try
+        Meta.ppExpr (← Meta.inferType info.expr)
+      catch _ =>
+        pure "<failed-to-infer-type>"
+    return f!"{← Meta.ppExpr info.expr} {if info.isBinder then "(isBinder := true) " else ""}: {ty} @ {formatElabInfo ctx info.toElabInfo}"
+
+def PartialTermInfo.format (ctx : ContextInfo) (info : PartialTermInfo) : Format :=
+  f!"Partial term @ {formatElabInfo ctx info.toElabInfo}"
 
 def CompletionInfo.format (ctx : ContextInfo) (info : CompletionInfo) : IO Format :=
   match info with
@@ -202,6 +201,7 @@ def ChoiceInfo.format (ctx : ContextInfo) (info : ChoiceInfo) : Format :=
 def Info.format (ctx : ContextInfo) : Info → IO Format
   | ofTacticInfo i         => i.format ctx
   | ofTermInfo i           => i.format ctx
+  | ofPartialTermInfo i    => pure <| i.format ctx
   | ofCommandInfo i        => i.format ctx
   | ofMacroExpansionInfo i => i.format ctx
   | ofOptionInfo i         => i.format ctx
@@ -217,6 +217,7 @@ def Info.format (ctx : ContextInfo) : Info → IO Format
 def Info.toElabInfo? : Info → Option ElabInfo
   | ofTacticInfo i         => some i.toElabInfo
   | ofTermInfo i           => some i.toElabInfo
+  | ofPartialTermInfo i    => some i.toElabInfo
   | ofCommandInfo i        => some i.toElabInfo
   | ofMacroExpansionInfo _ => none
   | ofOptionInfo _         => none
@@ -289,7 +290,7 @@ def addConstInfo [MonadEnv m] [MonadError m]
   pushInfoLeaf <| .ofTermInfo {
     elaborator := .anonymous
     lctx := .empty
-    expr? := (← mkConstWithLevelParams n)
+    expr := (← mkConstWithLevelParams n)
     stx
     expectedType?
   }
@@ -327,18 +328,23 @@ It saves the current list of trees `t₀` and resets it and then runs `x >>= mkI
 Running `x >>= mkInfo` will modify the trees state and produce a new list of trees `t₁`.
 In the `i : Info` case, `t₁` become the children of a node `node i t₁` that is appended to `t₀`.
  -/
-def withInfoContext' [MonadFinally m] (x : m α) (mkInfo : α → m (Sum Info MVarId)) : m α := do
+def withInfoContext'
+    [MonadFinally m]
+    (x : m α)
+    (mkInfo : α → m (Sum Info MVarId))
+    (mkInfoOnError : m Info) :
+    m α := do
   if (← getInfoState).enabled then
     let treesSaved ← getResetInfoTrees
     Prod.fst <$> MonadFinally.tryFinally' x fun a? => do
-      match a? with
-      | none   => modifyInfoTrees fun _ => treesSaved
-      | some a =>
-        let info ← mkInfo a
-        modifyInfoTrees fun trees =>
-          match info with
-          | Sum.inl info   => treesSaved.push <| InfoTree.node info trees
-          | Sum.inr mvarId => treesSaved.push <| InfoTree.hole mvarId
+      let info ← do
+        match a? with
+        | none => pure <| .inl <| ← mkInfoOnError
+        | some a => mkInfo a
+      modifyInfoTrees fun trees =>
+        match info with
+        | Sum.inl info   => treesSaved.push <| InfoTree.node info trees
+        | Sum.inr mvarId => treesSaved.push <| InfoTree.hole mvarId
   else
     x
 

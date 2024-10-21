@@ -136,6 +136,7 @@ def InfoTree.getCompletionInfos (infoTree : InfoTree) : Array (ContextInfo × Co
 def Info.stx : Info → Syntax
   | ofTacticInfo i         => i.stx
   | ofTermInfo i           => i.stx
+  | ofPartialTermInfo i    => i.stx
   | ofCommandInfo i        => i.stx
   | ofMacroExpansionInfo i => i.stx
   | ofOptionInfo i         => i.stx

@@ -86,7 +86,7 @@ where
         infos :=
           .fromList [(0, .ofTermInfo {
             lctx := .empty,
-            expr? := some <| .const n params,
+            expr := .const n params,
             stx := .ident .none (toString n).toSubstring n [.decl n []],
             elaborator := `Delab,
             expectedType? := none

@@ -433,12 +433,15 @@ private def elabFunValues (headers : Array DefViewElabHeader) (vars : Array Expr
           -- Store instantiated body in info tree for the benefit of the unused variables linter
           -- and other metaprograms that may want to inspect it without paying for the instantiation
           -- again
-          withInfoContext' valStx (mkInfo := mkTermInfo `MutualDef.body valStx) do
-            -- synthesize mvars here to force the top-level tactic block (if any) to run
-            let val ← elabTermEnsuringType valStx type <* synthesizeSyntheticMVarsNoPostponing
-            -- NOTE: without this `instantiatedMVars`, `mkLambdaFVars` may leave around a redex that
-            -- leads to more section variables being included than necessary
-            instantiateMVarsProfiling val
+          withInfoContext' valStx
+            (mkInfo := mkTermInfo `MutualDef.body valStx)
+            (mkInfoOnError := mkPartialTermInfo `MutualDef.body valStx)
+            do
+              -- synthesize mvars here to force the top-level tactic block (if any) to run
+              let val ← elabTermEnsuringType valStx type <* synthesizeSyntheticMVarsNoPostponing
+              -- NOTE: without this `instantiatedMVars`, `mkLambdaFVars` may leave around a redex that
+              -- leads to more section variables being included than necessary
+              instantiateMVarsProfiling val
         let val ← mkLambdaFVars xs val
         if linter.unusedSectionVars.get (← getOptions) && !header.type.hasSorry && !val.hasSorry then
           let unusedVars ← vars.filterMapM fun var => do

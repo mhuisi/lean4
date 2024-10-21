@@ -66,8 +66,14 @@ structure ElabInfo where
 structure TermInfo extends ElabInfo where
   lctx : LocalContext -- The local context when the term was elaborated.
   expectedType? : Option Expr
-  expr? : Option Expr
+  expr : Expr
   isBinder : Bool := false
+  deriving Inhabited
+
+-- Used instead of `TermInfo` when a term couldn't successfully be elaborated.
+structure PartialTermInfo extends ElabInfo where
+  lctx : LocalContext -- The local context when the term was elaborated.
+  expectedType? : Option Expr
   deriving Inhabited
 
 structure CommandInfo extends ElabInfo where
@@ -171,6 +177,7 @@ structure ChoiceInfo extends ElabInfo where
 inductive Info where
   | ofTacticInfo (i : TacticInfo)
   | ofTermInfo (i : TermInfo)
+  | ofPartialTermInfo (i : PartialTermInfo)
   | ofCommandInfo (i : CommandInfo)
   | ofMacroExpansionInfo (i : MacroExpansionInfo)
   | ofOptionInfo (i : OptionInfo)

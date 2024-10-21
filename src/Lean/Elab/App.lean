@@ -1634,8 +1634,6 @@ private def mergeFailures (f : Syntax) (failures : Array (TermElabResult Expr)) 
   let exs := failures.map fun | .error ex _ => ex | _ => unreachable!
   let trees := failures.map (fun | .error _ s => s.meta.core.infoState.trees | _ => unreachable!)
     |>.filterMap (·[0]?)
-  let foo ← failures.mapM (fun | .error _ s => s.meta.core.infoState.trees.mapM (fun tree => InfoTree.format tree) | _ => unreachable!)
-  dbg_trace foo.map (·.toArray)
   withInfoContext (mkInfo := pure <| .ofChoiceInfo { elaborator := .anonymous, stx := f}) do
     for tree in trees do
       pushInfoTree tree
