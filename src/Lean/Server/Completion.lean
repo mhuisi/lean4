@@ -1022,13 +1022,70 @@ where
     (fileMap.source.atEnd hoverPos || (fileMap.source.get hoverPos).isWhitespace)
       && (fileMap.source.get (hoverPos - ⟨1⟩)).isWhitespace
 
+private def isSyntheticFieldCompletion'
+  (fileMap  : FileMap)
+  (hoverPos : String.Pos)
+  (cmdStx   : Syntax)
+  : Bool := Id.run do
+  if ! isCursorOnWhitespace then
+    return false
+  let hoverFilePos := fileMap.toPosition hoverPos
+  let mut hoverLineIndentation := getIndentationAmount fileMap hoverFilePos.line
+  if hoverFilePos.column < hoverLineIndentation then
+    -- Ignore trailing whitespace after the cursor
+    hoverLineIndentation := hoverFilePos.column
+  return Option.isSome <| cmdStx.find? fun stx => Id.run do
+    let `(Lean.Parser.Term.structInst| { $[$srcs,* with]? $fields,* $[..%$ell]? $[: $ty]? }) :=
+        stx
+      | return false
+    let isEmptyStructureCompletion := Id.run do
+      let `(Lean.Parser.Term.structInst| { $[$_,* with]? $[..]? $[: $_]? }) := stx
+        | return false
+      let some startPos := stx[1].getTailPos? <|> stx[0].getTailPos?
+        | return false
+      let some endPos := stx[3].getPos? <|> stx[4].getPos? <|> stx[5].getPos?
+        | return false
+      return startPos < hoverPos && hoverPos < endPos
+    if isEmptyStructureCompletion then
+      return true
+    let isCompletionAfterComma := fields.elemsAndSeps.any fun fieldOrSep => Id.run do
+      if ! fieldOrSep.isToken "," then
+        return false
+      let some sepTailPos := fieldOrSep.getTailPos?
+        | return false
+      return sepTailPos <= hoverPos && hoverPos.byteIdx < sepTailPos.byteIdx + fieldOrSep.getTrailingSize
+    if isCompletionAfterComma then
+      return true
+    let isCompletionOnStructInstIndentation := Id.run do
+      if ! isCursorInProperWhitespace then
+        return false
+      let isCursorInIndentation := hoverFilePos.column <= hoverLineIndentation
+      if ! isCursorInIndentation then
+        return false
+      let some firstFieldPos := stx[2].getPos?
+        | return false
+      let firstFieldLine := fileMap.toPosition firstFieldPos |>.line
+      let firstFieldIndentation := getIndentationAmount fileMap firstFieldLine
+      let isCursorInStructInstBlock := hoverLineIndentation == firstFieldIndentation
+      return isCursorInStructInstBlock
+    return isCompletionOnStructInstIndentation
+
+where
+
+  isCursorOnWhitespace : Bool :=
+    fileMap.source.atEnd hoverPos || (fileMap.source.get hoverPos).isWhitespace
+
+  isCursorInProperWhitespace : Bool :=
+    (fileMap.source.atEnd hoverPos || (fileMap.source.get hoverPos).isWhitespace)
+      && (fileMap.source.get (hoverPos - ⟨1⟩)).isWhitespace
+
 private def findSyntheticFieldCompletion?
   (fileMap  : FileMap)
   (hoverPos : String.Pos)
   (cmdStx   : Syntax)
   (infoTree : InfoTree)
   : Option (HoverInfo × ContextInfo × CompletionInfo) := do
-  if ! isSyntheticFieldCompletion fileMap hoverPos cmdStx then
+  if ! isSyntheticFieldCompletion fileMap hoverPos cmdStx && ! isSyntheticFieldCompletion' fileMap hoverPos cmdStx then
     none
   let (ctx, expectedType) ← findExpectedTypeAt infoTree hoverPos
   let .const typeName _ := expectedType.getAppFn
