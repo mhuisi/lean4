@@ -43,11 +43,12 @@ inductive CompletionIdentifier where
   deriving FromJson, ToJson
 
 /--
-`CompletionItemData` that also contains a `CompletionIdentifier`.
-See the documentation of`CompletionItemData` and `CompletionIdentifier`.
+`CompletionItemData` that contains additional information to identify the item
+in order to resolve it.
 -/
-structure CompletionItemDataWithId extends CompletionItemData where
-  id?    : Option CompletionIdentifier
+structure ResolvableCompletionItemData extends CompletionItemData where
+  completionInfoPos : Nat
+  id?               : Option CompletionIdentifier
   deriving FromJson, ToJson
 
 /--
@@ -73,6 +74,8 @@ def CompletionItem.resolve
     item := { item with detail? := detail? }
 
   return item
+
+def CompletionList.empty : CompletionList := { items := #[], isIncomplete := true }
 
 end Lean.Lsp
 
@@ -123,28 +126,26 @@ private def allowCompletion (eligibleHeaderDecls : EligibleHeaderDecls) (env : E
   eligibleHeaderDecls.contains declName ||
     env.constants.map₂.contains declName && Lean.Meta.allowCompletion env declName
 
-/--
-Sorts `items` descendingly according to their score and ascendingly according to their label
-for equal scores.
--/
-private def sortCompletionItems (items : Array (CompletionItem × Float)) : Array CompletionItem :=
-  let items := items.qsort fun (i1, s1) (i2, s2) =>
-    if s1 != s2 then
-      s1 > s2
-    else
-      i1.label.map (·.toLower) < i2.label.map (·.toLower)
-  items.map (·.1)
+structure ScoredCompletionItem where
+  item  : CompletionItem
+  score : Float
+  deriving Inhabited
+
+structure Context where
+  params            : CompletionParams
+  completionInfoPos : Nat
+
 
 /-- Intermediate state while completions are being computed. -/
 structure State where
   /-- All completion items and their fuzzy match scores so far. -/
-  items  : Array (CompletionItem × Float) := #[]
+  items  : Array ScoredCompletionItem := #[]
 
 /--
 Monad used for completion computation that allows modifying a completion `State` and reading
 `CompletionParams`.
 -/
-abbrev M := OptionT $ ReaderT CompletionParams $ StateRefT State MetaM
+abbrev M := ReaderT Context $ StateRefT State MetaM
 
 /-- Adds a new completion item to the state in `M`. -/
 private def addItem
@@ -152,10 +153,15 @@ private def addItem
     (score : Float)
     (id?   : Option CompletionIdentifier := none)
     : M Unit := do
-  let params ← read
-  let data := { params, id? : CompletionItemDataWithId }
+  let ctx ← read
+  let data := {
+    params := ctx.params,
+    completionInfoPos := ctx.completionInfoPos,
+    id?
+    : ResolvableCompletionItemData
+  }
   let item := { item with data? := toJson data }
-  modify fun s => { s with items := s.items.push (item, score) }
+  modify fun s => { s with items := s.items.push ⟨item, score⟩ }
 
 /--
 Adds a new completion item with the given `label`, `id`, `kind` and `score` to the state in `M`.
@@ -226,13 +232,16 @@ private def addNamespaceCompletionItem (ns : Name) (score : Float) : M Unit := d
   let item := { label := ns.toString, detail? := "namespace", documentation? := none, kind? := CompletionItemKind.module }
   addItem item score
 
-private def runM (params : CompletionParams) (ctx : ContextInfo) (lctx : LocalContext) (x : M Unit)
-    : IO (Option CompletionList) :=
+private def runM
+    (params            : CompletionParams)
+    (completionInfoPos : Nat)
+    (ctx               : ContextInfo)
+    (lctx              : LocalContext)
+    (x                 : M Unit)
+    : IO (Array ScoredCompletionItem) :=
   ctx.runMetaM lctx do
-    match (← x.run |>.run params |>.run {}) with
-    | (none, _) => return none
-    | (some _, s) =>
-      return some { items := sortCompletionItems s.items, isIncomplete := true }
+    let (_, s) ← x.run ⟨params, completionInfoPos⟩ |>.run {}
+    return s.items
 
 private def matchAtomic (id : Name) (declName : Name) : Option Float :=
   match id, declName with
@@ -443,15 +452,16 @@ private def idCompletionCore
   completeNamespaces ctx id danglingDot
 
 private def idCompletion
-    (params        : CompletionParams)
-    (ctx           : ContextInfo)
-    (lctx          : LocalContext)
-    (stx           : Syntax)
-    (id            : Name)
-    (hoverInfo     : HoverInfo)
-    (danglingDot   : Bool)
-    : IO (Option CompletionList) :=
-  runM params ctx lctx do
+    (params            : CompletionParams)
+    (completionInfoPos : Nat)
+    (ctx               : ContextInfo)
+    (lctx              : LocalContext)
+    (stx               : Syntax)
+    (id                : Name)
+    (hoverInfo         : HoverInfo)
+    (danglingDot       : Bool)
+    : IO (Array ScoredCompletionItem) :=
+  runM params completionInfoPos ctx lctx do
     idCompletionCore ctx stx id hoverInfo danglingDot
 
 private def unfoldeDefinitionGuarded? (e : Expr) : MetaM (Option Expr) :=
@@ -539,12 +549,13 @@ where
     visit type
 
 private def dotCompletion
-    (params        : CompletionParams)
-    (ctx           : ContextInfo)
-    (info          : TermInfo)
-    (hoverInfo     : HoverInfo)
-    : IO (Option CompletionList) :=
-  runM params ctx info.lctx do
+    (params            : CompletionParams)
+    (completionInfoPos : Nat)
+    (ctx               : ContextInfo)
+    (info              : TermInfo)
+    (hoverInfo         : HoverInfo)
+    : IO (Array ScoredCompletionItem) :=
+  runM params completionInfoPos ctx info.lctx do
     let nameSet ← try
       getDotCompletionTypeNames (← instantiateMVars (← inferType info.expr))
     catch _ =>
@@ -574,13 +585,14 @@ private def dotCompletion
       addUnresolvedCompletionItem (.mkSimple c.name.getString!) (.const c.name) (kind := completionKind) 1
 
 private def dotIdCompletion
-    (params        : CompletionParams)
-    (ctx           : ContextInfo)
-    (lctx          : LocalContext)
-    (id            : Name)
-    (expectedType? : Option Expr)
-    : IO (Option CompletionList) :=
-  runM params ctx lctx do
+    (params            : CompletionParams)
+    (completionInfoPos : Nat)
+    (ctx               : ContextInfo)
+    (lctx              : LocalContext)
+    (id                : Name)
+    (expectedType?     : Option Expr)
+    : IO (Array ScoredCompletionItem) :=
+  runM params completionInfoPos ctx lctx do
     let some expectedType := expectedType?
       | return ()
 
@@ -615,17 +627,16 @@ private def dotIdCompletion
       addUnresolvedCompletionItem label (.const c.name) completionKind score
 
 private def fieldIdCompletion
-    (params     : CompletionParams)
-    (ctx        : ContextInfo)
-    (lctx       : LocalContext)
-    (id         : Option Name)
-    (structName : Name)
-    : IO (Option CompletionList) :=
-  dbg_trace structName
-  runM params ctx lctx do
+    (params            : CompletionParams)
+    (completionInfoPos : Nat)
+    (ctx               : ContextInfo)
+    (lctx              : LocalContext)
+    (id                : Option Name)
+    (structName        : Name)
+    : IO (Array ScoredCompletionItem) :=
+  runM params completionInfoPos ctx lctx do
     let idStr := id.map (·.toString) |>.getD ""
     let fieldNames := getStructureFieldsFlattened (← getEnv) structName (includeSubobjectFields := false)
-    dbg_trace fieldNames
     for fieldName in fieldNames do
       let .str _ fieldName := fieldName | continue
       let some score := fuzzyMatchScoreWithThreshold? idStr fieldName | continue
@@ -633,11 +644,12 @@ private def fieldIdCompletion
       addItem item score
 
 private def optionCompletion
-    (params : CompletionParams)
-    (ctx    : ContextInfo)
-    (stx    : Syntax)
-    (caps   : ClientCapabilities)
-    : IO (Option CompletionList) :=
+    (params            : CompletionParams)
+    (completionInfoPos : Nat)
+    (ctx               : ContextInfo)
+    (stx               : Syntax)
+    (caps              : ClientCapabilities)
+    : IO (Array ScoredCompletionItem) :=
   ctx.runMetaM {} do
     let (partialName, trailingDot) :=
       -- `stx` is from `"set_option" >> ident`
@@ -664,28 +676,36 @@ private def optionCompletion
             some { newText := name.toString, insert := range, replace := range : InsertReplaceEdit }
           else
             none
-        items := items.push
-          ({ label := name.toString
-             detail? := s!"({opts.get name decl.defValue}), {decl.descr}"
-             documentation? := none,
-             kind? := CompletionItemKind.property -- TODO: investigate whether this is the best kind for options.
-             textEdit? := textEdit
-             data? := toJson { params, id? := none : CompletionItemDataWithId } }, score)
-    return some { items := sortCompletionItems items, isIncomplete := true }
+        items := items.push ⟨{
+            label := name.toString
+            detail? := s!"({opts.get name decl.defValue}), {decl.descr}"
+            documentation? := none,
+            kind? := CompletionItemKind.property -- TODO: investigate whether this is the best kind for options.
+            textEdit? := textEdit
+            data? := toJson {
+              params,
+              completionInfoPos,
+              id? := none : ResolvableCompletionItemData
+            }
+          }, score⟩
+    return items
 
-private def tacticCompletion (params : CompletionParams) (ctx : ContextInfo)
-    : IO (Option CompletionList) := ctx.runMetaM .empty do
+private def tacticCompletion
+    (params            : CompletionParams)
+    (completionInfoPos : Nat)
+    (ctx               : ContextInfo)
+    : IO (Array ScoredCompletionItem) := ctx.runMetaM .empty do
   let allTacticDocs ← Tactic.Doc.allTacticDocs
-  let items : Array (CompletionItem × Float) := allTacticDocs.map fun tacticDoc =>
-    ({
+  let items : Array ScoredCompletionItem := allTacticDocs.map fun tacticDoc =>
+    ⟨{
       label          := tacticDoc.userName
       detail?        := none
       documentation? := tacticDoc.docString.map fun docString =>
         { value := docString, kind := MarkupKind.markdown : MarkupContent }
       kind?          := CompletionItemKind.keyword
-      data?          := toJson { params, id? := none : CompletionItemDataWithId }
-    }, 1)
-  return some { items := sortCompletionItems items, isIncomplete := true }
+      data?          := toJson { params, completionInfoPos, id? := none : ResolvableCompletionItemData }
+    }, 1⟩
+  return items
 
 private def findBest?
     (infoTree : InfoTree)
@@ -1009,70 +1029,68 @@ private def findSyntheticFieldCompletion?
   (infoTree : InfoTree)
   : Option (HoverInfo × ContextInfo × CompletionInfo) := do
   if ! isSyntheticFieldCompletion fileMap hoverPos cmdStx then
-    dbg_trace "1"
     none
   let (ctx, expectedType) ← findExpectedTypeAt infoTree hoverPos
   let .const typeName _ := expectedType.getAppFn
-    | dbg_trace "2"; none
+    | none
   if ! isStructure ctx.env typeName then
-    dbg_trace "3"; none
-  dbg_trace "4"
+    none
   return (HoverInfo.after, ctx, .fieldId .missing none .empty typeName)
 
-
-private def findCompletionInfoAt?
+private def findCompletionInfosAt
     (fileMap  : FileMap)
     (hoverPos : String.Pos)
     (cmdStx   : Syntax)
     (infoTree : InfoTree)
-    : Option (HoverInfo × ContextInfo × CompletionInfo) :=
-  dbg_trace hoverPos
+    : Array (HoverInfo × ContextInfo × CompletionInfo) :=
   let ⟨hoverLine, _⟩ := fileMap.toPosition hoverPos
   let completionInfoCandidates := infoTree.foldInfo (init := #[]) (choose hoverLine)
-  match completionInfoCandidates with
-  | some (hoverInfo, ctx, Info.ofCompletionInfo info) =>
-    some (hoverInfo, ctx, info)
-  | _ =>
-    findSyntheticTacticCompletion? fileMap hoverPos cmdStx infoTree <|>
-      findSyntheticFieldCompletion? fileMap hoverPos cmdStx infoTree <|>
-        findSyntheticIdentifierCompletion? hoverPos infoTree
+  if ! completionInfoCandidates.isEmpty then
+    completionInfoCandidates
+  else
+    let syntheticCompletionData? :=
+      findSyntheticTacticCompletion? fileMap hoverPos cmdStx infoTree <|>
+        findSyntheticFieldCompletion? fileMap hoverPos cmdStx infoTree <|>
+          findSyntheticIdentifierCompletion? hoverPos infoTree
+    syntheticCompletionData?.map (#[·]) |>.getD #[]
 
 where
+
   choose
       (hoverLine : Nat)
       (ctx       : ContextInfo)
       (info      : Info)
-      (best     : Array (HoverInfo × ContextInfo × Info))
-      : Array (HoverInfo × ContextInfo × Info) :=
-    if !info.isCompletion then
-      best
-    else if info.occursInOrOnBoundary hoverPos then
-      let headPos := info.pos?.get!
-      let tailPos := info.tailPos?.get!
-      let hoverInfo :=
-        if hoverPos < tailPos then
-          HoverInfo.inside (hoverPos - headPos).byteIdx
-        else
-          HoverInfo.after
-      let ⟨headPosLine, _⟩ := fileMap.toPosition headPos
-      let ⟨tailPosLine, _⟩ := fileMap.toPosition info.tailPos?.get!
-      if headPosLine != hoverLine || headPosLine != tailPosLine then
-        best
-      else match best[0]? with
-        | none              => #[(hoverInfo, ctx, info)]
-        | some (_, _, bestInfo) =>
-          match compare info bestInfo with
-          | .lt => #[(hoverInfo, ctx, info)]
-          | .gt => best
-          | .eq => best.push (hoverInfo, ctx, info)
-    else
-      best
+      (best     : Array (HoverInfo × ContextInfo × CompletionInfo))
+      : Array (HoverInfo × ContextInfo × CompletionInfo) := Id.run do
+    let .ofCompletionInfo completionInfo := info
+      | return best
+    if ! info.occursInOrOnBoundary hoverPos then
+      return best
+    let headPos := info.pos?.get!
+    let tailPos := info.tailPos?.get!
+    let hoverInfo :=
+      if hoverPos < tailPos then
+        HoverInfo.inside (hoverPos - headPos).byteIdx
+      else
+        HoverInfo.after
+    let ⟨headPosLine, _⟩ := fileMap.toPosition headPos
+    let ⟨tailPosLine, _⟩ := fileMap.toPosition info.tailPos?.get!
+    if headPosLine != hoverLine || headPosLine != tailPosLine then
+      return best
+    match best[0]? with
+    | none              => #[(hoverInfo, ctx, completionInfo)]
+    | some (_, _, bestCompletionInfo) =>
+      match compare info (.ofCompletionInfo bestCompletionInfo) with
+      | .lt => #[(hoverInfo, ctx, completionInfo)]
+      | .gt => best
+      | .eq => best.push (hoverInfo, ctx, completionInfo)
 
   compare : Info → Info → Ordering
     | i₁@(.ofCompletionInfo ci₁), i₂@(.ofCompletionInfo ci₂) =>
       -- Use the smallest info available and prefer non-id completion over id completions as a
       -- tie-breaker.
-      -- This is necessary because the elaborator sometimes generates both for the same range.
+      -- This is necessary because the elaborator sometimes generates both for the same range and
+      -- `id` completions tend to be sufficiently many that they drown out the others.
       -- If two infos are equivalent, always prefer the first one.
       if i₁.isSmaller i₂ then
         .lt
@@ -1088,22 +1106,71 @@ where
     | _, .ofCompletionInfo _ => .gt
     | _, _ => .eq
 
+private def filterDuplicateCompletionInfos
+    (infos : Array (HoverInfo × ContextInfo × CompletionInfo))
+    : Array (HoverInfo × ContextInfo × CompletionInfo) := Id.run do
+  -- We don't expect there to be too many equally good completion infos,
+  -- so it's fine if this is quadratic (we don't need to implement `Hashable` / `LT` this way).
+  let mut deduplicatedInfos : Array (HoverInfo × ContextInfo × CompletionInfo) := #[]
+  for i@⟨_, _, ci⟩ in infos do
+    if deduplicatedInfos.any (fun ⟨_, _, di⟩ => eq di ci) then
+      continue
+    deduplicatedInfos := deduplicatedInfos.push i
+  deduplicatedInfos
+where
+  eq : CompletionInfo → CompletionInfo → Bool
+    | .dot ti₁ .., .dot ti₂ .. =>
+      ti₁.stx.eqWithInfo ti₂.stx
+    | .id stx₁ id₁ .., .id stx₂ id₂ .. =>
+      stx₁.eqWithInfo stx₂ && id₁ == id₂
+    | .dotId stx₁ id₁ .., .id stx₂ id₂ .. =>
+      stx₁.eqWithInfo stx₂ && id₁ == id₂
+    | .fieldId stx₁ id₁? _ structName₁, .fieldId stx₂ id₂? _ structName₂ =>
+      stx₁.eqWithInfo stx₂ && id₁? == id₂? && structName₁ == structName₂
+    | .namespaceId stx₁, .namespaceId stx₂ =>
+      stx₁.eqWithInfo stx₂
+    | .option stx₁, .option stx₂ =>
+      stx₁.eqWithInfo stx₂
+    | .endSection stx₁ scopeNames₁, .endSection stx₂ scopeNames₂ =>
+      stx₁.eqWithInfo stx₂ && scopeNames₁ == scopeNames₂
+    | .tactic stx₁, .tactic stx₂ =>
+      stx₁.eqWithInfo stx₂
+    | _, _ =>
+      false
+
+private def filterDuplicateCompletionItems (items : Array ScoredCompletionItem) : Array ScoredCompletionItem :=
+  items.groupByKey (·.item)
+    |>.map (fun _ duplicateItems => duplicateItems.getMax? (·.score < ·.score) |>.get!)
+    |>.valuesArray
+
+/--
+Sorts `items` descendingly according to their score and ascendingly according to their label
+for equal scores.
+-/
+private def sortCompletionItems (items : Array ScoredCompletionItem) : Array CompletionItem :=
+  let items := items.qsort fun ⟨i1, s1⟩ ⟨i2, s2⟩ =>
+    if s1 != s2 then
+      s1 > s2
+    else
+      i1.label.map (·.toLower) < i2.label.map (·.toLower)
+  items.map (·.1)
+
 /--
 Assigns the `CompletionItem.sortText?` for all items in `completions` according to their order
 in `completions`. This is necessary because clients will use their own sort order if the server
 does not set it.
 -/
-private def assignSortTexts (completions : CompletionList) : CompletionList := Id.run do
-  if completions.items.isEmpty then
-    return completions
-  let items := completions.items.mapIdx fun i item =>
+private def assignSortTexts (completions : Array CompletionItem) : Array CompletionItem := Id.run do
+  if completions.isEmpty then
+    return #[]
+  let items := completions.mapIdx fun i item =>
     { item with sortText? := toString i.val }
   let maxDigits := items[items.size - 1]!.sortText?.get!.length
   let items := items.map fun item =>
     let sortText := item.sortText?.get!
     let pad := List.replicate (maxDigits - sortText.length) '0' |>.asString
     { item with sortText? := pad ++ sortText }
-  { completions with items := items }
+  items
 
 partial def find?
     (params   : CompletionParams)
@@ -1112,39 +1179,54 @@ partial def find?
     (cmdStx   : Syntax)
     (infoTree : InfoTree)
     (caps     : ClientCapabilities)
-    : IO (Option CompletionList) := do
-  let some (hoverInfo, ctx, info) := findCompletionInfoAt? fileMap hoverPos cmdStx infoTree
-    | return none
-  let completionList? ←
-    match info with
-    | .dot info .. =>
-      dotCompletion params ctx info hoverInfo
-    | .id stx id danglingDot lctx .. =>
-      idCompletion params ctx lctx stx id hoverInfo danglingDot
-    | .dotId _ id lctx expectedType? =>
-      dotIdCompletion params ctx lctx id expectedType?
-    | .fieldId _ id lctx structName =>
-      fieldIdCompletion params ctx lctx id structName
-    | .option stx =>
-      optionCompletion params ctx stx caps
-    | .tactic .. =>
-      tacticCompletion params ctx
-    | _ => return none
-  return completionList?.map assignSortTexts
+    : IO CompletionList := do
+  let completionInfos := filterDuplicateCompletionInfos <|
+    findCompletionInfosAt fileMap hoverPos cmdStx infoTree
+  if completionInfos.isEmpty then
+    return .empty
+  let mut completionInfoPos := 0
+  let mut allCompletions := #[]
+  for (hoverInfo, ctx, info) in completionInfos do
+    let completions : Array ScoredCompletionItem ←
+      match info with
+      | .dot info .. =>
+        dotCompletion params completionInfoPos ctx info hoverInfo
+      | .id stx id danglingDot lctx .. =>
+        idCompletion params completionInfoPos ctx lctx stx id hoverInfo danglingDot
+      | .dotId _ id lctx expectedType? =>
+        dotIdCompletion params completionInfoPos ctx lctx id expectedType?
+      | .fieldId _ id lctx structName =>
+        fieldIdCompletion params completionInfoPos ctx lctx id structName
+      | .option stx =>
+        optionCompletion params completionInfoPos ctx stx caps
+      | .tactic .. =>
+        tacticCompletion params completionInfoPos ctx
+      | _ =>
+        pure #[]
+    allCompletions := allCompletions ++ completions
+    completionInfoPos := completionInfoPos + 1
+  let finalCompletions := allCompletions
+    |> filterDuplicateCompletionItems
+    |> sortCompletionItems
+    |> assignSortTexts
+  return { items := finalCompletions, isIncomplete := true }
 
 /--
 Fills the `CompletionItem.detail?` field of `item` using the pretty-printed type identified by `id`
 in the context found at `hoverPos` in `infoTree`.
 -/
 def resolveCompletionItem?
-    (fileMap  : FileMap)
-    (hoverPos : String.Pos)
-    (cmdStx   : Syntax)
-    (infoTree : InfoTree)
-    (item     : CompletionItem)
-    (id       : CompletionIdentifier)
+    (fileMap           : FileMap)
+    (hoverPos          : String.Pos)
+    (cmdStx            : Syntax)
+    (infoTree          : InfoTree)
+    (item              : CompletionItem)
+    (id                : CompletionIdentifier)
+    (completionInfoPos : Nat)
     : IO CompletionItem := do
-  let some (_, ctx, info) := findCompletionInfoAt? fileMap hoverPos cmdStx infoTree
+  let completionInfos := filterDuplicateCompletionInfos <|
+    findCompletionInfosAt fileMap hoverPos cmdStx infoTree
+  let some (_, ctx, info) := completionInfos.get? completionInfoPos
     | return item
   ctx.runMetaM info.lctx (item.resolve id)
 
