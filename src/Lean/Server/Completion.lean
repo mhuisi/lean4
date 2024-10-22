@@ -1028,23 +1028,24 @@ private def findCompletionInfoAt?
     : Option (HoverInfo × ContextInfo × CompletionInfo) :=
   dbg_trace hoverPos
   let ⟨hoverLine, _⟩ := fileMap.toPosition hoverPos
-  match infoTree.foldInfo (init := none) (choose hoverLine) with
+  let completionInfoCandidates := infoTree.foldInfo (init := #[]) (choose hoverLine)
+  match completionInfoCandidates with
   | some (hoverInfo, ctx, Info.ofCompletionInfo info) =>
     some (hoverInfo, ctx, info)
   | _ =>
     findSyntheticTacticCompletion? fileMap hoverPos cmdStx infoTree <|>
       findSyntheticFieldCompletion? fileMap hoverPos cmdStx infoTree <|>
-      findSyntheticIdentifierCompletion? hoverPos infoTree
+        findSyntheticIdentifierCompletion? hoverPos infoTree
 
 where
   choose
       (hoverLine : Nat)
       (ctx       : ContextInfo)
       (info      : Info)
-      (best?     : Option (HoverInfo × ContextInfo × Info))
-      : Option (HoverInfo × ContextInfo × Info) :=
+      (best     : Array (HoverInfo × ContextInfo × Info))
+      : Array (HoverInfo × ContextInfo × Info) :=
     if !info.isCompletion then
-      best?
+      best
     else if info.occursInOrOnBoundary hoverPos then
       let headPos := info.pos?.get!
       let tailPos := info.tailPos?.get!
@@ -1056,36 +1057,36 @@ where
       let ⟨headPosLine, _⟩ := fileMap.toPosition headPos
       let ⟨tailPosLine, _⟩ := fileMap.toPosition info.tailPos?.get!
       if headPosLine != hoverLine || headPosLine != tailPosLine then
-        best?
-      else match best? with
-        | none              => (hoverInfo, ctx, info)
-        | some (_, _, best) =>
-          if isBetter info best then
-            (hoverInfo, ctx, info)
-          else
-            best?
+        best
+      else match best[0]? with
+        | none              => #[(hoverInfo, ctx, info)]
+        | some (_, _, bestInfo) =>
+          match compare info bestInfo with
+          | .lt => #[(hoverInfo, ctx, info)]
+          | .gt => best
+          | .eq => best.push (hoverInfo, ctx, info)
     else
-      best?
+      best
 
-  isBetter : Info → Info → Bool
+  compare : Info → Info → Ordering
     | i₁@(.ofCompletionInfo ci₁), i₂@(.ofCompletionInfo ci₂) =>
       -- Use the smallest info available and prefer non-id completion over id completions as a
       -- tie-breaker.
       -- This is necessary because the elaborator sometimes generates both for the same range.
       -- If two infos are equivalent, always prefer the first one.
       if i₁.isSmaller i₂ then
-        true
+        .lt
       else if i₂.isSmaller i₁ then
-        false
+        .gt
       else if !(ci₁ matches .id ..) && ci₂ matches .id .. then
-        true
+        .lt
       else if ci₁ matches .id .. && !(ci₂ matches .id ..) then
-        false
+        .gt
       else
-        true
-    | .ofCompletionInfo _, _ => true
-    | _, .ofCompletionInfo _ => false
-    | _, _ => true
+        .eq
+    | .ofCompletionInfo _, _ => .lt
+    | _, .ofCompletionInfo _ => .gt
+    | _, _ => .eq
 
 /--
 Assigns the `CompletionItem.sortText?` for all items in `completions` according to their order
