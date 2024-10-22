@@ -1086,19 +1086,11 @@ where
       | .eq => best.push (hoverInfo, ctx, completionInfo)
 
   compare : Info → Info → Ordering
-    | i₁@(.ofCompletionInfo ci₁), i₂@(.ofCompletionInfo ci₂) =>
-      -- Use the smallest info available and prefer non-id completion over id completions as a
-      -- tie-breaker.
-      -- This is necessary because the elaborator sometimes generates both for the same range and
-      -- `id` completions tend to be sufficiently many that they drown out the others.
-      -- If two infos are equivalent, always prefer the first one.
+    | i₁@(.ofCompletionInfo _), i₂@(.ofCompletionInfo _) =>
+      -- Use the smallest info available. If two infos are equivalent, always prefer the first one.
       if i₁.isSmaller i₂ then
         .lt
       else if i₂.isSmaller i₁ then
-        .gt
-      else if !(ci₁ matches .id ..) && ci₂ matches .id .. then
-        .lt
-      else if ci₁ matches .id .. && !(ci₂ matches .id ..) then
         .gt
       else
         .eq
@@ -1180,19 +1172,20 @@ partial def find?
     (infoTree : InfoTree)
     (caps     : ClientCapabilities)
     : IO CompletionList := do
-  let completionInfos := filterDuplicateCompletionInfos <|
-    findCompletionInfosAt fileMap hoverPos cmdStx infoTree
+  let completionInfos := findCompletionInfosAt fileMap hoverPos cmdStx infoTree
+    |> filterDuplicateCompletionInfos
+    |>.zipWithIndex
   if completionInfos.isEmpty then
     return .empty
-  let mut completionInfoPos := 0
+  let (idCompletionInfos, nonIdCompletionInfos) := completionInfos.partition fun ((_, _, ci), _) =>
+    ci matches .id ..
   let mut allCompletions := #[]
-  for (hoverInfo, ctx, info) in completionInfos do
+
+  for ((hoverInfo, ctx, info), completionInfoPos) in nonIdCompletionInfos do
     let completions : Array ScoredCompletionItem ←
       match info with
       | .dot info .. =>
         dotCompletion params completionInfoPos ctx info hoverInfo
-      | .id stx id danglingDot lctx .. =>
-        idCompletion params completionInfoPos ctx lctx stx id hoverInfo danglingDot
       | .dotId _ id lctx expectedType? =>
         dotIdCompletion params completionInfoPos ctx lctx id expectedType?
       | .fieldId _ id lctx structName =>
@@ -1204,7 +1197,20 @@ partial def find?
       | _ =>
         pure #[]
     allCompletions := allCompletions ++ completions
-    completionInfoPos := completionInfoPos + 1
+
+  if allCompletions.isEmpty then
+    -- Only compute identifier completions if there were no non-identifier completions.
+    -- This is done because there tend to be a lot of non-helpful identifier completions
+    -- drowning out more helpful non-identifier completions.
+    for ((hoverInfo, ctx, info), completionInfoPos) in idCompletionInfos do
+      let completions : Array ScoredCompletionItem ←
+        match info with
+        | .id stx id danglingDot lctx .. =>
+          idCompletion params completionInfoPos ctx lctx stx id hoverInfo danglingDot
+        | _ =>
+          pure #[]
+      allCompletions := allCompletions ++ completions
+
   let finalCompletions := allCompletions
     |> filterDuplicateCompletionItems
     |> sortCompletionItems
