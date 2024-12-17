@@ -431,5 +431,9 @@ structure WorkDoneProgressOptions where
   workDoneProgress := false
   deriving ToJson, FromJson
 
+structure ResolveSupport where
+  properties : Array String
+  deriving FromJson, ToJson
+
 end Lsp
 end Lean
