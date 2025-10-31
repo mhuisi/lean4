@@ -35,7 +35,8 @@ class ToLean (α : Type u) (k : SyntaxNodeKind := `term) where
   toLean : α → TSyntax k
 
 -- TODO: Remove once no longer needed for the `export` below to work
-namespace ToLean end ToLean
+namespace ToLean
+end ToLean
 
 open ToLean (toLean)
 
@@ -55,7 +56,8 @@ class ToLean? (α : Type u) where
   toLean? : α → Option Term
 
 -- TODO: Remove once no longer needed for the `export` below to work
-namespace ToLean? end ToLean?
+namespace ToLean?
+end ToLean?
 
 export ToLean? (toLean?)
 
@@ -113,7 +115,8 @@ class MkDeclFields (α : Type u) where
   mkDeclFields : α → Array DeclField
 
 -- TODO: Remove once no longer needed for the `export` below to work
-namespace MkDeclFields end MkDeclFields
+namespace MkDeclFields
+end MkDeclFields
 
 export MkDeclFields (mkDeclFields)
 

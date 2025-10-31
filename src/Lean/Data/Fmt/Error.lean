@@ -1,0 +1,46 @@
+/-
+Copyright (c) 2026 Lean FRO. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+
+Author: Marc Huisinga
+-/
+module
+
+prelude
+public import Init.Data.ToString
+public import Lean.Data.Fmt.Basic
+
+public inductive Lean.Fmt.Error where
+  | emptyInputSyntax
+    (stx : Syntax)
+    (msg : String := "Input syntax to the formatter is empty and contains only whitespace.")
+  | partialFormatter
+    (msg : String := s!"A formatter for is partial and does not handle the full syntax of the kind \
+      it was registered for.")
+  | formattingFailure
+    (stx : Syntax)
+    (doc : Doc)
+    (msg : String := "Formatting of the document produced by the current set of `[fmt]` \
+      annotations has failed. This issue is commonly caused by `Doc.failure` or attempting to \
+      flatten a document with hard newlines.")
+  | malformedInputSyntax
+    (stx : Syntax)
+    (malformedPortion? : Option Substring.Raw)
+    (reason : String)
+    (msg : String :=
+      let msg := s!"Input syntax to the formatter is malformed: {reason}."
+      match malformedPortion? with
+      | none => msg
+      | some malformedPortion => s!"{msg} Offending portion of the input syntax: \
+        {malformedPortion.toString}")
+  | raw
+    (msg : String)
+  deriving Inhabited
+
+public instance : ToString Lean.Fmt.Error where
+  toString
+    | .emptyInputSyntax (msg := msg) ..
+    | .partialFormatter (msg := msg) ..
+    | .formattingFailure (msg := msg) ..
+    | .malformedInputSyntax (msg := msg) ..
+    | .raw (msg := msg) .. => msg
