@@ -1,0 +1,316 @@
+/-
+Copyright (c) 2026 Lean FRO. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+
+Author: Marc Huisinga
+-/
+module
+
+prelude
+public import Lean.Environment
+public import Lean.Fmt.FmtM.Error
+import Lean.Fmt.FmtM.Basic
+import Std.Data.HashMap.AdditionalOperations
+import Lean.Fmt.FmtM.Comments
+import Lean.Fmt.Core.Formatter
+public import Lean.Data.Position
+import Init.Data.String.Iter.Intercalate
+public import Lean.Language.Lean.Types
+public import Lean.Fmt.FmtM.LineInfo
+public import Lean.Fmt.FmtM.Comments
+public import Lean.Fmt.FmtM.Attribute
+import Lean.Language.Lean
+import Lean.Fmt.Util.Module
+import Init.System.Platform
+import Std.Sync.Channel
+
+namespace Lean.Fmt
+
+def filterAlreadyFormattedComments
+    {rendering : String.Slice}
+    (comments : Std.HashMap Syntax.Range (Array Comment))
+    (syntaxToRenderedWhitespace : Std.HashMap Syntax.Range (Std.HashSet rendering.Subslice)) :
+    Std.HashMap Syntax.Range (Array Comment) :=
+  -- It would be nice to have a range index structure for this.
+  let renderedWhitespaceSyntaxRanges := syntaxToRenderedWhitespace.keysArray
+  let comments := comments.map fun _ cs =>
+    cs.filter fun c =>
+      ! renderedWhitespaceSyntaxRanges.any (·.includes c.originalWhitespaceRange)
+  comments.filter fun _ cs => ! cs.isEmpty
+
+/--
+Associates all syntax ranges that have been tagged by `Fmt.fmt` with the portions of the rendered
+string that a specific tagged sub-document has been rendered to.
+Tagged syntax ranges that do not appear in the rendered string at all are removed.
+-/
+def connectTags
+    {rendering : String.Slice}
+    (syntaxToTags : Std.HashMap Syntax.Range (Array TagId × RangeKind))
+    (tagsToRendered : Std.TreeMap TagId (Std.HashSet rendering.Subslice)) :
+    Std.HashMap Syntax.Range (Std.HashSet rendering.Subslice × RangeKind) :=
+  -- 1. All `TagId`s in `tagsToRendered` are contained in `syntaxToTags`.
+  -- 2. Only `Syntax.Range`s that have been assigned by the document construction will appear in
+  --   `syntaxToTags`. This includes `Syntax` subtrees for which `Fmt.fmt` has been called,
+  --   as well as all tokens that appear in the constructed document for which `Fmt.text` has been
+  --   called.
+  -- 3. `TagId`s in `syntaxToTags` that are not used in the specific alternative chosen by the
+  --   formatter do not appear in `tagsToRendered`.
+  -- 4. Multiple `TagId`s are associated with the same `Syntax.Range` in `syntaxToTags` when
+  --    `Fmt.fmt` is called for a `Syntax` subtree that contains another `Syntax` subtree of the
+  --    same range for which `Fmt.fmt` has also been called.
+  -- 5. Multiple `rendering.Subslice`s are associated with the same `TagId` in `tagsToRendered` when
+  --    a sub-document is shared in multiple places in the same alternative,
+  --    e.g. when a formatter yields the same document twice for the same token in the
+  --    input `Syntax`.
+  syntaxToTags.filterMap fun _ (tags, kind) => do
+    let mut ranges := {}
+    for tag in tags do
+      if let some rendered := tagsToRendered.get? tag then
+        ranges := ranges.insertMany rendered
+    ranges := ranges.filter (! ·.toSlice.isEmpty)
+    guard <| ! ranges.isEmpty
+    return (ranges, kind)
+
+def normalize (rendering : String) : String := Id.run do
+  let lines := rendering.split '\n'
+  let lines := lines.map (·.dropEndWhile ' ')
+  let lines := lines.toArray.popWhile (String.Slice.isEmpty ·)
+  let lines := lines.push ""
+  return lines.iter.intercalateString "\n"
+
+public structure tryInsertingComments.State where
+  comments : Std.HashMap TagId (Syntax.Range × Array Comment)
+  cache : Std.HashMap (PtrKey (Doc FmtCost)) (Doc FmtCost)
+  freshTagId : TagId
+  syntaxToTags : Std.HashMap Syntax.Range (Array TagId × RangeKind)
+
+public def tryInsertingComments
+    (doc : Doc FmtCost)
+    (comments : Std.HashMap Syntax.Range (Array Comment))
+    (freshTagId : TagId)
+    (syntaxToTags : Std.HashMap Syntax.Range (Array TagId × RangeKind))
+    : Doc FmtCost × Std.HashMap Syntax.Range (Array TagId × RangeKind) := Id.run do
+  -- It would be nice to have a range index structure for this.
+  let handledWhitespaceSyntaxRanges := syntaxToTags.filter (fun _ (_, kind) => kind matches .whitespace) |>.keysArray
+  let comments := comments.map fun _ cs =>
+    cs.filter fun c =>
+      ! handledWhitespaceSyntaxRanges.any (·.includes c.originalWhitespaceRange)
+  let comments := comments.filter fun _ cs => ! cs.isEmpty
+  let mut comments' := ∅
+  for ⟨range, comments⟩ in comments do
+    let some (tags, _) := syntaxToTags.get? range
+      | continue
+    let tag := tags[0]!
+    comments' := comments'.insert tag (range, comments)
+  let (doc, s) := go doc |>.run {
+    comments := comments'
+    cache := ∅
+    freshTagId
+    syntaxToTags
+  }
+  return (doc, s.syntaxToTags)
+where
+  goMemoized (v : Doc FmtCost) : StateM tryInsertingComments.State (Doc FmtCost) := do
+    let cacheKey := unsafe PtrKey.ofKey v
+    if let some v := (← get).cache.get? cacheKey then
+      return v
+    let v ← go v
+    modify fun s => {
+      s with
+      cache := s.cache.insert cacheKey v
+    }
+    return v
+  go (d : Doc FmtCost) : StateM tryInsertingComments.State (Doc FmtCost) := do
+    match d with
+    | .tagged id d =>
+      let d ← goMemoized d
+      let tagged := .tagged id d
+      let some (_, commentsForId) := (← get).comments.get? id
+        | return tagged
+      let eligibleComments := commentsForId.filter fun c =>
+        c.kind matches .blockComment && c.placement matches .afterToken && c.content.size == 1
+      if eligibleComments.isEmpty then
+        return tagged
+      let renderedComments ← eligibleComments.mapM fun c =>
+        let renderedDoc := Doc.text c.render[0]!.rendered
+        modifyGet fun s =>
+          let (freshTagId, syntaxToTags, doc) :=
+            TaggedDoc.taggedWithRange s.freshTagId s.syntaxToTags renderedDoc c.originalWhitespaceRange .whitespace
+          (doc.doc, { s with freshTagId, syntaxToTags })
+      let renderedComments := .joinUsing (.text " ") renderedComments
+      return .oneOf #[
+        tagged ++ .text " " ++ renderedComments,
+        Doc.costing (DefaultCost.ofOverflowFallbackPenalty 1) tagged
+      ]
+    | .failure
+    | .text _
+    | .newline _ =>
+      return d
+    | .unflattenable d =>
+      let d ← goMemoized d
+      return .unflattenable d
+    | .flattened d =>
+      let d ← goMemoized d
+      return .flattened d
+    | .indented n c d =>
+      let d ← goMemoized d
+      return .indented n c d
+    | .aligned d =>
+      let d ← goMemoized d
+      return .aligned d
+    | .unindented onlyNonCumulative d =>
+      let d ← goMemoized d
+      return .unindented onlyNonCumulative d
+    | .full d =>
+      let d ← goMemoized d
+      return .full d
+    | .free d =>
+      let d ← goMemoized d
+      return .free d
+    | .guarded p d =>
+      let d ← goMemoized d
+      return .guarded p d
+    | .costing c d =>
+      let d ← goMemoized d
+      return .costing c d
+    | .either d1 d2 =>
+      let d1 ← goMemoized d1
+      let d2 ← goMemoized d2
+      return .either d1 d2
+    | .append d1 d2 =>
+      let d1 ← goMemoized d1
+      let d2 ← goMemoized d2
+      return .append d1 d2
+
+public def insertRemainingComments
+    (rendering : String)
+    (syntaxToTags : Std.HashMap Syntax.Range (Array TagId × RangeKind))
+    (tagsToRendered : Std.TreeMap TagId (Std.HashSet rendering.toSlice.Subslice) compare)
+    (comments : Std.HashMap Syntax.Range (Array Comment))
+    : String :=
+  let syntaxToRendered := connectTags syntaxToTags tagsToRendered
+  let (syntaxToRenderedNodes, syntaxToRenderedWhitespace) := syntaxToRendered.partition fun _ (_, kind) =>
+    ! (kind matches .whitespace)
+  let syntaxToRenderedNodes := syntaxToRenderedNodes.map fun _ (ranges, _) => ranges
+  let syntaxToRenderedWhitespace := syntaxToRenderedWhitespace.map fun _ (ranges, _) => ranges
+  let comments := filterAlreadyFormattedComments comments syntaxToRenderedWhitespace
+  insertComments 100 rendering syntaxToRenderedNodes comments
+
+private structure CommandOutput where
+  rendering : String
+  syntaxToTags : Std.HashMap Syntax.Range (Array TagId × RangeKind)
+  tagsToRendered : Std.TreeMap TagId (Std.HashSet rendering.toSlice.Subslice) compare
+
+def render (ctx : Fmt.Context) (stx : Syntax) (act : FmtM TaggedDoc) : Except Error CommandOutput := do
+  let r ← FmtM.run ctx act
+  let doc := r.value.doc
+  let output ← format? 100 200 doc (taintedResolution := false)
+    |>.mapError (Error.ofFormattingError stx)
+  return ⟨output.rendering, r.tags, output.tags⟩
+
+def commandRaw (ctx : Fmt.Context) (stx : Syntax) : Except Error String := do
+  let some fullSyntaxRange := stx.getRange?
+    | throw <| .malformedInputSyntax stx none "Missing range"
+  let some start := ctx.text.source.pos? fullSyntaxRange.start
+    | throw <| .malformedInputSyntax stx none "Invalid range"
+  let some stop := ctx.text.source.pos? fullSyntaxRange.stop
+    | throw <| .malformedInputSyntax stx none "Invalid range"
+  let leading := (← render ctx stx <| fmtLeadingWithRetainedNewlinesAndComments stx).rendering
+  let rawText := ctx.text.source.extract start stop
+  let trailing := (← render ctx stx <| fmtTrailingWithRetainedNewlinesAndComments stx).rendering
+  return leading ++ rawText ++ trailing
+
+public def commandMain (ctx : Fmt.Context) (stx : Syntax) : Except Error String := do
+  let comments ← collectComments ctx.lineInfos stx
+  try
+    let r ← FmtM.run ctx do
+      let leading ← fmtLeadingWithRetainedNewlinesAndComments stx
+      let doc ← fmt stx
+      let trailing ← fmtTrailingWithRetainedNewlinesAndComments stx
+      return leading ++ doc ++ trailing
+    let doc := r.value.doc
+    let syntaxToTags := r.tags
+    let (doc, syntaxToTags) := tryInsertingComments doc comments r.freshTagId syntaxToTags
+    let output ← format? 100 200 doc (taintedResolution := false)
+      |>.mapError (Error.ofFormattingError stx)
+    let tagsToRendered := output.tags
+    let rendering := insertRemainingComments output.rendering syntaxToTags tagsToRendered comments
+    return rendering
+  catch _ =>
+    commandRaw ctx stx
+
+def getNumThreads : BaseIO Nat := do
+  if ! System.Platform.isEmscripten then
+    if let some s ← IO.getEnv "LEAN_NUM_THREADS" then
+      return s.trimAscii.toNat?.getD 0
+  return (System.Platform.Internal.getHardwareConcurrency ()).toNat
+
+def getParallelism : BaseIO Nat :=
+  return max 1 (← getNumThreads)
+
+public def fileMain (initialSnap : Language.Lean.InitialSnapshot) : BaseIO (Except Error String) := do
+  run
+where
+  run : ExceptT Error BaseIO String := do
+    let text := initialSnap.ictx.fileMap
+    let some finalCmdState := Language.Lean.waitForFinalCmdState? initialSnap
+      | throw <| .headerError initialSnap.stx
+    let moduleData := Language.Lean.moduleData initialSnap |>.get
+    if moduleData.hasParseErrors then
+      throw .parseError
+    let headerStx := moduleData.headerData.stx
+    let cmdStxs := moduleData.cmdData.map (·.stx)
+    let some modStx := mkModuleSyntax? headerStx cmdStxs
+      | throw .earlyTerminationCommand
+    let (some headerCmdState, some headerParserState) :=
+        (moduleData.headerData.cmdState?, moduleData.headerData.parserState?)
+      | throw <| .headerError headerStx
+    let allCmdData : Array Language.Lean.CommandData := #[⟨headerStx, headerParserState, headerCmdState⟩] ++ moduleData.cmdData
+    -- TODO: Use `collectSyntaxLineInfos` again once Verso docstrings are fixed and no longer
+    -- produce tokens without source positions.
+    let lineInfos := collectSyntaxLineInfos' text.source.toSlice modStx
+    let ctx : Fmt.Context := {
+      lineInfos
+      env := finalCmdState.env
+      text
+      initialSnap? := some initialSnap
+      opts := finalCmdState.scopes[0]!.opts
+    }
+    let renderedHeader ← commandMain ctx headerStx
+    let parallelism ← getParallelism
+    let renderedCommandsMutex : Std.Mutex (Std.TreeMap Nat (Except Error String)) ← Std.Mutex.new ∅
+    let jobs : Std.Channel Nat ← Std.Channel.new
+    for cmdIdx in (1...allCmdData.size) do
+      IO.wait (α := Unit) <| ← jobs.send cmdIdx
+    let mut tasks := #[]
+    for _ in (0...Nat.min parallelism (allCmdData.size - 1)) do
+      let t ← BaseIO.asTask (prio := .dedicated) do
+        while true do
+          let some cmdIdx ← jobs.tryRecv
+            | return
+          let some cmdData := allCmdData[cmdIdx]?
+            | unreachable!
+          let some prevCmdData := allCmdData[cmdIdx-1]?
+            | unreachable!
+          let rendered? := renderCommand ctx cmdData prevCmdData
+          renderedCommandsMutex.atomically do
+            modify (·.insert cmdIdx rendered?)
+      tasks := tasks.push t
+    for task in tasks do
+      IO.wait (α := PUnit) task
+    let renderedCommands : Array String ← (← renderedCommandsMutex.atomically get).valuesArray.mapM fun (renderedCommand? : Except Error String) =>
+      renderedCommand?
+    let renderedFile := renderedHeader ++ renderedCommands.iter.joinString
+    return normalize renderedFile
+  renderCommand (ctx : Context) (cmdData prevCmdData : Language.Lean.CommandData) : Except Error String := do
+    let mut renderedCommand ← commandMain ctx cmdData.stx
+    let pmctx := {
+      env := prevCmdData.cmdState.env
+      options := prevCmdData.cmdState.scopes[0]!.opts
+      currNamespace := prevCmdData.cmdState.scopes[0]!.currNamespace
+      openDecls := prevCmdData.cmdState.scopes[0]!.openDecls
+    }
+    let (_, _, msgLog) := Parser.parseCommand initialSnap.ictx pmctx prevCmdData.parserState MessageLog.empty
+    if msgLog.hasErrors then
+      renderedCommand ← commandRaw ctx cmdData.stx
+    return renderedCommand
