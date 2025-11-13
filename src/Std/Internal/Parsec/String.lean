@@ -25,51 +25,55 @@ instance : Input (Sigma String.ValidPos) Char String.Pos.Raw where
   curr' it h := it.2.get (by simpa using h)
 
 /--
-`Parser α` is a parser that consumes a `String` input using a `Sigma String.ValidPos` and returns a result of type `α`.
+`ParserT m α` is a parser that consumes a `String` input using a `Sigma String.ValidPos` and returns a result of type `α`.
 -/
-abbrev Parser (α : Type) : Type := Parsec (Sigma String.ValidPos) α
+abbrev ParserT (m : Type → Type) (α : Type) : Type := ParsecT (Sigma String.ValidPos) m α
+
+abbrev Parser (α : Type) : Type := ParserT Id α
+
+variable {m : Type → Type} [Monad m]
 
 /--
-Run a `Parser` on a `String`, returns either the result or an error string with offset.
+Run a `ParserT` on a `String`, returns either the result or an error string with offset.
 -/
-protected def Parser.run (p : Parser α) (s : String) : Except String α :=
-  match p ⟨s, s.startValidPos⟩ with
-  | .success _ res => Except.ok res
-  | .error it err => Except.error s!"offset {repr it.2.offset.byteIdx}: {err}"
+protected def ParserT.run (p : ParserT m α) (s : String) : m (Except String α) := do
+  match ← p ⟨s, s.startValidPos⟩ with
+  | .success _ res => pure <| Except.ok res
+  | .error it err => pure <| Except.error s!"offset {repr it.2.offset.byteIdx}: {err}"
 
 /--
 Parses the given string.
 -/
-def pstring (s : String) : Parser String := fun it =>
+def pstring (s : String) : ParserT m String := fun it =>
   if (it.1.replaceStart it.2).startsWith s then
-    .success ⟨_, it.2.nextn s.length⟩ s
+    pure <| .success ⟨_, it.2.nextn s.length⟩ s
   else
-    .error it (.other s!"expected: {s}")
+    pure <| .error it (.other s!"expected: {s}")
 
 /--
 Skips the given string.
 -/
 @[inline]
-def skipString (s : String) : Parser Unit := pstring s *> pure ()
+def skipString (s : String) : ParserT m Unit := pstring s *> pure ()
 
 /--
 Parses the given char.
 -/
 @[inline]
-def pchar (c : Char) : Parser Char := attempt do
+def pchar (c : Char) : ParserT m Char := attempt do
   if (← any) = c then pure c else fail s!"expected: '{c}'"
 
 /--
 Skips the given char.
 -/
 @[inline]
-def skipChar (c : Char) : Parser Unit := pchar c *> pure ()
+def skipChar (c : Char) : ParserT m Unit := pchar c *> pure ()
 
 /--
 Parse an ASCII digit `0-9` as a `Char`.
 -/
 @[inline]
-def digit : Parser Char := attempt do
+def digit : ParserT m Char := attempt do
   let c ← any
   if '0' ≤ c ∧ c ≤ '9' then return c else fail s!"digit expected"
 
@@ -80,13 +84,13 @@ Convert a byte representing `'0'..'9'` to a `Nat`.
 private def digitToNat (b : Char) : Nat := b.toNat - '0'.toNat
 
 @[inline]
-private def digitsCore (acc : Nat) : Parser Nat := fun it =>
+private def digitsCore (acc : Nat) : ParserT m Nat := fun it =>
   /-
   With this design instead of combinators we can avoid allocating and branching over .success values
   all of the time.
   -/
   let ⟨res, it⟩ := go it.2 acc
-  .success ⟨_, it⟩ res
+  pure <| .success ⟨_, it⟩ res
 where
   go {s : String} (it : s.ValidPos) (acc : Nat) : (Nat × s.ValidPos) :=
     if h : ¬it.IsAtEnd then
@@ -105,7 +109,7 @@ where
 Parse one or more ASCII digits into a `Nat`.
 -/
 @[inline]
-def digits : Parser Nat := do
+def digits : ParserT m Nat := do
   let d ← digit
   digitsCore (digitToNat d)
 
@@ -113,7 +117,7 @@ def digits : Parser Nat := do
 Parse a hex digit `0-9`, `a-f`, or `A-F` as a `Char`.
 -/
 @[inline]
-def hexDigit : Parser Char := attempt do
+def hexDigit : ParserT m Char := attempt do
   let c ← any
   if ('0' ≤ c ∧ c ≤ '9')
    ∨ ('a' ≤ c ∧ c ≤ 'f')
@@ -123,7 +127,7 @@ def hexDigit : Parser Char := attempt do
 Parse an ASCII letter `a-z` or `A-Z` as a `Char`.
 -/
 @[inline]
-def asciiLetter : Parser Char := attempt do
+def asciiLetter : ParserT m Char := attempt do
   let c ← any
   if ('A' ≤ c ∧ c ≤ 'Z') ∨ ('a' ≤ c ∧ c ≤ 'z') then return c else fail s!"ASCII letter expected"
 
@@ -142,19 +146,19 @@ termination_by it
 Skip whitespace: tabs, newlines, carriage returns, and spaces.
 -/
 @[inline]
-def ws : Parser Unit := fun it =>
-  .success ⟨_, skipWs it.2⟩ ()
+def ws : ParserT m Unit := fun it =>
+  pure <| .success ⟨_, skipWs it.2⟩ ()
 
 /--
 Takes a fixed amount of chars from the iterator.
 -/
-def take (n : Nat) : Parser String := fun it =>
+def take (n : Nat) : ParserT m String := fun it =>
   let right := it.2.nextn n
   let substr := String.Slice.mk it.1 it.2 right String.ValidPos.le_nextn |>.copy
   if substr.length != n then
-    .error it .eof
+    pure <| .error it .eof
   else
-    .success ⟨_, right⟩ substr
+    pure <| .success ⟨_, right⟩ substr
 
 end String
 end Parsec

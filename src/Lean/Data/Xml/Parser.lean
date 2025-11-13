@@ -34,7 +34,7 @@ def quote (p : Parser α) : Parser α :=
 
 /-- https://www.w3.org/TR/xml/#NT-Char -/
 def Char : Parser LeanChar :=
-  (attempt do
+  (attempt (m := Id) do
   let c ← any
   let cNat := c.toNat
   if (0x20 ≤ cNat ∧ cNat ≤ 0xD7FF)
@@ -152,14 +152,14 @@ def SystemLiteral : Parser String :=
 
 /-- https://www.w3.org/TR/xml/#NT-PubidChar -/
 def PubidChar : Parser LeanChar :=
-  asciiLetter <|> digit <|> endl <|> attempt do
+  asciiLetter <|> digit <|> endl <|> attempt (m := Id) do
   let c ← any
   if "-'()+,./:=?;!*#@$_%".contains c then pure c else fail "PublidChar expected"
 
 /-- https://www.w3.org/TR/xml/#NT-PubidLiteral -/
 def PubidLiteral : Parser String :=
   pchar '"' *> manyChars PubidChar <* pchar '"'
-  <|> pchar '\'' *> manyChars (attempt do
+  <|> pchar '\'' *> manyChars (attempt (m := Id) do
     let c ← PubidChar
     if c = '\'' then fail "'\\'' not expected" else pure c) <* pchar '\''
 
@@ -486,6 +486,6 @@ def document : Parser Element := prolog *> element <* many Misc <* eof
 end Parser
 
 def parse (s : String) : Except String Element :=
-  Parser.run Xml.Parser.document s
+  ParserT.run Xml.Parser.document s
 
 end Xml

@@ -322,7 +322,7 @@ def MessageMetaData.toMessage : MessageMetaData → Message
 open Std.Internal.Parsec in
 open Std.Internal.Parsec.String in
 open Json.Parser in
-private def messageMetaDataParser (input : String) : Parser MessageMetaData := do
+private def messageMetaDataParser (input : String) : JsonParser σ MessageMetaData := do
   skip
   let k ← parseStr
   skip
@@ -374,13 +374,13 @@ private def messageMetaDataParser (input : String) : Parser MessageMetaData := d
   | _ =>
     fail "expected `id`, `jsonrpc` or `error` field"
 where
-  parseStr : Parser String := do
+  parseStr : JsonParser σ String := do
     let c ← peek!
     if  c != '"' then
       fail "expected \""
     skip
     str
-  parseRequestID : Parser RequestID := do
+  parseRequestID : JsonParser σ RequestID := do
     (do
       let num ← Parser.num
       return .num num) <|>
@@ -398,7 +398,7 @@ Namely:
 - `compress` yields a lexicographic ordering of JSON object keys
 -/
 def parseMessageMetaData (input : String) : Except String MessageMetaData :=
-  messageMetaDataParser input |>.run input
+  runST fun _ => messageMetaDataParser input |>.run input |>.run (enableInterning := false)
 
 public inductive MessageDirection where
   | clientToServer

@@ -27,36 +27,40 @@ instance : Input ByteArray.Iterator UInt8 Nat where
 
 
 /--
-`Parser α` is a parser that consumes a `ByteArray` input using a `ByteArray.Iterator` and returns a result of type `α`.
+`ParserT m α` is a parser that consumes a `ByteArray` input using a `ByteArray.Iterator` and returns a result of type `α`.
 -/
-abbrev Parser (α : Type) : Type := Parsec ByteArray.Iterator α
+abbrev ParserT (m : Type → Type) (α : Type) : Type := ParsecT ByteArray.Iterator m α
+
+abbrev Parser (α : Type) : Type := ParserT Id α
+
+variable {m : Type → Type} [Monad m]
 
 /--
-Run a `Parser` on a `ByteArray`, returns either the result or an error string with offset.
+Run a `ParserT` on a `ByteArray`, returns either the result or an error string with offset.
 -/
-protected def Parser.run (p : Parser α) (arr : ByteArray) : Except String α :=
-  match p arr.iter with
-  | .success _ res => Except.ok res
-  | .error it err => Except.error s!"offset {repr it.pos}: {err}"
+protected def ParserT.run (p : ParserT m α) (arr : ByteArray) : m (Except String α) := do
+  match ← p arr.iter with
+  | .success _ res => pure <| Except.ok res
+  | .error it err => pure <| Except.error s!"offset {repr it.pos}: {err}"
 
 /--
 Parse a single byte equal to `b`, fails if different.
 -/
 @[inline]
-def pbyte (b : UInt8) : Parser UInt8 := attempt do
+def pbyte (b : UInt8) : ParserT m UInt8 := attempt do
   if (← any) = b then pure b else fail s!"expected: '{b}'"
 
 /--
 Skip a single byte equal to `b`, fails if different.
 -/
 @[inline]
-def skipByte (b : UInt8) : Parser Unit :=
+def skipByte (b : UInt8) : ParserT m Unit :=
   pbyte b *> pure ()
 
 /--
 Skip a sequence of bytes equal to the given `ByteArray`.
 -/
-def skipBytes (arr : ByteArray) : Parser Unit := do
+def skipBytes (arr : ByteArray) : ParserT m Unit := do
   for b in arr do
     skipByte b
 
@@ -64,7 +68,7 @@ def skipBytes (arr : ByteArray) : Parser Unit := do
 Parse a string by matching its UTF-8 bytes, returns the string on success.
 -/
 @[inline]
-def pstring (s : String) : Parser String := do
+def pstring (s : String) : ParserT m String := do
   skipBytes s.toUTF8
   return s
 
@@ -72,26 +76,26 @@ def pstring (s : String) : Parser String := do
 Skip a string by matching its UTF-8 bytes.
 -/
 @[inline]
-def skipString (s : String) : Parser Unit := pstring s *> pure ()
+def skipString (s : String) : ParserT m Unit := pstring s *> pure ()
 
 /--
 Parse a `Char` that can be represented in 1 byte. If `c` uses more than 1 byte it is truncated.
 -/
 @[inline]
-def pByteChar (c : Char) : Parser Char := attempt do
+def pByteChar (c : Char) : ParserT m Char := attempt do
   if (← any) = c.toUInt8 then pure c else fail s!"expected: '{c}'"
 
 /--
 Skip a `Char` that can be represented in 1 byte. If `c` uses more than 1 byte it is truncated.
 -/
 @[inline]
-def skipByteChar (c : Char) : Parser Unit := skipByte c.toUInt8
+def skipByteChar (c : Char) : ParserT m Unit := skipByte c.toUInt8
 
 /--
 Parse an ASCII digit `0-9` as a `Char`.
 -/
 @[inline]
-def digit : Parser Char := attempt do
+def digit : ParserT m Char := attempt do
   let b ← any
   if '0'.toUInt8 ≤ b ∧ b ≤ '9'.toUInt8 then return Char.ofUInt8 b else fail s!"digit expected"
 
@@ -106,13 +110,13 @@ private def digitToNat (b : UInt8) : Nat :=
 Parse zero or more ASCII digits into a `Nat`, continuing until non-digit or EOF.
 -/
 @[inline]
-private partial def digitsCore (acc : Nat) : Parser Nat := fun it =>
+private partial def digitsCore (acc : Nat) : ParserT m Nat := fun it =>
   /-
   With this design instead of combinators we can avoid allocating and branching over .success values
   all of the time.
   -/
   let ⟨res, it⟩ := go it acc
-  .success it res
+  pure <| .success it res
 where
   go (it : ByteArray.Iterator) (acc : Nat) : Nat × ByteArray.Iterator :=
     if h : it.hasNext then
@@ -130,7 +134,7 @@ where
 Parse one or more ASCII digits into a `Nat`.
 -/
 @[inline]
-def digits : Parser Nat := do
+def digits : ParserT m Nat := do
   let d ← digit
   digitsCore (digitToNat d.toUInt8)
 
@@ -138,7 +142,7 @@ def digits : Parser Nat := do
 Parse a hex digit `0-9`, `a-f`, or `A-F` as a `Char`.
 -/
 @[inline]
-def hexDigit : Parser Char := attempt do
+def hexDigit : ParserT m Char := attempt do
   let b ← any
   if ('0'.toUInt8 ≤ b ∧ b ≤ '9'.toUInt8)
    ∨ ('a'.toUInt8 ≤ b ∧ b ≤ 'f'.toUInt8)
@@ -148,7 +152,7 @@ def hexDigit : Parser Char := attempt do
 Parse an octal digit `0-7` as a `Char`.
 -/
 @[inline]
-def octDigit : Parser Char := attempt do
+def octDigit : ParserT m Char := attempt do
   let b ← any
   if '0'.toUInt8 ≤ b ∧ b ≤ '7'.toUInt8 then
     return Char.ofUInt8 b
@@ -159,7 +163,7 @@ def octDigit : Parser Char := attempt do
 Parse an ASCII letter `a-z` or `A-Z` as a `Char`.
 -/
 @[inline]
-def asciiLetter : Parser Char := attempt do
+def asciiLetter : ParserT m Char := attempt do
   let b ← any
   if ('A'.toUInt8 ≤ b ∧ b ≤ 'Z'.toUInt8) ∨ ('a'.toUInt8 ≤ b ∧ b ≤ 'z'.toUInt8) then
     return Char.ofUInt8 b
@@ -180,23 +184,23 @@ private partial def skipWs (it : ByteArray.Iterator) : ByteArray.Iterator :=
 Skip whitespace: tabs, newlines, carriage returns, and spaces.
 -/
 @[inline]
-def ws : Parser Unit := fun it =>
-  .success (skipWs it) ()
+def ws : ParserT m Unit := fun it =>
+  pure <| .success (skipWs it) ()
 
 /--
 Parse `n` bytes from the input into a `ByteSlice`, errors if not enough bytes.
 -/
-def take (n : Nat) : Parser ByteSlice := fun it =>
+def take (n : Nat) : ParserT m ByteSlice := fun it =>
   if it.remainingBytes < n then
-    .error it .eof
+    pure <| .error it .eof
   else
-    .success (it.forward n) (it.array[it.idx...(it.idx+n)])
+    pure <| .success (it.forward n) (it.array[it.idx...(it.idx+n)])
 
 /--
 Parses while a predicate is satisfied.
 -/
 @[inline]
-partial def takeWhile (pred : UInt8 → Bool) : Parser ByteSlice :=
+partial def takeWhile (pred : UInt8 → Bool) : ParserT m ByteSlice :=
   fun it =>
     let rec findEnd (count : Nat) (iter : ByteArray.Iterator) : Nat × ByteArray.Iterator :=
       if ¬iter.hasNext then (count, iter)
@@ -204,40 +208,40 @@ partial def takeWhile (pred : UInt8 → Bool) : Parser ByteSlice :=
       else (count, iter)
 
     let (length, newIt) := findEnd 0 it
-    .success newIt (it.array[it.idx...(it.idx + length)])
+    pure <| .success newIt (it.array[it.idx...(it.idx + length)])
 
 /--
 Parses until a predicate is satisfied (exclusive).
 -/
 @[inline]
-def takeUntil (pred : UInt8 → Bool) : Parser ByteSlice :=
+def takeUntil (pred : UInt8 → Bool) : ParserT m ByteSlice :=
   takeWhile (fun b => ¬pred b)
 
 /--
 Skips while a predicate is satisfied.
 -/
 @[inline]
-partial def skipWhile (pred : UInt8 → Bool) : Parser Unit :=
+partial def skipWhile (pred : UInt8 → Bool) : ParserT m Unit :=
   fun it =>
     let rec findEnd (count : Nat) (iter : ByteArray.Iterator) : ByteArray.Iterator :=
       if ¬iter.hasNext then iter
       else if pred iter.curr then findEnd (count + 1) iter.next
       else iter
 
-    .success (findEnd 0 it) ()
+    pure <| .success (findEnd 0 it) ()
 
 /--
 Skips until a predicate is satisfied.
 -/
 @[inline]
-def skipUntil (pred : UInt8 → Bool) : Parser Unit :=
+def skipUntil (pred : UInt8 → Bool) : ParserT m Unit :=
   skipWhile (fun b => ¬pred b)
 
 /--
 Parses while a predicate is satisfied, up to a given limit.
 -/
 @[inline]
-partial def takeWhileUpTo (pred : UInt8 → Bool) (limit : Nat) : Parser ByteSlice :=
+partial def takeWhileUpTo (pred : UInt8 → Bool) (limit : Nat) : ParserT m ByteSlice :=
   fun it =>
     let rec findEnd (count : Nat) (iter : ByteArray.Iterator) : Nat × ByteArray.Iterator :=
       if count ≥ limit then (count, iter)
@@ -246,13 +250,13 @@ partial def takeWhileUpTo (pred : UInt8 → Bool) (limit : Nat) : Parser ByteSli
       else (count, iter)
 
     let (length, newIt) := findEnd 0 it
-    .success newIt (it.array[it.idx...(it.idx + length)])
+    pure <| .success newIt (it.array[it.idx...(it.idx + length)])
 
 /--
 Parses while a predicate is satisfied, up to a given limit, requiring at least one byte.
 -/
 @[inline]
-def takeWhileUpTo1 (pred : UInt8 → Bool) (limit : Nat) : Parser ByteSlice :=
+def takeWhileUpTo1 (pred : UInt8 → Bool) (limit : Nat) : ParserT m ByteSlice :=
   fun it =>
     let rec findEnd (count : Nat) (iter : ByteArray.Iterator) : Nat × ByteArray.Iterator :=
       if count ≥ limit then (count, iter)
@@ -262,22 +266,22 @@ def takeWhileUpTo1 (pred : UInt8 → Bool) (limit : Nat) : Parser ByteSlice :=
 
     let (length, newIt) := findEnd 0 it
     if length = 0 then
-      .error it (if newIt.atEnd then .eof else .other "expected at least one char")
+      pure <| .error it (if newIt.atEnd then .eof else .other "expected at least one char")
     else
-      .success newIt (it.array[it.idx...(it.idx + length)])
+      pure <| .success newIt (it.array[it.idx...(it.idx + length)])
 
 /--
 Parses until a predicate is satisfied (exclusive), up to a given limit.
 -/
 @[inline]
-def takeUntilUpTo (pred : UInt8 → Bool) (limit : Nat) : Parser ByteSlice :=
+def takeUntilUpTo (pred : UInt8 → Bool) (limit : Nat) : ParserT m ByteSlice :=
   takeWhileUpTo (fun b => ¬pred b) limit
 
 /--
 Skips while a predicate is satisfied, up to a given limit.
 -/
 @[inline]
-partial def skipWhileUpTo (pred : UInt8 → Bool) (limit : Nat) : Parser Unit :=
+partial def skipWhileUpTo (pred : UInt8 → Bool) (limit : Nat) : ParserT m Unit :=
   fun it =>
     let rec findEnd (count : Nat) (iter : ByteArray.Iterator) : ByteArray.Iterator :=
       if count ≥ limit then iter
@@ -285,13 +289,13 @@ partial def skipWhileUpTo (pred : UInt8 → Bool) (limit : Nat) : Parser Unit :=
       else if pred iter.curr then findEnd (count + 1) iter.next
       else iter
 
-    .success (findEnd 0 it) ()
+    pure <| .success (findEnd 0 it) ()
 
 /--
 Skips until a predicate is satisfied, up to a given limit.
 -/
 @[inline]
-def skipUntilUpTo (pred : UInt8 → Bool) (limit : Nat) : Parser Unit :=
+def skipUntilUpTo (pred : UInt8 → Bool) (limit : Nat) : ParserT m Unit :=
   skipWhileUpTo (fun b => ¬pred b) limit
 
 end ByteArray

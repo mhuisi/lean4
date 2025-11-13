@@ -15,6 +15,7 @@ namespace Lean
 namespace Xml
 
 @[expose] def Attributes := Std.TreeMap String String
+deriving Inhabited
 instance : ToString Attributes := ⟨λ as => as.foldl (λ s n v => s ++ s!" {n}=\"{v}\"") ""⟩
 
 mutual
@@ -23,6 +24,7 @@ inductive Element
   (name : String)
   (attributes : Attributes)
   (content : Array Content)
+deriving Inhabited
 
 inductive Content
 | Element (element : Element)

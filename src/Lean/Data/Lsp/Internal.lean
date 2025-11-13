@@ -22,6 +22,21 @@ workers. These messages are not visible externally to users of the LSP server.
 
 namespace Lean.Lsp
 
+abbrev StringCache := Std.HashSet String
+abbrev InternedFromJsonM := StateM StringCache
+
+class InternedFromJson (α : Type) where
+  fromJson? : Json → InternedFromJsonM (Except String α)
+
+#synth FromJson String
+
+instance : InternedFromJson String where
+  fromJson?
+    | .str s =>
+
+    | _ =>
+      pure <| throw "String expected"
+
 /-! Most reference-related types have custom FromJson/ToJson implementations to
 reduce the size of the resulting JSON. -/
 
