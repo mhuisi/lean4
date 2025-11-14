@@ -24,12 +24,13 @@ structure StringCache (σ : Type) where
 
 abbrev InternM (σ : Type) := ReaderT (StringCache σ) (ST σ)
 
-def InternM.run (x : InternM σ α) (enableInterning := true) : ST σ α := do
-  let ref ← ST.mkRef ∅
-  ReaderT.run x {
+def InternM.run (x : InternM σ α) (init : Std.HashSet String) (enableInterning := true) : ST σ (α × Std.HashSet String) := do
+  let ref ← ST.mkRef init
+  let r ← ReaderT.run x {
     isEnabled := enableInterning
     ref
   }
+  return (r, ← ref.get)
 
 abbrev JsonParser (σ α : Type) := ParserT (InternM σ) α
 
@@ -319,12 +320,16 @@ end Json.Parser
 namespace Json
 
 def parse (s : String) : Except String Lean.Json :=
-  runST fun _ =>
-    Parser.InternM.run (enableInterning := false) <|
+  let (r, _) := runST fun _ =>
+    Parser.InternM.run (enableInterning := false) (init := ∅) <|
       Parser.JsonParser.run Json.Parser.any s
+  r
 
-def parseWithInterning (s : String) : Parser.InternM σ (Except String Lean.Json) :=
-  Parser.JsonParser.run Json.Parser.any s
+def parseWithInterning [Monad m] (s : String) : StateT (Std.HashSet String) m (Except String Lean.Json) :=
+  modifyGet fun cache =>
+    runST fun _ =>
+      Parser.InternM.run (enableInterning := true) (init := cache) <|
+        Parser.JsonParser.run Json.Parser.any s
 
 end Json
 
