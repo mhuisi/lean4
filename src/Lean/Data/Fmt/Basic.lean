@@ -18,7 +18,7 @@ namespace Lean.Fmt
 
 open Std
 
-def memoHeightLimit : Nat := 6
+def memoHeightLimit : Nat := 5
 
 def nextMemoHeight (memoHeight : Nat) : Nat :=
   if memoHeight = 0 then
@@ -497,17 +497,19 @@ where
     | .tainted tm1 =>
       return .tainted (.taintedConcat tm1 d2 indentation fullness2 d.maxNewlineCount?)
     | .set ms1 =>
-      let mut result := .set #[]
-      for m1 in ms1 do
+      ms1.foldlM (init := .set #[]) fun acc m1 => do
         let set2 ← resolve d2 m1.lastLineLength indentation fullness2
-        match set2 with
-        | .tainted tm2 =>
-          return .tainted (.concatTainted m1 tm2 d.maxNewlineCount?)
-        | .set ms2 =>
-          let m1Result : MeasureSet.Set τ := ms2.map m1.concat
-          let m1Result := m1Result.dedup
-          result := MeasureSet.merge result (.set m1Result) (prunable := true)
-      return result
+        let m1Result :=
+          match set2 with
+          | .tainted tm2 =>
+            .tainted (.concatTainted m1 tm2 d.maxNewlineCount?)
+          | .set ms2 =>
+            if ms2.isEmpty then
+              .set #[]
+            else
+              let r : MeasureSet.Set τ := ms2.map m1.concat
+              .set r.dedup
+        return MeasureSet.merge acc m1Result (prunable := true)
 
 partial def MeasureSet.resolve : Resolver σ τ := Resolver.memoize fun d columnPos indentation fullness => do
   let columnPos' :=
