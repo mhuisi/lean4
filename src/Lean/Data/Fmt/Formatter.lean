@@ -91,6 +91,9 @@ where
     | .failure
     | .text .. =>
       return d
+    | .tagged id d =>
+      let d ← goMemoized d isFlattened
+      return .tagged id d
     | .indented n c d =>
       let d ← goMemoized d isFlattened
       return .indented n c d
@@ -129,6 +132,11 @@ public class Cost (τ : Type) [Add τ] [LE τ] where
   can produce optimal renderings even when all renderings exceed the column limit.
   -/
   optimalityCutoffWidth : Nat
+
+public structure Output where
+  rendering : String
+  tags : Std.HashMap TagId (Array String.Slice)
+  deriving Inhabited
 
 /--
 A measure is a tuple of the compound cost of a specific rendering and a writer monad to produce the
@@ -202,9 +210,9 @@ structure Measure (τ : Type) where
   -/
   nonCumulativeIndentation : Nat
   /--
-  Writer monad that produces the rendering that this measure presents.
+  Writer monad that produces the rendering that this measure presents with a set of associated tags.
   -/
-  output : StateM String Unit
+  output : StateM Output Unit
 
 variable {τ : Type} [Add τ] [LE τ] [DecidableLE τ] [Cost τ]
 
@@ -232,11 +240,26 @@ def Measure.adjustIndentation (m : Measure τ) (newIndentation : Nat)
   nonCumulativeIndentation := newNonCumulativeIndentation
 }
 
+/-- Adds a tag to the rendering presented by this measure. -/
+def Measure.addTag (m : Measure τ) (tag : TagId) : Measure τ := { m with
+  output := do
+    m.output
+    modify fun out =>
+      let taggedSlice := out.rendering.toSlice
+      { out with
+        tags := out.tags.alter tag fun
+          | none => some #[taggedSlice]
+          | some slices => some <| slices.push taggedSlice
+      }
+}
 
-/-- Runs the writer monad of a measure, printing its rendering to a string. -/
-def Measure.print (m : Measure τ) : String :=
-  let (_, printed) := m.output.run ""
-  printed
+/--
+Runs the writer monad of a measure, printing its rendering to a string and collecting the
+set of tags for the rendering.
+-/
+def Measure.print (m : Measure τ) : Output :=
+  let (_, output) := m.output.run { rendering := "", tags := ∅ }
+  output
 
 /--
 A tainted measure is a measure for a rendering that exceeds the optimality cutoff width of the
@@ -294,10 +317,15 @@ inductive TaintedMeasure (τ : Type) where
   | appendTainted (m1 : Measure τ) (tm2 : TaintedMeasure τ) (maxNewlineCount? : Option Nat)
   /--
   Change the level of indentation of a tainted measure. Resolving this tainted measure amounts to
-  resolving the tainted measure and adjusting the resulting indentation levels.
+  resolving the inner tainted measure and adjusting the resulting indentation levels.
   -/
   | adjustTaintedIndentation (tm : TaintedMeasure τ)
     (newIndentation newNonCumulativeIndentation : Nat) (maxNewlineCount? : Option Nat)
+  /--
+  Add a tag to the tainted measure. Resolving this tainted measure amounts to resolving the inner
+  tainted measure and adding the tag to the resulting measure.
+  -/
+  | addTag (tm : TaintedMeasure τ) (tag : TagId) (maxNewlineCount? : Option Nat)
   /--
   Resolve a tainted measure for a given resolution context to a regular measure.
   Amounts to resolving the given document in the given context, picking a measure from the set of
@@ -318,6 +346,7 @@ def TaintedMeasure.maxNewlineCount? : TaintedMeasure τ → Option Nat
   | .taintedAppend (maxNewlineCount? := n) .. => n
   | .appendTainted (maxNewlineCount? := n) .. => n
   | .adjustTaintedIndentation (maxNewlineCount? := n) .. => n
+  | .addTag (maxNewlineCount? := n) .. => n
   | .resolveTainted (maxNewlineCount? := n) .. => n
 
 /--
@@ -422,6 +451,16 @@ def MeasureSet.adjustIndentation (m : MeasureSet τ) (newIndentation : Nat)
     .set <| ms.map (·.adjustIndentation newIndentation newNonCumulativeIndentation)
   | .tainted tm => .tainted
     (.adjustTaintedIndentation tm newIndentation newNonCumulativeIndentation tm.maxNewlineCount?)
+
+/--
+Adds a tag to all measures in a set of measures according to `Measure.addTag` and
+`TaintedMeasure.addTag`.
+-/
+def MeasureSet.addTag (m : MeasureSet τ) (tag : TagId) : MeasureSet τ :=
+  match m with
+  | .set ms =>
+    .set <| ms.map (·.addTag tag)
+  | .tainted tm => .tainted <| .addTag tm tag tm.maxNewlineCount?
 
 /--
 Memoization key for sets of measures produced by the formatter.
@@ -626,7 +665,10 @@ partial def MeasureSet.resolveCore : Resolver σ τ :=
         -- can increase the level of indentation again.
         nonCumulativeIndentation := 0
         output := modify fun out =>
-          out ++ "\n" |>.pushn ' ' lineIndentation
+          { out with
+            rendering := out.rendering ++ "\n" |>.pushn ' ' lineIndentation
+          }
+
       }]
     | .text s =>
       return .set [{
@@ -635,8 +677,13 @@ partial def MeasureSet.resolveCore : Resolver σ τ :=
         indentation
         nonCumulativeIndentation
         output := modify fun out =>
-          out ++ s
+          { out with
+            rendering := out.rendering ++ s
+          }
       }]
+    | .tagged id d =>
+      let ms ← resolve d columnPos indentation nonCumulativeIndentation fullness
+      return ms.addTag id
     | .flattened _ =>
       -- Eliminated during pre-processing.
       unreachable!
@@ -809,6 +856,10 @@ partial def TaintedMeasure.resolve? : TaintedResolver σ τ := TaintedResolver.m
       let some m ← tm.resolve?
         | return none
       return some <| m.adjustIndentation newIndentation newNonCumulativeIndentation
+    | .addTag tm tag _ =>
+      let some m ← tm.resolve?
+        | return none
+      return some <| m.addTag tag
     | .resolveTainted d columnPos indentation nonCumulativeIndentation fullness _ =>
       -- If we used `resolve` instead of `resolveCore` here, we would just again obtain a tainted
       -- measure, and the mutual recursion between `MeasureSet.extractAtMostOne?` and
@@ -857,7 +908,7 @@ Yields `none` if the resolution failed, i.e. if there is no interpretation of `d
 result in `failure`.
 -/
 public def formatWithCost? (τ : Type) [Add τ] [LE τ] [DecidableLE τ] [Cost τ]
-    (d : Doc) (offset : Nat := 0) : Option String := do
+    (d : Doc) (offset : Nat := 0) : Option Output := do
   let d := d.preprocess
   let m ← resolve? (τ := τ) d offset
   return m.print
@@ -976,7 +1027,7 @@ It does not represent the actual page limit and should always be chosen to be la
 public def format? (d : Doc) (width : Nat)
     (optimalityCutoffWidth : Nat := Nat.max ((5*width)/4) 200)
     (offset : Nat := 0) :
-    Option String := do
+    Option Output := do
   formatWithCost? (τ := DefaultCost width optimalityCutoffWidth) d offset
 
 section DefaultCostDefTheorems

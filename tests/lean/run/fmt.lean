@@ -20,7 +20,7 @@ def traditional : Doc :=
 
 def test (d : Doc) (width : Nat) (pre : String := "") : IO Unit := do
   IO.println ""
-  let r := pre ++ (format? d width (offset := pre.length) |>.getD "")
+  let r := pre ++ (format? d width (offset := pre.length) |>.map (·.rendering) |>.getD "")
   IO.println r
 
 /--
@@ -263,7 +263,7 @@ something
 
 /-- info: none -/
 #guard_msgs in
-#eval format? .failure 80
+#eval format? .failure 80 |>.map (·.rendering)
 
 def concated (n : Nat) : Doc :=
   if n = 0 then

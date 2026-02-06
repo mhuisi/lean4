@@ -50,7 +50,7 @@ def doc : IO Doc := do
 
 @[noinline]
 def format (doc : Doc) : IO (Option String) := do
-  return format? doc 80 100
+  return format? doc 80 100 |>.map (·.rendering)
 
 def main (_ : List String) : IO Unit := do
   let d ← doc

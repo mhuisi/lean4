@@ -20,7 +20,7 @@ def doc (n : Nat) : IO Doc := do
 
 @[noinline]
 def format (doc : Doc) : IO (Option String) := do
-  return format? doc 80 100
+  return format? doc 80 100 |>.map (·.rendering)
 
 def main (args : List String) : IO Unit := do
   let n := (args[0]!).toNat!

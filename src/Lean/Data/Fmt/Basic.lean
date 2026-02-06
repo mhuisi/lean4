@@ -8,7 +8,9 @@ module
 
 prelude
 public import Init.Data.Hashable
+public import Init.Data.Ord.Basic
 import Init.Data.Array
+import Init.Data.Ord.Basic
 
 /-!
 Document language of the `Fmt` formatter.
@@ -80,6 +82,10 @@ def FullnessState.setFullAfter (s : FullnessState) (isFullAfter : Bool) : Fullne
 
 /-- Whether resolving a document is guaranteed to fail in the given `FullnessState`. -/
 abbrev FailureCond := FullnessState → Bool
+
+@[expose]
+def TagId := Nat
+  deriving Inhabited, BEq, Hashable, Ord, Repr
 
 /-- Input document consumed by the formatter, which chooses an optimal rendering of the document. -/
 inductive Doc where
@@ -187,6 +193,21 @@ inductive Doc where
   ```
   -/
   | text (s : String)
+  /--
+  Associates a unique `TagId` with the inner document.
+  Tags are used to transfer properties on `Doc` to the rendered document.
+
+  Example:
+  ```
+  tagged 0 (text "a")
+  ```
+  produces
+  ```
+  a
+  ```
+  where the range `[0, 1]` is tagged with `0`.
+  -/
+  | tagged (id : TagId) (d : Doc)
   /--
   Flattens an inner document by replacing all `newline (some f)` nodes in the inner
   document with `text f` and all `newline none` nodes in the inner document with `failure`.
@@ -456,6 +477,7 @@ with
     | .newline .. => some 1
     | .text _
     | .flattened _ => some 0
+    | .tagged _ d
     | .indented _ _ d
     | .aligned d
     | .unindented d
@@ -472,11 +494,12 @@ with
     | .failure
     | .newline ..
     | .text _ => memoHeightLimit
+    | .tagged _ d
     | .flattened d
     | .indented _ _ d
     | .aligned d
     | .unindented d
-    | .full d =>
+    | .full d  =>
       let n := memoHeight d
       nextMemoHeight n
     | .either a b
