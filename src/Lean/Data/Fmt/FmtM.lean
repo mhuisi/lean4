@@ -13,6 +13,7 @@ import Lean.Parser.Extension
 import Lean.ExtraModUses
 import Lean.Elab.InfoTree.Main
 public import Lean.Util.ShareCommon
+import Std.Data.HashMap.AdditionalOperations
 
 namespace Lean
 
@@ -22,18 +23,40 @@ public structure Fmt.Context where
 public structure Fmt.State where
   shareCommonState : ShareCommon.State ShareCommon.objectFactory
   freshTagId : TagId
-  tags : Std.HashMap TagId Syntax.Range
+  tags : Std.HashMap Syntax.Range (Array TagId)
 
 public structure Fmt.TaggedDoc where
   doc : Fmt.Doc
 
-public abbrev FmtM α := ReaderT Fmt.Context (ExceptT Unit (StateT Fmt.State Id)) α
+public inductive Fmt.Error where
+  | partialFormatter
+    (kind : SyntaxNodeKind)
+    (msg : String := s!"Formatter for syntax kind `{kind}` is partial and does not handle the full \
+      syntax of `{kind}`.")
+  | formattingFailure
+    (stx : Syntax)
+    (doc : Doc)
+    (msg : String := "Formatting of the document produced by the current set of `[fmt]` \
+      annotations has failed. This issue is commonly caused by `Doc.failure` or attempting to \
+      flatten a document with hard newlines.")
+  | malformedInputSyntax
+    (stx : Syntax)
+    (malformedPortion : Substring.Raw)
+    (reason : String)
+    (msg : String := s!"Input syntax to the formatter is malformed: {reason}. Offending portion \
+      of the input syntax: {malformedPortion.toString}")
+  | raw
+    (msg : String)
+  deriving Inhabited
+
+public abbrev FmtM α := ReaderT Fmt.Context (ExceptT Fmt.Error (StateT Fmt.State Id)) α
 public abbrev Fmt := Syntax → FmtM Fmt.TaggedDoc
 
-public def FmtM.run (env : Environment) (act : FmtM α) : Option α :=
-  ReaderT.run act { env }
-    |>.run' { shareCommonState := default, freshTagId := Nat.zero, tags := ∅ }
-    |>.toOption
+public def FmtM.run (env : Environment) (act : FmtM α) :
+    Except Fmt.Error (α × Std.HashMap Syntax.Range (Array Fmt.TagId)) := do
+  let (v?, s) := ReaderT.run act { env }
+    |>.run { shareCommonState := default, freshTagId := Nat.zero, tags := ∅ }
+  return (← v?, s.tags)
 
 instance : MonadShareCommon FmtM where
   withShareCommon v _ := modifyGet fun s =>
@@ -41,6 +64,9 @@ instance : MonadShareCommon FmtM where
     (v, { s with shareCommonState })
 
 namespace Fmt
+
+public def throwPartialFormatter : FmtM α :=
+  throw <| .partialFormatter .anonymous
 
 public def untagged (doc : Fmt.Doc) : TaggedDoc :=
   ⟨doc⟩
@@ -52,11 +78,18 @@ public def tagged (doc : Fmt.Doc) (ref : Syntax) : FmtM TaggedDoc := do
     let currentTagId : Nat := s.freshTagId
     { s with
       freshTagId := currentTagId + 1
-      tags := s.tags.insertIfNew currentTagId range
+      tags := s.tags.alter range fun
+        | none => some #[currentTagId]
+        | some tags => some <| tags.push currentTagId
     }
   return ⟨doc⟩
 
-public def TaggedDoc.tag (d : TaggedDoc) (ref : Syntax) : FmtM TaggedDoc :=
+public def TaggedDoc.isTagged (d : TaggedDoc) : Bool :=
+  d.doc matches .tagged ..
+
+public def TaggedDoc.tag (d : TaggedDoc) (ref : Syntax) : FmtM TaggedDoc := do
+  if d.isTagged then
+    return d
   tagged d.doc ref
 
 public def failure : TaggedDoc :=
@@ -117,14 +150,261 @@ unsafe builtin_initialize fmtAttribute : KeyedDeclsAttribute Fmt ←
   }
 
 public def fmt : Fmt := fun stx => match stx with
-  | .missing => pure <| failure
-  | .atom _ val => text val stx
-  | .ident _ _ val _ => text val.toString stx
+  | .missing =>
+    pure <| failure
+  | .atom _ val =>
+    text val stx
+  | .ident _ _ val _ =>
+    text val.toString stx
   | .node .. => do
     let ctx ← read
-    let fmts := fmtAttribute.getValues ctx.env stx.getKind
+    let kind := stx.getKind
+    let fmts := fmtAttribute.getValues ctx.env kind
     let some f := fmts.head?
-      | panic! s!"No formatter found for kind '{stx.getKind}' of the following syntax: {stx}"
+      | panic! s!"No formatter found for kind '{kind}' of the following syntax: {stx}"
     let r ← f stx
-    let r ← r.tag stx
-    withShareCommon r
+    try
+      let r ← r.tag stx
+      withShareCommon r
+    catch e =>
+      if let .partialFormatter errorKind _ := e then
+        if errorKind == .anonymous then
+          throw <| .partialFormatter kind
+      throw e
+
+inductive Comment.Placement where
+  | afterToken
+  | onLineBeforeToken
+
+inductive Comment.Kind where
+  | lineComment
+  | blockComment
+
+def Comment.Kind.startSymbol (kind : Comment.Kind) : String :=
+  match kind with
+  | .lineComment => "--"
+  | .blockComment => "/-"
+
+def Comment.Kind.endSymbol (kind : Comment.Kind) : String :=
+  match kind with
+  | .lineComment => "\n"
+  | .blockComment => "-/"
+
+def Comment.Kind.hasNesting (kind : Comment.Kind) : Bool :=
+  match kind with
+  | .lineComment => false
+  | .blockComment => true
+
+structure Comment where
+  kind : Comment.Kind
+  placement : Comment.Placement
+  full : String
+  content : String
+
+structure PendingComment extends Comment where
+  startColumnOffset : Nat
+  startPos : String.Pos.Raw
+
+def PendingComment.finalize (p : PendingComment) : Comment :=
+  let s := p.full.toSlice.dropPrefix p.kind.startSymbol
+    |>.dropSuffix p.kind.endSymbol
+  let lines := s.split "\n" |>.toArray
+  let deindentedLines :=
+    lines[0]! :: lines[1:].toList.map (dropIndentation · p.startColumnOffset)
+  let deindentedLines := deindentedLines.map (·.toString)
+  let content := "\n".intercalate deindentedLines
+    |>.toSlice
+    |> normalizeContent p.kind
+    |>.toString
+  {
+    kind := p.kind
+    placement := p.placement
+    full := p.full
+    content
+  }
+where
+  normalizeContent (kind : Comment.Kind) (s : String.Slice) : String.Slice :=
+    match kind with
+    | .lineComment =>
+      s.dropPrefix " " |>.dropSuffix "\n"
+    | .blockComment =>
+      s.dropPrefix " "
+        |>.dropPrefix "\n"
+        |>.dropSuffix "\n"
+        |>.dropSuffix " "
+  dropIndentation (line : String.Slice) (amount : Nat) : String.Slice := Id.run do
+    let mut line := line
+    let mut amount := amount
+    while ! line.isEmpty && amount > 0 do
+      let c := line.front
+      if c != ' ' then
+        break
+      line := line.drop 1
+      amount := amount - 1
+    return line
+
+def advanceColumnOffset (columnOffset : Nat) (s : String.Slice) : Nat :=
+  match s.revFind? '\n' with
+  | none =>
+    columnOffset + s.positions.length
+  | some nlPos =>
+    s.sliceFrom nlPos.next! |>.positions.length
+
+def parseComments (trailingWs : String.Slice) (columnOffset : Nat) : Array Comment × Nat := Id.run do
+  let kinds := #[Comment.Kind.lineComment, Comment.Kind.blockComment]
+
+  let firstNewlinePos := trailingWs.find '\n' |>.str
+
+  let mut trailingWs := trailingWs
+  let mut columnOffset : Nat := columnOffset
+  let mut comments : Array PendingComment := #[]
+
+  let mut commentNestingLevel : Nat := 0
+  let mut pendingComment? : Option PendingComment := none
+
+  while ! trailingWs.isEmpty do
+    match pendingComment? with
+    | none =>
+      let currentPos := trailingWs.startPos.str.offset
+      let isAfterNewline := currentPos >= firstNewlinePos.offset
+      let startMatch? := kinds.findSome? fun kind => do
+        return (kind, ← trailingWs.dropPrefix? kind.startSymbol)
+      if let some (kind, trailingWs') := startMatch? then
+        pendingComment? := some {
+          kind := kind
+          placement := if isAfterNewline then .onLineBeforeToken else .afterToken
+          full := kind.startSymbol
+          content := ""
+          startColumnOffset := columnOffset
+          startPos := currentPos
+        }
+        commentNestingLevel := 1
+        trailingWs := trailingWs'
+        columnOffset := advanceColumnOffset columnOffset kind.startSymbol
+        continue
+      let c := trailingWs.front
+      trailingWs := trailingWs.drop 1
+      columnOffset := advanceColumnOffset columnOffset c.toString
+      continue
+    | some pendingComment =>
+      let kind := pendingComment.kind
+      let endMatch? := trailingWs.dropPrefix? kind.endSymbol
+      if let some trailingWs' := endMatch? then
+        commentNestingLevel := commentNestingLevel - 1
+        let pendingComment := { pendingComment with
+          full := pendingComment.full ++ kind.endSymbol
+        }
+        if !kind.hasNesting || commentNestingLevel == 0 then
+          comments := comments.push pendingComment
+          pendingComment? := none
+        else
+          pendingComment? := some pendingComment
+        trailingWs := trailingWs'
+        columnOffset := advanceColumnOffset columnOffset kind.endSymbol
+        continue
+      if kind.hasNesting then
+        let startMatch? := trailingWs.dropPrefix? kind.startSymbol
+        if let some trailingWs' := startMatch? then
+          commentNestingLevel := commentNestingLevel + 1
+          pendingComment? := some { pendingComment with
+            full := pendingComment.full ++ kind.startSymbol
+          }
+          trailingWs := trailingWs'
+          columnOffset := advanceColumnOffset columnOffset kind.startSymbol
+          continue
+      let c := trailingWs.front
+      pendingComment? := some { pendingComment with
+        full := pendingComment.full.push c
+      }
+      trailingWs := trailingWs.drop 1
+      columnOffset := advanceColumnOffset columnOffset c.toString
+      continue
+  if let some pendingComment := pendingComment? then
+    if pendingComment.kind.endSymbol.all Char.isWhitespace then
+      comments := comments.push pendingComment
+      pendingComment? := none
+  let finalized := comments.map (·.finalize)
+  return (finalized, columnOffset)
+
+structure collectComments.State where
+  pendingComments : Array Comment := #[]
+  comments : Array (Comment × Syntax.Range) := {}
+  columnOffset : Nat := 0 -- TODO: init?
+
+abbrev collectComments.M α := StateT collectComments.State (Except Fmt.Error) α
+
+def collectComments (stx : Syntax) :
+    Except Fmt.Error (Array (Comment × Syntax.Range)) := do
+  let (_, s) ← StateT.run (s := { : collectComments.State }) <| go stx
+  return s.comments
+where
+  go (stx : Syntax) : collectComments.M Unit := do
+    match stx with
+    | .missing =>
+      return
+    | .atom info val =>
+      collectTokenComments info val
+    | .ident info rawVal .. =>
+      let rawVal ← toSlice rawVal
+      collectTokenComments info rawVal
+    | .node _ _ args =>
+      for arg in args do
+        go arg
+  collectTokenComments (info : SourceInfo) (tk : String.Slice) : collectComments.M Unit := do
+    let some range := info.getRange?
+      | throw <| .malformedInputSyntax stx (.ofSlice tk) "missing token range"
+    let pendingComments ← modifyGet fun s =>
+      (s.pendingComments, { s with pendingComments := #[] })
+    addComments range pendingComments
+    advanceColumnOffset tk
+    let some trailing ← getTrailing? info
+      | return
+    let (comments, columnOffset) := parseComments trailing (← get).columnOffset
+    let (commentsAfterToken, commentsOnLineBeforeToken) :=
+      comments.partition (·.placement matches .afterToken)
+    addComments range commentsAfterToken
+    modify fun s => { s with
+      pendingComments := s.pendingComments ++ commentsOnLineBeforeToken
+      columnOffset
+    }
+    advanceColumnOffset trailing
+  addComments (range : Syntax.Range) (newComments : Array Comment) : collectComments.M Unit := do
+    modify fun s => { s with
+      comments := s.comments ++ newComments.map (·, range)
+    }
+  advanceColumnOffset (val : String.Slice) : collectComments.M Unit :=
+    modify fun s => { s with
+      columnOffset := Fmt.advanceColumnOffset s.columnOffset val
+    }
+  toSlice (s : Substring.Raw) : collectComments.M String.Slice := do
+    let some s := s.toSlice?
+      | throw <| .malformedInputSyntax stx s
+          "substring is invalid and cannot be converted to a slice"
+    return s
+  getTrailing? (info : SourceInfo) : collectComments.M (Option String.Slice) := do
+    let some trailing := info.getTrailing?
+      | return none
+    toSlice trailing
+
+def associate
+    (database : Array (Syntax.Range × α))
+    (queries : Array (Syntax.Range × β)) :
+    Array (Syntax.Range × α × β) := Id.run do
+
+
+def transferToTags
+    (tags : Std.HashMap Syntax.Range (Array TagId))
+    (entries : Array (α × Syntax.Range)) :
+    Std.HashMap TagId (Array α) :=
+  let taggedEntries := entries.flatMap fun (e, range) =>
+    tags.getD range #[] |>.map (e, ·)
+  taggedEntries.groupByKey (·.2)
+    |>.map fun _ entries => entries.map (·.1)
+
+public def main (env : Environment) (stx : Syntax) : Except Error String := do
+  let comments ← collectComments stx
+  let (taggedDoc, tags) ← FmtM.run env <| fmt stx
+  let doc := taggedDoc.doc
+  let some output := format? doc 80
+    | throw <| .formattingFailure stx doc
+  return output.rendering

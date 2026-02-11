@@ -113,6 +113,13 @@ def test : MetaM Unit := do
 
 #eval test
 
+set_option pp.raw true
+--set_option pp.raw.showInfo true
+set_option trace.Elab.command true
+
+/-- asdf -/
+def xd := 1
+
 #eval 1
   + 1
   +
