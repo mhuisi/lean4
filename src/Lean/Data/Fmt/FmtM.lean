@@ -14,6 +14,7 @@ import Lean.ExtraModUses
 import Lean.Elab.InfoTree.Main
 public import Lean.Util.ShareCommon
 import Std.Data.HashMap.AdditionalOperations
+import Std.Data.HashMap.Iterator
 
 namespace Lean
 
@@ -23,7 +24,7 @@ public structure Fmt.Context where
 public structure Fmt.State where
   shareCommonState : ShareCommon.State ShareCommon.objectFactory
   freshTagId : TagId
-  tags : Std.HashMap Syntax.Range (Array TagId)
+  tags : Std.HashMap TagId Syntax.Range
 
 public structure Fmt.TaggedDoc where
   doc : Fmt.Doc
@@ -53,7 +54,7 @@ public abbrev FmtM α := ReaderT Fmt.Context (ExceptT Fmt.Error (StateT Fmt.Stat
 public abbrev Fmt := Syntax → FmtM Fmt.TaggedDoc
 
 public def FmtM.run (env : Environment) (act : FmtM α) :
-    Except Fmt.Error (α × Std.HashMap Syntax.Range (Array Fmt.TagId)) := do
+    Except Fmt.Error (α × Std.HashMap Fmt.TagId Syntax.Range) := do
   let (v?, s) := ReaderT.run act { env }
     |>.run { shareCommonState := default, freshTagId := Nat.zero, tags := ∅ }
   return (← v?, s.tags)
@@ -78,9 +79,7 @@ public def tagged (doc : Fmt.Doc) (ref : Syntax) : FmtM TaggedDoc := do
     let currentTagId : Nat := s.freshTagId
     { s with
       freshTagId := currentTagId + 1
-      tags := s.tags.alter range fun
-        | none => some #[currentTagId]
-        | some tags => some <| tags.push currentTagId
+      tags := s.tags.insertIfNew currentTagId range
     }
   return ⟨doc⟩
 
@@ -328,13 +327,13 @@ def parseComments (trailingWs : String.Slice) (columnOffset : Nat) : Array Comme
 
 structure collectComments.State where
   pendingComments : Array Comment := #[]
-  comments : Array (Comment × Syntax.Range) := {}
+  comments : Std.HashMap Syntax.Range (Array Comment) := {}
   columnOffset : Nat := 0 -- TODO: init?
 
 abbrev collectComments.M α := StateT collectComments.State (Except Fmt.Error) α
 
 def collectComments (stx : Syntax) :
-    Except Fmt.Error (Array (Comment × Syntax.Range)) := do
+    Except Fmt.Error (Std.HashMap Syntax.Range (Array Comment)) := do
   let (_, s) ← StateT.run (s := { : collectComments.State }) <| go stx
   return s.comments
 where
@@ -370,7 +369,9 @@ where
     advanceColumnOffset trailing
   addComments (range : Syntax.Range) (newComments : Array Comment) : collectComments.M Unit := do
     modify fun s => { s with
-      comments := s.comments ++ newComments.map (·, range)
+      comments := s.comments.alter range fun
+        | none => some newComments
+        | some comments => some <| comments ++ newComments
     }
   advanceColumnOffset (val : String.Slice) : collectComments.M Unit :=
     modify fun s => { s with
@@ -386,20 +387,76 @@ where
       | return none
     toSlice trailing
 
-def associate
-    (database : Array (Syntax.Range × α))
-    (queries : Array (Syntax.Range × β)) :
-    Array (Syntax.Range × α × β) := Id.run do
+def rangeCompare (a b : Syntax.Range) : Ordering :=
+  Ord.compare a.start.byteIdx b.start.byteIdx
+    |>.then (Ord.compare a.stop.byteIdx b.stop.byteIdx)
+
+structure reassociateComments.State where
+  remainingComments : Std.TreeMap Syntax.Range (Array Comment) rangeCompare
+  visited : Std.HashSet USize
 
 
-def transferToTags
-    (tags : Std.HashMap Syntax.Range (Array TagId))
-    (entries : Array (α × Syntax.Range)) :
-    Std.HashMap TagId (Array α) :=
-  let taggedEntries := entries.flatMap fun (e, range) =>
-    tags.getD range #[] |>.map (e, ·)
-  taggedEntries.groupByKey (·.2)
-    |>.map fun _ entries => entries.map (·.1)
+def reassociateComments
+    (doc : Fmt.Doc)
+    (tags : Std.HashMap TagId Syntax.Range)
+    (comments : Std.HashMap Syntax.Range (Array Comment)) :
+    Std.TreeMap TagId (Array Comment) :=
+  let comments := comments.fold (init := ∅) fun acc range comments => acc.insert range comments
+  StateT.run' (go doc) { remainingComments := comments, visited := {} }
+where
+  go (doc : Fmt.Doc) : StateT reassociateComments.State Id (Std.TreeMap TagId (Array Comment) compare) := do
+    -- Do not visit the same document twice so that we do not have to traverse the whole unshared
+    -- document tree.
+    -- This is sound because if we have already visited this document somewhere else, then we
+    -- have already computed a comment association map for it.
+    -- Since these maps are merged, it is guaranteed that the association for this document
+    -- that we are skipping here will end up in the result.
+    if (← get).visited.contains (unsafe ptrAddrUnsafe doc) then
+      return ∅
+    modify fun s => { s with visited := s.visited.insert (unsafe ptrAddrUnsafe doc) }
+    match doc with
+    | .tagged id d =>
+      let assoc ← go d
+      let range := getRange! id
+      -- TODO: Assumes that we have an exact range match for every comment
+      -- Use all comments that match range here?
+      let some comments := (← get).remainingComments.get? range
+        | return assoc
+      let assoc := assoc.insert id comments
+      modify fun s => { s with remainingComments := s.remainingComments.erase range }
+      return assoc
+    | .failure
+    | .newline ..
+    | .text .. =>
+      return ∅
+    | .flattened d
+    | .indented _ _ d
+    | .aligned d
+    | .full d
+    | .unindented d =>
+      go d
+    | .append a b =>
+      let assoc1 ← go a
+      let assoc2 ← go b
+      return assoc1.union assoc2
+    | .either a b =>
+      let remainingComments := (← get).remainingComments
+      let assoc1 ← go a
+      let remainingComments1 := (← get).remainingComments
+      modify fun s => { s with remainingComments }
+      let assoc2 ← go b
+      let remainingComments2 := (← get).remainingComments
+      let remainingComments := remainingComments1.union remainingComments2
+      modify fun s => { s with remainingComments }
+      let assoc := assoc1.union assoc2
+        |>.filter fun id _ =>
+          -- If a comment remains in one branch of the `either`, but not the other one,
+          -- we ignore the association from the branch that assigned it and
+          -- instead keep looking for a matching association.
+          ! remainingComments.contains (getRange! id)
+      return assoc
+  getRange! (tag : TagId) : Syntax.Range :=
+    tags.get! tag
 
 public def main (env : Environment) (stx : Syntax) : Except Error String := do
   let comments ← collectComments stx
