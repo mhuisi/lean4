@@ -392,39 +392,62 @@ def rangeCompare (a b : Syntax.Range) : Ordering :=
     |>.then (Ord.compare a.stop.byteIdx b.stop.byteIdx)
 
 structure reassociateComments.State where
-  remainingComments : Std.TreeMap Syntax.Range (Array Comment) rangeCompare
-  visited : Std.HashSet USize
+  cache : Std.HashMap USize (Std.TreeMap Syntax.Range (Std.HashSet TagId) rangeCompare)
 
+def interWith (t₁ t₂ : Std.TreeMap α β cmp) (mergeFn : α → β → β → β) :
+    Std.TreeMap α β cmp := Id.run do
+  let (t₁, t₂) :=
+    if t₁.size <= t₂.size then
+      (t₁, t₂)
+    else
+      (t₂, t₁)
+  let mut r := ∅
+  for (k₁, v₁) in t₁ do
+    let some v₂ := t₂.get? k₁
+      | continue
+    let v := mergeFn k₁ v₁ v₂
+    r := r.insert k₁ v
+  return r
 
 def reassociateComments
     (doc : Fmt.Doc)
     (tags : Std.HashMap TagId Syntax.Range)
     (comments : Std.HashMap Syntax.Range (Array Comment)) :
-    Std.TreeMap TagId (Array Comment) :=
-  let comments := comments.fold (init := ∅) fun acc range comments => acc.insert range comments
-  StateT.run' (go doc) { remainingComments := comments, visited := {} }
+    Std.HashMap TagId (Array Comment) := Id.run do
+  let r ← StateT.run' (goMemoized doc) { cache := {} : reassociateComments.State }
+  let mut r' := ∅
+  for (commentRange, ids) in r do
+    let comments := comments.get! commentRange
+    for id in ids do
+      r' := r'.alter id fun
+        | none =>
+          some comments
+        | some existingComments =>
+          -- `r` is sorted by the ranges of the tokens that comments are attached to,
+          -- so when multiple sets of comments get associated with the same `id`,
+          -- they will be ordered according to the ranges of the tokens they are attached to.
+          -- This maintains the relative order of comments in the input syntax.
+          some <| existingComments ++ comments
+  return r'
 where
-  go (doc : Fmt.Doc) : StateT reassociateComments.State Id (Std.TreeMap TagId (Array Comment) compare) := do
-    -- Do not visit the same document twice so that we do not have to traverse the whole unshared
-    -- document tree.
-    -- This is sound because if we have already visited this document somewhere else, then we
-    -- have already computed a comment association map for it.
-    -- Since these maps are merged, it is guaranteed that the association for this document
-    -- that we are skipping here will end up in the result.
-    if (← get).visited.contains (unsafe ptrAddrUnsafe doc) then
-      return ∅
-    modify fun s => { s with visited := s.visited.insert (unsafe ptrAddrUnsafe doc) }
+  goMemoized (doc : Fmt.Doc) :
+      StateT reassociateComments.State Id
+        (Std.TreeMap Syntax.Range (Std.HashSet TagId) rangeCompare) := do
+    let cacheKey := unsafe ptrAddrUnsafe doc
+    if let some cached := (← get).cache.get? cacheKey then
+      return cached
+    let r ← go doc
+    modify fun s => { s with cache := s.cache.insert cacheKey r }
+    return r
+  go (doc : Fmt.Doc) :
+      StateT reassociateComments.State Id
+        (Std.TreeMap Syntax.Range (Std.HashSet TagId) rangeCompare) := do
     match doc with
     | .tagged id d =>
-      let assoc ← go d
-      let range := getRange! id
-      -- TODO: Assumes that we have an exact range match for every comment
-      -- Use all comments that match range here?
-      let some comments := (← get).remainingComments.get? range
-        | return assoc
-      let assoc := assoc.insert id comments
-      modify fun s => { s with remainingComments := s.remainingComments.erase range }
-      return assoc
+      let associatedComments1 ← goMemoized d
+      let associatedComments2 := getAssociatedComments id
+      -- If a set of comments has already been assigned in `d`, use those.
+      return associatedComments2.insertMany associatedComments1
     | .failure
     | .newline ..
     | .text .. =>
@@ -434,29 +457,28 @@ where
     | .aligned d
     | .full d
     | .unindented d =>
-      go d
+      goMemoized d
     | .append a b =>
-      let assoc1 ← go a
-      let assoc2 ← go b
-      return assoc1.union assoc2
+      let associatedComments1 ← goMemoized a
+      let associatedComments2 ← goMemoized b
+      -- If a set of comments has already been assigned in `a`, prefer those over ones from `b`.
+      return associatedComments2.insertMany associatedComments1
     | .either a b =>
-      let remainingComments := (← get).remainingComments
-      let assoc1 ← go a
-      let remainingComments1 := (← get).remainingComments
-      modify fun s => { s with remainingComments }
-      let assoc2 ← go b
-      let remainingComments2 := (← get).remainingComments
-      let remainingComments := remainingComments1.union remainingComments2
-      modify fun s => { s with remainingComments }
-      let assoc := assoc1.union assoc2
-        |>.filter fun id _ =>
-          -- If a comment remains in one branch of the `either`, but not the other one,
-          -- we ignore the association from the branch that assigned it and
-          -- instead keep looking for a matching association.
-          ! remainingComments.contains (getRange! id)
-      return assoc
-  getRange! (tag : TagId) : Syntax.Range :=
-    tags.get! tag
+      let associatedComments1 ← goMemoized a
+      let associatedComments2 ← goMemoized b
+      -- Comments must always be assigned in all alternatives.
+      -- If a comment is assigned in just one of the alternatives, then assigning it again
+      -- above the `either` may duplicate the comment, whereas not assigning it at all will erase
+      -- the comment if the alternative where the comment isn't assigned is chosen by the formatter.
+      return interWith associatedComments1 associatedComments2 fun _ tags1 tags2 =>
+        tags1.union tags2
+  getAssociatedComments (id : TagId) : Std.TreeMap Syntax.Range (Std.HashSet TagId) rangeCompare :=
+    let refRange := tags.get! id
+    -- TODO: Assumes that we have an exact range match for every comment
+    -- Use all comments that match refRange here?
+    comments.get? refRange
+      |>.map (fun _ => Std.TreeMap.ofArray (cmp := rangeCompare) #[(refRange, { id })])
+      |>.getD ∅
 
 public def main (env : Environment) (stx : Syntax) : Except Error String := do
   let comments ← collectComments stx
