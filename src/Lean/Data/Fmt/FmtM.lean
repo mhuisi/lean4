@@ -15,6 +15,7 @@ import Lean.Elab.InfoTree.Main
 public import Lean.Util.ShareCommon
 import Std.Data.HashMap.AdditionalOperations
 import Std.Data.HashMap.Iterator
+import Std.Data.Iterators.Producers.Slice
 
 namespace Lean
 
@@ -387,13 +388,6 @@ where
       | return none
     toSlice trailing
 
-def rangeCompare (a b : Syntax.Range) : Ordering :=
-  Ord.compare a.start.byteIdx b.start.byteIdx
-    |>.then (Ord.compare a.stop.byteIdx b.stop.byteIdx)
-
-structure reassociateComments.State where
-  cache : Std.HashMap USize (Std.TreeMap Syntax.Range (Std.HashSet TagId) rangeCompare)
-
 def interWith (t₁ t₂ : Std.TreeMap α β cmp) (mergeFn : α → β → β → β) :
     Std.TreeMap α β cmp := Id.run do
   let (t₁, t₂) :=
@@ -409,15 +403,65 @@ def interWith (t₁ t₂ : Std.TreeMap α β cmp) (mergeFn : α → β → β �
     r := r.insert k₁ v
   return r
 
+structure CommentMap where
+  map : Std.HashMap Syntax.Range (Array Comment)
+  -- Assumed invariants:
+  -- - Disjoint ranges
+  --   (enforced by `collectComments` attaching comments to tokens and tokens in `Syntax`
+  --    being disjoint)
+  -- - Sorted by start position of range (enforced by `CommentMap.ofHashMap`)
+  -- - Sorted by end position of range
+  --   (implied by disjoint ranges and being sorted by start position)
+  values : Array (Syntax.Range × Array Comment)
+
+def CommentMap.ofHashMap (xs : Std.HashMap Syntax.Range (Array Comment)) : CommentMap :=
+  { map := xs, values := xs.toArray.qsort fun (r1, _) (r2, _) => r1.start < r2.start }
+
+def CommentMap.findStart (xs : CommentMap) (start : String.Pos.Raw) : Nat := Id.run do
+  let xs := xs.values
+  let mut l := 0
+  let mut r := xs.size
+  while l < r do
+    let m := l + (r - l) / 2
+    if xs[m]!.1.start < start then
+      l := m + 1
+    else
+      r := m
+  return l
+
+def CommentMap.findEnd (xs : CommentMap) (stop : String.Pos.Raw) : Nat := Id.run do
+  let xs := xs.values
+  let mut l := 0
+  let mut r := xs.size
+  while l < r do
+    let m := l + (r - l) / 2
+    if xs[m]!.1.stop > stop then
+      r := m
+    else
+      l := m + 1
+  return r - 1
+
+def CommentMap.collectInRange (xs : CommentMap) (range : Syntax.Range) : Array (Syntax.Range × Array Comment) := Id.run do
+  let startIdx := xs.findStart range.start
+  let endIdx := xs.findEnd range.stop
+  xs.values[startIdx:endIdx+1].toArray
+
+def rangeCompare (a b : Syntax.Range) : Ordering :=
+  Ord.compare a.start.byteIdx b.start.byteIdx
+    |>.then (Ord.compare a.stop.byteIdx b.stop.byteIdx)
+
+structure reassociateComments.State where
+  cache : Std.HashMap USize (Std.TreeMap Syntax.Range (Std.HashSet TagId) rangeCompare)
+
 def reassociateComments
     (doc : Fmt.Doc)
     (tags : Std.HashMap TagId Syntax.Range)
-    (comments : Std.HashMap Syntax.Range (Array Comment)) :
+    (comments : CommentMap) :
     Std.HashMap TagId (Array Comment) := Id.run do
   let r ← StateT.run' (goMemoized doc) { cache := {} : reassociateComments.State }
   let mut r' := ∅
   for (commentRange, ids) in r do
-    let comments := comments.get! commentRange
+    let comments := comments.map.get! commentRange
     for id in ids do
       r' := r'.alter id fun
         | none =>
@@ -474,16 +518,16 @@ where
         tags1.union tags2
   getAssociatedComments (id : TagId) : Std.TreeMap Syntax.Range (Std.HashSet TagId) rangeCompare :=
     let refRange := tags.get! id
-    -- TODO: Assumes that we have an exact range match for every comment
-    -- Use all comments that match refRange here?
-    comments.get? refRange
-      |>.map (fun _ => Std.TreeMap.ofArray (cmp := rangeCompare) #[(refRange, { id })])
-      |>.getD ∅
+    let associatedComments := comments.collectInRange refRange
+      |>.map (fun (commentRange, _) => (commentRange, { id }))
+    Std.TreeMap.ofArray (cmp := rangeCompare) associatedComments
 
 public def main (env : Environment) (stx : Syntax) : Except Error String := do
   let comments ← collectComments stx
+  let comments := CommentMap.ofHashMap comments
   let (taggedDoc, tags) ← FmtM.run env <| fmt stx
   let doc := taggedDoc.doc
+  let comments := reassociateComments doc tags comments
   let some output := format? doc 80
     | throw <| .formattingFailure stx doc
   return output.rendering
