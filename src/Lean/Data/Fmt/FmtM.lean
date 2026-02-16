@@ -199,7 +199,17 @@ structure Comment where
   kind : Comment.Kind
   placement : Comment.Placement
   full : String
-  content : String
+  content : Array String
+
+def Comment.toDoc (c : Comment) : Fmt.Doc :=
+  match c.kind with
+  | .lineComment =>
+    .text s!"-- {c.content[0]!}"
+  | .blockComment =>
+    if c.content.size == 1 then
+      .text "/- " ++ .text c.content[0]! ++ .text " -/"
+    else
+      .text "/-" ++ .hardNl ++ .joinUsing .hardNl (c.content.map Doc.text) ++ .hardNl ++ .text "-/"
 
 structure PendingComment extends Comment where
   startColumnOffset : Nat
@@ -220,7 +230,7 @@ def PendingComment.finalize (p : PendingComment) : Comment :=
     kind := p.kind
     placement := p.placement
     full := p.full
-    content
+    content := content.split "\n" |>.toArray.map (·.toString)
   }
 where
   normalizeContent (kind : Comment.Kind) (s : String.Slice) : String.Slice :=
@@ -274,7 +284,7 @@ def parseComments (trailingWs : String.Slice) (columnOffset : Nat) : Array Comme
           kind := kind
           placement := if isAfterNewline then .onLineBeforeToken else .afterToken
           full := kind.startSymbol
-          content := ""
+          content := #[]
           startColumnOffset := columnOffset
           startPos := currentPos
         }
@@ -521,6 +531,76 @@ where
     let associatedComments := comments.collectInRange refRange
       |>.map (fun (commentRange, _) => (commentRange, { id }))
     Std.TreeMap.ofArray (cmp := rangeCompare) associatedComments
+
+def Doc.Pos := Nat
+  deriving Inhabited, BEq, Hashable, Ord
+
+namespace Doc.Pos
+
+def asNat (p : Pos) : Nat :=
+  p
+
+def maxChildren := 2
+
+def push (p : Pos) (c : Nat) : Pos :=
+  if c >= maxChildren then panic! s!"invalid coordinate {c}"
+  else p.asNat * maxChildren + c
+
+def pushFailure (p : Pos) : Pos := p.push 0
+def pushNewline (p : Pos) : Pos := p.push 0
+def pushText (p : Pos) : Pos := p.push 0
+def pushTagged (p : Pos) : Pos := p.push 0
+def pushFlattened (p : Pos) : Pos := p.push 0
+def pushIndented (p : Pos) : Pos := p.push 0
+def pushAligned (p : Pos) : Pos := p.push 0
+def pushUnindented (p : Pos) : Pos := p.push 0
+def pushFull (p : Pos) : Pos := p.push 0
+def pushAppendLeft (p : Pos) : Pos := p.push 0
+def pushAppendRight (p : Pos) : Pos := p.push 1
+def pushEitherLeft (p : Pos) : Pos := p.push 0
+def pushEitherRight (p : Pos) : Pos := p.push 1
+
+end Doc.Pos
+
+-- Comment association position: The highest node above a given `TagId` that has the same set of
+-- newlines to the left and to the right of it
+
+variable (comments : Std.HashMap TagId (Array Comment)) in
+def insertComments (doc : Fmt.Doc) : Fmt.Doc :=
+  match doc with
+  | .failure
+  | .newline ..
+  | .text .. => doc
+  | .tagged id d => Id.run do
+    let d := insertComments d
+    let some comments := comments.get? id
+      | return d
+    let mut placedHere := #[]
+    let mut placedAfterPreviousNewline := #[]
+    let mut placedBeforeNextNewline := #[]
+    for c in comments do
+      match c.kind, c.placement with
+      | .lineComment, .afterToken =>
+        placedBeforeNextNewline := placedBeforeNextNewline.push c
+      | .lineComment, .onLineBeforeToken =>
+        placedAfterPreviousNewline := placedBeforeNextNewline.push c
+      | .blockComment, .afterToken =>
+        placedHere := placedHere.push c
+      | .blockComment, .onLineBeforeToken =>
+        placedAfterPreviousNewline := placedAfterPreviousNewline.push c
+    let placedHereDoc := Doc.joinUsing .hardNl <| placedHere.map (·.toDoc)
+    return .append (.tagged id d) placedHereDoc
+  | .flattened d
+  | .indented _ _ d
+  | .aligned d
+  | .unindented d
+  | .full d =>
+    insertComments d
+  | .append a b =>
+    .append (insertComments a) (insertComments b)
+  | .either a b =>
+    .either (insertComments a) (insertComments b)
+
 
 public def main (env : Environment) (stx : Syntax) : Except Error String := do
   let comments ← collectComments stx
