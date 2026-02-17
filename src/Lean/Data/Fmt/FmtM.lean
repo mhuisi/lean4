@@ -25,7 +25,7 @@ public structure Fmt.Context where
 public structure Fmt.State where
   shareCommonState : ShareCommon.State ShareCommon.objectFactory
   freshTagId : TagId
-  tags : Std.HashMap TagId Syntax.Range
+  tags : Std.HashMap Syntax.Range (Array TagId)
 
 public structure Fmt.TaggedDoc where
   doc : Fmt.Doc
@@ -55,7 +55,7 @@ public abbrev FmtM α := ReaderT Fmt.Context (ExceptT Fmt.Error (StateT Fmt.Stat
 public abbrev Fmt := Syntax → FmtM Fmt.TaggedDoc
 
 public def FmtM.run (env : Environment) (act : FmtM α) :
-    Except Fmt.Error (α × Std.HashMap Fmt.TagId Syntax.Range) := do
+    Except Fmt.Error (α × Std.HashMap Syntax.Range (Array Fmt.TagId )) := do
   let (v?, s) := ReaderT.run act { env }
     |>.run { shareCommonState := default, freshTagId := Nat.zero, tags := ∅ }
   return (← v?, s.tags)
@@ -80,7 +80,10 @@ public def tagged (doc : Fmt.Doc) (ref : Syntax) : FmtM TaggedDoc := do
     let currentTagId : Nat := s.freshTagId
     { s with
       freshTagId := currentTagId + 1
-      tags := s.tags.insertIfNew currentTagId range
+      tags := s.tags.alter range fun
+        | none => some #[currentTagId]
+        | some tags => some <| tags.push currentTagId
+
     }
   return ⟨doc⟩
 
@@ -413,6 +416,73 @@ def interWith (t₁ t₂ : Std.TreeMap α β cmp) (mergeFn : α → β → β �
     r := r.insert k₁ v
   return r
 
+-- [0, 6) - [0, 2) - [0, 1)
+--                 - [1, 2)
+--        - [2, 4)
+--        - [4, 6)
+
+-- [0, 6) [0, 2) [0, 1) [1, 2) [2, 4) [4, 6)
+
+structure RangeTree (α : Type) where
+  range : Syntax.Range
+  value : α
+  children : Array (RangeTree α)
+  deriving Inhabited, Repr
+
+def compareRanges (a b : Syntax.Range) : Ordering :=
+  Ord.compare a.start.byteIdx b.start.byteIdx
+    |>.then (Ord.compare b.stop.byteIdx a.stop.byteIdx)
+
+partial def RangeTree.mk! [Inhabited α] (entries : Std.HashMap Syntax.Range α) : RangeTree α :=
+  let entries := entries.toArray.qsort (fun (a, _) (b, _) => compareRanges a b == .lt)
+  let (_, tree?) := go entries 0
+  tree?.get!
+where
+  go (entries : Array (Syntax.Range × α)) (i : Nat) : Nat × Option (RangeTree α) := Id.run do
+    let some (range, value) := entries[i]?
+      | (i, none)
+    let mut children : Array (RangeTree α) := #[]
+    let mut i := i + 1
+    while entries[i]?.any (fun (childRange, _) => range.includes childRange) do
+      let (i', childNode?) := go entries i
+      i := i'
+      if let some childNode := childNode? then
+        children := children.push childNode
+    return (i, some ⟨range, value, children⟩)
+
+partial def RangeTree.findSmallestRangeContaining? [Inhabited α] (t : RangeTree α) (range : Syntax.Range) :
+    Option (Syntax.Range × α) := do
+  guard <| t.range.includes range
+  let some child := findChildContaining t.children range
+    | return (t.range, t.value)
+  let some childMatch := findSmallestRangeContaining? child range
+    | return (t.range, t.value)
+  return childMatch
+where
+  findChildContaining (children : Array (RangeTree α)) (range : Syntax.Range) : Option (RangeTree α) := do
+    let mut l := 0
+    let mut r := children.size
+    while l < r do
+      let m := l + (r - l) / 2
+      if children[m]!.range.start > range.start then
+        r := m
+      else
+        l := m + 1
+    let i := r - 1
+    children[i]?
+
+def x : Std.HashMap Syntax.Range Unit :=
+  Std.HashMap.unitOfArray #[
+    ⟨⟨0⟩, ⟨6⟩⟩,
+    ⟨⟨0⟩, ⟨2⟩⟩,
+    ⟨⟨0⟩, ⟨1⟩⟩,
+    ⟨⟨1⟩, ⟨2⟩⟩,
+    ⟨⟨2⟩, ⟨4⟩⟩,
+    ⟨⟨4⟩, ⟨6⟩⟩
+  ]
+
+#eval RangeTree.mk! x |>.findSmallestRangeContaining? ⟨⟨3⟩, ⟨5⟩⟩
+
 structure CommentMap where
   map : Std.HashMap Syntax.Range (Array Comment)
   -- Assumed invariants:
@@ -427,29 +497,31 @@ structure CommentMap where
 def CommentMap.ofHashMap (xs : Std.HashMap Syntax.Range (Array Comment)) : CommentMap :=
   { map := xs, values := xs.toArray.qsort fun (r1, _) (r2, _) => r1.start < r2.start }
 
-def CommentMap.findStart (xs : CommentMap) (start : String.Pos.Raw) : Nat := Id.run do
-  let xs := xs.values
+def findStart (xs : Array Nat) (start : Nat) : Nat := Id.run do
   let mut l := 0
   let mut r := xs.size
   while l < r do
     let m := l + (r - l) / 2
-    if xs[m]!.1.start < start then
+    if xs[m]! < start then
       l := m + 1
     else
       r := m
   return l
 
-def CommentMap.findEnd (xs : CommentMap) (stop : String.Pos.Raw) : Nat := Id.run do
-  let xs := xs.values
+#eval findStart #[1, 2, 4, 6] 5
+
+def findEnd (xs : Array Nat) (stop : Nat) : Nat := Id.run do
   let mut l := 0
   let mut r := xs.size
   while l < r do
     let m := l + (r - l) / 2
-    if xs[m]!.1.stop > stop then
+    if xs[m]! > stop then
       r := m
     else
       l := m + 1
   return r - 1
+
+#eval findEnd #[1, 2, 2, 4, 6] 0
 
 def CommentMap.collectInRange (xs : CommentMap) (range : Syntax.Range) : Array (Syntax.Range × Array Comment) := Id.run do
   let startIdx := xs.findStart range.start
@@ -463,7 +535,7 @@ def rangeCompare (a b : Syntax.Range) : Ordering :=
 structure reassociateComments.State where
   cache : Std.HashMap USize (Std.TreeMap Syntax.Range (Std.HashSet TagId) rangeCompare)
 
-def reassociateComments
+def reassociateComments'
     (doc : Fmt.Doc)
     (tags : Std.HashMap TagId Syntax.Range)
     (comments : CommentMap) :
@@ -532,82 +604,49 @@ where
       |>.map (fun (commentRange, _) => (commentRange, { id }))
     Std.TreeMap.ofArray (cmp := rangeCompare) associatedComments
 
-def Doc.Pos := Nat
-  deriving Inhabited, BEq, Hashable, Ord
+def connectTags
+    (syntaxToTags : Std.HashMap Syntax.Range (Array TagId))
+    (tagsToRendered : Std.HashMap TagId (Array String.Slice)) :
+    Std.HashMap Syntax.Range (Array String.Slice) :=
+  -- Invariants:
+  -- 1. All `TagId`s in `tagsToRendered` are contained in `syntaxToTags`.
+  -- 2. Only `Syntax.Range`s that have been assigned by the document construction will appear in
+  --   `syntaxToTags`. This includes `Syntax` subtrees for which `Fmt.fmt` has been called,
+  --   as well as all tokens that appear in the constructed document for which `Fmt.text` has been
+  --   called.
+  -- 3. `TagId`s in `syntaxToTags` that are not used in the specific alternative chosen by the
+  --   formatter do not appear in `tagsToRendered`.
+  -- 4. Multiple `TagId`s are associated with the same `Syntax.Range` in `syntaxToTags` when
+  --    `Fmt.fmt` is called for a `Syntax` subtree that contains another `Syntax` subtree of the
+  --    same range for which `Fmt.fmt` has also been called.
+  -- 5. Multiple `String.Slice`s are associated with the same `TagId` in `tagsToRendered` when
+  --    a sub-document is shared in multiple places in the same alternative,
+  --    e.g. when a formatter yields the same document twice for the same token in the
+  --    input `Syntax`.
+  syntaxToTags.map fun _ tags =>
+    tags.flatMap fun tag =>
+      tagsToRendered.getD tag #[]
 
-namespace Doc.Pos
+def reassociateComments
+    (syntaxToRendered : Std.HashMap Syntax.Range (Array String.Slice))
+    (comments : Std.HashMap Syntax.Range (Array Comment)) :
+    Std.HashMap String.Slice (Array Comment) :=
+  -- For every comment, find the smallest range in `syntaxToRendered` that contains it.
 
-def asNat (p : Pos) : Nat :=
-  p
+  sorry
 
-def maxChildren := 2
-
-def push (p : Pos) (c : Nat) : Pos :=
-  if c >= maxChildren then panic! s!"invalid coordinate {c}"
-  else p.asNat * maxChildren + c
-
-def pushFailure (p : Pos) : Pos := p.push 0
-def pushNewline (p : Pos) : Pos := p.push 0
-def pushText (p : Pos) : Pos := p.push 0
-def pushTagged (p : Pos) : Pos := p.push 0
-def pushFlattened (p : Pos) : Pos := p.push 0
-def pushIndented (p : Pos) : Pos := p.push 0
-def pushAligned (p : Pos) : Pos := p.push 0
-def pushUnindented (p : Pos) : Pos := p.push 0
-def pushFull (p : Pos) : Pos := p.push 0
-def pushAppendLeft (p : Pos) : Pos := p.push 0
-def pushAppendRight (p : Pos) : Pos := p.push 1
-def pushEitherLeft (p : Pos) : Pos := p.push 0
-def pushEitherRight (p : Pos) : Pos := p.push 1
-
-end Doc.Pos
-
--- Comment association position: The highest node above a given `TagId` that has the same set of
--- newlines to the left and to the right of it
-
-variable (comments : Std.HashMap TagId (Array Comment)) in
-def insertComments (doc : Fmt.Doc) : Fmt.Doc :=
-  match doc with
-  | .failure
-  | .newline ..
-  | .text .. => doc
-  | .tagged id d => Id.run do
-    let d := insertComments d
-    let some comments := comments.get? id
-      | return d
-    let mut placedHere := #[]
-    let mut placedAfterPreviousNewline := #[]
-    let mut placedBeforeNextNewline := #[]
-    for c in comments do
-      match c.kind, c.placement with
-      | .lineComment, .afterToken =>
-        placedBeforeNextNewline := placedBeforeNextNewline.push c
-      | .lineComment, .onLineBeforeToken =>
-        placedAfterPreviousNewline := placedBeforeNextNewline.push c
-      | .blockComment, .afterToken =>
-        placedHere := placedHere.push c
-      | .blockComment, .onLineBeforeToken =>
-        placedAfterPreviousNewline := placedAfterPreviousNewline.push c
-    let placedHereDoc := Doc.joinUsing .hardNl <| placedHere.map (·.toDoc)
-    return .append (.tagged id d) placedHereDoc
-  | .flattened d
-  | .indented _ _ d
-  | .aligned d
-  | .unindented d
-  | .full d =>
-    insertComments d
-  | .append a b =>
-    .append (insertComments a) (insertComments b)
-  | .either a b =>
-    .either (insertComments a) (insertComments b)
-
+def insertComments (rendering : String) (comments : Std.HashMap String.Slice (Array Comment)) :
+    String :=
+  sorry
 
 public def main (env : Environment) (stx : Syntax) : Except Error String := do
   let comments ← collectComments stx
-  let comments := CommentMap.ofHashMap comments
-  let (taggedDoc, tags) ← FmtM.run env <| fmt stx
+  let (taggedDoc, syntaxToTags) ← FmtM.run env <| fmt stx
   let doc := taggedDoc.doc
-  let comments := reassociateComments doc tags comments
   let some output := format? doc 80
     | throw <| .formattingFailure stx doc
-  return output.rendering
+  let tagsToRendered := output.tags
+  let syntaxToRendered := connectTags syntaxToTags tagsToRendered
+  let comments := reassociateComments syntaxToRendered comments
+  let rendering := insertComments output.rendering comments
+  return rendering
