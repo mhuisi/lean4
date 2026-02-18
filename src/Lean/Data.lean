@@ -28,4 +28,5 @@ public import Lean.Data.Trie
 public import Lean.Data.NameTrie
 public import Lean.Data.RBTree
 public import Lean.Data.RBMap
+public import Lean.Data.IntervalTree
 public import Lean.Data.RArray
