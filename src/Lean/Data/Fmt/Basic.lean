@@ -11,6 +11,9 @@ public import Init.Data.Hashable
 public import Init.Data.Ord.Basic
 import Init.Data.Array
 import Init.Data.Ord.Basic
+import Init.Data.String.Defs
+import Init.Data.Array.Subarray
+import Init.Data.Slice.Array.Iterator
 
 /-!
 Document language of the `Fmt` formatter.

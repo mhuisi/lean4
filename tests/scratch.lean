@@ -1,10 +1,10 @@
 import Lean
 
-#synth BEq String.Pos.Raw
-
 open Lean
 open Lean.Data
 open Lean.Fmt
+
+#synth Hashable (String.Slice.Pos "")
 
 inductive Lean.Syntax.InfixOperationAssociativity where
   | left

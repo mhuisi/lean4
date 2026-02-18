@@ -17,6 +17,44 @@ import Std.Data.HashMap.AdditionalOperations
 import Std.Data.HashMap.Iterator
 import Std.Data.Iterators.Producers.Slice
 
+def Array.binSearchRightmost (xs : Array α) (query : β) (key : α → β) (lt : β → β → Bool) : Option (Nat × α) := do
+  let mut l := 0
+  let mut r := xs.size
+  while l < r do
+    let m := l + (r - l) / 2
+    let some v := xs[m]?
+      | unreachable!
+    if lt query (key v) then
+      r := m
+    else
+      l := m + 1
+  let i := r - 1
+  let v ← xs[i]?
+  guard <| !(lt query (key v)) -- key v <= query
+  return (i, v)
+
+def Array.binSearchLeftmost (xs : Array α) (query : β) (key : α → β) (lt : β → β → Bool) : Option (Nat × α) := do
+  let mut l := 0
+  let mut r := xs.size
+  while l < r do
+    let m := l + (r - l) / 2
+    let some v := xs[m]?
+      | unreachable!
+    if lt (key v) query then
+      l := m + 1
+    else
+      r := m
+  let i := l
+  let v ← xs[i]?
+  guard <| !(lt (key v) query) -- query <= key v
+  return (i, v)
+
+def String.indent (s : String) (numSpaces : Nat) : String :=
+  s.split "\n"
+    |>.map (fun line => "".pushn ' ' numSpaces ++ line.toString)
+    |>.toList
+    |> "\n".intercalate
+
 namespace Lean
 
 public structure Fmt.Context where
@@ -202,7 +240,6 @@ inductive Comment.RenderedPlacement where
   | afterClosestPreviousNewline
   | beforeClosestNextNewline
   | afterToken
-  | either (a b : Comment.RenderedPlacement)
 
 structure Comment where
   kind : Comment.Kind
@@ -220,23 +257,23 @@ def Comment.toString (c : Comment) : String :=
     else
       s!"/-\n{"\n".intercalate c.content.toList}\n-/"
 
-def Comment.renderedPlacement (c : Comment) : RenderedPlacement :=
+def Comment.renderedPlacements (c : Comment) : Array RenderedPlacement :=
   let isMultiLine := c.content.size > 1
   match c.kind, c.placement with
   | .lineComment, .afterToken =>
     if isMultiLine then
-      .afterClosestPreviousNewline
+      #[.afterClosestPreviousNewline]
     else
-      .either .beforeClosestNextNewline .afterClosestPreviousNewline
+      #[.beforeClosestNextNewline, .afterClosestPreviousNewline]
   | .lineComment, .onLineBeforeToken =>
-    .afterClosestPreviousNewline
+    #[.afterClosestPreviousNewline]
   | .blockComment, .afterToken =>
     if isMultiLine then
-      .afterClosestPreviousNewline
+      #[.afterClosestPreviousNewline]
     else
-      .either .beforeClosestNextNewline .afterClosestPreviousNewline
+      #[.beforeClosestNextNewline, .afterClosestPreviousNewline]
   | .blockComment, .onLineBeforeToken =>
-    .afterClosestPreviousNewline
+    #[.afterClosestPreviousNewline]
 
 structure PendingComment extends Comment where
   startColumnOffset : Nat
@@ -493,22 +530,14 @@ where
     let some childMatch := go child
       | return (t.range, t.value)
     return childMatch
-  findChildContaining (children : Array (RangeTreeNode α)) (range : Syntax.Range) : Option (RangeTreeNode α) := do
-    let mut l := 0
-    let mut r := children.size
-    while l < r do
-      let m := l + (r - l) / 2
-      if children[m]!.range.start > range.start then
-        r := m
-      else
-        l := m + 1
-    let i := r - 1
-    children[i]?
+  findChildContaining (children : Array (RangeTreeNode α)) (range : Syntax.Range) : Option (RangeTreeNode α) :=
+    children.binSearchRightmost range (·.range) (·.start < ·.start) |>.map (·.2)
 
 def connectTags
+    {rendering : String}
     (syntaxToTags : Std.HashMap Syntax.Range (Array TagId))
-    (tagsToRendered : Std.HashMap TagId (Array TagRange)) :
-    Std.HashMap Syntax.Range (Array TagRange) :=
+    (tagsToRendered : Std.HashMap TagId (Array (String.Slice.Subslice rendering))) :
+    Std.HashMap Syntax.Range (Array (String.Slice.Subslice rendering)) :=
   -- Invariants:
   -- 1. All `TagId`s in `tagsToRendered` are contained in `syntaxToTags`.
   -- 2. Only `Syntax.Range`s that have been assigned by the document construction will appear in
@@ -529,12 +558,13 @@ def connectTags
       tagsToRendered.getD tag #[]
 
 def reassociateComments
-    (syntaxToRendered : Std.HashMap Syntax.Range (Array TagRange))
+    {rendering : String}
+    (syntaxToRendered : Std.HashMap Syntax.Range (Array (String.Slice.Subslice rendering)))
     (comments : Std.HashMap Syntax.Range (Array Comment)) :
-    Std.HashMap TagRange (Array Comment) := Id.run do
+    Std.HashMap (String.Slice.Subslice rendering) (Array Comment) := Id.run do
   let syntaxToRendered := RangeTree.ofHashMap syntaxToRendered
   let comments := comments.toArray.qsort (fun (a, _) (b, _) => compareRangesSmallest a b == .lt)
-  let mut r : Std.HashMap TagRange (Array Comment) := ∅
+  let mut r : Std.HashMap (String.Slice.Subslice rendering) (Array Comment) := ∅
   for (commentRange, comments) in comments do
     let (_, ranges) := syntaxToRendered.findSmallestRangeContaining? commentRange |>.get!
     r := r.alter ranges[0]! fun
@@ -542,17 +572,92 @@ def reassociateComments
       | some previousComments => some <| previousComments ++ comments
   return r
 
-def insertComments (rendering : String) (comments : Std.HashMap TagRange (Array Comment)) :
+structure LineInfo (s : String.Slice) where
+  length : Nat
+  indentation : Nat
+  range : s.Subslice
+  deriving Inhabited
+
+def collectLineInfos (s : String.Slice) : Array (LineInfo s) := Id.run do
+  let mut r := #[]
+  let mut lineLength : Nat := 0
+  let mut lineIndentation : Nat := 0
+  let mut foundNonSpaceChar : Bool := false
+  let mut lineStartPos := s.startPos
+  let mut pos := s.startPos
+  while h : pos ≠ s.endPos do
+    let c := pos.get h
+    let pos' := pos.next h
+    if c == ' ' && ! foundNonSpaceChar then
+      lineLength := lineLength + 1
+      lineIndentation := lineIndentation + 1
+    else if c == '\n' then
+      r := r.push {
+        length := lineLength
+        indentation := lineIndentation
+        range := s.subslice! lineStartPos pos
+      }
+      lineLength := 0
+      lineIndentation := 0
+      lineStartPos := pos'
+      foundNonSpaceChar := false
+    else
+      lineLength := lineLength + 1
+      foundNonSpaceChar := true
+    pos := pos'
+  r := r.push {
+    length := lineLength
+    indentation := lineIndentation
+    range := s.subslice! lineStartPos pos
+  }
+  return r
+
+def insertComments
+    (maxColumnWidth : Nat)
+    (rendering : String.Slice)
+    (comments : Std.HashMap (String.Slice.Subslice rendering) (Array Comment)) :
     String :=
-  let searcher := String.Slice.Pattern.ToForwardSearcher.toSearcher '\n' rendering
-  let newlinePositions := searcher.filterMap fun
-    | .matched startPos _ => some startPos
-    | .rejected .. => none
-  let newlinePositions := newlinePositions.toArray
+  let lineInfos := collectLineInfos rendering
   sorry
 where
-  determineInsertionPositions {s : String.Slice} (newlinePositions : Array s.Pos) : Array s.Pos :=
-    sorry
+  determineInsertions
+      (range : String.Slice.Subslice rendering)
+      (comments : Array Comment)
+      (lineInfos : Array (LineInfo rendering)) :
+      Array (rendering.Pos × String) := Id.run do
+    -- TODO:
+    -- - multiple insertions at the same position
+    -- - max line length handling on multiple insertions in the same line (solution: allow only 1)
+    -- - sort the result so that we can compute the result
+    let mut r := #[]
+    for c in comments do
+      let rps := c.renderedPlacements
+      for rp in rps do
+        match rp with
+        | .afterClosestPreviousNewline =>
+          let (_, lineInfo) := findLineInfoContaining lineInfos range.startInclusive
+          let insertionPos := lineInfo.range.startInclusive
+          let insertedComment := c.toString.indent lineInfo.indentation ++ "\n"
+          r := r.push (insertionPos, insertedComment)
+        | .beforeClosestNextNewline =>
+          let (_, lineInfo) := findLineInfoContaining lineInfos range.endExclusive
+          let insertionPos := lineInfo.range.endExclusive
+          let insertedComment := " " ++ c.toString
+          let newLineLength := lineInfo.length + insertedComment.length
+          if newLineLength > maxColumnWidth then
+            continue
+          r := r.push (insertionPos, insertedComment)
+        | .afterToken =>
+          let (_, lineInfo) := findLineInfoContaining lineInfos range.endExclusive
+          let insertionPos := range.endExclusive
+          let insertedComment := " " ++ c.toString ++ " "
+          let newLineLength := lineInfo.length + insertedComment.length
+          if newLineLength > maxColumnWidth then
+            continue
+          r := r.push (insertionPos, insertedComment)
+    return r
+  findLineInfoContaining (lineInfos : Array (LineInfo rendering)) (pos : rendering.Pos) : Nat × LineInfo rendering :=
+    lineInfos.binSearchRightmost pos (·.range.startInclusive) (· < ·) |>.get!
 
 public def main (env : Environment) (stx : Syntax) : Except Error String := do
   let comments ← collectComments stx

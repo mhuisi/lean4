@@ -9,6 +9,8 @@ module
 prelude
 public import Lean.Data.Fmt.Basic
 public import Std.Data.HashSet.Basic
+public import Init
+import Std.Data.HashMap.Iterator
 
 /-!
 `Fmt` formatter.
@@ -133,15 +135,33 @@ public class Cost (τ : Type) [Add τ] [LE τ] where
   -/
   optimalityCutoffWidth : Nat
 
-structure InternalTagRange where
-  startInclusive : String.Pos.Raw
-  endExclusive : String.Pos.Raw
-  deriving Inhabited, BEq, Hashable
-
 structure InternalOutput where
   rendering : String
-  tags : Std.HashMap TagId (Array InternalTagRange)
+  tags : Std.HashMap TagId (Array (String.Pos.Raw × String.Pos.Raw))
   deriving Inhabited
+
+deriving instance Hashable for String.Slice.Pos
+deriving instance BEq, Hashable for String.Slice.Subslice
+
+public structure Output where
+  rendering : String
+  tags : Std.HashMap TagId (Array (String.Slice.Subslice rendering))
+  deriving Inhabited
+
+def Output.ofInternalOutput! (o : InternalOutput) : Output where
+  rendering := o.rendering
+  tags := Id.run do
+    let mut r : Std.HashMap TagId (Array (String.Slice.Subslice o.rendering)) := ∅
+    for (id, ranges) in o.tags do
+      let subslices := ranges.map fun (startPos, endPos) =>
+        let startPos := o.rendering.toSlice.pos! startPos
+        let endPos := o.rendering.toSlice.pos! endPos
+        if h : startPos ≤ endPos then
+          ⟨startPos, endPos, h⟩
+        else
+          panic! "Output.ofInternalOutput!: Got `startPos > endPos`."
+      r := r.insert id subslices
+    return r
 
 /--
 A measure is a tuple of the compound cost of a specific rendering and a writer monad to produce the
@@ -217,7 +237,7 @@ structure Measure (τ : Type) where
   /--
   Writer monad that produces the rendering that this measure presents with a set of associated tags.
   -/
-  output : StateM Output Unit
+  output : StateM InternalOutput Unit
 
 variable {τ : Type} [Add τ] [LE τ] [DecidableLE τ] [Cost τ]
 
@@ -250,7 +270,7 @@ def Measure.addTag (m : Measure τ) (tag : TagId) : Measure τ := { m with
   output := do
     m.output
     modify fun out =>
-      let tagRange := ⟨out.rendering.rawStartPos, out.rendering.rawEndPos⟩
+      let tagRange := (out.rendering.rawStartPos, out.rendering.rawEndPos)
       { out with
         tags := out.tags.alter tag fun
           | none => some #[tagRange]
@@ -264,7 +284,7 @@ set of tags for the rendering.
 -/
 def Measure.print (m : Measure τ) : Output :=
   let (_, output) := m.output.run { rendering := "", tags := ∅ }
-  output
+  .ofInternalOutput! output
 
 /--
 A tainted measure is a measure for a rendering that exceeds the optimality cutoff width of the
