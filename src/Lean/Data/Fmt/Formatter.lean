@@ -133,9 +133,14 @@ public class Cost (τ : Type) [Add τ] [LE τ] where
   -/
   optimalityCutoffWidth : Nat
 
-public structure Output where
+structure InternalTagRange where
+  startInclusive : String.Pos.Raw
+  endExclusive : String.Pos.Raw
+  deriving Inhabited, BEq, Hashable
+
+structure InternalOutput where
   rendering : String
-  tags : Std.HashMap TagId (Array String.Slice)
+  tags : Std.HashMap TagId (Array InternalTagRange)
   deriving Inhabited
 
 /--
@@ -245,11 +250,11 @@ def Measure.addTag (m : Measure τ) (tag : TagId) : Measure τ := { m with
   output := do
     m.output
     modify fun out =>
-      let taggedSlice := out.rendering.toSlice
+      let tagRange := ⟨out.rendering.rawStartPos, out.rendering.rawEndPos⟩
       { out with
         tags := out.tags.alter tag fun
-          | none => some #[taggedSlice]
-          | some slices => some <| slices.push taggedSlice
+          | none => some #[tagRange]
+          | some ranges => some <| ranges.push tagRange
       }
 }
 

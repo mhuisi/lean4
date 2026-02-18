@@ -198,21 +198,45 @@ def Comment.Kind.hasNesting (kind : Comment.Kind) : Bool :=
   | .lineComment => false
   | .blockComment => true
 
+inductive Comment.RenderedPlacement where
+  | afterClosestPreviousNewline
+  | beforeClosestNextNewline
+  | afterToken
+  | either (a b : Comment.RenderedPlacement)
+
 structure Comment where
   kind : Comment.Kind
   placement : Comment.Placement
   full : String
   content : Array String
 
-def Comment.toDoc (c : Comment) : Fmt.Doc :=
+def Comment.toString (c : Comment) : String :=
   match c.kind with
   | .lineComment =>
-    .text s!"-- {c.content[0]!}"
+    c.content.map (s!"-- {·}") |>.toList |> "\n".intercalate
   | .blockComment =>
     if c.content.size == 1 then
-      .text "/- " ++ .text c.content[0]! ++ .text " -/"
+      s!"/- {c.content[0]!} -/"
     else
-      .text "/-" ++ .hardNl ++ .joinUsing .hardNl (c.content.map Doc.text) ++ .hardNl ++ .text "-/"
+      s!"/-\n{"\n".intercalate c.content.toList}\n-/"
+
+def Comment.renderedPlacement (c : Comment) : RenderedPlacement :=
+  let isMultiLine := c.content.size > 1
+  match c.kind, c.placement with
+  | .lineComment, .afterToken =>
+    if isMultiLine then
+      .afterClosestPreviousNewline
+    else
+      .either .beforeClosestNextNewline .afterClosestPreviousNewline
+  | .lineComment, .onLineBeforeToken =>
+    .afterClosestPreviousNewline
+  | .blockComment, .afterToken =>
+    if isMultiLine then
+      .afterClosestPreviousNewline
+    else
+      .either .beforeClosestNextNewline .afterClosestPreviousNewline
+  | .blockComment, .onLineBeforeToken =>
+    .afterClosestPreviousNewline
 
 structure PendingComment extends Comment where
   startColumnOffset : Nat
@@ -416,32 +440,39 @@ def interWith (t₁ t₂ : Std.TreeMap α β cmp) (mergeFn : α → β → β �
     r := r.insert k₁ v
   return r
 
--- [0, 6) - [0, 2) - [0, 1)
---                 - [1, 2)
---        - [2, 4)
---        - [4, 6)
-
--- [0, 6) [0, 2) [0, 1) [1, 2) [2, 4) [4, 6)
-
-structure RangeTree (α : Type) where
+structure RangeTreeNode (α : Type) where
   range : Syntax.Range
   value : α
-  children : Array (RangeTree α)
+  children : Array (RangeTreeNode α)
   deriving Inhabited, Repr
 
-def compareRanges (a b : Syntax.Range) : Ordering :=
+structure RangeTree (α : Type) where
+  roots : Array (RangeTreeNode α)
+  deriving Inhabited, Repr
+
+def compareRangesLargest (a b : Syntax.Range) : Ordering :=
   Ord.compare a.start.byteIdx b.start.byteIdx
     |>.then (Ord.compare b.stop.byteIdx a.stop.byteIdx)
 
-partial def RangeTree.mk! [Inhabited α] (entries : Std.HashMap Syntax.Range α) : RangeTree α :=
-  let entries := entries.toArray.qsort (fun (a, _) (b, _) => compareRanges a b == .lt)
-  let (_, tree?) := go entries 0
-  tree?.get!
+def compareRangesSmallest (a b : Syntax.Range) : Ordering :=
+  Ord.compare a.start.byteIdx b.start.byteIdx
+    |>.then (Ord.compare a.stop.byteIdx b.stop.byteIdx)
+
+partial def RangeTree.ofHashMap [Inhabited α] (entries : Std.HashMap Syntax.Range α) : RangeTree α := Id.run do
+  let entries := entries.toArray.qsort (fun (a, _) (b, _) => compareRangesLargest a b == .lt)
+  let mut roots := #[]
+  let mut i := 0
+  while true do
+    let (i', some root) := go entries i
+      | break
+    i := i'
+    roots := roots.push root
+  return ⟨roots⟩
 where
-  go (entries : Array (Syntax.Range × α)) (i : Nat) : Nat × Option (RangeTree α) := Id.run do
+  go (entries : Array (Syntax.Range × α)) (i : Nat) : Nat × Option (RangeTreeNode α) := Id.run do
     let some (range, value) := entries[i]?
       | (i, none)
-    let mut children : Array (RangeTree α) := #[]
+    let mut children : Array (RangeTreeNode α) := #[]
     let mut i := i + 1
     while entries[i]?.any (fun (childRange, _) => range.includes childRange) do
       let (i', childNode?) := go entries i
@@ -452,14 +483,17 @@ where
 
 partial def RangeTree.findSmallestRangeContaining? [Inhabited α] (t : RangeTree α) (range : Syntax.Range) :
     Option (Syntax.Range × α) := do
-  guard <| t.range.includes range
-  let some child := findChildContaining t.children range
-    | return (t.range, t.value)
-  let some childMatch := findSmallestRangeContaining? child range
-    | return (t.range, t.value)
-  return childMatch
+  let child ← findChildContaining t.roots range
+  go child
 where
-  findChildContaining (children : Array (RangeTree α)) (range : Syntax.Range) : Option (RangeTree α) := do
+  go (t : RangeTreeNode α) : Option (Syntax.Range × α) := do
+    guard <| t.range.includes range
+    let some child := findChildContaining t.children range
+      | return (t.range, t.value)
+    let some childMatch := go child
+      | return (t.range, t.value)
+    return childMatch
+  findChildContaining (children : Array (RangeTreeNode α)) (range : Syntax.Range) : Option (RangeTreeNode α) := do
     let mut l := 0
     let mut r := children.size
     while l < r do
@@ -471,143 +505,10 @@ where
     let i := r - 1
     children[i]?
 
-def x : Std.HashMap Syntax.Range Unit :=
-  Std.HashMap.unitOfArray #[
-    ⟨⟨0⟩, ⟨6⟩⟩,
-    ⟨⟨0⟩, ⟨2⟩⟩,
-    ⟨⟨0⟩, ⟨1⟩⟩,
-    ⟨⟨1⟩, ⟨2⟩⟩,
-    ⟨⟨2⟩, ⟨4⟩⟩,
-    ⟨⟨4⟩, ⟨6⟩⟩
-  ]
-
-#eval RangeTree.mk! x |>.findSmallestRangeContaining? ⟨⟨3⟩, ⟨5⟩⟩
-
-structure CommentMap where
-  map : Std.HashMap Syntax.Range (Array Comment)
-  -- Assumed invariants:
-  -- - Disjoint ranges
-  --   (enforced by `collectComments` attaching comments to tokens and tokens in `Syntax`
-  --    being disjoint)
-  -- - Sorted by start position of range (enforced by `CommentMap.ofHashMap`)
-  -- - Sorted by end position of range
-  --   (implied by disjoint ranges and being sorted by start position)
-  values : Array (Syntax.Range × Array Comment)
-
-def CommentMap.ofHashMap (xs : Std.HashMap Syntax.Range (Array Comment)) : CommentMap :=
-  { map := xs, values := xs.toArray.qsort fun (r1, _) (r2, _) => r1.start < r2.start }
-
-def findStart (xs : Array Nat) (start : Nat) : Nat := Id.run do
-  let mut l := 0
-  let mut r := xs.size
-  while l < r do
-    let m := l + (r - l) / 2
-    if xs[m]! < start then
-      l := m + 1
-    else
-      r := m
-  return l
-
-#eval findStart #[1, 2, 4, 6] 5
-
-def findEnd (xs : Array Nat) (stop : Nat) : Nat := Id.run do
-  let mut l := 0
-  let mut r := xs.size
-  while l < r do
-    let m := l + (r - l) / 2
-    if xs[m]! > stop then
-      r := m
-    else
-      l := m + 1
-  return r - 1
-
-#eval findEnd #[1, 2, 2, 4, 6] 0
-
-def CommentMap.collectInRange (xs : CommentMap) (range : Syntax.Range) : Array (Syntax.Range × Array Comment) := Id.run do
-  let startIdx := xs.findStart range.start
-  let endIdx := xs.findEnd range.stop
-  xs.values[startIdx:endIdx+1].toArray
-
-def rangeCompare (a b : Syntax.Range) : Ordering :=
-  Ord.compare a.start.byteIdx b.start.byteIdx
-    |>.then (Ord.compare a.stop.byteIdx b.stop.byteIdx)
-
-structure reassociateComments.State where
-  cache : Std.HashMap USize (Std.TreeMap Syntax.Range (Std.HashSet TagId) rangeCompare)
-
-def reassociateComments'
-    (doc : Fmt.Doc)
-    (tags : Std.HashMap TagId Syntax.Range)
-    (comments : CommentMap) :
-    Std.HashMap TagId (Array Comment) := Id.run do
-  let r ← StateT.run' (goMemoized doc) { cache := {} : reassociateComments.State }
-  let mut r' := ∅
-  for (commentRange, ids) in r do
-    let comments := comments.map.get! commentRange
-    for id in ids do
-      r' := r'.alter id fun
-        | none =>
-          some comments
-        | some existingComments =>
-          -- `r` is sorted by the ranges of the tokens that comments are attached to,
-          -- so when multiple sets of comments get associated with the same `id`,
-          -- they will be ordered according to the ranges of the tokens they are attached to.
-          -- This maintains the relative order of comments in the input syntax.
-          some <| existingComments ++ comments
-  return r'
-where
-  goMemoized (doc : Fmt.Doc) :
-      StateT reassociateComments.State Id
-        (Std.TreeMap Syntax.Range (Std.HashSet TagId) rangeCompare) := do
-    let cacheKey := unsafe ptrAddrUnsafe doc
-    if let some cached := (← get).cache.get? cacheKey then
-      return cached
-    let r ← go doc
-    modify fun s => { s with cache := s.cache.insert cacheKey r }
-    return r
-  go (doc : Fmt.Doc) :
-      StateT reassociateComments.State Id
-        (Std.TreeMap Syntax.Range (Std.HashSet TagId) rangeCompare) := do
-    match doc with
-    | .tagged id d =>
-      let associatedComments1 ← goMemoized d
-      let associatedComments2 := getAssociatedComments id
-      -- If a set of comments has already been assigned in `d`, use those.
-      return associatedComments2.insertMany associatedComments1
-    | .failure
-    | .newline ..
-    | .text .. =>
-      return ∅
-    | .flattened d
-    | .indented _ _ d
-    | .aligned d
-    | .full d
-    | .unindented d =>
-      goMemoized d
-    | .append a b =>
-      let associatedComments1 ← goMemoized a
-      let associatedComments2 ← goMemoized b
-      -- If a set of comments has already been assigned in `a`, prefer those over ones from `b`.
-      return associatedComments2.insertMany associatedComments1
-    | .either a b =>
-      let associatedComments1 ← goMemoized a
-      let associatedComments2 ← goMemoized b
-      -- Comments must always be assigned in all alternatives.
-      -- If a comment is assigned in just one of the alternatives, then assigning it again
-      -- above the `either` may duplicate the comment, whereas not assigning it at all will erase
-      -- the comment if the alternative where the comment isn't assigned is chosen by the formatter.
-      return interWith associatedComments1 associatedComments2 fun _ tags1 tags2 =>
-        tags1.union tags2
-  getAssociatedComments (id : TagId) : Std.TreeMap Syntax.Range (Std.HashSet TagId) rangeCompare :=
-    let refRange := tags.get! id
-    let associatedComments := comments.collectInRange refRange
-      |>.map (fun (commentRange, _) => (commentRange, { id }))
-    Std.TreeMap.ofArray (cmp := rangeCompare) associatedComments
-
 def connectTags
     (syntaxToTags : Std.HashMap Syntax.Range (Array TagId))
-    (tagsToRendered : Std.HashMap TagId (Array String.Slice)) :
-    Std.HashMap Syntax.Range (Array String.Slice) :=
+    (tagsToRendered : Std.HashMap TagId (Array TagRange)) :
+    Std.HashMap Syntax.Range (Array TagRange) :=
   -- Invariants:
   -- 1. All `TagId`s in `tagsToRendered` are contained in `syntaxToTags`.
   -- 2. Only `Syntax.Range`s that have been assigned by the document construction will appear in
@@ -628,16 +529,30 @@ def connectTags
       tagsToRendered.getD tag #[]
 
 def reassociateComments
-    (syntaxToRendered : Std.HashMap Syntax.Range (Array String.Slice))
+    (syntaxToRendered : Std.HashMap Syntax.Range (Array TagRange))
     (comments : Std.HashMap Syntax.Range (Array Comment)) :
-    Std.HashMap String.Slice (Array Comment) :=
-  -- For every comment, find the smallest range in `syntaxToRendered` that contains it.
+    Std.HashMap TagRange (Array Comment) := Id.run do
+  let syntaxToRendered := RangeTree.ofHashMap syntaxToRendered
+  let comments := comments.toArray.qsort (fun (a, _) (b, _) => compareRangesSmallest a b == .lt)
+  let mut r : Std.HashMap TagRange (Array Comment) := ∅
+  for (commentRange, comments) in comments do
+    let (_, ranges) := syntaxToRendered.findSmallestRangeContaining? commentRange |>.get!
+    r := r.alter ranges[0]! fun
+      | none => some comments
+      | some previousComments => some <| previousComments ++ comments
+  return r
 
-  sorry
-
-def insertComments (rendering : String) (comments : Std.HashMap String.Slice (Array Comment)) :
+def insertComments (rendering : String) (comments : Std.HashMap TagRange (Array Comment)) :
     String :=
+  let searcher := String.Slice.Pattern.ToForwardSearcher.toSearcher '\n' rendering
+  let newlinePositions := searcher.filterMap fun
+    | .matched startPos _ => some startPos
+    | .rejected .. => none
+  let newlinePositions := newlinePositions.toArray
   sorry
+where
+  determineInsertionPositions {s : String.Slice} (newlinePositions : Array s.Pos) : Array s.Pos :=
+    sorry
 
 public def main (env : Environment) (stx : Syntax) : Except Error String := do
   let comments ← collectComments stx
