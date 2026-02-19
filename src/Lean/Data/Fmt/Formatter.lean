@@ -8,9 +8,12 @@ module
 
 prelude
 public import Lean.Data.Fmt.Basic
+public import Lean.Data.Fmt.Util
 public import Std.Data.HashSet.Basic
 public import Init
 import Std.Data.HashMap.Iterator
+import Std.Data.HashSet.Iterator
+import Std.Data.Iterators.Consumers.Set
 
 /-!
 `Fmt` formatter.
@@ -137,30 +140,27 @@ public class Cost (τ : Type) [Add τ] [LE τ] where
 
 structure InternalOutput where
   rendering : String
-  tags : Std.HashMap TagId (Array (String.Pos.Raw × String.Pos.Raw))
+  tags : Std.HashMap TagId (Std.HashSet (String.Pos.Raw × String.Pos.Raw))
   deriving Inhabited
-
-deriving instance Hashable for String.Slice.Pos
-deriving instance BEq, Hashable for String.Slice.Subslice
 
 public structure Output where
   rendering : String
-  tags : Std.HashMap TagId (Array (String.Slice.Subslice rendering))
+  tags : Std.HashMap TagId (Std.HashSet rendering.toSlice.Subslice)
   deriving Inhabited
 
 def Output.ofInternalOutput! (o : InternalOutput) : Output where
   rendering := o.rendering
   tags := Id.run do
-    let mut r : Std.HashMap TagId (Array (String.Slice.Subslice o.rendering)) := ∅
+    let mut r : Std.HashMap TagId (Std.HashSet o.rendering.toSlice.Subslice) := ∅
     for (id, ranges) in o.tags do
-      let subslices := ranges.map fun (startPos, endPos) =>
+      let subslices := ranges.iter.map fun (startPos, endPos) =>
         let startPos := o.rendering.toSlice.pos! startPos
         let endPos := o.rendering.toSlice.pos! endPos
         if h : startPos ≤ endPos then
           ⟨startPos, endPos, h⟩
         else
           panic! "Output.ofInternalOutput!: Got `startPos > endPos`."
-      r := r.insert id subslices
+      r := r.insert id subslices.toHashSet
     return r
 
 /--
@@ -268,13 +268,15 @@ def Measure.adjustIndentation (m : Measure τ) (newIndentation : Nat)
 /-- Adds a tag to the rendering presented by this measure. -/
 def Measure.addTag (m : Measure τ) (tag : TagId) : Measure τ := { m with
   output := do
+    let tagStartPos := (← get).rendering.rawEndPos
     m.output
+    let tagEndPos := (← get).rendering.rawEndPos
     modify fun out =>
-      let tagRange := (out.rendering.rawStartPos, out.rendering.rawEndPos)
+      let tagRange := (tagStartPos, tagEndPos)
       { out with
         tags := out.tags.alter tag fun
-          | none => some #[tagRange]
-          | some ranges => some <| ranges.push tagRange
+          | none => some { tagRange }
+          | some ranges => some <| ranges.insert tagRange
       }
 }
 
