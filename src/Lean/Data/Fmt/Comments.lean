@@ -28,11 +28,13 @@ namespace Lean.Fmt
 public inductive Comment.Placement where
   | afterToken
   | onLineBeforeToken
+  deriving Inhabited, Repr
 
 /-- Kind of comment in the input `Syntax`. -/
 public inductive Comment.Kind where
   | lineComment
   | blockComment
+  deriving Inhabited, Repr
 
 /-- Symbol that the comment starts with. -/
 def Comment.Kind.startSymbol (kind : Comment.Kind) : String :=
@@ -52,6 +54,12 @@ def Comment.Kind.hasNesting (kind : Comment.Kind) : Bool :=
   | .lineComment => false
   | .blockComment => true
 
+/-- Prefix that lines after the first line of the comment are prefixed with. -/
+def Comment.Kind.linePrefix? (kind : Comment.Kind) : Option String :=
+  match kind with
+  | .lineComment => some "--"
+  | .blockComment => none
+
 /-- Where this comment should be placed in the rendered document. -/
 inductive Comment.RenderedPlacement where
   | afterClosestPreviousNewline
@@ -63,14 +71,12 @@ public structure Comment where
   kind : Comment.Kind
   placement : Comment.Placement
   /--
-  Raw comment string in the input `Syntax`.
-  Includes the comment separators and all whitespace within the comment.
-  -/
-  full : String
-  /--
-
+  Content of the comment separated into lines.
+  Excludes the comment separators and all whitespace within the comment that serves as indentation
+  of the comment relative to the start symbol of the comment.
   -/
   content : Array String
+  deriving Inhabited, Repr
 
 /-- Renders this comment to a string. -/
 def Comment.toString (c : Comment) : String :=
@@ -83,6 +89,13 @@ def Comment.toString (c : Comment) : String :=
     else
       s!"/-\n{"\n".intercalate c.content.toList}\n-/"
 
+/--
+Yields a set of alternative placements of this comment in a rendered output, sorted descendingly
+by priority.
+If a specific placement does not fit into the line it is placed at, a lower priority placement
+is preferred.
+Ensures that the lowest priority placement always fits into a line.
+-/
 def Comment.renderedPlacements (c : Comment) : Array RenderedPlacement :=
   let isMultiLine := c.content.size > 1
   match c.kind, c.placement with
@@ -104,15 +117,19 @@ def Comment.renderedPlacements (c : Comment) : Array RenderedPlacement :=
 section Extraction
 
 structure PendingComment extends Comment where
+  full : String
   startColumnOffset : Nat
   startPos : String.Pos.Raw
+  endPos : String.Pos.Raw
+  deriving Inhabited
 
 def PendingComment.finalize (p : PendingComment) : Comment :=
   let s := p.full.toSlice.dropPrefix p.kind.startSymbol
     |>.dropSuffix p.kind.endSymbol
   let lines := s.split "\n" |>.toArray
   let deindentedLines :=
-    lines[0]! :: lines[1:].toList.map (dropIndentation · p.startColumnOffset)
+    lines[0]! ::
+      (lines[1:].toList.map (dropIndentation · p.startColumnOffset) |>.map dropLinePrefix)
   let deindentedLines := deindentedLines.map (·.toString)
   let content := "\n".intercalate deindentedLines
     |>.toSlice
@@ -121,7 +138,6 @@ def PendingComment.finalize (p : PendingComment) : Comment :=
   {
     kind := p.kind
     placement := p.placement
-    full := p.full
     content := content.split "\n" |>.toArray.map (·.toString)
   }
 where
@@ -144,6 +160,12 @@ where
       line := line.drop 1
       amount := amount - 1
     return line
+  dropLinePrefix (line : String.Slice) : String.Slice := Id.run do
+    let some pre := p.kind.linePrefix?
+      | return line
+    let some line := line.dropPrefix? pre
+      | return line
+    return line.dropPrefix " "
 
 def advanceColumnOffset (columnOffset : Nat) (s : String.Slice) : Nat :=
   match s.revFind? '\n' with
@@ -179,6 +201,7 @@ def parseComments (trailingWs : String.Slice) (columnOffset : Nat) : Array Comme
           content := #[]
           startColumnOffset := columnOffset
           startPos := currentPos
+          endPos := currentPos + kind.startSymbol
         }
         commentNestingLevel := 1
         trailingWs := trailingWs'
@@ -195,6 +218,7 @@ def parseComments (trailingWs : String.Slice) (columnOffset : Nat) : Array Comme
         commentNestingLevel := commentNestingLevel - 1
         let pendingComment := { pendingComment with
           full := pendingComment.full ++ kind.endSymbol
+          endPos := pendingComment.endPos + kind.endSymbol
         }
         if !kind.hasNesting || commentNestingLevel == 0 then
           comments := comments.push pendingComment
@@ -210,6 +234,7 @@ def parseComments (trailingWs : String.Slice) (columnOffset : Nat) : Array Comme
           commentNestingLevel := commentNestingLevel + 1
           pendingComment? := some { pendingComment with
             full := pendingComment.full ++ kind.startSymbol
+            endPos := pendingComment.endPos + kind.startSymbol
           }
           trailingWs := trailingWs'
           columnOffset := advanceColumnOffset columnOffset kind.startSymbol
@@ -217,6 +242,7 @@ def parseComments (trailingWs : String.Slice) (columnOffset : Nat) : Array Comme
       let c := trailingWs.front
       pendingComment? := some { pendingComment with
         full := pendingComment.full.push c
+        endPos := pendingComment.endPos + c
       }
       trailingWs := trailingWs.drop 1
       columnOffset := advanceColumnOffset columnOffset c.toString
@@ -225,8 +251,43 @@ def parseComments (trailingWs : String.Slice) (columnOffset : Nat) : Array Comme
     if pendingComment.kind.endSymbol.all Char.isWhitespace then
       comments := comments.push pendingComment
       pendingComment? := none
+  comments := groupComments comments
   let finalized := comments.map (·.finalize)
   return (finalized, columnOffset)
+where
+  groupComments (comments : Array PendingComment) : Array PendingComment := Id.run do
+    if comments.isEmpty then
+      return #[]
+    let newlinePositions := String.Slice.Pattern.ToForwardSearcher.toSearcher '\n' trailingWs
+      |>.filterMap fun
+        | .matched startPos _ => some startPos.offset
+        | .rejected .. => none
+    let newlinePositions := newlinePositions.toArray
+    let mut grouped := #[]
+    let mut group := comments[0]!
+    for c in comments[1:] do
+      if !(group.kind matches .lineComment && c.kind matches .lineComment) then
+        grouped := grouped.push group
+        group := c
+        continue
+      let newlineBeforeC? := newlinePositions.binSearchRightmost c.startPos id (· < ·)
+      if let some (_, newlineBeforeC) := newlineBeforeC? then
+        if newlineBeforeC >= group.endPos then
+          -- There is an empty line between `group` and `c`, which splits the group.
+          grouped := grouped.push group
+          group := c
+          continue
+      group := {
+        kind := .lineComment
+        placement := group.placement
+        content := #[]
+        full := group.full ++ c.full
+        startColumnOffset := group.startColumnOffset
+        startPos := group.startPos
+        endPos := c.endPos
+      }
+    grouped := grouped.push group
+    return grouped
 
 structure collectComments.State where
   pendingComments : Array Comment := #[]
