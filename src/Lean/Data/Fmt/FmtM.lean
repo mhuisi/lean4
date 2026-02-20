@@ -58,8 +58,8 @@ public def untagged (doc : Fmt.Doc) : TaggedDoc :=
 public def tagged (doc : Fmt.Doc) (ref : Syntax) : FmtM TaggedDoc := do
   let some range := ref.getRange?
     | return ⟨doc⟩
+  let currentTagId : Nat := (← get).freshTagId
   modify fun s =>
-    let currentTagId : Nat := s.freshTagId
     { s with
       freshTagId := currentTagId + 1
       tags := s.tags.alter range fun
@@ -67,7 +67,7 @@ public def tagged (doc : Fmt.Doc) (ref : Syntax) : FmtM TaggedDoc := do
         | some tags => some <| tags.push currentTagId
 
     }
-  return ⟨doc⟩
+  return ⟨.tagged currentTagId doc⟩
 
 public def TaggedDoc.isTagged (d : TaggedDoc) : Bool :=
   d.doc matches .tagged ..
@@ -109,6 +109,8 @@ public def append (a b : TaggedDoc) : TaggedDoc :=
   untagged <| .append a.doc b.doc
 public def join (ds : Array TaggedDoc) : TaggedDoc :=
   untagged <| .join <| ds.map (·.doc)
+public def joinUsing (sep : TaggedDoc) (ds : Array TaggedDoc) : TaggedDoc :=
+  untagged <| .joinUsing sep.doc <| ds.map (·.doc)
 
 public instance : Append TaggedDoc where
   append := append
@@ -181,13 +183,13 @@ def connectTags
   --    a sub-document is shared in multiple places in the same alternative,
   --    e.g. when a formatter yields the same document twice for the same token in the
   --    input `Syntax`.
-  syntaxToTags.map fun _ tags => Id.run do
+  syntaxToTags.filterMap fun _ tags => do
     let mut ranges := {}
     for tag in tags do
       if let some rendered := tagsToRendered.get? tag then
         ranges := ranges.insertMany rendered
+    guard <| ! ranges.isEmpty
     return ranges
-
 
 public def main (env : Environment) (stx : Syntax) : Except Error String := do
   let comments ← collectComments stx

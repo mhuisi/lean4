@@ -4,8 +4,6 @@ open Lean
 open Lean.Data
 open Lean.Fmt
 
-#synth Hashable (String.Slice.Pos "")
-
 inductive Lean.Syntax.InfixOperationAssociativity where
   | left
   | right
@@ -91,9 +89,9 @@ def fmt7 : Fmt := fmtInfixOperator .right
 def fmt2 : Fmt
   | stx@`($n:num) => do
     let Syntax.atom _ val := n.raw.ifNode (fun n => n.getArg 0) (fun _ => n.raw)
-      | throw ()
+      | throw .partialFormatter
     text val stx
-  | _ => throw ()
+  | _ => throw .partialFormatter
 
 @[fmt Lean.Parser.Term.paren]
 def fmt3 : Fmt
@@ -102,37 +100,45 @@ def fmt3 : Fmt
     let t ← fmt t
     let rb ← fmt rb
     return lb ++ t ++ rb
-  | _ => throw ()
+  | _ => throw .partialFormatter
+
+def module := `Lean.Parser.Module.module
+
+@[fmt null]
+def fmtNull : Fmt := fun stx => do
+  let docs ← stx.getArgs.mapM fmt
+  return joinUsing ⟨.nl⟩ docs
+
+@[fmt Lean.Parser.Command.eval]
+def fmtEval : Fmt
+  | `(#eval%$tk $t) => do
+    let tk ← fmt tk
+    let t ← fmt t
+    return joinUsing ⟨.text " "⟩ #[tk, t]
+  | _ => throw .partialFormatter
+
+def s := "
+#eval 1 + 1 + 1
+-- a
+#eval 1
+  -- b
+  + 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111 + /- asdf -/ 1 -- c
+"
+
+def testParse (env : Environment) (fname contents : String) : IO Syntax := do
+  let inputCtx := Parser.mkInputContext contents fname
+  let (header, state, messages) ← Parser.parseHeader inputCtx
+  let cmds ← Parser.testParseModuleAux env inputCtx state messages #[]
+  pure <| mkListNode cmds
 
 def test : MetaM Unit := do
-  let stx ← `((1111111111111111 + 2) + (3 + 4))
-  dbg_trace stx
-  let some r := fmt stx |>.run (← getEnv)
-    | panic "error"
-  let some r := format? r.doc 20
-    | panic "error 2"
-  IO.println r.rendering
+  let env ← getEnv
+  let stx ← testParse env "<test>" s
+  let r ← IO.ofExcept <| Fmt.main (← getEnv) stx
+  IO.println r
 
 #eval test
 
 set_option pp.raw true
 --set_option pp.raw.showInfo true
 set_option trace.Elab.command true
-
-/-- asdf -/
-def xd := 1
-
-#eval 1
-  + 1
-  +
-  -- the third addition
-  1
-  + 1
-
--- (1 + 2) + 3
--- => [1, +, 2, +, 3]
--- (((1 + 2) - 3) + 4) + 5
-
--- (asdf) => eps + asdf
--- asdf: [1, 5] => eps + [1, 5] - 1
--- wohin mappt [0, 6]?

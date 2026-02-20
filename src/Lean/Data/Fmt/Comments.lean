@@ -28,6 +28,7 @@ namespace Lean.Fmt
 public inductive Comment.Placement where
   | afterToken
   | onLineBeforeToken
+  | onLineAfterToken
   deriving Inhabited, Repr
 
 /-- Kind of comment in the input `Syntax`. -/
@@ -62,13 +63,20 @@ def Comment.Kind.linePrefix? (kind : Comment.Kind) : Option String :=
 
 /-- Where this comment should be placed in the rendered document. -/
 inductive Comment.RenderedPlacement where
+  /-- Placed on a separate line before the token that this comment is attached to. -/
   | afterClosestPreviousNewline
+  /-- Placed on the end of the same line as the token that this comment is attached to. -/
   | beforeClosestNextNewline
+  /-- Placed directly after the token that this comment is attached to. -/
   | afterToken
+  /-- Placed on a separate line after the token that this comment is attached to. -/
+  | afterClosestNextNewline
 
 /-- Comment extracted from an input `Syntax`. -/
 public structure Comment where
+  /-- Kind of comment in the input `Syntax`. -/
   kind : Comment.Kind
+  /-- Comment placement in the input `Syntax`. -/
   placement : Comment.Placement
   /--
   Content of the comment separated into lines.
@@ -106,6 +114,8 @@ def Comment.renderedPlacements (c : Comment) : Array RenderedPlacement :=
       #[.beforeClosestNextNewline, .afterClosestPreviousNewline]
   | .lineComment, .onLineBeforeToken =>
     #[.afterClosestPreviousNewline]
+  | .lineComment, .onLineAfterToken =>
+    #[.afterClosestNextNewline]
   | .blockComment, .afterToken =>
     if isMultiLine then
       #[.afterClosestPreviousNewline]
@@ -113,18 +123,26 @@ def Comment.renderedPlacements (c : Comment) : Array RenderedPlacement :=
       #[.afterToken, .afterClosestPreviousNewline]
   | .blockComment, .onLineBeforeToken =>
     #[.afterClosestPreviousNewline]
+  | .blockComment, .onLineAfterToken =>
+    #[.afterClosestNextNewline]
 
 section Extraction
 
 structure PendingComment extends Comment where
-  full : String
+  raw : String
   startColumnOffset : Nat
   startPos : String.Pos.Raw
   endPos : String.Pos.Raw
   deriving Inhabited
 
+/--
+Finalizes a pending comment, extracting `Comment.content` from `PendingComment.raw` by
+removing start, end and line separators, erasing all indentation relative to the start separator
+and dropping stylistic whitespace at the start and the end of the comment
+(e.g. the separation space in `-- ` or the newlines in a multi-line `/-\n...\n-/`).
+-/
 def PendingComment.finalize (p : PendingComment) : Comment :=
-  let s := p.full.toSlice.dropPrefix p.kind.startSymbol
+  let s := p.raw.toSlice.dropPrefix p.kind.startSymbol
     |>.dropSuffix p.kind.endSymbol
   let lines := s.split "\n" |>.toArray
   let deindentedLines :=
@@ -167,6 +185,11 @@ where
       | return line
     return line.dropPrefix " "
 
+/--
+Advances `columnOffset` by pretending that `s` is appended at `columnOffset`.
+If `s` contains newlines, `columnOffset` is reset to 0 at the last newline in `s` and advanced
+from there with the remainder of `s`.
+-/
 def advanceColumnOffset (columnOffset : Nat) (s : String.Slice) : Nat :=
   match s.revFind? '\n' with
   | none =>
@@ -174,91 +197,156 @@ def advanceColumnOffset (columnOffset : Nat) (s : String.Slice) : Nat :=
   | some nlPos =>
     s.sliceFrom nlPos.next! |>.positions.length
 
-def parseComments (trailingWs : String.Slice) (columnOffset : Nat) : Array Comment × Nat := Id.run do
-  let kinds := #[Comment.Kind.lineComment, Comment.Kind.blockComment]
+structure parseComments.State where
+  -- Read-only
+  firstNewlinePos : String.Pos.Raw
 
-  let firstNewlinePos := trailingWs.find '\n' |>.str
+  -- State
+  trailingWs : String.Slice
+  columnOffset : Nat
+  closedComments : Array PendingComment
+  openComment? : Option PendingComment
+  commentNestingLevel : Nat
 
-  let mut trailingWs := trailingWs
-  let mut columnOffset : Nat := columnOffset
-  let mut comments : Array PendingComment := #[]
-
-  let mut commentNestingLevel : Nat := 0
-  let mut pendingComment? : Option PendingComment := none
-
-  while ! trailingWs.isEmpty do
-    match pendingComment? with
-    | none =>
-      let currentPos := trailingWs.startPos.str.offset
-      let isAfterNewline := currentPos >= firstNewlinePos.offset
-      let startMatch? := kinds.findSome? fun kind => do
-        return (kind, ← trailingWs.dropPrefix? kind.startSymbol)
-      if let some (kind, trailingWs') := startMatch? then
-        pendingComment? := some {
-          kind := kind
-          placement := if isAfterNewline then .onLineBeforeToken else .afterToken
-          full := kind.startSymbol
-          content := #[]
-          startColumnOffset := columnOffset
-          startPos := currentPos
-          endPos := currentPos + kind.startSymbol
-        }
-        commentNestingLevel := 1
-        trailingWs := trailingWs'
-        columnOffset := advanceColumnOffset columnOffset kind.startSymbol
-        continue
-      let c := trailingWs.front
-      trailingWs := trailingWs.drop 1
-      columnOffset := advanceColumnOffset columnOffset c.toString
-      continue
-    | some pendingComment =>
-      let kind := pendingComment.kind
-      let endMatch? := trailingWs.dropPrefix? kind.endSymbol
-      if let some trailingWs' := endMatch? then
-        commentNestingLevel := commentNestingLevel - 1
-        let pendingComment := { pendingComment with
-          full := pendingComment.full ++ kind.endSymbol
-          endPos := pendingComment.endPos + kind.endSymbol
-        }
-        if !kind.hasNesting || commentNestingLevel == 0 then
-          comments := comments.push pendingComment
-          pendingComment? := none
-        else
-          pendingComment? := some pendingComment
-        trailingWs := trailingWs'
-        columnOffset := advanceColumnOffset columnOffset kind.endSymbol
-        continue
-      if kind.hasNesting then
-        let startMatch? := trailingWs.dropPrefix? kind.startSymbol
-        if let some trailingWs' := startMatch? then
-          commentNestingLevel := commentNestingLevel + 1
-          pendingComment? := some { pendingComment with
-            full := pendingComment.full ++ kind.startSymbol
-            endPos := pendingComment.endPos + kind.startSymbol
-          }
-          trailingWs := trailingWs'
-          columnOffset := advanceColumnOffset columnOffset kind.startSymbol
-          continue
-      let c := trailingWs.front
-      pendingComment? := some { pendingComment with
-        full := pendingComment.full.push c
-        endPos := pendingComment.endPos + c
-      }
-      trailingWs := trailingWs.drop 1
-      columnOffset := advanceColumnOffset columnOffset c.toString
-      continue
-  if let some pendingComment := pendingComment? then
-    if pendingComment.kind.endSymbol.all Char.isWhitespace then
-      comments := comments.push pendingComment
-      pendingComment? := none
-  comments := groupComments comments
+/--
+Parses the comments in `initialTrailingWs` at a current column offset of `initialColumnOffset`.
+Yields the set of comments and the column offset after `initialTailingWs`.
+-/
+def parseComments
+    (initialTrailingWs : String.Slice)
+    (initialColumnOffset : Nat) :
+    Array Comment × Nat := Id.run do
+  let (_, s) := StateT.run go {
+    firstNewlinePos := initialTrailingWs.find '\n' |>.str.offset
+    trailingWs := initialTrailingWs
+    columnOffset := initialColumnOffset
+    closedComments := #[]
+    openComment? := none
+    commentNestingLevel := 0
+  }
+  let comments := groupComments s.closedComments
   let finalized := comments.map (·.finalize)
-  return (finalized, columnOffset)
+  return (finalized, s.columnOffset)
+
 where
+
+  go : StateM parseComments.State Unit := do
+    let kinds := #[Comment.Kind.lineComment, Comment.Kind.blockComment]
+    while ! (← get).trailingWs.isEmpty do
+      match (← get).openComment? with
+      | none =>
+        let mut anySuccess := false
+        for kind in kinds do
+          let success ← tryOpenComment kind
+          if success then
+            anySuccess := true
+            break
+        if ! anySuccess then
+          skip
+      | some _openComment =>
+        let success ← tryCloseComment
+        if success then
+          continue
+        let success ← tryNestComment
+        if success then
+          continue
+        skip
+    terminateEndOfWhitespaceComment
+
+  advanceBy (pre : String) : StateM parseComments.State Unit := do
+    modify fun s => { s with
+      trailingWs := s.trailingWs.dropPrefix pre
+      columnOffset := advanceColumnOffset s.columnOffset pre
+      openComment? := s.openComment?.map fun openComment =>
+        { openComment with
+          raw := openComment.raw ++ pre
+          endPos := openComment.endPos + pre
+        }
+    }
+
+  skip : StateM parseComments.State Unit := do
+    let some c := (← get).trailingWs.front?
+      | return
+    advanceBy c.toString
+
+  tryParse (pat : String) : StateM parseComments.State Bool := do
+    if ! (← get).trailingWs.startsWith pat then
+      return false
+    advanceBy pat
+    return true
+
+  tryOpenComment
+      (kind : Comment.Kind) :
+      StateM parseComments.State Bool := do
+    let commentStartPos := (← get).trailingWs.startPos.str.offset
+    let isAfterNewline := commentStartPos >= (← get).firstNewlinePos
+    let commentStartColumnOffset := (← get).columnOffset
+    let success ← tryParse kind.startSymbol
+    if ! success then
+      return false
+    modify fun s => { s with
+      openComment? := some {
+        kind
+        placement := if isAfterNewline then .onLineBeforeToken else .afterToken
+        raw := kind.startSymbol
+        content := #[]
+        startColumnOffset := commentStartColumnOffset
+        startPos := commentStartPos
+        endPos := commentStartPos + kind.startSymbol
+      }
+      commentNestingLevel := 1
+    }
+    return true
+
+  tryCloseComment : StateM parseComments.State Bool := do
+    let some openComment := (← get).openComment?
+      | return false
+    let kind := openComment.kind
+    let success ← tryParse kind.endSymbol
+    if ! success then
+      return false
+    let closedComment := (← get).openComment?.get!
+    let commentNestingLevel := (← get).commentNestingLevel - 1
+    if ! kind.hasNesting || commentNestingLevel == 0 then
+      modify fun s => { s with
+        closedComments := s.closedComments.push closedComment
+        openComment? := none
+      }
+    else
+      modify fun s => { s with
+        openComment? := some closedComment
+      }
+    return true
+
+  tryNestComment : StateM parseComments.State Bool := do
+    let some openComment := (← get).openComment?
+      | return false
+    let kind := openComment.kind
+    if ! kind.hasNesting then
+      return false
+    let success ← tryParse kind.startSymbol
+    if ! success then
+      return false
+    modify fun s => { s with
+      commentNestingLevel := s.commentNestingLevel + 1
+    }
+    return true
+
+  terminateEndOfWhitespaceComment : StateM parseComments.State Unit := do
+    let some openComment := (← get).openComment?
+      | return
+    if ! openComment.kind.endSymbol.all Char.isWhitespace then
+      return
+    let closedComment := openComment
+    modify fun s => { s with
+      closedComments := s.closedComments.push closedComment
+      openComment? := none
+    }
+
   groupComments (comments : Array PendingComment) : Array PendingComment := Id.run do
     if comments.isEmpty then
       return #[]
-    let newlinePositions := String.Slice.Pattern.ToForwardSearcher.toSearcher '\n' trailingWs
+    let newlinePositions := String.Slice.Pattern.ToForwardSearcher.toSearcher '\n' initialTrailingWs
       |>.filterMap fun
         | .matched startPos _ => some startPos.offset
         | .rejected .. => none
@@ -281,7 +369,10 @@ where
         kind := .lineComment
         placement := group.placement
         content := #[]
-        full := group.full ++ c.full
+        -- This is strictly speaking not a proper `raw` representation for the entire group,
+        -- since it does not contain the whitespace in-between `group` and `c`,
+        -- but this is not a problem since `PendingComment.finalize` can handle this disparity.
+        raw := group.raw ++ c.raw
         startColumnOffset := group.startColumnOffset
         startPos := group.startPos
         endPos := c.endPos
@@ -292,14 +383,29 @@ where
 structure collectComments.State where
   pendingComments : Array Comment := #[]
   comments : Std.HashMap Syntax.Range (Array Comment) := {}
-  columnOffset : Nat := 0 -- TODO: init?
+  columnOffset : Nat
+  lastTokenRange? : Option Syntax.Range := none
 
 abbrev collectComments.M α := StateT collectComments.State (Except Fmt.Error) α
 
-public def collectComments (stx : Syntax) :
+/--
+Collects all comments in `stx`, associating them either with the token immediately before a comment
+on the same line or if the comment is on its own line with the next token following the comment.
+-/
+public def collectComments (stx : Syntax) (offset : Nat := 0):
     Except Fmt.Error (Std.HashMap Syntax.Range (Array Comment)) := do
-  let (_, s) ← StateT.run (s := { : collectComments.State }) <| go stx
-  return s.comments
+  let (_, s) ← StateT.run (s := { columnOffset := offset : collectComments.State }) <| go stx
+  let some lastTokenRange := s.lastTokenRange?
+    | throw <| .emptyInputSyntax stx
+  let endOfFileComments := s.pendingComments.map fun c => { c with
+    placement := .onLineAfterToken
+  }
+  let mut comments := s.comments
+  if ! endOfFileComments.isEmpty then
+    comments := comments.alter lastTokenRange fun
+      | none => some endOfFileComments
+      | some comments => some <| comments ++ endOfFileComments
+  return comments
 where
   go (stx : Syntax) : collectComments.M Unit := do
     match stx with
@@ -316,11 +422,16 @@ where
   collectTokenComments (info : SourceInfo) (tk : String.Slice) : collectComments.M Unit := do
     let some range := info.getRange?
       | throw <| .malformedInputSyntax stx (.ofSlice tk) "missing token range"
+    modify fun s => { s with
+      lastTokenRange? := some range
+    }
     let pendingComments ← modifyGet fun s =>
       (s.pendingComments, { s with pendingComments := #[] })
     addComments range pendingComments
-    advanceColumnOffset tk
-    let some trailing ← getTrailing? info
+    modify fun s => { s with
+      columnOffset := Fmt.advanceColumnOffset s.columnOffset tk
+    }
+    let some trailing ← info.getTrailing? |>.mapM toSlice
       | return
     let (comments, columnOffset) := parseComments trailing (← get).columnOffset
     let (commentsAfterToken, commentsOnLineBeforeToken) :=
@@ -330,31 +441,34 @@ where
       pendingComments := s.pendingComments ++ commentsOnLineBeforeToken
       columnOffset
     }
-    advanceColumnOffset trailing
   addComments (range : Syntax.Range) (newComments : Array Comment) : collectComments.M Unit := do
+    if newComments.isEmpty then
+      return
     modify fun s => { s with
       comments := s.comments.alter range fun
         | none => some newComments
         | some comments => some <| comments ++ newComments
-    }
-  advanceColumnOffset (val : String.Slice) : collectComments.M Unit :=
-    modify fun s => { s with
-      columnOffset := Fmt.advanceColumnOffset s.columnOffset val
     }
   toSlice (s : Substring.Raw) : collectComments.M String.Slice := do
     let some s := s.toSlice?
       | throw <| .malformedInputSyntax stx s
           "substring is invalid and cannot be converted to a slice"
     return s
-  getTrailing? (info : SourceInfo) : collectComments.M (Option String.Slice) := do
-    let some trailing := info.getTrailing?
-      | return none
-    toSlice trailing
 
 end Extraction
 
 section Placement
 
+/--
+Associates every comment with a specific range in the rendered output.
+If the token that a comment is attached to is rendered in the output,
+the comment will be associated with the rendered token.
+If the token that a comment is attached to is not rendered,
+the comments are associated with the smallest parent range of the token they are attached to that
+is rendered.
+If a specific range is rendered several times, we choose the smallest rendered range to attach
+the comment to, so as to not duplicate the comment.
+-/
 def reassociateComments
     {rendering : String.Slice}
     (syntaxToRendered : Std.HashMap Syntax.Range (Std.HashSet rendering.Subslice))
@@ -363,8 +477,8 @@ def reassociateComments
   let syntaxToRendered := RangeTree.ofHashMap syntaxToRendered
   let comments := comments.toArray.qsort (fun (a, _) (b, _) => compareRanges a b == .lt)
   let mut r : Std.HashMap rendering.Subslice (Array Comment) := ∅
-  for (commentRange, comments) in comments do
-    let (_, ranges) := syntaxToRendered.findSmallestRangeContaining? commentRange |>.get!
+  for (range, comments) in comments do
+    let (_, ranges) := syntaxToRendered.findSmallestRangeContaining? range |>.get!
     let range := findBestCommentRange ranges
     r := r.alter range fun
       | none => some comments
@@ -389,6 +503,10 @@ structure LineInfo (s : String.Slice) where
   range : s.Subslice
   deriving Inhabited
 
+/--
+For every line in `s`, determines the length of the line in characters, the level of indentation
+and the range of the line (without the terminal `\n`).
+-/
 def collectLineInfos (s : String.Slice) : Array (LineInfo s) := Id.run do
   let mut r := #[]
   let mut lineLength : Nat := 0
@@ -445,8 +563,7 @@ def determineCommentInsertions
   let mut r : Std.HashMap rendering.Pos String  := ∅
   for (range, comments) in comments do
     for c in comments do
-      let rps := c.renderedPlacements
-      for rp in rps do
+      for rp in c.renderedPlacements do
         match rp with
         | .afterClosestPreviousNewline =>
           let (_, lineInfo) := findLineInfoContaining lineInfos range.startInclusive
@@ -474,17 +591,23 @@ def determineCommentInsertions
           let (lineNum, _) := findLineInfoContaining lineInfos range.endExclusive
           let lineLength := lineLengths[lineNum]!
           let insertionPos := range.endExclusive
-          let insertedComment :=
-            if r.contains insertionPos then
-              " " ++ c.toString
-            else
-              " " ++ c.toString ++ " "
+          let insertedComment := " " ++ c.toString
           let newLineLength := lineLength + insertedComment.length
           if newLineLength > maxColumnWidth then
             continue
           r := r.alter insertionPos fun
             | none => some insertedComment
             | some existingInsertedComment => some <| insertedComment ++ existingInsertedComment
+        | .afterClosestNextNewline =>
+          let (_, lineInfo) := findLineInfoContaining lineInfos range.endExclusive
+          -- `lineInfo.range.endExclusive.next?` is only `none` on EOF, in which case we insert
+          -- the comment at the end of the file.
+          let insertionPos := lineInfo.range.endExclusive.next? |>.getD lineInfo.range.endExclusive
+          let insertedComment := "\n" ++ c.toString.indent lineInfo.indentation
+          r := r.alter insertionPos fun
+            | none => some insertedComment
+            | some existingInsertedComment => some <| insertedComment ++ existingInsertedComment
+        break
   return r.toArray.qsort (·.1 < ·.1)
 where
   findLineInfoContaining (lineInfos : Array (LineInfo rendering)) (pos : rendering.Pos) : Nat × LineInfo rendering :=
@@ -503,7 +626,13 @@ public def insertComments
   for (insertionPos, comments) in insertions do
     r := r ++ rendering.slice! startPos insertionPos
     r := r ++ comments
+    if let some charAfterComment := insertionPos.get? then
+      let endCommentChar := comments.revChars.first?.get!
+      if ! endCommentChar.isWhitespace && ! charAfterComment.isWhitespace then
+        -- Padding after `comments`
+        r := r ++ " "
     startPos := insertionPos
+  r := r ++ rendering.slice! startPos rendering.endPos
   return r
 
 end Placement

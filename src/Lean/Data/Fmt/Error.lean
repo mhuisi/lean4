@@ -11,8 +11,11 @@ public import Init.Data.ToString
 public import Lean.Data.Fmt.Basic
 
 public inductive Lean.Fmt.Error where
+  | emptyInputSyntax
+    (stx : Syntax)
+    (msg : String := "Input syntax to the formatter is empty and contains only whitespace.")
   | partialFormatter
-    (kind : SyntaxNodeKind)
+    (kind : SyntaxNodeKind := .anonymous)
     (msg : String := s!"Formatter for syntax kind `{kind}` is partial and does not handle the full \
       syntax of `{kind}`.")
   | formattingFailure
@@ -30,3 +33,11 @@ public inductive Lean.Fmt.Error where
   | raw
     (msg : String)
   deriving Inhabited
+
+instance : ToString Lean.Fmt.Error where
+  toString
+    | .emptyInputSyntax (msg := msg) ..
+    | .partialFormatter (msg := msg) ..
+    | .formattingFailure (msg := msg) ..
+    | .malformedInputSyntax (msg := msg) ..
+    | .raw (msg := msg) .. => msg

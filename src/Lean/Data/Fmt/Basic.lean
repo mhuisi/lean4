@@ -88,7 +88,7 @@ abbrev FailureCond := FullnessState → Bool
 
 @[expose]
 def TagId := Nat
-  deriving Inhabited, BEq, Hashable, Ord, Repr
+  deriving Inhabited, BEq, Hashable, Ord, Repr, ToString
 
 /-- Input document consumed by the formatter, which chooses an optimal rendering of the document. -/
 inductive Doc where
