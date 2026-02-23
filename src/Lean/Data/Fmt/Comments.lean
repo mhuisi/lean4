@@ -14,6 +14,7 @@ import Std.Data.HashMap.Basic
 import Lean.Data.Fmt.RangeTree
 public import Lean.Data.Fmt.Util
 import Std.Data.HashSet.Iterator
+import Lean.Data.Fmt.LineInfo
 
 /-- Indents all lines in `s` by `numSpaces` spaces. -/
 def String.indent (s : String) (numSpaces : Nat) : String :=
@@ -496,50 +497,6 @@ where
         bestRange := range
         bestLength := length
     return bestRange
-
-structure LineInfo (s : String.Slice) where
-  length : Nat
-  indentation : Nat
-  range : s.Subslice
-  deriving Inhabited
-
-/--
-For every line in `s`, determines the length of the line in characters, the level of indentation
-and the range of the line (without the terminal `\n`).
--/
-def collectLineInfos (s : String.Slice) : Array (LineInfo s) := Id.run do
-  let mut r := #[]
-  let mut lineLength : Nat := 0
-  let mut lineIndentation : Nat := 0
-  let mut foundNonSpaceChar : Bool := false
-  let mut lineStartPos := s.startPos
-  let mut pos := s.startPos
-  while h : pos ≠ s.endPos do
-    let c := pos.get h
-    let pos' := pos.next h
-    if c == ' ' && ! foundNonSpaceChar then
-      lineLength := lineLength + 1
-      lineIndentation := lineIndentation + 1
-    else if c == '\n' then
-      r := r.push {
-        length := lineLength
-        indentation := lineIndentation
-        range := s.subslice! lineStartPos pos
-      }
-      lineLength := 0
-      lineIndentation := 0
-      lineStartPos := pos'
-      foundNonSpaceChar := false
-    else
-      lineLength := lineLength + 1
-      foundNonSpaceChar := true
-    pos := pos'
-  r := r.push {
-    length := lineLength
-    indentation := lineIndentation
-    range := s.subslice! lineStartPos pos
-  }
-  return r
 
 def compareSubslicesLargest {s : String.Slice} (a b : s.Subslice) : Ordering :=
   Ord.compare a.startInclusive b.startInclusive

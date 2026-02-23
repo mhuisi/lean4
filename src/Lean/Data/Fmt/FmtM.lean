@@ -19,11 +19,13 @@ import Lean.Data.Fmt.RangeTree
 import Std.Data.Iterators.Producers.Array
 import Std.Data.Iterators.Producers.Empty
 import Std.Data.HashSet.Iterator
+public import Lean.Data.Fmt.LineInfo
 
 namespace Lean
 
 public structure Fmt.Context where
   env : Environment
+  lineInfos : Array SyntaxLineInfo
 
 public structure Fmt.State where
   shareCommonState : ShareCommon.State ShareCommon.objectFactory
@@ -36,9 +38,12 @@ public structure Fmt.TaggedDoc where
 public abbrev FmtM α := ReaderT Fmt.Context (ExceptT Fmt.Error (StateT Fmt.State Id)) α
 public abbrev Fmt := Syntax → FmtM Fmt.TaggedDoc
 
-public def FmtM.run (env : Environment) (act : FmtM α) :
+public def FmtM.run
+    (env : Environment)
+    (lineInfos : Array Fmt.SyntaxLineInfo)
+    (act : FmtM α) :
     Except Fmt.Error (α × Std.HashMap Syntax.Range (Array Fmt.TagId )) := do
-  let (v?, s) := ReaderT.run act { env }
+  let (v?, s) := ReaderT.run act { env, lineInfos }
     |>.run { shareCommonState := default, freshTagId := Nat.zero, tags := ∅ }
   return (← v?, s.tags)
 
@@ -65,7 +70,6 @@ public def tagged (doc : Fmt.Doc) (ref : Syntax) : FmtM TaggedDoc := do
       tags := s.tags.alter range fun
         | none => some #[currentTagId]
         | some tags => some <| tags.push currentTagId
-
     }
   return ⟨.tagged currentTagId doc⟩
 
@@ -136,7 +140,51 @@ unsafe builtin_initialize fmtAttribute : KeyedDeclsAttribute Fmt ←
       pure id
   }
 
-public def fmt : Fmt := fun stx => match stx with
+def fmtRaw (stx : Syntax) : Doc :=
+  match stx with
+  | .missing =>
+    .failure
+  | .atom info val =>
+    let trailing? := fmtTrailing info
+    match trailing? with
+    | none => .text val
+    | some trailing => trailing ++ .text val
+  | .ident _ _ val _ =>
+    .text val.toString
+  | .node _ _ args =>
+    let docs := args.map fmtRaw
+    .join docs
+where
+  fmtTrailing (info : SourceInfo) : Option Doc := do
+    let trailing ← info.getTrailing?
+    let lines := trailing.splitOn "\n"
+      |>.toArray
+      |>.map (Doc.text ·.toString)
+    return Doc.joinUsing .hardNl lines
+
+/-
+aaa (b +
+  2)
+
+aaa (
+  b +
+    2)
+
+aaa + b / 2
+aaa +
+  b / 2
+
+  aaa + b
+    / 2
+
+  aaa +
+    b
+      / 2
+
+-/
+
+public def fmt : Fmt := fun stx =>
+  match stx with
   | .missing =>
     pure <| failure
   | .atom _ val =>
@@ -192,8 +240,9 @@ def connectTags
     return ranges
 
 public def main (env : Environment) (stx : Syntax) : Except Error String := do
+  let lineInfos := collectSyntaxLineInfos stx
   let comments ← collectComments stx
-  let (taggedDoc, syntaxToTags) ← FmtM.run env <| fmt stx
+  let (taggedDoc, syntaxToTags) ← FmtM.run env lineInfos <| fmt stx
   let doc := taggedDoc.doc
   let some output := format? doc 100
     | throw <| .formattingFailure stx doc
