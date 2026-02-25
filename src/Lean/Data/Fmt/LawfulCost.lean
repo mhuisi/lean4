@@ -53,6 +53,7 @@ theorem DefaultCost.zero_def : (0 : DefaultCost w W) = ⟨0, 0⟩ := by
 
 theorem DefaultCost.add_zero (c : DefaultCost w W) : c + 0 = c := by
   simp only [zero_def, add_def]
+  grind
 
 theorem DefaultCost.add_comm (c₁ c₂ : DefaultCost w W) : c₁ + c₂ = c₂ + c₁ := by
   simp only [add_def]

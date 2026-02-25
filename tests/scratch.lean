@@ -109,20 +109,22 @@ def fmtNull : Fmt := fun stx => do
   let docs ← stx.getArgs.mapM fmt
   return joinUsing ⟨.nl⟩ docs
 
-@[fmt Lean.Parser.Command.eval]
-def fmtEval : Fmt
-  | `(#eval%$tk $t) => do
-    let tk ← fmt tk
-    let t ← fmt t
-    return joinUsing ⟨.text " "⟩ #[tk, t]
-  | _ => throw .partialFormatter
+-- @[fmt Lean.Parser.Command.eval]
+-- def fmtEval : Fmt
+--   | `(#eval%$tk $t) => do
+--     let tk ← fmt tk
+--     let t ← fmt t
+--     return joinUsing ⟨.text " "⟩ #[tk, t]
+--   | _ => throw .partialFormatter
 
 def s := "
 #eval 1 + 1 + 1
+
+
 -- a
 #eval 1
   -- b
-  + 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111 + /- asdf -/ 1 -- c
+  + 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111 + /- asdf -/ 1 -- c
 "
 
 def testParse (env : Environment) (fname contents : String) : IO Syntax := do

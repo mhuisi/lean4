@@ -79,6 +79,10 @@ public structure Comment where
   kind : Comment.Kind
   /-- Comment placement in the input `Syntax`. -/
   placement : Comment.Placement
+  /-- Range of the original token in the input `Syntax` that this comment was attached to. -/
+  originalTokenRange : Syntax.Range
+  /-- Range of the trailing whitespace in the input `Syntax`. -/
+  originalTrailingRange : Syntax.Range
   /--
   Content of the comment separated into lines.
   Excludes the comment separators and all whitespace within the comment that serves as indentation
@@ -157,6 +161,8 @@ def PendingComment.finalize (p : PendingComment) : Comment :=
   {
     kind := p.kind
     placement := p.placement
+    originalTokenRange := p.originalTokenRange
+    originalTrailingRange := ⟨p.startPos, p.endPos⟩
     content := content.split "\n" |>.toArray.map (·.toString)
   }
 where
@@ -214,6 +220,7 @@ Parses the comments in `initialTrailingWs` at a current column offset of `initia
 Yields the set of comments and the column offset after `initialTailingWs`.
 -/
 def parseComments
+    (originalTokenRange : Syntax.Range)
     (initialTrailingWs : String.Slice)
     (initialColumnOffset : Nat) :
     Array Comment × Nat := Id.run do
@@ -289,6 +296,8 @@ where
       openComment? := some {
         kind
         placement := if isAfterNewline then .onLineBeforeToken else .afterToken
+        originalTokenRange
+        originalTrailingRange := ⟨0, 0⟩
         raw := kind.startSymbol
         content := #[]
         startColumnOffset := commentStartColumnOffset
@@ -369,6 +378,8 @@ where
       group := {
         kind := .lineComment
         placement := group.placement
+        originalTokenRange := group.originalTokenRange
+        originalTrailingRange := ⟨group.originalTrailingRange.start, c.originalTrailingRange.stop⟩
         content := #[]
         -- This is strictly speaking not a proper `raw` representation for the entire group,
         -- since it does not contain the whitespace in-between `group` and `c`,
@@ -422,7 +433,7 @@ where
         go arg
   collectTokenComments (info : SourceInfo) (tk : String.Slice) : collectComments.M Unit := do
     let some range := info.getRange?
-      | throw <| .malformedInputSyntax stx (.ofSlice tk) "missing token range"
+      | throw <| .malformedInputSyntax stx (some <| .ofSlice tk) "missing token range"
     modify fun s => { s with
       lastTokenRange? := some range
     }
@@ -434,7 +445,7 @@ where
     }
     let some trailing ← info.getTrailing? |>.mapM toSlice
       | return
-    let (comments, columnOffset) := parseComments trailing (← get).columnOffset
+    let (comments, columnOffset) := parseComments range trailing (← get).columnOffset
     let (commentsAfterToken, commentsOnLineBeforeToken) :=
       comments.partition (·.placement matches .afterToken)
     addComments range commentsAfterToken

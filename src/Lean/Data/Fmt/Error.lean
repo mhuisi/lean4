@@ -26,10 +26,14 @@ public inductive Lean.Fmt.Error where
       flatten a document with hard newlines.")
   | malformedInputSyntax
     (stx : Syntax)
-    (malformedPortion : Substring.Raw)
+    (malformedPortion? : Option Substring.Raw)
     (reason : String)
-    (msg : String := s!"Input syntax to the formatter is malformed: {reason}. Offending portion \
-      of the input syntax: {malformedPortion.toString}")
+    (msg : String :=
+      let msg := s!"Input syntax to the formatter is malformed: {reason}."
+      match malformedPortion? with
+      | none => msg
+      | some malformedPortion => s!"{msg} Offending portion of the input syntax: \
+        {malformedPortion.toString}")
   | raw
     (msg : String)
   deriving Inhabited
