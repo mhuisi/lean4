@@ -70,21 +70,6 @@ def fmt6 : Fmt := fmtInfixOperator .left
 @[fmt Lean.Parser.Term.arrow]
 def fmt7 : Fmt := fmtInfixOperator .right
 
--- @[fmt ident]
--- def fmt8 : Fmt
---   | `($i:ident) =>
---     return .text i.getId.toString
---   | _ =>
---     throw ()
-
-
-  -- | `($a +%$tk $b) => do
-  --   let a ← fmt a
-  --   let b ← fmt b
-  --   let sum :=  fmt!"{a.nested}".append (Doc.nested fmt!"{Doc.nl}{tk.getAtomVal} {b.nested}")
-  --   return .maybeFlattened sum
-  -- | _ => throw ()
-
 @[fmt num]
 def fmt2 : Fmt
   | stx@`($n:num) => do
@@ -109,13 +94,13 @@ def fmtNull : Fmt := fun stx => do
   let docs ← stx.getArgs.mapM fmt
   return joinUsing ⟨.nl⟩ docs
 
--- @[fmt Lean.Parser.Command.eval]
--- def fmtEval : Fmt
---   | `(#eval%$tk $t) => do
---     let tk ← fmt tk
---     let t ← fmt t
---     return joinUsing ⟨.text " "⟩ #[tk, t]
---   | _ => throw .partialFormatter
+@[fmt Lean.Parser.Command.eval]
+def fmtEval : Fmt
+  | `(#eval%$tk $t) => do
+    let tk ← fmt tk
+    let t ← fmt t
+    return joinUsing ⟨.text " "⟩ #[tk, t]
+  | _ => throw .partialFormatter
 
 def s := "
 #eval 1 + 1 + 1

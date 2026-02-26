@@ -82,7 +82,7 @@ namespace Fmt
 public def getLineInfo! (pos : String.Pos.Raw) : FmtM SyntaxLineInfo := do
   let ctx ← read
   let (_, lineInfo) := ctx.lineInfos.binSearchRightmost pos (·.startPos) (· < ·) |>.get!
-  assert! lineInfo.startPos <= pos && pos < lineInfo.endPos
+  assert! lineInfo.startPos <= pos && pos <= lineInfo.endPos
   return lineInfo
 
 public def throwPartialFormatter : FmtM α :=
@@ -171,36 +171,42 @@ unsafe builtin_initialize fmtAttribute : KeyedDeclsAttribute Fmt ←
       pure id
   }
 
-def fmtRaw (stx : Syntax) : FmtM Doc := do
+mutual
+
+partial def fmtRaw : Fmt := fun stx => do
   let some pos := stx.getPos?
     | throw <| .malformedInputSyntax stx none "syntax has no head position"
   let some tailPos := stx.getTailPos?
     | throw <| .malformedInputSyntax stx none "syntax has no tail position"
   let firstRawLineIndentation := (← getLineInfo! pos).indentation
-  let rawStx ← go firstRawLineIndentation tailPos stx
-  return .nested rawStx
+  let rawDoc ← go firstRawLineIndentation tailPos stx
+  nested rawDoc |>.tag stx
 where
-  go (firstRawLineIndentation : Nat) (lastTokenTailPos : String.Pos.Raw) (stx : Syntax) : FmtM Doc := do
+  go (firstRawLineIndentation : Nat) (lastTokenTailPos : String.Pos.Raw) : Fmt := fun stx => do
     match stx with
     | .missing =>
-      return .failure
+      return failure
     | .atom info val =>
       let some trailing := info.getTrailing?
         | addRawFormattedToken stx none
-          return .text val
+          return untagged <| .text val
       let (trailing, formattedTrailingRange) := fmtTrailing firstRawLineIndentation lastTokenTailPos trailing
       addRawFormattedToken stx formattedTrailingRange
-      return .text val ++ trailing
+      return untagged <| .text val ++ trailing
     | .ident info rawVal _ _ =>
       let some trailing := info.getTrailing?
         | addRawFormattedToken stx none
-          return .text rawVal.toString
+          return untagged <| .text rawVal.toString
       let (trailing, formattedTrailingRange) := fmtTrailing firstRawLineIndentation lastTokenTailPos trailing
       addRawFormattedToken stx formattedTrailingRange
-      return .text rawVal.toString ++ trailing
-    | .node _ _ args =>
+      return untagged <| .text rawVal.toString ++ trailing
+    | .node _ kind args =>
+      let fmts := fmtAttribute.getValues (← read).env kind
+      if ! fmts.isEmpty then
+        let doc ← fmt stx
+        return doc
       let docs ← args.mapM (go firstRawLineIndentation lastTokenTailPos ·)
-      return .join docs
+      return join docs
   fmtTrailing
       (firstRawLineIndentation : Nat)
       (lastTokenTailPos : String.Pos.Raw)
@@ -211,7 +217,11 @@ where
     let mut formattedRange := ⟨trailing.startPos, trailing.stopPos⟩
     let isFinalTrailing := trailing.startPos >= lastTokenTailPos
     if isFinalTrailing then
-      formattedRange := ⟨lines[0]!.startPos, lines[0]!.stopPos⟩
+      if lines.size > 0 then
+        -- Include newline in range
+        formattedRange := ⟨lines[0]!.startPos, lines[0]!.stopPos.increaseBy 1⟩
+      else
+        formattedRange := ⟨lines[0]!.startPos, lines[0]!.stopPos⟩
     else
       newLines := newLines ++ lines[1...*].toArray.map (·.toString.deindent (firstRawLineIndentation + 2))
     let formatted := newLines.map (Doc.text ·)
@@ -223,27 +233,7 @@ where
       rawFormattedTokens := s.rawFormattedTokens.insert range { formattedTrailingRange? }
     }
 
-/-
-aaa (b +
-  2)
-
-aaa (
-  b +
-    2)
-
-aaa + b / 2
-aaa +
-  b / 2
-
-  aaa + b
-    / 2
-
-  aaa +
-    b
-      / 2
--/
-
-public def fmt : Fmt := fun stx =>
+public partial def fmt : Fmt := fun stx =>
   match stx with
   | .missing =>
     pure <| failure
@@ -257,7 +247,7 @@ public def fmt : Fmt := fun stx =>
     let fmts := fmtAttribute.getValues ctx.env kind
     let some f := fmts.head?
       | let doc ← fmtRaw stx
-        return ← tagged doc stx
+        return doc
     let r ← f stx
     try
       let r ← r.tag stx
@@ -267,6 +257,8 @@ public def fmt : Fmt := fun stx =>
         if errorKind == .anonymous then
           throw <| .partialFormatter kind
       throw e
+
+end
 
 def filterRawFormattedComments
     (comments : Std.HashMap Syntax.Range (Array Comment))
@@ -278,9 +270,6 @@ def filterRawFormattedComments
         | return true
       let some formattedTrailingRange := rawFormattedToken.formattedTrailingRange?
         | return true
-      dbg_trace c.content
-      dbg_trace repr formattedTrailingRange
-      dbg_trace repr c.originalTrailingRange
       return ! formattedTrailingRange.includes c.originalTrailingRange
   comments.filter fun _ cs => ! cs.isEmpty
 
