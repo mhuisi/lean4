@@ -10,10 +10,9 @@ prelude
 public import Lean.Data.Fmt.Basic
 public import Lean.Data.Fmt.Util
 public import Std.Data.HashSet.Basic
-public import Init
-import Std.Data.HashMap.Iterator
 import Std.Data.HashSet.Iterator
 import Std.Data.Iterators.Consumers.Set
+import Init.Data.Iterators.Combinators.FilterMap
 
 /-!
 `Fmt` formatter.
@@ -70,7 +69,7 @@ and implementing `flattened` as a function that flattens the newlines in the inn
 We instead implement this as a separate preprocessing step to circumvent the global
 preprocessing cache.
 -/
-def Doc.preprocess (d : Doc) : Doc :=
+partial def Doc.preprocess (d : Doc) : Doc :=
   goMemoized d false |>.run' {}
 where
   goMemoized (d : Doc) (isFlattened : Bool) : StateM PreprocessingState Doc := do

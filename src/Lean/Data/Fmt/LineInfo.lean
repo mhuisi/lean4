@@ -7,12 +7,8 @@ Author: Marc Huisinga
 module
 
 prelude
-public import Init.Data.String.Defs
-public import Init.Data.String.Subslice
-import Init.While
-import Init.Data.String.Substring
 public import Lean.Data.Fmt.Error
-import Init.Data.Array.Subarray
+import Init.While
 import Init.Data.Slice
 
 namespace Lean.Fmt

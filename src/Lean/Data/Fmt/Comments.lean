@@ -9,12 +9,10 @@ module
 prelude
 public import Lean.Syntax
 public import Lean.Data.Fmt.Error
-import Init
-import Std.Data.HashMap.Basic
-import Lean.Data.Fmt.RangeTree
 public import Lean.Data.Fmt.Util
-import Std.Data.HashSet.Iterator
+import Lean.Data.Fmt.RangeTree
 import Lean.Data.Fmt.LineInfo
+import Init.Data.String.Search
 
 /-- Indents all lines in `s` by `numSpaces` spaces. -/
 def String.indent (s : String) (numSpaces : Nat) : String :=
@@ -404,7 +402,7 @@ abbrev collectComments.M α := StateT collectComments.State (Except Fmt.Error) �
 Collects all comments in `stx`, associating them either with the token immediately before a comment
 on the same line or if the comment is on its own line with the next token following the comment.
 -/
-public def collectComments (stx : Syntax) (offset : Nat := 0):
+public partial def collectComments (stx : Syntax) (offset : Nat := 0):
     Except Fmt.Error (Std.HashMap Syntax.Range (Array Comment)) := do
   let (_, s) ← StateT.run (s := { columnOffset := offset : collectComments.State }) <| go stx
   let some lastTokenRange := s.lastTokenRange?

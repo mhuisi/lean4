@@ -9,7 +9,7 @@ module
 prelude
 public import Lean.Data.Fmt.Formatter
 public import Init.Grind.Module.Basic
-import Init
+public import Init
 
 /-!
 This file documents the properties that a cost function in the `Fmt` formatter must fulfill

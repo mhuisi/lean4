@@ -8,7 +8,13 @@ module
 
 prelude
 public import Lean.Data.Fmt.Basic
-public import Lean.Data.Fmt.Formatter
-public import Lean.Data.Fmt.LawfulCost
-public import Lean.Data.Fmt.Json
+public import Lean.Data.Fmt.Comments
+public import Lean.Data.Fmt.Error
 public import Lean.Data.Fmt.FmtM
+public import Lean.Data.Fmt.Formatter
+public import Lean.Data.Fmt.Json
+public import Lean.Data.Fmt.LawfulCost
+public import Lean.Data.Fmt.LineInfo
+public import Lean.Data.Fmt.Main
+public import Lean.Data.Fmt.RangeTree
+public import Lean.Data.Fmt.Util
