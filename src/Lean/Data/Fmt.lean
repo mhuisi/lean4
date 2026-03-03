@@ -16,5 +16,6 @@ public import Lean.Data.Fmt.Json
 public import Lean.Data.Fmt.LawfulCost
 public import Lean.Data.Fmt.LineInfo
 public import Lean.Data.Fmt.Main
+public import Lean.Data.Fmt.Module
 public import Lean.Data.Fmt.RangeTree
 public import Lean.Data.Fmt.Util

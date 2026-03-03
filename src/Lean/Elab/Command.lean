@@ -19,8 +19,8 @@ namespace Lean.Elab.Command
 structure State where
   env            : Environment
   messages       : MessageLog := {}
-  scopes         : List Scope := [{ header := "" }]
   usedQuotCtxts  : NameSet := {}
+  scopes         : List Scope := [{ header := "" }]
   nextMacroScope : Nat := firstFrontendMacroScope + 1
   maxRecDepth    : Nat
   ngen           : NameGenerator := {}

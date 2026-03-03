@@ -16,6 +16,7 @@ public import Lean.Server.References
 public import Lean.Server.Completion.CompletionItemCompression
 
 public import Lean.Widget.Diff
+import Lean.Data.Fmt
 
 public section
 
@@ -463,6 +464,32 @@ def handleSignatureHelp (p : SignatureHelpParams) : RequestM (RequestTask (Optio
       | return none
     SignatureHelp.findSignatureHelp? text p.context? cmdStx tree requestedPos
 
+def handleFormatting (_ : DocumentFormattingParams) : RequestM (RequestTask (Option (Array TextEdit))) := do
+  let doc ← readDoc
+  let t := moduleParseData doc.initSnap
+  mapTaskCostly t fun modParsedData => do
+    let headerStx := modParsedData.headerData.stx
+    let cmdStxs := modParsedData.cmdData.map (·.stx)
+    let modStx := Fmt.mkModuleSyntax headerStx cmdStxs
+    if modStx.hasMissing then
+      return none
+    -- HACK: Use final env for testing purposes
+    let (snaps, _) ← doc.cmdSnaps.waitAll.wait
+    let some lastSnap := snaps.getLast?
+      | return none
+    match Fmt.main lastSnap.env lastSnap.cmdState.scopes[0]!.opts modStx with
+    | .ok formatted =>
+      let originalText := doc.meta.text
+      let startPos := originalText.utf8PosToLspPos originalText.source.startPos.offset
+      let endPos := originalText.utf8PosToLspPos originalText.source.endPos.offset
+      return some #[{
+        range := ⟨startPos, endPos⟩
+        newText := formatted
+      }]
+    | .error err =>
+      dbg_trace toString err
+      return none
+
 partial def handleWaitForDiagnostics (p : WaitForDiagnosticsParams)
     : RequestM (RequestTask WaitForDiagnostics) := do
   let rec waitLoop : RequestM EditableDocument := do
@@ -553,6 +580,11 @@ builtin_initialize
     DocumentColorParams
     (Array ColorInformation)
     handleDocumentColor
+  registerLspRequestHandler
+    "textDocument/formatting"
+    DocumentFormattingParams
+    (Option (Array TextEdit))
+    handleFormatting
   registerLspRequestHandler
     "$/lean/plainGoal"
     PlainGoalParams

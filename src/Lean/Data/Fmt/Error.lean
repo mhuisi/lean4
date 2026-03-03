@@ -38,7 +38,7 @@ public inductive Lean.Fmt.Error where
     (msg : String)
   deriving Inhabited
 
-instance : ToString Lean.Fmt.Error where
+public instance : ToString Lean.Fmt.Error where
   toString
     | .emptyInputSyntax (msg := msg) ..
     | .partialFormatter (msg := msg) ..

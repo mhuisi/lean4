@@ -39,6 +39,58 @@ where
         | some next => .delayed <| next.task.asServerTask.bindCheap go
         | none => .nil)
 
+structure HeaderParsedData where
+  stx : Syntax
+  parserState? : Option Parser.ModuleParserState
+
+structure CommandParsedData where
+  stx : Syntax
+  parserState : Parser.ModuleParserState
+
+structure ModuleParsedData where
+  headerData : HeaderParsedData
+  cmdData : Array CommandParsedData
+
+partial def moduleParseData (initSnap : Language.Lean.InitialSnapshot) : ServerTask ModuleParsedData := Id.run do
+  let headerStx := initSnap.stx
+  let acc := {
+    headerData := {
+      stx := headerStx
+      parserState? := none
+    }
+    cmdData := #[]
+  }
+  let some headerParsedState := initSnap.result?
+    | return .pure acc
+  let acc := {
+    acc with
+    headerData := {
+      acc.headerData with
+      parserState? := some headerParsedState.parserState
+    }
+  }
+  headerParsedState.processedSnap.task.asServerTask.bindCheap fun headerProcessedSnap => Id.run do
+    let some headerProcessedState := headerProcessedSnap.result?
+      | return .pure acc
+    go headerProcessedState.firstCmdSnap acc
+where
+  go
+      (cmdParsedSnapTask : Language.SnapshotTask Language.Lean.CommandParsedSnapshot)
+      (acc : ModuleParsedData) :
+      ServerTask ModuleParsedData :=
+    cmdParsedSnapTask.task.asServerTask.bindCheap fun cmdParsedSnap => Id.run do
+      let acc := {
+        acc with
+        cmdData := acc.cmdData.push {
+          stx := cmdParsedSnap.stx
+          parserState := cmdParsedSnap.parserState
+        }
+      }
+      let some nextCmdParsedSnapTask := cmdParsedSnap.nextCmdSnap?
+        | return .pure acc
+      go nextCmdParsedSnapTask acc
+
+
 /--
 A document bundled with processing information. Turned into `EditableDocument` as soon as the
 reporter task has been started.
