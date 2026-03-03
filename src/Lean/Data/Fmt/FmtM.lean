@@ -38,6 +38,7 @@ public structure Fmt.RawFormattedToken where
 
 public structure Fmt.Context where
   env : Environment
+  opts : Options
   lineInfos : Array SyntaxLineInfo
 
 public structure Fmt.State where
@@ -54,10 +55,11 @@ public abbrev Fmt := Syntax → FmtM Fmt.TaggedDoc
 
 public def FmtM.run
     (env : Environment)
+    (opts : Options)
     (lineInfos : Array Fmt.SyntaxLineInfo)
     (act : FmtM α) :
     Except Fmt.Error (α × Std.HashMap Syntax.Range (Array Fmt.TagId) × Std.HashMap Syntax.Range Fmt.RawFormattedToken) := do
-  let (v?, s) := ReaderT.run act { env, lineInfos }
+  let (v?, s) := ReaderT.run act { env, opts, lineInfos }
     |>.run {
       shareCommonState := default
       freshTagId := Nat.zero
@@ -165,7 +167,75 @@ unsafe builtin_initialize fmtAttribute : KeyedDeclsAttribute Fmt ←
       pure id
   }
 
+public inductive InfixOperationAssociativity where
+  | left
+  | right
+  | middle
+
+inductive InfixOperatorChainLink where
+  | operand (stx : Syntax)
+  | operator (stx : Syntax)
+
+variable (assoc : InfixOperationAssociativity) in
+partial def infixOperatorChain (stx : Syntax) : Array InfixOperatorChainLink := Id.run do
+  if stx.getNumArgs != 3 then
+    return #[.operand stx]
+  let left := stx[0]
+  let op := stx[1]
+  let right := stx[2]
+  if ! op.isAtom then
+    return #[.operand stx]
+  let leftChain :=
+    if assoc matches .left then
+      infixOperatorChain left
+    else
+      #[.operand left]
+  let rightChain :=
+    if assoc matches .right then
+      infixOperatorChain right
+    else
+      #[.operand right]
+  return leftChain ++ #[.operator op] ++ rightChain
+
 mutual
+
+partial def fmtInfixOperator (assoc : InfixOperationAssociativity) : Fmt := fun stx => do
+  let chain := infixOperatorChain assoc stx
+    let chain ← chain.mapM fun
+      | .operator stx => do
+        return Fmt.nl ++ (← Fmt.fmt stx) ++ Fmt.space
+      | .operand stx => do
+        let operand ← Fmt.fmt stx
+        return Fmt.nested operand
+    let doc := Fmt.nested <| Fmt.join chain
+    return Fmt.maybeFlattened doc
+
+partial def interpretParserDescr? (descr : ParserDescr) : Option Fmt := do
+  let ParserDescr.trailingNode _ prec lhsPrec
+      (ParserDescr.binary `andthen (ParserDescr.symbol _)
+      (ParserDescr.cat `term rhsPrec)) := descr
+    | none
+  let isInfixl := prec == lhsPrec && lhsPrec + 1 == rhsPrec
+  let isInfixr := prec == rhsPrec && lhsPrec == rhsPrec + 1
+  let isInfix := prec + 1 == lhsPrec && lhsPrec == rhsPrec
+  if isInfixl then
+    return fmtInfixOperator .left
+  else if isInfixr then
+    return fmtInfixOperator .right
+  else if isInfix then
+    return fmtInfixOperator .middle
+  else
+    none
+
+partial def getFormatterForKind? (env : Environment) (opts : Options) (kind : SyntaxNodeKind) : Option Fmt := do
+  match fmtAttribute.getValues env kind |>.head? with
+  | none =>
+    let info ← env.find? kind
+    guard <| info.type.isConstOf ``ParserDescr || info.type.isConstOf ``TrailingParserDescr
+    let descr ← unsafe env.evalConst ParserDescr opts kind |>.toOption
+    interpretParserDescr? descr
+  | some fmt =>
+    return fmt
 
 partial def fmtRaw : Fmt := fun stx => do
   let some pos := stx.getPos?
@@ -195,8 +265,7 @@ where
       addRawFormattedToken stx formattedTrailingRange
       return untagged <| .text rawVal.toString ++ trailing
     | .node _ kind args =>
-      let fmts := fmtAttribute.getValues (← read).env kind
-      if ! fmts.isEmpty then
+      if getFormatterForKind? (← read).env (← read).opts kind |>.isSome then
         let doc ← fmt stx
         return doc
       let docs ← args.mapM (go firstRawLineIndentation lastTokenTailPos ·)
@@ -238,8 +307,7 @@ public partial def fmt : Fmt := fun stx =>
   | .node .. => do
     let ctx ← read
     let kind := stx.getKind
-    let fmts := fmtAttribute.getValues ctx.env kind
-    let some f := fmts.head?
+    let some f := getFormatterForKind? ctx.env ctx.opts kind
       | let doc ← fmtRaw stx
         return doc
     let r ← f stx

@@ -61,10 +61,10 @@ def connectTags
     guard <| ! ranges.isEmpty
     return ranges
 
-public def main (env : Environment) (stx : Syntax) : Except Error String := do
+public def main (env : Environment) (opts : Options) (stx : Syntax) : Except Error String := do
   let lineInfos := collectSyntaxLineInfos stx
   let comments ← collectComments stx
-  let (taggedDoc, syntaxToTags, rawFormattedTokens) ← FmtM.run env lineInfos <| fmt stx
+  let (taggedDoc, syntaxToTags, rawFormattedTokens) ← FmtM.run env opts lineInfos <| fmt stx
   let comments := filterRawFormattedComments comments rawFormattedTokens
   let doc := taggedDoc.doc
   let some output := format? doc 100
