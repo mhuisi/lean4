@@ -41,6 +41,7 @@ COMMANDS:
   scripts               shorthand for `lake script list`
   run <script>          shorthand for `lake script run`
   translate-config      change language of the package configuration
+  fmt <file>            format a Lean file using the auto-formatter
   serve                 start the Lean language server
 
 BASIC OPTIONS:
@@ -666,6 +667,22 @@ USAGE:
 
 Print the docstring of `script` in the workspace or the specific `package`."
 
+def helpFmt :=
+"Format Lean files using the Lean auto-formatter
+
+USAGE:
+  lake fmt [<file>]
+
+If `file` is given, formats it in-place using the Lean auto-formatter.
+If no `file` is given, formats all Lean source files in the root package.
+
+The auto-formatter requires the file's dependencies to be available
+(i.e., their .olean files must exist). Run `lake build` first if needed.
+
+Files that cannot be fully elaborated (e.g., due to missing dependencies
+or parse errors) are skipped with an error message.
+"
+
 def helpServe :=
 "Start the Lean language server
 
@@ -779,6 +796,7 @@ public def help : (cmd : String) → String
 | "script"              => helpScriptCli
 | "scripts"             => helpScriptList
 | "run"                 => helpScriptRun
+| "fmt"                 => helpFmt
 | "serve"               => helpServe
 | "env"                 => helpEnv
 | "exe" | "exec"        => helpExe

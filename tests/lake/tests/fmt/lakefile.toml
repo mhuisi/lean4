@@ -1,0 +1,7 @@
+name = "test"
+version = "0.1.0"
+defaultTargets = ["Lib"]
+
+[[lean_lib]]
+name = "Lib"
+globs = ["Lib.**"]

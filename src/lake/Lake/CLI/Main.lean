@@ -28,6 +28,7 @@ import Lake.CLI.Actions
 import Lake.CLI.Translate
 import Lake.CLI.Serve
 public import Lake.CLI.BuiltinLint
+import Lake.CLI.Fmt
 import Init.Data.String.Modify
 
 -- # CLI
@@ -1148,6 +1149,60 @@ protected def script : CliM PUnit := do
   else
     throw <| CliError.missingCommand
 
+protected def fmt : CliM PUnit := do
+  processOptions lakeOption
+  let opts ← getThe LakeOptions
+  let config ← mkLoadConfig opts
+  if let some leanFile ← takeArg? then
+    noArgsRem do
+    -- NOTE: The full workspace must be loaded here (rather than just its root) so that the
+    -- search path also covers the packages the file's imports transitively depend on.
+    let searchPath ←
+      match ← LoggerIO.run?' (loadWorkspace config) with
+      | some ws => pure ws.augmentedLeanPath
+      | none => (·.leanPath) <$> opts.computeEnv
+    Lean.searchPathRef.set searchPath
+    exit <| ← Fmt.fmtFile (FilePath.mk leanFile)
+  else
+    let ws ← loadWorkspace config
+    let mut exitCode : UInt32 := 0
+    -- Collect unique source directories across all libraries
+    let mut srcDirs : Array FilePath := #[]
+    for lib in ws.root.leanLibs do
+      let dir := lib.srcDir
+      unless srcDirs.contains dir do
+        srcDirs := srcDirs.push dir
+    -- Walk each source directory for all .lean files
+    let leanFiles ← srcDirs.foldlM (init := #[]) fun acc srcDir =>
+      (·.2) <$> StateT.run (s := acc) do
+        Lean.forEachModuleInDir srcDir fun modName => do
+          modify (·.push (Lean.modToFilePath srcDir modName "lean"))
+    -- Spawn a separate process for each file so that the environment
+    -- loaded by `Elab.processHeader` is freed when the process exits.
+    -- Processes are spawned in parallel using the Lean task pool, which
+    -- bounds concurrency to the number of available cores.
+    let tasks ← leanFiles.mapM fun leanFile => do
+      IO.asTask (prio := Task.Priority.default) do
+        let child ← IO.Process.spawn {
+          cmd := config.lakeEnv.lake.lake.toString
+          args := #["fmt", leanFile.toString]
+          env := ws.augmentedEnvVars
+        }
+        child.wait
+    let mut fileNo := 0
+    for leanFile in leanFiles, task in tasks do
+      fileNo := fileNo + 1
+      match task.get with
+      | .ok 0 =>
+        IO.println s!"Formatted {leanFile} ({fileNo}/{leanFiles.size})"
+      | .ok code =>
+        IO.eprintln s!"Failed to format {leanFile} ({fileNo}/{leanFiles.size})"
+        exitCode := code
+      | .error _ =>
+        IO.eprintln s!"Failed to format {leanFile} ({fileNo}/{leanFiles.size})"
+        exitCode := 1
+    exit exitCode
+
 protected def serve : CliM PUnit := do
   processOptions lakeOption
   let opts ← getThe LakeOptions
@@ -1296,6 +1351,7 @@ def lakeCli : (cmd : String) → CliM PUnit
 | "script"              => lake.script
 | "scripts"             => lake.script.list
 | "run"                 => lake.script.run
+| "fmt"                 => lake.fmt
 | "serve"               => lake.serve
 | "env"                 => lake.env
 | "exe" | "exec"        => lake.exe
