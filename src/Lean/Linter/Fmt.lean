@@ -1,0 +1,81 @@
+/-
+Copyright (c) 2026 Lean FRO, LLC. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Marc Huisinga
+-/
+module
+
+prelude
+public import Lean.Linter.Util
+public import Lean.Elab.Command
+import Lean.Fmt.FmtM
+
+public section
+
+namespace Lean.Linter
+
+open Lean Elab.Command
+
+register_builtin_option linter.missingFormatter : Bool := {
+  defValue := false
+  descr := "enable the 'missing formatter' linter"
+}
+
+/-- The syntax an error refers to, falling back to the whole command. -/
+private def errorRef (cmdStx : Syntax) : Fmt.Error → Syntax
+  | .emptyInputSyntax stx ..
+  | .formattingFailure stx ..
+  | .taintedFormatting stx ..
+  | .malformedInputSyntax stx ..
+  | .ambiguousChoiceNode stx ..
+  | .headerError stx .. => stx
+  | _ => cmdStx
+
+private def checkMissingFormatter (stx : Syntax) : CommandElabM Unit := do
+  let env ← getEnv
+  let text ← getFileMap
+  let opts ← getOptions
+  let lineInfos := Fmt.collectSyntaxLineInfos stx
+  let ctx := {
+    env
+    text
+    initialSnap? := none
+    opts
+    lineInfos
+  }
+  -- An aborting error hides all missing formatters of the command, so it is reported as well.
+  let r ← match FmtM.run ctx (Fmt.fmt stx) with
+    | .ok r => pure r
+    | .error e =>
+      logLint linter.missingFormatter (errorRef stx e) <|
+        m!"The auto-formatter failed, so this command was not checked for missing formatters:\n\n" ++
+        toString e
+      return
+  for (range, missingFormatter) in r.missingFormatters do
+    if missingFormatter.kind == nullKind then continue
+    logLint linter.missingFormatter (.ofRange range)
+      m!"no auto-formatter registered for syntax kind {Expr.const missingFormatter.kind []}"
+  for (range, partialFormatter) in r.partialFormatters do
+    let kind := partialFormatter.stx.getKind
+    if kind == nullKind then continue
+    let fmtName :=
+      if ! partialFormatter.formatterName.isAnonymous then
+        m!"{Expr.const partialFormatter.formatterName []} "
+      else
+        m!""
+    logLint linter.missingFormatter (.ofRange range) <|
+      m!"Auto-formatter {fmtName}for syntax kind {Expr.const kind []} is incomplete.\n" ++
+      m!"The syntax at the location has the following form:\n\n" ++
+      toString partialFormatter.stx
+
+/-- Linter that warns about syntax nodes for which no auto-formatter is registered.
+The linter notes the `SyntaxNodeKind` in the warning message. -/
+def missingFormatter : Linter where
+  run cmdStx := do
+    unless linter.missingFormatter.get (← getLinterOptions).toOptions do
+      return
+    checkMissingFormatter cmdStx
+
+builtin_initialize addLinter missingFormatter
+
+end Lean.Linter

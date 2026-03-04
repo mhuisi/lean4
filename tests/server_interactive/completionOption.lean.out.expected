@@ -54,6 +54,18 @@
    {"replace":
     {"start": {"line": 1, "character": 11},
      "end": {"line": 1, "character": 17}},
+    "newText": "linter.missingFormatter",
+    "insert":
+    {"start": {"line": 1, "character": 11},
+     "end": {"line": 1, "character": 17}}},
+   "label": "linter.missingFormatter",
+   "kind": 10,
+   "detail": "(false), enable the 'missing formatter' linter",
+   "data": ["file:///completionOption.lean", 1, 17, 0]},
+  {"textEdit":
+   {"replace":
+    {"start": {"line": 1, "character": 11},
+     "end": {"line": 1, "character": 17}},
     "newText": "trace.PrettyPrinter.format",
     "insert":
     {"start": {"line": 1, "character": 11},
@@ -62,6 +74,19 @@
    "kind": 10,
    "detail":
    "(false), enable/disable tracing for the given module and submodules",
+   "data": ["file:///completionOption.lean", 1, 17, 0]},
+  {"textEdit":
+   {"replace":
+    {"start": {"line": 1, "character": 11},
+     "end": {"line": 1, "character": 17}},
+    "newText": "linter.missingFormatter.ignorePrivate",
+    "insert":
+    {"start": {"line": 1, "character": 11},
+     "end": {"line": 1, "character": 17}}},
+   "label": "linter.missingFormatter.ignorePrivate",
+   "kind": 10,
+   "detail":
+   "(false), make the 'missing formatter' linter ignore syntax with a private node kind, which is what `local syntax`, `local macro` and `local notation` produce",
    "data": ["file:///completionOption.lean", 1, 17, 0]},
   {"textEdit":
    {"replace":
@@ -134,6 +159,17 @@ Resolution of trace.PrettyPrinter.format.input:
  "detail":
  "(false), enable/disable tracing for the given module and submodules",
  "data": ["file:///completionOption.lean", 1, 17, 0]}
+Resolution of linter.missingFormatter:
+{"textEdit":
+ {"replace":
+  {"start": {"line": 1, "character": 11}, "end": {"line": 1, "character": 17}},
+  "newText": "linter.missingFormatter",
+  "insert":
+  {"start": {"line": 1, "character": 11}, "end": {"line": 1, "character": 17}}},
+ "label": "linter.missingFormatter",
+ "kind": 10,
+ "detail": "(false), enable the 'missing formatter' linter",
+ "data": ["file:///completionOption.lean", 1, 17, 0]}
 Resolution of trace.PrettyPrinter.format:
 {"textEdit":
  {"replace":
@@ -145,6 +181,18 @@ Resolution of trace.PrettyPrinter.format:
  "kind": 10,
  "detail":
  "(false), enable/disable tracing for the given module and submodules",
+ "data": ["file:///completionOption.lean", 1, 17, 0]}
+Resolution of linter.missingFormatter.ignorePrivate:
+{"textEdit":
+ {"replace":
+  {"start": {"line": 1, "character": 11}, "end": {"line": 1, "character": 17}},
+  "newText": "linter.missingFormatter.ignorePrivate",
+  "insert":
+  {"start": {"line": 1, "character": 11}, "end": {"line": 1, "character": 17}}},
+ "label": "linter.missingFormatter.ignorePrivate",
+ "kind": 10,
+ "detail":
+ "(false), make the 'missing formatter' linter ignore syntax with a private node kind, which is what `local syntax`, `local macro` and `local notation` produce",
  "data": ["file:///completionOption.lean", 1, 17, 0]}
 Resolution of format.indent:
 {"textEdit":
@@ -201,6 +249,19 @@ Resolution of trace.PrettyPrinter.format.backtrack:
    {"replace":
     {"start": {"line": 4, "character": 11},
      "end": {"line": 4, "character": 20}},
+    "newText": "linter.missingFormatter.ignorePrivate",
+    "insert":
+    {"start": {"line": 4, "character": 11},
+     "end": {"line": 4, "character": 20}}},
+   "label": "linter.missingFormatter.ignorePrivate",
+   "kind": 10,
+   "detail":
+   "(false), make the 'missing formatter' linter ignore syntax with a private node kind, which is what `local syntax`, `local macro` and `local notation` produce",
+   "data": ["file:///completionOption.lean", 4, 20, 0]},
+  {"textEdit":
+   {"replace":
+    {"start": {"line": 4, "character": 11},
+     "end": {"line": 4, "character": 20}},
     "newText": "format.indent",
     "insert":
     {"start": {"line": 4, "character": 11},
@@ -232,6 +293,18 @@ Resolution of trace.PrettyPrinter.format.input:
  "kind": 10,
  "detail":
  "(false), enable/disable tracing for the given module and submodules",
+ "data": ["file:///completionOption.lean", 4, 20, 0]}
+Resolution of linter.missingFormatter.ignorePrivate:
+{"textEdit":
+ {"replace":
+  {"start": {"line": 4, "character": 11}, "end": {"line": 4, "character": 20}},
+  "newText": "linter.missingFormatter.ignorePrivate",
+  "insert":
+  {"start": {"line": 4, "character": 11}, "end": {"line": 4, "character": 20}}},
+ "label": "linter.missingFormatter.ignorePrivate",
+ "kind": 10,
+ "detail":
+ "(false), make the 'missing formatter' linter ignore syntax with a private node kind, which is what `local syntax`, `local macro` and `local notation` produce",
  "data": ["file:///completionOption.lean", 4, 20, 0]}
 Resolution of format.indent:
 {"textEdit":
@@ -566,6 +639,18 @@ Resolution of trace.pp.analyze.annotate:
    {"replace":
     {"start": {"line": 13, "character": 11},
      "end": {"line": 13, "character": 17}},
+    "newText": "linter.missingFormatter",
+    "insert":
+    {"start": {"line": 13, "character": 11},
+     "end": {"line": 13, "character": 17}}},
+   "label": "linter.missingFormatter",
+   "kind": 10,
+   "detail": "(false), enable the 'missing formatter' linter",
+   "data": ["file:///completionOption.lean", 13, 17, 0]},
+  {"textEdit":
+   {"replace":
+    {"start": {"line": 13, "character": 11},
+     "end": {"line": 13, "character": 17}},
     "newText": "trace.PrettyPrinter.format",
     "insert":
     {"start": {"line": 13, "character": 11},
@@ -574,6 +659,19 @@ Resolution of trace.pp.analyze.annotate:
    "kind": 10,
    "detail":
    "(false), enable/disable tracing for the given module and submodules",
+   "data": ["file:///completionOption.lean", 13, 17, 0]},
+  {"textEdit":
+   {"replace":
+    {"start": {"line": 13, "character": 11},
+     "end": {"line": 13, "character": 17}},
+    "newText": "linter.missingFormatter.ignorePrivate",
+    "insert":
+    {"start": {"line": 13, "character": 11},
+     "end": {"line": 13, "character": 17}}},
+   "label": "linter.missingFormatter.ignorePrivate",
+   "kind": 10,
+   "detail":
+   "(false), make the 'missing formatter' linter ignore syntax with a private node kind, which is what `local syntax`, `local macro` and `local notation` produce",
    "data": ["file:///completionOption.lean", 13, 17, 0]},
   {"textEdit":
    {"replace":
@@ -654,6 +752,19 @@ Resolution of trace.PrettyPrinter.format.input:
  "detail":
  "(false), enable/disable tracing for the given module and submodules",
  "data": ["file:///completionOption.lean", 13, 17, 0]}
+Resolution of linter.missingFormatter:
+{"textEdit":
+ {"replace":
+  {"start": {"line": 13, "character": 11},
+   "end": {"line": 13, "character": 17}},
+  "newText": "linter.missingFormatter",
+  "insert":
+  {"start": {"line": 13, "character": 11},
+   "end": {"line": 13, "character": 17}}},
+ "label": "linter.missingFormatter",
+ "kind": 10,
+ "detail": "(false), enable the 'missing formatter' linter",
+ "data": ["file:///completionOption.lean", 13, 17, 0]}
 Resolution of trace.PrettyPrinter.format:
 {"textEdit":
  {"replace":
@@ -667,6 +778,20 @@ Resolution of trace.PrettyPrinter.format:
  "kind": 10,
  "detail":
  "(false), enable/disable tracing for the given module and submodules",
+ "data": ["file:///completionOption.lean", 13, 17, 0]}
+Resolution of linter.missingFormatter.ignorePrivate:
+{"textEdit":
+ {"replace":
+  {"start": {"line": 13, "character": 11},
+   "end": {"line": 13, "character": 17}},
+  "newText": "linter.missingFormatter.ignorePrivate",
+  "insert":
+  {"start": {"line": 13, "character": 11},
+   "end": {"line": 13, "character": 17}}},
+ "label": "linter.missingFormatter.ignorePrivate",
+ "kind": 10,
+ "detail":
+ "(false), make the 'missing formatter' linter ignore syntax with a private node kind, which is what `local syntax`, `local macro` and `local notation` produce",
  "data": ["file:///completionOption.lean", 13, 17, 0]}
 Resolution of format.indent:
 {"textEdit":
@@ -751,6 +876,19 @@ Resolution of trace.PrettyPrinter.format.backtrack:
    {"replace":
     {"start": {"line": 16, "character": 11},
      "end": {"line": 16, "character": 18}},
+    "newText": "linter.missingFormatter.ignorePrivate",
+    "insert":
+    {"start": {"line": 16, "character": 11},
+     "end": {"line": 16, "character": 18}}},
+   "label": "linter.missingFormatter.ignorePrivate",
+   "kind": 10,
+   "detail":
+   "(false), make the 'missing formatter' linter ignore syntax with a private node kind, which is what `local syntax`, `local macro` and `local notation` produce",
+   "data": ["file:///completionOption.lean", 16, 18, 0]},
+  {"textEdit":
+   {"replace":
+    {"start": {"line": 16, "character": 11},
+     "end": {"line": 16, "character": 18}},
     "newText": "format.indent",
     "insert":
     {"start": {"line": 16, "character": 11},
@@ -825,6 +963,20 @@ Resolution of trace.PrettyPrinter.format.input:
  "kind": 10,
  "detail":
  "(false), enable/disable tracing for the given module and submodules",
+ "data": ["file:///completionOption.lean", 16, 18, 0]}
+Resolution of linter.missingFormatter.ignorePrivate:
+{"textEdit":
+ {"replace":
+  {"start": {"line": 16, "character": 11},
+   "end": {"line": 16, "character": 18}},
+  "newText": "linter.missingFormatter.ignorePrivate",
+  "insert":
+  {"start": {"line": 16, "character": 11},
+   "end": {"line": 16, "character": 18}}},
+ "label": "linter.missingFormatter.ignorePrivate",
+ "kind": 10,
+ "detail":
+ "(false), make the 'missing formatter' linter ignore syntax with a private node kind, which is what `local syntax`, `local macro` and `local notation` produce",
  "data": ["file:///completionOption.lean", 16, 18, 0]}
 Resolution of format.indent:
 {"textEdit":
