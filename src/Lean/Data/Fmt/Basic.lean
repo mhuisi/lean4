@@ -28,45 +28,6 @@ public section
 
 namespace Lean.Fmt
 
-/--
-Bitmap that tracks whether there is a `Doc.full` node on the same line *before* the current document
-that is being resolved by the formatter or on the same line *after* the current document.
-
-In the formatter, we case split on the fullness state in several places and then prune subtrees
-of the search when we notice that they are inconsistent with the actual document currently being
-resolved.
--/
-@[expose]
-def FullnessState := UInt8
-  deriving Inhabited, BEq, Hashable
-
-@[inline]
-def FullnessState.mk (isFullBefore : Bool) (isFullAfter : Bool) : FullnessState :=
-  (isFullBefore.toUInt8 <<< 1) ||| isFullAfter.toUInt8
-
-@[inline]
-def FullnessState.isFullBefore (s : FullnessState) : Bool :=
-  let s : UInt8 := s
-  (s &&& 0b10) != 0
-
-@[inline]
-def FullnessState.isFullAfter (s : FullnessState) : Bool :=
-  let s : UInt8 := s
-  (s &&& 0b1) != 0
-
-@[inline]
-def FullnessState.setFullBefore (s : FullnessState) (isFullBefore : Bool) : FullnessState :=
-  let s : UInt8 := s
-  (s &&& (0b11111101 : UInt8)) ||| (isFullBefore.toUInt8 <<< 1)
-
-@[inline]
-def FullnessState.setFullAfter (s : FullnessState) (isFullAfter : Bool) : FullnessState :=
-  let s : UInt8 := s
-  (s &&& (0b11111110 : UInt8)) ||| isFullAfter.toUInt8
-
-/-- Whether resolving a document is guaranteed to fail in the given `FullnessState`. -/
-abbrev FailureCond := FullnessState → Bool
-
 @[expose]
 def TagId := Nat
   deriving Inhabited, BEq, Hashable, Ord, Repr, ToString
@@ -387,24 +348,6 @@ inductive Doc where
   -/
   | unindented (unindentToLineIndentation : Bool) (d : Doc)
   /--
-  Enforces that no text can be placed on the same line after the inner document.
-
-  Example:
-
-  ```
-  either
-    (append
-      (full (text "a"))
-      (text "b"))
-    (text "c")
-  ```
-  produces
-  ```
-  c
-  ```
-  -/
-  | full (d : Doc)
-  /--
   Designates a document that can be rendered to one of two alternatives.
 
   The formatter will always choose a non-failing alternative if one is available or fail otherwise.
@@ -463,31 +406,6 @@ inductive Doc where
   | append (a b : Doc)
 with
   /--
-  Determines whether resolving the document is guaranteed to fail in the given `FullnessState`.
-  -/
-  @[computed_field] isFailure : Doc → FailureCond
-    -- `failure` always fails. All resolutions that contain `failure` can be pruned.
-    | .failure => fun _ => true
-    -- `newline` starts a new line, which can never be full at this point.
-    -- Hence, resolutions in which `isFullAfter` is true directly after `newline` can be pruned.
-    | .newline .. => (·.isFullAfter)
-    | .text s => fun state =>
-      match state.isFullBefore, state.isFullAfter with
-      -- `text` nodes can be placed on non-full lines.
-      | false, false => false
-      -- `text` nodes cannot turn a line from being full to non-full.
-      | true, false => true
-      -- `text` nodes cannot turn a line from being non-full to full.
-      | false, true => true
-      -- Empty text nodes can be inserted on a full line, while non-empty text nodes cannot.
-      | true, true => ! s.isEmpty
-    -- `full` designates that the line is full.
-    -- Hence, resolutions in which `isFullAfter` is false directly after `full` can be pruned.
-    | .full _ => (! ·.isFullAfter)
-    -- For all of the remaining inner nodes, whether resolving the document is guaranteed to fail
-    -- depends on the child nodes below the inner node.
-    | _ => fun _ => false
-  /--
   Designates an overapproximation for the amount of newlines in a document.
   This is used by the formatter to choose renderings amongst multiple alternatives
   that all exceed a maximum optimality cutoff width, which bounds the total search space.
@@ -500,8 +418,7 @@ with
     | .tagged _ d
     | .indented _ _ d
     | .aligned d
-    | .unindented _ d
-    | .full d => maxNewlineCount? d
+    | .unindented _ d => maxNewlineCount? d
     | .either a b => .merge (max · ·) (maxNewlineCount? a) (maxNewlineCount? b)
     | .append a b => .merge (· + ·) (maxNewlineCount? a) (maxNewlineCount? b)
   /-- Designates an approximation for whether a document is always empty. -/
@@ -528,8 +445,7 @@ with
     | .tagged _ d
     | .indented _ _ d
     | .aligned d
-    | .unindented _ d
-    | .full d =>
+    | .unindented _ d =>
       emptiness d
     | .either a b =>
       -- A fully accurate implementation would have to account for `failure`,

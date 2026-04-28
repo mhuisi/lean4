@@ -240,8 +240,6 @@ public def maybeFlattened (d : TaggedDoc) : TaggedDoc :=
   untagged <| .maybeFlattened d.doc
 public def unindented (unindentToLineIndentation : Bool) (d : TaggedDoc) : TaggedDoc :=
   untagged <| .unindented unindentToLineIndentation d.doc
-public def full (d : TaggedDoc) : TaggedDoc :=
-  untagged <| .full d.doc
 public def either (a b : TaggedDoc) : TaggedDoc :=
   untagged <| .either a.doc b.doc
 public def oneOf (ds : Array TaggedDoc) : TaggedDoc :=
