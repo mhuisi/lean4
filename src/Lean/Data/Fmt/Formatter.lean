@@ -53,9 +53,15 @@ instance : BEq (PtrKey α) where
 instance : Hashable (PtrKey α) where
   hash v := hash v.ptr
 
+inductive FlatteningMode where
+  | notFlat
+  | asFlatAsPossible
+  | flat
+  deriving BEq, Hashable
+
 structure PreprocessingCacheKey where
   docPtr : PtrKey Doc
-  isFlattened : Bool
+  flatteningMode : FlatteningMode
   deriving BEq, Hashable
 
 structure PreprocessingState where
@@ -85,55 +91,63 @@ We instead implement this as a separate preprocessing step to circumvent the glo
 preprocessing cache.
 -/
 partial def Doc.preprocess (d : Doc) : Doc :=
-  goMemoized d false |>.run' {}
+  goMemoized d .notFlat |>.run' {}
 where
-  goMemoized (d : Doc) (isFlattened : Bool) : StateM PreprocessingState Doc := do
-    let cacheKey := { docPtr := unsafe .ofKey d, isFlattened }
+  goMemoized (d : Doc) (flatteningMode : FlatteningMode) : StateM PreprocessingState Doc := do
+    let cacheKey := { docPtr := unsafe .ofKey d, flatteningMode }
     -- Re-using cached preprocessing results is essential for not destroying the
     -- shared structure of the input document.
     if let some d' := (← get).cache.get? cacheKey then
       return d'
-    let d' ← go d isFlattened
+    let d' ← go d flatteningMode
     modify fun s => { s with cache := s.cache.insert cacheKey d' }
     return d'
-  go (d : Doc) (isFlattened : Bool) : StateM PreprocessingState Doc := do
+  go (d : Doc) (flatteningMode : FlatteningMode) : StateM PreprocessingState Doc := do
     match d with
     | .newline f? =>
-      if isFlattened then
-        let some f := f?
-          | return .failure
-        return .text f
-      else
+      match flatteningMode, f? with
+      | .notFlat, _
+      | .asFlatAsPossible, none =>
         return .newline none
-    | .flattened d =>
-      goMemoized d true
+      | .flat, none =>
+        return .failure
+      | .asFlatAsPossible, some f
+      | .flat, some f =>
+          return .text f
+    | .flattened isSingleLine d =>
+      let flatteningMode :=
+        if isSingleLine then
+          .flat
+        else
+          .asFlatAsPossible
+      goMemoized d flatteningMode
     | .failure =>
       return d
     | .text s =>
       let lines := s.split '\n' |>.map (Doc.text ·.toString) |>.toArray
       return .joinUsing .hardNl lines
     | .tagged id d =>
-      let d ← goMemoized d isFlattened
+      let d ← goMemoized d flatteningMode
       return .tagged id d
     | .indented n c d =>
-      let d ← goMemoized d isFlattened
+      let d ← goMemoized d flatteningMode
       return .indented n c d
     | .aligned d =>
-      let d ← goMemoized d isFlattened
+      let d ← goMemoized d flatteningMode
       return .aligned d
     | .unindented unindentToLineIndentation d =>
-      let d ← goMemoized d isFlattened
+      let d ← goMemoized d flatteningMode
       return .unindented unindentToLineIndentation d
     | .full d =>
-      let d ← goMemoized d isFlattened
+      let d ← goMemoized d flatteningMode
       return .full d
     | .either d1 d2 =>
-      let d1 ← goMemoized d1 isFlattened
-      let d2 ← goMemoized d2 isFlattened
+      let d1 ← goMemoized d1 flatteningMode
+      let d2 ← goMemoized d2 flatteningMode
       return .either d1 d2
     | .append d1 d2 =>
-      let d1 ← goMemoized d1 isFlattened
-      let d2 ← goMemoized d2 isFlattened
+      let d1 ← goMemoized d1 flatteningMode
+      let d2 ← goMemoized d2 flatteningMode
       return .append d1 d2
 
 /--
@@ -757,7 +771,7 @@ partial def MeasureSet.resolveCore : Resolver σ τ :=
     | .tagged id d =>
       let ms ← resolve d columnPos indentation nonCumulativeIndentation lastLineIndentation fullness
       return ms.addTag id
-    | .flattened _ =>
+    | .flattened .. =>
       -- Eliminated during pre-processing.
       unreachable!
     | .indented n isCumulative d =>

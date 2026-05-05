@@ -12,7 +12,7 @@ def traditional : Doc :=
       .join #[
         .nl,
         .text "return ",
-        .maybeFlattened (.indented 4 true (.join #[f, .nl, s, .nl, t]))]
+        .maybeFlat (.indented 4 true (.join #[f, .nl, s, .nl, t]))]
     ),
     .nl,
     .text "}"
@@ -70,7 +70,7 @@ partial def SExpr.pretty (s : SExpr) : Doc :=
         .aligned (.joinUsing .hardNl argsp),
         .text ")"
       ],
-      .flattened (
+      .flat (
         .join #[
           .text "(",
           .aligned (.joinUsing (.text " ") (#[fp] ++ argsp)),
@@ -119,7 +119,7 @@ partial def SExpr.pretty'' (s : SExpr) : Doc :=
         .nested (.joinUsing .hardNl (#[fp] ++ argsp)),
         .text ")"
       ],
-      .flattened (
+      .flat (
         .join #[
           .text "(",
           .nested (.joinUsing (.text " ") (#[fp] ++ argsp)),
@@ -244,7 +244,7 @@ abc
 def
 -/
 #guard_msgs in
-#eval test (.indented 4 true (.unindented (.joinUsing .hardNl #[.text "abc", .text "def"]))) 80
+#eval test (.indented 4 true (.unindented false (.joinUsing .hardNl #[.text "abc", .text "def"]))) 80
 
 /--
 info:

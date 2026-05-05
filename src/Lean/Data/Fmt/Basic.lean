@@ -108,9 +108,9 @@ inductive Doc where
   /--
   Designates a newline in the document.
 
-  Within `flattened`, all `newline (some f)` nodes are replaced with `text f`
-  and all `newline none` nodes are replaced with `failure`, i.e. `newline none` can never be
-  flattened.
+  Within `flattened isSingleLine`, all `newline (some f)` nodes are replaced with `text f`.
+  `newline none` nodes are retained if `isSingleLine` is `false` and replaced with `failure`
+  otherwise.
 
   Any newline that is not flattened by an outer `flattened` node will yield `\n` followed by
   an amount of spaces corresponding to the current level of indentation as set by
@@ -136,7 +136,7 @@ inductive Doc where
   ```
   ---
   ```
-  flattened
+  flattened true
     (append
       (append
         (text "a")
@@ -149,7 +149,7 @@ inductive Doc where
   ```
   ---
   ```
-  flattened
+  flattened true
     (append
       (append
         (text "a")
@@ -159,6 +159,22 @@ inductive Doc where
   produces
   ```
   <no output>
+  ```
+  ---
+  ```
+  flattened false
+    (append
+      (append
+        (text "a")
+        (newline none))
+      (append
+        (newline (some " "))
+        (text "a")))
+  ```
+  produces
+  ```
+  a
+   b
   ```
   -/
   | newline (f? : Option String)
@@ -209,7 +225,9 @@ inductive Doc where
   | tagged (id : TagId) (d : Doc)
   /--
   Flattens an inner document by replacing all `newline (some f)` nodes in the inner
-  document with `text f` and all `newline none` nodes in the inner document with `failure`.
+  document with `text f`.
+  `newline none` nodes are retained if `isSingleLine` is `false` and replaced with `failure`
+  otherwise.
 
   `flattened` is eliminated before formatting by a preprocessing step that replaces all
   `newline f?` nodes within each `flattened` node.
@@ -217,7 +235,7 @@ inductive Doc where
   Examples:
 
   ```
-  flattened
+  flattened true
     (append
       (append
         (text "a")
@@ -230,7 +248,7 @@ inductive Doc where
   ```
   ---
   ```
-  flattened
+  flattened true
     (append
       (append
         (text "a")
@@ -241,8 +259,24 @@ inductive Doc where
   ```
   <no output>
   ```
+  ---
+  ```
+  flattened false
+    (append
+      (append
+        (text "a")
+        (newline none))
+      (append
+        (newline (some " "))
+        (text "a")))
+  ```
+  produces
+  ```
+  a
+   b
+  ```
   -/
-  | flattened (d : Doc)
+  | flattened (isSingleLine : Bool) (d : Doc)
   /--
   Adds `n` to the current level of indentation within an inner document.
   Multiple `indented` nodes with `isCumulative = false` will only increase the level of indentation
@@ -495,8 +529,12 @@ with
   @[computed_field] maxNewlineCount? : Doc → Option Nat
     | .failure => none
     | .newline .. => some 1
-    | .text _
-    | .flattened _ => some 0
+    | .text _ => some 0
+    | .flattened isSingleLine d =>
+      if isSingleLine then
+        some 0
+      else
+        maxNewlineCount? d
     | .tagged _ d
     | .indented _ _ d
     | .aligned d
@@ -520,7 +558,7 @@ with
         .alwaysEmpty
       else
         .sometimesNonEmpty
-    | .flattened d =>
+    | .flattened _ d =>
       match emptiness d with
       | .alwaysEmpty => .alwaysEmpty
       | .alwaysEmptyIfFlattened => .alwaysEmpty
@@ -554,18 +592,36 @@ def Doc.empty : Doc :=
   .text ""
 
 /--
+Enforces that an inner document is flat by replacing all `newline (some f)` nodes in the inner
+document with `text f` and all `newline none` nodes with `failure`.
+
+Equivalent to `flattened (isSingleLine := true) d`.
+-/
+def Doc.flat (d : Doc) : Doc :=
+  .flattened (isSingleLine := true) d
+
+/--
+Replaces all `newline (some f)` nodes in the inner document with `text f` and retains all
+`newline none` nodes.
+
+Equivalent to `flattened (isSingleLine := false) d`.
+-/
+def Doc.asFlatAsPossible (d : Doc) : Doc :=
+  .flattened (isSingleLine := false) d
+
+/--
 Designates a document that either contains all newlines in an inner document or where all newlines
 have been flattened.
 
 The formatter will always choose a non-failing alternative if one is available or fail otherwise.
 When both alternatives are not failing, it chooses an optimal rendering from both alternatives.
 
-`maybeFlattened d` is equivalent to `either d (flattened d)`.
+`maybeFlat d` is equivalent to `either d (flat d)`.
 
 This construct corresponds to `group` in most traditional formatting languages.
 -/
-def Doc.maybeFlattened (d : Doc) : Doc :=
-  .either d d.flattened
+def Doc.maybeFlat (d : Doc) : Doc :=
+  .either d d.flat
 
 /--
 Designates a newline that is flattened to a single space when placed inside of a `flattened` node.
@@ -585,7 +641,8 @@ def Doc.break : Doc :=
 
 /--
 Designates a newline that cannot be flattened and will produce a `failure` node when attempting
-to flatten it.
+to flatten it with `isSingleLine = true` or will be retained when attempting to flatten it with
+`isSingleLine = false`.
 
 Equivalent to `newline none`.
 -/
@@ -701,7 +758,7 @@ def Doc.joinUsing (sep : Doc) (ds : Array Doc) : Doc :=
     ds[1:].foldl (init := d) fun acc d => acc.append sep |>.append d
 
 /--
-Appends multiple flattened documents with a separator document between each pair of adjacent
+Appends multiple flat documents with a separator document between each pair of adjacent
 documents with optional newlines between them.
 When a document can't be flattened or its flattened renderings exceed the column limit, then
 `fillUsing` will allow the document to split, but ensure that it is surrounded by newlines.
@@ -712,19 +769,19 @@ def Doc.fillUsing (sep : Doc) (ds : Array Doc) : Doc := Id.run do
   let hd := ds[0]!
   if ds.size == 1 then
     return hd
-  let mut lastFlattened : Doc := .flattened hd
-  let mut lastNotFlattened : Doc := hd
+  let mut lastFlat : Doc := .flat hd
+  let mut lastNotFlat : Doc := hd
   for d in ds[1...*] do
-    let lastMaybeFlattened := .oneOf #[lastFlattened, lastNotFlattened]
-    lastFlattened := .oneOf #[
-      .join #[lastFlattened, sep, .flattened d],
-      .join #[lastMaybeFlattened, sep, .hardNl, .flattened d]
+    let lastMaybeFlat := .oneOf #[lastFlat, lastNotFlat]
+    lastFlat := .oneOf #[
+      .join #[lastFlat, sep, .flat d],
+      .join #[lastMaybeFlat, sep, .hardNl, .flat d]
     ]
-    lastNotFlattened := .join #[lastMaybeFlattened, sep, .hardNl, d]
-  return .oneOf #[lastFlattened, lastNotFlattened]
+    lastNotFlat := .join #[lastMaybeFlat, sep, .hardNl, d]
+  return .oneOf #[lastFlat, lastNotFlat]
 
 /--
-Appends multiple flattened documents with either a space or a newline between each pair of adjacent
+Appends multiple flat documents with either a space or a newline between each pair of adjacent
 documents.
 When a document can't be flattened or its flattened renderings exceed the column limit, then
 `fillUsingSpace` will allow the document to split, but ensure that it is surrounded by newlines.
@@ -737,16 +794,16 @@ def Doc.fillUsingSpace (ds : Array Doc) : Doc := Id.run do
   let hd := ds[0]!
   if ds.size == 1 then
     return hd
-  let mut lastFlattened : Doc := .flattened hd
-  let mut lastNotFlattened : Doc := hd
+  let mut lastFlat : Doc := .flat hd
+  let mut lastNotFlat : Doc := hd
   for d in ds[1...*] do
-    let lastMaybeFlattened := .oneOf #[lastFlattened, lastNotFlattened]
-    lastFlattened := .oneOf #[
-      .join #[lastFlattened, .text " ", .flattened d],
-      .join #[lastMaybeFlattened, .hardNl, .flattened d]
+    let lastMaybeFlat := .oneOf #[lastFlat, lastNotFlat]
+    lastFlat := .oneOf #[
+      .join #[lastFlat, .text " ", .flat d],
+      .join #[lastMaybeFlat, .hardNl, .flat d]
     ]
-    lastNotFlattened := .join #[lastMaybeFlattened, .hardNl, d]
-  return .oneOf #[lastFlattened, lastNotFlattened]
+    lastNotFlat := .join #[lastMaybeFlat, .hardNl, d]
+  return .oneOf #[lastFlat, lastNotFlat]
 
 instance : Append Doc where
   append d1 d2 := d1.append d2

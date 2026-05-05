@@ -8,7 +8,7 @@ def hConcat (ds : List Doc) : Doc :=
   | [] => .failure
   | [d] => d
   | d :: ds =>
-    ds.foldl (init := d) fun acc d => (Doc.flattened acc).append d
+    ds.foldl (init := d) fun acc d => (Doc.flat acc).append d
 
 def encloseSep (left right sep : Doc) (ds : List Doc) : Doc :=
   match ds with

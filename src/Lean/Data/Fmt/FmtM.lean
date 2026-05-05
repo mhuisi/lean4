@@ -234,10 +234,12 @@ public def nested (d : TaggedDoc) : TaggedDoc :=
   untagged <| .nested d.doc
 public def hardNested (d : TaggedDoc) : TaggedDoc :=
   untagged <| .hardNested d.doc
-public def flattened (d : TaggedDoc) : TaggedDoc :=
-  untagged <| .flattened d.doc
-public def maybeFlattened (d : TaggedDoc) : TaggedDoc :=
-  untagged <| .maybeFlattened d.doc
+public def flat (d : TaggedDoc) : TaggedDoc :=
+  untagged <| .flat d.doc
+public def asFlatAsPossible (d : TaggedDoc) : TaggedDoc :=
+  untagged <| .asFlatAsPossible d.doc
+public def maybeFlat (d : TaggedDoc) : TaggedDoc :=
+  untagged <| .maybeFlat d.doc
 public def unindented (unindentToLineIndentation : Bool) (d : TaggedDoc) : TaggedDoc :=
   untagged <| .unindented unindentToLineIndentation d.doc
 public def full (d : TaggedDoc) : TaggedDoc :=
@@ -409,7 +411,7 @@ partial def fmtInfixOperator (env : Environment) (opts : Options) (assoc : Infix
       let operand ← Fmt.fmt stx
       return Fmt.nested operand
     let doc := Fmt.nested <| Fmt.join chain
-    return Fmt.maybeFlattened doc
+    return Fmt.maybeFlat doc
 
 public partial def getFormatterForKind? (env : Environment) (opts : Options) (kind : SyntaxNodeKind) : Option Fmt := do
   if kind == choiceKind then
@@ -567,7 +569,7 @@ public def fmtSepArrayDocs
     let joinedUsingNl := joinUsingNl afterElem?
     if allowFlattening then
       oneOf #[
-        flattened <| joinUsingSep afterElem? (afterSep? := space),
+        flat <| joinUsingSep afterElem? (afterSep? := space),
         joinedUsingNl
       ]
     else
@@ -611,16 +613,16 @@ where
     let hd := elems[0]!
     if elems.size == 1 then
       return hd
-    let mut lastFlattened : TaggedDoc := flattened hd
-    let mut lastNotFlattened : TaggedDoc := hd
+    let mut lastFlat : TaggedDoc := flat hd
+    let mut lastNotFlat : TaggedDoc := hd
     for elem in elems[1...*], sep in seps do
-      let lastMaybeFlattened := oneOf #[lastFlattened, lastNotFlattened]
-      lastFlattened := oneOf #[
-        join #[lastFlattened, afterElem, sep, afterSep, flattened elem],
-        join #[lastMaybeFlattened, afterElem, sep, afterSep, hardNl, flattened elem]
+      let lastMaybeFlat := oneOf #[lastFlat, lastNotFlat]
+      lastFlat := oneOf #[
+        join #[lastFlat, afterElem, sep, afterSep, flat elem],
+        join #[lastMaybeFlat, afterElem, sep, afterSep, hardNl, flat elem]
       ]
-      lastNotFlattened := join #[lastMaybeFlattened, afterElem, sep, afterSep, hardNl, elem]
-    return oneOf #[lastFlattened, lastNotFlattened]
+      lastNotFlat := join #[lastMaybeFlat, afterElem, sep, afterSep, hardNl, elem]
+    return oneOf #[lastFlat, lastNotFlat]
 
   split : Array TaggedDoc × Array TaggedDoc := Id.run do
     let mut elems := #[]

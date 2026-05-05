@@ -6,7 +6,7 @@ def quadratic (n : Nat) : Doc :=
   if n = 0 then
     .text "line"
   else
-    .maybeFlattened
+    .maybeFlat
       (Doc.joinUsing .nl #[quadratic (n - 1), .text "line"])
 
 @[noinline]
