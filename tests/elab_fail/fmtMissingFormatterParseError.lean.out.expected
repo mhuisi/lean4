@@ -1,0 +1,2 @@
+fmtMissingFormatterParseError.lean:11:0: error: unexpected end of input
+fmtMissingFormatterParseError.lean:10:4-10:5: warning: declaration uses `sorry`
