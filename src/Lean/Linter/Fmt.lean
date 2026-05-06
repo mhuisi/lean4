@@ -21,6 +21,12 @@ register_builtin_option linter.missingFormatter : Bool := {
   descr := "enable the 'missing formatter' linter"
 }
 
+register_builtin_option linter.missingFormatter.ignorePrivate : Bool := {
+  defValue := false
+  descr := "make the 'missing formatter' linter ignore syntax with a private node kind, which is \
+    what `local syntax`, `local macro` and `local notation` produce"
+}
+
 /-- The syntax an error refers to, falling back to the whole command. -/
 private def errorRef (cmdStx : Syntax) : Fmt.Error → Syntax
   | .emptyInputSyntax stx ..
@@ -30,6 +36,11 @@ private def errorRef (cmdStx : Syntax) : Fmt.Error → Syntax
   | .ambiguousChoiceNode stx ..
   | .headerError stx .. => stx
   | _ => cmdStx
+
+/-- Whether `kind` is exempt from being reported. A private kind stems from a `local` syntax
+declaration, whose mangled kind no formatter can name. -/
+private def isIgnoredKind (opts : Options) (kind : Name) : Bool :=
+  kind == nullKind || (linter.missingFormatter.ignorePrivate.get opts && isPrivateName kind)
 
 private def checkMissingFormatter (stx : Syntax) : CommandElabM Unit := do
   let env ← getEnv
@@ -52,12 +63,12 @@ private def checkMissingFormatter (stx : Syntax) : CommandElabM Unit := do
         toString e
       return
   for (range, missingFormatter) in r.missingFormatters do
-    if missingFormatter.kind == nullKind then continue
+    if isIgnoredKind opts missingFormatter.kind then continue
     logLint linter.missingFormatter (.ofRange range)
       m!"no auto-formatter registered for syntax kind {Expr.const missingFormatter.kind []}"
   for (range, partialFormatter) in r.partialFormatters do
     let kind := partialFormatter.stx.getKind
-    if kind == nullKind then continue
+    if isIgnoredKind opts kind then continue
     let fmtName :=
       if ! partialFormatter.formatterName.isAnonymous then
         m!"{Expr.const partialFormatter.formatterName []} "
@@ -69,7 +80,9 @@ private def checkMissingFormatter (stx : Syntax) : CommandElabM Unit := do
       toString partialFormatter.stx
 
 /-- Linter that warns about syntax nodes for which no auto-formatter is registered.
-The linter notes the `SyntaxNodeKind` in the warning message. -/
+The linter notes the `SyntaxNodeKind` in the warning message.
+
+Set `linter.missingFormatter.ignorePrivate` to skip syntax declared with `local`. -/
 def missingFormatter : Linter where
   run cmdStx := do
     unless linter.missingFormatter.get (← getLinterOptions).toOptions do
