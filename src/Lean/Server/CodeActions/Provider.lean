@@ -80,7 +80,10 @@ This is a pure syntax pass, without regard to elaboration information.
 The return value is either a selected tactic, or a selected point in a tactic sequence.
 -/
 partial def findTactic? (preferred : String.Pos.Raw → Bool) (range : Lean.Syntax.Range)
-    (root : Syntax) : Option FindTacticResult := do _ ← visit root; ← go [] root
+    (root : Syntax) : Option FindTacticResult := do
+  let _ ← visit root
+  let r ← go [] root
+  r
 where
   /-- Returns `none` if we should not visit this syntax at all, and `some false` if we only
   want to visit it in "extended" mode (where we include trailing characters). -/
