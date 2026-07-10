@@ -223,6 +223,29 @@ the language server provide interactivity even when all overloaded elaborators f
 -/
 structure ChoiceInfo extends ElabInfo where
 
+/--
+Indicates which of the alternatives of the `choice` node `stx` was picked by the elaborator.
+
+The parser produces `choice` nodes when multiple syntax alternatives match the same piece of
+syntax, and only elaboration determines which of the alternatives succeeds. This info node is
+created when an elaborator commits to one of the alternatives, so that consumers of the
+`InfoTree` can determine the picked alternative without having to re-derive it from the
+elaboration results of the alternatives.
+
+Note that elaborators may rewrite the alternatives of `choice` nodes before resolving them
+(e.g. when elaborating patterns), so `stx` is the `choice` node as seen by the elaborator that
+resolved it. Such rewrites must preserve the arity and order of the alternatives (discarded
+alternatives are replaced with `Syntax.missing` instead of being removed, and `elabAppFn` skips
+`missing` alternatives), so `chosenAltIdx` is also a valid index into the alternatives of the
+original `choice` node produced by the parser.
+-/
+structure ChoiceResolutionInfo where
+  /-- The `choice` node whose resolution this info describes. -/
+  stx : Syntax
+  /-- The index of the alternative in `stx.getArgs` that was picked by the elaborator. -/
+  chosenAltIdx : Nat
+  deriving Inhabited
+
 inductive DocElabKind where
   | role | codeBlock | directive | command
 deriving Repr
@@ -266,6 +289,7 @@ inductive Info where
   | ofFieldRedeclInfo (i : FieldRedeclInfo)
   | ofDelabTermInfo (i : DelabTermInfo)
   | ofChoiceInfo (i : ChoiceInfo)
+  | ofChoiceResolutionInfo (i : ChoiceResolutionInfo)
   | ofDocInfo (i : DocInfo)
   | ofDocElabInfo (i : DocElabInfo)
   deriving Inhabited

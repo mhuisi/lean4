@@ -117,6 +117,7 @@ def Info.toElabInfo? : Info → Option ElabInfo
   | ofFieldRedeclInfo _    => none
   | ofDelabTermInfo i      => some i.toElabInfo
   | ofChoiceInfo i         => some i.toElabInfo
+  | ofChoiceResolutionInfo _ => none
   | ofDocInfo i            => some i.toElabInfo
   | ofDocElabInfo i        => some i.toElabInfo
 
@@ -154,6 +155,7 @@ def Info.stx : Info → Syntax
   | ofFieldRedeclInfo i    => i.stx
   | ofDelabTermInfo i      => i.stx
   | ofChoiceInfo i         => i.stx
+  | ofChoiceResolutionInfo i => i.stx
   | ofDocInfo i            => i.stx
   | ofDocElabInfo i        => i.stx
 
@@ -184,6 +186,7 @@ private def Info.setStx (stx : Syntax) : Info → Info
   | ofFieldRedeclInfo i    => ofFieldRedeclInfo { i with stx }
   | ofDelabTermInfo i      => ofDelabTermInfo { i with stx }
   | ofChoiceInfo i         => ofChoiceInfo { i with stx }
+  | ofChoiceResolutionInfo i => ofChoiceResolutionInfo { i with stx }
   | ofDocInfo i            => ofDocInfo { i with stx }
   | ofDocElabInfo i        => ofDocElabInfo { i with stx }
 

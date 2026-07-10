@@ -2057,12 +2057,43 @@ where
           throw ex
       | ex@(.internal _ _) => throw ex
 
+/--
+Adds a `ChoiceResolutionInfo` node for the alternative `chosenAltIdx` of the `choice` node
+`choiceStx` to the saved `InfoState` of a successful elaboration candidate.
+Since `observing` captures the `InfoState` of each candidate and `applyResult` restores it for
+the candidate that is eventually picked, the `ChoiceResolutionInfo` node ends up in the
+`InfoTree` if and only if the candidate is picked.
+-/
+private def addChoiceResolutionInfo (choiceStx : Syntax) (chosenAltIdx : Nat) :
+    TermElabResult Expr → TermElabResult Expr
+  | .ok e s =>
+    if s.meta.core.infoState.enabled then
+      let tree := InfoTree.node (.ofChoiceResolutionInfo { stx := choiceStx, chosenAltIdx }) {}
+      .ok e { s with meta.core.infoState.trees := s.meta.core.infoState.trees.push tree }
+    else
+      .ok e s
+  | r => r
+
 private partial def elabAppFn (f : Syntax) (lvals : List LVal) (namedArgs : Array NamedArg) (args : Array Arg)
     (expectedType? : Option Expr) (explicit ellipsis overloaded : Bool) (acc : Array (TermElabResult Expr)) : TermElabM (Array (TermElabResult Expr)) := do
   if f.getKind == choiceKind then
     -- Set `errToSorry` to `false` when processing choice nodes. See comment above about the interaction between `errToSorry` and `observing`.
     withReader (fun ctx => { ctx with errToSorry := false }) do
-      f.getArgs.foldlM (init := acc) fun acc f => elabAppFn f lvals namedArgs args expectedType? explicit ellipsis true acc
+      let mut acc := acc
+      for chosenAltIdx in 0...f.getNumArgs do
+        -- Skip `missing` alternatives, which pattern elaboration uses to discard alternatives
+        -- while keeping the indices of the remaining alternatives stable
+        -- (see `CollectPatternVars.collect`).
+        if (f.getArg chosenAltIdx).isMissing then
+          continue
+        let startIdx := acc.size
+        acc ← elabAppFn (f.getArg chosenAltIdx) lvals namedArgs args expectedType? explicit ellipsis true acc
+        -- Record which alternative of the choice node each candidate stems from so that the
+        -- `InfoTree` contains the resolution of the choice node for the candidate that is
+        -- eventually committed in `applyResult`.
+        for candidateIdx in startIdx...acc.size do
+          acc := acc.modify candidateIdx (addChoiceResolutionInfo f chosenAltIdx)
+      return acc
   else
     let elabFieldName (e field : Syntax) (explicitUnivs : List Level) := do
       let comps := field.identComponents

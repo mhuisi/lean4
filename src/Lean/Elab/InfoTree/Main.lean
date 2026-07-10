@@ -162,6 +162,9 @@ def DelabTermInfo.format (ctx : ContextInfo) (info : DelabTermInfo) : IO Format 
 def ChoiceInfo.format (ctx : ContextInfo) (info : ChoiceInfo) : Format :=
   f!"[Choice] @ {formatElabInfo ctx info.toElabInfo}"
 
+def ChoiceResolutionInfo.format (ctx : ContextInfo) (info : ChoiceResolutionInfo) : Format :=
+  f!"[ChoiceResolution] alternative {info.chosenAltIdx} of {info.stx.getNumArgs} ({(info.stx.getArg info.chosenAltIdx).getKind}) @ {formatStxRange ctx info.stx}"
+
 def DocInfo.format (ctx : ContextInfo) (info : DocInfo) : Format :=
   f!"[Doc] {info.stx.getKind} @ {formatElabInfo ctx info.toElabInfo}"
 
@@ -184,6 +187,7 @@ def Info.format (ctx : ContextInfo) : Info → IO Format
   | ofFieldRedeclInfo i    => pure <| i.format ctx
   | ofDelabTermInfo i      => i.format ctx
   | ofChoiceInfo i         => pure <| i.format ctx
+  | ofChoiceResolutionInfo i => pure <| i.format ctx
   | ofDocInfo i            => pure <| i.format ctx
   | ofDocElabInfo i        => pure <| i.format ctx
 

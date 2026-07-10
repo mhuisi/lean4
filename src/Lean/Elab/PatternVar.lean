@@ -285,23 +285,37 @@ partial def collect (stx : Syntax) : M Syntax := withRef stx <| withFreshMacroSc
     /- Remark: If there are `Term.structInst` alternatives, we keep only them. This is a hack to get rid of
        Set-like notation in patterns. Recall that in Mathlib `{a, b}` can be a set with two elements or the
        structure instance `{ a := a, b := b }`. Possible alternative solution: add a `pattern` category, or at least register
-       the `Syntax` node kinds that are allowed in patterns. -/
+       the `Syntax` node kinds that are allowed in patterns.
+       Discarded alternatives are replaced with `Syntax.missing` instead of being removed so that
+       the alternatives of the resulting `choice` node line up with those of the original `choice`
+       node produced by the parser. This ensures that the `chosenAltIdx` of the
+       `ChoiceResolutionInfo` emitted when the elaborator resolves the rewritten `choice` node is
+       also valid for the original node. `elabAppFn` skips `missing` alternatives. -/
     let args :=
       let args := stx.getArgs
       if args.any (·.isOfKind ``Parser.Term.structInst) then
-        args.filter (·.isOfKind ``Parser.Term.structInst)
+        args.map fun arg => if arg.isOfKind ``Parser.Term.structInst then arg else .missing
       else
         args
     let stateSaved ← get
-    let arg0 ← collect args[0]!
-    let stateNew ← get
-    let mut argsNew := #[arg0]
-    for arg in args[1...*] do
-      set stateSaved
-      argsNew := argsNew.push (← collect arg)
-      unless samePatternsVariables stateSaved.vars.size stateNew (← get) do
-        throwError "Invalid pattern: Overloaded notation is only allowed when all alternatives have the same set of pattern variables"
-    set stateNew
+    let mut stateFirst? := none
+    let mut argsNew := #[]
+    for arg in args do
+      if arg.isMissing then
+        argsNew := argsNew.push arg
+        continue
+      match stateFirst? with
+      | none =>
+        argsNew := argsNew.push (← collect arg)
+        stateFirst? := some (← get)
+      | some stateFirst =>
+        set stateSaved
+        argsNew := argsNew.push (← collect arg)
+        unless samePatternsVariables stateSaved.vars.size stateFirst (← get) do
+          throwError "Invalid pattern: Overloaded notation is only allowed when all alternatives have the same set of pattern variables"
+    let some stateFirst := stateFirst?
+      | throwInvalidPattern
+    set stateFirst
     return mkNode choiceKind argsNew
   else match stx with
   | `({ $[$srcs?,* with]? $fields,* $[..%$ell?]? $[: $ty?]? }) =>
