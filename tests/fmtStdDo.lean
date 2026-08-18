@@ -1,6 +1,7 @@
 import Std.Do
-import Std.Internal.Do.ExceptPost
-import Std.Internal.Do.Order.Basic
+import Std.WP.ExceptPost
+import Std.Internal.Order.Basic
+import Std.Internal.Order.OfProp
 import Std.Tactic.BVDecide.LRAT.Internal.Entails
 
 /-!
@@ -178,7 +179,7 @@ end WP
 
 section ExceptPost
 
-open Std.Internal.Do
+open Std.WP
 open Lean.Order
 
 variable (l : Type) [CompleteLattice l] (handleIO handleUser : String → l)

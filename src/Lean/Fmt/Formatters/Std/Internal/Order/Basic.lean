@@ -9,20 +9,10 @@ module
 prelude
 public import Lean.Fmt.FmtM.Basic
 public import Lean.Fmt.Formatters.Init.NotationExtra
-meta import Std.Internal.Do.Order.Basic
+meta import Std.Internal.Order.Basic
 import Init.Data
 
 namespace Lean.Fmt
-
-open Lean.Order in
-@[builtin_fmt Lean.Order.«term⌜_⌝»]
-public def fmtLatticeOfProp : Fmt := fun
-  | `(⌜%$lbTk $p:term ⌝%$rbTk) => do
-    let lbTk ← fmt lbTk
-    let p ← fmt p
-    let rbTk ← fmt rbTk
-    return Layouts.parens lbTk p rbTk
-  | _ => throw .partialFormatter
 
 open Lean.Order in
 @[builtin_quantifier_fmt Lean.Order.«term⨅_,_»]

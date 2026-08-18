@@ -1,10 +1,10 @@
 import Std.Do
-import Std.Internal
+import Std.WP
 
 /-!
 Tests for the formatters of the Hoare triple notations: `⦃P⦄ x ⦃Q⦄` of `Std.Do` (`fmtTriple`), as
 well as `⦃ P ⦄ x ⦃ Q ⦄`, `⦃ P ⦄ x ⦃ r, Q ⦄`, `⦃ P ⦄ x ⦃ Q; E ⦄` and `⦃ P ⦄ x ⦃ r, Q; E ⦄` of
-`Std.Internal.Do` (`fmtTripleNotation`, `fmtTripleBinderNotation`, `fmtTripleEPost`,
+`Std.WP` (`fmtTripleNotation`, `fmtTripleBinderNotation`, `fmtTripleEPost`,
 `fmtTripleBinderEPost`), each of the latter with and without the monad ascription `(m := …)`.
 
 Every section contains forms that fit on one line, forms that exceed the 100 column soft width,
@@ -81,7 +81,7 @@ end Triple
 
 section InternalTriple
 
-open Std.Internal.Do
+open Std.WP
 open Lean.Order
 
 abbrev Fallible := ExceptT String (StateM Nat)

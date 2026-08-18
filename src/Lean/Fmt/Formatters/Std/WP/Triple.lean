@@ -7,4 +7,4 @@ Author: Marc Huisinga
 module
 
 prelude
-public import Lean.Fmt.Formatters.Std.Tactic.BVDecide.LRAT
+public import Lean.Fmt.Formatters.Std.WP.Triple.Basic

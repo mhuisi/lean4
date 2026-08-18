@@ -8,12 +8,12 @@ module
 
 prelude
 public import Lean.Fmt.FmtM.Basic
-meta import Std.Internal.Do.ExceptPost
+meta import Std.WP.ExceptPost
 import Init.Data
 
 namespace Lean.Fmt
 
-@[builtin_fmt Std.Internal.Do.«termEPost⟨_⟩»]
+@[builtin_fmt Std.WP.«termEPost⟨_⟩»]
 public def fmtEPostType : Fmt := fun
   | `(EPost⟨%$lbTk $exceptConds,* ⟩%$rbTk) => do
     let lbTk ← fmt lbTk
@@ -22,7 +22,7 @@ public def fmtEPostType : Fmt := fun
     return Layouts.metaApplication lbTk (Layouts.metaApplication.Term.ofSepArray exceptConds) rbTk
   | _ => throw .partialFormatter
 
-@[builtin_fmt Std.Internal.Do.«termEpost⟨_⟩»]
+@[builtin_fmt Std.WP.«termEpost⟨_⟩»]
 public def fmtEPostValue : Fmt := fun
   | `(epost⟨%$lbTk $handlers,* ⟩%$rbTk) => do
     let lbTk ← fmt lbTk

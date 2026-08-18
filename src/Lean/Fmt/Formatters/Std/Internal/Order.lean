@@ -7,4 +7,5 @@ Author: Marc Huisinga
 module
 
 prelude
-public import Lean.Fmt.Formatters.Std.Internal.Do.Order.Basic
+public import Lean.Fmt.Formatters.Std.Internal.Order.Basic
+public import Lean.Fmt.Formatters.Std.Internal.Order.OfProp

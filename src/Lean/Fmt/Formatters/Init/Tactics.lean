@@ -1263,7 +1263,16 @@ public def fmtAssumptionModCast : Fmt := fun
     return Layouts.pseudoApplication <| #[assumptionTk] ++ cfg
   | _ => throw .partialFormatter
 
-@[builtin_fmt Lean.Parser.Tactic.bvDecideMacro]
+@[builtin_fmt Lean.Parser.Tactic.bvCheck]
+public def fmtBvCheck : Fmt := fun
+  | `(tactic| bv_check%$bvCheckTk $cfg:optConfig $lratFile:str) => do
+    let bvCheckTk ← fmt bvCheckTk
+    let cfg ← (← tacticOptConfigItems cfg).mapM fmt
+    let lratFile ← fmt lratFile
+    return Layouts.pseudoApplication <| #[bvCheckTk] ++ cfg ++ #[lratFile]
+  | _ => throw .partialFormatter
+
+@[builtin_fmt Lean.Parser.Tactic.bvDecide]
 public def fmtBvDecide : Fmt := fun
   | `(tactic| bv_decide%$bvDecideTk $cfg:optConfig) => do
     let bvDecideTk ← fmt bvDecideTk
@@ -1271,7 +1280,7 @@ public def fmtBvDecide : Fmt := fun
     return Layouts.pseudoApplication <| #[bvDecideTk] ++ cfg
   | _ => throw .partialFormatter
 
-@[builtin_fmt Lean.Parser.Tactic.bvTraceMacro]
+@[builtin_fmt Lean.Parser.Tactic.bvTrace]
 public def fmtBvTrace : Fmt := fun
   | `(tactic| bv_decide?%$bvDecideTk $cfg:optConfig) => do
     let bvDecideTk ← fmt bvDecideTk
@@ -1279,7 +1288,7 @@ public def fmtBvTrace : Fmt := fun
     return Layouts.pseudoApplication <| #[bvDecideTk] ++ cfg
   | _ => throw .partialFormatter
 
-@[builtin_fmt Lean.Parser.Tactic.bvNormalizeMacro]
+@[builtin_fmt Lean.Parser.Tactic.bvNormalize]
 public def fmtBvNormalize : Fmt := fun
   | `(tactic| bv_normalize%$bvNormalizeTk $cfg:optConfig) => do
     let bvNormalizeTk ← fmt bvNormalizeTk

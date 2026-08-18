@@ -1,7 +1,7 @@
 import Std.Do
 import Std.Tactic.Do
-import Std.Internal.Do
-import Std.Internal.Do.Triple.SpecLemmas
+import Std.WP
+import Std.WP.Triple.SpecLemmas
 
 /-!
 Tests for the formatters of the `Std.Tactic.Do` proof mode and verification condition generator
@@ -473,7 +473,7 @@ end MVCGen
 
 section VCGen
 
-open Std.Internal.Do
+open Std.WP
 open Lean.Order
 
 /-! ## `vcgen` -/

@@ -13,3 +13,4 @@ public import Lean.Fmt.Formatters.Std.Internal
 public import Lean.Fmt.Formatters.Std.Sat
 public import Lean.Fmt.Formatters.Std.Tactic
 public import Lean.Fmt.Formatters.Std.Time
+public import Lean.Fmt.Formatters.Std.WP

@@ -7,4 +7,5 @@ Author: Marc Huisinga
 module
 
 prelude
-public import Lean.Fmt.Formatters.Std.Internal.Do.Triple.Basic
+public import Lean.Fmt.Formatters.Std.WP.ExceptPost
+public import Lean.Fmt.Formatters.Std.WP.Triple
