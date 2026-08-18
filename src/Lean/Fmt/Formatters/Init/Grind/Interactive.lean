@@ -579,3 +579,52 @@ public def fmtGrindRw : Fmt := fun
   | `(grind| rw%$rwTk $rules:rwRuleSeq) =>
     fmtRwLike rwTk none rules none
   | _ => throw .partialFormatter
+
+@[builtin_fmt Lean.Parser.Tactic.Grind.bvNormalize]
+public def fmtGrindBvNormalize : Fmt := fun
+  | `(grind| bv_normalize%$bvNormalizeTk $cfg:optConfig $[$types?:bvTypes]?) => do
+    let bvNormalizeTk ← fmt bvNormalizeTk
+    let cfg ← (← tacticOptConfigItems cfg).mapM fmt
+    let types? ← fmt? types?
+    let lhs := Layouts.pseudoApplication <| #[bvNormalizeTk] ++ cfg
+    return Layouts.blocks #[lhs, types?]
+  | _ => throw .partialFormatter
+
+@[builtin_fmt Lean.Parser.Tactic.Grind.bvDecide]
+public def fmtGrindBvDecide : Fmt := fun
+  | `(grind| bv_decide%$bvDecideTk $cfg:optConfig $[$types?:bvTypes]?) => do
+    let bvDecideTk ← fmt bvDecideTk
+    let cfg ← (← tacticOptConfigItems cfg).mapM fmt
+    let types? ← fmt? types?
+    let lhs := Layouts.pseudoApplication <| #[bvDecideTk] ++ cfg
+    return Layouts.blocks #[lhs, types?]
+  | _ => throw .partialFormatter
+
+@[builtin_fmt Lean.Parser.Tactic.Grind.bvTrace]
+public def fmtGrindBvTrace : Fmt := fun
+  | `(grind| bv_decide?%$bvTraceTk $cfg:optConfig $[$types?:bvTypes]?) => do
+    let bvTraceTk ← fmt bvTraceTk
+    let cfg ← (← tacticOptConfigItems cfg).mapM fmt
+    let types? ← fmt? types?
+    let lhs := Layouts.pseudoApplication <| #[bvTraceTk] ++ cfg
+    return Layouts.blocks #[lhs, types?]
+  | _ => throw .partialFormatter
+
+@[builtin_fmt Lean.Parser.Tactic.Grind.bvCheck]
+public def fmtGrindBvCheck : Fmt := fun
+  | `(grind| bv_check%$bvCheckTk $cfg:optConfig $[$types?:bvTypes]? $lratFile:str) => do
+    let bvCheckTk ← fmt bvCheckTk
+    let cfg ← (← tacticOptConfigItems cfg).mapM fmt
+    let types? ← fmt? types?
+    let lratFile ← fmt lratFile
+    let lhs := Layouts.pseudoApplication <| #[bvCheckTk] ++ cfg
+    return Layouts.blocks #[lhs, types?, lratFile]
+  | _ => throw .partialFormatter
+
+@[builtin_fmt Lean.Parser.Tactic.Grind.bvDecidePush]
+public def fmtGrindBvDecidePush : Fmt := fun
+  | `(grind| bv_decide_push%$bvDecidePushTk $cfg:optConfig) => do
+    let bvDecidePushTk ← fmt bvDecidePushTk
+    let cfg ← (← tacticOptConfigItems cfg).mapM fmt
+    return Layouts.pseudoApplication <| #[bvDecidePushTk] ++ cfg
+  | _ => throw .partialFormatter

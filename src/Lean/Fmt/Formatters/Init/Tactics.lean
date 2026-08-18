@@ -552,9 +552,7 @@ public def fmtSimpLikeWithGenericConfig
   let args ← fmtSepArray (args?.getD ⟨#[]⟩)
   let rbTk? ← fmt? rbTk?
   let suffix? ← fmt? suffix?
-  let args := Layouts.collection lbTk? args rbTk?
-  let args := propagateStickyness args fun args =>
-    nested <| Layouts.spacedAtomic #[onlyTk?, args]
+  let args := Layouts.keywordPrefixedCollection onlyTk? lbTk? args rbTk?
   return Layouts.blocks #[«simp», args, suffix?]
 
 public def fmtSimpLike
@@ -585,9 +583,7 @@ public def fmtSimpaLike
   let args ← fmtSepArray (args?.getD ⟨#[]⟩)
   let rbTk? ← fmt? rbTk?
   let usingTk? ← fmt? usingTk?
-  let args := Layouts.collection lbTk? args rbTk?
-  let args := propagateStickyness args fun args =>
-    nested <| Layouts.spacedAtomic #[onlyTk?, args]
+  let args := Layouts.keywordPrefixedCollection onlyTk? lbTk? args rbTk?
   let «using» := Layouts.keywordPrefixedSepFill usingTk? usingTerms? .sticky
   return Layouts.blocks #[simpaLhs, args, «using»]
 
@@ -1263,37 +1259,55 @@ public def fmtAssumptionModCast : Fmt := fun
     return Layouts.pseudoApplication <| #[assumptionTk] ++ cfg
   | _ => throw .partialFormatter
 
+@[builtin_fmt Lean.Parser.Tactic.bvTypes]
+public def fmtBvTypes : Fmt := fun
+  | `(Parser.Tactic.bvTypes| types%$typesTk [%$lbTk $types:ident,* ]%$rbTk) => do
+    let typesTk ← fmt typesTk
+    let lbTk ← fmt lbTk
+    let types ← fmtTSepArray types
+    let rbTk ← fmt rbTk
+    return Layouts.keywordPrefixedCollection typesTk lbTk types rbTk
+  | _ => throw .partialFormatter
+
 @[builtin_fmt Lean.Parser.Tactic.bvCheck]
 public def fmtBvCheck : Fmt := fun
-  | `(tactic| bv_check%$bvCheckTk $cfg:optConfig $lratFile:str) => do
+  | `(tactic| bv_check%$bvCheckTk $cfg:optConfig $[$types?:bvTypes]? $lratFile:str) => do
     let bvCheckTk ← fmt bvCheckTk
     let cfg ← (← tacticOptConfigItems cfg).mapM fmt
+    let types? ← fmt? types?
     let lratFile ← fmt lratFile
-    return Layouts.pseudoApplication <| #[bvCheckTk] ++ cfg ++ #[lratFile]
+    let lhs := Layouts.pseudoApplication <| #[bvCheckTk] ++ cfg
+    return Layouts.blocks #[lhs, types?, lratFile]
   | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.bvDecide]
 public def fmtBvDecide : Fmt := fun
-  | `(tactic| bv_decide%$bvDecideTk $cfg:optConfig) => do
+  | `(tactic| bv_decide%$bvDecideTk $cfg:optConfig $[$types?:bvTypes]?) => do
     let bvDecideTk ← fmt bvDecideTk
     let cfg ← (← tacticOptConfigItems cfg).mapM fmt
-    return Layouts.pseudoApplication <| #[bvDecideTk] ++ cfg
+    let types? ← fmt? types?
+    let lhs := Layouts.pseudoApplication <| #[bvDecideTk] ++ cfg
+    return Layouts.blocks #[lhs, types?]
   | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.bvTrace]
 public def fmtBvTrace : Fmt := fun
-  | `(tactic| bv_decide?%$bvDecideTk $cfg:optConfig) => do
+  | `(tactic| bv_decide?%$bvDecideTk $cfg:optConfig $[$types?:bvTypes]?) => do
     let bvDecideTk ← fmt bvDecideTk
     let cfg ← (← tacticOptConfigItems cfg).mapM fmt
-    return Layouts.pseudoApplication <| #[bvDecideTk] ++ cfg
+    let types? ← fmt? types?
+    let lhs := Layouts.pseudoApplication <| #[bvDecideTk] ++ cfg
+    return Layouts.blocks #[lhs, types?]
   | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.bvNormalize]
 public def fmtBvNormalize : Fmt := fun
-  | `(tactic| bv_normalize%$bvNormalizeTk $cfg:optConfig) => do
+  | `(tactic| bv_normalize%$bvNormalizeTk $cfg:optConfig $[$types?:bvTypes]?) => do
     let bvNormalizeTk ← fmt bvNormalizeTk
     let cfg ← (← tacticOptConfigItems cfg).mapM fmt
-    return Layouts.pseudoApplication <| #[bvNormalizeTk] ++ cfg
+    let types? ← fmt? types?
+    let lhs := Layouts.pseudoApplication <| #[bvNormalizeTk] ++ cfg
+    return Layouts.blocks #[lhs, types?]
   | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.normCast0]

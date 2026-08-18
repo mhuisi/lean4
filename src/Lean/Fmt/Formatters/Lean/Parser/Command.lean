@@ -1149,8 +1149,7 @@ public def fmtRecommendedSpelling : Fmt := fun
     let ids ← fmtTSepArray ids
     let rbTk ← fmt rbTk
     let forNotation := Layouts.keywordPrefixedTerm forTk notationStr
-    let ids := Layouts.collection lbTk ids rbTk
-    let «in» := Layouts.keywordPrefixedTerm inTk ids
+    let «in» := Layouts.keywordPrefixedCollection inTk lbTk ids rbTk
     let cmd := Layouts.blocks #[lhs, forNotation, «in»]
     return Layouts.lines #[docComment?, cmd]
   | _ => throw .partialFormatter

@@ -1,16 +1,13 @@
 import Std.Data.DHashMap.RawLemmas
 import Std.Sat.AIG
-import Std.Tactic.BVDecide
 import Std.Time
 
 /-!
-Tests for the formatters of `Std`-specific syntax: `simp_to_raw` (`fmtSimpToRaw`), the
-`bv_decide` family of tactics and attributes (`fmtBvCheck`, `fmtStdBvDecide`, `fmtStdBvTrace`,
-`fmtStdBvNormalize`, `fmtBvNormalizeAttr`, `fmtBvNormalizeProcBuiltinAttr`), the AIG denotation
-notations `⟦_, _⟧` and `⟦_, _, _⟧` (`fmtAIGDenote`, `fmtAIGDenoteEntrypoint`), and
+Tests for the formatters of `Std`-specific syntax: `simp_to_raw` (`fmtSimpToRaw`), the AIG
+denotation notations `⟦_, _⟧` and `⟦_, _, _⟧` (`fmtAIGDenote`, `fmtAIGDenoteEntrypoint`), and
 `datespec(...)` (`fmtDatespec`, `fmtDatespecWithConfig`). Every section contains forms that fit
 on one line, forms that exceed the 100 column soft width, and forms with and without each
-optional component.
+optional component. The `bv_decide` family lives in `tests/fmtBvDecide.lean`.
 -/
 
 section SimpToRaw
@@ -38,78 +35,6 @@ example : True := by
     List.getValue?_insertManyIfNewUnit_list_of_containsKey_eq_false_of_mem_of_distinct_keys
 
 end SimpToRaw
-
-section BVDecide
-
-example (x y : BitVec 8) : x + y = y + x := by
-  bv_decide
-
-example (x y : BitVec 8) : x &&& y = y &&& x := by
-  bv_decide (timeout := 1)
-
-example (x y : BitVec 8) : x ||| y = y ||| x := by
-  bv_decide +acNf -structures (timeout := 1)
-
-example (x y : BitVec 8) : x ^^^ y = y ^^^ x := by
-  bv_decide +acNf +shortCircuit -structures -fixedInt -enums (maxSteps := 100000) (timeout := 1)
-
-example (x y : BitVec 8) : x + y = y + x := by
-  bv_decide?
-
-example (x y z : BitVec 8) : x + (y + z) = (y + z) + x := by
-  bv_decide? +acNf -embeddedConstraintSubst (timeout := 1)
-
-example (x y : BitVec 8) : x + y = y + x := by
-  bv_check "bv_add_comm.lrat"
-
-example (x y : BitVec 8) : x ^^^ y = y ^^^ x := by
-  bv_check +acNf -structures (timeout := 1) "bv_xor_comm.lrat"
-
-example (x y : BitVec 16) : x * y = y * x := by
-  bv_check +acNf +shortCircuit -structures -fixedInt -enums (maxSteps := 100000) (timeout := 1)
-    "bv_mul_comm.lrat"
-
-example (x y : BitVec 8) : x + y = y + x := by
-  bv_normalize
-
-example (x y : BitVec 8) : x + y = y + x := by
-  bv_normalize +acNf
-
-example (x y : BitVec 8) : x &&& y = y &&& x := by
-  bv_normalize (maxSteps := 10000)
-
-example (x y : BitVec 8) : x ||| y = y ||| x := by
-  bv_normalize +acNf -structures (timeout := 60)
-
-example (x y : BitVec 16) : x ^^^ y = y ^^^ x := by
-  bv_normalize +acNf +shortCircuit -structures -fixedInt -enums (maxSteps := 100000) (timeout := 120)
-
-example (x y : BitVec 16) : x * y = y * x := by
-  bv_normalize +acNf +shortCircuit +graphviz -structures -fixedInt -enums -andFlattening
-    -embeddedConstraintSubst (maxSteps := 100000) (timeout := 120) (solverMode := .counterexample)
-
-@[bv_normalize]
-theorem BitVec.and_self_left' (x y : BitVec w) : x &&& (x &&& y) = x &&& y := sorry
-
-@[bv_normalize ↓]
-theorem BitVec.or_self_left' (x y : BitVec w) : x ||| (x ||| y) = x ||| y := sorry
-
-@[bv_normalize ←]
-theorem BitVec.xor_assoc' (x y z : BitVec w) : (x ^^^ y) ^^^ z = x ^^^ (y ^^^ z) := sorry
-
-@[bv_normalize ↑ 500]
-theorem BitVec.add_zero' (x : BitVec w) : x + 0#w = x := sorry
-
-@[bv_normalize ↓ ← 10000]
-theorem BitVec.mul_one_of_shift_left_and_add_carry_bits (x : BitVec w) : x * 1#w = x := sorry
-
-attribute [bv_normalize ↓ ← 100] BitVec.and_self_left'
-
-attribute [builtin_bv_normalize_proc] BitVec.or_self_left'
-
-attribute [builtin_bv_normalize_proc ↑] BitVec.xor_assoc'
-
-end BVDecide
 
 section AIG
 

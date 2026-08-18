@@ -331,12 +331,14 @@ public def fmtByElab : Fmt := fun
 @[builtin_fmt Lean.deprecated]
 public def fmtDeprecated : Fmt := fun
   | `(Lean.deprecated| deprecated%$tk $[$id?:ident]? $[$msg?:str]?
+      $[$typeChanged?:deprecatedTypeChanged]?
       $[ (%$lbTk? since%$sinceTk? :=%$colonEqTk? $since?:str )%$rbTk?]?) => do
     let tk ← fmt tk
     let id? ← fmt? id?
     let msg? ← fmt? msg?
+    let typeChanged? ← fmt? typeChanged?
     let sinceParam? ← fmtNamedArgumentTerm? lbTk? sinceTk? colonEqTk? since? rbTk?
-    return Layouts.pseudoApplication #[tk, id?, msg?, sinceParam?]
+    return Layouts.pseudoApplication #[tk, id?, msg?, typeChanged?, sinceParam?]
   | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.deprecated_arg]

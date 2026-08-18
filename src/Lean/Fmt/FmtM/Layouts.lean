@@ -860,6 +860,12 @@ public def collection (lb : TaggedDoc) (elems : SepArray sep) (rb : TaggedDoc)
   let fields := Layouts.sepFill elems
   Layouts.bracketed lb fields rb <| .sparse sep format.unindentedRb (stickynessKind := .preferSticky)
 
+public def keywordPrefixedCollection (keyword : TaggedDoc) (lb : TaggedDoc) (elems : SepArray sep) (rb : TaggedDoc)
+    (format : Types.ArrayLitFormat := {}) : TaggedDoc :=
+  let collection := Layouts.collection lb elems rb format
+  propagateStickyness collection fun collection =>
+    nested <| Layouts.spacedAtomic #[keyword, collection]
+
 
 
 public inductive Types.SignatureKind where
