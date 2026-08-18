@@ -44,7 +44,7 @@ set -euo pipefail
 
 FMT_REV="${1:-@-}"
 BASE_REV="${2:-}"
-: "${LEAN_NUM_THREADS:=12}"
+: "${LEAN_NUM_THREADS:=40}"
 export LEAN_NUM_THREADS
 
 ROOT=$(jj root)
