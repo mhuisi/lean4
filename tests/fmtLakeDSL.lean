@@ -1,0 +1,325 @@
+import Lake
+
+/-!
+Tests for the formatters of Lake's user-facing DSL (`Lake.DSL.Syntax`, `Lake.DSL.DeclUtil`): the
+package and hook declarations `package` and `post_update` (`fmtPackageCommand`,
+`fmtPostUpdateDecl`), the dependency syntax `require` together with its clauses (`fmtRequireDecl`,
+`fmtDepName`, `fmtVerSpec`, `fmtFromClause`, `fmtFromSource`, `fmtFromGit`, `fmtFromPath`,
+`fmtWithClause`), the facet and target declarations `module_facet`, `package_facet`,
+`library_facet`, `target` and `extern_lib` (`fmtModuleFacetDecl`, `fmtPackageFacetDecl`,
+`fmtLibraryFacetDecl`, `fmtTargetCommand`, `fmtExternLibCommand`), the configuration commands
+`lean_lib`, `lean_exe`, `input_file` and `input_dir` (`fmtLeanLibCommand`, `fmtLeanExeCommand`,
+`fmtInputFileCommand`, `fmtInputDirCommand`) with their declarative configurations
+(`fmtWithOptConfig`, `fmtDeclField`, `fmtIdentOrStr`, `fmtSimpleBinder`,
+`fmtBracketedSimpleBinder`), `script` (`fmtScriptDecl`), the version and configuration terms
+`v!"..."`, `eval_ver%` and `get_config?` (`fmtVerLit`, `fmtEvalVer`, `fmtGetConfig`), the build key
+literals `` `+mod `` and `` `@pkg `` (`fmtModuleTargetKeyLit`, `fmtPackageTargetKeyLit`,
+`fmtFacetSuffix`, `fmtPackageTargetLit`) and the elaboration-time control flow `meta if` and
+`run_io` (`fmtMetaIf`, `fmtRunIO`). Every section contains forms that fit on one line, forms that
+exceed the 100 column soft width, and forms with and without each optional component.
+
+Elaboration of this file fails in many places on purpose: the declarations below reference targets,
+facets and configuration fields that do not exist, and several of them are declared more than once
+because only their formatting is of interest here.
+-/
+
+open Lake Lake.DSL System Lean
+
+section PackageDeclarations
+
+package tiny
+
+package «package-with-a-quoted-name»
+
+package configured where
+  version := v!"0.1.0"
+  srcDir := "src"
+
+package inlineConfigured { srcDir := "src"; buildDir := ".lake/build" }
+
+/-- The root package of this workspace. -/
+package documented where
+  version := v!"0.4.0-rc1"
+  keywords := #["build-system", "package-manager"]
+  description := "A tiny package that exercises the formatter of the Lake DSL"
+
+@[deprecated "Use the workspace package instead." (since := "2026-08-19")]
+package attributed where
+  srcDir := "src"
+
+package «heavily-configured» where
+  leanOptions := #[⟨`pp.unicode.fun, true⟩, ⟨`autoImplicit, false⟩, ⟨`relaxedAutoImplicit, false⟩, ⟨`linter.missingDocs, true⟩]
+  moreLinkArgs := #["-L/usr/local/lib", "-lcrypto", "-lssl", "-Wl,-rpath,/usr/local/lib", "-Wl,--as-needed"]
+  testDriver := "tests/runTests.lean"
+
+package withHelpers { srcDir := helperSrcDir } where
+  helperSrcDir : FilePath := "src"
+
+package commented where
+  -- The directory that the modules of the package are read from.
+  srcDir := "src"
+
+  /- The directory that the build artifacts of the package are written to. -/
+  buildDir := ".lake/build"
+
+end PackageDeclarations
+
+section PostUpdateHooks
+
+post_update pkg do
+  let wsToolchainFile := (← getRootPackage).dir / "lean-toolchain"
+  let toolchain ← IO.FS.readFile <| pkg.dir / "lean-toolchain"
+  IO.FS.writeFile wsToolchainFile toolchain
+
+/-- Synchronizes the toolchain of the workspace with the toolchain of this package. -/
+post_update (pkg : Package) do
+  let exitCode ← env (pkg.dir / "cache").toString #["get"]
+  if exitCode ≠ 0 then
+    error s!"{pkg.name}: failed to fetch the cache of the package after a successful update"
+
+post_update := pure ()
+
+post_update pkg := logInfo s!"the dependencies of {pkg.name} were updated; run `lake build` again"
+
+post_update (pkg : Package) do
+  writeManifest pkg
+where
+  writeManifest (pkg : Package) : LogIO PUnit :=
+    IO.FS.writeFile (pkg.dir / "manifest.json") "{}"
+
+end PostUpdateHooks
+
+section Dependencies
+
+require std
+
+require "leanprover-community" / mathlib
+
+-- Pinned to a released version because the `main` branch does not build with this toolchain.
+require batteries @ "0.1.0"
+
+require plausible @ git "main"
+
+require «doc-gen4» from git "https://github.com/leanprover/doc-gen4"
+
+require verso from git "https://github.com/leanprover/verso" @ "main"
+
+require subverso from git "https://github.com/leanprover/subverso" @ "main" / "src"
+
+require importGraph from "../import-graph"
+
+require cli from "../cli" with NameMap.empty
+
+/-- The mathematical library that the test suite of this package is checked against. -/
+require "leanprover-community" / mathlib @ git "master" from git "https://github.com/leanprover-community/mathlib4.git" @ "master" / "Mathlib" with configurationOptionsOfTheDependency
+
+require «a-package-with-a-name-that-is-long-enough-to-force-the-clauses-onto-their-own-lines» @ "1.0.0" from git "https://example.com/a/very/long/repository/url.git"
+
+end Dependencies
+
+section FacetsAndTargets
+
+module_facet lineCount : Nat := pure 0
+
+/-- The documentation of a module, as generated by `doc-gen4`. -/
+module_facet docs (mod : Module) : FilePath := do
+  let some docGen4 ← findLeanExe? `«doc-gen4» | error "the `doc-gen4` package is not required"
+  let exeJob ← docGen4.exe.fetch
+  let modJob ← mod.leanArts.fetch
+  exeJob.bindM fun exeFile => modJob.mapM fun _ => pure exeFile
+
+package_facet coverage pkg : FilePath := pure <| pkg.buildDir / "coverage"
+
+library_facet static (lib : LeanLib) : FilePath :=
+  lib.staticLib.fetch
+
+library_facet everyTransitivelyPrecompiledDynlibOfTheLibrary (lib : LeanLib) : Array (Name × FilePath) :=
+  pure #[]
+
+target simple : FilePath := pure default
+
+target ffi.o pkg : FilePath := do
+  let oFile := pkg.buildDir / "ffi" / "ffi.o"
+  let srcJob ← inputTextFile <| pkg.dir / "ffi" / "ffi.cpp"
+  let flags := #["-I", (← getLeanIncludeDir).toString, "-fPIC", "-O3", "-DNDEBUG", "-std=c++17"]
+  buildO oFile srcJob flags #[] "c++"
+
+/-- The static archive of the vendored C library, built with the platform's default toolchain. -/
+target «vendored-archive» (pkg : NPackage _package.name) : FilePath := buildArchive pkg
+where
+  buildArchive (pkg : NPackage _package.name) : FetchM (Job FilePath) :=
+    pure <| pure <| pkg.buildDir / "libvendored.a"
+
+extern_lib «tiny-lib» := pure default
+
+extern_lib libffi pkg := do
+  let name := nameToStaticLib "ffi"
+  let ffiO ← ffi.o.fetch
+  buildStaticLib (pkg.sharedLibDir / name) #[ffiO]
+
+/-- The static library of the vendored cryptography backend that the executable links against. -/
+extern_lib libcrypto (pkg : NPackage _package.name) := buildCryptoBackendOfThePackage pkg #["-O3"]
+
+end FacetsAndTargets
+
+section ConfigurationTargets
+
+lean_lib MyLib
+
+@[default_target]
+lean_lib Tests where
+  srcDir := "tests"
+  globs := #[`Tests.*]
+
+lean_lib «library-with-a-quoted-name» { srcDir := "src"; roots := #[`Library] }
+
+lean_lib SingleField { srcDir := "src" }
+
+/-- The library that contains the elaborators and tactics of this package. -/
+lean_lib Elab where
+  srcDir := "src"
+  roots := #[`Elab, `Elab.Tactic, `Elab.Term, `Elab.Command, `Elab.Attributes, `Elab.Builtins]
+  precompileModules := true
+
+lean_exe cli {
+  root := `Main
+  supportInterpreter := true
+}
+
+@[test_driver]
+lean_exe tests where
+  root := `Tests.Main
+
+lean_exe
+
+input_file readme where
+  path := "README.md"
+  text := true
+
+input_dir assets where
+  path := "assets"
+
+/-- Every icon that is embedded into the documentation of this package. -/
+input_dir «documentation-icons» { path := "doc" / "assets" / "icons"; text := false }
+
+end ConfigurationTargets
+
+section Scripts
+
+/-- Display a greeting. -/
+script greet (args) do
+  if h : 0 < args.length then
+    IO.println s!"Hello, {args[0]'h}!"
+  else
+    IO.println "Hello, world!"
+  return 0
+
+script noArgs do
+  return 0
+
+script version := fun _ => do
+  IO.println "0.4.0-rc1"
+  return 0
+
+@[test_driver]
+script «run-every-test-of-the-workspace» (args : List String) := runEveryTestOfTheWorkspace args
+where
+  runEveryTestOfTheWorkspace (args : List String) : ScriptM UInt32 := do
+    IO.println s!"running the tests with {args}"
+    return 0
+
+end Scripts
+
+section VersionsAndKeys
+
+def toolchainVersion : StdVer := v!"4.23.0"
+
+def patchedVersion (patch : Nat) : StdVer := v!"4.23.{patch}"
+
+def prereleaseVersionOfTheToolchainThatIsUsedByEveryPackageOfTheWorkspace : StdVer := v!"4.24.0-rc1"
+
+def requiredVersion : InputVer := eval_ver% "1.0.0"
+
+def requiredVersionOfTheDependency (ver : String) : InputVer := eval_ver% ver
+
+def optimizationLevel? : Option String := get_config? optLevel
+
+def transitiveDependencyClosureConfiguration? : Option String := get_config? transitiveDependencyClosure
+
+def moduleKey := `+Lake.Build.Data
+
+def moduleFacetKey := `+Lake.Build.Data:lean.o
+
+def moduleFacetKeyWithSeveralFacets := `+Lake.Build.Module.Facets.Transitive:lean.o:dynlib:static
+
+def workspaceKey := `@
+
+def packageKey := `@mathlib
+
+def packageFacetKey := `@mathlib:deps
+
+def packageTargetKey := `@mathlib/+Mathlib
+
+def packageTargetFacetKey := `@mathlib/Mathlib:static:shared
+
+end VersionsAndKeys
+
+section ElaborationTimeControlFlow
+
+meta if System.Platform.isWindows then
+-- The import library of the DLL is only needed on Windows.
+extern_lib winOnly := pure default
+
+meta if System.Platform.isOSX then
+extern_lib macOnly := pure default
+else
+extern_lib linuxOnly := pure default
+
+meta if System.Platform.isWindows then do
+  lean_lib WindowsSupport
+  lean_exe winCli
+else do
+  lean_lib PosixSupport
+
+  /-- The command line interface that is only built on POSIX platforms. -/
+  lean_exe posixCli
+
+meta if System.Platform.isOSX then
+extern_lib macFramework := pure default
+else meta if System.Platform.isWindows then
+extern_lib windowsImportLibrary := pure default
+else meta if System.Platform.getIsEmscripten () then
+extern_lib emscriptenSideModule := pure default
+else
+extern_lib elfSharedObject := pure default
+
+meta if System.Platform.isWindows then do
+  lean_lib WindowsSupport
+  lean_exe winCli
+else meta if System.Platform.isOSX then do
+  lean_lib DarwinSupport
+  lean_exe macCli
+else
+lean_lib PosixSupport
+
+meta if System.Platform.isWindows then
+extern_lib windowsOnly := pure default
+else do
+  -- The `do` group is kept as written, so the `meta if` below it is not chained onto the `else`.
+  meta if System.Platform.isOSX then
+  extern_lib darwinOnly := pure default
+  else
+  extern_lib elfOnly := pure default
+
+def buildKind : String := run_io do
+  let kind ← IO.getEnv "LAKE_BUILD_KIND"
+  return kind.getD "release"
+
+def emptyEnvironmentVariable : String := run_io do return ""
+
+def descriptionOfTheBuildEnvironmentOfTheWorkspaceThatIsReportedByTheCommandLine : String := run_io do
+  let kind ← IO.getEnv "LAKE_BUILD_KIND"
+  let toolchain ← IO.getEnv "ELAN_TOOLCHAIN"
+  return s!"{kind.getD "release"} build with {toolchain.getD "the default toolchain"}"
+
+end ElaborationTimeControlFlow

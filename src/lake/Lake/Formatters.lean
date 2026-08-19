@@ -8,6 +8,7 @@ module
 prelude
 public import Lake.Formatters.Build
 public import Lake.Formatters.Config
+public import Lake.Formatters.DSL
 public import Lake.Formatters.Util
 
 /-! # `Lake.Formatters`
