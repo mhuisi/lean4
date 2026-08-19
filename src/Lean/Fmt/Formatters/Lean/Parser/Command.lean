@@ -96,11 +96,11 @@ public def fmtNamedPrio : Fmt := fun
 
 public def fmtDeclarationSignature
     (declTks : Array Syntax)
-    (namedPrio? : Option (TSyntax ``Parser.Command.namedPrio))
+    (namedPrio? : Option Syntax)
     (declId? : Option Syntax)
     (binders : TSyntaxArray [`ident, ``Parser.Term.hole, ``Parser.Term.bracketedBinder])
     (typeAscriptionTk? : Option Syntax)
-    (type? : Option (TSyntax `term))
+    (type? : Option Syntax)
     : FmtM TaggedDoc := do
   let declTks := Layouts.spacedAtomic (← declTks.mapM fmt)
   let namedPrio? ← fmt? namedPrio?
@@ -113,20 +113,20 @@ public def fmtDeclarationSignature
 
 public def fmtAssignmentDeclaration
     (declTk : Syntax)
-    (namedPrio? : Option (TSyntax ``Parser.Command.namedPrio))
-    (declId? : Option (TSyntax ``Parser.Command.declId))
+    (namedPrio? : Option Syntax)
+    (declId? : Option Syntax)
     (binders : TSyntaxArray [`ident, ``Parser.Term.hole, ``Parser.Term.bracketedBinder])
     (typeAscriptionTk? : Option Syntax)
-    (type? : Option (TSyntax `term))
-    (colonEqTk : Syntax)
-    (declBody : TSyntax `term)
+    (type? : Option Syntax)
+    (colonEqTk? : Option Syntax)
+    (declBody : Syntax)
     (terminationSuffix : TSyntax ``Parser.Termination.suffix)
     (whereDecls? : Option (TSyntax ``Parser.Term.whereDecls))
     : FmtM TaggedDoc := do
   let signatureDoc ← fmtDeclarationSignature #[declTk] namedPrio? declId? binders typeAscriptionTk? type?
-  let colonEqTkDoc ← fmt colonEqTk
+  let colonEqTkDoc? ← fmt? colonEqTk?
   let declBodyDoc ← fmt declBody
-  let mainDeclDoc := Layouts.assignmentDeclaration signatureDoc colonEqTkDoc declBodyDoc
+  let mainDeclDoc := Layouts.assignmentDeclaration signatureDoc colonEqTkDoc? declBodyDoc
   let mainDeclTrailingDoc ← fmtTrailingWithRetainedNewlinesAndComments declBody
   let terminationSuffixDoc ← fmt terminationSuffix
   let terminationSuffixTrailingDoc ← fmtTrailingWithRetainedNewlinesAndComments terminationSuffix
@@ -141,11 +141,11 @@ public def fmtAssignmentDeclaration
 
 public def fmtMatchDeclaration
     (declTk : Syntax)
-    (namedPrio? : Option (TSyntax ``Parser.Command.namedPrio))
-    (declId? : Option (TSyntax ``Parser.Command.declId))
+    (namedPrio? : Option Syntax)
+    (declId? : Option Syntax)
     (binders : TSyntaxArray [`ident, ``Parser.Term.hole, ``Parser.Term.bracketedBinder])
     (typeAscriptionTk? : Option Syntax)
-    (type? : Option (TSyntax `term))
+    (type? : Option Syntax)
     (matchAlts : TSyntax ``Parser.Term.matchAlts)
     (terminationSuffix : TSyntax ``Parser.Termination.suffix)
     (whereDecls? : Option (TSyntax ``Parser.Term.whereDecls))
@@ -167,11 +167,11 @@ public def fmtMatchDeclaration
 
 public def fmtWhereDeclaration
     (declTk : Syntax)
-    (namedPrio? : Option (TSyntax ``Parser.Command.namedPrio))
-    (declId? : Option (TSyntax ``Parser.Command.declId))
+    (namedPrio? : Option Syntax)
+    (declId? : Option Syntax)
     (binders : TSyntaxArray [`ident, ``Parser.Term.hole, ``Parser.Term.bracketedBinder])
     (typeAscriptionTk? : Option Syntax)
-    (type? : Option (TSyntax `term))
+    (type? : Option Syntax)
     (whereTk : Syntax)
     (fields : Syntax.TSepArray ``Parser.Term.structInstField ";")
     (whereDecls? : Option (TSyntax ``Parser.Term.whereDecls))

@@ -31,7 +31,7 @@ public def fmtConfigField : Fmt := fun
     let colonEqTk? ← fmt? colonEqTk?
     let defVal? ← fmt? defVal?
     let ids := Layouts.sepFill ids
-    let lhs := Layouts.infixOperator #[id?, atTk?, ids]
+    let lhs := Layouts.infixOperator #[id?, atTk?, ids] .dense
     let field := Layouts.binder #[] #[lhs] binders typeAscriptionTk type colonEqTk? defVal? #[]
       (kind := .global)
     fmtDeclWithDeclModifiers declModifiers field

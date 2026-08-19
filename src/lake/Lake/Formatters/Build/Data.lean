@@ -38,7 +38,7 @@ public def fmtBuiltinFacetCommand : Fmt := fun
     let ns ← fmt ns
     let arrowTk ← fmt arrowTk
     let ty ← fmt ty
-    let facet := Layouts.infixOperator #[id?, atTk?, name]
+    let facet := Layouts.infixOperator #[id?, atTk?, name] .dense
     let signature := Layouts.globalSignature #[builtinFacetTk, facet] #[] typeAscriptionTk ns
     let decl := Layouts.assignmentDeclaration signature arrowTk ty
     fmtDeclWithModifiers docComment? none #[] decl
