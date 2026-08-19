@@ -178,11 +178,16 @@ public def fmtWhereDeclaration
     : FmtM TaggedDoc := do
   let signature ← fmtDeclarationSignature #[declTk] namedPrio? declId? binders typeAscriptionTk? type?
   let «where» ← fmt whereTk
-  let fields ← fmtTSepArray fields
+  let fieldsDoc ← fmtTSepArray fields
+  let mainDeclTrailingDoc ← fmtTrailingWithRetainedNewlinesAndComments <| mkNullNode <| #[whereTk] ++ fields
   let whereDecls? ← fmt? whereDecls?
-  let fields := Layouts.sepLines fields (includeSeps := false)
+  let fields := Layouts.sepLines fieldsDoc (includeSeps := false)
   let mainDecl := Layouts.whereDeclaration signature «where» fields
-  return Layouts.lines #[mainDecl, whereDecls?]
+  return Layouts.retainedWhitespace #[
+    mainDecl,
+    mainDeclTrailingDoc,
+    whereDecls?
+  ]
 
 @[builtin_fmt Lean.Parser.Command.abbrev]
 public def fmtAbbrev : Fmt := fun
