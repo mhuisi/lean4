@@ -6,6 +6,7 @@ Authors: Marc Huisinga
 module
 
 prelude
+import Lake.Formatters -- shake: keep (registers Lake's formatters)
 import Lean.Fmt
 import Lean.Language.Lean
 import Lean.Elab.Import
