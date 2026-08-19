@@ -586,21 +586,13 @@ public def fmtStructSimpleBinder : Fmt := fun
     fmtDeclWithDeclModifiers declModifiers binder
   | _ => throw .partialFormatter
 
-@[builtin_fmt Lean.Parser.Command.structFields]
-public def fmtStructFields : Fmt := fun
-  | `(Parser.Command.structFields| $fields*) => do
-    let fields ← fmtArray fields
-    return Layouts.lines fields
-  | _ =>
-    throw .partialFormatter
-
 public def fmtStructureLike
     (tk : Syntax) (declId : TSyntax ``Parser.Command.declId)
     (binders : TSyntaxArray [`ident, ``Parser.Term.hole, ``Parser.Term.bracketedBinder])
     (typeAscriptionTk? : Option Syntax) (type? : Option (TSyntax `term))
     (extends? : Option (TSyntax ``Parser.Command.extends)) (sepTk? : Option Syntax)
     (structCtor? : Option (TSyntax ``Parser.Command.structCtor))
-    (structFields? : Option (TSyntax ``Parser.Command.structFields))
+    (structFields? : Option (Array Syntax))
     (optDeriving : TSyntax ``Parser.Command.optDeriving)
     : FmtM TaggedDoc := do
   let signature ← fmtDeclarationSignature #[tk] none declId binders typeAscriptionTk? type?
@@ -614,11 +606,12 @@ public def fmtStructureLike
   let structParents? := structParents?.getD ⟨#[]⟩
   let sepTk? ← fmt? sepTk?
   let structCtor? ← fmt? structCtor?
-  let structFields? ← fmt? structFields?
+  let structFields ← structFields?.getD #[] |>.mapM fmt
   let optDeriving ← fmt optDeriving
   let «extends» := Layouts.keywordPrefixedSepFill extendsTk? structParents? .nonSticky
   let extendedSignature := Layouts.blocks #[ { block := signature, hardNestedIfFirst := false }, «extends»]
-  let structBody := Layouts.lines #[structCtor?, structFields?]
+  let structFields := Layouts.lines structFields
+  let structBody := Layouts.lines #[structCtor?, structFields]
   let mainDecl := Layouts.whereDeclaration extendedSignature sepTk? structBody
   return Layouts.lines #[mainDecl, optDeriving]
 
@@ -627,14 +620,14 @@ public def fmtStructure : Fmt := fun
   | `(Parser.Command.structure|
       $tk $declId:declId $binders* $[:%$typeAscriptionTk? $type?:term]? $[$extends?:extends]? $[where%$whereTk?
         $[$structCtor?:structCtor]?
-          $structFields?:structFields]?
+          $structFields?*]?
       $optDeriving:optDeriving) =>
     fmtStructureLike tk declId binders typeAscriptionTk? type? extends? whereTk? structCtor?.join
       structFields? optDeriving
   | `(Parser.Command.structure|
       $tk $declId:declId $binders* $[:%$typeAscriptionTk? $type?:term]? $[$extends?:extends]?
         $[:=%$colonEqTk? $[$structCtor?:structCtor]?
-          $structFields?:structFields]?
+          $structFields?*]?
       $optDeriving:optDeriving) =>
     fmtStructureLike tk declId binders typeAscriptionTk? type? extends? colonEqTk? structCtor?.join
       structFields? optDeriving
