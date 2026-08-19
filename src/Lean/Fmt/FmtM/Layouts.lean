@@ -911,9 +911,9 @@ private def signature
     match kind with
     | .local => .dense (hardNestedFirstOperand := false)
     | .global => .sparse (hardNestedFirstOperand := false)
-  let binderGroups := binderGroups.map (Layouts.fill ·)
+  let binderGroups := Layouts.horizontalOrVertical <| binderGroups.map (Layouts.fill ·)
   nested <| Layouts.typeAscription (format := format)
-    (Layouts.horizontalOrVertical <| #[(lvalsLayout lvals)] ++ binderGroups)
+    (Layouts.horizontalOrVertical <| #[(lvalsLayout lvals), binderGroups])
     typeAscriptionTk
     type
 

@@ -48,6 +48,85 @@ private inductive BinderKind where
   | instance
 deriving BEq, Inhabited
 
+private def BinderKind.classify (binder : TSyntax binderKinds) : BinderKind :=
+  match binder.raw.getKind with
+  | ``Parser.Term.strictImplicitBinder
+  | ``Parser.Term.implicitBinder => .implicit
+  | ``Parser.Term.instBinder => .instance
+  | _ => .explicit
+
+private structure BinderWithDependents where
+  binder : TSyntax binderKinds
+  dependents : Std.HashSet Nat
+deriving BEq, Inhabited
+
+/--
+Splits `binder` into the variables bound by it and the syntax in which variables bound by
+preceding binders may be referenced.
+-/
+private def splitBinder (binder : TSyntax binderKinds) : Array Name × Array Syntax :=
+  if binder.raw.isIdent then
+    (#[binder.raw.getId], #[])
+  else
+    match binder.raw with
+    | `(explicitBinderF| ($ids* $[: $type?:term]? $[$tacticOrDefault?]?)) =>
+      (binderIdentNames ids, type?.toArray.map (·.raw) ++ tacticOrDefault?.toArray.map (·.raw))
+    | `(implicitBinderF| {$ids* $[: $type?:term]?})
+    | `(strictImplicitBinderF| { {$ids* $[: $type?:term]?} })
+    | `(strictImplicitBinderF| { {$ids* $[: $type?:term]?⦄)
+    | `(strictImplicitBinderF| ⦃$ids* $[: $type?:term]?} })
+    | `(strictImplicitBinderF| ⦃$ids* $[: $type?:term]?⦄) =>
+      (binderIdentNames ids, type?.toArray.map (·.raw))
+    | `(Parser.Term.instBinder| [$[$id?:ident :]? $classType:term]) =>
+      (id?.toArray.map (·.getId), #[classType.raw])
+    | _ =>
+      (#[], #[])
+where
+  binderIdentNames (ids : Array Syntax) : Array Name :=
+    ids.filterMap fun id => if id.isIdent then some id.getId else none
+
+/--
+Checks whether `stx` contains an identifier that refers to one of `vars`.
+Identifiers that merely have one of `vars` as a prefix are considered references as well so that
+generalized field notation such as `xs.size` is accounted for.
+-/
+private partial def referencesVars (vars : Array Name) : Syntax → Bool
+  | .ident _ _ id _ => vars.any (·.isPrefixOf id)
+  | .node _ _ args  => args.any (referencesVars vars)
+  | _               => false
+
+/--
+Pairs every binder in `binders` with the indices of the later binders that reference one of the
+variables bound by it.
+-/
+private def computeBinderDependents
+    (binders : TSyntaxArray binderKinds)
+    : Array BinderWithDependents := Id.run do
+  let splitBinders := binders.map splitBinder
+  let mut result := Array.emptyWithCapacity binders.size
+  for i in 0...binders.size do
+    let (boundVars, _) := splitBinders[i]!
+    let mut dependents := {}
+    if ! boundVars.isEmpty then
+      for j in (i + 1)...binders.size do
+        let (_, body) := splitBinders[j]!
+        if body.any (referencesVars boundVars) then
+          dependents := dependents.insert j
+    result := result.push ⟨binders[i]!, dependents⟩
+  return result
+
+private structure BinderGroupInProgress where
+  binders : Array Syntax
+  dependents : Std.HashSet Nat
+  kind : BinderKind
+deriving Inhabited, BEq
+
+private def BinderGroupInProgress.init (b : BinderWithDependents) : BinderGroupInProgress := {
+  binders := #[b.binder]
+  dependents := b.dependents
+  kind := .classify b.binder
+}
+
 mutual
 
 public def fmtBinder
@@ -117,48 +196,42 @@ public def groupBinders
     : BinderGroups := Id.run do
   if binders.isEmpty then
     return #[]
-  let groups := groupByKind binders
-  let collapsedGroups := collapseGroups groups
-  return collapsedGroups
-where
-  classifyBinder (binder : TSyntax binderKinds) : BinderKind :=
-    match binder.raw.getKind with
-    | ``Parser.Term.strictImplicitBinder
-    | ``Parser.Term.implicitBinder => .implicit
-    | ``Parser.Term.instBinder => .instance
-    | _ => .explicit
-  groupByKind (binders : TSyntaxArray binderKinds) : Array (Array Syntax × BinderKind) := Id.run do
-    let mut groupedResult := #[]
-    let mut group : Array Syntax := #[]
-    let mut groupKind := classifyBinder binders[0]!
-    for binder in binders do
-      let kind := classifyBinder binder
-      if kind == groupKind then
-        group := group.push binder
+  let binders := computeBinderDependents binders
+  let mut groups : BinderGroups := #[]
+  let mut group : BinderGroupInProgress := .init binders[0]!
+  for i in (1...binders.size) do
+    let b := binders[i]!
+    let kind : BinderKind := .classify b.binder
+    match group.kind, kind with
+    | .implicit, .implicit
+    | .instance, .instance
+    | .implicit, .instance =>
+      group := extendGroup group b
+    | .implicit, .explicit
+    | .explicit, .instance
+    | .explicit, .explicit =>
+      if group.dependents.contains i then
+        group := extendGroup group b
       else
-        groupedResult := groupedResult.push (group, groupKind)
-        group := #[binder]
-        groupKind := kind
-    if ! group.isEmpty then
-      groupedResult := groupedResult.push (group, groupKind)
-    return groupedResult
-  collapseGroups (groups : Array (Array Syntax × BinderKind)) : Array (Array Syntax) := Id.run do
-    let mut collapsedResult := #[]
-    let mut collapsed := #[]
-    let mut (_, lastGroupKind) := groups[0]!
-    for (group, groupKind) in groups do
-      match lastGroupKind, groupKind with
-      | .explicit, .explicit
-      | .implicit, _
-      | _, .instance =>
-        collapsed := collapsed ++ group
-      | _, _ =>
-        collapsedResult := collapsedResult.push collapsed
-        collapsed := group
-      lastGroupKind := groupKind
-    if ! collapsed.isEmpty then
-      collapsedResult := collapsedResult.push collapsed
-    return collapsedResult
+        (groups, group) := finalizeGroup groups group b
+    | .explicit, .implicit
+    | .instance, .explicit
+    | .instance, .implicit =>
+      (groups, group) := finalizeGroup groups group b
+  groups := groups.push group.binders
+  return groups
+where
+  extendGroup (group : BinderGroupInProgress) (b : BinderWithDependents) : BinderGroupInProgress := {
+    group with
+    binders := group.binders.push b.binder
+    dependents := group.dependents.union b.dependents
+    kind := .classify b.binder
+  }
+  finalizeGroup (groups : BinderGroups) (group : BinderGroupInProgress) (b : BinderWithDependents)
+      : BinderGroups × BinderGroupInProgress :=
+    let groups := groups.push group.binders
+    let group := .init b
+    (groups, group)
 
 public def fmtBinders
     (binders : TSyntaxArray binderKinds)

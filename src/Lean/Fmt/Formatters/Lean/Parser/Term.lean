@@ -471,7 +471,7 @@ public def fmtForall : QuantifierFmt := fun
       ∀%$forallTk $binders* $[:%$typeAscriptionTk? $type?:term]? ,%$commaTk $body:term) =>
     some {
       quantifier := forallTk
-      binders := .binders <| groupBinders binders
+      binders := .binders #[binders]
       typeAscriptionTk?
       type?
       commaTk
