@@ -43,17 +43,25 @@ public abbrev binderKinds : List Name := [
 ]
 
 private inductive BinderKind where
-  | explicit
-  | implicit
-  | instance
+  | explicit (isTypeless : Bool)
+  | implicit (isTypeless : Bool)
+  | instance (isTypeless : Bool)
 deriving BEq, Inhabited
 
 private def BinderKind.classify (binder : TSyntax binderKinds) : BinderKind :=
-  match binder.raw.getKind with
-  | ``Parser.Term.strictImplicitBinder
-  | ``Parser.Term.implicitBinder => .implicit
-  | ``Parser.Term.instBinder => .instance
-  | _ => .explicit
+  match binder.raw with
+  | `(explicitBinderF| ($_* $[: $type?:term]? $[$_]?)) =>
+    .explicit (isTypeless := type?.isNone)
+  | `(implicitBinderF| {$_* $[: $type?:term]?})
+  | `(strictImplicitBinderF| { {$_* $[: $type?:term]?} })
+  | `(strictImplicitBinderF| { {$_* $[: $type?:term]?⦄)
+  | `(strictImplicitBinderF| ⦃$_* $[: $type?:term]?} })
+  | `(strictImplicitBinderF| ⦃$_* $[: $type?:term]?⦄) =>
+    .implicit (isTypeless := type?.isNone)
+  | `(Parser.Term.instBinder| [$[$_ :]? $_]) => .instance (isTypeless := false)
+  | _ =>
+    -- `ident` and `hole` binders
+    .explicit (isTypeless := true)
 
 private structure BinderWithDependents where
   binder : TSyntax binderKinds
@@ -69,8 +77,8 @@ private def splitBinder (binder : TSyntax binderKinds) : Array Name × Array Syn
     (#[binder.raw.getId], #[])
   else
     match binder.raw with
-    | `(explicitBinderF| ($ids* $[: $type?:term]? $[$tacticOrDefault?]?)) =>
-      (binderIdentNames ids, type?.toArray.map (·.raw) ++ tacticOrDefault?.toArray.map (·.raw))
+    | `(explicitBinderF| ($ids* $[: $type?:term]? $[$_]?)) =>
+      (binderIdentNames ids, type?.toArray.map (·.raw))
     | `(implicitBinderF| {$ids* $[: $type?:term]?})
     | `(strictImplicitBinderF| { {$ids* $[: $type?:term]?} })
     | `(strictImplicitBinderF| { {$ids* $[: $type?:term]?⦄)
@@ -203,20 +211,20 @@ public def groupBinders
     let b := binders[i]!
     let kind : BinderKind := .classify b.binder
     match group.kind, kind with
-    | .implicit, .implicit
-    | .instance, .instance
-    | .implicit, .instance =>
+    | .implicit .., .implicit ..
+    | .instance .., .instance ..
+    | .implicit .., .instance .. =>
       group := extendGroup group b
-    | .implicit, .explicit
-    | .explicit, .instance
-    | .explicit, .explicit =>
+    | .implicit .., .explicit ..
+    | .explicit .., .instance ..
+    | .explicit .., .explicit .. =>
       if group.dependents.contains i then
         group := extendGroup group b
       else
         (groups, group) := finalizeGroup groups group b
-    | .explicit, .implicit
-    | .instance, .explicit
-    | .instance, .implicit =>
+    | .explicit .., .implicit ..
+    | .instance .., .explicit ..
+    | .instance .., .implicit .. =>
       (groups, group) := finalizeGroup groups group b
   groups := groups.push group.binders
   return groups
