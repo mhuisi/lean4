@@ -50,18 +50,24 @@ deriving BEq, Inhabited
 
 private def BinderKind.classify (binder : TSyntax binderKinds) : BinderKind :=
   match binder.raw with
-  | `(explicitBinderF| ($_* $[: $type?:term]? $[$default?]?)) =>
-    .explicit (isBinderIdent := type?.isNone && default?.isNone)
-  | `(implicitBinderF| {$_* $[: $type?:term]?})
-  | `(strictImplicitBinderF| { {$_* $[: $type?:term]?} })
-  | `(strictImplicitBinderF| { {$_* $[: $type?:term]?⦄)
-  | `(strictImplicitBinderF| ⦃$_* $[: $type?:term]?} })
-  | `(strictImplicitBinderF| ⦃$_* $[: $type?:term]?⦄) =>
-    .implicit (isBinderIdent := type?.isNone)
+  | `(explicitBinderF| ($ids* $[: $type?:term]? $[$default?]?)) =>
+    c ids <| .explicit (isBinderIdent := type?.isNone && default?.isNone)
+  | `(implicitBinderF| {$ids* $[: $type?:term]?})
+  | `(strictImplicitBinderF| { {$ids* $[: $type?:term]?} })
+  | `(strictImplicitBinderF| { {$ids* $[: $type?:term]?⦄)
+  | `(strictImplicitBinderF| ⦃$ids* $[: $type?:term]?} })
+  | `(strictImplicitBinderF| ⦃$ids* $[: $type?:term]?⦄) =>
+    c ids <| .implicit (isBinderIdent := type?.isNone)
   | `(Parser.Term.instBinder| [$[$_ :]? $_]) => .instance (isBinderIdent := false)
   | _ =>
     -- `ident` and `hole` binders
-    .explicit (isBinderIdent := true)
+    c #[binder] <| .explicit (isBinderIdent := true)
+where
+  c (ids : Array Syntax) (k : BinderKind) : BinderKind :=
+    if ids.all (·.getKind == ``Parser.Term.hole) then
+      .instance (isBinderIdent := false)
+    else
+      k
 
 private structure BinderWithDependents where
   binder : TSyntax binderKinds
