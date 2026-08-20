@@ -310,7 +310,7 @@ where
       currNamespace := prevCmdData.cmdState.scopes[0]!.currNamespace
       openDecls := prevCmdData.cmdState.scopes[0]!.openDecls
     }
-    let (_, _, msgLog) := Parser.parseCommand initialSnap.ictx pmctx prevCmdData.parserState MessageLog.empty
+    let (stx, _, msgLog) := Parser.parseCommand initialSnap.ictx pmctx prevCmdData.parserState MessageLog.empty
     if msgLog.hasErrors then
       renderedCommand ← commandRaw ctx cmdData.stx
     return renderedCommand

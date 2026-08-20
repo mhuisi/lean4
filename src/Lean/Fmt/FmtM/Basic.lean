@@ -358,16 +358,30 @@ public partial def fmtInfixOperator (assoc? : Option InfixOperationAssociativity
 public partial def fmtPrefixOperator : Fmt := fun stx => do
   if stx.getNumArgs != 2 then
     throw .partialFormatter
-  let op ← fmt (← getStxArg! stx 0)
+  let op ← getStxArg! stx 0
+  let opIsIdentComponent := Lean.Name.escapePart op.getAtomVal == op.getAtomVal
+  let op ← fmt op
   let operand ← fmt (← getStxArg! stx 1)
-  return Layouts.prefixOperator op operand .withoutSpacingIfAtomic
+  let format :=
+    if opIsIdentComponent then
+      .withSpacing
+    else
+      .withoutSpacingIfAtomic
+  return Layouts.prefixOperator op operand format
 
 public partial def fmtPostfixOperator : Fmt := fun stx => do
   if stx.getNumArgs != 2 then
     throw .partialFormatter
   let operand ← fmt (← getStxArg! stx 0)
-  let op ← fmt (← getStxArg! stx 1)
-  return Layouts.postfixOperator operand op .withoutSpacing
+  let op ← getStxArg! stx 1
+  let opIsIdentComponent := Lean.Name.escapePart op.getAtomVal == op.getAtomVal
+  let op ← fmt op
+  let format :=
+    if opIsIdentComponent then
+      .withSpacing
+    else
+      .withoutSpacing
+  return Layouts.postfixOperator operand op format
 
 public partial def fmtConditional (initialFmt : ConditionalFmt) : Fmt := fun stx => do
   let env := (← read).env
