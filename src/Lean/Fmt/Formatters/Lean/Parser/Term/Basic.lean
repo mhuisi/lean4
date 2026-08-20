@@ -43,25 +43,25 @@ public abbrev binderKinds : List Name := [
 ]
 
 private inductive BinderKind where
-  | explicit (isTypeless : Bool)
-  | implicit (isTypeless : Bool)
-  | instance (isTypeless : Bool)
+  | explicit (isBinderIdent : Bool)
+  | implicit (isBinderIdent : Bool)
+  | instance (isBinderIdent : Bool)
 deriving BEq, Inhabited
 
 private def BinderKind.classify (binder : TSyntax binderKinds) : BinderKind :=
   match binder.raw with
-  | `(explicitBinderF| ($_* $[: $type?:term]? $[$_]?)) =>
-    .explicit (isTypeless := type?.isNone)
+  | `(explicitBinderF| ($_* $[: $type?:term]? $[$default?]?)) =>
+    .explicit (isBinderIdent := type?.isNone && default?.isNone)
   | `(implicitBinderF| {$_* $[: $type?:term]?})
   | `(strictImplicitBinderF| { {$_* $[: $type?:term]?} })
   | `(strictImplicitBinderF| { {$_* $[: $type?:term]?⦄)
   | `(strictImplicitBinderF| ⦃$_* $[: $type?:term]?} })
   | `(strictImplicitBinderF| ⦃$_* $[: $type?:term]?⦄) =>
-    .implicit (isTypeless := type?.isNone)
-  | `(Parser.Term.instBinder| [$[$_ :]? $_]) => .instance (isTypeless := false)
+    .implicit (isBinderIdent := type?.isNone)
+  | `(Parser.Term.instBinder| [$[$_ :]? $_]) => .instance (isBinderIdent := false)
   | _ =>
     -- `ident` and `hole` binders
-    .explicit (isTypeless := true)
+    .explicit (isBinderIdent := true)
 
 private structure BinderWithDependents where
   binder : TSyntax binderKinds
@@ -213,7 +213,8 @@ public def groupBinders
     match group.kind, kind with
     | .implicit .., .implicit ..
     | .instance .., .instance ..
-    | .implicit .., .instance .. =>
+    | .implicit .., .instance ..
+    | .explicit (isBinderIdent := true), .explicit (isBinderIdent := true) =>
       group := extendGroup group b
     | .implicit .., .explicit ..
     | .explicit .., .instance ..
