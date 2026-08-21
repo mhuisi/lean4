@@ -129,16 +129,16 @@ private def computeBinderDependents
     result := result.push ⟨binders[i]!, dependents⟩
   return result
 
-private structure BinderGroupInProgress where
+private structure BinderGroup where
   binders : Array Syntax
   dependents : Std.HashSet Nat
-  kind : BinderKind
+  kinds : Array BinderKind
 deriving Inhabited, BEq
 
-private def BinderGroupInProgress.init (b : BinderWithDependents) : BinderGroupInProgress := {
+private def BinderGroup.init (b : BinderWithDependents) : BinderGroup := {
   binders := #[b.binder]
   dependents := b.dependents
-  kind := .classify b.binder
+  kinds := #[.classify b.binder]
 }
 
 mutual
@@ -211,21 +211,25 @@ public def groupBinders
   if binders.isEmpty then
     return #[]
   let binders := computeBinderDependents binders
-  let mut groups : BinderGroups := #[]
-  let mut group : BinderGroupInProgress := .init binders[0]!
+  let mut groups : Array BinderGroup := #[]
+  let mut group : BinderGroup := .init binders[0]!
   for i in (1...binders.size) do
     let b := binders[i]!
     let kind : BinderKind := .classify b.binder
-    match group.kind, kind with
+    match group.kinds.back!, kind with
     | .implicit .., .implicit ..
     | .instance .., .instance ..
     | .implicit .., .instance ..
     | .explicit (isBinderIdent := true), .explicit (isBinderIdent := true) =>
       group := extendGroup group b
     | .implicit .., .explicit ..
-    | .explicit .., .instance ..
-    | .explicit .., .explicit .. =>
+    | .explicit .., .instance .. =>
       if group.dependents.contains i then
+        group := extendGroup group b
+      else
+        (groups, group) := finalizeGroup groups group b
+    | .explicit .., .explicit .. =>
+      if !group.dependents.isEmpty && !b.dependents.isEmpty && group.dependents == b.dependents || group.dependents.contains i then
         group := extendGroup group b
       else
         (groups, group) := finalizeGroup groups group b
@@ -233,18 +237,23 @@ public def groupBinders
     | .instance .., .explicit ..
     | .instance .., .implicit .. =>
       (groups, group) := finalizeGroup groups group b
-  groups := groups.push group.binders
-  return groups
+  groups := groups.push group
+  return groups.map (·.binders)
 where
-  extendGroup (group : BinderGroupInProgress) (b : BinderWithDependents) : BinderGroupInProgress := {
+  extendGroup (group : BinderGroup) (b : BinderWithDependents) : BinderGroup := {
     group with
     binders := group.binders.push b.binder
     dependents := group.dependents.union b.dependents
-    kind := .classify b.binder
+    kinds :=
+      let kind := .classify b.binder
+      if group.kinds.back! == kind then
+        group.kinds
+      else
+        group.kinds.push kind
   }
-  finalizeGroup (groups : BinderGroups) (group : BinderGroupInProgress) (b : BinderWithDependents)
-      : BinderGroups × BinderGroupInProgress :=
-    let groups := groups.push group.binders
+  finalizeGroup (groups : Array BinderGroup) (group : BinderGroup) (b : BinderWithDependents)
+      : Array BinderGroup × BinderGroup :=
+    let groups := groups.push group
     let group := .init b
     (groups, group)
 
