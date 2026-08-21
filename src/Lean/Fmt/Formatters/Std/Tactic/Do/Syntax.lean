@@ -346,7 +346,7 @@ public def fmtInvariantAlt : Syntax → FmtM Layouts.Types.Alt := fun
   | `(Parser.Tactic.invariantDotAlt| ·%$cdotTk $inv:term) => do
     let cdotTk ← fmt cdotTk
     let inv ← fmt inv
-    return Layouts.alt #[Layouts.prefixOperator cdotTk inv .withSpacing] empty empty
+    return Layouts.alt #[Layouts.prefixOperator cdotTk (aligned inv) .withSpacing] empty empty
   | `(Parser.Tactic.invariantCaseAlt| |%$pipeTk $arg:caseArg =>%$arrowTk $inv:term) => do
     let pipeTk ← fmt pipeTk
     let arg ← fmt arg
