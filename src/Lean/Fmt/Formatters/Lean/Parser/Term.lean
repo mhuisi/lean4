@@ -1182,13 +1182,16 @@ public def fmtSetNotationLike (lbTk : Syntax) (elems : Syntax.SepArray ",") (rbT
   let lbTk ← fmt lbTk
   let elems ← fmtSepArray elems
   let rbTk ← fmt rbTk
-  let elems := Layouts.sepArray elems <| .joinUsingSep none nl
-  return Layouts.bracketed lbTk elems rbTk <| .sparse nl (stickynessKind := .preferSticky)
+  return Layouts.tuple lbTk elems rbTk
 
 @[builtin_fmt Lean.Parser.Term.structInst]
 public def fmtStructInst : Fmt := fun
-  | `(Parser.Term.structInst| {%$lbTk $[$fields:structInstLVal],* }%$rbTk) =>
-    fmtSetNotationLike lbTk fields rbTk
+  | `(Parser.Term.structInst| {%$lbTk $[$fields:structInstLVal],* }%$rbTk) => do
+    let lbTk ← fmt lbTk
+    let fields ← fmtSepArray (sep := ",") fields
+    let rbTk ← fmt rbTk
+    let fields := Layouts.sepArray fields <| .joinUsingSep none nl
+    return Layouts.bracketed lbTk fields rbTk <| .sparse nl (stickynessKind := .preferSticky)
   | `(Parser.Term.structInst| {%$lbTk
         $[$modifiedStructures?:term,* with%$withTk?]?
         $fields:structInstField,* $optEllipsis:optEllipsis
