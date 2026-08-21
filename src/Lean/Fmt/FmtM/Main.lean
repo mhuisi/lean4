@@ -303,14 +303,19 @@ where
     let renderedFile := renderedHeader ++ renderedCommands.iter.joinString
     return normalize renderedFile
   renderCommand (ctx : Context) (cmdData prevCmdData : Language.Lean.CommandData) : Except Error String := do
+    let input := initialSnap.ictx.inputString
     let mut renderedCommand ← commandMain ctx cmdData.stx
+    let (some startPos, some endPos) := (cmdData.stx.getStartPos? >>= String.pos? input, cmdData.stx.getTrailingTailPos? >>= String.pos? input)
+      | return renderedCommand
+    let inputWithRenderedCommand := input.extract input.startPos startPos ++ renderedCommand ++ input.extract endPos input.endPos
+    let ictx := Parser.InputContext.mk inputWithRenderedCommand initialSnap.ictx.fileName
     let pmctx := {
       env := prevCmdData.cmdState.env
       options := prevCmdData.cmdState.scopes[0]!.opts
       currNamespace := prevCmdData.cmdState.scopes[0]!.currNamespace
       openDecls := prevCmdData.cmdState.scopes[0]!.openDecls
     }
-    let (stx, _, msgLog) := Parser.parseCommand initialSnap.ictx pmctx prevCmdData.parserState MessageLog.empty
-    if msgLog.hasErrors then
+    let (stx, _, msgLog) := Parser.parseCommand ictx pmctx prevCmdData.parserState MessageLog.empty
+    if msgLog.hasErrors || stx.hasMissing then
       renderedCommand ← commandRaw ctx cmdData.stx
     return renderedCommand
