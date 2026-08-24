@@ -247,7 +247,7 @@ public def fmtCalc (calcTk : Syntax) (calcSteps : TSyntax ``calcSteps) : FmtM Ta
   let calcTk ← fmt calcTk
   let calcSteps ← fmtCalcSteps calcSteps
   let separatedVariant := Layouts.keywordPrefixedSeq calcTk (withPosition <| Layouts.lines calcSteps)
-    .sticky
+    .nonSticky
   if firstStepHasAssignment then
     return separatedVariant
   let firstStep := calcSteps[0]!
