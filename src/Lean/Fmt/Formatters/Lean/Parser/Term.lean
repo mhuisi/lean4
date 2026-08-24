@@ -1178,11 +1178,8 @@ public def fmtStructInstFieldEqns : Fmt := fun
 @[builtin_fmt Lean.Parser.Term.optEllipsis]
 public def fmtOptEllipsis : Fmt := fmtAtomic
 
-public def fmtSetNotationLike (lbTk : Syntax) (elems : Syntax.SepArray ",") (rbTk : Syntax) : FmtM TaggedDoc := do
-  let lbTk ← fmt lbTk
-  let elems ← fmtSepArray elems
-  let rbTk ← fmt rbTk
-  return Layouts.tuple lbTk elems rbTk
+public def fmtSetNotationLike (lbTk : Syntax) (elems : Syntax.TSepArray ks ",") (rbTk : Syntax) : FmtM TaggedDoc := do
+  fmtArrayLit lbTk elems rbTk
 
 @[builtin_fmt Lean.Parser.Term.structInst]
 public def fmtStructInst : Fmt := fun
