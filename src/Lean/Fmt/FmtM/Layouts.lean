@@ -289,7 +289,9 @@ public def prefixOperator (prefixOperatorTk operand : TaggedDoc) (format : Types
   if prefixOperatorTk.isAlwaysEmpty then
     return operand
   let mut doc :=
-    if format matches .withoutSpacing || format matches .withoutSpacingIfAtomic && operand.isAtomic && ! operand.isRawFallback then
+    if format matches .withoutSpacing
+        || format matches .withoutSpacingIfAtomic && (operand.isAtomic || operand.isSelfDelimited)
+          && ! operand.isRawFallback then
       nested <| atomic #[prefixOperatorTk, operand]
     else
       nested <| spacedAtomic #[prefixOperatorTk, operand]
