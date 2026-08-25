@@ -667,8 +667,6 @@ def determineCommentInsertions
             continue
           let insertedComment := " " ++ rp.rendering.rendered
           let newLineLength := lineLength + insertedComment.chars.length
-          if ! isFinalAlternative && newLineLength > maxColumnWidth then
-            continue
           r := r.insert insertionPos insertedComment
           lineLengths := lineLengths.set! lineNum newLineLength
           containsEndOfLineComments := containsEndOfLineComments.set! lineNum true
