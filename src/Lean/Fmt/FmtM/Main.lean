@@ -120,6 +120,43 @@ where
       cache := s.cache.insert cacheKey v
     }
     return v
+  tryInsertComment (anchor : Doc FmtCost) (c : Comment) : StateM tryInsertingComments.State (Doc FmtCost) := do
+    match c.kind, c.placement with
+    | .lineComment, .afterToken =>
+      let renderedDoc := Doc.free <| Doc.full <| Doc.text c.render[0]!.rendered
+      let renderedDoc ← modifyGet fun s =>
+        let (freshTagId, syntaxToTags, doc) :=
+          TaggedDoc.taggedWithRange s.freshTagId s.syntaxToTags renderedDoc c.originalWhitespaceRange .whitespace
+        (doc.doc, { s with freshTagId, syntaxToTags })
+      return .oneOf #[
+        anchor ++ .text " " ++ renderedDoc,
+        Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
+      ]
+    | .lineComment, .onLineBeforeToken =>
+      return anchor
+    | .blockComment, .afterToken =>
+      if c.content.size == 1 then
+        let renderedDoc := Doc.text c.render[0]!.rendered
+        let renderedDoc ← modifyGet fun s =>
+          let (freshTagId, syntaxToTags, doc) :=
+            TaggedDoc.taggedWithRange s.freshTagId s.syntaxToTags renderedDoc c.originalWhitespaceRange .whitespace
+          (doc.doc, { s with freshTagId, syntaxToTags })
+        return .oneOf #[
+          anchor ++ .text " " ++ renderedDoc,
+          Doc.costing (DefaultCost.ofOverflowFallbackPenalty 1) anchor
+        ]
+      else
+        let renderedDoc := Doc.free <| Doc.full <| Doc.text c.render[0]!.rendered
+        let renderedDoc ← modifyGet fun s =>
+          let (freshTagId, syntaxToTags, doc) :=
+            TaggedDoc.taggedWithRange s.freshTagId s.syntaxToTags renderedDoc c.originalWhitespaceRange .whitespace
+          (doc.doc, { s with freshTagId, syntaxToTags })
+        return .oneOf #[
+          anchor ++ .text " " ++ renderedDoc,
+          Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
+        ]
+    | .blockComment, .onLineBeforeToken =>
+      return anchor
   go (d : Doc FmtCost) : StateM tryInsertingComments.State (Doc FmtCost) := do
     match d with
     | .tagged id d =>
@@ -127,21 +164,10 @@ where
       let tagged := .tagged id d
       let some (_, commentsForId) := (← get).comments.get? id
         | return tagged
-      let eligibleComments := commentsForId.filter fun c =>
-        c.kind matches .blockComment && c.placement matches .afterToken && c.content.size == 1
-      if eligibleComments.isEmpty then
-        return tagged
-      let renderedComments ← eligibleComments.mapM fun c =>
-        let renderedDoc := Doc.text c.render[0]!.rendered
-        modifyGet fun s =>
-          let (freshTagId, syntaxToTags, doc) :=
-            TaggedDoc.taggedWithRange s.freshTagId s.syntaxToTags renderedDoc c.originalWhitespaceRange .whitespace
-          (doc.doc, { s with freshTagId, syntaxToTags })
-      let renderedComments := .joinUsing (.text " ") renderedComments
-      return .oneOf #[
-        tagged ++ .text " " ++ renderedComments,
-        Doc.costing (DefaultCost.ofOverflowFallbackPenalty 1) tagged
-      ]
+      let mut result := tagged
+      for c in commentsForId do
+        result ← tryInsertComment result c
+      return result
     | .failure
     | .text _
     | .newline _ =>
