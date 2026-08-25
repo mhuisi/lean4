@@ -125,8 +125,6 @@ inductive Comment.RenderedPlacementKind where
   | afterClosestPreviousNewline
   /-- Placed on the end of the same line as the token that this comment is attached to. -/
   | beforeClosestNextNewline
-  /-- Placed directly after the token that this comment is attached to. -/
-  | afterToken
 
 structure Comment.RenderedPlacement where
   kind : RenderedPlacementKind
@@ -151,10 +149,7 @@ def Comment.renderedPlacements (c : Comment) : Array RenderedPlacement :=
       | .lineComment, .onLineBeforeToken =>
         #[.afterClosestPreviousNewline]
       | .blockComment, .afterToken =>
-        if rendering.isMultiLine then
-          #[.afterClosestPreviousNewline]
-        else
-          #[.afterToken, .afterClosestPreviousNewline]
+        #[.afterClosestPreviousNewline]
       | .blockComment, .onLineBeforeToken =>
         #[.afterClosestPreviousNewline]
     kinds.map (⟨·, rendering⟩)
@@ -637,7 +632,6 @@ def determineCommentInsertions
   -- get moved before the line.
   let comments := comments.toArray.map fun (range, comments) => (range, comments.reverse)
   let comments := Std.TreeMap.ofArray comments (fun a b => compareSubslicesLargest b a)
-  let mut lineLengths := lineInfos.map (·.length)
   let mut containsEndOfLineComments := Array.replicate lineInfos.size false
   let mut r : Std.HashMap rendering.Pos String  := ∅
   for (range, comments) in comments do
@@ -660,27 +654,13 @@ def determineCommentInsertions
           if containsEndOfLineComments[lineNum]! then
             assert! ! isFinalAlternative
             continue
-          let lineLength := lineLengths[lineNum]!
           let insertionPos := lineInfo.range.endExclusive
           if r.contains insertionPos then
             assert! ! isFinalAlternative
             continue
           let insertedComment := " " ++ rp.rendering.rendered
-          let newLineLength := lineLength + insertedComment.chars.length
           r := r.insert insertionPos insertedComment
-          lineLengths := lineLengths.set! lineNum newLineLength
           containsEndOfLineComments := containsEndOfLineComments.set! lineNum true
-        | .afterToken =>
-          let (lineNum, _) := findLineInfoContaining lineInfos range.endExclusive
-          let lineLength := lineLengths[lineNum]!
-          let insertionPos := range.endExclusive
-          let insertedComment := " " ++ rp.rendering.rendered
-          let newLineLength := lineLength + insertedComment.chars.length
-          if ! isFinalAlternative && newLineLength > maxColumnWidth then
-            continue
-          r := r.alter insertionPos fun
-            | none => some insertedComment
-            | some existingInsertedComment => some <| insertedComment ++ existingInsertedComment
         break
   return r.toArray.qsort (·.1 < ·.1)
 where
