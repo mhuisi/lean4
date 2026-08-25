@@ -631,6 +631,7 @@ def determineCommentInsertions
   -- (after a token or at the end of the line) and when the line is full, earlier comments
   -- get moved before the line.
   let comments := comments.toArray.map fun (range, comments) => (range, comments.reverse)
+  let endOfLineCandidateCounts := countEndOfLineCandidates lineInfos comments
   let comments := Std.TreeMap.ofArray comments (fun a b => compareSubslicesLargest b a)
   let mut containsEndOfLineComments := Array.replicate lineInfos.size false
   let mut r : Std.HashMap rendering.Pos String  := ∅
@@ -651,7 +652,10 @@ def determineCommentInsertions
             | some existingInsertedComment => some <| insertedComment ++ existingInsertedComment
         | .beforeClosestNextNewline =>
           let (lineNum, lineInfo) := findLineInfoContaining lineInfos range.endExclusive
-          if containsEndOfLineComments[lineNum]! then
+          -- Only a single comment fits at the end of a line, so when several comments compete for
+          -- the same line, we move all of them before the line instead of arbitrarily keeping one
+          -- of them at the end of the line.
+          if endOfLineCandidateCounts[lineNum]! > 1 || containsEndOfLineComments[lineNum]! then
             assert! ! isFinalAlternative
             continue
           let insertionPos := lineInfo.range.endExclusive
@@ -666,6 +670,21 @@ def determineCommentInsertions
 where
   findLineInfoContaining (lineInfos : Array (LineInfo rendering)) (pos : rendering.Pos) : Nat × LineInfo rendering :=
     binSearchRightmost lineInfos pos (·.range.startInclusive) (· < ·) |>.get!
+
+  /--
+  Counts for every line how many comments would preferably be placed at the end of that line.
+  -/
+  countEndOfLineCandidates
+      (lineInfos : Array (LineInfo rendering))
+      (comments : Array (rendering.Subslice × Array Comment)) :
+      Array Nat := Id.run do
+    let mut counts := Array.replicate lineInfos.size 0
+    for (range, comments) in comments do
+      for c in comments do
+        if c.renderedPlacements[0]?.any (·.kind matches .beforeClosestNextNewline) then
+          let (lineNum, _) := findLineInfoContaining lineInfos range.endExclusive
+          counts := counts.modify lineNum (· + 1)
+    return counts
 
 public def insertComments
     (maxColumnWidth : Nat)
