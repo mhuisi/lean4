@@ -521,9 +521,13 @@ where
     for newComment in newComments do
       let range :=
         match newComment.kind, newComment.placement with
-        | .lineComment, .afterToken =>
-          let (_, commentStartLineInfo) := binSearchRightmost lineInfos newComment.originalWhitespaceRange.start (·.startPos) (· < ·) |>.get!
-          commentStartLineInfo.tokenRanges[0]!
+        | .lineComment, .afterToken
+        | .blockComment, .afterToken =>
+          if newComment.content.size > 1 then
+            let (_, commentStartLineInfo) := binSearchRightmost lineInfos newComment.originalWhitespaceRange.start (·.startPos) (· < ·) |>.get!
+            commentStartLineInfo.tokenRanges[0]!
+          else
+            range
         | _, _ =>
           range
       modify fun s => { s with
