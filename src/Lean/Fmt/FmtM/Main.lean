@@ -190,6 +190,9 @@ where
     | .final d =>
       let d ← goMemoized d
       return .final d
+    | .initial d =>
+      let d ← goMemoized d
+      return .initial d
     | .free d =>
       let d ← goMemoized d
       return .free d

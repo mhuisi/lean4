@@ -28,8 +28,14 @@ public section
 namespace Lean.Fmt
 
 /--
-Bitmap that tracks whether there is a `Doc.final` node on the same line *before* the current
-document that is being resolved by the formatter or on the same line *after* the current document.
+Bitmap that tracks the fullness of the two edge positions of the document that is currently being
+resolved by the formatter, i.e. the position immediately *before* the document and the position
+immediately *after* it.
+
+A position is *full* if no text may be emitted between it and the end of its line, which is what
+`Doc.final` asserts about the position after it, and *initial* if no text may be emitted between
+the start of its line and the position, which is what `Doc.initial` asserts about the position
+before it. Both properties are tracked independently for both edge positions.
 
 In the formatter, we case split on the fullness state in several places and then prune subtrees
 of the search when we notice that they are inconsistent with the actual document currently being
@@ -40,8 +46,10 @@ def FullnessState := UInt8
   deriving Inhabited, BEq, Hashable
 
 @[inline]
-def FullnessState.mk (isFullBefore : Bool) (isFullAfter : Bool) : FullnessState :=
-  (isFullBefore.toUInt8 <<< 1) ||| isFullAfter.toUInt8
+def FullnessState.mk (isFullBefore : Bool) (isFullAfter : Bool)
+    (isInitialBefore : Bool) (isInitialAfter : Bool) : FullnessState :=
+  (isInitialBefore.toUInt8 <<< 3) ||| (isInitialAfter.toUInt8 <<< 2) |||
+    (isFullBefore.toUInt8 <<< 1) ||| isFullAfter.toUInt8
 
 @[inline]
 def FullnessState.isFullBefore (s : FullnessState) : Bool :=
@@ -54,6 +62,16 @@ def FullnessState.isFullAfter (s : FullnessState) : Bool :=
   (s &&& 0b1) != 0
 
 @[inline]
+def FullnessState.isInitialBefore (s : FullnessState) : Bool :=
+  let s : UInt8 := s
+  (s &&& 0b1000) != 0
+
+@[inline]
+def FullnessState.isInitialAfter (s : FullnessState) : Bool :=
+  let s : UInt8 := s
+  (s &&& 0b100) != 0
+
+@[inline]
 def FullnessState.setFullBefore (s : FullnessState) (isFullBefore : Bool) : FullnessState :=
   let s : UInt8 := s
   (s &&& (0b11111101 : UInt8)) ||| (isFullBefore.toUInt8 <<< 1)
@@ -62,6 +80,16 @@ def FullnessState.setFullBefore (s : FullnessState) (isFullBefore : Bool) : Full
 def FullnessState.setFullAfter (s : FullnessState) (isFullAfter : Bool) : FullnessState :=
   let s : UInt8 := s
   (s &&& (0b11111110 : UInt8)) ||| isFullAfter.toUInt8
+
+@[inline]
+def FullnessState.setInitialBefore (s : FullnessState) (isInitialBefore : Bool) : FullnessState :=
+  let s : UInt8 := s
+  (s &&& (0b11110111 : UInt8)) ||| (isInitialBefore.toUInt8 <<< 3)
+
+@[inline]
+def FullnessState.setInitialAfter (s : FullnessState) (isInitialAfter : Bool) : FullnessState :=
+  let s : UInt8 := s
+  (s &&& (0b11111011 : UInt8)) ||| (isInitialAfter.toUInt8 <<< 2)
 
 /-- Whether resolving a document is guaranteed to fail in the given `FullnessState`. -/
 abbrev FailureCond := FullnessState → Bool
@@ -191,7 +219,7 @@ inductive Doc (τ : Type) where
   `text` nodes are never broken apart by the formatter.
 
   The formatter will never choose a rendering where a non-empty `text` node is placed on the same
-  line after a `final` node.
+  line after a `final` node or on the same line before an `initial` node.
 
   Examples:
 
@@ -208,6 +236,18 @@ inductive Doc (τ : Type) where
     (append
       (final (text "a"))
       (text "b"))
+    (text "c")
+  ```
+  produces
+  ```
+  c
+  ```
+  ---
+  ```
+  either
+    (append
+      (text "b")
+      (initial (text "a")))
     (text "c")
   ```
   produces
@@ -446,6 +486,26 @@ inductive Doc (τ : Type) where
   -/
   | final (d : Doc τ)
   /--
+  Enforces that no text can be placed on the same line before the inner document.
+  The start of the document is treated as the start of a line, so an `initial` node at the very
+  beginning of the document is always admissible, independently of the offset it is formatted at.
+
+  Example:
+
+  ```
+  either
+    (append
+      (text "b")
+      (initial (text "a")))
+    (text "c")
+  ```
+  produces
+  ```
+  c
+  ```
+  -/
+  | initial (d : Doc τ)
+  /--
   Hides the cost of an inner document from the surrounding document, which is resolved as if
   `free d` was `text ""`.
 
@@ -583,22 +643,32 @@ with
   @[computed_field] isFailure : (τ : Type) → Doc τ → FailureCond
     -- `failure` always fails. All resolutions that contain `failure` can be pruned.
     | _, .failure => fun _ => true
-    -- `newline` starts a new line, which can never be full at this point.
-    -- Hence, resolutions in which `isFullAfter` is true directly after `newline` can be pruned.
-    | _, .newline .. => (·.isFullAfter)
+    -- `newline` ends the current line and starts a new one. The new line can never be full at its
+    -- start and the old line can never be initial at its end.
+    -- Hence, resolutions in which `isFullAfter` or `isInitialBefore` are true directly at
+    -- `newline` can be pruned.
+    | _, .newline .. => fun state => state.isFullAfter || state.isInitialBefore
     | _, .text s => fun state =>
-      match state.isFullBefore, state.isFullAfter with
-      -- `text` nodes can be placed on non-full lines.
-      | false, false => false
-      -- `text` nodes cannot turn a line from being full to non-full.
-      | true, false => true
-      -- `text` nodes cannot turn a line from being non-full to full.
-      | false, true => true
-      -- Empty text nodes can be inserted on a full line, while non-empty text nodes cannot.
-      | true, true => ! s.isEmpty
+      -- Fullness and initialness impose the same constraints on `text` in opposite directions.
+      let isFailureFor (before after : Bool) :=
+        match before, after with
+        -- `text` nodes can be placed on non-full lines.
+        | false, false => false
+        -- `text` nodes cannot turn a line from being full to non-full.
+        | true, false => true
+        -- `text` nodes cannot turn a line from being non-full to full.
+        | false, true => true
+        -- Empty text nodes can be inserted on a full line, while non-empty text nodes cannot.
+        | true, true => ! s.isEmpty
+      isFailureFor state.isFullBefore state.isFullAfter ||
+        isFailureFor state.isInitialBefore state.isInitialAfter
     -- `final` designates that the line is full.
     -- Hence, resolutions in which `isFullAfter` is false directly after `final` can be pruned.
     | _, .final _ => (! ·.isFullAfter)
+    -- `initial` designates that the line is initial.
+    -- Hence, resolutions in which `isInitialBefore` is false directly before `initial` can be
+    -- pruned.
+    | _, .initial _ => (! ·.isInitialBefore)
     -- For all of the remaining inner nodes, whether resolving the document is guaranteed to fail
     -- depends on the child nodes below the inner node or on more context.
     | _, _ => fun _ => false
@@ -617,6 +687,7 @@ with
     | _, .aligned d
     | _, .unindented _ d
     | _, .final d
+    | _, .initial d
     | _, .free d
     | _, .unflattenable d
     | _, .guarded _ d
@@ -651,6 +722,7 @@ with
     | _, .aligned d
     | _, .unindented _ d
     | _, .final d
+    | _, .initial d
     | _, .free d
     | _, .guarded _ d
     | _, .costing _ d =>
@@ -681,6 +753,7 @@ with
     | _, .aligned d
     | _, .unindented _ d
     | _, .final d
+    | _, .initial d
     | _, .free d
     | _, .guarded _ d
     | _, .costing _ d =>
@@ -712,6 +785,7 @@ with
     | _, .aligned d
     | _, .unindented _ d
     | _, .final d
+    | _, .initial d
     | _, .free d
     | _, .guarded _ d
     | _, .costing _ d =>
@@ -1160,6 +1234,7 @@ where
     | .unflattenable da, .unflattenable db
     | .aligned da, .aligned db
     | .final da, .final db
+    | .initial da, .initial db
     | .free da, .free db =>
       goMemoized da db
     | .unindented onca da, .unindented oncb db =>

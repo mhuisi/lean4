@@ -109,6 +109,9 @@ where
     | .final d =>
       let d ← goMemoized d isFlattened
       return .final d
+    | .initial d =>
+      let d ← goMemoized d isFlattened
+      return .initial d
     | .free d =>
       let d ← goMemoized d isFlattened
       return .free d
@@ -350,11 +353,12 @@ inductive TaintedMeasure (τ : Type) where
   Merge two tainted measures. Resolving this tainted measure amounts to resolving the first measure
   and only resolving the second measure if the resolution of the first tainted measure failed.
 
-  Since there are only four different fullness states in which each document can be resolved and
+  Since there are only 16 different fullness states in which each document can be resolved and
   potentially fail, since the failure of resolution is independent of column position and
   indentation, and since the resolver for tainted measures memoizes whether a resolution failed,
-  the resolver for tainted measures will only need to try resolving at most `4*amount of documents`
-  alternatives overall, so the time complexity of the formatter remains bounded.
+  the resolver for tainted measures will only need to try resolving at most
+  `16*amount of documents` alternatives overall, so the time complexity of the formatter remains
+  bounded.
   -/
   | mergeTainted (tm1 tm2 : TaintedMeasure τ) (maxNewlineCount? : Option Nat)
   /--
@@ -393,7 +397,7 @@ inductive TaintedMeasure (τ : Type) where
   Amounts to resolving the given document in the given context, picking a measure from the set of
   measures produced by the resolution and memoizing whether the resolution failed so that
   no failed resolution of a tainted measure is tried twice in the same fullness state and the time
-  complexity for tainted measure resolution remains bounded by `4*amount of documents`.
+  complexity for tainted measure resolution remains bounded by `16*amount of documents`.
 
   Notably, the resolution of the document in the given context skips the taintedness-check for the
   top level node, so this will process the top-level node of the document and then recurse with
@@ -655,7 +659,7 @@ Since resolution failure only depends on the document and the fullness state sur
 this key does not contain the column position or the current indentation level.
 
 Memoizing the failure state in the resolver for tainted measures ensures that we never have to
-resolve a single document (as identified by its pointer) more than 4 times.
+resolve a single document (as identified by its pointer) more than 16 times.
 -/
 structure FailureCacheKey (τ : Type) where
   docPtr : PtrKey (Doc τ)
@@ -689,7 +693,7 @@ Maintains three separate memoization caches:
   the document is resolved in, so this cache allows pruning subtrees of the search more
   aggressively.
   In the resolver for tainted measures, this cache also ensures that we never try to resolve the
-  same document more than four times, which bounds the time complexity of the tainted resolver.
+  same document more than 16 times, which bounds the time complexity of the tainted resolver.
   In the Racket implementation, this cache is a mutable cache on the document that is only used
   in the resolver for tainted measures to bound its time complexity. However, we've found that
   performance improves when also enabling it for the regular resolver.
@@ -909,6 +913,15 @@ partial def MeasureSet.resolveCore : Resolver σ τ :=
       let set2 ← MeasureSet.resolve d columnPos indentation nonCumulativeIndentation
         (fullness.setFullAfter true)
       return .merge set1 set2 (prunable := false)
+    | .initial d =>
+      -- Dual to `final`: the failure condition of `initial` ensures that `fullness.isInitialBefore`
+      -- is true when we reach this point, but within `initial`, the `initial` node imposes no
+      -- constraints, so we case-split on `fullness.isInitialBefore` here.
+      let set1 ← MeasureSet.resolve d columnPos indentation nonCumulativeIndentation
+        (fullness.setInitialBefore false)
+      let set2 ← MeasureSet.resolve d columnPos indentation nonCumulativeIndentation
+        (fullness.setInitialBefore true)
+      return .merge set1 set2 (prunable := false)
     | .free d =>
       let set ← MeasureSet.resolve d columnPos indentation nonCumulativeIndentation fullness
       let .ok measure ← set.extractAtMostOne? (taintedResolution := true)
@@ -936,29 +949,22 @@ partial def MeasureSet.resolveCore : Resolver σ τ :=
         fullness
       return .merge set1 set2 (prunable := false)
     | .append d1 d2 =>
-      -- We can't tell whether the line at the end of `d1` will be full in advance, which decides
-      -- whether we need to set `isFullAfter` on the left side of the `append` and `isFullBefore`
-      -- on the right side of the `append`, so we case-split on these two alternatives and then
-      -- later prune subtrees that are inconsistent with the given fullness state.
-      let set1 ← analyzeAppend
-        d
-        d1
-        d2
-        columnPos
-        indentation
-        nonCumulativeIndentation
-        fullness
-        false
-      let set2 ← analyzeAppend
-        d
-        d1
-        d2
-        columnPos
-        indentation
-        nonCumulativeIndentation
-        fullness
-        true
-      return .merge set1 set2 (prunable := false)
+      -- We can't tell whether the position between `d1` and `d2` will be full or initial in
+      -- advance, which decides whether we need to set `isFullAfter` and `isInitialAfter` on the
+      -- left side of the `append` and `isFullBefore` and `isInitialBefore` on the right side of
+      -- the `append`, so we case-split on these four alternatives and then later prune subtrees
+      -- that are inconsistent with the given fullness state.
+      let analyze (isMidFull isMidInitial : Bool) : ResolverM σ τ (MeasureSet τ) :=
+        analyzeAppend d d1 d2 columnPos indentation nonCumulativeIndentation fullness
+          isMidFull isMidInitial
+      let set1 ← analyze false false
+      let set2 ← analyze false true
+      let set3 ← analyze true false
+      let set4 ← analyze true true
+      return .merge
+        (.merge set1 set2 (prunable := false))
+        (.merge set3 set4 (prunable := false))
+        (prunable := false)
 where
   /--
   Resolves `d1` to a measure set, then resolves `d2` with each of the column positions in the
@@ -968,9 +974,16 @@ where
   -/
   analyzeAppend (d d1 d2 : Doc τ)
       (columnPos indentation nonCumulativeIndentation : Nat)
-      (fullness : FullnessState) (isMidFull : Bool) : ResolverM σ τ (MeasureSet τ) := do
-    let fullness1 := fullness.setFullAfter isMidFull
-    let fullness2 := fullness.setFullBefore isMidFull
+      (fullness : FullnessState) (isMidFull isMidInitial : Bool) :
+      ResolverM σ τ (MeasureSet τ) := do
+    let fullness1 := fullness.setFullAfter isMidFull |>.setInitialAfter isMidInitial
+    let fullness2 := fullness.setFullBefore isMidFull |>.setInitialBefore isMidInitial
+    -- `d2` is resolved in `fullness2` for every measure of `d1`, so if it is already known to fail
+    -- there, resolving `d1` cannot contribute any measure. Checking this up-front prunes the
+    -- inconsistent alternatives of the case split above before paying for the left side, which
+    -- matters most when `d2` is a text node adjacent to the boundary.
+    if ← isFailing d2 fullness2 then
+      return .set []
     let set1 ← MeasureSet.resolve
       d1
       columnPos
@@ -1069,7 +1082,7 @@ partial def TaintedMeasure.resolve? : TaintedResolver σ τ := TaintedResolver.m
     | .mergeTainted tm1 tm2 _ =>
       -- We need to try both alternatives here when the first alternative fails.
       -- However, such failures only depend on the document and the surrounding fullness state,
-      -- so this will never try more than 4 separate alternatives per document overall,
+      -- so this will never try more than 16 separate alternatives per document overall,
       -- which bounds the time complexity of the tainted resolver.
       let some m1 ← tm1.resolve?
         | let m2? ← tm2.resolve?
@@ -1179,12 +1192,20 @@ failed, i.e. if there is no interpretation of `d` that does not result in `failu
 -/
 def resolve? (d : Doc τ) (offset : Nat) (taintedResolution : Bool) : Except FormattingError (Measure τ) :=
   runST fun _ => ResolverM.run do
-    -- We cannot tell in advance whether the last line of `d` will be full, so we case split on
-    -- `isFullAfter` of the fullness state and later prune subtrees of the search
-    -- when we notice that they are inconsistent with the actual document.
-    let ms1 ← MeasureSet.resolve d offset 0 0 (.mk false false)
-    let ms2 ← MeasureSet.resolve d offset 0 0 (.mk false true)
-    let ms := ms1.merge ms2 (prunable := false)
+    -- We cannot tell in advance whether the last line of `d` will be full or whether its first line
+    -- will be initial, so we case split on `isFullAfter` and `isInitialBefore` of the fullness
+    -- state and later prune subtrees of the search when we notice that they are inconsistent with
+    -- the actual document. In particular, this means that the start and the end of the document are
+    -- treated as the start and the end of a line, independently of `offset`.
+    let resolveAt (isFullAfter isInitialBefore : Bool) :=
+      MeasureSet.resolve d offset 0 0
+        (.mk (isFullBefore := false) isFullAfter isInitialBefore (isInitialAfter := false))
+    let ms1 ← resolveAt false false
+    let ms2 ← resolveAt false true
+    let ms3 ← resolveAt true false
+    let ms4 ← resolveAt true true
+    let ms := (ms1.merge ms2 (prunable := false)).merge
+      (ms3.merge ms4 (prunable := false)) (prunable := false)
     ms.extractAtMostOne? taintedResolution
 
 /--

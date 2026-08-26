@@ -267,6 +267,7 @@ where
     | .indented _ _ d
     | .unindented _ d
     | .final d
+    | .initial d
     | .free d
     | .guarded _ d
     | .costing _ d =>

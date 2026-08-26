@@ -285,3 +285,152 @@ linelinelinelinelinelinelinelinelinelinelinelinelinelinelinelinelinelinelineline
 -/
 #guard_msgs in
 #eval test 100 (concated 100)
+
+/-!
+`final` and its dual `initial`.
+-/
+
+/--
+info:
+cccc
+-/
+#guard_msgs in
+#eval test 80 (.either (.append (.final (.text "a")) (.text "b")) (.text "cccc"))
+
+/--
+info:
+ba
+-/
+#guard_msgs in
+#eval test 80 (.append (.text "b") (.final (.text "a")))
+
+/--
+info:
+a
+b
+-/
+#guard_msgs in
+#eval test 80 (.join #[.final (.text "a"), .hardNl, .text "b"])
+
+/--
+info:
+a
+-/
+#guard_msgs in
+#eval test 80 (.append (.final (.text "a")) .empty)
+
+/-- info: none -/
+#guard_msgs in
+#eval format? 80 cutoff (.append (.final (.text "a")) (.text "b")) (taintedResolution := true)
+  |>.toOption.map (·.rendering)
+
+/--
+info:
+cccc
+-/
+#guard_msgs in
+#eval test 80 (.either (.append (.text "b") (.initial (.text "a"))) (.text "cccc"))
+
+/--
+info:
+ab
+-/
+#guard_msgs in
+#eval test 80 (.append (.initial (.text "a")) (.text "b"))
+
+/--
+info:
+b
+a
+-/
+#guard_msgs in
+#eval test 80 (.join #[.text "b", .hardNl, .initial (.text "a")])
+
+/--
+info:
+a
+-/
+#guard_msgs in
+#eval test 80 (.append .empty (.initial (.text "a")))
+
+-- The start of the document is treated as the start of a line, even at a non-zero offset.
+/--
+info:
+hello: a
+-/
+#guard_msgs in
+#eval test 80 (.initial (.text "a")) "hello: "
+
+/-- info: none -/
+#guard_msgs in
+#eval format? 80 cutoff (.append (.text "b") (.initial (.text "a"))) (taintedResolution := true)
+  |>.toOption.map (·.rendering)
+
+-- Fullness propagates through empty text nodes in both directions.
+/--
+info:
+cccc
+-/
+#guard_msgs in
+#eval test 80
+  (.either (.join #[.text "b", .empty, .empty, .initial (.text "a")]) (.text "cccc"))
+
+/--
+info:
+cccc
+-/
+#guard_msgs in
+#eval test 80
+  (.either (.join #[.final (.text "a"), .empty, .empty, .text "b"]) (.text "cccc"))
+
+-- The formatter picks the alternative that moves an `initial` node to a fresh line.
+/--
+info:
+x
+y
+-/
+#guard_msgs in
+#eval test 80
+  (.append (.text "x") (.oneOf #[.initial (.text "y"), .append .hardNl (.initial (.text "y"))]))
+
+-- A node that is both `initial` and `final` is placed on a line of its own.
+/--
+info:
+x
+y
+z
+-/
+#guard_msgs in
+#eval test 80 (.join #[
+  .text "x",
+  .oneOf #[.empty, .hardNl],
+  .initial (.final (.text "y")),
+  .oneOf #[.empty, .hardNl],
+  .text "z"
+])
+
+-- Nested `initial` nodes impose no additional constraints.
+/--
+info:
+b
+ac
+-/
+#guard_msgs in
+#eval test 80 (.join #[.text "b", .hardNl, .initial (.initial (.text "a")), .text "c"])
+
+-- Flattening a newline in front of an `initial` node is rejected, since it would place text
+-- before the `initial` node.
+/--
+info:
+b
+a
+-/
+#guard_msgs in
+#eval test 80 (.maybeFlattened (.join #[.text "b", .nl, .initial (.text "a")]))
+
+/--
+info:
+a b
+-/
+#guard_msgs in
+#eval test 80 (.maybeFlattened (.join #[.initial (.text "a"), .nl, .text "b"]))
