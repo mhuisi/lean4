@@ -142,10 +142,7 @@ def Comment.renderedPlacements (c : Comment) : Array RenderedPlacement :=
     let kinds : Array RenderedPlacementKind :=
       match c.kind, c.placement with
       | .lineComment, .afterToken =>
-        if rendering.isMultiLine then
-          #[.afterClosestPreviousNewline]
-        else
-          #[.beforeClosestNextNewline, .afterClosestPreviousNewline]
+        #[.beforeClosestNextNewline, .afterClosestPreviousNewline]
       | .lineComment, .onLineBeforeToken =>
         #[.afterClosestPreviousNewline]
       | .blockComment, .afterToken =>
@@ -597,7 +594,7 @@ where
     -- with the closest range after the token and block comments after a token with the closest
     -- range before the token.
     let (commentsWithPreviousRangeFallback, commentsWithNextRangeFallback) :=
-      comments.partition fun c => c.kind matches .blockComment && c.placement matches .afterToken
+      comments.partition fun c => c.placement matches .afterToken
     let (_, _, rangesForPreviousRangeFallback) :=
       binSearchRightmost syntaxToRenderedByStop range.stop (·.1.stop) (· < ·) |>.get!
     let (_, _, rangesForNextRangeFallback) :=

@@ -120,43 +120,68 @@ where
       cache := s.cache.insert cacheKey v
     }
     return v
+  tag (doc : Doc FmtCost) (c : Comment) : StateM tryInsertingComments.State (Doc FmtCost) :=
+    modifyGet fun s =>
+      let (freshTagId, syntaxToTags, doc) :=
+        TaggedDoc.taggedWithRange s.freshTagId s.syntaxToTags doc c.originalWhitespaceRange .whitespace
+      (doc.doc, { s with freshTagId, syntaxToTags })
+  renderingToDoc (r : Comment.Rendering) : Doc FmtCost :=
+    let lines := r.rendered.split '\n' |>.map (Doc.text ·.toString) |>.toArray
+    .joinUsing .hardNl lines
   tryInsertComment (anchor : Doc FmtCost) (c : Comment) : StateM tryInsertingComments.State (Doc FmtCost) := do
     match c.kind, c.placement with
-    | .lineComment, .afterToken =>
-      let renderedDoc := Doc.free <| Doc.final <| Doc.text c.render[0]!.rendered
-      let renderedDoc ← modifyGet fun s =>
-        let (freshTagId, syntaxToTags, doc) :=
-          TaggedDoc.taggedWithRange s.freshTagId s.syntaxToTags renderedDoc c.originalWhitespaceRange .whitespace
-        (doc.doc, { s with freshTagId, syntaxToTags })
+    | .lineComment, .onLineBeforeToken =>
+      let doc := Doc.free <| Doc.initial <| renderingToDoc c.render[0]!
+      let doc ← tag doc c
+      let doc := doc ++ .hardNl ++ anchor
       return .oneOf #[
-        anchor ++ .text " " ++ renderedDoc,
+        doc,
         Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
       ]
-    | .lineComment, .onLineBeforeToken =>
-      return anchor
-    | .blockComment, .afterToken =>
-      if c.content.size == 1 then
-        let renderedDoc := Doc.text c.render[0]!.rendered
-        let renderedDoc ← modifyGet fun s =>
-          let (freshTagId, syntaxToTags, doc) :=
-            TaggedDoc.taggedWithRange s.freshTagId s.syntaxToTags renderedDoc c.originalWhitespaceRange .whitespace
-          (doc.doc, { s with freshTagId, syntaxToTags })
+    | .blockComment, .onLineBeforeToken =>
+      let docs := c.render.map (Doc.free <| Doc.initial <| renderingToDoc ·)
+      let docs ← docs.mapM (tag · c)
+      let docs := docs.map (· ++ .hardNl ++ anchor)
+      return .oneOf <| docs ++ #[
+        Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
+      ]
+    | .lineComment, .afterToken =>
+      let rendering := c.render[0]!
+      let onLineBeforeDoc := Doc.free <| Doc.initial <| renderingToDoc c.render[0]!
+      let onLineBeforeDoc ← tag onLineBeforeDoc c
+      let onLineBeforeDoc := onLineBeforeDoc ++ .hardNl ++ anchor
+      if rendering.isMultiLine then
         return .oneOf #[
-          anchor ++ .text " " ++ renderedDoc,
-          Doc.costing (DefaultCost.ofOverflowFallbackPenalty 1) anchor
-        ]
-      else
-        let renderedDoc := Doc.free <| Doc.final <| Doc.text c.render[0]!.rendered
-        let renderedDoc ← modifyGet fun s =>
-          let (freshTagId, syntaxToTags, doc) :=
-            TaggedDoc.taggedWithRange s.freshTagId s.syntaxToTags renderedDoc c.originalWhitespaceRange .whitespace
-          (doc.doc, { s with freshTagId, syntaxToTags })
-        return .oneOf #[
-          anchor ++ .text " " ++ renderedDoc,
+          onLineBeforeDoc,
           Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
         ]
-    | .blockComment, .onLineBeforeToken =>
-      return anchor
+      else
+        let afterLineDoc := Doc.free <| Doc.final <| renderingToDoc rendering
+        let afterLineDoc ← tag afterLineDoc c
+        let afterLineDoc := anchor ++ .text " " ++ afterLineDoc
+        return .oneOf #[
+          afterLineDoc,
+          onLineBeforeDoc,
+          Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
+        ]
+    | .blockComment, .afterToken =>
+      let (multiLineRenderings, singleLineRenderings) := c.render.partition (·.isMultiLine)
+      let onLineBeforeDocs := multiLineRenderings.map (Doc.free <| Doc.initial <| renderingToDoc ·)
+      let onLineBeforeDocs ← onLineBeforeDocs.mapM (tag · c)
+      let onLineBeforeDocs := onLineBeforeDocs.map (· ++ .hardNl ++ anchor)
+      let afterLineDocs := singleLineRenderings.map (Doc.free <| Doc.final <| renderingToDoc ·)
+      let afterLineDocs ← afterLineDocs.mapM (tag · c)
+      let afterLineDocs := afterLineDocs.map (anchor ++ .text " " ++ ·)
+      let afterTokenDocs := singleLineRenderings.map (renderingToDoc ·)
+      let afterTokenDocs ← afterTokenDocs.mapM (tag · c)
+      let afterTokenDocs := afterTokenDocs.map (anchor ++ .text " " ++ ·)
+      return .oneOf <| afterTokenDocs ++ #[
+        Doc.costing (DefaultCost.ofOverflowFallbackPenalty 1) <| .oneOf <|
+          afterLineDocs ++ onLineBeforeDocs ++ #[
+            Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
+          ]
+      ]
+
   go (d : Doc FmtCost) : StateM tryInsertingComments.State (Doc FmtCost) := do
     match d with
     | .tagged id d =>

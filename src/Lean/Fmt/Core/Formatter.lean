@@ -93,7 +93,12 @@ where
       return d
     | .text s =>
       let lines := s.split '\n' |>.map (Doc.text ·.toString) |>.toArray
-      return .joinUsing .hardNl lines
+      if lines.size == 1 then
+        return .text s
+      else if isFlattened then
+        return .failure
+      else
+        return .joinUsing .nl lines
     | .tagged id d =>
       let d ← goMemoized d isFlattened
       return .tagged id d
@@ -876,7 +881,7 @@ partial def MeasureSet.resolveCore : Resolver σ τ :=
     | .unflattenable _
     | .flattened _ =>
       -- Eliminated during pre-processing.
-      unreachable!
+      panic! "Encountered `flattened` that should have been eliminated during pre-processing"
     | .indented n isCumulative d =>
       if isCumulative then
         let ms ← MeasureSet.resolve
