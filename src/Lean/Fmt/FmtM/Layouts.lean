@@ -266,7 +266,7 @@ where
     | .unflattenable d
     | .indented _ _ d
     | .unindented _ d
-    | .full d
+    | .final d
     | .free d
     | .guarded _ d
     | .costing _ d =>

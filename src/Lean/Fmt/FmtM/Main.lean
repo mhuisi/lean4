@@ -123,7 +123,7 @@ where
   tryInsertComment (anchor : Doc FmtCost) (c : Comment) : StateM tryInsertingComments.State (Doc FmtCost) := do
     match c.kind, c.placement with
     | .lineComment, .afterToken =>
-      let renderedDoc := Doc.free <| Doc.full <| Doc.text c.render[0]!.rendered
+      let renderedDoc := Doc.free <| Doc.final <| Doc.text c.render[0]!.rendered
       let renderedDoc ← modifyGet fun s =>
         let (freshTagId, syntaxToTags, doc) :=
           TaggedDoc.taggedWithRange s.freshTagId s.syntaxToTags renderedDoc c.originalWhitespaceRange .whitespace
@@ -146,7 +146,7 @@ where
           Doc.costing (DefaultCost.ofOverflowFallbackPenalty 1) anchor
         ]
       else
-        let renderedDoc := Doc.free <| Doc.full <| Doc.text c.render[0]!.rendered
+        let renderedDoc := Doc.free <| Doc.final <| Doc.text c.render[0]!.rendered
         let renderedDoc ← modifyGet fun s =>
           let (freshTagId, syntaxToTags, doc) :=
             TaggedDoc.taggedWithRange s.freshTagId s.syntaxToTags renderedDoc c.originalWhitespaceRange .whitespace
@@ -187,9 +187,9 @@ where
     | .unindented onlyNonCumulative d =>
       let d ← goMemoized d
       return .unindented onlyNonCumulative d
-    | .full d =>
+    | .final d =>
       let d ← goMemoized d
-      return .full d
+      return .final d
     | .free d =>
       let d ← goMemoized d
       return .free d

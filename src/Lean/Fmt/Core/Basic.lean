@@ -28,8 +28,8 @@ public section
 namespace Lean.Fmt
 
 /--
-Bitmap that tracks whether there is a `Doc.full` node on the same line *before* the current document
-that is being resolved by the formatter or on the same line *after* the current document.
+Bitmap that tracks whether there is a `Doc.final` node on the same line *before* the current
+document that is being resolved by the formatter or on the same line *after* the current document.
 
 In the formatter, we case split on the fullness state in several places and then prune subtrees
 of the search when we notice that they are inconsistent with the actual document currently being
@@ -191,7 +191,7 @@ inductive Doc (τ : Type) where
   `text` nodes are never broken apart by the formatter.
 
   The formatter will never choose a rendering where a non-empty `text` node is placed on the same
-  line after a `full` node.
+  line after a `final` node.
 
   Examples:
 
@@ -206,7 +206,7 @@ inductive Doc (τ : Type) where
   ```
   either
     (append
-      (full (text "a"))
+      (final (text "a"))
       (text "b"))
     (text "c")
   ```
@@ -435,7 +435,7 @@ inductive Doc (τ : Type) where
   ```
   either
     (append
-      (full (text "a"))
+      (final (text "a"))
       (text "b"))
     (text "c")
   ```
@@ -444,7 +444,7 @@ inductive Doc (τ : Type) where
   c
   ```
   -/
-  | full (d : Doc τ)
+  | final (d : Doc τ)
   /--
   Hides the cost of an inner document from the surrounding document, which is resolved as if
   `free d` was `text ""`.
@@ -596,9 +596,9 @@ with
       | false, true => true
       -- Empty text nodes can be inserted on a full line, while non-empty text nodes cannot.
       | true, true => ! s.isEmpty
-    -- `full` designates that the line is full.
-    -- Hence, resolutions in which `isFullAfter` is false directly after `full` can be pruned.
-    | _, .full _ => (! ·.isFullAfter)
+    -- `final` designates that the line is full.
+    -- Hence, resolutions in which `isFullAfter` is false directly after `final` can be pruned.
+    | _, .final _ => (! ·.isFullAfter)
     -- For all of the remaining inner nodes, whether resolving the document is guaranteed to fail
     -- depends on the child nodes below the inner node or on more context.
     | _, _ => fun _ => false
@@ -616,7 +616,7 @@ with
     | _, .indented _ _ d
     | _, .aligned d
     | _, .unindented _ d
-    | _, .full d
+    | _, .final d
     | _, .free d
     | _, .unflattenable d
     | _, .guarded _ d
@@ -650,14 +650,14 @@ with
     | _, .indented _ _ d
     | _, .aligned d
     | _, .unindented _ d
-    | _, .full d
+    | _, .final d
     | _, .free d
     | _, .guarded _ d
     | _, .costing _ d =>
       alwaysEmptiness _ d
     | _, .either a b =>
       -- A fully accurate implementation would have to account for `failure`,
-      -- which is complicated by `full`.
+      -- which is complicated by `final`.
       (alwaysEmptiness _ a).max (alwaysEmptiness _ b)
     | _, .append a b =>
       (alwaysEmptiness _ a).max (alwaysEmptiness _ b)
@@ -680,7 +680,7 @@ with
     | _, .indented _ _ d
     | _, .aligned d
     | _, .unindented _ d
-    | _, .full d
+    | _, .final d
     | _, .free d
     | _, .guarded _ d
     | _, .costing _ d =>
@@ -711,7 +711,7 @@ with
     | _, .indented _ _ d
     | _, .aligned d
     | _, .unindented _ d
-    | _, .full d
+    | _, .final d
     | _, .free d
     | _, .guarded _ d
     | _, .costing _ d =>
@@ -1159,7 +1159,7 @@ where
     | .flattened da, .flattened db
     | .unflattenable da, .unflattenable db
     | .aligned da, .aligned db
-    | .full da, .full db
+    | .final da, .final db
     | .free da, .free db =>
       goMemoized da db
     | .unindented onca da, .unindented oncb db =>

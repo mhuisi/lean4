@@ -106,9 +106,9 @@ where
     | .unindented onlyNonCumulative d =>
       let d ← goMemoized d isFlattened
       return .unindented onlyNonCumulative d
-    | .full d =>
+    | .final d =>
       let d ← goMemoized d isFlattened
-      return .full d
+      return .final d
     | .free d =>
       let d ← goMemoized d isFlattened
       return .free d
@@ -764,7 +764,7 @@ def isFailing (d : Doc τ) (fullness : FullnessState) : ResolverM σ τ Bool := 
     -- For leaf nodes, guaranteed failure is fully determinined by `Doc.isFailure`.
     return d.isFailure _ fullness
   else if d.isFailure _ fullness then
-    -- For some inner nodes (`full` specifically), we can prune specific subtrees
+    -- For some inner nodes (`final` specifically), we can prune specific subtrees
     -- if `Doc.isFailure` yields `true` and have no information about failure otherwise.
     return true
   else
@@ -900,10 +900,10 @@ partial def MeasureSet.resolveCore : Resolver σ τ :=
           0
       let ms ← MeasureSet.resolve d columnPos indentation 0 fullness
       return ms.setHasPendingNonCumulativeIndentation nonCumulativeIndentation
-    | .full d =>
-      -- The failure condition of `full` ensures that `fullness.isFullAfter` is true when we reach
-      -- this point. However, within `full`, the `full` node imposes no constraints, so we case-split
-      -- on `fullness.isFullAfter` here.
+    | .final d =>
+      -- The failure condition of `final` ensures that `fullness.isFullAfter` is true when we reach
+      -- this point. However, within `final`, the `final` node imposes no constraints, so we
+      -- case-split on `fullness.isFullAfter` here.
       let set1 ← MeasureSet.resolve d columnPos indentation nonCumulativeIndentation
         (fullness.setFullAfter false)
       let set2 ← MeasureSet.resolve d columnPos indentation nonCumulativeIndentation

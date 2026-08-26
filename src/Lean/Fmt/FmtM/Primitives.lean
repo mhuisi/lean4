@@ -110,8 +110,8 @@ public def maybeFlattened (d : TaggedDoc) : TaggedDoc :=
   propagateMetaData d Doc.maybeFlattened
 public def unindented (d : TaggedDoc) (onlyNonCumulative : Bool) : TaggedDoc :=
   propagateMetaData d (Doc.unindented onlyNonCumulative)
-public def full (d : TaggedDoc) : TaggedDoc :=
-  propagateMetaData d Doc.full
+public def final (d : TaggedDoc) : TaggedDoc :=
+  propagateMetaData d Doc.final
 public def free (d : TaggedDoc) : TaggedDoc :=
   propagateMetaData d Doc.free
 public def guarded (p : Assertion) (d : TaggedDoc) : TaggedDoc :=
@@ -409,7 +409,7 @@ end TaggedDoc
 
 export TaggedDoc (untagged taggedNode taggedText taggedWhitespace isTagged tag addMetaData getMetaData? failure newline nl «break» hardNl text empty space nested
   hardNested doublyNested withFailureFallbackPenalty withOverflowFallbackPenalty withHeightFallbackPenalty fallbackOnFailure fallbackOnOverflow fallbackOnHeight
-  aligned unflattenable flattened maybeFlattened unindented full free guarded either oneOf append join joinUsing fill fillWrapping fillUsing
+  aligned unflattenable flattened maybeFlattened unindented final free guarded either oneOf append join joinUsing fill fillWrapping fillUsing
   fillSomeUsing fillUsingSpace fillUsingSpaceWrapping fillSomeUsingSpace fillSomeUsingSpaceWrapping combine stickyCombine Sticky StickynessKind propagateStickyness PseudoAligned pseudoAligned isPseudoAligned
   needsAppBrackets sticky SelfDelimited mkSelfDelimited isSelfDelimited isBracketed RawFallback mkRawFallback isRawFallback getSticky? getStickynessKind? withStickyAlt withPosition SepArray propagateMetaData
   PseudoDedented pseudoDedented getPseudoDedented?)
