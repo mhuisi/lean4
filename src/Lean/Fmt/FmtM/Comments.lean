@@ -637,7 +637,7 @@ def determineCommentInsertions
   let comments := comments.toArray.map fun (range, comments) => (range, comments.reverse)
   let endOfLineCandidateCounts := countEndOfLineCandidates lineInfos comments
   let comments := Std.TreeMap.ofArray comments (fun a b => compareSubslicesLargest b a)
-  let mut containsEndOfLineComments := Array.replicate lineInfos.size false
+  let mut containsEndOfLineComments := lineInfos.map (·.range.toSlice.contains "--")
   let mut r : Std.HashMap rendering.Pos String  := ∅
   for (range, comments) in comments do
     for c in comments do
