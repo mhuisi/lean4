@@ -183,7 +183,7 @@ where
       let afterTokenDoc := anchor ++ .text " " ++ afterTokenDoc
       return .oneOf #[
         afterTokenDoc,
-        Doc.costing (DefaultCost.ofOverflowFallbackPenalty 1) afterLineDoc,
+        afterLineDoc,
         Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
       ]
   goMemoized (v : Doc FmtCost)
