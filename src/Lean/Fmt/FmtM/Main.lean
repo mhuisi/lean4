@@ -78,13 +78,6 @@ def normalize (rendering : String) : String := Id.run do
   let lines := lines.push ""
   return lines.iter.intercalateString "\n"
 
-public inductive tryInsertingComments.ParentKind where
-  | appendLeft
-  | appendRight
-  | other
-deriving Inhabited, BEq, Hashable
-
-
 public structure tryInsertingComments.Result where
   doc : Doc FmtCost
   pendingComments : Array Comment
