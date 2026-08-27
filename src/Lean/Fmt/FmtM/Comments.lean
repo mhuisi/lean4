@@ -28,7 +28,7 @@ namespace Lean.Fmt
 public inductive Comment.Whitespace where
   | leading
   | trailing
-  deriving Inhabited, Repr
+  deriving Inhabited, BEq, Repr
 
 /-- Comment placement in the input `Syntax`. -/
 public inductive Comment.Placement where
@@ -40,7 +40,7 @@ public inductive Comment.Placement where
 public inductive Comment.Kind where
   | lineComment
   | blockComment
-  deriving Inhabited, Repr
+  deriving Inhabited, BEq, Repr
 
 /-- Symbol that the comment starts with. -/
 def Comment.Kind.startSymbol (kind : Comment.Kind) : String :=
@@ -85,7 +85,7 @@ public structure Comment where
   of the comment relative to the least indented line with content in the comment.
   -/
   content : Array String
-  deriving Inhabited, Repr
+  deriving Inhabited, BEq, Repr
 
 public structure Comment.Rendering where
   rendered : String
@@ -120,11 +120,12 @@ public def Comment.render (c : Comment) : Array Rendering :=
       #[⟨multiLineRendering, true⟩]
 
 /-- Where this comment should be placed in the rendered document. -/
-inductive Comment.RenderedPlacementKind where
+public inductive Comment.RenderedPlacementKind where
   /-- Placed on a separate line before the token that this comment is attached to. -/
   | afterClosestPreviousNewline
   /-- Placed on the end of the same line as the token that this comment is attached to. -/
   | beforeClosestNextNewline
+  | afterToken
 
 structure Comment.RenderedPlacement where
   kind : RenderedPlacementKind
@@ -666,6 +667,8 @@ def determineCommentInsertions
           let insertedComment := " " ++ rp.rendering.rendered
           r := r.insert insertionPos insertedComment
           containsEndOfLineComments := containsEndOfLineComments.set! lineNum true
+        | .afterToken =>
+          unreachable!
         break
   return r.toArray.qsort (·.1 < ·.1)
 where

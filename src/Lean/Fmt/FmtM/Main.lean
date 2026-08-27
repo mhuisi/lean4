@@ -78,9 +78,36 @@ def normalize (rendering : String) : String := Id.run do
   let lines := lines.push ""
   return lines.iter.intercalateString "\n"
 
+public inductive tryInsertingComments.ParentKind where
+  | appendLeft
+  | appendRight
+  | other
+deriving Inhabited, BEq, Hashable
+
+
+public structure tryInsertingComments.Result where
+  doc : Doc FmtCost
+  pendingComments : Array Comment
+
+private def placement (c : Comment) : Comment.RenderedPlacementKind :=
+  match c.kind, c.placement with
+  | .lineComment, .onLineBeforeToken
+  | .blockComment, .onLineBeforeToken =>
+    .afterClosestPreviousNewline
+  | .lineComment, .afterToken =>
+    if c.content.size > 1 then
+      .afterClosestPreviousNewline
+    else
+      .beforeClosestNextNewline
+  | .blockComment, .afterToken =>
+    if c.content.size > 1 then
+      .afterClosestPreviousNewline
+    else
+      .afterToken
+
 public structure tryInsertingComments.State where
   comments : Std.HashMap TagId (Syntax.Range × Array Comment)
-  cache : Std.HashMap (PtrKey (Doc FmtCost)) (Doc FmtCost)
+  cache : Std.HashMap (PtrKey (Doc FmtCost)) tryInsertingComments.Result
   freshTagId : TagId
   syntaxToTags : Std.HashMap Syntax.Range (Array TagId × RangeKind)
 
@@ -102,24 +129,19 @@ public def tryInsertingComments
       | continue
     let tag := tags[0]!
     comments' := comments'.insert tag (range, comments)
-  let (doc, s) := go doc |>.run {
+  let init := {
     comments := comments'
     cache := ∅
     freshTagId
     syntaxToTags
   }
+  let mut (doc, s) := StateT.run (s := init) do
+    let mut ⟨d, p⟩ ← go doc
+    for c in p do
+      d ← tryInsertingComment d c
+    return d
   return (doc, s.syntaxToTags)
 where
-  goMemoized (v : Doc FmtCost) : StateM tryInsertingComments.State (Doc FmtCost) := do
-    let cacheKey := unsafe PtrKey.ofKey v
-    if let some v := (← get).cache.get? cacheKey then
-      return v
-    let v ← go v
-    modify fun s => {
-      s with
-      cache := s.cache.insert cacheKey v
-    }
-    return v
   tag (doc : Doc FmtCost) (c : Comment) : StateM tryInsertingComments.State (Doc FmtCost) :=
     modifyGet fun s =>
       let (freshTagId, syntaxToTags, doc) :=
@@ -127,114 +149,111 @@ where
       (doc.doc, { s with freshTagId, syntaxToTags })
   renderingToDoc (r : Comment.Rendering) : Doc FmtCost :=
     let lines := r.rendered.split '\n' |>.map (Doc.text ·.toString) |>.toArray
-    .joinUsing .hardNl lines
-  tryInsertComment (anchor : Doc FmtCost) (c : Comment) : StateM tryInsertingComments.State (Doc FmtCost) := do
-    match c.kind, c.placement with
-    | .lineComment, .onLineBeforeToken =>
-      let doc := Doc.free <| Doc.initial <| renderingToDoc c.render[0]!
-      let doc ← tag doc c
-      let doc := doc ++ .hardNl ++ anchor
-      return .oneOf #[
-        doc,
-        Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
-      ]
-    | .blockComment, .onLineBeforeToken =>
+    .aligned <| .joinUsing .hardNl lines
+  tryInsertingComment (anchor : Doc FmtCost) (c : Comment) : StateM tryInsertingComments.State (Doc FmtCost) := do
+    match placement c with
+    | .afterClosestPreviousNewline =>
       let docs := c.render.map (Doc.free <| Doc.initial <| renderingToDoc ·)
       let docs ← docs.mapM (tag · c)
-      let docs := docs.map (· ++ .hardNl ++ anchor)
+      let docs := docs.map (.aligned <| · ++ .hardNl ++ anchor)
       return .oneOf <| docs ++ #[
         Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
       ]
-    | .lineComment, .afterToken =>
-      let rendering := c.render[0]!
-      let onLineBeforeDoc := Doc.free <| Doc.initial <| renderingToDoc c.render[0]!
-      let onLineBeforeDoc ← tag onLineBeforeDoc c
-      let onLineBeforeDoc := onLineBeforeDoc ++ .hardNl ++ anchor
-      if rendering.isMultiLine then
-        return .oneOf #[
-          onLineBeforeDoc,
-          Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
-        ]
-      else
-        let afterLineDoc := Doc.free <| Doc.final <| renderingToDoc rendering
-        let afterLineDoc ← tag afterLineDoc c
-        let afterLineDoc := anchor ++ .text " " ++ afterLineDoc
-        return .oneOf #[
-          afterLineDoc,
-          onLineBeforeDoc,
-          Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
-        ]
-    | .blockComment, .afterToken =>
-      let (multiLineRenderings, singleLineRenderings) := c.render.partition (·.isMultiLine)
-      let onLineBeforeDocs := multiLineRenderings.map (Doc.free <| Doc.initial <| renderingToDoc ·)
-      let onLineBeforeDocs ← onLineBeforeDocs.mapM (tag · c)
-      let onLineBeforeDocs := onLineBeforeDocs.map (· ++ .hardNl ++ anchor)
-      let afterLineDocs := singleLineRenderings.map (Doc.free <| Doc.final <| renderingToDoc ·)
+    | .beforeClosestNextNewline =>
+      let docs := c.render.filter (! ·.isMultiLine)
+        |>.map (Doc.free <| Doc.final <| renderingToDoc ·)
+      let docs ← docs.mapM (tag · c)
+      let docs := docs.map (anchor ++ .text " " ++ ·)
+      return .oneOf <| docs ++ #[
+        Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
+      ]
+    | .afterToken =>
+      let renderings := c.render.filter (! ·.isMultiLine)
+      let afterLineDocs := renderings.map (Doc.free <| Doc.final <| renderingToDoc ·)
       let afterLineDocs ← afterLineDocs.mapM (tag · c)
       let afterLineDocs := afterLineDocs.map (anchor ++ .text " " ++ ·)
-      let afterTokenDocs := singleLineRenderings.map (renderingToDoc ·)
+      let afterTokenDocs := renderings.map (renderingToDoc ·)
       let afterTokenDocs ← afterTokenDocs.mapM (tag · c)
       let afterTokenDocs := afterTokenDocs.map (anchor ++ .text " " ++ ·)
       return .oneOf <| afterTokenDocs ++ #[
-        Doc.costing (DefaultCost.ofOverflowFallbackPenalty 1) <| .oneOf <|
-          afterLineDocs ++ onLineBeforeDocs ++ #[
-            Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
-          ]
+        Doc.costing (DefaultCost.ofOverflowFallbackPenalty 1) <| .oneOf afterLineDocs,
+        Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
       ]
-
-  go (d : Doc FmtCost) : StateM tryInsertingComments.State (Doc FmtCost) := do
+  goMemoized (v : Doc FmtCost)
+      : StateM tryInsertingComments.State tryInsertingComments.Result := do
+    let cacheKey := unsafe PtrKey.ofKey v
+    if let some r := (← get).cache.get? cacheKey then
+      return r
+    let r ← go v
+    modify fun s => {
+      s with
+      cache := s.cache.insert cacheKey r
+    }
+    return r
+  go (d : Doc FmtCost)
+      : StateM tryInsertingComments.State tryInsertingComments.Result := do
     match d with
     | .tagged id d =>
-      let d ← goMemoized d
+      let ⟨d, p⟩ ← goMemoized d
       let tagged := .tagged id d
       let some (_, commentsForId) := (← get).comments.get? id
-        | return tagged
-      let mut result := tagged
-      for c in commentsForId do
-        result ← tryInsertComment result c
-      return result
+        | return ⟨tagged, p⟩
+      return ⟨tagged, p ++ commentsForId⟩
     | .failure
     | .text _
     | .newline _ =>
-      return d
+      return ⟨d, #[]⟩
     | .unflattenable d =>
-      let d ← goMemoized d
-      return .unflattenable d
+      let ⟨d, p⟩ ← goMemoized d
+      return ⟨.unflattenable d, p⟩
     | .flattened d =>
-      let d ← goMemoized d
-      return .flattened d
+      let ⟨d, p⟩ ← goMemoized d
+      return ⟨.flattened d, p⟩
     | .indented n c d =>
-      let d ← goMemoized d
-      return .indented n c d
+      let ⟨d, p⟩ ← goMemoized d
+      return ⟨.indented n c d, p⟩
     | .aligned d =>
-      let d ← goMemoized d
-      return .aligned d
+      let ⟨d, p⟩ ← goMemoized d
+      return ⟨.aligned d, p⟩
     | .unindented onlyNonCumulative d =>
-      let d ← goMemoized d
-      return .unindented onlyNonCumulative d
+      let ⟨d, p⟩ ← goMemoized d
+      return ⟨.unindented onlyNonCumulative d, p⟩
     | .final d =>
-      let d ← goMemoized d
-      return .final d
+      let ⟨d, p⟩ ← goMemoized d
+      return ⟨.final d, p⟩
     | .initial d =>
-      let d ← goMemoized d
-      return .initial d
+      let ⟨d, p⟩ ← goMemoized d
+      return ⟨.initial d, p⟩
     | .free d =>
-      let d ← goMemoized d
-      return .free d
-    | .guarded p d =>
-      let d ← goMemoized d
-      return .guarded p d
+      let ⟨d, p⟩ ← goMemoized d
+      return ⟨.free d, p⟩
+    | .guarded a d =>
+      let ⟨d, p⟩ ← goMemoized d
+      return ⟨.guarded a d, p⟩
     | .costing c d =>
-      let d ← goMemoized d
-      return .costing c d
+      let ⟨d, p⟩ ← goMemoized d
+      return ⟨.costing c d, p⟩
     | .either d1 d2 =>
-      let d1 ← goMemoized d1
-      let d2 ← goMemoized d2
-      return .either d1 d2
+      let mut ⟨d1, p1⟩ ← goMemoized d1
+      let mut ⟨d2, p2⟩ ← goMemoized d2
+      let pShared := p1.filter (p2.contains ·)
+      let p1Unshared := p1.filter (! pShared.contains ·)
+      for c in p1Unshared do
+        d1 ← tryInsertingComment d1 c
+      let p2Unshared := p2.filter (! pShared.contains ·)
+      for c in p2Unshared do
+        d2 ← tryInsertingComment d2 c
+      return ⟨.either d1 d2, pShared⟩
     | .append d1 d2 =>
-      let d1 ← goMemoized d1
-      let d2 ← goMemoized d2
-      return .append d1 d2
+      let mut ⟨d1, p1⟩ ← goMemoized d1
+      let (commentsBefore1, commentsAfter1) := p1.partition (placement · matches .afterClosestPreviousNewline)
+      for c in commentsAfter1 do
+        d1 ← tryInsertingComment d1 c
+      let mut ⟨d2, p2⟩ ← goMemoized d2
+      let (commentsBefore2, commentsAfter2) := p2.partition (placement · matches .afterClosestPreviousNewline)
+      for c in commentsBefore2 do
+        d2 ← tryInsertingComment d2 c
+      return ⟨.append d1 d2, commentsBefore1 ++ commentsAfter2⟩
 
 public def insertRemainingComments
     (rendering : String)
