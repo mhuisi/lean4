@@ -963,6 +963,15 @@ def Doc.oneOf (ds : Array (Doc τ)) : Doc τ :=
   | some d =>
     ds[1:].foldl (init := d) fun acc d => acc.either d
 
+instance : Append (Doc τ) where
+  append d1 d2 :=
+    if d1.isAlwaysEmpty then
+      d2
+    else if d2.isAlwaysEmpty then
+      d1
+    else
+      d1.append d2
+
 /--
 Appends multiple documents. Each document is appended to the last line of the preceding document.
 -/
@@ -971,7 +980,7 @@ def Doc.join (ds : Array (Doc τ)) : Doc τ :=
   | none =>
     .text ""
   | some d =>
-    ds[1:].foldl (init := d) fun acc d => acc.append d
+    ds[1:].foldl (init := d) fun acc d => acc ++ d
 
 /--
 Appends multiple documents with a separator document between each pair of adjacent documents.
@@ -981,7 +990,7 @@ def Doc.joinUsing (sep : Doc τ) (ds : Array (Doc τ)) : Doc τ :=
   | none =>
     .text ""
   | some d =>
-    ds[1:].foldl (init := d) fun acc d => acc.append sep |>.append d
+    ds[1:].foldl (init := d) fun acc d => acc ++ sep ++ d
 
 def Doc.fill (ds : Array (Doc τ)) : Doc τ := Id.run do
   if ds.size == 0 then
@@ -1177,9 +1186,6 @@ def Doc.fillSomeUsingSpaceWrapping (ds : Array (Fillable (Doc τ))) (wrap : Doc 
       restNotFlattened := .join #[d.v, wrappedRest]
     restAllowsFill := d.allowFill
   return .oneOf #[restFlattened, restNotFlattened]
-
-instance : Append (Doc τ) where
-  append d1 d2 := d1.append d2
 
 /--
 Provides pointer-based equality and hashing for a value of type `α`.

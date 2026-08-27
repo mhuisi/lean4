@@ -178,11 +178,11 @@ def penalized (amount : Nat) (d : Doc FmtCost) : Doc FmtCost :=
 
 /-- A string gap: `\` at the end of the current line, continuing on the next line. -/
 def gapBreak : Doc FmtCost :=
-  .append (.text "\\") .hardNl
+  .text "\\" ++ .hardNl
 
 /-- A break opportunity at a word boundary before `rest`. -/
 def softGapBreak (rest : Doc FmtCost) : Doc FmtCost :=
-  .oneOf #[rest, .append (penalized softBreakPenalty (.text "\\")) (.append .hardNl rest)]
+  .oneOf #[rest, penalized softBreakPenalty (.text "\\") ++ .hardNl ++ rest]
 
 /-- Whether `e?` is an element that renders like a word: a word or an interpolation. -/
 def isWordLike (e? : Option Element) : Bool :=
@@ -204,8 +204,8 @@ def buildWord (units : Array String) (rest : Doc FmtCost) : Doc FmtCost := Id.ru
   for i in (0...units.size) do
     let unit : Doc FmtCost := .text units[units.size - 1 - i]!
     if i != 0 then
-      acc := .oneOf #[acc, .append (penalized wordSplitPenalty (.text "\\")) (.append .hardNl acc)]
-    acc := .append unit acc
+      acc := .oneOf #[acc, penalized wordSplitPenalty (.text "\\") ++ .hardNl ++ acc]
+    acc := unit ++ acc
   return acc
 
 /-- Renders a newline and its trailing whitespace before `rest`. -/
@@ -218,36 +218,36 @@ def buildNl (cr : Bool) (post : String) (isLeading isTrailing prevIsGap : Bool)
     -- may also be inserted between two leading newlines so that a long run of leading newlines
     -- can still be broken when it overflows the line.
     let canBreak := isWordLike next? || next? matches some (.nl ..)
-    .append nlText (if canBreak then softGapBreak rest else rest)
+    nlText ++ (if canBreak then softGapBreak rest else rest)
   else if prevIsGap then
     -- The retained gap directly before this newline already broke the line before it, so the line
     -- containing this newline may be filled further.
-    .append nlText (continueAfterBreak next? rest)
+    nlText ++ continueAfterBreak next? rest
   else if isTrailing then
     -- Like a leading newline, a newline at the end of the string does not separate two content
     -- lines and is kept together with the content before it, with optional gaps between two
     -- trailing newlines. When the line overflows, the newline may still be moved to the start of
     -- the next line.
     let canBreak := next? matches some (.nl ..)
-    let glued := .append nlText (if canBreak then softGapBreak rest else rest)
+    let glued := nlText ++ (if canBreak then softGapBreak rest else rest)
     .oneOf #[
       glued,
-      .append (penalized anchorPenalty (.text "\\")) (.append .hardNl glued)
+      penalized anchorPenalty (.text "\\") ++ .hardNl ++ glued
     ]
   else
     match next? with
     | some .gap =>
       -- The retained gap directly after this newline provides the mandatory break after it.
-      .append nlText rest
+      nlText ++ rest
     | _ =>
       .oneOf #[
         -- The newline is placed at the start of the next line, before the content of the line
         -- that it introduces. When the newline and its content overflow the next line, the
         -- content can be broken again at its word boundaries, including directly after the
         -- newline and its trailing whitespace.
-        .append gapBreak (.append nlText (continueAfterBreak next? rest)),
+        gapBreak ++ nlText ++ continueAfterBreak next? rest,
         -- In contexts that must be flattened, the mandatory string gap can be omitted.
-        .append (penalized noBreakPenalty nlText) rest
+        penalized noBreakPenalty nlText ++ rest
       ]
 
 /--
@@ -260,7 +260,7 @@ def buildInterp (term : Doc FmtCost) (prevIsGap : Bool) (next? nextNext? : Optio
   -- Primary: the interpolation is flattened and rendered like a word, filling the line together
   -- with the surrounding content. Together with the surrounding word boundaries, this also
   -- covers placing the intact interpolation on its own line.
-  let inline := .append (.join #[.text "{", .flattened term, .text "}"]) rest
+  let inline := .join #[.text "{", .flattened term, .text "}"] ++ rest
   -- Fallback: the interpolation is placed on its own lines, without other content surrounding
   -- it, and may be broken apart according to the formatting of the interpolated pattern.
   let leadingBreak : Doc FmtCost :=
@@ -276,11 +276,11 @@ def buildInterp (term : Doc FmtCost) (prevIsGap : Bool) (next? nextNext? : Optio
       -- interpolation, with the mandatory break after it (unless the element after it provides
       -- its own break).
       if isWordLike nextNext? then
-        .append (.text s) (.append gapBreak restAfterNext)
+        .text s ++ gapBreak ++ restAfterNext
       else
-        .append (.text s) restAfterNext
+        .text s ++ restAfterNext
     | some (.word ..) | some (.interp ..) =>
-      .append gapBreak rest
+      gapBreak ++ rest
     | _ =>
       -- A following newline or retained gap provides its own break; at the end of the string,
       -- the closing quote may follow directly after the interpolation.
@@ -316,13 +316,13 @@ public def build (elems : Array Element) : Doc FmtCost := Id.run do
     let newRest :=
       match elems[j]! with
       | .word units => buildWord units rest
-      | .ws s => .append (.text s) (continueAfterBreak next? rest)
+      | .ws s => .text s ++ continueAfterBreak next? rest
       | .nl cr post => buildNl cr post isLeading isTrailing prevIsGap next? rest
-      | .gap => .append gapBreak rest
+      | .gap => gapBreak ++ rest
       | .interp term => buildInterp term prevIsGap next? nextNext? rest restAfterNext
     restAfterNext := rest
     rest := newRest
-  return .nested (.append (.text "\"") rest)
+  return .nested (.text "\"" ++ rest)
 
 end fmtStr
 

@@ -153,30 +153,37 @@ where
   tryInsertingComment (anchor : Doc FmtCost) (c : Comment) : StateM tryInsertingComments.State (Doc FmtCost) := do
     match placement c with
     | .afterClosestPreviousNewline =>
-      let docs := c.render.map (Doc.free <| Doc.initial <| renderingToDoc ·)
+      let docs := c.render.map (Doc.initial <| renderingToDoc ·)
       let docs ← docs.mapM (tag · c)
-      let docs := docs.map (.aligned <| · ++ .hardNl ++ anchor)
-      return .oneOf <| docs ++ #[
+      let doc := Doc.free <| .oneOf docs
+      let doc := .aligned <| doc ++ .hardNl ++ anchor
+      return .oneOf #[
+        doc,
         Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
       ]
     | .beforeClosestNextNewline =>
       let docs := c.render.filter (! ·.isMultiLine)
-        |>.map (Doc.free <| Doc.final <| renderingToDoc ·)
+        |>.map (Doc.final <| renderingToDoc ·)
       let docs ← docs.mapM (tag · c)
-      let docs := docs.map (anchor ++ .text " " ++ ·)
-      return .oneOf <| docs ++ #[
+      let doc := Doc.free <| .oneOf docs
+      let doc := anchor ++ .text " " ++ doc
+      return .oneOf #[
+        doc,
         Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
       ]
     | .afterToken =>
       let renderings := c.render.filter (! ·.isMultiLine)
-      let afterLineDocs := renderings.map (Doc.free <| Doc.final <| renderingToDoc ·)
+      let afterLineDocs := renderings.map (Doc.final <| renderingToDoc ·)
       let afterLineDocs ← afterLineDocs.mapM (tag · c)
-      let afterLineDocs := afterLineDocs.map (anchor ++ .text " " ++ ·)
+      let afterLineDoc := Doc.free <| .oneOf afterLineDocs
+      let afterLineDoc := anchor ++ .text " " ++ afterLineDoc
       let afterTokenDocs := renderings.map (renderingToDoc ·)
       let afterTokenDocs ← afterTokenDocs.mapM (tag · c)
-      let afterTokenDocs := afterTokenDocs.map (anchor ++ .text " " ++ ·)
-      return .oneOf <| afterTokenDocs ++ #[
-        Doc.costing (DefaultCost.ofOverflowFallbackPenalty 1) <| .oneOf afterLineDocs,
+      let afterTokenDoc := .oneOf afterTokenDocs
+      let afterTokenDoc := anchor ++ .text " " ++ afterTokenDoc
+      return .oneOf #[
+        afterTokenDoc,
+        Doc.costing (DefaultCost.ofOverflowFallbackPenalty 1) afterLineDoc,
         Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
       ]
   goMemoized (v : Doc FmtCost)
@@ -247,13 +254,25 @@ where
     | .append d1 d2 =>
       let mut ⟨d1, p1⟩ ← goMemoized d1
       let (commentsBefore1, commentsAfter1) := p1.partition (placement · matches .afterClosestPreviousNewline)
-      for c in commentsAfter1 do
-        d1 ← tryInsertingComment d1 c
+      if ! d2.isAlwaysEmpty then
+        for c in commentsAfter1 do
+          d1 ← tryInsertingComment d1 c
       let mut ⟨d2, p2⟩ ← goMemoized d2
       let (commentsBefore2, commentsAfter2) := p2.partition (placement · matches .afterClosestPreviousNewline)
-      for c in commentsBefore2 do
-        d2 ← tryInsertingComment d2 c
-      return ⟨.append d1 d2, commentsBefore1 ++ commentsAfter2⟩
+      if ! d1.isAlwaysEmpty then
+        for c in commentsBefore2 do
+          d2 ← tryInsertingComment d2 c
+      p1 :=
+        if ! d2.isAlwaysEmpty then
+          commentsBefore1
+        else
+          p1
+      p2 :=
+        if ! d1.isAlwaysEmpty then
+          commentsAfter2
+        else
+          p2
+      return ⟨.append d1 d2, p1 ++ p2⟩
 
 public def insertRemainingComments
     (rendering : String)

@@ -185,7 +185,7 @@ public def isAtomic (d : TaggedDoc) : Bool :=
   d.doc.isAtomic
 
 public instance : Append TaggedDoc where
-  append := append
+  append a b := untagged <| a.doc ++ b.doc
 
 public inductive StickynessKind where
   | coequal

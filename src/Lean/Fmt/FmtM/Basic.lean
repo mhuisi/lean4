@@ -767,12 +767,8 @@ def fmtCommentsWithRetainedNewlines (comments : Array Comment) (whitespace : Str
     let c := comments[i]
     let alternatives := c.render.map (·.rendered) |>.mapIdx fun i r =>
       let lines := r.split '\n' |>.map (.text ·.toString) |>.toArray
-      let doc := TaggedDoc.untagged <| .joinUsing .hardNl lines
-      if i == c.render.size - 1 then
-        free doc
-      else
-        doc
-    let mut d := oneOf alternatives
+      TaggedDoc.untagged <| .joinUsing .hardNl lines
+    let mut d := free <| oneOf alternatives
     if c.kind matches .lineComment then
       d := d ++ hardNl
       insertedAnyNewlines := true
