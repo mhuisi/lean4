@@ -136,9 +136,8 @@ public def tryInsertingComments
     syntaxToTags
   }
   let mut (doc, s) := StateT.run (s := init) do
-    let mut ⟨d, p⟩ ← go doc
-    for c in p do
-      d ← tryInsertingComment d c
+    let ⟨d, p⟩ ← go doc
+    let d ← insertComments d p
     return d
   return (doc, s.syntaxToTags)
 where
@@ -150,42 +149,46 @@ where
   renderingToDoc (r : Comment.Rendering) : Doc FmtCost :=
     let lines := r.rendered.split '\n' |>.map (Doc.text ·.toString) |>.toArray
     .aligned <| .joinUsing .hardNl lines
-  tryInsertingComment (anchor : Doc FmtCost) (c : Comment) : StateM tryInsertingComments.State (Doc FmtCost) := do
-    match placement c with
-    | .afterClosestPreviousNewline =>
-      let docs := c.render.map (Doc.initial <| renderingToDoc ·)
-      let docs ← docs.mapM (tag · c)
-      let doc := Doc.free <| .oneOf docs
-      let doc := .aligned <| doc ++ .hardNl ++ anchor
-      return .oneOf #[
-        doc,
-        Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
-      ]
-    | .beforeClosestNextNewline =>
-      let docs := c.render.filter (! ·.isMultiLine)
-        |>.map (Doc.final <| renderingToDoc ·)
-      let docs ← docs.mapM (tag · c)
-      let doc := Doc.free <| .oneOf docs
-      let doc := anchor ++ .text " " ++ doc
-      return .oneOf #[
-        doc,
-        Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
-      ]
-    | .afterToken =>
-      let renderings := c.render.filter (! ·.isMultiLine)
-      let afterLineDocs := renderings.map (Doc.final <| renderingToDoc ·)
-      let afterLineDocs ← afterLineDocs.mapM (tag · c)
-      let afterLineDoc := Doc.free <| .oneOf afterLineDocs
-      let afterLineDoc := anchor ++ .text " " ++ afterLineDoc
-      let afterTokenDocs := renderings.map (renderingToDoc ·)
-      let afterTokenDocs ← afterTokenDocs.mapM (tag · c)
-      let afterTokenDoc := .oneOf afterTokenDocs
-      let afterTokenDoc := anchor ++ .text " " ++ afterTokenDoc
-      return .oneOf #[
-        afterTokenDoc,
-        afterLineDoc,
-        Doc.costing (DefaultCost.ofOverflowFallbackPenalty 1) anchor
-      ]
+  insertComments (anchor : Doc FmtCost) (cs : Array Comment) : StateM tryInsertingComments.State (Doc FmtCost) := do
+    let mut result := anchor
+    for c in cs.reverse do
+      match placement c with
+      | .afterClosestPreviousNewline =>
+        let renderings := c.render
+        let docs := renderings.map (Doc.initial <| renderingToDoc ·)
+        let docs ← docs.mapM (tag · c)
+        let doc := Doc.free <| .oneOf docs
+        let doc := .aligned <| doc ++ .hardNl ++ result
+        result := .oneOf #[
+          doc,
+          Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) result
+        ]
+      | .beforeClosestNextNewline =>
+        let renderings := c.render.filter (! ·.isMultiLine)
+        let docs := renderings.map (Doc.final <| renderingToDoc ·)
+        let docs ← docs.mapM (tag · c)
+        let doc := Doc.free <| .oneOf docs
+        let doc := result ++ .text " " ++ doc
+        result := .oneOf #[
+          doc,
+          Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) result
+        ]
+      | .afterToken =>
+        let renderings := c.render.filter (! ·.isMultiLine)
+        let afterLineDocs := renderings.map (Doc.final <| renderingToDoc ·)
+        let afterLineDocs ← afterLineDocs.mapM (tag · c)
+        let afterLineDoc := Doc.free <| .oneOf afterLineDocs
+        let afterLineDoc := result ++ .text " " ++ afterLineDoc
+        let afterTokenDocs := renderings.map (renderingToDoc ·)
+        let afterTokenDocs ← afterTokenDocs.mapM (tag · c)
+        let afterTokenDoc := .oneOf afterTokenDocs
+        let afterTokenDoc := result ++ .text " " ++ afterTokenDoc
+        result := .oneOf #[
+          afterTokenDoc,
+          afterLineDoc,
+          Doc.costing (DefaultCost.ofOverflowFallbackPenalty 1) result
+        ]
+    return result
   goMemoized (v : Doc FmtCost)
       : StateM tryInsertingComments.State tryInsertingComments.Result := do
     let cacheKey := unsafe PtrKey.ofKey v
@@ -241,27 +244,23 @@ where
       let ⟨d, p⟩ ← goMemoized d
       return ⟨.costing c d, p⟩
     | .either d1 d2 =>
-      let mut ⟨d1, p1⟩ ← goMemoized d1
-      let mut ⟨d2, p2⟩ ← goMemoized d2
+      let ⟨d1, p1⟩ ← goMemoized d1
+      let ⟨d2, p2⟩ ← goMemoized d2
       let pShared := p1.filter (p2.contains ·)
       let p1Unshared := p1.filter (! pShared.contains ·)
-      for c in p1Unshared do
-        d1 ← tryInsertingComment d1 c
+      let d1 ← insertComments d1 p1Unshared
       let p2Unshared := p2.filter (! pShared.contains ·)
-      for c in p2Unshared do
-        d2 ← tryInsertingComment d2 c
+      let d2 ← insertComments d2 p2Unshared
       return ⟨.either d1 d2, pShared⟩
     | .append d1 d2 =>
       let mut ⟨d1, p1⟩ ← goMemoized d1
       let (commentsBefore1, commentsAfter1) := p1.partition (placement · matches .afterClosestPreviousNewline)
       if ! d2.isAlwaysEmpty then
-        for c in commentsAfter1 do
-          d1 ← tryInsertingComment d1 c
+        d1 ← insertComments d1 commentsAfter1
       let mut ⟨d2, p2⟩ ← goMemoized d2
       let (commentsBefore2, commentsAfter2) := p2.partition (placement · matches .afterClosestPreviousNewline)
       if ! d1.isAlwaysEmpty then
-        for c in commentsBefore2 do
-          d2 ← tryInsertingComment d2 c
+        d2 ← insertComments d2 commentsBefore2
       p1 :=
         if ! d2.isAlwaysEmpty then
           commentsBefore1
