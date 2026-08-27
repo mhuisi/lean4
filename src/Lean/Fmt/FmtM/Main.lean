@@ -184,7 +184,7 @@ where
       return .oneOf #[
         afterTokenDoc,
         afterLineDoc,
-        Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) anchor
+        Doc.costing (DefaultCost.ofOverflowFallbackPenalty 1) anchor
       ]
   goMemoized (v : Doc FmtCost)
       : StateM tryInsertingComments.State tryInsertingComments.Result := do
