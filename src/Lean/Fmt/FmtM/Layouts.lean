@@ -950,10 +950,7 @@ public def assignmentDeclaration
           separationTk
         ]
       if let some stickyBody := getSticky? body then
-        if stickyBody.kind matches .preferSticky then
-          (combine #[.withSepAfter lhs ⟨space, nested⟩, stickyBody.stickyVariant], .preferSticky)
-        else
-          (stickyCombine lhs ⟨nl, nested⟩ body, stickyBody.kind)
+        (stickyCombine lhs ⟨nl, nested⟩ body (allowFlattening := !(stickyBody.kind matches .preferSticky)), stickyBody.kind)
       else
         (stickyCombine lhs ⟨nl, nested⟩ body, .coequal)
     TaggedDoc.sticky doc stickyVariant kind
