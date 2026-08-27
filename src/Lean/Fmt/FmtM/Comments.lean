@@ -570,7 +570,7 @@ def reassociateComments
     ord.isLT
   let syntaxToRenderedByStop := syntaxToRendered.toArray.qsort fun (a, _) (b, _) =>
     let ord := (Ord.compare a.stop b.stop)
-      |>.then (Ord.compare a.bsize b.bsize)
+      |>.then (Ord.compare b.bsize a.bsize)
     ord.isLT
   let comments := comments.toArray.qsort (fun (a, _) (b, _) => Lean.Fmt.compareRanges a b == .lt)
   let mut r : Std.HashMap rendering.Subslice (Array Comment) := ∅
@@ -601,7 +601,7 @@ where
     -- with the closest range after the token and block comments after a token with the closest
     -- range before the token.
     let (commentsWithPreviousRangeFallback, commentsWithNextRangeFallback) :=
-      comments.partition fun c => c.placement matches .afterToken
+      comments.partition fun c => c.content.size <= 1 && c.placement matches .afterToken
     let (_, _, rangesForPreviousRangeFallback) :=
       binSearchRightmost syntaxToRenderedByStop range.stop (·.1.stop) (· < ·) |>.get!
     let (_, _, rangesForNextRangeFallback) :=
