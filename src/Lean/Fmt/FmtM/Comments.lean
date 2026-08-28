@@ -125,6 +125,7 @@ public inductive Comment.RenderedPlacementKind where
   | afterClosestPreviousNewline
   /-- Placed on the end of the same line as the token that this comment is attached to. -/
   | beforeClosestNextNewline
+  /-- Placed after the token that this comment is attached to. -/
   | afterToken
 
 structure Comment.RenderedPlacement where
