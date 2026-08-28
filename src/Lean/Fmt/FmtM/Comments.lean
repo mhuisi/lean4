@@ -146,14 +146,14 @@ def Comment.renderedPlacements (c : Comment) : Array RenderedPlacement :=
         if rendering.isMultiLine then
           #[.afterClosestPreviousNewline]
         else
-          #[.beforeClosestNextNewline, .afterClosestPreviousNewline]
+          #[.afterClosestPreviousNewline]
       | .lineComment, .onLineBeforeToken =>
         #[.afterClosestPreviousNewline]
       | .blockComment, .afterToken =>
         if rendering.isMultiLine then
           #[.afterClosestPreviousNewline]
         else
-          #[.beforeClosestNextNewline, .afterClosestPreviousNewline]
+          #[.afterClosestPreviousNewline]
       | .blockComment, .onLineBeforeToken =>
         #[.afterClosestPreviousNewline]
     kinds.map (⟨·, rendering⟩)
@@ -670,8 +670,8 @@ def determineCommentInsertions
             continue
           let insertedComment := " " ++ rp.rendering.rendered
           let newLineLength := lineLength + insertedComment.chars.length
-          if ! isFinalAlternative && newLineLength > maxColumnWidth then
-            continue
+          -- if ! isFinalAlternative && newLineLength > maxColumnWidth then
+          --   continue
           r := r.insert insertionPos insertedComment
           lineLengths := lineLengths.set! lineNum newLineLength
           if c.kind matches .lineComment then
