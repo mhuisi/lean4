@@ -890,7 +890,7 @@ public def fmtTSepArrayWithRetainedIntermediateNewlinesAndComments (stxs : Synta
     : FmtM TaggedDoc := do
   let groups ← fmtTSepArrayTrailingGroups stxs
   let groups := groups.map fun
-    | .group g => Layouts.sepArray g <| .fillUsingSep none space .retainTrailingSep
+    | .group g => Layouts.sepArray g <| .fillUsingSpacedSep none .retainTrailingSep
     | .trailing t => t
   return join groups
 
@@ -902,7 +902,7 @@ public def fmtArrayLit (lbTk : Syntax) (elems : Syntax.TSepArray ks ",") (rbTk :
     if ! elem.needsAppBrackets then
       return Layouts.bracketed lbTk elem rbTk .dense
   let groups := groups.map fun
-    | .group g => Layouts.sepArray g <| .fillUsingSep none space .retainTrailingSep
+    | .group g => Layouts.sepArray g <| .fillUsingSpacedSep none .retainTrailingSep
     | .trailing t => t
   let elems := join groups
   return Layouts.bracketed lbTk elems rbTk <| .sparse «break» (stickynessKind := .coequal)

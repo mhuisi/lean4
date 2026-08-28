@@ -89,11 +89,13 @@ public inductive Types.SepArrayFormat
   | joinUsingNl (allowFlattening : Bool) (afterElem? : Option TaggedDoc := none)
     (trailingSep : SepArrayFormat.TrailingSep := .excludeTrailingSep)
   | fillUsingSep (afterElem? afterSep? : Option TaggedDoc) (trailingSep : SepArrayFormat.TrailingSep := .excludeTrailingSep)
+  | fillUsingSpacedSep (afterElem? : Option TaggedDoc) (trailingSep : SepArrayFormat.TrailingSep := .excludeTrailingSep)
 
 public def Types.SepArrayFormat.trailingSep : Types.SepArrayFormat → Types.SepArrayFormat.TrailingSep
   | .joinUsingSep (trailingSep := trailingSep) .. => trailingSep
   | .joinUsingNl (trailingSep := trailingSep) .. => trailingSep
   | .fillUsingSep (trailingSep := trailingSep) .. => trailingSep
+  | .fillUsingSpacedSep (trailingSep := trailingSep) .. => trailingSep
 
 public def sepArray
     (sepArray : SepArray sep)
@@ -118,6 +120,8 @@ public def sepArray
       joinedUsingNl
   | .fillUsingSep afterElem? afterSep? _ =>
     fillUsingSep sepArray afterElem? afterSep?
+  | .fillUsingSpacedSep afterElem? _ =>
+    fillUsingSpacedSep sepArray afterElem?
 
 where
 
@@ -196,6 +200,29 @@ where
       lastNotFlattened := join #[lastMaybeFlattened, afterElem, sep, afterSep, hardNl, elem]
     return oneOf #[lastFlattened, lastNotFlattened]
 
+  fillUsingSpacedSep (sepArray : SepArray sep) (afterElem? : Option TaggedDoc) : TaggedDoc := Id.run do
+    let afterElem := afterElem?.getD empty
+    let mut (elems, seps) := split sepArray
+    if elems.size == 0 then
+      return empty
+    if seps.size == elems.size then
+      let trailingSep := seps.back!
+      elems := elems.modify (elems.size - 1) fun lastElem => join #[lastElem, afterElem, trailingSep]
+      seps := seps.pop
+    let hd := elems[0]!
+    if elems.size == 1 then
+      return hd
+    let mut lastFlattened : TaggedDoc := flattened hd
+    let mut lastNotFlattened : TaggedDoc := hd
+    for elem in elems[1...*], sep in seps do
+      let lastMaybeFlattened := oneOf #[lastFlattened, lastNotFlattened]
+      lastFlattened := oneOf #[
+        join #[lastFlattened, afterElem, sep, space, flattened elem],
+        join #[lastMaybeFlattened, afterElem, sep, hardNl, flattened elem]
+      ]
+      lastNotFlattened := join #[lastMaybeFlattened, afterElem, sep, hardNl, elem]
+    return oneOf #[lastFlattened, lastNotFlattened]
+
   split (sepArray : SepArray sep) : Array TaggedDoc × Array TaggedDoc := Id.run do
     let mut elems := #[]
     let mut seps := #[]
@@ -219,7 +246,7 @@ public def sepLines (lines : SepArray sep) (includeSeps : Bool) : TaggedDoc :=
     sepArray lines <| .joinUsingNl (allowFlattening := false)
 
 public def sepFill (elems : SepArray sep) : TaggedDoc :=
-  sepArray elems <| .fillUsingSep none space
+  sepArray elems <| .fillUsingSpacedSep none
 
 public def sepHorizontalOrVertical (elems : SepArray sep) (includeSeps : Bool) : TaggedDoc := Id.run do
   let elems := sepArray.normalize elems .excludeTrailingSep
@@ -661,7 +688,7 @@ public inductive Types.KeywordPrefixedSepFillFormat where
 
 public def keywordPrefixedSepFill (keyword : TaggedDoc) (sepArray : SepArray sep) (format : Types.KeywordPrefixedSepFillFormat)
     : TaggedDoc :=
-  let sepArrayFormat := .fillUsingSep none space
+  let sepArrayFormat := .fillUsingSpacedSep none
   let format :=
     match format with
     | .sticky => .sticky sepArrayFormat

@@ -1183,8 +1183,10 @@ public def fmtSetNotationLike (lbTk : Syntax) (elems : Syntax.TSepArray ks ",") 
 
 @[builtin_fmt Lean.Parser.Term.structInst]
 public def fmtStructInst : Fmt := fun
-  | `(Parser.Term.structInst| {%$lbTk $[$fields:structInstLVal],* }%$rbTk) => do
+  | stx@`(Parser.Term.structInst| {%$lbTk $[$_:structInstLVal],* }%$rbTk) => do
     let lbTk ← fmt lbTk
+    let `({ $fields:structInstField,* }) := stx
+      | throw .partialFormatter
     let fields ← fmtSepArray (sep := ",") fields
     let rbTk ← fmt rbTk
     let fields := Layouts.sepArray fields <| .joinUsingSep none nl
