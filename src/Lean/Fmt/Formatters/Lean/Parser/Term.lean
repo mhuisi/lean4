@@ -757,7 +757,7 @@ public def fmtDeclWithAttributes
   let attributes? ← fmt? attributes?
   if isAttributesSimple then
     if compact then
-      return combine #[.withSepAfter attributes? space, decl]
+      return Layouts.softSpacedAtomic #[attributes?, decl]
     else
       return Layouts.horizontalOrVertical #[attributes?, decl]
   else
@@ -1114,13 +1114,13 @@ public def isComplexAlt (stx : TSyntax ``Parser.Term.matchAlt) : FmtM Bool := do
 Turns the alternatives of a `| pats | pats | pats => rhs` left-hand side into one sub-alternative
 per `|`, attaching each `|` to the alternative that follows it.
 -/
-public def joinAltPats (initialAltTk : TaggedDoc) (patss : SepArray "|") : Array TaggedDoc := Id.run do
+public def joinAltPats (initialAltTk : TaggedDoc) (patss : SepArray sep) : Array TaggedDoc := Id.run do
   let mut r := #[initialAltTk]
   for i in (0...patss.elemsAndSeps.size) do
     let patsOrSep := patss.elemsAndSeps[i]!
     if i % 2 == 0 then
       r := r.modify (r.size - 1) fun lastAltTk =>
-        Layouts.spacedAtomic #[lastAltTk, patsOrSep]
+        nested <| Layouts.spacedAtomic #[lastAltTk, patsOrSep]
     else
       r := r.push patsOrSep
   return r
@@ -1763,7 +1763,7 @@ public def fmtMatchExprAlt : Syntax → FmtM Layouts.Types.Alt := fun
     let pat ← fmt pat
     let arrowTk ← fmt arrowTk
     let rhs ← fmt rhs
-    let lhs := Layouts.spacedAtomic #[pipeTk, pat]
+    let lhs := nested <| Layouts.spacedAtomic #[pipeTk, pat]
     return Layouts.alt #[lhs] arrowTk rhs
   | _ => throw .partialFormatter
 
@@ -1775,7 +1775,7 @@ public def fmtMatchExprElseAlt : Syntax → FmtM Layouts.Types.Alt := fun
     let h ← fmt h
     let arrowTk ← fmt arrowTk
     let rhs ← fmt rhs
-    let lhs := Layouts.spacedAtomic #[pipeTk, h]
+    let lhs := nested <| Layouts.spacedAtomic #[pipeTk, h]
     return Layouts.alt #[lhs] arrowTk rhs
   | _ => throw .partialFormatter
 
@@ -1814,7 +1814,7 @@ public def fmtLetExpr : Fmt := fun
     let pipeTk ← fmt pipeTk
     let alt ← fmt alt
     let assignment := Layouts.assignmentDeclaration pat colonEqTk value
-    let pipeAlt := Layouts.prefixOperator pipeTk alt .withSpacing
+    let pipeAlt := nested <| Layouts.softSpacedAtomic #[pipeTk, alt]
     let decl := Layouts.matchDeclaration assignment pipeAlt
     let fullDecl := Layouts.letDecl letExprTk empty decl
     fmtTermInstruction fullDecl components semicolonTk body

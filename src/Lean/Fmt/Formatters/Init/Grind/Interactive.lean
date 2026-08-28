@@ -185,7 +185,7 @@ public def fmtGrindStep : Fmt := fun
     let g ← fmt g
     let pipeTk? ← fmt? pipeTk?
     let f? ← fmt? f?.join
-    let filter? := Layouts.prefixOperator pipeTk? f? .withSpacing
+    let filter? := nested <| Layouts.softSpacedAtomic #[pipeTk?, f?]
     return maybeFlattened <| combine #[
       .withSepAfter g ⟨nl, nested⟩,
       filter?
@@ -452,7 +452,7 @@ public def fmtGrindDot : Fmt := fun
   | `(grind| ·%$dotTk $s:grindSeq) => do
     let dotTk ← fmt dotTk
     let s ← fmt s
-    return Layouts.spacedAtomic #[dotTk, s]
+    return nested <| Layouts.softSpacedAtomic #[dotTk, s]
   | _ => throw .partialFormatter
 
 @[builtin_infix_fmt Lean.Parser.Tactic.Grind.«grind_<;>_»]

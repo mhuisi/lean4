@@ -378,7 +378,7 @@ public def fmtCtor : Fmt := fun
     let altTk ← fmt altTk
     let signature ← fmtGlobalSignature id binders typeAscriptionTk? type?
     let decl ← fmtDeclWithDeclModifiers declModifiers signature
-    let ctorDecl := Layouts.prefixOperator altTk decl .withSpacing
+    let ctorDecl := nested <| Layouts.spacedAtomic #[altTk, decl]
     return Layouts.lines #[outerDocComment?, ctorDecl]
   | _ => throw .partialFormatter
 

@@ -156,7 +156,7 @@ public def fmtDoLetElseLike
   let instructionComponents := declComponents ++ pipeTk?.toArray ++ elseSeq?.toArray
   let pipeTk? ← fmt? pipeTk?
   let elseSeq? ← fmt? elseSeq?
-  let elseClause? := Layouts.prefixOperator pipeTk? elseSeq? .withSpacing
+  let elseClause? := nested <| Layouts.softSpacedAtomic #[pipeTk?, elseSeq?]
   let instruction :=
     if ! elseClause?.isAlwaysEmpty then
       Layouts.matchDeclaration decl elseClause?

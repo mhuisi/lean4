@@ -11,6 +11,7 @@ public import Lean.Fmt.FmtM.Basic
 public import Lean.Fmt.Formatters.Lean.Parser.Term.Basic
 meta import Init.RCases
 import Init.Data
+import Lean.Fmt.Formatters.Lean.Parser.Term
 
 namespace Lean.Fmt
 
@@ -18,8 +19,7 @@ namespace Lean.Fmt
 public def fmtRCasesPatMed : Fmt := fun
   | `(Parser.Tactic.rcasesPatMed| $pats:rcasesPat|*) => do
     let pats ← fmtTSepArray pats
-    return maybeFlattened <| nested <|
-      Layouts.sepArray pats <| .joinUsingSep (afterElem? := some nl) (afterSep? := some space)
+    return nested <| Layouts.horizontalOrVertical <| joinAltPats empty pats
   | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.rcasesPatLo]

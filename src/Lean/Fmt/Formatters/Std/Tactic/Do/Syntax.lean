@@ -172,8 +172,7 @@ public def fmtMReplace : Fmt := fun
 public def fmtMCasesPatAlts : Fmt := fun
   | `(Parser.Tactic.mcasesPatAlts| $pats:mcasesPat|*) => do
     let pats ← fmtTSepArray pats
-    return maybeFlattened <| nested <|
-      Layouts.sepArray pats <| .joinUsingSep (afterElem? := some nl) (afterSep? := some space)
+    return nested <| Layouts.horizontalOrVertical <| joinAltPats empty pats
   | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mcasesPat_]
@@ -346,13 +345,13 @@ public def fmtInvariantAlt : Syntax → FmtM Layouts.Types.Alt := fun
   | `(Parser.Tactic.invariantDotAlt| ·%$cdotTk $inv:term) => do
     let cdotTk ← fmt cdotTk
     let inv ← fmt inv
-    return Layouts.alt #[Layouts.prefixOperator cdotTk (aligned inv) .withSpacing] empty empty
+    return Layouts.alt #[nested <| Layouts.softSpacedAtomic #[cdotTk, aligned inv]] empty empty
   | `(Parser.Tactic.invariantCaseAlt| |%$pipeTk $arg:caseArg =>%$arrowTk $inv:term) => do
     let pipeTk ← fmt pipeTk
     let arg ← fmt arg
     let arrowTk ← fmt arrowTk
     let inv ← fmt inv
-    let lhs := Layouts.spacedAtomic #[pipeTk, arg]
+    let lhs := nested <| Layouts.spacedAtomic #[pipeTk, arg]
     return Layouts.alt #[lhs] arrowTk inv
   | _ => throw .partialFormatter
 
@@ -372,7 +371,7 @@ public def fmtFrameAlt : Syntax → FmtM Layouts.Types.Alt := fun
     let arrowTk ← fmt arrowTk
     let frame ← fmt frame
     let pat := Layouts.pseudoApplication <| #[f] ++ args
-    let lhs := Layouts.spacedAtomic #[pipeTk, pat]
+    let lhs := nested <| Layouts.spacedAtomic #[pipeTk, pat]
     return Layouts.alt #[lhs] arrowTk frame
   | _ => throw .partialFormatter
 
@@ -382,7 +381,7 @@ public def fmtVCAlt : Syntax → FmtM Layouts.Types.Alt := fun
     let args ← fmtTSepArray args
     let arrowTk ← fmt arrowTk
     let seq ← fmt seq
-    let subAlts := joinAltPats pipeTk ⟨args.elemsAndSeps⟩
+    let subAlts := joinAltPats pipeTk args
     return Layouts.alt subAlts arrowTk seq
   | _ => throw .partialFormatter
 

@@ -20,6 +20,7 @@ section General
 public inductive Types.ArrayFormat where
   | join
   | joinUsingSpace
+  | joinUsingSoftSpace
   | joinUsingNl (allowFlattening : Bool)
   | joinUsingBreak
   | fill
@@ -36,6 +37,9 @@ public def array (array : Array TaggedDoc) (format : Types.ArrayFormat) : Tagged
     combine terms
   | .joinUsingSpace =>
     let terms := array.map (.withSepAfter · space)
+    combine terms
+  | .joinUsingSoftSpace =>
+    let terms := array.map (.withSepAfter · softSpace)
     combine terms
   | .joinUsingNl allowFlattening =>
     if allowFlattening then
@@ -69,6 +73,9 @@ public def atomicInfixOperator (terms : Array TaggedDoc) : TaggedDoc := Id.run d
 
 public def spacedAtomic (terms : Array TaggedDoc) : TaggedDoc :=
   array terms .joinUsingSpace
+
+public def softSpacedAtomic (terms : Array TaggedDoc) : TaggedDoc :=
+  array terms .joinUsingSoftSpace
 
 public def fill (terms : Array TaggedDoc) : TaggedDoc :=
   array terms .fill

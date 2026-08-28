@@ -1022,8 +1022,7 @@ public def fmtCaseDeclaration (caseTk : Syntax)
   let args ← fmtTSepArray args
   let arrowTk ← fmt arrowTk
   let tac ← fmt tac
-  let args :=
-    maybeFlattened <| Layouts.sepArray args <| .joinUsingSep (afterElem? := nl) (afterSep? := space)
+  let args := Layouts.horizontalOrVertical <| joinAltPats empty args
   let lhs := Layouts.prefixOperator caseTk args .withSpacing
   return Layouts.assignmentDeclaration lhs arrowTk tac
 
@@ -1057,13 +1056,13 @@ public def fmtInductionAltLHS : Fmt := fun
     let ctor := Layouts.prefixOperator atTk? ctor .withoutSpacing
     let discrims ← fmtArray discrims
     let operand := Layouts.pseudoApplication <| #[ctor] ++ discrims
-    return Layouts.prefixOperator pipeTk operand .withSpacing
+    return nested <| Layouts.spacedAtomic #[pipeTk, operand]
   | `(Parser.Tactic.inductionAltLHS| |%$pipeTk $ctor:hole $discrims*) => do
     let pipeTk ← fmt pipeTk
     let ctor ← fmt ctor
     let discrims ← fmtArray discrims
     let operand := Layouts.pseudoApplication <| #[ctor] ++ discrims
-    return Layouts.prefixOperator pipeTk operand .withSpacing
+    return nested <| Layouts.spacedAtomic #[pipeTk, operand]
   | _ => throw .partialFormatter
 
 public def fmtInductionAlt : Syntax → FmtM Layouts.Types.Alt := fun

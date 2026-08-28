@@ -50,7 +50,7 @@ where
     while i < secondaryPats.size do
       let sep := secondaryPats[i]!
       let pat := secondaryPats[i+1]!
-      lines := lines.push <| Layouts.prefixOperator sep pat .withSpacing
+      lines := lines.push <| nested <| Layouts.softSpacedAtomic #[sep, pat]
       i := i + 2
     let lineComponents := lines.map (.withSepAfter · nl)
     return combine lineComponents
@@ -200,7 +200,7 @@ public def fmtCdotTactic : Fmt := fun
     -- `tacticSeqIndentGt` formats with its own `withPosition`, so the first tactic stays on the `·`
     -- line and subsequent tactics align below it.
     let tacticSeq ← fmt tacticSeq
-    return pseudoAligned <| Layouts.spacedAtomic #[cdotTk, tacticSeq]
+    return pseudoAligned <| nested <| Layouts.softSpacedAtomic #[cdotTk, tacticSeq]
   | _ => throw .partialFormatter
 
 public def fmtAltsTactic (kwTk : Syntax) (barTks : Array Syntax) (cases : Array (TSyntax k)) : FmtM TaggedDoc := do
@@ -208,7 +208,7 @@ public def fmtAltsTactic (kwTk : Syntax) (barTks : Array Syntax) (cases : Array 
   let cases ← barTks.zip cases |>.mapM fun (barTk, tacticSeq) => do
     let barTk ← fmt barTk
     let tacticSeq ← fmt tacticSeq
-    return .withSepAfter (Layouts.spacedAtomic #[barTk, tacticSeq]) nl
+    return .withSepAfter (nested <| Layouts.softSpacedAtomic #[barTk, tacticSeq]) nl
   let cases := withPosition <| combine cases
   return Layouts.horizontalOrVertical #[kwTk, cases]
 

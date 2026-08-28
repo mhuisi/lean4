@@ -258,7 +258,7 @@ public def fmtConvDot : Fmt := fun
   | `(conv| ·%$dotTk $s:convSeq) => do
     let dotTk ← fmt dotTk
     let s ← fmt s
-    return Layouts.spacedAtomic #[dotTk, s]
+    return nested <| Layouts.softSpacedAtomic #[dotTk, s]
   | _ => throw .partialFormatter
 
 @[builtin_infix_fmt Lean.Parser.Tactic.Conv.«conv_<;>_»]

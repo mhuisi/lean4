@@ -134,6 +134,8 @@ public def fallbackOnOverflow (d fallback : TaggedDoc) : TaggedDoc :=
   oneOf #[d, withOverflowFallbackPenalty fallback]
 public def fallbackOnHeight (d fallback : TaggedDoc) : TaggedDoc :=
   oneOf #[d, withHeightFallbackPenalty fallback]
+public def softSpace : TaggedDoc :=
+  fallbackOnFailure space hardNl
 public def append (a b : TaggedDoc) : TaggedDoc :=
   untagged <| .append a.doc b.doc
 public def join (ds : Array TaggedDoc) : TaggedDoc :=
@@ -414,4 +416,4 @@ export TaggedDoc (untagged taggedNode taggedText taggedWhitespace isTagged tag a
   aligned unflattenable flattened maybeFlattened unindented final initial free guarded either oneOf append join joinUsing fill fillWrapping fillUsing
   fillSomeUsing fillUsingSpace fillUsingSpaceWrapping fillSomeUsingSpace fillSomeUsingSpaceWrapping combine stickyCombine Sticky StickynessKind propagateStickyness PseudoAligned pseudoAligned isPseudoAligned
   needsAppBrackets sticky SelfDelimited mkSelfDelimited isSelfDelimited isBracketed RawFallback mkRawFallback isRawFallback getSticky? getStickynessKind? withStickyAlt withPosition SepArray propagateMetaData
-  PseudoDedented pseudoDedented getPseudoDedented?)
+  PseudoDedented pseudoDedented getPseudoDedented? softSpace)

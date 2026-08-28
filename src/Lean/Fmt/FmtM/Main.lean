@@ -166,6 +166,7 @@ where
     let lines := r.rendered.split '\n' |>.map (Doc.text ·.toString) |>.toArray
     .aligned <| .joinUsing .hardNl lines
   insertComments (anchor : Doc FmtCost) (cs : Array Comment) : StateM tryInsertingComments.State (Doc FmtCost) := do
+    let penalty := 999999 -- All failure fallbacks in the document should take priority.
     let mut result := anchor
     for c in cs.reverse do
       match placement c with
@@ -177,7 +178,7 @@ where
         let doc := .aligned <| doc ++ .hardNl ++ result
         result := .oneOf #[
           doc,
-          Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) result
+          Doc.costing (DefaultCost.ofFailureFallbackPenalty penalty) result
         ]
       | .beforeClosestNextNewline =>
         let renderings := c.render.filter (! ·.isMultiLine)
@@ -187,7 +188,7 @@ where
         let doc := result ++ .text " " ++ doc
         result := .oneOf #[
           doc,
-          Doc.costing (DefaultCost.ofFailureFallbackPenalty 1) result
+          Doc.costing (DefaultCost.ofFailureFallbackPenalty penalty) result
         ]
       | .afterToken =>
         let renderings := c.render.filter (! ·.isMultiLine)
@@ -202,7 +203,7 @@ where
         result := .oneOf #[
           afterTokenDoc,
           afterLineDoc,
-          Doc.costing (DefaultCost.ofOverflowFallbackPenalty 1) result
+          Doc.costing (DefaultCost.ofOverflowFallbackPenalty penalty) result
         ]
     return result
   goMemoized (v : Doc FmtCost)
