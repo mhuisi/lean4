@@ -47,6 +47,7 @@ public inductive RangeKind where
   | whitespace
   | node
   | text
+  deriving Inhabited
 
 public structure BacktrackableState where
   tags : Std.HashMap Syntax.Range (Array TagId × RangeKind)

@@ -23,6 +23,7 @@ import Lean.Language.Lean
 import Lean.Fmt.Util.Module
 import Init.System.Platform
 import Std.Sync.Channel
+import Lean.Fmt.Util.RangeTree
 
 namespace Lean.Fmt
 
@@ -118,10 +119,9 @@ public def tryInsertingComments
   let comments := comments.filter fun _ cs => ! cs.isEmpty
   let mut comments' := ∅
   for ⟨range, comments⟩ in comments do
-    let some (tags, _) := syntaxToTags.get? range
-      | continue
-    let tag := tags[0]!
-    comments' := comments'.insert tag (range, comments)
+    let tags := findBestTags range comments
+    for (tag, rangeForTag, commentsForTag) in tags do
+      comments' := comments'.insert tag (rangeForTag, commentsForTag)
   let init := {
     comments := comments'
     cache := ∅
@@ -134,6 +134,29 @@ public def tryInsertingComments
     return d
   return (doc, s.syntaxToTags)
 where
+  findBestTags (range : Syntax.Range) (comments : Array Comment) : Array (TagId × Syntax.Range × Array Comment) := Id.run do
+    if let some (tags, _) := syntaxToTags.get? range then
+      return #[(tags[0]!, range, comments)]
+    let syntaxToTagsByStart := syntaxToTags.toArray.qsort fun (a, _) (b, _) =>
+      let ord := (Ord.compare a.start b.start)
+        |>.then (Ord.compare a.bsize b.bsize)
+      ord.isLT
+    let syntaxToTagsByStop := syntaxToTags.toArray.qsort fun (a, _) (b, _) =>
+      let ord := (Ord.compare a.stop b.stop)
+        |>.then (Ord.compare b.bsize a.bsize)
+      ord.isLT
+    let (commentsWithPreviousRangeFallback, commentsWithNextRangeFallback) :=
+      comments.partition fun c => c.content.size <= 1 && c.placement matches .afterToken
+    let (_, rangeForPreviousRangeFallback, tagsForPreviousRangeFallback, _) :=
+      binSearchRightmost syntaxToTagsByStop range.stop (·.1.stop) (· < ·) |>.get!
+    let (_, rangeForNextRangeFallback, tagsForNextRangeFallback, _) :=
+      binSearchLeftmost syntaxToTagsByStart range.start (·.1.start) (· < ·) |>.get!
+    let mut r := #[]
+    if ! commentsWithPreviousRangeFallback.isEmpty then
+      r := r.push (tagsForPreviousRangeFallback[0]!, rangeForPreviousRangeFallback, commentsWithPreviousRangeFallback)
+    if ! commentsWithNextRangeFallback.isEmpty then
+      r := r.push (tagsForNextRangeFallback[0]!, rangeForNextRangeFallback, commentsWithNextRangeFallback)
+    return r
   tag (doc : Doc FmtCost) (c : Comment) : StateM tryInsertingComments.State (Doc FmtCost) :=
     modifyGet fun s =>
       let (freshTagId, syntaxToTags, doc) :=
