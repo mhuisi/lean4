@@ -95,13 +95,20 @@ public structure FmtProviderEntry where
   priority : Nat
   provider : FmtProvider
 
+/-- Inserts `entry` after all entries of greater or equal priority. -/
+private def insertFmtProvider (providers : Array FmtProviderEntry) (entry : FmtProviderEntry) :
+    Array FmtProviderEntry :=
+  let i := providers.findIdx? (·.priority < entry.priority) |>.getD providers.size
+  providers.insertIdx! i entry
+
 /-- The list of builtin `FmtProvider`s, ordered by decreasing priority. -/
 builtin_initialize builtinFmtProvidersRef : IO.Ref (Array FmtProviderEntry) ← IO.mkRef #[]
 
 /--
 Adds a new builtin `FmtProvider`. Providers are consulted in order of decreasing priority and the
 first provider that is responsible for a syntax node kind determines its formatter. Providers of
-equal priority are consulted in the order in which they were added. The priorities used by core are:
+equal priority are consulted in the order in which they were added, with the builtin ones coming
+before those registered with `@[fmt_provider]`. The priorities used by core are:
 * 1100 for choice nodes,
 * 1000 for the formatters registered with `@[{builtin_}fmt]`,
 * 900 for antiquotations,
@@ -110,19 +117,58 @@ equal priority are consulted in the order in which they were added. The prioriti
 * 600 for the operator formatters derived from the `ParserDescr` of a notation,
 * 400 for the atomic formatter derived from the `ParserDescr` of syntax that only parses atoms.
 
-This function should only be used from within the `Lean` package.
+This function should only be used from within the `Lean` package; downstream code registers
+`FmtProvider`s with the `@[fmt_provider]` attribute instead.
 -/
 public def addBuiltinFmtProvider (priority : Nat) (provider : FmtProvider) : IO Unit :=
-  builtinFmtProvidersRef.modify fun providers =>
-    let i := providers.findIdx? (·.priority < priority) |>.getD providers.size
-    providers.insertIdx! i { priority, provider }
+  builtinFmtProvidersRef.modify (insertFmtProvider · { priority, provider })
 
-builtin_initialize fmtProvidersExt : EnvExtension (Array FmtProviderEntry) ←
-  registerEnvExtension builtinFmtProvidersRef.get
+/-- Interpret a `FmtProvider` from the environment. -/
+def mkFmtProvider (constName : Name) : ImportM FmtProvider := do
+  let { env, opts, .. } ← read
+  IO.ofExcept <| unsafe env.evalConstCheck FmtProvider opts ``FmtProvider constName
+
+/--
+An extension which keeps track of the builtin `FmtProvider`s together with those registered with
+`@[fmt_provider]`, ordered by decreasing priority.
+-/
+builtin_initialize fmtProvidersExt :
+    PersistentEnvExtension (Name × Nat) (Name × FmtProviderEntry)
+      (Array (Name × Nat) × Array FmtProviderEntry) ←
+  registerPersistentEnvExtension {
+    mkInitial       := return (#[], ← builtinFmtProvidersRef.get)
+    addImportedFn   := fun as => do
+      (#[], ·) <$> as.foldlM (init := ← builtinFmtProvidersRef.get) fun s as =>
+        as.foldlM (init := s) fun s (declName, priority) =>
+          return insertFmtProvider s { priority, provider := ← mkFmtProvider declName }
+    addEntryFn      := fun (names, providers) (declName, entry) =>
+      (names.push (declName, entry.priority), insertFmtProvider providers entry)
+    exportEntriesFn := (·.1)
+  }
 
 /-- The registered `FmtProvider`s, ordered by decreasing priority. -/
 public def getFmtProviders (env : Environment) : Array FmtProviderEntry :=
-  fmtProvidersExt.getState env
+  fmtProvidersExt.getState env |>.2
+
+/-- Adds the `@[fmt_provider]` attribute, which is applied to declarations of type
+`Lean.Fmt.FmtProvider` to make them determine the formatters of the syntax node kinds they are
+responsible for. Its optional argument is the provider's priority, which defaults to `1000`; see
+`addBuiltinFmtProvider` for the priorities used by core. -/
+builtin_initialize registerBuiltinAttribute {
+  name            := `fmt_provider
+  descr           := "Registers a function of type `Lean.Fmt.FmtProvider` that determines the \
+    formatters of the syntax node kinds it is responsible for."
+  applicationTime := .afterCompilation
+  add             := fun decl stx kind => do
+    let priority ← Attribute.Builtin.getPrio stx
+    ensureAttrDeclIsMeta `fmt_provider decl kind
+    unless kind == AttributeKind.global do throwAttrMustBeGlobal `fmt_provider kind
+    let declType := (← getConstInfo decl).type
+    unless declType.isConstOf ``FmtProvider do
+      throwAttrDeclNotOfExpectedType `fmt_provider decl declType (mkConst ``FmtProvider)
+    let entry := { priority, provider := ← mkFmtProvider decl }
+    setEnv <| fmtProvidersExt.addEntry (← getEnv) (decl, entry)
+}
 
 /--
 The `FmtProvider` of an attribute that registers formatters keyed by syntax node kind, where `mk`

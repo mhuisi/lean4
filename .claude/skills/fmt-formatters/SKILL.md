@@ -167,7 +167,9 @@ decreasing priority: choice nodes (1100), `@[builtin_fmt]` (1000), the specializ
 **new family** of formatters therefore means
 declaring its attribute in `FmtM/Attribute.lean` (the `evalKey` boilerplate is shared —
 `evalFmtAttributeKey`) and adding one `addBuiltinFmtProvider 800 <| keyedFmtProvider <attr> <driver>`
-line; nothing in the dispatch function itself changes.
+line; nothing in the dispatch function itself changes. `addBuiltinFmtProvider` is core-only;
+packages downstream of core register a provider with `@[fmt_provider <priority>]` (default `1000`)
+on a `meta def ... : FmtProvider`, which lands it in the same priority-ordered list.
 
 **Notations with a `ParserDescr` need no attribute at all.** The low-priority providers derive a
 formatter from the parser's shape when nothing else claims the kind: `infixl`/`infixr`/`notation`
