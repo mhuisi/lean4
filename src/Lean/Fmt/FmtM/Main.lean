@@ -295,6 +295,7 @@ public def insertRemainingComments
     (syntaxToTags : Std.HashMap Syntax.Range (Array TagId × RangeKind))
     (tagsToRendered : Std.TreeMap TagId (Std.HashSet rendering.toSlice.Subslice) compare)
     (comments : Std.HashMap Syntax.Range (Array Comment))
+    (multiLineTokenRanges : Array Syntax.Range)
     : String :=
   let syntaxToRendered := connectTags syntaxToTags tagsToRendered
   let (syntaxToRenderedNodes, syntaxToRenderedWhitespace) := syntaxToRendered.partition fun _ (_, kind) =>
@@ -302,7 +303,7 @@ public def insertRemainingComments
   let syntaxToRenderedNodes := syntaxToRenderedNodes.map fun _ (ranges, _) => ranges
   let syntaxToRenderedWhitespace := syntaxToRenderedWhitespace.map fun _ (ranges, _) => ranges
   let comments := filterAlreadyFormattedComments comments syntaxToRenderedWhitespace
-  insertComments 100 rendering syntaxToRenderedNodes comments
+  insertComments 100 rendering syntaxToRenderedNodes comments multiLineTokenRanges
 
 private structure CommandOutput where
   rendering : String
@@ -330,6 +331,7 @@ def commandRaw (ctx : Fmt.Context) (stx : Syntax) : Except Error String := do
 
 public def commandMain (ctx : Fmt.Context) (stx : Syntax) : Except Error String := do
   let comments ← collectComments ctx.lineInfos stx
+  let multiLineTokenRanges := collectMultiLineTokenRanges stx
   try
     let r ← FmtM.run ctx do
       let leading ← fmtLeadingWithRetainedNewlinesAndComments stx
@@ -343,6 +345,7 @@ public def commandMain (ctx : Fmt.Context) (stx : Syntax) : Except Error String 
       |>.mapError (Error.ofFormattingError stx)
     let tagsToRendered := output.tags
     let rendering := insertRemainingComments output.rendering syntaxToTags tagsToRendered comments
+      multiLineTokenRanges
     return rendering
   catch _ =>
     commandRaw ctx stx

@@ -550,6 +550,56 @@ end Extraction
 
 section Placement
 
+/-- Ranges of the tokens in `stx` that span several lines. -/
+public partial def collectMultiLineTokenRanges (stx : Syntax) : Array Syntax.Range :=
+  go stx #[]
+where
+  go (stx : Syntax) (ranges : Array Syntax.Range) : Array Syntax.Range :=
+    match stx with
+    | .missing =>
+      ranges
+    | .atom info val =>
+      pushMultiLineToken info val ranges
+    | .ident info rawVal .. =>
+      pushMultiLineToken info rawVal.toString ranges
+    | .node _ kind args =>
+      if kind == choiceKind then
+        match args[0]? with
+        | some firstAlternative => go firstAlternative ranges
+        | none => ranges
+      else
+        args.foldl (fun ranges arg => go arg ranges) ranges
+  pushMultiLineToken (info : SourceInfo) (val : String) (ranges : Array Syntax.Range) :
+      Array Syntax.Range :=
+    if ! val.contains '\n' then
+      ranges
+    else if let some range := info.getRange? then
+      ranges.push range
+    else
+      ranges
+
+/--
+Determines the ranges in the rendered output that the multi-line tokens at `multiLineTokenRanges`
+were rendered to, sorted ascendingly by start position.
+Multi-line tokens that cannot be transferred to the rendered output because none of the formatters
+tagged them are dropped; comments may then still end up within such a token.
+-/
+def determineRenderedMultiLineTokenRanges
+    {rendering : String.Slice}
+    (syntaxToRendered : Std.HashMap Syntax.Range (Std.HashSet rendering.Subslice))
+    (multiLineTokenRanges : Array Syntax.Range) :
+    Array rendering.Subslice := Id.run do
+  let mut r := #[]
+  for tokenRange in multiLineTokenRanges do
+    let some renderedRanges := syntaxToRendered.get? tokenRange
+      | continue
+    for renderedRange in renderedRanges do
+      -- A multi-line token may have been rendered on a single line, in which case no comment can
+      -- end up within it.
+      if renderedRange.toSlice.contains '\n' then
+        r := r.push renderedRange
+  return r.qsort (·.startInclusive < ·.startInclusive)
+
 /--
 Associates every comment with a specific range in the rendered output.
 If the token that a comment is attached to is rendered in the output,
@@ -631,7 +681,8 @@ def compareSubslicesLargest {s : String.Slice} (a b : s.Subslice) : Ordering :=
 def determineCommentInsertions
     {rendering : String.Slice}
     (maxColumnWidth : Nat)
-    (comments : Std.HashMap rendering.Subslice (Array Comment)) :
+    (comments : Std.HashMap rendering.Subslice (Array Comment))
+    (renderedMultiLineTokenRanges : Array rendering.Subslice) :
     Array (rendering.Pos × String) := Id.run do
   let lineInfos := collectLineInfos rendering
   -- We process comments from the back to the front
@@ -651,6 +702,7 @@ def determineCommentInsertions
         match rp.kind with
         | .afterClosestPreviousNewline =>
           let (_, lineInfo) := findLineInfoContaining lineInfos range.startInclusive
+          let lineInfo := escapeMultiLineTokens lineInfos renderedMultiLineTokenRanges lineInfo
           let insertionPos := lineInfo.range.startInclusive
           let insertedComment := rp.rendering.rendered.indent lineInfo.indentation ++ "\n"
           let newLineLength := insertedComment.chars.length - 1
@@ -662,6 +714,12 @@ def determineCommentInsertions
         | .beforeClosestNextNewline =>
           let (lineNum, lineInfo) := findLineInfoContaining lineInfos range.endExclusive
           if containsEndOfLineComments[lineNum]! then
+            assert! ! isFinalAlternative
+            continue
+          -- The end of the line lies within a token spanning several lines, so appending the
+          -- comment there would insert it into the token.
+          if multiLineTokenRangeContaining? renderedMultiLineTokenRanges
+              lineInfo.range.endExclusive |>.isSome then
             assert! ! isFinalAlternative
             continue
           let lineLength := lineLengths[lineNum]!
@@ -685,14 +743,44 @@ where
   findLineInfoContaining (lineInfos : Array (LineInfo rendering)) (pos : rendering.Pos) : Nat × LineInfo rendering :=
     binSearchRightmost lineInfos pos (·.range.startInclusive) (· < ·) |>.get!
 
+  /-- The token spanning several lines that strictly contains `pos`, if there is one. -/
+  multiLineTokenRangeContaining?
+      (renderedMultiLineTokenRanges : Array rendering.Subslice) (pos : rendering.Pos) :
+      Option rendering.Subslice := do
+    let (_, tokenRange) ←
+      binSearchRightmost renderedMultiLineTokenRanges pos (·.startInclusive) (· < ·)
+    guard <| tokenRange.startInclusive < pos && pos < tokenRange.endExclusive
+    return tokenRange
+
+  /--
+  Moves a line whose start lies within a token spanning several lines to the line that the token
+  starts on, so that inserting a comment before the line does not insert it into the token.
+  -/
+  escapeMultiLineTokens
+      (lineInfos : Array (LineInfo rendering))
+      (renderedMultiLineTokenRanges : Array rendering.Subslice)
+      (lineInfo : LineInfo rendering) :
+      LineInfo rendering := Id.run do
+    let mut lineInfo := lineInfo
+    repeat
+      let some tokenRange := multiLineTokenRangeContaining? renderedMultiLineTokenRanges
+          lineInfo.range.startInclusive
+        | break
+      -- Strictly decreasing, since `tokenRange` starts before the current line.
+      lineInfo := findLineInfoContaining lineInfos tokenRange.startInclusive |>.2
+    return lineInfo
+
 public def insertComments
     (maxColumnWidth : Nat)
     (rendering : String.Slice)
     (syntaxToRendered : Std.HashMap Syntax.Range (Std.HashSet rendering.Subslice))
-    (comments : Std.HashMap Syntax.Range (Array Comment)) :
+    (comments : Std.HashMap Syntax.Range (Array Comment))
+    (multiLineTokenRanges : Array Syntax.Range) :
     String := Id.run do
   let comments := reassociateComments syntaxToRendered comments
-  let insertions := determineCommentInsertions maxColumnWidth comments
+  let renderedMultiLineTokenRanges :=
+    determineRenderedMultiLineTokenRanges syntaxToRendered multiLineTokenRanges
+  let insertions := determineCommentInsertions maxColumnWidth comments renderedMultiLineTokenRanges
   let mut r : String := ""
   let mut startPos : rendering.Pos := rendering.startPos
   for (insertionPos, comments) in insertions do
