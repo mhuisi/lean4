@@ -330,7 +330,8 @@ def commandRaw (ctx : Fmt.Context) (stx : Syntax) : Except Error String := do
   return leading ++ rawText ++ trailing
 
 public def commandMain (ctx : Fmt.Context) (stx : Syntax) : Except Error String := do
-  let comments ← collectComments ctx.lineInfos stx
+  let comments ←
+    collectComments ctx.env ctx.opts (getCommentCollectors ctx.env) ctx.lineInfos stx
   let multiLineTokenRanges := collectMultiLineTokenRanges stx
   try
     let r ← FmtM.run ctx do

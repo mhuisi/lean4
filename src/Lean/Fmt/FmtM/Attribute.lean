@@ -10,6 +10,7 @@ prelude
 public import Lean.KeyedDeclsAttribute
 public import Lean.Util.ShareCommon
 public import Lean.Fmt.FmtM.LineInfo
+public import Lean.Fmt.FmtM.Comments
 import Lean.Compiler.InitAttr
 import Lean.ExtraModUses
 import Lean.Fmt.Util.Module
@@ -168,6 +169,75 @@ builtin_initialize registerBuiltinAttribute {
       throwAttrDeclNotOfExpectedType `fmt_provider decl declType (mkConst ``FmtProvider)
     let entry := { priority, provider := ← mkFmtProvider decl }
     setEnv <| fmtProvidersExt.addEntry (← getEnv) (decl, entry)
+}
+
+/-- Inserts `entry` after all entries of greater or equal priority. -/
+private def insertCommentCollector
+    (collectors : Array CommentCollectorEntry) (entry : CommentCollectorEntry) :
+    Array CommentCollectorEntry :=
+  let i := collectors.findIdx? (·.priority < entry.priority) |>.getD collectors.size
+  collectors.insertIdx! i entry
+
+/-- The list of builtin `CommentCollector`s, ordered by decreasing priority. -/
+builtin_initialize builtinCommentCollectorsRef : IO.Ref (Array CommentCollectorEntry) ← IO.mkRef #[]
+
+/--
+Adds a new builtin `CommentCollector`. Collectors are consulted for every syntax node in order of
+decreasing priority; when two collectors claim the same comment, the one of greater priority wins.
+Collectors of equal priority are consulted in the order in which they were added, with the builtin
+ones coming before those registered with `@[comment_collector]`.
+
+This function should only be used from within the `Lean` package; downstream code registers
+`CommentCollector`s with the `@[comment_collector]` attribute instead.
+-/
+public def addBuiltinCommentCollector (priority : Nat) (collector : CommentCollector) : IO Unit :=
+  builtinCommentCollectorsRef.modify (insertCommentCollector · { priority, collector })
+
+/-- Interpret a `CommentCollector` from the environment. -/
+def mkCommentCollector (constName : Name) : ImportM CommentCollector := do
+  let { env, opts, .. } ← read
+  IO.ofExcept <| unsafe env.evalConstCheck CommentCollector opts ``CommentCollector constName
+
+/--
+An extension which keeps track of the builtin `CommentCollector`s together with those registered
+with `@[comment_collector]`, ordered by decreasing priority.
+-/
+builtin_initialize commentCollectorsExt :
+    PersistentEnvExtension (Name × Nat) (Name × CommentCollectorEntry)
+      (Array (Name × Nat) × Array CommentCollectorEntry) ←
+  registerPersistentEnvExtension {
+    mkInitial       := return (#[], ← builtinCommentCollectorsRef.get)
+    addImportedFn   := fun as => do
+      (#[], ·) <$> as.foldlM (init := ← builtinCommentCollectorsRef.get) fun s as =>
+        as.foldlM (init := s) fun s (declName, priority) =>
+          return insertCommentCollector s { priority, collector := ← mkCommentCollector declName }
+    addEntryFn      := fun (names, collectors) (declName, entry) =>
+      (names.push (declName, entry.priority), insertCommentCollector collectors entry)
+    exportEntriesFn := (·.1)
+  }
+
+/-- The registered `CommentCollector`s, ordered by decreasing priority. -/
+public def getCommentCollectors (env : Environment) : Array CommentCollectorEntry :=
+  commentCollectorsExt.getState env |>.2
+
+/-- Adds the `@[comment_collector]` attribute, which is applied to declarations of type
+`Lean.Fmt.CommentCollector` to make them determine the syntax ranges that the comments of the
+syntax nodes they are responsible for are associated with. Its optional argument is the collector's
+priority, which defaults to `1000`; see `addBuiltinCommentCollector`. -/
+builtin_initialize registerBuiltinAttribute {
+  name            := `comment_collector
+  descr           := "Registers a function of type `Lean.Fmt.CommentCollector` that determines the \
+    syntax ranges that the comments of the syntax nodes it is responsible for are associated with."
+  applicationTime := .afterCompilation
+  add             := fun decl stx kind => do
+    let priority ← Attribute.Builtin.getPrio stx
+    ensureAttrDeclIsMeta `comment_collector decl kind
+    unless kind == AttributeKind.global do throwAttrMustBeGlobal `comment_collector kind
+    let declType := (← getConstInfo decl).type
+    unless declType.isConstOf ``CommentCollector do
+      throwAttrDeclNotOfExpectedType `comment_collector decl declType (mkConst ``CommentCollector)
+    let entry := { priority, collector := ← mkCommentCollector decl }
+    setEnv <| commentCollectorsExt.addEntry (← getEnv) (decl, entry)
 }
 
 /--

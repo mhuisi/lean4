@@ -13,7 +13,10 @@ public import Lean.Fmt.Util.Basic
 import Lean.Fmt.Util.RangeTree
 import Init.Data.String.Search
 import Init.Control.Basic
+import Std.Data.HashMap.AdditionalOperations
 public import Lean.Fmt.FmtM.LineInfo
+public import Lean.Environment
+public import Lean.Data.Options
 
 /-- Indents all lines in `s` by `numSpaces` spaces. -/
 def String.indent (s : String) (numSpaces : Nat) : String :=
@@ -463,7 +466,53 @@ where
       return false
     return true
 
+/-- Input that a `CommentCollector` is consulted with. -/
+public structure CommentCollector.Context where
+  env : Environment
+  opts : Options
+  /-- Line information for the input `Syntax`. -/
+  lineInfos : Array SyntaxLineInfo
+
+/-- The comments in the leading whitespace of the first token of `stx`. -/
+public def CommentCollector.Context.leadingComments (ctx : Context) (stx : Syntax) :
+    Array Comment := Id.run do
+  let info := stx.getHeadInfo
+  let (some range, some leading) := (info.getRange?, info.getLeading?.bind (·.toSlice?))
+    | return #[]
+  return parseComments ctx.lineInfos range .leading leading
+
+/-- The comments in the trailing whitespace of the last token of `stx`. -/
+public def CommentCollector.Context.trailingComments (ctx : Context) (stx : Syntax) :
+    Array Comment := Id.run do
+  let info := stx.getTailInfo
+  let (some range, some trailing) := (info.getRange?, info.getTrailing?.bind (·.toSlice?))
+    | return #[]
+  return parseComments ctx.lineInfos range .trailing trailing
+
+/--
+Associates the comments of a syntax node with the syntax ranges that they should be attached to,
+overriding the association that `collectComments` determines on its own.
+A collector is consulted for every `Syntax.node` in the input `Syntax` and must leave out the
+comments it is not responsible for, so that they can be associated by a collector of lower priority
+or, failing that, by `collectComments` itself.
+-/
+public abbrev CommentCollector :=
+  CommentCollector.Context → Syntax → Array (Comment × Syntax.Range)
+
+public structure CommentCollectorEntry where
+  priority : Nat
+  collector : CommentCollector
+
+/-- A comment claimed by a `CommentCollector`, together with the priority of that collector. -/
+structure collectComments.Claim where
+  priority : Nat
+  /-- The range that the collector associated the comment with. -/
+  associatedRange : Syntax.Range
+  comment : Comment
+
 structure collectComments.State where
+  /-- The ranges of the comments that a `CommentCollector` claimed. -/
+  claimedComments : Std.HashSet Syntax.Range := {}
   pendingComments : Array Comment := #[]
   comments : Std.HashMap Syntax.Range (Array Comment) := {}
 
@@ -472,16 +521,63 @@ abbrev collectComments.M α := StateT collectComments.State (Except Fmt.Error) �
 /--
 Collects all comments in `stx`, associating them either with the token immediately before a comment
 on the same line or if the comment is on its own line with the next token following the comment.
+
+The `collectors`, ordered by decreasing priority, override this association for the comments they
+claim; when two collectors claim the same comment, the one with the greater priority wins.
 -/
-public partial def collectComments (lineInfos : Array SyntaxLineInfo) (stx : Syntax) :
+public partial def collectComments
+    (env : Environment)
+    (opts : Options)
+    (collectors : Array CommentCollectorEntry)
+    (lineInfos : Array SyntaxLineInfo)
+    (stx : Syntax) :
     Except Fmt.Error (Std.HashMap Syntax.Range (Array Comment)) := do
-  let (_, s) ← StateT.run (s := { : collectComments.State }) <| go stx
+  let claims := collectClaims
+  let (_, s) ← StateT.run (s := mkInitialState claims) <| go stx
   -- Comments on lines after the last token (i.e. `s.pendingComments`) are ignored.
   -- When formatting entire files, there is always an `eoi` token at the end
   -- (so `s.pendingComments` is empty) and when formatting parts of files,
   -- we always want to ignore those comments anyways.
-  return s.comments
+  return s.comments.map fun _ comments =>
+    -- Claimed comments are collected before `go` runs, so they may be out of source order.
+    comments.qsort (·.originalWhitespaceRange.start < ·.originalWhitespaceRange.start)
 where
+  /-- Consults every collector for every node of `stx`, keyed by the range of the claimed comment. -/
+  collectClaims : Std.HashMap Syntax.Range collectComments.Claim := Id.run do
+    if collectors.isEmpty then
+      return {}
+    let (_, claims) := StateT.run (s := {}) <| goClaims { env, opts, lineInfos } stx
+    return claims
+
+  goClaims (ctx : CommentCollector.Context) (stx : Syntax) :
+      StateM (Std.HashMap Syntax.Range collectComments.Claim) Unit := do
+    let .node _ kind args := stx
+      | return
+    if kind == choiceKind then
+      if let some firstAlternative := args[0]? then
+        return ← goClaims ctx firstAlternative
+    for entry in collectors do
+      for (comment, associatedRange) in entry.collector ctx stx do
+        modify (·.alter comment.originalWhitespaceRange fun
+          | none =>
+            some { priority := entry.priority, associatedRange, comment }
+          | some claim =>
+            if claim.priority < entry.priority then
+              some { priority := entry.priority, associatedRange, comment }
+            else
+              some claim)
+    for arg in args do
+      goClaims ctx arg
+
+  mkInitialState (claims : Std.HashMap Syntax.Range collectComments.Claim) :
+      collectComments.State := {
+    claimedComments := .ofArray claims.keysArray
+    comments := claims.fold (init := {}) fun comments _ claim =>
+      comments.alter claim.associatedRange fun
+        | none => some #[claim.comment]
+        | some comments => some <| comments.push claim.comment
+  }
+
   go (stx : Syntax) : collectComments.M Unit := do
     match stx with
     | .missing =>
@@ -505,7 +601,7 @@ where
         -- *in the parser*.
         return
     if let some leading ← info.getLeading? |>.mapM toSlice then
-      let comments := parseComments lineInfos range .leading leading
+      let comments ← dropClaimedComments <| parseComments lineInfos range .leading leading
       modify fun s => { s with
         pendingComments := s.pendingComments ++ comments
       }
@@ -513,13 +609,19 @@ where
       (s.pendingComments, { s with pendingComments := #[] })
     addComments range pendingComments
     if let some trailing ← info.getTrailing? |>.mapM toSlice then
-      let comments := parseComments lineInfos range .trailing trailing
+      let comments ← dropClaimedComments <| parseComments lineInfos range .trailing trailing
       let (commentsAfterToken, commentsOnLineBeforeToken) :=
         comments.partition (·.placement matches .afterToken)
       addComments range commentsAfterToken
       modify fun s => { s with
         pendingComments := s.pendingComments ++ commentsOnLineBeforeToken
       }
+  /-- Drops the comments that a `CommentCollector` already associated with a range. -/
+  dropClaimedComments (comments : Array Comment) : collectComments.M (Array Comment) := do
+    let claimedComments := (← get).claimedComments
+    if claimedComments.isEmpty then
+      return comments
+    return comments.filter (! claimedComments.contains ·.originalWhitespaceRange)
   addComments (range : Syntax.Range) (newComments : Array Comment) : collectComments.M Unit := do
     if newComments.isEmpty then
       return
