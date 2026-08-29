@@ -147,14 +147,14 @@ def Comment.renderedPlacements (c : Comment) : Array RenderedPlacement :=
         if rendering.isMultiLine then
           #[.afterClosestPreviousNewline]
         else
-          #[.afterClosestPreviousNewline]
+          #[.beforeClosestNextNewline, .afterClosestPreviousNewline]
       | .lineComment, .onLineBeforeToken =>
         #[.afterClosestPreviousNewline]
       | .blockComment, .afterToken =>
         if rendering.isMultiLine then
           #[.afterClosestPreviousNewline]
         else
-          #[.afterClosestPreviousNewline]
+          #[.beforeClosestNextNewline, .afterClosestPreviousNewline]
       | .blockComment, .onLineBeforeToken =>
         #[.afterClosestPreviousNewline]
     kinds.map (⟨·, rendering⟩)
