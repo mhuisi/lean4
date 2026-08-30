@@ -89,10 +89,7 @@ private def placement (c : Comment) : Comment.RenderedPlacementKind :=
   | .blockComment, .onLineBeforeToken =>
     .afterClosestPreviousNewline
   | .lineComment, .afterToken =>
-    if c.content.size > 1 then
-      .afterClosestPreviousNewline
-    else
-      .beforeClosestNextNewline
+    .beforeClosestNextNewline
   | .blockComment, .afterToken =>
     if c.content.size > 1 then
       .afterClosestPreviousNewline
@@ -146,7 +143,7 @@ where
         |>.then (Ord.compare b.bsize a.bsize)
       ord.isLT
     let (commentsWithPreviousRangeFallback, commentsWithNextRangeFallback) :=
-      comments.partition fun c => c.content.size <= 1 && c.placement matches .afterToken
+      comments.partition fun c => c.placement matches .afterToken && ! (c.kind matches .blockComment && c.content.size > 1)
     let (_, rangeForPreviousRangeFallback, tagsForPreviousRangeFallback, _) :=
       binSearchRightmost syntaxToTagsByStop range.stop (·.1.stop) (· < ·) |>.get!
     let (_, rangeForNextRangeFallback, tagsForNextRangeFallback, _) :=
@@ -181,7 +178,7 @@ where
           Doc.costing (DefaultCost.ofFailureFallbackPenalty penalty) result
         ]
       | .beforeClosestNextNewline =>
-        let renderings := c.render.filter (! ·.isMultiLine)
+        let renderings := c.render
         let docs := renderings.map (Doc.final <| renderingToDoc ·)
         let docs ← docs.mapM (tag · c)
         let doc := Doc.free <| .oneOf docs
@@ -417,7 +414,12 @@ where
   renderCommand (ctx : Context) (cmdData prevCmdData : Language.Lean.CommandData) : Except Error String := do
     let input := initialSnap.ictx.inputString
     let mut renderedCommand ← commandMain ctx cmdData.stx
-    let (some startPos, some endPos) := (cmdData.stx.getStartPos? >>= String.pos? input, cmdData.stx.getTrailingTailPos? >>= String.pos? input)
+    -- The rendering of a command always starts at the beginning of a line, so it must be validated
+    -- there as well: commands like `variable` require their continuation lines to be indented
+    -- relative to the command's own column, which fails when the rendering is spliced in at the
+    -- indentation the command had in the input.
+    let rawStartPos := ctx.text.lineStart (ctx.text.toPosition prevCmdData.parserState.pos).line
+    let (some startPos, some endPos) := (input.pos? rawStartPos, cmdData.stx.getTrailingTailPos? >>= String.pos? input)
       | return renderedCommand
     let inputWithRenderedCommand := input.extract input.startPos startPos ++ renderedCommand ++ input.extract endPos input.endPos
     let ictx := Parser.InputContext.mk inputWithRenderedCommand initialSnap.ictx.fileName
@@ -427,7 +429,8 @@ where
       currNamespace := prevCmdData.cmdState.scopes[0]!.currNamespace
       openDecls := prevCmdData.cmdState.scopes[0]!.openDecls
     }
-    let (stx, _, msgLog) := Parser.parseCommand ictx pmctx prevCmdData.parserState MessageLog.empty
+    let parserState := { prevCmdData.parserState with pos := rawStartPos }
+    let (stx, _, msgLog) := Parser.parseCommand ictx pmctx parserState MessageLog.empty
     if msgLog.hasErrors || stx.hasMissing then
       renderedCommand ← commandRaw ctx cmdData.stx
     return renderedCommand
