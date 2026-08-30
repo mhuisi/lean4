@@ -645,6 +645,56 @@ def derivedAtomicFmtProvider : FmtProvider := fun env opts kind => do
   guard <| hasAtomicFormatter env opts kind
   return (`Lean.Fmt.fmtAtomic, fmtAtomic)
 
+/-- Whether `a` and `b` lie on the same line of `lineInfos`. -/
+private def sameLine (lineInfos : Array SyntaxLineInfo) (a b : String.Pos.Raw) : Bool :=
+  let lineIdx? (pos : String.Pos.Raw) :=
+    binSearchRightmost lineInfos pos (·.startPos) (· < ·) |>.map (·.1)
+  lineIdx? a == lineIdx? b
+
+/--
+Reassociates the comments that follow the operator of an infix operation.
+`collectComments` attaches such a comment to the operator or to the token after it, which moves it
+around with the operator when the operation is laid out differently. It is attached to the operand
+that it shares its line with instead; a comment that shares its line with neither operand is placed
+above the operator, where it ends up on a line of its own either way.
+-/
+def infixOperatorCommentCollector : CommentCollector := fun ctx stx => Id.run do
+  if stx.getNumArgs != 3 then
+    return #[]
+  let (lhs, op, rhs) := (stx[0], stx[1], stx[2])
+  if ! op.isAtom then
+    return #[]
+  if (getInfixOperation? ctx.env ctx.opts stx.getKind).isNone then
+    return #[]
+  let comments := ctx.trailingComments op
+  if comments.isEmpty then
+    return #[]
+  -- The operands are anchored at their last token, which is always tagged by the formatters,
+  -- whereas an operand of an operator chain is not formatted as a node of its own.
+  let (some lhsRange, some opRange, some rhsPos, some rhsRange) :=
+      (lhs.getTailInfo.getRange?, op.getRange?, rhs.getPos?, rhs.getTailInfo.getRange?)
+    | return #[]
+  let opOnLhsLine := sameLine ctx.lineInfos lhsRange.stop opRange.start
+  let opOnRhsLine := sameLine ctx.lineInfos opRange.stop rhsPos
+  let mut r := #[]
+  for c in comments do
+    -- Only a comment before the first newline of the whitespace is on the operator's line.
+    let commentOnOpLine := c.placement matches .afterToken
+    if commentOnOpLine && opOnLhsLine && opOnRhsLine then
+      -- `a + b`: the whole operation is on one line, so there is no other line to move to.
+      continue
+    if commentOnOpLine && opOnLhsLine then
+      -- `a +` / `b`: the comment ends the line of the left operand.
+      r := r.push (c, lhsRange)
+    else if commentOnOpLine && opOnRhsLine then
+      -- `a` / `+ b`: the comment lies within the line of the right operand.
+      r := r.push (c, rhsRange)
+    else
+      -- The comment shares its line with neither operand, so it belongs above the operator rather
+      -- than after it.
+      r := r.push ({ c with placement := .onLineBeforeToken }, opRange)
+  return r
+
 builtin_initialize
   addBuiltinFmtProvider 1100 choiceNodeFmtProvider
   addBuiltinFmtProvider 1000 <| keyedFmtProvider fmtAttribute id
@@ -655,6 +705,9 @@ builtin_initialize
   addBuiltinFmtProvider 800 <| keyedFmtProvider quantifierFmtAttribute fmtQuantifier
   addBuiltinFmtProvider 600 derivedOperatorFmtProvider
   addBuiltinFmtProvider 400 derivedAtomicFmtProvider
+
+builtin_initialize
+  addBuiltinCommentCollector 500 infixOperatorCommentCollector
 
 public def fmt? (stx? : Option Syntax) : FmtM TaggedDoc := do
   let some stx := stx?

@@ -185,7 +185,8 @@ builtin_initialize builtinCommentCollectorsRef : IO.Ref (Array CommentCollectorE
 Adds a new builtin `CommentCollector`. Collectors are consulted for every syntax node in order of
 decreasing priority; when two collectors claim the same comment, the one of greater priority wins.
 Collectors of equal priority are consulted in the order in which they were added, with the builtin
-ones coming before those registered with `@[comment_collector]`.
+ones coming before those registered with `@[comment_collector]`. The priorities used by core are:
+* 500 for `infixOperatorCommentCollector`.
 
 This function should only be used from within the `Lean` package; downstream code registers
 `CommentCollector`s with the `@[comment_collector]` attribute instead.
