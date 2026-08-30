@@ -459,11 +459,13 @@ public def fmtTypeAscription : Fmt := fun
     return Layouts.parens lbTk ascription rbTk
   | _ => throw .partialFormatter
 
-@[builtin_fmt Lean.Parser.Term.arrow]
-public def fmtArrow : Fmt := fmtInfixOperator (some .right) (extendedChainKinds := #[``Parser.Term.depArrow])
+@[builtin_infix_fmt Lean.Parser.Term.arrow]
+public def fmtArrow : Fmt.InfixOperation :=
+  { assoc := .right, extendedChainKinds := #[``Parser.Term.depArrow] }
 
-@[builtin_fmt Lean.Parser.Term.depArrow]
-public def fmtDepArrow : Fmt := fmtInfixOperator (some .right) (extendedChainKinds := #[``Parser.Term.arrow])
+@[builtin_infix_fmt Lean.Parser.Term.depArrow]
+public def fmtDepArrow : Fmt.InfixOperation :=
+  { assoc := .right, extendedChainKinds := #[``Parser.Term.arrow] }
 
 @[builtin_quantifier_fmt Lean.Parser.Term.forall]
 public def fmtForall : QuantifierFmt := fun
@@ -598,7 +600,7 @@ public def fmtPipeProj : Fmt := fun stx =>
   fmtPipeProjLike stx deconstructPipeProj
 
 @[builtin_infix_fmt Lean.Parser.Term.subst]
-public def fmtSubst : Fmt.InfixOperationAssociativity := .right
+public def fmtSubst : Fmt.InfixOperation := { assoc := .right }
 
 @[builtin_fmt Lean.Parser.Term.anonymousCtor]
 public def fmtAnonymousCtor : Fmt := fun

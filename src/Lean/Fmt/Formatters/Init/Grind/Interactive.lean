@@ -456,7 +456,7 @@ public def fmtGrindDot : Fmt := fun
   | _ => throw .partialFormatter
 
 @[builtin_infix_fmt Lean.Parser.Tactic.Grind.«grind_<;>_»]
-public def fmtGrindSeqFocus : Fmt.InfixOperationAssociativity := .left
+public def fmtGrindSeqFocus : Fmt.InfixOperation := { assoc := .left }
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.first]
 public def fmtGrindFirst : Fmt := fun

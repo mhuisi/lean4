@@ -15,10 +15,10 @@ import Init.Data
 namespace Lean.Fmt
 
 @[builtin_infix_fmt Lean.Parser.Sym.Simp.andThen]
-public def fmtSymSimprocAndThen : Fmt.InfixOperationAssociativity := .right
+public def fmtSymSimprocAndThen : Fmt.InfixOperation := { assoc := .right }
 
 @[builtin_infix_fmt Lean.Parser.Sym.Simp.orElse]
-public def fmtSymSimprocOrElse : Fmt.InfixOperationAssociativity := .right
+public def fmtSymSimprocOrElse : Fmt.InfixOperation := { assoc := .right }
 
 @[builtin_fmt Lean.Parser.Sym.Simp.rewriteSet]
 public def fmtSymSimpRewriteSet : Fmt := fun

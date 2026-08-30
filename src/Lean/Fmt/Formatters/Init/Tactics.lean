@@ -481,7 +481,7 @@ public def fmtFirst : Fmt := fun
   | _ => throw .partialFormatter
 
 @[builtin_infix_fmt Lean.Parser.Tactic.«tactic_<;>_»]
-public def fmtSeqFocus : Fmt.InfixOperationAssociativity := .left
+public def fmtSeqFocus : Fmt.InfixOperation := { assoc := .left }
 
 @[builtin_fmt Lean.Parser.Tactic.paren]
 public def fmtTacticParen : Fmt := fun

@@ -127,17 +127,21 @@ public def fmtPSigma : QuantifierFmt := fun
     }
   | _ => none
 
-@[builtin_fmt «term_×_»]
-public def fmtTimes : Fmt := fmtInfixOperator (assoc? := some .right) #[``«term_×__1»]
+@[builtin_infix_fmt «term_×_»]
+public def fmtTimes : Fmt.InfixOperation :=
+  { assoc := .right, extendedChainKinds := #[``«term_×__1»] }
 
-@[builtin_fmt «term_×__1»]
-public def fmtSigmaTimes : Fmt := fmtInfixOperator (assoc? := some .right) #[``«term_×_»]
+@[builtin_infix_fmt «term_×__1»]
+public def fmtSigmaTimes : Fmt.InfixOperation :=
+  { assoc := .right, extendedChainKinds := #[``«term_×_»] }
 
-@[builtin_fmt «term_×'_»]
-public def fmtTimes' : Fmt := fmtInfixOperator (assoc? := some .right) #[``«term_×'__1»]
+@[builtin_infix_fmt «term_×'_»]
+public def fmtTimes' : Fmt.InfixOperation :=
+  { assoc := .right, extendedChainKinds := #[``«term_×'__1»] }
 
-@[builtin_fmt «term_×'__1»]
-public def fmtPSigmaTimes : Fmt := fmtInfixOperator (assoc? := some .right) #[``«term_×'_»]
+@[builtin_infix_fmt «term_×'__1»]
+public def fmtPSigmaTimes : Fmt.InfixOperation :=
+  { assoc := .right, extendedChainKinds := #[``«term_×'_»] }
 
 @[builtin_fmt «term{_}»]
 public def fmtSetNotation : Fmt := fun
@@ -146,7 +150,7 @@ public def fmtSetNotation : Fmt := fun
   | _ => throw .partialFormatter
 
 @[builtin_infix_fmt Lean.unifConstraint]
-public def fmtUnifConstraint : Fmt.InfixOperationAssociativity := .middle
+public def fmtUnifConstraint : Fmt.InfixOperation := { assoc := .middle }
 
 @[builtin_fmt Lean.«command__Unif_hint____Where_|_-⊢__»]
 public def fmtUnifHint : Fmt := fun

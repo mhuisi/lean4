@@ -25,16 +25,16 @@ public def fmtPrecParen : Fmt := fun
   | _ => throw .partialFormatter
 
 @[builtin_infix_fmt Lean.Parser.Syntax.addPrec]
-public def fmtAddPrec : Fmt.InfixOperationAssociativity := .left
+public def fmtAddPrec : Fmt.InfixOperation := { assoc := .left }
 
 @[builtin_infix_fmt Lean.Parser.Syntax.subPrec]
-public def fmtSubPrec : Fmt.InfixOperationAssociativity := .left
+public def fmtSubPrec : Fmt.InfixOperation := { assoc := .left }
 
 @[builtin_infix_fmt Lean.Parser.Syntax.addPrio]
-public def fmtAddPrio : Fmt.InfixOperationAssociativity := .left
+public def fmtAddPrio : Fmt.InfixOperation := { assoc := .left }
 
 @[builtin_infix_fmt Lean.Parser.Syntax.subPrio]
-public def fmtSubPrio : Fmt.InfixOperationAssociativity := .left
+public def fmtSubPrio : Fmt.InfixOperation := { assoc := .left }
 
 @[builtin_fmt «prio(_)»]
 public def fmtPrioParen : Fmt := fun
@@ -100,7 +100,7 @@ public def fmtStxNotFollowedBy : Fmt := fun
   | _ => throw .partialFormatter
 
 @[builtin_infix_fmt «stx_<|>_»]
-public def fmtStxOrelse : Fmt.InfixOperationAssociativity := .left
+public def fmtStxOrelse : Fmt.InfixOperation := { assoc := .left }
 
 @[builtin_fmt «term¬_», builtin_fmt term!_]
 public def fmtTermNot : Fmt := fmtPrefixOperator
@@ -126,22 +126,22 @@ public def fmtTermInv : Fmt := fun
   | _ => throw .partialFormatter
 
 @[builtin_infix_fmt «term_∈_»]
-public def fmtTermMem : Fmt.InfixOperationAssociativity := .middle
+public def fmtTermMem : Fmt.InfixOperation := { assoc := .left }
 
 @[builtin_infix_fmt «term_∉_»]
-public def fmtTermNotMem : Fmt.InfixOperationAssociativity := .middle
+public def fmtTermNotMem : Fmt.InfixOperation := { assoc := .left }
 
 @[builtin_infix_fmt «term_≤_»]
-public def fmtTermLe : Fmt.InfixOperationAssociativity := .middle
+public def fmtTermLe : Fmt.InfixOperation := { assoc := .middle }
 
 @[builtin_infix_fmt «term_≥_»]
-public def fmtTermGe : Fmt.InfixOperationAssociativity := .middle
+public def fmtTermGe : Fmt.InfixOperation := { assoc := .middle }
 
 @[builtin_infix_fmt «term_∧_»]
-public def fmtTermAnd : Fmt.InfixOperationAssociativity := .right
+public def fmtTermAnd : Fmt.InfixOperation := { assoc := .right }
 
 @[builtin_infix_fmt «term_∨_»]
-public def fmtTermOr : Fmt.InfixOperationAssociativity := .right
+public def fmtTermOr : Fmt.InfixOperation := { assoc := .right }
 
 public structure PipeOperator where
   lhs : Syntax
@@ -287,12 +287,6 @@ public def fmtSubtype : Fmt := fun
     let lhs := Layouts.typeAscription x colonTk? type?
     return Layouts.subtype lbTk lhs slashTk p rbTk .dense
   | _ => throw .partialFormatter
-
-@[builtin_fmt «term_∈_»]
-public def fmtMem : Fmt := fmtInfixOperator (some .left)
-
-@[builtin_fmt «term_∉_»]
-public def fmtNotMem : Fmt := fmtInfixOperator (some .left)
 
 @[builtin_fmt termWithout_expected_type_]
 public def fmtWithoutExpectedType : Fmt := fun

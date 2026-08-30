@@ -14,4 +14,4 @@ import Init.Data
 namespace Lean.Fmt
 
 @[builtin_infix_fmt Std.Tactic.BVDecide.LRAT.Internal.«term_⊭_»]
-public def fmtNotEntails : Fmt.InfixOperationAssociativity := .middle
+public def fmtNotEntails : Fmt.InfixOperation := { assoc := .middle }

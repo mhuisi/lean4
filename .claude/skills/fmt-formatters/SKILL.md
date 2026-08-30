@@ -124,11 +124,14 @@ More good examples to read:
 (declared in `FmtM/Attribute.lean`):
 
 - `@[builtin_fmt <syntax node kind>]` on a `def ... : Fmt` — the general case.
-- `@[builtin_infix_fmt <syntax node kind>]` on a `def ... : Fmt.InfixOperationAssociativity`
-  (`.left`, `.right`, or `.middle`) — for infix operators whose parsers do **not** have a
-  `ParserDescr` (e.g. builtin `leading_parser`/`trailing_parser` definitions). The attribute
-  supplies the associativity, and the generic `fmtInfixOperator` formats whole operator chains
-  with it.
+- `@[builtin_infix_fmt <syntax node kind>]` on a `def ... : Fmt.InfixOperation`
+  (`{ assoc := .left / .right / .middle, extendedChainKinds := #[...] }`) — for infix operators
+  whose parsers do **not** have a `ParserDescr` (e.g. builtin `leading_parser`/`trailing_parser`
+  definitions), and for those whose chains span several syntax node kinds. The attribute supplies
+  the associativity and the extra chain kinds, and the generic `fmtInfixOperator` formats whole
+  operator chains with them. Registering here rather than calling `fmtInfixOperator` from a plain
+  `@[builtin_fmt]` is also what lets `Fmt` recognize the kind as an infix operation at all, which
+  `infixOperatorCommentCollector` relies on to place comments around the operator.
 - `@[builtin_conditional_fmt <syntax node kind>]` on a `def ... : ConditionalFmt`
   (`Syntax → FmtM (Option Fmt.Conditional)`) — for `if ... then ... else ...`-shaped syntax. The
   formatter only *deconstructs* one conditional into a `Conditional` record (`ifTk`, `cond`,
@@ -154,7 +157,7 @@ More good examples to read:
 
 ```lean
 @[builtin_infix_fmt Lean.Parser.Syntax.addPrec]
-public def fmtAddPrec : Fmt.InfixOperationAssociativity := .left
+public def fmtAddPrec : Fmt.InfixOperation := { assoc := .left }
 ```
 
 **Dispatch goes through `FmtProvider`s, not through a hardcoded chain.** A `FmtProvider` maps
@@ -178,12 +181,12 @@ operators get `fmtInfixOperator` with the associativity derived from the precede
 `TrailingParserDescr` of shape `symbol` at `lhsPrec == prec`) get `fmtPrefixOperator` /
 `fmtPostfixOperator`. Only write a formatter for these when the derived one is wrong.
 
-When a chain spans *several* node kinds, register a plain `@[builtin_fmt]` that calls
-`fmtInfixOperator` directly with the extra kinds, e.g. `fmtArrow`:
+When a chain spans *several* node kinds, name them in `extendedChainKinds`, e.g. `fmtArrow`:
 
 ```lean
-@[builtin_fmt Lean.Parser.Term.arrow]
-public def fmtArrow : Fmt := fmtInfixOperator (some .right) (extendedChainKinds := #[``Parser.Term.depArrow])
+@[builtin_infix_fmt Lean.Parser.Term.arrow]
+public def fmtArrow : Fmt.InfixOperation :=
+  { assoc := .right, extendedChainKinds := #[``Parser.Term.depArrow] }
 ```
 
 **1. Syntax match.** A formatter starts with a syntax match (an anti-quotation pattern)
