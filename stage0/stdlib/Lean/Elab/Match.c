@@ -202,7 +202,7 @@ lean_object* lean_expr_instantiate1(lean_object*, lean_object*);
 uint8_t l_Lean_LocalDeclKind_ofBinderName(lean_object*);
 uint8_t l_Lean_Expr_isAppOf(lean_object*, lean_object*);
 lean_object* l_Lean_Expr_app___override(lean_object*, lean_object*);
-lean_object* l_Lean_Elab_Term_mkTermInfo___redArg(lean_object*, lean_object*, lean_object*, lean_object*, lean_object*, uint8_t, uint8_t, lean_object*, lean_object*);
+lean_object* l_Lean_Elab_Term_mkTermInfo___redArg(lean_object*, lean_object*, lean_object*, lean_object*, lean_object*, uint8_t, uint8_t, lean_object*, lean_object*, lean_object*);
 lean_object* l_Lean_Elab_Term_mkPartialTermInfo___redArg(lean_object*, lean_object*, lean_object*, lean_object*, lean_object*);
 lean_object* l_Lean_mkMData(lean_object*, lean_object*);
 lean_object* l_Lean_MessageData_joinSep(lean_object*, lean_object*);
@@ -25120,7 +25120,7 @@ v___x_8627_ = l_Lean_Expr_isFVar(v_p_8616_);
 if (v___x_8627_ == 0)
 {
 lean_object* v___x_8628_; 
-v___x_8628_ = l_Lean_Elab_Term_mkTermInfo___redArg(v___x_8625_, v_fst_8613_, v_p_8616_, v___x_8614_, v___x_8626_, v___x_8627_, v___x_8615_, v___y_8619_, v___y_8620_);
+v___x_8628_ = l_Lean_Elab_Term_mkTermInfo___redArg(v___x_8625_, v_fst_8613_, v_p_8616_, v___x_8614_, v___x_8626_, v___x_8627_, v___x_8615_, v___y_8619_, v___y_8620_, v___y_8623_);
 return v___x_8628_;
 }
 else
@@ -25128,13 +25128,13 @@ else
 if (v___y_8617_ == 0)
 {
 lean_object* v___x_8629_; 
-v___x_8629_ = l_Lean_Elab_Term_mkTermInfo___redArg(v___x_8625_, v_fst_8613_, v_p_8616_, v___x_8614_, v___x_8626_, v___x_8627_, v___x_8615_, v___y_8619_, v___y_8620_);
+v___x_8629_ = l_Lean_Elab_Term_mkTermInfo___redArg(v___x_8625_, v_fst_8613_, v_p_8616_, v___x_8614_, v___x_8626_, v___x_8627_, v___x_8615_, v___y_8619_, v___y_8620_, v___y_8623_);
 return v___x_8629_;
 }
 else
 {
 lean_object* v___x_8630_; 
-v___x_8630_ = l_Lean_Elab_Term_mkTermInfo___redArg(v___x_8625_, v_fst_8613_, v_p_8616_, v___x_8614_, v___x_8626_, v___x_8615_, v___x_8615_, v___y_8619_, v___y_8620_);
+v___x_8630_ = l_Lean_Elab_Term_mkTermInfo___redArg(v___x_8625_, v_fst_8613_, v_p_8616_, v___x_8614_, v___x_8626_, v___x_8615_, v___x_8615_, v___y_8619_, v___y_8620_, v___y_8623_);
 return v___x_8630_;
 }
 }
