@@ -269,7 +269,7 @@ where
     let mut activeGroup : Array BinderWithDependents := groups[0]!
     for g in groups[1...*] do
       let isBinderlessExplicits := activeGroup.all (fun b => b.kind matches .explicit && b.type?.isNone) && g.all (fun b => b.kind matches .explicit && b.type?.isNone)
-      if isBinderlessExplicits then
+      if isBinderlessExplicits && isDefaultEquivalent activeGroup g then
         activeGroup := activeGroup ++ g
       else
         groupedGroups := groupedGroups.push activeGroup
@@ -285,7 +285,7 @@ where
         let some type := activeGroup[0]? >>= (·.type?)
           | return false
         return activeGroup.all (·.type? == type) && g.all (·.type? == type)
-      if isExplicits && sameType then
+      if isExplicits && sameType && isDefaultEquivalent activeGroup g then
         activeGroup := activeGroup ++ g
       else
         groupedGroups := groupedGroups.push activeGroup
@@ -297,7 +297,7 @@ where
     let mut activeGroup : Array BinderWithDependents := groups[0]!
     for g in groups[1...*] do
       let isExplicits := activeGroup.all (·.kind matches .explicit) && g.all (·.kind matches .explicit)
-      if isExplicits && activeGroup.all (·.dependents.all (·.isEmpty)) && g.all (·.dependents.all (·.isEmpty)) then
+      if isExplicits && activeGroup.all (·.dependents.all (·.isEmpty)) && g.all (·.dependents.all (·.isEmpty)) && isDefaultEquivalent activeGroup g then
         activeGroup := activeGroup ++ g
       else
         groupedGroups := groupedGroups.push activeGroup
@@ -324,6 +324,10 @@ where
           activeGroup := #[b]
       dividedGroups := dividedGroups.push activeGroup
       return dividedGroups
+  isDefaultEquivalent (group1 group2 : Array BinderWithDependents) : Bool :=
+    let defaults1 := Std.HashSet.ofArray <| group1.map (·.default?.isSome)
+    let defaults2 := Std.HashSet.ofArray <| group2.map (·.default?.isSome)
+    defaults1 == defaults2
 
 public def fmtBinders
     (binders : TSyntaxArray binderKinds)
