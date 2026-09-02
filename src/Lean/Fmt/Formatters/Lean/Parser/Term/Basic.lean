@@ -206,21 +206,11 @@ public def groupBinders
   for i in (0...runs.size) do
     runs := runs.modify i fun run => Id.run do
       let mut groups := run
-      --dbg_trace groups.map (·.map (·.idx))
-      --dbg_trace "implicits and instances"
       groups := groupAdjacentImplicitsAndInstances groups
-      --dbg_trace groups.map (·.map (·.idx))
-      --dbg_trace "dependents"
       groups := groupAdjacentExplicitsBySameDependents groups
-      --dbg_trace groups.map (·.map (·.idx))
-      --dbg_trace "deps"
       groups := groupAdjacentByDependencies groups
-      --dbg_trace groups.map (·.map (·.idx))
+      groups := groupAdjacentBinderlessExplicits groups
       groups := groupAdjacentExplicitsWithoutDependents groups
-      -- dbg_trace "implicit deps"
-      -- groups := groupAdjacentImplicitsAndExplicitsByDependencies groups
-      -- dbg_trace groups.map (·.map (·.idx))
-      --dbg_trace "run_end"
       return groups
   return runs.flatMap (·.map (·.map (·.binder)))
 where
@@ -241,6 +231,22 @@ where
         activeRun := #[b]
     kindRuns := kindRuns.push activeRun
     return kindRuns
+  groupAdjacentImplicitsAndInstances (groups : Array (Array BinderWithDependencies)) : Array (Array BinderWithDependencies) := Id.run do
+    let mut groupedGroups : Array (Array BinderWithDependencies) := #[]
+    let mut activeGroup : Array BinderWithDependencies := groups[0]!
+    for g in groups[1...*] do
+      let isImplicitsOrInstances :=
+        activeGroup.all (fun b => b.kind matches .implicit ..)
+            && g.all (fun b => b.kind matches .implicit .. || b.kind matches .instance ..)
+          || activeGroup.all (fun b => b.kind matches .implicit .. || b.kind matches .instance ..)
+            && g.all (fun b => b.kind matches .instance ..)
+      if isImplicitsOrInstances then
+        activeGroup := activeGroup ++ g
+      else
+        groupedGroups := groupedGroups.push activeGroup
+        activeGroup := g
+    groupedGroups := groupedGroups.push activeGroup
+    return groupedGroups
   groupAdjacentExplicitsBySameDependents (groups : Array (Array BinderWithDependencies)) : Array (Array BinderWithDependencies) := Id.run do
     let mut groupedGroups : Array (Array BinderWithDependencies) := #[]
     let mut activeGroup : Array BinderWithDependencies := groups[0]!
@@ -259,7 +265,6 @@ where
     let mut groupedGroups : Array (Array BinderWithDependencies) := #[]
     let mut activeGroup : Array BinderWithDependencies := groups[0]!
     for g in groups[1...*] do
-      --let isExplicits := activeGroup.all (·.kind matches .explicit ..) && g.all (·.kind matches .explicit ..)
       if g.all (fun b => activeGroup.any (·.dependents.contains b.idx)) then
         activeGroup := activeGroup ++ g
       else
@@ -279,16 +284,12 @@ where
         activeGroup := g
     groupedGroups := groupedGroups.push activeGroup
     return groupedGroups
-  groupAdjacentImplicitsAndInstances (groups : Array (Array BinderWithDependencies)) : Array (Array BinderWithDependencies) := Id.run do
+  groupAdjacentBinderlessExplicits (groups : Array (Array BinderWithDependencies))  : Array (Array BinderWithDependencies) := Id.run do
     let mut groupedGroups : Array (Array BinderWithDependencies) := #[]
     let mut activeGroup : Array BinderWithDependencies := groups[0]!
     for g in groups[1...*] do
-      let isImplicitsOrInstances :=
-        activeGroup.all (fun b => b.kind matches .implicit ..)
-            && g.all (fun b => b.kind matches .implicit .. || b.kind matches .instance ..)
-          || activeGroup.all (fun b => b.kind matches .implicit .. || b.kind matches .instance ..)
-            && g.all (fun b => b.kind matches .instance ..)
-      if isImplicitsOrInstances then
+      let isBinderlessExplicits := activeGroup.all (·.kind matches .explicit true) && g.all (·.kind matches .explicit true)
+      if isBinderlessExplicits then
         activeGroup := activeGroup ++ g
       else
         groupedGroups := groupedGroups.push activeGroup
