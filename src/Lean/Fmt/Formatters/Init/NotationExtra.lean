@@ -222,22 +222,40 @@ public def fmtSolve : Fmt := fun
     fmtAltsTactic solveTk barTks tacticSeqs
   | _ => throw .partialFormatter
 
+public def fmtCalcStepLike (pred : Syntax) (colonEqTk? proof? : Option Syntax) : FmtM TaggedDoc := do
+  let colonEqTk? ← fmt? colonEqTk?
+  let proof? ← fmt? proof?
+  if colonEqTk?.isAlwaysEmpty || proof?.isAlwaysEmpty then
+    return ← fmt pred
+  if pred.getArgs.size != 3 then
+    let pred ← fmt pred
+    return Layouts.assignmentDeclaration pred colonEqTk? proof?
+  let lhs := pred[0]!
+  let op := pred[1]!
+  let rhs := pred[2]!
+  let lhs ← fmt lhs
+  let op ← fmt op
+  let rhs ← fmt rhs
+  let shortProofPred := Layouts.infixOperator #[lhs, op, flattened rhs] <| .sparse (alignedOperators := true)
+  let shortProofVariant := combine #[
+    .withSepAfter shortProofPred space,
+    .withSepAfter colonEqTk? space,
+    flattened proof?
+  ]
+  let longProofPred := Layouts.infixOperator #[lhs, op, rhs] .sparse
+  let longProofVariant := Layouts.assignmentDeclaration longProofPred colonEqTk? proof?
+  return fallbackOnOverflow shortProofVariant longProofVariant
+
 @[builtin_fmt Lean.calcFirstStep]
 public def fmtCalcFirstStep : Fmt := fun
-  | `(Lean.calcFirstStep| $lhs:term $[ :=%$colonEqTk? $proof?:term]?) => do
-    let lhs ← fmt lhs
-    let colonEqTk? ← fmt? colonEqTk?
-    let proof? ← fmt? proof?
-    return Layouts.assignmentDeclaration lhs colonEqTk? proof?
+  | `(Lean.calcFirstStep| $pred:term $[ :=%$colonEqTk? $proof?:term]?) => do
+    fmtCalcStepLike pred colonEqTk? proof?
   | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.calcStep]
 public def fmtCalcStep : Fmt := fun
-  | `(Lean.calcStep| $lhs:term :=%$colonEqTk $proof:term) => do
-    let lhs ← fmt lhs
-    let colonEqTk ← fmt colonEqTk
-    let proof ← fmt proof
-    return Layouts.assignmentDeclaration lhs colonEqTk proof
+  | `(Lean.calcStep| $pred:term :=%$colonEqTk $proof:term) => do
+    fmtCalcStepLike pred colonEqTk proof
   | _ => throw .partialFormatter
 
 public def fmtCalcSteps (calcSteps : Syntax) : FmtM (Array TaggedDoc) := do
@@ -246,22 +264,9 @@ public def fmtCalcSteps (calcSteps : Syntax) : FmtM (Array TaggedDoc) := do
   return #[firstStep] ++ otherSteps
 
 public def fmtCalc (calcTk : Syntax) (calcSteps : TSyntax ``calcSteps) : FmtM TaggedDoc := do
-  let firstStep ← getStxArg! calcSteps 0
-  let firstStepHasAssignment := firstStep matches `(Lean.calcFirstStep| $_:term := $_:term)
   let calcTk ← fmt calcTk
   let calcSteps ← fmtCalcSteps calcSteps
-  let separatedVariant := Layouts.keywordPrefixedSeq calcTk (withPosition <| Layouts.lines calcSteps)
-    .nonSticky
-  if firstStepHasAssignment then
-    return separatedVariant
-  let firstStep := calcSteps[0]!
-  let otherSteps := calcSteps[1...*].toArray
-  let inlinedVariant := maybeFlattened <| combine #[
-    .withSepAfter calcTk space,
-    .withSepAfter (flattened firstStep) ⟨nl, nested⟩,
-    withPosition <| Layouts.lines otherSteps
-  ]
-  return oneOf #[inlinedVariant, separatedVariant]
+  return Layouts.keywordPrefixedSeq calcTk (withPosition <| Layouts.lines calcSteps) .nonSticky
 
 @[builtin_fmt Lean.«calc»]
 public def fmtCalcTerm : Fmt := fun

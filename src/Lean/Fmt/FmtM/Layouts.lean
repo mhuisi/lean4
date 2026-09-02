@@ -349,19 +349,23 @@ public def postfixOperator (operand postfixOperatorTk : TaggedDoc) (format : Typ
 
 public inductive Types.InfixOperatorFormat
   | dense (hardNestedFirstOperand := true) (trailingOperator : Bool := false) (spacing := true)
-  | sparse (hardNestedFirstOperand := true) (trailingOperator : Bool := false) (spacing := true)
+  | sparse (hardNestedFirstOperand := true) (trailingOperator : Bool := false) (spacing := true) (alignedOperators : Bool := false)
 
 public def Types.InfixOperatorFormat.hardNestedFirstOperand : Types.InfixOperatorFormat → Bool
   | .dense hardNestedFirstOperand _ _ => hardNestedFirstOperand
-  | .sparse hardNestedFirstOperand _ _ => hardNestedFirstOperand
+  | .sparse hardNestedFirstOperand _ _ _ => hardNestedFirstOperand
 
 public def Types.InfixOperatorFormat.trailingOperator : Types.InfixOperatorFormat → Bool
   | .dense _ trailingOperator _ => trailingOperator
-  | .sparse _ trailingOperator _ => trailingOperator
+  | .sparse _ trailingOperator _ _ => trailingOperator
 
 public def Types.InfixOperatorFormat.spacing : Types.InfixOperatorFormat → Bool
   | .dense _ _ spacing => spacing
-  | .sparse _ _ spacing => spacing
+  | .sparse _ _ spacing _ => spacing
+
+public def Types.InfixOperatorFormat.alignedOperators : Types.InfixOperatorFormat → Bool
+  | .dense _ _ _ => false
+  | .sparse _ trailingOperator _ alignedOperators => !trailingOperator && alignedOperators
 
 public def permitDenseLayout (doc : TaggedDoc) (respectPseudoAlignment : Bool) : Bool :=
   if respectPseudoAlignment then
@@ -511,7 +515,9 @@ where
     else
       Layouts.atomic docs
   fill (docs : Array TaggedDoc) : TaggedDoc :=
-    if format.spacing then
+    if format.alignedOperators then
+      Layouts.lines docs
+    else if format.spacing then
       fillUsingSpace docs
     else
       TaggedDoc.fill docs
