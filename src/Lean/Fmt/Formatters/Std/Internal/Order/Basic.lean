@@ -20,7 +20,7 @@ public def fmtIInf : QuantifierFmt := fun
   | `(⨅%$iInfTk $bs:explicitBinders ,%$commaTk $body:term) =>
     some {
       quantifier := iInfTk
-      binders := .binders #[explicitBindersToGroup bs]
+      binders := .binders #[#[explicitBindersToGroup bs]]
       typeAscriptionTk? := none
       type? := none
       commaTk
@@ -34,7 +34,7 @@ public def fmtISup : QuantifierFmt := fun
   | `(⨆%$iSupTk $bs:explicitBinders ,%$commaTk $body:term) =>
     some {
       quantifier := iSupTk
-      binders := .binders #[explicitBindersToGroup bs]
+      binders := .binders #[#[explicitBindersToGroup bs]]
       typeAscriptionTk? := none
       type? := none
       commaTk

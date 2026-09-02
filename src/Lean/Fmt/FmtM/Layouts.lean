@@ -910,7 +910,7 @@ public inductive Types.SignatureKind where
   | global
 
 private def signature
-    (lvals : Array TaggedDoc) (binderGroups : Array (Array TaggedDoc)) (typeAscriptionTk : TaggedDoc) (type : TaggedDoc) (kind : Types.SignatureKind)
+    (lvals : Array TaggedDoc) (binderGroups : Array (Array (Array TaggedDoc))) (typeAscriptionTk : TaggedDoc) (type : TaggedDoc) (kind : Types.SignatureKind)
     (lvalsLayout : Array TaggedDoc → TaggedDoc := Layouts.horizontalOrVertical)
     : TaggedDoc :=
   -- For a clear separation of a token preceding the list of binders and the type,
@@ -939,6 +939,13 @@ private def signature
   --   bar]
   -- ```
   let lvals := lvals.filter (! ·.isAlwaysEmpty)
+  let binderGroups := binderGroups.filterMap fun group => do
+    let group := group.filterMap fun subGroup => do
+      let subGroup := subGroup.filter (! ·.isAlwaysEmpty)
+      guard <| ! subGroup.isEmpty
+      return subGroup
+    guard <| ! group.isEmpty
+    return group
   let lvals :=
     if lvals.size <= 1 && type.isAlwaysEmpty && typeAscriptionTk.isAlwaysEmpty && binderGroups.isEmpty then
       lvals
@@ -948,16 +955,16 @@ private def signature
     match kind with
     | .local => .dense (hardNestedFirstOperand := false)
     | .global => .sparse (hardNestedFirstOperand := false)
-  let binderGroups := Layouts.horizontalOrVertical <| binderGroups.map (Layouts.fill ·)
+  let binderGroups := Layouts.horizontalOrVertical <| binderGroups.map (fillUsingSpaceWithSoftBoundaries ·)
   nested <| Layouts.typeAscription (format := format)
     (Layouts.horizontalOrVertical <| #[(lvalsLayout lvals), binderGroups])
     typeAscriptionTk
     type
 
-public def localSignature (lvals : Array TaggedDoc) (binderGroups : Array (Array TaggedDoc)) (typeAscriptionTk : TaggedDoc) (type : TaggedDoc) : TaggedDoc :=
+public def localSignature (lvals : Array TaggedDoc) (binderGroups : Array (Array (Array TaggedDoc))) (typeAscriptionTk : TaggedDoc) (type : TaggedDoc) : TaggedDoc :=
   signature lvals binderGroups typeAscriptionTk type .local
 
-public def globalSignature (lvals : Array TaggedDoc) (binderGroups : Array (Array TaggedDoc)) (typeAscriptionTk : TaggedDoc) (type : TaggedDoc) : TaggedDoc :=
+public def globalSignature (lvals : Array TaggedDoc) (binderGroups : Array (Array (Array TaggedDoc))) (typeAscriptionTk : TaggedDoc) (type : TaggedDoc) : TaggedDoc :=
   signature lvals binderGroups typeAscriptionTk type .global
 
 public def assignmentDeclaration
@@ -1013,7 +1020,7 @@ public def whereDeclaration
 public def binder
     (lbs : Array TaggedDoc)
     (lhses : Array TaggedDoc)
-    (subBinderGroups : Array (Array TaggedDoc))
+    (subBinderGroups : Array (Array (Array TaggedDoc)))
     (typeAscriptionTk? : TaggedDoc)
     (type? : TaggedDoc)
     (colonEqTk? : TaggedDoc)
@@ -1049,7 +1056,7 @@ public def letDecl
 
 public structure Types.QuantifierHead where
   quantifier : TaggedDoc
-  binderGroups : Array (Array TaggedDoc)
+  binderGroups : Array (Array (Array TaggedDoc))
   typeAscriptionTk? : TaggedDoc
   type? : TaggedDoc
   separationTk : TaggedDoc

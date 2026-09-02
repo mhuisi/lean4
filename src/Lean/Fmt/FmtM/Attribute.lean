@@ -391,7 +391,7 @@ public unsafe builtin_initialize conditionalFmtAttribute : KeyedDeclsAttribute C
   }
 
 /-- Binders partitioned into layout groups, as produced by `groupBinders`. -/
-public abbrev BinderGroups := Array (Array Syntax)
+public abbrev BinderGroups := Array (Array (Array Syntax))
 
 public inductive QuantifierBinders where
   | binders (group : BinderGroups)

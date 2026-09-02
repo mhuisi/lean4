@@ -80,7 +80,7 @@ public def fmtExists : QuantifierFmt := fun
   | `(∃%$exTk $bs:explicitBinders ,%$commaTk $body:term) =>
     some {
       quantifier := exTk
-      binders := .binders #[explicitBindersToGroup bs]
+      binders := .binders #[#[explicitBindersToGroup bs]]
       typeAscriptionTk? := none
       type? := none
       commaTk
@@ -93,7 +93,7 @@ public def fmtExistsKeyword : QuantifierFmt := fun
   | `(exists%$existsTk $bs:explicitBinders ,%$commaTk $body:term) =>
     some {
       quantifier := existsTk
-      binders := .binders #[explicitBindersToGroup bs]
+      binders := .binders #[#[explicitBindersToGroup bs]]
       typeAscriptionTk? := none
       type? := none
       commaTk
@@ -106,7 +106,7 @@ public def fmtSigma : QuantifierFmt := fun
   | `(Σ%$sigmaTk $bs:explicitBinders ,%$commaTk $body:term) =>
     some {
       quantifier := sigmaTk
-      binders := .binders #[explicitBindersToGroup bs]
+      binders := .binders #[#[explicitBindersToGroup bs]]
       typeAscriptionTk? := none
       type? := none
       commaTk
@@ -119,7 +119,7 @@ public def fmtPSigma : QuantifierFmt := fun
   | `(Σ'%$psigmaTk $bs:explicitBinders ,%$commaTk $body:term) =>
     some {
       quantifier := psigmaTk
-      binders := .binders #[explicitBindersToGroup bs]
+      binders := .binders #[#[explicitBindersToGroup bs]]
       typeAscriptionTk? := none
       type? := none
       commaTk

@@ -473,7 +473,7 @@ public def fmtForall : QuantifierFmt := fun
       ∀%$forallTk $binders* $[:%$typeAscriptionTk? $type?:term]? ,%$commaTk $body:term) =>
     some {
       quantifier := forallTk
-      binders := .binders #[binders]
+      binders := .binders #[#[binders]]
       typeAscriptionTk?
       type?
       commaTk
@@ -518,7 +518,7 @@ public def fmtFun : Fmt := fun
     let type? ← fmt? type?
     let arrowTk ← fmt arrowTk
     let body ← fmt body
-    let signature := Layouts.localSignature #[] #[binders] typeAscriptionTk? type?
+    let signature := Layouts.localSignature #[] #[#[binders]] typeAscriptionTk? type?
     return Layouts.assignmentDeclaration (sticky := true)
       (Layouts.spacedAtomic #[funTk, signature])
       arrowTk

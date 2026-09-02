@@ -204,7 +204,8 @@ public def groupBinders
       groups := groupAdjacentBinderlessExplicits groups
       groups := groupAdjacentExplicitsWithoutDependents groups
       return groups
-  return runs.flatMap (·.map (·.map (·.binder)))
+  let runs' := runs.map divideIntoKindSubgroups
+  return runs'.flatMap (·.map (·.map (·.map (·.binder))))
 where
   computeKindRuns (binders : Array BinderWithDependents) : Array (Array BinderWithDependents) := Id.run do
     let mut kindRuns := #[]
@@ -288,11 +289,27 @@ where
         activeGroup := g
     groupedGroups := groupedGroups.push activeGroup
     return groupedGroups
+  divideIntoKindSubgroups (groups : Array (Array BinderWithDependents)) : Array (Array (Array BinderWithDependents)) :=
+    groups.map fun group => Id.run do
+      let mut dividedGroups : Array (Array BinderWithDependents) := #[]
+      let mut activeGroup : Array BinderWithDependents := #[group[0]!]
+      for b in group[1...*] do
+        match activeGroup.back!.kind, b.kind with
+        | .implicit .., .implicit ..
+        | .explicit .., .explicit ..
+        | .instance .., .instance .. =>
+          activeGroup := activeGroup.push b
+        | _, _ =>
+          dividedGroups := dividedGroups.push activeGroup
+          activeGroup := #[b]
+      dividedGroups := dividedGroups.push activeGroup
+      return dividedGroups
+
 public def fmtBinders
     (binders : TSyntaxArray binderKinds)
-    : FmtM (Array (Array TaggedDoc)) := do
+    : FmtM (Array (Array (Array TaggedDoc))) := do
   let binderGroups := groupBinders binders
-  let binderGroups ← binderGroups.mapM fun binderGroup => binderGroup.mapM fmt
+  let binderGroups ← binderGroups.mapM fun binderGroup => binderGroup.mapM fun subBinderGroup => subBinderGroup.mapM fmt
   return binderGroups
 
 end

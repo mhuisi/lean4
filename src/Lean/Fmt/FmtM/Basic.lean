@@ -437,8 +437,8 @@ where
     let lineInfos ← getLineInfos pos tailPos
     return lineInfos.size > 1
 
-public partial def fmtBinderGroups (bgs : BinderGroups) : FmtM (Array (Array TaggedDoc)) := do
-  bgs.mapM fun bg => bg.mapM fmt
+public partial def fmtBinderGroups (bgs : BinderGroups) : FmtM (Array (Array (Array TaggedDoc))) := do
+  bgs.mapM fun bg => bg.mapM fun sbg => sbg.mapM fmt
 
 public partial def fmtWithBinderPred (lhs : Syntax) (rhs : TSyntax `binderPred) : FmtM TaggedDoc := do
   let lhs ← fmt lhs
@@ -453,7 +453,7 @@ public partial def fmtQuantifierHead (head : QuantifierHeadComponents)
     | .binders groups =>
       fmtBinderGroups groups
     | .pred lhs rhs =>
-      pure #[#[← fmtWithBinderPred lhs rhs]]
+      pure #[#[#[← fmtWithBinderPred lhs rhs]]]
   let typeAscriptionTk? := (← head.typeAscriptionTk?.mapM fmt).getD empty
   let type? := (← head.type?.mapM fmt).getD empty
   let commaTk ← fmt head.commaTk
