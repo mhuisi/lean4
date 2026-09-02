@@ -157,6 +157,18 @@ public def fillUsingSpaceWrapping (ds : Array TaggedDoc) (wrap : TaggedDoc → T
   -- so it is safe to lift it to `Doc`.
   propagateArrayMetaData ds (.fillUsingSpaceWrapping · fun d => wrap (untagged d) |>.doc)
 
+/--
+Fills all documents of all groups like `TaggedDoc.fillUsingSpace` does. In addition, the formatter
+can place a newline between two adjacent groups. It only does so if the newline does not increase
+the amount of lines.
+-/
+public def fillUsingSpaceWithSoftBoundaries (dss : Array (Array TaggedDoc)) : TaggedDoc := Id.run do
+  let ds := dss.flatten
+  if ds.size = 1 then
+    return ds[0]!
+  return untagged <| .fillUsingSpaceWithSoftBoundaries (DefaultCost.ofHeightFallbackPenalty 1) <|
+    dss.map (·.map (·.doc))
+
 public def fillSomeUsing (sep : TaggedDoc) (ds : Array (Fillable TaggedDoc)) : TaggedDoc := Id.run do
   if ds.size == 1 then
     return ds[0]!.v
@@ -420,6 +432,6 @@ end TaggedDoc
 export TaggedDoc (untagged taggedNode taggedText taggedWhitespace isTagged tag addMetaData getMetaData? failure newline nl «break» hardNl text empty space nested
   hardNested doublyNested withFailureFallbackPenalty withOverflowFallbackPenalty withHeightFallbackPenalty fallbackOnFailure fallbackOnOverflow fallbackOnHeight
   aligned unflattenable flattened maybeFlattened unindented final initial free guarded either oneOf append join joinUsing fill fillWrapping fillUsing
-  fillSomeUsing fillUsingSpace fillUsingSpaceWrapping fillSomeUsingSpace fillSomeUsingSpaceWrapping combine stickyCombine Sticky StickynessKind propagateStickyness PseudoAligned pseudoAligned isPseudoAligned
+  fillSomeUsing fillUsingSpace fillUsingSpaceWrapping fillUsingSpaceWithSoftBoundaries fillSomeUsingSpace fillSomeUsingSpaceWrapping combine stickyCombine Sticky StickynessKind propagateStickyness PseudoAligned pseudoAligned isPseudoAligned
   needsAppBrackets sticky SelfDelimited mkSelfDelimited isSelfDelimited isBracketed RawFallback mkRawFallback isRawFallback getSticky? getStickynessKind? withStickyAlt withPosition SepArray propagateMetaData
   PseudoDedented pseudoDedented getPseudoDedented? softSpace)

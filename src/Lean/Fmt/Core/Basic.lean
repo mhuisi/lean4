@@ -1094,6 +1094,40 @@ def Doc.fillUsingSpace (ds : Array (Doc τ)) : Doc τ := Id.run do
   return .oneOf #[lastFlattened, lastNotFlattened]
 
 /--
+Appends multiple groups of flattened documents with either a space or a newline between each pair
+of adjacent documents. `fillUsingSpaceWithSoftBoundaries` fills all documents of all groups exactly
+like `Doc.fillUsingSpace` does.
+
+Amongst the renderings that `Doc.fillUsingSpace` considers equally good, the formatter prefers the
+ones that place a newline between two adjacent groups. The formatter charges `boundaryPenalty` for
+every group boundary that it renders as a space. `boundaryPenalty` must thus be a cost that only
+breaks ties between otherwise equally good renderings, for example
+`DefaultCost.ofHeightFallbackPenalty 1`. This way, the formatter adds a newline at a group boundary
+only if it does not increase the amount of lines.
+-/
+def Doc.fillUsingSpaceWithSoftBoundaries (boundaryPenalty : τ) (dss : Array (Array (Doc τ)))
+    : Doc τ := Id.run do
+  -- Pairs every document with whether the separator in front of it is a group boundary.
+  let ds := dss.flatMap fun group => group.mapIdx fun i d => (d, i == 0)
+  if ds.size == 0 then
+    return .empty
+  let hd := ds[0]!.1
+  if ds.size == 1 then
+    return hd
+  let sep : Doc τ := .text " "
+  let boundarySep : Doc τ := .costing boundaryPenalty sep
+  let mut lastFlattened : Doc τ := .flattened hd
+  let mut lastNotFlattened : Doc τ := hd
+  for (d, isBoundary) in ds[1...*] do
+    let lastMaybeFlattened := .oneOf #[lastFlattened, lastNotFlattened]
+    lastFlattened := .oneOf #[
+      .join #[lastFlattened, if isBoundary then boundarySep else sep, .flattened d],
+      .join #[lastMaybeFlattened, .hardNl, .flattened d]
+    ]
+    lastNotFlattened := .join #[lastMaybeFlattened, .hardNl, d]
+  return .oneOf #[lastFlattened, lastNotFlattened]
+
+/--
 Appends multiple flattened documents with either a space or a newline between each pair of adjacent
 documents, wrapping the entire remainder of the document to the right of each space or newline in
 `wrap`.

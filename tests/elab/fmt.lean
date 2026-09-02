@@ -434,3 +434,161 @@ a b
 -/
 #guard_msgs in
 #eval test 80 (.maybeFlattened (.join #[.initial (.text "a"), .nl, .text "b"]))
+
+/-!
+`fillUsingSpaceWithSoftBoundaries`.
+
+These tests compare line breaks, so they must not normalize whitespace.
+-/
+
+def fillFlat (dss : Array (Array (Doc (DefaultCost w cutoff)))) : Doc (DefaultCost w cutoff) :=
+  .fillUsingSpace dss.flatten
+
+def fillSoft (dss : Array (Array (Doc (DefaultCost w cutoff)))) : Doc (DefaultCost w cutoff) :=
+  .fillUsingSpaceWithSoftBoundaries (.ofHeightFallbackPenalty 1) dss
+
+def abcd : Array (Array (Doc (DefaultCost w cutoff))) :=
+  #[#[.text "a", .text "b"], #[.text "c", .text "d"]]
+
+-- A soft boundary is not broken when breaking it would add a line.
+/--
+info:
+a b c d
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 80 (fillSoft abcd)
+
+/--
+info:
+a b c d
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 80 (fillFlat abcd)
+
+-- Without soft boundaries, the fill is greedy and the second group is split across both lines.
+/--
+info:
+a b c
+d
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 5 (fillFlat abcd)
+
+-- The soft boundary between the two groups is broken instead, which yields the same amount of
+-- lines.
+/--
+info:
+a b
+c d
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 5 (fillSoft abcd)
+
+-- Empty groups do not introduce a soft boundary.
+/--
+info:
+a b
+c d
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 5 (fillSoft #[#[], #[.text "a", .text "b"], #[], #[.text "c", .text "d"], #[]])
+
+-- Groups of differing sizes.
+/--
+info:
+a
+b c d e
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 7 (fillSoft #[#[.text "a"], #[.text "b", .text "c", .text "d", .text "e"]])
+
+-- The soft boundary stays unbroken because breaking it would add a line.
+/--
+info:
+a b c d e
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 9 (fillSoft #[#[.text "a"], #[.text "b", .text "c", .text "d", .text "e"]])
+
+-- Both soft boundaries are broken, since three lines are needed either way.
+/--
+info:
+aaa
+bbb bbb
+ccc ccc
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 8 (fillSoft #[
+  #[.text "aaa"],
+  #[.text "bbb", .text "bbb"],
+  #[.text "ccc", .text "ccc"]
+])
+
+/--
+info:
+aaa bbb
+bbb ccc
+ccc
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 8 (fillFlat #[
+  #[.text "aaa"],
+  #[.text "bbb", .text "bbb"],
+  #[.text "ccc", .text "ccc"]
+])
+
+-- Fewer lines always win over broken soft boundaries.
+/--
+info:
+aa bb bb
+cc cc cc
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 8 (fillSoft #[
+  #[.text "aa"],
+  #[.text "bb", .text "bb"],
+  #[.text "cc", .text "cc", .text "cc"]
+])
+
+-- A group is still split when its documents do not fit on a single line.
+/--
+info:
+aaaa
+bbbb
+bbbb
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 4 (fillSoft #[#[.text "aaaa"], #[.text "bbbb", .text "bbbb"]])
+
+-- A document that cannot be flattened is surrounded by newlines, just like in `fillUsingSpace`.
+/--
+info:
+a
+b
+c
+d
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 80 (fillSoft #[
+  #[.text "a", .join #[.text "b", .hardNl, .text "c"]],
+  #[.text "d"]
+])
+
+-- Flattening the whole document collapses every soft boundary to a space.
+/--
+info:
+a b c d
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 5 (.flattened (fillSoft abcd))
+
+/--
+info:
+a
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 80 (fillSoft #[#[], #[.text "a"]])
+
+/-- info: -/
+#guard_msgs (whitespace := exact) in
+#eval test 80 (fillSoft #[])
