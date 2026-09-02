@@ -69,12 +69,11 @@ where
     else
       k
 
-private structure BinderWithDependencies where
+private structure BinderWithDependents where
   idx : Nat
   kind : BinderKind
   binder : TSyntax binderKinds
-  dependents : Std.HashSet Nat
-  dependencies : Std.HashSet Nat
+  dependents : Array (Std.HashSet Nat)
 deriving BEq, Inhabited
 
 /--
@@ -102,34 +101,27 @@ where
   binderIdentNames (ids : Array Syntax) : Array Name :=
     ids.filterMap fun id => if id.isIdent then some id.getId else none
 
-/--
-Checks whether `stx` contains an identifier that refers to one of `vars`.
-Identifiers that merely have one of `vars` as a prefix are considered references as well so that
-generalized field notation such as `xs.size` is accounted for.
--/
-private partial def referencesVars (vars : Array Name) : Syntax → Bool
-  | .ident _ _ id _ => vars.any (·.isPrefixOf id)
-  | .node _ _ args  => args.any (referencesVars vars)
+private partial def referencesVar (var : Name) : Syntax → Bool
+  | .ident _ _ id _ => var.isPrefixOf id
+  | .node _ _ args  => args.any (referencesVar var)
   | _               => false
 
-private def computeBinderDependencies
+private def computeBinderDependents
     (binders : TSyntaxArray binderKinds)
-    : Array BinderWithDependencies := Id.run do
+    : Array BinderWithDependents := Id.run do
   let splitBinders := binders.map splitBinder
   let mut result := Array.emptyWithCapacity binders.size
   for i in 0...binders.size do
     let (boundVars, _) := splitBinders[i]!
-    let mut dependents := {}
-    if ! boundVars.isEmpty then
+    let mut dependents := #[]
+    for bv in boundVars do
+      let mut bvDependents := {}
       for j in (i + 1)...binders.size do
         let (_, body) := splitBinders[j]!
-        if body.any (referencesVars boundVars) then
-          dependents := dependents.insert j
-    let mut dependencies := {}
-    for r in result do
-      if r.dependents.contains i then
-        dependencies := dependencies.insert r.idx
-    result := result.push ⟨i, .classify binders[i]!, binders[i]!, dependents, dependencies⟩
+        if body.any (referencesVar bv) then
+          bvDependents := bvDependents.insert j
+      dependents := dependents.push bvDependents
+    result := result.push ⟨i, .classify binders[i]!, binders[i]!, dependents⟩
   return result
 
 mutual
@@ -201,7 +193,7 @@ public def groupBinders
     : BinderGroups := Id.run do
   if binders.isEmpty then
     return #[]
-  let binders := computeBinderDependencies binders
+  let binders := computeBinderDependents binders
   let mut runs := computeKindRuns binders |>.map fun run => run.map (#[·])
   for i in (0...runs.size) do
     runs := runs.modify i fun run => Id.run do
@@ -214,7 +206,7 @@ public def groupBinders
       return groups
   return runs.flatMap (·.map (·.map (·.binder)))
 where
-  computeKindRuns (binders : Array BinderWithDependencies) : Array (Array BinderWithDependencies) := Id.run do
+  computeKindRuns (binders : Array BinderWithDependents) : Array (Array BinderWithDependents) := Id.run do
     let mut kindRuns := #[]
     let mut activeRun := #[binders[0]!]
     for b in binders[1...*] do
@@ -231,9 +223,9 @@ where
         activeRun := #[b]
     kindRuns := kindRuns.push activeRun
     return kindRuns
-  groupAdjacentImplicitsAndInstances (groups : Array (Array BinderWithDependencies)) : Array (Array BinderWithDependencies) := Id.run do
-    let mut groupedGroups : Array (Array BinderWithDependencies) := #[]
-    let mut activeGroup : Array BinderWithDependencies := groups[0]!
+  groupAdjacentImplicitsAndInstances (groups : Array (Array BinderWithDependents)) : Array (Array BinderWithDependents) := Id.run do
+    let mut groupedGroups : Array (Array BinderWithDependents) := #[]
+    let mut activeGroup : Array BinderWithDependents := groups[0]!
     for g in groups[1...*] do
       let isImplicitsOrInstances :=
         activeGroup.all (fun b => b.kind matches .implicit ..)
@@ -247,12 +239,12 @@ where
         activeGroup := g
     groupedGroups := groupedGroups.push activeGroup
     return groupedGroups
-  groupAdjacentExplicitsBySameDependents (groups : Array (Array BinderWithDependencies)) : Array (Array BinderWithDependencies) := Id.run do
-    let mut groupedGroups : Array (Array BinderWithDependencies) := #[]
-    let mut activeGroup : Array BinderWithDependencies := groups[0]!
+  groupAdjacentExplicitsBySameDependents (groups : Array (Array BinderWithDependents)) : Array (Array BinderWithDependents) := Id.run do
+    let mut groupedGroups : Array (Array BinderWithDependents) := #[]
+    let mut activeGroup : Array BinderWithDependents := groups[0]!
     for g in groups[1...*] do
-      let activeGroupDependents := activeGroup.map (·.dependents) |>.foldr Std.HashSet.union {} |>.toArray.map (fun i => groups.findIdx (fun g => g.any (·.idx == i))) |> Std.HashSet.ofArray
-      let gDependents := g.map (·.dependents) |>.foldr Std.HashSet.union {} |>.toArray.map (fun i => groups.findIdx (fun g => g.any (·.idx == i))) |> Std.HashSet.ofArray
+      let activeGroupDependents := activeGroup.flatMap (·.dependents) |>.foldr Std.HashSet.union {} |>.toArray.map (fun i => groups.findIdx (fun g => g.any (·.idx == i))) |> Std.HashSet.ofArray
+      let gDependents := g.flatMap (·.dependents) |>.foldr Std.HashSet.union {} |>.toArray.map (fun i => groups.findIdx (fun g => g.any (·.idx == i))) |> Std.HashSet.ofArray
       let isExplicits := activeGroup.all (·.kind matches .explicit ..) && g.all (·.kind matches .explicit ..)
       if isExplicits && ! activeGroupDependents.isEmpty && ! gDependents.isEmpty && activeGroupDependents == gDependents then
         activeGroup := activeGroup ++ g
@@ -261,32 +253,32 @@ where
         activeGroup := g
     groupedGroups := groupedGroups.push activeGroup
     return groupedGroups
-  groupAdjacentByDependencies (groups : Array (Array BinderWithDependencies))  : Array (Array BinderWithDependencies) := Id.run do
-    let mut groupedGroups : Array (Array BinderWithDependencies) := #[]
-    let mut activeGroup : Array BinderWithDependencies := groups[0]!
+  groupAdjacentByDependencies (groups : Array (Array BinderWithDependents))  : Array (Array BinderWithDependents) := Id.run do
+    let mut groupedGroups : Array (Array BinderWithDependents) := #[]
+    let mut activeGroup : Array BinderWithDependents := groups[0]!
     for g in groups[1...*] do
-      if g.all (fun b => activeGroup.any (·.dependents.contains b.idx)) then
+      if g.all (fun b => activeGroup.any (·.dependents.any (·.contains b.idx))) then
         activeGroup := activeGroup ++ g
       else
         groupedGroups := groupedGroups.push activeGroup
         activeGroup := g
     groupedGroups := groupedGroups.push activeGroup
     return groupedGroups
-  groupAdjacentExplicitsWithoutDependents (groups : Array (Array BinderWithDependencies))  : Array (Array BinderWithDependencies) := Id.run do
-    let mut groupedGroups : Array (Array BinderWithDependencies) := #[]
-    let mut activeGroup : Array BinderWithDependencies := groups[0]!
+  groupAdjacentExplicitsWithoutDependents (groups : Array (Array BinderWithDependents))  : Array (Array BinderWithDependents) := Id.run do
+    let mut groupedGroups : Array (Array BinderWithDependents) := #[]
+    let mut activeGroup : Array BinderWithDependents := groups[0]!
     for g in groups[1...*] do
       let isExplicits := activeGroup.all (·.kind matches .explicit ..) && g.all (·.kind matches .explicit ..)
-      if isExplicits && activeGroup.all (·.dependents.isEmpty) && g.all (·.dependents.isEmpty) then
+      if isExplicits && activeGroup.all (·.dependents.all (·.isEmpty)) && g.all (·.dependents.all (·.isEmpty)) then
         activeGroup := activeGroup ++ g
       else
         groupedGroups := groupedGroups.push activeGroup
         activeGroup := g
     groupedGroups := groupedGroups.push activeGroup
     return groupedGroups
-  groupAdjacentBinderlessExplicits (groups : Array (Array BinderWithDependencies))  : Array (Array BinderWithDependencies) := Id.run do
-    let mut groupedGroups : Array (Array BinderWithDependencies) := #[]
-    let mut activeGroup : Array BinderWithDependencies := groups[0]!
+  groupAdjacentBinderlessExplicits (groups : Array (Array BinderWithDependents))  : Array (Array BinderWithDependents) := Id.run do
+    let mut groupedGroups : Array (Array BinderWithDependents) := #[]
+    let mut activeGroup : Array BinderWithDependents := groups[0]!
     for g in groups[1...*] do
       let isBinderlessExplicits := activeGroup.all (·.kind matches .explicit true) && g.all (·.kind matches .explicit true)
       if isBinderlessExplicits then
