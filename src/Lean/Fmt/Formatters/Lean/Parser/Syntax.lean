@@ -84,9 +84,7 @@ public def fmtMetaAssignmentDeclaration
     if rawBody then
       fmtRaw (isFallback := false) body
     else
-      let body ← fmt body
-      let body := withPosition body
-      pure body
+      fmt body
   let decl := Layouts.assignmentDeclaration signature sepTk body
   fmtDeclWithModifiers docComment? attributes? mods decl
 
@@ -440,7 +438,6 @@ public def fmtElab : Fmt := fun
     let rhs ← fmt rhs
     let metaSignature := Layouts.fill args
     let signature ← fmtElabDeclarationSignature elabTk prec? #[namedName?, namedPrio?] metaSignature colonTk cat leTk? expectedType?
-    let rhs := withPosition rhs
     let decl := Layouts.assignmentDeclaration signature darrowTk rhs
     fmtDeclWithModifiers docComment? attributes? #[attrKind] decl
   | _ => throw .partialFormatter
