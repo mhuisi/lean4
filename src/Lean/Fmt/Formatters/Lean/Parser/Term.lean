@@ -1115,10 +1115,10 @@ public def fmtWhereDecls : Fmt := fun
     return Layouts.retainedWhitespace #[whereDecls, declsTrailing, whereFinally?]
   | _ => throw .partialFormatter
 
-public def isComplexAlt (stx : TSyntax ``Parser.Term.matchAlt) : FmtM Bool := do
+public def isComplexAlt (stx : Syntax) : FmtM Bool := do
   let `(Parser.Term.matchAltExpr| | $[$_:term,*]|* => $_:term) := stx
     | throw .partialFormatter
-  let patss := stx.raw[1].getArgs.map (·.getArgs)
+  let patss := stx[1].getArgs.map (·.getArgs)
   return patss.any (·.size > 1)
 
 /--
@@ -1145,6 +1145,7 @@ public def fmtMatchAlt (stx : Syntax) : FmtM Layouts.Types.Alt := do
   let patss := stx[1].getArgs
   let arrowTk := stx[2]
   let rhs := stx[3]
+  let isComplexAlt ← isComplexAlt stx
   let initialAltTk ← fmt initialAltTk
   let patss : SepArray "|" ← patss.mapIdxM fun i patsOrSep => do
     if i % 2 == 0 then
@@ -1155,7 +1156,7 @@ public def fmtMatchAlt (stx : Syntax) : FmtM Layouts.Types.Alt := do
   let patss := joinAltPats initialAltTk patss
   let arrowTk ← fmt arrowTk
   let rhs ← fmt rhs
-  return Layouts.alt patss arrowTk rhs
+  return Layouts.alt patss arrowTk rhs isComplexAlt
 
 @[builtin_fmt Lean.Parser.Term.matchAlts]
 public def fmtMatchAlts : Fmt := fun

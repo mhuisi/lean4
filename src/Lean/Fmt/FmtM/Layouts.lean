@@ -596,19 +596,25 @@ public structure Types.Alt where
   flat : TaggedDoc
   nonFlat : TaggedDoc
 
-public def alt (subAlts : Array TaggedDoc) (arrowTk rhs : TaggedDoc) : Types.Alt := Id.run do
+public def alt (subAlts : Array TaggedDoc) (arrowTk rhs : TaggedDoc) (isComplex : Bool := false) : Types.Alt := Id.run do
   if arrowTk.isAlwaysEmpty && rhs.isAlwaysEmpty then
-    let subAlts := Layouts.lines subAlts
+    let subAlts := combineSubAlts subAlts
     return ⟨flattened subAlts, subAlts⟩
   let subAlts := subAlts.map nested
   let subAlts := subAlts.modify (subAlts.size - 1) hardNested
-  let lhs := Layouts.spacedAtomic #[Layouts.lines subAlts, arrowTk]
+  let lhs := Layouts.spacedAtomic #[combineSubAlts subAlts, arrowTk]
   let nonStickyDoc := combine #[.withSepAfter lhs ⟨nl, nested⟩, rhs]
   let flat := flattened nonStickyDoc
   let some stickyRhs := getSticky? rhs
     | return ⟨flat, nonStickyDoc⟩
   let stickyDoc := combine #[.withSepAfter lhs ⟨space, nested⟩, stickyRhs.stickyVariant]
   return ⟨flat, withStickyAlt nonStickyDoc stickyDoc (.ofSticky stickyRhs (allowFlattening := false))⟩
+where
+  combineSubAlts (subAlts : Array TaggedDoc) : TaggedDoc :=
+    if isComplex then
+      Layouts.lines subAlts
+    else
+      Layouts.horizontalOrVertical subAlts
 
 public def alts (alts : Array Types.Alt) (allowFlattenedAlts : Bool := true) : TaggedDoc :=
   let unflattened := Layouts.lines <| alts.map (·.nonFlat)
