@@ -41,4 +41,4 @@ public def fmtLevelIMax : Fmt := fun
 public def fmtLevelHole : Fmt := fmtAtomic
 
 @[builtin_infix_fmt Lean.Parser.Level.addLit]
-public def fmtAddLit : Lean.Fmt.InfixOperation := { assoc := .left }
+public def fmtAddLit : Lean.Fmt.InfixOperation := { sparse := false }

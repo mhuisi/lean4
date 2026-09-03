@@ -129,25 +129,25 @@ public def fmtPSigma : QuantifierFmt := fun
 
 @[builtin_infix_fmt «term_×_»]
 public def fmtTimes : Fmt.InfixOperation :=
-  { assoc := .right
+  { sparse := false
     precs? := some { prec := 35, lhsPrec := 36, rhsPrec := 35 }
     extendedChainKinds := {``«term_×__1»} }
 
 @[builtin_infix_fmt «term_×__1»]
 public def fmtSigmaTimes : Fmt.InfixOperation :=
-  { assoc := .right
+  { sparse := false
     precs? := some { prec := 35, lhsPrec := 0, rhsPrec := 35 }
     extendedChainKinds := {``«term_×_»} }
 
 @[builtin_infix_fmt «term_×'_»]
 public def fmtTimes' : Fmt.InfixOperation :=
-  { assoc := .right
+  { sparse := false
     precs? := some { prec := 35, lhsPrec := 36, rhsPrec := 35 }
     extendedChainKinds := {``«term_×'__1»} }
 
 @[builtin_infix_fmt «term_×'__1»]
 public def fmtPSigmaTimes : Fmt.InfixOperation :=
-  { assoc := .right
+  { sparse := false
     precs? := some { prec := 35, lhsPrec := 0, rhsPrec := 35 }
     extendedChainKinds := {``«term_×'_»} }
 
@@ -159,7 +159,7 @@ public def fmtSetNotation : Fmt := fun
 
 @[builtin_infix_fmt Lean.unifConstraint]
 public def fmtUnifConstraint : Fmt.InfixOperation :=
-  { assoc := .middle, precs? := some { prec := 0, lhsPrec := 0, rhsPrec := 0 } }
+  { sparse := true, precs? := some { prec := 0, lhsPrec := 0, rhsPrec := 0 } }
 
 @[builtin_fmt Lean.«command__Unif_hint____Where_|_-⊢__»]
 public def fmtUnifHint : Fmt := fun

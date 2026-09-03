@@ -15,4 +15,4 @@ namespace Lean.Fmt
 
 @[builtin_infix_fmt Std.Tactic.BVDecide.LRAT.Internal.«term_⊭_»]
 public def fmtNotEntails : Fmt.InfixOperation :=
-  { assoc := .middle, precs? := some { prec := 25, lhsPrec := 25, rhsPrec := 30 } }
+  { sparse := true, precs? := some { prec := 25, lhsPrec := 25, rhsPrec := 30 } }

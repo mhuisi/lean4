@@ -16,11 +16,11 @@ namespace Lean.Fmt
 
 @[builtin_infix_fmt Lean.Parser.Sym.DSimp.andThen]
 public def fmtSymDSimprocAndThen : Fmt.InfixOperation :=
-  { assoc := .right, precs? := some { prec := 60, lhsPrec := 61, rhsPrec := 60 } }
+  { sparse := false, precs? := some { prec := 60, lhsPrec := 61, rhsPrec := 60 } }
 
 @[builtin_infix_fmt Lean.Parser.Sym.DSimp.orElse]
 public def fmtSymDSimprocOrElse : Fmt.InfixOperation :=
-  { assoc := .right, precs? := some { prec := 20, lhsPrec := 21, rhsPrec := 20 } }
+  { sparse := false, precs? := some { prec := 20, lhsPrec := 21, rhsPrec := 20 } }
 
 @[builtin_fmt Lean.Parser.Sym.DSimp.dsimprocParen]
 public def fmtSymDSimprocParen : Fmt := fun

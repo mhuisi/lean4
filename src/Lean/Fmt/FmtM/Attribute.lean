@@ -352,7 +352,8 @@ public structure InfixOperationPrecs where
 
 /-- The infix operation that a syntax node kind denotes. -/
 public structure InfixOperation where
-  assoc : InfixOperationAssociativity
+  sparse : Bool
+  separateFinalOperand : Bool := false
   precs? : Option InfixOperationPrecs := none
   /--
   Further syntax node kinds that an operator chain containing this operator may continue with.

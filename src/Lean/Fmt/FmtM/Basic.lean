@@ -147,13 +147,13 @@ def getInfixOperationOfParserDescr? (env : Environment) (opts : Options)
   let isInfixl := prec == lhsPrec && lhsPrec + 1 == rhsPrec
   let precs? : Option InfixOperationPrecs := some { prec, lhsPrec, rhsPrec }
   if isInfixl then
-    return { assoc := .left, precs? }
+    return { sparse := false, precs? }
   let isInfixr := prec == rhsPrec && lhsPrec == rhsPrec + 1
   if isInfixr then
-    return { assoc := .right, precs? }
+    return { sparse := false, precs? }
   let isInfix := prec + 1 == lhsPrec && lhsPrec == rhsPrec
   if isInfix then
-    return { assoc := .middle, precs? }
+    return { sparse := true, precs? }
   none
 
 def getInfixOperation? (env : Environment) (opts : Options) (kind : SyntaxNodeKind)
@@ -350,8 +350,8 @@ public partial def fmtInfixOperator (op : InfixOperation)
   let chain := collectInfixOperatorChain ctx.env ctx.opts op stx
   let chain ← chain.mapM fmt
   let format :=
-    if op.assoc matches .middle then
-      .sparse
+    if op.sparse then
+      .sparse (separateFinalOperand := op.separateFinalOperand)
     else
       .dense
   return Layouts.infixOperator (format := format) chain
