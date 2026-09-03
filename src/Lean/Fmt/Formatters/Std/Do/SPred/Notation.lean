@@ -34,4 +34,5 @@ public def fmtSPredTautology : Fmt := fun
   | _ => throw .partialFormatter
 
 @[builtin_infix_fmt Std.Do.«term_⊣⊢ₛ_»]
-public def fmtSPredBientails : Fmt.InfixOperation := { assoc := .middle }
+public def fmtSPredBientails : Fmt.InfixOperation :=
+  { assoc := .middle, precs? := some { prec := 25, lhsPrec := 25, rhsPrec := 25 } }

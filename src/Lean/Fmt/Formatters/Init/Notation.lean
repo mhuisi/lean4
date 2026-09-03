@@ -25,16 +25,20 @@ public def fmtPrecParen : Fmt := fun
   | _ => throw .partialFormatter
 
 @[builtin_infix_fmt Lean.Parser.Syntax.addPrec]
-public def fmtAddPrec : Fmt.InfixOperation := { assoc := .left }
+public def fmtAddPrec : Fmt.InfixOperation :=
+  { assoc := .left, precs? := some { prec := 65, lhsPrec := 0, rhsPrec := 66 } }
 
 @[builtin_infix_fmt Lean.Parser.Syntax.subPrec]
-public def fmtSubPrec : Fmt.InfixOperation := { assoc := .left }
+public def fmtSubPrec : Fmt.InfixOperation :=
+  { assoc := .left, precs? := some { prec := 65, lhsPrec := 0, rhsPrec := 66 } }
 
 @[builtin_infix_fmt Lean.Parser.Syntax.addPrio]
-public def fmtAddPrio : Fmt.InfixOperation := { assoc := .left }
+public def fmtAddPrio : Fmt.InfixOperation :=
+  { assoc := .left, precs? := some { prec := 65, lhsPrec := 0, rhsPrec := 66 } }
 
 @[builtin_infix_fmt Lean.Parser.Syntax.subPrio]
-public def fmtSubPrio : Fmt.InfixOperation := { assoc := .left }
+public def fmtSubPrio : Fmt.InfixOperation :=
+  { assoc := .left, precs? := some { prec := 65, lhsPrec := 0, rhsPrec := 66 } }
 
 @[builtin_fmt «prio(_)»]
 public def fmtPrioParen : Fmt := fun
@@ -100,7 +104,8 @@ public def fmtStxNotFollowedBy : Fmt := fun
   | _ => throw .partialFormatter
 
 @[builtin_infix_fmt «stx_<|>_»]
-public def fmtStxOrelse : Fmt.InfixOperation := { assoc := .left }
+public def fmtStxOrelse : Fmt.InfixOperation :=
+  { assoc := .left, precs? := some { prec := 2, lhsPrec := 2, rhsPrec := 1 } }
 
 @[builtin_fmt «term¬_», builtin_fmt term!_]
 public def fmtTermNot : Fmt := fmtPrefixOperator
@@ -126,22 +131,28 @@ public def fmtTermInv : Fmt := fun
   | _ => throw .partialFormatter
 
 @[builtin_infix_fmt «term_∈_»]
-public def fmtTermMem : Fmt.InfixOperation := { assoc := .left }
+public def fmtTermMem : Fmt.InfixOperation :=
+  { assoc := .left, precs? := some { prec := 50, lhsPrec := 50, rhsPrec := 50 } }
 
 @[builtin_infix_fmt «term_∉_»]
-public def fmtTermNotMem : Fmt.InfixOperation := { assoc := .left }
+public def fmtTermNotMem : Fmt.InfixOperation :=
+  { assoc := .left, precs? := some { prec := 50, lhsPrec := 50, rhsPrec := 50 } }
 
 @[builtin_infix_fmt «term_≤_»]
-public def fmtTermLe : Fmt.InfixOperation := { assoc := .middle }
+public def fmtTermLe : Fmt.InfixOperation :=
+  { assoc := .middle, precs? := some { prec := 50, lhsPrec := 51, rhsPrec := 51 } }
 
 @[builtin_infix_fmt «term_≥_»]
-public def fmtTermGe : Fmt.InfixOperation := { assoc := .middle }
+public def fmtTermGe : Fmt.InfixOperation :=
+  { assoc := .middle, precs? := some { prec := 50, lhsPrec := 51, rhsPrec := 51 } }
 
 @[builtin_infix_fmt «term_∧_»]
-public def fmtTermAnd : Fmt.InfixOperation := { assoc := .right }
+public def fmtTermAnd : Fmt.InfixOperation :=
+  { assoc := .right, precs? := some { prec := 35, lhsPrec := 36, rhsPrec := 35 } }
 
 @[builtin_infix_fmt «term_∨_»]
-public def fmtTermOr : Fmt.InfixOperation := { assoc := .right }
+public def fmtTermOr : Fmt.InfixOperation :=
+  { assoc := .right, precs? := some { prec := 30, lhsPrec := 31, rhsPrec := 30 } }
 
 public structure PipeOperator where
   lhs : Syntax

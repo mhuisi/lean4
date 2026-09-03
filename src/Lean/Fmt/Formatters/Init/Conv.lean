@@ -262,7 +262,8 @@ public def fmtConvDot : Fmt := fun
   | _ => throw .partialFormatter
 
 @[builtin_infix_fmt Lean.Parser.Tactic.Conv.«conv_<;>_»]
-public def fmtConvSeqFocus : Fmt.InfixOperation := { assoc := .left }
+public def fmtConvSeqFocus : Fmt.InfixOperation :=
+  { assoc := .left, precs? := some { prec := 1, lhsPrec := 0, rhsPrec := 0 } }
 
 @[builtin_fmt Lean.Parser.Tactic.Conv.convRw__]
 public def fmtConvRw : Fmt := fun
