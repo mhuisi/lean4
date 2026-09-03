@@ -365,7 +365,7 @@ public def fmtDoForDecl : Fmt := fun
     let inTk ← fmt inTk
     let collection ← fmt collection
     let lhs := Layouts.typeAscription id? colonTk? pat
-    return Layouts.infixOperator (format := .dense) #[lhs, inTk, collection]
+    return Layouts.keywordSeparated lhs inTk collection
   | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doFor]
