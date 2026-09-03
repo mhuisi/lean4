@@ -428,6 +428,7 @@ where
       : Option TaggedDoc := do
     guard <| format matches .dense ..
     guard <| ! isTailless
+    guard <| format.trailingOperator || combinedChain.size = 2
     guard <| permitDenseLayout lastOperand (respectPseudoAlignment := true)
     return fallbackOnHeight doc <|
       combineFlat #[

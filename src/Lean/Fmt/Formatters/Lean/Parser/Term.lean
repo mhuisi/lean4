@@ -463,13 +463,13 @@ public def fmtTypeAscription : Fmt := fun
 public def fmtArrow : Fmt.InfixOperation :=
   -- The parser sets the node precedence to `maxPrec` and checks the actual precedence 25 with
   -- an inner `checkPrec`, so that `a → b` can be the left-hand side of any trailing parser.
-  { assoc := .right
+  { assoc := .middle
     precs? := some { prec := 25, lhsPrec := 0, rhsPrec := 25 }
     extendedChainKinds := {``Parser.Term.depArrow} }
 
 @[builtin_infix_fmt Lean.Parser.Term.depArrow]
 public def fmtDepArrow : Fmt.InfixOperation :=
-  { assoc := .right
+  { assoc := .middle
     precs? := some { prec := 25, lhsPrec := 0, rhsPrec := 0 }
     extendedChainKinds := {``Parser.Term.arrow} }
 
