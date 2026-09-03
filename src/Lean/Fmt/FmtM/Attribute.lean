@@ -342,17 +342,23 @@ public inductive InfixOperationAssociativity where
   | left
   | right
   | middle
-  deriving BEq
+  deriving Inhabited, BEq
+
+public structure InfixOperationPrecs where
+  prec : Nat
+  lhsPrec : Nat
+  rhsPrec : Nat
+  deriving Inhabited, BEq
 
 /-- The infix operation that a syntax node kind denotes. -/
 public structure InfixOperation where
   assoc : InfixOperationAssociativity
+  precs? : Option InfixOperationPrecs := none
   /--
-  Further syntax node kinds that an operator chain containing this operator may continue with,
-  for operators that are spread over several syntax node kinds (such as `→` and its dependent
-  variant).
+  Further syntax node kinds that an operator chain containing this operator may continue with.
   -/
-  extendedChainKinds : Array SyntaxNodeKind := #[]
+  extendedChainKinds : Std.HashSet SyntaxNodeKind := {}
+  deriving Inhabited, BEq
 
 public unsafe builtin_initialize infixFmtAttribute : KeyedDeclsAttribute InfixOperation ←
   KeyedDeclsAttribute.init {

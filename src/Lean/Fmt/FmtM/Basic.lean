@@ -145,14 +145,15 @@ def getInfixOperationOfParserDescr? (env : Environment) (opts : Options)
       (ParserDescr.cat `term rhsPrec)) := descr
     | none
   let isInfixl := prec == lhsPrec && lhsPrec + 1 == rhsPrec
+  let precs? : Option InfixOperationPrecs := some { prec, lhsPrec, rhsPrec }
   if isInfixl then
-    return { assoc := .left }
+    return { assoc := .left, precs? }
   let isInfixr := prec == rhsPrec && lhsPrec == rhsPrec + 1
   if isInfixr then
-    return { assoc := .right }
+    return { assoc := .right, precs? }
   let isInfix := prec + 1 == lhsPrec && lhsPrec == rhsPrec
   if isInfix then
-    return { assoc := .middle }
+    return { assoc := .middle, precs? }
   none
 
 def getInfixOperation? (env : Environment) (opts : Options) (kind : SyntaxNodeKind)
@@ -249,12 +250,13 @@ def quantifierChain
   unreachable!
 
 variable
-  (chainKinds : Array SyntaxNodeKind) in
+  (env : Environment) (opts : Options) (op : InfixOperation) in
 partial def collectInfixOperatorChain (stx : Syntax)
     : Array Syntax := Id.run do
   if stx.getNumArgs != 3 then
     return #[stx]
-  if ! chainKinds.contains stx.getKind then
+  let op'? := getInfixOperation? env opts stx.getKind
+  if ! (op.precs?.isSome && op'?.any (·.precs? == op.precs?) || op.extendedChainKinds.contains stx.getKind) then
     return #[stx]
   let left := stx[0]
   let op := stx[1]
@@ -341,15 +343,14 @@ where
       | throw <| .ambiguousChoiceNode stx
     fmt chosenAltStx
 
-public partial def fmtInfixOperator (assoc? : Option InfixOperationAssociativity) (extendedChainKinds : Array SyntaxNodeKind := #[])
+public partial def fmtInfixOperator (op : InfixOperation)
     : Fmt := fun stx => do
   let ctx ← read
-  let some assoc := assoc? <|> (getInfixOperation? ctx.env ctx.opts stx.getKind).map (·.assoc)
-    | throw .partialFormatter
-  let chain := collectInfixOperatorChain (extendedChainKinds.push stx.getKind) stx
+  let op := { op with extendedChainKinds := op.extendedChainKinds.insert stx.getKind }
+  let chain := collectInfixOperatorChain ctx.env ctx.opts op stx
   let chain ← chain.mapM fmt
   let format :=
-    if assoc matches .middle then
+    if op.assoc matches .middle then
       .sparse
     else
       .dense
@@ -632,7 +633,7 @@ def antiquotFmtProvider : FmtProvider := fun _ _ kind => do
 /-- Formats the operator notations whose associativity and fixity follow from their `ParserDescr`. -/
 def derivedOperatorFmtProvider : FmtProvider := fun env opts kind =>
   if let some op := getInfixOperationOfParserDescr? env opts kind then
-    some (`Lean.Fmt.fmtInfixOperator, fmtInfixOperator (some op.assoc) op.extendedChainKinds)
+    some (`Lean.Fmt.fmtInfixOperator, fmtInfixOperator op)
   else if hasPrefixFormatter env opts kind then
     some (`Lean.Fmt.fmtPrefixOperator, fmtPrefixOperator)
   else if hasPostfixFormatter env opts kind then
@@ -700,7 +701,7 @@ builtin_initialize
   addBuiltinFmtProvider 1000 <| keyedFmtProvider fmtAttribute id
   addBuiltinFmtProvider 900 antiquotFmtProvider
   addBuiltinFmtProvider 800 <| keyedFmtProvider infixFmtAttribute fun op =>
-    fmtInfixOperator (some op.assoc) op.extendedChainKinds
+    fmtInfixOperator op
   addBuiltinFmtProvider 800 <| keyedFmtProvider conditionalFmtAttribute fmtConditional
   addBuiltinFmtProvider 800 <| keyedFmtProvider quantifierFmtAttribute fmtQuantifier
   addBuiltinFmtProvider 600 derivedOperatorFmtProvider

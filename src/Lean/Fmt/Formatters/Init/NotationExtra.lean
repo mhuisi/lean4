@@ -129,19 +129,19 @@ public def fmtPSigma : QuantifierFmt := fun
 
 @[builtin_infix_fmt «term_×_»]
 public def fmtTimes : Fmt.InfixOperation :=
-  { assoc := .right, extendedChainKinds := #[``«term_×__1»] }
+  { assoc := .right, extendedChainKinds := {``«term_×__1»} }
 
 @[builtin_infix_fmt «term_×__1»]
 public def fmtSigmaTimes : Fmt.InfixOperation :=
-  { assoc := .right, extendedChainKinds := #[``«term_×_»] }
+  { assoc := .right, extendedChainKinds := {``«term_×_»} }
 
 @[builtin_infix_fmt «term_×'_»]
 public def fmtTimes' : Fmt.InfixOperation :=
-  { assoc := .right, extendedChainKinds := #[``«term_×'__1»] }
+  { assoc := .right, extendedChainKinds := {``«term_×'__1»}}
 
 @[builtin_infix_fmt «term_×'__1»]
 public def fmtPSigmaTimes : Fmt.InfixOperation :=
-  { assoc := .right, extendedChainKinds := #[``«term_×'_»] }
+  { assoc := .right, extendedChainKinds := {``«term_×'_»}}
 
 @[builtin_fmt «term{_}»]
 public def fmtSetNotation : Fmt := fun

@@ -461,11 +461,11 @@ public def fmtTypeAscription : Fmt := fun
 
 @[builtin_infix_fmt Lean.Parser.Term.arrow]
 public def fmtArrow : Fmt.InfixOperation :=
-  { assoc := .right, extendedChainKinds := #[``Parser.Term.depArrow] }
+  { assoc := .right, extendedChainKinds := {``Parser.Term.depArrow} }
 
 @[builtin_infix_fmt Lean.Parser.Term.depArrow]
 public def fmtDepArrow : Fmt.InfixOperation :=
-  { assoc := .right, extendedChainKinds := #[``Parser.Term.arrow] }
+  { assoc := .right, extendedChainKinds := {``Parser.Term.arrow} }
 
 @[builtin_quantifier_fmt Lean.Parser.Term.forall]
 public def fmtForall : QuantifierFmt := fun
