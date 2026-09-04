@@ -15,7 +15,8 @@ import Lean.Compiler.InitAttr
 import Lean.ExtraModUses
 import Lean.Fmt.Util.Module
 public import Lean.Fmt.Core.Formatter
-public import Lean.Language.Lean.Types
+public import Lean.Elab.InfoTree.Types
+import Lean.Elab.InfoTree.Basic
 
 namespace Lean.Fmt
 
@@ -40,9 +41,25 @@ public structure PartialFormatter where
 public structure Context where
   env : Environment
   text : FileMap
-  initialSnap? : Option Language.Lean.InitialSnapshot
+  /--
+  Resolves the `choice` node at the given range to the alternative that the elaborator picked.
+
+  `fmtChoiceNode` calls this only when the alternatives do not all render to the same document, so
+  an implementation may block on the elaboration that produces the resolution.
+  A `none` result raises `Error.ambiguousChoiceNode`.
+  -/
+  resolveChoiceNode : Syntax.Range → Option Elab.ChoiceResolutionInfo
   opts : Options
   lineInfos : Array SyntaxLineInfo
+
+/-- Looks up the resolution of the `choice` node at `range` in `infoTree`. -/
+public def findChoiceResolution? (infoTree : Elab.InfoTree) (range : Syntax.Range) :
+    Option Elab.ChoiceResolutionInfo := do
+  let .ofChoiceResolutionInfo i ← infoTree.findInfo? fun
+      | .ofChoiceResolutionInfo i => i.stx.getRange? == range
+      | _ => false
+    | none
+  return i
 
 public inductive RangeKind where
   | whitespace

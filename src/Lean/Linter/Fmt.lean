@@ -59,11 +59,18 @@ private def checkMissingFormatter (stx : Syntax) : CommandElabM Unit := do
   let env ← getEnv
   let text ← getFileMap
   let opts ← getOptions
+  let infoState ← Elab.getInfoState
+  -- Forced only when the formatter hits a `choice` node whose alternatives render differently.
+  -- `runLintersAsync` hands linters an already substituted info state, so forcing this waits on
+  -- nothing there.
+  let infoTrees : Thunk (PersistentArray Elab.InfoTree) :=
+    .mk fun _ => infoState.substituteLazy.get.trees
   let lineInfos := Fmt.collectSyntaxLineInfos' (sourceSliceOfSyntax text stx) stx
   let ctx := {
     env
     text
-    initialSnap? := none
+    resolveChoiceNode := fun range =>
+      infoTrees.get.findSome? (Fmt.findChoiceResolution? · range)
     opts
     lineInfos
   }

@@ -8,6 +8,7 @@ module
 
 prelude
 public import Lean.Fmt.FmtM.Basic
+meta import Lean.Parser.Term
 import Init.Data
 import Init.While
 

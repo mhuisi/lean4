@@ -382,7 +382,10 @@ where
       lineInfos
       env := finalCmdState.env
       text
-      initialSnap? := some initialSnap
+      resolveChoiceNode := fun range => do
+        let infoTree ←
+          Language.Lean.findInfoTreeAtPos initialSnap text range.start (includeStop := false) |>.get
+        findChoiceResolution? infoTree range
       opts := finalCmdState.scopes[0]!.opts
     }
     let renderedHeader ← commandMain ctx headerStx

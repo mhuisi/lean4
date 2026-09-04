@@ -11,8 +11,8 @@ public import Lean.Fmt.FmtM.Layouts
 import Lean.Fmt.Util.RangeTree
 import Lean.Fmt.Util.Basic
 import Lean.Fmt.FmtM.Comments
+meta import Lean.Parser.Term.Basic
 import Init.Data
-import Lean.Language.Lean.Util
 
 partial def Lean.Syntax.getTailToken? (stx : Syntax) : Option Syntax :=
   match stx with
@@ -326,16 +326,9 @@ partial def fmtChoiceNode : Fmt := fun choiceStx => do
 where
   disambiguateChoiceNode : Fmt := fun stx => do
     let ctx ← read
-    let some initialSnap := ctx.initialSnap?
-      | return ← fmtRaw (isFallback := true) stx
     let some range := stx.getRange?
       | throw <| .ambiguousChoiceNode stx
-    let some infoTree := Language.Lean.findInfoTreeAtPos initialSnap ctx.text range.start (includeStop := false) |>.get
-      | throw <| .ambiguousChoiceNode stx
-    let some (.ofChoiceResolutionInfo i) := infoTree.findInfo? fun
-        | .ofChoiceResolutionInfo i =>
-          i.stx.getRange? == range
-        | _ => false
+    let some i := ctx.resolveChoiceNode range
       | throw <| .ambiguousChoiceNode stx
     if i.stx.getNumArgs != stx.getNumArgs then
       throw <| .ambiguousChoiceNode stx
