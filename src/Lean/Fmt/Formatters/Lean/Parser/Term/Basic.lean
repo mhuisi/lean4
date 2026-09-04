@@ -234,13 +234,13 @@ public def groupBinders
   let binders := computeBinderDependents binders
   let runs := computeKindRuns binders |>.map (·.map PendingBinderGroup.init)
   let runs := runs.map groupAdjacentImplicitsAndInstances
-  let binderToGroup : Std.HashMap Nat Nat :=
+  let _binderToGroup : Std.HashMap Nat Nat :=
     runs.flatMap id |>.mapIdx (fun groupIdx group => group.binders.map (·.idx, groupIdx))
       |>.flatMap id
       |> Std.HashMap.ofArray
   let runs := runs.map fun run => Id.run do
     let mut groups := run
-    groups := groupAdjacentExplicitsBySameGroupDependents binderToGroup groups
+    --groups := groupAdjacentExplicitsBySameGroupDependents binderToGroup groups
     groups := groupAdjacentByDependencies groups
     groups := groupAdjacentBinderlessExplicits groups
     groups := groupAdjacentExplicitsBySameType groups
