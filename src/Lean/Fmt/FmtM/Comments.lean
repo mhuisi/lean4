@@ -19,9 +19,10 @@ public import Lean.Environment
 public import Lean.Data.Options
 
 /-- Indents all lines in `s` by `numSpaces` spaces. -/
-def String.indent (s : String) (numSpaces : Nat) : String :=
+def String.indent (s : String) (numSpaces : Nat) (skipFirstLine : Bool := false) : String :=
   s.split "\n"
-    |>.map (fun line => "".pushn ' ' numSpaces ++ line.toString)
+    |>.toArray
+    |>.mapIdx (fun i line => if skipFirstLine && i == 0 then line.toString else "".pushn ' ' numSpaces ++ line.toString)
     |>.toList
     |> "\n".intercalate
 
@@ -698,6 +699,15 @@ def determineRenderedMultiLineTokenRanges
         r := r.push renderedRange
   return r.qsort (·.startInclusive < ·.startInclusive)
 
+private def trimmedSubslice (s : String.Slice) : s.Subslice :=
+  let start := s.skipPrefixWhile Char.isWhitespace
+  let stop := s.skipSuffixWhile Char.isWhitespace
+  if h : start ≤ stop then
+    s.subslice start stop h
+  else
+    -- `s` is all whitespace: `start` is `s.endPos` and `stop` is `s.startPos`.
+    s.subsliceFrom start
+
 /--
 Associates every comment with a specific range in the rendered output.
 If the token that a comment is attached to is rendered in the output,
@@ -751,14 +761,17 @@ where
     -- range before the token.
     let (commentsWithPreviousRangeFallback, commentsWithNextRangeFallback) :=
       comments.partition fun c => c.placement matches .afterToken && ! (c.kind matches .blockComment && c.content.size > 1)
-    let (_, _, rangesForPreviousRangeFallback) :=
-      binSearchRightmost syntaxToRenderedByStop range.stop (·.1.stop) (· < ·) |>.get!
-    let (_, _, rangesForNextRangeFallback) :=
-      binSearchLeftmost syntaxToRenderedByStart range.start (·.1.start) (· < ·) |>.get!
-    return #[
-      (findBestCommentRange rangesForPreviousRangeFallback, commentsWithPreviousRangeFallback),
-      (findBestCommentRange rangesForNextRangeFallback, commentsWithNextRangeFallback),
-    ]
+
+    let rangesForPreviousRangeFallback :=
+      binSearchRightmost syntaxToRenderedByStop range.stop (·.1.stop) (· < ·) |>.map (·.2.2) |>.getD {trimmedSubslice rendering}
+    let rangesForNextRangeFallback :=
+      binSearchLeftmost syntaxToRenderedByStart range.start (·.1.start) (· < ·) |>.map (·.2.2) |>.getD {trimmedSubslice rendering}
+    let mut r := #[]
+    if ! commentsWithPreviousRangeFallback.isEmpty then
+      r := r.push (findBestCommentRange rangesForPreviousRangeFallback, commentsWithPreviousRangeFallback)
+    if ! commentsWithNextRangeFallback.isEmpty then
+      r := r.push (findBestCommentRange rangesForNextRangeFallback, commentsWithNextRangeFallback)
+    return r
 
   findBestCommentRange (ranges : Std.HashSet rendering.Subslice) : rendering.Subslice := Id.run do
     let ranges := ranges.toArray
@@ -790,7 +803,7 @@ def determineCommentInsertions
   -- get moved before the line.
   let comments := comments.toArray.map fun (range, comments) => (range, comments.reverse)
   let comments := Std.TreeMap.ofArray comments (fun a b => compareSubslicesLargest b a)
-  let mut lineLengths := lineInfos.map (·.length)
+
   let mut containsEndOfLineComments := lineInfos.map (·.range.toSlice.contains "--")
   let mut r : Std.HashMap rendering.Pos String  := ∅
   for (range, comments) in comments do
@@ -820,17 +833,12 @@ def determineCommentInsertions
               lineInfo.range.endExclusive |>.isSome then
             assert! ! isFinalAlternative
             continue
-          let lineLength := lineLengths[lineNum]!
           let insertionPos := lineInfo.range.endExclusive
           if r.contains insertionPos then
             assert! ! isFinalAlternative
             continue
-          let insertedComment := " " ++ rp.rendering.rendered
-          let newLineLength := lineLength + insertedComment.chars.length
-          -- if ! isFinalAlternative && newLineLength > maxColumnWidth then
-          --   continue
+          let insertedComment := " " ++ rp.rendering.rendered.indent (lineInfo.length + 1) (skipFirstLine := true)
           r := r.insert insertionPos insertedComment
-          lineLengths := lineLengths.set! lineNum newLineLength
           if c.kind matches .lineComment then
             containsEndOfLineComments := containsEndOfLineComments.set! lineNum true
         | .afterToken =>

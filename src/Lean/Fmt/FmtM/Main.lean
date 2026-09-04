@@ -144,15 +144,15 @@ where
       ord.isLT
     let (commentsWithPreviousRangeFallback, commentsWithNextRangeFallback) :=
       comments.partition fun c => c.placement matches .afterToken && ! (c.kind matches .blockComment && c.content.size > 1)
-    let (_, rangeForPreviousRangeFallback, tagsForPreviousRangeFallback, _) :=
-      binSearchRightmost syntaxToTagsByStop range.stop (·.1.stop) (· < ·) |>.get!
-    let (_, rangeForNextRangeFallback, tagsForNextRangeFallback, _) :=
-      binSearchLeftmost syntaxToTagsByStart range.start (·.1.start) (· < ·) |>.get!
     let mut r := #[]
     if ! commentsWithPreviousRangeFallback.isEmpty then
-      r := r.push (tagsForPreviousRangeFallback[0]!, rangeForPreviousRangeFallback, commentsWithPreviousRangeFallback)
+      if let some (_, rangeForPreviousRangeFallback, tagsForPreviousRangeFallback, _) :=
+          binSearchRightmost syntaxToTagsByStop range.stop (·.1.stop) (· < ·) then
+        r := r.push (tagsForPreviousRangeFallback[0]!, rangeForPreviousRangeFallback, commentsWithPreviousRangeFallback)
     if ! commentsWithNextRangeFallback.isEmpty then
-      r := r.push (tagsForNextRangeFallback[0]!, rangeForNextRangeFallback, commentsWithNextRangeFallback)
+      if let some (_, rangeForNextRangeFallback, tagsForNextRangeFallback, _) :=
+          binSearchLeftmost syntaxToTagsByStart range.start (·.1.start) (· < ·) then
+        r := r.push (tagsForNextRangeFallback[0]!, rangeForNextRangeFallback, commentsWithNextRangeFallback)
     return r
   tag (doc : Doc FmtCost) (c : Comment) : StateM tryInsertingComments.State (Doc FmtCost) :=
     modifyGet fun s =>
@@ -171,8 +171,8 @@ where
         let renderings := c.render
         let docs := renderings.map (Doc.initial <| renderingToDoc ·)
         let docs ← docs.mapM (tag · c)
-        let doc := Doc.free <| .oneOf docs
-        let doc := .aligned <| doc ++ .hardNl ++ result
+        let doc := .oneOf docs
+        let doc := .aligned <| Doc.free (doc ++ .hardNl) ++ result
         result := .oneOf #[
           doc,
           Doc.costing (DefaultCost.ofFailureFallbackPenalty penalty) result
@@ -181,8 +181,8 @@ where
         let renderings := c.render
         let docs := renderings.map (Doc.final <| renderingToDoc ·)
         let docs ← docs.mapM (tag · c)
-        let doc := Doc.free <| .oneOf docs
-        let doc := result ++ .text " " ++ doc
+        let doc := .oneOf docs
+        let doc := result ++ Doc.free (.text " " ++ doc)
         result := .oneOf #[
           doc,
           Doc.costing (DefaultCost.ofFailureFallbackPenalty penalty) result
