@@ -42,11 +42,24 @@ declaration, whose mangled kind no formatter can name. -/
 private def isIgnoredKind (opts : Options) (kind : Name) : Bool :=
   kind == nullKind || (linter.missingFormatter.ignorePrivate.get opts && isPrivateName kind)
 
+/-- The slice of `text` covered by `stx`, extended to whole lines.
+`Fmt.collectSyntaxLineInfos'` reads the line information off this slice, so it must begin at a line
+boundary for the indentation and length of the first line to be accurate. -/
+private def sourceSliceOfSyntax (text : FileMap) (stx : Syntax) : String.Slice :=
+  let source := text.source.toSlice
+  match stx.getStartPos? with
+  | none => source
+  | some startPos =>
+    let endPos := (stx.getTrailingTailPos? <|> stx.getTailPos?).getD startPos
+    let sliceStartPos := text.lineStart (text.toPosition startPos).line
+    let sliceEndPos := text.lineStart ((text.toPosition endPos).line + 1)
+    source.subslice! (source.pos! sliceStartPos) (source.pos! sliceEndPos) |>.toSlice
+
 private def checkMissingFormatter (stx : Syntax) : CommandElabM Unit := do
   let env ← getEnv
   let text ← getFileMap
   let opts ← getOptions
-  let lineInfos := Fmt.collectSyntaxLineInfos stx
+  let lineInfos := Fmt.collectSyntaxLineInfos' (sourceSliceOfSyntax text stx) stx
   let ctx := {
     env
     text
