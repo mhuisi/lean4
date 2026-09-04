@@ -584,11 +584,11 @@ search stays efficient.
 ## Finding missing or incomplete formatters
 
 To check which syntax in a file lacks a (complete) formatter without modifying the
-file, run the `missingFormatter` linter via `lean` with the option set on the command
+file, run the `fmt.missing` linter via `lean` with the option set on the command
 line:
 
 ```bash
-./build/release/stage1/bin/lean -Dlinter.missingFormatter=true path/to/File.lean
+./build/release/stage1/bin/lean -Dlinter.fmt.missing=true path/to/File.lean
 ```
 
 This elaborates the file (no reformatting) and warns about every syntax node kind with

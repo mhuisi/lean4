@@ -44,12 +44,12 @@ syntax (name := unformattedTestSyntax) "unformattedTest" "[" term "]" : term
 macro_rules
   | `(unformattedTest [ $x ]) => `($x)
 
-set_option linter.missingFormatter true
+set_option linter.fmt.missing true
 
 /--
 warning: no auto-formatter registered for syntax kind unformattedTestSyntax
 
-Note: This linter can be disabled with `set_option linter.missingFormatter false`
+Note: This linter can be disabled with `set_option linter.fmt.missing false`
 -/
 #guard_msgs in
 example : Nat := unformattedTest [ 1 ]

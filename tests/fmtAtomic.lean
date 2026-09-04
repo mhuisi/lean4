@@ -1,10 +1,10 @@
 /-!
 Tests the formatter derived for syntax that consists exclusively of atoms
 (`derivedAtomicFmtProvider`). None of the syntax below has a formatter of its own, so the
-`missingFormatter` linter enabled here must stay silent for all of it.
+`fmt.missing` linter enabled here must stay silent for all of it.
 -/
 
-set_option linter.missingFormatter true
+set_option linter.fmt.missing true
 
 example : True := by
   first

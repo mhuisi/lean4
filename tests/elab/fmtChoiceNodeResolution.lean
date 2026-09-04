@@ -1,7 +1,7 @@
 import Lean
 
 /-!
-Tests that `linter.missingFormatter` resolves ambiguous `choice` nodes through the info trees of
+Tests that `linter.fmt.missing` resolves ambiguous `choice` nodes through the info trees of
 the command it lints.
 
 The linter used to pass no resolution to the formatter at all, so every `choice` node whose
@@ -30,7 +30,7 @@ def fmtChoiceA : Fmt := fun stx => fmt stx[1]
 @[fmt choiceB]
 def fmtChoiceB : Fmt := fmtAtomic
 
-set_option linter.missingFormatter true
+set_option linter.fmt.missing true
 
 -- `choiceB` fails to elaborate, so the elaborator commits to `choiceA` and records the choice.
 
@@ -65,7 +65,7 @@ warning: The auto-formatter failed, so this command was not checked for missing 
 A choice node was not disambiguated by the elaborator:
 (choice (choiceD "choiceFail" (num "1")) (choiceC "choiceFail" (num "1")))
 
-Note: This linter can be disabled with `set_option linter.missingFormatter false`
+Note: This linter can be disabled with `set_option linter.fmt.missing false`
 -/
 #guard_msgs in
 example : Nat := choiceFail 1

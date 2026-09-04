@@ -16,12 +16,12 @@ namespace Lean.Linter
 
 open Lean Elab.Command
 
-register_builtin_option linter.missingFormatter : Bool := {
+register_builtin_option linter.fmt.missing : Bool := {
   defValue := false
   descr := "enable the 'missing formatter' linter"
 }
 
-register_builtin_option linter.missingFormatter.ignorePrivate : Bool := {
+register_builtin_option linter.fmt.missing.ignorePrivate : Bool := {
   defValue := false
   descr := "make the 'missing formatter' linter ignore syntax with a private node kind, which is \
     what `local syntax`, `local macro` and `local notation` produce"
@@ -40,7 +40,7 @@ private def errorRef (cmdStx : Syntax) : Fmt.Error → Syntax
 /-- Whether `kind` is exempt from being reported. A private kind stems from a `local` syntax
 declaration, whose mangled kind no formatter can name. -/
 private def isIgnoredKind (opts : Options) (kind : Name) : Bool :=
-  kind == nullKind || (linter.missingFormatter.ignorePrivate.get opts && isPrivateName kind)
+  kind == nullKind || (linter.fmt.missing.ignorePrivate.get opts && isPrivateName kind)
 
 /-- The slice of `text` covered by `stx`, extended to whole lines.
 `Fmt.collectSyntaxLineInfos'` reads the line information off this slice, so it must begin at a line
@@ -78,13 +78,13 @@ private def checkMissingFormatter (stx : Syntax) : CommandElabM Unit := do
   let r ← match FmtM.run ctx (Fmt.fmt stx) with
     | .ok r => pure r
     | .error e =>
-      logLint linter.missingFormatter (errorRef stx e) <|
+      logLint linter.fmt.missing (errorRef stx e) <|
         m!"The auto-formatter failed, so this command was not checked for missing formatters:\n\n" ++
         toString e
       return
   for (range, missingFormatter) in r.missingFormatters do
     if isIgnoredKind opts missingFormatter.kind then continue
-    logLint linter.missingFormatter (.ofRange range)
+    logLint linter.fmt.missing (.ofRange range)
       m!"no auto-formatter registered for syntax kind {Expr.const missingFormatter.kind []}"
   for (range, partialFormatter) in r.partialFormatters do
     let kind := partialFormatter.stx.getKind
@@ -94,7 +94,7 @@ private def checkMissingFormatter (stx : Syntax) : CommandElabM Unit := do
         m!"{Expr.const partialFormatter.formatterName []} "
       else
         m!""
-    logLint linter.missingFormatter (.ofRange range) <|
+    logLint linter.fmt.missing (.ofRange range) <|
       m!"Auto-formatter {fmtName}for syntax kind {Expr.const kind []} is incomplete.\n" ++
       m!"The syntax at the location has the following form:\n\n" ++
       toString partialFormatter.stx
@@ -102,10 +102,10 @@ private def checkMissingFormatter (stx : Syntax) : CommandElabM Unit := do
 /-- Linter that warns about syntax nodes for which no auto-formatter is registered.
 The linter notes the `SyntaxNodeKind` in the warning message.
 
-Set `linter.missingFormatter.ignorePrivate` to skip syntax declared with `local`. -/
-def missingFormatter : Linter where
+Set `linter.fmt.missing.ignorePrivate` to skip syntax declared with `local`. -/
+def fmtMissing : Linter where
   run cmdStx := do
-    unless linter.missingFormatter.get (← getLinterOptions).toOptions do
+    unless linter.fmt.missing.get (← getLinterOptions).toOptions do
       return
     -- `missing` nodes from parser error recovery make formatters fail, which would be reported as
     -- spurious incomplete formatters. The formatter entry points reject such input as well.
@@ -113,6 +113,6 @@ def missingFormatter : Linter where
       return
     checkMissingFormatter cmdStx
 
-builtin_initialize addLinter missingFormatter
+builtin_initialize addLinter fmtMissing
 
 end Lean.Linter
