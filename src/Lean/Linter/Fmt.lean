@@ -87,6 +87,10 @@ def missingFormatter : Linter where
   run cmdStx := do
     unless linter.missingFormatter.get (← getLinterOptions).toOptions do
       return
+    -- `missing` nodes from parser error recovery make formatters fail, which would be reported as
+    -- spurious incomplete formatters. The formatter entry points reject such input as well.
+    if cmdStx.hasMissing then
+      return
     checkMissingFormatter cmdStx
 
 builtin_initialize addLinter missingFormatter
