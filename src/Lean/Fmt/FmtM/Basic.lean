@@ -270,8 +270,7 @@ partial def collectInfixOperatorChain (stx : Syntax)
 public def fmtRawAsInSource (isFallback : Bool := false) : Fmt := fun stx => do
   -- We assume that this function is not being called for syntax that may contain tokens with
   -- comments.
-  -- TODO: Remove once Verso docstrings are fixed and actually contain the correct original syntax
-  -- (so that we can format them properly or using `fmtRaw`).
+  -- TODO: Remove once we have formatting for Verso docstrings.
   let some pos := stx.getPos?
     | return ← text "" stx
   let some tailPos := stx.getTailPos?
@@ -288,8 +287,6 @@ public def fmtRawAsInSource (isFallback : Bool := false) : Fmt := fun stx => do
   if isFallback then
     rawDoc := mkRawFallback rawDoc
   return rawDoc
-
-structure VersoDocStringException where
 
 structure fmtRaw.Context where
   anchorColumnPos : Nat
@@ -476,12 +473,11 @@ public partial def fmtRaw (isFallback : Bool := false) : Fmt := fun stx => do
     li.tokenRanges.all (·.start >= li.startPos) && li.length > li.indentation
   let anchorColumnPositions := #[startColumnPos] ++ anchorLineInfos.map (·.indentation)
   let anchorColumnPos := anchorColumnPositions.min?.get!
-  let mut (.ok rawDoc) ← go stx |>.run {
-        anchorColumnPos
-        firstTokenPos := pos
-        lastTokenTailPos := tailPos
-      }
-    | return ← fmtRawAsInSource isFallback stx
+  let mut rawDoc ← go stx |>.run {
+    anchorColumnPos
+    firstTokenPos := pos
+    lastTokenTailPos := tailPos
+  }
   let isRawBlockSeparated := startColumnPos <= lineInfos[0]!.indentation
   let rawColumnPositions := anchorLineInfos.map (·.indentation)
   let areLinesAligned := isRawBlockSeparated || rawColumnPositions.all (· >= startColumnPos)
@@ -494,7 +490,7 @@ public partial def fmtRaw (isFallback : Bool := false) : Fmt := fun stx => do
     rawDoc := mkRawFallback rawDoc
   return rawDoc
 where
-  go (stx : Syntax) : ReaderT fmtRaw.Context (ExceptT VersoDocStringException FmtM) TaggedDoc := do
+  go (stx : Syntax) : ReaderT fmtRaw.Context FmtM TaggedDoc := do
     match stx with
     | .missing =>
       return failure
@@ -509,10 +505,7 @@ where
       let docs ← args.mapM go
         return join docs
   fmtToken (stx : Syntax) (token : String) :
-      ReaderT fmtRaw.Context (ExceptT VersoDocStringException FmtM) TaggedDoc := do
-    let isTokenWellFormed := stx.getPos?.isSome && stx.getTailPos?.isSome
-    if ! isTokenWellFormed then
-      throwThe VersoDocStringException {}
+      ReaderT fmtRaw.Context FmtM TaggedDoc := do
     let ctx ← read
     let leadingDoc ← fmtLeadingWhitespace stx (fmtLeading ctx)
     let trailingDoc ← fmtTrailingWhitespace stx (fmtTrailing ctx)

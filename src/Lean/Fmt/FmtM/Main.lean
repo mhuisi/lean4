@@ -375,9 +375,7 @@ where
         (moduleData.headerData.cmdState?, moduleData.headerData.parserState?)
       | throw <| .headerError headerStx
     let allCmdData : Array Language.Lean.CommandData := #[⟨headerStx, headerParserState, headerCmdState⟩] ++ moduleData.cmdData
-    -- TODO: Use `collectSyntaxLineInfos` again once Verso docstrings are fixed and no longer
-    -- produce tokens without source positions.
-    let lineInfos := collectSyntaxLineInfos' text.source.toSlice modStx
+    let lineInfos := collectSyntaxLineInfos modStx
     let ctx : Fmt.Context := {
       lineInfos
       env := finalCmdState.env

@@ -591,12 +591,9 @@ where
           return ← go firstAlternative
       for arg in args do
         go arg
-  collectTokenComments (info : SourceInfo) (_tk : String.Slice) : collectComments.M Unit := do
+  collectTokenComments (info : SourceInfo) (tk : String.Slice) : collectComments.M Unit := do
     let some range := info.getRange?
-      | -- throw <| .malformedInputSyntax stx (some <| .ofSlice tk) "missing token range"
-        -- TODO: Replace with throwing an exception when Verso docstrings are fixed.
-        -- Currently, Verso docstrings violate this assumption because they are being elaborated
-        -- *in the parser*.
+      | throw <| .malformedInputSyntax stx (some <| .ofSlice tk) "missing token range"
         return
     if let some leading ← info.getLeading? |>.mapM toSlice then
       let comments ← dropClaimedComments <| parseComments lineInfos range .leading leading
