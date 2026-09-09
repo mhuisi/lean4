@@ -326,7 +326,7 @@ def commandRaw (ctx : Fmt.Context) (stx : Syntax) : Except Error String := do
   let trailing := (← render ctx stx <| fmtTrailingWithRetainedNewlinesAndComments stx).rendering
   return leading ++ rawText ++ trailing
 
-public def commandMain (ctx : Fmt.Context) (stx : Syntax) : Except Error String := do
+public def commandMain (ctx : Fmt.Context) (stx : Syntax) (fatal : Bool := false) : Except Error String := do
   let comments ←
     collectComments ctx.env ctx.opts (getCommentCollectors ctx.env) ctx.lineInfos stx
   let multiLineTokenRanges := collectMultiLineTokenRanges stx
@@ -345,8 +345,11 @@ public def commandMain (ctx : Fmt.Context) (stx : Syntax) : Except Error String 
     let rendering := insertRemainingComments output.rendering syntaxToTags tagsToRendered comments
       multiLineTokenRanges
     return rendering
-  catch _ =>
-    commandRaw ctx stx
+  catch e =>
+    if fatal then
+      throw e
+    else
+      commandRaw ctx stx
 
 def getNumThreads : BaseIO Nat := do
   if ! System.Platform.isEmscripten then
@@ -357,7 +360,7 @@ def getNumThreads : BaseIO Nat := do
 def getParallelism : BaseIO Nat :=
   return max 1 (← getNumThreads)
 
-public def fileMain (initialSnap : Language.Lean.InitialSnapshot) : BaseIO (Except Error String) := do
+public def fileMain (initialSnap : Language.Lean.InitialSnapshot) (fatal : Bool := false) : BaseIO (Except Error String) := do
   run
 where
   run : ExceptT Error BaseIO String := do
@@ -386,7 +389,7 @@ where
         findChoiceResolution? infoTree range
       opts := finalCmdState.scopes[0]!.opts
     }
-    let renderedHeader ← commandMain ctx headerStx
+    let renderedHeader ← commandMain ctx headerStx fatal
     let parallelism ← getParallelism
     let renderedCommandsMutex : Std.Mutex (Std.TreeMap Nat (Except Error String)) ← Std.Mutex.new ∅
     let jobs : Std.Channel Nat ← Std.Channel.new
@@ -414,7 +417,11 @@ where
     return normalize renderedFile
   renderCommand (ctx : Context) (cmdData prevCmdData : Language.Lean.CommandData) : Except Error String := do
     let input := initialSnap.ictx.inputString
-    let mut renderedCommand ← commandMain ctx cmdData.stx
+    if cmdData.stx.isOfKind ``Parser.Command.eoi then
+      return ← commandRaw ctx cmdData.stx
+    let mut renderedCommand ← commandMain ctx cmdData.stx fatal
+    if cmdData.stx.isOfKind ``Parser.Command.eoi then
+      return renderedCommand
     -- The rendering of a command always starts at the beginning of a line, so it must be validated
     -- there as well: commands like `variable` require their continuation lines to be indented
     -- relative to the command's own column, which fails when the rendering is spliced in at the
@@ -433,5 +440,7 @@ where
     let parserState := { prevCmdData.parserState with pos := rawStartPos }
     let (stx, _, msgLog) := Parser.parseCommand ictx pmctx parserState MessageLog.empty
     if msgLog.hasErrors || stx.hasMissing then
+      if fatal then
+        throw <| .reparseFailure cmdData.stx
       renderedCommand ← commandRaw ctx cmdData.stx
     return renderedCommand

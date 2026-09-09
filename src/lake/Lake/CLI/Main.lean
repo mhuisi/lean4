@@ -85,6 +85,8 @@ public structure LakeOptions where
   runBuiltinLint : Bool := false
   /-- Whether `lake lint` should skip the lint driver (via `--builtin-only`). -/
   builtinOnly : Bool := false
+  /-- Whether `lake fmt` should abort on a formatting error (via `--fatal`). -/
+  fmtFatal : Bool := false
 
 def LakeOptions.outLv (opts : LakeOptions) : LogLevel :=
   opts.outLv?.getD opts.verbosity.minLogLv
@@ -384,6 +386,9 @@ def lakeLongOption : (opt : String) → CliM PUnit
     { opts with runBuiltinLint := true, builtinOnly := true,
                 builtinLint.checks := opts.builtinLint.checks ++ checks,
                 builtinLint.mode := .codeQuality }
+
+-- Fmt options
+| "--fatal" => modifyThe LakeOptions ({· with fmtFatal := true})
 
 -- Shared options
 | "--force" => modifyThe LakeOptions ({· with shake.force := true})
@@ -1200,7 +1205,7 @@ protected def fmt : CliM PUnit := do
       | some ws => pure ws.augmentedLeanPath
       | none => (·.leanPath) <$> opts.computeEnv
     Lean.searchPathRef.set searchPath
-    exit <| ← Fmt.fmtFile (FilePath.mk leanFile)
+    exit <| ← Fmt.fmtFile (FilePath.mk leanFile) opts.fmtFatal
   else
     let ws ← loadWorkspace config
     let mut exitCode : UInt32 := 0
@@ -1219,11 +1224,12 @@ protected def fmt : CliM PUnit := do
     -- loaded by `Elab.processHeader` is freed when the process exits.
     -- Processes are spawned in parallel using the Lean task pool, which
     -- bounds concurrency to the number of available cores.
+    let fmtOpts := if opts.fmtFatal then #["--fatal"] else #[]
     let tasks ← leanFiles.mapM fun leanFile => do
       IO.asTask (prio := Task.Priority.default) do
         let child ← IO.Process.spawn {
           cmd := config.lakeEnv.lake.lake.toString
-          args := #["fmt", leanFile.toString]
+          args := #["fmt", leanFile.toString] ++ fmtOpts
           env := ws.augmentedEnvVars
         }
         child.wait

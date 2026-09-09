@@ -37,7 +37,7 @@ def commentAssociations (input : String) : CoreM (Array (String × String)) := d
     match Parser.runParserCategory env `command input with
     | .ok stx => pure stx
     | .error e => throwError e
-  let lineInfos := collectSyntaxLineInfos' input.toSlice stx
+  let lineInfos := collectSyntaxLineInfos stx
   let comments ←
     match collectComments env opts (getCommentCollectors env) lineInfos stx with
     | .ok comments => pure comments

@@ -35,8 +35,11 @@ private partial def collectParsedCmds? (snap : Language.Lean.CommandParsedSnapsh
 /--
 Format `file` using the Lean auto-formatter.
 Writes the formatted result back to `file`.
+
+If `fatal` is `true`, a formatting error aborts the command. If it is `false`, the formatter
+retains the unformatted text of the command that caused the error and continues.
 -/
-public def fmtFile (file : FilePath) : IO UInt32 := do
+public def fmtFile (file : FilePath) (fatal : Bool := false) : IO UInt32 := do
   let contents ← IO.FS.readFile file
   let inputCtx := Parser.mkInputContext contents file.toString
   unsafe enableInitializersExecution
@@ -52,7 +55,7 @@ public def fmtFile (file : FilePath) : IO UInt32 := do
       opts
     }
   let initialSnap ← Language.Lean.process setup none { inputCtx with }
-  match ← Fmt.fileMain initialSnap with
+  match ← Fmt.fileMain initialSnap fatal with
   | .error err =>
     IO.eprintln s!"error: {file}: {err}"
     return 1

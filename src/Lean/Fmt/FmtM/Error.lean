@@ -55,6 +55,11 @@ public inductive Error where
     (msg : String := s!"Cannot format file with parse errors.")
   | earlyTerminationCommand
     (msg : String := s!"Cannot format file with early termination commands (e.g. `#exit`).")
+  | reparseFailure
+    (stx : Syntax)
+    (msg : String := "The parser cannot parse the rendering of this command again. This issue \
+      is commonly caused by the formatter stripping semicolons that were used to prevent \
+      accidentally parsing too far.")
   | raw
     (msg : String)
   deriving Inhabited
@@ -70,6 +75,7 @@ public instance : ToString Error where
     | .headerError (msg := msg) ..
     | .parseError (msg := msg) ..
     | .earlyTerminationCommand (msg := msg) ..
+    | .reparseFailure (msg := msg) ..
     | .raw (msg := msg) .. => msg
 
 public def Error.ofFormattingError (stx : Syntax) : FormattingError → Error
