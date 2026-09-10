@@ -169,15 +169,11 @@ structure PendingComment extends Comment where
   endPos : String.Pos.Raw
   deriving Inhabited, Repr
 
-/--
-Finalizes a pending comment, extracting `Comment.content` from `PendingComment.raw` by
-removing start, end and line separators, erasing all indentation relative to the least indented
-line with content in the comment and dropping stylistic whitespace at the start and the end of the
-comment (e.g. the separation space in `-- ` or the newlines in a multi-line `/-\n...\n-/`).
--/
-def PendingComment.finalize (p : PendingComment) : Comment :=
-  let s := p.raw.toSlice.dropPrefix p.kind.startSymbol
-    |>.dropSuffix p.kind.endSymbol
+public def normalizeCommentContent (s : String) (startSymbol endSymbol : String) (startColumnOffset : Nat)
+    (isLineComment : Bool)
+    : Array String :=
+  let s := s.toSlice.dropPrefix startSymbol
+    |>.dropSuffix endSymbol
   let lines := s.split "\n" |>.toArray
   let indentation := contentColumnOffset lines
   let deindentedLines :=
@@ -186,16 +182,9 @@ def PendingComment.finalize (p : PendingComment) : Comment :=
   let deindentedLines := deindentedLines.map (·.toString)
   let content := "\n".intercalate deindentedLines
     |>.toSlice
-    |> normalizeContent p.kind
+    |> normalizeContent
     |>.toString
-  {
-    kind := p.kind
-    placement := p.placement
-    originalTokenRange := p.originalTokenRange
-    originalWhitespaceRange := ⟨p.startPos, p.endPos⟩
-    originalWhitespaceKind := p.originalWhitespaceKind
-    content := content.split "\n" |>.toArray.map (·.toString)
-  }
+  content.split "\n" |>.toArray.map (·.toString)
 where
   contentColumnOffset (lines : Array String.Slice) : Nat := Id.run do
     let mut offset? : Option Nat := none
@@ -204,17 +193,16 @@ where
       if indentation == line.chars.length then
         continue
       let lineColumnOffset :=
-        if i == 0 then p.startColumnOffset + p.kind.startSymbol.chars.length else 0
+        if i == 0 then startColumnOffset + startSymbol.chars.length else 0
       let columnOffset := lineColumnOffset + indentation
       offset? := some <| match offset? with
         | none => columnOffset
         | some offset => min offset columnOffset
-    return offset?.getD p.startColumnOffset
-  normalizeContent (kind : Comment.Kind) (s : String.Slice) : String.Slice := Id.run do
-    match kind with
-    | .lineComment =>
+    return offset?.getD startColumnOffset
+  normalizeContent (s : String.Slice) : String.Slice := Id.run do
+    if isLineComment then
       s.dropPrefix " " |>.dropSuffix "\n"
-    | .blockComment =>
+    else
       s.dropWhile (fun c => c = ' ' || c = '\n')
         |>.dropEndWhile (fun c => c = ' ' || c = '\n')
   dropIndentation (line : String.Slice) (amount : Nat) : String.Slice := Id.run do
@@ -228,11 +216,29 @@ where
       amount := amount - 1
     return line
   dropLinePrefix (line : String.Slice) : String.Slice := Id.run do
-    let some pre := p.kind.linePrefix?
-      | return line
-    let some line := line.dropPrefix? pre
+    if ! isLineComment then
+      return line
+    let some line := line.dropPrefix? startSymbol
       | return line
     return line.dropPrefix " "
+
+/--
+Finalizes a pending comment, extracting `Comment.content` from `PendingComment.raw` by
+removing start, end and line separators, erasing all indentation relative to the least indented
+line with content in the comment and dropping stylistic whitespace at the start and the end of the
+comment (e.g. the separation space in `-- ` or the newlines in a multi-line `/-\n...\n-/`).
+-/
+def PendingComment.finalize (p : PendingComment) : Comment :=
+  let content := normalizeCommentContent p.raw p.kind.startSymbol p.kind.endSymbol p.startColumnOffset <|
+    p.kind matches .lineComment
+  {
+    kind := p.kind
+    placement := p.placement
+    originalTokenRange := p.originalTokenRange
+    originalWhitespaceRange := ⟨p.startPos, p.endPos⟩
+    originalWhitespaceKind := p.originalWhitespaceKind
+    content
+  }
 
 /--
 Advances `columnOffset` by pretending that `s` is appended at `columnOffset`.
