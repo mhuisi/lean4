@@ -1669,9 +1669,18 @@ def expandInterpolatedStr (interpStr : TSyntax interpolatedStrKind) (type : Term
     (fun s => `($ofLitFn $(Syntax.mkStrLit s)))
   `(($r : $type))
 
+/--
+Extracts the doc string from `body`, the value of the atom that follows the opening delimiter of a
+documentation comment (`/-- ... -/` or `/-! ... -/`). The whitespace at the start of `body` and the
+closing delimiter are not part of the doc string.
+-/
+def docStringOfCommentBody (body : String) : String :=
+  String.Internal.extract body (String.Internal.nextWhile body Char.isWhitespace 0)
+    (String.Pos.Raw.Internal.sub body.rawEndPos ⟨2⟩)
+
 def getDocString (stx : TSyntax `Lean.Parser.Command.docComment) : String :=
   match stx.raw[1] with
-  | Syntax.atom _ val => String.Internal.extract val 0 (String.Pos.Raw.Internal.sub val.rawEndPos ⟨2⟩)
+  | Syntax.atom _ val => docStringOfCommentBody val
   | _                 => ""
 
 end TSyntax

@@ -28,7 +28,7 @@ namespace Lean.Elab.Command
   match stx[1] with
   | Syntax.atom _ val =>
     if getMainVersoModuleDocs (← getEnv) |>.isEmpty then
-      let doc := String.Pos.Raw.extract val 0 (val.rawEndPos.unoffsetBy ⟨2⟩)
+      let doc := TSyntax.docStringOfCommentBody val
       modifyEnv fun env => addMainModuleDoc env ⟨doc, range⟩
     else
       throwError m!"Can't add Markdown-format module docs because there is already Verso-format content present."

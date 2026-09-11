@@ -18,6 +18,29 @@ namespace Parser
 
 namespace Command
 
+/--
+Parses the opening delimiter `sym` of a documentation comment (`/-- ... -/` or `/-! ... -/`).
+Unlike `symbol sym`, it leaves the whitespace after the delimiter to the comment body.
+-/
+def docCommentOpen (sym : String) : Parser where
+  info := symbolInfo sym
+  fn c s :=
+    let startPos := s.pos
+    let s := symbolFn sym c s
+    if s.hasError then s
+    else
+      let stopPos := startPos + sym
+      let info := SourceInfo.original (c.mkEmptySubstringAt startPos) startPos
+        (c.mkEmptySubstringAt stopPos) stopPos
+      s.popSyntax.setPos stopPos |>.pushSyntax (.atom info sym)
+
+@[combinator_formatter docCommentOpen, expose]
+def docCommentOpen.formatter (sym : String) : PrettyPrinter.Formatter :=
+  PrettyPrinter.Formatter.symbolNoAntiquot.formatter sym
+@[combinator_parenthesizer docCommentOpen, expose]
+def docCommentOpen.parenthesizer (sym : String) : PrettyPrinter.Parenthesizer :=
+  PrettyPrinter.Parenthesizer.symbolNoAntiquot.parenthesizer sym
+
 open Lean.Parser in
 def versoCommentBodyFn : ParserFn := fun c s =>
   let startPos := s.pos
@@ -59,6 +82,18 @@ def versoCommentBody.parenthesizer := PrettyPrinter.Parenthesizer.visitToken
 
 open PrettyPrinter Formatter in
 open Syntax.MonadTraverser in
+/--
+Formats an atom that holds comment text. The whitespace at the start of the text is left out,
+because a `ppSpace` separates the text from the opening delimiter.
+-/
+def formatCommentText : Formatter := do
+  let stx ← getCur
+  let .atom info val := stx | throwError m!"not an atom: {stx}"
+  pushToken info val.trimAsciiStart.copy false
+  goLeft
+
+open PrettyPrinter Formatter in
+open Syntax.MonadTraverser in
 @[combinator_formatter versoCommentBody, expose]
 def versoCommentBody.formatter : PrettyPrinter.Formatter := do
   visitArgs $ do
@@ -66,7 +101,7 @@ def versoCommentBody.formatter : PrettyPrinter.Formatter := do
     goLeft
     -- Markup that did not parse is kept as the text that was written.
     if (← getCur).isOfKind `Lean.Doc.Syntax.parseFailure then
-      visitArgs (visitAtom .anonymous)
+      visitArgs formatCommentText
     else
       formatterForKind (← getCur).getKind
 
@@ -76,7 +111,7 @@ def commentBody : Parser :=
 @[combinator_parenthesizer commentBody, expose]
 def commentBody.parenthesizer := PrettyPrinter.Parenthesizer.visitToken
 @[combinator_formatter commentBody, expose]
-def commentBody.formatter := PrettyPrinter.Formatter.visitAtom Name.anonymous
+def commentBody.formatter := formatCommentText
 
 /--
 A `docComment` parses a "documentation comment" like `/-- foo -/`. This is not treated like
@@ -86,14 +121,16 @@ At parse time, `docComment` checks the value of the `doc.verso` option. If it is
 are parsed as Verso markup. If not, the contents are treated as plain text or Markdown. Use
 `plainDocComment` to always treat the contents as plain text.
 
-A plain text doc comment node contains a `/--` atom and then the remainder of the comment, `foo -/`
-in this example. Use `TSyntax.getDocString` to extract the body text from a doc string syntax node.
-A Verso comment node contains the `/--` atom, the document's syntax tree, and a closing `-/` atom.
+A plain text doc comment node contains a `/--` atom and then the remainder of the comment, including
+the whitespace after the opening delimiter (` foo -/` in this example). Use `TSyntax.getDocString`
+to extract the body text from a doc string syntax node. A Verso comment node contains the `/--`
+atom, the document's syntax tree, and a closing `-/` atom.
 -/
 -- @[builtin_doc] -- FIXME: suppress the hover
 @[run_builtin_parser_attribute_hooks]
 def docComment := leading_parser
-  ppDedent $ "/--" >> ppSpace >> Doc.Parser.ifVerso versoCommentBody commentBody >> ppLine
+  ppDedent $ docCommentOpen "/--" >> ppSpace >> Doc.Parser.ifVerso versoCommentBody commentBody >>
+    ppLine
 
 @[inherit_doc docComment, run_builtin_parser_attribute_hooks]
 def plainDocComment : Parser := Doc.Parser.withoutVersoSyntax docComment

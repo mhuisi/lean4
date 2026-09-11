@@ -30,7 +30,10 @@ def validateDocComment
     [Monad m] [MonadLiftT IO m] [MonadLog m] [AddMessageContext m] [MonadOptions m]
     (docstring : TSyntax `Lean.Parser.Command.docComment) :
     m Unit := do
-  let str := docstring.getDocString
+  -- Unlike `getDocString`, keep the leading whitespace so that offsets into `str` are offsets from
+  -- `pos?`.
+  let body := docstring.raw[1].getAtomVal
+  let str := String.Pos.Raw.extract body 0 (body.rawEndPos.unoffsetBy ⟨2⟩)
   let pos? := docstring.raw[1].getHeadInfo? >>= (·.getPos?)
 
   let (errs, out) ← (rewriteManualLinksCore str : IO _)
