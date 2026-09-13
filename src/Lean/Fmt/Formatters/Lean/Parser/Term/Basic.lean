@@ -10,6 +10,7 @@ prelude
 public import Lean.Fmt.FmtM.Basic
 meta import Lean.Parser.Term.Basic
 import Init.Data
+import Init.While
 import Lean.Fmt.Util.Basic
 
 namespace Lean.Fmt
@@ -146,6 +147,14 @@ private structure PendingBinderGroup where
   types : Std.HashSet Syntax
   deriving Inhabited
 
+private def PendingBinderGroup.empty : PendingBinderGroup := {
+  binders := #[]
+  kinds := ∅
+  dependents := ∅
+  defaultKinds := ∅
+  types := ∅
+}
+
 private def PendingBinderGroup.init (b : BinderWithDependents) : PendingBinderGroup := {
   binders := #[b]
   kinds := {b.kind}
@@ -160,6 +169,11 @@ private def PendingBinderGroup.merge (g1 g2 : PendingBinderGroup) : PendingBinde
   dependents := g1.dependents.union g2.dependents
   defaultKinds := g1.defaultKinds.union g2.defaultKinds
   types := g1.types.union g2.types
+}
+
+private def PendingBinderGroup.reverse (g : PendingBinderGroup) : PendingBinderGroup := {
+  g with
+  binders := g.binders.reverse
 }
 
 mutual
@@ -232,23 +246,31 @@ public def groupBinders
   if binders.isEmpty then
     return #[]
   let binders := computeBinderDependents binders
-  let runs := computeKindRuns binders |>.map (·.map PendingBinderGroup.init)
-  let runs := runs.map fun run => Id.run do
+  let mut runs := computeKindRuns binders |>.map (·.map PendingBinderGroup.init)
+  runs := runs.map fun run => Id.run do
     let mut groups := run
     groups := groupAdjacentImplicitsAndInstances groups
-    groups := groupAdjacentByDependencies groups
+    groups := groupAdjacentByDependencyChain groups
     groups := groupAdjacentBinderlessExplicits groups
     groups := groupAdjacentExplicitsBySameType groups
-    groups := groupAdjacentExplicitsWithoutDependents groups
     return groups
-  let binderToGroup : Std.HashMap Nat Nat :=
-    runs.flatMap id |>.mapIdx (fun groupIdx group => group.binders.map (·.idx, groupIdx))
-      |>.flatMap id
-      |> Std.HashMap.ofArray
-  let runs := runs.map (extendGroupsBySameGroupDependents binderToGroup)
-  let runs := runs.map (·.map (·.binders))
-  let runs := runs.map divideIntoSubgroups
-  return runs.flatMap (·.map (·.map (·.map (·.binder))))
+  let mut n := 0
+  repeat do
+    let n' := runs.map (·.size) |>.sum
+    if n == n' then
+      break
+    n := n'
+    let binderToGroup : Std.HashMap Nat Nat :=
+      runs.flatMap id |>.mapIdx (fun groupIdx group => group.binders.map (·.idx, groupIdx))
+        |>.flatMap id
+        |> Std.HashMap.ofArray
+    runs := runs.map fun groups =>
+      let groups := groupAdjacentExplicitsWithSameDependents binderToGroup groups
+      let groups := groupAdjacentByCohesion groups
+      groups
+  let runs' := runs.map (·.map (·.binders))
+  let runs' := runs'.map divideIntoSubgroups
+  return runs'.flatMap (·.map (·.map (·.map (·.binder))))
 where
   computeKindRuns (binders : Array BinderWithDependents) : Array (Array BinderWithDependents) := Id.run do
     let mut kindRuns := #[]
@@ -267,23 +289,39 @@ where
         activeRun := #[b]
     kindRuns := kindRuns.push activeRun
     return kindRuns
+  groupAdjacentByDependencyChain (groups : Array PendingBinderGroup) : Array PendingBinderGroup := Id.run do
+    let mut chains : Array PendingBinderGroup := #[]
+    let mut activeChain : PendingBinderGroup := groups[0]!
+    for g in groups[1...*] do
+      if g.binders.any (fun b => activeChain.dependents.contains b.idx) then
+        activeChain := activeChain.merge g
+      else
+        chains := chains.push activeChain
+        activeChain := g
+    chains := chains.push activeChain
+
+    chains := chains.reverse
+    let mut chains' : Array PendingBinderGroup := #[]
+    activeChain := chains[0]!
+    let mut activeInitialAnchor : Array PendingBinderGroup := #[]
+    for c in chains[1...*] do
+      if c.binders.size = 1 && activeChain.binders.any (c.dependents.contains ·.idx) then
+        activeInitialAnchor := activeInitialAnchor.push c
+      else
+        chains' := chains'.push <| (activeInitialAnchor.reverse.push activeChain).foldl (init := .empty) (·.merge ·)
+        activeInitialAnchor := #[]
+        activeChain := c
+    chains' := chains'.push <| (activeInitialAnchor.reverse.push activeChain).foldl (init := .empty) (·.merge ·)
+    chains' := chains'.reverse
+
+    return chains'
+
   groupAdjacentImplicitsAndInstances (groups : Array PendingBinderGroup) : Array PendingBinderGroup := Id.run do
     let mut groupedGroups : Array PendingBinderGroup := #[]
     let mut activeGroup : PendingBinderGroup := groups[0]!
     for g in groups[1...*] do
       let isImplicitsOrInstances := ! activeGroup.kinds.contains .explicit && ! g.kinds.contains .explicit
       if isImplicitsOrInstances then
-        activeGroup := activeGroup.merge g
-      else
-        groupedGroups := groupedGroups.push activeGroup
-        activeGroup := g
-    groupedGroups := groupedGroups.push activeGroup
-    return groupedGroups
-  groupAdjacentByDependencies (groups : Array PendingBinderGroup)  : Array PendingBinderGroup := Id.run do
-    let mut groupedGroups : Array PendingBinderGroup := #[]
-    let mut activeGroup : PendingBinderGroup := groups[0]!
-    for g in groups[1...*] do
-      if g.binders.all (activeGroup.dependents.contains ·.idx) then
         activeGroup := activeGroup.merge g
       else
         groupedGroups := groupedGroups.push activeGroup
@@ -316,37 +354,50 @@ where
         activeGroup := g
     groupedGroups := groupedGroups.push activeGroup
     return groupedGroups
-  groupAdjacentExplicitsWithoutDependents (groups : Array PendingBinderGroup)  : Array PendingBinderGroup := Id.run do
+  groupAdjacentExplicitsWithSameDependents (binderToGroup : Std.HashMap Nat Nat)
+      (groups : Array PendingBinderGroup) : Array PendingBinderGroup := Id.run do
+    let groupDependents (g : PendingBinderGroup) : Std.HashSet Nat :=
+      g.dependents.toArray.map binderToGroup.get! |> Std.HashSet.ofArray
+    let mut groupedGroups : Array PendingBinderGroup := #[]
+    let mut activeGroup? : Option PendingBinderGroup := none
+    for g in groups do
+      match activeGroup? with
+      | none =>
+        let groupDeps := g.binders.flatMap (·.dependents.map (·.toArray.map binderToGroup.get! |> Std.HashSet.ofArray))
+        let hasSameGroupDeps := groupDeps.all (· == groupDeps[0]!)
+        if hasSameGroupDeps && g.kinds == {.explicit} then
+          activeGroup? := g
+        else
+          groupedGroups := groupedGroups.push g
+      | some activeGroup =>
+        let groupDeps := g.binders.flatMap (·.dependents.map (·.toArray.map binderToGroup.get! |> Std.HashSet.ofArray))
+        let hasSameGroupDeps := groupDeps.all (· == groupDeps[0]!)
+        if hasSameGroupDeps && g.kinds == {.explicit} then
+          if groupDependents g == groupDependents activeGroup
+              && g.defaultKinds == activeGroup.defaultKinds then
+            activeGroup? := activeGroup.merge g
+          else
+            groupedGroups := groupedGroups.push activeGroup
+            activeGroup? := g
+        else
+          groupedGroups := groupedGroups.push activeGroup
+          groupedGroups := groupedGroups.push g
+          activeGroup? := none
+    if let some activeGroup := activeGroup? then
+      groupedGroups := groupedGroups.push activeGroup
+    return groupedGroups
+  groupAdjacentByCohesion (groups : Array PendingBinderGroup) : Array PendingBinderGroup := Id.run do
     let mut groupedGroups : Array PendingBinderGroup := #[]
     let mut activeGroup : PendingBinderGroup := groups[0]!
     for g in groups[1...*] do
-      let isExplicits := activeGroup.kinds == {.explicit} && g.kinds == {.explicit}
-      if isExplicits && activeGroup.dependents.isEmpty && g.dependents.isEmpty && activeGroup.defaultKinds == g.defaultKinds then
+      if g.binders.all (fun b => activeGroup.binders.any (·.dependents.any (·.contains b.idx)))
+          && activeGroup.binders.all (fun b => b.dependents.all (fun deps => g.binders.any (deps.contains ·.idx))) then
         activeGroup := activeGroup.merge g
       else
         groupedGroups := groupedGroups.push activeGroup
         activeGroup := g
     groupedGroups := groupedGroups.push activeGroup
     return groupedGroups
-  extendGroupsBySameGroupDependents (binderToGroup : Std.HashMap Nat Nat) (groups : Array PendingBinderGroup) : Array PendingBinderGroup := Id.run do
-    let groupDependents (b : BinderWithDependents) : Array (Std.HashSet Nat) :=
-      b.dependents.map fun dependents => dependents.toArray.map binderToGroup.get! |> Std.HashSet.ofArray
-    let groups := groups.map (fun g => { g with binders := g.binders.reverse }) |>.reverse
-    let mut groupedGroups : Array PendingBinderGroup := #[]
-    let mut activeGroup : PendingBinderGroup := groups[0]!
-    for g in groups[1...*] do
-      let gGroupDeps := groupDependents g.binders[0]!
-      let activeGroupGroupDeps := groupDependents activeGroup.binders.back!
-      if g.binders.size = 1
-          && g.binders[0]!.kind == .explicit && activeGroup.binders.back!.kind == .explicit
-          && ! gGroupDeps[0]!.isEmpty
-          && gGroupDeps.all (· == gGroupDeps[0]!) && activeGroupGroupDeps.all (· == gGroupDeps[0]!) then
-        activeGroup := activeGroup.merge g
-      else
-        groupedGroups := groupedGroups.push activeGroup
-        activeGroup := g
-    groupedGroups := groupedGroups.push activeGroup
-    return groupedGroups.map (fun g => { g with binders := g.binders.reverse }) |>.reverse
   divideIntoSubgroups (groups : Array (Array BinderWithDependents)) : Array (Array (Array BinderWithDependents)) :=
     groups.map fun group => Id.run do
       let mut dividedGroups : Array (Array BinderWithDependents) := #[]
@@ -357,6 +408,7 @@ where
         | .instance, .instance =>
           activeGroup := activeGroup.push b
         | .explicit, .explicit =>
+
           if activeGroup.back!.default?.isSome == b.default?.isSome then
             activeGroup := activeGroup.push b
           else
@@ -366,11 +418,38 @@ where
           dividedGroups := dividedGroups.push activeGroup
           activeGroup := #[b]
       dividedGroups := dividedGroups.push activeGroup
-      return dividedGroups
-  isDefaultEquivalent (group1 group2 : Array BinderWithDependents) : Bool :=
-    let defaults1 := Std.HashSet.ofArray <| group1.map (·.default?.isSome)
-    let defaults2 := Std.HashSet.ofArray <| group2.map (·.default?.isSome)
-    defaults1 == defaults2
+
+      if dividedGroups.size > 1 then
+        return dividedGroups
+
+      let mut dividedGroups' : Array (Array BinderWithDependents) := #[]
+      for group in dividedGroups do
+        let mut i : Int := 0
+        while i < group.size do
+          let b := group[i.toNat]!
+          if group[0...i.toNat].any (fun p => p.dependents.any (·.contains b.idx)) then
+            break
+          i := i + 1
+        if i <= 1 then
+          i := 0
+        let mut j : Int := group.size - 1
+        while j >= i do
+          let b := group[j.toNat]!
+          if group[(j+1).toNat...*].any (fun p => b.dependents.any (·.contains p.idx)) then
+            break
+          j := j - 1
+        if j >= group.size - 2 then
+          j := group.size - 1
+        let pre := group[0...i.toNat]
+        let mid := group[i.toNat...(j+1).toNat]
+        let post := group[(j+1).toNat...*]
+        if pre.size > 0 then
+          dividedGroups' := dividedGroups'.push pre
+        if mid.size > 0 then
+          dividedGroups' := dividedGroups'.push mid
+        if post.size > 0 then
+          dividedGroups' := dividedGroups'.push post
+      return dividedGroups'
 
 public def fmtBinders
     (binders : TSyntaxArray binderKinds)
