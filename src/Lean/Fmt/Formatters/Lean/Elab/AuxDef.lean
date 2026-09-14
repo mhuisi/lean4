@@ -26,7 +26,7 @@ public def fmtAuxDef : Fmt := fun
     let type ← fmt type
     let colonEqTk ← fmt colonEqTk
     let body ← fmt body
-    let signature := Layouts.binder #[] (#[auxDefTk] ++ suggestions) #[] colonTk type .empty .empty #[] .global
+    let signature := Layouts.globalSignature (#[auxDefTk] ++ suggestions) #[] colonTk type
     let decl := Layouts.assignmentDeclaration signature colonEqTk body
     fmtDeclWithModifiers docComment? attributes? #[visibility] decl
   | _ => throw .partialFormatter

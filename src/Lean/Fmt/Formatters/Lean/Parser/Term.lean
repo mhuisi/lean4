@@ -381,7 +381,7 @@ public def fmtNamedArgumentTerm
   let colonEqTk ← fmt colonEqTk
   let body ← fmt body
   let rbTk ← fmt rbTk
-  return Layouts.binder #[lbTk] #[lhs] #[] empty empty colonEqTk body #[rbTk]
+  return Layouts.binder #[lbTk] #[lhs] #[] empty empty colonEqTk body #[rbTk] (kind := .local (respectPseudoAlignment := true))
 
 public def fmtNamedArgumentTerm?
     (lbTk? : Option Syntax)

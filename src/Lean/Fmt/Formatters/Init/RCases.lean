@@ -72,7 +72,7 @@ public def fmtRIntroPatOne : Fmt := fun
 @[builtin_fmt Lean.Parser.Tactic.rintroPat.binder]
 public def fmtRIntroPatBinder : Fmt := fun
   | `(rintroPat| (%$lbTk $pats:rintroPat* $[:%$typeAscriptionTk? $type?:term]? )%$rbTk) =>
-    fmtBinder #[lbTk] pats #[] typeAscriptionTk? type? none #[rbTk]
+    fmtBinder #[lbTk] pats #[] typeAscriptionTk? type? none #[rbTk] (kind := .local (respectPseudoAlignment := true))
   | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.rcases]

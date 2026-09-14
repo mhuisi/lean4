@@ -349,28 +349,33 @@ public def postfixOperator (operand postfixOperatorTk : TaggedDoc) (format : Typ
 
 public inductive Types.InfixOperatorFormat
   | dense (hardNestedFirstOperand := true) (trailingOperator : Bool := false) (spacing := true)
+    (respectPseudoAlignment := true)
   | sparse (hardNestedFirstOperand := true) (trailingOperator : Bool := false) (spacing := true)
     (alignedOperators : Bool := false) (separateFinalOperand : Bool := false)
 
 public def Types.InfixOperatorFormat.hardNestedFirstOperand : Types.InfixOperatorFormat → Bool
-  | .dense hardNestedFirstOperand _ _ => hardNestedFirstOperand
+  | .dense hardNestedFirstOperand _ _ _ => hardNestedFirstOperand
   | .sparse hardNestedFirstOperand _ _ _ _ => hardNestedFirstOperand
 
 public def Types.InfixOperatorFormat.trailingOperator : Types.InfixOperatorFormat → Bool
-  | .dense _ trailingOperator _ => trailingOperator
+  | .dense _ trailingOperator _ _ => trailingOperator
   | .sparse _ trailingOperator _ _ _ => trailingOperator
 
 public def Types.InfixOperatorFormat.spacing : Types.InfixOperatorFormat → Bool
-  | .dense _ _ spacing => spacing
+  | .dense _ _ spacing _ => spacing
   | .sparse _ _ spacing _ _ => spacing
 
 public def Types.InfixOperatorFormat.alignedOperators : Types.InfixOperatorFormat → Bool
-  | .dense _ _ _ => false
+  | .dense _ _ _ _ => false
   | .sparse _ trailingOperator _ alignedOperators _ => !trailingOperator && alignedOperators
 
 public def Types.InfixOperatorFormat.separateFinalOperand : Types.InfixOperatorFormat → Bool
-  | .dense _ _ _ => false
+  | .dense _ _ _ _ => false
   | .sparse _ trailingOperator _ _ separateFinalOperand => !trailingOperator && separateFinalOperand
+
+public def Types.InfixOperatorFormat.respectPseudoAlignment : Types.InfixOperatorFormat → Bool
+  | .dense _ _ _ respectPseudoAlignment => respectPseudoAlignment
+  | .sparse _ _ _ _ _ => true
 
 public def permitDenseLayout (doc : TaggedDoc) (respectPseudoAlignment : Bool) : Bool :=
   if respectPseudoAlignment then
@@ -434,7 +439,7 @@ where
     guard <| format matches .dense ..
     guard <| ! isTailless
     guard <| format.trailingOperator || combinedChain.size = 2
-    guard <| permitDenseLayout lastOperand (respectPseudoAlignment := true)
+    guard <| permitDenseLayout lastOperand format.respectPseudoAlignment
     return fallbackOnHeight doc <|
       combineFlat #[
         flattened (combineFlat combinedChain.pop),
@@ -930,7 +935,7 @@ public def keywordPrefixedCollection (keyword : TaggedDoc) (lb : TaggedDoc) (ele
 
 
 public inductive Types.SignatureKind where
-  | local
+  | local (respectPseudoAlignment : Bool := true)
   | global
 
 private def signature
@@ -977,7 +982,7 @@ private def signature
       lvals.modify 0 hardNested
   let format :=
     match kind with
-    | .local => .dense (hardNestedFirstOperand := false)
+    | .local respectPseudoAlignment => .dense (hardNestedFirstOperand := false) (respectPseudoAlignment := respectPseudoAlignment)
     | .global => .sparse (hardNestedFirstOperand := false)
   let binderGroups := Layouts.horizontalOrVertical <| binderGroups.map (fillUsingSpaceWithSoftBoundaries ·)
   nested <| Layouts.typeAscription (format := format)
@@ -1050,7 +1055,7 @@ public def binder
     (colonEqTk? : TaggedDoc)
     (default? : TaggedDoc)
     (rbs : Array TaggedDoc)
-    (kind : Types.SignatureKind := .local)
+    (kind : Types.SignatureKind := .local (respectPseudoAlignment := false))
     : TaggedDoc :=
   let lbs := atomic lbs
   let binderSignature := Layouts.signature lhses subBinderGroups typeAscriptionTk? type? kind Layouts.fill

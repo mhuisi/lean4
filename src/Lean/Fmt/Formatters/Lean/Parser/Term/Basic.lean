@@ -186,7 +186,7 @@ public def fmtBinder
     (type? : Option (TSyntax `term))
     (tacticOrDefault? : Option (TSyntax [``Parser.Term.binderTactic, ``Parser.Term.binderDefault]))
     (rbTks : Array Syntax)
-    (kind : Layouts.Types.SignatureKind := Layouts.Types.SignatureKind.local)
+    (kind : Layouts.Types.SignatureKind := Layouts.Types.SignatureKind.local (respectPseudoAlignment := false))
     : FmtM TaggedDoc := do
   let lbTks ← lbTks.mapM fmt
   let lhses ← lhses.mapM fmt

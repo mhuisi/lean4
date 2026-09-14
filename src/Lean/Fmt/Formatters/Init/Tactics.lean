@@ -824,7 +824,7 @@ public def fmtClearValueHyp : Fmt := fun
     let b ← fmt b
     let rbTk ← fmt rbTk
     let type := Layouts.infixOperator #[a, eqTk, b]
-    return Layouts.binder #[lbTk] #[hyp] #[] colonTk type empty empty #[rbTk]
+    return Layouts.binder #[lbTk] #[hyp] #[] colonTk type empty empty #[rbTk] (kind := .local (respectPseudoAlignment := true))
   | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.clearValueArg]
