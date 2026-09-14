@@ -358,12 +358,10 @@ inductive TaintedMeasure (τ : Type) where
   Merge two tainted measures. Resolving this tainted measure amounts to resolving the first measure
   and only resolving the second measure if the resolution of the first tainted measure failed.
 
-  Since there are only 16 different fullness states in which each document can be resolved and
-  potentially fail, since the failure of resolution is independent of column position and
-  indentation, and since the resolver for tainted measures memoizes whether a resolution failed,
-  the resolver for tainted measures will only need to try resolving at most
-  `16*amount of documents` alternatives overall, so the time complexity of the formatter remains
-  bounded.
+  Resolving the first measure can only fail if it contains a document with context-dependent
+  failure (see `Doc.hasContextDependentFailure`), since the resolver prunes all other failing
+  documents before it creates tainted measures for them. Such documents only occur below
+  `Doc.guarded`, and the second measure is only resolved for them.
   -/
   | mergeTainted (tm1 tm2 : TaintedMeasure τ) (maxNewlineCount? : Option Nat)
   /--
@@ -659,23 +657,10 @@ structure SetCacheKey (τ : Type) where
   deriving BEq, Hashable
 
 /--
-Memoization key for tracking whether a document has failed in the resolver for tainted measures.
-Since resolution failure only depends on the document and the fullness state surrounding it,
-this key does not contain the column position or the current indentation level.
-
-Memoizing the failure state in the resolver for tainted measures ensures that we never have to
-resolve a single document (as identified by its pointer) more than 16 times.
--/
-structure FailureCacheKey (τ : Type) where
-  docPtr : PtrKey (Doc τ)
-  fullness : FullnessState
-  deriving BEq, Hashable
-
-/--
 State of the resolver and the resolver for tainted measures, which usually runs after the regular
 resolver, but is also invoked during resolution by `Doc.free` nodes.
 
-Maintains three separate memoization caches:
+Maintains two separate memoization caches:
 - `setCache`, which memoizes sets of measures that are produced during resolution per `SetCacheKey`.
   This is the main memoization cache of the formatter. It memoizes all resolution results for
   resolution contexts that do not exceed the optimality cutoff width and ensures that the time
@@ -693,20 +678,14 @@ Maintains three separate memoization caches:
   additional work relative to the resolver if the resolver has already figured out that two tainted
   measures are identical.
   In the Racket implementation, this cache is replaced with mutable state on the tainted measure.
-- `failureCache`, which memoizes whether resolving a document in a given fullness state resulted
-  in a failure. Resolution failure depends only on the document and the given fullness state that
-  the document is resolved in, so this cache allows pruning subtrees of the search more
-  aggressively.
-  In the resolver for tainted measures, this cache also ensures that we never try to resolve the
-  same document more than 16 times, which bounds the time complexity of the tainted resolver.
-  In the Racket implementation, this cache is a mutable cache on the document that is only used
-  in the resolver for tainted measures to bound its time complexity. However, we've found that
-  performance improves when also enabling it for the regular resolver.
+
+The Racket implementation additionally memoizes whether resolving a document failed. Here, whether
+a document fails is instead determined in advance by `Doc.failureSet`, which is exact for documents
+without `guarded`.
 -/
 structure ResolutionState (τ : Type) [BEq τ] [Hashable τ] where
   setCache : HashMap (SetCacheKey τ) (MeasureSet τ) := {}
   resolvedTaintedCache : HashMap (PtrKey (TaintedMeasure τ)) (Option (Measure τ)) := {}
-  failureCache : HashSet (FailureCacheKey τ) := {}
 
 /--
 Monad for resolving a document in a resolution context to a set of measures.
@@ -762,37 +741,6 @@ def setCachedResolvedTainted (tm : TaintedMeasure τ) (m? : Option (Measure τ))
     resolvedTaintedCache := state.resolvedTaintedCache.insert (unsafe .ofKey tm) m?
   }
 
-def Doc.isLeaf : Doc τ → Bool
-  | .failure => true
-  | .newline .. => true
-  | .text .. => true
-  | _ => false
-
-def isFailing (d : Doc τ) (fullness : FullnessState) : ResolverM σ τ Bool := do
-  if d.isLeaf then
-    -- For leaf nodes, guaranteed failure is fully determinined by `Doc.isFailure`.
-    return d.isFailure _ fullness
-  else if d.isFailure _ fullness then
-    -- For some inner nodes (`final` specifically), we can prune specific subtrees
-    -- if `Doc.isFailure` yields `true` and have no information about failure otherwise.
-    return true
-  else
-    -- For all other nodes, if we have already determined that a document fails in a given fullness
-    -- state, we can prune that subtree.
-    let isCachedFailure := (← get).failureCache.contains {
-      docPtr := unsafe .ofKey d
-      fullness
-    }
-    return isCachedFailure
-
-def setCachedFailing (d : Doc τ) (fullness : FullnessState) : ResolverM σ τ Unit :=
-  modify fun state => { state with
-    failureCache := state.failureCache.insert {
-      docPtr := unsafe .ofKey d
-      fullness
-    }
-  }
-
 def Resolver (σ τ : Type) [BEq τ] [Hashable τ] :=
   (d : Doc τ) → (columnPos indentation nonCumulativeIndentation : Nat) →
     (fullness : FullnessState) →
@@ -809,13 +757,10 @@ indentation exceeds the optimality cutoff width.
 @[specialize]
 def Resolver.memoize (f : Resolver σ τ) : Resolver σ τ :=
   fun d columnPos indentation nonCumulativeIndentation fullness => do
-    if ← isFailing d fullness then
+    if d.isFailure fullness then
       return .set []
     if columnPos > Cost.optimalityCutoffWidth τ || indentation > Cost.optimalityCutoffWidth τ then
-      let r ← f d columnPos indentation nonCumulativeIndentation fullness
-      if r matches .set [] then
-        setCachedFailing d fullness
-      return r
+      return ← f d columnPos indentation nonCumulativeIndentation fullness
     if let some cachedSet ←
         getCachedSet?
           d
@@ -826,8 +771,6 @@ def Resolver.memoize (f : Resolver σ τ) : Resolver σ τ :=
       return cachedSet
     let r ← f d columnPos indentation nonCumulativeIndentation fullness
     setCachedSet d columnPos indentation nonCumulativeIndentation fullness r
-    if r matches .set [] then
-      setCachedFailing d fullness
     return r
 
 public inductive FormattingError
@@ -987,7 +930,7 @@ where
     -- there, resolving `d1` cannot contribute any measure. Checking this up-front prunes the
     -- inconsistent alternatives of the case split above before paying for the left side, which
     -- matters most when `d2` is a text node adjacent to the boundary.
-    if ← isFailing d2 fullness2 then
+    if d2.isFailure fullness2 then
       return .set []
     let set1 ← MeasureSet.resolve
       d1
@@ -1028,10 +971,10 @@ where
             -- pending (where a T-pending measure newly dominates an F-pending measure at
             -- smaller-or-equal `lastLineLength`). `Set.dedup` cleans both up in linear time.
             MeasureSet.Set.dedup (ms2.map m1.append)
-        -- `m1Result` and (inductively) all results in `acc` are resolutions of `d2`, so all
-        -- resolutions being merged here either fail at once or none of them fail.
-        -- Hence, we can set `prunable := true` here.
-        return m1Result.merge acc (prunable := true)
+        -- `m1Result` and (inductively) all results in `acc` are resolutions of `d2` in `fullness2`,
+        -- so unless `d2` has context-dependent failure, all resolutions being merged here either
+        -- fail at once or none of them fail.
+        return m1Result.merge acc (prunable := ! d2.hasContextDependentFailure fullness2)
 
 /--
 Determines the set of measures for a given resolution context and memoizes all nodes along the way.
@@ -1067,10 +1010,8 @@ partial def MeasureSet.resolve : Resolver σ τ := Resolver.memoize
 Checks whether we have a memoized result for a given tainted measure and if so, uses that.
 Otherwise, `f` is evaluated and the result is memoized.
 
-We memoize all tainted resolution results because the resolver for tainted measures will only
-have to resolve every document at most 4 times, as it only performs a case-split in `mergeTainted`
-when one of the two resolutions fail, which is independent of indentation and column position and
-only depends on the document and the fullness state surrounding it.
+We memoize all tainted resolution results because tainted measures can be shared during resolution,
+and resolving a shared tainted measure again would repeat work.
 -/
 @[specialize]
 partial def TaintedResolver.memoize (f : TaintedResolver σ τ) : TaintedResolver σ τ := fun tm => do
@@ -1085,15 +1026,15 @@ partial def TaintedMeasure.resolve? : TaintedResolver σ τ := TaintedResolver.m
   fun tm => do
     match tm with
     | .mergeTainted tm1 tm2 _ =>
-      -- We need to try both alternatives here when the first alternative fails.
-      -- However, such failures only depend on the document and the surrounding fullness state,
-      -- so this will never try more than 16 separate alternatives per document overall,
-      -- which bounds the time complexity of the tainted resolver.
+      -- The first alternative can only fail if it contains a document with context-dependent
+      -- failure.
       let some m1 ← tm1.resolve?
         | let m2? ← tm2.resolve?
           return m2?
       return some m1
     | .taintedAppend tm d indentation nonCumulativeIndentation fullness _ =>
+      -- If `d` has context-dependent failure, it can fail after the measure chosen for `tm` but
+      -- succeed after another one. Other measures are not tried, so such renderings can be lost.
       let some m1 ← tm.resolve?
         | return none
       let (indentation2, nonCumulativeIndentation2) :=
@@ -1149,10 +1090,7 @@ partial def TaintedMeasure.resolve? : TaintedResolver σ τ := TaintedResolver.m
         indentation
         nonCumulativeIndentation
         fullness
-      let m? := (← ms.extractAtMostOne? (taintedResolution := true)).toOption
-      if m?.isNone then
-        setCachedFailing d fullness
-      return m?
+      return (← ms.extractAtMostOne? (taintedResolution := true)).toOption
 
 /--
 Yields the measure in a non-tainted measure set with the lowest cost and amongst measures with the

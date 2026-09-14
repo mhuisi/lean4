@@ -91,8 +91,118 @@ def FullnessState.setInitialAfter (s : FullnessState) (isInitialAfter : Bool) : 
   let s : UInt8 := s
   (s &&& (0b11111011 : UInt8)) ||| (isInitialAfter.toUInt8 <<< 2)
 
-/-- Whether resolving a document is guaranteed to fail in the given `FullnessState`. -/
-abbrev FailureCond := FullnessState → Bool
+/--
+Set of `FullnessState`s, represented as a bitmap in which bit `i` stands for the fullness state
+with value `i`.
+-/
+abbrev FullnessStateSet := UInt16
+
+@[inline]
+def FullnessStateSet.contains (set : FullnessStateSet) (s : FullnessState) : Bool :=
+  let s : UInt8 := s
+  (set >>> s.toUInt16) &&& 1 != 0
+
+@[specialize]
+def FullnessStateSet.ofPredBelow (p : FullnessState → Bool) :
+    Nat → FullnessStateSet → FullnessStateSet
+  | 0, acc => acc
+  | i + 1, acc =>
+    let s : FullnessState := i.toUInt8
+    ofPredBelow p i (if p s then acc ||| ((1 : UInt16) <<< i.toUInt16) else acc)
+
+/-- Yields the set of all fullness states in which `p` holds. -/
+@[inline]
+def FullnessStateSet.ofPred (p : FullnessState → Bool) : FullnessStateSet :=
+  ofPredBelow p 16 0
+
+/--
+Given the set `inner` of fullness states of `d` that have some property, yields the set of fullness
+states of `final d` in which `isFullAfter` holds and `d` has the property in at least one of the two
+fullness states that the formatter resolves `d` in.
+-/
+@[inline]
+def FullnessStateSet.finalAny (inner : FullnessStateSet) : FullnessStateSet :=
+  -- `isFullAfter` is bit 0 of a fullness state, so the states in which it holds are the odd ones.
+  ((inner <<< 1) ||| inner) &&& 0xAAAA
+
+/--
+Like `FullnessStateSet.finalAny`, but `d` must have the property in both fullness states that the
+formatter resolves `d` in.
+-/
+@[inline]
+def FullnessStateSet.finalAll (inner : FullnessStateSet) : FullnessStateSet :=
+  (inner <<< 1) &&& inner &&& 0xAAAA
+
+/--
+Given the set `inner` of fullness states of `d` that have some property, yields the set of fullness
+states of `initial d` in which `isInitialBefore` holds and `d` has the property in at least one of
+the two fullness states that the formatter resolves `d` in.
+-/
+@[inline]
+def FullnessStateSet.initialAny (inner : FullnessStateSet) : FullnessStateSet :=
+  -- `isInitialBefore` is bit 3 of a fullness state, so the states in which it holds are 8 to 15.
+  ((inner <<< 8) ||| inner) &&& 0xFF00
+
+/--
+Like `FullnessStateSet.initialAny`, but `d` must have the property in both fullness states that the
+formatter resolves `d` in.
+-/
+@[inline]
+def FullnessStateSet.initialAll (inner : FullnessStateSet) : FullnessStateSet :=
+  (inner <<< 8) &&& inner &&& 0xFF00
+
+/--
+Yields the set of fullness states of `append a b` in which `p` holds for the fullness states of `a`
+and `b` in at least one of the case splits that the formatter performs on the fullness state of the
+position between `a` and `b`.
+-/
+@[specialize]
+def FullnessStateSet.anySplit (p : FullnessState → FullnessState → Bool) : FullnessStateSet :=
+  ofPred fun s =>
+    let holdsFor (isMidFull isMidInitial : Bool) :=
+      p (s.setFullAfter isMidFull |>.setInitialAfter isMidInitial)
+        (s.setFullBefore isMidFull |>.setInitialBefore isMidInitial)
+    holdsFor false false || holdsFor false true || holdsFor true false || holdsFor true true
+
+/--
+Fullness states in which resolving a `newline` node fails.
+
+`newline` ends the current line and starts a new one. The new line can never be full at its
+start and the old line can never be initial at its end.
+Hence, resolutions in which `isFullAfter` or `isInitialBefore` are true directly at
+`newline` fail.
+-/
+def newlineFailureSet : FullnessStateSet :=
+  FullnessStateSet.ofPred fun state => state.isFullAfter || state.isInitialBefore
+
+/--
+Whether resolving a `text` node fails in the given `FullnessState`, where `isEmpty` designates
+whether its text is empty.
+-/
+def textFails (isEmpty : Bool) (state : FullnessState) : Bool :=
+  -- Fullness and initialness impose the same constraints on `text` in opposite directions.
+  let isFailureFor (before after : Bool) :=
+    match before, after with
+    -- `text` nodes can be placed on non-full lines.
+    | false, false => false
+    -- `text` nodes cannot turn a line from being full to non-full.
+    | true, false => true
+    -- `text` nodes cannot turn a line from being non-full to full.
+    | false, true => true
+    -- Empty text nodes can be inserted on a full line, while non-empty text nodes cannot.
+    | true, true => ! isEmpty
+  isFailureFor state.isFullBefore state.isFullAfter ||
+    isFailureFor state.isInitialBefore state.isInitialAfter
+
+/--
+Fullness states in which resolving a `text` node fails, where `isEmpty` designates whether its text
+is empty.
+-/
+def textFailureSet (isEmpty : Bool) : FullnessStateSet :=
+  if isEmpty then emptyTextFailureSet else nonEmptyTextFailureSet
+where
+  emptyTextFailureSet : FullnessStateSet := FullnessStateSet.ofPred (textFails true)
+  nonEmptyTextFailureSet : FullnessStateSet := FullnessStateSet.ofPred (textFails false)
 
 @[expose]
 def TagId := Nat
@@ -557,6 +667,8 @@ inductive Doc (τ : Type) where
 
   The assertion is a predicate over the current column position, the level of (cumulative)
   indentation and the level of non-cumulative indentation at that position.
+  Hence, whether resolving a document that contains `guarded` fails can depend on the resolution
+  context, which the formatter tracks with `Doc.hasContextDependentFailure`.
 
   Example:
 
@@ -638,40 +750,44 @@ inductive Doc (τ : Type) where
   | append (a b : Doc τ)
 with
   /--
-  Determines whether resolving the document is guaranteed to fail in the given `FullnessState`.
+  Designates an underapproximation of the set of fullness states in which resolving the
+  preprocessed document fails in every resolution context. For documents without `guarded`, this
+  set is exact, so the formatter can prune all failing alternatives before resolving them.
   -/
-  @[computed_field] isFailure : (τ : Type) → Doc τ → FailureCond
-    -- `failure` always fails. All resolutions that contain `failure` can be pruned.
-    | _, .failure => fun _ => true
-    -- `newline` ends the current line and starts a new one. The new line can never be full at its
-    -- start and the old line can never be initial at its end.
-    -- Hence, resolutions in which `isFullAfter` or `isInitialBefore` are true directly at
-    -- `newline` can be pruned.
-    | _, .newline .. => fun state => state.isFullAfter || state.isInitialBefore
-    | _, .text s => fun state =>
-      -- Fullness and initialness impose the same constraints on `text` in opposite directions.
-      let isFailureFor (before after : Bool) :=
-        match before, after with
-        -- `text` nodes can be placed on non-full lines.
-        | false, false => false
-        -- `text` nodes cannot turn a line from being full to non-full.
-        | true, false => true
-        -- `text` nodes cannot turn a line from being non-full to full.
-        | false, true => true
-        -- Empty text nodes can be inserted on a full line, while non-empty text nodes cannot.
-        | true, true => ! s.isEmpty
-      isFailureFor state.isFullBefore state.isFullAfter ||
-        isFailureFor state.isInitialBefore state.isInitialAfter
-    -- `final` designates that the line is full.
-    -- Hence, resolutions in which `isFullAfter` is false directly after `final` can be pruned.
-    | _, .final _ => (! ·.isFullAfter)
-    -- `initial` designates that the line is initial.
-    -- Hence, resolutions in which `isInitialBefore` is false directly before `initial` can be
-    -- pruned.
-    | _, .initial _ => (! ·.isInitialBefore)
-    -- For all of the remaining inner nodes, whether resolving the document is guaranteed to fail
-    -- depends on the child nodes below the inner node or on more context.
-    | _, _ => fun _ => false
+  @[computed_field] failureSet : (τ : Type) → Doc τ → FullnessStateSet
+    | _, .failure => 0xFFFF
+    | _, .newline .. => newlineFailureSet
+    | _, .text s => textFailureSet s.isEmpty
+    -- Eliminated during preprocessing.
+    | _, .flattened _
+    | _, .unflattenable _ => 0
+    -- Whether the assertion of `guarded` holds depends on the resolution context.
+    | _, .guarded _ d
+    | _, .tagged _ d
+    | _, .indented _ _ d
+    | _, .aligned d
+    | _, .unindented _ d
+    | _, .free d
+    | _, .costing _ d =>
+      failureSet _ d
+    -- `final` fails if `isFullAfter` (bit 0) does not hold, and otherwise if `d` fails in both
+    -- fullness states that it is resolved in.
+    | _, .final d =>
+      0x5555 ||| FullnessStateSet.finalAll (failureSet _ d)
+    -- `initial` fails if `isInitialBefore` (bit 3) does not hold, and otherwise if `d` fails in both
+    -- fullness states that it is resolved in.
+    | _, .initial d =>
+      0x00FF ||| FullnessStateSet.initialAll (failureSet _ d)
+    | _, .either a b =>
+      failureSet _ a &&& failureSet _ b
+    | _, .append a b =>
+      let failureA := failureSet _ a
+      let failureB := failureSet _ b
+      if failureA == 0xFFFF || failureB == 0xFFFF then
+        0xFFFF
+      else
+        ~~~(FullnessStateSet.anySplit fun s1 s2 =>
+          ! FullnessStateSet.contains failureA s1 && ! FullnessStateSet.contains failureB s2)
   /--
   Designates an overapproximation for the amount of newlines in a document.
   This is used by the formatter to choose renderings amongst multiple alternatives
@@ -799,8 +915,70 @@ with
         atomicness _ a
       else
         (atomicness _ a).max (atomicness _ b) |>.max .compoundAtomic
-
+  /--
+  Designates an underapproximation of the set of fullness states in which resolving the
+  preprocessed document never fails, in any resolution context. For documents without `guarded`,
+  this set is exact, i.e. the complement of `failureSet`.
+  -/
+  @[computed_field] neverFailsSet : (τ : Type) → Doc τ → FullnessStateSet
+    | _, .failure => 0
+    | _, .newline .. => ~~~newlineFailureSet
+    | _, .text s => ~~~(textFailureSet s.isEmpty)
+    -- Preprocessing can turn documents below `flattened` and `unflattenable` into `failure`.
+    | _, .flattened _
+    | _, .unflattenable _
+    | _, .guarded _ _ => 0
+    | _, .tagged _ d
+    | _, .indented _ _ d
+    | _, .aligned d
+    | _, .unindented _ d
+    | _, .free d
+    | _, .costing _ d =>
+      neverFailsSet _ d
+    | _, .final d =>
+      FullnessStateSet.finalAny (neverFailsSet _ d)
+    | _, .initial d =>
+      FullnessStateSet.initialAny (neverFailsSet _ d)
+    | _, .either a b =>
+      neverFailsSet _ a ||| neverFailsSet _ b
+    | _, .append a b =>
+      let neverFailsA := neverFailsSet _ a
+      let neverFailsB := neverFailsSet _ b
+      if neverFailsA == 0 || neverFailsB == 0 then
+        0
+      else
+        FullnessStateSet.anySplit fun s1 s2 =>
+          FullnessStateSet.contains neverFailsA s1 && FullnessStateSet.contains neverFailsB s2
 deriving Inhabited, Repr
+
+/--
+Checks whether resolving the preprocessed document `d` in `fullness` fails in every resolution
+context. For documents without `guarded`, this is exact.
+-/
+def Doc.isFailure (d : Doc τ) (fullness : FullnessState) : Bool :=
+  FullnessStateSet.contains d.failureSet fullness
+
+/--
+Checks whether resolving the preprocessed document `d` in `fullness` never fails, in any resolution
+context. For documents without `guarded`, this is exact.
+-/
+def Doc.neverFails (d : Doc τ) (fullness : FullnessState) : Bool :=
+  FullnessStateSet.contains d.neverFailsSet fullness
+
+/--
+Checks whether the failure of resolving the preprocessed document `d` in `fullness` can depend on
+the resolution context (the column position and the indentation), i.e. whether `fullness` is
+neither in `Doc.failureSet` nor in `Doc.neverFailsSet`. Since both sets are exact for documents
+without `guarded`, this is only possible below `guarded`. If this yields `false`, whether resolving
+`d` fails only depends on `d` and `fullness`.
+
+A document that never fails in a fullness state does not have context-dependent failure in it,
+which stops the propagation to the ancestors of `guarded`: e.g. `either a b` does not have
+context-dependent failure in the fullness states in which `b` never fails, even if `a` has
+context-dependent failure there.
+-/
+def Doc.hasContextDependentFailure (d : Doc τ) (fullness : FullnessState) : Bool :=
+  ! FullnessStateSet.contains (d.failureSet ||| d.neverFailsSet) fullness
 
 /--
 Checks whether `d` is guaranteed to be empty, i.e. equivalent to `.text ""`.

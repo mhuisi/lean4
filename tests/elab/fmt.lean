@@ -592,3 +592,113 @@ a
 /-- info: -/
 #guard_msgs (whitespace := exact) in
 #eval test 80 (fillSoft #[])
+
+/-! ## Guaranteed failure -/
+
+-- Guaranteed failure composes through inner nodes, so the formatter prunes failing alternatives
+-- before resolving them.
+#guard (Doc.either .failure .failure : Doc Unit).isFailure (.mk false false false false)
+#guard !(Doc.either .failure (.text "a") : Doc Unit).isFailure (.mk false false false false)
+#guard (Doc.append (.text "a") .failure : Doc Unit).isFailure (.mk false false false false)
+-- `initial` cannot follow a non-empty `text` on the same line, whatever the fullness state of the
+-- position between them.
+#guard (Doc.append (.text "a") (.initial (.text "b")) : Doc Unit).isFailure
+  (.mk false false false false)
+-- `final` fails if the line is not full after it, and otherwise if its inner document fails.
+#guard (Doc.final (.text "a") : Doc Unit).isFailure (.mk false false false false)
+#guard !(Doc.final (.text "a") : Doc Unit).isFailure (.mk false true false false)
+#guard (Doc.final .failure : Doc Unit).isFailure (.mk false true false false)
+
+/-! ## `guarded` -/
+
+def atColumn0 : Assertion where
+  id := `atColumn0
+  assertion columnPos _ _ := columnPos == 0
+
+-- A guard-free alternative that never fails makes the failure of an `either` independent of the
+-- resolution context. A guard-free alternative that can fail does not.
+#guard !(Doc.either (.guarded atColumn0 (.text "x")) (.text "y") : Doc Unit).hasContextDependentFailure
+  (.mk false false false false)
+#guard (Doc.either (.guarded atColumn0 (.text "x")) .failure : Doc Unit).hasContextDependentFailure
+  (.mk false false false false)
+-- Where the document below `guarded` fails whether the assertion holds or not, failure does not
+-- depend on the resolution context.
+#guard !(Doc.either (.guarded atColumn0 (.text "x")) (.text "y") : Doc Unit).hasContextDependentFailure
+  (.mk true false false false)
+
+-- In the following documents, the shared document `g` is first resolved at a column position where
+-- the assertion fails and then at column 0, where it holds. The first failure must not prune `g`
+-- at column 0.
+
+def sharedGuard : Doc τ :=
+  let g : Doc τ := .guarded atColumn0 (.text "x")
+  .either (.append (.text "aaa") g) g
+
+/--
+info:
+x
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 80 sharedGuard
+
+-- The guard-free alternative of `g` always fails.
+def sharedGuardWithFailingAlternative : Doc τ :=
+  let g : Doc τ := .either (.guarded atColumn0 (.text "x")) .failure
+  .either (.append (.text "aaa") g) g
+
+/--
+info:
+x
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 80 sharedGuardWithFailingAlternative
+
+def sharedGuardInAppend : Doc τ :=
+  let g : Doc τ := .append (.text "") (.guarded atColumn0 (.text "x"))
+  .either (.append (.text "aaa") g) g
+
+/--
+info:
+x
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 80 sharedGuardInAppend
+
+def sharedGuardInFinal : Doc τ :=
+  let g : Doc τ := .final (.guarded atColumn0 (.text "x"))
+  .either (.append (.text "aaa") g) g
+
+/--
+info:
+x
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 80 sharedGuardInFinal
+
+-- `g` is first resolved at column 3 at the start of a line, where `initial` holds.
+def sharedGuardInInitial : Doc τ :=
+  let g : Doc τ := .initial (.guarded atColumn0 (.text "x"))
+  .either (.indented 3 true (.append .hardNl g)) g
+
+/--
+info:
+x
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 80 sharedGuardInInitial
+
+-- Both measures of the first document are followed by a tainted resolution of the guarded document,
+-- since its indentation exceeds the optimality cutoff width. The assertion only holds after the
+-- second measure, so merging both resolutions must keep the second one.
+def taintedGuard : Doc τ :=
+  .append
+    (.either (.text "aaaa") (.append (.text "b") .hardNl))
+    (.indented (cutoff + 50) true (.guarded atColumn0 (.text "x")))
+
+/--
+info:
+b
+x
+-/
+#guard_msgs (whitespace := exact) in
+#eval test 80 taintedGuard
