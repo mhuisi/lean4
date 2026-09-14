@@ -510,7 +510,7 @@ where
         combinedChain[1]!
     let compactFirstOperation :=
       combineFlat #[
-        flattened firstOperand,
+        firstOperand,
         guarded compactFirstOperationAssertion secondOperand
       ]
     let compactedChain := #[compactFirstOperation] ++ combinedChain[2...*]
@@ -573,20 +573,14 @@ public def bracketed (lb : TaggedDoc) (body : TaggedDoc) (rb : TaggedDoc) (forma
     return propagateStickyness body f (kind? := some .preferUnsticky)
   | .sparse sep unindentedRb preferStickyVariant =>
     let body := aligned body
-    -- Ensures that the closing bracket is not rendered at a column position further to the right
-    -- than the opening bracket.
-    let denseAssertion columnPos indentation nonCumulativeIndentation : Bool :=
-      if unindentedRb then
-        columnPos < indentation
-      else
-        columnPos < indentation + nonCumulativeIndentation
-    let dense := atomic #[lb, flattened sep, body, flattened sep, rb]
     let mut sparse := lb ++ hardNested (sep ++ body) ++ sep ++ rb
     if unindentedRb then
       sparse := unindented (onlyNonCumulative := true) sparse
+    -- The less indented variant dominates, so the closing bracket is rendered at the minimum of the
+    -- indentation and the column of the opening bracket, never to the right of the opening bracket.
     let stickyVariant := mkSelfDelimited (isBracketed := true) <| oneOf #[
-      guarded { id := `Lean.Fmt.Layouts.bracketed, assertion := denseAssertion } dense,
-      sparse
+      sparse,
+      aligned sparse
     ]
     let nonStickyVariant := maybeFlattened stickyVariant
     return sticky nonStickyVariant stickyVariant preferStickyVariant
@@ -1102,7 +1096,7 @@ public def quantified (quantifierHeads : Array Types.QuantifierHead) (body : Tag
   return pseudoAligned <| maybeFlattened quantifiers
 
 public def subtype (lbTk lhs sepTk rhs rbTk : TaggedDoc) (format : Types.BracketFormat): TaggedDoc :=
-  let body := Layouts.infixOperator #[lhs, sepTk, rhs] (format := .dense (respectPseudoAlignment := false))
+  let body := pseudoAligned <| Layouts.infixOperator #[lhs, sepTk, rhs] (format := .dense (respectPseudoAlignment := false))
   Layouts.bracketed lbTk body rbTk format
 
 public structure Types.ElseIf where
