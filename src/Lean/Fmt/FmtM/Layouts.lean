@@ -1102,7 +1102,7 @@ public def quantified (quantifierHeads : Array Types.QuantifierHead) (body : Tag
   return pseudoAligned <| maybeFlattened quantifiers
 
 public def subtype (lbTk lhs sepTk rhs rbTk : TaggedDoc) (format : Types.BracketFormat): TaggedDoc :=
-  let body := pseudoAligned <| Layouts.infixOperator #[lhs, sepTk, rhs] (format := .dense)
+  let body := Layouts.infixOperator #[lhs, sepTk, rhs] (format := .dense (respectPseudoAlignment := false))
   Layouts.bracketed lbTk body rbTk format
 
 public structure Types.ElseIf where
