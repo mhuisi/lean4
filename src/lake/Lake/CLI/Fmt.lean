@@ -55,7 +55,7 @@ public def fmtFile (file : FilePath) (fatal : Bool := false) : IO UInt32 := do
       opts
     }
   let initialSnap ← Language.Lean.process setup none { inputCtx with }
-  match ← Fmt.fileMain initialSnap fatal with
+  match ← Fmt.fileMain initialSnap (fatal := fatal) with
   | .error err =>
     IO.eprintln s!"error: {file}: {err}"
     return 1
