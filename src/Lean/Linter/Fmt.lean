@@ -27,16 +27,6 @@ register_builtin_option linter.fmt.missing.ignorePrivate : Bool := {
     what `local syntax`, `local macro` and `local notation` produce"
 }
 
-/-- The syntax an error refers to, falling back to the whole command. -/
-private def errorRef (cmdStx : Syntax) : Fmt.Error → Syntax
-  | .emptyInputSyntax stx ..
-  | .formattingFailure stx ..
-  | .taintedFormatting stx ..
-  | .malformedInputSyntax stx ..
-  | .ambiguousChoiceNode stx ..
-  | .headerError stx .. => stx
-  | _ => cmdStx
-
 /-- Whether `kind` is exempt from being reported. A private kind stems from a `local` syntax
 declaration, whose mangled kind no formatter can name. -/
 private def isIgnoredKind (opts : Options) (kind : Name) : Bool :=
@@ -65,7 +55,8 @@ private def checkMissingFormatter (stx : Syntax) : CommandElabM Unit := do
   let r ← match FmtM.run ctx (Fmt.fmt stx) with
     | .ok r => pure r
     | .error e =>
-      logLint linter.fmt.missing (errorRef stx e) <|
+      let ref := e.ref? |>.getD stx
+      logLint linter.fmt.missing ref <|
         m!"The auto-formatter failed, so this command was not checked for missing formatters:\n\n" ++
         toString e
       return
