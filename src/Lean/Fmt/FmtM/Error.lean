@@ -14,18 +14,63 @@ public import Lean.Fmt.Core.Formatter
 
 namespace Lean.Fmt
 
-public inductive Error where
-  | emptyInputSyntax
-    (stx : Syntax)
-    (msg : String := "Input syntax to the formatter is empty and contains only whitespace.")
+public inductive InternalError where
   | partialFormatter
-    (msg : String := s!"A formatter for is partial and does not handle the full syntax of the kind \
-      it was registered for.")
+  | cancelled
+  deriving Inhabited
+
+public inductive InputError where
+  | parseError
+    (msg : String := s!"Cannot format file with parse errors.")
+  | earlyTerminationCommand
+    (stx : Syntax)
+    (msg : String := s!"Cannot format file with early termination commands (e.g. `#exit`).")
+  | importError
+    (stx : Syntax)
+    (msg : String := s!"Cannot format file with import errors.")
+  deriving Inhabited
+
+public instance : ToString InputError where
+  toString
+  | .parseError (msg := msg) ..
+  | .earlyTerminationCommand (msg := msg) ..
+  | .importError (msg := msg) .. => msg
+
+public def InputError.ref? : InputError → Option Syntax
+  | .parseError .. => none
+  | .earlyTerminationCommand (stx := stx) ..
+  | .importError (stx := stx) .. => stx
+
+public inductive ElaborationError where
+  | malformedInputSyntax
+    (stx : Syntax)
+    (reason : String)
+    (msg : String := s!"Input syntax to the formatter is malformed: {reason}.")
+  | ambiguousChoiceNode
+    (stx : Syntax)
+    (msg : String := s!"A choice node was not disambiguated by the elaborator:\n{toString stx}")
+  deriving Inhabited
+
+public instance : ToString ElaborationError where
+  toString
+  | .malformedInputSyntax (msg := msg) ..
+  | .ambiguousChoiceNode (msg := msg) .. => msg
+
+public def ElaborationError.ref : ElaborationError → Syntax
+  | .malformedInputSyntax (stx := stx) ..
+  | .ambiguousChoiceNode (stx := stx) .. => stx
+
+public inductive FmtError where
   | formattingFailure
     (stx : Syntax)
     (msg : String := "Formatting of the document produced by the current set of `[fmt]` \
       annotations has failed. This issue is commonly caused by `Doc.failure` or attempting to \
       flatten a document with hard newlines.")
+  | reparseFailure
+    (stx : Syntax)
+    (msg : String := "The parser cannot parse the rendering of this command again. This issue \
+      is commonly caused by the formatter stripping semicolons that were used to prevent \
+      accidentally parsing too far.")
   | taintedFormatting
     (stx : Syntax)
     (msg : String := "Formatting of the document produced by the current set of `[fmt]` \
@@ -35,49 +80,41 @@ public inductive Error where
       for it) and is also very long in the input document. To format the parts of the document \
       that are formatteable, either break up the document that is not formatted or write a \
       formatter for it.")
-  | malformedInputSyntax
-    (stx : Syntax)
-    (malformedPortion? : Option Substring.Raw)
-    (reason : String)
-    (msg : String :=
-      let msg := s!"Input syntax to the formatter is malformed: {reason}."
-      match malformedPortion? with
-      | none => msg
-      | some malformedPortion => s!"{msg} Offending portion of the input syntax: \
-        {malformedPortion.toString}")
-  | ambiguousChoiceNode
-    (stx : Syntax)
-    (msg : String := s!"A choice node was not disambiguated by the elaborator:\n{toString stx}")
-  | headerError
-    (stx : Syntax)
-    (msg : String := s!"Cannot format file with header errors.")
-  | parseError
-    (msg : String := s!"Cannot format file with parse errors.")
-  | earlyTerminationCommand
-    (msg : String := s!"Cannot format file with early termination commands (e.g. `#exit`).")
-  | reparseFailure
-    (stx : Syntax)
-    (msg : String := "The parser cannot parse the rendering of this command again. This issue \
-      is commonly caused by the formatter stripping semicolons that were used to prevent \
-      accidentally parsing too far.")
-  | raw
-    (msg : String)
   deriving Inhabited
+
+public instance : ToString FmtError where
+  toString
+  | .formattingFailure (msg := msg) ..
+  | .reparseFailure (msg := msg) ..
+  | .taintedFormatting (msg := msg) .. => msg
+
+public def FmtError.ref : FmtError → Syntax
+  | .formattingFailure (stx := stx) ..
+  | .reparseFailure (stx := stx) ..
+  | .taintedFormatting (stx := stx) .. => stx
+
+public inductive Error where
+  | internal (err : InternalError)
+  | input (err : InputError)
+  | elaboration (err : ElaborationError)
+  | fmt (err : FmtError)
+  deriving Inhabited
+
+public def Error.partialFormatter : Error := .internal .partialFormatter
 
 public instance : ToString Error where
   toString
-    | .emptyInputSyntax (msg := msg) ..
-    | .partialFormatter (msg := msg) ..
-    | .formattingFailure (msg := msg) ..
-    | .taintedFormatting (msg := msg) ..
-    | .malformedInputSyntax (msg := msg) ..
-    | .ambiguousChoiceNode (msg := msg) ..
-    | .headerError (msg := msg) ..
-    | .parseError (msg := msg) ..
-    | .earlyTerminationCommand (msg := msg) ..
-    | .reparseFailure (msg := msg) ..
-    | .raw (msg := msg) .. => msg
+    | .internal _ => "Internal error."
+    | .input err
+    | .elaboration err
+    | .fmt err => toString err
+
+public def Error.ref? : Error → Option Syntax
+  | .internal _ => none
+  | .input err => err.ref?
+  | .elaboration err
+  | .fmt err => err.ref
 
 public def Error.ofFormattingError (stx : Syntax) : FormattingError → Error
-  | .failure => .formattingFailure stx
-  | .tainted => .taintedFormatting stx
+  | .failure => .fmt <| .formattingFailure stx
+  | .tainted => .fmt <| .taintedFormatting stx

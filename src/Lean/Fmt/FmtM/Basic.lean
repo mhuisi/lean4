@@ -277,9 +277,9 @@ public def fmtRawAsInSource (isFallback : Bool := false) : Fmt := fun stx => do
     | return ← text "" stx
   let ctx ← read
   let some pos := ctx.text.source.pos? pos
-    | throw <| .malformedInputSyntax stx none "invalid syntax position"
+    | throw <| .elaboration <| .malformedInputSyntax stx "invalid syntax position"
   let some tailPos := ctx.text.source.pos? tailPos
-    | throw <| .malformedInputSyntax stx none "invalid syntax position"
+    | throw <| .elaboration <| .malformedInputSyntax stx "invalid syntax position"
   let source := ctx.text.source.extract pos tailPos
   let lines := source.split "\n" |>.map (Doc.text ·.toString) |>.toArray
   let rawDoc := Doc.unindented (onlyNonCumulative := false) <| .joinUsing .hardNl lines
@@ -324,13 +324,13 @@ where
   disambiguateChoiceNode : Fmt := fun stx => do
     let ctx ← read
     let some range := stx.getRange?
-      | throw <| .ambiguousChoiceNode stx
+      | throw <| .elaboration <| .ambiguousChoiceNode stx
     let some i := ctx.resolveChoiceNode range
-      | throw <| .ambiguousChoiceNode stx
+      | throw <| .elaboration <| .ambiguousChoiceNode stx
     if i.stx.getNumArgs != stx.getNumArgs then
-      throw <| .ambiguousChoiceNode stx
+      throw <| .elaboration <| .ambiguousChoiceNode stx
     let some chosenAltStx := stx.getArgs[i.chosenAltIdx]?
-      | throw <| .ambiguousChoiceNode stx
+      | throw <| .elaboration <| .ambiguousChoiceNode stx
     fmt chosenAltStx
 
 public partial def fmtInfixOperator (op : InfixOperation)
@@ -551,7 +551,7 @@ public partial def fmtWith (f : Fmt) (formatterName : Name) : Fmt := fun stx => 
     let r ← r.tag stx
     withShareCommon r
   catch e =>
-    if let .partialFormatter _ := e then
+    if let .internal .partialFormatter := e then
       let r ← fmtRaw (isFallback := true) stx
       if let some range := stx.getRange? then
         modify fun s => {
@@ -752,7 +752,7 @@ public def fmtTSepArrayWith
 public def fmtLeadingWithRetainedNewlines (stx : Syntax) (minNewlines := 1) (maxNewlines := 2) : FmtM TaggedDoc := do
   fmtLeadingWhitespace stx fun leadingTk leading => do
     let some leading := leading.toSlice?
-      | throw <| .malformedInputSyntax leadingTk none "substring is invalid and cannot be converted to a slice"
+      | throw <| .elaboration <| .malformedInputSyntax leadingTk "substring is invalid and cannot be converted to a slice"
     let searcher := String.Slice.Pattern.ToForwardSearcher.toSearcher '\n' leading
     let numNewlines := searcher.filter (· matches .matched ..) |>.length
     let numNewlines := Nat.min (Nat.max numNewlines minNewlines) maxNewlines
@@ -762,7 +762,7 @@ public def fmtLeadingWithRetainedNewlines (stx : Syntax) (minNewlines := 1) (max
 public def fmtTrailingWithRetainedNewlines (stx : Syntax) (minNewlines := 1) (maxNewlines := 2) : FmtM TaggedDoc := do
   fmtTrailingWhitespace stx fun trailingTk trailing => do
     let some trailing := trailing.toSlice?
-      | throw <| .malformedInputSyntax trailingTk none "substring is invalid and cannot be converted to a slice"
+      | throw <| .elaboration <| .malformedInputSyntax trailingTk "substring is invalid and cannot be converted to a slice"
     let searcher := String.Slice.Pattern.ToForwardSearcher.toSearcher '\n' trailing
     let numNewlines := searcher.filter (· matches .matched ..) |>.length
     let numNewlines := Nat.min (Nat.max numNewlines minNewlines) maxNewlines
@@ -857,9 +857,9 @@ where
 public def fmtLeadingWithRetainedNewlinesAndComments (stx : Syntax) : FmtM TaggedDoc :=
   fmtLeadingWhitespace stx fun leadingTk leading => do
     let some leadingTkRange := leadingTk.getRange?
-      | throw <| .malformedInputSyntax leadingTk none "missing token range"
+      | throw <| .elaboration <| .malformedInputSyntax leadingTk "missing token range"
     let some leading := leading.toSlice?
-      | throw <| .malformedInputSyntax leadingTk none "substring is invalid and cannot be converted to a slice"
+      | throw <| .elaboration <| .malformedInputSyntax leadingTk "substring is invalid and cannot be converted to a slice"
     let comments := parseComments (← read).lineInfos leadingTkRange .leading leading
     let (leadingDocs, _) := fmtCommentsWithRetainedNewlines comments leading (isLeading := true)
     return leadingDocs
@@ -867,9 +867,9 @@ public def fmtLeadingWithRetainedNewlinesAndComments (stx : Syntax) : FmtM Tagge
 public def fmtTrailingWithRetainedNewlinesAndComments (stx : Syntax) (atleastOneNewline : Bool := true) : FmtM TaggedDoc := do
   fmtTrailingWhitespace stx fun trailingTk trailing => do
     let some trailingTkRange := trailingTk.getRange?
-      | throw <| .malformedInputSyntax trailingTk none "missing token range"
+      | throw <| .elaboration <| .malformedInputSyntax trailingTk "missing token range"
     let some trailing := trailing.toSlice?
-      | throw <| .malformedInputSyntax trailingTk none "substring is invalid and cannot be converted to a slice"
+      | throw <| .elaboration <| .malformedInputSyntax trailingTk "substring is invalid and cannot be converted to a slice"
     let comments := parseComments (← read).lineInfos trailingTkRange .trailing trailing
     let topLevelComments := comments.filter (! ·.placement matches .afterToken)
     let mut (trailingDocs, insertedAnyNewlines) := fmtCommentsWithRetainedNewlines topLevelComments trailing (isLeading := false)

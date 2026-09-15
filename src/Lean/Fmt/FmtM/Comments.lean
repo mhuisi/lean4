@@ -586,20 +586,19 @@ where
     match stx with
     | .missing =>
       return
-    | .atom info val =>
-      collectTokenComments info val
-    | .ident info rawVal .. =>
-      let rawVal ← toSlice rawVal
-      collectTokenComments info rawVal
+    | .atom info .. =>
+      collectTokenComments info
+    | .ident info .. =>
+      collectTokenComments info
     | .node _ kind args =>
       if kind == choiceKind then
         if let some firstAlternative := args[0]? then
           return ← go firstAlternative
       for arg in args do
         go arg
-  collectTokenComments (info : SourceInfo) (tk : String.Slice) : collectComments.M Unit := do
+  collectTokenComments (info : SourceInfo) : collectComments.M Unit := do
     let some range := info.getRange?
-      | throw <| .malformedInputSyntax stx (some <| .ofSlice tk) "missing token range"
+      | throw <| .elaboration <| .malformedInputSyntax stx "missing token range"
         return
     if let some leading ← info.getLeading? |>.mapM toSlice then
       let comments ← dropClaimedComments <| parseComments lineInfos range .leading leading
@@ -644,7 +643,7 @@ where
       }
   toSlice (s : Substring.Raw) : collectComments.M String.Slice := do
     let some s := s.toSlice?
-      | throw <| .malformedInputSyntax stx s
+      | throw <| .elaboration <| .malformedInputSyntax stx
           "substring is invalid and cannot be converted to a slice"
     return s
 

@@ -902,11 +902,11 @@ public def fmtMatch : Fmt := fun
 public def fmtDocComment : Fmt := fun stx => do
   let ctx ← read
   let some range := stx.getRange?
-    | throw <| .malformedInputSyntax stx none "Missing range on comment syntax"
+    | throw <| .elaboration <| .malformedInputSyntax stx "missing range on comment syntax"
   let some pos := ctx.text.source.pos? range.start
-    | throw <| .malformedInputSyntax stx none "Malformed start position on comment syntax"
+    | throw <| .elaboration <| .malformedInputSyntax stx "malformed start position on comment syntax"
   let some tailPos := ctx.text.source.pos? range.stop
-    | throw <| .malformedInputSyntax stx none "Malformed stop position on comment syntax"
+    | throw <| .elaboration <| .malformedInputSyntax stx "malformed stop position on comment syntax"
   let body := ctx.text.source.extract pos tailPos
   let lineInfo ← getLineInfo! range.start
   let posInLine := range.start.unoffsetBy lineInfo.startPos

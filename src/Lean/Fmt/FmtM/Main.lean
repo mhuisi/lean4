@@ -316,21 +316,21 @@ def render (ctx : Fmt.Context) (stx : Syntax) (act : FmtM TaggedDoc) : Except Er
 
 def commandRaw (ctx : Fmt.Context) (stx : Syntax) : Except Error String := do
   let some fullSyntaxRange := stx.getRange?
-    | throw <| .malformedInputSyntax stx none "Missing range"
+    | throw <| .elaboration <| .malformedInputSyntax stx "missing range"
   let some start := ctx.text.source.pos? fullSyntaxRange.start
-    | throw <| .malformedInputSyntax stx none "Invalid range"
+    | throw <| .elaboration <| .malformedInputSyntax stx "invalid range"
   let some stop := ctx.text.source.pos? fullSyntaxRange.stop
-    | throw <| .malformedInputSyntax stx none "Invalid range"
+    | throw <| .elaboration <| .malformedInputSyntax stx "invalid range"
   let leading := (← render ctx stx <| fmtLeadingWithRetainedNewlinesAndComments stx).rendering
   let rawText := ctx.text.source.extract start stop
   let trailing := (← render ctx stx <| fmtTrailingWithRetainedNewlinesAndComments stx).rendering
   return leading ++ rawText ++ trailing
 
 public def commandMain (ctx : Fmt.Context) (stx : Syntax) (fatal : Bool := false) : Except Error String := do
-  let comments ←
-    collectComments ctx.env ctx.opts (getCommentCollectors ctx.env) ctx.lineInfos stx
-  let multiLineTokenRanges := collectMultiLineTokenRanges stx
   try
+    let comments ←
+      collectComments ctx.env ctx.opts (getCommentCollectors ctx.env) ctx.lineInfos stx
+    let multiLineTokenRanges := collectMultiLineTokenRanges stx
     let r ← FmtM.run ctx do
       let leading ← fmtLeadingWithRetainedNewlinesAndComments stx
       let doc ← fmt stx
@@ -360,23 +360,24 @@ def getNumThreads : BaseIO Nat := do
 def getParallelism : BaseIO Nat :=
   return max 1 (← getNumThreads)
 
-public def fileMain (initialSnap : Language.Lean.InitialSnapshot) (fatal : Bool := false) : BaseIO (Except Error String) := do
+public def fileMain (initialSnap : Language.Lean.InitialSnapshot) (cancelTks : Array IO.CancelToken := #[]) (fatal : Bool := false) : BaseIO (Except Error String) := do
   run
 where
   run : ExceptT Error BaseIO String := do
     let text := initialSnap.ictx.fileMap
     let some finalCmdState := Language.Lean.waitForFinalCmdState? initialSnap
-      | throw <| .headerError initialSnap.stx
+      | throw <| .input <| .importError initialSnap.stx
     let moduleData := Language.Lean.moduleData initialSnap |>.get
+    if ← cancelTks.anyM (·.isSet) then
+      throw <| .internal .cancelled
     if moduleData.hasParseErrors then
-      throw .parseError
+      throw <| .input .parseError
     let headerStx := moduleData.headerData.stx
     let cmdStxs := moduleData.cmdData.map (·.stx)
-    let some modStx := mkModuleSyntax? headerStx cmdStxs
-      | throw .earlyTerminationCommand
+    let modStx ← mkModuleSyntax headerStx cmdStxs
     let (some headerCmdState, some headerParserState) :=
         (moduleData.headerData.cmdState?, moduleData.headerData.parserState?)
-      | throw <| .headerError headerStx
+      | throw <| .input <| .importError headerStx
     let allCmdData : Array Language.Lean.CommandData := #[⟨headerStx, headerParserState, headerCmdState⟩] ++ moduleData.cmdData
     let lineInfos := collectSyntaxLineInfos modStx
     let ctx : Fmt.Context := {
@@ -401,6 +402,10 @@ where
         while true do
           let some cmdIdx ← jobs.tryRecv
             | return
+          if ← cancelTks.anyM (·.isSet) then
+            renderedCommandsMutex.atomically do
+              modify (·.insert cmdIdx <| .error <| .internal .cancelled)
+            return
           let some cmdData := allCmdData[cmdIdx]?
             | unreachable!
           let some prevCmdData := allCmdData[cmdIdx-1]?
@@ -420,8 +425,6 @@ where
     if cmdData.stx.isOfKind ``Parser.Command.eoi then
       return ← commandRaw ctx cmdData.stx
     let mut renderedCommand ← commandMain ctx cmdData.stx fatal
-    if cmdData.stx.isOfKind ``Parser.Command.eoi then
-      return renderedCommand
     -- The rendering of a command always starts at the beginning of a line, so it must be validated
     -- there as well: commands like `variable` require their continuation lines to be indented
     -- relative to the command's own column, which fails when the rendering is spliced in at the
@@ -441,6 +444,6 @@ where
     let (stx, _, msgLog) := Parser.parseCommand ictx pmctx parserState MessageLog.empty
     if msgLog.hasErrors || stx.hasMissing then
       if fatal then
-        throw <| .reparseFailure cmdData.stx
+        throw <| .fmt <| .reparseFailure cmdData.stx
       renderedCommand ← commandRaw ctx cmdData.stx
     return renderedCommand
