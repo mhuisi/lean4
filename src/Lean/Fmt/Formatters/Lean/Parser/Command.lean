@@ -492,9 +492,9 @@ public def fmtInductive : Fmt := fun
         $ctors*
         $[$computedFields?:computedFields]?
         $optDeriving:optDeriving
-        $monotonicityBy:monotonicityBy) =>
+        $[$monotonicityBy?:monotonicityBy]?) =>
     fmtInductiveLike #[inductiveTk] declId binders typeAscriptionTk? type? none ctors computedFields?
-      optDeriving monotonicityBy
+      optDeriving monotonicityBy?
   | `(Parser.Command.inductive|
       -- Anti-quotations only match on `Syntax.node`, so the `:=%$sepTk` actually matches both
       -- `:=` and `where` of the `optional (symbol " :=" <|> " where")` parser of `inductive`.
@@ -502,9 +502,9 @@ public def fmtInductive : Fmt := fun
         $ctors*
         $[$computedFields?:computedFields]?
         $optDeriving:optDeriving
-        $monotonicityBy:monotonicityBy) =>
+        $[$monotonicityBy?:monotonicityBy]?) =>
     fmtInductiveLike #[inductiveTk] declId binders typeAscriptionTk? type? sepTk ctors computedFields?
-      optDeriving monotonicityBy
+      optDeriving monotonicityBy?
   | _ =>
     throw .partialFormatter
 
@@ -515,9 +515,9 @@ public def fmtCoinductive : Fmt := fun
         $ctors*
         $[$computedFields?:computedFields]?
         $optDeriving:optDeriving
-        $monotonicityBy:monotonicityBy) =>
+        $[$monotonicityBy?:monotonicityBy]?) =>
     fmtInductiveLike #[coinductiveTk] declId binders typeAscriptionTk? type? none ctors computedFields?
-      optDeriving monotonicityBy
+      optDeriving monotonicityBy?
   | `(Parser.Command.coinductive|
       -- Anti-quotations only match on `Syntax.node`, so the `:=%$sepTk` actually matches both
       -- `:=` and `where` of the `optional (symbol " :=" <|> " where")` parser of `coinductive`.
@@ -525,9 +525,9 @@ public def fmtCoinductive : Fmt := fun
         $ctors*
         $[$computedFields?:computedFields]?
         $optDeriving:optDeriving
-        $monotonicityBy:monotonicityBy) =>
+        $[$monotonicityBy?:monotonicityBy]?) =>
     fmtInductiveLike #[coinductiveTk] declId binders typeAscriptionTk? type? sepTk ctors computedFields?
-      optDeriving monotonicityBy
+      optDeriving monotonicityBy?
   | _ =>
     throw .partialFormatter
 
