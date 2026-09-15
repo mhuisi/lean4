@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# usage: lint-core.sh <stage dir> <outdir> [jobs] [filelist]
+# usage: missing-fmts.sh <stage dir> <outdir> [jobs] [filelist]
 # Elaborates each repo-relative core file with `<stage dir>/bin/lean` and the `linter.fmt.missing`
 # linter enabled, against the `.olean` files of the same stage. The stage must be stage1 or later:
 # stage0 does not contain the linter. Without a file list, all core files are linted.
@@ -7,7 +7,7 @@
 # lines to <outdir>/results.txt and the reported syntax kinds to <outdir>/summary.txt.
 # Set IGNORE_PRIVATE=false to also report the private kinds of `local` syntax.
 set -u
-repo=/home/marc/lean4
+repo=$(realpath "$(dirname "$0")/..")
 export STAGE=$(realpath "$1")
 out=$(realpath -m "$2")
 jobs=${3:-48}
@@ -29,11 +29,16 @@ fi
 while read -r f; do mkdir -p "$out/$(dirname "$f")"; done < "$list"
 ulimit -s unlimited
 # `--root` gives `lean` the module name. Without it, some files do not elaborate.
+# `lean` does not link Lake, so Lake's builtin formatters only register when Lake is loaded as a
+# plugin. Without it, all Lake syntax is reported as missing.
 # `pp.fullNames` prints the kinds independently of the open namespaces, so that summary.txt
 # counts each kind in one row.
 xargs -a "$list" -P "$jobs" -I{} bash -c '
-  case "{}" in src/lake/*) root=src/lake ;; *) root=src ;; esac
-  timeout 1800 "$STAGE/bin/lean" --root=$root -Dlinter.fmt.missing=true \
+  case "{}" in
+    src/lake/*) args="--root=src/lake --plugin=$STAGE/lib/lean/libLake_shared.so" ;;
+    *) args=--root=src ;;
+  esac
+  timeout 1800 "$STAGE/bin/lean" $args -Dlinter.fmt.missing=true \
     -Dlinter.fmt.missing.ignorePrivate=$IGNORE_PRIVATE -Dinterpreter.prefer_native=false \
     -Dpp.fullNames=true "{}" > "$OUT/{}.log" 2>&1
   code=$?
