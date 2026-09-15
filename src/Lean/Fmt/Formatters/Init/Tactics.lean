@@ -187,7 +187,7 @@ public def fmtConstructor : Fmt := fun
     return Layouts.pseudoApplication <| #[constructorTk] ++ cfg
   | _ => throw .partialFormatter
 
-@[builtin_fmt Lean.Parser.Tactic.constructor]
+@[builtin_fmt Lean.Parser.Tactic.constructorBang]
 public def fmtConstructorBang : Fmt := fun
   | `(tactic| constructor!%$constructorTk $cfg:optConfig) => do
     let constructorTk ← fmt constructorTk
