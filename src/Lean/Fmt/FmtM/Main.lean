@@ -351,6 +351,107 @@ public def commandMain (ctx : Fmt.Context) (stx : Syntax) (fatal : Bool := false
     else
       commandRaw ctx stx
 
+/-- The state is the position in the file up to which the syntax has been validated. -/
+abbrev validateSyntax.M α := StateT String.Pos.Raw (Except Error) α
+
+/--
+Validates that `stx` is the syntax of the entire file `text`:
+* `stx` does not contain `Syntax.missing`.
+* No source info in `stx` is synthetic, and all atoms and identifiers have original source info.
+* For all alternatives of choice nodes, the concatenation of the leading whitespace, the text and
+  the trailing whitespace of all atoms and identifiers is `text.source`.
+* All source positions in `stx` are valid positions in `text.source`, and each position is the
+  position of its part in this concatenation. The source info of a node, if any, matches the source
+  info of its first and last token.
+-/
+public partial def validateSyntax (text : FileMap) (stx : Syntax) : Except Error Unit := do
+  let ((), stopPos) ← go stx stx |>.run 0
+  if stopPos != text.source.rawEndPos then
+    throw <| malformed stx s!"the syntax ends at byte {stopPos.byteIdx}, but the file ends at \
+      byte {text.source.rawEndPos.byteIdx}"
+where
+  malformed (stx : Syntax) (reason : String) : Error :=
+    .elaboration <| .malformedInputSyntax stx reason
+  go (parent stx : Syntax) : validateSyntax.M Unit := do
+    match stx with
+    | .missing =>
+      throw <| malformed parent "the syntax contains `Syntax.missing`"
+    | .atom info val =>
+      goToken stx info val.toSlice
+    | .ident info rawVal .. =>
+      let some rawValSlice := rawVal.toSlice?
+        | throw <| malformed stx "the raw text of an identifier is not a valid substring"
+      if let .original (pos := pos) (endPos := endPos) .. := info then
+        if rawVal.startPos != pos || rawVal.stopPos != endPos then
+          throw <| malformed stx
+            "the raw text of an identifier does not have the range of the identifier"
+      goToken stx info rawValSlice
+    | .node info kind args =>
+      if info matches .synthetic .. then
+        throw <| malformed stx "the syntax contains synthetic source info"
+      if kind == choiceKind then
+        goChoice stx args
+      else
+        for arg in args do
+          go stx arg
+      if let .original leading pos trailing endPos := info then
+        let tokens := Syntax.node .none kind args
+        let some (.original firstLeading firstPos ..) := tokens.getHeadInfo?
+          | throw <| malformed stx "a node without tokens has source info"
+        let some (.original _ _ lastTrailing lastEndPos) := tokens.getTailInfo?
+          | throw <| malformed stx "a node without tokens has source info"
+        let isSameSubstring (s1 s2 : Substring.Raw) :=
+          s1.startPos == s2.startPos && s1.stopPos == s2.stopPos && s1.toSlice? == s2.toSlice?
+        unless isSameSubstring leading firstLeading && pos == firstPos && endPos == lastEndPos &&
+            isSameSubstring trailing lastTrailing do
+          throw <| malformed stx
+            "the source info of a node does not match its first and last token"
+  goChoice (stx : Syntax) (alternatives : Array Syntax) : validateSyntax.M Unit := do
+    let some firstAlternative := alternatives[0]?
+      | return
+    let startPos ← get
+    go stx firstAlternative
+    let stopPos ← get
+    for alternative in alternatives[1...*] do
+      set startPos
+      go stx alternative
+      let alternativeStopPos ← get
+      if alternativeStopPos != stopPos then
+        throw <| malformed stx s!"the alternatives of a choice node end at different positions \
+          (byte {stopPos.byteIdx} and byte {alternativeStopPos.byteIdx})"
+  goToken (stx : Syntax) (info : SourceInfo) (val : String.Slice) : validateSyntax.M Unit := do
+    let .original leading pos trailing endPos := info
+      | if info matches .synthetic .. then
+          throw <| malformed stx "the syntax contains synthetic source info"
+        else
+          throw <| malformed stx "a token has no source info"
+    goWhitespace stx "leading whitespace" leading
+    goPart stx "text" val pos endPos
+    goWhitespace stx "trailing whitespace" trailing
+  goWhitespace (stx : Syntax) (partName : String) (whitespace : Substring.Raw) :
+      validateSyntax.M Unit := do
+    let some slice := whitespace.toSlice?
+      | throw <| malformed stx s!"the {partName} of a token is not a valid substring"
+    goPart stx partName slice whitespace.startPos whitespace.stopPos
+  /--
+  Validates that `part` of the token `stx` starts at the current position and is the text of the
+  file from `startPos` to `stopPos`. Moves the current position to `stopPos`.
+  -/
+  goPart (stx : Syntax) (partName : String) (part : String.Slice)
+      (startPos stopPos : String.Pos.Raw) : validateSyntax.M Unit := do
+    let pos ← get
+    if startPos != pos then
+      throw <| malformed stx s!"the {partName} of a token starts at byte {startPos.byteIdx}, but \
+        the text before it ends at byte {pos.byteIdx}"
+    let some filePart := do
+        text.source.slice? (← text.source.pos? startPos) (← text.source.pos? stopPos)
+      | throw <| malformed stx s!"the {partName} of a token has the range from byte \
+          {startPos.byteIdx} to byte {stopPos.byteIdx}, which is not a valid range of the file"
+    if part != filePart then
+      throw <| malformed stx s!"the {partName} of a token does not match the file from byte \
+        {startPos.byteIdx} to byte {stopPos.byteIdx}"
+    set stopPos
+
 def getNumThreads : BaseIO Nat := do
   if ! System.Platform.isEmscripten then
     if let some s ← IO.getEnv "LEAN_NUM_THREADS" then
@@ -375,6 +476,7 @@ where
     let headerStx := moduleData.headerData.stx
     let cmdStxs := moduleData.cmdData.map (·.stx)
     let modStx ← mkModuleSyntax headerStx cmdStxs
+    validateSyntax text modStx
     let (some headerCmdState, some headerParserState) :=
         (moduleData.headerData.cmdState?, moduleData.headerData.parserState?)
       | throw <| .input <| .importError headerStx
