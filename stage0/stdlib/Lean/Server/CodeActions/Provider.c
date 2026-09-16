@@ -1747,22 +1747,22 @@ return v___x_469_;
 v___jp_479_:
 {
 lean_object* v___x_484_; lean_object* v___x_485_; lean_object* v___x_486_; lean_object* v___x_487_; 
-lean_inc(v___y_482_);
+lean_inc(v___y_481_);
 v___x_484_ = lean_alloc_ctor(0, 2, 0);
-lean_ctor_set(v___x_484_, 0, v___y_482_);
+lean_ctor_set(v___x_484_, 0, v___y_481_);
 lean_ctor_set(v___x_484_, 1, v___x_458_);
 lean_inc(v___y_480_);
 v___x_485_ = lean_alloc_ctor(1, 2, 0);
 lean_ctor_set(v___x_485_, 0, v___x_484_);
 lean_ctor_set(v___x_485_, 1, v___y_480_);
 v___x_486_ = lean_alloc_ctor(1, 2, 1);
-lean_ctor_set(v___x_486_, 0, v___y_481_);
+lean_ctor_set(v___x_486_, 0, v___y_482_);
 lean_ctor_set(v___x_486_, 1, v___x_485_);
 lean_ctor_set_uint8(v___x_486_, sizeof(void*)*2, v___y_483_);
 v___x_487_ = lean_alloc_ctor(1, 1, 0);
 lean_ctor_set(v___x_487_, 0, v___x_486_);
 v___y_460_ = v___y_480_;
-v___y_461_ = v___y_482_;
+v___y_461_ = v___y_481_;
 v___y_462_ = v___x_487_;
 goto v___jp_459_;
 }
@@ -1775,8 +1775,8 @@ lean_inc_ref(v_preferred_436_);
 v___x_497_ = lean_apply_1(v_preferred_436_, v___y_494_);
 v___x_498_ = lean_unbox(v___x_497_);
 v___y_480_ = v___y_493_;
-v___y_481_ = v___y_496_;
-v___y_482_ = v___y_495_;
+v___y_481_ = v___y_495_;
+v___y_482_ = v___y_496_;
 v___y_483_ = v___x_498_;
 goto v___jp_479_;
 }
@@ -1784,8 +1784,8 @@ else
 {
 lean_dec(v___y_494_);
 v___y_480_ = v___y_493_;
-v___y_481_ = v___y_496_;
-v___y_482_ = v___y_495_;
+v___y_481_ = v___y_495_;
+v___y_482_ = v___y_496_;
 v___y_483_ = v___x_443_;
 goto v___jp_479_;
 }
@@ -3760,7 +3760,7 @@ _start:
 lean_object* v___x_1180_; lean_object* v___x_1181_; lean_object* v___x_1182_; lean_object* v___x_1183_; lean_object* v___x_1184_; lean_object* v___x_1185_; 
 v___x_1180_ = ((lean_object*)(l___private_Init_Data_Array_Basic_0__Array_forIn_x27Unsafe_loop___at___00__private_Init_Data_Array_Basic_0__Array_forIn_x27Unsafe_loop___at___00Lean_CodeAction_cmdCodeActionProvider_spec__2_spec__2___closed__2));
 v___x_1181_ = lean_unsigned_to_nat(48u);
-v___x_1182_ = lean_unsigned_to_nat(185u);
+v___x_1182_ = lean_unsigned_to_nat(188u);
 v___x_1183_ = ((lean_object*)(l___private_Init_Data_Array_Basic_0__Array_forIn_x27Unsafe_loop___at___00__private_Init_Data_Array_Basic_0__Array_forIn_x27Unsafe_loop___at___00Lean_CodeAction_cmdCodeActionProvider_spec__2_spec__2___closed__1));
 v___x_1184_ = ((lean_object*)(l___private_Init_Data_Array_Basic_0__Array_forIn_x27Unsafe_loop___at___00__private_Init_Data_Array_Basic_0__Array_forIn_x27Unsafe_loop___at___00Lean_CodeAction_cmdCodeActionProvider_spec__2_spec__2___closed__0));
 v___x_1185_ = l_mkPanicMessageWithDecl(v___x_1184_, v___x_1183_, v___x_1182_, v___x_1181_, v___x_1180_);
