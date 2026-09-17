@@ -12,7 +12,6 @@ meta import Lean.Parser.Command
 import Lean.Fmt.FmtM.CommonFormatters
 import Lean.Fmt.Formatters.Lean.Parser.Term
 import Init.Data
-import Lean.Fmt.Util.Basic
 
 namespace Lean.Fmt
 
@@ -49,34 +48,6 @@ public def fmtPartial : Fmt := fmtAtomic
 @[builtin_fmt Lean.Parser.Command.nonrec]
 public def fmtNonrec : Fmt := fmtAtomic
 
-public def fmtDeclWithModifiers
-    (docComment? : Option (TSyntax ``Parser.Command.docComment))
-    (attributes? : Option (TSyntax ``Parser.Term.attributes))
-    (mods : Array (Option Syntax))
-    (decl : TaggedDoc)
-    : FmtM TaggedDoc := do
-  let docComment? ← fmt? docComment?
-  let mods ← mods.filterMap id |>.mapM fmt
-  let mods := Layouts.spacedAtomic mods
-  let fullDecl := Layouts.spacedAtomic #[mods, decl]
-  let declWithAttributes ← fmtDeclWithAttributes attributes? fullDecl
-  return Layouts.lines #[docComment?, declWithAttributes]
-
-public def fmtDeclWithDeclModifiers
-    (declModifiers : TSyntax ``Parser.Command.declModifiers)
-    (decl : TaggedDoc)
-    : FmtM TaggedDoc := do
-  let `(declModifiers|
-      $[$docComment?:docComment]?
-      $[$attributes?:attributes]?
-      $[$visibility?:visibility]?
-      $[$protected?:protected]?
-      $[$metaOrNoncomputable?]?
-      $[$unsafe?:unsafe]?
-      $[$partialOrNonrec?]?) := declModifiers
-    | throw .partialFormatter
-  fmtDeclWithModifiers docComment? attributes? #[visibility?, protected?, metaOrNoncomputable?, unsafe?, partialOrNonrec?] decl
-
 @[builtin_fmt Lean.Parser.Command.declId]
 public def fmtDeclId : Fmt := fun
   | `(Parser.Command.declId| $declId:ident $[.{%$lbTk? $universeIds?:ident,* }%$rbTk?]?) => do
@@ -93,101 +64,6 @@ public def fmtNamedPrio : Fmt := fun
   | `(Parser.Command.namedPrio| (%$lbTk priority%$prioTk :=%$colonEqTk $prio:prio )%$rbTk) => do
     fmtNamedArgumentTerm lbTk prioTk colonEqTk prio rbTk
   | _ => throw .partialFormatter
-
-public def fmtDeclarationSignature
-    (declTks : Array Syntax)
-    (namedPrio? : Option Syntax)
-    (declId? : Option Syntax)
-    (binders : TSyntaxArray [`ident, ``Parser.Term.hole, ``Parser.Term.bracketedBinder])
-    (typeAscriptionTk? : Option Syntax)
-    (type? : Option Syntax)
-    : FmtM TaggedDoc := do
-  let declTks := Layouts.spacedAtomic (← declTks.mapM fmt)
-  let namedPrio? ← fmt? namedPrio?
-  let lvalLhs := Layouts.pseudoApplication #[declTks, namedPrio?]
-  let declId? ← fmt? declId?
-  let binders ← fmtBinders binders
-  let typeAscriptionTk? ← fmt? typeAscriptionTk?
-  let type? ← fmt? type?
-  return Layouts.globalSignature #[lvalLhs, declId?] binders typeAscriptionTk? type?
-
-public def fmtAssignmentDeclaration
-    (declTk : Syntax)
-    (namedPrio? : Option Syntax)
-    (declId? : Option Syntax)
-    (binders : TSyntaxArray [`ident, ``Parser.Term.hole, ``Parser.Term.bracketedBinder])
-    (typeAscriptionTk? : Option Syntax)
-    (type? : Option Syntax)
-    (colonEqTk? : Option Syntax)
-    (declBody : Syntax)
-    (terminationSuffix? : Option (TSyntax ``Parser.Termination.suffix))
-    (whereDecls? : Option (TSyntax ``Parser.Term.whereDecls))
-    : FmtM TaggedDoc := do
-  let signatureDoc ← fmtDeclarationSignature #[declTk] namedPrio? declId? binders typeAscriptionTk? type?
-  let colonEqTkDoc? ← fmt? colonEqTk?
-  let declBodyDoc ← fmt declBody
-  let mainDeclDoc := Layouts.assignmentDeclaration signatureDoc colonEqTkDoc? declBodyDoc
-  let mainDeclTrailingDoc ← fmtTrailingWithRetainedNewlinesAndComments declBody
-  let terminationSuffixDoc ← fmt? terminationSuffix?
-  let terminationSuffixTrailingDoc := (← terminationSuffix?.mapM fmtTrailingWithRetainedNewlinesAndComments).getD empty
-  let whereDecls? ← fmt? whereDecls?
-  return Layouts.retainedWhitespace #[
-    mainDeclDoc,
-    mainDeclTrailingDoc,
-    terminationSuffixDoc,
-    terminationSuffixTrailingDoc,
-    whereDecls?
-  ]
-
-public def fmtMatchDeclaration
-    (declTk : Syntax)
-    (namedPrio? : Option Syntax)
-    (declId? : Option Syntax)
-    (binders : TSyntaxArray [`ident, ``Parser.Term.hole, ``Parser.Term.bracketedBinder])
-    (typeAscriptionTk? : Option Syntax)
-    (type? : Option Syntax)
-    (matchAlts : TSyntax ``Parser.Term.matchAlts)
-    (terminationSuffix? : Option (TSyntax ``Parser.Termination.suffix))
-    (whereDecls? : Option (TSyntax ``Parser.Term.whereDecls))
-    : FmtM TaggedDoc := do
-  let signatureDoc ← fmtDeclarationSignature #[declTk] namedPrio? declId? binders typeAscriptionTk? type?
-  let matchAltsDoc ← fmt matchAlts
-  let mainDeclDoc := Layouts.matchDeclaration signatureDoc matchAltsDoc
-  let mainDeclTrailingDoc ← fmtTrailingWithRetainedNewlinesAndComments matchAlts
-  let terminationSuffixDoc ← fmt? terminationSuffix?
-  let terminationSuffixTrailingDoc := (← terminationSuffix?.mapM fmtTrailingWithRetainedNewlinesAndComments).getD empty
-  let whereDecls? ← fmt? whereDecls?
-  return Layouts.retainedWhitespace #[
-    mainDeclDoc,
-    mainDeclTrailingDoc,
-    terminationSuffixDoc,
-    terminationSuffixTrailingDoc,
-    whereDecls?
-  ]
-
-public def fmtWhereDeclaration
-    (declTk : Syntax)
-    (namedPrio? : Option Syntax)
-    (declId? : Option Syntax)
-    (binders : TSyntaxArray [`ident, ``Parser.Term.hole, ``Parser.Term.bracketedBinder])
-    (typeAscriptionTk? : Option Syntax)
-    (type? : Option Syntax)
-    (whereTk : Syntax)
-    (fields : Syntax.TSepArray ``Parser.Term.structInstField ";")
-    (whereDecls? : Option (TSyntax ``Parser.Term.whereDecls))
-    : FmtM TaggedDoc := do
-  let signature ← fmtDeclarationSignature #[declTk] namedPrio? declId? binders typeAscriptionTk? type?
-  let «where» ← fmt whereTk
-  let fieldsDoc ← fmtTSepArray fields
-  let mainDeclTrailingDoc ← fmtTrailingWithRetainedNewlinesAndComments <| mkNullNode <| #[whereTk] ++ fields
-  let whereDecls? ← fmt? whereDecls?
-  let fields := Layouts.sepLines fieldsDoc (includeSeps := false)
-  let mainDecl := Layouts.whereDeclaration signature «where» fields
-  return Layouts.retainedWhitespace #[
-    mainDecl,
-    mainDeclTrailingDoc,
-    whereDecls?
-  ]
 
 @[builtin_fmt Lean.Parser.Command.abbrev]
 public def fmtAbbrev : Fmt := fun
@@ -444,47 +320,6 @@ public def fmtMonotonicityBy : Fmt := fun
     return Layouts.keywordPrefixedSeq monotonicityByTk seq .nonSticky
   | _ => throw .partialFormatter
 
-public def fmtInductiveLike
-    (tks : Array Syntax) (declId : TSyntax ``Parser.Command.declId)
-    (binders : TSyntaxArray [`ident, ``Parser.Term.hole, ``Parser.Term.bracketedBinder])
-    (typeAscriptionTk? : Option Syntax) (type? : Option (TSyntax `term))
-    (sepTk? : Option Syntax) (ctors : TSyntaxArray ``Parser.Command.ctor)
-    (computedFields? : Option (TSyntax ``Parser.Command.computedFields))
-    (optDeriving : TSyntax ``Parser.Command.optDeriving)
-    (monotonicityBy? : Option (TSyntax ``Parser.Command.monotonicityBy))
-    : FmtM TaggedDoc := do
-  let signatureDoc ← fmtDeclarationSignature tks none declId binders typeAscriptionTk? type?
-  let sepTkDoc? ← fmt? sepTk?
-  let ctorsDoc ← fmtArray ctors
-  let ctorsDoc := Layouts.lines ctorsDoc
-  let mainDeclDoc := Layouts.whereDeclaration signatureDoc sepTkDoc? ctorsDoc
-  let optDerivingDoc ← fmt optDeriving
-  let monotonicityByDoc? ← fmt? monotonicityBy?
-  match computedFields? with
-  | none =>
-    return Layouts.lines #[mainDeclDoc, optDerivingDoc, monotonicityByDoc?]
-  | some computedFields =>
-    let mainDeclTrailingDoc ← fmtTrailingWithRetainedNewlinesAndComments <| mkNullNode <|
-      tks
-        ++ #[declId]
-        ++ binders
-        ++ typeAscriptionTk?.toArray
-        ++ type?.toArray
-        ++ sepTk?.toArray
-        ++ ctors
-    let computedFieldsDoc ← fmt computedFields
-    let computedFieldsTrailingDoc ← fmtTrailingWithRetainedNewlinesAndComments computedFields
-    let optDerivingTrailingDoc ← fmtTrailingWithRetainedNewlinesAndComments optDeriving
-    return Layouts.retainedWhitespace #[
-      mainDeclDoc,
-      mainDeclTrailingDoc,
-      computedFieldsDoc,
-      computedFieldsTrailingDoc,
-      optDerivingDoc,
-      optDerivingTrailingDoc,
-      monotonicityByDoc?
-    ]
-
 @[builtin_fmt Lean.Parser.Command.inductive]
 public def fmtInductive : Fmt := fun
   | `(Parser.Command.inductive|
@@ -634,35 +469,6 @@ public def fmtStructSimpleBinder : Fmt := fun
     let binder ← fmtBinder #[] #[id] binders typeAscriptionTk? type? tacticOrDefault? #[] (kind := .global)
     fmtDeclWithDeclModifiers declModifiers binder
   | _ => throw .partialFormatter
-
-public def fmtStructureLike
-    (tk : Syntax) (declId : TSyntax ``Parser.Command.declId)
-    (binders : TSyntaxArray [`ident, ``Parser.Term.hole, ``Parser.Term.bracketedBinder])
-    (typeAscriptionTk? : Option Syntax) (type? : Option (TSyntax `term))
-    (extends? : Option (TSyntax ``Parser.Command.extends)) (sepTk? : Option Syntax)
-    (structCtor? : Option (TSyntax ``Parser.Command.structCtor))
-    (structFields? : Option (Array Syntax))
-    (optDeriving : TSyntax ``Parser.Command.optDeriving)
-    : FmtM TaggedDoc := do
-  let signature ← fmtDeclarationSignature #[tk] none declId binders typeAscriptionTk? type?
-  let (extendsTk?, structParents?) := Option.split <| ← extends?.mapM fun
-    | `(Parser.Command.extends| extends%$extendsTk $structParents:structParent,*) => do
-      let extendsTk ← fmt extendsTk
-      let structParents ← fmtSepArray (sep := ",") structParents
-      return (extendsTk, structParents)
-    | _ => throw .partialFormatter
-  let extendsTk? := extendsTk?.getD empty
-  let structParents? := structParents?.getD ⟨#[]⟩
-  let sepTk? ← fmt? sepTk?
-  let structCtor? ← fmt? structCtor?
-  let structFields ← structFields?.getD #[] |>.mapM fmt
-  let optDeriving ← fmt optDeriving
-  let «extends» := Layouts.keywordPrefixedSepFill extendsTk? structParents? .nonSticky
-  let extendedSignature := Layouts.blocks #[ { block := signature, hardNestedIfFirst := false }, «extends»]
-  let structFields := Layouts.lines structFields
-  let structBody := Layouts.lines #[structCtor?, structFields]
-  let mainDecl := Layouts.whereDeclaration extendedSignature sepTk? structBody
-  return Layouts.lines #[mainDecl, optDeriving]
 
 @[builtin_fmt Lean.Parser.Command.structure]
 public def fmtStructure : Fmt := fun

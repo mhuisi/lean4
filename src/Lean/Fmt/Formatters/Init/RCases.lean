@@ -8,10 +8,9 @@ module
 
 prelude
 public import Lean.Fmt.FmtM.Basic
-public import Lean.Fmt.Formatters.Lean.Parser.Term.Basic
 meta import Init.RCases
+import Lean.Fmt.FmtM.CommonFormatters
 import Init.Data
-import Lean.Fmt.Formatters.Lean.Parser.Term
 
 namespace Lean.Fmt
 

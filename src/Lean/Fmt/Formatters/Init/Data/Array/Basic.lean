@@ -9,6 +9,7 @@ module
 prelude
 public import Lean.Fmt.FmtM.Basic
 meta import Init.Data.Array.Basic
+import Lean.Fmt.FmtM.CommonFormatters
 import Init.Data
 
 namespace Lean.Fmt

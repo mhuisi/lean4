@@ -10,8 +10,8 @@ prelude
 public import Lean.Fmt.Formatters.Lean.Parser.Term.Basic
 public import Lean.Parser.Term
 public import Lean.Fmt.FmtM.Basic
+public import Lean.Fmt.FmtM.CommonFormatters
 meta import Lean.Parser.Term
-import Lean.Fmt.FmtM.CommonFormatters
 import Init.Data
 import Init.While
 import Lean.Fmt.FmtM.Comments
@@ -369,32 +369,6 @@ public def fmtParen : Fmt := fun
     return Layouts.parens lbTk t rbTk
   | _ => throw .partialFormatter
 
-public def fmtNamedArgumentTerm
-    (lbTk : Syntax)
-    (lhs : Syntax)
-    (colonEqTk : Syntax)
-    (body : Syntax)
-    (rbTk : Syntax)
-    : FmtM TaggedDoc := do
-  let lbTk ← fmt lbTk
-  let lhs ← fmt lhs
-  let colonEqTk ← fmt colonEqTk
-  let body ← fmt body
-  let rbTk ← fmt rbTk
-  return Layouts.binder #[lbTk] #[lhs] #[] empty empty colonEqTk body #[rbTk] (kind := .local (respectPseudoAlignment := true))
-
-public def fmtNamedArgumentTerm?
-    (lbTk? : Option Syntax)
-    (lhs? : Option Syntax)
-    (colonEqTk? : Option Syntax)
-    (body? : Option Syntax)
-    (rbTk? : Option Syntax)
-    : FmtM TaggedDoc := do
-  let (some lbTk, some lhs, some colonEqTk, some body, some rbTk) :=
-      (lbTk?, lhs?, colonEqTk?, body?, rbTk?)
-    | return empty
-  fmtNamedArgumentTerm lbTk lhs colonEqTk body rbTk
-
 @[builtin_fmt Lean.Parser.Term.namedArgument]
 public def fmtNamedArgument : Fmt := fun
   | `(Parser.Term.namedArgument| (%$lbTk $id:ident :=%$colonEqTk $body:term )%$rbTk) =>
@@ -700,22 +674,6 @@ public def fmtLetConfig : Fmt := fun stx => do
   let items ← items.getArgs.mapM fmt
   return Layouts.fill items
 
-public def fmtTermInstruction
-    (instruction : TaggedDoc)
-    (instructionComponents : Array Syntax)
-    (semicolonTk? : Option Syntax)
-    (body : Syntax)
-    : FmtM TaggedDoc := do
-  let instructionTrailing ← fmtTrailingWithRetainedNewlinesAndComments (atleastOneNewline := false)
-    <| mkNullNode <| instructionComponents ++ semicolonTk?.toArray
-  let semicolonTk? ← fmt? semicolonTk?
-  let body ← fmt body
-  if ! instructionTrailing.isAlwaysEmpty then
-    return withPosition <| Layouts.retainedWhitespace #[instruction, instructionTrailing, body]
-  let singleLineAlt := flattened <| combine #[instruction, semicolonTk?, .withSepBefore body space]
-  let multiLineAlt := Layouts.lines #[instruction, body]
-  return withPosition <| oneOf #[singleLineAlt, multiLineAlt]
-
 public def fmtLetTerm
     (keywordTk : Syntax)
     (config? : Option (TSyntax ``Parser.Term.letConfig))
@@ -743,37 +701,6 @@ public def fmtHave : Fmt := fun
       have%$haveTk $config:letConfig $decl:letDecl ;%$semicolonTk $body:term) =>
     fmtLetTerm haveTk config decl semicolonTk body
   | _ => throw .partialFormatter
-
-public def isAttributesSimple? : TSyntax ``Parser.Term.attributes → Option Bool
-  | `(Parser.Term.attributes| @[ $attrInstances:attrInstance,* ]) =>
-    attrInstances.getElems.allM fun
-      | `(Parser.Term.attrInstance| $_:attrKind $attr:attr) => do
-        let mut numLeafs := 0
-        for node in attr.raw.topDown do
-          if node.isIdent || node.isAtom then
-            numLeafs := numLeafs + 1
-          if numLeafs > 1 then
-            return false
-        return true
-      | _ =>
-        none
-  | _ =>
-    none
-
-public def fmtDeclWithAttributes
-    (attributes? : Option (TSyntax ``Parser.Term.attributes))
-    (decl : TaggedDoc)
-    (compact : Bool := false)
-    : FmtM TaggedDoc := do
-  let isAttributesSimple := attributes?.any (isAttributesSimple? · |>.getD false)
-  let attributes? ← fmt? attributes?
-  if isAttributesSimple then
-    if compact then
-      return Layouts.softSpacedAtomic #[attributes?, decl]
-    else
-      return Layouts.horizontalOrVertical #[attributes?, decl]
-  else
-    return Layouts.lines #[attributes?, decl]
 
 public def fmtLetRecDecl (compact : Bool) : Fmt := fun
   | `(Parser.Term.letRecDecl|
@@ -1139,21 +1066,6 @@ public def isComplexAlt (stx : Syntax) : FmtM Bool := do
     | throw .partialFormatter
   let patss := stx[1].getArgs.map (·.getArgs)
   return patss.any (·.size > 1)
-
-/--
-Turns the alternatives of a `| pats | pats | pats => rhs` left-hand side into one sub-alternative
-per `|`, attaching each `|` to the alternative that follows it.
--/
-public def joinAltPats (initialAltTk : TaggedDoc) (patss : SepArray sep) : Array TaggedDoc := Id.run do
-  let mut r := #[initialAltTk]
-  for i in (0...patss.elemsAndSeps.size) do
-    let patsOrSep := patss.elemsAndSeps[i]!
-    if i % 2 == 0 then
-      r := r.modify (r.size - 1) fun lastAltTk =>
-        nested <| Layouts.spacedAtomic #[lastAltTk, patsOrSep]
-    else
-      r := r.push patsOrSep
-  return r
 
 public def fmtMatchAlt (stx : Syntax) : FmtM Layouts.Types.Alt := do
   -- The following anti-quotation does not retain the `|` separators,

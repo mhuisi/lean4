@@ -8,7 +8,7 @@ module
 prelude
 public import Lean.Fmt.FmtM.Basic
 public import Lake.DSL.DeclUtil
-import Lean.Fmt.Formatters.Lean.Parser.Term.Basic
+import Lean.Fmt.FmtM.CommonFormatters
 import Init.Data
 
 open Lean Lean.Fmt Lake.DSL

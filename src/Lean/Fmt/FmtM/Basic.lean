@@ -898,12 +898,12 @@ public def fmtArrayWithRetainedIntermediateNewlinesAndComments (stxs : Array Syn
     : FmtM TaggedDoc :=
   fmtArrayWithRetainedIntermediateNewlinesAndCommentsWith fmt stxs
 
-private inductive TrailingGroup (sep : String) where
+public inductive TrailingGroup (sep : String) where
   | group (g : SepArray sep)
   | trailing (t : TaggedDoc)
 deriving Inhabited
 
-private def fmtTSepArrayTrailingGroups (stxs : Syntax.TSepArray ks sep) : FmtM (Array (TrailingGroup sep)) := do
+public def fmtTSepArrayTrailingGroups (stxs : Syntax.TSepArray ks sep) : FmtM (Array (TrailingGroup sep)) := do
   let elemsAndSeps := stxs.elemsAndSeps
   let mut acc : Array (TrailingGroup sep) := #[]
   let mut pendingGroup : SepArray sep := ⟨#[]⟩
@@ -933,51 +933,3 @@ public def fmtTSepArrayWithRetainedIntermediateNewlinesAndComments (stxs : Synta
     | .group g => Layouts.sepArray g <| .fillUsingSpacedSep none .retainTrailingSep
     | .trailing t => t
   return join groups
-
-public def fmtArrayLit (lbTk : Syntax) (elems : Syntax.TSepArray ks ",") (rbTk : Syntax) : FmtM TaggedDoc := do
-  let lbTk ← fmt lbTk
-  let groups ← fmtTSepArrayTrailingGroups elems
-  let rbTk ← fmt rbTk
-  if let #[.group ⟨#[elem]⟩] := groups then
-    if ! elem.needsAppBrackets then
-      return Layouts.bracketed lbTk elem rbTk .dense
-  let groups := groups.map fun
-    | .group g => Layouts.sepArray g <| .fillUsingSpacedSep none .retainTrailingSep
-    | .trailing t => t
-  let elems := join groups
-  return Layouts.bracketed lbTk elems rbTk <| .sparse «break» (stickynessKind := .coequal)
-
-public def fmtSeq (seq : Syntax.TSepArray ks sep) (nestedKind? : Option SyntaxNodeKind) : FmtM TaggedDoc := do
-  if let some nestedKind := nestedKind? then
-    let seqElems := seq.getElems
-    if seqElems.size = 1 && seqElems[0]!.raw.getKind == nestedKind then
-      -- We deliberately skip `withPosition` here to support sticky nested sequences.
-      return ← fmt seqElems[0]!
-  let groups ← fmtTSepArrayTrailingGroups seq
-  let groups := applyPseudoDedented groups
-  let multiLineAlt := join <| groups.map fun
-    | .group g => Layouts.sepLines g (includeSeps := false)
-    | .trailing t => t
-  let mut r := multiLineAlt
-  if groups.size = 1 then
-    if let .group g := groups[0]! then
-      let singleLineAlt := flattened <| Layouts.sepArray g <| .joinUsingSep none space
-      r := oneOf #[singleLineAlt, r]
-  return withPosition r
-where
-  applyPseudoDedented (groups : Array (TrailingGroup sep)) : Array (TrailingGroup sep) := Id.run do
-    for i in (0...groups.size) do
-      let i := groups.size - i - 1
-      let .group g := groups[i]!
-        | continue
-      let j :=
-        if g.elemsAndSeps.size % 2 = 0 then
-          g.elemsAndSeps.size - 2
-        else
-          g.elemsAndSeps.size - 1
-      let some pseudoDedented := getPseudoDedented? g.elemsAndSeps[j]!
-        | break
-      return groups.modify i fun
-        | .group g => .group ⟨g.elemsAndSeps.set! j pseudoDedented.dedentedVariant⟩
-        | _ => unreachable!
-    return groups

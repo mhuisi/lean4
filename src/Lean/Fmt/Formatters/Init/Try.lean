@@ -8,10 +8,6 @@ module
 
 prelude
 public import Lean.Fmt.FmtM.Basic
-public import Lean.Fmt.Formatters.Init.Tactics
-public import Lean.Fmt.Formatters.Init.NotationExtra
-public import Lean.Fmt.Formatters.Lean.Parser.Term
-public import Lean.Fmt.Formatters.Lean.Parser.Command
 meta import Init.Try
 import Lean.Fmt.FmtM.CommonFormatters
 import Init.Data

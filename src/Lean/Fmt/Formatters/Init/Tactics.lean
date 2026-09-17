@@ -9,7 +9,6 @@ module
 prelude
 public import Lean.Fmt.FmtM.Basic
 public import Lean.Fmt.Formatters.Lean.Parser.Term
-public import Lean.Fmt.Formatters.Init.NotationExtra
 meta import Init.Tactics
 import Lean.Fmt.FmtM.CommonFormatters
 import Init.Data
@@ -59,13 +58,6 @@ public def fmtTacticConfigItem : Fmt := fun
   | `(Parser.Tactic.configItem| $item:posConfigItem) => fmt item
   | `(Parser.Tactic.configItem| $item:negConfigItem) => fmt item
   | `(Parser.Tactic.configItem| $item:valConfigItem) => fmt item
-  | _ => throw .partialFormatter
-
-public def tacticOptConfigItems (stx : TSyntax ``Parser.Tactic.optConfig)
-    : FmtM (Array Syntax) := do
-  match stx with
-  | `(Parser.Tactic.optConfig| $items:configItem*) =>
-    return items
   | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.location]
@@ -552,38 +544,6 @@ public def fmtSimpErase : Fmt := fun
       return Layouts.prefixOperator minusTk e .withoutSpacingIfAtomic
     | _ => throw .partialFormatter
 
-public def fmtSimpLikeWithGenericConfig
-    (lhs : Array Syntax)
-    (cfgItems : Array Syntax)
-    (disch? : Option (TSyntax ``Parser.Tactic.discharger))
-    (only? : Option Syntax)
-    (lbTk? : Option Syntax) (args? : Option (Syntax.SepArray ",")) (rbTk? : Option Syntax)
-    (suffix? : Option (TSyntax ``Parser.Tactic.location))
-    : FmtM TaggedDoc := do
-  let lhs := Layouts.spacedAtomic (← lhs.mapM fmt)
-  let cfgItems ← cfgItems.mapM fmt
-  let disch? ← fmt? disch?
-  let «simp» := Layouts.pseudoApplication <| #[lhs] ++ cfgItems ++ #[disch?]
-  let onlyTk? ← fmt? only?
-  let lbTk? ← fmt? lbTk?
-  let args ← fmtSepArray (args?.getD ⟨#[]⟩)
-  let rbTk? ← fmt? rbTk?
-  let suffix? ← fmt? suffix?
-  let args := Layouts.keywordPrefixedCollection onlyTk? lbTk? args rbTk?
-  return Layouts.blocks #[«simp», args, suffix?]
-
-public def fmtSimpLike
-    (lhs : Array Syntax)
-    (cfg : TSyntax ``Parser.Tactic.optConfig)
-    (disch? : Option (TSyntax ``Parser.Tactic.discharger))
-    (only? : Option Syntax)
-    (lbTk? : Option Syntax) (args? : Option (Syntax.SepArray ",")) (rbTk? : Option Syntax)
-    (suffix? : Option (TSyntax ``Parser.Tactic.location))
-    : FmtM TaggedDoc := do
-  let `(Parser.Tactic.optConfig| $cfgItems:configItem*) := cfg
-    | throw .partialFormatter
-  fmtSimpLikeWithGenericConfig lhs cfgItems disch? only? lbTk? args? rbTk? suffix?
-
 public def fmtSimpaLike
     (lhs : TaggedDoc)
     (cfg : TSyntax ``Parser.Tactic.optConfig)
@@ -850,16 +810,6 @@ public def fmtRwRuleSeq : Fmt := fun
     let rbTk ← fmt rbTk
     return Layouts.collection lbTk rules rbTk
   | _ => throw .partialFormatter
-
-public def fmtRwLike (rwTk : Syntax) (cfg? : Option (TSyntax ``Parser.Tactic.optConfig))
-    (rules : Syntax) (loc? : Option (TSyntax `Lean.Parser.Tactic.location)): FmtM TaggedDoc := do
-  let cfg := (← cfg?.mapM tacticOptConfigItems).getD #[]
-  let rwTk ← fmt rwTk
-  let cfg ← cfg.mapM fmt
-  let «rw» := Layouts.pseudoApplication <| #[rwTk] ++ cfg
-  let rules ← fmt rules
-  let loc? ← fmt? loc?
-  return Layouts.blocks #[«rw», rules, loc?]
 
 @[builtin_fmt Lean.Parser.Tactic.rewriteSeq]
 public def fmtRewrite : Fmt := fun

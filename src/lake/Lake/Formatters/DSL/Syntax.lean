@@ -10,8 +10,6 @@ public import Lean.Fmt.FmtM.Basic
 public import Lake.Formatters.DSL.DeclUtil
 public import Lake.DSL.Syntax
 import Lean.Fmt.FmtM.CommonFormatters
-import Lean.Fmt.Formatters.Lean.Parser.Command
-import Lean.Fmt.Formatters.Lean.Parser.Term.Basic
 import Init.Data
 
 open Lean Lean.Fmt Lake.DSL

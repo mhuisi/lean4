@@ -8,9 +8,8 @@ module
 
 prelude
 public import Lean.Fmt.FmtM.Basic
-public import Lean.Fmt.Formatters.Init.Tactics
-public import Lean.Fmt.Formatters.Lean.Parser.Term
 meta import Std.Tactic.Do.Syntax
+import Lean.Fmt.FmtM.CommonFormatters
 import Init.Data
 
 namespace Lean.Fmt

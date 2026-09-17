@@ -9,7 +9,6 @@ prelude
 public import Lean.Fmt.FmtM.Basic
 meta import Lake.Build.Data
 import Lean.Fmt.FmtM.CommonFormatters
-import Lean.Fmt.Formatters.Lean.Parser.Command
 import Init.Data
 
 open Lean Lean.Fmt

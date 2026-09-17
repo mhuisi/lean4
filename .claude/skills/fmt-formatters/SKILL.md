@@ -13,7 +13,7 @@ alternatives the document offers. Key modules:
 - `src/Lean/Fmt/FmtM/Basic.lean` — `fmt`, `fmt?`, `fmtArray`, `fmtSepArray`, `fmtRaw`, `fmtAtomic`, whitespace helpers
 - `src/Lean/Fmt/FmtM/Layouts.lean` — reusable layouts (**prefer these**)
 - `src/Lean/Fmt/FmtM/Primitives.lean` — low-level `TaggedDoc` primitives, `combine`, `stickyCombine`, `sticky`, `withPosition`
-- `src/Lean/Fmt/FmtM/CommonFormatters.lean` — `fmtAppLike`, `fmtFixedApp`, `fmtProjLike`: the shared machinery for application- and projection-shaped syntax
+- `src/Lean/Fmt/FmtM/CommonFormatters.lean` — the `fmt*` utility functions that formatters in several files share: application and projection shapes, binders, signatures, declaration shapes, and tactic shapes
 - `src/Lean/Fmt/FmtM/Attribute.lean` — the `Fmt` types, the registration attributes, and the `FmtProvider` and `CommentCollector` dispatch mechanisms
 - `src/Lean/Fmt/FmtM/Comments.lean` — how comments are parsed out of the whitespace and attached to syntax ranges
 - `src/Lean/Fmt/Core/Basic.lean` — underlying `Doc` language with detailed doc comments
@@ -519,9 +519,13 @@ From `Primitives.lean` (semantics documented in depth on `Doc` in `Core/Basic.le
 
 ## `fmt*` utility functions
 
-Prefer these over re-deriving common shapes. From `FmtM/CommonFormatters.lean` — use these
-whenever the syntax really is an application or a projection, rather than assembling
-`Layouts.application` yourself:
+Prefer these over re-deriving common shapes. Unless stated otherwise, they are in
+`FmtM/CommonFormatters.lean`. This file holds the helpers that formatters in several files use.
+When a second formatter file needs a helper from a formatter file, move the helper to
+`CommonFormatters.lean`. Do not import one formatter file from another.
+
+Application and projection shapes. Use these whenever the syntax really is an application or a
+projection, rather than assembling `Layouts.application` yourself:
 
 - `fmtAppLike terms` — a full application `f a b c`: formats the head (unwrapping a projection head via `fmtProjLike`), formats the arguments with per-argument fill control, and propagates the stickiness of a single argument out of the application when the head is registered with `@[builtin_fmt_sticky_term]`. This is what `fmtApp` is.
 - `fmtFixedApp f args (format := …)` — the same argument handling for a head you have *already* formatted plus raw argument syntax, for keyword-headed syntax with a fixed arity. `fmtFixedApp'` additionally returns the formatted arguments.
@@ -533,7 +537,7 @@ counterpart: it peels one pipe at a time with `deconstruct?` and lays the whole 
 `horizontalOrVertical`, so a long `|>.` chain breaks one link per line (see
 `deconstructPipeProj`/`fmtPipeProj`).
 
-From `Formatters/Lean/Parser/Term/Basic.lean`, `.../Term.lean`, `.../Command.lean`:
+Binders, signatures, and declarations:
 
 - `fmtBinder lbTks lhses subBinders typeAscriptionTk? type? tacticOrDefault? rbTks (kind := .local (respectPseudoAlignment := false))` — any binder form: `(x y : T := v)`, `{x}`, `[inst]`, `⦃x⦄`, also unbracketed ones (empty `lbTks`/`rbTks`).
 - `fmtBinders binders` — groups consecutive explicit/implicit binders with `groupBinders` and returns binder-group documents for `Layouts.localSignature`/`globalSignature`.
@@ -546,18 +550,18 @@ From `Formatters/Lean/Parser/Term/Basic.lean`, `.../Term.lean`, `.../Command.lea
 - `fmtInductiveLike tks declId binders ... ctors computedFields? optDeriving monotonicityBy?` — `inductive`/`coinductive`/`class inductive` declarations.
 - `fmtNamedArgumentTerm lbTk lhs colonEqTk body rbTk` — `(name := value)`-shaped syntax (named args, `(motive := ...)`, `(priority := ...)`).
 - `fmtDeclWithAttributes attributes? decl (compact := false)` — places `@[...]` on the same line as the declaration when the attributes are simple, on their own line otherwise.
-- `fmtLetRecDecls compact` — the declaration list of `let rec`.
-- `fmtLetTerm keywordTk config? decl semicolonTk body` — `let`/`have` terms (`config?` optional), preserving comments and newlines after the declaration.
+- `fmtLetRecDecls compact` (in `Formatters/Lean/Parser/Term.lean`) — the declaration list of `let rec`.
+- `fmtLetTerm keywordTk config? decl semicolonTk body` (in `Formatters/Lean/Parser/Term.lean`) — `let`/`have` terms (`config?` optional), preserving comments and newlines after the declaration.
 - `fmtTermInstruction instruction instructionComponents semicolonTk? body` — attaches a body to a `let`/`have`/`dbg_trace`-style instruction head (built with `Layouts.letDecl` or `Layouts.pseudoApplication`), retaining the user's blank lines/comments after the declaration. `instructionComponents` is the head's *raw* syntax (capture it before `← fmt` shadows the names); `semicolonTk?` is `none` for `do`-style instructions with no `;`. `fmtLetTerm`, `fmtLetrec`, and the `dbg_trace`/`idbg`-family formatters all go through this.
 
-Tactics have their own shared shapes, in `Formatters/Init/Tactics.lean` and
-`Formatters/Init/NotationExtra.lean`. Use them whenever a new tactic copies an existing
-tactic's grammar, rather than reassembling the layout:
+Tactic shapes. Use them whenever a new tactic copies an existing tactic's grammar, rather than
+reassembling the layout:
 
 - `fmtSimpLike lhs cfg disch? only? lbTk? args? rbTk? suffix?` — the whole `simp`-family shape:
   keyword run, config items, `discharger`, `only`, the `[...]` lemma list, and a trailing
   `location`. `fmtSimpLikeWithGenericConfig` takes the config items directly for tactics whose
-  config is not a `Parser.Tactic.optConfig`; `fmtSimpaLike` is the `simpa` variant.
+  config is not a `Parser.Tactic.optConfig`; `fmtSimpaLike` (in `Formatters/Init/Tactics.lean`)
+  is the `simpa` variant.
 - `fmtRwLike rwTk cfg? rules loc?` — `rw`/`rewrite`-shaped tactics: keyword plus config, the rule
   sequence, and an optional `location`, joined with `Layouts.blocks`.
 - `fmtAltsTactic kwTk barTks cases` — a keyword followed by `| case` alternatives that each hold a
@@ -565,6 +569,8 @@ tactic's grammar, rather than reassembling the layout:
 
 Also useful: `fmtDeclWithDeclModifiers` (a `declModifiers` node + decl; the underlying
 `fmtDeclWithModifiers` takes doc comment, attributes, and modifier keywords separately),
+`tacticOptConfigItems` (the config items of a `Parser.Tactic.optConfig`), `joinAltPats` (attaches
+each `|` of a `| pats | pats =>` left-hand side to the alternative that follows it),
 `fmtSeq seq nestedKind?` (tactic/`do`/conv sequences: `withPosition`, one element per line
 with a single-line alternative, plus `pseudoDedented` handling), `fmtArrayLit` (`[a, b, c]`),
 and the whitespace-retaining helpers `fmt{Leading,Trailing}WithRetainedNewlines[AndComments]`,

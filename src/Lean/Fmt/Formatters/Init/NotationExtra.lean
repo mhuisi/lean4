@@ -9,7 +9,6 @@ module
 prelude
 public import Lean.Fmt.FmtM.Basic
 public import Lean.Fmt.Formatters.Lean.Parser.Term
-public import Lean.Fmt.Formatters.Lean.Parser.Command
 meta import Init.NotationExtra
 meta import Init.Notation
 import Lean.Fmt.FmtM.CommonFormatters
@@ -215,15 +214,6 @@ public def fmtCdotTactic : Fmt := fun
     let tacticSeq ← fmt tacticSeq
     return pseudoAligned <| nested <| Layouts.softSpacedAtomic #[cdotTk, tacticSeq]
   | _ => throw .partialFormatter
-
-public def fmtAltsTactic (kwTk : Syntax) (barTks : Array Syntax) (cases : Array (TSyntax k)) : FmtM TaggedDoc := do
-  let kwTk ← fmt kwTk
-  let cases ← barTks.zip cases |>.mapM fun (barTk, tacticSeq) => do
-    let barTk ← fmt barTk
-    let tacticSeq ← fmt tacticSeq
-    return .withSepAfter (nested <| Layouts.softSpacedAtomic #[barTk, tacticSeq]) nl
-  let cases := withPosition <| combine cases
-  return Layouts.horizontalOrVertical #[kwTk, cases]
 
 @[builtin_fmt Lean.solveTactic]
 public def fmtSolve : Fmt := fun

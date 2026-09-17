@@ -8,9 +8,9 @@ module
 
 prelude
 public import Lean.Fmt.FmtM.Basic
-public import Lean.Fmt.Formatters.Lean.Parser.Command
 meta import Lean.Meta.Tactic.Grind.RegisterCommand
 meta import Lean.Parser.Command
+import Lean.Fmt.FmtM.CommonFormatters
 import Init.Data
 
 namespace Lean.Fmt

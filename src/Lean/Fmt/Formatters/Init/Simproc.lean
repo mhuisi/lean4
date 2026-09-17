@@ -8,7 +8,6 @@ module
 
 prelude
 public import Lean.Fmt.FmtM.Basic
-public import Lean.Fmt.Formatters.Lean.Parser.Command
 meta import Init.Simproc
 meta import Lean.Parser.Command
 import Lean.Fmt.FmtM.CommonFormatters
