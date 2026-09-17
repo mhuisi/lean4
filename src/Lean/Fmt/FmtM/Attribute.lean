@@ -10,7 +10,6 @@ prelude
 public import Lean.KeyedDeclsAttribute
 public import Lean.Util.ShareCommon
 public import Lean.Fmt.FmtM.LineInfo
-public import Lean.Fmt.FmtM.Comments
 import Lean.Compiler.InitAttr
 import Lean.ExtraModUses
 import Lean.Fmt.Util.Module
@@ -187,6 +186,65 @@ builtin_initialize registerBuiltinAttribute {
     let entry := { priority, provider := ← mkFmtProvider decl }
     setEnv <| fmtProvidersExt.addEntry (← getEnv) (decl, entry)
 }
+
+/-- Whether the comment was placed in leading or trailing whitespace in the input `Syntax`. -/
+public inductive Comment.Whitespace where
+  | leading
+  | trailing
+  deriving Inhabited, BEq, Repr
+
+/-- Comment placement in the input `Syntax`. -/
+public inductive Comment.Placement where
+  | afterToken
+  | onLineBeforeToken
+  deriving Inhabited, BEq, Repr
+
+/-- Kind of comment in the input `Syntax`. -/
+public inductive Comment.Kind where
+  | lineComment
+  | blockComment
+  deriving Inhabited, BEq, Repr
+
+/-- Comment extracted from an input `Syntax`. -/
+public structure Comment where
+  /-- Kind of comment in the input `Syntax`. -/
+  kind : Comment.Kind
+  /-- Comment placement in the input `Syntax`. -/
+  placement : Comment.Placement
+  /-- Range of the original token in the input `Syntax` that this comment was attached to. -/
+  originalTokenRange : Syntax.Range
+  /-- Range of the trailing whitespace in the input `Syntax`. -/
+  originalWhitespaceRange : Syntax.Range
+  /-- Whether the comment was placed in leading or trailing whitespace in the input `Syntax`. -/
+  originalWhitespaceKind : Comment.Whitespace
+  /--
+  Content of the comment separated into lines.
+  Excludes the comment separators and all whitespace within the comment that serves as indentation
+  of the comment relative to the least indented line with content in the comment.
+  -/
+  content : Array String
+  deriving Inhabited, BEq, Repr
+
+/-- Input that a `CommentCollector` is consulted with. -/
+public structure CommentCollector.Context where
+  env : Environment
+  opts : Options
+  /-- Line information for the input `Syntax`. -/
+  lineInfos : Array SyntaxLineInfo
+
+/--
+Associates the comments of a syntax node with the syntax ranges that they should be attached to,
+overriding the association that `collectComments` determines on its own.
+A collector is consulted for every `Syntax.node` in the input `Syntax` and must leave out the
+comments it is not responsible for, so that they can be associated by a collector of lower priority
+or, failing that, by `collectComments` itself.
+-/
+public abbrev CommentCollector :=
+  CommentCollector.Context → Syntax → Array (Comment × Syntax.Range)
+
+public structure CommentCollectorEntry where
+  priority : Nat
+  collector : CommentCollector
 
 /-- Inserts `entry` after all entries of greater or equal priority. -/
 private def insertCommentCollector
