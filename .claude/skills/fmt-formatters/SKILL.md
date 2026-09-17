@@ -1,6 +1,6 @@
 ---
 name: fmt-formatters
-description: Write formatters for the Lean auto-formatter Fmt. Use when adding or fixing a formatter for a syntax node kind (@[builtin_fmt]/@[builtin_infix_fmt]), working in src/Lean/Fmt/Formatters/, or composing formatting documents with Layouts.lean/Primitives.lean.
+description: Write formatters for the Lean auto-formatter Fmt. Use when adding or fixing a formatter for a syntax node kind (@[builtin_fmt]/@[builtin_infix_fmt]), working in src/Lean/Fmt/Formatters/ or src/lake/Lake/Formatters/, or composing formatting documents with Layouts.lean/Primitives.lean.
 ---
 
 # Writing `Fmt` Formatters
@@ -23,15 +23,17 @@ alternatives the document offers. Key modules:
 being formatted*. A formatter for syntax defined in `src/Init/ByCases.lean` goes in
 `src/Lean/Fmt/Formatters/Init/ByCases.lean` (creating that file + its aggregation-file
 `public import`), **not** in whichever existing file holds similar formatters. Decide
-placement from where the *syntax* is defined, not from what the formatter resembles. See
-[module-structure.md](references/module-structure.md) for the full layout and module header.
+placement from where the *syntax* is defined, not from what the formatter resembles. The
+formatters for the syntax that Lake declares (`src/lake/Lake/...`) are in a separate tree,
+`src/lake/Lake/Formatters/...`. See [module-structure.md](references/module-structure.md) for
+the full layout and module header.
 
 For as-needed details, read:
 
 - [locating-parsers.md](references/locating-parsers.md) — finding the parser for a piece of syntax; which parsers get their own syntax node kind
 - [antiquotations.md](references/antiquotations.md) — writing the syntax match of a formatter, with subtleties
 - [new-layouts.md](references/new-layouts.md) — criteria for proposing a new layout in `Layouts.lean`
-- [module-structure.md](references/module-structure.md) — directory layout of `Formatters/`, aggregation files, module header template
+- [module-structure.md](references/module-structure.md) — directory layout of `Formatters/` and of the Lake formatters, aggregation files, module header template
 
 ## Examples
 
@@ -115,7 +117,7 @@ where
 
 More good examples to read:
 
-- `fmtGrindPattern` (`Formatters/Lean/Meta/Tactic/Grind/Parser.lean`) — a complex command composed entirely from layouts (`spacedAtomic`, `bracketed`, `application`, `sepFill`, `assignmentDeclaration`, `whereDeclaration`)
+- `fmtGrindPattern` (`Formatters/Lean/Meta/Tactic/Grind/Parser.lean`) — a complex command composed entirely from layouts (`spacedAtomic`, `bracketed`, `blocks`, `sepFill`, `assignmentDeclaration`, `lines`, `whereDeclaration`)
 - `fmtStructInst` (`Formatters/Lean/Parser/Term.lean`) — `bracketed ... (.sparse nl)` for `{ ... }` blocks, sep arrays, `sepHorizontalOrVertical`
 - `fmtAbbrev`/`fmtDefinition` (`Formatters/Lean/Parser/Command.lean`) — one alternative per declaration body form, delegating to `fmtAssignmentDeclaration`/`fmtMatchDeclaration`/`fmtWhereDeclaration`
 
@@ -136,9 +138,10 @@ inside core, and the plain form (`@[fmt]`, `@[infix_fmt]`, `@[conditional_fmt]`,
   - `separateFinalOperand : Bool := false` — offer a layout that breaks only before the last
     operand (`Types.InfixOperatorFormat.sparse` ignores it when `trailingOperator` is set).
   - `precs? : Option InfixOperationPrecs := none` — the parser's `{ prec, lhsPrec, rhsPrec }`,
-    read off the parser definition. Two nested nodes join into one operator chain when their
-    `precs?` agree, so this is what makes `a + b + c` one chain rather than nested operations.
-    Without it, the chain extends through `extendedChainKinds` alone.
+    read off the parser definition. Nested nodes of the same kind always join one operator
+    chain. `precs?` also joins nested nodes of *other* kinds when their `precs?` agree, so this
+    is what makes `a + b - c` one chain rather than nested operations. Without it, the chain
+    extends to other kinds only through `extendedChainKinds`.
   - `extendedChainKinds : Std.HashSet SyntaxNodeKind := {}` — further kinds the chain may
     continue with.
 
@@ -363,17 +366,17 @@ Lean-specific layouts:
 |---|---|
 | `Layouts.retainedWhitespace` | Interleave documents with whitespace documents (from `fmtTrailingWithRetainedNewlines[AndComments]`) to preserve the user's blank lines/comments between parts of a declaration |
 | `Layouts.prefixOperator` / `Layouts.postfixOperator` | `-x`, `@t`, `x⁻¹`; `.withSpacing`/`.withoutSpacing` chooses whether operator and operand are glued. `prefixOperator` also has `.withoutSpacingIfAtomic`, which glues only when the operand is atomic or self-delimited and is not a raw fallback |
-| `Layouts.infixOperator` | Alternating chain `#[operand, op, operand, ...]`. By default operators lead their line when broken (`:` at line start); `trailingOperator := true` breaks *after* operators instead. `.sparse` (default) only fills; `.dense` additionally offers a fallback where everything except the last operand is flattened (good for `:=`-like chains where only the rhs should break). Both formats take `hardNestedFirstOperand` (indentation stacking, default `true`) and `spacing` (default `true`; `false` glues operators to their operands). `.sparse` takes two more, both ignored when `trailingOperator` is set: `alignedOperators` puts every operand on its own line instead of filling (`calc` steps, `fmtCalcStepLike`), and `separateFinalOperand` fills all but the last operand and breaks before it (`fmtArrow`) |
+| `Layouts.infixOperator` | Alternating chain `#[operand, op, operand, ...]`. By default operators lead their line when broken (`:` at line start); `trailingOperator := true` breaks *after* operators instead. `.sparse` (default) only fills; `.dense` additionally offers a height-penalized fallback where everything except the last operand is flattened (good for `:=`-like chains where only the rhs should break). `.dense` offers this fallback only for a single operator (or with `trailingOperator := true`) and only when the last operand is not `aligned`; its `respectPseudoAlignment` option (default `true`) also blocks it for a `pseudoAligned` last operand. Both formats take `hardNestedFirstOperand` (indentation stacking, default `true`) and `spacing` (default `true`; `false` glues operators to their operands). `.sparse` takes two more, both ignored when `trailingOperator` is set: `alignedOperators` puts every operand on its own line instead of filling (`calc` steps, `fmtCalcStepLike`), and `separateFinalOperand` fills all but the last operand and breaks before it (`fmtArrow`) |
 | `Layouts.typeAscription` | The `lhs : rhs` triple — `infixOperator #[lhs, tk, rhs]`, defaulting to `.dense` |
 | `Layouts.pipeOperator` | Operator chains that break after the operator with dense fallback (`infixOperator … (.dense (trailingOperator := true))`) |
 | `Layouts.keywordPrefixedSeq` | Keyword followed by one operand, breaking + nesting after the keyword (`namespace Foo`, `by tac`, `from e`); `.sticky` or `.nonSticky` |
-| `Layouts.keywordPrefixedTerm` | Keyword glued to a single operand by a space, with proper sticky and empty handling — clause suffixes like `with pat`, `at h`, `hiding foo` (`.sticky`/`.nonSticky`). Unlike `keywordPrefixedSeq`, it never breaks between keyword and operand |
+| `Layouts.keywordPrefixedTerm` | Keyword followed by a single operand, with proper sticky and empty handling — clause suffixes like `with pat`, `at h`, `hiding foo` (`.sticky`, the default, or `.nonSticky`). Unlike `keywordPrefixedSeq`, the non-sticky form glues keyword and operand with a space; it breaks after the keyword only when the operand is `aligned`. The sticky variant keeps the keyword at the end of the previous line and puts the operand on the next line |
 | `Layouts.keywordPrefixedSepArray` / `Layouts.keywordPrefixedSepFill` | Keyword followed by a separated list (`deriving Foo, Bar`, `for x, y`): list after the keyword, or on its own nested lines below it; `sepFill` fixes the list layout to `sepFill` (`.sticky`/`.nonSticky`) |
 | `Layouts.keywordPrefixedAlts` | Keyword followed by match alternatives (`Array Types.Alt`) — the `alts` counterpart of `keywordPrefixedTerm` (`.sticky`/`.nonSticky`) |
 | `Layouts.keywordPrefixedCollection` | Keyword glued by a space to a `collection`, keeping the collection's stickiness (`simp [a, b]`-shaped clause suffixes) |
 | `Layouts.keywordSeparated` | Two sides separated by a keyword that may either trail the lhs line or lead the rhs line (`show ... from ...`, `show ... by ...`, `match ... with ...`, `set_option ... in ...`). The `Types.KeywordSeparatedFormat` options are `allowFlattening` (forbid the single-line form with `false`) and `nestedRhs` (don't indent the rhs with `false`) |
 | `Layouts.blocks` | A sequence of blocks joined by flattenable newlines with sticky attachment between adjacent blocks — chained tactic modifiers and clause suffixes (`simp only [...] at h ⊢`, `conv at h in ...`, signature + `extends`). Takes `Array Types.Block`; a bare `TaggedDoc` coerces to a block with `hardNestedIfFirst := true`, so set that field to `false` per block to opt out of the stacked indentation. `Types.BlocksFormat` has one field, `nested := true` |
-| `Layouts.conditional` | `if cond then ... else ...`, with a chain of `else if` branches (`Array Types.ElseIf`). Each `then`/`else` block may trail its keyword's line or break below it. The trailing `allowFlattening : Bool` is required and positional; flattening to one line is offered only when it is `true` *and* there are no `else if` branches. Reached through `@[builtin_conditional_fmt]`/`fmtConditional`, which passes `allowFlattening := ! inputSpannedMultipleLines` — don't call it directly |
+| `Layouts.conditional` | `if cond then ... else ...`, with a chain of `else if` branches (`Array Types.ElseIf`). Each `then`/`else` block may trail its keyword's line or break below it. The trailing `allowFlattening : Bool` is required and positional; flattening to one line is offered only when it is `true` *and* there are no `else if` branches. Reached through `@[builtin_conditional_fmt]`/`fmtConditional`, which sets `allowFlattening` to `true` only when the input conditional is on one line — don't call it directly |
 | `Layouts.application` | Real function application: fill arguments with spaces, nest when broken, and parenthesize arguments that need it. `format : Types.ApplicationFormat` is a structure — `hardNestedFirstTerm := true`, `sparse := false` (set it to `true` to suppress the glued two-term fallback), and the two fields with no default, `parenthesize` and `respectPseudoAlignment`. Most formatters get here via `fmtAppLike`/`fmtFixedApp` rather than calling it. `applicationWithSomeFilled` gives per-argument fill control |
 | `Layouts.pseudoApplication` | **The common case**: keyword-plus-operands sequences that only *look* like application (`export ns (ids)`, `exact e`, `deriving ... for ...`). Same layout as `application`, but its `Types.PseudoApplicationFormat` defaults `parenthesize` and `respectPseudoAlignment` to `false`, so no argument is ever parenthesized. Prefer this over `application` unless you are formatting an actual application node |
 | `Layouts.metaApplication` | Call-syntax with the bracket glued to the head, `f(a b c)` — the `bracketed … .dense` of a filled argument list. Arguments are `Array metaApplication.Term`: `.elems docs` fills a run of arguments, `.sep doc` is a separator between runs (`metaApplication.Term.ofSepArray` builds both from a `SepArray`). Used by the syntax/parser DSL (`Parser.Syntax.unary`, `sepBy(...)`) and `spred(...)` |
@@ -382,11 +385,11 @@ Lean-specific layouts:
 | `Layouts.parens` | `( body )` — the `bracketed … .dense` special case for parenthesized content (prefer this over `bracketed … .dense`; used by `binder`, level/prec parens, named-arg lists) |
 | `Layouts.parenthesizedSeq` | A parenthesized sequence `( seq )` that may break after `(` and before `)` (`bracketed … (.sparse «break»)`; parenthesized tactic/conv sequences) |
 | `Layouts.collection` | List/array literals `[…]`, `#[…]` — filled elements inside `bracketed … .sparse`; `Types.ArrayLitFormat` offers `spacing` (space/`nl` just inside the brackets, for `⟨ … ⟩`-style syntax) and `unindentedRb` |
-| `Layouts.localSignature` / `Layouts.globalSignature` | `lvals binders : type` — binder groups plus optional type ascription. The two differ only in the `Types.SignatureKind` they pass on: `.local` uses a dense type ascription (term-level signatures: `fun`, quantifiers), `.global` a sparse one (declaration headers: `def foo ... : T`). `lvals : Array TaggedDoc` (pass `#[]` when there is no lval) and `binderGroups : Array (Array (Array TaggedDoc))`, as returned by `fmtBinders` |
+| `Layouts.localSignature` / `Layouts.globalSignature` | `lvals binders : type` — binder groups plus optional type ascription. The two differ only in the `Types.SignatureKind` they pass on: `.local` uses a dense type ascription (term-level signatures: `fun`, quantifiers), `.global` a sparse one (declaration headers: `def foo ... : T`). `.local` has a `respectPseudoAlignment` option (default `true`) that it passes to the dense format. `lvals : Array TaggedDoc` (pass `#[]` when there is no lval) and `binderGroups : Array (Array (Array TaggedDoc))`, as returned by `fmtBinders` |
 | `Layouts.assignmentDeclaration` | `signature := body`; `sticky := true` additionally gives the result a sticky variant (used for `fun ... => body`) |
 | `Layouts.matchDeclaration` | Signature followed by match alternatives on the lines below |
 | `Layouts.whereDeclaration` | `signature where body` with the body always on the lines below |
-| `Layouts.binder` | A single binder `(x y : T := default)`; also takes a `Types.SignatureKind` (default `.local`) |
+| `Layouts.binder` | A single binder `(x y : T := default)`; also takes a `Types.SignatureKind` (default `.local (respectPseudoAlignment := false)`) |
 | `Layouts.letDecl` | The declaration head of a `let`/`have`-like term (keyword + config + decl); `Types.LetTermFormat.separateSignatureAndDecl` breaks between `keyword config` and the decl instead of spacing them. Attach the body with `fmtTermInstruction` (which applies `retainedWhitespace`) rather than calling this directly |
 | `Layouts.alt` / `Layouts.alts` | Match alternatives: `alt subAlts arrowTk rhs` builds one alternative (a `Types.Alt` with flat and non-flat variants), `alts` lays out the list, each on its own line, wrapped in `withPosition`; `allowFlattenedAlts := true` also offers a collapsed form where every alt is flattened (used for simple matches). `alt`'s `isComplex := true` puts each sub-alternative of one arm on its own line instead of `horizontalOrVertical` |
 | `Layouts.quantified` | Chains of quantifier heads (`Array Types.QuantifierHead`) plus the body (`∀ x, ∃ y, p`); marks its result `pseudoAligned`. `fmtQuantifierHead` builds the heads from the `@[builtin_quantifier_fmt]` components |
@@ -429,11 +432,13 @@ Semantics:
 is the sticky-aware two-part join, and the one to reach for whenever a keyword/head is
 followed by a body that might itself be sticky. It builds `combine #[.withSepAfter lhs sep, rhs]`
 and, if `rhs` has a sticky variant, adds the alternative in which `sep` is replaced by a
-plain `space` and `rhs` by its sticky variant (via `withStickyAlt` with `rhs`'s own
-`StickynessKind`) — letting e.g. a `fun ... =>` start on the previous line with only its
-body broken. Most layouts that attach a body to a head (`keywordPrefixedSeq`,
-`keywordPrefixedTerm`, `assignmentDeclaration`, `whereDeclaration`, `keywordSeparated`,
-`conditional`) are built on it.
+plain `space` and `rhs` by its sticky variant (via `withStickyAlt`, configured from `rhs`'s own
+`StickynessKind` by `withStickyAlt.Config.ofSticky`) — letting e.g. a `fun ... =>` start on the
+previous line with only its body broken. `allowFlattening := false` removes the flattened
+non-sticky alternative for a `.preferSticky` rhs, so only the overflow-penalized one remains
+(`Layouts.conditional` uses this when it must not flatten). Most layouts that attach a body to
+a head (`keywordPrefixedSeq`, `keywordPrefixedTerm`, `assignmentDeclaration`,
+`whereDeclaration`, `keywordSeparated`, `conditional`) are built on it.
 
 ### `withPosition`
 
@@ -444,8 +449,8 @@ sequences, do-blocks, match alternatives). Without a corresponding `Fmt.withPosi
 the formatter, the optimizer may produce a layout in which continuation lines are
 indented less than the parser requires, so the output would re-parse differently or not
 at all. Whenever the parser you are formatting uses `withPosition`/`colGt`/`colGe`, wrap
-the corresponding document in `withPosition` (see `fmtTacticSeq1Indented`,
-`fmtMatchAlts`).
+the corresponding document in `withPosition` (see `fmtSeq`, which `fmtTacticSeq1Indented`
+uses, and `Layouts.alts`, which `fmtMatchAlts` uses).
 
 ### `sticky`
 
@@ -518,7 +523,7 @@ Prefer these over re-deriving common shapes. From `FmtM/CommonFormatters.lean` �
 whenever the syntax really is an application or a projection, rather than assembling
 `Layouts.application` yourself:
 
-- `fmtAppLike terms` — a full application `f a b c`: formats the head (unwrapping a projection head via `fmtProjLike`), formats the arguments with per-argument fill control, and propagates the last argument's stickiness out of the application when the head is registered with `@[builtin_fmt_sticky_term]`. This is what `fmtApp` is.
+- `fmtAppLike terms` — a full application `f a b c`: formats the head (unwrapping a projection head via `fmtProjLike`), formats the arguments with per-argument fill control, and propagates the stickiness of a single argument out of the application when the head is registered with `@[builtin_fmt_sticky_term]`. This is what `fmtApp` is.
 - `fmtFixedApp f args (format := …)` — the same argument handling for a head you have *already* formatted plus raw argument syntax, for keyword-headed syntax with a fixed arity. `fmtFixedApp'` additionally returns the formatted arguments.
 - `fmtProjLike lhs dotTk field` — `lhs.field`, preserving `lhs`'s stickiness and marking the result self-delimited.
 - `allowAppArgFill stx` — the predicate behind the above: a `fun` argument (bare, parenthesized, or as a named argument) must not be filled mid-line.
@@ -530,15 +535,15 @@ counterpart: it peels one pipe at a time with `deconstruct?` and lays the whole 
 
 From `Formatters/Lean/Parser/Term/Basic.lean`, `.../Term.lean`, `.../Command.lean`:
 
-- `fmtBinder lbTks lhses subBinders typeAscriptionTk? type? tacticOrDefault? rbTks (kind := .local)` — any binder form: `(x y : T := v)`, `{x}`, `[inst]`, `⦃x⦄`, also unbracketed ones (empty `lbTks`/`rbTks`).
+- `fmtBinder lbTks lhses subBinders typeAscriptionTk? type? tacticOrDefault? rbTks (kind := .local (respectPseudoAlignment := false))` — any binder form: `(x y : T := v)`, `{x}`, `[inst]`, `⦃x⦄`, also unbracketed ones (empty `lbTks`/`rbTks`).
 - `fmtBinders binders` — groups consecutive explicit/implicit binders with `groupBinders` and returns binder-group documents for `Layouts.localSignature`/`globalSignature`.
 - `fmtLocalSignature`/`fmtGlobalSignature lval binders typeAscriptionTk? type?` — `lval binders : type` (`local` for term-level signatures, `global` for declaration headers).
 - `fmtDeclarationSignature declTks namedPrio? declId? binders typeAscriptionTk? type?` — a full declaration header such as `def foo (x : Nat) : T`.
-- `fmtAssignmentDeclaration declTk ... colonEqTk declBody terminationSuffix whereDecls?` — `sig := body` declarations plus termination suffix and `where` decls, retaining the user's blank lines between the parts.
-- `fmtMatchDeclaration declTk ... matchAlts terminationSuffix whereDecls?` — declarations whose body is a list of match alternatives (`def f | 0 => ...`).
+- `fmtAssignmentDeclaration declTk ... colonEqTk? declBody terminationSuffix? whereDecls?` — `sig := body` declarations plus termination suffix and `where` decls, retaining the user's blank lines between the parts.
+- `fmtMatchDeclaration declTk ... matchAlts terminationSuffix? whereDecls?` — declarations whose body is a list of match alternatives (`def f | 0 => ...`).
 - `fmtWhereDeclaration declTk ... whereTk fields whereDecls?` — `sig where fields` declarations (e.g. `instance ... where`).
 - `fmtStructureLike tk declId binders ... extends? sepTk? structCtor? structFields? optDeriving` — `structure`/`class` declarations.
-- `fmtInductiveLike tks declId binders ... ctors computedFields? optDeriving` — `inductive`/`coinductive`/`class inductive` declarations.
+- `fmtInductiveLike tks declId binders ... ctors computedFields? optDeriving monotonicityBy?` — `inductive`/`coinductive`/`class inductive` declarations.
 - `fmtNamedArgumentTerm lbTk lhs colonEqTk body rbTk` — `(name := value)`-shaped syntax (named args, `(motive := ...)`, `(priority := ...)`).
 - `fmtDeclWithAttributes attributes? decl (compact := false)` — places `@[...]` on the same line as the declaration when the attributes are simple, on their own line otherwise.
 - `fmtLetRecDecls compact` — the declaration list of `let rec`.
@@ -621,6 +626,15 @@ search stays efficient.
    dependencies must be built first, and anything that makes elaboration slow or
    non-terminating makes `lake fmt` hang. It elaborates
    with `Elab.inServer := true`, which is what makes a stray `idbg` in the file hang it.
+   Elaboration also matters for ambiguous notation: when the alternatives of a `choice` node
+   format differently, `fmtChoiceNode` takes the alternative that the elaborator picked. If the
+   elaborator recorded no pick (for example, because elaboration failed), the formatting of that
+   command fails.
+
+   A command that fails to format does not stop `lake fmt`. The command keeps its input text,
+   and `lake fmt` continues with the next command. The same occurs when the formatted command
+   does not parse again. Thus, a command that stays unchanged in the output can be a silent
+   failure. To see the error, run `lake fmt --fatal` on a copy of the file.
 3. Put examples in a fixture of the `tests/fmt` test pile. The fixtures are grouped by syntax
    area, not one per formatter: `tests/fmt/fmtStr.lean`, `tests/fmt/fmtInterpolatedStr.lean`,
    `tests/fmt/fmtInfixComments.lean`, `tests/fmt/fmtMultiLineTokenComments.lean`, and so on.
@@ -664,3 +678,9 @@ on the syntax at hand (including a dump of the unmatched syntax form).
 Syntax declared with `local syntax`/`local macro`/`local notation` gets a private node kind
 and can never carry a formatter. Add `-Dlinter.fmt.missing.ignorePrivate=true` to drop those
 warnings when a file has many of them.
+
+`lean` does not link Lake, so Lake's formatters register only when Lake is loaded as a plugin.
+For a file that uses Lake syntax, add `--plugin=build/release/stage1/lib/lean/libLake_shared.so`.
+Without it, the linter reports every Lake command as a missing formatter.
+`script/missing-fmts.sh <stage dir> <outdir> [jobs] [filelist]` runs the linter over all of core
+and adds the plugin for Lake files.

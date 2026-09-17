@@ -120,7 +120,8 @@ present in the syntax tree, so read it by index from the matched node and render
 takes the separator from `stx[7]`). The `patternIgnore(...)` alternation may itself be a
 *wrapping node*, so the token can sit one level deeper than the obvious index: `discharger`'s
 `patternIgnore(&"discharger" <|> &"disch")` puts the keyword inside a `patternIgnore` node, so
-the keyword atom is `getStxArg! (← getStxArg! stx 1) 0`, not `stx[1]` (see `fmtTacticDischarger`).
+the keyword atom is `stx[1][0][0]` (read with nested `getStxArg!` calls), not `stx[1]` (see
+`fmtTacticDischarger`).
 
 **Repetitions guarded by `linebreak` cannot be destructured inline.** A parser like
 `calcSteps` (`... withPosition((ppLine linebreak calcStep)*)`) puts a `linebreak` before
@@ -136,9 +137,12 @@ anti-quotation parser cannot express (see `fmtStructInstLVal`, `fmtLetConfig`).
 
 **Ambiguous notations parse to a `choice` node.** Brackets shared by several parsers
 (e.g. `{ ... }` is both set-builder `«term{_}»` and `structInst`) parse to a `choice`
-node, but `fmt` resolves it via `fmtChoiceNode` (which formats the first alternative)
-*before* dispatching, so your per-kind formatter still receives the right node. A
-kind-qualified quotation works directly: `` `(«term{_}»| {%$lbTk $elems:term,* }%$rbTk) ``.
+node. `fmt` sends the `choice` node to `fmtChoiceNode`, which formats each alternative with the
+formatter of its own kind. Thus your per-kind formatter still receives a node of its kind. When
+all alternatives that did not fall back to `fmtRaw` give the same document, `fmtChoiceNode` uses
+that document. Otherwise, it uses the alternative that the elaborator picked
+(`Elab.ChoiceResolutionInfo`), and fails with `ambiguousChoiceNode` if the elaborator picked none.
+A kind-qualified quotation works directly: `` `(«term{_}»| {%$lbTk $elems:term,* }%$rbTk) ``.
 
 **A `(… <|> hygieneInfo)`-style "optional" is not an `optional`.** Some heads, like
 `sufficesDecl`'s `(atomic (group (binderIdent >> " : ")) <|> hygieneInfo)`, encode "binder

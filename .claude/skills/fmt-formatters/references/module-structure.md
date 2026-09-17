@@ -14,7 +14,8 @@ syntax/parsers being formatted:
 | `Lean.Meta.Tactic.Grind.Parser` | `src/Lean/Fmt/Formatters/Lean/Meta/Tactic/Grind/Parser.lean` |
 
 There are three top-level trees, one per source tree that declares syntax: `Init/`, `Std/`,
-and `Lean/`.
+and `Lean/`. The formatters for Lake's syntax are in a separate tree (see
+[Lake formatters](#lake-formatters)).
 
 Formatter modules are registered in aggregation files that mirror the hierarchy:
 
@@ -84,3 +85,22 @@ Notes:
   syntax-node kind; `@[builtin_fmt]` will not stop you, but only one wins.
 - Do not add `/-! … -/` section docstrings to group formatters within a module —
   formatters are listed one after another without section headers.
+
+## Lake formatters
+
+The formatters for the syntax that Lake declares are in `src/lake/Lake/Formatters/`. This tree
+mirrors `src/lake/Lake/`: the formatters for the syntax of `Lake.Config.Meta` are in
+`Lake.Formatters.Config.Meta`. `src/lake/Lake/Formatters.lean` and the aggregation files below
+it import all modules of the tree, as in the Lean tree.
+
+The differences from the Lean tree are:
+
+- The header uses `Copyright (c) <year> Lean FRO, LLC.` and `Authors: Marc Huisinga` (no blank
+  line before it).
+- After the imports, write `open Lean Lean.Fmt` and then `namespace Lake.Formatters`.
+- `Lake` and `Lake.CLI.Fmt` import `Lake.Formatters`. A Lake module with `@[builtin_fmt]` must
+  stay reachable by imports from `LakeMain`. If it is not, its formatters do not register, and
+  `lake fmt` falls back to `fmtRaw` for its syntax without an error.
+- `lean` does not link Lake. To see Lake's formatters with `lean` (for example, for the
+  `linter.fmt.missing` linter), load Lake as a plugin with
+  `--plugin=build/release/stage1/lib/lean/libLake_shared.so`.

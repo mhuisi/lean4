@@ -50,7 +50,7 @@ public def array (array : Array TaggedDoc) (format : Types.ArrayFormat) : Tagged
       combine terms
   | .joinUsingBreak =>
     let terms := array.map (.withSepAfter · «break»)
-    combine terms
+    maybeFlattened <| combine terms
   | .fill =>
     let array := array.filter (! ·.isAlwaysEmpty)
     fillUsingSpace array

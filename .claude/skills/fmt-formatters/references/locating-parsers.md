@@ -66,8 +66,8 @@ Caveats when discovering kinds this way:
   `cmdsKind` and `headerKind`, which are not parser declarations; the specialized attributes do
   not.
 - **Root-namespace kinds are written bare**, e.g. `@[builtin_fmt «term‹_›»]`,
-  `@[builtin_fmt tacticGet_elem_tactic]` (syntax declared outside any `namespace`, like the tail of
-  `Init/Tactics.lean`). Do **not** prefix them with `_root_.` — the attribute keeps the prefix
+  `@[builtin_fmt «tacticBy_cases_:_»]` (syntax declared outside any `namespace`, like
+  `Init/ByCases.lean`). Do **not** prefix them with `_root_.` — the attribute keeps the prefix
   literally and rejects it.
 
 ## Which parsers receive their own syntax node kind
