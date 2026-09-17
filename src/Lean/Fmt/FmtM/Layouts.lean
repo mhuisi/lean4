@@ -52,7 +52,6 @@ public def array (array : Array TaggedDoc) (format : Types.ArrayFormat) : Tagged
     let terms := array.map (.withSepAfter · «break»)
     maybeFlattened <| combine terms
   | .fill =>
-    let array := array.filter (! ·.isAlwaysEmpty)
     fillUsingSpace array
 
 public def lines (lines : Array TaggedDoc) : TaggedDoc :=
@@ -183,52 +182,29 @@ where
           elem ++ afterElem
     return joinUsing hardNl elems
 
-  fillUsingSep (sepArray : SepArray sep) (afterElem? afterSep? : Option TaggedDoc) : TaggedDoc := Id.run do
+  fillUsingSep (sepArray : SepArray sep) (afterElem? afterSep? : Option TaggedDoc) : TaggedDoc :=
     let afterElem := afterElem?.getD empty
     let afterSep := afterSep?.getD empty
-    let mut (elems, seps) := split sepArray
-    if elems.size == 0 then
-      return empty
-    if seps.size == elems.size then
-      let trailingSep := seps.back!
-      elems := elems.modify (elems.size - 1) fun lastElem => join #[lastElem, afterElem, trailingSep]
-      seps := seps.pop
-    let hd := elems[0]!
-    if elems.size == 1 then
-      return hd
-    let mut lastFlattened : TaggedDoc := flattened hd
-    let mut lastNotFlattened : TaggedDoc := hd
-    for elem in elems[1...*], sep in seps do
-      let lastMaybeFlattened := oneOf #[lastFlattened, lastNotFlattened]
-      lastFlattened := oneOf #[
-        join #[lastFlattened, afterElem, sep, afterSep, flattened elem],
-        join #[lastMaybeFlattened, afterElem, sep, afterSep, hardNl, flattened elem]
-      ]
-      lastNotFlattened := join #[lastMaybeFlattened, afterElem, sep, afterSep, hardNl, elem]
-    return oneOf #[lastFlattened, lastNotFlattened]
+    let (elems, seps) := splitAttachingTrailingSep sepArray afterElem
+    fillWith elems fun i =>
+      let sep := join #[afterElem, seps[i]!, afterSep]
+      { flat := sep, broken := sep }
 
-  fillUsingSpacedSep (sepArray : SepArray sep) (afterElem? : Option TaggedDoc) : TaggedDoc := Id.run do
+  fillUsingSpacedSep (sepArray : SepArray sep) (afterElem? : Option TaggedDoc) : TaggedDoc :=
     let afterElem := afterElem?.getD empty
+    let (elems, seps) := splitAttachingTrailingSep sepArray afterElem
+    fillWith elems fun i =>
+      let sep := join #[afterElem, seps[i]!]
+      { flat := join #[sep, space], broken := sep }
+
+  /-- Like `split`, but appends a trailing separator to the last element. -/
+  splitAttachingTrailingSep (sepArray : SepArray sep) (afterElem : TaggedDoc)
+      : Array TaggedDoc × Array TaggedDoc := Id.run do
     let mut (elems, seps) := split sepArray
-    if elems.size == 0 then
-      return empty
-    if seps.size == elems.size then
-      let trailingSep := seps.back!
-      elems := elems.modify (elems.size - 1) fun lastElem => join #[lastElem, afterElem, trailingSep]
+    if ! seps.isEmpty && seps.size == elems.size then
+      elems := elems.modify (elems.size - 1) fun lastElem => join #[lastElem, afterElem, seps.back!]
       seps := seps.pop
-    let hd := elems[0]!
-    if elems.size == 1 then
-      return hd
-    let mut lastFlattened : TaggedDoc := flattened hd
-    let mut lastNotFlattened : TaggedDoc := hd
-    for elem in elems[1...*], sep in seps do
-      let lastMaybeFlattened := oneOf #[lastFlattened, lastNotFlattened]
-      lastFlattened := oneOf #[
-        join #[lastFlattened, afterElem, sep, space, flattened elem],
-        join #[lastMaybeFlattened, afterElem, sep, hardNl, flattened elem]
-      ]
-      lastNotFlattened := join #[lastMaybeFlattened, afterElem, sep, hardNl, elem]
-    return oneOf #[lastFlattened, lastNotFlattened]
+    return (elems, seps)
 
   split (sepArray : SepArray sep) : Array TaggedDoc × Array TaggedDoc := Id.run do
     let mut elems := #[]

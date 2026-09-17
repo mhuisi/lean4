@@ -142,14 +142,16 @@ public def join (ds : Array TaggedDoc) : TaggedDoc :=
   propagateArrayMetaData ds (.join ·)
 public def joinUsing (sep : TaggedDoc) (ds : Array TaggedDoc) : TaggedDoc :=
   propagateArrayMetaData ds (.joinUsing sep.doc ·)
+public def fillWith (ds : Array TaggedDoc) (sep : Nat → FillSep TaggedDoc) : TaggedDoc :=
+  propagateArrayMetaData ds (.fillWith · fun i =>
+    let { flat, broken } := sep i
+    { flat := flat.doc, broken := broken.doc })
 public def fill (ds : Array TaggedDoc) : TaggedDoc :=
   propagateArrayMetaData ds (.fill ·)
 public def fillWrapping (ds : Array TaggedDoc) (wrap : TaggedDoc → TaggedDoc) : TaggedDoc :=
   -- `wrap` is only ever applied to untagged internal documents created by `fillWrapping`,
   -- so it is safe to lift it to `Doc`.
   propagateArrayMetaData ds (.fillWrapping · fun d => wrap (untagged d) |>.doc)
-public def fillUsing (sep : TaggedDoc) (ds : Array TaggedDoc) : TaggedDoc :=
-  propagateArrayMetaData ds (.fillUsing sep.doc ·)
 public def fillUsingSpace (ds : Array TaggedDoc) : TaggedDoc :=
   propagateArrayMetaData ds (.fillUsingSpace ·)
 public def fillUsingSpaceWrapping (ds : Array TaggedDoc) (wrap : TaggedDoc → TaggedDoc) : TaggedDoc :=
@@ -169,11 +171,6 @@ public def fillUsingSpaceWithSoftBoundaries (dss : Array (Array TaggedDoc)) : Ta
   return untagged <| .fillUsingSpaceWithSoftBoundaries (DefaultCost.ofHeightFallbackPenalty 1) <|
     dss.map (·.map (·.doc))
 
-public def fillSomeUsing (sep : TaggedDoc) (ds : Array (Fillable TaggedDoc)) : TaggedDoc := Id.run do
-  if ds.size == 1 then
-    return ds[0]!.v
-  return untagged <| .fillSomeUsing sep.doc <| ds.map fun { v, allowFill } =>
-    { v := v.doc, allowFill := allowFill }
 public def fillSomeUsingSpace (ds : Array (Fillable TaggedDoc)) : TaggedDoc := Id.run do
   if ds.size == 1 then
     return ds[0]!.v
@@ -431,7 +428,7 @@ end TaggedDoc
 
 export TaggedDoc (untagged taggedNode taggedText taggedWhitespace isTagged tag addMetaData getMetaData? failure newline nl «break» hardNl text empty space nested
   hardNested doublyNested withFailureFallbackPenalty withOverflowFallbackPenalty withHeightFallbackPenalty fallbackOnFailure fallbackOnOverflow fallbackOnHeight
-  aligned unflattenable flattened maybeFlattened unindented final initial free guarded either oneOf append join joinUsing fill fillWrapping fillUsing
-  fillSomeUsing fillUsingSpace fillUsingSpaceWrapping fillUsingSpaceWithSoftBoundaries fillSomeUsingSpace fillSomeUsingSpaceWrapping combine stickyCombine Sticky StickynessKind propagateStickyness PseudoAligned pseudoAligned isPseudoAligned
+  aligned unflattenable flattened maybeFlattened unindented final initial free guarded either oneOf append join joinUsing fillWith fill fillWrapping
+  fillUsingSpace fillUsingSpaceWrapping fillUsingSpaceWithSoftBoundaries fillSomeUsingSpace fillSomeUsingSpaceWrapping combine stickyCombine Sticky StickynessKind propagateStickyness PseudoAligned pseudoAligned isPseudoAligned
   needsAppBrackets sticky SelfDelimited mkSelfDelimited isSelfDelimited isBracketed RawFallback mkRawFallback isRawFallback getSticky? getStickynessKind? withStickyAlt withPosition SepArray propagateMetaData
   PseudoDedented pseudoDedented getPseudoDedented? softSpace)

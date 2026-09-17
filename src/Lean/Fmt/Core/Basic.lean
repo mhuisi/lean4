@@ -1170,7 +1170,22 @@ def Doc.joinUsing (sep : Doc τ) (ds : Array (Doc τ)) : Doc τ :=
   | some d =>
     ds[1:].foldl (init := d) fun acc d => acc ++ sep ++ d
 
-def Doc.fill (ds : Array (Doc τ)) : Doc τ := Id.run do
+/--
+Separator between two adjacent documents of a fill.
+-/
+structure FillSep (α : Type) where
+  /-- Separates the two documents when they are on the same line. -/
+  flat : α
+  /-- Precedes the newline when the two documents are on different lines. -/
+  broken : α
+
+/--
+Appends multiple flattened documents with optional newlines between them. `sep i` is the separator
+between `ds[i]` and `ds[i + 1]`.
+When a document can't be flattened or its flattened renderings exceed the column limit, then
+`fillWith` will allow the document to split, but ensure that it is surrounded by newlines.
+-/
+def Doc.fillWith (ds : Array (Doc τ)) (sep : Nat → FillSep (Doc τ)) : Doc τ := Id.run do
   if ds.size == 0 then
     return .empty
   let hd := ds[0]!
@@ -1178,14 +1193,98 @@ def Doc.fill (ds : Array (Doc τ)) : Doc τ := Id.run do
     return hd
   let mut lastFlattened : Doc τ := .flattened hd
   let mut lastNotFlattened : Doc τ := hd
-  for d in ds[1...*] do
+  for h : i in 1...ds.size do
+    let d := ds[i]
+    let { flat, broken } := sep (i - 1)
     let lastMaybeFlattened := .oneOf #[lastFlattened, lastNotFlattened]
     lastFlattened := .oneOf #[
-      .join #[lastFlattened, .flattened d],
-      .join #[lastMaybeFlattened, .hardNl, .flattened d]
+      .join #[lastFlattened, flat, .flattened d],
+      .join #[lastMaybeFlattened, broken, .hardNl, .flattened d]
     ]
-    lastNotFlattened := .join #[lastMaybeFlattened, .hardNl, d]
+    lastNotFlattened := .join #[lastMaybeFlattened, broken, .hardNl, d]
   return .oneOf #[lastFlattened, lastNotFlattened]
+
+def Doc.fill (ds : Array (Doc τ)) : Doc τ :=
+  fillWith ds fun _ => { flat := .empty, broken := .empty }
+
+/--
+Appends multiple flattened documents with a separator document between each pair of adjacent
+documents with optional newlines between them.
+When a document can't be flattened or its flattened renderings exceed the column limit, then
+`fillUsing` will allow the document to split, but ensure that it is surrounded by newlines.
+-/
+def Doc.fillUsing (sep : Doc τ) (ds : Array (Doc τ)) : Doc τ :=
+  fillWith ds fun _ => { flat := sep, broken := sep }
+
+/--
+Appends multiple flattened documents with either a space or a newline between each pair of adjacent
+documents.
+When a document can't be flattened or its flattened renderings exceed the column limit, then
+`fillUsingSpace` will allow the document to split, but ensure that it is surrounded by newlines.
+Notably, as opposed to `Doc.fillUsing (Doc.text " ")`, it will not leave trailing spaces before
+newlines.
+-/
+def Doc.fillUsingSpace (ds : Array (Doc τ)) : Doc τ :=
+  fillWith ds fun _ => { flat := .text " ", broken := .empty }
+
+/--
+Appends multiple groups of flattened documents with either a space or a newline between each pair
+of adjacent documents. `fillUsingSpaceWithSoftBoundaries` fills all documents of all groups exactly
+like `Doc.fillUsingSpace` does.
+
+Amongst the renderings that `Doc.fillUsingSpace` considers equally good, the formatter prefers the
+ones that place a newline between two adjacent groups. The formatter charges `boundaryPenalty` for
+every group boundary that it renders as a space. `boundaryPenalty` must thus be a cost that only
+breaks ties between otherwise equally good renderings, for example
+`DefaultCost.ofHeightFallbackPenalty 1`. This way, the formatter adds a newline at a group boundary
+only if it does not increase the amount of lines.
+-/
+def Doc.fillUsingSpaceWithSoftBoundaries (boundaryPenalty : τ) (dss : Array (Array (Doc τ)))
+    : Doc τ :=
+  -- `isBoundary[i]` designates whether the separator in front of the `i`-th document is a group
+  -- boundary.
+  let isBoundary := dss.flatMap (·.mapIdx fun i _ => i == 0)
+  let sep : Doc τ := .text " "
+  let boundarySep : Doc τ := .costing boundaryPenalty sep
+  fillWith dss.flatten fun i =>
+    { flat := if isBoundary[i + 1]! then boundarySep else sep, broken := .empty }
+
+/--
+Appends multiple flattened documents with optional newlines between them, wrapping the entire
+remainder of the document to the right of each separator or newline in `wrap`.
+`sep i` designates the gap between `ds[i]` and `ds[i + 1]`: `some flat` separates both documents
+with `flat` or a newline, while `none` separates them with `nl`.
+When a document can't be flattened or its flattened renderings exceed the column limit, then
+`fillWrappingWith` will allow the document to split, but ensure that it is surrounded by newlines.
+-/
+def Doc.fillWrappingWith (ds : Array (Doc τ)) (wrap : Doc τ → Doc τ) (sep : Nat → Option (Doc τ))
+    : Doc τ := Id.run do
+  if ds.size == 0 then
+    return .empty
+  let last := ds.back!
+  if ds.size == 1 then
+    return last
+  -- Since `wrap` encloses everything to the right of each separator or newline, the document is
+  -- built right-to-left. `restFlattened` and `restNotFlattened` are the renderings of the suffix
+  -- processed so far whose first document is flattened resp. not flattened.
+  let mut restFlattened : Doc τ := .flattened last
+  let mut restNotFlattened : Doc τ := last
+  for (d, i) in ds.pop.zipIdx.reverse do
+    let restMaybeFlattened := Doc.oneOf #[restFlattened, restNotFlattened]
+    match sep i with
+    | some flat =>
+      let wrappedBrokenRest := wrap <| .join #[.hardNl, restMaybeFlattened]
+      restFlattened := .oneOf #[
+        .join #[.flattened d, wrap <| .join #[flat, restFlattened]],
+        .join #[.flattened d, wrappedBrokenRest]
+      ]
+      restNotFlattened := .join #[d, wrappedBrokenRest]
+    | none =>
+      -- `nl` rather than `hardNl` so that the whole document can still be flattened onto one line.
+      let wrappedRest := wrap <| .join #[nl, restMaybeFlattened]
+      restFlattened := .join #[.flattened d, wrappedRest]
+      restNotFlattened := .join #[d, wrappedRest]
+  return .oneOf #[restFlattened, restNotFlattened]
 
 /--
 Appends multiple flattened documents with optional newlines between them, wrapping the entire
@@ -1202,108 +1301,8 @@ ab
     e
 ```
 -/
-def Doc.fillWrapping (ds : Array (Doc τ)) (wrap : Doc τ → Doc τ) : Doc τ := Id.run do
-  if ds.size == 0 then
-    return .empty
-  let last := ds.back!
-  if ds.size == 1 then
-    return last
-  -- Since `wrap` encloses everything to the right of each newline, the document is built
-  -- right-to-left. `restFlattened` and `restNotFlattened` are the renderings of the suffix
-  -- processed so far whose first document is flattened resp. not flattened.
-  let mut restFlattened : Doc τ := .flattened last
-  let mut restNotFlattened : Doc τ := last
-  for d in ds.pop.reverse do
-    let restMaybeFlattened := Doc.oneOf #[restFlattened, restNotFlattened]
-    let wrappedBrokenRest := wrap <| .join #[.hardNl, restMaybeFlattened]
-    restFlattened := .oneOf #[
-      .join #[.flattened d, wrap restFlattened],
-      .join #[.flattened d, wrappedBrokenRest]
-    ]
-    restNotFlattened := .join #[d, wrappedBrokenRest]
-  return .oneOf #[restFlattened, restNotFlattened]
-
-/--
-Appends multiple flattened documents with a separator document between each pair of adjacent
-documents with optional newlines between them.
-When a document can't be flattened or its flattened renderings exceed the column limit, then
-`fillUsing` will allow the document to split, but ensure that it is surrounded by newlines.
--/
-def Doc.fillUsing (sep : Doc τ) (ds : Array (Doc τ)) : Doc τ := Id.run do
-  if ds.size == 0 then
-    return .empty
-  let hd := ds[0]!
-  if ds.size == 1 then
-    return hd
-  let mut lastFlattened : Doc τ := .flattened hd
-  let mut lastNotFlattened : Doc τ := hd
-  for d in ds[1...*] do
-    let lastMaybeFlattened := .oneOf #[lastFlattened, lastNotFlattened]
-    lastFlattened := .oneOf #[
-      .join #[lastFlattened, sep, .flattened d],
-      .join #[lastMaybeFlattened, sep, .hardNl, .flattened d]
-    ]
-    lastNotFlattened := .join #[lastMaybeFlattened, sep, .hardNl, d]
-  return .oneOf #[lastFlattened, lastNotFlattened]
-
-/--
-Appends multiple flattened documents with either a space or a newline between each pair of adjacent
-documents.
-When a document can't be flattened or its flattened renderings exceed the column limit, then
-`fillUsingSpace` will allow the document to split, but ensure that it is surrounded by newlines.
-Notably, as opposed to `Doc.fillUsing (Doc.text " ")`, it will not leave trailing spaces before
-newlines.
--/
-def Doc.fillUsingSpace (ds : Array (Doc τ)) : Doc τ := Id.run do
-  if ds.size == 0 then
-    return .empty
-  let hd := ds[0]!
-  if ds.size == 1 then
-    return hd
-  let mut lastFlattened : Doc τ := .flattened hd
-  let mut lastNotFlattened : Doc τ := hd
-  for d in ds[1...*] do
-    let lastMaybeFlattened := .oneOf #[lastFlattened, lastNotFlattened]
-    lastFlattened := .oneOf #[
-      .join #[lastFlattened, .text " ", .flattened d],
-      .join #[lastMaybeFlattened, .hardNl, .flattened d]
-    ]
-    lastNotFlattened := .join #[lastMaybeFlattened, .hardNl, d]
-  return .oneOf #[lastFlattened, lastNotFlattened]
-
-/--
-Appends multiple groups of flattened documents with either a space or a newline between each pair
-of adjacent documents. `fillUsingSpaceWithSoftBoundaries` fills all documents of all groups exactly
-like `Doc.fillUsingSpace` does.
-
-Amongst the renderings that `Doc.fillUsingSpace` considers equally good, the formatter prefers the
-ones that place a newline between two adjacent groups. The formatter charges `boundaryPenalty` for
-every group boundary that it renders as a space. `boundaryPenalty` must thus be a cost that only
-breaks ties between otherwise equally good renderings, for example
-`DefaultCost.ofHeightFallbackPenalty 1`. This way, the formatter adds a newline at a group boundary
-only if it does not increase the amount of lines.
--/
-def Doc.fillUsingSpaceWithSoftBoundaries (boundaryPenalty : τ) (dss : Array (Array (Doc τ)))
-    : Doc τ := Id.run do
-  -- Pairs every document with whether the separator in front of it is a group boundary.
-  let ds := dss.flatMap fun group => group.mapIdx fun i d => (d, i == 0)
-  if ds.size == 0 then
-    return .empty
-  let hd := ds[0]!.1
-  if ds.size == 1 then
-    return hd
-  let sep : Doc τ := .text " "
-  let boundarySep : Doc τ := .costing boundaryPenalty sep
-  let mut lastFlattened : Doc τ := .flattened hd
-  let mut lastNotFlattened : Doc τ := hd
-  for (d, isBoundary) in ds[1...*] do
-    let lastMaybeFlattened := .oneOf #[lastFlattened, lastNotFlattened]
-    lastFlattened := .oneOf #[
-      .join #[lastFlattened, if isBoundary then boundarySep else sep, .flattened d],
-      .join #[lastMaybeFlattened, .hardNl, .flattened d]
-    ]
-    lastNotFlattened := .join #[lastMaybeFlattened, .hardNl, d]
-  return .oneOf #[lastFlattened, lastNotFlattened]
+def Doc.fillWrapping (ds : Array (Doc τ)) (wrap : Doc τ → Doc τ) : Doc τ :=
+  fillWrappingWith ds wrap fun _ => some .empty
 
 /--
 Appends multiple flattened documents with either a space or a newline between each pair of adjacent
@@ -1322,26 +1321,8 @@ a b
     e
 ```
 -/
-def Doc.fillUsingSpaceWrapping (ds : Array (Doc τ)) (wrap : Doc τ → Doc τ) : Doc τ := Id.run do
-  if ds.size == 0 then
-    return .empty
-  let last := ds.back!
-  if ds.size == 1 then
-    return last
-  -- Since `wrap` encloses everything to the right of each space or newline, the document is built
-  -- right-to-left. `restFlattened` and `restNotFlattened` are the renderings of the suffix
-  -- processed so far whose first document is flattened resp. not flattened.
-  let mut restFlattened : Doc τ := .flattened last
-  let mut restNotFlattened : Doc τ := last
-  for d in ds.pop.reverse do
-    let restMaybeFlattened := Doc.oneOf #[restFlattened, restNotFlattened]
-    let wrappedBrokenRest := wrap <| .join #[.hardNl, restMaybeFlattened]
-    restFlattened := .oneOf #[
-      .join #[.flattened d, wrap <| .join #[.text " ", restFlattened]],
-      .join #[.flattened d, wrappedBrokenRest]
-    ]
-    restNotFlattened := .join #[d, wrappedBrokenRest]
-  return .oneOf #[restFlattened, restNotFlattened]
+def Doc.fillUsingSpaceWrapping (ds : Array (Doc τ)) (wrap : Doc τ → Doc τ) : Doc τ :=
+  fillWrappingWith ds wrap fun _ => some (.text " ")
 
 structure Fillable (α : Type) where
   v : α
@@ -1356,10 +1337,6 @@ def Doc.splitFillGroups (ds : Array (Fillable (Doc τ))) : Array (Array (Doc τ)
     |>.toArray
     |>.map fun group => group.map (·.1)
 
-def Doc.fillSomeUsing (sep : Doc τ) (ds : Array (Fillable (Doc τ))) : Doc τ := Id.run do
-  let fillGroups := splitFillGroups ds
-  joinUsing nl <| fillGroups.map (fillUsing sep)
-
 def Doc.fillSomeUsingSpace (ds : Array (Fillable (Doc τ))) : Doc τ := Id.run do
   let fillGroups := splitFillGroups ds
   joinUsing nl <| fillGroups.map fillUsingSpace
@@ -1369,35 +1346,9 @@ Like `Doc.fillUsingSpaceWrapping`, but only fills adjacent documents that both a
 all other pairs of adjacent documents are separated by a newline.
 -/
 def Doc.fillSomeUsingSpaceWrapping (ds : Array (Fillable (Doc τ))) (wrap : Doc τ → Doc τ)
-    : Doc τ := Id.run do
-  if ds.isEmpty then
-    return .empty
-  let last := ds.back!
-  if ds.size == 1 then
-    return last.v
-  -- Since `wrap` encloses everything to the right of each space or newline, the document is built
-  -- right-to-left. `restFlattened` and `restNotFlattened` are the renderings of the suffix
-  -- processed so far whose first document is flattened resp. not flattened, and `restAllowsFill`
-  -- designates whether that first document may be filled with the document preceding it.
-  let mut restFlattened : Doc τ := .flattened last.v
-  let mut restNotFlattened : Doc τ := last.v
-  let mut restAllowsFill := last.allowFill
-  for d in ds.pop.reverse do
-    let restMaybeFlattened := Doc.oneOf #[restFlattened, restNotFlattened]
-    if d.allowFill && restAllowsFill then
-      let wrappedBrokenRest := wrap <| .join #[.hardNl, restMaybeFlattened]
-      restFlattened := .oneOf #[
-        .join #[.flattened d.v, wrap <| .join #[.text " ", restFlattened]],
-        .join #[.flattened d.v, wrappedBrokenRest]
-      ]
-      restNotFlattened := .join #[d.v, wrappedBrokenRest]
-    else
-      -- `nl` rather than `hardNl` so that the whole document can still be flattened onto one line.
-      let wrappedRest := wrap <| .join #[nl, restMaybeFlattened]
-      restFlattened := .join #[.flattened d.v, wrappedRest]
-      restNotFlattened := .join #[d.v, wrappedRest]
-    restAllowsFill := d.allowFill
-  return .oneOf #[restFlattened, restNotFlattened]
+    : Doc τ :=
+  fillWrappingWith (ds.map (·.v)) wrap fun i =>
+    if ds[i]!.allowFill && ds[i + 1]!.allowFill then some (.text " ") else none
 
 /--
 Provides pointer-based equality and hashing for a value of type `α`.
