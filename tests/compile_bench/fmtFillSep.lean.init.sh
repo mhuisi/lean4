@@ -1,3 +1,3 @@
-TEST_ARGS=( 10000 )
+TEST_ARGS=( 80000 )
 
 set_stack_size_to_maximum

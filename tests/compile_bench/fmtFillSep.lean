@@ -21,8 +21,8 @@ def fillSep (xs : Array String) : Doc τ := Id.run do
 @[noinline]
 def doc (n : Nat) : IO (Doc BenchCost) := do
   let words ← IO.FS.readFile "fmtFillSepWords"
-  let words := words.splitOn "\n" |>.take n |>.toArray
-  return fillSep words
+  let words := words.splitOn "\n" |>.filter (!·.isEmpty) |>.toArray
+  return fillSep <| Array.ofFn (n := n) fun i => words[i.val % words.size]!
 
 @[noinline]
 def format (doc : Doc BenchCost) : IO (Option String) := do

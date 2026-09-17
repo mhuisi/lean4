@@ -49,17 +49,19 @@ def readJson : IO Lean.Json := do
   IO.ofExcept <| Lean.Json.parse c
 
 @[noinline]
-def doc : IO (Doc BenchCost) := do
+def doc (copies : Nat) : IO (Doc BenchCost) := do
   let json ← IO.FS.readFile "fmtJson10k.json"
-  let json ← IO.ofExcept <| Lean.Json.parse json
-  return pp json
+  let .arr entries ← IO.ofExcept <| Lean.Json.parse json
+    | throw <| IO.userError "expected a top-level JSON array"
+  return pp (.arr (Array.replicate copies entries).flatten)
 
 @[noinline]
 def format (doc : Doc BenchCost) : IO (Option String) := do
   return format? width cutoff doc (taintedResolution := true) |>.toOption.map (·.rendering)
 
-def main (_ : List String) : IO Unit := do
-  let d ← doc
+def main (args : List String) : IO Unit := do
+  let copies := (args[0]!).toNat!
+  let d ← doc copies
   let startNs ← IO.monoNanosNow
   let r? ← format d
   let endNs ← IO.monoNanosNow

@@ -621,31 +621,31 @@ search stays efficient.
    dependencies must be built first, and anything that makes elaboration slow or
    non-terminating makes `lake fmt` hang. It elaborates
    with `Elab.inServer := true`, which is what makes a stray `idbg` in the file hang it.
-3. Put examples in a top-level `tests/fmt*.lean` file. These are grouped by syntax area,
-   not one per formatter: `tests/fmtNotations.lean`, `tests/fmtLeanCommands.lean`,
-   `tests/fmtStd.lean`, `tests/fmtQuantifier.lean`, `tests/fmtComments.lean`, and so on.
-   Add to the file that covers the area, and create a new `tests/fmtFoo.lean` only when
+3. Put examples in a fixture of the `tests/fmt` test pile. The fixtures are grouped by syntax
+   area, not one per formatter: `tests/fmt/fmtStr.lean`, `tests/fmt/fmtInterpolatedStr.lean`,
+   `tests/fmt/fmtInfixComments.lean`, `tests/fmt/fmtMultiLineTokenComments.lean`, and so on.
+   Add to the fixture that covers the area, and create a new `tests/fmt/fmtFoo.lean` only when
    the syntax fits none of them. The examples must force the formatter to break in
    different places: forms that fit on one line, forms just over the 100-column soft
    width, deeply nested forms, forms with and without each optional component.
    **The test file must be human-readable** — a human uses it to evaluate the new
    formatter, so use meaningful names and realistic code, not generated noise.
-4. Run the formatter **on a temporary copy**, never on the original test file — the
-   original must stay untouched so the user can run the formatter on it himself and
-   compare with a diff tool:
+4. Run the test of the fixture. The runner `tests/fmt/run_test.lean` formats the fixture with
+   `Fmt.fileMain` and the settings of `lake fmt`. It does not change the fixture. The test
+   writes the formatted file to `tests/fmt/fmtFoo.lean.out.produced` and compares it with
+   `tests/fmt/fmtFoo.lean.out.expected`:
 
    ```bash
+   tests/with_stage1_test_env.sh tests/fmt/run_test.sh fmtFoo.lean
+   diff tests/fmt/fmtFoo.lean tests/fmt/fmtFoo.lean.out.produced  # inspect the formatting
    scratch="${TMPDIR:-/tmp}"
-   cp tests/fmtFoo.lean tests/fmtFoo.tmp.lean
-   ./build/release/stage1/bin/lake fmt tests/fmtFoo.tmp.lean
-   diff tests/fmtFoo.lean tests/fmtFoo.tmp.lean       # inspect the formatting
-   cp tests/fmtFoo.tmp.lean "$scratch/fmtFoo.first.lean"
-   ./build/release/stage1/bin/lake fmt tests/fmtFoo.tmp.lean
-   diff "$scratch/fmtFoo.first.lean" tests/fmtFoo.tmp.lean  # must be empty (idempotence)
-   rm tests/fmtFoo.tmp.lean
+   cp tests/fmt/fmtFoo.lean.out.produced "$scratch/fmtFoo.lean"
+   ./build/release/stage1/bin/lake fmt "$scratch/fmtFoo.lean"
+   diff tests/fmt/fmtFoo.lean.out.produced "$scratch/fmtFoo.lean"  # must be empty (idempotence)
    ```
 5. Validate the output by reading it: does every example break where a human would
-   break it?
+   break it? When the output is correct, copy `fmtFoo.lean.out.produced` to
+   `fmtFoo.lean.out.expected`.
 
 ## Finding missing or incomplete formatters
 
