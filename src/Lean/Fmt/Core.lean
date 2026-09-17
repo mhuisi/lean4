@@ -9,5 +9,4 @@ module
 prelude
 public import Lean.Fmt.Core.Basic
 public import Lean.Fmt.Core.Formatter
-public import Lean.Fmt.Core.Json
 public import Lean.Fmt.Core.LawfulCost
