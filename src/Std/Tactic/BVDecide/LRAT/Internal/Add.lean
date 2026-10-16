@@ -15,16 +15,19 @@ open Std.Sat
 namespace State
 
 @[inline]
-public def add (s : State) (clause : CNF.Clause Nat) : State :=
-  { s with formula := s.formula.push (some clause) }
+public def add (s : State) (clause : CNF.Clause Nat) : State := {
+  s with
+  formula := s.formula.push (some clause)
+}
 
 @[simp]
-public theorem add_toCNF_eq_toCNF_add {s : State} {c : CNF.Clause Nat} :
-    (s.add c).toCNF = s.toCNF.add c := by
+public theorem add_toCNF_eq_toCNF_add {s : State} {c : CNF.Clause Nat}
+    : (s.add c).toCNF = s.toCNF.add c := by
   simp [toCNF, add, CNF.add]
 
-public theorem entails_add_of_entails_clause {s : State} {c : CNF.Clause Nat}
-    (h : CNF.EntailsClause s.toCNF c) : CNF.Entails s.toCNF (s.add c).toCNF := by
+public theorem entails_add_of_entails_clause
+    {s : State} {c : CNF.Clause Nat} (h : CNF.EntailsClause s.toCNF c)
+    : CNF.Entails s.toCNF (s.add c).toCNF := by
   rw [add_toCNF_eq_toCNF_add]
   apply CNF.entails_add_of_entails_clause
   exact h

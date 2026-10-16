@@ -19,22 +19,26 @@ Declares an auxiliary definition with an automatically generated name.
 For example, `aux_def foo : Nat := 42` creates a definition
 with an internal, unused name based on the suggestion `foo`.
 -/
-scoped syntax (name := aux_def) docComment ? attributes ? visibility "aux_def" ident+ ":" term ":=" term : command
+scoped syntax (name := aux_def)
+  docComment ? attributes ? visibility "aux_def" ident+ ":" term ":=" term
+  : command
 
 @[builtin_command_elab «aux_def»]
 def elabAuxDef : CommandElab
-  | `($[$doc?:docComment]? $[$attrs?:attributes]? $vis:visibility aux_def $suggestion* : $ty := $body) => do
-    let id := suggestion.map (·.getId.eraseMacroScopes) |>.foldl (· ++ ·) Name.anonymous
-    let id := `_aux ++ (← getMainModule) ++ `_ ++ id
-    let id := String.intercalate "_" <| id.components.map (·.toString (escape := false))
-    let ns ← getCurrNamespace
-    -- We use a new generator here because we want more control over the name; the default would
-    -- create a private name that then breaks the macro below. We assume that `aux_def` is not used
-    -- with the same arguments in parallel contexts.
-    let env := (← getEnv).setExporting true
-    let (id, _) := DeclNameGenerator.ofPrefix ns |>.mkUniqueName env («infix» := Name.mkSimple id)
-    let id := id.replacePrefix ns Name.anonymous -- TODO: replace with def _root_.id
-    elabCommand <|
-      ← `($[$doc?:docComment]? $[$attrs?:attributes]? $vis:visibility
-          meta def $(mkIdentFrom (mkNullNode suggestion) id (canonical := true)):ident : $ty := $body)
-  | _ => throwUnsupportedSyntax
+  | `($[$doc?:docComment]? $[$attrs?:attributes]? $vis:visibility aux_def $suggestion* : $ty := $body) =>
+    do
+      let id := suggestion.map (·.getId.eraseMacroScopes) |>.foldl (· ++ ·) Name.anonymous
+      let id := `_aux ++ (← getMainModule) ++ `_ ++ id
+      let id := String.intercalate "_" <| id.components.map (·.toString (escape := false))
+      let ns ← getCurrNamespace
+      -- We use a new generator here because we want more control over the name; the default would
+      -- create a private name that then breaks the macro below. We assume that `aux_def` is not used
+      -- with the same arguments in parallel contexts.
+      let env := (← getEnv).setExporting true
+      let (id, _) := DeclNameGenerator.ofPrefix ns |>.mkUniqueName env («infix» := Name.mkSimple id)
+      let id := id.replacePrefix ns Name.anonymous -- TODO: replace with def _root_.id
+      elabCommand <|
+        ← `($[$doc?:docComment]? $[$attrs?:attributes]? $vis:visibility
+            meta def $(mkIdentFrom (mkNullNode suggestion) id (canonical := true)):ident : $ty := $body)
+  | _ =>
+    throwUnsupportedSyntax

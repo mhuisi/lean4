@@ -25,7 +25,8 @@ builtin_initialize declRangeExt : MapDeclarationExtension DeclarationRanges ←
 def addBuiltinDeclarationRanges (declName : Name) (declRanges : DeclarationRanges) : IO Unit :=
   builtinDeclRanges.modify (·.insert declName declRanges)
 
-def addDeclarationRanges [Monad m] [MonadEnv m] (declName : Name) (declRanges : DeclarationRanges) : m Unit := do
+def addDeclarationRanges [Monad m] [MonadEnv m] (declName : Name) (declRanges : DeclarationRanges)
+    : m Unit := do
   if declName.isAnonymous then
     -- This can happen on elaboration of partial syntax and would panic in `modifyState` otherwise
     return
@@ -37,19 +38,22 @@ def addDeclarationRanges [Monad m] [MonadEnv m] (declName : Name) (declRanges : 
     return
   modifyEnv fun env => declRangeExt.insert env declName declRanges
 
-def findDeclarationRangesCore? [Monad m] [MonadEnv m] (declName : Name) : m (Option DeclarationRanges) :=
+def findDeclarationRangesCore? [Monad m] [MonadEnv m] (declName : Name)
+    : m (Option DeclarationRanges) :=
   -- In the case of private definitions imported via `import all`, looking in `.olean.server` is not
   -- sufficient, so we look in the actual environment as well via `exported` (TODO: rethink
   -- parameter naming).
-  return declRangeExt.find? (level := .exported) (← getEnv) declName <|>
-    declRangeExt.find? (level := .server) (← getEnv) declName
+  return declRangeExt.find? (level := .exported) (← getEnv) declName
+    <|> declRangeExt.find? (level := .server) (← getEnv) declName
 
-def findDeclarationRanges? [Monad m] [MonadEnv m] [MonadLiftT BaseIO m] (declName : Name) : m (Option DeclarationRanges) := do
+def findDeclarationRanges? [Monad m] [MonadEnv m] [MonadLiftT BaseIO m] (declName : Name)
+    : m (Option DeclarationRanges) := do
   let env ← getEnv
-  let ranges ← if isAuxRecursor env declName || isNoConfusion env declName || (← isRec declName)  then
-    findDeclarationRangesCore? declName.getPrefix
-  else
-    findDeclarationRangesCore? declName
+  let ranges ←
+    if isAuxRecursor env declName || isNoConfusion env declName || (← isRec declName) then
+      findDeclarationRangesCore? declName.getPrefix
+    else
+      findDeclarationRangesCore? declName
   match ranges with
   | none => return (← builtinDeclRanges.get (m := BaseIO)).find? declName
   | some _ => return ranges

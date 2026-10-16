@@ -56,7 +56,7 @@ structure DeferredCheck where
   /--
   The check-specific data. The name of the type in the `Dynamic` determines which checks are to be
   performed.
-   -/
+  -/
   check : Dynamic
 
 /--
@@ -65,8 +65,8 @@ A collection of deferred docstring checks.
 While docstrings are part of the server olean for a module, deferred checks are part of the public
 information so they can be found by the linter.
 -/
-builtin_initialize deferredCheckExt :
-    PersistentEnvExtension DeferredCheck DeferredCheck (Array DeferredCheck) ←
+builtin_initialize deferredCheckExt
+    : PersistentEnvExtension DeferredCheck DeferredCheck (Array DeferredCheck) ←
   registerPersistentEnvExtension {
     mkInitial := pure #[]
     addImportedFn := fun _ => pure #[]

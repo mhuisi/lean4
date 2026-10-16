@@ -35,7 +35,7 @@ structure PackageCheckContext where
 
 structure PackageCheck where
   ofFn ::
-    run : PackageCheckContext → MetaM (Array Entry)
+  run : PackageCheckContext → MetaM (Array Entry)
 
 structure CheckResult where
   entries : Array Entry
@@ -44,8 +44,8 @@ structure CheckResult where
 structure NamedPackageCheck extends PackageCheck where
   declName : Name
 
-def getPackageCheck (declName : Name) : CoreM NamedPackageCheck := unsafe
-  return { ← evalConstCheck PackageCheck ``PackageCheck declName with declName}
+def getPackageCheck (declName : Name) : CoreM NamedPackageCheck :=
+  unsafe return { ← evalConstCheck PackageCheck ``PackageCheck declName with declName }
 
 builtin_initialize packageCheckExt : SimplePersistentEnvExtension Name (Array Name) ←
   registerSimplePersistentEnvExtension {
@@ -53,25 +53,27 @@ builtin_initialize packageCheckExt : SimplePersistentEnvExtension Name (Array Na
     addEntryFn := Array.push
   }
 
-builtin_initialize registerBuiltinAttribute {
-  name := `package_code_quality_check
-  descr := "Use this declaration as a check in the code quality metrics driver"
-  add := fun decl _stx kind => do
-    unless kind == .global do
-      throwError "invalid attribute `package_code_quality_check`, must be global"
-    let env ← getEnv
-    let isPublic := !isPrivateName decl; let isMeta := isMarkedMeta env decl
-    unless isPublic && isMeta do
-      throwError "invalid attribute `package_code_quality_check`, \
-        declaration `{.ofConstName decl}` must be marked as `public` and `meta`\
-        {if isPublic then " but is only marked `public`" else ""}\
-        {if isMeta then " but is only marked `meta`" else ""}"
-    let constInfo ← getConstInfo decl
-    unless ← (isDefEq constInfo.type (mkConst ``PackageCheck)).run' do
-      throwError "`{.ofConstName decl}` must have type `{.ofConstName ``PackageCheck}`, got \
-        `{constInfo.type}`"
-    modifyEnv fun env => packageCheckExt.addEntry env decl
-}
+builtin_initialize
+  registerBuiltinAttribute {
+    name := `package_code_quality_check
+    descr := "Use this declaration as a check in the code quality metrics driver"
+    add := fun decl _stx kind => do
+      unless kind == .global do
+        throwError "invalid attribute `package_code_quality_check`, must be global"
+      let env ← getEnv
+      let isPublic := ! isPrivateName decl
+      let isMeta := isMarkedMeta env decl
+      unless isPublic && isMeta do
+        throwError "invalid attribute `package_code_quality_check`, \
+          declaration `{.ofConstName decl}` must be marked as `public` and `meta`\
+          {if isPublic then " but is only marked `public`" else ""}\
+          {if isMeta then " but is only marked `meta`" else ""}"
+      let constInfo ← getConstInfo decl
+      unless ← (isDefEq constInfo.type (mkConst ``PackageCheck)).run' do
+        throwError "`{.ofConstName decl}` must have type `{.ofConstName ``PackageCheck}`, got \
+          `{constInfo.type}`"
+      modifyEnv fun env => packageCheckExt.addEntry env decl
+  }
 
 def getPackageChecks : CoreM (Array NamedPackageCheck) := do
   let mut result := #[]
@@ -80,12 +82,14 @@ def getPackageChecks : CoreM (Array NamedPackageCheck) := do
     result := result.binInsert (·.declName.lt ·.declName) linter
   pure result
 
-def runPackageChecks (checks : Array NamedPackageCheck) (ctx : PackageCheckContext) :
-    CoreM CheckResult := do
-  let tasks ← checks.mapM fun check => do
-    let act ← Core.wrapAsync (cancelTk? := none) fun (_ : Unit) =>
-      check.run ctx |>.run' Elab.Command.mkMetaContext
-    return (check.declName, ← EIO.asTask (act ()))
+def runPackageChecks (checks : Array NamedPackageCheck) (ctx : PackageCheckContext)
+    : CoreM CheckResult := do
+  let tasks ←
+    checks.mapM fun check => do
+      let act ←
+        Core.wrapAsync (cancelTk? := none) fun (_ : Unit) =>
+          check.run ctx |>.run' Elab.Command.mkMetaContext
+      return (check.declName, ← EIO.asTask (act ()))
   let mut entries := #[]
   let mut errors := #[]
   for (declName, task) in tasks do

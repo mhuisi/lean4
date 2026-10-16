@@ -54,12 +54,13 @@ That is, Lake ignores the `-` suffix.
 - `"1.2.0"`: Add optional `fixedToolchain` manifest field
 - `"1.3.0"`: Add optional `copy` path dependency field
 -/
-@[inline] public def Manifest.version : StdVer := {major := 1, minor := 3}
+@[inline] public def Manifest.version : StdVer := { major := 1, minor := 3 }
 
 /-- Manifest version `0.6.0` package entry. For backwards compatibility. -/
 inductive PackageEntryV6
-| path (name : Name) (opts : NameMap String) (inherited : Bool) (dir : FilePath)
-| git (name : Name) (opts : NameMap String) (inherited : Bool) (url : String) (rev : String)
+  | path (name : Name) (opts : NameMap String) (inherited : Bool) (dir : FilePath)
+  | git
+    (name : Name) (opts : NameMap String) (inherited : Bool) (url : String) (rev : String)
     (inputRev? : Option String) (subDir? : Option FilePath)
 deriving FromJson, ToJson, Inhabited
 
@@ -72,16 +73,10 @@ public inductive PackageEntrySrc
   A local filesystem package. `dir` is relative to the package directory
   of the package containing the manifest.
   -/
-  | path
-    (dir : FilePath)
-    (copy : Bool := false)
+  | path (dir : FilePath) (copy : Bool := false)
   /-- A remote Git package. -/
-  | git
-    (url : String)
-    (rev : GitRev)
-    (inputRev? : Option GitRev)
-    (subDir? : Option FilePath)
-  deriving Inhabited
+  | git (url : String) (rev : GitRev) (inputRev? : Option GitRev) (subDir? : Option FilePath)
+deriving Inhabited
 
 /-- An entry for a package stored in the manifest. -/
 public structure PackageEntry where
@@ -93,7 +88,7 @@ public structure PackageEntry where
   /-- The relative path within the package directory to the Lake manifest file. -/
   manifestFile? : Option FilePath := none
   src : PackageEntrySrc
-  deriving Inhabited
+deriving Inhabited
 
 namespace PackageEntry
 
@@ -101,7 +96,7 @@ public protected def toJson (entry : PackageEntry) : Json :=
   let fields := [
     ("name", toJson entry.name),
     ("scope", toJson entry.scope),
-    ("configFile" , toJson entry.configFile),
+    ("configFile", toJson entry.configFile),
     ("manifestFile", toJson entry.manifestFile?),
     ("inherited", toJson entry.inherited),
   ]
@@ -132,63 +127,79 @@ public protected def fromJson? (json : Json) : Except String PackageEntry := do
     let inherited ← obj.get "inherited"
     let configFile ← obj.getD "configFile" defaultConfigFile
     let manifestFile ← obj.getD "manifestFile" defaultManifestFile
-    let src : PackageEntrySrc ← id do
-      match type with
-      | "path" =>
-        let dir ← obj.get "dir"
-        let copy ← obj.getD "copy" false
-        return .path dir copy
-      | "git" =>
-        let url ← obj.get "url"
-        let rev ← obj.get "rev"
-        let inputRev? ← obj.get? "inputRev"
-        let subDir? ← obj.get? "subDir"
-        return .git url rev inputRev? subDir?
-      | _ =>
-        throw s!"unknown package entry type '{type}'"
-    return {
-      name, scope, inherited
-      configFile, manifestFile? := manifestFile, src
-      : PackageEntry
-    }
+    let src : PackageEntrySrc ←
+      id do
+        match type with
+        | "path" =>
+          let dir ← obj.get "dir"
+          let copy ← obj.getD "copy" false
+          return .path dir copy
+        | "git" =>
+          let url ← obj.get "url"
+          let rev ← obj.get "rev"
+          let inputRev? ← obj.get? "inputRev"
+          let subDir? ← obj.get? "subDir"
+          return .git url rev inputRev? subDir?
+        | _ =>
+          throw s!"unknown package entry type '{type}'"
+    return { name, scope, inherited, configFile, manifestFile? := manifestFile, src : PackageEntry }
   catch e =>
     throw s!"package entry '{name}': {e}"
 
 public instance : FromJson PackageEntry := ⟨PackageEntry.fromJson?⟩
 
-@[inline] public def prettyName (entry : PackageEntry) : String :=
-  entry.name.toString (escape := false)
+@[inline]
+public def prettyName (entry : PackageEntry) : String := entry.name.toString (escape := false)
 
 /-- The directory name used to store the materialized dependency. -/
-@[inline] public def dirName (entry : PackageEntry) : String :=
-   entry.name.toString (escape := false)
+@[inline]
+public def dirName (entry : PackageEntry) : String := entry.name.toString (escape := false)
 
-@[inline] public def inputRev? (entry : PackageEntry) : Option GitRev :=
+@[inline]
+public def inputRev? (entry : PackageEntry) : Option GitRev :=
   match entry.src with
   | .git (inputRev? := rev?) .. => rev?
   | .path .. => none
 
 /-- **For internal use only.** -/
-@[inline] public def setInherited (entry : PackageEntry) : PackageEntry :=
-  {entry with inherited := true}
+@[inline]
+public def setInherited (entry : PackageEntry) : PackageEntry := { entry with inherited := true }
 
 /-- **For internal use only.** -/
-@[inline] public def setConfigFile (path : FilePath) (entry : PackageEntry) : PackageEntry :=
-  {entry with configFile := path}
+@[inline]
+public def setConfigFile (path : FilePath) (entry : PackageEntry) : PackageEntry := {
+  entry with
+  configFile := path
+}
 
 /-- **For internal use only.** -/
-@[inline] public def setManifestFile (path? : Option FilePath) (entry : PackageEntry) : PackageEntry :=
-  {entry with manifestFile? := path?}
+@[inline]
+public def setManifestFile (path? : Option FilePath) (entry : PackageEntry) : PackageEntry := {
+  entry with
+  manifestFile? := path?
+}
 
 /-- **For internal use only.** -/
-@[inline] public def inDirectory (pkgDir : FilePath) (entry : PackageEntry) : PackageEntry :=
-  {entry with src := match entry.src with | .path dir => .path (pkgDir / dir) | s => s}
+@[inline]
+public def inDirectory (pkgDir : FilePath) (entry : PackageEntry) : PackageEntry := {
+  entry with
+  src :=
+    match entry.src with
+    | .path dir => .path (pkgDir / dir)
+    | s => s
+}
 
 def ofV6 : PackageEntryV6 → PackageEntry
-| .path name _opts inherited dir =>
-  {name, inherited, src := .path dir}
-| .git name _opts inherited url rev inputRev? subDir? =>
-  {name, inherited, src := .git url rev inputRev? subDir?}
+  | .path name _opts inherited dir => {
+    name
+    inherited
+    src := .path dir
+  }
+  | .git name _opts inherited url rev inputRev? subDir? => {
+    name
+    inherited
+    src := .git url rev inputRev? subDir?
+  }
 
 end PackageEntry
 
@@ -203,8 +214,10 @@ public structure Manifest where
 namespace Manifest
 
 /-- Add a package entry to the end of a manifest. -/
-public def addPackage (entry : PackageEntry) (self : Manifest) : Manifest :=
-  {self with packages := self.packages.push entry}
+public def addPackage (entry : PackageEntry) (self : Manifest) : Manifest := {
+  self with
+  packages := self.packages.push entry
+}
 
 public protected def toJson (self : Manifest) : Json :=
   Json.mkObj [
@@ -222,20 +235,23 @@ def getVersion (obj : JsonObject) : Except String SemVerCore := do
   let ver : Json ← obj.get "version" <|> obj.get "schemaVersion"
   let ver : SemVerCore ←
     match ver with
-    | (n : Nat) => pure {minor := n}
-    | (s : String) => StdVer.parse s
-    | ver => throw s!"invalid version '{ver}'; \
-      you may need to update your 'lean-toolchain'"
+    | (n : Nat) =>
+      pure { minor := n }
+    | (s : String) =>
+      StdVer.parse s
+    | ver =>
+      throw s!"invalid version '{ver}'; \
+        you may need to update your 'lean-toolchain'"
   if ver.major > 1 then
     throw s!"schema version '{ver}' is of a higher major version than this \
       Lake's '{Manifest.version}'; you may need to update your 'lean-toolchain'"
-  else if ver < {minor := 5} then
+  else if ver < { minor := 5 } then
     throw s!"incompatible manifest version '{ver}'"
   else
     return ver
 
 def getPackages (ver : StdVer) (obj : JsonObject) : Except String (Array PackageEntry) := do
-  if ver < {minor := 7} then
+  if ver < { minor := 7 } then
     (·.map PackageEntry.ofV6) <$> obj.getD "packages" #[]
   else
     obj.getD "packages" #[]
@@ -248,7 +264,7 @@ public protected def fromJson? (json : Json) : Except String Manifest := do
   let lakeDir ← obj.getD "lakeDir" defaultLakeDir
   let packagesDir? ← obj.get? "packagesDir"
   let packages ← getPackages ver obj
-  return {name, lakeDir, packagesDir?, packages, fixedToolchain}
+  return { name, lakeDir, packagesDir?, packages, fixedToolchain }
 
 public instance : FromJson Manifest := ⟨Manifest.fromJson?⟩
 
@@ -303,15 +319,16 @@ Deserialize manifest package entries from a JSON file.
 Returns an empty array if the file does not exist.
 -/
 public def tryLoadEntries (file : FilePath) : IO (Array PackageEntry) := do
-  match  (← inline (loadEntries file) |>.toBaseIO) with
+  match (← inline (loadEntries file) |>.toBaseIO) with
   | .ok a => return a
   | .error (.noFileOrDirectory ..) => return #[]
   | .error e => error s!"{file}: {e}"
 
 /-- Serialize manifest package entries to a JSON file. -/
-public def saveEntries (file : FilePath) (entries : Array PackageEntry)  : IO PUnit := do
-  let contents := Json.pretty <| Json.mkObj [
-    ("schemaVersion", toJson version),
-    ("packages", toJson entries)
-  ]
+public def saveEntries (file : FilePath) (entries : Array PackageEntry) : IO PUnit := do
+  let contents :=
+    Json.pretty <| Json.mkObj [
+      ("schemaVersion", toJson version),
+      ("packages", toJson entries)
+    ]
   IO.FS.writeFile file <| contents.push '\n'

@@ -26,7 +26,8 @@ where
     if h : idx < proof.size then
       let step := proof[idx]
       match step with
-      | .addEmpty id rupHints => state.checkEmpty rupHints
+      | .addEmpty id rupHints =>
+        state.checkEmpty rupHints
       | .addRup id clause rupHints =>
         let clause := convertClause clause
         if state.checkRup clause rupHints then
@@ -39,7 +40,8 @@ where
           go (state.add clause) proof (idx + 1)
         else
           false
-      | .del ids => go (state.deleteMany ids) proof (idx + 1)
+      | .del ids =>
+        go (state.deleteMany ids) proof (idx + 1)
     else
       false
 
@@ -52,8 +54,9 @@ where
       else
         none
 
-theorem unsat_of_go {state : State} {proof : Array IntAction} {idx : Nat}
-    (h : check.go state proof idx) : CNF.Unsat state.toCNF := by
+theorem unsat_of_go
+    {state : State} {proof : Array IntAction} {idx : Nat} (h : check.go state proof idx)
+    : CNF.Unsat state.toCNF := by
   fun_induction check.go state proof idx
   case case1 =>
     apply CNF.unsat_of_entails_clause_unsat (c := .empty) (h1 := by simp)
@@ -79,8 +82,9 @@ theorem unsat_of_go {state : State} {proof : Array IntAction} {idx : Nat}
     apply State.entails_deleteMany
   case case7 => contradiction
 
-public theorem unsat_of_check {proof : Array IntAction} {formula : CNF Nat}
-    (h : check proof formula) : CNF.Unsat formula := by
+public theorem unsat_of_check
+    {proof : Array IntAction} {formula : CNF Nat} (h : check proof formula)
+    : CNF.Unsat formula := by
   simp only [check] at h
   replace h := unsat_of_go h
   simpa using h

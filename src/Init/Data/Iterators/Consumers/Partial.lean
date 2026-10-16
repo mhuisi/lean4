@@ -14,13 +14,9 @@ public section
 
 namespace Std
 
-/--
-A wrapper around an iterator that provides partial consumers. See `Iter.allowNontermination`.
--/
+/-- A wrapper around an iterator that provides partial consumers. See `Iter.allowNontermination`. -/
 structure Iter.Partial {α : Type w} (β : Type w) where
-  /--
-  The wrapped iterator, which was wrapped by `Iter.allowNontermination`.
-  -/
+  /-- The wrapped iterator, which was wrapped by `Iter.allowNontermination`. -/
   it : Iter (α := α) β
 
 /--
@@ -29,9 +25,13 @@ consumers such as `toList`. They can be used without any proof of termination su
 or `Productive`, but as they are implemented with the `partial` declaration modifier, they are
 opaque for the kernel and it is impossible to prove anything about them.
 -/
-@[always_inline, inline, deprecated "The consumers on iterators do not require proofs of termination anymore. For example, use `it.toList` instead of `it.allowNontermination.toList`." (since := "2026-01-28")]
-def Iter.allowNontermination {α : Type w} {β : Type w}
-    (it : Iter (α := α) β) : Iter.Partial (α := α) β :=
+@[always_inline, inline,
+  deprecated
+    "The consumers on iterators do not require proofs of termination anymore. For example, use \
+      `it.toList` instead of `it.allowNontermination.toList`."
+    (since := "2026-01-28")]
+def Iter.allowNontermination {α : Type w} {β : Type w} (it : Iter (α := α) β)
+    : Iter.Partial (α := α) β :=
   ⟨it⟩
 
 end Std

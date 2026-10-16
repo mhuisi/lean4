@@ -17,9 +17,11 @@ namespace String.Slice.Pattern
 namespace Internal
 
 @[extern "lean_string_memcmp"]
-def memcmpStr (lhs rhs : @& String) (lstart : @& String.Pos.Raw) (rstart : @& String.Pos.Raw)
-    (len : @& String.Pos.Raw) (h1 : len.offsetBy lstart ≤ lhs.rawEndPos)
-    (h2 : len.offsetBy rstart ≤ rhs.rawEndPos) : Bool :=
+def memcmpStr
+    (lhs rhs : @& String) (lstart : @& String.Pos.Raw) (rstart : @& String.Pos.Raw)
+    (len : @& String.Pos.Raw)
+    (h1 : len.offsetBy lstart ≤ lhs.rawEndPos) (h2 : len.offsetBy rstart ≤ rhs.rawEndPos)
+    : Bool :=
   go 0
 where
   go (curr : String.Pos.Raw) : Bool :=
@@ -42,26 +44,25 @@ where
     omega
 
 @[inline]
-def memcmpSlice (lhs rhs : Slice) (lstart : String.Pos.Raw) (rstart : String.Pos.Raw)
-    (len : String.Pos.Raw) (h1 : len.offsetBy lstart ≤ lhs.rawEndPos)
-    (h2 : len.offsetBy rstart ≤ rhs.rawEndPos) : Bool :=
-  memcmpStr
-    lhs.str
-    rhs.str
-    (lstart.offsetBy lhs.startInclusive.offset)
-    (rstart.offsetBy rhs.startInclusive.offset)
-    len
+def memcmpSlice
+    (lhs rhs : Slice) (lstart : String.Pos.Raw) (rstart : String.Pos.Raw) (len : String.Pos.Raw)
+    (h1 : len.offsetBy lstart ≤ lhs.rawEndPos) (h2 : len.offsetBy rstart ≤ rhs.rawEndPos)
+    : Bool :=
+  memcmpStr lhs.str rhs.str (lstart.offsetBy lhs.startInclusive.offset)
+    (rstart.offsetBy rhs.startInclusive.offset) len
     (by
       have := lhs.startInclusive_le_endExclusive
       have := lhs.endExclusive.isValid.le_utf8ByteSize
       simp [String.Pos.le_iff, Pos.Raw.le_iff, Slice.utf8ByteSize_eq,
-        -String.Pos.byteIdx_offset_le_utf8ByteSize] at *
+          -String.Pos.byteIdx_offset_le_utf8ByteSize]
+        at *
       omega)
     (by
       have := rhs.startInclusive_le_endExclusive
       have := rhs.endExclusive.isValid.le_utf8ByteSize
       simp [String.Pos.le_iff, Pos.Raw.le_iff, Slice.utf8ByteSize_eq,
-        -String.Pos.byteIdx_offset_le_utf8ByteSize] at *
+          -String.Pos.byteIdx_offset_le_utf8ByteSize]
+        at *
       omega)
 
 end Internal

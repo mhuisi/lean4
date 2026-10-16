@@ -20,7 +20,8 @@ def elabNameConst : TermElab := fun stx expectedType? => do
   unless env.contains packageDeclName do
     throwError "`__name__` can only be used after the `package` declaration"
   let ⟨idx, name⟩ := nameExt.getState env
-  let name := match name with
+  let name :=
+    match name with
     | .anonymous => (mkIdent <| packageDeclName.str "origName")
     | name => Name.quoteFrom stx name
   let exp := Syntax.mkCApp ``Name.num #[name, quote idx]
@@ -54,14 +55,16 @@ def elabGetConfig : TermElab := fun stx expectedType? => do
   tryPostponeIfNoneOrMVar expectedType?
   match stx with
   | `(getConfig| get_config? $key) => do
-    let exp : Term ← show TermElabM Term from do
-      if let some opts := optsExt.getState (← getEnv) then
-        if let some val := opts.find? key.getId then
-          `(some $(Syntax.mkStrLit val <| SourceInfo.fromRef (← getRef)))
+    let exp : Term ←
+      show TermElabM Term from do
+        if let some opts := optsExt.getState (← getEnv) then
+          if let some val := opts.find? key.getId then
+            `(some $(Syntax.mkStrLit val <| SourceInfo.fromRef (← getRef)))
+          else
+            -- Make sure `none` is properly typed
+            `((none : Option String))
         else
-          -- Make sure `none` is properly typed
-          `((none : Option String))
-      else
-        return Syntax.mkApp (mkCIdentFrom stx ``dummyGetConfig?) #[quote key.getId]
+          return Syntax.mkApp (mkCIdentFrom stx ``dummyGetConfig?) #[quote key.getId]
     withMacroExpansion stx exp <| elabTerm exp expectedType?
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax

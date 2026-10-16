@@ -13,16 +13,18 @@ public section
 
 namespace Lean.Meta
 
-@[inline] def testHelper (e : Expr) (p : Expr → MetaM Bool) : MetaM Bool := do
+@[inline]
+def testHelper (e : Expr) (p : Expr → MetaM Bool) : MetaM Bool := do
   if (← p e) then
     return true
   else
     p (← whnf e)
 
-@[inline] def matchHelper? (e : Expr) (p? : Expr → MetaM (Option α)) : MetaM (Option α) := do
+@[inline]
+def matchHelper? (e : Expr) (p? : Expr → MetaM (Option α)) : MetaM (Option α) := do
   match (← p? e) with
   | none => p? (← whnf e)
-  | s    => return s
+  | s => return s
 
 /-- Matches `e` with `lhs = (rhs : α)` and returns `(α, lhs, rhs)`. -/
 def matchEq? (e : Expr) : MetaM (Option (Expr × Expr × Expr)) :=
@@ -31,9 +33,7 @@ def matchEq? (e : Expr) : MetaM (Option (Expr × Expr × Expr)) :=
 def matchHEq? (e : Expr) : MetaM (Option (Expr × Expr × Expr × Expr)) :=
   matchHelper? e fun e => return Expr.heq? e
 
-/--
-  Return `some (α, lhs, rhs)` if `e` is of the form `@Eq α lhs rhs` or `@HEq α lhs α rhs`
--/
+/-- Return `some (α, lhs, rhs)` if `e` is of the form `@Eq α lhs rhs` or `@HEq α lhs α rhs` -/
 def matchEqHEq? (e : Expr) : MetaM (Option (Expr × Expr × Expr)) := do
   if let some r ← matchEq? e then
     return some r
@@ -44,9 +44,7 @@ def matchEqHEq? (e : Expr) : MetaM (Option (Expr × Expr × Expr)) := do
   else
     return none
 
-/--
-  Return `some (α, lhs)` if `e` is of the form `@Eq α lhs rhs` or `@HEq α lhs β rhs`
--/
+/-- Return `some (α, lhs)` if `e` is of the form `@Eq α lhs rhs` or `@HEq α lhs β rhs` -/
 def matchEqHEqLHS? (e : Expr) : MetaM (Option (Expr × Expr)) := do
   if let some (α, lhs, _rhs) ← matchEq? e then
     return some (α, lhs)
@@ -55,9 +53,7 @@ def matchEqHEqLHS? (e : Expr) : MetaM (Option (Expr × Expr)) := do
   else
     return none
 
-
-def matchFalse (e : Expr) : MetaM Bool := do
-  testHelper e fun e => return e.isFalse
+def matchFalse (e : Expr) : MetaM Bool := do testHelper e fun e => return e.isFalse
 
 def matchNot? (e : Expr) : MetaM (Option Expr) :=
   matchHelper? e fun e => do

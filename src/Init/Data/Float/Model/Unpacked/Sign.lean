@@ -33,17 +33,25 @@ namespace Sign
 
 instance : Mul Sign where
   mul
-    | .negative, .negative => .positive
-    | .negative, .positive => .negative
-    | .positive, .negative => .negative
-    | .positive, .positive => .positive
+    | .negative, .negative =>
+      .positive
+    | .negative, .positive =>
+      .negative
+    | .positive, .negative =>
+      .negative
+    | .positive, .positive =>
+      .positive
 
 instance : Div Sign where
   div
-    | .negative, .negative => .positive
-    | .negative, .positive => .negative
-    | .positive, .negative => .negative
-    | .positive, .positive => .positive
+    | .negative, .negative =>
+      .positive
+    | .negative, .positive =>
+      .negative
+    | .positive, .negative =>
+      .negative
+    | .positive, .positive =>
+      .positive
 
 instance : Neg Sign where
   neg
@@ -52,31 +60,28 @@ instance : Neg Sign where
 
 instance : Ord Sign where
   compare
-    | .negative, .negative => .eq
-    | .negative, .positive => .lt
-    | .positive, .negative => .gt
-    | .positive, .positive => .eq
+    | .negative, .negative =>
+      .eq
+    | .negative, .positive =>
+      .lt
+    | .positive, .negative =>
+      .gt
+    | .positive, .positive =>
+      .eq
 
-/--
-Apply the given sign to the given integer.
--/
+/-- Apply the given sign to the given integer. -/
 def apply (s : Sign) (n : Int) : Int :=
   match s with
   | .negative => -n
   | .positive => n
 
-/--
-Converts the sign to a bitvector, with positive sign denoted by `0`.
--/
+/-- Converts the sign to a bitvector, with positive sign denoted by `0`. -/
 def toBitVec : Sign → BitVec 1
   | .negative => 1#1
   | .positive => 0#1
 
-/--
-Constructs a sign from a bitvector, with positive sign denoted by `0`.
--/
-def ofBitVec (b  : BitVec 1) : Sign :=
-  if b = 0#1 then .positive else .negative
+/-- Constructs a sign from a bitvector, with positive sign denoted by `0`. -/
+def ofBitVec (b : BitVec 1) : Sign := if b = 0#1 then .positive else .negative
 
 end Sign
 

@@ -22,21 +22,13 @@ namespace Lake
 -- 2025-06-08: `LeanOption` was moved to the `Lean` namespace
 export Lean (LeanOption)
 
-/--
-Compiler backend with which to compile Lean.
--/
+/-- Compiler backend with which to compile Lean. -/
 public inductive Backend
-  /--
-  Force the C backend.
-  -/
+  /-- Force the C backend. -/
   | c
-  /--
-  Force the LLVM backend.
-  -/
+  /-- Force the LLVM backend. -/
   | llvm
-  /--
-  Use the default backend. Can be overridden by more specific configuration.
-  -/
+  /-- Use the default backend. Can be overridden by more specific configuration. -/
   | default
 deriving Repr, DecidableEq
 
@@ -68,8 +60,10 @@ where the library config can refine the package config.
 Formally, a left absorbing monoid on {`C`, `LLVM`} with `Default` as the unit.
 -/
 public def orPreferLeft : Backend → Backend → Backend
-| .default, b => b
-| b, _ => b
+  | .default, b =>
+    b
+  | b, _ =>
+    b
 
 end Backend
 
@@ -115,10 +109,10 @@ public instance : Max BuildType := maxOfLe
 
 /-- The arguments to pass to `leanc` based on the build type. -/
 public def leancArgs : BuildType → Array String
-| debug => #["-O0", "-g"]
-| relWithDebInfo => #["-O3", "-g", "-DNDEBUG"]
-| minSizeRel => #["-Os", "-DNDEBUG"]
-| release => #["-O3", "-DNDEBUG"]
+  | debug => #["-O0", "-g"]
+  | relWithDebInfo => #["-O3", "-g", "-DNDEBUG"]
+  | minSizeRel => #["-Os", "-DNDEBUG"]
+  | release => #["-O3", "-DNDEBUG"]
 
 @[inline]
 public def ofString? (s : String) : Option BuildType :=
@@ -140,14 +134,12 @@ public instance : ToString BuildType := ⟨BuildType.toString⟩
 
 /-- The options to pass to `lean` based on the build type. -/
 public def leanOptions : BuildType → LeanOptions
-| debug => ⟨NameMap.empty.insert `debugAssertions true⟩
-| _ => {}
+  | debug => ⟨NameMap.empty.insert `debugAssertions true⟩
+  | _ => {}
 
 set_option linter.unusedVariables.funArgs false in
 /-- The arguments to pass to `lean` based on the build type. -/
-public def leanArgs (t : BuildType) : Array String :=
-  #[]
-
+public def leanArgs (t : BuildType) : Array String := #[]
 
 end BuildType
 

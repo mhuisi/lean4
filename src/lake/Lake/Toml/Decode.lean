@@ -34,37 +34,39 @@ public abbrev Toml.EDecodeM := EStateM Unit (Array DecodeError)
 public class DecodeToml (α : Type) where
   decode (v : Toml.Value) : Toml.EDecodeM α
 
-public abbrev decodeToml [DecodeToml α] (v : Toml.Value) : Toml.EDecodeM α :=
-  DecodeToml.decode v
+public abbrev decodeToml [DecodeToml α] (v : Toml.Value) : Toml.EDecodeM α := DecodeToml.decode v
 
 namespace Toml
 
 /-- Run the decode action. If there were errors, throw. Otherwise, return the result. -/
-@[inline] public  def ensureDecode (x : DecodeM α) : EDecodeM α := fun es =>
+@[inline]
+public def ensureDecode (x : DecodeM α) : EDecodeM α := fun es =>
   match x es with
   | .ok a es => if es.isEmpty then .ok a es else .error () es
 
 /-- Run the decode action. If it fails, keep the errors but return `default`. -/
-@[inline] public  def tryDecodeD (default : α) (x : EDecodeM α) : DecodeM α := fun es =>
+@[inline]
+public def tryDecodeD (default : α) (x : EDecodeM α) : DecodeM α := fun es =>
   match x es with
   | .ok a es => .ok a es
   | .error _ es => .ok default es
 
 /-- Run the decode action. If it fails, keep the errors but  return `none`. -/
-@[inline] public def tryDecode? (x : EDecodeM α) : DecodeM (Option α) := fun es =>
-   match x es with
+@[inline]
+public def tryDecode? (x : EDecodeM α) : DecodeM (Option α) := fun es =>
+  match x es with
   | .ok a es => .ok (some a) es
   | .error _ es => .ok none es
 
 /-- Run the decode action. If it fails, keep the errors but  return `Inhabited.default`. -/
-@[inline] public  def tryDecode [Inhabited α] (x : EDecodeM α) : DecodeM α :=
-  tryDecodeD default x
+@[inline] public def tryDecode [Inhabited α] (x : EDecodeM α) : DecodeM α := tryDecodeD default x
 
 /--
 If the value is not `none`, run the decode action.
 If it fails, add the errors to the state and return `default`.
 -/
-@[inline] public def optDecodeD (default : β)  (a? : Option α) (f : α → EDecodeM β) : DecodeM β :=
+@[inline]
+public def optDecodeD (default : β) (a? : Option α) (f : α → EDecodeM β) : DecodeM β :=
   match a? with
   | some a => tryDecodeD default (f a)
   | none => pure default
@@ -73,7 +75,8 @@ If it fails, add the errors to the state and return `default`.
 If the value is not `none`, run the decode action.
 If it fails, add the errors to the state and return `Inhabited.default`.
 -/
-@[inline] public def optDecode [Inhabited β] (a? : Option α) (f : α → EDecodeM β) : DecodeM β :=
+@[inline]
+public def optDecode [Inhabited β] (a? : Option α) (f : α → EDecodeM β) : DecodeM β :=
   optDecodeD default a? f
 
 /--
@@ -81,8 +84,9 @@ If the value is not `none`, run the decode action.
 If it fails, add the errors to the state and return `none`.
 Otherwise, return the result in `some`.
 -/
-@[inline] public def optDecode? (a? : Option α)  (f : α → EDecodeM β) : DecodeM (Option β) :=
-  optDecodeD none a? fun a  => some <$> f a
+@[inline]
+public def optDecode? (a? : Option α) (f : α → EDecodeM β) : DecodeM (Option β) :=
+  optDecodeD none a? fun a => some <$> f a
 
 /--
 If either action errors, throw the concatenated errors.
@@ -94,18 +98,20 @@ public def mergeErrors (x₁ : EDecodeM α) (x₂ : EDecodeM β) (f : α → β 
     match x₂ es with
     | .ok b es => .ok (f a b) es
     | .error _ es => .error () es
-  | .error _ es => .error () es
+  | .error _ es =>
+    .error () es
 
-@[inline] public def logDecodeErrorAt (ref : Syntax) (msg : String) : DecodeM Unit :=
-  fun es => .ok () (es.push {ref, msg})
+@[inline]
+public def logDecodeErrorAt (ref : Syntax) (msg : String) : DecodeM Unit := fun es =>
+  .ok () (es.push { ref, msg })
 
-@[inline] public def throwDecodeErrorAt (ref : Syntax) (msg : String) : EDecodeM α :=
-  fun es => .error () (es.push {ref, msg})
+@[inline]
+public def throwDecodeErrorAt (ref : Syntax) (msg : String) : EDecodeM α := fun es =>
+  .error () (es.push { ref, msg })
 
 /-- Decode an array of TOML values, merging any errors from the elements into a single array. -/
 public def decodeArray [dec : DecodeToml α] (vs : Array Value) : EDecodeM (Array α) :=
-  vs.foldl (init := pure (.mkEmpty vs.size)) fun vs v =>
-    mergeErrors vs (dec.decode v) Array.push
+  vs.foldl (init := pure (.mkEmpty vs.size)) fun vs v => mergeErrors vs (dec.decode v) Array.push
 
 instance : DecodeToml Value := ⟨pure⟩
 
@@ -165,12 +171,14 @@ public def decodeValueArray (v : Value) : EDecodeM (Array Value) :=
   | .array _ vs => .ok vs
   | x => throwDecodeErrorAt x.ref "expected array"
 
-@[inline] public protected def decodeArray [dec : DecodeToml α] (v : Value) : EDecodeM (Array α) := do
+@[inline]
+public protected def decodeArray [dec : DecodeToml α] (v : Value) : EDecodeM (Array α) := do
   decodeArray (dec := dec) (← v.decodeValueArray)
 
 public instance [DecodeToml α] : DecodeToml (Array α) := ⟨Value.decodeArray⟩
 
-@[inline] public def decodeArrayOrSingleton [dec : DecodeToml α] (v : Value) : EDecodeM (Array α) :=
+@[inline]
+public def decodeArrayOrSingleton [dec : DecodeToml α] (v : Value) : EDecodeM (Array α) :=
   match v with
   | .array _ vs => decodeArray (dec := dec) vs
   | v => Array.singleton <$> dec.decode v
@@ -186,8 +194,8 @@ end Value
 
 public def decodeKeyval [dec : DecodeToml α] (k : Name) (v : Value) : EDecodeM α := fun es =>
   let iniPos := es.size
-  let f es := es.mapIdx fun i e =>
-    if iniPos ≤ i then {e with msg := s!"key {ppKey k}: {e.msg}"} else e
+  let f es :=
+    es.mapIdx fun i e => if iniPos ≤ i then { e with msg := s!"key {ppKey k}: {e.msg}" } else e
   match dec.decode v es with
   | .ok a es => .ok a (f es)
   | .error e es => .error e (f es)
@@ -199,36 +207,39 @@ public def decodeValue (t : Table) (k : Name) (ref := Syntax.missing) : EDecodeM
     | throwDecodeErrorAt ref s!"missing required key: {ppKey k}"
   return a
 
-@[inline] public def decode
-  [dec : DecodeToml α] (t : Table) (k : Name) (ref := Syntax.missing)
-: EDecodeM α := do
+@[inline]
+public def decode [dec : DecodeToml α] (t : Table) (k : Name) (ref := Syntax.missing)
+    : EDecodeM α := do
   let a ← t.decodeValue k ref
   decodeKeyval (dec := dec) k a
 
-@[inline] public def decode?
-  [dec : DecodeToml α] (t : Table) (k : Name)
-: EDecodeM (Option α) := t.find? k |>.mapM fun v => decodeKeyval (dec := dec) k v
+@[inline]
+public def decode? [dec : DecodeToml α] (t : Table) (k : Name) : EDecodeM (Option α) :=
+  t.find? k |>.mapM fun v => decodeKeyval (dec := dec) k v
 
-@[inline] public def decodeD
-  [dec : DecodeToml α] (t : Table) (k : Name) (default : α)
-: EDecodeM α := t.find? k |>.elim (pure default) (decodeKeyval (dec := dec) k)
+@[inline]
+public def decodeD [dec : DecodeToml α] (t : Table) (k : Name) (default : α) : EDecodeM α :=
+  t.find? k |>.elim (pure default) (decodeKeyval (dec := dec) k)
 
 public def decodeNameMap [dec : DecodeToml α] (t : Toml.Table) : EDecodeM (NameMap α) := do
-  t.items.foldl (init := pure {}) fun m (k,v) =>
+  t.items.foldl (init := pure {}) fun m (k, v) =>
     mergeErrors m (dec.decode v) fun m v => m.insert k v
 
 public instance [DecodeToml α] : DecodeToml (NameMap α) := ⟨(do decodeNameMap <| ← ·.decodeTable)⟩
 
-@[inline] public protected def tryDecode
-  [Inhabited α] [dec : DecodeToml α] (t : Table) (k : Name) (ref := Syntax.missing)
-: DecodeM α := tryDecode <| t.decode (dec := dec) k ref
+@[inline]
+public protected def tryDecode
+    [Inhabited α] [dec : DecodeToml α] (t : Table) (k : Name) (ref := Syntax.missing)
+    : DecodeM α :=
+  tryDecode <| t.decode (dec := dec) k ref
 
-@[inline] public protected def tryDecode?
-  [dec : DecodeToml α] (t : Table) (k : Name)
-: DecodeM (Option α) := optDecode? (t.find? k) dec.decode
+@[inline]
+public protected def tryDecode? [dec : DecodeToml α] (t : Table) (k : Name) : DecodeM (Option α) :=
+  optDecode? (t.find? k) dec.decode
 
-@[inline] public protected def tryDecodeD
-  [dec : DecodeToml α] (k : Name) (default : α) (t : Table)
-: DecodeM α := optDecodeD default (t.find? k) dec.decode
+@[inline]
+public protected def tryDecodeD [dec : DecodeToml α] (k : Name) (default : α) (t : Table)
+    : DecodeM α :=
+  optDecodeD default (t.find? k) dec.decode
 
 end Table

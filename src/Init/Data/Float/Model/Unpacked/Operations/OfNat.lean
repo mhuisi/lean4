@@ -16,51 +16,39 @@ public import Init.Data.SInt.Basic
 namespace Float.Model.UnpackedFloat
 
 /-- Converts an `Int` to an `UnpackedFloat`, returning positive zero on zero. -/
-def ofInt (spec : Format) (n : Int) : UnpackedFloat :=
-  normalize spec n 0 .positive
+def ofInt (spec : Format) (n : Int) : UnpackedFloat := normalize spec n 0 .positive
 
 /-- Converts a `Nat` to an `UnpackedFloat`, returning positive zero on zero. -/
-def ofNat (spec : Format) (n : Nat) : UnpackedFloat :=
-  ofInt spec (n : Int)
+def ofNat (spec : Format) (n : Nat) : UnpackedFloat := ofInt spec (n : Int)
 
 /-- Converts a `UInt8` to an `UnpackedFloat`, returning positive zero on zero. -/
-def ofUInt8 (spec : Format) (n : UInt8) : UnpackedFloat :=
-  ofNat spec n.toNat
+def ofUInt8 (spec : Format) (n : UInt8) : UnpackedFloat := ofNat spec n.toNat
 
 /-- Converts a `UInt16` to an `UnpackedFloat`, returning positive zero on zero. -/
-def ofUInt16 (spec : Format) (n : UInt16) : UnpackedFloat :=
-  ofNat spec n.toNat
+def ofUInt16 (spec : Format) (n : UInt16) : UnpackedFloat := ofNat spec n.toNat
 
 /-- Converts a `UInt32` to an `UnpackedFloat`, returning positive zero on zero. -/
-def ofUInt32 (spec : Format) (n : UInt32) : UnpackedFloat :=
-  ofNat spec n.toNat
+def ofUInt32 (spec : Format) (n : UInt32) : UnpackedFloat := ofNat spec n.toNat
 
 /-- Converts a `UInt64` to an `UnpackedFloat`, returning positive zero on zero. -/
-def ofUInt64 (spec : Format) (n : UInt64) : UnpackedFloat :=
-  ofNat spec n.toNat
+def ofUInt64 (spec : Format) (n : UInt64) : UnpackedFloat := ofNat spec n.toNat
 
 /-- Converts a `USize` to an `UnpackedFloat`, returning positive zero on zero. -/
-def ofUSize (spec : Format) (n : USize) : UnpackedFloat :=
-  ofNat spec n.toNat
+def ofUSize (spec : Format) (n : USize) : UnpackedFloat := ofNat spec n.toNat
 
 /-- Converts an `Int8` to an `UnpackedFloat`, returning positive zero on zero. -/
-def ofInt8 (spec : Format) (n : Int8) : UnpackedFloat :=
-  ofInt spec n.toInt
+def ofInt8 (spec : Format) (n : Int8) : UnpackedFloat := ofInt spec n.toInt
 
 /-- Converts an `Int16` to an `UnpackedFloat`, returning positive zero on zero. -/
-def ofInt16 (spec : Format) (n : Int16) : UnpackedFloat :=
-  ofInt spec n.toInt
+def ofInt16 (spec : Format) (n : Int16) : UnpackedFloat := ofInt spec n.toInt
 
 /-- Converts an `Int32` to an `UnpackedFloat`, returning positive zero on zero. -/
-def ofInt32 (spec : Format) (n : Int32) : UnpackedFloat :=
-  ofInt spec n.toInt
+def ofInt32 (spec : Format) (n : Int32) : UnpackedFloat := ofInt spec n.toInt
 
 /-- Converts an `Int64` to an `UnpackedFloat`, returning positive zero on zero. -/
-def ofInt64 (spec : Format) (n : Int64) : UnpackedFloat :=
-  ofInt spec n.toInt
+def ofInt64 (spec : Format) (n : Int64) : UnpackedFloat := ofInt spec n.toInt
 
 /-- Converts an `ISize` to an `UnpackedFloat`, returning positive zero on zero. -/
-def ofISize (spec : Format) (n : ISize) : UnpackedFloat :=
-  ofInt spec n.toInt
+def ofISize (spec : Format) (n : ISize) : UnpackedFloat := ofInt spec n.toInt
 
 end Float.Model.UnpackedFloat

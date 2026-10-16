@@ -20,9 +20,11 @@ public import Init.Data.BitVec.Bootstrap
 namespace Float.Model.UnpackedFloat
 
 /-- Creates a packed float from a sign, an exponent and a mantissa. -/
-def packComponents (spec : Format) (sign : Sign)
-    (exponent : BitVec spec.exponentBits)
-    (mantissa : BitVec spec.mantissaBitsWithoutImplicit) : BitVec spec.numBits :=
+def packComponents
+    (spec : Format)
+    (sign : Sign) (exponent : BitVec spec.exponentBits)
+    (mantissa : BitVec spec.mantissaBitsWithoutImplicit)
+    : BitVec spec.numBits :=
   sign.toBitVec ++ exponent ++ mantissa
 
 /-- Creates the packed signed infinity representation for the given specification. -/
@@ -34,8 +36,7 @@ def packedNaN (spec : Format) : BitVec spec.numBits :=
   packComponents spec .positive (-1#_) (1#_ <<< (spec.mantissaBitsWithoutImplicit - 1))
 
 /-- Creates the packed signed zero representation for the given specification. -/
-def packedZero (spec : Format) (sign : Sign) : BitVec spec.numBits :=
-  packComponents spec sign 0 0
+def packedZero (spec : Format) (sign : Sign) : BitVec spec.numBits := packComponents spec sign 0 0
 
 /--
 Packs the given float into the format given by the specification.
@@ -44,9 +45,12 @@ This function assumes that the float is already correctly rounded for the given 
 This means that the exponent must be equal to the exponent computed by `spec.targetExponent`.
 -/
 def pack (spec : Format) : UnpackedFloat → BitVec spec.numBits
-  | .notANumber => packedNaN spec
-  | .infinity s => packedInfinity spec s
-  | .zero s => packedZero spec s
+  | .notANumber =>
+    packedNaN spec
+  | .infinity s =>
+    packedInfinity spec s
+  | .zero s =>
+    packedZero spec s
   | .finite s m e _ =>
     let actualMantissaBits := m.log2
     let biasedExponent := (e + spec.exponentBias + spec.mantissaBitsWithoutImplicit).toNat
@@ -64,22 +68,16 @@ def pack (spec : Format) : UnpackedFloat → BitVec spec.numBits
 Unpacks the mantissa portion of the packed float. If this is a normal number, this
 will be missing the implicit bit.
 -/
-def unpackMantissa {spec : Format} (b : BitVec spec.numBits) :
-    BitVec spec.mantissaBitsWithoutImplicit :=
+def unpackMantissa {spec : Format} (b : BitVec spec.numBits)
+    : BitVec spec.mantissaBitsWithoutImplicit :=
   b.extractLsb' 0 spec.mantissaBitsWithoutImplicit
 
-/--
-Unpacks the exponent portion of the packed float.
--/
-def unpackExponent {spec : Format} (b : BitVec spec.numBits) :
-    BitVec spec.exponentBits :=
+/-- Unpacks the exponent portion of the packed float. -/
+def unpackExponent {spec : Format} (b : BitVec spec.numBits) : BitVec spec.exponentBits :=
   b.extractLsb' spec.mantissaBitsWithoutImplicit spec.exponentBits
 
-/--
-Unpacks the sign bit of the packed float.
--/
-def unpackSign {spec : Format} (b : BitVec spec.numBits) :
-    BitVec 1 :=
+/-- Unpacks the sign bit of the packed float. -/
+def unpackSign {spec : Format} (b : BitVec spec.numBits) : BitVec 1 :=
   b.extractLsb' (spec.mantissaBitsWithoutImplicit + spec.exponentBits) 1
 
 /--
@@ -89,8 +87,9 @@ The resulting float may be assumed to be correctly rounded for the given specifi
 -/
 def unpack (spec : Format) (b : BitVec spec.numBits) : UnpackedFloat :=
   let mantissaVec := unpackMantissa b
-  let exponentVec : BitVec spec.exponentBits :=  unpackExponent b
-  let exponent : Int := (exponentVec.toNat : Int) - (spec.exponentBias + spec.mantissaBitsWithoutImplicit)
+  let exponentVec : BitVec spec.exponentBits := unpackExponent b
+  let exponent : Int :=
+    (exponentVec.toNat : Int) - (spec.exponentBias + spec.mantissaBitsWithoutImplicit)
   let signVec : BitVec 1 := unpackSign b
   let sign := Sign.ofBitVec signVec
   if exponentVec = -1#_ then
@@ -103,7 +102,8 @@ def unpack (spec : Format) (b : BitVec spec.numBits) : UnpackedFloat :=
       .zero sign
     else
       -- subnormal
-      .finite sign mantissaVec.toNat (exponent + 1) (by simpa [BitVec.toNat_pos, BitVec.pos_iff_ne_zero])
+      .finite sign mantissaVec.toNat (exponent + 1)
+        (by simpa [BitVec.toNat_pos, BitVec.pos_iff_ne_zero])
   else
     -- normal
     .finite sign (1#1 ++ mantissaVec).toNat exponent (by simp)

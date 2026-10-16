@@ -12,7 +12,8 @@ open Lean Parser
 
 namespace Lake
 
-public def mkParserErrorMessage (ictx : InputContext) (s : ParserState) (e : Parser.Error) : Message where
+public def mkParserErrorMessage (ictx : InputContext) (s : ParserState) (e : Parser.Error)
+    : Message where
   fileName := ictx.fileName
   pos := ictx.fileMap.toPosition s.pos
   endPos := none
@@ -25,7 +26,9 @@ public def mkExceptionMessage (ictx : InputContext) (e : Exception) : Message wh
   endPos := ictx.fileMap.toPosition <$> e.getRef.getTailPos?
   data := e.toMessageData
 
-public def mkMessageNoPos (ictx : InputContext) (data : MessageData) (severity := MessageSeverity.error) : Message where
+public def mkMessageNoPos
+    (ictx : InputContext) (data : MessageData) (severity := MessageSeverity.error)
+    : Message where
   fileName := ictx.fileName
   pos := ictx.fileMap.toPosition 0
   endPos := none
@@ -33,11 +36,9 @@ public def mkMessageNoPos (ictx : InputContext) (data : MessageData) (severity :
   data := data
 
 public def mkMessageStringCore
-  (severity : MessageSeverity)
-  (fileName caption body : String)
-  (pos : Position) (endPos? : Option Position := none)
-  (infoWithPos := false)
-: String := Id.run do
+    (severity : MessageSeverity) (fileName caption body : String) (pos : Position)
+    (endPos? : Option Position := none) (infoWithPos := false)
+    : String := Id.run do
   let mut str := body
   unless caption == "" do
     str := caption ++ ":\n" ++ str
@@ -53,7 +54,8 @@ public def mkMessageStringCore
     str := str ++ "\n"
   return str
 
-public def mkMessageString (msg : Message) (includeEndPos := false) (infoWithPos := false) : BaseIO String := do
+public def mkMessageString (msg : Message) (includeEndPos := false) (infoWithPos := false)
+    : BaseIO String := do
   let endPos? := if includeEndPos then msg.endPos else none
   let s ← msg.data.toString
   return mkMessageStringCore msg.severity msg.fileName msg.caption s msg.pos endPos? infoWithPos

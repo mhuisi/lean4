@@ -29,27 +29,31 @@ Determine whether `declName` is an enum inductive `.match_x` definition that is 
 `MatchKind` for the supported shapes.
 -/
 public def isSupportedMatch (declName : Name) : MetaM (Option MatchKind) := do
-  let some info ← getMatcherInfo? declName | return none
+  let some info ← getMatcherInfo? declName
+    | return none
   if info.discrInfos.size ≠ 1 then return none
   if info.discrInfos[0]!.hName?.isSome then return none
-  let .defnInfo defnInfo ← getConstInfo declName | return none
+  let .defnInfo defnInfo ← getConstInfo declName
+    | return none
   forallTelescope defnInfo.type fun xs a => do
     if xs.size < 2 then return none
     -- Check that discriminator is `EnumInductive`
     let discr := xs[1]!
-    let some discrTypeName := (← inferType discr).constName? | return none
+    let some discrTypeName := (← inferType discr).constName?
+      | return none
     if !(← isEnumType discrTypeName) then return none
-    let .inductInfo inductiveInfo ← getConstInfo discrTypeName | unreachable!
+    let .inductInfo inductiveInfo ← getConstInfo discrTypeName
+      | unreachable!
 
     -- Check that motive is `EnumInductive → Sort u`
     let motive := xs[0]!
     let motiveType ← inferType motive
-    let some (.const domTypeName .., (.sort (.param ..))) := motiveType.arrow? | return none
+    let some (.const domTypeName .., (.sort (.param ..))) := motiveType.arrow?
+      | return none
     if domTypeName != discrTypeName then return none
 
     -- Check that resulting type is `motive discr`
-    let retTypeOk ← a.withApp fun fn arg =>
-      return fn == motive && arg.size == 1 && arg[0]! == discr
+    let retTypeOk ← a.withApp fun fn arg => return fn == motive && arg.size == 1 && arg[0]! == discr
     if !retTypeOk then return none
     let numCtors := inductiveInfo.numCtors
 
@@ -72,30 +76,31 @@ public def isSupportedMatch (declName : Name) : MetaM (Option MatchKind) := do
       ```
       Where we have as many arms as constructors but the last arm is a default.
       -/
-
       if let some kind ← trySimpleEnum inductiveInfo xs numCtors motive then
         return kind
 
     if xs.size > 2 then
       -- Probably a match with default case
-
       -- Check that all parameters except the last are `h_n EnumInductive.ctor`
       let numConcreteCases := xs.size - 3 -- minus motive, discr and default case
       let mut handledCtors := Array.mkEmpty (xs.size - 3)
       for i in *...numConcreteCases do
         let argType ← inferType xs[i + 2]!
-        let some (.const ``Unit [], (.app m (.const c ..))) := argType.arrow? | return none
+        let some (.const ``Unit [], (.app m (.const c ..))) := argType.arrow?
+          | return none
         if m != motive then return none
-        let .ctorInfo ctorInfo ← getConstInfo c | return none
+        let .ctorInfo ctorInfo ← getConstInfo c
+          | return none
         handledCtors := handledCtors.push ctorInfo
 
       -- Check that the last parameter looks like a default case one
       let defaultArgType ← inferType xs[xs.size - 1]!
-      let defaultOk ← forallTelescope defaultArgType fun args dom => do
-        if args.size != 1 then return false
-        let input := args[0]!
-        if !(← inferType input).isConstOf discrTypeName then return false
-        return dom.withApp fun fn arg => fn == motive && arg.size == 1 && arg[0]! == input
+      let defaultOk ←
+        forallTelescope defaultArgType fun args dom => do
+          if args.size != 1 then return false
+          let input := args[0]!
+          if ! (← inferType input).isConstOf discrTypeName then return false
+          return dom.withApp fun fn arg => fn == motive && arg.size == 1 && arg[0]! == input
 
       if !defaultOk then return none
 
@@ -103,29 +108,31 @@ public def isSupportedMatch (declName : Name) : MetaM (Option MatchKind) := do
     else
       return none
 where
-  trySimpleEnum (inductiveInfo : InductiveVal) (xs : Array Expr)
-      (numCtors : Nat) (motive : Expr) : MetaM (Option MatchKind) := do
+  trySimpleEnum (inductiveInfo : InductiveVal) (xs : Array Expr) (numCtors : Nat) (motive : Expr)
+      : MetaM (Option MatchKind) := do
     -- Check that all parameters are `h_n EnumInductive.ctor`
     let mut handledCtors := Array.mkEmpty numCtors
     for i in *...numCtors do
       let argType ← inferType xs[i + 2]!
-      let some (.const ``Unit [], (.app m (.const c ..))) := argType.arrow? | return none
+      let some (.const ``Unit [], (.app m (.const c ..))) := argType.arrow?
+        | return none
       if m != motive then return none
-      let .ctorInfo ctorInfo ← getConstInfo c | return none
+      let .ctorInfo ctorInfo ← getConstInfo c
+        | return none
       handledCtors := handledCtors.push ctorInfo
 
     return some <| .simpleEnum inductiveInfo handledCtors
 
-def builtinTypes : Array Name :=
-  #[``BitVec, ``Bool,
-    ``UInt8, ``UInt16, ``UInt32, ``UInt64, ``USize,
-    ``Int8, ``Int16, ``Int32, ``Int64, ``ISize]
+def builtinTypes : Array Name := #[
+  ``BitVec, ``Bool,
+  ``UInt8, ``UInt16, ``UInt32, ``UInt64, ``USize,
+  ``Int8, ``Int16, ``Int32, ``Int64, ``ISize
+]
 
-@[inline]
-def isBuiltIn (n : Name) : Bool := builtinTypes.contains n
+@[inline] def isBuiltIn (n : Name) : Bool := builtinTypes.contains n
 
-public def addDefaultTypeAnalysisLemmas (methods : Sym.Simp.Methods) :
-    PreProcessM Sym.Simp.Methods := do
+public def addDefaultTypeAnalysisLemmas (methods : Sym.Simp.Methods)
+    : PreProcessM Sym.Simp.Methods := do
   let mut lemmas : Sym.Simp.Theorems := {}
   let relevantNames := #[
     ``dite_eq_ite,
@@ -154,7 +161,8 @@ public partial def typeAnalysisPass : Pass where
       seedRestrictedTypes types
     checkContext (← PreProcessM.getTargetMVarId) |>.run { restricted := restrictedTypes.isSome }
     let analysis ← PreProcessM.getTypeAnalysis
-    trace[Meta.Tactic.bv] m!"Type analysis found structures: {analysis.interestingStructures.toList}"
+    trace[Meta.Tactic.bv]
+      m!"Type analysis found structures: {analysis.interestingStructures.toList}"
     trace[Meta.Tactic.bv] m!"Type analysis found enums: {analysis.interestingEnums.toList}"
     trace[Meta.Tactic.bv] m!"Type analysis found matchers: {analysis.interestingMatchers.keys}"
     return false
@@ -180,7 +188,8 @@ where
 
   analyzeType (expr : Expr) : AnalysisM Unit := do
     expr.forEachWhere Expr.isConst fun e => do
-      let .const declName .. := e | unreachable!
+      let .const declName .. := e
+        | unreachable!
       discard <| analyzeConst declName
 
   /--
@@ -231,15 +240,17 @@ where
       return false
 
     let ctorTyp := (← getConstInfoCtor constInfo.ctors.head!).type
-    let interesting ← forallTelescope ctorTyp fun args _ =>
-      -- Note: Important not to short circuit here so that we collect information about all
-      -- arguments in case we want to split recursively.
-      args.foldlM (init := false) fun state arg => do
-        return state || (← typeCasesRelevant (← arg.fvarId!.getType))
+    let interesting ←
+      forallTelescope ctorTyp fun args _ =>
+        -- Note: Important not to short circuit here so that we collect information about all
+        -- arguments in case we want to split recursively.
+        args.foldlM (init := false) fun state arg => do
+          return state || (← typeCasesRelevant (← arg.fvarId!.getType))
     return interesting
 
   typeCasesRelevant (expr : Expr) : AnalysisM Bool := do
-    let some const := expr.getAppFn.constName? | return false
+    let some const := expr.getAppFn.constName?
+      | return false
     analyzeConst const
 
 end Normalize

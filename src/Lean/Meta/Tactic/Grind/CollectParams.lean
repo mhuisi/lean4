@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 namespace Lean.Meta.Grind
@@ -33,7 +34,8 @@ def pushAnchor (a : TAnchor) : Collect Unit := do
     return ()
   modify fun s => { s with anchors := s.anchors.push a }
 
-def collectInstantiateParams (params : Syntax.TSepArray `Lean.Parser.Tactic.Grind.thm ",") : Collect Unit := do
+def collectInstantiateParams (params : Syntax.TSepArray `Lean.Parser.Tactic.Grind.thm ",")
+    : Collect Unit := do
   for p in params.getElems do
     match p with
     | `(Lean.Parser.Tactic.Grind.thm| $lemma:grindLemma) =>
@@ -50,32 +52,35 @@ def collectInstantiateParams (params : Syntax.TSepArray `Lean.Parser.Tactic.Grin
 
 partial def collect (tac : TGrind) : Collect Unit := do
   match tac with
-  | `(grind| sorry) => modify fun s => { s with hasSorry := true }
-  | `(grind| next => $$seq;*)
-  | `(grind| · $$seq;*) =>
+  | `(grind| sorry) =>
+    modify fun s => { s with hasSorry := true }
+  | `(grind| next => $$seq;*) | `(grind| · $$seq;*) =>
     for step in seq.getElems do
       match step with
       | `(Parser.Tactic.Grind.grindStep| $tac:grind $[| $_:grind_filter]?) => collect tac
       | _ => return ()
-  | `(grind| $tac₁:grind <;> $tac₂:grind) => collect tac₁; collect tac₂
-  | `(grind| cases $a:anchor) => pushAnchor a
-  | `(grind| cases $a:anchor/$_:num) => pushAnchor a
+  | `(grind| $tac₁:grind <;> $tac₂:grind) =>
+    collect tac₁; collect tac₂
+  | `(grind| cases $a:anchor) =>
+    pushAnchor a
+  | `(grind| cases $a:anchor/$_:num) =>
+    pushAnchor a
   | `(grind| use [$params,*]) =>
     collectInstantiateParams params
   | `(grind| instantiate $[only]? $[approx]? $[[$params?,*]]?) =>
-    let some params := params? | return ()
+    let some params := params?
+      | return ()
     collectInstantiateParams params
-  | _ => return ()
+  | _ =>
+    return ()
 
-def main (seq : List TGrind) : Collect Unit :=
-  seq.forM collect
+def main (seq : List TGrind) : Collect Unit := seq.forM collect
 
 end Collector
 
 def collectParamsCore (seq : List TGrind) : CoreM (Bool × Array TParam × Array TParam) := do
   let (_, s) ← Collector.main seq |>.run {}
-  let anchors ← s.anchors.mapM fun anchor =>
-    `(Parser.Tactic.grindParam| $anchor:anchor)
+  let anchors ← s.anchors.mapM fun anchor => `(Parser.Tactic.grindParam| $anchor:anchor)
   return (s.hasSorry, s.params, anchors)
 
 def collectParams (seq : List TGrind) : CoreM (Array TParam) := do
@@ -87,7 +92,8 @@ Given a `grind` tactic sequence, extracts parameters and builds a terminal `fini
 The `extraParams` are additional parameters (e.g., from the original `finish?` call) that
 should always be included.
 -/
-public def mkFinishTactic (seq : List TGrind) (extraParams : Array TParam := #[]) : CoreM TGrind := do
+public def mkFinishTactic (seq : List TGrind) (extraParams : Array TParam := #[])
+    : CoreM TGrind := do
   let params := (← collectParams seq) ++ extraParams
   `(grind| finish only [$params,*])
 
@@ -100,8 +106,10 @@ are anchors.
 The `extraParams` are additional parameters (e.g., term arguments from the original `grind?` call)
 that should always be included in the suggestion.
 -/
-public def mkGrindOnlyTactics (cfg : TSyntax `Lean.Parser.Tactic.optConfig) (seq : List TGrind)
-    (extraParams : Array TParam := #[]) : CoreM (Array (TSyntax `tactic)) := do
+public def mkGrindOnlyTactics
+    (cfg : TSyntax `Lean.Parser.Tactic.optConfig) (seq : List TGrind)
+    (extraParams : Array TParam := #[])
+    : CoreM (Array (TSyntax `tactic)) := do
   let (hasSorry, params, anchors) ← collectParamsCore seq
   if hasSorry then return #[]
   let allParams := params ++ anchors ++ extraParams

@@ -14,22 +14,20 @@ public section
 namespace Lean
 
 structure Position where
-  line   : Nat
+  line : Nat
   column : Nat
-  deriving Inhabited, DecidableEq, Repr, ToJson, FromJson
+deriving Inhabited, DecidableEq, Repr, ToJson, FromJson
 
 namespace Position
 protected def lt : Position → Position → Bool
   | ⟨l₁, c₁⟩, ⟨l₂, c₂⟩ => Prod.lexLt (l₁, c₁) (l₂, c₂)
 
-instance : ToFormat Position :=
-  ⟨fun ⟨l, c⟩ => "⟨" ++ format l ++ ", " ++ format c ++ "⟩"⟩
+instance : ToFormat Position := ⟨fun ⟨l, c⟩ => "⟨" ++ format l ++ ", " ++ format c ++ "⟩"⟩
 
-instance : ToString Position :=
-  ⟨fun ⟨l, c⟩ => "⟨" ++ toString l ++ ", " ++ toString c ++ "⟩"⟩
+instance : ToString Position := ⟨fun ⟨l, c⟩ => "⟨" ++ toString l ++ ", " ++ toString c ++ "⟩"⟩
 
 instance : ToExpr Position where
-  toExpr p   := mkAppN (mkConst ``Position.mk) #[toExpr p.line, toExpr p.column]
+  toExpr p := mkAppN (mkConst ``Position.mk) #[toExpr p.line, toExpr p.column]
   toTypeExpr := mkConst ``Position
 
 end Position
@@ -37,12 +35,14 @@ end Position
 /-- Content of a file together with precalculated positions of newlines. -/
 structure FileMap where
   /-- The content of the file. -/
-  source    : String
-  /-- The positions of newline characters.
+  source : String
+  /--
+  The positions of newline characters.
   The first entry is always `0` and the last always the index of the last character.
-  In particular, if the last character is a newline, that index will appear twice. -/
+  In particular, if the last character is a newline, that index will appear twice.
+  -/
   positions : Array String.Pos.Raw
-  deriving Inhabited
+deriving Inhabited
 
 class MonadFileMap (m : Type → Type) where
   getFileMap : m FileMap
@@ -52,23 +52,28 @@ export MonadFileMap (getFileMap)
 namespace FileMap
 
 /-- The last line should always be `positions.size - 1`. -/
-def getLastLine (fmap : FileMap) : Nat :=
-  fmap.positions.size - 1
+def getLastLine (fmap : FileMap) : Nat := fmap.positions.size - 1
 
-/-- The line numbers associated with the `positions` of the `FileMap`.
+/--
+The line numbers associated with the `positions` of the `FileMap`.
 `fmap.getLine i` is the iᵗʰ entry of `#[1, 2, …, n-1, n-1]`
-where `n` is the `size` of `positions`. -/
-def getLine (fmap : FileMap) (x : Nat) : Nat :=
-  min (x + 1) fmap.getLastLine
+where `n` is the `size` of `positions`.
+-/
+def getLine (fmap : FileMap) (x : Nat) : Nat := min (x + 1) fmap.getLastLine
 
 partial def ofString (s : String) : FileMap :=
   let rec loop (i : String.Pos.Raw) (ps : Array String.Pos.Raw) : FileMap :=
-    if i.atEnd s then { source := s, positions := ps.push i }
+    if i.atEnd s then {
+      source := s
+      positions := ps.push i
+    }
     else
       let c := i.get s
       let i := i.next s
-      if c == '\n' then loop i (ps.push i)
-      else loop i ps
+      if c == '\n' then
+        loop i (ps.push i)
+      else
+        loop i ps
   loop 0 #[0]
 
 partial def toPosition (fmap : FileMap) (pos : String.Pos.Raw) : Position :=
@@ -76,17 +81,27 @@ partial def toPosition (fmap : FileMap) (pos : String.Pos.Raw) : Position :=
   | { source := str, positions := ps } =>
     if ps.size >= 2 && pos <= ps.back! then
       let rec toColumn (i : String.Pos.Raw) (c : Nat) : Nat :=
-        if i == pos || i.atEnd str then c
-        else toColumn (i.next str) (c+1)
+        if i == pos || i.atEnd str then
+          c
+        else
+          toColumn (i.next str) (c + 1)
       let rec loop (b e : Nat) :=
         let posB := ps[b]!
-        if e == b + 1 then { line := fmap.getLine b, column := toColumn posB 0 }
+        if e == b + 1 then {
+          line := fmap.getLine b
+          column := toColumn posB 0
+        }
         else
-          let m := (b + e) / 2;
+          let m := (b + e) / 2
           let posM := ps[m]!
-          if pos == posM then { line := fmap.getLine m, column := 0 }
-          else if pos > posM then loop m e
-          else loop b m
+          if pos == posM then {
+            line := fmap.getLine m
+            column := 0
+          }
+          else if pos > posM then
+            loop m e
+          else
+            loop b m
       loop 0 (ps.size - 1)
     else if ps.isEmpty then
       ⟨0, 0⟩
@@ -114,10 +129,10 @@ This gives the same result as `map.ofPosition ⟨line, 0⟩`, but is more effici
 def lineStart (map : FileMap) (line : Nat) : String.Pos.Raw :=
   if h : line - 1 < map.positions.size then
     map.positions[line - 1]
-  else map.positions.back?.getD 0
+  else
+    map.positions.back?.getD 0
 
 end FileMap
 end Lean
 
-def Lean.String.toFileMap (s : String) : Lean.FileMap :=
-  Lean.FileMap.ofString s
+def Lean.String.toFileMap (s : String) : Lean.FileMap := Lean.FileMap.ofString s

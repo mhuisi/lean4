@@ -14,11 +14,9 @@ namespace Lean
 
 builtin_initialize protectedExt : TagDeclarationExtension ← mkTagDeclarationExtension
 
-def addProtected (env : Environment) (n : Name) : Environment :=
-  protectedExt.tag env n
+def addProtected (env : Environment) (n : Name) : Environment := protectedExt.tag env n
 
-def isProtected (env : Environment) (n : Name) : Bool :=
-  protectedExt.isTagged env n
+def isProtected (env : Environment) (n : Name) : Bool := protectedExt.isTagged env n
 
 def mkPrivateName (env : Environment) (n : Name) : Name :=
   -- If name is already private, remove previous suffix first. We need to ensure the resulting name

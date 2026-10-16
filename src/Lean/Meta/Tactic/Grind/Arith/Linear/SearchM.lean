@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.Linear.LinearM
 public section
@@ -21,15 +22,13 @@ structure Case where
   Snapshot of the state for backtracking purposes.
   We do not use a trail stack.
   -/
-  saved  : Struct
-  deriving Inhabited
+  saved : Struct
+deriving Inhabited
 
-/--
-State of the model search procedure.
--/
+/-- State of the model search procedure. -/
 structure Search.State where
   /-- Decision stack (aka case-split stack) -/
-  cases   : PArray Case := {}
+  cases : PArray Case := {}
   /-- Set of decision variables in `cases`. -/
   decVars : FVarIdSet := {}
 
@@ -38,8 +37,9 @@ abbrev SearchM := StateRefT Search.State LinearM
 def mkCase (c : DiseqCnstr) : SearchM FVarId := do
   let fvarId ← mkFreshFVarId
   let saved ← getStruct
-  modify fun s => { s with
-    cases   := s.cases.push { saved, fvarId, c }
+  modify fun s => {
+    s with
+    cases := s.cases.push { saved, fvarId, c }
     decVars := s.decVars.insert fvarId
   }
   modifyStruct fun s => { s with caseSplits := true }

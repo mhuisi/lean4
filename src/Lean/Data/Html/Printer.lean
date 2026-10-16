@@ -28,52 +28,52 @@ private inductive RenderWorkItemKind where
 private structure RenderWorkItemStack where
   kinds : Array RenderWorkItemKind
   htmls : Array Html
-  strs  : Array String
+  strs : Array String
 
 namespace RenderWorkItemStack
 
 @[inline]
-private def pushKind (q : RenderWorkItemStack) (kind : RenderWorkItemKind) :
-    RenderWorkItemStack := {
-  q with kinds := q.kinds.push kind
+private def pushKind (q : RenderWorkItemStack) (kind : RenderWorkItemKind)
+    : RenderWorkItemStack := {
+  q with
+  kinds := q.kinds.push kind
 }
 
 @[inline]
-private def pushHtml (q : RenderWorkItemStack) (value : Html) :
-    RenderWorkItemStack := {
-  q with htmls := q.htmls.push value
+private def pushHtml (q : RenderWorkItemStack) (value : Html) : RenderWorkItemStack := {
+  q with
+  htmls := q.htmls.push value
 }
 
 @[inline]
-private def pushStr (q : RenderWorkItemStack) (str : String) :
-    RenderWorkItemStack := {
-  q with strs := q.strs.push str
+private def pushStr (q : RenderWorkItemStack) (str : String) : RenderWorkItemStack := {
+  q with
+  strs := q.strs.push str
 }
 
 @[inline]
-private def popKind (q : RenderWorkItemStack) (h : q.kinds.size ≠ 0) :
-    RenderWorkItemKind × RenderWorkItemStack :=
+private def popKind (q : RenderWorkItemStack) (h : q.kinds.size ≠ 0)
+    : RenderWorkItemKind × RenderWorkItemStack :=
   let kind := q.kinds[q.kinds.size - 1]
   let q := { q with kinds := q.kinds.pop }
   (kind, q)
 
 @[inline]
-private def popHtml! (q : RenderWorkItemStack) :
-    Html × RenderWorkItemStack :=
+private def popHtml! (q : RenderWorkItemStack) : Html × RenderWorkItemStack :=
   let value := q.htmls[q.htmls.size - 1]!
   let q := { q with htmls := q.htmls.pop }
   (value, q)
 
 @[inline]
-private def popStr! (q : RenderWorkItemStack) :
-    String × RenderWorkItemStack :=
+private def popStr! (q : RenderWorkItemStack) : String × RenderWorkItemStack :=
   let str := q.strs[q.strs.size - 1]!
   let q := { q with strs := q.strs.pop }
   (str, q)
 
 end RenderWorkItemStack
 
-/-- Renders into a string to be consumed by browsers.
+/--
+Renders into a string to be consumed by browsers.
 The input's structure is respected as much as possible:
 - No whitespace is added or removed.
 - Tag names are not escaped.
@@ -90,13 +90,9 @@ We make the following XML-compatible choices:
 - Attribute values are always double-quoted.
 
 And the following incompatible choices:
-- Attributes with empty values are [minimized](https://www.w3.org/TR/xhtml1/#h-4.5). -/
-partial def render (h : Html) : String :=
-  go "" {
-    kinds := #[.html]
-    htmls := #[h]
-    strs := #[]
-  }
+- Attributes with empty values are [minimized](https://www.w3.org/TR/xhtml1/#h-4.5).
+-/
+partial def render (h : Html) : String := go "" { kinds := #[.html], htmls := #[h], strs := #[] }
 where
   go (acc : String) (q : RenderWorkItemStack) : String :=
     if h : q.kinds.size = 0 then
@@ -119,8 +115,8 @@ where
               let q := q.pushKind .endElement |>.pushStr tag
               let q := q.pushKind .html |>.pushHtml children
               q.pushKind .endAttrs
-          let q := attrs.foldr (init := q) fun (k, v) q =>
-            q.pushKind .attr |>.pushStr v |>.pushStr k
+          let q :=
+            attrs.foldr (init := q) fun (k, v) q => q.pushKind .attr |>.pushStr v |>.pushStr k
           go (acc ++ s!"<{tag}") q
         | .text t =>
           go (acc ++ escapeText t) q

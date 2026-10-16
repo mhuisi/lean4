@@ -29,8 +29,8 @@ This is intended to be used before saving a docstring that is later subject to r
 -/
 def validateDocComment
     [Monad m] [MonadLiftT IO m] [MonadLog m] [AddMessageContext m] [MonadOptions m]
-    (docstring : TSyntax `Lean.Parser.Command.docComment) :
-    m Unit := do
+    (docstring : TSyntax `Lean.Parser.Command.docComment)
+    : m Unit := do
   let str := docstring.getDocString
   let pos? := docstring.raw[1].getHeadInfo? >>= (·.getPos?)
 
@@ -39,21 +39,25 @@ def validateDocComment
   for (⟨start, stop⟩, err) in errs do
     -- Report errors at their actual location if possible
     if let some pos := pos? then
-      let urlStx : Syntax := .atom (.synthetic (start.offsetBy pos) (stop.offsetBy pos)) (String.Pos.Raw.extract str start stop)
+      let urlStx : Syntax :=
+        .atom (.synthetic (start.offsetBy pos) (stop.offsetBy pos))
+          (String.Pos.Raw.extract str start stop)
       logErrorAt urlStx err
     else
       logError err
 
 open Lean.Parser in
 /-- Builds the message for a Verso parse error. -/
-private def mkVersoParseMessage (ictx : InputContext) (pos : String.Pos.Raw) (e : Parser.Error) :
-    Message :=
+private def mkVersoParseMessage (ictx : InputContext) (pos : String.Pos.Raw) (e : Parser.Error)
+    : Message :=
   let (pos, endPos?, e) := Doc.Parser.locateError ictx pos e
-  { fileName := ictx.fileName
+  {
+    fileName := ictx.fileName
     pos := ictx.fileMap.toPosition pos
     endPos := endPos?.map ictx.fileMap.toPosition
     keepFullRange := true
-    data := toString e }
+    data := toString e
+  }
 
 open Lean.Doc in
 /--
@@ -79,9 +83,7 @@ def VersoDocstringMarkup.stx : VersoDocstringMarkup → Syntax
   | .document doc => doc.raw
   | .parseFailure text => text
 
-/--
-A view of a Verso doc comment: its delimiters and the markup between them.
--/
+/-- A view of a Verso doc comment: its delimiters and the markup between them. -/
 structure VersoDocstringView where
   /-- The token that opens the comment. -/
   opener : Syntax
@@ -98,11 +100,15 @@ The comment's body must have been parsed as Verso markup, which `isVersoDocComme
 -/
 def VersoDocstringView.of (docComment : TSyntax [``docComment, ``moduleDoc]) : VersoDocstringView :=
   let body := docComment.raw[1]
-  { opener := docComment.raw[0]
+  {
+    opener := docComment.raw[0]
     markup :=
-      if body[0].isOfKind Doc.parseFailureKind then .parseFailure body[0][0]
-      else .document ⟨body[0]⟩
-    closer := body[1] }
+      if body[0].isOfKind Doc.parseFailureKind then
+        .parseFailure body[0][0]
+      else
+        .document ⟨body[0]⟩
+    closer := body[1]
+  }
 
 /--
 The report for a documentation comment that cannot be parsed because the part `what` names has no
@@ -116,8 +122,8 @@ The source positions a Verso docstring is parsed from: its opening delimiter, th
 markup, and its closing delimiter. If any are missing original or canonical source, an error
 is thrown.
 -/
-private def docCommentRange (view : VersoDocstringView) :
-    Except MessageData (String.Pos.Raw × String.Pos.Raw × String.Pos.Raw) := do
+private def docCommentRange (view : VersoDocstringView)
+    : Except MessageData (String.Pos.Raw × String.Pos.Raw × String.Pos.Raw) := do
   let some openPos := view.opener.getPos? (canonicalOnly := true)
     | throw (noSourceLocation "opening delimiter")
   let some startPos := view.markup.stx.getPos? (canonicalOnly := true)
@@ -131,8 +137,8 @@ open Lean.Parser Command in
 The source positions a docstring is read from: its opening delimiter, the start of its content, and
 its closing delimiter.
 -/
-private def docStringRange (docComment : TSyntax [``docComment, ``moduleDoc]) :
-    Except MessageData (String.Pos.Raw × String.Pos.Raw × String.Pos.Raw) := do
+private def docStringRange (docComment : TSyntax [``docComment, ``moduleDoc])
+    : Except MessageData (String.Pos.Raw × String.Pos.Raw × String.Pos.Raw) := do
   let ⟨.node _ _ #[opener, .node _ _ #[content, closer]]⟩ := docComment
     | throw m!"This documentation comment has an unexpected structure, so it cannot be parsed."
   let some openPos := opener.getPos? (canonicalOnly := true)
@@ -150,8 +156,8 @@ Parses the Verso docstring in the current file whose comment opens at `openPos` 
 are between `startPos` and `endPos`. Returns the document if it parsed, and otherwise logs each
 parse error.
 -/
-def parseVersoDocStringAt (openPos startPos endPos : String.Pos.Raw) :
-    CoreM (Option VersoDocument) := do
+def parseVersoDocStringAt (openPos startPos endPos : String.Pos.Raw)
+    : CoreM (Option VersoDocument) := do
   let text ← getFileMap
   let endPos := if endPos ≤ text.source.rawEndPos then endPos else text.source.rawEndPos
   have endPos_valid : endPos ≤ text.source.rawEndPos := by
@@ -160,12 +166,12 @@ def parseVersoDocStringAt (openPos startPos endPos : String.Pos.Raw) :
 
   let env ← getEnv
   let ictx : InputContext :=
-    .mk text.source (← getFileName) (fileMap := text)
-      (endPos := endPos) (endPos_valid := endPos_valid)
+    .mk text.source (← getFileName) (fileMap := text) (endPos := endPos)
+      (endPos_valid := endPos_valid)
   let pmctx : ParserModuleContext := {
-    env,
-    options := ← getOptions,
-    currNamespace := (← getCurrNamespace),
+    env
+    options := ← getOptions
+    currNamespace := (← getCurrNamespace)
     openDecls := (← getOpenDecls)
   }
   let blockCtxt := .forDocString text openPos startPos endPos
@@ -186,8 +192,8 @@ Parses a docstring as Verso, returning the syntax if successful.
 
 When not successful, parser errors are logged.
 -/
-def parseVersoDocString (docComment : TSyntax [``docComment, ``moduleDoc]) :
-    CoreM (Option VersoDocument) := do
+def parseVersoDocString (docComment : TSyntax [``docComment, ``moduleDoc])
+    : CoreM (Option VersoDocument) := do
   -- TODO fallback to string version without nice interactivity
   let (openPos, startPos, endPos) ←
     match docStringRange docComment with
@@ -222,7 +228,6 @@ structure VersoDocResult extends VersoDocString where
   -/
   deferredChecks : Array DeferredCheck
 
-
 open Lean.Doc in
 /--
 Elaborates already-parsed Verso `blocks` for the specified declaration with interactive features
@@ -231,15 +236,16 @@ message positions are interpreted against it.
 -/
 private def execVersoBlocks
     (declName : Name) (binders : Syntax) (blocks : TSyntaxArray ``Parser.block)
-    (fileMap? : Option FileMap) : TermElabM VersoDocResult := do
+    (fileMap? : Option FileMap)
+    : TermElabM VersoDocResult := do
   let msgs ← Core.getAndEmptyMessageLog
   let (val, msgs') ←
     try
-      let act := (Doc.elabBlocks (blocks.map (⟨·⟩))).exec declName binders (suggestionMode := .batch)
+      let act :=
+        (Doc.elabBlocks (blocks.map (⟨·⟩))).exec declName binders (suggestionMode := .batch)
       let val ←
-        Elab.withEnableInfoTree false <|
-          match fileMap? with
-          | some fileMap => withTheReader Core.Context ({· with fileMap }) act
+        Elab.withEnableInfoTree false <| match fileMap? with
+          | some fileMap => withTheReader Core.Context ({ · with fileMap }) act
           | none => act
       pure (val, ← Core.getAndEmptyMessageLog)
     finally
@@ -259,16 +265,15 @@ the current reference.
 `binders` should be the syntax of the parameters to the constant that is being documented, as a null
 node that contains a sequence of bracketed binders, or an empty null node when none are available.
 -/
-def versoDocStringOfText
-    (declName : Name) (binders : Syntax) (docComment : String) :
-    TermElabM VersoDocResult := do
+def versoDocStringOfText (declName : Name) (binders : Syntax) (docComment : String)
+    : TermElabM VersoDocResult := do
   let env ← getEnv
   let ictx : InputContext := .mk docComment (← getFileName)
   let text := ictx.fileMap
   let pmctx : ParserModuleContext := {
-    env,
-    options := ← getOptions,
-    currNamespace := (← getCurrNamespace),
+    env
+    options := ← getOptions
+    currNamespace := (← getCurrNamespace)
     openDecls := (← getOpenDecls)
   }
   let s := mkParserState docComment
@@ -294,10 +299,8 @@ node that contains a sequence of bracketed binders. It is used to allow interact
 document highlights and “find references” to work for documented parameters. If no parameter binders
 are available, pass `Syntax.missing` or an empty null node.
 -/
-
-def versoDocString
-    (declName : Name) (binders : Syntax) (docComment : TSyntax ``docComment) :
-    TermElabM VersoDocResult := do
+def versoDocString (declName : Name) (binders : Syntax) (docComment : TSyntax ``docComment)
+    : TermElabM VersoDocResult := do
   -- A docstring already parsed as Verso, or one re-parsable from its source range, supports
   -- interactive features. A macro-generated docstring has neither, so fall back to its text.
   let body := docComment.raw[1]
@@ -306,10 +309,10 @@ def versoDocString
   if (docStringRange docComment).toOption.isSome then
     -- Source positions are available, so re-parse from source for interactive features.
     if let some stx ← parseVersoDocString docComment then
-      let ((text, subsections), deferredChecks) ←
-        Doc.elabBlocks stx |>.exec declName binders
+      let ((text, subsections), deferredChecks) ← Doc.elabBlocks stx |>.exec declName binders
       return { text, subsections, deferredChecks }
-    else return { text := #[], subsections := #[], deferredChecks := #[] }
+    else
+      return { text := #[], subsections := #[], deferredChecks := #[] }
   else if body.isOfKind ``versoCommentBody then
     match (VersoDocstringView.of docComment).markup with
     | .parseFailure text =>
@@ -323,40 +326,32 @@ def versoDocString
     versoDocStringOfText declName binders docComment.getDocString
 
 open Lean.Doc in
-/--
-Parses and elaborates a Verso module docstring.
--/
-def versoModDocString
-    (range : DeclarationRange) (doc : VersoDocument) :
-    TermElabM (VersoModuleDocs.Snippet × Array Doc.DeferredCheck) := do
+/-- Parses and elaborates a Verso module docstring. -/
+def versoModDocString (range : DeclarationRange) (doc : VersoDocument)
+    : TermElabM (VersoModuleDocs.Snippet × Array Doc.DeferredCheck) := do
   let level := getMainVersoModuleDocs (← getEnv) |>.terminalNesting |>.map (· + 1)
   Doc.elabModSnippet range doc (level.getD 0) |>.execForModule
-
-
 
 /--
 Adds a Verso docstring to the specified declaration, which should already be present in the
 environment. The docstring is added from a string value, rather than syntax, which means that the
 interactive features are disabled.
 -/
-def versoDocStringFromString
-    (declName : Name) (docComment : String) :
-    TermElabM VersoDocResult :=
+def versoDocStringFromString (declName : Name) (docComment : String) : TermElabM VersoDocResult :=
   versoDocStringOfText declName (mkNullNode #[]) docComment
 
-/--
-Adds a Markdown docstring to the environment, validating documentation links.
--/
+/-- Adds a Markdown docstring to the environment, validating documentation links. -/
 def addMarkdownDocString
-    [Monad m] [MonadLiftT IO m] [MonadOptions m] [MonadEnv m]
-    [MonadError m] [MonadLog m] [AddMessageContext m]
-    (declName : Name) (docComment : TSyntax `Lean.Parser.Command.docComment) :
-    m Unit := do
+    [Monad m] [MonadLiftT IO m] [MonadOptions m] [MonadEnv m] [MonadError m] [MonadLog m]
+    [AddMessageContext m]
+    (declName : Name) (docComment : TSyntax `Lean.Parser.Command.docComment)
+    : m Unit := do
   if declName.isAnonymous then
     -- This case might happen on partial elaboration; ignore instead of triggering any panics below
     return
   unless (← getEnv).getModuleIdxFor? declName |>.isNone do
-    throwError m!"invalid doc string, declaration `{.ofConstName declName}` is in an imported module"
+    throwError
+      m!"invalid doc string, declaration `{.ofConstName declName}` is in an imported module"
   validateDocComment docComment
   let docString : String ← getDocStringText docComment
   -- replacing, as attributes applied before elaboration may already have written one
@@ -367,8 +362,10 @@ def addMarkdownDocString
 Adds an elaborated Verso docstring to the environment, recording its `deferred` checks under this
 declaration as their `site`.
 -/
-def addVersoDocStringCore [Monad m] [MonadEnv m] [MonadLiftT BaseIO m] [MonadError m]
-    (declName : Name) (docs : VersoDocString) (deferred : Array Doc.DeferredCheck) : m Unit := do
+def addVersoDocStringCore
+    [Monad m] [MonadEnv m] [MonadLiftT BaseIO m] [MonadError m]
+    (declName : Name) (docs : VersoDocString) (deferred : Array Doc.DeferredCheck)
+    : m Unit := do
   -- The decl name can be anonymous due to attempts to elaborate incomplete syntax. If the name is
   -- anonymous, the `MapDeclarationExtension.insert` panics due to not being on the right async
   -- branch. Better to just do nothing.
@@ -381,21 +378,23 @@ def addVersoDocStringCore [Monad m] [MonadEnv m] [MonadLiftT BaseIO m] [MonadErr
     deferred.foldl (init := env) fun env c =>
       Doc.deferredCheckExt.addEntry env { c with site := .decl declName }
 
-/--
-Adds an elaborated Verso module docstring to the environment.
--/
-def addVersoModDocStringCore [Monad m] [MonadEnv m] [MonadLiftT BaseIO m] [MonadError m]
-  (docs : VersoModuleDocs.Snippet) (deferred : Array Doc.DeferredCheck) : m Unit := do
+/-- Adds an elaborated Verso module docstring to the environment. -/
+def addVersoModDocStringCore
+    [Monad m] [MonadEnv m] [MonadLiftT BaseIO m] [MonadError m]
+    (docs : VersoModuleDocs.Snippet) (deferred : Array Doc.DeferredCheck)
+    : m Unit := do
   if (getMainModuleDoc (← getEnv)).isEmpty then
     -- The snippet's index is the number of snippets already present.
     let n := (getMainVersoModuleDocs (← getEnv)).snippets.size
     match addVersoModuleDocSnippet (← getEnv) docs with
-    | .error e => throwError "Error adding module docs: {indentD <| toMessageData e}"
+    | .error e =>
+      throwError "Error adding module docs: {indentD <| toMessageData e}"
     | .ok env' =>
       setEnv <| deferred.foldl (init := env') fun env c =>
         Doc.deferredCheckExt.addEntry env { c with site := .moduleDoc n }
   else
-    throwError m!"Can't add Verso-format module docs because there is already Markdown-format content present."
+    throwError m!"Can't add Verso-format module docs because there is already Markdown-format \
+      content present."
 
 open Lean.Parser.Command in
 /--
@@ -406,9 +405,8 @@ node that contains a sequence of bracketed binders. It is used to allow interact
 document highlights and “find references” to work for documented parameters. If no parameter binders
 are available, pass `Syntax.missing` or an empty null node.
 -/
-def addVersoDocString
-    (declName : Name) (binders : Syntax) (docComment : TSyntax ``docComment) :
-    TermElabM Unit := do
+def addVersoDocString (declName : Name) (binders : Syntax) (docComment : TSyntax ``docComment)
+    : TermElabM Unit := do
   unless (← getEnv).getModuleIdxFor? declName |>.isNone do
     throwError s!"invalid doc string, declaration '{declName}' is in an imported module"
   let { toVersoDocString, deferredChecks } ← versoDocString declName binders docComment
@@ -418,13 +416,11 @@ def addVersoDocString
 Adds a Verso docstring to the environment from a string value, which disables the interactive
 features. This should be used for programs that add documentation when there is no syntax available.
 -/
-def addVersoDocStringFromString (declName : Name) (docComment : String) :
-    TermElabM Unit := do
+def addVersoDocStringFromString (declName : Name) (docComment : String) : TermElabM Unit := do
   unless (← getEnv).getModuleIdxFor? declName |>.isNone do
     throwError s!"invalid doc string, declaration '{declName}' is in an imported module"
   let { toVersoDocString, deferredChecks } ← versoDocStringFromString declName docComment
   addVersoDocStringCore declName toVersoDocString deferredChecks
-
 
 /--
 Adds a docstring to the environment. If `isVerso` is `false`, then the docstring is interpreted as
@@ -432,8 +428,8 @@ Markdown.
 -/
 def addDocStringOf
     (isVerso : Bool) (declName : Name) (binders : Syntax)
-    (docComment : TSyntax `Lean.Parser.Command.docComment) :
-    TermElabM Unit := do
+    (docComment : TSyntax `Lean.Parser.Command.docComment)
+    : TermElabM Unit := do
   if isVerso then
     addVersoDocString declName binders docComment
   else
@@ -467,8 +463,8 @@ parameters. If no parameter binders are available, pass `Syntax.missing` or an e
 `binders` is not used for Markdown docstrings.
 -/
 def addDocString
-    (declName : Name) (binders : Syntax) (docComment : TSyntax `Lean.Parser.Command.docComment) :
-    TermElabM Unit := do
+    (declName : Name) (binders : Syntax) (docComment : TSyntax `Lean.Parser.Command.docComment)
+    : TermElabM Unit := do
   addDocStringOf (isVersoDocComment docComment) declName binders docComment
 
 /--
@@ -486,22 +482,17 @@ documented, as a null node that contains a sequence of bracketed binders. It is 
 interactive features such as document highlights and “find references” to work for documented
 parameters. If no parameter binders are available, pass `Syntax.missing` or an empty null node.
 `binders` is not used for Markdown docstrings.
-
 -/
 def addDocString'
-    (declName : Name) (binders : Syntax) (docString? : Option (TSyntax `Lean.Parser.Command.docComment)) :
-    TermElabM Unit :=
+    (declName : Name) (binders : Syntax)
+    (docString? : Option (TSyntax `Lean.Parser.Command.docComment))
+    : TermElabM Unit :=
   match docString? with
   | some docString => addDocString declName binders docString
   | none => return ()
 
-
 open Lean.Doc in
-/--
-Adds a Verso module docstring to the environment.
--/
-def addVersoModDocString
-    (range : DeclarationRange) (doc : VersoDocument) :
-    TermElabM Unit := do
+/-- Adds a Verso module docstring to the environment. -/
+def addVersoModDocString (range : DeclarationRange) (doc : VersoDocument) : TermElabM Unit := do
   let (snippet, deferred) ← versoModDocString range doc
   addVersoModDocStringCore snippet deferred

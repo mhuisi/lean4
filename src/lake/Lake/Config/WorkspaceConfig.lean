@@ -21,4 +21,4 @@ public configuration WorkspaceConfig where
   Defaults to `defaultPackagesDir` (i.e., `.lake/packages`).
   -/
   packagesDir : FilePath := defaultPackagesDir
-  deriving Inhabited, Repr
+deriving Inhabited, Repr

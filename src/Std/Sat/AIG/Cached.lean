@@ -24,15 +24,13 @@ namespace AIG
 
 variable {α : Type} [Hashable α] [DecidableEq α]
 
-/--
-Add a new input node to `aig`.
--/
+/-- Add a new input node to `aig`. -/
 def mkAtomCached (aig : AIG α) (n : α) : Entrypoint α :=
   let ⟨decls, cache, hdag, hzero, hconst⟩ := aig
   let decl := .atom n
   match hcache : cache.get? decl with
   | some hit =>
-    ⟨⟨decls, cache, hdag, hzero, hconst⟩ , hit.idx, false, hit.hbound⟩
+    ⟨⟨decls, cache, hdag, hzero, hconst⟩, hit.idx, false, hit.hbound⟩
   | none =>
     let g := decls.size
     let cache := cache.insert decls decl (Cache.get?_eq_none_iff.mp hcache)
@@ -47,12 +45,8 @@ def mkAtomCached (aig : AIG α) (n : α) : Entrypoint α :=
     have hconst := by simp [decls, Array.getElem_push, hzero, hconst]
     ⟨⟨decls, cache, hdag, hzero', hconst⟩, ⟨g, false, by simp [g, decls]⟩⟩
 
-/--
-Add a new constant node to `aig`.
--/
-@[inline]
-def mkConstCached (aig : AIG α) (val : Bool) : Ref aig :=
-  ⟨0, val, aig.hzero⟩
+/-- Add a new constant node to `aig`. -/
+@[inline] def mkConstCached (aig : AIG α) (val : Bool) : Ref aig := ⟨0, val, aig.hzero⟩
 
 /--
 Add a new and inverter gate to the AIG in `aig`.
@@ -91,17 +85,20 @@ where
       let rhsVal := AIG.getConstant ⟨decls, cache, hdag, hzero, hconst⟩ input.rhs
       match lhsVal, rhsVal with
       -- Boundedness
-      | .some false, _ | _, .some false =>
+      | .some false, _
+      | _, .some false =>
         let ref := mkConstCached ⟨decls, cache, hdag, hzero, hconst⟩ false
         ⟨⟨decls, cache, hdag, hzero, hconst⟩, ref⟩
       -- Left Neutrality
-      | .some true, _ => ⟨⟨decls, cache, hdag, hzero, hconst⟩, ⟨rhs, rinv, by assumption⟩⟩
+      | .some true, _ =>
+        ⟨⟨decls, cache, hdag, hzero, hconst⟩, ⟨rhs, rinv, by assumption⟩⟩
       -- Right Neutrality
-      | _, .some true => ⟨⟨decls, cache, hdag, hzero, hconst⟩, ⟨lhs, linv, by assumption⟩⟩
+      | _, .some true =>
+        ⟨⟨decls, cache, hdag, hzero, hconst⟩, ⟨lhs, linv, by assumption⟩⟩
       -- No constant inputs
       | _, _ =>
         if lhs == rhs then
-           -- Idempotency
+          -- Idempotency
           if linv == rinv then
             ⟨⟨decls, cache, hdag, hzero, hconst⟩, ⟨lhs, linv, by assumption⟩⟩
           -- Contradiction

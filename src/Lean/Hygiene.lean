@@ -14,7 +14,7 @@ namespace Lean
 /-! Remark: `MonadQuotation` class is part of the `Init` package and loaded by default since it is used in the builtin command `macro`. -/
 
 structure Unhygienic.Context where
-  ref   : Syntax
+  ref : Syntax
   scope : MacroScope
 
 /--
@@ -34,16 +34,17 @@ corresponding to `withFreshMacroScope` calls.
 abbrev Unhygienic := ReaderT Lean.Unhygienic.Context <| StateM MacroScope
 namespace Unhygienic
 instance : MonadQuotation Unhygienic where
-  getRef              := return (← read).ref
-  withRef             := fun ref => withReader ({ · with ref := ref })
-  getCurrMacroScope   := return (← read).scope
-  getContext          := pure `UnhygienicMain
+  getRef := return (← read).ref
+  withRef := fun ref => withReader ({ · with ref := ref })
+  getCurrMacroScope := return (← read).scope
+  getContext := pure `UnhygienicMain
   withFreshMacroScope := fun x => do
     let fresh ← modifyGet fun n => (n, n + 1)
-    withReader ({ · with scope := fresh}) x
+    withReader ({ · with scope := fresh }) x
 
 @[inline]
-protected def run {α : Type} (x : Unhygienic α) : α := (x ⟨Syntax.missing, firstFrontendMacroScope⟩).run' (firstFrontendMacroScope+1)
+protected def run {α : Type} (x : Unhygienic α) : α :=
+  (x ⟨Syntax.missing, firstFrontendMacroScope⟩).run' (firstFrontendMacroScope + 1)
 end Unhygienic
 
 private def mkInaccessibleUserNameAux (unicode : Bool) (name : Name) (idx : Nat) : Name :=
@@ -65,47 +66,53 @@ private def mkInaccessibleUserName (unicode : Bool) : Name → Name
       (mkInaccessibleUserName unicode p).appendAfter ("⁻" ++ idx.toSuperscriptString)
     else
       Name.mkNum (mkInaccessibleUserName unicode p) idx
-  | n => n
+  | n =>
+    n
 
 register_builtin_option pp.sanitizeNames : Bool := {
   defValue := true
-  descr    := "add suffix to shadowed/inaccessible variables when pretty printing"
+  descr := "add suffix to shadowed/inaccessible variables when pretty printing"
 }
 
 def getSanitizeNames (o : Options) : Bool := pp.sanitizeNames.get o
 
 structure NameSanitizerState where
-  options            : Options
+  options : Options
   /-- `x` ~> 2 if we're already using `x✝`, `x✝¹` -/
-  nameStem2Idx       : NameMap Nat := {}
+  nameStem2Idx : NameMap Nat := {}
   /-- `x._hyg...` ~> `x✝` -/
   userName2Sanitized : NameMap Name := {}
 
-private partial def mkFreshInaccessibleUserName (userName : Name) (idx : Nat) : StateM NameSanitizerState Name := do
+private partial def mkFreshInaccessibleUserName (userName : Name) (idx : Nat)
+    : StateM NameSanitizerState Name := do
   let s ← get
-  let userNameNew := mkInaccessibleUserName (Std.Format.getUnicode s.options) (Name.mkNum userName idx)
+  let userNameNew :=
+    mkInaccessibleUserName (Std.Format.getUnicode s.options) (Name.mkNum userName idx)
   if s.nameStem2Idx.contains userNameNew then
-    mkFreshInaccessibleUserName userName (idx+1)
+    mkFreshInaccessibleUserName userName (idx + 1)
   else do
-    modify fun s => { s with nameStem2Idx := s.nameStem2Idx.insert userName (idx+1) }
+    modify fun s => { s with nameStem2Idx := s.nameStem2Idx.insert userName (idx + 1) }
     pure userNameNew
 
 /-- Erase macro scopes from `userName` and add "tombstone" + superscript (or `._hyg`). -/
 def sanitizeName (userName : Name) : StateM NameSanitizerState Name := do
-  let stem := userName.eraseMacroScopes;
-  let idx  := (← get).nameStem2Idx.find? stem |>.getD 0
+  let stem := userName.eraseMacroScopes
+  let idx := (← get).nameStem2Idx.find? stem |>.getD 0
   let san ← mkFreshInaccessibleUserName stem idx
   modify fun s => { s with userName2Sanitized := s.userName2Sanitized.insert userName san }
   pure san
 
 private partial def sanitizeSyntaxAux : Syntax → StateM NameSanitizerState Syntax
   | stx@(Syntax.ident _ _ n _) => do
-    let n ← match (← get).userName2Sanitized.find? n with
+    let n ←
+      match (← get).userName2Sanitized.find? n with
       | some n' => pure n'
-      | none    => if n.hasMacroScopes then sanitizeName n else pure n
+      | none => if n.hasMacroScopes then sanitizeName n else pure n
     return mkIdentFrom stx n
-  | Syntax.node info k args => Syntax.node info k <$> args.mapM sanitizeSyntaxAux
-  | stx => pure stx
+  | Syntax.node info k args =>
+    Syntax.node info k <$> args.mapM sanitizeSyntaxAux
+  | stx =>
+    pure stx
 
 def sanitizeSyntax (stx : Syntax) : StateM NameSanitizerState Syntax := do
   if getSanitizeNames (← get).options then

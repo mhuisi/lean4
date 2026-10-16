@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Simp.SimpM
 import Lean.Meta.Tactic.Util
@@ -35,16 +36,18 @@ public def SimpGoalResult.toOption : SimpGoalResult → CoreM (Option MVarId)
   | .goal mvarId => return some mvarId
 
 public def SimpGoalResult.ignoreNoProgress : SimpGoalResult → MVarId → SimpGoalResult
-  | .noProgress, mvarId => .goal mvarId
-  | r, _ => r
+  | .noProgress, mvarId =>
+    .goal mvarId
+  | r, _ =>
+    r
 
-/--
-Converts a `Simp.Result` value into `SimpGoalResult`.
--/
-public def Simp.Result.toSimpGoalResult (result : Simp.Result) (mvarId : MVarId) : SymM SimpGoalResult := do
+/-- Converts a `Simp.Result` value into `SimpGoalResult`. -/
+public def Simp.Result.toSimpGoalResult (result : Simp.Result) (mvarId : MVarId)
+    : SymM SimpGoalResult := do
   let decl ← mvarId.getDecl
   match result with
-  | .rfl _ _ => return .noProgress
+  | .rfl _ _ =>
+    return .noProgress
   | .step target' h _ _ =>
     let mvarNew ← mkFreshExprSyntheticOpaqueMVar target' decl.userName
     let u ← getLevel decl.type
@@ -63,15 +66,15 @@ to a new goal, or `.noProgress` if no simplification occurred.
 
 This function assumed the input goal is a valid `Sym` goal (e.g., expressions are maximally shared).
 -/
-public def simpGoal (mvarId : MVarId) (methods :  Simp.Methods := {}) (config : Simp.Config := {})
-    : SymM SimpGoalResult := mvarId.withContext do
-  let decl ← mvarId.getDecl
-  (← simp decl.type methods config).toSimpGoalResult mvarId
+public def simpGoal (mvarId : MVarId) (methods : Simp.Methods := {}) (config : Simp.Config := {})
+    : SymM SimpGoalResult :=
+  mvarId.withContext do
+    let decl ← mvarId.getDecl
+    (← simp decl.type methods config).toSimpGoalResult mvarId
 
-/--
-Similar to `simpGoal`, but returns `.goal mvarId` if no progress was made.
--/
-public def simpGoalIgnoringNoProgress (mvarId : MVarId) (methods :  Simp.Methods := {}) (config : Simp.Config := {})
+/-- Similar to `simpGoal`, but returns `.goal mvarId` if no progress was made. -/
+public def simpGoalIgnoringNoProgress
+    (mvarId : MVarId) (methods : Simp.Methods := {}) (config : Simp.Config := {})
     : SymM SimpGoalResult := do
   match (← simpGoal mvarId methods config) with
   | .noProgress => return .goal mvarId

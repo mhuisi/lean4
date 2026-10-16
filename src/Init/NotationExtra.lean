@@ -19,39 +19,51 @@ namespace Lean
 -- Auxiliary parsers and functions for declaring notation with binders
 
 syntax unbracketedExplicitBinders := (ppSpace binderIdent)+ (" : " term)?
-syntax bracketedExplicitBinders   := "(" withoutPosition((binderIdent ppSpace)+ ": " term) ")"
-syntax explicitBinders            := (ppSpace bracketedExplicitBinders)+ <|> unbracketedExplicitBinders
+syntax bracketedExplicitBinders := "(" withoutPosition((binderIdent ppSpace)+ ": " term) ")"
+syntax explicitBinders := (ppSpace bracketedExplicitBinders)+ <|> unbracketedExplicitBinders
 
 open TSyntax.Compat in
-meta def expandExplicitBindersAux (combinator : Syntax) (idents : Array Syntax) (type? : Option Syntax) (body : Syntax) : MacroM Syntax :=
+meta def expandExplicitBindersAux
+    (combinator : Syntax) (idents : Array Syntax) (type? : Option Syntax) (body : Syntax)
+    : MacroM Syntax :=
   let rec loop (i : Nat) (h : i ≤ idents.size) (acc : Syntax) := do
     match i, h with
-    | 0, _   => pure acc
+    | 0, _ =>
+      pure acc
     | i + 1, h =>
       let ident := idents[i][0]
-      let acc ← match ident.isIdent, type? with
-        | true,  none      => `($combinator fun $ident => $acc)
-        | true,  some type => `($combinator fun $ident : $type => $acc)
-        | false, none      => `($combinator fun _ => $acc)
-        | false, some type => `($combinator fun _ : $type => $acc)
+      let acc ←
+        match ident.isIdent, type? with
+        | true, none =>
+          `($combinator fun $ident => $acc)
+        | true, some type =>
+          `($combinator fun $ident : $type => $acc)
+        | false, none =>
+          `($combinator fun _ => $acc)
+        | false, some type =>
+          `($combinator fun _ : $type => $acc)
       loop i (Nat.le_of_succ_le h) acc
   loop idents.size (by simp) body
 
-meta def expandBracketedBindersAux (combinator : Syntax) (binders : Array Syntax) (body : Syntax) : MacroM Syntax :=
+meta def expandBracketedBindersAux (combinator : Syntax) (binders : Array Syntax) (body : Syntax)
+    : MacroM Syntax :=
   let rec loop (i : Nat) (h : i ≤ binders.size) (acc : Syntax) := do
     match i, h with
-    | 0, _   => pure acc
-    | i+1, h =>
+    | 0, _ =>
+      pure acc
+    | i + 1, h =>
       let idents := binders[i][1].getArgs
-      let type   := binders[i][3]
+      let type := binders[i][3]
       loop i (Nat.le_of_succ_le h) (← expandExplicitBindersAux combinator idents (some type) acc)
   loop binders.size (by simp) body
 
-meta def expandExplicitBinders (combinatorDeclName : Name) (explicitBinders : Syntax) (body : Syntax) : MacroM Syntax := do
+meta def expandExplicitBinders
+    (combinatorDeclName : Name) (explicitBinders : Syntax) (body : Syntax)
+    : MacroM Syntax := do
   let combinator := mkCIdentFrom (← getRef) combinatorDeclName
   let explicitBinders := explicitBinders[0]
   if explicitBinders.getKind == ``Lean.unbracketedExplicitBinders then
-    let idents   := explicitBinders[0].getArgs
+    let idents := explicitBinders[0].getArgs
     let type? := if explicitBinders[1].isNone then none else some explicitBinders[1][1]
     expandExplicitBindersAux combinator idents type? body
   else if explicitBinders.getArgs.all (·.getKind == ``Lean.bracketedExplicitBinders) then
@@ -59,15 +71,20 @@ meta def expandExplicitBinders (combinatorDeclName : Name) (explicitBinders : Sy
   else
     Macro.throwError "unexpected explicit binder"
 
-meta def expandBracketedBinders (combinatorDeclName : Name) (bracketedExplicitBinders : Syntax) (body : Syntax) : MacroM Syntax := do
+meta def expandBracketedBinders
+    (combinatorDeclName : Name) (bracketedExplicitBinders : Syntax) (body : Syntax)
+    : MacroM Syntax := do
   let combinator := mkCIdentFrom (← getRef) combinatorDeclName
   expandBracketedBindersAux combinator #[bracketedExplicitBinders] body
 
 syntax unifConstraint := term unicode(" ≟ ", " =?= ") term
 syntax unifConstraintElem := colGe unifConstraint ", "?
 
-syntax (docComment)? attrKind "unif_hint" (ppSpace ident)? (ppSpace bracketedBinder)*
-  " where " withPosition(unifConstraintElem*) patternIgnore(atomic("|" noWs "-") <|> "⊢") ppSpace unifConstraint : command
+syntax
+  (docComment)? attrKind "unif_hint" (ppSpace ident)? (ppSpace bracketedBinder)* " where "
+  withPosition(unifConstraintElem*) patternIgnore(atomic("|" noWs "-") <|> "⊢") ppSpace
+  unifConstraint
+  : command
 
 macro_rules
   | `($[$doc?:docComment]? $kind:attrKind unif_hint $(n)? $bs* where $[$cs₁ ≟ $cs₂]* |- $t₁ ≟ $t₂) => do
@@ -90,7 +107,7 @@ macro "∃" xs:explicitBinders ", " b:term : term => expandExplicitBinders ``Exi
 macro "exists" xs:explicitBinders ", " b:term : term => expandExplicitBinders ``Exists xs b
 macro "Σ" xs:explicitBinders ", " b:term : term => expandExplicitBinders ``Sigma xs b
 macro "Σ'" xs:explicitBinders ", " b:term : term => expandExplicitBinders ``PSigma xs b
-macro:35 xs:bracketedExplicitBinders " × " b:term:35  : term => expandBracketedBinders ``Sigma xs b
+macro:35 xs:bracketedExplicitBinders " × " b:term:35 : term => expandBracketedBinders ``Sigma xs b
 macro:35 xs:bracketedExplicitBinders " ×' " b:term:35 : term => expandBracketedBinders ``PSigma xs b
 end
 
@@ -101,7 +118,8 @@ syntax calcFirstStep := ppIndent(colGe term (" := " term)?)
 syntax calcStep := ppIndent(colGe term " := " term)
 syntax calcSteps := ppLine withPosition(calcFirstStep) withPosition((ppLine linebreak calcStep)*)
 
-/-- Step-wise reasoning over transitive relations.
+/--
+Step-wise reasoning over transitive relations.
 ```
 calc
   a = b := pab
@@ -142,124 +160,152 @@ syntax (name := calc) "calc" calcSteps : term
 syntax (name := calcTactic) "calc" calcSteps : tactic
 
 @[inherit_doc «calc»]
-macro tk:"calc" steps:calcSteps : conv =>
-  `(conv| tactic => calc%$tk $steps)
+macro tk:"calc" steps:calcSteps : conv => `(conv| tactic => calc%$tk $steps)
 end Lean
 
-@[app_unexpander Unit.unit] meta def unexpandUnit : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Unit.unit]
+meta def unexpandUnit : Lean.PrettyPrinter.Unexpander
   | `($(_)) => `(())
 
-@[app_unexpander List.nil] meta def unexpandListNil : Lean.PrettyPrinter.Unexpander
+@[app_unexpander List.nil]
+meta def unexpandListNil : Lean.PrettyPrinter.Unexpander
   | `($(_)) => `([])
 
-@[app_unexpander List.cons] meta def unexpandListCons : Lean.PrettyPrinter.Unexpander
+@[app_unexpander List.cons]
+meta def unexpandListCons : Lean.PrettyPrinter.Unexpander
   | `($(_) $x $tail) =>
     match tail with
-    | `([])      => `([$x])
+    | `([]) => `([$x])
     | `([$xs,*]) => `([$x, $xs,*])
-    | `(⋯)       => `([$x, $tail]) -- Unexpands to `[x, y, z, ⋯]` for `⋯ : List α`
-    | _          => throw ()
+    | `(⋯) => `([$x, $tail]) -- Unexpands to `[x, y, z, ⋯]` for `⋯ : List α`
+    | _ => throw ()
+  | _ =>
+    throw ()
+
+@[app_unexpander List.toArray]
+meta def unexpandListToArray : Lean.PrettyPrinter.Unexpander
+  | `($(_) [$xs,*]) => `(#[$xs,*])
   | _ => throw ()
 
-@[app_unexpander List.toArray] meta def unexpandListToArray : Lean.PrettyPrinter.Unexpander
-  | `($(_) [$xs,*]) => `(#[$xs,*])
-  | _               => throw ()
-
-@[app_unexpander Prod.mk] meta def unexpandProdMk : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Prod.mk]
+meta def unexpandProdMk : Lean.PrettyPrinter.Unexpander
   | `($(_) $x ($y, $ys,*)) => `(($x, $y, $ys,*))
-  | `($(_) $x $y)          => `(($x, $y))
-  | _                      => throw ()
+  | `($(_) $x $y) => `(($x, $y))
+  | _ => throw ()
 
-@[app_unexpander ite] meta def unexpandIte : Lean.PrettyPrinter.Unexpander
+@[app_unexpander ite]
+meta def unexpandIte : Lean.PrettyPrinter.Unexpander
   | `($(_) $c $t $e) => `(if $c then $t else $e)
-  | _                => throw ()
+  | _ => throw ()
 
-@[app_unexpander Eq.ndrec] meta def unexpandEqNDRec : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Eq.ndrec]
+meta def unexpandEqNDRec : Lean.PrettyPrinter.Unexpander
   | `($(_) $m $h) => `($h ▸ $m)
-  | _             => throw ()
+  | _ => throw ()
 
-@[app_unexpander Eq.rec] meta def unexpandEqRec : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Eq.rec]
+meta def unexpandEqRec : Lean.PrettyPrinter.Unexpander
   | `($(_) $m $h) => `($h ▸ $m)
-  | _             => throw ()
+  | _ => throw ()
 
-@[app_unexpander Exists] meta def unexpandExists : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Exists]
+meta def unexpandExists : Lean.PrettyPrinter.Unexpander
   | `($(_) fun $x:ident => ∃ $xs:binderIdent*, $b) => `(∃ $x:ident $xs:binderIdent*, $b)
-  | `($(_) fun $x:ident => $b)                     => `(∃ $x:ident, $b)
-  | `($(_) fun ($x:ident : $t) => $b)              => `(∃ ($x:ident : $t), $b)
-  | _                                              => throw ()
+  | `($(_) fun $x:ident => $b) => `(∃ $x:ident, $b)
+  | `($(_) fun ($x:ident : $t) => $b) => `(∃ ($x:ident : $t), $b)
+  | _ => throw ()
 
-@[app_unexpander Sigma] meta def unexpandSigma : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Sigma]
+meta def unexpandSigma : Lean.PrettyPrinter.Unexpander
   | `($(_) fun ($x:ident : $t) => $b) => `(($x:ident : $t) × $b)
-  | _                                  => throw ()
+  | _ => throw ()
 
-@[app_unexpander PSigma] meta def unexpandPSigma : Lean.PrettyPrinter.Unexpander
+@[app_unexpander PSigma]
+meta def unexpandPSigma : Lean.PrettyPrinter.Unexpander
   | `($(_) fun ($x:ident : $t) => $b) => `(($x:ident : $t) ×' $b)
-  | _                                 => throw ()
+  | _ => throw ()
 
-@[app_unexpander Subtype] meta def unexpandSubtype : Lean.PrettyPrinter.Unexpander
-  | `($(_) fun ($x:ident : $type) => $p)  => `({ $x : $type // $p })
-  | `($(_) fun $x:ident => $p)            => `({ $x // $p })
-  | _                                     => throw ()
+@[app_unexpander Subtype]
+meta def unexpandSubtype : Lean.PrettyPrinter.Unexpander
+  | `($(_) fun ($x:ident : $type) => $p) => `({ $x : $type // $p })
+  | `($(_) fun $x:ident => $p) => `({ $x // $p })
+  | _ => throw ()
 
-@[app_unexpander TSyntax] meta def unexpandTSyntax : Lean.PrettyPrinter.Unexpander
-  | `($f [$k])  => `($f $k)
-  | _           => throw ()
+@[app_unexpander TSyntax]
+meta def unexpandTSyntax : Lean.PrettyPrinter.Unexpander
+  | `($f [$k]) => `($f $k)
+  | _ => throw ()
 
-@[app_unexpander TSyntaxArray] meta def unexpandTSyntaxArray : Lean.PrettyPrinter.Unexpander
-  | `($f [$k])  => `($f $k)
-  | _           => throw ()
+@[app_unexpander TSyntaxArray]
+meta def unexpandTSyntaxArray : Lean.PrettyPrinter.Unexpander
+  | `($f [$k]) => `($f $k)
+  | _ => throw ()
 
-@[app_unexpander Syntax.TSepArray] meta def unexpandTSepArray : Lean.PrettyPrinter.Unexpander
-  | `($f [$k] $sep)  => `($f $k $sep)
-  | _                => throw ()
+@[app_unexpander Syntax.TSepArray]
+meta def unexpandTSepArray : Lean.PrettyPrinter.Unexpander
+  | `($f [$k] $sep) => `($f $k $sep)
+  | _ => throw ()
 
-@[app_unexpander GetElem.getElem] meta def unexpandGetElem : Lean.PrettyPrinter.Unexpander
+@[app_unexpander GetElem.getElem]
+meta def unexpandGetElem : Lean.PrettyPrinter.Unexpander
   | `($_ $array $index $_) => `($array[$index])
   | _ => throw ()
 
-@[app_unexpander getElem!] meta def unexpandGetElem! : Lean.PrettyPrinter.Unexpander
+@[app_unexpander getElem!]
+meta def unexpandGetElem! : Lean.PrettyPrinter.Unexpander
   | `($_ $array $index) => `($array[$index]!)
   | _ => throw ()
 
-@[app_unexpander getElem?] meta def unexpandGetElem? : Lean.PrettyPrinter.Unexpander
+@[app_unexpander getElem?]
+meta def unexpandGetElem? : Lean.PrettyPrinter.Unexpander
   | `($_ $array $index) => `($array[$index]?)
   | _ => throw ()
 
-@[app_unexpander Array.empty] meta def unexpandArrayEmpty : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Array.empty]
+meta def unexpandArrayEmpty : Lean.PrettyPrinter.Unexpander
   | _ => `(#[])
 
-@[app_unexpander Array.mkArray0] meta def unexpandMkArray0 : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Array.mkArray0]
+meta def unexpandMkArray0 : Lean.PrettyPrinter.Unexpander
   | _ => `(#[])
 
-@[app_unexpander Array.mkArray1] meta def unexpandMkArray1 : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Array.mkArray1]
+meta def unexpandMkArray1 : Lean.PrettyPrinter.Unexpander
   | `($(_) $a1) => `(#[$a1])
   | _ => throw ()
 
-@[app_unexpander Array.mkArray2] meta def unexpandMkArray2 : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Array.mkArray2]
+meta def unexpandMkArray2 : Lean.PrettyPrinter.Unexpander
   | `($(_) $a1 $a2) => `(#[$a1, $a2])
   | _ => throw ()
 
-@[app_unexpander Array.mkArray3] meta def unexpandMkArray3 : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Array.mkArray3]
+meta def unexpandMkArray3 : Lean.PrettyPrinter.Unexpander
   | `($(_) $a1 $a2 $a3) => `(#[$a1, $a2, $a3])
   | _ => throw ()
 
-@[app_unexpander Array.mkArray4] meta def unexpandMkArray4 : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Array.mkArray4]
+meta def unexpandMkArray4 : Lean.PrettyPrinter.Unexpander
   | `($(_) $a1 $a2 $a3 $a4) => `(#[$a1, $a2, $a3, $a4])
   | _ => throw ()
 
-@[app_unexpander Array.mkArray5] meta def unexpandMkArray5 : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Array.mkArray5]
+meta def unexpandMkArray5 : Lean.PrettyPrinter.Unexpander
   | `($(_) $a1 $a2 $a3 $a4 $a5) => `(#[$a1, $a2, $a3, $a4, $a5])
   | _ => throw ()
 
-@[app_unexpander Array.mkArray6] meta def unexpandMkArray6 : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Array.mkArray6]
+meta def unexpandMkArray6 : Lean.PrettyPrinter.Unexpander
   | `($(_) $a1 $a2 $a3 $a4 $a5 $a6) => `(#[$a1, $a2, $a3, $a4, $a5, $a6])
   | _ => throw ()
 
-@[app_unexpander Array.mkArray7] meta def unexpandMkArray7 : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Array.mkArray7]
+meta def unexpandMkArray7 : Lean.PrettyPrinter.Unexpander
   | `($(_) $a1 $a2 $a3 $a4 $a5 $a6 $a7) => `(#[$a1, $a2, $a3, $a4, $a5, $a6, $a7])
   | _ => throw ()
 
-@[app_unexpander Array.mkArray8] meta def unexpandMkArray8 : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Array.mkArray8]
+meta def unexpandMkArray8 : Lean.PrettyPrinter.Unexpander
   | `($(_) $a1 $a2 $a3 $a4 $a5 $a6 $a7 $a8) => `(#[$a1, $a2, $a3, $a4, $a5, $a6, $a7, $a8])
   | _ => throw ()
 
@@ -286,8 +332,7 @@ macro_rules
 macro_rules
   | `(%[ $[$x],* | $k ]) =>
     if x.size < 8 then
-      x.foldrM (β := Term) (init := k) fun x k =>
-        `(List.cons $x $k)
+      x.foldrM (β := Term) (init := k) fun x k => `(List.cons $x $k)
     else
       let m := x.size / 2
       let y := x.drop m
@@ -296,19 +341,20 @@ macro_rules
         %[ $[$z],* | y ])
 
 /--
-  Expands
-  ```
-  class abbrev C <params> := D_1, ..., D_n
-  ```
-  into
-  ```
-  class C <params> extends D_1, ..., D_n
-  attribute [instance] C.mk
-  ```
+Expands
+```
+class abbrev C <params> := D_1, ..., D_n
+```
+into
+```
+class C <params> extends D_1, ..., D_n
+attribute [instance] C.mk
+```
 -/
 syntax (name := Lean.Parser.Command.classAbbrev)
-  declModifiers "class " "abbrev " declId bracketedBinder* (":" term)?
-  ":=" withPosition(group(colGe term ","?)*) : command
+  declModifiers "class " "abbrev " declId bracketedBinder* (":" term)? ":="
+  withPosition(group(colGe term ","?)*)
+  : command
 
 macro_rules
   | `($mods:declModifiers class abbrev $id $params* $[: $ty]? := $[ $parents $[,]? ]*) =>
@@ -321,9 +367,7 @@ syntax cdotTk := unicode("· ", ". ")
 /-- `· tac` focuses on the main goal and tries to solve it using `tac`, or else fails. -/
 syntax (name := cdot) cdotTk tacticSeqIndentGt : tactic
 
-/--
-  Similar to `first`, but succeeds only if one the given tactics solves the current goal.
--/
+/-- Similar to `first`, but succeeds only if one the given tactics solves the current goal. -/
 syntax (name := solveTactic) "solve" withPosition((ppDedent(ppLine) colGe "| " tacticSeq)+) : tactic
 
 macro_rules

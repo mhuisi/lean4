@@ -36,22 +36,23 @@ theorem if_false {_ : Decidable False} (t e : α) : ite False t e = e := ite_eq_
 theorem ite_id [Decidable c] {α} (t : α) : (if c then t else t) = t := by split <;> rfl
 
 /-- A function applied to a `dite` is a `dite` of that function applied to each of the branches. -/
-theorem apply_dite (f : α → β) (P : Prop) [Decidable P] (x : P → α) (y : ¬P → α) :
-    f (dite P x y) = dite P (fun h => f (x h)) (fun h => f (y h)) := by
+theorem apply_dite (f : α → β) (P : Prop) [Decidable P] (x : P → α) (y : ¬P → α)
+    : f (dite P x y) = dite P (fun h => f (x h)) (fun h => f (y h)) := by
   by_cases h : P <;> simp [h]
 
 /-- A function applied to a `ite` is a `ite` of that function applied to each of the branches. -/
-theorem apply_ite (f : α → β) (P : Prop) [Decidable P] (x y : α) :
-    f (ite P x y) = ite P (f x) (f y) :=
+theorem apply_ite (f : α → β) (P : Prop) [Decidable P] (x y : α)
+    : f (ite P x y) = ite P (f x) (f y) :=
   apply_dite f P (fun _ => x) (fun _ => y)
 
 /-- A `dite` whose results do not actually depend on the condition may be reduced to an `ite`. -/
-@[simp] theorem dite_eq_ite {_ : Decidable P} :
-  (dite P (fun _ => a) (fun _ => b)) = ite P a b := rfl
+@[simp]
+theorem dite_eq_ite {_ : Decidable P} : (dite P (fun _ => a) (fun _ => b)) = ite P a b := rfl
 
 -- Remark: dite and ite are "defally equal" when we ignore the proofs.
 @[deprecated dite_eq_ite +typeChanged (since := "2025-10-29")]
-theorem dif_eq_if (c : Prop) {h : Decidable c} {α : Sort u} (t : α) (e : α) : dite c (fun _ => t) (fun _ => e) = ite c t e :=
+theorem dif_eq_if (c : Prop) {h : Decidable c} {α : Sort u} (t : α) (e : α)
+    : dite c (fun _ => t) (fun _ => e) = ite c t e :=
   match h with
-  | isTrue _    => rfl
-  | isFalse _   => rfl
+  | isTrue _ => rfl
+  | isFalse _ => rfl

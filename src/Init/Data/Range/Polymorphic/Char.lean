@@ -21,11 +21,9 @@ public instance : UpwardEnumerable Char where
   succ?
   succMany?
 
-@[simp]
-public theorem pRangeSucc?_eq : PRange.succ? (α := Char) = Char.succ? := rfl
+@[simp] public theorem pRangeSucc?_eq : PRange.succ? (α := Char) = Char.succ? := rfl
 
-@[simp]
-public theorem pRangeSuccMany?_eq : PRange.succMany? (α := Char) = Char.succMany? := rfl
+@[simp] public theorem pRangeSuccMany?_eq : PRange.succMany? (α := Char) = Char.succMany? := rfl
 
 public instance : Rxc.HasSize Char where
   size lo hi := Rxc.HasSize.size lo.ordinal hi.ordinal
@@ -39,8 +37,7 @@ public instance : Rxi.HasSize Char where
 public instance : Least? Char where
   least? := some '\x00'
 
-@[simp]
-public theorem least?_eq : Least?.least? (α := Char) = some '\x00' := rfl
+@[simp] public theorem least?_eq : Least?.least? (α := Char) = some '\x00' := rfl
 
 def map : Map Char (Fin Char.numCodePoints) where
   toFun := Char.ordinal
@@ -48,8 +45,7 @@ def map : Map Char (Fin Char.numCodePoints) where
   succ?_toFun := by simp [succ?_eq]
   succMany?_toFun := by simp [succMany?_eq]
 
-@[simp]
-theorem toFun_map : map.toFun = Char.ordinal := rfl
+@[simp] theorem toFun_map : map.toFun = Char.ordinal := rfl
 
 instance : Map.PreservesLE map where
   le_iff := by simp [le_iff_ordinal_le]

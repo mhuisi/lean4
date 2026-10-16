@@ -30,8 +30,9 @@ inductive TraceTree where
   original `MessageData` while decomposing it; it is re-applied around the node by
   `toMessageData`.
   -/
-  | node (data : TraceData) (msg : MessageData) (children : Array TraceTree)
-      (wrap : MessageData → MessageData)
+  | node
+    (data : TraceData) (msg : MessageData) (children : Array TraceTree)
+    (wrap : MessageData → MessageData)
   /-- A child message that is not itself a trace node (e.g. produced by `addRawTrace`). -/
   | leaf (msg : MessageData)
 
@@ -41,8 +42,7 @@ instance : Inhabited TraceTree := ⟨.leaf .nil⟩
 Decomposes trace `MessageData` into a `TraceTree`. The `MessageData` can be reconstructed using
 `TraceTree.toMessageData`.
 -/
-meta partial def TraceTree.ofMessageData (msg : MessageData) : TraceTree :=
-  go id msg
+meta partial def TraceTree.ofMessageData (msg : MessageData) : TraceTree := go id msg
 where
   go (wrap : MessageData → MessageData) : MessageData → TraceTree
     | .withContext ctx m => go (fun m => wrap (.withContext ctx m)) m
@@ -83,34 +83,33 @@ namespace TraceTree
 /-- The `TraceData` of a trace node; `none` for leaf messages. -/
 def data? : TraceTree → Option TraceData
   | .node data .. => some data
-  | .leaf _       => none
+  | .leaf _ => none
 
 /-- The trace class of a trace node; `none` for leaf messages. -/
-def cls? (t : TraceTree) : Option Name :=
-  t.data?.map (·.cls)
+def cls? (t : TraceTree) : Option Name := t.data?.map (·.cls)
 
 /-- The children of this tree. -/
 def children : TraceTree → Array TraceTree
   | .node _ _ children _ => children
-  | .leaf _              => #[]
+  | .leaf _ => #[]
 
 /-- Replaces the children of a trace node. Leaf messages are returned unchanged. -/
 def withChildren (t : TraceTree) (children : Array TraceTree) : TraceTree :=
   match t with
   | .node data msg _ wrap => .node data msg children wrap
-  | .leaf msg             => .leaf msg
+  | .leaf msg => .leaf msg
 
 /-- Transforms the `TraceData` of a trace node. Leaf messages are returned unchanged. -/
 def modifyData (t : TraceTree) (f : TraceData → TraceData) : TraceTree :=
   match t with
   | .node data msg children wrap => .node (f data) msg children wrap
-  | .leaf msg                    => .leaf msg
+  | .leaf msg => .leaf msg
 
 /-- Elapsed time of this node in seconds; `0` if no profiling data is available. -/
 def elapsed (t : TraceTree) : Float :=
   match t.data? with
   | some data => data.stopTime - data.startTime
-  | none      => 0
+  | none => 0
 
 /--
 Elapsed time of this node that is not accounted for by its children, in seconds; `0` if no
@@ -128,19 +127,19 @@ def headText : TraceTree → BaseIO String
     let s ← (wrap msg).toString
     return match data.result? with
       | some r => s!"{r.toEmoji} {s}"
-      | none   => s
-  | .leaf msg => msg.toString
+      | none => s
+  | .leaf msg =>
+    msg.toString
 
 /-- The `TraceResult` of a trace node; `none` for leaf messages and nodes without a result. -/
-def result? (t : TraceTree) : Option TraceResult :=
-  t.data?.bind (·.result?)
+def result? (t : TraceTree) : Option TraceResult := t.data?.bind (·.result?)
 
 /--
 Collects all maximal subtrees satisfying `p` in `acc`: adds `t` itself if `p t` holds, and
 otherwise recurses into the children. Matching subtrees are not searched for nested matches.
 -/
-partial def collectSubtrees (p : TracePattern) (t : TraceTree)
-    (acc : Array TraceTree := #[]) : CoreM (Array TraceTree) := do
+partial def collectSubtrees (p : TracePattern) (t : TraceTree) (acc : Array TraceTree := #[])
+    : CoreM (Array TraceTree) := do
   if ← p t then
     return acc.push t
   t.children.foldlM (fun acc c => collectSubtrees p c acc) acc
@@ -150,8 +149,7 @@ Prunes the tree to the subtrees satisfying `p`, keeping their ancestors for cont
 there is no match. The resulting tree consists of those nodes that either have a matching
 ancestor or transitive child. Matching subtrees are not searched for nested matches.
 -/
-partial def filterSubtrees (p : TracePattern) (t : TraceTree) :
-    CoreM (Option TraceTree) := do
+partial def filterSubtrees (p : TracePattern) (t : TraceTree) : CoreM (Option TraceTree) := do
   if ← p t then
     return some t
   let children ← t.children.filterMapM (filterSubtrees p)
@@ -172,27 +170,30 @@ Decomposes the synthetic container message produced by `addTraceAsMessages`
 (``.tagged `trace <| .trace _ _ roots``, possibly inside context wrappers) into its trace roots,
 together with a function that reassembles the container from transformed roots.
 -/
-meta partial def traceContainer? (data : MessageData) :
-    Option ((Array MessageData → MessageData) × Array MessageData) :=
+meta partial def traceContainer? (data : MessageData)
+    : Option ((Array MessageData → MessageData) × Array MessageData) :=
   go id data
 where
-  go (wrap : MessageData → MessageData) :
-      MessageData → Option ((Array MessageData → MessageData) × Array MessageData)
-    | .withContext ctx m       => go (fun m => wrap (.withContext ctx m)) m
-    | .withNamingContext ctx m => go (fun m => wrap (.withNamingContext ctx m)) m
+  go (wrap : MessageData → MessageData)
+      : MessageData → Option ((Array MessageData → MessageData) × Array MessageData)
+    | .withContext ctx m =>
+      go (fun m => wrap (.withContext ctx m)) m
+    | .withNamingContext ctx m =>
+      go (fun m => wrap (.withNamingContext ctx m)) m
     | .tagged n (.trace data head children) =>
       if n == `trace then
         some (fun children => wrap (.tagged n (.trace data head children)), children)
       else
         none
-    | _ => none
+    | _ =>
+      none
 
 /--
 Applies `post` to a trace message (see `addTraceAsMessages`), returning `none` if the
 postprocessor dropped all roots of the message. Non-trace messages are returned unchanged.
 -/
-meta def postprocessMessage (post : TracePostprocessor) (msg : Message) :
-    CoreM (Option Message) := do
+meta def postprocessMessage (post : TracePostprocessor) (msg : Message)
+    : CoreM (Option Message) := do
   let some (rebuild, roots) := traceContainer? msg.data
     | return some msg
   let roots ← post (roots.map TraceTree.ofMessageData)
@@ -213,16 +214,18 @@ meta def runAndCollectMessages (cmd : Syntax) : CommandElabM (Array Message) := 
   modify fun st => { st with messages := {} }
   try
     -- do not forward the snapshot as we don't want messages assigned to it to leak outside
-    withReader ({ · with snap? := none }) do
-      elabCommandTopLevel cmd
-    let msgs := (← get).messages ++
-      (← get).snapshotTasks.foldl (· ++ ·.get.getAll.foldl (· ++ ·.diagnostics.msgLog) .empty) .empty
+    withReader ({ · with snap? := none }) do elabCommandTopLevel cmd
+    let msgs :=
+      (← get).messages ++ (← get).snapshotTasks.foldl
+        (· ++ ·.get.getAll.foldl (· ++ ·.diagnostics.msgLog) .empty) .empty
     modify fun st => { st with snapshotTasks := #[], messages := {} }
     return msgs.toArray
   finally
-    modify fun st => { st with
+    modify fun st => {
+      st with
       infoState.trees := savedTrees ++ st.infoState.trees
-      messages        := saved ++ st.messages }
+      messages := saved ++ st.messages
+    }
 
 /--
 Evaluates a term of type `TracePostprocessor`, with the `Lean.PostprocessTraces` namespace opened so

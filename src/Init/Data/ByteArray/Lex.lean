@@ -23,27 +23,21 @@ namespace ByteArray
 public instance : LT ByteArray where
   lt a b := a.data < b.data
 
-public instance : LE ByteArray :=
-  LE.ofLT _
+public instance : LE ByteArray := LE.ofLT _
 
-@[simp]
-public theorem data_lt_data {a b : ByteArray} : a.data < b.data ↔ a < b :=
-  Iff.rfl
+@[simp] public theorem data_lt_data {a b : ByteArray} : a.data < b.data ↔ a < b := Iff.rfl
 
 @[extern "lean_byte_array_dec_lt"]
 public protected def decidableLT (a b : @& ByteArray) : Decidable (a < b) :=
   decidable_of_iff _ data_lt_data
 
-public instance : DecidableLT ByteArray :=
-  ByteArray.decidableLT
+public instance : DecidableLT ByteArray := ByteArray.decidableLT
 
 -- Work around #15328
-public instance : DecidableLE ByteArray :=
-  fun a b => inferInstanceAs (Decidable (¬ b < a))
+public instance : DecidableLE ByteArray := fun a b => inferInstanceAs (Decidable (¬ b < a))
 
 @[extern "lean_byte_array_compare", expose]
-public protected def compare (a b : @& ByteArray) : Ordering :=
-  compare a.data b.data
+public protected def compare (a b : @& ByteArray) : Ordering := compare a.data b.data
 
 public instance : Ord ByteArray where
   compare := ByteArray.compare
@@ -55,9 +49,7 @@ public theorem compare_data_data {a b : ByteArray} : Ord.compare a.data b.data =
 instance : Std.Asymm (α := ByteArray) (· < ·) where
   asymm a b := by simpa only [← data_lt_data] using Std.not_gt_of_lt
 
-@[simp]
-public theorem data_le_data {a b : ByteArray} : a.data ≤ b.data ↔ a ≤ b :=
-  Iff.rfl
+@[simp] public theorem data_le_data {a b : ByteArray} : a.data ≤ b.data ↔ a ≤ b := Iff.rfl
 
 instance : LawfulOrderOrd ByteArray where
   isLE_compare a b := by simp [← compare_data_data, isLE_compare]
@@ -73,26 +65,27 @@ instance : Trans (α := ByteArray) (¬ · < ·) (¬ · < ·) (¬ · < ·) where
   trans {_ _ _} := by simpa [← data_lt_data, -data_le_data] using flip le_trans
 
 instance : Trichotomous (α := ByteArray) (· < ·) where
-  trichotomous a b := by simpa [← data_lt_data, -data_le_data, ByteArray.ext_iff] using flip le_antisymm
+  trichotomous a b := by
+    simpa [← data_lt_data, -data_le_data, ByteArray.ext_iff] using flip le_antisymm
 
-public instance : LinearOrderPackage ByteArray := .ofLE _ { }
+public instance : LinearOrderPackage ByteArray := .ofLE _ {}
 
 end ByteArray
 
 @[simp]
-public theorem List.toByteArray_lt_toByteArray {l₁ l₂ : List UInt8} :
-    l₁.toByteArray < l₂.toByteArray ↔ l₁ < l₂ := by
-  conv => rhs; rw [← List.toList_data_toByteArray (l := l₁),
-    ← List.toList_data_toByteArray (l := l₂)]
+public theorem List.toByteArray_lt_toByteArray {l₁ l₂ : List UInt8}
+    : l₁.toByteArray < l₂.toByteArray ↔ l₁ < l₂ := by
+  conv =>
+    rhs; rw [← List.toList_data_toByteArray (l := l₁), ← List.toList_data_toByteArray (l := l₂)]
   rw [Array.lt_toList, ByteArray.data_lt_data]
 
 @[simp]
-public theorem List.toByteArray_le_toByteArray {l₁ l₂ : List UInt8} :
-    l₁.toByteArray ≤ l₂.toByteArray ↔ l₁ ≤ l₂ :=
+public theorem List.toByteArray_le_toByteArray {l₁ l₂ : List UInt8}
+    : l₁.toByteArray ≤ l₂.toByteArray ↔ l₁ ≤ l₂ :=
   not_congr List.toByteArray_lt_toByteArray
 
 @[simp]
-public theorem List.compare_toByteArray_toByteArray {l₁ l₂ : List UInt8} :
-    compare l₁.toByteArray l₂.toByteArray = compare l₁ l₂ := by
-  rw [← ByteArray.compare_data_data, Array.compare_eq_compare_toList,
-    List.toList_data_toByteArray, List.toList_data_toByteArray]
+public theorem List.compare_toByteArray_toByteArray {l₁ l₂ : List UInt8}
+    : compare l₁.toByteArray l₂.toByteArray = compare l₁ l₂ := by
+  rw [← ByteArray.compare_data_data, Array.compare_eq_compare_toList, List.toList_data_toByteArray,
+    List.toList_data_toByteArray]

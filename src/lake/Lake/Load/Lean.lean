@@ -22,7 +22,7 @@ open Lean
 
 namespace Lake
 
-/-- Elaborate a Lake configuration file written in Lean and extract the Lake configuration.  -/
-public def loadLeanConfig  (cfg : LoadConfig) : LogIO LakefileConfig := do
+/-- Elaborate a Lake configuration file written in Lean and extract the Lake configuration. -/
+public def loadLeanConfig (cfg : LoadConfig) : LogIO LakefileConfig := do
   let configEnv ← importConfigFile cfg
   LakefileConfig.loadFromEnv configEnv cfg.leanOpts

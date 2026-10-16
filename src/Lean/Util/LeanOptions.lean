@@ -12,26 +12,28 @@ public section
 
 namespace Lean
 
-/-- Restriction of `DataValue` that covers exactly those cases that Lean is able to handle when passed via the `-D` flag. -/
+/--
+Restriction of `DataValue` that covers exactly those cases that Lean is able to handle when passed via the `-D` flag.
+-/
 inductive LeanOptionValue where
   | ofString (s : String)
-  | ofBool   (b : Bool)
-  | ofNat    (n : Nat)
-  deriving Inhabited, Repr
+  | ofBool (b : Bool)
+  | ofNat (n : Nat)
+deriving Inhabited, Repr
 
 def LeanOptionValue.ofDataValue? : DataValue → Option LeanOptionValue
   | .ofString s => some (.ofString s)
-  | .ofBool b   => some (.ofBool b)
-  | .ofNat n    => some (.ofNat n)
-  | _           => none
+  | .ofBool b => some (.ofBool b)
+  | .ofNat n => some (.ofNat n)
+  | _ => none
 
 def LeanOptionValue.toDataValue : LeanOptionValue → DataValue
   | .ofString s => .ofString s
-  | .ofBool b   => .ofBool b
-  | .ofNat n    => .ofNat n
+  | .ofBool b => .ofBool b
+  | .ofNat n => .ofNat n
 
 instance : KVMap.Value LeanOptionValue where
-  toDataValue  := LeanOptionValue.toDataValue
+  toDataValue := LeanOptionValue.toDataValue
   ofDataValue? := LeanOptionValue.ofDataValue?
 
 instance : Coe String LeanOptionValue where
@@ -49,43 +51,42 @@ instance {n : Nat} : OfNat LeanOptionValue n where
 instance : FromJson LeanOptionValue where
   fromJson?
     | (s : String) => Except.ok s
-    | (b : Bool)   => Except.ok b
-    | (n : Nat)    => Except.ok n
+    | (b : Bool) => Except.ok b
+    | (n : Nat) => Except.ok n
     | _ => Except.error "invalid LeanOptionValue type"
 
 instance : ToJson LeanOptionValue where
   toJson
     | (s : String) => s
-    | (b : Bool)   => b
-    | (n : Nat)    => n
+    | (b : Bool) => b
+    | (n : Nat) => n
 
 /-- Formats the lean option value as a CLI flag argument. -/
 def LeanOptionValue.asCliFlagValue : (v : LeanOptionValue) → String
   | (s : String) => s!"\"{s}\""
-  | (b : Bool)   => toString b
-  | (n : Nat)    => toString n
+  | (b : Bool) => toString b
+  | (n : Nat) => toString n
 
 /-- An option that is used by Lean as if it was passed using `-D`. -/
 structure LeanOption where
   /-- The option's name. -/
-  name  : Lean.Name
+  name : Lean.Name
   /-- The option's value. -/
   value : Lean.LeanOptionValue
-  deriving Inhabited, Repr
+deriving Inhabited, Repr
 
 /-- Formats the lean option as a CLI argument using the `-D` flag. -/
-def LeanOption.asCliArg (o : LeanOption) : String :=
-  s!"-D{o.name}={o.value.asCliFlagValue}"
+def LeanOption.asCliArg (o : LeanOption) : String := s!"-D{o.name}={o.value.asCliFlagValue}"
 
 /-- Options that are used by Lean as if they were passed using `-D`. -/
 structure LeanOptions where
   values : NameMap LeanOptionValue
-  deriving Inhabited, Repr
+deriving Inhabited, Repr
 
 instance : EmptyCollection LeanOptions := ⟨⟨∅⟩⟩
 
 def LeanOptions.ofArray (opts : Array LeanOption) : LeanOptions :=
-  ⟨opts.foldl (fun m {name, value} => m.insert name value) {}⟩
+  ⟨opts.foldl (fun m { name, value } => m.insert name value) {}⟩
 
 /-- Add the options from `new`, overriding those in `self`. -/
 protected def LeanOptions.append (self new : LeanOptions) : LeanOptions :=
@@ -95,7 +96,7 @@ instance : Append LeanOptions := ⟨LeanOptions.append⟩
 
 /-- Add the options from `new`, overriding those in `self`. -/
 def LeanOptions.appendArray (self : LeanOptions) (new : Array LeanOption) : LeanOptions :=
-  ⟨new.foldl (fun m {name, value} => m.insert name value) self.values⟩
+  ⟨new.foldl (fun m { name, value } => m.insert name value) self.values⟩
 
 instance : HAppend LeanOptions (Array LeanOption) LeanOptions := ⟨LeanOptions.appendArray⟩
 

@@ -24,8 +24,8 @@ open Std
 namespace Char
 
 instance : TransOrd Char :=
-  TransOrd.compareOfLessAndEq_of_antisymm_of_trans_of_total_of_not_le
-    Char.le_antisymm Char.le_trans Char.le_total Char.not_le
+  TransOrd.compareOfLessAndEq_of_antisymm_of_trans_of_total_of_not_le Char.le_antisymm Char.le_trans
+    Char.le_total Char.not_le
 
 instance : LawfulEqOrd Char where
   eq_of_compare h := compareOfLessAndEq_eq_eq Char.le_refl Char.not_le |>.mp h

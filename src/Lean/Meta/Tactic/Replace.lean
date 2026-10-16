@@ -16,18 +16,20 @@ public section
 namespace Lean.Meta
 
 /--
-  Convert the given goal `Ctx |- target` into `Ctx |- targetNew` using an equality proof `eqProof : target = targetNew`.
-  It assumes `eqProof` has type `target = targetNew` -/
-def _root_.Lean.MVarId.replaceTargetEq (mvarId : MVarId) (targetNew : Expr) (eqProof : Expr) : MetaM MVarId :=
+Convert the given goal `Ctx |- target` into `Ctx |- targetNew` using an equality proof `eqProof : target = targetNew`.
+It assumes `eqProof` has type `target = targetNew`
+-/
+def _root_.Lean.MVarId.replaceTargetEq (mvarId : MVarId) (targetNew : Expr) (eqProof : Expr)
+    : MetaM MVarId :=
   mvarId.withContext do
     mvarId.checkNotAssigned `replaceTarget
-    let tag      ← mvarId.getTag
-    let mvarNew  ← mkFreshExprSyntheticOpaqueMVar targetNew tag
-    let target   ← mvarId.getType
-    let u        ← getLevel target
-    let eq       ← mkEq target targetNew
+    let tag ← mvarId.getTag
+    let mvarNew ← mkFreshExprSyntheticOpaqueMVar targetNew tag
+    let target ← mvarId.getType
+    let u ← getLevel target
+    let eq ← mkEq target targetNew
     let newProof := mkExpectedPropHint eqProof eq
-    let val  := mkAppN (Lean.mkConst `Eq.mpr [u]) #[target, targetNew, newProof, mvarNew]
+    let val := mkAppN (Lean.mkConst `Eq.mpr [u]) #[target, targetNew, newProof, mvarNew]
     mvarId.assign val
     return mvarNew.mvarId!
 
@@ -45,7 +47,7 @@ Uses `Expr.equal` for the comparison so that it is possible to update binder nam
 def _root_.Lean.MVarId.replaceTargetDefEq (mvarId : MVarId) (targetNew : Expr) : MetaM MVarId :=
   mvarId.withContext do
     mvarId.checkNotAssigned `change
-    let target  ← mvarId.getType
+    let target ← mvarId.getType
     if Expr.equal target targetNew then
       return mvarId
     else
@@ -57,9 +59,9 @@ def _root_.Lean.MVarId.replaceTargetDefEq (mvarId : MVarId) (targetNew : Expr) :
         mvarId.setType target -- cache the instantiated type
         return mvarId
       else
-        let tag     ← mvarId.getTag
+        let tag ← mvarId.getTag
         let mvarNew ← mkFreshExprSyntheticOpaqueMVar targetNew tag
-        let newVal  ← mkExpectedTypeHint mvarNew target
+        let newVal ← mkExpectedTypeHint mvarNew target
         mvarId.assign newVal
         return mvarNew.mvarId!
 
@@ -74,8 +76,9 @@ metavariables. The value `val : type` can depend on any variables in the local c
 See also `Lean.MVarId.assertAfter'`, which asserts hypotheses without clearing.
 -/
 def _root_.Lean.MVarId.replace
-    (mvarId : MVarId) (fvarId : FVarId) (val : Expr) (type? : Option Expr := none) (userName? : Option Name := none) :
-    MetaM AssertAfterResult :=
+    (mvarId : MVarId) (fvarId : FVarId) (val : Expr)
+    (type? : Option Expr := none) (userName? : Option Name := none)
+    : MetaM AssertAfterResult :=
   mvarId.withContext do
     let type ← type?.getDM (inferType val)
     let userName ← userName?.getDM (LocalDecl.userName <$> fvarId.getDecl)
@@ -84,17 +87,20 @@ def _root_.Lean.MVarId.replace
     return { result with mvarId }
 
 /--
-  Replace type of the local declaration with id `fvarId` with one with the same user-facing name, but with type `typeNew`.
-  This method assumes `eqProof` is a proof that the type of `fvarId` is equal to `typeNew`.
-  This tactic actually adds a new declaration and (tries to) clear the old one.
-  If the old one cannot be cleared, then at least its user-facing name becomes inaccessible.
+Replace type of the local declaration with id `fvarId` with one with the same user-facing name, but with type `typeNew`.
+This method assumes `eqProof` is a proof that the type of `fvarId` is equal to `typeNew`.
+This tactic actually adds a new declaration and (tries to) clear the old one.
+If the old one cannot be cleared, then at least its user-facing name becomes inaccessible.
 
-  The new local declaration is inserted at the soonest point after `fvarId` at which it is
-  well-formed. That is, if `typeNew` involves declarations which occur later than `fvarId` in the
-  local context, the new local declaration will be inserted immediately after the latest-occurring
-  one. Otherwise, it will be inserted immediately after `fvarId`.
-  -/
-@[inline] def _root_.Lean.MVarId.replaceLocalDecl (mvarId : MVarId) (fvarId : FVarId) (typeNew : Expr) (eqProof : Expr) : MetaM AssertAfterResult :=
+The new local declaration is inserted at the soonest point after `fvarId` at which it is
+well-formed. That is, if `typeNew` involves declarations which occur later than `fvarId` in the
+local context, the new local declaration will be inserted immediately after the latest-occurring
+one. Otherwise, it will be inserted immediately after `fvarId`.
+-/
+@[inline]
+def _root_.Lean.MVarId.replaceLocalDecl
+    (mvarId : MVarId) (fvarId : FVarId) (typeNew : Expr) (eqProof : Expr)
+    : MetaM AssertAfterResult :=
   mvarId.withContext do
     let typeNewPr ← mkEqMP eqProof (mkFVar fvarId)
     mvarId.replace fvarId typeNewPr typeNew
@@ -107,7 +113,8 @@ and that `typeNew` is well-formed at this position.
 If `typeNew` is equal to current type of `fvarId`, then returns `mvarId` unchanged.
 Uses `Expr.equal` for the comparison so that it is possible to update binder names, etc., which are user-visible.
 -/
-def _root_.Lean.MVarId.replaceLocalDeclDefEq (mvarId : MVarId) (fvarId : FVarId) (typeNew : Expr) : MetaM MVarId := do
+def _root_.Lean.MVarId.replaceLocalDeclDefEq (mvarId : MVarId) (fvarId : FVarId) (typeNew : Expr)
+    : MetaM MVarId := do
   mvarId.withContext do
     let type ← fvarId.getType
     if Expr.equal type typeNew then
@@ -136,12 +143,16 @@ Replace the target type of `mvarId` with `typeNew`.
 If `checkDefEq = false`, this method assumes that `typeNew` is definitionally equal to the current target type.
 If `checkDefEq = true`, throw an error if `typeNew` is not definitionally equal to the current target type.
 -/
-def _root_.Lean.MVarId.change (mvarId : MVarId) (targetNew : Expr) (checkDefEq := true) : MetaM MVarId := mvarId.withContext do
-  let target ← mvarId.getType
-  if checkDefEq then
-    unless (← isDefEq target targetNew) do
-      throwTacticEx `change mvarId m!"given type{indentExpr targetNew}\nis not definitionally equal to{indentExpr target}"
-  mvarId.replaceTargetDefEq targetNew
+def _root_.Lean.MVarId.change (mvarId : MVarId) (targetNew : Expr) (checkDefEq := true)
+    : MetaM MVarId :=
+  mvarId.withContext do
+    let target ← mvarId.getType
+    if checkDefEq then
+      unless (← isDefEq target targetNew) do
+        throwTacticEx `change mvarId
+          m!"given type{indentExpr targetNew}\
+            \nis not definitionally equal to{indentExpr target}"
+    mvarId.replaceTargetDefEq targetNew
 
 /--
 Executes the revert/intro pattern, running the continuation `k` after temporarily reverting
@@ -173,9 +184,11 @@ See `Lean.MVarId.changeLocalDecl` for an example. The motivation is that to work
 you need to move it into the goal, alter the goal, and then bring it back into the local context,
 all while keeping track of any other local variables that depend on this one.
 -/
-def _root_.Lean.MVarId.withReverted (mvarId : MVarId) (fvarIds : Array FVarId)
+def _root_.Lean.MVarId.withReverted
+    (mvarId : MVarId) (fvarIds : Array FVarId)
     (k : MVarId → Array FVarId → MetaM (α × Array (Option FVarId) × MVarId))
-    (clearAuxDeclsInsteadOfRevert := false) : MetaM (α × MVarId) := do
+    (clearAuxDeclsInsteadOfRevert := false)
+    : MetaM (α × MVarId) := do
   let (xs, mvarId) ← mvarId.revert fvarIds true clearAuxDeclsInsteadOfRevert
   let (r, xs', mvarId) ← k mvarId xs
   let (ys, mvarId) ← mvarId.introNP xs'.size
@@ -185,11 +198,11 @@ def _root_.Lean.MVarId.withReverted (mvarId : MVarId) (fvarIds : Array FVarId)
         Elab.pushInfoLeaf (.ofFVarAliasInfo { id := y, baseId := x, userName := ← y.getUserName })
   return (r, mvarId)
 
-/--
-Like `Lean.MVarId.withReverted`, but reverts all local variables starting from `fvarId`.
--/
-def _root_.Lean.MVarId.withRevertedFrom (mvarId : MVarId) (fvarId : FVarId)
-    (k : MVarId → Array FVarId → MetaM (α × Array (Option FVarId) × MVarId)) : MetaM (α × MVarId) := do
+/-- Like `Lean.MVarId.withReverted`, but reverts all local variables starting from `fvarId`. -/
+def _root_.Lean.MVarId.withRevertedFrom
+    (mvarId : MVarId) (fvarId : FVarId)
+    (k : MVarId → Array FVarId → MetaM (α × Array (Option FVarId) × MVarId))
+    : MetaM (α × MVarId) := do
   let (xs, mvarId) ← mvarId.revertFrom fvarId
   let (r, xs', mvarId) ← k mvarId xs
   let (ys, mvarId) ← mvarId.introNP xs'.size
@@ -206,26 +219,28 @@ If `checkDefEq` is `true` then an error is thrown if `typeNew` is not definition
 equal to the type of `fvarId`. Otherwise this function assumes `typeNew` and the type
 of `fvarId` are definitionally equal.
 -/
-def _root_.Lean.MVarId.changeLocalDecl (mvarId : MVarId) (fvarId : FVarId) (typeNew : Expr)
-    (checkDefEq := true) : MetaM MVarId := do
+def _root_.Lean.MVarId.changeLocalDecl
+    (mvarId : MVarId) (fvarId : FVarId) (typeNew : Expr) (checkDefEq := true)
+    : MetaM MVarId := do
   mvarId.checkNotAssigned `changeLocalDecl
-  let (_, mvarId) ← mvarId.withReverted #[fvarId] fun mvarId fvars => mvarId.withContext do
-    let check (typeOld : Expr) : MetaM Unit := do
-      if checkDefEq then
-        unless ← isDefEq typeNew typeOld do
-          throwTacticEx `changeLocalDecl mvarId
-            m!"given type{indentExpr typeNew}\nis not definitionally equal to{indentExpr typeOld}"
-    let finalize (targetNew : Expr) := do
-      return ((), fvars.map .some, ← mvarId.replaceTargetDefEq targetNew)
-    match ← mvarId.getType with
-    | .forallE n d b bi => do check d; finalize (.forallE n typeNew b bi)
-    | .letE n t v b ndep => do check t; finalize (.letE n typeNew v b ndep)
-    | _ => throwTacticEx `changeLocalDecl mvarId "unexpected auxiliary target"
+  let (_, mvarId) ←
+    mvarId.withReverted #[fvarId] fun mvarId fvars =>
+      mvarId.withContext do
+        let check (typeOld : Expr) : MetaM Unit := do
+          if checkDefEq then
+            unless ← isDefEq typeNew typeOld do
+              throwTacticEx `changeLocalDecl mvarId
+                m!"given type{indentExpr typeNew}\
+                  \nis not definitionally equal to{indentExpr typeOld}"
+        let finalize (targetNew : Expr) := do
+          return ((), fvars.map .some, ← mvarId.replaceTargetDefEq targetNew)
+        match ← mvarId.getType with
+        | .forallE n d b bi => do check d; finalize (.forallE n typeNew b bi)
+        | .letE n t v b ndep => do check t; finalize (.letE n typeNew v b ndep)
+        | _ => throwTacticEx `changeLocalDecl mvarId "unexpected auxiliary target"
   return mvarId
 
-/--
-Modify `mvarId` target type using `f`.
--/
+/-- Modify `mvarId` target type using `f`. -/
 def _root_.Lean.MVarId.modifyTarget (mvarId : MVarId) (f : Expr → MetaM Expr) : MetaM MVarId := do
   mvarId.withContext do
     mvarId.checkNotAssigned `modifyTarget
@@ -235,12 +250,13 @@ def _root_.Lean.MVarId.modifyTarget (mvarId : MVarId) (f : Expr → MetaM Expr) 
 Modify `mvarId` target type left-hand-side using `f`.
 Throw an error if target type is not an equality.
 -/
-def _root_.Lean.MVarId.modifyTargetEqLHS (mvarId : MVarId) (f : Expr → MetaM Expr) : MetaM MVarId := do
-   mvarId.modifyTarget fun target => do
-     if let some (_, lhs, rhs) ← matchEq? target then
-       mkEq (← f lhs) rhs
-     else
-       throwTacticEx `modifyTargetEqLHS mvarId m!"equality expected{indentExpr target}"
+def _root_.Lean.MVarId.modifyTargetEqLHS (mvarId : MVarId) (f : Expr → MetaM Expr)
+    : MetaM MVarId := do
+  mvarId.modifyTarget fun target => do
+    if let some (_, lhs, rhs) ← matchEq? target then
+      mkEq (← f lhs) rhs
+    else
+      throwTacticEx `modifyTargetEqLHS mvarId m!"equality expected{indentExpr target}"
 
 /--
 Clears the value of the local definition `fvarId`. Ensures that the resulting goal state
@@ -251,28 +267,29 @@ Preserves the order of the local context.
 def _root_.Lean.MVarId.clearValue (mvarId : MVarId) (fvarId : FVarId) : MetaM MVarId := do
   mvarId.checkNotAssigned `clear_value
   let tag ← mvarId.getTag
-  let (_, mvarId) ← mvarId.withRevertedFrom fvarId fun mvarId' fvars => mvarId'.withContext do
-    let tgt ← mvarId'.getType
-    unless tgt.isLet do
-      mvarId.withContext <|
-        throwTacticEx `clear_value mvarId m!"hypothesis `{Expr.fvar fvarId}` is not a local definition."
-    let tgt' := Expr.forallE tgt.letName! tgt.letType! tgt.letBody! .default
-    /-
-    Note: `isTypeCorrect` does not instantiate metavariables. Ideally this should not matter,
-    however delayed assigned metavariables assume that the arguments applied to them have the correct
-    definitional properties (e.g. an argument might be for the value of a `let` binding).
-    Instantiating the metavariables before `isTypeCorrect` lets examples like the one reported in
-    https://github.com/leanprover-community/mathlib4/issues/25053 go through.
-    (See `tests/lean/run/clear_value.lean`, 25053.)
-    -/
-    let tgt' ← instantiateMVars tgt'
-    unless ← isTypeCorrect tgt' do
-      mvarId.withContext <|
-        throwTacticEx `clear_value mvarId
-          m!"cannot clear {Expr.fvar fvarId}, the resulting context is not type correct."
-    let mvarId'' ← mkFreshExprSyntheticOpaqueMVar tgt' tag
-    mvarId'.assign <| .app mvarId'' tgt.letValue!
-    return ((), fvars.map .some, mvarId''.mvarId!)
+  let (_, mvarId) ←
+    mvarId.withRevertedFrom fvarId fun mvarId' fvars =>
+      mvarId'.withContext do
+        let tgt ← mvarId'.getType
+        unless tgt.isLet do
+          mvarId.withContext <| throwTacticEx `clear_value mvarId
+            m!"hypothesis `{Expr.fvar fvarId}` is not a local definition."
+        let tgt' := Expr.forallE tgt.letName! tgt.letType! tgt.letBody! .default
+        /-
+        Note: `isTypeCorrect` does not instantiate metavariables. Ideally this should not matter,
+        however delayed assigned metavariables assume that the arguments applied to them have the correct
+        definitional properties (e.g. an argument might be for the value of a `let` binding).
+        Instantiating the metavariables before `isTypeCorrect` lets examples like the one reported in
+        https://github.com/leanprover-community/mathlib4/issues/25053 go through.
+        (See `tests/lean/run/clear_value.lean`, 25053.)
+        -/
+        let tgt' ← instantiateMVars tgt'
+        unless ← isTypeCorrect tgt' do
+          mvarId.withContext <| throwTacticEx `clear_value mvarId
+            m!"cannot clear {Expr.fvar fvarId}, the resulting context is not type correct."
+        let mvarId'' ← mkFreshExprSyntheticOpaqueMVar tgt' tag
+        mvarId'.assign <| .app mvarId'' tgt.letValue!
+        return ((), fvars.map .some, mvarId''.mvarId!)
   return mvarId
 
 end Lean.Meta

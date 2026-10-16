@@ -29,7 +29,9 @@ partial def hasUnusedForallBindersWhere (p : BinderInfo → Expr → Bool) (e : 
   | .forallE _ type body bi =>
     p bi type && !(body.hasLooseBVar 0) || body.hasUnusedForallBindersWhere p
   /- See through `letE` -/
-  | .letE _ _ _ body _ => body.hasUnusedForallBindersWhere p
-  | _ => false
+  | .letE _ _ _ body _ =>
+    body.hasUnusedForallBindersWhere p
+  | _ =>
+    false
 
 end Lean.Expr

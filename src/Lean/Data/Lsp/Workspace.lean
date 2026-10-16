@@ -19,7 +19,7 @@ open Json
 structure WorkspaceFolder where
   uri : DocumentUri
   name : String
-  deriving ToJson, FromJson
+deriving ToJson, FromJson
 
 -- TODO(WN):
 -- WorkspaceFoldersServerCapabilities,
@@ -29,7 +29,7 @@ structure WorkspaceFolder where
 structure FileSystemWatcher where
   globPattern : String
   kind? : Option Nat := none
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 namespace FileSystemWatcher
 
@@ -42,7 +42,7 @@ end FileSystemWatcher
 
 structure DidChangeWatchedFilesRegistrationOptions where
   watchers : Array FileSystemWatcher
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 inductive FileChangeType
   | Created
@@ -52,10 +52,10 @@ inductive FileChangeType
 instance : FromJson FileChangeType where
   fromJson? j := do
     match (← fromJson? j : Nat) with
-      | 1 => return FileChangeType.Created
-      | 2 => return FileChangeType.Changed
-      | 3 => return FileChangeType.Deleted
-      | _ => throw s!"expected 1, 2, or 3, got {j}"
+    | 1 => return FileChangeType.Created
+    | 2 => return FileChangeType.Changed
+    | 3 => return FileChangeType.Deleted
+    | _ => throw s!"expected 1, 2, or 3, got {j}"
 
 instance : ToJson FileChangeType where
   toJson
@@ -66,11 +66,11 @@ instance : ToJson FileChangeType where
 structure FileEvent where
   uri : DocumentUri
   type : FileChangeType
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure DidChangeWatchedFilesParams where
   changes : Array FileEvent
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 end Lsp
 end Lean

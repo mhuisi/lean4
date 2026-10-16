@@ -4,14 +4,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Data.Repr
-meta import Init.MetaTypes  -- shake: keep (dependency of `simp +decide`, fix)
+meta import Init.MetaTypes -- shake: keep (dependency of `simp +decide`, fix)
 public section
 namespace Lean.Meta.Grind
-/--
-Result type for satisfiability checking procedures.
--/
+/-- Result type for satisfiability checking procedures. -/
 inductive CheckResult where
   | /-- No progress -/
     none
@@ -21,33 +20,44 @@ inductive CheckResult where
     propagated
   | /-- Closed the goal. -/
     closed
-  deriving BEq, Inhabited, Repr
+deriving BEq, Inhabited, Repr
 
 def CheckResult.lt (r₁ r₂ : CheckResult) : Bool :=
   match r₁, r₂ with
-  | _,          .none        => false
-  | .none,       _           => true
-  | _,           .progress   => false
-  | .progress,   _           => true
-  | _,           .propagated => false
-  | .propagated, _           => true
-  | .closed,     .closed     => false
+  | _, .none =>
+    false
+  | .none, _ =>
+    true
+  | _, .progress =>
+    false
+  | .progress, _ =>
+    true
+  | _, .propagated =>
+    false
+  | .propagated, _ =>
+    true
+  | .closed, .closed =>
+    false
 
-def CheckResult.le (r₁ r₂ : CheckResult) : Bool :=
-  r₁ == r₂ || r₁.lt r₂
+def CheckResult.le (r₁ r₂ : CheckResult) : Bool := r₁ == r₂ || r₁.lt r₂
 
-/--
-Joins two results. It uses the order `.none < .progress < .propagated < .closed`
--/
+/-- Joins two results. It uses the order `.none < .progress < .propagated < .closed` -/
 def CheckResult.join (r₁ r₂ : CheckResult) : CheckResult :=
   match r₁, r₂ with
-  | .none,       _           => r₂
-  | _,           .none       => r₁
-  | .progress,   _           => r₂
-  | _,           .progress   => r₁
-  | .propagated, _           => r₂
-  | _,           .propagated => r₁
-  | .closed,     .closed     => .closed
+  | .none, _ =>
+    r₂
+  | _, .none =>
+    r₁
+  | .progress, _ =>
+    r₂
+  | _, .progress =>
+    r₁
+  | .propagated, _ =>
+    r₂
+  | _, .propagated =>
+    r₁
+  | .closed, .closed =>
+    .closed
 
 /-! Sanity check theorems -/
 section

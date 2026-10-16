@@ -23,7 +23,7 @@ inductive Gate
   | xor
   | beq
   | or
-  deriving DecidableEq, Hashable
+deriving DecidableEq, Hashable
 
 namespace Gate
 
@@ -47,7 +47,7 @@ inductive BoolExpr (α : Type)
   | not : BoolExpr α → BoolExpr α
   | gate : Gate → BoolExpr α → BoolExpr α → BoolExpr α
   | ite : BoolExpr α → BoolExpr α → BoolExpr α → BoolExpr α
-  deriving DecidableEq, Hashable
+deriving DecidableEq, Hashable
 
 namespace BoolExpr
 
@@ -63,21 +63,21 @@ instance [ToString α] : ToString (BoolExpr α) := ⟨toString⟩
 def eval (a : α → Bool) : BoolExpr α → Bool
   | .literal l => a l
   | .const b => b
-  | .not x => !eval a x
+  | .not x => ! eval a x
   | .gate g x y => g.eval (eval a x) (eval a y)
   | .ite d l r => bif d.eval a then l.eval a else r.eval a
 
 @[simp] theorem eval_literal : eval a (.literal l) = a l := rfl
 @[simp] theorem eval_const : eval a (.const b) = b := rfl
-@[simp] theorem eval_not : eval a (.not x) = !eval a x := rfl
+@[simp] theorem eval_not : eval a (.not x) = ! eval a x := rfl
 @[simp] theorem eval_gate : eval a (.gate g x y) = g.eval (eval a x) (eval a y) := rfl
 @[simp] theorem eval_ite : eval a (.ite d l r) = bif d.eval a then l.eval a else r.eval a := rfl
 
 def Sat (a : α → Bool) (x : BoolExpr α) : Prop := eval a x = true
 def Unsat (x : BoolExpr α) : Prop := ∀ f, eval f x = false
 
-theorem sat_and {x y : BoolExpr α} {a : α → Bool} (hx : Sat a x) (hy : Sat a y) :
-    Sat a (BoolExpr.gate .and x y) := by
+theorem sat_and {x y : BoolExpr α} {a : α → Bool} (hx : Sat a x) (hy : Sat a y)
+    : Sat a (BoolExpr.gate .and x y) := by
   simp only [Sat] at *
   simp [hx, hy, Gate.eval]
 

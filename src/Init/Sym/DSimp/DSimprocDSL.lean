@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Tactics
 public section
@@ -104,7 +105,7 @@ register_sym_dsimp myVariant where
   maxSteps := 50000
 ```
 -/
-syntax (name := registerSymDSimp) "register_sym_dsimp" ident "where"
-  (colGt sym_dsimp_field)* : command
+syntax (name := registerSymDSimp) "register_sym_dsimp" ident "where" (colGt sym_dsimp_field)*
+  : command
 
 end Lean.Parser.Command

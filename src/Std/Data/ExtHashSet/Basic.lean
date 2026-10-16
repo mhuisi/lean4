@@ -66,7 +66,8 @@ set so that it can hold the given number of elements without reallocating. It is
 use the empty collection notations `∅` and `{}` to create an empty hash set with the default
 capacity.
 -/
-@[inline] def emptyWithCapacity [BEq α] [Hashable α] (capacity := 8) : ExtHashSet α :=
+@[inline]
+def emptyWithCapacity [BEq α] [Hashable α] (capacity := 8) : ExtHashSet α :=
   ⟨ExtHashMap.emptyWithCapacity capacity⟩
 
 instance [BEq α] [Hashable α] : EmptyCollection (ExtHashSet α) where
@@ -83,7 +84,8 @@ Note: this non-replacement behavior is true for `ExtHashSet` and `ExtHashSet.Raw
 The `insert` function on `ExtHashMap`, `DExtHashMap`, `ExtHashMap.Raw` and `DExtHashMap.Raw` behaves
 differently: it will overwrite an existing mapping.
 -/
-@[inline] def insert [EquivBEq α] [LawfulHashable α] (m : ExtHashSet α) (a : α) : ExtHashSet α :=
+@[inline]
+def insert [EquivBEq α] [LawfulHashable α] (m : ExtHashSet α) (a : α) : ExtHashSet α :=
   ⟨m.inner.insertIfNew a ()⟩
 
 instance [EquivBEq α] [LawfulHashable α] : Singleton α (ExtHashSet α) where
@@ -100,8 +102,8 @@ element, then the hash set is returned unchanged.
 Equivalent to (but potentially faster than) calling `contains` followed by `insert`.
 -/
 @[inline]
-def containsThenInsert [EquivBEq α] [LawfulHashable α] (m : ExtHashSet α)
-    (a : α) : Bool × ExtHashSet α :=
+def containsThenInsert [EquivBEq α] [LawfulHashable α] (m : ExtHashSet α) (a : α)
+    : Bool × ExtHashSet α :=
   let ⟨replaced, r⟩ := m.inner.containsThenInsertIfNew a ()
   ⟨replaced, ⟨r⟩⟩
 
@@ -112,51 +114,53 @@ this: `a ∈ m` is equivalent to `m.contains a = true`.
 Observe that this is different behavior than for lists: for lists, `∈` uses `=` and `contains` use
 `==` for comparisons, while for hash sets, both use `==`.
 -/
-@[inline] def contains [EquivBEq α] [LawfulHashable α] (m : ExtHashSet α) (a : α) : Bool :=
-  m.inner.contains a
+@[inline]
+def contains [EquivBEq α] [LawfulHashable α] (m : ExtHashSet α) (a : α) : Bool := m.inner.contains a
 
 instance [BEq α] [Hashable α] [EquivBEq α] [LawfulHashable α] : Membership α (ExtHashSet α) where
   mem m a := a ∈ m.inner
 
-instance [BEq α] [Hashable α] [EquivBEq α] [LawfulHashable α]
-    {m : ExtHashSet α} {a : α} : Decidable (a ∈ m) :=
+instance [BEq α] [Hashable α] [EquivBEq α] [LawfulHashable α] {m : ExtHashSet α} {a : α}
+    : Decidable (a ∈ m) :=
   inferInstanceAs (Decidable (a ∈ m.inner))
 
 /-- Removes the element if it exists. -/
-@[inline] def erase [EquivBEq α] [LawfulHashable α] (m : ExtHashSet α) (a : α) : ExtHashSet α :=
+@[inline]
+def erase [EquivBEq α] [LawfulHashable α] (m : ExtHashSet α) (a : α) : ExtHashSet α :=
   ⟨m.inner.erase a⟩
 
 /-- The number of elements present in the set -/
-@[inline] def size [EquivBEq α] [LawfulHashable α] (m : ExtHashSet α) : Nat :=
-  m.inner.size
+@[inline] def size [EquivBEq α] [LawfulHashable α] (m : ExtHashSet α) : Nat := m.inner.size
 
 /--
 Checks if given key is contained and returns the key if it is, otherwise `none`.
 The result in the `some` case is guaranteed to be pointer equal to the key in the set.
 -/
-@[inline] def get? [EquivBEq α] [LawfulHashable α] (m : ExtHashSet α) (a : α) : Option α :=
-  m.inner.getKey? a
+@[inline]
+def get? [EquivBEq α] [LawfulHashable α] (m : ExtHashSet α) (a : α) : Option α := m.inner.getKey? a
 
 /--
 Retrieves the key from the set that matches `a`. Ensures that such a key exists by requiring a proof
 of `a ∈ m`. The result is guaranteed to be pointer equal to the key in the set.
 -/
-@[inline] def get [EquivBEq α] [LawfulHashable α]
-    (m : ExtHashSet α) (a : α) (h : a ∈ m) : α :=
+@[inline]
+def get [EquivBEq α] [LawfulHashable α] (m : ExtHashSet α) (a : α) (h : a ∈ m) : α :=
   m.inner.getKey a h
 
 /--
 Checks if given key is contained and returns the key if it is, otherwise `fallback`.
 If they key is contained the result is guaranteed to be pointer equal to the key in the set.
 -/
-@[inline] def getD [EquivBEq α] [LawfulHashable α] (m : ExtHashSet α) (a : α) (fallback : α) : α :=
+@[inline]
+def getD [EquivBEq α] [LawfulHashable α] (m : ExtHashSet α) (a : α) (fallback : α) : α :=
   m.inner.getKeyD a fallback
 
 /--
 Checks if given key is contained and returns the key if it is, otherwise panics.
 If no panic occurs the result is guaranteed to be pointer equal to the key in the set.
 -/
-@[inline] def get! [EquivBEq α] [LawfulHashable α] [Inhabited α] (m : ExtHashSet α) (a : α) : α :=
+@[inline]
+def get! [EquivBEq α] [LawfulHashable α] [Inhabited α] (m : ExtHashSet α) (a : α) : α :=
   m.inner.getKey! a
 
 /--
@@ -166,19 +170,18 @@ Note that if your `BEq` instance is not reflexive or your `Hashable` instance is
 lawful, then it is possible that this function returns `false` even though `m.contains a = false`
 for all `a`.
 -/
-@[inline] def isEmpty [EquivBEq α] [LawfulHashable α] (m : ExtHashSet α) : Bool :=
-  m.inner.isEmpty
+@[inline] def isEmpty [EquivBEq α] [LawfulHashable α] (m : ExtHashSet α) : Bool := m.inner.isEmpty
 
 /--
 Creates a hash set from a list of elements. Note that unlike repeatedly calling `insert`, if the
 collection contains multiple elements that are equal (with regard to `==`), then the last element
 in the collection will be present in the returned hash set.
 -/
-@[inline] def ofList [BEq α] [Hashable α] (l : List α) : ExtHashSet α :=
-  ⟨ExtHashMap.unitOfList l⟩
+@[inline] def ofList [BEq α] [Hashable α] (l : List α) : ExtHashSet α := ⟨ExtHashMap.unitOfList l⟩
 
 /-- Removes all elements from the hash set for which the given function returns `false`. -/
-@[inline] def filter [EquivBEq α] [LawfulHashable α] (f : α → Bool) (m : ExtHashSet α) : ExtHashSet α :=
+@[inline]
+def filter [EquivBEq α] [LawfulHashable α] (f : α → Bool) (m : ExtHashSet α) : ExtHashSet α :=
   ⟨m.inner.filter fun a _ => f a⟩
 
 /--
@@ -189,8 +192,10 @@ Note: this precedence behavior is true for `ExtHashSet` and `ExtHashSet.Raw`. Th
 `ExtHashMap`, `DExtHashMap`, `ExtHashMap.Raw` and `DExtHashMap.Raw` behaves differently: it will prefer the last
 appearance.
 -/
-@[inline] def insertMany [EquivBEq α] [LawfulHashable α] {ρ : Type v} [ForIn Id ρ α]
-    (m : ExtHashSet α) (l : ρ) : ExtHashSet α :=
+@[inline]
+def insertMany
+    [EquivBEq α] [LawfulHashable α] {ρ : Type v} [ForIn Id ρ α] (m : ExtHashSet α) (l : ρ)
+    : ExtHashSet α :=
   ⟨m.inner.insertManyIfNewUnit l⟩
 
 /--
@@ -200,7 +205,8 @@ This function always merges the smaller set into the larger set, so the expected
 `O(min(m₁.size, m₂.size))`.
 -/
 @[inline]
-def union [EquivBEq α] [LawfulHashable α] (m₁ m₂ : ExtHashSet α) : ExtHashSet α := ⟨ExtHashMap.union m₁.inner m₂.inner⟩
+def union [EquivBEq α] [LawfulHashable α] (m₁ m₂ : ExtHashSet α) : ExtHashSet α :=
+  ⟨ExtHashMap.union m₁.inner m₂.inner⟩
 
 instance [EquivBEq α] [LawfulHashable α] : Union (ExtHashSet α) := ⟨union⟩
 
@@ -217,8 +223,8 @@ instance [LawfulBEq α] : LawfulBEq (ExtHashSet α) where
     simp only [mk.injEq, ExtHashMap.mk.injEq] at |- hyp
     exact ExtDHashMap.Const.eq_of_beq _ _ hyp
 
-instance {α : Type u} [BEq α] [LawfulBEq α] [Hashable α] : DecidableEq (ExtHashSet α) :=
-  fun _ _ => decidable_of_iff _ beq_iff_eq
+instance {α : Type u} [BEq α] [LawfulBEq α] [Hashable α] : DecidableEq (ExtHashSet α) := fun _ _ =>
+  decidable_of_iff _ beq_iff_eq
 
 /--
 Computes the intersection of the given hash sets.
@@ -226,7 +232,8 @@ Computes the intersection of the given hash sets.
 This function always iterates through the smaller set.
 -/
 @[inline]
-def inter [EquivBEq α] [LawfulHashable α] (m₁ m₂ : ExtHashSet α) : ExtHashSet α := ⟨ExtHashMap.inter m₁.inner m₂.inner⟩
+def inter [EquivBEq α] [LawfulHashable α] (m₁ m₂ : ExtHashSet α) : ExtHashSet α :=
+  ⟨ExtHashMap.inter m₁.inner m₂.inner⟩
 
 instance [EquivBEq α] [LawfulHashable α] : Inter (ExtHashSet α) := ⟨inter⟩
 
@@ -236,7 +243,8 @@ Computes the difference of the given hash sets.
 This function always iterates through the smaller set.
 -/
 @[inline]
-def diff [EquivBEq α] [LawfulHashable α] (m₁ m₂ : ExtHashSet α) : ExtHashSet α := ⟨ExtHashMap.diff m₁.inner m₂.inner⟩
+def diff [EquivBEq α] [LawfulHashable α] (m₁ m₂ : ExtHashSet α) : ExtHashSet α :=
+  ⟨ExtHashMap.diff m₁.inner m₂.inner⟩
 
 instance [EquivBEq α] [LawfulHashable α] : SDiff (ExtHashSet α) := ⟨diff⟩
 
@@ -245,8 +253,8 @@ Creates a hash set from an array of elements. Note that unlike repeatedly callin
 collection contains multiple elements that are equal (with regard to `==`), then the last element
 in the collection will be present in the returned hash set.
 -/
-@[inline] def ofArray [BEq α] [Hashable α] (l : Array α) : ExtHashSet α :=
-  ⟨ExtHashMap.unitOfArray l⟩
+@[inline]
+def ofArray [BEq α] [Hashable α] (l : Array α) : ExtHashSet α := ⟨ExtHashMap.unitOfArray l⟩
 
 end ExtHashSet
 

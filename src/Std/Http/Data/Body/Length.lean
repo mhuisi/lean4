@@ -21,15 +21,10 @@ namespace Std.Http.Body
 
 set_option linter.all true
 
-/--
-Size of the body of a response or request.
--/
+/-- Size of the body of a response or request. -/
 inductive Length
-  /--
-  Indicates that the HTTP message body uses **chunked transfer encoding**.
-  -/
+  /-- Indicates that the HTTP message body uses **chunked transfer encoding**. -/
   | chunked
-
   /--
   Indicates that the HTTP message body has a **fixed, known length**, as specified by the
   `Content-Length` header.
@@ -39,17 +34,13 @@ deriving Repr, BEq
 
 namespace Length
 
-/--
-Checks if the `Length` is chunked.
--/
+/-- Checks if the `Length` is chunked. -/
 @[inline]
 def isChunked : Length → Bool
   | .chunked => true
   | _ => false
 
-/--
-Checks if the `Length` is a fixed size.
--/
+/-- Checks if the `Length` is a fixed size. -/
 @[inline]
 def isFixed : Length → Bool
   | .fixed _ => true

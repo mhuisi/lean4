@@ -15,26 +15,27 @@ open Lean (Name)
 public abbrev ExternLib := ConfigTarget ExternLib.configKind
 
 /-- The external libraries of the package (as an Array). -/
-@[inline] public def Package.externLibs (self : Package) : Array ExternLib :=
+@[inline]
+public def Package.externLibs (self : Package) : Array ExternLib :=
   self.configTargets ExternLib.configKind
 
 /-- Try to find a external library in the package with the given name. -/
-@[inline] public def Package.findExternLib? (name : Name) (self : Package) : Option ExternLib :=
+@[inline]
+public def Package.findExternLib? (name : Name) (self : Package) : Option ExternLib :=
   self.findConfigTarget? ExternLib.configKind name
 
 namespace ExternLib
 
 /-- The library's user-defined configuration. -/
-@[inline] public nonrec def config (self : ExternLib) : ExternLibConfig self.pkg.keyName self.name :=
+@[inline]
+public nonrec def config (self : ExternLib) : ExternLibConfig self.pkg.keyName self.name :=
   self.config
 
 /--
 The arguments to pass to `leanc` when linking the external library.
 That is, the package's `moreLinkArgs`.
 -/
-@[inline] public def linkArgs (self : ExternLib) : Array String :=
-  self.pkg.moreLinkArgs
+@[inline] public def linkArgs (self : ExternLib) : Array String := self.pkg.moreLinkArgs
 
 /-- The name of the package target used to build the external library's static binary. -/
-public abbrev staticTargetName (self : ExternLib) : Name :=
-  .str self.name "static"
+public abbrev staticTargetName (self : ExternLib) : Name := .str self.name "static"

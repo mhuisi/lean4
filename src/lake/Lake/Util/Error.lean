@@ -31,9 +31,10 @@ public instance : MonadError (Except String) where
 Perform an EIO action.
 If it throws an error, invoke `error` with its string representation.
 -/
-@[inline] public def MonadError.runEIO
-  [Monad m] [MonadError m] [MonadLiftT BaseIO m] [ToString ε] (x : EIO ε α)
-: m α := do
+@[inline]
+public def MonadError.runEIO
+    [Monad m] [MonadError m] [MonadLiftT BaseIO m] [ToString ε] (x : EIO ε α)
+    : m α := do
   match (← x.toBaseIO) with
   | .ok a => pure a
   | .error e => error (toString e)
@@ -42,6 +43,6 @@ If it throws an error, invoke `error` with its string representation.
 Perform an IO action.
 If it throws an error, invoke `error` with its string representation.
 -/
-@[inline] public def MonadError.runIO
-  [Monad m] [MonadError m] [MonadLiftT BaseIO m] (x : IO α)
-: m α := MonadError.runEIO x
+@[inline]
+public def MonadError.runIO [Monad m] [MonadError m] [MonadLiftT BaseIO m] (x : IO α) : m α :=
+  MonadError.runEIO x

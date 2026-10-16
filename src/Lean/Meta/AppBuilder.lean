@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.SynthInstance
 public import Lean.Meta.DecLevel
@@ -17,7 +18,7 @@ namespace Lean.Meta
 /-- Returns `id e` -/
 def mkId (e : Expr) : MetaM Expr := do
   let type ← inferType e
-  let u    ← getLevel type
+  let u ← getLevel type
   return mkApp2 (mkConst ``id [u]) type e
 
 def mkExpectedTypeHintCore (e : Expr) (expectedType : Expr) (expectedTypeUniv : Level) : Expr :=
@@ -25,13 +26,15 @@ def mkExpectedTypeHintCore (e : Expr) (expectedType : Expr) (expectedTypeUniv : 
 
 /--
 Given `proof` s.t. `inferType proof` is definitionally equal to `expectedProp`, returns
-term `@id expectedProp proof`. -/
+term `@id expectedProp proof`.
+-/
 def mkExpectedPropHint (proof : Expr) (expectedProp : Expr) : Expr :=
   mkExpectedTypeHintCore proof expectedProp Level.zero
 
 /--
 Given `e` s.t. `inferType e` is definitionally equal to `expectedType`, returns
-term `@id expectedType e`. -/
+term `@id expectedType e`.
+-/
 def mkExpectedTypeHint (e : Expr) (expectedType : Expr) : MetaM Expr := do
   let u ← getLevel expectedType
   return mkExpectedTypeHintCore e expectedType u
@@ -49,9 +52,7 @@ def mkHEq (a b : Expr) : MetaM Expr := do
   let u ← getLevel aType
   return mkApp4 (mkConst ``HEq [u]) aType a bType b
 
-/--
-  If `a` and `b` have definitionally equal types, returns `a = b`, otherwise returns `a ≍ b`.
--/
+/-- If `a` and `b` have definitionally equal types, returns `a = b`, otherwise returns `a ≍ b`. -/
 def mkEqHEq (a b : Expr) : MetaM Expr := do
   let aType ← inferType a
   let bType ← inferType b
@@ -89,7 +90,8 @@ private def infer (h : Expr) : MetaM Expr := do
   whnfD hType
 
 private def hasTypeMsg (e type : Expr) : MessageData :=
-  m!"{indentExpr e}\nhas type{indentExpr type}"
+  m!"{indentExpr e}\
+    \nhas type{indentExpr type}"
 
 private def throwAppBuilderException {α} (op : Name) (msg : MessageData) : MetaM α :=
   throwError "AppBuilder for `{op}`, {msg}"
@@ -104,15 +106,17 @@ def mkEqSymm (h : Expr) : MetaM Expr := do
     | some (α, a, b) =>
       let u ← getLevel α
       return mkApp4 (mkConst ``Eq.symm [u]) α a b h
-    | none => throwAppBuilderException ``Eq.symm ("equality proof expected" ++ hasTypeMsg h hType)
+    | none =>
+      throwAppBuilderException ``Eq.symm ("equality proof expected" ++ hasTypeMsg h hType)
 
-/-- Given `h₁ : @Eq α a b` and `h₂ : @Eq α b c` with `α : Sort u`, returns `@Eq.trans α a b c h₁ h₂`. -/
+/--
+Given `h₁ : @Eq α a b` and `h₂ : @Eq α b c` with `α : Sort u`, returns `@Eq.trans α a b c h₁ h₂`.
+-/
 def mkEqTransCore (u : Level) (α a b c h₁ h₂ : Expr) : Expr :=
   mkApp6 (mkConst ``Eq.trans [u]) α a b c h₁ h₂
 
 /-- Given `h₁ : a = b` and `h₂ : b = c` for propositions `a b c`, returns a proof of `a = c`. -/
-def mkEqTransCoreProp (a b c h₁ h₂ : Expr) : Expr :=
-  mkEqTransCore 1 (mkSort 0) a b c h₁ h₂
+def mkEqTransCoreProp (a b c h₁ h₂ : Expr) : Expr := mkEqTransCore 1 (mkSort 0) a b c h₁ h₂
 
 /-- Given `h₁ : a = b` and `h₂ : b = c`, returns a proof of `a = c`. -/
 def mkEqTrans (h₁ h₂ : Expr) : MetaM Expr := do
@@ -127,8 +131,10 @@ def mkEqTrans (h₁ h₂ : Expr) : MetaM Expr := do
     | some (α, a, b), some (_, _, c) =>
       let u ← getLevel α
       return mkEqTransCore u α a b c h₁ h₂
-    | none, _ => throwAppBuilderException ``Eq.trans ("equality proof expected" ++ hasTypeMsg h₁ hType₁)
-    | _, none => throwAppBuilderException ``Eq.trans ("equality proof expected" ++ hasTypeMsg h₂ hType₂)
+    | none, _ =>
+      throwAppBuilderException ``Eq.trans ("equality proof expected" ++ hasTypeMsg h₁ hType₁)
+    | _, none =>
+      throwAppBuilderException ``Eq.trans ("equality proof expected" ++ hasTypeMsg h₂ hType₂)
 
 /--
 Similar to `mkEqTrans`, but arguments can be `none`.
@@ -136,12 +142,16 @@ Similar to `mkEqTrans`, but arguments can be `none`.
 -/
 def mkEqTrans? (h₁? h₂? : Option Expr) : MetaM (Option Expr) :=
   match h₁?, h₂? with
-  | none, none       => return none
-  | none, some h     => return h
-  | some h, none     => return h
-  | some h₁, some h₂ => mkEqTrans h₁ h₂
+  | none, none =>
+    return none
+  | none, some h =>
+    return h
+  | some h, none =>
+    return h
+  | some h₁, some h₂ =>
+    mkEqTrans h₁ h₂
 
-/-- Given `h : a ≍ b`, returns a proof of `b ≍ a`.  -/
+/-- Given `h : a ≍ b`, returns a proof of `b ≍ a`. -/
 def mkHEqSymm (h : Expr) : MetaM Expr := do
   if h.isAppOf ``HEq.refl then
     return h
@@ -152,7 +162,8 @@ def mkHEqSymm (h : Expr) : MetaM Expr := do
       let u ← getLevel α
       return mkApp5 (mkConst ``HEq.symm [u]) α β a b h
     | none =>
-      throwAppBuilderException ``HEq.symm ("heterogeneous equality proof expected" ++ hasTypeMsg h hType)
+      throwAppBuilderException ``HEq.symm
+        ("heterogeneous equality proof expected" ++ hasTypeMsg h hType)
 
 /-- Given `h₁ : a ≍ b`, `h₂ : b ≍ c`, returns a proof of `a ≍ c`. -/
 def mkHEqTrans (h₁ h₂ : Expr) : MetaM Expr := do
@@ -167,8 +178,12 @@ def mkHEqTrans (h₁ h₂ : Expr) : MetaM Expr := do
     | some (α, a, β, b), some (_, _, γ, c) =>
       let u ← getLevel α
       return mkApp8 (mkConst ``HEq.trans [u]) α β γ a b c h₁ h₂
-    | none, _ => throwAppBuilderException ``HEq.trans ("heterogeneous equality proof expected" ++ hasTypeMsg h₁ hType₁)
-    | _, none => throwAppBuilderException ``HEq.trans ("heterogeneous equality proof expected" ++ hasTypeMsg h₂ hType₂)
+    | none, _ =>
+      throwAppBuilderException ``HEq.trans
+        ("heterogeneous equality proof expected" ++ hasTypeMsg h₁ hType₁)
+    | _, none =>
+      throwAppBuilderException ``HEq.trans
+        ("heterogeneous equality proof expected" ++ hasTypeMsg h₂ hType₂)
 
 /-- Given `h : a ≍ b` where `a` and `b` have the same type, returns a proof of `a = b`. -/
 def mkEqOfHEq (h : Expr) (check := true) : MetaM Expr := do
@@ -177,7 +192,9 @@ def mkEqOfHEq (h : Expr) (check := true) : MetaM Expr := do
   | some (α, a, β, b) =>
     if check then
       unless (← isDefEq α β) do
-        throwAppBuilderException ``eq_of_heq m!"heterogeneous equality types are not definitionally equal{indentExpr α}\nis not definitionally equal to{indentExpr β}"
+        throwAppBuilderException ``eq_of_heq
+          m!"heterogeneous equality types are not definitionally equal{indentExpr α}\
+            \nis not definitionally equal to{indentExpr β}"
     let u ← getLevel α
     return mkApp4 (mkConst ``eq_of_heq [u]) α a b h
   | _ =>
@@ -191,9 +208,7 @@ def mkHEqOfEq (h : Expr) : MetaM Expr := do
   let u ← getLevel α
   return mkApp4 (mkConst ``heq_of_eq [u]) α a b h
 
-/--
-If `e` is `@Eq.refl α a`, returns `a`.
--/
+/-- If `e` is `@Eq.refl α a`, returns `a`. -/
 def isRefl? (e : Expr) : Option Expr := do
   if e.isAppOfArity ``Eq.refl 2 then
     some e.appArg!
@@ -206,17 +221,19 @@ Also works if `e` can be turned into such an application (e.g. `congrFun`).
 -/
 def congrArg? (e : Expr) : MetaM (Option (Expr × Expr × Expr)) := do
   if e.isAppOfArity ``congrArg 6 then
-    let #[α, _β, _a, _b, f, h] := e.getAppArgs | unreachable!
+    let #[α, _β, _a, _b, f, h] := e.getAppArgs
+      | unreachable!
     return some (α, f, h)
   if e.isAppOfArity ``congrFun 6 then
-    let #[α, β, _f, _g, h, a] := e.getAppArgs | unreachable!
+    let #[α, β, _f, _g, h, a] := e.getAppArgs
+      | unreachable!
     -- hot path, construct terms directly
     let α' := .forallE `x α (β.beta #[.bvar 0]) .default
     let f' := .lam `f α' (.app (.bvar 0) a) .default
     return some (α', f', h)
   return none
 
-/-- Given `f : α → β` and `h : a = b`, returns a proof of `f a = f b`.-/
+/-- Given `f : α → β` and `h : a = b`, returns a proof of `f a = f b`. -/
 partial def mkCongrArg (f h : Expr) : MetaM Expr := do
   if let some a := isRefl? h then
     mkEqRefl (mkApp f a)
@@ -233,10 +250,12 @@ partial def mkCongrArg (f h : Expr) : MetaM Expr := do
       let u ← getLevel α
       let v ← getLevel β
       return mkApp6 (mkConst ``congrArg [u, v]) α β a b f h
-    | none, _ => throwAppBuilderException ``congrArg ("non-dependent function expected" ++ hasTypeMsg f fType)
-    | _, none => throwAppBuilderException ``congrArg ("equality proof expected" ++ hasTypeMsg h hType)
+    | none, _ =>
+      throwAppBuilderException ``congrArg ("non-dependent function expected" ++ hasTypeMsg f fType)
+    | _, none =>
+      throwAppBuilderException ``congrArg ("equality proof expected" ++ hasTypeMsg h hType)
 
-/-- Given `h : f = g` and `a : α`, returns a proof of `f a = g a`.-/
+/-- Given `h : f = g` and `a : α`, returns a proof of `f a = g a`. -/
 def mkCongrFun (h a : Expr) : MetaM Expr := do
   if let some f := isRefl? h then
     mkEqRefl (mkApp f a)
@@ -256,8 +275,11 @@ def mkCongrFun (h a : Expr) : MetaM Expr := do
         let u ← getLevel α
         let v ← getLevel (mkApp β' a)
         return mkApp6 (mkConst ``congrFun [u, v]) α β' f g h a
-      | _ => throwAppBuilderException ``congrFun ("equality proof between functions expected" ++ hasTypeMsg h hType)
-    | _ => throwAppBuilderException ``congrFun ("equality proof expected" ++ hasTypeMsg h hType)
+      | _ =>
+        throwAppBuilderException ``congrFun
+          ("equality proof between functions expected" ++ hasTypeMsg h hType)
+    | _ =>
+      throwAppBuilderException ``congrFun ("equality proof expected" ++ hasTypeMsg h hType)
 
 /-- Given `h₁ : f = g` and `h₂ : a = b`, returns a proof of `f a = g b`. -/
 def mkCongr (h₁ h₂ : Expr) : MetaM Expr := do
@@ -276,31 +298,39 @@ def mkCongr (h₁ h₂ : Expr) : MetaM Expr := do
         let u ← getLevel α
         let v ← getLevel β
         return mkApp8 (mkConst ``congr [u, v]) α β f g a b h₁ h₂
-      | _ => throwAppBuilderException ``congr ("non-dependent function expected" ++ hasTypeMsg h₁ hType₁)
-    | none, _ => throwAppBuilderException ``congr ("equality proof expected" ++ hasTypeMsg h₁ hType₁)
-    | _, none => throwAppBuilderException ``congr ("equality proof expected" ++ hasTypeMsg h₂ hType₂)
+      | _ =>
+        throwAppBuilderException ``congr ("non-dependent function expected" ++ hasTypeMsg h₁ hType₁)
+    | none, _ =>
+      throwAppBuilderException ``congr ("equality proof expected" ++ hasTypeMsg h₁ hType₁)
+    | _, none =>
+      throwAppBuilderException ``congr ("equality proof expected" ++ hasTypeMsg h₂ hType₂)
 
-private def mkAppMFinal (methodName : Name) (f : Expr) (args : Array Expr) (instMVars : Array MVarId) : MetaM Expr := do
+private def mkAppMFinal
+    (methodName : Name) (f : Expr) (args : Array Expr) (instMVars : Array MVarId)
+    : MetaM Expr := do
   instMVars.forM fun mvarId => do
     let mvarDecl ← mvarId.getDecl
-    let mvarVal  ← synthInstance mvarDecl.type
+    let mvarVal ← synthInstance mvarDecl.type
     mvarId.assign mvarVal
   let result ← instantiateMVars (mkAppN f args)
-  if (← hasAssignableMVar result) then throwAppBuilderException methodName ("result contains metavariables" ++ indentExpr result)
+  if (← hasAssignableMVar result) then
+    throwAppBuilderException methodName ("result contains metavariables" ++ indentExpr result)
   return result
 
 private partial def mkAppMArgs (f : Expr) (fType : Expr) (xs : Array Expr) : MetaM Expr :=
-  let rec loop (type : Expr) (i : Nat) (j : Nat) (args : Array Expr) (instMVars : Array MVarId) : MetaM Expr := do
+  let rec loop (type : Expr) (i : Nat) (j : Nat) (args : Array Expr) (instMVars : Array MVarId)
+      : MetaM Expr := do
     if h : i >= xs.size then
       mkAppMFinal `mkAppM f args instMVars
-    else match type with
+    else
+      match type with
       | Expr.forallE n d b bi =>
-        let d  := d.instantiateRevRange j args.size args
+        let d := d.instantiateRevRange j args.size args
         match bi with
-        | BinderInfo.implicit     =>
+        | BinderInfo.implicit =>
           let mvar ← mkFreshExprMVar d MetavarKind.natural n
           loop b i j (args.push mvar) instMVars
-        | BinderInfo.strictImplicit     =>
+        | BinderInfo.strictImplicit =>
           let mvar ← mkFreshExprMVar d MetavarKind.natural n
           loop b i j (args.push mvar) instMVars
         | BinderInfo.instImplicit =>
@@ -310,7 +340,7 @@ private partial def mkAppMArgs (f : Expr) (fType : Expr) (xs : Array Expr) : Met
           let x := xs[i]
           let xType ← inferType x
           if (← withAtLeastTransparency .default (isDefEq d xType)) then
-            loop b (i+1) j (args.push x) instMVars
+            loop b (i + 1) j (args.push x) instMVars
           else
             throwAppTypeMismatch (mkAppN f args) x
       | type =>
@@ -319,7 +349,9 @@ private partial def mkAppMArgs (f : Expr) (fType : Expr) (xs : Array Expr) : Met
         if type.isForall then
           loop type i args.size args instMVars
         else
-          throwAppBuilderException `mkAppM m!"too many explicit arguments provided to{indentExpr f}\narguments{indentD xs}"
+          throwAppBuilderException `mkAppM
+            m!"too many explicit arguments provided to{indentExpr f}\
+              \narguments{indentD xs}"
   loop fType 0 0 #[] #[]
 
 private def mkFun (constName : Name) : MetaM (Expr × Expr) := do
@@ -329,8 +361,9 @@ private def mkFun (constName : Name) : MetaM (Expr × Expr) := do
   let fType ← instantiateTypeLevelParams cinfo us
   return (f, fType)
 
-private def withAppBuilderTrace [ToMessageData α] [ToMessageData β]
-    (f : α) (xs : β) (k : MetaM Expr) : MetaM Expr :=
+private def withAppBuilderTrace
+    [ToMessageData α] [ToMessageData β] (f : α) (xs : β) (k : MetaM Expr)
+    : MetaM Expr :=
   withTraceNode `Meta.appBuilder (fun _ => return m!"f: {f}, xs: {xs}") do
     try
       let res ← k
@@ -341,43 +374,44 @@ private def withAppBuilderTrace [ToMessageData α] [ToMessageData β]
       throw ex
 
 /--
-  Returns the application `constName xs`.
-  It tries to fill the implicit arguments before the last element in `xs`.
+Returns the application `constName xs`.
+It tries to fill the implicit arguments before the last element in `xs`.
 
-  Remark:
-  ``mkAppM `arbitrary #[α]`` returns `@arbitrary.{u} α` without synthesizing
-  the implicit argument occurring after `α`.
-  Given a `x : ([Decidable p] → Bool) × Nat`, ``mkAppM `Prod.fst #[x]``,
-  returns `@Prod.fst ([Decidable p] → Bool) Nat x`.
+Remark:
+``mkAppM `arbitrary #[α]`` returns `@arbitrary.{u} α` without synthesizing
+the implicit argument occurring after `α`.
+Given a `x : ([Decidable p] → Bool) × Nat`, ``mkAppM `Prod.fst #[x]``,
+returns `@Prod.fst ([Decidable p] → Bool) Nat x`.
 -/
 def mkAppM (constName : Name) (xs : Array Expr) : MetaM Expr := do
-  withAppBuilderTrace constName xs do withNewMCtxDepth do
-    let (f, fType) ← mkFun constName
-    mkAppMArgs f fType xs
+  withAppBuilderTrace constName xs do
+    withNewMCtxDepth do
+      let (f, fType) ← mkFun constName
+      mkAppMArgs f fType xs
 
 /-- Similar to `mkAppM`, but takes an `Expr` instead of a constant name. -/
 def mkAppM' (f : Expr) (xs : Array Expr) : MetaM Expr := do
   let fType ← inferType f
-  withAppBuilderTrace f xs do withNewMCtxDepth do
-    mkAppMArgs f fType xs
+  withAppBuilderTrace f xs do withNewMCtxDepth do mkAppMArgs f fType xs
 
-private partial def mkAppOptMAux (f : Expr) (xs : Array (Option Expr)) : Nat → Array Expr → Nat → Array MVarId → Expr → MetaM Expr
+private partial def mkAppOptMAux (f : Expr) (xs : Array (Option Expr))
+    : Nat → Array Expr → Nat → Array MVarId → Expr → MetaM Expr
   | i, args, j, instMVars, Expr.forallE n d b bi => do
-    let d  := d.instantiateRevRange j args.size args
+    let d := d.instantiateRevRange j args.size args
     if h : i < xs.size then
       match xs[i] with
       | none =>
         match bi with
         | BinderInfo.instImplicit => do
           let mvar ← mkFreshExprMVar d MetavarKind.synthetic n
-          mkAppOptMAux f xs (i+1) (args.push mvar) j (instMVars.push mvar.mvarId!) b
-        | _                       => do
+          mkAppOptMAux f xs (i + 1) (args.push mvar) j (instMVars.push mvar.mvarId!) b
+        | _ => do
           let mvar ← mkFreshExprMVar d MetavarKind.natural n
-          mkAppOptMAux f xs (i+1) (args.push mvar) j instMVars b
+          mkAppOptMAux f xs (i + 1) (args.push mvar) j instMVars b
       | some x =>
         let xType ← inferType x
         if (← isDefEq d xType) then
-          mkAppOptMAux f xs (i+1) (args.push x) j instMVars b
+          mkAppOptMAux f xs (i + 1) (args.push x) j instMVars b
         else
           throwAppTypeMismatch (mkAppN f args) x
     else
@@ -390,33 +424,41 @@ private partial def mkAppOptMAux (f : Expr) (xs : Array (Option Expr)) : Nat →
     else if i == xs.size then
       mkAppMFinal `mkAppOptM f args instMVars
     else do
-      let xs : Array Expr := xs.foldl (fun r x? => match x? with | none => r | some x => r.push x) #[]
-      throwAppBuilderException `mkAppOptM ("too many arguments provided to" ++ indentExpr f ++ Format.line ++ "arguments" ++ xs)
+      let xs : Array Expr :=
+        xs.foldl
+          (fun r x? =>
+            match x? with
+            | none => r
+            | some x => r.push x)
+          #[]
+      throwAppBuilderException `mkAppOptM
+        ("too many arguments provided to" ++ indentExpr f ++ Format.line ++ "arguments" ++ xs)
 
 /--
-  Similar to `mkAppM`, but it allows us to specify which arguments are provided explicitly using `Option` type.
-  Example:
-  Given `Pure.pure {m : Type u → Type v} [Pure m] {α : Type u} (a : α) : m α`,
-  ```
-  mkAppOptM `Pure.pure #[m, none, none, a]
-  ```
-  returns a `Pure.pure` application if the instance `Pure m` can be synthesized, and the universe match.
-  Note that,
-  ```
-  mkAppM `Pure.pure #[a]
-  ```
-  fails because the only explicit argument `(a : α)` is not sufficient for inferring the remaining arguments,
-  we would need the expected type. -/
+Similar to `mkAppM`, but it allows us to specify which arguments are provided explicitly using `Option` type.
+Example:
+Given `Pure.pure {m : Type u → Type v} [Pure m] {α : Type u} (a : α) : m α`,
+```
+mkAppOptM `Pure.pure #[m, none, none, a]
+```
+returns a `Pure.pure` application if the instance `Pure m` can be synthesized, and the universe match.
+Note that,
+```
+mkAppM `Pure.pure #[a]
+```
+fails because the only explicit argument `(a : α)` is not sufficient for inferring the remaining arguments,
+we would need the expected type.
+-/
 def mkAppOptM (constName : Name) (xs : Array (Option Expr)) : MetaM Expr := do
-  withAppBuilderTrace constName xs do withNewMCtxDepth do
-    let (f, fType) ← mkFun constName
-    mkAppOptMAux f xs 0 #[] 0 #[] fType
+  withAppBuilderTrace constName xs do
+    withNewMCtxDepth do
+      let (f, fType) ← mkFun constName
+      mkAppOptMAux f xs 0 #[] 0 #[] fType
 
 /-- Similar to `mkAppOptM`, but takes an `Expr` instead of a constant name. -/
 def mkAppOptM' (f : Expr) (xs : Array (Option Expr)) : MetaM Expr := do
   let fType ← inferType f
-  withAppBuilderTrace f xs do withNewMCtxDepth do
-    mkAppOptMAux f xs 0 #[] 0 #[] fType
+  withAppBuilderTrace f xs do withNewMCtxDepth do mkAppOptMAux f xs 0 #[] 0 #[] fType
 
 def mkEqNDRec (motive h1 h2 : Expr) : MetaM Expr := do
   if h2.isAppOf ``Eq.refl then
@@ -424,14 +466,16 @@ def mkEqNDRec (motive h1 h2 : Expr) : MetaM Expr := do
   else
     let h2Type ← infer h2
     match h2Type.eq? with
-    | none => throwAppBuilderException ``Eq.ndrec ("equality proof expected" ++ hasTypeMsg h2 h2Type)
+    | none =>
+      throwAppBuilderException ``Eq.ndrec ("equality proof expected" ++ hasTypeMsg h2 h2Type)
     | some (α, a, b) =>
       let u2 ← getLevel α
       let motiveType ← infer motive
       match motiveType with
       | Expr.forallE _ _ (Expr.sort u1) _ =>
         return mkAppN (mkConst ``Eq.ndrec [u1, u2]) #[α, a, motive, h1, b, h2]
-      | _ => throwAppBuilderException ``Eq.ndrec ("invalid motive" ++ indentExpr motive)
+      | _ =>
+        throwAppBuilderException ``Eq.ndrec ("invalid motive" ++ indentExpr motive)
 
 def mkEqRec (motive h1 h2 : Expr) : MetaM Expr := do
   if h2.isAppOf ``Eq.refl then
@@ -439,7 +483,8 @@ def mkEqRec (motive h1 h2 : Expr) : MetaM Expr := do
   else
     let h2Type ← infer h2
     match h2Type.eq? with
-    | none => throwAppBuilderException ``Eq.rec ("equality proof expected" ++ indentExpr h2)
+    | none =>
+      throwAppBuilderException ``Eq.rec ("equality proof expected" ++ indentExpr h2)
     | some (α, a, b) =>
       let u2 ← getLevel α
       let motiveType ← infer motive
@@ -462,73 +507,77 @@ def mkEqMPCore (α β h a : Expr) : MetaM Expr := do
 def mkEqMP (eqProof pr : Expr) : MetaM Expr := do
   let eqType ← infer eqProof
   match eqType.eq? with
-  | some (_, α, β) => mkEqMPCore α β eqProof pr
-  | none => throwAppBuilderException ``Eq.mp ("equality proof expected" ++ hasTypeMsg eqProof eqType)
+  | some (_, α, β) =>
+    mkEqMPCore α β eqProof pr
+  | none =>
+    throwAppBuilderException ``Eq.mp ("equality proof expected" ++ hasTypeMsg eqProof eqType)
 
-def mkEqMPR (eqProof pr : Expr) : MetaM Expr :=
-  mkAppM ``Eq.mpr #[eqProof, pr]
+def mkEqMPR (eqProof pr : Expr) : MetaM Expr := mkAppM ``Eq.mpr #[eqProof, pr]
 
 def mkNoConfusion (target : Expr) (h : Expr) : MetaM Expr := do
   let type ← inferType h
   let type ← whnf type
   match type.eq? with
-  | none           => throwAppBuilderException `noConfusion ("equality expected" ++ hasTypeMsg h type)
+  | none =>
+    throwAppBuilderException `noConfusion ("equality expected" ++ hasTypeMsg h type)
   | some (α, a, b) =>
     let α ← whnfD α
-    matchConstInduct α.getAppFn (fun _ => throwAppBuilderException `noConfusion ("inductive type expected" ++ indentExpr α)) fun indVal us => do
-      let u ← getLevel target
-      if let some (ctorA, ys1) ← constructorApp'? a then
-       if let some (ctorB, ys2) ← constructorApp'? b then
-        -- Different constructors: Use use `ctorIdx`
-        if ctorA.cidx ≠ ctorB.cidx then
-          let ctorIdxName := Name.mkStr indVal.name "ctorIdx"
-          if (← hasConst ctorIdxName) && (← hasConst `noConfusion_of_Nat) then
-            let ctorIdx := mkAppN (mkConst ctorIdxName us) α.getAppArgs
-            let v ← getLevel α
-            return mkApp2 (mkConst ``False.elim [u]) target <|
-              mkAppN (mkConst `noConfusion_of_Nat [v]) #[α, ctorIdx, a, b, h]
-          else
-            throwError "mkNoConfusion: Missing {ctorIdxName} or {`noConfusion_of_Nat}"
-        else
-          -- Same constructors: use per-constructor noConfusion
-          -- Nullary constructors, the construction is trivial
-          if ctorA.numFields = 0 then
-            return ← withLocalDeclD `P target fun P => mkLambdaFVars #[P] P
-
-          let noConfusionName := ctorA.name.str "noConfusion"
-          unless (← hasConst noConfusionName) do
-            throwError "mkNoConfusion: Missing {noConfusionName}"
-          let noConfusionNameInfo ← getConstVal noConfusionName
-
-          let xs := α.getAppArgs[:ctorA.numParams]
-          let noConfusion := mkAppN (mkConst noConfusionName (u :: us)) xs
-          let fields1 : Array Expr := ys1[ctorA.numParams:]
-          let fields2 : Array Expr := ys2[ctorA.numParams:]
-          let mut e := mkAppN noConfusion (#[target] ++ fields1 ++ fields2)
-          let arity := noConfusionNameInfo.type.getNumHeadForalls
-          -- Index equalities expected. Can be less than `indVal.numIndices` when this constructor
-          -- has fixed indices.
-          assert! arity ≥ xs.size + fields1.size + fields2.size + 3
-          let numIndEqs := arity - (xs.size + fields1.size + fields2.size + 3) -- 3 for `target`, `h` and the continuation
-          for _ in [:numIndEqs] do
-            let eq ← whnf (← whnfForall (← inferType e)).bindingDomain!
-            if let some (_,i,_,_) := eq.heq? then
-              e := mkApp e (← mkHEqRefl i)
-            else if let some (_,i,_) := eq.eq? then
-              e := mkApp e (← mkEqRefl i)
+    matchConstInduct α.getAppFn
+      (fun _ => throwAppBuilderException `noConfusion ("inductive type expected" ++ indentExpr α))
+      fun indVal us => do
+        let u ← getLevel target
+        if let some (ctorA, ys1) ← constructorApp'? a then
+          if let some (ctorB, ys2) ← constructorApp'? b then
+            -- Different constructors: Use use `ctorIdx`
+            if ctorA.cidx ≠ ctorB.cidx then
+              let ctorIdxName := Name.mkStr indVal.name "ctorIdx"
+              if (← hasConst ctorIdxName) && (← hasConst `noConfusion_of_Nat) then
+                let ctorIdx := mkAppN (mkConst ctorIdxName us) α.getAppArgs
+                let v ← getLevel α
+                return mkApp2 (mkConst ``False.elim [u]) target <|
+                  mkAppN (mkConst `noConfusion_of_Nat [v]) #[α, ctorIdx, a, b, h]
+              else
+                throwError "mkNoConfusion: Missing {ctorIdxName} or {`noConfusion_of_Nat}"
             else
-              throwError "mkNoConfusion: unexpected equality `{eq}` as next argument to{inlineExpr (← inferType e)}"
-          let eq := (← whnfForall (← inferType e)).bindingDomain!
-          if eq.isHEq then
-            e := mkApp e (← mkHEqOfEq h)
-          else
-            e := mkApp e h
-          return e
-      throwError "mkNoConfusion: No manifest constructors in {a} = {b}"
+              -- Same constructors: use per-constructor noConfusion
+              -- Nullary constructors, the construction is trivial
+              if ctorA.numFields = 0 then
+                return ← withLocalDeclD `P target fun P => mkLambdaFVars #[P] P
 
-/-- Given a `monad` and `e : α`, makes `pure e`.-/
-def mkPure (monad : Expr) (e : Expr) : MetaM Expr :=
-  mkAppOptM ``Pure.pure #[monad, none, none, e]
+              let noConfusionName := ctorA.name.str "noConfusion"
+              unless (← hasConst noConfusionName) do
+                throwError "mkNoConfusion: Missing {noConfusionName}"
+              let noConfusionNameInfo ← getConstVal noConfusionName
+
+              let xs := α.getAppArgs[:ctorA.numParams]
+              let noConfusion := mkAppN (mkConst noConfusionName (u :: us)) xs
+              let fields1 : Array Expr := ys1[ctorA.numParams:]
+              let fields2 : Array Expr := ys2[ctorA.numParams:]
+              let mut e := mkAppN noConfusion (#[target] ++ fields1 ++ fields2)
+              let arity := noConfusionNameInfo.type.getNumHeadForalls
+              -- Index equalities expected. Can be less than `indVal.numIndices` when this constructor
+              -- has fixed indices.
+              assert! arity ≥ xs.size + fields1.size + fields2.size + 3
+              let numIndEqs := arity - (xs.size + fields1.size + fields2.size + 3) -- 3 for `target`, `h` and the continuation
+              for _ in [:numIndEqs] do
+                let eq ← whnf (← whnfForall (← inferType e)).bindingDomain!
+                if let some (_, i, _, _) := eq.heq? then
+                  e := mkApp e (← mkHEqRefl i)
+                else if let some (_, i, _) := eq.eq? then
+                  e := mkApp e (← mkEqRefl i)
+                else
+                  throwError "mkNoConfusion: unexpected equality `{eq}` as next argument \
+                    to{inlineExpr (← inferType e)}"
+              let eq := (← whnfForall (← inferType e)).bindingDomain!
+              if eq.isHEq then
+                e := mkApp e (← mkHEqOfEq h)
+              else
+                e := mkApp e h
+              return e
+        throwError "mkNoConfusion: No manifest constructors in {a} = {b}"
+
+/-- Given a `monad` and `e : α`, makes `pure e`. -/
+def mkPure (monad : Expr) (e : Expr) : MetaM Expr := mkAppOptM ``Pure.pure #[monad, none, none, e]
 
 /--
 `mkProjection s fieldName` returns an expression for accessing field `fieldName` of the structure `s`.
@@ -548,29 +597,34 @@ partial def mkProjection (s : Expr) (fieldName : Name) : MetaM Expr := do
       return mkApp (mkAppN (mkConst projFn us) params) s
     | none =>
       let fields := getStructureFields env structName
-      let r? ← fields.findSomeM? fun fieldName' => do
-        match isSubobjectField? env structName fieldName' with
-        | none   => pure none
-        | some _ =>
-          let parent ← mkProjection s fieldName'
-          (do let r ← mkProjection parent fieldName; return some r)
-          <|>
-          pure none
+      let r? ←
+        fields.findSomeM? fun fieldName' => do
+          match isSubobjectField? env structName fieldName' with
+          | none =>
+            pure none
+          | some _ =>
+            let parent ← mkProjection s fieldName'
+            (do let r ← mkProjection parent fieldName; return some r) <|> pure none
       match r? with
-      | some r => pure r
-      | none   => throwAppBuilderException `mkProjection ("invalid field name '" ++ toString fieldName ++ "' for" ++ hasTypeMsg s type)
-  | _ => throwAppBuilderException `mkProjection ("structure expected" ++ hasTypeMsg s type)
+      | some r =>
+        pure r
+      | none =>
+        throwAppBuilderException `mkProjection
+          ("invalid field name '" ++ toString fieldName ++ "' for" ++ hasTypeMsg s type)
+  | _ =>
+    throwAppBuilderException `mkProjection ("structure expected" ++ hasTypeMsg s type)
 
 private def mkListLitAux (nil : Expr) (cons : Expr) : List Expr → Expr
-  | []    => nil
-  | x::xs => mkApp (mkApp cons x) (mkListLitAux nil cons xs)
+  | [] => nil
+  | x :: xs => mkApp (mkApp cons x) (mkListLitAux nil cons xs)
 
 def mkListLit (type : Expr) (xs : List Expr) : MetaM Expr := do
-  let u   ← getDecLevel type
+  let u ← getDecLevel type
   let nil := mkApp (mkConst ``List.nil [u]) type
   match xs with
-  | [] => return nil
-  | _  =>
+  | [] =>
+    return nil
+  | _ =>
     let cons := mkApp (mkConst ``List.cons [u]) type
     return mkListLitAux nil cons xs
 
@@ -588,52 +642,42 @@ def mkSome (type value : Expr) : MetaM Expr := do
   return mkApp2 (mkConst ``Option.some [u]) type value
 
 /-- Returns `Decidable.decide p` -/
-def mkDecide (p : Expr) : MetaM Expr :=
-  mkAppOptM ``Decidable.decide #[p, none]
+def mkDecide (p : Expr) : MetaM Expr := mkAppOptM ``Decidable.decide #[p, none]
 
 /-- Returns a proof for `p : Prop` using `decide p` -/
 def mkDecideProof (p : Expr) : MetaM Expr := do
-  let decP      ← mkDecide p
+  let decP ← mkDecide p
   let decEqTrue ← mkEq decP (mkConst ``Bool.true)
-  let h         ← mkEqRefl (mkConst ``Bool.true)
-  let h         := mkExpectedPropHint h decEqTrue
+  let h ← mkEqRefl (mkConst ``Bool.true)
+  let h := mkExpectedPropHint h decEqTrue
   mkAppM ``of_decide_eq_true #[h]
 
 /-- Returns `a < b` -/
-def mkLt (a b : Expr) : MetaM Expr :=
-  mkAppM ``LT.lt #[a, b]
+def mkLt (a b : Expr) : MetaM Expr := mkAppM ``LT.lt #[a, b]
 
 /-- Returns `a <= b` -/
-def mkLe (a b : Expr) : MetaM Expr :=
-  mkAppM ``LE.le #[a, b]
+def mkLe (a b : Expr) : MetaM Expr := mkAppM ``LE.le #[a, b]
 
 /-- Returns `Inhabited.default α` -/
-def mkDefault (α : Expr) : MetaM Expr :=
-  mkAppOptM ``Inhabited.default #[α, none]
+def mkDefault (α : Expr) : MetaM Expr := mkAppOptM ``Inhabited.default #[α, none]
 
 /-- Returns `@Classical.ofNonempty α _` -/
-def mkOfNonempty (α : Expr) : MetaM Expr := do
-  mkAppOptM ``Classical.ofNonempty #[α, none]
+def mkOfNonempty (α : Expr) : MetaM Expr := do mkAppOptM ``Classical.ofNonempty #[α, none]
 
 /-- Returns `funext h` -/
-def mkFunExt (h : Expr) : MetaM Expr :=
-  mkAppM ``funext #[h]
+def mkFunExt (h : Expr) : MetaM Expr := mkAppM ``funext #[h]
 
 /-- Returns `propext h` -/
-def mkPropExt (h : Expr) : MetaM Expr :=
-  mkAppM ``propext #[h]
+def mkPropExt (h : Expr) : MetaM Expr := mkAppM ``propext #[h]
 
 /-- Returns `let_congr h₁ h₂` -/
-def mkLetCongr (h₁ h₂ : Expr) : MetaM Expr :=
-  mkAppM ``let_congr #[h₁, h₂]
+def mkLetCongr (h₁ h₂ : Expr) : MetaM Expr := mkAppM ``let_congr #[h₁, h₂]
 
 /-- Returns `let_val_congr b h` -/
-def mkLetValCongr (b h : Expr) : MetaM Expr :=
-  mkAppM ``let_val_congr #[b, h]
+def mkLetValCongr (b h : Expr) : MetaM Expr := mkAppM ``let_val_congr #[b, h]
 
 /-- Returns `let_body_congr a h` -/
-def mkLetBodyCongr (a h : Expr) : MetaM Expr :=
-  mkAppM ``let_body_congr #[a, h]
+def mkLetBodyCongr (a h : Expr) : MetaM Expr := mkAppM ``let_body_congr #[a, h]
 
 /-- Returns `@of_eq_false p h` -/
 def mkOfEqFalseCore (p : Expr) (h : Expr) : Expr :=
@@ -672,45 +716,44 @@ def mkEqTrue (h : Expr) : MetaM Expr := do
   | _ => return mkApp2 (mkConst ``eq_true) (← inferType h) h
 
 /--
-  Returns `eq_false h`
-  `h` must have type definitionally equal to `¬ p` in the current
-  reducibility setting. -/
+Returns `eq_false h`
+`h` must have type definitionally equal to `¬ p` in the current
+reducibility setting.
+-/
 def mkEqFalse (h : Expr) : MetaM Expr :=
   match_expr h with
   | of_eq_false _ h => return h
   | _ => mkAppM ``eq_false #[h]
 
 /--
-  Returns `eq_false' h`
-  `h` must have type definitionally equal to `p → False` in the current
-  reducibility setting. -/
-def mkEqFalse' (h : Expr) : MetaM Expr :=
-  mkAppM ``eq_false' #[h]
+Returns `eq_false' h`
+`h` must have type definitionally equal to `p → False` in the current
+reducibility setting.
+-/
+def mkEqFalse' (h : Expr) : MetaM Expr := mkAppM ``eq_false' #[h]
 
-def mkImpCongr (h₁ h₂ : Expr) : MetaM Expr :=
-  mkAppM ``implies_congr #[h₁, h₂]
+def mkImpCongr (h₁ h₂ : Expr) : MetaM Expr := mkAppM ``implies_congr #[h₁, h₂]
 
-def mkImpCongrCtx (h₁ h₂ : Expr) : MetaM Expr :=
-  mkAppM ``implies_congr_ctx #[h₁, h₂]
+def mkImpCongrCtx (h₁ h₂ : Expr) : MetaM Expr := mkAppM ``implies_congr_ctx #[h₁, h₂]
 
-def mkImpDepCongrCtx (h₁ h₂ : Expr) : MetaM Expr :=
-  mkAppM ``implies_dep_congr_ctx #[h₁, h₂]
+def mkImpDepCongrCtx (h₁ h₂ : Expr) : MetaM Expr := mkAppM ``implies_dep_congr_ctx #[h₁, h₂]
 
-def mkForallCongr (h : Expr) : MetaM Expr :=
-  mkAppM ``forall_congr #[h]
+def mkForallCongr (h : Expr) : MetaM Expr := mkAppM ``forall_congr #[h]
 
 /-- Returns instance for `[Monad m]` if there is one -/
 def isMonad? (m : Expr) : MetaM (Option Expr) :=
   try
     let monadType ← mkAppM `Monad #[m]
-    let result    ← trySynthInstance monadType
+    let result ← trySynthInstance monadType
     match result with
     | LOption.some inst => pure inst
-    | _                 => pure none
+    | _ => pure none
   catch _ =>
     pure none
 
-/-- Returns `(n : type)`, a numeric literal of type `type`. The method fails if we don't have an instance `OfNat type n` -/
+/--
+Returns `(n : type)`, a numeric literal of type `type`. The method fails if we don't have an instance `OfNat type n`
+-/
 def mkNumeral (type : Expr) (n : Nat) : MetaM Expr := do
   let u ← getDecLevel type
   let inst ← synthInstance (mkApp2 (mkConst ``OfNat [u]) type (mkRawNatLit n))
@@ -728,13 +771,19 @@ private def mkBinaryOp (className : Name) (opName : Name) (a b : Expr) : MetaM E
   let inst ← synthInstance (mkApp3 (mkConst className [u, u, u]) aType aType aType)
   return mkApp6 (mkConst opName [u, u, u]) aType aType aType inst a b
 
-/-- Returns `a + b` using a heterogeneous `+`. This method assumes `a` and `b` have the same type. -/
+/--
+Returns `a + b` using a heterogeneous `+`. This method assumes `a` and `b` have the same type.
+-/
 def mkAdd (a b : Expr) : MetaM Expr := mkBinaryOp ``HAdd ``HAdd.hAdd a b
 
-/-- Returns `a - b` using a heterogeneous `-`. This method assumes `a` and `b` have the same type. -/
+/--
+Returns `a - b` using a heterogeneous `-`. This method assumes `a` and `b` have the same type.
+-/
 def mkSub (a b : Expr) : MetaM Expr := mkBinaryOp ``HSub ``HSub.hSub a b
 
-/-- Returns `a * b` using a heterogeneous `*`. This method assumes `a` and `b` have the same type. -/
+/--
+Returns `a * b` using a heterogeneous `*`. This method assumes `a` and `b` have the same type.
+-/
 def mkMul (a b : Expr) : MetaM Expr := mkBinaryOp ``HMul ``HMul.hMul a b
 
 /--
@@ -767,14 +816,16 @@ Given proofs `hᵢ : pᵢ`, returns a proof for `p₁ ∧ ... ∧ pₙ`.
 Roughly, `mkAndIntroN hs : mkAndN (← hs.mapM inferType)`.
 -/
 def mkAndIntroN (hs : List Expr) : MetaM Expr := (·.1) <$> go hs
-  where
-    go : List Expr → MetaM (Expr × Expr)
-      | [] => return (mkConst ``True.intro, mkConst ``True)
-      | [h] => return (h, ← inferType h)
-      | h :: hs => do
-        let (h', p') ← go hs
-        let p ← inferType h
-        return (mkApp4 (mkConst ``And.intro) p p' h h', mkApp2 (mkConst ``And) p p')
+where
+  go : List Expr → MetaM (Expr × Expr)
+    | [] =>
+      return (mkConst ``True.intro, mkConst ``True)
+    | [h] =>
+      return (h, ← inferType h)
+    | h :: hs => do
+      let (h', p') ← go hs
+      let p ← inferType h
+      return (mkApp4 (mkConst ``And.intro) p p' h h', mkApp2 (mkConst ``And) p p')
 
 builtin_initialize do
   registerTraceClass `Meta.appBuilder

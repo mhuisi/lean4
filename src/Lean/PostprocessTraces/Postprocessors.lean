@@ -13,14 +13,12 @@ public section
 
 namespace Lean.PostprocessTraces
 
-private def containsSubstr (s pat : String) : Bool :=
-  (s.find? pat).isSome
+private def containsSubstr (s pat : String) : Bool := (s.find? pat).isSome
 
 section TracePatterns
 
 /-- Matches the trace nodes with the exact trace class `cls`. -/
-def ofClass (cls : Name) : TracePattern := fun t =>
-  return t.cls? == some cls
+def ofClass (cls : Name) : TracePattern := fun t => return t.cls? == some cls
 
 /--
 Matches the subtrees whose trace class or head message contains `pat` as a substring.
@@ -36,16 +34,13 @@ def containsString (pat : String) : TracePattern := fun t => do
 Matches the trace nodes whose action succeeded (✅️, `TraceResult.success`).
 Nodes without a recorded result (e.g. from `addTrace`) do not match.
 -/
-def succeeded : TracePattern := fun t =>
-  return t.result? == some .success
+def succeeded : TracePattern := fun t => return t.result? == some .success
 
 /-- Matches the trace nodes whose action failed (❌️, `TraceResult.failure`). -/
-def failed : TracePattern := fun t =>
-  return t.result? == some .failure
+def failed : TracePattern := fun t => return t.result? == some .failure
 
 /-- Matches the trace nodes whose action threw an exception (💥️, `TraceResult.error`). -/
-def errored : TracePattern := fun t =>
-  return t.result? == some .error
+def errored : TracePattern := fun t => return t.result? == some .error
 
 /--
 Matches the trace nodes whose action did not succeed, i.e. failed (❌️) or threw an exception
@@ -58,15 +53,13 @@ def unsuccessful : TracePattern := fun t =>
 Matches the subtrees whose action took at least `ms` milliseconds.
 Timing information is only available with `set_option trace.profiler true`.
 -/
-def minTimeMs (ms : Float) : TracePattern := fun t =>
-  return t.elapsed * 1000 ≥ ms
+def minTimeMs (ms : Float) : TracePattern := fun t => return t.elapsed * 1000 ≥ ms
 
 /--
 Matches the subtrees whose action took at least `ms` milliseconds outside of their child nodes.
 Timing information is only available with `set_option trace.profiler true`.
 -/
-def minSelfTimeMs (ms : Float) : TracePattern := fun t =>
-  return t.selfElapsed * 1000 ≥ ms
+def minSelfTimeMs (ms : Float) : TracePattern := fun t => return t.selfElapsed * 1000 ≥ ms
 
 end TracePatterns
 
@@ -107,12 +100,12 @@ where
     return (t, hasMatchBelow)
 
 /-- Appends the number of nodes inside each subtree to the subtree's head message. -/
-partial def countNodes : TracePostprocessor := fun roots =>
-  return roots.map fun root => (go root).1
+partial def countNodes : TracePostprocessor := fun roots => return roots.map fun root => (go root).1
 where
   /-- Returns the transformed tree and its number of nodes. -/
   go : TraceTree → TraceTree × Nat
-    | .leaf msg => (.leaf msg, 1)
+    | .leaf msg =>
+      (.leaf msg, 1)
     | .node data msg children wrap =>
       let results := children.map go
       let n := results.foldl (fun n (_, k) => n + k) 1
@@ -129,15 +122,17 @@ Appends the number of milliseconds spent inside each subtree but outside of its 
 the subtree's head message. Timing information is only available with
 `set_option trace.profiler true`; nodes without it are not annotated.
 -/
-partial def selfTime : TracePostprocessor := fun roots =>
-  return roots.map go
+partial def selfTime : TracePostprocessor := fun roots => return roots.map go
 where
   go : TraceTree → TraceTree
-    | .leaf msg => .leaf msg
+    | .leaf msg =>
+      .leaf msg
     | t@(.node data msg children wrap) =>
       let msg :=
-        if data.startTime == 0 then msg
-        else m!"{msg} (self: {formatMs (t.selfElapsed * 1000)})"
+        if data.startTime == 0 then
+          msg
+        else
+          m!"{msg} (self: {formatMs (t.selfElapsed * 1000)})"
       .node data msg (children.map go) wrap
 
 end Postprocessors

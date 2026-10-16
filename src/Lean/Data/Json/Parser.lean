@@ -35,7 +35,9 @@ def finishSurrogatePair (low : UInt16) : Parser Char := do
   if c != 'u' then fail ""
   let c ← any
   if c != 'd' && c != 'D' then fail ""
-  let u2 ← hexChar; let u3 ← hexChar; let u4 ← hexChar
+  let u2 ← hexChar
+  let u3 ← hexChar
+  let u4 ← hexChar
   let val := (u2 <<< 8) ||| (u3 <<< 4) ||| u4
   if val < 0xC00 then fail "" -- low or not a surrogate
   let charVal := (((low.toUInt32 &&& 0x3FF) <<< 10) ||| (val.toUInt32 &&& 0x3FF)) + 0x10000
@@ -47,16 +49,27 @@ def finishSurrogatePair (low : UInt16) : Parser Char := do
 def escapedChar : Parser Char := do
   let c ← any
   match c with
-  | '\\' => return '\\'
-  | '"'  => return '"'
-  | '/'  => return '/'
-  | 'b'  => return '\x08'
-  | 'f'  => return '\x0c'
-  | 'n'  => return '\n'
-  | 'r'  => return '\x0d'
-  | 't'  => return '\t'
-  | 'u'  =>
-    let u1 ← hexChar; let u2 ← hexChar; let u3 ← hexChar; let u4 ← hexChar
+  | '\\' =>
+    return '\\'
+  | '"' =>
+    return '"'
+  | '/' =>
+    return '/'
+  | 'b' =>
+    return '\x08'
+  | 'f' =>
+    return '\x0c'
+  | 'n' =>
+    return '\n'
+  | 'r' =>
+    return '\x0d'
+  | 't' =>
+    return '\t'
+  | 'u' =>
+    let u1 ← hexChar
+    let u2 ← hexChar
+    let u3 ← hexChar
+    let u4 ← hexChar
     let val := (u1 <<< 12) ||| (u2 <<< 8) ||| (u3 <<< 4) ||| u4
     if h : val < 0xD800 then
       return ⟨val.toUInt32, Or.inl h⟩
@@ -70,7 +83,8 @@ def escapedChar : Parser Char := do
         return '\ufffd' -- replacement character
     else
       return ⟨val.toUInt32, Or.inr ⟨Nat.not_lt.mp h', Nat.lt_trans val.toFin.isLt (by decide)⟩⟩
-  | _ => fail "illegal \\u escape"
+  | _ =>
+    fail "illegal \\u escape"
 
 partial def strCore (acc : String) : Parser String := do
   let c ← peek!
@@ -98,7 +112,7 @@ partial def natCore (acc : Nat) : Parser Nat := do
     let c ← peek!
     if '0' <= c && c <= '9' then
       skip
-      let acc' := 10*acc + (c.val - '0'.val).toNat
+      let acc' := 10 * acc + (c.val - '0'.val).toNat
       natCore acc'
     else
       return acc
@@ -110,8 +124,8 @@ partial def natCoreNumDigits (acc digits : Nat) : Parser (Nat × Nat) := do
     let c ← peek!
     if '0' <= c && c <= '9' then
       skip
-      let acc' := 10*acc + (c.val - '0'.val).toNat
-      natCoreNumDigits acc' (digits+1)
+      let acc' := 10 * acc + (c.val - '0'.val).toNat
+      natCoreNumDigits acc' (digits + 1)
     else
       return (acc, digits)
 
@@ -168,7 +182,7 @@ def numWithDecimals : Parser JsonNumber := do
       skip
       let (n, d) ← natNumDigits
       if d > USize.size then fail "too many decimals"
-      let mantissa' := sign * (whole * (10^d : Nat) + n)
+      let mantissa' := sign * (whole * (10 ^ d : Nat) + n)
       let exponent' := d
       pure <| JsonNumber.mk mantissa' exponent'
     else
@@ -204,76 +218,87 @@ def num : Parser JsonNumber := do
 
 mutual
 
-  partial def arrayCore (acc : Array Json) : Parser (Array Json) := do
-    let hd ← anyCore
-    let acc' := acc.push hd
-    let c ← any
-    if c == ']' then
-      ws
-      return acc'
-    else if c == ',' then
-      ws
-      arrayCore acc'
-    else
-      fail "unexpected character in array"
+partial def arrayCore (acc : Array Json) : Parser (Array Json) := do
+  let hd ← anyCore
+  let acc' := acc.push hd
+  let c ← any
+  if c == ']' then
+    ws
+    return acc'
+  else if c == ',' then
+    ws
+    arrayCore acc'
+  else
+    fail "unexpected character in array"
 
-  partial def objectCore (kvs : Std.TreeMap.Raw String Json) :
-      Parser (Std.TreeMap.Raw String Json) := do
-    lookahead (fun c => c == '"') "\""; skip;
-    let k ← str; ws
-    if kvs.contains k then fail s!"duplicate object key {k.quote}"
-    lookahead (fun c => c == ':') ":"; skip; ws
-    let v ← anyCore
-    let c ← any
-    if c == '}' then
-      ws
-      return kvs.insert k v
-    else if c == ',' then
-      ws
-      objectCore (kvs.insert k v)
-    else
-      fail "unexpected character in object"
+partial def objectCore (kvs : Std.TreeMap.Raw String Json)
+    : Parser (Std.TreeMap.Raw String Json) := do
+  lookahead (fun c => c == '"') "\""
+  skip
+  let k ← str
+  ws
+  if kvs.contains k then fail s!"duplicate object key {k.quote}"
+  lookahead (fun c => c == ':') ":"
+  skip
+  ws
+  let v ← anyCore
+  let c ← any
+  if c == '}' then
+    ws
+    return kvs.insert k v
+  else if c == ',' then
+    ws
+    objectCore (kvs.insert k v)
+  else
+    fail "unexpected character in object"
 
-  partial def anyCore : Parser Json := do
+partial def anyCore : Parser Json := do
+  let c ← peek!
+  if c == '[' then
+    skip
+    ws
     let c ← peek!
-    if c == '[' then
-      skip; ws
-      let c ← peek!
-      if c == ']' then
-        skip; ws
-        return Json.arr (Array.mkEmpty 0)
-      else
-        let a ← arrayCore (Array.mkEmpty 4)
-        return Json.arr a
-    else if c == '{' then
-      skip; ws
-      let c ← peek!
-      if c == '}' then
-        skip; ws
-        return Json.obj ∅
-      else
-        let kvs ← objectCore ∅
-        return Json.obj kvs
-    else if c == '\"' then
+    if c == ']' then
       skip
-      let s ← str
       ws
-      return Json.str s
-    else if c == 'f' then
-      skipString "false"; ws
-      return Json.bool false
-    else if c == 't' then
-      skipString "true"; ws
-      return Json.bool true
-    else if c == 'n' then
-      skipString "null"; ws
-      return Json.null
-    else if c == '-' || ('0' <= c && c <= '9') then
-      let n ← num
-      ws
-      return Json.num n
+      return Json.arr (Array.mkEmpty 0)
     else
-      fail "unexpected input"
+      let a ← arrayCore (Array.mkEmpty 4)
+      return Json.arr a
+  else if c == '{' then
+    skip
+    ws
+    let c ← peek!
+    if c == '}' then
+      skip
+      ws
+      return Json.obj ∅
+    else
+      let kvs ← objectCore ∅
+      return Json.obj kvs
+  else if c == '\"' then
+    skip
+    let s ← str
+    ws
+    return Json.str s
+  else if c == 'f' then
+    skipString "false"
+    ws
+    return Json.bool false
+  else if c == 't' then
+    skipString "true"
+    ws
+    return Json.bool true
+  else if c == 'n' then
+    skipString "null"
+    ws
+    return Json.null
+  else if c == '-' || ('0' <= c && c <= '9') then
+    let n ← num
+    ws
+    return Json.num n
+  else
+    fail "unexpected input"
 
 end
 
@@ -287,9 +312,10 @@ end Json.Parser
 
 namespace Json
 
-/-- Parses a JSON value, surrounded by optional whitespace. Objects with duplicate keys are rejected. -/
-def parse (s : String) : Except String Lean.Json :=
-  Parser.run Json.Parser.any s
+/--
+Parses a JSON value, surrounded by optional whitespace. Objects with duplicate keys are rejected.
+-/
+def parse (s : String) : Except String Lean.Json := Parser.run Json.Parser.any s
 
 end Json
 

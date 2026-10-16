@@ -12,7 +12,6 @@ public import Std.Async.Select
 
 public section
 
-
 namespace Std
 namespace Async
 
@@ -22,7 +21,7 @@ The underlying timer has millisecond resolution.
 -/
 structure Sleep where
   private ofNative ::
-    native : Internal.UV.Timer
+  native : Internal.UV.Timer
 
 /--
 The timeout of the underlying timer. Longer durations are clamped, since they cannot elapse anyway.
@@ -51,9 +50,7 @@ If:
   restarts it, and the computations from earlier calls then fail.
 - `s` was stopped with `stop` before completing, return an `Async` computation that fails.
 -/
-@[inline]
-def wait (s : Sleep) : Async Unit :=
-  Async.ofPurePromise s.native.next
+@[inline] def wait (s : Sleep) : Async Unit := Async.ofPurePromise s.native.next
 
 /--
 If:
@@ -61,9 +58,7 @@ If:
   milliseconds.
 - `s` is not yet or not anymore running this is a no-op.
 -/
-@[inline]
-def reset (s : Sleep) : Async Unit :=
-  s.native.reset
+@[inline] def reset (s : Sleep) : Async Unit := s.native.reset
 
 /--
 If:
@@ -72,50 +67,41 @@ If:
   dropped, rather than producing a value.
 - `s` is not yet or not anymore running this is a no-op.
 -/
-@[inline]
-def stop (s : Sleep) : IO Unit :=
-  s.native.stop
+@[inline] def stop (s : Sleep) : IO Unit := s.native.stop
 
 /--
 Create a `Selector` that resolves once `s` has finished. `s` only starts when it runs inside of a
 Selectable. Every select or `Selectable.tryOne` that checks `s` before it has finished starts it again
 from `duration`, so a `Sleep` that is checked more often than `duration` never finishes.
 -/
-def selector (s : Sleep) : Selector Unit :=
-  {
-    tryFn := do
-      let sleepWaiter ← s.native.next
-      if ← sleepWaiter.isResolved then
-        return some ()
-      else
-        s.native.cancel
-        return none
-
-    registerFn waiter := do
-      let sleepWaiter ← s.native.next
-      BaseIO.chainTask sleepWaiter.result? fun
-        | none => do
-          return ()
-        | some _ =>
-          let lose := return ()
-          let win promise := promise.resolve (.ok ())
-          waiter.race lose win
-
-    unregisterFn := s.native.cancel
-  }
+def selector (s : Sleep) : Selector Unit := {
+  tryFn := do
+    let sleepWaiter ← s.native.next
+    if ← sleepWaiter.isResolved then
+      return some ()
+    else
+      s.native.cancel
+      return none
+  registerFn waiter := do
+    let sleepWaiter ← s.native.next
+    BaseIO.chainTask sleepWaiter.result? fun
+      | none => do
+        return ()
+      | some _ =>
+        let lose := return ()
+        let win promise := promise.resolve (.ok ())
+        waiter.race lose win
+  unregisterFn := s.native.cancel
+}
 
 end Sleep
 
-/--
-Return an `Async` computation that completes after `duration`.
--/
+/-- Return an `Async` computation that completes after `duration`. -/
 def sleep (duration : Std.Time.Millisecond.Offset) : Async Unit := do
   let sleeper ← Sleep.mk duration
   sleeper.wait
 
-/--
-Return a `Selector` that completes after `duration`.
--/
+/-- Return a `Selector` that completes after `duration`. -/
 def Selector.sleep (duration : Std.Time.Millisecond.Offset) : Async (Selector Unit) := do
   let sleeper ← Sleep.mk duration
   return sleeper.selector
@@ -126,7 +112,7 @@ The underlying timer has millisecond resolution.
 -/
 structure Interval where
   private ofNative ::
-    native : Internal.UV.Timer
+  native : Internal.UV.Timer
 
 namespace Interval
 
@@ -151,9 +137,7 @@ If:
 - `i` is not running anymore, the returned `Async` computation fails, as `stop` dropped the promise
   it would have completed.
 -/
-@[inline]
-def tick (i : Interval) : Async Unit := do
-  Async.ofPurePromise i.native.next
+@[inline] def tick (i : Interval) : Async Unit := do Async.ofPurePromise i.native.next
 
 /--
 If:
@@ -161,9 +145,7 @@ If:
    happens in `duration`.
 - `i` is not yet or not anymore running this is a no-op.
 -/
-@[inline]
-def reset (i : Interval) : IO Unit :=
-  i.native.reset
+@[inline] def reset (i : Interval) : IO Unit := i.native.reset
 
 /--
 If:
@@ -172,9 +154,7 @@ If:
   dropped, rather than producing a value.
 - `i` is not yet or not anymore running this is a no-op.
 -/
-@[inline]
-def stop (i : Interval) : IO Unit :=
-  i.native.stop
+@[inline] def stop (i : Interval) : IO Unit := i.native.stop
 
 end Interval
 

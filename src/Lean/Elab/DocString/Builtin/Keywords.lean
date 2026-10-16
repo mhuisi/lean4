@@ -5,6 +5,7 @@ Author: David Thrane Christiansen
 -/
 
 module
+
 prelude
 public import Lean.Elab.DocString.Builtin.Parsing
 public import Lean.Elab.DocString.Builtin.Scopes
@@ -15,7 +16,6 @@ public import Lean.DocString.View
 public import Lean.Elab.InfoTree
 public import Lean.Parser
 import Init.Omega
-
 
 namespace Lean.Doc
 open Lean Elab Term
@@ -31,28 +31,38 @@ public structure Data.Atom where
   category : Name
 deriving TypeName
 
-
-/--
-Checks whether a syntax descriptor's value contains the given atom.
--/
+/-- Checks whether a syntax descriptor's value contains the given atom. -/
 partial def containsAtom (e : Expr) (atom : String) : MetaM Bool := do
   let rec attempt (p : Expr) (tryWhnf : Bool) : MetaM Bool := do
     match p.getAppFnArgs with
-    | (``ParserDescr.node, #[_, _, p]) => containsAtom p atom
-    | (``ParserDescr.trailingNode, #[_, _, _, p]) => containsAtom p atom
-    | (``ParserDescr.unary, #[.app _ (.lit (.strVal _)), p]) => containsAtom p atom
-    | (``ParserDescr.binary, #[.app _ (.lit (.strVal "andthen")), p, _]) => containsAtom p atom
-    | (``ParserDescr.nonReservedSymbol, #[.lit (.strVal tk), _]) => pure (tk.trimAscii == atom.toSlice)
-    | (``ParserDescr.symbol, #[.lit (.strVal tk)]) => pure (tk.trimAscii == atom.toSlice)
-    | (``Parser.withAntiquot, #[_, p]) => containsAtom p atom
-    | (``Parser.leadingNode, #[_, _, p]) => containsAtom p atom
+    | (``ParserDescr.node, #[_, _, p]) =>
+      containsAtom p atom
+    | (``ParserDescr.trailingNode, #[_, _, _, p]) =>
+      containsAtom p atom
+    | (``ParserDescr.unary, #[.app _ (.lit (.strVal _)), p]) =>
+      containsAtom p atom
+    | (``ParserDescr.binary, #[.app _ (.lit (.strVal "andthen")), p, _]) =>
+      containsAtom p atom
+    | (``ParserDescr.nonReservedSymbol, #[.lit (.strVal tk), _]) =>
+      pure (tk.trimAscii == atom.toSlice)
+    | (``ParserDescr.symbol, #[.lit (.strVal tk)]) =>
+      pure (tk.trimAscii == atom.toSlice)
+    | (``Parser.withAntiquot, #[_, p]) =>
+      containsAtom p atom
+    | (``Parser.leadingNode, #[_, _, p]) =>
+      containsAtom p atom
     | (``HAndThen.hAndThen, #[_, _, _, _, p1, p2]) =>
       containsAtom p1 atom <||> containsAtom p2 atom
-    | (``Parser.nonReservedSymbol, #[.lit (.strVal tk), _]) => pure (tk.trimAscii == atom.toSlice)
-    | (``Parser.symbol, #[.lit (.strVal tk)]) => pure (tk.trimAscii == atom.toSlice)
-    | (``Parser.symbol, #[_nonlit]) => pure false
-    | (``Parser.withCache, #[_, p]) => containsAtom p atom
-    | _ => if tryWhnf then attempt (← Meta.whnf p) false else pure false
+    | (``Parser.nonReservedSymbol, #[.lit (.strVal tk), _]) =>
+      pure (tk.trimAscii == atom.toSlice)
+    | (``Parser.symbol, #[.lit (.strVal tk)]) =>
+      pure (tk.trimAscii == atom.toSlice)
+    | (``Parser.symbol, #[_nonlit]) =>
+      pure false
+    | (``Parser.withCache, #[_, p]) =>
+      containsAtom p atom
+    | _ =>
+      if tryWhnf then attempt (← Meta.whnf p) false else pure false
   attempt e true
 
 /--
@@ -62,48 +72,66 @@ the atom is returned.
 partial def containsAtom' (e : Expr) (atom : String) : MetaM (Option Expr) := do
   let rec attempt (p : Expr) (tryWhnf : Bool) : MetaM (Option Expr) := do
     match p.getAppFnArgs with
-    | (``ParserDescr.node, #[_, _, p]) => containsAtom' p atom
-    | (``ParserDescr.trailingNode, #[_, _, _, p]) => containsAtom' p atom
-    | (``ParserDescr.unary, #[.app _ (.lit (.strVal _)), p]) => containsAtom' p atom
+    | (``ParserDescr.node, #[_, _, p]) =>
+      containsAtom' p atom
+    | (``ParserDescr.trailingNode, #[_, _, _, p]) =>
+      containsAtom' p atom
+    | (``ParserDescr.unary, #[.app _ (.lit (.strVal _)), p]) =>
+      containsAtom' p atom
     | (``ParserDescr.nonReservedSymbol, #[.lit (.strVal tk), _])
     | (``ParserDescr.symbol, #[.lit (.strVal tk)])
     | (``Parser.symbol, #[.lit (.strVal tk)])
     | (``Parser.nonReservedSymbol, #[.lit (.strVal tk), _]) =>
-        if tk.trimAscii == atom.toSlice then
-          pure (Expr.app (.const ``ParserDescr.const []) (toExpr ``Parser.skip))
-        else pure none
-    | (``Parser.withAntiquot, #[_, p]) => containsAtom' p atom
-    | (``Parser.leadingNode, #[_, _, p]) => containsAtom' p atom
+      if tk.trimAscii == atom.toSlice then
+        pure (Expr.app (.const ``ParserDescr.const []) (toExpr ``Parser.skip))
+      else
+        pure none
+    | (``Parser.withAntiquot, #[_, p]) =>
+      containsAtom' p atom
+    | (``Parser.leadingNode, #[_, _, p]) =>
+      containsAtom' p atom
     | (``HAndThen.hAndThen, #[_, _, _, _, p1, p2])
     | (``ParserDescr.binary, #[.app _ (.lit (.strVal "andthen")), p1, p2]) =>
       if let some r ← containsAtom' p1 atom then
         pure <| some <| mkApp3 (.const ``ParserDescr.binary []) (toExpr ``Parser.andthen) r p2
-      else containsAtom' p2 atom
-    | (``Parser.symbol, #[_nonlit]) => pure none
-    | (``Parser.withCache, #[_, p]) => containsAtom' p atom
-    | _ => if tryWhnf then attempt (← Meta.whnf p) false else pure none
+      else
+        containsAtom' p2 atom
+    | (``Parser.symbol, #[_nonlit]) =>
+      pure none
+    | (``Parser.withCache, #[_, p]) =>
+      containsAtom' p atom
+    | _ =>
+      if tryWhnf then attempt (← Meta.whnf p) false else pure none
   attempt e true
 
 partial def canEpsilon (e : Expr) : MetaM Bool := do
   let rec attempt (p : Expr) (tryWhnf : Bool) : MetaM Bool := do
     match p.getAppFnArgs with
-    | (``ParserDescr.node, #[_, _, p]) => canEpsilon p
-    | (``ParserDescr.trailingNode, #[_, _, _, p]) => canEpsilon p
-    | (``ParserDescr.unary, #[.app _ (.lit (.strVal _)), p]) => canEpsilon p
+    | (``ParserDescr.node, #[_, _, p]) =>
+      canEpsilon p
+    | (``ParserDescr.trailingNode, #[_, _, _, p]) =>
+      canEpsilon p
+    | (``ParserDescr.unary, #[.app _ (.lit (.strVal _)), p]) =>
+      canEpsilon p
     | (``ParserDescr.nonReservedSymbol, #[.lit (.strVal _tk), _])
     | (``ParserDescr.symbol, #[_])
     | (``Parser.symbol, #[_])
     | (``Parser.nonReservedSymbol, #[_, _]) =>
       pure false
-    | (``Parser.withAntiquot, #[_, p]) => canEpsilon p
-    | (``Parser.leadingNode, #[_, _, p]) => canEpsilon p
+    | (``Parser.withAntiquot, #[_, p]) =>
+      canEpsilon p
+    | (``Parser.leadingNode, #[_, _, p]) =>
+      canEpsilon p
     | (``HAndThen.hAndThen, #[_, _, _, _, p1, p2])
     | (``ParserDescr.binary, #[(.app _ (.lit (.strVal "andthen"))), p1, p2]) =>
       canEpsilon p1 <&&> canEpsilon p2
-    | (``Parser.withCache, #[_, p]) => canEpsilon p
+    | (``Parser.withCache, #[_, p]) =>
+      canEpsilon p
     | _ =>
-      if tryWhnf then attempt (← Meta.whnf p) false
-      else pure false -- Conservative approximation
+      if tryWhnf then
+        attempt (← Meta.whnf p) false
+      else
+        pure false -- Conservative approximation
   attempt e true
 
 /--
@@ -113,28 +141,38 @@ after the atom is returned.
 partial def startsWithAtom? (e : Expr) (atom : String) : MetaM (Option Expr) := do
   let rec attempt (p : Expr) (tryWhnf : Bool) : MetaM (Option Expr) := do
     match p.getAppFnArgs with
-    | (``ParserDescr.node, #[_, _, p]) => startsWithAtom? p atom
-    | (``ParserDescr.trailingNode, #[_, _, _, p]) => startsWithAtom? p atom
-    | (``ParserDescr.unary, #[.app _ (.lit (.strVal _)), p]) => startsWithAtom? p atom
+    | (``ParserDescr.node, #[_, _, p]) =>
+      startsWithAtom? p atom
+    | (``ParserDescr.trailingNode, #[_, _, _, p]) =>
+      startsWithAtom? p atom
+    | (``ParserDescr.unary, #[.app _ (.lit (.strVal _)), p]) =>
+      startsWithAtom? p atom
     | (``ParserDescr.nonReservedSymbol, #[.lit (.strVal tk), _])
     | (``ParserDescr.symbol, #[.lit (.strVal tk)])
     | (``Parser.symbol, #[.lit (.strVal tk)])
     | (``Parser.nonReservedSymbol, #[.lit (.strVal tk), _]) =>
-        if tk.trimAscii == atom.toSlice then
-          pure (Expr.app (.const ``ParserDescr.const []) (toExpr ``Parser.skip))
-        else pure none
-    | (``Parser.withAntiquot, #[_, p]) => startsWithAtom? p atom
-    | (``Parser.leadingNode, #[_, _, p]) => startsWithAtom? p atom
+      if tk.trimAscii == atom.toSlice then
+        pure (Expr.app (.const ``ParserDescr.const []) (toExpr ``Parser.skip))
+      else
+        pure none
+    | (``Parser.withAntiquot, #[_, p]) =>
+      startsWithAtom? p atom
+    | (``Parser.leadingNode, #[_, _, p]) =>
+      startsWithAtom? p atom
     | (``HAndThen.hAndThen, #[_, _, _, _, p1, p2])
     | (``ParserDescr.binary, #[(.app _ (.lit (.strVal "andthen"))), p1, p2]) =>
       if let some r ← startsWithAtom? p1 atom then
         pure <| some <| mkApp3 (.const ``ParserDescr.binary []) (toExpr ``Parser.andthen) r p2
       else if ← canEpsilon p1 then
         startsWithAtom? p2 atom
-      else pure none
-    | (``Parser.symbol, #[_nonlit]) => pure none
-    | (``Parser.withCache, #[_, p]) => startsWithAtom? p atom
-    | _ => if tryWhnf then attempt (← Meta.whnf p) false else pure none
+      else
+        pure none
+    | (``Parser.symbol, #[_nonlit]) =>
+      pure none
+    | (``Parser.withCache, #[_, p]) =>
+      startsWithAtom? p atom
+    | _ =>
+      if tryWhnf then attempt (← Meta.whnf p) false else pure none
   attempt e true
 
 /--
@@ -143,19 +181,23 @@ after the atoms is returned.
 -/
 partial def startsWithAtoms? (e : Expr) (atoms : List String) : MetaM (Option Expr) := do
   match atoms with
-  | [] => pure e
+  | [] =>
+    pure e
   | a :: as =>
     if let some e' ← startsWithAtom? e a then
       startsWithAtoms? e' as
-    else pure none
+    else
+      pure none
 
 partial def exprContainsAtoms (e : Expr) (atoms : List String) : MetaM Bool := do
   match atoms with
-  | [] => pure true
+  | [] =>
+    pure true
   | a :: as =>
     if let some e' ← containsAtom' e a then
       (startsWithAtoms? e' as <&> Option.isSome) <||> exprContainsAtoms e' (a :: as)
-    else pure false
+    else
+      pure false
 
 def withAtom (cat : Name) (atom : String) : DocM (Array Name) := do
   let env ← getEnv
@@ -174,17 +216,22 @@ partial def isAtoms (atoms : List String) (stx : Syntax) : Bool :=
 where
   go (stxs : List Syntax) : StateM (List String) Bool := do
     match ← get with
-    | [] => return true
+    | [] =>
+      return true
     | a :: as =>
       match stxs with
-      | [] => return false
-      | .ident .. :: _ => return false
+      | [] =>
+        return false
+      | .ident .. :: _ =>
+        return false
       | .atom _ s :: ss =>
         if a.trimAscii == s.trimAscii then
           set as
           go ss
-        else return false
-      | .missing :: ss => go ss
+        else
+          return false
+      | .missing :: ss =>
+        go ss
       | .node _ _ args :: ss =>
         go (args.toList ++ ss)
 
@@ -195,14 +242,18 @@ def parserHasAtomPrefix (atoms : List String) (p : Parser) : TermElabM Bool := d
   let s := mkParserState str
   -- Some parsers look upwards in the stack and will crash without this
   let s := s.pushSyntax .missing
-  let s := p.fn.run {inputString := str, fileName := "", fileMap := FileMap.ofString str} {env, options} (getTokenTable env) s
+  let s :=
+    p.fn.run { inputString := str, fileName := "", fileMap := FileMap.ofString str }
+      { env, options } (getTokenTable env) s
   return isAtoms atoms (mkNullNode (s.stxStack.extract 1 s.stxStack.size))
 
-unsafe def namedParserHasAtomPrefixUnsafe (atoms : List String) (parserName : Name) : TermElabM Bool := do
+unsafe def namedParserHasAtomPrefixUnsafe (atoms : List String) (parserName : Name)
+    : TermElabM Bool := do
   try
     let p ← evalConstCheck Parser ``Parser parserName
     parserHasAtomPrefix atoms p
-  catch | _ => pure false
+  catch
+    | _ => pure false
 
 @[implemented_by namedParserHasAtomPrefixUnsafe]
 opaque namedParserHasAtomPrefix (atoms : List String) (parserName : Name) : TermElabM Bool
@@ -226,66 +277,89 @@ def parserDescrHasAtom (atom : String) (p : ParserDescr) : TermElabM (Option Par
   | .nonReservedSymbol tk _ | .symbol tk =>
     if tk.trimAscii == atom.toSlice then
       pure (some (.const ``Parser.skip))
-    else pure none
+    else
+      pure none
   | .binary ``Parser.andthen p1 p2 =>
     if let some p1' ← parserDescrHasAtom atom p1 then
       pure <| some <| .binary ``Parser.andthen p1' p2
-    else parserDescrHasAtom atom p2
+    else
+      parserDescrHasAtom atom p2
   | .binary ``Parser.orelse p1 p2 =>
     let p1' ← parserDescrHasAtom atom p1
     let p2' ← parserDescrHasAtom atom p2
     match p1', p2' with
-    | some x, some y => pure <| some (.binary ``Parser.orelse x y)
-    | some _, none => pure p1'
-    | none, some _ => pure p2'
-    | none, none => pure none
-  | _ => pure none
+    | some x, some y =>
+      pure <| some (.binary ``Parser.orelse x y)
+    | some _, none =>
+      pure p1'
+    | none, some _ =>
+      pure p2'
+    | none, none =>
+      pure none
+  | _ =>
+    pure none
 
-def parserDescrStartsWithAtom (atom : String) (p : ParserDescr) : TermElabM (Option ParserDescr) := do
+def parserDescrStartsWithAtom (atom : String) (p : ParserDescr)
+    : TermElabM (Option ParserDescr) := do
   match p with
   | .node _ _ p | .trailingNode _ _ _ p | .unary _ p =>
     parserDescrStartsWithAtom atom p
   | .nonReservedSymbol tk _ | .symbol tk =>
     if tk.trimAscii == atom.toSlice then
       pure (some (.const ``Parser.skip))
-    else pure none
+    else
+      pure none
   | .binary ``Parser.andthen p1 p2 =>
     if let some p1' ← parserDescrStartsWithAtom atom p1 then
       pure <| some <| .binary ``Parser.andthen p1' p2
-    else if parserDescrCanEps p1 then parserDescrStartsWithAtom atom p2
-    else pure none
+    else if parserDescrCanEps p1 then
+      parserDescrStartsWithAtom atom p2
+    else
+      pure none
   | .binary ``Parser.orelse p1 p2 =>
     let p1' ← parserDescrHasAtom atom p1
     let p2' ← parserDescrHasAtom atom p2
     match p1', p2' with
-    | some x, some y => pure <| some (.binary ``Parser.orelse x y)
-    | some _, none => pure p1'
-    | none, some _ => pure p2'
-    | none, none => pure none
-  | _ => pure none
+    | some x, some y =>
+      pure <| some (.binary ``Parser.orelse x y)
+    | some _, none =>
+      pure p1'
+    | none, some _ =>
+      pure p2'
+    | none, none =>
+      pure none
+  | _ =>
+    pure none
 
 def parserDescrStartsWithAtoms (atoms : List String) (p : ParserDescr) : TermElabM Bool := do
   match atoms with
-  | [] => pure true
+  | [] =>
+    pure true
   | a :: as =>
     if let some p' ← parserDescrStartsWithAtom a p then
       parserDescrStartsWithAtoms as p'
-    else pure false
+    else
+      pure false
 
 partial def parserDescrHasAtoms (atoms : List String) (p : ParserDescr) : TermElabM Bool := do
   match atoms with
-  | [] => pure true
+  | [] =>
+    pure true
   | a :: as =>
     if let some p' ← parserDescrHasAtom a p then
-      if ← parserDescrStartsWithAtoms as p' then pure true
-      else parserDescrHasAtoms (a :: as) p'
-    else pure false
+      if ← parserDescrStartsWithAtoms as p' then
+        pure true
+      else
+        parserDescrHasAtoms (a :: as) p'
+    else
+      pure false
 
 unsafe def parserDescrNameHasAtomsUnsafe (atoms : List String) (p : Name) : TermElabM Bool := do
   try
     let p ← evalConstCheck ParserDescr ``ParserDescr p
     parserDescrHasAtoms atoms p
-  catch | _ => pure false
+  catch
+    | _ => pure false
 
 @[implemented_by parserDescrNameHasAtomsUnsafe]
 opaque parserDescrNameHasAtoms (atoms : List String) (p : Name) : TermElabM Bool
@@ -315,9 +389,10 @@ def withAtoms (cat : Name) (atoms : List String) : TermElabM (Array Name) := do
       found := found.push k
   return found
 
-def kwImpl (cat : Ident := mkIdent .anonymous) (of : Ident := mkIdent .anonymous)
-    (suggest : Bool)
-    (s : VersoCode) : TermElabM (Inline ElabInline) := do
+def kwImpl
+    (cat : Ident := mkIdent .anonymous) (of : Ident := mkIdent .anonymous)
+    (suggest : Bool) (s : VersoCode)
+    : TermElabM (Inline ElabInline) := do
   let atoms := s.getVersoCode |>.split Char.isWhitespace |>.toStringList
   let env ← getEnv
   let parsers := Lean.Parser.parserExtension.getState env
@@ -331,7 +406,8 @@ def kwImpl (cat : Ident := mkIdent .anonymous) (of : Ident := mkIdent .anonymous
     else
       if let some catImpl := parsers.categories.find? cat' then
         pure #[(cat', catImpl)]
-      else throwError m!"Syntax category `{cat'}` not found"
+      else
+        throwError m!"Syntax category `{cat'}` not found"
 
   let mut candidates := #[]
   for (catName, category) in cats do
@@ -352,21 +428,25 @@ def kwImpl (cat : Ident := mkIdent .anonymous) (of : Ident := mkIdent .anonymous
     let ofSuggs ← ofSuggestions of' candidates
     let hintText :=
       if catSuggs.isEmpty then
-        if ofSuggs.isEmpty then m!""
-        else m!"Specify the syntax kind:"
+        if ofSuggs.isEmpty then
+          m!""
+        else
+          m!"Specify the syntax kind:"
+      else if ofSuggs.isEmpty then
+        m!"Specify the category:"
       else
-        if ofSuggs.isEmpty then m!"Specify the category:"
-        else m!"Specify the category or syntax kind:"
+        m!"Specify the category or syntax kind:"
 
     let range? :=
       match InlineView.of ⟨← getRef⟩ with
-      | some (.role { name, args, content := #[_], .. }) =>
-        (mkNullNode (#[name] ++ args)).getRange?
+      | some (.role { name, args, content := #[_], .. }) => (mkNullNode (#[name] ++ args)).getRange?
       | _ => none
 
     let hint ← makeHint hintText (ofSuggs ++ catSuggs)
 
-    logErrorAt s m!"Multiple syntax entries found with atoms `{" ".intercalate atoms}`: {choices}{hint.getD m!""}"
+    logErrorAt s
+      m!"Multiple syntax entries found with atoms `{" ".intercalate atoms}`: \
+        {choices}{hint.getD m!""}"
     return .code s.getVersoCode
   else
     let (catName, k) := candidates[0]
@@ -386,27 +466,29 @@ where
       counts := counts.filter fun _ n => n == 1
       let sorted := counts.keys.toArray.qsort (fun x y => x.toString < y.toString)
       return sorted.map (s!" (cat := {·})")
-    else return #[]
-  ofSuggestions (o candidates) : TermElabM (Array String):= do
+    else
+      return #[]
+  ofSuggestions (o candidates) : TermElabM (Array String) := do
     if o.isAnonymous then
       let sorted := candidates |>.map (·.2) |>.qsort (fun x y => x.toString < y.toString)
       sorted.mapM fun k => do
         let k ← unresolveNameGlobalAvoidingLocals k
         pure s!" (of := {k})"
-    else return #[]
+    else
+      return #[]
   makeHint (hintText) (suggestions : Array String) : TermElabM (Option MessageData) := do
     let range? :=
       match InlineView.of ⟨← getRef⟩ with
-      | some (.role { name, args, content := #[_], .. }) =>
-        (mkNullNode (#[name] ++ args)).getRange?
+      | some (.role { name, args, content := #[_], .. }) => (mkNullNode (#[name] ++ args)).getRange?
       | _ => none
     if let some ⟨b, e⟩ := range? then
       let str := String.Pos.Raw.extract (← getFileMap).source b e
       let str := if str.startsWith "kw?" then "kw" ++ str.drop 3 else str
       let stx := Syntax.mkStrLit str (info := .synthetic b e (canonical := true))
-      let suggs := suggestions.map (fun (s : String) => {suggestion := str ++ s})
+      let suggs := suggestions.map (fun (s : String) => { suggestion := str ++ s })
       some <$> MessageData.hint hintText suggs (ref? := some stx)
-    else pure none
+    else
+      pure none
 
 /--
 A reference to a particular syntax kind, via one of its atoms.
@@ -421,20 +503,22 @@ process.
 Use `kw?` to receive a suggestion of a specific kind, and `kw!` to disable the check.
 -/
 @[builtin_doc_role]
-public def kw (cat : Ident := mkIdent .anonymous) (of : Ident := mkIdent .anonymous)
-    (xs : TSyntaxArray ``Parser.inline) : DocM (Inline ElabInline) := do
+public def kw
+    (cat : Ident := mkIdent .anonymous) (of : Ident := mkIdent .anonymous)
+    (xs : TSyntaxArray ``Parser.inline)
+    : DocM (Inline ElabInline) := do
   let s ← onlyCode xs
   kwImpl (cat := cat) (of := of) false s
 
 @[inherit_doc kw, builtin_doc_role]
-public def kw? (cat : Ident := mkIdent .anonymous) (of : Ident := mkIdent .anonymous)
-    (xs : TSyntaxArray ``Parser.inline) : DocM (Inline ElabInline) := do
+public def kw?
+    (cat : Ident := mkIdent .anonymous) (of : Ident := mkIdent .anonymous)
+    (xs : TSyntaxArray ``Parser.inline)
+    : DocM (Inline ElabInline) := do
   let s ← onlyCode xs
   kwImpl (cat := cat) (of := of) true s
 
-/--
-Checks that a syntax kind name exists.
--/
+/-- Checks that a syntax kind name exists. -/
 -- The builtin attribute will be available after the next stage0 update. Get rid of the
 -- builtin_initialize line and uncomment the attribute line once that's happened.
 -- @[builtin_deferred_doc_check PostponedKind]
@@ -449,10 +533,10 @@ public def checkKindExists : DeferredCheckHandler := fun d => do
 
 builtin_initialize DeferredCheck.addBuiltinHandler ``PostponedKind checkKindExists
 
-
 @[inherit_doc kw, builtin_doc_role]
-public def kw! (of : Option Ident := none) (scope : DocScope := .local)
-    (xs : TSyntaxArray ``Parser.inline) : DocM (Inline ElabInline) := do
+public def kw!
+    (of : Option Ident := none) (scope : DocScope := .local) (xs : TSyntaxArray ``Parser.inline)
+    : DocM (Inline ElabInline) := do
   let s ← onlyCode xs
   let some of' := of
     | let h ←
@@ -460,15 +544,18 @@ public def kw! (of : Option Ident := none) (scope : DocScope := .local)
           let kwName ← unresolveNameGlobalAvoidingLocals ``kw
           let kwSuggestionsName ← unresolveNameGlobalAvoidingLocals ``kw?
           let ss := #[
-            { suggestion := s!"{kwName}",
-              postInfo? := some "for automatic resolution" },
-            { suggestion := s!"{kwSuggestionsName}",
-              postInfo? := some "for automatic resolution with suggestions" }
+            { suggestion := s!"{kwName}", postInfo? := some "for automatic resolution" },
+            {
+              suggestion := s!"{kwSuggestionsName}"
+              postInfo? := some "for automatic resolution with suggestions"
+            }
           ]
           m!"Use one of the other keyword roles.".hint ss (ref? := name)
-        else pure m!""
-      logErrorAt s m!"No syntax kind specified. The named argument `of` is required for \
-        `{.ofConstName `Lean.Doc.kw!}`.{h}"
+        else
+          pure m!""
+      logErrorAt s
+        m!"No syntax kind specified. The named argument `of` is required for \
+          `{.ofConstName `Lean.Doc.kw!}`.{h}"
       return .code s.getVersoCode
   match scope with
   | .local =>
@@ -478,13 +565,12 @@ public def kw! (of : Option Ident := none) (scope : DocScope := .local)
     unless parsers.kinds.contains k do
       logErrorAt s m!"Not a syntax kind: `{.ofConstName k}`"
   | .import xs =>
-    return .deferred (← addDeferredCheck (.mk (PostponedKind.mk of'.getId)) xs (← getRef)) #[.code s.getVersoCode]
+    return .deferred (← addDeferredCheck (.mk (PostponedKind.mk of'.getId)) xs (← getRef))
+      #[.code s.getVersoCode]
 
   pure <| .code s.getVersoCode
 
-/--
-Suggests the `kw` role, if applicable.
--/
+/-- Suggests the `kw` role, if applicable. -/
 @[builtin_doc_code_suggestions]
 public def suggestKw (code : VersoCode) : DocM (Array CodeSuggestion) := do
   let atoms := code.getVersoCode |>.split Char.isWhitespace |>.toStringList

@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Basic
 import Init.Grind.Norm
@@ -23,9 +24,12 @@ in `∀ x, p x → q x ∧ r x` must not block that. A telescope of arrows alone
 kept: `grind` propagates `a ∧ b` from `p` without a case split.
 -/
 partial def forallImpAnd? (e : Expr) : MetaM (Option (Expr × Expr × Expr)) := do
-  unless isCandidate e do return none
-  let some (lhs, rhs, h?, true) ← go e | return none
-  let some h := h? | return none -- unreachable: `e` has at least one binder
+  unless isCandidate e do
+    return none
+  let some (lhs, rhs, h?, true) ← go e
+    | return none
+  let some h := h?
+    | return none -- unreachable: `e` has at least one binder
   return some (lhs, rhs, h)
 where
   /-- Syntactic probe: the telescope ends in a conjunction and some binder is dependent. -/
@@ -41,27 +45,49 @@ where
   -/
   go (t : Expr) : MetaM (Option (Expr × Expr × Option Expr × Bool)) := do
     match_expr t with
-    | And a b => return some (a, b, none, false)
+    | And a b =>
+      return some (a, b, none, false)
     | _ =>
-      let .forallE n p rest bi := t | return none
+      let .forallE n p rest bi := t
+        | return none
       let u ← getLevel p
       if rest.hasLooseBVars then
         withLocalDecl n bi p fun x => do
           let rest := rest.instantiate1 x
-          let some (a, b, h?, _) ← go rest | return none
+          let some (a, b, h?, _) ← go rest
+            | return none
           let lhs ← mkForallFVars #[x] a
           let rhs ← mkForallFVars #[x] b
-          let hAnd := mkApp3 (mkConst ``Grind.forall_and [u]) p (← mkLambdaFVars #[x] a) (← mkLambdaFVars #[x] b)
-          let some h := h? | return some (lhs, rhs, some hAnd, true)
-          let hCongr := mkApp4 (mkConst ``forall_congr [u]) p (← mkLambdaFVars #[x] rest) (← mkLambdaFVars #[x] (mkAnd a b)) (← mkLambdaFVars #[x] h)
-          return some (lhs, rhs, some (mkEqTransCoreProp t (← mkForallFVars #[x] (mkAnd a b)) (mkAnd lhs rhs) hCongr hAnd), true)
+          let hAnd :=
+            mkApp3 (mkConst ``Grind.forall_and [u]) p (← mkLambdaFVars #[x] a)
+              (← mkLambdaFVars #[x] b)
+          let some h := h?
+            | return some (lhs, rhs, some hAnd, true)
+          let hCongr :=
+            mkApp4 (mkConst ``forall_congr [u]) p (← mkLambdaFVars #[x] rest)
+              (← mkLambdaFVars #[x] (mkAnd a b)) (← mkLambdaFVars #[x] h)
+          return some (
+            lhs,
+            rhs,
+            some (mkEqTransCoreProp t (← mkForallFVars #[x] (mkAnd a b)) (mkAnd lhs rhs) hCongr
+              hAnd),
+            true
+          )
       else
-        let some (a, b, h?, dep) ← go rest | return none
+        let some (a, b, h?, dep) ← go rest
+          | return none
         let lhs := mkForall n bi p a
         let rhs := mkForall n bi p b
-        let hAnd := mkApp3 (mkConst ``Grind.forall_and [u]) p (mkLambda n bi p a) (mkLambda n bi p b)
-        let some h := h? | return some (lhs, rhs, some hAnd, dep)
+        let hAnd :=
+          mkApp3 (mkConst ``Grind.forall_and [u]) p (mkLambda n bi p a) (mkLambda n bi p b)
+        let some h := h?
+          | return some (lhs, rhs, some hAnd, dep)
         let hCongr := mkApp4 (mkConst ``implies_congr_right [u, 0]) p rest (mkAnd a b) h
-        return some (lhs, rhs, some (mkEqTransCoreProp t (mkForall n bi p (mkAnd a b)) (mkAnd lhs rhs) hCongr hAnd), dep)
+        return some (
+          lhs,
+          rhs,
+          some (mkEqTransCoreProp t (mkForall n bi p (mkAnd a b)) (mkAnd lhs rhs) hCongr hAnd),
+          dep
+        )
 
 end Lean.Meta.Grind

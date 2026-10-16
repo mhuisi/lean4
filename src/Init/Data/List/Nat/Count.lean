@@ -27,13 +27,15 @@ open Nat
 
 set_option backward.isDefEq.respectTransparency false in
 @[grind =]
-theorem countP_set {p : α → Bool} {l : List α} {i : Nat} {a : α} (h : i < l.length) :
-    (l.set i a).countP p = l.countP p - (if p l[i] then 1 else 0) + (if p a then 1 else 0) := by
+theorem countP_set {p : α → Bool} {l : List α} {i : Nat} {a : α} (h : i < l.length)
+    : (l.set i a).countP p = l.countP p - (if p l[i] then 1 else 0) + (if p a then 1 else 0) := by
   induction l generalizing i with
-  | nil => simp at h
+  | nil =>
+    simp at h
   | cons x l ih =>
     cases i with
-    | zero => simp [countP_cons]
+    | zero =>
+      simp [countP_cons]
     | succ i =>
       simp [add_one_lt_add_one_iff] at h
       simp [countP_cons, ih h]
@@ -41,16 +43,21 @@ theorem countP_set {p : α → Bool} {l : List α} {i : Nat} {a : α} (h : i < l
       omega
 
 @[grind =]
-theorem count_set [BEq α] {a b : α} {l : List α} {i : Nat} (h : i < l.length) :
-    (l.set i a).count b = l.count b - (if l[i] == b then 1 else 0) + (if a == b then 1 else 0) := by
+theorem count_set [BEq α] {a b : α} {l : List α} {i : Nat} (h : i < l.length)
+    : (l.set i a).count b
+      = l.count b - (if l[i] == b then 1 else 0) + (if a == b then 1 else 0) := by
   simp [count_eq_countP, countP_set, h]
 
 @[grind =]
-theorem countP_replace [BEq α] [LawfulBEq α] {a b : α} {l : List α} {p : α → Bool} :
-    (l.replace a b).countP p =
-      if l.contains a then l.countP p + (if p b then 1 else 0) - (if p a then 1 else 0) else l.countP p := by
+theorem countP_replace [BEq α] [LawfulBEq α] {a b : α} {l : List α} {p : α → Bool}
+    : (l.replace a b).countP p
+      = if l.contains a then
+          l.countP p + (if p b then 1 else 0) - (if p a then 1 else 0)
+        else
+          l.countP p := by
   induction l with
-  | nil => simp
+  | nil =>
+    simp
   | cons x l ih =>
     simp [replace_cons]
     split <;> rename_i h
@@ -69,13 +76,17 @@ theorem countP_replace [BEq α] [LawfulBEq α] {a b : α} {l : List α} {p : α 
       · omega
 
 @[grind =]
-theorem count_replace [BEq α] [LawfulBEq α] {a b c : α} {l : List α} :
-    (l.replace a b).count c =
-      if l.contains a then l.count c + (if b == c then 1 else 0) - (if a == c then 1 else 0) else l.count c := by
+theorem count_replace [BEq α] [LawfulBEq α] {a b c : α} {l : List α}
+    : (l.replace a b).count c
+      = if l.contains a then
+          l.count c + (if b == c then 1 else 0) - (if a == c then 1 else 0)
+        else
+          l.count c := by
   simp [count_eq_countP, countP_replace]
 
-@[grind =] theorem count_insert [BEq α] [LawfulBEq α] {a b : α} {l : List α} :
-    count a (List.insert b l) = max (count a l) (if b == a then 1 else 0) := by
+@[grind =]
+theorem count_insert [BEq α] [LawfulBEq α] {a b : α} {l : List α}
+    : count a (List.insert b l) = max (count a l) (if b == a then 1 else 0) := by
   simp only [List.insert, contains_eq_mem, decide_eq_true_eq, beq_iff_eq]
   split <;> rename_i h
   · split <;> rename_i h'
@@ -97,9 +108,11 @@ theorem count_replace [BEq α] [LawfulBEq α] {a b c : α} {l : List α} :
 The number of elements satisfying a predicate in a sublist is at least the number of elements satisfying the predicate in the list,
 minus the difference in the lengths.
 -/
-theorem Sublist.le_countP (s : l₁ <+ l₂) (p) : countP p l₂ - (l₂.length - l₁.length) ≤ countP p l₁ := by
+theorem Sublist.le_countP (s : l₁ <+ l₂) (p)
+    : countP p l₂ - (l₂.length - l₁.length) ≤ countP p l₁ := by
   match s with
-  | .slnil => simp
+  | .slnil =>
+    simp
   | .cons a s =>
     rename_i l
     simp only [countP_cons, length_cons]
@@ -135,20 +148,23 @@ grind_pattern le_countP_tail => countP p l.tail
 
 variable [BEq α]
 
-theorem Sublist.le_count (s : l₁ <+ l₂) (a : α) : count a l₂ - (l₂.length - l₁.length) ≤ count a l₁ :=
+theorem Sublist.le_count (s : l₁ <+ l₂) (a : α)
+    : count a l₂ - (l₂.length - l₁.length) ≤ count a l₁ :=
   s.le_countP _
 
-theorem IsPrefix.le_count (s : l₁ <+: l₂) (a : α) : count a l₂ - (l₂.length - l₁.length) ≤ count a l₁ :=
+theorem IsPrefix.le_count (s : l₁ <+: l₂) (a : α)
+    : count a l₂ - (l₂.length - l₁.length) ≤ count a l₁ :=
   s.sublist.le_count _
 
-theorem IsSuffix.le_count (s : l₁ <:+ l₂) (a : α) : count a l₂ - (l₂.length - l₁.length) ≤ count a l₁ :=
+theorem IsSuffix.le_count (s : l₁ <:+ l₂) (a : α)
+    : count a l₂ - (l₂.length - l₁.length) ≤ count a l₁ :=
   s.sublist.le_count _
 
-theorem IsInfix.le_count (s : l₁ <:+: l₂) (a : α) : count a l₂ - (l₂.length - l₁.length) ≤ count a l₁ :=
+theorem IsInfix.le_count (s : l₁ <:+: l₂) (a : α)
+    : count a l₂ - (l₂.length - l₁.length) ≤ count a l₁ :=
   s.sublist.le_count _
 
-theorem le_count_tail {a : α} {l : List α} : count a l - 1 ≤ count a l.tail :=
-  le_countP_tail
+theorem le_count_tail {a : α} {l : List α} : count a l - 1 ≤ count a l.tail := le_countP_tail
 
 grind_pattern le_count_tail => count a l.tail
 

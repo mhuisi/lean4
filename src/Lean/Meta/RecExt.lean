@@ -20,11 +20,8 @@ uses when unfolding declarations.
 builtin_initialize recExt : TagDeclarationExtension ←
   mkTagDeclarationExtension `recExt (asyncMode := .async .asyncEnv)
 
-/--
-Marks the given declaration as recursive.
--/
-def markAsRecursive (declName : Name) : CoreM Unit :=
-  modifyEnv (recExt.tag · declName)
+/-- Marks the given declaration as recursive. -/
+def markAsRecursive (declName : Name) : CoreM Unit := modifyEnv (recExt.tag · declName)
 
 /--
 Returns `true` if `declName` was defined using well-founded recursion, or structural recursion.

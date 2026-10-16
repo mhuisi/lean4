@@ -23,15 +23,15 @@ section
 variable (α : Type) [BEq α] [Hashable α]
 
 structure Data where
-  index?   : Option Nat := none
+  index? : Option Nat := none
   lowlink? : Option Nat := none
-  onStack  : Bool       := false
+  onStack : Bool := false
 
 structure State where
-  stack     : List α := []
+  stack : List α := []
   nextIndex : Nat := 0
-  data      : Std.HashMap α Data := {}
-  sccs      : List (List α) := []
+  data : Std.HashMap α Data := {}
+  sccs : List (List α) := []
 
 abbrev M := StateM (State α)
 end
@@ -42,43 +42,47 @@ private def getDataOf (a : α) : M α Data := do
   let s ← get
   match s.data[a]? with
   | some d => pure d
-  | none   => pure {}
+  | none => pure {}
 
 private def push (a : α) : M α Unit :=
-  modify fun s => { s with
-    stack     := a :: s.stack,
-    nextIndex := s.nextIndex + 1,
-    data      := s.data.insert a {
-      index?   := s.nextIndex,
-      lowlink? := s.nextIndex,
-      onStack  := true
-    }
+  modify fun s => {
+    s with
+    stack := a :: s.stack
+    nextIndex := s.nextIndex + 1
+    data := s.data.insert a { index? := s.nextIndex, lowlink? := s.nextIndex, onStack := true }
   }
 
 private def modifyDataOf (a : α) (f : Data → Data) : M α Unit :=
-  modify fun s => { s with
-    data := match s.data[a]? with
-      | none   => s.data
+  modify fun s => {
+    s with
+    data :=
+      match s.data[a]? with
+      | none => s.data
       | some d => s.data.insert a (f d)
   }
 
-private def resetOnStack (a : α) : M α Unit :=
-  modifyDataOf a fun d => { d with onStack := false }
+private def resetOnStack (a : α) : M α Unit := modifyDataOf a fun d => { d with onStack := false }
 
 private def updateLowLinkOf (a : α) (v : Option Nat) : M α Unit :=
-  modifyDataOf a fun d => { d with
-    lowlink? := match d.lowlink?, v with
-      | i, none => i
-      | none, i => i
-      | some i, some j => if i < j then i else j
+  modifyDataOf a fun d => {
+    d with
+    lowlink? :=
+      match d.lowlink?, v with
+      | i, none =>
+        i
+      | none, i =>
+        i
+      | some i, some j =>
+        if i < j then i else j
   }
 
 private def addSCC (a : α) : M α Unit := do
   let rec add
-    | [],    newSCC => modify fun s => { s with stack := [], sccs := newSCC :: s.sccs }
-    | b::bs, newSCC => do
-      resetOnStack b;
-      let newSCC := b::newSCC;
+    | [], newSCC =>
+      modify fun s => { s with stack := [], sccs := newSCC :: s.sccs }
+    | b :: bs, newSCC => do
+      resetOnStack b
+      let newSCC := b :: newSCC
       if a != b then
         add bs newSCC
       else
@@ -88,11 +92,11 @@ private def addSCC (a : α) : M α Unit := do
 private partial def sccAux (successorsOf : α → List α) (a : α) : M α Unit := do
   push a
   (successorsOf a).forM fun b => do
-    let bData ← getDataOf b;
+    let bData ← getDataOf b
     if bData.index?.isNone then
       -- `b` has not been visited yet
-      sccAux successorsOf b;
-      let bData ← getDataOf b;
+      sccAux successorsOf b
+      let bData ← getDataOf b
       updateLowLinkOf a bData.lowlink?
     else if bData.onStack then do
       -- `b` is on the stack. So, it must be in the current SCC
@@ -100,14 +104,15 @@ private partial def sccAux (successorsOf : α → List α) (a : α) : M α Unit 
       updateLowLinkOf a bData.index?
     else
       pure ()
-  let aData ← getDataOf a;
+  let aData ← getDataOf a
   if aData.lowlink? == aData.index? then
     addSCC a
 
 def scc (vertices : List α) (successorsOf : α → List α) : List (List α) :=
-  let main : M α Unit := vertices.forM fun a => do
-    let aData ← getDataOf a
-    if aData.index?.isNone then sccAux successorsOf a
+  let main : M α Unit :=
+    vertices.forM fun a => do
+      let aData ← getDataOf a
+      if aData.index?.isNone then sccAux successorsOf a
   let (_, s) := main.run {}
   s.sccs.reverse
 

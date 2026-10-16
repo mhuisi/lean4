@@ -64,14 +64,16 @@ class NatCast (R : Type u) where
   /-- The canonical map `Nat → R`. -/
   protected natCast : Nat → R
 
-instance : NatCast Nat where natCast n := n
+instance : NatCast Nat where
+  natCast n := n
 
 @[coe, expose, reducible, match_pattern, inherit_doc NatCast]
-protected def Nat.cast {R : Type u} [NatCast R] : Nat → R :=
-  NatCast.natCast
+protected def Nat.cast {R : Type u} [NatCast R] : Nat → R := NatCast.natCast
 
 -- see the notes about coercions into arbitrary types in the module doc-string
-instance [NatCast R] : CoeTail Nat R where coe := Nat.cast
+instance [NatCast R] : CoeTail Nat R where
+  coe := Nat.cast
 
 -- see the notes about coercions into arbitrary types in the module doc-string
-instance [NatCast R] : CoeHTCT Nat R where coe := Nat.cast
+instance [NatCast R] : CoeHTCT Nat R where
+  coe := Nat.cast

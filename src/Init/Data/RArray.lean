@@ -40,10 +40,11 @@ variable {α : Type u}
 noncomputable abbrev RArray.get (a : RArray α) (n : Nat) : α :=
   RArray.rec (fun x => x) (fun p _ _ l r => (Nat.ble p n).rec l r) a
 
-private theorem RArray.get_eq_def (a : RArray α) (n : Nat) :
-  a.get n = match a with
-    | .leaf x => x
-    | .branch p l r => (Nat.ble p n).rec (l.get n) (r.get n) := by
+private theorem RArray.get_eq_def (a : RArray α) (n : Nat)
+    : a.get n
+      = match a with
+        | .leaf x => x
+        | .branch p l r => (Nat.ble p n).rec (l.get n) (r.get n) := by
   conv => lhs; unfold RArray.get
   split <;> rfl
 
@@ -57,7 +58,8 @@ def RArray.getImpl (a : RArray α) (n : Nat) : α :=
 theorem RArray.get_eq_getImpl : @RArray.get = @RArray.getImpl := by
   funext α a n
   induction a with
-  | leaf _ => rfl
+  | leaf _ =>
+    rfl
   | branch p l r ihl ihr =>
     rw [RArray.getImpl, RArray.get_eq_def]
     simp only [ihl, ihr, ← Nat.not_le, ← Nat.ble_eq, ite_not]

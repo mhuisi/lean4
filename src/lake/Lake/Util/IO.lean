@@ -20,7 +20,9 @@ public def createParentDirs (path : FilePath) : IO Unit := do
 
 /-- Remove the file at {lean}`path` if it exists. -/
 public def removeFileIfExists (path : FilePath) : IO Unit := do
-  try IO.FS.removeFile path catch
+  try
+    IO.FS.removeFile path
+  catch
     | .noFileOrDirectory .. => pure ()
     | e => throw e
 
@@ -29,9 +31,12 @@ Write the UTF-8 encoded string {lean}`content` to {lean}`path`.
 If the file already exists, does nothing.
 -/
 public def writeFileIfNew (path : FilePath) (content : String) : IO Unit := do
-  let h ← try IO.FS.Handle.mk path IO.FS.Mode.writeNew catch
-    | .alreadyExists .. => return
-    | e => throw e
+  let h ←
+    try
+      IO.FS.Handle.mk path IO.FS.Mode.writeNew
+    catch
+      | .alreadyExists .. => return
+      | e => throw e
   h.putStr content
 
 /--
@@ -39,9 +44,12 @@ Write the bytes of {lean}`content` to {lean}`path`.
 If the file already exists, does nothing.
 -/
 public def writeBinFileIfNew (path : FilePath) (content : ByteArray) : IO Unit := do
-  let h ← try IO.FS.Handle.mk path IO.FS.Mode.writeNew catch
-    | .alreadyExists .. => return
-    | e => throw e
+  let h ←
+    try
+      IO.FS.Handle.mk path IO.FS.Mode.writeNew
+    catch
+      | .alreadyExists .. => return
+      | e => throw e
   h.write content
 
 /--
@@ -50,19 +58,27 @@ Like {lean}`IO.FS.removeDirAll`, but does not fail if {lean}`path` does not exis
 or if a file is first deleted by a racing process.
 -/
 public partial def removeDirAllIfExists (path : FilePath) : IO Unit := do
-  let ents ← try path.readDir catch
-    | .noFileOrDirectory .. => return -- path did not exist or something else was faster
-    | e => throw e
+  let ents ←
+    try
+      path.readDir
+    catch
+      | .noFileOrDirectory .. => return -- path did not exist or something else was faster
+      | e => throw e
   for ent in ents do
     -- Do not follow symlinks
-    let mdata ← try ent.path.symlinkMetadata catch
-      | .noFileOrDirectory .. => continue -- something else was faster
-      | e => throw e
+    let mdata ←
+      try
+        ent.path.symlinkMetadata
+      catch
+        | .noFileOrDirectory .. => continue -- something else was faster
+        | e => throw e
     if mdata.type == .dir then
       removeDirAllIfExists ent.path
     else
       removeFileIfExists ent.path
-  try IO.FS.removeDir path catch
+  try
+    IO.FS.removeDir path
+  catch
     | .noFileOrDirectory .. => return -- something else was faster
     | e => throw e
 
@@ -96,6 +112,7 @@ public def resolvePath (path : FilePath) : BaseIO FilePath := do
     return ""
 
 /-- Returns the normalized real path of a file if and only if it exists. -/
-@[inline] public def resolvePath? (path : FilePath) : BaseIO (Option FilePath) := do
+@[inline]
+public def resolvePath? (path : FilePath) : BaseIO (Option FilePath) := do
   let path ← resolvePath path
   return if path.toString.isEmpty then none else some path

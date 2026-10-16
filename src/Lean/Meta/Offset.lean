@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Data.LBool
 public import Lean.Meta.Basic
@@ -23,16 +24,17 @@ private abbrev withInstantiatedMVars (e : Expr) (k : Expr → OptionT MetaM α) 
 
 open Structural in -- TODO FIX
 /--
-  Evaluate simple `Nat` expressions.
-  Remark: this method assumes the given expression has type `Nat`. -/
+Evaluate simple `Nat` expressions.
+Remark: this method assumes the given expression has type `Nat`.
+-/
 partial def evalNat (e : Expr) : OptionT MetaM Nat := do
   match e with
-  | .lit (.natVal n)     => return n
-  | .mdata _ e           => evalNat e
+  | .lit (.natVal n) => return n
+  | .mdata _ e => evalNat e
   | .const ``Nat.zero .. => return 0
-  | .app ..              => visit e
-  | .mvar ..             => visit e
-  | _                    => failure
+  | .app .. => visit e
+  | .mvar .. => visit e
+  | _ => failure
 where
   evalPow (b n : Expr) : OptionT MetaM Nat := do
     let n ← evalNat n
@@ -80,32 +82,33 @@ Quick function for converting `e` into `s + k` s.t. `e` is definitionally equal 
 This function always succeeds in finding such `s` and `k`
 (as a last resort it returns `e` and `0`).
 -/
-private partial def getOffset (e : Expr) : MetaM (Expr × Nat) :=
-  return (← isOffset? e).getD (e, 0)
+private partial def getOffset (e : Expr) : MetaM (Expr × Nat) := return (← isOffset? e).getD (e, 0)
 
-/--
-Similar to `getOffset` but returns `none` if the expression is not an offset.
--/
+/-- Similar to `getOffset` but returns `none` if the expression is not an offset. -/
 partial def isOffset? (e : Expr) : OptionT MetaM (Expr × Nat) := do
   let add (a b : Expr) := do
     let v ← evalNat b
     let (s, k) ← getOffset a
-    return (s, k+v)
+    return (s, k + v)
   match_expr e with
   | Nat.succ a =>
     let (s, k) ← getOffset a
-    return (s, k+1)
-  | Nat.add a b => add a b
-  | Add.add _ i a b => guard (← matchesInstance i Nat.mkInstAdd); add a b
-  | HAdd.hAdd _ _ _ i a b => guard (← matchesInstance i Nat.mkInstHAdd); add a b
-  | _ => failure
+    return (s, k + 1)
+  | Nat.add a b =>
+    add a b
+  | Add.add _ i a b =>
+    guard (← matchesInstance i Nat.mkInstAdd); add a b
+  | HAdd.hAdd _ _ _ i a b =>
+    guard (← matchesInstance i Nat.mkInstHAdd); add a b
+  | _ =>
+    failure
 
 end
 
 private def isNatZero (e : Expr) : MetaM Bool := do
   match (← evalNat e) with
   | some v => return v == 0
-  | _      => return false
+  | _ => return false
 
 def mkOffset (e : Expr) (offset : Nat) : MetaM Expr := do
   if offset == 0 then
@@ -123,8 +126,7 @@ def isDefEqOffset (s t : Expr) : MetaM LBool := do
       x
     else
       return LBool.undef
-  let isDefEq (s t) : MetaM LBool :=
-    ifNatExpr <| toLBoolM <| Meta.isExprDefEqAux s t
+  let isDefEq (s t) : MetaM LBool := ifNatExpr <| toLBoolM <| Meta.isExprDefEqAux s t
   if !(← getConfig).offsetCnstrs then
     return LBool.undef
   else
@@ -159,7 +161,8 @@ def isDefEqOffset (s t : Expr) : MetaM LBool := do
         | none =>
           match (← evalNat t) with
           | some v₂ => ifNatExpr <| return (v₁ == v₂).toLBool -- v₁ =?= v₂
-          | none    => return LBool.undef
-      | none => return LBool.undef
+          | none => return LBool.undef
+      | none =>
+        return LBool.undef
 
 end Lean.Meta

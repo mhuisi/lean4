@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Order.OrderM
 import Lean.Meta.Tactic.Grind.Arith.Util
@@ -13,7 +14,8 @@ namespace Lean.Meta.Grind.Order
 def Cnstr.pp (c : Cnstr NodeId) : OrderM MessageData := do
   let u ← getExpr c.u
   let v ← getExpr c.v
-  let op := match c.kind with
+  let op :=
+    match c.kind with
     | .le => "≤"
     | .lt => "<"
   if c.k != 0 then
@@ -48,23 +50,18 @@ instance : LE Weight where
 instance : LT Weight where
   lt a b := compare a b = .lt
 
-instance : DecidableLE Weight :=
-  fun a b => inferInstanceAs (Decidable (compare a b ≠ .gt))
+instance : DecidableLE Weight := fun a b => inferInstanceAs (Decidable (compare a b ≠ .gt))
 
-instance : DecidableLT Weight :=
-  fun a b => inferInstanceAs (Decidable (compare a b = .lt))
+instance : DecidableLT Weight := fun a b => inferInstanceAs (Decidable (compare a b = .lt))
 
-def Weight.add (a b : Weight) : Weight :=
-  { k := a.k + b.k, strict := a.strict || b.strict }
+def Weight.add (a b : Weight) : Weight := { k := a.k + b.k, strict := a.strict || b.strict }
 
 instance : Add Weight where
   add := Weight.add
 
-def Weight.isNeg (a : Weight) : Bool :=
-  a.k < 0 || (a.k == 0 && a.strict)
+def Weight.isNeg (a : Weight) : Bool := a.k < 0 || (a.k == 0 && a.strict)
 
-def Weight.isZero (a : Weight) : Bool :=
-  a.k == 0 && !a.strict
+def Weight.isZero (a : Weight) : Bool := a.k == 0 && !a.strict
 
 instance : ToString Weight where
   toString a := if a.strict then s!"{a.k}-ε" else s!"{a.k}"

@@ -19,16 +19,26 @@ Computes the product of two floating-point numbers and rounds the result accordi
 the given specification.
 -/
 def mul (spec : Format) : UnpackedFloat → UnpackedFloat → UnpackedFloat
-  | .notANumber, _ => .notANumber
-  | _, .notANumber => .notANumber
-  | .infinity sign₁, .infinity sign₂ => .infinity (sign₁ * sign₂)
-  | .infinity sign₁, .finite sign₂ .. => .infinity (sign₁ * sign₂)
-  | .finite sign₁ .., .infinity sign₂ => .infinity (sign₁ * sign₂)
-  | .infinity _, .zero _ => .notANumber
-  | .zero _, .infinity _ => .notANumber
-  | .finite sign₁ .., .zero sign₂ => .zero (sign₁ * sign₂)
-  | .zero sign₁, .finite sign₂ .. => .zero (sign₁ * sign₂)
-  | .zero sign₁, .zero sign₂ => .zero (sign₁ * sign₂)
+  | .notANumber, _ =>
+    .notANumber
+  | _, .notANumber =>
+    .notANumber
+  | .infinity sign₁, .infinity sign₂ =>
+    .infinity (sign₁ * sign₂)
+  | .infinity sign₁, .finite sign₂ .. =>
+    .infinity (sign₁ * sign₂)
+  | .finite sign₁ .., .infinity sign₂ =>
+    .infinity (sign₁ * sign₂)
+  | .infinity _, .zero _ =>
+    .notANumber
+  | .zero _, .infinity _ =>
+    .notANumber
+  | .finite sign₁ .., .zero sign₂ =>
+    .zero (sign₁ * sign₂)
+  | .zero sign₁, .finite sign₂ .. =>
+    .zero (sign₁ * sign₂)
+  | .zero sign₁, .zero sign₂ =>
+    .zero (sign₁ * sign₂)
   | .finite s₁ m₁ e₁ _, .finite s₂ m₂ e₂ _ =>
     roundWithAccuracy spec (s₁ * s₂) (m₁ * m₂) (e₁ + e₂) .exact
 

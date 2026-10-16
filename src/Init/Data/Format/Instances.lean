@@ -14,8 +14,7 @@ public section
 
 open Std
 
-instance (priority := low) [ToString α] : ToFormat α :=
-  ⟨Std.Format.text ∘ toString⟩
+instance (priority := low) [ToString α] : ToFormat α := ⟨Std.Format.text ∘ toString⟩
 
 def List.format [ToFormat α] : List α → Format
   | [] => "[]"
@@ -34,11 +33,10 @@ result.
 This function is usually accessed through the `ToFormat (Option α)` instance.
 -/
 def Option.format {α : Type u} [ToFormat α] : Option α → Format
-  | none   => "none"
+  | none => "none"
   | some a => "some " ++ Std.format a
 
-instance {α : Type u} [ToFormat α] : ToFormat (Option α) :=
-  ⟨Option.format⟩
+instance {α : Type u} [ToFormat α] : ToFormat (Option α) := ⟨Option.format⟩
 
 instance {α : Type u} {β : Type v} [ToFormat α] [ToFormat β] : ToFormat (Prod α β) where
   format := fun (a, b) => Format.paren <| format a ++ "," ++ Format.line ++ format b

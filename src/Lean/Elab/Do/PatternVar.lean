@@ -25,13 +25,11 @@ open Lean Meta Parser.Term
 -- of the catch-all "unsupported pattern in syntax match".
 def getPatternVarsEx (pattern : Term) : TermElabM (Array Ident) :=
   open TSyntax.Compat in -- until PatternVar := Ident
-  Term.Quotation.getPatternVars pattern <|>
-  Term.getPatternVars pattern
+  Term.Quotation.getPatternVars pattern <|> Term.getPatternVars pattern
 
 def getPatternsVarsEx (patterns : Array Term) : TermElabM (Array Ident) :=
   open TSyntax.Compat in -- until PatternVar := Ident
-  Term.Quotation.getPatternsVars patterns <|>
-  Term.getPatternsVars patterns
+  Term.Quotation.getPatternsVars patterns <|> Term.getPatternsVars patterns
 
 private def getLetIdVars (letId : TSyntax ``letId) : TermElabM (Array Ident) := do
   match letId with
@@ -69,7 +67,8 @@ private def getLetRecDeclVars (letRecDecl : TSyntax ``letRecDecl) : TermElabM (A
 
 def getLetRecDeclsVars (letRecDecls : TSyntax ``letRecDecls) : TermElabM (Array Ident) := do
   -- def letRecDecls := sepBy1 letRecDecl ", "
-  let `(letRecDecls| $[$letRecDecls:letRecDecl],*) := letRecDecls | throwUnsupportedSyntax
+  let `(letRecDecls| $[$letRecDecls:letRecDecl],*) := letRecDecls
+    | throwUnsupportedSyntax
   let mut allVars := #[]
   for letRecDecl in letRecDecls do
     let vars ← getLetRecDeclVars letRecDecl
@@ -77,7 +76,8 @@ def getLetRecDeclsVars (letRecDecls : TSyntax ``letRecDecls) : TermElabM (Array 
   return allVars
 
 def getExprPatternVarsEx (exprPattern : TSyntax ``matchExprPat) : TermElabM (Array Ident) := do
-  let `(matchExprPat| $[$var? @]? $_funName:ident $pvars*) := exprPattern | throwUnsupportedSyntax
+  let `(matchExprPat| $[$var? @]? $_funName:ident $pvars*) := exprPattern
+    | throwUnsupportedSyntax
   match var? with
   | some var => return #[var] ++ pvars.filter (·.raw.isIdent) |>.map (⟨·⟩)
   | none => return pvars.filter (·.raw.isIdent) |>.map (⟨·⟩)

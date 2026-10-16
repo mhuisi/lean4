@@ -35,26 +35,30 @@ scoped syntax:max "term(" term ")" : term
 -- allow fallback to `term`
 macro_rules
   | `(spred(term($t))) => pure t
-  | `(spred($t))       => pure t
+  | `(spred($t)) => pure t
 
 -- pushes `spred` inside some `term` constructs
 macro_rules
-  | `(spred(($P)))                  => ``((spred($P)))
-  | `(spred(fun $xs* => $b))        => ``(fun $xs* => spred($b))
+  | `(spred(($P))) => ``((spred($P)))
+  | `(spred(fun $xs* => $b)) => ``(fun $xs* => spred($b))
   | `(spred(if $c then $t else $e)) => ``(if $c then spred($t) else spred($e))
-  | `(spred(($P : $t)))             => ``((spred($P) : $t))
+  | `(spred(($P : $t))) => ``((spred($P) : $t))
 
 /-- Removes an `spred` layer from a `term` syntax object. -/
 -- inverts the rules above.
 partial def SPred.Notation.unpack [Monad m] [MonadRef m] [MonadQuotation m] : Term → m Term
-  | `(spred($P))             => do `($P)
-  | `(($P))                  => do `(($(← unpack P)))
+  | `(spred($P)) => do
+    `($P)
+  | `(($P)) => do
+    `(($(← unpack P)))
   | `(if $c then $t else $e) => do
     let t ← unpack t
     let e ← unpack e
     `(if $c then $t else $e)
-  | `(fun $xs* => $b)        => do
+  | `(fun $xs* => $b) => do
     let b ← unpack b
     `(fun $xs* => $b)
-  | `(($P : $t))             => do ``(($(← unpack P) : $t))
-  | `($t)                    => `($t)
+  | `(($P : $t)) => do
+    ``(($(← unpack P) : $t))
+  | `($t) =>
+    `($t)

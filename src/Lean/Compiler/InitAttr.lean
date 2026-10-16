@@ -18,11 +18,11 @@ namespace Lean
 
 private def getIOTypeArg : Expr → Option Expr
   | Expr.app (Expr.const `IO _) arg => some arg
-  | _                               => none
+  | _ => none
 
 private def isUnitType : Expr → Bool
   | Expr.const `Unit _ => true
-  | _                  => false
+  | _ => false
 
 private def isIOUnit (type : Expr) : Bool :=
   match getIOTypeArg type with
@@ -37,37 +37,48 @@ Run the initializer of the given module (without `builtin_initialize` commands).
 Return `false` if the initializer is not available as native code.
 Initializers do not have corresponding Lean definitions, so they cannot be interpreted in this case.
 -/
-@[inline] private unsafe def runModInit (mod : Name) (pkg? : Option String) (phases : IRPhases) : IO Bool :=
+@[inline]
+private unsafe def runModInit (mod : Name) (pkg? : Option String) (phases : IRPhases) : IO Bool :=
   runModInitCore (mkModuleInitializationFunctionName mod pkg? phases)
 
-/-- Run the initializer for `decl` and store its value for global access. Should only be used while importing. -/
+/--
+Run the initializer for `decl` and store its value for global access. Should only be used while importing.
+-/
 @[extern "lean_run_init"]
 unsafe opaque runInit (env : @& Environment) (opts : @& Options) (decl initDecl : @& Name) : IO Unit
 
 /-- Set of modules for which we have already run the module initializer in the interpreter. -/
 builtin_initialize interpretedModInits : IO.Ref NameSet ← IO.mkRef {}
 
-unsafe def registerInitAttrUnsafe (attrName : Name) (runAfterImport : Bool) (ref : Name) : IO (ParametricAttribute Name) :=
+unsafe def registerInitAttrUnsafe (attrName : Name) (runAfterImport : Bool) (ref : Name)
+    : IO (ParametricAttribute Name) :=
   registerParametricAttribute {
     ref := ref
     name := attrName
     descr := "initialization procedure for global references"
     -- We want to run `[init]` in declaration order
     preserveOrder := true
-    getParam := fun declName stx => withoutExporting do
-      let decl ← getConstInfo declName
-      match (← Attribute.Builtin.getIdent? stx) with
-      | some initFnName =>
-        let initFnName ← Elab.realizeGlobalConstNoOverloadWithInfo initFnName
-        let initDecl ← getConstInfo initFnName
-        match getIOTypeArg initDecl.type with
-        | none => throwError "initialization function `{initFnName}` must have type of the form `IO <type>`"
-        | some initTypeArg =>
-          if decl.type == initTypeArg then pure initFnName
-          else throwError "initialization function `{initFnName}` type mismatch"
-      | none =>
-        if isIOUnit decl.type then pure Name.anonymous
-        else throwError "initialization function must have type `IO Unit`"
+    getParam := fun declName stx =>
+      withoutExporting do
+        let decl ← getConstInfo declName
+        match (← Attribute.Builtin.getIdent? stx) with
+        | some initFnName =>
+          let initFnName ← Elab.realizeGlobalConstNoOverloadWithInfo initFnName
+          let initDecl ← getConstInfo initFnName
+          match getIOTypeArg initDecl.type with
+          | none =>
+            throwError
+              "initialization function `{initFnName}` must have type of the form `IO <type>`"
+          | some initTypeArg =>
+            if decl.type == initTypeArg then
+              pure initFnName
+            else
+              throwError "initialization function `{initFnName}` type mismatch"
+        | none =>
+          if isIOUnit decl.type then
+            pure Name.anonymous
+          else
+            throwError "initialization function must have type `IO Unit`"
     -- Save `meta initialize` in .olean; `initialize`s of any kind will be stored in .ir by
     -- `exportIREntries` analogously to `Lean.IR.declMapExt` so we can run them when meta-imported,
     -- even without the .olean file.
@@ -79,10 +90,12 @@ unsafe def registerInitAttrUnsafe (attrName : Name) (runAfterImport : Bool) (ref
   }
 
 @[implemented_by registerInitAttrUnsafe]
-private opaque registerInitAttrInner (attrName : Name) (runAfterImport : Bool) (ref : Name) : IO (ParametricAttribute Name)
+private opaque registerInitAttrInner (attrName : Name) (runAfterImport : Bool) (ref : Name)
+  : IO (ParametricAttribute Name)
 
 @[inline]
-def registerInitAttr (attrName : Name) (runAfterImport : Bool) (ref : Name := by exact decl_name%) : IO (ParametricAttribute Name) :=
+def registerInitAttr (attrName : Name) (runAfterImport : Bool) (ref : Name := by exact decl_name%)
+    : IO (ParametricAttribute Name) :=
   registerInitAttrInner attrName runAfterImport ref
 
 /--
@@ -109,11 +122,12 @@ should not be used otherwise.
 @[builtin_doc]
 builtin_initialize builtinInitAttr : ParametricAttribute Name ← registerInitAttr `builtin_init false
 
-def getInitFnNameForCore? (env : Environment) (attr : ParametricAttribute Name) (fn : Name) : Option Name :=
+def getInitFnNameForCore? (env : Environment) (attr : ParametricAttribute Name) (fn : Name)
+    : Option Name :=
   match attr.getParam? env fn with
   | some Name.anonymous => none
-  | some n              => some n
-  | _                   => none
+  | some n => some n
+  | _ => none
 
 def getBuiltinInitFnNameFor? (env : Environment) (fn : Name) : Option Name :=
   getInitFnNameForCore? env builtinInitAttr fn
@@ -140,10 +154,10 @@ def isIOUnitBuiltinInitFn (env : Environment) (fn : Name) : Bool :=
 def isIOUnitInitFn (env : Environment) (fn : Name) : Bool :=
   isIOUnitBuiltinInitFn env fn || isIOUnitRegularInitFn env fn
 
-def hasInitAttr (env : Environment) (fn : Name) : Bool :=
-  (getInitFnNameFor? env fn).isSome
+def hasInitAttr (env : Environment) (fn : Name) : Bool := (getInitFnNameFor? env fn).isSome
 
-def setBuiltinInitAttr (env : Environment) (declName : Name) (initFnName : Name := Name.anonymous) : Except String Environment :=
+def setBuiltinInitAttr (env : Environment) (declName : Name) (initFnName : Name := Name.anonymous)
+    : Except String Environment :=
   builtinInitAttr.setParam env declName initFnName
 
 def declareBuiltin (forDecl : Name) (value : Expr) : CoreM Unit :=
@@ -151,13 +165,21 @@ def declareBuiltin (forDecl : Name) (value : Expr) : CoreM Unit :=
   withoutExporting do
     let name ← mkAuxDeclName (kind := `_regBuiltin ++ forDecl)
     let type := mkApp (mkConst `IO) (mkConst `Unit)
-    let decl := Declaration.defnDecl { name, levelParams := [], type, value, hints := ReducibilityHints.opaque,
-                                       safety := DefinitionSafety.safe }
+    let decl :=
+      Declaration.defnDecl {
+        name
+        levelParams := []
+        type
+        value
+        hints := ReducibilityHints.opaque
+        safety := DefinitionSafety.safe
+      }
     addAndCompile decl
     IO.ofExcept (setBuiltinInitAttr (← getEnv) name) >>= setEnv
 
 private unsafe def runInitAttrForMod
-    (env : Environment) (opts : Options) (mod : EffectiveImport) (modIdx : Nat) : IO Unit := do
+    (env : Environment) (opts : Options) (mod : EffectiveImport) (modIdx : Nat)
+    : IO Unit := do
   let initRuntime := Elab.inServer.get opts || mod.irPhases != .runtime
 
   -- any native Lean code reachable by the interpreter (i.e. from shared
@@ -184,12 +206,14 @@ private unsafe def runInitAttrForMod
   -- so deduplicate (these lists should be very short).
   -- If we have both, we should not need to worry about their relative ordering as `meta` and
   -- non-`meta` initialize should not have interdependencies.
-  let modEntries := modEntries ++ (regularInitAttr.ext.getModuleIREntries env modIdx).filter (!modEntries.contains ·)
+  let modEntries :=
+    modEntries
+      ++ (regularInitAttr.ext.getModuleIREntries env modIdx).filter (! modEntries.contains ·)
   for (decl, initDecl) in modEntries do
     if !initRuntime && getIRPhases env decl == .runtime then
       continue
     if initDecl.isAnonymous then
-        -- Don't check `meta` again as it would not respect `Elab.inServer`
+      -- Don't check `meta` again as it would not respect `Elab.inServer`
       let initFn ← IO.ofExcept <| env.evalConst (checkMeta := false) (IO Unit) opts decl
       initFn
     else
@@ -198,7 +222,8 @@ private unsafe def runInitAttrForMod
 @[export lean_run_init_attrs]
 private unsafe def runInitAttrs (env : Environment) (opts : Options) : IO Unit := do
   if !(← isInitializerExecutionEnabled) then
-    throw <| IO.userError "`enableInitializersExecution` must be run before calling `importModules (loadExts := true)`"
+    throw <| IO.userError
+      "`enableInitializersExecution` must be run before calling `importModules (loadExts := true)`"
   for mod in env.header.modules, modIdx in 0...* do
     runInitAttrForMod env opts mod modIdx
 
@@ -209,10 +234,11 @@ dep-region pages for modules without `[init]` work. Assumes the host process has
 initialized the saved env's native `builtin_initialize` side effects (typically because the
 statically-linked Lean runtime ran them at startup) and skips `runModInit` for the omitted modules.
 -/
-unsafe def runInitAttrsForModules
-    (env : Environment) (modIdxs : Array Nat) (opts : Options) : IO Unit := do
+unsafe def runInitAttrsForModules (env : Environment) (modIdxs : Array Nat) (opts : Options)
+    : IO Unit := do
   if !(← isInitializerExecutionEnabled) then
-    throw <| IO.userError "`enableInitializersExecution` must be run before reusing a `--incr-load` snapshot"
+    throw <| IO.userError
+      "`enableInitializersExecution` must be run before reusing a `--incr-load` snapshot"
   for modIdx in modIdxs do
     if h : modIdx < env.header.modules.size then
       runInitAttrForMod env opts env.header.modules[modIdx] modIdx

@@ -17,28 +17,29 @@ universe u v w w'
 
 namespace Lean
 
-/-- Staged map for implementing the Environment. The idea is to store
-   imported entries into a hashtable and local entries into a persistent hashtable.
+/--
+Staged map for implementing the Environment. The idea is to store
+imported entries into a hashtable and local entries into a persistent hashtable.
 
-   Hypotheses:
-   - The number of entries (i.e., declarations) coming from imported files is much bigger than
-     the number of entries in the current file.
-   - HashMap is faster than PersistentHashMap.
-   - When we are reading imported files, we have exclusive access to the map, and efficient
-     destructive updates are performed.
+Hypotheses:
+- The number of entries (i.e., declarations) coming from imported files is much bigger than
+  the number of entries in the current file.
+- HashMap is faster than PersistentHashMap.
+- When we are reading imported files, we have exclusive access to the map, and efficient
+  destructive updates are performed.
 
-   Remarks:
-   - We never remove declarations from the Environment. In principle, we could support
-     deletion by using `(PHashMap α (Option β))` where the value `none` would indicate
-     that an entry was "removed" from the hashtable.
-   - We do not need additional bookkeeping for extracting the local entries.
+Remarks:
+- We never remove declarations from the Environment. In principle, we could support
+  deletion by using `(PHashMap α (Option β))` where the value `none` would indicate
+  that an entry was "removed" from the hashtable.
+- We do not need additional bookkeeping for extracting the local entries.
 -/
 structure SMap (α : Type u) (β : Type v) [BEq α] [Hashable α] where
-  stage₁ : Bool         := true
+  stage₁ : Bool := true
   /-- Imported constants. -/
-  map₁   : Std.HashMap α β  := {}
+  map₁ : Std.HashMap α β := {}
   /-- Local constants defined in the current module. -/
-  map₂   : PHashMap α β := {}
+  map₂ : PHashMap α β := {}
 
 namespace SMap
 variable {α : Type u} {β : Type v} [BEq α] [Hashable α]
@@ -46,38 +47,55 @@ variable {α : Type u} {β : Type v} [BEq α] [Hashable α]
 instance : Inhabited (SMap α β) := ⟨{}⟩
 def empty : SMap α β := {}
 
-@[inline] def fromHashMap (m : Std.HashMap α β) (stage₁ := true) : SMap α β :=
-  { map₁ := m, stage₁ := stage₁ }
+@[inline]
+def fromHashMap (m : Std.HashMap α β) (stage₁ := true) : SMap α β := { map₁ := m, stage₁ := stage₁ }
 
-@[specialize] def insert : SMap α β → α → β → SMap α β
-  | ⟨true, m₁, m₂⟩, k, v  => ⟨true, m₁.insert k v, m₂⟩
-  | ⟨false, m₁, m₂⟩, k, v => ⟨false, m₁, m₂.insert k v⟩
+@[specialize]
+def insert : SMap α β → α → β → SMap α β
+  | ⟨true, m₁, m₂⟩, k, v =>
+    ⟨true, m₁.insert k v, m₂⟩
+  | ⟨false, m₁, m₂⟩, k, v =>
+    ⟨false, m₁, m₂.insert k v⟩
 
-@[specialize] def insert' : SMap α β → α → β → SMap α β
-  | ⟨true, m₁, m₂⟩, k, v  => ⟨true, m₁.insert k v, m₂⟩
-  | ⟨false, m₁, m₂⟩, k, v => ⟨false, m₁, m₂.insert k v⟩
+@[specialize]
+def insert' : SMap α β → α → β → SMap α β
+  | ⟨true, m₁, m₂⟩, k, v =>
+    ⟨true, m₁.insert k v, m₂⟩
+  | ⟨false, m₁, m₂⟩, k, v =>
+    ⟨false, m₁, m₂.insert k v⟩
 
-@[specialize] def find? : SMap α β → α → Option β
-  | ⟨true, m₁, _⟩, k   => m₁[k]?
-  | ⟨false, m₁, m₂⟩, k => (m₂.find? k).orElse fun _ => m₁[k]?
+@[specialize]
+def find? : SMap α β → α → Option β
+  | ⟨true, m₁, _⟩, k =>
+    m₁[k]?
+  | ⟨false, m₁, m₂⟩, k =>
+    (m₂.find? k).orElse fun _ => m₁[k]?
 
-@[inline] def findD (m : SMap α β) (a : α) (b₀ : β) : β :=
-  (m.find? a).getD b₀
+@[inline] def findD (m : SMap α β) (a : α) (b₀ : β) : β := (m.find? a).getD b₀
 
-@[inline] def find! [Inhabited β] (m : SMap α β) (a : α) : β :=
+@[inline]
+def find! [Inhabited β] (m : SMap α β) (a : α) : β :=
   match m.find? a with
   | some b => b
-  | none   => panic! "key is not in the map"
+  | none => panic! "key is not in the map"
 
-@[specialize] def contains : SMap α β → α → Bool
-  | ⟨true, m₁, _⟩, k   => m₁.contains k
-  | ⟨false, m₁, m₂⟩, k => m₁.contains k || m₂.contains k
+@[specialize]
+def contains : SMap α β → α → Bool
+  | ⟨true, m₁, _⟩, k =>
+    m₁.contains k
+  | ⟨false, m₁, m₂⟩, k =>
+    m₁.contains k || m₂.contains k
 
-/-- Similar to `find?`, but searches for result in the hashmap first.
-   So, the result is correct only if we never "overwrite" `map₁` entries using `map₂`. -/
-@[specialize] def find?' : SMap α β → α → Option β
-  | ⟨true, m₁, _⟩, k   => m₁[k]?
-  | ⟨false, m₁, m₂⟩, k => m₁[k]?.orElse fun _ => m₂.find? k
+/--
+Similar to `find?`, but searches for result in the hashmap first.
+So, the result is correct only if we never "overwrite" `map₁` entries using `map₂`.
+-/
+@[specialize]
+def find?' : SMap α β → α → Option β
+  | ⟨true, m₁, _⟩, k =>
+    m₁[k]?
+  | ⟨false, m₁, m₂⟩, k =>
+    m₁[k]?.orElse fun _ => m₂.find? k
 
 def forM [Monad m] (s : SMap α β) (f : α → β → m PUnit) : m PUnit := do
   s.map₁.forM f
@@ -89,29 +107,25 @@ instance [Monad m] : ForM m (SMap α β) (α × β) where
 instance [Monad m] : ForIn m (SMap α β) (α × β) where
   forIn := ForM.forIn
 
-def iter (s : SMap α β) :=
-  s.map₁.iter.append s.map₂.iter
+def iter (s : SMap α β) := s.map₁.iter.append s.map₂.iter
 
 /-- Move from stage 1 into stage 2. -/
-def switch (m : SMap α β) : SMap α β :=
-  if m.stage₁ then { m with stage₁ := false } else m
+def switch (m : SMap α β) : SMap α β := if m.stage₁ then { m with stage₁ := false } else m
 
-@[inline] def foldStage2 {σ : Type w} (f : σ → α → β → σ) (s : σ) (m : SMap α β) : σ :=
-  m.map₂.foldl f s
+@[inline]
+def foldStage2 {σ : Type w} (f : σ → α → β → σ) (s : σ) (m : SMap α β) : σ := m.map₂.foldl f s
 
 /-- Monadic fold over a staged map. -/
-def foldM {m : Type w → Type w'} [Monad m]
-    (f : σ → α → β → m σ) (init : σ) (map : SMap α β) : m σ := do
+def foldM {m : Type w → Type w'} [Monad m] (f : σ → α → β → m σ) (init : σ) (map : SMap α β)
+    : m σ := do
   map.map₂.foldlM f (← map.map₁.foldM f init)
 
 def fold {σ : Type w} (f : σ → α → β → σ) (init : σ) (m : SMap α β) : σ :=
   m.map₂.foldl f $ m.map₁.fold f init
 
-def numBuckets (m : SMap α β) : Nat :=
-  Std.HashMap.Internal.numBuckets m.map₁
+def numBuckets (m : SMap α β) : Nat := Std.HashMap.Internal.numBuckets m.map₁
 
-def toList (m : SMap α β) : List (α × β) :=
-  m.fold (init := []) fun es a b => (a, b)::es
+def toList (m : SMap α β) : List (α × β) := m.fold (init := []) fun es a b => (a, b) :: es
 
 end SMap
 

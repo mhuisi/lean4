@@ -18,12 +18,9 @@ Return `true` if `mdata` should be preserved.
 Right now, we don't preserve any `MData`, but this may
 change in the future when we add support for debugging information
 -/
-def isCompilerRelevantMData (_mdata : MData) : Bool :=
-  false
+def isCompilerRelevantMData (_mdata : MData) : Bool := false
 
-/--
-Return `true` if `e` is a `lcCast` application.
--/
+/-- Return `true` if `e` is a `lcCast` application. -/
 def isLcCast? (e : Expr) : Option Expr :=
   if e.isAppOfArity ``lcCast 3 then
     some e.appArg!
@@ -31,12 +28,11 @@ def isLcCast? (e : Expr) : Option Expr :=
     none
 
 def getCtorArity? (declName : Name) : CoreM (Option Nat) := do
-  let .ctorInfo val ← getConstInfo declName | return none
+  let .ctorInfo val ← getConstInfo declName
+    | return none
   return val.numParams + val.numFields
 
-/--
-List of types that have builtin runtime support
--/
+/-- List of types that have builtin runtime support -/
 def builtinRuntimeTypes : Array Name := #[
   ``String,
   ``UInt8, ``UInt16, ``UInt32, ``UInt64, ``USize,
@@ -46,10 +42,7 @@ def builtinRuntimeTypes : Array Name := #[
   ``Nat, ``Int
 ]
 
-/--
-Return `true` iff `declName` is the name of a type with builtin support in the runtime.
--/
-def isRuntimeBuiltinType (declName : Name) : Bool :=
-  builtinRuntimeTypes.contains declName
+/-- Return `true` iff `declName` is the name of a type with builtin support in the runtime. -/
+def isRuntimeBuiltinType (declName : Name) : Bool := builtinRuntimeTypes.contains declName
 
 end Lean.Compiler.LCNF

@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Simp.SimpM
 namespace Lean.Meta.Sym.Simp
@@ -26,33 +27,37 @@ def mkFunextFor (xs : Array Expr) (β : Expr) : MetaM Expr := do
   let v ← getLevel β
   let w ← getLevel type
   withLocalDeclD `f type fun f =>
-  withLocalDeclD `g type fun g => do
-  let eq := mkApp3 (mkConst ``Eq [v]) β (mkAppN f xs) (mkAppN g xs)
-  withLocalDeclD `h (← mkForallFVars xs eq) fun h => do
-  let eqv ← mkLambdaFVars #[f, g] (← mkForallFVars xs eq)
-  let quotEqv := mkApp2 (mkConst ``Quot [w]) type eqv
-  withLocalDeclD `f' quotEqv fun f' => do
-  let lift := mkApp6 (mkConst ``Quot.lift [w, v]) type eqv β
-    (mkLambda `f .default type (mkAppN (.bvar 0) xs))
-    (mkLambda `f .default type (mkLambda `g .default type (mkLambda `h .default (mkApp2 eqv (.bvar 1) (.bvar 0)) (mkAppN (.bvar 0) xs))))
-    f'
-  let extfunAppVal ← mkLambdaFVars (#[f'] ++ xs) lift
-  let extfunApp := extfunAppVal
-  let quotSound := mkApp5 (mkConst ``Quot.sound [w]) type eqv f g h
-  let Quot_mk_f := mkApp3 (mkConst ``Quot.mk [w]) type eqv f
-  let Quot_mk_g := mkApp3 (mkConst ``Quot.mk [w]) type eqv g
-  let result := mkApp6 (mkConst ``congrArg [w, w]) quotEqv type Quot_mk_f Quot_mk_g extfunApp quotSound
-  let result ← mkLambdaFVars #[f, g, h] result
-  return result
+    withLocalDeclD `g type fun g => do
+      let eq := mkApp3 (mkConst ``Eq [v]) β (mkAppN f xs) (mkAppN g xs)
+      withLocalDeclD `h (← mkForallFVars xs eq) fun h => do
+        let eqv ← mkLambdaFVars #[f, g] (← mkForallFVars xs eq)
+        let quotEqv := mkApp2 (mkConst ``Quot [w]) type eqv
+        withLocalDeclD `f' quotEqv fun f' => do
+          let lift :=
+            mkApp6 (mkConst ``Quot.lift [w, v]) type eqv β
+              (mkLambda `f .default type (mkAppN (.bvar 0) xs))
+              (mkLambda `f .default type
+                (mkLambda `g .default type
+                  (mkLambda `h .default (mkApp2 eqv (.bvar 1) (.bvar 0)) (mkAppN (.bvar 0) xs))))
+              f'
+          let extfunAppVal ← mkLambdaFVars (#[f'] ++ xs) lift
+          let extfunApp := extfunAppVal
+          let quotSound := mkApp5 (mkConst ``Quot.sound [w]) type eqv f g h
+          let Quot_mk_f := mkApp3 (mkConst ``Quot.mk [w]) type eqv f
+          let Quot_mk_g := mkApp3 (mkConst ``Quot.mk [w]) type eqv g
+          let result :=
+            mkApp6 (mkConst ``congrArg [w, w]) quotEqv type Quot_mk_f Quot_mk_g extfunApp quotSound
+          let result ← mkLambdaFVars #[f, g, h] result
+          return result
 
 public def simpLambda' (simpBody : Simproc) (e : Expr) : SimpM Result := do
-  lambdaTelescope e fun xs b => withFreshTransientCache do
-    main xs (← shareCommon b)
+  lambdaTelescope e fun xs b => withFreshTransientCache do main xs (← shareCommon b)
 where
   main (xs : Array Expr) (b : Expr) : SimpM Result := do
     -- Propagate `cd` from the body: in another context the body might simplify differently.
     match (← simpBody b) with
-    | .rfl _ cd => return mkRflResultCD cd
+    | .rfl _ cd =>
+      return mkRflResultCD cd
     | .step b' h _ cd =>
       let h ← mkLambdaFVars xs h
       let e' ← shareCommon (← mkLambdaFVars xs b')
@@ -69,7 +74,6 @@ where
       modify fun s => { s with funext := s.funext.insert { expr := key } h }
       return h
 
-public def simpLambda : Simproc :=
-  simpLambda' simp
+public def simpLambda : Simproc := simpLambda' simp
 
 end Lean.Meta.Sym.Simp

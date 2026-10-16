@@ -31,18 +31,23 @@ public instance (priority := low) [Pure m] [MonadExceptOf ε m] : MonadLiftT (Ex
     | .error e => throw e
 
 -- Remark: not necessarily optimal; uses context non-linearly
-public instance (priority := low) [Monad m] [MonadReaderOf ρ m] [MonadLiftT n m] : MonadLiftT (ReaderT ρ n) m where
+public instance (priority := low) [Monad m] [MonadReaderOf ρ m] [MonadLiftT n m]
+    : MonadLiftT (ReaderT ρ n) m where
   monadLift act := do act.run (← read)
 
 -- Remark: not necessarily optimal; uses state non-linearly
-public instance (priority := low) [Monad m] [MonadStateOf σ m] [MonadLiftT n m] : MonadLiftT (StateT σ n) m where
+public instance (priority := low) [Monad m] [MonadStateOf σ m] [MonadLiftT n m]
+    : MonadLiftT (StateT σ n) m where
   monadLift act := do let (a, s) ← act.run (m := n) (← get); set s; pure a
 
-public instance (priority := low) [Monad m] [Alternative m] [MonadLiftT n m] : MonadLiftT (OptionT n) m where
+public instance (priority := low) [Monad m] [Alternative m] [MonadLiftT n m]
+    : MonadLiftT (OptionT n) m where
   monadLift act := act.run >>= liftM
 
-public instance (priority := low) [Monad m] [MonadExceptOf ε m] [MonadLiftT n m] : MonadLiftT (ExceptT ε n) m where
+public instance (priority := low) [Monad m] [MonadExceptOf ε m] [MonadLiftT n m]
+    : MonadLiftT (ExceptT ε n) m where
   monadLift act := act.run >>= liftM
 
-public instance (priority := low) [Monad m] [MonadExceptOf ε m] [MonadLiftT BaseIO m] : MonadLiftT (EIO ε) m where
+public instance (priority := low) [Monad m] [MonadExceptOf ε m] [MonadLiftT BaseIO m]
+    : MonadLiftT (EIO ε) m where
   monadLift act := act.toBaseIO >>= liftM

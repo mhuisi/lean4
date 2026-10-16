@@ -20,22 +20,24 @@ structure Context where
 abbrev InternalizeM (pu : Purity) := ReaderT Context StateRefT (FVarSubst pu) CompilerM
 
 @[inline]
-def InternalizeM.run (x : InternalizeM pu α) (state : FVarSubst pu) (ctx : Context := {}) :
-    CompilerM (α × FVarSubst pu) :=
+def InternalizeM.run (x : InternalizeM pu α) (state : FVarSubst pu) (ctx : Context := {})
+    : CompilerM (α × FVarSubst pu) :=
   StateRefT'.run (ReaderT.run x ctx) state
 
 @[inline]
-def InternalizeM.run' (x : InternalizeM pu α) (state : FVarSubst pu) (ctx : Context := {}) :
-    CompilerM α :=
+def InternalizeM.run' (x : InternalizeM pu α) (state : FVarSubst pu) (ctx : Context := {})
+    : CompilerM α :=
   StateRefT'.run' (ReaderT.run x ctx) state
 
 private def refreshBinderName (binderName : Name) : InternalizeM pu Name := do
   match binderName with
   | .num p _ =>
-    return .num p (← modifyGetThe CompilerM.State fun s => (s.nextIdx, { s with nextIdx := s.nextIdx + 1 }))
+    return .num p
+      (← modifyGetThe CompilerM.State fun s => (s.nextIdx, { s with nextIdx := s.nextIdx + 1 }))
   | _ =>
     if (← read).uniqueIdents then
-      return .num binderName (← modifyGetThe CompilerM.State fun s => (s.nextIdx, { s with nextIdx := s.nextIdx + 1 }))
+      return .num binderName
+        (← modifyGetThe CompilerM.State fun s => (s.nextIdx, { s with nextIdx := s.nextIdx + 1 }))
     else
       return binderName
 
@@ -77,15 +79,24 @@ where
             return .fvar fvarId'
           else
             return anyExpr
-        | some .erased => return erasedExpr
-        | some (.type e _) | none => return e
-      | .lit .. | .const .. | .sort .. | .mvar .. | .bvar .. => return e
-      | .app f a => return e.updateApp! (← goApp f) (← go a) |>.headBeta
-      | .mdata _ b => return e.updateMData! (← go b)
-      | .proj _ _ b => return e.updateProj! (← go b)
-      | .forallE _ d b _ => return e.updateForallE! (← go d) (← go b)
-      | .lam _ d b _ => return e.updateLambdaE! (← go d) (← go b)
-      | .letE .. => unreachable!
+        | some .erased =>
+          return erasedExpr
+        | some (.type e _) | none =>
+          return e
+      | .lit .. | .const .. | .sort .. | .mvar .. | .bvar .. =>
+        return e
+      | .app f a =>
+        return e.updateApp! (← goApp f) (← go a) |>.headBeta
+      | .mdata _ b =>
+        return e.updateMData! (← go b)
+      | .proj _ _ b =>
+        return e.updateProj! (← go b)
+      | .forallE _ d b _ =>
+        return e.updateForallE! (← go d) (← go b)
+      | .lam _ d b _ =>
+        return e.updateLambdaE! (← go d) (← go b)
+      | .letE .. =>
+        unreachable!
     else
       return e
 
@@ -104,22 +115,26 @@ def internalizeArg (arg : Arg pu) : InternalizeM pu (Arg pu) := do
     | some arg'@(.fvar _) => return arg'
     | some arg'@.erased | some arg'@(.type _ _) => return arg'
     | none => return arg
-  | .type e _ => return arg.updateType! (← internalizeExpr e)
-  | .erased => return arg
+  | .type e _ =>
+    return arg.updateType! (← internalizeExpr e)
+  | .erased =>
+    return arg
 
 def internalizeArgs (args : Array (Arg pu)) : InternalizeM pu (Array (Arg pu)) :=
   args.mapM internalizeArg
 
 private partial def internalizeLetValue (e : LetValue pu) : InternalizeM pu (LetValue pu) := do
   match e with
-  | .erased | .lit .. => return e
+  | .erased | .lit .. =>
+    return e
   | .proj _ _ fvarId _ | .oproj _ fvarId _ | .sproj _ _ fvarId _ | .uproj _ fvarId _ =>
     match (← normFVar fvarId) with
     | .fvar fvarId' => return e.updateProj! fvarId'
     | .erased => return .erased
   | .const _ _ args _ | .fap _ args _ | .pap _ args _ | .ctor _ args _ =>
     return e.updateArgs! (← internalizeArgs args)
-  | .fvar fvarId args => match (← normFVar fvarId) with
+  | .fvar fvarId args =>
+    match (← normFVar fvarId) with
     | .fvar fvarId' => return e.updateFVar! fvarId' (← internalizeArgs args)
     | .erased => return .erased
   | .reset n fvarId _ =>
@@ -166,28 +181,38 @@ partial def internalizeFunDecl (decl : FunDecl pu) : InternalizeM pu (FunDecl pu
 
 partial def internalizeCode (code : Code pu) : InternalizeM pu (Code pu) := do
   match code with
-  | .let decl k => return .let (← internalizeLetDecl decl) (← internalizeCode k)
-  | .fun decl k _ => return .fun (← internalizeFunDecl decl) (← internalizeCode k)
-  | .jp decl k => return .jp (← internalizeFunDecl decl) (← internalizeCode k)
-  | .return fvarId => withNormFVarResult (← normFVar fvarId) fun fvarId => return .return fvarId
-  | .jmp fvarId args => withNormFVarResult (← normFVar fvarId) fun fvarId => return .jmp fvarId (← internalizeArgs args)
-  | .unreach type => return .unreach (← internalizeExpr type)
+  | .let decl k =>
+    return .let (← internalizeLetDecl decl) (← internalizeCode k)
+  | .fun decl k _ =>
+    return .fun (← internalizeFunDecl decl) (← internalizeCode k)
+  | .jp decl k =>
+    return .jp (← internalizeFunDecl decl) (← internalizeCode k)
+  | .return fvarId =>
+    withNormFVarResult (← normFVar fvarId) fun fvarId => return .return fvarId
+  | .jmp fvarId args =>
+    withNormFVarResult (← normFVar fvarId) fun fvarId => return .jmp fvarId (← internalizeArgs args)
+  | .unreach type =>
+    return .unreach (← internalizeExpr type)
   | .cases c =>
     withNormFVarResult (← normFVar c.discr) fun discr => do
       let resultType ← internalizeExpr c.resultType
-      let alts ← c.alts.mapM fun
-        | .alt ctorName params k _ => return .alt ctorName (← params.mapM internalizeParam) (← internalizeCode k)
-        | .default k => return .default (← internalizeCode k)
-        | .ctorAlt i k _ => return .ctorAlt i (← internalizeCode k)
+      let alts ←
+        c.alts.mapM fun
+          | .alt ctorName params k _ =>
+            return .alt ctorName (← params.mapM internalizeParam) (← internalizeCode k)
+          | .default k =>
+            return .default (← internalizeCode k)
+          | .ctorAlt i k _ =>
+            return .ctorAlt i (← internalizeCode k)
       return .cases ⟨c.typeName, resultType, discr, alts⟩
   | .sset fvarId i offset y ty k _ =>
     withNormFVarResult (← normFVar fvarId) fun fvarId => do
-    withNormFVarResult (← normFVar y) fun y => do
-      return .sset fvarId i offset y (← internalizeExpr ty) (← internalizeCode k)
+      withNormFVarResult (← normFVar y) fun y => do
+        return .sset fvarId i offset y (← internalizeExpr ty) (← internalizeCode k)
   | .uset fvarId offset y k _ =>
     withNormFVarResult (← normFVar fvarId) fun fvarId => do
-    withNormFVarResult (← normFVar y) fun y => do
-      return .uset fvarId offset y (← internalizeCode k)
+      withNormFVarResult (← normFVar y) fun y => do
+        return .uset fvarId offset y (← internalizeCode k)
   | .oset fvarId offset y k _ =>
     withNormFVarResult (← normFVar fvarId) fun fvarId => do
       let y ← normArg y
@@ -202,56 +227,65 @@ partial def internalizeCode (code : Code pu) : InternalizeM pu (Code pu) := do
     withNormFVarResult (← normFVar fvarId) fun fvarId => do
       return .dec fvarId n check persistent objs? (← internalizeCode k)
   | .del fvarId k _ =>
-    withNormFVarResult (← normFVar fvarId) fun fvarId => do
-      return .del fvarId (← internalizeCode k)
+    withNormFVarResult (← normFVar fvarId) fun fvarId => do return .del fvarId (← internalizeCode k)
 
 end
 
 partial def internalizeCodeDecl (decl : CodeDecl pu) : InternalizeM pu (CodeDecl pu) := do
   match decl with
-  | .let decl => return .let (← internalizeLetDecl decl)
-  | .fun decl _ => return .fun (← internalizeFunDecl decl)
-  | .jp decl => return .jp (← internalizeFunDecl decl)
+  | .let decl =>
+    return .let (← internalizeLetDecl decl)
+  | .fun decl _ =>
+    return .fun (← internalizeFunDecl decl)
+  | .jp decl =>
+    return .jp (← internalizeFunDecl decl)
   | .oset fvarId i y _ =>
     -- Something weird should be happening if these become erased...
-    let .fvar fvarId ← normFVar fvarId | unreachable!
+    let .fvar fvarId ← normFVar fvarId
+      | unreachable!
     let y ← normArg y
     return .oset fvarId i y
   | .uset fvarId i y _ =>
-    let .fvar fvarId ← normFVar fvarId | unreachable!
-    let .fvar y ← normFVar y | unreachable!
+    let .fvar fvarId ← normFVar fvarId
+      | unreachable!
+    let .fvar y ← normFVar y
+      | unreachable!
     return .uset fvarId i y
   | .sset fvarId i offset y ty _ =>
-    let .fvar fvarId ← normFVar fvarId | unreachable!
-    let .fvar y ← normFVar y | unreachable!
+    let .fvar fvarId ← normFVar fvarId
+      | unreachable!
+    let .fvar y ← normFVar y
+      | unreachable!
     let ty ← normExpr ty
     return .sset fvarId i offset y ty
   | .setTag fvarId cidx _ =>
-    let .fvar fvarId ← normFVar fvarId | unreachable!
+    let .fvar fvarId ← normFVar fvarId
+      | unreachable!
     return .setTag fvarId cidx
   | .inc fvarId n check offset _ =>
-    let .fvar fvarId ← normFVar fvarId | unreachable!
+    let .fvar fvarId ← normFVar fvarId
+      | unreachable!
     return .inc fvarId n check offset
   | .dec fvarId n check offset objs? _ =>
-    let .fvar fvarId ← normFVar fvarId | unreachable!
+    let .fvar fvarId ← normFVar fvarId
+      | unreachable!
     return .dec fvarId n check offset objs?
   | .del fvarId _ =>
-    let .fvar fvarId ← normFVar fvarId | unreachable!
+    let .fvar fvarId ← normFVar fvarId
+      | unreachable!
     return .del fvarId
-
 
 end Internalize
 
-/--
-Refresh free variables ids in `code`, and store their declarations in the local context.
--/
-partial def Code.internalize (code : Code pu) (s : FVarSubst pu := {})
-    (uniqueIdents : Bool := false) : CompilerM (Code pu) :=
+/-- Refresh free variables ids in `code`, and store their declarations in the local context. -/
+partial def Code.internalize
+    (code : Code pu) (s : FVarSubst pu := {}) (uniqueIdents : Bool := false)
+    : CompilerM (Code pu) :=
   Internalize.internalizeCode code |>.run' s { uniqueIdents }
 
 open Internalize in
-def Decl.internalize (decl : Decl pu) (s : FVarSubst pu := {}) (uniqueIdents : Bool := false) :
-    CompilerM (Decl pu) :=
+def Decl.internalize (decl : Decl pu) (s : FVarSubst pu := {}) (uniqueIdents : Bool := false)
+    : CompilerM (Decl pu) :=
   go decl |>.run' s { uniqueIdents }
 where
   go (decl : Decl pu) : InternalizeM pu (Decl pu) := do
@@ -260,9 +294,7 @@ where
     let value ← decl.value.mapCodeM internalizeCode
     return { decl with type, params, value }
 
-/--
-Create a fresh local context and internalize the given decls.
--/
+/-- Create a fresh local context and internalize the given decls. -/
 def cleanup (decl : Array (Decl pu)) : CompilerM (Array (Decl pu)) := do
   modify fun _ => {}
   decl.mapM fun decl => do

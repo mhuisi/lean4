@@ -42,14 +42,12 @@ def Notify.Consumer.resolve (c : Consumer α) (x : α) : BaseIO Bool := do
       return true
     waiter.race lose win
 
-/--
-The central state structure for a `Notify`.
--/
+/-- The central state structure for a `Notify`. -/
 structure Notify.State where
-
   /--
   Consumers that are blocked waiting for a notification.
-  --/
+  -
+  -/
   consumers : Std.Queue (Notify.Consumer Unit)
 
 /--
@@ -61,15 +59,10 @@ structure Notify where
 
 namespace Notify
 
-/--
-Create a new notify.
--/
-def new : BaseIO Notify := do
-  return { state := ← Std.Mutex.new { consumers := ∅ } }
+/-- Create a new notify. -/
+def new : BaseIO Notify := do return { state := ← Std.Mutex.new { consumers := ∅ } }
 
-/--
-Notify all currently waiting consumers.
--/
+/-- Notify all currently waiting consumers. -/
 def notify (x : Notify) : BaseIO Unit := do
   x.state.atomically do
     let mut st ← get
@@ -96,7 +89,8 @@ def notifyOne (x : Notify) : BaseIO Bool := do
     -- notification, which then goes to the next consumer.
     while true do
       let st ← get
-      let some (consumer, rest) := st.consumers.dequeue? | return false
+      let some (consumer, rest) := st.consumers.dequeue?
+        | return false
       set { st with consumers := rest }
       if ← consumer.resolve () then
         return true
@@ -114,24 +108,20 @@ def wait (x : Notify) : IO (AsyncTask Unit) :=
       | some res => pure <| Task.pure (.ok res)
       | none => throw (IO.userError "notify dropped")
 
-/--
-Creates a selector that waits for notifications
--/
+/-- Creates a selector that waits for notifications -/
 def selector (notify : Notify) : Selector Unit := {
-  tryFn := do
-    return none
-
+  tryFn := do return none
   registerFn := fun waiter => do
     notify.state.atomically do
       modify fun st => { st with consumers := st.consumers.enqueue (.select waiter) }
-
   unregisterFn := do
     notify.state.atomically do
       let st ← get
 
-      let consumers ← st.consumers.filterM fun
-        | .normal _ => return true
-        | .select waiter => return !(← waiter.checkFinished)
+      let consumers ←
+        st.consumers.filterM fun
+          | .normal _ => return true
+          | .select waiter => return !(← waiter.checkFinished)
 
       set { st with consumers }
 }

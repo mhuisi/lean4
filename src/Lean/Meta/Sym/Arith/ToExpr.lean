@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Grind.Ring.CommSemiringAdapter
 public import Lean.ToExpr
@@ -14,8 +15,7 @@ open Grind.CommRing
 `ToExpr` instances for `CommRing.Poly` types.
 -/
 
-def ofPower (p : Power) : Expr :=
-  mkApp2 (mkConst ``Power.mk) (toExpr p.x) (toExpr p.k)
+def ofPower (p : Power) : Expr := mkApp2 (mkConst ``Power.mk) (toExpr p.x) (toExpr p.k)
 
 instance : ToExpr Power where
   toExpr := ofPower

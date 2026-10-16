@@ -42,9 +42,7 @@ instance : CommRing (BitVec w) where
     rfl
   zsmul_natCast_eq_nsmul _ _ := rfl
 
-instance : IsCharP (BitVec w) (2 ^ w) := IsCharP.mk' _ _
-  (ofNat_eq_zero_iff := fun x => by simp [BitVec.toNat_eq])
-
-
+instance : IsCharP (BitVec w) (2 ^ w) :=
+  IsCharP.mk' _ _ (ofNat_eq_zero_iff := fun x => by simp [BitVec.toNat_eq])
 
 end Lean.Grind

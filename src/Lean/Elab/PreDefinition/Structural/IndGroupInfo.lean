@@ -29,25 +29,26 @@ A mutually inductive group, identified by the `all` array of the `InductiveVal` 
 constituents.
 -/
 structure IndGroupInfo where
-  all       : Array Name
+  all : Array Name
   numNested : Nat
 deriving BEq, Inhabited, Repr
 
 def IndGroupInfo.ofInductiveVal (indInfo : InductiveVal) : IndGroupInfo where
-  all       := indInfo.all.toArray
+  all := indInfo.all.toArray
   numNested := indInfo.numNested
 
-def IndGroupInfo.numMotives (group : IndGroupInfo) : Nat :=
-  group.all.size + group.numNested
+def IndGroupInfo.numMotives (group : IndGroupInfo) : Nat := group.all.size + group.numNested
 
-/-- Instantiates the right `.brecOn` for the given type former index,
-including universe parameters and fixed prefix.  -/
+/--
+Instantiates the right `.brecOn` for the given type former index,
+including universe parameters and fixed prefix.
+-/
 partial def IndGroupInfo.brecOnName (info : IndGroupInfo) (idx : Nat) : Name :=
   if let .some n := info.all[idx]? then
-      mkBRecOnName n
-    else
-      let j := idx - info.all.size + 1
-      info.brecOnName 0 |>.appendIndexAfter j
+    mkBRecOnName n
+  else
+    let j := idx - info.all.size + 1
+    info.brecOnName 0 |>.appendIndexAfter j
 
 /--
 An instance of an mutually inductive group of inductives, identified by the `all` array
@@ -57,8 +58,8 @@ For example this distinguishes between `List α` and `List β` so that we will n
 mutual structural recursion on such incompatible types.
 -/
 structure IndGroupInst extends IndGroupInfo where
-  levels    : List Level
-  params    : Array Expr
+  levels : List Level
+  params : Array Expr
 deriving Inhabited, Repr
 
 def IndGroupInst.toMessageData (igi : IndGroupInst) : MessageData :=
@@ -68,15 +69,22 @@ instance : ToMessageData IndGroupInst where
   toMessageData := IndGroupInst.toMessageData
 
 def IndGroupInst.isDefEq (igi1 igi2 : IndGroupInst) : MetaM Bool := do
-  unless igi1.toIndGroupInfo == igi2.toIndGroupInfo do return false
-  unless igi1.levels.length = igi2.levels.length do return false
-  unless (igi1.levels.zip igi2.levels).all (fun (l₁, l₂) => Level.isEquiv l₁ l₂) do return false
-  unless igi1.params.size = igi2.params.size do return false
-  unless (← (igi1.params.zip igi2.params).allM (fun (e₁, e₂) => Meta.isDefEqGuarded e₁ e₂)) do return false
+  unless igi1.toIndGroupInfo == igi2.toIndGroupInfo do
+    return false
+  unless igi1.levels.length = igi2.levels.length do
+    return false
+  unless (igi1.levels.zip igi2.levels).all (fun (l₁, l₂) => Level.isEquiv l₁ l₂) do
+    return false
+  unless igi1.params.size = igi2.params.size do
+    return false
+  unless (← (igi1.params.zip igi2.params).allM (fun (e₁, e₂) => Meta.isDefEqGuarded e₁ e₂)) do
+    return false
   return true
 
-/-- Instantiates the right `.brecOn` for the given type former index,
-including universe parameters and fixed prefix.  -/
+/--
+Instantiates the right `.brecOn` for the given type former index,
+including universe parameters and fixed prefix.
+-/
 def IndGroupInst.brecOn (group : IndGroupInst) (lvl : Level) (idx : Nat) : Expr :=
   let n := group.brecOnName idx
   let us := lvl :: group.levels
@@ -94,7 +102,6 @@ inductive Tree α where | node : α → Vector (Tree α) n → Tree α
 ```
 #[(n : Nat) → Vector (Tree Int) n]
 ```
-
 -/
 def IndGroupInst.nestedTypeFormers (igi : IndGroupInst) : MetaM (Array Expr) := do
   if igi.numNested = 0 then return #[]
@@ -103,8 +110,10 @@ def IndGroupInst.nestedTypeFormers (igi : IndGroupInst) : MetaM (Array Expr) := 
   let recInfo ← getConstInfoRec recName
   assert! recInfo.numMotives = igi.numMotives
   let lvls :=
-    if igi.levels.length = recInfo.levelParams.length then igi.levels
-    else Level.zero :: igi.levels
+    if igi.levels.length = recInfo.levelParams.length then
+      igi.levels
+    else
+      Level.zero :: igi.levels
   let aux := mkAppN (.const recName lvls) igi.params
   let motives ← inferArgumentTypesN recInfo.numMotives aux
   let auxMotives : Array Expr := motives[igi.all.size...*]

@@ -35,17 +35,13 @@ public section
 
 namespace String.Slice.Pattern
 
-/--
-A step taken during the traversal of a {name}`Slice` by a forward or backward searcher.
--/
+/-- A step taken during the traversal of a {name}`Slice` by a forward or backward searcher. -/
 inductive SearchStep (s : Slice) where
   /--
   The subslice starting at {name}`startPos` and ending at {name}`endPos` did not match the pattern.
   -/
   | rejected (startPos endPos : s.Pos)
-  /--
-  The subslice starting at {name}`startPos` and ending at {name}`endPos` matches the pattern.
-  -/
+  /-- The subslice starting at {name}`startPos` and ending at {name}`endPos` matches the pattern. -/
   | matched (startPos endPos : s.Pos)
 deriving Inhabited, BEq
 
@@ -59,7 +55,8 @@ def startPos {s : Slice} (st : SearchStep s) : s.Pos :=
   | .matched startPos _ => startPos
 
 @[simp]
-theorem startPos_rejected {s : Slice} {p q : s.Pos} : (SearchStep.rejected p q).startPos = p := (rfl)
+theorem startPos_rejected {s : Slice} {p q : s.Pos} : (SearchStep.rejected p q).startPos = p :=
+  (rfl)
 
 @[simp]
 theorem startPos_matched {s : Slice} {p q : s.Pos} : (SearchStep.matched p q).startPos = p := (rfl)
@@ -87,13 +84,13 @@ def ofSliceFrom {s : Slice} {p : s.Pos} (st : SearchStep (s.sliceFrom p)) : Sear
   | .matched l r => .matched (Slice.Pos.ofSliceFrom l) (Slice.Pos.ofSliceFrom r)
 
 @[simp]
-theorem startPos_ofSliceFrom {s : Slice} {p : s.Pos} {st : SearchStep (s.sliceFrom p)} :
-    st.ofSliceFrom.startPos = Slice.Pos.ofSliceFrom st.startPos := by
-  cases st <;>  simp [ofSliceFrom]
+theorem startPos_ofSliceFrom {s : Slice} {p : s.Pos} {st : SearchStep (s.sliceFrom p)}
+    : st.ofSliceFrom.startPos = Slice.Pos.ofSliceFrom st.startPos := by
+  cases st <;> simp [ofSliceFrom]
 
 @[simp]
-theorem endPos_ofSliceFrom {s : Slice} {p : s.Pos} {st : SearchStep (s.sliceFrom p)} :
-    st.ofSliceFrom.endPos = Slice.Pos.ofSliceFrom st.endPos := by
+theorem endPos_ofSliceFrom {s : Slice} {p : s.Pos} {st : SearchStep (s.sliceFrom p)}
+    : st.ofSliceFrom.endPos = Slice.Pos.ofSliceFrom st.endPos := by
   cases st <;> simp [ofSliceFrom]
 
 /--
@@ -106,57 +103,56 @@ def cast {s t : Slice} (hst : s.copy = t.copy) : SearchStep s → SearchStep t
   | .matched startPos endPos => .matched (startPos.cast hst) (endPos.cast hst)
 
 @[simp]
-theorem cast_rejected {s t : Slice} {hst : s.copy = t.copy} {startPos endPos : s.Pos} :
-    (SearchStep.rejected startPos endPos).cast hst = .rejected (startPos.cast hst) (endPos.cast hst) :=
+theorem cast_rejected {s t : Slice} {hst : s.copy = t.copy} {startPos endPos : s.Pos}
+    : (SearchStep.rejected startPos endPos).cast hst
+      = .rejected (startPos.cast hst) (endPos.cast hst) :=
   (rfl)
 
 @[simp]
-theorem cast_matched {s t : Slice} {hst : s.copy = t.copy} {startPos endPos : s.Pos} :
-    (SearchStep.matched startPos endPos).cast hst = .matched (startPos.cast hst) (endPos.cast hst) :=
+theorem cast_matched {s t : Slice} {hst : s.copy = t.copy} {startPos endPos : s.Pos}
+    : (SearchStep.matched startPos endPos).cast hst
+      = .matched (startPos.cast hst) (endPos.cast hst) :=
   (rfl)
 
 @[simp]
-theorem startPos_cast {s t : Slice} (hst : s.copy = t.copy) {st : SearchStep s} :
-    (st.cast hst).startPos = st.startPos.cast hst := by
+theorem startPos_cast {s t : Slice} (hst : s.copy = t.copy) {st : SearchStep s}
+    : (st.cast hst).startPos = st.startPos.cast hst := by
   cases st <;> simp
 
 @[simp]
-theorem endPos_cast {s t : Slice} (hst : s.copy = t.copy) {st : SearchStep s} :
-    (st.cast hst).endPos = st.endPos.cast hst := by
+theorem endPos_cast {s t : Slice} (hst : s.copy = t.copy) {st : SearchStep s}
+    : (st.cast hst).endPos = st.endPos.cast hst := by
   cases st <;> simp
 
-@[simp]
-theorem cast_rfl {s : Slice} {st : SearchStep s} : st.cast rfl = st := by
-  cases st <;> simp
+@[simp] theorem cast_rfl {s : Slice} {st : SearchStep s} : st.cast rfl = st := by cases st <;> simp
 
 @[simp]
-theorem cast_cast {s t u : Slice} {hst : s.copy = t.copy} {htu : t.copy = u.copy} {st : SearchStep s} :
-    (st.cast hst).cast htu = st.cast (hst.trans htu) := by
+theorem cast_cast
+    {s t u : Slice} {hst : s.copy = t.copy} {htu : t.copy = u.copy} {st : SearchStep s}
+    : (st.cast hst).cast htu = st.cast (hst.trans htu) := by
   cases st <;> simp
 
 end SearchStep
 
-/--
-Provides simple pattern matching capabilities from the start of a {name}`Slice`.
--/
+/-- Provides simple pattern matching capabilities from the start of a {name}`Slice`. -/
 class ForwardPattern {ρ : Type} (pat : ρ) where
   /--
   Checks whether the slice starts with the pattern. If it does, the slice is returned with the
   prefix removed; otherwise the result is {name}`none`.
   -/
-  skipPrefix? : (s : Slice) →  Option s.Pos
+  skipPrefix? : (s : Slice) → Option s.Pos
   /--
   Checks whether the slice starts with the pattern. If it does, the slice is returned with the
   prefix removed; otherwise the result is {name}`none`.
   -/
-  skipPrefixOfNonempty? : (s : Slice) → (h : s.isEmpty = false) → Option s.Pos := fun s _ => skipPrefix? s
-  /--
-  Checks whether the slice starts with the pattern.
-  -/
+  skipPrefixOfNonempty? : (s : Slice) → (h : s.isEmpty = false) → Option s.Pos := fun s _ =>
+    skipPrefix? s
+  /-- Checks whether the slice starts with the pattern. -/
   startsWith : (s : Slice) → Bool := fun s => (skipPrefix? s).isSome
 
 @[deprecated ForwardPattern.skipPrefix? (since := "2026-03-19")]
-def ForwardPattern.dropPrefix? {ρ : Type} (pat : ρ) [ForwardPattern pat] (s : Slice) : Option s.Pos :=
+def ForwardPattern.dropPrefix? {ρ : Type} (pat : ρ) [ForwardPattern pat] (s : Slice)
+    : Option s.Pos :=
   ForwardPattern.skipPrefix? pat s
 
 /--
@@ -173,10 +169,10 @@ There is a stronger lawfulness typeclass {lit}`LawfulForwardPatternModel` that a
 according to some notion of matching.
 -/
 class LawfulForwardPattern {ρ : Type} (pat : ρ) [ForwardPattern pat] : Prop where
-  skipPrefixOfNonempty?_eq {s : Slice} (h) :
-    ForwardPattern.skipPrefixOfNonempty? pat s h = ForwardPattern.skipPrefix? pat s
-  startsWith_eq (s : Slice) :
-    ForwardPattern.startsWith pat s = (ForwardPattern.skipPrefix? pat s).isSome
+  skipPrefixOfNonempty?_eq {s : Slice} (h)
+    : ForwardPattern.skipPrefixOfNonempty? pat s h = ForwardPattern.skipPrefix? pat s
+  startsWith_eq (s : Slice)
+    : ForwardPattern.startsWith pat s = (ForwardPattern.skipPrefix? pat s).isSome
 
 /--
 A strict forward pattern is one which never drops an empty prefix.
@@ -185,8 +181,8 @@ This condition ensures that the default searcher derived from the forward patter
 iterator.
 -/
 class StrictForwardPattern {ρ : Type} (pat : ρ) [ForwardPattern pat] : Prop where
-  ne_startPos {s : Slice} (h) (q) :
-    ForwardPattern.skipPrefixOfNonempty? pat s h = some q → q ≠ s.startPos
+  ne_startPos {s : Slice} (h) (q)
+    : ForwardPattern.skipPrefixOfNonempty? pat s h = some q → q ≠ s.startPos
 
 /--
 Provides a conversion from a pattern to an iterator of {name}`SearchStep` that searches for matches
@@ -223,36 +219,48 @@ namespace DefaultForwardSearcher
 variable {ρ : Type} (pat : ρ)
 
 @[inline]
-def iter (s : Slice) : Std.Iter (α := DefaultForwardSearcher pat s) (SearchStep s) :=
-  ⟨⟨s.startPos⟩⟩
+def iter (s : Slice) : Std.Iter (α := DefaultForwardSearcher pat s) (SearchStep s) := ⟨⟨s.startPos⟩⟩
 
-instance (s : Slice) [ForwardPattern pat] :
-    Std.Iterator (DefaultForwardSearcher pat s) Id (SearchStep s) where
+instance (s : Slice) [ForwardPattern pat]
+    : Std.Iterator (DefaultForwardSearcher pat s) Id (SearchStep s) where
   IsPlausibleStep it
-    | .yield it' (.rejected p₁ p₂) => ∃ (h : it.internalState.currPos ≠ s.endPos),
-      ForwardPattern.skipPrefixOfNonempty? pat (s.sliceFrom it.internalState.currPos) (by simpa) = none ∧
-      p₁ = it.internalState.currPos ∧ p₂ = it.internalState.currPos.next h ∧
-      it'.internalState.currPos = it.internalState.currPos.next h
-    | .yield it' (.matched p₁ p₂) => ∃ (h : it.internalState.currPos ≠ s.endPos), ∃ pos,
-      ForwardPattern.skipPrefixOfNonempty? pat (s.sliceFrom it.internalState.currPos) (by simpa) = some pos ∧
-      p₁ = it.internalState.currPos ∧ p₂ = Slice.Pos.ofSliceFrom pos ∧
-      it'.internalState.currPos = Slice.Pos.ofSliceFrom pos
-    | .done => it.internalState.currPos = s.endPos
-    | .skip _ => False
+    | .yield it' (.rejected p₁ p₂) =>
+      ∃ (h : it.internalState.currPos ≠ s.endPos),
+        ForwardPattern.skipPrefixOfNonempty? pat (s.sliceFrom it.internalState.currPos) (by simpa)
+            = none
+          ∧ p₁ = it.internalState.currPos ∧ p₂ = it.internalState.currPos.next h
+          ∧ it'.internalState.currPos = it.internalState.currPos.next h
+    | .yield it' (.matched p₁ p₂) =>
+      ∃ (h : it.internalState.currPos ≠ s.endPos), ∃ pos,
+        ForwardPattern.skipPrefixOfNonempty? pat (s.sliceFrom it.internalState.currPos) (by simpa)
+            = some pos
+          ∧ p₁ = it.internalState.currPos ∧ p₂ = Slice.Pos.ofSliceFrom pos
+          ∧ it'.internalState.currPos = Slice.Pos.ofSliceFrom pos
+    | .done =>
+      it.internalState.currPos = s.endPos
+    | .skip _ =>
+      False
   step it :=
     if h : it.internalState.currPos = s.endPos then
       pure (.deflate ⟨.done, by simp [h]⟩)
     else
-      match h' : ForwardPattern.skipPrefixOfNonempty? pat (s.sliceFrom it.internalState.currPos) (by simpa) with
+      match h' : ForwardPattern.skipPrefixOfNonempty? pat (s.sliceFrom it.internalState.currPos)
+        (by simpa) with
       | some pos =>
-        pure (.deflate ⟨.yield ⟨⟨Slice.Pos.ofSliceFrom pos⟩⟩
-          (.matched it.internalState.currPos (Slice.Pos.ofSliceFrom pos)), by simp [h, h']⟩)
+        pure (.deflate ⟨
+          .yield ⟨⟨Slice.Pos.ofSliceFrom pos⟩⟩
+            (.matched it.internalState.currPos (Slice.Pos.ofSliceFrom pos)),
+          by simp [h, h']
+        ⟩)
       | none =>
-        pure (.deflate ⟨.yield ⟨⟨it.internalState.currPos.next h⟩⟩
-          (.rejected it.internalState.currPos (it.internalState.currPos.next h)), by simp [h, h']⟩)
+        pure (.deflate ⟨
+          .yield ⟨⟨it.internalState.currPos.next h⟩⟩
+            (.rejected it.internalState.currPos (it.internalState.currPos.next h)),
+          by simp [h, h']
+        ⟩)
 
-private def finitenessRelation (s : Slice) [ForwardPattern pat] [StrictForwardPattern pat] :
-    Std.Iterators.FinitenessRelation (DefaultForwardSearcher pat s) Id where
+private def finitenessRelation (s : Slice) [ForwardPattern pat] [StrictForwardPattern pat]
+    : Std.Iterators.FinitenessRelation (DefaultForwardSearcher pat s) Id where
   Rel := InvImage WellFoundedRelation.rel (fun it => it.internalState.currPos)
   wf := InvImage.wf _ WellFoundedRelation.wf
   subrelation {it it'} h := by
@@ -271,8 +279,8 @@ private def finitenessRelation (s : Slice) [ForwardPattern pat] [StrictForwardPa
       exact Std.lt_of_le_of_lt Slice.Pos.le_ofSliceFrom
         (Slice.Pos.ofSliceFrom_lt_ofSliceFrom_iff.2 ((Slice.Pos.startPos_lt_iff _).2 this))
 
-instance {s : Slice} [ForwardPattern pat] [StrictForwardPattern pat] :
-    Std.Iterators.Finite (DefaultForwardSearcher pat s) Id :=
+instance {s : Slice} [ForwardPattern pat] [StrictForwardPattern pat]
+    : Std.Iterators.Finite (DefaultForwardSearcher pat s) Id :=
   .of_finitenessRelation (finitenessRelation pat s)
 
 instance [ForwardPattern pat] : Std.IteratorLoop (DefaultForwardSearcher pat s) Id Id :=
@@ -288,15 +296,13 @@ It is sometimes possible to give a more efficient implementation; see {name}`ToF
 for more details.
 -/
 @[inline, instance_reducible]
-def defaultImplementation [ForwardPattern pat] :
-    ToForwardSearcher pat (DefaultForwardSearcher pat) where
+def defaultImplementation [ForwardPattern pat]
+    : ToForwardSearcher pat (DefaultForwardSearcher pat) where
   toSearcher := DefaultForwardSearcher.iter pat
 
 end ToForwardSearcher
 
-/--
-Provides simple pattern matching capabilities from the end of a {name}`Slice`.
--/
+/-- Provides simple pattern matching capabilities from the end of a {name}`Slice`. -/
 class BackwardPattern {ρ : Type} (pat : ρ) where
   /--
   Checks whether the slice ends with the pattern. If it does, the slice is returned with the
@@ -307,10 +313,9 @@ class BackwardPattern {ρ : Type} (pat : ρ) where
   Checks whether the slice ends with the pattern. If it does, the slice is returned with the
   suffix removed; otherwise the result is {name}`none`.
   -/
-  skipSuffixOfNonempty? : (s : Slice) → (h : s.isEmpty = false) → Option s.Pos := fun s _ => skipSuffix? s
-  /--
-  Checks whether the slice ends with the pattern.
-  -/
+  skipSuffixOfNonempty? : (s : Slice) → (h : s.isEmpty = false) → Option s.Pos := fun s _ =>
+    skipSuffix? s
+  /-- Checks whether the slice ends with the pattern. -/
   endsWith : Slice → Bool := fun s => (skipSuffix? s).isSome
 
 /--
@@ -327,10 +332,10 @@ There is a stronger lawfulness typeclass {lit}`LawfulBackwardPatternModel` that 
 according to some notion of matching.
 -/
 class LawfulBackwardPattern {ρ : Type} (pat : ρ) [BackwardPattern pat] : Prop where
-  skipSuffixOfNonempty?_eq {s : Slice} (h) :
-    BackwardPattern.skipSuffixOfNonempty? pat s h = BackwardPattern.skipSuffix? pat s
-  endsWith_eq (s : Slice) :
-    BackwardPattern.endsWith pat s = (BackwardPattern.skipSuffix? pat s).isSome
+  skipSuffixOfNonempty?_eq {s : Slice} (h)
+    : BackwardPattern.skipSuffixOfNonempty? pat s h = BackwardPattern.skipSuffix? pat s
+  endsWith_eq (s : Slice)
+    : BackwardPattern.endsWith pat s = (BackwardPattern.skipSuffix? pat s).isSome
 
 /--
 A strict backward pattern is one which never drops an empty suffix.
@@ -339,8 +344,8 @@ This condition ensures that the default searcher derived from the backward patte
 iterator.
 -/
 class StrictBackwardPattern {ρ : Type} (pat : ρ) [BackwardPattern pat] : Prop where
-  ne_endPos {s : Slice} (h) (q) :
-    BackwardPattern.skipSuffixOfNonempty? pat s h = some q → q ≠ s.endPos
+  ne_endPos {s : Slice} (h) (q)
+    : BackwardPattern.skipSuffixOfNonempty? pat s h = some q → q ≠ s.endPos
 
 /--
 Provides a conversion from a pattern to an iterator of {name}`SearchStep` searching for matches of
@@ -377,36 +382,48 @@ namespace DefaultBackwardSearcher
 variable {ρ : Type} (pat : ρ)
 
 @[inline]
-def iter (s : Slice) : Std.Iter (α := DefaultBackwardSearcher pat s) (SearchStep s) :=
-  ⟨⟨s.endPos⟩⟩
+def iter (s : Slice) : Std.Iter (α := DefaultBackwardSearcher pat s) (SearchStep s) := ⟨⟨s.endPos⟩⟩
 
-instance (s : Slice) [BackwardPattern pat] :
-    Std.Iterator (DefaultBackwardSearcher pat s) Id (SearchStep s) where
+instance (s : Slice) [BackwardPattern pat]
+    : Std.Iterator (DefaultBackwardSearcher pat s) Id (SearchStep s) where
   IsPlausibleStep it
-    | .yield it' (.rejected p₁ p₂) => ∃ (h : it.internalState.currPos ≠ s.startPos),
-      BackwardPattern.skipSuffixOfNonempty? pat (s.sliceTo it.internalState.currPos) (by simpa) = none ∧
-      p₁ = it.internalState.currPos.prev h ∧ p₂ = it.internalState.currPos  ∧
-      it'.internalState.currPos = it.internalState.currPos.prev h
-    | .yield it' (.matched p₁ p₂) => ∃ (h : it.internalState.currPos ≠ s.startPos), ∃ pos,
-      BackwardPattern.skipSuffixOfNonempty? pat (s.sliceTo it.internalState.currPos) (by simpa) = some pos ∧
-      p₁ = Slice.Pos.ofSliceTo pos ∧ p₂ = it.internalState.currPos  ∧
-      it'.internalState.currPos = Slice.Pos.ofSliceTo pos
-    | .done => it.internalState.currPos = s.startPos
-    | .skip _ => False
+    | .yield it' (.rejected p₁ p₂) =>
+      ∃ (h : it.internalState.currPos ≠ s.startPos),
+        BackwardPattern.skipSuffixOfNonempty? pat (s.sliceTo it.internalState.currPos) (by simpa)
+            = none
+          ∧ p₁ = it.internalState.currPos.prev h ∧ p₂ = it.internalState.currPos
+          ∧ it'.internalState.currPos = it.internalState.currPos.prev h
+    | .yield it' (.matched p₁ p₂) =>
+      ∃ (h : it.internalState.currPos ≠ s.startPos), ∃ pos,
+        BackwardPattern.skipSuffixOfNonempty? pat (s.sliceTo it.internalState.currPos) (by simpa)
+            = some pos
+          ∧ p₁ = Slice.Pos.ofSliceTo pos ∧ p₂ = it.internalState.currPos
+          ∧ it'.internalState.currPos = Slice.Pos.ofSliceTo pos
+    | .done =>
+      it.internalState.currPos = s.startPos
+    | .skip _ =>
+      False
   step it :=
     if h : it.internalState.currPos = s.startPos then
       pure (.deflate ⟨.done, by simp [h]⟩)
     else
-      match h' : BackwardPattern.skipSuffixOfNonempty? pat (s.sliceTo it.internalState.currPos) (by simpa) with
+      match h' : BackwardPattern.skipSuffixOfNonempty? pat (s.sliceTo it.internalState.currPos)
+        (by simpa) with
       | some pos =>
-        pure (.deflate ⟨.yield ⟨⟨Slice.Pos.ofSliceTo pos⟩⟩
-          (.matched (Slice.Pos.ofSliceTo pos) it.internalState.currPos), by simp [h, h']⟩)
+        pure (.deflate ⟨
+          .yield ⟨⟨Slice.Pos.ofSliceTo pos⟩⟩
+            (.matched (Slice.Pos.ofSliceTo pos) it.internalState.currPos),
+          by simp [h, h']
+        ⟩)
       | none =>
-        pure (.deflate ⟨.yield ⟨⟨it.internalState.currPos.prev h⟩⟩
-          (.rejected (it.internalState.currPos.prev h) it.internalState.currPos), by simp [h, h']⟩)
+        pure (.deflate ⟨
+          .yield ⟨⟨it.internalState.currPos.prev h⟩⟩
+            (.rejected (it.internalState.currPos.prev h) it.internalState.currPos),
+          by simp [h, h']
+        ⟩)
 
-private def finitenessRelation (s : Slice) [BackwardPattern pat] [StrictBackwardPattern pat] :
-    Std.Iterators.FinitenessRelation (DefaultBackwardSearcher pat s) Id where
+private def finitenessRelation (s : Slice) [BackwardPattern pat] [StrictBackwardPattern pat]
+    : Std.Iterators.FinitenessRelation (DefaultBackwardSearcher pat s) Id where
   Rel := InvImage WellFoundedRelation.rel (fun it => it.internalState.currPos.down)
   wf := InvImage.wf _ WellFoundedRelation.wf
   subrelation {it it'} h := by
@@ -422,10 +439,12 @@ private def finitenessRelation (s : Slice) [BackwardPattern pat] [StrictBackward
       cases h
       have := StrictBackwardPattern.ne_endPos _ _ h₀
       rw [h']
-      exact Std.lt_of_lt_of_le (Slice.Pos.ofSliceTo_lt_ofSliceTo_iff.2 ((Slice.Pos.lt_endPos_iff _).2 this)) Slice.Pos.ofSliceTo_le
+      exact Std.lt_of_lt_of_le
+        (Slice.Pos.ofSliceTo_lt_ofSliceTo_iff.2 ((Slice.Pos.lt_endPos_iff _).2 this))
+        Slice.Pos.ofSliceTo_le
 
-instance {s : Slice} [BackwardPattern pat] [StrictBackwardPattern pat] :
-    Std.Iterators.Finite (DefaultBackwardSearcher pat s) Id :=
+instance {s : Slice} [BackwardPattern pat] [StrictBackwardPattern pat]
+    : Std.Iterators.Finite (DefaultBackwardSearcher pat s) Id :=
   .of_finitenessRelation (finitenessRelation pat s)
 
 instance [BackwardPattern pat] : Std.IteratorLoop (DefaultBackwardSearcher pat s) Id Id :=
@@ -441,8 +460,8 @@ It is sometimes possible to give a more efficient implementation; see {name}`ToB
 for more details.
 -/
 @[inline, instance_reducible]
-def defaultImplementation [BackwardPattern pat] :
-    ToBackwardSearcher pat (DefaultBackwardSearcher pat) where
+def defaultImplementation [BackwardPattern pat]
+    : ToBackwardSearcher pat (DefaultBackwardSearcher pat) where
   toSearcher := DefaultBackwardSearcher.iter pat
 
 end ToBackwardSearcher

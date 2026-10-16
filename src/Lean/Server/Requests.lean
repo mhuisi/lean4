@@ -7,14 +7,9 @@ Authors: Wojciech Nawrocki, Marc Huisinga
 module
 
 prelude
-
-
 public import Lean.Server.RequestCancellation
-
 public import Lean.Server.FileSource
 public import Lean.Server.FileWorker.Utils
-
-
 public import Std.Sync.Mutex
 
 public section
@@ -24,67 +19,68 @@ open Lean
 namespace Lean.Server
 
 structure RequestError where
-  code    : JsonRpc.ErrorCode
+  code : JsonRpc.ErrorCode
   message : String
-  deriving Inhabited
+deriving Inhabited
 
 namespace RequestError
 open JsonRpc
 
-def fileChanged : RequestError :=
-  { code := ErrorCode.contentModified
-    message := "File changed." }
+def fileChanged : RequestError := { code := ErrorCode.contentModified, message := "File changed." }
 
-def methodNotFound (method : String) : RequestError :=
-  { code := ErrorCode.methodNotFound
-    message := s!"No request handler found for '{method}'" }
+def methodNotFound (method : String) : RequestError := {
+  code := ErrorCode.methodNotFound
+  message := s!"No request handler found for '{method}'"
+}
 
-def invalidParams (message : String) : RequestError :=
-  { code := ErrorCode.invalidParams, message }
+def invalidParams (message : String) : RequestError := { code := ErrorCode.invalidParams, message }
 
-def internalError (message : String) : RequestError :=
-  { code := ErrorCode.internalError, message }
+def internalError (message : String) : RequestError := { code := ErrorCode.internalError, message }
 
-def requestCancelled : RequestError :=
-  { code := ErrorCode.requestCancelled, message := "" }
+def requestCancelled : RequestError := { code := ErrorCode.requestCancelled, message := "" }
 
-def rpcNeedsReconnect : RequestError :=
-  { code := ErrorCode.rpcNeedsReconnect, message := "Outdated RPC session" }
+def rpcNeedsReconnect : RequestError := {
+  code := ErrorCode.rpcNeedsReconnect
+  message := "Outdated RPC session"
+}
 
 def ofException (e : Lean.Exception) : IO RequestError :=
   return internalError (← e.toMessageData.toString)
 
-def ofIoError (e : IO.Error) : RequestError :=
-  internalError (toString e)
+def ofIoError (e : IO.Error) : RequestError := internalError (toString e)
 
-def toLspResponseError (id : RequestID) (e : RequestError) : ResponseError Unit :=
-  { id := id
-    code := e.code
-    message := e.message }
+def toLspResponseError (id : RequestID) (e : RequestError) : ResponseError Unit := {
+  id := id
+  code := e.code
+  message := e.message
+}
 
 end RequestError
 
 def parseRequestParams (paramType : Type) [FromJson paramType] (params : Json)
     : Except RequestError paramType :=
-  fromJson? params |>.mapError fun inner => {
-    code := JsonRpc.ErrorCode.invalidParams
-    message := s!"Cannot parse request params: {params.compress}\n{inner}"
-  }
+  fromJson? params
+    |>.mapError fun inner => {
+      code := JsonRpc.ErrorCode.invalidParams
+      message :=
+        s!"Cannot parse request params: {params.compress}\
+          \n{inner}"
+    }
 
 inductive ServerRequestResponse (α : Type) where
   | success (response : α)
   | failure (code : JsonRpc.ErrorCode) (message : String)
-  deriving Inhabited
+deriving Inhabited
 
-abbrev ServerRequestEmitter := (method : String) → (param : Json)
-  → BaseIO (ServerTask (ServerRequestResponse Json))
+abbrev ServerRequestEmitter :=
+  (method : String) → (param : Json) → BaseIO (ServerTask (ServerRequestResponse Json))
 
 structure RequestContext where
-  rpcSessions          : Std.TreeMap UInt64 (IO.Ref FileWorker.RpcSession)
-  doc                  : FileWorker.EditableDocument
-  hLog                 : IO.FS.Stream
-  initParams           : Lsp.InitializeParams
-  cancelTk             : RequestCancellationToken
+  rpcSessions : Std.TreeMap UInt64 (IO.Ref FileWorker.RpcSession)
+  doc : FileWorker.EditableDocument
+  hLog : IO.FS.Stream
+  initParams : Lsp.InitializeParams
+  cancelTk : RequestCancellationToken
   serverRequestEmitter : ServerRequestEmitter
 
 abbrev RequestTask α := ServerTask (Except RequestError α)
@@ -92,20 +88,19 @@ abbrev RequestT m := ReaderT RequestContext <| ExceptT RequestError m
 /-- Workers execute request handlers in this monad. -/
 abbrev RequestM := ReaderT RequestContext <| EIO RequestError
 
-def RequestM.run (act : RequestM α) (rc : RequestContext) : EIO RequestError α :=
-  act rc
+def RequestM.run (act : RequestM α) (rc : RequestContext) : EIO RequestError α := act rc
 
 abbrev RequestTask.pure (a : α) : RequestTask α := ServerTask.pure (.ok a)
 
 instance : MonadLift IO RequestM where
   monadLift x := do
-    match ←  x.toBaseIO with
+    match ← x.toBaseIO with
     | .error e => throw <| RequestError.ofIoError e
     | .ok v => return v
 
 instance : MonadLift (EIO Exception) RequestM where
   monadLift x := do
-    match ←  x.toBaseIO with
+    match ← x.toBaseIO with
     | .error e => throw <| ← RequestError.ofException e
     | .ok v => return v
 
@@ -115,7 +110,7 @@ instance : MonadLift CancellableM RequestM where
     let r ← x.run ctx.cancelTk
     match r with
     | .error _ => throw RequestError.requestCancelled
-    | .ok v    => return v
+    | .ok v => return v
 
 namespace RequestM
 open FileWorker
@@ -144,11 +139,13 @@ def mapTaskCostly (t : ServerTask α) (f : α → RequestM β) : RequestM (Reque
   let rc ← readThe RequestContext
   ServerTask.EIO.mapTaskCostly (f · rc) t
 
-def bindTaskCheap (t : ServerTask α) (f : α → RequestM (RequestTask β)) : RequestM (RequestTask β) := do
+def bindTaskCheap (t : ServerTask α) (f : α → RequestM (RequestTask β))
+    : RequestM (RequestTask β) := do
   let rc ← readThe RequestContext
   ServerTask.EIO.bindTaskCheap t (f · rc)
 
-def bindTaskCostly (t : ServerTask α) (f : α → RequestM (RequestTask β)) : RequestM (RequestTask β) := do
+def bindTaskCostly (t : ServerTask α) (f : α → RequestM (RequestTask β))
+    : RequestM (RequestTask β) := do
   let rc ← readThe RequestContext
   ServerTask.EIO.bindTaskCostly t (f · rc)
 
@@ -162,12 +159,14 @@ def mapRequestTaskCostly (t : RequestTask α) (f : α → RequestM β) : Request
     | .error e => throw e
     | .ok r => f r
 
-def bindRequestTaskCheap (t : RequestTask α) (f : α → RequestM (RequestTask β)) : RequestM (RequestTask β) := do
+def bindRequestTaskCheap (t : RequestTask α) (f : α → RequestM (RequestTask β))
+    : RequestM (RequestTask β) := do
   bindTaskCheap (t := t) fun
     | .error e => throw e
     | .ok r => f r
 
-def bindRequestTaskCostly (t : RequestTask α) (f : α → RequestM (RequestTask β)) : RequestM (RequestTask β) := do
+def bindRequestTaskCostly (t : RequestTask α) (f : α → RequestM (RequestTask β))
+    : RequestM (RequestTask β) := do
   bindTaskCostly (t := t) fun
     | .error e => throw e
     | .ok r => f r
@@ -182,57 +181,66 @@ def checkCancelled : RequestM Unit := do
     throw .requestCancelled
 
 def sendServerRequest
-    paramType [ToJson paramType] responseType [FromJson responseType] [Inhabited responseType]
-    (method : String)
-    (param  : paramType)
+    paramType [ToJson paramType]
+    responseType [FromJson responseType] [Inhabited responseType]
+    (method : String) (param : paramType)
     : RequestM (ServerTask (ServerRequestResponse responseType)) := do
   let ctx ← read
   let task ← ctx.serverRequestEmitter method (toJson param)
   return task.mapCheap fun
     | ServerRequestResponse.success response =>
       match fromJson? response with
-      | .ok (response : responseType) => ServerRequestResponse.success response
-      | .error err => ServerRequestResponse.failure .parseError s!"Cannot parse server request response: {response.compress}\n{err}"
-    | ServerRequestResponse.failure code msg => ServerRequestResponse.failure code msg
+      | .ok (response : responseType) =>
+        ServerRequestResponse.success response
+      | .error err =>
+        ServerRequestResponse.failure .parseError
+          s!"Cannot parse server request response: {response.compress}\
+            \n{err}"
+    | ServerRequestResponse.failure code msg =>
+      ServerRequestResponse.failure code msg
 
 def waitFindSnapAux (notFoundX : RequestM α) (x : Snapshot → RequestM α)
     : Except IO.Error (Option Snapshot) → RequestM α
-  /- The elaboration task that we're waiting for may be aborted if the file contents change.
+  /-
+  The elaboration task that we're waiting for may be aborted if the file contents change.
   In that case, we reply with the `fileChanged` error by default. Thanks to this, the server doesn't
-  get bogged down in requests for an old state of the document. -/
+  get bogged down in requests for an old state of the document.
+  -/
   | Except.error e => throw (RequestError.ofIoError e)
   | Except.ok none => notFoundX
   | Except.ok (some snap) => x snap
 
-/-- Create a task which waits for the first snapshot matching `p`, handles various errors,
+/--
+Create a task which waits for the first snapshot matching `p`, handles various errors,
 and if a matching snapshot was found executes `x` with it. If not found, the task executes
-`notFoundX`. -/
-def withWaitFindSnap (doc : EditableDocument) (p : Snapshot → Bool)
-    (notFoundX : RequestM β)
+`notFoundX`.
+-/
+def withWaitFindSnap
+    (doc : EditableDocument) (p : Snapshot → Bool) (notFoundX : RequestM β)
     (x : Snapshot → RequestM β)
     : RequestM (RequestTask β) := do
   let findTask := doc.cmdSnaps.waitFind? p
   mapTaskCostly findTask <| waitFindSnapAux notFoundX x
 
 /-- See `withWaitFindSnap`. -/
-def bindWaitFindSnap (doc : EditableDocument) (p : Snapshot → Bool)
-    (notFoundX : RequestM (RequestTask β))
+def bindWaitFindSnap
+    (doc : EditableDocument) (p : Snapshot → Bool) (notFoundX : RequestM (RequestTask β))
     (x : Snapshot → RequestM (RequestTask β))
     : RequestM (RequestTask β) := do
   let findTask := doc.cmdSnaps.waitFind? p
   bindTaskCostly findTask <| waitFindSnapAux notFoundX x
 
-/-- Create a task which waits for the snapshot containing `lspPos` and executes `f` with it.
-If no such snapshot exists, the request fails with an error. -/
-def withWaitFindSnapAtPos
-    (lspPos : Lsp.Position)
-    (f : Snapshots.Snapshot → RequestM α)
+/--
+Create a task which waits for the snapshot containing `lspPos` and executes `f` with it.
+If no such snapshot exists, the request fails with an error.
+-/
+def withWaitFindSnapAtPos (lspPos : Lsp.Position) (f : Snapshots.Snapshot → RequestM α)
     : RequestM (RequestTask α) := do
   let doc ← readDoc
   let pos := doc.meta.text.lspPosToUtf8Pos lspPos
-  withWaitFindSnap doc (fun s => s.endPos >= pos)
-    (notFoundX := throw ⟨.invalidParams, s!"no snapshot found at {lspPos}"⟩)
-    (x := f)
+  withWaitFindSnap doc
+    (fun s => s.endPos >= pos)
+    (notFoundX := throw ⟨.invalidParams, s!"no snapshot found at {lspPos}"⟩) (x := f)
 
 open Elab.Command in
 def runCommandElabM (snap : Snapshot) (c : RequestT CommandElabM α) : RequestM α := do
@@ -267,32 +275,29 @@ section HandlerTable
 open Lsp
 
 structure LspResponse (α : Type) where
-  response   : α
+  response : α
   isComplete : Bool
 
 structure SerializedLspResponse where
-  response?  : Option Json
+  response? : Option Json
   serialized : String
   isComplete : Bool
 
 -- Custom serialization that uses `r.serialized` in place of `response`.
 -- Identical to `Json.compress` for the JSON of `JsonRpc.Message.response ..`.
-def SerializedLspResponse.toSerializedMessage
-    (id : JsonRpc.RequestID) (r : SerializedLspResponse) : String :=
-  "{" ++
-    s!"\"id\":{toJson id |>.compress}," ++
-    s!"\"jsonrpc\":\"2.0\"," ++
-    s!"\"result\":{r.serialized}"
-    ++ "}"
+def SerializedLspResponse.toSerializedMessage (id : JsonRpc.RequestID) (r : SerializedLspResponse)
+    : String :=
+  "{" ++ s!"\"id\":{toJson id |>.compress}," ++ s!"\"jsonrpc\":\"2.0\","
+    ++ s!"\"result\":{r.serialized}" ++ "}"
 
 structure RequestHandler where
   fileSource : Json → Except RequestError DocumentUri
   handle : Json → RequestM (RequestTask SerializedLspResponse)
 
-builtin_initialize requestHandlers : IO.Ref (PersistentHashMap String RequestHandler) ←
-  IO.mkRef {}
+builtin_initialize requestHandlers : IO.Ref (PersistentHashMap String RequestHandler) ← IO.mkRef {}
 
-/-- NB: This method may only be called in `initialize` blocks (user or builtin).
+/--
+NB: This method may only be called in `initialize` blocks (user or builtin).
 
 A registration consists of:
 - a type of JSON-parsable request data `paramType`
@@ -305,82 +310,87 @@ A registration consists of:
 
 A handler task may be cancelled at any time, so it should check the cancellation token when possible
 to handle this cooperatively. Any exceptions thrown in a request handler will be reported to the client
-as LSP error responses. -/
-def registerLspRequestHandler (method : String)
+as LSP error responses.
+-/
+def registerLspRequestHandler
+    (method : String)
     paramType [FromJson paramType] [FileSource paramType]
     respType [ToJson respType]
     (handler : paramType → RequestM (RequestTask respType))
-    (serialize? : Option (respType → String) := none) :
-    IO Unit := do
+    (serialize? : Option (respType → String) := none)
+    : IO Unit := do
   if !(← Lean.initializing) then
-    throw <| IO.userError s!"Failed to register LSP request handler for '{method}': only possible during initialization"
+    throw <| IO.userError
+      s!"Failed to register LSP request handler for '{method}': only possible during initialization"
   if (← requestHandlers.get).contains method then
-    throw <| IO.userError s!"Failed to register LSP request handler for '{method}': already registered"
-  let fileSource := fun j =>
-    parseRequestParams paramType j |>.map Lsp.fileSource
+    throw <|
+      IO.userError s!"Failed to register LSP request handler for '{method}': already registered"
+  let fileSource := fun j => parseRequestParams paramType j |>.map Lsp.fileSource
   let handle := fun j => do
     let params ← RequestM.parseRequestParams paramType j
     let t ← handler params
     pure <| t.mapCheap <| Except.map fun r =>
-      if let some serialize := serialize? then
-        {
-          response?  := none
-          serialized := serialize r
-          isComplete := true
-        }
+      if let some serialize := serialize? then {
+        response? := none
+        serialized := serialize r
+        isComplete := true
+      }
       else
         let j := toJson r
-        {
-          response? := some j
-          serialized := j.compress
-          isComplete := true
-        }
+        { response? := some j, serialized := j.compress, isComplete := true }
 
   requestHandlers.modify fun rhs => rhs.insert method { fileSource, handle }
 
 def lookupLspRequestHandler (method : String) : IO (Option RequestHandler) :=
   return (← requestHandlers.get).find? method
 
-/-- NB: This method may only be called in `initialize` blocks (user or builtin).
+/--
+NB: This method may only be called in `initialize` blocks (user or builtin).
 
 Register another handler to invoke after the last one registered for a method.
 At least one handler for the method must have already been registered to perform
 chaining.
 
-For more details on the registration of a handler, see `registerLspRequestHandler`. -/
-def chainLspRequestHandler (method : String)
+For more details on the registration of a handler, see `registerLspRequestHandler`.
+-/
+def chainLspRequestHandler
+    (method : String)
     paramType [FromJson paramType]
     respType [FromJson respType] [ToJson respType]
-    (handler : paramType → RequestTask respType → RequestM (RequestTask respType)) : IO Unit := do
+    (handler : paramType → RequestTask respType → RequestM (RequestTask respType))
+    : IO Unit := do
   if !(← Lean.initializing) then
-    throw <| IO.userError s!"Failed to chain LSP request handler for '{method}': only possible during initialization"
+    throw <| IO.userError
+      s!"Failed to chain LSP request handler for '{method}': only possible during initialization"
   if let some oldHandler ← lookupLspRequestHandler method then
     let handle := fun j => do
       let t ← oldHandler.handle j
-      let t := t.mapCheap fun x =>
-        x.bind fun j => do
-          let response ←
-            match j.response? with
-            | none =>
-              Json.parse j.serialized |>.mapError fun e =>
-                .internalError s!"Failed to parse original LSP response JSON for `{method}` when chaining: {e}"
-            | some response =>
-              pure response
-          FromJson.fromJson? response |>.mapError fun e =>
-            .internalError s!"Failed to parse original LSP response for `{method}` when chaining: {e}"
+      let t :=
+        t.mapCheap fun x =>
+          x.bind fun j => do
+            let response ←
+              match j.response? with
+              | none =>
+                Json.parse j.serialized
+                  |>.mapError fun e =>
+                    .internalError s!"Failed to parse original LSP response JSON for `{method}` \
+                      when chaining: {e}"
+              | some response =>
+                pure response
+            FromJson.fromJson? response
+              |>.mapError fun e =>
+                .internalError
+                  s!"Failed to parse original LSP response for `{method}` when chaining: {e}"
       let params ← RequestM.parseRequestParams paramType j
       let t ← handler params t
       pure <| t.mapCheap <| Except.map fun r =>
         let j := toJson r
-        {
-          response? := some j
-          serialized := j.compress
-          isComplete := true
-        }
+        { response? := some j, serialized := j.compress, isComplete := true }
 
-    requestHandlers.modify fun rhs => rhs.insert method {oldHandler with handle}
+    requestHandlers.modify fun rhs => rhs.insert method { oldHandler with handle }
   else
-    throw <| IO.userError s!"Failed to chain LSP request handler for '{method}': no initial handler registered"
+    throw <| IO.userError
+      s!"Failed to chain LSP request handler for '{method}': no initial handler registered"
 
 inductive RequestHandlerCompleteness where
   | complete
@@ -398,37 +408,41 @@ inductive RequestHandlerCompleteness where
   | «partial» (refreshMethod : String) (refreshIntervalMs : Nat)
 
 structure StatefulRequestHandler where
-  fileSource      : Json → Except RequestError DocumentUri
+  fileSource : Json → Except RequestError DocumentUri
   /--
   `handle` with explicit state management for chaining request handlers.
   This function is pure w.r.t. `lastTaskMutex` and `stateRef`, but not `RequestM`.
   -/
-  pureHandle      : Json → Dynamic → RequestM (SerializedLspResponse × Dynamic)
-  handle          : Json → RequestM (RequestTask SerializedLspResponse)
+  pureHandle : Json → Dynamic → RequestM (SerializedLspResponse × Dynamic)
+  handle : Json → RequestM (RequestTask SerializedLspResponse)
   /--
   `onDidChange` with explicit state management for chaining request handlers.
   This function is pure w.r.t. `lastTaskMutex` and `stateRef`, but not `RequestM`.
   -/
   pureOnDidChange : DidChangeTextDocumentParams → (StateT Dynamic RequestM) Unit
-  onDidChange     : DidChangeTextDocumentParams → RequestM Unit
-  lastTaskMutex   : Std.Mutex (ServerTask Unit)
-  initState       : Dynamic
+  onDidChange : DidChangeTextDocumentParams → RequestM Unit
+  lastTaskMutex : Std.Mutex (ServerTask Unit)
+  initState : Dynamic
   /--
   `stateRef` is synchronized in `registerStatefulLspRequestHandler` by using `lastTaskMutex` to
   ensure that stateful request tasks for the same handler are executed sequentially (in order of arrival).
   -/
-  stateRef        : IO.Ref Dynamic
-  completeness    : RequestHandlerCompleteness
+  stateRef : IO.Ref Dynamic
+  completeness : RequestHandlerCompleteness
 
-builtin_initialize statefulRequestHandlers : IO.Ref (PersistentHashMap String StatefulRequestHandler) ←
+builtin_initialize statefulRequestHandlers
+    : IO.Ref (PersistentHashMap String StatefulRequestHandler) ←
   IO.mkRef {}
 
-private def getState! (method : String) (state : Dynamic) stateType [TypeName stateType] : RequestM stateType := do
+private def getState! (method : String) (state : Dynamic) stateType [TypeName stateType]
+    : RequestM stateType := do
   let some state := state.get? stateType
-    | throw <| .internalError s!"Got invalid state type in stateful LSP request handler for {method}"
+    | throw <|
+        .internalError s!"Got invalid state type in stateful LSP request handler for {method}"
   return state
 
-private def getIOState! (method : String) (state : Dynamic) stateType [TypeName stateType] : IO stateType := do
+private def getIOState! (method : String) (state : Dynamic) stateType [TypeName stateType]
+    : IO stateType := do
   let some state := state.get? stateType
     | throw <| .userError s!"Got invalid state type in stateful LSP request handler for {method}"
   return state
@@ -443,54 +457,64 @@ private def overrideStatefulLspRequestHandler
     (onDidChange : DidChangeTextDocumentParams → StateT stateType RequestM Unit)
     : IO Unit := do
   if !(← Lean.initializing) then
-    throw <| IO.userError s!"Failed to register stateful LSP request handler for '{method}': only possible during initialization"
-  let fileSource := fun j =>
-    parseRequestParams paramType j |>.map Lsp.fileSource
+    throw <| IO.userError s!"Failed to register stateful LSP request handler for '{method}': only \
+      possible during initialization"
+  let fileSource := fun j => parseRequestParams paramType j |>.map Lsp.fileSource
   let lastTaskMutex ← Std.Mutex.new <| ServerTask.pure ()
   let initState := Dynamic.mk initState
   let stateRef ← IO.mkRef initState
 
-  let pureHandle : Json → Dynamic → RequestM (SerializedLspResponse × Dynamic) := fun param state => do
+  let pureHandle
+      : Json → Dynamic → RequestM (SerializedLspResponse × Dynamic) := fun param state => do
     let param ← RequestM.parseRequestParams paramType param
     let state ← getState! method state stateType
     let (r, state') ← handler param state
     let response := toJson r.response
-    return ({ r with response? := some response, serialized := response.compress }, Dynamic.mk state')
+    return (
+      { r with response? := some response, serialized := response.compress },
+      Dynamic.mk state'
+    )
 
-  let handle : Json → RequestM (RequestTask SerializedLspResponse) := fun param => lastTaskMutex.atomically do
-    let lastTask ← get
-    let requestTask ← RequestM.mapTaskCostly lastTask fun () => do
-      let state ← stateRef.get
-      let (r, state') ← pureHandle param state
-      stateRef.set state'
-      return r
-    set <| requestTask.mapCheap <| fun _ => ()
-    return requestTask
+  let handle : Json → RequestM (RequestTask SerializedLspResponse) := fun param =>
+    lastTaskMutex.atomically do
+      let lastTask ← get
+      let requestTask ←
+        RequestM.mapTaskCostly lastTask fun () => do
+          let state ← stateRef.get
+          let (r, state') ← pureHandle param state
+          stateRef.set state'
+          return r
+      set <| requestTask.mapCheap <| fun _ => ()
+      return requestTask
 
-  let pureOnDidChange : DidChangeTextDocumentParams → (StateT Dynamic RequestM) Unit := fun param => do
+  let pureOnDidChange
+      : DidChangeTextDocumentParams → (StateT Dynamic RequestM) Unit := fun param => do
     let state ← getState! method (← get) stateType
     let ((), state') ← onDidChange param |>.run state
     set <| Dynamic.mk state'
 
-  let onDidChange : DidChangeTextDocumentParams → RequestM Unit := fun param => lastTaskMutex.atomically do
+  let onDidChange : DidChangeTextDocumentParams → RequestM Unit := fun param =>
+    lastTaskMutex.atomically do
       let lastTask ← get
-      let didChangeTask ← RequestM.mapTaskCostly (t := lastTask) fun () => do
-        let state ← stateRef.get
-        let ((), state') ← pureOnDidChange param |>.run state
-        stateRef.set state'
+      let didChangeTask ←
+        RequestM.mapTaskCostly (t := lastTask) fun () => do
+          let state ← stateRef.get
+          let ((), state') ← pureOnDidChange param |>.run state
+          stateRef.set state'
       set <| didChangeTask.mapCheap <| fun _ => ()
 
-  statefulRequestHandlers.modify fun rhs => rhs.insert method {
-    fileSource,
-    pureHandle,
-    handle,
-    pureOnDidChange,
-    onDidChange,
-    lastTaskMutex,
-    initState,
-    stateRef,
-    completeness
-  }
+  statefulRequestHandlers.modify fun rhs =>
+    rhs.insert method {
+      fileSource,
+      pureHandle,
+      handle,
+      pureOnDidChange,
+      onDidChange,
+      lastTaskMutex,
+      initState,
+      stateRef,
+      completeness
+    }
 
 private def registerStatefulLspRequestHandler
     (method : String) (completeness : RequestHandlerCompleteness)
@@ -502,30 +526,35 @@ private def registerStatefulLspRequestHandler
     (onDidChange : DidChangeTextDocumentParams → StateT stateType RequestM Unit)
     : IO Unit := do
   if (← requestHandlers.get).contains method then
-    throw <| IO.userError s!"Failed to register stateful LSP request handler for '{method}': already registered"
-  overrideStatefulLspRequestHandler method completeness paramType respType stateType initState handler onDidChange
+    throw <| IO.userError
+      s!"Failed to register stateful LSP request handler for '{method}': already registered"
+  overrideStatefulLspRequestHandler method completeness paramType respType stateType initState
+    handler onDidChange
 
-def registerCompleteStatefulLspRequestHandler (method : String)
+def registerCompleteStatefulLspRequestHandler
+    (method : String)
     paramType [FromJson paramType] [FileSource paramType]
     respType [ToJson respType]
     stateType [TypeName stateType]
-    (initState : stateType)
-    (handler : paramType → stateType → RequestM (respType × stateType))
+    (initState : stateType) (handler : paramType → stateType → RequestM (respType × stateType))
     (onDidChange : DidChangeTextDocumentParams → StateT stateType RequestM Unit)
     : IO Unit :=
   let handler : paramType → stateType → RequestM (LspResponse respType × stateType) := fun p s => do
     let (response, s) ← handler p s
     return ({ response, isComplete := true }, s)
-  registerStatefulLspRequestHandler method .complete paramType respType stateType initState handler onDidChange
+  registerStatefulLspRequestHandler method .complete paramType respType stateType initState handler
+    onDidChange
 
-def registerPartialStatefulLspRequestHandler (method refreshMethod : String) (refreshIntervalMs : Nat)
+def registerPartialStatefulLspRequestHandler
+    (method refreshMethod : String) (refreshIntervalMs : Nat)
     paramType [FromJson paramType] [FileSource paramType]
     respType [ToJson respType]
     stateType [TypeName stateType]
     (initState : stateType)
     (handler : paramType → stateType → RequestM (LspResponse respType × stateType))
     (onDidChange : DidChangeTextDocumentParams → StateT stateType RequestM Unit) :=
-  registerStatefulLspRequestHandler method (.partial refreshMethod refreshIntervalMs) paramType respType stateType initState handler onDidChange
+  registerStatefulLspRequestHandler method (.partial refreshMethod refreshIntervalMs) paramType
+    respType stateType initState handler onDidChange
 
 def isStatefulLspRequestMethod (method : String) : BaseIO Bool := do
   return (← statefulRequestHandlers.get).contains method
@@ -539,16 +568,21 @@ def partialLspRequestHandlerMethods : IO (Array (String × String × Nat)) := do
       | none
     return (method, refreshMethod, refreshIntervalMs)
 
-def chainStatefulLspRequestHandler (method : String)
+def chainStatefulLspRequestHandler
+    (method : String)
     paramType [FromJson paramType] [ToJson paramType] [FileSource paramType]
     respType [FromJson respType] [ToJson respType]
     stateType [TypeName stateType]
-    (handler : paramType → LspResponse respType → stateType → RequestM (LspResponse respType × stateType))
-    (onDidChange : DidChangeTextDocumentParams → StateT stateType RequestM Unit) : IO Unit := do
-  if ! (← Lean.initializing) then
-    throw <| IO.userError s!"Failed to chain stateful LSP request handler for '{method}': only possible during initialization"
+    (handler
+      : paramType → LspResponse respType → stateType → RequestM (LspResponse respType × stateType))
+    (onDidChange : DidChangeTextDocumentParams → StateT stateType RequestM Unit)
+    : IO Unit := do
+  if !(← Lean.initializing) then
+    throw <| IO.userError s!"Failed to chain stateful LSP request handler for '{method}': only \
+      possible during initialization"
   let some oldHandler ← lookupStatefulLspRequestHandler method
-    | throw <| IO.userError s!"Failed to chain stateful LSP request handler for '{method}': no initial handler registered"
+    | throw <| IO.userError s!"Failed to chain stateful LSP request handler for '{method}': no \
+        initial handler registered"
   let oldHandle := oldHandler.pureHandle
   let oldOnDidChange := oldHandler.pureOnDidChange
   let initState ← getIOState! method oldHandler.initState stateType
@@ -558,9 +592,11 @@ def chainStatefulLspRequestHandler (method : String)
         match r.response? with
         | none => Json.parse r.serialized
         | some response => .ok response
-      | throw <| RequestError.internalError "Failed to parse response of previous request handler when chaining stateful LSP request handlers"
+      | throw <| RequestError.internalError "Failed to parse response of previous request handler \
+          when chaining stateful LSP request handlers"
     let .ok response := fromJson? response
-      | throw <| RequestError.internalError "Failed to convert response of previous request handler when chaining stateful LSP request handlers"
+      | throw <| RequestError.internalError "Failed to convert response of previous request \
+          handler when chaining stateful LSP request handlers"
     let r := { r with response := response }
     let s ← getState! method s stateType
     handler p r s
@@ -570,26 +606,28 @@ def chainStatefulLspRequestHandler (method : String)
     let s ← getState! method s stateType
     let ((), s) ← onDidChange p |>.run s
     set <| s
-  overrideStatefulLspRequestHandler method oldHandler.completeness paramType respType stateType initState
-    handle onDidChange
+  overrideStatefulLspRequestHandler method oldHandler.completeness paramType respType stateType
+    initState handle onDidChange
 
 def handleOnDidChange (p : DidChangeTextDocumentParams) : RequestM Unit := do
-  (← statefulRequestHandlers.get).forM fun _ handler => do
-    handler.onDidChange p
+  (← statefulRequestHandlers.get).forM fun _ handler => do handler.onDidChange p
 
-def handleLspRequest (method : String) (params : Json) : RequestM (RequestTask SerializedLspResponse) := do
+def handleLspRequest (method : String) (params : Json)
+    : RequestM (RequestTask SerializedLspResponse) := do
   if ← isStatefulLspRequestMethod method then
     match ← lookupStatefulLspRequestHandler method with
     | none =>
-      throw <| .internalError
-        s!"request '{method}' routed through watchdog but unknown in worker; are both using the same plugins?"
-    | some rh => rh.handle params
+      throw <| .internalError s!"request '{method}' routed through watchdog but unknown in worker; \
+        are both using the same plugins?"
+    | some rh =>
+      rh.handle params
   else
     match ← lookupLspRequestHandler method with
     | none =>
-      throw <| .internalError
-        s!"request '{method}' routed through watchdog but unknown in worker; are both using the same plugins?"
-    | some rh => rh.handle params
+      throw <| .internalError s!"request '{method}' routed through watchdog but unknown in worker; \
+        are both using the same plugins?"
+    | some rh =>
+      rh.handle params
 
 def routeLspRequest (method : String) (params : Json) : IO (Except RequestError DocumentUri) := do
   if ← isStatefulLspRequestMethod method then

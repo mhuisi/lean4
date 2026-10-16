@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Grind.Ring.CommSemiringAdapter
 public import Lean.Meta.Sym.SymM
@@ -20,65 +21,67 @@ abbrev SemiringExpr := Grind.CommRing.Expr
 
 /-- Classification state for a type with a `Semiring` instance. -/
 structure Semiring where
-  id             : Nat
-  type           : Expr
+  id : Nat
+  type : Expr
   /-- Cached `getDecLevel type` -/
-  u              : Level
+  u : Level
   /-- `Semiring` instance for `type` -/
-  semiringInst   : Expr
-  addFn?         : Option Expr := none
-  mulFn?         : Option Expr := none
-  powFn?         : Option Expr := none
-  natCastFn?     : Option Expr := none
-  natSMulFn?     : Option Expr := none
-  deriving Inhabited
+  semiringInst : Expr
+  addFn? : Option Expr := none
+  mulFn? : Option Expr := none
+  powFn? : Option Expr := none
+  natCastFn? : Option Expr := none
+  natSMulFn? : Option Expr := none
+deriving Inhabited
 
 /-- Classification state for a type with a `Ring` instance. -/
 structure Ring where
-  id             : Nat
-  type           : Expr
+  id : Nat
+  type : Expr
   /-- Cached `getDecLevel type` -/
-  u              : Level
+  u : Level
   /-- `Ring` instance for `type` -/
-  ringInst       : Expr
+  ringInst : Expr
   /-- `Semiring` instance for `type` -/
-  semiringInst   : Expr
+  semiringInst : Expr
   /-- `IsCharP` instance for `type` if available. -/
-  charInst?      : Option (Expr × Nat)
-  addFn?         : Option Expr := none
-  mulFn?         : Option Expr := none
-  subFn?         : Option Expr := none
-  negFn?         : Option Expr := none
-  powFn?         : Option Expr := none
-  intCastFn?     : Option Expr := none
-  natCastFn?     : Option Expr := none
-  natSMulFn?     : Option Expr := none
-  intSMulFn?     : Option Expr := none
-  one?           : Option Expr := none
-  deriving Inhabited
+  charInst? : Option (Expr × Nat)
+  addFn? : Option Expr := none
+  mulFn? : Option Expr := none
+  subFn? : Option Expr := none
+  negFn? : Option Expr := none
+  powFn? : Option Expr := none
+  intCastFn? : Option Expr := none
+  natCastFn? : Option Expr := none
+  natSMulFn? : Option Expr := none
+  intSMulFn? : Option Expr := none
+  one? : Option Expr := none
+deriving Inhabited
 
 /-- Classification state for a type with a `CommRing` instance. -/
 structure CommRing extends Ring where
   /-- Inverse function if `fieldInst?` is `some inst` -/
-  invFn?             : Option Expr := none
+  invFn? : Option Expr := none
   /-- Division function if `fieldInst?` is `some inst` -/
-  divFn?             : Option Expr := none
+  divFn? : Option Expr := none
   /--
   If this is a `OfSemiring.Q α` ring, this field contains the
   `semiringId` for `α`.
   -/
-  semiringId?        : Option Nat
+  semiringId? : Option Nat
   /-- `CommSemiring` instance for `type` -/
-  commSemiringInst   : Expr
+  commSemiringInst : Expr
   /-- `CommRing` instance for `type` -/
-  commRingInst       : Expr
+  commRingInst : Expr
   /-- `NoNatZeroDivisors` instance for `type` if available. -/
-  noZeroDivInst?     : Option Expr
+  noZeroDivInst? : Option Expr
   /-- `Field` instance for `type` if available. -/
-  fieldInst?         : Option Expr
-  /-- `PowIdentity` instance, the synthesized `CommSemiring` instance, and exponent `p` if available. -/
-  powIdentityInst?   : Option (Expr × Expr × Nat) := none
-  deriving Inhabited
+  fieldInst? : Option Expr
+  /--
+  `PowIdentity` instance, the synthesized `CommSemiring` instance, and exponent `p` if available.
+  -/
+  powIdentityInst? : Option (Expr × Expr × Nat) := none
+deriving Inhabited
 
 /--
 Classification state for a type with a `CommSemiring` instance.
@@ -86,13 +89,13 @@ Recall that `CommSemiring` types are normalized using the `OfSemiring.Q` envelop
 -/
 structure CommSemiring extends Semiring where
   /-- Id of the envelope ring `OfSemiring.Q type` -/
-  ringId             : Nat
+  ringId : Nat
   /-- `CommSemiring` instance for `type` -/
-  commSemiringInst   : Expr
+  commSemiringInst : Expr
   /-- `AddRightCancel` instance for `type` if available. -/
   addRightCancelInst? : Option (Option Expr) := none
-  toQFn?             : Option Expr := none
-  deriving Inhabited
+  toQFn? : Option Expr := none
+deriving Inhabited
 
 /-- Result of classifying a type's algebraic structure. -/
 inductive ClassifyResult where
@@ -100,8 +103,9 @@ inductive ClassifyResult where
   | nonCommRing (id : Nat)
   | commSemiring (id : Nat)
   | nonCommSemiring (id : Nat)
-  | /-- No algebraic structure found. -/ none
-  deriving Inhabited
+  | /-- No algebraic structure found. -/
+    none
+deriving Inhabited
 
 /--
 Classification state for a type with an `IsPreorder` instance: the order instances, the
@@ -109,38 +113,44 @@ canonical `≤`/`<` functions, and the link to the ring classification when the 
 an ordered ring.
 -/
 structure Order where
-  id                 : Nat
-  type               : Expr
+  id : Nat
+  type : Expr
   /-- Cached `getDecLevel type` -/
-  u                  : Level
-  isPreorderInst     : Expr
+  u : Level
+  isPreorderInst : Expr
   /-- `LE` instance -/
-  leInst             : Expr
+  leInst : Expr
   /-- `LT` instance if available -/
-  ltInst?            : Option Expr
+  ltInst? : Option Expr
   /-- `IsPartialOrder` instance if available -/
-  isPartialInst?     : Option Expr
+  isPartialInst? : Option Expr
   /-- `IsLinearPreorder` instance if available -/
-  isLinearPreInst?   : Option Expr
+  isLinearPreInst? : Option Expr
   /-- `LawfulOrderLT` instance if available -/
   lawfulOrderLTInst? : Option Expr
-  /-- Id of the `CommRing` (`rings`) or non-commutative `Ring` (`ncRings`) classification, if available. -/
-  ringId?            : Option Nat
+  /--
+  Id of the `CommRing` (`rings`) or non-commutative `Ring` (`ncRings`) classification, if available.
+  -/
+  ringId? : Option Nat
   /-- `true` if `ringId?` indexes `rings`, `false` if it indexes `ncRings` -/
-  isCommRing         : Bool
-  /-- Id of the semiring classification (`semirings` or `ncSemirings`) when the type is an ordered semiring that is not a ring. -/
-  semiringId?        : Option Nat := none
+  isCommRing : Bool
+  /--
+  Id of the semiring classification (`semirings` or `ncSemirings`) when the type is an ordered semiring that is not a ring.
+  -/
+  semiringId? : Option Nat := none
   /-- `true` if `semiringId?` indexes `semirings`, `false` if it indexes `ncSemirings` -/
-  isCommSemiring     : Bool := true
+  isCommSemiring : Bool := true
   /-- `Ring` instance if available -/
-  ringInst?          : Option Expr
-  /-- `OrderedRing` instance if available (with the semiring instance of `ringId?`, or of `semiringId?`) -/
-  orderedRingInst?   : Option Expr
+  ringInst? : Option Expr
+  /--
+  `OrderedRing` instance if available (with the semiring instance of `ringId?`, or of `semiringId?`)
+  -/
+  orderedRingInst? : Option Expr
   /-- Canonical `LE.le type leInst` -/
-  leFn               : Expr
+  leFn : Expr
   /-- Canonical `LT.lt type ltInst`, present iff `lawfulOrderLTInst?` is -/
-  ltFn?              : Option Expr
-  deriving Inhabited
+  ltFn? : Option Expr
+deriving Inhabited
 
 /-- Arith type classification state, stored as a `SymExtension`. -/
 structure State where
@@ -148,38 +158,34 @@ structure State where
   Maximum exponent eagerly evaluated while computing bounds for `ToInt` and
   the characteristic of a ring. Same meaning as `Grind.Config.exp`.
   -/
-  exp            : Nat := 2^20
+  exp : Nat := 2 ^ 20
   /-- Commutative rings. -/
-  rings          : Array CommRing := {}
+  rings : Array CommRing := {}
   /-- Commutative semirings. -/
-  semirings      : Array CommSemiring := {}
+  semirings : Array CommSemiring := {}
   /-- Non-commutative rings. -/
-  ncRings        : Array Ring := {}
+  ncRings : Array Ring := {}
   /-- Non-commutative semirings. -/
-  ncSemirings    : Array Semiring := {}
+  ncSemirings : Array Semiring := {}
   /-- Mapping from types to their classification result. Caches failures as `.none`. -/
-  typeClassify   : PHashMap ExprPtr ClassifyResult := {}
+  typeClassify : PHashMap ExprPtr ClassifyResult := {}
   /-- Order structures. -/
-  orders         : Array Order := {}
+  orders : Array Order := {}
   /-- Mapping from types to their order id. Caches failures as `none`. -/
   typeOrderClassify : PHashMap ExprPtr (Option Nat) := {}
-  deriving Inhabited
+deriving Inhabited
 
 builtin_initialize arithExt : SymExtension State ← registerSymExtension (return {})
 
-def getArithState : SymM State :=
-  arithExt.getState
+def getArithState : SymM State := arithExt.getState
 
-@[inline] def modifyArithState (f : State → State) : SymM Unit :=
-  arithExt.modifyState f
+@[inline] def modifyArithState (f : State → State) : SymM Unit := arithExt.modifyState f
 
 /-- Get the exponent threshold. -/
-def getExpThreshold : SymM Nat :=
-  return (← getArithState).exp
+def getExpThreshold : SymM Nat := return (← getArithState).exp
 
 /-- Set the exponent threshold. -/
-def setExpThreshold (exp : Nat) : SymM Unit :=
-  modifyArithState fun s => { s with exp }
+def setExpThreshold (exp : Nat) : SymM Unit := modifyArithState fun s => { s with exp }
 
 /-- Run `k` with a temporary exponent threshold. -/
 def withExpThreshold (exp : Nat) (k : SymM α) : SymM α := do

@@ -17,27 +17,26 @@ namespace Lean
 namespace Parser
 
 /-- Syntax quotation for terms. -/
-@[builtin_term_parser] def Term.quot := leading_parser
-  "`(" >> withoutPosition (incQuotDepth termParser) >> ")"
-@[builtin_term_parser] def Term.precheckedQuot := leading_parser
-  "`" >> Term.quot
+@[builtin_term_parser]
+def Term.quot := leading_parser "`(" >> withoutPosition (incQuotDepth termParser) >> ")"
+@[builtin_term_parser] def Term.precheckedQuot := leading_parser "`" >> Term.quot
 
 namespace Command
 
 /-- Skip input until the next character that satisfies the predicate, then skip whitespace -/
 private def skipUntil (pred : Char → Bool) : Parser where
-  fn :=
-    andthenFn
-      (takeUntilFn pred)
-      (takeWhileFn Char.isWhitespace)
+  fn := andthenFn (takeUntilFn pred) (takeWhileFn Char.isWhitespace)
 
 /-- Skip input until the next whitespace character (used for error recovery for certain tokens) -/
 private def skipUntilWs : Parser := skipUntil Char.isWhitespace
 
-/-- Skip input until the next whitespace character or delimiter (used for error recovery for certain
-    tokens, especially names that occur in signatures) -/
-private def skipUntilWsOrDelim : Parser := skipUntil fun c =>
-  c.isWhitespace || c == '(' || c == ')' || c == ':' || c == '{' || c == '}' || c == '|'
+/--
+Skip input until the next whitespace character or delimiter (used for error recovery for certain
+tokens, especially names that occur in signatures)
+-/
+private def skipUntilWsOrDelim : Parser :=
+  skipUntil fun c =>
+    c.isWhitespace || c == '(' || c == ')' || c == ':' || c == '{' || c == '}' || c == '|'
 
 /--
 Syntax quotation for (sequences of) commands.
@@ -46,10 +45,10 @@ so ambiguous quotations like `` `($x $y) `` will be parsed as an application,
 not two commands. Use `` `($x:command $y:command) `` instead.
 Multiple commands will be put in a `` `null `` node,
 but a single command will not (so that you can directly
-match against a quotation in a command kind's elaborator). -/
-@[builtin_term_parser low] def quot := leading_parser
-  "`(" >> withoutPosition (incQuotDepth (many1Unbox commandParser)) >> ")"
-
+match against a quotation in a command kind's elaborator).
+-/
+@[builtin_term_parser low]
+def quot := leading_parser "`(" >> withoutPosition (incQuotDepth (many1Unbox commandParser)) >> ")"
 
 /--
 `/-! <text> -/` defines a *module docstring* that can be displayed by documentation generation
@@ -57,20 +56,20 @@ tools. The string is associated with the corresponding position in the file. It 
 multiple times in the same file.
 -/
 @[builtin_command_parser]
-def moduleDoc := leading_parser ppDedent <|
-  docCommentOpen "/-!" >> Doc.Parser.ifVersoModuleDocs versoCommentBody commentBody >> ppLine
+def moduleDoc :=
+  leading_parser ppDedent <|
+    docCommentOpen "/-!" >> Doc.Parser.ifVersoModuleDocs versoCommentBody commentBody >> ppLine
 
-
-def namedPrio := leading_parser
-  atomic (" (" >> nonReservedSymbol "priority") >> " := " >> withoutPosition priorityParser >> ")"
+def namedPrio :=
+  leading_parser
+    atomic (" (" >> nonReservedSymbol "priority") >> " := " >> withoutPosition priorityParser >> ")"
 def optNamedPrio := optional namedPrio
 
-def «private»        := leading_parser "private "
-def «public»         := leading_parser "public "
-def visibility       :=
-  withAntiquot (mkAntiquot "visibility" decl_name% (isPseudoKind := true)) <|
-    «private» <|> «public»
-def «protected»      := leading_parser "protected "
+def «private» := leading_parser "private "
+def «public» := leading_parser "public "
+def visibility :=
+  withAntiquot (mkAntiquot "visibility" decl_name% (isPseudoKind := true)) <| «private» <|> «public»
+def «protected» := leading_parser "protected "
 /--
 (module system) The `meta` modifier can be applied to a `def` in order to make it available for
 compile-time execution, e.g. as part of a macro or tactic. Specifically, attributes such as
@@ -90,14 +89,14 @@ be defined without `meta` and then imported with the correct modifier as needed.
 the same module can be `import`ed and `meta import`ed at once in order to make such regular `def`s
 available in both `meta` and non-`meta` `def`s.
 -/
-@[builtin_doc]
-def «meta»           := leading_parser "meta "
-def «noncomputable»  := leading_parser "noncomputable "
-def «unsafe»         := leading_parser "unsafe "
-def «partial»        := leading_parser "partial "
-def «nonrec»         := leading_parser "nonrec "
+@[builtin_doc] def «meta» := leading_parser "meta "
+def «noncomputable» := leading_parser "noncomputable "
+def «unsafe» := leading_parser "unsafe "
+def «partial» := leading_parser "partial "
+def «nonrec» := leading_parser "nonrec "
 
-/-- `declModifiers` is the collection of modifiers on a declaration:
+/--
+`declModifiers` is the collection of modifiers on a declaration:
 * a doc comment `/-- ... -/`
 * a list of attributes `@[attr1, attr2]`
 * a visibility specifier, `private` or `public`
@@ -110,52 +109,71 @@ All modifiers are optional, and have to come in the listed order.
 
 `nestedDeclModifiers` is the same as `declModifiers`, but attributes are printed
 on the same line as the declaration. It is used for declarations nested inside other syntax,
-such as inductive constructors, structure projections, and `let rec` / `where` definitions. -/
-def declModifiers (inline : Bool) := leading_parser
-  optional docComment >>
-  optional (Term.«attributes» >> if inline then skip else ppDedent ppLine) >>
-  optional visibility >>
-  optional «protected» >>
-  optional («meta» <|> «noncomputable») >>
-  optional «unsafe» >>
-  optional («partial» <|> «nonrec»)
-/-- `declId` matches `foo` or `foo.{u,v}`: an identifier possibly followed by a list of universe names -/
+such as inductive constructors, structure projections, and `let rec` / `where` definitions.
+-/
+def declModifiers (inline : Bool) :=
+  leading_parser
+    optional docComment >> optional (Term.«attributes» >> if inline then skip else ppDedent ppLine)
+      >> optional visibility >> optional «protected» >> optional («meta» <|> «noncomputable»)
+      >> optional «unsafe» >> optional («partial» <|> «nonrec»)
+/--
+`declId` matches `foo` or `foo.{u,v}`: an identifier possibly followed by a list of universe names
+-/
 -- @[builtin_doc] -- FIXME: suppress the hover
-def declId := leading_parser
-  ident >>
-  optional (checkNoWsBefore "no space before '.{'" >> ".{" >>
-    sepBy1 (recover ident (skipUntil (fun c => c.isWhitespace || c ∈ [',', '}']))) ", " >> "}")
-/-- `declSig` matches the signature of a declaration with required type: a list of binders and then `: type` -/
+def declId :=
+  leading_parser
+    ident >> optional
+      (checkNoWsBefore "no space before '.{'" >> ".{"
+        >> sepBy1 (recover ident (skipUntil (fun c => c.isWhitespace || c ∈ [',', '}']))) ", "
+        >> "}")
+/--
+`declSig` matches the signature of a declaration with required type: a list of binders and then `: type`
+-/
 -- @[builtin_doc] -- FIXME: suppress the hover
-def declSig := leading_parser
-  many (ppSpace >> (Term.binderIdent <|> Term.bracketedBinder)) >> Term.typeSpec
-/-- The `given xs` clause of a `def` contract. It binds logical variables and scopes them over the
-`requires` and `ensures` clauses. A logical variable belongs to the specification alone. -/
-def givenClause := leading_parser
-  ppIndent (ppLine >> nonReservedSymbol "given" >>
-    withForbiddens #["requires", "ensures", "throws"]
-      (many1 (ppSpace >> (Term.binderIdent <|> Term.bracketedBinder))))
-/-- The `requires P` precondition clause of a `def` contract. The form `requires s => P s` binds the
-arguments of the assertion itself, such as the state of a state monad. -/
-def requiresClause := leading_parser
-  ppIndent (ppLine >> nonReservedSymbol "requires" >>
-    withForbiddens #["ensures", "throws"] (atomic Term.basicFun <|> (ppSpace >> termParser)))
+def declSig :=
+  leading_parser many (ppSpace >> (Term.binderIdent <|> Term.bracketedBinder)) >> Term.typeSpec
+/--
+The `given xs` clause of a `def` contract. It binds logical variables and scopes them over the
+`requires` and `ensures` clauses. A logical variable belongs to the specification alone.
+-/
+def givenClause :=
+  leading_parser ppIndent
+    (ppLine >> nonReservedSymbol "given"
+      >> withForbiddens #["requires", "ensures", "throws"]
+        (many1 (ppSpace >> (Term.binderIdent <|> Term.bracketedBinder))))
+/--
+The `requires P` precondition clause of a `def` contract. The form `requires s => P s` binds the
+arguments of the assertion itself, such as the state of a state monad.
+-/
+def requiresClause :=
+  leading_parser ppIndent
+    (ppLine >> nonReservedSymbol "requires"
+      >> withForbiddens #["ensures", "throws"] (atomic Term.basicFun <|> (ppSpace >> termParser)))
 /-- The `ensures b => Q` postcondition clause of a `def` contract, binding the result `b`. -/
-def ensuresClause := leading_parser
-  ppIndent (ppLine >> nonReservedSymbol "ensures" >> withForbidden "throws" Term.basicFun)
-/-- The `throws e => R` exception clause of a `def` contract, binding the raised exception `e`.
-An ascription `throws (e : ε) => R` selects the exception layer of type `ε`. -/
-def throwsClause := leading_parser
-  ppIndent (ppLine >> nonReservedSymbol "throws" >> withForbidden "throws" Term.basicFun)
-/-- The `: type` of a `def`. It may carry contract clauses, so we forbid `given`, `requires`,
-`ensures` and `throws` in the type. -/
+def ensuresClause :=
+  leading_parser ppIndent
+    (ppLine >> nonReservedSymbol "ensures" >> withForbidden "throws" Term.basicFun)
+/--
+The `throws e => R` exception clause of a `def` contract, binding the raised exception `e`.
+An ascription `throws (e : ε) => R` selects the exception layer of type `ε`.
+-/
+def throwsClause :=
+  leading_parser ppIndent
+    (ppLine >> nonReservedSymbol "throws" >> withForbidden "throws" Term.basicFun)
+/--
+The `: type` of a `def`. It may carry contract clauses, so we forbid `given`, `requires`,
+`ensures` and `throws` in the type.
+-/
 def defTypeSpec := withForbiddens #["given", "requires", "ensures", "throws"] Term.typeSpec
-/-- `optDeclSig` matches the signature of a declaration with optional type: a list of binders and then possibly `: type` -/
+/--
+`optDeclSig` matches the signature of a declaration with optional type: a list of binders and then possibly `: type`
+-/
 -- @[builtin_doc] -- FIXME: suppress the hover
-def optDeclSig := leading_parser
-  withForbiddens #["given", "requires", "ensures", "throws"]
-    (many (ppSpace >> (Term.binderIdent <|> Term.bracketedBinder))) >>
-  optional defTypeSpec
+def optDeclSig :=
+  leading_parser
+    withForbiddens #["given", "requires", "ensures", "throws"]
+        (many (ppSpace >> (Term.binderIdent <|> Term.bracketedBinder)))
+      >> optional defTypeSpec
 /-- Right-hand side of a `:=` in a declaration, a term. -/
 def declBody : Parser :=
   /-
@@ -180,78 +198,91 @@ def declBody : Parser :=
   do not call `byTactic` directly to avoid differences in pretty printing or behavior or error
   reporting between the two branches.
   -/
-  lookahead (setExpected [] "by") >> termParser leadPrec <|>
-  termParser
+  lookahead (setExpected [] "by") >> termParser leadPrec <|> termParser
 
 -- As the pretty printer ignores `lookahead`, we need a custom parenthesizer to choose the correct
 -- precedence
 open PrettyPrinter in
-@[combinator_parenthesizer declBody, expose] def declBody.parenthesizer : Parenthesizer :=
-  Parenthesizer.categoryParser.parenthesizer `term 0
+@[combinator_parenthesizer declBody, expose]
+def declBody.parenthesizer : Parenthesizer := Parenthesizer.categoryParser.parenthesizer `term 0
 
-def declValSimple    := leading_parser
-  " :=" >> ppHardLineUnlessUngrouped >> declBody >> Termination.suffix >> optional Term.whereDecls
-def declValEqns      := leading_parser
-  Term.matchAltsWhereDecls
-def whereStructInst  := leading_parser
-  ppIndent ppSpace >> "where" >> Term.structInstFields (sepByIndent Term.structInstField "; " (allowTrailingSep := true)) >>
-  optional Term.whereDecls
-/-- `declVal` matches the right-hand side of a declaration, one of:
+def declValSimple :=
+  leading_parser
+    " :=" >> ppHardLineUnlessUngrouped >> declBody >> Termination.suffix >> optional Term.whereDecls
+def declValEqns := leading_parser Term.matchAltsWhereDecls
+def whereStructInst :=
+  leading_parser
+    ppIndent ppSpace >> "where"
+      >> Term.structInstFields (sepByIndent Term.structInstField "; " (allowTrailingSep := true))
+      >> optional Term.whereDecls
+/--
+`declVal` matches the right-hand side of a declaration, one of:
 * `:= expr` (a "simple declaration")
 * a sequence of `| pat => expr` (a declaration by equations), shorthand for a `match`
 * `where` and then a sequence of `field := value` initializers, shorthand for a structure constructor
 -/
-@[builtin_doc] def declVal :=
+@[builtin_doc]
+def declVal :=
   -- Remark: we should not use `Term.whereDecls` at `declVal`
   -- because `Term.whereDecls` is defined using `Term.letRecDecl` which may contain attributes.
   -- Issue #753 shows an example that fails to be parsed when we used `Term.whereDecls`.
   withAntiquot (mkAntiquot "declVal" decl_name% (isPseudoKind := true)) <|
     declValSimple <|> declValEqns <|> whereStructInst
-/-- `given xs`/`requires P`/`ensures b => Q`/`throws e => R` contract clauses followed by the value
-of a `def`. Tried only after `declVal` fails. -/
-def contractDeclVal := leading_parser
-  optional givenClause >> optional requiresClause >> optional ensuresClause >>
-  many throwsClause >> withoutInfo declVal
-def «abbrev»         := leading_parser
-  "abbrev " >> declId >> ppIndent optDeclSig >> declVal
-def derivingClass    := leading_parser
-  optional ("@[" >> nonReservedSymbol "expose" >> "]") >> withForbidden "for" termParser
-def derivingClasses  := sepBy1 derivingClass ", "
-def optDefDeriving   :=
-  optional (ppDedent ppLine >> atomic ("deriving " >> notSymbol "instance" >> notSymbol "noncomputable") >> derivingClasses)
-def definition     := leading_parser
-  "def " >> recover declId skipUntilWsOrDelim >> ppIndent optDeclSig >>
-  (declVal <|> contractDeclVal) >> optDefDeriving
-def «theorem»        := leading_parser
-  "theorem " >> recover declId skipUntilWsOrDelim >> ppIndent declSig >> declVal
-def «opaque»         := leading_parser
-  "opaque " >> recover declId skipUntilWsOrDelim >> ppIndent declSig >> optional declValSimple
-/- As `declSig` starts with a space, "instance" does not need a trailing space
-  if we put `ppSpace` in the optional fragments. -/
-def «instance»       := leading_parser
-  Term.attrKind >> "instance" >> optNamedPrio >>
-  optional (ppSpace >> declId) >> ppIndent declSig >> declVal
-def «axiom»          := leading_parser
-  "axiom " >> recover declId skipUntilWsOrDelim >> ppIndent declSig
+/--
+`given xs`/`requires P`/`ensures b => Q`/`throws e => R` contract clauses followed by the value
+of a `def`. Tried only after `declVal` fails.
+-/
+def contractDeclVal :=
+  leading_parser
+    optional givenClause >> optional requiresClause >> optional ensuresClause >> many throwsClause
+      >> withoutInfo declVal
+def «abbrev» := leading_parser "abbrev " >> declId >> ppIndent optDeclSig >> declVal
+def derivingClass :=
+  leading_parser
+    optional ("@[" >> nonReservedSymbol "expose" >> "]") >> withForbidden "for" termParser
+def derivingClasses := sepBy1 derivingClass ", "
+def optDefDeriving :=
+  optional
+    (ppDedent ppLine >> atomic ("deriving " >> notSymbol "instance" >> notSymbol "noncomputable")
+      >> derivingClasses)
+def definition :=
+  leading_parser
+    "def " >> recover declId skipUntilWsOrDelim >> ppIndent optDeclSig
+      >> (declVal <|> contractDeclVal) >> optDefDeriving
+def «theorem» :=
+  leading_parser "theorem " >> recover declId skipUntilWsOrDelim >> ppIndent declSig >> declVal
+def «opaque» :=
+  leading_parser
+    "opaque " >> recover declId skipUntilWsOrDelim >> ppIndent declSig >> optional declValSimple
+/-
+As `declSig` starts with a space, "instance" does not need a trailing space
+if we put `ppSpace` in the optional fragments.
+-/
+def «instance» :=
+  leading_parser
+    Term.attrKind >> "instance" >> optNamedPrio >> optional (ppSpace >> declId) >> ppIndent declSig
+      >> declVal
+def «axiom» := leading_parser "axiom " >> recover declId skipUntilWsOrDelim >> ppIndent declSig
 /- As `declSig` starts with a space, "example" does not need a trailing space. -/
-def «example»        := leading_parser
-  "example" >> ppIndent optDeclSig >> declVal
-def ctor             := leading_parser
-  atomic (optional docComment >> "\n| ") >>
-  ppGroup (declModifiers true >> rawIdent >> optDeclSig)
-def optDeriving      := leading_parser
-  optional (ppLine >> atomic ("deriving " >> notSymbol "instance" >> notSymbol "noncomputable") >> derivingClasses)
-def computedField    := leading_parser
-  declModifiers true >> ident >> " : " >> termParser >> Term.matchAlts
-def computedFields   := leading_parser
-  "with" >> manyIndent (ppLine >> ppGroup computedField)
+def «example» := leading_parser "example" >> ppIndent optDeclSig >> declVal
+def ctor :=
+  leading_parser
+    atomic (optional docComment >> "\n| ") >> ppGroup (declModifiers true >> rawIdent >> optDeclSig)
+def optDeriving :=
+  leading_parser optional
+    (ppLine >> atomic ("deriving " >> notSymbol "instance" >> notSymbol "noncomputable")
+      >> derivingClasses)
+def computedField :=
+  leading_parser declModifiers true >> ident >> " : " >> termParser >> Term.matchAlts
+def computedFields := leading_parser "with" >> manyIndent (ppLine >> ppGroup computedField)
 /--
 Manually prove that the predicate functor is `Lean.Order.monotone`, instead of relying on the
 proof search performed by the `Lean.Order.monotonicity` tactic. Only supported on `coinductive`
 predicates and on `inductive` predicates that share a `mutual` block with a `coinductive` one.
 -/
-@[builtin_doc] def monotonicityBy := leading_parser
-  ppDedent ppLine >> "monotonicity_by " >> Tactic.tacticSeqIndentGt
+@[builtin_doc]
+def monotonicityBy :=
+  leading_parser ppDedent ppLine >> "monotonicity_by " >> Tactic.tacticSeqIndentGt
 /--
 In Lean, every concrete type other than the universes
 and every type constructor other than dependent arrows
@@ -271,81 +302,97 @@ or an element `head : α` followed by a list `tail : List α`.
 See [Inductive types](https://lean-lang.org/theorem_proving_in_lean4/inductive_types.html)
 for more information.
 -/
-@[builtin_doc] def «inductive» := leading_parser
-  "inductive " >> recover declId skipUntilWsOrDelim >> ppIndent optDeclSig >> optional (symbol " :=" <|> " where") >>
-  many ctor >> optional (ppDedent ppLine >> computedFields) >> optDeriving >> optional monotonicityBy
-@[builtin_doc] def «coinductive» := leading_parser
-  "coinductive " >> recover declId skipUntilWsOrDelim >> ppIndent optDeclSig >> optional (symbol " :=" <|> " where") >>
-  many ctor >> optional (ppDedent ppLine >> computedFields) >> optDeriving >> optional monotonicityBy
-def classInductive   := leading_parser
-  atomic (group (symbol "class " >> "inductive ")) >>
-  recover declId skipUntilWsOrDelim >> ppIndent optDeclSig >>
-  optional (symbol " :=" <|> " where") >> many ctor >> optDeriving
-def structExplicitBinder := leading_parser
-  atomic (declModifiers true >> "(") >>
-  withoutPosition (many1 ident >> ppIndent optDeclSig >>
-    optional (Term.binderTactic <|> Term.binderDefault)) >> ")"
-def structImplicitBinder := leading_parser
-  atomic (declModifiers true >> "{") >> withoutPosition (many1 ident >> declSig) >> "}"
-def structInstBinder     := leading_parser
-  atomic (declModifiers true >> "[") >> withoutPosition (many1 ident >> declSig) >> "]"
-def structSimpleBinder   := leading_parser
-  atomic (declModifiers true >> ident) >> optDeclSig >>
-  optional (Term.binderTactic <|> Term.binderDefault)
-def structFields         := leading_parser
-  manyIndent <|
-    ppLine >> checkColGe >> ppGroup (
-      structExplicitBinder <|> structImplicitBinder <|>
-      structInstBinder <|> structSimpleBinder)
-def structCtor           := leading_parser
-  atomic (ppIndent (declModifiers true >> ident >> many (ppSpace >> Term.bracketedBinder) >> " :: "))
-def structureTk          := leading_parser
-  "structure "
-def classTk              := leading_parser
-  "class "
-def structParent        := leading_parser
-  optional (atomic (ident >> " : ")) >> termParser
-def «extends»            := leading_parser
-  -- The optType is to catch code that uses the old order for optType and extends.
-  " extends " >> sepBy1 structParent ", " >> Term.optType
-def «structure»          := leading_parser
-    (structureTk <|> classTk) >>
-    -- Note: no error recovery here due to clashing with the `class abbrev` syntax
-    declId >>
-    ppIndent (optDeclSig >> optional «extends») >>
-    optional ((symbol " := " <|> " where ") >> optional structCtor >> structFields) >>
-    optDeriving
-@[builtin_command_parser] def declaration := leading_parser
-  declModifiers false >>
-  («abbrev» <|> definition <|> «theorem» <|> «opaque» <|> «instance» <|> «axiom» <|> «example» <|>
-   «inductive» <|> «coinductive» <|> classInductive <|> «structure»)
+@[builtin_doc]
+def «inductive» :=
+  leading_parser
+    "inductive " >> recover declId skipUntilWsOrDelim >> ppIndent optDeclSig
+      >> optional (symbol " :=" <|> " where") >> many ctor
+      >> optional (ppDedent ppLine >> computedFields) >> optDeriving >> optional monotonicityBy
+@[builtin_doc]
+def «coinductive» :=
+  leading_parser
+    "coinductive " >> recover declId skipUntilWsOrDelim >> ppIndent optDeclSig
+      >> optional (symbol " :=" <|> " where") >> many ctor
+      >> optional (ppDedent ppLine >> computedFields) >> optDeriving >> optional monotonicityBy
+def classInductive :=
+  leading_parser
+    atomic (group (symbol "class " >> "inductive ")) >> recover declId skipUntilWsOrDelim
+      >> ppIndent optDeclSig >> optional (symbol " :=" <|> " where") >> many ctor >> optDeriving
+def structExplicitBinder :=
+  leading_parser
+    atomic (declModifiers true >> "(")
+      >> withoutPosition
+        (many1 ident >> ppIndent optDeclSig >> optional (Term.binderTactic <|> Term.binderDefault))
+      >> ")"
+def structImplicitBinder :=
+  leading_parser
+    atomic (declModifiers true >> "{") >> withoutPosition (many1 ident >> declSig) >> "}"
+def structInstBinder :=
+  leading_parser
+    atomic (declModifiers true >> "[") >> withoutPosition (many1 ident >> declSig) >> "]"
+def structSimpleBinder :=
+  leading_parser
+    atomic (declModifiers true >> ident) >> optDeclSig
+      >> optional (Term.binderTactic <|> Term.binderDefault)
+def structFields :=
+  leading_parser manyIndent <|
+    ppLine >> checkColGe
+      >> ppGroup
+        (structExplicitBinder <|> structImplicitBinder <|> structInstBinder <|> structSimpleBinder)
+def structCtor :=
+  leading_parser atomic (ppIndent
+    (declModifiers true >> ident >> many (ppSpace >> Term.bracketedBinder) >> " :: "))
+def structureTk := leading_parser "structure "
+def classTk := leading_parser "class "
+def structParent := leading_parser optional (atomic (ident >> " : ")) >> termParser
+def «extends» :=
+  leading_parser
+    -- The optType is to catch code that uses the old order for optType and extends.
+    " extends " >> sepBy1 structParent ", " >> Term.optType
+def «structure» :=
+  leading_parser
+    (structureTk <|> classTk)
+      -- Note: no error recovery here due to clashing with the `class abbrev` syntax
+      >> declId >> ppIndent (optDeclSig >> optional «extends»)
+      >> optional ((symbol " := " <|> " where ") >> optional structCtor >> structFields)
+      >> optDeriving
+@[builtin_command_parser]
+def declaration :=
+  leading_parser
+    declModifiers false
+      >> («abbrev» <|> definition <|> «theorem» <|> «opaque» <|> «instance» <|> «axiom»
+        <|> «example» <|> «inductive» <|> «coinductive» <|> classInductive <|> «structure»)
 
 /--
 `recall` restates a previous declaration for illustrative purposes and checks that its type and
 optional value are definitionally equal to the original declaration.
 -/
-@[builtin_command_parser] def recallCmd := leading_parser
-  optional docComment >> "recall " >> ident >> ppIndent optDeclSig >> optional declVal
+@[builtin_command_parser]
+def recallCmd :=
+  leading_parser
+    optional docComment >> "recall " >> ident >> ppIndent optDeclSig >> optional declVal
 
 /-- `recall?` suggests a `recall` statement for a previous declaration. -/
-@[builtin_command_parser] def recallQuestionCmd := leading_parser
-  "recall? " >> ident
+@[builtin_command_parser] def recallQuestionCmd := leading_parser "recall? " >> ident
 
-@[builtin_command_parser] def «deriving»     := leading_parser
-  "deriving " >> optional "noncomputable " >> "instance " >> derivingClasses >> " for " >> sepBy1 (recover termParser skip) ", "
-def sectionHeader := leading_parser
-  optional ("@[" >> nonReservedSymbol "expose" >> "] ") >>
-  optional ("public ") >>
-  optional ("noncomputable ") >>
-  optional ("meta ")
+@[builtin_command_parser]
+def «deriving» :=
+  leading_parser
+    "deriving " >> optional "noncomputable " >> "instance " >> derivingClasses >> " for "
+      >> sepBy1 (recover termParser skip) ", "
+def sectionHeader :=
+  leading_parser
+    optional ("@[" >> nonReservedSymbol "expose" >> "] ") >> optional ("public ")
+      >> optional ("noncomputable ") >> optional ("meta ")
 /--
 A `section`/`end` pair delimits the scope of `variable`, `include`, `open`, `set_option`, and `local`
 commands. Sections can be nested. `section <id>` provides a label to the section that has to appear
 with the matching `end`. In either case, the `end` can be omitted, in which case the section is
 closed at the end of the file.
 -/
-@[builtin_command_parser] def «section»      := leading_parser
-  sectionHeader >> "section" >> optional (ppSpace >> checkColGt >> ident)
+@[builtin_command_parser]
+def «section» :=
+  leading_parser sectionHeader >> "section" >> optional (ppSpace >> checkColGt >> ident)
 /--
 `namespace <id>` opens a section with label `<id>` that influences naming and name resolution inside
 the section:
@@ -362,8 +409,7 @@ corresponding `end <id>` or the end of the file.
 
 `namespace` also acts like `section` in delimiting the scope of `variable`, `open`, and other scoped commands.
 -/
-@[builtin_command_parser] def «namespace»    := leading_parser
-  "namespace " >> checkColGt >> ident
+@[builtin_command_parser] def «namespace» := leading_parser "namespace " >> checkColGt >> ident
 /--
 `with_weak_namespace <id> <cmd>` changes the current namespace to `<id>` for the duration of
 executing command `<cmd>`, without causing scoped things to go out of scope.
@@ -375,29 +421,34 @@ so scoped extensions remain active.
 This is primarily useful for defining syntax extensions that should be scoped to a different
 namespace than the current one.
 -/
-@[builtin_command_parser] def withWeakNamespace := leading_parser
-  "with_weak_namespace " >> checkColGt >> ident >> ppSpace >> checkColGt >> commandParser
+@[builtin_command_parser]
+def withWeakNamespace :=
+  leading_parser
+    "with_weak_namespace " >> checkColGt >> ident >> ppSpace >> checkColGt >> commandParser
 
 /--
 `end` closes a `section` or `namespace` scope. If the scope is named `<id>`, it has to be closed
 with `end <id>`. The `end` command is optional at the end of a file.
 -/
-@[builtin_command_parser] def «end»          := leading_parser
-  "end" >> optional (ppSpace >> checkColGt >> identWithPartialTrailingDot)
+@[builtin_command_parser]
+def «end» := leading_parser "end" >> optional (ppSpace >> checkColGt >> identWithPartialTrailingDot)
 
 namespace InternalSyntax
-  /-- Disable delimiting of local entries in ScopedEnvExtension within the current scope.
-  This command is for internal use only. It is intended for macros that implicitly introduce new
-  scopes, such as `expandInCmd` and `expandNamespacedDeclaration`. It allows local attributes to remain
-  accessible beyond those implicit scopes, even though they would normally be hidden from the user.
-  The numeric argument specifies how many scope levels to mark as non-delimiting.
-  -/
-  scoped syntax (name := end_local_scope) "end_local_scope" num : command
+/--
+Disable delimiting of local entries in ScopedEnvExtension within the current scope.
+This command is for internal use only. It is intended for macros that implicitly introduce new
+scopes, such as `expandInCmd` and `expandNamespacedDeclaration`. It allows local attributes to remain
+accessible beyond those implicit scopes, even though they would normally be hidden from the user.
+The numeric argument specifies how many scope levels to mark as non-delimiting.
+-/
+scoped syntax (name := end_local_scope) "end_local_scope" num : command
 
-  def endLocalScopeSyntax (depth : Nat) : Command := Unhygienic.run `(end_local_scope $(Syntax.mkNumLit (toString depth)))
+def endLocalScopeSyntax (depth : Nat) : Command :=
+  Unhygienic.run `(end_local_scope $(Syntax.mkNumLit (toString depth)))
 end InternalSyntax
 
-/-- Declares one or more typed variables, or modifies whether already-declared variables are
+/--
+Declares one or more typed variables, or modifies whether already-declared variables are
   implicit.
 
 Introduces variables that can be used in definitions within the same `namespace` or `section` block.
@@ -516,9 +567,12 @@ included section variable '[ToString α]' is not used in 'ex', consider excludin
 In such cases, the offending variable declaration should be moved down or into a section so that
 only theorems that do depend on it follow it until the end of the section.
 -/
-@[builtin_command_parser] def «variable»     := leading_parser
-  optional visibility >> "variable" >> many1 (ppSpace >> checkColGt >> Term.bracketedBinder)
-/-- Declares one or more universe variables.
+@[builtin_command_parser]
+def «variable» :=
+  leading_parser
+    optional visibility >> "variable" >> many1 (ppSpace >> checkColGt >> Term.bracketedBinder)
+/--
+Declares one or more universe variables.
 
 `universe u v`
 
@@ -576,37 +630,32 @@ structure Pair (α : Type u) (β : Type v) : Type (max u v) where
 -- Pair : Type v → Type w → Type (max v w)
 ```
 -/
-@[builtin_command_parser] def «universe»     := leading_parser
-  "universe" >> many1 (ppSpace >> checkColGt >> ident)
-@[builtin_command_parser] def check          := leading_parser
-  "#check " >> termParser
-@[builtin_command_parser] def check_failure  := leading_parser
-  "#check_failure " >> termParser -- Like `#check`, but succeeds only if term does not type check
+@[builtin_command_parser]
+def «universe» := leading_parser "universe" >> many1 (ppSpace >> checkColGt >> ident)
+@[builtin_command_parser] def check := leading_parser "#check " >> termParser
+@[builtin_command_parser] def check_failure := leading_parser "#check_failure " >> termParser -- Like `#check`, but succeeds only if term does not type check
 /--
 `#import_path Foo` prints the transitive import chain that brings the declaration `Foo`
 into the current file's scope.
 -/
-@[builtin_command_parser] def importPath := leading_parser
-  "#import_path " >> ident
+@[builtin_command_parser] def importPath := leading_parser "#import_path " >> ident
 /--
 `assert_not_exists Foo Bar` asserts that the declarations `Foo` and `Bar` do not exist
 in the current import scope. Used for dependency management.
 -/
-@[builtin_command_parser] def assertNotExists := leading_parser
-  "assert_not_exists " >> many1 ident
+@[builtin_command_parser] def assertNotExists := leading_parser "assert_not_exists " >> many1 ident
 /--
 `assert_not_imported Mod1 Mod2` asserts that the modules `Mod1` and `Mod2` are not
 transitively imported by the current file. Used for dependency management.
 -/
-@[builtin_command_parser] def assertNotImported := leading_parser
-  "assert_not_imported " >> many1 ident
+@[builtin_command_parser]
+def assertNotImported := leading_parser "assert_not_imported " >> many1 ident
 /--
 `#check_assertions` reports whether all `assert_not_exists` and `assert_not_imported`
 assertions in the current file and its imports have been satisfied.
 Use `#check_assertions!` to only show unsatisfied assertions.
 -/
-@[builtin_command_parser] def checkAssertions := leading_parser
-  "#check_assertions" >> optional "!"
+@[builtin_command_parser] def checkAssertions := leading_parser "#check_assertions" >> optional "!"
 /--
 `#eval e` evaluates the expression `e` by compiling it and running the compiled code. It then
 prints the resulting value.
@@ -632,48 +681,43 @@ Options:
 
 See also: `#reduce e` for evaluation by term reduction.
 -/
-@[builtin_command_parser, builtin_doc] def eval := leading_parser
-  "#eval " >> termParser
-@[builtin_command_parser, inherit_doc eval] def evalBang := leading_parser
-  "#eval! " >> termParser
-@[builtin_command_parser] def synth          := leading_parser
-  "#synth " >> termParser
-@[builtin_command_parser] def exit           := leading_parser
-  "#exit"
-@[builtin_command_parser] def print          := leading_parser
-  "#print " >> (ident <|> strLit)
-@[builtin_command_parser] def printSig       := leading_parser
-  "#print " >> nonReservedSymbol "sig " >> ident
-/-- Prints the axioms used by a declaration, directly or indirectly.
-Please consult [the reference manual](lean-manual://section/validating-proofs) to understand the significance of the output. -/
-@[builtin_command_parser] def printAxioms    := leading_parser
-  "#print " >> nonReservedSymbol "axioms " >> ident
-@[builtin_command_parser] def printEqns      := leading_parser
-  "#print " >> (nonReservedSymbol "equations " <|> nonReservedSymbol "eqns ") >> ident
+@[builtin_command_parser, builtin_doc] def eval := leading_parser "#eval " >> termParser
+@[builtin_command_parser, inherit_doc eval]
+def evalBang := leading_parser "#eval! " >> termParser
+@[builtin_command_parser] def synth := leading_parser "#synth " >> termParser
+@[builtin_command_parser] def exit := leading_parser "#exit"
+@[builtin_command_parser] def print := leading_parser "#print " >> (ident <|> strLit)
+@[builtin_command_parser]
+def printSig := leading_parser "#print " >> nonReservedSymbol "sig " >> ident
 /--
-Displays all available tactic tags, with documentation.
+Prints the axioms used by a declaration, directly or indirectly.
+Please consult [the reference manual](lean-manual://section/validating-proofs) to understand the significance of the output.
 -/
-@[builtin_command_parser] def printTacTags   := leading_parser
-  "#print " >> nonReservedSymbol "tactic " >> nonReservedSymbol "tags"
+@[builtin_command_parser]
+def printAxioms := leading_parser "#print " >> nonReservedSymbol "axioms " >> ident
+@[builtin_command_parser]
+def printEqns :=
+  leading_parser
+    "#print " >> (nonReservedSymbol "equations " <|> nonReservedSymbol "eqns ") >> ident
+/-- Displays all available tactic tags, with documentation. -/
+@[builtin_command_parser]
+def printTacTags :=
+  leading_parser "#print " >> nonReservedSymbol "tactic " >> nonReservedSymbol "tags"
 /--
 `#where` gives a description of the state of the current scope scope.
 This includes the current namespace, `open` namespaces, `universe` and `variable` commands,
 and options set with `set_option`.
 -/
-@[builtin_command_parser] def «where»        := leading_parser
-  "#where"
+@[builtin_command_parser] def «where» := leading_parser "#where"
 /-- Shows the current Lean version. Prints `Lean.versionString`. -/
-@[builtin_command_parser] def version        := leading_parser
-  "#version"
+@[builtin_command_parser] def version := leading_parser "#version"
 /--
 Debugging command. Runs the following command in an exported context just like elaboration of
 declaration signatures.
 -/
-@[builtin_command_parser] def withExporting  := leading_parser
-  "#with_exporting " >> commandParser
+@[builtin_command_parser] def withExporting := leading_parser "#with_exporting " >> commandParser
 /-- Debugging command: Prints the result of `Environment.dumpAsyncEnvState`. -/
-@[builtin_command_parser] def dumpAsyncEnvState := leading_parser
-  "#dump_async_env_state"
+@[builtin_command_parser] def dumpAsyncEnvState := leading_parser "#dump_async_env_state"
 /--
 Mark a syntax kind as deprecated. When this syntax is elaborated, a warning will be emitted.
 
@@ -681,15 +725,15 @@ Mark a syntax kind as deprecated. When this syntax is elaborated, a warning will
 deprecated_syntax Lean.Parser.Term.let_fun "use `have` instead" (since := "2026-03-18")
 ```
 -/
-@[builtin_command_parser] def deprecatedSyntax := leading_parser
-  "deprecated_syntax " >> ident >> optional (ppSpace >> strLit) >> optional (" (" >> nonReservedSymbol "since" >> " := " >> strLit >> ")")
-@[builtin_command_parser] def «init_quot»    := leading_parser
-  "init_quot"
-/--
-An internal bootstrapping command that reinterprets a Markdown docstring as Verso.
--/
-@[builtin_command_parser] def «docs_to_verso»    := leading_parser
-  "docs_to_verso " >> sepBy1 ident ", "
+@[builtin_command_parser]
+def deprecatedSyntax :=
+  leading_parser
+    "deprecated_syntax " >> ident >> optional (ppSpace >> strLit)
+      >> optional (" (" >> nonReservedSymbol "since" >> " := " >> strLit >> ")")
+@[builtin_command_parser] def «init_quot» := leading_parser "init_quot"
+/-- An internal bootstrapping command that reinterprets a Markdown docstring as Verso. -/
+@[builtin_command_parser]
+def «docs_to_verso» := leading_parser "docs_to_verso " >> sepBy1 ident ", "
 /--
 `deprecated_module` marks the current module as deprecated.
 When another module imports a deprecated module, a warning is emitted during elaboration.
@@ -702,15 +746,17 @@ The warning message is optional but recommended.
 The warning can be disabled with `set_option linter.deprecated.module false` or
 `-Dlinter.deprecated.module=false`.
 -/
-@[builtin_command_parser] def «deprecated_module» := leading_parser
-  "deprecated_module" >> optional (ppSpace >> strLit) >> optional (" (" >> nonReservedSymbol "since" >> " := " >> strLit >> ")")
+@[builtin_command_parser]
+def «deprecated_module» :=
+  leading_parser
+    "deprecated_module" >> optional (ppSpace >> strLit)
+      >> optional (" (" >> nonReservedSymbol "since" >> " := " >> strLit >> ")")
 
 /--
 `#show_deprecated_modules` displays all modules in the current environment that have been
 marked with `deprecated_module`.
 -/
-@[builtin_command_parser] def showDeprecatedModules := leading_parser
-  "#show_deprecated_modules"
+@[builtin_command_parser] def showDeprecatedModules := leading_parser "#show_deprecated_modules"
 
 def optionValue := nonReservedSymbol "true" <|> nonReservedSymbol "false" <|> strLit <|> numLit
 /--
@@ -728,21 +774,22 @@ set_option pp.all true in
 Similarly, `set_option <id> <value> in` can also be used inside terms and tactics to set an option
 only in a single term or tactic.
 -/
-@[builtin_command_parser] def «set_option»   := leading_parser
-  "set_option " >> identWithPartialTrailingDot >> ppSpace >> optionValue
+@[builtin_command_parser]
+def «set_option» :=
+  leading_parser "set_option " >> identWithPartialTrailingDot >> ppSpace >> optionValue
 /--
 `unlock_limits` disables all built-in resource limit options (currently `maxRecDepth`,
 `maxHeartbeats`, and `synthInstance.maxHeartbeats`) in the current scope by setting them to 0.
 -/
-@[builtin_command_parser] def «unlock_limits» := leading_parser
-  "unlock_limits"
-def eraseAttr := leading_parser
-  "-" >> rawIdent
-@[builtin_command_parser] def «attribute»    := leading_parser
-  "attribute " >> "[" >>
-    withoutPosition (sepBy1 (eraseAttr <|> Term.attrInstance) ", ") >>
-  "]" >> many1 (ppSpace >> ident)
-/-- Adds names from other namespaces to the current namespace.
+@[builtin_command_parser] def «unlock_limits» := leading_parser "unlock_limits"
+def eraseAttr := leading_parser "-" >> rawIdent
+@[builtin_command_parser]
+def «attribute» :=
+  leading_parser
+    "attribute " >> "[" >> withoutPosition (sepBy1 (eraseAttr <|> Term.attrInstance) ", ") >> "]"
+      >> many1 (ppSpace >> ident)
+/--
+Adds names from other namespaces to the current namespace.
 
 The command `export Some.Namespace (name₁ name₂)` makes `name₁` and `name₂`:
 
@@ -766,27 +813,24 @@ end Evening.Sky
 #check Evening.Sky.star
 ```
 -/
-@[builtin_command_parser] def «export»       := leading_parser
-  "export " >> ident >> " (" >> many1 ident >> ")"
-@[builtin_command_parser] def «import»       := leading_parser
-  "import" -- not a real command, only for error messages
-def openHiding       := leading_parser
-  ppSpace >> atomic (ident >> " hiding") >> many1 (ppSpace >> checkColGt >> ident)
-def openRenamingItem := leading_parser
-  ident >> unicodeSymbol " → " " -> " >> checkColGt >> ident
-def openRenaming     := leading_parser
-  ppSpace >> atomic (ident >> " renaming ") >> sepBy1 openRenamingItem ", "
-def openOnly         := leading_parser
-  ppSpace >> atomic (ident >> " (") >> many1 ident >> ")"
-def openSimple       := leading_parser
-  many1 (ppSpace >> checkColGt >> ident)
-def openScoped       := leading_parser
-  " scoped" >> many1 (ppSpace >> checkColGt >> ident)
+@[builtin_command_parser]
+def «export» := leading_parser "export " >> ident >> " (" >> many1 ident >> ")"
+@[builtin_command_parser] def «import» := leading_parser "import" -- not a real command, only for error messages
+def openHiding :=
+  leading_parser ppSpace >> atomic (ident >> " hiding") >> many1 (ppSpace >> checkColGt >> ident)
+def openRenamingItem := leading_parser ident >> unicodeSymbol " → " " -> " >> checkColGt >> ident
+def openRenaming :=
+  leading_parser ppSpace >> atomic (ident >> " renaming ") >> sepBy1 openRenamingItem ", "
+def openOnly := leading_parser ppSpace >> atomic (ident >> " (") >> many1 ident >> ")"
+def openSimple := leading_parser many1 (ppSpace >> checkColGt >> ident)
+def openScoped := leading_parser " scoped" >> many1 (ppSpace >> checkColGt >> ident)
 /-- `openDecl` is the body of an `open` declaration (see `open`) -/
-@[builtin_doc] def openDecl :=
+@[builtin_doc]
+def openDecl :=
   withAntiquot (mkAntiquot "openDecl" `Lean.Parser.Command.openDecl (isPseudoKind := true)) <|
     openHiding <|> openRenaming <|> openOnly <|> openSimple <|> openScoped
-/-- Makes names from other namespaces visible without writing the namespace prefix.
+/--
+Makes names from other namespaces visible without writing the namespace prefix.
 
 Names that are made available with `open` are visible within the current `section` or `namespace`
 block. This makes referring to (type) definitions and theorems easier, but note that it can also
@@ -898,20 +942,21 @@ section
 end
 ```
 -/
-@[builtin_command_parser] def «open»    := leading_parser
-  withPosition ("open" >> openDecl)
+@[builtin_command_parser] def «open» := leading_parser withPosition ("open" >> openDecl)
 
-@[builtin_command_parser] def «mutual» := leading_parser
-  "mutual" >> many1 (ppLine >> notSymbol "end" >> commandParser) >>
-  ppDedent (ppLine >> "end")
-def initializeKeyword := leading_parser
-  "initialize " <|> "builtin_initialize "
-@[builtin_command_parser] def «initialize» := leading_parser
-  declModifiers false >> initializeKeyword >>
-  optional (atomic (ident >> Term.typeSpec >> ppSpace >> Term.leftArrow)) >> Term.doSeq
+@[builtin_command_parser]
+def «mutual» :=
+  leading_parser
+    "mutual" >> many1 (ppLine >> notSymbol "end" >> commandParser) >> ppDedent (ppLine >> "end")
+def initializeKeyword := leading_parser "initialize " <|> "builtin_initialize "
+@[builtin_command_parser]
+def «initialize» :=
+  leading_parser
+    declModifiers false >> initializeKeyword
+      >> optional (atomic (ident >> Term.typeSpec >> ppSpace >> Term.leftArrow)) >> Term.doSeq
 
-@[builtin_command_parser] def «in»  := trailing_parser
-  withOpen (withSetOption (ppDedent (" in" >> ppLine >> commandParser)))
+@[builtin_command_parser]
+def «in» := trailing_parser withOpen (withSetOption (ppDedent (" in" >> ppLine >> commandParser)))
 
 /--
 Adds a docstring to an existing declaration, replacing any existing docstring.
@@ -935,17 +980,16 @@ add_decl_doc Triple.toProd
 
 Documentation can only be added to declarations in the same module.
 -/
-@[builtin_command_parser] def addDocString := leading_parser
-  docComment >> "add_decl_doc " >> ident
+@[builtin_command_parser] def addDocString := leading_parser docComment >> "add_decl_doc " >> ident
 
 /--
 Registers a tactic tag, saving its user-facing name and docstring.
 
 Tactic tags can be used by documentation generation tools to classify related tactics.
 -/
-@[builtin_command_parser] def «register_tactic_tag» := leading_parser
-  optional (docComment >> ppLine) >>
-  "register_tactic_tag " >> ident >> strLit
+@[builtin_command_parser]
+def «register_tactic_tag» :=
+  leading_parser optional (docComment >> ppLine) >> "register_tactic_tag " >> ident >> strLit
 
 /--
 Adds more documentation as an extension of the documentation for a given tactic.
@@ -953,9 +997,9 @@ Adds more documentation as an extension of the documentation for a given tactic.
 The extended documentation is placed in the command's docstring. It is shown as part of a bulleted
 list, so it should be brief.
 -/
-@[builtin_command_parser] def «tactic_extension» := leading_parser
-  optional (docComment >> ppLine) >>
-  "tactic_extension " >> ident
+@[builtin_command_parser]
+def «tactic_extension» :=
+  leading_parser optional (docComment >> ppLine) >> "tactic_extension " >> ident
 
 /--
 Documents a recommended spelling for a notation in identifiers.
@@ -994,18 +1038,20 @@ Using `[·]` or `[⋯]` or `[…]` instead of `[a]` would be against the convent
 recommended spelling to a notation whose docstring already has an example, try to reuse the
 identifier names chosen in the docstring for consistency.
 -/
-@[builtin_command_parser] def «recommended_spelling» := leading_parser
-  optional (docComment >> ppLine) >>
-  "recommended_spelling " >> strLit >> " for " >> strLit >> " in " >>
-    "[" >> sepBy1 ident ", " >> "]"
+@[builtin_command_parser]
+def «recommended_spelling» :=
+  leading_parser
+    optional (docComment >> ppLine) >> "recommended_spelling " >> strLit >> " for " >> strLit
+      >> " in " >> "[" >> sepBy1 ident ", " >> "]"
 
 /--
-  This is an auxiliary command to generate constructor injectivity theorems for
-  inductive types defined at `Prelude.lean`.
-  Temporarily also controls the generation of the `ctorIdx` definition.
-  It is meant for bootstrapping purposes only. -/
-@[builtin_command_parser] def genInjectiveTheorems := leading_parser
-  "gen_injective_theorems% " >> ident
+This is an auxiliary command to generate constructor injectivity theorems for
+inductive types defined at `Prelude.lean`.
+Temporarily also controls the generation of the `ctorIdx` definition.
+It is meant for bootstrapping purposes only.
+-/
+@[builtin_command_parser]
+def genInjectiveTheorems := leading_parser "gen_injective_theorems% " >> ident
 
 /--
 `include eeny meeny` instructs Lean to include the section `variable`s `eeny` and `meeny` in all
@@ -1014,7 +1060,8 @@ conditionally including variables based on use in the theorem header. Other comm
 not affected. `include` is usually followed by `in theorem ...` to limit the inclusion
 to the subsequent declaration.
 -/
-@[builtin_command_parser] def «include» := leading_parser "include" >> many1 (ppSpace >> checkColGt >> ident)
+@[builtin_command_parser]
+def «include» := leading_parser "include" >> many1 (ppSpace >> checkColGt >> ident)
 
 /--
 `omit` instructs Lean to not include a variable previously `include`d. Apart from variable names, it
@@ -1022,14 +1069,13 @@ can also refer to typeclass instance variables by type using the syntax `omit [T
 which case all instance variables that unify with the given type are omitted. `omit` should usually
 only be used in conjunction with `in` in order to keep the section structure simple.
 -/
-@[builtin_command_parser] def «omit» := leading_parser "omit" >>
-  many1 (ppSpace >> checkColGt >> (ident <|> Term.instBinder))
+@[builtin_command_parser]
+def «omit» := leading_parser "omit" >> many1 (ppSpace >> checkColGt >> (ident <|> Term.instBinder))
 
 /-- No-op parser used as syntax kind for attaching remaining whitespace at the end of the input. -/
 @[run_builtin_parser_attribute_hooks] def eoi : Parser := leading_parser ""
 
-builtin_initialize
-  registerBuiltinNodeKind ``eoi
+builtin_initialize registerBuiltinNodeKind ``eoi
 
 @[run_builtin_parser_attribute_hooks, inherit_doc declModifiers]
 abbrev declModifiersF := declModifiers false
@@ -1037,7 +1083,7 @@ abbrev declModifiersF := declModifiers false
 abbrev declModifiersT := declModifiers true
 
 builtin_initialize
-  register_parser_alias (kind := ``declModifiers) "declModifiers"       declModifiersF
+  register_parser_alias (kind := ``declModifiers) "declModifiers" declModifiersF
   register_parser_alias (kind := ``declModifiers) "nestedDeclModifiers" declModifiersT
   register_parser_alias declId
   register_parser_alias declSig
@@ -1054,8 +1100,9 @@ Registers an error explanation.
 
 Note that the error name is not relativized to the current namespace.
 -/
-@[builtin_command_parser] def registerErrorExplanationStx := leading_parser
-  optional docComment >> "register_error_explanation " >> ident >> termParser
+@[builtin_command_parser]
+def registerErrorExplanationStx :=
+  leading_parser optional docComment >> "register_error_explanation " >> ident >> termParser
 
 end Command
 
@@ -1064,29 +1111,39 @@ namespace Term
 `open Foo in e` is like `open Foo` but scoped to a single term.
 It makes the given namespaces available in the term `e`.
 -/
-@[builtin_term_parser] def «open» := leading_parser:leadPrec
-  "open" >> Command.openDecl >> withOpenDecl (" in " >> termParser)
+@[builtin_term_parser]
+def «open» :=
+  leading_parser:leadPrec "open" >> Command.openDecl >> withOpenDecl (" in " >> termParser)
 
 /--
 `set_option opt val in e` is like `set_option opt val` but scoped to a single term.
 It sets the option `opt` to the value `val` in the term `e`.
 -/
-@[builtin_term_parser] def «set_option» := leading_parser:leadPrec
-  "set_option " >> identWithPartialTrailingDot >> ppSpace >> Command.optionValue >>
-    withSetOptionValue (" in " >> termParser)
+@[builtin_term_parser]
+def «set_option» :=
+  leading_parser:leadPrec
+    "set_option " >> identWithPartialTrailingDot >> ppSpace >> Command.optionValue
+      >> withSetOptionValue (" in " >> termParser)
 end Term
 
 namespace Tactic
-/-- `open Foo in tacs` (the tactic) acts like `open Foo` at command level,
-but it opens a namespace only within the tactics `tacs`. -/
-@[builtin_tactic_parser] def «open» := leading_parser:leadPrec
-  "open " >> Command.openDecl >> withOpenDecl (" in " >> tacticSeq)
+/--
+`open Foo in tacs` (the tactic) acts like `open Foo` at command level,
+but it opens a namespace only within the tactics `tacs`.
+-/
+@[builtin_tactic_parser]
+def «open» :=
+  leading_parser:leadPrec "open " >> Command.openDecl >> withOpenDecl (" in " >> tacticSeq)
 
-/-- `set_option opt val in tacs` (the tactic) acts like `set_option opt val` at the command level,
-but it sets the option only within the tactics `tacs`. -/
-@[builtin_tactic_parser] def «set_option» := leading_parser:leadPrec
-  "set_option " >> identWithPartialTrailingDot >> ppSpace >> Command.optionValue >>
-    withSetOptionValue (" in " >> tacticSeq)
+/--
+`set_option opt val in tacs` (the tactic) acts like `set_option opt val` at the command level,
+but it sets the option only within the tactics `tacs`.
+-/
+@[builtin_tactic_parser]
+def «set_option» :=
+  leading_parser:leadPrec
+    "set_option " >> identWithPartialTrailingDot >> ppSpace >> Command.optionValue
+      >> withSetOptionValue (" in " >> tacticSeq)
 end Tactic
 
 end Parser

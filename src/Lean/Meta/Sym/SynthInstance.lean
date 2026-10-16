@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.SymM
 import Lean.Meta.SynthInstance
@@ -28,7 +29,7 @@ instance-implicit position is still mapped to the builtin one.
 private def builtinInsts : Std.HashMap Expr Expr :=
   let nat := Nat.mkType
   let int := Int.mkType
-  let us  := [Level.zero, Level.zero, Level.zero]
+  let us := [Level.zero, Level.zero, Level.zero]
   Std.HashMap.ofList [
     (mkApp3 (mkConst ``HAdd us) nat nat nat, Nat.mkInstHAdd),
     (mkApp3 (mkConst ``HSub us) nat nat nat, Nat.mkInstHSub),
@@ -36,15 +37,15 @@ private def builtinInsts : Std.HashMap Expr Expr :=
     (mkApp3 (mkConst ``HDiv us) nat nat nat, Nat.mkInstHDiv),
     (mkApp3 (mkConst ``HMod us) nat nat nat, Nat.mkInstHMod),
     (mkApp3 (mkConst ``HPow us) nat nat nat, Nat.mkInstHPow),
-    (mkApp  (mkConst ``Add [0]) nat, Nat.mkInstAdd),
-    (mkApp  (mkConst ``Sub [0]) nat, Nat.mkInstSub),
-    (mkApp  (mkConst ``Mul [0]) nat, Nat.mkInstMul),
-    (mkApp  (mkConst ``Div [0]) nat, Nat.mkInstDiv),
-    (mkApp  (mkConst ``Mod [0]) nat, Nat.mkInstMod),
+    (mkApp (mkConst ``Add [0]) nat, Nat.mkInstAdd),
+    (mkApp (mkConst ``Sub [0]) nat, Nat.mkInstSub),
+    (mkApp (mkConst ``Mul [0]) nat, Nat.mkInstMul),
+    (mkApp (mkConst ``Div [0]) nat, Nat.mkInstDiv),
+    (mkApp (mkConst ``Mod [0]) nat, Nat.mkInstMod),
     (mkApp2 (mkConst ``Pow [0, 0]) nat nat, Nat.mkInstPow),
-    (mkApp  (mkConst ``NatPow [0]) nat, Nat.mkInstNatPow),
-    (mkApp  (mkConst ``LT [0]) nat, Nat.mkInstLT),
-    (mkApp  (mkConst ``LE [0]) nat, Nat.mkInstLE),
+    (mkApp (mkConst ``NatPow [0]) nat, Nat.mkInstNatPow),
+    (mkApp (mkConst ``LT [0]) nat, Nat.mkInstLT),
+    (mkApp (mkConst ``LE [0]) nat, Nat.mkInstLE),
 
     (mkApp3 (mkConst ``HAdd us) int int int, Int.mkInstHAdd),
     (mkApp3 (mkConst ``HSub us) int int int, Int.mkInstHSub),
@@ -52,16 +53,16 @@ private def builtinInsts : Std.HashMap Expr Expr :=
     (mkApp3 (mkConst ``HDiv us) int int int, Int.mkInstHDiv),
     (mkApp3 (mkConst ``HMod us) int int int, Int.mkInstHMod),
     (mkApp3 (mkConst ``HPow us) int nat int, Int.mkInstHPow),
-    (mkApp  (mkConst ``Add [0]) int, Int.mkInstAdd),
-    (mkApp  (mkConst ``Sub [0]) int, Int.mkInstSub),
-    (mkApp  (mkConst ``Mul [0]) int, Int.mkInstMul),
-    (mkApp  (mkConst ``Div [0]) int, Int.mkInstDiv),
-    (mkApp  (mkConst ``Mod [0]) int, Int.mkInstMod),
+    (mkApp (mkConst ``Add [0]) int, Int.mkInstAdd),
+    (mkApp (mkConst ``Sub [0]) int, Int.mkInstSub),
+    (mkApp (mkConst ``Mul [0]) int, Int.mkInstMul),
+    (mkApp (mkConst ``Div [0]) int, Int.mkInstDiv),
+    (mkApp (mkConst ``Mod [0]) int, Int.mkInstMod),
     (mkApp2 (mkConst ``Pow [0, 0]) int nat, Int.mkInstPowNat),
-    (mkApp  (mkConst ``NatPow [0]) int, Int.mkInstPow),
-    (mkApp  (mkConst ``Neg [0]) int, Int.mkInstNeg),
-    (mkApp  (mkConst ``LT [0]) int, Int.mkInstLT),
-    (mkApp  (mkConst ``LE [0]) int, Int.mkInstLE),
+    (mkApp (mkConst ``NatPow [0]) int, Int.mkInstPow),
+    (mkApp (mkConst ``Neg [0]) int, Int.mkInstNeg),
+    (mkApp (mkConst ``LT [0]) int, Int.mkInstLT),
+    (mkApp (mkConst ``LE [0]) int, Int.mkInstLE),
   ]
 
 /--
@@ -70,15 +71,15 @@ Users may provide nonstandard instances that are definitionally equal to the one
 Given a type, such as `HAdd Int Int Int`, this function returns the instance defined in
 core.
 -/
-def getBuiltinInstance? (type : Expr) : Option Expr :=
-  builtinInsts[type]?
+def getBuiltinInstance? (type : Expr) : Option Expr := builtinInsts[type]?
 
-def synthInstanceMeta? (type : Expr) : MetaM (Option Expr) := do profileitM Exception "sym typeclass inference" (← getOptions) (decl := type.getAppFn.constName?.getD .anonymous) do
-  if let some inst := getBuiltinInstance? type then
-    return inst
-  catchInternalId isDefEqStuckExceptionId
-    (synthInstanceCore? type none)
-    (fun _ => pure none)
+def synthInstanceMeta? (type : Expr) : MetaM (Option Expr) := do
+  profileitM Exception "sym typeclass inference" (← getOptions)
+    (decl := type.getAppFn.constName?.getD .anonymous)
+    do
+      if let some inst := getBuiltinInstance? type then
+        return inst
+      catchInternalId isDefEqStuckExceptionId (synthInstanceCore? type none) (fun _ => pure none)
 
 /--
 Registers `inst` as **the** instance for `type`. `synthInstance?` returns it without
@@ -104,7 +105,8 @@ Helper function for instantiating a type class `type`, and
 then using the result to perform `isDefEq x val`.
 -/
 def synthInstanceAndAssign (x type : Expr) : SymM Bool := do
-  let some val ← synthInstance? type | return false
+  let some val ← synthInstance? type
+    | return false
   isDefEq x val
 
 end Lean.Meta.Sym

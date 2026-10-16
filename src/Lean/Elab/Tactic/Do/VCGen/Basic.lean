@@ -22,11 +22,10 @@ builtin_initialize registerTraceClass `Elab.Tactic.Do.vcgen.split
 
 register_builtin_option mvcgen.warning : Bool := {
   defValue := true
-  descr    := "this option has no effect; `mvcgen` reports a deprecation warning controlled by \
-`linter.deprecated.syntax`"
-  deprecation? := some {
-    since := "2026-09-23"
-    text? := some "this option has no effect" }
+  descr :=
+    "this option has no effect; `mvcgen` reports a deprecation warning controlled by \
+      `linter.deprecated.syntax`"
+  deprecation? := some { since := "2026-09-23", text? := some "this option has no effect" }
 }
 
 inductive Fuel where
@@ -57,9 +56,7 @@ structure JumpSiteInfo where
   `let x := ...; ∃ y (h : y = ...), ∃ z, ∃ (h₂ : p)`.
   -/
   hyps : MVarId
-  /--
-  The proof that jump sites should use to discharge `Hᵢ ⊢ₛ wp[jp a b c] Q`.
-  -/
+  /-- The proof that jump sites should use to discharge `Hᵢ ⊢ₛ wp[jp a b c] Q`. -/
   joinPrf : Expr
 
 structure Context where
@@ -73,13 +70,9 @@ structure Context where
 structure State where
   fuel : Fuel := .unlimited
   simpState : Simp.State := {}
-  /--
-  Holes of type `Invariant` that have been generated so far.
-  -/
+  /-- Holes of type `Invariant` that have been generated so far. -/
   invariants : Array MVarId := #[]
-  /--
-  The verification conditions that have been generated so far.
-  -/
+  /-- The verification conditions that have been generated so far. -/
   vcs : Array MVarId := #[]
 
 abbrev VCGenM := ReaderT Context (StateRefT State MetaM)
@@ -133,10 +126,10 @@ instance : MonadLift SimpM VCGenM where
 def withJP (jp : FVarId) (info : JumpSiteInfo) : VCGenM α → VCGenM α :=
   ReaderT.adapt fun ctx => { ctx with jps := ctx.jps.insert jp info }
 
-def knownJP? (jp : FVarId) : VCGenM (Option JumpSiteInfo) := do
-  return (← read).jps.get? jp
+def knownJP? (jp : FVarId) : VCGenM (Option JumpSiteInfo) := do return (← read).jps.get? jp
 
-def isDuplicable (e : Expr) : Bool := match e with
+def isDuplicable (e : Expr) : Bool :=
+  match e with
   | .bvar .. => true
   | .mvar .. => true
   | .fvar .. => true
@@ -150,12 +143,14 @@ def isDuplicable (e : Expr) : Bool := match e with
   | .letE .. => false
   | .app .. => e.isAppOf ``OfNat.ofNat
 
-def withLetDeclShared (name : Name) (type : Expr) (val : Expr) (k : Bool → Expr → (Expr → VCGenM Expr) → VCGenM α) (kind : LocalDeclKind := .default) : VCGenM α :=
+def withLetDeclShared
+    (name : Name) (type : Expr) (val : Expr) (k : Bool → Expr → (Expr → VCGenM Expr) → VCGenM α)
+    (kind : LocalDeclKind := .default)
+    : VCGenM α :=
   if isDuplicable val then
     k false val pure
   else
-    withLetDecl name type val (kind := kind) fun fv => do
-      k true fv (liftM <| mkLetFVars #[fv] ·)
+    withLetDecl name type val (kind := kind) fun fv => do k true fv (liftM <| mkLetFVars #[fv] ·)
 
 /-- TODO: Fix this when rewriting the do elaborator -/
 def isJP (n : Name) : Bool := n.eraseMacroScopes == `__do_jp
@@ -170,39 +165,47 @@ partial def getNumJoinParams (joinTy : Expr) (resTy : Expr) : MetaM Nat := do
   else
     throwError "getNumJoinParams: residual joinTy not a forall: {joinTy}"
 
-/-- Reduces (1) Prod projection functions and (2) Projs in application heads,
-and (3) beta reduces. Will not unfold projection functions unless further beta reduction happens. -/
-partial def reduceProjBeta? (e : Expr) : MetaM (Option Expr) :=
-  go none e.getAppFn e.getAppRevArgs
-  where
-    go lastReduction f rargs := do
-      match f with
-      | .mdata _ f => go lastReduction f rargs
-      | .app f a => go lastReduction f (rargs.push a)
-      | .lam .. =>
-        if rargs.size = 0 then return lastReduction
-        let e' := f.betaRev rargs
-        go (some e') e'.getAppFn e'.getAppRevArgs
-      | .const name .. =>
-        let env ← getEnv
-        match env.getProjectionStructureName? name with
-        | some ``Prod => -- only reduce fst and snd for now
-          match ← Meta.unfoldDefinition? (mkAppRev f rargs) with
-          | some e' => go lastReduction e'.getAppFn e'.getAppRevArgs
-          | none => pure lastReduction
-        | _ => pure lastReduction
-      | .proj .. => match ← reduceProj? f with
-        | some f' =>
-          let e' := mkAppRev f' rargs
-          go (some e') e'.getAppFn e'.getAppRevArgs
-        | none    => pure lastReduction
-      | .letE x ty val body nondep =>
-        match ← go none body rargs with
+/--
+Reduces (1) Prod projection functions and (2) Projs in application heads,
+and (3) beta reduces. Will not unfold projection functions unless further beta reduction happens.
+-/
+partial def reduceProjBeta? (e : Expr) : MetaM (Option Expr) := go none e.getAppFn e.getAppRevArgs
+where
+  go lastReduction f rargs := do
+    match f with
+    | .mdata _ f =>
+      go lastReduction f rargs
+    | .app f a =>
+      go lastReduction f (rargs.push a)
+    | .lam .. =>
+      if rargs.size = 0 then return lastReduction
+      let e' := f.betaRev rargs
+      go (some e') e'.getAppFn e'.getAppRevArgs
+    | .const name .. =>
+      let env ← getEnv
+      match env.getProjectionStructureName? name with
+      | some ``Prod => -- only reduce fst and snd for now
+        match ← Meta.unfoldDefinition? (mkAppRev f rargs) with
+        | some e' => go lastReduction e'.getAppFn e'.getAppRevArgs
         | none => pure lastReduction
-        | some body' => pure (some (.letE x ty val body' nondep))
-      | _ => pure lastReduction
+      | _ =>
+        pure lastReduction
+    | .proj .. =>
+      match ← reduceProj? f with
+      | some f' =>
+        let e' := mkAppRev f' rargs
+        go (some e') e'.getAppFn e'.getAppRevArgs
+      | none =>
+        pure lastReduction
+    | .letE x ty val body nondep =>
+      match ← go none body rargs with
+      | none => pure lastReduction
+      | some body' => pure (some (.letE x ty val body' nondep))
+    | _ =>
+      pure lastReduction
 
-def mkSpecContext (optConfig : Syntax) (lemmas : Syntax) (ignoreStarArg := false) : TacticM Context := do
+def mkSpecContext (optConfig : Syntax) (lemmas : Syntax) (ignoreStarArg := false)
+    : TacticM Context := do
   let config ← elabConfig optConfig
   let mut specThms ← getSpecTheorems
   let mut simpStuff := #[]
@@ -245,7 +248,8 @@ def mkSpecContext (optConfig : Syntax) (lemmas : Syntax) (ignoreStarArg := false
           specThms := specThms.insert thm
         catch _ =>
           simpStuff := simpStuff.push ⟨arg⟩
-      | _ => withRef term <| throwError "Could not resolve spec theorem `{term}`"
+      | _ =>
+        withRef term <| throwError "Could not resolve spec theorem `{term}`"
     else if arg.getKind == ``simpStar then
       starArg := true
       simpStuff := simpStuff.push ⟨arg⟩
@@ -254,10 +258,9 @@ def mkSpecContext (optConfig : Syntax) (lemmas : Syntax) (ignoreStarArg := false
   -- Build a mock simp call to build a simp context that corresponds to `simp [simpStuff]`
   let stx ← `(tactic| simp +unfoldPartialApp -zeta [$(Syntax.TSepArray.ofElems simpStuff),*])
   -- logInfo s!"{stx}"
-  let res ← mkSimpContext stx.raw
-    (eraseLocal := false)
-    (simpTheorems := getSpecSimpTheorems)
-    (ignoreStarArg := ignoreStarArg)
+  let res ←
+    mkSimpContext stx.raw (eraseLocal := false) (simpTheorems := getSpecSimpTheorems)
+      (ignoreStarArg := ignoreStarArg)
   -- logInfo m!"{res.ctx.simpTheorems.map (·.toUnfold.toList)}"
   if starArg && !ignoreStarArg then
     let fvars ← getPropHyps
@@ -266,11 +269,12 @@ def mkSpecContext (optConfig : Syntax) (lemmas : Syntax) (ignoreStarArg := false
         try
           let thm ← mkSpecTheoremFromLocal fvar
           specThms := specThms.insert thm
-        catch _ => continue
+        catch _ =>
+          continue
   return {
-    config,
-    specThms,
-    simpCtx := res.ctx,
+    config
+    specThms
+    simpCtx := res.ctx
     simprocs := res.simprocs
     initialCtxSize := (← getLCtx).numIndices
   }
@@ -287,7 +291,7 @@ def withLocalSpecs [Monad m] [MonadControlT VCGenM m] (xs : Array Expr) (k : m �
         catch ex =>
           match ex with
           | .internal .. => throw ex
-          | .error ..    => loop (i + 1)
+          | .error .. => loop (i + 1)
       else
         runInBase k
     loop 0

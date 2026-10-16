@@ -41,11 +41,16 @@ Computes the square root of a floating-point number and rounds the result accord
 specification.
 -/
 def sqrt (spec : Format) : UnpackedFloat → UnpackedFloat
-  | .notANumber => .notANumber
-  | .infinity .positive => .infinity .positive
-  | .infinity .negative => .notANumber
-  | .finite .negative .. => .notANumber
-  | .zero sign => .zero sign
+  | .notANumber =>
+    .notANumber
+  | .infinity .positive =>
+    .infinity .positive
+  | .infinity .negative =>
+    .notANumber
+  | .finite .negative .. =>
+    .notANumber
+  | .zero sign =>
+    .zero sign
   | .finite .positive m e _ =>
     let (m, e, acc) := sqrtCore spec m e
     roundWithAccuracy spec .positive m e acc

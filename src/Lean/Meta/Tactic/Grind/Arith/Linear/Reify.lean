@@ -4,40 +4,38 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.Linear.LinearM
 import Lean.Meta.Tactic.Grind.Arith.Linear.Var
 public section
 namespace Lean.Meta.Grind.Arith.Linear
 
-def isAddInst (struct : Struct) (inst : Expr) : Bool :=
-  isSameExpr struct.addFn.appArg! inst
-def isZeroInst (struct : Struct) (inst : Expr) : Bool :=
-  isSameExpr struct.zero.appArg! inst
-def isSMulIntInst (struct : Struct) (inst : Expr) : Bool :=
-  isSameExpr struct.zsmulFn.appArg! inst
-def isSMulNatInst (struct : Struct) (inst : Expr) : Bool :=
-  isSameExpr struct.nsmulFn.appArg! inst
+def isAddInst (struct : Struct) (inst : Expr) : Bool := isSameExpr struct.addFn.appArg! inst
+def isZeroInst (struct : Struct) (inst : Expr) : Bool := isSameExpr struct.zero.appArg! inst
+def isSMulIntInst (struct : Struct) (inst : Expr) : Bool := isSameExpr struct.zsmulFn.appArg! inst
+def isSMulNatInst (struct : Struct) (inst : Expr) : Bool := isSameExpr struct.nsmulFn.appArg! inst
 def isHomoMulInst (struct : Struct) (inst : Expr) : Bool :=
   if let some homomulFn := struct.homomulFn? then isSameExpr homomulFn inst else false
 def isHSMulIntInst (struct : Struct) (inst : Expr) : Bool :=
   if let some smulFn := struct.zsmulFn? then isSameExpr smulFn.appArg! inst else false
 def isHSMulNatInst (struct : Struct) (inst : Expr) : Bool :=
   if let some smulFn := struct.nsmulFn? then isSameExpr smulFn.appArg! inst else false
-def isSubInst (struct : Struct) (inst : Expr) : Bool :=
-  isSameExpr struct.subFn.appArg! inst
-def isNegInst (struct : Struct) (inst : Expr) : Bool :=
-  isSameExpr struct.negFn.appArg! inst
+def isSubInst (struct : Struct) (inst : Expr) : Bool := isSameExpr struct.subFn.appArg! inst
+def isNegInst (struct : Struct) (inst : Expr) : Bool := isSameExpr struct.negFn.appArg! inst
 
 def reportInstIssue (e : Expr) : GoalM Unit := do
   reportIssue! "`grind linarith` term with unexpected instance{indentExpr e}"
 
 private def assertNatCastNonneg (a : Expr) : LinearM Unit := do
   let s ← getStruct
-  let some lawfulOrderLTInst := s.lawfulOrderLTInst? | return ()
-  let h := mkApp8 (mkConst ``Grind.OrderedRing.natCast_nonneg [s.u]) s.type s.ringInst?.get!
-    s.leInst?.get! s.ltInst?.get! lawfulOrderLTInst s.isPreorderInst?.get! s.orderedRingInst?.get! a
-  addNewRawFact h (← inferType h) (← getGeneration a) (.ematch (.decl ``Grind.OrderedRing.natCast_nonneg)) .other
+  let some lawfulOrderLTInst := s.lawfulOrderLTInst?
+    | return ()
+  let h :=
+    mkApp8 (mkConst ``Grind.OrderedRing.natCast_nonneg [s.u]) s.type s.ringInst?.get! s.leInst?.get!
+      s.ltInst?.get! lawfulOrderLTInst s.isPreorderInst?.get! s.orderedRingInst?.get! a
+  addNewRawFact h (← inferType h) (← getGeneration a)
+    (.ematch (.decl ``Grind.OrderedRing.natCast_nonneg)) .other
 
 /--
 Converts a Lean `IntModule` expression `e` into a `LinExpr`
@@ -52,7 +50,8 @@ partial def reify? (e : Expr) (skipVar : Bool) : LinearM (Option LinExpr) := do
   | HSub.hSub _ _ _ i a b =>
     if isSubInst (← getStruct) i then return some (.sub (← go a) (← go b)) else asTopVar e
   | HSMul.hSMul _ _ _ i a b =>
-    let some r ← processSMul i a b | asTopVar e
+    let some r ← processSMul i a b
+      | asTopVar e
     return some r
   | Neg.neg _ i a =>
     if isNegInst (← getStruct) i then return some (.neg (← go a)) else asTopVar e
@@ -64,7 +63,8 @@ partial def reify? (e : Expr) (skipVar : Bool) : LinearM (Option LinExpr) := do
     if (← getStruct).orderedRingInst?.isSome then
       assertNatCastNonneg a
     toTopVar e
-  | _ => toTopVar e
+  | _ =>
+    toTopVar e
 where
   toVar (e : Expr) : LinearM LinExpr := do
     unless (← alreadyInternalized e) do
@@ -84,14 +84,15 @@ where
       return none
     else
       return some (← asVar e)
-  isOfNatZero (e : Expr) : LinearM Bool := do
-    isDefEqD e (← getStruct).ofNatZero
+  isOfNatZero (e : Expr) : LinearM Bool := do isDefEqD e (← getStruct).ofNatZero
   processSMul (i a b : Expr) : LinearM (Option LinExpr) := do
     if isSMulIntInst (← getStruct) i then
-      let some k ← getIntValue? a | return none
+      let some k ← getIntValue? a
+        | return none
       return some (.intMul k (← go b))
     else if isSMulNatInst (← getStruct) i then
-      let some k ← getNatValue? a | return none
+      let some k ← getNatValue? a
+        | return none
       return some (.natMul k (← go b))
     return none
   go (e : Expr) : LinearM LinExpr := do
@@ -101,7 +102,8 @@ where
     | HSub.hSub _ _ _ i a b =>
       if isSubInst (← getStruct) i then return .sub (← go a) (← go b) else asVar e
     | HSMul.hSMul _ _ _ i a b =>
-      let some r ← processSMul i a b | asVar e
+      let some r ← processSMul i a b
+        | asVar e
       return r
     | Neg.neg _ i a =>
       if isNegInst (← getStruct) i then return .neg (← go a) else asVar e
@@ -113,6 +115,7 @@ where
       if (← getStruct).orderedRingInst?.isSome then
         assertNatCastNonneg a
       toVar e
-    | _ => toVar e
+    | _ =>
+      toVar e
 
-end  Lean.Meta.Grind.Arith.Linear
+end Lean.Meta.Grind.Arith.Linear

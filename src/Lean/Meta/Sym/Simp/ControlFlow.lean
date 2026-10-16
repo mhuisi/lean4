@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Simp.SimpM
 import Lean.Meta.Sym.AlphaShareBuilder
@@ -18,14 +19,13 @@ import Init.Sym.Lemmas
 namespace Lean.Meta.Sym.Simp
 open Lean.Meta.Sym.Internal
 
-/--
-Simplifies a non-dependent `if-then-else` expression.
--/
+/-- Simplifies a non-dependent `if-then-else` expression. -/
 def simpIte : Simproc := fun e => do
   let numArgs := e.getAppNumArgs
   if numArgs < 5 then return .rfl (done := true)
   propagateOverApplied e (numArgs - 5) fun e => do
-    let_expr f@ite α c inst a b := e | return .rfl
+    let_expr f@ite α c inst a b := e
+      | return .rfl
     -- **cd propagation**: `cd` from `simp c` is propagated to ALL branches.
     -- When `cd = true`, `simp c` might produce a different result in another context
     -- (e.g., a conditional rewrite could change `c`). This means the entire `ite`
@@ -34,9 +34,11 @@ def simpIte : Simproc := fun e => do
     match (← simp c) with
     | .rfl _ cd =>
       if (← isTrueExpr c) then
-        return .step a (mkApp4 (mkConst ``ite_true f.constLevels!) α inst a b) (contextDependent := cd)
-      else if (← isFalseExpr  c) then
-        return .step b (mkApp4 (mkConst ``ite_false f.constLevels!) α inst a b) (contextDependent := cd)
+        return .step a (mkApp4 (mkConst ``ite_true f.constLevels!) α inst a b)
+          (contextDependent := cd)
+      else if (← isFalseExpr c) then
+        return .step b (mkApp4 (mkConst ``ite_false f.constLevels!) α inst a b)
+          (contextDependent := cd)
       else
         return mkRflResult (done := true) (contextDependent := cd)
     | .step c' h _ cd =>
@@ -45,30 +47,32 @@ def simpIte : Simproc := fun e => do
       else if (← isFalseExpr c') then
         return .step b (mkApp (e.replaceFn ``ite_eq_right_of_eq_false) h) (contextDependent := cd)
       else
-        let .some inst' ← trySynthInstance (mkApp (mkConst ``Decidable) c') | return .rfl
+        let .some inst' ← trySynthInstance (mkApp (mkConst ``Decidable) c')
+          | return .rfl
         let inst' ← shareCommon inst'
         let e' := e.getBoundedAppFn 4
         let e' ← mkAppS₄ e' c' inst' a b
         let h' := mkApp3 (e.replaceFn ``Sym.ite_cond_congr) c' inst' h
         return .step e' h' (done := true) (contextDependent := cd)
 
-/--
-Simplifies a dependent `if-then-else` expression.
--/
+/-- Simplifies a dependent `if-then-else` expression. -/
 def simpDIte : Simproc := fun e => do
   let numArgs := e.getAppNumArgs
   if numArgs < 5 then return .rfl (done := true)
   propagateOverApplied e (numArgs - 5) fun e => do
-    let_expr f@dite α c inst a b := e | return .rfl
+    let_expr f@dite α c inst a b := e
+      | return .rfl
     -- See `simpIte` for why `cd` is propagated to all branches.
     match (← simp c) with
     | .rfl _ cd =>
       if (← isTrueExpr c) then
         let a' ← share <| a.betaRev #[mkConst ``True.intro]
-        return .step a' (mkApp4 (mkConst ``dite_true f.constLevels!) α inst a b) (contextDependent := cd)
+        return .step a' (mkApp4 (mkConst ``dite_true f.constLevels!) α inst a b)
+          (contextDependent := cd)
       else if (← isFalseExpr c) then
         let b' ← share <| b.betaRev #[mkConst ``not_false]
-        return .step b' (mkApp4 (mkConst ``dite_false f.constLevels!) α inst a b) (contextDependent := cd)
+        return .step b' (mkApp4 (mkConst ``dite_false f.constLevels!) α inst a b)
+          (contextDependent := cd)
       else
         return mkRflResult (done := true) (contextDependent := cd)
     | .step c' h _ cd =>
@@ -81,24 +85,28 @@ def simpDIte : Simproc := fun e => do
         let b ← share <| b.betaRev #[h']
         return .step b (mkApp (e.replaceFn ``dite_eq_right_of_eq_false) h) (contextDependent := cd)
       else
-        let .some inst' ← trySynthInstance (mkApp (mkConst ``Decidable) c') | return .rfl
+        let .some inst' ← trySynthInstance (mkApp (mkConst ``Decidable) c')
+          | return .rfl
         let inst' ← shareCommon inst'
         let e' := e.getBoundedAppFn 4
         let h ← shareCommon h
-        let a ← share <| mkLambda `h .default c' (a.betaRev #[mkApp4 (mkConst ``Eq.mpr_prop) c c' h (mkBVar 0)])
-        let b ← share <| mkLambda `h .default (mkNot c') (b.betaRev #[mkApp4 (mkConst ``Eq.mpr_not) c c' h (mkBVar 0)])
+        let a ←
+          share <|
+            mkLambda `h .default c' (a.betaRev #[mkApp4 (mkConst ``Eq.mpr_prop) c c' h (mkBVar 0)])
+        let b ←
+          share <| mkLambda `h .default (mkNot c')
+            (b.betaRev #[mkApp4 (mkConst ``Eq.mpr_not) c c' h (mkBVar 0)])
         let e' ← mkAppS₄ e' c' inst' a b
         let h' := mkApp3 (e.replaceFn ``Sym.dite_cond_congr) c' inst' h
         return .step e' h' (done := true) (contextDependent := cd)
 
-/--
-Simplifies a `cond` expression (aka Boolean `if-then-else`).
--/
+/-- Simplifies a `cond` expression (aka Boolean `if-then-else`). -/
 public def simpCond : Simproc := fun e => do
   let numArgs := e.getAppNumArgs
   if numArgs < 4 then return .rfl (done := true)
   propagateOverApplied e (numArgs - 4) fun e => do
-    let_expr f@cond α c a b := e | return .rfl
+    let_expr f@cond α c a b := e
+      | return .rfl
     -- See `simpIte` for why `cd` is propagated to all branches.
     match (← simp c) with
     | .rfl _ cd =>
@@ -119,9 +127,7 @@ public def simpCond : Simproc := fun e => do
         let h' := mkApp2 (e.replaceFn ``Sym.cond_cond_congr) c' h
         return .step e' h' (done := true) (contextDependent := cd)
 
-/--
-Simplifies a `match`-expression.
--/
+/-- Simplifies a `match`-expression. -/
 def simpMatch (declName : Name) : Simproc := fun e => do
   if let some e' ← reduceMatcherApp? e then
     return .step e' (← mkEqRefl e')
@@ -129,7 +135,7 @@ def simpMatch (declName : Name) : Simproc := fun e => do
     | return .rfl
   -- **Note**: Simplify only the discriminants
   let start := info.numParams + 1
-  let stop  := start + info.numDiscrs
+  let stop := start + info.numDiscrs
   let r ← simpAppArgRange e start stop
   match r with
   | .step .. => return r
@@ -141,7 +147,8 @@ It visits only the conditions and discriminants.
 -/
 public def simpControl : Simproc := fun e => do
   if !e.isApp then return .rfl
-  let .const declName _ := e.getAppFn | return .rfl
+  let .const declName _ := e.getAppFn
+    | return .rfl
   if declName == ``ite then
     simpIte e
   else if declName == ``cond then
@@ -155,7 +162,6 @@ public def simpControl : Simproc := fun e => do
 Like `simpControl`, but does not block the simplifier: when the condition or the discriminants
 are not decided, the branches are visited too.
 -/
-public def reduceControl : Simproc := fun e =>
-  return (← simpControl e).markAsNotDone
+public def reduceControl : Simproc := fun e => return (← simpControl e).markAsNotDone
 
 end Lean.Meta.Sym.Simp

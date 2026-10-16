@@ -16,11 +16,11 @@ open Lean (Name)
 
 /-- The type of keys in the Lake build store. -/
 public inductive BuildKey
-| module (module : Name)
-| package (package : Name)
-| packageModule (package module : Name)
-| packageTarget (package target : Name)
-| facet (target : BuildKey) (facet : Name)
+  | module (module : Name)
+  | package (package : Name)
+  | packageModule (package module : Name)
+  | packageTarget (package target : Name)
+  | facet (target : BuildKey) (facet : Name)
 deriving Inhabited, Repr, DecidableEq, Hashable
 
 /--
@@ -30,7 +30,7 @@ A build key with some missing info.
 * Facet names are unqualified (they do not include the input target kind)
   and may also be ellided.
 -/
-@[expose]  -- for codegen
+@[expose] -- for codegen
 public def PartialBuildKey := BuildKey
 
 namespace PartialBuildKey
@@ -102,11 +102,22 @@ where
       return .packageTarget pkg target
 
 public def toString : (self : PartialBuildKey) → String
-| .module m => s!"+{m}"
-| .package p => match (getPkgName p) with | .anonymous => "" | p => s!"@{p}"
-| .packageModule p m => match (getPkgName p) with | .anonymous => s!"+{m}" | p => s!"{p}/+{m}"
-| .packageTarget p t => match (getPkgName p) with | .anonymous => t.toString | p => s!"{p}/{t}"
-| .facet t f => if f.isAnonymous then toString t else s!"{toString t}:{f}"
+  | .module m =>
+    s!"+{m}"
+  | .package p =>
+    match (getPkgName p) with
+    | .anonymous => ""
+    | p => s!"@{p}"
+  | .packageModule p m =>
+    match (getPkgName p) with
+    | .anonymous => s!"+{m}"
+    | p => s!"{p}/+{m}"
+  | .packageTarget p t =>
+    match (getPkgName p) with
+    | .anonymous => t.toString
+    | p => s!"{p}/{t}"
+  | .facet t f =>
+    if f.isAnonymous then toString t else s!"{toString t}:{f}"
 where
   /-- Utility for extracting a package's base name from its key name. -/
   getPkgName (p : Name) : Name :=
@@ -120,37 +131,39 @@ end PartialBuildKey
 
 namespace BuildKey
 
-@[match_pattern] public abbrev moduleFacet (module facet : Name) : BuildKey :=
-  .facet (.module module) facet
+@[match_pattern]
+public abbrev moduleFacet (module facet : Name) : BuildKey := .facet (.module module) facet
 
-@[match_pattern] public abbrev packageFacet (package facet : Name) : BuildKey :=
-  .facet (.package package) facet
+@[match_pattern]
+public abbrev packageFacet (package facet : Name) : BuildKey := .facet (.package package) facet
 
-@[match_pattern] public abbrev packageModuleFacet (package module facet : Name) : BuildKey :=
+@[match_pattern]
+public abbrev packageModuleFacet (package module facet : Name) : BuildKey :=
   .facet (.packageModule package module) facet
 
 attribute [deprecated packageModuleFacet +typeChanged (since := "2025-11-13")] moduleFacet
 
-@[match_pattern] public abbrev targetFacet (package target facet : Name) : BuildKey :=
+@[match_pattern]
+public abbrev targetFacet (package target facet : Name) : BuildKey :=
   .facet (.packageTarget package target) facet
 
-@[match_pattern] public abbrev customTarget (package target : Name) : BuildKey :=
-  .packageTarget package target
+@[match_pattern]
+public abbrev customTarget (package target : Name) : BuildKey := .packageTarget package target
 
 public def toString : (self : BuildKey) → String
-| module m => s!"+{m}"
-| package p => s!"@{p.getPrefix}"
-| packageModule p m => s!"{p.getPrefix}/+{m}"
-| packageTarget p t => s!"{p.getPrefix}/{t}"
-| facet t f => s!"{toString t}:{Name.eraseHead f}"
+  | module m => s!"+{m}"
+  | package p => s!"@{p.getPrefix}"
+  | packageModule p m => s!"{p.getPrefix}/+{m}"
+  | packageTarget p t => s!"{p.getPrefix}/{t}"
+  | facet t f => s!"{toString t}:{Name.eraseHead f}"
 
 /-- Like the default `toString`, but without disambiguation markers. -/
 public def toSimpleString : (self : BuildKey) → String
-| module m => s!"{m}"
-| package p => s!"{p.getPrefix}"
-| packageModule p m => s!"{p.getPrefix}/{m}"
-| packageTarget p t => s!"{p.getPrefix}/{t}"
-| facet t f => s!"{toSimpleString t}:{Name.eraseHead f}"
+  | module m => s!"{m}"
+  | package p => s!"{p.getPrefix}"
+  | packageModule p m => s!"{p.getPrefix}/{m}"
+  | packageTarget p t => s!"{p.getPrefix}/{t}"
+  | facet t f => s!"{toSimpleString t}:{Name.eraseHead f}"
 
 public instance : ToString BuildKey := ⟨(·.toString)⟩
 
@@ -167,8 +180,10 @@ public def quickCmp (k k' : BuildKey) : Ordering :=
     | _ => .lt
   | packageModule p m =>
     match k' with
-    | facet .. => .lt
-    | packageTarget .. => .lt
+    | facet .. =>
+      .lt
+    | packageTarget .. =>
+      .lt
     | packageModule p' m' =>
       -- Remark: Comparing by module then package instead of vice-versa
       -- provides a significant performance improvement in the common case.
@@ -176,59 +191,71 @@ public def quickCmp (k k' : BuildKey) : Ordering :=
       match m.quickCmp m' with
       | .eq => p.quickCmp p'
       | ord => ord
-    | _ => .gt
+    | _ =>
+      .gt
   | packageTarget p t =>
     match k' with
-    | facet .. => .lt
+    | facet .. =>
+      .lt
     | packageTarget p' t' =>
       match p.quickCmp p' with
       | .eq => t.quickCmp t'
       | ord => ord
-    | _=> .gt
+    | _ =>
+      .gt
   | facet t f =>
     match k' with
     | facet t' f' =>
       match t.quickCmp t' with
       | .eq => f.quickCmp f'
       | ord => ord
-    | _ => .gt
+    | _ =>
+      .gt
 
-public theorem eq_of_quickCmp :
-  quickCmp k k' = Ordering.eq → k = k'
-:= by
+public theorem eq_of_quickCmp : quickCmp k k' = Ordering.eq → k = k' := by
   revert k'
   induction k with
   | module m =>
     unfold quickCmp
-    intro k'; cases k'
+    intro k'
+    cases k'
     case module m' => simp
     all_goals (intro; contradiction)
   | package p =>
     unfold quickCmp
-    intro k'; cases k'
+    intro k'
+    cases k'
     case package p' => simp
     all_goals (intro; contradiction)
   | packageModule p m =>
     unfold quickCmp
-    intro k'; cases k'
+    intro k'
+    cases k'
     case packageModule p' m' =>
-      dsimp only; split
-      next p_eq => intro t_eq; rw [Std.LawfulEqCmp.eq_of_compare p_eq, Std.LawfulEqCmp.eq_of_compare t_eq]
+      dsimp only
+      split
+      next p_eq =>
+        intro t_eq; rw [Std.LawfulEqCmp.eq_of_compare p_eq, Std.LawfulEqCmp.eq_of_compare t_eq]
       next => intro; contradiction
     all_goals (intro; contradiction)
   | packageTarget p t =>
     unfold quickCmp
-    intro k'; cases k'
+    intro k'
+    cases k'
     case packageTarget p' t' =>
-      dsimp only; split
-      next p_eq => intro t_eq; rw [Std.LawfulEqCmp.eq_of_compare p_eq, Std.LawfulEqCmp.eq_of_compare t_eq]
+      dsimp only
+      split
+      next p_eq =>
+        intro t_eq; rw [Std.LawfulEqCmp.eq_of_compare p_eq, Std.LawfulEqCmp.eq_of_compare t_eq]
       next => intro; contradiction
     all_goals (intro; contradiction)
   | facet t f ih =>
     unfold quickCmp
-    intro k'; cases k'
+    intro k'
+    cases k'
     case facet t' f'' =>
-      dsimp only; split
+      dsimp only
+      split
       next t_eq => intro f_eq; rw [ih t_eq, Std.LawfulEqCmp.eq_of_compare f_eq]
       next => intro; contradiction
     all_goals (intro; contradiction)

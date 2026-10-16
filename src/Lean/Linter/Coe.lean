@@ -25,9 +25,7 @@ register_builtin_option linter.deprecatedCoercions : Bool := {
   descr := "Validate that no deprecated coercions are used."
 }
 
-/--
-Checks whether the "deprecated coercions" linter is enabled.
--/
+/-- Checks whether the "deprecated coercions" linter is enabled. -/
 def shouldWarnOnDeprecatedCoercions [Monad m] [MonadOptions m] : m Bool :=
   return (← getOptions).get linter.deprecatedCoercions.name true
 
@@ -42,19 +40,25 @@ def coeLinter : Linter where
     let shouldWarnOnDeprecated := getLinterValue linter.deprecatedCoercions (← getLinterOptions)
     let trees ← Elab.getInfoTrees
     for tree in trees do
-      tree.visitM' (m := Elab.Command.CommandElabM) (fun _ info _ => do
-        match info with
-        | .ofCustomInfo ci =>
-          if let some trace := ci.value.get? Elab.Term.CoeExpansionTrace then
-            for coeDecl in trace.expandedCoeDecls do
-              if isCoreModule && coeDecl ∈ coercionsBannedInCore then
-                logWarningAt ci.stx m!"This term uses the coercion `{coeDecl}`, which is banned in Lean's core library."
-              if shouldWarnOnDeprecated then
-                let some attr := deprecatedAttr.getParam? (← getEnv) coeDecl | pure ()
-                logLint linter.deprecatedCoercions ci.stx <| .tagged ``deprecatedAttr <|
-                  m!"This term uses the deprecated coercion `{.ofConstName coeDecl true}`."
-        | _ => pure ()
-        return true) (fun _ _ _ _ => return)
+      tree.visitM' (m := Elab.Command.CommandElabM)
+        (fun _ info _ => do
+          match info with
+          | .ofCustomInfo ci =>
+            if let some trace := ci.value.get? Elab.Term.CoeExpansionTrace then
+              for coeDecl in trace.expandedCoeDecls do
+                if isCoreModule && coeDecl ∈ coercionsBannedInCore then
+                  logWarningAt ci.stx
+                    m!"This term uses the coercion `{coeDecl}`, which is banned in Lean's core \
+                      library."
+                if shouldWarnOnDeprecated then
+                  let some attr := deprecatedAttr.getParam? (← getEnv) coeDecl
+                    | pure ()
+                  logLint linter.deprecatedCoercions ci.stx <| .tagged ``deprecatedAttr <|
+                    m!"This term uses the deprecated coercion `{.ofConstName coeDecl true}`."
+          | _ =>
+            pure ()
+          return true)
+        (fun _ _ _ _ => return)
 
 builtin_initialize addLinter coeLinter
 

@@ -13,10 +13,10 @@ public section
 
 namespace Lean.Compiler.LCNF
 
-structure  AuxDeclCacheKey where
+structure AuxDeclCacheKey where
   pu : Purity
   decl : Decl pu
-  deriving BEq, Hashable
+deriving BEq, Hashable
 
 builtin_initialize auxDeclCacheExt : CacheExtension AuxDeclCacheKey Name ← CacheExtension.register
 

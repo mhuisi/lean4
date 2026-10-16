@@ -20,14 +20,13 @@ Definitions and helpers for interacting with the Lake configuration monads.
 namespace Lake
 
 /-- A monad equipped with a (read-only) detected environment for Lake. -/
-public abbrev MonadLakeEnv (m : Type → Type u) :=
-  MonadReaderOf Lake.Env m
+public abbrev MonadLakeEnv (m : Type → Type u) := MonadReaderOf Lake.Env m
 
 /-- A transformer to equip a monad with a {lean}`Lake.Env`. -/
 public abbrev LakeEnvT := ReaderT Lake.Env
 
-@[inline] public def LakeEnvT.run (env : Lake.Env) (self : LakeEnvT m α) : m α :=
-  ReaderT.run self env
+@[inline]
+public def LakeEnvT.run (env : Lake.Env) (self : LakeEnvT m α) : m α := ReaderT.run self env
 
 /-- A monad equipped with a (read-only) Lake {lean}`Workspace`. -/
 public class MonadWorkspace (m : Type → Type u) where
@@ -43,22 +42,21 @@ public instance [MonadStateOf Workspace m] : MonadWorkspace m where
   getWorkspace := get
 
 /-- A monad equipped with a (read-only) Lake context. -/
-public abbrev MonadLake (m : Type → Type u) :=
-  MonadReaderOf Lake.Context m
+public abbrev MonadLake (m : Type → Type u) := MonadReaderOf Lake.Context m
 
 /-- Constructs a {lean}`Lake.Context` from  the workspace {lean}`ws`. -/
-@[inline] public def mkLakeContext (ws : Workspace) : Lake.Context where
+@[inline]
+public def mkLakeContext (ws : Workspace) : Lake.Context where
   opaqueWs := ws
 
 /-- Runs a {lean}`LakeT` monad in the context of the workspace {lean}`ws`. -/
-@[inline] public def Workspace.runLakeT (ws : Workspace) (x : LakeT m α) : m α :=
-  x.run (mkLakeContext ws)
+@[inline]
+public def Workspace.runLakeT (ws : Workspace) (x : LakeT m α) : m α := x.run (mkLakeContext ws)
 
 public instance [MonadWorkspace m] [Functor m] : MonadLake m where
   read := (mkLakeContext ·) <$> getWorkspace
 
-@[inline] public def Context.workspace (self : Context) :=
-  self.opaqueWs.get
+@[inline] public def Context.workspace (self : Context) := self.opaqueWs.get
 
 public instance [MonadLake m] [Functor m] : MonadWorkspace m where
   getWorkspace := (·.workspace) <$> read
@@ -74,8 +72,7 @@ variable [MonadWorkspace m]
 variable [Functor m]
 
 /-- Returns the root package of the context's workspace. -/
-@[inline] public def getRootPackage : m Package :=
-  (·.root) <$> getWorkspace
+@[inline] public def getRootPackage : m Package := (·.root) <$> getWorkspace
 
 @[inherit_doc Workspace.findPackageByKey?, inline]
 public def findPackageByKey? (keyName : Name) : m (Option (NPackage keyName)) :=
@@ -87,7 +84,8 @@ Returns the first package in the workspace (if any) that has been assigned the {
 This can be used to find the package corresponding to a user-provided name. If the package's unique
 identifier is already available, use {name}`findPackageByKey?`instead.
 -/
-@[inline] public def findPackageByName? (name : Name) : m (Option Package) :=
+@[inline]
+public def findPackageByName? (name : Name) : m (Option Package) :=
   (·.findPackageByName? name) <$> getWorkspace
 
 /--
@@ -99,77 +97,67 @@ unique identifier is available, use {name (full :=findPackageByKey?)}`findPackag
 public abbrev findPackage? (name : Name) : m (Option (NPackage name)) := findPackageByKey? name
 
 @[inherit_doc Workspace.findModule?, inline]
-public def findModule? (name : Name) : m (Option Module) :=
-  (·.findModule? name) <$> getWorkspace
+public def findModule? (name : Name) : m (Option Module) := (·.findModule? name) <$> getWorkspace
 
 @[inherit_doc Workspace.findModules, inline]
-public def findModules (name : Name) : m (Array Module) :=
-  (·.findModules name) <$> getWorkspace
+public def findModules (name : Name) : m (Array Module) := (·.findModules name) <$> getWorkspace
 
 @[inherit_doc Workspace.findModuleBySrc?, inline]
 public def findModuleBySrc? (path : FilePath) : m (Option Module) :=
   (·.findModuleBySrc? path) <$> getWorkspace
 
 @[inherit_doc Workspace.findLeanExe?, inline]
-public def findLeanExe? (name : Name) : m (Option LeanExe) :=
-  (·.findLeanExe? name) <$> getWorkspace
+public def findLeanExe? (name : Name) : m (Option LeanExe) := (·.findLeanExe? name) <$> getWorkspace
 
 @[inherit_doc Workspace.findLeanLib?, inline]
-public def findLeanLib? (name : Name) : m (Option LeanLib) :=
-  (·.findLeanLib? name) <$> getWorkspace
+public def findLeanLib? (name : Name) : m (Option LeanLib) := (·.findLeanLib? name) <$> getWorkspace
 
 @[inherit_doc Workspace.findExternLib?, inline]
 public def findExternLib? (name : Name) : m (Option ExternLib) :=
   (·.findExternLib? name) <$> getWorkspace
 
 @[inherit_doc Workspace.serverOptions, inline]
-public def getServerOptions : m LeanOptions :=
-  (·.serverOptions) <$> getWorkspace
+public def getServerOptions : m LeanOptions := (·.serverOptions) <$> getWorkspace
 
 @[inherit_doc Workspace.leanOptions, inline]
-public def getLeanOptions : m LeanOptions :=
-  (·.leanOptions) <$> getWorkspace
+public def getLeanOptions : m LeanOptions := (·.leanOptions) <$> getWorkspace
 
 @[inherit_doc Workspace.leanArgs, inline]
-public def getLeanArgs : m (Array String) :=
-  (·.leanArgs) <$> getWorkspace
+public def getLeanArgs : m (Array String) := (·.leanArgs) <$> getWorkspace
 
 /-- Returns the paths added to {lit}`LEAN_PATH` by the context's workspace. -/
-@[inline] public def getLeanPath : m SearchPath :=
-  (·.leanPath) <$> getWorkspace
+@[inline] public def getLeanPath : m SearchPath := (·.leanPath) <$> getWorkspace
 
 /-- Returns the paths added to {lit}`LEAN_SRC_PATH` by the context's workspace. -/
-@[inline] public def getLeanSrcPath : m SearchPath :=
-  (·.leanSrcPath) <$> getWorkspace
+@[inline] public def getLeanSrcPath : m SearchPath := (·.leanSrcPath) <$> getWorkspace
 
 /-- Returns the paths added to the shared library path by the context's workspace. -/
-@[inline] public def getSharedLibPath : m SearchPath :=
-  (·.sharedLibPath) <$> getWorkspace
+@[inline] public def getSharedLibPath : m SearchPath := (·.sharedLibPath) <$> getWorkspace
 
 /-- Returns the augmented {lit}`LEAN_PATH` set by the context's workspace. -/
-@[inline] public def getAugmentedLeanPath : m SearchPath :=
-  (·.augmentedLeanPath) <$> getWorkspace
+@[inline] public def getAugmentedLeanPath : m SearchPath := (·.augmentedLeanPath) <$> getWorkspace
 
 /-- Returns the augmented {lit}`LEAN_SRC_PATH` set by the context's workspace. -/
-@[inline] public def getAugmentedLeanSrcPath  : m SearchPath :=
-  (·.augmentedLeanSrcPath) <$> getWorkspace
+@[inline]
+public def getAugmentedLeanSrcPath : m SearchPath := (·.augmentedLeanSrcPath) <$> getWorkspace
 
 /-- Returns the augmented shared library path set by the context's workspace. -/
-@[inline] public def getAugmentedSharedLibPath  : m SearchPath :=
-  (·.augmentedSharedLibPath) <$> getWorkspace
+@[inline]
+public def getAugmentedSharedLibPath : m SearchPath := (·.augmentedSharedLibPath) <$> getWorkspace
 
 /-- Returns the augmented environment variables set by the context's workspace. -/
-@[inline] public def getAugmentedEnv : m (Array (String × Option String)) :=
+@[inline]
+public def getAugmentedEnv : m (Array (String × Option String)) :=
   (·.augmentedEnvVars) <$> getWorkspace
 
 /-- Returns the Lake cache for the environment. -/
-@[inline] public def getLakeCache : m Cache :=
-  (·.lakeCache) <$> getWorkspace
+@[inline] public def getLakeCache : m Cache := (·.lakeCache) <$> getWorkspace
 
 set_option linter.deprecated false in
 @[inline, inherit_doc Cache.getArtifact?,
-deprecated "Deprecated without replacement." (since := "2025-03-04")]
-public def getArtifact? [Bind m] [MonadLiftT BaseIO m] (descr : ArtifactDescr) : m (Option Artifact) :=
+  deprecated "Deprecated without replacement." (since := "2025-03-04")]
+public def getArtifact? [Bind m] [MonadLiftT BaseIO m] (descr : ArtifactDescr)
+    : m (Option Artifact) :=
   getLakeCache >>= (·.getArtifact? descr)
 
 /--
@@ -179,7 +167,8 @@ If the package has not configured this option itself through
 {lean}`Package.restoreAllArtifacts?`, this will default to the workspace configuration.
 If not configured at all, this defaults to {lean}`false`.
 -/
-@[inline] public def Package.restoreAllArtifacts [MonadWorkspace m] (self : Package) : m Bool :=
+@[inline]
+public def Package.restoreAllArtifacts [MonadWorkspace m] (self : Package) : m Bool :=
   (self.restoreAllArtifacts? <|> ·.restoreAllArtifacts? |>.getD false) <$> getWorkspace
 
 /--
@@ -189,7 +178,8 @@ If the package has not configured the artifact cache itself through
 {lean}`Package.enableArtifactCache?`, this will default to the workspace configuration.
 If not configured at all, this defaults to {lean}`true`.
 -/
-@[inline] public def Package.isArtifactCacheReadable [MonadWorkspace m] (self : Package) : m Bool :=
+@[inline]
+public def Package.isArtifactCacheReadable [MonadWorkspace m] (self : Package) : m Bool :=
   (self.enableArtifactCache? <|> ·.enableArtifactCache? |>.getD true) <$> getWorkspace
 
 /--
@@ -199,7 +189,8 @@ If the package has not configured the artifact cache itself through
 {lean}`Package.enableArtifactCache?`, this will default to the workspace configuration.
 If not configured at all, this defaults to {lean}`false`.
 -/
-@[inline] public def Package.isArtifactCacheWritable [MonadWorkspace m] (self : Package) : m Bool :=
+@[inline]
+public def Package.isArtifactCacheWritable [MonadWorkspace m] (self : Package) : m Bool :=
   (self.enableArtifactCache? <|> ·.enableArtifactCache? |>.getD false) <$> getWorkspace
 
 @[inherit_doc isArtifactCacheWritable, deprecated isArtifactCacheWritable (since := "2026-02-03")]
@@ -213,159 +204,123 @@ variable [MonadLakeEnv m]
 
 /-! ## Environment Helpers -/
 
-/--
-Gets the current Lake environment.
--/
-@[inline] public def getLakeEnv : m Lake.Env :=
-  read
+/-- Gets the current Lake environment. -/
+@[inline] public def getLakeEnv : m Lake.Env := read
 
 variable [Functor m]
 
 /-- Returns the {lit}`LAKE_NO_CACHE`/{lit}`--no-cache` Lake configuration. -/
-@[inline] public def getNoCache [Functor m] [MonadBuild m] : m Bool :=
-  (·.noCache) <$> getLakeEnv
+@[inline] public def getNoCache [Functor m] [MonadBuild m] : m Bool := (·.noCache) <$> getLakeEnv
 
 /-- Returns whether the {lit}`LAKE_NO_CACHE`/{lit}`--no-cache` Lake configuration is **NOT** set. -/
-@[inline] public def getTryCache [Functor m] [MonadBuild m] : m Bool :=
-  (!·.noCache) <$> getLakeEnv
+@[inline] public def getTryCache [Functor m] [MonadBuild m] : m Bool := (!·.noCache) <$> getLakeEnv
 
 /-- Returns the {lit}`LAKE_PACKAGE_URL_MAP` for the Lake environment. Empty if none. -/
-@[inline] public def getPkgUrlMap : m (NameMap String) :=
-  (·.pkgUrlMap) <$> getLakeEnv
+@[inline] public def getPkgUrlMap : m (NameMap String) := (·.pkgUrlMap) <$> getLakeEnv
 
 /-- Returns the name of Elan toolchain for the Lake environment. Empty if none. -/
-@[inline] public def getElanToolchain : m String :=
-  (·.toolchain) <$> getLakeEnv
-
+@[inline] public def getElanToolchain : m String := (·.toolchain) <$> getLakeEnv
 
 /-! ### Search Path Helpers -/
 
 /-- Returns the detected {lit}`LEAN_PATH` value of the Lake environment. -/
-@[inline] public def getEnvLeanPath : m SearchPath :=
-  (·.leanPath) <$> getLakeEnv
+@[inline] public def getEnvLeanPath : m SearchPath := (·.leanPath) <$> getLakeEnv
 
 /-- Returns the detected {lit}`LEAN_SRC_PATH` value of the Lake environment. -/
-@[inline] public def getEnvLeanSrcPath : m SearchPath :=
-  (·.leanSrcPath) <$> getLakeEnv
+@[inline] public def getEnvLeanSrcPath : m SearchPath := (·.leanSrcPath) <$> getLakeEnv
 
 /-- Returns the detected {lean}`sharedLibPathEnvVar` value of the Lake environment. -/
-@[inline] public def getEnvSharedLibPath : m SearchPath :=
-  (·.sharedLibPath) <$> getLakeEnv
+@[inline] public def getEnvSharedLibPath : m SearchPath := (·.sharedLibPath) <$> getLakeEnv
 
 /-! ### Elan Install Helpers -/
 
 /-- Returns the detected Elan installation (if one). -/
-@[inline] public def getElanInstall? : m (Option ElanInstall) :=
-  (·.elan?) <$> getLakeEnv
+@[inline] public def getElanInstall? : m (Option ElanInstall) := (·.elan?) <$> getLakeEnv
 
 /-- Returns the root directory of the detected Elan installation (i.e., {lit}`ELAN_HOME`). -/
-@[inline] public def getElanHome? : m (Option FilePath) :=
-  (·.map (·.home)) <$> getElanInstall?
+@[inline] public def getElanHome? : m (Option FilePath) := (·.map (·.home)) <$> getElanInstall?
 
 /-- Returns the path of the {lit}`elan` binary in the detected Elan installation. -/
-@[inline] public def getElan? : m (Option FilePath) :=
-  (·.map (·.elan)) <$> getElanInstall?
+@[inline] public def getElan? : m (Option FilePath) := (·.map (·.elan)) <$> getElanInstall?
 
 /-! ### Lean Install Helpers -/
 
 /-- Returns the detected Lean installation. -/
-@[inline] public def getLeanInstall : m LeanInstall :=
-  (·.lean) <$> getLakeEnv
+@[inline] public def getLeanInstall : m LeanInstall := (·.lean) <$> getLakeEnv
 
 /-- Returns the root directory of the detected Lean installation. -/
-@[inline] public def getLeanSysroot : m FilePath :=
-  (·.sysroot) <$> getLeanInstall
+@[inline] public def getLeanSysroot : m FilePath := (·.sysroot) <$> getLeanInstall
 
 /-- Returns the Lean source directory of the detected Lean installation. -/
-@[inline] public def getLeanSrcDir : m FilePath :=
-  (·.srcDir) <$> getLeanInstall
+@[inline] public def getLeanSrcDir : m FilePath := (·.srcDir) <$> getLeanInstall
 
 /-- Returns the Lean library directory of the detected Lean installation. -/
-@[inline] public def getLeanLibDir : m FilePath :=
-  (·.leanLibDir) <$> getLeanInstall
+@[inline] public def getLeanLibDir : m FilePath := (·.leanLibDir) <$> getLeanInstall
 
 /-- Returns the C include directory of the detected Lean installation. -/
-@[inline] public def getLeanIncludeDir : m FilePath :=
-  (·.includeDir) <$> getLeanInstall
+@[inline] public def getLeanIncludeDir : m FilePath := (·.includeDir) <$> getLeanInstall
 
 /-- Returns the system library directory of the detected Lean installation. -/
-@[inline] public def getLeanSystemLibDir : m FilePath :=
-  (·.systemLibDir) <$> getLeanInstall
+@[inline] public def getLeanSystemLibDir : m FilePath := (·.systemLibDir) <$> getLeanInstall
 
 /-- Returns the path of the {lit}`lean` binary in the detected Lean installation. -/
-@[inline] public def getLean : m FilePath :=
-  (·.lean) <$> getLeanInstall
+@[inline] public def getLean : m FilePath := (·.lean) <$> getLeanInstall
 
 /-- Get the path of the {lit}`leanir` binary in the detected Lean installation. -/
-@[inline] public def getLeanir : m FilePath :=
-  (·.leanir) <$> getLeanInstall
+@[inline] public def getLeanir : m FilePath := (·.leanir) <$> getLeanInstall
 
 /-- Returns the path of the {lit}`leanc` binary in the detected Lean installation. -/
-@[inline] public def getLeanc : m FilePath :=
-  (·.leanc) <$> getLeanInstall
+@[inline] public def getLeanc : m FilePath := (·.leanc) <$> getLeanInstall
 
 /-- Returns the path of the {lit}`leantar` binary in the detected Lean installation. -/
-@[inline] public def getLeantar : m FilePath :=
-  (·.leantar) <$> getLeanInstall
+@[inline] public def getLeantar : m FilePath := (·.leantar) <$> getLeanInstall
 
 /--
 Returns the primary core shared library
 (i.e., {lit}`libleanshared`) in the detected Lean installation.
 -/
-@[inline] public def getLeanSharedDynlib : m Dynlib :=
-  (·.sharedDynlib) <$> getLeanInstall
+@[inline] public def getLeanSharedDynlib : m Dynlib := (·.sharedDynlib) <$> getLeanInstall
 
 /-- Returns the core shared libraries in the detected Lean installation. -/
-@[inline] public def getLeanSharedDynlibs : m (Array Dynlib) :=
-  (·.sharedDynlibs) <$> getLeanInstall
+@[inline] public def getLeanSharedDynlibs : m (Array Dynlib) := (·.sharedDynlibs) <$> getLeanInstall
 
 /--
 Returns the path of the primary core shared library
 (i.e., {lit}`libleanshared`) in the detected Lean installation.
 -/
-@[inline] public def getLeanSharedLib : m FilePath :=
-  (·.sharedLib) <$> getLeanInstall
+@[inline] public def getLeanSharedLib : m FilePath := (·.sharedLib) <$> getLeanInstall
 
 /-- Get the path of the {lit}`ar` binary in the detected Lean installation. -/
-@[inline] public def getLeanAr : m FilePath :=
-  (·.ar) <$> getLeanInstall
+@[inline] public def getLeanAr : m FilePath := (·.ar) <$> getLeanInstall
 
 /-- Get the path of C compiler in the detected Lean installation. -/
-@[inline] public def getLeanCc : m FilePath :=
-  (·.cc) <$> getLeanInstall
+@[inline] public def getLeanCc : m FilePath := (·.cc) <$> getLeanInstall
 
 /-- Get the optional {lit}`LEAN_CC` compiler override of the detected Lean installation. -/
-@[inline] public def getLeanCc? : m (Option String) :=
-  (·.leanCc?) <$> getLeanInstall
+@[inline] public def getLeanCc? : m (Option String) := (·.leanCc?) <$> getLeanInstall
 
 /-- Get the flags required to link shared libraries using the detected Lean installation. -/
-@[inline] public def getLeanLinkSharedFlags : m (Array String) :=
-  (·.ccLinkSharedFlags) <$> getLeanInstall
+@[inline]
+public def getLeanLinkSharedFlags : m (Array String) := (·.ccLinkSharedFlags) <$> getLeanInstall
 
 /-! ### Lake Install Helpers -/
 
 /-- Get the detected Lake installation. -/
-@[inline] public def getLakeInstall : m LakeInstall :=
-  (·.lake) <$> getLakeEnv
+@[inline] public def getLakeInstall : m LakeInstall := (·.lake) <$> getLakeEnv
 
 /-- Get the root directory of the detected Lake installation (e.g., {lit}`LAKE_HOME`). -/
-@[inline] public def getLakeHome : m FilePath :=
-  (·.home) <$> getLakeInstall
+@[inline] public def getLakeHome : m FilePath := (·.home) <$> getLakeInstall
 
 /-- Get the source directory of the detected Lake installation. -/
-@[inline] public def getLakeSrcDir : m FilePath :=
-  (·.srcDir) <$> getLakeInstall
+@[inline] public def getLakeSrcDir : m FilePath := (·.srcDir) <$> getLakeInstall
 
 /-- Get the Lean library directory of the detected Lake installation. -/
-@[inline] public def getLakeLibDir : m FilePath :=
-  (·.libDir) <$> getLakeInstall
+@[inline] public def getLakeLibDir : m FilePath := (·.libDir) <$> getLakeInstall
 
 /-- Get the path of the {lit}`lake` binary in the detected Lake installation. -/
-@[inline] public def getLake : m FilePath :=
-  (·.lake) <$> getLakeInstall
+@[inline] public def getLake : m FilePath := (·.lake) <$> getLakeInstall
 
 /-- Get the Lake shared library (e.g., {lit}`libLake_shared`) in the detected Lake installation. -/
-@[inline] public def getLakeSharedDynlib : m Dynlib :=
-  (·.sharedDynlib) <$> getLakeInstall
+@[inline] public def getLakeSharedDynlib : m Dynlib := (·.sharedDynlib) <$> getLakeInstall
 
 end

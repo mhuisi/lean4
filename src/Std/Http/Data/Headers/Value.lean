@@ -39,22 +39,14 @@ Reference: https://www.rfc-editor.org/rfc/rfc9110.html#section-5.5
 abbrev IsValidHeaderValue (s : String) : Prop :=
   let s := s.toList
 
-  s.all Char.fieldContent ∧
-  (s.head?.map Char.fieldVchar |>.getD true) ∧
-  (s.getLast?.map Char.fieldVchar |>.getD true)
+  s.all Char.fieldContent ∧ (s.head?.map Char.fieldVchar |>.getD true)
+    ∧ (s.getLast?.map Char.fieldVchar |>.getD true)
 
-/--
-A validated HTTP header value that ensures all characters conform to HTTP standards.
--/
+/-- A validated HTTP header value that ensures all characters conform to HTTP standards. -/
 structure Value where
-  /--
-  The string data.
-  -/
+  /-- The string data. -/
   value : String
-
-  /--
-  The proof that it's a valid header value.
-  -/
+  /-- The proof that it's a valid header value. -/
   isValidHeaderValue : IsValidHeaderValue value := by decide
 deriving BEq, DecidableEq, Repr
 
@@ -93,9 +85,7 @@ def ofString! (s : String) : Value :=
 /--
 Performs a case-insensitive comparison between a `Value` and a `String`. Returns `true` if they match.
 -/
-@[expose]
-def is (s : Value) (h : String) : Bool :=
-  s.value.toLower == h.toLower
+@[expose] def is (s : Value) (h : String) : Bool := s.value.toLower == h.toLower
 
 instance : ToString Value where
   toString v := v.value

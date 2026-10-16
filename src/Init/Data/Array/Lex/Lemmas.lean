@@ -32,8 +32,12 @@ namespace Array
 
 /-! ### Lexicographic ordering -/
 
-@[simp] theorem _root_.List.lt_toArray [LT α] {l₁ l₂ : List α} : l₁.toArray < l₂.toArray ↔ l₁ < l₂ := Iff.rfl
-@[simp] theorem _root_.List.le_toArray [LT α] {l₁ l₂ : List α} : l₁.toArray ≤ l₂.toArray ↔ l₁ ≤ l₂ := Iff.rfl
+@[simp]
+theorem _root_.List.lt_toArray [LT α] {l₁ l₂ : List α} : l₁.toArray < l₂.toArray ↔ l₁ < l₂ :=
+  Iff.rfl
+@[simp]
+theorem _root_.List.le_toArray [LT α] {l₁ l₂ : List α} : l₁.toArray ≤ l₂.toArray ↔ l₁ ≤ l₂ :=
+  Iff.rfl
 
 @[simp] theorem lt_toList [LT α] {xs ys : Array α} : xs.toList < ys.toList ↔ xs < ys := Iff.rfl
 @[simp] theorem le_toList [LT α] {xs ys : Array α} : xs.toList ≤ ys.toList ↔ xs ≤ ys := Iff.rfl
@@ -43,43 +47,41 @@ grind_pattern _root_.List.le_toArray => l₁.toArray ≤ l₂.toArray
 grind_pattern lt_toList => xs.toList < ys.toList
 grind_pattern le_toList => xs.toList ≤ ys.toList
 
-@[simp]
-protected theorem not_lt [LT α] {xs ys : Array α} : ¬ xs < ys ↔ ys ≤ xs := Iff.rfl
+@[simp] protected theorem not_lt [LT α] {xs ys : Array α} : ¬ xs < ys ↔ ys ≤ xs := Iff.rfl
 
 @[deprecated Array.not_lt (since := "2025-10-26")]
 protected theorem not_lt_iff_ge [LT α] {xs ys : Array α} : ¬ xs < ys ↔ ys ≤ xs := Iff.rfl
 
-@[simp]
-protected theorem not_le [LT α] {xs ys : Array α} :
-    ¬ xs ≤ ys ↔ ys < xs :=
-  Classical.not_not
+@[simp] protected theorem not_le [LT α] {xs ys : Array α} : ¬ xs ≤ ys ↔ ys < xs := Classical.not_not
 
 @[deprecated Array.not_le (since := "2025-10-26")]
-protected theorem not_le_iff_gt [LT α] {xs ys : Array α} :
-    ¬ xs ≤ ys ↔ ys < xs :=
-  Classical.not_not
+protected theorem not_le_iff_gt [LT α] {xs ys : Array α} : ¬ xs ≤ ys ↔ ys < xs := Classical.not_not
 
-@[simp] theorem lex_empty [BEq α] {lt : α → α → Bool} {xs : Array α} : xs.lex #[] lt = false := by
+@[simp]
+theorem lex_empty [BEq α] {lt : α → α → Bool} {xs : Array α} : xs.lex #[] lt = false := by
   simp [lex, lex.go]
 
-private theorem lex.go_def [BEq α] (lt : α → α → Bool) (i : Nat) (l₁ l₂ r₁ r₂ : List α)
-    (h₁ : l₁.length = i) (h₂ : l₂.length = i) :
-    go (l₁ ++ r₁).toArray (l₂ ++ r₂).toArray lt i = r₁.lex r₂ lt := by
+private theorem lex.go_def
+    [BEq α]
+    (lt : α → α → Bool)
+    (i : Nat) (l₁ l₂ r₁ r₂ : List α) (h₁ : l₁.length = i) (h₂ : l₂.length = i)
+    : go (l₁ ++ r₁).toArray (l₂ ++ r₂).toArray lt i = r₁.lex r₂ lt := by
   cases r₁ <;> cases r₂ <;> rw [go] <;> (try simp [*]; done)
   rename_i x₁ t₁ x₂ t₂
   have := lex.go_def lt (i + 1) (l₁ ++ [x₁]) (l₂ ++ [x₂]) t₁ t₂
   have := @Nat.add_le_add_iff_left (k := 0)
   simp_all
 
-@[simp, grind =] theorem _root_.List.lex_toArray [BEq α] {lt : α → α → Bool} {l₁ l₂ : List α} :
-    lex l₁.toArray l₂.toArray lt = l₁.lex l₂ lt := by
+@[simp, grind =]
+theorem _root_.List.lex_toArray [BEq α] {lt : α → α → Bool} {l₁ l₂ : List α}
+    : lex l₁.toArray l₂.toArray lt = l₁.lex l₂ lt := by
   simpa [lex] using lex.go_def lt 0 [] [] l₁ l₂
 
-theorem singleton_lex_singleton [BEq α] {lt : α → α → Bool} : #[a].lex #[b] lt = lt a b := by
-  simp
+theorem singleton_lex_singleton [BEq α] {lt : α → α → Bool} : #[a].lex #[b] lt = lt a b := by simp
 
-@[simp, grind =] theorem lex_toList [BEq α] {lt : α → α → Bool} {xs ys : Array α} :
-    xs.toList.lex ys.toList lt = xs.lex ys lt := by
+@[simp, grind =]
+theorem lex_toList [BEq α] {lt : α → α → Bool} {xs ys : Array α}
+    : xs.toList.lex ys.toList lt = xs.lex ys lt := by
   cases xs <;> cases ys <;> simp
 
 instance [LT α] [LE α] [LawfulOrderLT α] [IsLinearOrder α] : IsLinearOrder (Array α) := by
@@ -93,99 +95,111 @@ instance [LT α] [LE α] [LawfulOrderLT α] [IsLinearOrder α] : IsLinearOrder (
 protected theorem lt_irrefl [LT α] [Std.Irrefl (· < · : α → α → Prop)] (xs : Array α) : ¬ xs < xs :=
   List.lt_irrefl xs.toList
 
-instance ltIrrefl [LT α] [Std.Irrefl (· < · : α → α → Prop)] : Std.Irrefl (α := Array α) (· < ·) where
+instance ltIrrefl [LT α] [Std.Irrefl (· < · : α → α → Prop)]
+    : Std.Irrefl (α := Array α) (· < ·) where
   irrefl := Array.lt_irrefl
 
 @[simp] theorem not_lt_empty [LT α] (xs : Array α) : ¬ xs < #[] := List.not_lt_nil xs.toList
 @[simp] theorem empty_le [LT α] (xs : Array α) : #[] ≤ xs := List.nil_le xs.toList
 
-@[simp] theorem le_empty [LT α] {xs : Array α} : xs ≤ #[] ↔ xs = #[] := by
+@[simp]
+theorem le_empty [LT α] {xs : Array α} : xs ≤ #[] ↔ xs = #[] := by
   cases xs
   simp
 
-@[simp] theorem empty_lt_push [LT α] (xs : Array α) (a : α) : #[] < xs.push a := by
+@[simp]
+theorem empty_lt_push [LT α] (xs : Array α) (a : α) : #[] < xs.push a := by
   rcases xs with (_ | ⟨x, xs⟩) <;> simp
 
 theorem empty_lt_iff [LT α] {xs : Array α} : #[] < xs ↔ xs ≠ #[] := by
   rw [← lt_toList, toList_empty, List.nil_lt_iff, ne_eq, ne_eq, toList_eq_nil_iff]
 
-protected theorem le_refl [LT α] [i₀ : Std.Irrefl (· < · : α → α → Prop)] (xs : Array α) : xs ≤ xs :=
+protected theorem le_refl [LT α] [i₀ : Std.Irrefl (· < · : α → α → Prop)] (xs : Array α)
+    : xs ≤ xs :=
   List.le_refl xs.toList
 
-instance [LT α] [Std.Irrefl (· < · : α → α → Prop)] : Std.Refl (· ≤ · : Array α → Array α → Prop) where
+instance [LT α] [Std.Irrefl (· < · : α → α → Prop)]
+    : Std.Refl (· ≤ · : Array α → Array α → Prop) where
   refl := Array.le_refl
 
-protected theorem lt_trans [LT α]
-    [i₁ : Trans (· < · : α → α → Prop) (· < ·) (· < ·)]
-    {xs ys zs : Array α} (h₁ : xs < ys) (h₂ : ys < zs) : xs < zs :=
+protected theorem lt_trans
+    [LT α] [i₁ : Trans (· < · : α → α → Prop) (· < ·) (· < ·)]
+    {xs ys zs : Array α} (h₁ : xs < ys) (h₂ : ys < zs)
+    : xs < zs :=
   List.lt_trans h₁ h₂
 
-instance [LT α] [Trans (· < · : α → α → Prop) (· < ·) (· < ·)] :
-    Trans (· < · : Array α → Array α → Prop) (· < ·) (· < ·) where
+instance [LT α] [Trans (· < · : α → α → Prop) (· < ·) (· < ·)]
+    : Trans (· < · : Array α → Array α → Prop) (· < ·) (· < ·) where
   trans h₁ h₂ := Array.lt_trans h₁ h₂
 
-protected theorem lt_of_le_of_lt [LE α] [LT α] [LawfulOrderLT α] [IsLinearOrder α]
-    {xs ys zs : Array α} (h₁ : xs ≤ ys) (h₂ : ys < zs) : xs < zs :=
+protected theorem lt_of_le_of_lt
+    [LE α] [LT α] [LawfulOrderLT α] [IsLinearOrder α]
+    {xs ys zs : Array α} (h₁ : xs ≤ ys) (h₂ : ys < zs)
+    : xs < zs :=
   Std.lt_of_le_of_lt (α := List α) h₁ h₂
 
-protected theorem le_trans [LE α] [LT α] [LawfulOrderLT α] [IsLinearOrder α]
-    {xs ys zs : Array α} (h₁ : xs ≤ ys) (h₂ : ys ≤ zs) : xs ≤ zs :=
-  fun h₃ => h₁ (Array.lt_of_le_of_lt h₂ h₃)
+protected theorem le_trans
+    [LE α] [LT α] [LawfulOrderLT α] [IsLinearOrder α]
+    {xs ys zs : Array α} (h₁ : xs ≤ ys) (h₂ : ys ≤ zs)
+    : xs ≤ zs := fun h₃ =>
+  h₁ (Array.lt_of_le_of_lt h₂ h₃)
 
-instance [LE α] [LT α] [LawfulOrderLT α] [IsLinearOrder α] :
-    Trans (· ≤ · : Array α → Array α → Prop) (· ≤ ·) (· ≤ ·) where
+instance [LE α] [LT α] [LawfulOrderLT α] [IsLinearOrder α]
+    : Trans (· ≤ · : Array α → Array α → Prop) (· ≤ ·) (· ≤ ·) where
   trans h₁ h₂ := Array.le_trans h₁ h₂
 
-protected theorem lt_asymm [LT α]
-    [i : Std.Asymm (· < · : α → α → Prop)]
-    {xs ys : Array α} (h : xs < ys) : ¬ ys < xs := List.lt_asymm h
+protected theorem lt_asymm
+    [LT α] [i : Std.Asymm (· < · : α → α → Prop)] {xs ys : Array α} (h : xs < ys)
+    : ¬ ys < xs :=
+  List.lt_asymm h
 
-instance [LT α]
-    [Std.Asymm (· < · : α → α → Prop)] :
-    Std.Asymm (· < · : Array α → Array α → Prop) where
+instance [LT α] [Std.Asymm (· < · : α → α → Prop)]
+    : Std.Asymm (· < · : Array α → Array α → Prop) where
   asymm _ _ := Array.lt_asymm
 
-protected theorem le_total [LT α]
-    [i : Std.Asymm (· < · : α → α → Prop)] (xs ys : Array α) : xs ≤ ys ∨ ys ≤ xs :=
+protected theorem le_total [LT α] [i : Std.Asymm (· < · : α → α → Prop)] (xs ys : Array α)
+    : xs ≤ ys ∨ ys ≤ xs :=
   List.le_total xs.toList ys.toList
 
-protected theorem le_of_lt [LT α]
-    [i : Std.Asymm (· < · : α → α → Prop)]
-    {xs ys : Array α} (h : xs < ys) : xs ≤ ys :=
+protected theorem le_of_lt
+    [LT α] [i : Std.Asymm (· < · : α → α → Prop)] {xs ys : Array α} (h : xs < ys)
+    : xs ≤ ys :=
   List.le_of_lt h
 
-protected theorem le_iff_lt_or_eq [LT α]
-    [Std.Irrefl (· < · : α → α → Prop)]
-    [Std.Trichotomous (· < · : α → α → Prop)]
+protected theorem le_iff_lt_or_eq
+    [LT α] [Std.Irrefl (· < · : α → α → Prop)] [Std.Trichotomous (· < · : α → α → Prop)]
     [Std.Asymm (· < · : α → α → Prop)]
-    {xs ys : Array α} : xs ≤ ys ↔ xs < ys ∨ xs = ys := by
+    {xs ys : Array α}
+    : xs ≤ ys ↔ xs < ys ∨ xs = ys := by
   simpa using List.le_iff_lt_or_eq (l₁ := xs.toList) (l₂ := ys.toList)
 
-protected theorem le_antisymm [LT α] [LE α] [IsLinearOrder α] [LawfulOrderLT α]
-    {xs ys : Array α} : xs ≤ ys → ys ≤ xs → xs = ys := by
+protected theorem le_antisymm [LT α] [LE α] [IsLinearOrder α] [LawfulOrderLT α] {xs ys : Array α}
+    : xs ≤ ys → ys ≤ xs → xs = ys := by
   simpa using List.le_antisymm (as := xs.toList) (bs := ys.toList)
 
-instance [LT α] [Std.Asymm (· < · : α → α → Prop)] :
-    Std.Total (· ≤ · : Array α → Array α → Prop) where
+instance [LT α] [Std.Asymm (· < · : α → α → Prop)]
+    : Std.Total (· ≤ · : Array α → Array α → Prop) where
   total := Array.le_total
 
-@[simp] theorem lex_eq_true_iff_lt [BEq α] [LawfulBEq α] [LT α] [DecidableLT α]
-    {xs ys : Array α} : lex xs ys = true ↔ xs < ys := by
+@[simp]
+theorem lex_eq_true_iff_lt [BEq α] [LawfulBEq α] [LT α] [DecidableLT α] {xs ys : Array α}
+    : lex xs ys = true ↔ xs < ys := by
   cases xs
   cases ys
   simp
 
-@[simp] theorem lex_eq_false_iff_ge [BEq α] [LawfulBEq α] [LT α] [DecidableLT α]
-    {xs ys : Array α} : lex xs ys = false ↔ ys ≤ xs := by
+@[simp]
+theorem lex_eq_false_iff_ge [BEq α] [LawfulBEq α] [LT α] [DecidableLT α] {xs ys : Array α}
+    : lex xs ys = false ↔ ys ≤ xs := by
   cases xs
   cases ys
   simp
 
-instance [DecidableEq α] [LT α] [DecidableLT α] : DecidableLT (Array α) :=
-  fun xs ys => decidable_of_iff (lex xs ys = true) lex_eq_true_iff_lt
+instance [DecidableEq α] [LT α] [DecidableLT α] : DecidableLT (Array α) := fun xs ys =>
+  decidable_of_iff (lex xs ys = true) lex_eq_true_iff_lt
 
-instance [DecidableEq α] [LT α] [DecidableLT α] : DecidableLE (Array α) :=
-  fun xs ys => decidable_of_iff (lex ys xs = false) lex_eq_false_iff_ge
+instance [DecidableEq α] [LT α] [DecidableLT α] : DecidableLE (Array α) := fun xs ys =>
+  decidable_of_iff (lex ys xs = false) lex_eq_false_iff_ge
 
 /--
 `l₁` is lexicographically less than `l₂` if either
@@ -195,12 +209,12 @@ instance [DecidableEq α] [LT α] [DecidableLT α] : DecidableLE (Array α) :=
   - for all `j < i`, `l₁[j] == l₂[j]` and
   - `l₁[i] < l₂[i]`
 -/
-theorem lex_eq_true_iff_exists [BEq α] (lt : α → α → Bool) :
-    lex l₁ l₂ lt = true ↔
-      (l₁.isEqv (l₂.take l₁.size) (· == ·) ∧ l₁.size < l₂.size) ∨
-        (∃ (i : Nat) (h₁ : i < l₁.size) (h₂ : i < l₂.size),
-          (∀ j, (hj : j < i) →
-            l₁[j]'(Nat.lt_trans hj h₁) == l₂[j]'(Nat.lt_trans hj h₂)) ∧ lt l₁[i] l₂[i]) := by
+theorem lex_eq_true_iff_exists [BEq α] (lt : α → α → Bool)
+    : lex l₁ l₂ lt = true
+      ↔ (l₁.isEqv (l₂.take l₁.size) (· == ·) ∧ l₁.size < l₂.size)
+        ∨ (∃ (i : Nat) (h₁ : i < l₁.size) (h₂ : i < l₂.size),
+          (∀ j, (hj : j < i) → l₁[j]'(Nat.lt_trans hj h₁) == l₂[j]'(Nat.lt_trans hj h₂))
+            ∧ lt l₁[i] l₂[i]) := by
   cases l₁
   cases l₂
   simp [List.lex_eq_true_iff_exists]
@@ -220,163 +234,178 @@ This formulation requires that `==` and `lt` are compatible in the following sen
 - `lt` is asymmetric  (i.e. `lt x y = true → lt y x = false`)
 - `lt` is antisymmetric with respect to `==` (i.e. `lt x y = false → lt y x = false → x == y`)
 -/
-theorem lex_eq_false_iff_exists [BEq α] [PartialEquivBEq α] (lt : α → α → Bool)
-    (lt_irrefl : ∀ x y, x == y → lt x y = false)
-    (lt_asymm : ∀ x y, lt x y = true → lt y x = false)
-    (lt_antisymm : ∀ x y, lt x y = false → lt y x = false → x == y) :
-    lex l₁ l₂ lt = false ↔
-      (l₂.isEqv (l₁.take l₂.size) (· == ·)) ∨
-        (∃ (i : Nat) (h₁ : i < l₁.size) (h₂ : i < l₂.size),
-          (∀ j, (hj : j < i) →
-            l₁[j]'(Nat.lt_trans hj h₁) == l₂[j]'(Nat.lt_trans hj h₂)) ∧ lt l₂[i] l₁[i]) := by
+theorem lex_eq_false_iff_exists
+    [BEq α] [PartialEquivBEq α]
+    (lt : α → α → Bool)
+    (lt_irrefl : ∀ x y, x == y → lt x y = false) (lt_asymm : ∀ x y, lt x y = true → lt y x = false)
+    (lt_antisymm : ∀ x y, lt x y = false → lt y x = false → x == y)
+    : lex l₁ l₂ lt = false
+      ↔ (l₂.isEqv (l₁.take l₂.size) (· == ·))
+        ∨ (∃ (i : Nat) (h₁ : i < l₁.size) (h₂ : i < l₂.size),
+          (∀ j, (hj : j < i) → l₁[j]'(Nat.lt_trans hj h₁) == l₂[j]'(Nat.lt_trans hj h₂))
+            ∧ lt l₂[i] l₁[i]) := by
   cases l₁
   cases l₂
   simp_all [List.lex_eq_false_iff_exists]
 
-protected theorem lt_iff_exists [LT α] {xs ys : Array α} :
-    xs < ys ↔
-      (xs = ys.take xs.size ∧ xs.size < ys.size) ∨
-        (∃ (i : Nat) (h₁ : i < xs.size) (h₂ : i < ys.size),
-          (∀ j, (hj : j < i) →
-            xs[j]'(Nat.lt_trans hj h₁) = ys[j]'(Nat.lt_trans hj h₂)) ∧ xs[i] < ys[i]) := by
+protected theorem lt_iff_exists [LT α] {xs ys : Array α}
+    : xs < ys
+      ↔ (xs = ys.take xs.size ∧ xs.size < ys.size)
+        ∨ (∃ (i : Nat) (h₁ : i < xs.size) (h₂ : i < ys.size),
+          (∀ j, (hj : j < i) → xs[j]'(Nat.lt_trans hj h₁) = ys[j]'(Nat.lt_trans hj h₂))
+            ∧ xs[i] < ys[i]) := by
   cases xs
   cases ys
   simp [List.lt_iff_exists]
 
-protected theorem le_iff_exists [LT α]
-    [Std.Asymm (· < · : α → α → Prop)]
-    [Std.Trichotomous (· < · : α → α → Prop)] {xs ys : Array α} :
-    xs ≤ ys ↔
-      (xs = ys.take xs.size) ∨
-        (∃ (i : Nat) (h₁ : i < xs.size) (h₂ : i < ys.size),
-          (∀ j, (hj : j < i) →
-            xs[j]'(Nat.lt_trans hj h₁) = ys[j]'(Nat.lt_trans hj h₂)) ∧ xs[i] < ys[i]) := by
+protected theorem le_iff_exists
+    [LT α] [Std.Asymm (· < · : α → α → Prop)] [Std.Trichotomous (· < · : α → α → Prop)]
+    {xs ys : Array α}
+    : xs ≤ ys
+      ↔ (xs = ys.take xs.size)
+        ∨ (∃ (i : Nat) (h₁ : i < xs.size) (h₂ : i < ys.size),
+          (∀ j, (hj : j < i) → xs[j]'(Nat.lt_trans hj h₁) = ys[j]'(Nat.lt_trans hj h₂))
+            ∧ xs[i] < ys[i]) := by
   cases xs
   cases ys
   simp [List.le_iff_exists]
 
-theorem lt_of_getElem_zero [LT α] {xs ys : Array α} (h₁ : 0 < xs.size) (h₂ : 0 < ys.size)
-    (h : xs[0]'h₁ < ys[0]'h₂) : xs < ys :=
+theorem lt_of_getElem_zero
+    [LT α] {xs ys : Array α} (h₁ : 0 < xs.size) (h₂ : 0 < ys.size) (h : xs[0]'h₁ < ys[0]'h₂)
+    : xs < ys :=
   List.lt_of_getElem_zero (by simpa using h₁) (by simpa using h₂) (by simpa using h)
 
-theorem append_left_lt [LT α] {xs ys zs : Array α} (h : ys < zs) :
-    xs ++ ys < xs ++ zs := by
+theorem append_left_lt [LT α] {xs ys zs : Array α} (h : ys < zs) : xs ++ ys < xs ++ zs := by
   cases xs
   cases ys
   cases zs
   simpa using List.append_left_lt h
 
-theorem append_left_le [LT α]
-    [Std.Asymm (· < · : α → α → Prop)]
-    [Std.Trichotomous (· < · : α → α → Prop)]
-    {xs ys zs : Array α} (h : ys ≤ zs) :
-    xs ++ ys ≤ xs ++ zs := by
+theorem append_left_le
+    [LT α] [Std.Asymm (· < · : α → α → Prop)] [Std.Trichotomous (· < · : α → α → Prop)]
+    {xs ys zs : Array α} (h : ys ≤ zs)
+    : xs ++ ys ≤ xs ++ zs := by
   cases xs
   cases ys
   cases zs
   simpa using h
 
 @[simp]
-theorem append_left_lt_iff [LT α] [Std.Irrefl (· < · : α → α → Prop)] (xs : Array α)
-    {ys zs : Array α} : xs ++ ys < xs ++ zs ↔ ys < zs := by
+theorem append_left_lt_iff
+    [LT α] [Std.Irrefl (· < · : α → α → Prop)] (xs : Array α) {ys zs : Array α}
+    : xs ++ ys < xs ++ zs ↔ ys < zs := by
   simp only [← lt_toList, toList_append, List.append_left_lt_iff]
 
 @[simp]
-theorem append_left_le_iff [LT α] [Std.Irrefl (· < · : α → α → Prop)] (xs : Array α)
-    {ys zs : Array α} : xs ++ ys ≤ xs ++ zs ↔ ys ≤ zs :=
+theorem append_left_le_iff
+    [LT α] [Std.Irrefl (· < · : α → α → Prop)] (xs : Array α) {ys zs : Array α}
+    : xs ++ ys ≤ xs ++ zs ↔ ys ≤ zs :=
   not_congr (append_left_lt_iff xs)
 
-theorem le_append_left [LT α] [Std.Irrefl (· < · : α → α → Prop)]
-    {xs ys : Array α} : xs ≤ xs ++ ys := by
+theorem le_append_left [LT α] [Std.Irrefl (· < · : α → α → Prop)] {xs ys : Array α}
+    : xs ≤ xs ++ ys := by
   cases xs
   cases ys
   simpa using List.le_append_left
 
-theorem append_lt_append_iff_of_size_eq [LT α] {xs₁ xs₂ ys₁ ys₂ : Array α}
-    (h : xs₁.size = xs₂.size) :
-    xs₁ ++ ys₁ < xs₂ ++ ys₂ ↔ xs₁ < xs₂ ∨ (xs₁ = xs₂ ∧ ys₁ < ys₂) := by
+theorem append_lt_append_iff_of_size_eq [LT α] {xs₁ xs₂ ys₁ ys₂ : Array α} (h : xs₁.size = xs₂.size)
+    : xs₁ ++ ys₁ < xs₂ ++ ys₂ ↔ xs₁ < xs₂ ∨ (xs₁ = xs₂ ∧ ys₁ < ys₂) := by
   rw [← lt_toList, toList_append, toList_append,
     List.append_lt_append_iff_of_length_eq (by simpa using h), lt_toList, lt_toList, toList_inj]
 
-theorem append_le_append_iff_of_size_eq [LT α] [Std.Asymm (· < · : α → α → Prop)]
-    [Std.Trichotomous (· < · : α → α → Prop)] {xs₁ xs₂ ys₁ ys₂ : Array α}
-    (h : xs₁.size = xs₂.size) :
-    xs₁ ++ ys₁ ≤ xs₂ ++ ys₂ ↔ xs₁ < xs₂ ∨ (xs₁ = xs₂ ∧ ys₁ ≤ ys₂) := by
+theorem append_le_append_iff_of_size_eq
+    [LT α] [Std.Asymm (· < · : α → α → Prop)] [Std.Trichotomous (· < · : α → α → Prop)]
+    {xs₁ xs₂ ys₁ ys₂ : Array α} (h : xs₁.size = xs₂.size)
+    : xs₁ ++ ys₁ ≤ xs₂ ++ ys₂ ↔ xs₁ < xs₂ ∨ (xs₁ = xs₂ ∧ ys₁ ≤ ys₂) := by
   rw [← le_toList, toList_append, toList_append,
     List.append_le_append_iff_of_length_eq (by simpa using h), lt_toList, le_toList, toList_inj]
 
-theorem append_right_lt_iff_of_size_eq [LT α] [Std.Irrefl (· < · : α → α → Prop)]
-    {xs₁ xs₂ : Array α} (ys : Array α) (h : xs₁.size = xs₂.size) :
-    xs₁ ++ ys < xs₂ ++ ys ↔ xs₁ < xs₂ := by
+theorem append_right_lt_iff_of_size_eq
+    [LT α] [Std.Irrefl (· < · : α → α → Prop)]
+    {xs₁ xs₂ : Array α}
+    (ys : Array α) (h : xs₁.size = xs₂.size)
+    : xs₁ ++ ys < xs₂ ++ ys ↔ xs₁ < xs₂ := by
   rw [← lt_toList, toList_append, toList_append,
     List.append_right_lt_iff_of_length_eq _ (by simpa using h), lt_toList]
 
-theorem append_right_le_iff_of_size_eq [LT α] [Std.Irrefl (· < · : α → α → Prop)]
-    {xs₁ xs₂ : Array α} (ys : Array α) (h : xs₁.size = xs₂.size) :
-    xs₁ ++ ys ≤ xs₂ ++ ys ↔ xs₁ ≤ xs₂ :=
+theorem append_right_le_iff_of_size_eq
+    [LT α] [Std.Irrefl (· < · : α → α → Prop)]
+    {xs₁ xs₂ : Array α}
+    (ys : Array α) (h : xs₁.size = xs₂.size)
+    : xs₁ ++ ys ≤ xs₂ ++ ys ↔ xs₁ ≤ xs₂ :=
   not_congr (append_right_lt_iff_of_size_eq ys h.symm)
 
-protected theorem map_lt [LT α] [LT β]
-    {xs ys : Array α} {f : α → β} (w : ∀ x y, x < y → f x < f y) (h : xs < ys) :
-    map f xs < map f ys := by
+protected theorem map_lt
+    [LT α] [LT β] {xs ys : Array α} {f : α → β} (w : ∀ x y, x < y → f x < f y) (h : xs < ys)
+    : map f xs < map f ys := by
   cases xs
   cases ys
   simpa using List.map_lt w h
 
-protected theorem map_le [LT α] [LT β]
-    [Std.Asymm (· < · : α → α → Prop)]
-    [Std.Trichotomous (· < · : α → α → Prop)]
-    [Std.Asymm (· < · : β → β → Prop)]
-    [Std.Trichotomous (· < · : β → β → Prop)]
-    {xs ys : Array α} {f : α → β} (w : ∀ x y, x < y → f x < f y) (h : xs ≤ ys) :
-    map f xs ≤ map f ys := by
+protected theorem map_le
+    [LT α] [LT β] [Std.Asymm (· < · : α → α → Prop)] [Std.Trichotomous (· < · : α → α → Prop)]
+    [Std.Asymm (· < · : β → β → Prop)] [Std.Trichotomous (· < · : β → β → Prop)]
+    {xs ys : Array α} {f : α → β} (w : ∀ x y, x < y → f x < f y) (h : xs ≤ ys)
+    : map f xs ≤ map f ys := by
   cases xs
   cases ys
   simpa using List.map_le w h
 
-/-- See `map_lt_map_iff` for a variant with fewer proof obligations for `f` but with some mild
-assumptions on the order on `α` and `β`. -/
-theorem map_lt_map_iff_of_injective [LT α] [LT β] (f : α → β) (hf : ∀ a b, f a < f b ↔ a < b)
-    (hfinj : Function.Injective f) {xs ys : Array α} :
-    xs.map f < ys.map f ↔ xs < ys := by
+/--
+See `map_lt_map_iff` for a variant with fewer proof obligations for `f` but with some mild
+assumptions on the order on `α` and `β`.
+-/
+theorem map_lt_map_iff_of_injective
+    [LT α] [LT β]
+    (f : α → β) (hf : ∀ a b, f a < f b ↔ a < b) (hfinj : Function.Injective f)
+    {xs ys : Array α}
+    : xs.map f < ys.map f ↔ xs < ys := by
   rw [← lt_toList, toList_map, toList_map, List.map_lt_map_iff_of_injective f hf hfinj, lt_toList]
 
-/-- See `map_lt_map_iff_of_injective` for a variant which does not assume anything about the order
-on `α` and `β`, but with more assumptions on `f`. -/
-theorem map_lt_map_iff [LT α] [Std.Trichotomous (· < · : α → α → Prop)] [LT β]
-    [Std.Asymm (· < · : β → β → Prop)] (f : α → β) (hf : ∀ a b, a < b → f a < f b)
-    {xs ys : Array α} : xs.map f < ys.map f ↔ xs < ys := by
+/--
+See `map_lt_map_iff_of_injective` for a variant which does not assume anything about the order
+on `α` and `β`, but with more assumptions on `f`.
+-/
+theorem map_lt_map_iff
+    [LT α] [Std.Trichotomous (· < · : α → α → Prop)] [LT β] [Std.Asymm (· < · : β → β → Prop)]
+    (f : α → β) (hf : ∀ a b, a < b → f a < f b)
+    {xs ys : Array α}
+    : xs.map f < ys.map f ↔ xs < ys := by
   rw [← lt_toList, toList_map, toList_map, List.map_lt_map_iff f hf, lt_toList]
 
-theorem map_le_map_iff_of_injective [LT α] [LT β] (f : α → β) (hf : ∀ a b, f a < f b ↔ a < b)
-    (hfinj : Function.Injective f) {xs ys : Array α} :
-    xs.map f ≤ ys.map f ↔ xs ≤ ys :=
+theorem map_le_map_iff_of_injective
+    [LT α] [LT β]
+    (f : α → β) (hf : ∀ a b, f a < f b ↔ a < b) (hfinj : Function.Injective f)
+    {xs ys : Array α}
+    : xs.map f ≤ ys.map f ↔ xs ≤ ys :=
   not_congr (map_lt_map_iff_of_injective f hf hfinj)
 
-theorem map_le_map_iff [LT α] [Std.Trichotomous (· < · : α → α → Prop)] [LT β]
-    [Std.Asymm (· < · : β → β → Prop)] (f : α → β) (hf : ∀ a b, a < b → f a < f b)
-    {xs ys : Array α} : xs.map f ≤ ys.map f ↔ xs ≤ ys :=
+theorem map_le_map_iff
+    [LT α] [Std.Trichotomous (· < · : α → α → Prop)] [LT β] [Std.Asymm (· < · : β → β → Prop)]
+    (f : α → β) (hf : ∀ a b, a < b → f a < f b)
+    {xs ys : Array α}
+    : xs.map f ≤ ys.map f ↔ xs ≤ ys :=
   not_congr (map_lt_map_iff f hf)
 
-theorem flatMap_lt_flatMap_iff [LT α] [Std.Trichotomous (· < · : α → α → Prop)] [LT β]
-    [Std.Asymm (· < · : β → β → Prop)] (f : α → Array β)
-    (hf : ∀ a b, a < b → f a < f b)
-    (hp : ∀ a b zs, f a ++ zs = f b → a = b)
-    (hx : ∀ a, f a ≠ #[])
-    {xs ys : Array α} :
-    xs.flatMap f < ys.flatMap f ↔ xs < ys := by
+theorem flatMap_lt_flatMap_iff
+    [LT α] [Std.Trichotomous (· < · : α → α → Prop)] [LT β] [Std.Asymm (· < · : β → β → Prop)]
+    (f : α → Array β)
+    (hf : ∀ a b, a < b → f a < f b) (hp : ∀ a b zs, f a ++ zs = f b → a = b) (hx : ∀ a, f a ≠ #[])
+    {xs ys : Array α}
+    : xs.flatMap f < ys.flatMap f ↔ xs < ys := by
   rw [← lt_toList, ← lt_toList, toList_flatMap, toList_flatMap]
-  exact List.flatMap_lt_flatMap_iff (fun a => (f a).toList) (fun a b h => hf a b h)
+  exact List.flatMap_lt_flatMap_iff
+    (fun a => (f a).toList)
+    (fun a b h => hf a b h)
     (fun a b ⟨l, hl⟩ => hp a b l.toArray (by simpa [← toList_inj] using hl))
     (fun a => by simpa using hx a)
 
-theorem flatMap_le_flatMap_iff [LT α] [Std.Trichotomous (· < · : α → α → Prop)] [LT β]
-    [Std.Asymm (· < · : β → β → Prop)] (f : α → Array β)
-    (hf : ∀ a b, a < b → f a < f b)
-    (hp : ∀ a b zs, f a ++ zs = f b → a = b)
-    (hx : ∀ a, f a ≠ #[])
-    {xs ys : Array α} :
-    xs.flatMap f ≤ ys.flatMap f ↔ xs ≤ ys :=
+theorem flatMap_le_flatMap_iff
+    [LT α] [Std.Trichotomous (· < · : α → α → Prop)] [LT β] [Std.Asymm (· < · : β → β → Prop)]
+    (f : α → Array β)
+    (hf : ∀ a b, a < b → f a < f b) (hp : ∀ a b zs, f a ++ zs = f b → a = b) (hx : ∀ a, f a ≠ #[])
+    {xs ys : Array α}
+    : xs.flatMap f ≤ ys.flatMap f ↔ xs ≤ ys :=
   not_congr (flatMap_lt_flatMap_iff f hf hp hx)
 
 end Array

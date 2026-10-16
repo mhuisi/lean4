@@ -27,14 +27,13 @@ namespace bitblast
 
 variable [Hashable α] [DecidableEq α]
 
-theorem denote_blastNeg (aig : AIG α) (value : BitVec w) (target : RefVec aig w)
-    (assign : α → Bool)
-    (htarget : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, target.get idx hidx, assign⟧ = value.getLsbD idx) :
-
-    ∀ (idx : Nat) (hidx : idx < w),
-        ⟦(blastNeg aig target).aig, (blastNeg aig target).vec.get idx hidx, assign⟧
-          =
-        (-value).getLsbD idx := by
+theorem denote_blastNeg
+    (aig : AIG α) (value : BitVec w) (target : RefVec aig w) (assign : α → Bool)
+    (htarget
+      : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, target.get idx hidx, assign⟧ = value.getLsbD idx)
+    : ∀ (idx : Nat) (hidx : idx < w),
+      ⟦(blastNeg aig target).aig, (blastNeg aig target).vec.get idx hidx, assign⟧
+        = (-value).getLsbD idx := by
   intro idx hidx
   rw [BitVec.neg_eq_not_add]
   unfold blastNeg

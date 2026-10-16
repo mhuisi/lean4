@@ -44,7 +44,7 @@ namespace Lean.Server
 
 structure ServerTask (α : Type u) where
   task : Task α
-  deriving Inhabited
+deriving Inhabited
 
 instance : Coe (Task α) (ServerTask α) where
   coe := .mk
@@ -57,11 +57,9 @@ def get (t : ServerTask α) : α := t.task.get
 
 def wait (t : ServerTask α) : BaseIO α := IO.wait t.task
 
-def mapCheap (f : α → β) (t : ServerTask α) : ServerTask β :=
-  t.task.map f (sync := true)
+def mapCheap (f : α → β) (t : ServerTask α) : ServerTask β := t.task.map f (sync := true)
 
-def mapCostly (f : α → β) (t : ServerTask α) : ServerTask β :=
-  t.task.map f (prio := .dedicated)
+def mapCostly (f : α → β) (t : ServerTask α) : ServerTask β := t.task.map f (prio := .dedicated)
 
 def bindCheap (t : ServerTask α) (f : α → ServerTask β) : ServerTask β :=
   t.task.bind (f · |>.task) (sync := true)
@@ -77,8 +75,7 @@ def join (ts : Array (ServerTask α)) : ServerTask (Array α) := Id.run do
 
 namespace BaseIO
 
-def asTask (act : BaseIO α) : BaseIO (ServerTask α) :=
-  _root_.BaseIO.asTask (prio := .dedicated) act
+def asTask (act : BaseIO α) : BaseIO (ServerTask α) := _root_.BaseIO.asTask (prio := .dedicated) act
 
 def mapTaskCheap (f : α → BaseIO β) (t : ServerTask α) : BaseIO (ServerTask β) :=
   BaseIO.mapTask f t.task (sync := true)
@@ -105,10 +102,12 @@ def mapTaskCheap (f : α → EIO ε β) (t : ServerTask α) : BaseIO (ServerTask
 def mapTaskCostly (f : α → EIO ε β) (t : ServerTask α) : BaseIO (ServerTask (Except ε β)) :=
   EIO.mapTask f t.task (prio := .dedicated)
 
-def bindTaskCheap (t : ServerTask α) (f : α → EIO ε (ServerTask (Except ε β))) : BaseIO (ServerTask (Except ε β)) :=
+def bindTaskCheap (t : ServerTask α) (f : α → EIO ε (ServerTask (Except ε β)))
+    : BaseIO (ServerTask (Except ε β)) :=
   EIO.bindTask t.task (ServerTask.task <$> f ·) (sync := true)
 
-def bindTaskCostly (t : ServerTask α) (f : α → EIO ε (ServerTask (Except ε β))) : BaseIO (ServerTask (Except ε β)) :=
+def bindTaskCostly (t : ServerTask α) (f : α → EIO ε (ServerTask (Except ε β)))
+    : BaseIO (ServerTask (Except ε β)) :=
   EIO.bindTask t.task (ServerTask.task <$> f ·) (prio := .dedicated)
 
 end EIO
@@ -124,25 +123,24 @@ def mapTaskCheap (f : α → IO β) (t : ServerTask α) : BaseIO (ServerTask (Ex
 def mapTaskCostly (f : α → IO β) (t : ServerTask α) : BaseIO (ServerTask (Except IO.Error β)) :=
   IO.mapTask f t.task (prio := .dedicated)
 
-def bindTaskCheap (t : ServerTask α) (f : α → IO (ServerTask (Except IO.Error β))) : BaseIO (ServerTask (Except IO.Error β)) :=
+def bindTaskCheap (t : ServerTask α) (f : α → IO (ServerTask (Except IO.Error β)))
+    : BaseIO (ServerTask (Except IO.Error β)) :=
   IO.bindTask t.task (ServerTask.task <$> f ·) (sync := true)
 
-def bindTaskCostly (t : ServerTask α) (f : α → IO (ServerTask (Except IO.Error β))) : BaseIO (ServerTask (Except IO.Error β)) :=
+def bindTaskCostly (t : ServerTask α) (f : α → IO (ServerTask (Except IO.Error β)))
+    : BaseIO (ServerTask (Except IO.Error β)) :=
   IO.bindTask t.task (ServerTask.task <$> f ·) (prio := .dedicated)
 
 end IO
 
-def hasFinished (t : ServerTask α) : BaseIO Bool :=
-  IO.hasFinished t.task
+def hasFinished (t : ServerTask α) : BaseIO Bool := IO.hasFinished t.task
 
-def waitAny (tasks : List (ServerTask α))
-    (h : tasks.length > 0 := by exact Nat.zero_lt_succ _) : BaseIO α :=
-  let ⟨tasks, h⟩ : { tasks : List (Task α) // tasks.length > 0 } :=
-    ⟨tasks.map (·.task), by simpa⟩
+def waitAny (tasks : List (ServerTask α)) (h : tasks.length > 0 := by exact Nat.zero_lt_succ _)
+    : BaseIO α :=
+  let ⟨tasks, h⟩ : {tasks : List (Task α) // tasks.length > 0} := ⟨tasks.map (·.task), by simpa⟩
   IO.waitAny tasks h
 
-def cancel (t : ServerTask α) : BaseIO Unit :=
-  IO.cancel t.task
+def cancel (t : ServerTask α) : BaseIO Unit := IO.cancel t.task
 
 end Lean.Server.ServerTask
 

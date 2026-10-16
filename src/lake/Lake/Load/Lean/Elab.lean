@@ -19,23 +19,20 @@ import Lake.DSL.AttributesCore
 This module contains the definitions to elaborate a Lake configuration file.
 -/
 
-
 open System Lean
 
 namespace Lake
 
 /- Cache for the imported header environment of Lake configuration files. -/
-builtin_initialize importEnvCache :
-  IO.Ref (Std.HashMap (Array Import) Environment) ← IO.mkRef {}
+builtin_initialize importEnvCache : IO.Ref (Std.HashMap (Array Import) Environment) ← IO.mkRef {}
 
 /-- Like `importModules`, but fetch the resulting import state from the cache if possible. -/
-public def importModulesUsingCache
-  (imports : Array Import) (opts : Options) (trustLevel : UInt32)
-: IO Environment := do
+public def importModulesUsingCache (imports : Array Import) (opts : Options) (trustLevel : UInt32)
+    : IO Environment := do
   if let some env := (← importEnvCache.get)[imports]? then
     return env
 
-  unsafe enableInitializersExecution  -- needed for `loadExts`
+  unsafe enableInitializersExecution -- needed for `loadExts`
   let env ← importModules (loadExts := true) imports opts trustLevel
   importEnvCache.modify (·.insert imports env)
   return env
@@ -43,9 +40,8 @@ public def importModulesUsingCache
 /-- Like `Lean.Elab.processHeader`, but using `importEnvCache`. -/
 -- TODO: Update to incorporate the module system
 def processHeader
-  (header : TSyntax ``Parser.Module.header) (opts : Options)
-  (inputCtx : Parser.InputContext) : StateT MessageLog IO Environment
-:= do
+    (header : TSyntax ``Parser.Module.header) (opts : Options) (inputCtx : Parser.InputContext)
+    : StateT MessageLog IO Environment := do
   try
     let imports := Elab.headerToImports header
     importModulesUsingCache imports opts 1024
@@ -59,10 +55,9 @@ public def configModuleName : Name := `lakefile
 
 /-- Elaborate `configFile` with the given package directory and options. -/
 def elabConfigFile
-  (pkgIdx : Nat) (pkgName : Name) (pkgDir : FilePath) (lakeOpts : NameMap String)
-  (leanOpts := Options.empty) (configFile := pkgDir / defaultLeanConfigFile)
-: LogIO Environment := do
-
+    (pkgIdx : Nat) (pkgName : Name) (pkgDir : FilePath) (lakeOpts : NameMap String)
+    (leanOpts := Options.empty) (configFile := pkgDir / defaultLeanConfigFile)
+    : LogIO Environment := do
   -- Read file and initialize environment
   let input ← IO.FS.readFile configFile
   let inputCtx := Parser.mkInputContext input configFile.toString
@@ -128,40 +123,42 @@ def importConfigFileCore (olean : FilePath) (leanOpts : Options) : IO Environmen
   -/
   let extDescrs ← persistentEnvExtensionsRef.get
   let extNameIdx ← mkExtNameMap 0
-  let env := mod.entries.foldl (init := env) fun env (extName, ents) =>
-    if lakeExts.contains extName then
-      match extNameIdx[extName]? with
-      | some entryIdx =>
-        -- Use `sync` to avoid `async` checks, which are not relevant here as there is only one
-        -- environment branch.
-        ents.foldl (extDescrs[entryIdx]!.addEntry (asyncMode := .sync)) env
-      | none => env
-    else
-      env
+  let env :=
+    mod.entries.foldl (init := env) fun env (extName, ents) =>
+      if lakeExts.contains extName then
+        match extNameIdx[extName]? with
+        | some entryIdx =>
+          -- Use `sync` to avoid `async` checks, which are not relevant here as there is only one
+          -- environment branch.
+          ents.foldl (extDescrs[entryIdx]!.addEntry (asyncMode := .sync)) env
+        | none =>
+          env
+      else
+        env
   return env
 where
   lakeExts :=
     NameSet.empty
-    -- Lake Persistent Extensions
-    |>.insert ``packageAttr
-    |>.insert ``packageDepAttr
-    |>.insert ``postUpdateAttr
-    |>.insert ``scriptAttr
-    |>.insert ``defaultScriptAttr
-    |>.insert ``leanLibAttr
-    |>.insert ``leanExeAttr
-    |>.insert ``externLibAttr
-    |>.insert ``targetAttr
-    |>.insert ``defaultTargetAttr
-    |>.insert ``testDriverAttr
-    |>.insert ``lintDriverAttr
-    |>.insert ``moduleFacetAttr
-    |>.insert ``packageFacetAttr
-    |>.insert ``libraryFacetAttr
-    -- Docstring Extension (e.g., for scripts)
-    |>.insert ``docStringExt
-    -- IR Extension (for constant evaluation)
-    |>.insert ``IR.declMapExt
+      -- Lake Persistent Extensions
+      |>.insert ``packageAttr
+      |>.insert ``packageDepAttr
+      |>.insert ``postUpdateAttr
+      |>.insert ``scriptAttr
+      |>.insert ``defaultScriptAttr
+      |>.insert ``leanLibAttr
+      |>.insert ``leanExeAttr
+      |>.insert ``externLibAttr
+      |>.insert ``targetAttr
+      |>.insert ``defaultTargetAttr
+      |>.insert ``testDriverAttr
+      |>.insert ``lintDriverAttr
+      |>.insert ``moduleFacetAttr
+      |>.insert ``packageFacetAttr
+      |>.insert ``libraryFacetAttr
+      -- Docstring Extension (e.g., for scripts)
+      |>.insert ``docStringExt
+      -- IR Extension (for constant evaluation)
+      |>.insert ``IR.declMapExt
 
 structure ConfigTrace where
   idx : Nat
@@ -170,7 +167,7 @@ structure ConfigTrace where
   leanHash : String
   configHash : Hash
   options : NameMap String
-  deriving ToJson, FromJson
+deriving ToJson, FromJson
 
 /--
 Import the `.olean` for the configuration file if `reconfigure` is not set and
@@ -203,97 +200,105 @@ public def importConfigFile (cfg : LoadConfig) : LogIO Environment := do
   handle, and acquires an exclusive lock on the trace. It then releases its
   lock on the lock file. writes the new lock data.
   -/
-  let acquireTrace h : IO IO.FS.Handle := id do
-    let hLock ← IO.FS.Handle.mk lockFile .write
-    /-
-    Remark:
-    We do not wait for a lock here, because that can lead to deadlock.
+  let acquireTrace h : IO IO.FS.Handle :=
+    id do
+      let hLock ← IO.FS.Handle.mk lockFile .write
+      /-
+      Remark:
+      We do not wait for a lock here, because that can lead to deadlock.
 
-    This is because we are already holding a shared lock on the trace.
-    If multiple process race for this lock, one will get it and then
-    wait for an exclusive lock on the trace file, but be blocked by the
-    other process with a shared lock waiting on this file.
+      This is because we are already holding a shared lock on the trace.
+      If multiple process race for this lock, one will get it and then
+      wait for an exclusive lock on the trace file, but be blocked by the
+      other process with a shared lock waiting on this file.
 
-    While there is likely a way to sequence this to avoid erroring,
-    simultaneous reconfigures are likely to produce unexpected results
-    anyway, so the error seems wise nonetheless.
-    -/
-    if (← hLock.tryLock) then
-      h.unlock
-      let h ← IO.FS.Handle.mk traceFile .readWrite
-      h.lock
-      hLock.unlock
-      return h
-    else
-      h.unlock
-      error <| s!"could not acquire an exclusive configuration lock; " ++
-        "another process may already be reconfiguring the package"
+      While there is likely a way to sequence this to avoid erroring,
+      simultaneous reconfigures are likely to produce unexpected results
+      anyway, so the error seems wise nonetheless.
+      -/
+      if (← hLock.tryLock) then
+        h.unlock
+        let h ← IO.FS.Handle.mk traceFile .readWrite
+        h.lock
+        hLock.unlock
+        return h
+      else
+        h.unlock
+        error <|
+          s!"could not acquire an exclusive configuration lock; "
+            ++ "another process may already be reconfiguring the package"
   let configHash ← computeTextFileHash cfg.configFile
-  let elabConfig h (lakeOpts : NameMap String) : LogIO Environment := id do
-    /-
-    Remark:
-    We write the trace before elaborating the configuration file
-    to enable automatic reconfiguration on the next `lake` invocation if
-    elaboration fails. To ensure a failure triggers a reconfigure, we must also
-    remove any previous out-of-date `.olean`. Otherwise, Lake will treat the
-    older `.olean` as matching the new trace.
+  let elabConfig h (lakeOpts : NameMap String) : LogIO Environment :=
+    id do
+      /-
+      Remark:
+      We write the trace before elaborating the configuration file
+      to enable automatic reconfiguration on the next `lake` invocation if
+      elaboration fails. To ensure a failure triggers a reconfigure, we must also
+      remove any previous out-of-date `.olean`. Otherwise, Lake will treat the
+      older `.olean` as matching the new trace.
 
-    See the related PR and Zulip discussion for more details:
-    [leanprover/lean4#3069](https://github.com/leanprover/lean4/pull/3069).
-    -/
-    match (← IO.FS.removeFile olean |>.toBaseIO) with
-    | .ok _ | .error (.noFileOrDirectory ..) =>
-      h.putStrLn <| Json.pretty <| toJson
-        {platform := System.Platform.target, leanHash := cfg.lakeEnv.leanGithash,
-          configHash, idx := cfg.pkgIdx, name := cfg.pkgName, options := lakeOpts : ConfigTrace}
-      -- Flush before `truncate` (which sets the file size without flushing buffered
-      -- writes) and before the slow elaboration below, so a process killed
-      -- mid-elaboration leaves a valid trace rather than a NUL-byte size placeholder.
-      h.flush
-      h.truncate
-      let env ← elabConfigFile
-        cfg.pkgIdx cfg.pkgName cfg.pkgDir lakeOpts cfg.leanOpts cfg.configFile
-      Lean.writeModule env olean
-      h.unlock
-      return env
-    | .error e => errorWithLog do
-      logError <| toString e
-      h.unlock
-      IO.FS.removeFile traceFile
-  let validateTrace h : LogIO Environment := id do
-    if cfg.reconfigure then
-      elabConfig (← acquireTrace h) cfg.lakeOpts
-    else
-      h.lock (exclusive := false)
-      let contents ← h.readToEnd
-      match Json.parse contents with
-      | .ok json =>
-        match fromJson? json with
-        | .ok (trace : ConfigTrace) =>
-          let upToDate := (← olean.pathExists) ∧
-            trace.idx = cfg.pkgIdx ∧ trace.name = cfg.pkgName ∧  trace.configHash = configHash ∧
-            trace.platform = System.Platform.target ∧  trace.leanHash = cfg.lakeEnv.leanGithash
-          if upToDate then
-            let env ← importConfigFileCore olean cfg.leanOpts
-            h.unlock
-            return env
-          else
-            elabConfig (← acquireTrace h) trace.options
-        | .error _ => -- trace has unexpected format, try to just read the one necessary field
-          match JsonObject.fromJson? json >>= (·.get "options") with
-          | .ok (opts : NameMap String) =>
-            elabConfig (← acquireTrace h) opts
-          | .error _ =>
-            elabConfig (← acquireTrace h) cfg.lakeOpts
-      | .error _ =>
+      See the related PR and Zulip discussion for more details:
+      [leanprover/lean4#3069](https://github.com/leanprover/lean4/pull/3069).
+      -/
+      match (← IO.FS.removeFile olean |>.toBaseIO) with
+      | .ok _ | .error (.noFileOrDirectory ..) =>
+        h.putStrLn <| Json.pretty <| toJson {
+          platform := System.Platform.target
+          leanHash := cfg.lakeEnv.leanGithash
+          configHash
+          idx := cfg.pkgIdx
+          name := cfg.pkgName
+          options := lakeOpts
+          : ConfigTrace
+        }
+        -- Flush before `truncate` (which sets the file size without flushing buffered
+        -- writes) and before the slow elaboration below, so a process killed
+        -- mid-elaboration leaves a valid trace rather than a NUL-byte size placeholder.
+        h.flush
+        h.truncate
+        let env ←
+          elabConfigFile cfg.pkgIdx cfg.pkgName cfg.pkgDir lakeOpts cfg.leanOpts cfg.configFile
+        Lean.writeModule env olean
+        h.unlock
+        return env
+      | .error e =>
+        errorWithLog do
+          logError <| toString e
+          h.unlock
+          IO.FS.removeFile traceFile
+  let validateTrace h : LogIO Environment :=
+    id do
+      if cfg.reconfigure then
         elabConfig (← acquireTrace h) cfg.lakeOpts
+      else
+        h.lock (exclusive := false)
+        let contents ← h.readToEnd
+        match Json.parse contents with
+        | .ok json =>
+          match fromJson? json with
+          | .ok (trace : ConfigTrace) =>
+            let upToDate :=
+              (← olean.pathExists) ∧ trace.idx = cfg.pkgIdx ∧ trace.name = cfg.pkgName
+                ∧ trace.configHash = configHash ∧ trace.platform = System.Platform.target
+                ∧ trace.leanHash = cfg.lakeEnv.leanGithash
+            if upToDate then
+              let env ← importConfigFileCore olean cfg.leanOpts
+              h.unlock
+              return env
+            else
+              elabConfig (← acquireTrace h) trace.options
+          | .error _ => -- trace has unexpected format, try to just read the one necessary field
+            match JsonObject.fromJson? json >>= (·.get "options") with
+            | .ok (opts : NameMap String) => elabConfig (← acquireTrace h) opts
+            | .error _ => elabConfig (← acquireTrace h) cfg.lakeOpts
+        | .error _ =>
+          elabConfig (← acquireTrace h) cfg.lakeOpts
   if (← traceFile.pathExists) then
     validateTrace <| ← IO.FS.Handle.mk traceFile .read
   else
     IO.FS.createDirAll cfg.lakeDir
     match (← IO.FS.Handle.mk traceFile .writeNew |>.toBaseIO) with
-    | .ok h =>
-      h.lock; elabConfig h cfg.lakeOpts
-    | .error (.alreadyExists ..) =>
-      validateTrace <| ← IO.FS.Handle.mk traceFile .read
+    | .ok h => h.lock; elabConfig h cfg.lakeOpts
+    | .error (.alreadyExists ..) => validateTrace <| ← IO.FS.Handle.mk traceFile .read
     | .error e => error e.toString

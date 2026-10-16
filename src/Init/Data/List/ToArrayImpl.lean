@@ -20,8 +20,10 @@ Auxiliary definition for `List.toArray`.
 -/
 @[inline_if_reduce]
 def List.toArrayAux : List α → Array α → Array α
-  | nil,       xs => xs
-  | cons a as, xs => toArrayAux as (xs.push a)
+  | nil, xs =>
+    xs
+  | cons a as, xs =>
+    toArrayAux as (xs.push a)
 
 /--
 Converts a `List α` into an `Array α` by repeatedly pushing elements from the list onto an empty
@@ -33,5 +35,4 @@ both `List.toArray` and `Array.mk`.
 -- This function is exported to C, where it is called by `Array.mk`
 -- (the constructor) to implement this functionality.
 @[inline, expose, match_pattern, pp_nodot, export lean_list_to_array]
-def List.toArrayImpl (xs : List α) : Array α :=
-  xs.toArrayAux (Array.mkEmpty xs.length)
+def List.toArrayImpl (xs : List α) : Array α := xs.toArrayAux (Array.mkEmpty xs.length)

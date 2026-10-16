@@ -29,8 +29,9 @@ true`.
 -/
 register_builtin_option linter.coreInternal.internalModule : Bool := {
   defValue := false
-  descr := "enable the `internalModule` linter, which warns when a module considered \
-    \"internal\" declares a declaration that is not itself \"internal\"."
+  descr :=
+    "enable the `internalModule` linter, which warns when a module considered \
+      \"internal\" declares a declaration that is not itself \"internal\"."
 }
 
 namespace InternalModule
@@ -45,10 +46,11 @@ def hasInternalNameComponent : Name → Bool
   | .anonymous => false
 
 /-- A module is internal if it is (a submodule of) one of these modules. -/
-def internalModulePrefixes : Array Name :=
-  #[`Init.Omega, `Init.Grind, `Lean, `Lake,
-    -- only used by `tests/pkg/internal_module_linter`
-    `IMLinterTest]
+def internalModulePrefixes : Array Name := #[
+  `Init.Omega, `Init.Grind, `Lean, `Lake,
+  -- only used by `tests/pkg/internal_module_linter`
+  `IMLinterTest
+]
 
 /-- Whether `mod` is an "internal" module, i.e. one whose declarations should stay internal. -/
 def isInternalModule (mod : Name) : Bool :=
@@ -59,35 +61,43 @@ def internalDeclNamespaces : Array Name := #[`Lean, `Lake]
 
 /-- Whether `declName` is an "internal" declaration. -/
 def isInternalDecl (declName : Name) : Bool :=
-  isPrivateName declName ||
-    internalDeclNamespaces.any (·.isPrefixOf declName) ||
-    hasInternalNameComponent declName
+  isPrivateName declName || internalDeclNamespaces.any (·.isPrefixOf declName)
+    || hasInternalNameComponent declName
 
 @[inherit_doc linter.coreInternal.internalModule]
-def internalModuleLinter : Linter where run := withSetOptionIn fun _ => do
-  if (← get).messages.hasErrors then return
-  unless getLinterValue linter.coreInternal.internalModule (← getLinterOptions) do return
-  let env ← getEnv
-  let mainModule := env.mainModule
-  -- The linter only constrains declarations introduced by internal modules.
-  unless isInternalModule mainModule do return
-  let mut seen : NameSet := {}
-  for t in ← getInfoTrees do
-    for declName in getNewDecls t do
-      if seen.contains declName then continue
-      seen := seen.insert declName
-      unless env.contains declName do continue
-      if isInternalDecl declName then continue
-      logLint linter.coreInternal.internalModule (← getRef)
-        m!"`{.ofConstName declName}` is a non-internal declaration in the internal module \
-          `{mainModule}`; declarations in internal modules should themselves be internal.\n\
-          \n\
-          Make the declaration private, or put it into an internal namespace, or, if the declaration \
-          is supposed to be part of the standard library, move it into a file that is part of the \
-          standard library.\n\
-          \n\
-          For core-specific helper functions about basic types, recall that after `open Lean`, a \
-          declaration like `Lean.List.foo` will be available for generalized field notation on lists."
+def internalModuleLinter : Linter where
+  run :=
+    withSetOptionIn fun _ => do
+      if (← get).messages.hasErrors then return
+      unless getLinterValue linter.coreInternal.internalModule (← getLinterOptions) do
+        return
+      let env ← getEnv
+      let mainModule := env.mainModule
+      -- The linter only constrains declarations introduced by internal modules.
+      unless isInternalModule mainModule do
+        return
+      let mut seen : NameSet := {}
+      for t in ← getInfoTrees do
+        for declName in getNewDecls t do
+          if seen.contains declName then continue
+          seen := seen.insert declName
+          unless env.contains declName do
+            continue
+          if isInternalDecl declName then continue
+          logLint linter.coreInternal.internalModule (← getRef)
+            m!"`{.ofConstName declName}` is a non-internal declaration in the internal module \
+              `{mainModule}`; declarations in internal modules should themselves be internal.\n\
+              \n\
+              Make the declaration private, or put it into an internal namespace, or, if the \
+              declaration \
+              is supposed to be part of the standard library, move it into a file that is part of \
+              the \
+              standard library.\n\
+              \n\
+              For core-specific helper functions about basic types, recall that after `open Lean`, \
+              a \
+              declaration like `Lean.List.foo` will be available for generalized field notation on \
+              lists."
 
 builtin_initialize addLinter internalModuleLinter
 

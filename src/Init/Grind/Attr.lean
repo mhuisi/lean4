@@ -68,19 +68,19 @@ Reset all `grind` attributes. This command is intended for testing purposes only
 syntax (name := resetGrindAttrs) "reset_grind_attrs%" : command
 
 namespace Attr
-syntax grindGen    := ppSpace &"gen"
+syntax grindGen := ppSpace &"gen"
 /--
 The `=` modifier instructs `grind` to check that the conclusion of the theorem is an equality,
 and then uses the left-hand side of the equality as a pattern. This may fail if not all of the arguments appear
 in the left-hand side.
 -/
-syntax grindEq     := "=" (grindGen)?
+syntax grindEq := "=" (grindGen)?
 /--
 The `=_` modifier instructs `grind` to check that the conclusion of the theorem is an equality,
 and then uses the right-hand side of the equality as a pattern. This may fail if not all of the arguments appear
 in the right-hand side.
 -/
-syntax grindEqRhs  := atomic("=" "_") (grindGen)?
+syntax grindEqRhs := atomic("=" "_") (grindGen)?
 /--
 The `_=_` modifier acts like a macro which expands to `=` and `=_`.  It adds two patterns,
 allowing the equality theorem to trigger in either direction.
@@ -93,7 +93,7 @@ is annotated with `@[grind ←=]`, grind `will` instantiate it whenever the corr
 is assumed—this is a consequence of the fact that grind performs all proofs by contradiction.
 Ordinarily, the grind attribute does not consider the `=` symbol when generating patterns.
 -/
-syntax grindEqBwd  := patternIgnore(atomic("←" "=") <|> atomic("<-" "="))
+syntax grindEqBwd := patternIgnore(atomic("←" "=") <|> atomic("<-" "="))
 /--
 The `←` modifier instructs `grind` to select a multi-pattern from the conclusion of theorem.
 In other words, `grind` will use the theorem for backwards reasoning.
@@ -102,7 +102,7 @@ Each time it encounters a subexpression which covers an argument which was not
 previously covered, it adds that subexpression as a pattern, until all arguments have been covered.
 If `grind!` is used, then only minimal indexable subexpressions are considered.
 -/
-syntax grindBwd    := patternIgnore("←" <|> "<-") (grindGen)?
+syntax grindBwd := patternIgnore("←" <|> "<-") (grindGen)?
 /--
 The `→` modifier instructs `grind` to select a multi-pattern from the hypotheses of the theorem.
 In other words, `grind` will use the theorem for forwards reasoning.
@@ -111,7 +111,7 @@ Each time it encounters a subexpression which covers an argument which was not
 previously covered, it adds that subexpression as a pattern, until all arguments have been covered.
 If `grind!` is used, then only minimal indexable subexpressions are considered.
 -/
-syntax grindFwd    := patternIgnore("→" <|> "->")
+syntax grindFwd := patternIgnore("→" <|> "->")
 /--
 The `⇐` modifier instructs `grind` to select a multi-pattern by traversing the conclusion, and then
 all the hypotheses from right to left.
@@ -119,7 +119,7 @@ Each time it encounters a subexpression which covers an argument which was not
 previously covered, it adds that subexpression as a pattern, until all arguments have been covered.
 If `grind!` is used, then only minimal indexable subexpressions are considered.
 -/
-syntax grindRL     := patternIgnore("⇐" <|> "<=")
+syntax grindRL := patternIgnore("⇐" <|> "<=")
 /--
 The `⇒` modifier instructs `grind` to select a multi-pattern by traversing all the hypotheses from
 left to right, followed by the conclusion.
@@ -127,7 +127,7 @@ Each time it encounters a subexpression which covers an argument which was not
 previously covered, it adds that subexpression as a pattern, until all arguments have been covered.
 If `grind!` is used, then only minimal indexable subexpressions are considered.
 -/
-syntax grindLR     := patternIgnore("⇒" <|> "=>")
+syntax grindLR := patternIgnore("⇒" <|> "=>")
 /--
 The `.` modifier instructs `grind` to select a multi-pattern by traversing the conclusion of the
 theorem, and then the hypotheses from left to right. We say this is the default modifier.
@@ -135,7 +135,7 @@ Each time it encounters a subexpression which covers an argument which was not
 previously covered, it adds that subexpression as a pattern, until all arguments have been covered.
 If `grind!` is used, then only minimal indexable subexpressions are considered.
 -/
-syntax grindDef    := patternIgnore("." <|> "·") (grindGen)?
+syntax grindDef := patternIgnore("." <|> "·") (grindGen)?
 /--
 The `usr` modifier indicates that this theorem was applied using a
 **user-defined instantiation pattern**. Such patterns are declared with
@@ -146,11 +146,9 @@ Example:
 - `grind [usr myThm]` means `grind` is using `myThm`, but with
   the custom pattern you defined with `grind_pattern`.
 -/
-syntax grindUsr    := &"usr"
-/--
-The `cases` modifier marks inductively-defined predicates as suitable for case splitting.
--/
-syntax grindCases  := &"cases"
+syntax grindUsr := &"usr"
+/-- The `cases` modifier marks inductively-defined predicates as suitable for case splitting. -/
+syntax grindCases := &"cases"
 /--
 The `cases eager` modifier marks inductively-defined predicates as suitable for case splitting,
 and instructs `grind` to perform it eagerly while preprocessing hypotheses.
@@ -172,7 +170,7 @@ Here `attribute [grind intro] Even` acts like a macro that expands to
 `attribute [grind] Even.zero` and `attribute [grind] Even.add2`.
 This is especially convenient for inductive predicates with many constructors.
 -/
-syntax grindIntro  := &"intro"
+syntax grindIntro := &"intro"
 /--
 The `ext` modifier marks extensionality theorems for use by `grind`.
 For example, the standard library marks `funext` with this attribute.
@@ -180,13 +178,13 @@ For example, the standard library marks `funext` with this attribute.
 Whenever `grind` encounters a disequality `a ≠ b`, it attempts to apply any
 available extensionality theorems whose matches the type of `a` and `b`.
 -/
-syntax grindExt    := &"ext"
+syntax grindExt := &"ext"
 /--
 The `inj` modifier marks injectivity theorems for use by `grind`.
 The conclusion of the theorem must be of the form `Function.Injective f`
 where the term `f` contains at least one constant symbol.
 -/
-syntax grindInj    := &"inj"
+syntax grindInj := &"inj"
 /--
 The `funCC` modifier marks global functions that support **function-valued congruence closure**.
 Given an application `f a₁ a₂ … aₙ`, when `funCC := true`,
@@ -196,7 +194,7 @@ Given an application `f a₁ a₂ … aₙ`, when `funCC := true`,
 - `…`
 - `f a₁ a₂ … aₙ`
 -/
-syntax grindFunCC  := &"funCC"
+syntax grindFunCC := &"funCC"
 /--
 The `hom` modifier marks a theorem as a homomorphism rule for `grind`.
 
@@ -212,7 +210,7 @@ arithmetic using `BitVec.toNat`:
 The rules must be unconditional equations (or `Iff`s). They are applied to fixpoint
 outside the E-graph, and only the final result is internalized.
 -/
-syntax grindHom    := &"hom"
+syntax grindHom := &"hom"
 /--
 The `hom fallback` modifier marks a homomorphism rule that is tried only when no other
 `[grind hom]` rule applies to the term. It is meant for rules whose left-hand side matches
@@ -279,7 +277,7 @@ example : f x ≥ g x := by grind
 example : f x + g x ≥ 4 := by grind
 ```
 -/
-syntax grindNorm  := &"norm" (Tactic.simpPre <|> Tactic.simpPost)? patternIgnore(" ←" <|> " <-")?
+syntax grindNorm := &"norm" (Tactic.simpPre <|> Tactic.simpPost)? patternIgnore(" ←" <|> " <-")?
 /--
 The `unfold` modifier instructs `grind` to unfold the given definition during the preprocessing step.
 Example:
@@ -311,15 +309,14 @@ not cover `y`. It then allows both high and default symbols and succeeds with
 the multi-pattern `q x x, r x y`. The term `p x y` is ignored due to `p`’s low
 priority. Symbols with priority `0` are never used in patterns.
 -/
-syntax grindSym    := &"symbol" ppSpace prio
+syntax grindSym := &"symbol" ppSpace prio
 /-- Modifiers for `grind` attributes and tactic parameters. -/
 declare_syntax_cat grind_mod (behavior := both)
 
 attribute [grind_mod_parser]
-  grindEqBoth grindEqRhs grindEq grindEqBwd grindBwd
-  grindFwd grindRL grindLR grindUsr grindCasesEager
-  grindCases grindIntro grindExt grindGen grindSym grindInj
-  grindFunCC grindHomPred grindHomFallback grindHom grindNorm grindUnfold grindDef
+  grindEqBoth grindEqRhs grindEq grindEqBwd grindBwd grindFwd grindRL grindLR grindUsr
+  grindCasesEager grindCases grindIntro grindExt grindGen grindSym grindInj grindFunCC grindHomPred
+  grindHomFallback grindHom grindNorm grindUnfold grindDef
 
 -- Retain the wrapper's syntax kind and antiquotations while sharing the modifier parsers.
 syntax grindMod := grind_mod

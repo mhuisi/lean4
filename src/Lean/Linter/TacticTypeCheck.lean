@@ -44,7 +44,8 @@ def tacticCheckInstances : Linter where
       -- `by` block and would otherwise be the warning location.
       tree.visitM' (postNode := fun ci info _ => do
         if (← warned.get) then return
-        let .ofTacticInfo ti := info | return
+        let .ofTacticInfo ti := info
+          | return
         -- Check `goalsBefore` then `goalsAfter`.
         -- - `goalsBefore` catches an initially-bad goal at the first tactic.
         -- - `goalsAfter` catches the result of this tactic — so `unfold foo`
@@ -63,41 +64,43 @@ def tacticCheckInstances : Linter where
         --   * "produced" — the failure is in `goalsAfter` of this tactic
         --     (i.e. this tactic left the goal in a bad state).
         let checkGoal (kind : String) (g : MVarId) : MetaM (Option MessageData) := do
-          let some mdecl := (← getMCtx).findDecl? g | return none
+          let some mdecl := (← getMCtx).findDecl? g
+            | return none
           let target ← instantiateMVars mdecl.type
           let origDiag := (← get).diag
-          let result : Option MessageData ← Meta.withLCtx mdecl.lctx #[] <|
-              withOptions (diagnostics.set · true) do
-            -- If the goal is not even type-correct at `.default`, bail out —
-            -- this is a different (more fundamental) problem.
-            try Meta.check target .default catch _ => return none
-            let counterDefault := (← get).diag.unfoldCounter
-            -- Reset and try at `.implicit`.
-            modify ({ · with diag := origDiag })
-            try
-              Meta.check target .implicit
-              return none
-            catch e =>
-              let counterInst := (← get).diag.unfoldCounter
-              let diff := Meta.subCounters counterDefault counterInst
-              let env ← getEnv
-              let candidates : List MessageData :=
-                diff.toList.filterMap fun (n, count) => do
-                  guard <| count > 0
-                  guard <| getReducibilityStatusCore env n matches .semireducible
-                  guard <| !Meta.isInstanceCore env n
-                  return m!"{.ofConstName n}"
-              if candidates.isEmpty then
+          let result : Option MessageData ←
+            Meta.withLCtx mdecl.lctx #[] <| withOptions (diagnostics.set · true) do
+              -- If the goal is not even type-correct at `.default`, bail out —
+              -- this is a different (more fundamental) problem.
+              try Meta.check target .default catch _ => return none
+              let counterDefault := (← get).diag.unfoldCounter
+              -- Reset and try at `.implicit`.
+              modify ({ · with diag := origDiag })
+              try
+                Meta.check target .implicit
                 return none
-              let remedy : MessageData := match kind with
-                | "initial" => "consider rephrasing the goal or marking"
-                | _         => "consider using propositional rewriting or marking"
-              return some m!"{kind} tactic goal is not type-correct at \
-                `.implicit` transparency; {remedy} some of the following as \
-                `@[implicit_reducible]`:\
-                {indentD (.joinSep candidates Format.line)}\n\
-                Full error:\
-                {indentD e.toMessageData}"
+              catch e =>
+                let counterInst := (← get).diag.unfoldCounter
+                let diff := Meta.subCounters counterDefault counterInst
+                let env ← getEnv
+                let candidates : List MessageData :=
+                  diff.toList.filterMap fun (n, count) => do
+                    guard <| count > 0
+                    guard <| getReducibilityStatusCore env n matches .semireducible
+                    guard <| ! Meta.isInstanceCore env n
+                    return m!"{.ofConstName n}"
+                if candidates.isEmpty then
+                  return none
+                let remedy : MessageData :=
+                  match kind with
+                  | "initial" => "consider rephrasing the goal or marking"
+                  | _ => "consider using propositional rewriting or marking"
+                return some m!"{kind} tactic goal is not type-correct at \
+                  `.implicit` transparency; {remedy} some of the following as \
+                  `@[implicit_reducible]`:\
+                  {indentD (.joinSep candidates Format.line)}\n\
+                  Full error:\
+                  {indentD e.toMessageData}"
           -- Always restore the original diagnostics snapshot.
           modify ({ · with diag := origDiag })
           return result
@@ -107,11 +110,12 @@ def tacticCheckInstances : Linter where
               return some msg
           return none
         let ctxBefore : ContextInfo := { ci with mctx := ti.mctxBefore }
-        let ctxAfter  : ContextInfo := { ci with mctx := ti.mctxAfter }
-        let failure : Option MessageData ← liftM do
-          let m₁ ← ctxBefore.runMetaM {} (check "initial" ti.goalsBefore)
-          if m₁.isSome then return m₁
-          ctxAfter.runMetaM {} (check "produced" ti.goalsAfter)
+        let ctxAfter : ContextInfo := { ci with mctx := ti.mctxAfter }
+        let failure : Option MessageData ←
+          liftM do
+            let m₁ ← ctxBefore.runMetaM {} (check "initial" ti.goalsBefore)
+            if m₁.isSome then return m₁
+            ctxAfter.runMetaM {} (check "produced" ti.goalsAfter)
         if let some msg := failure then
           warned.set true
           logLint linter.tacticCheckInstances ti.stx msg)

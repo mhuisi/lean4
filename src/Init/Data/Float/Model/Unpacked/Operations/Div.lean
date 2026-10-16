@@ -34,7 +34,8 @@ def divCore (spec : Format) (m₁ : Nat) (e₁ : Int) (m₂ : Nat) (e₂ : Int) 
   -- Strategy: decrease the exponent here far enough so that we definitely get enough bits in the
   -- quotient `m / m₂`. We take the `min` because we don't want to increase the exponent; this happens
   -- later in the rounding step.
-  let targetExponent := min (e₁ - e₂) (spec.targetExponent (totalExponent m₁ e₁ - totalExponent m₂ e₂))
+  let targetExponent :=
+    min (e₁ - e₂) (spec.targetExponent (totalExponent m₁ e₁ - totalExponent m₂ e₂))
   let shiftAmount := (e₁ - e₂ - targetExponent).toNat
   let m := m₁ <<< shiftAmount
   (m / m₂, targetExponent, accuracyOfFraction (m % m₂) m₂)
@@ -44,16 +45,26 @@ Computes the quotient of two floating point numbers and rounds the result accord
 the given specification.
 -/
 def div (spec : Format) : UnpackedFloat → UnpackedFloat → UnpackedFloat
-  | .notANumber, _ => .notANumber
-  | _, .notANumber => .notANumber
-  | .infinity _, .infinity _ => .notANumber
-  | .infinity sign₁, .finite sign₂ .. => .infinity (sign₁ / sign₂)
-  | .finite sign₁ .., .infinity sign₂ => .zero (sign₁ / sign₂)
-  | .infinity sign₁, .zero sign₂ => .infinity (sign₁ / sign₂)
-  | .zero sign₁, .infinity sign₂ => .zero (sign₁ / sign₂)
-  | .finite sign₁ .., .zero sign₂ => .infinity (sign₁ / sign₂)
-  | .zero sign₁, .finite sign₂ .. => .zero (sign₁ / sign₂)
-  | .zero _, .zero _ => .notANumber
+  | .notANumber, _ =>
+    .notANumber
+  | _, .notANumber =>
+    .notANumber
+  | .infinity _, .infinity _ =>
+    .notANumber
+  | .infinity sign₁, .finite sign₂ .. =>
+    .infinity (sign₁ / sign₂)
+  | .finite sign₁ .., .infinity sign₂ =>
+    .zero (sign₁ / sign₂)
+  | .infinity sign₁, .zero sign₂ =>
+    .infinity (sign₁ / sign₂)
+  | .zero sign₁, .infinity sign₂ =>
+    .zero (sign₁ / sign₂)
+  | .finite sign₁ .., .zero sign₂ =>
+    .infinity (sign₁ / sign₂)
+  | .zero sign₁, .finite sign₂ .. =>
+    .zero (sign₁ / sign₂)
+  | .zero _, .zero _ =>
+    .notANumber
   | .finite s₁ m₁ e₁ _, .finite s₂ m₂ e₂ _ =>
     let (m, e, acc) := divCore spec m₁ e₁ m₂ e₂
     roundWithAccuracy spec (s₁ / s₂) m e acc

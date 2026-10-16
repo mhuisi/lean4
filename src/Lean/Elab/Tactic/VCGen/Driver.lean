@@ -21,7 +21,6 @@ Worklist driver for `vcgen`. Wraps `solve` with a queue of pending goals
 and emits VCs (or invariant holes) for those `solve` cannot decompose further.
 -/
 
-
 /--
 Try to elaborate the user's invariant alt for invariant number `n` inline,
 discharging `mv` if successful. Looks up `Context.invariantAlts[n]?` (pre-parsed
@@ -31,14 +30,19 @@ succeeded. Numbering is 1-based; out-of-order labelled forms (e.g. `| inv2 => �
 before `| inv1 => …`) are supported because the map is keyed by parsed number,
 not position.
 -/
-public def elabInvariant (invariantAlts : Std.HashMap Nat Syntax) (n : Nat) (mv : MVarId) : SymM Bool := do
+public def elabInvariant (invariantAlts : Std.HashMap Nat Syntax) (n : Nat) (mv : MVarId)
+    : SymM Bool := do
   try
-    let some alt := invariantAlts[n]? | return false
-    let tac ← match alt with
-      | `(Lean.Parser.Tactic.invariantDotAlt| · $rhs) => `(tactic| exact $rhs)
+    let some alt := invariantAlts[n]?
+      | return false
+    let tac ←
+      match alt with
+      | `(Lean.Parser.Tactic.invariantDotAlt| · $rhs) =>
+        `(tactic| exact $rhs)
       | `(Lean.Parser.Tactic.invariantCaseAlt| | $_tag $args* => $rhs) =>
-          `(tactic| (rename_i $args*; exact $rhs))
-      | _ => return false
+        `(tactic| (rename_i $args*; exact $rhs))
+      | _ =>
+        return false
     -- `withDefault`: the surrounding grind context forces reducible transparency,
     -- under which the invariant's type isn't resolved enough for term elaboration
     -- of the alternative's right-hand side to succeed.
@@ -54,13 +58,16 @@ public def elabInvariant (invariantAlts : Std.HashMap Nat Syntax) (n : Nat) (mv 
       return true
     else
       return false
-  catch _ => return false
+  catch _ =>
+    return false
 
-/-- Pull invariant subgoals out of `subgoals` and handle them eagerly: register
+/--
+Pull invariant subgoals out of `subgoals` and handle them eagerly: register
 each in `State.invariants` (1-based stable index) and try to inline-elaborate
 its matching user alt. Returns the remaining non-invariant subgoals for `work`
 to enqueue. Eager handling here ensures dependent VCs see `?inv` assigned by
-the time they reach `emitVC`. -/
+the time they reach `emitVC`.
+-/
 def handleInvariantSubgoals (subgoals : List MVarId) : VCGenM (Array MVarId) := do
   let env ← getEnv
   let mut others : Array MVarId := #[]
@@ -85,7 +92,8 @@ public def emitVC (goal : Grind.Goal) : VCGenM Unit := do
   let mut goal := { goal with mvarId := ← elimTopPre goal.mvarId }
   goal ← processHypotheses goal
   if goal.inconsistent then return
-  let some mvarId ← cleanupVC goal.mvarId | return
+  let some mvarId ← cleanupVC goal.mvarId
+    | return
   mvarId.setKind .syntheticOpaque
   modify fun s => { s with vcs := s.vcs.push { goal with mvarId } }
 
@@ -109,20 +117,24 @@ public def work (scope : Scope) (goal : Grind.Goal) : VCGenM Unit := do
       -- from the worklist later see the invariant MVar already assigned.
       -- Non-invariant subgoals go to the worklist as usual and will eventually go through `emitVC`.
       let subgoals ← handleInvariantSubgoals subgoals
-      worklist := worklist ++ subgoals.reverse.map (fun mv =>
-        { goal := { goal with mvarId := mv }, scope })
+      worklist :=
+        worklist ++ subgoals.reverse.map (fun mv => { goal := { goal with mvarId := mv }, scope })
 
 public structure Result where
-  /-- All invariant goals emitted during VC generation, in emit order. The MVarId at
+  /--
+  All invariant goals emitted during VC generation, in emit order. The MVarId at
   index `i` carries tag `inv{i+1}`, so callers can treat the array index as the
   invariant number. Some entries may already be assigned (inline-elaborated by
-  `Driver.emitVC`); the caller is responsible for filtering before discharging. -/
+  `Driver.emitVC`); the caller is responsible for filtering before discharging.
+  -/
   invariants : Array MVarId
   /-- Unassigned VCs. Each shares the parent `Grind.Goal`'s state. -/
   vcs : Array Grind.Goal
-  /-- Invariant numbers handled inline by `Driver.emitVC`. Used by `Frontend` to
+  /--
+  Invariant numbers handled inline by `Driver.emitVC`. Used by `Frontend` to
   avoid spurious "alt does not match any invariant" warnings for inline-consumed
-  alts. -/
+  alts.
+  -/
   inlineHandledInvariants : Std.HashSet Nat := {}
   /-- Frame terms of `frames` alternatives whose program pattern matched no program. -/
   unmatchedFrames : Array Syntax := #[]
@@ -134,27 +146,37 @@ Return the VCs and invariant goals.
 
 `stepLimit?`, when `some n`, seeds the fuel counter to `n`; when `none`, fuel is unlimited.
 -/
-public partial def run (goal : Grind.Goal) (ctx : Context) (scope : Scope)
-    (stepLimit? : Option Nat := none) (frameDB : FrameDB := {}) :
-    Grind.GrindM Result := do
-  let initState : State :=
-    { fuel := match stepLimit? with | some n => .limited n | none => .unlimited, frameDB }
+public partial def run
+    (goal : Grind.Goal) (ctx : Context) (scope : Scope)
+    (stepLimit? : Option Nat := none) (frameDB : FrameDB := {})
+    : Grind.GrindM Result := do
+  let initState : State := {
+    fuel :=
+      match stepLimit? with
+      | some n => .limited n
+      | none => .unlimited
+    frameDB
+  }
   -- VCGen temporarily violates the `SymM` folded-projections invariant: `reduceHead?`
   -- exposes kernel projections in intermediate terms and restores the invariant in its
   -- final result, so the `shareCommon` kernel-projection check is disabled.
-  let ((), state) ← Sym.withoutFoldProjsCheck <| StateRefT'.run (ReaderT.run (work scope goal) ctx) initState
-  _ ← state.invariants.mapIdxM fun idx mv => do
-    mv.setTag (Name.mkSimple ("inv" ++ toString (idx + 1)))
-  _ ← state.vcs.mapIdxM fun idx g => do
-    g.mvarId.setTag (Name.mkSimple ("vc" ++ toString (idx + 1)) ++ (← g.mvarId.getTag).eraseMacroScopes)
+  let ((), state) ←
+    Sym.withoutFoldProjsCheck <| StateRefT'.run (ReaderT.run (work scope goal) ctx) initState
+  _ ←
+    state.invariants.mapIdxM fun idx mv => do
+      mv.setTag (Name.mkSimple ("inv" ++ toString (idx + 1)))
+  _ ←
+    state.vcs.mapIdxM fun idx g => do
+      g.mvarId.setTag
+        (Name.mkSimple ("vc" ++ toString (idx + 1)) ++ (← g.mvarId.getTag).eraseMacroScopes)
   let vcs ← state.vcs.filterM (not <$> ·.mvarId.isAssigned)
-  let unmatchedFrames := state.frameDB.entries.filterMap fun e =>
-    if e.retired then none else some e.frameStx
+  let unmatchedFrames :=
+    state.frameDB.entries.filterMap fun e => if e.retired then none else some e.frameStx
   return {
-    invariants := state.invariants,
-    vcs,
-    inlineHandledInvariants := state.inlineHandledInvariants,
-    unmatchedFrames }
-
+    invariants := state.invariants
+    vcs
+    inlineHandledInvariants := state.inlineHandledInvariants
+    unmatchedFrames
+  }
 
 end Lean.Elab.Tactic.VCGen

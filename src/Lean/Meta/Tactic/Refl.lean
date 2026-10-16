@@ -33,30 +33,28 @@ def _root_.Lean.MVarId.refl (mvarId : MVarId) (check := true) : MetaM Unit := do
     if check then
       let success ← isDefEq lhs rhs
       unless success do
-        throwTacticEx `rfl mvarId m!"equality lhs{indentExpr lhs}\nis not definitionally equal to rhs{indentExpr rhs}"
+        throwTacticEx `rfl mvarId
+          m!"equality lhs{indentExpr lhs}\
+            \nis not definitionally equal to rhs{indentExpr rhs}"
     let us := targetType.getAppFn.constLevels!
     let α := targetType.appFn!.appFn!.appArg!
-    mvarId.assign (mkApp2 (mkConst ``Eq.refl  us) α lhs)
+    mvarId.assign (mkApp2 (mkConst ``Eq.refl us) α lhs)
 
-/--
-Try to apply `heq_of_eq`. If successful, then return new goal, otherwise return `mvarId`.
--/
+/-- Try to apply `heq_of_eq`. If successful, then return new goal, otherwise return `mvarId`. -/
 def _root_.Lean.MVarId.heqOfEq (mvarId : MVarId) : MetaM MVarId :=
   mvarId.withContext do
-    let some [mvarId] ← observing? do mvarId.apply (mkConst ``heq_of_eq [← mkFreshLevelMVar]) | return mvarId
+    let some [mvarId] ← observing? do mvarId.apply (mkConst ``heq_of_eq [← mkFreshLevelMVar])
+      | return mvarId
     return mvarId
 
-/--
-Try to apply `eq_of_heq`. If successful, then return new goal, otherwise return `mvarId`.
--/
+/-- Try to apply `eq_of_heq`. If successful, then return new goal, otherwise return `mvarId`. -/
 def _root_.Lean.MVarId.eqOfHEq (mvarId : MVarId) : MetaM MVarId :=
   mvarId.withContext do
-    let some [mvarId] ← observing? do mvarId.apply (mkConst ``eq_of_heq [← mkFreshLevelMVar]) | return mvarId
+    let some [mvarId] ← observing? do mvarId.apply (mkConst ``eq_of_heq [← mkFreshLevelMVar])
+      | return mvarId
     return mvarId
 
-/--
-Close given goal using `HEq.refl`.
--/
+/-- Close given goal using `HEq.refl`. -/
 def _root_.Lean.MVarId.hrefl (mvarId : MVarId) : MetaM Unit := do
   mvarId.withContext do
     let some [] ← observing? do mvarId.apply (mkConst ``HEq.refl [← mkFreshLevelMVar])

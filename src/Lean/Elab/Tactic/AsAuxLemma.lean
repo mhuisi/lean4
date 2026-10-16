@@ -16,14 +16,16 @@ namespace Lean.Elab.Tactic
 
 @[builtin_tactic as_aux_lemma]
 def elabAsAuxLemma : Lean.Elab.Tactic.Tactic
-| `(tactic| as_aux_lemma => $s) => withMainContext do
-  let mvarId ← getMainGoal
-  let mvars ← Tactic.run mvarId (evalTactic s)
-  unless mvars.isEmpty do
-    throwError "Cannot abstract term into auxiliary lemma because there are open goals."
-  let e ← instantiateMVars (mkMVar mvarId)
-  let e ← mkAuxTheorem (← mvarId.getType) e
-  mvarId.assign e
-| _ => throwError "Invalid as_aux_lemma syntax"
+  | `(tactic| as_aux_lemma => $s) =>
+    withMainContext do
+      let mvarId ← getMainGoal
+      let mvars ← Tactic.run mvarId (evalTactic s)
+      unless mvars.isEmpty do
+        throwError "Cannot abstract term into auxiliary lemma because there are open goals."
+      let e ← instantiateMVars (mkMVar mvarId)
+      let e ← mkAuxTheorem (← mvarId.getType) e
+      mvarId.assign e
+  | _ =>
+    throwError "Invalid as_aux_lemma syntax"
 
 end Lean.Elab.Tactic

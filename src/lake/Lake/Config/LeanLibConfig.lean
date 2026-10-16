@@ -26,7 +26,6 @@ public configuration LeanLibConfig (name : Name) extends LeanConfig where
   (This will be passed to `lean` as the `-R` option.)
   -/
   srcDir : FilePath := "."
-
   /--
   The root module(s) of the library.
   Submodules of these roots (e.g., `Lib.Foo` of `Lib`) are considered
@@ -34,7 +33,6 @@ public configuration LeanLibConfig (name : Name) extends LeanConfig where
   Defaults to a single root of the target's name.
   -/
   roots : Array Name := #[name]
-
   /--
   An `Array` of module `Glob`s to build for the library.
   Defaults to a `Glob.one` of each of the library's  `roots`.
@@ -44,14 +42,12 @@ public configuration LeanLibConfig (name : Name) extends LeanConfig where
   also recursively built.
   -/
   globs : Array Glob := roots.map Glob.one
-
   /--
   The name of the library artifact.
   Used as a base for the file names of its static and dynamic binaries.
   Defaults to the mangled name of the target.
   -/
   libName : String := ""
-
   /--
   Whether static and shared binaries of this library should be prefixed with `lib` on Windows.
 
@@ -62,16 +58,13 @@ public configuration LeanLibConfig (name : Name) extends LeanConfig where
   Defaults to `false`.
   -/
   libPrefixOnWindows : Bool := false
-
   /-- An `Array` of targets to build before the executable's modules. -/
   needs : Array PartialBuildKey := #[]
-
   /--
-   **Deprecated. Use `needs` instead.**
+  **Deprecated. Use `needs` instead.**
   An `Array` of target names to build before the library's modules.
   -/
   extraDepTargets : Array Name := #[]
-
   /--
   Whether to compile the library into a native shared library that is loaded
   whenever one of its modules is imported by a module outside the library.
@@ -81,7 +74,6 @@ public configuration LeanLibConfig (name : Name) extends LeanConfig where
   Defaults to `false`.
   -/
   precompileLibrary : Bool := false
-
   /--
   Whether to compile each of the library's modules into a native shared library
   that is loaded whenever the module is imported. This speeds up evaluation of
@@ -92,13 +84,11 @@ public configuration LeanLibConfig (name : Name) extends LeanConfig where
   Defaults to `false`.
   -/
   precompileModules : Bool := false
-
   /--
   An `Array` of library facets to build on a bare `lake build` of the library.
   For example, `#[LeanLib.sharedFacet]` will build the shared library facet.
   -/
   defaultFacets : Array Name := #[LeanLib.leanArtsFacet]
-
   /--
   The module facets to build and combine into the library's static
   and shared libraries. If `shouldExport` is true, the module facets should
@@ -111,7 +101,6 @@ public configuration LeanLibConfig (name : Name) extends LeanConfig where
   -/
   nativeFacets (shouldExport : Bool) : Array (ModuleFacet FilePath) :=
     #[if shouldExport then Module.oExportFacet else Module.oFacet]
-
   /--
   Whether downstream packages can `import all` modules of this library.
 
@@ -123,7 +112,6 @@ public configuration LeanLibConfig (name : Name) extends LeanConfig where
   Defaults to `false`.
   -/
   allowImportAll : Bool := false
-
 deriving Inhabited
 
 namespace LeanLibConfig
@@ -133,10 +121,9 @@ public abbrev name (_ : LeanLibConfig n) := n
 
 /-- Whether the given module is considered local to the library. -/
 public def isLocalModule (mod : Name) (self : LeanLibConfig n) : Bool :=
-  self.roots.any (fun root => root.isPrefixOf mod) ||
-  self.globs.any (fun glob => glob.matches mod)
+  self.roots.any (fun root => root.isPrefixOf mod) || self.globs.any (fun glob => glob.matches mod)
 
 /-- Whether the given module is a buildable part of the library. -/
 public def isBuildableModule (mod : Name) (self : LeanLibConfig n) : Bool :=
-  self.globs.any (fun glob => glob.matches mod) ||
-  self.roots.any (fun root => root.isPrefixOf mod && self.globs.any (·.matches root))
+  self.globs.any (fun glob => glob.matches mod)
+    || self.roots.any (fun root => root.isPrefixOf mod && self.globs.any (·.matches root))

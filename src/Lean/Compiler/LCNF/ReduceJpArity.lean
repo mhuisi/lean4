@@ -20,7 +20,8 @@ abbrev ReduceM := ReaderT (FVarIdMap (Array Bool)) CompilerM
 
 partial def reduce (code : Code .pure) : ReduceM (Code .pure) := do
   match code with
-  | .let decl k => return code.updateLet! decl (← reduce k)
+  | .let decl k =>
+    return code.updateLet! decl (← reduce k)
   | .fun decl k =>
     let value ← reduce decl.value
     let decl ← decl.update' decl.type value
@@ -51,7 +52,8 @@ partial def reduce (code : Code .pure) : ReduceM (Code .pure) := do
   | .cases c =>
     let alts ← c.alts.mapMonoM fun alt => return alt.updateCode (← reduce alt.getCode)
     return code.updateAlts! alts
-  | .return .. | .unreach .. => return code
+  | .return .. | .unreach .. =>
+    return code
   | .jmp fvarId args =>
     if let some mask := (← read).get? fvarId then
       let mut argsNew := #[]
@@ -66,9 +68,7 @@ end ReduceJpArity
 
 open ReduceJpArity
 
-/--
-Try to reduce arity of join points
--/
+/-- Try to reduce arity of join points -/
 def Decl.reduceJpArity (decl : Decl .pure) : CompilerM (Decl .pure) := do
   let value ← decl.value.mapCodeM reduce |>.run {}
   return { decl with value }
@@ -78,7 +78,6 @@ def reduceJpArity (phase := Phase.base) : Pass :=
   phase.withPurityCheck .pure fun h =>
     .mkPerDeclaration `reduceJpArity phase (h ▸ Decl.reduceJpArity)
 
-builtin_initialize
-  registerTraceClass `Compiler.reduceJpArity (inherited := true)
+builtin_initialize registerTraceClass `Compiler.reduceJpArity (inherited := true)
 
 end Lean.Compiler.LCNF

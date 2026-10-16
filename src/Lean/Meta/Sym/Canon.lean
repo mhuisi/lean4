@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.SymM
 import Lean.Meta.Sym.ExprPtr
@@ -126,13 +127,14 @@ def normOfNatArgs? (args : Array Expr) : MetaM (Option (Array Expr)) := do
     let mut modified := false
     if args[1].isAppOf ``OfNat.ofNat then
       -- If nested `OfNat.ofNat`, convert to raw nat literal
-      let some val ← getNatValue? args[1] | pure ()
+      let some val ← getNatValue? args[1]
+        | pure ()
       args := args.set 1 (mkRawNatLit val)
       modified := true
     let inst := args[2]
-    if (← Structural.isInstOfNatNat inst) && !args[0].isConstOf ``Nat then
+    if (← Structural.isInstOfNatNat inst) && ! args[0].isConstOf ``Nat then
       return some (args.set 0 Nat.mkType |>.toArray)
-    else if (← Structural.isInstOfNatInt inst) && !args[0].isConstOf ``Int then
+    else if (← Structural.isInstOfNatInt inst) && ! args[0].isConstOf ``Int then
       return some (args.set 0 Int.mkType |>.toArray)
     else if modified then
       return some args.toArray
@@ -162,27 +164,36 @@ public def normNumLit? (e : Expr) : MetaM (Option Expr) := do
     else
       -- Symbolic width: `BitVec.ofNat w a` is definitionally `OfNat.ofNat (BitVec w) a`, but the
       -- numeral cannot be reduced modulo `2^w`.
-      let some v ← getNatValue? a | return none
+      let some v ← getNatValue? a
+        | return none
       return some (← mkNumeral (mkApp (mkConst ``BitVec) w) v)
-  | BitVec.ofNatLT _ _ _ => bitVecOfNatForm e
+  | BitVec.ofNatLT _ _ _ =>
+    bitVecOfNatForm e
   | Fin.ofNat n _ a =>
-    let some n ← getNatValue? n | return none
-    let some a ← getNatValue? a | return none
+    let some n ← getNatValue? n
+      | return none
+    let some a ← getNatValue? a
+      | return none
     if n == 0 then return none
     return some (← mkNumeral (mkApp (mkConst ``Fin) (mkNatLit n)) (a % n))
   | OfNat.ofNat α n _ =>
-    let some m ← getLitValueModulus? α | return none
-    let some v ← getNatValue? n | return none
+    let some m ← getLitValueModulus? α
+      | return none
+    let some v ← getNatValue? n
+      | return none
     if m == 0 || v < m then return none
     return some (← mkNumeral α (v % m))
   | Char.ofNat n =>
     if e.isCharLit then return none
-    let some v ← getNatValue? n | return none
+    let some v ← getNatValue? n
+      | return none
     return some (toExpr (Char.ofNat v))
-  | _ => return none
+  | _ =>
+    return none
 where
   bitVecOfNatForm (e : Expr) : MetaM (Option Expr) := do
-    let some ⟨w, v⟩ ← Meta.getBitVecValue? e | return none
+    let some ⟨w, v⟩ ← Meta.getBitVecValue? e
+      | return none
     return some (← mkNumeral (mkApp (mkConst ``BitVec) (mkNatLit w)) v.toNat)
 
 abbrev withCaching (e : Expr) (k : CanonM Expr) : CanonM Expr := do
@@ -213,33 +224,27 @@ def isFalseCond (e : Expr) : Bool :=
   | Eq _ a b => a.isBoolFalse && b.isBoolTrue
   | _ => false
 
-/--
-Return type for the `shouldCanon` function.
--/
+/-- Return type for the `shouldCanon` function. -/
 inductive ShouldCanonResult where
-  | /- Nested types (and type formers) are canonicalized. -/
-    canonType
-  | /- Nested instances are canonicalized. -/
-    canonInst
-  | /- Implicit argument that is not an instance nor a type. -/
-    canonImplicit
-  | /-
-    Term is not a proof, type (former), nor an instance.
-    Thus, it must be recursively visited by the canonicalizer.
-    -/
-    visit
-  deriving Inhabited
+  | /- Nested types (and type formers) are canonicalized. -/ canonType
+  | /- Nested instances are canonicalized. -/ canonInst
+  | /- Implicit argument that is not an instance nor a type. -/ canonImplicit
+  /-
+  Term is not a proof, type (former), nor an instance.
+  Thus, it must be recursively visited by the canonicalizer.
+  -/
+  | visit
+deriving Inhabited
 
 instance : Repr ShouldCanonResult where
-  reprPrec r _ := private match r with
+  reprPrec r _ := private
+    match r with
     | .canonType => "canonType"
     | .canonInst => "canonInst"
     | .canonImplicit => "canonImplicit"
     | .visit => "visit"
 
-/--
-See comments at `ShouldCanonResult`.
--/
+/-- See comments at `ShouldCanonResult`. -/
 def shouldCanon (pinfos : Array ParamInfo) (i : Nat) (arg : Expr) : MetaM ShouldCanonResult := do
   if h : i < pinfos.size then
     let pinfo := pinfos[i]
@@ -272,15 +277,18 @@ Class projections are not reduced — they are support elements handled by insta
 def reduceProjFn? (info : ProjectionFunctionInfo) (e : Expr) : SymM (Option Expr) := do
   if info.fromClass then
     return none
-  let some e ← unfoldDefinition? e | return none
+  let some e ← unfoldDefinition? e
+    | return none
   match (← reduceProj? e.getAppFn) with
   | some f => return some <| mkAppN f e.getAppArgs
-  | none   => return none
+  | none => return none
 
 def isNat (e : Expr) := e.isConstOf ``Nat
 
-/-- Returns `true` if `e` is a Nat arithmetic expression that should be normalized
-(ground evaluation or offset normalization). -/
+/--
+Returns `true` if `e` is a Nat arithmetic expression that should be normalized
+(ground evaluation or offset normalization).
+-/
 def isNatArithApp (e : Expr) : Bool :=
   match_expr e with
   | Nat.zero => true
@@ -292,24 +300,27 @@ def isNatArithApp (e : Expr) : Bool :=
   | HMod.hMod α _ _ _ _ _ => isNat α
   | _ => false
 
-/-- Check that `e` is definitionally equal to `inst` at instance transparency.
-Returns `inst` on success, `e` with a reported issue on failure. -/
+/--
+Check that `e` is definitionally equal to `inst` at instance transparency.
+Returns `inst` on success, `e` with a reported issue on failure.
+-/
 def checkDefEqInst (e : Expr) (inst : Expr) : SymM Expr := do
   unless (← isDefEqI e inst) do
-    reportIssue! "failed to canonicalize instance{indentExpr e}\nsynthesized instance is not definitionally equal{indentExpr inst}"
+    reportIssue! "failed to canonicalize instance{indentExpr e}\
+      \nsynthesized instance is not definitionally equal{indentExpr inst}"
     return e
   return inst
 
 /-- Canonicalize `e`. Applies targeted reductions and re-synthesizes instances. -/
 partial def canon (e : Expr) : CanonM Expr := do
   match e with
-  | .forallE ..    => withCaching e <| canonForall #[] e
-  | .lam ..        => withCaching e <| canonLambda e
-  | .letE ..       => withCaching e <| canonLet #[] e
-  | .app ..        => withCaching e <| canonApp e
-  | .proj ..       => withCaching e <| canonProj e
-  | .mdata _ b     => return e.updateMData! (← canon b)
-  | _              => return e
+  | .forallE .. => withCaching e <| canonForall #[] e
+  | .lam .. => withCaching e <| canonLambda e
+  | .letE .. => withCaching e <| canonLet #[] e
+  | .app .. => withCaching e <| canonApp e
+  | .proj .. => withCaching e <| canonProj e
+  | .mdata _ b => return e.updateMData! (← canon b)
+  | _ => return e
 where
   canonInsideType (e : Expr) : CanonM Expr := do
     if (← read).insideType then
@@ -360,7 +371,8 @@ where
           if e.isApp && info.fromClass then
             return (← canonAppDefault e)
       if report then
-        reportIssue! "failed to canonicalize instance{indentExpr e}\nfailed to synthesize{indentExpr type}"
+        reportIssue! "failed to canonicalize instance{indentExpr e}\
+          \nfailed to synthesize{indentExpr type}"
       return e
 
   /--
@@ -386,8 +398,7 @@ where
     canonInstCore e type' report
 
   /-- `withCaching` + `canonInst'` -/
-  canonInst (e : Expr) (report := true) : CanonM Expr := withCaching e do
-    canonInst' e report
+  canonInst (e : Expr) (report := true) : CanonM Expr := withCaching e do canonInst' e report
 
   /--
   Canonicalize a proposition that is also a term instance.
@@ -397,20 +408,25 @@ where
   2- Try to resynthesize the instance, but keep the original one in case of failure since users often
   provide them using `haveI`.
   -/
-  canonInstProp (g : Expr) (prop : Expr) (h : Expr) (e : Expr) : CanonM Expr := withCaching e do
-    let prop' ← canon prop
-    if (← read).insideType then
-      /- We suppress reporting here because `haveI`-provided instances propagate into types
-         through forward dependencies, and reporting them produces noise. See module doc. -/
-      canonInstCore h prop' (report := false)
-    else
-      /-
-      **Note**: We try to resynthesize the proposition, but if it fails we keep the current one.
-      This may happen because propositional instances are often provided manually using `haveI`.
-      -/
-      let h' := (← Sym.synthInstance? prop').getD h
-      /- **Note**: We don't need to check whether `h` and `h'` are definitionally equal because of proof irrelevance. -/
-      return if isSameExpr prop prop' && isSameExpr h h' then e else mkApp2 g prop' h'
+  canonInstProp (g : Expr) (prop : Expr) (h : Expr) (e : Expr) : CanonM Expr :=
+    withCaching e do
+      let prop' ← canon prop
+      if (← read).insideType then
+        /-
+        We suppress reporting here because `haveI`-provided instances propagate into types
+        through forward dependencies, and reporting them produces noise. See module doc.
+        -/
+        canonInstCore h prop' (report := false)
+      else
+        /-
+        **Note**: We try to resynthesize the proposition, but if it fails we keep the current one.
+        This may happen because propositional instances are often provided manually using `haveI`.
+        -/
+        let h' := (← Sym.synthInstance? prop').getD h
+        /-
+        **Note**: We don't need to check whether `h` and `h'` are definitionally equal because of proof irrelevance.
+        -/
+        return if isSameExpr prop prop' && isSameExpr h h' then e else mkApp2 g prop' h'
 
   /--
   Canonicalize a decidable instance without checking the cache.
@@ -438,14 +454,14 @@ where
       return if isSameExpr prop prop' && isSameExpr inst inst' then e else mkApp2 g prop' inst'
 
   /-- `withCaching` + `canonInstDec'` -/
-  canonInstDec (g : Expr) (prop : Expr) (h : Expr) (e : Expr) : CanonM Expr := withCaching e do
-    canonInstDec' g prop h e
+  canonInstDec (g : Expr) (prop : Expr) (h : Expr) (e : Expr) : CanonM Expr :=
+    withCaching e do canonInstDec' g prop h e
 
   /-- `canonInstDec` variant for normalizing `if-then-else` expressions. -/
   canonInstDecCore (e : Expr) : CanonM Expr := do
     match_expr e with
     | g@Grind.nestedDecidable prop inst => canonInstDec g prop inst e
-    | _  => canonInst e (report := false)
+    | _ => canonInst e (report := false)
 
   canonLambda (e : Expr) : CanonM Expr := do
     if (← read).insideType then
@@ -472,68 +488,80 @@ where
   canonLet (fvars : Array Expr) (e : Expr) : CanonM Expr := do
     match e with
     | .letE n t v b nondep =>
-      withLetDecl n (← canonInsideType (t.instantiateRev fvars)) (← canon (v.instantiateRev fvars)) (nondep := nondep) fun x =>
-        canonLet (fvars.push x) b
+      withLetDecl n (← canonInsideType (t.instantiateRev fvars)) (← canon (v.instantiateRev fvars))
+        (nondep := nondep) fun x => canonLet (fvars.push x) b
     | e =>
       mkLetFVars (generalizeNondepLet := false) fvars (← canon (e.instantiateRev fvars))
 
-  canonAppDefault (e : Expr) : CanonM Expr := e.withApp fun f args => do
-    if args.size == 2 then
-      if f.isConstOf ``Grind.nestedProof then
-        /- **Note**: We don't have special treatment if `e` inside a type. -/
-        let prop := args[0]!
-        let prop' ← canon prop
-        let e' := if isSameExpr prop prop' then e else mkApp2 f prop' args[1]!
-        return e'
-      else if f.isConstOf ``Grind.nestedDecidable then
-        return (← canonInstDec' f args[0]! args[1]! e)
-    let mut modified := false
-    let args ← if f.isConstOf ``OfNat.ofNat then
-      let some args ← normOfNatArgs? args | pure args
-      modified := true
-      pure args
-    else
-      pure args
-    let mut f := f
-    let f' ← canon f
-    unless isSameExpr f f' do
-      f := f'
-      modified := true
-    let pinfos := (← getFunInfo f).paramInfo
-    let mut args := args.toVector
-    for h : i in *...args.size do
-      let arg := args[i]
-      trace[sym.debug.canon] "[{repr (← shouldCanon pinfos i arg)}]: {arg} : {← inferType arg}"
-      let arg' ← match (← shouldCanon pinfos i arg) with
-        | .canonType =>
-          /-
-          The type may have nested propositions and terms that may need to be canonicalized too.
-          So, we must recurse over it. See issue #10232
-          -/
-          canonInsideType' arg
-        | .canonImplicit => canon arg
-        | .visit => canon arg
-        | .canonInst =>
-          match_expr arg with
-          | g@Grind.nestedDecidable prop h => canonInstDec g prop h arg
-          | g@Grind.nestedProof prop h => canonInstProp g prop h arg
-          | _ => canonInst arg
-      unless isSameExpr arg arg' do
-        args := args.set i arg'
+  canonAppDefault (e : Expr) : CanonM Expr :=
+    e.withApp fun f args => do
+      if args.size == 2 then
+        if f.isConstOf ``Grind.nestedProof then
+          /- **Note**: We don't have special treatment if `e` inside a type. -/
+          let prop := args[0]!
+          let prop' ← canon prop
+          let e' := if isSameExpr prop prop' then e else mkApp2 f prop' args[1]!
+          return e'
+        else if f.isConstOf ``Grind.nestedDecidable then
+          return (← canonInstDec' f args[0]! args[1]! e)
+      let mut modified := false
+      let args ←
+        if f.isConstOf ``OfNat.ofNat then
+          let some args ← normOfNatArgs? args
+            | pure args
+          modified := true
+          pure args
+        else
+          pure args
+      let mut f := f
+      let f' ← canon f
+      unless isSameExpr f f' do
+        f := f'
         modified := true
-    return if modified then mkAppN f args.toArray else e
+      let pinfos := (← getFunInfo f).paramInfo
+      let mut args := args.toVector
+      for h : i in *...args.size do
+        let arg := args[i]
+        trace[sym.debug.canon] "[{repr (← shouldCanon pinfos i arg)}]: {arg} : {← inferType arg}"
+        let arg' ←
+          match (← shouldCanon pinfos i arg) with
+          | .canonType =>
+            /-
+            The type may have nested propositions and terms that may need to be canonicalized too.
+            So, we must recurse over it. See issue #10232
+            -/
+            canonInsideType' arg
+          | .canonImplicit =>
+            canon arg
+          | .visit =>
+            canon arg
+          | .canonInst =>
+            match_expr arg with
+            | g@Grind.nestedDecidable prop h => canonInstDec g prop h arg
+            | g@Grind.nestedProof prop h => canonInstProp g prop h arg
+            | _ => canonInst arg
+        unless isSameExpr arg arg' do
+          args := args.set i arg'
+          modified := true
+      return if modified then mkAppN f args.toArray else e
 
   canonIte (f : Expr) (α c inst a b : Expr) : CanonM Expr := do
     let c ← canon c
-    if isTrueCond c then canon a
-    else if isFalseCond c then canon b
-    else return mkApp5 f (← canonInsideType α) c (← canonInstDecCore inst) (← canon a) (← canon b)
+    if isTrueCond c then
+      canon a
+    else if isFalseCond c then
+      canon b
+    else
+      return mkApp5 f (← canonInsideType α) c (← canonInstDecCore inst) (← canon a) (← canon b)
 
   canonCond (f : Expr) (α c a b : Expr) : CanonM Expr := do
     let c ← canon c
-    if c.isBoolTrue then canon a
-    else if c.isBoolFalse then canon b
-    else return mkApp4 f (← canonInsideType α) c (← canon a) (← canon b)
+    if c.isBoolTrue then
+      canon a
+    else if c.isBoolFalse then
+      canon b
+    else
+      return mkApp4 f (← canonInsideType α) c (← canon a) (← canon b)
 
   postReduce (e : Expr) : CanonM Expr := do
     if isNatArithApp e then
@@ -545,7 +573,8 @@ where
         return e
     else
       let f := e.getAppFn
-      let .const declName _ := f | return e
+      let .const declName _ := f
+        | return e
       if declName == ``BitVec.ofNat || declName == ``BitVec.ofNatLT || declName == ``Fin.ofNat
           || declName == ``OfNat.ofNat || declName == ``Char.ofNat then
         if let some e' ← normNumLit? e then
@@ -575,8 +604,10 @@ where
 
   canonApp (e : Expr) : CanonM Expr := do
     match_expr e with
-    | f@ite α c i a b => canonIte f α c i a b
-    | f@cond α c a b => canonCond f α c a b
+    | f@ite α c i a b =>
+      canonIte f α c i a b
+    | f@cond α c a b =>
+      canonCond f α c a b
     -- Remark: We currently don't normalize dependent-if-then-else occurring in types.
     | _ =>
       let f := e.getAppFn
@@ -585,7 +616,8 @@ where
         -- structurally identical after canonicalization, e.g.
         -- `(fun X => Fin (X.size + 1)) (Vector.singleton 1)` and `Fin 2`.
         return (← canon e.headBeta)
-      let .const declName _ := f | canonAppAndPost e
+      let .const declName _ := f
+        | canonAppAndPost e
       if (← isMatcher declName) then
         canonMatch e
       else
@@ -601,7 +633,7 @@ This is a helper function used to implement mbtc.
 -/
 public def isSupport (pinfos : Array ParamInfo) (i : Nat) (arg : Expr) : MetaM Bool := do
   let r ← Canon.shouldCanon pinfos i arg
-  return !r matches .visit
+  return ! r matches .visit
 
 end Canon
 
@@ -611,7 +643,7 @@ Applies targeted reductions (projection, match/ite/cond, Nat arithmetic) in all 
 eta reduction is applied only inside types. Instances are re-synthesized.
 Runs at reducible transparency.
 -/
-public def canon (e : Expr) : SymM Expr := do profileitM Exception "sym canon" (← getOptions) do
-  withReducible do Canon.canon e {}
+public def canon (e : Expr) : SymM Expr := do
+  profileitM Exception "sym canon" (← getOptions) do withReducible do Canon.canon e {}
 
 end Lean.Meta.Sym

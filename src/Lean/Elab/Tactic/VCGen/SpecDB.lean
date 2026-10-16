@@ -35,9 +35,11 @@ structurally equal to but distinct from the targets'. Internalizing the pattern 
 subterms pointer-equal to every target internalized afterwards, so matching them is `O(1)`.
 -/
 public def _root_.Lean.Meta.Sym.Pattern.shareCommon (p : Pattern) : SymM Pattern := do
-  return { p with
+  return {
+    p with
     pattern := ← Sym.shareCommon p.pattern
-    varTypes := ← p.varTypes.mapM Sym.shareCommon }
+    varTypes := ← p.varTypes.mapM Sym.shareCommon
+  }
 
 /--
 Instantiates a spec theorem's proof.
@@ -51,8 +53,8 @@ This method applies `congrFun` for each leading forall to reduce the equation to
 values of type `m α`, introducing fresh metavariables for the extra arguments.
 The number of extra args is stored in `SpecTheoremKind.simp etaArgs`.
 -/
-public def SpecAttr.SpecTheorem.instantiate (specThm : SpecTheorem) :
-    MetaM (Array Expr × Array BinderInfo × Expr × Expr) := do
+public def SpecAttr.SpecTheorem.instantiate (specThm : SpecTheorem)
+    : MetaM (Array Expr × Array BinderInfo × Expr × Expr) := do
   let (xs, bs, prf, type) ← specThm.proof.instantiate
   let .simp etaArgs := specThm.kind
     | do
@@ -60,7 +62,8 @@ public def SpecAttr.SpecTheorem.instantiate (specThm : SpecTheorem) :
         | throwError "expected `Triple` or `⊑ wp` specification, got{indentExpr type}"
       return (xs, bs, prf, type)
   if etaArgs == 0 then return (xs, bs, prf, type)
-  let_expr Eq eqα _lhs _rhs := type | return (xs, bs, prf, type)
+  let_expr Eq eqα _lhs _rhs := type
+    | return (xs, bs, prf, type)
   -- Eta-expand: introduce fresh metavars for leading foralls, then apply congrFun for each.
   let (extraXs, extraBs, _) ← withReducible <| forallMetaBoundedTelescope eqα etaArgs
   let prf ← extraXs.foldlM (init := prf) Meta.mkCongrFun
@@ -69,8 +72,9 @@ public def SpecAttr.SpecTheorem.instantiate (specThm : SpecTheorem) :
 
 /-- The declaration name of a global spec theorem, `none` for local/syntactic specs. -/
 public def SpecAttr.SpecTheorem.global? (specThm : SpecTheorem) : Option Name :=
-  match specThm.proof with | .global decl => some decl | _ => none
-
+  match specThm.proof with
+  | .global decl => some decl
+  | _ => none
 
 /--
 Extend the spec `database` with the specs a `vcgen [...]` call's simp-style arguments contribute
@@ -79,38 +83,39 @@ Extend the spec `database` with the specs a `vcgen [...]` call's simp-style argu
 Hoare triple and `⊑ wp` specs are already in `database`: the attribute stores them pattern-keyed
 at annotation time.
 -/
-public def addSimpSpecs (database : SpecTheorems) (simpThms : SimpTheorems) :
-    MetaM SpecTheorems := do
+public def addSimpSpecs (database : SpecTheorems) (simpThms : SimpTheorems)
+    : MetaM SpecTheorems := do
   let mut specs := database.specs
   -- Erased entries are still inserted into `specs` below; `findSpecs` filters them out
   -- at lookup time.
-  let erased : PHashSet SpecProof := simpThms.erased.fold (init := database.erased) fun acc o =>
-    match SpecProof.ofOrigin o with
-    | some p => acc.insert p
-    | none => acc
+  let erased : PHashSet SpecProof :=
+    simpThms.erased.fold (init := database.erased) fun acc o =>
+      match SpecProof.ofOrigin o with
+      | some p => acc.insert p
+      | none => acc
   -- Only post-rewrite simp lemmas become specs, so a `↓`-marked (pre-rewrite) argument is dropped.
   for simpThm in simpThms.pre.values do
     logWarning m!"`vcgen` uses only post-rewrite simp lemmas as specs; ignoring the pre-rewrite \
       lemma `{simpThm.origin.key}`."
   -- `mkSimpContext` splits a bracketed definition into its equations (in `post`) and a `toUnfold`
   -- entry; feed both back to `simpSpecTheorems` as the `SimpEntry`s the definition would produce.
-  let entries := simpThms.post.values.map (SimpEntry.thm ·)
-    ++ simpThms.toUnfold.toList.toArray.map (SimpEntry.toUnfold ·)
+  let entries :=
+    simpThms.post.values.map (SimpEntry.thm ·)
+      ++ simpThms.toUnfold.toList.toArray.map (SimpEntry.toUnfold ·)
   for newSpec in ← simpSpecTheorems entries unfoldSpecPrio do
     specs := Sym.insertPattern specs newSpec.pattern newSpec
   return { specs, erased }
-
 
 /--
 Look up `SpecTheorem`s in the `@[spec]` database.
 Takes all specs the discrimination tree holds for the program `e` and sorts by descending priority.
 -/
-public def SpecAttr.SpecTheorems.findSpecs (database : SpecTheorems) (e : Expr) :
-    SymM (Array SpecTheorem) := do
+public def SpecAttr.SpecTheorems.findSpecs (database : SpecTheorems) (e : Expr)
+    : SymM (Array SpecTheorem) := do
   let e ← instantiateMVars e
   let e ← shareCommon e
   let candidates := Sym.getMatch (← getMCtx) database.specs e
-  let candidates := candidates.filter fun spec => !database.erased.contains spec.proof
+  let candidates := candidates.filter fun spec => ! database.erased.contains spec.proof
   -- It appears that insertion sort is *much* faster than qsort here.
   return candidates.insertionSort (·.priority > ·.priority)
 

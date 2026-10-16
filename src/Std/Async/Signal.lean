@@ -22,7 +22,6 @@ SIGBUS, SIGFPE, SIGILL, and SIGSEGV are missing because they cannot be caught sa
 SIGPIPE is not present because the runtime ignores the signal.
 -/
 inductive Signal
-
   /--
   Hangup detected on controlling terminal or death of controlling process.
 
@@ -31,7 +30,6 @@ inductive Signal
     perform cleanup before Windows unconditionally terminates it.
   -/
   | sighup
-
   /--
   Interrupt program.
 
@@ -39,17 +37,10 @@ inductive Signal
   - Normally delivered when the user presses CTRL+C. Not generated when terminal raw mode is enabled.
   -/
   | sigint
-
-  /--
-  Quit program.
-  -/
+  /-- Quit program. -/
   | sigquit
-
-  /--
-  Trace/breakpoint trap.
-  -/
+  /-- Trace/breakpoint trap. -/
   | sigtrap
-
   /--
   Abort signal.
 
@@ -58,22 +49,12 @@ inductive Signal
   - On Windows, watchers can be created for SIGABRT, but they never receive the signal.
   -/
   | sigabrt
-
-  /--
-  User-defined signal 1.
-  -/
+  /-- User-defined signal 1. -/
   | sigusr1
-
-  /--
-  User-defined signal 2.
-  -/
+  /-- User-defined signal 2. -/
   | sigusr2
-
-  /--
-  Real-time timer expired.
-  -/
+  /-- Real-time timer expired. -/
   | sigalrm
-
   /--
   Termination signal.
 
@@ -81,57 +62,26 @@ inductive Signal
   - On Windows, watchers can be created for SIGTERM, but they never receive the signal.
   -/
   | sigterm
-
-  /--
-  Child status has changed.
-  -/
+  /-- Child status has changed. -/
   | sigchld
-
-  /--
-  Continue after stop.
-  -/
+  /-- Continue after stop. -/
   | sigcont
-
-  /--
-  Stop typed at terminal.
-  -/
+  /-- Stop typed at terminal. -/
   | sigtstp
-
-  /--
-  Background read attempted from control terminal.
-  -/
+  /-- Background read attempted from control terminal. -/
   | sigttin
-
-  /--
-  Background write attempted to control terminal.
-  -/
+  /-- Background write attempted to control terminal. -/
   | sigttou
-
-  /--
-  Urgent condition on socket.
-  -/
+  /-- Urgent condition on socket. -/
   | sigurg
-
-  /--
-  CPU time limit exceeded.
-  -/
+  /-- CPU time limit exceeded. -/
   | sigxcpu
-
-  /--
-  File size limit exceeded.
-  -/
+  /-- File size limit exceeded. -/
   | sigxfsz
-
-  /--
-  Virtual alarm clock.
-  -/
+  /-- Virtual alarm clock. -/
   | sigvtalrm
-
-  /--
-  Profiling timer expired.
-  -/
+  /-- Profiling timer expired. -/
   | sigprof
-
   /--
   Window size change.
 
@@ -141,17 +91,10 @@ inductive Signal
   - In these cases, signals may not be delivered timely.
   -/
   | sigwinch
-
-  /--
-  I/O now possible.
-  -/
+  /-- I/O now possible. -/
   | sigio
-
-  /--
-  Bad system call.
-  -/
+  /-- Bad system call. -/
   | sigsys
-
 deriving Repr, DecidableEq, BEq
 
 namespace Signal
@@ -186,12 +129,10 @@ private def toInt32 : Signal → Int32
   | .sigio => 29
   | .sigsys => 31
 
-/--
-`Signal.Waiter` can be used to wait for a specific signal.
--/
+/-- `Signal.Waiter` can be used to wait for a specific signal. -/
 structure Waiter where
   private ofNative ::
-    native : Internal.UV.Signal
+  native : Internal.UV.Signal
 
 namespace Waiter
 
@@ -235,9 +176,7 @@ If:
   producing a value.
 - `s` is not yet or not anymore running this is a no-op.
 -/
-@[inline]
-def stop (s : Signal.Waiter) : IO Unit :=
-  s.native.stop
+@[inline] def stop (s : Signal.Waiter) : IO Unit := s.native.stop
 
 /--
 Create a `Selector` that resolves once `s` has received the signal. Calling this function does not
@@ -249,25 +188,21 @@ dropped, and a signal that arrives afterwards is kept and reported by the next s
 `s`. For a repeating `s`, a signal that arrives while another selector wins the same select may be
 lost.
 -/
-def selector (s : Signal.Waiter) : Selector Unit :=
-  {
-    tryFn := do
-      let signalWaiter ← s.native.next
-      -- Also when `signalWaiter` is already resolved: a repeating signal otherwise keeps the loop's
-      -- reference to it, so it would keep listening after it is dropped.
-      s.native.cancel
-      -- A signal that arrived before `cancel` resolved `signalWaiter` instead of being kept.
-      if ← signalWaiter.isResolved then
-        return some ()
-      return none
-
-    registerFn waiter := do
-      let signalWaiter ← s.wait
-      discard <| AsyncTask.mapIO (x := signalWaiter) fun _ => do
-        let lose := return ()
-        let win promise := promise.resolve (.ok ())
-        waiter.race lose win
-
-    unregisterFn := s.native.cancel
-
-  }
+def selector (s : Signal.Waiter) : Selector Unit := {
+  tryFn := do
+    let signalWaiter ← s.native.next
+    -- Also when `signalWaiter` is already resolved: a repeating signal otherwise keeps the loop's
+    -- reference to it, so it would keep listening after it is dropped.
+    s.native.cancel
+    -- A signal that arrived before `cancel` resolved `signalWaiter` instead of being kept.
+    if ← signalWaiter.isResolved then
+      return some ()
+    return none
+  registerFn waiter := do
+    let signalWaiter ← s.wait
+    discard <| AsyncTask.mapIO (x := signalWaiter) fun _ => do
+      let lose := return ()
+      let win promise := promise.resolve (.ok ())
+      waiter.race lose win
+  unregisterFn := s.native.cancel
+}

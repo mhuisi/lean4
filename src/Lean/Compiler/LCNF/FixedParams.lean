@@ -42,7 +42,7 @@ inductive AbsValue where
   | top
   | erased
   | val (i : Nat)
-  deriving Inhabited, BEq, Hashable
+deriving Inhabited, BEq, Hashable
 
 structure Context where
   /-- Declaration in the same mutual block. -/
@@ -72,7 +72,9 @@ structure State where
   -/
   fixed : Array Bool
 
-/-- Monad for the fixed parameter static analyzer. We use the unit-exception to interrupt the analysis. -/
+/--
+Monad for the fixed parameter static analyzer. We use the unit-exception to interrupt the analysis.
+-/
 abbrev FixParamM := ReaderT Context <| EStateM Unit State
 
 /-- Stop the analysis and mark all parameters as non-fixed. -/
@@ -81,7 +83,8 @@ abbrev abort : FixParamM α := do
   throw ()
 
 def evalFVar (fvarId : FVarId) : FixParamM AbsValue := do
-  let some val := (← read).assignment.get? fvarId | return .top
+  let some val := (← read).assignment.get? fvarId
+    | return .top
   return val
 
 def evalArg (arg : Arg .pure) : FixParamM AbsValue := do
@@ -108,11 +111,14 @@ partial def evalLetValue (e : LetValue .pure) : FixParamM Unit := do
   | _ => return ()
 
 partial def isEquivalentFunDecl? (decl : FunDecl .pure) : FixParamM (Option Nat) := do
-  let .let { fvarId, value := (.fvar funFvarId args), .. } k := decl.value | return none
+  let .let { fvarId, value := (.fvar funFvarId args), .. } k := decl.value
+    | return none
   if args.size != decl.params.size then return none
-  let .return retFVarId := k | return none
+  let .return retFVarId := k
+    | return none
   if retFVarId != fvarId then return none
-  let some (.val funIdx) := (← read).assignment.get? funFvarId | return none
+  let some (.val funIdx) := (← read).assignment.get? funFvarId
+    | return none
   for h : i in [:decl.params.size] do
     let param := decl.params[i]
     -- TODO: Eliminate this dynamic bounds check.
@@ -122,18 +128,22 @@ partial def isEquivalentFunDecl? (decl : FunDecl .pure) : FixParamM (Option Nat)
 
 partial def evalCode (code : Code .pure) : FixParamM Unit := do
   match code with
-  | .let decl k => evalLetValue decl.value; evalCode k
+  | .let decl k =>
+    evalLetValue decl.value; evalCode k
   | .fun decl k _ =>
     if let some paramIdx ← isEquivalentFunDecl? decl then
-      withReader (fun ctx =>
-                    { ctx with assignment := ctx.assignment.insert decl.fvarId (.val paramIdx) })
+      withReader
+        (fun ctx => { ctx with assignment := ctx.assignment.insert decl.fvarId (.val paramIdx) })
         do evalCode k
     else
       evalCode decl.value
       evalCode k
-  | .jp decl k => evalCode decl.value; evalCode k
-  | .cases c => c.alts.forM fun alt => evalCode alt.getCode
-  | .unreach .. | .jmp .. | .return .. => return ()
+  | .jp decl k =>
+    evalCode decl.value; evalCode k
+  | .cases c =>
+    c.alts.forM fun alt => evalCode alt.getCode
+  | .unreach .. | .jmp .. | .return .. =>
+    return ()
 
 partial def evalApp (declName : Name) (args : Array (Arg .pure)) : FixParamM Unit := do
   let main := (← read).main

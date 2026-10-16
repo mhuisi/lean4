@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 public import Lean.Meta.Sym.Arith.Types
@@ -13,9 +14,11 @@ public section
 namespace Lean.Meta.Grind.Arith.CommRing
 open Sym.Arith
 
-/-- The two halves of one ring: its `Sym.Arith` classification record and the goal's solver state. -/
+/--
+The two halves of one ring: its `Sym.Arith` classification record and the goal's solver state.
+-/
 private structure RingInfo where
-  ring  : Sym.Arith.CommRing
+  ring : Sym.Arith.CommRing
   state : CommRingState
 
 private abbrev M := StateT RingInfo MetaM
@@ -35,11 +38,12 @@ private instance : MonadCommRingState M where
 private instance : MonadGetVar M where
   getVar x := return (← get).state.vars[x]!
 
-private def toOption (cls : Name) (header : Thunk MessageData) (msgs : Array MessageData) : Option MessageData :=
+private def toOption (cls : Name) (header : Thunk MessageData) (msgs : Array MessageData)
+    : Option MessageData :=
   if msgs.isEmpty then
     none
   else
-    some (.trace {cls} header.get msgs)
+    some (.trace { cls } header.get msgs)
 
 private def push (msgs : Array MessageData) (msg? : Option MessageData) : Array MessageData :=
   if let some msg := msg? then msgs.push msg else msgs
@@ -76,8 +80,10 @@ def pp? (goal : Goal) (rings : Array Sym.Arith.CommRing) : MetaM (Option Message
   let s ← ringExt.getStateCore goal
   for i in [:s.rings.size] do
     let some ring := rings[i]?
-      | throwError "`grind` internal error, ring solver state without a `Sym.Arith` record (ring id {i})"
-    let some msg ← ppRing? |>.run' { ring, state := s.getRing i } | continue
+      | throwError
+          "`grind` internal error, ring solver state without a `Sym.Arith` record (ring id {i})"
+    let some msg ← ppRing? |>.run' { ring, state := s.getRing i }
+      | continue
     msgs := msgs.push msg
   if msgs.isEmpty then
     return none
@@ -86,10 +92,13 @@ def pp? (goal : Goal) (rings : Array Sym.Arith.CommRing) : MetaM (Option Message
   else
     return some (.trace { cls := `ring } "Rings" msgs)
 
-def addThresholdMessage (goal : Goal) (c : Grind.Config) (msgs : Array MessageData) : IO (Array MessageData) := do
+def addThresholdMessage (goal : Goal) (c : Grind.Config) (msgs : Array MessageData)
+    : IO (Array MessageData) := do
   let s ← ringExt.getStateCore goal
   if s.steps ≥ c.ringSteps then
-    return msgs.push <| .trace { cls := `limit } m!"maximum number of ring steps has been reached, threshold: `(ringSteps := {c.ringSteps})`" #[]
+    return msgs.push <| .trace { cls := `limit }
+      m!"maximum number of ring steps has been reached, threshold: `(ringSteps := {c.ringSteps})`"
+      #[]
   else
     return msgs
 

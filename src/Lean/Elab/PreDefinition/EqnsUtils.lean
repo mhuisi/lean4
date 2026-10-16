@@ -5,7 +5,6 @@ Authors: Leonardo de Moura
 -/
 module
 
-
 prelude
 public import Lean.Meta.Basic
 import Lean.Meta.Tactic.Split
@@ -35,15 +34,17 @@ public def simpIf? (mvarId : MVarId) (useNewSemantics := false) : MetaM (Option 
 
 /-- Try to close goal using `rfl` with smart unfolding turned off. -/
 public def tryURefl (mvarId : MVarId) : MetaM Bool :=
-  withOptions (smartUnfolding.set · false) do
-    try mvarId.refl; return true catch _ => return false
+  withOptions (smartUnfolding.set · false) do try mvarId.refl; return true catch _ => return false
 
 /-- Delta reduce the equation left-hand-side -/
-public def deltaLHS (mvarId : MVarId) : MetaM MVarId := mvarId.withContext do
-  let target ← mvarId.getType'
-  let some (_, lhs, rhs) := target.eq? | throwTacticEx `deltaLHS mvarId "equality expected"
-  let some lhs ← delta? lhs | throwTacticEx `deltaLHS mvarId "failed to delta reduce lhs"
-  mvarId.replaceTargetDefEq (← mkEq lhs rhs)
+public def deltaLHS (mvarId : MVarId) : MetaM MVarId :=
+  mvarId.withContext do
+    let target ← mvarId.getType'
+    let some (_, lhs, rhs) := target.eq?
+      | throwTacticEx `deltaLHS mvarId "equality expected"
+    let some lhs ← delta? lhs
+      | throwTacticEx `deltaLHS mvarId "failed to delta reduce lhs"
+    mvarId.replaceTargetDefEq (← mkEq lhs rhs)
 
 public def tryContradiction (mvarId : MVarId) : MetaM Bool := do
   mvarId.contradictionCore { genDiseq := true }
@@ -56,13 +57,15 @@ partial def whnfAux (e : Expr) : MetaM Expr := do
   | _ => return e
 
 /-- Apply `whnfR` to lhs, return `none` if `lhs` was not modified -/
-public def whnfReducibleLHS? (mvarId : MVarId) : MetaM (Option MVarId) := mvarId.withContext do
-  let target ← mvarId.getType'
-  let some (_, lhs, rhs) := target.eq? | return none
-  let lhs' ← whnfAux lhs
-  if lhs' != lhs then
-    return some (← mvarId.replaceTargetDefEq (← mkEq lhs' rhs))
-  else
-    return none
+public def whnfReducibleLHS? (mvarId : MVarId) : MetaM (Option MVarId) :=
+  mvarId.withContext do
+    let target ← mvarId.getType'
+    let some (_, lhs, rhs) := target.eq?
+      | return none
+    let lhs' ← whnfAux lhs
+    if lhs' != lhs then
+      return some (← mvarId.replaceTargetDefEq (← mkEq lhs' rhs))
+    else
+      return none
 
 end Lean.Elab.Eqns

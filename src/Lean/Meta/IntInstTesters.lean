@@ -21,58 +21,76 @@ should be used only in modules that have perform some kind of canonicalization.
 -/
 
 def isInstOfNatInt (e : Expr) : MetaM Bool := do
-  let_expr instOfNat _ ← e | return false
+  let_expr instOfNat _ ← e
+    | return false
   return true
 def isInstNegInt (e : Expr) : MetaM Bool := do
-  let_expr Int.instNegInt ← e | return false
+  let_expr Int.instNegInt ← e
+    | return false
   return true
 def isInstAddInt (e : Expr) : MetaM Bool := do
-  let_expr Int.instAdd ← e | return false
+  let_expr Int.instAdd ← e
+    | return false
   return true
 def isInstSubInt (e : Expr) : MetaM Bool := do
-  let_expr Int.instSub ← e | return false
+  let_expr Int.instSub ← e
+    | return false
   return true
 def isInstMulInt (e : Expr) : MetaM Bool := do
-  let_expr Int.instMul ← e | return false
+  let_expr Int.instMul ← e
+    | return false
   return true
 def isInstDivInt (e : Expr) : MetaM Bool := do
-  let_expr Int.instDiv ← e | return false
+  let_expr Int.instDiv ← e
+    | return false
   return true
 def isInstModInt (e : Expr) : MetaM Bool := do
-  let_expr Int.instMod ← e | return false
+  let_expr Int.instMod ← e
+    | return false
   return true
 def isInstDvdInt (e : Expr) : MetaM Bool := do
-  let_expr Int.instDvd ← e | return false
+  let_expr Int.instDvd ← e
+    | return false
   return true
 def isInstHAddInt (e : Expr) : MetaM Bool := do
-  let_expr instHAdd _ i ← e | return false
+  let_expr instHAdd _ i ← e
+    | return false
   isInstAddInt i
 def isInstHSubInt (e : Expr) : MetaM Bool := do
-  let_expr instHSub _ i ← e | return false
+  let_expr instHSub _ i ← e
+    | return false
   isInstSubInt i
 def isInstHMulInt (e : Expr) : MetaM Bool := do
-  let_expr instHMul _ i ← e | return false
+  let_expr instHMul _ i ← e
+    | return false
   isInstMulInt i
 def isInstHDivInt (e : Expr) : MetaM Bool := do
-  let_expr instHDiv _ i ← e | return false
+  let_expr instHDiv _ i ← e
+    | return false
   isInstDivInt i
 def isInstHModInt (e : Expr) : MetaM Bool := do
-  let_expr instHMod _ i ← e | return false
+  let_expr instHMod _ i ← e
+    | return false
   isInstModInt i
 def isInstLTInt (e : Expr) : MetaM Bool := do
-  let_expr Int.instLTInt ← e | return false
+  let_expr Int.instLTInt ← e
+    | return false
   return true
 def isInstLEInt (e : Expr) : MetaM Bool := do
-  let_expr Int.instLEInt ← e | return false
+  let_expr Int.instLEInt ← e
+    | return false
   return true
 def isInstNatPowInt (e : Expr) : MetaM Bool := do
-  let_expr Int.instNatPow ← e | return false
+  let_expr Int.instNatPow ← e
+    | return false
   return true
 def isInstPowInt (e : Expr) : MetaM Bool := do
-  let_expr instPowNat _ i ← e | return false
+  let_expr instPowNat _ i ← e
+    | return false
   isInstNatPowInt i
 def isInstHPowInt (e : Expr) : MetaM Bool := do
-  let_expr instHPow _ _ i ← e | return false
+  let_expr instHPow _ _ i ← e
+    | return false
   isInstPowInt i
 end Structural
 

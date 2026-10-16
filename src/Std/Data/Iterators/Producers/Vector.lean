@@ -51,5 +51,4 @@ The monadic version of this iterator is
 * {name}`Productive` instance: always
 -/
 @[always_inline, inline]
-def Vector.iter {α : Type w} (xs : Vector α n) :=
-  (xs.toArray.iter : Iter α)
+def Vector.iter {α : Type w} (xs : Vector α n) := (xs.toArray.iter : Iter α)

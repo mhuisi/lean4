@@ -22,8 +22,7 @@ namespace Lake
 /-! ## Input File -/
 
 def InputFile.recFetch (t : InputFile) : FetchM (Job FilePath) :=
-  withRegisterJob s!"{t.name}" do
-  inputFile t.path t.text
+  withRegisterJob s!"{t.name}" do inputFile t.path t.text
 
 /-- The facet configuration for the builtin `ExternLib.staticFacet`. -/
 public def InputFile.defaultFacetConfig : KFacetConfig InputFile.facetKind defaultFacet :=
@@ -34,14 +33,12 @@ A name-configuration map for the initial set of
 input file facets (e.g., `default`).
 -/
 public def InputFile.initFacetConfigs : DNameMap (KFacetConfig InputFile.facetKind) :=
-  DNameMap.empty
-  |>.insert defaultFacet defaultFacetConfig
+  DNameMap.empty |>.insert defaultFacet defaultFacetConfig
 
 /-! ## Input Directory -/
 
 def InputDir.recFetch (t : InputDir) : FetchM (Job (Array FilePath)) :=
-  withRegisterJob s!"{t.name}" do
-  inputDir t.path t.text t.filter
+  withRegisterJob s!"{t.name}" do inputDir t.path t.text t.filter
 
 /-- The facet configuration for the builtin `ExternLib.staticFacet`. -/
 public def InputDir.defaultFacetConfig : KFacetConfig InputDir.facetKind defaultFacet :=
@@ -52,5 +49,4 @@ A name-configuration map for the initial set of
 input directory facets (e.g., `default`).
 -/
 public def InputDir.initFacetConfigs : DNameMap (KFacetConfig InputDir.facetKind) :=
-  DNameMap.empty
-  |>.insert defaultFacet defaultFacetConfig
+  DNameMap.empty |>.insert defaultFacet defaultFacetConfig

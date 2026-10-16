@@ -21,12 +21,12 @@ namespace Std.Tactic.BVDecide
 
 namespace BVExpr
 
-def Assignment.toAIGAssignment (assign : Assignment) : BVBit → Bool :=
-  fun bit => (assign.get bit.var).bv.getLsbD bit.idx
+def Assignment.toAIGAssignment (assign : Assignment) : BVBit → Bool := fun bit =>
+  (assign.get bit.var).bv.getLsbD bit.idx
 
 @[simp]
-theorem Assignment.toAIGAssignment_apply (assign : Assignment) (bit : BVBit) :
-    assign.toAIGAssignment bit = (assign.get bit.var).bv.getLsbD bit.idx := by
+theorem Assignment.toAIGAssignment_apply (assign : Assignment) (bit : BVBit)
+    : assign.toAIGAssignment bit = (assign.get bit.var).bv.getLsbD bit.idx := by
   rfl
 
 end BVExpr

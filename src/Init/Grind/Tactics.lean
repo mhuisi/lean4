@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Core
 public import Init.Grind.Interactive
@@ -282,18 +283,15 @@ example (as : Array α) (lo hi i j : Nat) :
 ```
 -/
 syntax (name := grind)
-  "grind" optConfig (&" only")?
-  (" [" withoutPosition(grindParam,*) "]")?
-  (" => " grindSeq)? : tactic
+  "grind" optConfig (&" only")? (" [" withoutPosition(grindParam,*) "]")? (" => " grindSeq)?
+  : tactic
 
 /--
 `grind?` takes the same arguments as `grind`, but reports an equivalent call to `grind only`
 that would be sufficient to close the goal. This is useful for reducing the size of the `grind`
 theorems in a local invocation.
 -/
-syntax (name := grindTrace)
-  "grind?" optConfig (&" only")?
-  (" [" withoutPosition(grindParam,*) "]")?
+syntax (name := grindTrace) "grind?" optConfig (&" only")? (" [" withoutPosition(grindParam,*) "]")?
   : tactic
 
 /--
@@ -310,9 +308,8 @@ example (x : Nat) : myP x → myQ x := by
 ```
 -/
 syntax (name := sym)
-  "sym" optConfig (&" only")?
-  (" [" withoutPosition(grindParam,*) "]")?
-  " => " grindSeq : tactic
+  "sym" optConfig (&" only")? (" [" withoutPosition(grindParam,*) "]")? " => " grindSeq
+  : tactic
 
 /--
 `grind_norm` applies the `grind` normalizer to the goal target and replaces the goal with the

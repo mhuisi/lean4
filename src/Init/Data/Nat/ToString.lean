@@ -30,26 +30,25 @@ namespace Nat
 
 variable {b : Nat}
 
-
 @[simp]
 theorem isDigit_digitChar : n.digitChar.isDigit = decide (n < 10) :=
   match n with
-  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 => by simp [digitChar]
+  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 => by
+    simp [digitChar]
   | _ + 10 => by
-    simp only [digitChar, ↓reduceIte, Nat.reduceEqDiff]
+    simp only [digitChar, ↓ reduceIte, Nat.reduceEqDiff]
     (repeat' split) <;> simp
 
-private theorem digitChar_iff_aux :
-    ∀ n, (n.digitChar = '0' ↔ n = 0) ∧ (n.digitChar = '1' ↔ n = 1) ∧
-         (n.digitChar = '2' ↔ n = 2) ∧ (n.digitChar = '3' ↔ n = 3) ∧
-         (n.digitChar = '4' ↔ n = 4) ∧ (n.digitChar = '5' ↔ n = 5) ∧
-         (n.digitChar = '6' ↔ n = 6) ∧ (n.digitChar = '7' ↔ n = 7) ∧
-         (n.digitChar = '8' ↔ n = 8) ∧ (n.digitChar = '9' ↔ n = 9) ∧
-         (n.digitChar = 'a' ↔ n = 10) ∧ (n.digitChar = 'b' ↔ n = 11) ∧
-         (n.digitChar = 'c' ↔ n = 12) ∧ (n.digitChar = 'd' ↔ n = 13) ∧
-         (n.digitChar = 'e' ↔ n = 14) ∧ (n.digitChar = 'f' ↔ n = 15) ∧
-         (n.digitChar = '*' ↔ 16 ≤ n)
-  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | _ + 16 => by simp [digitChar]
+private theorem digitChar_iff_aux
+    : ∀ n,
+      (n.digitChar = '0' ↔ n = 0) ∧ (n.digitChar = '1' ↔ n = 1) ∧ (n.digitChar = '2' ↔ n = 2)
+        ∧ (n.digitChar = '3' ↔ n = 3) ∧ (n.digitChar = '4' ↔ n = 4) ∧ (n.digitChar = '5' ↔ n = 5)
+        ∧ (n.digitChar = '6' ↔ n = 6) ∧ (n.digitChar = '7' ↔ n = 7) ∧ (n.digitChar = '8' ↔ n = 8)
+        ∧ (n.digitChar = '9' ↔ n = 9) ∧ (n.digitChar = 'a' ↔ n = 10) ∧ (n.digitChar = 'b' ↔ n = 11)
+        ∧ (n.digitChar = 'c' ↔ n = 12) ∧ (n.digitChar = 'd' ↔ n = 13) ∧ (n.digitChar = 'e' ↔ n = 14)
+        ∧ (n.digitChar = 'f' ↔ n = 15) ∧ (n.digitChar = '*' ↔ 16 ≤ n)
+  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | _ + 16 => by
+    simp [digitChar]
 
 @[simp] theorem digitChar_eq_zero : n.digitChar = '0' ↔ n = 0 := (digitChar_iff_aux n).1
 @[simp] theorem digitChar_eq_one : n.digitChar = '1' ↔ n = 1 := (digitChar_iff_aux n).2.1
@@ -58,26 +57,44 @@ private theorem digitChar_iff_aux :
 @[simp] theorem digitChar_eq_four : n.digitChar = '4' ↔ n = 4 := (digitChar_iff_aux n).2.2.2.2.1
 @[simp] theorem digitChar_eq_five : n.digitChar = '5' ↔ n = 5 := (digitChar_iff_aux n).2.2.2.2.2.1
 @[simp] theorem digitChar_eq_six : n.digitChar = '6' ↔ n = 6 := (digitChar_iff_aux n).2.2.2.2.2.2.1
-@[simp] theorem digitChar_eq_seven : n.digitChar = '7' ↔ n = 7 := (digitChar_iff_aux n).2.2.2.2.2.2.2.1
-@[simp] theorem digitChar_eq_eight : n.digitChar = '8' ↔ n = 8 := (digitChar_iff_aux n).2.2.2.2.2.2.2.2.1
-@[simp] theorem digitChar_eq_nine : n.digitChar = '9' ↔ n = 9 := (digitChar_iff_aux n).2.2.2.2.2.2.2.2.2.1
-@[simp] theorem digitChar_eq_a : n.digitChar = 'a' ↔ n = 10 := (digitChar_iff_aux n).2.2.2.2.2.2.2.2.2.2.1
-@[simp] theorem digitChar_eq_b : n.digitChar = 'b' ↔ n = 11 := (digitChar_iff_aux n).2.2.2.2.2.2.2.2.2.2.2.1
-@[simp] theorem digitChar_eq_c : n.digitChar = 'c' ↔ n = 12 := (digitChar_iff_aux n).2.2.2.2.2.2.2.2.2.2.2.2.1
-@[simp] theorem digitChar_eq_d : n.digitChar = 'd' ↔ n = 13 := (digitChar_iff_aux n).2.2.2.2.2.2.2.2.2.2.2.2.2.1
-@[simp] theorem digitChar_eq_e : n.digitChar = 'e' ↔ n = 14 := (digitChar_iff_aux n).2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
-@[simp] theorem digitChar_eq_f : n.digitChar = 'f' ↔ n = 15 := (digitChar_iff_aux n).2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
-@[simp] theorem digitChar_eq_star : n.digitChar = '*' ↔ 16 ≤ n := (digitChar_iff_aux n).2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2
+@[simp]
+theorem digitChar_eq_seven : n.digitChar = '7' ↔ n = 7 := (digitChar_iff_aux n).2.2.2.2.2.2.2.1
+@[simp]
+theorem digitChar_eq_eight : n.digitChar = '8' ↔ n = 8 := (digitChar_iff_aux n).2.2.2.2.2.2.2.2.1
+@[simp]
+theorem digitChar_eq_nine : n.digitChar = '9' ↔ n = 9 := (digitChar_iff_aux n).2.2.2.2.2.2.2.2.2.1
+@[simp]
+theorem digitChar_eq_a : n.digitChar = 'a' ↔ n = 10 := (digitChar_iff_aux n).2.2.2.2.2.2.2.2.2.2.1
+@[simp]
+theorem digitChar_eq_b : n.digitChar = 'b' ↔ n = 11 := (digitChar_iff_aux n).2.2.2.2.2.2.2.2.2.2.2.1
+@[simp]
+theorem digitChar_eq_c : n.digitChar = 'c' ↔ n = 12 :=
+  (digitChar_iff_aux n).2.2.2.2.2.2.2.2.2.2.2.2.1
+@[simp]
+theorem digitChar_eq_d : n.digitChar = 'd' ↔ n = 13 :=
+  (digitChar_iff_aux n).2.2.2.2.2.2.2.2.2.2.2.2.2.1
+@[simp]
+theorem digitChar_eq_e : n.digitChar = 'e' ↔ n = 14 :=
+  (digitChar_iff_aux n).2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+@[simp]
+theorem digitChar_eq_f : n.digitChar = 'f' ↔ n = 15 :=
+  (digitChar_iff_aux n).2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+@[simp]
+theorem digitChar_eq_star : n.digitChar = '*' ↔ 16 ≤ n :=
+  (digitChar_iff_aux n).2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2
 
 @[simp] theorem zero_eq_digitChar : '0' = n.digitChar ↔ n = 0 := digitChar_eq_zero |> eq_comm.trans
 @[simp] theorem one_eq_digitChar : '1' = n.digitChar ↔ n = 1 := digitChar_eq_one |> eq_comm.trans
 @[simp] theorem two_eq_digitChar : '2' = n.digitChar ↔ n = 2 := digitChar_eq_two |> eq_comm.trans
-@[simp] theorem three_eq_digitChar : '3' = n.digitChar ↔ n = 3 := digitChar_eq_three |> eq_comm.trans
+@[simp]
+theorem three_eq_digitChar : '3' = n.digitChar ↔ n = 3 := digitChar_eq_three |> eq_comm.trans
 @[simp] theorem four_eq_digitChar : '4' = n.digitChar ↔ n = 4 := digitChar_eq_four |> eq_comm.trans
 @[simp] theorem five_eq_digitChar : '5' = n.digitChar ↔ n = 5 := digitChar_eq_five |> eq_comm.trans
 @[simp] theorem six_eq_digitChar : '6' = n.digitChar ↔ n = 6 := digitChar_eq_six |> eq_comm.trans
-@[simp] theorem seven_eq_digitChar : '7' = n.digitChar ↔ n = 7 := digitChar_eq_seven |> eq_comm.trans
-@[simp] theorem eight_eq_digitChar : '8' = n.digitChar ↔ n = 8 := digitChar_eq_eight |> eq_comm.trans
+@[simp]
+theorem seven_eq_digitChar : '7' = n.digitChar ↔ n = 7 := digitChar_eq_seven |> eq_comm.trans
+@[simp]
+theorem eight_eq_digitChar : '8' = n.digitChar ↔ n = 8 := digitChar_eq_eight |> eq_comm.trans
 @[simp] theorem nine_eq_digitChar : '9' = n.digitChar ↔ n = 9 := digitChar_eq_nine |> eq_comm.trans
 @[simp] theorem a_eq_digitChar : 'a' = n.digitChar ↔ n = 10 := digitChar_eq_a |> eq_comm.trans
 @[simp] theorem b_eq_digitChar : 'b' = n.digitChar ↔ n = 11 := digitChar_eq_b |> eq_comm.trans
@@ -88,13 +105,17 @@ private theorem digitChar_iff_aux :
 @[simp] theorem star_eq_digitChar : '*' = n.digitChar ↔ 16 ≤ n := digitChar_eq_star |> eq_comm.trans
 
 /-- Auxiliary theorem for `Nat.reduceDigitCharEq` simproc. -/
-protected theorem digitChar_ne {n : Nat} (c : Char)
-    (h : c != '0' && c != '1' && c != '2' && c != '3' && c != '4' && c != '5' &&
-         c != '6' && c != '7' && c != '8' && c != '9' && c != 'a' && c != 'b' &&
-         c != 'c' && c != 'd' && c != 'e' && c != 'f' && c != '*') : n.digitChar ≠ c := by
+protected theorem digitChar_ne
+    {n : Nat}
+    (c : Char)
+    (h : c != '0' && c != '1' && c != '2' && c != '3' && c != '4' && c != '5' && c != '6'
+      && c != '7' && c != '8' && c != '9' && c != 'a' && c != 'b' && c != 'c' && c != 'd'
+      && c != 'e' && c != 'f' && c != '*')
+    : n.digitChar ≠ c := by
   rintro rfl
   match n with
-  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | _ + 16 => simp [digitChar] at h
+  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | _ + 16 =>
+    simp [digitChar] at h
 
 theorem toNat_digitChar_of_lt_ten {n : Nat} (hn : n < 10) : n.digitChar.toNat = 48 + n :=
   match n with
@@ -105,28 +126,29 @@ theorem toNat_digitChar_sub_48_of_lt_ten {n : Nat} (hn : n < 10) : n.digitChar.t
   simp [toNat_digitChar_of_lt_ten hn]
 
 private theorem isDigit_of_mem_toDigitsCore
-    (hc : c ∈ cs → c.isDigit) (hb₁ : 0 < b) (hb₂ : b ≤ 10) (h : c ∈ toDigitsCore b fuel n cs) :
-    c.isDigit := by
+    (hc : c ∈ cs → c.isDigit) (hb₁ : 0 < b) (hb₂ : b ≤ 10) (h : c ∈ toDigitsCore b fuel n cs)
+    : c.isDigit := by
   induction fuel generalizing n cs with rw [toDigitsCore] at h
-  | zero => exact hc h
+  | zero =>
+    exact hc h
   | succ _ ih =>
     split at h
     case' isFalse => apply ih (fun h => ?_) h
     all_goals
       cases h with
-      | head      => simp [Nat.lt_of_lt_of_le (mod_lt _ hb₁) hb₂]
+      | head => simp [Nat.lt_of_lt_of_le (mod_lt _ hb₁) hb₂]
       | tail _ hm => exact hc hm
 
 theorem isDigit_of_mem_toDigits (hb₁ : 0 < b) (hb₂ : b ≤ 10) (hc : c ∈ toDigits b n) : c.isDigit :=
   isDigit_of_mem_toDigitsCore (fun _ => by contradiction) hb₁ hb₂ hc
 
 @[simp]
-theorem underscore_not_in_toDigits {n : Nat} : ¬'_' ∈ Nat.toDigits 10 n := by
+theorem underscore_not_in_toDigits {n : Nat} : ¬ '_' ∈ Nat.toDigits 10 n := by
   intro h
   simpa using isDigit_of_mem_toDigits (by decide) (by decide) h
 
-private theorem toDigitsCore_of_lt_base (hb : n < b) (hf : n < fuel) :
-    toDigitsCore b fuel n cs = n.digitChar :: cs := by
+private theorem toDigitsCore_of_lt_base (hb : n < b) (hf : n < fuel)
+    : toDigitsCore b fuel n cs = n.digitChar :: cs := by
   unfold toDigitsCore
   split <;> simp_all [mod_eq_of_lt]
 
@@ -135,20 +157,20 @@ theorem toDigits_of_lt_base (h : n < b) : toDigits b n = [n.digitChar] :=
 
 @[simp, grind =]
 theorem toDigits_zero : (b : Nat) → toDigits b 0 = ['0']
-  | 0     => rfl
+  | 0 => rfl
   | _ + 1 => toDigits_of_lt_base (zero_lt_succ _)
 
-private theorem toDigitsCore_append :
-    toDigitsCore b fuel n cs₁ ++ cs₂ = toDigitsCore b fuel n (cs₁ ++ cs₂) := by
+private theorem toDigitsCore_append
+    : toDigitsCore b fuel n cs₁ ++ cs₂ = toDigitsCore b fuel n (cs₁ ++ cs₂) := by
   induction fuel generalizing n cs₁ with simp only [toDigitsCore]
   | succ => split <;> simp_all
 
-private theorem toDigitsCore_eq_toDigitsCore_nil_append :
-    toDigitsCore b fuel n cs₁ = toDigitsCore b fuel n [] ++ cs₁ := by
+private theorem toDigitsCore_eq_toDigitsCore_nil_append
+    : toDigitsCore b fuel n cs₁ = toDigitsCore b fuel n [] ++ cs₁ := by
   simp [toDigitsCore_append]
 
-private theorem toDigitsCore_eq_of_lt_fuel (hb : 1 < b) (h₁ : n < fuel₁) (h₂ : n < fuel₂) :
-    toDigitsCore b fuel₁ n cs = toDigitsCore b fuel₂ n cs := by
+private theorem toDigitsCore_eq_of_lt_fuel (hb : 1 < b) (h₁ : n < fuel₁) (h₂ : n < fuel₂)
+    : toDigitsCore b fuel₁ n cs = toDigitsCore b fuel₂ n cs := by
   cases fuel₁ <;> cases fuel₂ <;> try contradiction
   simp only [toDigitsCore, Nat.div_eq_zero_iff]
   split
@@ -157,10 +179,11 @@ private theorem toDigitsCore_eq_of_lt_fuel (hb : 1 < b) (h₁ : n < fuel₁) (h�
     exact toDigitsCore_eq_of_lt_fuel hb (by omega) (by omega)
 
 private theorem toDigitsCore_toDigitsCore
-    (hb : 1 < b) (hn : 0 < n) (hd : d < b) (hf : b * n + d < fuel) (hnf : n < nf) (hdf : d < df) :
-    toDigitsCore b nf n (toDigitsCore b df d cs) = toDigitsCore b fuel (b * n + d) cs := by
+    (hb : 1 < b) (hn : 0 < n) (hd : d < b) (hf : b * n + d < fuel) (hnf : n < nf) (hdf : d < df)
+    : toDigitsCore b nf n (toDigitsCore b df d cs) = toDigitsCore b fuel (b * n + d) cs := by
   cases fuel with
-  | zero => contradiction
+  | zero =>
+    contradiction
   | succ fuel =>
     rw [toDigitsCore]
     split
@@ -174,29 +197,32 @@ private theorem toDigitsCore_toDigitsCore
       simp only [toDigitsCore_of_lt_base hd hdf, mul_add_mod_self_left, mod_eq_of_lt hd, h]
       apply toDigitsCore_eq_of_lt_fuel hb hnf (by omega)
 
-theorem toDigits_append_toDigits (hb : 1 < b) (hn : 0 < n) (hd : d < b) :
-    (toDigits b n) ++ (toDigits b d) = toDigits b (b * n + d) := by
+theorem toDigits_append_toDigits (hb : 1 < b) (hn : 0 < n) (hd : d < b)
+    : (toDigits b n) ++ (toDigits b d) = toDigits b (b * n + d) := by
   rw [toDigits, toDigitsCore_append]
   exact toDigitsCore_toDigitsCore hb hn hd (lt_succ_self _) (lt_succ_self _) (lt_succ_self _)
 
-theorem toDigits_of_base_le (hb : 1 < b) (h : b ≤ n) :
-    toDigits b n = toDigits b (n / b) ++ [digitChar (n % b)] := by
+theorem toDigits_of_base_le (hb : 1 < b) (h : b ≤ n)
+    : toDigits b n = toDigits b (n / b) ++ [digitChar (n % b)] := by
   have := Nat.div_add_mod n b
   rw (occs := [1]) [← Nat.div_add_mod n b,
-    ← toDigits_append_toDigits (by omega) (Nat.div_pos_iff.mpr (by omega)) (Nat.mod_lt n (by omega))]
+    ← toDigits_append_toDigits (by omega) (Nat.div_pos_iff.mpr (by omega))
+      (Nat.mod_lt n (by omega))]
   rw [toDigits_of_lt_base (n := n % b) (Nat.mod_lt n (by omega))]
 
-theorem toDigits_eq_ite (hb : 1 < b) :
-    toDigits b n = if n < b then [digitChar n] else toDigits b (n / b) ++ [digitChar (n % b)] := by
+theorem toDigits_eq_ite (hb : 1 < b)
+    : toDigits b n
+      = if n < b then [digitChar n] else toDigits b (n / b) ++ [digitChar (n % b)] := by
   split
   · rw [toDigits_of_lt_base ‹_›]
   · rw [toDigits_of_base_le hb (by omega)]
 
 @[deprecated Nat.toDigits_eq_ite (since := "2026-07-21")]
-theorem toDigits_eq_if {b : Nat} {n : Nat} (hb : 1 < b) : b.toDigits n = if n < b then [n.digitChar] else b.toDigits (n / b) ++ [(n % b).digitChar] := Nat.toDigits_eq_ite hb
+theorem toDigits_eq_if {b : Nat} {n : Nat} (hb : 1 < b)
+    : b.toDigits n = if n < b then [n.digitChar] else b.toDigits (n / b) ++ [(n % b).digitChar] :=
+  Nat.toDigits_eq_ite hb
 
-theorem length_toDigits_pos {b n : Nat} :
-    0 < (Nat.toDigits b n).length := by
+theorem length_toDigits_pos {b n : Nat} : 0 < (Nat.toDigits b n).length := by
   simp [toDigits]
   rw [toDigitsCore]
   split
@@ -209,14 +235,15 @@ theorem toDigits_ne_nil {n b : Nat} : Nat.toDigits b n ≠ [] := by
   rw [← List.length_pos_iff]
   exact Nat.length_toDigits_pos
 
-theorem length_toDigits_le_iff {n k : Nat} (hb : 1 < b) (h : 0 < k) :
-    (Nat.toDigits b n).length ≤ k ↔ n < b ^ k := by
+theorem length_toDigits_le_iff {n k : Nat} (hb : 1 < b) (h : 0 < k)
+    : (Nat.toDigits b n).length ≤ k ↔ n < b ^ k := by
   match k with
-  | 0 => contradiction
+  | 0 =>
+    contradiction
   | k + 1 =>
     induction k generalizing n
     · rw [toDigits_eq_ite hb]
-      split <;> simp [*, length_toDigits_pos, ← Nat.pos_iff_ne_zero, - List.length_eq_zero_iff]
+      split <;> simp [*, length_toDigits_pos, ← Nat.pos_iff_ne_zero, -List.length_eq_zero_iff]
     · rename_i ih
       rw [toDigits_eq_ite hb]
       split
@@ -230,56 +257,41 @@ theorem length_toDigits_le_iff {n k : Nat} (hb : 1 < b) (h : 0 < k) :
         · omega
       · simp [ih (n := n / b) (by omega), Nat.div_lt_iff_lt_mul (k := b) (by omega), Nat.pow_add]
 
-theorem repr_eq_ofList_toDigits {n : Nat} :
-    n.repr = .ofList (toDigits 10 n) :=
-  (rfl)
+theorem repr_eq_ofList_toDigits {n : Nat} : n.repr = .ofList (toDigits 10 n) := (rfl)
 
 @[simp]
 theorem toList_repr {n : Nat} : n.repr.toList = Nat.toDigits 10 n := by
   simp [repr_eq_ofList_toDigits]
 
-@[simp]
-theorem repr_ne_empty {n : Nat} : n.repr ≠ "" := by
-  simp [← String.toList_inj]
+@[simp] theorem repr_ne_empty {n : Nat} : n.repr ≠ "" := by simp [← String.toList_inj]
 
-theorem toString_eq_ofList_toDigits {n : Nat} :
-    toString n = .ofList (toDigits 10 n) :=
-  (rfl)
+theorem toString_eq_ofList_toDigits {n : Nat} : toString n = .ofList (toDigits 10 n) := (rfl)
 
 @[simp, grind norm]
-theorem toString_eq_repr {n : Nat} :
-    toString n = n.repr :=
-  (rfl)
+theorem toString_eq_repr {n : Nat} : toString n = n.repr := (rfl)
 
 @[simp, grind norm]
-theorem reprPrec_eq_repr {n i : Nat} :
-    reprPrec n i = n.repr :=
-  (rfl)
+theorem reprPrec_eq_repr {n i : Nat} : reprPrec n i = n.repr := (rfl)
 
 @[simp, grind norm]
-theorem repr_eq_repr {n : Nat} :
-    repr n = n.repr :=
-  (rfl)
+theorem repr_eq_repr {n : Nat} : repr n = n.repr := (rfl)
 
-theorem repr_of_lt {n : Nat} (h : n < 10) :
-    n.repr = .singleton (digitChar n) := by
+theorem repr_of_lt {n : Nat} (h : n < 10) : n.repr = .singleton (digitChar n) := by
   rw [repr_eq_ofList_toDigits, toDigits_of_lt_base h, String.singleton_eq_ofList]
 
-theorem repr_of_ge {n : Nat} (h : 10 ≤ n) :
-    n.repr = (n / 10).repr ++ .singleton (digitChar (n % 10)) := by
+theorem repr_of_ge {n : Nat} (h : 10 ≤ n)
+    : n.repr = (n / 10).repr ++ .singleton (digitChar (n % 10)) := by
   simp [repr_eq_ofList_toDigits, toDigits_of_base_le (by omega) h, String.singleton_eq_ofList,
     String.ofList_append]
 
-theorem repr_eq_repr_append_repr {n : Nat} (h : 10 ≤ n) :
-    n.repr = (n / 10).repr ++ (n % 10).repr := by
+theorem repr_eq_repr_append_repr {n : Nat} (h : 10 ≤ n)
+    : n.repr = (n / 10).repr ++ (n % 10).repr := by
   rw [repr_of_ge h, repr_of_lt (n := n % 10) (by omega)]
 
-theorem length_repr_pos {n : Nat} :
-    0 < n.repr.length := by
+theorem length_repr_pos {n : Nat} : 0 < n.repr.length := by
   simpa [repr_eq_ofList_toDigits] using length_toDigits_pos
 
-theorem length_repr_le_iff {n k : Nat} (h : 0 < k) :
-    n.repr.length ≤ k ↔ n < 10 ^ k := by
+theorem length_repr_le_iff {n k : Nat} (h : 0 < k) : n.repr.length ≤ k ↔ n < 10 ^ k := by
   simpa [repr_eq_ofList_toDigits] using length_toDigits_le_iff (by omega) h
 
 /--
@@ -289,49 +301,53 @@ range from `'0'` to `'9'`*.
 def ofDigitChars (b : Nat) (l : List Char) (init : Nat) : Nat :=
   l.foldl (init := init) (fun sofar c => b * sofar + (c.toNat - '0'.toNat))
 
-theorem ofDigitChars_eq_foldl {b : Nat} {l : List Char} {init : Nat} :
-    ofDigitChars b l init = l.foldl (init := init) (fun sofar c => b * sofar + (c.toNat - '0'.toNat)) :=
+theorem ofDigitChars_eq_foldl {b : Nat} {l : List Char} {init : Nat}
+    : ofDigitChars b l init
+      = l.foldl (init := init) (fun sofar c => b * sofar + (c.toNat - '0'.toNat)) :=
   (rfl)
 
 @[simp]
-theorem ofDigitChars_nil {init : Nat} : ofDigitChars b [] init = init := by
+theorem ofDigitChars_nil {init : Nat} : ofDigitChars b [] init = init := by simp [ofDigitChars]
+
+theorem ofDigitChars_cons {c : Char} {cs : List Char} {init : Nat}
+    : ofDigitChars b (c :: cs) init = ofDigitChars b cs (b * init + (c.toNat - '0'.toNat)) := by
   simp [ofDigitChars]
 
-theorem ofDigitChars_cons {c : Char} {cs : List Char} {init : Nat} :
-    ofDigitChars b (c::cs) init = ofDigitChars b cs (b * init + (c.toNat - '0'.toNat)) := by
-  simp [ofDigitChars]
-
-theorem ofDigitChars_cons_digitChar_of_lt_ten {n : Nat} (hn : n < 10) {cs : List Char} {init : Nat} :
-    ofDigitChars b (n.digitChar :: cs) init = ofDigitChars b cs (b * init + n) := by
+theorem ofDigitChars_cons_digitChar_of_lt_ten {n : Nat} (hn : n < 10) {cs : List Char} {init : Nat}
+    : ofDigitChars b (n.digitChar :: cs) init = ofDigitChars b cs (b * init + n) := by
   simp [ofDigitChars_cons, Nat.toNat_digitChar_sub_48_of_lt_ten hn]
 
-theorem ofDigitChars_eq_ofDigitChars_zero {l : List Char} {init : Nat} :
-    ofDigitChars 10 l init = 10 ^ l.length * init + ofDigitChars 10 l 0 := by
+theorem ofDigitChars_eq_ofDigitChars_zero {l : List Char} {init : Nat}
+    : ofDigitChars 10 l init = 10 ^ l.length * init + ofDigitChars 10 l 0 := by
   induction l generalizing init with
-  | nil => simp [ofDigitChars]
+  | nil =>
+    simp [ofDigitChars]
   | cons hd tl ih =>
-    simp only [ofDigitChars, ↓Char.isValue, Char.reduceToNat, List.foldl_cons, List.length_cons,
-      Nat.mul_zero, Nat.zero_add] at ⊢ ih
+    simp only [ofDigitChars, ↓ Char.isValue, Char.reduceToNat, List.foldl_cons, List.length_cons,
+        Nat.mul_zero, Nat.zero_add]
+      at ⊢ ih
     rw [ih, ih (init := hd.toNat - 48), Nat.pow_succ, Nat.mul_add, Nat.mul_assoc, Nat.add_assoc]
 
-theorem ofDigitChars_append {l m : List Char} (init : Nat) :
-    ofDigitChars b (l ++ m) init = ofDigitChars b m (ofDigitChars b l init) := by
+theorem ofDigitChars_append {l m : List Char} (init : Nat)
+    : ofDigitChars b (l ++ m) init = ofDigitChars b m (ofDigitChars b l init) := by
   simp [ofDigitChars]
 
 @[simp]
-theorem ofDigitChars_replicate_zero {n : Nat} : ofDigitChars b (List.replicate n '0') init = b ^ n * init := by
+theorem ofDigitChars_replicate_zero {n : Nat}
+    : ofDigitChars b (List.replicate n '0') init = b ^ n * init := by
   induction n generalizing init with
   | zero => simp
   | succ n ih => simp [List.replicate_succ, ofDigitChars_cons, ih, Nat.pow_succ, Nat.mul_assoc]
 
-theorem ofDigitChars_toDigits {b n : Nat} (hb' : 1 < b) (hb : b ≤ 10) : ofDigitChars b (toDigits b n) 0 = n := by
+theorem ofDigitChars_toDigits {b n : Nat} (hb' : 1 < b) (hb : b ≤ 10)
+    : ofDigitChars b (toDigits b n) 0 = n := by
   induction n using base_induction b hb' with
   | single m hm =>
     simp [Nat.toDigits_of_lt_base hm, ofDigitChars_cons_digitChar_of_lt_ten (by omega : m < 10)]
   | digit m k hk hm ih =>
-    rw [← Nat.toDigits_append_toDigits hb' hm hk,
-      ofDigitChars_append, ih, Nat.toDigits_of_lt_base hk,
-      ofDigitChars_cons_digitChar_of_lt_ten (Nat.lt_of_lt_of_le hk hb), ofDigitChars_nil]
+    rw [← Nat.toDigits_append_toDigits hb' hm hk, ofDigitChars_append, ih,
+      Nat.toDigits_of_lt_base hk, ofDigitChars_cons_digitChar_of_lt_ten (Nat.lt_of_lt_of_le hk hb),
+      ofDigitChars_nil]
 
 @[simp]
 theorem ofDigitChars_ten_toDigits {n : Nat} : ofDigitChars 10 (toDigits 10 n) 0 = n :=

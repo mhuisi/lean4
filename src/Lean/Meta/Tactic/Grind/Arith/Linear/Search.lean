@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.Linear.SearchM
 import Lean.Meta.Tactic.Grind.Arith.Linear.IneqCnstr
@@ -17,7 +18,7 @@ def IneqCnstr.throwUnexpected (c : IneqCnstr) : LinearM α := do
 def DiseqCnstr.throwUnexpected (c : DiseqCnstr) : LinearM α := do
   throwError "`grind linarith` internal error, unexpected{indentD (← c.denoteExpr)}"
 
-def EqCnstr.throwUnexpected (c :EqCnstr) : LinearM α := do
+def EqCnstr.throwUnexpected (c : EqCnstr) : LinearM α := do
   throwError "`grind linarith` internal error, unexpected{indentD (← c.denoteExpr)}"
 
 private def checkIsNextVar (x : Var) : LinearM Unit := do
@@ -41,8 +42,10 @@ def getBestLower? (x : Var) : LinearM (Option (Rat × IneqCnstr)) := do
   let s ← getStruct
   let mut best? := none
   for c' in s.lowers[x]! do
-    let .add k _ p := c'.p | c'.throwUnexpected
-    let some v ← p.eval? | c'.throwUnexpected
+    let .add k _ p := c'.p
+      | c'.throwUnexpected
+    let some v ← p.eval?
+      | c'.throwUnexpected
     let lower' := v / (-k)
     if let some (lower, c) := best? then
       if lower' > lower || (lower' == lower && c'.strict && !c.strict) then
@@ -60,8 +63,10 @@ def getBestUpper? (x : Var) : LinearM (Option (Rat × IneqCnstr)) := do
   let s ← getStruct
   let mut best? := none
   for c' in s.uppers[x]! do
-    let .add k _ p := c'.p | c'.throwUnexpected
-    let some v ← p.eval? | c'.throwUnexpected
+    let .add k _ p := c'.p
+      | c'.throwUnexpected
+    let some v ← p.eval?
+      | c'.throwUnexpected
     let upper' := (-v) / k
     if let some (upper, c) := best? then
       if upper' < upper || (upper' == upper && c'.strict && !c.strict) then
@@ -75,9 +80,11 @@ def getDiseqValues (x : Var) : LinearM (Array (Rat × DiseqCnstr)) := do
   let s ← getStruct
   let mut r := #[]
   for c in s.diseqs[x]! do
-    let .add k _ p := c.p | c.throwUnexpected
-    let some v ← p.eval? | c.throwUnexpected
-    r := r.push (((-v)/k), c)
+    let .add k _ p := c.p
+      | c.throwUnexpected
+    let some v ← p.eval?
+      | c.throwUnexpected
+    r := r.push (((-v) / k), c)
   return r
 
 def findDiseq? (v : Rat) (dvals : Array (Rat × DiseqCnstr)) : Option DiseqCnstr :=
@@ -87,23 +94,26 @@ def inDiseqValues (v : Rat) (dvals : Array (Rat × DiseqCnstr)) : Bool :=
   Option.isSome <| findDiseq? v dvals
 
 partial def geAvoiding (v : Rat) (dvals : Array (Rat × DiseqCnstr)) : Rat :=
-  if inDiseqValues v dvals then geAvoiding (v+1) dvals else v
+  if inDiseqValues v dvals then geAvoiding (v + 1) dvals else v
 
 partial def leAvoiding (v : Rat) (dvals : Array (Rat × DiseqCnstr)) : Rat :=
-  if inDiseqValues v dvals then leAvoiding (v-1) dvals else v
+  if inDiseqValues v dvals then leAvoiding (v - 1) dvals else v
 
 def resolveLowerUpperConflict (c₁ c₂ : IneqCnstr) : LinearM Unit := do
   trace[grind.debug.linarith.search.conflict] "{← c₁.denoteExpr}, {← c₂.denoteExpr}"
-  let .add a₁ _ p₁ := c₁.p | c₁.throwUnexpected
-  let .add a₂ _ p₂ := c₂.p | c₂.throwUnexpected
+  let .add a₁ _ p₁ := c₁.p
+    | c₁.throwUnexpected
+  let .add a₂ _ p₂ := c₂.p
+    | c₂.throwUnexpected
   let p := p₁.mul a₂.natAbs |>.combine (p₂.mul a₁.natAbs)
   let c : IneqCnstr := { p, strict := c₁.strict || c₂.strict, h := .combine c₁ c₂ }
   c.assert
 
-/--
-Try to find integer between lower and upper bounds that is different for known disequalities
--/
-partial def findInt? (lower : Rat) (lowerStrict : Bool) (upper : Rat) (upperStrict : Bool) (dvals : Array (Rat × DiseqCnstr)) : Option Rat :=
+/-- Try to find integer between lower and upper bounds that is different for known disequalities -/
+partial def findInt?
+    (lower : Rat) (lowerStrict : Bool) (upper : Rat) (upperStrict : Bool)
+    (dvals : Array (Rat × DiseqCnstr))
+    : Option Rat :=
   let start := lower.ceil
   let start := if start == lower && lowerStrict then start + 1 else start
   let stop := upper.floor
@@ -114,7 +124,7 @@ where
     if v > stop then
       none
     else if inDiseqValues v dvals then
-      go (v+1) stop
+      go (v + 1) stop
     else
       some v
 
@@ -130,14 +140,15 @@ partial def findRat (lower : Rat) (upper : Rat) (dvals : Array (Rat × DiseqCnst
     mid
 
 def DiseqCnstr.split (c : DiseqCnstr) : SearchM IneqCnstr := do
-  let fvarId ← if let some fvarId := (← getStruct).diseqSplits.find? c.p then
-    trace[grind.debug.linarith.search.split] "{← c.denoteExpr}, reusing {fvarId.name}"
-    pure fvarId
-  else
-    let fvarId ← mkCase c
-    trace[grind.debug.linarith.search.split] "{← c.denoteExpr}, {fvarId.name}"
-    modifyStruct fun s => { s with diseqSplits := s.diseqSplits.insert c.p fvarId }
-    pure fvarId
+  let fvarId ←
+    if let some fvarId := (← getStruct).diseqSplits.find? c.p then
+      trace[grind.debug.linarith.search.split] "{← c.denoteExpr}, reusing {fvarId.name}"
+      pure fvarId
+    else
+      let fvarId ← mkCase c
+      trace[grind.debug.linarith.search.split] "{← c.denoteExpr}, {fvarId.name}"
+      modifyStruct fun s => { s with diseqSplits := s.diseqSplits.insert c.p fvarId }
+      pure fvarId
   return { p := c.p, strict := true, h := .dec fvarId }
 
 /--
@@ -145,14 +156,15 @@ Given an inequality `c₁` which is a lower bound, i.e., leading coefficient is 
 and a disequality `c`, splits `c` and resolve with `c₁`.
 -/
 def resolveLowerDiseqConflict (c₁ : IneqCnstr) (c : DiseqCnstr) : SearchM Unit := do
-  let c := if c.p.leadCoeff < 0 then
-    /-
-    Ensure leading coefficient of the disequality is positive.
-    Thus, after the split, we have an upper bound that can be resolved with `c₁`
-    -/
-    { p := c.p.mul (-1), h := .neg c : DiseqCnstr }
-  else
-    c
+  let c :=
+    if c.p.leadCoeff < 0 then
+      /-
+      Ensure leading coefficient of the disequality is positive.
+      Thus, after the split, we have an upper bound that can be resolved with `c₁`
+      -/
+      { p := c.p.mul (-1), h := .neg c : DiseqCnstr }
+    else
+      c
   let c₂ ← c.split
   resolveLowerUpperConflict c₁ c₂
 
@@ -194,17 +206,21 @@ def processVar (x : Var) : SearchM Unit := do
           let diseq ← d.denoteExpr
           -- Remark: we filter duplicates before displaying diagnostics to users
           modifyStruct fun s => { s with ignored := s.ignored.push diseq }
-          trace[grind.debug.linarith.search] "v: {lower}, lower, upper: {lower}, **ignore diseq**, diseqs: {diseqVals.map (·.1)}"
+          trace[grind.debug.linarith.search]
+            "v: {lower}, lower, upper: {lower}, **ignore diseq**, diseqs: {diseqVals.map (·.1)}"
           setAssignment x lower
       else
-        trace[grind.debug.linarith.search] "v: {lower}, lower, upper: {lower}, diseqs: {diseqVals.map (·.1)}"
+        trace[grind.debug.linarith.search]
+          "v: {lower}, lower, upper: {lower}, diseqs: {diseqVals.map (·.1)}"
         setAssignment x lower
     else
-      let v := if let some v := findInt? lower c₁.strict upper c₂.strict diseqVals then
-        v
-      else
-        findRat lower upper diseqVals
-      trace[grind.debug.linarith.search] "v: {v}, lower: {lower}, upper: {upper}, diseqs: {diseqVals.map (·.1)}"
+      let v :=
+        if let some v := findInt? lower c₁.strict upper c₂.strict diseqVals then
+          v
+        else
+          findRat lower upper diseqVals
+      trace[grind.debug.linarith.search]
+        "v: {v}, lower: {lower}, upper: {upper}, diseqs: {diseqVals.map (·.1)}"
       setAssignment x v
 
 /-- Returns `true` if we already have a complete assignment / model. -/
@@ -214,8 +230,9 @@ def hasAssignment : LinearM Bool := do
 private def findCase (decVars : FVarIdSet) : SearchM Case := do
   repeat
     let numCases := (← get).cases.size
-    unless numCases > 0 do throwError "`grind linarith` internal cases, cases stack is empty"
-    let case := (← get).cases[numCases-1]!
+    unless numCases > 0 do
+      throwError "`grind linarith` internal cases, cases stack is empty"
+    let case := (← get).cases[numCases - 1]!
     modify fun s => { s with cases := s.cases.pop }
     if decVars.contains case.fvarId then
       return case
@@ -224,14 +241,15 @@ private def findCase (decVars : FVarIdSet) : SearchM Case := do
   unreachable!
 
 def resolveConflict (h : UnsatProof) : SearchM Unit := do
-  trace[grind.debug.linarith.search.backtrack] "resolve conflict, decision stack: {(← get).cases.toList.map fun c => c.fvarId.name}"
+  trace[grind.debug.linarith.search.backtrack]
+    "resolve conflict, decision stack: {(← get).cases.toList.map fun c => c.fvarId.name}"
   let decVars := h.collectDecVars.run (← get).decVars
   trace[grind.debug.linarith.search.backtrack] "dec vars: {decVars.toList.map (·.name)}"
   if decVars.isEmpty then
     closeGoal (← h.toExprProof)
     return ()
   let c ← findCase decVars
-  modifyStruct fun _  => c.saved
+  modifyStruct fun _ => c.saved
   trace[grind.debug.linarith.search.backtrack] "backtracking {c.fvarId.name}"
   let decVars := decVars.erase c.fvarId
   let decVars := decVars.toArray
@@ -255,16 +273,19 @@ private def assignElimVars : SearchM Unit := do
 where
   go (xs : List Var) : SearchM Unit := do
     match xs with
-    | [] => return ()
+    | [] =>
+      return ()
     | x :: xs =>
       let some c := (← getStruct).elimEqs[x]!
-        | throwError "`grind` internal error, eliminated variable must have equation associated with it"
+        | throwError
+            "`grind` internal error, eliminated variable must have equation associated with it"
       -- `x` may not be the max variable
       let a := c.p.coeff x
       if a == 0 then c.throwUnexpected
       -- ensure `x` is 0 when evaluating `c.p`
       modifyStruct fun s => { s with assignment := s.assignment.set x 0 }
-      let some v ← c.p.eval? | c.throwUnexpected
+      let some v ← c.p.eval?
+        | c.throwUnexpected
       let v := (-v) / a
       traceAssignment x v
       modifyStruct fun s => { s with assignment := s.assignment.set x v }
@@ -286,7 +307,8 @@ private def searchAssignmentMain : SearchM Unit := do
       resolveConflict c
     else
       let x : Var := (← getStruct).assignment.size
-      trace[grind.debug.linarith.search] "next var: {← getVar x}, {x}, {(← getStruct).assignment.toList}"
+      trace[grind.debug.linarith.search]
+        "next var: {← getVar x}, {x}, {(← getStruct).assignment.toList}"
       processVar x
 
 private def searchAssignment : LinearM Unit := do
@@ -300,17 +322,19 @@ There are two kinds of progress:
 
 The result is `false` if module for every structure already has an assignment.
 -/
-def check : GoalM Bool := do profileitM Exception "grind linarith" (← getOptions) do
-  let mut progress := false
-  for structId in *...(← get').structs.size do
-    let r ← LinearM.run structId do
-      if (← hasAssignment) then
-        return false
-      searchAssignment
-      return true
-    progress := progress || r
-    if (← isInconsistent) then
-      return true
-  return progress
+def check : GoalM Bool := do
+  profileitM Exception "grind linarith" (← getOptions) do
+    let mut progress := false
+    for structId in *...(← get').structs.size do
+      let r ←
+        LinearM.run structId do
+          if (← hasAssignment) then
+            return false
+          searchAssignment
+          return true
+      progress := progress || r
+      if (← isInconsistent) then
+        return true
+    return progress
 
 end Lean.Meta.Grind.Arith.Linear

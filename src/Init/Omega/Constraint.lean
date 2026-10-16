@@ -41,7 +41,7 @@ private local instance : Append String where
 
 private local instance : ToString Int where
   toString
-    | Int.ofNat m   => toString m
+    | Int.ofNat m => toString m
     | Int.negSucc m => "-" ++ toString (m + 1)
 
 private local instance : Repr Int where
@@ -62,11 +62,19 @@ namespace Constraint
 
 instance : ToString Constraint where
   toString := private fun
-  | ⟨none, none⟩ => "(-∞, ∞)"
-  | ⟨none, some y⟩ => s!"(-∞, {y}]"
-  | ⟨some x, none⟩ => s!"[{x}, ∞)"
-  | ⟨some x, some y⟩ =>
-    if y < x then "∅" else if x = y then s!"\{{x}}" else s!"[{x}, {y}]"
+    | ⟨none, none⟩ =>
+      "(-∞, ∞)"
+    | ⟨none, some y⟩ =>
+      s!"(-∞, {y}]"
+    | ⟨some x, none⟩ =>
+      s!"[{x}, ∞)"
+    | ⟨some x, some y⟩ =>
+      if y < x then
+        "∅"
+      else if x = y then
+        s!"\{{x}}"
+      else
+        s!"[{x}, {y}]"
 
 /-- A constraint is satisfied at `t` is both the lower bound and upper bound are satisfied. -/
 def sat (c : Constraint) (t : Int) : Bool := c.lowerBound.sat t ∧ c.upperBound.sat t
@@ -90,10 +98,8 @@ def flip (c : Constraint) : Constraint where
   lowerBound := c.upperBound
   upperBound := c.lowerBound
 
-/--
-Negate a constraint. `[x, y]` becomes `[-y, -x]`.
--/
-def neg (c : Constraint) : Constraint := c.flip.map (- ·)
+/-- Negate a constraint. `[x, y]` becomes `[-y, -x]`. -/
+def neg (c : Constraint) : Constraint := c.flip.map (-·)
 
 theorem neg_sat : {c : Constraint} → {v : Int} → sat c v → sat (c.neg) (-v) := by
   rintro ⟨_ | l, _ | u⟩ v w <;> simp_all [sat, neg, flip, map]
@@ -105,10 +111,10 @@ def impossible : Constraint := ⟨some 1, some 0⟩
 /-- An exact constraint. -/
 def exact (r : Int) : Constraint := ⟨some r, some r⟩
 
-@[simp] theorem trivial_say : trivial.sat t := by
-  simp [sat, trivial]
+@[simp] theorem trivial_say : trivial.sat t := by simp [sat, trivial]
 
-@[simp] theorem exact_sat (r : Int) (t : Int) : (exact r).sat t = decide (r = t) := by
+@[simp]
+theorem exact_sat (r : Int) (t : Int) : (exact r).sat t = decide (r = t) := by
   simp only [sat, exact, Option.all_some, decide_eq_true_eq, decide_eq_decide]
   exact Int.eq_iff_le_and_ge.symm
 
@@ -183,8 +189,8 @@ theorem add_sat (w₁ : c₁.sat x₁) (w₂ : c₂.sat x₂) : (add c₁ c₂).
 def combo (a : Int) (x : Constraint) (b : Int) (y : Constraint) : Constraint :=
   add (scale a x) (scale b y)
 
-theorem combo_sat (a) (w₁ : c₁.sat x₁) (b) (w₂ : c₂.sat x₂) :
-    (combo a c₁ b c₂).sat (a * x₁ + b * x₂) :=
+theorem combo_sat (a) (w₁ : c₁.sat x₁) (b) (w₂ : c₂.sat x₂)
+    : (combo a c₁ b c₂).sat (a * x₁ + b * x₂) :=
   add_sat (scale_sat a w₁) (scale_sat b w₂)
 
 /-- The conjunction of two constraints. -/
@@ -192,10 +198,12 @@ def combine (x y : Constraint) : Constraint where
   lowerBound := Option.merge max x.lowerBound y.lowerBound
   upperBound := Option.merge min x.upperBound y.upperBound
 
-theorem combine_sat : (c : Constraint) → (c' : Constraint) → (t : Int) →
-    (c.combine c').sat t = (c.sat t ∧ c'.sat t) := by
+theorem combine_sat
+    : (c : Constraint) → (c' : Constraint) → (t : Int)
+      → (c.combine c').sat t = (c.sat t ∧ c'.sat t) := by
   rintro ⟨_ | l₁, _ | u₁⟩ <;> rintro ⟨_ | l₂, _ | u₂⟩ t
-    <;> simp [sat, LowerBound.sat, UpperBound.sat, combine, Int.le_min, Int.max_le, Option.merge] at *
+    <;> simp [sat, LowerBound.sat, UpperBound.sat, combine, Int.le_min, Int.max_le, Option.merge]
+      at *
   · rw [And.comm]
   · rw [← and_assoc, And.comm (a := l₂ ≤ t), and_assoc]
   · rw [and_assoc]
@@ -208,11 +216,11 @@ Dividing a constraint by a natural number, and tightened to integer bounds.
 Thus the lower bound is rounded up, and the upper bound is rounded down.
 -/
 def div (c : Constraint) (k : Nat) : Constraint where
-  lowerBound := c.lowerBound.map fun x => (- ((- x) / k))
+  lowerBound := c.lowerBound.map fun x => (-((-x) / k))
   upperBound := c.upperBound.map fun y => y / k
 
-theorem div_sat (c : Constraint) (t : Int) (k : Nat) (n : k ≠ 0) (h : (k : Int) ∣ t) (w : c.sat t) :
-    (c.div k).sat (t / k) := by
+theorem div_sat (c : Constraint) (t : Int) (k : Nat) (n : k ≠ 0) (h : (k : Int) ∣ t) (w : c.sat t)
+    : (c.div k).sat (t / k) := by
   replace n : (k : Int) > 0 := Int.ofNat_lt.mpr (Nat.pos_of_ne_zero n)
   rcases c with ⟨_ | l, _ | u⟩
   · simp_all [sat, div]
@@ -239,11 +247,12 @@ so we make an abbreviation `sat'` for this.
 -/
 abbrev sat' (c : Constraint) (x y : Coeffs) := c.sat (Coeffs.dot x y)
 
-theorem combine_sat' {s t : Constraint} {x y} (ws : s.sat' x y) (wt : t.sat' x y) :
-    (s.combine t).sat' x y := (combine_sat _ _ _).mpr ⟨ws, wt⟩
+theorem combine_sat' {s t : Constraint} {x y} (ws : s.sat' x y) (wt : t.sat' x y)
+    : (s.combine t).sat' x y :=
+  (combine_sat _ _ _).mpr ⟨ws, wt⟩
 
-theorem div_sat' {c : Constraint} {x y} (h : Coeffs.gcd x ≠ 0) (w : c.sat (Coeffs.dot x y)) :
-    (c.div (Coeffs.gcd x)).sat' (Coeffs.sdiv x (Coeffs.gcd x)) y := by
+theorem div_sat' {c : Constraint} {x y} (h : Coeffs.gcd x ≠ 0) (w : c.sat (Coeffs.dot x y))
+    : (c.div (Coeffs.gcd x)).sat' (Coeffs.sdiv x (Coeffs.gcd x)) y := by
   dsimp [sat']
   rw [Coeffs.dot_sdiv_left _ _ (Int.dvd_refl _)]
   exact div_sat c _ (Coeffs.gcd x) h (Coeffs.gcd_dvd_dot_left x y) w
@@ -251,14 +260,14 @@ theorem div_sat' {c : Constraint} {x y} (h : Coeffs.gcd x ≠ 0) (w : c.sat (Coe
 theorem not_sat'_of_isImpossible (h : isImpossible c) {x y} : ¬ c.sat' x y :=
   not_sat_of_isImpossible h
 
-theorem addInequality_sat (w : c + Coeffs.dot x y ≥ 0) :
-    Constraint.sat' { lowerBound := some (-c), upperBound := none } x y := by
+theorem addInequality_sat (w : c + Coeffs.dot x y ≥ 0)
+    : Constraint.sat' { lowerBound := some (-c), upperBound := none } x y := by
   simp [Constraint.sat', Constraint.sat]
   rw [← Int.zero_sub c]
   exact Int.sub_left_le_of_le_add w
 
-theorem addEquality_sat (w : c + Coeffs.dot x y = 0) :
-    Constraint.sat' { lowerBound := some (-c), upperBound := some (-c) } x y := by
+theorem addEquality_sat (w : c + Coeffs.dot x y = 0)
+    : Constraint.sat' { lowerBound := some (-c), upperBound := some (-c) } x y := by
   simp [Constraint.sat', Constraint.sat]
   rw [Int.eq_iff_le_and_ge] at w
   rwa [Int.add_le_zero_iff_le_neg', Int.add_nonneg_iff_neg_le', and_comm] at w
@@ -284,23 +293,21 @@ def normalize? : Constraint × Coeffs → Option (Constraint × Coeffs)
       some (s.div gcd, Coeffs.sdiv x gcd)
 
 /-- Normalize a constraint, by dividing through by the GCD. -/
-def normalize (p : Constraint × Coeffs) : Constraint × Coeffs :=
-  normalize? p |>.getD p
+def normalize (p : Constraint × Coeffs) : Constraint × Coeffs := normalize? p |>.getD p
 
 /-- Shorthand for the first component of `normalize`. -/
 -- This `noncomputable` (and others below) is a safeguard that we only use this in proofs.
 noncomputable abbrev normalizeConstraint (s : Constraint) (x : Coeffs) : Constraint :=
   (normalize (s, x)).1
 /-- Shorthand for the second component of `normalize`. -/
-noncomputable abbrev normalizeCoeffs (s : Constraint) (x : Coeffs) : Coeffs :=
-  (normalize (s, x)).2
+noncomputable abbrev normalizeCoeffs (s : Constraint) (x : Coeffs) : Coeffs := (normalize (s, x)).2
 
-theorem normalize?_eq_some (w : normalize? (s, x) = some (s', x')) :
-    normalizeConstraint s x = s' ∧ normalizeCoeffs s x = x' := by
+theorem normalize?_eq_some (w : normalize? (s, x) = some (s', x'))
+    : normalizeConstraint s x = s' ∧ normalizeCoeffs s x = x' := by
   simp_all [normalizeConstraint, normalizeCoeffs, normalize]
 
-theorem normalize_sat {s x v} (w : s.sat' x v) :
-    (normalizeConstraint s x).sat' (normalizeCoeffs s x) v := by
+theorem normalize_sat {s x v} (w : s.sat' x v)
+    : (normalizeConstraint s x).sat' (normalizeCoeffs s x) v := by
   dsimp [normalizeConstraint, normalizeCoeffs, normalize, normalize?]
   split <;> rename_i h
   · split
@@ -332,12 +339,12 @@ noncomputable abbrev positivizeConstraint (s : Constraint) (x : Coeffs) : Constr
 noncomputable abbrev positivizeCoeffs (s : Constraint) (x : Coeffs) : Coeffs :=
   (positivize (s, x)).2
 
-theorem positivize?_eq_some (w : positivize? (s, x) = some (s', x')) :
-    positivizeConstraint s x = s' ∧ positivizeCoeffs s x = x' := by
+theorem positivize?_eq_some (w : positivize? (s, x) = some (s', x'))
+    : positivizeConstraint s x = s' ∧ positivizeCoeffs s x = x' := by
   simp_all [positivizeConstraint, positivizeCoeffs, positivize]
 
-theorem positivize_sat {s x v} (w : s.sat' x v) :
-    (positivizeConstraint s x).sat' (positivizeCoeffs s x) v := by
+theorem positivize_sat {s x v} (w : s.sat' x v)
+    : (positivizeConstraint s x).sat' (positivizeCoeffs s x) v := by
   dsimp [positivizeConstraint, positivizeCoeffs, positivize, positivize?]
   split
   · exact w
@@ -349,14 +356,15 @@ theorem positivize_sat {s x v} (w : s.sat' x v) :
 def tidy? : Constraint × Coeffs → Option (Constraint × Coeffs)
   | ⟨s, x⟩ =>
     match positivize? (s, x) with
-    | none => match normalize? (s, x) with
+    | none =>
+      match normalize? (s, x) with
       | none => none
       | some (s', x') => some (s', x')
-    | some (s', x') => some (normalize (s', x'))
+    | some (s', x') =>
+      some (normalize (s', x'))
 
 /-- `positivize` and `normalize` -/
-def tidy (p : Constraint × Coeffs) : Constraint × Coeffs :=
-  tidy? p |>.getD p
+def tidy (p : Constraint × Coeffs) : Constraint × Coeffs := tidy? p |>.getD p
 
 /-- Shorthand for the first component of `tidy`. -/
 abbrev tidyConstraint (s : Constraint) (x : Coeffs) : Constraint := (tidy (s, x)).1
@@ -373,31 +381,33 @@ theorem tidy_sat {s x v} (w : s.sat' x v) : (tidyConstraint s x).sat' (tidyCoeff
   · rcases positivize?_eq_some hp with ⟨rfl, rfl⟩
     exact normalize_sat (positivize_sat w)
 
-theorem combo_sat' (s t : Constraint)
-    (a : Int) (x : Coeffs) (b : Int) (y : Coeffs) (v : Coeffs)
-    (wx : s.sat' x v) (wy : t.sat' y v) :
-    (Constraint.combo a s b t).sat' (Coeffs.combo a x b y) v := by
-  rw [Constraint.sat', Coeffs.combo_eq_smul_add_smul, Coeffs.dot_distrib_left,
-    Coeffs.dot_smul_left, Coeffs.dot_smul_left]
+theorem combo_sat'
+    (s t : Constraint)
+    (a : Int)
+    (x : Coeffs)
+    (b : Int)
+    (y : Coeffs) (v : Coeffs) (wx : s.sat' x v) (wy : t.sat' y v)
+    : (Constraint.combo a s b t).sat' (Coeffs.combo a x b y) v := by
+  rw [Constraint.sat', Coeffs.combo_eq_smul_add_smul, Coeffs.dot_distrib_left, Coeffs.dot_smul_left,
+    Coeffs.dot_smul_left]
   exact Constraint.combo_sat a wx b wy
 
 /-- The value of the new variable introduced when solving a hard equality. -/
 abbrev bmod_div_term (m : Nat) (a b : Coeffs) : Int := Coeffs.bmod_dot_sub_dot_bmod m a b / m
 
 /-- The coefficients of the new equation generated when solving a hard equality. -/
-def bmod_coeffs (m : Nat) (i : Nat) (x : Coeffs) : Coeffs :=
-  Coeffs.set (Coeffs.bmod x m) i m
+def bmod_coeffs (m : Nat) (i : Nat) (x : Coeffs) : Coeffs := Coeffs.set (Coeffs.bmod x m) i m
 
-theorem bmod_sat (m : Nat) (r : Int) (i : Nat) (x v : Coeffs)
-    (h : x.length ≤ i)  -- during proof reconstruction this will be by `decide`
+theorem bmod_sat
+    (m : Nat) (r : Int) (i : Nat) (x v : Coeffs) (h : x.length ≤ i) -- during proof reconstruction this will be by `decide`
     (p : Coeffs.get v i = bmod_div_term m x v) -- and this will be by `rfl`
-    (w : (Constraint.exact r).sat' x v) :
-    (Constraint.exact (Int.bmod r m)).sat' (bmod_coeffs m i x) v := by
+    (w : (Constraint.exact r).sat' x v)
+    : (Constraint.exact (Int.bmod r m)).sat' (bmod_coeffs m i x) v := by
   simp at w
   simp only [p, bmod_coeffs, Constraint.exact_sat, Coeffs.dot_set_left, decide_eq_true_eq]
   replace h := Nat.le_trans (Coeffs.bmod_length x m) h
   rw [Coeffs.get_of_length_le h, Int.sub_zero,
-    Int.mul_ediv_cancel' (Coeffs.dvd_bmod_dot_sub_dot_bmod _ _ _), w,
-    ← Int.add_sub_assoc, Int.add_comm, Int.add_sub_assoc, Int.sub_self, Int.add_zero]
+    Int.mul_ediv_cancel' (Coeffs.dvd_bmod_dot_sub_dot_bmod _ _ _), w, ← Int.add_sub_assoc,
+    Int.add_comm, Int.add_sub_assoc, Int.sub_self, Int.add_zero]
 
 end Lean.Omega

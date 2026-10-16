@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 import Lean.Meta.Tactic.Grind.Arith.Util
@@ -19,16 +20,22 @@ Helper functions for constructing counterexamples in the `linarith` and `cutsat`
 /--
 Returns `true` if adding the assignment `e := v` to `a` will falsify any asserted disequality in core.
 -/
-private partial def satisfyDiseqs (goal : Goal) (a : Std.HashMap Expr Rat) (e : Expr) (v : Int) : Bool := Id.run do
-  let some parents := goal.parents.find? { expr := e } | return true
+private partial def satisfyDiseqs (goal : Goal) (a : Std.HashMap Expr Rat) (e : Expr) (v : Int)
+    : Bool := Id.run do
+  let some parents := goal.parents.find? { expr := e }
+    | return true
   for parent in parents.elems do
-    let_expr Eq _ lhs rhs := parent | continue
-    let some root := goal.getRoot? parent | continue
+    let_expr Eq _ lhs rhs := parent
+      | continue
+    let some root := goal.getRoot? parent
+      | continue
     if root.isConstOf ``False then
-      let some lhsRoot := goal.getRoot? lhs | continue
-      let some rhsRoot := goal.getRoot? rhs | continue
-      if lhsRoot == e && !checkDiseq rhsRoot then return false
-      if rhsRoot == e && !checkDiseq lhsRoot then return false
+      let some lhsRoot := goal.getRoot? lhs
+        | continue
+      let some rhsRoot := goal.getRoot? rhs
+        | continue
+      if lhsRoot == e && ! checkDiseq rhsRoot then return false
+      if rhsRoot == e && ! checkDiseq lhsRoot then return false
   return true
 where
   checkDiseq (other : Expr) : Bool :=
@@ -41,31 +48,32 @@ where
 Returns an integer value `i` for assigning to `e` s.t. adding `e := i` to `a` will not falsify any disequality
 and `i` is not in `alreadyUsed`.
 -/
-partial def pickUnusedValue (goal : Goal) (a : Std.HashMap Expr Rat) (e : Expr) (next : Int) (alreadyUsed : Std.HashSet Int) : Int :=
+partial def pickUnusedValue
+    (goal : Goal) (a : Std.HashMap Expr Rat) (e : Expr) (next : Int) (alreadyUsed : Std.HashSet Int)
+    : Int :=
   go next
 where
   go (next : Int) : Int :=
     if alreadyUsed.contains next then
-      go (next+1)
+      go (next + 1)
     else if satisfyDiseqs goal a e next then
       next
     else
       go (next + 1)
 
-/--
-Returns `true` if `e` should be treated as an interpreted value by the arithmetic modules.
--/
+/-- Returns `true` if `e` should be treated as an interpreted value by the arithmetic modules. -/
 def isInterpretedTerm (e : Expr) : Bool :=
-  isNatNum e || isIntNum e || e.isAppOf ``HAdd.hAdd || e.isAppOf ``HMul.hMul || e.isAppOf ``HSub.hSub || e.isAppOf ``HSMul.hSMul
-  || e.isAppOf ``Neg.neg || e.isAppOf ``HDiv.hDiv || e.isAppOf ``HMod.hMod || e.isAppOf ``One.one || e.isAppOf ``Zero.zero
-  || e.isAppOf ``Inv.inv || e.isAppOf ``NatCast.natCast || e.isIte || e.isDIte || e.isAppOf ``OfNat.ofNat
-  || e.isAppOf ``Fin.val || e.isAppOf ``Grind.IntModule.OfNatModule.toQ || e matches .lit (.natVal _)
-  || e.isAppOf ``BitVec.toNat || e.isAppOf ``BitVec.toInt
+  isNatNum e || isIntNum e || e.isAppOf ``HAdd.hAdd || e.isAppOf ``HMul.hMul
+    || e.isAppOf ``HSub.hSub || e.isAppOf ``HSMul.hSMul || e.isAppOf ``Neg.neg
+    || e.isAppOf ``HDiv.hDiv || e.isAppOf ``HMod.hMod || e.isAppOf ``One.one
+    || e.isAppOf ``Zero.zero || e.isAppOf ``Inv.inv || e.isAppOf ``NatCast.natCast || e.isIte
+    || e.isDIte || e.isAppOf ``OfNat.ofNat || e.isAppOf ``Fin.val
+    || e.isAppOf ``Grind.IntModule.OfNatModule.toQ || e matches .lit (.natVal _)
+    || e.isAppOf ``BitVec.toNat || e.isAppOf ``BitVec.toInt
 
-/--
-Adds the assignments `e' := v` to `a` for each `e'` in the equivalence class os `e`.
--/
-def assignEqc (goal : Goal) (e : Expr) (v : Rat) (a : Std.HashMap Expr Rat) : Std.HashMap Expr Rat := Id.run do
+/-- Adds the assignments `e' := v` to `a` for each `e'` in the equivalence class os `e`. -/
+def assignEqc (goal : Goal) (e : Expr) (v : Rat) (a : Std.HashMap Expr Rat)
+    : Std.HashMap Expr Rat := Id.run do
   let mut a := a
   for e in goal.getEqc e do
     a := a.insert e v
@@ -77,7 +85,9 @@ Recall that not all terms are communicated to `linarith` and `cutsat` modules if
 The idea is to assign unused integer values that have not been used in the model and do not falsify equalities and disequalities
 in core.
 -/
-private def assignUnassigned (goal : Goal) (isTarget : ENode → MetaM Bool) (model : Std.HashMap Expr Rat) : MetaM (Std.HashMap Expr Rat) := do
+private def assignUnassigned
+    (goal : Goal) (isTarget : ENode → MetaM Bool) (model : Std.HashMap Expr Rat)
+    : MetaM (Std.HashMap Expr Rat) := do
   let mut nextVal : Int := 0
   -- Collect used values
   let mut used : Std.HashSet Int := {}
@@ -89,12 +99,12 @@ private def assignUnassigned (goal : Goal) (isTarget : ENode → MetaM Bool) (mo
   for e in goal.exprs do
     let node ← goal.getENode e
     if node.isRoot then
-    if (← isTarget node) then
-    if model[node.self]?.isNone then
-      let v := pickUnusedValue goal model node.self nextVal used
-      model := assignEqc goal node.self v model
-      used := used.insert v
-      nextVal := v + 1
+      if (← isTarget node) then
+        if model[node.self]?.isNone then
+          let v := pickUnusedValue goal model node.self nextVal used
+          model := assignEqc goal node.self v model
+          used := used.insert v
+          nextVal := v + 1
   return model
 
 /-- Sorts assignment first by expression generation and then `Expr.lt` -/
@@ -110,7 +120,8 @@ Converts the given model into a sorted array of pairs `(e, v)` representing assi
 The pairs are sorted using `e`s generation and then `Expr.lt`.
 Only terms s.t. `isInterpretedTerm e = false` are included into the resulting array.
 -/
-def finalizeModel (goal : Goal) (isTarget : ENode → MetaM Bool) (model : Std.HashMap Expr Rat) : MetaM (Array (Expr × Rat)) := do
+def finalizeModel (goal : Goal) (isTarget : ENode → MetaM Bool) (model : Std.HashMap Expr Rat)
+    : MetaM (Array (Expr × Rat)) := do
   let model ← assignUnassigned goal isTarget model
   let mut r := #[]
   for (e, v) in model do

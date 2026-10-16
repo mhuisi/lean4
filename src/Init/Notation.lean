@@ -6,6 +6,7 @@ Authors: Leonardo de Moura, Mario Carneiro
 Notation for operators defined at Prelude.lean
 -/
 module
+
 prelude
 public import Init.Coe
 public section
@@ -20,21 +21,26 @@ meta structure Parser.Category
 
 namespace Parser.Category
 
-/-- `command` is the syntax category for things that appear at the top level
+/--
+`command` is the syntax category for things that appear at the top level
 of a lean file. For example, `def foo := 1` is a `command`, as is
 `namespace Foo` and `end Foo`. Commands generally have an effect on the state of
 adding something to the environment (like a new definition), as well as
-commands like `variable` which modify future commands within a scope. -/
+commands like `variable` which modify future commands within a scope.
+-/
 meta def command : Category := {}
 
-/-- `term` is the builtin syntax category for terms. A term denotes an expression
+/--
+`term` is the builtin syntax category for terms. A term denotes an expression
 in lean's type theory, for example `2 + 2` is a term. The difference between
 `Term` and `Expr` is that the former is a kind of syntax, while the latter is
 the result of elaboration. For example `by simp` is also a `Term`, but it elaborates
-to different `Expr`s depending on the context. -/
+to different `Expr`s depending on the context.
+-/
 meta def term : Category := {}
 
-/-- `tactic` is the builtin syntax category for tactics. These appear after
+/--
+`tactic` is the builtin syntax category for tactics. These appear after
 `by` in proofs, and they are programs that take in the proof context
 (the hypotheses in scope plus the type of the term to synthesize) and construct
 a term of the expected type. For example, `simp` is a tactic, used in:
@@ -44,36 +50,49 @@ example : 2 + 2 = 4 := by simp
 -/
 meta def tactic : Category := {}
 
-/-- `doElem` is a builtin syntax category for elements that can appear in the `do` notation.
-For example, `let x ← e` is a `doElem`, and a `do` block consists of a list of `doElem`s. -/
+/--
+`doElem` is a builtin syntax category for elements that can appear in the `do` notation.
+For example, `let x ← e` is a `doElem`, and a `do` block consists of a list of `doElem`s.
+-/
 meta def doElem : Category := {}
 
-/-- `structInstFieldDecl` is the syntax category for value declarations for fields in structure instance notation.
-For example, the `:= 1` and `| 0 => 0 | n + 1 => n` in `{ x := 1, f | 0 => 0 | n + 1 => n }` are in the `structInstFieldDecl` class. -/
+/--
+`structInstFieldDecl` is the syntax category for value declarations for fields in structure instance notation.
+For example, the `:= 1` and `| 0 => 0 | n + 1 => n` in `{ x := 1, f | 0 => 0 | n + 1 => n }` are in the `structInstFieldDecl` class.
+-/
 meta def structInstFieldDecl : Category := {}
 
-/-- `level` is a builtin syntax category for universe levels.
+/--
+`level` is a builtin syntax category for universe levels.
 This is the `u` in `Sort u`: it can contain `max` and `imax`, addition with
-constants, and variables. -/
+constants, and variables.
+-/
 meta def level : Category := {}
 
-/-- `attr` is a builtin syntax category for attributes.
-Declarations can be annotated with attributes using the `@[...]` notation. -/
+/--
+`attr` is a builtin syntax category for attributes.
+Declarations can be annotated with attributes using the `@[...]` notation.
+-/
 meta def attr : Category := {}
 
-/-- `stx` is a builtin syntax category for syntax. This is the abbreviated
-parser notation used inside `syntax` and `macro` declarations. -/
+/--
+`stx` is a builtin syntax category for syntax. This is the abbreviated
+parser notation used inside `syntax` and `macro` declarations.
+-/
 meta def stx : Category := {}
 
-/-- `prio` is a builtin syntax category for priorities.
+/--
+`prio` is a builtin syntax category for priorities.
 Priorities are used in many different attributes.
 Higher numbers denote higher priority, and for example typeclass search will
 try high priority instances before low priority.
 In addition to literals like `37`, you can also use `low`, `mid`, `high`, as well as
-add and subtract priorities. -/
+add and subtract priorities.
+-/
 meta def prio : Category := {}
 
-/-- `prec` is a builtin syntax category for precedences. A precedence is a value
+/--
+`prec` is a builtin syntax category for precedences. A precedence is a value
 that expresses how tightly a piece of syntax binds: for example `1 + 2 * 3` is
 parsed as `1 + (2 * 3)` because `*` has a higher precedence than `+`.
 Higher numbers denote higher precedence.
@@ -81,7 +100,8 @@ In addition to literals like `37`, there are some special named precedence level
 * `arg` for the precedence of function arguments
 * `max` for the highest precedence used in term parsers (not actually the maximum possible value)
 * `lead` for the precedence of terms not supposed to be used as arguments
-and you can also add and subtract precedences. -/
+and you can also add and subtract precedences.
+-/
 meta def prec : Category := {}
 
 end Parser.Category
@@ -114,15 +134,15 @@ end Lean
 Maximum precedence used in term parsers, in particular for terms in
 function position (`ident`, `paren`, ...)
 -/
-macro "max"  : prec => `(prec| 1024)
+macro "max" : prec => `(prec| 1024)
 /-- Precedence used for application arguments (`do`, `by`, ...). -/
-macro "arg"  : prec => `(prec| 1023)
+macro "arg" : prec => `(prec| 1023)
 /-- Precedence used for terms not supposed to be used as arguments (`let`, `have`, ...). -/
 macro "lead" : prec => `(prec| 1022)
 /-- Parentheses are used for grouping precedence expressions. -/
 macro "(" p:prec ")" : prec => return p
 /-- Minimum precedence used in term parsers. -/
-macro "min"  : prec => `(prec| 10)
+macro "min" : prec => `(prec| 10)
 /-- `(min+1)` (we can only write `min+1` after `Meta.lean`) -/
 macro "min1" : prec => `(prec| 11)
 /--
@@ -133,14 +153,18 @@ macro "max_prec" : term => `(1024)
 
 /-- The default priority `default = 1000`, which is used when no priority is set. -/
 macro "default" : prio => `(prio| 1000)
-/-- The standardized "low" priority `low = 100`, for things that should be lower than default priority. -/
-macro "low"     : prio => `(prio| 100)
+/--
+The standardized "low" priority `low = 100`, for things that should be lower than default priority.
+-/
+macro "low" : prio => `(prio| 100)
 /--
 The standardized "medium" priority `mid = 500`. This is lower than `default`, and higher than `low`.
 -/
-macro "mid"     : prio => `(prio| 500)
-/-- The standardized "high" priority `high = 10000`, for things that should be higher than default priority. -/
-macro "high"    : prio => `(prio| 10000)
+macro "mid" : prio => `(prio| 500)
+/--
+The standardized "high" priority `high = 10000`, for things that should be higher than default priority.
+-/
+macro "high" : prio => `(prio| 10000)
 /-- Parentheses are used for grouping priority expressions. -/
 macro "(" p:prio ")" : prio => return p
 
@@ -221,7 +245,7 @@ macro_rules
 It produces a `nullNode` containing a `SepArray` with the interleaved parser
 results. It has arity 1, and auto-groups its component parser if needed.
 -/
-macro:arg x:stx:max ",*"   : stx => `(stx| sepBy($x, ",", ", "))
+macro:arg x:stx:max ",*" : stx => `(stx| sepBy($x, ",", ", "))
 /--
 `p,+` is shorthand for `sepBy1(p, ",")`. It parses 1 or more occurrences of
 `p` separated by `,`, that is: `p | p,p | p,p,p | ...`.
@@ -229,7 +253,7 @@ macro:arg x:stx:max ",*"   : stx => `(stx| sepBy($x, ",", ", "))
 It produces a `nullNode` containing a `SepArray` with the interleaved parser
 results. It has arity 1, and auto-groups its component parser if needed.
 -/
-macro:arg x:stx:max ",+"   : stx => `(stx| sepBy1($x, ",", ", "))
+macro:arg x:stx:max ",+" : stx => `(stx| sepBy1($x, ",", ", "))
 
 /--
 `p,*,?` is shorthand for `sepBy(p, ",", allowTrailingSep)`.
@@ -269,48 +293,59 @@ especially when proving properties about the `ofNat` function itself.
 -/
 syntax (name := rawNatLit) "nat_lit " num : term
 
-@[inherit_doc] infixr:90 " ∘ "  => Function.comp
-@[inherit_doc] infixr:35 " × "  => Prod
+@[inherit_doc] infixr:90 " ∘ " => Function.comp
+@[inherit_doc] infixr:35 " × " => Prod
 @[inherit_doc] infixr:35 " ×' " => PProd
 
 recommended_spelling "comp" for "∘" in [Function.comp, «term_∘_»]
 recommended_spelling "Prod" for "×" in [Prod, «term_×_»]
 recommended_spelling "PProd" for "×'" in [PProd, «term_×'_»]
 
-@[inherit_doc] infix:50  " ∣ " => Dvd.dvd
+@[inherit_doc] infix:50 " ∣ " => Dvd.dvd
 @[inherit_doc] infixl:55 " ||| " => HOr.hOr
 @[inherit_doc] infixl:58 " ^^^ " => HXor.hXor
 @[inherit_doc] infixl:60 " &&& " => HAnd.hAnd
-@[inherit_doc] infixl:65 " + "   => HAdd.hAdd
-@[inherit_doc] infixl:65 " - "   => HSub.hSub
-@[inherit_doc] infixl:70 " * "   => HMul.hMul
-@[inherit_doc] infixl:70 " / "   => HDiv.hDiv
-@[inherit_doc] infixl:70 " % "   => HMod.hMod
+@[inherit_doc] infixl:65 " + " => HAdd.hAdd
+@[inherit_doc] infixl:65 " - " => HSub.hSub
+@[inherit_doc] infixl:70 " * " => HMul.hMul
+@[inherit_doc] infixl:70 " / " => HDiv.hDiv
+@[inherit_doc] infixl:70 " % " => HMod.hMod
 @[inherit_doc] infixl:75 " <<< " => HShiftLeft.hShiftLeft
 @[inherit_doc] infixl:75 " >>> " => HShiftRight.hShiftRight
-@[inherit_doc] infixr:80 " ^ "   => HPow.hPow
-@[inherit_doc] infixl:65 " ++ "  => HAppend.hAppend
-@[inherit_doc] prefix:75 "-"     => Neg.neg
-@[inherit_doc] prefix:100 "~~~"  => Complement.complement
-@[inherit_doc] postfix:max "⁻¹"  => Inv.inv
+@[inherit_doc] infixr:80 " ^ " => HPow.hPow
+@[inherit_doc] infixl:65 " ++ " => HAppend.hAppend
+@[inherit_doc] prefix:75 "-" => Neg.neg
+@[inherit_doc] prefix:100 "~~~" => Complement.complement
+@[inherit_doc] postfix:max "⁻¹" => Inv.inv
 @[inherit_doc] infixr:73 " • " => HSMul.hSMul
 
 /-!
   Remark: the infix commands above ensure a delaborator is generated for each relations.
   We redefine the macros below to be able to use the auxiliary `binop%` elaboration helper for binary operators.
   It addresses issue #382. -/
-macro_rules | `($x ||| $y) => `(binop% HOr.hOr $x $y)
-macro_rules | `($x ^^^ $y) => `(binop% HXor.hXor $x $y)
-macro_rules | `($x &&& $y) => `(binop% HAnd.hAnd $x $y)
-macro_rules | `($x + $y)   => `(binop% HAdd.hAdd $x $y)
-macro_rules | `($x - $y)   => `(binop% HSub.hSub $x $y)
-macro_rules | `($x * $y)   => `(binop% HMul.hMul $x $y)
-macro_rules | `($x / $y)   => `(binop% HDiv.hDiv $x $y)
-macro_rules | `($x % $y)   => `(binop% HMod.hMod $x $y)
+macro_rules
+  | `($x ||| $y) => `(binop% HOr.hOr $x $y)
+macro_rules
+  | `($x ^^^ $y) => `(binop% HXor.hXor $x $y)
+macro_rules
+  | `($x &&& $y) => `(binop% HAnd.hAnd $x $y)
+macro_rules
+  | `($x + $y) => `(binop% HAdd.hAdd $x $y)
+macro_rules
+  | `($x - $y) => `(binop% HSub.hSub $x $y)
+macro_rules
+  | `($x * $y) => `(binop% HMul.hMul $x $y)
+macro_rules
+  | `($x / $y) => `(binop% HDiv.hDiv $x $y)
+macro_rules
+  | `($x % $y) => `(binop% HMod.hMod $x $y)
 -- exponentiation should be considered a right action (#2854)
-macro_rules | `($x ^ $y)   => `(rightact% HPow.hPow $x $y)
-macro_rules | `($x ++ $y)  => `(binop% HAppend.hAppend $x $y)
-macro_rules | `(- $x)      => `(unop% Neg.neg $x)
+macro_rules
+  | `($x ^ $y) => `(rightact% HPow.hPow $x $y)
+macro_rules
+  | `($x ++ $y) => `(binop% HAppend.hAppend $x $y)
+macro_rules
+  | `(- $x) => `(unop% Neg.neg $x)
 /-!
 We have a macro to make `x • y` notation participate in the expression tree elaborator,
 like other arithmetic expressions such as `+`, `*`, `/`, `^`, `=`, inequalities, etc.
@@ -344,7 +379,8 @@ they would likely appear as `↑(x • y)` rather than `x • ↑y`, unlike othe
 -/
 
 @[inherit_doc HSMul.hSMul]
-macro_rules | `($x • $y) => `(leftact% HSMul.hSMul $x $y)
+macro_rules
+  | `($x • $y) => `(leftact% HSMul.hSMul $x $y)
 
 recommended_spelling "or" for "|||" in [HOr.hOr, «term_|||_»]
 recommended_spelling "xor" for "^^^" in [HXor.hXor, «term_^^^_»]
@@ -369,16 +405,18 @@ recommended_spelling "not" for "~~~" in [Complement.complement, «term~~~_»]
 -- TODO(kmill) remove these after stage0 update. There are builtin macros still using `«term_>=_»`
 @[inherit_doc] infix:50 (priority := low) " >= " => GE.ge
 @[inherit_doc] infix:50 (priority := low) " <= " => LE.le
-macro_rules | `($x >= $y)  => `(binrel% GE.ge $x $y)
-macro_rules | `($x <= $y)  => `(binrel% LE.le $x $y)
+macro_rules
+  | `($x >= $y) => `(binrel% GE.ge $x $y)
+macro_rules
+  | `($x <= $y) => `(binrel% LE.le $x $y)
 
 @[inherit_doc] infix:50 unicode(" ≤ ", " <= ") => LE.le
-@[inherit_doc] infix:50 " < "                  => LT.lt
+@[inherit_doc] infix:50 " < " => LT.lt
 @[inherit_doc] infix:50 unicode(" ≥ ", " >= ") => GE.ge
-@[inherit_doc] infix:50 " > "                  => GT.gt
-@[inherit_doc] infix:50 " = "                  => Eq
-@[inherit_doc] infix:50 " == "                 => BEq.beq
-@[inherit_doc] infix:50 " ≍ "                  => HEq
+@[inherit_doc] infix:50 " > " => GT.gt
+@[inherit_doc] infix:50 " = " => Eq
+@[inherit_doc] infix:50 " == " => BEq.beq
+@[inherit_doc] infix:50 " ≍ " => HEq
 
 /-!
   Remark: the infix commands above ensure a delaborator is generated for each relations.
@@ -386,12 +424,18 @@ macro_rules | `($x <= $y)  => `(binrel% LE.le $x $y)
   It has better support for applying coercions. For example, suppose we have `binrel% Eq n i` where `n : Nat` and
   `i : Int`. The default elaborator fails because we don't have a coercion from `Int` to `Nat`, but
   `binrel%` succeeds because it also tries a coercion from `Nat` to `Int` even when the nat occurs before the int. -/
-macro_rules | `($x ≤ $y)  => `(binrel% LE.le $x $y)
-macro_rules | `($x < $y)  => `(binrel% LT.lt $x $y)
-macro_rules | `($x > $y)  => `(binrel% GT.gt $x $y)
-macro_rules | `($x ≥ $y)  => `(binrel% GE.ge $x $y)
-macro_rules | `($x = $y)  => `(binrel% Eq $x $y)
-macro_rules | `($x == $y) => `(binrel_no_prop% BEq.beq $x $y)
+macro_rules
+  | `($x ≤ $y) => `(binrel% LE.le $x $y)
+macro_rules
+  | `($x < $y) => `(binrel% LT.lt $x $y)
+macro_rules
+  | `($x > $y) => `(binrel% GT.gt $x $y)
+macro_rules
+  | `($x ≥ $y) => `(binrel% GE.ge $x $y)
+macro_rules
+  | `($x = $y) => `(binrel% Eq $x $y)
+macro_rules
+  | `($x == $y) => `(binrel_no_prop% BEq.beq $x $y)
 
 recommended_spelling "le" for "≤" in [LE.le, «term_≤_»]
 recommended_spelling "lt" for "<" in [LT.lt, «term_<_»]
@@ -426,18 +470,28 @@ recommended_spelling "notMem" for "∉" in [«term_∉_»]
 
 @[inherit_doc] infixr:67 " :: " => List.cons
 @[inherit_doc] infixr:100 " <$> " => Functor.map
-@[inherit_doc] infixl:55  " >>= " => Bind.bind
-@[inherit_doc HOrElse.hOrElse]   syntax:20 term:21 " <|> " term:20 : term
-@[inherit_doc HAndThen.hAndThen] syntax:60 term:61 " >> " term:60 : term
-@[inherit_doc Seq.seq]           syntax:60 term:60 " <*> " term:61 : term
-@[inherit_doc SeqLeft.seqLeft]   syntax:60 term:60 " <* " term:61 : term
-@[inherit_doc SeqRight.seqRight] syntax:60 term:60 " *> " term:61 : term
+@[inherit_doc] infixl:55 " >>= " => Bind.bind
+@[inherit_doc HOrElse.hOrElse]
+syntax:20 term:21 " <|> " term:20 : term
+@[inherit_doc HAndThen.hAndThen]
+syntax:60 term:61 " >> " term:60 : term
+@[inherit_doc Seq.seq]
+syntax:60 term:60 " <*> " term:61 : term
+@[inherit_doc SeqLeft.seqLeft]
+syntax:60 term:60 " <* " term:61 : term
+@[inherit_doc SeqRight.seqRight]
+syntax:60 term:60 " *> " term:61 : term
 
-macro_rules | `($x <|> $y) => `(binop_lazy% HOrElse.hOrElse $x $y)
-macro_rules | `($x >> $y)  => `(binop_lazy% HAndThen.hAndThen $x $y)
-macro_rules | `($x <*> $y) => `(Seq.seq $x fun _ : Unit => $y)
-macro_rules | `($x <* $y)  => `(SeqLeft.seqLeft $x fun _ : Unit => $y)
-macro_rules | `($x *> $y)  => `(SeqRight.seqRight $x fun _ : Unit => $y)
+macro_rules
+  | `($x <|> $y) => `(binop_lazy% HOrElse.hOrElse $x $y)
+macro_rules
+  | `($x >> $y) => `(binop_lazy% HAndThen.hAndThen $x $y)
+macro_rules
+  | `($x <*> $y) => `(Seq.seq $x fun _ : Unit => $y)
+macro_rules
+  | `($x <* $y) => `(SeqLeft.seqLeft $x fun _ : Unit => $y)
+macro_rules
+  | `($x *> $y) => `(SeqRight.seqRight $x fun _ : Unit => $y)
 
 recommended_spelling "cons" for "::" in [List.cons, «term_::_»]
 recommended_spelling "map" for "<$>" in [Functor.map, «term_<$>_»]
@@ -467,9 +521,11 @@ syntax caseArg := binderIdent (ppSpace binderIdent)*
 end Parser.Tactic
 end Lean
 
-@[inherit_doc dite] syntax (name := termDepIfThenElse)
+@[inherit_doc dite]
+syntax (name := termDepIfThenElse)
   ppRealGroup(ppRealFill(ppIndent("if " Lean.binderIdent " : " term " then") ppSpace term)
-    ppDedent(ppSpace) ppRealFill("else " term)) : term
+    ppDedent(ppSpace) ppRealFill("else " term))
+  : term
 
 macro_rules
   | `(if $h:ident : $c then $t else $e) => do
@@ -482,9 +538,11 @@ macro_rules
 /-- use `left` for `t` and `right` for `e` -/
 recommended_spelling "dite" for "if h : c then t else e" in [dite, termDepIfThenElse]
 
-@[inherit_doc ite] syntax (name := termIfThenElse)
-  ppRealGroup(ppRealFill(ppIndent("if " term " then") ppSpace term)
-    ppDedent(ppSpace) ppRealFill("else " term)) : term
+@[inherit_doc ite]
+syntax (name := termIfThenElse)
+  ppRealGroup(ppRealFill(ppIndent("if " term " then") ppSpace term) ppDedent(ppSpace)
+    ppRealFill("else " term))
+  : term
 
 macro_rules
   | `(if $c then $t else $e) => do
@@ -506,15 +564,17 @@ If the pattern does not match, it returns `e` instead.
 -/
 syntax (name := termIfLet)
   ppRealGroup(ppRealFill(ppIndent("if " "let " term " := " term " then") ppSpace term)
-    ppDedent(ppSpace) ppRealFill("else " term)) : term
+    ppDedent(ppSpace) ppRealFill("else " term))
+  : term
 
 macro_rules
-  | `(if let $pat := $d then $t else $e) =>
-    `(match $d:term with | $pat => $t | _ => $e)
+  | `(if let $pat := $d then $t else $e) => `(match $d:term with | $pat => $t | _ => $e)
 
-@[inherit_doc cond] syntax (name := boolIfThenElse)
-  ppRealGroup(ppRealFill(ppIndent("bif " term " then") ppSpace term)
-    ppDedent(ppSpace) ppRealFill("else " term)) : term
+@[inherit_doc cond]
+syntax (name := boolIfThenElse)
+  ppRealGroup(ppRealFill(ppIndent("bif " term " then") ppSpace term) ppDedent(ppSpace)
+    ppRealFill("else " term))
+  : term
 
 macro_rules
   | `(bif $c then $t else $e) => `(cond $c $t $e)
@@ -553,7 +613,7 @@ syntax:min term " |> " term:min1 : term
 
 macro_rules
   | `($a |> $f $args*) => `($f $args* $a)
-  | `($a |> $f)        => `($f $a)
+  | `($a |> $f) => `($f $a)
 
 /--
 Alternative syntax for `<|`. `f $ x` means the same as `f x`,
@@ -580,11 +640,12 @@ macro_rules
     else
       `($f $a)
 
-@[inherit_doc Subtype] syntax "{ " withoutPosition(ident (" : " term)? " // " term) " }" : term
+@[inherit_doc Subtype]
+syntax "{ " withoutPosition(ident (" : " term)? " // " term) " }" : term
 
 macro_rules
   | `({ $x : $type // $p }) => ``(Subtype (fun ($x:ident : $type) => $p))
-  | `({ $x // $p })         => ``(Subtype (fun ($x:ident : _) => $p))
+  | `({ $x // $p }) => ``(Subtype (fun ($x:ident : _) => $p))
 
 recommended_spelling "subtype" for "{ x // p x }" in [Subtype, «term{_:_//_}»]
 
@@ -614,7 +675,9 @@ declare_syntax_cat rawStx
 instance : Coe Syntax (TSyntax `rawStx) where
   coe stx := ⟨stx⟩
 
-/-- `with_annotate_term stx e` annotates the lexical range of `stx : Syntax` with term info for `e`. -/
+/--
+`with_annotate_term stx e` annotates the lexical range of `stx : Syntax` with term info for `e`.
+-/
 scoped syntax (name := withAnnotateTerm) "with_annotate_term " rawStx ppSpace term : term
 
 /-- Normalize casts in an expression using the same method as the `norm_cast` tactic. -/
@@ -639,8 +702,10 @@ existing code. It may be removed in a future version of the library.
   different type. `(typeChanged := true)` is an equivalent syntax.
 * `@[deprecated (since := "2024-04-21")]` records when the deprecation was first applied.
 -/
-syntax (name := deprecated) "deprecated" (ppSpace ident)? (ppSpace str)?
-    (deprecatedTypeChanged)? (" (" &"since" " := " str ")")? : attr
+syntax (name := deprecated)
+  "deprecated" (ppSpace ident)? (ppSpace str)? (deprecatedTypeChanged)?
+  (" (" &"since" " := " str ")")?
+  : attr
 
 /--
 The attribute `@[deprecated_arg old new]` marks a named parameter as deprecated.
@@ -656,8 +721,9 @@ the parameter is treated as removed and using it produces an error.
 
 A warning is emitted if `(since := "...")` is omitted.
 -/
-syntax (name := deprecated_arg) "deprecated_arg" ppSpace ident (ppSpace ident)? (ppSpace str)?
-    (" (" &"since" " := " str ")")? : attr
+syntax (name := deprecated_arg)
+  "deprecated_arg" ppSpace ident (ppSpace ident)? (ppSpace str)? (" (" &"since" " := " str ")")?
+  : attr
 
 /--
 The attribute `@[suggest_for ..]` on a declaration suggests likely ways in which
@@ -731,9 +797,7 @@ This attribute marks a code action that triggers on specific commands.
 -/
 syntax (name := command_code_action) "command_code_action" (ppSpace ident)* : attr
 
-/--
-Builtin command code action. See `command_code_action`.
--/
+/-- Builtin command code action. See `command_code_action`. -/
 syntax (name := builtin_command_code_action) "builtin_command_code_action" (ppSpace ident)* : attr
 
 /--
@@ -852,7 +916,8 @@ syntax guardMsgsSubstring := &"substring" " := " (&"true" <|> &"false")
 
 set_option linter.missingDocs false in
 syntax guardMsgsSpecElt :=
-  guardMsgsFilter <|> guardMsgsWhitespace <|> guardMsgsOrdering <|> guardMsgsPositions <|> guardMsgsSubstring
+  guardMsgsFilter <|> guardMsgsWhitespace <|> guardMsgsOrdering <|> guardMsgsPositions
+    <|> guardMsgsSubstring
 
 set_option linter.missingDocs false in
 syntax guardMsgsSpec := "(" guardMsgsSpecElt,* ")"
@@ -952,29 +1017,27 @@ which would include `#guard_msgs` itself, and would cause duplicate and/or uncap
 The top-level command elaborator only runs the linters if `#guard_msgs` is not present.
 -/
 syntax (name := guardMsgsCmd)
-  (plainDocComment)? "#guard_msgs" (ppSpace guardMsgsSpec)? " in" ppLine command : command
+  (plainDocComment)? "#guard_msgs" (ppSpace guardMsgsSpec)? " in" ppLine command
+  : command
 
 /--
 `#guard_panic in cmd` runs `cmd` and succeeds if the command produces a panic message.
 This is useful for testing that a command panics without matching the exact (volatile) panic text.
 -/
-syntax (name := guardPanicCmd)
-  "#guard_panic" " in" ppLine command : command
+syntax (name := guardPanicCmd) "#guard_panic" " in" ppLine command : command
 
 /--
 Format and print the info trees for a given command.
 This is mostly useful for debugging info trees.
 -/
-syntax (name := infoTreesCmd)
-  "#info_trees" " in" ppLine command : command
+syntax (name := infoTreesCmd) "#info_trees" " in" ppLine command : command
 
 /--
 Specify a library suggestion engine.
 Note that Lean does not ship a default library suggestion engine,
 so this is only useful in conjunction with a downstream package which provides one.
 -/
-syntax (name := setLibrarySuggestionsCmd)
-  "set_library_suggestions" term : command
+syntax (name := setLibrarySuggestionsCmd) "set_library_suggestions" term : command
 
 namespace Parser
 
@@ -989,16 +1052,12 @@ syntax (name := checkTactic) "#check_tactic " term "~>" term "by" tactic : comma
 `#check_tactic_failure t by tac` runs the tactic `tac`
 on a goal with `t` and verifies it fails.
 -/
-syntax  (name := checkTacticFailure) "#check_tactic_failure " term "by" tactic : command
+syntax (name := checkTacticFailure) "#check_tactic_failure " term "by" tactic : command
 
-/--
-`#check_simp t ~> r` checks `simp` reduces `t` to `r`.
--/
+/-- `#check_simp t ~> r` checks `simp` reduces `t` to `r`. -/
 syntax (name := checkSimp) "#check_simp " term "~>" term : command
 
-/--
-`#check_simp t !~>` checks `simp` fails on reducing `t`.
--/
+/-- `#check_simp t !~>` checks `simp` fails on reducing `t`. -/
 syntax (name := checkSimpFailure) "#check_simp " term "!~>" : command
 
 /--
