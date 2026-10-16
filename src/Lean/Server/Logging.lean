@@ -25,11 +25,11 @@ public def LogConfig.ofLspLogConfig (lspCfg? : Option Lsp.LogConfig) : IO LogCon
   let defaultLogFile : System.FilePath := System.FilePath.join "." logFileName
   let some lspCfg := lspCfg?
     | return {
-      isEnabled := false
-      logFile := defaultLogFile
-      allowedMethods? := none
-      disallowedMethods? := none
-    }
+        isEnabled := false
+        logFile := defaultLogFile
+        allowedMethods? := none
+        disallowedMethods? := none
+      }
   return {
     isEnabled := true
     logFile := lspCfg.logDir?.map (System.FilePath.join · logFileName) |>.getD defaultLogFile
@@ -43,14 +43,11 @@ public inductive MessageMethod where
   | request (method : String)
   | rpcRequest (method : String)
   | notification (method : String)
-  deriving Inhabited
+deriving Inhabited
 
 def MessageMethod.all : MessageMethod → Array String
-  | .request method
-  | .notification method =>
-    #[method]
-  | .rpcRequest method =>
-    #["$/lean/rpc/call", method]
+  | .request method | .notification method => #[method]
+  | .rpcRequest method => #["$/lean/rpc/call", method]
 
 public def messageMethod? : JsonRpc.Message → Option MessageMethod
   | .request _ method params? => do
@@ -70,10 +67,11 @@ def messageId? : JsonRpc.Message → Option JsonRpc.RequestID
   | .responseError id .. => some id
   | _ => none
 
-def isMsgAllowed (cfg : LogConfig)
-    (pending : Std.HashMap JsonRpc.RequestID MessageMethod)
-    (msg : JsonRpc.Message) : Bool := Id.run do
-  if ! cfg.isEnabled then
+def isMsgAllowed
+    (cfg : LogConfig) (pending : Std.HashMap JsonRpc.RequestID MessageMethod)
+    (msg : JsonRpc.Message)
+    : Bool := Id.run do
+  if !cfg.isEnabled then
     return false
   let some method := method?
     | return false
@@ -86,8 +84,7 @@ def isMsgAllowed (cfg : LogConfig)
       return false
   return true
 where
-  method? : Option MessageMethod :=
-    messageMethod? msg <|> (do pending.get? (← messageId? msg))
+  method? : Option MessageMethod := messageMethod? msg <|> (do pending.get? (← messageId? msg))
 
 local instance : ToJson Std.Time.DateTime where
   toJson dt := dt.toISO8601String
@@ -102,10 +99,12 @@ structure LogEntry where
   direction : JsonRpc.MessageDirection
   kind : JsonRpc.MessageKind
   msg : JsonRpc.Message
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
-public def writeLogEntry (cfg : LogConfig) (pending : Std.HashMap JsonRpc.RequestID MessageMethod)
-    (log : IO.FS.Handle) (direction : JsonRpc.MessageDirection) (msg : JsonRpc.Message) : IO Unit := do
+public def writeLogEntry
+    (cfg : LogConfig) (pending : Std.HashMap JsonRpc.RequestID MessageMethod) (log : IO.FS.Handle)
+    (direction : JsonRpc.MessageDirection) (msg : JsonRpc.Message)
+    : IO Unit := do
   if ! isMsgAllowed cfg pending msg then
     return
   let entry : LogEntry := {

@@ -32,12 +32,15 @@ Reify an `Expr` that is a proof of some boolean structure on top of predicates a
 public partial def of (hyp : Normalize.Hyp) : LemmaM (Option SatAtBVLogical) := do
   match_expr hyp.type with
   | Eq α lhsExpr rhsExpr =>
-    let_expr Bool := α | return none
-    let_expr Bool.true := rhsExpr | return none
+    let_expr Bool := α
+      | return none
+    let_expr Bool.true := rhsExpr
+      | return none
     -- We now know that `h : lhsExpr = true`
     -- We attempt to reify lhsExpr into a BVLogicalExpr, then prove that evaluating
     -- this BVLogicalExpr must eval to true due to `h`
-    let some bvLogical ← ReifiedBVLogical.of lhsExpr | return none
+    let some bvLogical ← ReifiedBVLogical.of lhsExpr
+      | return none
     let proof := do
       let evalLogic ← ReifiedBVLogical.mkEvalExpr bvLogical.expr
       -- this is evalLogic = lhsExpr
@@ -46,22 +49,18 @@ public partial def of (hyp : Normalize.Hyp) : LemmaM (Option SatAtBVLogical) := 
       -- we prove evalLogic = true by evalLogic = lhsExpr = true
       return ReifiedBVLogical.mkTrans evalLogic lhsExpr (mkConst ``Bool.true) evalProof hyp.value
     return some ⟨bvLogical.bvExpr, proof, bvLogical.expr⟩
-  | _ => return none
+  | _ =>
+    return none
 
-/--
-Logical conjunction of two `ReifiedBVLogical`.
--/
+/-- Logical conjunction of two `ReifiedBVLogical`. -/
 public def and (x y : SatAtBVLogical) : ReifyM SatAtBVLogical := do
   let bvExpr := .gate .and x.bvExpr y.bvExpr
-  let expr ← Sym.share <| mkApp4 (mkConst ``BoolExpr.gate) (mkConst ``BVPred) (mkConst ``Gate.and) x.expr y.expr
+  let expr ←
+    Sym.share <|
+      mkApp4 (mkConst ``BoolExpr.gate) (mkConst ``BVPred) (mkConst ``Gate.and) x.expr y.expr
   let proof := do
-    return mkApp5
-      (mkConst ``BVLogicalExpr.sat_and)
-      x.expr
-      y.expr
-      (← ReifyM.atomsAssignmentExpr)
-      (← x.satAtAtoms)
-      (← y.satAtAtoms)
+    return mkApp5 (mkConst ``BVLogicalExpr.sat_and) x.expr y.expr (← ReifyM.atomsAssignmentExpr)
+      (← x.satAtAtoms) (← y.satAtAtoms)
   return ⟨bvExpr, proof, expr⟩
 
 /-- Given a proof that `x.expr.Unsat`, produce a proof of `False`. -/
@@ -71,12 +70,8 @@ public def proveFalse (x : SatAtBVLogical) (h : Expr) : ReifyM Expr := do
   else
     let atomsList ← ReifyM.atomsAssignmentExpr
     let evalExpr ← Sym.share <| mkApp2 (mkConst ``BVLogicalExpr.eval) atomsList x.expr
-    return mkApp3
-      (mkConst ``Std.Tactic.BVDecide.Reflect.Bool.false_of_eq_true_of_eq_false)
-      evalExpr
-      (← x.satAtAtoms)
-      (.app h atomsList)
-
+    return mkApp3 (mkConst ``Std.Tactic.BVDecide.Reflect.Bool.false_of_eq_true_of_eq_false) evalExpr
+      (← x.satAtAtoms) (.app h atomsList)
 
 end SatAtBVLogical
 

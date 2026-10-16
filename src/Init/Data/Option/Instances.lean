@@ -15,10 +15,14 @@ universe u v
 namespace Option
 
 theorem eq_of_eq_some {α : Type u} : ∀ {x y : Option α}, (∀ z, x = some z ↔ y = some z) → x = y
-  | none,   none,   _ => rfl
-  | none,   some z, h => Option.noConfusion rfl (heq_of_eq ((h z).2 rfl))
-  | some z, none,   h => Option.noConfusion rfl (heq_of_eq ((h z).1 rfl))
-  | some _, some w, h => Option.noConfusion rfl (heq_of_eq ((h w).2 rfl)) (fun h => congrArg some (eq_of_heq h))
+  | none, none, _ =>
+    rfl
+  | none, some z, h =>
+    Option.noConfusion rfl (heq_of_eq ((h z).2 rfl))
+  | some z, none, h =>
+    Option.noConfusion rfl (heq_of_eq ((h z).1 rfl))
+  | some _, some w, h =>
+    Option.noConfusion rfl (heq_of_eq ((h w).2 rfl)) (fun h => congrArg some (eq_of_heq h))
 
 theorem eq_none_of_isNone {α : Type u} : ∀ {o : Option α}, o.isNone → o = none
   | none, _ => rfl
@@ -30,20 +34,24 @@ instance : Membership α (Option α) := ⟨fun b a => b = some a⟩
 instance [DecidableEq α] (j : α) (o : Option α) : Decidable (j ∈ o) :=
   inferInstanceAs <| Decidable (o = some j)
 
-@[simp] theorem isNone_iff_eq_none {o : Option α} : o.isNone ↔ o = none :=
+@[simp]
+theorem isNone_iff_eq_none {o : Option α} : o.isNone ↔ o = none :=
   ⟨Option.eq_none_of_isNone, fun e => e.symm ▸ rfl⟩
 
 theorem some_inj {a b : α} : some a = some b ↔ a = b := by simp; rfl
 
-instance decidableForallMem {p : α → Prop} [DecidablePred p] :
-    ∀ o : Option α, Decidable (∀ a, a ∈ o → p a)
-  | none => isTrue nofun
+instance decidableForallMem {p : α → Prop} [DecidablePred p]
+    : ∀ o : Option α, Decidable (∀ a, a ∈ o → p a)
+  | none =>
+    isTrue nofun
   | some a =>
-    if h : p a then isTrue fun _ e => some_inj.1 e ▸ h
-    else isFalse <| mt (· _ rfl) h
+    if h : p a then
+      isTrue fun _ e => some_inj.1 e ▸ h
+    else
+      isFalse <| mt (· _ rfl) h
 
-instance decidableExistsMem {p : α → Prop} [DecidablePred p] :
-    ∀ o : Option α, Decidable (Exists fun a => a ∈ o ∧ p a)
+instance decidableExistsMem {p : α → Prop} [DecidablePred p]
+    : ∀ o : Option α, Decidable (Exists fun a => a ∈ o ∧ p a)
   | none => isFalse nofun
   | some a => if h : p a then isTrue ⟨_, rfl, h⟩ else isFalse fun ⟨_, ⟨rfl, hn⟩⟩ => h hn
 
@@ -76,8 +84,10 @@ none
 -/
 @[inline, expose]
 def pbind : (o : Option α) → (f : (a : α) → o = some a → Option β) → Option β
-  | none, _ => none
-  | some a, f => f a rfl
+  | none, _ =>
+    none
+  | some a, f =>
+    f a rfl
 
 /--
 Given a function from the elements of `α` that satisfy `p` to `β` and a proof that an optional value
@@ -101,11 +111,12 @@ some ⟨3, ⋯⟩
 none
 ```
 -/
-@[inline, expose] def pmap {p : α → Prop}
-    (f : ∀ a : α, p a → β) :
-    (o : Option α) → (∀ a, o = some a → p a) → Option β
-  | none, _ => none
-  | some a, H => some <| f a (H a rfl)
+@[inline, expose]
+def pmap {p : α → Prop} (f : ∀ a : α, p a → β) : (o : Option α) → (∀ a, o = some a → p a) → Option β
+  | none, _ =>
+    none
+  | some a, H =>
+    some <| f a (H a rfl)
 
 /--
 Given an optional value and a function that can be applied when the value is `some`, returns the
@@ -134,14 +145,18 @@ some ⟨3, ⋯⟩
 none
 ```
 -/
-@[inline, expose, implicit_reducible] def pelim (o : Option α) (b : β) (f : (a : α) → o = some a → β) : β :=
+@[inline, expose, implicit_reducible]
+def pelim (o : Option α) (b : β) (f : (a : α) → o = some a → β) : β :=
   match o with
   | none => b
   | some a => f a rfl
 
-/-- Partial filter. If `o : Option α`, `p : (a : α) → o = some a → Bool`, then `o.pfilter p` is
-the same as `o.filter p` but `p` is passed the proof that `o = some a`. -/
-@[inline, expose, implicit_reducible] def pfilter (o : Option α) (p : (a : α) → o = some a → Bool) : Option α :=
+/--
+Partial filter. If `o : Option α`, `p : (a : α) → o = some a → Bool`, then `o.pfilter p` is
+the same as `o.filter p` but `p` is passed the proof that `o = some a`.
+-/
+@[inline, expose, implicit_reducible]
+def pfilter (o : Option α) (p : (a : α) → o = some a → Bool) : Option α :=
   match o with
   | none => none
   | some a => bif p a rfl then o else none
@@ -164,17 +179,20 @@ Examples:
 ((), 0)
 ```
 -/
-@[inline, expose] protected def forM [Pure m] : Option α → (α → m PUnit) → m PUnit
-  | none  , _ => pure ⟨⟩
-  | some a, f => f a
+@[inline, expose]
+protected def forM [Pure m] : Option α → (α → m PUnit) → m PUnit
+  | none, _ =>
+    pure ⟨⟩
+  | some a, f =>
+    f a
 
-instance [Monad m] : ForM m (Option α) α :=
-  ⟨Option.forM⟩
+instance [Monad m] : ForM m (Option α) α := ⟨Option.forM⟩
 
 instance [Monad m] : ForIn' m (Option α) α inferInstance where
   forIn' x init f :=
     match x with
-    | none => return init
+    | none =>
+      return init
     | some a => do
       match ← f a rfl init with
       | .done r | .yield r => return r

@@ -56,10 +56,7 @@ private def Consumer.resolve (c : Consumer) (x : Except IO.Error (Option Chunk))
 
 private structure Producer where
   chunk : Chunk
-
-  /--
-  Resolved with `true` when consumed by a receiver, `false` when the channel closes.
-  -/
+  /-- Resolved with `true` when consumed by a receiver, `false` when the channel closes. -/
   done : IO.Promise Bool
 
 open Async in
@@ -71,37 +68,21 @@ private def resolveInterestWaiter (waiter : Waiter Bool) (x : Bool) : BaseIO Boo
   waiter.race lose win
 
 private structure State where
-  /--
-  A single blocked producer waiting for a receiver.
-  -/
+  /-- A single blocked producer waiting for a receiver. -/
   pendingProducer : Option Producer
-
-  /--
-  A single blocked consumer waiting for a producer.
-  -/
+  /-- A single blocked consumer waiting for a producer. -/
   pendingConsumer : Option Consumer
-
-  /--
-  A waiter for `Stream.interestSelector`.
-  -/
+  /-- A waiter for `Stream.interestSelector`. -/
   interestWaiter : Option (Async.Waiter Bool)
-
-  /--
-  Whether the channel is closed.
-  -/
+  /-- Whether the channel is closed. -/
   closed : Bool
-
-  /--
-  Known size of the stream if available.
-  -/
+  /-- Known size of the stream if available. -/
   knownSize : Option Body.Length
-
   /--
   Buffered partial chunk data accumulated from `Stream.send ... (incomplete := true)`.
   These partial pieces are collapsed and emitted as a single chunk on the next complete send.
   -/
   pendingIncompleteChunk : Option Chunk := none
-
   /--
   Terminal error recorded when the producer could not deliver the full body
   (e.g. connection closed mid-stream with a Content-Length underflow). Surfaced
@@ -112,37 +93,35 @@ deriving Nonempty
 
 end Channel
 
-/--
-A zero-buffer rendezvous body channel that supports both sending and receiving chunks.
--/
+/-- A zero-buffer rendezvous body channel that supports both sending and receiving chunks. -/
 structure Stream where
   private mk ::
   private state : Mutex Channel.State
 deriving Nonempty, TypeName
 
-/--
-Creates a rendezvous body stream.
--/
+/-- Creates a rendezvous body stream. -/
 def mkStream : Async Stream := do
-  let state ← Mutex.new {
-    pendingProducer := none
-    pendingConsumer := none
-    interestWaiter := none
-    closed := false
-    knownSize := none
-    closeError := none
-  }
+  let state ←
+    Mutex.new {
+      pendingProducer := none
+      pendingConsumer := none
+      interestWaiter := none
+      closed := false
+      knownSize := none
+      closeError := none
+    }
   return { state }
 
 namespace Channel
 
-private def decreaseKnownSize (knownSize : Option Body.Length) (chunk : Chunk) : Option Body.Length :=
+private def decreaseKnownSize (knownSize : Option Body.Length) (chunk : Chunk)
+    : Option Body.Length :=
   match knownSize with
   | some (.fixed res) => some (Body.Length.fixed (res - chunk.data.size))
   | _ => knownSize
 
-private def pruneFinishedWaiters [Monad m] [MonadLiftT (ST IO.RealWorld) m] :
-    AtomicT State m Unit := do
+private def pruneFinishedWaiters [Monad m] [MonadLiftT (ST IO.RealWorld) m]
+    : AtomicT State m Unit := do
   let st ← get
 
   let pendingConsumer ←
@@ -167,25 +146,23 @@ private def pruneFinishedWaiters [Monad m] [MonadLiftT (ST IO.RealWorld) m] :
 
   set { st with pendingConsumer, interestWaiter }
 
-private def signalInterest [Monad m] [MonadLiftT (ST IO.RealWorld) m] [MonadLiftT BaseIO m] :
-    AtomicT State m Unit := do
+private def signalInterest [Monad m] [MonadLiftT (ST IO.RealWorld) m] [MonadLiftT BaseIO m]
+    : AtomicT State m Unit := do
   let st ← get
   if let some waiter := st.interestWaiter then
     discard <| resolveInterestWaiter waiter true
     set { st with interestWaiter := none }
 
-private def recvReady' [Monad m] [MonadLiftT (ST IO.RealWorld) m] :
-    AtomicT State m Bool := do
+private def recvReady' [Monad m] [MonadLiftT (ST IO.RealWorld) m] : AtomicT State m Bool := do
   let st ← get
   return st.pendingProducer.isSome || st.closed
 
-private def hasInterest' [Monad m] [MonadLiftT (ST IO.RealWorld) m] :
-    AtomicT State m Bool := do
+private def hasInterest' [Monad m] [MonadLiftT (ST IO.RealWorld) m] : AtomicT State m Bool := do
   let st ← get
   return st.pendingConsumer.isSome
 
-private def tryRecv' [Monad m] [MonadLiftT (ST IO.RealWorld) m] [MonadLiftT BaseIO m] :
-    AtomicT State m (Option Chunk) := do
+private def tryRecv' [Monad m] [MonadLiftT (ST IO.RealWorld) m] [MonadLiftT BaseIO m]
+    : AtomicT State m (Option Chunk) := do
   let st ← get
   if let some producer := st.pendingProducer then
     set {
@@ -198,8 +175,8 @@ private def tryRecv' [Monad m] [MonadLiftT (ST IO.RealWorld) m] [MonadLiftT Base
   else
     return none
 
-private def recvReadyResult' [Monad m] [MonadLiftT (ST IO.RealWorld) m] [MonadLiftT BaseIO m] :
-    AtomicT State m (Except IO.Error (Option Chunk)) := do
+private def recvReadyResult' [Monad m] [MonadLiftT (ST IO.RealWorld) m] [MonadLiftT BaseIO m]
+    : AtomicT State m (Except IO.Error (Option Chunk)) := do
   if let some chunk ← tryRecv' then
     return .ok (some chunk)
 
@@ -209,8 +186,8 @@ private def recvReadyResult' [Monad m] [MonadLiftT (ST IO.RealWorld) m] [MonadLi
   else
     return .ok none
 
-private def close' [Monad m] [MonadLiftT (ST IO.RealWorld) m] [MonadLiftT BaseIO m] :
-    AtomicT State m Unit := do
+private def close' [Monad m] [MonadLiftT (ST IO.RealWorld) m] [MonadLiftT BaseIO m]
+    : AtomicT State m Unit := do
   let st ← get
   if st.closed then
     return ()
@@ -299,15 +276,10 @@ Receives a chunk from the channel. Blocks until a producer sends one. Returns `n
 is closed and no producer is waiting. If the channel was closed with a terminal error
 (via `closeWithError`) after all buffered chunks have been consumed, that error is thrown instead of EOF.
 -/
-def recv (stream : Stream) : Async (Option Chunk) := do
-  Async.ofAsyncTask (← recv' stream)
+def recv (stream : Stream) : Async (Option Chunk) := do Async.ofAsyncTask (← recv' stream)
 
-/--
-Closes the channel.
--/
-def close (stream : Stream) : Async Unit :=
-  stream.state.atomically do
-    Channel.close'
+/-- Closes the channel. -/
+def close (stream : Stream) : Async Unit := stream.state.atomically do Channel.close'
 
 /--
 Closes the channel only if no consumer is currently registered (i.e., the stream
@@ -332,40 +304,31 @@ This function does not overwrite an existing error.
 def closeWithError (stream : Stream) (err : IO.Error) : Async Unit :=
   stream.state.atomically do
     modify fun st =>
-      if st.closeError.isNone then { st with closeError := some err }
-      else st
+      if st.closeError.isNone then {
+        st with
+        closeError := some err
+      }
+      else
+        st
 
     Channel.close'
 
-/--
-Checks whether the channel is closed.
--/
+/-- Checks whether the channel is closed. -/
 @[always_inline, inline]
-def isClosed (stream : Stream) : Async Bool :=
-  stream.state.atomically do
-    return (← get).closed
+def isClosed (stream : Stream) : Async Bool := stream.state.atomically do return (← get).closed
 
-/--
-Gets the known size if available.
--/
+/-- Gets the known size if available. -/
 @[always_inline, inline]
 def getKnownSize (stream : Stream) : Async (Option Body.Length) :=
-  stream.state.atomically do
-    return (← get).knownSize
+  stream.state.atomically do return (← get).knownSize
 
-/--
-Sets known size metadata.
--/
+/-- Sets known size metadata. -/
 @[always_inline, inline]
 def setKnownSize (stream : Stream) (size : Option Body.Length) : Async Unit :=
-  stream.state.atomically do
-    modify fun st => { st with knownSize := size }
+  stream.state.atomically do modify fun st => { st with knownSize := size }
 
 open Async in
-
-/--
-Creates a selector that resolves when a producer is waiting (or the channel closes).
--/
+/-- Creates a selector that resolves when a producer is waiting (or the channel closes). -/
 def recvSelector (stream : Stream) : Selector (Option Chunk) where
   tryFn := do
     stream.state.atomically do
@@ -376,14 +339,12 @@ def recvSelector (stream : Stream) : Selector (Option Chunk) where
         | .error err => throw err
       else
         return none
-
   registerFn waiter := do
     stream.state.atomically do
       Channel.pruneFinishedWaiters
       if ← Channel.recvReady' then
         let lose := return ()
-        let win promise := do
-          promise.resolve (← Channel.recvReadyResult')
+        let win promise := do promise.resolve (← Channel.recvReadyResult')
         waiter.race lose win
       else
         let st ← get
@@ -392,36 +353,29 @@ def recvSelector (stream : Stream) : Selector (Option Chunk) where
 
         set { st with pendingConsumer := some (.select waiter) }
         Channel.signalInterest
+  unregisterFn := do stream.state.atomically do Channel.pruneFinishedWaiters
 
-  unregisterFn := do
-    stream.state.atomically do
-      Channel.pruneFinishedWaiters
-
-/--
-Iterates over chunks until the channel closes.
--/
+/-- Iterates over chunks until the channel closes. -/
 @[inline]
-protected def forIn
-    {β : Type} (stream : Stream) (acc : β)
-    (step : Chunk → β → Async (ForInStep β)) : Async β :=
+protected def forIn {β : Type} (stream : Stream) (acc : β) (step : Chunk → β → Async (ForInStep β))
+    : Async β :=
   EAsync.forIn acc fun _ acc => do
     if let some chunk ← stream.recv then
       step chunk acc
     else
       return .done acc
 
-/--
-Context-aware iteration over chunks until the channel closes.
--/
+/-- Context-aware iteration over chunks until the channel closes. -/
 @[inline]
 protected def forIn'
-    {β : Type} (stream : Stream) (acc : β)
-    (step : Chunk → β → ContextAsync (ForInStep β)) : ContextAsync β :=
+    {β : Type} (stream : Stream) (acc : β) (step : Chunk → β → ContextAsync (ForInStep β))
+    : ContextAsync β :=
   ContextAsync.forIn acc fun _ acc => do
-    let data ← Selectable.one #[
-      .case stream.recvSelector pure,
-      .case (← ContextAsync.doneSelector) (fun _ => pure none),
-    ]
+    let data ←
+      Selectable.one #[
+        .case stream.recvSelector pure,
+        .case (← ContextAsync.doneSelector) (fun _ => pure none),
+      ]
 
     if let some chunk := data then
       step chunk acc
@@ -439,8 +393,7 @@ class NextChunk (m : Type → Type) where
   nextChunk : Stream → m (Option Chunk)
 
 instance : NextChunk Async where
-  nextChunk stream :=
-    Stream.recv stream
+  nextChunk stream := Stream.recv stream
 
 instance : NextChunk ContextAsync where
   nextChunk stream := do
@@ -449,7 +402,6 @@ instance : NextChunk ContextAsync where
       .case (← ContextAsync.doneSelector) (fun _ => pure none),
     ]
 
-
 /--
 Reads all remaining chunks and decodes them into `α`.
 
@@ -457,15 +409,14 @@ Works in both `Async` (reads until EOF, no cancellation) and `ContextAsync` (als
 context is cancelled).
 -/
 partial def readAll
-    [FromByteArray α]
-    [Monad m] [MonadExceptOf IO.Error m] [NextChunk m]
+    [FromByteArray α] [Monad m] [MonadExceptOf IO.Error m] [NextChunk m]
     (stream : Stream)
-    (maximumSize : Option UInt64 := none) :
-    m α := do
-
+    (maximumSize : Option UInt64 := none)
+    : m α := do
   let rec loop (result : ByteArray) : m ByteArray := do
     match ← NextChunk.nextChunk stream with
-    | none => return result
+    | none =>
+      return result
     | some chunk =>
       let result := result ++ chunk.data
       if let some max := maximumSize then
@@ -491,11 +442,12 @@ context is cancelled).
 partial def drain
     [Monad m] [NextChunk m]
     (stream : Stream)
-    (drainLimit : Option UInt64 := none)
-    (closeStream : m Unit := pure ()) : m Unit := do
+    (drainLimit : Option UInt64 := none) (closeStream : m Unit := pure ())
+    : m Unit := do
   let rec loop (consumed : UInt64) : m Unit := do
     match ← NextChunk.nextChunk stream with
-    | none => return ()
+    | none =>
+      return ()
     | some chunk =>
       let consumed := consumed + chunk.data.size.toUInt64
       if let some limit := drainLimit then
@@ -505,11 +457,8 @@ partial def drain
       loop consumed
   loop 0
 
-private def collapseForSend
-    (stream : Stream)
-    (chunk : Chunk)
-    (incomplete : Bool) : BaseIO (Except IO.Error (Option Chunk)) := do
-
+private def collapseForSend (stream : Stream) (chunk : Chunk) (incomplete : Bool)
+    : BaseIO (Except IO.Error (Option Chunk)) := do
   stream.state.atomically do
     Channel.pruneFinishedWaiters
     let st ← get
@@ -517,13 +466,14 @@ private def collapseForSend
     if st.closed then
       return .error (.userError "channel closed")
 
-    let merged := match st.pendingIncompleteChunk with
-      | some pending =>
-        {
-          data := pending.data ++ chunk.data
-          extensions := if pending.extensions.isEmpty then chunk.extensions else pending.extensions
-        }
-      | none => chunk
+    let merged :=
+      match st.pendingIncompleteChunk with
+      | some pending => {
+        data := pending.data ++ chunk.data
+        extensions := if pending.extensions.isEmpty then chunk.extensions else pending.extensions
+      }
+      | none =>
+        chunk
 
     if incomplete then
       set { st with pendingIncompleteChunk := some merged }
@@ -538,31 +488,32 @@ installs the chunk as a pending producer and awaits acknowledgement from the rec
 -/
 private partial def send' (stream : Stream) (chunk : Chunk) : Async Unit := do
   let done ← IO.Promise.new
-  let result : Except IO.Error (Option Bool) ← stream.state.atomically do
-    Channel.pruneFinishedWaiters
-    let st ← get
+  let result : Except IO.Error (Option Bool) ←
+    stream.state.atomically do
+      Channel.pruneFinishedWaiters
+      let st ← get
 
-    if st.closed then
-      return .error (IO.Error.userError "channel closed")
+      if st.closed then
+        return .error (IO.Error.userError "channel closed")
 
-    if let some consumer := st.pendingConsumer then
-      let success ← consumer.resolve (.ok (some chunk))
+      if let some consumer := st.pendingConsumer then
+        let success ← consumer.resolve (.ok (some chunk))
 
-      if success then
-        set {
-          st with
-          pendingConsumer := none
-          knownSize := Channel.decreaseKnownSize st.knownSize chunk
-        }
-        return .ok (some true)
+        if success then
+          set {
+            st with
+            pendingConsumer := none
+            knownSize := Channel.decreaseKnownSize st.knownSize chunk
+          }
+          return .ok (some true)
+        else
+          set { st with pendingConsumer := none }
+          return .ok (some false)
+      else if st.pendingProducer.isSome then
+        return .error (IO.Error.userError "only one blocked producer is allowed")
       else
-        set { st with pendingConsumer := none }
-        return .ok (some false)
-    else if st.pendingProducer.isSome then
-      return .error (IO.Error.userError "only one blocked producer is allowed")
-    else
-      set { st with pendingProducer := some { chunk, done } }
-      return .ok none
+        set { st with pendingProducer := some { chunk, done } }
+        return .ok none
 
   match result with
   | .error err =>
@@ -587,17 +538,17 @@ single merged chunk is sent.
 -/
 def send (stream : Stream) (chunk : Chunk) (incomplete : Bool := false) : Async Unit := do
   match (← collapseForSend stream chunk incomplete) with
-  | .error err => throw err
-  | .ok none => pure ()
+  | .error err =>
+    throw err
+  | .ok none =>
+    pure ()
   | .ok (some toSend) =>
     if toSend.data.isEmpty ∧ toSend.extensions.isEmpty then
       return ()
 
     send' stream toSend
 
-/--
-Returns `true` when a consumer is currently blocked waiting for data.
--/
+/-- Returns `true` when a consumer is currently blocked waiting for data. -/
 def hasInterest (stream : Stream) : Async Bool :=
   stream.state.atomically do
     Channel.pruneFinishedWaiters
@@ -619,7 +570,6 @@ def interestSelector (stream : Stream) : Selector Bool where
         return some false
       else
         return none
-
   registerFn waiter := do
     stream.state.atomically do
       Channel.pruneFinishedWaiters
@@ -627,22 +577,17 @@ def interestSelector (stream : Stream) : Selector Bool where
 
       if st.pendingConsumer.isSome then
         let lose := return ()
-        let win promise := do
-          promise.resolve (.ok true)
+        let win promise := do promise.resolve (.ok true)
         waiter.race lose win
       else if st.closed then
         let lose := return ()
-        let win promise := do
-          promise.resolve (.ok false)
+        let win promise := do promise.resolve (.ok false)
         waiter.race lose win
       else if st.interestWaiter.isSome then
         throw (.userError "only one blocked interest selector is allowed")
       else
         set { st with interestWaiter := some waiter }
-
-  unregisterFn := do
-    stream.state.atomically do
-      Channel.pruneFinishedWaiters
+  unregisterFn := do stream.state.atomically do Channel.pruneFinishedWaiters
 
 end Stream
 
@@ -665,9 +610,7 @@ def stream (gen : Stream → Async Unit) : Async Stream := do
 
   return s
 
-/--
-Creates a body from a fixed byte array.
--/
+/-- Creates a body from a fixed byte array. -/
 def fromBytes (content : ByteArray) : Async Stream := do
   stream fun s => do
     s.setKnownSize (some (.fixed content.size))
@@ -722,13 +665,8 @@ namespace Request.Builder
 
 open Async
 
-/--
-Builds a request with a streaming body generator.
--/
-def stream
-    (builder : Builder)
-    (gen : Body.Stream → Async Unit) :
-    Async (Request Body.Stream) := do
+/-- Builds a request with a streaming body generator. -/
+def stream (builder : Builder) (gen : Body.Stream → Async Unit) : Async (Request Body.Stream) := do
   let s ← Body.stream gen
 
   return Request.Builder.body builder s
@@ -738,13 +676,8 @@ end Request.Builder
 namespace Response.Builder
 open Async
 
-/--
-Builds a response with a streaming body generator.
--/
-def stream
-    (builder : Builder)
-    (gen : Body.Stream → Async Unit) :
-    Async (Response Body.Stream) := do
+/-- Builds a response with a streaming body generator. -/
+def stream (builder : Builder) (gen : Body.Stream → Async Unit) : Async (Response Body.Stream) := do
   let s ← Body.stream gen
 
   return Response.Builder.body builder s

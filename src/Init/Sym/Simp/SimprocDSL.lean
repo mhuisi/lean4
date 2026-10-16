@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Tactics
 public section
@@ -51,12 +52,16 @@ syntax (name := ground) "ground" : sym_simproc
 /-- Simplify telescope binders but not the final body. -/
 syntax (name := telescope) "telescope" : sym_simproc
 
-/-- Simplify control-flow expressions (`if-then-else`, `match`, `cond`, `dite`).
-Visits only conditions and discriminants. Intended as a `pre` simproc. -/
+/--
+Simplify control-flow expressions (`if-then-else`, `match`, `cond`, `dite`).
+Visits only conditions and discriminants. Intended as a `pre` simproc.
+-/
 syntax (name := control) "control" : sym_simproc
 
-/-- Simplify arrow telescopes (`p₁ → p₂ → ... → q`) without entering binders.
-Simplifies each `pᵢ` and `q` individually. Intended as a `pre` simproc. -/
+/--
+Simplify arrow telescopes (`p₁ → p₂ → ... → q`) without entering binders.
+Simplifies each `pᵢ` and `q` individually. Intended as a `pre` simproc.
+-/
 syntax (name := arrowTelescope) "arrow_telescope" : sym_simproc
 
 /-- Rewrite using a named theorem set. Optionally specify a discharger for conditional rewrites. -/
@@ -65,9 +70,11 @@ syntax (name := rewriteSet) "rewrite" ident (" with " sym_discharger)? : sym_sim
 /-- Rewrite using inline theorems. Optionally specify a discharger for conditional rewrites. -/
 syntax (name := rewriteInline) "rewrite" " [" ident,* "]" (" with " sym_discharger)? : sym_simproc
 
-/-- Normalize ring and semiring terms into polynomial normal form (`Sym.Arith.normalize?`).
+/--
+Normalize ring and semiring terms into polynomial normal form (`Sym.Arith.normalize?`).
 Simplifies the atoms recursively. Intended as a `pre` simproc. The optional discharger proves
-the side conditions `x ≠ 0` under which `x * x⁻¹` is cancelled in a field. -/
+the side conditions `x ≠ 0` under which `x * x⁻¹` is cancelled in a field.
+-/
 syntax (name := arith) "arith" (" with " sym_discharger)? : sym_simproc
 
 /-- Recursive simplification (calls the full simplifier). -/
@@ -156,7 +163,6 @@ register_sym_simp myVariant where
   maxSteps := 50000
 ```
 -/
-syntax (name := registerSymSimp) "register_sym_simp" ident "where"
-  (colGt sym_simp_field)* : command
+syntax (name := registerSymSimp) "register_sym_simp" ident "where" (colGt sym_simp_field)* : command
 
 end Lean.Parser.Command

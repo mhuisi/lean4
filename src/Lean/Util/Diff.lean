@@ -21,9 +21,7 @@ import Init.Omega
 public section
 
 namespace Lean.Diff
-/--
-An action in an edit script to transform one source sequence into a target sequence.
--/
+/-- An action in an edit script to transform one source sequence into a target sequence. -/
 inductive Action where
   /-- Insert the item into the source -/
   | insert
@@ -67,10 +65,10 @@ structure Histogram.Entry (α : Type u) (lsize rsize : Nat) where
   /-- Invariant: the count is non-zero iff there is a saved index -/
   rightWF : rightCount = 0 ↔ rightIndex = none
 
-/-- A histogram for arrays maps each element to a count and, if applicable, an index.-/
-@[expose] def Histogram (α : Type u) (lsize rsize : Nat) [BEq α] [Hashable α] :=
+/-- A histogram for arrays maps each element to a count and, if applicable, an index. -/
+@[expose]
+def Histogram (α : Type u) (lsize rsize : Nat) [BEq α] [Hashable α] :=
   Std.HashMap α (Histogram.Entry α lsize rsize)
-
 
 section
 
@@ -80,28 +78,41 @@ variable [BEq α] [Hashable α]
 def Histogram.addLeft (histogram : Histogram α lsize rsize) (index : Fin lsize) (val : α)
     : Histogram α lsize rsize :=
   match histogram.get? val with
-  | none => histogram.insert val {
-      leftCount := 1, leftIndex := some index,
-      leftWF := by simp,
-      rightCount := 0, rightIndex := none
+  | none =>
+    histogram.insert val {
+      leftCount := 1
+      leftIndex := some index
+      leftWF := by simp
+      rightCount := 0
+      rightIndex := none
       rightWF := by simp
     }
-  | some x => histogram.insert val {x with
-      leftCount := x.leftCount + 1, leftIndex := some index, leftWF := by simp
+  | some x =>
+    histogram.insert val {
+      x with
+      leftCount := x.leftCount + 1
+      leftIndex := some index
+      leftWF := by simp
     }
 
 /-- Add an element from the right array to a histogram -/
 def Histogram.addRight (histogram : Histogram α lsize rsize) (index : Fin rsize) (val : α)
     : Histogram α lsize rsize :=
   match histogram.get? val with
-  | none => histogram.insert val {
-      leftCount := 0, leftIndex := none,
-      leftWF := by simp,
-      rightCount := 1, rightIndex := some index,
+  | none =>
+    histogram.insert val {
+      leftCount := 0
+      leftIndex := none
+      leftWF := by simp
+      rightCount := 1
+      rightIndex := some index
       rightWF := by simp
     }
-  | some x => histogram.insert val {x with
-      rightCount := x.leftCount + 1, rightIndex := some index,
+  | some x =>
+    histogram.insert val {
+      x with
+      rightCount := x.leftCount + 1
+      rightIndex := some index
       rightWF := by simp
     }
 
@@ -112,9 +123,11 @@ def matchPrefix (left right : Subarray α) : Array α × Subarray α × Subarray
     if _ : i < left.size ∧ i < right.size then
       if left[i]'(by omega) == right[i]'(by omega) then
         go <| pref.push <| left[i]'(by omega)
-      else (pref, left.drop pref.size, right.drop pref.size)
-    else (pref, left.drop pref.size, right.drop pref.size)
-  termination_by left.size - pref.size
+      else
+        (pref, left.drop pref.size, right.drop pref.size)
+    else
+      (pref, left.drop pref.size, right.drop pref.size)
+    termination_by left.size - pref.size
   go #[]
 
 /-- Given two `Subarray`s, find their common suffix and return their differing prefixes -/
@@ -123,8 +136,11 @@ def matchSuffix (left right : Subarray α) : Subarray α × Subarray α × Array
     if _ : i < left.size ∧ i < right.size then
       if left[left.size - i - 1]'(by omega) == right[right.size - i - 1]'(by omega) then
         go i.succ
-      else
-        (left.take (left.size - i), right.take (right.size - i), (left.drop (left.size - i)).toArray)
+      else (
+        left.take (left.size - i),
+        right.take (right.size - i),
+        (left.drop (left.size - i)).toArray
+      )
     else
       (left.take (left.size - i), right.take (right.size - i), (left.drop (left.size - i)).toArray)
     termination_by left.size - i
@@ -149,7 +165,8 @@ partial def lcs (left right : Subarray α) : Array α := Id.run do
     hist := hist.addRight ⟨i, Std.Rio.Internal.get_elem_helper_upper_open h rfl⟩ right[i]
   let mut best := none
   for (k, v) in hist.toList do
-    if let {leftCount := lc, leftIndex := some li, rightCount := rc, rightIndex := some ri, ..} := v then
+    if let { leftCount := lc, leftIndex := some li, rightCount := rc, rightIndex := some ri, .. } :=
+        v then
       match best with
       | none =>
         best := some ((lc + rc), k, li, ri)
@@ -164,9 +181,7 @@ partial def lcs (left right : Subarray α) : Array α := Id.run do
 
   pref ++ lcs lefts.1 rights.1 ++ #[v] ++ lcs (lefts.2.drop 1) (rights.2.drop 1) ++ suff
 
-/--
-Computes an edit script to transform `left` into `right`.
--/
+/-- Computes an edit script to transform `left` into `right`. -/
 def diff [Inhabited α] (original edited : Array α) : Array (Action × α) :=
   if h : ¬(0 < original.size) then
     edited.map (.insert, ·)

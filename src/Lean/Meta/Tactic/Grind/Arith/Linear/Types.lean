@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Grind.Ring.CommSolver
 public import Init.Grind.Ordered.Linarith
@@ -20,9 +21,9 @@ deriving instance Hashable for Grind.Linarith.Expr
 mutual
 /-- Auxiliary type for normalizing `Ring` and `Field` inequalities. -/
 structure RingIneqCnstr where
-  p      : Grind.CommRing.Poly
+  p : Grind.CommRing.Poly
   strict : Bool
-  h      : RingIneqCnstrProof
+  h : RingIneqCnstrProof
 
 inductive RingIneqCnstrProof where
   | core (e : Expr) (lhs rhs : Grind.CommRing.Expr)
@@ -33,8 +34,8 @@ end
 mutual
 /-- Auxiliary type for normalizing `Ring` and `Field` equalities. -/
 structure RingEqCnstr where
-  p      : Grind.CommRing.Poly
-  h      : RingEqCnstrProof
+  p : Grind.CommRing.Poly
+  h : RingEqCnstrProof
 
 inductive RingEqCnstrProof where
   | core (a b : Expr) (ra rb : Grind.CommRing.Expr)
@@ -45,8 +46,8 @@ end
 mutual
 /-- Auxiliary type for normalizing `Ring` and `Field` disequalities. -/
 structure RingDiseqCnstr where
-  p      : Grind.CommRing.Poly
-  h      : RingDiseqCnstrProof
+  p : Grind.CommRing.Poly
+  h : RingDiseqCnstrProof
 
 inductive RingDiseqCnstrProof where
   | core (a b : Expr) (ra rb : Grind.CommRing.Expr)
@@ -56,12 +57,13 @@ end
 mutual
 /-- An equality constraint and its justification/proof. -/
 structure EqCnstr where
-  p      : Poly
-  h      : EqCnstrProof
+  p : Poly
+  h : EqCnstrProof
 
 inductive EqCnstrProof where
   | core (a b : Expr) (lhs rhs : LinExpr)
-  | coreCommRing (a b : Expr) (ra rb : Grind.CommRing.Expr) (p : Grind.CommRing.Poly) (lhs' : LinExpr)
+  | coreCommRing
+    (a b : Expr) (ra rb : Grind.CommRing.Expr) (p : Grind.CommRing.Poly) (lhs' : LinExpr)
   | coreOfNat (a b : Expr) (natStructId : Nat) (lhs rhs : LinExpr)
   | neg (c : EqCnstr)
   | coeff (k : Nat) (c : EqCnstr)
@@ -69,9 +71,9 @@ inductive EqCnstrProof where
 
 /-- An inequality constraint and its justification/proof. -/
 structure IneqCnstr where
-  p      : Poly
+  p : Poly
   strict : Bool
-  h      : IneqCnstrProof
+  h : IneqCnstrProof
 
 inductive IneqCnstrProof where
   | core (e : Expr) (lhs rhs : LinExpr)
@@ -93,8 +95,8 @@ inductive IneqCnstrProof where
   | subst (x : Var) (c₁ : EqCnstr) (c₂ : IneqCnstr)
 
 structure DiseqCnstr where
-  p  : Poly
-  h  : DiseqCnstrProof
+  p : Poly
+  h : DiseqCnstrProof
 
 inductive DiseqCnstrProof where
   | core (a b : Expr) (lhs rhs : LinExpr)
@@ -125,18 +127,18 @@ Each type must at least implement the instance `IntModule`.
 For being able to process inequalities, it must at least implement `Preorder`, and `OrderedAdd`
 -/
 structure Struct where
-  id                 : Nat
+  id : Nat
   /-- If the structure is a ring, we store its id in the `CommRing` module at `ringId?` -/
-  ringId?            : Option Nat
-  type               : Expr
+  ringId? : Option Nat
+  type : Expr
   /-- Cached `getDecLevel type` -/
-  u                  : Level
+  u : Level
   /-- `IntModule` instance -/
-  intModuleInst      : Expr
+  intModuleInst : Expr
   /-- `LE` instance if available -/
-  leInst?            : Option Expr
+  leInst? : Option Expr
   /-- `LT` instance if available -/
-  ltInst?            : Option Expr
+  ltInst? : Option Expr
   /--
   `LawfulOrderLT` instance if available. Every `linarith` theorem about `<` assumes it, so `<`
   facts, negated facts, disequality splits, and the `OrderedRing` facts `0 < 1`, `0 ≠ 1`, and
@@ -144,43 +146,43 @@ structure Struct where
   -/
   lawfulOrderLTInst? : Option Expr
   /-- `IsPreorder` instance if available -/
-  isPreorderInst?    : Option Expr
+  isPreorderInst? : Option Expr
   /-- `OrderedAdd` instance with `IsPreorder` if available -/
-  orderedAddInst?    : Option Expr
+  orderedAddInst? : Option Expr
   /-- `IsLinearOrder` instance if available -/
-  isLinearInst?      : Option Expr
+  isLinearInst? : Option Expr
   /-- `NoNatZeroDivisors` -/
-  noNatDivInst?      : Option Expr
+  noNatDivInst? : Option Expr
   /-- `Ring` instance -/
-  ringInst?          : Option Expr
+  ringInst? : Option Expr
   /-- `CommRing` instance -/
-  commRingInst?      : Option Expr
+  commRingInst? : Option Expr
   /-- `OrderedRing` instance with `Preorder` -/
-  orderedRingInst?   : Option Expr
+  orderedRingInst? : Option Expr
   /-- `Field` instance -/
-  fieldInst?         : Option Expr
+  fieldInst? : Option Expr
   /-- `IsCharP` instance for `type` if available. -/
-  charInst?          : Option (Expr × Nat)
-  zero               : Expr
-  ofNatZero          : Expr
-  one?               : Option Expr
-  leFn?              : Option Expr
-  ltFn?              : Option Expr
-  addFn              : Expr
-  zsmulFn            : Expr
-  nsmulFn            : Expr
-  zsmulFn?           : Option Expr
-  nsmulFn?           : Option Expr
-  homomulFn?         : Option Expr -- homogeneous multiplication if structure is a ring
-  subFn              : Expr
-  negFn              : Expr
+  charInst? : Option (Expr × Nat)
+  zero : Expr
+  ofNatZero : Expr
+  one? : Option Expr
+  leFn? : Option Expr
+  ltFn? : Option Expr
+  addFn : Expr
+  zsmulFn : Expr
+  nsmulFn : Expr
+  zsmulFn? : Option Expr
+  nsmulFn? : Option Expr
+  homomulFn? : Option Expr -- homogeneous multiplication if structure is a ring
+  subFn : Expr
+  negFn : Expr
   /--
   Mapping from variables to their denotations.
   Remark each variable can be in only one ring.
   -/
-  vars             : PArray Expr := {}
+  vars : PArray Expr := {}
   /-- Mapping from `Expr` to a variable representing it. -/
-  varMap           : PHashMap ExprPtr Var := {}
+  varMap : PHashMap ExprPtr Var := {}
   /--
   Mapping from variables to their "lower" bounds. We say a relational constraint `c` is a lower bound for a variable `x`
   if `x` is the maximal variable in `c`, and `x` coefficient in `c` is negative.
@@ -239,36 +241,36 @@ structure Struct where
   TODO: store constraints instead.
   -/
   ignored : PArray Expr := {}
-  deriving Inhabited
+deriving Inhabited
 
 structure NatStruct where
-  id                  : Nat
+  id : Nat
   /-- Id for `OfNatModule.Q` -/
-  structId            : Nat
-  type                : Expr
+  structId : Nat
+  type : Expr
   /-- Cached `getDecLevel type` -/
-  u                   : Level
+  u : Level
   /-- `NatModule` instance for `type` -/
-  natModuleInst       : Expr
+  natModuleInst : Expr
   /-- `LE` instance if available -/
-  leInst?             : Option Expr
+  leInst? : Option Expr
   /-- `LT` instance if available -/
-  ltInst?             : Option Expr
+  ltInst? : Option Expr
   /-- `LawfulOrderLT` instance if available -/
-  lawfulOrderLTInst?  : Option Expr
+  lawfulOrderLTInst? : Option Expr
   /-- `IsPreorder` instance if available -/
-  isPreorderInst?     : Option Expr
+  isPreorderInst? : Option Expr
   /-- `OrderedAdd` instance with `IsPreorder` if available -/
-  orderedAddInst?     : Option Expr
+  orderedAddInst? : Option Expr
   /-- `IsLinearOrder` instance if available -/
-  isLinearInst?       : Option Expr
+  isLinearInst? : Option Expr
   addRightCancelInst? : Option Expr
-  rfl_q               : Expr -- `@Eq.Refl (OfNatModule.Q type)`
-  zero                : Expr
-  toQFn               : Expr
-  addFn               : Expr
-  smulFn              : Expr
-  termMap             : PHashMap ExprPtr (Expr × Expr) := {}
+  rfl_q : Expr -- `@Eq.Refl (OfNatModule.Q type)`
+  zero : Expr
+  toQFn : Expr
+  addFn : Expr
+  smulFn : Expr
+  termMap : PHashMap ExprPtr (Expr × Expr) := {}
 
 /-- State for all `IntModule` types detected by `grind`. -/
 structure State where
@@ -279,7 +281,8 @@ structure State where
   structs : Array Struct := {}
   /--
   Mapping from types to its "structure id". We cache failures using `none`.
-  `typeIdOf[type]` is `some id`, then `id < structs.size`. -/
+  `typeIdOf[type]` is `some id`, then `id < structs.size`.
+  -/
   typeIdOf : PHashMap ExprPtr (Option Nat) := {}
   /- Mapping from expressions/terms to their structure ids. -/
   exprToStructId : PHashMap ExprPtr Nat := {}
@@ -301,7 +304,7 @@ structure State where
   natTypeIdOf : PHashMap ExprPtr (Option Nat) := {}
   /- Mapping from expressions/terms to their nat structure ids. -/
   exprToNatStructId : PHashMap ExprPtr Nat := {}
-  deriving Inhabited
+deriving Inhabited
 
 builtin_initialize linearExt : SolverExtension State ← registerSolverExtension (return {})
 

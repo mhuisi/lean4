@@ -11,12 +11,15 @@ import Lean.Meta.RecExt
 
 public section
 
-
 namespace Lean.Compiler
 
 inductive InlineAttributeKind where
-  | inline | noinline | macroInline | inlineIfReduce | alwaysInline
-  deriving Inhabited, BEq, Hashable
+  | inline
+  | noinline
+  | macroInline
+  | inlineIfReduce
+  | alwaysInline
+deriving Inhabited, BEq, Hashable
 
 private def InlineAttributeKind.toAttrString : InlineAttributeKind → String
   | .inline => "inline"
@@ -62,33 +65,46 @@ Changes the inlining behavior. This attribute comes in several variants:
 @[builtin_doc]
 builtin_initialize inlineAttrs : EnumAttributes InlineAttributeKind ←
   registerEnumAttributes
-    [(`inline, "mark definition to be inlined", .inline),
-     (`inline_if_reduce, "mark definition to be inlined when resultant term after reduction is not a `cases_on` application", .inlineIfReduce),
-     (`noinline, "mark definition to never be inlined", .noinline),
-     (`macro_inline, "mark definition to always be inlined before ANF conversion", .macroInline),
-     (`always_inline, "mark definition to be always inlined", .alwaysInline)]
+    [
+      (`inline, "mark definition to be inlined", .inline),
+      (
+        `inline_if_reduce,
+        "mark definition to be inlined when resultant term after reduction is not a `cases_on` \
+          application",
+        .inlineIfReduce
+      ),
+      (`noinline, "mark definition to never be inlined", .noinline),
+      (`macro_inline, "mark definition to always be inlined before ANF conversion", .macroInline),
+      (`always_inline, "mark definition to be always inlined", .alwaysInline)
+    ]
     fun declName kind => do
       if kind matches .macroInline then
         if !(checkIsDefinition (← getEnv) declName |>.isOk) then
-          throwError "invalid `[macro_inline]` attribute, `{.ofConstName declName}` must be an exposed definition"
+          throwError "invalid `[macro_inline]` attribute, `{.ofConstName declName}` must be an \
+            exposed definition"
         unless (← isValidMacroInline declName) do
-          throwError "Cannot add `[macro_inline]` attribute to `{.ofConstName declName}`: This attribute does not support this kind of declaration; only non-recursive definitions are supported"
+          throwError "Cannot add `[macro_inline]` attribute to `{.ofConstName declName}`: This \
+            attribute does not support this kind of declaration; only non-recursive definitions \
+            are supported"
       else
         ofExcept <| (checkIsDefinition (← withoutExporting <| getEnv) declName).mapError fun e =>
           s!"Cannot add attribute `[{kind.toAttrString}]`: {e}"
 
-def setInlineAttribute (env : Environment) (declName : Name) (kind : InlineAttributeKind) : Except String Environment :=
+def setInlineAttribute (env : Environment) (declName : Name) (kind : InlineAttributeKind)
+    : Except String Environment :=
   inlineAttrs.setValue env declName kind
 
 def getInlineAttribute? (env : Environment) (declName : Name) : Option InlineAttributeKind :=
   inlineAttrs.getValue env declName
 
-private def hasInlineAttrCore (env : Environment) (kind : InlineAttributeKind) (declName : Name) : Bool :=
+private def hasInlineAttrCore (env : Environment) (kind : InlineAttributeKind) (declName : Name)
+    : Bool :=
   match inlineAttrs.getValue env declName with
   | some k => kind == k
   | _ => false
 
-@[inline] def hasInlineAttribute (env : Environment) (declName : Name) : Bool :=
+@[inline]
+def hasInlineAttribute (env : Environment) (declName : Name) : Bool :=
   hasInlineAttrCore env .inline declName
 
 def hasInlineIfReduceAttribute (env : Environment) (declName : Name) : Bool :=
@@ -100,7 +116,8 @@ def hasNoInlineAttribute (env : Environment) (declName : Name) : Bool :=
 def hasMacroInlineAttribute (env : Environment) (declName : Name) : Bool :=
   hasInlineAttrCore env .macroInline declName
 
-@[inline] def hasAlwaysInlineAttribute (env : Environment) (declName : Name) : Bool :=
+@[inline]
+def hasAlwaysInlineAttribute (env : Environment) (declName : Name) : Bool :=
   hasInlineAttrCore env .alwaysInline declName
 
 end Lean.Compiler

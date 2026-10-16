@@ -21,24 +21,13 @@ public section
 namespace Std.Time.TimeZone
 open Time.Internal
 
-/--
-Specifies how a DST transition date is expressed.
--/
+/-- Specifies how a DST transition date is expressed. -/
 inductive TransitionSpec where
-
-  /--
-  `Mm.w.d` form: month `m`, week `w` (1–5; 5 = last), ISO weekday `d`.
-  -/
+  /-- `Mm.w.d` form: month `m`, week `w` (1–5; 5 = last), ISO weekday `d`. -/
   | mwd (month : Month.Ordinal) (week : Week.Aligned.Ordinal) (day : Weekday.Ordinal)
-
-  /--
-  `Jn` form: Julian day 1–365 (Feb 29 never counted, even in leap years).
-  -/
+  /-- `Jn` form: Julian day 1–365 (Feb 29 never counted, even in leap years). -/
   | julian (day : Bounded.LE 1 365)
-
-  /--
-  `n` form: zero-based day 0–365 (Feb 29 counted in leap years).
-  -/
+  /-- `n` form: zero-based day 0–365 (Feb 29 counted in leap years). -/
   | julian0 (day : Bounded.LE 0 365)
 deriving Repr
 
@@ -50,7 +39,10 @@ Returns the `Day.Offset` (days since epoch) for a `TransitionSpec.mwd` in the gi
 `Mm.w.d`: month `m`, week `w` (1–5; 5 = last), ISO weekday `d` (1 = Monday, 7 = Sunday).
 Finds the `w`-th occurrence of weekday `d` in month `m`; if `w = 5`, returns the last occurrence.
 -/
-def toEpochDayMWD (year : Year.Offset) (month : Month.Ordinal) (week : Week.Aligned.Ordinal) (day : Weekday.Ordinal) : Day.Offset :=
+def toEpochDayMWD
+    (year : Year.Offset) (month : Month.Ordinal) (week : Week.Aligned.Ordinal)
+    (day : Weekday.Ordinal)
+    : Day.Offset :=
   if week.val == 5 then
     -- "week 5" means the last occurrence of `day` in `month`.
     -- Start from the last day of the month and walk backwards to the desired weekday.
@@ -87,9 +79,7 @@ def toEpochDayJulian0 (year : Year.Offset) (day : Bounded.LE 0 365) : Day.Offset
   let jan1 := PlainDate.ofYearMonthDayClip year 1 1
   jan1.toEpochDay + Day.Offset.ofInt day.val
 
-/--
-Returns the `Day.Offset` (days since epoch) for this `TransitionSpec` in the given year.
--/
+/-- Returns the `Day.Offset` (days since epoch) for this `TransitionSpec` in the given year. -/
 def toEpochDay (spec : TransitionSpec) (year : Year.Offset) : Day.Offset :=
   match spec with
   | .mwd month week day => toEpochDayMWD year month week day
@@ -98,16 +88,10 @@ def toEpochDay (spec : TransitionSpec) (year : Year.Offset) : Day.Offset :=
 
 end TransitionSpec
 
-/--
-A single DST transition rule: a date specification and a wall-clock time.
--/
+/-- A single DST transition rule: a date specification and a wall-clock time. -/
 structure TransitionRule where
-
-  /--
-  How the transition date is specified.
-  -/
+  /-- How the transition date is specified. -/
   spec : TransitionSpec
-
   /--
   Time of day as seconds from midnight (default 7200 = 02:00).
 
@@ -117,29 +101,15 @@ structure TransitionRule where
   time : Second.Offset := 7200
 deriving Repr
 
-/--
-Recurring DST details for a zone that observes daylight saving time.
--/
+/-- Recurring DST details for a zone that observes daylight saving time. -/
 structure DaylightSavingRule where
-
-  /--
-  DST abbreviation.
-  -/
+  /-- DST abbreviation. -/
   name : String
-
-  /--
-  DST UTC offset (east-positive).
-  -/
+  /-- DST UTC offset (east-positive). -/
   offset : TimeZone.Offset
-
-  /--
-  Rule for the start of DST, if any.
-  -/
+  /-- Rule for the start of DST, if any. -/
   start : Option TransitionRule := none
-
-  /--
-  Rule for the end of DST, if any.
-  -/
+  /-- Rule for the end of DST, if any. -/
   end_ : Option TransitionRule := none
 deriving Repr
 
@@ -147,20 +117,11 @@ deriving Repr
 Recurring rule describing standard and DST zones, as found in a POSIX TZ string or TZif footer.
 -/
 structure RecurringRule where
-
-  /--
-  Standard time abbreviation.
-  -/
+  /-- Standard time abbreviation. -/
   stdName : String
-
-  /--
-  Standard UTC offset (east-positive).
-  -/
+  /-- Standard UTC offset (east-positive). -/
   stdOffset : TimeZone.Offset
-
-  /--
-  DST details, if this zone observes DST.
-  -/
+  /-- DST details, if this zone observes DST. -/
   dst : Option DaylightSavingRule := none
 deriving Repr
 

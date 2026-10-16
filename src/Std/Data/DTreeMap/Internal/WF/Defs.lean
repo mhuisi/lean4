@@ -27,7 +27,8 @@ universe u v w w'
 variable {α : Type u} {β : α → Type v} {γ : α → Type w} {δ : Type w} {m : Type w → Type w'}
 
 namespace Std.DTreeMap.Internal
-local instance : Coe (Type v) (α → Type v) where coe γ := fun _ => γ
+local instance : Coe (Type v) (α → Type v) where
+  coe γ := fun _ => γ
 
 namespace Impl
 
@@ -69,53 +70,59 @@ A well-formed tree is balanced. This is needed here already because we need to k
 tree is balanced to call the optimized modification functions.
 -/
 theorem WF.balanced [Ord α] {t : Impl α β} (h : WF t) : t.Balanced := by
-  induction h <;> (try apply SizedBalancedTree.balanced_impl) <;> try apply BalancedTree.balanced_impl
+  induction h <;> (try apply SizedBalancedTree.balanced_impl)
+    <;> try apply BalancedTree.balanced_impl
   case wf htb hto => exact htb
   case empty => exact balanced_empty
   case modify ih => exact balanced_modify ih
   case constModify ih => exact Const.balanced_modify ih
   case inter ih => exact balanced_inter ih
 
-theorem WF.eraseManyEntries [Ord α] {ρ} [ForIn Id ρ ((a : α) × β a)] {t : Impl α β} {l : ρ} {h} (hwf : WF t) :
-    WF (t.eraseManyEntries l h).val :=
+theorem WF.eraseManyEntries
+    [Ord α] {ρ} [ForIn Id ρ ((a : α) × β a)] {t : Impl α β} {l : ρ} {h} (hwf : WF t)
+    : WF (t.eraseManyEntries l h).val :=
   (t.eraseManyEntries l h).2 hwf fun _ _ _ hwf' => hwf'.erase
 
-theorem WF.eraseMany [Ord α] {ρ} [ForIn Id ρ α] {t : Impl α β} {l : ρ} {h} (hwf : WF t) :
-    WF (t.eraseMany l h).val :=
+theorem WF.eraseMany [Ord α] {ρ} [ForIn Id ρ α] {t : Impl α β} {l : ρ} {h} (hwf : WF t)
+    : WF (t.eraseMany l h).val :=
   (t.eraseMany l h).2 hwf fun _ _ _ hwf' => hwf'.erase
 
-theorem WF.insertMany [Ord α] {ρ} [ForIn Id ρ ((a : α) × β a)] {t : Impl α β} {l : ρ} {h} (hwf : WF t) :
-    WF (t.insertMany l h).val :=
+theorem WF.insertMany
+    [Ord α] {ρ} [ForIn Id ρ ((a : α) × β a)] {t : Impl α β} {l : ρ} {h} (hwf : WF t)
+    : WF (t.insertMany l h).val :=
   (t.insertMany l h).2 hwf fun _ _ _ _ hwf' => hwf'.insert
 
-theorem WF.insertManyIfNew [Ord α] {ρ} [ForIn Id ρ ((a : α) × β a)] {t : Impl α β} {l : ρ} {h} (hwf : WF t) :
-    WF (t.insertManyIfNew l h).val :=
+theorem WF.insertManyIfNew
+    [Ord α] {ρ} [ForIn Id ρ ((a : α) × β a)] {t : Impl α β} {l : ρ} {h} (hwf : WF t)
+    : WF (t.insertManyIfNew l h).val :=
   (t.insertManyIfNew l h).2 hwf fun _ _ _ _ hwf' => hwf'.insertIfNew
 
-theorem WF.constInsertMany [Ord α] {β : Type v} {ρ} [ForIn Id ρ (α × β)] {t : Impl α (fun _ => β)}
-    {l : ρ} {h} (hwf : WF t) : WF (Impl.Const.insertMany t l h).val :=
+theorem WF.constInsertMany
+    [Ord α] {β : Type v} {ρ} [ForIn Id ρ (α × β)] {t : Impl α (fun _ => β)} {l : ρ} {h} (hwf : WF t)
+    : WF (Impl.Const.insertMany t l h).val :=
   (Impl.Const.insertMany t l h).2 hwf fun _ _ _ _ hwf' => hwf'.insert
 
-theorem WF.constInsertManyIfNewUnit [Ord α] {ρ} [ForIn Id ρ α] {t : Impl α (fun _ => Unit)} {l : ρ}
-    {h} (hwf : WF t) : WF (Impl.Const.insertManyIfNewUnit t l h).val :=
+theorem WF.constInsertManyIfNewUnit
+    [Ord α] {ρ} [ForIn Id ρ α] {t : Impl α (fun _ => Unit)} {l : ρ} {h} (hwf : WF t)
+    : WF (Impl.Const.insertManyIfNewUnit t l h).val :=
   (Impl.Const.insertManyIfNewUnit t l h).2 hwf fun _ _ _ hwf' => hwf'.insertIfNew
 
-theorem WF.getThenInsertIfNew? [Ord α] [LawfulEqOrd α] {t : Impl α β} {k v} {h : t.WF} :
-    (t.getThenInsertIfNew? k v h.balanced).2.WF := by
+theorem WF.getThenInsertIfNew? [Ord α] [LawfulEqOrd α] {t : Impl α β} {k v} {h : t.WF}
+    : (t.getThenInsertIfNew? k v h.balanced).2.WF := by
   simp only [Impl.getThenInsertIfNew?]
   split
   · exact h.insertIfNew
   · exact h
 
-theorem WF.union [Ord α] {t₁ : Impl α β} {h₁ : t₁.WF} {t₂ : Impl α β} {h₂ : t₂.WF} :
-    (t₁.union t₂ h₁.balanced h₂.balanced).WF := by
+theorem WF.union [Ord α] {t₁ : Impl α β} {h₁ : t₁.WF} {t₂ : Impl α β} {h₂ : t₂.WF}
+    : (t₁.union t₂ h₁.balanced h₂.balanced).WF := by
   simp [Impl.union]
   split
   . apply WF.insertManyIfNew h₂
   . apply WF.insertMany h₁
 
-theorem WF.diff [Ord α] {t₁ : Impl α β} {h₁ : t₁.WF} {t₂ : Impl α β} :
-    (t₁.diff t₂ h₁.balanced).WF := by
+theorem WF.diff [Ord α] {t₁ : Impl α β} {h₁ : t₁.WF} {t₂ : Impl α β}
+    : (t₁.diff t₂ h₁.balanced).WF := by
   simp [Impl.diff]
   split
   · apply WF.filter h₁
@@ -125,8 +132,8 @@ section Const
 
 variable {β : Type v}
 
-theorem WF.constGetThenInsertIfNew? [Ord α] {t : Impl α β} {k v} {h : t.WF} :
-    (Impl.Const.getThenInsertIfNew? t k v h.balanced).2.WF := by
+theorem WF.constGetThenInsertIfNew? [Ord α] {t : Impl α β} {k v} {h : t.WF}
+    : (Impl.Const.getThenInsertIfNew? t k v h.balanced).2.WF := by
   simp only [Impl.Const.getThenInsertIfNew?]
   split
   · exact h.insertIfNew

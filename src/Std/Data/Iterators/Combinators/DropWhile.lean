@@ -20,8 +20,7 @@ directly with `Iter.dropWhile` but only with `Intermediate.dropWhile`.
 `Intermediate.dropWhile` is meant to be used only for internally or for verification purposes.
 -/
 @[always_inline, inline]
-def Iter.Intermediate.dropWhile (P : β → Bool) (dropping : Bool)
-    (it : Iter (α := α) β) :=
+def Iter.Intermediate.dropWhile (P : β → Bool) (dropping : Bool) (it : Iter (α := α) β) :=
   ((IterM.Intermediate.dropWhile P dropping it.toIterM).toIter : Iter β)
 
 /--

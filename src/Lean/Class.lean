@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Attributes
 import Lean.Util.CollectLevelParams
@@ -13,7 +14,7 @@ namespace Lean
 /-- An entry for the persistent environment extension for declared type classes -/
 structure ClassEntry where
   /-- Class name. -/
-  name      : Name
+  name : Name
   /--
   Position of the class `outParams`.
   For example, for class
@@ -33,8 +34,7 @@ structure ClassEntry where
 
 namespace ClassEntry
 
-def lt (a b : ClassEntry) : Bool :=
-  Name.quickLt a.name b.name
+def lt (a b : ClassEntry) : Bool := Name.quickLt a.name b.name
 
 end ClassEntry
 
@@ -42,35 +42,35 @@ end ClassEntry
 structure ClassState where
   outParamMap : SMap Name (Array Nat) := SMap.empty
   outLevelParamMap : SMap Name (Array Nat) := SMap.empty
-  deriving Inhabited
+deriving Inhabited
 
 namespace ClassState
 
-def addEntry (s : ClassState) (entry : ClassEntry) : ClassState :=
-  { s with
-    outParamMap := s.outParamMap.insert entry.name entry.outParams
-    outLevelParamMap := s.outLevelParamMap.insert entry.name entry.outLevelParams }
+def addEntry (s : ClassState) (entry : ClassEntry) : ClassState := {
+  s with
+  outParamMap := s.outParamMap.insert entry.name entry.outParams
+  outLevelParamMap := s.outLevelParamMap.insert entry.name entry.outLevelParams
+}
 
 /--
 Switch the state into persistent mode. We switch to this mode after
 we read all imported .olean files.
 Recall that we use a `SMap` for implementing the state of the type class environment extension.
 -/
-def switch (s : ClassState) : ClassState :=
-  { s with
-    outParamMap := s.outParamMap.switch
-    outLevelParamMap := s.outLevelParamMap.switch }
+def switch (s : ClassState) : ClassState := {
+  s with
+  outParamMap := s.outParamMap.switch
+  outLevelParamMap := s.outLevelParamMap.switch
+}
 
 end ClassState
 
-/--
-Type class environment extension
--/
+/-- Type class environment extension -/
 -- TODO: add support for scoped instances
 builtin_initialize classExtension : SimplePersistentEnvExtension ClassEntry ClassState ←
   registerSimplePersistentEnvExtension {
-    logWrites     := true
-    addEntryFn    := ClassState.addEntry
+    logWrites := true
+    addEntryFn := ClassState.addEntry
     addImportedFn := fun es => (mkStateFromImportedEntries ClassState.addEntry {} es).switch
   }
 
@@ -88,30 +88,34 @@ def hasOutParams (env : Environment) (declName : Name) : Bool :=
   | some outParams => !outParams.isEmpty
   | none => false
 
-/-- If `declName` is a class, return the positions of universe level parameters that only appear in output parameter types. -/
+/--
+If `declName` is a class, return the positions of universe level parameters that only appear in output parameter types.
+-/
 def getOutLevelParamPositions? (env : Environment) (declName : Name) : Option (Array Nat) :=
   (classExtension.getState env).outLevelParamMap.find? declName
 
 /--
-  Auxiliary function for collection the position class `outParams`, and
-  checking whether they are being correctly used.
-  A regular (i.e., non `outParam`) must not depend on an `outParam`.
-  Reason for this restriction:
-  When performing type class resolution, we replace arguments that
-  are `outParam`s with fresh metavariables. If regular parameters could
-  depend on `outParam`s, then we would also have to replace them with
-  fresh metavariables. Otherwise, the resulting expression could be type
-  incorrect. This transformation would be counterintuitive to users since
-  we would implicitly treat these regular parameters as `outParam`s.
+Auxiliary function for collection the position class `outParams`, and
+checking whether they are being correctly used.
+A regular (i.e., non `outParam`) must not depend on an `outParam`.
+Reason for this restriction:
+When performing type class resolution, we replace arguments that
+are `outParam`s with fresh metavariables. If regular parameters could
+depend on `outParam`s, then we would also have to replace them with
+fresh metavariables. Otherwise, the resulting expression could be type
+incorrect. This transformation would be counterintuitive to users since
+we would implicitly treat these regular parameters as `outParam`s.
 -/
-private partial def checkOutParam (i : Nat) (outParamFVarIds : Array FVarId) (outParams : Array Nat) (type : Expr) : Except MessageData (Array Nat) :=
+private partial def checkOutParam
+    (i : Nat) (outParamFVarIds : Array FVarId) (outParams : Array Nat) (type : Expr)
+    : Except MessageData (Array Nat) :=
   match type with
   | .forallE _ d b bi =>
     let addOutParam (_ : Unit) :=
       let fvarId := { name := Name.mkNum `_fvar outParamFVarIds.size }
-      let fvar      := mkFVar fvarId
-      let b         := b.instantiate1 fvar
-      checkOutParam (i+1) (outParamFVarIds.push fvarId) (outParams.push i) b
+      let fvar := mkFVar fvarId
+      let b := b.instantiate1 fvar
+      checkOutParam (i + 1) (outParamFVarIds.push fvarId) (outParams.push i) b
     if d.isOutParam then
       addOutParam ()
     else if d.hasAnyFVar fun fvarId => outParamFVarIds.contains fvarId then
@@ -119,10 +123,12 @@ private partial def checkOutParam (i : Nat) (outParamFVarIds : Array FVarId) (ou
         /- See issue #1852 for a motivation for `bi.isInstImplicit` -/
         addOutParam ()
       else
-        Except.error m!"invalid class, parameter #{i+1} depends on `outParam`, but it is not an `outParam`"
+        Except.error
+          m!"invalid class, parameter #{i + 1} depends on `outParam`, but it is not an `outParam`"
     else
-      checkOutParam (i+1) outParamFVarIds outParams b
-  | _ => return outParams
+      checkOutParam (i + 1) outParamFVarIds outParams b
+  | _ =>
+    return outParams
 
 /--
 Compute positions of universe level parameters that only appear in output parameter types.
@@ -138,7 +144,9 @@ This function identifies which universe level parameter positions are "output-on
 collecting all level param names that appear in non-output parameter domains, then returning
 the positions of any level params not in that set.
 -/
-private partial def computeOutLevelParams (type : Expr) (outParams : Array Nat) (levelParams : List Name) : Array Nat := Id.run do
+private partial def computeOutLevelParams
+    (type : Expr) (outParams : Array Nat) (levelParams : List Name)
+    : Array Nat := Id.run do
   let nonOutLevels := go type 0 {} |>.params
   let mut result := #[]
   let mut i := 0
@@ -155,7 +163,8 @@ where
         go b (i + 1) s
       else
         go b (i + 1) (collectLevelParams s d)
-    | _ => s
+    | _ =>
+      s
 
 /--
 Add a new type class with the given name to the environment.
@@ -170,12 +179,16 @@ def addClass (env : Environment) (clsName : Name) : Except MessageData Environme
   let some decl := env.find? clsName
     | throw m!"unknown declaration '{clsName}'"
   unless decl matches .inductInfo .. | .axiomInfo .. do
-    throw m!"invalid 'class', declaration '{.ofConstName clsName}' must be inductive datatype, structure, or constant"
+    throw m!"invalid 'class', declaration '{.ofConstName clsName}' must be inductive datatype, \
+      structure, or constant"
   let outParams ← checkOutParam 0 #[] #[] decl.type
   let outLevelParams := computeOutLevelParams decl.type outParams decl.levelParams
   -- `log` necessary: `attribute [class]` may be applied to an existing declaration
-  return classExtension.addEntry (log := .decl clsName) env
-    { name := clsName, outParams, outLevelParams }
+  return classExtension.addEntry (log := .decl clsName) env {
+    name := clsName
+    outParams
+    outLevelParams
+  }
 
 /--
 Registers an inductive type or structure as a type class. Using `class` or `class inductive` is
@@ -184,22 +197,24 @@ generally preferred over using `@[class] structure` or `@[class] inductive` dire
 @[builtin_init, builtin_doc]
 private def init :=
   registerBuiltinAttribute {
-    name  := `class
+    name := `class
     descr := "type class"
-    add   := fun decl stx kind => do
+    add := fun decl stx kind => do
       let env ← getEnv
       Attribute.Builtin.ensureNoArgs stx
-      unless kind == AttributeKind.global do throwAttrMustBeGlobal `class kind
+      unless kind == AttributeKind.global do
+        throwAttrMustBeGlobal `class kind
       let env ← ofExcept (addClass env decl)
       setEnv env
   }
 
 builtin_initialize
   registerBuiltinAttribute {
-    name  := `univ_out_params
+    name := `univ_out_params
     descr := "universe output parameters for a type class"
-    add   := fun decl stx kind => do
-      unless kind == AttributeKind.global do throwAttrMustBeGlobal `univ_out_params kind
+    add := fun decl stx kind => do
+      unless kind == AttributeKind.global do
+        throwAttrMustBeGlobal `univ_out_params kind
       let env ← getEnv
       unless isClass env decl do
         throwError "invalid `univ_out_params`, `{decl}` is not a class"

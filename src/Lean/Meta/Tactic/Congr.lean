@@ -38,18 +38,22 @@ private def applyCongrThm? (mvarId : MVarId) (congrThm : CongrTheorem) : MetaM (
   let mvarIds ← mvarId.apply (mkFVar fvarId) { synthAssignedInstances := false }
   mvarIds.mapM fun mvarId => mvarId.tryClear fvarId
 
-/--
-Try to apply a `simp` congruence theorem.
--/
+/-- Try to apply a `simp` congruence theorem. -/
 def MVarId.congr? (mvarId : MVarId) : MetaM (Option (List MVarId)) :=
-  mvarId.withContext do commitWhenSomeNoEx? do
-    mvarId.checkNotAssigned `congr
-    let target ← mvarId.getType'
-    let some (_, lhs, _) := target.eq? | return none
-    let lhs := lhs.cleanupAnnotations
-    unless lhs.isApp do return none
-    let some congrThm ← mkCongrSimp? lhs.getAppFn (subsingletonInstImplicitRhs := false) (maxArgs? := lhs.getAppNumArgs) | return none
-    applyCongrThm? mvarId congrThm
+  mvarId.withContext do
+    commitWhenSomeNoEx? do
+      mvarId.checkNotAssigned `congr
+      let target ← mvarId.getType'
+      let some (_, lhs, _) := target.eq?
+        | return none
+      let lhs := lhs.cleanupAnnotations
+      unless lhs.isApp do
+        return none
+      let some congrThm ←
+          mkCongrSimp? lhs.getAppFn (subsingletonInstImplicitRhs := false)
+            (maxArgs? := lhs.getAppNumArgs)
+        | return none
+      applyCongrThm? mvarId congrThm
 
 /--
 Try to apply a `hcongr` congruence theorem, and then tries to close resulting goals
@@ -61,19 +65,20 @@ def MVarId.hcongr? (mvarId : MVarId) : MetaM (Option (List MVarId)) := do
     let mvarId ← mvarId.eqOfHEq
     mvarId.withContext do
       let target ← mvarId.getType'
-      let some (_, lhs, _, _) := target.heq? | return none
+      let some (_, lhs, _, _) := target.heq?
+        | return none
       let lhs := lhs.cleanupAnnotations
-      unless lhs.isApp do return none
+      unless lhs.isApp do
+        return none
       let congrThm ← mkHCongrWithArity lhs.getAppFn lhs.getAppNumArgs
       applyCongrThm? mvarId congrThm
 
-/--
-Try to apply `implies_congr`.
--/
+/-- Try to apply `implies_congr`. -/
 def MVarId.congrImplies? (mvarId : MVarId) : MetaM (Option (List MVarId)) :=
   observing? do
     let mvarId₁ :: mvarId₂ :: _ ← mvarId.apply (← mkConstWithFreshMVarLevels ``implies_congr)
-      | throwError "Internal error: Expected at least two goals after applying `{.ofConstName ``implies_congr}`, but unexpectedly found fewer"
+      | throwError "Internal error: Expected at least two goals after applying \
+          `{.ofConstName ``implies_congr}`, but unexpectedly found fewer"
     return [mvarId₁, mvarId₂]
 
 /--
@@ -100,7 +105,8 @@ It takes proof irrelevance into account, and the fact that `Decidable p` is a su
 * If `closePost := true`, it will try again on goals on which `congr` failed to make progress
   with default transparency.
 -/
-def MVarId.congrN (mvarId : MVarId) (depth : Nat := 1000000) (closePre := true) (closePost := true) : MetaM (List MVarId) := do
+def MVarId.congrN (mvarId : MVarId) (depth : Nat := 1000000) (closePre := true) (closePost := true)
+    : MetaM (List MVarId) := do
   let (_, s) ← go depth mvarId |>.run #[]
   return s.toList
 where
@@ -115,8 +121,9 @@ where
   go (n : Nat) (mvarId : MVarId) : StateRefT (Array MVarId) MetaM Unit := do
     if let some mvarId ← if closePre then withReducible mvarId.congrPre else pure mvarId then
       match n with
-      | 0 => post mvarId
-      | n+1 =>
+      | 0 =>
+        post mvarId
+      | n + 1 =>
         let some mvarIds ← observing? (m := MetaM) mvarId.congrCore
           | post mvarId
         mvarIds.forM (go n)

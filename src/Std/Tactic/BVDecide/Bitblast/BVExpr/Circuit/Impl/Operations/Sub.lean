@@ -46,7 +46,6 @@ instance : AIG.LawfulVecOperator α AIG.BinaryRefVec blastSub where
     apply AIG.LawfulVecOperator.lt_size_of_lt_aig_size (f := blastNeg)
     assumption
 
-
 end bitblast
 end BVExpr
 

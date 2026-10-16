@@ -23,17 +23,22 @@ deriving Inhabited
 
 instance : Coe Float Milliseconds := ⟨fun s => .mk (s * 1000)⟩
 instance : OfScientific Milliseconds := ⟨fun m s e => .mk (OfScientific.ofScientific m s e)⟩
-instance : ToJson Milliseconds where toJson x := toJson x.ms
-instance : FromJson Milliseconds where fromJson? j := Milliseconds.mk <$> fromJson? j
-instance : Add Milliseconds where add x y := ⟨x.ms + y.ms⟩
+instance : ToJson Milliseconds where
+  toJson x := toJson x.ms
+instance : FromJson Milliseconds where
+  fromJson? j := Milliseconds.mk <$> fromJson? j
+instance : Add Milliseconds where
+  add x y := ⟨x.ms + y.ms⟩
 
 structure Microseconds where
   μs : Float
 
 instance : Coe Float Microseconds := ⟨fun s => .mk (s * 1000000)⟩
 instance : OfScientific Microseconds := ⟨fun m s e => .mk (OfScientific.ofScientific m s e)⟩
-instance : ToJson Microseconds where toJson x := toJson x.μs
-instance : FromJson Microseconds where fromJson? j := Microseconds.mk <$> fromJson? j
+instance : ToJson Microseconds where
+  toJson x := toJson x.μs
+instance : FromJson Microseconds where
+  fromJson? j := Microseconds.mk <$> fromJson? j
 
 structure Category where
   name : Name
@@ -48,7 +53,7 @@ structure SampleUnits where
 deriving FromJson, ToJson
 
 structure ProfileMeta where
-  interval : Milliseconds := 0.0  -- should be irrelevant with `tracing-ms`
+  interval : Milliseconds := 0.0 -- should be irrelevant with `tracing-ms`
   startTime : Milliseconds
   categories : Array Category := #[]
   processType : Nat := 0
@@ -99,9 +104,7 @@ structure FrameTable.Entry where
   line : Option Nat := none
   column : Option Nat := none
 
-/-
-Ideally could generate this from the above, but we don't have `Lean.getStructureInfo` yet.
--/
+/- Ideally could generate this from the above, but we don't have `Lean.getStructureInfo` yet. -/
 structure FrameTable where
   address : Array Int
   inlineDepth : Array Nat
@@ -146,7 +149,7 @@ structure Thread where
   processType : String := "default"
   isMainThread : Bool := true
   samples : SamplesTable
-  markers: RawMarkerTable := {}
+  markers : RawMarkerTable := {}
   stackTable : StackTable
   frameTable : FrameTable
   resourceTable : ResourceTable := {}
@@ -166,7 +169,7 @@ structure ThreadWithMaps extends Thread where
   stringMap : Std.HashMap String Nat := {}
   funcMap : Std.HashMap Nat Nat := {}
   stackMap : Std.HashMap (Nat × Option Nat) Nat := {}
-  /-- Last timestamp encountered: stop time of preceding sibling, or else start time of parent.  -/
+  /-- Last timestamp encountered: stop time of preceding sibling, or else start time of parent. -/
   lastTime : Float := 0
 
 -- TODO: add others, dynamically?
@@ -182,95 +185,119 @@ def categories : Array Category := #[
 
 /-- Returns first `startTime` in the trace tree, if any. -/
 private partial def getFirstStart? : MessageData → Option Float
-    | .trace data _ children => do
-      if data.startTime != 0 then
-        return data.startTime
-      if let some startTime := children.findSome? getFirstStart? then
-        return startTime
-      none
-    | .withContext _ msg => getFirstStart? msg
-    | _ => none
+  | .trace data _ children => do
+    if data.startTime != 0 then
+      return data.startTime
+    if let some startTime := children.findSome? getFirstStart? then
+      return startTime
+    none
+  | .withContext _ msg =>
+    getFirstStart? msg
+  | _ =>
+    none
 
-private partial def addTrace (pp : Bool) (thread : ThreadWithMaps) (trace : MessageData) :
-    IO ThreadWithMaps :=
+private partial def addTrace (pp : Bool) (thread : ThreadWithMaps) (trace : MessageData)
+    : IO ThreadWithMaps :=
   (·.2) <$> StateT.run (go none none trace) thread
 where
   go parentStackIdx? ctx? : _ → StateT ThreadWithMaps IO Unit
     | .trace data msg children => do
       if data.startTime == 0 then
-        return  -- no time data, skip
+        return -- no time data, skip
       let mut funcName := data.cls.toString
       if !data.tag.isEmpty then
         funcName := s!"{funcName}: {data.tag}"
       if pp then
         funcName := s!"{funcName}: {← msg.format ctx?}"
-      let strIdx ← modifyGet fun thread =>
-        if let some idx := thread.stringMap[funcName]? then
-          (idx, thread)
-        else
-          (thread.stringMap.size, { thread with
-            stringArray := thread.stringArray.push funcName
-            stringMap := thread.stringMap.insert funcName thread.stringMap.size })
+      let strIdx ←
+        modifyGet fun thread =>
+          if let some idx := thread.stringMap[funcName]? then
+            (idx, thread)
+          else (
+            thread.stringMap.size,
+            {
+              thread with
+              stringArray := thread.stringArray.push funcName
+              stringMap := thread.stringMap.insert funcName thread.stringMap.size
+            }
+          )
       let category := categories.findIdx? (·.name.isPrefixOf data.cls) |>.getD 0
-      let funcIdx ← modifyGet fun thread =>
-        if let some idx := thread.funcMap[strIdx]? then
-          (idx, thread)
-        else
-          (thread.funcMap.size, { thread with
-            funcTable := {
-              name := thread.funcTable.name.push strIdx
-              resource := thread.funcTable.resource.push (-1)
-              -- the following fields could be inferred from `Syntax` in the message
-              fileName := thread.funcTable.fileName.push none
-              lineNumber := thread.funcTable.lineNumber.push none
-              columnNumber := thread.funcTable.columnNumber.push none
-              length := thread.funcTable.length + 1
+      let funcIdx ←
+        modifyGet fun thread =>
+          if let some idx := thread.funcMap[strIdx]? then
+            (idx, thread)
+          else (
+            thread.funcMap.size,
+            {
+              thread with
+              funcTable := {
+                name := thread.funcTable.name.push strIdx
+                resource := thread.funcTable.resource.push (-1)
+                -- the following fields could be inferred from `Syntax` in the message
+                fileName := thread.funcTable.fileName.push none
+                lineNumber := thread.funcTable.lineNumber.push none
+                columnNumber := thread.funcTable.columnNumber.push none
+                length := thread.funcTable.length + 1
+              }
+              frameTable :=
+                thread.frameTable.push { func := thread.funcMap.size, category := category }
+              funcMap := thread.funcMap.insert strIdx thread.funcMap.size
             }
-            frameTable := thread.frameTable.push {
-              func := thread.funcMap.size
-              category := category
-            }
-            funcMap := thread.funcMap.insert strIdx thread.funcMap.size })
+          )
       let frameIdx := funcIdx
-      let stackIdx ← modifyGet fun thread =>
-        if let some idx := thread.stackMap[(frameIdx, parentStackIdx?)]? then
-          (idx, thread)
-        else
-          (thread.stackMap.size, { thread with
-            stackTable := {
-              frame := thread.stackTable.frame.push frameIdx
-              «prefix» := thread.stackTable.prefix.push parentStackIdx?
-              category := thread.stackTable.category.push category
-              subcategory := thread.stackTable.subcategory.push 0
-              length := thread.stackTable.length + 1
+      let stackIdx ←
+        modifyGet fun thread =>
+          if let some idx := thread.stackMap[(frameIdx, parentStackIdx?)]? then
+            (idx, thread)
+          else (
+            thread.stackMap.size,
+            {
+              thread with
+              stackTable := {
+                frame := thread.stackTable.frame.push frameIdx
+                «prefix» := thread.stackTable.prefix.push parentStackIdx?
+                category := thread.stackTable.category.push category
+                subcategory := thread.stackTable.subcategory.push 0
+                length := thread.stackTable.length + 1
+              }
+              stackMap := thread.stackMap.insert (frameIdx, parentStackIdx?) thread.stackMap.size
             }
-            stackMap := thread.stackMap.insert (frameIdx, parentStackIdx?) thread.stackMap.size })
+          )
       modify fun thread => { thread with lastTime := data.startTime }
       for c in children do
         if let some nextStart := getFirstStart? c then
           -- add run time slice between children/before first child
           -- a "slice" is always a pair of samples as otherwise Firefox Profiler interpolates
           -- between adjacent samples in undesirable ways
-          modify fun thread => { thread with samples := {
-            stack := thread.samples.stack.push stackIdx |>.push stackIdx
-            time := thread.samples.time.push thread.lastTime |>.push nextStart
-            weight := thread.samples.weight.push 0.0 |>.push (nextStart - thread.lastTime)
-            threadCPUDelta := thread.samples.threadCPUDelta.push 0.0 |>.push (nextStart - thread.lastTime)
-            length := thread.samples.length + 2
-          } }
+          modify fun thread => {
+            thread with
+            samples := {
+              stack := thread.samples.stack.push stackIdx |>.push stackIdx
+              time := thread.samples.time.push thread.lastTime |>.push nextStart
+              weight := thread.samples.weight.push 0.0 |>.push (nextStart - thread.lastTime)
+              threadCPUDelta :=
+                thread.samples.threadCPUDelta.push 0.0 |>.push (nextStart - thread.lastTime)
+              length := thread.samples.length + 2
+            }
+          }
           go (some stackIdx) ctx? c
       -- add remaining slice after last child
-      modify fun thread => { thread with
+      modify fun thread => {
+        thread with
         lastTime := data.stopTime
         samples := {
           stack := thread.samples.stack.push stackIdx |>.push stackIdx
           time := thread.samples.time.push thread.lastTime |>.push data.stopTime
           weight := thread.samples.weight.push 0.0 |>.push (data.stopTime - thread.lastTime)
-          threadCPUDelta := thread.samples.threadCPUDelta.push 0.0 |>.push (data.stopTime - thread.lastTime)
+          threadCPUDelta :=
+            thread.samples.threadCPUDelta.push 0.0 |>.push (data.stopTime - thread.lastTime)
           length := thread.samples.length + 2
-        } }
-    | .withContext ctx msg => go parentStackIdx? (some ctx) msg
-    | _ => return
+        }
+      }
+    | .withContext ctx msg =>
+      go parentStackIdx? (some ctx) msg
+    | _ =>
+      return
 
 def Thread.new (name : String) : Thread := {
   name
@@ -279,44 +306,55 @@ def Thread.new (name : String) : Thread := {
   frameTable := default
   stringArray := #[]
   funcTable := {
-    name := #[], resource := #[], fileName := #[], lineNumber := #[], columnNumber := #[],
-    length := 0 }
+    name := #[]
+    resource := #[]
+    fileName := #[]
+    lineNumber := #[]
+    columnNumber := #[]
+    length := 0
+  }
 }
 
-def Profile.export (name : String) (startTime : Float) (traceStates : Array TraceState)
-    (opts : Options) : IO Profile := do
+def Profile.export
+    (name : String) (startTime : Float) (traceStates : Array TraceState) (opts : Options)
+    : IO Profile := do
   let tids := traceStates.groupByKey (·.tid)
   let stopTime := (← IO.monoNanosNow).toFloat / 1000000000
-  let threads ← tids.toArray.qsort (fun (t1, _) (t2, _) => t1 < t2) |>.mapM fun (tid, traceStates) => do
-    let mut thread := { Thread.new (if tid = 0 then name else toString tid) with isMainThread := tid = 0 }
-    let traces := traceStates.map (·.traces.toArray)
-    -- sort traces of thread by start time
-    let traces := traces.qsort (fun tr1 tr2 =>
-      let f tr := tr[0]? |>.bind (getFirstStart? ·.msg) |>.getD 0
-      f tr1 < f tr2)
-    let mut traces := traces.flatMap id |>.map (·.msg)
-    if tid = 0 then
-      -- wrap entire trace up to current time in `runFrontend` node
-      traces := #[.trace {
-        cls := `runFrontend, startTime, stopTime,
-        collapsed := true } "" traces]
-    for trace in traces do
-      if thread.lastTime > 0.0 then
-        if let some nextStart := getFirstStart? trace then
-          -- add 0% CPU run time slice between traces
-          thread := { thread with samples := {
-            stack := thread.samples.stack.push 0 |>.push 0
-            time := thread.samples.time.push thread.lastTime |>.push nextStart
-            weight := thread.samples.weight.push 0.0 |>.push 0.0
-            threadCPUDelta := thread.samples.threadCPUDelta.push 0.0 |>.push 0.0
-            length := thread.samples.length + 2
-          } }
-      thread ← addTrace (Lean.trace.profiler.output.pp.get opts) thread trace
-    return thread
-  return {
-    «meta» := { startTime, categories }
-    threads := threads.map (·.toThread)
-  }
+  let threads ←
+    tids.toArray.qsort (fun (t1, _) (t2, _) => t1 < t2)
+      |>.mapM fun (tid, traceStates) => do
+        let mut thread := {
+          Thread.new (if tid = 0 then name else toString tid) with
+          isMainThread := tid = 0
+        }
+        let traces := traceStates.map (·.traces.toArray)
+        -- sort traces of thread by start time
+        let traces :=
+          traces.qsort (fun tr1 tr2 =>
+            let f tr := tr[0]? |>.bind (getFirstStart? ·.msg) |>.getD 0
+            f tr1 < f tr2)
+        let mut traces := traces.flatMap id |>.map (·.msg)
+        if tid = 0 then
+          -- wrap entire trace up to current time in `runFrontend` node
+          traces :=
+            #[.trace { cls := `runFrontend, startTime, stopTime, collapsed := true } "" traces]
+        for trace in traces do
+          if thread.lastTime > 0.0 then
+            if let some nextStart := getFirstStart? trace then
+              -- add 0% CPU run time slice between traces
+              thread := {
+                thread with
+                samples := {
+                  stack := thread.samples.stack.push 0 |>.push 0
+                  time := thread.samples.time.push thread.lastTime |>.push nextStart
+                  weight := thread.samples.weight.push 0.0 |>.push 0.0
+                  threadCPUDelta := thread.samples.threadCPUDelta.push 0.0 |>.push 0.0
+                  length := thread.samples.length + 2
+                }
+              }
+          thread ← addTrace (Lean.trace.profiler.output.pp.get opts) thread trace
+        return thread
+  return { «meta» := { startTime, categories }, threads := threads.map (·.toThread) }
 
 structure ThreadWithCollideMaps extends ThreadWithMaps where
   /-- Max sharing map for samples -/
@@ -326,8 +364,8 @@ structure ThreadWithCollideMaps extends ThreadWithMaps where
 Adds samples from `add` to `thread`, increasing the weight of existing samples with identical stacks
 instead of pushing new samples.
 -/
-private partial def collideThreads (thread : ThreadWithCollideMaps) (add : Thread) :
-    ThreadWithCollideMaps :=
+private partial def collideThreads (thread : ThreadWithCollideMaps) (add : Thread)
+    : ThreadWithCollideMaps :=
   StateT.run collideSamples thread |>.2
 where
   collideSamples : StateM ThreadWithCollideMaps Unit := do
@@ -348,12 +386,12 @@ where
             thread
           let ⟨stack, time, weight, _, threadCPUDelta, length⟩ := samples
           let samples := {
-              stack := stack.push stackIdx
-              time := time.push time.size.toFloat
-              weight := weight.push add.samples.weight[oldSampleIdx]!
-              threadCPUDelta := threadCPUDelta.push 1.0
-              length := length + 1
-            }
+            stack := stack.push stackIdx
+            time := time.push time.size.toFloat
+            weight := weight.push add.samples.weight[oldSampleIdx]!
+            threadCPUDelta := threadCPUDelta.push 1.0
+            length := length + 1
+          }
           let sampleMap := sampleMap.insert stackIdx sampleMap.size
           ⟨⟨⟨t1, t2, t3, samples, t5, t6, t7, t8, t9, t10, t11⟩, o2, o3, o4, o5⟩, sampleMap⟩
   collideStacks oldStackIdx : StateM ThreadWithCollideMaps Nat := do
@@ -363,49 +401,57 @@ where
     let oldFuncIdx := add.frameTable.func[oldFrameIdx]!
     let oldStrIdx := add.funcTable.name[oldFuncIdx]!
     let strIdx ← getStrIdx add.stringArray[oldStrIdx]!
-    let funcIdx ← modifyGet fun thread =>
-      if let some idx := thread.funcMap[strIdx]? then
-        (idx, thread)
-      else
-        (thread.funcMap.size, { thread with
-          funcTable := {
-            name := thread.funcTable.name.push strIdx
-            resource := thread.funcTable.resource.push (-1)
-            fileName := thread.funcTable.fileName.push none
-            lineNumber := thread.funcTable.lineNumber.push none
-            columnNumber := thread.funcTable.columnNumber.push none
-            length := thread.funcTable.length + 1
+    let funcIdx ←
+      modifyGet fun thread =>
+        if let some idx := thread.funcMap[strIdx]? then
+          (idx, thread)
+        else (
+          thread.funcMap.size,
+          {
+            thread with
+            funcTable := {
+              name := thread.funcTable.name.push strIdx
+              resource := thread.funcTable.resource.push (-1)
+              fileName := thread.funcTable.fileName.push none
+              lineNumber := thread.funcTable.lineNumber.push none
+              columnNumber := thread.funcTable.columnNumber.push none
+              length := thread.funcTable.length + 1
+            }
+            frameTable := thread.frameTable.push { func := thread.funcMap.size }
+            funcMap := thread.funcMap.insert strIdx thread.funcMap.size
           }
-          frameTable := thread.frameTable.push {
-            func := thread.funcMap.size
-          }
-          funcMap := thread.funcMap.insert strIdx thread.funcMap.size })
+        )
     let frameIdx := funcIdx
     modifyGet fun thread =>
       if let some idx := thread.stackMap[(frameIdx, parentStackIdx?)]? then
         (idx, thread)
-      else
-        (thread.stackMap.size,
-          let ⟨⟨⟨t1,t2, t3, t4, t5, stackTable, t7, t8, t9, t10, t11⟩, o2, o3, stackMap, o5⟩, o6⟩ :=
-            thread
-          let { frame, «prefix», category, subcategory, length } := stackTable
-          let stackTable := {
-            frame := frame.push frameIdx
-            «prefix» := prefix.push parentStackIdx?
-            category := category.push add.stackTable.category[oldStackIdx]!
-            subcategory := subcategory.push add.stackTable.subcategory[oldStackIdx]!
-            length := length + 1
-          }
-          let stackMap := stackMap.insert (frameIdx, parentStackIdx?) stackMap.size
-          ⟨⟨⟨t1,t2, t3, t4, t5, stackTable, t7, t8, t9, t10, t11⟩, o2, o3, stackMap, o5⟩, o6⟩)
+      else (
+        thread.stackMap.size,
+        let ⟨⟨⟨t1, t2, t3, t4, t5, stackTable, t7, t8, t9, t10, t11⟩, o2, o3, stackMap, o5⟩, o6⟩ :=
+          thread
+        let { frame, «prefix», category, subcategory, length } := stackTable
+        let stackTable := {
+          frame := frame.push frameIdx
+          «prefix» := prefix.push parentStackIdx?
+          category := category.push add.stackTable.category[oldStackIdx]!
+          subcategory := subcategory.push add.stackTable.subcategory[oldStackIdx]!
+          length := length + 1
+        }
+        let stackMap := stackMap.insert (frameIdx, parentStackIdx?) stackMap.size
+        ⟨⟨⟨t1, t2, t3, t4, t5, stackTable, t7, t8, t9, t10, t11⟩, o2, o3, stackMap, o5⟩, o6⟩
+      )
   getStrIdx (s : String) :=
     modifyGet fun thread =>
       if let some idx := thread.stringMap[s]? then
         (idx, thread)
-      else
-        (thread.stringMap.size, { thread with
+      else (
+        thread.stringMap.size,
+        {
+          thread with
           stringArray := thread.stringArray.push s
-          stringMap := thread.stringMap.insert s thread.stringMap.size })
+          stringMap := thread.stringMap.insert s thread.stringMap.size
+        }
+      )
 
 /--
 Merges given profiles such that samples with identical stacks are deduplicated by adding up their

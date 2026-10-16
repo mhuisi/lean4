@@ -14,11 +14,12 @@ namespace Lean
 
 register_builtin_option exponentiation.threshold : Nat := {
   defValue := 256
-  descr    := "maximum value for \
-  which exponentiation operations are safe to evaluate. When an exponent \
-  is a value greater than this threshold, the exponentiation will not be evaluated, \
-  and a warning will be logged. This helps to prevent the system from becoming \
-  unresponsive due to excessively large computations."
+  descr :=
+    "maximum value for \
+      which exponentiation operations are safe to evaluate. When an exponent \
+      is a value greater than this threshold, the exponentiation will not be evaluated, \
+      and a warning will be logged. This helps to prevent the system from becoming \
+      unresponsive due to excessively large computations."
 }
 
 /--
@@ -30,7 +31,9 @@ def checkExponent (n : Nat) (warning := true) : CoreM Bool := do
   let threshold ← getRecordedOption exponentiation.threshold
   if n > threshold then
     if (← pure warning <&&> logMessageKind `unsafe.exponentiation) then
-      logWarning s!"exponent {n} exceeds the threshold {threshold}, exponentiation operation was not evaluated, use `set_option {exponentiation.threshold.name} <num>` to set a new threshold"
+      logWarning
+        s!"exponent {n} exceeds the threshold {threshold}, exponentiation operation was not \
+          evaluated, use `set_option {exponentiation.threshold.name} <num>` to set a new threshold"
     return false
   else
     return true

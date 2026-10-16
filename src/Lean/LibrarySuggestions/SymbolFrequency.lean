@@ -48,7 +48,8 @@ def withUncountedHeartbeats (x : CoreM α) : CoreM α := do
 def waitInterruptibly (t : Task (Option α)) : CoreM (Option α) := do
   if ← IO.hasFinished t then
     return t.get
-  let some tk := (← readThe Core.Context).cancelTk? | IO.wait t
+  let some tk := (← readThe Core.Context).cancelTk?
+    | IO.wait t
   let result : IO.Promise (Option (Option α)) ← IO.Promise.new
   tk.onSet (result.resolve none)
   BaseIO.chainTask t (fun value => result.resolve (some value)) (sync := true)
@@ -63,9 +64,10 @@ cached, and the callers that were waiting for it compute the value themselves.
 -/
 partial def SharedCache.getOrCompute (cache : SharedCache α) (x : CoreM α) : CoreM α := do
   let promise : IO.Promise (Option α) ← IO.Promise.new
-  let running? ← cache.modifyGet fun
-    | some t => (some t, some t)
-    | none => (none, some (promise.resultD none))
+  let running? ←
+    cache.modifyGet fun
+      | some t => (some t, some t)
+      | none => (none, some (promise.resultD none))
   if let some t := running? then
     if let some value ← waitInterruptibly t then
       return value
@@ -90,8 +92,9 @@ process.
 def importedRelevantConstants : CoreM (Array (Name × Array Name)) :=
   importedRelevantConstantsRef.getOrCompute <| withUncountedHeartbeats do
     let env ← getEnv
-    let names := env.constants.map₁.keysArray.filter fun name =>
-      !isDeniedPremise env name && wasOriginallyTheorem env name
+    let names :=
+      env.constants.map₁.keysArray.filter fun name =>
+        ! isDeniedPremise env name && wasOriginallyTheorem env name
     let cancelTk? := (← readThe Core.Context).cancelTk?
     let visitChunk (chunk : Array Name) : CoreM (Array (Name × Array Name)) :=
       Meta.MetaM.run' <| withoutExporting do
@@ -131,5 +134,4 @@ Return the number of times a `Name` appears
 in the signatures of (non-internal) theorems in the imported environment,
 skipping instance arguments and proofs.
 -/
-public def symbolFrequency (n : Name) : CoreM Nat :=
-  return (← symbolFrequencyMap) |>.getD n 0
+public def symbolFrequency (n : Name) : CoreM Nat := return (← symbolFrequencyMap) |>.getD n 0

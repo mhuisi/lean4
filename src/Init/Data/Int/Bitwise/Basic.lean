@@ -45,8 +45,10 @@ Examples:
 -/
 @[expose, implicit_reducible]
 protected def shiftRight : Int → Nat → Int
-  | Int.ofNat n, s => Int.ofNat (n >>> s)
-  | Int.negSucc n, s => Int.negSucc (n >>> s)
+  | Int.ofNat n, s =>
+    Int.ofNat (n >>> s)
+  | Int.negSucc n, s =>
+    Int.negSucc (n >>> s)
 
 instance : HShiftRight Int Nat Int := ⟨.shiftRight⟩
 
@@ -62,8 +64,10 @@ Examples:
 -/
 @[expose]
 protected def shiftLeft : Int → Nat → Int
-  | Int.ofNat n, s => Int.ofNat (n <<< s)
-  | Int.negSucc n, s => Int.negSucc (((n + 1) <<< s) - 1)
+  | Int.ofNat n, s =>
+    Int.ofNat (n <<< s)
+  | Int.negSucc n, s =>
+    Int.negSucc (((n + 1) <<< s) - 1)
 
 instance : HShiftLeft Int Nat Int := ⟨.shiftLeft⟩
 

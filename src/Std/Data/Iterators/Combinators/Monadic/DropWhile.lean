@@ -35,12 +35,10 @@ open Std.Iterators
 
 variable {α : Type w} {m : Type w → Type w'} {β : Type w}
 
-/--
-Internal state of the `dropWhile` combinator. Do not depend on its internals.
--/
+/-- Internal state of the `dropWhile` combinator. Do not depend on its internals. -/
 @[unbox]
-structure Iterators.Types.DropWhile (α : Type w) (m : Type w → Type w') (β : Type w)
-    (P : β → PostconditionT m (ULift Bool)) where
+structure Iterators.Types.DropWhile
+    (α : Type w) (m : Type w → Type w') (β : Type w) (P : β → PostconditionT m (ULift Bool)) where
   /-- Internal implementation detail of the iterator library. -/
   dropping : Bool
   /-- Internal implementation detail of the iterator library. -/
@@ -57,8 +55,8 @@ created directly with `IterM.dropWhileWithPostcondition` but only with
 verification purposes.
 -/
 @[always_inline, inline, implicit_reducible]
-def IterM.Intermediate.dropWhileWithPostcondition (P : β → PostconditionT m (ULift Bool))
-    (dropping : Bool) (it : IterM (α := α) m β) :=
+def IterM.Intermediate.dropWhileWithPostcondition
+    (P : β → PostconditionT m (ULift Bool)) (dropping : Bool) (it : IterM (α := α) m β) :=
   (⟨Iterators.Types.DropWhile.mk (P := P) dropping it⟩ : IterM m β)
 
 /--
@@ -69,9 +67,11 @@ directly with `IterM.dropWhileM` but only with `Intermediate.dropWhileM`.
 `Intermediate.dropWhileM` is meant to be used only for internally or for verification purposes.
 -/
 @[always_inline, inline]
-def IterM.Intermediate.dropWhileM [Monad m] [MonadAttach m] (P : β → m (ULift Bool)) (dropping : Bool)
-    (it : IterM (α := α) m β) :=
-  (IterM.Intermediate.dropWhileWithPostcondition (PostconditionT.attachLift ∘ P) dropping it : IterM m β)
+def IterM.Intermediate.dropWhileM
+    [Monad m] [MonadAttach m]
+    (P : β → m (ULift Bool)) (dropping : Bool) (it : IterM (α := α) m β) :=
+  (IterM.Intermediate.dropWhileWithPostcondition (PostconditionT.attachLift ∘ P) dropping it
+    : IterM m β)
 
 /--
 Constructs intermediate states of an iterator created with the combinator `IterM.dropWhile`.
@@ -81,8 +81,8 @@ directly with `IterM.dropWhile` but only with `Intermediate.dropWhile`.
 `Intermediate.dropWhile` is meant to be used only for internally or for verification purposes.
 -/
 @[always_inline, inline, implicit_reducible]
-def IterM.Intermediate.dropWhile [Monad m] (P : β → Bool) (dropping : Bool)
-    (it : IterM (α := α) m β) :=
+def IterM.Intermediate.dropWhile
+    [Monad m] (P : β → Bool) (dropping : Bool) (it : IterM (α := α) m β) :=
   (IterM.Intermediate.dropWhileWithPostcondition (pure ∘ ULift.up ∘ P) dropping it : IterM m β)
 
 /--
@@ -124,7 +124,8 @@ This combinator calls `P` on each output of `it` until the predicate evaluates t
 that, the combinator incurs an additional O(1) cost for each value emitted by `it`.
 -/
 @[always_inline, inline]
-def IterM.dropWhileWithPostcondition (P : β → PostconditionT m (ULift Bool)) (it : IterM (α := α) m β) :=
+def IterM.dropWhileWithPostcondition
+    (P : β → PostconditionT m (ULift Bool)) (it : IterM (α := α) m β) :=
   (Intermediate.dropWhileWithPostcondition P true it : IterM m β)
 
 /--
@@ -194,7 +195,7 @@ that, the combinator incurs an addictional O(1) cost for each value emitted by `
 -/
 @[always_inline, inline]
 def IterM.dropWhile [Monad m] (P : β → Bool) (it : IterM (α := α) m β) :=
-  (Intermediate.dropWhile P true it: IterM m β)
+  (Intermediate.dropWhile P true it : IterM m β)
 
 namespace Iterators.Types
 
@@ -203,24 +204,32 @@ namespace Iterators.Types
 `dropWhile` iterator `it`. This is mostly internally relevant, except if one needs to manually
 prove termination (`Finite` or `Productive` instances, for example) of a `dropWhile` iterator.
 -/
-inductive DropWhile.PlausibleStep [Iterator α m β] {P} (it : IterM (α := DropWhile α m β P) m β) :
-    (step : IterStep (IterM (α := DropWhile α m β P) m β) β) → Prop where
-  | yield : ∀ {it' out}, it.internalState.inner.IsPlausibleStep (.yield it' out) →
-      it.internalState.dropping = false →
-      PlausibleStep it (.yield (IterM.Intermediate.dropWhileWithPostcondition P false it') out)
-  | skip : ∀ {it'}, it.internalState.inner.IsPlausibleStep (.skip it') →
-      PlausibleStep it (.skip (IterM.Intermediate.dropWhileWithPostcondition P it.internalState.dropping it'))
+inductive DropWhile.PlausibleStep [Iterator α m β] {P} (it : IterM (α := DropWhile α m β P) m β)
+    : (step : IterStep (IterM (α := DropWhile α m β P) m β) β) → Prop where
+  | yield
+    : ∀ {it' out},
+      it.internalState.inner.IsPlausibleStep (.yield it' out) → it.internalState.dropping = false
+        → PlausibleStep it (.yield (IterM.Intermediate.dropWhileWithPostcondition P false it') out)
+  | skip
+    : ∀ {it'},
+      it.internalState.inner.IsPlausibleStep (.skip it')
+        → PlausibleStep it
+          (.skip (IterM.Intermediate.dropWhileWithPostcondition P it.internalState.dropping it'))
   | done : it.internalState.inner.IsPlausibleStep .done → PlausibleStep it .done
-  | start : ∀ {it' out}, it.internalState.inner.IsPlausibleStep (.yield it' out) →
-      it.internalState.dropping = true → (P out).Property (.up false) →
-      PlausibleStep it (.yield (IterM.Intermediate.dropWhileWithPostcondition P false it') out)
-  | dropped : ∀ {it' out}, it.internalState.inner.IsPlausibleStep (.yield it' out) →
-      it.internalState.dropping = true → (P out).Property (.up true) →
-      PlausibleStep it (.skip (IterM.Intermediate.dropWhileWithPostcondition P true it'))
+  | start
+    : ∀ {it' out},
+      it.internalState.inner.IsPlausibleStep (.yield it' out) → it.internalState.dropping = true
+        → (P out).Property (.up false)
+        → PlausibleStep it (.yield (IterM.Intermediate.dropWhileWithPostcondition P false it') out)
+  | dropped
+    : ∀ {it' out},
+      it.internalState.inner.IsPlausibleStep (.yield it' out) → it.internalState.dropping = true
+        → (P out).Property (.up true)
+        → PlausibleStep it (.skip (IterM.Intermediate.dropWhileWithPostcondition P true it'))
 
 @[always_inline, inline]
-instance DropWhile.instIterator [Monad m] [Iterator α m β] {P} :
-    Iterator (DropWhile α m β P) m β where
+instance DropWhile.instIterator [Monad m] [Iterator α m β] {P}
+    : Iterator (DropWhile α m β P) m β where
   IsPlausibleStep := DropWhile.PlausibleStep
   step it := do
     match (← it.internalState.inner.step).inflate with
@@ -228,21 +237,24 @@ instance DropWhile.instIterator [Monad m] [Iterator α m β] {P} :
       if h' : it.internalState.dropping = true then
         match ← (P out).operation with
         | ⟨.up true, h''⟩ =>
-          return .deflate <| .skip (IterM.Intermediate.dropWhileWithPostcondition P true it') (.dropped h h' h'')
+          return .deflate <|
+            .skip (IterM.Intermediate.dropWhileWithPostcondition P true it') (.dropped h h' h'')
         | ⟨.up false, h''⟩ =>
-          return .deflate <| .yield (IterM.Intermediate.dropWhileWithPostcondition P false it') out (.start h h' h'')
+          return .deflate <|
+            .yield (IterM.Intermediate.dropWhileWithPostcondition P false it') out (.start h h' h'')
       else
         return .deflate <| .yield (IterM.Intermediate.dropWhileWithPostcondition P false it') out
-            (.yield h (Bool.not_eq_true _ ▸ h'))
+          (.yield h (Bool.not_eq_true _ ▸ h'))
     | .skip it' h =>
-      return .deflate <| .skip (IterM.Intermediate.dropWhileWithPostcondition P it.internalState.dropping it') (.skip h)
+      return .deflate <| .skip
+        (IterM.Intermediate.dropWhileWithPostcondition P it.internalState.dropping it') (.skip h)
     | .done h =>
       return .deflate <| .done (.done h)
 
-private def DropWhile.instFinitenessRelation [Monad m] [Iterator α m β]
-    [Finite α m] {P} :
-    FinitenessRelation (DropWhile α m β P) m where
-  Rel := InvImage WellFoundedRelation.rel
+private def DropWhile.instFinitenessRelation [Monad m] [Iterator α m β] [Finite α m] {P}
+    : FinitenessRelation (DropWhile α m β P) m where
+  Rel :=
+    InvImage WellFoundedRelation.rel
       (IterM.finitelyManySteps ∘ DropWhile.inner ∘ IterM.internalState)
   wf := by
     apply InvImage.wf
@@ -256,8 +268,7 @@ private def DropWhile.instFinitenessRelation [Monad m] [Iterator α m β]
     case skip it' out h' =>
       cases h
       exact IterM.TerminationMeasures.Finite.rel_of_skip h'
-    case done _ =>
-      cases h
+    case done _ => cases h
     case start it' out h' h'' h''' =>
       cases h
       exact IterM.TerminationMeasures.Finite.rel_of_yield h'
@@ -265,12 +276,12 @@ private def DropWhile.instFinitenessRelation [Monad m] [Iterator α m β]
       cases h
       exact IterM.TerminationMeasures.Finite.rel_of_yield h'
 
-instance DropWhile.instFinite [Monad m] [Iterator α m β] [Finite α m] {P} :
-    Finite (DropWhile α m β P) m :=
-  by exact Finite.of_finitenessRelation instFinitenessRelation
+instance DropWhile.instFinite [Monad m] [Iterator α m β] [Finite α m] {P}
+    : Finite (DropWhile α m β P) m := by
+  exact Finite.of_finitenessRelation instFinitenessRelation
 
-instance DropWhile.instIteratorLoop [Monad m] [Monad n] [Iterator α m β] :
-    IteratorLoop (DropWhile α m β P) m n :=
+instance DropWhile.instIteratorLoop [Monad m] [Monad n] [Iterator α m β]
+    : IteratorLoop (DropWhile α m β P) m n :=
   .defaultImplementation
 
 end Std.Iterators.Types

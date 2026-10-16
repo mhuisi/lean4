@@ -33,14 +33,16 @@ inductive CoeFnType
   | coeFun
   /-- The coercion to a type, see `CoeSort.coe` -/
   | coeSort
-  deriving Inhabited, Repr, DecidableEq
+deriving Inhabited, Repr, DecidableEq
 
 instance : ToExpr CoeFnType where
   toTypeExpr := mkConst ``CoeFnType
-  toExpr := open CoeFnType in fun
-    | coe => mkConst ``coe
-    | coeFun => mkConst ``coeFun
-    | coeSort => mkConst ``coeSort
+  toExpr :=
+    open CoeFnType in
+    fun
+      | coe => mkConst ``coe
+      | coeFun => mkConst ``coeFun
+      | coeSort => mkConst ``coeSort
 
 /-- Information associated to a coercion function to enable sensible delaboration. -/
 structure CoeFnInfo where
@@ -50,19 +52,17 @@ structure CoeFnInfo where
   coercee : Nat
   /-- The type of coercion -/
   type : CoeFnType
-  deriving Inhabited, Repr
+deriving Inhabited, Repr
 
 instance : ToExpr CoeFnInfo where
   toTypeExpr := mkConst ``CoeFnInfo
-  toExpr | ⟨a, b, c⟩ => mkApp3 (mkConst ``CoeFnInfo.mk) (toExpr a) (toExpr b) (toExpr c)
+  toExpr
+    | ⟨a, b, c⟩ => mkApp3 (mkConst ``CoeFnInfo.mk) (toExpr a) (toExpr b) (toExpr c)
 
 /-- The environment extension for tracking coercion functions for delaboration -/
 -- TODO: does it need to be a scoped extension
 initialize coeExt : SimpleScopedEnvExtension (Name × CoeFnInfo) (NameMap CoeFnInfo) ←
-  registerSimpleScopedEnvExtension {
-    addEntry := fun st (n, i) => st.insert n i
-    initial := {}
-  }
+  registerSimpleScopedEnvExtension { addEntry := fun st (n, i) => st.insert n i, initial := {} }
 
 /-- Lookup the coercion information for a given function -/
 def getCoeFnInfo? (fn : Name) : CoreM (Option CoeFnInfo) :=
@@ -70,20 +70,26 @@ def getCoeFnInfo? (fn : Name) : CoreM (Option CoeFnInfo) :=
 
 /-- Add `name` to the coercion extension and add a coercion delaborator for the function. -/
 def registerCoercion (name : Name) (info : Option CoeFnInfo := none) : MetaM Unit := do
-  let info ← match info with | some info => pure info | none => do
-    let fnInfo ← getFunInfo (← mkConstWithLevelParams name)
-    let some coercee := fnInfo.paramInfo.findIdx? (·.binderInfo.isExplicit)
-      | throwError "{name} has no explicit arguments"
-    pure { numArgs := coercee + 1, coercee, type := .coe }
+  let info ←
+    match info with
+    | some info =>
+      pure info
+    | none => do
+      let fnInfo ← getFunInfo (← mkConstWithLevelParams name)
+      let some coercee := fnInfo.paramInfo.findIdx? (·.binderInfo.isExplicit)
+        | throwError "{name} has no explicit arguments"
+      pure { numArgs := coercee + 1, coercee, type := .coe }
   modifyEnv fun env => coeExt.addEntry env (name, info)
 
-builtin_initialize registerBuiltinAttribute {
-  name := `coe
-  descr := "Adds a definition as a coercion"
-  add := fun decl _stx kind => MetaM.run' do
-    unless kind == .global do
-      throwAttrMustBeGlobal `coe kind
-    registerCoercion decl
-}
+builtin_initialize
+  registerBuiltinAttribute {
+    name := `coe
+    descr := "Adds a definition as a coercion"
+    add := fun decl _stx kind =>
+      MetaM.run' do
+        unless kind == .global do
+          throwAttrMustBeGlobal `coe kind
+        registerCoercion decl
+  }
 
 end Lean.Meta

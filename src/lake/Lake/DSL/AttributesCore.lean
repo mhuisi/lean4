@@ -30,10 +30,12 @@ public builtin_initialize defaultScriptAttr : OrderedTagAttribute ←
         throwError "attribute `default_script` can only be used on a `script`"
 
 public builtin_initialize leanLibAttr : OrderedTagAttribute ←
-  registerOrderedTagAttribute `lean_lib "mark a definition as a Lake Lean library target configuration"
+  registerOrderedTagAttribute `lean_lib
+    "mark a definition as a Lake Lean library target configuration"
 
 public builtin_initialize leanExeAttr : OrderedTagAttribute ←
-  registerOrderedTagAttribute `lean_exe "mark a definition as a Lake Lean executable target configuration"
+  registerOrderedTagAttribute `lean_exe
+    "mark a definition as a Lake Lean executable target configuration"
 
 public builtin_initialize externLibAttr : OrderedTagAttribute ←
   registerOrderedTagAttribute `extern_lib "mark a definition as a Lake external library target"
@@ -50,27 +52,26 @@ public builtin_initialize targetAttr : OrderedTagAttribute ←
 public builtin_initialize defaultTargetAttr : OrderedTagAttribute ←
   registerOrderedTagAttribute `default_target "mark a Lake target as the package's default"
     fun name => do
-      let valid ← getEnv <&> fun env =>
-        targetAttr.hasTag env name
+      let valid ← getEnv <&> fun env => targetAttr.hasTag env name
       unless valid do
-        throwError "attribute `default_target` can only be used on a target (e.g., `lean_lib`, `lean_exe`)"
+        throwError
+          "attribute `default_target` can only be used on a target (e.g., `lean_lib`, `lean_exe`)"
 
 public builtin_initialize testDriverAttr : OrderedTagAttribute ←
-  registerOrderedTagAttribute `test_driver "mark a Lake script, executable, or library as package's test driver"
+  registerOrderedTagAttribute `test_driver
+    "mark a Lake script, executable, or library as package's test driver"
     fun name => do
-      let valid ← getEnv <&> fun env =>
-        scriptAttr.hasTag env name ||
-        leanExeAttr.hasTag env name ||
-        leanLibAttr.hasTag env name
+      let valid ←
+        getEnv <&> fun env =>
+          scriptAttr.hasTag env name || leanExeAttr.hasTag env name || leanLibAttr.hasTag env name
       unless valid do
-        throwError "attribute `test_driver` can only be used on a `script`, `lean_exe`, or `lean_lib`"
+        throwError
+          "attribute `test_driver` can only be used on a `script`, `lean_exe`, or `lean_lib`"
 
 public builtin_initialize lintDriverAttr : OrderedTagAttribute ←
   registerOrderedTagAttribute `lint_driver "mark a Lake script or executable as package's linter"
     fun name => do
-      let valid ← getEnv <&> fun env =>
-        scriptAttr.hasTag env name ||
-        leanExeAttr.hasTag env name
+      let valid ← getEnv <&> fun env => scriptAttr.hasTag env name || leanExeAttr.hasTag env name
       unless valid do
         throwError "attribute `lint_driver` can only be used on a `script` or `lean_exe`"
 

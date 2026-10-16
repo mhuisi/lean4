@@ -21,11 +21,16 @@ Import `Std.Classes.Ord` in order to obtain the `TransOrd` and `LawfulEqOrd` ins
 -/
 namespace Int
 
-protected theorem lt_or_eq_of_le {n m : Int} (h : n ≤ m) : n < m ∨ n = m := by
-  omega
+protected theorem lt_or_eq_of_le {n m : Int} (h : n ≤ m) : n < m ∨ n = m := by omega
 
-theorem compare_eq_ite_lt (a b : Int) :
-    compare a b = if a < b then .lt else if b < a then .gt else .eq := by
+theorem compare_eq_ite_lt (a b : Int)
+    : compare a b
+      = if a < b then
+          .lt
+        else if b < a then
+          .gt
+        else
+          .eq := by
   simp only [compare, compareOfLessAndEq]
   split
   · rfl
@@ -34,8 +39,8 @@ theorem compare_eq_ite_lt (a b : Int) :
     | .inl h => simp [h, Int.ne_of_gt h]
     | .inr rfl => simp
 
-theorem compare_eq_ite_le (a b : Int) :
-    compare a b = if a ≤ b then if b ≤ a then .eq else .lt else .gt := by
+theorem compare_eq_ite_le (a b : Int)
+    : compare a b = if a ≤ b then if b ≤ a then .eq else .lt else .gt := by
   rw [compare_eq_ite_lt]
   split
   next hlt => simp [Int.le_of_lt hlt, Int.not_le.2 hlt]
@@ -45,11 +50,13 @@ theorem compare_eq_ite_le (a b : Int) :
     next hle => simp [Int.not_lt.1 hge, Int.not_lt.1 hle]
 
 protected theorem compare_swap (a b : Int) : (compare a b).swap = compare b a := by
-  simp only [compare_eq_ite_le]; (repeat' split) <;> try rfl
+  simp only [compare_eq_ite_le]
+  (repeat' split) <;> try rfl
   next h1 h2 => cases h1 (Int.le_of_not_le h2)
 
 protected theorem compare_eq_eq {a b : Int} : compare a b = .eq ↔ a = b := by
-  rw [compare_eq_ite_lt]; (repeat' split) <;> simp [Int.ne_of_lt, Int.ne_of_gt, *]
+  rw [compare_eq_ite_lt]
+  (repeat' split) <;> simp [Int.ne_of_lt, Int.ne_of_gt, *]
   next hlt hgt => exact Int.le_antisymm (Int.not_lt.1 hgt) (Int.not_lt.1 hlt)
 
 protected theorem compare_eq_lt {a b : Int} : compare a b = .lt ↔ a < b := by
@@ -64,13 +71,11 @@ protected theorem compare_ne_gt {a b : Int} : compare a b ≠ .gt ↔ a ≤ b :=
 protected theorem compare_ne_lt {a b : Int} : compare a b ≠ .lt ↔ b ≤ a := by
   rw [compare_eq_ite_le]; (repeat' split) <;> simp [Int.le_of_not_le, *]
 
-protected theorem isLE_compare {a b : Int} :
-    (compare a b).isLE ↔ a ≤ b := by
+protected theorem isLE_compare {a b : Int} : (compare a b).isLE ↔ a ≤ b := by
   simp only [Int.compare_eq_ite_le]
   repeat' split <;> simp_all
 
-protected theorem isGE_compare {a b : Int} :
-    (compare a b).isGE ↔ b ≤ a := by
+protected theorem isGE_compare {a b : Int} : (compare a b).isGE ↔ b ≤ a := by
   rw [← Int.compare_swap, Ordering.isGE_swap]
   exact Int.isLE_compare
 

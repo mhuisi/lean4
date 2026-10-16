@@ -19,16 +19,22 @@ Computes the difference of two floating point numbers and rounds the result acco
 the given specification.
 -/
 def sub (spec : Format) : UnpackedFloat → UnpackedFloat → UnpackedFloat
-  | .notANumber, _ => .notANumber
-  | _, .notANumber => .notANumber
+  | .notANumber, _ =>
+    .notANumber
+  | _, .notANumber =>
+    .notANumber
   | .infinity sign₁, .infinity sign₂ =>
     if sign₁ == -sign₂ then .infinity sign₁ else .notANumber
-  | .infinity s, _ => .infinity s
-  | _, .infinity s => .infinity (-s)
+  | .infinity s, _ =>
+    .infinity s
+  | _, .infinity s =>
+    .infinity (-s)
   | .zero sign₁, .zero sign₂ =>
     if sign₁ == -sign₂ then .zero sign₁ else .zero .positive
-  | .zero _, .finite sign mantissa exponent hm => .finite (-sign) mantissa exponent hm
-  | x, .zero _ => x
+  | .zero _, .finite sign mantissa exponent hm =>
+    .finite (-sign) mantissa exponent hm
+  | x, .zero _ =>
+    x
   | .finite s₁ m₁ e₁ _, .finite s₂ m₂ e₂ _ =>
     let smallerExponent := min e₁ e₂
     let (m₁, _) := decreaseExponent m₁ e₁ smallerExponent

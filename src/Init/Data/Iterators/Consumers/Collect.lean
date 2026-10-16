@@ -33,8 +33,7 @@ If the iterator is not finite, this function might run forever. The variant
 `it.ensureTermination.toArray` always terminates after finitely many steps.
 -/
 @[cbv_opaque, always_inline, inline]
-def Iter.toArray {α : Type w} {β : Type w}
-    [Iterator α Id β] (it : Iter (α := α) β) : Array β :=
+def Iter.toArray {α : Type w} {β : Type w} [Iterator α Id β] (it : Iter (α := α) β) : Array β :=
   it.toIterM.toArray.run
 
 /--
@@ -44,9 +43,9 @@ This variant terminates after finitely many steps and requires a proof that the 
 finite. If such a proof is not available, consider using `Iter.toArray`.
 -/
 @[always_inline, inline]
-def Iter.Total.toArray {α : Type w} {β : Type w}
-    [Iterator α Id β] [Finite α Id] (it : Iter.Total (α := α) β) :
-    Array β :=
+def Iter.Total.toArray
+    {α : Type w} {β : Type w} [Iterator α Id β] [Finite α Id] (it : Iter.Total (α := α) β)
+    : Array β :=
   it.it.toArray
 
 /--
@@ -57,8 +56,7 @@ If the iterator is not finite, this function might run forever. The variant
 `it.ensureTermination.toListRev` always terminates after finitely many steps.
 -/
 @[always_inline, inline, cbv_opaque]
-def Iter.toListRev {α : Type w} {β : Type w}
-    [Iterator α Id β] (it : Iter (α := α) β) : List β :=
+def Iter.toListRev {α : Type w} {β : Type w} [Iterator α Id β] (it : Iter (α := α) β) : List β :=
   it.toIterM.toListRev.run
 
 /--
@@ -69,8 +67,9 @@ This variant terminates after finitely many steps and requires a proof that the 
 finite. If such a proof is not available, consider using `Iter.toListRev`.
 -/
 @[always_inline, inline]
-def Iter.Total.toListRev {α : Type w} {β : Type w}
-    [Iterator α Id β] [Finite α Id] (it : Iter.Total (α := α) β) : List β :=
+def Iter.Total.toListRev
+    {α : Type w} {β : Type w} [Iterator α Id β] [Finite α Id] (it : Iter.Total (α := α) β)
+    : List β :=
   it.it.toListRev
 
 /--
@@ -81,8 +80,7 @@ If the iterator is not finite, this function might run forever. The variant
 `it.ensureTermination.toList` always terminates after finitely many steps.
 -/
 @[cbv_opaque, always_inline, inline]
-def Iter.toList {α : Type w} {β : Type w}
-    [Iterator α Id β] (it : Iter (α := α) β) : List β :=
+def Iter.toList {α : Type w} {β : Type w} [Iterator α Id β] (it : Iter (α := α) β) : List β :=
   it.toIterM.toList.run
 
 /--
@@ -93,9 +91,9 @@ This variant terminates after finitely many steps and requires a proof that the 
 finite. If such a proof is not available, consider using `Iter.toList`.
 -/
 @[always_inline, inline]
-def Iter.Total.toList {α : Type w} {β : Type w}
-    [Iterator α Id β] [Finite α Id] (it : Iter.Total (α := α) β) :
-    List β :=
+def Iter.Total.toList
+    {α : Type w} {β : Type w} [Iterator α Id β] [Finite α Id] (it : Iter.Total (α := α) β)
+    : List β :=
   it.it.toList
 
 end Std

@@ -36,22 +36,21 @@ namespace Std
 
 namespace Iterators.Types
 
-/--
-Internal state of the `filterMap` combinator. Do not depend on its internals.
--/
+/-- Internal state of the `filterMap` combinator. Do not depend on its internals. -/
 @[ext, unbox]
-structure FilterMap (α : Type w) {β γ : Type w}
-    (m : Type w → Type w') (n : Type w → Type w'') (lift : ⦃α : Type w⦄ → m α → n α)
+structure FilterMap
+    (α : Type w)
+    {β γ : Type w} (m : Type w → Type w') (n : Type w → Type w'') (lift : ⦃α : Type w⦄ → m α → n α)
     (f : β → PostconditionT n (Option γ)) where
   /-- Internal implementation detail of the iterator library. -/
   inner : IterM (α := α) m β
 
-/--
-Internal state of the `map` combinator. Do not depend on its internals.
--/
+/-- Internal state of the `map` combinator. Do not depend on its internals. -/
 @[expose]
-def Map (α : Type w) {β γ : Type w} (m : Type w → Type w') (n : Type w → Type w'')
-    (lift : ⦃α : Type w⦄ → m α → n α) [Functor n]
+def Map
+    (α : Type w)
+    {β γ : Type w}
+    (m : Type w → Type w') (n : Type w → Type w'') (lift : ⦃α : Type w⦄ → m α → n α) [Functor n]
     (f : β → PostconditionT n γ) :=
   FilterMap α m n lift (fun b => PostconditionT.map some (f b))
 
@@ -60,17 +59,20 @@ end Iterators.Types
 open Std.Iterators Std.Iterators.Types
 
 @[always_inline, inline, expose]
-def IterM.InternalCombinators.filterMap {α β γ : Type w} {m : Type w → Type w'}
-    {n : Type w → Type w''} (lift : ⦃α : Type w⦄ → m α → n α)
-    [Iterator α m β] (f : β → PostconditionT n (Option γ))
-    (it : IterM (α := α) m β) : IterM (α := FilterMap α m n lift f) n γ :=
+def IterM.InternalCombinators.filterMap
+    {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''}
+    (lift : ⦃α : Type w⦄ → m α → n α) [Iterator α m β]
+    (f : β → PostconditionT n (Option γ)) (it : IterM (α := α) m β)
+    : IterM (α := FilterMap α m n lift f) n γ :=
   ⟨⟨it⟩⟩
 
 @[always_inline, inline, expose]
-def IterM.InternalCombinators.map {α β γ : Type w} {m : Type w → Type w'}
-    {n : Type w → Type w''} [Monad n] (lift : ⦃α : Type w⦄ → m α → n α)
-    [Iterator α m β] (f : β → PostconditionT n γ)
-    (it : IterM (α := α) m β) : IterM (α := Map α m n lift f) n γ :=
+def IterM.InternalCombinators.map
+    {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''} [Monad n]
+    (lift : ⦃α : Type w⦄ → m α → n α)
+    [Iterator α m β]
+    (f : β → PostconditionT n γ) (it : IterM (α := α) m β)
+    : IterM (α := Map α m n lift f) n γ :=
   ⟨⟨it⟩⟩
 
 /--
@@ -120,9 +122,11 @@ For each value emitted by the base iterator `it`, this combinator calls `f` and 
 returned `Option` value.
 -/
 @[inline, expose]
-def IterM.filterMapWithPostcondition {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''}
-    [MonadLiftT m n] [Iterator α m β] (f : β → PostconditionT n (Option γ))
-    (it : IterM (α := α) m β) : IterM (α := FilterMap α m n (fun ⦃_⦄ => monadLift) f) n γ :=
+def IterM.filterMapWithPostcondition
+    {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''}
+    [MonadLiftT m n] [Iterator α m β]
+    (f : β → PostconditionT n (Option γ)) (it : IterM (α := α) m β)
+    : IterM (α := FilterMap α m n (fun ⦃_⦄ => monadLift) f) n γ :=
   IterM.InternalCombinators.filterMap (n := n) (fun ⦃_⦄ => monadLift) f it
 
 namespace Iterators.Types
@@ -132,25 +136,30 @@ namespace Iterators.Types
 `filterMap` iterator `it`. This is mostly internally relevant, except if one needs to manually
 prove termination (`Finite` or `Productive` instances, for example) of a `filterMap` iterator.
 -/
-inductive FilterMap.PlausibleStep {α β γ : Type w} {m : Type w → Type w'}
-    {n : Type w → Type w''} {lift : ⦃α : Type w⦄ → m α → n α} {f : β → PostconditionT n (Option γ)}
-    [Iterator α m β] (it : IterM (α := FilterMap α m n lift f) n γ) :
-    IterStep (IterM (α := FilterMap α m n lift f) n γ) γ → Prop where
-  | yieldNone : ∀ {it' out},
-      it.internalState.inner.IsPlausibleStep (.yield it' out) →
-      (f out).Property none →
-      PlausibleStep it (.skip (IterM.InternalCombinators.filterMap lift f it'))
-  | yieldSome : ∀ {it' out out'}, it.internalState.inner.IsPlausibleStep (.yield it' out) →
-      (f out).Property (some out') →
-      PlausibleStep it (.yield (IterM.InternalCombinators.filterMap lift f it') out')
-  | skip : ∀ {it'}, it.internalState.inner.IsPlausibleStep (.skip it') →
-      PlausibleStep it (.skip (IterM.InternalCombinators.filterMap lift f it'))
+inductive FilterMap.PlausibleStep
+    {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''}
+    {lift : ⦃α : Type w⦄ → m α → n α} {f : β → PostconditionT n (Option γ)} [Iterator α m β]
+    (it : IterM (α := FilterMap α m n lift f) n γ)
+    : IterStep (IterM (α := FilterMap α m n lift f) n γ) γ → Prop where
+  | yieldNone
+    : ∀ {it' out},
+      it.internalState.inner.IsPlausibleStep (.yield it' out) → (f out).Property none
+        → PlausibleStep it (.skip (IterM.InternalCombinators.filterMap lift f it'))
+  | yieldSome
+    : ∀ {it' out out'},
+      it.internalState.inner.IsPlausibleStep (.yield it' out) → (f out).Property (some out')
+        → PlausibleStep it (.yield (IterM.InternalCombinators.filterMap lift f it') out')
+  | skip
+    : ∀ {it'},
+      it.internalState.inner.IsPlausibleStep (.skip it')
+        → PlausibleStep it (.skip (IterM.InternalCombinators.filterMap lift f it'))
   | done : it.internalState.inner.IsPlausibleStep .done → PlausibleStep it .done
 
-instance FilterMap.instIterator {α β γ : Type w} {m : Type w → Type w'}
-    {n : Type w → Type w''} {lift : ⦃α : Type w⦄ → m α → n α} {f : β → PostconditionT n (Option γ)}
-    [Iterator α m β] [Monad n] :
-    Iterator (FilterMap α m n lift f) n γ where
+instance FilterMap.instIterator
+    {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''}
+    {lift : ⦃α : Type w⦄ → m α → n α} {f : β → PostconditionT n (Option γ)}
+    [Iterator α m β] [Monad n]
+    : Iterator (FilterMap α m n lift f) n γ where
   IsPlausibleStep := FilterMap.PlausibleStep (m := m) (n := n)
   step it :=
     letI : MonadLift m n := ⟨lift (α := _)⟩
@@ -158,27 +167,33 @@ instance FilterMap.instIterator {α β γ : Type w} {m : Type w → Type w'}
       match (← it.internalState.inner.step).inflate with
       | .yield it' out h => do
         match ← (f out).operation with
-        | ⟨none, h'⟩ => pure <| .deflate <| .skip (it'.filterMapWithPostcondition f) (by exact .yieldNone h h')
-        | ⟨some out', h'⟩ => pure <| .deflate <| .yield (it'.filterMapWithPostcondition f) out' (by exact .yieldSome h h')
-      | .skip it' h => pure <| .deflate <| .skip (it'.filterMapWithPostcondition f) (by exact .skip h)
-      | .done h => pure <| .deflate <| .done (.done h)
+        | ⟨none, h'⟩ =>
+          pure <| .deflate <| .skip (it'.filterMapWithPostcondition f) (by exact .yieldNone h h')
+        | ⟨some out', h'⟩ =>
+          pure <| .deflate <|
+            .yield (it'.filterMapWithPostcondition f) out' (by exact .yieldSome h h')
+      | .skip it' h =>
+        pure <| .deflate <| .skip (it'.filterMapWithPostcondition f) (by exact .skip h)
+      | .done h =>
+        pure <| .deflate <| .done (.done h)
 
-instance Map.instIterator {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''} [Monad n]
-    [Iterator α m β] {lift : ⦃α : Type w⦄ → m α → n α} {f : β → PostconditionT n γ} :
-    Iterator (Map α m n lift f) n γ :=
+instance Map.instIterator
+    {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''} [Monad n] [Iterator α m β]
+    {lift : ⦃α : Type w⦄ → m α → n α} {f : β → PostconditionT n γ}
+    : Iterator (Map α m n lift f) n γ :=
   inferInstanceAs <| Iterator (FilterMap α m n lift _) n γ
 
-theorem Map.instIterator_eq_filterMapInstIterator {α β γ : Type w} {m : Type w → Type w'}
-    {n : Type w → Type w''} [Monad n]
-    [Iterator α m β] {lift : ⦃α : Type w⦄ → m α → n α} {f : β → PostconditionT n γ} :
-    Map.instIterator (α := α) (β := β) (γ := γ) (m := m) (n := n) (lift := lift) (f := f) =
-      FilterMap.instIterator :=
+theorem Map.instIterator_eq_filterMapInstIterator
+    {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''} [Monad n] [Iterator α m β]
+    {lift : ⦃α : Type w⦄ → m α → n α} {f : β → PostconditionT n γ}
+    : Map.instIterator (α := α) (β := β) (γ := γ) (m := m) (n := n) (lift := lift) (f := f)
+      = FilterMap.instIterator :=
   rfl
 
-private def FilterMap.instFinitenessRelation {α β γ : Type w} {m : Type w → Type w'}
-    {n : Type w → Type w''} [Monad n] [Iterator α m β] {lift : ⦃α : Type w⦄ → m α → n α}
-    {f : β → PostconditionT n (Option γ)} [Finite α m] :
-    FinitenessRelation (FilterMap α m n lift f) n where
+private def FilterMap.instFinitenessRelation
+    {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''} [Monad n] [Iterator α m β]
+    {lift : ⦃α : Type w⦄ → m α → n α} {f : β → PostconditionT n (Option γ)} [Finite α m]
+    : FinitenessRelation (FilterMap α m n lift f) n where
   Rel := InvImage IterM.IsPlausibleSuccessorOf (FilterMap.inner ∘ IterM.internalState)
   wf := InvImage.wf _ Finite.wf
   subrelation {it it'} h := by
@@ -193,50 +208,49 @@ private def FilterMap.instFinitenessRelation {α β γ : Type w} {m : Type w →
     case skip it' h' =>
       cases h
       exact IterM.isPlausibleSuccessorOf_of_skip h'
-    case done h' =>
-      cases h
+    case done h' => cases h
 
-instance FilterMap.instFinite {α β γ : Type w} {m : Type w → Type w'}
-    {n : Type w → Type w''} [Monad n] [Iterator α m β] {lift : ⦃α : Type w⦄ → m α → n α}
-    {f : β → PostconditionT n (Option γ)} [Finite α m] : Finite (FilterMap α m n lift f) n :=
+instance FilterMap.instFinite
+    {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''} [Monad n] [Iterator α m β]
+    {lift : ⦃α : Type w⦄ → m α → n α} {f : β → PostconditionT n (Option γ)} [Finite α m]
+    : Finite (FilterMap α m n lift f) n :=
   Finite.of_finitenessRelation FilterMap.instFinitenessRelation
 
-instance Map.instFinite {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''} [Monad n]
-    [Iterator α m β] {lift : ⦃α : Type w⦄ → m α → n α} {f : β → PostconditionT n γ} [Finite α m] :
-    Finite (Map α m n lift f) n :=
+instance Map.instFinite
+    {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''} [Monad n] [Iterator α m β]
+    {lift : ⦃α : Type w⦄ → m α → n α} {f : β → PostconditionT n γ} [Finite α m]
+    : Finite (Map α m n lift f) n :=
   Finite.of_finitenessRelation FilterMap.instFinitenessRelation
 
-private def Map.instProductivenessRelation {α β γ : Type w} {m : Type w → Type w'}
-    {n : Type w → Type w''} [Monad n] [Iterator α m β] {lift : ⦃α : Type w⦄ → m α → n α}
-    {f : β → PostconditionT n γ} [Productive α m] :
-    ProductivenessRelation (Map α m n lift f) n where
+private def Map.instProductivenessRelation
+    {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''} [Monad n] [Iterator α m β]
+    {lift : ⦃α : Type w⦄ → m α → n α} {f : β → PostconditionT n γ} [Productive α m]
+    : ProductivenessRelation (Map α m n lift f) n where
   Rel := InvImage IterM.IsPlausibleSkipSuccessorOf (FilterMap.inner ∘ IterM.internalState)
   wf := InvImage.wf _ Productive.wf
   subrelation {it it'} h := by
     cases h
-    case yieldNone it' out h h' =>
-      simp at h'
-    case skip it' h =>
-      exact h
+    case yieldNone it' out h h' => simp at h'
+    case skip it' h => exact h
 
-instance Map.instProductive {α β γ : Type w} {m : Type w → Type w'}
-    {n : Type w → Type w''} [Monad n] [Iterator α m β] {lift : ⦃α : Type w⦄ → m α → n α}
-    {f : β → PostconditionT n γ} [Productive α m] :
-    Productive (Map α m n lift f) n :=
+instance Map.instProductive
+    {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''} [Monad n] [Iterator α m β]
+    {lift : ⦃α : Type w⦄ → m α → n α} {f : β → PostconditionT n γ} [Productive α m]
+    : Productive (Map α m n lift f) n :=
   Productive.of_productivenessRelation Map.instProductivenessRelation
 
-instance FilterMap.instIteratorLoop {α β γ : Type w} {m : Type w → Type w'}
-    {n : Type w → Type w''} {o : Type x → Type x'}
-    [Monad n] [Monad o] [Iterator α m β] {lift : ⦃α : Type w⦄ → m α → n α}
-    {f : β → PostconditionT n (Option γ)} :
-    IteratorLoop (FilterMap α m n lift f) n o :=
+instance FilterMap.instIteratorLoop
+    {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''} {o : Type x → Type x'}
+    [Monad n] [Monad o] [Iterator α m β]
+    {lift : ⦃α : Type w⦄ → m α → n α} {f : β → PostconditionT n (Option γ)}
+    : IteratorLoop (FilterMap α m n lift f) n o :=
   .defaultImplementation
 
-instance Map.instIteratorLoop {α β γ : Type w} {m : Type w → Type w'}
-    {n : Type w → Type w''} {o : Type x → Type x'} [Monad n] [Monad o] [Iterator α m β]
-    {lift : ⦃α : Type w⦄ → m α → n α}
-    {f : β → PostconditionT n γ} :
-    IteratorLoop (Map α m n lift f) n o :=
+instance Map.instIteratorLoop
+    {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''} {o : Type x → Type x'}
+    [Monad n] [Monad o] [Iterator α m β]
+    {lift : ⦃α : Type w⦄ → m α → n α} {f : β → PostconditionT n γ}
+    : IteratorLoop (Map α m n lift f) n o :=
   .defaultImplementation
 
 end Iterators.Types
@@ -282,9 +296,11 @@ be `fun _ => False`.
 For each value emitted by the base iterator `it`, this combinator calls `f`.
 -/
 @[inline, expose]
-def IterM.mapWithPostcondition {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''}
-    [Monad n] [MonadLiftT m n] [Iterator α m β] (f : β → PostconditionT n γ)
-    (it : IterM (α := α) m β) : IterM (α := Map α m n (fun ⦃_⦄ => monadLift) f) n γ :=
+def IterM.mapWithPostcondition
+    {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''}
+    [Monad n] [MonadLiftT m n] [Iterator α m β]
+    (f : β → PostconditionT n γ) (it : IterM (α := α) m β)
+    : IterM (α := Map α m n (fun ⦃_⦄ => monadLift) f) n γ :=
   InternalCombinators.map (fun {_} => monadLift) f it
 
 /--
@@ -329,11 +345,13 @@ be `fun _ => False`.
 For each value emitted by the base iterator `it`, this combinator calls `f`.
 -/
 @[inline, expose]
-def IterM.filterWithPostcondition {α β : Type w} {m : Type w → Type w'} {n : Type w → Type w''}
-    [Monad n] [MonadLiftT m n] [Iterator α m β] (f : β → PostconditionT n (ULift Bool))
-    (it : IterM (α := α) m β) :=
-  (it.filterMapWithPostcondition
-    (fun b => (f b).map (fun x => if x.down = true then some b else none)) : IterM n β)
+def IterM.filterWithPostcondition
+    {α β : Type w} {m : Type w → Type w'} {n : Type w → Type w''}
+    [Monad n] [MonadLiftT m n] [Iterator α m β]
+    (f : β → PostconditionT n (ULift Bool)) (it : IterM (α := α) m β) :=
+  (it.filterMapWithPostcondition (fun b =>
+      (f b).map (fun x => if x.down = true then some b else none))
+    : IterM n β)
 
 /--
 If `it` is an iterator, then `it.filterMapM f` is another iterator that applies a monadic
@@ -371,7 +389,8 @@ For each value emitted by the base iterator `it`, this combinator calls `f` and 
 returned `Option` value.
 -/
 @[inline, expose]
-def IterM.filterMapM {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''}
+def IterM.filterMapM
+    {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''}
     [Iterator α m β] [Monad n] [MonadAttach n] [MonadLiftT m n]
     (f : β → n (Option γ)) (it : IterM (α := α) m β) :=
   (it.filterMapWithPostcondition (fun b => PostconditionT.attachLift (f b)) : IterM n γ)
@@ -409,8 +428,10 @@ proof needs to be done manually.
 For each value emitted by the base iterator `it`, this combinator calls `f`.
 -/
 @[inline, expose]
-def IterM.mapM {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''} [Iterator α m β]
-    [Monad n] [MonadAttach n] [MonadLiftT m n] (f : β → n γ) (it : IterM (α := α) m β) :=
+def IterM.mapM
+    {α β γ : Type w} {m : Type w → Type w'} {n : Type w → Type w''}
+    [Iterator α m β] [Monad n] [MonadAttach n] [MonadLiftT m n]
+    (f : β → n γ) (it : IterM (α := α) m β) :=
   (it.mapWithPostcondition (fun b => PostconditionT.attachLift (f b)) : IterM n γ)
 
 /--
@@ -446,10 +467,13 @@ isn't. In such cases, the termination proof needs to be done manually.
 For each value emitted by the base iterator `it`, this combinator calls `f`.
 -/
 @[inline, expose]
-def IterM.filterM {α β : Type w} {m : Type w → Type w'} {n : Type w → Type w''} [Iterator α m β]
-    [Monad n] [MonadAttach n] [MonadLiftT m n] (f : β → n (ULift Bool)) (it : IterM (α := α) m β) :=
-  (it.filterMapWithPostcondition
-    (fun b => (PostconditionT.attachLift (f b)).map (if ·.down = true then some b else none)) : IterM n β)
+def IterM.filterM
+    {α β : Type w} {m : Type w → Type w'} {n : Type w → Type w''}
+    [Iterator α m β] [Monad n] [MonadAttach n] [MonadLiftT m n]
+    (f : β → n (ULift Bool)) (it : IterM (α := α) m β) :=
+  (it.filterMapWithPostcondition (fun b =>
+      (PostconditionT.attachLift (f b)).map (if ·.down = true then some b else none))
+    : IterM n β)
 
 /--
 If `it` is an iterator, then `it.filterMap f` is another iterator that applies a function `f` to all
@@ -483,8 +507,9 @@ For each value emitted by the base iterator `it`, this combinator calls `f` and 
 returned `Option` value.
 -/
 @[inline, expose]
-def IterM.filterMap {α β γ : Type w} {m : Type w → Type w'}
-    [Iterator α m β] [Monad m] (f : β → Option γ) (it : IterM (α := α) m β) :=
+def IterM.filterMap
+    {α β γ : Type w} {m : Type w → Type w'} [Iterator α m β] [Monad m]
+    (f : β → Option γ) (it : IterM (α := α) m β) :=
   (it.filterMapWithPostcondition (fun b => pure (f b)) : IterM m γ)
 
 /--
@@ -512,8 +537,9 @@ it.map     ---a'--b'--c'--d'-e'----⊥
 For each value emitted by the base iterator `it`, this combinator calls `f`.
 -/
 @[inline, expose]
-def IterM.map {α β γ : Type w} {m : Type w → Type w'} [Iterator α m β] [Monad m] (f : β → γ)
-    (it : IterM (α := α) m β) :=
+def IterM.map
+    {α β γ : Type w} {m : Type w → Type w'} [Iterator α m β] [Monad m]
+    (f : β → γ) (it : IterM (α := α) m β) :=
   (it.mapWithPostcondition (fun b => pure (f b)) : IterM m γ)
 
 /--
@@ -547,7 +573,8 @@ For each value emitted by the base iterator `it`, this combinator calls `f` and 
 returned value.
 -/
 @[inline, expose]
-def IterM.filter {α β : Type w} {m : Type w → Type w'} [Iterator α m β] [Monad m]
+def IterM.filter
+    {α β : Type w} {m : Type w → Type w'} [Iterator α m β] [Monad m]
     (f : β → Bool) (it : IterM (α := α) m β) :=
   (it.filterMap (fun b => if f b then some b else none) : IterM m β)
 

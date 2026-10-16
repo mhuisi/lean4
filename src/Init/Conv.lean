@@ -15,11 +15,13 @@ public section
 
 namespace Lean.Parser.Tactic.Conv
 
-/-- `conv` is the syntax category for a "conv tactic", where "conv" is short
+/--
+`conv` is the syntax category for a "conv tactic", where "conv" is short
 for conversion. A conv tactic is a program which receives a target, printed as
 `| a`, and is tasked with coming up with some term `b` and a proof of `a = b`.
 It is mainly used for doing targeted term transformations, for example rewriting
-only on the left side of an equality. -/
+only on the left side of an equality.
+-/
 declare_syntax_cat conv (behavior := both)
 
 syntax convSeq1Indented := sepBy1IndentSemicolon(conv)
@@ -44,9 +46,7 @@ syntax occs := atomic("(" &"occs") " := " (occsWildcard <|> occsIndexed) ") "
 `with_annotate_state stx t` annotates the lexical range of `stx : Syntax` with
 the initial and final state of running tactic `t`.
 -/
-scoped syntax (name := withAnnotateState)
-  "with_annotate_state " rawStx ppSpace conv : conv
-
+scoped syntax (name := withAnnotateState) "with_annotate_state " rawStx ppSpace conv : conv
 
 /-- `skip` does nothing. -/
 syntax (name := skip) "skip" : conv
@@ -79,13 +79,17 @@ It is a synonym for `arg -1`.
 -/
 syntax (name := rhs) "rhs" : conv
 
-/-- Traverses into the function of a (unary) function application.
-For example, `| f a b` turns into `| f a`. (Use `arg 0` to traverse into `f`.)  -/
+/--
+Traverses into the function of a (unary) function application.
+For example, `| f a b` turns into `| f a`. (Use `arg 0` to traverse into `f`.)
+-/
 syntax (name := «fun») "fun" : conv
 
-/-- Reduces the target to Weak Head Normal Form. This reduces definitions
+/--
+Reduces the target to Weak Head Normal Form. This reduces definitions
 in "head position" until a constructor is exposed. For example, `List.map f [a, b, c]`
-weak head normalizes to `f a :: List.map f [b, c]`. -/
+weak head normalizes to `f a :: List.map f [b, c]`.
+-/
 syntax (name := whnf) "whnf" : conv
 
 /-- Expands let-declarations and let-variables. -/
@@ -94,9 +98,11 @@ syntax (name := zeta) "zeta" : conv
 /-- Puts term in normal form, this tactic is meant for debugging purposes only. -/
 syntax (name := reduce) "reduce" : conv
 
-/-- Performs one step of "congruence", which takes a term and produces
+/--
+Performs one step of "congruence", which takes a term and produces
 subgoals for all the function arguments. For example, if the target is `f x y` then
-`congr` produces two subgoals, one for `x` and one for `y`. -/
+`congr` produces two subgoals, one for `x` and one for `y`.
+-/
 syntax (name := congr) "congr" : conv
 
 syntax argArg := "@"? "-"? num
@@ -108,21 +114,28 @@ syntax argArg := "@"? "-"? num
   `arg -2` into the second-to-last argument, and so on.
 * `arg @i` is the same as `arg i` but it counts all arguments instead of just the
   explicit arguments.
-* `arg 0` traverses into the function. If the target is `f a b c d`, `arg 0` traverses into `f`. -/
+* `arg 0` traverses into the function. If the target is `f a b c d`, `arg 0` traverses into `f`.
+-/
 syntax (name := arg) "arg " argArg : conv
 
-/-- `ext x` traverses into a binder (a `fun x => e` or `∀ x, e` expression)
-to target `e`, introducing name `x` in the process. -/
+/--
+`ext x` traverses into a binder (a `fun x => e` or `∀ x, e` expression)
+to target `e`, introducing name `x` in the process.
+-/
 syntax (name := ext) "ext" (ppSpace colGt binderIdent)* : conv
 
-/-- `change t'` replaces the target `t` with `t'`,
-assuming `t` and `t'` are definitionally equal. -/
+/--
+`change t'` replaces the target `t` with `t'`,
+assuming `t` and `t'` are definitionally equal.
+-/
 syntax (name := change) "change " term : conv
 
-/-- `delta id1 id2 ...` unfolds all occurrences of `id1`, `id2`, ... in the target.
+/--
+`delta id1 id2 ...` unfolds all occurrences of `id1`, `id2`, ... in the target.
 Like the `delta` tactic, this ignores any definitional equations and uses
 primitive delta-reduction instead, which may result in leaking implementation details.
-Users should prefer `unfold` for unfolding definitions. -/
+Users should prefer `unfold` for unfolding definitions.
+-/
 syntax (name := delta) "delta" (ppSpace colGt ident)+ : conv
 
 /--
@@ -161,13 +174,19 @@ syntax (name := pattern) "pattern " (occs)? term : conv
 /-- `rw [thm]` rewrites the target using `thm`. See the `rw` tactic for more information. -/
 syntax (name := rewrite) "rewrite" optConfig rwRuleSeq : conv
 
-/-- `simp [thm]` performs simplification using `thm` and marked `@[simp]` lemmas.
-See the `simp` tactic for more information. -/
-syntax (name := simp) "simp" optConfig (discharger)? (&" only")?
-  (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*) "]")? : conv
+/--
+`simp [thm]` performs simplification using `thm` and marked `@[simp]` lemmas.
+See the `simp` tactic for more information.
+-/
+syntax (name := simp)
+  "simp" optConfig (discharger)? (&" only")?
+  (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*) "]")?
+  : conv
 
-/-- `simp?` takes the same arguments as `simp`, but reports an equivalent call to `simp only`
-that would be sufficient to close the goal. See the `simp?` tactic for more information. -/
+/--
+`simp?` takes the same arguments as `simp`, but reports an equivalent call to `simp only`
+that would be sufficient to close the goal. See the `simp?` tactic for more information.
+-/
 syntax (name := simpTrace) "simp?" optConfig (discharger)? (&" only")? (simpArgs)? : conv
 
 /--
@@ -184,19 +203,23 @@ example (a : Nat): (0 + 0) = a - a := by
     rw [← Nat.sub_self a]
 ```
 -/
-syntax (name := dsimp) "dsimp" optConfig (discharger)? (&" only")?
-  (" [" withoutPosition((simpErase <|> simpLemma),*) "]")? : conv
+syntax (name := dsimp)
+  "dsimp" optConfig (discharger)? (&" only")?
+  (" [" withoutPosition((simpErase <|> simpLemma),*) "]")?
+  : conv
 
 @[inherit_doc simpTrace]
 syntax (name := dsimpTrace) "dsimp?" optConfig (&" only")? (dsimpArgs)? : conv
 
-/-- `simp_match` simplifies match expressions. For example,
+/--
+`simp_match` simplifies match expressions. For example,
 ```
 match [a, b] with
 | [] => 0
 | hd :: tl => hd
 ```
-simplifies to `a`. -/
+simplifies to `a`.
+-/
 syntax (name := simpMatch) "simp_match" : conv
 
 /-- Removes one or more hypotheses from the local context. -/
@@ -205,22 +228,30 @@ syntax (name := clear) "clear" (ppSpace colGt term:max)+ : conv
 /-- Executes the given tactic block without converting `conv` goal into a regular goal. -/
 syntax (name := nestedTacticCore) "tactic'" " => " tacticSeq : conv
 
-/-- Focuses, converts the `conv` goal `⊢ lhs` into a regular goal `⊢ lhs = rhs`, and then executes the given tactic block. -/
+/--
+Focuses, converts the `conv` goal `⊢ lhs` into a regular goal `⊢ lhs = rhs`, and then executes the given tactic block.
+-/
 syntax (name := nestedTactic) "tactic" " => " tacticSeq : conv
 
 /-- Executes the given conv block without converting regular goal into a `conv` goal. -/
 syntax (name := convTactic) "conv'" " => " convSeq : tactic
 
-/-- `{ convs }` runs the list of `convs` on the current target, and any subgoals that
-remain are trivially closed by `skip`. -/
+/--
+`{ convs }` runs the list of `convs` on the current target, and any subgoals that
+remain are trivially closed by `skip`.
+-/
 syntax (name := nestedConv) convSeqBracketed : conv
 
-/-- `(convs)` runs the `convs` in sequence on the current list of targets.
-This is pure grouping with no added effects. -/
+/--
+`(convs)` runs the `convs` in sequence on the current list of targets.
+This is pure grouping with no added effects.
+-/
 syntax (name := paren) "(" withoutPosition(convSeq) ")" : conv
 
-/-- `rfl` closes one conv goal "trivially", by using reflexivity
-(that is, no rewriting). -/
+/--
+`rfl` closes one conv goal "trivially", by using reflexivity
+(that is, no rewriting).
+-/
 macro "rfl" : conv => `(conv| tactic => rfl)
 
 /-- `done` succeeds iff there are no goals remaining. -/
@@ -272,26 +303,32 @@ Usually `· tac`, which enforces that the goal is closed by `tac`, should be pre
 -/
 macro (name := focus) tk:"focus " s:convSeq : conv => `(conv| tactic' => focus%$tk conv' => $s)
 
-/-- `conv => cs` runs `cs` in sequence on the target `t`,
-resulting in `t'`, which becomes the new target subgoal. -/
+/--
+`conv => cs` runs `cs` in sequence on the target `t`,
+resulting in `t'`, which becomes the new target subgoal.
+-/
 syntax (name := convConvSeq) "conv" " => " convSeq : conv
 
 /-- `· conv` focuses on the main conv goal and tries to solve it using `s`. -/
 macro dot:unicode("· ", ". ") s:convSeq : conv => `(conv| {%$dot ($s) })
 
-
 /-- `fail_if_success t` fails if the tactic `t` succeeds. -/
 macro (name := failIfSuccess) tk:"fail_if_success " s:convSeq : conv =>
   `(conv| tactic' => fail_if_success%$tk conv' => $s)
 
-/-- `rw [rules]` applies the given list of rewrite rules to the target.
-See the `rw` tactic for more information. -/
+/--
+`rw [rules]` applies the given list of rewrite rules to the target.
+See the `rw` tactic for more information.
+-/
 macro "rw" c:optConfig s:rwRuleSeq : conv => `(conv| rewrite $c:optConfig $s)
 
-/-- `erw [rules]` is a shorthand for `rw (transparency := .default) [rules]`.
+/--
+`erw [rules]` is a shorthand for `rw (transparency := .default) [rules]`.
 This does rewriting up to unfolding of regular definitions (by comparison to regular `rw`
-which only unfolds `@[reducible]` definitions). -/
-macro "erw" c:optConfig s:rwRuleSeq : conv => `(conv| rw $[$(getConfigItems c)]* (transparency := .default) $s:rwRuleSeq)
+which only unfolds `@[reducible]` definitions).
+-/
+macro "erw" c:optConfig s:rwRuleSeq : conv =>
+  `(conv| rw $[$(getConfigItems c)]* (transparency := .default) $s:rwRuleSeq)
 
 /-- `args` traverses into all arguments. Synonym for `congr`. -/
 macro "args" : conv => `(conv| congr)
@@ -306,7 +343,8 @@ syntax enterPattern := "in " (occs)? term
 
 syntax enterArg := binderIdent <|> argArg <|> enterPattern
 
-/-- `enter [arg, ...]` is a compact way to describe a path to a subterm.
+/--
+`enter [arg, ...]` is a compact way to describe a path to a subterm.
 It is a shorthand for other conv tactics as follows:
 * `enter [i]` is equivalent to `arg i`.
 * `enter [@i]` is equivalent to `arg @i`.
@@ -314,12 +352,15 @@ It is a shorthand for other conv tactics as follows:
 * `enter [in e]` (where `e` is a term) is equivalent to `pattern e`.
   Occurrences can be specified with `enter [in (occs := ...) e]`.
 For example, given the target `f (g a (fun x => x b))`, `enter [1, 2, x, 1]`
-will traverse to the subterm `b`. -/
+will traverse to the subterm `b`.
+-/
 syntax (name := enter) "enter" " [" withoutPosition(enterArg,+) "]" : conv
 
-/-- The `apply thm` conv tactic is the same as `apply thm` the tactic.
+/--
+The `apply thm` conv tactic is the same as `apply thm` the tactic.
 There are no restrictions on `thm`, but strange results may occur if `thm`
-cannot be reasonably interpreted as proving one equality from a list of others. -/
+cannot be reasonably interpreted as proving one equality from a list of others.
+-/
 -- TODO: error if non-conv subgoals?
 macro "apply " e:term : conv => `(conv| tactic => apply $e)
 

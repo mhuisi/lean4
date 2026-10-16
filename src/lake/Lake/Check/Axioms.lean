@@ -46,10 +46,10 @@ where
       | throw s!"Constant not found in solution '{n}'"
 
     if let .axiomInfo info := info then
-      if !(← read).legalAxioms.contains info.name then
+      if ! (← read).legalAxioms.contains info.name then
         throw s!"Illegal axiom detected: '{n}'"
 
-    if !(← get).checked.contains n then
+    if ! (← get).checked.contains n then
       modify fun s => { s with worklist := s.worklist.push n }
 
 end Axioms
@@ -61,7 +61,8 @@ public def usedAxioms (env : LeanExport.ExportedEnv) : Array (Lean.Name × Lean.
   -- `constOrder` is the export order, so the result is deterministic without needing an `Ord`.
   let collect : StateM (Std.HashSet Lean.Name × Array (Lean.Name × Lean.Name)) Unit := do
     for name in env.constOrder do
-      let some info := env.constMap[name]? | continue
+      let some info := env.constMap[name]?
+        | continue
       runForUsedConsts info fun ref => do
         -- `runForUsedConsts` reports the constant itself, which is not an incoming reference
         unless ref == name do
@@ -70,8 +71,10 @@ public def usedAxioms (env : LeanExport.ExportedEnv) : Array (Lean.Name × Lean.
               if seen.contains ref then (seen, used) else (seen.insert ref, used.push (ref, name))
   (collect.run ({}, #[])).2.2
 
-public def checkAxioms (solution : LeanExport.ExportedEnv) (theoremTargets : Array Lean.Name)
-    (definitionTargets : Array Lean.Name) (legalAxioms : Array Lean.Name) : Except String Unit := do
+public def checkAxioms
+    (solution : LeanExport.ExportedEnv) (theoremTargets : Array Lean.Name)
+    (definitionTargets : Array Lean.Name) (legalAxioms : Array Lean.Name)
+    : Except String Unit := do
   let mut worklist := #[]
   for target in theoremTargets do
     let some solutionConst := solution.constMap[target]?

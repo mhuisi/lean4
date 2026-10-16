@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 import Lean.Elab.Tactic.Grind.Basic
 import Lean.Elab.Tactic.Grind.SimprocDSL
@@ -21,7 +22,8 @@ import Lean.Elab.SyntheticMVars
 namespace Lean.Elab.Tactic.Grind
 open Meta
 
-def evalIntroCore (internalize : Bool) (ids : TSyntaxArray `Lean.binderIdent) : GrindTacticM Unit := do
+def evalIntroCore (internalize : Bool) (ids : TSyntaxArray `Lean.binderIdent)
+    : GrindTacticM Unit := do
   ensureSym
   let hygienic := tactic.hygienic.get (← getOptions)
   let goal ← getMainGoal
@@ -31,16 +33,19 @@ def evalIntroCore (internalize : Bool) (ids : TSyntaxArray `Lean.binderIdent) : 
       | .goal _ goal => pure goal
       | .failed => throwError "`intro` failed, no binders to introduce"
     else
-      let names ← ids.mapM fun id => match id with
-        | `(binderIdent| $name:ident) => pure name.getId
-        | `(binderIdent| $_) => mkFreshBinderNameForTactic `h
+      let names ←
+        ids.mapM fun id =>
+          match id with
+          | `(binderIdent| $name:ident) => pure name.getId
+          | `(binderIdent| $_) => mkFreshBinderNameForTactic `h
       match (← liftSymM <| Grind.Goal.intros goal names hygienic) with
       | .goal _ goal => pure goal
       | .failed => throwError "`intro` failed"
   let goal ← if internalize then liftGrindM <| Grind.Goal.internalizeAll goal else pure goal
   replaceMainGoal [goal]
 
-@[builtin_grind_tactic Parser.Tactic.Grind.symIntro] def evalSymIntro : GrindTactic := fun stx => do
+@[builtin_grind_tactic Parser.Tactic.Grind.symIntro]
+def evalSymIntro : GrindTactic := fun stx => do
   -- syntax: "intro" ("(" &"internalize" " := " (&"true" <|> &"false") ")")? binderIdent*
   match stx with
   | `(grind| intro $ids:binderIdent*) => evalIntroCore true ids
@@ -56,9 +61,11 @@ def evalIntrosCore (internalize : Bool) : GrindTacticM Unit := do
   | .goal _ goal =>
     let goal ← if internalize then liftGrindM <| Grind.Goal.internalizeAll goal else pure goal
     replaceMainGoal [goal]
-  | .failed => throwError "`intros` failed"
+  | .failed =>
+    throwError "`intros` failed"
 
-@[builtin_grind_tactic Parser.Tactic.Grind.symIntros] def evalSymIntros : GrindTactic := fun stx => do
+@[builtin_grind_tactic Parser.Tactic.Grind.symIntros]
+def evalSymIntros : GrindTactic := fun stx => do
   match stx with
   | `(grind| intros) => evalIntrosCore true
   | `(grind| intros (internalize := false)) => evalIntrosCore false
@@ -80,47 +87,54 @@ def getOrCreateBackwardRuleFromTerm (term : Syntax) : GrindTacticM Sym.BackwardR
   let pos := (startPos, endPos)
   if let some rule := (← get).cache.backwardRuleSyntax.find? pos then
     return rule
-  let e ← withMainContext do
-    let e ← Term.elabTerm term none
-    Term.synthesizeSyntheticMVars (postpone := .no)
-    instantiateMVars e
+  let e ←
+    withMainContext do
+      let e ← Term.elabTerm term none
+      Term.synthesizeSyntheticMVars (postpone := .no)
+      instantiateMVars e
   let rule ← Sym.mkBackwardRuleFromExpr e
   modify fun s => { s with cache.backwardRuleSyntax := s.cache.backwardRuleSyntax.insert pos rule }
   return rule
 
-@[builtin_grind_tactic Parser.Tactic.Grind.symApply] def evalSymApply : GrindTactic := fun stx => do
+@[builtin_grind_tactic Parser.Tactic.Grind.symApply]
+def evalSymApply : GrindTactic := fun stx => do
   ensureSym
-  let `(grind| apply $term:term) := stx | throwUnsupportedSyntax
+  let `(grind| apply $term:term) := stx
+    | throwUnsupportedSyntax
   let goal ← getMainGoal
   goal.withContext do
-  -- Try to interpret as a declaration name for efficient caching
-  let rule ← match term with
-  | `($id:ident) =>
-    try
-      let declName ← realizeGlobalConstNoOverload id
-      getOrCreateBackwardRule declName
-    catch _ =>
-      getOrCreateBackwardRuleFromTerm term
-  | _ =>
-    getOrCreateBackwardRuleFromTerm term
-  match (← liftSymM <| Grind.Goal.apply goal rule) with
-  | .goals subgoals => replaceMainGoal subgoals
-  | .failed => throwError "`apply` failed, rule is not applicable"
+    -- Try to interpret as a declaration name for efficient caching
+    let rule ←
+      match term with
+      | `($id:ident) =>
+        try
+          let declName ← realizeGlobalConstNoOverload id
+          getOrCreateBackwardRule declName
+        catch _ =>
+          getOrCreateBackwardRuleFromTerm term
+      | _ =>
+        getOrCreateBackwardRuleFromTerm term
+    match (← liftSymM <| Grind.Goal.apply goal rule) with
+    | .goals subgoals => replaceMainGoal subgoals
+    | .failed => throwError "`apply` failed, rule is not applicable"
 
-@[builtin_grind_tactic Parser.Tactic.Grind.symInternalize] def evalSymInternalize : GrindTactic := fun stx => do
+@[builtin_grind_tactic Parser.Tactic.Grind.symInternalize]
+def evalSymInternalize : GrindTactic := fun stx => do
   ensureSym
   let goal ← getMainGoal
   let num := if stx[1].isNone then 1 else stx[1][0].toNat
   let goal ← liftGrindM <| Grind.Goal.internalize goal num
   replaceMainGoal [goal]
 
-@[builtin_grind_tactic Parser.Tactic.Grind.symInternalizeAll] def evalSymInternalizeAll : GrindTactic := fun _ => do
+@[builtin_grind_tactic Parser.Tactic.Grind.symInternalizeAll]
+def evalSymInternalizeAll : GrindTactic := fun _ => do
   ensureSym
   let goal ← getMainGoal
   let goal ← liftGrindM <| Grind.Goal.internalizeAll goal
   replaceMainGoal [goal]
 
-@[builtin_grind_tactic Parser.Tactic.Grind.symByContra] def evalSymByContra : GrindTactic := fun _ => do
+@[builtin_grind_tactic Parser.Tactic.Grind.symByContra]
+def evalSymByContra : GrindTactic := fun _ => do
   ensureSym
   let goal ← getMainGoal
   let target ← goal.mvarId.getType
@@ -140,19 +154,22 @@ def getOrCreateBackwardRuleFromTerm (term : Syntax) : GrindTacticM Sym.BackwardR
 section
 open Sym.Simp
 
-def trivialSimproc : Simproc := fun _ =>
-  return .rfl
+def trivialSimproc : Simproc := fun _ => return .rfl
 
 def elabOptSimproc (stx? : Option Syntax) : GrindTacticM Simproc := do
-  let some stx := stx? | return trivialSimproc
+  let some stx := stx?
+    | return trivialSimproc
   elabSymSimproc stx
 
 def elabOptDischarger (stx? : Option Syntax) : GrindTacticM Discharger := do
-  let some stx := stx? | return dischargeNone
+  let some stx := stx?
+    | return dischargeNone
   elabSymDischarger stx
 
-def resolveExtraTheorems (ids? :  Option (Array (TSyntax `ident))) : GrindTacticM (Array ExtraTheorem × Array Theorem) := do
-  let some ids := ids? | return (#[], #[])
+def resolveExtraTheorems (ids? : Option (Array (TSyntax `ident)))
+    : GrindTacticM (Array ExtraTheorem × Array Theorem) := do
+  let some ids := ids?
+    | return (#[], #[])
   let mut extras := #[]
   let mut thms := #[]
   let lctx ← getLCtx
@@ -167,7 +184,8 @@ def resolveExtraTheorems (ids? :  Option (Array (TSyntax `ident))) : GrindTactic
   return (extras, thms)
 
 /-- Appends the extra theorems `extraThms` to `post`, discharging their side conditions with `d`. -/
-def addExtraTheorems (post : Simproc) (extraThms : Array Theorem) (d : Discharger := dischargeNone) : GrindTacticM Simproc := do
+def addExtraTheorems (post : Simproc) (extraThms : Array Theorem) (d : Discharger := dischargeNone)
+    : GrindTacticM Simproc := do
   if extraThms.isEmpty then return post
   let mut thms : Theorems := {}
   for thm in extraThms do
@@ -178,7 +196,8 @@ def addExtraTheorems (post : Simproc) (extraThms : Array Theorem) (d : Discharge
 Methods of the default `Sym.simp` variant. The discharger `d` is used for the side conditions
 of the `sym_simp` theorems and of the extra theorems `extraThms`.
 -/
-def mkSimpDefaultMethods (extraThms : Array Theorem) (d : Discharger) : GrindTacticM Sym.Simp.Methods := do
+def mkSimpDefaultMethods (extraThms : Array Theorem) (d : Discharger)
+    : GrindTacticM Sym.Simp.Methods := do
   let thms ← getSymSimpTheorems
   let pre := simpControl >> simpArrowTelescope
   let post ← addExtraTheorems (evalGround >> thms.rewrite d) extraThms d
@@ -190,48 +209,60 @@ internalized context and a single round of E-matching with few instances. A fail
 redoes the whole search, since the `grind` state is discarded after each attempt, so the search
 is kept small.
 -/
-def defaultDischargerConfig (cfg : Lean.Grind.Config) : Lean.Grind.Config :=
-  { cfg with ematch := 1, gen := 1, genLocal := 1, instances := 20 }
+def defaultDischargerConfig (cfg : Lean.Grind.Config) : Lean.Grind.Config := {
+  cfg with
+  ematch := 1
+  gen := 1
+  genLocal := 1
+  instances := 20
+}
 
 /--
 Creates the discharger of the default `Sym.simp` variant: `grind` on `goal` with
 `defaultDischargerConfig`. See `Grind.Goal.mkSymSimpDischarger`.
 -/
 def mkDefaultDischarger (goal : Meta.Grind.Goal) : Meta.Grind.GrindM Discharger :=
-  withTheReader Meta.Grind.Context (fun ctx => { ctx with config := defaultDischargerConfig ctx.config })
+  withTheReader Meta.Grind.Context
+    (fun ctx => { ctx with config := defaultDischargerConfig ctx.config })
     goal.mkSymSimpDischarger
 
-def elabSimpVariant (variantName : Name) (extraThms : Array Theorem) : GrindTacticM (Sym.Simp.Methods × Sym.Simp.Config) := do
+def elabSimpVariant (variantName : Name) (extraThms : Array Theorem)
+    : GrindTacticM (Sym.Simp.Methods × Sym.Simp.Config) := do
   if variantName.isAnonymous then
     let d ← liftGrindM <| mkDefaultDischarger (← getMainGoal)
     return (← mkSimpDefaultMethods extraThms d, {})
   let some v := getSymSimpVariant? (← getEnv) variantName
     | throwError "unknown Sym.simp variant `{variantName}`"
   let pre ← elabOptSimproc v.pre?
-  let post ← addExtraTheorems (← elabOptSimproc v.post?) extraThms (← elabOptDischarger v.discharger?)
-  return ({ pre, post}, v.config)
+  let post ←
+    addExtraTheorems (← elabOptSimproc v.post?) extraThms (← elabOptDischarger v.discharger?)
+  return ({ pre, post }, v.config)
 
-@[builtin_grind_tactic Parser.Tactic.Grind.symSimp] def evalSymSimp : GrindTactic := fun stx => withMainContext do
-  ensureSym
-  let `(grind| simp $[$variantId?]? $[[ $[$extraIds],* ]]?) := stx | throwUnsupportedSyntax
-  -- Resolve variant
-  let variantName := variantId?.map (·.getId) |>.getD .anonymous
-  -- Resolve extra theorems (local hypotheses first, then global constants)
-  let (extras, thms) ← resolveExtraTheorems extraIds
-  -- Cache lookup/creation
-  let cacheKey : SimpCacheKey := { variant := variantName, extras }
-  let simpState := (← get).cache.simpState[cacheKey]?.getD {}
-  let (methods, config) ← elabSimpVariant variantName thms
-  let goal ← getMainGoal
-  let (simpResult, simpState) ← liftGrindM <| goal.withContext do
-    Sym.Simp.SimpM.run (Sym.Simp.simp (← goal.mvarId.getType)) methods config simpState
-  -- Save updated cache
-  modify fun s => { s with cache.simpState := s.cache.simpState.insert cacheKey simpState }
-  -- Apply result to goal
-  match (← liftGrindM <| Sym.Simp.Result.toSimpGoalResult simpResult goal.mvarId) with
-  | .closed => replaceMainGoal []
-  | .goal mvarId => replaceMainGoal [{ goal with mvarId }]
-  | .noProgress => throwError "`Sym.simp` made no progress"
+@[builtin_grind_tactic Parser.Tactic.Grind.symSimp]
+def evalSymSimp : GrindTactic := fun stx =>
+  withMainContext do
+    ensureSym
+    let `(grind| simp $[$variantId?]? $[[ $[$extraIds],* ]]?) := stx
+      | throwUnsupportedSyntax
+    -- Resolve variant
+    let variantName := variantId?.map (·.getId) |>.getD .anonymous
+    -- Resolve extra theorems (local hypotheses first, then global constants)
+    let (extras, thms) ← resolveExtraTheorems extraIds
+    -- Cache lookup/creation
+    let cacheKey : SimpCacheKey := { variant := variantName, extras }
+    let simpState := (← get).cache.simpState[cacheKey]?.getD {}
+    let (methods, config) ← elabSimpVariant variantName thms
+    let goal ← getMainGoal
+    let (simpResult, simpState) ←
+      liftGrindM <| goal.withContext do
+        Sym.Simp.SimpM.run (Sym.Simp.simp (← goal.mvarId.getType)) methods config simpState
+    -- Save updated cache
+    modify fun s => { s with cache.simpState := s.cache.simpState.insert cacheKey simpState }
+    -- Apply result to goal
+    match (← liftGrindM <| Sym.Simp.Result.toSimpGoalResult simpResult goal.mvarId) with
+    | .closed => replaceMainGoal []
+    | .goal mvarId => replaceMainGoal [{ goal with mvarId }]
+    | .noProgress => throwError "`Sym.simp` made no progress"
 
 end
 

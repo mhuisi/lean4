@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.Linear.LinearM
 import Lean.Meta.Tactic.Grind.Arith.Util
@@ -13,29 +14,26 @@ namespace Lean.Meta.Grind.Arith.Linear
 
 open Lean
 
-def getZero : LinearM Expr :=
-  return (← getStruct).zero
+def getZero : LinearM Expr := return (← getStruct).zero
 
 def getOne : LinearM Expr := do
   let some one := (← getStruct).one?
     | throwNotRing
   return one
 
-def isCommRing : LinearM Bool :=
-  return (← getStruct).ringId?.isSome
+def isCommRing : LinearM Bool := return (← getStruct).ringId?.isSome
 
 def isOrderedCommRing : LinearM Bool := do
   return (← isCommRing) && (← getStruct).orderedRingInst?.isSome
 
-def isLinearOrder : LinearM Bool :=
-  return (← getStruct).isLinearInst?.isSome
+def isLinearOrder : LinearM Bool := return (← getStruct).isLinearInst?.isSome
 
-/-- Returns `true` if the structure has a `LawfulOrderLT` instance. See `Struct.lawfulOrderLTInst?`. -/
-def hasLawfulLT : LinearM Bool :=
-  return (← getStruct).lawfulOrderLTInst?.isSome
+/--
+Returns `true` if the structure has a `LawfulOrderLT` instance. See `Struct.lawfulOrderLTInst?`.
+-/
+def hasLawfulLT : LinearM Bool := return (← getStruct).lawfulOrderLTInst?.isSome
 
-def hasNoNatZeroDivisors : LinearM Bool :=
-  return (← getStruct).noNatDivInst?.isSome
+def hasNoNatZeroDivisors : LinearM Bool := return (← getStruct).noNatDivInst?.isSome
 
 def getTermStructId? (e : Expr) : GoalM (Option Nat) := do
   return (← get').exprToStructId.find? { expr := e }
@@ -46,7 +44,8 @@ def setTermStructId (e : Expr) : LinearM Unit := do
     unless structId' == structId do
       reportIssue! "expression in two different structure in linarith module{indentExpr e}"
     return ()
-  modify' fun s => { s with
+  modify' fun s => {
+    s with
     exprToStructId := s.exprToStructId.insert { expr := e } structId
     exprToStructIdEntries := s.exprToStructIdEntries.push (e, structId)
   }
@@ -81,8 +80,7 @@ def getOrderedAddInst : LinearM Expr := do
     | throwError "`grind linarith` internal error, structure is not an ordered module"
   return inst
 
-def isOrderedAdd : LinearM Bool :=
-  return (← getStruct).orderedAddInst?.isSome
+def isOrderedAdd : LinearM Bool := return (← getStruct).orderedAddInst?.isSome
 
 def getLtFn [Monad m] [MonadError m] [MonadGetStruct m] : m Expr := do
   let some lt := (← getStruct).ltFn?
@@ -121,10 +119,11 @@ The result is `none` if the polynomial contains variables that have not been ass
 def _root_.Lean.Grind.Linarith.Poly.eval? (p : Poly) : LinearM (Option Rat) := do
   let a := (← getStruct).assignment
   let rec go (v : Rat) : Poly → Option Rat
-    | .nil => some v
+    | .nil =>
+      some v
     | .add k x p =>
       if _ : x < a.size then
-        go (v + k*a[x]) p
+        go (v + k * a[x]) p
       else
         none
   return go 0 p
@@ -133,22 +132,23 @@ Returns `.true` if `c` is satisfied by the current partial model,
 `.undef` if `c` contains unassigned variables, and `.false` otherwise.
 -/
 def IneqCnstr.satisfied (c : IneqCnstr) : LinearM LBool := do
-  let some v ← c.p.eval? | return .undef
+  let some v ← c.p.eval?
+    | return .undef
   if c.strict then
     return decide (v < 0) |>.toLBool
   else
     return decide (v <= 0) |>.toLBool
 
 def DiseqCnstr.satisfied (c : DiseqCnstr) : LinearM LBool := do
-  let some v ← c.p.eval? | return .undef
+  let some v ← c.p.eval?
+    | return .undef
   return decide (v != 0) |>.toLBool
 
 /-- Resets the assignment of any variable bigger or equal to `x`. -/
 def resetAssignmentFrom (x : Var) : LinearM Unit := do
   modifyStruct fun s => { s with assignment := shrink s.assignment x }
 
-def getVar (x : Var) : LinearM Expr :=
-  return (← getStruct).vars[x]!
+def getVar (x : Var) : LinearM Expr := return (← getStruct).vars[x]!
 
 /-- Returns `true` if the linarith state is inconsistent. -/
 def inconsistent : LinearM Bool := do
@@ -156,12 +156,10 @@ def inconsistent : LinearM Bool := do
   return (← getStruct).conflict?.isSome
 
 /-- Returns `true` if `x` has been eliminated using an equality constraint. -/
-def eliminated (x : Var) : LinearM Bool :=
-  return (← getStruct).elimEqs[x]!.isSome
+def eliminated (x : Var) : LinearM Bool := return (← getStruct).elimEqs[x]!.isSome
 
 /-- Returns occurrences of `x`. -/
-def getOccursOf (x : Var) : LinearM VarSet :=
-  return (← getStruct).occurs[x]!
+def getOccursOf (x : Var) : LinearM VarSet := return (← getStruct).occurs[x]!
 
 /--
 Adds `y` as an occurrence of `x`.
@@ -176,9 +174,11 @@ Given `p` a polynomial being inserted into `lowers`, `uppers`, or `diseqs`,
 get its leading variable `y`, and adds `y` as an occurrence for the remaining variables in `p`.
 -/
 partial def _root_.Lean.Grind.Linarith.Poly.updateOccs (p : Poly) : LinearM Unit := do
-  let .add _ y p := p | throwError "`grind linarith` internal error, unexpected constant polynomial"
+  let .add _ y p := p
+    | throwError "`grind linarith` internal error, unexpected constant polynomial"
   let rec go (p : Poly) : LinearM Unit := do
-    let .add _ x p := p | return ()
+    let .add _ x p := p
+      | return ()
     addOcc x y; go p
   go p
 
@@ -186,9 +186,11 @@ partial def _root_.Lean.Grind.Linarith.Poly.updateOccs (p : Poly) : LinearM Unit
 Given a polynomial `p`, returns `some (x, k, c)` if `p` contains the monomial `k*x`,
 and `x` has been eliminated using the equality `c`.
 -/
-def _root_.Lean.Grind.Linarith.Poly.findVarToSubst (p : Poly) : LinearM (Option (Int × Var × EqCnstr)) := do
+def _root_.Lean.Grind.Linarith.Poly.findVarToSubst (p : Poly)
+    : LinearM (Option (Int × Var × EqCnstr)) := do
   match p with
-  | .nil => return none
+  | .nil =>
+    return none
   | .add k x p =>
     if let some c := (← getStruct).elimEqs[x]! then
       return some (k, x, c)
@@ -196,8 +198,10 @@ def _root_.Lean.Grind.Linarith.Poly.findVarToSubst (p : Poly) : LinearM (Option 
       findVarToSubst p
 
 def _root_.Lean.Grind.Linarith.Poly.gcdCoeffsAux : Poly → Nat → Nat
-  | .nil, k => k
-  | .add k' _ p, k => gcdCoeffsAux p (Int.gcd k' k)
+  | .nil, k =>
+    k
+  | .add k' _ p, k =>
+    gcdCoeffsAux p (Int.gcd k' k)
 
 def _root_.Lean.Grind.Linarith.Poly.gcdCoeffs (p : Poly) : Nat :=
   match p with
@@ -220,7 +224,8 @@ where
   go (k : Int) (x : Var) (p : Poly) : Int × Var :=
     if k == 1 || k == -1 then
       (k, x)
-    else match p with
+    else
+      match p with
       | .nil => (k, x)
       | .add k' x' p => if k'.natAbs < k.natAbs then go k' x' p else go k x p
 

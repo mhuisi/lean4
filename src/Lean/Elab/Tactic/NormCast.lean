@@ -29,22 +29,22 @@ def proveEqUsing (s : SimpTheorems) (a b : Expr) : MetaM (Option Simp.Result) :=
   let go : SimpM (Option Simp.Result) := do
     let a' ← Simp.simp a
     let b' ← Simp.simp b
-    unless ← isDefEq a'.expr b'.expr do return none
+    unless ← isDefEq a'.expr b'.expr do
+      return none
     a'.mkEqTrans (← b'.mkEqSymm b)
   withReducible do
-    let ctx ← Simp.mkContext
-        (simpTheorems := #[s])
-        (congrTheorems := ← Meta.getSimpCongrTheorems)
+    let ctx ← Simp.mkContext (simpTheorems := #[s]) (congrTheorems := ← Meta.getSimpCongrTheorems)
     (go (← Simp.mkDefaultMethods).toMethodsRef ctx).run' {}
 
 /-- Proves `a = b` by simplifying using move and squash lemmas. -/
 def proveEqUsingDown (a b : Expr) : MetaM (Option Simp.Result) := do
   withTraceNode `Tactic.norm_cast (fun _ => return m!"proving: {← mkEq a b}") do
-  proveEqUsing (← normCastExt.down.getTheorems) a b
+    proveEqUsing (← normCastExt.down.getTheorems) a b
 
 /-- Constructs the expression `(e : ty)`. -/
 def mkCoe (e : Expr) (ty : Expr) : MetaM Expr := do
-  let .some e' ← coerce? e ty | failure
+  let .some e' ← coerce? e ty
+    | failure
   return e'
 
 /--
@@ -66,8 +66,10 @@ def isNumeral? (e : Expr) : Option (Expr × Nat) :=
   -- TODO: cleanup, and possibly remove duplicate
   if e.isConstOf ``Nat.zero then
     (mkConst ``Nat, 0)
-  else if let Expr.app (Expr.app (Expr.app (Expr.const ``OfNat.ofNat ..) α ..)
-      (Expr.lit (Literal.natVal n) ..) ..) .. := e.consumeMData then
+  else if let Expr.app
+        (Expr.app (Expr.app (Expr.const ``OfNat.ofNat ..) α ..) (Expr.lit (Literal.natVal n) ..) ..)
+        .. :=
+      e.consumeMData then
     some (α, n)
   else
     none
@@ -90,58 +92,70 @@ when
 can be proven with a squash lemma
 -/
 def splittingProcedure (expr : Expr) : MetaM Simp.Result := do
-  let Expr.app (Expr.app op x ..) y .. := expr | return {expr}
+  let Expr.app (Expr.app op x ..) y .. := expr
+    | return { expr }
 
-  let Expr.forallE _ γ (Expr.forallE _ γ' ty ..) .. ← inferType op | return {expr}
-  if γ'.hasLooseBVars || ty.hasLooseBVars then return {expr}
-  unless ← isDefEq γ γ' do return {expr}
+  let Expr.forallE _ γ (Expr.forallE _ γ' ty ..) .. ← inferType op
+    | return { expr }
+  if γ'.hasLooseBVars || ty.hasLooseBVars then return { expr }
+  unless ← isDefEq γ γ' do
+    return { expr }
 
   let msg := m!"splitting {expr}"
   let msg
     | .error _ => return msg
     | .ok r => return if r.expr == expr then msg else m!"{msg} to {r.expr}"
   withTraceNode `Tactic.norm_cast msg do
+    try
+      let some x' ← isCoeOf? x
+        | failure
+      let some y' ← isCoeOf? y
+        | failure
+      let α ← inferType x'
+      let β ← inferType y'
 
-  try
-    let some x' ← isCoeOf? x | failure
-    let some y' ← isCoeOf? y | failure
-    let α ← inferType x'
-    let β ← inferType y'
-
-    -- TODO: fast timeout
-    (try
-      let x2 ← mkCoe (← mkCoe x' β) γ
-      let some x_x2 ← proveEqUsingDown x x2 | failure
-      Simp.mkCongrFun (← Simp.mkCongr {expr := op} x_x2) y
+      -- TODO: fast timeout
+      (try
+         let x2 ← mkCoe (← mkCoe x' β) γ
+         let some x_x2 ← proveEqUsingDown x x2
+           | failure
+         Simp.mkCongrFun (← Simp.mkCongr { expr := op } x_x2) y
+       catch _ =>
+         let y2 ← mkCoe (← mkCoe y' α) γ
+         let some y_y2 ← proveEqUsingDown y y2
+           | failure
+         Simp.mkCongr { expr := mkApp op x } y_y2)
     catch _ =>
-      let y2 ← mkCoe (← mkCoe y' α) γ
-      let some y_y2 ← proveEqUsingDown y y2 | failure
-      Simp.mkCongr {expr := mkApp op x} y_y2)
-  catch _ => try
-    let some (_, n) := isNumeral? y | failure
-    let some x' ← isCoeOf? x | failure
-    let α ← inferType x'
-    let y2 ← mkCoe (← mkNumeral α n) γ
-    let some y_y2 ← proveEqUsingDown y y2 | failure
-    Simp.mkCongr {expr := mkApp op x} y_y2
-  catch _ => try
-    let some (_, n) := isNumeral? x | failure
-    let some y' ← isCoeOf? y | failure
-    let β ← inferType y'
-    let x2 ← mkCoe (← mkNumeral β n) γ
-    let some x_x2 ← proveEqUsingDown x x2 | failure
-    Simp.mkCongrFun (← Simp.mkCongr {expr := op} x_x2) y
-  catch _ =>
-    return {expr}
+      try
+        let some (_, n) := isNumeral? y
+          | failure
+        let some x' ← isCoeOf? x
+          | failure
+        let α ← inferType x'
+        let y2 ← mkCoe (← mkNumeral α n) γ
+        let some y_y2 ← proveEqUsingDown y y2
+          | failure
+        Simp.mkCongr { expr := mkApp op x } y_y2
+      catch _ =>
+        try
+          let some (_, n) := isNumeral? x
+            | failure
+          let some y' ← isCoeOf? y
+            | failure
+          let β ← inferType y'
+          let x2 ← mkCoe (← mkNumeral β n) γ
+          let some x_x2 ← proveEqUsingDown x x2
+            | failure
+          Simp.mkCongrFun (← Simp.mkCongr { expr := op } x_x2) y
+        catch _ =>
+          return { expr }
 
-/--
-Discharging function used during simplification in the "squash" step.
--/
+/-- Discharging function used during simplification in the "squash" step. -/
 -- TODO: normCast takes a list of expressions to use as lemmas for the discharger
 -- TODO: a tactic to print the results the discharger fails to prove
 def prove (e : Expr) : SimpM (Option Expr) := do
   withTraceNode `Tactic.norm_cast (fun _ => return m!"discharging: {e}") do
-  return (← findLocalDeclWithType? e).map mkFVar
+    return (← findLocalDeclWithType? e).map mkFVar
 
 /--
 Core rewriting function used in the "squash" step, which moves casts upwards
@@ -153,11 +167,12 @@ On failure, it calls the splitting procedure heuristic.
 partial def upwardAndElim (up : SimpTheorems) (e : Expr) : SimpM Simp.Step := do
   -- Remark: we set `wellBehavedDischarge := false` because `prove` may access arbitrary elements in the local context.
   -- See comment at `Methods.wellBehavedDischarge`
-  let r ← withDischarger prove (wellBehavedDischarge := false) do
-    Simp.rewrite? e up.post up.erased (tag := "squash") (rflOnly := false)
+  let r ←
+    withDischarger prove (wellBehavedDischarge := false) do
+      Simp.rewrite? e up.post up.erased (tag := "squash") (rflOnly := false)
   let r := r.getD { expr := e }
   let r ← r.mkEqTrans (← splittingProcedure r.expr)
-  if r.expr == e then return Simp.Step.done {expr := e}
+  if r.expr == e then return Simp.Step.done { expr := e }
   return Simp.Step.visit r
 
 /--
@@ -165,72 +180,77 @@ If possible, rewrites `(n : α)` to `(Nat.cast n : α)` where `n` is a numeral a
 Returns a pair of the new expression and proof that they are equal.
 -/
 def numeralToCoe (e : Expr) : MetaM Simp.Result := do
-  let some (α, n) := isNumeral? e | failure
+  let some (α, n) := isNumeral? e
+    | failure
   if (← whnf α).isConstOf ``Nat then failure
   let newE ← mkAppOptM ``Nat.cast #[α, none, toExpr n]
-  let some pr ← proveEqUsingDown e newE | failure
+  let some pr ← proveEqUsingDown e newE
+    | failure
   return pr
 
 declare_config_elab elabNormCastConfig NormCastConfig
 
-/--
-The core simplification routine of `normCast`.
--/
+/-- The core simplification routine of `normCast`. -/
 def derive (e : Expr) (config : NormCastConfig := {}) : MetaM Simp.Result := do
   withTraceNode `Tactic.norm_cast (fun _ => return m!"{e}") do
-  let e ← instantiateMVars e
+    let e ← instantiateMVars e
 
-  let config := config.toConfig
-  let congrTheorems ← Meta.getSimpCongrTheorems
+    let config := config.toConfig
+    let congrTheorems ← Meta.getSimpCongrTheorems
 
-  let r : Simp.Result := { expr := e }
+    let r : Simp.Result := { expr := e }
 
-  let withTrace phase := withTraceNode `Tactic.norm_cast fun
-    | .ok r => return m!"{r.expr} (after {phase})"
-    | .error _ => return m!"{bombEmoji} {phase}"
+    let withTrace phase :=
+      withTraceNode `Tactic.norm_cast fun
+        | .ok r => return m!"{r.expr} (after {phase})"
+        | .error _ => return m!"{bombEmoji} {phase}"
 
-  -- step 1: pre-processing of numerals
-  let r ← withTrace "pre-processing numerals" do
-    let post e := return Simp.Step.done (← try numeralToCoe e catch _ => pure {expr := e})
-    let ctx ← Simp.mkContext config (congrTheorems := congrTheorems)
-    r.mkEqTrans (← Simp.main r.expr ctx (methods := { post })).1
+    -- step 1: pre-processing of numerals
+    let r ←
+      withTrace "pre-processing numerals" do
+        let post e := return Simp.Step.done (← try numeralToCoe e catch _ => pure { expr := e })
+        let ctx ← Simp.mkContext config (congrTheorems := congrTheorems)
+        r.mkEqTrans (← Simp.main r.expr ctx (methods := { post })).1
 
-  -- step 2: casts are moved upwards and eliminated
-  let r ← withTrace "moving upward, splitting and eliminating" do
-    let post := upwardAndElim (← normCastExt.up.getTheorems)
-    let ctx ← Simp.mkContext config (congrTheorems := congrTheorems)
-    r.mkEqTrans (← Simp.main r.expr ctx (methods := { post })).1
+    -- step 2: casts are moved upwards and eliminated
+    let r ←
+      withTrace "moving upward, splitting and eliminating" do
+        let post := upwardAndElim (← normCastExt.up.getTheorems)
+        let ctx ← Simp.mkContext config (congrTheorems := congrTheorems)
+        r.mkEqTrans (← Simp.main r.expr ctx (methods := { post })).1
 
-  let simprocs ← ({} : Simp.SimprocsArray).add `reduceCtorEq false
+    let simprocs ← ({} : Simp.SimprocsArray).add `reduceCtorEq false
 
-  -- step 3: casts are squashed
-  let r ← withTrace "squashing" do
-    let simpTheorems := #[← normCastExt.squash.getTheorems]
-    let ctx ← Simp.mkContext
-      (config := config)
-      (simpTheorems := simpTheorems)
-      (congrTheorems := congrTheorems)
-    r.mkEqTrans (← simp r.expr ctx simprocs).1
+    -- step 3: casts are squashed
+    let r ←
+      withTrace "squashing" do
+        let simpTheorems := #[← normCastExt.squash.getTheorems]
+        let ctx ←
+          Simp.mkContext (config := config) (simpTheorems := simpTheorems)
+            (congrTheorems := congrTheorems)
+        r.mkEqTrans (← simp r.expr ctx simprocs).1
 
-  return r
+    return r
 
 open Term
-@[builtin_term_elab modCast] def elabModCast : TermElab := fun stx expectedType? => do
+@[builtin_term_elab modCast]
+def elabModCast : TermElab := fun stx expectedType? => do
   match stx with
   | `(mod_cast $e:term) =>
     withExpectedType expectedType? fun expectedType => do
-    if (← instantiateMVars expectedType).hasExprMVar then tryPostpone
-    let expectedType' ← derive expectedType
-    let e ← Term.elabTerm e expectedType'.expr
-    synthesizeSyntheticMVars
-    let eTy ← instantiateMVars (← inferType e)
-    if eTy.hasExprMVar then tryPostpone
-    let eTy' ← derive eTy
-    unless ← isDefEq eTy'.expr expectedType'.expr do
-      throwTypeMismatchError "mod_cast" expectedType'.expr eTy'.expr e
-    let eTy_eq_expectedType ← eTy'.mkEqTrans (← expectedType'.mkEqSymm expectedType )
-    eTy_eq_expectedType.mkCast e
-  | _ => throwUnsupportedSyntax
+      if (← instantiateMVars expectedType).hasExprMVar then tryPostpone
+      let expectedType' ← derive expectedType
+      let e ← Term.elabTerm e expectedType'.expr
+      synthesizeSyntheticMVars
+      let eTy ← instantiateMVars (← inferType e)
+      if eTy.hasExprMVar then tryPostpone
+      let eTy' ← derive eTy
+      unless ← isDefEq eTy'.expr expectedType'.expr do
+        throwTypeMismatchError "mod_cast" expectedType'.expr eTy'.expr e
+      let eTy_eq_expectedType ← eTy'.mkEqTrans (← expectedType'.mkEqSymm expectedType)
+      eTy_eq_expectedType.mkCast e
+  | _ =>
+    throwUnsupportedSyntax
 
 /-- Implementation of the `norm_cast` tactic when operating on the main goal. -/
 def normCastTarget (cfg : NormCastConfig) : TacticM Unit :=
@@ -260,27 +280,30 @@ def evalNormCast0 : Tactic := fun stx => do
       | Location.wildcard =>
         normCastTarget cfg
         (← (← getMainGoal).getNondepPropHyps).forM (normCastHyp cfg)
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
 @[builtin_tactic Lean.Parser.Tactic.Conv.normCast]
 def evalConvNormCast : Tactic :=
-  open Elab.Tactic.Conv in fun _ => withMainContext do
-    applySimpResult (← derive (← getLhs))
+  open Elab.Tactic.Conv in
+  fun _ => withMainContext do applySimpResult (← derive (← getLhs))
 
 @[builtin_tactic pushCast]
 def evalPushCast : Tactic := fun stx => do
-  let { ctx, simprocs, dischargeWrapper, .. } ← withMainContext do
-    mkSimpContext (simpTheorems := pushCastExt.getTheorems) stx (eraseLocal := false)
+  let { ctx, simprocs, dischargeWrapper, .. } ←
+    withMainContext do
+      mkSimpContext (simpTheorems := pushCastExt.getTheorems) stx (eraseLocal := false)
   let ctx := ctx.setFailIfUnchanged false
   dischargeWrapper.with fun discharge? =>
     discard <| simpLocation ctx simprocs discharge? (expandOptLocation stx[5])
 
 open Command in
-@[builtin_command_elab Parser.Tactic.normCastAddElim] def elabAddElim : CommandElab := fun stx => do
+@[builtin_command_elab Parser.Tactic.normCastAddElim]
+def elabAddElim : CommandElab := fun stx => do
   match stx with
   | `(norm_cast_add_elim $id:ident) =>
-    Elab.Command.liftCoreM do MetaM.run' do
-     addElim (← realizeGlobalConstNoOverload id)
-  | _ => throwUnsupportedSyntax
+    Elab.Command.liftCoreM do MetaM.run' do addElim (← realizeGlobalConstNoOverload id)
+  | _ =>
+    throwUnsupportedSyntax
 
 end Lean.Elab.Tactic.NormCast

@@ -28,13 +28,11 @@ The iterator yields the elements of the set in order and then terminates.
 * `Productive` instance: always
 -/
 @[inline]
-public def iter {α : Type u}
-    {cmp : α → α → Ordering} (m : Raw α cmp) :=
+public def iter {α : Type u} {cmp : α → α → Ordering} (m : Raw α cmp) :=
   (m.inner.iter.map fun e => e.1 : Iter α)
 
 @[simp]
-public theorem toList_iter {cmp : α → α → Ordering} (m : Raw α cmp) :
-    m.iter.toList = m.toList := by
+public theorem toList_iter {cmp : α → α → Ordering} (m : Raw α cmp) : m.iter.toList = m.toList := by
   rw [iter, Iter.toList_map, TreeMap.Raw.toList_iter, TreeMap.Raw.toList]
   rw [TreeSet.Raw.toList]
   rw [Std.DTreeMap.Internal.Impl.foldr_eq_foldr_toList]

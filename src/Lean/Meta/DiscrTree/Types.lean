@@ -4,45 +4,42 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Expr
 public section
 namespace Lean.Meta
 /-! See file `DiscrTree.lean` for the actual implementation and documentation. -/
 namespace DiscrTree
-/--
-Discrimination tree key. See `DiscrTree`
--/
+/-- Discrimination tree key. See `DiscrTree` -/
 inductive Key where
-  | star  : Key
+  | star : Key
   | other : Key
-  | lit   : Literal → Key
-  | fvar  : FVarId → Nat → Key
+  | lit : Literal → Key
+  | fvar : FVarId → Nat → Key
   | const : Name → Nat → Key
   | arrow : Key
-  | proj  : Name → Nat → Nat → Key
-  deriving Inhabited, BEq, Repr
+  | proj : Name → Nat → Nat → Key
+deriving Inhabited, BEq, Repr
 
 protected def Key.hash : Key → UInt64
-  | .const n a   => mixHash 5237 $ mixHash (hash n) (hash a)
-  | .fvar n a    => mixHash 3541 $ mixHash (hash n) (hash a)
-  | .lit v       => mixHash 1879 $ hash v
-  | .star        => 7883
-  | .other       => 2411
-  | .arrow       => 17
-  | .proj s i a  =>  mixHash (hash a) $ mixHash (hash s) (hash i)
+  | .const n a => mixHash 5237 $ mixHash (hash n) (hash a)
+  | .fvar n a => mixHash 3541 $ mixHash (hash n) (hash a)
+  | .lit v => mixHash 1879 $ hash v
+  | .star => 7883
+  | .other => 2411
+  | .arrow => 17
+  | .proj s i a => mixHash (hash a) $ mixHash (hash s) (hash i)
 
 instance : Hashable Key := ⟨Key.hash⟩
 
-/--
-Discrimination tree trie. See `DiscrTree`.
--/
+/-- Discrimination tree trie. See `DiscrTree`. -/
 inductive Trie (α : Type) where
-    /--
-    In many use cases, tries do a lot of their actual discrimination near the root and end up with
-    long chains of singleton nodes. The special-cased `.chain key child` node is equivalent to
-    `.node #[] #[(key, child)]` but is more memory efficient.
-    -/
+  /--
+  In many use cases, tries do a lot of their actual discrimination near the root and end up with
+  long chains of singleton nodes. The special-cased `.chain key child` node is equivalent to
+  `.node #[] #[(key, child)]` but is more memory efficient.
+  -/
   | chain (key : Key) (child : Trie α) : Trie α
   | node (vs : Array α) (children : Array (Key × Trie α)) : Trie α
 
@@ -82,9 +79,7 @@ def f (a b : Ty.bool.interp) : Ty.bool.interp :=
 ```
 -/
 
-/--
-Discrimination trees. It is an index from terms to values of type `α`.
--/
+/-- Discrimination trees. It is an index from terms to values of type `α`. -/
 structure DiscrTree (α : Type) where
   root : PersistentHashMap Key (Trie α) := {}
 

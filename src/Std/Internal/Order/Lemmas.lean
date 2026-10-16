@@ -36,11 +36,13 @@ theorem le_top (x : α) : x ⊑ ⊤ := by
 
 theorem meet_le_left (x y : α) : x ⊓ y ⊑ x := by
   apply inf_le
-  left; rfl
+  left
+  rfl
 
 theorem meet_le_right (x y : α) : x ⊓ y ⊑ y := by
   apply inf_le
-  right; rfl
+  right
+  rfl
 
 theorem le_meet (x y z : α) : x ⊑ y → x ⊑ z → x ⊑ y ⊓ z := by
   intro hxy hxz
@@ -52,11 +54,13 @@ theorem le_meet (x y z : α) : x ⊑ y → x ⊑ z → x ⊑ y ⊓ z := by
 
 theorem left_le_join (x y : α) : x ⊑ x ⊔ y := by
   apply le_sup
-  left; rfl
+  left
+  rfl
 
 theorem right_le_join (x y : α) : y ⊑ x ⊔ y := by
   apply le_sup
-  right; rfl
+  right
+  rfl
 
 theorem join_le (x y z : α) : x ⊑ z → y ⊑ z → x ⊔ y ⊑ z := by
   intro hxz hyz
@@ -145,50 +149,48 @@ theorem iSup_mono {β} {Φ Ψ : β → l} (h : ∀ a, Φ a ⊑ Ψ a) : iSup Φ �
 
 /-! ### Boolean algebra -/
 
-theorem meet_self : P ⊓ P = P :=
-  rel_antisymm (meet_le_left _ _) (le_meet _ _ _ rel_refl rel_refl)
-theorem join_self : P ⊔ P = P :=
-  rel_antisymm (join_le _ _ _ rel_refl rel_refl) (left_le_join _ _)
+theorem meet_self : P ⊓ P = P := rel_antisymm (meet_le_left _ _) (le_meet _ _ _ rel_refl rel_refl)
+theorem join_self : P ⊔ P = P := rel_antisymm (join_le _ _ _ rel_refl rel_refl) (left_le_join _ _)
 theorem meet_comm : P ⊓ Q = Q ⊓ P := rel_antisymm meet_le_comm meet_le_comm
 theorem join_comm : P ⊔ Q = Q ⊔ P := rel_antisymm join_le_comm join_le_comm
 theorem meet_assoc : (P ⊓ Q) ⊓ R = P ⊓ (Q ⊓ R) :=
   rel_antisymm
     (le_meet _ _ _ (meet_le_of_left_le (meet_le_left _ _))
       (le_meet _ _ _ (meet_le_of_left_le (meet_le_right _ _)) (meet_le_right _ _)))
-    (le_meet _ _ _
-      (le_meet _ _ _ (meet_le_left _ _) (meet_le_of_right_le (meet_le_left _ _)))
+    (le_meet _ _ _ (le_meet _ _ _ (meet_le_left _ _) (meet_le_of_right_le (meet_le_left _ _)))
       (meet_le_of_right_le (meet_le_right _ _)))
 theorem join_assoc : (P ⊔ Q) ⊔ R = P ⊔ (Q ⊔ R) :=
   rel_antisymm
-    (join_le _ _ _
-      (join_le _ _ _ (left_le_join _ _) (le_join_of_le_right (left_le_join _ _)))
+    (join_le _ _ _ (join_le _ _ _ (left_le_join _ _) (le_join_of_le_right (left_le_join _ _)))
       (le_join_of_le_right (right_le_join _ _)))
     (join_le _ _ _ (le_join_of_le_left (left_le_join _ _))
       (join_le _ _ _ (le_join_of_le_left (right_le_join _ _)) (right_le_join _ _)))
 
-theorem le_iff_meet_eq_right : (P ⊑ Q) ↔ Q ⊓ P = P :=
-  ⟨fun h => rel_antisymm (meet_le_right _ _) (le_meet _ _ _ h rel_refl),
-   fun h => h ▸ meet_le_left _ _⟩
-theorem le_iff_meet_eq_left : (P ⊑ Q) ↔ P ⊓ Q = P :=
-  ⟨fun h => rel_antisymm (meet_le_left _ _) (le_meet _ _ _ rel_refl h),
-   fun h => h ▸ meet_le_right _ _⟩
-theorem le_iff_join_eq_left : (P ⊑ Q) ↔ Q ⊔ P = Q :=
-  ⟨fun h => rel_antisymm (join_le _ _ _ rel_refl h) (left_le_join _ _),
-   fun h => h ▸ right_le_join _ _⟩
-theorem le_iff_join_eq_right : (P ⊑ Q) ↔ P ⊔ Q = Q :=
-  ⟨fun h => rel_antisymm (join_le _ _ _ h rel_refl) (right_le_join _ _),
-   fun h => h ▸ left_le_join _ _⟩
+theorem le_iff_meet_eq_right : (P ⊑ Q) ↔ Q ⊓ P = P := ⟨
+  fun h => rel_antisymm (meet_le_right _ _) (le_meet _ _ _ h rel_refl),
+  fun h => h ▸ meet_le_left _ _
+⟩
+theorem le_iff_meet_eq_left : (P ⊑ Q) ↔ P ⊓ Q = P := ⟨
+  fun h => rel_antisymm (meet_le_left _ _) (le_meet _ _ _ rel_refl h),
+  fun h => h ▸ meet_le_right _ _
+⟩
+theorem le_iff_join_eq_left : (P ⊑ Q) ↔ Q ⊔ P = Q := ⟨
+  fun h => rel_antisymm (join_le _ _ _ rel_refl h) (left_le_join _ _),
+  fun h => h ▸ right_le_join _ _
+⟩
+theorem le_iff_join_eq_right : (P ⊑ Q) ↔ P ⊔ Q = Q := ⟨
+  fun h => rel_antisymm (join_le _ _ _ h rel_refl) (right_le_join _ _),
+  fun h => h ▸ left_le_join _ _
+⟩
 
 theorem top_meet : (⊤ : l) ⊓ P = P :=
   rel_antisymm (meet_le_right _ _) (le_meet _ _ _ (le_top _) rel_refl)
 theorem meet_top : P ⊓ (⊤ : l) = P := meet_comm.trans top_meet
 /-- Cancel a redundant `⊓ ⊤` on the left of an entailment. -/
 theorem meet_top_le_of_le (h : P ⊑ Q) : P ⊓ ⊤ ⊑ Q := by rw [meet_top]; exact h
-theorem bot_meet : (⊥ : l) ⊓ P = ⊥ :=
-  rel_antisymm (meet_le_of_left_le (bot_le _)) (bot_le _)
+theorem bot_meet : (⊥ : l) ⊓ P = ⊥ := rel_antisymm (meet_le_of_left_le (bot_le _)) (bot_le _)
 theorem meet_bot : P ⊓ (⊥ : l) = ⊥ := meet_comm.trans bot_meet
-theorem top_join : (⊤ : l) ⊔ P = ⊤ :=
-  rel_antisymm (le_top _) (left_le_join _ _)
+theorem top_join : (⊤ : l) ⊔ P = ⊤ := rel_antisymm (le_top _) (left_le_join _ _)
 theorem join_top : P ⊔ (⊤ : l) = ⊤ := join_comm.trans top_join
 theorem bot_join : (⊥ : l) ⊔ P = P :=
   rel_antisymm (join_le _ _ _ (bot_le _) rel_refl) (right_le_join _ _)
@@ -209,12 +211,14 @@ theorem meet_right_comm : (P ⊓ Q) ⊓ R = (P ⊓ R) ⊓ Q := by
 
 theorem le_top_iff : (Q ⊑ (⊤ : l)) ↔ True := iff_true_intro (le_top _)
 theorem bot_le_iff : ((⊥ : l) ⊑ Q) ↔ True := iff_true_intro (bot_le _)
-theorem join_le_iff : (P ⊔ Q ⊑ R) ↔ (P ⊑ R ∧ Q ⊑ R) :=
-  ⟨fun h => ⟨rel_trans (left_le_join _ _) h, rel_trans (right_le_join _ _) h⟩,
-   fun h => join_le _ _ _ h.1 h.2⟩
-theorem le_meet_iff : (P ⊑ Q ⊓ R) ↔ (P ⊑ Q ∧ P ⊑ R) :=
-  ⟨fun h => ⟨rel_trans h (meet_le_left _ _), rel_trans h (meet_le_right _ _)⟩,
-   fun h => le_meet _ _ _ h.1 h.2⟩
+theorem join_le_iff : (P ⊔ Q ⊑ R) ↔ (P ⊑ R ∧ Q ⊑ R) := ⟨
+  fun h => ⟨rel_trans (left_le_join _ _) h, rel_trans (right_le_join _ _) h⟩,
+  fun h => join_le _ _ _ h.1 h.2
+⟩
+theorem le_meet_iff : (P ⊑ Q ⊓ R) ↔ (P ⊑ Q ∧ P ⊑ R) := ⟨
+  fun h => ⟨rel_trans h (meet_le_left _ _), rel_trans h (meet_le_right _ _)⟩,
+  fun h => le_meet _ _ _ h.1 h.2
+⟩
 theorem iSup_le_iff {ι : Type _} {Φ : ι → l} : (iSup Φ ⊑ P) ↔ ∀ i, Φ i ⊑ P :=
   ⟨fun h i => rel_trans (le_iSup _ i) h, iSup_le _ _⟩
 theorem le_iInf_iff {ι : Type _} {Φ : ι → l} : (P ⊑ iInf Φ) ↔ ∀ i, P ⊑ Φ i :=

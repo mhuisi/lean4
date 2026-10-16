@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Try
 public import Lean.Meta.Tactic.LibrarySearch
@@ -13,13 +14,13 @@ namespace Lean.Meta.Try.Collector
 
 structure InductionCandidate where
   fvarId : FVarId
-  val    : InductiveVal
+  val : InductiveVal
 
 /-- `Set` with insertion order preserved. -/
 structure OrdSet (α : Type) [Hashable α] [BEq α] where
   elems : Array α := #[]
   set : Std.HashSet α := {}
-  deriving Inhabited
+deriving Inhabited
 
 def OrdSet.insert {_ : Hashable α} {_ : BEq α} (s : OrdSet α) (a : α) : OrdSet α :=
   if s.set.contains a then
@@ -28,16 +29,15 @@ def OrdSet.insert {_ : Hashable α} {_ : BEq α} (s : OrdSet α) (a : α) : OrdS
     let { elems, set } := s
     { elems := elems.push a, set := set.insert a }
 
-def OrdSet.isEmpty {_ : Hashable α} {_ : BEq α} (s : OrdSet α) : Bool :=
-  s.elems.isEmpty
+def OrdSet.isEmpty {_ : Hashable α} {_ : BEq α} (s : OrdSet α) : Bool := s.elems.isEmpty
 
 structure Result where
   /-- All constant symbols occurring in the gal. -/
-  allConsts : OrdSet Name  := {}
+  allConsts : OrdSet Name := {}
   /-- Unfolding candidates. -/
-  unfoldCandidates : OrdSet Name  := {}
+  unfoldCandidates : OrdSet Name := {}
   /-- Equation function candidates. -/
-  eqnCandidates : OrdSet Name  := {}
+  eqnCandidates : OrdSet Name := {}
   /-- Function induction candidates -/
   funIndCandidates : FunInd.SeenCalls := {}
   /-- Induction candidates. -/
@@ -50,8 +50,7 @@ structure Context where
 
 abbrev M := ReaderT Context <| StateRefT Result MetaM
 
-def getConfig : M Try.Config := do
-  return (← read).config
+def getConfig : M Try.Config := do return (← read).config
 
 def saveConst (declName : Name) : M Unit := do
   modify fun s => { s with allConsts := s.allConsts.insert declName }
@@ -72,7 +71,8 @@ def isEligible (declName : Name) : M Bool := do
 
 def saveEqnCandidate (declName : Name) : M Unit := do
   if (← isEligible declName) then
-    let some eqns ← getEqnsFor? declName | return ()
+    let some eqns ← getEqnsFor? declName
+      | return ()
     if eqns.isEmpty then return ()
     unless (← Grind.grindExt.isEMatchTheorem eqns[0]!) do
       modify fun s => { s with eqnCandidates := s.eqnCandidates.insert declName }
@@ -88,7 +88,8 @@ def getEqDefDecl? (declName : Name) : MetaM (Option Name) := do
 
 def saveUnfoldCandidate (declName : Name) : M Unit := do
   if (← isEligible declName) then
-    let some eqDefName ← getEqDefDecl? declName | return ()
+    let some eqDefName ← getEqDefDecl? declName
+      | return ()
     modify fun s => { s with unfoldCandidates := s.unfoldCandidates.insert eqDefName }
 
 def visitConst (declName : Name) : M Unit := do
@@ -107,7 +108,8 @@ def saveLibSearchCandidates (e : Expr) : M Unit := do
   if (← getConfig).harder then
     for (declName, declMod) in (← libSearchFindDecls e) do
       unless (← Grind.grindExt.isEMatchTheorem declName) do
-        let kind := match declMod with
+        let kind :=
+          match declMod with
           | .none => (.default false)
           | .mp => .leftRight
           | .mpr => .rightLeft
@@ -122,11 +124,16 @@ def visitApp (e : Expr) (declName : Name) (args : Array Expr) : M Unit := do
 def checkInductive (localDecl : LocalDecl) : M Unit := do
   let type ← whnfD localDecl.type
   -- Use getAppFn to handle both `T` and `T α β ...` cases
-  let .const declName _ := type.getAppFn | return ()
-  let .inductInfo val ← getConstInfo declName | return ()
+  let .const declName _ := type.getAppFn
+    | return ()
+  let .inductInfo val ← getConstInfo declName
+    | return ()
   if (← isEligible declName) then
     unless (← Grind.isGlobalSplit declName) do
-      modify fun s => { s with indCandidates := s.indCandidates.push { fvarId := localDecl.fvarId, val } }
+      modify fun s => {
+        s with
+        indCandidates := s.indCandidates.push { fvarId := localDecl.fvarId, val }
+      }
 
 unsafe abbrev Cache := PtrSet Expr
 
@@ -134,12 +141,18 @@ unsafe def visit (e : Expr) : StateRefT Cache M Unit := do
   unless (← get).contains e do
     modify fun s => s.insert e
     match e with
-      | .const declName _ => visitConst declName
-      | .forallE _ d b _  => visit d; visit b
-      | .lam _ d b _      => visit d; visit b
-      | .mdata _ b        => visit b
-      | .letE _ t v b _   => visit t; visit v; visit b
-      | .app ..           => e.withApp fun f args => do
+    | .const declName _ =>
+      visitConst declName
+    | .forallE _ d b _ =>
+      visit d; visit b
+    | .lam _ d b _ =>
+      visit d; visit b
+    | .mdata _ b =>
+      visit b
+    | .letE _ t v b _ =>
+      visit t; visit v; visit b
+    | .app .. =>
+      e.withApp fun f args => do
         if let .const declName _ := f then
           saveConst declName
           unless e.hasLooseBVars do
@@ -147,12 +160,15 @@ unsafe def visit (e : Expr) : StateRefT Cache M Unit := do
         else
           visit f
         args.forM visit
-      | .proj _ _ b       => visit b
-      | _                 => return ()
+    | .proj _ _ b =>
+      visit b
+    | _ =>
+      return ()
 
-unsafe def main (mvarId : MVarId) (config : Try.Config) : MetaM Result := mvarId.withContext do
-  let (_, s) ← go |>.run mkPtrSet |>.run { config } |>.run {}
-  return s
+unsafe def main (mvarId : MVarId) (config : Try.Config) : MetaM Result :=
+  mvarId.withContext do
+    let (_, s) ← go |>.run mkPtrSet |>.run { config } |>.run {}
+    return s
 where
   go : StateRefT Cache M Unit := do
     unless (← getConfig).targetOnly do

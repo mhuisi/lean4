@@ -43,21 +43,17 @@ instance : BEq Slice where
   beq := beq
 
 @[inherit_doc Slice.copy]
-def toString (s : Slice) : String :=
-  s.copy
+def toString (s : Slice) : String := s.copy
 
-@[simp]
-theorem toString_eq : toString = copy := (rfl)
+@[simp] theorem toString_eq : toString = copy := (rfl)
 
 instance : ToString String.Slice where
   toString := toString
 
-@[simp]
-theorem toStringToString_eq : ToString.toString = String.Slice.copy := (rfl)
+@[simp] theorem toStringToString_eq : ToString.toString = String.Slice.copy := (rfl)
 
 @[extern "lean_slice_hash"]
-protected def hash (s : @& Slice) : UInt64 :=
-  String.hash s.copy
+protected def hash (s : @& Slice) : UInt64 := String.hash s.copy
 
 instance : Hashable Slice where
   hash := Slice.hash
@@ -66,17 +62,15 @@ instance : LT Slice where
   lt x y := x.copy < y.copy
 
 @[extern "lean_slice_dec_lt"]
-instance (x y : @& Slice) : Decidable (x < y) :=
-  inferInstanceAs (Decidable (x.copy < y.copy))
+instance (x y : @& Slice) : Decidable (x < y) := inferInstanceAs (Decidable (x.copy < y.copy))
 
 instance : Ord Slice where
   compare x y := compareOfLessAndBEq x y
 
 instance : LE Slice where
-  le x y := ¬x < y
+  le x y := ¬ x < y
 
-instance : DecidableLE Slice :=
-  fun x y => inferInstanceAs (Decidable (¬x < y))
+instance : DecidableLE Slice := fun x y => inferInstanceAs (Decidable (¬ x < y))
 
 /--
 Removes the specified number of characters (Unicode code points) from the start of the slice.
@@ -88,9 +82,7 @@ Examples:
  * {lean}`"red green blue".toSlice.drop 10 == "blue".toSlice`
  * {lean}`"red green blue".toSlice.drop 50 == "".toSlice`
 -/
-@[inline]
-def drop (s : Slice) (n : Nat) : Slice :=
-  s.sliceFrom (s.startPos.nextn n)
+@[inline] def drop (s : Slice) (n : Nat) : Slice := s.sliceFrom (s.startPos.nextn n)
 
 /--
 Creates a new slice that contains the first {name}`n` characters (Unicode code points) of {name}`s`.
@@ -103,9 +95,7 @@ Examples:
  * {lean}`"red green blue".toSlice.take 0 == "".toSlice`
  * {lean}`"red green blue".toSlice.take 100 == "red green blue".toSlice`
 -/
-@[inline]
-def take (s : Slice) (n : Nat) : Slice :=
-  s.sliceTo (s.startPos.nextn n)
+@[inline] def take (s : Slice) (n : Nat) : Slice := s.sliceTo (s.startPos.nextn n)
 
 /--
 Removes the specified number of characters (Unicode code points) from the end of the slice.
@@ -117,9 +107,7 @@ Examples:
  * {lean}`"red green blue".toSlice.dropEnd 11 == "red".toSlice`
  * {lean}`"red green blue".toSlice.dropEnd 50 == "".toSlice`
 -/
-@[inline]
-def dropEnd (s : Slice) (n : Nat) : Slice :=
-  s.sliceTo (s.endPos.prevn n)
+@[inline] def dropEnd (s : Slice) (n : Nat) : Slice := s.sliceTo (s.endPos.prevn n)
 
 /--
 Creates a new slice that contains the last {name}`n` characters (Unicode code points) of {name}`s`.
@@ -132,13 +120,9 @@ Examples:
  * {lean}`"red green blue".toSlice.takeEnd 0 == "".toSlice`
  * {lean}`"red green blue".toSlice.takeEnd 100 == "red green blue".toSlice`
 -/
-@[inline]
-def takeEnd (s : Slice) (n : Nat) : Slice :=
-  s.sliceFrom (s.endPos.prevn n)
+@[inline] def takeEnd (s : Slice) (n : Nat) : Slice := s.sliceFrom (s.endPos.prevn n)
 
-/--
-Checks whether {lean}`s1 == s2` if ASCII upper/lowercase are ignored.
--/
+/-- Checks whether {lean}`s1 == s2` if ASCII upper/lowercase are ignored. -/
 def eqIgnoreAsciiCase (s1 s2 : Slice) : Bool :=
   s1.utf8ByteSize == s2.utf8ByteSize && go s1 s1.startPos.offset s2 s2.startPos.offset
 where
@@ -164,9 +148,7 @@ Examples:
 * {lean}`"abc".toSlice.front? = some 'a'`
 * {lean}`"".toSlice.front? = none`
 -/
-@[inline, expose]
-def front? (s : Slice) : Option Char :=
-  s.startPos.get?
+@[inline, expose] def front? (s : Slice) : Option Char := s.startPos.get?
 
 /--
 Returns the first character in {name}`s`. If {name}`s` is empty, returns {lean}`(default : Char)`.
@@ -175,9 +157,7 @@ Examples:
 * {lean}`"abc".toSlice.front = 'a'`
 * {lean}`"".toSlice.front = (default : Char)`
 -/
-@[inline, expose]
-def front (s : Slice) : Char :=
-  s.front?.getD default
+@[inline, expose] def front (s : Slice) : Char := s.front?.getD default
 
 /--
 Returns the last character in {name}`s`. If {name}`s` is empty, returns {name}`none`.
@@ -186,9 +166,7 @@ Examples:
 * {lean}`"abc".toSlice.back? = some 'c'`
 * {lean}`"".toSlice.back? = none`
 -/
-@[inline, expose]
-def back? (s : Slice) : Option Char :=
-  s.endPos.prev? |>.bind (·.get?)
+@[inline, expose] def back? (s : Slice) : Option Char := s.endPos.prev? |>.bind (·.get?)
 
 /--
 Returns the last character in {name}`s`. If {name}`s` is empty, returns {lean}`(default : Char)`.
@@ -197,9 +175,7 @@ Examples:
 * {lean}`"abc".toSlice.back = 'c'`
 * {lean}`"".toSlice.back = (default : Char)`
 -/
-@[inline, expose]
-def back (s : Slice) : Char :=
-  s.back?.getD default
+@[inline, expose] def back (s : Slice) : Char := s.back?.getD default
 
 /--
 Appends the slices in a list of slices, placing the separator {name}`s` between each pair.
@@ -210,11 +186,12 @@ Examples:
  * {lean}`" | ".toSlice.intercalate ["M".toSlice, "".toSlice, "N".toSlice] = "M |  | N"`
 -/
 def intercalate (s : Slice) : List Slice → String
-  | []      => ""
+  | [] => ""
   | a :: as => go a.copy s as
-where go (acc : String) (s : Slice) : List Slice → String
-  | a :: as => go (acc ++ s ++ a) s as
-  | []      => acc
+where
+  go (acc : String) (s : Slice) : List Slice → String
+    | a :: as => go (acc ++ s ++ a) s as
+    | [] => acc
 
 /--
 Appends all the slices in a list of slices, in order.
@@ -236,8 +213,7 @@ hierarchical, and the string is split at the dots ({lean}`'.'`).
 {lean}`"a.b".toSlice.toName` is the name {lit}`a.b`, not {lit}`«a.b»`. For the latter, use
 `Name.mkSimple`.
 -/
-def toName (s : Slice) : Lean.Name :=
-  s.toString.toName
+def toName (s : Slice) : Lean.Name := s.toString.toName
 
 instance : Std.ToFormat String.Slice where
   format s := Std.ToFormat.format s.copy

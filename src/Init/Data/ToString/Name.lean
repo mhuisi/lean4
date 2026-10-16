@@ -33,17 +33,19 @@ private partial def needsNoEscapeAsciiRest (s : String) (i : Nat) : Bool :=
     true
 
 -- If you change this, also change the corresponding function in `Init.Meta`.
-@[inline] private def needsNoEscapeAscii (s : String) (h : s.utf8ByteSize > 0) : Bool :=
+@[inline]
+private def needsNoEscapeAscii (s : String) (h : s.utf8ByteSize > 0) : Bool :=
   let c := s.getUTF8Byte 0 h
   isIdFirstAscii c && needsNoEscapeAsciiRest s 1
 
 -- If you change this, also change the corresponding function in `Init.Meta`.
-@[inline] private def needsNoEscape (s : String) (h : s.utf8ByteSize > 0) : Bool :=
+@[inline]
+private def needsNoEscape (s : String) (h : s.utf8ByteSize > 0) : Bool :=
   needsNoEscapeAscii s h || isIdFirst s.front && (s.toRawSubstring.drop 1).all isIdRest
 
 -- If you change this, also change the corresponding function in `Init.Meta`.
-@[inline] private def escape (s : String) : String :=
-  idBeginEscape.toString ++ s ++ idEndEscape.toString
+@[inline]
+private def escape (s : String) : String := idBeginEscape.toString ++ s ++ idEndEscape.toString
 
 /--
 Creates a round-trippable string name component if possible, otherwise returns `none`.
@@ -72,15 +74,19 @@ See the documentation for `Name.toStringWithToken` for an explanation of `escape
 @[specialize isToken] -- explicit annotation because isToken is overridden in recursive call
 def toStringWithSep (n : Name) (isToken : String → Bool := fun _ => false) : String :=
   match n with
-  | anonymous       => "[anonymous]"
-  | str anonymous s => maybeEscape s (isToken s)
-  | num anonymous v => toString v
-  | str n s         =>
+  | anonymous =>
+    "[anonymous]"
+  | str anonymous s =>
+    maybeEscape s (isToken s)
+  | num anonymous v =>
+    toString v
+  | str n s =>
     -- Escape the last component if the identifier would otherwise be a token
     let r := toStringWithSep n isToken
     let r' := r ++ sep ++ (maybeEscape s false)
     if escape && isToken r' then r ++ sep ++ (maybeEscape s true) else r'
-  | num n v         => toStringWithSep n (isToken := fun _ => false) ++ sep ++ Nat.repr v
+  | num n v =>
+    toStringWithSep n (isToken := fun _ => false) ++ sep ++ Nat.repr v
 where
   maybeEscape s force := if escape then escapePart s force |>.getD s else s
 
@@ -99,7 +105,8 @@ Converts a name to a string.
 @[specialize]
 def toStringWithToken (n : Name) (escape := true) (isToken : String → Bool) : String :=
   -- never escape "prettified" inaccessible names or macro scopes or pseudo-syntax introduced by the delaborator
-  toStringWithSep "." (escape && !n.isInaccessibleUserName && !n.hasMacroScopes && !maybePseudoSyntax) n isToken
+  toStringWithSep "."
+    (escape && !n.isInaccessibleUserName && !n.hasMacroScopes && !maybePseudoSyntax) n isToken
 where
   maybePseudoSyntax :=
     if n == `_ then

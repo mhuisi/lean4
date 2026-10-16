@@ -38,20 +38,17 @@ theorem pos_pow_of_pos (a : Int) (b : Nat) (h : 0 < a) : 0 < a ^ b := by
   rw [Int.eq_natAbs_of_nonneg (Int.le_of_lt h), ← Int.ofNat_zero, ← Int.ofNat_pow, Int.ofNat_lt]
   exact Nat.pow_pos (Int.natAbs_pos.mpr (Int.ne_of_gt h))
 
-theorem ofNat_pos {a : Nat} : 0 < (a : Int) ↔ 0 < a := by
-  rw [← Int.ofNat_zero, Int.ofNat_lt]
+theorem ofNat_pos {a : Nat} : 0 < (a : Int) ↔ 0 < a := by rw [← Int.ofNat_zero, Int.ofNat_lt]
 
-theorem ofNat_pos_of_pos {a : Nat} (h : 0 < a) : 0 < (a : Int) :=
-  ofNat_pos.mpr h
+theorem ofNat_pos_of_pos {a : Nat} (h : 0 < a) : 0 < (a : Int) := ofNat_pos.mpr h
 
-theorem natCast_ofNat {x : Nat} :
-    @Nat.cast Int instNatCastInt (no_index (OfNat.ofNat x)) = OfNat.ofNat x := rfl
+theorem natCast_ofNat {x : Nat}
+    : @Nat.cast Int instNatCastInt (no_index (OfNat.ofNat x)) = OfNat.ofNat x :=
+  rfl
 
-theorem ofNat_lt_of_lt {x y : Nat} (h : x < y) : (x : Int) < (y : Int) :=
-  Int.ofNat_lt.mpr h
+theorem ofNat_lt_of_lt {x y : Nat} (h : x < y) : (x : Int) < (y : Int) := Int.ofNat_lt.mpr h
 
-theorem ofNat_le_of_le {x y : Nat} (h : x ≤ y) : (x : Int) ≤ (y : Int) :=
-  Int.ofNat_le.mpr h
+theorem ofNat_le_of_le {x y : Nat} (h : x ≤ y) : (x : Int) ≤ (y : Int) := Int.ofNat_le.mpr h
 
 theorem ofNat_shiftLeft_eq {x y : Nat} : (x <<< y : Int) = (x : Int) * (2 ^ y : Nat) := by
   simp [Nat.shiftLeft_eq]
@@ -59,20 +56,19 @@ theorem ofNat_shiftLeft_eq {x y : Nat} : (x <<< y : Int) = (x : Int) * (2 ^ y : 
 theorem ofNat_shiftRight_eq_div_pow {x y : Nat} : (x >>> y : Int) = (x : Int) / (2 ^ y : Nat) := by
   simp only [Nat.shiftRight_eq_div_pow, Int.natCast_ediv]
 
-theorem emod_ofNat_nonneg {x : Nat} {y : Int} : 0 ≤ (x : Int) % y :=
-  Int.natCast_nonneg _
+theorem emod_ofNat_nonneg {x : Nat} {y : Int} : 0 ≤ (x : Int) % y := Int.natCast_nonneg _
 
 -- FIXME these are insane:
-theorem lt_of_not_ge {x y : Int} (h : ¬ (x ≤ y)) : y < x := Int.not_le.mp h
-theorem lt_of_not_le {x y : Int} (h : ¬ (x ≤ y)) : y < x := Int.not_le.mp h
-theorem not_le_of_lt {x y : Int} (h : y < x) : ¬ (x ≤ y) := Int.not_le.mpr h
+theorem lt_of_not_ge {x y : Int} (h : ¬(x ≤ y)) : y < x := Int.not_le.mp h
+theorem lt_of_not_le {x y : Int} (h : ¬(x ≤ y)) : y < x := Int.not_le.mp h
+theorem not_le_of_lt {x y : Int} (h : y < x) : ¬(x ≤ y) := Int.not_le.mpr h
 theorem lt_le_asymm {x y : Int} (h₁ : y < x) (h₂ : x ≤ y) : False := Int.not_le.mpr h₁ h₂
 theorem le_lt_asymm {x y : Int} (h₁ : y ≤ x) (h₂ : x < y) : False := Int.not_lt.mpr h₁ h₂
 
-theorem le_of_not_gt {x y : Int} (h : ¬ (y > x)) : y ≤ x := Int.not_lt.mp h
-theorem not_lt_of_ge {x y : Int} (h : y ≥ x) : ¬ (y < x) := Int.not_lt.mpr h
-theorem le_of_not_lt {x y : Int} (h : ¬ (x < y)) : y ≤ x := Int.not_lt.mp h
-theorem not_lt_of_le {x y : Int} (h : y ≤ x) : ¬ (x < y) := Int.not_lt.mpr h
+theorem le_of_not_gt {x y : Int} (h : ¬(y > x)) : y ≤ x := Int.not_lt.mp h
+theorem not_lt_of_ge {x y : Int} (h : y ≥ x) : ¬(y < x) := Int.not_lt.mpr h
+theorem le_of_not_lt {x y : Int} (h : ¬(x < y)) : y ≤ x := Int.not_lt.mp h
+theorem not_lt_of_le {x y : Int} (h : y ≤ x) : ¬(x < y) := Int.not_lt.mpr h
 
 theorem add_congr {a b c d : Int} (h₁ : a = b) (h₂ : c = d) : a + c = b + d := by
   subst h₁; subst h₂; rfl
@@ -80,14 +76,12 @@ theorem add_congr {a b c d : Int} (h₁ : a = b) (h₂ : c = d) : a + c = b + d 
 theorem mul_congr {a b c d : Int} (h₁ : a = b) (h₂ : c = d) : a * c = b * d := by
   subst h₁; subst h₂; rfl
 
-theorem mul_congr_left {a b : Int} (h₁ : a = b)  (c : Int) : a * c = b * c := by
-  subst h₁; rfl
+theorem mul_congr_left {a b : Int} (h₁ : a = b) (c : Int) : a * c = b * c := by subst h₁; rfl
 
 theorem sub_congr {a b c d : Int} (h₁ : a = b) (h₂ : c = d) : a - c = b - d := by
   subst h₁; subst h₂; rfl
 
-theorem neg_congr {a b : Int} (h₁ : a = b) : -a = -b := by
-  subst h₁; rfl
+theorem neg_congr {a b : Int} (h₁ : a = b) : -a = -b := by subst h₁; rfl
 
 theorem lt_of_gt {x y : Int} (h : x > y) : y < x := gt_iff_lt.mp h
 theorem le_of_ge {x y : Int} (h : x ≥ y) : y ≤ x := ge_iff_le.mp h
@@ -99,8 +93,8 @@ theorem ofNat_mul_nonneg {a b : Nat} : 0 ≤ (a : Int) * b := by
 theorem ofNat_sub_eq_zero {b a : Nat} (h : ¬ b ≤ a) : ((a - b : Nat) : Int) = 0 :=
   Int.ofNat_eq_zero.mpr (Nat.sub_eq_zero_of_le (Nat.le_of_lt (Nat.not_le.mp h)))
 
-theorem ofNat_sub_dichotomy {a b : Nat} :
-    b ≤ a ∧ ((a - b : Nat) : Int) = a - b ∨ a < b ∧ ((a - b : Nat) : Int) = 0 := by
+theorem ofNat_sub_dichotomy {a b : Nat}
+    : b ≤ a ∧ ((a - b : Nat) : Int) = a - b ∨ a < b ∧ ((a - b : Nat) : Int) = 0 := by
   by_cases h : b ≤ a
   · left
     have t := Int.ofNat_sub h
@@ -157,7 +151,7 @@ theorem le_add_iff_sub_le {a b c : Int} : a ≤ b + c ↔ a - c ≤ b := by
     rw [← Int.neg_neg c, Int.add_neg_eq_sub, ← add_le_iff_le_sub]
   rfl
 
-theorem add_le_zero_iff_le_neg {a b : Int} : a + b ≤ 0 ↔ a ≤ - b := by
+theorem add_le_zero_iff_le_neg {a b : Int} : a + b ≤ 0 ↔ a ≤ -b := by
   rw [add_le_iff_le_sub, Int.zero_sub]
 theorem add_le_zero_iff_le_neg' {a b : Int} : a + b ≤ 0 ↔ b ≤ -a := by
   rw [Int.add_comm, add_le_zero_iff_le_neg]
@@ -168,7 +162,6 @@ theorem add_nonneg_iff_neg_le' {a b : Int} : 0 ≤ a + b ↔ -a ≤ b := by
 
 theorem ofNat_fst_mk {β} {x : Nat} {y : β} : (Prod.mk x y).fst = (x : Int) := rfl
 theorem ofNat_snd_mk {α} {x : α} {y : Nat} : (Prod.mk x y).snd = (y : Int) := rfl
-
 
 end Int
 
@@ -184,28 +177,26 @@ namespace Fin
 theorem ne_iff_lt_or_gt {i j : Fin n} : i ≠ j ↔ i < j ∨ i > j := by
   cases i; cases j; simp only [ne_eq, Fin.mk.injEq, Nat.ne_iff_lt_or_gt, gt_iff_lt]; rfl
 
-protected theorem lt_or_gt_of_ne {i j : Fin n} (h : i ≠ j) : i < j ∨ i > j := Fin.ne_iff_lt_or_gt.mp h
+protected theorem lt_or_gt_of_ne {i j : Fin n} (h : i ≠ j) : i < j ∨ i > j :=
+  Fin.ne_iff_lt_or_gt.mp h
 
-theorem not_le {i j : Fin n} : ¬ i ≤ j ↔ j < i := by
-  cases i; cases j; exact Nat.not_le
+theorem not_le {i j : Fin n} : ¬ i ≤ j ↔ j < i := by cases i; cases j; exact Nat.not_le
 
-theorem not_lt {i j : Fin n} : ¬ i < j ↔ j ≤ i := by
-  cases i; cases j; exact Nat.not_lt
+theorem not_lt {i j : Fin n} : ¬ i < j ↔ j ≤ i := by cases i; cases j; exact Nat.not_lt
 
 protected theorem lt_of_not_le {i j : Fin n} (h : ¬ i ≤ j) : j < i := Fin.not_le.mp h
 protected theorem le_of_not_lt {i j : Fin n} (h : ¬ i < j) : j ≤ i := Fin.not_lt.mp h
 
-theorem ofNat_val_add {x y : Fin n} :
-    (((x + y : Fin n)) : Int) = ((x : Int) + (y : Int)) % n := rfl
+theorem ofNat_val_add {x y : Fin n} : (((x + y : Fin n)) : Int) = ((x : Int) + (y : Int)) % n := rfl
 
-theorem ofNat_val_sub {x y : Fin n} :
-    (((x - y : Fin n)) : Int) = (((n - y : Nat) + (x : Int) : Int)) % n := rfl
+theorem ofNat_val_sub {x y : Fin n}
+    : (((x - y : Fin n)) : Int) = (((n - y : Nat) + (x : Int) : Int)) % n :=
+  rfl
 
-theorem ofNat_val_mul {x y : Fin n} :
-    (((x * y : Fin n)) : Int) = ((x : Int) * (y : Int)) % n := rfl
+theorem ofNat_val_mul {x y : Fin n} : (((x * y : Fin n)) : Int) = ((x : Int) * (y : Int)) % n := rfl
 
-theorem ofNat_val_natCast {n x y : Nat} (h : y = x % (n + 1)):
-    @Nat.cast Int instNatCastInt (@Fin.val (n + 1) (OfNat.ofNat x)) = OfNat.ofNat y := by
+theorem ofNat_val_natCast {n x y : Nat} (h : y = x % (n + 1))
+    : @Nat.cast Int instNatCastInt (@Fin.val (n + 1) (OfNat.ofNat x)) = OfNat.ofNat y := by
   rw [h]
   rfl
 
@@ -216,9 +207,10 @@ namespace Prod
 theorem of_lex (w : Prod.Lex r s p q) : r p.fst q.fst ∨ p.fst = q.fst ∧ s p.snd q.snd :=
   Prod.lex_def.mp w
 
-theorem of_not_lex {α} {r : α → α → Prop} [DecidableEq α] {β} {s : β → β → Prop}
-    {p q : α × β} (w : ¬ Prod.Lex r s p q) :
-    ¬ r p.fst q.fst ∧ (p.fst ≠ q.fst ∨ ¬ s p.snd q.snd) := by
+theorem of_not_lex
+    {α} {r : α → α → Prop} [DecidableEq α]
+    {β} {s : β → β → Prop} {p q : α × β} (w : ¬ Prod.Lex r s p q)
+    : ¬ r p.fst q.fst ∧ (p.fst ≠ q.fst ∨ ¬ s p.snd q.snd) := by
   rw [Prod.lex_def, not_or, Decidable.not_and_iff_not_or_not] at w
   exact w
 

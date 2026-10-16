@@ -60,8 +60,8 @@ since it can sometimes be used to avoid introducing variables.
 For example, `(·<·)` is the less-than relation,
 and `flip (·<·)` is the greater-than relation.
 -/
-@[inline] def flip {α : Sort u} {β : Sort v} {φ : Sort w} (f : α → β → φ) : β → α → φ :=
-  fun b a => f a b
+@[inline]
+def flip {α : Sort u} {β : Sort v} {φ : Sort w} (f : α → β → φ) : β → α → φ := fun b a => f a b
 
 @[simp] theorem Function.const_apply {y : β} {x : α} : const α y x = y := rfl
 
@@ -69,16 +69,15 @@ and `flip (·<·)` is the greater-than relation.
 
 theorem Function.comp_def {α β δ} (f : β → δ) (g : α → β) : f ∘ g = fun x => f (g x) := rfl
 
-@[simp] theorem Function.const_comp {f : α → β} {c : γ} :
-    (Function.const β c ∘ f) = Function.const α c :=
+@[simp]
+theorem Function.const_comp {f : α → β} {c : γ} : (Function.const β c ∘ f) = Function.const α c :=
   rfl
-@[simp] theorem Function.comp_const {f : β → γ} {b : β} :
-    (f ∘ Function.const α b) = Function.const α (f b) :=
+@[simp]
+theorem Function.comp_const {f : β → γ} {b : β}
+    : (f ∘ Function.const α b) = Function.const α (f b) :=
   rfl
-@[simp] theorem Function.true_comp {f : α → β} : ((fun _ => true) ∘ f) = fun _ => true :=
-  rfl
-@[simp] theorem Function.false_comp {f : α → β} : ((fun _ => false) ∘ f) = fun _ => false :=
-  rfl
+@[simp] theorem Function.true_comp {f : α → β} : ((fun _ => true) ∘ f) = fun _ => true := rfl
+@[simp] theorem Function.false_comp {f : α → β} : ((fun _ => false) ∘ f) = fun _ => false := rfl
 
 @[simp] theorem Function.comp_id (f : α → β) : f ∘ id = f := rfl
 @[simp] theorem Function.id_comp (f : α → β) : id ∘ f = f := rfl
@@ -132,8 +131,8 @@ Stores an already-computed value in a thunk.
 
 Because the value has already been computed, there is no laziness.
 -/
-@[extern "lean_thunk_pure"] protected def Thunk.pure (a : α) : Thunk α :=
-  ⟨fun _ => a⟩
+@[extern "lean_thunk_pure"]
+protected def Thunk.pure (a : α) : Thunk α := ⟨fun _ => a⟩
 
 /--
 Gets the thunk's value. If the value is cached, it is returned in constant time; if not, it is
@@ -142,8 +141,8 @@ computed.
 Computed values are cached, so the value is not recomputed.
 -/
 -- NOTE: we use `Thunk.get` instead of `Thunk.fn` as the accessor primitive as the latter has an additional `Unit` argument
-@[extern "lean_thunk_get_own"] protected def Thunk.get (x : @& Thunk α) : α :=
-  x.fn ()
+@[extern "lean_thunk_get_own"]
+protected def Thunk.get (x : @& Thunk α) : α := x.fn ()
 
 -- Ensure `Thunk.fn` is still computable even if it shouldn't be accessed directly.
 /-- Implementation detail. -/
@@ -154,17 +153,14 @@ Computed values are cached, so the value is not recomputed.
 Constructs a new thunk that forces `x` and then applies `x` to the result. Upon forcing, the result
 of `f` is cached and the reference to the thunk `x` is dropped.
 -/
-@[inline] protected def Thunk.map (f : α → β) (x : Thunk α) : Thunk β :=
-  ⟨fun _ => f x.get⟩
+@[inline] protected def Thunk.map (f : α → β) (x : Thunk α) : Thunk β := ⟨fun _ => f x.get⟩
 
-/--
-Constructs a new thunk that applies `f` to the result of `x` when forced.
--/
-@[inline] protected def Thunk.bind (x : Thunk α) (f : α → Thunk β) : Thunk β :=
-  ⟨fun _ => (f x.get).get⟩
+/-- Constructs a new thunk that applies `f` to the result of `x` when forced. -/
+@[inline]
+protected def Thunk.bind (x : Thunk α) (f : α → Thunk β) : Thunk β := ⟨fun _ => (f x.get).get⟩
 
-@[simp] theorem Thunk.sizeOf_eq [SizeOf α] (a : Thunk α) : sizeOf a = 1 + sizeOf a.get := by
-   cases a; rfl
+@[simp]
+theorem Thunk.sizeOf_eq [SizeOf α] (a : Thunk α) : sizeOf a = 1 + sizeOf a.get := by cases a; rfl
 
 instance thunkCoe : CoeTail α (Thunk α) where
   -- Since coercions are expanded eagerly, `a` is evaluated lazily.
@@ -173,7 +169,9 @@ instance thunkCoe : CoeTail α (Thunk α) where
 instance [Inhabited α] : Inhabited (Thunk α) := ⟨.pure default⟩
 
 /-- A variation on `Eq.ndrec` with the equality argument first. -/
-abbrev Eq.ndrecOn.{u1, u2} {α : Sort u2} {a : α} {motive : α → Sort u1} {b : α} (h : a = b) (m : motive a) : motive b :=
+abbrev Eq.ndrecOn.{u1, u2}
+    {α : Sort u2} {a : α} {motive : α → Sort u1} {b : α} (h : a = b) (m : motive a)
+    : motive b :=
   Eq.ndrec m h
 
 /-! # definitions  -/
@@ -192,7 +190,7 @@ structure Iff (a b : Prop) : Prop where
   mpr : b → a
 
 @[inherit_doc] infix:20 " <-> " => Iff
-@[inherit_doc] infix:20 " ↔ "   => Iff
+@[inherit_doc] infix:20 " ↔ " => Iff
 
 recommended_spelling "iff" for "↔" in [Iff, «term_↔_»]
 /-- prefer `↔` over `<->` -/
@@ -224,7 +222,7 @@ where one side is a proposition, like `True ⊕' Nat`. However, the resulting un
 constraints are often more difficult to solve than those that result from `Sum`.
 -/
 inductive PSum (α : Sort u) (β : Sort v) where
-  /-- Left injection into the sum type `α ⊕' β`.-/
+  /-- Left injection into the sum type `α ⊕' β`. -/
   | inl (val : α) : PSum α β
   /-- Right injection into the sum type `α ⊕' β`. -/
   | inr (val : β) : PSum α β
@@ -245,7 +243,8 @@ If the right type in a sum is inhabited then the sum is inhabited.
 This is not an instance to avoid non-canonical instances when both the left and right types are
 inhabited.
 -/
-@[reducible] def PSum.inhabitedRight {α β} [Inhabited β] : Inhabited (PSum α β) := ⟨PSum.inr default⟩
+@[reducible]
+def PSum.inhabitedRight {α β} [Inhabited β] : Inhabited (PSum α β) := ⟨PSum.inr default⟩
 
 instance PSum.nonemptyLeft [h : Nonempty α] : Nonempty (PSum α β) :=
   Nonempty.elim h (fun a => ⟨PSum.inl a⟩)
@@ -270,13 +269,9 @@ structure Sigma {α : Type u} (β : α → Type v) where
   generally be determined automatically.
   -/
   mk ::
-  /--
-  The first component of a dependent pair.
-  -/
+  /-- The first component of a dependent pair. -/
   fst : α
-  /--
-  The second component of a dependent pair. Its type depends on the first component.
-  -/
+  /-- The second component of a dependent pair. Its type depends on the first component. -/
   snd : β fst
 
 attribute [unbox] Sigma
@@ -299,13 +294,9 @@ specific proof because all proofs are equal anyway.
 structure PSigma {α : Sort u} (β : α → Sort v) where
   /-- Constructs a fully universe-polymorphic dependent pair. -/
   mk ::
-  /--
-  The first component of a dependent pair.
-  -/
+  /-- The first component of a dependent pair. -/
   fst : α
-  /--
-  The second component of a dependent pair. Its type depends on the first component.
-  -/
+  /-- The second component of a dependent pair. Its type depends on the first component. -/
   snd : β fst
 
 /--
@@ -334,8 +325,10 @@ example (h : ∃ x : Nat, x = x) : True :=
 ```
 -/
 inductive Exists {α : Sort u} (p : α → Prop) : Prop where
-  /-- Existential introduction. If `a : α` and `h : p a`,
-  then `⟨a, h⟩` is a proof that `∃ x : α, p x`. -/
+  /--
+  Existential introduction. If `a : α` and `h : p a`,
+  then `⟨a, h⟩` is a proof that `∃ x : α, p x`.
+  -/
   | intro (w : α) (h : p w) : Exists p
 
 /--
@@ -352,14 +345,14 @@ inductive ForInStep (α : Type u) where
 
   `ForInStep.done` is produced by uses of `break` or `return` in the loop body.
   -/
-  | done  : α → ForInStep α
+  | done : α → ForInStep α
   /--
   The loop should continue with the next iteration, using the returned state.
 
   `ForInStep.yield` is produced by `continue` and by reaching the bottom of the loop body.
   -/
   | yield : α → ForInStep α
-  deriving Inhabited
+deriving Inhabited
 
 /--
 Monadic iteration in `do`-blocks, using the `for x in xs` notation.
@@ -394,7 +387,9 @@ The parameter `m` is the monad of the `do`-block in which iteration is performed
 the collection being iterated over, `α` is the type of elements, and `d` is the specific membership
 predicate to provide.
 -/
-class ForIn' (m : Type u₁ → Type u₂) (ρ : Type u) (α : outParam (Type v)) (d : outParam (Membership α ρ)) where
+class ForIn'
+    (m : Type u₁ → Type u₂)
+    (ρ : Type u) (α : outParam (Type v)) (d : outParam (Membership α ρ)) where
   /--
   Monadically iterates over the contents of a collection `xs`, with a local state `b` and the
   possibility of early termination. At each iteration, the body of the loop is provided with a proof
@@ -433,11 +428,15 @@ inductive DoResultPRBC (α β σ : Type u) where
   | pure : α → σ → DoResultPRBC α β σ
   /-- `return (b : β) s` means that the block exited via a `return b` early-exit command -/
   | return : β → σ → DoResultPRBC α β σ
-  /-- `break s` means that `break` was called, meaning that we should exit
-  from the containing loop -/
+  /--
+  `break s` means that `break` was called, meaning that we should exit
+  from the containing loop
+  -/
   | break : σ → DoResultPRBC α β σ
-  /-- `continue s` means that `continue` was called, meaning that we should continue
-  to the next iteration of the containing loop -/
+  /--
+  `continue s` means that `continue` was called, meaning that we should continue
+  to the next iteration of the containing loop
+  -/
   | continue : σ → DoResultPRBC α β σ
 
 /--
@@ -447,7 +446,7 @@ because we are not in a loop context.
 -/
 inductive DoResultPR (α β σ : Type u) where
   /-- `pure (a : α) s` means that the block exited normally with return value `a` -/
-  | pure   : α → σ → DoResultPR α β σ
+  | pure : α → σ → DoResultPR α β σ
   /-- `return (b : β) s` means that the block exited via a `return b` early-exit command -/
   | return : β → σ → DoResultPR α β σ
 
@@ -457,11 +456,15 @@ Auxiliary type used to compile `do` notation. It is an optimization of
 used when neither `pure` nor `return` are possible exit paths.
 -/
 inductive DoResultBC (σ : Type u) where
-  /-- `break s` means that `break` was called, meaning that we should exit
-  from the containing loop -/
-  | break    : σ → DoResultBC σ
-  /-- `continue s` means that `continue` was called, meaning that we should continue
-  to the next iteration of the containing loop -/
+  /--
+  `break s` means that `break` was called, meaning that we should exit
+  from the containing loop
+  -/
+  | break : σ → DoResultBC σ
+  /--
+  `continue s` means that `continue` was called, meaning that we should continue
+  to the next iteration of the containing loop
+  -/
   | continue : σ → DoResultBC σ
 
 /--
@@ -470,28 +473,36 @@ either `DoResultPRBC α PEmpty σ` or `DoResultPRBC PEmpty α σ` to remove the
 impossible case, used when either `pure` or `return` is never used.
 -/
 inductive DoResultSBC (α σ : Type u) where
-  /-- This encodes either `pure (a : α)` or `return (a : α)`:
+  /--
+  This encodes either `pure (a : α)` or `return (a : α)`:
   * `pure (a : α) s` means that the block exited normally with return value `a`
   * `return (b : β) s` means that the block exited via a `return b` early-exit command
 
-  The one that is actually encoded depends on the context of use. -/
+  The one that is actually encoded depends on the context of use.
+  -/
   | pureReturn : α → σ → DoResultSBC α σ
-  /-- `break s` means that `break` was called, meaning that we should exit
-  from the containing loop -/
-  | break    : σ → DoResultSBC α σ
-  /-- `continue s` means that `continue` was called, meaning that we should continue
-  to the next iteration of the containing loop -/
-  | continue   : σ → DoResultSBC α σ
+  /--
+  `break s` means that `break` was called, meaning that we should exit
+  from the containing loop
+  -/
+  | break : σ → DoResultSBC α σ
+  /--
+  `continue s` means that `continue` was called, meaning that we should continue
+  to the next iteration of the containing loop
+  -/
+  | continue : σ → DoResultSBC α σ
 
-/-- `HasEquiv α` is the typeclass which supports the notation `x ≈ y` where `x y : α`.-/
+/-- `HasEquiv α` is the typeclass which supports the notation `x ≈ y` where `x y : α`. -/
 class HasEquiv (α : Sort u) where
-  /-- `x ≈ y` says that `x` and `y` are equivalent. Because this is a typeclass,
-  the notion of equivalence is type-dependent. -/
+  /--
+  `x ≈ y` says that `x` and `y` are equivalent. Because this is a typeclass,
+  the notion of equivalence is type-dependent.
+  -/
   Equiv : α → α → Sort v
 
 attribute [reducible] HasEquiv.Equiv
 
-@[inherit_doc] infix:50 " ≈ "  => HasEquiv.Equiv
+@[inherit_doc] infix:50 " ≈ " => HasEquiv.Equiv
 
 recommended_spelling "equiv" for "≈" in [HasEquiv.Equiv, «term_≈_»]
 
@@ -499,20 +510,20 @@ recommended_spelling "equiv" for "≈" in [HasEquiv.Equiv, «term_≈_»]
 
 /-- Notation type class for the subset relation `⊆`. -/
 class HasSubset (α : Type u) where
-  /-- Subset relation: `a ⊆ b`  -/
+  /-- Subset relation: `a ⊆ b` -/
   Subset : α → α → Prop
 export HasSubset (Subset)
 
 /-- Notation type class for the strict subset relation `⊂`. -/
 class HasSSubset (α : Type u) where
-  /-- Strict subset relation: `a ⊂ b`  -/
+  /-- Strict subset relation: `a ⊂ b` -/
   SSubset : α → α → Prop
 export HasSSubset (SSubset)
 
-/-- Superset relation: `a ⊇ b`  -/
+/-- Superset relation: `a ⊇ b` -/
 abbrev Superset [HasSubset α] (a b : α) := Subset b a
 
-/-- Strict superset relation: `a ⊃ b`  -/
+/-- Strict superset relation: `a ⊃ b` -/
 abbrev SSuperset [HasSSubset α] (a b : α) := SSubset b a
 
 /-- Notation type class for the union operation `∪`. -/
@@ -533,16 +544,16 @@ class SDiff (α : Type u) where
   -/
   sdiff : α → α → α
 
-/-- Subset relation: `a ⊆ b`  -/
+/-- Subset relation: `a ⊆ b` -/
 infix:50 " ⊆ " => Subset
 
-/-- Strict subset relation: `a ⊂ b`  -/
+/-- Strict subset relation: `a ⊂ b` -/
 infix:50 " ⊂ " => SSubset
 
-/-- Superset relation: `a ⊇ b`  -/
+/-- Superset relation: `a ⊇ b` -/
 infix:50 " ⊇ " => Superset
 
-/-- Strict superset relation: `a ⊃ b`  -/
+/-- Strict superset relation: `a ⊃ b` -/
 infix:50 " ⊃ " => SSuperset
 
 /-- `a ∪ b` is the union of `a` and `b`. -/
@@ -571,12 +582,14 @@ recommended_spelling "sdiff" for "\\" in [SDiff.sdiff, «term_\_»]
 
 /-- `EmptyCollection α` is the typeclass which supports the notation `∅`, also written as `{}`. -/
 class EmptyCollection (α : Type u) where
-  /-- `∅` or `{}` is the empty set or empty collection.
-  It is supported by the `EmptyCollection` typeclass. -/
+  /--
+  `∅` or `{}` is the empty set or empty collection.
+  It is supported by the `EmptyCollection` typeclass.
+  -/
   emptyCollection : α
 
 @[inherit_doc] notation "{" "}" => EmptyCollection.emptyCollection
-@[inherit_doc] notation "∅"     => EmptyCollection.emptyCollection
+@[inherit_doc] notation "∅" => EmptyCollection.emptyCollection
 
 recommended_spelling "empty" for "{}" in [EmptyCollection.emptyCollection, «term{}»]
 recommended_spelling "empty" for "∅" in [EmptyCollection.emptyCollection, «term∅»]
@@ -600,8 +613,8 @@ class Singleton (α : outParam <| Type u) (β : Type v) where
 export Singleton (singleton)
 
 /-- `insert x ∅ = {x}` -/
-class LawfulSingleton (α : Type u) (β : Type v) [EmptyCollection β] [Insert α β] [Singleton α β] :
-    Prop where
+class LawfulSingleton (α : Type u) (β : Type v) [EmptyCollection β] [Insert α β] [Singleton α β]
+    : Prop where
   /-- `insert x ∅ = {x}` -/
   insert_empty_eq (x : α) : (insert x ∅ : β) = singleton x
 export LawfulSingleton (insert_empty_eq)
@@ -639,7 +652,7 @@ structure Task (α : Type u) : Type u where
   waited-upon task should instead be returned and unwrapped using `Task.bind/IO.bindTask`.
   -/
   get : α
-  deriving Inhabited, Nonempty
+deriving Inhabited, Nonempty
 
 attribute [extern "lean_task_pure"] Task.pure
 attribute [extern "lean_task_get_own"] Task.get
@@ -682,8 +695,7 @@ evaluating the function `fn () : α` asynchronously.
 `prio`, if provided, is the priority of the task.
 -/
 @[noinline, extern "lean_task_spawn"]
-protected def spawn {α : Type u} (fn : Unit → α) (prio := Priority.default) : Task α :=
-  ⟨fn ()⟩
+protected def spawn {α : Type u} (fn : Unit → α) (prio := Priority.default) : Task α := ⟨fn ()⟩
 
 set_option linter.unusedVariables.funArgs false in
 /--
@@ -713,8 +725,8 @@ otherwise on the thread that `x` finished on. `prio` is ignored in this case. Th
 done when executing `f` is cheap and non-blocking.
 -/
 @[noinline, extern "lean_task_bind"]
-protected def bind (x : Task α) (f : α → Task β) (prio := Priority.default) (sync := false) :
-    Task β :=
+protected def bind (x : Task α) (f : α → Task β) (prio := Priority.default) (sync := false)
+    : Task β :=
   ⟨(f x.get).get⟩
 
 end Task
@@ -726,8 +738,10 @@ monomorphization, and it is only created using `unsafeCast`. It is somewhat
 analogous to C `void*` in usage, but the type itself is not special.
 -/
 structure NonScalar where
-  /-- You should not use this function -/ mk ::
-  /-- You should not use this function -/ val : Nat
+  /-- You should not use this function -/
+  mk ::
+  /-- You should not use this function -/
+  val : Nat
 
 /--
 `PNonScalar` is a type that is not a scalar value in our runtime.
@@ -752,13 +766,15 @@ theorem optParam_eq (α : Sort u) (default : α) : optParam α default = α := r
 `strictOr` is the same as `or`, but it does not use short-circuit evaluation semantics:
 both sides are evaluated, even if the first value is `true`.
 -/
-@[extern "lean_strict_or"] def strictOr  (b₁ b₂ : Bool) := b₁ || b₂
+@[extern "lean_strict_or"]
+def strictOr (b₁ b₂ : Bool) := b₁ || b₂
 
 /--
 `strictAnd` is the same as `and`, but it does not use short-circuit evaluation semantics:
 both sides are evaluated, even if the first value is `false`.
 -/
-@[extern "lean_strict_and"] def strictAnd (b₁ b₂ : Bool) := b₁ && b₂
+@[extern "lean_strict_and"]
+def strictAnd (b₁ b₂ : Bool) := b₁ && b₂
 
 /--
 `x != y` is boolean not-equal. It is the negation of `x == y` which is supplied by
@@ -767,12 +783,12 @@ the `BEq` typeclass.
 Unlike `x ≠ y` (which is notation for `Ne x y`), this is `Bool` valued instead of
 `Prop` valued. It is mainly intended for programming applications.
 -/
-@[inline, implicit_reducible] def bne {α : Type u} [BEq α] (a b : α) : Bool :=
-  !(a == b)
+@[inline, implicit_reducible] def bne {α : Type u} [BEq α] (a b : α) : Bool := !(a == b)
 
 @[inherit_doc] infix:50 " != " => bne
 
-macro_rules | `($x != $y) => `(binrel_no_prop% bne $x $y)
+macro_rules
+  | `($x != $y) => `(binrel_no_prop% bne $x $y)
 
 recommended_spelling "bne" for "!=" in [bne, «term_!=_»]
 
@@ -787,7 +803,7 @@ theorem BEq.refl [BEq α] [ReflBEq α] (a : α) : a == a := BEq.rfl
 theorem beq_of_eq [BEq α] [ReflBEq α] {a b : α} : a = b → a == b
   | rfl => BEq.rfl
 
-theorem not_eq_of_beq_eq_false [BEq α] [ReflBEq α] {a b : α} (h : (a == b) = false) : ¬a = b := by
+theorem not_eq_of_beq_eq_false [BEq α] [ReflBEq α] {a b : α} (h : (a == b) = false) : ¬ a = b := by
   intro h'; subst h'; have : true = false := BEq.rfl.symm.trans h; contradiction
 
 /--
@@ -815,20 +831,19 @@ To use this, add `attribute [local instance 5] instDecidableEqOfLawfulBEq` at th
 def instDecidableEqOfLawfulBEq [BEq α] [LawfulBEq α] : DecidableEq α := fun x y =>
   Decidable.intro (x == y)
     (match h : x == y with
-    | false => not_eq_of_beq_eq_false h
-    | true => eq_of_beq h)
+      | false => not_eq_of_beq_eq_false h
+      | true => eq_of_beq h)
 
 /-! # Logical connectives and equality -/
 
-@[inherit_doc True.intro] theorem trivial : True := ⟨⟩
+@[inherit_doc True.intro]
+theorem trivial : True := ⟨⟩
 
-theorem mt {a b : Prop} (h₁ : a → b) (h₂ : ¬b) : ¬a :=
-  fun ha => h₂ (h₁ ha)
+theorem mt {a b : Prop} (h₁ : a → b) (h₂ : ¬b) : ¬a := fun ha => h₂ (h₁ ha)
 
 theorem not_false : ¬False := id
 
-theorem not_not_intro {p : Prop} (h : p) : ¬ ¬ p :=
-  fun hn : ¬ p => hn h
+theorem not_not_intro {p : Prop} (h : p) : ¬ ¬p := fun hn : ¬p => hn h
 
 -- proof irrelevance is built in
 theorem proof_irrel {a : Prop} (h₁ h₂ : a) : h₁ = h₂ := rfl
@@ -840,8 +855,7 @@ If `h : α = β` is a proof of type equality, then `h.mp : α → β` is the ind
 You can prove theorems about the resulting element by induction on `h`, since
 `rfl.mp` is definitionally the identity function.
 -/
-@[macro_inline] def Eq.mp {α β : Sort u} (h : α = β) (a : α) : β :=
-  h ▸ a
+@[macro_inline] def Eq.mp {α β : Sort u} (h : α = β) (a : α) : β := h ▸ a
 
 /--
 If `h : α = β` is a proof of type equality, then `h.mpr : β → α` is the induced
@@ -850,26 +864,23 @@ If `h : α = β` is a proof of type equality, then `h.mpr : β → α` is the in
 You can prove theorems about the resulting element by induction on `h`, since
 `rfl.mpr` is definitionally the identity function.
 -/
-@[macro_inline] def Eq.mpr {α β : Sort u} (h : α = β) (b : β) : α :=
-  h ▸ b
+@[macro_inline] def Eq.mpr {α β : Sort u} (h : α = β) (b : β) : α := h ▸ b
 
 @[elab_as_elim]
-theorem Eq.substr {α : Sort u} {p : α → Prop} {a b : α} (h₁ : b = a) (h₂ : p a) : p b :=
-  h₁ ▸ h₂
+theorem Eq.substr {α : Sort u} {p : α → Prop} {a b : α} (h₁ : b = a) (h₂ : p a) : p b := h₁ ▸ h₂
 
-@[simp] theorem cast_eq {α : Sort u} (h : α = α) (a : α) : cast h a = a :=
-  rfl
+@[simp] theorem cast_eq {α : Sort u} (h : α = α) (a : α) : cast h a = a := rfl
 
 /--
 `a ≠ b`, or `Ne a b` is defined as `¬ (a = b)` or `a = b → False`,
 and asserts that `a` and `b` are not equal.
 -/
-@[reducible] def Ne {α : Sort u} (a b : α) :=
-  ¬(a = b)
+@[reducible] def Ne {α : Sort u} (a b : α) := ¬(a = b)
 
-@[inherit_doc] infix:50 " ≠ "  => Ne
+@[inherit_doc] infix:50 " ≠ " => Ne
 
-macro_rules | `($x ≠ $y) => `(binrel% Ne $x $y)
+macro_rules
+  | `($x ≠ $y) => `(binrel% Ne $x $y)
 
 recommended_spelling "ne" for "≠" in [Ne, «term_≠_»]
 
@@ -887,56 +898,68 @@ theorem ne_comm {α} {a b : α} : a ≠ b ↔ b ≠ a := ⟨Ne.symm, Ne.symm⟩
 
 theorem false_of_ne : a ≠ a → False := Ne.irrefl
 
-theorem ne_false_of_self : p → p ≠ False :=
-  fun (hp : p) (h : p = False) => h ▸ hp
+theorem ne_false_of_self : p → p ≠ False := fun (hp : p) (h : p = False) => h ▸ hp
 
-theorem ne_true_of_not : ¬p → p ≠ True :=
-  fun (hnp : ¬p) (h : p = True) =>
-    have : ¬True := h ▸ hnp
-    this trivial
+theorem ne_true_of_not : ¬p → p ≠ True := fun (hnp : ¬p) (h : p = True) =>
+  have : ¬True := h ▸ hnp
+  this trivial
 
-theorem true_ne_false : ¬True = False := ne_false_of_self trivial
+theorem true_ne_false : ¬ True = False := ne_false_of_self trivial
 theorem false_ne_true : False ≠ True := fun h => h.symm ▸ trivial
 
 end Ne
 
-theorem Bool.of_not_eq_true : {b : Bool} → ¬ (b = true) → b = false
-  | true,  h => absurd rfl h
-  | false, _ => rfl
+theorem Bool.of_not_eq_true : {b : Bool} → ¬(b = true) → b = false
+  | true, h =>
+    absurd rfl h
+  | false, _ =>
+    rfl
 
-theorem Bool.of_not_eq_false : {b : Bool} → ¬ (b = false) → b = true
-  | true,  _ => rfl
-  | false, h => absurd rfl h
+theorem Bool.of_not_eq_false : {b : Bool} → ¬(b = false) → b = true
+  | true, _ =>
+    rfl
+  | false, h =>
+    absurd rfl h
 
 theorem ne_of_beq_false [BEq α] [ReflBEq α] {a b : α} (h : (a == b) = false) : a ≠ b :=
   not_eq_of_beq_eq_false h
 
 theorem beq_false_of_ne [BEq α] [LawfulBEq α] {a b : α} (h : a ≠ b) : (a == b) = false :=
-  have : ¬ (a == b) = true := by
-    intro h'; rw [eq_of_beq h'] at h; contradiction
+  have : ¬ (a == b) = true := by intro h'; rw [eq_of_beq h'] at h; contradiction
   Bool.of_not_eq_true this
 
 section
 variable {α β φ : Sort u} {a a' : α} {b b' : β} {c : φ}
 
 /-- Non-dependent recursor for `HEq` -/
-noncomputable def HEq.ndrec.{u1, u2} {α : Sort u2} {a : α} {motive : {β : Sort u2} → β → Sort u1} (m : motive a) {β : Sort u2} {b : β} (h : a ≍ b) : motive b :=
+noncomputable def HEq.ndrec.{u1, u2}
+    {α : Sort u2} {a : α} {motive : {β : Sort u2} → β → Sort u1} (m : motive a)
+    {β : Sort u2} {b : β} (h : a ≍ b)
+    : motive b :=
   h.rec m
 
 /-- `HEq.ndrec` variant -/
-noncomputable def HEq.ndrecOn.{u1, u2} {α : Sort u2} {a : α} {motive : {β : Sort u2} → β → Sort u1} {β : Sort u2} {b : β} (h : a ≍ b) (m : motive a) : motive b :=
+noncomputable def HEq.ndrecOn.{u1, u2}
+    {α : Sort u2} {a : α} {motive : {β : Sort u2} → β → Sort u1} {β : Sort u2} {b : β}
+    (h : a ≍ b) (m : motive a)
+    : motive b :=
   h.rec m
 
 /-- `HEq.ndrec` specialized to homogeneous heterogeneous equality -/
-noncomputable def HEq.homo_ndrec.{u1, u2} {α : Sort u2} {a : α} {motive : α → Sort u1} (m : motive a) {b : α} (h : a ≍ b) : motive b :=
+noncomputable def HEq.homo_ndrec.{u1, u2}
+    {α : Sort u2} {a : α} {motive : α → Sort u1} (m : motive a) {b : α} (h : a ≍ b)
+    : motive b :=
   (eq_of_heq h).ndrec m
 
 /-- `HEq.ndrec` specialized to homogeneous heterogeneous equality, symmetric variant -/
-noncomputable def HEq.homo_ndrec_symm.{u1, u2} {α : Sort u2} {a : α} {motive : α → Sort u1} (m : motive a) {b : α} (h : b ≍ a) : motive b :=
+noncomputable def HEq.homo_ndrec_symm.{u1, u2}
+    {α : Sort u2} {a : α} {motive : α → Sort u1} (m : motive a) {b : α} (h : b ≍ a)
+    : motive b :=
   (eq_of_heq h).ndrec_symm m
 
 /-- `HEq.ndrec` variant -/
-noncomputable def HEq.elim {α : Sort u} {a : α} {p : α → Sort v} {b : α} (h₁ : a ≍ b) (h₂ : p a) : p b :=
+noncomputable def HEq.elim {α : Sort u} {a : α} {p : α → Sort v} {b : α} (h₁ : a ≍ b) (h₂ : p a)
+    : p b :=
   eq_of_heq h₁ ▸ h₂
 
 /-- Substitution with heterogeneous equality. -/
@@ -944,26 +967,19 @@ theorem HEq.subst {p : (T : Sort u) → T → Prop} (h₁ : a ≍ b) (h₂ : p �
   HEq.ndrecOn h₁ h₂
 
 /-- Heterogeneous equality is symmetric. -/
-@[symm] theorem HEq.symm (h : a ≍ b) : b ≍ a :=
-  h.rec (HEq.refl a)
-
-
+@[symm] theorem HEq.symm (h : a ≍ b) : b ≍ a := h.rec (HEq.refl a)
 
 /-- Heterogeneous equality is transitive. -/
-theorem HEq.trans (h₁ : a ≍ b) (h₂ : b ≍ c) : a ≍ c :=
-  HEq.subst h₂ h₁
+theorem HEq.trans (h₁ : a ≍ b) (h₂ : b ≍ c) : a ≍ c := HEq.subst h₂ h₁
 
 /-- Heterogeneous equality precomposes with propositional equality. -/
-theorem heq_of_heq_of_eq (h₁ : a ≍ b) (h₂ : b = b') : a ≍ b' :=
-  HEq.trans h₁ (heq_of_eq h₂)
+theorem heq_of_heq_of_eq (h₁ : a ≍ b) (h₂ : b = b') : a ≍ b' := HEq.trans h₁ (heq_of_eq h₂)
 
 /-- Heterogeneous equality postcomposes with propositional equality. -/
-theorem heq_of_eq_of_heq (h₁ : a = a') (h₂ : a' ≍ b) : a ≍ b :=
-  HEq.trans (heq_of_eq h₁) h₂
+theorem heq_of_eq_of_heq (h₁ : a = a') (h₂ : a' ≍ b) : a ≍ b := HEq.trans (heq_of_eq h₁) h₂
 
 /-- If two terms are heterogeneously equal then their types are propositionally equal. -/
-theorem type_eq_of_heq (h : a ≍ b) : α = β :=
-  h.rec (Eq.refl α)
+theorem type_eq_of_heq (h : a ≍ b) : α = β := h.rec (Eq.refl α)
 
 end
 
@@ -971,15 +987,17 @@ end
 Rewriting inside `φ` using `Eq.recOn` yields a term that's heterogeneously equal to the original
 term.
 -/
-theorem eqRec_heq {α : Sort u} {φ : α → Sort v} {a a' : α} : (h : a = a') → (p : φ a) → Eq.recOn (motive := fun x _ => φ x) h p ≍ p
+theorem eqRec_heq {α : Sort u} {φ : α → Sort v} {a a' : α}
+    : (h : a = a') → (p : φ a) → Eq.recOn (motive := fun x _ => φ x) h p ≍ p
   | rfl, p => HEq.refl p
 
 /--
 Heterogeneous equality with an `Eq.rec` application on the left is equivalent to a heterogeneous
 equality on the original term.
 -/
-theorem eqRec_heq_iff {α : Sort u} {a : α} {motive : (b : α) → a = b → Sort v}
-    {b : α} {refl : motive a (Eq.refl a)} {h : a = b} {c : β}
+theorem eqRec_heq_iff
+    {α : Sort u} {a : α} {motive : (b : α) → a = b → Sort v} {b : α}
+    {refl : motive a (Eq.refl a)} {h : a = b} {c : β}
     : @Eq.rec α a motive refl b h ≍ c ↔ refl ≍ c :=
   h.rec (fun _ => ⟨id, id⟩) c
 
@@ -987,9 +1005,10 @@ theorem eqRec_heq_iff {α : Sort u} {a : α} {motive : (b : α) → a = b → So
 Heterogeneous equality with an `Eq.rec` application on the right is equivalent to a heterogeneous
 equality on the original term.
 -/
-theorem heq_eqRec_iff {α : Sort u} {a : α} {motive : (b : α) → a = b → Sort v}
-    {b : α} {refl : motive a (Eq.refl a)} {h : a = b} {c : β} :
-    c ≍ @Eq.rec α a motive refl b h ↔ c ≍ refl :=
+theorem heq_eqRec_iff
+    {α : Sort u} {a : α} {motive : (b : α) → a = b → Sort v} {b : α}
+    {refl : motive a (Eq.refl a)} {h : a = b} {c : β}
+    : c ≍ @Eq.rec α a motive refl b h ↔ c ≍ refl :=
   h.rec (fun _ => ⟨id, id⟩) c
 
 /--
@@ -997,23 +1016,24 @@ Moves an cast using `Eq.rec` from the function to the argument.
 Note: because the motive isn't reliably detected by unification,
 it needs to be provided as an explicit parameter.
 -/
-theorem apply_eqRec {α : Sort u} {a : α} (motive : (b : α) → a = b → Sort v)
-    {b : α} {h : a = b} {c : motive a (Eq.refl a) → β} {d : motive b h} :
-    @Eq.rec α a (fun b h => motive b h → β) c b h d = c (h.symm ▸ d) := by
+theorem apply_eqRec
+    {α : Sort u} {a : α} (motive : (b : α) → a = b → Sort v)
+    {b : α} {h : a = b} {c : motive a (Eq.refl a) → β} {d : motive b h}
+    : @Eq.rec α a (fun b h => motive b h → β) c b h d = c (h.symm ▸ d) := by
   cases h; rfl
 
 /--
 If casting a term with `Eq.rec` to another type makes it equal to some other term, then the two
 terms are heterogeneously equal.
 -/
-theorem heq_of_eqRec_eq {α β : Sort u} {a : α} {b : β} (h₁ : α = β) (h₂ : Eq.rec (motive := fun α _ => α) a h₁ = b) : a ≍ b := by
+theorem heq_of_eqRec_eq
+    {α β : Sort u} {a : α} {b : β} (h₁ : α = β) (h₂ : Eq.rec (motive := fun α _ => α) a h₁ = b)
+    : a ≍ b := by
   subst h₁
   apply heq_of_eq
   exact h₂
 
-/--
-The result of casting a term with `cast` is heterogeneously equal to the original term.
--/
+/-- The result of casting a term with `cast` is heterogeneously equal to the original term. -/
 theorem cast_heq {α β : Sort u} : (h : α = β) → (a : α) → cast h a ≍ a
   | rfl, a => HEq.refl a
 
@@ -1022,19 +1042,17 @@ variable {a b c d : Prop}
 theorem iff_iff_implies_and_implies {a b : Prop} : (a ↔ b) ↔ (a → b) ∧ (b → a) :=
   Iff.intro (fun h => And.intro h.mp h.mpr) (fun h => Iff.intro h.left h.right)
 
-@[refl] theorem Iff.refl (a : Prop) : a ↔ a :=
-  Iff.intro (fun h => h) (fun h => h)
+@[refl] theorem Iff.refl (a : Prop) : a ↔ a := Iff.intro (fun h => h) (fun h => h)
 
-protected theorem Iff.rfl {a : Prop} : a ↔ a :=
-  Iff.refl a
+protected theorem Iff.rfl {a : Prop} : a ↔ a := Iff.refl a
 
 -- And, also for backward compatibility, we try `Iff.rfl.` using `exact` (see #5366)
-macro_rules | `(tactic| rfl) => `(tactic| exact Iff.rfl)
+macro_rules
+  | `(tactic| rfl) => `(tactic| exact Iff.rfl)
 
 theorem Iff.of_eq (h : a = b) : a ↔ b := h ▸ Iff.rfl
 
-theorem Iff.trans (h₁ : a ↔ b) (h₂ : b ↔ c) : a ↔ c :=
-  Iff.intro (h₂.mp ∘ h₁.mp) (h₁.mpr ∘ h₂.mpr)
+theorem Iff.trans (h₁ : a ↔ b) (h₂ : b ↔ c) : a ↔ c := Iff.intro (h₂.mp ∘ h₁.mp) (h₁.mpr ∘ h₂.mpr)
 
 -- This is needed for `calc` to work with `iff`.
 instance : Trans Iff Iff Iff where
@@ -1060,26 +1078,28 @@ theorem or_comm : a ∨ b ↔ b ∨ a := Or.comm
 
 /-! # Exists -/
 
-theorem Exists.elim {α : Sort u} {p : α → Prop} {b : Prop}
-   (h₁ : Exists (fun x => p x)) (h₂ : ∀ (a : α), p a → b) : b :=
+theorem Exists.elim
+    {α : Sort u} {p : α → Prop} {b : Prop} (h₁ : Exists (fun x => p x)) (h₂ : ∀ (a : α), p a → b)
+    : b :=
   match h₁ with
   | intro a h => h₂ a h
 
 /-! # Decidable -/
 
-@[simp] theorem decide_true (h : Decidable True) : @decide True h = true :=
+@[simp]
+theorem decide_true (h : Decidable True) : @decide True h = true :=
   match h with
-  | isTrue _  => rfl
+  | isTrue _ => rfl
   | isFalse h => False.elim <| h ⟨⟩
 
-@[simp] theorem decide_false (h : Decidable False) : @decide False h = false :=
+@[simp]
+theorem decide_false (h : Decidable False) : @decide False h = false :=
   match h with
   | isFalse _ => rfl
-  | isTrue h  => False.elim h
+  | isTrue h => False.elim h
 
 /-- Similar to `decide`, but uses an explicit instance -/
-@[inline] def toBoolUsing {p : Prop} (d : Decidable p) : Bool :=
-  d.decide
+@[inline] def toBoolUsing {p : Prop} (d : Decidable p) : Bool := d.decide
 
 theorem toBoolUsing_eq_true {p : Prop} (d : Decidable p) (h : p) : toBoolUsing d = true :=
   decide_eq_true (inst := d) h
@@ -1093,11 +1113,9 @@ theorem of_toBoolUsing_eq_false {p : Prop} {d : Decidable p} (h : toBoolUsing d 
 theorem reflects_toBoolUsing {p : Prop} {d : Decidable p} : (toBoolUsing d).Reflects p :=
   d.reflects_decide
 
-instance : Decidable True :=
-  isTrue trivial
+instance : Decidable True := isTrue trivial
 
-instance : Decidable False :=
-  isFalse not_false
+instance : Decidable False := isFalse not_false
 
 namespace Decidable
 variable {p q : Prop}
@@ -1108,28 +1126,33 @@ sufficient to construct a `q`.
 
 This is a synonym for `dite`, the dependent if-then-else operator.
 -/
-@[macro_inline] def byCases {q : Sort u} [dec : Decidable p] (h1 : p → q) (h2 : ¬p → q) : q :=
+@[macro_inline]
+def byCases {q : Sort u} [dec : Decidable p] (h1 : p → q) (h2 : ¬p → q) : q :=
   match dec with
-  | isTrue h  => h1 h
+  | isTrue h => h1 h
   | isFalse h => h2 h
 
-theorem em (p : Prop) [Decidable p] : p ∨ ¬p :=
-  byCases Or.inl Or.inr
+theorem em (p : Prop) [Decidable p] : p ∨ ¬p := byCases Or.inl Or.inr
 
 set_option linter.unusedVariables.funArgs false in
 theorem byContradiction [dec : Decidable p] (h : ¬p → False) : p :=
   byCases id (fun np => False.elim (h np))
 
-theorem of_not_not [Decidable p] : ¬ ¬ p → p :=
-  fun hnn => byContradiction (fun hn => absurd hn hnn)
+theorem of_not_not [Decidable p] : ¬ ¬p → p := fun hnn => byContradiction (fun hn => absurd hn hnn)
 
-theorem not_and_iff_or_not {p q : Prop} [d₁ : Decidable p] [d₂ : Decidable q] : ¬ (p ∧ q) ↔ ¬ p ∨ ¬ q :=
+theorem not_and_iff_or_not {p q : Prop} [d₁ : Decidable p] [d₂ : Decidable q]
+    : ¬(p ∧ q) ↔ ¬p ∨ ¬q :=
   Iff.intro
-    (fun h => match d₁, d₂ with
-      | isTrue h₁,  isTrue h₂   => absurd (And.intro h₁ h₂) h
-      | _,           isFalse h₂ => Or.inr h₂
-      | isFalse h₁, _           => Or.inl h₁)
-    (fun (h) ⟨hp, hq⟩ => match h with
+    (fun h =>
+      match d₁, d₂ with
+      | isTrue h₁, isTrue h₂ =>
+        absurd (And.intro h₁ h₂) h
+      | _, isFalse h₂ =>
+        Or.inr h₂
+      | isFalse h₁, _ =>
+        Or.inl h₁)
+    (fun (h) ⟨hp, hq⟩ =>
+      match h with
       | Or.inl h => h hp
       | Or.inr h => h hq)
 
@@ -1150,83 +1173,112 @@ abbrev decidable_of_decidable_of_eq [Decidable p] (h : p = q) : Decidable q :=
   decidable_of_decidable_of_iff (p := p) (h ▸ Iff.rfl)
 end
 
-@[macro_inline] instance {p q} [Decidable p] [Decidable q] : Decidable (p → q) :=
+@[macro_inline]
+instance {p q} [Decidable p] [Decidable q] : Decidable (p → q) :=
   if hp : p then
-    if hq : q then isTrue (fun _ => hq)
-    else isFalse (fun h => absurd (h hp) hq)
-  else isTrue (fun h => absurd h hp)
+    if hq : q then
+      isTrue (fun _ => hq)
+    else
+      isFalse (fun h => absurd (h hp) hq)
+  else
+    isTrue (fun h => absurd h hp)
 
 @[inline]
 instance {p q} [dp : Decidable p] [dq : Decidable q] : Decidable (p ↔ q) where
   decide := decide p == decide q
   reflects_decide :=
     match dp, dq with
-    | isTrue  hp, isTrue  hq => ⟨fun _ => hq, fun _ => hp⟩
-    | isTrue  hp, isFalse hq => fun h => hq (h.1 hp)
-    | isFalse hp, isTrue  hq => fun h => hp (h.2 hq)
-    | isFalse hp, isFalse hq => ⟨fun h => absurd h hp, fun h => absurd h hq⟩
+    | isTrue hp, isTrue hq =>
+      ⟨fun _ => hq, fun _ => hp⟩
+    | isTrue hp, isFalse hq => fun h =>
+      hq (h.1 hp)
+    | isFalse hp, isTrue hq => fun h =>
+      hp (h.2 hq)
+    | isFalse hp, isFalse hq =>
+      ⟨fun h => absurd h hp, fun h => absurd h hq⟩
 
 /-! # if-then-else expression theorems -/
 
 @[suggest_for ite_pos ite_of_pos]
-theorem ite_eq_left {c : Prop} {h : Decidable c} (hc : c) {α : Sort u} {t e : α} : (ite c t e) = t :=
+theorem ite_eq_left {c : Prop} {h : Decidable c} (hc : c) {α : Sort u} {t e : α}
+    : (ite c t e) = t :=
   match h with
-  | isTrue  _   => rfl
+  | isTrue _ => rfl
   | isFalse hnc => absurd hc hnc
 
 @[deprecated ite_eq_left (since := "2026-07-21")]
-theorem if_pos {c : Prop} {h : Decidable c} (hc : c) {α : Sort u} {t : α} {e : α} : (if c then t else e) = t := ite_eq_left hc
+theorem if_pos {c : Prop} {h : Decidable c} (hc : c) {α : Sort u} {t : α} {e : α}
+    : (if c then t else e) = t :=
+  ite_eq_left hc
 
 @[suggest_for ite_neg ite_of_neg]
-theorem ite_eq_right {c : Prop} {h : Decidable c} (hnc : ¬c) {α : Sort u} {t e : α} : (ite c t e) = e :=
+theorem ite_eq_right {c : Prop} {h : Decidable c} (hnc : ¬c) {α : Sort u} {t e : α}
+    : (ite c t e) = e :=
   match h with
-  | isTrue hc   => absurd hc hnc
-  | isFalse _   => rfl
+  | isTrue hc => absurd hc hnc
+  | isFalse _ => rfl
 
 @[deprecated ite_eq_right (since := "2026-07-21")]
-theorem if_neg {c : Prop} {h : Decidable c} (hnc : ¬c) {α : Sort u} {t : α} {e : α} : (if c then t else e) = e := ite_eq_right hnc
+theorem if_neg {c : Prop} {h : Decidable c} (hnc : ¬c) {α : Sort u} {t : α} {e : α}
+    : (if c then t else e) = e :=
+  ite_eq_right hnc
 
-/-- Split an if-then-else into cases. The `split` tactic is generally easier to use than this theorem. -/
-def iteInduction {c} [inst : Decidable c] {motive : α → Sort _} {t e : α}
-    (hpos : c → motive t) (hneg : ¬c → motive e) : motive (ite c t e) :=
+/--
+Split an if-then-else into cases. The `split` tactic is generally easier to use than this theorem.
+-/
+def iteInduction
+    {c} [inst : Decidable c]
+    {motive : α → Sort _} {t e : α} (hpos : c → motive t) (hneg : ¬c → motive e)
+    : motive (ite c t e) :=
   match inst with
   | isTrue h => hpos h
   | isFalse h => hneg h
 
 @[suggest_for dite_pos dite_of_pos]
-theorem dite_eq_left {c : Prop} {h : Decidable c} (hc : c) {α : Sort u} {t : c → α} {e : ¬ c → α} : (dite c t e) = t hc :=
+theorem dite_eq_left {c : Prop} {h : Decidable c} (hc : c) {α : Sort u} {t : c → α} {e : ¬c → α}
+    : (dite c t e) = t hc :=
   match h with
-  | isTrue  _   => rfl
+  | isTrue _ => rfl
   | isFalse hnc => absurd hc hnc
 
 @[deprecated dite_eq_left (since := "2026-07-21")]
-theorem dif_pos {c : Prop} {h : Decidable c} (hc : c) {α : Sort u} {t : c → α} {e : ¬c → α} : dite c t e = t hc := dite_eq_left hc
+theorem dif_pos {c : Prop} {h : Decidable c} (hc : c) {α : Sort u} {t : c → α} {e : ¬c → α}
+    : dite c t e = t hc :=
+  dite_eq_left hc
 
 @[suggest_for dite_neg dite_of_neg]
-theorem dite_eq_right {c : Prop} {h : Decidable c} (hnc : ¬c) {α : Sort u} {t : c → α} {e : ¬ c → α} : (dite c t e) = e hnc :=
+theorem dite_eq_right {c : Prop} {h : Decidable c} (hnc : ¬c) {α : Sort u} {t : c → α} {e : ¬c → α}
+    : (dite c t e) = e hnc :=
   match h with
-  | isTrue hc   => absurd hc hnc
-  | isFalse _   => rfl
+  | isTrue hc => absurd hc hnc
+  | isFalse _ => rfl
 
 @[deprecated dite_eq_right (since := "2026-07-21")]
-theorem dif_neg {c : Prop} {h : Decidable c} (hnc : ¬c) {α : Sort u} {t : c → α} {e : ¬c → α} : dite c t e = e hnc := dite_eq_right hnc
+theorem dif_neg {c : Prop} {h : Decidable c} (hnc : ¬c) {α : Sort u} {t : c → α} {e : ¬c → α}
+    : dite c t e = e hnc :=
+  dite_eq_right hnc
 
 @[macro_inline]
-instance {c t e : Prop} [dC : Decidable c] [dT : Decidable t] [dE : Decidable e] : Decidable (if c then t else e) :=
+instance {c t e : Prop} [dC : Decidable c] [dT : Decidable t] [dE : Decidable e]
+    : Decidable (if c then t else e) :=
   match dC with
-  | isTrue _   => dT
-  | isFalse _  => dE
+  | isTrue _ => dT
+  | isFalse _ => dE
 
 @[inline]
-instance {c : Prop} {t : c → Prop} {e : ¬c → Prop} [dC : Decidable c] [dT : ∀ h, Decidable (t h)] [dE : ∀ h, Decidable (e h)] : Decidable (if h : c then t h else e h) :=
+instance
+    {c : Prop} {t : c → Prop} {e : ¬c → Prop}
+    [dC : Decidable c] [dT : ∀ h, Decidable (t h)] [dE : ∀ h, Decidable (e h)]
+    : Decidable (if h : c then t h else e h) :=
   match dC with
-  | isTrue hc  => dT hc
+  | isTrue hc => dT hc
   | isFalse hc => dE hc
 
 @[macro_inline]
-instance {c : Bool} {t e : Prop} [dT : Decidable t] [dE : Decidable e] : Decidable (bif c then t else e) :=
+instance {c : Bool} {t e : Prop} [dT : Decidable t] [dE : Decidable e]
+    : Decidable (bif c then t else e) :=
   match c with
-  | true  => dT
+  | true => dT
   | false => dE
 
 /-- Auxiliary definition for generating compact `noConfusion` for enumeration types -/
@@ -1234,7 +1286,8 @@ abbrev noConfusionTypeEnum {α : Sort u} (f : α → Nat) (P : Sort w) (x y : α
   ((f x).beq (f y)).casesOn P (P → P)
 
 /-- Auxiliary definition for generating compact `noConfusion` for enumeration types -/
-abbrev noConfusionEnum {α : Sort u} (f : α → Nat) {P : Sort w} {x y : α} (h : x = y) : noConfusionTypeEnum f P x y :=
+abbrev noConfusionEnum {α : Sort u} (f : α → Nat) {P : Sort w} {x y : α} (h : x = y)
+    : noConfusionTypeEnum f P x y :=
   ((f x).beq (f y)).casesOn
     (motive := fun b => (f x).beq (f y) = b → b.casesOn P (P → P))
     (fun h' => False.elim (Nat.ne_of_beq_eq_false h' (congrArg f h)))
@@ -1263,50 +1316,47 @@ class Subsingleton (α : Sort u) : Prop where
   /-- Any two elements of a subsingleton are equal. -/
   allEq : (a b : α) → a = b
 
-/--
-If a type is a subsingleton, then all of its elements are equal.
--/
-protected theorem Subsingleton.elim {α : Sort u} [h : Subsingleton α] : (a b : α) → a = b :=
-  h.allEq
+/-- If a type is a subsingleton, then all of its elements are equal. -/
+protected theorem Subsingleton.elim {α : Sort u} [h : Subsingleton α] : (a b : α) → a = b := h.allEq
 
 /--
 If two types are equal and one of them is a subsingleton, then all of their elements are
 [heterogeneously equal](lean-manual://section/HEq).
 -/
-protected theorem Subsingleton.helim {α β : Sort u} [h₁ : Subsingleton α] (h₂ : α = β) (a : α) (b : β) : a ≍ b := by
+protected theorem Subsingleton.helim
+    {α β : Sort u} [h₁ : Subsingleton α] (h₂ : α = β) (a : α) (b : β)
+    : a ≍ b := by
   subst h₂
   apply heq_of_eq
   apply Subsingleton.elim
 
 instance (p : Prop) : Subsingleton p := ⟨fun a b => proof_irrel a b⟩
 
-instance : Subsingleton Empty  := ⟨(·.elim)⟩
+instance : Subsingleton Empty := ⟨(·.elim)⟩
 instance : Subsingleton PEmpty := ⟨(·.elim)⟩
 
 instance [Subsingleton α] [Subsingleton β] : Subsingleton (α × β) :=
-  ⟨fun {..} {..} => by congr <;> apply Subsingleton.elim⟩
+  ⟨fun { .. } { .. } => by congr <;> apply Subsingleton.elim⟩
 
 instance (p : Prop) : Subsingleton (Decidable p) :=
   Subsingleton.intro fun
     | isTrue t₁ => fun
-      | isTrue _   => rfl
+      | isTrue _ => rfl
       | isFalse f₂ => absurd t₁ f₂
     | isFalse f₁ => fun
-      | isTrue t₂  => absurd t₂ f₁
-      | isFalse _  => rfl
+      | isTrue t₂ => absurd t₂ f₁
+      | isFalse _ => rfl
 
 example [Subsingleton α] (p : α → Prop) : Subsingleton (Subtype p) :=
   ⟨fun ⟨x, _⟩ ⟨y, _⟩ => by congr; exact Subsingleton.elim x y⟩
 
 theorem recSubsingleton
-     {p : Prop} [h : Decidable p]
-     {h₁ : p → Sort u}
-     {h₂ : ¬p → Sort u}
-     [h₃ : ∀ (h : p), Subsingleton (h₁ h)]
-     [h₄ : ∀ (h : ¬p), Subsingleton (h₂ h)]
-     : Subsingleton (h.falseTrueCases h₂ h₁) :=
+    {p : Prop} [h : Decidable p]
+    {h₁ : p → Sort u} {h₂ : ¬p → Sort u}
+    [h₃ : ∀ (h : p), Subsingleton (h₁ h)] [h₄ : ∀ (h : ¬p), Subsingleton (h₂ h)]
+    : Subsingleton (h.falseTrueCases h₂ h₁) :=
   match h with
-  | isTrue h  => h₃ h
+  | isTrue h => h₃ h
   | isFalse h => h₄ h
 
 /--
@@ -1321,29 +1371,28 @@ equality.
 -/
 structure Equivalence {α : Sort u} (r : α → α → Prop) : Prop where
   /-- An equivalence relation is reflexive: `r x x` -/
-  refl  : ∀ x, r x x
+  refl : ∀ x, r x x
   /-- An equivalence relation is symmetric: `r x y` implies `r y x` -/
-  symm  : ∀ {x y}, r x y → r y x
+  symm : ∀ {x y}, r x y → r y x
   /-- An equivalence relation is transitive: `r x y` and `r y z` implies `r x z` -/
   trans : ∀ {x y z}, r x y → r y z → r x z
 
 /-- The empty relation is the relation on `α` which is always `False`. -/
-def emptyRelation {α : Sort u} (_ _ : α) : Prop :=
-  False
+def emptyRelation {α : Sort u} (_ _ : α) : Prop := False
 
 /--
 `Subrelation q r` means that `q ⊆ r` or `∀ x y, q x y → r x y`.
 It is the analogue of the subset relation on relations.
 -/
-def Subrelation {α : Sort u} (q r : α → α → Prop) :=
-  ∀ {x y}, q x y → r x y
+def Subrelation {α : Sort u} (q r : α → α → Prop) := ∀ {x y}, q x y → r x y
 
 /--
 The inverse image of `r : β → β → Prop` by a function `α → β` is the relation
 `s : α → α → Prop` defined by `s a b = r (f a) (f b)`.
 -/
-@[implicit_reducible] def InvImage {α : Sort u} {β : Sort v} (r : β → β → Prop) (f : α → β) : α → α → Prop :=
-  fun a₁ a₂ => r (f a₁) (f a₂)
+@[implicit_reducible]
+def InvImage {α : Sort u} {β : Sort v} (r : β → β → Prop) (f : α → β) : α → α → Prop := fun a₁ a₂ =>
+  r (f a₁) (f a₂)
 
 /--
 The transitive closure `TransGen r` of a relation `r` is the smallest relation which is
@@ -1353,13 +1402,15 @@ transitive and contains `r`. `TransGen r a z` if and only if there exists a sequ
 inductive Relation.TransGen {α : Sort u} (r : α → α → Prop) : α → α → Prop
   /-- If `r a b`, then `TransGen r a b`. This is the base case of the transitive closure. -/
   | single {a b : α} : r a b → TransGen r a b
-  /-- If `TransGen r a b` and `r b c`, then `TransGen r a c`.
-  This is the inductive case of the transitive closure. -/
+  /--
+  If `TransGen r a b` and `r b c`, then `TransGen r a c`.
+  This is the inductive case of the transitive closure.
+  -/
   | tail {a b c : α} : TransGen r a b → r b c → TransGen r a c
 
 /-- The transitive closure is transitive. -/
-theorem Relation.TransGen.trans {α : Sort u} {r : α → α → Prop} {a b c} :
-    TransGen r a b → TransGen r b c → TransGen r a c := by
+theorem Relation.TransGen.trans {α : Sort u} {r : α → α → Prop} {a b c}
+    : TransGen r a b → TransGen r b c → TransGen r a c := by
   intro hab hbc
   induction hbc with
   | single h => exact TransGen.tail hab h
@@ -1369,7 +1420,7 @@ theorem Relation.TransGen.trans {α : Sort u} {r : α → α → Prop} {a b c} :
 
 namespace Subtype
 
-theorem exists_of_subtype {α : Type u} {p : α → Prop} : { x // p x } → Exists (fun x => p x)
+theorem exists_of_subtype {α : Type u} {p : α → Prop} : {x // p x} → Exists (fun x => p x)
   | ⟨a, h⟩ => ⟨a, h⟩
 
 variable {α : Sort u} {p : α → Prop}
@@ -1385,8 +1436,7 @@ theorem eta (a : {x // p x}) (h : p (val a)) : mk (val a) h = a := by
   cases a
   exact rfl
 
-instance {α : Type u} {p : α → Prop} [BEq α] : BEq {x : α // p x} :=
-  ⟨fun x y => x.1 == y.1⟩
+instance {α : Type u} {p : α → Prop} [BEq α] : BEq {x : α // p x} := ⟨fun x y => x.1 == y.1⟩
 
 instance {α : Type u} {p : α → Prop} [BEq α] [ReflBEq α] : ReflBEq {x : α // p x} where
   rfl {x} := BEq.refl x.1
@@ -1394,10 +1444,13 @@ instance {α : Type u} {p : α → Prop} [BEq α] [ReflBEq α] : ReflBEq {x : α
 instance {α : Type u} {p : α → Prop} [BEq α] [LawfulBEq α] : LawfulBEq {x : α // p x} where
   eq_of_beq h := Subtype.ext (eq_of_beq h)
 
-instance {α : Sort u} {p : α → Prop} [DecidableEq α] : DecidableEq {x : α // p x} :=
-  fun ⟨a, h₁⟩ ⟨b, h₂⟩ =>
-    if h : a = b then isTrue (by subst h; exact rfl)
-    else isFalse (fun h' => Subtype.noConfusion rfl .rfl (heq_of_eq h') (fun h' => absurd (eq_of_heq h') h))
+instance {α : Sort u} {p : α → Prop} [DecidableEq α]
+    : DecidableEq {x : α // p x} := fun ⟨a, h₁⟩ ⟨b, h₂⟩ =>
+  if h : a = b then
+    isTrue (by subst h; exact rfl)
+  else
+    isFalse (fun h' =>
+      Subtype.noConfusion rfl .rfl (heq_of_eq h') (fun h' => absurd (eq_of_heq h') h))
 
 end Subtype
 
@@ -1427,19 +1480,13 @@ end
 /-! # Product -/
 
 instance [h1 : Nonempty α] [h2 : Nonempty β] : Nonempty (α × β) :=
-  Nonempty.elim h1 fun x =>
-    Nonempty.elim h2 fun y =>
-      ⟨(x, y)⟩
+  Nonempty.elim h1 fun x => Nonempty.elim h2 fun y => ⟨(x, y)⟩
 
 instance [h1 : Nonempty α] [h2 : Nonempty β] : Nonempty (MProd α β) :=
-  Nonempty.elim h1 fun x =>
-    Nonempty.elim h2 fun y =>
-      ⟨⟨x, y⟩⟩
+  Nonempty.elim h1 fun x => Nonempty.elim h2 fun y => ⟨⟨x, y⟩⟩
 
 instance [h1 : Nonempty α] [h2 : Nonempty β] : Nonempty (PProd α β) :=
-  Nonempty.elim h1 fun x =>
-    Nonempty.elim h2 fun y =>
-      ⟨⟨x, y⟩⟩
+  Nonempty.elim h1 fun x => Nonempty.elim h2 fun y => ⟨⟨x, y⟩⟩
 
 instance [Inhabited α] [Inhabited β] : Inhabited (α × β) where
   default := (default, default)
@@ -1450,15 +1497,17 @@ instance [Inhabited α] [Inhabited β] : Inhabited (MProd α β) where
 instance [Inhabited α] [Inhabited β] : Inhabited (PProd α β) where
   default := ⟨default, default⟩
 
-instance [h : DecidableEq α] [h' : DecidableEq β] : DecidableEq (α × β) :=
-  fun (a, b) (a', b') =>
-    Decidable.intro (decide (a = a') && decide (b = b'))
-      (match h a a' with
+instance [h : DecidableEq α] [h' : DecidableEq β] : DecidableEq (α × β) := fun (a, b) (a', b') =>
+  Decidable.intro (decide (a = a') && decide (b = b'))
+    (match h a a' with
       | isTrue e₁ =>
         match h' b b' with
-        | isTrue e₂  => (e₁ ▸ e₂ ▸ rfl : (a, b) = (a', b'))
-        | isFalse n₂ => fun h => Prod.noConfusion rfl rfl (heq_of_eq h) fun _ e₂' => absurd (eq_of_heq e₂') n₂
-      | isFalse n₁ => fun h => Prod.noConfusion rfl rfl (heq_of_eq h) fun e₁' _   => absurd (eq_of_heq e₁') n₁)
+        | isTrue e₂ =>
+          (e₁ ▸ e₂ ▸ rfl : (a, b) = (a', b'))
+        | isFalse n₂ => fun h =>
+          Prod.noConfusion rfl rfl (heq_of_eq h) fun _ e₂' => absurd (eq_of_heq e₂') n₂
+      | isFalse n₁ => fun h =>
+        Prod.noConfusion rfl rfl (heq_of_eq h) fun e₁' _ => absurd (eq_of_heq e₁') n₁)
 
 instance [BEq α] [BEq β] : BEq (α × β) where
   beq := fun (a₁, b₁) (a₂, b₂) => a₁ == a₂ && b₁ == b₂
@@ -1469,16 +1518,15 @@ Lexicographical order for products.
 Two pairs are lexicographically ordered if their first elements are ordered or if their first
 elements are equal and their second elements are ordered.
 -/
-def Prod.lexLt [LT α] [LT β] (s : α × β) (t : α × β) : Prop :=
-  s.1 < t.1 ∨ (s.1 = t.1 ∧ s.2 < t.2)
+def Prod.lexLt [LT α] [LT β] (s : α × β) (t : α × β) : Prop := s.1 < t.1 ∨ (s.1 = t.1 ∧ s.2 < t.2)
 
 instance Prod.lexLtDec
-    [LT α] [LT β] [DecidableEq α]
-    [(a b : α) → Decidable (a < b)] [(a b : β) → Decidable (a < b)]
-    : (s t : α × β) → Decidable (Prod.lexLt s t) :=
-  fun _ _ => inferInstanceAs (Decidable (_ ∨ _))
+    [LT α] [LT β] [DecidableEq α] [(a b : α) → Decidable (a < b)] [(a b : β) → Decidable (a < b)]
+    : (s t : α × β) → Decidable (Prod.lexLt s t) := fun _ _ =>
+  inferInstanceAs (Decidable (_ ∨ _))
 
-theorem Prod.lexLt_def [LT α] [LT β] (s t : α × β) : (Prod.lexLt s t) = (s.1 < t.1 ∨ (s.1 = t.1 ∧ s.2 < t.2)) :=
+theorem Prod.lexLt_def [LT α] [LT β] (s t : α × β)
+    : (Prod.lexLt s t) = (s.1 < t.1 ∨ (s.1 = t.1 ∧ s.2 < t.2)) :=
   rfl
 
 theorem Prod.eta (p : α × β) : (p.1, p.2) = p := rfl
@@ -1490,12 +1538,13 @@ Examples:
  * `(1, 2).map (· + 1) (· * 3) = (2, 6)`
  * `(1, 2).map toString (· * 3) = ("1", 6)`
 -/
-@[implicit_reducible] def Prod.map {α₁ : Type u₁} {α₂ : Type u₂} {β₁ : Type v₁} {β₂ : Type v₂}
-    (f : α₁ → α₂) (g : β₁ → β₂) : α₁ × β₁ → α₂ × β₂
+@[implicit_reducible]
+def Prod.map {α₁ : Type u₁} {α₂ : Type u₂} {β₁ : Type v₁} {β₂ : Type v₂} (f : α₁ → α₂) (g : β₁ → β₂)
+    : α₁ × β₁ → α₂ × β₂
   | (a, b) => (f a, g b)
 
-@[simp] theorem Prod.map_apply (f : α → β) (g : γ → δ) (x) (y) :
-    Prod.map f g (x, y) = (f x, g y) := rfl
+@[simp]
+theorem Prod.map_apply (f : α → β) (g : γ → δ) (x) (y) : Prod.map f g (x, y) = (f x, g y) := rfl
 
 -- We add `@[grind =]` to these in `Init.Data.Prod`.
 @[simp] theorem Prod.map_fst (f : α → β) (g : γ → δ) (x) : (Prod.map f g x).1 = f x.1 := rfl
@@ -1503,58 +1552,59 @@ Examples:
 
 /-! # Dependent products -/
 
-instance {α : Type u} {β : α → Type v} [h₁ : DecidableEq α] [h₂ : ∀ a, DecidableEq (β a)] :
-    DecidableEq (Sigma β)
+instance {α : Type u} {β : α → Type v} [h₁ : DecidableEq α] [h₂ : ∀ a, DecidableEq (β a)]
+    : DecidableEq (Sigma β)
   | ⟨a₁, b₁⟩, ⟨a₂, b₂⟩ =>
     match a₁, b₁, a₂, b₂, h₁ a₁ a₂ with
     | _, b₁, _, b₂, isTrue (Eq.refl _) =>
       match b₁, b₂, h₂ _ b₁ b₂ with
-      | _, _, isTrue (Eq.refl _) => isTrue rfl
-      | _, _, isFalse n => isFalse fun h ↦
-        Sigma.noConfusion rfl .rfl (heq_of_eq h) fun _ e₂ ↦ n (eq_of_heq e₂)
-    | _, _, _, _, isFalse n => isFalse fun h ↦
-      Sigma.noConfusion rfl .rfl (heq_of_eq h) fun e₁ _ ↦ n (eq_of_heq e₁)
+      | _, _, isTrue (Eq.refl _) =>
+        isTrue rfl
+      | _, _, isFalse n =>
+        isFalse fun h ↦ Sigma.noConfusion rfl .rfl (heq_of_eq h) fun _ e₂ ↦ n (eq_of_heq e₂)
+    | _, _, _, _, isFalse n =>
+      isFalse fun h ↦ Sigma.noConfusion rfl .rfl (heq_of_eq h) fun e₁ _ ↦ n (eq_of_heq e₁)
 
-instance {α : Sort u} {β : α → Sort v} [h₁ : DecidableEq α] [h₂ : ∀ a, DecidableEq (β a)] : DecidableEq (PSigma β)
+instance {α : Sort u} {β : α → Sort v} [h₁ : DecidableEq α] [h₂ : ∀ a, DecidableEq (β a)]
+    : DecidableEq (PSigma β)
   | ⟨a₁, b₁⟩, ⟨a₂, b₂⟩ =>
     match a₁, b₁, a₂, b₂, h₁ a₁ a₂ with
     | _, b₁, _, b₂, isTrue (Eq.refl _) =>
       match b₁, b₂, h₂ _ b₁ b₂ with
-      | _, _, isTrue (Eq.refl _) => isTrue rfl
-      | _, _, isFalse n => isFalse fun h ↦
-        PSigma.noConfusion rfl .rfl (heq_of_eq h) fun _ e₂ ↦ n (eq_of_heq e₂)
-    | _, _, _, _, isFalse n => isFalse fun h ↦
-      PSigma.noConfusion rfl .rfl (heq_of_eq h) fun e₁ _ ↦ n (eq_of_heq e₁)
+      | _, _, isTrue (Eq.refl _) =>
+        isTrue rfl
+      | _, _, isFalse n =>
+        isFalse fun h ↦ PSigma.noConfusion rfl .rfl (heq_of_eq h) fun _ e₂ ↦ n (eq_of_heq e₂)
+    | _, _, _, _, isFalse n =>
+      isFalse fun h ↦ PSigma.noConfusion rfl .rfl (heq_of_eq h) fun e₁ _ ↦ n (eq_of_heq e₁)
 
-theorem Exists.of_psigma_prop {α : Sort u} {p : α → Prop} : (PSigma (fun x => p x)) → Exists (fun x => p x)
+theorem Exists.of_psigma_prop {α : Sort u} {p : α → Prop}
+    : (PSigma (fun x => p x)) → Exists (fun x => p x)
   | ⟨x, hx⟩ => ⟨x, hx⟩
 
-protected theorem PSigma.eta {α : Sort u} {β : α → Sort v} {a₁ a₂ : α} {b₁ : β a₁} {b₂ : β a₂}
-    (h₁ : a₁ = a₂) (h₂ : Eq.ndrec b₁ h₁ = b₂) : PSigma.mk a₁ b₁ = PSigma.mk a₂ b₂ := by
+protected theorem PSigma.eta
+    {α : Sort u} {β : α → Sort v} {a₁ a₂ : α} {b₁ : β a₁} {b₂ : β a₂}
+    (h₁ : a₁ = a₂) (h₂ : Eq.ndrec b₁ h₁ = b₂)
+    : PSigma.mk a₁ b₁ = PSigma.mk a₂ b₂ := by
   subst h₁
   subst h₂
   exact rfl
 
 /-! # Universe polymorphic unit -/
 
-theorem PUnit.ext (a b : PUnit) : a = b := by
-  cases a; cases b; exact rfl
+theorem PUnit.ext (a b : PUnit) : a = b := by cases a; cases b; exact rfl
 
 @[deprecated PUnit.ext (since := "2025-10-26")]
-theorem PUnit.subsingleton (a b : PUnit) : a = b := by
-  cases a; cases b; exact rfl
+theorem PUnit.subsingleton (a b : PUnit) : a = b := by cases a; cases b; exact rfl
 
-theorem PUnit.eq_punit (a : PUnit) : a = ⟨⟩ :=
-  PUnit.ext a ⟨⟩
+theorem PUnit.eq_punit (a : PUnit) : a = ⟨⟩ := PUnit.ext a ⟨⟩
 
-instance : Subsingleton PUnit :=
-  Subsingleton.intro PUnit.ext
+instance : Subsingleton PUnit := Subsingleton.intro PUnit.ext
 
 instance : Inhabited PUnit where
   default := ⟨⟩
 
-instance : DecidableEq PUnit :=
-  fun a b => isTrue (PUnit.ext a b)
+instance : DecidableEq PUnit := fun a b => isTrue (PUnit.ext a b)
 
 /-! # Setoid -/
 
@@ -1569,27 +1619,22 @@ class Setoid (α : Sort u) where
   /-- The relation `x ≈ y` is an equivalence relation. -/
   iseqv : Equivalence r
 
-instance {α : Sort u} [Setoid α] : HasEquiv α :=
-  ⟨Setoid.r⟩
+instance {α : Sort u} [Setoid α] : HasEquiv α := ⟨Setoid.r⟩
 
 namespace Setoid
 
 variable {α : Sort u} [Setoid α]
 
 /-- A setoid's equivalence relation is reflexive. -/
-theorem refl (a : α) : a ≈ a :=
-  iseqv.refl a
+theorem refl (a : α) : a ≈ a := iseqv.refl a
 
 /-- A setoid's equivalence relation is symmetric. -/
-theorem symm {a b : α} (hab : a ≈ b) : b ≈ a :=
-  iseqv.symm hab
+theorem symm {a b : α} (hab : a ≈ b) : b ≈ a := iseqv.symm hab
 
 /-- A setoid's equivalence relation is transitive. -/
-theorem trans {a b c : α} (hab : a ≈ b) (hbc : b ≈ c) : a ≈ c :=
-  iseqv.trans hab hbc
+theorem trans {a b c : α} (hab : a ≈ b) (hbc : b ≈ c) : a ≈ c := iseqv.trans hab hbc
 
 end Setoid
-
 
 /-! # Propositional extensionality -/
 
@@ -1604,16 +1649,15 @@ equality. Propositional extensionality is intuitionistically valid.
 -/
 axiom propext {a b : Prop} : (a ↔ b) → a = b
 
-theorem Eq.propIntro {a b : Prop} (h₁ : a → b) (h₂ : b → a) : a = b :=
-  propext <| Iff.intro h₁ h₂
+theorem Eq.propIntro {a b : Prop} (h₁ : a → b) (h₂ : b → a) : a = b := propext <| Iff.intro h₁ h₂
 
 -- Eq for Prop is now decidable if the equivalent Iff is decidable
 instance {p q : Prop} [d : Decidable (p ↔ q)] : Decidable (p = q) :=
   decidable_of_decidable_of_iff ⟨propext, Iff.of_eq⟩
 
 /-- Helper theorem for proving injectivity theorems -/
-theorem Lean.injEq_helper {P Q R : Prop} :
-  (P → Q → R) → (P ∧ Q → R) := by intro h ⟨h₁,h₂⟩; exact h h₁ h₂
+theorem Lean.injEq_helper {P Q R : Prop} : (P → Q → R) → (P ∧ Q → R) := by
+  intro h ⟨h₁, h₂⟩; exact h h₁ h₂
 
 gen_injective_theorems% Array
 gen_injective_theorems% BitVec
@@ -1655,19 +1699,20 @@ gen_injective_theorems% UInt8
 gen_injective_theorems% ULift
 gen_injective_theorems% USize
 
-theorem Nat.succ.inj {m n : Nat} : m.succ = n.succ → m = n :=
-  fun x => Nat.noConfusion x id
+theorem Nat.succ.inj {m n : Nat} : m.succ = n.succ → m = n := fun x => Nat.noConfusion x id
 
 theorem Nat.succ.injEq (u v : Nat) : (u.succ = v.succ) = (u = v) :=
   Eq.propIntro Nat.succ.inj (congrArg Nat.succ)
 
-@[simp] theorem beq_iff_eq [BEq α] [LawfulBEq α] {a b : α} : a == b ↔ a = b :=
-  ⟨eq_of_beq, beq_of_eq⟩
+@[simp]
+theorem beq_iff_eq [BEq α] [LawfulBEq α] {a b : α} : a == b ↔ a = b := ⟨eq_of_beq, beq_of_eq⟩
 
 /-! # Prop lemmas -/
 
-/-- *Ex falso* for negation: from `¬a` and `a` anything follows. This is the same as `absurd` with
-the arguments flipped, but it is in the `Not` namespace so that projection notation can be used. -/
+/--
+*Ex falso* for negation: from `¬a` and `a` anything follows. This is the same as `absurd` with
+the arguments flipped, but it is in the `Not` namespace so that projection notation can be used.
+-/
 def Not.elim {α : Sort _} (H1 : ¬a) (H2 : a) : α := absurd H2 H1
 
 /-- Non-dependent eliminator for `And`. -/
@@ -1686,18 +1731,18 @@ theorem Not.imp {a b : Prop} (H2 : ¬b) (H1 : a → b) : ¬a := mt H1 H2
 
 theorem not_congr (h : a ↔ b) : ¬a ↔ ¬b := ⟨mt h.2, mt h.1⟩
 
-theorem not_not_not : ¬¬¬a ↔ ¬a := ⟨mt not_not_intro, not_not_intro⟩
+theorem not_not_not : ¬ ¬ ¬a ↔ ¬a := ⟨mt not_not_intro, not_not_intro⟩
 
 theorem iff_of_true (ha : a) (hb : b) : a ↔ b := Iff.intro (fun _ => hb) (fun _ => ha)
 theorem iff_of_false (ha : ¬a) (hb : ¬b) : a ↔ b := Iff.intro ha.elim hb.elim
 
-theorem iff_true_left  (ha : a) : (a ↔ b) ↔ b := Iff.intro (·.mp ha) (iff_of_true ha)
+theorem iff_true_left (ha : a) : (a ↔ b) ↔ b := Iff.intro (·.mp ha) (iff_of_true ha)
 theorem iff_true_right (ha : a) : (b ↔ a) ↔ b := Iff.comm.trans (iff_true_left ha)
 
-theorem iff_false_left  (ha : ¬a) : (a ↔ b) ↔ ¬b := Iff.intro (mt ·.mpr ha) (iff_of_false ha)
+theorem iff_false_left (ha : ¬a) : (a ↔ b) ↔ ¬b := Iff.intro (mt ·.mpr ha) (iff_of_false ha)
 theorem iff_false_right (ha : ¬a) : (b ↔ a) ↔ ¬b := Iff.comm.trans (iff_false_left ha)
 
-theorem of_iff_true    (h : a ↔ True) : a := h.mpr trivial
+theorem of_iff_true (h : a ↔ True) : a := h.mpr trivial
 theorem iff_true_intro (h : a) : a ↔ True := iff_of_true h trivial
 
 theorem eq_iff_true_of_subsingleton [Subsingleton α] (x y : α) : x = y ↔ True :=
@@ -1718,26 +1763,27 @@ theorem neq_of_not_iff : ¬(a ↔ b) → a ≠ b := mt Iff.of_eq
 theorem iff_iff_eq : (a ↔ b) ↔ a = b := Iff.intro propext Iff.of_eq
 @[simp] theorem eq_iff_iff : (a = b) ↔ (a ↔ b) := iff_iff_eq.symm
 
-theorem eq_self_iff_true (a : α)  : a = a ↔ True  := iff_true_intro rfl
+theorem eq_self_iff_true (a : α) : a = a ↔ True := iff_true_intro rfl
 theorem ne_self_iff_false (a : α) : a ≠ a ↔ False := not_iff_false_intro rfl
 
 theorem false_of_true_iff_false (h : True ↔ False) : False := h.mp trivial
-theorem false_of_true_eq_false  (h : True = False) : False := false_of_true_iff_false (Iff.of_eq h)
+theorem false_of_true_eq_false (h : True = False) : False := false_of_true_iff_false (Iff.of_eq h)
 
 theorem true_eq_false_of_false : False → (True = False) := False.elim
 
-theorem iff_def  : (a ↔ b) ↔ (a → b) ∧ (b → a) := iff_iff_implies_and_implies
+theorem iff_def : (a ↔ b) ↔ (a → b) ∧ (b → a) := iff_iff_implies_and_implies
 theorem iff_def' : (a ↔ b) ↔ (b → a) ∧ (a → b) := Iff.trans iff_def And.comm
 
-theorem true_iff_false : (True ↔ False) ↔ False := iff_false_intro (·.mp  True.intro)
+theorem true_iff_false : (True ↔ False) ↔ False := iff_false_intro (·.mp True.intro)
 theorem false_iff_true : (False ↔ True) ↔ False := iff_false_intro (·.mpr True.intro)
 
-theorem iff_not_self : ¬(a ↔ ¬a) | H => let f h := H.1 h h; f (H.2 f)
+theorem iff_not_self : ¬(a ↔ ¬a)
+  | H => let f h := H.1 h h; f (H.2 f)
 theorem heq_self_iff_true (a : α) : a ≍ a ↔ True := iff_true_intro HEq.rfl
 
 /-! ## implies -/
 
-theorem not_not_of_not_imp : ¬(a → b) → ¬¬a := mt Not.elim
+theorem not_not_of_not_imp : ¬(a → b) → ¬ ¬a := mt Not.elim
 
 theorem not_of_not_imp {a : Prop} : ¬(a → b) → ¬b := mt fun h _ => h
 
@@ -1756,7 +1802,8 @@ theorem false_imp_iff (a : Prop) : (False → a) ↔ True := iff_true_intro Fals
 
 theorem true_imp_iff {α : Prop} : (True → α) ↔ α := imp_iff_right True.intro
 
-@[simp high] theorem imp_self : (a → a) ↔ True := iff_true_intro id
+@[simp high]
+theorem imp_self : (a → a) ↔ True := iff_true_intro id
 
 @[simp] theorem imp_false : (a → False) ↔ ¬a := Iff.rfl
 
@@ -1780,27 +1827,27 @@ theorem imp_iff_not (hb : ¬b) : a → b ↔ ¬a := imp_congr_right fun _ => iff
 
 namespace Quot
 
-protected theorem liftBeta {α : Sort u} {r : α → α → Prop} {β : Sort v}
-    (f : α → β)
-    (c : (a b : α) → r a b → f a = f b)
-    (a : α)
+protected theorem liftBeta
+    {α : Sort u} {r : α → α → Prop} {β : Sort v}
+    (f : α → β) (c : (a b : α) → r a b → f a = f b) (a : α)
     : lift f c (Quot.mk r a) = f a :=
   rfl
 
-protected theorem indBeta {α : Sort u} {r : α → α → Prop} {motive : Quot r → Prop}
-    (p : (a : α) → motive (Quot.mk r a))
-    (a : α)
+protected theorem indBeta
+    {α : Sort u} {r : α → α → Prop} {motive : Quot r → Prop}
+    (p : (a : α) → motive (Quot.mk r a)) (a : α)
     : (ind p (Quot.mk r a) : motive (Quot.mk r a)) = p a :=
   rfl
 
 @[elab_as_elim]
-protected theorem inductionOn {α : Sort u} {r : α → α → Prop} {motive : Quot r → Prop}
-    (q : Quot r)
-    (h : (a : α) → motive (Quot.mk r a))
+protected theorem inductionOn
+    {α : Sort u} {r : α → α → Prop} {motive : Quot r → Prop}
+    (q : Quot r) (h : (a : α) → motive (Quot.mk r a))
     : motive q :=
   ind h q
 
-theorem exists_rep {α : Sort u} {r : α → α → Prop} (q : Quot r) : Exists (fun a => (Quot.mk r a) = q) :=
+theorem exists_rep {α : Sort u} {r : α → α → Prop} (q : Quot r)
+    : Exists (fun a => (Quot.mk r a) = q) :=
   q.inductionOn (fun a => ⟨a, rfl⟩)
 
 section
@@ -1816,16 +1863,16 @@ protected def indep (f : (a : α) → motive (Quot.mk r a)) (a : α) : PSigma mo
 protected theorem indepCoherent
     (f : (a : α) → motive (Quot.mk r a))
     (h : (a b : α) → (p : r a b) → Eq.ndrec (f a) (sound p) = f b)
-    : (a b : α) → r a b → Quot.indep f a = Quot.indep f b  :=
-  fun a b e => PSigma.eta (sound e) (h a b e)
+    : (a b : α) → r a b → Quot.indep f a = Quot.indep f b := fun a b e =>
+  PSigma.eta (sound e) (h a b e)
 
 protected theorem liftIndepPr1
     (f : (a : α) → motive (Quot.mk r a))
     (h : ∀ (a b : α) (p : r a b), Eq.ndrec (f a) (sound p) = f b)
     (q : Quot r)
     : (lift (Quot.indep f) (Quot.indepCoherent f h) q).1 = q := by
- induction q using Quot.ind
- exact rfl
+  induction q using Quot.ind
+  exact rfl
 
 /--
 A dependent recursion principle for `Quot`. It is analogous to the
@@ -1842,10 +1889,12 @@ be easier to use:
 
 `Quot.recOn` is a version of this recursor that takes the quotient parameter first.
 -/
-@[elab_as_elim] protected abbrev rec
+@[elab_as_elim]
+protected abbrev rec
     (f : (a : α) → motive (Quot.mk r a))
     (h : (a b : α) → (p : r a b) → Eq.ndrec (f a) (sound p) = f b)
-    (q : Quot r) : motive q :=
+    (q : Quot r)
+    : motive q :=
   Eq.ndrecOn (Quot.liftIndepPr1 f h q) ((lift (Quot.indep f) (Quot.indepCoherent f h) q).2)
 
 /--
@@ -1863,12 +1912,13 @@ be easier to use:
 
 `Quot.rec` is a version of this recursor that takes the quotient parameter last.
 -/
-@[elab_as_elim] protected abbrev recOn
+@[elab_as_elim]
+protected abbrev recOn
     (q : Quot r)
     (f : (a : α) → motive (Quot.mk r a))
     (h : (a b : α) → (p : r a b) → Eq.ndrec (f a) (sound p) = f b)
     : motive q :=
- q.rec f h
+  q.rec f h
 
 /--
 An alternative induction principle for quotients that can be used when the target type is a
@@ -1879,10 +1929,10 @@ function can be lifted.
 
 `Quot.rec` does not assume that the type is a subsingleton.
 -/
-@[elab_as_elim] protected abbrev recOnSubsingleton
+@[elab_as_elim]
+protected abbrev recOnSubsingleton
     [h : (a : α) → Subsingleton (motive (Quot.mk r a))]
-    (q : Quot r)
-    (f : (a : α) → motive (Quot.mk r a))
+    (q : Quot r) (f : (a : α) → motive (Quot.mk r a))
     : motive q := by
   induction q using Quot.rec
   apply f
@@ -1896,9 +1946,7 @@ a structure.
 `Quot.recOn` is a version of this recursor that uses `Eq` instead of `HEq`.
 -/
 protected abbrev hrecOn
-    (q : Quot r)
-    (f : (a : α) → motive (Quot.mk r a))
-    (c : (a b : α) → (p : r a b) → f a ≍ f b)
+    (q : Quot r) (f : (a : α) → motive (Quot.mk r a)) (c : (a b : α) → (p : r a b) → f a ≍ f b)
     : motive q :=
   Quot.recOn q f fun a b p => eq_of_heq (eqRec_heq_iff.mpr (c a b p))
 
@@ -1927,8 +1975,7 @@ The key quotient operators are:
 that the relation is an equivalence relation. `Quotient` should be used instead of `Quot` for
 relations that actually are equivalence relations.
 -/
-def Quotient {α : Sort u} (s : Setoid α) :=
-  @Quot α Setoid.r
+def Quotient {α : Sort u} (s : Setoid α) := @Quot α Setoid.r
 
 namespace Quotient
 
@@ -1942,9 +1989,7 @@ Given `v : α`, `Quotient.mk s v : Quotient s` is like `v`, except all observati
 must respect `s.r`. `Quotient.lift` allows values in a quotient to be mapped to other types, so long
 as the mapping respects `s.r`.
 -/
-@[inline]
-protected def mk {α : Sort u} (s : Setoid α) (a : α) : Quotient s :=
-  Quot.mk Setoid.r a
+@[inline] protected def mk {α : Sort u} (s : Setoid α) (a : α) : Quotient s := Quot.mk Setoid.r a
 
 /--
 Places an element of a type into the quotient that equates terms according to an equivalence
@@ -1956,11 +2001,9 @@ the instance to be provided explicitly.
 Given `v : α`, `Quotient.mk' v : Quotient s` is like `v`, except all observations of `v`'s value
 must respect `s.r`. `Quotient.lift` allows values in a quotient to be mapped to other types, so long
 as the mapping respects `s.r`.
-
 -/
 @[implicit_reducible]
-protected def mk' {α : Sort u} [s : Setoid α] (a : α) : Quotient s :=
-  Quotient.mk s a
+protected def mk' {α : Sort u} [s : Setoid α] (a : α) : Quotient s := Quotient.mk s a
 
 /--
 The **quotient axiom**, which asserts the equality of elements related in the setoid.
@@ -1983,14 +2026,16 @@ Given `s : Setoid α` and a quotient `Quotient s`, applying a function `f : α �
 `Quotient.liftOn` is a version of this operation that takes the quotient value as its first explicit
 parameter.
 -/
-protected abbrev lift {α : Sort u} {β : Sort v} {s : Setoid α} (f : α → β) : ((a b : α) → a ≈ b → f a = f b) → Quotient s → β :=
+protected abbrev lift {α : Sort u} {β : Sort v} {s : Setoid α} (f : α → β)
+    : ((a b : α) → a ≈ b → f a = f b) → Quotient s → β :=
   Quot.lift f
 
 /--
 A reasoning principle for quotients that allows proofs about quotients to assume that all values are
 constructed with `Quotient.mk`.
 -/
-protected theorem ind {α : Sort u} {s : Setoid α} {motive : Quotient s → Prop} : ((a : α) → motive (Quotient.mk s a)) → (q : Quotient s) → motive q :=
+protected theorem ind {α : Sort u} {s : Setoid α} {motive : Quotient s → Prop}
+    : ((a : α) → motive (Quotient.mk s a)) → (q : Quotient s) → motive q :=
   Quot.ind
 
 /--
@@ -2004,18 +2049,24 @@ a proof `c` that `f` respects the equivalence relation `s.r`. In this case, the 
 `Quotient.lift` is a version of this operation that takes the quotient value last, rather than
 first.
 -/
-protected abbrev liftOn {α : Sort u} {β : Sort v} {s : Setoid α} (q : Quotient s) (f : α → β) (c : (a b : α) → a ≈ b → f a = f b) : β :=
+protected abbrev liftOn
+    {α : Sort u} {β : Sort v} {s : Setoid α}
+    (q : Quotient s) (f : α → β) (c : (a b : α) → a ≈ b → f a = f b)
+    : β :=
   Quot.liftOn q f c
 
-/-- The analogue of `Quot.inductionOn`: every element of `Quotient s` is of the form `Quotient.mk s a`. -/
+/--
+The analogue of `Quot.inductionOn`: every element of `Quotient s` is of the form `Quotient.mk s a`.
+-/
 @[elab_as_elim]
-protected theorem inductionOn {α : Sort u} {s : Setoid α} {motive : Quotient s → Prop}
-    (q : Quotient s)
-    (h : (a : α) → motive (Quotient.mk s a))
+protected theorem inductionOn
+    {α : Sort u} {s : Setoid α} {motive : Quotient s → Prop}
+    (q : Quotient s) (h : (a : α) → motive (Quotient.mk s a))
     : motive q :=
   Quot.inductionOn q h
 
-theorem exists_rep {α : Sort u} {s : Setoid α} (q : Quotient s) : Exists (fun (a : α) => Quotient.mk s a = q) :=
+theorem exists_rep {α : Sort u} {s : Setoid α} (q : Quotient s)
+    : Exists (fun (a : α) => Quotient.mk s a = q) :=
   Quot.exists_rep q
 
 section
@@ -2081,8 +2132,7 @@ so any function can be lifted.
 @[elab_as_elim]
 protected abbrev recOnSubsingleton
     [h : (a : α) → Subsingleton (motive (Quotient.mk s a))]
-    (q : Quotient s)
-    (f : (a : α) → motive (Quotient.mk s a))
+    (q : Quotient s) (f : (a : α) → motive (Quotient.mk s a))
     : motive q :=
   Quot.recOnSubsingleton (h := h) q f
 
@@ -2096,8 +2146,7 @@ a structure.
 @[elab_as_elim]
 protected abbrev hrecOn
     (q : Quotient s)
-    (f : (a : α) → motive (Quotient.mk s a))
-    (c : (a b : α) → (p : a ≈ b) → f a ≍ f b)
+    (f : (a : α) → motive (Quotient.mk s a)) (c : (a b : α) → (p : a ≈ b) → f a ≍ f b)
     : motive q :=
   Quot.hrecOn q f c
 end
@@ -2119,10 +2168,14 @@ protected abbrev lift₂
     (c : (a₁ : α) → (b₁ : β) → (a₂ : α) → (b₂ : β) → a₁ ≈ a₂ → b₁ ≈ b₂ → f a₁ b₁ = f a₂ b₂)
     (q₁ : Quotient s₁) (q₂ : Quotient s₂)
     : φ := by
-  apply Quotient.lift (fun (a₁ : α) => Quotient.lift (f a₁) (fun (a b : β) => c a₁ a a₁ b (Setoid.refl a₁)) q₂) _ q₁
+  apply Quotient.lift
+    (fun (a₁ : α) => Quotient.lift (f a₁) (fun (a b : β) => c a₁ a a₁ b (Setoid.refl a₁)) q₂)
+    _ q₁
   intros
   induction q₂ using Quotient.ind
-  apply c; assumption; apply Setoid.refl
+  apply c
+  assumption
+  apply Setoid.refl
 
 /--
 Lifts a binary function from the underlying types to a binary function on quotients. The function
@@ -2132,8 +2185,7 @@ must respect both quotients' equivalence relations.
 that take the quotient parameters last.
 -/
 protected abbrev liftOn₂
-    (q₁ : Quotient s₁)
-    (q₂ : Quotient s₂)
+    (q₁ : Quotient s₁) (q₂ : Quotient s₂)
     (f : α → β → φ)
     (c : (a₁ : α) → (b₁ : β) → (a₂ : α) → (b₂ : β) → a₁ ≈ a₂ → b₁ ≈ b₂ → f a₁ b₁ = f a₂ b₂)
     : φ :=
@@ -2143,8 +2195,7 @@ protected abbrev liftOn₂
 protected theorem ind₂
     {motive : Quotient s₁ → Quotient s₂ → Prop}
     (h : (a : α) → (b : β) → motive (Quotient.mk s₁ a) (Quotient.mk s₂ b))
-    (q₁ : Quotient s₁)
-    (q₂ : Quotient s₂)
+    (q₁ : Quotient s₁) (q₂ : Quotient s₂)
     : motive q₁ q₂ := by
   induction q₁ using Quotient.ind
   induction q₂ using Quotient.ind
@@ -2153,8 +2204,7 @@ protected theorem ind₂
 @[elab_as_elim]
 protected theorem inductionOn₂
     {motive : Quotient s₁ → Quotient s₂ → Prop}
-    (q₁ : Quotient s₁)
-    (q₂ : Quotient s₂)
+    (q₁ : Quotient s₁) (q₂ : Quotient s₂)
     (h : (a : α) → (b : β) → motive (Quotient.mk s₁ a) (Quotient.mk s₂ b))
     : motive q₁ q₂ := by
   induction q₁ using Quotient.ind
@@ -2163,12 +2213,10 @@ protected theorem inductionOn₂
 
 @[elab_as_elim]
 protected theorem inductionOn₃
-    {s₃ : Setoid φ}
-    {motive : Quotient s₁ → Quotient s₂ → Quotient s₃ → Prop}
-    (q₁ : Quotient s₁)
-    (q₂ : Quotient s₂)
-    (q₃ : Quotient s₃)
-    (h : (a : α) → (b : β) → (c : φ) → motive (Quotient.mk s₁ a) (Quotient.mk s₂ b) (Quotient.mk s₃ c))
+    {s₃ : Setoid φ} {motive : Quotient s₁ → Quotient s₂ → Quotient s₃ → Prop}
+    (q₁ : Quotient s₁) (q₂ : Quotient s₂) (q₃ : Quotient s₃)
+    (h : (a : α) → (b : β) → (c : φ)
+      → motive (Quotient.mk s₁ a) (Quotient.mk s₂ b) (Quotient.mk s₃ c))
     : motive q₁ q₂ q₃ := by
   induction q₁ using Quotient.ind
   induction q₂ using Quotient.ind
@@ -2189,17 +2237,14 @@ private def rel {s : Setoid α} (q₁ q₂ : Quotient s) : Prop :=
         (fun a₁a₂ => Setoid.trans (Setoid.symm a₁b₁) (Setoid.trans a₁a₂ a₂b₂))
         (fun b₁b₂ => Setoid.trans a₁b₁ (Setoid.trans b₁b₂ (Setoid.symm a₂b₂)))))
 
-private theorem rel.refl {s : Setoid α} (q : Quotient s) : rel q q :=
-  q.inductionOn Setoid.refl
+private theorem rel.refl {s : Setoid α} (q : Quotient s) : rel q q := q.inductionOn Setoid.refl
 
-private theorem rel_of_eq {s : Setoid α} {q₁ q₂ : Quotient s} : q₁ = q₂ → rel q₁ q₂ :=
-  fun h => Eq.ndrecOn h (rel.refl q₁)
+private theorem rel_of_eq {s : Setoid α} {q₁ q₂ : Quotient s} : q₁ = q₂ → rel q₁ q₂ := fun h =>
+  Eq.ndrecOn h (rel.refl q₁)
 
-/--
-If two values are equal in a quotient, then they are related by its equivalence relation.
--/
-theorem exact {s : Setoid α} {a b : α} : Quotient.mk s a = Quotient.mk s b → a ≈ b :=
-  fun h => rel_of_eq h
+/-- If two values are equal in a quotient, then they are related by its equivalence relation. -/
+theorem exact {s : Setoid α} {a b : α} : Quotient.mk s a = Quotient.mk s b → a ≈ b := fun h =>
+  rel_of_eq h
 
 end Exact
 
@@ -2219,54 +2264,52 @@ so any function can be lifted.
 protected abbrev recOnSubsingleton₂
     {motive : Quotient s₁ → Quotient s₂ → Sort uC}
     [s : (a : α) → (b : β) → Subsingleton (motive (Quotient.mk s₁ a) (Quotient.mk s₂ b))]
-    (q₁ : Quotient s₁)
-    (q₂ : Quotient s₂)
+    (q₁ : Quotient s₁) (q₂ : Quotient s₂)
     (g : (a : α) → (b : β) → motive (Quotient.mk s₁ a) (Quotient.mk s₂ b))
     : motive q₁ q₂ := by
   induction q₁ using Quot.recOnSubsingleton
   induction q₂ using Quot.recOnSubsingleton
   apply g
-  intro a; apply s
+  intro a
+  apply s
   induction q₂ using Quot.recOnSubsingleton
-  intro a; apply s
+  intro a
+  apply s
   infer_instance
 
 end
 end Quotient
 
 instance Quotient.decidableEq {α : Sort u} {s : Setoid α} [d : ∀ (a b : α), Decidable (a ≈ b)]
-    : DecidableEq (Quotient s) :=
-  fun (q₁ q₂ : Quotient s) =>
-    Quotient.recOnSubsingleton₂ q₁ q₂
-      fun a₁ a₂ =>
-        Decidable.intro (decide (a₁ ≈ a₂))
-          (match d a₁ a₂ with
-          | isTrue h₁  => Quotient.sound h₁
-          | isFalse h₂ => fun h => absurd (Quotient.exact h) h₂)
+    : DecidableEq (Quotient s) := fun (q₁ q₂ : Quotient s) =>
+  Quotient.recOnSubsingleton₂ q₁ q₂ fun a₁ a₂ =>
+    Decidable.intro (decide (a₁ ≈ a₂))
+      (match d a₁ a₂ with
+        | isTrue h₁ => Quotient.sound h₁
+        | isFalse h₂ => fun h => absurd (Quotient.exact h) h₂)
 
-/--
-Like `Quot.liftOn q f h` but allows `f a` to "know" that `q = Quot.mk r a`.
--/
-protected abbrev Quot.pliftOn {α : Sort u} {r : α → α → Prop}
-    (q : Quot r)
-    (f : (a : α) → q = Quot.mk r a → β)
-    (h : ∀ (a b : α) (h h'), r a b → f a h = f b h') : β :=
-  q.rec (motive := fun q' => q = q' → β) f
-    (fun a b p => funext fun h' =>
-      (apply_eqRec (motive := fun b _ => q = b)).trans
-        (@h a b (h'.trans (sound p).symm) h' p)) rfl
+/-- Like `Quot.liftOn q f h` but allows `f a` to "know" that `q = Quot.mk r a`. -/
+protected abbrev Quot.pliftOn
+    {α : Sort u} {r : α → α → Prop} (q : Quot r) (f : (a : α) → q = Quot.mk r a → β)
+    (h : ∀ (a b : α) (h h'), r a b → f a h = f b h')
+    : β :=
+  q.rec
+    (motive := fun q' => q = q' → β)
+    f
+    (fun a b p =>
+      funext fun h' =>
+        (apply_eqRec (motive := fun b _ => q = b)).trans (@h a b (h'.trans (sound p).symm) h' p))
+    rfl
 
-/--
-Like `Quotient.liftOn q f h` but allows `f a` to "know" that `q = Quotient.mk s a`.
--/
-protected abbrev Quotient.pliftOn {α : Sort u} {s : Setoid α}
-    (q : Quotient s)
-    (f : (a : α) → q = Quotient.mk s a → β)
-    (h : ∀ (a b : α) (h h'), a ≈ b → f a h = f b h') : β :=
+/-- Like `Quotient.liftOn q f h` but allows `f a` to "know" that `q = Quotient.mk s a`. -/
+protected abbrev Quotient.pliftOn
+    {α : Sort u} {s : Setoid α} (q : Quotient s) (f : (a : α) → q = Quotient.mk s a → β)
+    (h : ∀ (a b : α) (h h'), a ≈ b → f a h = f b h')
+    : β :=
   Quot.pliftOn q f h
 
-instance Pi.instSubsingleton {α : Sort u} {β : α → Sort v} [∀ a, Subsingleton (β a)] :
-    Subsingleton (∀ a, β a) where
+instance Pi.instSubsingleton {α : Sort u} {β : α → Sort v} [∀ a, Subsingleton (β a)]
+    : Subsingleton (∀ a, β a) where
   allEq f g := funext fun a => Subsingleton.elim (f a) (g a)
 
 /-! # Squash -/
@@ -2275,8 +2318,7 @@ theorem equivalence_true (α : Sort u) : Equivalence fun _ _ : α => True :=
   ⟨fun _ => trivial, fun _ => trivial, fun _ _ => trivial⟩
 
 /-- Always-true relation as a `Setoid`. -/
-protected def Setoid.trivial (α : Sort u) : Setoid α :=
-  ⟨_, equivalence_true α⟩
+protected def Setoid.trivial (α : Sort u) : Setoid α := ⟨_, equivalence_true α⟩
 
 /--
 The quotient of `α` by the universal relation. The elements of `Squash α` are those of `α`, but all
@@ -2297,16 +2339,15 @@ expected.
 -/
 def Squash (α : Sort u) := Quotient (Setoid.trivial α)
 
-/--
-Places a value into its squash type, in which it cannot be distinguished from any other.
--/
+/-- Places a value into its squash type, in which it cannot be distinguished from any other. -/
 def Squash.mk {α : Sort u} (x : α) : Squash α := Quot.mk _ x
 
 /--
 A reasoning principle that allows proofs about squashed types to assume that all values are
 constructed with `Squash.mk`.
 -/
-theorem Squash.ind {α : Sort u} {motive : Squash α → Prop} (h : ∀ (a : α), motive (Squash.mk a)) : ∀ (q : Squash α), motive q :=
+theorem Squash.ind {α : Sort u} {motive : Squash α → Prop} (h : ∀ (a : α), motive (Squash.mk a))
+    : ∀ (q : Squash α), motive q :=
   Quot.ind h
 
 /--
@@ -2315,7 +2356,8 @@ Extracts a squashed value into any subsingleton type.
 If `β` is a subsingleton, a function `α → β` cannot distinguish between elements of `α` and thus
 automatically respects the universal relation that `Squash` quotients with.
 -/
-@[inline] def Squash.lift {α β} [Subsingleton β] (s : Squash α) (f : α → β) : β :=
+@[inline]
+def Squash.lift {α β} [Subsingleton β] (s : Squash α) (f : α → β) : β :=
   Quot.lift f (fun _ _ _ => Subsingleton.elim _ _) s
 
 instance : Subsingleton (Squash α) where
@@ -2326,9 +2368,7 @@ instance : Subsingleton (Squash α) where
     trivial
 
 namespace Lean
-/--
-The term `opaqueId x` will not be reduced by the kernel.
--/
+/-- The term `opaqueId x` will not be reduced by the kernel. -/
 opaque opaqueId {α : Sort u} (x : α) : α := x
 
 end Lean
@@ -2410,13 +2450,15 @@ class LawfulRightIdentity (op : α → β → α) (o : outParam β) : Prop exten
 This class does not require a proof that `o` is an identity, and is used
 primarily for inferring the identity using class resolution.
 -/
-class Identity (op : α → α → α) (o : outParam α) : Prop extends LeftIdentity op o, RightIdentity op o
+class Identity (op : α → α → α) (o : outParam α) : Prop
+  extends LeftIdentity op o, RightIdentity op o
 
 /--
 `LawfulIdentity op o` indicates `o` is a verified left and right
 identity of `op`.
 -/
-class LawfulIdentity (op : α → α → α) (o : outParam α) : Prop extends Identity op o, LawfulLeftIdentity op o, LawfulRightIdentity op o
+class LawfulIdentity (op : α → α → α) (o : outParam α) : Prop
+  extends Identity op o, LawfulLeftIdentity op o, LawfulRightIdentity op o
 
 /--
 `LawfulCommIdentity` can simplify defining instances of `LawfulIdentity`
@@ -2427,7 +2469,8 @@ This class is intended for simplifying defining instances of
 `LawfulIdentity` and functions needed commutative operations with
 identity should just add a `LawfulIdentity` constraint.
 -/
-class LawfulCommIdentity (op : α → α → α) (o : outParam α) [hc : Commutative op] : Prop extends LawfulIdentity op o where
+class LawfulCommIdentity (op : α → α → α) (o : outParam α) [hc : Commutative op] : Prop
+    extends LawfulIdentity op o where
   left_id a := Eq.trans (hc.comm o a) (right_id a)
   right_id a := Eq.trans (hc.comm a o) (left_id a)
 
@@ -2448,9 +2491,9 @@ class Antisymm (r : α → α → Prop) : Prop where
 /-- `Asymm r` means that the binary relation `r` is asymmetric, that is, `r a b → ¬ r b a`. -/
 class Asymm (r : α → α → Prop) : Prop where
   /-- An asymmetric relation satisfies `r a b → ¬ r b a`. -/
-  asymm : ∀ a b, r a b → ¬r b a
+  asymm : ∀ a b, r a b → ¬ r b a
 
-/-- `Symm r` means that the binary relation `r` is symmetric, that is, `r a b → r b a`.  -/
+/-- `Symm r` means that the binary relation `r` is symmetric, that is, `r a b → r b a`. -/
 class Symm (r : α → α → Prop) : Prop where
   /-- A symmetric relation satisfies `r a b → r b a`. -/
   symm : ∀ a b, r a b → r b a
@@ -2463,7 +2506,7 @@ class Total (r : α → α → Prop) : Prop where
 /-- `Irrefl r` means the binary relation `r` is irreflexive, that is, `r x x` never holds. -/
 class Irrefl (r : α → α → Prop) : Prop where
   /-- An irreflexive relation satisfies `¬ r a a`. -/
-  irrefl : ∀ a, ¬r a a
+  irrefl : ∀ a, ¬ r a a
 
 /-- `Trichotomous r` says that `r` is trichotomous, that is, `¬ r a b → ¬ r b a → a = b`. -/
 class Trichotomous (r : α → α → Prop) : Prop where
@@ -2472,8 +2515,8 @@ class Trichotomous (r : α → α → Prop) : Prop where
 
 end Std
 
-@[simp] theorem flip_flip {α : Sort u} {β : Sort v} {φ : Sort w} {f : α → β → φ} :
-    flip (flip f) = f := by
+@[simp]
+theorem flip_flip {α : Sort u} {β : Sort v} {φ : Sort w} {f : α → β → φ} : flip (flip f) = f := by
   apply funext
   intro a
   apply funext

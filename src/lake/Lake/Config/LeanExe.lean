@@ -15,11 +15,13 @@ open Lean System
 public abbrev LeanExe := ConfigTarget LeanExe.configKind
 
 /-- The Lean executables of the package (as an Array). -/
-@[inline] public def Package.leanExes (self : Package) : Array LeanExe :=
+@[inline]
+public def Package.leanExes (self : Package) : Array LeanExe :=
   self.configTargets LeanExe.configKind
 
 /-- Try to find a Lean executable in the package with the given name. -/
-@[inline] public def Package.findLeanExe? (name : Name) (self : Package) : Option LeanExe :=
+@[inline]
+public def Package.findLeanExe? (name : Name) (self : Package) : Option LeanExe :=
   self.findConfigTarget? LeanExe.configKind name
 
 /--
@@ -38,15 +40,16 @@ public def LeanExeConfig.toLeanLibConfig (self : LeanExeConfig n) : LeanLibConfi
 namespace LeanExe
 
 /-- The executable's user-defined configuration. -/
-@[inline] public nonrec def config (self : LeanExe) : LeanExeConfig self.name :=
-  self.config
+@[inline] public nonrec def config (self : LeanExe) : LeanExeConfig self.name := self.config
 
 /-- Converts the executable into a library with a single module (the root). -/
-@[inline] public def toLeanLib (self : LeanExe) : LeanLib :=
+@[inline]
+public def toLeanLib (self : LeanExe) : LeanLib :=
   ⟨self.pkg, self.name, self.config.toLeanLibConfig⟩
 
 /-- The executable's root module. -/
-@[inline] public def root (self : LeanExe) : Module where
+@[inline]
+public def root (self : LeanExe) : Module where
   lib := self.toLeanLib
   name := self.config.root
 
@@ -65,16 +68,15 @@ public def isRootSrc? (path : FilePath) (self : LeanExe) : Option Module :=
 The file name of binary executable
 (i.e., `exeName` plus the platform's `exeExtension`).
 -/
-@[inline] public def fileName (self : LeanExe) : FilePath :=
+@[inline]
+public def fileName (self : LeanExe) : FilePath :=
   FilePath.addExtension self.config.exeName FilePath.exeExtension
 
 /-- The path to the executable in the package's `binDir`. -/
-@[inline] public def file (self : LeanExe) : FilePath :=
-  self.pkg.binDir / self.fileName
+@[inline] public def file (self : LeanExe) : FilePath := self.pkg.binDir / self.fileName
 
 /-- The executable's `supportInterpreter` configuration. -/
-@[inline] public def supportInterpreter (self : LeanExe) : Bool :=
-  self.config.supportInterpreter
+@[inline] public def supportInterpreter (self : LeanExe) : Bool := self.config.supportInterpreter
 
 /--
 Additional link arguments to pass `leanc` when linking the module root
@@ -110,23 +112,24 @@ interpreter. On Windows, it is not possible to statically include these
 symbols in the executable due to symbol limits, so Lake dynamically links to
 the Lean shared library. Otherwise, Lean is linked statically.
 -/
-@[inline] public def sharedLean (self : LeanExe) : Bool :=
+@[inline]
+public def sharedLean (self : LeanExe) : Bool :=
   strictAnd Platform.isWindows self.config.supportInterpreter
 
 /--
 The arguments to weakly pass to `leanc` when linking the binary executable.
 That is, the package's `weakLinkArgs` plus the executable's  `weakLinkArgs`.
 -/
-@[inline] public def weakLinkArgs (self : LeanExe) : Array String :=
+@[inline]
+public def weakLinkArgs (self : LeanExe) : Array String :=
   self.pkg.weakLinkArgs ++ self.config.weakLinkArgs
 
 /-- Additional objects (e.g., `.o` files, static libraries) to link to the executable. -/
-@[inline] public def moreLinkObjs (self : LeanExe) : TargetArray FilePath :=
-  self.config.moreLinkObjs
+@[inline]
+public def moreLinkObjs (self : LeanExe) : TargetArray FilePath := self.config.moreLinkObjs
 
 /-- Additional shared libraries to link to the executable. -/
-@[inline] public def moreLinkLibs (self : LeanExe) : TargetArray Dynlib :=
-  self.config.moreLinkLibs
+@[inline] public def moreLinkLibs (self : LeanExe) : TargetArray Dynlib := self.config.moreLinkLibs
 
 end LeanExe
 
@@ -134,7 +137,7 @@ end LeanExe
 public def Package.findTargetModule? (mod : Name) (self : Package) : Option Module :=
   self.leanExes.findSomeRev? (·.isRoot? mod) <|> self.findModule? mod
 
-/-- Returns the buildable module in the package whose source file is `path`.  -/
+/-- Returns the buildable module in the package whose source file is `path`. -/
 public def Package.findModuleBySrc? (path : FilePath) (self : Package) : Option Module :=
-  self.leanLibs.findSomeRev? (·.findModuleBySrc? path) <|>
-  self.leanExes.findSomeRev? (·.isRootSrc? path)
+  self.leanLibs.findSomeRev? (·.findModuleBySrc? path)
+    <|> self.leanExes.findSomeRev? (·.isRootSrc? path)

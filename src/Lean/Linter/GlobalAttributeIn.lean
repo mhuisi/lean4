@@ -9,7 +9,6 @@ prelude
 public import Lean.Elab.Command
 public import Lean.Linter.Basic
 
-
 namespace Lean.Linter
 open Elab.Command
 
@@ -29,30 +28,36 @@ partial instance [Monad m] : ForIn m TopDownSkipQuot Syntax where
           for arg in args do
             match (← loop arg b) with
             | ForInStep.yield b' => b := b'
-            | ForInStep.done b'  => return ForInStep.done b'
+            | ForInStep.done b' => return ForInStep.done b'
         return ForInStep.yield b
-      | ForInStep.done b => return ForInStep.done b
+      | ForInStep.done b =>
+        return ForInStep.done b
     match (← @loop stx init ⟨init⟩) with
     | ForInStep.yield b => return b
-    | ForInStep.done b  => return b
+    | ForInStep.done b => return b
 
 def getGlobalAttributesIn? : Syntax → Option (Ident × Array (TSyntax `attr))
   | `(attribute [$x,*] $id in $_) =>
-    let xs := x.getElems.filterMap fun a => match a.raw with
-      | `(Parser.Command.eraseAttr| -$_) => none
-      | `(Parser.Term.attrInstance| local $_attr:attr) => none
-      | `(Parser.Term.attrInstance| scoped $_attr:attr) => none
-      | `(attr| $a) => some a
+    let xs :=
+      x.getElems.filterMap fun a =>
+        match a.raw with
+        | `(Parser.Command.eraseAttr| -$_) => none
+        | `(Parser.Term.attrInstance| local $_attr:attr) => none
+        | `(Parser.Term.attrInstance| scoped $_attr:attr) => none
+        | `(attr| $a) => some a
     (id, xs)
-  | _ => default
+  | _ =>
+    default
 
-def globalAttributeIn : Linter where run := withSetOptionIn fun stx => do
-  for s in topDownSkipQuot stx do
-    if let some (id, nonScopedNorLocal) := getGlobalAttributesIn? s then
-      for attr in nonScopedNorLocal do
-        logErrorAt attr
-          m!"Despite the `in`, the attribute {attr} is added globally to {id}\n\
-          please remove the `in` or make this a `local {attr}`"
+def globalAttributeIn : Linter where
+  run :=
+    withSetOptionIn fun stx => do
+      for s in topDownSkipQuot stx do
+        if let some (id, nonScopedNorLocal) := getGlobalAttributesIn? s then
+          for attr in nonScopedNorLocal do
+            logErrorAt attr
+              m!"Despite the `in`, the attribute {attr} is added globally to {id}\n\
+                please remove the `in` or make this a `local {attr}`"
 
 builtin_initialize addLinter globalAttributeIn
 

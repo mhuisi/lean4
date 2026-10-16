@@ -22,7 +22,7 @@ namespace Lake
 public structure LakefileConfig where
   /-- The package deceleration of the configuration file. -/
   pkgDecl : PackageDecl
-  /-- Depdency configurations in the order declared by the configuration file.  -/
+  /-- Depdency configurations in the order declared by the configuration file. -/
   depConfigs : Array Dependency := #[]
   /-- Facet configurations in the order declared by the configuration file. -/
   facetDecls : Array FacetDecl := {}

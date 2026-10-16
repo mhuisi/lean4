@@ -18,33 +18,36 @@ Given a constructor, return a bitmask `m` s.t. `m[i]` is true if field `i` is
 computationally relevant. Returns `none` if the constructor is not sufficiently public for the
 result to be stable across modules.
 -/
-def getRelevantCtorFields? (ctorName : Name) (trivialType : Expr → MetaM Bool) :
-    CoreM (Option (Array Bool)) := do
-  let .ctorInfo info ← getConstInfo ctorName | unreachable!
-  if !isPrivateName info.induct && isPrivateName ctorName then
+def getRelevantCtorFields? (ctorName : Name) (trivialType : Expr → MetaM Bool)
+    : CoreM (Option (Array Bool)) := do
+  let .ctorInfo info ← getConstInfo ctorName
+    | unreachable!
+  if ! isPrivateName info.induct && isPrivateName ctorName then
     try
-      withExporting do
-      go info
-    catch _ => return none
-  else go info
-where go info :=
-  Meta.MetaM.run' do
-    Meta.forallTelescopeReducing info.type fun xs _ => do
-      let mut result := #[]
-      for x in xs[info.numParams...*] do
-        let type ← Meta.inferType x
-        result := result.push !(← trivialType type)
-      return result
+      withExporting do go info
+    catch _ =>
+      return none
+  else
+    go info
+where
+  go info :=
+    Meta.MetaM.run' do
+      Meta.forallTelescopeReducing info.type fun xs _ => do
+        let mut result := #[]
+        for x in xs[info.numParams...*] do
+          let type ← Meta.inferType x
+          result := result.push !(← trivialType type)
+        return result
 
 /--
 We say a structure has a trivial structure if it has not builtin support in the runtime,
 it has only one constructor, and this constructor has only one relevant field.
 -/
 public structure TrivialStructureInfo where
-  ctorName  : Name
+  ctorName : Name
   numParams : Nat
-  fieldIdx  : Nat
-  deriving Inhabited, Repr
+  fieldIdx : Nat
+deriving Inhabited, Repr
 
 /--
 Computes `some fieldIdx` if `declName` is the name of an inductive datatype s.t.
@@ -54,12 +57,14 @@ Computes `some fieldIdx` if `declName` is the name of an inductive datatype s.t.
 - This information is stable across modules, i.e. the type is private or that field does not
   access private information.
 -/
-def Irrelevant.computeHasTrivialStructure?
-    (trivialType : Expr → MetaM Bool) (declName : Name) : CoreM (Option TrivialStructureInfo) := do
+def Irrelevant.computeHasTrivialStructure? (trivialType : Expr → MetaM Bool) (declName : Name)
+    : CoreM (Option TrivialStructureInfo) := do
   if isRuntimeBuiltinType declName then return none
-  let .inductInfo info ← getConstInfo declName | return none
+  let .inductInfo info ← getConstInfo declName
+    | return none
   if info.isUnsafe || info.isRec then return none
-  let [ctorName] := info.ctors | return none
+  let [ctorName] := info.ctors
+    | return none
   let ctorType ← getOtherDeclBaseType ctorName []
   if ctorType.isErased then return none
   let some mask ← getRelevantCtorFields? ctorName trivialType
@@ -74,17 +79,21 @@ def Irrelevant.computeHasTrivialStructure?
 /-- Eagerly computes and persists the trivial-structure info for `declName`; see `compileDecls`. -/
 public def Irrelevant.setHasTrivialStructure?
     (infoExt : MapDeclarationExtension (Option TrivialStructureInfo))
-    (trivialType : Expr → MetaM Bool) (declName : Name) : CoreM Unit := do
+    (trivialType : Expr → MetaM Bool) (declName : Name)
+    : CoreM Unit := do
   unless (infoExt.find? (← getEnv) declName).isSome do
     modifyEnv (infoExt.insert · declName (← computeHasTrivialStructure? trivialType declName))
 
-/-- Trivial-structure info for `declName` (`none` for non-inductives); requires `compileDecls` to
-have been run for inductive `declName`. -/
+/--
+Trivial-structure info for `declName` (`none` for non-inductives); requires `compileDecls` to
+have been run for inductive `declName`.
+-/
 public def Irrelevant.hasTrivialStructure?
-    (infoExt : MapDeclarationExtension (Option TrivialStructureInfo))
-    (declName : Name) : CoreM (Option TrivialStructureInfo) := do
+    (infoExt : MapDeclarationExtension (Option TrivialStructureInfo)) (declName : Name)
+    : CoreM (Option TrivialStructureInfo) := do
   if isRuntimeBuiltinType declName then return none
-  let .inductInfo _ ← getConstInfo declName | return none
+  let .inductInfo _ ← getConstInfo declName
+    | return none
   let some info? := infoExt.find? (← getEnv) declName
     | throwError "`{declName}` was not compiled; `compileDecls` must run on inductive types first"
   return info?

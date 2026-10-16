@@ -29,7 +29,7 @@ public structure Date where
   year : Nat
   month : Nat
   day : Nat
-  deriving Inhabited, DecidableEq, Ord, Repr
+deriving Inhabited, DecidableEq, Ord, Repr
 
 namespace Date
 
@@ -38,13 +38,11 @@ public instance : LE Date := leOfOrd
 public instance : Min Date := minOfLe
 public instance : Max Date := maxOfLe
 
-public abbrev IsLeapYear (y : Nat) : Prop :=
-  y % 4 = 0 ∧ (y % 100 ≠ 0 ∨ y % 400 = 0)
+public abbrev IsLeapYear (y : Nat) : Prop := y % 4 = 0 ∧ (y % 100 ≠ 0 ∨ y % 400 = 0)
 
-public abbrev IsValidMonth (m : Nat) : Prop :=
-  m ≥ 1 ∧ m ≤ 12
+public abbrev IsValidMonth (m : Nat) : Prop := m ≥ 1 ∧ m ≤ 12
 
-public def maxDay (y m : Nat) :  Nat :=
+public def maxDay (y m : Nat) : Nat :=
   if m = 2 then
     if IsLeapYear y then 29 else 28
   else if m ≤ 7 then
@@ -52,17 +50,15 @@ public def maxDay (y m : Nat) :  Nat :=
   else
     31 - (m % 2)
 
-public abbrev IsValidDay (y m d : Nat) : Prop :=
-  d ≥ 1 ∧ d ≤ maxDay y m
+public abbrev IsValidDay (y m d : Nat) : Prop := d ≥ 1 ∧ d ≤ maxDay y m
 
 public def ofValid? (year month day : Nat) : Option Date := do
   guard (IsValidMonth month ∧ IsValidDay year month day)
-  return {year, month, day}
+  return { year, month, day }
 
 public def ofString? (t : String) : Option Date := do
   match t.split '-' |>.toList with
-  | [y,m,d] =>
-    ofValid? (← y.toNat?) (← m.toNat?) (← d.toNat?)
+  | [y, m, d] => ofValid? (← y.toNat?) (← m.toNat?) (← d.toNat?)
   | _ => none
 
 public protected def fromJson? (j : Json) : Except String Date := do
@@ -79,7 +75,6 @@ public protected def toString (d : Date) : String :=
 
 public instance : ToString Date := ⟨Date.toString⟩
 
-@[inline] public protected def toJson (d : Date) : Json :=
-  d.toString
+@[inline] public protected def toJson (d : Date) : Json := d.toString
 
 public instance : ToJson Date := ⟨Date.toJson⟩

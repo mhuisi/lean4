@@ -22,14 +22,14 @@ more details.
 namespace Float.Model.UnpackedFloat
 
 @[simp]
-theorem unpackMantissa_packComponents {spec : Format} {sign exponent mantissa} :
-    unpackMantissa (packComponents spec sign exponent mantissa) = mantissa := by
+theorem unpackMantissa_packComponents {spec : Format} {sign exponent mantissa}
+    : unpackMantissa (packComponents spec sign exponent mantissa) = mantissa := by
   ext i hi
   simp [unpackMantissa, packComponents, BitVec.getLsbD_eq_getElem, BitVec.getLsbD_append, hi]
 
 @[simp]
-theorem unpackExponent_packComponents {spec : Format} {sign exponent mantissa} :
-    unpackExponent (packComponents spec sign exponent mantissa) = exponent := by
+theorem unpackExponent_packComponents {spec : Format} {sign exponent mantissa}
+    : unpackExponent (packComponents spec sign exponent mantissa) = exponent := by
   ext i hi
   simp [unpackExponent, packComponents, BitVec.getLsbD_eq_getElem, BitVec.getLsbD_append, hi]
 
@@ -37,10 +37,14 @@ theorem unpackExponent_packComponents {spec : Format} {sign exponent mantissa} :
 theorem valid_pack {spec : Format} {f : UnpackedFloat} : spec.Valid (pack spec f) := by
   refine ⟨?_⟩
   fun_cases pack with
-  | case1 => simp
-  | case2 s => simp [packedInfinity]
-  | case3 s => simp [packedZero]
-  | case4 s m e hm biasedExponent h => simp [packedInfinity]
+  | case1 =>
+    simp
+  | case2 s =>
+    simp [packedInfinity]
+  | case3 s =>
+    simp [packedZero]
+  | case4 s m e hm biasedExponent h =>
+    simp [packedInfinity]
   | case5 s m e hm actualMantissaBits biasedExponent h₁ h₂ =>
     suffices biasedExponent % 2 ^ spec.exponentBits ≠ 2 ^ spec.exponentBits - 1 by
       simp [BitVec.neg_one_eq_allOnes, ← BitVec.toNat_inj, this]

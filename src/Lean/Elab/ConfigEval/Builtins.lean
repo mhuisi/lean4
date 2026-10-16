@@ -27,31 +27,36 @@ def elabEnsureEvalTermInstance : CommandElab
   | `(command| $[$vis?:visibility]? $kind:attrKind ensure_eval_term_instance%$tk $t:term) => do
     let type ← liftTermElabM do withoutErrToSorry <| elabTermAndSynthesize t none
     ensureEvalTerm vis? kind tk t type
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
 @[builtin_command_elab ensureEvalExprInstance]
 def elabEnsureEvalExprInstance : CommandElab
   | `(command| $[$vis?:visibility]? $kind:attrKind ensure_eval_expr_instance%$tk $t:term) => do
     let type ← liftTermElabM do withoutErrToSorry <| elabTermAndSynthesize t none
     ensureEvalExpr vis? kind tk t type
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
 @[builtin_macro ensureEvalTermExprInstances]
 def expandEnsureEvalTermExprInstance : Macro
   | `(command| $[$vis?:visibility]? $kind:attrKind ensure_eval_term_expr_instances%$tk $t:term) =>
     `($[$vis?]? $kind ensure_eval_term_instance%$tk $t
       $[$vis?]? $kind ensure_eval_expr_instance%$tk $t)
-  | _ => Macro.throwUnsupported
+  | _ =>
+    Macro.throwUnsupported
 
 @[builtin_command_elab deriveEvalExprUsingMeta]
 def elabDeriveEvalExprUsingMeta : CommandElab
-  | `(command| $[$vis?:visibility]? $kind:attrKind derive_eval_expr_instance_using_meta_eval%$tk $t:term) => do
-    let type ← liftTermElabM do withoutErrToSorry <| elabTermAndSynthesize t none
-    deriveEvalExprUsingMetaEval vis? kind tk t type
-  | _ => throwUnsupportedSyntax
+  | `(command| $[$vis?:visibility]? $kind:attrKind derive_eval_expr_instance_using_meta_eval%$tk $t:term) =>
+    do
+      let type ← liftTermElabM do withoutErrToSorry <| elabTermAndSynthesize t none
+      deriveEvalExprUsingMetaEval vis? kind tk t type
+  | _ =>
+    throwUnsupportedSyntax
 
-def mkEvalConfigItemView (entries? : Option (TSyntax ``configEntries)) :
-    CommandElabM EvalConfigItemView := do
+def mkEvalConfigItemView (entries? : Option (TSyntax ``configEntries))
+    : CommandElabM EvalConfigItemView := do
   let mut omitFields : Array (Ident × Name) := #[]
   let mut handlers : Array EvalConfigItemHandler := #[]
   if let some entries := entries? then
@@ -69,8 +74,10 @@ def mkEvalConfigItemView (entries? : Option (TSyntax ``configEntries)) :
             | `(configEntryHandlerKey| *) => pure (.anonymous, .wildcard)
             | _ => throwUnsupportedSyntax
           handlers := handlers.push { ref := key, key := optName, body, kind }
-        | _ => throwUnsupportedSyntax
-    | _ => throwUnsupportedSyntax
+        | _ =>
+          throwUnsupportedSyntax
+    | _ =>
+      throwUnsupportedSyntax
   return { omitFields, handlers }
 
 @[builtin_command_elab defEvalConfigItemCmd]
@@ -81,7 +88,8 @@ def elabDefEvalConfigItemCmd : CommandElab
           $[$entries?:configEntries]?) => do
     let view ← mkEvalConfigItemView entries?
     defEvalConfigItem doc? vis? kind tk struct fn binders view
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
 open Linter.MissingDocs in
 @[builtin_missing_docs_handler defEvalConfigItemCmd]
@@ -91,32 +99,30 @@ open Lean.Parser.Term in
 private def getBracketedBinderArgs (stx : Syntax) : MacroM (Array Term) :=
   match stx with
   | `(bracketedBinderF|($ids:ident* $[: $ty?]? $(_annot?)?)) => return ids
-  | `(bracketedBinderF|{$ids:ident* $[: $_]?})               => return ids
-  | `(bracketedBinderF|⦃$ids:ident* : $_⦄)                    => return ids
-  | `(bracketedBinderF|[$id:ident : $_])                     => return #[id]
-  | `(bracketedBinderF|[$_])                                 => return #[mkHole stx]
-  | _                                                        => Macro.throwErrorAt stx "Unsupported binder"
+  | `(bracketedBinderF|{$ids:ident* $[: $_]?}) => return ids
+  | `(bracketedBinderF|⦃$ids:ident* : $_⦄) => return ids
+  | `(bracketedBinderF|[$id:ident : $_]) => return #[id]
+  | `(bracketedBinderF|[$_]) => return #[mkHole stx]
+  | _ => Macro.throwErrorAt stx "Unsupported binder"
 
 private def mkElabConfigCmd
-    (monad : Ident)
-    (mkMonadAdapt : Term → MacroM Term)
-    (logExceptionsDefault : Term)
-    (mkLogExceptionsTerm : Term → MacroM Term)
-    (doc? : Option (TSyntax ``Parser.Command.docComment))
-    (vis? : Option (TSyntax ``Parser.Command.visibility))
-    (tk : Syntax)
-    (elabName type : Ident)
+    (monad : Ident) (mkMonadAdapt : Term → MacroM Term) (logExceptionsDefault : Term)
+    (mkLogExceptionsTerm : Term → MacroM Term) (doc? : Option (TSyntax ``Parser.Command.docComment))
+    (vis? : Option (TSyntax ``Parser.Command.visibility)) (tk : Syntax) (elabName type : Ident)
     (binders : TSyntaxArray ``Parser.Term.bracketedBinder)
-    (entries? : Option (TSyntax ``configEntries)) :
-    MacroM Command := do
+    (entries? : Option (TSyntax ``configEntries))
+    : MacroM Command := do
   let fnName := mkIdentFrom elabName (elabName.getId ++ `evalConfigItem)
-  let binderArgs ← binders.foldlM (init := #[]) fun args binder => do
-    pure <| args ++ (← getBracketedBinderArgs binder)
+  let binderArgs ←
+    binders.foldlM (init := #[]) fun args binder => do
+      pure <| args ++ (← getBracketedBinderArgs binder)
   let cfgIdent := mkIdent `cfg
   let initIdent := mkIdent `init
   let logExceptionsIdent := mkIdent `logExceptions
   let logExceptionsTerm ← mkLogExceptionsTerm logExceptionsIdent
-  let go ← mkMonadAdapt =<< `(EvalConfigItem.setConfig' eval $initIdent $cfgIdent (onErr := onErr) (logExceptions := $logExceptionsTerm))
+  let go ←
+    mkMonadAdapt
+      =<< `(EvalConfigItem.setConfig' eval $initIdent $cfgIdent (onErr := onErr) (logExceptions := $logExceptionsTerm))
   withRef (mkNullNode #[tk, elabName, type]) do
     `(private local def_eval_config_item $fnName $[$binders]* for $type $[$entries?:configEntries]?
       $[$doc?:docComment]?
@@ -134,7 +140,8 @@ def elabDeclareCoreConfigElab : Macro
     mkElabConfigCmd (mkCIdent ``CoreM) pure (mkCIdent ``false)
       (fun logExceptions => pure logExceptions)
       doc? vis? tk elabName type binders entries?
-  | _ => Macro.throwUnsupported
+  | _ =>
+    Macro.throwUnsupported
 
 open Linter.MissingDocs in
 @[builtin_missing_docs_handler declareCoreConfigElab]
@@ -149,7 +156,8 @@ def elabDeclareTermConfigElab : Macro
     mkElabConfigCmd (mkCIdent ``TermElabM) pure (mkCIdent ``true)
       (fun logExceptions => `($logExceptions && (← read).errToSorry))
       doc? vis? tk elabName type binders entries?
-  | _ => Macro.throwUnsupported
+  | _ =>
+    Macro.throwUnsupported
 
 open Linter.MissingDocs in
 @[builtin_missing_docs_handler elabDeclareTermConfigElab]
@@ -164,7 +172,8 @@ def elabDeclareTacticConfig : Macro
     mkElabConfigCmd (mkCIdent ``Tactic.TacticM) pure (mkCIdent ``true)
       (fun logExceptions => `($logExceptions && (← read).recover))
       doc? vis? tk elabName type binders entries?
-  | _ => Macro.throwUnsupported
+  | _ =>
+    Macro.throwUnsupported
 
 open Linter.MissingDocs in
 @[builtin_missing_docs_handler elabDeclareTacticConfig]
@@ -176,10 +185,13 @@ def elabDeclareCommandConfig : Macro
         $[$doc?:docComment]? $[$vis?:visibility]?
         declare_command_config_elab%$tk $elabName:ident $type:ident $(binders)*
           $[$entries?:configEntries]?) =>
-    mkElabConfigCmd (mkCIdent ``CommandElabM) (fun eval => `(Command.liftTermElabM $eval)) (mkCIdent ``true)
+    mkElabConfigCmd (mkCIdent ``CommandElabM)
+      (fun eval => `(Command.liftTermElabM $eval))
+      (mkCIdent ``true)
       (fun logExceptions => pure logExceptions)
       doc? vis? tk elabName type binders entries?
-  | _ => Macro.throwUnsupported
+  | _ =>
+    Macro.throwUnsupported
 
 open Linter.MissingDocs in
 @[builtin_missing_docs_handler elabDeclareCommandConfig]

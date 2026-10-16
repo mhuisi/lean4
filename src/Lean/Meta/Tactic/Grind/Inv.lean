@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 import Init.Grind.Util
@@ -47,11 +48,13 @@ def checkEqc (root : ENode) : GoalM Unit := do
   assert! root.size == size
 
 def checkChild (e : Expr) (child : Expr) : GoalM Bool := do
-  let some childRoot ← getRoot? child | return false
+  let some childRoot ← getRoot? child
+    | return false
   return isSameExpr childRoot e
 
 def checkMatchCondParent (e : Expr) (parent : Expr) : GoalM Bool := do
-  let_expr Grind.MatchCond parent ← parent | return false
+  let_expr Grind.MatchCond parent ← parent
+    | return false
   let mut curr := parent
   repeat
     let .forallE _ d b _ := curr
@@ -92,20 +95,20 @@ def checkParents (e : Expr) : GoalM Unit := do
           unless (← checkChild e parent.getAppFn) do
             throwError "e: {e}, parent: {parent}"
           assert! (← checkChild e parent.getAppFn)
-    else
-      -- All the parents are stored in the root of the equivalence class.
-      assert! (← getParents e).isEmpty
+  else
+    -- All the parents are stored in the root of the equivalence class.
+    assert! (← getParents e).isEmpty
 
 def checkPtrEqImpliesStructEq : GoalM Unit := do
   let exprs ← getExprs
   for h₁ : i in *...exprs.size do
     let e₁ := exprs[i]
-    for h₂ : j in (i+1)...exprs.size do
+    for h₂ : j in (i + 1)...exprs.size do
       let e₂ := exprs[j]
       -- We don't have multiple nodes for the same expression
-      assert! !isSameExpr e₁ e₂
+      assert! ! isSameExpr e₁ e₂
       -- and the two expressions must not be structurally equal
-      assert! !Expr.equal e₁ e₂
+      assert! ! Expr.equal e₁ e₂
 
 def checkProofs : GoalM Unit := do
   let eqcs ← getEqcs

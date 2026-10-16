@@ -34,23 +34,18 @@ def maxCtorTag := getMaxCtorTag ()
 opaque getUSizeSize : Unit → Nat
 def usizeSize := getUSizeSize ()
 
-
 @[extern "lean_libuv_version"]
 opaque libUVVersionFn : Unit → Nat
 
 @[extern "lean_openssl_version"]
 opaque openSSLVersionFn : Unit → Nat
 
-def closureMaxArgs : Nat :=
-  closureMaxArgsFn ()
+def closureMaxArgs : Nat := closureMaxArgsFn ()
 
-def maxSmallNat : Nat :=
-  maxSmallNatFn ()
+def maxSmallNat : Nat := maxSmallNatFn ()
 
-def libUVVersion : Nat :=
-  libUVVersionFn ()
+def libUVVersion : Nat := libUVVersionFn ()
 
-def openSSLVersion : Nat :=
-  openSSLVersionFn ()
+def openSSLVersion : Nat := openSSLVersionFn ()
 
 end Lean

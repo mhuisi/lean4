@@ -33,8 +33,8 @@ instance : PreservesSup (id : α → α) where
     funext y
     exact propext ⟨fun hy => ⟨y, hy, rfl⟩, fun ⟨x, hx, hxy⟩ => hxy ▸ hx⟩
 
-instance {ε : Type v} (f : α → α) [PreservesSup f] :
-    PreservesSup (Function.comp f : (ε → α) → ε → α) where
+instance {ε : Type v} (f : α → α) [PreservesSup f]
+    : PreservesSup (Function.comp f : (ε → α) → ε → α) where
   map_sup s := by
     funext e
     show f (CompleteLattice.sup s e) = _
@@ -67,8 +67,11 @@ instance (a : Prop) : PreservesSup (meet a) where
       subst p
       exact ⟨hp.1, x, hsx, hp.2⟩
 
-instance {σ : Type v} {β : σ → Type u} [∀ s, CompleteLattice (β s)]
-    [∀ s, ∀ c : β s, PreservesSup (meet c)] (a : ∀ s, β s) : PreservesSup (meet a) where
+instance
+    {σ : Type v} {β : σ → Type u}
+    [∀ s, CompleteLattice (β s)] [∀ s, ∀ c : β s, PreservesSup (meet c)]
+    (a : ∀ s, β s)
+    : PreservesSup (meet a) where
   map_sup s := by
     show a ⊓ CompleteLattice.sup s = CompleteLattice.sup (fun y => ∃ x, s x ∧ y = a ⊓ x)
     funext t
@@ -88,18 +91,20 @@ variable {β : Type v} [CompleteLattice β]
 private theorem fst_meet (p q : α ×' β) : (p ⊓ q).1 = p.1 ⊓ q.1 := by rw [← PProd.mk_meet]
 private theorem snd_meet (p q : α ×' β) : (p ⊓ q).2 = p.2 ⊓ q.2 := by rw [← PProd.mk_meet]
 
-private theorem fst_sup (c : α ×' β → Prop) :
-    (CompleteLattice.sup c).1 = CompleteLattice.sup fun a => ∃ b, c ⟨a, b⟩ := by
+private theorem fst_sup (c : α ×' β → Prop)
+    : (CompleteLattice.sup c).1 = CompleteLattice.sup fun a => ∃ b, c ⟨a, b⟩ := by
   rw [← PProd.mk_sup]
 
-private theorem snd_sup (c : α ×' β → Prop) :
-    (CompleteLattice.sup c).2 = CompleteLattice.sup fun b => ∃ a, c ⟨a, b⟩ := by
+private theorem snd_sup (c : α ×' β → Prop)
+    : (CompleteLattice.sup c).2 = CompleteLattice.sup fun b => ∃ a, c ⟨a, b⟩ := by
   rw [← PProd.mk_sup]
 
-/-- A product lattice preserves suprema componentwise: meets, least upper bounds and the order all
-act on the two components separately. -/
-instance [∀ a : α, PreservesSup (meet a)] [∀ b : β, PreservesSup (meet b)] (p : α ×' β) :
-    PreservesSup (meet p) where
+/--
+A product lattice preserves suprema componentwise: meets, least upper bounds and the order all
+act on the two components separately.
+-/
+instance [∀ a : α, PreservesSup (meet a)] [∀ b : β, PreservesSup (meet b)] (p : α ×' β)
+    : PreservesSup (meet p) where
   map_sup s := by
     refine PartialOrder.rel_antisymm (pprod_le ?_ ?_)
       (sup_le _ fun _ ⟨x, hx, hy⟩ => hy ▸ meet_mono PartialOrder.rel_refl (le_sup s hx))
@@ -120,11 +125,11 @@ section Prod
 
 variable {β : Type v} [CompleteLattice β]
 /-- The order on `α × β` is the order on `α ×' β` at the two components. -/
-private theorem prod_le_iff (p q : α × β) :
-    p ⊑ q ↔ (⟨p.fst, p.snd⟩ : α ×' β) ⊑ ⟨q.fst, q.snd⟩ := Iff.rfl
+private theorem prod_le_iff (p q : α × β) : p ⊑ q ↔ (⟨p.fst, p.snd⟩ : α ×' β) ⊑ ⟨q.fst, q.snd⟩ :=
+  Iff.rfl
 
-instance (f : α → α) (g : β → β) [PreservesSup f] [PreservesSup g] :
-    PreservesSup (Prod.map f g) where
+instance (f : α → α) (g : β → β) [PreservesSup f] [PreservesSup g]
+    : PreservesSup (Prod.map f g) where
   map_sup s := by
     show (f (CompleteLattice.sup s).1, g (CompleteLattice.sup s).2) = _
     refine Eq.trans ?_ (Prod.mk_sup _)
@@ -151,8 +156,8 @@ instance (f : α → α) (g : β → β) [PreservesSup f] [PreservesSup g] :
         exact ⟨x.2, ⟨x.1, hx⟩, h2⟩
 
 /-- A product lattice preserves suprema at the two components. -/
-instance [∀ a : α, PreservesSup (meet a)] [∀ b : β, PreservesSup (meet b)] (p : α × β) :
-    PreservesSup (meet p) where
+instance [∀ a : α, PreservesSup (meet a)] [∀ b : β, PreservesSup (meet b)] (p : α × β)
+    : PreservesSup (meet p) where
   map_sup s := by
     refine PartialOrder.rel_antisymm ?_
       (sup_le _ fun _ ⟨x, hx, hy⟩ => hy ▸ meet_mono PartialOrder.rel_refl (le_sup s hx))
@@ -186,16 +191,16 @@ theorem upperAdjoint_le (f : α → α) [PreservesSup f] (b : α) : f (upperAdjo
 /-- Monotonicity of a supremum-preserving `f`, derived from supremum preservation. -/
 theorem map_mono (f : α → α) [PreservesSup f] {b b' : α} (h : b ⊑ b') : f b ⊑ f b' := by
   have hsup : (CompleteLattice.sup (fun y => y ⊑ b')) = b' :=
-    is_sup_unique (CompleteLattice.sup_spec _)
-      (fun x => ⟨fun hb' y hy => PartialOrder.rel_trans hy hb',
-                 fun hy => hy b' PartialOrder.rel_refl⟩)
-  calc f b ⊑ f (CompleteLattice.sup (fun y => y ⊑ b')) := by
-            rw [PreservesSup.map_sup (f := f)]; exact le_sup _ ⟨b, h, rfl⟩
+    is_sup_unique (CompleteLattice.sup_spec _) (fun x =>
+      ⟨fun hb' y hy => PartialOrder.rel_trans hy hb', fun hy => hy b' PartialOrder.rel_refl⟩)
+  calc
+    f b ⊑ f (CompleteLattice.sup (fun y => y ⊑ b')) := by
+      rw [PreservesSup.map_sup (f := f)]; exact le_sup _ ⟨b, h, rfl⟩
     _ = f b' := by rw [hsup]
 
 /-- A right adjoint is monotone. -/
-theorem upperAdjoint_mono (f : α → α) [PreservesSup f] {b b' : α} (h : b ⊑ b') :
-    upperAdjoint f b ⊑ upperAdjoint f b' :=
+theorem upperAdjoint_mono (f : α → α) [PreservesSup f] {b b' : α} (h : b ⊑ b')
+    : upperAdjoint f b ⊑ upperAdjoint f b' :=
   le_upperAdjoint f (PartialOrder.rel_trans (upperAdjoint_le f b) h)
 
 theorem upperAdjoint_id (b : α) : upperAdjoint (id : α → α) b = b := by
@@ -204,8 +209,8 @@ theorem upperAdjoint_id (b : α) : upperAdjoint (id : α → α) b = b := by
     exact sup_le _ fun x hx => hx
   · exact le_upperAdjoint _ PartialOrder.rel_refl
 
-theorem upperAdjoint_comp_apply {ε : Type v} (f : α → α) [PreservesSup f] (X : ε → α) (e : ε) :
-    upperAdjoint (Function.comp f) X e = upperAdjoint f (X e) := by
+theorem upperAdjoint_comp_apply {ε : Type v} (f : α → α) [PreservesSup f] (X : ε → α) (e : ε)
+    : upperAdjoint (Function.comp f) X e = upperAdjoint f (X e) := by
   apply PartialOrder.rel_antisymm
   · show upperAdjoint (Function.comp f) X e ⊑ _
     unfold upperAdjoint
@@ -217,9 +222,11 @@ theorem upperAdjoint_comp_apply {ε : Type v} (f : α → α) [PreservesSup f] (
       le_upperAdjoint _ fun e' => upperAdjoint_le f (X e')
     exact h e
 
-theorem upperAdjoint_prodMap_fst {β : Type v} [CompleteLattice β]
-    (f : α → α) (g : β → β) [PreservesSup f] [PreservesSup g] (E : α × β) :
-    (upperAdjoint (Prod.map f g) E).fst = upperAdjoint f E.fst := by
+theorem upperAdjoint_prodMap_fst
+    {β : Type v} [CompleteLattice β]
+    (f : α → α) (g : β → β) [PreservesSup f] [PreservesSup g]
+    (E : α × β)
+    : (upperAdjoint (Prod.map f g) E).fst = upperAdjoint f E.fst := by
   apply PartialOrder.rel_antisymm
   · show (upperAdjoint (Prod.map f g) E).fst ⊑ _
     unfold upperAdjoint
@@ -227,15 +234,17 @@ theorem upperAdjoint_prodMap_fst {β : Type v} [CompleteLattice β]
     apply sup_le
     rintro a ⟨b, hab⟩
     exact le_upperAdjoint f hab.left
-  · have h : ((upperAdjoint f E.fst, upperAdjoint g E.snd) : α × β)
-        ⊑ upperAdjoint (Prod.map f g) E :=
+  · have h
+        : ((upperAdjoint f E.fst, upperAdjoint g E.snd) : α × β) ⊑ upperAdjoint (Prod.map f g) E :=
       le_upperAdjoint _ (x := (upperAdjoint f E.fst, upperAdjoint g E.snd))
         (Prod.mk_le _ _ _ (upperAdjoint_le f E.fst) (upperAdjoint_le g E.snd))
     exact h.left
 
-theorem upperAdjoint_prodMap_snd {β : Type v} [CompleteLattice β]
-    (f : α → α) (g : β → β) [PreservesSup f] [PreservesSup g] (E : α × β) :
-    (upperAdjoint (Prod.map f g) E).snd = upperAdjoint g E.snd := by
+theorem upperAdjoint_prodMap_snd
+    {β : Type v} [CompleteLattice β]
+    (f : α → α) (g : β → β) [PreservesSup f] [PreservesSup g]
+    (E : α × β)
+    : (upperAdjoint (Prod.map f g) E).snd = upperAdjoint g E.snd := by
   apply PartialOrder.rel_antisymm
   · show (upperAdjoint (Prod.map f g) E).snd ⊑ _
     unfold upperAdjoint
@@ -243,8 +252,8 @@ theorem upperAdjoint_prodMap_snd {β : Type v} [CompleteLattice β]
     apply sup_le
     rintro b ⟨a, hab⟩
     exact le_upperAdjoint g hab.right
-  · have h : ((upperAdjoint f E.fst, upperAdjoint g E.snd) : α × β)
-        ⊑ upperAdjoint (Prod.map f g) E :=
+  · have h
+        : ((upperAdjoint f E.fst, upperAdjoint g E.snd) : α × β) ⊑ upperAdjoint (Prod.map f g) E :=
       le_upperAdjoint _ (x := (upperAdjoint f E.fst, upperAdjoint g E.snd))
         (Prod.mk_le _ _ _ (upperAdjoint_le f E.fst) (upperAdjoint_le g E.snd))
     exact h.right
@@ -252,17 +261,16 @@ theorem upperAdjoint_prodMap_snd {β : Type v} [CompleteLattice β]
 end PreservesSup
 
 /-- Frame elimination: a join on the left of a meet is eliminated pointwise. -/
-theorem iSup_meet_le {ι : Type v} {P R : α} {Φ : ι → α} [PreservesSup (meet P)]
-    (h : ∀ i, Φ i ⊓ P ⊑ R) : iSup Φ ⊓ P ⊑ R := by
-  refine PartialOrder.rel_trans
-    (le_meet _ _ _ (meet_le_right _ _) (meet_le_left _ _)) ?_
+theorem iSup_meet_le
+    {ι : Type v} {P R : α} {Φ : ι → α} [PreservesSup (meet P)] (h : ∀ i, Φ i ⊓ P ⊑ R)
+    : iSup Φ ⊓ P ⊑ R := by
+  refine PartialOrder.rel_trans (le_meet _ _ _ (meet_le_right _ _) (meet_le_left _ _)) ?_
   show meet P (iSup Φ) ⊑ R
   unfold iSup
   rw [PreservesSup.map_sup (f := meet P)]
   apply sup_le
   rintro y ⟨x, ⟨i, rfl⟩, rfl⟩
-  exact PartialOrder.rel_trans
-    (le_meet _ _ _ (meet_le_right _ _) (meet_le_left _ _)) (h i)
+  exact PartialOrder.rel_trans (le_meet _ _ _ (meet_le_right _ _) (meet_le_left _ _)) (h i)
 
 end Lean.Order
 

@@ -25,12 +25,15 @@ structure ProjectionFunctionInfo where
   i : Nat
   /-- `true` if the structure is a class. -/
   fromClass : Bool
-  deriving Inhabited, Repr
+deriving Inhabited, Repr
 
 builtin_initialize projectionFnInfoExt : MapDeclarationExtension ProjectionFunctionInfo ←
   mkMapDeclarationExtension (logWrites := true)
 
-def addProjectionFnInfo (env : Environment) (projName : Name) (ctorName : Name) (numParams : Nat) (i : Nat) (fromClass : Bool) : Environment :=
+def addProjectionFnInfo
+    (env : Environment) (projName : Name) (ctorName : Name) (numParams : Nat) (i : Nat)
+    (fromClass : Bool)
+    : Environment :=
   projectionFnInfoExt.insert env projName { ctorName, numParams, i, fromClass }
 
 namespace Environment
@@ -44,7 +47,8 @@ def isProjectionFn (env : Environment) (declName : Name) : Bool :=
 /-- If `projName` is the name of a projection function, return the associated structure name -/
 def getProjectionStructureName? (env : Environment) (projName : Name) : Option Name :=
   match env.getProjectionFnInfo? projName with
-  | none          => none
+  | none =>
+    none
   | some projInfo =>
     match env.find? projInfo.ctorName with
     | some (ConstantInfo.ctorInfo val) => some val.induct
@@ -55,7 +59,8 @@ end Environment
 def isProjectionFn [MonadEnv m] [Monad m] (declName : Name) : m Bool :=
   return (← getEnv).isProjectionFn declName
 
-def getProjectionFnInfo? [MonadEnv m] [Monad m] (declName : Name) : m (Option ProjectionFunctionInfo) :=
+def getProjectionFnInfo? [MonadEnv m] [Monad m] (declName : Name)
+    : m (Option ProjectionFunctionInfo) :=
   return (← getEnv).getProjectionFnInfo? declName
 
 /--
@@ -69,22 +74,26 @@ structure AuxParentProjectionInfo where
   numParams : Nat
   /-- `true` if the child structure is a class. -/
   fromClass : Bool
-  deriving Inhabited, Repr
+deriving Inhabited, Repr
 
 builtin_initialize auxParentProjInfoExt : MapDeclarationExtension AuxParentProjectionInfo ←
   mkMapDeclarationExtension (logWrites := true)
 
-def addAuxParentProjectionInfo (env : Environment) (projName : Name) (numParams : Nat) (fromClass : Bool) : Environment :=
+def addAuxParentProjectionInfo
+    (env : Environment) (projName : Name) (numParams : Nat) (fromClass : Bool)
+    : Environment :=
   auxParentProjInfoExt.insert env projName { numParams, fromClass }
 
 namespace Environment
 
-def getAuxParentProjectionInfo? (env : Environment) (projName : Name) : Option AuxParentProjectionInfo :=
+def getAuxParentProjectionInfo? (env : Environment) (projName : Name)
+    : Option AuxParentProjectionInfo :=
   auxParentProjInfoExt.find? env projName
 
 end Environment
 
-def getAuxParentProjectionInfo? [MonadEnv m] [Monad m] (declName : Name) : m (Option AuxParentProjectionInfo) :=
+def getAuxParentProjectionInfo? [MonadEnv m] [Monad m] (declName : Name)
+    : m (Option AuxParentProjectionInfo) :=
   return (← getEnv).getAuxParentProjectionInfo? declName
 
 end Lean

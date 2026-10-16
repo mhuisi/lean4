@@ -33,14 +33,10 @@ end Attr
 
 namespace Tactic
 
-/--
-An invariant alternative of the form `· term`, one per invariant goal.
--/
+/-- An invariant alternative of the form `· term`, one per invariant goal. -/
 syntax invariantDotAlt := ppDedent(ppLine) cdotTk (colGe term)
 
-/--
-An invariant alternative of the form `| inv<n> a b c => term`, one per invariant goal.
--/
+/-- An invariant alternative of the form `| inv<n> a b c => term`, one per invariant goal. -/
 syntax invariantCaseAlt := ppDedent(ppLine) "| " caseArg " => " (colGe term)
 
 /--
@@ -81,23 +77,22 @@ syntax (name := vcgenDischargeGrind) grind : vcgenDischarge
 syntax (name := vcgenDischargeTactic) (priority := low) tactic : vcgenDischarge
 
 @[tactic_alt Lean.Parser.Tactic.vcgenMacro]
-syntax (name := vcgen) "vcgen" optConfig
-  (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*,?) "] ")?
-  (&" until " term)?
-  (&" frames " withPosition((colGe frameAlt)+))?
-  (invariantAlts)?
+syntax (name := vcgen)
+  "vcgen" optConfig (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*,?) "] ")?
+  (&" until " term)? (&" frames " withPosition((colGe frameAlt)+))? (invariantAlts)?
   (&" simplifying_assumptions" (ppSpace colGt ident)? (" [" ident,* "]")?)?
-  (&" with " vcgenDischarge)? : tactic
+  (&" with " vcgenDischarge)?
+  : tactic
 
 namespace Grind
 
-/-- `vcgen` step for `sym => …` blocks. No `with` clause: compose with subsequent grind
-steps using `<;>` instead. -/
-syntax (name := vcgen) "vcgen" optConfig
-  (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*,?) "] ")?
-  (&" until " term)?
-  (&" frames " withPosition((colGe frameAlt)+))?
-  (invariantAlts)?
+/--
+`vcgen` step for `sym => …` blocks. No `with` clause: compose with subsequent grind
+steps using `<;>` instead.
+-/
+syntax (name := vcgen)
+  "vcgen" optConfig (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*,?) "] ")?
+  (&" until " term)? (&" frames " withPosition((colGe frameAlt)+))? (invariantAlts)?
   (&" simplifying_assumptions" (ppSpace colGt ident)? (" [" ident,* "]")?)?
   : grind
 

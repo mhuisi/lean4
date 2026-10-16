@@ -28,102 +28,91 @@ class ToString (α : Type u) where
 export ToString (toString)
 
 -- This instance is needed because `id` is not reducible
-instance {α} [ToString α] : ToString (id α) :=
-  inferInstanceAs (ToString α)
+instance {α} [ToString α] : ToString (id α) := inferInstanceAs (ToString α)
 
-instance {α} [ToString α] : ToString (Id α) :=
-  inferInstanceAs (ToString α)
+instance {α} [ToString α] : ToString (Id α) := inferInstanceAs (ToString α)
 
-instance : ToString String :=
-  ⟨fun s => s⟩
+instance : ToString String := ⟨fun s => s⟩
 
-instance : ToString Substring.Raw :=
-  ⟨fun s => Substring.Raw.Internal.toString s⟩
+instance : ToString Substring.Raw := ⟨fun s => Substring.Raw.Internal.toString s⟩
 
-instance : ToString Char :=
-  ⟨fun c => Char.toString c⟩
+instance : ToString Char := ⟨fun c => Char.toString c⟩
 
-instance : ToString Bool :=
-  ⟨fun b => cond b "true" "false"⟩
+instance : ToString Bool := ⟨fun b => cond b "true" "false"⟩
 
 instance {p : Prop} : ToString (Decidable p) := ⟨fun h =>
   match h with
-  | Decidable.isTrue _  => "true"
+  | Decidable.isTrue _ => "true"
   | Decidable.isFalse _ => "false"⟩
 
-instance : ToString PUnit.{u+1} :=
-  ⟨fun _ => "()"⟩
+instance : ToString PUnit.{u + 1} := ⟨fun _ => "()"⟩
 
-instance {α : Type u} [ToString α] : ToString (ULift.{v} α) :=
-  ⟨fun v => toString v.1⟩
+instance {α : Type u} [ToString α] : ToString (ULift.{v} α) := ⟨fun v => toString v.1⟩
 
-instance : ToString Nat :=
-  ⟨fun n => Nat.repr n⟩
+instance : ToString Nat := ⟨fun n => Nat.repr n⟩
 
-instance : ToString String.Pos.Raw :=
-  ⟨fun p => Nat.repr p.byteIdx⟩
+instance : ToString String.Pos.Raw := ⟨fun p => Nat.repr p.byteIdx⟩
 
-instance (n : Nat) : ToString (Fin n) :=
-  ⟨fun f => toString (Fin.val f)⟩
+instance (n : Nat) : ToString (Fin n) := ⟨fun f => toString (Fin.val f)⟩
 
-instance : ToString UInt8 :=
-  ⟨fun n => toString n.toNat⟩
+instance : ToString UInt8 := ⟨fun n => toString n.toNat⟩
 
-instance : ToString UInt16 :=
-  ⟨fun n => toString n.toNat⟩
+instance : ToString UInt16 := ⟨fun n => toString n.toNat⟩
 
-instance : ToString UInt32 :=
-  ⟨fun n => toString n.toNat⟩
+instance : ToString UInt32 := ⟨fun n => toString n.toNat⟩
 
-instance : ToString UInt64 :=
-  ⟨fun n => toString n.toNat⟩
+instance : ToString UInt64 := ⟨fun n => toString n.toNat⟩
 
-instance : ToString USize :=
-  ⟨fun n => toString n.toNat⟩
+instance : ToString USize := ⟨fun n => toString n.toNat⟩
 
 instance : ToString Format where
   toString f := f.pretty
 
 def addParenHeuristic (s : String) : String :=
-  if String.Internal.isPrefixOf "(" s || String.Internal.isPrefixOf "[" s || String.Internal.isPrefixOf "{" s || String.Internal.isPrefixOf "#[" s then s
-  else if !(String.Internal.any s Char.isWhitespace) then s
-  else String.Internal.append (String.Internal.append "(" s) ")"
+  if String.Internal.isPrefixOf "(" s || String.Internal.isPrefixOf "[" s
+      || String.Internal.isPrefixOf "{" s || String.Internal.isPrefixOf "#[" s then
+    s
+  else if !(String.Internal.any s Char.isWhitespace) then
+    s
+  else
+    String.Internal.append (String.Internal.append "(" s) ")"
 
 instance {α : Type u} [ToString α] : ToString (Option α) := ⟨fun
-  | none => "none"
-  | (some a) => String.Internal.append (String.Internal.append "(some " (addParenHeuristic (toString a))) ")"⟩
+  | none =>
+    "none"
+  | (some a) =>
+    String.Internal.append (String.Internal.append "(some " (addParenHeuristic (toString a))) ")"⟩
 
 instance {α : Type u} {β : Type v} [ToString α] [ToString β] : ToString (Sum α β) := ⟨fun
-  | (inl a) => String.Internal.append (String.Internal.append "(inl " (addParenHeuristic (toString a))) ")"
-  | (inr b) => String.Internal.append (String.Internal.append "(inr " (addParenHeuristic (toString b))) ")"⟩
+  | (inl a) =>
+    String.Internal.append (String.Internal.append "(inl " (addParenHeuristic (toString a))) ")"
+  | (inr b) =>
+    String.Internal.append (String.Internal.append "(inr " (addParenHeuristic (toString b))) ")"⟩
 
 instance {α : Type u} {β : Type v} [ToString α] [ToString β] : ToString (α × β) := ⟨fun (a, b) =>
   String.Internal.append
-    (String.Internal.append
-      (String.Internal.append
-        (String.Internal.append "(" (toString a))
-        ", ")
+    (String.Internal.append (String.Internal.append (String.Internal.append "(" (toString a)) ", ")
       (toString b))
     ")"⟩
 
-instance {α : Type u} {β : α → Type v} [ToString α] [∀ x, ToString (β x)] : ToString (Sigma β) := ⟨fun ⟨a, b⟩ =>
-  String.Internal.append
-    (String.Internal.append
+instance {α : Type u} {β : α → Type v} [ToString α] [∀ x, ToString (β x)] : ToString (Sigma β) :=
+  ⟨fun ⟨a, b⟩ =>
+    String.Internal.append
       (String.Internal.append
-        (String.Internal.append "⟨" (toString a))
-        ", ")
-      (toString b))
-    "⟩"⟩
+        (String.Internal.append (String.Internal.append "⟨" (toString a)) ", ") (toString b))
+      "⟩"⟩
 
-instance {α : Type u} {p : α → Prop} [ToString α] : ToString (Subtype p) := ⟨fun s =>
-  toString (val s)⟩
+instance {α : Type u} {p : α → Prop} [ToString α] : ToString (Subtype p) :=
+  ⟨fun s => toString (val s)⟩
 
 instance [ToString ε] [ToString α] : ToString (Except ε α) where
   toString
     | Except.error e => String.Internal.append "error: " (toString e)
-    | Except.ok a    => String.Internal.append "ok: " (toString a)
+    | Except.ok a => String.Internal.append "ok: " (toString a)
 
 instance [Repr ε] [Repr α] : Repr (Except ε α) where
   reprPrec
-    | Except.error e, prec => Repr.addAppParen ("Except.error " ++ reprArg e) prec
-    | Except.ok a, prec    => Repr.addAppParen ("Except.ok " ++ reprArg a) prec
+    | Except.error e, prec =>
+      Repr.addAppParen ("Except.error " ++ reprArg e) prec
+    | Except.ok a, prec =>
+      Repr.addAppParen ("Except.ok " ++ reprArg a) prec

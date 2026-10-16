@@ -23,13 +23,9 @@ namespace Lean.Compiler.LCNF
 
 open ImpureType
 
-/--
-An argument to a `SimpleGroundExpr`. They get compiled to `lean_object*` in various ways.
--/
+/-- An argument to a `SimpleGroundExpr`. They get compiled to `lean_object*` in various ways. -/
 public inductive SimpleGroundArg where
-  /--
-  A simple tagged literal.
-  -/
+  /-- A simple tagged literal. -/
   | tagged (val : Nat)
   /--
   A reference to another declaration that was marked as a simple ground expression. This gets
@@ -40,24 +36,20 @@ public inductive SimpleGroundArg where
   A reference directly to a raw C name. This gets compiled to a reference to the name directly.
   -/
   | rawReference (s : String)
-  deriving Inhabited
+deriving Inhabited
 
-/--
-A simple ground expression that can be turned into a static initializer.
--/
+/-- A simple ground expression that can be turned into a static initializer. -/
 public inductive SimpleGroundExpr where
   /--
   Represents a `lean_ctor_object`. Crucially the `scalarArgs` array must have a size that is a
   multiple of 8.
   -/
-  | ctor (cidx : Nat) (objArgs : Array SimpleGroundArg) (usizeArgs : Array UInt64) (scalarArgs : Array UInt8)
-  /--
-  A string literal, represented by a `lean_string_object`.
-  -/
+  | ctor
+    (cidx : Nat) (objArgs : Array SimpleGroundArg) (usizeArgs : Array UInt64)
+    (scalarArgs : Array UInt8)
+  /-- A string literal, represented by a `lean_string_object`. -/
   | string (data : String)
-  /--
-  A partial application, represented by a `lean_closure_object`.
-  -/
+  /-- A partial application, represented by a `lean_closure_object`. -/
   | pap (func : Name) (args : Array SimpleGroundArg)
   /--
   An application of `Lean.Name.mkStrX`. This expression is represented separately to ensure that
@@ -71,41 +63,36 @@ public inductive SimpleGroundExpr where
   compiled to a reference to the mangled version of the name.
   -/
   | reference (n : Name)
-  /--
-  An array of `lean_object*` elements, represented by a `lean_array_object`.
-  -/
+  /-- An array of `lean_object*` elements, represented by a `lean_array_object`. -/
   | array (elems : Array SimpleGroundArg)
-  /--
-  A byte array (scalar array with elem_size=1), represented by a `lean_sarray_object`.
-  -/
+  /-- A byte array (scalar array with elem_size=1), represented by a `lean_sarray_object`. -/
   | byteArray (data : Array UInt8)
-  deriving Inhabited
+deriving Inhabited
 
 public structure SimpleGroundExtState where
   constNames : PHashMap Name SimpleGroundExpr := {}
   revNames : List Name := []
-  deriving Inhabited
+deriving Inhabited
 
 builtin_initialize simpleGroundDeclExt : EnvExtension SimpleGroundExtState ←
   registerEnvExtension (pure {}) (asyncMode := .sync)
-    (replay? := some fun oldState newState _ s =>
-      let newNames := takeNewEntries newState.revNames oldState.revNames
-      newNames.foldl (init := s) fun s n =>
-        let g := newState.constNames.find! n
-        { s with constNames := s.constNames.insert n g, revNames := n :: s.revNames }
-    )
+    (replay? :=
+      some fun oldState newState _ s =>
+        let newNames := takeNewEntries newState.revNames oldState.revNames
+        newNames.foldl (init := s) fun s n =>
+          let g := newState.constNames.find! n
+          { s with constNames := s.constNames.insert n g, revNames := n :: s.revNames })
 
-/--
-Record `declName` as mapping to the simple ground expr `expr`.
--/
-public def addSimpleGroundDecl (env : Environment) (declName : Name) (expr : SimpleGroundExpr) :
-    Environment :=
-  simpleGroundDeclExt.modifyState env fun s =>
-    { s with constNames := s.constNames.insert declName expr, revNames := declName :: s.revNames }
+/-- Record `declName` as mapping to the simple ground expr `expr`. -/
+public def addSimpleGroundDecl (env : Environment) (declName : Name) (expr : SimpleGroundExpr)
+    : Environment :=
+  simpleGroundDeclExt.modifyState env fun s => {
+    s with
+    constNames := s.constNames.insert declName expr
+    revNames := declName :: s.revNames
+  }
 
-/--
-Attempt to fetch a `SimpleGroundExpr` associated with `declName` if it exists.
--/
+/-- Attempt to fetch a `SimpleGroundExpr` associated with `declName` if it exists. -/
 public def getSimpleGroundExpr (env : Environment) (declName : Name) : Option SimpleGroundExpr :=
   (simpleGroundDeclExt.getState env).constNames.find? declName
 
@@ -113,8 +100,8 @@ public def getSimpleGroundExpr (env : Environment) (declName : Name) : Option Si
 Like `getSimpleGroundExpr` but recursively traverses `reference` exprs to get to actual ground
 values.
 -/
-public def getSimpleGroundExprWithResolvedRefs (env : Environment) (declName : Name) :
-    Option SimpleGroundExpr := Id.run do
+public def getSimpleGroundExprWithResolvedRefs (env : Environment) (declName : Name)
+    : Option SimpleGroundExpr := Id.run do
   let mut declName := declName
   while true do
     let val := getSimpleGroundExpr env declName
@@ -123,24 +110,20 @@ public def getSimpleGroundExprWithResolvedRefs (env : Environment) (declName : N
     | other => return other
   return none
 
-/--
-Check if `declName` is recorded as being a `SimpleGroundExpr`.
--/
+/-- Check if `declName` is recorded as being a `SimpleGroundExpr`. -/
 public def isSimpleGroundDecl (env : Environment) (declName : Name) : Bool :=
   (simpleGroundDeclExt.getState env).constNames.contains declName
 
-public def uint64ToByteArrayLE (n : UInt64) : Array UInt8 :=
-  #[
-    n.toUInt8,
-    (n >>> 0x08).toUInt8,
-    (n >>> 0x10).toUInt8,
-    (n >>> 0x18).toUInt8,
-    (n >>> 0x20).toUInt8,
-    (n >>> 0x28).toUInt8,
-    (n >>> 0x30).toUInt8,
-    (n >>> 0x38).toUInt8,
-  ]
-
+public def uint64ToByteArrayLE (n : UInt64) : Array UInt8 := #[
+  n.toUInt8,
+  (n >>> 0x08).toUInt8,
+  (n >>> 0x10).toUInt8,
+  (n >>> 0x18).toUInt8,
+  (n >>> 0x20).toUInt8,
+  (n >>> 0x28).toUInt8,
+  (n >>> 0x30).toUInt8,
+  (n >>> 0x38).toUInt8,
+]
 
 inductive SimpleGroundValue where
   | arg (arg : SimpleGroundArg)
@@ -154,7 +137,7 @@ inductive SimpleGroundValue where
   expression instead.
   -/
   | arrayBuilder (elems : List SimpleGroundArg) (remainingCapacity : Nat)
-  deriving Inhabited
+deriving Inhabited
 
 structure DetectState where
   groundMap : Std.HashMap FVarId SimpleGroundValue := {}
@@ -178,12 +161,15 @@ partial def compileToSimpleGroundExpr (code : Code .impure) : CompilerM (Option 
 where
   go (code : Code .impure) : DetectM SimpleGroundExpr := do
     match code with
-    | .let decl (.return fvarId) | .let decl (.inc _ _ _ true  (.return fvarId)) =>
+    | .let decl (.return fvarId) | .let decl (.inc _ _ _ true (.return fvarId)) =>
       guard <| decl.fvarId == fvarId
       compileFinalLet decl.value
-    | .let decl k => compileNonFinalLet decl k
-    | .inc (persistent := true) (k := k) .. => go k
-    | _ => failure
+    | .let decl k =>
+      compileNonFinalLet decl k
+    | .inc (persistent := true) (k := k) .. =>
+      go k
+    | _ =>
+      failure
 
   @[inline]
   record (id : FVarId) (val : SimpleGroundValue) : DetectM Unit :=
@@ -200,15 +186,22 @@ where
       | .nat v =>
         match decl.type with
         | ImpureType.tagged =>
-          guard <| v < 2^31
+          guard <| v < 2 ^ 31
           record decl.fvarId (.arg (.tagged v))
-        | _ => failure
-      | .uint8 v => record decl.fvarId (.uint8 v)
-      | .uint16 v => record decl.fvarId (.uint16 v)
-      | .uint32 v => record decl.fvarId (.uint32 v)
-      | .uint64 v => record decl.fvarId (.uint64 v)
-      | .usize v => record decl.fvarId (.usize v)
-      | .str .. => failure
+        | _ =>
+          failure
+      | .uint8 v =>
+        record decl.fvarId (.uint8 v)
+      | .uint16 v =>
+        record decl.fvarId (.uint16 v)
+      | .uint32 v =>
+        record decl.fvarId (.uint32 v)
+      | .uint64 v =>
+        record decl.fvarId (.uint64 v)
+      | .usize v =>
+        record decl.fvarId (.usize v)
+      | .str .. =>
+        failure
       go k
     | .ctor i objArgs =>
       if i.isScalar then
@@ -218,8 +211,7 @@ where
         let objArgs ← compileArgs objArgs
         let usizeArgs := Array.replicate i.usize 0
         -- Align to 8 bytes for alignment with lean_object*
-        let align (v a : Nat) : Nat :=
-          (v / a) * a + a * (if v % a != 0 then 1 else 0)
+        let align (v a : Nat) : Nat := (v / a) * a + a * (if v % a != 0 then 1 else 0)
         let alignedSsize := align i.ssize 8
         let ssizeArgs := Array.replicate alignedSsize 0
         compileSetChain decl.fvarId i objArgs usizeArgs ssizeArgs k
@@ -232,22 +224,28 @@ where
         record decl.fvarId (.arg (.tagged v.toNat))
         go k
       -- boxed uint32/uint64 get extracted into separate closed terms automatically
-      | _ => failure
+      | _ =>
+        failure
     | .fap ``Array.mkEmpty #[.erased, .fvar sizeId]
     | .fap ``Array.emptyWithCapacity #[.erased, .fvar sizeId] =>
-      let .arg (.tagged size) := (← get).groundMap[sizeId]! | failure
+      let .arg (.tagged size) := (← get).groundMap[sizeId]!
+        | failure
       record decl.fvarId (.arrayBuilder [] size)
       go k
     | .fap ``Array.push #[.erased, .fvar arrId, .fvar elemId] =>
-      let .arrayBuilder elems remainingCapacity := (← get).groundMap[arrId]! | failure
-      let .arg elemArg := (← get).groundMap[elemId]! | failure
+      let .arrayBuilder elems remainingCapacity := (← get).groundMap[arrId]!
+        | failure
+      let .arg elemArg := (← get).groundMap[elemId]!
+        | failure
       record decl.fvarId (.arrayBuilder (elemArg :: elems) (remainingCapacity - 1))
       go k
-    | _ => failure
+    | _ =>
+      failure
 
-  compileSetChain (id : FVarId) (info : CtorInfo) (objArgs : Array SimpleGroundArg)
-      (usizeArgs : Array UInt64) (scalarArgs : Array UInt8) (code : Code .impure) :
-      DetectM SimpleGroundExpr := do
+  compileSetChain
+      (id : FVarId) (info : CtorInfo) (objArgs : Array SimpleGroundArg) (usizeArgs : Array UInt64)
+      (scalarArgs : Array UInt8) (code : Code .impure)
+      : DetectM SimpleGroundExpr := do
     match code with
     | .return fvarId =>
       guard <| id == fvarId
@@ -281,15 +279,18 @@ where
           let scalarArgs := scalarArgs.set! (offset + 6) (v >>> 0x30).toUInt8
           let scalarArgs := scalarArgs.set! (offset + 7) (v >>> 0x38).toUInt8
           pure scalarArgs
-        | _ => failure
+        | _ =>
+          failure
       compileSetChain id info objArgs usizeArgs scalarArgs k
     | .uset id' i y k =>
       guard <| id == id'
       let i := i - objArgs.size
-      let .usize v := (← get).groundMap[y]! | failure
+      let .usize v := (← get).groundMap[y]!
+        | failure
       let usizeArgs := usizeArgs.set! i v
       compileSetChain id info objArgs usizeArgs scalarArgs k
-    | _ => failure
+    | _ =>
+      failure
 
   compileFinalLet (e : LetValue .impure) : DetectM SimpleGroundExpr := do
     match e with
@@ -302,7 +303,8 @@ where
       return .ctor i.cidx (← compileArgs args) #[] #[]
     | .fap ``Name.num._override args =>
       let pre ← compileArg args[0]!
-      let .tagged i ← compileArg args[1]! | failure
+      let .tagged i ← compileArg args[1]!
+        | failure
       let name := Name.num (← interpNameLiteral pre) i
       let hash := name.hash
       return .ctor 2 #[pre, .tagged i] #[] (uint64ToByteArrayLE hash)
@@ -329,64 +331,88 @@ where
       return .nameMkStr processedArgs
     | .fap ``Array.mkEmpty #[.erased, .fvar sizeId]
     | .fap ``Array.emptyWithCapacity #[.erased, .fvar sizeId] =>
-      let .arg (.tagged 0) := (← get).groundMap[sizeId]! | failure
+      let .arg (.tagged 0) := (← get).groundMap[sizeId]!
+        | failure
       return .array #[]
     | .fap ``ByteArray.mk #[.fvar argId] =>
       match (← get).groundMap[argId]! with
       | .arrayBuilder elems 0 =>
-        let bytes ← elems.mapM fun elem => do
-          let .tagged v := elem | failure
-          return v.toUInt8
+        let bytes ←
+          elems.mapM fun elem => do
+            let .tagged v := elem
+              | failure
+            return v.toUInt8
         return .byteArray bytes.toArray.reverse
       | .arg (.reference ref) =>
-        let some (.array elems) := getSimpleGroundExprWithResolvedRefs (← getEnv) ref | failure
-        let bytes ← elems.mapM fun elem => do
-          let .tagged v := elem | failure
-          return v.toUInt8
+        let some (.array elems) := getSimpleGroundExprWithResolvedRefs (← getEnv) ref
+          | failure
+        let bytes ←
+          elems.mapM fun elem => do
+            let .tagged v := elem
+              | failure
+            return v.toUInt8
         return .byteArray bytes
-      | _ => failure
+      | _ =>
+        failure
     | .fap ``Array.push #[.erased, .fvar arrId, .fvar elemId] =>
-      let .arrayBuilder elems remainingCapacity := (← get).groundMap[arrId]! | failure
+      let .arrayBuilder elems remainingCapacity := (← get).groundMap[arrId]!
+        | failure
       if remainingCapacity > 1 then failure
-      let .arg elemArg := (← get).groundMap[elemId]! | failure
+      let .arg elemArg := (← get).groundMap[elemId]!
+        | failure
       return .array (elemArg :: elems).toArray.reverse
     | .fap c #[] =>
       guard <| isSimpleGroundDecl (← getEnv) c
       return .reference c
     | .box _ fvarId =>
       match (← get).groundMap[fvarId]! with
-      | .uint32 _ => failure -- TODO: figure out how to do this properly with 32/64bit restrictions
-      | .uint64 v => return .ctor 0 #[] #[] (uint64ToByteArrayLE v)
-      | .usize v => return .ctor 0 #[] #[v] #[]
-      | .uint8 _ | .uint16 _ -- boxed uint8/uint16 should never be final expressions
-      | _ => failure
-    | .pap c ys => return .pap c (← compileArgs ys)
-    | _ => failure
+      | .uint32 _ =>
+        failure -- TODO: figure out how to do this properly with 32/64bit restrictions
+      | .uint64 v =>
+        return .ctor 0 #[] #[] (uint64ToByteArrayLE v)
+      | .usize v =>
+        return .ctor 0 #[] #[v] #[]
+      | .uint8 _
+      | .uint16 _ -- boxed uint8/uint16 should never be final expressions
+      | _ =>
+        failure
+    | .pap c ys =>
+      return .pap c (← compileArgs ys)
+    | _ =>
+      failure
 
   compileArg (arg : Arg .impure) : DetectM SimpleGroundArg := do
     match arg with
     | .fvar fvarId =>
-      let .arg arg := (← get).groundMap[fvarId]! | failure
+      let .arg arg := (← get).groundMap[fvarId]!
+        | failure
       return arg
-    | .erased => return .tagged 0
+    | .erased =>
+      return .tagged 0
 
   compileArgs (args : Array (Arg .impure)) : DetectM (Array SimpleGroundArg) := do
     args.mapM compileArg
 
   compileStrArg (arg : Arg .impure) : DetectM (Name × String) := do
-    let .fvar fvarId := arg | failure
-    let (.arg (.reference ref)) := (← get).groundMap[fvarId]! | failure
-    let some (.string val) := getSimpleGroundExprWithResolvedRefs (← getEnv) ref | failure
+    let .fvar fvarId := arg
+      | failure
+    let (.arg (.reference ref)) := (← get).groundMap[fvarId]!
+      | failure
+    let some (.string val) := getSimpleGroundExprWithResolvedRefs (← getEnv) ref
+      | failure
     return (ref, val)
 
   interpStringLiteral (arg : SimpleGroundArg) : DetectM String := do
-    let .reference ref := arg | failure
-    let some (.string val) := getSimpleGroundExprWithResolvedRefs (← getEnv) ref | failure
+    let .reference ref := arg
+      | failure
+    let some (.string val) := getSimpleGroundExprWithResolvedRefs (← getEnv) ref
+      | failure
     return val
 
   interpNameLiteral (arg : SimpleGroundArg) : DetectM Name := do
     match arg with
-    | .tagged 0 => return .anonymous
+    | .tagged 0 =>
+      return .anonymous
     | .reference ref =>
       match getSimpleGroundExprWithResolvedRefs (← getEnv) ref with
       | some (.ctor 1 #[pre, .reference ref] _ _) =>
@@ -400,16 +426,18 @@ where
         args.foldlM (init := .anonymous) fun acc (ref, _) => do
           let part ← interpStringLiteral (.reference ref)
           return .str acc part
-      | _ => failure
-    | _ => failure
-
+      | _ =>
+        failure
+    | _ =>
+      failure
 
 /--
 Detect whether `d` can be compiled to a `SimpleGroundExpr`. If it can record the associated
 `SimpleGroundExpr` into the environment for later processing by code emission.
 -/
 def Decl.detectSimpleGround (d : Decl .impure) : CompilerM Unit := do
-  let .code code := d.value | return ()
+  let .code code := d.value
+    | return ()
   if d.type.isPossibleRef && d.params.isEmpty then
     if let some groundExpr ← compileToSimpleGroundExpr code then
       trace[Compiler.simpleGround] m!"Marked {d.name} as simple ground expr"

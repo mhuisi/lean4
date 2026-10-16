@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 public import Lean.Meta.Sym.Simp.SimpM
@@ -48,16 +49,21 @@ builtin_initialize registerTraceClass `grind.norm.sym
 /-- The `grind` normalization theorems as `Sym.simp` theorem sets. -/
 structure NormSymTheorems where
   /-- Theorems applied before visiting subterms (`[grind norm ↓]`). -/
-  pre  : Sym.Simp.Theorems := {}
-  /-- Theorems applied after visiting subterms (`[grind norm]`), and the equational theorems
-  of the declarations to unfold (`[grind unfold]`). -/
+  pre : Sym.Simp.Theorems := {}
+  /--
+  Theorems applied after visiting subterms (`[grind norm]`), and the equational theorems
+  of the declarations to unfold (`[grind unfold]`).
+  -/
   post : Sym.Simp.Theorems := {}
-  /-- The `rfl`-theorems of `post` and the declarations to unfold, for `Sym.dsimp`. `grind` needs
+  /--
+  The `rfl`-theorems of `post` and the declarations to unfold, for `Sym.dsimp`. `grind` needs
   `dsimp` in one place: the right-hand side of a generalized pattern (`mkGeneralizedPatternEqProof`)
-  must stay definitionally equal to the term it replaces, e.g. `Nat.succ x` becomes `x + 1`. -/
+  must stay definitionally equal to the term it replaces, e.g. `Nat.succ x` becomes `x + 1`.
+  -/
   dsimp : Sym.DSimp.Decls := {}
 
-private def addNormSymTheorem (thms : Sym.Simp.Theorems) (thm : SimpTheorem) : MetaM Sym.Simp.Theorems := do
+private def addNormSymTheorem (thms : Sym.Simp.Theorems) (thm : SimpTheorem)
+    : MetaM Sym.Simp.Theorems := do
   -- Global simp theorems, including the reversed ones (`[grind norm ←]`), are stored as
   -- constants: `mkSimpTheoremFromConst` creates an auxiliary lemma when it has to adapt the
   -- statement.
@@ -99,20 +105,27 @@ def mkNormSymTheorems : MetaM NormSymTheorems := do
   return { pre, post, dsimp }
 
 /-- `Sym.simp` methods approximating the legacy `grind` normalizer. -/
-def mkNormSymMethods (config : Grind.Config) (thms : NormSymTheorems) : Sym.Simp.Methods := Id.run do
+def mkNormSymMethods (config : Grind.Config) (thms : NormSymTheorems)
+    : Sym.Simp.Methods := Id.run do
   let d : Discharger := Sym.Simp.dischargeSimpSelf
-  let mut pre : Simproc := NormSym.eraseMData >> NormSym.preMatchCond >> NormSym.simpMatchDiscrsOnly
-    >> Sym.Simp.beta >> Sym.Simp.reduceProj >> Sym.Simp.reduceControl >> Sym.Simp.simpExistsPropDomain
+  let mut pre : Simproc :=
+    NormSym.eraseMData >> NormSym.preMatchCond >> NormSym.simpMatchDiscrsOnly >> Sym.Simp.beta
+      >> Sym.Simp.reduceProj >> Sym.Simp.reduceControl >> Sym.Simp.simpExistsPropDomain
   if config.zeta then pre := pre >> Sym.Simp.zeta
   if config.zetaDelta then pre := pre >> Sym.Simp.zetaDeltaAll
-  pre := pre >> NormSym.pushNot >> Sym.Simp.simpArith d (lhsOnly := true) (distrib := config.distrib) >> thms.pre.rewrite d
+  pre :=
+    pre >> NormSym.pushNot >> Sym.Simp.simpArith d (lhsOnly := true) (distrib := config.distrib)
+      >> thms.pre.rewrite d
   -- `grind` keeps bit-vector literals in `OfNat.ofNat` form.
-  let post : Simproc := thms.post.rewrite d >> Sym.Simp.evalGround { bitVecOfNat := false } >> Sym.Simp.simpNatRel >> NormSym.simpEq >> NormSym.simpOr
-    >> NormSym.simpDIte >> NormSym.reduceCtorEq >> NormSym.simpForall >> NormSym.simpExists
+  let post : Simproc :=
+    thms.post.rewrite d >> Sym.Simp.evalGround { bitVecOfNat := false } >> Sym.Simp.simpNatRel
+      >> NormSym.simpEq >> NormSym.simpOr >> NormSym.simpDIte >> NormSym.reduceCtorEq
+      >> NormSym.simpForall >> NormSym.simpExists
   return { pre, post }
 
 /-- `Sym.dsimp` methods approximating the legacy `grind` `dsimp` step (`dsimpCore`). -/
-def mkNormSymDSimpMethods (config : Grind.Config) (thms : NormSymTheorems) : Sym.DSimp.Methods := Id.run do
+def mkNormSymDSimpMethods (config : Grind.Config) (thms : NormSymTheorems)
+    : Sym.DSimp.Methods := Id.run do
   let mut pre : Sym.DSimp.DSimproc := Sym.DSimp.beta >> Sym.DSimp.dsimpProj >> Sym.DSimp.dsimpMatch
   if config.zeta then pre := pre >> Sym.DSimp.zeta
   if config.zetaDelta then pre := pre >> Sym.DSimp.zetaDeltaAll

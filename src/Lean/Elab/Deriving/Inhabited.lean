@@ -17,7 +17,9 @@ open Command Meta Parser Term
 private abbrev IndexSet := Std.TreeSet Nat
 private abbrev LocalInst2Index := FVarIdMap Nat
 
-private def mkInhabitedInstanceUsing (inductiveTypeName : Name) (ctorName : Name) (addHypotheses : Bool) : CommandElabM Bool := do
+private def mkInhabitedInstanceUsing
+    (inductiveTypeName : Name) (ctorName : Name) (addHypotheses : Bool)
+    : CommandElabM Bool := do
   match (← liftTermElabM mkInstanceCmd?) with
   | some cmd =>
     elabCommand cmd
@@ -25,25 +27,29 @@ private def mkInhabitedInstanceUsing (inductiveTypeName : Name) (ctorName : Name
   | none =>
     return false
 where
-  addLocalInstancesForParamsAux {α} (k : Array Expr → LocalInst2Index → TermElabM α) : List Expr → Nat → Array Expr → LocalInst2Index → TermElabM α
-    | [],    _, insts, map => k insts map
-    | x::xs, i, insts, map =>
+  addLocalInstancesForParamsAux {α} (k : Array Expr → LocalInst2Index → TermElabM α)
+      : List Expr → Nat → Array Expr → LocalInst2Index → TermElabM α
+    | [], _, insts, map =>
+      k insts map
+    | x :: xs, i, insts, map =>
       try
         let instType ← mkAppM `Inhabited #[x]
         check instType
         withLocalDecl (← mkFreshUserName `inst) .instImplicit instType fun inst => do
           trace[Elab.Deriving.inhabited] "adding local instance {instType}"
-          addLocalInstancesForParamsAux k xs (i+1) (insts.push inst) (map.insert inst.fvarId! i)
+          addLocalInstancesForParamsAux k xs (i + 1) (insts.push inst) (map.insert inst.fvarId! i)
       catch _ =>
-        addLocalInstancesForParamsAux k xs (i+1) insts map
+        addLocalInstancesForParamsAux k xs (i + 1) insts map
 
-  addLocalInstancesForParams {α} (xs : Array Expr) (k : Array Expr → LocalInst2Index → TermElabM α) : TermElabM α := do
+  addLocalInstancesForParams {α} (xs : Array Expr) (k : Array Expr → LocalInst2Index → TermElabM α)
+      : TermElabM α := do
     if addHypotheses then
       addLocalInstancesForParamsAux k xs.toList 0 #[] {}
     else
       k #[] {}
 
-  collectUsedLocalsInsts (usedInstIdxs : IndexSet) (localInst2Index : LocalInst2Index) (e : Expr) : IndexSet :=
+  collectUsedLocalsInsts (usedInstIdxs : IndexSet) (localInst2Index : LocalInst2Index) (e : Expr)
+      : IndexSet :=
     if localInst2Index.isEmpty then
       usedInstIdxs
     else
@@ -55,9 +61,12 @@ where
           | none => pure ()
       runST (fun _ => visit |>.run usedInstIdxs) |>.2
 
-  /-- Create an `instance` command using the constructor `ctorName` with a hypothesis `Inhabited α` when `α` is one of the inductive type parameters
-     at position `i` and `i ∈ usedInstIdxs`. -/
-  mkInstanceCmdWith (instId : Ident) (usedInstIdxs : IndexSet) (auxFunId : Ident) : TermElabM Syntax := do
+  /--
+  Create an `instance` command using the constructor `ctorName` with a hypothesis `Inhabited α` when `α` is one of the inductive type parameters
+  at position `i` and `i ∈ usedInstIdxs`.
+  -/
+  mkInstanceCmdWith (instId : Ident) (usedInstIdxs : IndexSet) (auxFunId : Ident)
+      : TermElabM Syntax := do
     let indVal ← getConstInfoInduct inductiveTypeName
     let mut indArgs := #[]
     let mut binders := #[]
@@ -72,48 +81,57 @@ where
 
   solveMVarsWithDefault (e : Expr) : TermElabM Unit := do
     let mvarIds ← getMVarsNoDelayed e
-    mvarIds.forM fun mvarId => mvarId.withContext do
-      unless ← mvarId.isAssigned do
-        let type ← mvarId.getType
-        withTraceNode `Elab.Deriving.inhabited (fun _ => return m!"synthesizing Inhabited instance for{inlineExprTrailing type}") do
-          let val ← mkDefault type
-          mvarId.assign val
-          trace[Elab.Deriving.inhabited] "value:{inlineExprTrailing val}"
+    mvarIds.forM fun mvarId =>
+      mvarId.withContext do
+        unless ← mvarId.isAssigned do
+          let type ← mvarId.getType
+          withTraceNode `Elab.Deriving.inhabited
+            (fun _ => return m!"synthesizing Inhabited instance for{inlineExprTrailing type}")
+            do
+              let val ← mkDefault type
+              mvarId.assign val
+              trace[Elab.Deriving.inhabited] "value:{inlineExprTrailing val}"
 
   mkDefaultValue (indVal : InductiveVal) : TermElabM (Expr × Expr × IndexSet) := do
     let us := indVal.levelParams.map Level.param
     forallTelescopeReducing indVal.type fun xs _ =>
-    withImplicitBinderInfos xs do
-    addLocalInstancesForParams xs[0...indVal.numParams] fun insts localInst2Index => do
-      let type := mkAppN (.const inductiveTypeName us) xs
-      let val ←
-        if isStructure (← getEnv) inductiveTypeName then
-          withTraceNode `Elab.Deriving.inhabited (fun _ => return m!"using structure instance elaborator") do
-            let stx ← `(structInstDefault| struct_inst_default%)
-            withoutErrToSorry <| elabTermAndSynthesize stx type
-        else
-          withTraceNode `Elab.Deriving.inhabited (fun _ => return m!"using constructor `{.ofConstName ctorName}`") do
-            let val := mkAppN (.const ctorName us) xs[0...indVal.numParams]
-            let (mvars, _, type') ← forallMetaTelescopeReducing (← inferType val)
-            unless ← isDefEq type type' do
-              throwError "cannot unify{indentExpr type}\nand type of constructor{indentExpr type'}"
-            pure <| mkAppN val mvars
-      solveMVarsWithDefault val
-      let val ← instantiateMVars val
-      if val.hasMVar then
-        throwError "default value contains metavariables{inlineExprTrailing val}"
-      let fvars := Lean.collectFVars {} val
-      let insts' := insts.filter fvars.visitedExpr.contains
-      let usedInstIdxs := collectUsedLocalsInsts {} localInst2Index val
-      assert! insts'.size == usedInstIdxs.size
-      trace[Elab.Deriving.inhabited] "inhabited instance using{inlineExpr val}{if insts'.isEmpty then m!"" else m!"(assuming parameters {insts'} are inhabited)"}"
-      let xs' := xs ++ insts'
-      let auxType ← mkForallFVars xs' type
-      let auxVal ← mkLambdaFVars xs' val
-      return (auxType, auxVal, usedInstIdxs)
+      withImplicitBinderInfos xs do
+        addLocalInstancesForParams xs[0...indVal.numParams] fun insts localInst2Index => do
+          let type := mkAppN (.const inductiveTypeName us) xs
+          let val ←
+            if isStructure (← getEnv) inductiveTypeName then
+              withTraceNode `Elab.Deriving.inhabited
+                (fun _ => return m!"using structure instance elaborator")
+                do
+                  let stx ← `(structInstDefault| struct_inst_default%)
+                  withoutErrToSorry <| elabTermAndSynthesize stx type
+            else
+              withTraceNode `Elab.Deriving.inhabited
+                (fun _ => return m!"using constructor `{.ofConstName ctorName}`")
+                do
+                  let val := mkAppN (.const ctorName us) xs[0...indVal.numParams]
+                  let (mvars, _, type') ← forallMetaTelescopeReducing (← inferType val)
+                  unless ← isDefEq type type' do
+                    throwError "cannot unify{indentExpr type}\
+                      \nand type of constructor{indentExpr type'}"
+                  pure <| mkAppN val mvars
+          solveMVarsWithDefault val
+          let val ← instantiateMVars val
+          if val.hasMVar then
+            throwError "default value contains metavariables{inlineExprTrailing val}"
+          let fvars := Lean.collectFVars {} val
+          let insts' := insts.filter fvars.visitedExpr.contains
+          let usedInstIdxs := collectUsedLocalsInsts {} localInst2Index val
+          assert! insts'.size == usedInstIdxs.size
+          trace[Elab.Deriving.inhabited] "inhabited instance using{inlineExpr val}\
+            {if insts'.isEmpty then m!"" else m!"(assuming parameters {insts'} are inhabited)"}"
+          let xs' := xs ++ insts'
+          let auxType ← mkForallFVars xs' type
+          let auxVal ← mkLambdaFVars xs' val
+          return (auxType, auxVal, usedInstIdxs)
 
   mkInstanceCmd? : TermElabM (Option Syntax) :=
-    withExporting (isExporting := !isPrivateName ctorName) do
+    withExporting (isExporting := ! isPrivateName ctorName) do
       let ctx ← mkContext ``Inhabited "default" inductiveTypeName
       let auxFunName := (← getCurrNamespace) ++ ctx.auxFunNames[0]!
       let indVal ← getConstInfoInduct inductiveTypeName
@@ -123,12 +141,9 @@ where
         catch e =>
           trace[Elab.Deriving.inhabited] "error: {e.toMessageData}"
           return none
-      addDecl <| .defnDecl <| ← mkDefinitionValInferringUnsafe
-        (name        := auxFunName)
-        (levelParams := indVal.levelParams)
-        (type        := auxType)
-        (value       := auxVal)
-        (hints       := ReducibilityHints.regular (getMaxHeight (← getEnv) auxVal + 1))
+      addDecl <| .defnDecl <| ← mkDefinitionValInferringUnsafe (name := auxFunName)
+        (levelParams := indVal.levelParams) (type := auxType) (value := auxVal)
+        (hints := ReducibilityHints.regular (getMaxHeight (← getEnv) auxVal + 1))
       if isMarkedMeta (← getEnv) inductiveTypeName then
         modifyEnv (markMeta · auxFunName)
       compileDecls #[auxFunName]
@@ -141,14 +156,14 @@ where
 
 private def mkInhabitedInstance (declName : Name) : CommandElabM Unit := do
   withoutExposeFromCtors declName do
-  let indVal ← getConstInfoInduct declName
-  let doIt (addHypotheses : Bool) : CommandElabM Bool := do
-    for ctorName in indVal.ctors do
-      if (← mkInhabitedInstanceUsing declName ctorName addHypotheses) then
-        return true
-    return false
-  unless (← doIt false <||> doIt true) do
-    throwError "failed to generate `Inhabited` instance for `{.ofConstName declName}`"
+    let indVal ← getConstInfoInduct declName
+    let doIt (addHypotheses : Bool) : CommandElabM Bool := do
+      for ctorName in indVal.ctors do
+        if (← mkInhabitedInstanceUsing declName ctorName addHypotheses) then
+          return true
+      return false
+    unless (← doIt false <||> doIt true) do
+      throwError "failed to generate `Inhabited` instance for `{.ofConstName declName}`"
 
 def mkInhabitedInstanceHandler (declNames : Array Name) : CommandElabM Bool := do
   if (← declNames.allM isInductive) then

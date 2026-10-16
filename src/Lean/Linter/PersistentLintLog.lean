@@ -17,19 +17,21 @@ public section
 namespace Lean.Linter
 
 structure LintEntry where
-  linter  : Name
+  linter : Name
   message : SerialMessage
   position? : Option Position := none
   file : String
 
-builtin_initialize lintLogExt :
-    PersistentEnvExtension LintEntry LintEntry (Array LintEntry) ←
+builtin_initialize lintLogExt : PersistentEnvExtension LintEntry LintEntry (Array LintEntry) ←
   registerPersistentEnvExtension {
-    mkInitial     := pure #[]
+    mkInitial := pure #[]
     addImportedFn := fun _ => pure #[]
-    addEntryFn    := Array.push
-    exportEntriesFnEx := fun _ entries =>
-      { exported := #[], server := entries, «private» := entries }
+    addEntryFn := Array.push
+    exportEntriesFnEx := fun _ entries => {
+      exported := #[]
+      server := entries
+      «private» := entries
+    }
   }
 
 def getAllLints (env : Environment) : Array (Name × Array LintEntry) :=
@@ -44,16 +46,19 @@ logged via `logCodeQualityEntry` carry `none` and are exempt from such filtering
 -/
 structure CodeQualityLogEntry where
   linter? : Option Name
-  entry   : CodeQuality.Entry
+  entry : CodeQuality.Entry
 
-builtin_initialize codeQualityLogExt :
-    PersistentEnvExtension CodeQualityLogEntry CodeQualityLogEntry (Array CodeQualityLogEntry) ←
+builtin_initialize codeQualityLogExt
+    : PersistentEnvExtension CodeQualityLogEntry CodeQualityLogEntry (Array CodeQualityLogEntry) ←
   registerPersistentEnvExtension {
-    mkInitial     := pure #[]
+    mkInitial := pure #[]
     addImportedFn := fun _ => pure #[]
-    addEntryFn    := Array.push
-    exportEntriesFnEx := fun _ entries =>
-      { exported := #[], server := entries, «private» := entries }
+    addEntryFn := Array.push
+    exportEntriesFnEx := fun _ entries => {
+      exported := #[]
+      server := entries
+      «private» := entries
+    }
   }
 
 def getAllCodeQualityEntries (env : Environment) : Array (Name × Array CodeQualityLogEntry) :=
@@ -66,12 +71,14 @@ instance : MonadFileMap (ReaderT FileMap BaseIO) := ⟨read⟩
 Records linter warnings and looks up positions of their associated commands from a build
 into `lintLogExt` so that consumers (e.g. `lake lint`) can recover them from the `.olean`.
 -/
-def recordLints (fileMap : FileMap) (env : Environment)
-    (commandLints : Array (Option Syntax × MessageLog)) : BaseIO Environment := do
+def recordLints
+    (fileMap : FileMap) (env : Environment) (commandLints : Array (Option Syntax × MessageLog))
+    : BaseIO Environment := do
   commandLints.foldlM (init := env) fun env (cmdStx?, messages) => do
-    let declRange? : Option DeclarationRange ← match cmdStx? with
+    let declRange? : Option DeclarationRange ←
+      match cmdStx? with
       | some stx => (Lean.Elab.getDeclarationRange? stx : ReaderT FileMap _ _).run fileMap
-      | none     => pure none
+      | none => pure none
     let position? : Option Position := declRange?.map (·.pos)
     messages.reportedPlusUnreported.foldlM (init := env) fun env m => do
       unless m.data.isLinterMessage do
@@ -80,7 +87,12 @@ def recordLints (fileMap : FileMap) (env : Environment)
       if kind.isAnonymous then
         return env
       let sm ← m.serialize
-      return lintLogExt.addEntry env { linter := kind, message := sm, position?, file := m.fileName }
+      return lintLogExt.addEntry env {
+        linter := kind
+        message := sm
+        position?
+        file := m.fileName
+      }
 
 /--
 Records the code quality entry `e` into `codeQualityLogExt` so that it is persisted into the
@@ -96,8 +108,7 @@ linter selection flag (e.g. `lake lint --lint-only`) can suppress it. Inside a l
 an option, use `logCodeQualityEntryIf` instead; this variant is meant for unconditional metrics
 not tied to any linter option.
 -/
-def logCodeQualityEntry [Monad m] [MonadEnv m]
-    (e : CodeQuality.Entry) : m Unit :=
+def logCodeQualityEntry [Monad m] [MonadEnv m] (e : CodeQuality.Entry) : m Unit :=
   modifyEnv (codeQualityLogExt.addEntry · { linter? := none, entry := e })
 
 /--
@@ -106,8 +117,10 @@ provided linter option is enabled, taking `linter.all` and linter sets into acco
 is recorded with `linterOption.name` as its attribution, so consumers can filter it by linter
 selection (e.g. `lake lint --lint-only`).
 -/
-def logCodeQualityEntryIf [Monad m] [MonadOptions m] [MonadEnv m]
-    (linterOption : Lean.Option Bool) (e : CodeQuality.Entry) : m Unit := do
+def logCodeQualityEntryIf
+    [Monad m] [MonadOptions m] [MonadEnv m]
+    (linterOption : Lean.Option Bool) (e : CodeQuality.Entry)
+    : m Unit := do
   if getLinterValue linterOption (← getLinterOptions) then
     modifyEnv (codeQualityLogExt.addEntry · { linter? := some linterOption.name, entry := e })
 

@@ -19,9 +19,12 @@ private def scanAuxM [Monad m] (f : β → α → m β) (init : β) (l : List α
   go l init []
 where
   /-- Auxiliary for `scanAuxM` -/
-  @[specialize] go : List α → β → List β → m (List β)
-    | [], last, acc => pure <| last :: acc
-    | x :: xs, last, acc => do go xs (← f last x) (last :: acc)
+  @[specialize]
+  go : List α → β → List β → m (List β)
+    | [], last, acc =>
+      pure <| last :: acc
+    | x :: xs, last, acc => do
+      go xs (← f last x) (last :: acc)
 
 /--
 Folds a monadic function over a list from the left, accumulating partial results starting with

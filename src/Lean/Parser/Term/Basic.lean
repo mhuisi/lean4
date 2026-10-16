@@ -28,20 +28,18 @@ public section
 namespace Lean
 namespace Parser
 
-
 builtin_initialize
   registerBuiltinParserAttribute `builtin_tactic_parser ``Category.tactic .both
   registerBuiltinDynamicParserAttribute `tactic_parser `tactic
 
-@[inline] def tacticParser (rbp : Nat := 0) : Parser :=
-  categoryParser `tactic rbp
+@[inline] def tacticParser (rbp : Nat := 0) : Parser := categoryParser `tactic rbp
 
-@[inline] def convParser (rbp : Nat := 0) : Parser :=
-  categoryParser `conv rbp
+@[inline] def convParser (rbp : Nat := 0) : Parser := categoryParser `conv rbp
 
 namespace Tactic
 
-/-- `sepByIndentSemicolon(p)` parses a sequence of `p` optionally followed by `;`,
+/--
+`sepByIndentSemicolon(p)` parses a sequence of `p` optionally followed by `;`,
 similar to `manyIndent(p ";"?)`, except that if two occurrences of `p` occur on the same line,
 the `;` is mandatory. This is used by tactic parsing, so that
 ```
@@ -49,12 +47,13 @@ example := by
   skip
   skip
 ```
-is legal, but `by skip skip` is not - it must be written as `by skip; skip`. -/
+is legal, but `by skip skip` is not - it must be written as `by skip; skip`.
+-/
 @[run_builtin_parser_attribute_hooks, builtin_doc]
-def sepByIndentSemicolon (p : Parser) : Parser :=
-  sepByIndent p "; " (allowTrailingSep := true)
+def sepByIndentSemicolon (p : Parser) : Parser := sepByIndent p "; " (allowTrailingSep := true)
 
-/-- `sepBy1IndentSemicolon(p)` parses a (nonempty) sequence of `p` optionally followed by `;`,
+/--
+`sepBy1IndentSemicolon(p)` parses a (nonempty) sequence of `p` optionally followed by `;`,
 similar to `many1Indent(p ";"?)`, except that if two occurrences of `p` occur on the same line,
 the `;` is mandatory. This is used by tactic parsing, so that
 ```
@@ -62,39 +61,45 @@ example := by
   skip
   skip
 ```
-is legal, but `by skip skip` is not - it must be written as `by skip; skip`. -/
+is legal, but `by skip skip` is not - it must be written as `by skip; skip`.
+-/
 @[run_builtin_parser_attribute_hooks, builtin_doc]
-def sepBy1IndentSemicolon (p : Parser) : Parser :=
-  sepBy1Indent p "; " (allowTrailingSep := true)
+def sepBy1IndentSemicolon (p : Parser) : Parser := sepBy1Indent p "; " (allowTrailingSep := true)
 
 builtin_initialize
   register_parser_alias sepByIndentSemicolon
   register_parser_alias sepBy1IndentSemicolon
 
-@[builtin_doc] def tacticSeq1Indented : Parser := leading_parser
-  sepBy1IndentSemicolon tacticParser
-/-- The syntax `{ tacs }` is an alternative syntax for `· tacs`.
-It runs the tactics in sequence, and fails if the goal is not solved. -/
-@[builtin_doc] def tacticSeqBracketed : Parser := leading_parser
-  "{ " >> sepByIndentSemicolon tacticParser >> ppDedent ppLine >> "}"
+@[builtin_doc] def tacticSeq1Indented : Parser := leading_parser sepBy1IndentSemicolon tacticParser
+/--
+The syntax `{ tacs }` is an alternative syntax for `· tacs`.
+It runs the tactics in sequence, and fails if the goal is not solved.
+-/
+@[builtin_doc]
+def tacticSeqBracketed : Parser :=
+  leading_parser "{ " >> sepByIndentSemicolon tacticParser >> ppDedent ppLine >> "}"
 
-/-- A sequence of tactics in brackets, or a delimiter-free indented sequence of tactics.
-Delimiter-free indentation is determined by the *first* tactic of the sequence. -/
-@[builtin_doc, run_builtin_parser_attribute_hooks] def tacticSeq := leading_parser
-  tacticSeqBracketed <|> tacticSeq1Indented
-
-/-- Same as [`tacticSeq`] but requires delimiter-free tactic sequence to have strict indentation.
-Falls back to an empty tactic sequence when no appropriately indented content follows, producing
-an elaboration error (unsolved goals) rather than a parse error. -/
+/--
+A sequence of tactics in brackets, or a delimiter-free indented sequence of tactics.
+Delimiter-free indentation is determined by the *first* tactic of the sequence.
+-/
 @[builtin_doc, run_builtin_parser_attribute_hooks]
-def tacticSeqIndentGt := withAntiquot (mkAntiquot "tacticSeq" ``tacticSeq) <| node ``tacticSeq <|
-  tacticSeqBracketed <|> (checkColGt "indented tactic sequence" >> tacticSeq1Indented) <|>
-  node ``tacticSeq1Indented pushNone
+def tacticSeq := leading_parser tacticSeqBracketed <|> tacticSeq1Indented
+
+/--
+Same as [`tacticSeq`] but requires delimiter-free tactic sequence to have strict indentation.
+Falls back to an empty tactic sequence when no appropriately indented content follows, producing
+an elaboration error (unsolved goals) rather than a parse error.
+-/
+@[builtin_doc, run_builtin_parser_attribute_hooks]
+def tacticSeqIndentGt :=
+  withAntiquot (mkAntiquot "tacticSeq" ``tacticSeq) <| node ``tacticSeq <|
+    tacticSeqBracketed <|> (checkColGt "indented tactic sequence" >> tacticSeq1Indented)
+      <|> node ``tacticSeq1Indented pushNone
 
 /- Raw sequence for quotation and grouping -/
 @[run_builtin_parser_attribute_hooks]
-def seq1 :=
-  node `Lean.Parser.Tactic.seq1 $ sepBy1 tacticParser ";\n" (allowTrailingSep := true)
+def seq1 := node `Lean.Parser.Tactic.seq1 $ sepBy1 tacticParser ";\n" (allowTrailingSep := true)
 
 end Tactic
 
@@ -115,8 +120,7 @@ Related concept: implicit parameters are automatically filled in with holes duri
 
 See also `?m` syntax (synthetic holes).
 -/
-@[builtin_term_parser] def hole := leading_parser
-  "_"
+@[builtin_term_parser] def hole := leading_parser "_"
 /--
 A *synthetic hole* (or *synthetic placeholder*), which stands for an unknown term that should be synthesized using tactics.
 - `?_` creates a fresh metavariable with an auto-generated name.
@@ -161,8 +165,7 @@ The delayed assigned metavariables themselves can be pretty printed using `set_o
 
 For more information, see the "Gruesome details" module docstrings in `Lean.MetavarContext`.
 -/
-@[builtin_term_parser] def syntheticHole := leading_parser
-  "?" >> (ident <|> "_")
+@[builtin_term_parser] def syntheticHole := leading_parser "?" >> (ident <|> "_")
 
 /--
 The `⋯` term denotes a term that was omitted by the pretty printer.
@@ -172,29 +175,27 @@ and these options can be further adjusted using `pp.deepTerms.threshold` and `pp
 It is only meant to be used for pretty printing.
 However, in case it is copied and pasted from the Infoview, `⋯` logs a warning and elaborates like `_`.
 -/
-@[builtin_term_parser] def omission := leading_parser
-  "⋯"
-@[run_builtin_parser_attribute_hooks]
-def binderIdent : Parser  := ident <|> hole
+@[builtin_term_parser] def omission := leading_parser "⋯"
+@[run_builtin_parser_attribute_hooks] def binderIdent : Parser := ident <|> hole
 
 @[run_builtin_parser_attribute_hooks]
 def binderType (requireType := false) : Parser :=
   if requireType then node nullKind (" : " >> termParser) else optional (" : " >> termParser)
 @[run_builtin_parser_attribute_hooks]
-def binderTactic  := leading_parser
-  atomic (symbol " := " >> " by ") >> Tactic.tacticSeq
-def binderDefault := leading_parser
-  " := " >> termParser
+def binderTactic := leading_parser atomic (symbol " := " >> " by ") >> Tactic.tacticSeq
+def binderDefault := leading_parser " := " >> termParser
 
 set_option compiler.relaxedMetaCheck true in
 private meta def binderDefaultM := binderDefault
 
 open Lean.PrettyPrinter Parenthesizer Syntax.MonadTraverser in
-@[combinator_parenthesizer Lean.Parser.Term.binderDefault, expose] def binderDefault.parenthesizer : Parenthesizer := do
-  let prec := match (← getCur) with
+@[combinator_parenthesizer Lean.Parser.Term.binderDefault, expose]
+def binderDefault.parenthesizer : Parenthesizer := do
+  let prec :=
+    match (← getCur) with
     -- must parenthesize to distinguish from `binderTactic`
     | `(binderDefaultM| := by $_) => maxPrec
-    | _                          => 0
+    | _ => 0
   visitArgs do
     term.parenthesizer prec
     visitToken
@@ -203,8 +204,13 @@ open Lean.PrettyPrinter Parenthesizer Syntax.MonadTraverser in
 Explicit binder, like `(x y : A)` or `(x y)`.
 Default values can be specified using `(x : A := v)` syntax, and tactics using `(x : A := by tac)`.
 -/
-@[builtin_doc] def explicitBinder (requireType := false) := leading_parser ppGroup <|
-  "(" >> withoutPosition (many1 binderIdent >> binderType requireType >> optional (binderTactic <|> binderDefault)) >> ")"
+@[builtin_doc]
+def explicitBinder (requireType := false) :=
+  leading_parser ppGroup <|
+    "("
+      >> withoutPosition
+        (many1 binderIdent >> binderType requireType >> optional (binderTactic <|> binderDefault))
+      >> ")"
 /--
 Implicit binder, like `{x y : A}` or `{x y}`.
 In regular applications, whenever all parameters before it have been specified,
@@ -214,8 +220,10 @@ by unification.
 
 In `@` explicit mode, implicit binders behave like explicit binders.
 -/
-@[builtin_doc] def implicitBinder (requireType := false) := leading_parser ppGroup <|
-  "{" >> withoutPosition (many1 binderIdent >> binderType requireType) >> "}"
+@[builtin_doc]
+def implicitBinder (requireType := false) :=
+  leading_parser ppGroup <|
+    "{" >> withoutPosition (many1 binderIdent >> binderType requireType) >> "}"
 def strictImplicitLeftBracket := atomic (group (symbol "{" >> "{")) <|> "⦃"
 def strictImplicitRightBracket := atomic (group (symbol "}" >> "}")) <|> "⦄"
 /--
@@ -231,12 +239,13 @@ and `h hs` has type `p y`.
 In contrast, if `h' : ∀ {x : A}, x ∈ s → p x`, then `h` by itself elaborates to have type `?m ∈ s → p ?m`
 with `?m` a fresh metavariable.
 -/
-@[builtin_doc] def strictImplicitBinder (requireType := false) := leading_parser ppGroup <|
-  strictImplicitLeftBracket >> many1 binderIdent >>
-  binderType requireType >> strictImplicitRightBracket
+@[builtin_doc]
+def strictImplicitBinder (requireType := false) :=
+  leading_parser ppGroup <|
+    strictImplicitLeftBracket >> many1 binderIdent >> binderType requireType
+      >> strictImplicitRightBracket
 
-def optIdent : Parser :=
-  optional (atomic (ident >> " : "))
+def optIdent : Parser := optional (atomic (ident >> " : "))
 
 /--
 Instance-implicit binder, like `[C]` or `[inst : C]`.
@@ -245,24 +254,24 @@ and solved for by typeclass inference for the specified class `C`.
 In `@` explicit mode, if `_` is used for an instance-implicit parameter, then it is still solved for by typeclass inference;
 use `(_)` to inhibit this and have it be solved for by unification instead, like an implicit argument.
 -/
-@[builtin_doc] def instBinder := leading_parser ppGroup <|
-  "[" >> withoutPosition (optIdent >> termParser) >> "]"
-/-- A `bracketedBinder` matches any kind of binder group that uses some kind of brackets:
+@[builtin_doc]
+def instBinder := leading_parser ppGroup <| "[" >> withoutPosition (optIdent >> termParser) >> "]"
+/--
+A `bracketedBinder` matches any kind of binder group that uses some kind of brackets:
 * An explicit binder like `(x y : A)`
 * An implicit binder like `{x y : A}`
 * A strict implicit binder, `⦃y z : A⦄` or its ASCII alternative `{{y z : A}}`
 * An instance binder `[A]` or `[x : A]` (multiple variables are not allowed here)
 -/
-@[builtin_doc, run_builtin_parser_attribute_hooks] def bracketedBinder (requireType := false) :=
+@[builtin_doc, run_builtin_parser_attribute_hooks]
+def bracketedBinder (requireType := false) :=
   withAntiquot (mkAntiquot "bracketedBinder" decl_name% (isPseudoKind := true)) <|
-    explicitBinder requireType <|> strictImplicitBinder requireType <|>
-    implicitBinder requireType <|> instBinder
+    explicitBinder requireType <|> strictImplicitBinder requireType <|> implicitBinder requireType
+      <|> instBinder
 
-@[run_builtin_parser_attribute_hooks]
-def typeSpec := leading_parser " : " >> termParser
+@[run_builtin_parser_attribute_hooks] def typeSpec := leading_parser " : " >> termParser
 
-@[run_builtin_parser_attribute_hooks]
-def optType : Parser := optional typeSpec
+@[run_builtin_parser_attribute_hooks] def optType : Parser := optional typeSpec
 
 /-
 Syntax category for structure instance notation fields.
@@ -270,18 +279,16 @@ Does not initialize `registerBuiltinDynamicParserAttribute` since this category 
 -/
 builtin_initialize
   registerBuiltinParserAttribute `builtin_structInstFieldDecl_parser ``Category.structInstFieldDecl
-@[inline] def structInstFieldDeclParser (rbp : Nat := 0) : Parser :=
-  categoryParser `structInstFieldDecl rbp
+@[inline]
+def structInstFieldDeclParser (rbp : Nat := 0) : Parser := categoryParser `structInstFieldDecl rbp
+@[run_builtin_parser_attribute_hooks] def optEllipsis := leading_parser optional " .."
 @[run_builtin_parser_attribute_hooks]
-def optEllipsis := leading_parser
-  optional " .."
+def structInstArrayRef := leading_parser "[" >> withoutPosition termParser >> "]"
 @[run_builtin_parser_attribute_hooks]
-def structInstArrayRef := leading_parser
-  "[" >> withoutPosition termParser >> "]"
-@[run_builtin_parser_attribute_hooks]
-def structInstLVal := leading_parser
-  (ident <|> fieldIdx <|> structInstArrayRef) >>
-  many (group ("." >> (ident <|> fieldIdx)) <|> structInstArrayRef)
+def structInstLVal :=
+  leading_parser
+    (ident <|> fieldIdx <|> structInstArrayRef)
+      >> many (group ("." >> (ident <|> fieldIdx)) <|> structInstArrayRef)
 @[run_builtin_parser_attribute_hooks]
 def structInstFieldBinder :=
   withAntiquot (mkAntiquot "structInstFieldBinder" decl_name% (isPseudoKind := true)) <|
@@ -290,8 +297,11 @@ def structInstFieldBinder :=
 def optTypeForStructInst : Parser := optional (atomic (typeSpec >> notFollowedBy "}" "}"))
 /- `x` is an abbreviation for `x := x` -/
 @[run_builtin_parser_attribute_hooks]
-def structInstField := ppGroup <| leading_parser
-  structInstLVal >> optional (many (checkColGt >> ppSpace >> structInstFieldBinder) >> optTypeForStructInst >> ppDedent structInstFieldDeclParser)
+def structInstField :=
+  ppGroup <| leading_parser
+    structInstLVal >> optional
+      (many (checkColGt >> ppSpace >> structInstFieldBinder) >> optTypeForStructInst
+        >> ppDedent structInstFieldDeclParser)
 /-
 Tags the structure instance field syntax with a `Lean.Parser.Term.structInstFields` syntax node.
 This node is used to enable structure instance field completion in the whitespace

@@ -17,35 +17,39 @@ namespace Lean.Linter
 
 open Lean.Elab CodeQuality
 
-/-- Go upwards through the given `tree` starting from the smallest node that
+/--
+Go upwards through the given `tree` starting from the smallest node that
 contains the given `range` and collect all `MacroExpansionInfo`s on the way up.
 The result is `some []` if no `MacroExpansionInfo` was found on the way and
 `none` if no `InfoTree` node was found that covers the given `range`.
 
 Return the result reversed, s.t. the macro expansion that would be applied to
-the original syntax first is the first element of the returned list. -/
-def collectMacroExpansions? {m} [Monad m] (range : Lean.Syntax.Range) (tree : Elab.InfoTree) : m <| Option <| List Elab.MacroExpansionInfo := do
+the original syntax first is the first element of the returned list.
+-/
+def collectMacroExpansions? {m} [Monad m] (range : Lean.Syntax.Range) (tree : Elab.InfoTree)
+    : m <| Option <| List Elab.MacroExpansionInfo := do
   if let .some <| .some result ← go then
     return some result.reverse
   else
     return none
 where
-  go : m <| Option <| Option <| List Elab.MacroExpansionInfo := tree.visitM (postNode := fun _ i _ results => do
-    let results := results |>.filterMap id |>.filterMap id
+  go : m <| Option <| Option <| List Elab.MacroExpansionInfo :=
+    tree.visitM (postNode := fun _ i _ results => do
+      let results := results |>.filterMap id |>.filterMap id
 
-    -- we expect that at most one InfoTree child returns a result
-    if let results :: _ := results then
-      if let .ofMacroExpansionInfo i := i then
-        return some <| i :: results
+      -- we expect that at most one InfoTree child returns a result
+      if let results :: _ := results then
+        if let .ofMacroExpansionInfo i := i then
+          return some <| i :: results
+        else
+          return some results
+      else if i.contains range.start && i.contains (includeStop := true) range.stop then
+        if let .ofMacroExpansionInfo i := i then
+          return some [i]
+        else
+          return some []
       else
-        return some results
-    else if i.contains range.start && i.contains (includeStop := true) range.stop then
-      if let .ofMacroExpansionInfo i := i then
-        return some [i]
-      else
-        return some []
-    else
-      return none)
+        return none)
 
 /-- Get the `parentDecl`s of every elaborated body in the infotree. -/
 def getDeclsByBody (t : InfoTree) : List Name :=
@@ -55,11 +59,15 @@ def getDeclsByBody (t : InfoTree) : List Name :=
       if i.value.typeName == ``Lean.Elab.Term.BodyInfo then
         if let some decl := ctx.parentDecl? then
           decl :: decls
-        else decls
-      else decls
-    | _ => decls
+        else
+          decls
+      else
+        decls
+    | _ =>
+      decls
 
-/-- Get the names of declarations introduced by elaborating `t`.
+/--
+Get the names of declarations introduced by elaborating `t`.
 
 A declaration introduces a `TermInfo` with `isBinder := true` whose `expr` is the constant
 being declared. This covers `def`/`theorem`/`axiom`, inductive types and their constructors,
@@ -74,39 +82,49 @@ def getNewDecls (t : InfoTree) : List Name :=
         ti.expr.constName! :: acc
       else
         acc
-    | _ => acc
+    | _ =>
+      acc
 
-/-- Find the declaration in the current file that `stx` belongs to.
+/--
+Find the declaration in the current file that `stx` belongs to.
 
 Searches the info trees of the current command for declarations (see `getNewDecls`) whose
 declaration range contains the range of `stx`, and returns the one whose range starts earliest.
 Returns `none` if `stx` has no position or no declaration's range contains it (e.g. for commands
 such as `#check` or `open`).
 -/
-def findMatchingDecl? [Monad m] [MonadInfoTree m] [MonadEnv m] [MonadFileMap m]
-    (stx : Syntax) : m (Option Name) := do
-  let some stxRange ← getDeclarationRange? stx | return none
+def findMatchingDecl? [Monad m] [MonadInfoTree m] [MonadEnv m] [MonadFileMap m] (stx : Syntax)
+    : m (Option Name) := do
+  let some stxRange ← getDeclarationRange? stx
+    | return none
   let mut best? : Option (Name × DeclarationRange) := none
   for t in ← getInfoTrees do
     for declName in getNewDecls t do
-      let some ranges ← findDeclarationRangesCore? declName | continue
+      let some ranges ← findDeclarationRangesCore? declName
+        | continue
       let r := ranges.range
-      unless !r.pos.lt stxRange.pos && !stxRange.endPos.lt r.endPos do continue
+      unless ! r.pos.lt stxRange.pos && ! stxRange.endPos.lt r.endPos do
+        continue
       if best?.all fun (_, b) => r.pos.lt b.pos then
         best? := some (declName, r)
   return best?.map (·.1)
 
-/-- Build a code-quality `Source` attributing `stx` to the declaration it belongs to
-(see `findMatchingDecl?`), or `none` if no declaration matches. -/
-def findCodeQualitySource? [Monad m] [MonadInfoTree m] [MonadEnv m] [MonadFileMap m]
-    (stx : Syntax) : m (Option Source) := do
-  let some name ← findMatchingDecl? stx | return none
+/--
+Build a code-quality `Source` attributing `stx` to the declaration it belongs to
+(see `findMatchingDecl?`), or `none` if no declaration matches.
+-/
+def findCodeQualitySource? [Monad m] [MonadInfoTree m] [MonadEnv m] [MonadFileMap m] (stx : Syntax)
+    : m (Option Source) := do
+  let some name ← findMatchingDecl? stx
+    | return none
   return some (.declaration (← getEnv).mainModule name)
 
-/-- Build a code-quality `Source` attributing `stx` to the declaration it belongs to
-(see `findMatchingDecl?`), falling back to the current module if no declaration matches. -/
-def findCodeQualitySource [Monad m] [MonadInfoTree m] [MonadEnv m] [MonadFileMap m]
-    (stx : Syntax) : m Source := do
+/--
+Build a code-quality `Source` attributing `stx` to the declaration it belongs to
+(see `findMatchingDecl?`), falling back to the current module if no declaration matches.
+-/
+def findCodeQualitySource [Monad m] [MonadInfoTree m] [MonadEnv m] [MonadFileMap m] (stx : Syntax)
+    : m Source := do
   match ← findMatchingDecl? stx with
   | some name => return .declaration (← getEnv).mainModule name
-  | none      => return .module (← getEnv).mainModule
+  | none => return .module (← getEnv).mainModule

@@ -12,7 +12,8 @@ import Lean.Meta.Constructions.CtorIdx
 
 namespace Lean.Elab.Command
 
-@[builtin_command_elab genInjectiveTheorems] def elabGenInjectiveTheorems : CommandElab := fun stx => do
+@[builtin_command_elab genInjectiveTheorems]
+def elabGenInjectiveTheorems : CommandElab := fun stx => do
   liftTermElabM do
     let declName ← realizeGlobalConstNoOverloadWithInfo stx[1]
     mkCtorIdx declName

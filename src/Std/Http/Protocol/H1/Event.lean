@@ -27,47 +27,22 @@ namespace Std.Http.Protocol.H1
 
 set_option linter.all true
 
-/--
-Events emitted during HTTP message processing.
--/
+/-- Events emitted during HTTP message processing. -/
 inductive Event (dir : Direction)
-  /--
-  Indicates that all headers have been successfully parsed.
-  -/
+  /-- Indicates that all headers have been successfully parsed. -/
   | endHeaders (head : Message.Head dir)
-
-  /--
-  Signals that additional input data is required to continue processing.
-  -/
+  /-- Signals that additional input data is required to continue processing. -/
   | needMoreData (size : Option Nat)
-
-  /--
-  Indicates a failure during parsing or processing.
-  -/
+  /-- Indicates a failure during parsing or processing. -/
   | failed (err : Error)
-
-  /--
-  Requests that the connection be closed.
-  -/
+  /-- Requests that the connection be closed. -/
   | close
-
-  /--
-  The body should be closed.
-  -/
+  /-- The body should be closed. -/
   | closeBody
-
-  /--
-  Indicates that a response is required.
-  -/
+  /-- Indicates that a response is required. -/
   | needAnswer
-
-  /--
-  Indicates readiness to process the next message.
-  -/
+  /-- Indicates readiness to process the next message. -/
   | next
-
-  /--
-  Signals that an `Expect: 100-continue` decision is pending.
-  -/
+  /-- Signals that an `Expect: 100-continue` decision is pending. -/
   | «continue»
 deriving Inhabited, Repr

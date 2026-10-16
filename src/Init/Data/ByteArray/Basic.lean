@@ -21,8 +21,7 @@ universe u
 namespace ByteArray
 
 @[extern "lean_sarray_dec_eq"]
-def beq (lhs rhs : @& ByteArray) : Bool :=
-  lhs.data == rhs.data
+def beq (lhs rhs : @& ByteArray) : Bool := lhs.data == rhs.data
 
 instance : BEq ByteArray where
   beq := beq
@@ -48,8 +47,7 @@ Because {name}`USize` is big enough to address all memory on every platform that
 there are in practice no {name}`ByteArray`s that have more elements that {name}`USize` can count.
 -/
 @[extern "lean_sarray_size", simp]
-def usize (a : @& ByteArray) : USize :=
-  a.size.toUSize
+def usize (a : @& ByteArray) : USize := a.size.toUSize
 
 /--
 Retrieves the byte at the indicated index. Callers must prove that the index is in bounds. The index
@@ -62,9 +60,7 @@ in practice no {name}`ByteArray`s for which {name}`uget` cannot retrieve all ele
 def uget : (a : @& ByteArray) → (i : USize) → (h : i.toNat < a.size := by get_elem_tactic) → UInt8
   | ⟨bs⟩, i, h => bs[i]
 
-/--
-Retrieves the byte at the indicated index. Panics if the index is out of bounds.
--/
+/-- Retrieves the byte at the indicated index. Panics if the index is out of bounds. -/
 @[extern "lean_byte_array_get"]
 def get! : (@& ByteArray) → (@& Nat) → UInt8
   | ⟨bs⟩, i => bs[i]!
@@ -105,11 +101,14 @@ proof can usually be omitted, and will be synthesized automatically.
 The array is modified in-place if there are no other references to it.
 -/
 @[extern "lean_byte_array_fset"]
-def set : (a : ByteArray) → (i : @& Nat) → UInt8 → (h : i < a.size := by get_elem_tactic) → ByteArray
+def set
+    : (a : ByteArray) → (i : @& Nat) → UInt8 → (h : i < a.size := by get_elem_tactic) → ByteArray
   | ⟨bs⟩, i, b, h => ⟨bs.set i b h⟩
 
 @[extern "lean_byte_array_uset", inherit_doc ByteArray.set]
-def uset : (a : ByteArray) → (i : USize) → UInt8 → (h : i.toNat < a.size := by get_elem_tactic) → ByteArray
+def uset
+    : (a : ByteArray) → (i : USize) → UInt8 → (h : i.toNat < a.size := by get_elem_tactic)
+      → ByteArray
   | ⟨bs⟩, i, v, h => ⟨bs.uset i v h⟩
 
 /--
@@ -124,7 +123,8 @@ To debug where the non-linearity is coming from you can set a breakpoint on {lit
 @[never_extract, extern "lean_sarray_mark_linear"]
 def markLinear (a : ByteArray) : ByteArray := a
 
-@[simp, grind =] theorem markLinear_eq {a : ByteArray} : a.markLinear = a := rfl
+@[simp, grind =]
+theorem markLinear_eq {a : ByteArray} : a.markLinear = a := rfl
 
 /--
 Returns {name}`b`, propagating the linearity marker of {name}`a` onto it. This is a no-op logically.
@@ -134,22 +134,18 @@ See also {name}`ByteArray.markLinear`.
 @[never_extract, extern "lean_sarray_propagate_mark"]
 def propagateMark (a : @& ByteArray) (b : ByteArray) : ByteArray := b
 
-@[simp, grind =] theorem propagateMark_eq {a b : ByteArray} : a.propagateMark b = b := rfl
+@[simp, grind =]
+theorem propagateMark_eq {a b : ByteArray} : a.propagateMark b = b := rfl
 
-/--
-Computes a hash for a {name}`ByteArray`.
--/
+/-- Computes a hash for a {name}`ByteArray`. -/
 @[extern "lean_byte_array_hash"]
 protected opaque hash (a : @& ByteArray) : UInt64
 
 instance : Hashable ByteArray where
   hash := ByteArray.hash
 
-/--
-Returns {name}`true` when {name}`s` contains zero bytes.
--/
-def isEmpty (s : ByteArray) : Bool :=
-  s.size == 0
+/-- Returns {name}`true` when {name}`s` contains zero bytes. -/
+def isEmpty (s : ByteArray) : Bool := s.size == 0
 
 /--
 Copies the slice at `[srcOff, srcOff + len)` in {name}`src` to `[destOff, destOff + len)` in
@@ -157,15 +153,18 @@ Copies the slice at `[srcOff, srcOff + len)` in {name}`src` to `[destOff, destOf
 will be doubled when grown.
 -/
 @[extern "lean_byte_array_copy_slice"]
-def copySlice (src : @& ByteArray) (srcOff : Nat) (dest : ByteArray) (destOff len : Nat) (exact : Bool := true) : ByteArray :=
-  ⟨dest.data.extract 0 destOff ++ src.data.extract srcOff (srcOff + len) ++ dest.data.extract (destOff + min len (src.data.size - srcOff)) dest.data.size⟩
+def copySlice
+    (src : @& ByteArray) (srcOff : Nat) (dest : ByteArray) (destOff len : Nat)
+    (exact : Bool := true)
+    : ByteArray :=
+  ⟨dest.data.extract 0 destOff ++ src.data.extract srcOff (srcOff + len)
+    ++ dest.data.extract (destOff + min len (src.data.size - srcOff)) dest.data.size⟩
 
 /--
 Copies the bytes with indices {name}`b` (inclusive) to {name}`e` (exclusive) to a new
 {name}`ByteArray`.
 -/
-def extract (a : ByteArray) (b e : Nat) : ByteArray :=
-  a.copySlice b empty 0 (e - b)
+def extract (a : ByteArray) (b e : Nat) : ByteArray := a.copySlice b empty 0 (e - b)
 
 /--
 Appends two byte arrays using fast array primitives instead of converting them into lists and back.
@@ -177,37 +176,33 @@ protected def fastAppend (a : ByteArray) (b : ByteArray) : ByteArray :=
   -- we assume that `append`s may be repeated, so use asymptotic growing; use `copySlice` directly to customize
   b.copySlice 0 a a.size b.size false
 
-@[simp]
-theorem size_data {a : ByteArray} :
-  a.data.size = a.size := rfl
+@[simp] theorem size_data {a : ByteArray} : a.data.size = a.size := rfl
 
 @[csimp]
 theorem append_eq_fastAppend : @ByteArray.append = @ByteArray.fastAppend := by
   funext a b
   ext1
   apply Array.ext'
-  simp [ByteArray.fastAppend, copySlice, ← size_data, - Array.append_assoc]
+  simp [ByteArray.fastAppend, copySlice, ← size_data, -Array.append_assoc]
 
 -- Needs to come after the `csimp` lemma
 instance : Append ByteArray where
   append := ByteArray.append
 
-@[simp]
-theorem append_eq {a b : ByteArray} : a.append b = a ++ b := rfl
+@[simp] theorem append_eq {a b : ByteArray} : a.append b = a ++ b := rfl
 
 @[simp]
 theorem fastAppend_eq {a b : ByteArray} : a.fastAppend b = a ++ b := by
   simp [← append_eq_fastAppend]
 
-/--
-Converts a packed array of bytes to a linked list.
--/
+/-- Converts a packed array of bytes to a linked list. -/
 def toList (bs : ByteArray) : List UInt8 :=
-  let rec loop (i : Nat) (r : List UInt8) :=
-    if i < bs.size then
-      loop (i+1) (bs.get! i :: r)
-    else
-      r.reverse
+  let rec
+    loop (i : Nat) (r : List UInt8) :=
+      if i < bs.size then
+        loop (i + 1) (bs.get! i :: r)
+      else
+        r.reverse
     termination_by bs.size - i
     decreasing_by decreasing_trivial_pre_omega
   loop 0 []
@@ -218,12 +213,14 @@ in {name}`a` satisfies {name}`p`, then the result is {name}`none`.
 
 The index is returned along with a proof that it is a valid index in the array.
 -/
-@[inline] def findFinIdx? (a : ByteArray) (p : UInt8 → Bool) (start := 0) : Option (Fin a.size) :=
-  let rec @[specialize] loop (i : Nat) :=
-    if h : i < a.size then
-      if p a[i] then some ⟨i, h⟩ else loop (i+1)
-    else
-      none
+@[inline]
+def findFinIdx? (a : ByteArray) (p : UInt8 → Bool) (start := 0) : Option (Fin a.size) :=
+  let rec
+    @[specialize] loop (i : Nat) :=
+      if h : i < a.size then
+        if p a[i] then some ⟨i, h⟩ else loop (i + 1)
+      else
+        none
     termination_by a.size - i
     decreasing_by decreasing_trivial_pre_omega
   loop start
@@ -234,12 +231,14 @@ in {name}`a` satisfies {name}`p`, then the result is {name}`none`.
 
 The variant {name}`findFinIdx?` additionally returns a proof that the found index is in bounds.
 -/
-@[inline] def findIdx? (a : ByteArray) (p : UInt8 → Bool) (start := 0) : Option Nat :=
-  let rec @[specialize] loop (i : Nat) :=
-    if h : i < a.size then
-      if p a[i] then some i else loop (i+1)
-    else
-      none
+@[inline]
+def findIdx? (a : ByteArray) (p : UInt8 → Bool) (start := 0) : Option Nat :=
+  let rec
+    @[specialize] loop (i : Nat) :=
+      if h : i < a.size then
+        if p a[i] then some i else loop (i + 1)
+      else
+        none
     termination_by a.size - i
     decreasing_by decreasing_trivial_pre_omega
   loop start
@@ -252,14 +251,18 @@ We claim this unsafe implementation is correct because an array cannot have more
 {name}`USize.size` elements in our runtime. This is similar to the {name}`Array` version.
 -/
 -- TODO: avoid code duplication in the future after we improve the compiler.
-@[inline] unsafe def forInUnsafe {β : Type v} {m : Type v → Type w} [Monad m] (as : ByteArray) (b : β) (f : UInt8 → β → m (ForInStep β)) : m β :=
+@[inline]
+unsafe def forInUnsafe
+    {β : Type v} {m : Type v → Type w} [Monad m]
+    (as : ByteArray) (b : β) (f : UInt8 → β → m (ForInStep β))
+    : m β :=
   let sz := as.usize
   let rec @[specialize] loop (i : USize) (b : β) : m β := do
     if i < sz then
       let a := as.uget i lcProof
       match (← f a b) with
-      | ForInStep.done  b => pure b
-      | ForInStep.yield b => loop (i+1) b
+      | ForInStep.done b => pure b
+      | ForInStep.yield b => loop (i + 1) b
     else
       pure b
   loop 0 b
@@ -270,16 +273,20 @@ The reference implementation of {name}`ForIn.forIn` for {name}`ByteArray`.
 In compiled code, this is replaced by the more efficient {name}`ByteArray.forInUnsafe`.
 -/
 @[implemented_by ByteArray.forInUnsafe]
-protected def forIn {β : Type v} {m : Type v → Type w} [Monad m] (as : ByteArray) (b : β) (f : UInt8 → β → m (ForInStep β)) : m β :=
+protected def forIn
+    {β : Type v} {m : Type v → Type w} [Monad m]
+    (as : ByteArray) (b : β) (f : UInt8 → β → m (ForInStep β))
+    : m β :=
   let rec loop (i : Nat) (h : i ≤ as.size) (b : β) : m β := do
     match i, h with
-    | 0,   _ => pure b
-    | i+1, h =>
-      have h' : i < as.size            := Nat.lt_of_lt_of_le (Nat.lt_succ_self i) h
-      have : as.size - 1 < as.size     := Nat.sub_lt (Nat.zero_lt_of_lt h') (by decide)
+    | 0, _ =>
+      pure b
+    | i + 1, h =>
+      have h' : i < as.size := Nat.lt_of_lt_of_le (Nat.lt_succ_self i) h
+      have : as.size - 1 < as.size := Nat.sub_lt (Nat.zero_lt_of_lt h') (by decide)
       have : as.size - 1 - i < as.size := Nat.lt_of_le_of_lt (Nat.sub_le (as.size - 1) i) this
       match (← f as[as.size - 1 - i] b) with
-      | ForInStep.done b  => pure b
+      | ForInStep.done b => pure b
       | ForInStep.yield b => loop i (Nat.le_of_lt h') b
   loop as.size (Nat.le_refl _) b
 
@@ -295,12 +302,16 @@ We claim this unsafe implementation is correct because an array cannot have more
 -/
 -- TODO: avoid code duplication.
 @[inline]
-unsafe def foldlMUnsafe {β : Type v} {m : Type v → Type w} [Monad m] (f : β → UInt8 → m β) (init : β) (as : ByteArray) (start := 0) (stop := as.size) : m β :=
+unsafe def foldlMUnsafe
+    {β : Type v} {m : Type v → Type w} [Monad m]
+    (f : β → UInt8 → m β) (init : β) (as : ByteArray)
+    (start := 0) (stop := as.size)
+    : m β :=
   let rec @[specialize] fold (i : USize) (stop : USize) (b : β) : m β := do
     if i == stop then
       pure b
     else
-      fold (i+1) stop (← f b (as.uget i lcProof))
+      fold (i + 1) stop (← f b (as.uget i lcProof))
   if start < stop then
     if stop ≤ as.size then
       fold (USize.ofNat start) (USize.ofNat stop) init
@@ -320,14 +331,17 @@ function {name}`f`. The initial value {name}`init` is the starting value before 
 been processed.
 -/
 @[implemented_by foldlMUnsafe]
-def foldlM {β : Type v} {m : Type v → Type w} [Monad m] (f : β → UInt8 → m β) (init : β) (as : ByteArray) (start := 0) (stop := as.size) : m β :=
+def foldlM
+    {β : Type v} {m : Type v → Type w} [Monad m]
+    (f : β → UInt8 → m β) (init : β) (as : ByteArray)
+    (start := 0) (stop := as.size)
+    : m β :=
   let fold (stop : Nat) (h : stop ≤ as.size) :=
     let rec loop (i : Nat) (j : Nat) (b : β) : m β := do
       if hlt : j < stop then
         match i with
-        | 0    => pure b
-        | i'+1 =>
-          loop i' (j+1) (← f b as[j])
+        | 0 => pure b
+        | i' + 1 => loop i' (j + 1) (← f b as[j])
       else
         pure b
     loop (stop - start) start init
@@ -347,7 +361,9 @@ processed.
 {name}`ByteArray.foldlM` is a monadic variant of this function.
 -/
 @[inline]
-def foldl {β : Type v} (f : β → UInt8 → β) (init : β) (as : ByteArray) (start := 0) (stop := as.size) : β :=
+def foldl
+    {β : Type v} (f : β → UInt8 → β) (init : β) (as : ByteArray) (start := 0) (stop := as.size)
+    : β :=
   Id.run <| as.foldlM (pure <| f · ·) init start stop
 
 set_option doc.verso false -- Awaiting intra-module forward reference support
@@ -369,18 +385,19 @@ the `ByteArray.Iterator` API should rule out the creation of invalid iterators, 
 structure Iterator where
   /-- The array the iterator is for. -/
   array : ByteArray
-  /-- The current position.
+  /--
+  The current position.
 
   This position is not necessarily valid for the array, for instance if one keeps calling
   `Iterator.next` when `Iterator.atEnd` is true. If the position is not valid, then the
-  current byte is `(default : UInt8)`. -/
+  current byte is `(default : UInt8)`.
+  -/
   idx : Nat
-  deriving Inhabited
+deriving Inhabited
 set_option doc.verso true
 
 /-- Creates an iterator at the beginning of an array. -/
-def mkIterator (arr : ByteArray) : Iterator :=
-  ⟨arr, 0⟩
+def mkIterator (arr : ByteArray) : Iterator := ⟨arr, 0⟩
 
 @[inherit_doc mkIterator]
 abbrev iter := mkIterator
@@ -389,14 +406,11 @@ abbrev iter := mkIterator
 instance : SizeOf Iterator where
   sizeOf i := i.array.size - i.idx
 
-theorem Iterator.sizeOf_eq (i : Iterator) : sizeOf i = i.array.size - i.idx :=
-  rfl
+theorem Iterator.sizeOf_eq (i : Iterator) : sizeOf i = i.array.size - i.idx := rfl
 
 namespace Iterator
 
-/--
-The number of bytes remaining in the iterator.
--/
+/-- The number of bytes remaining in the iterator. -/
 def remainingBytes : Iterator → Nat
   | ⟨arr, i⟩ => arr.size - i
 
@@ -440,14 +454,12 @@ If the position is zero, this function is the identity.
 def prev : Iterator → Iterator
   | ⟨arr, i⟩ => ⟨arr, i - 1⟩
 
-/--
-True if the iterator is valid; that is, it is not past the array's last byte.
--/
+/-- True if the iterator is valid; that is, it is not past the array's last byte. -/
 @[inline]
 def hasNext : Iterator → Bool
   | ⟨arr, i⟩ => i < arr.size
 
-/-- The byte at the current position. --/
+/-- The byte at the current position. - -/
 @[inline]
 def curr' (it : Iterator) (h : it.hasNext) : UInt8 :=
   match it with
@@ -457,7 +469,7 @@ def curr' (it : Iterator) (h : it.hasNext) : UInt8 :=
       assumption
     arr[i]
 
-/-- Moves the iterator's position forward by one byte. --/
+/-- Moves the iterator's position forward by one byte. - -/
 @[inline]
 def next' (it : Iterator) (_h : it.hasNext) : Iterator :=
   match it with

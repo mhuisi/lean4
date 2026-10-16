@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.CommRing.RingM
 public import Lean.Meta.Sym.Arith.Poly
@@ -19,8 +20,7 @@ The guarded versions live in `Sym.Arith.SafePoly`; the wrappers below run them w
 characteristic of the current ring and no budget.
 -/
 
-private abbrev runPoly (x : PolyM α) : RingM (Option α) := do
-  x.run { char? := (← nonzeroChar?) }
+private abbrev runPoly (x : PolyM α) : RingM (Option α) := do x.run { char? := (← nonzeroChar?) }
 
 private abbrev runPoly! (x : PolyM α) : RingM α := do
   let some r ← runPoly x
@@ -49,35 +49,42 @@ def _root_.Lean.Grind.CommRing.Poly.combineM (p₁ p₂ : Poly) : RingM Poly :=
 def _root_.Lean.Grind.CommRing.Poly.spolM (p₁ p₂ : Poly) : RingM Grind.CommRing.SPolResult := do
   match p₁, p₂ with
   | .add k₁ m₁ p₁, .add k₂ m₂ p₂ =>
-    let m    := m₁.lcm m₂
-    let m₁   := m.div m₁
-    let m₂   := m.div m₂
-    let g    := Nat.gcd k₁.natAbs k₂.natAbs
-    let c₁   := k₂/g
-    let c₂   := -k₁/g
-    let p₁   ← p₁.mulMonM c₁ m₁
-    let p₂   ← p₂.mulMonM c₂ m₂
+    let m := m₁.lcm m₂
+    let m₁ := m.div m₁
+    let m₂ := m.div m₂
+    let g := Nat.gcd k₁.natAbs k₂.natAbs
+    let c₁ := k₂ / g
+    let c₂ := -k₁ / g
+    let p₁ ← p₁.mulMonM c₁ m₁
+    let p₂ ← p₂.mulMonM c₂ m₂
     let spol ← p₁.combineM p₂
     return { spol, m₁, m₂, k₁ := c₁, k₂ := c₂ }
-  | _, _ => return {}
+  | _, _ =>
+    return {}
 
 /-- Returns `some (val, x)` if `m` contains a variable `x` whose the denotation is `val⁻¹`. -/
 def _root_.Lean.Grind.CommRing.Mon.findInvNumeralVar? (m : Mon) : RingM (Option (Nat × Var)) := do
   match m with
-  | .unit => return none
+  | .unit =>
+    return none
   | .mult pw m =>
     let e := (← getRingState).vars[pw.x]!
-    let_expr Inv.inv _ _ a := e | m.findInvNumeralVar?
-    let_expr OfNat.ofNat _ n _ := a | m.findInvNumeralVar?
-    let some n ← getNatValue? n | m.findInvNumeralVar?
+    let_expr Inv.inv _ _ a := e
+      | m.findInvNumeralVar?
+    let_expr OfNat.ofNat _ n _ := a
+      | m.findInvNumeralVar?
+    let some n ← getNatValue? n
+      | m.findInvNumeralVar?
     return some (n, pw.x)
 
 /-- Returns `some (val, x)` if `p` contains a variable `x` whose the denotation is `val⁻¹`. -/
 def _root_.Lean.Grind.CommRing.Poly.findInvNumeralVar? (p : Poly) : RingM (Option (Nat × Var)) := do
   match p with
-  | .num _ => return none
+  | .num _ =>
+    return none
   | .add _ m p =>
-    let some r ← m.findInvNumeralVar? | p.findInvNumeralVar?
+    let some r ← m.findInvNumeralVar?
+      | p.findInvNumeralVar?
     return some r
 
 /--
@@ -88,13 +95,13 @@ by the leading monomial of `p₂`.
 -/
 structure SimpResult where
   /-- The resulting simplified polynomial after rewriting. -/
-  p  : Poly := .num 0
+  p : Poly := .num 0
   /-- The integer coefficient multiplied with polynomial `p₁` in the rewriting step. -/
-  k₁ : Int  := 0
+  k₁ : Int := 0
   /-- The integer coefficient multiplied with polynomial `p₂` during rewriting. -/
-  k₂ : Int  := 0
+  k₂ : Int := 0
   /-- The monomial factor applied to polynomial `p₂`. -/
-  m₂ : Mon  := .unit
+  m₂ : Mon := .unit
 
 /--
 Simplifies polynomial `p₁` using polynomial `p₂` by rewriting.
@@ -116,24 +123,26 @@ def _root_.Lean.Grind.CommRing.Poly.simpM? (p₁ p₂ : Poly) : RingM (Option Si
       | .add k₁' m₁ p₁ =>
         if m₂.divides m₁ && (!checkCoeff || k₂' ∣ k₁') then
           let m₂ := m₁.div m₂
-          let g  := Nat.gcd k₁'.natAbs k₂'.natAbs
-          let k₁ := k₂'/g
-          let k₂ := -k₁'/g
-          let p  ← (← p₂.mulMonM k₂ m₂).combineM (← p₁.mulConstM k₁)
+          let g := Nat.gcd k₁'.natAbs k₂'.natAbs
+          let k₁ := k₂' / g
+          let k₂ := -k₁' / g
+          let p ← (← p₂.mulMonM k₂ m₂).combineM (← p₁.mulConstM k₁)
           return some { p, k₁, k₂, m₂ }
         else if let some r ← go? p₁ then
           if let some char ← nonzeroChar? then
-            let k := (k₁'*r.k₁) % char
+            let k := (k₁' * r.k₁) % char
             if k == 0 then
               return some r
             else
               return some { r with p := .add k m₁ r.p }
           else
-            return some { r with p := .add (k₁'*r.k₁) m₁ r.p }
+            return some { r with p := .add (k₁' * r.k₁) m₁ r.p }
         else
           return none
-      | .num _ => return none
+      | .num _ =>
+        return none
     go? p₁
-  | _ => return none
+  | _ =>
+    return none
 
 end Lean.Meta.Grind.Arith.CommRing

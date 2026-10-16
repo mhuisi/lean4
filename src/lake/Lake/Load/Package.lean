@@ -32,27 +32,56 @@ namespace Lake
 Constructs a package from the configuration defined in its Lake configuration file
 and the load configuaration.
 -/
-public def mkPackage
-  (loadCfg : LoadConfig) (fileCfg : LakefileConfig) (wsIdx := loadCfg.pkgIdx)
-: Package :=
+public def mkPackage (loadCfg : LoadConfig) (fileCfg : LakefileConfig) (wsIdx := loadCfg.pkgIdx)
+    : Package :=
   let {
-    pkgDir := dir, relPkgDir := relDir,
-    configFile, relConfigFile, relManifestFile,
-    scope, remoteUrl, ..} := loadCfg
+      pkgDir := dir
+      relPkgDir := relDir
+      configFile
+      relConfigFile
+      relManifestFile
+      scope
+      remoteUrl
+      ..
+    } :=
+    loadCfg
   let {
-    depConfigs, defaultTargets, scripts, defaultScripts, testDriver, lintDriver
-    -- destructing needed for type-correctness
-    pkgDecl, targetDecls, targetDeclMap, postUpdateHooks,
-    ..} := fileCfg
-  let {baseName, keyName, origName, config} := pkgDecl
+      depConfigs
+      defaultTargets
+      scripts
+      defaultScripts
+      testDriver
+      lintDriver
+      -- destructing needed for type-correctness
+      pkgDecl
+      targetDecls
+      targetDeclMap
+      postUpdateHooks
+      ..
+    } :=
+    fileCfg
+  let { baseName, keyName, origName, config } := pkgDecl
   {
-    wsIdx, baseName, keyName, origName, config
-    dir, relDir, configFile, relConfigFile, relManifestFile
-    scope, remoteUrl
-    depConfigs
-    targetDecls, targetDeclMap, defaultTargets
-    scripts, defaultScripts
-    testDriver, lintDriver
+    wsIdx,
+    baseName,
+    keyName,
+    origName,
+    config,
+    dir,
+    relDir,
+    configFile,
+    relConfigFile,
+    relManifestFile,
+    scope,
+    remoteUrl,
+    depConfigs,
+    targetDecls,
+    targetDeclMap,
+    defaultTargets,
+    scripts,
+    defaultScripts,
+    testDriver,
+    lintDriver,
     postUpdateHooks
   }
 
@@ -90,19 +119,18 @@ public def realConfigFile (cfgFile : FilePath) : BaseIO FilePath := do
 Resolves a relative configuration file path in {lean}`cfg` and
 detects its configuration language (if necessary).
 -/
-public def resolveConfigFile
-  (name : String) (cfg : LoadConfig)
-: LogIO {cfg : LoadConfig // cfg.configLang?.isSome} := do
+public def resolveConfigFile (name : String) (cfg : LoadConfig)
+    : LogIO {cfg : LoadConfig // cfg.configLang?.isSome} := do
   if h : cfg.configLang?.isSome then
     let some configFile ← resolvePath? cfg.configFile
       | error s!"{name}: configuration file not found: {cfg.configFile}"
-    return ⟨{cfg with configFile}, h⟩
+    return ⟨{ cfg with configFile }, h⟩
   else if let some ext := cfg.relConfigFile.extension then
     let some configFile ← resolvePath? cfg.configFile
       | error s!"{name}: configuration file not found: {cfg.configFile}"
     match ext with
-    | "lean" => return ⟨{cfg with configFile, configLang? := some .lean}, rfl⟩
-    | "toml" => return ⟨{cfg with configFile, configLang? := some .toml}, rfl⟩
+    | "lean" => return ⟨{ cfg with configFile, configLang? := some .lean }, rfl⟩
+    | "toml" => return ⟨{ cfg with configFile, configLang? := some .toml }, rfl⟩
     | _ => error s!"{name}: configuration has unsupported file extension: {configFile}"
   else
     let relLeanFile := cfg.relConfigFile.addExtension "lean"
@@ -112,11 +140,13 @@ public def resolveConfigFile
     if let some configFile ← resolvePath? leanFile then
       if (← tomlFile.pathExists) then
         logInfo s!"{name}: {relLeanFile} and {relTomlFile} are both present; using {relLeanFile}"
-      return ⟨{cfg with configFile, relConfigFile := relLeanFile, configLang? := some .lean}, rfl⟩
+      return ⟨{ cfg with configFile, relConfigFile := relLeanFile, configLang? := some .lean }, rfl⟩
     else if let some configFile ← resolvePath? tomlFile then
-      return ⟨{cfg with configFile, relConfigFile := relTomlFile, configLang? := some .toml}, rfl⟩
+      return ⟨{ cfg with configFile, relConfigFile := relTomlFile, configLang? := some .toml }, rfl⟩
     else
-      error s!"{name}: no configuration file with a supported extension:\n{leanFile}\n{tomlFile}"
+      error s!"{name}: no configuration file with a supported extension:\
+        \n{leanFile}\
+        \n{tomlFile}"
 
 /--
 **For internal use only.**
@@ -126,7 +156,8 @@ The load configuration {lean}`cfg` is assumed to already have an absolute path i
 {lean}`cfg.configFile` and that the proper configuratin langauge for it is in
 {lean}`cfg.configLang?`. This can be ensured through {lean}`resolveConfigFile`.
 -/
-public def loadConfigFile (cfg : LoadConfig) (h : cfg.configLang?.isSome) : LogIO LakefileConfig := do
+public def loadConfigFile (cfg : LoadConfig) (h : cfg.configLang?.isSome)
+    : LogIO LakefileConfig := do
   match cfg.configLang?.get h with
   | .lean => loadLeanConfig cfg
   | .toml => loadTomlConfig cfg

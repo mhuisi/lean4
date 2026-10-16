@@ -21,18 +21,38 @@ namespace Lsp
 open Json
 
 structure CompletionOptions where
-  triggerCharacters?   : Option (Array String) := none
+  triggerCharacters? : Option (Array String) := none
   allCommitCharacters? : Option (Array String) := none
-  resolveProvider      : Bool := false
-  deriving FromJson, ToJson
+  resolveProvider : Bool := false
+deriving FromJson, ToJson
 
 inductive CompletionItemKind where
-  | text | method | function | constructor | field
-  | variable | class | interface | module | property
-  | unit | value | enum | keyword | snippet
-  | color | file | reference | folder | enumMember
-  | constant | struct | event | operator | typeParameter
-  deriving Inhabited, DecidableEq, Repr, Hashable
+  | text
+  | method
+  | function
+  | constructor
+  | field
+  | variable
+  | class
+  | interface
+  | module
+  | property
+  | unit
+  | value
+  | enum
+  | keyword
+  | snippet
+  | color
+  | file
+  | reference
+  | folder
+  | enumMember
+  | constant
+  | struct
+  | event
+  | operator
+  | typeParameter
+deriving Inhabited, DecidableEq, Repr, Hashable
 
 instance : ToJson CompletionItemKind where
   toJson a := toJson (a.ctorIdx + 1)
@@ -40,17 +60,17 @@ instance : ToJson CompletionItemKind where
 instance : FromJson CompletionItemKind where
   fromJson? v := do
     let i : Nat ← fromJson? v
-    return CompletionItemKind.ofNat (i-1)
+    return CompletionItemKind.ofNat (i - 1)
 
 structure InsertReplaceEdit where
   newText : String
-  insert  : Range
+  insert : Range
   replace : Range
-  deriving FromJson, ToJson, BEq, Hashable
+deriving FromJson, ToJson, BEq, Hashable
 
 inductive CompletionItemTag where
   | deprecated
-  deriving Inhabited, DecidableEq, Repr, Hashable
+deriving Inhabited, DecidableEq, Repr, Hashable
 
 instance : ToJson CompletionItemTag where
   toJson t := toJson (t.ctorIdx + 1)
@@ -58,38 +78,38 @@ instance : ToJson CompletionItemTag where
 instance : FromJson CompletionItemTag where
   fromJson? v := do
     let i : Nat ← fromJson? v
-    return CompletionItemTag.ofNat (i-1)
+    return CompletionItemTag.ofNat (i - 1)
 
 structure CompletionItem where
   -- When adjusting this type, make sure to adjust `ResolvableCompletionList.compressFast`
   -- as well, which is our `(toJson l).compress` fast path.
   -- (Completion downstream of Mathlib can output gigantic JSON,
   -- so we want to avoid all redundant allocs)
-  label          : String
-  detail?        : Option String := none
+  label : String
+  detail? : Option String := none
   documentation? : Option MarkupContent := none
-  kind?          : Option CompletionItemKind := none
-  textEdit?      : Option InsertReplaceEdit := none
-  sortText?      : Option String := none
-  data?          : Option Json := none
-  tags?          : Option (Array CompletionItemTag) := none
-  /-
-  deprecated? : boolean
-  preselect? : boolean
-  filterText? : string
-  insertText? : string
-  insertTextFormat? : InsertTextFormat
-  insertTextMode? : InsertTextMode
-  additionalTextEdits? : TextEdit[]
-  commitCharacters? : string[]
-  command? : Command
-  -/
-  deriving FromJson, ToJson, Inhabited, BEq, Hashable
+  kind? : Option CompletionItemKind := none
+  textEdit? : Option InsertReplaceEdit := none
+  sortText? : Option String := none
+  data? : Option Json := none
+  tags? : Option (Array CompletionItemTag) := none
+/-
+deprecated? : boolean
+preselect? : boolean
+filterText? : string
+insertText? : string
+insertTextFormat? : InsertTextFormat
+insertTextMode? : InsertTextMode
+additionalTextEdits? : TextEdit[]
+commitCharacters? : string[]
+command? : Command
+-/
+deriving FromJson, ToJson, Inhabited, BEq, Hashable
 
 structure CompletionList where
   isIncomplete : Bool
-  items        : Array CompletionItem
-  deriving FromJson, ToJson
+  items : Array CompletionItem
+deriving FromJson, ToJson
 
 /--
 Identifier that is sent from the server to the client as part of the `CompletionItem.data?` field.
@@ -99,14 +119,12 @@ for that item, again containing the `data?` field provided by the server.
 inductive CompletionIdentifier where
   | const (declName : Name)
   | fvar (id : Lean.FVarId)
-  deriving BEq, Hashable
+deriving BEq, Hashable
 
 instance : ToJson CompletionIdentifier where
   toJson
-  | .const declName =>
-    .str s!"c{toString declName}"
-  | .fvar id =>
-    .str s!"f{toString id.name}"
+    | .const declName => .str s!"c{toString declName}"
+    | .fvar id => .str s!"f{toString id.name}"
 
 instance : FromJson CompletionIdentifier where
   fromJson?
@@ -119,16 +137,18 @@ instance : FromJson CompletionIdentifier where
         let id := ⟨String.Pos.Raw.extract s ⟨1⟩ s.rawEndPos |>.toName⟩
         .ok <| .fvar id
       else
-        .error "Expected string with prefix `c` or `f` in `FromJson` instance of `CompletionIdentifier`."
-    | _ => .error "Expected string in `FromJson` instance of `CompletionIdentifier`."
+        .error
+          "Expected string with prefix `c` or `f` in `FromJson` instance of `CompletionIdentifier`."
+    | _ =>
+      .error "Expected string in `FromJson` instance of `CompletionIdentifier`."
 
 structure ResolvableCompletionItemData where
-  uri   : DocumentUri
-  pos   : Position
+  uri : DocumentUri
+  pos : Position
   /-- Position of the completion info that this completion item was created from. -/
   cPos? : Option Nat := none
-  id?   : Option CompletionIdentifier := none
-  deriving BEq, Hashable
+  id? : Option CompletionIdentifier := none
+deriving BEq, Hashable
 
 instance : ToJson ResolvableCompletionItemData where
   toJson d := Id.run do
@@ -162,78 +182,76 @@ instance : FromJson ResolvableCompletionItemData where
       if let .ok (some id) := elems[4]?.mapM fromJson? then
         id? := some id
       let pos := { line, character }
-      return {
-        uri
-        pos
-        cPos?
-        id?
-      }
-    | _ => .error "Expected array in `FromJson` instance of `ResolvableCompletionItemData`"
+      return { uri, pos, cPos?, id? }
+    | _ =>
+      .error "Expected array in `FromJson` instance of `ResolvableCompletionItemData`"
 
 structure ResolvableCompletionItem where
-  label          : String
-  detail?        : Option String := none
+  label : String
+  detail? : Option String := none
   documentation? : Option MarkupContent := none
-  kind?          : Option CompletionItemKind := none
-  textEdit?      : Option InsertReplaceEdit := none
-  sortText?      : Option String := none
-  data?          : Option ResolvableCompletionItemData := none
-  tags?          : Option (Array CompletionItemTag) := none
-  /-
-  deprecated? : boolean
-  preselect? : boolean
-  filterText? : string
-  insertText? : string
-  insertTextFormat? : InsertTextFormat
-  insertTextMode? : InsertTextMode
-  additionalTextEdits? : TextEdit[]
-  commitCharacters? : string[]
-  command? : Command
-  -/
-  deriving FromJson, ToJson, Inhabited, BEq, Hashable
+  kind? : Option CompletionItemKind := none
+  textEdit? : Option InsertReplaceEdit := none
+  sortText? : Option String := none
+  data? : Option ResolvableCompletionItemData := none
+  tags? : Option (Array CompletionItemTag) := none
+/-
+deprecated? : boolean
+preselect? : boolean
+filterText? : string
+insertText? : string
+insertTextFormat? : InsertTextFormat
+insertTextMode? : InsertTextMode
+additionalTextEdits? : TextEdit[]
+commitCharacters? : string[]
+command? : Command
+-/
+deriving FromJson, ToJson, Inhabited, BEq, Hashable
 
 structure ResolvableCompletionList where
   isIncomplete : Bool
-  items        : Array ResolvableCompletionItem
-  deriving FromJson, ToJson
+  items : Array ResolvableCompletionItem
+deriving FromJson, ToJson
 
 structure CompletionParams extends TextDocumentPositionParams where
-  -- context? : CompletionContext
-  deriving FromJson, ToJson
+-- context? : CompletionContext
+deriving FromJson, ToJson
 
 structure Hover where
-  /- NOTE we should also accept MarkedString/MarkedString[] here
-  but they are deprecated, so maybe can get away without. -/
+  /-
+  NOTE we should also accept MarkedString/MarkedString[] here
+  but they are deprecated, so maybe can get away without.
+  -/
   contents : MarkupContent
-  range?   : Option Range := none
-  deriving ToJson, FromJson
+  range? : Option Range := none
+deriving ToJson, FromJson
 
 structure HoverParams extends TextDocumentPositionParams
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure DeclarationParams extends TextDocumentPositionParams
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure DefinitionParams extends TextDocumentPositionParams
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure TypeDefinitionParams extends TextDocumentPositionParams
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure ReferenceContext where
   includeDeclaration : Bool
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure ReferenceParams extends TextDocumentPositionParams where
   context : ReferenceContext
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure WorkspaceSymbolParams where
   query : String
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure DocumentHighlightParams extends TextDocumentPositionParams
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 inductive DocumentHighlightKind where
   | text
@@ -241,21 +259,21 @@ inductive DocumentHighlightKind where
   | write
 
 instance : ToJson DocumentHighlightKind where
- toJson
-   | DocumentHighlightKind.text => 1
-   | DocumentHighlightKind.read => 2
-   | DocumentHighlightKind.write => 3
+  toJson
+    | DocumentHighlightKind.text => 1
+    | DocumentHighlightKind.read => 2
+    | DocumentHighlightKind.write => 3
 
 structure DocumentHighlight where
   range : Range
   kind? : Option DocumentHighlightKind := none
-  deriving ToJson
+deriving ToJson
 
 abbrev DocumentHighlightResult := Array DocumentHighlight
 
 structure DocumentSymbolParams where
   textDocument : TextDocumentIdentifier
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 inductive SymbolKind where
   | file
@@ -284,19 +302,19 @@ inductive SymbolKind where
   | event
   | operator
   | typeParameter
-  deriving BEq, Hashable, Inhabited
+deriving BEq, Hashable, Inhabited
 
 instance : FromJson SymbolKind where
   fromJson?
-    | 1  => .ok .file
-    | 2  => .ok .module
-    | 3  => .ok .namespace
-    | 4  => .ok .package
-    | 5  => .ok .class
-    | 6  => .ok .method
-    | 7  => .ok .property
-    | 8  => .ok .field
-    | 9  => .ok .constructor
+    | 1 => .ok .file
+    | 2 => .ok .module
+    | 3 => .ok .namespace
+    | 4 => .ok .package
+    | 5 => .ok .class
+    | 6 => .ok .method
+    | 7 => .ok .property
+    | 8 => .ok .field
+    | 9 => .ok .constructor
     | 10 => .ok .enum
     | 11 => .ok .interface
     | 12 => .ok .function
@@ -314,46 +332,46 @@ instance : FromJson SymbolKind where
     | 24 => .ok .event
     | 25 => .ok .operator
     | 26 => .ok .typeParameter
-    | j  => .error s!"invalid symbol kind {j}"
+    | j => .error s!"invalid symbol kind {j}"
 
 instance : ToJson SymbolKind where
   toJson
-    | .file          => 1
-    | .module        => 2
-    | .namespace     => 3
-    | .package       => 4
-    | .class         => 5
-    | .method        => 6
-    | .property      => 7
-    | .field         => 8
-    | .constructor   => 9
-    | .enum          => 10
-    | .interface     => 11
-    | .function      => 12
-    | .variable      => 13
-    | .constant      => 14
-    | .string        => 15
-    | .number        => 16
-    | .boolean       => 17
-    | .array         => 18
-    | .object        => 19
-    | .key           => 20
-    | .null          => 21
-    | .enumMember    => 22
-    | .struct        => 23
-    | .event         => 24
-    | .operator      => 25
+    | .file => 1
+    | .module => 2
+    | .namespace => 3
+    | .package => 4
+    | .class => 5
+    | .method => 6
+    | .property => 7
+    | .field => 8
+    | .constructor => 9
+    | .enum => 10
+    | .interface => 11
+    | .function => 12
+    | .variable => 13
+    | .constant => 14
+    | .string => 15
+    | .number => 16
+    | .boolean => 17
+    | .array => 18
+    | .object => 19
+    | .key => 20
+    | .null => 21
+    | .enumMember => 22
+    | .struct => 23
+    | .event => 24
+    | .operator => 25
     | .typeParameter => 26
 
 structure DocumentSymbolAux (Self : Type) where
-  name           : String
-  detail?        : Option String := none
-  kind           : SymbolKind
+  name : String
+  detail? : Option String := none
+  kind : SymbolKind
   -- tags? : Array SymbolTag
-  range          : Range
+  range : Range
   selectionRange : Range
-  children?      : Option (Array Self) := none
-  deriving FromJson, ToJson
+  children? : Option (Array Self) := none
+deriving FromJson, ToJson
 
 inductive DocumentSymbol where
   | mk (sym : DocumentSymbolAux DocumentSymbol)
@@ -374,7 +392,7 @@ instance : ToJson DocumentSymbolResult where
 
 inductive SymbolTag where
   | deprecated
-  deriving BEq, Hashable, Inhabited
+deriving BEq, Hashable, Inhabited
 
 instance : FromJson SymbolTag where
   fromJson?
@@ -386,44 +404,44 @@ instance : ToJson SymbolTag where
     | .deprecated => 1
 
 structure SymbolInformation where
-  name           : String
-  kind           : SymbolKind
-  tags           : Array SymbolTag := #[]
-  location       : Location
+  name : String
+  kind : SymbolKind
+  tags : Array SymbolTag := #[]
+  location : Location
   containerName? : Option String := none
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure CallHierarchyPrepareParams extends TextDocumentPositionParams
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure CallHierarchyItem where
-  name           : String
-  kind           : SymbolKind
-  tags?          : Option (Array SymbolTag) := none
-  detail?        : Option String := none
-  uri            : DocumentUri
-  range          : Range
+  name : String
+  kind : SymbolKind
+  tags? : Option (Array SymbolTag) := none
+  detail? : Option String := none
+  uri : DocumentUri
+  range : Range
   selectionRange : Range
-  data?          : Option Json := none
-  deriving FromJson, ToJson, BEq, Hashable, Inhabited
+  data? : Option Json := none
+deriving FromJson, ToJson, BEq, Hashable, Inhabited
 
 structure CallHierarchyIncomingCallsParams where
   item : CallHierarchyItem
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure CallHierarchyIncomingCall where
-  «from»     : CallHierarchyItem
+  «from» : CallHierarchyItem
   fromRanges : Array Range
-  deriving FromJson, ToJson, Inhabited
+deriving FromJson, ToJson, Inhabited
 
 structure CallHierarchyOutgoingCallsParams where
   item : CallHierarchyItem
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure CallHierarchyOutgoingCall where
-  to         : CallHierarchyItem
+  to : CallHierarchyItem
   fromRanges : Array Range
-  deriving FromJson, ToJson, Inhabited
+deriving FromJson, ToJson, Inhabited
 
 inductive SemanticTokenType where
   -- Used by Lean
@@ -431,8 +449,10 @@ inductive SemanticTokenType where
   | variable
   | property
   | function
-  /- Other types included by default in the LSP specification.
-  Not used by the Lean core, but useful to users extending the Lean server. -/
+  /-
+  Other types included by default in the LSP specification.
+  Not used by the Lean core, but useful to users extending the Lean server.
+  -/
   | namespace
   | type
   | class
@@ -454,21 +474,22 @@ inductive SemanticTokenType where
   | decorator
   -- Extensions
   | leanSorryLike
-  deriving ToJson, FromJson, BEq, Hashable
+deriving ToJson, FromJson, BEq, Hashable
 
 -- must be in the same order as the constructors
-def SemanticTokenType.names : Array String :=
-  #["keyword", "variable", "property", "function", "namespace", "type", "class",
-    "enum", "interface", "struct", "typeParameter", "parameter", "enumMember",
-    "event", "method", "macro", "modifier", "comment", "string", "number",
-    "regexp", "operator", "decorator", "leanSorryLike"]
+def SemanticTokenType.names : Array String := #[
+  "keyword", "variable", "property", "function", "namespace", "type", "class",
+  "enum", "interface", "struct", "typeParameter", "parameter", "enumMember",
+  "event", "method", "macro", "modifier", "comment", "string", "number",
+  "regexp", "operator", "decorator", "leanSorryLike"
+]
 
-def SemanticTokenType.toNat (tokenType : SemanticTokenType) : Nat :=
-  tokenType.ctorIdx
+def SemanticTokenType.toNat (tokenType : SemanticTokenType) : Nat := tokenType.ctorIdx
 
 -- sanity check
-example {v : SemanticTokenType} : open SemanticTokenType in
-    names[v.toNat]?.map (toString <| toJson ·) = some (toString <| toJson v) := by
+example {v : SemanticTokenType}
+    : open SemanticTokenType in
+      names[v.toNat]?.map (toString <| toJson ·) = some (toString <| toJson v) := by
   cases v <;> native_decide
 
 /--
@@ -487,51 +508,55 @@ inductive SemanticTokenModifier where
   | modification
   | documentation
   | defaultLibrary
-  deriving ToJson, FromJson
+deriving ToJson, FromJson
 
 -- must be in the same order as the constructors
-def SemanticTokenModifier.names : Array String :=
-  #["declaration", "definition", "readonly", "static", "deprecated", "abstract",
-    "async", "modification", "documentation", "defaultLibrary"]
+def SemanticTokenModifier.names : Array String := #[
+  "declaration", "definition", "readonly", "static", "deprecated", "abstract",
+  "async", "modification", "documentation", "defaultLibrary"
+]
 
-def SemanticTokenModifier.toNat (modifier : SemanticTokenModifier) : Nat :=
-  modifier.ctorIdx
+def SemanticTokenModifier.toNat (modifier : SemanticTokenModifier) : Nat := modifier.ctorIdx
 
 -- sanity check
-example {v : SemanticTokenModifier} : open SemanticTokenModifier in
-    names[v.toNat]?.map (toString <| toJson ·) = some (toString <| toJson v) := by
+example {v : SemanticTokenModifier}
+    : open SemanticTokenModifier in
+      names[v.toNat]?.map (toString <| toJson ·) = some (toString <| toJson v) := by
   cases v <;> native_decide
 
 structure SemanticTokensLegend where
-  tokenTypes     : Array String
+  tokenTypes : Array String
   tokenModifiers : Array String
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure SemanticTokensOptions where
   legend : SemanticTokensLegend
-  range  : Bool
-  full   : Bool /- | {
+  range : Bool
+  /-
+  | {
     delta?: boolean;
-  } -/
-  deriving FromJson, ToJson
+  }
+  -/
+  full : Bool
+deriving FromJson, ToJson
 
 structure SemanticTokensParams where
   textDocument : TextDocumentIdentifier
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure SemanticTokensRangeParams where
   textDocument : TextDocumentIdentifier
-  range        : Range
-  deriving FromJson, ToJson
+  range : Range
+deriving FromJson, ToJson
 
 structure SemanticTokens where
   resultId? : Option String := none
-  data      : Array Nat
-  deriving FromJson, ToJson
+  data : Array Nat
+deriving FromJson, ToJson
 
 structure FoldingRangeParams where
   textDocument : TextDocumentIdentifier
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 inductive FoldingRangeKind where
   | comment
@@ -542,29 +567,29 @@ instance : ToJson FoldingRangeKind where
   toJson
     | FoldingRangeKind.comment => "comment"
     | FoldingRangeKind.imports => "imports"
-    | FoldingRangeKind.region  => "region"
+    | FoldingRangeKind.region => "region"
 
 structure FoldingRange where
   startLine : Nat
-  endLine   : Nat
-  kind?     : Option FoldingRangeKind := none
-  deriving ToJson
+  endLine : Nat
+  kind? : Option FoldingRangeKind := none
+deriving ToJson
 
 structure RenameOptions where
   prepareProvider : Bool := false
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure RenameParams extends TextDocumentPositionParams where
   newName : String
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure PrepareRenameParams extends TextDocumentPositionParams
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure InlayHintParams extends WorkDoneProgressParams where
   textDocument : TextDocumentIdentifier
-  range        : Range
-  deriving FromJson, ToJson
+  range : Range
+deriving FromJson, ToJson
 
 inductive InlayHintTooltip
   | plaintext (text : String)
@@ -582,11 +607,11 @@ instance : ToJson InlayHintTooltip where
     | .markdown markup => toJson markup
 
 structure InlayHintLabelPart where
-  value     : String
-  tooltip?  : Option InlayHintTooltip := none
+  value : String
+  tooltip? : Option InlayHintTooltip := none
   location? : Option Location := none
-  command?  : Option Command := none
-  deriving FromJson, ToJson
+  command? : Option Command := none
+deriving FromJson, ToJson
 
 inductive InlayHintLabel
   | name (n : String)
@@ -619,24 +644,24 @@ instance : ToJson InlayHintKind where
     | .parameter => 2
 
 structure InlayHint where
-  position      : Position
-  label         : InlayHintLabel
-  kind?         : Option InlayHintKind := none
-  textEdits?    : Option (Array TextEdit) := none
-  tooltip?      : Option (InlayHintTooltip) := none
-  paddingLeft?  : Option Bool := none
+  position : Position
+  label : InlayHintLabel
+  kind? : Option InlayHintKind := none
+  textEdits? : Option (Array TextEdit) := none
+  tooltip? : Option (InlayHintTooltip) := none
+  paddingLeft? : Option Bool := none
   paddingRight? : Option Bool := none
-  data?         : Option Json := none
-  deriving FromJson, ToJson
+  data? : Option Json := none
+deriving FromJson, ToJson
 
 structure InlayHintClientCapabilities where
   dynamicRegistration? : Option Bool := none
-  resolveSupport?      : Option ResolveSupport := none
-  deriving FromJson, ToJson
+  resolveSupport? : Option ResolveSupport := none
+deriving FromJson, ToJson
 
 structure InlayHintOptions extends WorkDoneProgressOptions where
   resolveProvider? : Option Bool := none
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 inductive ParameterInformationLabel
   | name (name : String)
@@ -644,10 +669,12 @@ inductive ParameterInformationLabel
 
 instance : FromJson ParameterInformationLabel where
   fromJson?
-    | .str name => .ok <| .name name
+    | .str name =>
+      .ok <| .name name
     | .arr #[startUtf16OffsetJson, endUtf16OffsetJson] => do
       return .range (← fromJson? startUtf16OffsetJson) (← fromJson? endUtf16OffsetJson)
-    | _ => .error "unexpected JSON for `ParameterInformationLabel`"
+    | _ =>
+      .error "unexpected JSON for `ParameterInformationLabel`"
 
 instance : ToJson ParameterInformationLabel where
   toJson
@@ -657,20 +684,20 @@ instance : ToJson ParameterInformationLabel where
 structure ParameterInformation where
   label : ParameterInformationLabel
   documentation? : Option MarkupContent := none
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure SignatureInformation where
   label : String
   documentation? : Option MarkupContent := none
   parameters? : Option (Array ParameterInformation) := none
   activeParameter? : Option Nat := none
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure SignatureHelp where
   signatures : Array SignatureInformation
   activeSignature? : Option Nat := none
   activeParameter? : Option Nat := none
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 inductive SignatureHelpTriggerKind where
   | invoked
@@ -695,43 +722,43 @@ structure SignatureHelpContext where
   triggerCharacter? : Option String := none
   isRetrigger : Bool
   activeSignatureHelp? : Option SignatureHelp := none
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure SignatureHelpParams extends TextDocumentPositionParams, WorkDoneProgressParams where
   context? : Option SignatureHelpContext := none
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure SignatureHelpOptions extends WorkDoneProgressOptions where
   triggerCharacters? : Option (Array String) := none
   retriggerCharacters? : Option (Array String) := none
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure DocumentColorParams extends WorkDoneProgressParams, PartialResultParams where
   textDocument : TextDocumentIdentifier
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure Color where
   red : Float
   green : Float
   blue : Float
   alpha : Float
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure ColorInformation where
   range : Range
   color : Color
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure DocumentColorOptions extends WorkDoneProgressOptions where
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure DocumentFormattingParams where
   -- Missing: `options: FormattingOptions`
   textDocument : TextDocumentIdentifier
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 structure DocumentFormattingOptions where
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 end Lsp
 end Lean

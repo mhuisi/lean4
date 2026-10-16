@@ -25,16 +25,18 @@ The full collection of fields is the transitive closure of fields through the su
 -/
 structure StructureFieldInfo where
   /-- The name of the field. This is a single-component name. -/
-  fieldName  : Name
+  fieldName : Name
   /-- The projection function associated to the field. -/
-  projFn     : Name
-  /-- If this field is for a subobject (i.e., an embedded parent structure), contains the name of the parent structure. -/
+  projFn : Name
+  /--
+  If this field is for a subobject (i.e., an embedded parent structure), contains the name of the parent structure.
+  -/
   subobject? : Option Name
   /-- The binder info for the field from the `structure` definition. -/
   binderInfo : BinderInfo
   /-- Deprecated. -/
   autoParam? : Option Expr := none
-  deriving Inhabited, Repr
+deriving Inhabited, Repr
 
 def StructureFieldInfo.lt (i₁ i₂ : StructureFieldInfo) : Bool :=
   Name.quickLt i₁.fieldName i₂.fieldName
@@ -49,59 +51,69 @@ and all the fields of the structure parent that do not occur in earlier parents 
 structure StructureParentInfo where
   /-- The name of the parent structure. -/
   structName : Name
-  /-- Whether this parent structure is represented as a subobject. If so, then there is a `fieldInfo` entry with the same `projFn`. -/
-  subobject  : Bool
-  /-- The projection function associated to the field. For subobjects, this is the same as the `projFn` in its `fieldInfo` entry. -/
-  projFn     : Name
-  deriving Inhabited
+  /--
+  Whether this parent structure is represented as a subobject. If so, then there is a `fieldInfo` entry with the same `projFn`.
+  -/
+  subobject : Bool
+  /--
+  The projection function associated to the field. For subobjects, this is the same as the `projFn` in its `fieldInfo` entry.
+  -/
+  projFn : Name
+deriving Inhabited
 
-/--
-Data about a type created with the `structure` command.
--/
+/-- Data about a type created with the `structure` command. -/
 structure StructureInfo where
   /-- The name of the structure. -/
-  structName  : Name
-  /-- The direct fields of a structure, sorted by position in the structure.
-  For example, the `s.3` notation refers to `fieldNames[3 - 1]`. -/
-  fieldNames  : Array Name := #[]
+  structName : Name
+  /--
+  The direct fields of a structure, sorted by position in the structure.
+  For example, the `s.3` notation refers to `fieldNames[3 - 1]`.
+  -/
+  fieldNames : Array Name := #[]
   /-- Information about the structure fields, sorted by `fieldName`. -/
-  fieldInfo   : Array StructureFieldInfo := #[]
-  /-- Information about structure parents. These are in the order they appear in the `extends` clause. -/
-  parentInfo  : Array StructureParentInfo := #[]
-  deriving Inhabited
+  fieldInfo : Array StructureFieldInfo := #[]
+  /--
+  Information about structure parents. These are in the order they appear in the `extends` clause.
+  -/
+  parentInfo : Array StructureParentInfo := #[]
+deriving Inhabited
 
-def StructureInfo.lt (i₁ i₂ : StructureInfo) : Bool :=
-  Name.quickLt i₁.structName i₂.structName
+def StructureInfo.lt (i₁ i₂ : StructureInfo) : Bool := Name.quickLt i₁.structName i₂.structName
 
 def StructureInfo.getProjFn? (info : StructureInfo) (i : Nat) : Option Name :=
   if h : i < info.fieldNames.size then
     let fieldName := info.fieldNames[i]
-    info.fieldInfo.binSearch { fieldName := fieldName, projFn := default, subobject? := none, binderInfo := default } StructureFieldInfo.lt |>.map (·.projFn)
+    info.fieldInfo.binSearch
+        { fieldName := fieldName, projFn := default, subobject? := none, binderInfo := default }
+        StructureFieldInfo.lt
+      |>.map (·.projFn)
   else
     none
 
 /-- Auxiliary state for structures defined in the current module. -/
 private structure StructureState where
   map : PersistentHashMap Name StructureInfo := {}
-  deriving Inhabited
+deriving Inhabited
 
-private builtin_initialize structureExt : PersistentEnvExtension StructureInfo StructureInfo (Unit × StructureState) ← registerPersistentEnvExtension {
-  logWrites       := true
-  mkInitial       := pure ((), {})
-  addImportedFn   := fun _ => pure ((), {})
-  addEntryFn      := fun (_, s) e => ((), { s with map := s.map.insert e.structName e })
-  exportEntriesFn := fun (_, s) => s.map.toArray |>.map (·.snd) |>.qsort StructureInfo.lt
-}
+private builtin_initialize structureExt
+    : PersistentEnvExtension StructureInfo StructureInfo (Unit × StructureState) ←
+  registerPersistentEnvExtension {
+    logWrites := true
+    mkInitial := pure ((), {})
+    addImportedFn := fun _ => pure ((), {})
+    addEntryFn := fun (_, s) e => ((), { s with map := s.map.insert e.structName e })
+    exportEntriesFn := fun (_, s) => s.map.toArray |>.map (·.snd) |>.qsort StructureInfo.lt
+  }
 
 /--
 A descriptor for a structure, for constructing a `StructureInfo` via `Lean.registerStructure`.
 -/
 structure StructureDescr where
   /-- The name of the structure. -/
-  structName  : Name
+  structName : Name
   /-- The fields should be in the order that they appear in the structure's constructor. -/
-  fields      : Array StructureFieldInfo
-  deriving Inhabited
+  fields : Array StructureFieldInfo
+deriving Inhabited
 
 /--
 Declares a new structure to the elaborator.
@@ -118,23 +130,29 @@ def registerStructure (env : Environment) (e : StructureDescr) : Environment :=
     structureExt.addEntry (log := .decl e.structName) env {
       structName := e.structName
       fieldNames := e.fields.map fun e => e.fieldName
-      fieldInfo  := e.fields.qsort StructureFieldInfo.lt
+      fieldInfo := e.fields.qsort StructureFieldInfo.lt
     }
 
 /--
 Sets parent projection info for a structure defined in the current module.
 Throws an error if the structure has not already been registered with `Lean.registerStructure`.
 -/
-def setStructureParents [Monad m] [MonadEnv m] [MonadError m] (structName : Name) (parentInfo : Array StructureParentInfo) : m Unit := do
+def setStructureParents
+    [Monad m] [MonadEnv m] [MonadError m]
+    (structName : Name) (parentInfo : Array StructureParentInfo)
+    : m Unit := do
   let some info := structureExt.getState (← getEnv) |>.snd.map.find? structName
-    | throwError "cannot set structure parents for `{structName}`, structure not defined in current module"
+    | throwError
+        "cannot set structure parents for `{structName}`, structure not defined in current module"
   modifyEnv (structureExt.addEntry (log := .decl structName) · { info with parentInfo })
 
 /-- Gets the `StructureInfo` if `structName` has been declared as a structure to the elaborator. -/
 def getStructureInfo? (env : Environment) (structName : Name) : Option StructureInfo :=
   match env.getModuleIdxFor? structName with
-  | some modIdx => structureExt.getModuleEntries env modIdx |>.binSearch { structName } StructureInfo.lt
-  | none        => structureExt.getState env |>.snd.map.find? structName
+  | some modIdx =>
+    structureExt.getModuleEntries env modIdx |>.binSearch { structName } StructureInfo.lt
+  | none =>
+    structureExt.getState env |>.snd.map.find? structName
 
 /--
 Gets the `StructureInfo` for `structName`, which is assumed to have been declared as a structure to the elaborator.
@@ -159,16 +177,20 @@ def getStructureCtor (env : Environment) (constName : Name) : ConstructorVal :=
     match env.find? ctorName with
     | some (ConstantInfo.ctorInfo val) => val
     | _ => panic! "ill-formed environment"
-  | _ => panic! "structure expected"
+  | _ =>
+    panic! "structure expected"
 
 /-- Gets the direct field names for the given structure, including subobject fields. -/
 def getStructureFields (env : Environment) (structName : Name) : Array Name :=
   (getStructureInfo env structName).fieldNames
 
 /-- Gets the `StructureFieldInfo` for the given direct field of the structure. -/
-def getFieldInfo? (env : Environment) (structName : Name) (fieldName : Name) : Option StructureFieldInfo :=
+def getFieldInfo? (env : Environment) (structName : Name) (fieldName : Name)
+    : Option StructureFieldInfo :=
   if let some info := getStructureInfo? env structName then
-    info.fieldInfo.binSearch { fieldName := fieldName, projFn := default, subobject? := none, binderInfo := default } StructureFieldInfo.lt
+    info.fieldInfo.binSearch
+      { fieldName := fieldName, projFn := default, subobject? := none, binderInfo := default }
+      StructureFieldInfo.lt
   else
     none
 
@@ -215,7 +237,8 @@ The parent projection name is a single-component name.
 
 Note: this relies on the fact that projection names are checked to be consistent across all parents.
 -/
-partial def findParentProjStruct? (env : Environment) (structName : Name) (projName : Name) : Option Name :=
+partial def findParentProjStruct? (env : Environment) (structName : Name) (projName : Name)
+    : Option Name :=
   go structName |>.run' {}
 where
   -- Use a cache to navigate the DAG in polynomial time
@@ -241,16 +264,18 @@ The body of the flat constructor has the following properties (recursively):
 - for subobject fields, the value is the unfolded flat constructor for that field
 - for standard fields, the value is one of the flat constructor parameters
 -/
-def mkFlatCtorOfStructCtorName (structCtorName : Name) : Name :=
-  structCtorName ++ `_flat_ctor
+def mkFlatCtorOfStructCtorName (structCtorName : Name) : Name := structCtorName ++ `_flat_ctor
 
-private partial def getStructureFieldsFlattenedAux (env : Environment) (structName : Name) (fullNames : Array Name) (includeSubobjectFields : Bool) : Array Name :=
+private partial def getStructureFieldsFlattenedAux
+    (env : Environment) (structName : Name) (fullNames : Array Name) (includeSubobjectFields : Bool)
+    : Array Name :=
   (getStructureFields env structName).foldl (init := fullNames) fun fullNames fieldName =>
     match isSubobjectField? env structName fieldName with
     | some parentStructName =>
       let fullNames := if includeSubobjectFields then fullNames.push fieldName else fullNames
       getStructureFieldsFlattenedAux env parentStructName fullNames includeSubobjectFields
-    | none                  => fullNames.push fieldName
+    | none =>
+      fullNames.push fieldName
 
 /--
 Returns the full set of field names for the given structure,
@@ -265,7 +290,9 @@ structure Bar extends Foo where b : Nat
 ```
 this returns ``#[`toFoo, `a, `b]``, or ``#[`a, `b]`` when `includeSubobjectFields := false`.
 -/
-def getStructureFieldsFlattened (env : Environment) (structName : Name) (includeSubobjectFields := true) : Array Name :=
+def getStructureFieldsFlattened
+    (env : Environment) (structName : Name) (includeSubobjectFields := true)
+    : Array Name :=
   getStructureFieldsFlattenedAux env structName #[] includeSubobjectFields
 
 /--
@@ -284,7 +311,8 @@ def getProjFnForField? (env : Environment) (structName : Name) (fieldName : Name
   else
     none
 
-def getProjFnInfoForField? (env : Environment) (structName : Name) (fieldName : Name) : Option (Name × ProjectionFunctionInfo) :=
+def getProjFnInfoForField? (env : Environment) (structName : Name) (fieldName : Name)
+    : Option (Name × ProjectionFunctionInfo) :=
   if let some projFn := getProjFnForField? env structName fieldName then
     (projFn, ·) <$> env.getProjectionFnInfo? projFn
   else
@@ -293,16 +321,16 @@ def getProjFnInfoForField? (env : Environment) (structName : Name) (fieldName : 
 /--
 Gets the name of the auxiliary definition that would have the default value for the structure field if it exists.
 -/
-def mkDefaultFnOfProjFn (projFn : Name) : Name :=
-  projFn ++ `_default
+def mkDefaultFnOfProjFn (projFn : Name) : Name := projFn ++ `_default
 
 /--
 Gets the name of the auxiliary definition that would have the inherited default value for the structure field if it exists.
 -/
-def mkInheritedDefaultFnOfProjFn (projFn : Name) : Name :=
-  projFn ++ `_inherited_default
+def mkInheritedDefaultFnOfProjFn (projFn : Name) : Name := projFn ++ `_inherited_default
 
-private def getFnForFieldUsing? (mkName : Name → Name) (env : Environment) (structName : Name) (fieldName : Name) : Option Name :=
+private def getFnForFieldUsing?
+    (mkName : Name → Name) (env : Environment) (structName : Name) (fieldName : Name)
+    : Option Name :=
   if let some projName := getProjFnForField? env structName fieldName then
     let defFn := mkName projName
     if env.contains defFn then defFn else none
@@ -315,51 +343,55 @@ private def getFnForFieldUsing? (mkName : Name → Name) (env : Environment) (st
 Returns the name of the auxiliary definition that defines a default value for the field, if any such definition exists.
 This is *not* an inherited default. We need to store provided defaults so that it is possible to resolve defaults according to the resolution order.
 -/
-def getDefaultFnForField? (env : Environment) (structName : Name) (fieldName : Name) : Option Name :=
+def getDefaultFnForField? (env : Environment) (structName : Name) (fieldName : Name)
+    : Option Name :=
   getFnForFieldUsing? mkDefaultFnOfProjFn env structName fieldName
 
 /--
 Returns the name of the auxiliary definition for a default value for the field, even if inherited, if any such definition exists.
 -/
-def getEffectiveDefaultFnForField? (env : Environment) (structName : Name) (fieldName : Name) : Option Name :=
+def getEffectiveDefaultFnForField? (env : Environment) (structName : Name) (fieldName : Name)
+    : Option Name :=
   getDefaultFnForField? env structName fieldName
-  <|> getFnForFieldUsing? mkInheritedDefaultFnOfProjFn env structName fieldName
+    <|> getFnForFieldUsing? mkInheritedDefaultFnOfProjFn env structName fieldName
 
 /--
 Gets the name of the auxiliary definition that would have the autoParam definition for a field.
 -/
-def mkAutoParamFnOfProjFn (projFn : Name) : Name :=
-  projFn ++ `_autoParam
+def mkAutoParamFnOfProjFn (projFn : Name) : Name := projFn ++ `_autoParam
 
 /--
 Returns the name of the auxiliary definition that defines the autoParam for the field, if any such definition exists.
 This is not the inherited autoParam, but the one that is defined or overridden by this structure.
 The effective autoParams are collected in the flat constructor.
 -/
-def getAutoParamFnForField? (env : Environment) (structName : Name) (fieldName : Name) : Option Name :=
+def getAutoParamFnForField? (env : Environment) (structName : Name) (fieldName : Name)
+    : Option Name :=
   getFnForFieldUsing? mkAutoParamFnOfProjFn env structName fieldName
 
 /--
 If `baseStructName` is an ancestor structure for `structName`, then returns a sequence of projection functions
 to go from `structName` to `baseStructName`. Returns `[]` if `baseStructName == structName`.
 -/
-partial def getPathToBaseStructure? (env : Environment) (baseStructName : Name) (structName : Name) : Option (List Name) :=
+partial def getPathToBaseStructure? (env : Environment) (baseStructName : Name) (structName : Name)
+    : Option (List Name) :=
   OptionT.run (go structName []) |>.run' {}
 where
   go (structName : Name) (path : List Name) : OptionT (StateM NameSet) (List Name) := do
     if baseStructName == structName then
       return path.reverse
     else
-      guard <| !(← get).contains structName
+      guard <| ! (← get).contains structName
       modify fun s => s.insert structName
-      let some info := getStructureInfo? env structName | failure
+      let some info := getStructureInfo? env structName
+        | failure
       -- Prefer subobject projections
       (info.fieldInfo.firstM fun field => do
-        let some parentStructName := field.subobject? | failure
-        go parentStructName (field.projFn :: path))
-      -- Otherwise, consider other parents
-      <|> info.parentInfo.firstM fun parent => do
-        go parent.structName (parent.projFn :: path)
+          let some parentStructName := field.subobject?
+            | failure
+          go parentStructName (field.projFn :: path))
+        -- Otherwise, consider other parents
+        <|> info.parentInfo.firstM fun parent => do go parent.structName (parent.projFn :: path)
 
 /--
 Returns true iff `constName` is a non-recursive inductive datatype that has only one constructor and no indices.
@@ -380,7 +412,8 @@ def getNonRecStructureCtor? (env : Environment) (constName : Name) : Option Cons
     match env.find? ctorName with
     | some (ConstantInfo.ctorInfo val) => val
     | _ => panic! "ill-formed environment"
-  | _ => none
+  | _ =>
+    none
 
 /-- Returns the number of fields for a non-recursive structure type. -/
 def getNonRecStructureNumFields (env : Environment) (constName : Name) : Nat :=
@@ -389,7 +422,8 @@ def getNonRecStructureNumFields (env : Environment) (constName : Name) : Nat :=
     match env.find? ctor with
     | some (.ctorInfo { numFields := n, .. }) => n
     | _ => 0
-  | _ => 0
+  | _ =>
+    0
 
 /-!
 ### Resolution orders
@@ -420,7 +454,7 @@ We may consider introducing an environment extension with ordering hints to help
 
 structure StructureResolutionState where
   resolutions : PHashMap Name (Array Name) := {}
-  deriving Inhabited
+deriving Inhabited
 
 /--
 We use an environment extension to cache resolution orders.
@@ -430,14 +464,20 @@ builtin_initialize structureResolutionExt : EnvExtension StructureResolutionStat
   registerEnvExtension (pure {}) (asyncMode := .local) (logWrites := true)
 
 /-- Gets the resolution order if it has already been cached. -/
-private def getStructureResolutionOrder? (env : Environment) (structName : Name) : Option (Array Name) :=
+private def getStructureResolutionOrder? (env : Environment) (structName : Name)
+    : Option (Array Name) :=
   (structureResolutionExt.getState env).resolutions.find? structName
 
 /-- Caches a structure's resolution order. -/
-private def setStructureResolutionOrder [MonadEnv m] (structName : Name) (resolutionOrder : Array Name) : m Unit :=
+private def setStructureResolutionOrder
+    [MonadEnv m] (structName : Name) (resolutionOrder : Array Name)
+    : m Unit :=
   -- unlogged: a mere cache of a pure computation over tracked inputs
-  modifyEnv fun env => structureResolutionExt.modifyState (log := .unlogged) env fun s =>
-    { s with resolutions := s.resolutions.insert structName resolutionOrder }
+  modifyEnv fun env =>
+    structureResolutionExt.modifyState (log := .unlogged) env fun s => {
+      s with
+      resolutions := s.resolutions.insert structName resolutionOrder
+    }
 
 /-- "The `badParent` must come after the `conflicts`. -/
 structure StructureResolutionOrderConflict where
@@ -445,12 +485,12 @@ structure StructureResolutionOrderConflict where
   badParent : Name
   /-- Conflicts that must come before `badParent`. The flag is whether it is a direct parent. -/
   conflicts : Array (Bool × Name)
-  deriving Inhabited
+deriving Inhabited
 
 structure StructureResolutionOrderResult where
   resolutionOrder : Array Name
   conflicts : Array StructureResolutionOrderConflict := #[]
-  deriving Inhabited
+deriving Inhabited
 
 mutual
 
@@ -458,8 +498,9 @@ mutual
 Computes and caches the C3 linearization. Assumes parents have already been set with `setStructureParents`.
 If `relaxed` is false, then if the linearization cannot be computed, conflicts are recorded in the return value.
 -/
-partial def computeStructureResolutionOrder [Monad m] [MonadEnv m]
-    (structName : Name) (relaxed : Bool) : m StructureResolutionOrderResult := do
+partial def computeStructureResolutionOrder
+    [Monad m] [MonadEnv m] (structName : Name) (relaxed : Bool)
+    : m StructureResolutionOrderResult := do
   let env ← getEnv
   if let some resOrder := getStructureResolutionOrder? env structName then
     return { resolutionOrder := resOrder }
@@ -468,10 +509,13 @@ partial def computeStructureResolutionOrder [Monad m] [MonadEnv m]
   setStructureResolutionOrder structName result.resolutionOrder
   return result
 
-partial def mergeStructureResolutionOrders [Monad m] [MonadEnv m]
-    (structName : Name) (parentNames : Array Name) (relaxed : Bool) : m StructureResolutionOrderResult := do
+partial def mergeStructureResolutionOrders
+    [Monad m] [MonadEnv m] (structName : Name) (parentNames : Array Name) (relaxed : Bool)
+    : m StructureResolutionOrderResult := do
   -- Don't be strict about parents: if they were supposed to be checked, they were already checked.
-  let parentResOrders ← parentNames.mapM fun parentName => return (← computeStructureResolutionOrder parentName true).resolutionOrder
+  let parentResOrders ←
+    parentNames.mapM fun parentName =>
+      return (← computeStructureResolutionOrder parentName true).resolutionOrder
 
   -- `resOrders` contains the resolution orders to merge.
   -- The parent list is inserted as a pseudo resolution order to ensure immediate parents come out in order,
@@ -486,17 +530,18 @@ partial def mergeStructureResolutionOrders [Monad m] [MonadEnv m]
     let (good, name) ← selectParent resOrders
 
     unless good || relaxed do
-      let conflicts := resOrders |>.filter (·[1...*].any (· == name)) |>.map (·[0]!) |>.qsort Name.lt |>.eraseReps
-      defects := defects.push {
-        isDirectParent := parentNames.contains name
-        badParent := name
-        conflicts := conflicts.map fun c => (parentNames.contains c, c)
-      }
+      let conflicts :=
+        resOrders |>.filter (·[1...*].any (· == name)) |>.map (·[0]!) |>.qsort Name.lt |>.eraseReps
+      defects :=
+        defects.push {
+          isDirectParent := parentNames.contains name
+          badParent := name
+          conflicts := conflicts.map fun c => (parentNames.contains c, c)
+        }
 
     resOrder := resOrder.push name
-    resOrders := resOrders
-      |>.map (fun resOrder => resOrder.filter (· != name))
-      |>.filter (!·.isEmpty)
+    resOrders :=
+      resOrders |>.map (fun resOrder => resOrder.filter (· != name)) |>.filter (!·.isEmpty)
 
   return { resolutionOrder := resOrder, conflicts := defects }
 where
@@ -515,11 +560,8 @@ where
 
 end
 
-/--
-Gets the resolution order for a structure.
--/
-def getStructureResolutionOrder [Monad m] [MonadEnv m]
-    (structName : Name) : m (Array Name) :=
+/-- Gets the resolution order for a structure. -/
+def getStructureResolutionOrder [Monad m] [MonadEnv m] (structName : Name) : m (Array Name) :=
   (·.resolutionOrder) <$> computeStructureResolutionOrder structName (relaxed := true)
 
 /--

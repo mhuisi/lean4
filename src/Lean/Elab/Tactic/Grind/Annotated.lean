@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kim Morrison
 -/
 module
+
 prelude
 public import Lean.Elab.Command
 import Init.Grind.Annotated
@@ -32,7 +33,8 @@ public def isGrindAnnotatedModule (env : Environment) (modIdx : ModuleIdx) : Boo
 
 @[builtin_command_elab Lean.Parser.Command.grindAnnotated]
 def elabGrindAnnotated : CommandElab := fun stx => do
-  let `(grind_annotated $dateStr) := stx | throwUnsupportedSyntax
+  let `(grind_annotated $dateStr) := stx
+    | throwUnsupportedSyntax
 
   -- Extract the date string value
   let dateValue := dateStr.getString
@@ -40,7 +42,8 @@ def elabGrindAnnotated : CommandElab := fun stx => do
   -- Validate that the date is in YYYY-MM-DD format using Std.Time
   match PlainDate.parse dateValue with
   | .error err =>
-    throwError "Invalid date format: {err}\nExpected format: YYYY-MM-DD (e.g., \"2025-01-15\")"
+    throwError "Invalid date format: {err}\
+      \nExpected format: YYYY-MM-DD (e.g., \"2025-01-15\")"
   | .ok _ =>
     -- Date is valid, mark the current module as grind-annotated
     let modName ← getMainModule

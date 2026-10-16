@@ -35,35 +35,41 @@ Use `run_cmd modifyEnv fun env => triggerDenyListExt.addEntry env trigger` to ad
 builtin_initialize triggerDenyListExt : SimplePersistentEnvExtension Name NameSet ←
   registerSimplePersistentEnvExtension {
     addEntryFn := (·.insert)
-    addImportedFn := mkStateFromImportedEntries (·.insert)
-      (NameSet.ofList [`Eq, `BEq, `BEq.beq, `LE.le, `LT.lt, `GE.ge, `GT.gt,
-        `Bool.not, `Bool.and, `Bool.or, `Bool.xor, `Bool.true, `Bool.false,
-        `Not, `And, `Or, `Xor,
-        `ite, `dite, `Exists, `OfNat, `OfNat.ofNat, `SizeOf, `SizeOf.sizeOf])
+    addImportedFn :=
+      mkStateFromImportedEntries (·.insert)
+        (NameSet.ofList [
+          `Eq, `BEq, `BEq.beq, `LE.le, `LT.lt, `GE.ge, `GT.gt,
+          `Bool.not, `Bool.and, `Bool.or, `Bool.xor, `Bool.true, `Bool.false,
+          `Not, `And, `Or, `Xor,
+          `ite, `dite, `Exists, `OfNat, `OfNat.ofNat, `SizeOf, `SizeOf.sizeOf
+        ])
   }
 
 /--
 Return the constants in `consts` that are not in `denyList` and are approximately least frequent
 (relative to the others), with their frequency relative to the least frequent one.
 -/
-def triggersOf (frequency : Name → Nat) (denyList : NameSet) (consts : Array Name)
-    (maxTolerance : Float) : Array (Name × Float) := Id.run do
-  let frequencies := consts.filterMap fun n => Id.run do
-    if denyList.contains n then
-      return none
-    let f := frequency n
-    return if f = 0 then
-      none
-    else
-      some (n, f.toFloat)
+def triggersOf
+    (frequency : Name → Nat) (denyList : NameSet) (consts : Array Name) (maxTolerance : Float)
+    : Array (Name × Float) := Id.run do
+  let frequencies :=
+    consts.filterMap fun n => Id.run do
+      if denyList.contains n then
+        return none
+      let f := frequency n
+      return if f = 0 then
+               none
+             else
+               some (n, f.toFloat)
   if frequencies.isEmpty then
     return #[]
   let minFrequency := frequencies.foldl (fun acc (_, f) => min acc f) (frequencies[0]!.2)
-  return frequencies.filterMap
-    (fun (n, f) => if f ≤ minFrequency * maxTolerance then some (n, f / minFrequency) else none)
+  return frequencies.filterMap (fun (n, f) =>
+    if f ≤ minFrequency * maxTolerance then some (n, f / minFrequency) else none)
 
-def triggerSymbolsUsing (frequency : Name → Nat) (denyList : NameSet)
-    (ci : ConstantInfo) (maxTolerance : Float) : MetaM (Array (Name × Float)) :=
+def triggerSymbolsUsing
+    (frequency : Name → Nat) (denyList : NameSet) (ci : ConstantInfo) (maxTolerance : Float)
+    : MetaM (Array (Name × Float)) :=
   return triggersOf frequency denyList (← ci.type.relevantConstants) maxTolerance
 
 /--
@@ -71,7 +77,8 @@ Return the relevant constants (i.e. ignoring instances and proofs)
 which appear in the type of `ci` and which are approximately least frequent in the library
 (relative to other constants appearing in the type of `ci`).
 -/
-def triggerSymbols (ci : ConstantInfo) (maxTolerance : Float := 3.0) : MetaM (Array (Name × Float)) := do
+def triggerSymbols (ci : ConstantInfo) (maxTolerance : Float := 3.0)
+    : MetaM (Array (Name × Float)) := do
   let frequency ← symbolFrequencyMap
   let denyList := triggerDenyListExt.getState (← getEnv)
   triggerSymbolsUsing (frequency.getD · 0) denyList ci maxTolerance
@@ -88,8 +95,8 @@ def prepareTriggers (maxTolerance : Float := 3.0) : CoreM (NameMap (List (Name �
   for h : i in [0:consts.size] do
     let (name, relevant) := consts[i]
     for (trigger, tolerance) in triggersOf (frequency.getD · 0) denyList relevant maxTolerance do
-      buckets := buckets.alter trigger fun entries? =>
-        some ((entries?.getD #[]).push (i, name, tolerance))
+      buckets :=
+        buckets.alter trigger fun entries? => some ((entries?.getD #[]).push (i, name, tolerance))
   return buckets.foldl (init := {}) fun map trigger entries =>
     let sorted := entries.qsort fun (i, _, x) (j, _, y) => x < y || (x == y && i > j)
     map.insert trigger (sorted.toList.map fun (_, name, tolerance) => (name, tolerance))
@@ -115,7 +122,13 @@ def sineQuaNonTriggersFor (decl : Name) : CoreM (List (Name × Float)) := do
     (v.find? fun (n, _) => n == decl) |>.map fun (_, f) => (t, f)
 
 local instance : Ord (Float × Name) where
-  compare x y := if x.1 < y.1 then .lt else if x.1 > y.1 then .gt else Name.cmp x.2 y.2
+  compare x y :=
+    if x.1 < y.1 then
+      .lt
+    else if x.1 > y.1 then
+      .gt
+    else
+      Name.cmp x.2 y.2
 
 def frequencyScore (n : Name) (frequencyWeight : Float := 0.01) : MetaM Float := do
   let f ← symbolFrequency n
@@ -128,41 +141,58 @@ We select theorems in a priority order, where the priority is `1.5 ^ (trigger de
 
 The `1.5` factor could be tuned.
 -/
-public partial def sineQuaNon (names : NameSet) (maxSuggestions : Nat) (depthFactor := 1.5) (frequencyWeight : Float := 0.01) :
-    MetaM (Array Suggestion) := do
+public partial def sineQuaNon
+    (names : NameSet) (maxSuggestions : Nat) (depthFactor := 1.5) (frequencyWeight : Float := 0.01)
+    : MetaM (Array Suggestion) := do
   let denyList := triggerDenyListExt.getState (← getEnv)
   let targets := names \ denyList
-  let r ← go denyList targets
-    (Std.TreeSet.ofList (← targets.toList.mapM (fun n => return (← frequencyScore n, n)))) #[] {}
+  let r ←
+    go denyList targets
+      (Std.TreeSet.ofList (← targets.toList.mapM (fun n => return (← frequencyScore n, n)))) #[] {}
   return r.map (fun (n, f) => { name := n, score := 1 / f })
-where go (denyList : NameSet)(pastTriggers : NameSet) (triggerQueue : Std.TreeSet (Float × Name) compare)
-    (acceptedTheorems : Array (Name × Float)) (queuedTheorems : Std.TreeSet (Float × Name) compare) : MetaM (Array (Name × Float)) := do
-  if acceptedTheorems.size ≥ maxSuggestions then return acceptedTheorems else
-  -- Is there a companion to `min?` that gives the minimum element along with the rest of the set?
-  match triggerQueue.min? with
-  | some (tf, t) => do
-    let qf? := queuedTheorems.min?.map (·.1)
-    if match qf? with | none => true | some qf => tf < qf then
-      trace[sineQuaNon] m!"\
-        acceptedTheorems: {acceptedTheorems}\n\
-        pastTriggers: {pastTriggers.toList}\n\
-        triggerQueue: {triggerQueue.toList}\n\
-        queuedTheorems: {queuedTheorems.toList}"
-      let theorems ← sineQuaNonTheorems t
-      return ← go denyList pastTriggers (triggerQueue.erase (tf, t)) acceptedTheorems
-        (theorems.foldl (init := queuedTheorems) fun acc (p, pf) => acc.insert (pf * tf, p))
-  | none => pure ()
-  match queuedTheorems.min? with
-  | none => return acceptedTheorems
-  | some (qf, q) =>
-    let ci ← getConstInfo q
-    let (pastTriggers', triggersQueue') ← (← ci.type.relevantConstants).foldlM (init := (pastTriggers, triggerQueue))
-      fun ⟨pastTriggers', triggersQueue'⟩ n => do
-        if pastTriggers'.contains n || denyList.contains n then
-          pure ⟨pastTriggers', triggersQueue'⟩
-        else
-          pure <| ⟨pastTriggers'.insert n, triggersQueue'.insert (qf * depthFactor * (← frequencyScore n frequencyWeight), n)⟩
-    go denyList pastTriggers' triggersQueue' (acceptedTheorems.push (q, qf)) (queuedTheorems.erase (qf, q))
+where
+  go
+      (denyList : NameSet) (pastTriggers : NameSet)
+      (triggerQueue : Std.TreeSet (Float × Name) compare) (acceptedTheorems : Array (Name × Float))
+      (queuedTheorems : Std.TreeSet (Float × Name) compare)
+      : MetaM (Array (Name × Float)) := do
+    if acceptedTheorems.size ≥ maxSuggestions then
+      return acceptedTheorems
+    else
+      -- Is there a companion to `min?` that gives the minimum element along with the rest of the set?
+      match triggerQueue.min? with
+      | some (tf, t) => do
+        let qf? := queuedTheorems.min?.map (·.1)
+        if match qf? with
+            | none => true
+            | some qf => tf < qf then
+          trace[sineQuaNon] m!"\
+            acceptedTheorems: {acceptedTheorems}\n\
+            pastTriggers: {pastTriggers.toList}\n\
+            triggerQueue: {triggerQueue.toList}\n\
+            queuedTheorems: {queuedTheorems.toList}"
+          let theorems ← sineQuaNonTheorems t
+          return ← go denyList pastTriggers (triggerQueue.erase (tf, t)) acceptedTheorems
+            (theorems.foldl (init := queuedTheorems) fun acc (p, pf) => acc.insert (pf * tf, p))
+      | none =>
+        pure ()
+      match queuedTheorems.min? with
+      | none =>
+        return acceptedTheorems
+      | some (qf, q) =>
+        let ci ← getConstInfo q
+        let (pastTriggers', triggersQueue') ←
+          (← ci.type.relevantConstants).foldlM (init := (pastTriggers, triggerQueue))
+            fun ⟨pastTriggers', triggersQueue'⟩ n => do
+              if pastTriggers'.contains n || denyList.contains n then
+                pure ⟨pastTriggers', triggersQueue'⟩
+              else
+                pure <| ⟨
+                  pastTriggers'.insert n,
+                  triggersQueue'.insert (qf * depthFactor * (← frequencyScore n frequencyWeight), n)
+                ⟩
+        go denyList pastTriggers' triggersQueue' (acceptedTheorems.push (q, qf))
+          (queuedTheorems.erase (qf, q))
 
 end SineQuaNon
 

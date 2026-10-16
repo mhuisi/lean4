@@ -23,22 +23,36 @@ Important: this operation only works correctly if the two inputs are in
 canonical form for a common format (see the docstring for `UnpackedFloat` for details.)
 -/
 protected def compare : UnpackedFloat → UnpackedFloat → Option Ordering
-  | .notANumber, _ => none
-  | _, .notANumber => none
-  | .infinity s₁, .infinity s₂ => some (compare s₁ s₂)
-  | .infinity .positive, _ => some .gt
-  | .infinity .negative, _ => some .lt
-  | _, .infinity .positive => some .lt
-  | _, .infinity .negative => some .gt
-  | .finite .positive .., .zero _ => some .gt
-  | .finite .negative .., .zero _ => some .lt
-  | .zero _, .finite .positive .. => some .lt
-  | .zero _, .finite .negative .. => some .gt
-  | .zero _, .zero _ => some .eq
+  | .notANumber, _ =>
+    none
+  | _, .notANumber =>
+    none
+  | .infinity s₁, .infinity s₂ =>
+    some (compare s₁ s₂)
+  | .infinity .positive, _ =>
+    some .gt
+  | .infinity .negative, _ =>
+    some .lt
+  | _, .infinity .positive =>
+    some .lt
+  | _, .infinity .negative =>
+    some .gt
+  | .finite .positive .., .zero _ =>
+    some .gt
+  | .finite .negative .., .zero _ =>
+    some .lt
+  | .zero _, .finite .positive .. =>
+    some .lt
+  | .zero _, .finite .negative .. =>
+    some .gt
+  | .zero _, .zero _ =>
+    some .eq
   | .finite .negative m₁ e₁ _, .finite .negative m₂ e₂ _ =>
     some ((compare e₁ e₂).then (compare m₁ m₂)).swap
-  | .finite .negative .., .finite .positive .. => some .lt
-  | .finite .positive .., .finite .negative .. => some .gt
+  | .finite .negative .., .finite .positive .. =>
+    some .lt
+  | .finite .positive .., .finite .negative .. =>
+    some .gt
   | .finite .positive m₁ e₁ _, .finite .positive m₂ e₂ _ =>
     some ((compare e₁ e₂).then (compare m₁ m₂))
 
@@ -47,23 +61,20 @@ Determines whether `a` is less than or equal to `b` according to IEEE rules.
 
 This is not a total ordering, and `≤` is not reflexive.
 -/
-protected def le (a b : UnpackedFloat) : Bool :=
-  (a.compare b).any (·.isLE)
+protected def le (a b : UnpackedFloat) : Bool := (a.compare b).any (·.isLE)
 
 /--
 Determines whether `a` is less than `b` according to IEEE rules.
 
 This is not a total ordering.
 -/
-protected def lt (a b : UnpackedFloat) : Bool :=
-  a.compare b == some .lt
+protected def lt (a b : UnpackedFloat) : Bool := a.compare b == some .lt
 
 /--
 Determines whether `a` is equal to `b` according to IEEE rules.
 
 This is not a reflexive relation.
 -/
-protected def beq (a b : UnpackedFloat) : Bool :=
-  a.compare b == some .eq
+protected def beq (a b : UnpackedFloat) : Bool := a.compare b == some .eq
 
 end Float.Model.UnpackedFloat

@@ -26,57 +26,32 @@ open Std Async
 
 set_option linter.all true
 
-/--
-Typeclass for values that can be read as HTTP body streams.
--/
+/-- Typeclass for values that can be read as HTTP body streams. -/
 class Body (α : Type) where
-  /--
-  Receives the next body chunk. Returns `none` at end-of-stream.
-  -/
+  /-- Receives the next body chunk. Returns `none` at end-of-stream. -/
   recv : α → Async (Option Chunk)
-
-  /--
-  Closes the body stream.
-  -/
+  /-- Closes the body stream. -/
   close : α → Async Unit
-
-  /--
-  Returns `true` when the body stream is closed.
-  -/
+  /-- Returns `true` when the body stream is closed. -/
   isClosed : α → Async Bool
-
-  /--
-  Selector that resolves when a chunk is available or EOF is reached.
-  -/
+  /-- Selector that resolves when a chunk is available or EOF is reached. -/
   recvSelector : α → Selector (Option Chunk)
-
   /--
   Non-blocking receive attempt. Returns `none` if no chunk is immediately available,
   `some (some chunk)` when a chunk is ready, or `some none` at end-of-stream.
   -/
   tryRecv (body : α) : Async (Option (Option Chunk))
-
-  /--
-  Gets the declared size of the body.
-  -/
+  /-- Gets the declared size of the body. -/
   getKnownSize : α → Async (Option Body.Length)
-
-  /--
-  Sets the declared size of a body.
-  -/
+  /-- Sets the declared size of a body. -/
   setKnownSize : α → Option Body.Length → Async Unit
 end Std.Http
 
 namespace Std.Http.Body
 
-/--
-Typeclass for types that can be converted to a `ByteArray`.
--/
+/-- Typeclass for types that can be converted to a `ByteArray`. -/
 class ToByteArray (α : Type) where
-
-  /--
-  Transforms into a `ByteArray`.
-  -/
+  /-- Transforms into a `ByteArray`. -/
   toByteArray : α → ByteArray
 
 instance : ToByteArray ByteArray where
@@ -90,7 +65,6 @@ Typeclass for types that can be decoded from a `ByteArray`. The conversion may f
 message if the bytes are not valid for the target type.
 -/
 class FromByteArray (α : Type) where
-
   /--
   Attempts to decode a `ByteArray` into the target type, returning an error message on failure.
   -/

@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Simp.Simproc
 import Init.Grind.Util
@@ -16,14 +17,13 @@ Returns `Grind.simpMatchDiscrsOnly e`. Recall that `Grind.simpMatchDiscrsOnly` i
 a gadget for instructing the `grind` simplifier to only normalize/simplify
 the discriminants of a `match`-expression. See `reduceSimpMatchDiscrsOnly`.
 -/
-def markAsSimpMatchDiscrsOnly (e : Expr) : MetaM Expr :=
-  mkAppM ``Grind.simpMatchDiscrsOnly #[e]
+def markAsSimpMatchDiscrsOnly (e : Expr) : MetaM Expr := mkAppM ``Grind.simpMatchDiscrsOnly #[e]
 
-def isSimpMatchDiscrsOnly (e : Expr) :=
-  e.isAppOfArity ``Grind.simpMatchDiscrsOnly 2
+def isSimpMatchDiscrsOnly (e : Expr) := e.isAppOfArity ``Grind.simpMatchDiscrsOnly 2
 
 builtin_simproc_decl reduceSimpMatchDiscrsOnly (Grind.simpMatchDiscrsOnly _) := fun e => do
-  let_expr Grind.simpMatchDiscrsOnly _ m ← e | return .continue
+  let_expr Grind.simpMatchDiscrsOnly _ m ← e
+    | return .continue
   let .const declName _ := m.getAppFn
     | return .done { expr := e }
   let some info ← getMatcherInfo? declName
@@ -42,7 +42,8 @@ def eraseSimpMatchDiscrsOnly (e : Expr) : MetaM Simp.Result := do
     return { expr := e }
   else
     let pre (e : Expr) := do
-      let_expr Grind.simpMatchDiscrsOnly _ a := e | return .continue e
+      let_expr Grind.simpMatchDiscrsOnly _ a := e
+        | return .continue e
       return .continue a
     let e' ← Core.transform e (pre := pre)
     /-

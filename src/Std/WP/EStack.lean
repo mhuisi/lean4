@@ -30,15 +30,21 @@ weakens its values one stack component at a time.
 
 namespace Std.WP
 
-/-- The last component of an exception postcondition stack. It reduces to `Unit`, so every
-`Unit` instance applies. It is a named constant, so only a stack prints as `EStack⟨…⟩`. -/
+/--
+The last component of an exception postcondition stack. It reduces to `Unit`, so every
+`Unit` instance applies. It is a named constant, so only a stack prints as `EStack⟨…⟩`.
+-/
 abbrev EStackEnd := Unit
 
-/-- The value of the last stack component. It reduces to `()`. It is a named constant, so only a
-stack value prints as `estack⟨…⟩`. -/
+/--
+The value of the last stack component. It reduces to `()`. It is a named constant, so only a
+stack value prints as `estack⟨…⟩`.
+-/
 abbrev EStackEnd.mk : EStackEnd := ()
 
-/-- Exception postcondition stack **type**: `EStack⟨ε₁ → l, ε₂ → l⟩` is `(ε₁ → l) × (ε₂ → l) × EStack⟨⟩`. -/
+/--
+Exception postcondition stack **type**: `EStack⟨ε₁ → l, ε₂ → l⟩` is `(ε₁ → l) × (ε₂ → l) × EStack⟨⟩`.
+-/
 syntax "EStack⟨" term,* "⟩" : term
 /-- Exception postcondition stack **value**: `estack⟨e₁, e₂⟩` is `(e₁, e₂, ())`. -/
 syntax "estack⟨" term,* "⟩" : term
@@ -52,40 +58,48 @@ macro_rules
   | `(estack⟨$x, $xs,*⟩) => `(($x, estack⟨$xs,*⟩))
 
 /-- Prints `EStackEnd` as `EStack⟨⟩`. -/
-@[app_unexpander EStackEnd] meta def unexpandEStackEnd : Lean.PrettyPrinter.Unexpander
+@[app_unexpander EStackEnd]
+meta def unexpandEStackEnd : Lean.PrettyPrinter.Unexpander
   | `($(_)) => `(EStack⟨⟩)
 
 /-- Prints a product that ends in `EStack⟨⟩` as `EStack⟨e₁, e₂, …⟩`. -/
-@[app_unexpander Prod] meta def unexpandEStack : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Prod]
+meta def unexpandEStack : Lean.PrettyPrinter.Unexpander
   | `($(_) $x $xs) =>
     match xs with
     | `(EStack⟨⟩) => `(EStack⟨$x⟩)
     | `(EStack⟨$y⟩) => `(EStack⟨$x, $y⟩)
     | `(EStack⟨$y, $ys,*⟩) => `(EStack⟨$x, $y, $ys,*⟩)
     | _ => throw ()
-  | _ => throw ()
+  | _ =>
+    throw ()
 
 /-- Prints `EStackEnd.mk` as `estack⟨⟩`. -/
-@[app_unexpander EStackEnd.mk] meta def unexpandEStackEndMk : Lean.PrettyPrinter.Unexpander
+@[app_unexpander EStackEnd.mk]
+meta def unexpandEStackEndMk : Lean.PrettyPrinter.Unexpander
   | `($(_)) => `(estack⟨⟩)
 
 /-- Prints a tuple that ends in `estack⟨⟩` as `estack⟨e₁, e₂, …⟩`. -/
-@[app_unexpander Prod.mk] meta def unexpandEStackMk : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Prod.mk]
+meta def unexpandEStackMk : Lean.PrettyPrinter.Unexpander
   | `($(_) $x $xs) =>
     match xs with
     | `(estack⟨⟩) => `(estack⟨$x⟩)
     | `(estack⟨$y⟩) => `(estack⟨$x, $y⟩)
     | `(estack⟨$y, $ys,*⟩) => `(estack⟨$x, $y, $ys,*⟩)
     | _ => throw ()
-  | _ => throw ()
+  | _ =>
+    throw ()
 
 open Lean.Order in
 /-- `⊥` at the end of an exception postcondition stack is the empty stack value. -/
 theorem EStackEnd.bot_eq [CCPO EStackEnd] : (⊥ : EStackEnd) = estack⟨⟩ := rfl
 
 open Lean.Order in
-/-- `toEStack` exposes the exception postconditions `E` as a stack. Example: `Thrown` with the field
-`onThrow : String → Prop` has `toEStack t = estack⟨t.onThrow⟩`, and `vcgen` weakens `onThrow`. -/
+/--
+`toEStack` exposes the exception postconditions `E` as a stack. Example: `Thrown` with the field
+`onThrow : String → Prop` has `toEStack t = estack⟨t.onThrow⟩`, and `vcgen` weakens `onThrow`.
+-/
 class ToEStack (E : Type u) (T : outParam (Type u)) [Assertion E] [Assertion T] where
   /-- The stack that `E` converts to. -/
   toEStack : E → T

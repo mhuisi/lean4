@@ -26,18 +26,19 @@ Specifically, `Array.lex as bs lt` is true if
 * there is an index `i` such that `lt as[i] bs[i]`, and for all `j < i`, `as[j] == bs[j]`.
 -/
 @[inline, expose]
-def lex [BEq α] (as bs : Array α) (lt : α → α → Bool := by exact (· < ·)) : Bool :=
-  go 0
-where @[specialize, semireducible] go (i : Nat) : Bool :=
-  if h₁ : as.size ≤ i then
-    i < bs.size
-  else if h₂ : bs.size ≤ i then
-    false
-  else if lt as[i] bs[i] then
-    true
-  else if as[i] == bs[i] then
-    go (i + 1)
-  else
-    false
+def lex [BEq α] (as bs : Array α) (lt : α → α → Bool := by exact (· < ·)) : Bool := go 0
+where
+  @[specialize, semireducible]
+  go (i : Nat) : Bool :=
+    if h₁ : as.size ≤ i then
+      i < bs.size
+    else if h₂ : bs.size ≤ i then
+      false
+    else if lt as[i] bs[i] then
+      true
+    else if as[i] == bs[i] then
+      go (i + 1)
+    else
+      false
 
 end Array

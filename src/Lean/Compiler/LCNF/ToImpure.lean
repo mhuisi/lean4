@@ -70,15 +70,16 @@ def lowerSpillObjs (base : FVarId) (depth : Nat) : CompilerM (Array (LetDecl .im
 Moves the arguments that do not fit into a constructor object of `ctorName` into spill objects.
 Returns their declarations, innermost first, and the arguments of the constructor object.
 -/
-def mkSpillObjs (ctorName : Name) (objArgs : Array (Arg .impure)) :
-    CompilerM (Array (LetDecl .impure) × Array (Arg .impure)) := do
+def mkSpillObjs (ctorName : Name) (objArgs : Array (Arg .impure))
+    : CompilerM (Array (LetDecl .impure) × Array (Arg .impure)) := do
   let mut decls := #[]
   let mut args := objArgs
   for d in (List.range (numSpillObjs objArgs.size)).reverse do
     let start := (d + 1) * spillLinkIdx
     let spillArgs := args.extract start args.size
-    let decl ← mkLetDecl (← mkFreshBinderName `_spill) ImpureType.object
-      (.ctor (spillCtorInfo ctorName spillArgs.size) spillArgs)
+    let decl ←
+      mkLetDecl (← mkFreshBinderName `_spill) ImpureType.object
+        (.ctor (spillCtorInfo ctorName spillArgs.size) spillArgs)
     decls := decls.push decl
     args := (args.extract 0 start).push (.fvar decl.fvarId)
   return (decls, args)
@@ -87,8 +88,9 @@ def attachLetDecls (decls : Array (LetDecl .impure)) (code : Code .impure) : Cod
   decls.foldr (init := code) fun decl code => .let decl code
 
 /-- `spills` are the declarations from `lowerSpillObjs` reaching at least `field.spillDepth`. -/
-def lowerProj (base : FVarId) (spills : Array (LetDecl .impure)) (ctorInfo : CtorInfo)
-    (field : CtorFieldInfo) : LetValue .impure × Expr :=
+def lowerProj
+    (base : FVarId) (spills : Array (LetDecl .impure)) (ctorInfo : CtorInfo) (field : CtorFieldInfo)
+    : LetValue .impure × Expr :=
   match field with
   | .object i irType => ⟨.oproj i base, irType⟩
   | .spilled depth i irType => ⟨.oproj i spills[depth - 1]!.fvarId, irType⟩
@@ -105,19 +107,19 @@ def Arg.toImpure (arg : Arg .pure) : ToImpureM (Arg .impure) := do
 
 public def lowerResultType (type : Expr) (arity : Nat) : CoreM Expr :=
   toImpureType (resultTypeForArity type arity)
-where resultTypeForArity (type : Lean.Expr) (arity : Nat) : Expr :=
-  if arity == 0 then
-    type
-  else
-    match type with
-    | .forallE _ _ b _ => resultTypeForArity b (arity - 1)
-    | .const ``lcErased _ => mkConst ``lcErased
-    | _ => panic! "invalid arity"
+where
+  resultTypeForArity (type : Lean.Expr) (arity : Nat) : Expr :=
+    if arity == 0 then
+      type
+    else
+      match type with
+      | .forallE _ _ b _ => resultTypeForArity b (arity - 1)
+      | .const ``lcErased _ => mkConst ``lcErased
+      | _ => panic! "invalid arity"
 
 def litValueImpureType (v : LCNF.LitValue) : Expr :=
   match v with
-  | .nat n =>
-    if n < UInt32.size then ImpureType.tagged else ImpureType.tobject
+  | .nat n => if n < UInt32.size then ImpureType.tagged else ImpureType.tobject
   | .str .. => ImpureType.object
   | .uint8 .. => ImpureType.uint8
   | .uint16 .. => ImpureType.uint16
@@ -150,8 +152,10 @@ partial def lowerLet (decl : LetDecl .pure) (k : Code .pure) : ToImpureM (Code .
         let spills ← lowerSpillObjs fvarId fields[i]!.spillDepth
         let ⟨result, type⟩ := lowerProj fvarId spills ctorInfo fields[i]!
         match result with
-        | .erased => continueErased decl.fvarId
-        | _ => return attachLetDecls spills (← continueLet ⟨decl.fvarId, decl.binderName, type, result⟩)
+        | .erased =>
+          continueErased decl.fvarId
+        | _ =>
+          return attachLetDecls spills (← continueLet ⟨decl.fvarId, decl.binderName, type, result⟩)
       | .erased =>
         addSubst decl.fvarId .erased
         k.toImpure
@@ -172,7 +176,8 @@ partial def lowerLet (decl : LetDecl .pure) (k : Code .pure) : ToImpureM (Code .
       else
         let type ← nameToImpureType ctorVal.induct
         if type.isScalar then
-          let decl := ⟨decl.fvarId, decl.binderName, type, .lit (.impureTypeScalarNumLit type ctorVal.cidx)⟩
+          let decl :=
+            ⟨decl.fvarId, decl.binderName, type, .lit (.impureTypeScalarNumLit type ctorVal.cidx)⟩
           let res ← continueLet decl
           return res
 
@@ -187,8 +192,7 @@ partial def lowerLet (decl : LetDecl .pure) (k : Code .pure) : ToImpureM (Code .
           let mut result : Array (Arg .impure) := #[]
           for h : i in *...fields.size do
             match fields[i] with
-            | .object .. | .spilled .. =>
-              result := result.push irArgs[i]!
+            | .object .. | .spilled .. => result := result.push irArgs[i]!
             | .usize .. | .scalar .. | .erased | .void => pure ()
           pure result
         let (spills, objArgs) ← mkSpillObjs name objArgs
@@ -203,20 +207,27 @@ partial def lowerLet (decl : LetDecl .pure) (k : Code .pure) : ToImpureM (Code .
               | .scalar _ offset argType =>
                 let k ← loop (i + 1)
                 return .sset decl.fvarId (ctorInfo.size + ctorInfo.usize) offset fvarId argType k
-              | .object .. | .spilled .. | .erased | .void => loop (i + 1)
-            | some .erased => loop (i + 1)
-            | none => k.toImpure
+              | .object .. | .spilled .. | .erased | .void =>
+                loop (i + 1)
+            | some .erased =>
+              loop (i + 1)
+            | none =>
+              k.toImpure
           loop 0
         let decl := ⟨decl.fvarId, decl.binderName, ctorInfo.type, .ctor ctorInfo objArgs⟩
         modifyLCtx fun lctx => lctx.addLetDecl decl
         return attachLetDecls spills (.let decl (← lowerNonObjectFields))
-    | some (.defnInfo ..) | some (.opaqueInfo ..) => mkFap name irArgs
+    | some (.defnInfo ..) | some (.opaqueInfo ..) =>
+      mkFap name irArgs
     | some (.axiomInfo ..) | .some (.quotInfo ..) | .some (.inductInfo ..) | .some (.thmInfo ..) =>
       -- Should have been caught by `ToLCNF`
-      throwError f!"ToImpure: unexpected use of noncomputable declaration `{name}`; please report this issue"
+      throwError
+        f!"ToImpure: unexpected use of noncomputable declaration `{name}`; please report this issue"
     | some (.recInfo ..) =>
-      throwError f!"code generator does not support recursor `{name}` yet, consider using 'match ... with' and/or structural recursion"
-    | none => panic! "reference to unbound name"
+      throwError f!"code generator does not support recursor `{name}` yet, consider using 'match \
+        ... with' and/or structural recursion"
+    | none =>
+      panic! "reference to unbound name"
   | .fvar fvarId irArgs =>
     let irArgs ← irArgs.mapM (·.toImpure)
     let type := (← toImpureType decl.type).boxed
@@ -240,8 +251,8 @@ where
   mkPap (name : Name) (args : Array (Arg .impure)) : ToImpureM (Code .impure) := do
     continueLet ⟨decl.fvarId, decl.binderName, ImpureType.object, .pap name args⟩
 
-  mkOverApplication (name : Name) (numParams : Nat) (args : Array (Arg .impure)) :
-      ToImpureM (Code .impure) := do
+  mkOverApplication (name : Name) (numParams : Nat) (args : Array (Arg .impure))
+      : ToImpureM (Code .impure) := do
     let type := (← toImpureType decl.type).boxed
     let firstArgs := args.extract 0 numParams
     let restArgs := args.extract numParams args.size
@@ -250,8 +261,8 @@ where
     modifyLCtx fun lctx => lctx.addLetDecl resDecl
     return .let auxDecl (.let resDecl (← k.toImpure))
 
-  mkApplication (name : Name) (numParams : Nat) (args : Array (Arg .impure)) :
-      ToImpureM (Code .impure) := do
+  mkApplication (name : Name) (numParams : Nat) (args : Array (Arg .impure))
+      : ToImpureM (Code .impure) := do
     let numArgs := args.size
     if numArgs < numParams then
       mkPap name args
@@ -262,13 +273,15 @@ where
 
 partial def Code.toImpure (c : Code .pure) : ToImpureM (Code .impure) := do
   match c with
-  | .let decl k => lowerLet decl k
+  | .let decl k =>
+    lowerLet decl k
   | .jp decl k =>
     let params ← decl.params.mapM (·.toImpure)
     let keepMask := params.map fun p => !(p.type.isVoid || p.type.isErased)
     modify fun s => { s with jpParamMask := s.jpParamMask.insert decl.fvarId keepMask }
-    let filteredParams := (params.zip keepMask).foldl (init := #[]) fun acc (p, keep) =>
-      if keep then acc.push p else acc
+    let filteredParams :=
+      (params.zip keepMask).foldl (init := #[]) fun acc (p, keep) =>
+        if keep then acc.push p else acc
     let value ← decl.value.toImpure
     let k ← k.toImpure
     let type ← lowerResultType decl.type params.size
@@ -277,13 +290,15 @@ partial def Code.toImpure (c : Code .pure) : ToImpureM (Code .impure) := do
     return .jp decl k
   | .jmp fvarId args =>
     let keepMask := (← get).jpParamMask[fvarId]!
-    let filteredArgs ← (args.zip keepMask).foldlM (init := #[]) fun acc (a, keep) => do
-      if keep then return acc.push (← a.toImpure) else return acc
+    let filteredArgs ←
+      (args.zip keepMask).foldlM (init := #[]) fun acc (a, keep) => do
+        if keep then return acc.push (← a.toImpure) else return acc
     return .jmp fvarId filteredArgs
   | .cases c =>
     if let some info ← hasTrivialImpureStructure? c.typeName then
       assert! c.alts.size == 1
-      let .alt ctorName ps k := c.alts[0]! | unreachable!
+      let .alt ctorName ps k := c.alts[0]!
+        | unreachable!
       assert! ctorName == info.ctorName
       assert! info.fieldIdx < ps.size
       for idx in 0...ps.size do
@@ -300,18 +315,19 @@ partial def Code.toImpure (c : Code .pure) : ToImpureM (Code .impure) := do
         let alts ← c.alts.mapM (·.toImpure discr)
         return .cases ⟨(← nameToImpureType c.typeName).getAppFn.constName!, resultType, discr, alts⟩
   | .return fvarId =>
-    withNormFVarResult (← normFVar fvarId) fun fvarId => do
-      return .return fvarId
-  | .unreach type => return .unreach (← toImpureType type)
-  | .fun .. => panic! "all local functions should be λ-lifted"
+    withNormFVarResult (← normFVar fvarId) fun fvarId => do return .return fvarId
+  | .unreach type =>
+    return .unreach (← toImpureType type)
+  | .fun .. =>
+    panic! "all local functions should be λ-lifted"
 
 partial def Alt.toImpure (discr : FVarId) (alt : Alt .pure) : ToImpureM (Alt .impure) := do
   match alt with
   | .alt ctorName params k =>
     let ⟨ctorInfo, fields⟩ ← getCtorLayout ctorName
     let spills ← lowerSpillObjs discr (fields.foldl (max · ·.spillDepth) 0)
-    let lowerParams (params : Array (LCNF.Param .pure)) (fields : Array CtorFieldInfo) :
-        ToImpureM (Code .impure) := do
+    let lowerParams (params : Array (LCNF.Param .pure)) (fields : Array CtorFieldInfo)
+        : ToImpureM (Code .impure) := do
       let rec loop (i : Nat) : ToImpureM (Code .impure) := do
         match params[i]?, fields[i]? with
         | some param, some field =>
@@ -324,17 +340,19 @@ partial def Alt.toImpure (discr : FVarId) (alt : Alt .pure) : ToImpureM (Alt .im
             let decl := ⟨param.fvarId, param.binderName, type, result⟩
             modifyLCtx fun lctx => lctx.addLetDecl decl
             return .let decl (← loop (i + 1))
-        | none, none => k.toImpure
-        | _, _ => panic! "mismatched fields and params"
+        | none, none =>
+          k.toImpure
+        | _, _ =>
+          panic! "mismatched fields and params"
       loop 0
     let body ← lowerParams params fields
     return .ctorAlt ctorInfo (attachLetDecls spills body)
-  | .default k => return .default (← k.toImpure)
+  | .default k =>
+    return .default (← k.toImpure)
 
 end
 
-def Decl.toImpure (decl : Decl .pure) : CompilerM (Decl .impure) := do
-  go |>.run' {}
+def Decl.toImpure (decl : Decl .pure) : CompilerM (Decl .impure) := do go |>.run' {}
 where
   go : ToImpureM (Decl .impure) := do
     let decl ← lowerDecl
@@ -348,26 +366,27 @@ where
     match decl.value with
     | .code code =>
       if taggedReturn then
-        throwError m!"Error while compiling function '{decl.name}': @[tagged_return] is only valid for extern declarations"
+        throwError m!"Error while compiling function '{decl.name}': @[tagged_return] is only valid \
+          for extern declarations"
       let value ← code.toImpure
       return { decl with type := resultType, params, value := .code value }
     | .extern externAttrData =>
       if taggedReturn then
         if resultType.isScalar then
-          throwError m!"@[tagged_return] on function '{decl.name}' with scalar return type {resultType}"
+          throwError
+            m!"@[tagged_return] on function '{decl.name}' with scalar return type {resultType}"
         else
           resultType := ImpureType.tagged
 
       return { decl with type := resultType, params, value := .extern externAttrData }
 
 public def toImpure : Pass where
-  name     := `toImpure
-  run      := (·.mapM (·.toImpure))
-  phase    := .mono
+  name := `toImpure
+  run := (·.mapM (·.toImpure))
+  phase := .mono
   phaseOut := .impure
   shouldAlwaysRunCheck := true
 
-builtin_initialize
-  registerTraceClass `Compiler.toImpure (inherited := true)
+builtin_initialize registerTraceClass `Compiler.toImpure (inherited := true)
 
 end Lean.Compiler.LCNF

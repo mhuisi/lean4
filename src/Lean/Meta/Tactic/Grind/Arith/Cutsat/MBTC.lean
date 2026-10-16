@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.Cutsat.Util
 import Lean.Meta.Tactic.Grind.MBTC
@@ -22,19 +23,24 @@ embedding-accessor application in the E-graph, so their value is computed direct
 -/
 private def getEmbeddedLitValue? (e : Expr) : GoalM (Option Rat) := do
   let value? (α k : Expr) (neg : Bool) : GoalM (Option Rat) := do
-    let some k ← getNatValue? k | return none
-    let some m ← getLitValueModulus? α | return none
+    let some k ← getNatValue? k
+      | return none
+    let some m ← getLitValueModulus? α
+      | return none
     let m : Int := m
     let k : Int := if neg then -(k : Int) else (k : Int)
     let v := k % m
     let v := if isSignedType α && v ≥ m / 2 then v - m else v
     return some (v : Rat)
   match_expr e with
-  | OfNat.ofNat α k _ => value? α k false
+  | OfNat.ofNat α k _ =>
+    value? α k false
   | Neg.neg α _ a =>
-    let_expr OfNat.ofNat _ k _ := a | return none
+    let_expr OfNat.ofNat _ k _ := a
+      | return none
     value? α k true
-  | _ => return none
+  | _ =>
+    return none
 
 private partial def getAssignmentExt? (e : Expr) : GoalM (Option Rat) := do
   if let some val ← getEmbeddedLitValue? e then
@@ -53,8 +59,10 @@ private partial def getAssignmentExt? (e : Expr) : GoalM (Option Rat) := do
   else if type == Nat.mkType then
     -- TODO: improve this case.
     for parent in (← getParents e).elems do
-      let_expr NatCast.natCast _ inst _ := parent | pure ()
-      let_expr instNatCastInt := inst | pure ()
+      let_expr NatCast.natCast _ inst _ := parent
+        | pure ()
+      let_expr instNatCastInt := inst
+        | pure ()
       return (← getAssignment? (← get) parent)
   else
     -- `e` is a term of an embedded type (e.g., `Fin`, `BitVec`, `UInt8`): use the value of an
@@ -78,12 +86,13 @@ propose case splits. The homomorphism engine is the intended client: all homomor
 target domains are handled by cutsat, so the result type is `Int`.
 -/
 def getModelValue? (e : Expr) : GoalM (Option Int) := do
-  let some v ← getAssignmentExt? e | return none
-  unless v.den == 1 do return none
+  let some v ← getAssignmentExt? e
+    | return none
+  unless v.den == 1 do
+    return none
   return some v.num
 
-private def hasTheoryVar (e : Expr) : GoalM Bool := do
-  cutsatExt.hasTermAtRoot e
+private def hasTheoryVar (e : Expr) : GoalM Bool := do cutsatExt.hasTermAtRoot e
 
 /-
 **Note**: cutsat is a procedure for linear integer arithmetic. Thus, morally a
@@ -123,8 +132,10 @@ private def isInterpreted (e : Expr) : GoalM Bool := do
   return f.isConstOf ``LE.le || f.isConstOf ``Dvd.dvd || f.isConstOf ``LT.lt
 
 private def eqAssignment (a b : Expr) : GoalM Bool := do
-  let some v₁ ← getAssignmentExt? a | return false
-  let some v₂ ← getAssignmentExt? b | return false
+  let some v₁ ← getAssignmentExt? a
+    | return false
+  let some v₂ ← getAssignmentExt? b
+    | return false
   return v₁ == v₂
 
 def mbtc : GoalM Bool := do

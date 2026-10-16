@@ -39,12 +39,10 @@ Examples:
  * {lean}`"red green blue".drop 50 == "".toSlice`
  * {lean}`"مرحبا بالعالم".drop 3 == "با بالعالم".toSlice`
 -/
-@[inline] def drop (s : String) (n : Nat) : Slice :=
-  s.toSlice.drop n
+@[inline] def drop (s : String) (n : Nat) : Slice := s.toSlice.drop n
 
 @[export lean_string_drop]
-def Internal.dropImpl (s : String) (n : Nat) : String :=
-  (String.drop s n).copy
+def Internal.dropImpl (s : String) (n : Nat) : String := (String.drop s n).copy
 
 /--
 Returns a {name}`String.Slice` obtained by removing the specified number of characters (Unicode code
@@ -61,16 +59,13 @@ Examples:
  * {lean}`"red green blue".dropEnd 50 == "".toSlice`
  * {lean}`"مرحبا بالعالم".dropEnd 3 == "مرحبا بالع".toSlice`
 -/
-@[inline] def dropEnd (s : String) (n : Nat) : Slice :=
-  s.toSlice.dropEnd n
+@[inline] def dropEnd (s : String) (n : Nat) : Slice := s.toSlice.dropEnd n
 
 @[deprecated Slice.dropEnd (since := "2025-11-20")]
-def Slice.dropRight (s : Slice) (n : Nat) : Slice :=
-  s.dropEnd n
+def Slice.dropRight (s : Slice) (n : Nat) : Slice := s.dropEnd n
 
 @[export lean_string_dropright]
-def Internal.dropRightImpl (s : String) (n : Nat) : String :=
-  (String.dropEnd s n).copy
+def Internal.dropRightImpl (s : String) (n : Nat) : String := (String.dropEnd s n).copy
 
 /--
 Returns a {name}`String.Slice` that contains the first {name}`n` characters (Unicode code points) of
@@ -88,8 +83,7 @@ Examples:
 * {lean}`"red green blue".take 100 == "red green blue".toSlice`
 * {lean}`"مرحبا بالعالم".take 5 == "مرحبا".toSlice`
 -/
-@[inline] def take (s : String) (n : Nat) : String.Slice :=
-  s.toSlice.take n
+@[inline] def take (s : String) (n : Nat) : String.Slice := s.toSlice.take n
 
 /--
 Returns a {name}`String.Slice` that contains the last {name}`n` characters (Unicode code points) of
@@ -107,12 +101,10 @@ Examples:
 * {lean}`"red green blue".takeEnd 100 == "red green blue".toSlice`
 * {lean}`"مرحبا بالعالم".takeEnd 5 == "لعالم".toSlice`
 -/
-@[inline] def takeEnd (s : String) (n : Nat) : String.Slice :=
-  s.toSlice.takeEnd n
+@[inline] def takeEnd (s : String) (n : Nat) : String.Slice := s.toSlice.takeEnd n
 
 @[deprecated Slice.takeEnd (since := "2025-11-20")]
-def Slice.takeRight (s : Slice) (n : Nat) : Slice :=
-  s.takeEnd n
+def Slice.takeRight (s : Slice) (n : Nat) : Slice := s.takeEnd n
 
 /--
 Creates a string slice that contains the longest prefix of {name}`s` in which {name}`pat` matched
@@ -129,8 +121,8 @@ Examples:
  * {lean}`"red red green blue".takeWhile "red " == "red red ".toSlice`
  * {lean}`"red green blue".takeWhile (fun (_ : Char) => true) == "red green blue".toSlice`
 -/
-@[inline] def takeWhile (s : String) (pat : ρ) [ForwardPattern pat] : String.Slice :=
-  s.toSlice.takeWhile pat
+@[inline]
+def takeWhile (s : String) (pat : ρ) [ForwardPattern pat] : String.Slice := s.toSlice.takeWhile pat
 
 /--
 Creates a string slice by removing the longest prefix from {name}`s` in which {name}`pat` matched
@@ -147,8 +139,8 @@ Examples:
  * {lean}`"red red green blue".dropWhile "red " == "green blue".toSlice`
  * {lean}`"red green blue".dropWhile (fun (_ : Char) => true) == "".toSlice`
 -/
-@[inline] def dropWhile (s : String) (pat : ρ) [ForwardPattern pat] : String.Slice :=
-  s.toSlice.dropWhile pat
+@[inline]
+def dropWhile (s : String) (pat : ρ) [ForwardPattern pat] : String.Slice := s.toSlice.dropWhile pat
 
 /--
 Creates a string slice that contains the longest suffix of {name}`s` in which {name}`pat` matched
@@ -164,7 +156,8 @@ Examples:
  * {lean}`"red green blue".takeEndWhile 'e' == "e".toSlice`
  * {lean}`"red green blue".takeEndWhile (fun (_ : Char) => true) == "red green blue".toSlice`
 -/
-@[inline] def takeEndWhile (s : String) (pat : ρ) [BackwardPattern pat] : String.Slice :=
+@[inline]
+def takeEndWhile (s : String) (pat : ρ) [BackwardPattern pat] : String.Slice :=
   s.toSlice.takeEndWhile pat
 
 /--
@@ -181,7 +174,8 @@ Examples:
  * {lean}`"red green blue".dropEndWhile 'e' == "red green blu".toSlice`
  * {lean}`"red green blue".dropEndWhile (fun (_ : Char) => true) == "".toSlice`
 -/
-@[inline] def dropEndWhile (s : String) (pat : ρ) [BackwardPattern pat] : String.Slice :=
+@[inline]
+def dropEndWhile (s : String) (pat : ρ) [BackwardPattern pat] : String.Slice :=
   s.toSlice.dropEndWhile pat
 
 /--
@@ -190,14 +184,16 @@ Returns {name}`none` otherwise.
 
 This function is generic over all currently supported patterns.
 -/
-@[inline] def skipPrefix? (s : String) (pat : ρ) [ForwardPattern pat] : Option s.Pos :=
+@[inline]
+def skipPrefix? (s : String) (pat : ρ) [ForwardPattern pat] : Option s.Pos :=
   (s.toSlice.skipPrefix? pat).map Pos.ofToSlice
 
 /--
 Returns the position after the longest prefix of {name}`s` for which {name}`pat` matches
 (potentially repeatedly).
 -/
-@[inline] def skipPrefixWhile (s : String) (pat : ρ) [ForwardPattern pat] : s.Pos :=
+@[inline]
+def skipPrefixWhile (s : String) (pat : ρ) [ForwardPattern pat] : s.Pos :=
   Pos.ofToSlice (s.toSlice.skipPrefixWhile pat)
 
 /--
@@ -214,8 +210,8 @@ Examples:
  * {lean}`"aaaaaa".all "aa" = true`
  * {lean}`"aaaaaaa".all "aa" = false`
 -/
-@[inline, suggest_for String.every] def all (s : String) (pat : ρ) [ForwardPattern pat] : Bool :=
-  s.toSlice.all pat
+@[inline, suggest_for String.every]
+def all (s : String) (pat : ρ) [ForwardPattern pat] : Bool := s.toSlice.all pat
 
 /--
 Checks whether a string only consists of matches of the pattern {name}`pat`, starting from the back
@@ -243,9 +239,7 @@ Examples:
  * {lean}`"aaaaaa".revAll "aa" = true`
  * {lean}`"aaaaaaa".revAll "aa" = false`
 -/
-@[inline]
-def revAll (s : String) (pat : ρ) [BackwardPattern pat] : Bool :=
-  s.toSlice.revAll pat
+@[inline] def revAll (s : String) (pat : ρ) [BackwardPattern pat] : Bool := s.toSlice.revAll pat
 
 /--
 If {name}`pat` matches at {name}`pos`, returns the position after the end of the match.
@@ -257,9 +251,7 @@ This function is generic over all currently supported patterns.
 def Pos.skip? {s : String} (pos : s.Pos) (pat : ρ) [ForwardPattern pat] : Option s.Pos :=
   (pos.toSlice.skip? pat).map Pos.ofToSlice
 
-/--
-Advances {name}`pos` as long as {name}`pat` matches.
--/
+/-- Advances {name}`pos` as long as {name}`pat` matches. -/
 @[inline]
 def Pos.skipWhile {s : String} (pos : s.Pos) (pat : ρ) [ForwardPattern pat] : s.Pos :=
   Pos.ofToSlice (pos.toSlice.skipWhile pat)
@@ -277,8 +269,8 @@ Examples:
  * {lean}`"red green blue".startsWith 'r' = true`
  * {lean}`"red green blue".startsWith Char.isLower = true`
 -/
-@[inline] def startsWith (s : String) (pat : ρ) [ForwardPattern pat] : Bool :=
-  s.toSlice.startsWith pat
+@[inline]
+def startsWith (s : String) (pat : ρ) [ForwardPattern pat] : Bool := s.toSlice.startsWith pat
 
 /--
 Checks whether the second string ({name}`s`) begins with a prefix ({name}`p`).
@@ -292,12 +284,10 @@ Examples:
  * {lean}`"green".isPrefixOf "red green blue" = false`
  * {lean}`"".isPrefixOf "red green blue" = true`
 -/
-@[inline] def isPrefixOf (p : String) (s : String) : Bool :=
-  s.startsWith p
+@[inline] def isPrefixOf (p : String) (s : String) : Bool := s.startsWith p
 
 @[export lean_string_isprefixof]
-def Internal.isPrefixOfImpl (p : String) (s : String) : Bool :=
-  String.isPrefixOf p s
+def Internal.isPrefixOfImpl (p : String) (s : String) : Bool := String.isPrefixOf p s
 
 /--
 Checks whether the string ({name}`s`) ends with the pattern ({name}`pat`).
@@ -311,8 +301,7 @@ Examples:
  * {lean}`"red green blue".endsWith 'e' = true`
  * {lean}`"red green blue".endsWith Char.isLower = true`
 -/
-@[inline] def endsWith (s : String) (pat : ρ) [BackwardPattern pat] : Bool :=
-  s.toSlice.endsWith pat
+@[inline] def endsWith (s : String) (pat : ρ) [BackwardPattern pat] : Bool := s.toSlice.endsWith pat
 
 /--
 If {name}`pat` matches a suffix of {name}`s`, returns the position at the beginning of the suffix.
@@ -320,14 +309,16 @@ Returns {name}`none` otherwise.
 
 This function is generic over all currently supported patterns.
 -/
-@[inline] def skipSuffix? (s : String) (pat : ρ) [BackwardPattern pat] : Option s.Pos :=
+@[inline]
+def skipSuffix? (s : String) (pat : ρ) [BackwardPattern pat] : Option s.Pos :=
   (s.toSlice.skipSuffix? pat).map Pos.ofToSlice
 
 /--
 Returns the position at the start of the longest suffix of {name}`s` for which {name}`pat` matches
 (potentially repeatedly).
 -/
-@[inline] def skipSuffixWhile (s : String) (pat : ρ) [BackwardPattern pat] : s.Pos :=
+@[inline]
+def skipSuffixWhile (s : String) (pat : ρ) [BackwardPattern pat] : s.Pos :=
   Pos.ofToSlice (s.toSlice.skipSuffixWhile pat)
 
 /--
@@ -340,9 +331,7 @@ This function is generic over all currently supported patterns.
 def Pos.revSkip? {s : String} (pos : s.Pos) (pat : ρ) [BackwardPattern pat] : Option s.Pos :=
   (pos.toSlice.revSkip? pat).map Pos.ofToSlice
 
-/--
-Rewinds {name}`pos` as long as {name}`pat` matches.
--/
+/-- Rewinds {name}`pos` as long as {name}`pat` matches. -/
 @[inline]
 def Pos.revSkipWhile {s : String} (pos : s.Pos) (pat : ρ) [BackwardPattern pat] : s.Pos :=
   Pos.ofToSlice (pos.toSlice.revSkipWhile pat)
@@ -360,12 +349,10 @@ Examples:
  * {lean}`"  abc   ".trimAsciiEnd == "  abc".toSlice`
  * {lean}`"abc\ndef\n".trimAsciiEnd == "abc\ndef".toSlice`
 -/
-@[inline] def trimAsciiEnd (s : String) : String.Slice :=
-  s.toSlice.trimAsciiEnd
+@[inline] def trimAsciiEnd (s : String) : String.Slice := s.toSlice.trimAsciiEnd
 
 @[deprecated Slice.trimAsciiEnd (since := "2025-11-20")]
-def Slice.trimRight (s : Slice) : Slice :=
-  s.trimAsciiEnd
+def Slice.trimRight (s : Slice) : Slice := s.trimAsciiEnd
 
 /--
 Removes leading whitespace from a string by returning a slice whose start position is the first
@@ -380,12 +367,10 @@ Examples:
  * {lean}`"  abc   ".trimAsciiStart == "abc   ".toSlice`
  * {lean}`"abc\ndef\n".trimAsciiStart == "abc\ndef\n".toSlice`
 -/
-@[inline] def trimAsciiStart (s : String) : String.Slice :=
-  s.toSlice.trimAsciiStart
+@[inline] def trimAsciiStart (s : String) : String.Slice := s.toSlice.trimAsciiStart
 
 @[deprecated Slice.trimAsciiStart (since := "2025-11-20")]
-def Slice.trimLeft (s : Slice) : Slice :=
-  s.trimAsciiStart
+def Slice.trimLeft (s : Slice) : Slice := s.trimAsciiStart
 
 /--
 Removes leading and trailing whitespace from a string.
@@ -399,16 +384,13 @@ Examples:
  * {lean}`"  abc   ".trimAscii == "abc".toSlice`
  * {lean}`"abc\ndef\n".trimAscii == "abc\ndef".toSlice`
 -/
-@[inline] def trimAscii (s : String) : String.Slice :=
-  s.toSlice.trimAscii
+@[inline] def trimAscii (s : String) : String.Slice := s.toSlice.trimAscii
 
 @[deprecated Slice.trimAscii (since := "2025-11-20")]
-def Slice.trim (s : Slice) : Slice :=
-  s.trimAscii
+def Slice.trim (s : Slice) : Slice := s.trimAscii
 
 @[export lean_string_trim]
-def Internal.trimImpl (s : String) : String :=
-  (String.trimAscii s).copy
+def Internal.trimImpl (s : String) : String := (String.trimAscii s).copy
 
 /--
 Repeatedly increments a position in a string, as if by {name}`String.Pos.Raw.next`, while the
@@ -420,7 +402,8 @@ Examples:
 * {lean}`let s := "a  "; ((0 : Pos.Raw).nextWhile s Char.isWhitespace).get s = 'a'`
 * {lean}`let s := "ba  "; (Pos.Raw.nextWhile s Char.isWhitespace 0).get s = 'b'`
 -/
-@[inline] def Pos.Raw.nextWhile (s : String) (p : Char → Bool) (i : String.Pos.Raw) : String.Pos.Raw :=
+@[inline]
+def Pos.Raw.nextWhile (s : String) (p : Char → Bool) (i : String.Pos.Raw) : String.Pos.Raw :=
   Substring.Raw.takeWhileAux s s.rawEndPos p i
 
 @[deprecated Pos.Raw.nextWhile (since := "2025-10-10")]
@@ -441,8 +424,9 @@ Examples:
 * {lean}`let s := "   a  "; (Pos.Raw.nextUntil s Char.isAlpha 0).get s = 'a'`
 * {lean}`let s := "a  "; (Pos.Raw.nextUntil s Char.isWhitespace 0).get s = ' '`
 -/
-@[inline] def Pos.Raw.nextUntil (s : String) (p : Char → Bool) (i : String.Pos.Raw) : String.Pos.Raw :=
-  nextWhile s (fun c => !p c) i
+@[inline]
+def Pos.Raw.nextUntil (s : String) (p : Char → Bool) (i : String.Pos.Raw) : String.Pos.Raw :=
+  nextWhile s (fun c => ! p c) i
 
 @[deprecated Pos.Raw.nextUntil (since := "2025-10-10")]
 def nextUntil (s : String) (p : Char → Bool) (i : String.Pos.Raw) : String.Pos.Raw :=
@@ -509,8 +493,7 @@ def dropPrefix (s : String) (pat : ρ) [ForwardPattern pat] : String.Slice :=
   s.toSlice.dropPrefix pat
 
 @[deprecated String.dropPrefix +typeChanged (since := "2025-11-17")]
-def stripPrefix (s pre : String) : String :=
-  (s.dropPrefix pre).toString
+def stripPrefix (s pre : String) : String := (s.dropPrefix pre).toString
 
 /--
 If {name}`pat` matches a suffix of {name}`s`, returns the remainder. Returns {name}`s` unmodified

@@ -15,9 +15,7 @@ import Lean.Meta.Tactic.Refl
 
 namespace Lean.Meta
 
-/--
-Given a sparseCasesOn, creates an equational theorem for the else-case.
--/
+/-- Given a sparseCasesOn, creates an equational theorem for the else-case. -/
 public def getSparseCasesOnEq (sparseCasesOnName : Name) : MetaM Name := do
   let thmName := sparseCasesOnName.str "else_eq"
   realizeConst sparseCasesOnName thmName (realize thmName)
@@ -42,46 +40,48 @@ where
         -- to prevent the kernel from running into #11181
         -- (Even with #11181 fixes this may be necessary to avoid the kernel from reducing
         -- `hasNotBit` without native nat computation)
-        let_expr Nat.hasNotBit mask ctorIdxApp := (← inferType hyp) | throwError "mkSparseCasesOnEq: unexpected hyp type {← inferType hyp}"
+        let_expr Nat.hasNotBit mask ctorIdxApp := (← inferType hyp)
+          | throwError "mkSparseCasesOnEq: unexpected hyp type {← inferType hyp}"
         -- Simulate `generalize h : x.ctorIdx = i`
         let mvarId ← mvarId.assertExt `idx (type := mkConst ``Nat) (val := ctorIdxApp) `hidx
         let (ctorIdxApp, mvarId) ← mvarId.intro1P
         let (ctorIdxAppEq, mvarId) ← mvarId.intro1P
         mvarId.withContext do
-        let hyp'Type := mkApp2 (mkConst ``Nat.hasNotBit) mask (mkFVar ctorIdxApp)
-        let hyp'Val ← do
-          let val ← mkFreshExprSyntheticOpaqueMVar hyp'Type
-          let (subst, hypMVarId) ← substEq val.mvarId! ctorIdxAppEq
-          hypMVarId.assign (hyp.applyFVarSubst subst)
-          pure val
-        let (hyp', mvarId) ← mvarId.note `h hyp'Val hyp'Type
-        -- The original hyp is still mentioned, so we cannot
-        --   let mvarId ← mvarId.clear hyp.fvarId!
-        -- but that is ok.
-        let subgoals ← mvarId.cases xs[casesOnInfo.majorPos]!.fvarId!
-        subgoals.forM fun s => s.mvarId.withContext do
-          assert! s.ctorName.isSome
-          if s.ctorName.get! ∈ casesOnInfo.insterestingCtors then
-            let hyp := s.subst.get hyp'
-            let ctorIdxAppEq := s.subst.get ctorIdxAppEq
-            let (subst, mvarId) ← substEq s.mvarId ctorIdxAppEq.fvarId!
-            let hyp := hyp.applyFVarSubst subst
-            mvarId.withContext do
-              let some prf ← refutableHasNotBit? (← inferType hyp)
-                | throwError m!"mkSparseCasesOnEq: not refutable {← inferType hyp}"
-              mvarId.assign (← mkAbsurd (← mvarId.getType) prf hyp)
-          else
-            s.mvarId.refl
-        let val ← instantiateMVars val
-        let type ← mkForallFVars (xs ++ hyps) eq
-        let val ← mkLambdaFVars (xs ++ hyps) val
+          let hyp'Type := mkApp2 (mkConst ``Nat.hasNotBit) mask (mkFVar ctorIdxApp)
+          let hyp'Val ← do
+            let val ← mkFreshExprSyntheticOpaqueMVar hyp'Type
+            let (subst, hypMVarId) ← substEq val.mvarId! ctorIdxAppEq
+            hypMVarId.assign (hyp.applyFVarSubst subst)
+            pure val
+          let (hyp', mvarId) ← mvarId.note `h hyp'Val hyp'Type
+          -- The original hyp is still mentioned, so we cannot
+          --   let mvarId ← mvarId.clear hyp.fvarId!
+          -- but that is ok.
+          let subgoals ← mvarId.cases xs[casesOnInfo.majorPos]!.fvarId!
+          subgoals.forM fun s =>
+            s.mvarId.withContext do
+              assert! s.ctorName.isSome
+              if s.ctorName.get! ∈ casesOnInfo.insterestingCtors then
+                let hyp := s.subst.get hyp'
+                let ctorIdxAppEq := s.subst.get ctorIdxAppEq
+                let (subst, mvarId) ← substEq s.mvarId ctorIdxAppEq.fvarId!
+                let hyp := hyp.applyFVarSubst subst
+                mvarId.withContext do
+                  let some prf ← refutableHasNotBit? (← inferType hyp)
+                    | throwError m!"mkSparseCasesOnEq: not refutable {← inferType hyp}"
+                  mvarId.assign (← mkAbsurd (← mvarId.getType) prf hyp)
+              else
+                s.mvarId.refl
+          let val ← instantiateMVars val
+          let type ← mkForallFVars (xs ++ hyps) eq
+          let val ← mkLambdaFVars (xs ++ hyps) val
 
-        addDecl (.thmDecl {
-          name := thmName
-          levelParams := info.levelParams
-          type := type
-          value := val
-        })
+          addDecl (.thmDecl {
+            name := thmName
+            levelParams := info.levelParams
+            type := type
+            value := val
+          })
 
 def isName (env : Environment) (n : Name) : Bool :=
   if let .str p "else_eq" := n then
@@ -91,10 +91,11 @@ def isName (env : Environment) (n : Name) : Bool :=
 
 builtin_initialize registerReservedNamePredicate isName
 
-builtin_initialize registerReservedNameAction fun name => do
-  if isName (← getEnv) name then
-    let name' ← MetaM.run' <| getSparseCasesOnEq name.getPrefix
-    assert! name = name'
-    return true
-  else
-    return false
+builtin_initialize
+  registerReservedNameAction fun name => do
+    if isName (← getEnv) name then
+      let name' ← MetaM.run' <| getSparseCasesOnEq name.getPrefix
+      assert! name = name'
+      return true
+    else
+      return false

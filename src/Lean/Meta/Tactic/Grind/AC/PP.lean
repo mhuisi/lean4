@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 import Lean.Meta.Tactic.Grind.AC.DenoteExpr
@@ -16,11 +17,12 @@ private abbrev M := StateT Struct MetaM
 private instance : MonadGetStruct M where
   getStruct := get
 
-private def toOption (cls : Name) (header : Thunk MessageData) (msgs : Array MessageData) : Option MessageData :=
+private def toOption (cls : Name) (header : Thunk MessageData) (msgs : Array MessageData)
+    : Option MessageData :=
   if msgs.isEmpty then
     none
   else
-    some (.trace {cls} header.get msgs)
+    some (.trace { cls } header.get msgs)
 
 private def push (msgs : Array MessageData) (msg? : Option MessageData) : Array MessageData :=
   if let some msg := msg? then msgs.push msg else msgs
@@ -55,7 +57,8 @@ private def ppStruct? : M (Option MessageData) := do
 def pp? (goal : Goal) : MetaM (Option MessageData) := do
   let mut msgs := #[]
   for struct in (← acExt.getStateCore goal).structs do
-    let some msg ← ppStruct? |>.run' struct | pure ()
+    let some msg ← ppStruct? |>.run' struct
+      | pure ()
     msgs := msgs.push msg
   if msgs.isEmpty then
     return none

@@ -26,8 +26,8 @@ namespace BitVec
 variable {n : Nat}
 
 instance : TransOrd (BitVec n) :=
-  TransOrd.compareOfLessAndEq_of_antisymm_of_trans_of_total_of_not_le
-    BitVec.le_antisymm BitVec.le_trans BitVec.le_total BitVec.not_le
+  TransOrd.compareOfLessAndEq_of_antisymm_of_trans_of_total_of_not_le BitVec.le_antisymm
+    BitVec.le_trans BitVec.le_total BitVec.not_le
 
 instance : LawfulEqOrd (BitVec n) where
   eq_of_compare h := compareOfLessAndEq_eq_eq BitVec.le_refl BitVec.not_le |>.mp h

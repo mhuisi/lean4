@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Diagnostics
 public import Lean.Meta.Tactic.Refl
@@ -20,19 +21,18 @@ namespace Lean.Elab.Tactic
 open Meta
 open Parser.Tactic
 
-@[builtin_tactic withAnnotateState, builtin_incremental] def evalWithAnnotateState : Tactic :=
-  fun stx =>
-    withTacticInfoContext stx[1] do
-    Term.withNarrowedArgTacticReuse (argIdx := 2) evalTactic stx
+@[builtin_tactic withAnnotateState, builtin_incremental]
+def evalWithAnnotateState : Tactic := fun stx =>
+  withTacticInfoContext stx[1] do Term.withNarrowedArgTacticReuse (argIdx := 2) evalTactic stx
 
-@[builtin_tactic Lean.Parser.Tactic.«done»] def evalDone : Tactic := fun _ =>
-  done
+@[builtin_tactic Lean.Parser.Tactic.«done»]
+def evalDone : Tactic := fun _ => done
 
 open Language in
 /--
 Evaluates a tactic script in form of a syntax node with alternating tactics and separators as
 children.
- -/
+-/
 partial def evalSepTactics : Tactic := goEven
 where
   -- `stx[0]` is the next tactic step, if any
@@ -70,82 +70,87 @@ where
         -- (access to `raw` is correct here as this value is passed into the reuse context)
         oldInner? := oldParsed.transformed.raw.inner? |>.map (⟨oldParsed.transformed.raw.stx, ·⟩)
     -- compare (trimmed) `tac` for `finished`/`next` reuse, focus on remainder of script
-    Term.withNarrowedTacticReuse (stx := stx) (fun stx => (stx[0].unsetTrailing, mkNullNode stx.getArgs[1...*])) fun stxs => do
-      let some snap := (← readThe Term.Context).tacSnap?
-        -- NOTE: make sure to use `untrimmedTac` in this non-incremental case since there is no
-        -- reuse opportunity anyway and we skip the whitespace save below
-        | do evalTactic untrimmedTac; goOdd stxs
-      let mut reusableResult? := none
-      let mut oldNext? := none
-      if let some old := snap.old? then
-        -- `tac` must be unchanged given the narrow above; let's reuse `finished`'s state!
-        -- (access to `raw`: as above)
-        let oldParsed := old.val.get.transformed.raw
-        if let some state := oldParsed.finished.get.state? then
-          reusableResult? := some ((), state)
-          -- only allow `next` reuse in this case
-          oldNext? := old.val.get.next[0]?.map (⟨old.stx, ·⟩)
+    Term.withNarrowedTacticReuse (stx := stx)
+      (fun stx => (stx[0].unsetTrailing, mkNullNode stx.getArgs[1...*]))
+      fun stxs => do
+        let some snap := (← readThe Term.Context).tacSnap?
+          -- NOTE: make sure to use `untrimmedTac` in this non-incremental case since there is no
+          -- reuse opportunity anyway and we skip the whitespace save below
+          | do evalTactic untrimmedTac; goOdd stxs
+        let mut reusableResult? := none
+        let mut oldNext? := none
+        if let some old := snap.old? then
+          -- `tac` must be unchanged given the narrow above; let's reuse `finished`'s state!
+          -- (access to `raw`: as above)
+          let oldParsed := old.val.get.transformed.raw
+          if let some state := oldParsed.finished.get.state? then
+            reusableResult? := some ((), state)
+            -- only allow `next` reuse in this case
+            oldNext? := old.val.get.next[0]?.map (⟨old.stx, ·⟩)
 
-      let next ← IO.Promise.new
-      let finished ← IO.Promise.new
-      let inner ← IO.Promise.new
-      let cancelTk? := (← readThe Core.Context).cancelTk?
-      snap.new.resolve {
-        transformed.transform.addTrailing := untrimmedTac.getTrailing?.getD default
-        transformed.raw := {
-          desc := tac.getKind.toString
-          diagnostics := .empty
-          stx := tac
-          inner? := some { stx? := tac, task := inner.resultD default, cancelTk? }
-          finished := {
-            stx? := tac, task := finished.resultD default, cancelTk?
-            -- Do not report range as it is identical to `inner?`'s and should not cover up
-            -- incremental reporting done in the latter.
-            reportingRange := .skip
+        let next ← IO.Promise.new
+        let finished ← IO.Promise.new
+        let inner ← IO.Promise.new
+        let cancelTk? := (← readThe Core.Context).cancelTk?
+        snap.new.resolve {
+          transformed.transform.addTrailing := untrimmedTac.getTrailing?.getD default
+          transformed.raw := {
+            desc := tac.getKind.toString
+            diagnostics := .empty
+            stx := tac
+            inner? := some { stx? := tac, task := inner.resultD default, cancelTk? }
+            finished := {
+              stx? := tac
+              task := finished.resultD default
+              cancelTk?
+              -- Do not report range as it is identical to `inner?`'s and should not cover up
+              -- incremental reporting done in the latter.
+              reportingRange := .skip
+            }
           }
+          next := #[{
+            stx? := stxs
+            task := next.resultD default
+            cancelTk?
+            -- Do not fall back to `inherit` if there are no more tactics as that would cover up
+            -- incremental reporting done in `inner?`. Do use default range in all other cases so that
+            -- reporting ranges are properly nested.
+            reportingRange :=
+              if stxs.getNumArgs == 0 then .skip else SnapshotTask.defaultReportingRange stxs
+          }]
         }
-        next := #[{
-          stx? := stxs, task := next.resultD default, cancelTk?
-          -- Do not fall back to `inherit` if there are no more tactics as that would cover up
-          -- incremental reporting done in `inner?`. Do use default range in all other cases so that
-          -- reporting ranges are properly nested.
-          reportingRange :=
-            if stxs.getNumArgs == 0 then .skip else SnapshotTask.defaultReportingRange stxs
-        }]
-      }
-      -- Run `tac` in a fresh info tree state and store resulting state in snapshot for
-      -- incremental reporting, then add back saved trees. Here we rely on `evalTactic`
-      -- producing at most one info tree as otherwise `getInfoTreeWithContext?` would panic.
-      let trees ← getResetInfoTrees
-      try
-        let (_, state) ← withRestoreOrSaveFull reusableResult?
-            -- set up nested reuse; `evalTactic` will check for `isIncrementalElab`
-            (tacSnap? := some { old? := oldInner?, new := inner }) do
-          Term.withReuseContext tac do
-            evalTactic tac
-        finished.resolve {
-          diagnostics := (← Language.Snapshot.Diagnostics.ofMessageLog
-            (← Core.getAndEmptyMessageLog))
-          infoTree? := (← Term.getInfoTreeWithContext?)
-          state? := state
-          moreSnaps := (← Core.getAndEmptySnapshotTasks)
-        }
-      finally
-        -- New trees are not guarded by a transformation here so add back trailing eagerly. Unlikely
-        -- to be a bottleneck but could be optimized by adding a transformation node to `InfoTree`.
-        let trailing := untrimmedTac.getTrailing?.getD default
-        unless trailing.isEmpty do
-          -- Substitute info holes first so that term-level tactic blocks ending in the same token
-          -- as `tac` (e.g. `exact foo <| by ...`) regain the trailing whitespace as well.
-          modifyInfoState fun s => { s with
-            trees := s.trees.map (·.substitute s.assignment |>.addTrailing trailing) }
-        modifyInfoState fun s => { s with trees := trees ++ s.trees }
+        -- Run `tac` in a fresh info tree state and store resulting state in snapshot for
+        -- incremental reporting, then add back saved trees. Here we rely on `evalTactic`
+        -- producing at most one info tree as otherwise `getInfoTreeWithContext?` would panic.
+        let trees ← getResetInfoTrees
+        try
+          let (_, state) ←
+            withRestoreOrSaveFull reusableResult?
+              -- set up nested reuse; `evalTactic` will check for `isIncrementalElab`
+              (tacSnap? := some { old? := oldInner?, new := inner })
+              do Term.withReuseContext tac do evalTactic tac
+          finished.resolve {
+            diagnostics :=
+              (← Language.Snapshot.Diagnostics.ofMessageLog (← Core.getAndEmptyMessageLog))
+            infoTree? := (← Term.getInfoTreeWithContext?)
+            state? := state
+            moreSnaps := (← Core.getAndEmptySnapshotTasks)
+          }
+        finally
+          -- New trees are not guarded by a transformation here so add back trailing eagerly. Unlikely
+          -- to be a bottleneck but could be optimized by adding a transformation node to `InfoTree`.
+          let trailing := untrimmedTac.getTrailing?.getD default
+          unless trailing.isEmpty do
+            -- Substitute info holes first so that term-level tactic blocks ending in the same token
+            -- as `tac` (e.g. `exact foo <| by ...`) regain the trailing whitespace as well.
+            modifyInfoState fun s => {
+              s with
+              trees := s.trees.map (·.substitute s.assignment |>.addTrailing trailing)
+            }
+          modifyInfoState fun s => { s with trees := trees ++ s.trees }
 
-      withTheReader Term.Context ({ · with tacSnap? := some {
-        new := next
-        old? := oldNext?
-      } }) do
-        goOdd stxs
+        withTheReader Term.Context ({ · with tacSnap? := some { new := next, old? := oldNext? } })
+          do goOdd stxs
   -- `stx[0]` is the next separator, if any
   goOdd stx := do
     if stx.getNumArgs == 0 then
@@ -154,15 +159,14 @@ where
     -- disable further reuse on separator change as to not reuse wrong `TacticInfo`
     Term.withNarrowedTacticReuse (fun stx => (stx[0], mkNullNode stx.getArgs[1...*])) goEven stx
 
-@[builtin_tactic seq1] def evalSeq1 : Tactic := fun stx =>
-  evalSepTactics stx[0]
+@[builtin_tactic seq1]
+def evalSeq1 : Tactic := fun stx => evalSepTactics stx[0]
 
-@[builtin_tactic paren, builtin_incremental] def evalParen : Tactic :=
-  Term.withNarrowedArgTacticReuse 1 evalTactic
+@[builtin_tactic paren, builtin_incremental]
+def evalParen : Tactic := Term.withNarrowedArgTacticReuse 1 evalTactic
 
 @[builtin_tactic tacticSeq1Indented, builtin_incremental]
-def evalTacticSeq1Indented : Tactic :=
-  Term.withNarrowedArgTacticReuse (argIdx := 0) evalSepTactics
+def evalTacticSeq1Indented : Tactic := Term.withNarrowedArgTacticReuse (argIdx := 0) evalSepTactics
 
 @[builtin_tactic tacticSeqBracketed, builtin_incremental]
 def evalTacticSeqBracketed : Tactic := fun stx => do
@@ -184,31 +188,34 @@ def evalTacticCDot : Tactic := fun stx => do
     withInfoContext (pure ()) initInfo
     Term.withNarrowedArgTacticReuse (argIdx := 1) evalTactic stx
 
-@[builtin_tactic Parser.Tactic.focus, builtin_incremental] def evalFocus : Tactic := fun stx => do
+@[builtin_tactic Parser.Tactic.focus, builtin_incremental]
+def evalFocus : Tactic := fun stx => do
   let mkInfo ← mkInitialTacticInfo stx[0]
   focus do
     -- show focused state on `focus`
     withInfoContext (pure ()) mkInfo
     Term.withNarrowedArgTacticReuse (argIdx := 1) evalTactic stx
 
-private def getOptRotation (stx : Syntax) : Nat :=
-  if stx.isNone then 1 else stx[0].toNat
+private def getOptRotation (stx : Syntax) : Nat := if stx.isNone then 1 else stx[0].toNat
 
-@[builtin_tactic Parser.Tactic.rotateLeft] def evalRotateLeft : Tactic := fun stx => do
+@[builtin_tactic Parser.Tactic.rotateLeft]
+def evalRotateLeft : Tactic := fun stx => do
   let n := getOptRotation stx[1]
   setGoals <| (← getGoals).rotateLeft n
 
-@[builtin_tactic Parser.Tactic.rotateRight] def evalRotateRight : Tactic := fun stx => do
+@[builtin_tactic Parser.Tactic.rotateRight]
+def evalRotateRight : Tactic := fun stx => do
   let n := getOptRotation stx[1]
   setGoals <| (← getGoals).rotateRight n
 
-@[builtin_tactic Parser.Tactic.open] def evalOpen : Tactic := fun stx => do
-  let `(tactic| open $decl in $tac) := stx | throwUnsupportedSyntax
+@[builtin_tactic Parser.Tactic.open]
+def evalOpen : Tactic := fun stx => do
+  let `(tactic| open $decl in $tac) := stx
+    | throwUnsupportedSyntax
   try
     pushScope
     let openDecls ← elabOpenDecl decl
-    withTheReader Core.Context (fun ctx => { ctx with openDecls := openDecls }) do
-      evalTactic tac
+    withTheReader Core.Context (fun ctx => { ctx with openDecls := openDecls }) do evalTactic tac
   finally
     popScope
 
@@ -226,7 +233,8 @@ def elabSetOption : Tactic := fun stx => do
       if stx[1].getId == `diagnostics then
         reportDiag
 
-@[builtin_tactic Parser.Tactic.allGoals] def evalAllGoals : Tactic := fun stx => do
+@[builtin_tactic Parser.Tactic.allGoals]
+def evalAllGoals : Tactic := fun stx => do
   let mvarIds ← getGoals
   let mut mvarIdsNew := #[]
   let mut abort := false
@@ -234,26 +242,28 @@ def elabSetOption : Tactic := fun stx => do
     unless (← mvarId.isAssigned) do
       setGoals [mvarId]
       let saved ← saveState
-      abort ← Tactic.tryCatch
-        (do
-          evalTactic stx[1]
-          pure abort)
-        (fun ex => do
-          if (← read).recover then
-            logException ex
-            let msgLog ← Core.getMessageLog
-            saved.restore
-            Core.setMessageLog msgLog
-            admitGoal mvarId
-            pure true
-          else
-            throw ex)
+      abort ←
+        Tactic.tryCatch
+          (do
+            evalTactic stx[1]
+            pure abort)
+          (fun ex => do
+            if (← read).recover then
+              logException ex
+              let msgLog ← Core.getMessageLog
+              saved.restore
+              Core.setMessageLog msgLog
+              admitGoal mvarId
+              pure true
+            else
+              throw ex)
       mvarIdsNew := mvarIdsNew ++ (← getUnsolvedGoals)
   if abort then
     throwAbortTactic
   setGoals mvarIdsNew.toList
 
-@[builtin_tactic Parser.Tactic.anyGoals] def evalAnyGoals : Tactic := fun stx => do
+@[builtin_tactic Parser.Tactic.anyGoals]
+def evalAnyGoals : Tactic := fun stx => do
   let mvarIds ← getGoals
   let mut mvarIdsNew := #[]
   let mut succeeded := false
@@ -271,8 +281,7 @@ def elabSetOption : Tactic := fun stx => do
   setGoals mvarIdsNew.toList
 
 @[builtin_tactic tacticSeq, builtin_incremental]
-def evalTacticSeq : Tactic :=
-  Term.withNarrowedArgTacticReuse (argIdx := 0) evalTactic
+def evalTacticSeq : Tactic := Term.withNarrowedArgTacticReuse (argIdx := 0) evalTactic
 
 partial def evalChoiceAux (choiceStx : Syntax) (i : Nat) : TacticM Unit :=
   if i < choiceStx.getNumArgs then
@@ -281,47 +290,56 @@ partial def evalChoiceAux (choiceStx : Syntax) (i : Nat) : TacticM Unit :=
       (do
         evalTactic tactic
         pushInfoLeaf <| .ofChoiceResolutionInfo { stx := choiceStx, chosenAltIdx := i })
-      (fun _ => evalChoiceAux choiceStx (i+1))
+      (fun _ => evalChoiceAux choiceStx (i + 1))
   else
     throwUnsupportedSyntax
 
-@[builtin_tactic choice] def evalChoice : Tactic := fun stx =>
-  evalChoiceAux stx 0
+@[builtin_tactic choice]
+def evalChoice : Tactic := fun stx => evalChoiceAux stx 0
 
-@[builtin_tactic skip] def evalSkip : Tactic := fun _ => pure ()
+@[builtin_tactic skip]
+def evalSkip : Tactic := fun _ => pure ()
 
-@[builtin_tactic unknown] def evalUnknown : Tactic := fun stx => do
-  addCompletionInfo <| CompletionInfo.tactic stx
+@[builtin_tactic unknown]
+def evalUnknown : Tactic := fun stx => do addCompletionInfo <| CompletionInfo.tactic stx
 
-@[builtin_tactic failIfSuccess] def evalFailIfSuccess : Tactic := fun stx =>
+@[builtin_tactic failIfSuccess]
+def evalFailIfSuccess : Tactic := fun stx =>
   Term.withoutErrToSorry <| withoutRecover do
     let tactic := stx[1]
     if (← try evalTactic tactic; pure true catch _ => pure false) then
-      throwError "The tactic provided to `fail_if_success` succeeded but was expected to fail:{indentD stx[1]}"
+      throwError "The tactic provided to `fail_if_success` succeeded but was expected to \
+        fail:{indentD stx[1]}"
 
-@[builtin_tactic traceState] def evalTraceState : Tactic := fun _ => do
+@[builtin_tactic traceState]
+def evalTraceState : Tactic := fun _ => do
   let gs ← getUnsolvedGoals
   addRawTrace (goalsToMessageData gs)
 
-@[builtin_tactic traceMessage] def evalTraceMessage : Tactic := fun stx => do
+@[builtin_tactic traceMessage]
+def evalTraceMessage : Tactic := fun stx => do
   match stx[1].isStrLit? with
-  | none     => throwIllFormedSyntax
+  | none => throwIllFormedSyntax
   | some msg => withRef stx[0] <| addRawTrace msg
 
-@[builtin_tactic Lean.Parser.Tactic.assumption] def evalAssumption : Tactic := fun _ =>
+@[builtin_tactic Lean.Parser.Tactic.assumption]
+def evalAssumption : Tactic := fun _ =>
   -- The `withAssignableSyntheticOpaque` is needed here to accommodate
   -- `assumption` after `refine`.
   -- See https://github.com/leanprover/lean4/issues/2361
   liftMetaTactic fun mvarId => withAssignableSyntheticOpaque do mvarId.assumption; pure []
 
-@[builtin_tactic Lean.Parser.Tactic.contradiction] def evalContradiction : Tactic := fun _ =>
+@[builtin_tactic Lean.Parser.Tactic.contradiction]
+def evalContradiction : Tactic := fun _ =>
   liftMetaTactic fun mvarId => do mvarId.contradiction; pure []
 
-@[builtin_tactic Lean.Parser.Tactic.eqRefl] def evalRefl : Tactic := fun _ =>
+@[builtin_tactic Lean.Parser.Tactic.eqRefl]
+def evalRefl : Tactic := fun _ =>
   -- Allow assigning synthetic opaque so that it is as capable as `exact rfl`.
   liftMetaTactic fun mvarId => do withAssignableSyntheticOpaque mvarId.refl; pure []
 
-@[builtin_tactic Lean.Parser.Tactic.intro] def evalIntro : Tactic := fun stx => do
+@[builtin_tactic Lean.Parser.Tactic.intro]
+def evalIntro : Tactic := fun stx => do
   match stx with
   | `(tactic| intro) =>
     -- `intro` is implicitly `intro _`
@@ -332,24 +350,28 @@ partial def evalChoiceAux (choiceStx : Syntax) (i : Nat) : TacticM Unit :=
       -- are similar at each position, so we include `intro` with the first argument for the tactic info range.
       let ctxRef := if i == 0 then mkNullNode #[tk, t] else t
       withTacticInfoContext ctxRef <| withRef t do evalArg t
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 where
-  /--
-  Evaluates an `intro` argument.
-  -/
+  /-- Evaluates an `intro` argument. -/
   evalArg (t : Term) : TacticM Unit := do
     match t with
-    | `($h:ident) => introStep h h.getId
-    | `(_%$h)     => introStep h `_
+    | `($h:ident) =>
+      introStep h h.getId
+    | `(_%$h) =>
+      introStep h `_
     /- Type ascription -/
-    | `(($h:ident : $[$type?:term]?)) => introStep h h.getId type?
-    | `((_%$h     : $[$type?:term]?)) => introStep h `_      type?
+    | `(($h:ident : $[$type?:term]?)) =>
+      introStep h h.getId type?
+    | `((_%$h     : $[$type?:term]?)) =>
+      introStep h `_ type?
     /- Pattern -/
     | _ =>
       -- Using `mkIdentFrom` guarantees that errors are localized on `t`.
       let h := mkIdentFrom t (← mkFreshUserName `h)
       /- We use `@h` at the match-discriminant to disable the implicit lambda feature -/
-      evalTactic (← `(tactic| intro $h:ident; match @$h:ident with | $t:term => ?_; try clear $h:ident))
+      evalTactic
+        (← `(tactic| intro $h:ident; match @$h:ident with | $t:term => ?_; try clear $h:ident))
   /--
   Performs an `intro` step.
   - `nref` is a ref for the introduced hypothesis
@@ -361,23 +383,26 @@ where
     let mvarIdOrig ← getMainGoal
     let subst := n == `rfl
     let n := if subst then `_ else n
-    let fvarId ← liftMetaTacticAux fun mvarId => do
-      let (fvarId, mvarId) ← mvarId.intro n
-      pure (fvarId, [mvarId])
+    let fvarId ←
+      liftMetaTacticAux fun mvarId => do
+        let (fvarId, mvarId) ← mvarId.intro n
+        pure (fvarId, [mvarId])
     let fvar := mkFVar fvarId
     if let some typeStx := typeStx? then
       withMainContext do
         let mvarCounterSaved := (← getMCtx).mvarCounter
         let fvarType ← inferType fvar
-        let type ← runTermElab do
-          -- Use the original context, to prevent `type` from referring to the introduced hypothesis
-          let type ← mvarIdOrig.withContext <| Term.elabType typeStx
-          Term.synthesizeSyntheticMVars
-          discard <| isDefEqGuarded type fvarType
-          pure type
+        let type ←
+          runTermElab do
+            -- Use the original context, to prevent `type` from referring to the introduced hypothesis
+            let type ← mvarIdOrig.withContext <| Term.elabType typeStx
+            Term.synthesizeSyntheticMVars
+            discard <| isDefEqGuarded type fvarType
+            pure type
         unless (← isDefEqGuarded type fvarType) do
-          throwError m!"Type mismatch: Hypothesis `{fvar}` " ++
-            (← mkHasTypeButIsExpectedMsg fvarType type (trailing? := "due to the provided type annotation"))
+          throwError
+            m!"Type mismatch: Hypothesis `{fvar}` " ++ (← mkHasTypeButIsExpectedMsg fvarType type
+              (trailing? := "due to the provided type annotation"))
         let type ← instantiateMVars type
         let mvars ← filterOldMVars (← getMVars type) mvarCounterSaved
         logUnassignedAndAbort mvars
@@ -390,33 +415,41 @@ where
       else
         Term.addLocalVarInfo nref fvar
 
-@[builtin_tactic Lean.Parser.Tactic.introMatch] def evalIntroMatch : Tactic := fun stx => do
+@[builtin_tactic Lean.Parser.Tactic.introMatch]
+def evalIntroMatch : Tactic := fun stx => do
   let matchAlts := stx[1]
   let stxNew ← liftMacroM <| Term.expandMatchAltsIntoMatchTactic stx matchAlts
   withMacroExpansion stx stxNew <| evalTactic stxNew
 
-@[builtin_tactic «intros»] def evalIntros : Tactic := fun stx =>
+@[builtin_tactic «intros»]
+def evalIntros : Tactic := fun stx =>
   match stx with
-  | `(tactic| intros) => liftMetaTactic fun mvarId => do
-    let (_, mvarId) ← mvarId.intros
-    return [mvarId]
+  | `(tactic| intros) =>
+    liftMetaTactic fun mvarId => do
+      let (_, mvarId) ← mvarId.intros
+      return [mvarId]
   | `(tactic| intros $ids*) => do
-    let fvars ← liftMetaTacticAux fun mvarId => do
-      let (fvars, mvarId) ← mvarId.introN ids.size (ids.map getNameOfIdent').toList
-      return (fvars, [mvarId])
+    let fvars ←
+      liftMetaTacticAux fun mvarId => do
+        let (fvars, mvarId) ← mvarId.introN ids.size (ids.map getNameOfIdent').toList
+        return (fvars, [mvarId])
     withMainContext do
       for stx in ids, fvar in fvars do
         Term.addLocalVarInfo stx (mkFVar fvar)
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
-@[builtin_tactic Lean.Parser.Tactic.revert] def evalRevert : Tactic := fun stx =>
+@[builtin_tactic Lean.Parser.Tactic.revert]
+def evalRevert : Tactic := fun stx =>
   match stx with
   | `(tactic| revert $hs*) => do
-     let (_, mvarId) ← (← getMainGoal).revert (← getFVarIds hs)
-     replaceMainGoal [mvarId]
-  | _                     => throwUnsupportedSyntax
+    let (_, mvarId) ← (← getMainGoal).revert (← getFVarIds hs)
+    replaceMainGoal [mvarId]
+  | _ =>
+    throwUnsupportedSyntax
 
-@[builtin_tactic Lean.Parser.Tactic.clear] def evalClear : Tactic := fun stx =>
+@[builtin_tactic Lean.Parser.Tactic.clear]
+def evalClear : Tactic := fun stx =>
   match stx with
   | `(tactic| clear $hs*) => do
     let fvarIds ← getFVarIds hs
@@ -425,9 +458,11 @@ where
       withMainContext do
         let mvarId ← (← getMainGoal).clear fvarId
         replaceMainGoal [mvarId]
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
-@[builtin_tactic Lean.Parser.Tactic.clearValue] def evalClearValue : Tactic := fun stx => do
+@[builtin_tactic Lean.Parser.Tactic.clearValue]
+def evalClearValue : Tactic := fun stx => do
   let args : TSyntaxArray ``Parser.Tactic.clearValueArg := TSyntaxArray.mk stx[1].getArgs
   withMainContext do
     -- Elaboration phase
@@ -436,7 +471,8 @@ where
     let mut hasStar := false
     let mut hypStxs : Array Syntax := #[]
     let mut hyps : Array Hypothesis := #[]
-    let pushFVarId (fvarIds : Array FVarId) (x : Term) (fvarId : FVarId) : TacticM (Array FVarId) := do
+    let pushFVarId (fvarIds : Array FVarId) (x : Term) (fvarId : FVarId)
+        : TacticM (Array FVarId) := do
       unless ← fvarId.isLetVar do
         throwErrorAt x "Hypothesis `{mkFVar fvarId}` is not a local definition."
       if fvarIds.contains fvarId then
@@ -455,11 +491,13 @@ where
         let e' ← Tactic.elabTermEnsuringType v (← fvarId.getType)
         unless ← withAssignableSyntheticOpaque <| isDefEq e e' do
           let (e, e') ← withAssignableSyntheticOpaque <| addPPExplicitToExposeDiff e e'
-          throwErrorAt v "Provided term{indentExpr e'}\n\
-            is not definitionally equal to{indentD m!"{Expr.fvar fvarId} := {e}"}"
+          throwErrorAt v
+            "Provided term{indentExpr e'}\n\
+              is not definitionally equal to{indentD m!"{Expr.fvar fvarId} := {e}"}"
         let mvars ← filterOldMVars (← getMVars e') mvarCounterSaved
         logUnassignedAndAbort mvars
-        let userName ← match h with
+        let userName ←
+          match h with
           | `(binderIdent| $n:ident) => pure n.raw.getId
           | _ => mkFreshBinderNameForTactic `h
         let type ← mkEq (Expr.fvar fvarId) e'
@@ -469,7 +507,8 @@ where
       | `(clearValueArg| $x:term) =>
         let fvarId ← getFVarId x
         fvarIds ← pushFVarId fvarIds x fvarId
-      | _ => throwUnsupportedSyntax
+      | _ =>
+        throwUnsupportedSyntax
     -- Clearing phase
     let mut g ← popMainGoal
     let (hypFVarIds, g') ← g.assertHypotheses hyps
@@ -477,9 +516,12 @@ where
     g.withContext do
       for hypStx in hypStxs, hypFVarId in hypFVarIds do
         Term.addTermInfo' (isBinder := true) hypStx (Expr.fvar hypFVarId)
-    let toClear ← g.withContext do
-      if hasStar then pure <| (← getLocalHyps).map Expr.fvarId!
-      else sortFVarIds fvarIds
+    let toClear ←
+      g.withContext do
+        if hasStar then
+          pure <| (← getLocalHyps).map Expr.fvarId!
+        else
+          sortFVarIds fvarIds
     let mut succeeded := false
     for fvarId in toClear.reverse do
       try
@@ -487,9 +529,14 @@ where
         succeeded := true
       catch _ =>
         if fvarIds.contains fvarId then
-          g.withContext do throwError "Tactic `clear_value` failed, the value of `{Expr.fvar fvarId}` cannot be cleared.\n{g}"
+          g.withContext do
+            throwError
+              "Tactic `clear_value` failed, the value of `{Expr.fvar fvarId}` cannot be cleared.\
+                \n{g}"
     unless succeeded do
-      g.withContext do throwError "Tactic `clear_value` failed to clear any values.\n{g}"
+      g.withContext do
+        throwError "Tactic `clear_value` failed to clear any values.\
+          \n{g}"
     pushGoal g
 
 def forEachVar (hs : Array Syntax) (tac : MVarId → FVarId → MetaM MVarId) : TacticM Unit := do
@@ -499,57 +546,70 @@ def forEachVar (hs : Array Syntax) (tac : MVarId → FVarId → MetaM MVarId) : 
       let mvarId ← tac (← getMainGoal) fvarId
       replaceMainGoal [mvarId]
 
-@[builtin_tactic Lean.Parser.Tactic.subst] def evalSubst : Tactic := fun stx =>
+@[builtin_tactic Lean.Parser.Tactic.subst]
+def evalSubst : Tactic := fun stx =>
   match stx with
-  | `(tactic| subst $hs*) => forEachVar hs fun mvarId fvarId => do
-    let decl ← fvarId.getDecl
-    if decl.isLet then
-      -- Zeta delta reduce the let and eliminate it.
-      let (_, mvarId) ← mvarId.withReverted #[fvarId] fun mvarId' fvars => mvarId'.withContext do
-        let tgt ← mvarId'.getType
-        assert! tgt.isLet
-        let mvarId'' ← mvarId'.replaceTargetDefEq (tgt.letBody!.instantiate1 tgt.letValue!)
-        -- Dropped the let fvar
-        let aliasing := (fvars.extract 1).map some
-        return ((), aliasing, mvarId'')
-      return mvarId
-    else
-      Meta.subst mvarId fvarId
-  | _                     => throwUnsupportedSyntax
+  | `(tactic| subst $hs*) =>
+    forEachVar hs fun mvarId fvarId => do
+      let decl ← fvarId.getDecl
+      if decl.isLet then
+        -- Zeta delta reduce the let and eliminate it.
+        let (_, mvarId) ←
+          mvarId.withReverted #[fvarId] fun mvarId' fvars =>
+            mvarId'.withContext do
+              let tgt ← mvarId'.getType
+              assert! tgt.isLet
+              let mvarId'' ← mvarId'.replaceTargetDefEq (tgt.letBody!.instantiate1 tgt.letValue!)
+              -- Dropped the let fvar
+              let aliasing := (fvars.extract 1).map some
+              return ((), aliasing, mvarId'')
+        return mvarId
+      else
+        Meta.subst mvarId fvarId
+  | _ =>
+    throwUnsupportedSyntax
 
-@[builtin_tactic Lean.Parser.Tactic.substVars] def evalSubstVars : Tactic := fun _ =>
-  liftMetaTactic fun mvarId => return [← substVars mvarId]
+@[builtin_tactic Lean.Parser.Tactic.substVars]
+def evalSubstVars : Tactic := fun _ => liftMetaTactic fun mvarId => return [← substVars mvarId]
 
-@[builtin_tactic Lean.Parser.Tactic.substEqs] def evalSubstEqs : Tactic := fun _ =>
-  Elab.Tactic.liftMetaTactic1 (·.substEqs)
+@[builtin_tactic Lean.Parser.Tactic.substEqs]
+def evalSubstEqs : Tactic := fun _ => Elab.Tactic.liftMetaTactic1 (·.substEqs)
 
 /--
-  Searches for a metavariable `g` s.t. `tag` is its exact name.
-  If none then searches for a metavariable `g` s.t. `tag` is a suffix of its name.
-  If none, then it searches for a metavariable `g` s.t. `tag` is a prefix of its name.
+Searches for a metavariable `g` s.t. `tag` is its exact name.
+If none then searches for a metavariable `g` s.t. `tag` is a suffix of its name.
+If none, then it searches for a metavariable `g` s.t. `tag` is a prefix of its name.
 
-  We erase macro scopes from the metavariable's user name before comparing, so that
-  user-written tags match even when a previous tactic left hygienic macro scopes at
-  the end of the tag (e.g. `e_a.yield._@._internal._hyg.0`, where `yield` is not the
-  literal last component of the name). Case tags written by the user are never
-  macro-scoped, so erasing scopes on the mvar side is sufficient.
+We erase macro scopes from the metavariable's user name before comparing, so that
+user-written tags match even when a previous tactic left hygienic macro scopes at
+the end of the tag (e.g. `e_a.yield._@._internal._hyg.0`, where `yield` is not the
+literal last component of the name). Case tags written by the user are never
+macro-scoped, so erasing scopes on the mvar side is sufficient.
 -/
 private def findTag? (mvarIds : List MVarId) (tag : Name) : TacticM (Option MVarId) := do
-  match (← mvarIds.findM? fun mvarId => return tag == (← mvarId.getDecl).userName.eraseMacroScopes) with
-  | some mvarId => return mvarId
+  match (← mvarIds.findM? fun mvarId =>
+    return tag == (← mvarId.getDecl).userName.eraseMacroScopes) with
+  | some mvarId =>
+    return mvarId
   | none =>
-  match (← mvarIds.findM? fun mvarId => return tag.isSuffixOf (← mvarId.getDecl).userName.eraseMacroScopes) with
-  | some mvarId => return mvarId
-  | none => mvarIds.findM? fun mvarId => return tag.isPrefixOf (← mvarId.getDecl).userName.eraseMacroScopes
+    match (← mvarIds.findM? fun mvarId =>
+      return tag.isSuffixOf (← mvarId.getDecl).userName.eraseMacroScopes) with
+    | some mvarId =>
+      return mvarId
+    | none =>
+      mvarIds.findM? fun mvarId =>
+        return tag.isPrefixOf (← mvarId.getDecl).userName.eraseMacroScopes
 
 private def getCaseGoals (tag : TSyntax ``binderIdent) : TacticM (MVarId × List MVarId) := do
   let gs ← getUnsolvedGoals
-  let g ← if let `(binderIdent| $tagId:ident) := tag then
-    let tagId := tagId.getId.eraseMacroScopes
-    let some g ← findTag? gs tagId | notFound gs tagId tag
-    pure g
-  else
-    getMainGoal
+  let g ←
+    if let `(binderIdent| $tagId:ident) := tag then
+      let tagId := tagId.getId.eraseMacroScopes
+      let some g ← findTag? gs tagId
+        | notFound gs tagId tag
+      pure g
+    else
+      getMainGoal
   return (g, gs.erase g)
 
 where
@@ -561,8 +621,10 @@ where
     -- We must filter out the anonymous name because there may be an
     -- anonymous goal, but users shouldn't be mistakenly encouraged
     -- to write `case anonymous`
-    let hint ← match (← available.mapM getUserName).filter (· ≠ Name.anonymous) with
-      | [] => pure <| MessageData.note m!"There are no cases to select."
+    let hint ←
+      match (← available.mapM getUserName).filter (· ≠ Name.anonymous) with
+      | [] =>
+        pure <| MessageData.note m!"There are no cases to select."
       | [availableName] =>
         let msg := m!"The only available case tag is {showTagName availableName}."
         if isOriginalStx then
@@ -585,14 +647,15 @@ where
   -- indented, if it's too long
   commaList (items : List MessageData) : MessageData :=
     let sep := MessageData.ofFormat "," ++ Format.line
-    .group <| .nest 2 <|
-    .ofFormat .line ++ .joinSep items sep
+    .group <| .nest 2 <| .ofFormat .line ++ .joinSep items sep
 
   mkSuggestions (names : Array Name) :=
-    names.map fun name =>
-      { suggestion := name.toString
-        toCodeActionTitle? := some fun s => s!"Change case name: {s}"
-        preInfo? := if names.size == 1 then none else s!"`{name}`: " : Hint.Suggestion }
+    names.map fun name => {
+      suggestion := name.toString
+      toCodeActionTitle? := some fun s => s!"Change case name: {s}"
+      preInfo? := if names.size == 1 then none else s!"`{name}`: "
+      : Hint.Suggestion
+    }
 
 @[builtin_tactic «case», builtin_incremental]
 def evalCase : Tactic
@@ -604,12 +667,15 @@ def evalCase : Tactic
         let g ← renameInaccessibles g hs
         setGoals [g]
         g.setTag Name.anonymous
-        withCaseRef arr tac <| closeUsingOrAdmit <| withTacticInfoContext (mkNullNode #[caseTk, arr]) <|
-          Term.withNarrowedArgTacticReuse (argIdx := 3) (evalTactic ·) stx
+        withCaseRef arr tac <| closeUsingOrAdmit <|
+          withTacticInfoContext (mkNullNode #[caseTk, arr]) <|
+            Term.withNarrowedArgTacticReuse (argIdx := 3) (evalTactic ·) stx
         setGoals gs
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
-@[builtin_tactic «case'»] def evalCase' : Tactic
+@[builtin_tactic «case'»]
+def evalCase' : Tactic
   | `(tactic| case'%$caseTk $[$tag $hs*]|* =>%$arr $tac:tacticSeq) => do
     let mut acc := #[]
     for tag in tag, hs in hs do
@@ -624,13 +690,16 @@ def evalCase : Tactic
       acc := acc ++ gs'
       setGoals gs
     setGoals (acc.toList ++ (← getGoals))
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
-@[builtin_tactic «renameI»] def evalRenameInaccessibles : Tactic
+@[builtin_tactic «renameI»]
+def evalRenameInaccessibles : Tactic
   | `(tactic| rename_i $hs*) => do replaceMainGoal [← renameInaccessibles (← getMainGoal) hs]
   | _ => throwUnsupportedSyntax
 
-@[builtin_tactic «first»] partial def evalFirst : Tactic := fun stx => do
+@[builtin_tactic «first»]
+partial def evalFirst : Tactic := fun stx => do
   let tacs := stx[1].getArgs
   if tacs.isEmpty then throwUnsupportedSyntax
   loop tacs 0
@@ -639,33 +708,43 @@ where
     if i == tacs.size - 1 then
       evalTactic tacs[i]![1]
     else
-      evalTactic tacs[i]![1] <|> loop tacs (i+1)
+      evalTactic tacs[i]![1] <|> loop tacs (i + 1)
 
-@[builtin_tactic «fail»] def evalFail : Tactic := fun stx => do
+@[builtin_tactic «fail»]
+def evalFail : Tactic := fun stx => do
   let goals ← getGoals
   let goalsMsg := MessageData.joinSep (goals.map MessageData.ofGoal) m!"\n\n"
   match stx with
-  | `(tactic| fail)          => throwError "Failed: `fail` tactic was invoked\n{goalsMsg}"
-  | `(tactic| fail $msg:str) => throwError "{msg.getString}\n{goalsMsg}"
-  | _ => throwUnsupportedSyntax
+  | `(tactic| fail) =>
+    throwError "Failed: `fail` tactic was invoked\
+      \n{goalsMsg}"
+  | `(tactic| fail $msg:str) =>
+    throwError "{msg.getString}\
+      \n{goalsMsg}"
+  | _ =>
+    throwUnsupportedSyntax
 
-@[builtin_tactic Parser.Tactic.dbgTrace] def evalDbgTrace : Tactic := fun stx => do
+@[builtin_tactic Parser.Tactic.dbgTrace]
+def evalDbgTrace : Tactic := fun stx => do
   match stx[1].isStrLit? with
-  | none     => throwIllFormedSyntax
+  | none => throwIllFormedSyntax
   | some msg => dbg_trace msg
 
-@[builtin_tactic sleep] def evalSleep : Tactic := fun stx => do
+@[builtin_tactic sleep]
+def evalSleep : Tactic := fun stx => do
   match stx[1].isNatLit? with
-  | none    => throwIllFormedSyntax
+  | none => throwIllFormedSyntax
   | some ms => IO.sleep ms.toUInt32
 
-@[builtin_tactic left] def evalLeft : Tactic := fun _stx => do
-  liftMetaTactic (fun g => g.nthConstructor `left 0 (some 2))
+@[builtin_tactic left]
+def evalLeft : Tactic := fun _stx => do liftMetaTactic (fun g => g.nthConstructor `left 0 (some 2))
 
-@[builtin_tactic right] def evalRight : Tactic := fun _stx => do
+@[builtin_tactic right]
+def evalRight : Tactic := fun _stx => do
   liftMetaTactic (fun g => g.nthConstructor `right 1 (some 2))
 
-@[builtin_tactic replace] def evalReplace : Tactic := fun stx => do
+@[builtin_tactic replace]
+def evalReplace : Tactic := fun stx => do
   match stx with
   | `(tactic| replace $decl:letDecl) =>
     withMainContext do
@@ -677,13 +756,16 @@ where
         if let some ldecl := origLCtx.findFromUserName? fv.getId then
           toClear := toClear.push ldecl.fvarId
       liftMetaTactic1 (·.tryClearMany toClear)
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
-@[builtin_tactic runTac] def evalRunTac : Tactic := fun stx => do
+@[builtin_tactic runTac]
+def evalRunTac : Tactic := fun stx => do
   match stx with
   | `(tactic| run_tac $e:doSeq) =>
     ← unsafe Term.evalTerm (TacticM Unit) (mkApp (Lean.mkConst ``TacticM) (Lean.mkConst ``Unit))
       (← `(discard do $e))
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
 end Lean.Elab.Tactic

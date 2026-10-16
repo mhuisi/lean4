@@ -14,13 +14,15 @@ public section
 
 namespace Lean.Compiler.LCNF
 
-private builtin_initialize trivialStructureInfoExt : MapDeclarationExtension (Option TrivialStructureInfo) ←
+private builtin_initialize trivialStructureInfoExt
+    : MapDeclarationExtension (Option TrivialStructureInfo) ←
   mkMapDeclarationExtension (asyncMode := .sync)
 
 /-- Eagerly computes and persists the trivial-structure info of `declName`; see `compileDecls`. -/
 def setHasTrivialStructure? (declName : Name) : CoreM Unit :=
   Irrelevant.setHasTrivialStructure? trivialStructureInfoExt
-    (fun type => Meta.isProp type <||> Meta.isTypeFormerType type) declName
+    (fun type => Meta.isProp type <||> Meta.isTypeFormerType type)
+    declName
 
 /--
 Return `some fieldIdx` if `declName` is the name of an inductive datatype s.t.
@@ -33,8 +35,7 @@ Requires `compileDecls` to have been run for inductive `declName`.
 def hasTrivialStructure? (declName : Name) : CoreM (Option TrivialStructureInfo) :=
   Irrelevant.hasTrivialStructure? trivialStructureInfoExt declName
 
-def getParamTypes (type : Expr) : Array Expr :=
-  go type #[]
+def getParamTypes (type : Expr) : Array Expr := go type #[]
 where
   go (type : Expr) (r : Array Expr) :=
     match type with
@@ -52,33 +53,43 @@ The type contains only `→` and constants.
 partial def toMonoType (type : Expr) : CoreM Expr := do
   let type := type.headBeta
   match type with
-  | .const .. => visitApp type #[]
-  | .app .. => type.withApp visitApp
+  | .const .. =>
+    visitApp type #[]
+  | .app .. =>
+    type.withApp visitApp
   | .forallE n d b bi =>
     let monoB ← toMonoType (b.instantiate1 anyExpr)
     match monoB with
-    | .const ``lcErased _ => return erasedExpr
+    | .const ``lcErased _ =>
+      return erasedExpr
     | _ =>
       -- preserve parameter names for readability and to avoid recompilation from signature changes
       return .forallE n (← toMonoType d) monoB bi
-  | .sort _ => return erasedExpr
-  | .mdata d b => return .mdata d (← toMonoType b)
-  | _ => return anyExpr
+  | .sort _ =>
+    return erasedExpr
+  | .mdata d b =>
+    return .mdata d (← toMonoType b)
+  | _ =>
+    return anyExpr
 where
   visitApp (f : Expr) (args : Array Expr) : CoreM Expr := do
     match f with
-    | .const ``lcErased _ => return erasedExpr
-    | .const ``lcAny _ => return anyExpr
+    | .const ``lcErased _ =>
+      return erasedExpr
+    | .const ``lcAny _ =>
+      return anyExpr
     | .const declName us =>
       if let some info ← hasTrivialStructure? declName then
         let ctorType ← getOtherDeclBaseType info.ctorName []
-        toMonoType (getParamTypes (← instantiateForall ctorType args[*...info.numParams]))[info.fieldIdx]!
+        toMonoType (getParamTypes (← instantiateForall ctorType
+          args[*...info.numParams]))[info.fieldIdx]!
       else
         let mut result := mkConst declName
         let mut type ← getOtherDeclBaseType declName us
         if type.isErased then return erasedExpr
         for arg in args do
-          let .forallE _ d b _ := type.headBeta | unreachable!
+          let .forallE _ d b _ := type.headBeta
+            | unreachable!
           let arg := arg.headBeta
           if d matches .const ``lcErased _ | .sort _ then
             result := mkApp result (← toMonoType arg)
@@ -86,7 +97,8 @@ where
             result := mkApp result anyExpr
           type := b.instantiate1 arg
         return result
-    | _ => return anyExpr
+    | _ =>
+      return anyExpr
 
 /--
 State for the environment extension used to save the LCNF mono phase type for declarations

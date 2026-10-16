@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Grind.Ring.CommSemiringAdapter
 public import Lean.Meta.Tactic.Grind.Types
@@ -24,10 +25,10 @@ by the ids assigned by `Sym.Arith.classify?`.
 
 mutual
 structure EqCnstr where
-  p     : Poly
-  h     : EqCnstrProof
+  p : Poly
+  h : EqCnstrProof
   sugar : Nat
-  id    : Nat
+  id : Nat
 
 inductive EqCnstrProof where
   | core (a b : Expr) (ra rb : RingExpr)
@@ -47,9 +48,9 @@ instance : Inhabited EqCnstr where
   default := { p := default, h := default, sugar := 0, id := 0 }
 
 protected def EqCnstr.compare (c₁ c₂ : EqCnstr) : Ordering :=
-  (compare c₁.sugar c₂.sugar) |>.then
-  (compare c₁.p.degree c₂.p.degree) |>.then
-  (compare c₁.id c₂.id)
+  (compare c₁.sugar c₂.sugar)
+    |>.then (compare c₁.p.degree c₂.p.degree)
+    |>.then (compare c₁.id c₂.id)
 
 abbrev Queue : Type := Std.TreeSet EqCnstr EqCnstr.compare
 
@@ -132,7 +133,7 @@ inductive PolyDerivation where
     normEq0 (p : Poly) (d : PolyDerivation) (c : EqCnstr)
 
 def PolyDerivation.p : PolyDerivation → Poly
-  | .input p   => p
+  | .input p => p
   | .step p .. => p
   | .normEq0 p .. => p
 
@@ -155,15 +156,15 @@ structure DiseqCnstr where
 /-- Per-goal solver state of a (commutative or not) semiring classified by `Sym.Arith`. -/
 structure SemiringState where
   /-- Mapping from Lean expressions to their representations as `SemiringExpr` -/
-  denote         : PHashMap ExprPtr SemiringExpr := {}
+  denote : PHashMap ExprPtr SemiringExpr := {}
   /--
   Mapping from variables to their denotations.
   Remark each variable can be in only one ring.
   -/
-  vars           : PArray Expr := {}
+  vars : PArray Expr := {}
   /-- Mapping from `Expr` to a variable representing it. -/
-  varMap         : PHashMap ExprPtr Var := {}
-  deriving Inhabited
+  varMap : PHashMap ExprPtr Var := {}
+deriving Inhabited
 
 /-- Per-goal solver state of a (commutative or not) ring classified by `Sym.Arith`. -/
 structure RingState where
@@ -171,48 +172,46 @@ structure RingState where
   Mapping from variables to their denotations.
   Remark each variable can be in only one ring.
   -/
-  vars           : PArray Expr := {}
+  vars : PArray Expr := {}
   /-- Mapping from `Expr` to a variable representing it. -/
-  varMap         : PHashMap ExprPtr Var := {}
+  varMap : PHashMap ExprPtr Var := {}
   /-- Mapping from Lean expressions to their representations as `RingExpr` -/
-  denote         : PHashMap ExprPtr RingExpr := {}
-  deriving Inhabited
+  denote : PHashMap ExprPtr RingExpr := {}
+deriving Inhabited
 
 /-- Per-goal solver state of a commutative ring: the Gröbner basis machinery. -/
 structure CommRingState extends RingState where
   /-- `denoteEntries` is `denote` as a `PArray` for deterministic traversal. -/
-  denoteEntries  : PArray (Expr × RingExpr) := {}
+  denoteEntries : PArray (Expr × RingExpr) := {}
   /-- Next unique id for `EqCnstr`s. -/
-  nextId         : Nat := 0
+  nextId : Nat := 0
   /-- Number of "steps": simplification and superposition. -/
-  steps          : Nat := 0
+  steps : Nat := 0
   /-- Equations to process. -/
-  queue          : Queue := {}
+  queue : Queue := {}
   /--
   The basis is currently just a list. If this is a performance bottleneck, we should use
   a better data-structure. For examples, we could use a simple indexing for the linear case
   where we map variable in the leading monomial to `EqCnstr`.
   -/
-  basis          : List EqCnstr := {}
+  basis : List EqCnstr := {}
   /-- Disequalities. -/
   -- TODO: add indexing
-  diseqs         : PArray DiseqCnstr := {}
+  diseqs : PArray DiseqCnstr := {}
   /--
   If `recheck` is `true`, then new equalities have been added to the basis since we checked
   disequalities and implied equalities.
   -/
-  recheck        : Bool := false
+  recheck : Bool := false
   /-- Inverse theorems that have been already asserted. -/
-  invSet         : PHashSet Expr := {}
+  invSet : PHashSet Expr := {}
   /-- Number of variables for which `PowIdentity` equations have been pushed. -/
   powIdentityVarCount : Nat := 0
-  /--
-  An equality of the form `c = 0`. It is used to simplify polynomial coefficients.
-  -/
-  numEq0?        : Option EqCnstr := none
+  /-- An equality of the form `c = 0`. It is used to simplify polynomial coefficients. -/
+  numEq0? : Option EqCnstr := none
   /-- Flag indicating whether `numEq0?` has been updated. -/
-  numEq0Updated  : Bool := false
-  deriving Inhabited
+  numEq0Updated : Bool := false
+deriving Inhabited
 
 /--
 Per-goal state of the ring solver.
@@ -248,47 +247,62 @@ structure State where
   steps := 0
   /-- `true` if solver has already reported max degree issue. -/
   reportedMaxDegreeIssue : Bool := false
-  deriving Inhabited
+deriving Inhabited
 
 builtin_initialize ringExt : SolverExtension State ← registerSolverExtension (return {})
 
-def get' : GoalM State := do
-  ringExt.getState
+def get' : GoalM State := do ringExt.getState
 
-@[inline] def modify' (f : State → State) : GoalM Unit := do
-  ringExt.modifyState f
+@[inline] def modify' (f : State → State) : GoalM Unit := do ringExt.modifyState f
 
 /-- Applies `f` to `a[i]`, first padding `a` with empty states so that `i` is in range. -/
-@[inline] private def padAndModify [Inhabited α] (a : Array α) (i : Nat) (f : α → α) : Array α :=
+@[inline]
+private def padAndModify [Inhabited α] (a : Array α) (i : Nat) (f : α → α) : Array α :=
   (a.rightpad (i + 1) default).modify i f
 
 /-- Solver state of the commutative ring `ringId`; empty if this goal has not used it yet. -/
-def State.getRing (s : State) (ringId : Nat) : CommRingState :=
-  s.rings.getD ringId {}
+def State.getRing (s : State) (ringId : Nat) : CommRingState := s.rings.getD ringId {}
 
-@[inline] def State.modifyRing (s : State) (ringId : Nat) (f : CommRingState → CommRingState) : State :=
-  { s with rings := padAndModify s.rings ringId f }
+@[inline]
+def State.modifyRing (s : State) (ringId : Nat) (f : CommRingState → CommRingState) : State := {
+  s with
+  rings := padAndModify s.rings ringId f
+}
 
-/-- Solver state of the commutative semiring `semiringId`; empty if this goal has not used it yet. -/
+/--
+Solver state of the commutative semiring `semiringId`; empty if this goal has not used it yet.
+-/
 def State.getSemiring (s : State) (semiringId : Nat) : SemiringState :=
   s.semirings.getD semiringId {}
 
-@[inline] def State.modifySemiring (s : State) (semiringId : Nat) (f : SemiringState → SemiringState) : State :=
-  { s with semirings := padAndModify s.semirings semiringId f }
+@[inline]
+def State.modifySemiring (s : State) (semiringId : Nat) (f : SemiringState → SemiringState)
+    : State := {
+  s with
+  semirings := padAndModify s.semirings semiringId f
+}
 
 /-- Solver state of the non-commutative ring `ringId`; empty if this goal has not used it yet. -/
-def State.getNCRing (s : State) (ringId : Nat) : RingState :=
-  s.ncRings.getD ringId {}
+def State.getNCRing (s : State) (ringId : Nat) : RingState := s.ncRings.getD ringId {}
 
-@[inline] def State.modifyNCRing (s : State) (ringId : Nat) (f : RingState → RingState) : State :=
-  { s with ncRings := padAndModify s.ncRings ringId f }
+@[inline]
+def State.modifyNCRing (s : State) (ringId : Nat) (f : RingState → RingState) : State := {
+  s with
+  ncRings := padAndModify s.ncRings ringId f
+}
 
-/-- Solver state of the non-commutative semiring `semiringId`; empty if this goal has not used it yet. -/
+/--
+Solver state of the non-commutative semiring `semiringId`; empty if this goal has not used it yet.
+-/
 def State.getNCSemiring (s : State) (semiringId : Nat) : SemiringState :=
   s.ncSemirings.getD semiringId {}
 
-@[inline] def State.modifyNCSemiring (s : State) (semiringId : Nat) (f : SemiringState → SemiringState) : State :=
-  { s with ncSemirings := padAndModify s.ncSemirings semiringId f }
+@[inline]
+def State.modifyNCSemiring (s : State) (semiringId : Nat) (f : SemiringState → SemiringState)
+    : State := {
+  s with
+  ncSemirings := padAndModify s.ncSemirings semiringId f
+}
 
 /-- Access to the per-goal state of the current (commutative or not) ring. -/
 class MonadRingState (m : Type → Type) where
@@ -299,7 +313,7 @@ export MonadRingState (getRingState modifyRingState)
 
 @[always_inline]
 instance (m n) [MonadLift m n] [MonadRingState m] : MonadRingState n where
-  getRingState    := liftM (getRingState : m RingState)
+  getRingState := liftM (getRingState : m RingState)
   modifyRingState f := liftM (modifyRingState f : m Unit)
 
 /-- Access to the per-goal state of the current commutative ring. -/
@@ -311,7 +325,7 @@ export MonadCommRingState (getCommRingState modifyCommRingState)
 
 @[always_inline]
 instance (m n) [MonadLift m n] [MonadCommRingState m] : MonadCommRingState n where
-  getCommRingState      := liftM (getCommRingState : m CommRingState)
+  getCommRingState := liftM (getCommRingState : m CommRingState)
   modifyCommRingState f := liftM (modifyCommRingState f : m Unit)
 
 @[always_inline]
@@ -328,7 +342,7 @@ export MonadSemiringState (getSemiringState modifySemiringState)
 
 @[always_inline]
 instance (m n) [MonadLift m n] [MonadSemiringState m] : MonadSemiringState n where
-  getSemiringState    := liftM (getSemiringState : m SemiringState)
+  getSemiringState := liftM (getSemiringState : m SemiringState)
   modifySemiringState f := liftM (modifySemiringState f : m Unit)
 
 end Lean.Meta.Grind.Arith.CommRing

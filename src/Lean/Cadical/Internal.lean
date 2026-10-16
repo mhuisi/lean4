@@ -16,7 +16,6 @@ See https://github.com/arminbiere/cadical/blob/rel-2.2.1/src/cadical.hpp for pre
 information and invariants.
 -/
 
-
 namespace Lean.Cadical.Internal
 
 opaque SolverImpl : NonemptyType.{0}
@@ -25,7 +24,7 @@ public inductive Status where
   | satisfiable
   | unsatisfiable
   | unknown
-  deriving Inhabited, DecidableEq, Hashable, Repr
+deriving Inhabited, DecidableEq, Hashable, Repr
 
 public def Status.toInt32 : Status → Int32
   | .satisfiable => 10

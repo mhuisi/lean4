@@ -21,20 +21,21 @@ class IsCut {α : Type u} (cmp : α → α → Ordering) (cut : α → Ordering)
   lt {k k'} : cut k' = .lt → cmp k' k = .lt → cut k = .lt
   gt {k k'} : cut k' = .gt → cmp k' k = .gt → cut k = .gt
 
-class IsStrictCut {α : Type u} (cmp : α → α → Ordering) (cut : α → Ordering) extends IsCut cmp cut where
+class IsStrictCut {α : Type u} (cmp : α → α → Ordering) (cut : α → Ordering)
+    extends IsCut cmp cut where
   eq (k) {k'} : cut k' = .eq → cut k = cmp k' k
 
 variable {α : Type u} {cmp : α → α → Ordering} {cut : α → Ordering}
 
-theorem IsStrictCut.gt_of_isGE_of_gt [IsStrictCut cmp cut] {k k' : α} :
-    (cut k').isGE → cmp k' k = .gt → cut k = .gt := by
+theorem IsStrictCut.gt_of_isGE_of_gt [IsStrictCut cmp cut] {k k' : α}
+    : (cut k').isGE → cmp k' k = .gt → cut k = .gt := by
   cases h₁ : cut k' with
   | lt => rintro ⟨⟩
   | gt => exact fun _ => IsCut.gt h₁
   | eq => exact fun h₂ h₃ => by rw [← h₃, IsStrictCut.eq (cmp := cmp) k h₁]
 
-theorem IsStrictCut.lt_of_isLE_of_lt [IsStrictCut cmp cut] {k k' : α} :
-    (cut k').isLE → cmp k' k = .lt → cut k = .lt := by
+theorem IsStrictCut.lt_of_isLE_of_lt [IsStrictCut cmp cut] {k k' : α}
+    : (cut k').isLE → cmp k' k = .lt → cut k = .lt := by
   cases h₁ : cut k' with
   | gt => rintro ⟨⟩
   | lt => exact fun _ => IsCut.lt h₁
@@ -42,8 +43,8 @@ theorem IsStrictCut.lt_of_isLE_of_lt [IsStrictCut cmp cut] {k k' : α} :
 
 instance [Ord α] [TransOrd α] {k : α} : IsStrictCut compare (compare k) where
   lt := TransCmp.lt_trans
-  gt h₁ h₂ := OrientedCmp.gt_of_lt (TransCmp.lt_trans (OrientedCmp.lt_of_gt h₂)
-    (OrientedCmp.lt_of_gt h₁))
+  gt h₁ h₂ :=
+    OrientedCmp.gt_of_lt (TransCmp.lt_trans (OrientedCmp.lt_of_gt h₂) (OrientedCmp.lt_of_gt h₁))
   eq _ _ := TransCmp.congr_left
 
 instance [Ord α] : IsStrictCut (compare : α → α → Ordering) (fun _ => .lt) where

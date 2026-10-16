@@ -20,9 +20,9 @@ structure State where
 abbrev M := StateT State CompilerM
 
 def visitExpr : Expr → ExceptT Name M Unit
-  | Expr.fap f _  => getSorryDepFor? f
-  | Expr.pap f _  => getSorryDepFor? f
-  | _             => return ()
+  | Expr.fap f _ => getSorryDepFor? f
+  | Expr.pap f _ => getSorryDepFor? f
+  | _ => return ()
 where
   getSorryDepFor? (f : Name) : ExceptT Name M Unit := do
     let found (g : Name) :=
@@ -34,15 +34,19 @@ where
       throwThe Name f
     else if let some g := (← get).localSorryMap.find? f then
       found g
-    else match (← findDecl f) with
+    else
+      match (← findDecl f) with
       | some (.fdecl (info := { sorryDep? := some g, .. }) ..) => found g
       | _ => return ()
 
 partial def visitFnBody (b : FnBody) : ExceptT Name M Unit := do
   match b with
-  | .vdecl _ _ v b   => visitExpr v; visitFnBody b
-  | .jdecl _ _ v b   => visitFnBody v; visitFnBody b
-  | .case _ _ _ alts => alts.forM fun alt => visitFnBody alt.body
+  | .vdecl _ _ v b =>
+    visitExpr v; visitFnBody b
+  | .jdecl _ _ v b =>
+    visitFnBody v; visitFnBody b
+  | .case _ _ _ alts =>
+    alts.forM fun alt => visitFnBody alt.body
   | _ =>
     unless b.isTerminal do
       visitFnBody b.body
@@ -51,16 +55,16 @@ def visitDecl (d : Decl) : M Unit := do
   match d with
   | .fdecl (f := f) (body := b) .. =>
     match (← get).localSorryMap.find? f with
-    | some _ => return ()
+    | some _ =>
+      return ()
     | none =>
       match (← visitFnBody b |>.run) with
-      | .ok _    => return ()
+      | .ok _ =>
+        return ()
       | .error g =>
-        modify fun s => {
-          localSorryMap := s.localSorryMap.insert f g
-          modified      := true
-        }
-  | _ => return ()
+        modify fun s => { localSorryMap := s.localSorryMap.insert f g, modified := true }
+  | _ =>
+    return ()
 
 partial def collect (decls : Array Decl) : M Unit := do
   modify fun s => { s with modified := false }
@@ -74,10 +78,11 @@ def updateSorryDep (decls : Array Decl) : CompilerM (Array Decl) := do
   let (_, s) ← Sorry.collect decls |>.run {}
   return decls.map fun decl =>
     match decl with
-    | Decl.fdecl f xs t b info    =>
+    | Decl.fdecl f xs t b info =>
       match s.localSorryMap.find? f with
       | some g => Decl.fdecl f xs t b { info with sorryDep? := some g }
       | _ => decl
-    | _ => decl
+    | _ =>
+      decl
 
 end Lean.IR

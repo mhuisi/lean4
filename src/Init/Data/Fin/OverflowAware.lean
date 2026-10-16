@@ -29,8 +29,7 @@ protected def addNat? (i : Fin n) (m : Nat) : Option (Fin n) :=
 theorem addNat?_eq_some {i : Fin n} (h : i + m < n) : i.addNat? m = some ⟨i + m, h⟩ := by
   simp [Fin.addNat?, h]
 
-theorem addNat?_eq_some_iff {i : Fin n} :
-    i.addNat? m = some j ↔ i + m < n ∧ j = i + m := by
+theorem addNat?_eq_some_iff {i : Fin n} : i.addNat? m = some j ↔ i + m < n ∧ j = i + m := by
   simp only [Fin.addNat?]
   split <;> simp [Fin.ext_iff, eq_comm, *]
 
@@ -39,16 +38,16 @@ theorem addNat?_eq_none_iff {i : Fin n} : i.addNat? m = none ↔ n ≤ i + m := 
   simp only [Fin.addNat?]
   split <;> simp_all [Nat.not_lt]
 
-@[simp]
-theorem addNat?_zero {i : Fin n} : i.addNat? 0 = some i := by
-  simp [addNat?_eq_some_iff]
+@[simp] theorem addNat?_zero {i : Fin n} : i.addNat? 0 = some i := by simp [addNat?_eq_some_iff]
 
 @[grind =]
-theorem addNat?_eq_dite {i : Fin n} :
-    i.addNat? m = if h : i + m < n then some ⟨i + m, h⟩ else none := by
+theorem addNat?_eq_dite {i : Fin n}
+    : i.addNat? m = if h : i + m < n then some ⟨i + m, h⟩ else none := by
   rfl
 
 @[deprecated Fin.addNat?_eq_dite (since := "2026-07-21")]
-theorem addNat?_eq_dif {n : Nat} {m : Nat} {i : Fin n} : i.addNat? m = if h : ↑i + m < n then Option.some ⟨↑i + m, h⟩ else Option.none := Fin.addNat?_eq_dite
+theorem addNat?_eq_dif {n : Nat} {m : Nat} {i : Fin n}
+    : i.addNat? m = if h : ↑i + m < n then Option.some ⟨↑i + m, h⟩ else Option.none :=
+  Fin.addNat?_eq_dite
 
 end Fin

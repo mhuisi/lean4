@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.SymM
 import Lean.Meta.Sym.AlphaShareBuilder
@@ -50,15 +51,17 @@ namespace LiftLet
 /-- A `let`-declaration collected by `Sym.liftLets`, in dependency order. -/
 structure Decl where
   /-- Hash-consed `.fvar` node standing for this declaration in intermediate terms. -/
-  fvar     : Expr
+  fvar : Expr
   userName : Name
-  /-- Type after processing: maximally shared, referencing earlier declarations via their scratch fvars. -/
-  type     : Expr
+  /--
+  Type after processing: maximally shared, referencing earlier declarations via their scratch fvars.
+  -/
+  type : Expr
   /-- Value after processing. -/
-  value    : Expr
+  value : Expr
   /-- `true` if this is a `have` (nondependent `let`). -/
-  nondep   : Bool
-  deriving Inhabited
+  nondep : Bool
+deriving Inhabited
 
 /--
 Pointer-equality key for the traversal environment.
@@ -67,11 +70,9 @@ Pointer-equality key for the traversal environment.
 structure EnvPtr where
   env : PArray Expr
 
-abbrev hashPtrEnv (xs : PArray Expr) : UInt64 :=
-  unsafe (ptrAddrUnsafe xs >>> 3).toUInt64
+abbrev hashPtrEnv (xs : PArray Expr) : UInt64 := unsafe (ptrAddrUnsafe xs >>> 3).toUInt64
 
-abbrev isSameEnv (xs ys : PArray Expr) : Bool :=
-  unsafe ptrEq xs ys
+abbrev isSameEnv (xs ys : PArray Expr) : Bool := unsafe ptrEq xs ys
 
 instance : Hashable EnvPtr where
   hash k := hashPtrEnv k.env
@@ -142,8 +143,9 @@ def mkDecl (userName : Name) (type value : Expr) (nondep : Bool) : M Expr := do
     return (← get).decls[idx]!.fvar
   let fvar ← mkFVarS (← mkFreshFVarId)
   let idx := (← get).decls.size
-  modify fun s => { s with
-    decls    := s.decls.push { fvar, userName, type, value, nondep }
+  modify fun s => {
+    s with
+    decls := s.decls.push { fvar, userName, type, value, nondep }
     valueMap := s.valueMap.insert key idx
   }
   return fvar
@@ -165,8 +167,10 @@ def substEnv (xs : PArray Expr) (e : Expr) : M Expr := do
         pure (some xs[n - (idx - offset) - 1]!)
       else
         pure (some sub)
-    | .lit _ | .mvar _ | .fvar _ | .const _ _ | .sort _ => pure (some sub)
-    | _ => if offset ≥ sub.looseBVarRange then pure (some sub) else pure none
+    | .lit _ | .mvar _ | .fvar _ | .const _ _ | .sort _ =>
+      pure (some sub)
+    | _ =>
+      if offset ≥ sub.looseBVarRange then pure (some sub) else pure none
 
 /--
 Main traversal. `xs` maps the de Bruijn indices of the enclosing (lifted) `let` binders
@@ -180,7 +184,8 @@ partial def go (xs : PArray Expr) (e : Expr) : M Expr := do
       return xs[n - idx - 1]
     else
       throwError "`Sym.liftLets` internal error, input term is not closed"
-  | .fvar .. | .mvar .. | .sort .. | .const .. | .lit .. => return e
+  | .fvar .. | .mvar .. | .sort .. | .const .. | .lit .. =>
+    return e
   | _ =>
     if !e.hasLooseBVars then
       -- The result does not depend on `xs`; see `State.cacheClosed`.
@@ -206,11 +211,16 @@ where
       let v ← go xs v
       let x ← mkDecl n t v nondep
       go (xs.push x) b
-    | .app f a    => e.updateAppS! (← go xs f) (← go xs a)
-    | .mdata _ b  => e.updateMDataS! (← go xs b)
-    | .proj _ _ b => e.updateProjS! (← go xs b)
-    | .forallE .. | .lam .. => substEnv xs e
-    | .bvar .. | .fvar .. | .mvar .. | .sort .. | .const .. | .lit .. => unreachable!
+    | .app f a =>
+      e.updateAppS! (← go xs f) (← go xs a)
+    | .mdata _ b =>
+      e.updateMDataS! (← go xs b)
+    | .proj _ _ b =>
+      e.updateProjS! (← go xs b)
+    | .forallE .. | .lam .. =>
+      substEnv xs e
+    | .bvar .. | .fvar .. | .mvar .. | .sort .. | .const .. | .lit .. =>
+      unreachable!
 
 /--
 Closing pass: wraps `e` with the collected declarations, converting the scratch fvars
@@ -237,8 +247,10 @@ def mkLets (e : Expr) : M Expr := do
           some <$> mkBVarS (offset + i - p - 1)
         else
           pure (some sub)
-      | .lit _ | .mvar _ | .bvar _ | .const _ _ | .sort _ => pure (some sub)
-      | _ => if !sub.hasFVar then pure (some sub) else pure none
+      | .lit _ | .mvar _ | .bvar _ | .const _ _ | .sort _ =>
+        pure (some sub)
+      | _ =>
+        if !sub.hasFVar then pure (some sub) else pure none
   let mut r ← abst e decls.size
   let mut j := decls.size
   for d in decls.reverse do

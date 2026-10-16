@@ -30,7 +30,9 @@ universe u v
 section Basic
 
 variable {α : Type u} [CompleteLattice α]
-/-- Unit for `⇨`, the meet specialization of `PreservesSup.le_upperAdjoint`: `a ⊓ x ⊑ b → x ⊑ a ⇨ b`. -/
+/--
+Unit for `⇨`, the meet specialization of `PreservesSup.le_upperAdjoint`: `a ⊓ x ⊑ b → x ⊑ a ⇨ b`.
+-/
 theorem le_himp_of_meet_le_left {a b x : α} (h : a ⊓ x ⊑ b) : x ⊑ a ⇨ b := by
   unfold himp; exact PreservesSup.le_upperAdjoint (meet a) h
 
@@ -50,11 +52,9 @@ variable [Heyting l]
 
 /-! ### Connectives -/
 
-theorem le_himp (h : P ⊓ Q ⊑ R) : P ⊑ Q ⇨ R :=
-  le_himp_of_meet_le_left (rel_trans meet_le_comm h)
-theorem meet_le_of_le_himp (h : P ⊑ Q ⇨ R) : P ⊓ Q ⊑ R := rel_trans
-  (le_meet _ _ _ (meet_le_right _ _) (meet_le_of_left_le h))
-  meet_himp_le
+theorem le_himp (h : P ⊓ Q ⊑ R) : P ⊑ Q ⇨ R := le_himp_of_meet_le_left (rel_trans meet_le_comm h)
+theorem meet_le_of_le_himp (h : P ⊑ Q ⇨ R) : P ⊓ Q ⊑ R :=
+  rel_trans (le_meet _ _ _ (meet_le_right _ _) (meet_le_of_left_le h)) meet_himp_le
 theorem meet_le_of_le_himp_left (h : Q ⊑ P ⇨ R) : P ⊓ Q ⊑ R :=
   rel_trans meet_le_comm (meet_le_of_le_himp h)
 theorem himp_meet_le : (P ⇨ Q) ⊓ P ⊑ Q := meet_le_of_le_himp rel_refl
@@ -62,13 +62,10 @@ theorem le_himp_mp (h₁ : P ⊑ Q ⇨ R) (h₂ : P ⊑ Q) : P ⊑ R :=
   le_of_le_of_meet_le h₂ (meet_le_of_le_himp h₁)
 
 theorem join_meet_le (hleft : P ⊓ R ⊑ T) (hright : Q ⊓ R ⊑ T) : (P ⊔ Q) ⊓ R ⊑ T :=
-  meet_le_of_le_himp
-    (join_le _ _ _ (le_himp hleft) (le_himp hright))
+  meet_le_of_le_himp (join_le _ _ _ (le_himp hleft) (le_himp hright))
 theorem meet_join_le (hleft : P ⊓ Q ⊑ T) (hright : P ⊓ R ⊑ T) : P ⊓ (Q ⊔ R) ⊑ T :=
-  meet_le_of_le_himp_left
-    (join_le _ _ _
-      (le_himp (rel_trans meet_le_comm hleft))
-      (le_himp (rel_trans meet_le_comm hright)))
+  meet_le_of_le_himp_left (join_le _ _ _ (le_himp (rel_trans meet_le_comm hleft))
+    (le_himp (rel_trans meet_le_comm hright)))
 
 /-! ### Monotonicity -/
 
@@ -80,8 +77,7 @@ theorem himp_mono_right (h : Q ⊑ Q') : (P ⇨ Q) ⊑ (P ⇨ Q') := himp_mono r
 /-! ### Distributivity -/
 
 theorem meet_join_left : P ⊓ (Q ⊔ R) = (P ⊓ Q) ⊔ (P ⊓ R) :=
-  rel_antisymm
-    (meet_join_le (le_join_of_le_left rel_refl) (le_join_of_le_right rel_refl))
+  rel_antisymm (meet_join_le (le_join_of_le_left rel_refl) (le_join_of_le_right rel_refl))
     (join_le _ _ _ (meet_mono_right (left_le_join _ _)) (meet_mono_right (right_le_join _ _)))
 theorem join_meet_left : P ⊔ (Q ⊓ R) = (P ⊔ Q) ⊓ (P ⊔ R) :=
   rel_antisymm
@@ -91,8 +87,7 @@ theorem join_meet_left : P ⊔ (Q ⊓ R) = (P ⊔ Q) ⊓ (P ⊔ R) :=
       (meet_join_le (le_join_of_le_left (meet_le_right _ _)) (le_join_of_le_right rel_refl)))
 theorem meet_join_right : (P ⊔ Q) ⊓ R = (P ⊓ R) ⊔ (Q ⊓ R) :=
   meet_comm.trans (meet_join_left.trans (rel_antisymm
-    (join_mono (P := _) (Q := _) (P' := _) (Q' := _)
-      (rel_of_eq meet_comm) (rel_of_eq meet_comm))
+    (join_mono (P := _) (Q := _) (P' := _) (Q' := _) (rel_of_eq meet_comm) (rel_of_eq meet_comm))
     (join_mono (rel_of_eq meet_comm) (rel_of_eq meet_comm))))
 theorem join_meet_right : (P ⊓ Q) ⊔ R = (P ⊔ R) ⊓ (Q ⊔ R) :=
   join_comm.trans (join_meet_left.trans (rel_antisymm
@@ -102,15 +97,13 @@ theorem join_meet_right : (P ⊓ Q) ⊔ R = (P ⊔ R) ⊓ (Q ⊔ R) :=
 /-! ### Units and composition -/
 
 theorem top_himp : ((⊤ : l) ⇨ P) = P :=
-  rel_antisymm
-    (rel_trans (le_meet _ _ _ (le_top _) rel_refl) meet_himp_le)
+  rel_antisymm (rel_trans (le_meet _ _ _ (le_top _) rel_refl) meet_himp_le)
     (le_himp (meet_le_of_left_le rel_refl))
 theorem le_himp_self : Q ⊑ P ⇨ P := le_himp (meet_le_right _ _)
 theorem le_himp_self_iff : (Q ⊑ P ⇨ P) ↔ True := iff_true_intro le_himp_self
 theorem himp_meet_himp_le : (P ⇨ Q) ⊓ (Q ⇨ R) ⊑ P ⇨ R :=
-  le_himp_of_meet_le_left <|
-    rel_trans (rel_of_eq meet_assoc.symm) <|
-      rel_trans (meet_mono_left meet_himp_le) meet_himp_le
+  le_himp_of_meet_le_left <| rel_trans (rel_of_eq meet_assoc.symm) <|
+    rel_trans (meet_mono_left meet_himp_le) meet_himp_le
 theorem bot_himp : ((⊥ : l) ⇨ P) = ⊤ :=
   rel_antisymm (le_top _) (le_himp (meet_le_of_right_le (bot_le _)))
 
@@ -131,8 +124,7 @@ theorem CompleteLattice.ofProp_himp_ofProp {φ₁ φ₂ : Prop} : ((⌜φ₁⌝ 
       have h₁' : (⊤ : l) ⊑ ⌜φ₁⌝ := by
         have : (⌜φ₁⌝ : l) = ⊤ := ofProp_eq_top h₁
         exact this ▸ rel_refl
-      exact rel_trans
-        (le_meet _ _ _ rel_refl (rel_trans (le_top _) h₁'))
+      exact rel_trans (le_meet _ _ _ rel_refl (rel_trans (le_top _) h₁'))
         (rel_trans himp_meet_le (ofProp_mono (fun h _ => h)))
     · -- φ₁ false: `⌜φ₁ → φ₂⌝ = ⊤`
       have : (⌜φ₁ → φ₂⌝ : l) = ⊤ := ofProp_eq_top (fun hp => absurd hp h₁)
@@ -162,13 +154,12 @@ theorem meet_le_of_le_himp_comm (h : Q ⊑ P ⇨ R) : P ⊓ Q ⊑ R := meet_le_o
 end Derived
 
 /-- `⊤ ⊑ (P ⇨ Q)` iff `P ⊑ Q`. -/
-theorem top_le_himp_iff {l : Type u} [CompleteLattice l]
-    [Heyting l] (P Q : l) :
-    ((⊤ : l) ⊑ P ⇨ Q) ↔ (P ⊑ Q) :=
-  ⟨fun h => rel_trans
-    (le_meet _ _ _ (le_top _) rel_refl)
-    (rel_trans (meet_mono_left h) himp_meet_le),
-   fun h => le_himp (meet_le_of_right_le h)⟩
+theorem top_le_himp_iff {l : Type u} [CompleteLattice l] [Heyting l] (P Q : l)
+    : ((⊤ : l) ⊑ P ⇨ Q) ↔ (P ⊑ Q) := ⟨
+  fun h =>
+    rel_trans (le_meet _ _ _ (le_top _) rel_refl) (rel_trans (meet_mono_left h) himp_meet_le),
+  fun h => le_himp (meet_le_of_right_le h)
+⟩
 
 end Lean.Order
 

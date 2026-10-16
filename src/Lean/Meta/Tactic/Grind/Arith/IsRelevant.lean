@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 import Lean.Meta.Tactic.Grind.Arith.Util
@@ -12,7 +13,7 @@ import Lean.Meta.Tactic.Grind.Arith.Linear.StructId
 public section
 namespace Lean.Meta.Grind.Arith
 
-def isSupportedType (α  : Expr) : GoalM Bool := do
+def isSupportedType (α : Expr) : GoalM Bool := do
   if (← Cutsat.isSupportedType α) then
     return true
   else if (← Linear.getStructId? α).isSome then

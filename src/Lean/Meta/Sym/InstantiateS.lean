@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.SymM
 import Lean.Meta.Sym.LooseBVarsS
@@ -15,37 +16,43 @@ Similar to `Lean.Expr.instantiateRevRange`.
 It assumes the input is maximally shared, and ensures the output is too.
 It assumes `beginIdx ≤ endIdx` and `endIdx ≤ subst.size`
 -/
-public def instantiateRevRangeS (e : Expr) (beginIdx endIdx : Nat) (subst : Array Expr) : SymM Expr :=
-  if !e.hasLooseBVars then pure e else
-  if _ : beginIdx > endIdx then unreachable! else
-  if _ : endIdx > subst.size then unreachable! else
-  let s := beginIdx
-  let n := endIdx - beginIdx
-  replaceS e fun e offset => do
-    let s₁ := s + offset
-    match e with
-    | .bvar idx =>
-      if _h : idx >= s₁ then
-        if _h : idx < offset + n then
-          let v := subst[n - (idx - offset) - 1]
-          liftLooseBVarsS' v 0 offset
+public def instantiateRevRangeS (e : Expr) (beginIdx endIdx : Nat) (subst : Array Expr)
+    : SymM Expr :=
+  if !e.hasLooseBVars then
+    pure e
+  else if _ : beginIdx > endIdx then
+    unreachable!
+  else if _ : endIdx > subst.size then
+    unreachable!
+  else
+    let s := beginIdx
+    let n := endIdx - beginIdx
+    replaceS e fun e offset => do
+      let s₁ := s + offset
+      match e with
+      | .bvar idx =>
+        if _h : idx >= s₁ then
+          if _h : idx < offset + n then
+            let v := subst[n - (idx - offset) - 1]
+            liftLooseBVarsS' v 0 offset
+          else
+            mkBVarS (idx - n)
         else
-          mkBVarS (idx - n)
-      else
+          return some e
+      | .lit _ | .mvar _ | .fvar _ | .const _ _ | .sort _ =>
         return some e
-    | .lit _ | .mvar _ | .fvar _ | .const _ _ | .sort _ =>
-      return some e
-    | _ =>
-      if s₁ >= e.looseBVarRange then
-        return some e
-      else
-        return none
+      | _ =>
+        if s₁ >= e.looseBVarRange then
+          return some e
+        else
+          return none
 
 /--
 Similar to `Lean.Expr.instantiateRev`.
 It assumes the input is maximally shared, and ensures the output is too.
 -/
-@[inline] public def instantiateRevS (e : Expr) (subst : Array Expr) : SymM Expr :=
+@[inline]
+public def instantiateRevS (e : Expr) (subst : Array Expr) : SymM Expr :=
   instantiateRevRangeS e 0 subst.size subst
 
 /--
@@ -53,28 +60,32 @@ Similar to `Lean.Expr.instantiateRange`.
 It assumes the input is maximally shared, and ensures the output is too.
 It assumes `beginIdx ≤ endIdx` and `endIdx ≤ subst.size`
 -/
-def instantiateRangeS' (e : Expr) (beginIdx endIdx : Nat) (subst : Array Expr) : AlphaShareBuilderM Expr :=
-  if _ : beginIdx > endIdx then unreachable! else
-  if _ : endIdx > subst.size then unreachable! else
-  let n := endIdx - beginIdx
-  replaceS' e fun e offset => do
-    match e with
-    | .bvar idx =>
-      if _h : idx >= offset then
-        if _h : idx < offset + n then
-          let v := subst[beginIdx + idx - offset]
-          liftLooseBVarsS' v 0 offset
+def instantiateRangeS' (e : Expr) (beginIdx endIdx : Nat) (subst : Array Expr)
+    : AlphaShareBuilderM Expr :=
+  if _ : beginIdx > endIdx then
+    unreachable!
+  else if _ : endIdx > subst.size then
+    unreachable!
+  else
+    let n := endIdx - beginIdx
+    replaceS' e fun e offset => do
+      match e with
+      | .bvar idx =>
+        if _h : idx >= offset then
+          if _h : idx < offset + n then
+            let v := subst[beginIdx + idx - offset]
+            liftLooseBVarsS' v 0 offset
+          else
+            mkBVarS (idx - n)
         else
-          mkBVarS (idx - n)
-      else
+          return some e
+      | .lit _ | .mvar _ | .fvar _ | .const _ _ | .sort _ =>
         return some e
-    | .lit _ | .mvar _ | .fvar _ | .const _ _ | .sort _ =>
-      return some e
-    | _ =>
-      if offset >= e.looseBVarRange then
-        return some e
-      else
-        return none
+      | _ =>
+        if offset >= e.looseBVarRange then
+          return some e
+        else
+          return none
 
 /-- Internal variant of `instantiateS` that runs in `AlphaShareBuilderM`. -/
 def instantiateS' (e : Expr) (subst : Array Expr) : AlphaShareBuilderM Expr :=
@@ -84,7 +95,7 @@ def instantiateS' (e : Expr) (subst : Array Expr) : AlphaShareBuilderM Expr :=
 Similar to `Lean.Expr.instantiate`.
 It assumes the input is maximally shared, and ensures the output is too.
 -/
-public def instantiateS  (e : Expr) (subst : Array Expr) : SymM Expr :=
+public def instantiateS (e : Expr) (subst : Array Expr) : SymM Expr :=
   liftBuilderM <| instantiateS' e subst
 
 /-- Internal variant of `betaRevS` that runs in `AlphaShareBuilderM`. -/
@@ -97,10 +108,11 @@ partial def betaRevS' (f : Expr) (revArgs : Array Expr) : AlphaShareBuilderM Exp
       match e with
       | .lam _ _ b _ =>
         if i + 1 < sz then
-          go b (i+1)
+          go b (i + 1)
         else
           instantiateS' b revArgs
-      | .mdata _ b => go b i
+      | .mdata _ b =>
+        go b i
       | _ =>
         let n := sz - i
         mkAppRevRangeS (← instantiateRangeS' e n sz revArgs) 0 n revArgs
@@ -137,7 +149,8 @@ where
       let key := (⟨e⟩, offset)
       if let some r := (← get)[key]? then
         return r
-      else match e with
+      else
+        match e with
         | .bvar bidx => save key (← visitBVar e bidx offset)
         | .lit _ | .mvar _ | .fvar _ | .const _ _ | .sort _ => save key e
         | e => save key (← visit e offset)
@@ -150,38 +163,49 @@ where
         return r
       else
         save key (← e.updateAppS! (← visitAppDefault f offset) (← visitChild a offset))
-    | e => visitChild e offset
+    | e =>
+      visitChild e offset
 
-  visitAppBeta (e : Expr) (f : Expr) (argsRev : Array Expr) (offset : Nat) (modified : Bool) : M Expr := do
+  visitAppBeta (e : Expr) (f : Expr) (argsRev : Array Expr) (offset : Nat) (modified : Bool)
+      : M Expr := do
     match f with
     | .app f a =>
       let a' ← visitChild a offset
-      visitAppBeta e f (argsRev.push a') offset (modified || !isSameExpr a a')
+      visitAppBeta e f (argsRev.push a') offset (modified || ! isSameExpr a a')
     | .bvar bidx =>
       let f' ← visitBVar f bidx offset
-      if modified || !isSameExpr f f' then
+      if modified || ! isSameExpr f f' then
         betaRevS' f' argsRev
       else
         return e
-    | _ => unreachable!
+    | _ =>
+      unreachable!
 
   visitApp (e : Expr) (f : Expr) (arg : Expr) (offset : Nat) (_ : e = .app f arg) : M Expr := do
     let arg' ← visitChild arg offset
     if f.getAppFn.isBVar then
-      visitAppBeta e f #[arg'] offset (!isSameExpr arg arg')
+      visitAppBeta e f #[arg'] offset (! isSameExpr arg arg')
     else
       e.updateAppS! (← visitAppDefault f offset) arg'
 
   visit (e : Expr) (offset : Nat) : M Expr := do
     match h : e with
-    | .lit _ | .mvar _ | .fvar _ | .const _ _ | .sort _ => unreachable!
-    | .bvar bidx => visitBVar e bidx offset
-    | .app f a => visitApp e f a offset h
-    | .mdata _ a => e.updateMDataS! (← visitChild a offset)
-    | .proj _ _ a => e.updateProjS! (← visitChild a offset)
-    | .forallE _ d b _ => e.updateForallS! (← visitChild d offset) (← visitChild b (offset+1))
-    | .lam _ d b _ => e.updateLambdaS! (← visitChild d offset) (← visitChild b (offset+1))
-    | .letE _ t v b _ => e.updateLetS! (← visitChild t offset) (← visitChild v offset) (← visitChild b (offset+1))
+    | .lit _ | .mvar _ | .fvar _ | .const _ _ | .sort _ =>
+      unreachable!
+    | .bvar bidx =>
+      visitBVar e bidx offset
+    | .app f a =>
+      visitApp e f a offset h
+    | .mdata _ a =>
+      e.updateMDataS! (← visitChild a offset)
+    | .proj _ _ a =>
+      e.updateProjS! (← visitChild a offset)
+    | .forallE _ d b _ =>
+      e.updateForallS! (← visitChild d offset) (← visitChild b (offset + 1))
+    | .lam _ d b _ =>
+      e.updateLambdaS! (← visitChild d offset) (← visitChild b (offset + 1))
+    | .letE _ t v b _ =>
+      e.updateLetS! (← visitChild t offset) (← visitChild v offset) (← visitChild b (offset + 1))
 
 /--
 Similar to `instantiateRevS`, but beta-reduces nested applications whose function becomes a lambda
@@ -199,8 +223,10 @@ With `instantiateRevBetaS`, the type of `?h` becomes `p ?w ∧ q ?w` instead of
 `(fun x => p x ∧ q x) ?w`.
 -/
 public def instantiateRevBetaS (e : Expr) (subst : Array Expr) : SymM Expr := do
-  if !e.hasLooseBVars || subst.isEmpty then return e
-  else liftBuilderM <| instantiateRevBetaS' e subst
+  if !e.hasLooseBVars || subst.isEmpty then
+    return e
+  else
+    liftBuilderM <| instantiateRevBetaS' e subst
 
 /--
 Beta-reduces `f` applied to reversed arguments `revArgs`, ensuring maximally shared terms.
@@ -213,7 +239,6 @@ public def betaRevS (f : Expr) (revArgs : Array Expr) : SymM Expr :=
 Apply the given arguments to `f`, beta-reducing if `f` is a lambda expression,
 ensuring maximally shared terms. See `betaRevS` for details.
 -/
-public def betaS (f : Expr) (args : Array Expr) : SymM Expr :=
-  betaRevS f args.reverse
+public def betaS (f : Expr) (args : Array Expr) : SymM Expr := betaRevS f args.reverse
 
 end Lean.Meta.Sym

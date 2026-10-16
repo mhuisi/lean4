@@ -17,20 +17,24 @@ This module defines `Lean.ToLevel`, which is the `Lean.Level` analogue to `Lean.
 
 namespace Lean
 
-/-- A class to create `Level` expressions that denote particular universe levels in Lean.
-`Lean.ToLevel.toLevel.{u}` evaluates to a `Lean.Level` term representing `u` -/
+/--
+A class to create `Level` expressions that denote particular universe levels in Lean.
+`Lean.ToLevel.toLevel.{u}` evaluates to a `Lean.Level` term representing `u`
+-/
 class ToLevel.{u} : Type where
   /-- A `Level` that represents the universe level `u`. -/
   toLevel : Level
-  /-- A hack to avoid the "unused universe parameter" error.
-    We can remove this field pending issue https://github.com/leanprover/lean4/issues/2116 -/
+  /--
+  A hack to avoid the "unused universe parameter" error.
+  We can remove this field pending issue https://github.com/leanprover/lean4/issues/2116
+  -/
   univ : ∀ (_ : Sort u), True := fun _ => trivial
 export ToLevel (toLevel)
 
 instance : ToLevel.{0} where
   toLevel := .zero
 
-instance [ToLevel.{u}] : ToLevel.{u+1} where
+instance [ToLevel.{u}] : ToLevel.{u + 1} where
   toLevel := .succ toLevel.{u}
 
 /-- `ToLevel` for `max u v`. This is not an instance since it causes divergence. -/

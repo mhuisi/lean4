@@ -10,7 +10,8 @@ public import Lean.Elab.Command
 
 namespace Lean.Elab.Command
 
-/-- Adds the name to the namespace, `_root_`-aware.
+/--
+Adds the name to the namespace, `_root_`-aware.
 ```
 resolveNamespaceRelative `A `B.b == `A.B.b
 resolveNamespaceRelative `A `_root_.B.c == `B.c
@@ -34,6 +35,7 @@ def withWeakNamespace {α : Type} (ns : Name) (m : CommandElabM α) : CommandEla
 def elabWithWeakNamespace : CommandElab
   | `(Parser.Command.withWeakNamespace| with_weak_namespace $ns:ident $cmd) =>
     withWeakNamespace ns.getId (elabCommand cmd)
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
 end Lean.Elab.Command

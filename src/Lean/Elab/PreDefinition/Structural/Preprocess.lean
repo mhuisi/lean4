@@ -41,7 +41,6 @@ Preprocesses the expressions to improve the effectiveness of `elimRecursion`.
 
 * Unfold auxiliary definitions abstracting over the function call
   (typically abstracted) proofs.
-
 -/
 def preprocess (e : Expr) (recFnNames : Array Name) (numFixedParams : Nat) : CoreM Expr := do
   let e ← unfoldIfArgIsAppOf recFnNames numFixedParams e
@@ -53,10 +52,10 @@ def preprocess (e : Expr) (recFnNames : Array Name) (numFixedParams : Nat) : Cor
         return .continue)
     (post := fun e => do
       if e.isApp && e.getAppFn.isMData then
-        let .mdata m f := e.getAppFn | unreachable!
+        let .mdata m f := e.getAppFn
+          | unreachable!
         if m.isRecApp then
           return .done (.mdata m (f.beta e.getAppArgs))
       return .continue)
-
 
 end Lean.Elab.Structural

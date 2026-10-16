@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 import Init.Grind
 import Lean.Meta.Tactic.Contradiction
@@ -102,16 +103,15 @@ private def collectMatchCondLhss (e : Expr) : Array (Expr × Option Expr) := Id.
   let mut r := #[]
   let mut e := e
   repeat
-    let .forallE _ d b _ := e | return r
+    let .forallE _ d b _ := e
+      | return r
     if let some (α?, lhs, _) := isEqHEq? d then
       unless lhs.hasLooseBVars do
         r := r.push (lhs, α?)
     e := b
   return r
 
-/--
-Replaces the left-hand side of an equality (or heterogeneous equality) `e` with `lhsNew`.
--/
+/-- Replaces the left-hand side of an equality (or heterogeneous equality) `e` with `lhsNew`. -/
 private def replaceLhs? (e : Expr) (lhsNew : Expr) (ty? : Option Expr) : Option Expr :=
   match_expr e with
   | f@Eq α lhs rhs => if lhs.hasLooseBVars then none else some (mkApp3 f α lhsNew rhs)
@@ -167,30 +167,35 @@ Note that we can abstract the type without introducing type errors because
 heterogeneous equality is used for `as` and `bs`.
 -/
 def collectMatchCondLhssAndAbstract (matchCond : Expr) : GoalM (Array Expr × Expr) := do
-  let_expr Grind.MatchCond e := matchCond | return (#[], matchCond)
+  let_expr Grind.MatchCond e := matchCond
+    | return (#[], matchCond)
   let lhssαs := collectMatchCondLhss e
-  let rec go (i : Nat) (xs : Array Expr) (tys : Array (Option Expr)) (tysxs : Array Expr) (args : Array Expr) : GoalM (Array Expr × Expr) := do
+  let rec go
+      (i : Nat) (xs : Array Expr) (tys : Array (Option Expr)) (tysxs : Array Expr)
+      (args : Array Expr)
+      : GoalM (Array Expr × Expr) := do
     if h : i < lhssαs.size then
       let (lhs, α?) := lhssαs[i]
       if let some α := α? then
         withLocalDeclD ((`ty).appendIndexAfter i) (← inferType α) fun ty =>
-        withLocalDeclD ((`x).appendIndexAfter i) ty fun x =>
-          go (i+1) (xs.push x) (tys.push ty) (tysxs.push ty |>.push x) (args.push α |>.push lhs)
+          withLocalDeclD ((`x).appendIndexAfter i) ty fun x =>
+            go (i + 1) (xs.push x) (tys.push ty) (tysxs.push ty |>.push x) (args.push α |>.push lhs)
       else
         withLocalDeclD ((`x).appendIndexAfter i) (← inferType lhs) fun x =>
-          go (i+1) (xs.push x) (tys.push none) (tysxs.push x) (args.push lhs)
+          go (i + 1) (xs.push x) (tys.push none) (tysxs.push x) (args.push lhs)
     else
       let rec replaceLhss (e : Expr) (i : Nat) : Expr := Id.run do
-        let .forallE _ d b _ := e | return e
+        let .forallE _ d b _ := e
+          | return e
         if h : i < xs.size then
           if let some dNew := replaceLhs? d xs[i] tys[i]! then
-            return e.updateForallE! dNew (replaceLhss b (i+1))
+            return e.updateForallE! dNew (replaceLhss b (i + 1))
           else
             return e.updateForallE! d (replaceLhss b i)
         else
           return e
       let eAbst := replaceLhss e 0
-      let eLam  ← mkLambdaFVars tysxs eAbst
+      let eLam ← mkLambdaFVars tysxs eAbst
       let e' := mkAppN eLam args
       return (args, ← shareCommon e')
   go 0 #[] #[] #[] #[]
@@ -200,15 +205,18 @@ Helper function for `isSatisfied`.
 See `isSatisfied`.
 -/
 private partial def isMatchCondFalseHyp (e : Expr) : GoalM Bool := do
-  let some (_, lhs, rhs) := isEqHEq? e | return false
+  let some (_, lhs, rhs) := isEqHEq? e
+    | return false
   isFalse lhs rhs
 where
   isFalse (lhs rhs : Expr) : GoalM Bool := do
     if lhs.hasLooseBVars then return false
     let root ← getRootENode lhs
     if root.ctor then
-      let some ctorLhs ← isConstructorApp? root.self | return false
-      let some ctorRhs ← isConstructorApp? rhs | return false
+      let some ctorLhs ← isConstructorApp? root.self
+        | return false
+      let some ctorRhs ← isConstructorApp? rhs
+        | return false
       if ctorLhs.name ≠ ctorRhs.name then return true
       let lhsArgs := root.self.getAppArgs
       let rhsArgs := rhs.getAppArgs
@@ -218,7 +226,8 @@ where
       return false
     else if root.interpreted then
       if rhs.hasLooseBVars then return false
-      unless (← isLitValue rhs) do return false
+      unless (← isLitValue rhs) do
+        return false
       return (← normLitValue root.self) != (← normLitValue rhs)
     else
       return false
@@ -252,12 +261,15 @@ the following auxiliary `Grind.MatchCond` terms for an application `f a b`:
 are always the root of their equivalence classes.
 -/
 private partial def isSatisfied (e : Expr) : GoalM Bool := do
-  let_expr Grind.MatchCond e ← e | return false
+  let_expr Grind.MatchCond e ← e
+    | return false
   let mut e := e
   repeat
-    let .forallE _ d b _ := e | break
+    let .forallE _ d b _ := e
+      | break
     if (← isMatchCondFalseHyp d) then
-      trace_goal[grind.debug.matchCond] "satifised{indentExpr e}\nthe following equality is false{indentExpr d}"
+      trace_goal[grind.debug.matchCond] "satifised{indentExpr e}\
+        \nthe following equality is false{indentExpr d}"
       return true
     e := b
   return false
@@ -266,13 +278,15 @@ private partial def isSatisfied (e : Expr) : GoalM Bool := do
 
 /-- Constructs a proof for a satisfied `match`-expression condition. -/
 private partial def mkMatchCondProof? (e : Expr) : GoalM (Option Expr) := do
-  let_expr Grind.MatchCond f ← e | return none
+  let_expr Grind.MatchCond f ← e
+    | return none
   forallTelescopeReducing f fun xs _ => do
     for x in xs do
       let type ← inferType x
       if (← isMatchCondFalseHyp type) then
         trace_goal[grind.debug.matchCond] ">>> {type}"
-        let some h ← go? x | pure ()
+        let some h ← go? x
+          | pure ()
         return some (← mkLambdaFVars xs h)
     return none
 where
@@ -284,18 +298,22 @@ where
     -- created when we infer the type of the `noConfusion` term below
     let lhs ← shareCommon lhs
     let some root ← getRootENode? lhs
-      | reportIssue! "found term that has not been internalized{indentExpr lhs}\nwhile trying to construct a proof for `MatchCond`{indentExpr e}"
+      | reportIssue! "found term that has not been internalized{indentExpr lhs}\
+          \nwhile trying to construct a proof for `MatchCond`{indentExpr e}"
         return none
     let isHEq := α?.isSome
     unless (← hasSameType root.self rhs) do
       return none
-    let h ← if isHEq then
-      mkEqOfHEq (← mkHEqTrans (← mkHEqProof root.self lhs) h) (check := false)
-    else
-      mkEqTrans (← mkEqProof root.self lhs) h
+    let h ←
+      if isHEq then
+        mkEqOfHEq (← mkHEqTrans (← mkHEqProof root.self lhs) h) (check := false)
+      else
+        mkEqTrans (← mkEqProof root.self lhs) h
     if root.ctor then
-      let some ctorLhs ← isConstructorApp? root.self | return none
-      let some ctorRhs ← isConstructorApp? rhs | return none
+      let some ctorLhs ← isConstructorApp? root.self
+        | return none
+      let some ctorRhs ← isConstructorApp? rhs
+        | return none
       -- See comment on `shareCommon` above.
       -- Recall that `match`-expression conditions always have `False` as their conclusion.
       let h ← mkNoConfusion (← getFalseExpr) h
@@ -306,7 +324,8 @@ where
           | return none
         forallTelescopeReducing k fun xs _ => do
           for x in xs do
-            let some hx ← go? x | pure ()
+            let some hx ← go? x
+              | pure ()
             return some (mkApp h (← mkLambdaFVars xs hx))
           return none
     else if root.interpreted then
@@ -358,44 +377,48 @@ and use the fact that `x✝²` is equal to `a :: as`.
 -/
 partial def tryToProveFalse (e : Expr) : GoalM Unit := do
   trace_goal[grind.debug.matchCond.proveFalse] "{e}"
-  let_expr Grind.MatchCond body ← e | return ()
-  let proof? ← withNewMCtxDepth do
-    let (args, _, _) ← forallMetaTelescope body
-    let mask := mkGenDiseqMask body
-    for arg in args, target in mask do
-      if target then
-        let some (α?, lhs, rhs) := isEqHEq? (← inferType arg)
-          | return none
-        let isHEq := α?.isSome
-        let rhs ← instantiateMVars rhs
-        let lhs' ← if (← pure !rhs.hasExprMVar <&&> isEqv lhs rhs) then
-          -- The congruence closure already knows that `lhs = rhs`.
-          pure rhs
-        else
-          let lhs' ← go lhs
-          trace[grind.debug.matchCond.proveFalse] "{lhs'} =?= {rhs}"
-          /-
-          `rhs` is pattern-like for actual `match`-expression conditions. For hypotheses that
-          merely have the shape of a condition (e.g., `h : a = b → False` where `b` is not a
-          constructor application), `isDefEqD` may trigger arbitrarily expensive reductions
-          trying to decide `a =?= b`. See issue #14441.
-          -/
-          unless (← isPatternLike rhs) do
+  let_expr Grind.MatchCond body ← e
+    | return ()
+  let proof? ←
+    withNewMCtxDepth do
+      let (args, _, _) ← forallMetaTelescope body
+      let mask := mkGenDiseqMask body
+      for arg in args, target in mask do
+        if target then
+          let some (α?, lhs, rhs) := isEqHEq? (← inferType arg)
+            | return none
+          let isHEq := α?.isSome
+          let rhs ← instantiateMVars rhs
+          let lhs' ←
+            if (← pure !rhs.hasExprMVar <&&> isEqv lhs rhs) then
+              -- The congruence closure already knows that `lhs = rhs`.
+              pure rhs
+            else
+              let lhs' ← go lhs
+              trace[grind.debug.matchCond.proveFalse] "{lhs'} =?= {rhs}"
+              /-
+              `rhs` is pattern-like for actual `match`-expression conditions. For hypotheses that
+              merely have the shape of a condition (e.g., `h : a = b → False` where `b` is not a
+              constructor application), `isDefEqD` may trigger arbitrarily expensive reductions
+              trying to decide `a =?= b`. See issue #14441.
+              -/
+              unless (← isPatternLike rhs) do
+                return none
+              unless (← isDefEqD lhs' rhs) do
+                return none
+              pure lhs'
+          let some lhsEqLhs' ← if isHEq then proveHEq? lhs lhs' else proveEq? lhs lhs'
+            | return none
+          unless (← isDefEq arg lhsEqLhs') do
             return none
-          unless (← isDefEqD lhs' rhs) do
-            return none
-          pure lhs'
-        let some lhsEqLhs' ← if isHEq then proveHEq? lhs lhs' else proveEq? lhs lhs'
-          | return none
-        unless (← isDefEq arg lhsEqLhs') do
-          return none
-    let he := mkOfEqTrueCore e (← mkEqTrueProof e)
-    let falseProof ← instantiateMVars (mkAppN he args)
-    if (← hasAssignableMVar falseProof) then
-      return none
-    trace[grind.debug.matchCond.proveFalse] "{falseProof} : {← inferType falseProof}"
-    return some falseProof
-  let some proof := proof? | return ()
+      let he := mkOfEqTrueCore e (← mkEqTrueProof e)
+      let falseProof ← instantiateMVars (mkAppN he args)
+      if (← hasAssignableMVar falseProof) then
+        return none
+      trace[grind.debug.matchCond.proveFalse] "{falseProof} : {← inferType falseProof}"
+      return some falseProof
+  let some proof := proof?
+    | return ()
   closeGoal proof
 where
   /--
@@ -412,11 +435,12 @@ where
     let root ← getRootENode e
     if root.ctor then
       let ctor := root.self
-      let some ctorInfo ← isConstructorApp? ctor | return ctor
+      let some ctorInfo ← isConstructorApp? ctor
+        | return ctor
       let mut ctorArgs := ctor.getAppArgs
       let mut modified := false
       for i in ctorInfo.numParams...(ctorInfo.numParams + ctorInfo.numFields) do
-        let arg  := ctorArgs[i]!
+        let arg := ctorArgs[i]!
         let arg' ← go arg
         unless isSameExpr arg arg' do
           ctorArgs := ctorArgs.set! i arg'
@@ -431,7 +455,7 @@ where
       return e
 
 /-- Propagates `MatchCond` upwards -/
-builtin_grind_propagator propagateMatchCondUp ↑Grind.MatchCond := fun e => do
+builtin_grind_propagator propagateMatchCondUp ↑ Grind.MatchCond := fun e => do
   trace_goal[grind.debug.matchCond] "visiting{indentExpr e}"
   if (← isEqTrue e) then
     unless (← isSatisfied e) do
@@ -439,12 +463,12 @@ builtin_grind_propagator propagateMatchCondUp ↑Grind.MatchCond := fun e => do
   else
     if !(← isSatisfied e) then return ()
     let some h ← mkMatchCondProof? e
-       | reportIssue! "failed to construct proof for{indentExpr e}"; return ()
+      | reportIssue! "failed to construct proof for{indentExpr e}"; return ()
     trace_goal[grind.debug.matchCond] "{← inferType h}"
     pushEqTrue e <| mkEqTrueCore e h
 
 /-- Propagates `MatchCond` downwards -/
-builtin_grind_propagator propagateMatchCondDown ↓Grind.MatchCond := fun e => do
+builtin_grind_propagator propagateMatchCondDown ↓ Grind.MatchCond := fun e => do
   if (← isEqTrue e) then
     unless (← isSatisfied e) do
       tryToProveFalse e

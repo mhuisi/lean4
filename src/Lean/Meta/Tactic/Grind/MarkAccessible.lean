@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Revert
 import Init.Data.Range.Polymorphic.Iterators
@@ -22,8 +23,7 @@ def getOriginalName? (name : Name) : Option Name := do
   | .str p s => if s == grindMark then some p else none
   | _ => none
 
-def markGrindName (userName : Name) : Name :=
-  Name.str userName grindMark
+def markGrindName (userName : Name) : Name := Name.str userName grindMark
 
 /--
 Helper tactic for marking accessible names in the local context.
@@ -32,23 +32,27 @@ Recall that during preprocessing, `grind` reverts all hypotheses and reintroduce
 performing eager case splitting.
 When `clean := false`, we create a fresh user name unless the name was "marked" by this function.
 -/
-def _root_.Lean.MVarId.markAccessible (mvarId : MVarId) : MetaM MVarId := mvarId.withContext do
-  let mvarDecl ← mvarId.getDecl
-  let mut lctx := mvarDecl.lctx
-  let n := lctx.numIndices
-  for i in *...n do
-    let j := n - i - 1
-    match lctx.getAt? j with
-    | none => pure ()
-    | some localDecl =>
-      if localDecl.isImplementationDetail then
-        continue
-      if localDecl.userName.hasMacroScopes then
-        continue
-      let markedName := markGrindName localDecl.userName
-      lctx := lctx.setUserName localDecl.fvarId markedName
-  let mvarNew ← Meta.mkFreshExprMVarAt lctx mvarDecl.localInstances mvarDecl.type MetavarKind.syntheticOpaque mvarDecl.userName
-  mvarId.assign mvarNew
-  return mvarNew.mvarId!
+def _root_.Lean.MVarId.markAccessible (mvarId : MVarId) : MetaM MVarId :=
+  mvarId.withContext do
+    let mvarDecl ← mvarId.getDecl
+    let mut lctx := mvarDecl.lctx
+    let n := lctx.numIndices
+    for i in *...n do
+      let j := n - i - 1
+      match lctx.getAt? j with
+      | none =>
+        pure ()
+      | some localDecl =>
+        if localDecl.isImplementationDetail then
+          continue
+        if localDecl.userName.hasMacroScopes then
+          continue
+        let markedName := markGrindName localDecl.userName
+        lctx := lctx.setUserName localDecl.fvarId markedName
+    let mvarNew ←
+      Meta.mkFreshExprMVarAt lctx mvarDecl.localInstances mvarDecl.type MetavarKind.syntheticOpaque
+        mvarDecl.userName
+    mvarId.assign mvarNew
+    return mvarNew.mvarId!
 
 end Lean.Meta.Grind

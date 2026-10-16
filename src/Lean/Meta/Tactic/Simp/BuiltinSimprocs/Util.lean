@@ -20,9 +20,16 @@ proof is uses `Decidable p` and the auxiliary theorems `eq_true_of_decide`/`eq_f
 def evalPropStep (p : Expr) (result : Bool) : SimpM Step := do
   let d ← mkDecide p
   if result then
-    return .done { expr := mkConst ``True, proof? := mkAppN (mkConst ``eq_true_of_decide) #[p, d.appArg!, (← mkEqRefl (mkConst ``true))] }
+    return .done {
+      expr := mkConst ``True
+      proof? := mkAppN (mkConst ``eq_true_of_decide) #[p, d.appArg!, (← mkEqRefl (mkConst ``true))]
+    }
   else
-    return .done { expr := mkConst ``False, proof? := mkAppN (mkConst ``eq_false_of_decide) #[p, d.appArg!, (← mkEqRefl (mkConst ``false))] }
+    return .done {
+      expr := mkConst ``False
+      proof? :=
+        mkAppN (mkConst ``eq_false_of_decide) #[p, d.appArg!, (← mkEqRefl (mkConst ``false))]
+    }
 
 /--
 Like `evalPropStep`, but specialized for `@Eq.{u} α a b`. When the values are equal, uses

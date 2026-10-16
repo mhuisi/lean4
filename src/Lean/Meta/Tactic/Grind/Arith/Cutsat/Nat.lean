@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.Cutsat.Util
 import Init.Data.Int.OfNat
@@ -23,9 +24,7 @@ def mkNatVar (e : Expr) : GoalM (Expr × Expr) := do
   let e' ← shareCommon (mkIntNatCast e)
   let he := mkApp (mkApp (mkConst ``Eq.refl [1]) Int.mkType) e'
   let r := (e', he)
-  modify' fun s => { s with
-    natToIntMap := s.natToIntMap.insert { expr := e } r
-  }
+  modify' fun s => { s with natToIntMap := s.natToIntMap.insert { expr := e } r }
   internalize e' (← getGeneration e)
   cutsatExt.markTerm e
   return r
@@ -101,13 +100,13 @@ private partial def natToInt' (e : Expr) : GoalM (Expr × Expr) := do
     -- for `Fin` is provided by the `[grind hom]` rules.
     let alreadyProcessed := (← get').natToIntMap.contains { expr := e }
     let r ← mkNatVar e
-    unless alreadyProcessed do pushNewFact <| mkApp2 (mkConst ``Fin.isLt) n a
+    unless alreadyProcessed do
+      pushNewFact <| mkApp2 (mkConst ``Fin.isLt) n a
     return r
-  | _ => mkNatVar e
+  | _ =>
+    mkNatVar e
 
-/--
-Given `a : Nat`, returns `(a', h)` such that `a' : Int`, and `h : NatCast.natCast a = a'`
--/
+/-- Given `a : Nat`, returns `(a', h)` such that `a' : Int`, and `h : NatCast.natCast a = a'` -/
 def natToInt (a : Expr) : GoalM (Expr × Expr) := do
   let (b, h) ← natToInt' a
   let b ← shareCommon b
@@ -118,18 +117,19 @@ Given `x` whose denotation is `e`, if `e` is of the form `NatCast.natCast a`,
 asserts that it is nonnegative.
 -/
 def assertNatCast (e : Expr) (x : Var) : GoalM Unit := do
-  let_expr NatCast.natCast _ inst a := e | return ()
-  let_expr instNatCastInt := inst | return ()
+  let_expr NatCast.natCast _ inst a := e
+    | return ()
+  let_expr instNatCastInt := inst
+    | return ()
   if a.isAppOf ``OfNat.ofNat then return () -- we don't want to propagate constraints such as `2 ≥ 0`
   if (← get').natDef.contains { expr := a } then return ()
   -- Ensure `a` is marked as a `Nat` variable. This can happen when the `natCast` was introduced by the user.
   discard <| mkNatVar a
   let p := .add (-1) x (.num 0)
-  let c := { p, h := .ofNatNonneg a : LeCnstr}
+  let c := { p, h := .ofNatNonneg a : LeCnstr }
   c.assert
 
-def isNatTerm (e : Expr) : GoalM Bool :=
-  return (← get').natToIntMap.contains { expr := e }
+def isNatTerm (e : Expr) : GoalM Bool := return (← get').natToIntMap.contains { expr := e }
 
 /-
 **Note**: It is safe to use (the more efficient) structural instances tests here because `grind` uses the canonicalizer.
@@ -138,43 +138,60 @@ open Structural in
 private partial def isNonneg (e : Expr) : MetaM Bool := do
   match_expr e with
   | OfNat.ofNat _ _ _ =>
-    let some n ← getIntValue? e | return false
+    let some n ← getIntValue? e
+      | return false
     return (n ≥ 0 : Bool)
-  | HAdd.hAdd _ _ _ i a b => isInstHAddInt i <&&> isNonneg a <&&> isNonneg b
-  | HMul.hMul _ _ _ i a b => isInstHMulInt i <&&> isNonneg a <&&> isNonneg b
-  | HDiv.hDiv _ _ _ i a b => isInstHDivInt i <&&> isNonneg a <&&> isNonneg b
-  | HMod.hMod _ _ _ i a _ => isInstHModInt i <&&> isNonneg a
-  | HPow.hPow _ _ _ i a _ => isInstHPowInt i <&&> isNonneg a
+  | HAdd.hAdd _ _ _ i a b =>
+    isInstHAddInt i <&&> isNonneg a <&&> isNonneg b
+  | HMul.hMul _ _ _ i a b =>
+    isInstHMulInt i <&&> isNonneg a <&&> isNonneg b
+  | HDiv.hDiv _ _ _ i a b =>
+    isInstHDivInt i <&&> isNonneg a <&&> isNonneg b
+  | HMod.hMod _ _ _ i a _ =>
+    isInstHModInt i <&&> isNonneg a
+  | HPow.hPow _ _ _ i a _ =>
+    isInstHPowInt i <&&> isNonneg a
   | _ =>
-    let_expr NatCast.natCast _ inst _ ← e | return false
-    let_expr instNatCastInt := inst | return false
+    let_expr NatCast.natCast _ inst _ ← e
+      | return false
+    let_expr instNatCastInt := inst
+      | return false
     return true
 
 /-- Given `e : Int`, tries to construct a proof that `e ≥ 0` -/
 partial def mkNonnegThm? (e : Expr) : GoalM (Option Expr) := do
-  unless (← isNonneg e) do return none
+  unless (← isNonneg e) do
+    return none
   return some (← go e)
 where
   go (e : Expr) : MetaM Expr := do
     match_expr e with
-    | OfNat.ofNat _ _ _ => return mkApp2 (mkConst ``Int.Nonneg.num) e eagerReflBoolTrue
-    | HAdd.hAdd _ _ _ _ a b => return mkApp4 (mkConst ``Int.Nonneg.add) a b (← go a) (← go b)
-    | HMul.hMul _ _ _ _ a b => return mkApp4 (mkConst ``Int.Nonneg.mul) a b (← go a) (← go b)
-    | HDiv.hDiv _ _ _ _ a b => return mkApp4 (mkConst ``Int.Nonneg.div) a b (← go a) (← go b)
-    | HMod.hMod _ _ _ _ a b => return mkApp3 (mkConst ``Int.Nonneg.mod) a b (← go a)
-    | HPow.hPow _ _ _ _ a b => return mkApp3 (mkConst ``Int.Nonneg.pow) a b (← go a)
+    | OfNat.ofNat _ _ _ =>
+      return mkApp2 (mkConst ``Int.Nonneg.num) e eagerReflBoolTrue
+    | HAdd.hAdd _ _ _ _ a b =>
+      return mkApp4 (mkConst ``Int.Nonneg.add) a b (← go a) (← go b)
+    | HMul.hMul _ _ _ _ a b =>
+      return mkApp4 (mkConst ``Int.Nonneg.mul) a b (← go a) (← go b)
+    | HDiv.hDiv _ _ _ _ a b =>
+      return mkApp4 (mkConst ``Int.Nonneg.div) a b (← go a) (← go b)
+    | HMod.hMod _ _ _ _ a b =>
+      return mkApp3 (mkConst ``Int.Nonneg.mod) a b (← go a)
+    | HPow.hPow _ _ _ _ a b =>
+      return mkApp3 (mkConst ``Int.Nonneg.pow) a b (← go a)
     | _ =>
-      let_expr NatCast.natCast _ _ a ← e | unreachable!
+      let_expr NatCast.natCast _ _ a ← e
+        | unreachable!
       return mkApp (mkConst ``Int.Nonneg.natCast) a
 
- /-- Given `x` whose denotation is `e : Int`, tries to assert that `e ≥ 0` -/
+/-- Given `x` whose denotation is `e : Int`, tries to assert that `e ≥ 0` -/
 def assertNonneg (e : Expr) (x : Var) : GoalM Unit := do
   if e.isAppOf ``NatCast.natCast then return ()
   if e.isAppOf ``OfNat.ofNat then return ()
-  let some h ← mkNonnegThm? e | return ()
+  let some h ← mkNonnegThm? e
+    | return ()
   let h := mkApp2 (mkConst ``Int.Nonneg.toPoly) e h
   let p := .add (-1) x (.num 0)
-  let c := { p, h := .bound h : LeCnstr}
+  let c := { p, h := .bound h : LeCnstr }
   c.assert
 
 end Lean.Meta.Grind.Arith.Cutsat

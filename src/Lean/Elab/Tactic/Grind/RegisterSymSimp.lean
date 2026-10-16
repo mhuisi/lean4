@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 import Init.Sym.Simp.SimprocDSL
 import Lean.Meta.Sym.Simp.Variant
@@ -13,11 +14,13 @@ namespace Lean.Elab.Command
 open Meta Sym.Simp
 
 def validateOptionSimprocSyntax (proc? : Option Syntax) : CommandElabM Unit := do
-  let some proc := proc? | return ()
+  let some proc := proc?
+    | return ()
   discard <| withGrindTacticM <| Tactic.Grind.elabSymSimproc proc
 
 def validateOptionDischargerSyntax (d? : Option Syntax) : CommandElabM Unit := do
-  let some d := d? | return ()
+  let some d := d?
+    | return ()
   discard <| withGrindTacticM <| Tactic.Grind.elabSymDischarger d
 
 @[builtin_command_elab Lean.Parser.Command.registerSymSimp]
@@ -36,26 +39,35 @@ def elabRegisterSymSimp : CommandElab := fun stx => do
   for field in fields do
     match field with
     | `(sym_simp_field| maxSteps := $val:num) =>
-      unless maxSteps?.isNone do throwErrorAt field "duplicate `maxSteps` field"
+      unless maxSteps?.isNone do
+        throwErrorAt field "duplicate `maxSteps` field"
       maxSteps? := some val.getNat
     | `(sym_simp_field| maxDischargeDepth := $val:num) =>
-      unless maxDischargeDepth?.isNone do throwErrorAt field "duplicate `maxDischargeDepth` field"
+      unless maxDischargeDepth?.isNone do
+        throwErrorAt field "duplicate `maxDischargeDepth` field"
       maxDischargeDepth? := some val.getNat
     | `(sym_simp_field| pre := $proc) =>
-      unless pre?.isNone do throwErrorAt field "duplicate `pre` field"
+      unless pre?.isNone do
+        throwErrorAt field "duplicate `pre` field"
       pre? := some proc
     | `(sym_simp_field| post := $proc) =>
-      unless post?.isNone do throwErrorAt field "duplicate `post` field"
+      unless post?.isNone do
+        throwErrorAt field "duplicate `post` field"
       post? := some proc
     | `(sym_simp_field| discharger := $d) =>
-      unless discharger?.isNone do throwErrorAt field "duplicate `discharger` field"
+      unless discharger?.isNone do
+        throwErrorAt field "duplicate `discharger` field"
       discharger? := some d
-    | _ => throwErrorAt field "unexpected field"
+    | _ =>
+      throwErrorAt field "unexpected field"
   -- Validate pre/post by elaborating them
   validateOptionSimprocSyntax pre?
   validateOptionSimprocSyntax post?
   validateOptionDischargerSyntax discharger?
-  let config := { maxSteps := maxSteps?.getD 100_000, maxDischargeDepth := maxDischargeDepth?.getD 2 }
+  let config := {
+    maxSteps := maxSteps?.getD 100_000
+    maxDischargeDepth := maxDischargeDepth?.getD 2
+  }
   let variant : SymSimpVariant := { pre?, post?, discharger?, config }
   modifyEnv fun env => symSimpVariantExtension.addEntry env { name, variant }
 

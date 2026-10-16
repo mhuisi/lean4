@@ -15,18 +15,17 @@ public section
 namespace Lean.Meta.Match
 
 structure MatchEqns where
-  eqnNames             : Array Name
-  splitterName         : Name
-  splitterMatchInfo    : MatcherInfo
+  eqnNames : Array Name
+  splitterName : Name
+  splitterMatchInfo : MatcherInfo
 deriving Inhabited, Repr
 
-def MatchEqns.size (e : MatchEqns) : Nat :=
-  e.eqnNames.size
+def MatchEqns.size (e : MatchEqns) : Nat := e.eqnNames.size
 
 structure MatchEqnsExtState where
   map : PHashMap Name MatchEqns := {}
   eqns : PHashSet Name := {}
-  deriving Inhabited
+deriving Inhabited
 
 /- We generate the equations and splitter on demand, and do not save them on .olean files. -/
 builtin_initialize matchEqnsExt : EnvExtension MatchEqnsExtState ←
@@ -37,20 +36,22 @@ builtin_initialize matchEqnsExt : EnvExtension MatchEqnsExtState ←
 
 def registerMatchEqns (matchDeclName : Name) (matchEqns : MatchEqns) : CoreM Unit := do
   -- unlogged: as for `registerEqnThms`
-  modifyEnv fun env => matchEqnsExt.modifyState (log := .unlogged) env fun { map, eqns } => {
-    eqns := matchEqns.eqnNames.foldl (init := eqns) fun eqns eqn => eqns.insert eqn
-    -- Write-once, as for `MapDeclarationExtension.insert`. Re-registration with the same equations
-    -- is idempotent.
-    map :=
-      have : Inhabited _ := ⟨map⟩
-      match map.find? matchDeclName with
-      | some prev =>
-        if prev.eqnNames != matchEqns.eqnNames then
-          panic! s!"match equations for `{matchDeclName}` are already registered"
-        else
-          map
-      | none => map.insert matchDeclName matchEqns
-  }
+  modifyEnv fun env =>
+    matchEqnsExt.modifyState (log := .unlogged) env fun { map, eqns } => {
+      eqns := matchEqns.eqnNames.foldl (init := eqns) fun eqns eqn => eqns.insert eqn
+      -- Write-once, as for `MapDeclarationExtension.insert`. Re-registration with the same equations
+      -- is idempotent.
+      map :=
+        have : Inhabited _ := ⟨map⟩
+        match map.find? matchDeclName with
+        | some prev =>
+          if prev.eqnNames != matchEqns.eqnNames then
+            panic! s!"match equations for `{matchDeclName}` are already registered"
+          else
+            map
+        | none =>
+          map.insert matchDeclName matchEqns
+    }
 
 /-
 Forward definition of `getEquationsForImpl`.
@@ -61,21 +62,19 @@ set_option compiler.ignoreBorrowAnnotation true in
 @[extern "lean_get_match_equations_for"]
 opaque getEquationsFor (matchDeclName : Name) : MetaM MatchEqns
 
-/-
-Forward definition of `genMatchCongrEqnsImpl`.
--/
+/- Forward definition of `genMatchCongrEqnsImpl`. -/
 set_option compiler.ignoreBorrowAnnotation true in
 @[extern "lean_get_congr_match_equations_for"]
 opaque genMatchCongrEqns (matchDeclName : Name) : MetaM (Array Name)
 
-/--
-Returns `true` if `declName` is the name of a `match` equational theorem.
--/
+/-- Returns `true` if `declName` is the name of a `match` equational theorem. -/
 def isMatchEqnTheorem (env : Environment) (declName : Name) : Bool := Id.run do
   -- avoid blocking on async decls whose names look nothing like matchers
-  let .str _ s := declName.eraseMacroScopes | return false
-  if !isEqnLikeSuffix s then
+  let .str _ s := declName.eraseMacroScopes
+    | return false
+  if ! isEqnLikeSuffix s then
     return false
-  (matchEqnsExt.getState (asyncMode := .async .asyncEnv) (asyncDecl := declName) env).eqns.contains declName
+  (matchEqnsExt.getState (asyncMode := .async .asyncEnv) (asyncDecl := declName) env).eqns.contains
+    declName
 
 end Lean.Meta.Match

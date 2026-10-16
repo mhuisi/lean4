@@ -22,9 +22,7 @@ abbrev Literal (α : Type u) := α × Bool
 
 namespace Literal
 
-/--
-Flip the polarity of `l`.
--/
+/-- Flip the polarity of `l`. -/
 @[inline, grind =]
 def negate (l : Literal α) : Literal α := (l.1, !l.2)
 

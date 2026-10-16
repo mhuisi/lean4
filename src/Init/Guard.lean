@@ -90,10 +90,9 @@ Tactic to check that a named hypothesis has a given type and/or value.
 
 The value `v` is elaborated using the type of `h` as the expected type.
 -/
-syntax (name := guardHyp)
-  "guard_hyp " term:max (colon term)? (colonEq term)? : tactic
-@[inherit_doc guardHyp] syntax (name := guardHypConv)
-  "guard_hyp " term:max (colon term)? (colonEq term)? : conv
+syntax (name := guardHyp) "guard_hyp " term:max (colon term)? (colonEq term)? : tactic
+@[inherit_doc guardHyp]
+syntax (name := guardHypConv) "guard_hyp " term:max (colon term)? (colonEq term)? : conv
 
 end Tactic
 
@@ -106,7 +105,8 @@ Command to check equality of two expressions.
 * `#guard_expr e =ₛ e'` checks that `e` and `e'` are syntactically equal.
 * `#guard_expr e =ₐ e'` checks that `e` and `e'` are alpha-equivalent.
 
-This is a command version of the `guard_expr` tactic. -/
+This is a command version of the `guard_expr` tactic.
+-/
 syntax (name := guardExprCmd) "#guard_expr " term:51 equal term : command
 
 /--
@@ -123,7 +123,8 @@ if `a` and `b` evaluate to the same thing since it uses the `DecidableEq` instan
 the evaluation.
 
 Note: this uses the untrusted evaluator, so `#guard` passing is *not* a proof that the
-expression equals `true`. -/
+expression equals `true`.
+-/
 syntax (name := guardCmd) "#guard " term : command
 
 end Command

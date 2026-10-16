@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 public section
@@ -16,8 +17,9 @@ Solver for preorders, partial orders, linear orders, and support for offsets.
 abbrev NodeId := Nat
 
 inductive CnstrKind where
-  | le | lt
-  deriving Inhabited
+  | le
+  | lt
+deriving Inhabited
 
 /--
 A constraint of the form `u ≤ v + k` (`u < v + k` if `strict := true`)
@@ -26,31 +28,31 @@ Remark: If the order does not support offsets, then `k` is zero.
 but provably equal with proof `h`.
 -/
 structure Cnstr (α : Type) where
-  kind   : CnstrKind
-  u      : α
-  v      : α
-  k      : Int := 0
+  kind : CnstrKind
+  u : α
+  v : α
+  k : Int := 0
   /-- Denotation of this constraint as an expression. -/
-  e      : Expr
+  e : Expr
   /--
   If `h? := some h`, then `h` is proof for that the expression associated with this constraint
   is equal to `e`. Recall that the input constraints are normalized. For example, given `x y : Int`,
   `x ≤ y` is internally represented as `x ≤ y + 0`
   -/
-  h?     : Option Expr := none
-  deriving Inhabited
+  h? : Option Expr := none
+deriving Inhabited
 
 structure Weight where
   k : Int := 0
   strict := false
-  deriving Inhabited
+deriving Inhabited
 
-/-- Auxiliary structure used for proof extraction.  -/
+/-- Auxiliary structure used for proof extraction. -/
 structure ProofInfo where
-  w      : NodeId
-  k      : Weight
-  proof  : Expr
-  deriving Inhabited
+  w : NodeId
+  k : Weight
+  proof : Expr
+deriving Inhabited
 
 /--
 Auxiliary inductive type for representing constraints and equalities
@@ -64,7 +66,7 @@ inductive ToPropagate where
   | eqTrue (c : Cnstr NodeId) (e : Expr) (u v : NodeId) (k k' : Weight)
   | eqFalse (c : Cnstr NodeId) (e : Expr) (u v : NodeId) (k k' : Weight)
   | eq (u v : NodeId)
-  deriving Inhabited
+deriving Inhabited
 
 /--
 Per-goal solver state of an order structure. The instances and the canonical `≤`/`<`
@@ -72,38 +74,38 @@ functions live in `Sym.Arith.Order` (see `Sym.Arith.classifyOrder?`); `id` is th
 of that record, and `structs` in `State` is indexed by the same ids.
 -/
 structure Struct where
-  id                 : Nat
+  id : Nat
   /-- Mapping from `NodeId` to the `Expr` represented by the node. -/
-  nodes              : PArray Expr := {}
+  nodes : PArray Expr := {}
   /-- Mapping from `Expr` to a node representing it. -/
-  nodeMap            : PHashMap ExprPtr NodeId := {}
+  nodeMap : PHashMap ExprPtr NodeId := {}
   /-- Mapping from `Expr` representing inequalities to constraints. -/
-  cnstrs             : PHashMap ExprPtr (Cnstr NodeId) := {}
+  cnstrs : PHashMap ExprPtr (Cnstr NodeId) := {}
   /--
   Mapping from pairs `(u, v)` to a list of constraints on `u` and `v`.
   We use this mapping to implement exhaustive constraint propagation.
   -/
-  cnstrsOf           : PHashMap (NodeId × NodeId) (List (Cnstr NodeId × Expr)) := {}
+  cnstrsOf : PHashMap (NodeId × NodeId) (List (Cnstr NodeId × Expr)) := {}
   /--
   For each node with id `u`, `sources[u]` contains
   pairs `(v, k)` s.t. there is a path from `v` to `u` with weight `k`.
   -/
-  sources            : PArray (AssocList NodeId Weight) := {}
+  sources : PArray (AssocList NodeId Weight) := {}
   /--
   For each node with id `u`, `targets[u]` contains
   pairs `(v, k)` s.t. there is a path from `u` to `v` with weight `k`.
   -/
-  targets            : PArray (AssocList NodeId Weight) := {}
+  targets : PArray (AssocList NodeId Weight) := {}
   /--
   Proof reconstruction information. For each node with id `u`, `proofs[u]` contains
   pairs `(v, { w, proof })` s.t. there is a path from `u` to `v`, and
   `w` is the penultimate node in the path, and `proof` is the justification for
   the last edge.
   -/
-  proofs             : PArray (AssocList NodeId ProofInfo) := {}
+  proofs : PArray (AssocList NodeId ProofInfo) := {}
   /-- Truth values and equalities to propagate to core. -/
-  propagate          : List ToPropagate := []
-  deriving Inhabited
+  propagate : List ToPropagate := []
+deriving Inhabited
 
 /-- Entry/Value for the map `termMap` in `State` -/
 structure TermMapEntry where
@@ -118,7 +120,8 @@ structure State where
   structs : Array Struct := {}
   /--
   Mapping from types to its "structure id". We cache failures using `none`.
-  `typeIdOf[type]` is `some id`, then `id < structs.size`. -/
+  `typeIdOf[type]` is `some id`, then `id < structs.size`.
+  -/
   typeIdOf : PHashMap ExprPtr (Option Nat) := {}
   /-- Mapping from expressions/terms to their structure ids. -/
   exprToStructId : PHashMap ExprPtr Nat := {}
@@ -127,17 +130,15 @@ structure State where
   Example: given `x y : Nat`, `x ≤ y + 1` is mapped to `Int.ofNat x ≤ Int.ofNat y + 1`, and proof
   of equivalence.
   -/
-  termMap    : PHashMap ExprPtr TermMapEntry := {}
+  termMap : PHashMap ExprPtr TermMapEntry := {}
   /-- `termMap` inverse -/
   termMapInv : PHashMap ExprPtr (Expr × Expr) := {}
-  deriving Inhabited
+deriving Inhabited
 
 builtin_initialize orderExt : SolverExtension State ← registerSolverExtension (return {})
 
-def get' : GoalM State := do
-  orderExt.getState
+def get' : GoalM State := do orderExt.getState
 
-@[inline] def modify' (f : State → State) : GoalM Unit := do
-  orderExt.modifyState f
+@[inline] def modify' (f : State → State) : GoalM Unit := do orderExt.modifyState f
 
 end Lean.Meta.Grind.Order

@@ -45,11 +45,33 @@ structure ConfigItemView where
 def mkConfigItemViews (c : TSyntaxArray ``configItem) : Array ConfigItemView :=
   c.map fun item =>
     match item with
-    | `(configItem| ($option:ident := $value)) => { ref := item, option, value }
-    | `(configItem| +$option) => { ref := item, option, bool := true, value := mkCIdentFrom item ``true }
-    | `(configItem| -$option) => { ref := item, option, bool := true, value := mkCIdentFrom item ``false }
-    | `(config| (config%$tk := $value)) => { ref := item, option := mkCIdentFrom tk `config, value := value }
-    | _ => { ref := item, option := ⟨Syntax.missing⟩, value := ⟨Syntax.missing⟩ }
+    | `(configItem| ($option:ident := $value)) => {
+      ref := item
+      option
+      value
+    }
+    | `(configItem| +$option) => {
+      ref := item
+      option
+      bool := true
+      value := mkCIdentFrom item ``true
+    }
+    | `(configItem| -$option) => {
+      ref := item
+      option
+      bool := true
+      value := mkCIdentFrom item ``false
+    }
+    | `(config| (config%$tk := $value)) => {
+      ref := item
+      option := mkCIdentFrom tk `config
+      value := value
+    }
+    | _ => {
+      ref := item
+      option := ⟨Syntax.missing⟩
+      value := ⟨Syntax.missing⟩
+    }
 
 /--
 Expands a field access into full field access like `toB.toA.x`.
@@ -57,38 +79,47 @@ Returns that and the last projection function for `x` itself.
 -/
 private def expandFieldName (structName : Name) (fieldName : Name) : MetaM (Name × Name) := do
   let env ← getEnv
-  unless isStructure env structName do throwError "`{.ofConstName structName}` is not a structure"
+  unless isStructure env structName do
+    throwError "`{.ofConstName structName}` is not a structure"
   let some baseStructName := findField? env structName fieldName
     | throwError "Structure `{.ofConstName structName}` does not have a field named `{fieldName}`"
   let some path := getPathToBaseStructure? env baseStructName structName
     | throwError "Internal error: Failed to access field `{fieldName}` in parent structure"
-  let field := path.foldl (init := .anonymous) (fun acc s => Name.appendCore acc <| Name.mkSimple s.getString!) ++ fieldName
+  let field :=
+    path.foldl (init := .anonymous) (fun acc s => Name.appendCore acc <| Name.mkSimple s.getString!)
+      ++ fieldName
   let fieldInfo := (getFieldInfo? env baseStructName fieldName).get!
   return (field, fieldInfo.projFn)
-
 
 /--
 Given a hierarchical name `field`, returns the fully resolved field access, the base struct name, and the last projection function.
 -/
 private partial def expandField (structName : Name) (field : Name) : MetaM (Name × Name) := do
   match field with
-  | .num .. | .anonymous => throwError m!"Invalid configuration field"
-  | .str .anonymous fieldName => expandFieldName structName (Name.mkSimple fieldName)
+  | .num .. | .anonymous =>
+    throwError m!"Invalid configuration field"
+  | .str .anonymous fieldName =>
+    expandFieldName structName (Name.mkSimple fieldName)
   | .str field' fieldName =>
     let (field', projFn) ← expandField structName field'
-    let notStructure {α} : MetaM α := throwError "Field `{field'}` of structure `{.ofConstName structName}` is not a structure"
-    let .const structName' _ := (← getConstInfo projFn).type.getForallBody | notStructure
-    unless isStructure (← getEnv) structName' do notStructure
+    let notStructure {α} : MetaM α :=
+      throwError "Field `{field'}` of structure `{.ofConstName structName}` is not a structure"
+    let .const structName' _ := (← getConstInfo projFn).type.getForallBody
+      | notStructure
+    unless isStructure (← getEnv) structName' do
+      notStructure
     let (field'', projFn) ← expandFieldName structName' (Name.mkSimple fieldName)
     return (field' ++ field'', projFn)
 
 /-- Elaborates a tactic configuration. -/
-def elabConfig (recover : Bool) (structName : Name) (items : Array ConfigItemView) : TermElabM Expr := do
+def elabConfig (recover : Bool) (structName : Name) (items : Array ConfigItemView)
+    : TermElabM Expr := do
   withoutModifyingStateWithInfoAndMessages <| withLCtx {} {} <| withSaveInfoContext do
-    let mkStructInst (source? : Option Term) (fields : TSyntaxArray ``Parser.Term.structInstField) : TermElabM Term :=
+    let mkStructInst (source? : Option Term) (fields : TSyntaxArray ``Parser.Term.structInstField)
+        : TermElabM Term :=
       match source? with
       | some source => `({$source with $fields* : $(mkCIdent structName)})
-      | none        => `({$fields* : $(mkCIdent structName)})
+      | none => `({$fields* : $(mkCIdent structName)})
     let mut source? : Option Term := none
     let mut seenFields : NameSet := {}
     let mut fields : TSyntaxArray ``Parser.Term.structInstField := #[]
@@ -112,20 +143,23 @@ def elabConfig (recover : Bool) (structName : Name) (items : Array ConfigItemVie
           if item.bool then
             -- Verify that the type is `Bool`
             unless (← getConstInfo projFn).type.bindingBody! == .const ``Bool [] do
-              throwErrorAt item.ref m!"Option is not boolean-valued, so `({option} := ...)` syntax must be used"
+              throwErrorAt item.ref
+                m!"Option is not boolean-valued, so `({option} := ...)` syntax must be used"
           let value ←
             match item.value with
             | `(by $seq:tacticSeq) =>
               -- Special case: `(opt := by tacs)` uses the `tacs` syntax itself
               withRef item.value <| `(Unhygienic.run `(tacticSeq| $seq))
-            | value => pure value
+            | value =>
+              pure value
           if seenFields.contains path then
             -- Flush fields. There is a duplicate, but we still want to elaborate both.
             source? ← mkStructInst source? fields
             seenFields := {}
             fields := #[]
-          fields := fields.push <| ← `(Parser.Term.structInstField|
-            $(mkCIdentFrom item.option path (canonical := true)):ident := $value)
+          fields :=
+            fields.push <| ← `(Parser.Term.structInstField|
+              $(mkCIdentFrom item.option path (canonical := true)):ident := $value)
           seenFields := seenFields.insert path
       catch ex =>
         if recover then
@@ -145,7 +179,8 @@ set_option internal.parseQuotWithCurrentStage false
 
 private meta def mkConfigElaborator
     (doc? : Option (TSyntax ``Parser.Command.docComment)) (elabName type monadName : Ident)
-    (adapt recover : Term) : MacroM (TSyntax `command) := do
+    (adapt recover : Term)
+    : MacroM (TSyntax `command) := do
   let empty ← withRef type `({ : $type})
   `(unsafe def evalUnsafe (e : Expr) : TermElabM $type :=
       Meta.evalExpr' (safety := .unsafe) $type ``$type e
@@ -192,8 +227,11 @@ For defining elaborators for commands, use `declare_command_config_elab`.
 
 This command has been deprecated since 2026-05-14. Use `declare_config_elab` instead.
 -/
-macro (name := configElab) doc?:(docComment)? "declare_config_elab_legacy" elabName:ident type:ident : command => do
-  mkConfigElaborator doc? elabName type (mkCIdent ``TacticM) (mkCIdent ``id) (← `((← read).recover))
+macro (name := configElab) doc?:(docComment)? "declare_config_elab_legacy" elabName:ident type:ident
+    : command =>
+  do
+    mkConfigElaborator doc? elabName type (mkCIdent ``TacticM) (mkCIdent ``id)
+      (← `((← read).recover))
 
 open Linter.MissingDocs in
 @[builtin_missing_docs_handler Elab.Tactic.configElab]
@@ -209,8 +247,12 @@ The elaborator has error recovery enabled.
 
 This command has been deprecated since 2026-05-14. Use `declare_command_config_elab` instead.
 -/
-macro (name := commandConfigElab) doc?:(docComment)? "declare_command_config_elab_legacy" elabName:ident type:ident : command => do
-  mkConfigElaborator doc? elabName type (mkCIdent ``CommandElabM) (mkCIdent ``liftTermElabM) (mkCIdent ``true)
+macro (name := commandConfigElab)
+    doc?:(docComment)? "declare_command_config_elab_legacy" elabName:ident type:ident
+    : command =>
+  do
+    mkConfigElaborator doc? elabName type (mkCIdent ``CommandElabM) (mkCIdent ``liftTermElabM)
+      (mkCIdent ``true)
 
 open Linter.MissingDocs in
 @[builtin_missing_docs_handler Elab.Tactic.commandConfigElab]

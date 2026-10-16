@@ -31,8 +31,8 @@ def mkPrivateNameCore (mainModule : Name) (n : Name) : Name :=
 
 def isPrivateName : Name → Bool
   | n@(.str p _) => n == privateHeader || isPrivateName p
-  | .num p _     => isPrivateName p
-  | _            => false
+  | .num p _ => isPrivateName p
+  | _ => false
 
 /--
 Return `true` if `n` is of the form `_private.<module_name>.0`
@@ -44,31 +44,36 @@ def isPrivatePrefix (n : Name) : Bool :=
   | _ => false
 where
   go (n : Name) : Bool :=
-    n == privateHeader ||
-    match n with
-    | .str p _ => go p
-    | _ => false
+    n == privateHeader || match n with
+      | .str p _ => go p
+      | _ => false
 
 private def privateToUserNameAux (n : Name) : Name :=
   match n with
   | .str p s => .str (privateToUserNameAux p) s
   | .num p i => if isPrivatePrefix n then .anonymous else .num (privateToUserNameAux p) i
-  | _        => .anonymous
+  | _ => .anonymous
 
 def privateToUserName? (n : Name) : Option Name :=
-  if isPrivateName n then privateToUserNameAux n
-  else none
+  if isPrivateName n then
+    privateToUserNameAux n
+  else
+    none
 
 def privateToUserName (n : Name) : Name :=
-  if isPrivateName n then privateToUserNameAux n
-  else n
+  if isPrivateName n then
+    privateToUserNameAux n
+  else
+    n
 
 private def privatePrefixAux : Name → Name
   | .str p _ => privatePrefixAux p
-  | n        => n
+  | n => n
 
 def privatePrefix? (n : Name) : Option Name :=
-  if isPrivateName n then privatePrefixAux n
-  else none
+  if isPrivateName n then
+    privatePrefixAux n
+  else
+    none
 
 end Lean

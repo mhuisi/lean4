@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.Linear.Types
 public import Lean.Meta.Tactic.Grind.Arith.Linear.Util
@@ -44,13 +45,8 @@ builtin_initialize registerTraceClass `grind.debug.linarith.search.backtrack (in
 builtin_initialize registerTraceClass `grind.debug.linarith.subst
 
 builtin_initialize
-  linearExt.setMethods
-    (internalize := Linear.internalize)
-    (newEq       := Linear.processNewEq)
-    (newDiseq    := Linear.processNewDiseq)
-    (action      := Action.linarith)
-    (check       := Linear.check)
-    (checkInv    := Linear.checkInvariants)
-    (mbtc        := Linear.mbtc)
+  linearExt.setMethods (internalize := Linear.internalize) (newEq := Linear.processNewEq)
+    (newDiseq := Linear.processNewDiseq) (action := Action.linarith) (check := Linear.check)
+    (checkInv := Linear.checkInvariants) (mbtc := Linear.mbtc)
 
 end Lean.Meta.Grind.Arith.Linear

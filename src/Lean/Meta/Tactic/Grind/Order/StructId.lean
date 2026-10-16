@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Order.Types
 import Lean.Meta.Sym.Arith.Classify
@@ -16,7 +17,8 @@ The classification is done and cached by `Sym.Arith.classifyOrder?` for the whol
 this function only applies the `order` configuration flag.
 -/
 def getStructId? (type : Expr) : GoalM (Option Nat) := do
-  unless (← getConfig).order do return none
+  unless (← getConfig).order do
+    return none
   Sym.Arith.classifyOrder? type
 
 end Lean.Meta.Grind.Order

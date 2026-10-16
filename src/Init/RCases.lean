@@ -10,7 +10,6 @@ public import Init.Meta
 
 public section
 
-
 /-!
 # Recursive cases (`rcases`) tactic and related tactics
 
@@ -94,10 +93,12 @@ syntax (name := rintroPat.one) rcasesPat : rintroPat
 /--
 A multi argument binder `(pat1 pat2 : ty)` binds a list of patterns and gives them all type `ty`.
 -/
-syntax (name := rintroPat.binder) (priority := default+1) -- to override rcasesPat.paren
-  "(" rintroPat+ (" : " term)? ")" : rintroPat
+syntax (name := rintroPat.binder) (priority := default + 1) -- to override rcasesPat.paren
+  "(" rintroPat+ (" : " term)? ")"
+  : rintroPat
 
-/- TODO
+/-
+TODO
 /--
 `rcases? e` will perform case splits on `e` in the same way as `rcases e`,
 but rather than accepting a pattern, it does a maximal cases and prints the
@@ -171,7 +172,8 @@ If `type` is omitted, `:= proof` is required.
 -/
 syntax (name := obtain) "obtain" (ppSpace rcasesPatMed)? (" : " term)? (" := " term,+)? : tactic
 
-/- TODO
+/-
+TODO
 /--
 `rintro?` will introduce and case split on variables in the same way as
 `rintro`, but will also print the `rintro` invocation that would have the same

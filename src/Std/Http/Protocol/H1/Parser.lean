@@ -28,25 +28,17 @@ Checks if a byte may appear inside a field value.
 This parser enforces strict ASCII-only field values and allows only `field-content`
 (`HTAB / SP / VCHAR`).
 -/
-@[inline]
-def isFieldVChar (c : UInt8) : Bool :=
-  fieldContent (Char.ofUInt8 c)
+@[inline] def isFieldVChar (c : UInt8) : Bool := fieldContent (Char.ofUInt8 c)
 
 /--
 Checks if a byte may appear unescaped inside a quoted-string value.
 
 Allows `HTAB / SP / %x21 / %x23-5B / %x5D-7E` (strict ASCII-only; no obs-text).
 -/
-@[inline]
-def isQdText (c : UInt8) : Bool :=
-  qdtext (Char.ofUInt8 c)
+@[inline] def isQdText (c : UInt8) : Bool := qdtext (Char.ofUInt8 c)
 
-/--
-Checks if a byte is optional whitespace (`OWS = SP / HTAB`, RFC 9110 §5.6.3).
--/
-@[inline]
-def isOwsByte (c : UInt8) : Bool :=
-  ows (Char.ofUInt8 c)
+/-- Checks if a byte is optional whitespace (`OWS = SP / HTAB`, RFC 9110 §5.6.3). -/
+@[inline] def isOwsByte (c : UInt8) : Bool := ows (Char.ofUInt8 c)
 
 -- Parser blocks
 
@@ -54,12 +46,14 @@ def isOwsByte (c : UInt8) : Bool :=
 Repeatedly applies `parser` until it returns `none` or the `maxCount` limit is
 exceeded. Returns the collected results as an array.
 -/
-partial def manyItems {α : Type} (parser : Parser (Option α)) (maxCount : Nat) : Parser (Array α) := do
+partial def manyItems {α : Type} (parser : Parser (Option α)) (maxCount : Nat)
+    : Parser (Array α) := do
   let rec go (acc : Array α) : Parser (Array α) := do
-    let step ← optional <| attempt do
-      match ← parser with
-      | none => fail "end of items"
-      | some x => return x
+    let step ←
+      optional <| attempt do
+        match ← parser with
+        | none => fail "end of items"
+        | some x => return x
 
     match step with
     | none =>
@@ -72,7 +66,6 @@ partial def manyItems {α : Type} (parser : Parser (Option α)) (maxCount : Nat)
 
       go acc
   go #[]
-
 
 /--
 Lifts an `Option` into the parser monad, failing with a generic message if the value is `none`.
@@ -91,12 +84,8 @@ Fails if the input starts with a non-token character or is empty.
 def parseToken (limit : Nat) : Parser ByteSlice :=
   takeWhileUpTo1 (fun c => tchar (Char.ofUInt8 c)) limit
 
-/--
-Parses a line terminator.
--/
-@[inline]
-def crlf : Parser Unit := do
-  skipBytes "\r\n".toUTF8
+/-- Parses a line terminator. -/
+@[inline] def crlf : Parser Unit := do skipBytes "\r\n".toUTF8
 
 /--
 Consumes and ignores empty lines (`CRLF`) that appear before a request-line.
@@ -114,12 +103,8 @@ def skipLeadingRequestEmptyLines (limits : H1.Config) : Parser Unit := do
     crlf
     count := count + 1
 
-/--
-Parses a single space (SP, 0x20).
--/
-@[inline]
-def sp : Parser Unit :=
-  skipByte ' '.toUInt8
+/-- Parses a single space (SP, 0x20). -/
+@[inline] def sp : Parser Unit := skipByte ' '.toUInt8
 
 /--
 Parses optional whitespace (OWS = *(SP / HTAB), RFC 9110 §5.6.3), bounded by
@@ -135,16 +120,18 @@ def ows (limits : H1.Config) : Parser Unit := do
   else
     pure ()
 
-/--
-Parses a single ASCII hex digit and returns its numeric value (`0`–`15`).
--/
+/-- Parses a single ASCII hex digit and returns its numeric value (`0`–`15`). -/
 def hexDigit : Parser UInt8 := do
   let b ← any
   if isHexDigitByte b then
-    if b ≥ '0'.toUInt8 && b ≤ '9'.toUInt8 then return b - '0'.toUInt8
-    else if b ≥ 'A'.toUInt8 && b ≤ 'F'.toUInt8 then return b - 'A'.toUInt8 + 10
-    else return b - 'a'.toUInt8 + 10
-  else fail s!"invalid hex digit {Char.ofUInt8 b |>.quote}"
+    if b ≥ '0'.toUInt8 && b ≤ '9'.toUInt8 then
+      return b - '0'.toUInt8
+    else if b ≥ 'A'.toUInt8 && b ≤ 'F'.toUInt8 then
+      return b - 'A'.toUInt8 + 10
+    else
+      return b - 'a'.toUInt8 + 10
+  else
+    fail s!"invalid hex digit {Char.ofUInt8 b |>.quote}"
 
 /--
 Parses a hexadecimal integer (one or more hex digits, up to 16 digits).
@@ -154,18 +141,18 @@ partial def hex : Parser Nat := do
   let rec go (acc : Nat) (count : Nat) : Parser Nat := do
     match ← optional (attempt hexDigit) with
     | some d =>
-        if count + 1 > 16 then
-          fail "chunk size too large"
-        else
-          go (acc * 16 + d.toNat) (count + 1)
+      if count + 1 > 16 then
+        fail "chunk size too large"
+      else
+        go (acc * 16 + d.toNat) (count + 1)
     | none =>
-        if count = 0 then
-          -- Preserve EOF as incremental chunk-size parsing can request more data.
-          -- For non-EOF invalid bytes, keep the specific parse failure.
-          let _ ← peek!
-          fail "expected hex digit"
-        else
-          return acc
+      if count = 0 then
+        -- Preserve EOF as incremental chunk-size parsing can request more data.
+        -- For non-EOF invalid bytes, keep the specific parse failure.
+        let _ ← peek!
+        fail "expected hex digit"
+      else
+        return acc
   go 0 0
 
 -- Actual parsers
@@ -200,46 +187,46 @@ added in the future.
 -/
 def parseMethod : Parser Method :=
   (attempt <| skipBytes "GET".toUTF8 <&> fun _ => Method.get)
-  <|> (attempt <| skipBytes "HEAD".toUTF8 <&> fun _ => Method.head)
-  <|> (attempt <| skipBytes "DELETE".toUTF8 <&> fun _ => Method.delete)
-  <|> (attempt <| skipBytes "TRACE".toUTF8 <&> fun _ => Method.trace)
-  <|> (attempt <| skipBytes "ACL".toUTF8 <&> fun _ => Method.acl)
-  <|> (attempt <| skipBytes "QUERY".toUTF8 <&> fun _ => Method.query)
-  <|> (attempt <| skipBytes "SEARCH".toUTF8 <&> fun _ => Method.search)
-  <|> (attempt <| skipBytes "BASELINE-CONTROL".toUTF8 <&> fun _ => Method.baselineControl)
-  <|> (attempt <| skipBytes "BIND".toUTF8 <&> fun _ => Method.bind)
-  <|> (attempt <| skipBytes "CONNECT".toUTF8 <&> fun _ => Method.connect)
-  <|> (attempt <| skipBytes "CHECKIN".toUTF8 <&> fun _ => Method.checkin)
-  <|> (attempt <| skipBytes "CHECKOUT".toUTF8 <&> fun _ => Method.checkout)
-  <|> (attempt <| skipBytes "COPY".toUTF8 <&> fun _ => Method.copy)
-  <|> (attempt <| skipBytes "LABEL".toUTF8 <&> fun _ => Method.label)
-  <|> (attempt <| skipBytes "LINK".toUTF8 <&> fun _ => Method.link)
-  <|> (attempt <| skipBytes "LOCK".toUTF8 <&> fun _ => Method.lock)
-  <|> (attempt <| skipBytes "MERGE".toUTF8 <&> fun _ => Method.merge)
-  <|> (attempt <| skipBytes "MKACTIVITY".toUTF8 <&> fun _ => Method.mkactivity)
-  <|> (attempt <| skipBytes "MKCALENDAR".toUTF8 <&> fun _ => Method.mkcalendar)
-  <|> (attempt <| skipBytes "MKCOL".toUTF8 <&> fun _ => Method.mkcol)
-  <|> (attempt <| skipBytes "MKREDIRECTREF".toUTF8 <&> fun _ => Method.mkredirectref)
-  <|> (attempt <| skipBytes "MKWORKSPACE".toUTF8 <&> fun _ => Method.mkworkspace)
-  <|> (attempt <| skipBytes "MOVE".toUTF8 <&> fun _ => Method.move)
-  <|> (attempt <| skipBytes "OPTIONS".toUTF8 <&> fun _ => Method.options)
-  <|> (attempt <| skipBytes "ORDERPATCH".toUTF8 <&> fun _ => Method.orderpatch)
-  <|> (attempt <| skipBytes "POST".toUTF8 <&> fun _ => Method.post)
-  <|> (attempt <| skipBytes "PUT".toUTF8 <&> fun _ => Method.put)
-  <|> (attempt <| skipBytes "PATCH".toUTF8 <&> fun _ => Method.patch)
-  <|> (attempt <| skipBytes "PRI".toUTF8 <&> fun _ => Method.pri)
-  <|> (attempt <| skipBytes "PROPFIND".toUTF8 <&> fun _ => Method.propfind)
-  <|> (attempt <| skipBytes "PROPPATCH".toUTF8 <&> fun _ => Method.proppatch)
-  <|> (attempt <| skipBytes "REBIND".toUTF8 <&> fun _ => Method.rebind)
-  <|> (attempt <| skipBytes "REPORT".toUTF8 <&> fun _ => Method.report)
-  <|> (attempt <| skipBytes "UNBIND".toUTF8 <&> fun _ => Method.unbind)
-  <|> (attempt <| skipBytes "UNCHECKOUT".toUTF8 <&> fun _ => Method.uncheckout)
-  <|> (attempt <| skipBytes "UNLINK".toUTF8 <&> fun _ => Method.unlink)
-  <|> (attempt <| skipBytes "UNLOCK".toUTF8 <&> fun _ => Method.unlock)
-  <|> (attempt <| skipBytes "UPDATEREDIRECTREF".toUTF8 <&> fun _ => Method.updateredirectref)
-  <|> (attempt <| skipBytes "UPDATE".toUTF8 <&> fun _ => Method.update)
-  <|> (attempt <| skipBytes "VERSION-CONTROL".toUTF8 <&> fun _ => Method.versionControl)
-  <|> (parseToken 64 *> fail "unrecognized method")
+    <|> (attempt <| skipBytes "HEAD".toUTF8 <&> fun _ => Method.head)
+    <|> (attempt <| skipBytes "DELETE".toUTF8 <&> fun _ => Method.delete)
+    <|> (attempt <| skipBytes "TRACE".toUTF8 <&> fun _ => Method.trace)
+    <|> (attempt <| skipBytes "ACL".toUTF8 <&> fun _ => Method.acl)
+    <|> (attempt <| skipBytes "QUERY".toUTF8 <&> fun _ => Method.query)
+    <|> (attempt <| skipBytes "SEARCH".toUTF8 <&> fun _ => Method.search)
+    <|> (attempt <| skipBytes "BASELINE-CONTROL".toUTF8 <&> fun _ => Method.baselineControl)
+    <|> (attempt <| skipBytes "BIND".toUTF8 <&> fun _ => Method.bind)
+    <|> (attempt <| skipBytes "CONNECT".toUTF8 <&> fun _ => Method.connect)
+    <|> (attempt <| skipBytes "CHECKIN".toUTF8 <&> fun _ => Method.checkin)
+    <|> (attempt <| skipBytes "CHECKOUT".toUTF8 <&> fun _ => Method.checkout)
+    <|> (attempt <| skipBytes "COPY".toUTF8 <&> fun _ => Method.copy)
+    <|> (attempt <| skipBytes "LABEL".toUTF8 <&> fun _ => Method.label)
+    <|> (attempt <| skipBytes "LINK".toUTF8 <&> fun _ => Method.link)
+    <|> (attempt <| skipBytes "LOCK".toUTF8 <&> fun _ => Method.lock)
+    <|> (attempt <| skipBytes "MERGE".toUTF8 <&> fun _ => Method.merge)
+    <|> (attempt <| skipBytes "MKACTIVITY".toUTF8 <&> fun _ => Method.mkactivity)
+    <|> (attempt <| skipBytes "MKCALENDAR".toUTF8 <&> fun _ => Method.mkcalendar)
+    <|> (attempt <| skipBytes "MKCOL".toUTF8 <&> fun _ => Method.mkcol)
+    <|> (attempt <| skipBytes "MKREDIRECTREF".toUTF8 <&> fun _ => Method.mkredirectref)
+    <|> (attempt <| skipBytes "MKWORKSPACE".toUTF8 <&> fun _ => Method.mkworkspace)
+    <|> (attempt <| skipBytes "MOVE".toUTF8 <&> fun _ => Method.move)
+    <|> (attempt <| skipBytes "OPTIONS".toUTF8 <&> fun _ => Method.options)
+    <|> (attempt <| skipBytes "ORDERPATCH".toUTF8 <&> fun _ => Method.orderpatch)
+    <|> (attempt <| skipBytes "POST".toUTF8 <&> fun _ => Method.post)
+    <|> (attempt <| skipBytes "PUT".toUTF8 <&> fun _ => Method.put)
+    <|> (attempt <| skipBytes "PATCH".toUTF8 <&> fun _ => Method.patch)
+    <|> (attempt <| skipBytes "PRI".toUTF8 <&> fun _ => Method.pri)
+    <|> (attempt <| skipBytes "PROPFIND".toUTF8 <&> fun _ => Method.propfind)
+    <|> (attempt <| skipBytes "PROPPATCH".toUTF8 <&> fun _ => Method.proppatch)
+    <|> (attempt <| skipBytes "REBIND".toUTF8 <&> fun _ => Method.rebind)
+    <|> (attempt <| skipBytes "REPORT".toUTF8 <&> fun _ => Method.report)
+    <|> (attempt <| skipBytes "UNBIND".toUTF8 <&> fun _ => Method.unbind)
+    <|> (attempt <| skipBytes "UNCHECKOUT".toUTF8 <&> fun _ => Method.uncheckout)
+    <|> (attempt <| skipBytes "UNLINK".toUTF8 <&> fun _ => Method.unlink)
+    <|> (attempt <| skipBytes "UNLOCK".toUTF8 <&> fun _ => Method.unlock)
+    <|> (attempt <| skipBytes "UPDATEREDIRECTREF".toUTF8 <&> fun _ => Method.updateredirectref)
+    <|> (attempt <| skipBytes "UPDATE".toUTF8 <&> fun _ => Method.update)
+    <|> (attempt <| skipBytes "VERSION-CONTROL".toUTF8 <&> fun _ => Method.versionControl)
+    <|> (parseToken 64 *> fail "unrecognized method")
 
 /--
 Parses a request-target URI, up to `limits.maxUriLength` bytes.
@@ -262,9 +249,10 @@ the method token, keeping URI validation and version parsing in one place.
 -/
 def parseRequestLineBody (limits : H1.Config) : Parser (RequestTarget × Nat × Nat) := do
   let rawUri ← parseURI limits <* sp
-  let uri ← match (Std.Http.URI.Parser.parseRequestTarget <* eof).run rawUri with
-  | .ok res => pure res
-  | .error res => fail res
+  let uri ←
+    match (Std.Http.URI.Parser.parseRequestTarget <* eof).run rawUri with
+    | .ok res => pure res
+    | .error res => fail res
   let versionPair ← parseHttpVersionNumber <* crlf
   return (uri, versionPair)
 
@@ -288,7 +276,8 @@ Parses a request line and returns the recognized HTTP method and version when av
 
 request-line = method SP request-target SP HTTP-version
 -/
-public def parseRequestLineRawVersion (limits : H1.Config) : Parser (Method × RequestTarget × Option Version) := do
+public def parseRequestLineRawVersion (limits : H1.Config)
+    : Parser (Method × RequestTarget × Option Version) := do
   skipLeadingRequestEmptyLines limits
   let method ← parseMethod <* sp
   let (uri, (major, minor)) ← parseRequestLineBody limits
@@ -301,7 +290,9 @@ Parses a single header field line.
 -/
 def parseFieldLine (limits : H1.Config) : Parser (String × String) := do
   let name ← parseToken limits.maxHeaderNameLength
-  let value ← skipByte ':'.toUInt8 *> ows limits *> optional (takeWhileUpTo isFieldVChar limits.maxHeaderValueLength) <* ows limits
+  let value ←
+    skipByte ':'.toUInt8 *> ows limits
+      *> optional (takeWhileUpTo isFieldVChar limits.maxHeaderValueLength) <* ows limits
 
   let name ← liftOption <| String.fromUTF8? name.toByteArray
   let value ← liftOption <| String.fromUTF8? <| value.map (·.toByteArray) |>.getD .empty
@@ -354,14 +345,14 @@ partial def parseQuotedString (maxLength : Nat) : Parser String := do
       return buf
     else if b == '\\'.toUInt8 then
       let next ← any
-      if quotedPairChar (Char.ofUInt8 next)
-        then
-          let length := length + 1
-          if length > maxLength then
-            fail "quoted-string too long"
-          else
-            loop (buf.push next) length
-        else fail s!"invalid quoted-pair byte: {Char.ofUInt8 next |>.quote}"
+      if quotedPairChar (Char.ofUInt8 next) then
+        let length := length + 1
+        if length > maxLength then
+          fail "quoted-string too long"
+        else
+          loop (buf.push next) length
+      else
+        fail s!"invalid quoted-pair byte: {Char.ofUInt8 next |>.quote}"
     else if isQdText b then
       let length := length + 1
       if length > maxLength then
@@ -374,9 +365,13 @@ partial def parseQuotedString (maxLength : Nat) : Parser String := do
   liftOption <| String.fromUTF8? (← loop .empty 0)
 
 -- chunk-ext = *( BWS ";" BWS chunk-ext-name [ BWS "=" BWS chunk-ext-val] )
-def parseChunkExt (limits : H1.Config) : Parser (Chunk.ExtensionName × Option Chunk.ExtensionValue) := do
+def parseChunkExt (limits : H1.Config)
+    : Parser (Chunk.ExtensionName × Option Chunk.ExtensionValue) := do
   ows limits *> skipByte ';'.toUInt8 *> ows limits
-  let name ← (liftOption =<< String.fromUTF8? <$> ByteSlice.toByteArray <$> parseToken limits.maxChunkExtNameLength) <* ows limits
+  let name ←
+    (liftOption
+        =<< String.fromUTF8? <$> ByteSlice.toByteArray <$> parseToken limits.maxChunkExtNameLength)
+      <* ows limits
 
   let some name := Chunk.ExtensionName.ofString? name
     | fail "invalid extension name"
@@ -386,7 +381,12 @@ def parseChunkExt (limits : H1.Config) : Parser (Chunk.ExtensionName × Option C
     -- The `<* ows limits` after the name already consumed any trailing whitespace,
     -- so these ows calls are no-ops in practice, but kept for explicit grammar correspondence.
     ows limits *> skipByte '='.toUInt8 *> ows limits
-    let value ← ows limits *> (parseQuotedString limits.maxChunkExtValueLength <|> liftOption =<< (String.fromUTF8? <$> ByteSlice.toByteArray <$> parseToken limits.maxChunkExtValueLength))
+    let value ←
+      ows limits
+        *> (parseQuotedString limits.maxChunkExtValueLength
+          <|> liftOption
+            =<< (String.fromUTF8? <$> ByteSlice.toByteArray
+              <$> parseToken limits.maxChunkExtValueLength))
 
     let some value := Chunk.ExtensionValue.ofString? value
       | fail "invalid extension value"
@@ -395,26 +395,23 @@ def parseChunkExt (limits : H1.Config) : Parser (Chunk.ExtensionName × Option C
 
   return (name, none)
 
-/--
-Parses the size and extensions of a chunk.
--/
-public def parseChunkSize (limits : H1.Config) : Parser (Nat × Array (Chunk.ExtensionName × Option Chunk.ExtensionValue)) := do
+/-- Parses the size and extensions of a chunk. -/
+public def parseChunkSize (limits : H1.Config)
+    : Parser (Nat × Array (Chunk.ExtensionName × Option Chunk.ExtensionValue)) := do
   let size ← hex
   let ext ← manyItems (optional (attempt (parseChunkExt limits))) limits.maxChunkExtensions
   crlf
   return (size, ext)
 
-/--
-Result of parsing partial or complete information.
--/
+/-- Result of parsing partial or complete information. -/
 public inductive TakeResult
   | complete (data : ByteSlice)
   | incomplete (data : ByteSlice) (remaining : Nat)
 
-/--
-Parses a single chunk in chunked transfer encoding.
--/
-public def parseChunkPartial (limits : H1.Config) : Parser (Option (Nat × Array (Chunk.ExtensionName × Option Chunk.ExtensionValue) × ByteSlice)) := do
+/-- Parses a single chunk in chunked transfer encoding. -/
+public def parseChunkPartial (limits : H1.Config)
+    : Parser (Option
+      (Nat × Array (Chunk.ExtensionName × Option Chunk.ExtensionValue) × ByteSlice)) := do
   let (size, ext) ← parseChunkSize limits
   if size == 0 then
     return none
@@ -422,20 +419,17 @@ public def parseChunkPartial (limits : H1.Config) : Parser (Option (Nat × Array
     let data ← take size
     return some ⟨size, ext, data⟩
 
-/--
-Parses fixed-size data that can be incomplete.
--/
+/-- Parses fixed-size data that can be incomplete. -/
 public def parseFixedSizeData (size : Nat) : Parser TakeResult := fun it =>
   if it.remainingBytes = 0 then
     .error it .eof
   else if it.remainingBytes < size then
-    .success (it.forward it.remainingBytes) (.incomplete it.array[it.idx...(it.idx+it.remainingBytes)] (size - it.remainingBytes))
+    .success (it.forward it.remainingBytes)
+      (.incomplete it.array[it.idx...(it.idx + it.remainingBytes)] (size - it.remainingBytes))
   else
-    .success (it.forward size) (.complete (it.array[it.idx...(it.idx+size)]))
+    .success (it.forward size) (.complete (it.array[it.idx...(it.idx + size)]))
 
-/--
-Parses fixed-size chunk data that can be incomplete.
--/
+/-- Parses fixed-size chunk data that can be incomplete. -/
 public def parseChunkSizedData (size : Nat) : Parser TakeResult := do
   match ← parseFixedSizeData size with
   | .complete data => crlf *> return .complete data
@@ -448,10 +442,9 @@ trailer sections per RFC 9112 §6.5. Forbidden fields are those required for mes
 -/
 def isForbiddenTrailerField (name : String) : Bool :=
   let n := name.toLower
-  n == "content-length" || n == "transfer-encoding" || n == "host" ||
-  n == "connection" || n == "expect" || n == "te" ||
-  n == "authorization" || n == "max-forwards" || n == "cache-control" ||
-  n == "content-encoding" || n == "upgrade" || n == "trailer"
+  n == "content-length" || n == "transfer-encoding" || n == "host" || n == "connection"
+    || n == "expect" || n == "te" || n == "authorization" || n == "max-forwards"
+    || n == "cache-control" || n == "content-encoding" || n == "upgrade" || n == "trailer"
 
 /--
 Parses a trailer header (used after a chunked body), rejecting forbidden field names per RFC 9112
@@ -477,12 +470,8 @@ public def parseTrailers (limits : H1.Config) : Parser (Array (String × String)
   crlf
   return trailers
 
-/--
-Returns `true` if `c` is a valid reason-phrase byte (`HTAB / SP / VCHAR`, strict ASCII-only).
--/
-@[inline]
-def isReasonPhraseByte (c : UInt8) : Bool :=
-  fieldContent (Char.ofUInt8 c)
+/-- Returns `true` if `c` is a valid reason-phrase byte (`HTAB / SP / VCHAR`, strict ASCII-only). -/
+@[inline] def isReasonPhraseByte (c : UInt8) : Bool := fieldContent (Char.ofUInt8 c)
 
 /--
 Parses a reason phrase (text after status code).
@@ -538,9 +527,7 @@ public def parseStatusLineRawVersion (limits : H1.Config) : Parser (Status × Op
   let status ← parseStatusCode limits
   return (status, Version.ofNumber? major minor)
 
-/--
-Parses the trailer section that follows the last chunk size line (`0\r\n`).
--/
+/-- Parses the trailer section that follows the last chunk size line (`0\r\n`). -/
 public def parseLastChunkBody (limits : H1.Config) : Parser Unit := do
   discard <| manyItems (parseTrailerHeader limits) limits.maxTrailerHeaders
   crlf

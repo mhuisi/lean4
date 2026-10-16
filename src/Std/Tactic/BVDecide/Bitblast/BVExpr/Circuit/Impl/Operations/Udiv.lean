@@ -59,8 +59,9 @@ structure BlastDivSubtractShiftOutput (old : AIG α) (w : Nat) where
   r : AIG.RefVec aig w
   hle : old.decls.size ≤ aig.decls.size
 
-def blastDivSubtractShift (aig : AIG α) (n d : AIG.RefVec aig w) (wn wr : Nat)
-    (q r : AIG.RefVec aig w) : BlastDivSubtractShiftOutput aig w :=
+def blastDivSubtractShift
+    (aig : AIG α) (n d : AIG.RefVec aig w) (wn wr : Nat) (q r : AIG.RefVec aig w)
+    : BlastDivSubtractShiftOutput aig w :=
   let wn := wn - 1
   let wr := wr + 1
   let falseRef := aig.mkConstCached false
@@ -132,9 +133,9 @@ def blastDivSubtractShift (aig : AIG α) (n d : AIG.RefVec aig w) (wn wr : Nat)
     apply AIG.LawfulVecOperator.le_size (f := blastShiftConcat)
   ⟨aig, wn, wr, nextQ, nextR, this⟩
 
-theorem blastDivSubtractShift_le_size (aig : AIG α)
-     (n d : AIG.RefVec aig w) (wn wr : Nat) (q r : AIG.RefVec aig w) :
-    aig.decls.size ≤ (blastDivSubtractShift aig n d wn wr q r).aig.decls.size := by
+theorem blastDivSubtractShift_le_size
+    (aig : AIG α) (n d : AIG.RefVec aig w) (wn wr : Nat) (q r : AIG.RefVec aig w)
+    : aig.decls.size ≤ (blastDivSubtractShift aig n d wn wr q r).aig.decls.size := by
   unfold blastDivSubtractShift
   dsimp only
   apply AIG.LawfulVecOperator.le_size_of_le_aig_size (f := AIG.RefVec.ite)
@@ -145,10 +146,10 @@ theorem blastDivSubtractShift_le_size (aig : AIG α)
   apply AIG.LawfulVecOperator.le_size_of_le_aig_size (f := blastUdiv.blastShiftConcat)
   apply AIG.LawfulVecOperator.le_size (f := blastUdiv.blastShiftConcat)
 
-theorem blastDivSubtractShift_decl_eq (aig : AIG α) (n d : AIG.RefVec aig w) (wn wr : Nat)
-    (q r : AIG.RefVec aig w) :
-    ∀ (idx : Nat) (h1) (h2),
-        (blastDivSubtractShift aig n d wn wr q r).aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
+theorem blastDivSubtractShift_decl_eq
+    (aig : AIG α) (n d : AIG.RefVec aig w) (wn wr : Nat) (q r : AIG.RefVec aig w)
+    : ∀ (idx : Nat) (h1) (h2),
+      (blastDivSubtractShift aig n d wn wr q r).aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
   generalize hres : blastDivSubtractShift aig n d wn wr q r = res
   unfold blastDivSubtractShift at hres
   dsimp only at hres
@@ -195,10 +196,11 @@ structure BlastUdivOutput (old : AIG α) (w : Nat) where
   r : AIG.RefVec aig w
   hle : old.decls.size ≤ aig.decls.size
 
-def go (aig : AIG α) (curr : Nat) (n d : AIG.RefVec aig w)
-    (wn wr : Nat) (q r : AIG.RefVec aig w) : BlastUdivOutput aig w :=
+def go (aig : AIG α) (curr : Nat) (n d : AIG.RefVec aig w) (wn wr : Nat) (q r : AIG.RefVec aig w)
+    : BlastUdivOutput aig w :=
   match curr with
-  | 0 => ⟨aig, q, r, by omega⟩
+  | 0 =>
+    ⟨aig, q, r, by omega⟩
   | curr + 1 =>
     let res := blastDivSubtractShift aig n d wn wr q r
     let aig := res.aig
@@ -224,9 +226,9 @@ def go (aig : AIG α) (curr : Nat) (n d : AIG.RefVec aig w)
       apply AIG.LawfulVecOperator.le_size (f := blastShiftConcat)
     ⟨aig, q, r, this⟩
 
-theorem go_le_size (aig : AIG α) (curr : Nat) (n d : AIG.RefVec aig w) (wn wr : Nat)
-    (q r : AIG.RefVec aig w) :
-    aig.decls.size ≤ (go aig curr n d wn wr q r).aig.decls.size := by
+theorem go_le_size
+    (aig : AIG α) (curr : Nat) (n d : AIG.RefVec aig w) (wn wr : Nat) (q r : AIG.RefVec aig w)
+    : aig.decls.size ≤ (go aig curr n d wn wr q r).aig.decls.size := by
   unfold go
   dsimp only
   split
@@ -234,10 +236,10 @@ theorem go_le_size (aig : AIG α) (curr : Nat) (n d : AIG.RefVec aig w) (wn wr :
   · refine Nat.le_trans ?_ (by apply go_le_size)
     apply blastUdiv.blastDivSubtractShift_le_size
 
-theorem go_decl_eq (aig : AIG α) (curr : Nat) (n d : AIG.RefVec aig w) (wn wr : Nat)
-    (q r : AIG.RefVec aig w) :
-    ∀ (idx : Nat) (h1) (h2),
-        (go aig curr n d wn wr q r).aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
+theorem go_decl_eq
+    (aig : AIG α) (curr : Nat) (n d : AIG.RefVec aig w) (wn wr : Nat) (q r : AIG.RefVec aig w)
+    : ∀ (idx : Nat) (h1) (h2),
+      (go aig curr n d wn wr q r).aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
   generalize hgo : go aig curr n d wn wr q r = res
   unfold go at hgo
   dsimp only at hgo
@@ -295,6 +297,5 @@ instance : AIG.LawfulVecOperator α AIG.BinaryRefVec blastUdiv where
 
 end bitblast
 end BVExpr
-
 
 end Std.Tactic.BVDecide

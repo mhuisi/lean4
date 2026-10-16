@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.DSimp.DSimpM
 public import Lean.Meta.Sym.DSimp.DSimproc
@@ -31,33 +32,35 @@ Definitions are unfolded by `unfold` instead of their equational theorems, which
 public def rewriteWith (thm : Theorem) (e : Expr) : DSimpM Result :=
   -- See the note about `withNewMCtxDepth` at `Simp.Theorem.rewrite`.
   withNewMCtxDepth do
-  let mvarCounterSaved := (← getMCtx).mvarCounter
-  let some result ← thm.pattern.match? e | return .rfl
-  let mut args := result.args.toVector
-  let us ← result.us.mapM instantiateLevelMVars
-  for h : i in *...args.size do
-    let arg := args[i]
-    if let .mvar mvarId := arg then
-      if (← mvarId.isAssigned) then
+    let mvarCounterSaved := (← getMCtx).mvarCounter
+    let some result ← thm.pattern.match? e
+      | return .rfl
+    let mut args := result.args.toVector
+    let us ← result.us.mapM instantiateLevelMVars
+    for h : i in *...args.size do
+      let arg := args[i]
+      if let .mvar mvarId := arg then
+        if (← mvarId.isAssigned) then
+          args := args.set i (← instantiateMVarsS arg)
+        else if (← mvarId.getDecl).index ≥ mvarCounterSaved then
+          -- A hypothesis or instance not covered by the pattern. It cannot be discharged.
+          return .rfl
+      else if arg.hasMVar then
         args := args.set i (← instantiateMVarsS arg)
-      else if (← mvarId.getDecl).index ≥ mvarCounterSaved then
-        -- A hypothesis or instance not covered by the pattern. It cannot be discharged.
-        return .rfl
-    else if arg.hasMVar then
-      args := args.set i (← instantiateMVarsS arg)
-  let rhs := thm.rhs.instantiateLevelParams thm.pattern.levelParams us
-  let rhs ← share rhs
-  let e' ← instantiateRevBetaS rhs args.toArray
-  if isSameExpr e e' then
-    return .rfl
-  if thm.perm && !(← acLt e' e) then
-    return .rfl
-  return .step e'
+    let rhs := thm.rhs.instantiateLevelParams thm.pattern.levelParams us
+    let rhs ← share rhs
+    let e' ← instantiateRevBetaS rhs args.toArray
+    if isSameExpr e e' then
+      return .rfl
+    if thm.perm && !(← acLt e' e) then
+      return .rfl
+    return .step e'
 
 /-- Rewrites the prefix of `e` obtained by removing its last `numExtra` arguments. -/
 def rewriteOverApplied (thm : Theorem) (e : Expr) (numExtra : Nat) : DSimpM Result := do
   let f := e.getBoundedAppFn numExtra
-  let .step f' _ ← rewriteWith thm f | return .rfl
+  let .step f' _ ← rewriteWith thm f
+    | return .rfl
   return .step (← share (mkAppN f' (e.getBoundedAppArgs numExtra)))
 
 def rewriteUsing (candidates : Array (Theorem × Nat)) (e : Expr) : DSimpM Result := do
@@ -81,7 +84,7 @@ public def rewrite (thms : Theorems) : DSimproc := fun e => do
 
 /-- The `rfl`-theorems and the definitions to unfold contributed by `Sym.dsimp` parameters. -/
 public structure Decls where
-  thms     : Theorems := {}
+  thms : Theorems := {}
   toUnfold : NameSet := {}
 
 /--
@@ -93,7 +96,8 @@ public def Decls.add (decls : Decls) (declName : Name) : MetaM Decls := do
   let info ← getAsyncConstInfo declName
   if (← isProp info.sig.get.type) then
     unless (← isRflTheorem declName) do
-      throwError "cannot use `{.ofConstName declName}` as a dsimp theorem, it is not proved by `rfl`"
+      throwError
+        "cannot use `{.ofConstName declName}` as a dsimp theorem, it is not proved by `rfl`"
     return { decls with thms := decls.thms.insert (← Sym.Simp.mkTheoremFromDecl declName) }
   let names ← Sym.Simp.getSimpTheoremNames declName
   -- A reducible definition contributes nothing: the `Sym` preprocessing unfolds it.
@@ -107,8 +111,7 @@ public def Decls.add (decls : Decls) (declName : Name) : MetaM Decls := do
     toUnfold := toUnfold.insert declName
   return { thms, toUnfold }
 
-public def Decls.ofNames (declNames : Array Name) : MetaM Decls :=
-  declNames.foldlM Decls.add {}
+public def Decls.ofNames (declNames : Array Name) : MetaM Decls := declNames.foldlM Decls.add {}
 
 /-- The dsimproc unfolding the definitions and rewriting with the theorems in `decls`. -/
 public def Decls.toDSimproc (decls : Decls) : DSimproc :=

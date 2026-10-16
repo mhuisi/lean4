@@ -56,11 +56,10 @@ def recBuildWithIndex (info : BuildInfo) : FetchM (Job (BuildData info.key)) :=
 
 /-- Recursive build function with memoization. -/
 def recFetchWithIndex : (info : BuildInfo) → RecBuildM (Job (BuildData info.key)) :=
- inline <| recFetchAcyclic (β := (Job <| BuildData ·.key)) BuildInfo.key recBuildWithIndex
+  inline <| recFetchAcyclic (β := (Job <| BuildData ·.key)) BuildInfo.key recBuildWithIndex
 
 /--
 Run a recursive Lake build using the Lake build index
 and a topological / suspending scheduler.
 -/
-@[inline] public nonrec def FetchT.run (x : FetchT m α) : RecBuildT m α :=
-  x.run recFetchWithIndex
+@[inline] public nonrec def FetchT.run (x : FetchT m α) : RecBuildT m α := x.run recFetchWithIndex

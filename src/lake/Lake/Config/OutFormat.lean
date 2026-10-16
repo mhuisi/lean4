@@ -15,8 +15,10 @@ namespace Lake
 
 /-- Target output formats supported by the Lake CLI (e.g., `lake query`). -/
 public inductive OutFormat
-| /-- Format target output as text. -/ text
-| /-- Format target output as JSON. -/ json
+  | /-- Format target output as text. -/
+    text
+  | /-- Format target output as JSON. -/
+    json
 
 public class ToText (α : Type u) where
   toText : α → String
@@ -25,10 +27,12 @@ export ToText (toText)
 
 public instance (priority := 0) [ToString α] : ToText α := ⟨toString⟩
 
-@[inline] public def listToLines (as : List α) (f : α → String) : String :=
+@[inline]
+public def listToLines (as : List α) (f : α → String) : String :=
   as.foldl (s!"{·}{f ·}\n") "" |>.dropEnd 1 |>.copy
 
-@[inline] public def arrayToLines (as : Array α) (f : α → String) : String :=
+@[inline]
+public def arrayToLines (as : Array α) (f : α → String) : String :=
   as.foldl (s!"{·}{f ·}\n") "" |>.dropEnd 1 |>.copy
 
 public instance : ToText Json := ⟨Json.compress⟩
@@ -75,7 +79,8 @@ public def nullFormat (fmt : OutFormat) (_ : α) : String :=
   | .json => Json.null.compress
 
 /-- Format function that uses `QueryText` and `QueryJson` to produce output. -/
-@[specialize] public  def formatQuery [FormatQuery α] (fmt : OutFormat) (a : α) : String :=
+@[specialize]
+public def formatQuery [FormatQuery α] (fmt : OutFormat) (a : α) : String :=
   match fmt with
   | .text => queryText a
   | .json => queryJson a |>.compress
@@ -87,7 +92,7 @@ public def ppImport (imp : Import) (isModule : Bool) (init := "") : String := Id
   if imp.isMeta then
     s := s ++ "meta "
   s := s ++ "import "
-   if imp.importAll then
+  if imp.importAll then
     s := s!"{s}all "
   s := s ++ imp.module.toString
   return s
@@ -95,7 +100,6 @@ public def ppImport (imp : Import) (isModule : Bool) (init := "") : String := Id
 public def ppModuleHeader (header : ModuleHeader) : String :=
   let isModule := header.isModule
   let s := if isModule then "module prelude" else "prelude"
-  header.imports.foldl (init := s) fun s imp =>
-    ppImport imp isModule (s.push '\n')
+  header.imports.foldl (init := s) fun s imp => ppImport imp isModule (s.push '\n')
 
 instance : QueryText ModuleHeader := ⟨ppModuleHeader⟩

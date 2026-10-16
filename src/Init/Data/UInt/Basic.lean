@@ -19,8 +19,9 @@ open Nat
 /-- Converts a `Fin UInt8.size` into the corresponding `UInt8`. -/
 @[inline] def UInt8.ofFin (a : Fin UInt8.size) : UInt8 := ⟨⟨a⟩⟩
 
-
-/-- Converts an `Int` to a `UInt8` by taking the (non-negative remainder of the division by `2 ^ 8`. -/
+/--
+Converts an `Int` to a `UInt8` by taking the (non-negative remainder of the division by `2 ^ 8`.
+-/
 def UInt8.ofInt (x : Int) : UInt8 := ofNat (x % 2 ^ 8).toNat
 
 /--
@@ -132,16 +133,16 @@ This function is overridden at runtime with an efficient implementation.
 @[extern "lean_uint8_shift_right"]
 protected def UInt8.shiftRight (a b : UInt8) : UInt8 := ⟨a.toBitVec >>> (UInt8.mod b 8).toBitVec⟩
 
-instance : Add UInt8       := ⟨UInt8.add⟩
-instance : Sub UInt8       := ⟨UInt8.sub⟩
-instance : Mul UInt8       := ⟨UInt8.mul⟩
-instance : Pow UInt8 Nat   := ⟨UInt8.pow⟩
-instance : Mod UInt8       := ⟨UInt8.mod⟩
+instance : Add UInt8 := ⟨UInt8.add⟩
+instance : Sub UInt8 := ⟨UInt8.sub⟩
+instance : Mul UInt8 := ⟨UInt8.mul⟩
+instance : Pow UInt8 Nat := ⟨UInt8.pow⟩
+instance : Mod UInt8 := ⟨UInt8.mod⟩
 
 set_option linter.deprecated false in
 instance : HMod UInt8 Nat UInt8 := ⟨UInt8.modn⟩
 
-instance : Div UInt8       := ⟨UInt8.div⟩
+instance : Div UInt8 := ⟨UInt8.div⟩
 
 /--
 Bitwise complement, also known as bitwise negation, for 8-bit unsigned integers. Usually accessed
@@ -165,15 +166,13 @@ protected def UInt8.neg (a : UInt8) : UInt8 := ⟨-a.toBitVec⟩
 
 instance : Complement UInt8 := ⟨UInt8.complement⟩
 instance : Neg UInt8 := ⟨UInt8.neg⟩
-instance : AndOp UInt8     := ⟨UInt8.land⟩
-instance : OrOp UInt8      := ⟨UInt8.lor⟩
-instance : XorOp UInt8       := ⟨UInt8.xor⟩
-instance : ShiftLeft UInt8  := ⟨UInt8.shiftLeft⟩
+instance : AndOp UInt8 := ⟨UInt8.land⟩
+instance : OrOp UInt8 := ⟨UInt8.lor⟩
+instance : XorOp UInt8 := ⟨UInt8.xor⟩
+instance : ShiftLeft UInt8 := ⟨UInt8.shiftLeft⟩
 instance : ShiftRight UInt8 := ⟨UInt8.shiftRight⟩
 
-/--
-Converts `true` to `1` and `false` to `0`.
--/
+/-- Converts `true` to `1` and `false` to `0`. -/
 @[extern "lean_bool_to_uint8"]
 def Bool.toUInt8 (b : Bool) : UInt8 := if b then 1 else 0
 
@@ -202,7 +201,9 @@ def UInt8.toAsciiUpper (b : UInt8) : UInt8 :=
 /-- Converts a `Fin UInt16.size` into the corresponding `UInt16`. -/
 @[inline] def UInt16.ofFin (a : Fin UInt16.size) : UInt16 := ⟨⟨a⟩⟩
 
-/-- Converts an `Int` to a `UInt16` by taking the (non-negative remainder of the division by `2 ^ 16`. -/
+/--
+Converts an `Int` to a `UInt16` by taking the (non-negative remainder of the division by `2 ^ 16`.
+-/
 def UInt16.ofInt (x : Int) : UInt16 := ofNat (x % 2 ^ 16).toNat
 
 /--
@@ -305,14 +306,16 @@ Bitwise left shift for 16-bit unsigned integers. Usually accessed via the `<<<` 
 This function is overridden at runtime with an efficient implementation.
 -/
 @[extern "lean_uint16_shift_left"]
-protected def UInt16.shiftLeft (a b : UInt16) : UInt16 := ⟨a.toBitVec <<< (UInt16.mod b 16).toBitVec⟩
+protected def UInt16.shiftLeft (a b : UInt16) : UInt16 :=
+  ⟨a.toBitVec <<< (UInt16.mod b 16).toBitVec⟩
 /--
 Bitwise right shift for 16-bit unsigned integers. Usually accessed via the `>>>` operator.
 
 This function is overridden at runtime with an efficient implementation.
 -/
 @[extern "lean_uint16_shift_right"]
-protected def UInt16.shiftRight (a b : UInt16) : UInt16 := ⟨a.toBitVec >>> (UInt16.mod b 16).toBitVec⟩
+protected def UInt16.shiftRight (a b : UInt16) : UInt16 :=
+  ⟨a.toBitVec >>> (UInt16.mod b 16).toBitVec⟩
 /--
 Strict inequality of 16-bit unsigned integers, defined as inequality of the corresponding
 natural numbers. Usually accessed via the `<` operator.
@@ -324,18 +327,18 @@ natural numbers. Usually accessed via the `≤` operator.
 -/
 protected def UInt16.le (a b : UInt16) : Prop := a.toBitVec ≤ b.toBitVec
 
-instance : Add UInt16       := ⟨UInt16.add⟩
-instance : Sub UInt16       := ⟨UInt16.sub⟩
-instance : Mul UInt16       := ⟨UInt16.mul⟩
-instance : Pow UInt16 Nat   := ⟨UInt16.pow⟩
-instance : Mod UInt16       := ⟨UInt16.mod⟩
+instance : Add UInt16 := ⟨UInt16.add⟩
+instance : Sub UInt16 := ⟨UInt16.sub⟩
+instance : Mul UInt16 := ⟨UInt16.mul⟩
+instance : Pow UInt16 Nat := ⟨UInt16.pow⟩
+instance : Mod UInt16 := ⟨UInt16.mod⟩
 
 set_option linter.deprecated false in
 instance : HMod UInt16 Nat UInt16 := ⟨UInt16.modn⟩
 
-instance : Div UInt16       := ⟨UInt16.div⟩
-instance : LT UInt16        := ⟨UInt16.lt⟩
-instance : LE UInt16        := ⟨UInt16.le⟩
+instance : Div UInt16 := ⟨UInt16.div⟩
+instance : LT UInt16 := ⟨UInt16.lt⟩
+instance : LE UInt16 := ⟨UInt16.le⟩
 
 /--
 Bitwise complement, also known as bitwise negation, for 16-bit unsigned integers. Usually accessed
@@ -359,15 +362,13 @@ protected def UInt16.neg (a : UInt16) : UInt16 := ⟨-a.toBitVec⟩
 
 instance : Complement UInt16 := ⟨UInt16.complement⟩
 instance : Neg UInt16 := ⟨UInt16.neg⟩
-instance : AndOp UInt16     := ⟨UInt16.land⟩
-instance : OrOp UInt16      := ⟨UInt16.lor⟩
-instance : XorOp UInt16       := ⟨UInt16.xor⟩
-instance : ShiftLeft UInt16  := ⟨UInt16.shiftLeft⟩
+instance : AndOp UInt16 := ⟨UInt16.land⟩
+instance : OrOp UInt16 := ⟨UInt16.lor⟩
+instance : XorOp UInt16 := ⟨UInt16.xor⟩
+instance : ShiftLeft UInt16 := ⟨UInt16.shiftLeft⟩
 instance : ShiftRight UInt16 := ⟨UInt16.shiftRight⟩
 
-/--
-Converts `true` to `1` and `false` to `0`.
--/
+/-- Converts `true` to `1` and `false` to `0`. -/
 @[extern "lean_bool_to_uint16"]
 def Bool.toUInt16 (b : Bool) : UInt16 := if b then 1 else 0
 
@@ -412,7 +413,9 @@ instance : Min UInt16 := minOfLe
 /-- Converts a `Fin UInt32.size` into the corresponding `UInt32`. -/
 @[inline] def UInt32.ofFin (a : Fin UInt32.size) : UInt32 := ⟨⟨a⟩⟩
 
-/-- Converts an `Int` to a `UInt32` by taking the (non-negative remainder of the division by `2 ^ 32`. -/
+/--
+Converts an `Int` to a `UInt32` by taking the (non-negative remainder of the division by `2 ^ 32`.
+-/
 def UInt32.ofInt (x : Int) : UInt32 := ofNat (x % 2 ^ 32).toNat
 
 /--
@@ -499,14 +502,16 @@ Bitwise left shift for 32-bit unsigned integers. Usually accessed via the `<<<` 
 This function is overridden at runtime with an efficient implementation.
 -/
 @[extern "lean_uint32_shift_left"]
-protected def UInt32.shiftLeft (a b : UInt32) : UInt32 := ⟨a.toBitVec <<< (UInt32.mod b 32).toBitVec⟩
+protected def UInt32.shiftLeft (a b : UInt32) : UInt32 :=
+  ⟨a.toBitVec <<< (UInt32.mod b 32).toBitVec⟩
 /--
 Bitwise right shift for 32-bit unsigned integers. Usually accessed via the `>>>` operator.
 
 This function is overridden at runtime with an efficient implementation.
 -/
 @[extern "lean_uint32_shift_right"]
-protected def UInt32.shiftRight (a b : UInt32) : UInt32 := ⟨a.toBitVec >>> (UInt32.mod b 32).toBitVec⟩
+protected def UInt32.shiftRight (a b : UInt32) : UInt32 :=
+  ⟨a.toBitVec >>> (UInt32.mod b 32).toBitVec⟩
 /--
 Strict inequality of 32-bit unsigned integers, defined as inequality of the corresponding
 natural numbers. Usually accessed via the `<` operator.
@@ -520,14 +525,14 @@ natural numbers. Usually accessed via the `≤` operator.
 -/
 protected def UInt32.le (a b : UInt32) : Prop := a.toBitVec ≤ b.toBitVec
 
-instance : Mul UInt32       := ⟨UInt32.mul⟩
-instance : Pow UInt32 Nat   := ⟨UInt32.pow⟩
-instance : Mod UInt32       := ⟨UInt32.mod⟩
+instance : Mul UInt32 := ⟨UInt32.mul⟩
+instance : Pow UInt32 Nat := ⟨UInt32.pow⟩
+instance : Mod UInt32 := ⟨UInt32.mod⟩
 
 set_option linter.deprecated false in
 instance : HMod UInt32 Nat UInt32 := ⟨UInt32.modn⟩
 
-instance : Div UInt32       := ⟨UInt32.div⟩
+instance : Div UInt32 := ⟨UInt32.div⟩
 -- `LT` and `LE` are already defined in `Init.Prelude`
 
 /--
@@ -552,22 +557,22 @@ protected def UInt32.neg (a : UInt32) : UInt32 := ⟨-a.toBitVec⟩
 
 instance : Complement UInt32 := ⟨UInt32.complement⟩
 instance : Neg UInt32 := ⟨UInt32.neg⟩
-instance : AndOp UInt32     := ⟨UInt32.land⟩
-instance : OrOp UInt32      := ⟨UInt32.lor⟩
-instance : XorOp UInt32       := ⟨UInt32.xor⟩
-instance : ShiftLeft UInt32  := ⟨UInt32.shiftLeft⟩
+instance : AndOp UInt32 := ⟨UInt32.land⟩
+instance : OrOp UInt32 := ⟨UInt32.lor⟩
+instance : XorOp UInt32 := ⟨UInt32.xor⟩
+instance : ShiftLeft UInt32 := ⟨UInt32.shiftLeft⟩
 instance : ShiftRight UInt32 := ⟨UInt32.shiftRight⟩
 
-/--
-Converts `true` to `1` and `false` to `0`.
--/
+/-- Converts `true` to `1` and `false` to `0`. -/
 @[extern "lean_bool_to_uint32"]
 def Bool.toUInt32 (b : Bool) : UInt32 := if b then 1 else 0
 
 /-- Converts a `Fin UInt64.size` into the corresponding `UInt64`. -/
 @[inline] def UInt64.ofFin (a : Fin UInt64.size) : UInt64 := ⟨⟨a⟩⟩
 
-/-- Converts an `Int` to a `UInt64` by taking the (non-negative remainder of the division by `2 ^ 64`. -/
+/--
+Converts an `Int` to a `UInt64` by taking the (non-negative remainder of the division by `2 ^ 64`.
+-/
 def UInt64.ofInt (x : Int) : UInt64 := ofNat (x % 2 ^ 64).toNat
 
 /--
@@ -670,14 +675,16 @@ Bitwise left shift for 64-bit unsigned integers. Usually accessed via the `<<<` 
 This function is overridden at runtime with an efficient implementation.
 -/
 @[extern "lean_uint64_shift_left"]
-protected def UInt64.shiftLeft (a b : UInt64) : UInt64 := ⟨a.toBitVec <<< (UInt64.mod b 64).toBitVec⟩
+protected def UInt64.shiftLeft (a b : UInt64) : UInt64 :=
+  ⟨a.toBitVec <<< (UInt64.mod b 64).toBitVec⟩
 /--
 Bitwise right shift for 64-bit unsigned integers. Usually accessed via the `>>>` operator.
 
 This function is overridden at runtime with an efficient implementation.
 -/
 @[extern "lean_uint64_shift_right"]
-protected def UInt64.shiftRight (a b : UInt64) : UInt64 := ⟨a.toBitVec >>> (UInt64.mod b 64).toBitVec⟩
+protected def UInt64.shiftRight (a b : UInt64) : UInt64 :=
+  ⟨a.toBitVec >>> (UInt64.mod b 64).toBitVec⟩
 /--
 Strict inequality of 64-bit unsigned integers, defined as inequality of the corresponding
 natural numbers. Usually accessed via the `<` operator.
@@ -689,18 +696,18 @@ natural numbers. Usually accessed via the `≤` operator.
 -/
 protected def UInt64.le (a b : UInt64) : Prop := a.toBitVec ≤ b.toBitVec
 
-instance : Add UInt64       := ⟨UInt64.add⟩
-instance : Sub UInt64       := ⟨UInt64.sub⟩
-instance : Mul UInt64       := ⟨UInt64.mul⟩
-instance : Pow UInt64 Nat   := ⟨UInt64.pow⟩
-instance : Mod UInt64       := ⟨UInt64.mod⟩
+instance : Add UInt64 := ⟨UInt64.add⟩
+instance : Sub UInt64 := ⟨UInt64.sub⟩
+instance : Mul UInt64 := ⟨UInt64.mul⟩
+instance : Pow UInt64 Nat := ⟨UInt64.pow⟩
+instance : Mod UInt64 := ⟨UInt64.mod⟩
 
 set_option linter.deprecated false in
 instance : HMod UInt64 Nat UInt64 := ⟨UInt64.modn⟩
 
-instance : Div UInt64       := ⟨UInt64.div⟩
-instance : LT UInt64        := ⟨UInt64.lt⟩
-instance : LE UInt64        := ⟨UInt64.le⟩
+instance : Div UInt64 := ⟨UInt64.div⟩
+instance : LT UInt64 := ⟨UInt64.lt⟩
+instance : LE UInt64 := ⟨UInt64.le⟩
 
 /--
 Bitwise complement, also known as bitwise negation, for 64-bit unsigned integers. Usually accessed
@@ -724,15 +731,13 @@ protected def UInt64.neg (a : UInt64) : UInt64 := ⟨-a.toBitVec⟩
 
 instance : Complement UInt64 := ⟨UInt64.complement⟩
 instance : Neg UInt64 := ⟨UInt64.neg⟩
-instance : AndOp UInt64     := ⟨UInt64.land⟩
-instance : OrOp UInt64      := ⟨UInt64.lor⟩
-instance : XorOp UInt64       := ⟨UInt64.xor⟩
-instance : ShiftLeft UInt64  := ⟨UInt64.shiftLeft⟩
+instance : AndOp UInt64 := ⟨UInt64.land⟩
+instance : OrOp UInt64 := ⟨UInt64.lor⟩
+instance : XorOp UInt64 := ⟨UInt64.xor⟩
+instance : ShiftLeft UInt64 := ⟨UInt64.shiftLeft⟩
 instance : ShiftRight UInt64 := ⟨UInt64.shiftRight⟩
 
-/--
-Converts `true` to `1` and `false` to `0`.
--/
+/-- Converts `true` to `1` and `false` to `0`. -/
 @[extern "lean_bool_to_uint64"]
 def Bool.toUInt64 (b : Bool) : UInt64 := if b then 1 else 0
 
@@ -775,7 +780,9 @@ instance : Min UInt64 := minOfLe
 /-- Converts a `Fin USize.size` into the corresponding `USize`. -/
 @[inline] def USize.ofFin (a : Fin USize.size) : USize := ⟨⟨a⟩⟩
 
-/-- Converts an `Int` to a `USize` by taking the (non-negative remainder of the division by `2 ^ numBits`. -/
+/--
+Converts an `Int` to a `USize` by taking the (non-negative remainder of the division by `2 ^ numBits`.
+-/
 def USize.ofInt (x : Int) : USize := ofNat (x % 2 ^ System.Platform.numBits).toNat
 
 @[simp] theorem USize.le_size : 2 ^ 32 ≤ USize.size := by cases USize.size_eq <;> simp_all
@@ -865,14 +872,16 @@ Bitwise left shift for word-sized unsigned integers. Usually accessed via the `<
 This function is overridden at runtime with an efficient implementation.
 -/
 @[extern "lean_usize_shift_left"]
-protected def USize.shiftLeft (a b : USize) : USize := ⟨a.toBitVec <<< (USize.mod b (USize.ofNat System.Platform.numBits)).toBitVec⟩
+protected def USize.shiftLeft (a b : USize) : USize :=
+  ⟨a.toBitVec <<< (USize.mod b (USize.ofNat System.Platform.numBits)).toBitVec⟩
 /--
 Bitwise right shift for word-sized unsigned integers. Usually accessed via the `>>>` operator.
 
 This function is overridden at runtime with an efficient implementation.
 -/
 @[extern "lean_usize_shift_right"]
-protected def USize.shiftRight (a b : USize) : USize := ⟨a.toBitVec >>> (USize.mod b (USize.ofNat System.Platform.numBits)).toBitVec⟩
+protected def USize.shiftRight (a b : USize) : USize :=
+  ⟨a.toBitVec >>> (USize.mod b (USize.ofNat System.Platform.numBits)).toBitVec⟩
 /--
 Converts a natural number to a `USize`. Overflow is impossible on any supported platform because
 `USize.size` is either `2^32` or `2^64`.
@@ -950,25 +959,23 @@ Convert a `USize` to `BitVec 32`, assuming that the system bit-width is 32.
 
 This operation is intended for proof purposes.
 -/
-def USize.toBitVec32 (a : USize) (h : System.Platform.numBits = 32) : BitVec 32 :=
-  a.toBitVec.cast h
+def USize.toBitVec32 (a : USize) (h : System.Platform.numBits = 32) : BitVec 32 := a.toBitVec.cast h
 
 /--
 Convert a `USize` to `BitVec 64`, assuming that the system bit-width is 64.
 
 This operation is intended for proof purposes.
 -/
-def USize.toBitVec64 (a : USize) (h : System.Platform.numBits = 64) : BitVec 64 :=
-  a.toBitVec.cast h
+def USize.toBitVec64 (a : USize) (h : System.Platform.numBits = 64) : BitVec 64 := a.toBitVec.cast h
 
-instance : Mul USize       := ⟨USize.mul⟩
-instance : Pow USize Nat   := ⟨USize.pow⟩
-instance : Mod USize       := ⟨USize.mod⟩
+instance : Mul USize := ⟨USize.mul⟩
+instance : Pow USize Nat := ⟨USize.pow⟩
+instance : Mod USize := ⟨USize.mod⟩
 
 set_option linter.deprecated false in
 instance : HMod USize Nat USize := ⟨USize.modn⟩
 
-instance : Div USize       := ⟨USize.div⟩
+instance : Div USize := ⟨USize.div⟩
 
 /--
 Bitwise complement, also known as bitwise negation, for word-sized unsigned integers. Usually
@@ -990,15 +997,13 @@ protected def USize.neg (a : USize) : USize := ⟨-a.toBitVec⟩
 
 instance : Complement USize := ⟨USize.complement⟩
 instance : Neg USize := ⟨USize.neg⟩
-instance : AndOp USize      := ⟨USize.land⟩
-instance : OrOp USize       := ⟨USize.lor⟩
-instance : XorOp USize        := ⟨USize.xor⟩
-instance : ShiftLeft USize  := ⟨USize.shiftLeft⟩
+instance : AndOp USize := ⟨USize.land⟩
+instance : OrOp USize := ⟨USize.lor⟩
+instance : XorOp USize := ⟨USize.xor⟩
+instance : ShiftLeft USize := ⟨USize.shiftLeft⟩
 instance : ShiftRight USize := ⟨USize.shiftRight⟩
 
-/--
-Converts `true` to `1` and `false` to `0`.
--/
+/-- Converts `true` to `1` and `false` to `0`. -/
 @[extern "lean_bool_to_usize"]
 def Bool.toUSize (b : Bool) : USize := if b then 1 else 0
 

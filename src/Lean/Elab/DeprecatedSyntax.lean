@@ -32,8 +32,8 @@ structure SyntaxDeprecationEntry where
   /-- Optional version or date at which the syntax was deprecated. -/
   since? : Option String := none
 
-builtin_initialize deprecatedSyntaxExt :
-    SimplePersistentEnvExtension SyntaxDeprecationEntry (NameMap SyntaxDeprecationEntry) ←
+builtin_initialize deprecatedSyntaxExt
+    : SimplePersistentEnvExtension SyntaxDeprecationEntry (NameMap SyntaxDeprecationEntry) ←
   registerSimplePersistentEnvExtension {
     addImportedFn := mkStateFromImportedEntries (fun m e => m.insert e.kind e) {}
     addEntryFn := fun m e => m.insert e.kind e
@@ -52,12 +52,15 @@ attributed to the syntax itself even inside a macro expansion: enclosing macros 
 macro-generated syntax (synthetic source info, as produced by syntax quotations) is attributed to
 the macro call site via `macroStack`.
 -/
-def checkDeprecatedSyntax [Monad m] [MonadEnv m] [MonadLog m] [MonadOptions m]
-    [AddMessageContext m] [MonadRef m] (stx : Syntax) (macroStack : MacroStack) : m Unit := do
+def checkDeprecatedSyntax
+    [Monad m] [MonadEnv m] [MonadLog m] [MonadOptions m] [AddMessageContext m] [MonadRef m]
+    (stx : Syntax) (macroStack : MacroStack)
+    : m Unit := do
   let env ← getEnv
   let kind := stx.getKind
   if let some entry := (deprecatedSyntaxExt.getState env).find? kind then
-    let extraMsg := match entry.text? with
+    let extraMsg :=
+      match entry.text? with
       | some text => m!": {text}"
       | none => m!""
     if stx.getHeadInfo matches .original .. then
@@ -69,7 +72,8 @@ def checkDeprecatedSyntax [Monad m] [MonadEnv m] [MonadLog m] [MonadOptions m]
       let expandedFrom :=
         if callerStx.getKind != macroStx.getKind then
           m!" (expanded from '{callerStx.getKind}')"
-        else m!""
+        else
+          m!""
       Linter.logLintIf Linter.linter.deprecated.syntax macroStx
         m!"macro '{macroStx.getKind}'{expandedFrom} produces deprecated syntax '{kind}'{extraMsg}"
     | { before := macroStx, .. } :: [] =>

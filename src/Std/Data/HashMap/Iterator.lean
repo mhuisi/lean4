@@ -41,9 +41,7 @@ The key and value types must live in the same universe.
 * `Finite` instance: always
 * `Productive` instance: always
 -/
-@[inline]
-public def keysIter {α : Type u} {β : Type u} (m : Raw α β) :=
-  (m.inner.keysIter : Iter α)
+@[inline] public def keysIter {α : Type u} {β : Type u} (m : Raw α β) := (m.inner.keysIter : Iter α)
 
 /--
 Returns a finite iterator over the values of a hash map.
@@ -57,8 +55,7 @@ The key and value types must live in the same universe.
 * `Productive` instance: always
 -/
 @[inline]
-public def valuesIter {α : Type u} {β : Type u} (m : Raw α β) :=
-  (m.inner.valuesIter : Iter β)
+public def valuesIter {α : Type u} {β : Type u} (m : Raw α β) := (m.inner.valuesIter : Iter β)
 
 end Std.HashMap.Raw
 

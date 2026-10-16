@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.Cutsat.DvdCnstr
 public import Lean.Meta.Tactic.Grind.Arith.Cutsat.LeCnstr
@@ -46,13 +47,8 @@ builtin_initialize registerTraceClass `grind.debug.lia.search.reorder
 builtin_initialize registerTraceClass `grind.debug.lia.elimEq
 
 builtin_initialize
-  cutsatExt.setMethods
-    (internalize := Cutsat.internalize)
-    (newEq       := Cutsat.processNewEq)
-    (newDiseq    := Cutsat.processNewDiseq)
-    (action      := Action.lia)
-    (check       := Cutsat.check)
-    (checkInv    := Cutsat.checkInvariants)
-    (mbtc        := Cutsat.mbtc)
+  cutsatExt.setMethods (internalize := Cutsat.internalize) (newEq := Cutsat.processNewEq)
+    (newDiseq := Cutsat.processNewDiseq) (action := Action.lia) (check := Cutsat.check)
+    (checkInv := Cutsat.checkInvariants) (mbtc := Cutsat.mbtc)
 
 end Lean.Meta.Grind.Arith.Cutsat

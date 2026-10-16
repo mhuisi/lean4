@@ -44,7 +44,6 @@ def Tuple.map (f : α → β) (xs : Tuple α n) : Tuple β n :=
 ```
 -/
 
-
 /--
 Quick check for `compatibleTypes`. It is not monadic, but it is incomplete
 because it does not eta-expand type formers. See comment at `compatibleTypes`.
@@ -65,12 +64,18 @@ partial def compatibleTypesQuick (a b : Expr) : Bool :=
       match a, b with
       -- Note that even after reducing to head-beta, we can still have `.app` terms. For example,
       -- an inductive constructor application such as `List Int`
-      | .app f a, .app g b => compatibleTypesQuick f g && compatibleTypesQuick a b
-      | .forallE _ d₁ b₁ _, .forallE _ d₂ b₂ _ => compatibleTypesQuick d₁ d₂ && compatibleTypesQuick b₁ b₂
-      | .lam _ d₁ b₁ _, .lam _ d₂ b₂ _ => compatibleTypesQuick d₁ d₂ && compatibleTypesQuick b₁ b₂
-      | .sort u, .sort v => Level.isEquiv u v
-      | .const n us, .const m vs => n == m && List.isEqv us vs Level.isEquiv
-      | _, _ => false
+      | .app f a, .app g b =>
+        compatibleTypesQuick f g && compatibleTypesQuick a b
+      | .forallE _ d₁ b₁ _, .forallE _ d₂ b₂ _ =>
+        compatibleTypesQuick d₁ d₂ && compatibleTypesQuick b₁ b₂
+      | .lam _ d₁ b₁ _, .lam _ d₂ b₂ _ =>
+        compatibleTypesQuick d₁ d₂ && compatibleTypesQuick b₁ b₂
+      | .sort u, .sort v =>
+        Level.isEquiv u v
+      | .const n us, .const m vs =>
+        n == m && List.isEqv us vs Level.isEquiv
+      | _, _ =>
+        false
 
 namespace InferType
 namespace Pure
@@ -92,25 +97,32 @@ partial def compatibleTypesFull (a b : Expr) : InferTypeM Bool := do
       match a, b with
       -- Note that even after reducing to head-beta, we can still have `.app` terms. For example,
       -- an inductive constructor application such as `List Int`
-      | .app f a, .app g b => compatibleTypesFull f g <&&> compatibleTypesFull a b
+      | .app f a, .app g b =>
+        compatibleTypesFull f g <&&> compatibleTypesFull a b
       | .forallE n d₁ b₁ bi, .forallE _ d₂ b₂ _ =>
-        unless (← compatibleTypesFull d₁ d₂) do return false
-        withLocalDecl n d₁ bi fun x =>
-          compatibleTypesFull (b₁.instantiate1 x) (b₂.instantiate1 x)
+        unless (← compatibleTypesFull d₁ d₂) do
+          return false
+        withLocalDecl n d₁ bi fun x => compatibleTypesFull (b₁.instantiate1 x) (b₂.instantiate1 x)
       | .lam n d₁ b₁ bi, .lam _ d₂ b₂ _ =>
-        unless (← compatibleTypesFull d₁ d₂) do return false
-        withLocalDecl n d₁ bi fun x =>
-          compatibleTypesFull (b₁.instantiate1 x) (b₂.instantiate1 x)
-      | .sort u, .sort v => return Level.isEquiv u v
-      | .const n us, .const m vs => return n == m && List.isEqv us vs Level.isEquiv
-      | .mdata _ e, _ => compatibleTypesFull e b
-      | _, .mdata _ e => compatibleTypesFull a e
+        unless (← compatibleTypesFull d₁ d₂) do
+          return false
+        withLocalDecl n d₁ bi fun x => compatibleTypesFull (b₁.instantiate1 x) (b₂.instantiate1 x)
+      | .sort u, .sort v =>
+        return Level.isEquiv u v
+      | .const n us, .const m vs =>
+        return n == m && List.isEqv us vs Level.isEquiv
+      | .mdata _ e, _ =>
+        compatibleTypesFull e b
+      | _, .mdata _ e =>
+        compatibleTypesFull a e
       | _, _ =>
         if a.isLambda then
-          let some b ← etaExpand? b | return false
+          let some b ← etaExpand? b
+            | return false
           compatibleTypesFull a b
         else if b.isLambda then
-          let some a ← etaExpand? a | return false
+          let some a ← etaExpand? a
+            | return false
           compatibleTypesFull a b
         else
           return false
@@ -124,7 +136,8 @@ where
       a justification why this is ok.
       -/
       return some (.lam n d (.app e (.bvar 0)) bi)
-    | _ => return none
+    | _ =>
+      return none
 
 /--
 Return true if the LCNF types `a` and `b` are compatible.

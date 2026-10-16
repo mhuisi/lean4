@@ -19,7 +19,7 @@ structure Precheck.Context where
   quotLCtx : NameSet
 
 abbrev PrecheckM := ReaderT Precheck.Context TermElabM
-abbrev Precheck  := Syntax → PrecheckM Unit
+abbrev Precheck := Syntax → PrecheckM Unit
 
 protected def withNewLocal (l : Name) (x : PrecheckM α) : PrecheckM α :=
   withReader (fun ctx => { ctx with quotLCtx := ctx.quotLCtx.insert l }) x
@@ -29,13 +29,17 @@ protected def withNewLocals (ls : Array Name) (x : PrecheckM α) : PrecheckM α 
 
 register_builtin_option quotPrecheck : Bool := {
   defValue := true
-  descr    := "Enable eager name analysis on notations in order to find unbound identifiers early.
-Note that type-sensitive syntax (\"elaborators\") needs special support for this kind of check, so it might need to be turned off when using such syntax."
+  descr :=
+    "Enable eager name analysis on notations in order to find unbound identifiers early.\
+      \nNote that type-sensitive syntax (\"elaborators\") needs special support for this kind of \
+      check, so it might need to be turned off when using such syntax."
 }
 
 register_builtin_option quotPrecheck.allowSectionVars : Bool := {
   defValue := false
-  descr    := "Allow occurrences of section variables in checked quotations, it is useful when declaring local notation."
+  descr :=
+    "Allow occurrences of section variables in checked quotations, it is useful when declaring \
+      local notation."
 }
 
 /--
@@ -50,36 +54,41 @@ unfolded, and identifier-less syntax is ultimately assumed to be well-formed.
 @[builtin_doc]
 unsafe builtin_initialize precheckAttribute : KeyedDeclsAttribute Precheck ←
   KeyedDeclsAttribute.init {
-    builtinName := `builtin_quot_precheck,
-    name := `quot_precheck,
-    descr    := "Register a double backtick syntax quotation pre-check.",
+    builtinName := `builtin_quot_precheck
+    name := `quot_precheck
+    descr := "Register a double backtick syntax quotation pre-check."
     valueTypeName := ``Precheck
   }
 
 partial def precheck : Precheck := fun stx => do
   -- Check for deprecated syntax kinds in quotations
   if let some entry := (deprecatedSyntaxExt.getState (← getEnv)).find? stx.getKind then
-    let extraMsg := match entry.text? with
+    let extraMsg :=
+      match entry.text? with
       | some text => m!": {text}"
       | none => m!""
     withRef stx do
       Linter.logLintIf Linter.linter.deprecated.syntax stx
         m!"quotation uses deprecated syntax '{stx.getKind}'{extraMsg}"
-  if let p::_ := precheckAttribute.getValues (← getEnv) stx.getKind then
-    if ← catchInternalId unsupportedSyntaxExceptionId (do withRef stx <| p stx; pure true) (fun _ => pure false) then
+  if let p :: _ := precheckAttribute.getValues (← getEnv) stx.getKind then
+    if ← catchInternalId unsupportedSyntaxExceptionId (do withRef stx <| p stx; pure true)
+        (fun _ => pure false) then
       return
   if stx.isAnyAntiquot then
     return
-  if !hasQuotedIdent stx then
-    return  -- we only precheck identifiers, so there is nothing to check here
+  if ! hasQuotedIdent stx then
+    return -- we only precheck identifiers, so there is nothing to check here
   if let some stx' ← liftMacroM <| expandMacro? stx then
     precheck stx'
     return
-  throwErrorAt stx "no macro or `[quot_precheck]` instance for syntax kind `{stx.getKind}` found{indentD stx}
-This means we cannot eagerly check your notation/quotation for unbound identifiers; you can use `set_option quotPrecheck false` to disable this check."
+  throwErrorAt stx
+    "no macro or `[quot_precheck]` instance for syntax kind `{stx.getKind}` found{indentD stx}\
+      \nThis means we cannot eagerly check your notation/quotation for unbound identifiers; you \
+      can use `set_option quotPrecheck false` to disable this check."
 where
   hasQuotedIdent
-    | Syntax.ident .. => true
+    | Syntax.ident .. =>
+      true
     | stx =>
       if stx.isAnyAntiquot then
         false
@@ -96,99 +105,126 @@ def runPrecheck (stx : Syntax) : TermElabM Unit := do
 private def isSectionVariable (e : Expr) : TermElabM Bool := do
   return (← read).sectionFVars.any fun _ v => e == v
 
-@[builtin_quot_precheck ident] def precheckIdent : Precheck := fun stx =>
+@[builtin_quot_precheck ident]
+def precheckIdent : Precheck := fun stx =>
   match stx with
-  | Syntax.ident _    _      val preresolved => do
+  | Syntax.ident _ _ val preresolved => do
     if !preresolved.isEmpty then
       return
-    /- The precheck currently ignores field notation.
-       For example: the following notation is accepted although `foo` is not a valid field name for a `Nat` value.
-       ```
-       def x := 0
-       notation "x++" => x.foo
-       ```
+    /-
+    The precheck currently ignores field notation.
+    For example: the following notation is accepted although `foo` is not a valid field name for a `Nat` value.
+    ```
+    def x := 0
+    notation "x++" => x.foo
+    ```
     -/
-    if let _::_ ← realizeGlobalNameWithInfos stx val then
+    if let _ :: _ ← realizeGlobalNameWithInfos stx val then
       return
     if (← read).quotLCtx.contains val then
       return
     let rs ← try resolveName stx val [] [] catch _ => pure []
     for (e, _, _) in rs do
       match e with
-      | Expr.fvar _      .. =>
+      | Expr.fvar _ .. =>
         if quotPrecheck.allowSectionVars.get (← getOptions) && (← isSectionVariable e) then
           return
-      | _ => pure ()
-    throwError m!"Unknown identifier `{val}` at quotation precheck"
-      ++ .note "You can use `set_option quotPrecheck false` to disable this check."
-  | _ => throwUnsupportedSyntax
+      | _ =>
+        pure ()
+    throwError
+      m!"Unknown identifier `{val}` at quotation precheck"
+        ++ .note "You can use `set_option quotPrecheck false` to disable this check."
+  | _ =>
+    throwUnsupportedSyntax
 
-@[builtin_quot_precheck Lean.Parser.Term.app] def precheckApp : Precheck
+@[builtin_quot_precheck Lean.Parser.Term.app]
+def precheckApp : Precheck
   | `($f $args*) => do
     precheck f
     for arg in args.raw do
       match arg with
       | `(argument| ($_ := $e)) => precheck e
-      | `(argument| ..)         => pure ()
-      | `(argument| $e:term)    => precheck e
-  | _ => throwUnsupportedSyntax
+      | `(argument| ..) => pure ()
+      | `(argument| $e:term) => precheck e
+  | _ =>
+    throwUnsupportedSyntax
 
-@[builtin_quot_precheck Lean.Parser.Term.typeAscription] def precheckTypeAscription : Precheck
+@[builtin_quot_precheck Lean.Parser.Term.typeAscription]
+def precheckTypeAscription : Precheck
   | `(($e : $type)) => do
     precheck e
     precheck type
-  | `(($e :)) => precheck e
+  | `(($e :)) =>
+    precheck e
+  | _ =>
+    throwUnsupportedSyntax
+
+@[builtin_quot_precheck Lean.Parser.Term.explicit]
+def precheckExplicit : Precheck
+  | `(@ $id) => do precheck id
   | _ => throwUnsupportedSyntax
 
-@[builtin_quot_precheck Lean.Parser.Term.explicit] def precheckExplicit : Precheck
-  | `(@ $id) => do
-    precheck id
-  | _ => throwUnsupportedSyntax
-
-@[builtin_quot_precheck choice] def precheckChoice : Precheck := fun stx => do
+@[builtin_quot_precheck choice]
+def precheckChoice : Precheck := fun stx => do
   let checks ← stx.getArgs.mapM (_root_.observing ∘ precheck)
-  let fails := checks.zip stx.getArgs |>.filterMap fun
-    | (.error e, stx) => some m!"{stx}\n{e.toMessageData}"
-    | _               => none
+  let fails :=
+    checks.zip stx.getArgs
+      |>.filterMap fun
+        | (.error e, stx) =>
+          some m!"{stx}\
+            \n{e.toMessageData}"
+        | _ =>
+          none
   unless fails.isEmpty do
-    throwErrorAt stx "ambiguous notation with at least one interpretation that failed quotation precheck, possible interpretations {indentD (MessageData.joinSep fails.toList m!"\n\n")}"
+    throwErrorAt stx
+      "ambiguous notation with at least one interpretation that failed quotation precheck, \
+        possible interpretations {indentD (MessageData.joinSep fails.toList m!"\n\n")}"
 
-@[builtin_term_elab precheckedQuot] def elabPrecheckedQuot : TermElab := fun stx expectedType? => do
+@[builtin_term_elab precheckedQuot]
+def elabPrecheckedQuot : TermElab := fun stx expectedType? => do
   let singleQuot := stx[1]
   runPrecheck singleQuot.getQuotContent
   adaptExpander (fun _ => pure singleQuot) stx expectedType?
 
 section ExpressionTree
 
-@[builtin_quot_precheck Lean.Parser.Term.binrel] def precheckBinrel : Precheck
+@[builtin_quot_precheck Lean.Parser.Term.binrel]
+def precheckBinrel : Precheck
   | `(binrel% $f $a $b) => do precheck f; precheck a; precheck b
   | _ => throwUnsupportedSyntax
 
-@[builtin_quot_precheck Lean.Parser.Term.binrel_no_prop] def precheckBinrelNoProp : Precheck
+@[builtin_quot_precheck Lean.Parser.Term.binrel_no_prop]
+def precheckBinrelNoProp : Precheck
   | `(binrel_no_prop% $f $a $b) => do precheck f; precheck a; precheck b
   | _ => throwUnsupportedSyntax
 
-@[builtin_quot_precheck Lean.Parser.Term.binop] def precheckBinop : Precheck
+@[builtin_quot_precheck Lean.Parser.Term.binop]
+def precheckBinop : Precheck
   | `(binop% $f $a $b) => do precheck f; precheck a; precheck b
   | _ => throwUnsupportedSyntax
 
-@[builtin_quot_precheck Lean.Parser.Term.binop_lazy] def precheckBinopLazy : Precheck
+@[builtin_quot_precheck Lean.Parser.Term.binop_lazy]
+def precheckBinopLazy : Precheck
   | `(binop_lazy% $f $a $b) => do precheck f; precheck a; precheck b
   | _ => throwUnsupportedSyntax
 
-@[builtin_quot_precheck Lean.Parser.Term.leftact] def precheckLeftact : Precheck
+@[builtin_quot_precheck Lean.Parser.Term.leftact]
+def precheckLeftact : Precheck
   | `(leftact% $f $a $b) => do precheck f; precheck a; precheck b
   | _ => throwUnsupportedSyntax
 
-@[builtin_quot_precheck Lean.Parser.Term.rightact] def precheckRightact : Precheck
+@[builtin_quot_precheck Lean.Parser.Term.rightact]
+def precheckRightact : Precheck
   | `(rightact% $f $a $b) => do precheck f; precheck a; precheck b
   | _ => throwUnsupportedSyntax
 
-@[builtin_quot_precheck Lean.Parser.Term.unop] def precheckUnop : Precheck
+@[builtin_quot_precheck Lean.Parser.Term.unop]
+def precheckUnop : Precheck
   | `(unop% $f $a) => do precheck f; precheck a
   | _ => throwUnsupportedSyntax
 
-@[builtin_quot_precheck Lean.Parser.Term.hygieneInfo] def precheckHygieneInfo : Precheck
+@[builtin_quot_precheck Lean.Parser.Term.hygieneInfo]
+def precheckHygieneInfo : Precheck
   | _ => pure ()
 
 end ExpressionTree

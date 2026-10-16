@@ -17,32 +17,34 @@ Auxiliary inductive datatype for combining unelaborated syntax
 and already elaborated expressions. It is used to elaborate applications.
 -/
 inductive Arg where
-  | stx  (val : Syntax)
+  | stx (val : Syntax)
   | expr (val : Expr)
-  deriving Inhabited
+deriving Inhabited
 
 instance : ToString Arg where
   toString
     | .stx stx => toString stx
-    | .expr e  => toString e
+    | .expr e => toString e
 
 instance : ToMessageData Arg where
   toMessageData
     | .stx stx => toMessageData stx
-    | .expr e  => toMessageData e
+    | .expr e => toMessageData e
 
 /-- Named arguments created using the notation `(x := val)`. -/
 structure NamedArg where
-  ref  : Syntax := Syntax.missing
+  ref : Syntax := Syntax.missing
   name : Name
-  val  : Arg
-  /-- Overrides the binder infos for the first `numImplicitParams` parameters
+  val : Arg
+  /--
+  Overrides the binder infos for the first `numImplicitParams` parameters
   to make them be implicit if they were explicit.
   This is used for expanding projection notation. The primary motivation for this field
   is that class projections may feature explicit structure parameters.
-  See the note at `Lean.Elab.Term.ElabAppArgs.processExplicitArg`. -/
+  See the note at `Lean.Elab.Term.ElabAppArgs.processExplicitArg`.
+  -/
   numImplicitParams : Nat := 0
-  deriving Inhabited
+deriving Inhabited
 
 instance : ToString NamedArg where
   toString s := s!"({s.name} := {s.val})"
@@ -51,8 +53,9 @@ instance : ToMessageData NamedArg where
   toMessageData s := m!"({s.name} := {s.val})"
 
 /--
-  Add a new named argument to `namedArgs`, and throw an error if it already contains a named argument
-  with the same name. -/
+Add a new named argument to `namedArgs`, and throw an error if it already contains a named argument
+with the same name.
+-/
 def addNamedArg (namedArgs : Array NamedArg) (namedArg : NamedArg) : MetaM (Array NamedArg) := do
   if namedArgs.any (namedArg.name == ·.name) then
     throwErrorAt namedArg.ref "Argument `{namedArg.name}` was already set"
@@ -66,17 +69,18 @@ partial def expandArgs (args : Array Syntax) : MetaM (Array NamedArg × Array Ar
       (args.pop, true)
     else
       (args, false)
-  let (namedArgs, args) ← args.foldlM (init := (#[], #[])) fun (namedArgs, args) stx => do
-    if stx.getKind == ``Lean.Parser.Term.namedArgument then
-      -- trailing_tparser try ("(" >> ident >> " := ") >> termParser >> ")"
-      let name := stx[1].getId.eraseMacroScopes
-      let val  := stx[3]
-      let namedArgs ← addNamedArg namedArgs { ref := stx, name := name, val := Arg.stx val }
-      return (namedArgs, args)
-    else if stx.getKind == ``Lean.Parser.Term.ellipsis then
-      throwErrorAt stx "unexpected '..'"
-    else
-      return (namedArgs, args.push $ Arg.stx stx)
+  let (namedArgs, args) ←
+    args.foldlM (init := (#[], #[])) fun (namedArgs, args) stx => do
+      if stx.getKind == ``Lean.Parser.Term.namedArgument then
+        -- trailing_tparser try ("(" >> ident >> " := ") >> termParser >> ")"
+        let name := stx[1].getId.eraseMacroScopes
+        let val := stx[3]
+        let namedArgs ← addNamedArg namedArgs { ref := stx, name := name, val := Arg.stx val }
+        return (namedArgs, args)
+      else if stx.getKind == ``Lean.Parser.Term.ellipsis then
+        throwErrorAt stx "unexpected '..'"
+      else
+        return (namedArgs, args.push $ Arg.stx stx)
   return (namedArgs, args, ellipsis)
 
 def expandApp (stx : Syntax) : MetaM (Syntax × Array NamedArg × Array Arg × Bool) := do

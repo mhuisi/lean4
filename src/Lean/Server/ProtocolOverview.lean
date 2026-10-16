@@ -70,19 +70,28 @@ def protocolOverview : Array MessageOverview := #[
     direction := .clientToServer
     kinds := #[.standard]
     parameterType := CancelParams
-    description := "Emitted in VS Code when a running request is cancelled, e.g. when the document state has changed."
+    description :=
+      "Emitted in VS Code when a running request is cancelled, e.g. when the document state has \
+        changed."
   },
   .request {
     method := "initialize"
     direction := .clientToServer
     kinds := #[
-      .standardViolation "The Lean language server currently ignores almost all standard client capabilities and expects clients to be sufficiently fully-featured.",
-      .standardViolation "The `InitializeParams.rootUri?` field is not used by the language server - it instead uses the cwd of the language server process.",
-      .extendedParameterType #[``InitializeParams.initializationOptions?, ``InitializeParams.capabilities, ``ClientCapabilities.lean?]
+      .standardViolation "The Lean language server currently ignores almost all standard client \
+        capabilities and expects clients to be sufficiently fully-featured.",
+      .standardViolation "The `InitializeParams.rootUri?` field is not used by the language server \
+        - it instead uses the cwd of the language server process.",
+      .extendedParameterType #[
+        ``InitializeParams.initializationOptions?, ``InitializeParams.capabilities,
+        ``ClientCapabilities.lean?
+      ]
     ]
     parameterType := InitializeParams
     responseType := InitializeResult
-    description := "Emitted when the language server is being initialized. The server is only started once an `initialized` notification is emitted after the `initialize` request."
+    description :=
+      "Emitted when the language server is being initialized. The server is only started once an \
+        `initialized` notification is emitted after the `initialize` request."
   },
   .notification {
     method := "initialized"
@@ -97,7 +106,9 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.standard]
     parameterType := Option Empty
     responseType := Option Empty
-    description := "Emitted when the language server is being asked to shut down and deliver responses for all pending requests."
+    description :=
+      "Emitted when the language server is being asked to shut down and deliver responses for all \
+        pending requests."
   },
   .notification {
     method := "exit"
@@ -110,23 +121,31 @@ def protocolOverview : Array MessageOverview := #[
     method := "client/registerCapability"
     direction := .serverToClient
     kinds := #[.standard]
-    parameterType := NestedType #[Option RegistrationParams, DidChangeWatchedFilesRegistrationOptions]
+    parameterType :=
+      NestedType #[Option RegistrationParams, DidChangeWatchedFilesRegistrationOptions]
     responseType := Option Empty
-    description := "Emitted by the language server after receiving the `initialized` notification to register file watchers for `.lean` and `.ilean` files using the `workspace/didChangeWatchedFiles` registration."
+    description :=
+      "Emitted by the language server after receiving the `initialized` notification to register \
+        file watchers for `.lean` and `.ilean` files using the `workspace/didChangeWatchedFiles` \
+        registration."
   },
   .notification {
     method := "textDocument/didOpen"
     direction := .clientToServer
     kinds := #[.extendedParameterType #[``LeanDidOpenTextDocumentParams.dependencyBuildMode?]]
     parameterType := LeanDidOpenTextDocumentParams
-    description := "Emitted in VS Code when a text document is opened. VS Code may sometimes emit this notification for files that were not opened in an editor."
+    description :=
+      "Emitted in VS Code when a text document is opened. VS Code may sometimes emit this \
+        notification for files that were not opened in an editor."
   },
   .notification {
     method := "textDocument/didClose"
     direction := .clientToServer
     kinds := #[.standard]
     parameterType := DidCloseTextDocumentParams
-    description := "Emitted in VS Code when a text document is closed. VS Code may sometimes emit this notification for files that were not opened in an editor."
+    description :=
+      "Emitted in VS Code when a text document is closed. VS Code may sometimes emit this \
+        notification for files that were not opened in an editor."
   },
   .notification {
     method := "textDocument/didChange"
@@ -147,21 +166,35 @@ def protocolOverview : Array MessageOverview := #[
     direction := .clientToServer
     kinds := #[.standard]
     parameterType := DidChangeWatchedFilesParams
-    description := "Emitted in VS Code when one of the files that the language server registered a file watcher for changes."
+    description :=
+      "Emitted in VS Code when one of the files that the language server registered a file watcher \
+        for changes."
   },
   .notification {
     method := "textDocument/publishDiagnostics"
     direction := .serverToClient
-    kinds := #[.extendedParameterType #[``PublishDiagnosticsParams.isIncremental?, ``PublishDiagnosticsParams.diagnostics, ``DiagnosticWith.fullRange?, ``DiagnosticWith.isSilent?, ``DiagnosticWith.leanTags?]]
+    kinds := #[
+      .extendedParameterType #[
+        ``PublishDiagnosticsParams.isIncremental?, ``PublishDiagnosticsParams.diagnostics,
+        ``DiagnosticWith.fullRange?, ``DiagnosticWith.isSilent?, ``DiagnosticWith.leanTags?
+      ]
+    ]
     parameterType := PublishDiagnosticsParams
-    description := "Emitted by the language server whenever a new set of diagnostics becomes available for a file. Unlike most language servers, the Lean language server emits this notification incrementally while processing the file, not only when the full file has been processed. If the client sets `LeanClientCapabilities.incrementalDiagnosticSupport` and `isIncremental` is `true`, the diagnostics in the notification should be appended to the existing diagnostics for the same document version rather than replacing them."
+    description :=
+      "Emitted by the language server whenever a new set of diagnostics becomes available for a \
+        file. Unlike most language servers, the Lean language server emits this notification \
+        incrementally while processing the file, not only when the full file has been processed. \
+        If the client sets `LeanClientCapabilities.incrementalDiagnosticSupport` and \
+        `isIncremental` is `true`, the diagnostics in the notification should be appended to the \
+        existing diagnostics for the same document version rather than replacing them."
   },
   .notification {
     method := "$/lean/fileProgress"
     direction := .serverToClient
     kinds := #[.leanSpecificMethod]
     parameterType := LeanFileProgressParams
-    description := "Emitted by the language server whenever the elaboration progress of a file changes."
+    description :=
+      "Emitted by the language server whenever the elaboration progress of a file changes."
   },
   .request {
     method := "textDocument/completion"
@@ -169,7 +202,9 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.standard]
     parameterType := CompletionParams
     responseType := CompletionList
-    description := "Emitted in VS Code when auto-completion is triggered, e.g. automatically while typing or after hitting Ctrl+Space."
+    description :=
+      "Emitted in VS Code when auto-completion is triggered, e.g. automatically while typing or \
+        after hitting Ctrl+Space."
   },
   .request {
     method := "completionItem/resolve"
@@ -185,7 +220,9 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.standard]
     parameterType := CodeActionParams
     responseType := Array CodeAction
-    description := "Emitted in VS Code when code actions are triggered, e.g. automatically while typing, moving the text cursor or when hovering over a diagnostic."
+    description :=
+      "Emitted in VS Code when code actions are triggered, e.g. automatically while typing, moving \
+        the text cursor or when hovering over a diagnostic."
   },
   .request {
     method := "codeAction/resolve"
@@ -201,7 +238,9 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.standard]
     parameterType := SignatureHelpParams
     responseType := Option SignatureHelp
-    description := "Emitted in VS Code when the signature help is triggered, e.g. automatically while typing or after hitting Ctrl+Shift+Space."
+    description :=
+      "Emitted in VS Code when the signature help is triggered, e.g. automatically while typing or \
+        after hitting Ctrl+Shift+Space."
   },
   .request {
     method := "textDocument/hover"
@@ -241,7 +280,10 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.standard]
     parameterType := DocumentColorParams
     responseType := Array ColorInformation
-    description := "Emitted in VS Code when a file is first opened or when it is changed. The language server defines this handler to override the default document color handler of VS Code with an empty one."
+    description :=
+      "Emitted in VS Code when a file is first opened or when it is changed. The language server \
+        defines this handler to override the default document color handler of VS Code with an \
+        empty one."
   },
   .request {
     method := "textDocument/semanticTokens/range"
@@ -254,10 +296,21 @@ def protocolOverview : Array MessageOverview := #[
   .request {
     method := "textDocument/semanticTokens/full"
     direction := .clientToServer
-    kinds := #[.standardViolation "Instead of reporting the full semantic tokens for the full file as specified by LSP, the Lean language server will only report the semantic tokens for the part of the file that has been processed so far. If the response is incomplete, the language server periodically emits `workspace/semanticTokens/refresh` to request another `textDocument/semanticTokens/full` request from the client. This process is repeated until the file has been fully processed and all semantic tokens have been reported. We use this trick to stream semantic tokens to VS Code, despite the fact that VS Code does not support result streaming."]
+    kinds := #[
+      .standardViolation "Instead of reporting the full semantic tokens for the full file as \
+        specified by LSP, the Lean language server will only report the semantic tokens for the \
+        part of the file that has been processed so far. If the response is incomplete, the \
+        language server periodically emits `workspace/semanticTokens/refresh` to request another \
+        `textDocument/semanticTokens/full` request from the client. This process is repeated until \
+        the file has been fully processed and all semantic tokens have been reported. We use this \
+        trick to stream semantic tokens to VS Code, despite the fact that VS Code does not support \
+        result streaming."
+    ]
     parameterType := SemanticTokensParams
     responseType := SemanticTokens
-    description := "Emitted in VS Code when a file is first opened, when it is changed or when VS Code receives a `workspace/semanticTokens/refresh` request from the server."
+    description :=
+      "Emitted in VS Code when a file is first opened, when it is changed or when VS Code receives \
+        a `workspace/semanticTokens/refresh` request from the server."
   },
   .request {
     method := "workspace/semanticTokens/refresh"
@@ -265,15 +318,28 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.standard]
     parameterType := Option Empty
     responseType := Option Empty
-    description := "Emitted by the language server to request another `textDocument/semanticTokens/full` request from the client."
+    description :=
+      "Emitted by the language server to request another `textDocument/semanticTokens/full` \
+        request from the client."
   },
   .request {
     method := "textDocument/inlayHint"
     direction := .clientToServer
-    kinds := #[.standardViolation "Instead of reporting the full inlay hints for the full file as specified by LSP, the Lean language server will only report the inlay hints for the part of the file that has been processed so far. If the response is incomplete, the language server periodically emits `workspace/inlayHint/refresh` to request another `textDocument/inlayHint` request from the client. This process is repeated until the file has been fully processed and all inlay hints have been reported. We use this trick to stream inlay hints to VS Code, despite the fact that VS Code does not support result streaming."]
+    kinds := #[
+      .standardViolation
+        "Instead of reporting the full inlay hints for the full file as specified by LSP, the Lean \
+          language server will only report the inlay hints for the part of the file that has been \
+          processed so far. If the response is incomplete, the language server periodically emits \
+          `workspace/inlayHint/refresh` to request another `textDocument/inlayHint` request from \
+          the client. This process is repeated until the file has been fully processed and all \
+          inlay hints have been reported. We use this trick to stream inlay hints to VS Code, \
+          despite the fact that VS Code does not support result streaming."
+    ]
     parameterType := InlayHintParams
     responseType := Array InlayHint
-    description := "Emitted in VS Code when a file is first opened, when it is changed or when VS Code receives a `workspace/inlayHint/refresh` request from the server."
+    description :=
+      "Emitted in VS Code when a file is first opened, when it is changed or when VS Code receives \
+        a `workspace/inlayHint/refresh` request from the server."
   },
   .request {
     method := "workspace/inlayHint/refresh"
@@ -281,7 +347,9 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.standard]
     parameterType := Option Empty
     responseType := Option Empty
-    description := "Emitted by the language server to request another `textDocument/inlayHint` request from the client."
+    description :=
+      "Emitted by the language server to request another `textDocument/inlayHint` request from the \
+        client."
   },
   .request {
     method := "textDocument/definition"
@@ -289,7 +357,8 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.standard]
     parameterType := DefinitionParams
     responseType := Array LocationLink
-    description := "Emitted in VS Code when clicking 'Go to Definition' in the context menu or using Ctrl+Click."
+    description :=
+      "Emitted in VS Code when clicking 'Go to Definition' in the context menu or using Ctrl+Click."
   },
   .request {
     method := "textDocument/declaration"
@@ -313,7 +382,9 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.standard]
     parameterType := ReferenceParams
     responseType := Array Location
-    description := "Emitted in VS Code when clicking 'Find All References' or 'Go to References' in the context menu."
+    description :=
+      "Emitted in VS Code when clicking 'Find All References' or 'Go to References' in the context \
+        menu."
   },
   .request {
     method := "textDocument/prepareCallHierarchy"
@@ -329,7 +400,8 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.standard]
     parameterType := CallHierarchyIncomingCallsParams
     responseType := Array CallHierarchyIncomingCall
-    description := "Emitted in VS Code when expanding a node in the call hierarchy in 'incoming calls' mode."
+    description :=
+      "Emitted in VS Code when expanding a node in the call hierarchy in 'incoming calls' mode."
   },
   .request {
     method := "callHierarchy/outgoingCalls"
@@ -337,7 +409,8 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.standard]
     parameterType := CallHierarchyOutgoingCallsParams
     responseType := Array CallHierarchyOutgoingCall
-    description := "Emitted in VS Code when expanding a node in the call hierarchy in 'outgoing calls' mode."
+    description :=
+      "Emitted in VS Code when expanding a node in the call hierarchy in 'outgoing calls' mode."
   },
   .request {
     method := "$/lean/prepareModuleHierarchy"
@@ -345,7 +418,9 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.leanSpecificMethod]
     parameterType := LeanPrepareModuleHierarchyParams
     responseType := Option LeanModule
-    description := "Emitted in VS Code when clicking 'Show Module Hierarchy' or 'Show Inverse Module Hierarchy' in the context menu."
+    description :=
+      "Emitted in VS Code when clicking 'Show Module Hierarchy' or 'Show Inverse Module Hierarchy' \
+        in the context menu."
   },
   .request {
     method := "$/lean/moduleHierarchy/imports"
@@ -377,7 +452,9 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.standard]
     parameterType := RenameParams
     responseType := WorkspaceEdit
-    description := "Emitted in VS Code when entering an identifier after clicking 'Rename Symbol' in the context menu."
+    description :=
+      "Emitted in VS Code when entering an identifier after clicking 'Rename Symbol' in the \
+        context menu."
   },
   .request {
     method := "workspace/symbol"
@@ -385,7 +462,9 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.standard]
     parameterType := WorkspaceSymbolParams
     responseType := Array SymbolInformation
-    description := "Emitted in VS Code when opening the command prompt and entering a `#` prefix with a query after it."
+    description :=
+      "Emitted in VS Code when opening the command prompt and entering a `#` prefix with a query \
+        after it."
   },
   .request {
     method := "$/lean/plainGoal"
@@ -393,7 +472,9 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.leanSpecificMethod]
     parameterType := PlainGoalParams
     responseType := Option PlainGoal
-    description := "Not used in VS Code. Emitted in editors that do not support an interactive InfoView (e.g. Emacs) and interactive tests."
+    description :=
+      "Not used in VS Code. Emitted in editors that do not support an interactive InfoView (e.g. \
+        Emacs) and interactive tests."
   },
   .request {
     method := "$/lean/plainTermGoal"
@@ -401,7 +482,9 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.leanSpecificMethod]
     parameterType := PlainTermGoalParams
     responseType := Option PlainTermGoal
-    description := "Not used in VS Code. Emitted in editors that do not support an interactive InfoView (e.g. Emacs) and interactive tests."
+    description :=
+      "Not used in VS Code. Emitted in editors that do not support an interactive InfoView (e.g. \
+        Emacs) and interactive tests."
   },
   .request {
     method := "textDocument/waitForDiagnostics"
@@ -409,7 +492,9 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.leanSpecificMethod]
     parameterType := WaitForDiagnosticsParams
     responseType := WaitForDiagnostics
-    description := "Not used in the editor. Emitted in interactive tests to wait for all diagnostics up to a given point."
+    description :=
+      "Not used in the editor. Emitted in interactive tests to wait for all diagnostics up to a \
+        given point."
   },
   .request {
     method := "$/lean/waitForILeans"
@@ -417,7 +502,9 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.leanSpecificMethod]
     parameterType := WaitForILeansParams
     responseType := WaitForILeans
-    description := "Not used in the editor. Emitted in interactive tests to wait for all .ileans in the project and the .ilean of the given file to be loaded."
+    description :=
+      "Not used in the editor. Emitted in interactive tests to wait for all .ileans in the project \
+        and the .ilean of the given file to be loaded."
   },
   .request {
     method := "$/lean/rpc/connect"
@@ -425,21 +512,26 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.leanSpecificMethod]
     parameterType := RpcConnectParams
     responseType := RpcConnected
-    description := "Emitted in VS Code when an RPC session for InfoView interactivity is initially set up."
+    description :=
+      "Emitted in VS Code when an RPC session for InfoView interactivity is initially set up."
   },
   .notification {
     method := "$/lean/rpc/release"
     direction := .clientToServer
     kinds := #[.leanSpecificMethod]
     parameterType := RpcReleaseParams
-    description := "Emitted in VS Code when an RPC object in the server (the lifecycle of which is managed by the client) is freed by the client."
+    description :=
+      "Emitted in VS Code when an RPC object in the server (the lifecycle of which is managed by \
+        the client) is freed by the client."
   },
   .notification {
     method := "$/lean/rpc/keepAlive"
     direction := .clientToServer
     kinds := #[.leanSpecificMethod]
     parameterType := RpcKeepAliveParams
-    description := "Emitted periodically in VS Code to signal that the RPC client has not disconnected yet to keep the RPC session alive."
+    description :=
+      "Emitted periodically in VS Code to signal that the RPC client has not disconnected yet to \
+        keep the RPC session alive."
   },
   .request {
     method := "$/lean/rpc/call"
@@ -447,31 +539,43 @@ def protocolOverview : Array MessageOverview := #[
     kinds := #[.leanSpecificMethod]
     parameterType := RpcCallParams
     responseType := Json
-    description := "Emitted in VS Code when an RPC method is called. `RpcCallParams.method` and `RpcCallParams.params` can be any of the builtin `.rpcRequest`s described in this overview or any custom RPC methods tagged with `@[server_rpc_method]` that can be set up for use in the widget system."
+    description :=
+      "Emitted in VS Code when an RPC method is called. `RpcCallParams.method` and \
+        `RpcCallParams.params` can be any of the builtin `.rpcRequest`s described in this overview \
+        or any custom RPC methods tagged with `@[server_rpc_method]` that can be set up for use in \
+        the widget system."
   },
   .rpcRequest {
     method := `Lean.Widget.getInteractiveDiagnostics
     parameterType := GetInteractiveDiagnosticsParams
     responseType := Array InteractiveDiagnostic
-    description := "Emitted in VS Code when the text cursor is moved, the set of diagnostics at the cursor position changes or the file starts or finishes processing."
+    description :=
+      "Emitted in VS Code when the text cursor is moved, the set of diagnostics at the cursor \
+        position changes or the file starts or finishes processing."
   },
   .rpcRequest {
     method := `Lean.Widget.getInteractiveGoals
     parameterType := Lsp.PlainGoalParams
     responseType := Option InteractiveGoals
-    description := "Emitted in VS Code when the text cursor is moved, the set of diagnostics at the cursor position changes or the file starts or finishes processing."
+    description :=
+      "Emitted in VS Code when the text cursor is moved, the set of diagnostics at the cursor \
+        position changes or the file starts or finishes processing."
   },
   .rpcRequest {
     method := `Lean.Widget.getInteractiveTermGoal
     parameterType := Lsp.PlainTermGoalParams
     responseType := Option InteractiveTermGoal
-    description := "Emitted in VS Code when the text cursor is moved, the set of diagnostics at the cursor position changes or the file starts or finishes processing."
+    description :=
+      "Emitted in VS Code when the text cursor is moved, the set of diagnostics at the cursor \
+        position changes or the file starts or finishes processing."
   },
   .rpcRequest {
     method := `Lean.Widget.getWidgets
     parameterType := Position
     responseType := GetWidgetsResponse
-    description := "Emitted in VS Code when the text cursor is moved, the set of diagnostics at the cursor position changes or the file starts or finishes processing."
+    description :=
+      "Emitted in VS Code when the text cursor is moved, the set of diagnostics at the cursor \
+        position changes or the file starts or finishes processing."
   },
   .rpcRequest {
     method := `Lean.Widget.InteractiveDiagnostics.infoToInteractive
@@ -483,7 +587,9 @@ def protocolOverview : Array MessageOverview := #[
     method := `Lean.Widget.getGoToLocation
     parameterType := GetGoToLocationParams
     responseType := Array Lsp.LocationLink
-    description := "Emitted in VS Code when clicking 'Go to Definition' in the context menu of the InfoView or using Ctrl+Click in the InfoView."
+    description :=
+      "Emitted in VS Code when clicking 'Go to Definition' in the context menu of the InfoView or \
+        using Ctrl+Click in the InfoView."
   },
   .rpcRequest {
     method := `Lean.Widget.lazyTraceChildrenToInteractive
@@ -507,6 +613,7 @@ def protocolOverview : Array MessageOverview := #[
     method := `Lean.Widget.InteractiveDiagnostics.msgToInteractive
     parameterType := MsgToInteractive
     responseType := InteractiveMessage
-    description := "Emitted in VS Code in some widgets to convert non-interactive messages to interactive ones."
+    description :=
+      "Emitted in VS Code in some widgets to convert non-interactive messages to interactive ones."
   },
 ]

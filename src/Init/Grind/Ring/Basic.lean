@@ -111,14 +111,21 @@ class Ring (α : Type u) extends Semiring α, Neg α, Sub α where
   neg_add_cancel : ∀ a : α, -a + a = 0
   /-- Subtraction is addition of the negative. -/
   sub_eq_add_neg : ∀ a b : α, a - b = a + -b
-  /-- Scalar multiplication by the negation of an integer is the negation of scalar multiplication by that integer. -/
+  /--
+  Scalar multiplication by the negation of an integer is the negation of scalar multiplication by that integer.
+  -/
   neg_zsmul : ∀ (i : Int) (a : α), (-i : Int) • a = -(i • a)
-  /-- Scalar multiplication by natural numbers is consistent with scalar multiplication by integers. -/
+  /--
+  Scalar multiplication by natural numbers is consistent with scalar multiplication by integers.
+  -/
   zsmul_natCast_eq_nsmul : ∀ n : Nat, ∀ a : α, (n : Int) • a = n • a := by intros; rfl
-  /-- The canonical map from the integers is consistent with the canonical map from the natural numbers. -/
-  intCast_ofNat : ∀ n : Nat, Int.cast (OfNat.ofNat (α := Int) n) = OfNat.ofNat (α := α) n := by intros; rfl
+  /--
+  The canonical map from the integers is consistent with the canonical map from the natural numbers.
+  -/
+  intCast_ofNat : ∀ n : Nat, Int.cast (OfNat.ofNat (α := Int) n) = OfNat.ofNat (α := α) n := by
+    intros; rfl
   /-- The canonical map from the integers is consistent with negation. -/
-  intCast_neg : ∀ i : Int, Int.cast (R := α) (-i) = -Int.cast i := by intros; rfl
+  intCast_neg : ∀ i : Int, Int.cast (R := α) (-i) = - Int.cast i := by intros; rfl
 
 attribute [implicit_reducible] Ring.intCast Ring.zsmul
 
@@ -134,9 +141,7 @@ class CommSemiring (α : Type u) extends Semiring α where
   mul_zero := by intro a; rw [mul_comm, zero_mul]
   right_distrib := by intro a b c; rw [mul_comm, left_distrib, mul_comm c, mul_comm c]
 
-/--
-A commutative ring, i.e. a ring with commutative multiplication.
--/
+/-- A commutative ring, i.e. a ring with commutative multiplication. -/
 class CommRing (α : Type u) extends Ring α, CommSemiring α
 
 -- We reduce the priority of these parent instances,
@@ -151,7 +156,8 @@ attribute [instance 100] Semiring.ofNat
 attribute [local instance] Semiring.natCast Ring.intCast
 
 -- Verify that the diamond from `CommRing` to `Semiring` via either `CommSemiring` or `Ring` is defeq.
-example [CommRing α] : (CommSemiring.toSemiring : Semiring α) = (Ring.toSemiring : Semiring α) := rfl
+example [CommRing α] : (CommSemiring.toSemiring : Semiring α) = (Ring.toSemiring : Semiring α) :=
+  rfl
 
 namespace Semiring
 
@@ -162,8 +168,7 @@ variable {α : Type u} [Semiring α]
 theorem natCast_eq_ofNat (n : Nat) : NatCast.natCast n = OfNat.ofNat (α := α) n := by
   rw [ofNat_eq_natCast]
 
-theorem natCast_zero : ((0 : Nat) : α) = 0 := by
-  rw [← ofNat_eq_natCast 0]
+theorem natCast_zero : ((0 : Nat) : α) = 0 := by rw [← ofNat_eq_natCast 0]
 theorem natCast_one : ((1 : Nat) : α) = 1 := (ofNat_eq_natCast 1).symm
 
 theorem ofNat_add (a b : Nat) : OfNat.ofNat (α := α) (a + b) = OfNat.ofNat a + OfNat.ofNat b := by
@@ -171,11 +176,13 @@ theorem ofNat_add (a b : Nat) : OfNat.ofNat (α := α) (a + b) = OfNat.ofNat a +
   | zero => rw [Nat.add_zero, add_zero]
   | succ b ih => rw [Nat.add_succ, ofNat_succ, ih, ofNat_succ b, add_assoc]
 
-instance toNatModule [I : Semiring α] : NatModule α :=
-  { I with
-    zero_nsmul a := by rw [nsmul_eq_natCast_mul, ← ofNat_eq_natCast, zero_mul]
-    add_one_nsmul n a := by rw [nsmul_eq_natCast_mul, ← ofNat_eq_natCast, ofNat_add, right_distrib,
-      ofNat_eq_natCast, ← nsmul_eq_natCast_mul, ofNat_eq_natCast, natCast_one, one_mul] }
+instance toNatModule [I : Semiring α] : NatModule α := {
+  I with
+  zero_nsmul a := by rw [nsmul_eq_natCast_mul, ← ofNat_eq_natCast, zero_mul]
+  add_one_nsmul n a := by
+    rw [nsmul_eq_natCast_mul, ← ofNat_eq_natCast, ofNat_add, right_distrib, ofNat_eq_natCast,
+      ← nsmul_eq_natCast_mul, ofNat_eq_natCast, natCast_one, one_mul]
+}
 
 theorem natCast_add (a b : Nat) : ((a + b : Nat) : α) = ((a : α) + (b : α)) := by
   rw [← ofNat_eq_natCast, ← ofNat_eq_natCast, ofNat_add, ofNat_eq_natCast, ofNat_eq_natCast]
@@ -202,20 +209,19 @@ theorem natCast_mul_left_comm (a : α) (b : Nat) (c : α) : a * (b * c) = b * (a
   next => simp [Semiring.natCast_zero, mul_zero, zero_mul]
   next ih =>
     rw [Semiring.natCast_succ, Semiring.right_distrib, Semiring.left_distrib, ih,
-        Semiring.right_distrib, Semiring.one_mul, Semiring.one_mul]
+      Semiring.right_distrib, Semiring.one_mul, Semiring.one_mul]
 
-theorem pow_one (a : α) : a ^ 1 = a := by
-  rw [pow_succ, pow_zero, one_mul]
+theorem pow_one (a : α) : a ^ 1 = a := by rw [pow_succ, pow_zero, one_mul]
 
-theorem pow_two (a : α) : a ^ 2 = a * a := by
-  rw [pow_succ, pow_one]
+theorem pow_two (a : α) : a ^ 2 = a * a := by rw [pow_succ, pow_one]
 
-theorem pow_add (a : α) (k₁ k₂ : Nat) : a ^ (k₁ + k₂) = a^k₁ * a^k₂ := by
+theorem pow_add (a : α) (k₁ k₂ : Nat) : a ^ (k₁ + k₂) = a ^ k₁ * a ^ k₂ := by
   induction k₂
   next => simp [pow_zero, mul_one]
   next k₂ ih => rw [Nat.add_succ, pow_succ, pow_succ, ih, mul_assoc]
 
-theorem pow_add_congr (a r : α) (k k₁ k₂ : Nat) : k = k₁ + k₂ → a^k₁ * a^k₂ = r → a ^ k = r := by
+theorem pow_add_congr (a r : α) (k k₁ k₂ : Nat)
+    : k = k₁ + k₂ → a ^ k₁ * a ^ k₂ = r → a ^ k = r := by
   intros; subst k r; rw [pow_add]
 
 theorem one_pow (n : Nat) : (1 : α) ^ n = 1 := by
@@ -244,11 +250,9 @@ theorem intCast_natCast (n : Nat) : ((n : Int) : α) = (n : α) := by
   erw [intCast_ofNat]
   rw [ofNat_eq_natCast]
 
-instance toAddCommGroup [I : Ring α] : AddCommGroup α :=
-  { I with }
+instance toAddCommGroup [I : Ring α] : AddCommGroup α := { I with }
 
-theorem intCast_zero : ((0 : Int) : α) = 0 := by
-  rw [intCast_ofNat 0]
+theorem intCast_zero : ((0 : Int) : α) = 0 := by rw [intCast_ofNat 0]
 theorem intCast_one : ((1 : Int) : α) = 1 := intCast_ofNat 1
 theorem intCast_neg_one : ((-1 : Int) : α) = -1 := by rw [intCast_neg, intCast_ofNat]
 theorem intCast_natCast_add_one (n : Nat) : ((n + 1 : Int) : α) = (n : α) + 1 := by
@@ -258,21 +262,24 @@ theorem intCast_negSucc (n : Nat) : ((-(n + 1) : Int) : α) = -((n : α) + 1) :=
 theorem intCast_nat_add {x y : Nat} : ((x + y : Int) : α) = ((x : α) + (y : α)) := by
   rw [Int.ofNat_add_ofNat, intCast_natCast, natCast_add]
 
-theorem intCast_eq_ofNat_of_nonneg (x : Int) (h : Int.ble' 0 x) : IntCast.intCast (R := α) x = OfNat.ofNat (α := α) x.toNat := by
+theorem intCast_eq_ofNat_of_nonneg (x : Int) (h : Int.ble' 0 x)
+    : IntCast.intCast (R := α) x = OfNat.ofNat (α := α) x.toNat := by
   show Int.cast x = _
   rw [Int.ble'_eq_true] at h
   have := Int.toNat_of_nonneg h
   conv => lhs; rw [← this, Ring.intCast_natCast]
   rw [Semiring.ofNat_eq_natCast]
 
-theorem intCast_eq_ofNat_of_nonpos (x : Int) (h : Int.ble' x 0) : IntCast.intCast (R := α) x = - OfNat.ofNat (α := α) x.natAbs := by
+theorem intCast_eq_ofNat_of_nonpos (x : Int) (h : Int.ble' x 0)
+    : IntCast.intCast (R := α) x = - OfNat.ofNat (α := α) x.natAbs := by
   show Int.cast x = _
   rw [Int.ble'_eq_true] at h
   have := Int.eq_neg_natAbs_of_nonpos h
   conv => lhs; rw [this]
   rw [Ring.intCast_neg, Semiring.ofNat_eq_natCast, Ring.intCast_natCast]
 
-theorem intCast_nat_sub {x y : Nat} (h : x ≥ y) : (((x - y : Nat) : Int) : α) = ((x : α) - (y : α)) := by
+theorem intCast_nat_sub {x y : Nat} (h : x ≥ y)
+    : (((x - y : Nat) : Int) : α) = ((x : α) - (y : α)) := by
   induction x with
   | zero =>
     have : y = 0 := by omega
@@ -284,37 +291,41 @@ theorem intCast_nat_sub {x y : Nat} (h : x ≥ y) : (((x - y : Nat) : Int) : α)
       rw [this, intCast_natCast_add_one]
       specialize ih (by omega)
       rw [intCast_natCast] at ih
-      rw [ih, natCast_succ, sub_eq_add_neg, sub_eq_add_neg, add_assoc,
-        AddCommMonoid.add_comm _ 1, ← add_assoc]
+      rw [ih, natCast_succ, sub_eq_add_neg, sub_eq_add_neg, add_assoc, AddCommMonoid.add_comm _ 1,
+        ← add_assoc]
 theorem intCast_add (x y : Int) : ((x + y : Int) : α) = ((x : α) + (y : α)) :=
   match x, y with
   | (x : Nat), (y : Nat) => by
     rw [intCast_nat_add, intCast_natCast, intCast_natCast]
   | (x : Nat), (-(y + 1 : Nat)) => by
     by_cases h : x ≥ y + 1
-    · have : (x + -(y+1 : Nat) : Int) = ((x - (y + 1) : Nat) : Int) := by omega
+    · have : (x + -(y + 1 : Nat) : Int) = ((x - (y + 1) : Nat) : Int) := by omega
       rw [this, intCast_neg, intCast_nat_sub h, intCast_natCast, intCast_natCast, sub_eq_add_neg]
-    · have : (x + -(y+1 : Nat) : Int) = (-(y + 1 - x : Nat) : Int) := by omega
-      rw [this, intCast_neg, intCast_nat_sub (by omega), intCast_natCast, intCast_neg, intCast_natCast,
-        neg_sub, sub_eq_add_neg]
+    · have : (x + -(y + 1 : Nat) : Int) = (-(y + 1 - x : Nat) : Int) := by omega
+      rw [this, intCast_neg, intCast_nat_sub (by omega), intCast_natCast, intCast_neg,
+        intCast_natCast, neg_sub, sub_eq_add_neg]
   | (-(x + 1 : Nat)), (y : Nat) => by
-    by_cases h : y ≥ x+ 1
-    · have : (-(x+1 : Nat) + y : Int) = ((y - (x + 1) : Nat) : Int) := by omega
-      rw [this, intCast_neg, intCast_nat_sub h, intCast_natCast, intCast_natCast, sub_eq_add_neg, add_comm]
-    · have : (-(x+1 : Nat) + y : Int) = (-(x + 1 - y : Nat) : Int) := by omega
-      rw [this, intCast_neg, intCast_nat_sub (by omega), intCast_natCast, intCast_neg, intCast_natCast,
-        neg_sub, sub_eq_add_neg, add_comm]
+    by_cases h : y ≥ x + 1
+    · have : (-(x + 1 : Nat) + y : Int) = ((y - (x + 1) : Nat) : Int) := by omega
+      rw [this, intCast_neg, intCast_nat_sub h, intCast_natCast, intCast_natCast, sub_eq_add_neg,
+        add_comm]
+    · have : (-(x + 1 : Nat) + y : Int) = (-(x + 1 - y : Nat) : Int) := by omega
+      rw [this, intCast_neg, intCast_nat_sub (by omega), intCast_natCast, intCast_neg,
+        intCast_natCast, neg_sub, sub_eq_add_neg, add_comm]
   | (-(x + 1 : Nat)), (-(y + 1 : Nat)) => by
-    rw [← Int.neg_add, intCast_neg, intCast_nat_add, neg_add, intCast_neg, intCast_neg, intCast_natCast, intCast_natCast]
+    rw [← Int.neg_add, intCast_neg, intCast_nat_add, neg_add, intCast_neg, intCast_neg,
+      intCast_natCast, intCast_natCast]
 theorem intCast_sub (x y : Int) : ((x - y : Int) : α) = ((x : α) - (y : α)) := by
   rw [Int.sub_eq_add_neg, intCast_add, intCast_neg, sub_eq_add_neg]
 
-theorem ofNat_sub {x y : Nat} (h : y ≤ x) : OfNat.ofNat (α := α) (x - y) = OfNat.ofNat x - OfNat.ofNat y := by
+theorem ofNat_sub {x y : Nat} (h : y ≤ x)
+    : OfNat.ofNat (α := α) (x - y) = OfNat.ofNat x - OfNat.ofNat y := by
   rw [ofNat_eq_natCast, ← intCast_natCast, Int.ofNat_sub h]
   rw [intCast_sub]
   rw [intCast_natCast, intCast_natCast, ofNat_eq_natCast, ofNat_eq_natCast]
 
-theorem neg_ofNat_sub {x y : Nat} (h : y ≤ x) : -OfNat.ofNat (α := α) (x - y) = OfNat.ofNat y - OfNat.ofNat x := by
+theorem neg_ofNat_sub {x y : Nat} (h : y ≤ x)
+    : - OfNat.ofNat (α := α) (x - y) = OfNat.ofNat y - OfNat.ofNat x := by
   rw [neg_eq_iff, ofNat_sub h, neg_sub]
 
 theorem neg_eq_neg_one_mul (a : α) : -a = (-1) * a := by
@@ -341,13 +352,17 @@ theorem zsmul_eq_intCast_mul {k : Int} {a : α} : (k • a : α) = (k : α) * a 
   | (k : Nat) =>
     rw [intCast_natCast, zsmul_natCast_eq_nsmul, nsmul_eq_natCast_mul]
   | -(k + 1 : Nat) =>
-    rw [intCast_neg, neg_mul, neg_zsmul, intCast_natCast, zsmul_natCast_eq_nsmul, nsmul_eq_natCast_mul]
+    rw [intCast_neg, neg_mul, neg_zsmul, intCast_natCast, zsmul_natCast_eq_nsmul,
+      nsmul_eq_natCast_mul]
 
-instance toIntModule [I : Ring α] : IntModule α :=
-  { I, Semiring.toNatModule (α := α) with
-    zero_zsmul a := by rw [← Int.natCast_zero, zsmul_natCast_eq_nsmul, zero_nsmul]
-    one_zsmul a := by rw [← Int.natCast_one, zsmul_natCast_eq_nsmul, one_nsmul]
-    add_zsmul n m a := by rw [zsmul_eq_intCast_mul, intCast_add, right_distrib, zsmul_eq_intCast_mul, zsmul_eq_intCast_mul] }
+instance toIntModule [I : Ring α] : IntModule α := {
+  I, Semiring.toNatModule (α := α) with
+  zero_zsmul a := by rw [← Int.natCast_zero, zsmul_natCast_eq_nsmul, zero_nsmul]
+  one_zsmul a := by rw [← Int.natCast_one, zsmul_natCast_eq_nsmul, one_nsmul]
+  add_zsmul n m a := by
+    rw [zsmul_eq_intCast_mul, intCast_add, right_distrib, zsmul_eq_intCast_mul,
+      zsmul_eq_intCast_mul]
+}
 
 private theorem intCast_mul_aux (x y : Nat) : ((x * y : Int) : α) = ((x : α) * (y : α)) := by
   rw [Int.ofNat_mul_ofNat, intCast_natCast, natCast_mul]
@@ -357,9 +372,11 @@ theorem intCast_mul (x y : Int) : ((x * y : Int) : α) = ((x : α) * (y : α)) :
   | (x : Nat), (y : Nat) => by
     rw [intCast_mul_aux, intCast_natCast, intCast_natCast]
   | (x : Nat), (-(y + 1 : Nat)) => by
-    rw [Int.mul_neg, intCast_neg, intCast_mul_aux, intCast_neg, mul_neg, intCast_natCast, intCast_natCast]
+    rw [Int.mul_neg, intCast_neg, intCast_mul_aux, intCast_neg, mul_neg, intCast_natCast,
+      intCast_natCast]
   | (-(x + 1 : Nat)), (y : Nat) => by
-    rw [Int.neg_mul, intCast_neg, intCast_mul_aux, intCast_neg, neg_mul, intCast_natCast, intCast_natCast]
+    rw [Int.neg_mul, intCast_neg, intCast_mul_aux, intCast_neg, neg_mul, intCast_natCast,
+      intCast_natCast]
   | (-(x + 1 : Nat)), (-(y + 1 : Nat)) => by
     rw [Int.neg_mul_neg, intCast_neg, intCast_neg, neg_mul, mul_neg, neg_neg, intCast_mul_aux,
       intCast_natCast, intCast_natCast]
@@ -368,13 +385,17 @@ theorem intCast_mul_comm (a : Int) (b : α) : a * b = b * a := by
   have : a = a.natAbs ∨ a = -a.natAbs := by exact Int.natAbs_eq a
   cases this
   next h => rw [h, Ring.intCast_natCast, Semiring.natCast_mul_comm]
-  next h => rw [h, Ring.intCast_neg, Ring.intCast_natCast, Ring.mul_neg, Ring.neg_mul, Semiring.natCast_mul_comm]
+  next h =>
+    rw [h, Ring.intCast_neg, Ring.intCast_natCast, Ring.mul_neg, Ring.neg_mul,
+      Semiring.natCast_mul_comm]
 
 theorem intCast_mul_left_comm (a : α) (b : Int) (c : α) : a * (b * c) = b * (a * c) := by
   have : b = b.natAbs ∨ b = -b.natAbs := by exact Int.natAbs_eq b
   cases this
   next h => rw [h, Ring.intCast_natCast, Semiring.natCast_mul_left_comm]
-  next h => rw [h, Ring.intCast_neg, Ring.intCast_natCast, Ring.neg_mul, Ring.neg_mul, Ring.mul_neg, Semiring.natCast_mul_left_comm]
+  next h =>
+    rw [h, Ring.intCast_neg, Ring.intCast_natCast, Ring.neg_mul, Ring.neg_mul, Ring.mul_neg,
+      Semiring.natCast_mul_left_comm]
 
 theorem intCast_pow (x : Int) (k : Nat) : ((x ^ k : Int) : α) = (x : α) ^ k := by
   induction k
@@ -395,7 +416,7 @@ variable {α : Type u} [CommSemiring α]
 theorem mul_left_comm (a b c : α) : a * (b * c) = b * (a * c) := by
   rw [← mul_assoc, ← mul_assoc, mul_comm a]
 
-theorem mul_pow (a b : α) (n : Nat) : (a*b)^n = a^n * b^n := by
+theorem mul_pow (a b : α) (n : Nat) : (a * b) ^ n = a ^ n * b ^ n := by
   induction n
   next => simp [pow_zero, mul_one]
   next n ih => simp [pow_succ, ih, mul_comm, mul_assoc, mul_left_comm]
@@ -415,7 +436,9 @@ In the case of a semiring, we take the stronger condition that
 `OfNat.ofNat x = OfNat.ofNat y` iff `x % p = y % p`.
 -/
 class IsCharP (α : Type u) [Semiring α] (p : outParam Nat) where
-  /-- Two numerals in a semiring are equal iff they are congruent module `p` in the natural numbers. -/
+  /--
+  Two numerals in a semiring are equal iff they are congruent module `p` in the natural numbers.
+  -/
   ofNat_ext_iff (p) : ∀ {x y : Nat}, OfNat.ofNat (α := α) x = OfNat.ofNat (α := α) y ↔ x % p = y % p
 
 namespace IsCharP
@@ -424,18 +447,19 @@ section
 
 variable (p) [Semiring α] [IsCharP α p]
 
-theorem ofNat_eq_zero_iff  (x : Nat) :
-    OfNat.ofNat (α := α) x = 0 ↔ x % p = 0 := by
+theorem ofNat_eq_zero_iff (x : Nat) : OfNat.ofNat (α := α) x = 0 ↔ x % p = 0 := by
   rw [ofNat_ext_iff p]
   simp
 
-theorem ofNat_ext {x y : Nat} (h : x % p = y % p) : OfNat.ofNat (α := α) x = OfNat.ofNat (α := α) y := (ofNat_ext_iff p).mpr h
+theorem ofNat_ext {x y : Nat} (h : x % p = y % p)
+    : OfNat.ofNat (α := α) x = OfNat.ofNat (α := α) y :=
+  (ofNat_ext_iff p).mpr h
 
 theorem ofNat_eq_zero_iff_of_lt {x : Nat} (h : x < p) : OfNat.ofNat (α := α) x = 0 ↔ x = 0 := by
   rw [ofNat_eq_zero_iff p, Nat.mod_eq_of_lt h]
 
-theorem ofNat_eq_iff_of_lt {x y : Nat} (h₁ : x < p) (h₂ : y < p) :
-    OfNat.ofNat (α := α) x = OfNat.ofNat (α := α) y ↔ x = y := by
+theorem ofNat_eq_iff_of_lt {x y : Nat} (h₁ : x < p) (h₂ : y < p)
+    : OfNat.ofNat (α := α) x = OfNat.ofNat (α := α) y ↔ x = y := by
   rw [ofNat_ext_iff p, Nat.mod_eq_of_lt h₁, Nat.mod_eq_of_lt h₂]
 
 end
@@ -468,8 +492,7 @@ theorem ofNat_emod (x : Nat) : OfNat.ofNat (α := α) (x % p) = OfNat.ofNat x :=
 theorem natCast_eq_zero_iff_of_lt {x : Nat} (h : x < p) : (x : α) = 0 ↔ x = 0 := by
   rw [natCast_eq_zero_iff p, Nat.mod_eq_of_lt h]
 
-theorem natCast_eq_iff_of_lt {x y : Nat} (h₁ : x < p) (h₂ : y < p) :
-    (x : α) = (y : α) ↔ x = y := by
+theorem natCast_eq_iff_of_lt {x y : Nat} (h₁ : x < p) (h₂ : y < p) : (x : α) = (y : α) ↔ x = y := by
   rw [natCast_ext_iff p, Nat.mod_eq_of_lt h₁, Nat.mod_eq_of_lt h₂]
 
 end Semiring
@@ -478,10 +501,10 @@ section Ring
 
 open AddCommMonoid AddCommGroup
 
-variable (p)  {α : Type u} [Ring α] [IsCharP α p]
+variable (p) {α : Type u} [Ring α] [IsCharP α p]
 
-private theorem mk'_aux {x y : Nat} (p : Nat) (h : y ≤ x) :
-    (x - y) % p = 0 ↔ ∃ k₁ k₂, x + k₁ * p = y + k₂ * p := by
+private theorem mk'_aux {x y : Nat} (p : Nat) (h : y ≤ x)
+    : (x - y) % p = 0 ↔ ∃ k₁ k₂, x + k₁ * p = y + k₂ * p := by
   rw [Nat.mod_eq_iff]
   by_cases h : p = 0
   · simp [h]
@@ -503,8 +526,11 @@ private theorem mk'_aux {x y : Nat} (p : Nat) (h : y ≤ x) :
 set_option linter.defProp false in
 /-- Alternative constructor when `α` is a `Ring`. -/
 @[instance_reducible]
-def mk' (p : Nat) (α : Type u) [Ring α]
-    (ofNat_eq_zero_iff : ∀ (x : Nat), OfNat.ofNat (α := α) x = 0 ↔ x % p = 0) : IsCharP α p where
+def mk'
+    (p : Nat)
+    (α : Type u) [Ring α]
+    (ofNat_eq_zero_iff : ∀ (x : Nat), OfNat.ofNat (α := α) x = 0 ↔ x % p = 0)
+    : IsCharP α p where
   ofNat_ext_iff {x y} := by
     rw [← sub_eq_zero_iff]
     rw [Nat.mod_eq_mod_iff]
@@ -512,7 +538,8 @@ def mk' (p : Nat) (α : Type u) [Ring α]
     · have : OfNat.ofNat (α := α) x - OfNat.ofNat y = OfNat.ofNat (x - y) := by rw [ofNat_sub h]
       rw [this, ofNat_eq_zero_iff]
       apply mk'_aux _ h
-    · have : OfNat.ofNat (α := α) x - OfNat.ofNat (α := α) y = - OfNat.ofNat (y - x) := by rw [neg_ofNat_sub (by omega)]
+    · have : OfNat.ofNat (α := α) x - OfNat.ofNat (α := α) y = - OfNat.ofNat (y - x) := by
+        rw [neg_ofNat_sub (by omega)]
       rw [this, neg_eq_zero, ofNat_eq_zero_iff]
       rw [mk'_aux _ (by omega)]
       rw [exists_comm]
@@ -534,12 +561,10 @@ theorem intCast_eq_zero_iff (x : Int) : (x : α) = 0 ↔ x % p = 0 :=
     rw [ofNat_eq_natCast] at this
     rw [this]
     simp only [Int.ofNat_dvd]
-    simp only [← Nat.dvd_iff_mod_eq_zero, Int.natAbs_natCast,
-      ite_eq_left_iff]
+    simp only [← Nat.dvd_iff_mod_eq_zero, Int.natAbs_natCast, ite_eq_left_iff]
     by_cases h : p ∣ x + 1
     · simp [h]
-    · simp only [h, not_false_eq_true,
-        forall_const, false_iff, ne_eq]
+    · simp only [h, not_false_eq_true, forall_const, false_iff, ne_eq]
       by_cases w : p = 0
       · simp [w]
         omega
@@ -555,8 +580,8 @@ theorem intCast_ext_iff {x y : Int} : (x : α) = (y : α) ↔ x % p = y % p := b
     have : ((x - y : Int) : α) = 0 :=
       (intCast_eq_zero_iff p _).mpr (by rw [Int.sub_emod, h, Int.sub_self, Int.zero_emod])
     replace this := congrArg (· + (y : α)) this
-    simpa [intCast_sub, zero_add, AddCommGroup.sub_eq_add_neg, add_assoc,
-      neg_add_cancel, add_zero] using this
+    simpa [intCast_sub, zero_add, AddCommGroup.sub_eq_add_neg, add_assoc, neg_add_cancel, add_zero]
+      using this
 
 theorem intCast_emod (x : Int) : ((x % p : Int) : α) = (x : α) := by
   rw [intCast_ext_iff p, Int.emod_emod]
@@ -598,7 +623,7 @@ theorem no_int_zero_divisors {α : Type u} [IntModule α] [NoNatZeroDivisors α]
     replace h₁ : k ≠ 0 := by intro h; simp [h] at h₁
     rw [IntModule.zsmul_natCast_eq_nsmul] at h₂
     exact NoNatZeroDivisors.eq_zero_of_mul_eq_zero h₁ h₂
-  | -(k+1 : Nat) =>
+  | -(k + 1 : Nat) =>
     rw [IntModule.neg_zsmul]
     intro _ h
     replace h := congrArg (-·) h

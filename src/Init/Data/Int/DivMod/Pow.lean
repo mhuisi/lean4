@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kim Morrison
 -/
 module
+
 prelude
 public import Init.Data.Int.DivMod.Basic
 import Init.ByCases
@@ -23,17 +24,16 @@ public theorem dvd_pow {a b : Int} {n : Nat} (hab : b ∣ a) : b ^ n ∣ a ^ n :
   rw [Int.mul_pow]
   exact Int.dvd_mul_right (b ^ n) (c ^ n)
 
-public theorem ediv_pow {a b : Int} {n : Nat} (hab : b ∣ a) :
-    (a / b) ^ n = a ^ n / b ^ n := by
+public theorem ediv_pow {a b : Int} {n : Nat} (hab : b ∣ a) : (a / b) ^ n = a ^ n / b ^ n := by
   obtain ⟨c, rfl⟩ := hab
   by_cases b = 0
   · by_cases n = 0 <;> simp [*, Int.zero_pow]
   · simp [Int.mul_pow, Int.pow_ne_zero, *]
 
-public theorem tdiv_pow {a b : Int} {n : Nat} (hab : b ∣ a) :
-    (a.tdiv b) ^ n = (a ^ n).tdiv (b ^ n) := by
+public theorem tdiv_pow {a b : Int} {n : Nat} (hab : b ∣ a)
+    : (a.tdiv b) ^ n = (a ^ n).tdiv (b ^ n) := by
   rw [Int.tdiv_eq_ediv_of_dvd hab, ediv_pow hab, Int.tdiv_eq_ediv_of_dvd (dvd_pow hab)]
 
-public theorem fdiv_pow {a b : Int} {n : Nat} (hab : b ∣ a) :
-    (a.fdiv b) ^ n = (a ^ n).fdiv (b ^ n) := by
+public theorem fdiv_pow {a b : Int} {n : Nat} (hab : b ∣ a)
+    : (a.fdiv b) ^ n = (a ^ n).fdiv (b ^ n) := by
   rw [Int.fdiv_eq_ediv_of_dvd hab, ediv_pow hab, Int.fdiv_eq_ediv_of_dvd (dvd_pow hab)]

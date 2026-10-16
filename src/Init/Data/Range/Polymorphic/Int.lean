@@ -23,8 +23,8 @@ instance : LawfulUpwardEnumerable Int where
     omega
   succMany?_zero := by simp [UpwardEnumerable.succMany?]
   succMany?_add_one := by
-    simp only [UpwardEnumerable.succMany?, UpwardEnumerable.succ?,
-      Option.bind_some, Option.some.injEq]
+    simp only [UpwardEnumerable.succMany?, UpwardEnumerable.succ?, Option.bind_some,
+      Option.some.injEq]
     omega
 
 instance : InfinitelyUpwardEnumerable Int where
@@ -44,9 +44,7 @@ instance : Rxc.LawfulHasSize Int where
   size_eq_zero_of_not_le lo hi := by
     simp only [Rxc.HasSize.size]
     omega
-  size_eq_one_of_succ?_eq_none lo hi := by
-    simp [Rxc.HasSize.size, UpwardEnumerable.succ?]
-
+  size_eq_one_of_succ?_eq_none lo hi := by simp [Rxc.HasSize.size, UpwardEnumerable.succ?]
   size_eq_succ_of_succ?_eq_some bound init x := by
     simp only [UpwardEnumerable.succ?, Rxc.HasSize.size, Option.some.injEq]
     omega

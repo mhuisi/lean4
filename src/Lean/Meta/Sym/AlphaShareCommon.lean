@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.ExprPtr
 public import Lean.Environment
@@ -15,42 +16,51 @@ namespace Lean.Meta.Sym
 
 private def hashChild (e : Expr) : UInt64 :=
   match e with
-  | .bvar .. | .mvar .. | .const .. | .fvar .. | .sort .. | .lit .. =>
-    hash e
-  | .app .. | .letE .. | .forallE .. | .lam .. | .mdata .. | .proj .. =>
-    hashPtrExpr e
+  | .bvar .. | .mvar .. | .const .. | .fvar .. | .sort .. | .lit .. => hash e
+  | .app .. | .letE .. | .forallE .. | .lam .. | .mdata .. | .proj .. => hashPtrExpr e
 
 private def alphaHash (e : Expr) : UInt64 :=
   match e with
   | .bvar .. | .mvar .. | .const .. | .fvar .. | .sort .. | .lit .. =>
     hash e
-  | .app f a => mixHash (hashChild f) (hashChild a)
-  | .letE _ _ v b nondep => mixHash (if nondep then 17 else 19) (mixHash (hashChild v) (hashChild b))
-  | .forallE _ d b _ | .lam _ d b _ => mixHash (hashChild d) (hashChild b)
-  | .mdata _ b => mixHash 13 (hashChild b)
-  | .proj n i b => mixHash (mixHash (hash n) (hash i)) (hashChild b)
+  | .app f a =>
+    mixHash (hashChild f) (hashChild a)
+  | .letE _ _ v b nondep =>
+    mixHash (if nondep then 17 else 19) (mixHash (hashChild v) (hashChild b))
+  | .forallE _ d b _ | .lam _ d b _ =>
+    mixHash (hashChild d) (hashChild b)
+  | .mdata _ b =>
+    mixHash 13 (hashChild b)
+  | .proj n i b =>
+    mixHash (mixHash (hash n) (hash i)) (hashChild b)
 
 private def alphaEq (e₁ e₂ : Expr) : Bool := Id.run do
   match e₁ with
   | .bvar .. | .mvar .. | .const .. | .fvar .. | .sort .. | .lit .. =>
     e₁ == e₂
   | .app f₁ a₁ =>
-    let .app f₂ a₂ := e₂ | false
+    let .app f₂ a₂ := e₂
+      | false
     isSameExpr f₁ f₂ && isSameExpr a₁ a₂
   | .letE _ _ v₁ b₁ nondep₁ =>
-    let .letE _ _ v₂ b₂ nondep₂ := e₂ | false
+    let .letE _ _ v₂ b₂ nondep₂ := e₂
+      | false
     nondep₁ == nondep₂ && isSameExpr v₁ v₂ && isSameExpr b₁ b₂
   | .forallE _ d₁ b₁ _ =>
-    let .forallE _ d₂ b₂ _ := e₂ | false
+    let .forallE _ d₂ b₂ _ := e₂
+      | false
     isSameExpr d₁ d₂ && isSameExpr b₁ b₂
   | .lam _ d₁ b₁ _ =>
-    let .lam _ d₂ b₂ _ := e₂ | false
+    let .lam _ d₂ b₂ _ := e₂
+      | false
     isSameExpr d₁ d₂ && isSameExpr b₁ b₂
   | .mdata d₁ b₁ =>
-    let .mdata d₂ b₂ := e₂ | false
+    let .mdata d₂ b₂ := e₂
+      | false
     return isSameExpr b₁ b₂ && d₁ == d₂
   | .proj n₁ i₁ b₁ =>
-    let .proj n₂ i₂ b₂ := e₂ | false
+    let .proj n₂ i₂ b₂ := e₂
+      | false
     n₁ == n₂ && i₁ == i₂ && isSameExpr b₁ b₂
 
 /--
@@ -60,7 +70,8 @@ are `abbrev`s, but they are gadgets that must survive until the corresponding
 propagators consume them.
 -/
 def isGrindGadget (declName : Name) : Bool :=
-  declName == ``Grind.EqMatch || declName == ``Grind.MatchCond || declName == ``Grind.nestedDecidable
+  declName == ``Grind.EqMatch || declName == ``Grind.MatchCond
+    || declName == ``Grind.nestedDecidable
 
 /--
 Returns `true` if `declName` is a reducible constant that the `unfoldReducible`
@@ -71,8 +82,8 @@ unfolding them produces kernel projections, which the `foldProjs` preprocessing
 step folds back into projection function applications.
 -/
 def isUnfoldReducibleCandidate (env : Environment) (declName : Name) : Bool :=
-  getReducibilityStatusCore env declName matches .reducible
-    && !isGrindGadget declName && !env.isProjectionFn declName
+  getReducibilityStatusCore env declName matches .reducible && ! isGrindGadget declName
+    && ! env.isProjectionFn declName
 
 structure AlphaKey where
   expr : Expr
@@ -127,7 +138,8 @@ repairing the input term. The error value is the `Cache` accumulated before the
 failure (empty for `shareCommonAlphaInc`, which does not use one); the retry can
 be seeded with it to avoid revisiting the subterms processed before the failure.
 -/
-abbrev AlphaShareCommonM := ReaderT AlphaShareCommon.Context (EStateM AlphaShareCommon.Cache AlphaShareCommon.State)
+abbrev AlphaShareCommonM :=
+  ReaderT AlphaShareCommon.Context (EStateM AlphaShareCommon.Cache AlphaShareCommon.State)
 
 /--
 Returns `true` if `ctx.checkReducible` is true and `declName` is reducible declaration that
@@ -142,7 +154,7 @@ private structure State where
 
 private abbrev M := ReaderT AlphaShareCommon.Context (EStateM Unit State)
 
-private def dummy : AlphaKey := { expr := mkConst `__dummy__}
+private def dummy : AlphaKey := { expr := mkConst `__dummy__ }
 
 private def save (e : Expr) (r : Expr) : M Expr := do
   let prev := (← get).set.findD { expr := r } dummy
@@ -155,10 +167,7 @@ private def save (e : Expr) (r : Expr) : M Expr := do
     return r
   else
     let r := prev.expr
-    modify fun { set, map } => {
-      set
-      map := map.insert { expr := e } r
-    }
+    modify fun { set, map } => { set, map := map.insert { expr := e } r }
     return r
 
 private abbrev visit (e : Expr) (k : M Expr) : M Expr := do
@@ -169,16 +178,16 @@ private abbrev visit (e : Expr) (k : M Expr) : M Expr := do
   if let some r := (← get).map[{ expr := e : ExprPtr }]? then
     return r
   else
-  /-
-  **Note**: The input may contain sub-expressions that have already been processed and are
-  already maximally shared.
-  -/
-  let prev := (← get).set.findD { expr := e } dummy
-  if isSameExpr prev.expr dummy.expr then
-    -- `e` has not been hash-consed before
-    save e (← k)
-  else
-    return prev.expr
+    /-
+    **Note**: The input may contain sub-expressions that have already been processed and are
+    already maximally shared.
+    -/
+    let prev := (← get).set.findD { expr := e } dummy
+    if isSameExpr prev.expr dummy.expr then
+      -- `e` has not been hash-consed before
+      save e (← k)
+    else
+      return prev.expr
 
 private def go (e : Expr) : M Expr := do
   match e with
@@ -195,12 +204,18 @@ private def go (e : Expr) : M Expr := do
       if isReducible (← read) declName then throw ()
       modify fun { set, map } => { set := set.insert { expr := e }, map }
       return e
-  | .app f a => visit e (return e.updateApp! (← go f) (← go a))
-  | .letE _ t v b _ => visit e (return e.updateLetE! (← go t) (← go v) (← go b))
-  | .forallE _ d b _ => visit e (return e.updateForallE! (← go d) (← go b))
-  | .lam _ d b _ => visit e (return e.updateLambdaE! (← go d) (← go b))
-  | .mdata _ b => visit e (return e.updateMData! (← go b))
-  | .proj _ _ b => visit e do
+  | .app f a =>
+    visit e (return e.updateApp! (← go f) (← go a))
+  | .letE _ t v b _ =>
+    visit e (return e.updateLetE! (← go t) (← go v) (← go b))
+  | .forallE _ d b _ =>
+    visit e (return e.updateForallE! (← go d) (← go b))
+  | .lam _ d b _ =>
+    visit e (return e.updateLambdaE! (← go d) (← go b))
+  | .mdata _ b =>
+    visit e (return e.updateMData! (← go b))
+  | .proj _ _ b =>
+    visit e do
       if (← read).checkProj then throw ()
       return e.updateProj! (← go b)
 
@@ -211,7 +226,9 @@ Similar to `shareCommon`, but handles alpha-equivalence.
 (see `AlphaShareCommonM`); seeding the retry with it avoids revisiting the subterms
 that were processed before the failure.
 -/
-@[inline] def shareCommonAlpha (e : Expr) (cache : AlphaShareCommon.Cache := {}) : AlphaShareCommonM Expr := fun ctx s =>
+@[inline]
+def shareCommonAlpha (e : Expr) (cache : AlphaShareCommon.Cache := {})
+    : AlphaShareCommonM Expr := fun ctx s =>
   if let some r := s.set.find? { expr := e } then
     .ok r.expr s
   else
@@ -231,7 +248,8 @@ private def saveInc (e : Expr) : AlphaShareCommonM Expr := do
   else
     return prev.expr
 
-@[inline] private def visitInc (e : Expr) (k : AlphaShareCommonM Expr) : AlphaShareCommonM Expr := do
+@[inline]
+private def visitInc (e : Expr) (k : AlphaShareCommonM Expr) : AlphaShareCommonM Expr := do
   let prev := (← get).set.findD { expr := e } dummy
   if isSameExpr prev.expr dummy.expr then
     -- `e` has now been cached before
@@ -259,30 +277,37 @@ let result := mkApp2 f a b  -- result is not maximally shared
 let result ← shareCommonAlphaInc result -- efficiently restore sharing
 ```
 -/
-@[inline] def shareCommonAlphaInc (e : Expr) : AlphaShareCommonM Expr :=
-  go e
+@[inline]
+def shareCommonAlphaInc (e : Expr) : AlphaShareCommonM Expr := go e
 where
   go (e : Expr) : AlphaShareCommonM Expr := do
-  match e with
-  | .bvar .. | .mvar .. | .fvar .. | .sort .. | .lit .. => saveInc e
-  | .const declName _ =>
-    let prev := (← get).set.findD { expr := e } dummy
-    if isSameExpr prev.expr dummy.expr then
-      -- `e` is new. The check runs only here: set membership certifies that a
-      -- term was admitted before, and re-checking admitted terms would repeat
-      -- the repair on every call when the term was admitted with residual dirt.
-      if isReducible (← read) declName then throw {}
-      modify fun { set := set } => { set := set.insert { expr := e } }
-      return e
-    else
-      return prev.expr
-  | .app f a => visitInc e (return e.updateApp! (← go f) (← go a))
-  | .letE _ t v b _ => visitInc e (return e.updateLetE! (← go t) (← go v) (← go b))
-  | .forallE _ d b _ => visitInc e (return e.updateForallE! (← go d) (← go b))
-  | .lam _ d b _ => visitInc e (return e.updateLambdaE! (← go d) (← go b))
-  | .mdata _ b => visitInc e (return e.updateMData! (← go b))
-  | .proj _ _ b => visitInc e do
-      if (← read).checkProj then throw {}
-      return e.updateProj! (← go b)
+    match e with
+    | .bvar .. | .mvar .. | .fvar .. | .sort .. | .lit .. =>
+      saveInc e
+    | .const declName _ =>
+      let prev := (← get).set.findD { expr := e } dummy
+      if isSameExpr prev.expr dummy.expr then
+        -- `e` is new. The check runs only here: set membership certifies that a
+        -- term was admitted before, and re-checking admitted terms would repeat
+        -- the repair on every call when the term was admitted with residual dirt.
+        if isReducible (← read) declName then throw {}
+        modify fun { set := set } => { set := set.insert { expr := e } }
+        return e
+      else
+        return prev.expr
+    | .app f a =>
+      visitInc e (return e.updateApp! (← go f) (← go a))
+    | .letE _ t v b _ =>
+      visitInc e (return e.updateLetE! (← go t) (← go v) (← go b))
+    | .forallE _ d b _ =>
+      visitInc e (return e.updateForallE! (← go d) (← go b))
+    | .lam _ d b _ =>
+      visitInc e (return e.updateLambdaE! (← go d) (← go b))
+    | .mdata _ b =>
+      visitInc e (return e.updateMData! (← go b))
+    | .proj _ _ b =>
+      visitInc e do
+        if (← read).checkProj then throw {}
+        return e.updateProj! (← go b)
 
 end Lean.Meta.Sym

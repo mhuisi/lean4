@@ -18,20 +18,12 @@ set_option linter.all true
 
 namespace TimeZone
 
-/--
-Represents a timezone offset as a total number of seconds from UTC.
--/
+/-- Represents a timezone offset as a total number of seconds from UTC. -/
 @[ext]
 structure Offset where
-
-  /--
-  Creates an `Offset` from a given number of seconds.
-  -/
+  /-- Creates an `Offset` from a given number of seconds. -/
   ofSeconds ::
-
-  /--
-  The same timezone offset in seconds.
-  -/
+  /-- The same timezone offset in seconds. -/
   second : Second.Offset
 deriving Repr, DecidableEq
 
@@ -41,8 +33,7 @@ instance : Inhabited Offset where
 instance : Ord Offset where
   compare := compareOn (·.second)
 
-theorem Offset.compare_def :
-    compare (α := Offset) = compareOn (·.second) := rfl
+theorem Offset.compare_def : compare (α := Offset) = compareOn (·.second) := rfl
 
 instance : TransOrd Offset := inferInstanceAs <| TransCmp (compareOn _)
 
@@ -64,24 +55,18 @@ def toIsoString (offset : Offset) (colon : Bool) : String :=
   let minute := Int.ediv (Int.tmod time.val 3600) 60
   let hourStr := if hour.val < 10 then s!"0{hour.val}" else toString hour.val
   let minuteStr := if minute < 10 then s!"0{minute}" else toString minute
-    if colon then s!"{sign}{hourStr}:{minuteStr}"
-    else s!"{sign}{hourStr}{minuteStr}"
+  if colon then
+    s!"{sign}{hourStr}:{minuteStr}"
+  else
+    s!"{sign}{hourStr}{minuteStr}"
 
-/--
-A zero `Offset` representing UTC (no offset).
--/
-def zero : Offset :=
-  { second := 0 }
+/-- A zero `Offset` representing UTC (no offset). -/
+def zero : Offset := { second := 0 }
 
-/--
-Creates an `Offset` from a given number of hour.
--/
-def ofHours (n : Hour.Offset) : Offset :=
-  ofSeconds n.toSeconds
+/-- Creates an `Offset` from a given number of hour. -/
+def ofHours (n : Hour.Offset) : Offset := ofSeconds n.toSeconds
 
-/--
-Creates an `Offset` from a given number of hours and minutes.
--/
+/-- Creates an `Offset` from a given number of hours and minutes. -/
 def ofHoursAndMinutes (n : Hour.Offset) (m : Minute.Offset) : Offset :=
   ofSeconds (n.toSeconds + m.toSeconds)
 
@@ -92,59 +77,36 @@ A TimeZone structure that stores the timezone offset, the name, abbreviation and
 saving time.
 -/
 structure TimeZone where
-
-  /--
-  The `Offset` of the date time.
-  -/
+  /-- The `Offset` of the date time. -/
   offset : TimeZone.Offset
-
-  /--
-  The name of the time zone.
-  -/
+  /-- The name of the time zone. -/
   name : String
-
-  /--
-  The abbreviation of the time zone.
-  -/
+  /-- The abbreviation of the time zone. -/
   abbreviation : String
-
-  /--
-  Day light saving flag.
-  -/
+  /-- Day light saving flag. -/
   isDST : Bool
 deriving Inhabited, Repr, DecidableEq
 
 namespace TimeZone
 
-/--
-A zeroed `Timezone` representing UTC (no offset).
--/
-def UTC : TimeZone :=
-  TimeZone.mk (Offset.zero) "UTC" "UTC" false
+/-- A zeroed `Timezone` representing UTC (no offset). -/
+def UTC : TimeZone := TimeZone.mk (Offset.zero) "UTC" "UTC" false
 
-/--
-A zeroed `Timezone` representing GMT (no offset).
--/
-def GMT : TimeZone :=
-  TimeZone.mk (Offset.zero) "Greenwich Mean Time" "GMT" false
+/-- A zeroed `Timezone` representing GMT (no offset). -/
+def GMT : TimeZone := TimeZone.mk (Offset.zero) "Greenwich Mean Time" "GMT" false
 
-/--
-Creates a `Timestamp` from a given number of hour.
--/
-def ofHours (name : String) (abbreviation : String) (n : Hour.Offset) (isDST : Bool := false) : TimeZone :=
+/-- Creates a `Timestamp` from a given number of hour. -/
+def ofHours (name : String) (abbreviation : String) (n : Hour.Offset) (isDST : Bool := false)
+    : TimeZone :=
   TimeZone.mk (Offset.ofHours n) name abbreviation isDST
 
-/--
-Creates a `Timestamp` from a given number of second.
--/
-def ofSeconds (name : String) (abbreviation : String) (n : Second.Offset) (isDST : Bool := false) : TimeZone :=
+/-- Creates a `Timestamp` from a given number of second. -/
+def ofSeconds (name : String) (abbreviation : String) (n : Second.Offset) (isDST : Bool := false)
+    : TimeZone :=
   TimeZone.mk (Offset.ofSeconds n) name abbreviation isDST
 
-/--
-Gets the number of seconds in a timezone offset.
--/
-def toSeconds (tz : TimeZone) : Second.Offset :=
-  tz.offset.second
+/-- Gets the number of seconds in a timezone offset. -/
+def toSeconds (tz : TimeZone) : Second.Offset := tz.offset.second
 
 end TimeZone
 

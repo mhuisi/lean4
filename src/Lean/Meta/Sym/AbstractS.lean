@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.SymM
 import Lean.Meta.Sym.ReplaceS
@@ -11,12 +12,12 @@ import Init.Omega
 namespace Lean.Meta.Sym
 open Lean.Meta.Sym.Internal
 
-/--
-Helper function for implementing `abstractFVars` (and possible variants in the future).
--/
-@[inline] def abstractFVarsCore (e : Expr) (lctx : LocalContext)
-    (maxFVar : PHashMap ExprPtr (Option FVarId))
-    (minFVarId : FVarId) (toDeBruijn? : FVarId → Option Nat) : AlphaShareBuilderM Expr := do
+/-- Helper function for implementing `abstractFVars` (and possible variants in the future). -/
+@[inline]
+def abstractFVarsCore
+    (e : Expr) (lctx : LocalContext) (maxFVar : PHashMap ExprPtr (Option FVarId))
+    (minFVarId : FVarId) (toDeBruijn? : FVarId → Option Nat)
+    : AlphaShareBuilderM Expr := do
   let minIndex := (lctx.find? minFVarId).get!.index
   replaceS' e fun e offset => do
     match e with
@@ -108,8 +109,7 @@ Abstracts free variables `xs` in expression `e`, converting them to de Bruijn in
 
 It is an abbreviation for `abstractFVarsRange e 0 xs`.
 -/
-public abbrev abstractFVars (e : Expr) (xs : Array Expr) : SymM Expr := do
-  abstractFVarsRange e 0 xs
+public abbrev abstractFVars (e : Expr) (xs : Array Expr) : SymM Expr := do abstractFVarsRange e 0 xs
 
 /--
 Similar to `mkLambdaFVars`, but uses the more efficient `abstractFVars` and `abstractFVarsPrefix`,
