@@ -86,9 +86,13 @@ public def fmtArrayLit (lbTk : Syntax) (elems : Syntax.TSepArray ks ",") (rbTk :
     if !elem.needsAppBrackets then
       return Layouts.bracketed lbTk elem rbTk .dense
   let groups :=
-    groups.map fun
-      | .group g => Layouts.sepArray g <| .fillUsingSpacedSep none .retainTrailingSep
-      | .trailing t => t
+    groups.mapIdx fun
+      | i, .group g =>
+        if i == groups.size - 1 then
+          Layouts.sepArray g <| .fillUsingSpacedSep none .excludeTrailingSep
+        else
+          Layouts.sepArray g <| .fillUsingSpacedSep none .retainTrailingSep
+      | _, .trailing t => t
   let elems := join groups
   return Layouts.bracketed lbTk elems rbTk <| .sparse «break» (stickynessKind := .coequal)
 
