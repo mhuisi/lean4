@@ -201,6 +201,7 @@ def PendingComment.finalize (p : PendingComment) : Comment :=
     originalWhitespaceRange := ⟨p.startPos, p.endPos⟩
     originalWhitespaceKind := p.originalWhitespaceKind
     content
+    emptyLineBefore := p.emptyLineBefore
   }
 
 /--
@@ -382,9 +383,11 @@ where
     let mut grouped := #[]
     let mut group := comments[0]!
     for c in comments[1:] do
-      if ! isGroupable newlinePositions group c then
+      let emptyLineBefore := hasEmptyLineBetween newlinePositions group c
+      -- An empty line between `group` and `c` splits the group.
+      if emptyLineBefore || ! isGroupable group c then
         grouped := grouped.push group
-        group := c
+        group := { c with emptyLineBefore }
         continue
       group := {
         kind := .lineComment
@@ -394,6 +397,7 @@ where
           ⟨group.originalWhitespaceRange.start, c.originalWhitespaceRange.stop⟩
         originalWhitespaceKind := group.originalWhitespaceKind
         content := #[]
+        emptyLineBefore := group.emptyLineBefore
         -- This is strictly speaking not a proper `raw` representation for the entire group,
         -- since it does not contain the whitespace in-between `group` and `c`,
         -- but this is not a problem since `PendingComment.finalize` can handle this disparity.
@@ -405,8 +409,7 @@ where
     grouped := grouped.push group
     return grouped
 
-  isGroupable (newlinePositions : Array String.Pos.Raw) (group c : PendingComment)
-      : Bool := Id.run do
+  isGroupable (group c : PendingComment) : Bool := Id.run do
     let isGroupableKind := group.kind matches .lineComment && c.kind matches .lineComment
     if !isGroupableKind then
       return false
@@ -421,18 +424,18 @@ where
       | .afterToken, .onLineBeforeToken
       | .onLineBeforeToken, .afterToken =>
         false
-    if !isGroupablePlacement then
+    return isGroupablePlacement
+
+  hasEmptyLineBetween (newlinePositions : Array String.Pos.Raw) (prev c : PendingComment)
+      : Bool := Id.run do
+    let some (i, _) := binSearchRightmost newlinePositions c.startPos id (· < ·)
+      | return false
+    if i == 0 then
       return false
-    let newlineBeforeC? := binSearchRightmost newlinePositions c.startPos id (· < ·)
-    let isGroupableAdjacency :=
-      if let some (_, newlineBeforeC) := newlineBeforeC? then
-        -- There is an empty line between `group` and `c`, which splits the group.
-        newlineBeforeC < group.endPos
-      else
-        true
-    if !isGroupableAdjacency then
-      return false
-    return true
+    -- The line before the line of `c` is empty if it starts after `prev`, which includes the
+    -- newline that terminates `prev` if it is a line comment.
+    let lineBeforeCStartPos := newlinePositions[i - 1]! + '\n'
+    return prev.endPos ≤ lineBeforeCStartPos
 
 /-- The comments in the leading whitespace of the first token of `stx`. -/
 public def CommentCollector.Context.leadingComments (ctx : Context) (stx : Syntax)
@@ -611,6 +614,19 @@ def placement (c : Comment) : Comment.RenderedPlacementKind :=
     else
       .afterToken
 
+/--
+Whether `next` follows `prev` in the same whitespace of the input with an empty line between them,
+and both are placed on lines of their own before the token after them. When `next` is rendered on
+the line directly after `prev`, the two are then separated by one empty line.
+-/
+def isSeparatedByEmptyLine (prev next : Comment) : Bool :=
+  prev.placement matches .onLineBeforeToken
+    && next.placement matches .onLineBeforeToken
+    && next.emptyLineBefore
+    && prev.originalTokenRange == next.originalTokenRange
+    && prev.originalWhitespaceKind == next.originalWhitespaceKind
+    && prev.originalWhitespaceRange.stop ≤ next.originalWhitespaceRange.start
+
 public structure tryInsertingComments.State where
   comments : Std.HashMap TagId (Syntax.Range × Array Comment)
   cache : Std.HashMap (PtrKey (Doc FmtCost)) tryInsertingComments.Result
@@ -686,6 +702,7 @@ where
       : StateM tryInsertingComments.State (Doc FmtCost) := do
     let penalty := 999999 -- All fallbacks in the document should take priority.
     let mut result := anchor
+    let mut next? : Option Comment := none
     for c in cs.reverse do
       match placement c with
       | .afterClosestPreviousNewline =>
@@ -693,7 +710,8 @@ where
         let docs := renderings.map (Doc.initial <| renderingToDoc ·)
         let docs ← docs.mapM (tag · c)
         let doc := .oneOf docs
-        let doc := .aligned <| Doc.free (doc ++ .hardNl) ++ result
+        let sep := if next?.any (isSeparatedByEmptyLine c) then .hardNl ++ .hardNl else .hardNl
+        let doc := .aligned <| Doc.free (doc ++ sep) ++ result
         result :=
           .oneOf #[
             doc,
@@ -726,6 +744,7 @@ where
             afterLineDoc,
             Doc.costing (DefaultCost.ofFailureFallbackPenalty penalty) result
           ]
+      next? := c
     return result
   goMemoized (v : Doc FmtCost) : StateM tryInsertingComments.State tryInsertingComments.Result := do
     let cacheKey := unsafe PtrKey.ofKey v
@@ -963,6 +982,8 @@ def determineCommentInsertions
   let comments := Std.TreeMap.ofArray comments (fun a b => compareSubslicesLargest b a)
 
   let mut r : Std.HashMap rendering.Pos String := ∅
+  -- The comment that the insertion at a line start currently begins with.
+  let mut firstInsertedComments : Std.HashMap rendering.Pos Comment := ∅
   for (range, comments) in comments do
     for c in comments do
       for (rp, i) in c.renderedPlacements.zipIdx do
@@ -972,11 +993,14 @@ def determineCommentInsertions
           let (_, lineInfo) := findLineInfoContaining lineInfos range.startInclusive
           let lineInfo := escapeMultiLineTokens lineInfos renderedMultiLineTokenRanges lineInfo
           let insertionPos := lineInfo.range.startInclusive
-          let insertedComment := rp.rendering.rendered.indent lineInfo.indentation ++ "\n"
+          let mut insertedComment := rp.rendering.rendered.indent lineInfo.indentation ++ "\n"
+          if (firstInsertedComments.get? insertionPos).any (isSeparatedByEmptyLine c) then
+            insertedComment := insertedComment ++ "\n"
           r :=
             r.alter insertionPos fun
               | none => some insertedComment
               | some existingInsertedComment => some <| insertedComment ++ existingInsertedComment
+          firstInsertedComments := firstInsertedComments.insert insertionPos c
         | .beforeClosestNextNewline =>
           let (_, lineInfo) := findLineInfoContaining lineInfos range.endExclusive
           -- The end of the line lies within a token spanning several lines, so appending the

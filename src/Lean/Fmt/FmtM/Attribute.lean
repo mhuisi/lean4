@@ -229,6 +229,11 @@ public structure Comment where
   of the comment relative to the least indented line with content in the comment.
   -/
   content : Array String
+  /--
+  Whether the whitespace in the input `Syntax` has an empty line between this comment and the
+  previous comment in the same whitespace.
+  -/
+  emptyLineBefore : Bool := false
 deriving Inhabited, BEq, Repr
 
 /-- Input that a `CommentCollector` is consulted with. -/
