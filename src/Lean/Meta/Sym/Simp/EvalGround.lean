@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Simp.SimpM
 import Init.Sym.Lemmas
@@ -70,8 +71,10 @@ def skipIfUnchanged (e : Expr) (result : Result) : Result :=
   | .step e' _ _ cd => if isSameExpr e e' then mkRflResultCD cd else result
   | _ => result
 
-abbrev evalUnary [ToExpr β] (toValue? : Expr → Option α) (op : α → β) (a : Expr) : SimpM Result := do
-  let some a := toValue? a | return .rfl
+abbrev evalUnary [ToExpr β] (toValue? : Expr → Option α) (op : α → β) (a : Expr)
+    : SimpM Result := do
+  let some a := toValue? a
+    | return .rfl
   let e ← share <| toExpr (op a)
   return .step e (mkApp2 (mkConst ``Eq.refl [1]) (ToExpr.toTypeExpr (α := β)) e) (done := true)
 
@@ -80,16 +83,20 @@ abbrev evalUnaryNat : (op : Nat → Nat) → (a : Expr) → SimpM Result := eval
 abbrev evalUnaryInt : (op : Int → Int) → (a : Expr) → SimpM Result := evalUnary getIntValue?
 abbrev evalUnaryRat : (op : Rat → Rat) → (a : Expr) → SimpM Result := evalUnary getRatValue?
 abbrev evalUnaryUInt8 : (op : UInt8 → UInt8) → (a : Expr) → SimpM Result := evalUnary getUInt8Value?
-abbrev evalUnaryUInt16 : (op : UInt16 → UInt16) → (a : Expr) → SimpM Result := evalUnary getUInt16Value?
-abbrev evalUnaryUInt32 : (op : UInt32 → UInt32) → (a : Expr) → SimpM Result := evalUnary getUInt32Value?
-abbrev evalUnaryUInt64 : (op : UInt64 → UInt64) → (a : Expr) → SimpM Result := evalUnary getUInt64Value?
+abbrev evalUnaryUInt16 : (op : UInt16 → UInt16) → (a : Expr) → SimpM Result :=
+  evalUnary getUInt16Value?
+abbrev evalUnaryUInt32 : (op : UInt32 → UInt32) → (a : Expr) → SimpM Result :=
+  evalUnary getUInt32Value?
+abbrev evalUnaryUInt64 : (op : UInt64 → UInt64) → (a : Expr) → SimpM Result :=
+  evalUnary getUInt64Value?
 abbrev evalUnaryInt8 : (op : Int8 → Int8) → (a : Expr) → SimpM Result := evalUnary getInt8Value?
 abbrev evalUnaryInt16 : (op : Int16 → Int16) → (a : Expr) → SimpM Result := evalUnary getInt16Value?
 abbrev evalUnaryInt32 : (op : Int32 → Int32) → (a : Expr) → SimpM Result := evalUnary getInt32Value?
 abbrev evalUnaryInt64 : (op : Int64 → Int64) → (a : Expr) → SimpM Result := evalUnary getInt64Value?
 
 abbrev evalUnaryFin' (op : {n : Nat} → Fin n → Fin n) (αExpr : Expr) (a : Expr) : SimpM Result := do
-  let some a := getFinValue? a | return .rfl
+  let some a := getFinValue? a
+    | return .rfl
   let e ← share <| toExpr (op a.val)
   return .step e (mkApp2 (mkConst ``Eq.refl [1]) αExpr e) (done := true)
 
@@ -119,58 +126,86 @@ def mkBitVecLit (a : BitVec n) : EvalM Expr := do
     share <| mkApp3 (mkConst ``OfNat.ofNat [0]) (mkApp (mkConst ``BitVec) nExpr) v
       (mkApp2 (mkConst ``BitVec.instOfNat) nExpr v)
 
-abbrev evalUnaryBitVec' (op : {n : Nat} → BitVec n → BitVec n) (αExpr : Expr) (a : Expr) : EvalM Result := do
-  let some a := getBitVecValue? a | return .rfl
+abbrev evalUnaryBitVec' (op : {n : Nat} → BitVec n → BitVec n) (αExpr : Expr) (a : Expr)
+    : EvalM Result := do
+  let some a := getBitVecValue? a
+    | return .rfl
   let e ← mkBitVecLit (op a.val)
   return .step e (mkApp2 (mkConst ``Eq.refl [1]) αExpr e) (done := true)
 
-abbrev evalBin [ToExpr α] (toValue? : Expr → Option α) (op : α → α → α) (a b : Expr) : SimpM Result := do
-  let some a := toValue? a | return .rfl
-  let some b := toValue? b | return .rfl
+abbrev evalBin [ToExpr α] (toValue? : Expr → Option α) (op : α → α → α) (a b : Expr)
+    : SimpM Result := do
+  let some a := toValue? a
+    | return .rfl
+  let some b := toValue? b
+    | return .rfl
   let e ← share <| toExpr (op a b)
   return .step e (mkApp2 (mkConst ``Eq.refl [1]) (ToExpr.toTypeExpr (α := α)) e) (done := true)
 
-abbrev evalBinBool : (op : Bool → Bool → Bool) → (a b : Expr) → SimpM Result := evalBin getBoolValue?
+abbrev evalBinBool : (op : Bool → Bool → Bool) → (a b : Expr) → SimpM Result :=
+  evalBin getBoolValue?
 abbrev evalBinNat : (op : Nat → Nat → Nat) → (a b : Expr) → SimpM Result := evalBin getNatValue?
 abbrev evalBinInt : (op : Int → Int → Int) → (a b : Expr) → SimpM Result := evalBin getIntValue?
 abbrev evalBinRat : (op : Rat → Rat → Rat) → (a b : Expr) → SimpM Result := evalBin getRatValue?
-abbrev evalBinUInt8 : (op : UInt8 → UInt8 → UInt8) → (a b : Expr) → SimpM Result := evalBin getUInt8Value?
-abbrev evalBinUInt16 : (op : UInt16 → UInt16 → UInt16) → (a b : Expr) → SimpM Result := evalBin getUInt16Value?
-abbrev evalBinUInt32 : (op : UInt32 → UInt32 → UInt32) → (a b : Expr) → SimpM Result := evalBin getUInt32Value?
-abbrev evalBinUInt64 : (op : UInt64 → UInt64 → UInt64) → (a b : Expr) → SimpM Result := evalBin getUInt64Value?
-abbrev evalBinInt8 : (op : Int8 → Int8 → Int8) → (a b : Expr) → SimpM Result := evalBin getInt8Value?
-abbrev evalBinInt16 : (op : Int16 → Int16 → Int16) → (a b : Expr) → SimpM Result := evalBin getInt16Value?
-abbrev evalBinInt32 : (op : Int32 → Int32 → Int32) → (a b : Expr) → SimpM Result := evalBin getInt32Value?
-abbrev evalBinInt64 : (op : Int64 → Int64 → Int64) → (a b : Expr) → SimpM Result := evalBin getInt64Value?
+abbrev evalBinUInt8 : (op : UInt8 → UInt8 → UInt8) → (a b : Expr) → SimpM Result :=
+  evalBin getUInt8Value?
+abbrev evalBinUInt16 : (op : UInt16 → UInt16 → UInt16) → (a b : Expr) → SimpM Result :=
+  evalBin getUInt16Value?
+abbrev evalBinUInt32 : (op : UInt32 → UInt32 → UInt32) → (a b : Expr) → SimpM Result :=
+  evalBin getUInt32Value?
+abbrev evalBinUInt64 : (op : UInt64 → UInt64 → UInt64) → (a b : Expr) → SimpM Result :=
+  evalBin getUInt64Value?
+abbrev evalBinInt8 : (op : Int8 → Int8 → Int8) → (a b : Expr) → SimpM Result :=
+  evalBin getInt8Value?
+abbrev evalBinInt16 : (op : Int16 → Int16 → Int16) → (a b : Expr) → SimpM Result :=
+  evalBin getInt16Value?
+abbrev evalBinInt32 : (op : Int32 → Int32 → Int32) → (a b : Expr) → SimpM Result :=
+  evalBin getInt32Value?
+abbrev evalBinInt64 : (op : Int64 → Int64 → Int64) → (a b : Expr) → SimpM Result :=
+  evalBin getInt64Value?
 
-abbrev evalBinFin' (op : {n : Nat} → Fin n → Fin n → Fin n) (αExpr : Expr) (a b : Expr) : SimpM Result := do
-  let some a := getFinValue? a | return .rfl
-  let some b := getFinValue? b | return .rfl
+abbrev evalBinFin' (op : {n : Nat} → Fin n → Fin n → Fin n) (αExpr : Expr) (a b : Expr)
+    : SimpM Result := do
+  let some a := getFinValue? a
+    | return .rfl
+  let some b := getFinValue? b
+    | return .rfl
   if h : a.n = b.n then
     let e ← share <| toExpr (op a.val (h ▸ b.val))
     return .step e (mkApp2 (mkConst ``Eq.refl [1]) αExpr e) (done := true)
   else
     return .rfl
 
-abbrev evalBinBitVec' (op : {n : Nat} → BitVec n → BitVec n → BitVec n) (αExpr : Expr) (a b : Expr) : EvalM Result := do
-  let some a := getBitVecValue? a | return .rfl
-  let some b := getBitVecValue? b | return .rfl
+abbrev evalBinBitVec' (op : {n : Nat} → BitVec n → BitVec n → BitVec n) (αExpr : Expr) (a b : Expr)
+    : EvalM Result := do
+  let some a := getBitVecValue? a
+    | return .rfl
+  let some b := getBitVecValue? b
+    | return .rfl
   if h : a.n = b.n then
     let e ← mkBitVecLit (op a.val (h ▸ b.val))
     return .step e (mkApp2 (mkConst ``Eq.refl [1]) αExpr e) (done := true)
   else
     return .rfl
 
-abbrev evalPowNat [ToExpr α] (maxExponent : Nat) (toValue? : Expr → Option α) (op : α → Nat → α) (a b : Expr) : SimpM Result := do
-  let some a := toValue? a | return .rfl
-  let some b := getNatValue? b | return .rfl
+abbrev evalPowNat
+    [ToExpr α] (maxExponent : Nat) (toValue? : Expr → Option α) (op : α → Nat → α) (a b : Expr)
+    : SimpM Result := do
+  let some a := toValue? a
+    | return .rfl
+  let some b := getNatValue? b
+    | return .rfl
   if b > maxExponent then return .rfl
   let e ← share <| toExpr (op a b)
   return .step e (mkApp2 (mkConst ``Eq.refl [1]) (ToExpr.toTypeExpr (α := α)) e) (done := true)
 
-abbrev evalPowInt [ToExpr α] (maxExponent : Nat) (toValue? : Expr → Option α) (op : α → Int → α) (a b : Expr) : SimpM Result := do
-  let some a := toValue? a | return .rfl
-  let some b := getIntValue? b | return .rfl
+abbrev evalPowInt
+    [ToExpr α] (maxExponent : Nat) (toValue? : Expr → Option α) (op : α → Int → α) (a b : Expr)
+    : SimpM Result := do
+  let some a := toValue? a
+    | return .rfl
+  let some b := getIntValue? b
+    | return .rfl
   if b.natAbs > maxExponent then return .rfl
   let e ← share <| toExpr (op a b)
   return .step e (mkApp2 (mkConst ``Eq.refl [1]) (ToExpr.toTypeExpr (α := α)) e) (done := true)
@@ -233,37 +268,37 @@ def evalMod (α : Expr) (a b : Expr) : EvalM Result :=
 
 def evalNeg (α : Expr) (a : Expr) : EvalM Result :=
   match_expr α with
-  | Int => evalUnaryInt (- ·) a
-  | Rat => evalUnaryRat (- ·) a
-  | Fin _ => evalUnaryFin' (- ·) α a
-  | BitVec _ => evalUnaryBitVec' (- ·) α a
-  | UInt8 => evalUnaryUInt8 (- ·) a
-  | UInt16 => evalUnaryUInt16 (- ·) a
-  | UInt32 => evalUnaryUInt32 (- ·) a
-  | UInt64 => evalUnaryUInt64 (- ·) a
-  | Int8 => evalUnaryInt8 (- ·) a
-  | Int16 => evalUnaryInt16 (- ·) a
-  | Int32 => evalUnaryInt32 (- ·) a
-  | Int64 => evalUnaryInt64 (- ·) a
+  | Int => evalUnaryInt (-·) a
+  | Rat => evalUnaryRat (-·) a
+  | Fin _ => evalUnaryFin' (-·) α a
+  | BitVec _ => evalUnaryBitVec' (-·) α a
+  | UInt8 => evalUnaryUInt8 (-·) a
+  | UInt16 => evalUnaryUInt16 (-·) a
+  | UInt32 => evalUnaryUInt32 (-·) a
+  | UInt64 => evalUnaryUInt64 (-·) a
+  | Int8 => evalUnaryInt8 (-·) a
+  | Int16 => evalUnaryInt16 (-·) a
+  | Int32 => evalUnaryInt32 (-·) a
+  | Int64 => evalUnaryInt64 (-·) a
   | _ => return .rfl
 
 def evalComplement (α : Expr) (a : Expr) : EvalM Result :=
   match_expr α with
-  | Int => evalUnaryInt (~~~ ·) a
-  | BitVec _ => evalUnaryBitVec' (~~~ ·) α a
-  | UInt8 => evalUnaryUInt8 (~~~ ·) a
-  | UInt16 => evalUnaryUInt16 (~~~ ·) a
-  | UInt32 => evalUnaryUInt32 (~~~ ·) a
-  | UInt64 => evalUnaryUInt64 (~~~ ·) a
-  | Int8 => evalUnaryInt8 (~~~ ·) a
-  | Int16 => evalUnaryInt16 (~~~ ·) a
-  | Int32 => evalUnaryInt32 (~~~ ·) a
-  | Int64 => evalUnaryInt64 (~~~ ·) a
+  | Int => evalUnaryInt (~~~·) a
+  | BitVec _ => evalUnaryBitVec' (~~~·) α a
+  | UInt8 => evalUnaryUInt8 (~~~·) a
+  | UInt16 => evalUnaryUInt16 (~~~·) a
+  | UInt32 => evalUnaryUInt32 (~~~·) a
+  | UInt64 => evalUnaryUInt64 (~~~·) a
+  | Int8 => evalUnaryInt8 (~~~·) a
+  | Int16 => evalUnaryInt16 (~~~·) a
+  | Int32 => evalUnaryInt32 (~~~·) a
+  | Int64 => evalUnaryInt64 (~~~·) a
   | _ => return .rfl
 
 def evalInv (α : Expr) (a : Expr) : SimpM Result :=
   match_expr α with
-  | Rat => evalUnaryRat (· ⁻¹) a
+  | Rat => evalUnaryRat (·⁻¹) a
   | _ => return .rfl
 
 macro "declare_eval_bin_bitwise" id:ident op:term : command =>
@@ -290,7 +325,8 @@ declare_eval_bin_bitwise evalXOr (· ^^^ ·)
 def evalPow (α β : Expr) (a b : Expr) : EvalM Result := do
   let maxExponent := (← read).maxExponent
   match_expr β with
-  | Nat => match_expr α with
+  | Nat =>
+    match_expr α with
     | Nat => evalPowNat maxExponent getNatValue? (· ^ ·) a b
     | Int => evalPowNat maxExponent getIntValue? (· ^ ·) a b
     | Rat => evalPowNat maxExponent getRatValue? (· ^ ·) a b
@@ -303,10 +339,12 @@ def evalPow (α β : Expr) (a b : Expr) : EvalM Result := do
     | Int32 => evalPowNat maxExponent getInt32Value? (· ^ ·) a b
     | Int64 => evalPowNat maxExponent getInt64Value? (· ^ ·) a b
     | _ => return .rfl
-  | Int => match_expr α with
+  | Int =>
+    match_expr α with
     | Rat => evalPowInt maxExponent getRatValue? (· ^ ·) a b
     | _ => return .rfl
-  | _ => return .rfl
+  | _ =>
+    return .rfl
 
 abbrev shift [ShiftLeft α] [ShiftRight α] (left : Bool) (a b : α) : α :=
   if left then a <<< b else a >>> b
@@ -327,58 +365,78 @@ def evalShift (left : Bool) (α β : Expr) (a b : Expr) : EvalM Result :=
     | Int64 => evalBinInt64 (shift left) a b
     | _ => return .rfl
   else
-  match_expr β with
-  | Nat =>
-    match_expr α with
-    | Int => do
-      let some a := getIntValue? a | return .rfl
-      let some b := getNatValue? b | return .rfl
-      let e := if left then a <<< b else a >>> b
-      let e ← share <| toExpr e
-      return .step e (mkApp2 (mkConst ``Eq.refl [1]) α e) (done := true)
+    match_expr β with
+    | Nat =>
+      match_expr α with
+      | Int => do
+        let some a := getIntValue? a
+          | return .rfl
+        let some b := getNatValue? b
+          | return .rfl
+        let e := if left then a <<< b else a >>> b
+        let e ← share <| toExpr e
+        return .step e (mkApp2 (mkConst ``Eq.refl [1]) α e) (done := true)
+      | BitVec _ => do
+        let some a := getBitVecValue? a
+          | return .rfl
+        let some b := getNatValue? b
+          | return .rfl
+        let e := if left then a.val <<< b else a.val >>> b
+        let e ← mkBitVecLit e
+        return .step e (mkApp2 (mkConst ``Eq.refl [1]) α e) (done := true)
+      | _ =>
+        return .rfl
     | BitVec _ => do
-      let some a := getBitVecValue? a | return .rfl
-      let some b := getNatValue? b | return .rfl
-      let e := if left then a.val <<< b else a.val >>> b
+      let_expr BitVec _ := α
+        | return .rfl
+      let some a := getBitVecValue? a
+        | return .rfl
+      let some b := getBitVecValue? b
+        | return .rfl
+      let e := if left then a.val <<< b.val else a.val >>> b.val
       let e ← mkBitVecLit e
       return .step e (mkApp2 (mkConst ``Eq.refl [1]) α e) (done := true)
-    | _ => return .rfl
-  | BitVec _ => do
-    let_expr BitVec _ := α | return .rfl
-    let some a := getBitVecValue? a | return .rfl
-    let some b := getBitVecValue? b | return .rfl
-    let e := if left then a.val <<< b.val else a.val >>> b.val
-    let e ← mkBitVecLit e
-    return .step e (mkApp2 (mkConst ``Eq.refl [1]) α e) (done := true)
-  | _ => return .rfl
+    | _ =>
+      return .rfl
 
 def evalIntGcd (a b : Expr) : SimpM Result := do
-  let some a := getIntValue? a | return .rfl
-  let some b := getIntValue? b | return .rfl
+  let some a := getIntValue? a
+    | return .rfl
+  let some b := getIntValue? b
+    | return .rfl
   let e ← share <| toExpr (Int.gcd a b)
   return .step e (mkApp2 (mkConst ``Eq.refl [1]) Nat.mkType e) (done := true)
 
 def evalIntBMod (a b : Expr) : SimpM Result := do
-  let some a := getIntValue? a | return .rfl
-  let some b := getNatValue? b | return .rfl
+  let some a := getIntValue? a
+    | return .rfl
+  let some b := getNatValue? b
+    | return .rfl
   let e ← share <| toExpr (Int.bmod a b)
   return .step e (mkApp2 (mkConst ``Eq.refl [1]) Int.mkType e) (done := true)
 
 def evalIntBDiv (a b : Expr) : SimpM Result := do
-  let some a := getIntValue? a | return .rfl
-  let some b := getNatValue? b | return .rfl
+  let some a := getIntValue? a
+    | return .rfl
+  let some b := getNatValue? b
+    | return .rfl
   let e ← share <| toExpr (Int.bdiv a b)
   return .step e (mkApp2 (mkConst ``Eq.refl [1]) Int.mkType e) (done := true)
 
 def evalLog2 (a : Expr) : EvalM Result := do
-  let some n := getNatValue? a | return .rfl
-  if n > 2^(← read).maxExponent then return .rfl
+  let some n := getNatValue? a
+    | return .rfl
+  if n > 2 ^ (← read).maxExponent then return .rfl
   let e ← share <| toExpr n.log2
   return .step e (mkApp2 (mkConst ``Eq.refl [1]) Nat.mkType e) (done := true)
 
-abbrev evalBinPred (toValue? : Expr → Option α) (trueThm falseThm : Expr) (op : α → α → Bool) (a b : Expr) : SimpM Result := do
-  let some va := toValue? a | return .rfl
-  let some vb := toValue? b | return .rfl
+abbrev evalBinPred
+    (toValue? : Expr → Option α) (trueThm falseThm : Expr) (op : α → α → Bool) (a b : Expr)
+    : SimpM Result := do
+  let some va := toValue? a
+    | return .rfl
+  let some vb := toValue? b
+    | return .rfl
   if op va vb then
     let e ← getTrueExpr
     return .step e (mkApp3 trueThm a b eagerReflBoolTrue) (done := true)
@@ -386,9 +444,13 @@ abbrev evalBinPred (toValue? : Expr → Option α) (trueThm falseThm : Expr) (op
     let e ← getFalseExpr
     return .step e (mkApp3 falseThm a b eagerReflBoolFalse) (done := true)
 
-def evalBitVecPred (n : Expr) (trueThm falseThm : Expr) (op : {n : Nat} → BitVec n → BitVec n → Bool) (a b : Expr) : SimpM Result := do
-  let some va := getBitVecValue? a | return .rfl
-  let some vb := getBitVecValue? b | return .rfl
+def evalBitVecPred
+    (n : Expr) (trueThm falseThm : Expr) (op : {n : Nat} → BitVec n → BitVec n → Bool) (a b : Expr)
+    : SimpM Result := do
+  let some va := getBitVecValue? a
+    | return .rfl
+  let some vb := getBitVecValue? b
+    | return .rfl
   if h : va.n = vb.n then
     if op va.val (h ▸ vb.val) then
       let e ← getTrueExpr
@@ -399,9 +461,13 @@ def evalBitVecPred (n : Expr) (trueThm falseThm : Expr) (op : {n : Nat} → BitV
   else
     return .rfl
 
-def evalFinPred (n : Expr) (trueThm falseThm : Expr) (op : {n : Nat} → Fin n → Fin n → Bool) (a b : Expr) : SimpM Result := do
-  let some va := getFinValue? a | return .rfl
-  let some vb := getFinValue? b | return .rfl
+def evalFinPred
+    (n : Expr) (trueThm falseThm : Expr) (op : {n : Nat} → Fin n → Fin n → Bool) (a b : Expr)
+    : SimpM Result := do
+  let some va := getFinValue? a
+    | return .rfl
+  let some vb := getFinValue? b
+    | return .rfl
   if h : va.n = vb.n then
     if op va.val (h ▸ vb.val) then
       let e ← getTrueExpr
@@ -421,110 +487,207 @@ When equal, uses `eq_self` (no kernel evaluation needed). When different, uses
 inequality via `congrArg (List.get?Internal · i)`.
 -/
 def evalStringEq (a b : Expr) : SimpM Result := do
-  let some va := getStringValue? a | return .rfl
-  let some vb := getStringValue? b | return .rfl
+  let some va := getStringValue? a
+    | return .rfl
+  let some vb := getStringValue? b
+    | return .rfl
   if va = vb then
     let e ← getTrueExpr
     return .step e (mkApp2 (mkConst ``eq_self [.succ .zero]) (mkConst ``String) a) (done := true)
   else
     let neProof ← mkStringLitNeProof va vb
-    let proof := mkApp2 (mkConst ``eq_false)
-      (mkApp3 (mkConst ``Eq [.succ .zero]) (mkConst ``String) a b) neProof
+    let proof :=
+      mkApp2 (mkConst ``eq_false) (mkApp3 (mkConst ``Eq [.succ .zero]) (mkConst ``String) a b)
+        neProof
     let e ← getFalseExpr
     return .step e proof (done := true)
 
 def evalLT (α : Expr) (a b : Expr) : SimpM Result :=
   match_expr α with
-  | Nat => evalBinPred getNatValue? (mkConst ``Nat.lt_eq_true) (mkConst ``Nat.lt_eq_false) (. < .) a b
-  | Int => evalBinPred getIntValue? (mkConst ``Int.lt_eq_true) (mkConst ``Int.lt_eq_false) (. < .) a b
-  | Rat => evalBinPred getRatValue? (mkConst ``Rat.lt_eq_true) (mkConst ``Rat.lt_eq_false) (. < .) a b
-  | Int8 => evalBinPred getInt8Value? (mkConst ``Int8.lt_eq_true) (mkConst ``Int8.lt_eq_false) (. < .) a b
-  | Int16 => evalBinPred getInt16Value? (mkConst ``Int16.lt_eq_true) (mkConst ``Int16.lt_eq_false) (. < .) a b
-  | Int32 => evalBinPred getInt32Value? (mkConst ``Int32.lt_eq_true) (mkConst ``Int32.lt_eq_false) (. < .) a b
-  | Int64 => evalBinPred getInt64Value? (mkConst ``Int64.lt_eq_true) (mkConst ``Int64.lt_eq_false) (. < .) a b
-  | UInt8 => evalBinPred getUInt8Value? (mkConst ``UInt8.lt_eq_true) (mkConst ``UInt8.lt_eq_false) (. < .) a b
-  | UInt16 => evalBinPred getUInt16Value? (mkConst ``UInt16.lt_eq_true) (mkConst ``UInt16.lt_eq_false) (. < .) a b
-  | UInt32 => evalBinPred getUInt32Value? (mkConst ``UInt32.lt_eq_true) (mkConst ``UInt32.lt_eq_false) (. < .) a b
-  | UInt64 => evalBinPred getUInt64Value? (mkConst ``UInt64.lt_eq_true) (mkConst ``UInt64.lt_eq_false) (. < .) a b
-  | Fin n => evalFinPred n (mkConst ``Fin.lt_eq_true) (mkConst ``Fin.lt_eq_false) (. < .) a b
-  | BitVec n => evalBitVecPred n (mkConst ``BitVec.lt_eq_true) (mkConst ``BitVec.lt_eq_false) (. < .) a b
-  | String => evalBinPred getStringValue? (mkConst ``String.lt_eq_true) (mkConst ``String.lt_eq_false) (. < .) a b
-  | Char => evalBinPred getCharValue? (mkConst ``Char.lt_eq_true) (mkConst ``Char.lt_eq_false) (. < .) a b
-  | _ => return .rfl
+  | Nat =>
+    evalBinPred getNatValue? (mkConst ``Nat.lt_eq_true) (mkConst ``Nat.lt_eq_false) (. < .) a b
+  | Int =>
+    evalBinPred getIntValue? (mkConst ``Int.lt_eq_true) (mkConst ``Int.lt_eq_false) (. < .) a b
+  | Rat =>
+    evalBinPred getRatValue? (mkConst ``Rat.lt_eq_true) (mkConst ``Rat.lt_eq_false) (. < .) a b
+  | Int8 =>
+    evalBinPred getInt8Value? (mkConst ``Int8.lt_eq_true) (mkConst ``Int8.lt_eq_false) (. < .) a b
+  | Int16 =>
+    evalBinPred getInt16Value? (mkConst ``Int16.lt_eq_true) (mkConst ``Int16.lt_eq_false) (. < .) a
+      b
+  | Int32 =>
+    evalBinPred getInt32Value? (mkConst ``Int32.lt_eq_true) (mkConst ``Int32.lt_eq_false) (. < .) a
+      b
+  | Int64 =>
+    evalBinPred getInt64Value? (mkConst ``Int64.lt_eq_true) (mkConst ``Int64.lt_eq_false) (. < .) a
+      b
+  | UInt8 =>
+    evalBinPred getUInt8Value? (mkConst ``UInt8.lt_eq_true) (mkConst ``UInt8.lt_eq_false) (. < .) a
+      b
+  | UInt16 =>
+    evalBinPred getUInt16Value? (mkConst ``UInt16.lt_eq_true) (mkConst ``UInt16.lt_eq_false) (. < .)
+      a b
+  | UInt32 =>
+    evalBinPred getUInt32Value? (mkConst ``UInt32.lt_eq_true) (mkConst ``UInt32.lt_eq_false) (. < .)
+      a b
+  | UInt64 =>
+    evalBinPred getUInt64Value? (mkConst ``UInt64.lt_eq_true) (mkConst ``UInt64.lt_eq_false) (. < .)
+      a b
+  | Fin n =>
+    evalFinPred n (mkConst ``Fin.lt_eq_true) (mkConst ``Fin.lt_eq_false) (. < .) a b
+  | BitVec n =>
+    evalBitVecPred n (mkConst ``BitVec.lt_eq_true) (mkConst ``BitVec.lt_eq_false) (. < .) a b
+  | String =>
+    evalBinPred getStringValue? (mkConst ``String.lt_eq_true) (mkConst ``String.lt_eq_false) (. < .)
+      a b
+  | Char =>
+    evalBinPred getCharValue? (mkConst ``Char.lt_eq_true) (mkConst ``Char.lt_eq_false) (. < .) a b
+  | _ =>
+    return .rfl
 
 def evalLE (α : Expr) (a b : Expr) : SimpM Result :=
   match_expr α with
-  | Nat => evalBinPred getNatValue? (mkConst ``Nat.le_eq_true) (mkConst ``Nat.le_eq_false) (. ≤ .) a b
-  | Int => evalBinPred getIntValue? (mkConst ``Int.le_eq_true) (mkConst ``Int.le_eq_false) (. ≤ .) a b
-  | Rat => evalBinPred getRatValue? (mkConst ``Rat.le_eq_true) (mkConst ``Rat.le_eq_false) (. ≤ .) a b
-  | Int8 => evalBinPred getInt8Value? (mkConst ``Int8.le_eq_true) (mkConst ``Int8.le_eq_false) (. ≤ .) a b
-  | Int16 => evalBinPred getInt16Value? (mkConst ``Int16.le_eq_true) (mkConst ``Int16.le_eq_false) (. ≤ .) a b
-  | Int32 => evalBinPred getInt32Value? (mkConst ``Int32.le_eq_true) (mkConst ``Int32.le_eq_false) (. ≤ .) a b
-  | Int64 => evalBinPred getInt64Value? (mkConst ``Int64.le_eq_true) (mkConst ``Int64.le_eq_false) (. ≤ .) a b
-  | UInt8 => evalBinPred getUInt8Value? (mkConst ``UInt8.le_eq_true) (mkConst ``UInt8.le_eq_false) (. ≤ .) a b
-  | UInt16 => evalBinPred getUInt16Value? (mkConst ``UInt16.le_eq_true) (mkConst ``UInt16.le_eq_false) (. ≤ .) a b
-  | UInt32 => evalBinPred getUInt32Value? (mkConst ``UInt32.le_eq_true) (mkConst ``UInt32.le_eq_false) (. ≤ .) a b
-  | UInt64 => evalBinPred getUInt64Value? (mkConst ``UInt64.le_eq_true) (mkConst ``UInt64.le_eq_false) (. ≤ .) a b
-  | Fin n => evalFinPred n (mkConst ``Fin.le_eq_true) (mkConst ``Fin.le_eq_false) (. ≤ .) a b
-  | BitVec n => evalBitVecPred n (mkConst ``BitVec.le_eq_true) (mkConst ``BitVec.le_eq_false) (. ≤ .) a b
-  | String => evalBinPred getStringValue? (mkConst ``String.le_eq_true) (mkConst ``String.le_eq_false) (. ≤ .) a b
-  | Char => evalBinPred getCharValue? (mkConst ``Char.le_eq_true) (mkConst ``Char.le_eq_false) (. ≤ .) a b
-  | _ => return .rfl
+  | Nat =>
+    evalBinPred getNatValue? (mkConst ``Nat.le_eq_true) (mkConst ``Nat.le_eq_false) (. ≤ .) a b
+  | Int =>
+    evalBinPred getIntValue? (mkConst ``Int.le_eq_true) (mkConst ``Int.le_eq_false) (. ≤ .) a b
+  | Rat =>
+    evalBinPred getRatValue? (mkConst ``Rat.le_eq_true) (mkConst ``Rat.le_eq_false) (. ≤ .) a b
+  | Int8 =>
+    evalBinPred getInt8Value? (mkConst ``Int8.le_eq_true) (mkConst ``Int8.le_eq_false) (. ≤ .) a b
+  | Int16 =>
+    evalBinPred getInt16Value? (mkConst ``Int16.le_eq_true) (mkConst ``Int16.le_eq_false) (. ≤ .) a
+      b
+  | Int32 =>
+    evalBinPred getInt32Value? (mkConst ``Int32.le_eq_true) (mkConst ``Int32.le_eq_false) (. ≤ .) a
+      b
+  | Int64 =>
+    evalBinPred getInt64Value? (mkConst ``Int64.le_eq_true) (mkConst ``Int64.le_eq_false) (. ≤ .) a
+      b
+  | UInt8 =>
+    evalBinPred getUInt8Value? (mkConst ``UInt8.le_eq_true) (mkConst ``UInt8.le_eq_false) (. ≤ .) a
+      b
+  | UInt16 =>
+    evalBinPred getUInt16Value? (mkConst ``UInt16.le_eq_true) (mkConst ``UInt16.le_eq_false) (. ≤ .)
+      a b
+  | UInt32 =>
+    evalBinPred getUInt32Value? (mkConst ``UInt32.le_eq_true) (mkConst ``UInt32.le_eq_false) (. ≤ .)
+      a b
+  | UInt64 =>
+    evalBinPred getUInt64Value? (mkConst ``UInt64.le_eq_true) (mkConst ``UInt64.le_eq_false) (. ≤ .)
+      a b
+  | Fin n =>
+    evalFinPred n (mkConst ``Fin.le_eq_true) (mkConst ``Fin.le_eq_false) (. ≤ .) a b
+  | BitVec n =>
+    evalBitVecPred n (mkConst ``BitVec.le_eq_true) (mkConst ``BitVec.le_eq_false) (. ≤ .) a b
+  | String =>
+    evalBinPred getStringValue? (mkConst ``String.le_eq_true) (mkConst ``String.le_eq_false) (. ≤ .)
+      a b
+  | Char =>
+    evalBinPred getCharValue? (mkConst ``Char.le_eq_true) (mkConst ``Char.le_eq_false) (. ≤ .) a b
+  | _ =>
+    return .rfl
 
 def evalEq (α : Expr) (a b : Expr) : SimpM Result :=
   if isSameExpr a b then do
     let e ← getTrueExpr
     let u ← getLevel α
     return .step e (mkApp2 (mkConst ``eq_self [u]) α a) (done := true)
-  else match_expr α with
-  | Bool => evalBinPred getBoolValue? (mkConst ``Bool.eq_eq_true) (mkConst ``Bool.eq_eq_false) (. = .) a b
-  | Nat => evalBinPred getNatValue? (mkConst ``Nat.eq_eq_true) (mkConst ``Nat.eq_eq_false) (. = .) a b
-  | Int => evalBinPred getIntValue? (mkConst ``Int.eq_eq_true) (mkConst ``Int.eq_eq_false) (. = .) a b
-  | Rat => evalBinPred getRatValue? (mkConst ``Rat.eq_eq_true) (mkConst ``Rat.eq_eq_false) (. = .) a b
-  | Int8 => evalBinPred getInt8Value? (mkConst ``Int8.eq_eq_true) (mkConst ``Int8.eq_eq_false) (. = .) a b
-  | Int16 => evalBinPred getInt16Value? (mkConst ``Int16.eq_eq_true) (mkConst ``Int16.eq_eq_false) (. = .) a b
-  | Int32 => evalBinPred getInt32Value? (mkConst ``Int32.eq_eq_true) (mkConst ``Int32.eq_eq_false) (. = .) a b
-  | Int64 => evalBinPred getInt64Value? (mkConst ``Int64.eq_eq_true) (mkConst ``Int64.eq_eq_false) (. = .) a b
-  | UInt8 => evalBinPred getUInt8Value? (mkConst ``UInt8.eq_eq_true) (mkConst ``UInt8.eq_eq_false) (. = .) a b
-  | UInt16 => evalBinPred getUInt16Value? (mkConst ``UInt16.eq_eq_true) (mkConst ``UInt16.eq_eq_false) (. = .) a b
-  | UInt32 => evalBinPred getUInt32Value? (mkConst ``UInt32.eq_eq_true) (mkConst ``UInt32.eq_eq_false) (. = .) a b
-  | UInt64 => evalBinPred getUInt64Value? (mkConst ``UInt64.eq_eq_true) (mkConst ``UInt64.eq_eq_false) (. = .) a b
-  | Fin n => evalFinPred n (mkConst ``Fin.eq_eq_true) (mkConst ``Fin.eq_eq_false) (. = .) a b
-  | BitVec n => evalBitVecPred n (mkConst ``BitVec.eq_eq_true) (mkConst ``BitVec.eq_eq_false) (. = .) a b
-  | Char => evalBinPred getCharValue? (mkConst ``Char.eq_eq_true) (mkConst ``Char.eq_eq_false) (. = .) a b
-  | String => evalStringEq a b
-  | _ => return .rfl
+  else
+    match_expr α with
+    | Bool =>
+      evalBinPred getBoolValue? (mkConst ``Bool.eq_eq_true) (mkConst ``Bool.eq_eq_false) (. = .) a b
+    | Nat =>
+      evalBinPred getNatValue? (mkConst ``Nat.eq_eq_true) (mkConst ``Nat.eq_eq_false) (. = .) a b
+    | Int =>
+      evalBinPred getIntValue? (mkConst ``Int.eq_eq_true) (mkConst ``Int.eq_eq_false) (. = .) a b
+    | Rat =>
+      evalBinPred getRatValue? (mkConst ``Rat.eq_eq_true) (mkConst ``Rat.eq_eq_false) (. = .) a b
+    | Int8 =>
+      evalBinPred getInt8Value? (mkConst ``Int8.eq_eq_true) (mkConst ``Int8.eq_eq_false) (. = .) a b
+    | Int16 =>
+      evalBinPred getInt16Value? (mkConst ``Int16.eq_eq_true) (mkConst ``Int16.eq_eq_false) (. = .)
+        a b
+    | Int32 =>
+      evalBinPred getInt32Value? (mkConst ``Int32.eq_eq_true) (mkConst ``Int32.eq_eq_false) (. = .)
+        a b
+    | Int64 =>
+      evalBinPred getInt64Value? (mkConst ``Int64.eq_eq_true) (mkConst ``Int64.eq_eq_false) (. = .)
+        a b
+    | UInt8 =>
+      evalBinPred getUInt8Value? (mkConst ``UInt8.eq_eq_true) (mkConst ``UInt8.eq_eq_false) (. = .)
+        a b
+    | UInt16 =>
+      evalBinPred getUInt16Value? (mkConst ``UInt16.eq_eq_true) (mkConst ``UInt16.eq_eq_false)
+        (. = .) a b
+    | UInt32 =>
+      evalBinPred getUInt32Value? (mkConst ``UInt32.eq_eq_true) (mkConst ``UInt32.eq_eq_false)
+        (. = .) a b
+    | UInt64 =>
+      evalBinPred getUInt64Value? (mkConst ``UInt64.eq_eq_true) (mkConst ``UInt64.eq_eq_false)
+        (. = .) a b
+    | Fin n =>
+      evalFinPred n (mkConst ``Fin.eq_eq_true) (mkConst ``Fin.eq_eq_false) (. = .) a b
+    | BitVec n =>
+      evalBitVecPred n (mkConst ``BitVec.eq_eq_true) (mkConst ``BitVec.eq_eq_false) (. = .) a b
+    | Char =>
+      evalBinPred getCharValue? (mkConst ``Char.eq_eq_true) (mkConst ``Char.eq_eq_false) (. = .) a b
+    | String =>
+      evalStringEq a b
+    | _ =>
+      return .rfl
 
 def evalDvd (α : Expr) (a b : Expr) : SimpM Result :=
   match_expr α with
-  | Nat => evalBinPred getNatValue? (mkConst ``Nat.dvd_eq_true) (mkConst ``Nat.dvd_eq_false) (. ∣ .) a b
-  | Int => evalBinPred getIntValue? (mkConst ``Int.dvd_eq_true) (mkConst ``Int.dvd_eq_false) (. ∣ .) a b
-  | _ => return .rfl
+  | Nat =>
+    evalBinPred getNatValue? (mkConst ``Nat.dvd_eq_true) (mkConst ``Nat.dvd_eq_false) (. ∣ .) a b
+  | Int =>
+    evalBinPred getIntValue? (mkConst ``Int.dvd_eq_true) (mkConst ``Int.dvd_eq_false) (. ∣ .) a b
+  | _ =>
+    return .rfl
 
-abbrev evalBinBoolPred (toValue? : Expr → Option α) (op : α → α → Bool) (a b : Expr) : SimpM Result := do
-  let some va := toValue? a | return .rfl
-  let some vb := toValue? b | return .rfl
+abbrev evalBinBoolPred (toValue? : Expr → Option α) (op : α → α → Bool) (a b : Expr)
+    : SimpM Result := do
+  let some va := toValue? a
+    | return .rfl
+  let some vb := toValue? b
+    | return .rfl
   let r := op va vb
   let e ← share (toExpr r)
   return .step e (if r then eagerReflBoolTrue else eagerReflBoolFalse) (done := true)
 
-abbrev evalBinBoolPredBool : (op : Bool → Bool → Bool) → (a b : Expr) → SimpM Result := evalBinBoolPred getBoolValue?
-abbrev evalBinBoolPredNat : (op : Nat → Nat → Bool) → (a b : Expr) → SimpM Result := evalBinBoolPred getNatValue?
-abbrev evalBinBoolPredInt : (op : Int → Int → Bool) → (a b : Expr) → SimpM Result := evalBinBoolPred getIntValue?
-abbrev evalBinBoolPredRat : (op : Rat → Rat → Bool) → (a b : Expr) → SimpM Result := evalBinBoolPred getRatValue?
-abbrev evalBinBoolPredUInt8 : (op : UInt8 → UInt8 → Bool) → (a b : Expr) → SimpM Result := evalBinBoolPred getUInt8Value?
-abbrev evalBinBoolPredUInt16 : (op : UInt16 → UInt16 → Bool) → (a b : Expr) → SimpM Result := evalBinBoolPred getUInt16Value?
-abbrev evalBinBoolPredUInt32 : (op : UInt32 → UInt32 → Bool) → (a b : Expr) → SimpM Result := evalBinBoolPred getUInt32Value?
-abbrev evalBinBoolPredUInt64 : (op : UInt64 → UInt64 → Bool) → (a b : Expr) → SimpM Result := evalBinBoolPred getUInt64Value?
-abbrev evalBinBoolPredInt8 : (op : Int8 → Int8 → Bool) → (a b : Expr) → SimpM Result := evalBinBoolPred getInt8Value?
-abbrev evalBinBoolPredInt16 : (op : Int16 → Int16 → Bool) → (a b : Expr) → SimpM Result := evalBinBoolPred getInt16Value?
-abbrev evalBinBoolPredInt32 : (op : Int32 → Int32 → Bool) → (a b : Expr) → SimpM Result := evalBinBoolPred getInt32Value?
-abbrev evalBinBoolPredInt64 : (op : Int64 → Int64 → Bool) → (a b : Expr) → SimpM Result := evalBinBoolPred getInt64Value?
-abbrev evalBinBoolPredChar : (op : Char → Char → Bool) → (a b : Expr) → SimpM Result := evalBinBoolPred getCharValue?
+abbrev evalBinBoolPredBool : (op : Bool → Bool → Bool) → (a b : Expr) → SimpM Result :=
+  evalBinBoolPred getBoolValue?
+abbrev evalBinBoolPredNat : (op : Nat → Nat → Bool) → (a b : Expr) → SimpM Result :=
+  evalBinBoolPred getNatValue?
+abbrev evalBinBoolPredInt : (op : Int → Int → Bool) → (a b : Expr) → SimpM Result :=
+  evalBinBoolPred getIntValue?
+abbrev evalBinBoolPredRat : (op : Rat → Rat → Bool) → (a b : Expr) → SimpM Result :=
+  evalBinBoolPred getRatValue?
+abbrev evalBinBoolPredUInt8 : (op : UInt8 → UInt8 → Bool) → (a b : Expr) → SimpM Result :=
+  evalBinBoolPred getUInt8Value?
+abbrev evalBinBoolPredUInt16 : (op : UInt16 → UInt16 → Bool) → (a b : Expr) → SimpM Result :=
+  evalBinBoolPred getUInt16Value?
+abbrev evalBinBoolPredUInt32 : (op : UInt32 → UInt32 → Bool) → (a b : Expr) → SimpM Result :=
+  evalBinBoolPred getUInt32Value?
+abbrev evalBinBoolPredUInt64 : (op : UInt64 → UInt64 → Bool) → (a b : Expr) → SimpM Result :=
+  evalBinBoolPred getUInt64Value?
+abbrev evalBinBoolPredInt8 : (op : Int8 → Int8 → Bool) → (a b : Expr) → SimpM Result :=
+  evalBinBoolPred getInt8Value?
+abbrev evalBinBoolPredInt16 : (op : Int16 → Int16 → Bool) → (a b : Expr) → SimpM Result :=
+  evalBinBoolPred getInt16Value?
+abbrev evalBinBoolPredInt32 : (op : Int32 → Int32 → Bool) → (a b : Expr) → SimpM Result :=
+  evalBinBoolPred getInt32Value?
+abbrev evalBinBoolPredInt64 : (op : Int64 → Int64 → Bool) → (a b : Expr) → SimpM Result :=
+  evalBinBoolPred getInt64Value?
+abbrev evalBinBoolPredChar : (op : Char → Char → Bool) → (a b : Expr) → SimpM Result :=
+  evalBinBoolPred getCharValue?
 
 abbrev evalBinBoolPredFin (op : {n : Nat} → Fin n → Fin n → Bool) (a b : Expr) : SimpM Result := do
-  let some a := getFinValue? a | return .rfl
-  let some b := getFinValue? b | return .rfl
+  let some a := getFinValue? a
+    | return .rfl
+  let some b := getFinValue? b
+    | return .rfl
   if h : a.n = b.n then
     let r := op a.val (h ▸ b.val)
     let e ← share (toExpr r)
@@ -532,9 +695,12 @@ abbrev evalBinBoolPredFin (op : {n : Nat} → Fin n → Fin n → Bool) (a b : E
   else
     return .rfl
 
-abbrev evalBinBoolPredBitVec (op : {n : Nat} → BitVec n → BitVec n → Bool) (a b : Expr) : SimpM Result := do
-  let some a := getBitVecValue? a | return .rfl
-  let some b := getBitVecValue? b | return .rfl
+abbrev evalBinBoolPredBitVec (op : {n : Nat} → BitVec n → BitVec n → Bool) (a b : Expr)
+    : SimpM Result := do
+  let some a := getBitVecValue? a
+    | return .rfl
+  let some b := getBitVecValue? b
+    | return .rfl
   if h : a.n = b.n then
     let r := op a.val (h ▸ b.val)
     let e ← share (toExpr r)
@@ -567,9 +733,7 @@ declare_eval_bin_bool_pred evalBEq (· == ·)
 declare_eval_bin_bool_pred evalBNe (· != ·)
 
 def evalNot (a : Expr) : SimpM Result :=
-  /-
-  **Note**: We added `evalNot` because some abbreviations expanded into `Not`s.
-  -/
+  /- **Note**: We added `evalNot` because some abbreviations expanded into `Not`s. -/
   match_expr a with
   | True => return .step (← getFalseExpr) (mkConst ``Sym.not_true_eq) (done := true)
   | False => return .step (← getTrueExpr) (mkConst ``Sym.not_false_eq) (done := true)
@@ -579,8 +743,7 @@ abbrev mkRflBitVec (a : Expr) (n : Nat) : Expr :=
   mkApp2 (mkConst ``Eq.refl [1]) (mkApp (mkConst ``BitVec) (toExpr n)) a
 
 /-- Builds the type expression `BitVec w` from a width expression `w`. -/
-abbrev mkBitVecType (w : Expr) : Expr :=
-  mkApp (mkConst ``BitVec) w
+abbrev mkBitVecType (w : Expr) : Expr := mkApp (mkConst ``BitVec) w
 
 /--
 `USize.toNat n` for a numeral `n < 2^32`. The kernel cannot evaluate `USize` operations, whose
@@ -588,62 +751,75 @@ result depends on the opaque `System.Platform.numBits`, so the step is justified
 `USize.toNat_ofNat_of_lt_32` instead of `Eq.refl`.
 -/
 def evalUSizeToNat (a : Expr) : EvalM Result := do
-  let some n ← getNatValue? a |>.run | return .rfl
-  unless n < UInt32.size do return .rfl
+  let some n ← getNatValue? a |>.run
+    | return .rfl
+  unless n < UInt32.size do
+    return .rfl
   let e ← share <| toExpr n
   let bound := mkNatLit UInt32.size
   let lt := mkApp4 (mkConst ``LT.lt [0]) (mkConst ``Nat) (mkConst ``instLTNat) e bound
-  let h := mkApp3 (mkConst ``of_decide_eq_true) lt (mkApp2 (mkConst ``Nat.decLt) e bound)
-    (mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Bool) (mkConst ``Bool.true))
+  let h :=
+    mkApp3 (mkConst ``of_decide_eq_true) lt (mkApp2 (mkConst ``Nat.decLt) e bound)
+      (mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Bool) (mkConst ``Bool.true))
   return .step e (mkApp2 (mkConst ``USize.toNat_ofNat_of_lt_32) e h) (done := true)
 
 def evalInt8ToBitVec (a : Expr) : EvalM Result := do
-  let some v ← getInt8Value? a |>.run | return .rfl
+  let some v ← getInt8Value? a |>.run
+    | return .rfl
   let v ← mkBitVecLit v.toBitVec
   return .step v (mkRflBitVec v 8) (done := true)
 
 def evalInt16ToBitVec (a : Expr) : EvalM Result := do
-  let some v ← getInt16Value? a |>.run | return .rfl
+  let some v ← getInt16Value? a |>.run
+    | return .rfl
   let v ← mkBitVecLit v.toBitVec
   return .step v (mkRflBitVec v 16) (done := true)
 
 def evalInt32ToBitVec (a : Expr) : EvalM Result := do
-  let some v ← getInt32Value? a |>.run | return .rfl
+  let some v ← getInt32Value? a |>.run
+    | return .rfl
   let v ← mkBitVecLit v.toBitVec
   return .step v (mkRflBitVec v 32) (done := true)
 
 def evalInt64ToBitVec (a : Expr) : EvalM Result := do
-  let some v ← getInt64Value? a |>.run | return .rfl
+  let some v ← getInt64Value? a |>.run
+    | return .rfl
   let v ← mkBitVecLit v.toBitVec
   return .step v (mkRflBitVec v 64) (done := true)
 
 def evalUInt8ToBitVec (a : Expr) : EvalM Result := do
-  let some v ← getUInt8Value? a |>.run | return .rfl
+  let some v ← getUInt8Value? a |>.run
+    | return .rfl
   let v ← mkBitVecLit v.toBitVec
   return .step v (mkRflBitVec v 8) (done := true)
 
 def evalUInt16ToBitVec (a : Expr) : EvalM Result := do
-  let some v ← getUInt16Value? a |>.run | return .rfl
+  let some v ← getUInt16Value? a |>.run
+    | return .rfl
   let v ← mkBitVecLit v.toBitVec
   return .step v (mkRflBitVec v 16) (done := true)
 
 def evalUInt32ToBitVec (a : Expr) : EvalM Result := do
-  let some v ← getUInt32Value? a |>.run | return .rfl
+  let some v ← getUInt32Value? a |>.run
+    | return .rfl
   let v ← mkBitVecLit v.toBitVec
   return .step v (mkRflBitVec v 32) (done := true)
 
 def evalUInt64ToBitVec (a : Expr) : EvalM Result := do
-  let some v ← getUInt64Value? a |>.run | return .rfl
+  let some v ← getUInt64Value? a |>.run
+    | return .rfl
   let v ← mkBitVecLit v.toBitVec
   return .step v (mkRflBitVec v 64) (done := true)
 
 def evalBitVecToNat (a : Expr) : SimpM Result := do
-  let some a := getBitVecValue? a | return .rfl
+  let some a := getBitVecValue? a
+    | return .rfl
   let a ← share (toExpr a.val.toNat)
   return .step a (mkApp2 (mkConst ``Eq.refl [1]) Nat.mkType a) (done := true)
 
 def evalBitVecOfNat (n a : Expr) : EvalM Result := do
-  let some a ← getNatValue? a |>.run | return .rfl
+  let some a ← getNatValue? a |>.run
+    | return .rfl
   -- `BitVec.ofNat` with a literal width is the normal form only when `bitVecOfNat := true`
   if (← getNatValue? n |>.run).isSome && (← read).bitVecOfNat then return .rfl
   if let some nv ← evalNat n |>.run then -- TODO: consider using dsimp
@@ -658,92 +834,120 @@ def evalBitVecOfNat (n a : Expr) : EvalM Result := do
     if (← read).bitVecOfNat then return .rfl
     let v := mkRawNatLit a
     let type := mkBitVecType n
-    let r ← share <| mkApp3 (mkConst ``OfNat.ofNat [0]) type v (mkApp2 (mkConst ``BitVec.instOfNat) n v)
+    let r ←
+      share <| mkApp3 (mkConst ``OfNat.ofNat [0]) type v (mkApp2 (mkConst ``BitVec.instOfNat) n v)
     return .step r (mkApp2 (mkConst ``Eq.refl [1]) type r) (done := true)
 
 def evalBitVecOfNatClamp (n a : Expr) : EvalM Result := do
-  let some nv := getNatValue? n | return .rfl
-  let some av := getNatValue? a | return .rfl
+  let some nv := getNatValue? n
+    | return .rfl
+  let some av := getNatValue? a
+    | return .rfl
   let r ← mkBitVecLit (BitVec.ofNatClamp nv av)
   return .step r (mkRflBitVec r nv) (done := true)
 
 def evalBitVecToInt (a : Expr) : SimpM Result := do
-  let some a := getBitVecValue? a | return .rfl
+  let some a := getBitVecValue? a
+    | return .rfl
   let e ← share <| toExpr <| BitVec.toInt a.val
   return .step e (mkApp2 (mkConst ``Eq.refl [1]) Int.mkType e) (done := true)
 
 abbrev evalBitVecNatBool (op : {n : Nat} → BitVec n → Nat → Bool) (a i : Expr) : SimpM Result := do
-  let some a := getBitVecValue? a | return .rfl
-  let some i := getNatValue? i | return .rfl
+  let some a := getBitVecValue? a
+    | return .rfl
+  let some i := getNatValue? i
+    | return .rfl
   let r := op a.val i
   let e ← share (toExpr r)
   return .step e (if r then eagerReflBoolTrue else eagerReflBoolFalse) (done := true)
 
-abbrev evalBitVecNatBitVec (αExpr : Expr) (op : {n : Nat} → BitVec n → Nat → BitVec n) (a i : Expr) :
-    EvalM Result := do
-  let some a := getBitVecValue? a | return .rfl
-  let some i := getNatValue? i | return .rfl
+abbrev evalBitVecNatBitVec (αExpr : Expr) (op : {n : Nat} → BitVec n → Nat → BitVec n) (a i : Expr)
+    : EvalM Result := do
+  let some a := getBitVecValue? a
+    | return .rfl
+  let some i := getNatValue? i
+    | return .rfl
   let e ← mkBitVecLit (op a.val i)
   return .step e (mkApp2 (mkConst ``Eq.refl [1]) αExpr e) (done := true)
 
 def evalBitVecAppend (a b : Expr) : EvalM Result := do
-  let some a := getBitVecValue? a | return .rfl
-  let some b := getBitVecValue? b | return .rfl
+  let some a := getBitVecValue? a
+    | return .rfl
+  let some b := getBitVecValue? b
+    | return .rfl
   let e ← mkBitVecLit (a.val ++ b.val)
   return .step e (mkRflBitVec e (a.n + b.n)) (done := true)
 
 def evalBitVecCast (m a : Expr) : EvalM Result := do
-  let some a := getBitVecValue? a | return .rfl
-  let some m ← evalNat m |>.run | return .rfl
+  let some a := getBitVecValue? a
+    | return .rfl
+  let some m ← evalNat m |>.run
+    | return .rfl
   let e ← mkBitVecLit (BitVec.ofNat m a.val.toNat)
   return .step e (mkRflBitVec e m) (done := true)
 
-def evalBitVecExtend (op : {n : Nat} → (v : Nat) → BitVec n → BitVec v) (v a : Expr) : EvalM Result := do
-  let some a := getBitVecValue? a | return .rfl
-  let some v ← evalNat v |>.run | return .rfl
+def evalBitVecExtend (op : {n : Nat} → (v : Nat) → BitVec n → BitVec v) (v a : Expr)
+    : EvalM Result := do
+  let some a := getBitVecValue? a
+    | return .rfl
+  let some v ← evalNat v |>.run
+    | return .rfl
   let e ← mkBitVecLit (op v a.val)
   return .step e (mkRflBitVec e v) (done := true)
 
 def evalBitVecExtractLsb' (start len a : Expr) : EvalM Result := do
-  let some a := getBitVecValue? a | return .rfl
-  let some start ← evalNat start |>.run | return .rfl
-  let some len ← evalNat len |>.run | return .rfl
+  let some a := getBitVecValue? a
+    | return .rfl
+  let some start ← evalNat start |>.run
+    | return .rfl
+  let some len ← evalNat len |>.run
+    | return .rfl
   let e ← mkBitVecLit (a.val.extractLsb' start len)
   return .step e (mkRflBitVec e len) (done := true)
 
 def evalBitVecReplicate (i a : Expr) : EvalM Result := do
-  let some a := getBitVecValue? a | return .rfl
-  let some i ← evalNat i |>.run | return .rfl
+  let some a := getBitVecValue? a
+    | return .rfl
+  let some i ← evalNat i |>.run
+    | return .rfl
   let e ← mkBitVecLit (a.val.replicate i)
   return .step e (mkRflBitVec e (a.n * i)) (done := true)
 
 def evalBitVecShiftLeftZeroExtend (a m : Expr) : EvalM Result := do
-  let some a := getBitVecValue? a | return .rfl
-  let some m ← evalNat m |>.run | return .rfl
+  let some a := getBitVecValue? a
+    | return .rfl
+  let some m ← evalNat m |>.run
+    | return .rfl
   let e ← mkBitVecLit (a.val.shiftLeftZeroExtend m)
   return .step e (mkRflBitVec e (a.n + m)) (done := true)
 
 def evalBitVecAllOnes (n : Expr) : EvalM Result := do
-  let some n ← evalNat n |>.run | return .rfl
+  let some n ← evalNat n |>.run
+    | return .rfl
   let e ← mkBitVecLit (BitVec.allOnes n)
   return .step e (mkRflBitVec e n) (done := true)
 
 def evalBitVecOfInt (n i : Expr) : EvalM Result := do
-  let some n ← evalNat n |>.run | return .rfl
-  let some i := getIntValue? i | return .rfl
+  let some n ← evalNat n |>.run
+    | return .rfl
+  let some i := getIntValue? i
+    | return .rfl
   let e ← mkBitVecLit (BitVec.ofInt n i)
   return .step e (mkRflBitVec e n) (done := true)
 
 def evalBitVecToFin (a : Expr) : SimpM Result := do
-  let some a := getBitVecValue? a | return .rfl
+  let some a := getBitVecValue? a
+    | return .rfl
   let v := a.val.toFin
   let e ← share <| toExpr v
   let finType := mkApp (mkConst ``Fin) (toExpr (2 ^ a.n))
   return .step e (mkApp2 (mkConst ``Eq.refl [1]) finType e) (done := true)
 
 def evalBitVecOfFin (n a : Expr) : EvalM Result := do
-  let some n ← evalNat n |>.run | return .rfl
-  let some a := getFinValue? a | return .rfl
+  let some n ← evalNat n |>.run
+    | return .rfl
+  let some a := getFinValue? a
+    | return .rfl
   let e ← mkBitVecLit (BitVec.ofNat n a.val.val)
   return .step e (mkRflBitVec e n) (done := true)
 
@@ -752,60 +956,81 @@ def mkFinResult (v : Fin m) : SimpM Result := do
   let e ← share <| toExpr v
   return .step e (mkApp2 (mkConst ``Eq.refl [1]) (ToExpr.toTypeExpr (α := Fin m)) e) (done := true)
 
-abbrev evalFinUnary {f : Nat → Nat} (op : {n : Nat} → Fin n → Fin (f n)) (a : Expr) : SimpM Result := do
-  let some a := getFinValue? a | return .rfl
+abbrev evalFinUnary {f : Nat → Nat} (op : {n : Nat} → Fin n → Fin (f n)) (a : Expr)
+    : SimpM Result := do
+  let some a := getFinValue? a
+    | return .rfl
   mkFinResult (op a.val)
 
 def evalFinVal (a : Expr) : SimpM Result := do
-  let some a := getFinValue? a | return .rfl
+  let some a := getFinValue? a
+    | return .rfl
   let e ← share <| toExpr a.val.val
   return .step e (mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Nat) e) (done := true)
 
 def evalFinLast (n : Expr) : SimpM Result := do
-  let some n := getNatValue? n | return .rfl
+  let some n := getNatValue? n
+    | return .rfl
   mkFinResult (Fin.last n)
 
 def evalFinPredecessor (a : Expr) : SimpM Result := do
-  let some ⟨_ + 1, i⟩ := getFinValue? a | return .rfl
+  let some ⟨_ + 1, i⟩ := getFinValue? a
+    | return .rfl
   if h : i ≠ 0 then mkFinResult (i.pred h) else return .rfl
 
 def evalFinCastAdd (m a : Expr) : SimpM Result := do
-  let some m := getNatValue? m | return .rfl
-  let some a := getFinValue? a | return .rfl
+  let some m := getNatValue? m
+    | return .rfl
+  let some a := getFinValue? a
+    | return .rfl
   mkFinResult (a.val.castAdd m)
 
 def evalFinAddNat (a m : Expr) : SimpM Result := do
-  let some a := getFinValue? a | return .rfl
-  let some m := getNatValue? m | return .rfl
+  let some a := getFinValue? a
+    | return .rfl
+  let some m := getNatValue? m
+    | return .rfl
   mkFinResult (a.val.addNat m)
 
 def evalFinNatAdd (n a : Expr) : SimpM Result := do
-  let some n := getNatValue? n | return .rfl
-  let some a := getFinValue? a | return .rfl
+  let some n := getNatValue? n
+    | return .rfl
+  let some a := getFinValue? a
+    | return .rfl
   mkFinResult (Fin.natAdd n a.val)
 
 def evalFinCastLT (n a : Expr) : SimpM Result := do
-  let some n := getNatValue? n | return .rfl
-  let some a := getFinValue? a | return .rfl
+  let some n := getNatValue? n
+    | return .rfl
+  let some a := getFinValue? a
+    | return .rfl
   if h : a.val.val < n then mkFinResult (a.val.castLT h) else return .rfl
 
 def evalFinCastLE (m a : Expr) : SimpM Result := do
-  let some m := getNatValue? m | return .rfl
-  let some a := getFinValue? a | return .rfl
+  let some m := getNatValue? m
+    | return .rfl
+  let some a := getFinValue? a
+    | return .rfl
   if h : a.n ≤ m then mkFinResult (Fin.castLE h a.val) else return .rfl
 
 def evalFinSubNat (m a : Expr) : SimpM Result := do
-  let some m := getNatValue? m | return .rfl
-  let some a := getFinValue? a | return .rfl
+  let some m := getNatValue? m
+    | return .rfl
+  let some a := getFinValue? a
+    | return .rfl
   if h : m ≤ a.val.val then
     mkFinResult (⟨a.val.val - m, by have := a.val.isLt; omega⟩ : Fin (a.n - m))
   else
     return .rfl
 
-/-- Converts `Fin.mk v _` and `Fin.ofNat n v` into a `Fin n` literal when `n` and `v` are numerals. -/
+/--
+Converts `Fin.mk v _` and `Fin.ofNat n v` into a `Fin n` literal when `n` and `v` are numerals.
+-/
 def evalFinOfNat (n v : Expr) : SimpM Result := do
-  let some n := getNatValue? n | return .rfl
-  let some v := getNatValue? v | return .rfl
+  let some n := getNatValue? n
+    | return .rfl
+  let some v := getNatValue? v
+    | return .rfl
   if h : n ≠ 0 then
     have : NeZero n := ⟨h⟩
     mkFinResult (Fin.ofNat n v)
@@ -820,41 +1045,53 @@ The value `v` may also be a nested numeral and `n` a ground term, as in
 so every spelling must become the same term. The instance is left to `Sym.canon`.
 -/
 def evalFinLit (e α v : Expr) : SimpM Result := do
-  let_expr Fin nExpr := α | return .rfl
+  let_expr Fin nExpr := α
+    | return .rfl
   let isCanonical := v.isRawNatLit && (getNatValue? nExpr).isSome
-  let some v := (match v with | .lit (.natVal v) => some v | _ => getNatValue? v) | return .rfl
-  let some n ← evalNat nExpr |>.run | return .rfl
+  let some v :=
+      (match v with
+        | .lit (.natVal v) => some v
+        | _ => getNatValue? v)
+    | return .rfl
+  let some n ← evalNat nExpr |>.run
+    | return .rfl
   if isCanonical && v < n then return .rfl
   if h : n ≠ 0 then
     have : NeZero n := ⟨h⟩
     let e' ← share <| toExpr (Fin.ofNat n v)
     if isSameExpr e e' then return .rfl
-    return .step e' (mkApp2 (mkConst ``Eq.refl [1]) (ToExpr.toTypeExpr (α := Fin n)) e') (done := true)
+    return .step e' (mkApp2 (mkConst ``Eq.refl [1]) (ToExpr.toTypeExpr (α := Fin n)) e')
+      (done := true)
   else
     return .rfl
 
 abbrev evalCharUnary [ToExpr α] (op : Char → α) (a : Expr) : SimpM Result := do
-  let some a := getCharValue? a | return .rfl
+  let some a := getCharValue? a
+    | return .rfl
   let e ← share <| toExpr (op a)
   return .step e (mkApp2 (mkConst ``Eq.refl [1]) (ToExpr.toTypeExpr (α := α)) e) (done := true)
 
 abbrev evalCharPred (op : Char → Bool) (a : Expr) : SimpM Result := do
-  let some a := getCharValue? a | return .rfl
+  let some a := getCharValue? a
+    | return .rfl
   let r := op a
   let e ← share (toExpr r)
   return .step e (if r then eagerReflBoolTrue else eagerReflBoolFalse) (done := true)
 
 /-- Evaluates `String.push s c` on a string literal and a character literal. -/
 def evalStringPush (s c : Expr) : SimpM Result := do
-  let some s := getStringValue? s | return .rfl
-  let some c := getCharValue? c | return .rfl
+  let some s := getStringValue? s
+    | return .rfl
+  let some c := getCharValue? c
+    | return .rfl
   let e ← share <| toExpr (s.push c)
   return .step e (mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``String) e) (done := true)
 
 /-- Converts `Char.ofNat n` into a character literal when `n` is a numeral. -/
 def evalCharOfNat (n : Expr) : SimpM Result := do
   -- `getNatValue?` fails on raw literals: `Char.ofNat` applied to one is the character literal.
-  let some n := getNatValue? n | return .rfl
+  let some n := getNatValue? n
+    | return .rfl
   let e ← share <| toExpr (Char.ofNat n)
   return .step e (mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Char) e) (done := true)
 
@@ -867,40 +1104,74 @@ set_option maxRecDepth 1024 in
 /-- Evaluation step of `evalGround`. -/
 def evalGroundCore (e : Expr) : EvalM Result :=
   match_expr e with
-  | HAdd.hAdd α _ _ _ a b => evalAdd α a b
-  | HSub.hSub α _ _ _ a b => evalSub α a b
-  | HMul.hMul α _ _ _ a b => evalMul α a b
-  | HDiv.hDiv α _ _ _ a b => evalDiv e α a b
-  | HMod.hMod α _ _ _ a b => evalMod α a b
-  | HPow.hPow α β _ _ a b => evalPow α β a b
-  | HAnd.hAnd α _ _ _ a b => evalAnd α a b
-  | HXor.hXor α _ _ _ a b => evalXOr α a b
-  | HOr.hOr α _ _ _ a b => evalOr α a b
-  | HShiftLeft.hShiftLeft α β _ _ a b => evalShift (left := true) α β a b
-  | HShiftRight.hShiftRight α β _ _ a b => evalShift (left := false) α β a b
-  | Inv.inv α _ a => evalInv α a
-  | Neg.neg α _ a => return skipIfUnchanged e (← evalNeg α a)
-  | Complement.complement α _ a => evalComplement α a
-  | Nat.gcd a b => evalBinNat Nat.gcd a b
-  | Nat.succ a => evalUnaryNat (· + 1) a
-  | Nat.log2 a => evalLog2 a
-  | Int.gcd a b => evalIntGcd a b
-  | Int.tdiv a b => evalBinInt Int.tdiv a b
-  | Int.fdiv a b => evalBinInt Int.fdiv a b
-  | Int.bdiv a b => evalIntBDiv a b
-  | Int.tmod a b => evalBinInt Int.tmod a b
-  | Int.fmod a b => evalBinInt Int.fmod a b
-  | Int.bmod a b => evalIntBMod a b
-  | LE.le α _ a b => evalLE α a b
-  | LT.lt α _ a b => evalLT α a b
-  | Dvd.dvd α _ a b => evalDvd α a b
-  | Eq α a b => evalEq α a b
-  | BEq.beq α _ a b => evalBEq α a b
-  | bne α _ a b => evalBNe α a b
-  | Not a => evalNot a
-  | Bool.and x y => evalBinBool Bool.and x y
-  | Bool.or x y => evalBinBool Bool.or x y
-  | Bool.not x => evalUnaryBool Bool.not x
+  | HAdd.hAdd α _ _ _ a b =>
+    evalAdd α a b
+  | HSub.hSub α _ _ _ a b =>
+    evalSub α a b
+  | HMul.hMul α _ _ _ a b =>
+    evalMul α a b
+  | HDiv.hDiv α _ _ _ a b =>
+    evalDiv e α a b
+  | HMod.hMod α _ _ _ a b =>
+    evalMod α a b
+  | HPow.hPow α β _ _ a b =>
+    evalPow α β a b
+  | HAnd.hAnd α _ _ _ a b =>
+    evalAnd α a b
+  | HXor.hXor α _ _ _ a b =>
+    evalXOr α a b
+  | HOr.hOr α _ _ _ a b =>
+    evalOr α a b
+  | HShiftLeft.hShiftLeft α β _ _ a b =>
+    evalShift (left := true) α β a b
+  | HShiftRight.hShiftRight α β _ _ a b =>
+    evalShift (left := false) α β a b
+  | Inv.inv α _ a =>
+    evalInv α a
+  | Neg.neg α _ a =>
+    return skipIfUnchanged e (← evalNeg α a)
+  | Complement.complement α _ a =>
+    evalComplement α a
+  | Nat.gcd a b =>
+    evalBinNat Nat.gcd a b
+  | Nat.succ a =>
+    evalUnaryNat (· + 1) a
+  | Nat.log2 a =>
+    evalLog2 a
+  | Int.gcd a b =>
+    evalIntGcd a b
+  | Int.tdiv a b =>
+    evalBinInt Int.tdiv a b
+  | Int.fdiv a b =>
+    evalBinInt Int.fdiv a b
+  | Int.bdiv a b =>
+    evalIntBDiv a b
+  | Int.tmod a b =>
+    evalBinInt Int.tmod a b
+  | Int.fmod a b =>
+    evalBinInt Int.fmod a b
+  | Int.bmod a b =>
+    evalIntBMod a b
+  | LE.le α _ a b =>
+    evalLE α a b
+  | LT.lt α _ a b =>
+    evalLT α a b
+  | Dvd.dvd α _ a b =>
+    evalDvd α a b
+  | Eq α a b =>
+    evalEq α a b
+  | BEq.beq α _ a b =>
+    evalBEq α a b
+  | bne α _ a b =>
+    evalBNe α a b
+  | Not a =>
+    evalNot a
+  | Bool.and x y =>
+    evalBinBool Bool.and x y
+  | Bool.or x y =>
+    evalBinBool Bool.or x y
+  | Bool.not x =>
+    evalUnaryBool Bool.not x
   | HAppend.hAppend α _ _ _ a b =>
     match_expr α with
     | BitVec _ => evalBitVecAppend a b
@@ -910,90 +1181,174 @@ def evalGroundCore (e : Expr) : EvalM Result :=
     match_expr α with
     | BitVec _ => evalBitVecNatBool BitVec.getLsbD a i
     | _ => return .rfl
-  | BitVec.append _ _ a b => evalBitVecAppend a b
-  | BitVec.shiftLeft w a i => evalBitVecNatBitVec (mkBitVecType w) BitVec.shiftLeft a i
-  | BitVec.ushiftRight w a i => evalBitVecNatBitVec (mkBitVecType w) BitVec.ushiftRight a i
-  | BitVec.sshiftRight w a i => evalBitVecNatBitVec (mkBitVecType w) BitVec.sshiftRight a i
-  | BitVec.sshiftRight' n _ a b => evalBinBitVec' BitVec.sshiftRight' (mkBitVecType n) a b
-  | BitVec.rotateLeft w a i => evalBitVecNatBitVec (mkBitVecType w) BitVec.rotateLeft a i
-  | BitVec.rotateRight w a i => evalBitVecNatBitVec (mkBitVecType w) BitVec.rotateRight a i
-  | BitVec.udiv w a b => evalBinBitVec' BitVec.udiv (mkBitVecType w) a b
-  | BitVec.umod w a b => evalBinBitVec' BitVec.umod (mkBitVecType w) a b
-  | BitVec.sdiv w a b => evalBinBitVec' BitVec.sdiv (mkBitVecType w) a b
-  | BitVec.smod w a b => evalBinBitVec' BitVec.smod (mkBitVecType w) a b
-  | BitVec.srem w a b => evalBinBitVec' BitVec.srem (mkBitVecType w) a b
-  | BitVec.smtUDiv w a b => evalBinBitVec' BitVec.smtUDiv (mkBitVecType w) a b
-  | BitVec.smtSDiv w a b => evalBinBitVec' BitVec.smtSDiv (mkBitVecType w) a b
-  | BitVec.abs w a => evalUnaryBitVec' BitVec.abs (mkBitVecType w) a
-  | BitVec.clz w a => evalUnaryBitVec' BitVec.clz (mkBitVecType w) a
-  | BitVec.cpop w a => evalUnaryBitVec' BitVec.cpop (mkBitVecType w) a
-  | BitVec.ult _ a b => evalBinBoolPredBitVec BitVec.ult a b
-  | BitVec.ule _ a b => evalBinBoolPredBitVec BitVec.ule a b
-  | BitVec.slt _ a b => evalBinBoolPredBitVec BitVec.slt a b
-  | BitVec.sle _ a b => evalBinBoolPredBitVec BitVec.sle a b
-  | BitVec.getLsbD _ a i => evalBitVecNatBool BitVec.getLsbD a i
-  | BitVec.getMsbD _ a i => evalBitVecNatBool BitVec.getMsbD a i
-  | BitVec.setWidth _ v x => evalBitVecExtend BitVec.setWidth v x
-  | BitVec.zeroExtend _ v x => evalBitVecExtend BitVec.zeroExtend v x
-  | BitVec.signExtend _ v a => evalBitVecExtend BitVec.signExtend v a
-  | BitVec.setWidth' _ w _ a => evalBitVecExtend BitVec.setWidth w a
-  | BitVec.cast _ m _ a => evalBitVecCast m a
-  | BitVec.shiftLeftZeroExtend _ a m => evalBitVecShiftLeftZeroExtend a m
-  | BitVec.extractLsb' _ start len a => evalBitVecExtractLsb' start len a
-  | BitVec.replicate _ i a => evalBitVecReplicate i a
-  | BitVec.allOnes n => evalBitVecAllOnes n
-  | BitVec.toNat _ a => evalBitVecToNat a
-  | BitVec.ofNat n a => evalBitVecOfNat n a
-  | BitVec.ofNatClamp n a => evalBitVecOfNatClamp n a
-  | BitVec.toInt _ a => evalBitVecToInt a
-  | BitVec.ofInt n i => evalBitVecOfInt n i
-  | BitVec.toFin _ a => evalBitVecToFin a
-  | BitVec.ofFin n a => evalBitVecOfFin n a
-  | Int8.toBitVec a => evalInt8ToBitVec a
-  | Int16.toBitVec a => evalInt16ToBitVec a
-  | Int32.toBitVec a => evalInt32ToBitVec a
-  | Int64.toBitVec a => evalInt64ToBitVec a
-  | UInt8.toBitVec a => evalUInt8ToBitVec a
-  | UInt16.toBitVec a => evalUInt16ToBitVec a
-  | UInt32.toBitVec a => evalUInt32ToBitVec a
-  | UInt64.toBitVec a => evalUInt64ToBitVec a
-  | Fin.succ _ a => evalFinUnary Fin.succ a
-  | Fin.castSucc _ a => evalFinUnary Fin.castSucc a
-  | Fin.rev _ a => evalFinUnary Fin.rev a
-  | Fin.last n => evalFinLast n
-  | Fin.val _ a => evalFinVal a
-  | Fin.pred _ a _ => evalFinPredecessor a
-  | Fin.castAdd _ m a => evalFinCastAdd m a
-  | Fin.addNat _ a m => evalFinAddNat a m
-  | Fin.natAdd _ n a => evalFinNatAdd n a
-  | Fin.castLT n _ a _ => evalFinCastLT n a
-  | Fin.castLE _ m _ a => evalFinCastLE m a
-  | Fin.subNat _ m a _ => evalFinSubNat m a
-  | Fin.mk n v _ => evalFinOfNat n v
-  | Fin.ofNat n _ v => evalFinOfNat n v
-  | OfNat.ofNat α v _ => evalFinLit e α v
-  | Char.ofNat n => evalCharOfNat n
-  | Char.toNat a => evalCharUnary Char.toNat a
-  | Char.val a => evalCharUnary Char.val a
-  | Char.toLower a => evalCharUnary Char.toLower a
-  | Char.toUpper a => evalCharUnary Char.toUpper a
-  | Char.isWhitespace a => evalCharPred Char.isWhitespace a
-  | Char.isUpper a => evalCharPred Char.isUpper a
-  | Char.isLower a => evalCharPred Char.isLower a
-  | Char.isAlpha a => evalCharPred Char.isAlpha a
-  | Char.isDigit a => evalCharPred Char.isDigit a
-  | Char.isAlphanum a => evalCharPred Char.isAlphanum a
-  | ToString.toString α _ a => evalToString α a
-  | String.push s c => evalStringPush s c
-  | String.singleton c => evalCharUnary String.singleton c
-  | Int.toNat a => evalUnary getIntValue? Int.toNat a
-  | Int.natAbs a => evalUnary getIntValue? Int.natAbs a
-  | UInt8.toNat a => evalUnary getUInt8Value? UInt8.toNat a
-  | UInt16.toNat a => evalUnary getUInt16Value? UInt16.toNat a
-  | UInt32.toNat a => evalUnary getUInt32Value? UInt32.toNat a
-  | UInt64.toNat a => evalUnary getUInt64Value? UInt64.toNat a
-  | USize.toNat a => evalUSizeToNat a
-  | _  => return .rfl
+  | BitVec.append _ _ a b =>
+    evalBitVecAppend a b
+  | BitVec.shiftLeft w a i =>
+    evalBitVecNatBitVec (mkBitVecType w) BitVec.shiftLeft a i
+  | BitVec.ushiftRight w a i =>
+    evalBitVecNatBitVec (mkBitVecType w) BitVec.ushiftRight a i
+  | BitVec.sshiftRight w a i =>
+    evalBitVecNatBitVec (mkBitVecType w) BitVec.sshiftRight a i
+  | BitVec.sshiftRight' n _ a b =>
+    evalBinBitVec' BitVec.sshiftRight' (mkBitVecType n) a b
+  | BitVec.rotateLeft w a i =>
+    evalBitVecNatBitVec (mkBitVecType w) BitVec.rotateLeft a i
+  | BitVec.rotateRight w a i =>
+    evalBitVecNatBitVec (mkBitVecType w) BitVec.rotateRight a i
+  | BitVec.udiv w a b =>
+    evalBinBitVec' BitVec.udiv (mkBitVecType w) a b
+  | BitVec.umod w a b =>
+    evalBinBitVec' BitVec.umod (mkBitVecType w) a b
+  | BitVec.sdiv w a b =>
+    evalBinBitVec' BitVec.sdiv (mkBitVecType w) a b
+  | BitVec.smod w a b =>
+    evalBinBitVec' BitVec.smod (mkBitVecType w) a b
+  | BitVec.srem w a b =>
+    evalBinBitVec' BitVec.srem (mkBitVecType w) a b
+  | BitVec.smtUDiv w a b =>
+    evalBinBitVec' BitVec.smtUDiv (mkBitVecType w) a b
+  | BitVec.smtSDiv w a b =>
+    evalBinBitVec' BitVec.smtSDiv (mkBitVecType w) a b
+  | BitVec.abs w a =>
+    evalUnaryBitVec' BitVec.abs (mkBitVecType w) a
+  | BitVec.clz w a =>
+    evalUnaryBitVec' BitVec.clz (mkBitVecType w) a
+  | BitVec.cpop w a =>
+    evalUnaryBitVec' BitVec.cpop (mkBitVecType w) a
+  | BitVec.ult _ a b =>
+    evalBinBoolPredBitVec BitVec.ult a b
+  | BitVec.ule _ a b =>
+    evalBinBoolPredBitVec BitVec.ule a b
+  | BitVec.slt _ a b =>
+    evalBinBoolPredBitVec BitVec.slt a b
+  | BitVec.sle _ a b =>
+    evalBinBoolPredBitVec BitVec.sle a b
+  | BitVec.getLsbD _ a i =>
+    evalBitVecNatBool BitVec.getLsbD a i
+  | BitVec.getMsbD _ a i =>
+    evalBitVecNatBool BitVec.getMsbD a i
+  | BitVec.setWidth _ v x =>
+    evalBitVecExtend BitVec.setWidth v x
+  | BitVec.zeroExtend _ v x =>
+    evalBitVecExtend BitVec.zeroExtend v x
+  | BitVec.signExtend _ v a =>
+    evalBitVecExtend BitVec.signExtend v a
+  | BitVec.setWidth' _ w _ a =>
+    evalBitVecExtend BitVec.setWidth w a
+  | BitVec.cast _ m _ a =>
+    evalBitVecCast m a
+  | BitVec.shiftLeftZeroExtend _ a m =>
+    evalBitVecShiftLeftZeroExtend a m
+  | BitVec.extractLsb' _ start len a =>
+    evalBitVecExtractLsb' start len a
+  | BitVec.replicate _ i a =>
+    evalBitVecReplicate i a
+  | BitVec.allOnes n =>
+    evalBitVecAllOnes n
+  | BitVec.toNat _ a =>
+    evalBitVecToNat a
+  | BitVec.ofNat n a =>
+    evalBitVecOfNat n a
+  | BitVec.ofNatClamp n a =>
+    evalBitVecOfNatClamp n a
+  | BitVec.toInt _ a =>
+    evalBitVecToInt a
+  | BitVec.ofInt n i =>
+    evalBitVecOfInt n i
+  | BitVec.toFin _ a =>
+    evalBitVecToFin a
+  | BitVec.ofFin n a =>
+    evalBitVecOfFin n a
+  | Int8.toBitVec a =>
+    evalInt8ToBitVec a
+  | Int16.toBitVec a =>
+    evalInt16ToBitVec a
+  | Int32.toBitVec a =>
+    evalInt32ToBitVec a
+  | Int64.toBitVec a =>
+    evalInt64ToBitVec a
+  | UInt8.toBitVec a =>
+    evalUInt8ToBitVec a
+  | UInt16.toBitVec a =>
+    evalUInt16ToBitVec a
+  | UInt32.toBitVec a =>
+    evalUInt32ToBitVec a
+  | UInt64.toBitVec a =>
+    evalUInt64ToBitVec a
+  | Fin.succ _ a =>
+    evalFinUnary Fin.succ a
+  | Fin.castSucc _ a =>
+    evalFinUnary Fin.castSucc a
+  | Fin.rev _ a =>
+    evalFinUnary Fin.rev a
+  | Fin.last n =>
+    evalFinLast n
+  | Fin.val _ a =>
+    evalFinVal a
+  | Fin.pred _ a _ =>
+    evalFinPredecessor a
+  | Fin.castAdd _ m a =>
+    evalFinCastAdd m a
+  | Fin.addNat _ a m =>
+    evalFinAddNat a m
+  | Fin.natAdd _ n a =>
+    evalFinNatAdd n a
+  | Fin.castLT n _ a _ =>
+    evalFinCastLT n a
+  | Fin.castLE _ m _ a =>
+    evalFinCastLE m a
+  | Fin.subNat _ m a _ =>
+    evalFinSubNat m a
+  | Fin.mk n v _ =>
+    evalFinOfNat n v
+  | Fin.ofNat n _ v =>
+    evalFinOfNat n v
+  | OfNat.ofNat α v _ =>
+    evalFinLit e α v
+  | Char.ofNat n =>
+    evalCharOfNat n
+  | Char.toNat a =>
+    evalCharUnary Char.toNat a
+  | Char.val a =>
+    evalCharUnary Char.val a
+  | Char.toLower a =>
+    evalCharUnary Char.toLower a
+  | Char.toUpper a =>
+    evalCharUnary Char.toUpper a
+  | Char.isWhitespace a =>
+    evalCharPred Char.isWhitespace a
+  | Char.isUpper a =>
+    evalCharPred Char.isUpper a
+  | Char.isLower a =>
+    evalCharPred Char.isLower a
+  | Char.isAlpha a =>
+    evalCharPred Char.isAlpha a
+  | Char.isDigit a =>
+    evalCharPred Char.isDigit a
+  | Char.isAlphanum a =>
+    evalCharPred Char.isAlphanum a
+  | ToString.toString α _ a =>
+    evalToString α a
+  | String.push s c =>
+    evalStringPush s c
+  | String.singleton c =>
+    evalCharUnary String.singleton c
+  | Int.toNat a =>
+    evalUnary getIntValue? Int.toNat a
+  | Int.natAbs a =>
+    evalUnary getIntValue? Int.natAbs a
+  | UInt8.toNat a =>
+    evalUnary getUInt8Value? UInt8.toNat a
+  | UInt16.toNat a =>
+    evalUnary getUInt16Value? UInt16.toNat a
+  | UInt32.toNat a =>
+    evalUnary getUInt32Value? UInt32.toNat a
+  | UInt64.toNat a =>
+    evalUnary getUInt64Value? UInt64.toNat a
+  | USize.toNat a =>
+    evalUSizeToNat a
+  | _ =>
+    return .rfl
 
 /--
 Simplification procedure that evaluates ground terms of builtin types.

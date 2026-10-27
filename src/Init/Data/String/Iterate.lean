@@ -24,13 +24,12 @@ structure PosIterator (s : Slice) where
   currPos : s.Pos
 deriving Inhabited
 
-/--
-Creates an iterator over the valid positions within {name}`s`, starting at {name}`p`.
--/
+/-- Creates an iterator over the valid positions within {name}`s`, starting at {name}`p`. -/
 @[cbv_opaque]
-def positionsFrom {s : Slice} (p : s.Pos) :
-    Std.Iter (α := PosIterator s) { p : s.Pos // p ≠ s.endPos } :=
-  { internalState := { currPos := p } }
+def positionsFrom {s : Slice} (p : s.Pos)
+    : Std.Iter (α := PosIterator s) {p : s.Pos // p ≠ s.endPos} := {
+  internalState := { currPos := p }
+}
 
 set_option doc.verso false
 /--
@@ -42,31 +41,31 @@ Examples:
  * {lean}`("ab∀c".toSlice.positions.map (fun ⟨p, h⟩ => p.get h) |>.toList) = ['a', 'b', '∀', 'c']`
  * {lean}`("ab∀c".toSlice.positions.map (·.val.offset.byteIdx) |>.toList) = [0, 1, 2, 5]`
 -/
-def positions (s : Slice) : Std.Iter (α := PosIterator s) { p : s.Pos // p ≠ s.endPos } :=
+def positions (s : Slice) : Std.Iter (α := PosIterator s) {p : s.Pos // p ≠ s.endPos} :=
   s.positionsFrom s.startPos
 
 set_option doc.verso true
 
 namespace PosIterator
 
-instance [Pure m] :
-    Std.Iterator (PosIterator s) m { p : s.Pos // p ≠ s.endPos } where
+instance [Pure m] : Std.Iterator (PosIterator s) m {p : s.Pos // p ≠ s.endPos} where
   IsPlausibleStep it
     | .yield it' out =>
       ∃ h : it.internalState.currPos ≠ s.endPos,
-        it'.internalState.currPos = it.internalState.currPos.next h ∧
-        it.internalState.currPos = out
-    | .skip _ => False
-    | .done => it.internalState.currPos = s.endPos
+        it'.internalState.currPos = it.internalState.currPos.next h ∧ it.internalState.currPos = out
+    | .skip _ =>
+      False
+    | .done =>
+      it.internalState.currPos = s.endPos
   step := fun ⟨⟨currPos⟩⟩ =>
     if h : currPos = s.endPos then
       pure (.deflate ⟨.done, by simp [h]⟩)
     else
       pure (.deflate ⟨.yield ⟨⟨currPos.next h⟩⟩ ⟨currPos, h⟩, by simp [h]⟩)
 
-private def finitenessRelation [Pure m] :
-    Std.Iterators.FinitenessRelation (PosIterator s) m where
-  Rel := InvImage WellFoundedRelation.rel
+private def finitenessRelation [Pure m] : Std.Iterators.FinitenessRelation (PosIterator s) m where
+  Rel :=
+    InvImage WellFoundedRelation.rel
       (fun it => s.utf8ByteSize - it.internalState.currPos.offset.byteIdx)
   wf := InvImage.wf _ WellFoundedRelation.wf
   subrelation {it it'} h := by
@@ -85,8 +84,7 @@ private def finitenessRelation [Pure m] :
 instance [Pure m] : Std.Iterators.Finite (PosIterator s) m :=
   .of_finitenessRelation finitenessRelation
 
-instance [Monad m] [Monad n] : Std.IteratorLoop (PosIterator s) m n :=
-  .defaultImplementation
+instance [Monad m] [Monad n] : Std.IteratorLoop (PosIterator s) m n := .defaultImplementation
 
 docs_to_verso positions
 
@@ -100,12 +98,13 @@ Examples:
  * {lean}`"ab∀c".toSlice.chars.toList = ['a', 'b', '∀', 'c']`
 -/
 @[cbv_opaque, expose, inline]
-def chars (s : Slice) :=
-  Std.Iter.map (fun ⟨pos, h⟩ => pos.get h) (positions s)
+def chars (s : Slice) := Std.Iter.map (fun ⟨pos, h⟩ => pos.get h) (positions s)
 
-@[deprecated "There is no constant-time length function on slices. Use `s.positions.length` instead, or `isEmpty` if you only need to know whether the slice is empty." (since := "2025-11-20")]
-def length (s : Slice) : Nat :=
-  s.positions.length
+@[deprecated
+  "There is no constant-time length function on slices. Use `s.positions.length` instead, or \
+    `isEmpty` if you only need to know whether the slice is empty."
+  (since := "2025-11-20")]
+def length (s : Slice) : Nat := s.positions.length
 
 structure RevPosIterator (s : Slice) where
   currPos : s.Pos
@@ -115,8 +114,10 @@ deriving Inhabited
 Creates an iterator over all valid positions within {name}`s` that are strictly smaller than
 {name}`p`, starting from the position before {name}`p` and iterating towards the first one.
 -/
-def revPositionsFrom (s : Slice) (p : s.Pos) : Std.Iter (α := RevPosIterator s) { p : s.Pos // p ≠ s.endPos } :=
-  { internalState := { currPos := p } }
+def revPositionsFrom (s : Slice) (p : s.Pos)
+    : Std.Iter (α := RevPosIterator s) {p : s.Pos // p ≠ s.endPos} := {
+  internalState := { currPos := p }
+}
 
 set_option doc.verso false
 /--
@@ -129,33 +130,34 @@ Examples
  * {lean}`("ab∀c".toSlice.revPositions.map (fun ⟨p, h⟩ => p.get h) |>.toList) = ['c', '∀', 'b', 'a']`
  * {lean}`("ab∀c".toSlice.revPositions.map (·.val.offset.byteIdx) |>.toList) = [5, 2, 1, 0]`
 -/
-def revPositions (s : Slice) : Std.Iter (α := RevPosIterator s) { p : s.Pos // p ≠ s.endPos } :=
+def revPositions (s : Slice) : Std.Iter (α := RevPosIterator s) {p : s.Pos // p ≠ s.endPos} :=
   s.revPositionsFrom s.endPos
 
 set_option doc.verso true
 
 namespace RevPosIterator
 
-instance [Pure m] :
-    Std.Iterator (RevPosIterator s) m { p : s.Pos // p ≠ s.endPos } where
+instance [Pure m] : Std.Iterator (RevPosIterator s) m {p : s.Pos // p ≠ s.endPos} where
   IsPlausibleStep it
     | .yield it' out =>
       ∃ h : it.internalState.currPos ≠ s.startPos,
-        it'.internalState.currPos = it.internalState.currPos.prev h ∧
-        it.internalState.currPos.prev h = out
-    | .skip _ => False
-    | .done => it.internalState.currPos = s.startPos
+        it'.internalState.currPos = it.internalState.currPos.prev h
+          ∧ it.internalState.currPos.prev h = out
+    | .skip _ =>
+      False
+    | .done =>
+      it.internalState.currPos = s.startPos
   step := fun ⟨⟨currPos⟩⟩ =>
     if h : currPos = s.startPos then
       pure (.deflate ⟨.done, by simp [h]⟩)
     else
       let prevPos := currPos.prev h
-      pure (.deflate ⟨.yield ⟨⟨prevPos⟩⟩ ⟨prevPos, by exact Pos.prev_ne_endPos⟩, by simp [h, prevPos]⟩)
+      pure (.deflate
+        ⟨.yield ⟨⟨prevPos⟩⟩ ⟨prevPos, by exact Pos.prev_ne_endPos⟩, by simp [h, prevPos]⟩)
 
-private def finitenessRelation [Pure m] :
-    Std.Iterators.FinitenessRelation (RevPosIterator s) m where
-  Rel := InvImage WellFoundedRelation.rel
-      (fun it => it.internalState.currPos.offset.byteIdx)
+private def finitenessRelation [Pure m]
+    : Std.Iterators.FinitenessRelation (RevPosIterator s) m where
+  Rel := InvImage WellFoundedRelation.rel (fun it => it.internalState.currPos.offset.byteIdx)
   wf := InvImage.wf _ WellFoundedRelation.wf
   subrelation {it it'} h := by
     simp_wf
@@ -172,8 +174,7 @@ private def finitenessRelation [Pure m] :
 instance [Pure m] : Std.Iterators.Finite (RevPosIterator s) m :=
   .of_finitenessRelation finitenessRelation
 
-instance [Monad m] [Monad n] : Std.IteratorLoop (RevPosIterator s) m n :=
-  .defaultImplementation
+instance [Monad m] [Monad n] : Std.IteratorLoop (RevPosIterator s) m n := .defaultImplementation
 
 docs_to_verso revPositions
 
@@ -188,8 +189,7 @@ Example:
  * {lean}`"ab∀c".toSlice.revChars.toList = ['c', '∀', 'b', 'a']`
 -/
 @[cbv_opaque, expose, inline]
-def revChars (s : Slice) :=
-  Std.Iter.map (fun ⟨pos, h⟩ => pos.get h) (revPositions s)
+def revChars (s : Slice) := Std.Iter.map (fun ⟨pos, h⟩ => pos.get h) (revPositions s)
 
 structure ByteIterator where
   s : Slice
@@ -204,8 +204,9 @@ Examples:
  * {lean}`"abc".toSlice.bytes.toList = [97, 98, 99]`
  * {lean}`"ab∀c".toSlice.bytes.toList = [97, 98, 226, 136, 128, 99]`
 -/
-def bytes (s : Slice) : Std.Iter (α := ByteIterator) UInt8 :=
-  { internalState := { s, offset := s.startPos.offset }}
+def bytes (s : Slice) : Std.Iter (α := ByteIterator) UInt8 := {
+  internalState := { s, offset := s.startPos.offset }
+}
 
 set_option doc.verso true
 
@@ -215,20 +216,22 @@ instance [Pure m] : Std.Iterator ByteIterator m UInt8 where
   IsPlausibleStep it
     | .yield it' out =>
       ∃ h1 : it.internalState.offset < it.internalState.s.rawEndPos,
-        it.internalState.s = it'.internalState.s ∧
-        it'.internalState.offset = it.internalState.offset.inc ∧
-        it.internalState.s.getUTF8Byte it.internalState.offset h1 = out
-    | .skip _ => False
-    | .done => ¬ it.internalState.offset < it.internalState.s.rawEndPos
+        it.internalState.s = it'.internalState.s
+          ∧ it'.internalState.offset = it.internalState.offset.inc
+          ∧ it.internalState.s.getUTF8Byte it.internalState.offset h1 = out
+    | .skip _ =>
+      False
+    | .done =>
+      ¬ it.internalState.offset < it.internalState.s.rawEndPos
   step := fun ⟨s, offset⟩ =>
     if h : offset < s.rawEndPos then
       pure (.deflate ⟨.yield ⟨s, offset.inc⟩ (s.getUTF8Byte offset h), by simp [h]⟩)
     else
       pure (.deflate ⟨.done, by simp [h]⟩)
 
-private def finitenessRelation [Pure m] :
-    Std.Iterators.FinitenessRelation (ByteIterator) m where
-  Rel := InvImage WellFoundedRelation.rel
+private def finitenessRelation [Pure m] : Std.Iterators.FinitenessRelation (ByteIterator) m where
+  Rel :=
+    InvImage WellFoundedRelation.rel
       (fun it => it.internalState.s.utf8ByteSize - it.internalState.offset.byteIdx)
   wf := InvImage.wf _ WellFoundedRelation.wf
   subrelation {it it'} h := by
@@ -245,11 +248,9 @@ private def finitenessRelation [Pure m] :
     · cases h'
     · cases h
 
-instance [Pure m] : Std.Iterators.Finite ByteIterator m :=
-  .of_finitenessRelation finitenessRelation
+instance [Pure m] : Std.Iterators.Finite ByteIterator m := .of_finitenessRelation finitenessRelation
 
-instance [Monad m] [Monad n] : Std.IteratorLoop ByteIterator m n :=
-  .defaultImplementation
+instance [Monad m] [Monad n] : Std.IteratorLoop ByteIterator m n := .defaultImplementation
 
 docs_to_verso bytes
 
@@ -269,15 +270,16 @@ Examples:
  * {lean}`"abc".toSlice.revBytes.toList = [99, 98, 97]`
  * {lean}`"ab∀c".toSlice.revBytes.toList = [99, 128, 136, 226, 98, 97]`
 -/
-def revBytes (s : Slice) : Std.Iter (α := RevByteIterator) UInt8 :=
-  { internalState := { s, offset := s.endPos.offset, hinv := by simp }}
+def revBytes (s : Slice) : Std.Iter (α := RevByteIterator) UInt8 := {
+  internalState := { s, offset := s.endPos.offset, hinv := by simp }
+}
 
 set_option doc.verso true
 
 instance : Inhabited RevByteIterator where
   default :=
     let s := default
-    { s := s, offset := s.endPos.offset, hinv := by simp}
+    { s := s, offset := s.endPos.offset, hinv := by simp }
 
 namespace RevByteIterator
 
@@ -285,12 +287,13 @@ instance [Pure m] : Std.Iterator RevByteIterator m UInt8 where
   IsPlausibleStep it
     | .yield it' out =>
       ∃ h1 : it.internalState.offset.dec < it.internalState.s.rawEndPos,
-        it.internalState.s = it'.internalState.s ∧
-        it.internalState.offset ≠ 0 ∧
-        it'.internalState.offset = it.internalState.offset.dec ∧
-        it.internalState.s.getUTF8Byte it.internalState.offset.dec h1 = out
-    | .skip _ => False
-    | .done => it.internalState.offset = 0
+        it.internalState.s = it'.internalState.s ∧ it.internalState.offset ≠ 0
+          ∧ it'.internalState.offset = it.internalState.offset.dec
+          ∧ it.internalState.s.getUTF8Byte it.internalState.offset.dec h1 = out
+    | .skip _ =>
+      False
+    | .done =>
+      it.internalState.offset = 0
   step := fun ⟨s, offset, hinv⟩ =>
     if h : offset ≠ 0 then
       let nextOffset := offset.dec
@@ -305,10 +308,8 @@ instance [Pure m] : Std.Iterator RevByteIterator m UInt8 where
     else
       pure (.deflate ⟨.done, by simpa using h⟩)
 
-private def finitenessRelation [Pure m] :
-    Std.Iterators.FinitenessRelation (RevByteIterator) m where
-  Rel := InvImage WellFoundedRelation.rel
-      (fun it => it.internalState.offset.byteIdx)
+private def finitenessRelation [Pure m] : Std.Iterators.FinitenessRelation (RevByteIterator) m where
+  Rel := InvImage WellFoundedRelation.rel (fun it => it.internalState.offset.byteIdx)
   wf := InvImage.wf _ WellFoundedRelation.wf
   subrelation {it it'} h := by
     simp_wf
@@ -325,8 +326,7 @@ private def finitenessRelation [Pure m] :
 instance [Pure m] : Std.Iterators.Finite RevByteIterator m :=
   .of_finitenessRelation finitenessRelation
 
-instance [Monad m] [Monad n] : Std.IteratorLoop RevByteIterator m n :=
-  .defaultImplementation
+instance [Monad m] [Monad n] : Std.IteratorLoop RevByteIterator m n := .defaultImplementation
 
 docs_to_verso revBytes
 
@@ -364,16 +364,14 @@ def foldr {α : Type u} (f : Char → α → α) (init : α) (s : Slice) : α :=
 end Slice
 
 @[inline]
-def Internal.ofToSliceWithProof {s : String} :
-    { p : s.toSlice.Pos // p ≠ s.toSlice.endPos } → { p : s.Pos // p ≠ s.endPos } :=
-  fun ⟨p, h⟩ => ⟨Pos.ofToSlice p, by simpa [← Pos.toSlice_inj]⟩
+def Internal.ofToSliceWithProof {s : String}
+    : {p : s.toSlice.Pos // p ≠ s.toSlice.endPos} → {p : s.Pos // p ≠ s.endPos} := fun ⟨p, h⟩ =>
+  ⟨Pos.ofToSlice p, by simpa [← Pos.toSlice_inj]⟩
 
-/--
-Creates an iterator over the valid positions within {name}`s`, starting at {name}`p`.
--/
+/-- Creates an iterator over the valid positions within {name}`s`, starting at {name}`p`. -/
 def positionsFrom (s : String) (p : s.Pos) :=
-  ((s.toSlice.positionsFrom p.toSlice).map Internal.ofToSliceWithProof :
-    Std.Iter { p : s.Pos // p ≠ s.endPos })
+  ((s.toSlice.positionsFrom p.toSlice).map Internal.ofToSliceWithProof
+    : Std.Iter {p : s.Pos // p ≠ s.endPos})
 
 /--
 Creates an iterator over all valid positions within {name}`s`.
@@ -384,9 +382,7 @@ Examples
  * {lean}`("ab∀c".positions.map (fun ⟨p, h⟩ => p.get h) |>.toList) = ['a', 'b', '∀', 'c']`
  * {lean}`("ab∀c".positions.map (·.val.offset.byteIdx) |>.toList) = [0, 1, 2, 5]`
 -/
-@[inline]
-def positions (s : String) :=
-  s.positionsFrom s.startPos
+@[inline] def positions (s : String) := s.positionsFrom s.startPos
 
 /--
 Creates an iterator over all characters (Unicode code points) in {name}`s`.
@@ -395,17 +391,15 @@ Examples:
  * {lean}`"abc".chars.toList = ['a', 'b', 'c']`
  * {lean}`"ab∀c".chars.toList = ['a', 'b', '∀', 'c']`
 -/
-@[cbv_opaque, inline]
-def chars (s : String) :=
-  (s.toSlice.chars : Std.Iter Char)
+@[cbv_opaque, inline] def chars (s : String) := (s.toSlice.chars : Std.Iter Char)
 
 /--
 Creates an iterator over all valid positions within {name}`s` that are strictly smaller than
 {name}`p`, starting from the position before {name}`p` and iterating towards the first one.
 -/
 def revPositionsFrom (s : String) (p : s.Pos) :=
-  ((s.toSlice.revPositionsFrom p.toSlice).map Internal.ofToSliceWithProof :
-    Std.Iter { p : s.Pos // p ≠ s.endPos })
+  ((s.toSlice.revPositionsFrom p.toSlice).map Internal.ofToSliceWithProof
+    : Std.Iter {p : s.Pos // p ≠ s.endPos})
 
 /--
 Creates an iterator over all valid positions within {name}`s`, starting from the last valid
@@ -417,9 +411,7 @@ Examples
  * {lean}`("ab∀c".revPositions.map (fun ⟨p, h⟩ => p.get h) |>.toList) = ['c', '∀', 'b', 'a']`
  * {lean}`("ab∀c".toSlice.revPositions.map (·.val.offset.byteIdx) |>.toList) = [5, 2, 1, 0]`
 -/
-@[inline]
-def revPositions (s : String) :=
-  s.revPositionsFrom s.endPos
+@[inline] def revPositions (s : String) := s.revPositionsFrom s.endPos
 
 /--
 Creates an iterator over all characters (Unicode code points) in {name}`s`, starting from the end
@@ -429,9 +421,7 @@ Example:
  * {lean}`"abc".revChars.toList = ['c', 'b', 'a']`
  * {lean}`"ab∀c".revChars.toList = ['c', '∀', 'b', 'a']`
 -/
-@[cbv_opaque, inline]
-def revChars (s : String) :=
-  (s.toSlice.revChars : Std.Iter Char)
+@[cbv_opaque, inline] def revChars (s : String) := (s.toSlice.revChars : Std.Iter Char)
 
 /--
 Creates an iterator over all bytes in {name}`s`.
@@ -440,9 +430,7 @@ Examples:
  * {lean}`"abc".byteIterator.toList = [97, 98, 99]`
  * {lean}`"ab∀c".byteIterator.toList = [97, 98, 226, 136, 128, 99]`
 -/
-@[inline]
-def byteIterator (s : String) :=
-  (s.toSlice.bytes : Std.Iter UInt8)
+@[inline] def byteIterator (s : String) := (s.toSlice.bytes : Std.Iter UInt8)
 
 /--
 Creates an iterator over all bytes in {name}`s`, starting from the last one and iterating towards
@@ -452,9 +440,7 @@ Examples:
  * {lean}`"abc".revBytes.toList = [99, 98, 97]`
  * {lean}`"ab∀c".revBytes.toList = [99, 128, 136, 226, 98, 97]`
 -/
-@[inline]
-def revBytes (s : String) :=
-  (s.toSlice.revBytes : Std.Iter UInt8)
+@[inline] def revBytes (s : String) := (s.toSlice.revBytes : Std.Iter UInt8)
 
 instance {m : Type u → Type v} [Monad m] : ForIn m String Char where
   forIn s b f := ForIn.forIn s.toSlice b f
@@ -468,8 +454,8 @@ Examples:
  * {lean}`"coffee tea and water".foldl (fun n c => if c.isWhitespace then n + 1 else n) 0 = 3`
  * {lean}`"coffee tea water".foldl (·.push ·) "" = "coffee tea water"`
 -/
-@[inline] def foldl {α : Type u} (f : α → Char → α) (init : α) (s : String) : α :=
-  s.toSlice.foldl f init
+@[inline]
+def foldl {α : Type u} (f : α → Char → α) (init : α) (s : String) : α := s.toSlice.foldl f init
 
 @[export lean_string_foldl]
 def Internal.foldlImpl (f : String → Char → String) (init : String) (s : String) : String :=
@@ -484,7 +470,7 @@ Examples:
  * {lean}`"coffee tea and water".foldr (fun c n => if c.isWhitespace then n + 1 else n) 0 = 3`
  * {lean}`"coffee tea water".foldr (fun c s => s.push c) "" = "retaw aet eeffoc"`
 -/
-@[inline] def foldr {α : Type u} (f : Char → α → α) (init : α) (s : String) : α :=
-  s.toSlice.foldr f init
+@[inline]
+def foldr {α : Type u} (f : Char → α → α) (init : α) (s : String) : α := s.toSlice.foldr f init
 
 end String

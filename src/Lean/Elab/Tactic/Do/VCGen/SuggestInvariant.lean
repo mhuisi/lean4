@@ -28,9 +28,15 @@ This means that both `H args` and `T args` have type `SPred []`.
 -/
 def getSPredGoalHypsAndTarget (type : Expr) : MetaM (Option (Level × Expr × Expr)) := do
   let args := type.getAppArgs
-  if (type.isAppOf ``Std.Tactic.Do.MGoalEntails || type.isAppOf ``SPred.entails) && args.size > 2 then
-    return (type.getAppFn.constLevels![0]!, (type.getArg! 1).beta args[3:], (type.getArg! 2).beta args[3:])
-  let some decl := (← getLCtx).lastDecl | return none
+  if (type.isAppOf ``Std.Tactic.Do.MGoalEntails || type.isAppOf ``SPred.entails)
+      && args.size > 2 then
+    return (
+      type.getAppFn.constLevels![0]!,
+      (type.getArg! 1).beta args[3:],
+      (type.getArg! 2).beta args[3:]
+    )
+  let some decl := (← getLCtx).lastDecl
+    | return none
   let hyps := decl.type.consumeMData
   let lvl := (getULiftDownLevel type <|> getULiftDownLevel hyps).getD .zero
   -- logWarning m!"getSPredGoalHypsAndTarget: {hyps} ⊢ₛ {type}"
@@ -69,11 +75,11 @@ def classifyInvariantUse (assertion : Expr) (inv : MVarId) : ClassifyInvariantUs
   -- There we have `assertion = ?inv.1 payload args`.
   -- The chain of `.2.2...1` is normalized to nested applications of `Prod.fst` and `Prod.snd`:
   --   `@Prod.fst _ _ (@Prod.snd _ _ (@Prod.snd _ _ ... ?inv)) payload args`
-  if !assertion.isAppOf ``Prod.fst then return .notAnInvariantUse
+  if ! assertion.isAppOf ``Prod.fst then return .notAnInvariantUse
   let mut head := assertion.getArg! 2 -- indices 0 and 1 are type args
   let mut conditionIdx := 0
   while head != mkMVar inv do
-    if !head.isAppOfArity ``Prod.snd 4 then return .notAnInvariantUse -- cannot classify as a use of the invariant!
+    if ! head.isAppOfArity ``Prod.snd 4 then return .notAnInvariantUse -- cannot classify as a use of the invariant!
     conditionIdx := conditionIdx + 1
     head := head.getRevArg! 1
   -- `head` is ?inv => Found the end of the chain.
@@ -87,15 +93,24 @@ def classifyInvariantUse (assertion : Expr) (inv : MVarId) : ClassifyInvariantUs
   -- `stateArgs` can be non-empty when `σs` is non-empty.
   -- logWarning m!"Payload: {payload}"
 
-  let_expr Prod.mk _ _ cursor letMutsTuple := payload | return .unknownInvariantUse -- NB: be conservative here
-  let_expr List.Cursor.mk _α _l pref suff _prf := cursor | return .unknownInvariantUse -- dito
+  let_expr Prod.mk _ _ cursor letMutsTuple := payload
+    | return .unknownInvariantUse -- NB: be conservative here
+  let_expr List.Cursor.mk _α _l pref suff _prf := cursor
+    | return .unknownInvariantUse -- dito
   let mut acc := letMutsTuple
   let mut letMuts := #[]
   while acc.isAppOfArity ``Prod.mk 4 do
     letMuts := letMuts.push (acc.getArg! 2)
     acc := acc.getArg! 3
   letMuts := letMuts.push acc
-  return .success { conditionIdx, cursorPrefix := pref, cursorSuffix := suff, letMuts, letMutsTuple, stateArgs }
+  return .success {
+    conditionIdx
+    cursorPrefix := pref
+    cursorSuffix := suff
+    letMuts
+    letMutsTuple
+    stateArgs
+  }
 
 /--
 Returns `some (ρ, σ)` if `letMutsTy` is of the form `Prod (Option ρ) σ` and every VC in `vcs`
@@ -104,9 +119,11 @@ uses the `Option ρ` component according to early return semantics.
 * `σ` is an `n`-ary `Prod`, carrying the current value of the `let mut` variables.
   NB: When `n=0`, we have `Prod (Option ρ) PUnit` rather than `Option ρ`.
 -/
-def hasEarlyReturn (vcs : Array MVarId) (inv : MVarId) (letMutsTy : Expr) : MetaM (Option (Expr × Expr)) := do
+def hasEarlyReturn (vcs : Array MVarId) (inv : MVarId) (letMutsTy : Expr)
+    : MetaM (Option (Expr × Expr)) := do
   if !(letMutsTy.isAppOf ``Prod) || letMutsTy.getAppNumArgs < 2 then return none
-  let_expr Option ρ := letMutsTy.getArg! 0 | return none
+  let_expr Option ρ := letMutsTy.getArg! 0
+    | return none
   let σ := letMutsTy.getArg! 1
 
   -- The predicate on `letMutsTy` above is not sufficient; after all the user might just have
@@ -142,23 +159,27 @@ def hasEarlyReturn (vcs : Array MVarId) (inv : MVarId) (letMutsTy : Expr) : Meta
   for vc in vcs do
     -- logWarning m!"Looking at {vc}."
     let type ← Expr.consumeMData <$> instantiateMVars (← vc.getType)
-    let some (_, _, spredTarget) ← vc.withContext <| getSPredGoalHypsAndTarget type | continue
+    let some (_, _, spredTarget) ← vc.withContext <| getSPredGoalHypsAndTarget type
+      | continue
     -- logWarning m!"Found spredTarget: {spredTarget}"
     match classifyInvariantUse spredTarget inv with
-    | .notAnInvariantUse => continue
-    | .unknownInvariantUse => return none -- conservative
+    | .notAnInvariantUse =>
+      continue
+    | .unknownInvariantUse =>
+      return none -- conservative
     | .success invariantUse =>
-    -- logWarning m!"Invariant use: {invariantUse.letMuts}"
-    -- The following check could be smarter. Essentially it tries to construct a proof that
-    -- `suff = []` or `acc = (none, _)` and returns `none` upon failure.
-    -- NB: There always is at least one `invariantUse.letMuts`.
-    if !invariantUse.cursorSuffix.isAppOf ``List.nil && !invariantUse.letMuts[0]!.isAppOf ``Option.none then
-      -- logWarning m!"No early return! Not a `List.nil`: {invariantUse.cursorSuffix} and not an `Option.none`: {invariantUse.letMuts[0]!}"
-      return none
+      -- logWarning m!"Invariant use: {invariantUse.letMuts}"
+      -- The following check could be smarter. Essentially it tries to construct a proof that
+      -- `suff = []` or `acc = (none, _)` and returns `none` upon failure.
+      -- NB: There always is at least one `invariantUse.letMuts`.
+      if ! invariantUse.cursorSuffix.isAppOf ``List.nil
+          && ! invariantUse.letMuts[0]!.isAppOf ``Option.none then
+        -- logWarning m!"No early return! Not a `List.nil`: {invariantUse.cursorSuffix} and not an `Option.none`: {invariantUse.letMuts[0]!}"
+        return none
 
   return (ρ, σ)
 
-def collectFVarsToRevert (e : Expr)(dontRevert : FVarId → Bool) : MetaM (Array Expr) := do
+def collectFVarsToRevert (e : Expr) (dontRevert : FVarId → Bool) : MetaM (Array Expr) := do
   let mut xs := (collectFVars {} e).fvarIds |>.filter (not ∘ dontRevert) |>.map mkFVar
   repeat do
     let new ← collectForwardDeps xs false
@@ -166,7 +187,9 @@ def collectFVarsToRevert (e : Expr)(dontRevert : FVarId → Bool) : MetaM (Array
     if new.size == xs.size then xs := new; break
     let types ← new.mapM inferType
     let forbidden : FVarIdSet := new.foldl (·.insert ·.fvarId!) {}
-    let s := (types.foldl collectFVars {}).fvarIds |>.filter fun x => !forbidden.contains x && !dontRevert x
+    let s :=
+      (types.foldl collectFVars {}).fvarIds
+        |>.filter fun x => ! forbidden.contains x && ! dontRevert x
     xs := new ++ s.map mkFVar
     if s.isEmpty then break -- no need for another iteration; collectForwardDeps is idempotent
   return xs
@@ -175,28 +198,32 @@ def collectFVarsToRevert (e : Expr)(dontRevert : FVarId → Bool) : MetaM (Array
 def revertFVarsInTypeExcept (e : Expr) (dontRevert : FVarId → Bool) : MetaM Expr := do
   let xs ← collectFVarsToRevert e dontRevert
   let lctx ← getLCtx
-  let_expr c@SPred _σs := (← inferType e) | return e
+  let_expr c@SPred _σs := (← inferType e)
+    | return e
   let lvl := c.constLevels![0]!
   -- logWarning m!"Reverting {xs} in {e}, {lvl}"
-  let e ← xs.size.foldRevM (init := e.abstract xs) fun i _ e => do
-    let x := xs[i]
-    match lctx.getFVar! x with
-    | LocalDecl.cdecl _ _ n type bi _ =>
-      let type := type.headBeta
-      let type := type.abstractRange i xs
-      return mkApp3 (mkConst ``SPred.forall [← getLevel type, lvl]) type (TypeList.mkNil lvl) (Lean.mkLambda n bi type e)
-    | LocalDecl.ldecl (nondep := true) _ _ n type _ _ =>
-      let type := type.headBeta
-      let type := type.abstractRange i xs
-      return mkApp3 (mkConst ``SPred.forall [← getLevel type, lvl]) type (TypeList.mkNil lvl) (Lean.mkLambda n .default type e)
-    | LocalDecl.ldecl (nondep := false) _ _ n type value _ =>
-      if e.hasLooseBVar 0 then
+  let e ←
+    xs.size.foldRevM (init := e.abstract xs) fun i _ e => do
+      let x := xs[i]
+      match lctx.getFVar! x with
+      | LocalDecl.cdecl _ _ n type bi _ =>
         let type := type.headBeta
         let type := type.abstractRange i xs
-        let value := value.abstractRange i xs
-        return mkLet n type value e false
-      else
-        return e.lowerLooseBVars 1 1
+        return mkApp3 (mkConst ``SPred.forall [← getLevel type, lvl]) type (TypeList.mkNil lvl)
+          (Lean.mkLambda n bi type e)
+      | LocalDecl.ldecl (nondep := true) _ _ n type _ _ =>
+        let type := type.headBeta
+        let type := type.abstractRange i xs
+        return mkApp3 (mkConst ``SPred.forall [← getLevel type, lvl]) type (TypeList.mkNil lvl)
+          (Lean.mkLambda n .default type e)
+      | LocalDecl.ldecl (nondep := false) _ _ n type value _ =>
+        if e.hasLooseBVar 0 then
+          let type := type.headBeta
+          let type := type.abstractRange i xs
+          let value := value.abstractRange i xs
+          return mkLet n type value e false
+        else
+          return e.lowerLooseBVars 1 1
   return e
 
 structure SuccessPoint where
@@ -213,8 +240,7 @@ def SPredNil.mkAnd (lvl : Level) (lhs rhs : Expr) : Expr :=
 def SPredNil.mkOr (lvl : Level) (lhs rhs : Expr) : Expr :=
   mkApp3 (mkConst ``SPred.or [lvl]) (TypeList.mkNil lvl) lhs rhs
 
-def SuccessPoint.clause (p : SuccessPoint) : Expr :=
-  SPredNil.mkAnd p.lvl p.cursorPred p.letMutsPred
+def SuccessPoint.clause (p : SuccessPoint) : Expr := SPredNil.mkAnd p.lvl p.cursorPred p.letMutsPred
 
 /-- The last syntactic element of a `FailureCond`. -/
 inductive ExceptCondsDefault where
@@ -240,7 +266,8 @@ structure FailureCondHints where
   points : Array Expr := #[]
   default : ExceptCondsDefault := .punit
 
-/-- Look at how `inv` is used in the `vcs` and collect hints about how `inv` should be instantiated.
+/--
+Look at how `inv` is used in the `vcs` and collect hints about how `inv` should be instantiated.
 In case it succeeds, there will be
 * A `SuccessPoint` for the `xs.prefix = []` case
 * A `SuccessPoint` for all the `xs.suffix = []` case (control flow splits can introduce multiple
@@ -248,7 +275,8 @@ In case it succeeds, there will be
 * A `FailureCondHints` with the default exception condition (i.e., `FailureConds.false`, `()` or
   something else?) and the non-defaulted exception conditions.
 -/
-def collectInvariantHints (vcs : Array MVarId) (inv : MVarId) (xs : Expr) (letMuts : Expr) : MetaM (Option (SuccessPoint × SuccessPoint × FailureCondHints)) := do
+def collectInvariantHints (vcs : Array MVarId) (inv : MVarId) (xs : Expr) (letMuts : Expr)
+    : MetaM (Option (SuccessPoint × SuccessPoint × FailureCondHints)) := do
   let lctx ← getLCtx -- this is the local context of `inv` extended by `xs` and `letMuts`
   let mut prefixPoint? : Option SuccessPoint := none
   let mut suffixPoint? : Option SuccessPoint := none
@@ -256,7 +284,8 @@ def collectInvariantHints (vcs : Array MVarId) (inv : MVarId) (xs : Expr) (letMu
   for vc in vcs do
     -- logWarning m!"Looking at {vc}."
     let target ← Expr.consumeMData <$> instantiateMVars (← vc.getType)
-    if let some (lvl, spredHyps, spredTarget) ← vc.withContext <| getSPredGoalHypsAndTarget target then
+    if let some (lvl, spredHyps, spredTarget) ←
+        vc.withContext <| getSPredGoalHypsAndTarget target then
       let mkPure p := SPred.mkPure lvl (TypeList.mkNil lvl) p
       -- vc.withContext <| logWarning m!"collectPoint: {spredHyps} ⊢ₛ {spredTarget}"
       if let .success invariantUse := classifyInvariantUse spredTarget inv then
@@ -278,19 +307,25 @@ def collectInvariantHints (vcs : Array MVarId) (inv : MVarId) (xs : Expr) (letMu
         if invariantUse.cursorSuffix.isAppOf ``List.nil && invariantUse.letMutsTuple.isFVar then
           let xsPrefix ← mkProjection xs `suffix
           let eqNil ← mkEq xsPrefix invariantUse.cursorSuffix
-          let dontRevert fvarId := fvarId == invariantUse.letMutsTuple.fvarId! || lctx.contains fvarId
+          let dontRevert fvarId :=
+            fvarId == invariantUse.letMutsTuple.fvarId! || lctx.contains fvarId
           let eqLetMuts ← vc.withContext <| revertFVarsInTypeExcept spredTarget dontRevert
           let eqLetMuts := eqLetMuts.replaceFVar invariantUse.letMutsTuple letMuts
           -- logWarning m!"Reverted to {eqLetMuts}"
           if let some suffixPoint := suffixPoint? then
-            suffixPoint? := some { suffixPoint with letMutsPred := SPredNil.mkAnd lvl suffixPoint.letMutsPred eqLetMuts }
+            suffixPoint? :=
+              some {
+                suffixPoint with
+                letMutsPred := SPredNil.mkAnd lvl suffixPoint.letMutsPred eqLetMuts
+              }
           else
             suffixPoint? := some { lvl, cursorPred := mkPure eqNil, letMutsPred := eqLetMuts }
     if let some (_ps, lhs, rhs) := target.app3? ``ExceptConds.entails then
       -- This is a exception condition case.
       -- logWarning m!"Found ExceptConds.entails: {lhs}, {rhs}"
       -- We are targeting `Prod.snd ?inv ⊢ₑ blah` specifically
-      unless lhs.isAppOfArity ``Prod.snd 3 && lhs.getArg! 2 == mkMVar inv do continue
+      unless lhs.isAppOfArity ``Prod.snd 3 && lhs.getArg! 2 == mkMVar inv do
+        continue
       let mut n := 0
       let mut conds := rhs
       let mut points := #[]
@@ -310,7 +345,7 @@ def collectInvariantHints (vcs : Array MVarId) (inv : MVarId) (xs : Expr) (letMu
           failureConds := { failureConds with default := .true }
         else
           failureConds := { failureConds with default := .other conds }
-      -- vc.withContext <| logWarning m!"Found failure conds: {failureConds.points.toList}"
+  -- vc.withContext <| logWarning m!"Found failure conds: {failureConds.points.toList}"
   return (·, ·, ·) <$> prefixPoint? <*> suffixPoint? <*> pure failureConds
 
 def duplicateMVar (m : MVarId) : MetaM MVarId := do
@@ -357,103 +392,107 @@ public def suggestInvariant (vcs : Array MVarId) (inv : MVarId) : TacticM Term :
   let_expr c@Std.Do.Invariant α l letMutsTy _ps := invType
     | throwError "Expected invariant type, got {invType}"
   let us := c.constLevels!.take 1 -- This is the list of universe params for `List.Cursor`. It only
-                                  -- takes the level `u₁` for `α` in the type of `Invariant`, so
-                                  -- we drop the rest (i.e., `u₂` for `β`).
+  -- takes the level `u₁` for `α` in the type of `Invariant`, so
+  -- we drop the rest (i.e., `u₂` for `β`).
 
   -- Simplify the VCs a bit using `mleave`. Makes the job of the analysis below simpler.
-  let vcs ← vcs.flatMapM fun vc =>
-    try
-      (·.toArray) <$> evalTacticAt (← `(tactic| mleave)) (← duplicateMVar vc)
-    catch _e =>
-      -- logWarning m!"Failed to simplify {vc}: {_e.toMessageData}"
-      pure #[vc]
+  let vcs ←
+    vcs.flatMapM fun vc =>
+      try
+        (·.toArray) <$> evalTacticAt (← `(tactic| mleave)) (← duplicateMVar vc)
+      catch _e =>
+        -- logWarning m!"Failed to simplify {vc}: {_e.toMessageData}"
+        pure #[vc]
 
   inv.withContext do
-  -- Build the success points into self-contained lambdas, to be beta reduced below.
-  let suggestion? ←
-    withLocalDeclD `xs (mkApp2 (mkConst ``List.Cursor us) α l) fun xs =>
-    withLocalDeclD `letMuts letMutsTy fun letMuts => do
-    let some (prefixPoint, suffixPoint, failureConds) ← collectInvariantHints vcs inv xs letMuts | return none
-    let pred := SPredNil.mkOr prefixPoint.lvl prefixPoint.clause suffixPoint.clause
-    let success ← mkLambdaFVars #[xs, letMuts] (tryHoistPure pred)
-    let onReturn ← mkLambdaFVars #[letMuts] (tryHoistPure suffixPoint.letMutsPred)
-    return some (success, onReturn, failureConds)
+    -- Build the success points into self-contained lambdas, to be beta reduced below.
+    let suggestion? ←
+      withLocalDeclD `xs (mkApp2 (mkConst ``List.Cursor us) α l) fun xs =>
+        withLocalDeclD `letMuts letMutsTy fun letMuts => do
+          let some (prefixPoint, suffixPoint, failureConds) ←
+              collectInvariantHints vcs inv xs letMuts
+            | return none
+          let pred := SPredNil.mkOr prefixPoint.lvl prefixPoint.clause suffixPoint.clause
+          let success ← mkLambdaFVars #[xs, letMuts] (tryHoistPure pred)
+          let onReturn ← mkLambdaFVars #[letMuts] (tryHoistPure suffixPoint.letMutsPred)
+          return some (success, onReturn, failureConds)
 
-  -- Quotes introduce macro scopes to any binders. `Syntax.eraseQuoteMacroScopes` removes just
-  -- those, and will not remove any inaccessible markers stemming from inaccessible free variables
-  -- in the proof state.
-  (⟨·.raw.eraseQuoteMacroScopes⟩) <$> do
-  --
-  -- Finally, build the syntax for the suggestion. It's a giant configuration space mess, because
-  -- 1. Generally want to suggest something using `⇓ ⟨xs, letMuts⟩ => ...`, i.e. `PostCond.noThrow`.
-  -- 2. However, on early return we want to suggest something using `Invariant.withEarlyReturnNewDo`.
-  -- 3. When there are non-`False` failure conditions, we cannot suggest `⇓ ⟨xs, letMuts⟩ => ...`.
-  --    We might be able to suggest `⇓? ⟨xs, letMuts⟩ => ...` (`True` failure condition),
-  --    or `post⟨...⟩` (more than 0 failure handlers, but ending in `PUnit.unit`), and fall back to
-  --    `by exact ⟨...⟩` (not ending in `PUnit.unit`).
-  -- 4. Similarly for the `onExcept` argument of `Invariant.withEarlyReturnNewDo`.
-  -- Hence the spaghetti code.
-  --
-  if let some (ρ, σ) ← hasEarlyReturn vcs inv letMutsTy then
-    -- logWarning m!"Found early return for {inv}!"
-    -- Suggest an invariant using `Invariant.withEarlyReturnNewDo`.
-    if let some (success, onReturn, failureConds) := suggestion? then
-      -- First construct `onContinue` and `onReturn` clause and simplify them according to the
-      -- definition of `Invariant.withEarlyReturnNewDo`.
-      let (onContinue, onReturn) ← withLocalDeclD `xs (mkApp2 (mkConst ``List.Cursor us) α l) fun xs =>
-        withLocalDeclD `r ρ fun r =>
-        withLocalDeclD `letMuts σ fun letMuts => do
-        let onContinue := success.beta #[xs, ← mkAppM ``Prod.mk #[← mkNone ρ, letMuts]]
-        let onReturn := onReturn.beta #[← mkAppM ``Prod.mk #[← mkSome ρ r, letMuts]]
-        let ctx ← Simp.mkContext
-          (config := {})
-          (simpTheorems := #[(← Meta.getSimpTheorems)])
-          (congrTheorems := (← Meta.getSimpCongrTheorems))
-        let simprocs ← ({} : Simp.SimprocsArray).add `reduceCtorEq false
-        let (res1, _) ← Lean.Meta.simp onContinue ctx simprocs
-        let (res2, _) ← Lean.Meta.simp onReturn ctx simprocs
-        return (← Lean.PrettyPrinter.delab res1.expr, ← Lean.PrettyPrinter.delab res2.expr)
-      -- Now the configuration mess.
-      if failureConds.points.isEmpty then
-        match failureConds.default with
-        | .false | .punit =>
-          `(Invariant.withEarlyReturnNewDo (onReturn := fun r letMuts => $onReturn) (onContinue := fun xs letMuts => $onContinue))
-        -- we handle the following two cases here rather than through
-        -- `postCondWithMultipleConditions` below because that would insert a superfluous `by exact _`.
-        | .true =>
-          `(Invariant.withEarlyReturnNewDo (onReturn := fun r letMuts => $onReturn) (onContinue := fun xs letMuts => $onContinue (onExcept := ExceptConds.true)))
-        | .other e =>
-          `(Invariant.withEarlyReturnNewDo (onReturn := fun r letMuts => $onReturn) (onContinue := fun xs letMuts => $onContinue (onExcept := $(← Lean.PrettyPrinter.delab e))))
-      else -- need the postcondition long form as `onExcept` arg
-        let mut terms : Array Term := #[]
-        for point in failureConds.points do
-          terms := terms.push (← Lean.PrettyPrinter.delab point)
-        let onExcept ← postCondWithMultipleConditions terms failureConds.default
-        `(Invariant.withEarlyReturnNewDo (onReturn := fun r letMuts => $onReturn) (onContinue := fun xs letMuts => $onContinue) (onExcept := $onExcept))
-    else -- No suggestion. Just fill in `_`.
-      `(Invariant.withEarlyReturnNewDo (onReturn := fun r letMuts => _) (onContinue := fun xs letMuts => _))
-  else if let some (success, _, failureConds) := suggestion? then
-    -- No early return, but we do have a suggestion.
-    withLocalDeclD `xs (mkApp2 (mkConst ``List.Cursor us) α l) fun xs =>
-    withLocalDeclD `letMuts letMutsTy fun letMuts => do
-    let successBody ← Lean.PrettyPrinter.delab (success.beta #[xs, letMuts])
-    -- Configuration mess
-    if failureConds.points.isEmpty && not (failureConds.default matches .other _) then
-      if (failureConds.default matches .true) then
-        `(⇓? ⟨xs, letMuts⟩ => $successBody)
+    -- Quotes introduce macro scopes to any binders. `Syntax.eraseQuoteMacroScopes` removes just
+    -- those, and will not remove any inaccessible markers stemming from inaccessible free variables
+    -- in the proof state.
+    (⟨·.raw.eraseQuoteMacroScopes⟩) <$> do
+      --
+      -- Finally, build the syntax for the suggestion. It's a giant configuration space mess, because
+      -- 1. Generally want to suggest something using `⇓ ⟨xs, letMuts⟩ => ...`, i.e. `PostCond.noThrow`.
+      -- 2. However, on early return we want to suggest something using `Invariant.withEarlyReturnNewDo`.
+      -- 3. When there are non-`False` failure conditions, we cannot suggest `⇓ ⟨xs, letMuts⟩ => ...`.
+      --    We might be able to suggest `⇓? ⟨xs, letMuts⟩ => ...` (`True` failure condition),
+      --    or `post⟨...⟩` (more than 0 failure handlers, but ending in `PUnit.unit`), and fall back to
+      --    `by exact ⟨...⟩` (not ending in `PUnit.unit`).
+      -- 4. Similarly for the `onExcept` argument of `Invariant.withEarlyReturnNewDo`.
+      -- Hence the spaghetti code.
+      if let some (ρ, σ) ← hasEarlyReturn vcs inv letMutsTy then
+        -- logWarning m!"Found early return for {inv}!"
+        -- Suggest an invariant using `Invariant.withEarlyReturnNewDo`.
+        if let some (success, onReturn, failureConds) := suggestion? then
+          -- First construct `onContinue` and `onReturn` clause and simplify them according to the
+          -- definition of `Invariant.withEarlyReturnNewDo`.
+          let (onContinue, onReturn) ←
+            withLocalDeclD `xs (mkApp2 (mkConst ``List.Cursor us) α l) fun xs =>
+              withLocalDeclD `r ρ fun r =>
+                withLocalDeclD `letMuts σ fun letMuts => do
+                  let onContinue := success.beta #[xs, ← mkAppM ``Prod.mk #[← mkNone ρ, letMuts]]
+                  let onReturn := onReturn.beta #[← mkAppM ``Prod.mk #[← mkSome ρ r, letMuts]]
+                  let ctx ←
+                    Simp.mkContext (config := {}) (simpTheorems := #[(← Meta.getSimpTheorems)])
+                      (congrTheorems := (← Meta.getSimpCongrTheorems))
+                  let simprocs ← ({} : Simp.SimprocsArray).add `reduceCtorEq false
+                  let (res1, _) ← Lean.Meta.simp onContinue ctx simprocs
+                  let (res2, _) ← Lean.Meta.simp onReturn ctx simprocs
+                  return
+                    (← Lean.PrettyPrinter.delab res1.expr, ← Lean.PrettyPrinter.delab res2.expr)
+          -- Now the configuration mess.
+          if failureConds.points.isEmpty then
+            match failureConds.default with
+            | .false | .punit =>
+              `(Invariant.withEarlyReturnNewDo (onReturn := fun r letMuts => $onReturn) (onContinue := fun xs letMuts => $onContinue))
+            -- we handle the following two cases here rather than through
+            -- `postCondWithMultipleConditions` below because that would insert a superfluous `by exact _`.
+            | .true =>
+              `(Invariant.withEarlyReturnNewDo (onReturn := fun r letMuts => $onReturn) (onContinue := fun xs letMuts => $onContinue (onExcept := ExceptConds.true)))
+            | .other e =>
+              `(Invariant.withEarlyReturnNewDo (onReturn := fun r letMuts => $onReturn) (onContinue := fun xs letMuts => $onContinue (onExcept := $(← Lean.PrettyPrinter.delab e))))
+          else -- need the postcondition long form as `onExcept` arg
+            let mut terms : Array Term := #[]
+            for point in failureConds.points do
+              terms := terms.push (← Lean.PrettyPrinter.delab point)
+            let onExcept ← postCondWithMultipleConditions terms failureConds.default
+            `(Invariant.withEarlyReturnNewDo (onReturn := fun r letMuts => $onReturn) (onContinue := fun xs letMuts => $onContinue) (onExcept := $onExcept))
+        else -- No suggestion. Just fill in `_`.
+          `(Invariant.withEarlyReturnNewDo (onReturn := fun r letMuts => _) (onContinue := fun xs letMuts => _))
+      else if let some (success, _, failureConds) := suggestion? then
+        -- No early return, but we do have a suggestion.
+        withLocalDeclD `xs (mkApp2 (mkConst ``List.Cursor us) α l) fun xs =>
+          withLocalDeclD `letMuts letMutsTy fun letMuts => do
+            let successBody ← Lean.PrettyPrinter.delab (success.beta #[xs, letMuts])
+            -- Configuration mess
+            if failureConds.points.isEmpty && not (failureConds.default matches .other _) then
+              if (failureConds.default matches .true) then
+                `(⇓? ⟨xs, letMuts⟩ => $successBody)
+              else
+                `(⇓ ⟨xs, letMuts⟩ => $successBody)
+            else -- need the long form
+              let mut terms : Array Term := #[← `(fun ⟨xs, letMuts⟩ => $successBody)]
+              for point in failureConds.points do
+                terms := terms.push (← Lean.PrettyPrinter.delab point)
+              postCondWithMultipleConditions terms failureConds.default
       else
-        `(⇓ ⟨xs, letMuts⟩ => $successBody)
-    else -- need the long form
-      let mut terms : Array Term := #[← `(fun ⟨xs, letMuts⟩ => $successBody)]
-      for point in failureConds.points do
-        terms := terms.push (← Lean.PrettyPrinter.delab point)
-      postCondWithMultipleConditions terms failureConds.default
-  else
-    -- No early return and no suggestion. Just suggest _something_.
-    -- `PostCond.noThrow` is the most common case.
-    `(⇓ ⟨xs, letMuts⟩ => _)
+        -- No early return and no suggestion. Just suggest _something_.
+        -- `PostCond.noThrow` is the most common case.
+        `(⇓ ⟨xs, letMuts⟩ => _)
 where
-  postCondWithMultipleConditions (handlers : Array Term) (default : ExceptCondsDefault) : MetaM Term := do
+  postCondWithMultipleConditions (handlers : Array Term) (default : ExceptCondsDefault)
+      : MetaM Term := do
     let handlers := Syntax.TSepArray.ofElems (sep := ",") handlers
     match default with
     | .punit => `(post⟨$handlers,*⟩)

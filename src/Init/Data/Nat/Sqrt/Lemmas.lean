@@ -25,11 +25,13 @@ See [Wikipedia, *Methods of computing square roots*]
 -/
 
 private theorem AM_GM : {a b : Nat} → (4 * a * b ≤ (a + b) * (a + b))
-  | 0, _ => by rw [Nat.mul_zero, Nat.zero_mul]; exact zero_le _
-  | _, 0 => by rw [Nat.mul_zero]; exact zero_le _
+  | 0, _ => by
+    rw [Nat.mul_zero, Nat.zero_mul]; exact zero_le _
+  | _, 0 => by
+    rw [Nat.mul_zero]; exact zero_le _
   | a + 1, b + 1 => by
     simpa only [Nat.mul_add, Nat.add_mul, show (4 : Nat) = 1 + 1 + 1 + 1 from rfl, Nat.one_mul,
-      Nat.mul_one, Nat.add_assoc, Nat.add_left_comm, Nat.add_le_add_iff_left]
+        Nat.mul_one, Nat.add_assoc, Nat.add_left_comm, Nat.add_le_add_iff_left]
       using Nat.add_le_add_right (@AM_GM a b) 4
 
 private theorem sqrt.iter_sq_le (n guess : Nat) : sqrt.iter n guess * sqrt.iter n guess ≤ n := by
@@ -42,8 +44,8 @@ private theorem sqrt.iter_sq_le (n guess : Nat) : sqrt.iter n guess * sqrt.iter 
     simp only
     split <;> omega
 
-private theorem sqrt.lt_iter_succ_sq (n guess : Nat) (hn : n < (guess + 1) * (guess + 1)) :
-    n < (sqrt.iter n guess + 1) * (sqrt.iter n guess + 1) := by
+private theorem sqrt.lt_iter_succ_sq (n guess : Nat) (hn : n < (guess + 1) * (guess + 1))
+    : n < (sqrt.iter n guess + 1) * (sqrt.iter n guess + 1) := by
   unfold sqrt.iter
   -- m was `next`
   let m := (guess + n / guess) / 2
@@ -64,8 +66,7 @@ private theorem sqrt.lt_iter_succ_sq (n guess : Nat) (hn : n < (guess + 1) * (gu
     exact Nat.add_lt_add_left (lt_mul_div_succ _ (Nat.lt_of_le_of_lt (Nat.zero_le m) h)) _
   · exact hn
 
-private def IsSqrt (n q : Nat) : Prop :=
-  q * q ≤ n ∧ n < (q + 1) * (q + 1)
+private def IsSqrt (n q : Nat) : Prop := q * q ≤ n ∧ n < (q + 1) * (q + 1)
 
 /-
 Sketch of proof:
@@ -78,8 +79,10 @@ To turn this into a lean proof we need to manipulate, use properties of natural 
 -/
 private theorem sqrt_isSqrt (n : Nat) : IsSqrt n (sqrt n) := by
   match n with
-  | 0 => simp [IsSqrt, sqrt]
-  | 1 => simp [IsSqrt, sqrt]
+  | 0 =>
+    simp [IsSqrt, sqrt]
+  | 1 =>
+    simp [IsSqrt, sqrt]
   | n + 2 =>
     have h : ¬ (n + 2) ≤ 1 := by simp
     simp only [IsSqrt, sqrt, h, ite_false]

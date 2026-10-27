@@ -17,21 +17,19 @@ namespace Lake
 open Toml Lean System PrettyPrinter
 
 partial def descopeSyntax : Syntax → Syntax
-| .ident info rawVal val preresolved =>
-  .ident info rawVal val.eraseMacroScopes preresolved
-| .node info k args => .node info k <| args.map descopeSyntax
-| stx => stx
+  | .ident info rawVal val preresolved => .ident info rawVal val.eraseMacroScopes preresolved
+  | .node info k args => .node info k <| args.map descopeSyntax
+  | stx => stx
 
-def descopeTSyntax (stx : TSyntax k) : TSyntax k :=
-  ⟨descopeSyntax stx.raw⟩
+def descopeTSyntax (stx : TSyntax k) : TSyntax k := ⟨descopeSyntax stx.raw⟩
 
 public def Package.mkConfigString (pkg : Package) (lang : ConfigLang) : LogIO String := do
   match lang with
-  | .toml => pure <| ppTable pkg.mkTomlConfig
+  | .toml =>
+    pure <| ppTable pkg.mkTomlConfig
   | .lean => do
     let env ← importModulesUsingCache #[`Lake] {} 1024
     let pp := ppModule <| descopeTSyntax <| pkg.mkLeanConfig
-    match (← pp.toIO {fileName := "", fileMap := default} {env} |>.toBaseIO) with
+    match (← pp.toIO { fileName := "", fileMap := default } { env } |>.toBaseIO) with
     | .ok (fmt, _) => pure <| (toString fmt).trimAscii.copy ++ "\n"
-    | .error ex =>
-      error s!"(internal) failed to pretty print Lean configuration: {ex.toString}"
+    | .error ex => error s!"(internal) failed to pretty print Lean configuration: {ex.toString}"

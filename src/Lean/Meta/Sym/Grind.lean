@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 public import Lean.Meta.Sym.Simp.SimpM
@@ -47,7 +48,6 @@ conditional rewrite rules using `grind`, sharing the goal's internalized local c
 across discharge attempts.
 -/
 
-
 /--
 Creates a `Goal` from an `MVarId`, applying `Sym` preprocessing.
 Preprocessing ensures the goal is compatible with `Sym` operations.
@@ -64,12 +64,15 @@ public inductive IntrosResult where
 
 /-- Introduces `num` binders from the goal's target. -/
 public def Goal.introN (goal : Goal) (num : Nat) (hygienic : Bool := true) : SymM IntrosResult := do
-  let .goal xs mvarId ← Sym.introN goal.mvarId num hygienic | return .failed
+  let .goal xs mvarId ← Sym.introN goal.mvarId num hygienic
+    | return .failed
   return .goal xs { goal with mvarId }
 
 /-- Introduces binders with the specified names. -/
-public def Goal.intros (goal : Goal) (names : Array Name) (hygienic : Bool := true) : SymM IntrosResult := do
-  let .goal xs mvarId ← Sym.intros goal.mvarId names hygienic | return .failed
+public def Goal.intros (goal : Goal) (names : Array Name) (hygienic : Bool := true)
+    : SymM IntrosResult := do
+  let .goal xs mvarId ← Sym.intros goal.mvarId names hygienic
+    | return .failed
   return .goal xs { goal with mvarId }
 
 public inductive ApplyResult where
@@ -78,7 +81,8 @@ public inductive ApplyResult where
 
 /-- Applies a backward rule, returning subgoals on success. -/
 public def Goal.apply (goal : Goal) (rule : Sym.BackwardRule) : SymM ApplyResult := do
-  let .goals mvarIds ← rule.apply goal.mvarId | return .failed
+  let .goals mvarIds ← rule.apply goal.mvarId
+    | return .failed
   return .goals <| mvarIds.map fun mvarId => { goal with mvarId }
 
 public inductive SimpGoalResult where
@@ -87,17 +91,21 @@ public inductive SimpGoalResult where
   | goal (goal : Goal)
 
 /-- Simplifies the goal using the given methods. -/
-public def Goal.simp (goal : Goal) (methods : Sym.Simp.Methods := {}) (config : Sym.Simp.Config := {}) : SymM SimpGoalResult := do
+public def Goal.simp
+    (goal : Goal) (methods : Sym.Simp.Methods := {}) (config : Sym.Simp.Config := {})
+    : SymM SimpGoalResult := do
   match (← Sym.simpGoal goal.mvarId methods config) with
   | .goal mvarId => return .goal { goal with mvarId }
-  | .noProgress  => return .noProgress
+  | .noProgress => return .noProgress
   | .closed => return .closed
 
 /-- Like `simp`, but returns the original goal unchanged when no progress is made. -/
-public def Goal.simpIgnoringNoProgress (goal : Goal) (methods : Sym.Simp.Methods := {}) (config : Sym.Simp.Config := {}) : SymM SimpGoalResult := do
+public def Goal.simpIgnoringNoProgress
+    (goal : Goal) (methods : Sym.Simp.Methods := {}) (config : Sym.Simp.Config := {})
+    : SymM SimpGoalResult := do
   match (← Sym.simpGoal goal.mvarId methods config) with
   | .goal mvarId => return .goal { goal with mvarId }
-  | .noProgress  => return .goal goal
+  | .noProgress => return .goal goal
   | .closed => return .closed
 
 /--
@@ -107,8 +115,7 @@ public def Goal.internalize (goal : Goal) (num : Nat) : GrindM Goal := do
   Grind.processHypotheses goal (some num)
 
 /-- Internalizes all (un-internalized) hypotheses from the local context into the `grind` state. -/
-public def Goal.internalizeAll (goal : Goal) : GrindM Goal := do
-  Grind.processHypotheses goal none
+public def Goal.internalizeAll (goal : Goal) : GrindM Goal := do Grind.processHypotheses goal none
 
 public inductive GrindResult where
   | failed (goal : Goal)
@@ -173,7 +180,8 @@ attempt is terminal: it either produces a proof or fails. Thus, it runs `grind` 
 re-internalizing the common local context prefix for every side condition; only local
 declarations introduced after `goal` was created are internalized per attempt.
 -/
-def mkSymSimpDischarger (goal : Goal) (methods : MethodsRef) (ctx : Context) (s : State) : Sym.Simp.Discharger := fun e => do
+def mkSymSimpDischarger (goal : Goal) (methods : MethodsRef) (ctx : Context) (s : State)
+    : Sym.Simp.Discharger := fun e => do
   goal.dischargeSymSimp e methods ctx |>.run' s
 
 /--

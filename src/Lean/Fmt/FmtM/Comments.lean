@@ -620,10 +620,8 @@ and both are placed on lines of their own before the token after them. When `nex
 the line directly after `prev`, the two are then separated by one empty line.
 -/
 def isSeparatedByEmptyLine (prev next : Comment) : Bool :=
-  prev.placement matches .onLineBeforeToken
-    && next.placement matches .onLineBeforeToken
-    && next.emptyLineBefore
-    && prev.originalTokenRange == next.originalTokenRange
+  prev.placement matches .onLineBeforeToken && next.placement matches .onLineBeforeToken
+    && next.emptyLineBefore && prev.originalTokenRange == next.originalTokenRange
     && prev.originalWhitespaceKind == next.originalWhitespaceKind
     && prev.originalWhitespaceRange.stop ≤ next.originalWhitespaceRange.start
 

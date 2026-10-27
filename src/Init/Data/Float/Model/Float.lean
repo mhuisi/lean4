@@ -52,39 +52,25 @@ def pack (f : UnpackedFloat) : Float.Model where
   toBits := UInt64.ofBitVec (UnpackedFloat.pack Format.binary64 f)
   valid := by simp
 
-/--
-The special `NaN` value.
--/
-def nan : Float.Model :=
-  pack .notANumber
+/-- The special `NaN` value. -/
+def nan : Float.Model := pack .notANumber
 
-/--
-The special `Inf` value.
--/
-def inf : Float.Model :=
-  pack (.infinity .positive)
+/-- The special `Inf` value. -/
+def inf : Float.Model := pack (.infinity .positive)
 
-/--
-Compute the sum of two `Float.Model`.
--/
+/-- Compute the sum of two `Float.Model`. -/
 def add (a b : Float.Model) : Float.Model :=
   pack (UnpackedFloat.add Format.binary64 a.unpack b.unpack)
 
-/--
-Compute the difference of two `Float.Model`.
--/
+/-- Compute the difference of two `Float.Model`. -/
 def sub (a b : Float.Model) : Float.Model :=
   pack (UnpackedFloat.sub Format.binary64 a.unpack b.unpack)
 
-/--
-Compute the product of two `Float.Model`.
--/
+/-- Compute the product of two `Float.Model`. -/
 def mul (a b : Float.Model) : Float.Model :=
   pack (UnpackedFloat.mul Format.binary64 a.unpack b.unpack)
 
-/--
-Compute the quotient of two `Float.Model`.
--/
+/-- Compute the quotient of two `Float.Model`. -/
 def div (a b : Float.Model) : Float.Model :=
   pack (UnpackedFloat.div Format.binary64 a.unpack b.unpack)
 
@@ -100,76 +86,59 @@ instance : Mul Float.Model where
 instance : Div Float.Model where
   div a b := a.div b
 
-/--
-Compute the square root of a `Float.Model`.
--/
-def sqrt (a : Float.Model) : Float.Model :=
-  pack (UnpackedFloat.sqrt Format.binary64 a.unpack)
+/-- Compute the square root of a `Float.Model`. -/
+def sqrt (a : Float.Model) : Float.Model := pack (UnpackedFloat.sqrt Format.binary64 a.unpack)
 
-/--
-Compute the fused multiply-add `a * b + c` of three `Float.Model`, with a single rounding.
--/
+/-- Compute the fused multiply-add `a * b + c` of three `Float.Model`, with a single rounding. -/
 def fma (a b c : Float.Model) : Float.Model :=
   pack (UnpackedFloat.fma Format.binary64 a.unpack b.unpack c.unpack)
 
-/--
-Negate a `Float.Model`.
--/
-def neg (a : Float.Model) : Float.Model :=
-  pack a.unpack.neg
+/-- Negate a `Float.Model`. -/
+def neg (a : Float.Model) : Float.Model := pack a.unpack.neg
 
 instance : Neg Float.Model where
   neg a := a.neg
 
-/--
-Return a `Float.Model` with positive sign.
--/
-def abs (a : Float.Model) : Float.Model :=
-  pack a.unpack.abs
+/-- Return a `Float.Model` with positive sign. -/
+def abs (a : Float.Model) : Float.Model := pack a.unpack.abs
 
 /--
 Compute the ordering between two `Float.Model` as specified by IEEE. Returns an
 `Option Ordering` to account for the fact that `NaN` is incomparable with everything.
 Also, positive and negative zero are equal.
 -/
-protected def compare (a b : Float.Model) : Option Ordering :=
-  a.unpack.compare b.unpack
+protected def compare (a b : Float.Model) : Option Ordering := a.unpack.compare b.unpack
 
 /--
 Determine whether `a` is less than or equal to `b` according to IEEE rules.
 
 This is not a total ordering, and `≤` is not reflexive.
 -/
-protected def le (a b : Float.Model) : Bool :=
-  a.unpack.le b.unpack
+protected def le (a b : Float.Model) : Bool := a.unpack.le b.unpack
 
 /--
 Determine whether `a` is less than `b` according to IEEE rules.
 
 This is not a total ordering.
 -/
-protected def lt (a b : Float.Model) : Bool :=
-  a.unpack.lt b.unpack
+protected def lt (a b : Float.Model) : Bool := a.unpack.lt b.unpack
 
 /--
 Determine whether `a` is equal to `b` according to IEEE rules.
 
 This is not a reflexive relation.
 -/
-protected def beq (a b : Float.Model) : Bool :=
-  a.unpack.beq b.unpack
+protected def beq (a b : Float.Model) : Bool := a.unpack.beq b.unpack
 
 instance : LE Float.Model where
   le a b := a.le b
 
-instance : DecidableLE Float.Model :=
-  inferInstanceAs (∀ (a b : Float.Model), Decidable (a.le b))
+instance : DecidableLE Float.Model := inferInstanceAs (∀ (a b : Float.Model), Decidable (a.le b))
 
 instance : LT Float.Model where
   lt a b := a.lt b
 
-instance : DecidableLT Float.Model :=
-  inferInstanceAs (∀ (a b : Float.Model), Decidable (a.lt b))
+instance : DecidableLT Float.Model := inferInstanceAs (∀ (a b : Float.Model), Decidable (a.lt b))
 
 instance : BEq Float.Model where
   beq a b := a.beq b
@@ -178,29 +147,25 @@ instance : BEq Float.Model where
 Compute the IEEE-754-2019 `minimum` of two `Float.Model`, which is `NaN` if either operand is
 `NaN` and considers `-0` to be smaller than `+0`.
 -/
-def minimum (a b : Float.Model) : Float.Model :=
-  pack (a.unpack.minimum b.unpack)
+def minimum (a b : Float.Model) : Float.Model := pack (a.unpack.minimum b.unpack)
 
 /--
 Compute the IEEE-754-2019 `minimumNumber` of two `Float.Model`, which ignores a `NaN` operand if
 the other operand is a number and considers `-0` to be smaller than `+0`.
 -/
-def minimumNumber (a b : Float.Model) : Float.Model :=
-  pack (a.unpack.minimumNumber b.unpack)
+def minimumNumber (a b : Float.Model) : Float.Model := pack (a.unpack.minimumNumber b.unpack)
 
 /--
 Compute the IEEE-754-2019 `maximum` of two `Float.Model`, which is `NaN` if either operand is
 `NaN` and considers `-0` to be smaller than `+0`.
 -/
-def maximum (a b : Float.Model) : Float.Model :=
-  pack (a.unpack.maximum b.unpack)
+def maximum (a b : Float.Model) : Float.Model := pack (a.unpack.maximum b.unpack)
 
 /--
 Compute the IEEE-754-2019 `maximumNumber` of two `Float.Model`, which ignores a `NaN` operand if
 the other operand is a number and considers `-0` to be smaller than `+0`.
 -/
-def maximumNumber (a b : Float.Model) : Float.Model :=
-  pack (a.unpack.maximumNumber b.unpack)
+def maximumNumber (a b : Float.Model) : Float.Model := pack (a.unpack.maximumNumber b.unpack)
 
 instance : Min Float.Model where
   min a b := a.minimum b
@@ -208,78 +173,56 @@ instance : Min Float.Model where
 instance : Max Float.Model where
   max a b := a.maximum b
 
-/--
-Returns `true` if the float represents a real number, i.e., it is neither infinite nor `NaN`.
--/
-def isFinite (a : Float.Model) : Bool :=
-  a.unpack.isFinite
+/-- Returns `true` if the float represents a real number, i.e., it is neither infinite nor `NaN`. -/
+def isFinite (a : Float.Model) : Bool := a.unpack.isFinite
 
-/--
-Returns `true` if the float is positive or negative infinity.
--/
-def isInf (a : Float.Model) : Bool :=
-  a.unpack.isInf
+/-- Returns `true` if the float is positive or negative infinity. -/
+def isInf (a : Float.Model) : Bool := a.unpack.isInf
 
-/--
-Returns `true` if the float is `NaN`.
--/
-def isNaN (a : Float.Model) : Bool :=
-  a.unpack.isNaN
+/-- Returns `true` if the float is `NaN`. -/
+def isNaN (a : Float.Model) : Bool := a.unpack.isNaN
 
 /--
 Construct a `Float.Model` from its bit representation. This operation canonicalizes
 all `NaN` inputs into the canonical `NaN`.
 -/
-def ofBits (a : UInt64) : Float.Model :=
-  pack (UnpackedFloat.unpack Format.binary64 a.toBitVec)
+def ofBits (a : UInt64) : Float.Model := pack (UnpackedFloat.unpack Format.binary64 a.toBitVec)
 
 /-- Converts an `Int` to a `Float.Model`, returning positive zero on zero. -/
-def ofInt (n : Int) : Float.Model :=
-  pack (UnpackedFloat.ofInt Format.binary64 n)
+def ofInt (n : Int) : Float.Model := pack (UnpackedFloat.ofInt Format.binary64 n)
 
 /-- Converts a `Nat` to a `Float.Model`, returning positive zero on zero. -/
-def ofNat (n : Nat) : Float.Model :=
-  pack (UnpackedFloat.ofNat Format.binary64 n)
+def ofNat (n : Nat) : Float.Model := pack (UnpackedFloat.ofNat Format.binary64 n)
 
 /-- Converts a `UInt8` to a `Float.Model`, returning positive zero on zero. -/
-def ofUInt8 (n : UInt8) : Float.Model :=
-  pack (UnpackedFloat.ofUInt8 Format.binary64 n)
+def ofUInt8 (n : UInt8) : Float.Model := pack (UnpackedFloat.ofUInt8 Format.binary64 n)
 
 /-- Converts a `UInt16` to a `Float.Model`, returning positive zero on zero. -/
-def ofUInt16 (n : UInt16) : Float.Model :=
-  pack (UnpackedFloat.ofUInt16 Format.binary64 n)
+def ofUInt16 (n : UInt16) : Float.Model := pack (UnpackedFloat.ofUInt16 Format.binary64 n)
 
 /-- Converts a `UInt32` to a `Float.Model`, returning positive zero on zero. -/
-def ofUInt32 (n : UInt32) : Float.Model :=
-  pack (UnpackedFloat.ofUInt32 Format.binary64 n)
+def ofUInt32 (n : UInt32) : Float.Model := pack (UnpackedFloat.ofUInt32 Format.binary64 n)
 
 /-- Converts a `UInt64` to a `Float.Model`, returning positive zero on zero. -/
-def ofUInt64 (n : UInt64) : Float.Model :=
-  pack (UnpackedFloat.ofUInt64 Format.binary64 n)
+def ofUInt64 (n : UInt64) : Float.Model := pack (UnpackedFloat.ofUInt64 Format.binary64 n)
 
 /-- Converts a `USize` to a `Float.Model`, returning positive zero on zero. -/
-def ofUSize (n : USize) : Float.Model :=
-  pack (UnpackedFloat.ofUSize Format.binary64 n)
+def ofUSize (n : USize) : Float.Model := pack (UnpackedFloat.ofUSize Format.binary64 n)
 
 /-- Converts an `Int8` to a `Float.Model`, returning positive zero on zero. -/
-def ofInt8 (n : Int8) : Float.Model :=
-  pack (UnpackedFloat.ofInt8 Format.binary64 n)
+def ofInt8 (n : Int8) : Float.Model := pack (UnpackedFloat.ofInt8 Format.binary64 n)
 
 /-- Converts an `Int16` to a `Float.Model`, returning positive zero on zero. -/
-def ofInt16 (n : Int16) : Float.Model :=
-  pack (UnpackedFloat.ofInt16 Format.binary64 n)
+def ofInt16 (n : Int16) : Float.Model := pack (UnpackedFloat.ofInt16 Format.binary64 n)
 
 /-- Converts an `Int32` to a `Float.Model`, returning positive zero on zero. -/
-def ofInt32 (n : Int32) : Float.Model :=
-  pack (UnpackedFloat.ofInt32 Format.binary64 n)
+def ofInt32 (n : Int32) : Float.Model := pack (UnpackedFloat.ofInt32 Format.binary64 n)
 
 /-- Converts an `Int64` to a `Float.Model`, returning positive zero on zero. -/
-def ofInt64 (n : Int64) : Float.Model :=
-  pack (UnpackedFloat.ofInt64 Format.binary64 n)
+def ofInt64 (n : Int64) : Float.Model := pack (UnpackedFloat.ofInt64 Format.binary64 n)
 
 /-- Converts an `ISize` to a `Float.Model`, returning positive zero on zero. -/
-def ofISize (n : ISize) : Float.Model :=
-  pack (UnpackedFloat.ofISize Format.binary64 n)
+def ofISize (n : ISize) : Float.Model := pack (UnpackedFloat.ofISize Format.binary64 n)
 
 /--
 Converts a `Float.Model` to a `UInt8`, truncating after the decimal point, sending `NaN` to

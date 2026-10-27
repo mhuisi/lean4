@@ -18,8 +18,8 @@ Convenience function for turning an iterator into a list of strings, provided th
 iterator implements {name}`ToString`.
 -/
 @[inline]
-public abbrev Iter.toStringList {α β : Type} [Iterator α Id β] [ToString β]
-    (it : Iter (α := α) β) : List String :=
+public abbrev Iter.toStringList {α β : Type} [Iterator α Id β] [ToString β] (it : Iter (α := α) β)
+    : List String :=
   it.map toString |>.toList
 
 /--
@@ -27,8 +27,8 @@ Convenience function for turning an iterator into an array of strings, provided 
 iterator implements {name}`ToString`.
 -/
 @[inline]
-public abbrev Iter.toStringArray {α β : Type} [Iterator α Id β] [ToString β]
-    (it : Iter (α := α) β) : Array String :=
+public abbrev Iter.toStringArray {α β : Type} [Iterator α Id β] [ToString β] (it : Iter (α := α) β)
+    : Array String :=
   it.map toString |>.toArray
 
 end Std

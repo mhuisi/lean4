@@ -42,7 +42,7 @@ inductive Html where
   | raw : String → Html
   /-- A sequence of HTML values. -/
   | seq : Array Html → Html
-  deriving Repr, Inhabited, BEq, Hashable, TypeName, ToExpr
+deriving Repr, Inhabited, BEq, Hashable, TypeName, ToExpr
 
 namespace Html
 
@@ -56,45 +56,58 @@ def isEmpty : Html → Bool
   | .text s | .raw s => s.isEmpty
   | .element .. => false
 
-/-- If {name}`escape` is {lean}`true`,
+/--
+If {name}`escape` is {lean}`true`,
 then characters such as `&` are escaped
 to entities such as `&amp;` during rendering.
 
-Use {lean}`false` in raw text elements ({lit}`script` and {lit}`style`). -/
-def ofString (escape : Bool) : String → Html :=
-  if escape then text else raw
+Use {lean}`false` in raw text elements ({lit}`script` and {lit}`style`).
+-/
+def ofString (escape : Bool) : String → Html := if escape then text else raw
 
 instance : Coe String Html := ⟨.text⟩
 
 /-- Appends two HTML forests. -/
 def append : Html → Html → Html
   | x@(.seq xs), y@(.seq ys) =>
-    if x.isEmpty then .seq ys
-    else if y.isEmpty then .seq xs
-    else .seq (xs ++ ys)
-  | .seq xs, y => if xs.isEmpty then y else .seq (xs.push y)
-  | x, .seq ys => if ys.isEmpty then x else .seq (#[x] ++ ys)
-  | x, y => .seq #[x, y]
+    if x.isEmpty then
+      .seq ys
+    else if y.isEmpty then
+      .seq xs
+    else
+      .seq (xs ++ ys)
+  | .seq xs, y =>
+    if xs.isEmpty then y else .seq (xs.push y)
+  | x, .seq ys =>
+    if ys.isEmpty then x else .seq (#[x] ++ ys)
+  | x, y =>
+    .seq #[x, y]
 
 instance : Append Html := ⟨.append⟩
 
-/-- Merges a collection of HTML values by appending them.
+/--
+Merges a collection of HTML values by appending them.
 
-Like {lean}`seq (ForIn.toArray hs)`, but may produce a more compact representation. -/
+Like {lean}`seq (ForIn.toArray hs)`, but may produce a more compact representation.
+-/
 def ofCollection {ρ : Type w} [ForIn Id ρ Html] (hs : ρ) : Html := Id.run do
   let mut out := .empty
   for h in hs do
     out := out ++ h
   return out
 
-/-- Merges an array of HTML values by appending them.
+/--
+Merges an array of HTML values by appending them.
 
-Like {name}`seq`, but may produce a more compact representation. -/
+Like {name}`seq`, but may produce a more compact representation.
+-/
 def ofArray (hs : Array Html) : Html := ofCollection hs
 
-/-- Merges a list of HTML values by appending them.
+/--
+Merges a list of HTML values by appending them.
 
-Like {lean}`seq hs.toArray`, but may produce a more compact representation. -/
+Like {lean}`seq hs.toArray`, but may produce a more compact representation.
+-/
 def ofList (hs : List Html) : Html := ofCollection hs
 
 /-- Returns the given HTML, or {name}`empty` when the input is {lean}`none`. -/
@@ -109,12 +122,15 @@ instance : ToJson Html where
   toJson := to
 where
   to
-    | .text t => .str t
-    | .raw r => json%{r: $r}
+    | .text t =>
+      .str t
+    | .raw r =>
+      json% { r: $r }
     | .element tag attrs children =>
       let attrs : Array Json := attrs.map fun (k, v) => .arr #[.str k, .str v]
-      json%{t: $tag, a: $attrs, c: $(to children)}
-    | .seq hs => .arr (hs.map to)
+      json% { t: $tag, a: $attrs, c: $(to children) }
+    | .seq hs =>
+      .arr (hs.map to)
 
 partial instance : FromJson Html where
   fromJson? j :=
@@ -124,24 +140,30 @@ partial instance : FromJson Html where
       throw s!"Failed to deserialize HTML from JSON {j.compress}: {e}"
 where
   from?
-    | .str s => return .text s
-    | .arr j => return .seq (← j.mapM from?)
+    | .str s =>
+      return .text s
+    | .arr j =>
+      return .seq (← j.mapM from?)
     | j@(.obj o) => do
       if let some tag := o["t"]? then
-        let .str tag := tag | throw s!"Expected a string, got: {tag.compress}"
+        let .str tag := tag
+          | throw s!"Expected a string, got: {tag.compress}"
         let attrs ← j.getObjValAs? (Array Json) "a"
-        let attrs ← attrs.mapM fun kv => do
-          let .arr #[.str k, .str v] := kv
-            | throw s!"Expected an array of two strings, got: {kv.compress}"
-          return (k, v)
+        let attrs ←
+          attrs.mapM fun kv => do
+            let .arr #[.str k, .str v] := kv
+              | throw s!"Expected an array of two strings, got: {kv.compress}"
+            return (k, v)
         let children ← j.getObjVal? "c" >>= from?
         return .element tag attrs children
       else if let some r := o["r"]? then
-        let .str r := r | throw s!"Expected a string, got: {r.compress}"
+        let .str r := r
+          | throw s!"Expected a string, got: {r.compress}"
         return .raw r
       else
         throw s!"Expected key \"t\" or key \"r\" in: {j.compress}"
-    | j => throw s!"Expected a string, an object, or an array, got: {j.compress}"
+    | j =>
+      throw s!"Expected a string, an object, or an array, got: {j.compress}"
 
 open Syntax in
 partial instance : Quote Html `term where
@@ -159,9 +181,11 @@ where
       letI : Quote Html `term := ⟨q⟩
       mkCApp ``Html.seq #[quote s]
 
-/-- Rewrites the forest by using {name}`fn` to transform every node.
+/--
+Rewrites the forest by using {name}`fn` to transform every node.
 Traversal proceeds in post-order:
-{name}`fn` receives {name}`element` and {name}`seq` nodes with already-rewritten children. -/
+{name}`fn` receives {name}`element` and {name}`seq` nodes with already-rewritten children.
+-/
 partial def rewritePostM [Monad m] (fn : Html → m Html) : Html → m Html
   | .element tag attrs children => do
     let children' ← rewritePostM fn children
@@ -169,12 +193,14 @@ partial def rewritePostM [Monad m] (fn : Html → m Html) : Html → m Html
   | .seq s => do
     let s' ← s.mapM (rewritePostM fn)
     fn (.seq s')
-  | h => fn h
+  | h =>
+    fn h
 
-/-- Rewrites the forest by using {name}`fn` to transform every node.
+/--
+Rewrites the forest by using {name}`fn` to transform every node.
 Traversal proceeds in post-order:
-{name}`fn` receives {name}`element` and {name}`seq` nodes with already-rewritten children. -/
-partial def rewritePost (fn : Html → Html) (h : Html) : Html :=
-  rewritePostM (m := Id) fn h |>.run
+{name}`fn` receives {name}`element` and {name}`seq` nodes with already-rewritten children.
+-/
+partial def rewritePost (fn : Html → Html) (h : Html) : Html := rewritePostM (m := Id) fn h |>.run
 
 end Lean.Html

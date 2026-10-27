@@ -15,8 +15,7 @@ namespace Lean.Compiler.LCNF
 instance : Hashable (Param pu) where
   hash p := mixHash (hash p.fvarId) (hash p.type)
 
-def hashParams (ps : Array (Param pu)) : UInt64 :=
-  hash ps
+def hashParams (ps : Array (Param pu)) : UInt64 := hash ps
 
 mutual
 partial def hashAlt (alt : Alt pu) : UInt64 :=
@@ -30,15 +29,24 @@ partial def hashAlts (alts : Array (Alt pu)) : UInt64 :=
 
 partial def hashCode (code : Code pu) : UInt64 :=
   match code with
-  | .let decl k => mixHash (mixHash (hash decl.fvarId) (hash decl.type)) (mixHash (hash decl.value) (hashCode k))
+  | .let decl k =>
+    mixHash (mixHash (hash decl.fvarId) (hash decl.type)) (mixHash (hash decl.value) (hashCode k))
   | .fun decl k _ | .jp decl k =>
-    mixHash (mixHash (mixHash (hash decl.fvarId) (hash decl.type)) (mixHash (hashCode decl.value) (hashCode k))) (hash decl.params)
-  | .return fvarId => hash fvarId
-  | .unreach type => hash type
-  | .jmp fvarId args => mixHash (hash fvarId) (hash args)
-  | .cases c => mixHash (mixHash (hash c.discr) (hash c.resultType)) (hashAlts c.alts)
+    mixHash
+      (mixHash (mixHash (hash decl.fvarId) (hash decl.type))
+        (mixHash (hashCode decl.value) (hashCode k)))
+      (hash decl.params)
+  | .return fvarId =>
+    hash fvarId
+  | .unreach type =>
+    hash type
+  | .jmp fvarId args =>
+    mixHash (hash fvarId) (hash args)
+  | .cases c =>
+    mixHash (mixHash (hash c.discr) (hash c.resultType)) (hashAlts c.alts)
   | .sset fvarId i offset y ty k _ =>
-    mixHash (mixHash (hash fvarId) (hash i)) (mixHash (mixHash (hash offset) (hash y)) (mixHash (hash ty) (hashCode k)))
+    mixHash (mixHash (hash fvarId) (hash i))
+      (mixHash (mixHash (hash offset) (hash y)) (mixHash (hash ty) (hashCode k)))
   | .oset fvarId offset y k _ =>
     mixHash (mixHash (hash fvarId) (hash offset)) (mixHash (hash y) (hashCode k))
   | .uset fvarId offset y k _ =>
@@ -46,9 +54,11 @@ partial def hashCode (code : Code pu) : UInt64 :=
   | .setTag fvarId cidx k _ =>
     mixHash (hash fvarId) (mixHash (hash cidx) (hashCode k))
   | .inc fvarId n check persistent k _ =>
-    mixHash (mixHash (hash fvarId) (hash n)) (mixHash (mixHash (hash persistent) (hash check)) (hashCode k))
+    mixHash (mixHash (hash fvarId) (hash n))
+      (mixHash (mixHash (hash persistent) (hash check)) (hashCode k))
   | .dec fvarId n check persistent objs? k _ =>
-    mixHash (mixHash (hash fvarId) (hash n)) (mixHash (mixHash (hash persistent) (hash check)) (mixHash (hash objs?) (hashCode k)))
+    mixHash (mixHash (hash fvarId) (hash n))
+      (mixHash (mixHash (hash persistent) (hash check)) (mixHash (hash objs?) (hashCode k)))
   | .del fvarId k _ =>
     mixHash (hash fvarId) (hashCode k)
 

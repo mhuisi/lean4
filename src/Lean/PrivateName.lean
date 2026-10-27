@@ -45,10 +45,9 @@ def isPrivatePrefix (n : Name) : Bool :=
   | _ => false
 where
   go (n : Name) : Bool :=
-    n == privateHeader ||
-    match n with
-    | .str p _ => go p
-    | _ => false
+    n == privateHeader || match n with
+      | .str p _ => go p
+      | _ => false
 
 /--
 Return `true` if `n` is a private name, that is, if `n` is equivalent to
@@ -58,7 +57,7 @@ def isPrivateName (n : Name) : Bool :=
   match n with
   | .str p _ => isPrivateName p
   | .num p _ => isPrivatePrefix n || isPrivateName p
-  | _        => false
+  | _ => false
 
 private def privateToUserNameAux (n : Name) (h : isPrivateName n) : Name :=
   match hn : n with
@@ -70,16 +69,20 @@ where finally simp_all [isPrivateName]
 Returns the user name corresponding to the private name `n` or `none` if `n` is not a private name.
 -/
 def privateToUserName? (n : Name) : Option Name :=
-  if h : isPrivateName n then privateToUserNameAux n h
-  else none
+  if h : isPrivateName n then
+    privateToUserNameAux n h
+  else
+    none
 
 /--
 Returns the user name corresponding to the private name `n` or `n` itself if `n` is not a
 private name.
 -/
 def privateToUserName (n : Name) : Name :=
-  if h : isPrivateName n then privateToUserNameAux n h
-  else n
+  if h : isPrivateName n then
+    privateToUserNameAux n h
+  else
+    n
 
 /--
 If `n` is a private name, returns `some pfx` such that `pfx.appendCore (privateToUserName n) = n`.

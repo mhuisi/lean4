@@ -19,13 +19,15 @@ using the appropriate brackets given its `BinderInfo`. Example output: `{α : Ty
 Returns `none` for let decls.
 -/
 protected def LocalDecl.ppAsBinder : LocalDecl → Option MessageData
-  | .ldecl .. => none
+  | .ldecl .. =>
+    none
   | .cdecl _ fvarId _ type binderInfo _ =>
-    let (lBracket, rBracket) : String × String := match binderInfo with
-      | .implicit       => ("{", "}")
+    let (lBracket, rBracket) : String × String :=
+      match binderInfo with
+      | .implicit => ("{", "}")
       | .strictImplicit => ("⦃", "⦄")
-      | .instImplicit   => ("[", "]")
-      | .default        => ("(", ")")
+      | .instImplicit => ("[", "]")
+      | .default => ("(", ")")
     some <| .bracket lBracket m!"{mkFVar fvarId} : {type}" rBracket
 
 /--

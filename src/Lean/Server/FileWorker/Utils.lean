@@ -21,26 +21,29 @@ open Snapshots
 open Lean.IO
 
 -- TEMP: translate from new heterogeneous snapshot tree to old homogeneous async list
-private partial def mkCmdSnaps (initSnap : Language.Lean.InitialSnapshot) :
-    AsyncList IO.Error Snapshot := Id.run do
-  let some headerParsed := initSnap.result? | return .nil
-  .delayed <| headerParsed.processedSnap.task.asServerTask.bindCheap fun headerProcessed => Id.run do
-    let some headerSuccess := headerProcessed.result? | return .pure <| .ok .nil
-    return .pure <| .ok <| .cons {
-      stx := initSnap.stx
-      mpState := headerParsed.parserState
-      cmdState := headerSuccess.cmdState
-    } <| .delayed <| headerSuccess.firstCmdSnap.task.asServerTask.bindCheap go
+private partial def mkCmdSnaps (initSnap : Language.Lean.InitialSnapshot)
+    : AsyncList IO.Error Snapshot := Id.run do
+  let some headerParsed := initSnap.result?
+    | return .nil
+  .delayed <|
+    headerParsed.processedSnap.task.asServerTask.bindCheap fun headerProcessed => Id.run do
+      let some headerSuccess := headerProcessed.result?
+        | return .pure <| .ok .nil
+      return .pure <| .ok <|
+        .cons {
+            stx := initSnap.stx
+            mpState := headerParsed.parserState
+            cmdState := headerSuccess.cmdState
+          } <|
+          .delayed <| headerSuccess.firstCmdSnap.task.asServerTask.bindCheap go
 where
   go cmdParsed :=
     cmdParsed.elabSnap.resultSnap.task.asServerTask.mapCheap fun result =>
-      .ok <| .cons {
-        stx := cmdParsed.stx
-        mpState := cmdParsed.parserState
-        cmdState := result.cmdState
-      } (match cmdParsed.nextCmdSnap? with
-        | some next => .delayed <| next.task.asServerTask.bindCheap go
-        | none => .nil)
+      .ok <| .cons
+        { stx := cmdParsed.stx, mpState := cmdParsed.parserState, cmdState := result.cmdState }
+        (match cmdParsed.nextCmdSnap? with
+          | some next => .delayed <| next.task.asServerTask.bindCheap go
+          | none => .nil)
 
 /--
 Tracks diagnostics and incremental diagnostic reporting state for a single document version.
@@ -68,7 +71,7 @@ reporter task has been started.
 -/
 structure EditableDocumentCore where
   /-- The document. -/
-  «meta»   : DocumentMeta
+  «meta» : DocumentMeta
   /-- Initial processing snapshot. -/
   initSnap : Language.Lean.InitialSnapshot
   /-- Old representation for backward compatibility. -/
@@ -80,8 +83,8 @@ namespace EditableDocumentCore
 open Widget
 
 /-- Appends new non-sticky diagnostics. -/
-def appendDiagnostics (doc : EditableDocumentCore) (diags : Array InteractiveDiagnostic) :
-    BaseIO Unit :=
+def appendDiagnostics (doc : EditableDocumentCore) (diags : Array InteractiveDiagnostic)
+    : BaseIO Unit :=
   doc.diagnosticsMutex.atomically do
     modify fun ds => { ds with diags := diags.foldl (init := ds.diags) fun acc d => acc.push d }
 
@@ -89,19 +92,18 @@ def appendDiagnostics (doc : EditableDocumentCore) (diags : Array InteractiveDia
 Appends a sticky diagnostic and marks the next publish as non-incremental.
 Removes any existing sticky diagnostic whose `message.stripTags` matches the new one.
 -/
-def appendStickyDiagnostic (doc : EditableDocumentCore) (diagnostic : InteractiveDiagnostic) :
-    BaseIO Unit :=
+def appendStickyDiagnostic (doc : EditableDocumentCore) (diagnostic : InteractiveDiagnostic)
+    : BaseIO Unit :=
   doc.diagnosticsMutex.atomically do
     let ds ← get
     ds.stickyDiagsRef.modify fun stickyDiags =>
-      let stickyDiags := stickyDiags.filter
-        (·.message.stripTags != diagnostic.message.stripTags)
+      let stickyDiags := stickyDiags.filter (·.message.stripTags != diagnostic.message.stripTags)
       stickyDiags.push diagnostic
     set { ds with isIncremental := false }
 
 /-- Returns all current diagnostics (sticky ++ doc). -/
-def collectCurrentDiagnostics (doc : EditableDocumentCore) :
-    BaseIO (PersistentArray InteractiveDiagnostic) :=
+def collectCurrentDiagnostics (doc : EditableDocumentCore)
+    : BaseIO (PersistentArray InteractiveDiagnostic) :=
   doc.diagnosticsMutex.atomically do
     let ds ← get
     let stickyDiags ← ds.stickyDiagsRef.get
@@ -111,10 +113,11 @@ def collectCurrentDiagnostics (doc : EditableDocumentCore) :
 Creates a new `EditableDocumentCore` for a new document version, sharing the same sticky
 diagnostics with the previous version.
 -/
-def update (doc : EditableDocumentCore) (newMeta : DocumentMeta)
-    (newInitSnap : Language.Lean.InitialSnapshot) : BaseIO EditableDocumentCore := do
-  let stickyDiagsRef ← doc.diagnosticsMutex.atomically do
-    return (← get).stickyDiagsRef
+def update
+    (doc : EditableDocumentCore) (newMeta : DocumentMeta)
+    (newInitSnap : Language.Lean.InitialSnapshot)
+    : BaseIO EditableDocumentCore := do
+  let stickyDiagsRef ← doc.diagnosticsMutex.atomically do return (← get).stickyDiagsRef
   let diagnosticsMutex ← Std.Mutex.new { stickyDiagsRef }
   return { «meta» := newMeta, initSnap := newInitSnap, diagnosticsMutex }
 
@@ -129,9 +132,10 @@ all sticky and non-sticky diagnostics non-incrementally.
 The state update and the write are performed atomically under the diagnostics mutex
 to prevent reordering between concurrent publishers (the reporter task and the main thread).
 -/
-def publishDiagnostics (doc : EditableDocumentCore) (incrementalDiagnosticSupport : Bool)
-    (writeDiagnostics : JsonRpc.Notification Lsp.PublishDiagnosticsParams → BaseIO Unit) :
-    BaseIO Unit := do
+def publishDiagnostics
+    (doc : EditableDocumentCore) (incrementalDiagnosticSupport : Bool)
+    (writeDiagnostics : JsonRpc.Notification Lsp.PublishDiagnosticsParams → BaseIO Unit)
+    : BaseIO Unit := do
   -- The mutex must be held across both the state update and the write to ensure that concurrent
   -- publishers (e.g. the reporter task and the main thread) cannot interleave their state reads
   -- and writes, which would reorder incremental/non-incremental messages and corrupt client state.
@@ -144,14 +148,13 @@ def publishDiagnostics (doc : EditableDocumentCore) (incrementalDiagnosticSuppor
     set <| { ds with publishedDiagsAmount := diags.size, isIncremental := true }
     let (diagsToSend, isIncremental) :=
       if useIncremental then
-        let newDiags := diags.foldl (init := #[]) (start := publishedDiagsAmount) fun acc d =>
-          acc.push d.toDiagnostic
+        let newDiags :=
+          diags.foldl (init := #[]) (start := publishedDiagsAmount) fun acc d =>
+            acc.push d.toDiagnostic
         (newDiags, true)
       else
-        let allDiags := stickyDiags.foldl (init := #[]) fun acc d =>
-          acc.push d.toDiagnostic
-        let allDiags := diags.foldl (init := allDiags) fun acc d =>
-          acc.push d.toDiagnostic
+        let allDiags := stickyDiags.foldl (init := #[]) fun acc d => acc.push d.toDiagnostic
+        let allDiags := diags.foldl (init := allDiags) fun acc d => acc.push d.toDiagnostic
         (allDiags, false)
     let isIncremental? :=
       if incrementalDiagnosticSupport then
@@ -165,13 +168,14 @@ end EditableDocumentCore
 /-- `EditableDocumentCore` with reporter task. -/
 structure EditableDocument extends EditableDocumentCore where
   /--
-    Task reporting processing status back to client. We store it here for implementing
-    `waitForDiagnostics`. -/
+  Task reporting processing status back to client. We store it here for implementing
+  `waitForDiagnostics`.
+  -/
   reporter : ServerTask Unit
 
 namespace EditableDocument
 
-/-- Construct a VersionedTextDocumentIdentifier from an EditableDocument --/
+/-- Construct a VersionedTextDocumentIdentifier from an EditableDocument - -/
 def versionedIdentifier (ed : EditableDocument) : Lsp.VersionedTextDocumentIdentifier := {
   uri := ed.meta.uri
   version? := some ed.meta.version
@@ -180,30 +184,29 @@ def versionedIdentifier (ed : EditableDocument) : Lsp.VersionedTextDocumentIdent
 end EditableDocument
 
 structure RpcSession where
-  objects         : RpcObjectStore
+  objects : RpcObjectStore
   /-- The `IO.monoMsNow` time when the session expires. See `$/lean/rpc/keepAlive`. -/
-  expireTime      : Nat
+  expireTime : Nat
 
 namespace RpcSession
 
-def keepAliveTimeMs : Nat :=
-  30000
+def keepAliveTimeMs : Nat := 30000
 
 def new (wireFormat : Lsp.RpcWireFormat) : IO (UInt64 × RpcSession) := do
-  /- We generate a random ID to ensure that session IDs do not repeat across re-initializations
-  and worker restarts. Otherwise, the client may attempt to use outdated references. -/
+  /-
+  We generate a random ID to ensure that session IDs do not repeat across re-initializations
+  and worker restarts. Otherwise, the client may attempt to use outdated references.
+  -/
   let newId ← ByteArray.toUInt64LE! <$> IO.getRandomBytes 8
-  let newSesh := {
-    objects := { wireFormat }
-    expireTime := (← IO.monoMsNow) + keepAliveTimeMs
-  }
+  let newSesh := { objects := { wireFormat }, expireTime := (← IO.monoMsNow) + keepAliveTimeMs }
   return (newId, newSesh)
 
-def keptAlive (monoMsNow : Nat) (s : RpcSession) : RpcSession :=
-  { s with expireTime := monoMsNow + keepAliveTimeMs }
+def keptAlive (monoMsNow : Nat) (s : RpcSession) : RpcSession := {
+  s with
+  expireTime := monoMsNow + keepAliveTimeMs
+}
 
-def hasExpired (s : RpcSession) : IO Bool :=
-  return s.expireTime ≤ (← IO.monoMsNow)
+def hasExpired (s : RpcSession) : IO Bool := return s.expireTime ≤ (← IO.monoMsNow)
 
 end RpcSession
 

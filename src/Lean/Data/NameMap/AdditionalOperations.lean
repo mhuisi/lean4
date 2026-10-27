@@ -14,10 +14,12 @@ public section
 namespace Lean
 namespace NameMap
 
-/-- `filterMap f m` filters an `NameMap` and simultaneously modifies the filtered values.
+/--
+`filterMap f m` filters an `NameMap` and simultaneously modifies the filtered values.
 
 It takes a function `f : Name → α → Option β` and applies `f name` to the value with key `name`.
-The resulting entries with non-`none` value are collected to form the output `NameMap`. -/
+The resulting entries with non-`none` value are collected to form the output `NameMap`.
+-/
 def filterMap (f : Name → α → Option β) (m : NameMap α) : NameMap β := Std.TreeMap.filterMap f m
 
 end NameMap

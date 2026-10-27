@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura, Mario Carneiro
 -/
 module
+
 prelude
 public import Init.Prelude
 import Init.Data.Array.Set
@@ -24,7 +25,7 @@ Does nothing for non-`node` nodes.
 def setArgs (stx : Syntax) (args : Array Syntax) : Syntax :=
   match stx with
   | node info k _ => node info k args
-  | stx           => stx
+  | stx => stx
 
 /--
 Updates the `i`'th argument of the syntax.
@@ -33,6 +34,6 @@ Does nothing for non-`node` nodes, or if `i` is out of bounds of the node list.
 def setArg (stx : Syntax) (i : Nat) (arg : Syntax) : Syntax :=
   match stx with
   | node info k args => node info k (args.setIfInBounds i arg)
-  | stx              => stx
+  | stx => stx
 
 end Lean.Syntax

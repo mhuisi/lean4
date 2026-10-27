@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.DiscrTree.Main
 import Init.Data.Range.Polymorphic.Iterators
@@ -12,18 +13,18 @@ public section
 namespace Lean
 
 def Expr.ctorWeight : Expr → UInt8
-  | bvar ..    => 0
-  | fvar ..    => 1
-  | mvar ..    => 2
-  | sort ..    => 3
-  | const ..   => 4
-  | lit ..     => 5
-  | mdata ..   => 6
-  | proj ..    => 7
-  | app ..     => 8
-  | lam ..     => 9
+  | bvar .. => 0
+  | fvar .. => 1
+  | mvar .. => 2
+  | sort .. => 3
+  | const .. => 4
+  | lit .. => 5
+  | mdata .. => 6
+  | proj .. => 7
+  | app .. => 8
+  | lam .. => 9
   | forallE .. => 10
-  | letE ..    => 11
+  | letE .. => 11
 
 namespace Meta
 namespace ACLt
@@ -33,29 +34,32 @@ inductive ReduceMode where
   | reduceSimpleOnly
   | none
 
-private def config : ConfigWithKey :=
-  { transparency := .reducible, iota := false, proj := .no : Config }.toConfigWithKey
+private def config : ConfigWithKey := {
+  transparency := .reducible
+  iota := false
+  proj := .no
+  : Config
+}.toConfigWithKey
 
 mutual
 
 /--
-  An AC-compatible ordering.
+An AC-compatible ordering.
 
-  Recall that an AC-compatible ordering if it is monotonic, well-founded, and total.
-  Both KBO and LPO are AC-compatible. KBO is faster, but we do not cache the weight of
-  each expression in Lean 4. Even if we did, we would need to have a weight where implicit instance arguments are ignored.
-  So, we use a LPO-like term ordering.
+Recall that an AC-compatible ordering if it is monotonic, well-founded, and total.
+Both KBO and LPO are AC-compatible. KBO is faster, but we do not cache the weight of
+each expression in Lean 4. Even if we did, we would need to have a weight where implicit instance arguments are ignored.
+So, we use a LPO-like term ordering.
 
-  Remark: this method is used to implement ordered rewriting. We ignore implicit instance
-  arguments to address an issue reported at issue #972.
+Remark: this method is used to implement ordered rewriting. We ignore implicit instance
+arguments to address an issue reported at issue #972.
 
-  Remark: the order is not really total on terms since
-   - We instance implicit arguments.
-   - We ignore metadata.
-   - We ignore universe parameters at constants.
+Remark: the order is not really total on terms since
+ - We instance implicit arguments.
+ - We ignore metadata.
+ - We ignore universe parameters at constants.
 -/
-partial def main (a b : Expr) (mode : ReduceMode := .none) : MetaM Bool := do
-  lt a b
+partial def main (a b : Expr) (mode : ReduceMode := .none) : MetaM Bool := do lt a b
 where
   reduce (e : Expr) : MetaM Expr := do
     if e.hasLooseBVars then
@@ -64,7 +68,8 @@ where
       -- TODO: investigate whether we have to create temporary fresh free variables in practice.
       -- Drawback: cost.
       return e
-    else match mode with
+    else
+      match mode with
       | .reduce => DiscrTree.reduce e
       | .reduceSimpleOnly => withConfigWithKey config <| DiscrTree.reduce e
       | .none => return e
@@ -133,28 +138,29 @@ where
   lexSameCtor (a b : Expr) : MetaM Bool :=
     match a with
     -- Atomic
-    | .bvar i ..    => return i < b.bvarIdx!
+    | .bvar i .. => return i < b.bvarIdx!
     -- We want to ensure that fvars are sorted in declaration order (#12136). This is not
     -- necessarily the case with `Name.lt` when hierarchical names are used as they are compared
     -- bottom-up.
-    | .fvar id ..   => return (← id.findDecl?).get!.index < (← b.fvarId!.findDecl?).get!.index
-    | .mvar id ..   => return Name.lt id.name b.mvarId!.name
-    | .sort u ..    => return Level.normLt u b.sortLevel!
-    | .const n ..   => return Name.lt n b.constName! -- We ignore the levels
-    | .lit v ..     => return Literal.lt v b.litValue!
+    | .fvar id .. => return (← id.findDecl?).get!.index < (← b.fvarId!.findDecl?).get!.index
+    | .mvar id .. => return Name.lt id.name b.mvarId!.name
+    | .sort u .. => return Level.normLt u b.sortLevel!
+    | .const n .. => return Name.lt n b.constName! -- We ignore the levels
+    | .lit v .. => return Literal.lt v b.litValue!
     -- Composite
-    | .proj _ i e ..    => if i != b.projIdx! then return i < b.projIdx! else lt e b.projExpr!
-    | .app ..           => ltApp a b
-    | .lam _ d e ..     => ltPair d e b.bindingDomain! b.bindingBody!
+    | .proj _ i e .. => if i != b.projIdx! then return i < b.projIdx! else lt e b.projExpr!
+    | .app .. => ltApp a b
+    | .lam _ d e .. => ltPair d e b.bindingDomain! b.bindingBody!
     | .forallE _ d e .. => ltPair d e b.bindingDomain! b.bindingBody!
-    | .letE _ _ v e ..  => ltPair v e b.letValue! b.letBody!
+    | .letE _ _ v e .. => ltPair v e b.letValue! b.letBody!
     -- See main function
-    | .mdata ..         => unreachable!
+    | .mdata .. => unreachable!
 
   allChildrenLt (a b : Expr) : MetaM Bool :=
     match a with
-    | .proj _ _ e ..    => lt e b
-    | .app ..           =>
+    | .proj _ _ e .. =>
+      lt e b
+    | .app .. =>
       a.withApp fun f args => do
         let infos ← getParamsInfo f args.size
         for i in *...infos.size do
@@ -166,13 +172,16 @@ where
           if !(← lt args[i] b) then
             return false
         return true
-    | .lam _ d e ..     => lt d b <&&> lt e b
-    | .forallE _ d e .. => lt d b <&&> lt e b
-    | .letE _ _ v e ..  => lt v b <&&> lt e b
-    | _ => return true
+    | .lam _ d e .. =>
+      lt d b <&&> lt e b
+    | .forallE _ d e .. =>
+      lt d b <&&> lt e b
+    | .letE _ _ v e .. =>
+      lt v b <&&> lt e b
+    | _ =>
+      return true
 
-  someChildGe (a b : Expr) : MetaM Bool :=
-    return !(← allChildrenLt a b)
+  someChildGe (a b : Expr) : MetaM Bool := return !(← allChildrenLt a b)
 
   lpo (a b : Expr) : MetaM Bool := do
     checkSystem "Lean.Meta.acLt"
@@ -197,7 +206,6 @@ end
 end ACLt
 
 @[inherit_doc ACLt.main]
-def acLt (a b : Expr) (mode : ACLt.ReduceMode := .none) : MetaM Bool :=
-  ACLt.main a b mode
+def acLt (a b : Expr) (mode : ACLt.ReduceMode := .none) : MetaM Bool := ACLt.main a b mode
 
 end Lean.Meta

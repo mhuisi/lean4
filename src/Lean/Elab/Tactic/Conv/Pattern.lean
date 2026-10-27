@@ -15,15 +15,16 @@ namespace Lean.Elab.Tactic.Conv
 open Meta
 
 private def getContext : MetaM Simp.Context := do
-  Simp.mkContext
-    (simpTheorems  := {})
-    (congrTheorems := (← getSimpCongrTheorems))
-    (config        := Simp.neutralConfig)
+  Simp.mkContext (simpTheorems := {}) (congrTheorems := (← getSimpCongrTheorems))
+    (config := Simp.neutralConfig)
 
-partial def matchPattern? (pattern : AbstractMVarsResult) (e : Expr) : MetaM (Option (Expr × Array Expr)) :=
+partial def matchPattern? (pattern : AbstractMVarsResult) (e : Expr)
+    : MetaM (Option (Expr × Array Expr)) :=
   withNewMCtxDepth do
-    /- TODO: check whether the following is a performance bottleneck. If it is, recall that we used `AbstractMVarsResult` to make
-       sure we can match the pattern inside of binders. So, it is not needed in most cases. -/
+    /-
+    TODO: check whether the following is a performance bottleneck. If it is, recall that we used `AbstractMVarsResult` to make
+    sure we can match the pattern inside of binders. So, it is not needed in most cases.
+    -/
     let (_, _, pattern) ← openAbstractMVarsResult pattern
     let rec go? (e : Expr) : MetaM (Option (Expr × Array Expr)) := do
       if e.toHeadIndex != pattern.toHeadIndex then
@@ -77,13 +78,17 @@ Assuming `isReady` returned true, this adds the generated subgoal to the list
 and advances to the next match.
 -/
 def accept (mvarId : MVarId) : PatternMatchState → PatternMatchState
-  | .all subgoals => .all (subgoals.push mvarId)
-  | .occs subgoals idx ((_, n) :: remaining) => .occs (subgoals.push (n, mvarId)) (idx + 1) remaining
-  | s => s
+  | .all subgoals =>
+    .all (subgoals.push mvarId)
+  | .occs subgoals idx ((_, n) :: remaining) =>
+    .occs (subgoals.push (n, mvarId)) (idx + 1) remaining
+  | s =>
+    s
 
 end PatternMatchState
 
-private def pre (pattern : AbstractMVarsResult) (state : IO.Ref PatternMatchState) (e : Expr) : SimpM Simp.Step := do
+private def pre (pattern : AbstractMVarsResult) (state : IO.Ref PatternMatchState) (e : Expr)
+    : SimpM Simp.Step := do
   if (← state.get).isDone then
     return Simp.Step.done { expr := e }
   else if let some (e, extraArgs) ← matchPattern? pattern e then
@@ -104,41 +109,52 @@ private def pre (pattern : AbstractMVarsResult) (state : IO.Ref PatternMatchStat
   else
     return Simp.Step.continue
 
-@[builtin_tactic Lean.Parser.Tactic.Conv.pattern] def evalPattern : Tactic := fun stx => withMainContext do
-  match stx with
-  | `(conv| pattern $[(occs := $occs)]? $p) =>
-    let patternA ←
-       withTheReader Term.Context (fun ctx => { ctx with ignoreTCFailures := true }) <|
-       Term.withoutModifyingElabMetaStateWithInfo <| withRef p <|
-       Term.withoutErrToSorry do
-         abstractMVars (← Term.elabTerm p none)
-    let lhs ← getLhs
-    let occs ← match occs with
-    | none => pure (.occs #[] 0 [(0, 0)])
-    | some occs => match occs with
-      | `(Parser.Tactic.Conv.occsWildcard| *) => pure (.all #[])
-      | `(Parser.Tactic.Conv.occsIndexed| $ids*) => do
-        let ids ← ids.mapIdxM fun i id =>
-          match id.getNat with
-          | 0 => throwErrorAt id "positive integer expected"
-          | n+1 => pure (n, i)
-        let ids := ids.qsort (·.1 < ·.1)
-        unless @Array.allDiff _ ⟨(·.1 == ·.1)⟩ ids do
-          throwError "occurrence list is not distinct"
-        pure (.occs #[] 0 ids.toList)
-      | _ => throwUnsupportedSyntax
-    let state ← IO.mkRef occs
-    let ctx := (← getContext).setMemoize (occs matches .all _)
-    let (result, _) ← Simp.main lhs ctx (methods := { pre := pre patternA state })
-    let subgoals ← match ← state.get with
-    | .all #[] | .occs _ 0 _ =>
-      throwError "`pattern` conv tactic failed, pattern was not found{indentExpr patternA.expr}"
-    | .all subgoals => pure subgoals
-    | .occs subgoals idx remaining =>
-      if let some (i, _) := remaining.getLast? then
-        throwError "`pattern` conv tactic failed, pattern was found only {idx} times but {i+1} expected"
-      pure <| (subgoals.qsort (·.1 < ·.1)).map (·.2)
-    (← getRhs).mvarId!.assign result.expr
-    (← getMainGoal).assign (← result.getProof)
-    replaceMainGoal subgoals.toList
-  | _ => throwUnsupportedSyntax
+@[builtin_tactic Lean.Parser.Tactic.Conv.pattern]
+def evalPattern : Tactic := fun stx =>
+  withMainContext do
+    match stx with
+    | `(conv| pattern $[(occs := $occs)]? $p) =>
+      let patternA ←
+        withTheReader Term.Context (fun ctx => { ctx with ignoreTCFailures := true }) <|
+          Term.withoutModifyingElabMetaStateWithInfo <| withRef p <|
+            Term.withoutErrToSorry do abstractMVars (← Term.elabTerm p none)
+      let lhs ← getLhs
+      let occs ←
+        match occs with
+        | none =>
+          pure (.occs #[] 0 [(0, 0)])
+        | some occs =>
+          match occs with
+          | `(Parser.Tactic.Conv.occsWildcard| *) =>
+            pure (.all #[])
+          | `(Parser.Tactic.Conv.occsIndexed| $ids*) => do
+            let ids ←
+              ids.mapIdxM fun i id =>
+                match id.getNat with
+                | 0 => throwErrorAt id "positive integer expected"
+                | n + 1 => pure (n, i)
+            let ids := ids.qsort (·.1 < ·.1)
+            unless @Array.allDiff _ ⟨(·.1 == ·.1)⟩ ids do
+              throwError "occurrence list is not distinct"
+            pure (.occs #[] 0 ids.toList)
+          | _ =>
+            throwUnsupportedSyntax
+      let state ← IO.mkRef occs
+      let ctx := (← getContext).setMemoize (occs matches .all _)
+      let (result, _) ← Simp.main lhs ctx (methods := { pre := pre patternA state })
+      let subgoals ←
+        match ← state.get with
+        | .all #[] | .occs _ 0 _ =>
+          throwError "`pattern` conv tactic failed, pattern was not found{indentExpr patternA.expr}"
+        | .all subgoals =>
+          pure subgoals
+        | .occs subgoals idx remaining =>
+          if let some (i, _) := remaining.getLast? then
+            throwError "`pattern` conv tactic failed, pattern was found only {idx} times but \
+              {i + 1} expected"
+          pure <| (subgoals.qsort (·.1 < ·.1)).map (·.2)
+      (← getRhs).mvarId!.assign result.expr
+      (← getMainGoal).assign (← result.getProof)
+      replaceMainGoal subgoals.toList
+    | _ =>
+      throwUnsupportedSyntax

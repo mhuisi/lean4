@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Elab.Tactic.Grind.Basic
 public import Lean.Meta.Sym.Simp.Discharger
@@ -19,12 +20,12 @@ abbrev SymSimprocElab := Syntax → GrindTacticM Simproc
 abbrev SymDischargerElab := Syntax → GrindTacticM Discharger
 
 unsafe builtin_initialize symSimprocElabAttribute : KeyedDeclsAttribute SymSimprocElab ←
-  mkElabAttribute SymSimprocElab `builtin_sym_simproc `sym_simproc
-    `Lean.Parser.Sym.Simp `Lean.Elab.Tactic.Grind.SymSimprocElab "sym_simproc"
+  mkElabAttribute SymSimprocElab `builtin_sym_simproc `sym_simproc `Lean.Parser.Sym.Simp
+    `Lean.Elab.Tactic.Grind.SymSimprocElab "sym_simproc"
 
 unsafe builtin_initialize symDischargerElabAttribute : KeyedDeclsAttribute SymDischargerElab ←
-  mkElabAttribute SymDischargerElab `builtin_sym_discharger `sym_discharger
-    `Lean.Parser.Sym.Simp `Lean.Elab.Tactic.Grind.SymDischargerElab "sym_discharger"
+  mkElabAttribute SymDischargerElab `builtin_sym_discharger `sym_discharger `Lean.Parser.Sym.Simp
+    `Lean.Elab.Tactic.Grind.SymDischargerElab "sym_discharger"
 
 /-- Elaborate a `sym_simproc` syntax node into a `Simproc`. -/
 partial def elabSymSimproc (stx : Syntax) : GrindTacticM Simproc := do
@@ -35,9 +36,12 @@ partial def elabSymSimproc (stx : Syntax) : GrindTacticM Simproc := do
     catch ex =>
       match ex with
       | .internal id _ =>
-        if id == unsupportedSyntaxExceptionId then continue
-        else throw ex
-      | _ => throw ex
+        if id == unsupportedSyntaxExceptionId then
+          continue
+        else
+          throw ex
+      | _ =>
+        throw ex
   throwErrorAt stx "unsupported sym_simproc syntax `{stx.getKind}`"
 
 /-- Elaborate a `sym_discharger` syntax node into a `Discharger`. -/
@@ -49,9 +53,12 @@ def elabSymDischarger (stx : Syntax) : GrindTacticM Discharger := do
     catch ex =>
       match ex with
       | .internal id _ =>
-        if id == unsupportedSyntaxExceptionId then continue
-        else throw ex
-      | _ => throw ex
+        if id == unsupportedSyntaxExceptionId then
+          continue
+        else
+          throw ex
+      | _ =>
+        throw ex
   throwErrorAt stx "unsupported sym_discharger syntax `{stx.getKind}`"
 
 end Lean.Elab.Tactic.Grind

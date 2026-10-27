@@ -29,7 +29,6 @@ Packing an empty list uses `True` or `PUnit` depending on the given `lvl`.
 Also see `Lean.Meta.ArgsPacker` for a similar module for `PSigma` and `PSum`, used by well-founded recursion.
 -/
 
-
 namespace Lean.Meta
 
 /-- Given types `t₁` and `t₂`, produces `t₁ ×' t₂` (or `t₁ ∧ t₂` if the universes allow) -/
@@ -41,7 +40,9 @@ def mkPProd (e1 e2 : Expr) : MetaM Expr := do
   else
     return mkApp2 (.const ``PProd [lvl1, lvl2]) e1 e2
 
-/-- Given values of typs `t₁` and `t₂`, produces value of type `t₁ ×' t₂` (or `t₁ ∧ t₂` if the universes allow) -/
+/--
+Given values of typs `t₁` and `t₂`, produces value of type `t₁ ×' t₂` (or `t₁ ∧ t₂` if the universes allow)
+-/
 def mkPProdMk (e1 e2 : Expr) : MetaM Expr := do
   let t1 ← inferType e1
   let t2 ← inferType e2
@@ -55,13 +56,16 @@ def mkPProdMk (e1 e2 : Expr) : MetaM Expr := do
 /-- `PProd.fst` or `And.left` (using `.proj`) -/
 def mkPProdFst (t e : Expr) : Expr :=
   match_expr t with
-  | PProd _ _ => .proj ``PProd 0 e
-  | And _ _ => .proj ``And 0 e
-  | _ => panic! s!"mkPProdFst: cannot handle {e}\nof type {t}"
+  | PProd _ _ =>
+    .proj ``PProd 0 e
+  | And _ _ =>
+    .proj ``And 0 e
+  | _ =>
+    panic! s!"mkPProdFst: cannot handle {e}\
+      \nof type {t}"
 
 /-- `PProd.fst` or `And.left` (using `.proj`), inferring the type of `e` -/
-def mkPProdFstM (e : Expr) : MetaM Expr := do
-  return mkPProdFst (← whnf (← inferType e)) e
+def mkPProdFstM (e : Expr) : MetaM Expr := do return mkPProdFst (← whnf (← inferType e)) e
 
 private def mkTypeSnd (t : Expr) : Expr :=
   match_expr t with
@@ -72,13 +76,16 @@ private def mkTypeSnd (t : Expr) : Expr :=
 /-- `PProd.snd` or `And.right` (using `.proj`) -/
 def mkPProdSnd (t e : Expr) : Expr :=
   match_expr t with
-  | PProd _ _ => .proj ``PProd 1 e
-  | And _ _ => .proj ``And 1 e
-  | _ => panic! s!"mkPProdSnd: cannot handle {e}\nof type {t}"
+  | PProd _ _ =>
+    .proj ``PProd 1 e
+  | And _ _ =>
+    .proj ``And 1 e
+  | _ =>
+    panic! s!"mkPProdSnd: cannot handle {e}\
+      \nof type {t}"
 
 /-- `PProd.snd` or `And.right` (using `.proj`), inferring the type of `e` -/
-def mkPProdSndM (e : Expr) : MetaM Expr := do
-  return mkPProdSnd (← whnf (← inferType e)) e
+def mkPProdSndM (e : Expr) : MetaM Expr := do return mkPProdSnd (← whnf (← inferType e)) e
 
 namespace PProdN
 
@@ -93,8 +100,10 @@ def genMk {α : Type _} [Inhabited α] (mk : α → α → MetaM α) (xs : Array
 /-- Given types `tᵢ`, produces `t₁ ×' t₂ ×' t₃` -/
 def pack (lvl : Level) (xs : Array Expr) : MetaM Expr := do
   if xs.size = 0 then
-    if lvl.isAlwaysZero then return .const ``True []
-                        else return .const ``PUnit [lvl]
+    if lvl.isAlwaysZero then
+      return .const ``True []
+    else
+      return .const ``PUnit [lvl]
   genMk mkPProd xs
 
 /--
@@ -109,44 +118,46 @@ def unpack (e : Expr) (n : Nat) : MetaM (Array Expr) := do
 where
   go (e : Expr) (remaining : Nat) (acc : Array Expr) : MetaM (Array Expr) := do
     if remaining = 0 then return acc
-    let .app (.app (.const ``PProd _) a) b := e | return acc.push e
+    let .app (.app (.const ``PProd _) a) b := e
+      | return acc.push e
     go b (remaining - 1) (acc.push a)
 
 /-- Given values `xᵢ` of type `tᵢ`, produces value of type `t₁ ×' t₂ ×' t₃` -/
 def mk (lvl : Level) (xs : Array Expr) : MetaM Expr := do
   if xs.size = 0 then
-    if lvl.isAlwaysZero then return .const ``True.intro []
-                        else return .const ``PUnit.unit [lvl]
+    if lvl.isAlwaysZero then
+      return .const ``True.intro []
+    else
+      return .const ``PUnit.unit [lvl]
   genMk mkPProdMk xs
 
 /-- Given a value `e` of type `t = t₁ ×' … ×' tᵢ ×' … ×' tₙ`, return a value of type `tᵢ` -/
-def proj (n i : Nat) (t e : Expr) : Expr := Id.run <| do
-  unless i < n do panic! "PProdN.proj: {i} not less than {n}"
-  let mut t := t
-  let mut value := e
-  for _ in *...i do
+def proj (n i : Nat) (t e : Expr) : Expr :=
+  Id.run <| do
+    unless i < n do
+      panic! "PProdN.proj: {i} not less than {n}"
+    let mut t := t
+    let mut value := e
+    for _ in *...i do
       value := mkPProdSnd t value
       t := mkTypeSnd t
-  if i+1 < n then
-    mkPProdFst t value
-  else
-    value
+    if i + 1 < n then
+      mkPProdFst t value
+    else
+      value
 
 /-- Given a value `e` of type `t = t₁ ×' … ×' tᵢ ×' … ×' tₙ`, return the values of type `tᵢ` -/
-def projs (n : Nat) (t e : Expr) : Array Expr :=
-  Array.ofFn (n := n) fun i => PProdN.proj n i t e
+def projs (n : Nat) (t e : Expr) : Array Expr := Array.ofFn (n := n) fun i => PProdN.proj n i t e
 
 /-- Given a value of type `t₁ ×' … ×' tᵢ ×' … ×' tₙ`, return a value of type `tᵢ` -/
 def projM (n i : Nat) (e : Expr) : MetaM Expr := do
   let mut value := e
   for _ in *...i do
-      value ← mkPProdSndM value
-  if i+1 < n then
+    value ← mkPProdSndM value
+  if i + 1 < n then
     mkPProdFstM value
   else
     pure value
-
-
 
 /--
 Packs multiple type-forming lambda expressions taking the same parameters using `PProd`.
@@ -166,7 +177,6 @@ It is the identity if `es.size = 1`.
 
 It returns a dummy motive `(xs : ) → PUnit` or `(xs : … ) → True` if no expressions are given.
 (this is the reason we need the expected type in the `type` parameter).
-
 -/
 def packLambdas (type : Expr) (es : Array Expr) : MetaM Expr := do
   if h : es.size = 1 then
@@ -193,30 +203,31 @@ def mkLambdas (type : Expr) (es : Array Expr) : MetaM Expr := do
     let packed ← PProdN.mk lvl es'
     mkLambdaFVars xs packed
 
-
-/--  Strips top-level `PProd` and `And` projections -/
+/-- Strips top-level `PProd` and `And` projections -/
 def stripProjs (e : Expr) : Expr :=
   match e with
   | .proj ``PProd _ e' => stripProjs e'
   | .proj ``And _ e' => stripProjs e'
   | e => e
 
-/--
-Reduces `⟨x,y⟩.1` or `⟨x,y⟩.fst` redexes for `PProd` and `And`
--/
+/-- Reduces `⟨x,y⟩.1` or `⟨x,y⟩.fst` redexes for `PProd` and `And` -/
 def reduceProjs (e : Expr) : MetaM Expr := do
-  Core.transform e (post := fun e => do
-    match_expr e with
-    | PProd.fst _ _ e' => reduce e' 0
-    | And.left _ _ e'  => reduce e' 0
-    | PProd.snd _ _ e' => reduce e' 1
-    | And.right _ _ e' => reduce e' 1
-    | _ =>
+  Core.transform e
+    (post := fun e => do
+      match_expr e with
+      | PProd.fst _ _ e' =>
+        reduce e' 0
+      | And.left _ _ e' =>
+        reduce e' 0
+      | PProd.snd _ _ e' =>
+        reduce e' 1
+      | And.right _ _ e' =>
+        reduce e' 1
+      | _ =>
         if e.isProj then
           reduce e.projExpr! e.projIdx!
         else
-          return .continue
-  )
+          return .continue)
 where
   reduce (e : Expr) (i : Nat) : MetaM TransformStep := do
     if e.isAppOfArity ``PProd.mk 4 || e.isAppOfArity ``And.intro 2 then

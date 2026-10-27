@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.SymM
 import Lean.Meta.Sym.InferType
@@ -88,10 +89,14 @@ Runs `x` with fresh scoped caches, restoring the current ones afterwards. Used w
 entering a binder body: entries computed at the outer binder offset denote different
 terms inside and must be invisible there.
 -/
-@[inline] def withNewScope (x : M α) : M α := do
-  let (visited, types, subst) ← modifyGet fun s =>
-    ((s.visited, s.types, s.subst), { s with visited := {}, types := {}, subst := {} })
-  try x finally
+@[inline]
+def withNewScope (x : M α) : M α := do
+  let (visited, types, subst) ←
+    modifyGet fun s =>
+      ((s.visited, s.types, s.subst), { s with visited := {}, types := {}, subst := {} })
+  try
+    x
+  finally
     modify fun s => { s with visited, types, subst }
 
 /-- Returns `true` if `e` contains a `.letE` with `nondep := false`. Pointer-cached per run. -/
@@ -127,15 +132,18 @@ def substEnv (e : Expr) : M Expr := do
     return r
   let xs := (← read).xs
   let n := xs.size
-  let r ← replaceS e fun sub offset => do
-    match sub with
-    | .bvar idx =>
-      if idx ≥ offset then
-        pure (some xs[n - (idx - offset) - 1]!)
-      else
+  let r ←
+    replaceS e fun sub offset => do
+      match sub with
+      | .bvar idx =>
+        if idx ≥ offset then
+          pure (some xs[n - (idx - offset) - 1]!)
+        else
+          pure (some sub)
+      | .lit _ | .mvar _ | .fvar _ | .const _ _ | .sort _ =>
         pure (some sub)
-    | .lit _ | .mvar _ | .fvar _ | .const _ _ | .sort _ => pure (some sub)
-    | _ => if offset ≥ sub.looseBVarRange then pure (some sub) else pure none
+      | _ =>
+        if offset ≥ sub.looseBVarRange then pure (some sub) else pure none
   modify fun s => { s with subst := s.subst.insert { expr := e } r }
   return r
 
@@ -148,7 +156,8 @@ def checkDefEq (t s : Expr) : M Unit := do
   if isSameExpr t s then
     return ()
   unless (← Meta.isDefEq t s) do
-    throwError "`Sym.letToHave` failed, type error{indentExpr t}\nis not definitionally equal to{indentExpr s}"
+    throwError "`Sym.letToHave` failed, type error{indentExpr t}\
+      \nis not definitionally equal to{indentExpr s}"
 
 /-- Ensures `type` (in fvar form) is a `.forallE`, using tracked `whnf` if needed. -/
 def ensureForall (type : Expr) : M Expr := do
@@ -163,8 +172,7 @@ def ensureForall (type : Expr) : M Expr := do
 Returns `true` if type checking `e` cannot create an obligation that reaches a
 candidate: `e` is closed, or all its loose bound variables refer to clean binders.
 -/
-@[inline] def isClean (e : Expr) (ctx : Context) : Bool :=
-  e.looseBVarRange ≤ ctx.cleanSuffix
+@[inline] def isClean (e : Expr) (ctx : Context) : Bool := e.looseBVarRange ≤ ctx.cleanSuffix
 
 mutual
 
@@ -174,7 +182,8 @@ the enclosing candidates. `e` is in bound-variable form w.r.t. the enclosing bin
 -/
 partial def visit (e : Expr) : M Expr := do
   match e with
-  | .bvar .. | .fvar .. | .mvar .. | .sort .. | .const .. | .lit .. => return e
+  | .bvar .. | .fvar .. | .mvar .. | .sort .. | .const .. | .lit .. =>
+    return e
   | _ =>
     let ctx ← read
     if ctx.numCandidates == 0 || isClean e ctx then
@@ -198,8 +207,9 @@ for the whole run.
 partial def visitClosed (e : Expr) : M Expr := do
   if let some r := (← get).visitedClosed[{ expr := e : ExprPtr }]? then
     return r
-  let r ← withReader (fun _ => { xs := {}, numCandidates := 0, cleanSuffix := 0 }) do
-    withNewScope do visitCore e
+  let r ←
+    withReader (fun _ => { xs := {}, numCandidates := 0, cleanSuffix := 0 }) do
+      withNewScope do visitCore e
   modify fun s => { s with visitedClosed := s.visitedClosed.insert { expr := e } r }
   return r
 
@@ -210,11 +220,12 @@ partial def visitCore (e : Expr) : M Expr := do
     if (← read).numCandidates > 0 then
       checkApp f a
     return r
-  | .mdata _ b => e.updateMDataS! (← visit b)
+  | .mdata _ b =>
+    e.updateMDataS! (← visit b)
   | .proj _ _ b =>
     let r ← e.updateProjS! (← visit b)
     let ctx ← read
-    if ctx.numCandidates > 0 && !isClean b ctx then
+    if ctx.numCandidates > 0 && ! isClean b ctx then
       -- The struct type may need tracked `whnf` to expose the structure.
       discard <| inferTypeFallback e
     return r
@@ -222,9 +233,10 @@ partial def visitCore (e : Expr) : M Expr := do
     let t' ← visit t
     let tf ← substEnv t'
     checkDomain t tf
-    withBinder n tf none (tainted := !isClean t (← read)) (isCandidate := false) fun _ => do
+    withBinder n tf none (tainted := ! isClean t (← read)) (isCandidate := false) fun _ => do
       e.updateLambdaS! t' (← visit b)
-  | .forallE .. => visitForall e
+  | .forallE .. =>
+    visitForall e
   | .letE n t v b nondep =>
     let t' ← visit t
     let v' ← visit v
@@ -232,7 +244,7 @@ partial def visitCore (e : Expr) : M Expr := do
     let ctx ← read
     if ctx.numCandidates > 0 then
       checkDomain t tf
-      if !isClean t ctx || !isClean v ctx then
+      if ! isClean t ctx || ! isClean v ctx then
         -- The value's type must match the annotation without unfolding candidates.
         if v.isLambda then
           checkFun v tf
@@ -247,20 +259,25 @@ partial def visitCore (e : Expr) : M Expr := do
     -- candidates during checks.
     let isDep := !nondep
     let isCandidate := isDep && !e.hasExprMVar
-    withBinder n tf (some (vf, nondep)) (tainted := isDep || !isClean t ctx) isCandidate fun x => do
-      let b' ← visit b
-      let nondep' ←
-        if nondep then pure true
-        else if !isCandidate then pure false
-        else if (← getZetaDeltaFVarIds).contains x.fvarId! then pure false
-        else do
-          modify fun s => { s with numConverted := s.numConverted + 1 }
-          pure true
-      if nondep' == nondep then
-        e.updateLetS! t' v' b'
-      else
-        mkLetS n t' v' b' nondep'
-  | _ => unreachable!
+    withBinder n tf (some (vf, nondep)) (tainted := isDep || ! isClean t ctx) isCandidate fun x =>
+      do
+        let b' ← visit b
+        let nondep' ←
+          if nondep then
+            pure true
+          else if !isCandidate then
+            pure false
+          else if (← getZetaDeltaFVarIds).contains x.fvarId! then
+            pure false
+          else do
+            modify fun s => { s with numConverted := s.numConverted + 1 }
+            pure true
+        if nondep' == nondep then
+          e.updateLetS! t' v' b'
+        else
+          mkLetS n t' v' b' nondep'
+  | _ =>
+    unreachable!
 
 /--
 Visits a `∀`-telescope. Sort obligations: one tracked `getLevel` per non-clean domain,
@@ -273,12 +290,12 @@ partial def visitForall (e : Expr) : M Expr := do
     let t' ← visit t
     let tf ← substEnv t'
     checkDomain t tf
-    withBinder n tf none (tainted := !isClean t (← read)) (isCandidate := false) fun _ => do
+    withBinder n tf none (tainted := ! isClean t (← read)) (isCandidate := false) fun _ => do
       e.updateForallS! t' (← visitForall b)
   | _ =>
     let r ← visit e
     let ctx ← read
-    if ctx.numCandidates > 0 && !isClean e ctx then
+    if ctx.numCandidates > 0 && ! isClean e ctx then
       discard <| Meta.getLevel (← substEnv r)
     return r
 
@@ -288,7 +305,7 @@ Skipped when the domain cannot reach a candidate.
 -/
 partial def checkDomain (t tf : Expr) : M Unit := do
   let ctx ← read
-  if ctx.numCandidates > 0 && !isClean t ctx then
+  if ctx.numCandidates > 0 && ! isClean t ctx then
     discard <| Meta.getLevel tf
 
 /--
@@ -297,20 +314,26 @@ Adds the scratch declaration for a binder, installs the extended local context, 
 the binder scope sees the scratch declarations. `value?` provides the (fvar-form) value
 and `nondep` flag for `let`/`have` binders.
 -/
-partial def withBinder (n : Name) (type : Expr) (value? : Option (Expr × Bool))
-    (tainted : Bool) (isCandidate : Bool) (k : Expr → M α) : M α := do
+partial def withBinder
+    (n : Name) (type : Expr) (value? : Option (Expr × Bool)) (tainted : Bool) (isCandidate : Bool)
+    (k : Expr → M α)
+    : M α := do
   let fvarId ← mkFreshFVarId
   let x ← mkFVarS fvarId
   let lctx ← getLCtx
-  let lctx := match value? with
+  let lctx :=
+    match value? with
     | some (v, nondep) => lctx.mkLetDecl fvarId n type v nondep
     | none => lctx.mkLocalDecl fvarId n type
   withLCtx lctx {} do
-    withReader (fun ctx => { ctx with
+    withReader
+      (fun ctx => {
+        ctx with
         xs := ctx.xs.push x
         numCandidates := ctx.numCandidates + (if isCandidate then 1 else 0)
-        cleanSuffix := if tainted then 0 else ctx.cleanSuffix + 1 }) do
-      withNewScope do k x
+        cleanSuffix := if tainted then 0 else ctx.cleanSuffix + 1
+      })
+      do withNewScope do k x
 
 /--
 Obligation for the application node `f a`: the type of `a` must match the domain of the
@@ -319,7 +342,8 @@ decomposed binder-wise (`checkFun`) so that the lambda's type is never materiali
 -/
 partial def checkApp (f a : Expr) : M Unit := do
   let fnType ← ensureForall (← inferTypeO f)
-  let .forallE _ d _ _ := fnType | unreachable!
+  let .forallE _ d _ _ := fnType
+    | unreachable!
   if !a.hasLooseBVars && !d.hasFVar then
     -- Neither side can reach a candidate.
     return ()
@@ -337,13 +361,15 @@ partial def checkFun (e : Expr) (expected : Expr) : M Unit := do
   match e with
   | .lam n t b _ =>
     let expected ← ensureForall expected
-    let .forallE _ d body _ := expected | unreachable!
+    let .forallE _ d body _ := expected
+      | unreachable!
     let tf ← substEnv t
     checkDefEq tf d
-    withBinder n tf none (tainted := !isClean t (← read)) (isCandidate := false) fun x => do
+    withBinder n tf none (tainted := ! isClean t (← read)) (isCandidate := false) fun x => do
       let body ← if body.hasLooseBVars then share (body.instantiate1 x) else pure body
       checkFun b body
-  | _ => checkDefEq (← inferTypeO e) expected
+  | _ =>
+    checkDefEq (← inferTypeO e) expected
 
 /--
 Returns the type (in fvar form, maximally shared) of `e` (in bvar form). Pure
@@ -356,20 +382,24 @@ partial def inferTypeO (e : Expr) : M Expr := do
   else
     if let some type := (← get).types[{ expr := e : ExprPtr }]? then
       return type
-    let type ← match e with
+    let type ←
+      match e with
       | .bvar idx =>
         let xs := (← read).xs
         let x := xs[xs.size - idx - 1]!
         pure ((← getLCtx).getFVar! x).type
-      | .mdata _ b => inferTypeO b
+      | .mdata _ b =>
+        inferTypeO b
       | .app f a =>
         let fnType ← ensureForall (← inferTypeO f)
-        let .forallE _ _ body _ := fnType | unreachable!
+        let .forallE _ _ body _ := fnType
+          | unreachable!
         if body.hasLooseBVars then
           share (body.instantiate1 (← substEnv a))
         else
           pure body
-      | _ => inferTypeFallback e
+      | _ =>
+        inferTypeFallback e
     modify fun s => { s with types := s.types.insert { expr := e } type }
     return type
 
@@ -379,8 +409,9 @@ scratch fvars and calls `Meta.inferType` (tracked, without the `MetaM` infer-typ
 -/
 partial def inferTypeFallback (e : Expr) : M Expr := do
   let ef ← substEnv e
-  let type ← withTheReader Meta.Context (fun ctx => { ctx with cacheInferType := false }) do
-    Meta.inferType ef
+  let type ←
+    withTheReader Meta.Context (fun ctx => { ctx with cacheInferType := false }) do
+      Meta.inferType ef
   -- Not needed for correctness: it keeps the invariant that all cached types are
   -- maximally shared, so `checkDefEq`'s pointer-equality fast path can fire on them.
   shareCommon type
@@ -404,13 +435,22 @@ public def letToHave (e : Expr) : SymM Expr := do
     throwError "`Sym.letToHave` internal error, input term has loose bound variables"
   -- The `withConfig` step is the (monad-generic) equivalent of `withInferTypeConfig`.
   -- `withNewMCtxDepth` makes pre-existing metavariables rigid: obligations cannot assign them.
-  withoutExporting <| withNewMCtxDepth <| withTrackingZetaDelta <| withTransparency TransparencyMode.all <|
-    withConfig (fun cfg => { cfg with
-      beta := true, iota := true, zeta := true, zetaHave := true, zetaDelta := true
-      proj := .yesWithDelta, etaStruct := .all }) do
-    withLCtx (← getLCtx) {} do
-      let x : M Expr := do
-        if (← hasDepLet e) then visit e else return e
-      x.run {} |>.run' {}
+  withoutExporting <| withNewMCtxDepth <| withTrackingZetaDelta <|
+    withTransparency TransparencyMode.all <|
+      withConfig
+        (fun cfg => {
+          cfg with
+          beta := true
+          iota := true
+          zeta := true
+          zetaHave := true
+          zetaDelta := true
+          proj := .yesWithDelta
+          etaStruct := .all
+        })
+        do
+          withLCtx (← getLCtx) {} do
+            let x : M Expr := do if (← hasDepLet e) then visit e else return e
+            x.run {} |>.run' {}
 
 end Lean.Meta.Sym

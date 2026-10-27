@@ -21,13 +21,13 @@ namespace Sat
 namespace CNF
 
 /-- We may add any tautological clause -/
-theorem entails_clause_of_forall_sat {f : CNF α} {c : Clause α} (h : ∀ a, c.Sat a) :
-    EntailsClause f c := by
+theorem entails_clause_of_forall_sat {f : CNF α} {c : Clause α} (h : ∀ a, c.Sat a)
+    : EntailsClause f c := by
   simp [entails_clause_def, h]
 
-theorem entails_clause_of_unsat_of_forall_not_sat (h1 : ∀ (a : α → Bool), ¬ f1.Sat a → Clause.Sat a c)
-    (h2 : CNF.Unsat (f2 ++ f1)) :
-    CNF.EntailsClause f2 c := by
+theorem entails_clause_of_unsat_of_forall_not_sat
+    (h1 : ∀ (a : α → Bool), ¬ f1.Sat a → Clause.Sat a c) (h2 : CNF.Unsat (f2 ++ f1))
+    : CNF.EntailsClause f2 c := by
   rw [entails_clause_def]
   rw [CNF.unsat_iff_not_sat] at h2
   intro a hf2
@@ -36,9 +36,8 @@ theorem entails_clause_of_unsat_of_forall_not_sat (h1 : ∀ (a : α → Bool), �
   simp_all
 
 /-- This is known as the AT or RUP property. -/
-theorem entails_clause_of_unsat_of_isNegationOf (h1 : IsNegationOf f1 c)
-    (h2 : CNF.Unsat (f2 ++ f1)) :
-    CNF.EntailsClause f2 c := by
+theorem entails_clause_of_unsat_of_isNegationOf (h1 : IsNegationOf f1 c) (h2 : CNF.Unsat (f2 ++ f1))
+    : CNF.EntailsClause f2 c := by
   refine entails_clause_of_unsat_of_forall_not_sat ?_ h2
   rw [isNegationOf_def] at h1
   intro a
@@ -50,9 +49,11 @@ This is known as the RAT property. It's a formalization of Proposition 1 from
 "Inprocessing Rules" by Matti Järvisalo, Marijn Heule, and Armin Biere
 (https://cca.informatik.uni-freiburg.de/papers/JarvisaloHeuleBiere-IJCAR12.pdf)
 -/
-theorem exists_sat_add_of_rat [BEq α] [LawfulBEq α] {f : CNF α} {c : Clause α} {l : Literal α}
-    (h1 : l ∈ c) (h2 : ∀ c' ∈ f, l.negate ∈ c' → f.EntailsClause (c ++ c'.erase l.negate)) :
-    ∀ a, f.Sat a → ∃ a', (f.add c).Sat a' := by
+theorem exists_sat_add_of_rat
+    [BEq α] [LawfulBEq α]
+    {f : CNF α} {c : Clause α} {l : Literal α}
+    (h1 : l ∈ c) (h2 : ∀ c' ∈ f, l.negate ∈ c' → f.EntailsClause (c ++ c'.erase l.negate))
+    : ∀ a, f.Sat a → ∃ a', (f.add c).Sat a' := by
   intro a hf
   by_cases hsat1 : c.Sat a
   · exists a

@@ -27,27 +27,34 @@ def getCalcRelation? (e : Expr) : MetaM (Option (Expr × Expr × Expr)) := do
 private def getRelUniv (r : Expr) : MetaM Level := do
   let rType ← inferType r
   forallTelescopeReducing rType fun _ sort => do
-    let .sort u ← whnf sort | throwError "unexpected relation type{indentExpr rType}"
+    let .sort u ← whnf sort
+      | throwError "unexpected relation type{indentExpr rType}"
     return u
 
 def mkCalcTrans (result resultType step stepType : Expr) : MetaM (Expr × Expr) := do
-  let some (r, a, b) ← getCalcRelation? resultType | unreachable!
-  let some (s, _, c) ← getCalcRelation? (← instantiateMVars stepType) | unreachable!
+  let some (r, a, b) ← getCalcRelation? resultType
+    | unreachable!
+  let some (s, _, c) ← getCalcRelation? (← instantiateMVars stepType)
+    | unreachable!
   let u ← getRelUniv r
   let v ← getRelUniv s
-  let (α, β, γ)       := (← inferType a, ← inferType b, ← inferType c)
+  let (α, β, γ) := (← inferType a, ← inferType b, ← inferType c)
   let (u_1, u_2, u_3) := (← getLevel α, ← getLevel β, ← getLevel γ)
   let w ← mkFreshLevelMVar
   let t ← mkFreshExprMVar (← mkArrow α (← mkArrow γ (mkSort w)))
   let selfType := mkAppN (Lean.mkConst ``Trans [u, v, w, u_1, u_2, u_3]) #[α, β, γ, r, s, t]
   match (← trySynthInstance selfType) with
   | .some self =>
-    let result := mkAppN (Lean.mkConst ``Trans.trans [u, v, w, u_1, u_2, u_3]) #[α, β, γ, r, s, t, self, a, b, c, result, step]
+    let result :=
+      mkAppN (Lean.mkConst ``Trans.trans [u, v, w, u_1, u_2, u_3])
+        #[α, β, γ, r, s, t, self, a, b, c, result, step]
     let resultType := (← instantiateMVars (← inferType result)).headBeta
     unless (← getCalcRelation? resultType).isSome do
       throwError "invalid 'calc' step, step result is not a relation{indentExpr resultType}"
     return (result, resultType)
-  | _ => throwError "invalid 'calc' step, failed to synthesize `Trans` instance{indentExpr selfType}{useDiagnosticMsg}"
+  | _ =>
+    throwError "invalid 'calc' step, failed to synthesize `Trans` \
+      instance{indentExpr selfType}{useDiagnosticMsg}"
 
 /--
 Adds a type annotation to a hole that occurs immediately at the beginning of the term.
@@ -65,13 +72,16 @@ partial def annotateFirstHoleWithType (t : Term) (type : Expr) : TermElabM Term 
   return ⟨← StateT.run' (go t) true⟩
 where
   go (t : Syntax) := do
-    unless ← get do return t
+    unless ← get do
+      return t
     match t with
     | .node _ ``Lean.Parser.Term.hole _ =>
       set false
       `(($(⟨t⟩) : $(← exprToSyntax type)))
-    | .node i k as => return .node i k (← as.mapM go)
-    | _ => set false; return t
+    | .node i k as =>
+      return .node i k (← as.mapM go)
+    | _ =>
+      set false; return t
 
 /-- View of a `calcStep`. -/
 structure CalcStepView where
@@ -80,14 +90,17 @@ structure CalcStepView where
   term : Term
   /-- A proof of `term` -/
   proof : Term
-  deriving Inhabited
+deriving Inhabited
 
 def mkCalcFirstStepView (step0 : TSyntax ``calcFirstStep) : TermElabM CalcStepView :=
   withRef step0 do
-  match step0  with
-  | `(calcFirstStep| $term:term)      => return { ref := step0, term := ← `($term = _), proof := ← ``(rfl)}
-  | `(calcFirstStep| $term := $proof) => return { ref := step0, term, proof}
-  | _ => throwUnsupportedSyntax
+    match step0 with
+    | `(calcFirstStep| $term:term) =>
+      return { ref := step0, term := ← `($term = _), proof := ← ``(rfl) }
+    | `(calcFirstStep| $term := $proof) =>
+      return { ref := step0, term, proof }
+    | _ =>
+      throwUnsupportedSyntax
 
 def mkCalcStepViews (steps : TSyntax ``calcSteps) : TermElabM (Array CalcStepView) :=
   match steps with
@@ -96,57 +109,65 @@ def mkCalcStepViews (steps : TSyntax ``calcSteps) : TermElabM (Array CalcStepVie
         $rest*) => do
     let mut steps := #[← mkCalcFirstStepView step0]
     for step in rest do
-      let `(calcStep| $term := $proof) := step | throwUnsupportedSyntax
+      let `(calcStep| $term := $proof) := step
+        | throwUnsupportedSyntax
       steps := steps.push { ref := step, term, proof }
     return steps
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
 def elabCalcSteps (steps : Array CalcStepView) : TermElabM (Expr × Expr) := do
   let mut result? := none
   let mut prevRhs? := none
   for step in steps do
-    let type ← elabType <| ← do
-      if let some prevRhs := prevRhs? then
-        annotateFirstHoleWithType step.term (← inferType prevRhs)
-      else
-        pure step.term
-    let some (_, lhs, rhs) ← getCalcRelation? type |
-      throwErrorAt step.term "invalid 'calc' step, relation expected{indentExpr type}"
+    let type ←
+      elabType <| ← do
+        if let some prevRhs := prevRhs? then
+          annotateFirstHoleWithType step.term (← inferType prevRhs)
+        else
+          pure step.term
+    let some (_, lhs, rhs) ← getCalcRelation? type
+      | throwErrorAt step.term "invalid 'calc' step, relation expected{indentExpr type}"
     if let some prevRhs := prevRhs? then
       unless (← isDefEqGuarded lhs prevRhs) do
-        throwErrorAt step.term "\
-          invalid 'calc' step, left-hand side is{indentD m!"{lhs} : {← inferType lhs}"}\n\
-          but previous right-hand side is{indentD m!"{prevRhs} : {← inferType prevRhs}"}"
+        throwErrorAt step.term
+          "\
+            invalid 'calc' step, left-hand side is{indentD m!"{lhs} : {← inferType lhs}"}\n\
+            but previous right-hand side is{indentD m!"{prevRhs} : {← inferType prevRhs}"}"
     let proof ← withFreshMacroScope do elabTermEnsuringType step.proof type
-    result? := some <| ← do
-      if let some (result, resultType) := result? then
-        synthesizeSyntheticMVarsUsingDefault
-        withRef step.term do mkCalcTrans result resultType proof type
-      else
-        pure (proof, type)
+    result? :=
+      some <| ← do
+        if let some (result, resultType) := result? then
+          synthesizeSyntheticMVarsUsingDefault
+          withRef step.term do mkCalcTrans result resultType proof type
+        else
+          pure (proof, type)
     prevRhs? := rhs
   synthesizeSyntheticMVarsUsingDefault
   return result?.get!
 
 def throwCalcFailure (steps : Array CalcStepView) (expectedType result : Expr) : MetaM α := do
   let resultType := (← instantiateMVars (← inferType result)).headBeta
-  let some (r, lhs, rhs) ← getCalcRelation? resultType | unreachable!
+  let some (r, lhs, rhs) ← getCalcRelation? resultType
+    | unreachable!
   if let some (er, elhs, erhs) ← getCalcRelation? expectedType then
     if ← isDefEqGuarded r er then
       let mut failed := false
       unless ← isDefEqGuarded lhs elhs do
         let (lhs, elhs) ← addPPExplicitToExposeDiff lhs elhs
         let (lhsTy, elhsTy) ← addPPExplicitToExposeDiff (← inferType lhs) (← inferType elhs)
-        logErrorAt steps[0]!.term m!"\
-          invalid 'calc' step, left-hand side is{indentD m!"{lhs} : {lhsTy}"}\n\
-          but is expected to be{indentD m!"{elhs} : {elhsTy}"}"
+        logErrorAt steps[0]!.term
+          m!"\
+            invalid 'calc' step, left-hand side is{indentD m!"{lhs} : {lhsTy}"}\n\
+            but is expected to be{indentD m!"{elhs} : {elhsTy}"}"
         failed := true
       unless ← isDefEqGuarded rhs erhs do
         let (rhs, erhs) ← addPPExplicitToExposeDiff rhs erhs
         let (rhsTy, erhsTy) ← addPPExplicitToExposeDiff (← inferType rhs) (← inferType erhs)
-        logErrorAt steps.back!.term m!"\
-          invalid 'calc' step, right-hand side is{indentD m!"{rhs} : {rhsTy}"}\n\
-          but is expected to be{indentD m!"{erhs} : {erhsTy}"}"
+        logErrorAt steps.back!.term
+          m!"\
+            invalid 'calc' step, right-hand side is{indentD m!"{rhs} : {rhsTy}"}\n\
+            but is expected to be{indentD m!"{erhs} : {erhsTy}"}"
         failed := true
       if failed then
         throwAbortTerm
@@ -167,12 +188,14 @@ so we also cannot use the expected LHS and RHS as type hints.
 /-- Elaborator for the `calc` term mode variant. -/
 @[builtin_term_elab Lean.calc]
 def elabCalc : TermElab
-  | `(calc%$tk $steps:calcSteps), expectedType? => withRef tk do
-    let steps ← mkCalcStepViews steps
-    let (result, _) ← elabCalcSteps steps
-    ensureHasTypeWithErrorMsgs expectedType? result
-      (mkImmedErrorMsg := fun _ => throwCalcFailure steps)
-      (mkErrorMsg := fun _ => throwCalcFailure steps)
-  | _, _ => throwUnsupportedSyntax
+  | `(calc%$tk $steps:calcSteps), expectedType? =>
+    withRef tk do
+      let steps ← mkCalcStepViews steps
+      let (result, _) ← elabCalcSteps steps
+      ensureHasTypeWithErrorMsgs expectedType? result
+        (mkImmedErrorMsg := fun _ => throwCalcFailure steps)
+        (mkErrorMsg := fun _ => throwCalcFailure steps)
+  | _, _ =>
+    throwUnsupportedSyntax
 
 end Lean.Elab.Term

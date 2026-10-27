@@ -65,8 +65,9 @@ that calls `toExpr` and `toTypeExpr` to assemble an expression for a given term.
 For recursive inductive types, `auxFunName` refers to the `ToExpr` instance for the current type.
 For mutually recursive types, we rely on the local instances set up by `mkLocalInstanceLetDecls`.
 -/
-def mkToExprBody (header : Header) (indVal : InductiveVal) (auxFunName : Name) (levelInsts : Array Term) :
-    TermElabM Term := do
+def mkToExprBody
+    (header : Header) (indVal : InductiveVal) (auxFunName : Name) (levelInsts : Array Term)
+    : TermElabM Term := do
   let discrs ← mkDiscrs header indVal
   let alts ← mkAlts
   `(match $[$discrs],* with $alts:matchAlt*)
@@ -77,32 +78,33 @@ where
     let mut alts := #[]
     for ctorName in indVal.ctors do
       let ctorInfo ← getConstInfoCtor ctorName
-      let alt ← forallTelescopeReducing ctorInfo.type fun xs _ => do
-        let mut patterns := #[]
-        -- add `_` pattern for indices, before the constructor's pattern
-        for _ in *...indVal.numIndices do
-          patterns := patterns.push (← `(_))
-        let mut ctorArgs := #[]
-        let mut rhsArgs : Array Term := #[]
-        let mkArg (x : Expr) (a : Term) : TermElabM Term := do
-          if (← inferType x).isAppOf indVal.name then
-            `($(mkIdent auxFunName) $levelInsts* $a)
-          else if ← Meta.isType x then
-            ``(toTypeExpr $a)
-          else
-            ``(toExpr $a)
-        -- add `_` pattern for inductive parameters, which are inaccessible
-        for i in *...ctorInfo.numParams do
-          let a := mkIdent header.argNames[i]!
-          ctorArgs := ctorArgs.push (← `(_))
-          rhsArgs := rhsArgs.push <| ← mkArg xs[i]! a
-        for i in *...ctorInfo.numFields do
-          let a := mkIdent (← mkFreshUserName `a)
-          ctorArgs := ctorArgs.push a
-          rhsArgs := rhsArgs.push <| ← mkArg xs[ctorInfo.numParams + i]! a
-        patterns := patterns.push (← `(@$(mkIdent ctorName):ident $ctorArgs:term*))
-        let rhs : Term ← mkAppNTerm (← ``(Expr.const $(quote ctorInfo.name) [$levels,*])) rhsArgs
-        `(matchAltExpr| | $[$patterns:term],* => $rhs)
+      let alt ←
+        forallTelescopeReducing ctorInfo.type fun xs _ => do
+          let mut patterns := #[]
+          -- add `_` pattern for indices, before the constructor's pattern
+          for _ in *...indVal.numIndices do
+            patterns := patterns.push (← `(_))
+          let mut ctorArgs := #[]
+          let mut rhsArgs : Array Term := #[]
+          let mkArg (x : Expr) (a : Term) : TermElabM Term := do
+            if (← inferType x).isAppOf indVal.name then
+              `($(mkIdent auxFunName) $levelInsts* $a)
+            else if ← Meta.isType x then
+              ``(toTypeExpr $a)
+            else
+              ``(toExpr $a)
+          -- add `_` pattern for inductive parameters, which are inaccessible
+          for i in *...ctorInfo.numParams do
+            let a := mkIdent header.argNames[i]!
+            ctorArgs := ctorArgs.push (← `(_))
+            rhsArgs := rhsArgs.push <| ← mkArg xs[i]! a
+          for i in *...ctorInfo.numFields do
+            let a := mkIdent (← mkFreshUserName `a)
+            ctorArgs := ctorArgs.push a
+            rhsArgs := rhsArgs.push <| ← mkArg xs[ctorInfo.numParams + i]! a
+          patterns := patterns.push (← `(@$(mkIdent ctorName):ident $ctorArgs:term*))
+          let rhs : Term ← mkAppNTerm (← ``(Expr.const $(quote ctorInfo.name) [$levels,*])) rhsArgs
+          `(matchAltExpr| | $[$patterns:term],* => $rhs)
       alts := alts.push alt
     return alts
 
@@ -116,22 +118,24 @@ since we need to include the `toTypeExpr` field in the `letDecl`
 Note that, for simplicity, each instance gets its own definition of each others' `toTypeExpr` fields.
 These are very simple fields, so avoiding the duplication is not worth it.
 -/
-def mkLocalInstanceLetDecls (ctx : Deriving.Context) (argNames : Array Name) (levelInsts : Array Term) :
-    TermElabM (Array (TSyntax ``Parser.Term.letDecl)) := do
+def mkLocalInstanceLetDecls
+    (ctx : Deriving.Context) (argNames : Array Name) (levelInsts : Array Term)
+    : TermElabM (Array (TSyntax ``Parser.Term.letDecl)) := do
   let mut letDecls := #[]
   for indVal in ctx.typeInfos, auxFunName in ctx.auxFunNames do
     let currArgNames ← mkInductArgNames indVal
-    let numParams    := indVal.numParams
-    let currIndices  := currArgNames[numParams...*]
-    let binders      ← mkImplicitBinders currIndices
-    let argNamesNew  := argNames[*...numParams] ++ currIndices
-    let indType      ← mkInductiveApp indVal argNamesNew
-    let instName     ← mkFreshUserName `localinst
-    let toTypeExpr   ← mkToTypeExpr indVal argNames
+    let numParams := indVal.numParams
+    let currIndices := currArgNames[numParams...*]
+    let binders ← mkImplicitBinders currIndices
+    let argNamesNew := argNames[*...numParams] ++ currIndices
+    let indType ← mkInductiveApp indVal argNamesNew
+    let instName ← mkFreshUserName `localinst
+    let toTypeExpr ← mkToTypeExpr indVal argNames
     -- Recall that mutually inductive types all use the same universe levels, hence we pass the same ToLevel instances to each aux function.
-    let letDecl      ← `(Parser.Term.letDecl| $(mkIdent instName):ident $binders:implicitBinder* : ToExpr $indType :=
-                          { toExpr     := $(mkIdent auxFunName) $levelInsts*,
-                            toTypeExpr := $toTypeExpr })
+    let letDecl ←
+      `(Parser.Term.letDecl| $(mkIdent instName):ident $binders:implicitBinder* : ToExpr $indType :=
+         { toExpr     := $(mkIdent auxFunName) $levelInsts*,
+           toTypeExpr := $toTypeExpr })
     letDecls := letDecls.push letDecl
   return letDecls
 
@@ -145,22 +149,27 @@ to wire together the recursion (necessitating these auxiliary definitions being 
 -/
 def mkAuxFunction (ctx : Deriving.Context) (i : Nat) : TermElabM Command := do
   let auxFunName := ctx.auxFunNames[i]!
-  let indVal     := ctx.typeInfos[i]!
-  let header     ← mkHeader ``ToExpr 1 indVal
-  /- We make the `ToLevel` instances be explicit here so that we can pass the instances from the instances to the
-     aux functions. This lets us ensure universe level variables are being lined up,
-     without needing to use `ident.{u₁,…,uₙ}` syntax, which could conditionally be incorrect
-     depending on the ambient CommandElabM scope state.
-     TODO(kmill): deriving handlers should run in a scope with no `universes` or `variables`. -/
-  let (toLevelInsts, levelBinders) := Array.unzip <| ← indVal.levelParams.toArray.mapM fun u => do
-    let inst := mkIdent (← mkFreshUserName `inst)
-    return (inst, ← `(explicitBinderF| ($inst : ToLevel.{$(mkIdent u)})))
+  let indVal := ctx.typeInfos[i]!
+  let header ← mkHeader ``ToExpr 1 indVal
+  /-
+  We make the `ToLevel` instances be explicit here so that we can pass the instances from the instances to the
+  aux functions. This lets us ensure universe level variables are being lined up,
+  without needing to use `ident.{u₁,…,uₙ}` syntax, which could conditionally be incorrect
+  depending on the ambient CommandElabM scope state.
+  TODO(kmill): deriving handlers should run in a scope with no `universes` or `variables`.
+  -/
+  let (toLevelInsts, levelBinders) :=
+    Array.unzip <| ← indVal.levelParams.toArray.mapM fun u => do
+      let inst := mkIdent (← mkFreshUserName `inst)
+      return (inst, ← `(explicitBinderF| ($inst : ToLevel.{$(mkIdent u)})))
   let mut body ← mkToExprBody header indVal auxFunName toLevelInsts
   if ctx.usePartial then
     let letDecls ← mkLocalInstanceLetDecls ctx header.argNames toLevelInsts
     body ← mkLet letDecls body
-  /- We need to alter the last binder (the one for the "target") to have explicit universe levels
-     so that the `ToLevel` instance arguments can use them. -/
+  /-
+  We need to alter the last binder (the one for the "target") to have explicit universe levels
+  so that the `ToLevel` instance arguments can use them.
+  -/
   let addLevels binder :=
     match binder with
     | `(bracketedBinderF| ($a : $ty)) => do `(bracketedBinderF| ($a : $(← updateIndType indVal ty)))
@@ -188,39 +197,37 @@ creates all the `instance` commands for the `ToExpr` instances for the (mutual) 
 This is a modified copy of `Lean.Elab.Deriving.mkInstanceCmds` to account for `ToLevel` instances
 parameters.
 -/
-def mkInstanceCmds (ctx : Deriving.Context) (typeNames : Array Name) :
-    TermElabM (Array Command) := do
+def mkInstanceCmds (ctx : Deriving.Context) (typeNames : Array Name)
+    : TermElabM (Array Command) := do
   let mut instances := #[]
   for indVal in ctx.typeInfos, auxFunName in ctx.auxFunNames do
     if typeNames.contains indVal.name then
-      let argNames     ← mkInductArgNames indVal
-      let binders      ← mkImplicitBinders argNames
-      let binders      := binders ++ (← mkInstImplicitBinders ``ToExpr indVal argNames)
-      let (toLevelInsts, levelBinders) := Array.unzip <| ← indVal.levelParams.toArray.mapM fun u => do
-        let inst := mkIdent (← mkFreshUserName `inst)
-        return (inst, ← `(instBinderF| [$inst : ToLevel.{$(mkIdent u)}]))
-      let binders      := binders ++ levelBinders
-      let indType      ← updateIndType indVal (← mkInductiveApp indVal argNames)
-      let toTypeExpr   ← mkToTypeExpr indVal argNames
-      let instName     ← mkInstName ``ToExpr indVal.name
-      let instCmd ← `(instance $(mkIdent instName):ident $binders:implicitBinder* : ToExpr $indType where
-                        toExpr := $(mkIdent auxFunName) $toLevelInsts*
-                        toTypeExpr := $toTypeExpr)
+      let argNames ← mkInductArgNames indVal
+      let binders ← mkImplicitBinders argNames
+      let binders := binders ++ (← mkInstImplicitBinders ``ToExpr indVal argNames)
+      let (toLevelInsts, levelBinders) :=
+        Array.unzip <| ← indVal.levelParams.toArray.mapM fun u => do
+          let inst := mkIdent (← mkFreshUserName `inst)
+          return (inst, ← `(instBinderF| [$inst : ToLevel.{$(mkIdent u)}]))
+      let binders := binders ++ levelBinders
+      let indType ← updateIndType indVal (← mkInductiveApp indVal argNames)
+      let toTypeExpr ← mkToTypeExpr indVal argNames
+      let instName ← mkInstName ``ToExpr indVal.name
+      let instCmd ←
+        `(instance $(mkIdent instName):ident $binders:implicitBinder* : ToExpr $indType where
+            toExpr := $(mkIdent auxFunName) $toLevelInsts*
+            toTypeExpr := $toTypeExpr)
       instances := instances.push instCmd
   return instances
 
-/--
-Returns all the commands necessary to construct the `ToExpr` instances.
--/
+/-- Returns all the commands necessary to construct the `ToExpr` instances. -/
 def mkToExprInstanceCmds (declNames : Array Name) : TermElabM (Array Syntax) := do
   let ctx ← mkContext ``ToExpr "toExpr" declNames[0]!
   let cmds := #[← mkAuxFunctions ctx] ++ (← mkInstanceCmds ctx declNames)
   trace[Elab.Deriving.toExpr] "\n{cmds}"
   return cmds
 
-/--
-The main entry point to the `ToExpr` deriving handler.
--/
+/-- The main entry point to the `ToExpr` deriving handler. -/
 def mkToExprInstanceHandler (declNames : Array Name) : CommandElabM Bool := do
   if (← declNames.allM isInductive) && declNames.size > 0 then
     let cmds ← withFreshMacroScope <| liftTermElabM <| mkToExprInstanceCmds declNames

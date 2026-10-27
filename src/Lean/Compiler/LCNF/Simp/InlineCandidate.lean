@@ -18,12 +18,12 @@ Result of `inlineCandidate?`.
 It contains information for inlining local and global functions.
 -/
 structure InlineCandidateInfo where
-  isLocal  : Bool
-  params   : Array (Param .pure)
+  isLocal : Bool
+  params : Array (Param .pure)
   /-- Value (lambda expression) of the function to be inlined. -/
-  value    : Code .pure
-  fType    : Expr
-  args     : Array (Arg .pure)
+  value : Code .pure
+  fType : Expr
+  args : Array (Arg .pure)
   /-- `ifReduce = true` if the declaration being inlined was tagged with `inline_if_reduce`. -/
   ifReduce : Bool
   /-- `recursive = true` if the declaration being inline is in a mutually recursive block. -/
@@ -33,9 +33,7 @@ structure InlineCandidateInfo where
 def InlineCandidateInfo.arity : InlineCandidateInfo → Nat
   | { params, .. } => params.size
 
-/--
-Return `some info` if `e` should be inlined.
--/
+/-- Return `some info` if `e` should be inlined. -/
 def inlineCandidate? (e : LetValue .pure) : SimpM (Option InlineCandidateInfo) := do
   let mut e := e
   let mut mustInline := false
@@ -56,8 +54,10 @@ def inlineCandidate? (e : LetValue .pure) : SimpM (Option InlineCandidateInfo) :
   if let .const declName us args := e then
     unless (← read).config.inlineDefs do
       return none
-    let some ⟨.pure, decl⟩ ← getDecl? declName | return none
-    let .code code := decl.value | return none
+    let some ⟨.pure, decl⟩ ← getDecl? declName
+      | return none
+    let .code code := decl.value
+      | return none
     let shouldInline : SimpM Bool := do
       if !decl.inlineIfReduceAttr && decl.recursive then return false
       if mustInline then return true
@@ -93,45 +93,52 @@ def inlineCandidate? (e : LetValue .pure) : SimpM (Option InlineCandidateInfo) :
       if decl.inlineAttr || decl.inlineIfReduceAttr then return true
       if decl.noinlineAttr then return false
       isSmall code
-    unless (← shouldInline) do return none
+    unless (← shouldInline) do
+      return none
     /- check arity -/
     let arity := decl.getArity
     let inlinePartial := (← read).config.inlinePartial
     if !mustInline && !inlinePartial && args.size < arity then return none
     if decl.inlineIfReduceAttr then
-      let some paramIdx := decl.isCasesOnParam? | return none
-      unless paramIdx < args.size do return none
+      let some paramIdx := decl.isCasesOnParam?
+        | return none
+      unless paramIdx < args.size do
+        return none
       let arg := args[paramIdx]!
-      unless (← arg.isConstructorApp) do return none
+      unless (← arg.isConstructorApp) do
+        return none
     let params := decl.instantiateParamsLevelParams us
     let value := code.instantiateValueLevelParams decl.levelParams us
     let type := decl.instantiateTypeLevelParams us
     incInline
     return some {
-      isLocal   := false
-      fType     := type
-      args      := args
-      ifReduce  := decl.inlineIfReduceAttr
+      isLocal := false
+      fType := type
+      args := args
+      ifReduce := decl.inlineIfReduceAttr
       recursive := decl.recursive
-      params, value
+      params
+      value
     }
   else if let .fvar f args := e then
-    let some decl ← findFunDecl'? f | return none
-    unless mustInline || args.size > 0 do return none -- It is not worth to inline a local function that does not take any arguments
-    unless mustInline || (← shouldInlineLocal decl) do return none
+    let some decl ← findFunDecl'? f
+      | return none
+    unless mustInline || args.size > 0 do
+      return none -- It is not worth to inline a local function that does not take any arguments
+    unless mustInline || (← shouldInlineLocal decl) do
+      return none
     -- Remark: we inline local function declarations even if they are partial applied
     incInlineLocal
     modify fun s => { s with inlineLocal := s.inlineLocal + 1 }
     return some {
-      isLocal  := true
-      fType    := (← getType f)
-      args     := args
-      params   := decl.params
-      value    := decl.value
+      isLocal := true
+      fType := (← getType f)
+      args := args
+      params := decl.params
+      value := decl.value
       ifReduce := false
     }
   else
     return none
 
-builtin_initialize
-  registerTraceClass `Compiler.simp.inline
+builtin_initialize registerTraceClass `Compiler.simp.inline

@@ -22,7 +22,8 @@ namespace Lean.Elab.Tactic.VCGen
 unsafe def getFrameProcFromDeclImpl (declName : Name) : ImportM FrameProc := do
   let ctx ← read
   match ctx.env.find? declName with
-  | none => throw <| .userError s!"unknown constant '{declName}'"
+  | none =>
+    throw <| .userError s!"unknown constant '{declName}'"
   | some info =>
     unless info.type.isConstOf ``FrameProc do
       throw <| .userError s!"`{declName}` is not a `FrameProc`"
@@ -39,11 +40,11 @@ def toFrameProcEntry (declName : Name) : ImportM (Name × FrameProc) := do
 
 builtin_initialize frameProcExt : FrameProcExtension ←
   registerScopedEnvExtension {
-    name         := by exact decl_name%
-    mkInitial    := return {}
+    name := by exact decl_name%
+    mkInitial := return {}
     ofOLeanEntry := fun _ declName => toFrameProcEntry declName
     toOLeanEntry := fun (declName, _) => declName
-    addEntry     := fun s (_declName, fp) => s.insert fp
+    addEntry := fun s (_declName, fp) => s.insert fp
   }
 
 /-- The frame inference procedures in scope. -/
@@ -55,12 +56,13 @@ def addFrameProcAttr (declName : Name) (kind : AttributeKind) : AttrM Unit := do
   let fp ← getFrameProcFromDecl declName
   frameProcExt.add (declName, fp) kind
 
-builtin_initialize registerBuiltinAttribute {
-  ref             := by exact decl_name%
-  name            := `frameproc
-  descr           := "register a frame inference procedure for `vcgen`"
-  applicationTime := .afterCompilation
-  add             := fun declName _stx kind => addFrameProcAttr declName kind
-}
+builtin_initialize
+  registerBuiltinAttribute {
+    ref := by exact decl_name%
+    name := `frameproc
+    descr := "register a frame inference procedure for `vcgen`"
+    applicationTime := .afterCompilation
+    add := fun declName _stx kind => addFrameProcAttr declName kind
+  }
 
 end Lean.Elab.Tactic.VCGen

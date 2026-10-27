@@ -63,10 +63,14 @@ def bindsAsTightly (cat : Name) (stx newStx : Syntax) : CoreM Bool := do
   let (minPrec, trailPrec, trailCat) ← syntaxPrecedences cat stx
   let (newMinPrec, newTrailPrec, newTrailCat) ← syntaxPrecedences cat newStx
   -- Syntax after `stx` was not absorbed by its right end, so it has precedence below `trailPrec`
-  let bindsRight := match newTrailPrec, trailPrec with
-    | none, _ => true
-    | some newTrailPrec, some trailPrec => newTrailCat == trailCat && newTrailPrec ≥ trailPrec
-    | some _, none => false
+  let bindsRight :=
+    match newTrailPrec, trailPrec with
+    | none, _ =>
+      true
+    | some newTrailPrec, some trailPrec =>
+      newTrailCat == trailCat && newTrailPrec ≥ trailPrec
+    | some _, none =>
+      false
   return newMinPrec.getD 0 ≥ minPrec.getD Parser.maxPrec && bindsRight
 
 /--
@@ -108,8 +112,8 @@ def needsSpaceBetween (left right : String.Slice) : CoreM Bool := do
 Returns the text replacing the source of `stx`, which has category `cat` and source range `range`,
 by `newStx`. See the module docstring for how the text is made to fit into the surrounding source.
 -/
-public def formatReplacement (cat : Name) (stx newStx : Syntax) (range : Syntax.Range) :
-    CoreM String := do
+public def formatReplacement (cat : Name) (stx newStx : Syntax) (range : Syntax.Range)
+    : CoreM String := do
   let newStx ← parenthesizeReplacement cat stx newStx
   let map ← getFileMap
   let (indent, column) := Meta.Tactic.TryThis.getIndentAndColumn map range

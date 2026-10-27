@@ -18,8 +18,8 @@ Extra tactics and implementation for some tactics defined at `Init/Tactic.lean`
 namespace Lean.Parser.Tactic
 
 private meta def expandIfThenElse
-    (ifTk thenTk elseTk pos neg : Syntax)
-    (mkIf : Term → Term → MacroM Term) : MacroM (TSyntax `tactic) := do
+    (ifTk thenTk elseTk pos neg : Syntax) (mkIf : Term → Term → MacroM Term)
+    : MacroM (TSyntax `tactic) := do
   let mkCase tk holeOrTacticSeq mkName : MacroM (Term × Array (TSyntax `tactic)) := do
     if holeOrTacticSeq.isOfKind `Lean.Parser.Term.syntheticHole then
       pure (⟨holeOrTacticSeq⟩, #[])
@@ -32,9 +32,11 @@ private meta def expandIfThenElse
       let holeId : Ident := ⟨hole.raw[1]⟩
       let tacticSeq : TSyntax `Lean.Parser.Tactic.tacticSeq := ⟨holeOrTacticSeq⟩
       -- Use `missing` for ref to ensure that the source range is the same as `holeOrTacticSeq`'s.
-      let tacticSeq : TSyntax `Lean.Parser.Tactic.tacticSeq ← MonadRef.withRef .missing `(tacticSeq|
-        with_annotate_state $tk skip
-        ($tacticSeq))
+      let tacticSeq : TSyntax `Lean.Parser.Tactic.tacticSeq ←
+        MonadRef.withRef .missing
+          `(tacticSeq|
+            with_annotate_state $tk skip
+            ($tacticSeq))
       let case ← withRef tk <| `(tactic| case $holeId:ident =>%$tk $tacticSeq:tacticSeq)
       pure (hole, #[case])
   let (posHole, posCase) ← mkCase thenTk pos `(?pos)
@@ -73,21 +75,16 @@ macro_rules
   | `(tactic| iterate $n $seq:tacticSeq) =>
     match n.1.toNat with
     | 0 => `(tactic| skip)
-    | n+1 => `(tactic| ($seq:tacticSeq); iterate $(quote n) $seq:tacticSeq)
+    | n + 1 => `(tactic| ($seq:tacticSeq); iterate $(quote n) $seq:tacticSeq)
 
-/--
-Rewrites with the given rules, normalizing casts prior to each step.
--/
+/-- Rewrites with the given rules, normalizing casts prior to each step. -/
 syntax "rw_mod_cast" optConfig rwRuleSeq (location)? : tactic
 macro_rules
   | `(tactic| rw_mod_cast $cfg:optConfig [$rules,*] $[$loc]?) => do
-    let tacs ← rules.getElems.mapM fun rule =>
-      `(tactic| (norm_cast at *; rw $cfg [$rule] $[$loc]?))
+    let tacs ← rules.getElems.mapM fun rule => `(tactic| (norm_cast at *; rw $cfg [$rule] $[$loc]?))
     `(tactic| ($[$tacs]*))
 
-/--
-Normalize casts in the goal and the given expression, then close the goal with `exact`.
--/
+/-- Normalize casts in the goal and the given expression, then close the goal with `exact`. -/
 macro "exact_mod_cast " e:term : tactic => `(tactic| exact mod_cast ($e : _))
 
 /--

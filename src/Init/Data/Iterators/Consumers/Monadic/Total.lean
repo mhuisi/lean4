@@ -18,9 +18,7 @@ namespace Std
 -- documented below by `add_decl_doc`, which can refer to `IterM.ensureTermination`
 set_option linter.missingDocs false in
 structure IterM.Total {α : Type w} (m : Type w → Type w') (β : Type w) where
-  /--
-  The wrapped iterator, which was wrapped by `IterM.ensureTermination`.
-  -/
+  /-- The wrapped iterator, which was wrapped by `IterM.ensureTermination`. -/
   it : IterM (α := α) m β
 
 /--
@@ -28,9 +26,9 @@ For an iterator {name}`it`, {lean}`it.ensureTermination` provides variants of co
 terminate.
 -/
 @[always_inline, inline]
-def IterM.ensureTermination {α : Type w} {β : Type w} {m : Type w → Type w'}
-    (it : IterM (α := α) m β) :
-  IterM.Total (α := α) m β :=
+def IterM.ensureTermination
+    {α : Type w} {β : Type w} {m : Type w → Type w'} (it : IterM (α := α) m β)
+    : IterM.Total (α := α) m β :=
   ⟨it⟩
 
 /--

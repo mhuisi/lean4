@@ -28,7 +28,6 @@ private def getLinterDocsOnAlt (o : LinterOptions) : Bool :=
 
 namespace DocsOnAlt
 
-
 private partial def docsOnAlt : Linter where
   run stx := do
     if getLinterDocsOnAlt (← getLinterOptions) then
@@ -43,20 +42,22 @@ private partial def docsOnAlt : Linter where
         if (attrs.find? isAltAttr).isSome then
           let infoTrees := (← get).infoState.trees.toArray
           for tree in infoTrees do
-            tree.visitM' (postNode := fun ci info _ => do
-              match info with
-              | .ofTermInfo ti =>
-                if names.contains ti.stx then
-                  if let some (x, _) := ti.expr.const? then
-                    if (← findInternalDocString? ci.env x).isSome then
-                      let msg := m!"Documentation for `{.ofConstName x}` is ignored because it is \
-                        a tactic alternative."
-                      logLint linter.tactic.docsOnAlt ti.stx msg
-              | _ => pure ())
+            tree.visitM'
+              (postNode := fun ci info _ => do
+                match info with
+                | .ofTermInfo ti =>
+                  if names.contains ti.stx then
+                    if let some (x, _) := ti.expr.const? then
+                      if (← findInternalDocString? ci.env x).isSome then
+                        let msg :=
+                          m!"Documentation for `{.ofConstName x}` is ignored because it is \
+                            a tactic alternative."
+                        logLint linter.tactic.docsOnAlt ti.stx msg
+                | _ =>
+                  pure ())
 where
   isAltAttr : Syntax → Bool
     | `(attr|tactic_alt $_) => true
     | _ => false
-
 
 builtin_initialize addLinter docsOnAlt

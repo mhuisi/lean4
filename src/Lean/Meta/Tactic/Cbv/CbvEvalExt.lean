@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Wojciech Różowski
 -/
 module
+
 prelude
 public import Lean.Data.NameMap
 public import Lean.ScopedEnvExtension
@@ -34,53 +35,62 @@ namespace Lean.Meta.Tactic.Cbv
 open Lean.Meta.Sym.Simp
 
 /--
-  Entry of the `CbvEvalExtension`.
-  Consists of name of the theorem used, the precomputed `Theorem` object 
-  and a name of the head function appearing on the left-hand side of the theorem.
+Entry of the `CbvEvalExtension`.
+Consists of name of the theorem used, the precomputed `Theorem` object
+and a name of the head function appearing on the left-hand side of the theorem.
 -/
 structure CbvEvalEntry where
   origin : Name
-  appFn  : Name
-  thm    : Theorem
-  deriving BEq, Inhabited
+  appFn : Name
+  thm : Theorem
+deriving BEq, Inhabited
 
-/-- Create a `CbvEvalEntry` from a theorem declaration. When `inv = true`, creates an
-auxiliary lemma with swapped sides so the theorem can be used for right-to-left rewriting. -/
+/--
+Create a `CbvEvalEntry` from a theorem declaration. When `inv = true`, creates an
+auxiliary lemma with swapped sides so the theorem can be used for right-to-left rewriting.
+-/
 def mkCbvTheoremFromConst (declName : Name) (inv : Bool := false) : MetaM CbvEvalEntry := do
   let cinfo ← getConstVal declName
   let us := cinfo.levelParams.map mkLevelParam
   let val := mkConst declName us
   let type ← inferType val
-  unless (← isProp type) do throwError "{val} is not a theorem and thus cannot be marked with `cbv_eval` attribute"
-  let (fnName, thmDeclName) ← forallTelescope type fun xs body => do
-    let some (_, lhs, rhs) := body.eq? | throwError "The conclusion {type} of theorem {val} is not an equality"
-    let matchSide := if inv then rhs else lhs
-    let some constName := matchSide.getAppFn.constName?
-      | throwError "The rewrite side of theorem {val} is not an application of a constant"
-    let mut thmDeclName := declName
-    if inv then
-      let invType ← mkForallFVars xs (← mkEq rhs lhs)
-      let invVal ← mkLambdaFVars xs (← mkEqSymm (mkAppN val xs))
-      thmDeclName ← mkAuxLemma (kind? := `_cbv_eval) cinfo.levelParams invType invVal
-    return (constName, thmDeclName)
+  unless (← isProp type) do
+    throwError "{val} is not a theorem and thus cannot be marked with `cbv_eval` attribute"
+  let (fnName, thmDeclName) ←
+    forallTelescope type fun xs body => do
+      let some (_, lhs, rhs) := body.eq?
+        | throwError "The conclusion {type} of theorem {val} is not an equality"
+      let matchSide := if inv then rhs else lhs
+      let some constName := matchSide.getAppFn.constName?
+        | throwError "The rewrite side of theorem {val} is not an application of a constant"
+      let mut thmDeclName := declName
+      if inv then
+        let invType ← mkForallFVars xs (← mkEq rhs lhs)
+        let invVal ← mkLambdaFVars xs (← mkEqSymm (mkAppN val xs))
+        thmDeclName ← mkAuxLemma (kind? := `_cbv_eval) cinfo.levelParams invType invVal
+      return (constName, thmDeclName)
   let thm ← mkTheoremFromDecl thmDeclName
   return ⟨declName, fnName, thm⟩
 
 structure CbvEvalState where
-  lemmas  : NameMap Theorems := {}
+  lemmas : NameMap Theorems := {}
   entries : NameMap <| Array CbvEvalEntry := {}
-  deriving Inhabited
+deriving Inhabited
 
 def CbvEvalState.addEntry (s : CbvEvalState) (e : CbvEvalEntry) : CbvEvalState :=
   let lemmas := (s.lemmas.find? e.appFn).getD {}
   let entries := (s.entries.find? e.appFn).getD {}
-  { s with
-    lemmas  := s.lemmas.insert e.appFn (lemmas.insert e.thm)
-    entries := s.entries.insert e.appFn <| entries.push e}
+  {
+    s with
+    lemmas := s.lemmas.insert e.appFn (lemmas.insert e.thm)
+    entries := s.entries.insert e.appFn <| entries.push e
+  }
 
 /-- Rebuild the `Theorems` for a given `appFn` from the entries that target it. -/
-private def CbvEvalState.rebuildLemmas (entries : NameMap <| Array CbvEvalEntry) (appFn : Name) (lemmas : NameMap Theorems) : NameMap Theorems := 
-  let appFnEntries := entries.getD appFn #[] 
+private def CbvEvalState.rebuildLemmas
+    (entries : NameMap <| Array CbvEvalEntry) (appFn : Name) (lemmas : NameMap Theorems)
+    : NameMap Theorems :=
+  let appFnEntries := entries.getD appFn #[]
   if appFnEntries.isEmpty then
     lemmas.erase appFn
   else
@@ -88,28 +98,38 @@ private def CbvEvalState.rebuildLemmas (entries : NameMap <| Array CbvEvalEntry)
 
 /-- Erase a theorem from the state. Returns `none` if the theorem is not found. -/
 def CbvEvalState.erase (s : CbvEvalState) (declName : Name) : Option CbvEvalState := do
-  let (appFn, oldEntries) ← s.entries.foldl (init := none) fun acc appFn entries =>
-    if acc.isSome then acc
-    else if entries.any (·.origin == declName) then some (appFn, entries)
-    else none
+  let (appFn, oldEntries) ←
+    s.entries.foldl (init := none) fun acc appFn entries =>
+      if acc.isSome then
+        acc
+      else if entries.any (·.origin == declName) then
+        some (appFn, entries)
+      else
+        none
   let newEntries := oldEntries.filter (·.origin != declName)
-  let entries := if newEntries.isEmpty then s.entries.erase appFn
-    else s.entries.insert appFn newEntries
+  let entries :=
+    if newEntries.isEmpty then
+      s.entries.erase appFn
+    else
+      s.entries.insert appFn newEntries
   return { lemmas := rebuildLemmas entries appFn s.lemmas, entries }
 
 abbrev CbvEvalExtension := SimpleScopedEnvExtension CbvEvalEntry CbvEvalState
 
 builtin_initialize cbvEvalExt : CbvEvalExtension ←
   registerSimpleScopedEnvExtension {
-    name     := `cbvEvalExt
-    initial  := {}
+    name := `cbvEvalExt
+    initial := {}
     addEntry := CbvEvalState.addEntry
     exportEntry? := fun _ entry =>
       match entry.thm.declName with
-      | none => ⟨none, none, none⟩
+      | none =>
+        ⟨none, none, none⟩
       | some n =>
-        if isPrivateName n then ⟨none, none, some entry⟩
-        else .uniform (some entry)
+        if isPrivateName n then
+          ⟨none, none, some entry⟩
+        else
+          .uniform (some entry)
   }
 
 def getCbvEvalLemmas (target : Name) : CoreM (Option Theorems) := do
@@ -118,8 +138,8 @@ def getCbvEvalLemmas (target : Name) : CoreM (Option Theorems) := do
 
 builtin_initialize
   registerBuiltinAttribute {
-    ref   := `cbvEvalAttr
-    name  := `cbv_eval
+    ref := `cbvEvalAttr
+    name := `cbv_eval
     descr := "Register a theorem as a rewrite rule for `cbv` evaluation of a given definition."
     applicationTime := AttributeApplicationTime.afterCompilation
     add := fun lemmaName stx kind => do

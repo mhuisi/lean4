@@ -20,8 +20,7 @@ The position of the most significant digit, where the unit digit corresponds to 
 So, for example, `1.0b` has total exponent `1`, `0.1b` has total exponent `0`,
 `0.01b` has total exponent `-1`, and so on.
 -/
-def totalExponent (mantissa : Nat) (exponent : Int) :=
-  mantissa.log2 + 1 + exponent
+def totalExponent (mantissa : Nat) (exponent : Int) := mantissa.log2 + 1 + exponent
 
 /--
 A floating point format is specified by two pieces of information: the number
@@ -48,26 +47,22 @@ abbrev binary64 : Format where
   exponentBits := 11
 
 /-- The total number of bits in the packed representation. -/
-abbrev numBits (spec : Format) : Nat :=
-  1 + spec.exponentBits + spec.mantissaBitsWithoutImplicit
+abbrev numBits (spec : Format) : Nat := 1 + spec.exponentBits + spec.mantissaBitsWithoutImplicit
 
 /-- The number of bits in the mantissa, *including the implicit bit*. -/
-def mantissaBits (spec : Format) : Nat :=
-  1 + spec.mantissaBitsWithoutImplicit
+def mantissaBits (spec : Format) : Nat := 1 + spec.mantissaBitsWithoutImplicit
 
 /--
 The exponent bias. In packed formats, we store the sum of the true exponent and
 the bias.
 -/
-def exponentBias (spec : Format) : Nat :=
-  2 ^ (spec.exponentBits - 1) - 1
+def exponentBias (spec : Format) : Nat := 2 ^ (spec.exponentBits - 1) - 1
 
 /--
 The smallest exponent possible for a number using the given specification,
 including subnormals.
 -/
-def minExponent (spec : Format) : Int :=
-  3 - 2 ^ (spec.exponentBits - 1) - spec.mantissaBits
+def minExponent (spec : Format) : Int := 3 - 2 ^ (spec.exponentBits - 1) - spec.mantissaBits
 
 /--
 Suppose we have written a number where `totalExponent` is the position of the

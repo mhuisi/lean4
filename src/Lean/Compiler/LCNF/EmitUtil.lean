@@ -21,8 +21,8 @@ structure CollectUsedDeclsState where
 Find all declarations that the declarations in `decls` transitively depend on. They are returned
 partitioned into the declarations from the current module and declarations from other modules.
 -/
-public partial def collectUsedDecls (decls : Array Name) :
-    CoreM (Array (Decl .impure) × Array (Signature .impure)) := do
+public partial def collectUsedDecls (decls : Array Name)
+    : CoreM (Array (Decl .impure) × Array (Signature .impure)) := do
   let (_, state) ← go decls |>.run {}
   return (state.localDecls, state.extSigs)
 where
@@ -34,7 +34,8 @@ where
         modify fun s => { s with localDecls := s.localDecls.push decl }
         decl.value.forCodeM (·.forM visitCode)
         let env ← getEnv
-        if let some initializer := getBuiltinInitFnNameFor? env decl.name <|> getInitFnNameFor? env decl.name then
+        if let some initializer :=
+            getBuiltinInitFnNameFor? env decl.name <|> getInitFnNameFor? env decl.name then
           go #[initializer]
       else if let some sig ← getImpureSignature? name then
         modify fun s => { s with extSigs := s.extSigs.push sig }
@@ -45,10 +46,10 @@ where
     match code with
     | .let decl _ =>
       match decl.value with
-      | .const declName .. | .fap declName .. | .pap declName .. =>
-        go #[declName]
+      | .const declName .. | .fap declName .. | .pap declName .. => go #[declName]
       | _ => return ()
-    | _ => return ()
+    | _ =>
+      return ()
 
 public def usesModuleFrom (env : Environment) (modulePrefix : Name) : Bool :=
   env.header.modules.any fun mod => mod.irPhases != .comptime && modulePrefix.isPrefixOf mod.module

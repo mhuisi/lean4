@@ -43,8 +43,7 @@ environment, so the trace can be inspected by arbitrary metaprograms, e.g.
 `#eval do return (← t).roots.size`. The declaration only references the trace data, which is
 kept in memory for the current file only; it is not exported to `.olean` files.
 -/
-scoped syntax (name := storeTracesAsCmd)
-  "store_traces_as " ident " in" ppLine command : command
+scoped syntax (name := storeTracesAsCmd) "store_traces_as " ident " in" ppLine command : command
 
 /--
 Experimental. `#postprocess_traces` and the library around it are expected to change in the
@@ -54,8 +53,8 @@ future.
 trace stored as `t` by `store_traces_as t in cmd` and then renders the resulting trace tree.
 See `postprocess_traces` for the available operations and patterns.
 -/
-scoped syntax (name := postprocessStoredTracesCmd)
-  "#postprocess_traces " ident ppSpace term : command
+scoped syntax (name := postprocessStoredTracesCmd) "#postprocess_traces " ident ppSpace term
+  : command
 
 /--
 A trace stored by `store_traces_as t in cmd`, for inspection in metaprograms.
@@ -72,7 +71,7 @@ structure StoredTrace where
   `addTraceAsMessages`.
   -/
   messages : Array Message
-  deriving Inhabited
+deriving Inhabited
 
 private meta initialize storedTracesExt : EnvExtension (NameMap StoredTrace) ←
   registerEnvExtension (pure {})
@@ -107,7 +106,7 @@ meta def trees (t : StoredTrace) : Array TraceTree :=
   t.messages.flatMap fun msg =>
     match traceContainer? msg.data with
     | some (_, roots) => roots.map TraceTree.ofMessageData
-    | none            => #[]
+    | none => #[]
 
 /--
 Applies a postprocessor to every trace message of the stored trace, dropping messages whose
@@ -135,12 +134,12 @@ meta def elabStoreTraceAs : CommandElab
     -- metaprograms. The declaration body merely references the trace data, which is kept in an
     -- in-memory environment extension, so declaring it is cheap even for very large traces.
     liftCoreM <| addAndCompile (markMeta := true) <| .defnDecl {
-      name        := declName
+      name := declName
       levelParams := []
-      type        := mkApp (mkConst ``CoreM) (mkConst ``Lean.PostprocessTraces.StoredTrace)
-      value       := mkApp (mkConst ``Lean.PostprocessTraces.findStoredTrace) (toExpr declName)
-      hints       := .abbrev
-      safety      := .safe
+      type := mkApp (mkConst ``CoreM) (mkConst ``Lean.PostprocessTraces.StoredTrace)
+      value := mkApp (mkConst ``Lean.PostprocessTraces.findStoredTrace) (toExpr declName)
+      hints := .abbrev
+      safety := .safe
     }
     liftCoreM <| addDocStringCore declName
       s!"A trace stored by `store_traces_as` (`{(← getFileName)}`); \
@@ -150,7 +149,8 @@ meta def elabStoreTraceAs : CommandElab
     addDeclarationRangesFromSyntax declName (← getRef) id
     addConstInfo id declName
     liftCoreM <| storeTraces declName ⟨msgs.filter (·.isTrace)⟩
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
 /--
 Resolves the name of a trace stored by `store_traces_as` (relative to the current namespace,
@@ -166,7 +166,9 @@ private meta def resolveStoredTrace (id : Ident) : CommandElabM StoredTrace := d
           m!"no traces have been stored in this file"
         else
           m!"stored traces: {MessageData.joinSep available ", "}"
-      throwErrorAt id "unknown stored trace `{id.getId}` ({hint}); store one using `store_traces_as {id.getId} in <command>`"
+      throwErrorAt id
+        "unknown stored trace `{id.getId}` ({hint}); store one using `store_traces_as {id.getId} \
+          in <command>`"
   return t
 
 @[command_elab Lean.PostprocessTraces.postprocessStoredTracesCmd]
@@ -182,6 +184,7 @@ meta def elabPostprocessStoredTraces : CommandElab
     let endPos := ref.getTailPos?.getD pos
     for msg in stored.messages do
       logMessage <| mkMessageCore (← getFileName) (← getFileMap) msg.data .information pos endPos
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
 end Lean.Elab.PostprocessTraces

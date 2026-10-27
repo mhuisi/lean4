@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.Cutsat.Util
 import Init.Data.Int.OfNat
@@ -17,13 +18,18 @@ public section
 namespace Lean.Meta.Grind.Arith.Cutsat
 
 def LeCnstr.norm (c : LeCnstr) : LeCnstr :=
-  let c := if c.p.isSorted then
-    c
-  else
-    { p := c.p.norm, h := .norm c }
+  let c :=
+    if c.p.isSorted then
+      c
+    else {
+      p := c.p.norm
+      h := .norm c
+    }
   let k := c.p.gcdCoeffs'
-  if k != 1 then
-    { p := c.p.div k, h := .divCoeffs c }
+  if k != 1 then {
+    p := c.p.div k
+    h := .divCoeffs c
+  }
   else
     c
 
@@ -31,34 +37,48 @@ def LeCnstr.norm (c : LeCnstr) : LeCnstr :=
 Given an equation `c₁` containing the monomial `a*x`, and an inequality constraint `c₂`
 containing the monomial `b*x`, eliminate `x` by applying substitution.
 -/
-def LeCnstr.applyEq (a : Int) (x : Var) (c₁ : EqCnstr) (b : Int) (c₂ : LeCnstr) : GoalM LeCnstr := do
+def LeCnstr.applyEq (a : Int) (x : Var) (c₁ : EqCnstr) (b : Int) (c₂ : LeCnstr)
+    : GoalM LeCnstr := do
   let p := c₁.p
   let q := c₂.p
-  let p := if a ≥ 0 then
-    q.mul a |>.combine (p.mul (-b))
-  else
-    p.mul b |>.combine (q.mul (-a))
+  let p :=
+    if a ≥ 0 then
+      q.mul a |>.combine (p.mul (-b))
+    else
+      p.mul b |>.combine (q.mul (-a))
   trace[grind.lia.subst] "{← getVar x}, {← c₁.pp}, {← c₂.pp}"
   return { p, h := .subst x c₁ c₂ }
 
-partial def LeCnstr.applySubsts (c : LeCnstr) : GoalM LeCnstr := withIncRecDepth do
-  let some (b, x, c₁) ← c.p.findVarToSubst | return c
-  let a := c₁.p.coeff x
-  let c ← c.applyEq a x c₁ b
-  applySubsts c
+partial def LeCnstr.applySubsts (c : LeCnstr) : GoalM LeCnstr :=
+  withIncRecDepth do
+    let some (b, x, c₁) ← c.p.findVarToSubst
+      | return c
+    let a := c₁.p.coeff x
+    let c ← c.applyEq a x c₁ b
+    applySubsts c
 
 def _root_.Int.Internal.Linear.Poly.isNegEq (p₁ p₂ : Poly) : Bool :=
   match p₁, p₂ with
-  | .num k₁, .num k₂ => k₁ == -k₂
-  | .add a₁ x p₁, .add a₂ y p₂ => a₁ == -a₂ && x == y && isNegEq p₁ p₂
-  | _, _ => false
+  | .num k₁, .num k₂ =>
+    k₁ == -k₂
+  | .add a₁ x p₁, .add a₂ y p₂ =>
+    a₁ == -a₂ && x == y && isNegEq p₁ p₂
+  | _, _ =>
+    false
 
 def LeCnstr.erase (c : LeCnstr) : GoalM Unit := do
-  let .add a x _ := c.p | c.throwUnexpected
+  let .add a x _ := c.p
+    | c.throwUnexpected
   if a < 0 then
-    modify' fun s => { s with lowers := s.lowers.modify x fun cs' => cs'.filter fun c' => c'.p != c.p }
+    modify' fun s => {
+      s with
+      lowers := s.lowers.modify x fun cs' => cs'.filter fun c' => c'.p != c.p
+    }
   else
-    modify' fun s => { s with uppers := s.uppers.modify x fun cs' => cs'.filter fun c' => c'.p != c.p }
+    modify' fun s => {
+      s with
+      uppers := s.uppers.modify x fun cs' => cs'.filter fun c' => c'.p != c.p
+    }
 
 /--
 Given a lower (upper) bound constraint `c`, tries to find
@@ -66,7 +86,8 @@ an imply equality by searching a upper (lower) bound constraint `c'` such that
 `c.p == -c'.p`
 -/
 private def findEq (c : LeCnstr) : GoalM Bool := do
-  let .add a x _ := c.p | c.throwUnexpected
+  let .add a x _ := c.p
+    | c.throwUnexpected
   let s ← get'
   let cs' := if a < 0 then s.uppers[x]! else s.lowers[x]!
   for c' in cs' do
@@ -78,14 +99,14 @@ private def findEq (c : LeCnstr) : GoalM Bool := do
       return true
   return false
 
-/--
-Applies `p ≤ 0 → p ≠ 0 → p + 1 ≤ 0`
--/
+/-- Applies `p ≤ 0 → p ≠ 0 → p + 1 ≤ 0` -/
 private def refineWithDiseq (c : LeCnstr) : GoalM LeCnstr := do
-  let .add _ x _ := c.p | c.throwUnexpected
+  let .add _ x _ := c.p
+    | c.throwUnexpected
   let mut c := c
   repeat
-    let some c' ← refineWithDiseqStep? x c | return c
+    let some c' ← refineWithDiseqStep? x c
+      | return c
     c := c'
   return c
 where
@@ -95,7 +116,10 @@ where
     for c' in cs' do
       if c.p == c'.p || c.p.isNegEq c'.p then
         -- Remove `c'`
-        modify' fun s => { s with diseqs := s.diseqs.modify x fun cs' => cs'.filter fun c => c.p != c'.p }
+        modify' fun s => {
+          s with
+          diseqs := s.diseqs.modify x fun cs' => cs'.filter fun c => c.p != c'.p
+        }
         return some { p := c.p.addConst 1, h := .ofLeDiseq c c' }
     return none
 
@@ -112,7 +136,8 @@ def LeCnstr.assertImpl (c : LeCnstr) : GoalM Unit := do
   if c.isTrivial then
     trace[grind.lia.assert.trivial] "{← c.pp}"
     return ()
-  let .add a x _ := c.p | c.throwUnexpected
+  let .add a x _ := c.p
+    | c.throwUnexpected
   if (← findEq c) then
     return ()
   let c ← (← refineWithDiseq c).markStored
@@ -128,7 +153,7 @@ def LeCnstr.assertImpl (c : LeCnstr) : GoalM Unit := do
 /-- Asserts a constraint coming from the core. -/
 private def LeCnstr.assertCore (c : LeCnstr) : GoalM Unit := do
   if let some (re, rp, p) ← c.p.normCommRing? then
-    let c := { p, h := .commRingNorm c re rp : LeCnstr}
+    let c := { p, h := .commRingNorm c re rp : LeCnstr }
     c.assert
   else
     c.assert
@@ -141,15 +166,18 @@ The `grind` preprocessor normalizes inequalities to `a ≤ 0` with `a` in normal
 `toPoly?`). Inequalities in dependent positions may not be normalized, and we normalize them here.
 -/
 def propagateIntLe (e : Expr) (eqTrue : Bool) : GoalM Unit := do
-  let_expr LE.le _ inst a b ← e | return ()
-  unless (← Structural.isInstLEInt inst) do return ()
+  let_expr LE.le _ inst a b ← e
+    | return ()
+  unless (← Structural.isInstLEInt inst) do
+    return ()
   if let some 0 ← getIntValue? b then
     if let some p ← toPoly? a then
       trace[grind.debug.lia.norm] "normalized: {e}"
-      let c ← if eqTrue then
-        pure { p, h := .core e : LeCnstr }
-      else
-        pure { p := p.mul (-1) |>.addConst 1, h := .coreNeg e p : LeCnstr }
+      let c ←
+        if eqTrue then
+          pure { p, h := .core e : LeCnstr }
+        else
+          pure { p := p.mul (-1) |>.addConst 1, h := .coreNeg e p : LeCnstr }
       c.assertCore
       return
   trace[grind.debug.lia.norm] "not normalized: {e}"
@@ -162,7 +190,8 @@ def propagateIntLe (e : Expr) (eqTrue : Bool) : GoalM Unit := do
   c.assertCore
 
 def propagateNatLe (e : Expr) (eqTrue : Bool) : GoalM Unit := do
-  let_expr LE.le _ _ a b := e | return ()
+  let_expr LE.le _ _ a b := e
+    | return ()
   let thm := if eqTrue then mkConst ``Nat.ToInt.of_le else mkConst ``Nat.ToInt.of_not_le
   let gen ← getGeneration e
   let (a', h₁) ← natToInt a
@@ -176,8 +205,10 @@ def propagateNatLe (e : Expr) (eqTrue : Bool) : GoalM Unit := do
   c.assertCore
 
 def propagateLe (e : Expr) (eqTrue : Bool) : GoalM Unit := do
-  unless (← getConfig).lia do return ()
-  let_expr LE.le α _ _ _ := e | return ()
+  unless (← getConfig).lia do
+    return ()
+  let_expr LE.le α _ _ _ := e
+    | return ()
   if α.isConstOf ``Nat then
     propagateNatLe e eqTrue
   else if α.isConstOf ``Int then

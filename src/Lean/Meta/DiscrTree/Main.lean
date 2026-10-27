@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura, Jannis Limperg, Kim Morrison
 -/
 module
+
 prelude
 public import Lean.Meta.Basic
 public import Lean.Meta.DiscrTree.Util
@@ -51,8 +52,8 @@ namespace Lean.Meta.DiscrTree
 -/
 
 def Key.arity : Key → Nat
-  | .const _ a  => a
-  | .fvar _ a   => a
+  | .const _ a => a
+  | .fvar _ a => a
   /-
   Remark: `.arrow` used to have arity 2, and was used to encode only **non**-dependent
   arrows. However, this feature was a recurrent source of bugs. For example, a
@@ -62,44 +63,46 @@ def Key.arity : Key → Nat
   that ∀ and ∃ behave quite differently. So now `.arrow` at least indexes the
   domain of the forall (whether dependent or non-dependent).
   -/
-  | .arrow      => 1
+  | .arrow => 1
   | .proj _ _ a => 1 + a
-  | _           => 0
+  | _ => 0
 
-/-- The discrimination tree ignores implicit arguments and proofs.
-   We use the following auxiliary id as a "mark". -/
+/--
+The discrimination tree ignores implicit arguments and proofs.
+We use the following auxiliary id as a "mark".
+-/
 private def tmpMVarId : MVarId := { name := `_discr_tree_tmp }
 private def tmpStar := mkMVar tmpMVarId
 
 /--
-  Return true iff the argument should be treated as a "wildcard" by the discrimination tree.
+Return true iff the argument should be treated as a "wildcard" by the discrimination tree.
 
-  - We ignore proofs because of proof irrelevance. It doesn't make sense to try to
-    index their structure.
+- We ignore proofs because of proof irrelevance. It doesn't make sense to try to
+  index their structure.
 
-  - We ignore instance implicit arguments (e.g., `[Add α]`) because they are "morally" canonical.
-    Moreover, we may have many definitionally equal terms floating around.
-    Example: `Ring.hasAdd Int Int.isRing` and `Int.hasAdd`.
+- We ignore instance implicit arguments (e.g., `[Add α]`) because they are "morally" canonical.
+  Moreover, we may have many definitionally equal terms floating around.
+  Example: `Ring.hasAdd Int Int.isRing` and `Int.hasAdd`.
 
-  - We considered ignoring implicit arguments (e.g., `{α : Type}`) since users don't "see" them,
-    and may not even understand why some simplification rule is not firing.
-    However, in type class resolution, we have instance such as `Decidable (@Eq Nat x y)`,
-    where `Nat` is an implicit argument. Thus, we would add the path
-    ```
-    Decidable -> Eq -> * -> * -> * -> [Nat.decEq]
-    ```
-    to the discrimination tree IF we ignored the implicit `Nat` argument.
-    This would be BAD since **ALL** decidable equality instances would be in the same path.
-    So, we index implicit arguments if they are types.
-    This setting seems sensible for simplification theorems such as:
-    ```
-    forall (x y : Unit), (@Eq Unit x y) = true
-    ```
-    If we ignore the implicit argument `Unit`, the `DiscrTree` will say it is a candidate
-    simplification theorem for any equality in our goal.
+- We considered ignoring implicit arguments (e.g., `{α : Type}`) since users don't "see" them,
+  and may not even understand why some simplification rule is not firing.
+  However, in type class resolution, we have instance such as `Decidable (@Eq Nat x y)`,
+  where `Nat` is an implicit argument. Thus, we would add the path
+  ```
+  Decidable -> Eq -> * -> * -> * -> [Nat.decEq]
+  ```
+  to the discrimination tree IF we ignored the implicit `Nat` argument.
+  This would be BAD since **ALL** decidable equality instances would be in the same path.
+  So, we index implicit arguments if they are types.
+  This setting seems sensible for simplification theorems such as:
+  ```
+  forall (x y : Unit), (@Eq Unit x y) = true
+  ```
+  If we ignore the implicit argument `Unit`, the `DiscrTree` will say it is a candidate
+  simplification theorem for any equality in our goal.
 
-  Remark: if users have problems with the solution above, we may provide a `noIndexing` annotation,
-  and `ignoreArg` would return true for any term of the form `noIndexing t`.
+Remark: if users have problems with the solution above, we may provide a `noIndexing` annotation,
+and `ignoreArg` would return true for any term of the form `noIndexing t`.
 -/
 private def ignoreArg (a : Expr) (i : Nat) (infos : Array ParamInfo) : MetaM Bool := do
   if h : i < infos.size then
@@ -113,31 +116,40 @@ private def ignoreArg (a : Expr) (i : Nat) (infos : Array ParamInfo) : MetaM Boo
   else
     isProof a
 
-private partial def pushArgsAux (infos : Array ParamInfo) : Nat → Expr → Array Expr → MetaM (Array Expr)
+private partial def pushArgsAux (infos : Array ParamInfo)
+    : Nat → Expr → Array Expr → MetaM (Array Expr)
   | i, .app f a, todo => do
     if (← ignoreArg a i infos) then
-      pushArgsAux infos (i-1) f (todo.push tmpStar)
+      pushArgsAux infos (i - 1) f (todo.push tmpStar)
     else
-      pushArgsAux infos (i-1) f (todo.push a)
-  | _, _, todo => return todo
+      pushArgsAux infos (i - 1) f (todo.push a)
+  | _, _, todo =>
+    return todo
 
 /--
-  Return true if `e` is one of the following
-  - A nat literal (numeral)
-  - `Nat.zero`
-  - `Nat.succ x` where `isNumeral x`
-  - `OfNat.ofNat _ x _` where `isNumeral x` -/
+Return true if `e` is one of the following
+- A nat literal (numeral)
+- `Nat.zero`
+- `Nat.succ x` where `isNumeral x`
+- `OfNat.ofNat _ x _` where `isNumeral x`
+-/
 private partial def isNumeral (e : Expr) : Bool :=
-  if e.isRawNatLit then true
+  if e.isRawNatLit then
+    true
   else
     let f := e.getAppFn
-    if !f.isConst then false
+    if !f.isConst then
+      false
     else
       let fName := f.constName!
-      if fName == ``Nat.succ && e.getAppNumArgs == 1 then isNumeral e.appArg!
-      else if fName == ``OfNat.ofNat && e.getAppNumArgs == 3 then isNumeral (e.getArg! 1)
-      else if fName == ``Nat.zero && e.getAppNumArgs == 0 then true
-      else false
+      if fName == ``Nat.succ && e.getAppNumArgs == 1 then
+        isNumeral e.appArg!
+      else if fName == ``OfNat.ofNat && e.getAppNumArgs == 3 then
+        isNumeral (e.getArg! 1)
+      else if fName == ``Nat.zero && e.getAppNumArgs == 0 then
+        true
+      else
+        false
 
 private partial def toNatLit? (e : Expr) : Option Literal :=
   if isNumeral e then
@@ -151,29 +163,30 @@ where
   loop (e : Expr) : OptionT Id Nat := do
     let f := e.getAppFn
     match f with
-    | .lit (.natVal n) => return n
+    | .lit (.natVal n) =>
+      return n
     | .const fName .. =>
       if fName == ``Nat.succ && e.getAppNumArgs == 1 then
         let r ← loop e.appArg!
-        return r+1
+        return r + 1
       else if fName == ``OfNat.ofNat && e.getAppNumArgs == 3 then
         loop (e.getArg! 1)
       else if fName == ``Nat.zero && e.getAppNumArgs == 0 then
         return 0
       else
         failure
-    | _ => failure
+    | _ =>
+      failure
 
-private def isNatType (e : Expr) : MetaM Bool :=
-  return (← whnf e).isConstOf ``Nat
+private def isNatType (e : Expr) : MetaM Bool := return (← whnf e).isConstOf ``Nat
 
 /--
-  Return true if `e` is one of the following
-  - `Nat.add _ k` where `isNumeral k`
-  - `Add.add Nat _ _ k` where `isNumeral k`
-  - `HAdd.hAdd _ Nat _ _ k` where `isNumeral k`
-  - `Nat.succ _`
-  This function assumes `e.isAppOf fName`
+Return true if `e` is one of the following
+- `Nat.add _ k` where `isNumeral k`
+- `Add.add Nat _ _ k` where `isNumeral k`
+- `HAdd.hAdd _ Nat _ _ k` where `isNumeral k`
+- `Nat.succ _`
+This function assumes `e.isAppOf fName`
 -/
 private def isOffset (fName : Name) (e : Expr) : MetaM Bool := do
   if fName == ``Nat.add && e.getAppNumArgs == 2 then
@@ -186,73 +199,70 @@ private def isOffset (fName : Name) (e : Expr) : MetaM Bool := do
     return fName == ``Nat.succ && e.getAppNumArgs == 1
 
 /--
-  TODO: add hook for users adding their own functions for controlling `shouldAddAsStar`
-  Different `DiscrTree` users may populate this set using, for example, attributes.
+TODO: add hook for users adding their own functions for controlling `shouldAddAsStar`
+Different `DiscrTree` users may populate this set using, for example, attributes.
 
-  Remark: we currently tag "offset" terms as star to avoid having to add special
-  support for offset terms.
-  Example, suppose the discrimination tree contains the entry
-  `Nat.succ ?m |-> v`, and we are trying to retrieve the matches for `Expr.lit (Literal.natVal 1) _`.
-  In this scenario, we want to retrieve `Nat.succ ?m |-> v`
+Remark: we currently tag "offset" terms as star to avoid having to add special
+support for offset terms.
+Example, suppose the discrimination tree contains the entry
+`Nat.succ ?m |-> v`, and we are trying to retrieve the matches for `Expr.lit (Literal.natVal 1) _`.
+In this scenario, we want to retrieve `Nat.succ ?m |-> v`
 -/
-private def shouldAddAsStar (fName : Name) (e : Expr) : MetaM Bool := do
-  isOffset fName e
+private def shouldAddAsStar (fName : Name) (e : Expr) : MetaM Bool := do isOffset fName e
 
-/--
-Reduction procedure for the discrimination tree indexing.
--/
+/-- Reduction procedure for the discrimination tree indexing. -/
 partial def reduce (e : Expr) : MetaM Expr := do
   let e ← whnfCore e
   match (← unfoldDefinition? e) with
-  | some e => reduce e
-  | none => match e.etaExpandedStrict? with
+  | some e =>
+    reduce e
+  | none =>
+    match e.etaExpandedStrict? with
     | some e => reduce e
-    | none   => return e
+    | none => return e
 
 /--
-  Return `true` if `fn` is a "bad" key. That is, `pushArgs` would add `Key.other` or `Key.star`.
-  We use this function when processing "root terms, and will avoid unfolding terms.
-  Note that without this trick the pattern `List.map f ∘ List.map g` would be mapped into the key `Key.other`
-  since the function composition `∘` would be unfolded and we would get `fun x => List.map g (List.map f x)`
+Return `true` if `fn` is a "bad" key. That is, `pushArgs` would add `Key.other` or `Key.star`.
+We use this function when processing "root terms, and will avoid unfolding terms.
+Note that without this trick the pattern `List.map f ∘ List.map g` would be mapped into the key `Key.other`
+since the function composition `∘` would be unfolded and we would get `fun x => List.map g (List.map f x)`
 -/
 private def isBadKey (fn : Expr) : Bool :=
   match fn with
-  | .lit ..     => false
-  | .const ..   => false
-  | .fvar ..    => false
-  | .proj ..    => false
+  | .lit .. => false
+  | .const .. => false
+  | .fvar .. => false
+  | .proj .. => false
   | .forallE .. => false
-  | _           => true
+  | _ => true
 
 /--
 Reduce `e` until we get an irreducible term (modulo current reducibility setting) or the resulting term
 is a bad key (see comment at `isBadKey`).
-We use this method instead of `reduce` for root terms at `pushArgs`. -/
+We use this method instead of `reduce` for root terms at `pushArgs`.
+-/
 private partial def reduceUntilBadKey (e : Expr) : MetaM Expr := do
   let e ← step e
   match e.etaExpandedStrict? with
   | some e => reduceUntilBadKey e
-  | none   => return e
+  | none => return e
 where
   step (e : Expr) := do
     let e ← whnfCore e
     match (← unfoldDefinition? e) with
     | some e' => if isBadKey e'.getAppFn then return e else step e'
-    | none    => return e
+    | none => return e
 
 /-- whnf for the discrimination tree module -/
-def reduceDT (e : Expr) (root : Bool) : MetaM Expr :=
-  if root then reduceUntilBadKey e else reduce e
+def reduceDT (e : Expr) (root : Bool) : MetaM Expr := if root then reduceUntilBadKey e else reduce e
 
 /- Remark: we use `shouldAddAsStar` only for nested terms, and `root == false` for nested terms -/
 
-/--
-Append `n` wildcards to `todo`
--/
+/-- Append `n` wildcards to `todo` -/
 private def pushWildcards (n : Nat) (todo : Array Expr) : Array Expr :=
   match n with
-  | 0   => todo
-  | n+1 => pushWildcards n (todo.push tmpStar)
+  | 0 => todo
+  | n + 1 => pushWildcards n (todo.push tmpStar)
 
 /--
 When `noIndexAtArgs := true`, `pushArgs` assumes function application arguments have a `no_index` annotation.
@@ -264,21 +274,23 @@ In this issue, we have a local hypotheses `(h : ∀ p : α × β, f p p.2 = p.2)
 For example, it was introduced by another tactic. Thus, when populating the discrimination tree explicit arguments provided to `simp` (e.g., `simp [h]`),
 we use `noIndexAtArgs := true`. See comment: https://github.com/leanprover/lean4/issues/2670#issuecomment-1758889365
 -/
-private def pushArgs (root : Bool) (todo : Array Expr) (e : Expr) (noIndexAtArgs : Bool) : MetaM (Key × Array Expr) := do
+private def pushArgs (root : Bool) (todo : Array Expr) (e : Expr) (noIndexAtArgs : Bool)
+    : MetaM (Key × Array Expr) := do
   if hasNoindexAnnotation e then
     return (.star, todo)
   else
     let e ← reduceDT e root
     let fn := e.getAppFn
-    let push (k : Key) (nargs : Nat) (todo : Array Expr): MetaM (Key × Array Expr) := do
+    let push (k : Key) (nargs : Nat) (todo : Array Expr) : MetaM (Key × Array Expr) := do
       let info ← getFunInfoNArgs fn nargs
-      let todo ← if noIndexAtArgs then
-        pure <| pushWildcards nargs todo
-      else
-        pushArgsAux info.paramInfo (nargs-1) e todo
+      let todo ←
+        if noIndexAtArgs then
+          pure <| pushWildcards nargs todo
+        else
+          pushArgsAux info.paramInfo (nargs - 1) e todo
       return (k, todo)
     match fn with
-    | .lit v     =>
+    | .lit v =>
       return (.lit v, todo)
     | .const c _ =>
       unless root do
@@ -298,10 +310,10 @@ private def pushArgs (root : Bool) (todo : Array Expr) (e : Expr) (noIndexAtArgs
       let a := if isClass (← getEnv) s then mkNoindexAnnotation a else a
       let nargs := e.getAppNumArgs
       push (.proj s i nargs) nargs (todo.push a)
-    | .fvar fvarId   =>
+    | .fvar fvarId =>
       let nargs := e.getAppNumArgs
       push (.fvar fvarId nargs) nargs todo
-    | .mvar mvarId   =>
+    | .mvar mvarId =>
       if mvarId == tmpMVarId then
         -- We use `tmp to mark implicit arguments and proofs
         return (.star, todo)
@@ -311,14 +323,16 @@ private def pushArgs (root : Bool) (todo : Array Expr) (e : Expr) (noIndexAtArgs
         return (.star, todo)
     | .forallE _n d _ _ =>
       return (.arrow, todo.push d)
-    | _ => return (.other, todo)
+    | _ =>
+      return (.other, todo)
 
 @[inherit_doc pushArgs]
-partial def mkPathAux (root : Bool) (todo : Array Expr) (keys : Array Key) (noIndexAtArgs : Bool) : MetaM (Array Key) := do
+partial def mkPathAux (root : Bool) (todo : Array Expr) (keys : Array Key) (noIndexAtArgs : Bool)
+    : MetaM (Array Key) := do
   if todo.isEmpty then
     return keys
   else
-    let e    := todo.back!
+    let e := todo.back!
     let todo := todo.pop
     let (k, todo) ← pushArgs root todo e noIndexAtArgs
     mkPathAux false todo (keys.push k) noIndexAtArgs
@@ -332,7 +346,8 @@ def mkPath (e : Expr) (noIndexAtArgs := false) : MetaM (Array Key) := do
     let keys : Array Key := .mkEmpty initCapacity
     mkPathAux (root := true) (todo.push e) keys noIndexAtArgs
 
-def insert [BEq α] (d : DiscrTree α) (e : Expr) (v : α) (noIndexAtArgs := false) : MetaM (DiscrTree α) := do
+def insert [BEq α] (d : DiscrTree α) (e : Expr) (v : α) (noIndexAtArgs := false)
+    : MetaM (DiscrTree α) := do
   let keys ← mkPath e noIndexAtArgs
   return d.insertKeyValue keys v
 
@@ -340,7 +355,8 @@ def insert [BEq α] (d : DiscrTree α) (e : Expr) (v : α) (noIndexAtArgs := fal
 Inserts a value into a discrimination tree,
 but only if its key is not of the form `#[*]` or `#[=, *, *, *]`.
 -/
-def insertIfSpecific [BEq α] (d : DiscrTree α) (e : Expr) (v : α) (noIndexAtArgs := false) : MetaM (DiscrTree α) := do
+def insertIfSpecific [BEq α] (d : DiscrTree α) (e : Expr) (v : α) (noIndexAtArgs := false)
+    : MetaM (DiscrTree α) := do
   let keys ← mkPath e noIndexAtArgs
   if keys == #[Key.star] || keys == #[Key.const `Eq 3, Key.star, Key.star, Key.star] then
     return d
@@ -354,61 +370,68 @@ private def getKeyArgs (e : Expr) (isMatch root : Bool) : MetaM (Key × Array Ex
     if let some v := toNatLit? e then
       return (.lit v, #[])
   match e.getAppFn with
-  | .lit v         => return (.lit v, #[])
-  | .const c _     =>
+  | .lit v =>
+    return (.lit v, #[])
+  | .const c _ =>
     if (← getConfig).isDefEqStuckEx && e.hasExprMVar then
       if (← isReducible c) then
-        /- `e` is a term `c ...` s.t. `c` is reducible and `e` has metavariables, but it was not unfolded.
-           This can happen if the metavariables in `e` are "blocking" smart unfolding.
-           If `isDefEqStuckEx` is enabled, then we must throw the `isDefEqStuck` exception to postpone TC resolution.
-           Here is an example. Suppose we have
-           ```
-            inductive Ty where
-              | bool | fn (a ty : Ty)
+        /-
+        `e` is a term `c ...` s.t. `c` is reducible and `e` has metavariables, but it was not unfolded.
+        This can happen if the metavariables in `e` are "blocking" smart unfolding.
+        If `isDefEqStuckEx` is enabled, then we must throw the `isDefEqStuck` exception to postpone TC resolution.
+        Here is an example. Suppose we have
+        ```
+         inductive Ty where
+           | bool | fn (a ty : Ty)
 
 
-            @[reducible] def Ty.interp : Ty → Type
-              | bool   => Bool
-              | fn a b => a.interp → b.interp
-           ```
-           and we are trying to synthesize `BEq (Ty.interp ?m)`
+         @[reducible] def Ty.interp : Ty → Type
+           | bool   => Bool
+           | fn a b => a.interp → b.interp
+        ```
+        and we are trying to synthesize `BEq (Ty.interp ?m)`
         -/
         Meta.throwIsDefEqStuck
       else if let some matcherInfo := isMatcherAppCore? (← getEnv) e then
         -- A matcher application is stuck is one of the discriminants has a metavariable
         let args := e.getAppArgs
-        for arg in args[matcherInfo.getFirstDiscrPos...(matcherInfo.getFirstDiscrPos + matcherInfo.numDiscrs)] do
+        for arg
+            in args[matcherInfo.getFirstDiscrPos
+              ...(matcherInfo.getFirstDiscrPos + matcherInfo.numDiscrs)] do
           if arg.hasExprMVar then
             Meta.throwIsDefEqStuck
       else if (← isRec c) then
-        /- Similar to the previous case, but for `match` and recursor applications. It may be stuck (i.e., did not reduce)
-           because of metavariables. -/
+        /-
+        Similar to the previous case, but for `match` and recursor applications. It may be stuck (i.e., did not reduce)
+        because of metavariables.
+        -/
         Meta.throwIsDefEqStuck
     let nargs := e.getAppNumArgs
     return (.const c nargs, e.getAppRevArgs)
-  | .fvar fvarId   =>
+  | .fvar fvarId =>
     let nargs := e.getAppNumArgs
     return (.fvar fvarId nargs, e.getAppRevArgs)
-  | .mvar mvarId   =>
+  | .mvar mvarId =>
     if isMatch then
       return (.other, #[])
     else do
       let cfg ← getConfig
       if cfg.isDefEqStuckEx then
         /-
-          When the configuration flag `isDefEqStuckEx` is set to true,
-          we want `isDefEq` to throw an exception whenever it tries to assign
-          a read-only metavariable.
-          This feature is useful for type class resolution where
-          we may want to notify the caller that the TC problem may be solvable
-          later after it assigns `?m`.
-          The method `DiscrTree.getUnify e` returns candidates `c` that may "unify" with `e`.
-          That is, `isDefEq c e` may return true. Now, consider `DiscrTree.getUnify d (Add ?m)`
-          where `?m` is a read-only metavariable, and the discrimination tree contains the keys
-          `HadAdd Nat` and `Add Int`. If `isDefEqStuckEx` is set to true, we must treat `?m` as
-          a regular metavariable here, otherwise we return the empty set of candidates.
-          This is incorrect because it is equivalent to saying that there is no solution even if
-          the caller assigns `?m` and try again. -/
+        When the configuration flag `isDefEqStuckEx` is set to true,
+        we want `isDefEq` to throw an exception whenever it tries to assign
+        a read-only metavariable.
+        This feature is useful for type class resolution where
+        we may want to notify the caller that the TC problem may be solvable
+        later after it assigns `?m`.
+        The method `DiscrTree.getUnify e` returns candidates `c` that may "unify" with `e`.
+        That is, `isDefEq c e` may return true. Now, consider `DiscrTree.getUnify d (Add ?m)`
+        where `?m` is a read-only metavariable, and the discrimination tree contains the keys
+        `HadAdd Nat` and `Add Int`. If `isDefEqStuckEx` is set to true, we must treat `?m` as
+        a regular metavariable here, otherwise we return the empty set of candidates.
+        This is incorrect because it is equivalent to saying that there is no solution even if
+        the caller assigns `?m` and try again.
+        -/
         return (.star, #[])
       else if (← mvarId.isReadOnlyOrSyntheticOpaque) then
         return (.other, #[])
@@ -417,8 +440,10 @@ private def getKeyArgs (e : Expr) (isMatch root : Bool) : MetaM (Key × Array Ex
   | .proj s i a .. =>
     let nargs := e.getAppNumArgs
     return (.proj s i nargs, #[a] ++ e.getAppRevArgs)
-  | .forallE _ d _ _ => return (.arrow, #[d])
-  | _ => return (.other, #[])
+  | .forallE _ d _ _ =>
+    return (.arrow, #[d])
+  | _ =>
+    return (.other, #[])
 
 private abbrev getMatchKeyArgs (e : Expr) (root : Bool) : MetaM (Key × Array Expr) :=
   getKeyArgs e (isMatch := true) (root := root)
@@ -435,14 +460,15 @@ private def getStarResult (d : DiscrTree α) : Array α :=
 private abbrev findKey (cs : Array (Key × Trie α)) (k : Key) : Option (Key × Trie α) :=
   cs.binSearch (k, default) (fun a b => a.1 < b.1)
 
-private partial def getMatchLoop (todo : Array Expr) (c : Trie α) (result : Array α) : MetaM (Array α) := do
+private partial def getMatchLoop (todo : Array Expr) (c : Trie α) (result : Array α)
+    : MetaM (Array α) := do
   match c with
   | .chain key child =>
     if todo.isEmpty then
       return result
     else
-      let e     := todo.back!
-      let todo  := todo.pop
+      let e := todo.back!
+      let todo := todo.pop
       let (k, args) ← getMatchKeyArgs e (root := false)
       if key == .star then
         getMatchLoop todo child result
@@ -451,20 +477,21 @@ private partial def getMatchLoop (todo : Array Expr) (c : Trie α) (result : Arr
           getMatchLoop (todo ++ args) child result
         else
           return result
-
   | .node vs cs =>
     if todo.isEmpty then
       return result ++ vs
     else if cs.isEmpty then
       return result
     else
-      let e     := todo.back!
-      let todo  := todo.pop
+      let e := todo.back!
+      let todo := todo.pop
       let first := cs[0]! /- Recall that `Key.star` is the minimal key -/
       let (k, args) ← getMatchKeyArgs e (root := false)
-      /- We must always visit `Key.star` edges since they are wildcards.
-         Thus, `todo` is not used linearly when there is `Key.star` edge
-         and there is an edge for `k` and `k != Key.star`. -/
+      /-
+      We must always visit `Key.star` edges since they are wildcards.
+      Thus, `todo` is not used linearly when there is `Key.star` edge
+      and there is an edge for `k` and `k != Key.star`.
+      -/
       let visitStar (result : Array α) : MetaM (Array α) :=
         if first.1 == .star then
           getMatchLoop todo first.2 result
@@ -472,16 +499,17 @@ private partial def getMatchLoop (todo : Array Expr) (c : Trie α) (result : Arr
           return result
       let visitNonStar (k : Key) (args : Array Expr) (result : Array α) : MetaM (Array α) :=
         match findKey cs k with
-        | none   => return result
+        | none => return result
         | some c => getMatchLoop (todo ++ args) c.2 result
       let result ← visitStar result
       match k with
-      | .star  => return result
-      | _      => visitNonStar k args result
+      | .star => return result
+      | _ => visitNonStar k args result
 
-private def getMatchRoot (d : DiscrTree α) (k : Key) (args : Array Expr) (result : Array α) : MetaM (Array α) :=
+private def getMatchRoot (d : DiscrTree α) (k : Key) (args : Array Expr) (result : Array α)
+    : MetaM (Array α) :=
   match d.root.find? k with
-  | none   => return result
+  | none => return result
   | some c => getMatchLoop args c result
 
 private def getMatchCore (d : DiscrTree α) (e : Expr) : MetaM (Key × Array α) :=
@@ -489,18 +517,16 @@ private def getMatchCore (d : DiscrTree α) (e : Expr) : MetaM (Key × Array α)
     let result := getStarResult d
     let (k, args) ← getMatchKeyArgs e (root := true)
     match k with
-    | .star  => return (k, result)
-    | _      => return (k, (← getMatchRoot d k args result))
+    | .star => return (k, result)
+    | _ => return (k, (← getMatchRoot d k args result))
+
+/-- Find values that match `e` in `d`. -/
+def getMatch (d : DiscrTree α) (e : Expr) : MetaM (Array α) := return (← getMatchCore d e).2
 
 /--
-  Find values that match `e` in `d`.
+Similar to `getMatch`, but returns solutions that are prefixes of `e`.
+We store the number of ignored arguments in the result.
 -/
-def getMatch (d : DiscrTree α) (e : Expr) : MetaM (Array α) :=
-  return (← getMatchCore d e).2
-
-/--
-  Similar to `getMatch`, but returns solutions that are prefixes of `e`.
-  We store the number of ignored arguments in the result.-/
 partial def getMatchWithExtra (d : DiscrTree α) (e : Expr) : MetaM (Array (α × Nat)) := do
   let (k, result) ← getMatchCore d e
   let result := result.map (·, 0)
@@ -518,10 +544,10 @@ where
       else
         mayMatchPrefix k
     match k with
-    | .const f (n+1)  => cont (.const f n)
-    | .fvar f (n+1)   => cont (.fvar f n)
-    | .proj s i (n+1) => cont (.proj s i n)
-    | _               => return false
+    | .const f (n + 1) => cont (.const f n)
+    | .fvar f (n + 1) => cont (.fvar f n)
+    | .proj s i (n + 1) => cont (.proj s i n)
+    | _ => return false
 
   go (e : Expr) (numExtra : Nat) (result : Array (α × Nat)) : MetaM (Array (α × Nat)) := do
     let result := result ++ (← getMatchCore d e).2.map (., numExtra)
@@ -530,36 +556,40 @@ where
     else
       return result
 
-/--
-Return the root symbol for `e`, and the number of arguments after `reduceDT`.
--/
+/-- Return the root symbol for `e`, and the number of arguments after `reduceDT`. -/
 def getMatchKeyRootFor (e : Expr) : MetaM (Key × Nat) := do
   let e ← reduceDT e (root := true)
   let numArgs := e.getAppNumArgs
-  let key := match e.getAppFn with
-    | .lit v         => .lit v
-    | .fvar fvarId   => .fvar fvarId numArgs
-    | .mvar _        => .other
-    | .proj s i _ .. => .proj s i numArgs
-    | .forallE ..    => .arrow
-    | .const c _     =>
+  let key :=
+    match e.getAppFn with
+    | .lit v =>
+      .lit v
+    | .fvar fvarId =>
+      .fvar fvarId numArgs
+    | .mvar _ =>
+      .other
+    | .proj s i _ .. =>
+      .proj s i numArgs
+    | .forallE .. =>
+      .arrow
+    | .const c _ =>
       -- This method is used by the simplifier only, we do **not** support
       -- (← getConfig).isDefEqStuckEx
       .const c numArgs
-    | _ => .other
+    | _ =>
+      .other
   return (key, numArgs)
 
-/--
-Get all results under key `k`.
--/
+/-- Get all results under key `k`. -/
 private partial def getAllValuesForKey (d : DiscrTree α) (k : Key) (result : Array α) : Array α :=
   match d.root.find? k with
-  | none      => result
+  | none => result
   | some trie => go trie result
 where
   go (trie : Trie α) (result : Array α) : Array α := Id.run do
     match trie with
-    | .chain _ c => go c result
+    | .chain _ c =>
+      go c result
     | .node vs cs =>
       let mut result := result ++ vs
       for (_, trie) in cs do
@@ -577,25 +607,26 @@ def getMatchLiberal (d : DiscrTree α) (e : Expr) : MetaM (Array α × Nat) := d
     let result := getStarResult d
     let (k, numArgs) ← getMatchKeyRootFor e
     match k with
-    | .star  => return (result, numArgs)
-    | _      => return (getAllValuesForKey d k result, numArgs)
+    | .star => return (result, numArgs)
+    | _ => return (getAllValuesForKey d k result, numArgs)
 
 partial def getUnify (d : DiscrTree α) (e : Expr) : MetaM (Array α) :=
   withReducible do
     let (k, args) ← getUnifyKeyArgs e (root := true)
     match k with
-    | .star => d.root.foldlM (init := #[]) fun result k c => process k.arity #[] c result
+    | .star =>
+      d.root.foldlM (init := #[]) fun result k c => process k.arity #[] c result
     | _ =>
       let result := getStarResult d
       match d.root.find? k with
-      | none   => return result
+      | none => return result
       | some c => process 0 args c result
 where
   process (skip : Nat) (todo : Array Expr) (c : Trie α) (result : Array α) : MetaM (Array α) := do
     match skip, c with
-    | skip+1, .chain key child =>
+    | skip + 1, .chain key child =>
       process (skip + key.arity) todo child result
-    | skip+1, .node _  cs =>
+    | skip + 1, .node _ cs =>
       if cs.isEmpty then
         return result
       else
@@ -607,8 +638,8 @@ where
       if cs.isEmpty then
         return result
       else
-        let e     := todo.back!
-        let todo  := todo.pop
+        let e := todo.back!
+        let todo := todo.pop
         let (k, args) ← getUnifyKeyArgs e (root := false)
         let visitStar (result : Array α) : MetaM (Array α) :=
           let first := cs[0]!
@@ -618,10 +649,10 @@ where
             return result
         let visitNonStar (k : Key) (args : Array Expr) (result : Array α) : MetaM (Array α) :=
           match findKey cs k with
-          | none   => return result
+          | none => return result
           | some c => process 0 (todo ++ args) c.2 result
         match k with
-        | .star  => cs.foldlM (init := result) fun result ⟨k, c⟩ => process k.arity todo c result
-        | _      => visitNonStar k args (← visitStar result)
+        | .star => cs.foldlM (init := result) fun result ⟨k, c⟩ => process k.arity todo c result
+        | _ => visitNonStar k args (← visitStar result)
 
 end Lean.Meta.DiscrTree

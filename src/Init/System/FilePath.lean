@@ -30,7 +30,7 @@ delimited by a platform-dependent separator character (see `System.FilePath.path
 structure FilePath where
   /-- The string representation of the path. -/
   toString : String
-  deriving Inhabited, DecidableEq, Hashable
+deriving Inhabited, DecidableEq, Hashable
 
 instance : Repr FilePath where
   reprPrec p := Repr.addAppParen ("FilePath.mk " ++ repr p.toString)
@@ -46,8 +46,7 @@ The character that separates directories.
 On platforms that support multiple separators, `System.FilePath.pathSeparator` is the “ideal” one expected by users
 on the platform. `System.FilePath.pathSeparators` lists all supported separators.
 -/
-def pathSeparator : Char :=
-  if isWindows then '\\' else '/'
+def pathSeparator : Char := if isWindows then '\\' else '/'
 
 /--
 The list of all path separator characters supported on the current platform.
@@ -55,20 +54,16 @@ The list of all path separator characters supported on the current platform.
 On platforms that support multiple separators, `System.FilePath.pathSeparator` is the “ideal” one
 expected by users on the platform.
 -/
-def pathSeparators : List Char :=
-  if isWindows then ['\\', '/'] else ['/']
+def pathSeparators : List Char := if isWindows then ['\\', '/'] else ['/']
 
-/--
-The character that separates file extensions from file names.
--/
+/-- The character that separates file extensions from file names. -/
 def extSeparator : Char := '.'
 
 /--
 The file extension expected for executable binaries on the current platform, or `""` if there is no
 such extension.
 -/
-def exeExtension : String :=
-  if isWindows then "exe" else ""
+def exeExtension : String := if isWindows then "exe" else ""
 
 /--
 Normalizes a path, returning an equivalent path that may better follow platform conventions.
@@ -108,14 +103,14 @@ An absolute path starts at the root directory or a drive letter. Accessing files
 path does not depend on the current working directory.
 -/
 def isAbsolute (p : FilePath) : Bool := Id.run do
-  pathSeparators.contains p.toString.front || (isWindows && p.toString.chars.atIdxSlow? 1 == some ':')
+  pathSeparators.contains p.toString.front
+    || (isWindows && p.toString.chars.atIdxSlow? 1 == some ':')
 
 /--
 A relative path is one that depends on the current working directory for interpretation. Relative
 paths do not start with the root directory or a drive letter.
 -/
-def isRelative (p : FilePath) : Bool :=
-  !p.isAbsolute
+def isRelative (p : FilePath) : Bool := !p.isAbsolute
 
 /--
 Appends two paths, taking absolute paths into account. This operation is also accessible via the `/`
@@ -175,9 +170,10 @@ Returns `none` if the last entry is a special name (such as `.` or `..`) or if t
 directory.
 -/
 def fileName (p : FilePath) : Option String :=
-  let lastPart := match posOfLastSep p with
+  let lastPart :=
+    match posOfLastSep p with
     | some sepPos => (String.sliceFrom _ sepPos.next!).copy
-    | none        => p.toString
+    | none => p.toString
   if lastPart.isEmpty || lastPart == "." || lastPart == ".." then none else some lastPart
 
 /--
@@ -197,7 +193,7 @@ def fileStem (p : FilePath) : Option String :=
     match fname.revFind? '.' |>.map String.Pos.offset with
     | some ⟨0⟩ => fname
     | some pos => String.Pos.Raw.extract fname 0 pos
-    | none     => fname
+    | none => fname
 
 /--
 Extracts the extension part of `p.fileName`.
@@ -214,9 +210,9 @@ Examples:
 def extension (p : FilePath) : Option String :=
   p.fileName.bind fun fname =>
     match fname.revFind? '.' |>.map String.Pos.offset with
-    | some 0   => none
+    | some 0 => none
     | some pos => some <| String.Pos.Raw.extract fname (pos + '.') fname.rawEndPos
-    | none     => none
+    | none => none
 
 /--
 Replaces the file name at the end of the path `p` with `fname`, placing `fname` in the parent
@@ -260,9 +256,7 @@ def withExtension (p : FilePath) (ext : String) : FilePath :=
   | none => p
   | some stem => p.withFileName (if ext.isEmpty then stem else stem ++ "." ++ ext)
 
-/--
-Splits a path into a list of individual file names at the platform-specific path separator.
--/
+/-- Splits a path into a list of individual file names at the platform-specific path separator. -/
 def components (p : FilePath) : List String :=
   p.normalize |>.toString.split pathSeparator.toString |>.toStringList
 
@@ -287,8 +281,7 @@ The character that is used to separate the entries in the `$PATH` (or `%PATH%`) 
 
 This value is platform dependent.
 -/
-protected def separator : Char :=
-  if isWindows then ';' else ':'
+protected def separator : Char := if isWindows then ';' else ':'
 
 /--
 Separates the entries in the `$PATH` (or `%PATH%`) environment variable by the current

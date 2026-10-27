@@ -30,6 +30,5 @@ The monadic version of this iterator is `List.iterM`.
 * `Productive` instance: always
 -/
 @[cbv_opaque, always_inline, inline]
-def List.iter {α : Type w} (l : List α) :
-    Iter (α := ListIterator α) α :=
+def List.iter {α : Type w} (l : List α) : Iter (α := ListIterator α) α :=
   ((l.iterM Id).toIter : Iter α)

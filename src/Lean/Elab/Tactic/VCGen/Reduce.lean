@@ -16,7 +16,6 @@ open Lean Meta Sym Sym.Internal
 
 namespace Lean.Elab.Tactic.VCGen
 
-
 /-!
 SymM-level head-redex reducer used throughout VCGen.
 -/
@@ -26,9 +25,11 @@ Like `Meta.reduceProj?` but also `Sym.unfoldReducible`s the projected field when
 reduced the structure. Transparency is the caller's choice.
 -/
 def reduceProjAndUnfold? (e : Expr) : MetaM (Option Expr) := do
-  let .proj _ idx s := e | return none
+  let .proj _ idx s := e
+    | return none
   let s' ← Lean.Meta.whnf s
-  let some f ← Lean.Meta.projectCore? s' idx | return none
+  let some f ← Lean.Meta.projectCore? s' idx
+    | return none
   if isSameExpr s s' then return some f else return some (← Sym.unfoldReducible f)
 
 /--
@@ -47,37 +48,41 @@ sharing builders and `shareCommonInc`, and the SymM no-exposed-reducibles invari
 -/
 public partial def reduceHead? (e : Expr) : SymM (Option Expr) :=
   withReducible <| go none e.getAppFn e.getAppRevArgs
-  where
-    go lastReduction f rargs := do
-      match f with
-      | .mdata _ f => go lastReduction f rargs
-      | .app f a => go lastReduction f (rargs.push a)
-      | .lam .. =>
-        if rargs.size = 0 then return lastReduction
-        let e' ← betaRevS f rargs
+where
+  go lastReduction f rargs := do
+    match f with
+    | .mdata _ f =>
+      go lastReduction f rargs
+    | .app f a =>
+      go lastReduction f (rargs.push a)
+    | .lam .. =>
+      if rargs.size = 0 then return lastReduction
+      let e' ← betaRevS f rargs
+      go (some e') e'.getAppFn e'.getAppRevArgs
+    | .const name .. =>
+      -- projections
+      if ← isProjectionFn name then
+        let some e' ← Meta.unfoldDefinition? (mkAppRev f rargs)
+          | return lastReduction
+        let e' ← Sym.shareCommonInc e'
+        go lastReduction e'.getAppFn e'.getAppRevArgs -- intentional lastReduction! see docstring
+      -- iota reduction: match/recursor with concrete discriminant
+      else if let some e' ← liftMetaM <| reduceRecMatcher? (mkAppRev f rargs) then
+        let e' ← Sym.shareCommonInc e'
         go (some e') e'.getAppFn e'.getAppRevArgs
-      | .const name .. =>
-        -- projections
-        if ← isProjectionFn name then
-          let some e' ← Meta.unfoldDefinition? (mkAppRev f rargs) | return lastReduction
-          let e' ← Sym.shareCommonInc e'
-          go lastReduction e'.getAppFn e'.getAppRevArgs  -- intentional lastReduction! see docstring
-        -- iota reduction: match/recursor with concrete discriminant
-        else if let some e' ← liftMetaM <| reduceRecMatcher? (mkAppRev f rargs) then
-          let e' ← Sym.shareCommonInc e'
-          go (some e') e'.getAppFn e'.getAppRevArgs
-        else
-          pure lastReduction
-      | .proj .. =>
-        match ← withReducibleAndInstances <| reduceProjAndUnfold? f with
-        | some f' =>
-          let f' ← Sym.shareCommonInc f'
-          let e' ← mkAppRevS f' rargs
-          go (some e') e'.getAppFn e'.getAppRevArgs
-        | none    => pure lastReduction
-      | _ => pure lastReduction
+      else
+        pure lastReduction
+    | .proj .. =>
+      match ← withReducibleAndInstances <| reduceProjAndUnfold? f with
+      | some f' =>
+        let f' ← Sym.shareCommonInc f'
+        let e' ← mkAppRevS f' rargs
+        go (some e') e'.getAppFn e'.getAppRevArgs
+      | none =>
+        pure lastReduction
+    | _ =>
+      pure lastReduction
 
-public def reduceHead (e : Expr) : SymM Expr :=
-  return (← reduceHead? e).getD e
+public def reduceHead (e : Expr) : SymM Expr := return (← reduceHead? e).getD e
 
 end Lean.Elab.Tactic.VCGen

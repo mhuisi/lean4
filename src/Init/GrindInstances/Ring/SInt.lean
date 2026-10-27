@@ -27,11 +27,11 @@ def Int8.intCast : IntCast Int8 where
   intCast x := Int8.ofInt x
 
 attribute [local instance] Int8.intCast in
-theorem Int8.intCast_neg (i : Int) : ((-i : Int) : Int8) = -(i : Int8) :=
-  Int8.ofInt_neg _
+theorem Int8.intCast_neg (i : Int) : ((-i : Int) : Int8) = -(i : Int8) := Int8.ofInt_neg _
 
 attribute [local instance] Int8.intCast in
-theorem Int8.intCast_ofNat (x : Nat) : (OfNat.ofNat (α := Int) x : Int8) = OfNat.ofNat x := Int8.ofInt_eq_ofNat
+theorem Int8.intCast_ofNat (x : Nat) : (OfNat.ofNat (α := Int) x : Int8) = OfNat.ofNat x :=
+  Int8.ofInt_eq_ofNat
 
 attribute [local instance] Int8.natCast Int8.intCast in
 instance : CommRing Int8 where
@@ -55,18 +55,17 @@ instance : CommRing Int8 where
   ofNat_succ x := Int8.ofNat_add x 1
   intCast_neg := Int8.ofInt_neg
   neg_zsmul i x := by
-    change (-i : Int) * x = - (i * x)
+    change (-i : Int) * x = -(i * x)
     simp [Int8.intCast_neg, Int8.neg_mul]
   zsmul_natCast_eq_nsmul n a := congrArg (· * a) (Int8.intCast_ofNat _)
 
-instance : IsCharP Int8 (2 ^ 8) := IsCharP.mk' _ _
-  (ofNat_eq_zero_iff := fun x => by
-    have : OfNat.ofNat x = Int8.ofInt x := rfl
-    rw [this]
-    simp [Int8.ofInt_eq_iff_bmod_eq_toInt,
-      ← Int.dvd_iff_bmod_eq_zero, ← Nat.dvd_iff_mod_eq_zero, Int.ofNat_dvd_right])
-
-
+instance : IsCharP Int8 (2 ^ 8) :=
+  IsCharP.mk' _ _
+    (ofNat_eq_zero_iff := fun x => by
+      have : OfNat.ofNat x = Int8.ofInt x := rfl
+      rw [this]
+      simp [Int8.ofInt_eq_iff_bmod_eq_toInt, ← Int.dvd_iff_bmod_eq_zero, ← Nat.dvd_iff_mod_eq_zero,
+        Int.ofNat_dvd_right])
 
 @[expose, instance_reducible]
 def Int16.natCast : NatCast Int16 where
@@ -77,11 +76,11 @@ def Int16.intCast : IntCast Int16 where
   intCast x := Int16.ofInt x
 
 attribute [local instance] Int16.intCast in
-theorem Int16.intCast_neg (i : Int) : ((-i : Int) : Int16) = -(i : Int16) :=
-  Int16.ofInt_neg _
+theorem Int16.intCast_neg (i : Int) : ((-i : Int) : Int16) = -(i : Int16) := Int16.ofInt_neg _
 
 attribute [local instance] Int16.intCast in
-theorem Int16.intCast_ofNat (x : Nat) : (OfNat.ofNat (α := Int) x : Int16) = OfNat.ofNat x := Int16.ofInt_eq_ofNat
+theorem Int16.intCast_ofNat (x : Nat) : (OfNat.ofNat (α := Int) x : Int16) = OfNat.ofNat x :=
+  Int16.ofInt_eq_ofNat
 
 attribute [local instance] Int16.natCast Int16.intCast in
 instance : CommRing Int16 where
@@ -105,18 +104,17 @@ instance : CommRing Int16 where
   ofNat_succ x := Int16.ofNat_add x 1
   intCast_neg := Int16.ofInt_neg
   neg_zsmul i x := by
-    change (-i : Int) * x = - (i * x)
+    change (-i : Int) * x = -(i * x)
     simp [Int16.intCast_neg, Int16.neg_mul]
   zsmul_natCast_eq_nsmul n a := congrArg (· * a) (Int16.intCast_ofNat _)
 
-instance : IsCharP Int16 (2 ^ 16) := IsCharP.mk' _ _
-  (ofNat_eq_zero_iff := fun x => by
-    have : OfNat.ofNat x = Int16.ofInt x := rfl
-    rw [this]
-    simp [Int16.ofInt_eq_iff_bmod_eq_toInt,
-      ← Int.dvd_iff_bmod_eq_zero, ← Nat.dvd_iff_mod_eq_zero, Int.ofNat_dvd_right])
-
-
+instance : IsCharP Int16 (2 ^ 16) :=
+  IsCharP.mk' _ _
+    (ofNat_eq_zero_iff := fun x => by
+      have : OfNat.ofNat x = Int16.ofInt x := rfl
+      rw [this]
+      simp [Int16.ofInt_eq_iff_bmod_eq_toInt, ← Int.dvd_iff_bmod_eq_zero, ← Nat.dvd_iff_mod_eq_zero,
+        Int.ofNat_dvd_right])
 
 @[expose, instance_reducible]
 def Int32.natCast : NatCast Int32 where
@@ -127,11 +125,11 @@ def Int32.intCast : IntCast Int32 where
   intCast x := Int32.ofInt x
 
 attribute [local instance] Int32.intCast in
-theorem Int32.intCast_neg (i : Int) : ((-i : Int) : Int32) = -(i : Int32) :=
-  Int32.ofInt_neg _
+theorem Int32.intCast_neg (i : Int) : ((-i : Int) : Int32) = -(i : Int32) := Int32.ofInt_neg _
 
 attribute [local instance] Int32.intCast in
-theorem Int32.intCast_ofNat (x : Nat) : (OfNat.ofNat (α := Int) x : Int32) = OfNat.ofNat x := Int32.ofInt_eq_ofNat
+theorem Int32.intCast_ofNat (x : Nat) : (OfNat.ofNat (α := Int) x : Int32) = OfNat.ofNat x :=
+  Int32.ofInt_eq_ofNat
 
 attribute [local instance] Int32.natCast Int32.intCast in
 instance : CommRing Int32 where
@@ -155,18 +153,17 @@ instance : CommRing Int32 where
   ofNat_succ x := Int32.ofNat_add x 1
   intCast_neg := Int32.ofInt_neg
   neg_zsmul i x := by
-    change (-i : Int) * x = - (i * x)
+    change (-i : Int) * x = -(i * x)
     simp [Int32.intCast_neg, Int32.neg_mul]
   zsmul_natCast_eq_nsmul n a := congrArg (· * a) (Int32.intCast_ofNat _)
 
-instance : IsCharP Int32 (2 ^ 32) := IsCharP.mk' _ _
-  (ofNat_eq_zero_iff := fun x => by
-    have : OfNat.ofNat x = Int32.ofInt x := rfl
-    rw [this]
-    simp [Int32.ofInt_eq_iff_bmod_eq_toInt,
-      ← Int.dvd_iff_bmod_eq_zero, ← Nat.dvd_iff_mod_eq_zero, Int.ofNat_dvd_right])
-
-
+instance : IsCharP Int32 (2 ^ 32) :=
+  IsCharP.mk' _ _
+    (ofNat_eq_zero_iff := fun x => by
+      have : OfNat.ofNat x = Int32.ofInt x := rfl
+      rw [this]
+      simp [Int32.ofInt_eq_iff_bmod_eq_toInt, ← Int.dvd_iff_bmod_eq_zero, ← Nat.dvd_iff_mod_eq_zero,
+        Int.ofNat_dvd_right])
 
 @[expose, instance_reducible]
 def Int64.natCast : NatCast Int64 where
@@ -177,11 +174,11 @@ def Int64.intCast : IntCast Int64 where
   intCast x := Int64.ofInt x
 
 attribute [local instance] Int64.intCast in
-theorem Int64.intCast_neg (i : Int) : ((-i : Int) : Int64) = -(i : Int64) :=
-  Int64.ofInt_neg _
+theorem Int64.intCast_neg (i : Int) : ((-i : Int) : Int64) = -(i : Int64) := Int64.ofInt_neg _
 
 attribute [local instance] Int64.intCast in
-theorem Int64.intCast_ofNat (x : Nat) : (OfNat.ofNat (α := Int) x : Int64) = OfNat.ofNat x := Int64.ofInt_eq_ofNat
+theorem Int64.intCast_ofNat (x : Nat) : (OfNat.ofNat (α := Int) x : Int64) = OfNat.ofNat x :=
+  Int64.ofInt_eq_ofNat
 
 attribute [local instance] Int64.natCast Int64.intCast in
 instance : CommRing Int64 where
@@ -205,18 +202,17 @@ instance : CommRing Int64 where
   ofNat_succ x := Int64.ofNat_add x 1
   intCast_neg := Int64.ofInt_neg
   neg_zsmul i x := by
-    change (-i : Int) * x = - (i * x)
+    change (-i : Int) * x = -(i * x)
     simp [Int64.intCast_neg, Int64.neg_mul]
   zsmul_natCast_eq_nsmul n a := congrArg (· * a) (Int64.intCast_ofNat _)
 
-instance : IsCharP Int64 (2 ^ 64) := IsCharP.mk' _ _
-  (ofNat_eq_zero_iff := fun x => by
-    have : OfNat.ofNat x = Int64.ofInt x := rfl
-    rw [this]
-    simp [Int64.ofInt_eq_iff_bmod_eq_toInt,
-      ← Int.dvd_iff_bmod_eq_zero, ← Nat.dvd_iff_mod_eq_zero, Int.ofNat_dvd_right])
-
-
+instance : IsCharP Int64 (2 ^ 64) :=
+  IsCharP.mk' _ _
+    (ofNat_eq_zero_iff := fun x => by
+      have : OfNat.ofNat x = Int64.ofInt x := rfl
+      rw [this]
+      simp [Int64.ofInt_eq_iff_bmod_eq_toInt, ← Int.dvd_iff_bmod_eq_zero, ← Nat.dvd_iff_mod_eq_zero,
+        Int.ofNat_dvd_right])
 
 @[expose, instance_reducible]
 def ISize.natCast : NatCast ISize where
@@ -227,11 +223,11 @@ def ISize.intCast : IntCast ISize where
   intCast x := ISize.ofInt x
 
 attribute [local instance] ISize.intCast in
-theorem ISize.intCast_neg (i : Int) : ((-i : Int) : ISize) = -(i : ISize) :=
-  ISize.ofInt_neg _
+theorem ISize.intCast_neg (i : Int) : ((-i : Int) : ISize) = -(i : ISize) := ISize.ofInt_neg _
 
 attribute [local instance] ISize.intCast in
-theorem ISize.intCast_ofNat (x : Nat) : (OfNat.ofNat (α := Int) x : ISize) = OfNat.ofNat x := ISize.ofInt_eq_ofNat
+theorem ISize.intCast_ofNat (x : Nat) : (OfNat.ofNat (α := Int) x : ISize) = OfNat.ofNat x :=
+  ISize.ofInt_eq_ofNat
 
 attribute [local instance] ISize.natCast ISize.intCast in
 instance : CommRing ISize where
@@ -255,19 +251,18 @@ instance : CommRing ISize where
   ofNat_succ x := ISize.ofNat_add x 1
   intCast_neg := ISize.ofInt_neg
   neg_zsmul i x := by
-    change (-i : Int) * x = - (i * x)
+    change (-i : Int) * x = -(i * x)
     simp [ISize.intCast_neg, ISize.neg_mul]
   zsmul_natCast_eq_nsmul n a := congrArg (· * a) (ISize.intCast_ofNat _)
 
 open System.Platform (numBits)
 
-instance : IsCharP ISize (2 ^ numBits) := IsCharP.mk' _ _
-  (ofNat_eq_zero_iff := fun x => by
-    have : OfNat.ofNat x = ISize.ofInt x := rfl
-    rw [this]
-    simp [ISize.ofInt_eq_iff_bmod_eq_toInt,
-      ← Int.dvd_iff_bmod_eq_zero, ← Nat.dvd_iff_mod_eq_zero, Int.ofNat_dvd_right])
-
-
+instance : IsCharP ISize (2 ^ numBits) :=
+  IsCharP.mk' _ _
+    (ofNat_eq_zero_iff := fun x => by
+      have : OfNat.ofNat x = ISize.ofInt x := rfl
+      rw [this]
+      simp [ISize.ofInt_eq_iff_bmod_eq_toInt, ← Int.dvd_iff_bmod_eq_zero, ← Nat.dvd_iff_mod_eq_zero,
+        Int.ofNat_dvd_right])
 
 end Lean.Grind

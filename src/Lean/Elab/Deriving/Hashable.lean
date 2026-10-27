@@ -17,8 +17,7 @@ open Command
 open Lean.Parser.Term
 open Meta
 
-def mkHashableHeader (indVal : InductiveVal) : TermElabM Header := do
-  mkHeader `Hashable 1 indVal
+def mkHashableHeader (indVal : InductiveVal) : TermElabM Header := do mkHeader `Hashable 1 indVal
 
 def mkMatch (ctx : Context) (header : Header) (indVal : InductiveVal) : TermElabM Term := do
   let discrs ← mkDiscrs header indVal
@@ -32,42 +31,44 @@ where
     let allIndVals := indVal.all.toArray
     for ctorName in indVal.ctors do
       let ctorInfo ← getConstInfoCtor ctorName
-      let alt ← forallTelescopeReducing ctorInfo.type fun xs _ => do
-        let mut patterns := #[]
-        -- add `_` pattern for indices
-        for _ in *...indVal.numIndices do
-          patterns := patterns.push (← `(_))
-        let mut ctorArgs := #[]
-        let mut rhs ← `($(quote ctorIdx))
-        -- add `_` for inductive parameters, they are inaccessible
-        for _ in *...indVal.numParams do
-          ctorArgs := ctorArgs.push (← `(_))
-        for i in *...ctorInfo.numFields do
-          let x := xs[indVal.numParams + i]!
-          let a := mkIdent (← mkFreshUserName `a)
-          ctorArgs := ctorArgs.push a
-          let xTy ← whnf (← inferType x)
-          match xTy.getAppFn with
-          | .const declName .. =>
-            match allIndVals.findIdx? (· == declName) with
-            | some x => rhs ← `(mixHash $rhs ($(mkIdent ctx.auxFunNames[x]!) $a:ident))
-            | none => rhs ← `(mixHash $rhs (hash $a:ident))
-          | _ => rhs ← `(mixHash $rhs (hash $a:ident))
-        patterns := patterns.push (← `(@$(mkIdent ctorName):ident $ctorArgs:term*))
-        `(matchAltExpr| | $[$patterns:term],* => $rhs:term)
+      let alt ←
+        forallTelescopeReducing ctorInfo.type fun xs _ => do
+          let mut patterns := #[]
+          -- add `_` pattern for indices
+          for _ in *...indVal.numIndices do
+            patterns := patterns.push (← `(_))
+          let mut ctorArgs := #[]
+          let mut rhs ← `($(quote ctorIdx))
+          -- add `_` for inductive parameters, they are inaccessible
+          for _ in *...indVal.numParams do
+            ctorArgs := ctorArgs.push (← `(_))
+          for i in *...ctorInfo.numFields do
+            let x := xs[indVal.numParams + i]!
+            let a := mkIdent (← mkFreshUserName `a)
+            ctorArgs := ctorArgs.push a
+            let xTy ← whnf (← inferType x)
+            match xTy.getAppFn with
+            | .const declName .. =>
+              match allIndVals.findIdx? (· == declName) with
+              | some x => rhs ← `(mixHash $rhs ($(mkIdent ctx.auxFunNames[x]!) $a:ident))
+              | none => rhs ← `(mixHash $rhs (hash $a:ident))
+            | _ =>
+              rhs ← `(mixHash $rhs (hash $a:ident))
+          patterns := patterns.push (← `(@$(mkIdent ctorName):ident $ctorArgs:term*))
+          `(matchAltExpr| | $[$patterns:term],* => $rhs:term)
       alts := alts.push alt
       ctorIdx := ctorIdx + 1
     return alts
 
 def mkAuxFunction (ctx : Context) (i : Nat) : TermElabM Command := do
   let auxFunName := ctx.auxFunNames[i]!
-  let indVal     := ctx.typeInfos[i]!
-  let header     ← mkHashableHeader indVal
-  let mut body   ← mkMatch ctx header indVal
+  let indVal := ctx.typeInfos[i]!
+  let header ← mkHashableHeader indVal
+  let mut body ← mkMatch ctx header indVal
   if ctx.usePartial then
     let letDecls ← mkLocalInstanceLetDecls ctx `Hashable header.argNames
     body ← mkLet letDecls body
-  let binders    := header.binders
+  let binders := header.binders
   if ctx.usePartial then
     -- TODO(Dany): Get rid of this code branch altogether once we have well-founded recursion
     `(partial def $(mkIdent auxFunName):ident $binders:bracketedBinder* : UInt64 := $body:term)
@@ -87,15 +88,15 @@ private def mkHashableInstanceCmds (declName : Name) : TermElabM (Array Syntax) 
   return cmds
 
 def mkHashableHandler (declNames : Array Name) : CommandElabM Bool := do
-  withoutExporting do  -- This deriving handler handles visibility of generated decls syntactically
-  if (← declNames.allM isInductive)  then
-    for declName in declNames do
-      withoutExposeFromCtors declName do
-        let cmds ← liftTermElabM <| mkHashableInstanceCmds declName
-        cmds.forM elabCommand
-    return true
-  else
-    return false
+  withoutExporting do -- This deriving handler handles visibility of generated decls syntactically
+    if (← declNames.allM isInductive) then
+      for declName in declNames do
+        withoutExposeFromCtors declName do
+          let cmds ← liftTermElabM <| mkHashableInstanceCmds declName
+          cmds.forM elabCommand
+      return true
+    else
+      return false
 
 builtin_initialize
   registerDerivingHandler ``Hashable mkHashableHandler

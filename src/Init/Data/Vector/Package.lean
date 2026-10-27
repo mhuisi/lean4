@@ -15,14 +15,15 @@ open Std
 
 namespace Vector
 
-variable [LE α] [LT α] [Ord α] [h : BEq α] [DecidableEq α] [DecidableLT α] [IsLinearOrder α]
+variable
+  [LE α] [LT α] [Ord α] [h : BEq α] [DecidableEq α] [DecidableLT α] [IsLinearOrder α]
   [LawfulOrderLT α] [LawfulOrderOrd α] [LawfulOrderBEq α]
 
 public instance : LawfulOrderOrd (Vector α n) where
   isLE_compare xs ys := by rw [Vector.compare_eq_compare_toList, Std.isLE_compare, le_toList]
   isGE_compare xs ys := by rw [Vector.compare_eq_compare_toList, Std.isGE_compare, le_toList]
 
-public instance : LinearOrderPackage (Vector α n) := .ofLE _ { }
+public instance : LinearOrderPackage (Vector α n) := .ofLE _ {}
 
 -- Make sure we're not accidentally baking in `instBEqOfDecidableEq`.
 example : (instLinearOrderPackage (α := α) (n := n)).toBEq = @Vector.instBEq _ _ h := by

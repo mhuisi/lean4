@@ -27,4 +27,5 @@ Examples:
  * `(1 : Fin 10).log2 = (0 : Fin 10)`
  * `(0 : Fin 10).log2 = (0 : Fin 10)`
 -/
-def Fin.log2 (n : Fin m) : Fin m := ⟨Nat.log2 n.val, Nat.lt_of_le_of_lt (Nat.log2_le_self n.val) n.isLt⟩
+def Fin.log2 (n : Fin m) : Fin m :=
+  ⟨Nat.log2 n.val, Nat.lt_of_le_of_lt (Nat.log2_le_self n.val) n.isLt⟩

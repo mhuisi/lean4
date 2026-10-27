@@ -28,13 +28,9 @@ structure Context where
   -/
   declName : Name
   config : Config := {}
-  /--
-  Stack of global declarations being recursively inlined.
-  -/
+  /-- Stack of global declarations being recursively inlined. -/
   inlineStack : List Name := []
-  /--
-  Mapping from declaration names to number of occurrences at `inlineStack`
-  -/
+  /-- Mapping from declaration names to number of occurrences at `inlineStack` -/
   inlineStackOccs : PHashMap Name Nat := {}
 
 structure State where
@@ -42,22 +38,16 @@ structure State where
   Free variable substitution. We use it to implement inlining and removing redundant variables `let _x.i := _x.j`
   -/
   subst : FVarSubst .pure := {}
-  /--
-  Track used local declarations to be able to eliminate dead variables.
-  -/
+  /-- Track used local declarations to be able to eliminate dead variables. -/
   used : UsedLocalDecls := {}
   /--
   Mapping containing free variables ids that need to be renamed (i.e., the `binderName`).
   We use this map to preserve user provide names.
   -/
   binderRenaming : Renaming := {}
-  /--
-  Mapping used to decide whether a local function declaration must be inlined or not.
-  -/
+  /-- Mapping used to decide whether a local function declaration must be inlined or not. -/
   funDeclInfoMap : FunDeclInfoMap := {}
-  /--
-  `true` if some simplification was performed in the current simplification pass.
-  -/
+  /-- `true` if some simplification was performed in the current simplification pass. -/
   simplified : Bool := false
   /--
   Number of visited `let-declarations` and terminal values.
@@ -87,20 +77,18 @@ instance : MonadFVarSubstState SimpM .pure where
   modifySubst f := modify fun s => { s with subst := f s.subst }
 
 /-- Set the `simplified` flag to `true`. -/
-def markSimplified : SimpM Unit :=
-  modify fun s => { s with simplified := true }
+def markSimplified : SimpM Unit := modify fun s => { s with simplified := true }
 
 /-- Increment `visited` performance counter. -/
-def incVisited : SimpM Unit :=
-  modify fun s => { s with visited := s.visited + 1 }
+def incVisited : SimpM Unit := modify fun s => { s with visited := s.visited + 1 }
 
 /-- Increment `inline` performance counter. It is the number of inlined global declarations. -/
-def incInline : SimpM Unit :=
-  modify fun s => { s with inline := s.inline + 1 }
+def incInline : SimpM Unit := modify fun s => { s with inline := s.inline + 1 }
 
-/-- Increment `inlineLocal` performance counter. It is the number of inlined local function and join point declarations. -/
-def incInlineLocal : SimpM Unit :=
-  modify fun s => { s with inlineLocal := s.inlineLocal + 1 }
+/--
+Increment `inlineLocal` performance counter. It is the number of inlined local function and join point declarations.
+-/
+def incInlineLocal : SimpM Unit := modify fun s => { s with inlineLocal := s.inlineLocal + 1 }
 
 /-- Mark the local function declaration or join point with the given id as a "must inline". -/
 def addMustInline (fvarId : FVarId) : SimpM Unit :=
@@ -124,10 +112,17 @@ partial def updateFunDeclInfo (code : Code .pure) (mustInline := false) : SimpM 
 Execute `x` with an updated `inlineStack`. If `value` is of the form `const ...`, add `const` to the stack.
 Otherwise, do not change the `inlineStack`.
 -/
-@[inline] def withInlining (value : LetValue .pure) (recursive : Bool) (x : SimpM α) : SimpM α := do
+@[inline]
+def withInlining (value : LetValue .pure) (recursive : Bool) (x : SimpM α) : SimpM α := do
   if let .const declName _ _ := value then
     let numOccs ← check declName
-    withReader (fun ctx => { ctx with inlineStack := declName :: ctx.inlineStack, inlineStackOccs := ctx.inlineStackOccs.insert declName numOccs }) x
+    withReader
+      (fun ctx => {
+        ctx with
+        inlineStack := declName :: ctx.inlineStack
+        inlineStackOccs := ctx.inlineStackOccs.insert declName numOccs
+      })
+      x
   else
     x
 where
@@ -135,27 +130,33 @@ where
     trace[Compiler.simp.inline] "{.ofConstName declName}"
     let numOccs := (← read).inlineStackOccs.find? declName |>.getD 0
     let numOccs := numOccs + 1
-    let inlineIfReduce ← if let some ⟨_, decl⟩ ← getDecl? declName then pure decl.inlineIfReduceAttr else pure false
+    let inlineIfReduce ←
+      if let some ⟨_, decl⟩ ← getDecl? declName then pure decl.inlineIfReduceAttr else pure false
     if recursive && inlineIfReduce && numOccs > (← getConfig).maxRecInlineIfReduce then
-      throwError "function `{.ofConstName declName}` has been recursively inlined more than #{(← getConfig).maxRecInlineIfReduce}, consider removing the attribute `[inline_if_reduce]` from this declaration or increasing the limit using `set_option compiler.maxRecInlineIfReduce <num>`"
+      throwError "function `{.ofConstName declName}` has been recursively inlined more than \
+        #{(← getConfig).maxRecInlineIfReduce}, consider removing the attribute \
+        `[inline_if_reduce]` from this declaration or increasing the limit using `set_option \
+        compiler.maxRecInlineIfReduce <num>`"
     return numOccs
 
 /--
 Similar to the default `Lean.withIncRecDepth`, but include the `inlineStack` in the error message.
 -/
-@[inline] def withIncRecDepth (x : SimpM α) : SimpM α := do
+@[inline]
+def withIncRecDepth (x : SimpM α) : SimpM α := do
   let curr ← MonadRecDepth.getRecDepth
-  let max  ← MonadRecDepth.getMaxRecDepth
+  let max ← MonadRecDepth.getMaxRecDepth
   if max != 0 && curr == max then
     throwMaxRecDepth
   else
-    MonadRecDepth.withRecDepth (curr+1) x
+    MonadRecDepth.withRecDepth (curr + 1) x
 where
   throwMaxRecDepth : SimpM α := do
     match (← read).inlineStack with
-    | [] => throwError maxRecDepthErrorMessage
+    | [] =>
+      throwError maxRecDepthErrorMessage
     | declName :: stack =>
-      let mut fmt  := m!"{.ofConstName declName}\n"
+      let mut fmt := m!"{.ofConstName declName}\n"
       let mut prev := declName
       let mut ellipsis := false
       for declName in stack do
@@ -167,7 +168,9 @@ where
           fmt := fmt ++ m!"{.ofConstName declName}\n"
           prev := declName
           ellipsis := false
-      throwError "maximum recursion depth reached in the code generator\nfunction inline stack:\n{fmt}"
+      throwError "maximum recursion depth reached in the code generator\
+        \nfunction inline stack:\
+        \n{fmt}"
 
 /--
 Execute `x` with `fvarId` set as `mustInline`.
@@ -187,18 +190,13 @@ Return true if the given local function declaration or join point id is marked a
 -/
 def isOnceOrMustInline (fvarId : FVarId) : SimpM Bool := do
   match (← get).funDeclInfoMap.map[fvarId]? with
-    | some .once | some .mustInline  => return true
-    | _ => return false
+  | some .once | some .mustInline => return true
+  | _ => return false
 
-/--
-Return `true` if the given code is considered "small".
--/
-def isSmall (code : Code .pure) : SimpM Bool :=
-  return code.sizeLe (← getConfig).smallThreshold
+/-- Return `true` if the given code is considered "small". -/
+def isSmall (code : Code .pure) : SimpM Bool := return code.sizeLe (← getConfig).smallThreshold
 
-/--
-Return `true` if the given local function declaration should be inlined.
--/
+/-- Return `true` if the given local function declaration should be inlined. -/
 def shouldInlineLocal (decl : FunDecl .pure) : SimpM Bool := do
   if (← isOnceOrMustInline decl.fvarId) then
     return true
@@ -210,8 +208,10 @@ LCNF "Beta-reduce". The equivalent of `(fun params => code) args`.
 If `mustInline` is true, the local function declarations in the resulting code are marked as `.mustInline`.
 See comment at `updateFunDeclInfo`.
 -/
-def betaReduce (params : Array (Param .pure)) (code : Code .pure) (args : Array (Arg .pure))
-    (mustInline := false) : SimpM (Code .pure) := do
+def betaReduce
+    (params : Array (Param .pure)) (code : Code .pure) (args : Array (Arg .pure))
+    (mustInline := false)
+    : SimpM (Code .pure) := do
   let mut subst := {}
   for param in params, arg in args do
     subst := subst.insert param.fvarId arg

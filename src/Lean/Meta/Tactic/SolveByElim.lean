@@ -50,10 +50,12 @@ we can perform backtracking search based on applying a list of lemmas.
 ``applyTactics (trace := `name)`` will construct trace nodes for ``name` indicating which
 calls to `apply` succeeded or failed.
 -/
-def applyTactics (cfg : ApplyConfig := {}) (transparency : TransparencyMode := .default)
-    (lemmas : List Expr) (g : MVarId) : MetaM (Lean.Meta.Iterator (List Lean.MVarId)) := do
-  pure <|
-    (← Meta.Iterator.ofList lemmas).filterMapM (fun e => observing? do
+def applyTactics
+    (cfg : ApplyConfig := {}) (transparency : TransparencyMode := .default)
+    (lemmas : List Expr) (g : MVarId)
+    : MetaM (Lean.Meta.Iterator (List Lean.MVarId)) := do
+  pure <| (← Meta.Iterator.ofList lemmas).filterMapM (fun e =>
+    observing? do
       withTraceNode `Meta.Tactic.solveByElim (fun _ => return m!"trying to apply: {e}") do
         let goals ← withTransparency transparency (g.apply e cfg)
         -- When we call `apply` interactively, `Lean.Elab.Tactic.evalApplyLikeTactic`
@@ -69,8 +71,10 @@ which can be successfully applied to `goal`, and fails if none apply.
 
 We use this in `apply_rules` and `apply_assumption` where backtracking is not needed.
 -/
-def applyFirst (cfg : ApplyConfig := {}) (transparency : TransparencyMode := .default)
-    (lemmas : List Expr) (g : MVarId) : MetaM (List MVarId) := do
+def applyFirst
+    (cfg : ApplyConfig := {}) (transparency : TransparencyMode := .default)
+    (lemmas : List Expr) (g : MVarId)
+    : MetaM (List MVarId) := do
   (← applyTactics cfg transparency lemmas g).head
 
 open Lean.Meta.Tactic.Backtrack (BacktrackConfig backtrack)
@@ -81,8 +85,10 @@ structure ApplyRulesConfig extends BacktrackConfig, ApplyConfig where
   transparency : TransparencyMode := .default
   /-- Also use symmetric versions (via `@[symm]`) of local hypotheses. -/
   symm : Bool := true
-  /-- Try proving the goal via `exfalso` if `solve_by_elim` otherwise fails.
-  This is only used when operating on a single goal. -/
+  /--
+  Try proving the goal via `exfalso` if `solve_by_elim` otherwise fails.
+  This is only used when operating on a single goal.
+  -/
   exfalso : Bool := true
   maxDepth := 50
 
@@ -112,25 +118,32 @@ namespace SolveByElimConfig
 instance : Coe SolveByElimConfig BacktrackConfig := ⟨(·.toApplyRulesConfig.toBacktrackConfig)⟩
 
 /-- Create or modify a `Config` which allows a class of goals to be returned as subgoals. -/
-def accept (cfg : SolveByElimConfig := {}) (test : MVarId → MetaM Bool) : SolveByElimConfig :=
-  { cfg with
-    discharge := fun g => do
-      if (← test g) then
-        pure none
-      else
-        cfg.discharge g }
+def accept (cfg : SolveByElimConfig := {}) (test : MVarId → MetaM Bool) : SolveByElimConfig := {
+  cfg with
+  discharge := fun g => do
+    if (← test g) then
+      pure none
+    else
+      cfg.discharge g
+}
 
 /--
 Create or modify a `Config` which runs a tactic on the main goal.
 If that tactic fails, fall back to the `proc` behaviour of `cfg`.
 -/
-def mainGoalProc (cfg : SolveByElimConfig := {}) (proc : MVarId → MetaM (List MVarId)) : SolveByElimConfig :=
-  { cfg with
-    proc := fun orig goals => match goals with
-    | [] => cfg.proc orig []
-    | g :: gs => try
+def mainGoalProc (cfg : SolveByElimConfig := {}) (proc : MVarId → MetaM (List MVarId))
+    : SolveByElimConfig := {
+  cfg with
+  proc := fun orig goals =>
+    match goals with
+    | [] =>
+      cfg.proc orig []
+    | g :: gs =>
+      try
         return (← proc g) ++ gs
-      catch _ => cfg.proc orig goals }
+      catch _ =>
+        cfg.proc orig goals
+}
 
 /-- Create or modify a `Config` which calls `intro` on each goal before applying lemmas. -/
 -- Because `SolveByElim` works on each goal in sequence, even though
@@ -148,23 +161,35 @@ def synthInstance (cfg : SolveByElimConfig := {}) : SolveByElimConfig :=
     g.assign (← Lean.Meta.synthInstance (← g.getType))
     pure []
 
-/-- Add a discharging tactic, falling back to the original discharging tactic if it fails.
-Return `none` to return the goal as a new subgoal, or `some goals` to replace it. -/
-def withDischarge (cfg : SolveByElimConfig := {}) (discharge : MVarId → MetaM (Option (List MVarId))) : SolveByElimConfig :=
-  { cfg with
-    discharge := fun g => try discharge g
-      catch _ => cfg.discharge g }
+/--
+Add a discharging tactic, falling back to the original discharging tactic if it fails.
+Return `none` to return the goal as a new subgoal, or `some goals` to replace it.
+-/
+def withDischarge
+    (cfg : SolveByElimConfig := {}) (discharge : MVarId → MetaM (Option (List MVarId)))
+    : SolveByElimConfig := {
+  cfg with
+  discharge := fun g =>
+    try
+      discharge g
+    catch _ =>
+      cfg.discharge g
+}
 
-/-- Create or modify a `SolveByElimConfig` which calls `intro` on any goal for which no lemma applies. -/
+/--
+Create or modify a `SolveByElimConfig` which calls `intro` on any goal for which no lemma applies.
+-/
 def introsAfter (cfg : SolveByElimConfig := {}) : SolveByElimConfig :=
   cfg.withDischarge fun g => do pure [(← g.intro1P).2]
 
 /-- Call `constructor` when no lemmas apply. -/
 def constructorAfter (cfg : SolveByElimConfig := {}) : SolveByElimConfig :=
-  cfg.withDischarge fun g => g.constructor {newGoals := .all}
+  cfg.withDischarge fun g => g.constructor { newGoals := .all }
 
-/-- Create or modify a `Config` which
-calls `synthInstance` on any goal for which no lemma applies. -/
+/--
+Create or modify a `Config` which
+calls `synthInstance` on any goal for which no lemma applies.
+-/
 def synthInstanceAfter (cfg : SolveByElimConfig := {}) : SolveByElimConfig :=
   cfg.withDischarge fun g => do
     g.assign (← Lean.Meta.synthInstance (← g.getType))
@@ -174,17 +199,20 @@ def synthInstanceAfter (cfg : SolveByElimConfig := {}) : SolveByElimConfig :=
 Create or modify a `Config` which rejects branches for which `test`,
 applied to the instantiations of the original goals, fails or returns `false`.
 -/
-def testPartialSolutions (cfg : SolveByElimConfig := {}) (test : List Expr → MetaM Bool) : SolveByElimConfig :=
-  { cfg with
-    proc := fun orig goals => do
-      guard <| ← test (← orig.mapM fun m => m.withContext do instantiateMVars (.mvar m))
-      cfg.proc orig goals }
+def testPartialSolutions (cfg : SolveByElimConfig := {}) (test : List Expr → MetaM Bool)
+    : SolveByElimConfig := {
+  cfg with
+  proc := fun orig goals => do
+    guard <| ← test (← orig.mapM fun m => m.withContext do instantiateMVars (.mvar m))
+    cfg.proc orig goals
+}
 
 /--
 Create or modify a `SolveByElimConfig` which rejects complete solutions for which `test`,
 applied to the instantiations of the original goals, fails or returns `false`.
 -/
-def testSolutions (cfg : SolveByElimConfig := {}) (test : List Expr → MetaM Bool) : SolveByElimConfig :=
+def testSolutions (cfg : SolveByElimConfig := {}) (test : List Expr → MetaM Bool)
+    : SolveByElimConfig :=
   cfg.testPartialSolutions fun sols => do
     if sols.any Expr.hasMVar then
       pure true
@@ -196,12 +224,9 @@ Create or modify a `Config` which only accept solutions
 for which every expression in `use` appears as a subexpression.
 -/
 def requireUsingAll (cfg : SolveByElimConfig := {}) (use : List Expr) : SolveByElimConfig :=
-  cfg.testSolutions fun sols => do
-    pure <| use.all fun e => sols.any fun s => e.occurs s
+  cfg.testSolutions fun sols => do pure <| use.all fun e => sols.any fun s => e.occurs s
 
-/--
-Process the `intro` and `constructor` options by implementing the `discharger` tactic.
--/
+/-- Process the `intro` and `constructor` options by implementing the `discharger` tactic. -/
 def processOptions (cfg : SolveByElimConfig) : SolveByElimConfig :=
   let cfg := if cfg.intro then introsAfter { cfg with intro := false } else cfg
   let cfg := if cfg.constructor then constructorAfter { cfg with constructor := false } else cfg
@@ -213,22 +238,25 @@ end SolveByElimConfig
 Elaborate a list of lemmas and local context.
 See `mkAssumptionSet` for an explanation of why this is needed.
 -/
-def elabContextLemmas (cfg : SolveByElimConfig) (g : MVarId)
-    (lemmas : List (TermElabM Expr)) (ctx : SolveByElimConfig → TermElabM (List Expr)) :
-    MetaM (List Expr) := do
+def elabContextLemmas
+    (cfg : SolveByElimConfig) (g : MVarId) (lemmas : List (TermElabM Expr))
+    (ctx : SolveByElimConfig → TermElabM (List Expr))
+    : MetaM (List Expr) := do
   g.withContext (Elab.Term.TermElabM.run' do pure ((← ctx cfg) ++ (← lemmas.mapM id)))
 
 /-- Returns the list of tactics corresponding to applying the available lemmas to the goal. -/
-def applyLemmas (cfg : SolveByElimConfig)
-    (lemmas : List (TermElabM Expr)) (ctx : SolveByElimConfig → TermElabM (List Expr))
-    (g : MVarId) : MetaM (Meta.Iterator (List MVarId)) := do
+def applyLemmas
+    (cfg : SolveByElimConfig) (lemmas : List (TermElabM Expr))
+    (ctx : SolveByElimConfig → TermElabM (List Expr)) (g : MVarId)
+    : MetaM (Meta.Iterator (List MVarId)) := do
   let es ← elabContextLemmas cfg g lemmas ctx
   applyTactics cfg.toApplyConfig cfg.transparency es g
 
 /-- Applies the first possible lemma to the goal. -/
-def applyFirstLemma (cfg : SolveByElimConfig)
-    (lemmas : List (TermElabM Expr)) (ctx : SolveByElimConfig → TermElabM (List Expr))
-    (g : MVarId) : MetaM (List MVarId) := do
+def applyFirstLemma
+    (cfg : SolveByElimConfig) (lemmas : List (TermElabM Expr))
+    (ctx : SolveByElimConfig → TermElabM (List Expr)) (g : MVarId)
+    : MetaM (List MVarId) := do
   let es ← elabContextLemmas cfg g lemmas ctx
   applyFirst cfg.toApplyConfig cfg.transparency es g
 
@@ -248,9 +276,10 @@ By default `cfg.suspend` is `false,` `cfg.discharge` fails, and `cfg.failAtMaxDe
 and so the returned list is always empty.
 Custom wrappers (e.g. `apply_assumption` and `apply_rules`) may modify this behaviour.
 -/
-def solveByElim (cfg : SolveByElimConfig)
-    (lemmas : List (TermElabM Expr)) (ctx : SolveByElimConfig → TermElabM (List Expr))
-    (goals : List MVarId) : MetaM (List MVarId) := do
+def solveByElim
+    (cfg : SolveByElimConfig) (lemmas : List (TermElabM Expr))
+    (ctx : SolveByElimConfig → TermElabM (List Expr)) (goals : List MVarId)
+    : MetaM (List MVarId) := do
   let cfg := cfg.processOptions
   try
     run cfg goals
@@ -260,9 +289,10 @@ def solveByElim (cfg : SolveByElimConfig)
     match goals, cfg.exfalso with
     | [g], true =>
       withTraceNode `Meta.Tactic.solveByElim
-          (fun _ => return m!"⏮️ starting over using `exfalso`") do
-        run cfg [← g.exfalso]
-    | _, _ => throw e
+        (fun _ => return m!"⏮️ starting over using `exfalso`")
+        do run cfg [← g.exfalso]
+    | _, _ =>
+      throw e
 where
   /-- Run either backtracking search, or repeated application, on the list of goals. -/
   run (cfg : SolveByElimConfig) : List MVarId → MetaM (List MVarId) :=
@@ -271,9 +301,7 @@ where
     else
       Lean.Meta.repeat1' (maxIters := cfg.maxDepth) (applyFirstLemma cfg lemmas ctx)
 
-/--
-If `symm` is `true`, then adds in symmetric versions of each hypothesis.
--/
+/-- If `symm` is `true`, then adds in symmetric versions of each hypothesis. -/
 def saturateSymm (symm : Bool) (hyps : List Expr) : MetaM (List Expr) := do
   if symm then
     let extraHyps ← hyps.filterMapM fun hyp => try some <$> hyp.applySymm catch _ => pure none
@@ -290,11 +318,14 @@ so they can be generated fresh for each application, to avoid stuck metavariable
 By default it uses all local hypotheses, but you can disable this with `only := true`.
 If you need to remove particular local hypotheses, call `solveByElim` directly.
 -/
-def _root_.Lean.MVarId.applyRules (cfg : SolveByElimConfig) (lemmas : List (TermElabM Expr))
-    (only : Bool := false) (g : MVarId) : MetaM (List MVarId) := do
+def _root_.Lean.MVarId.applyRules
+    (cfg : SolveByElimConfig) (lemmas : List (TermElabM Expr)) (only : Bool := false) (g : MVarId)
+    : MetaM (List MVarId) := do
   let ctx (cfg : SolveByElimConfig) : TermElabM (List Expr) :=
-    if only then pure []
-    else do saturateSymm cfg.symm (← getLocalHyps).toList
+    if only then
+      pure []
+    else do
+      saturateSymm cfg.symm (← getLocalHyps).toList
   solveByElim { cfg with backtracking := false } lemmas ctx [g]
 
 open Lean.Parser.Tactic
@@ -343,29 +374,32 @@ and we need to use separate sets of local hypotheses for each goal.
 The second component of the returned value provides these local hypotheses.
 (Essentially using `getLocalHyps`, along with some filtering to remove hypotheses
 that have been explicitly removed via `only` or `[-h]`.)
-
 -/
 -- These `TermElabM`s must be run inside a suitable `g.withContext`,
 -- usually using `elabContextLemmas`.
-def mkAssumptionSet (noDefaults star : Bool) (add remove : List Term) (use : Array Ident) :
-    MetaM (List (TermElabM Expr) × (SolveByElimConfig → TermElabM (List Expr))) := do
+def mkAssumptionSet (noDefaults star : Bool) (add remove : List Term) (use : Array Ident)
+    : MetaM (List (TermElabM Expr) × (SolveByElimConfig → TermElabM (List Expr))) := do
   if star && !noDefaults then
     throwError "It doesn't make sense to use `*` without `only`."
 
   let defaults : List (TermElabM Expr) :=
     [← `(rfl), ← `(trivial), ← `(congrFun), ← `(congrArg)].map elab'
-  let labelledLemmas := (← use.mapM (Lean.labelled ·.raw.getId)).flatten.toList
-    |>.map (liftM <| mkConstWithFreshMVarLevels ·)
-  let lemmas := if noDefaults then
-    add.map elab' ++ labelledLemmas
-  else
-    add.map elab' ++ labelledLemmas ++ defaults
+  let labelledLemmas :=
+    (← use.mapM (Lean.labelled ·.raw.getId)).flatten.toList
+      |>.map (liftM <| mkConstWithFreshMVarLevels ·)
+  let lemmas :=
+    if noDefaults then
+      add.map elab' ++ labelledLemmas
+    else
+      add.map elab' ++ labelledLemmas ++ defaults
 
   if !remove.isEmpty && noDefaults && !star then
     throwError "It doesn't make sense to remove local hypotheses when using `only` without `*`."
   let locals (cfg : SolveByElimConfig) : TermElabM (List Expr) :=
-    if noDefaults && !star then do pure []
-    else do saturateSymm cfg.symm <| (← getLocalHyps).toList.removeAll (← remove.mapM elab')
+    if noDefaults && !star then do
+      pure []
+    else do
+      saturateSymm cfg.symm <| (← getLocalHyps).toList.removeAll (← remove.mapM elab')
 
   return (lemmas, locals)
 where

@@ -41,8 +41,10 @@ instance : Insert (Name × α) (NameMap α) where
 instance [Monad m] : ForIn m (NameMap α) (Name × α) :=
   inferInstanceAs (ForIn _ (Std.TreeMap _ _ _) ..)
 
-/-- `filter f m` returns the `NameMap` consisting of all
-"`key`/`val`"-pairs in `m` where `f key val` returns `true`. -/
+/--
+`filter f m` returns the `NameMap` consisting of all
+"`key`/`val`"-pairs in `m` where `f key val` returns `true`.
+-/
 def filter (f : Name → α → Bool) (m : NameMap α) : NameMap α := Std.TreeMap.filter f m
 
 end NameMap
@@ -57,12 +59,10 @@ def insert (s : NameSet) (n : Name) : NameSet := Std.TreeSet.insert s n
 def contains (s : NameSet) (n : Name) : Bool := Std.TreeSet.contains s n
 instance : Insert Name NameSet where
   insert n s := s.insert n
-instance [Monad m] : ForIn m NameSet Name :=
-  inferInstanceAs (ForIn _ (Std.TreeSet _ _) ..)
+instance [Monad m] : ForIn m NameSet Name := inferInstanceAs (ForIn _ (Std.TreeSet _ _) ..)
 
 /-- The union of two `NameSet`s. -/
-def append (s t : NameSet) : NameSet :=
-  s.merge t
+def append (s t : NameSet) : NameSet := s.merge t
 
 instance : Append NameSet where
   append := NameSet.append
@@ -107,20 +107,18 @@ instance : Inhabited NameHashSet := ⟨{}⟩
 def insert (s : NameHashSet) (n : Name) := Std.HashSet.insert s n
 def contains (s : NameHashSet) (n : Name) : Bool := Std.HashSet.contains s n
 
-/-- `filter f s` returns the `NameHashSet` consisting of all `x` in `s` where `f x` returns `true`. -/
+/--
+`filter f s` returns the `NameHashSet` consisting of all `x` in `s` where `f x` returns `true`.
+-/
 def filter (f : Name → Bool) (s : NameHashSet) : NameHashSet := Std.HashSet.filter f s
 end NameHashSet
 
 def MacroScopesView.isPrefixOf (v₁ v₂ : MacroScopesView) : Bool :=
-  v₁.name.isPrefixOf v₂.name &&
-  v₁.scopes == v₂.scopes &&
-  v₁.ctx == v₂.ctx &&
-  v₁.imported == v₂.imported
+  v₁.name.isPrefixOf v₂.name && v₁.scopes == v₂.scopes && v₁.ctx == v₂.ctx
+    && v₁.imported == v₂.imported
 
 def MacroScopesView.isSuffixOf (v₁ v₂ : MacroScopesView) : Bool :=
-  v₁.name.isSuffixOf v₂.name &&
-  v₁.scopes == v₂.scopes &&
-  v₁.ctx == v₂.ctx &&
-  v₁.imported == v₂.imported
+  v₁.name.isSuffixOf v₂.name && v₁.scopes == v₂.scopes && v₁.ctx == v₂.ctx
+    && v₁.imported == v₂.imported
 
 end Lean

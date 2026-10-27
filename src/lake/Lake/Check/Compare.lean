@@ -28,7 +28,7 @@ structure State where
 abbrev CompareM := ReaderT Context <| StateT State <| Except String
 
 def addWorklist (n : Lean.Name) : CompareM Unit := do
-  if !(← get).checked.contains n then
+  if ! (← get).checked.contains n then
     modify fun s => { s with worklist := s.worklist.push n }
 
 def addRelevantConsts (info : Lean.ConstantInfo) : CompareM Unit := do
@@ -64,8 +64,10 @@ public def definitionHoleMatches (challengeHole solutionHole : Lean.DefinitionVa
   challengeHole.toConstantVal == solutionHole.toConstantVal
     && challengeHole.safety == solutionHole.safety
 
-public def compareAt (challenge solution : LeanExport.ExportedEnv) (theoremTargets : Array Lean.Name)
-    (definitionTargets : Array Lean.Name) (primitive : Array Lean.Name) : Except String Unit := do
+public def compareAt
+    (challenge solution : LeanExport.ExportedEnv) (theoremTargets : Array Lean.Name)
+    (definitionTargets : Array Lean.Name) (primitive : Array Lean.Name)
+    : Except String Unit := do
   let mut worklist := primitive
 
   for target in theoremTargets do
@@ -78,8 +80,10 @@ public def compareAt (challenge solution : LeanExport.ExportedEnv) (theoremTarge
     let (challengeConst, solutionConst) ←
       match challengeConst, solutionConst with
       | .thmInfo cc, .thmInfo sc
-      | .axiomInfo cc, .axiomInfo sc => pure (cc.toConstantVal, sc.toConstantVal)
-      | _, _ => throw s!"Challenge and solution constant kind don't match: '{target}'"
+      | .axiomInfo cc, .axiomInfo sc =>
+        pure (cc.toConstantVal, sc.toConstantVal)
+      | _, _ =>
+        throw s!"Challenge and solution constant kind don't match: '{target}'"
 
     if challengeConst != solutionConst then
       throw s!"Challenge and solution theorem statement do not match: '{target}'"
@@ -101,13 +105,14 @@ public def compareAt (challenge solution : LeanExport.ExportedEnv) (theoremTarge
     unless challengeConst.value.getLambdaBody.isAppOf ``sorryAx do
       throw s!"Challenge definition is not sorried: '{target}'"
 
-    if !definitionHoleMatches challengeConst solutionConst then
+    if ! definitionHoleMatches challengeConst solutionConst then
       throw s!"Const does not match between challenge and target '{target}'"
 
     worklist := worklist.push solutionConst.name
 
   let definitionTargets := Std.HashSet.ofArray definitionTargets
   let theoremTargets := Std.HashSet.ofArray theoremTargets
-  Compare.loop.run { challenge, solution, definitionTargets, theoremTargets } |>.run' { worklist, checked := {} }
+  Compare.loop.run { challenge, solution, definitionTargets, theoremTargets }
+    |>.run' { worklist, checked := {} }
 
 end Lake.Check

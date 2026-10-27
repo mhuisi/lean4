@@ -18,9 +18,7 @@ This module contains the equality simplifying part of the `bv_normalize` simp se
 namespace Std.Tactic.BVDecide
 namespace Frontend.Normalize
 
-@[bv_normalize]
-theorem Bool.not_beq_not : ∀ (a b : Bool), ((!a) == (!b)) = (a == b) := by
-  decide
+@[bv_normalize] theorem Bool.not_beq_not : ∀ (a b : Bool), ((!a) == (!b)) = (a == b) := by decide
 
 @[bv_normalize]
 theorem BitVec.not_beq_not (a b : BitVec w) : (~~~a == ~~~b) = (a == b) := by
@@ -102,7 +100,8 @@ theorem BitVec.eq_sub_iff_add_eq (a b c : BitVec w) : (a == c + (~~~b + 1#w)) = 
   exact _root_.BitVec.eq_sub_iff_add_eq
 
 @[bv_normalize]
-theorem BitVec.eq_neg_add_iff_add_eq (a b c : BitVec w) : (a == (~~~b + 1#w) + c) = (a + b == c) := by
+theorem BitVec.eq_neg_add_iff_add_eq (a b c : BitVec w)
+    : (a == (~~~b + 1#w) + c) = (a + b == c) := by
   rw [BitVec.add_comm]
   exact BitVec.eq_sub_iff_add_eq _ _ _
 
@@ -112,68 +111,73 @@ theorem BitVec.sub_eq_iff_eq_add (a b c : BitVec w) : (a + (~~~b + 1#w) == c) = 
   exact _root_.BitVec.sub_eq_iff_eq_add
 
 @[bv_normalize]
-theorem BitVec.neg_add_eq_iff_eq_add (a b c : BitVec w) : ((~~~a + 1#w) + b == c) = (b == c + a) := by
+theorem BitVec.neg_add_eq_iff_eq_add (a b c : BitVec w)
+    : ((~~~a + 1#w) + b == c) = (b == c + a) := by
   rw [BitVec.add_comm]
   exact BitVec.sub_eq_iff_eq_add _ _ _
 
 @[bv_normalize]
-theorem Bool.bif_eq_bif (d a b c : Bool) :
-    ((bif d then a else b) == (bif d then a else c)) = (d || b == c) := by
+theorem Bool.bif_eq_bif (d a b c : Bool)
+    : ((bif d then a else b) == (bif d then a else c)) = (d || b == c) := by
   decide +revert
 
 @[bv_normalize]
-theorem Bool.not_bif_eq_bif (d a b c : Bool) :
-    ((!(bif d then a else b)) == (bif d then a else c)) = (!d && (!b) == c) := by
+theorem Bool.not_bif_eq_bif (d a b c : Bool)
+    : ((!(bif d then a else b)) == (bif d then a else c)) = (!d && (!b) == c) := by
   decide +revert
 
 @[bv_normalize]
-theorem Bool.bif_eq_not_bif (d a b c : Bool) :
-    ((bif d then a else b) == (!(bif d then a else c))) = (!d && b == (!c)) := by
+theorem Bool.bif_eq_not_bif (d a b c : Bool)
+    : ((bif d then a else b) == (!(bif d then a else c))) = (!d && b == (!c)) := by
   decide +revert
 
 @[bv_normalize]
-theorem Bool.bif_eq_bif' (d a b c : Bool) :
-    ((bif d then a else c) == (bif d then b else c)) = (!d || a == b) := by
+theorem Bool.bif_eq_bif' (d a b c : Bool)
+    : ((bif d then a else c) == (bif d then b else c)) = (!d || a == b) := by
   decide +revert
 
 @[bv_normalize]
-theorem Bool.not_bif_eq_bif' (d a b c : Bool) :
-    ((!(bif d then a else c)) == (bif d then b else c)) = (d && (!a) == b) := by
+theorem Bool.not_bif_eq_bif' (d a b c : Bool)
+    : ((!(bif d then a else c)) == (bif d then b else c)) = (d && (!a) == b) := by
   decide +revert
 
 @[bv_normalize]
-theorem Bool.bif_eq_not_bif' (d a b c : Bool) :
-    ((bif d then a else c) == (!(bif d then b else c))) = (d && a == (!b)) := by
+theorem Bool.bif_eq_not_bif' (d a b c : Bool)
+    : ((bif d then a else c) == (!(bif d then b else c))) = (d && a == (!b)) := by
   decide +revert
 
 @[bv_normalize]
-theorem BitVec.bif_eq_bif (d : Bool) (a b c : BitVec w) :
-    ((bif d then a else b) == (bif d then a else c)) = (d || b == c) := by
+theorem BitVec.bif_eq_bif (d : Bool) (a b c : BitVec w)
+    : ((bif d then a else b) == (bif d then a else c)) = (d || b == c) := by
   cases d <;> simp
 
 @[bv_normalize]
-theorem BitVec.not_bif_eq_bif (d : Bool) (a b c : BitVec w) :
-    (~~~(bif d then a else b) == (bif d then a else c)) = (bif d then ~~~a == a else ~~~b == c) := by
+theorem BitVec.not_bif_eq_bif (d : Bool) (a b c : BitVec w)
+    : (~~~(bif d then a else b) == (bif d then a else c))
+      = (bif d then ~~~a == a else ~~~b == c) := by
   cases d <;> simp
 
 @[bv_normalize]
-theorem BitVec.bif_eq_not_bif (d : Bool) (a b c : BitVec w) :
-    ((bif d then a else b) == ~~~(bif d then a else c)) = (bif d then a == ~~~a else b == ~~~c) := by
+theorem BitVec.bif_eq_not_bif (d : Bool) (a b c : BitVec w)
+    : ((bif d then a else b) == ~~~(bif d then a else c))
+      = (bif d then a == ~~~a else b == ~~~c) := by
   cases d <;> simp
 
 @[bv_normalize]
-theorem BitVec.bif_eq_bif' (d : Bool) (a b c : BitVec w) :
-    ((bif d then a else c) == (bif d then b else c)) = (!d || a == b) := by
+theorem BitVec.bif_eq_bif' (d : Bool) (a b c : BitVec w)
+    : ((bif d then a else c) == (bif d then b else c)) = (!d || a == b) := by
   cases d <;> simp
 
 @[bv_normalize]
-theorem BitVec.not_bif_eq_bif' (d : Bool) (a b c : BitVec w) :
-    (~~~(bif d then a else c) == (bif d then b else c)) = (bif d then ~~~a == b else ~~~c == c) := by
+theorem BitVec.not_bif_eq_bif' (d : Bool) (a b c : BitVec w)
+    : (~~~(bif d then a else c) == (bif d then b else c))
+      = (bif d then ~~~a == b else ~~~c == c) := by
   cases d <;> simp
 
 @[bv_normalize]
-theorem BitVec.bif_eq_not_bif' (d : Bool) (a b c : BitVec w) :
-    ((bif d then a else c) == ~~~(bif d then b else c)) = (bif d then a == ~~~b else c == ~~~c) := by
+theorem BitVec.bif_eq_not_bif' (d : Bool) (a b c : BitVec w)
+    : ((bif d then a else c) == ~~~(bif d then b else c))
+      = (bif d then a == ~~~b else c == ~~~c) := by
   cases d <;> simp
 
 -- used for bv_equal_const_not simproc
@@ -185,7 +189,6 @@ theorem BitVec.not_eq_comm (a b : BitVec w) : (~~~a == b) = (a == ~~~b) := by
 theorem BitVec.not_eq_comm' (a b : BitVec w) : (a == ~~~b) = (b == ~~~a) := by
   rw [Bool.eq_iff_iff, beq_iff_eq, Eq.comm]
   simp [_root_.BitVec.not_eq_comm]
-
 
 end Frontend.Normalize
 end Std.Tactic.BVDecide

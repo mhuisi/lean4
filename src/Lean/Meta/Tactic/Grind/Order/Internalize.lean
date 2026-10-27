@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Order.OrderM
 import Init.Data.Int.OfNat
@@ -37,12 +38,18 @@ def getType? (e : Expr) : Option Expr :=
       some α
     else
       none
-  | LE.le α _ _ _ => some α
-  | LT.lt α _ _ _ => some α
-  | HAdd.hAdd α β γ _ _ _ => homoType? α β γ
-  | HSub.hSub α β γ _ _ _ => homoType? α β γ
-  | OfNat.ofNat α _ _ => some α
-  | _ => none
+  | LE.le α _ _ _ =>
+    some α
+  | LT.lt α _ _ _ =>
+    some α
+  | HAdd.hAdd α β γ _ _ _ =>
+    homoType? α β γ
+  | HSub.hSub α β γ _ _ _ =>
+    homoType? α β γ
+  | OfNat.ofNat α _ _ =>
+    some α
+  | _ =>
+    none
 
 def isForbiddenParent (parent? : Option Expr) : Bool :=
   if isIntModuleVirtualParent parent? then
@@ -56,22 +63,20 @@ def isForbiddenParent (parent? : Option Expr) : Bool :=
       false
     else
       (getType? parent |>.isSome)
-      ||
-      /-
-      **Note**: We currently ignore `•`. We may reconsider it in the future.
-      -/
-      match_expr parent with
-      | HSMul.hSMul _ _ _ _ _ _ => true
-      | Nat.cast _ _ _ => true
-      | NatCast.natCast _ _ _ => true
-      | Grind.IntModule.OfNatModule.toQ _ _ _ => true
-      | _ => false
+        /- **Note**: We currently ignore `•`. We may reconsider it in the future. -/
+        || match_expr parent with
+          | HSMul.hSMul _ _ _ _ _ _ => true
+          | Nat.cast _ _ _ => true
+          | NatCast.natCast _ _ _ => true
+          | Grind.IntModule.OfNatModule.toQ _ _ _ => true
+          | _ => false
   else
     false
 
 def split (p : Poly) : Poly × Poly × Int :=
   match p with
-  | .num k => (.num 0, .num 0, -k)
+  | .num k =>
+    (.num 0, .num 0, -k)
   | .add k m p =>
     let (lhs, rhs, c) := split p
     if k < 0 then
@@ -80,7 +85,8 @@ def split (p : Poly) : Poly × Poly × Int :=
       (.add k m lhs, rhs, c)
 
 def mkRel (s : Sym.Arith.Order) (kind : CnstrKind) (lhs rhs : Expr) : Expr :=
-  let rel := match kind with
+  let rel :=
+    match kind with
     | .le => s.leFn
     | .lt => s.ltFn?.get!
   mkApp2 rel lhs rhs
@@ -94,48 +100,73 @@ def mkLtNorm0 (s : Sym.Arith.Order) (ringInst : Expr) (lhs rhs : Expr) : Expr :=
 def mkEqNorm0 (s : Sym.Arith.Order) (ringInst : Expr) (lhs rhs : Expr) : Expr :=
   mkApp4 (mkConst ``Grind.CommRing.eq_norm0 [s.u]) s.type ringInst lhs rhs
 
-def mkCnstrNorm0 (s : Sym.Arith.Order) (ringInst : Expr) (kind : CnstrKind) (lhs rhs : Expr) : Expr :=
+def mkCnstrNorm0 (s : Sym.Arith.Order) (ringInst : Expr) (kind : CnstrKind) (lhs rhs : Expr)
+    : Expr :=
   match kind with
   | .le => mkLeNorm0 s ringInst lhs rhs
   | .lt => mkLtNorm0 s ringInst lhs rhs
 
 open Sym.Arith (MonadCanon MonadRing getAddFn getIntCastFn)
 
-/--
-Returns `rel lhs (rhs + 0)`
--/
-def mkDenote0 [MonadLiftT MetaM m] [MonadError m] [Monad m] [MonadCanon m] [MonadRing m]
-    (s : Sym.Arith.Order) (kind : CnstrKind) (lhs rhs : Expr) : m Expr := do
+/-- Returns `rel lhs (rhs + 0)` -/
+def mkDenote0
+    [MonadLiftT MetaM m] [MonadError m] [Monad m] [MonadCanon m] [MonadRing m]
+    (s : Sym.Arith.Order) (kind : CnstrKind) (lhs rhs : Expr)
+    : m Expr := do
   let rhs' := mkApp2 (← getAddFn) rhs (mkApp (← getIntCastFn) (mkIntLit 0))
   return mkRel s kind lhs rhs'
 
-def mkCommRingCnstr? (s : Sym.Arith.Order) (kind : CnstrKind) (lhs rhs : Expr) : RingM (Option (Cnstr Expr)) := do
-  if !isArithTerm lhs && !isArithTerm rhs then
+def mkCommRingCnstr? (s : Sym.Arith.Order) (kind : CnstrKind) (lhs rhs : Expr)
+    : RingM (Option (Cnstr Expr)) := do
+  if ! isArithTerm lhs && ! isArithTerm rhs then
     let e ← mkDenote0 s kind lhs rhs
-    return some { u := lhs, v := rhs, k := 0, e, kind, h? := some (mkCnstrNorm0 s (← getRing).ringInst kind lhs rhs)  }
-  let some lhs ← reify? lhs (skipVar := false) | return none
-  let some rhs ← reify? rhs (skipVar := false) | return none
-  let some p ← lhs.sub rhs |>.toPolyM? | return none
+    return some {
+      u := lhs
+      v := rhs
+      k := 0
+      e
+      kind
+      h? := some (mkCnstrNorm0 s (← getRing).ringInst kind lhs rhs)
+    }
+  let some lhs ← reify? lhs (skipVar := false)
+    | return none
+  let some rhs ← reify? rhs (skipVar := false)
+    | return none
+  let some p ← lhs.sub rhs |>.toPolyM?
+    | return none
   let (lhs', rhs', k) := split p
   let lhs' := lhs'.toExpr
   let rhs' := rhs'.toExpr
   let u ← shareCommon (← lhs'.denoteExpr)
   let v ← shareCommon (← rhs'.denoteExpr)
   let rhs' : RingExpr := .add rhs' (.intCast k)
-  let h ← match kind with
-    | .le => mkLeIffProof s.leInst s.ltInst?.get! s.isPreorderInst s.orderedRingInst?.get! lhs rhs lhs' rhs'
-    | .lt => mkLtIffProof s.leInst s.ltInst?.get! s.lawfulOrderLTInst?.get! s.isPreorderInst s.orderedRingInst?.get! lhs rhs lhs' rhs'
+  let h ←
+    match kind with
+    | .le =>
+      mkLeIffProof s.leInst s.ltInst?.get! s.isPreorderInst s.orderedRingInst?.get! lhs rhs lhs'
+        rhs'
+    | .lt =>
+      mkLtIffProof s.leInst s.ltInst?.get! s.lawfulOrderLTInst?.get! s.isPreorderInst
+        s.orderedRingInst?.get! lhs rhs lhs' rhs'
   let e' := mkRel s kind u (← rhs'.denoteExpr)
-  return some {
-    kind, u, v, k, e := e', h? := some h
-  }
+  return some { kind, u, v, k, e := e', h? := some h }
 
-def mkNonCommRingCnstr? (s : Sym.Arith.Order) (kind : CnstrKind) (lhs rhs : Expr) : NonCommRingM (Option (Cnstr Expr)) := do
-  if !isArithTerm lhs && !isArithTerm rhs then
+def mkNonCommRingCnstr? (s : Sym.Arith.Order) (kind : CnstrKind) (lhs rhs : Expr)
+    : NonCommRingM (Option (Cnstr Expr)) := do
+  if ! isArithTerm lhs && ! isArithTerm rhs then
     let e ← mkDenote0 s kind lhs rhs
-    return some { u := lhs, v := rhs, k := 0, e, kind, h? := some (mkCnstrNorm0 s (← getRing).ringInst kind lhs rhs)  }
-  let some lhs ← ncreify? lhs (skipVar := false) | return none
-  let some rhs ← ncreify? rhs (skipVar := false) | return none
+    return some {
+      u := lhs
+      v := rhs
+      k := 0
+      e
+      kind
+      h? := some (mkCnstrNorm0 s (← getRing).ringInst kind lhs rhs)
+    }
+  let some lhs ← ncreify? lhs (skipVar := false)
+    | return none
+  let some rhs ← ncreify? rhs (skipVar := false)
+    | return none
   -- **TODO**: We need a `toPolyM_nc` similar `toPolyM`
   let p := lhs.sub rhs |>.toPoly_nc
   let (lhs', rhs', k) := split p
@@ -144,13 +175,16 @@ def mkNonCommRingCnstr? (s : Sym.Arith.Order) (kind : CnstrKind) (lhs rhs : Expr
   let u ← shareCommon (← lhs'.denoteExpr)
   let v ← shareCommon (← rhs'.denoteExpr)
   let rhs' : RingExpr := .add rhs' (.intCast k)
-  let h ← match kind with
-    | .le => mkNonCommLeIffProof s.leInst s.ltInst?.get! s.isPreorderInst s.orderedRingInst?.get! lhs rhs lhs' rhs'
-    | .lt => mkNonCommLtIffProof s.leInst s.ltInst?.get! s.lawfulOrderLTInst?.get! s.isPreorderInst s.orderedRingInst?.get! lhs rhs lhs' rhs'
+  let h ←
+    match kind with
+    | .le =>
+      mkNonCommLeIffProof s.leInst s.ltInst?.get! s.isPreorderInst s.orderedRingInst?.get! lhs rhs
+        lhs' rhs'
+    | .lt =>
+      mkNonCommLtIffProof s.leInst s.ltInst?.get! s.lawfulOrderLTInst?.get! s.isPreorderInst
+        s.orderedRingInst?.get! lhs rhs lhs' rhs'
   let e' := mkRel s kind u (← rhs'.denoteExpr)
-  return some {
-    kind, u, v, k, e := e', h? := some h
-  }
+  return some { kind, u, v, k, e := e', h? := some h }
 
 def mkCnstr? (e : Expr) (kind : CnstrKind) (lhs rhs : Expr) : OrderM (Option (Cnstr Expr)) := do
   let s ← getOrder
@@ -164,13 +198,12 @@ def mkCnstr? (e : Expr) (kind : CnstrKind) (lhs rhs : Expr) : OrderM (Option (Cn
 
 def setStructId (e : Expr) : OrderM Unit := do
   let structId ← getStructId
-  modify' fun s => { s with
-    exprToStructId := s.exprToStructId.insert { expr := e } structId
-  }
+  modify' fun s => { s with exprToStructId := s.exprToStructId.insert { expr := e } structId }
 
 def updateTermMap (e eNew h α : Expr) : GoalM Unit := do
-  modify' fun s => { s with
-    termMap    := s.termMap.insert { expr := e } { e := eNew, h, α }
+  modify' fun s => {
+    s with
+    termMap := s.termMap.insert { expr := e } { e := eNew, h, α }
     termMapInv := s.termMapInv.insert { expr := eNew } (e, h)
   }
 
@@ -183,12 +216,18 @@ check that `natToInt a` is `e`.
 -/
 partial def toNatTerm? (e : Expr) : Option Expr :=
   match_expr e with
-  | HAdd.hAdd _ _ _ _ a b => return mkNatAdd (← toNatTerm? a) (← toNatTerm? b)
-  | HMul.hMul _ _ _ _ a b => return mkNatMul (← toNatTerm? a) (← toNatTerm? b)
-  | HDiv.hDiv _ _ _ _ a b => return mkNatDiv (← toNatTerm? a) (← toNatTerm? b)
-  | HMod.hMod _ _ _ _ a b => return mkNatMod (← toNatTerm? a) (← toNatTerm? b)
-  | HPow.hPow _ _ _ _ a k => return mkNatPow (← toNatTerm? a) k
-  | NatCast.natCast _ _ a => some a
+  | HAdd.hAdd _ _ _ _ a b =>
+    return mkNatAdd (← toNatTerm? a) (← toNatTerm? b)
+  | HMul.hMul _ _ _ _ a b =>
+    return mkNatMul (← toNatTerm? a) (← toNatTerm? b)
+  | HDiv.hDiv _ _ _ _ a b =>
+    return mkNatDiv (← toNatTerm? a) (← toNatTerm? b)
+  | HMod.hMod _ _ _ _ a b =>
+    return mkNatMod (← toNatTerm? a) (← toNatTerm? b)
+  | HPow.hPow _ _ _ _ a k =>
+    return mkNatPow (← toNatTerm? a) k
+  | NatCast.natCast _ _ a =>
+    some a
   | _ => do
     let n ← e.int?
     if n ≥ 0 then some (mkNatLit n.toNat) else none
@@ -198,12 +237,13 @@ def mkNode (e : Expr) : OrderM NodeId := do
     return nodeId
   let nodeId : NodeId := (← getStruct).nodes.size
   trace[grind.order.internalize.term] "{e} ↦ #{nodeId}"
-  modifyStruct fun s => { s with
-    nodes   := s.nodes.push e
+  modifyStruct fun s => {
+    s with
+    nodes := s.nodes.push e
     nodeMap := s.nodeMap.insert { expr := e } nodeId
     sources := s.sources.push {}
     targets := s.targets.push {}
-    proofs  := s.proofs.push {}
+    proofs := s.proofs.push {}
   }
   setStructId e
   /-
@@ -219,7 +259,8 @@ where
   getOriginal? (e : Expr) : OrderM (Option Expr) := do
     if let some (e', _) := (← get').termMapInv.find? { expr := e } then
       return some e'
-    let_expr NatCast.natCast α _ a := e | getNatTerm? e
+    let_expr NatCast.natCast α _ a := e
+      | getNatTerm? e
     if (← alreadyInternalized a) then
       updateTermMap a e (← mkEqRefl e) α
       return some a
@@ -235,17 +276,22 @@ where
   - `getOriginal?` falls back to `getNatTerm?`, which returns `a + b`.
   -/
   getNatTerm? (e : Expr) : OrderM (Option Expr) := do
-    unless (← isInt) do return none
-    let some a := toNatTerm? e | return none
+    unless (← isInt) do
+      return none
+    let some a := toNatTerm? e
+      | return none
     let a ← shareCommon a
-    unless (← alreadyInternalized a) do return none
+    unless (← alreadyInternalized a) do
+      return none
     let (e', h) ← Arith.Cutsat.natToInt a
-    unless isSameExpr e e' do return none
+    unless isSameExpr e e' do
+      return none
     updateTermMap a e h (← getIntExpr)
     return some a
 
 def internalizeCnstr (e : Expr) (kind : CnstrKind) (lhs rhs : Expr) : OrderM Unit := do
-  let some c ← mkCnstr? e kind lhs rhs | return ()
+  let some c ← mkCnstr? e kind lhs rhs
+    | return ()
   trace[grind.order.internalize] "{c.u}, {c.v}, {c.k}"
   if (← isDebugEnabled) then
     if let some h := c.h? then check h
@@ -268,8 +314,9 @@ def internalizeCnstr (e : Expr) (kind : CnstrKind) (lhs rhs : Expr) : OrderM Uni
       propagateEqFalse c e v u k k'
       return ()
   setStructId e
-  modifyStruct fun s => { s with
-    cnstrs   := s.cnstrs.insert { expr := e } c
+  modifyStruct fun s => {
+    s with
+    cnstrs := s.cnstrs.insert { expr := e } c
     cnstrsOf :=
       let cs := if let some cs := s.cnstrsOf.find? (u, v) then (c, e) :: cs else [(c, e)]
       s.cnstrsOf.insert (u, v) cs
@@ -285,8 +332,10 @@ structure OffsetTermResult where
   h : Expr
 
 def toOffsetTermCommRing? (e : Expr) : RingM (Option OffsetTermResult) := do
-  let some e ← reify? e (skipVar := false) | return none
-  let some p ← e.toPolyM? | return none
+  let some e ← reify? e (skipVar := false)
+    | return none
+  let some p ← e.toPolyM?
+    | return none
   let k := p.getConst
   let p := p.addConst (-k)
   let a ← shareCommon (← p.denoteExpr)
@@ -294,7 +343,8 @@ def toOffsetTermCommRing? (e : Expr) : RingM (Option OffsetTermResult) := do
   return some { a, k, h }
 
 def toOffsetTermNonCommRing? (e : Expr) : NonCommRingM (Option OffsetTermResult) := do
-  let some e ← ncreify? e (skipVar := false) | return none
+  let some e ← ncreify? e (skipVar := false)
+    | return none
   let p := e.toPoly_nc
   let k := p.getConst
   let p := p.addConst (-k)
@@ -308,15 +358,18 @@ def toOffsetTerm? (e : Expr) : OrderM (Option OffsetTermResult) := do
   **Note**: If it is not a partial order, then it is not worth internalizing term
   since we will not be able to propagate implied equalities back to core.
   -/
-  unless s.isPartialInst?.isSome do return none
-  let some ringId := s.ringId? | return none
+  unless s.isPartialInst?.isSome do
+    return none
+  let some ringId := s.ringId?
+    | return none
   if s.isCommRing then
     RingM.run ringId <| toOffsetTermCommRing? e
   else
     NonCommRingM.run ringId <| toOffsetTermNonCommRing? e
 
 def internalizeTerm (e : Expr) : OrderM Unit := do
-  let some r ← toOffsetTerm? e | return ()
+  let some r ← toOffsetTerm? e
+    | return ()
   if e == r.a && r.k == 0 then return ()
   let x ← mkNode e
   let y ← mkNode r.a
@@ -331,7 +384,8 @@ open Arith.Cutsat in
 def adaptNat (e : Expr) : GoalM Expr := do
   if let some { e := eNew, .. } := (← get').termMap.find? { expr := e } then
     return eNew
-  else match_expr e with
+  else
+    match_expr e with
     | LE.le _ _ lhs rhs => adaptCnstr lhs rhs (isLT := false)
     | LT.lt _ _ lhs rhs => adaptCnstr lhs rhs (isLT := true)
     | HAdd.hAdd _ _ _ _ _ _ => adaptTerm
@@ -343,9 +397,9 @@ where
     let (lhs', h₁) ← natToInt lhs
     let (rhs', h₂) ← natToInt rhs
     let eNew := if isLT then mkIntLT lhs' rhs' else mkIntLE lhs' rhs'
-    let h := mkApp6
-        (mkConst (if isLT then ``Nat.ToInt.lt_eq else ``Nat.ToInt.le_eq))
-        lhs rhs lhs' rhs' h₁ h₂
+    let h :=
+      mkApp6 (mkConst (if isLT then ``Nat.ToInt.lt_eq else ``Nat.ToInt.le_eq)) lhs rhs lhs' rhs' h₁
+        h₂
     updateTermMap e eNew h (← getIntExpr)
     return eNew
 
@@ -367,18 +421,21 @@ def alreadyInternalizedHere (e : Expr) : OrderM Bool := do
   return s.cnstrs.contains { expr := e } || s.nodeMap.contains { expr := e }
 
 public def internalize (e : Expr) (parent? : Option Expr) : GoalM Unit := do
-  unless (← getConfig).order do return ()
-  let some α := getType? e | return ()
+  unless (← getConfig).order do
+    return ()
+  let some α := getType? e
+    | return ()
   if isForbiddenParent parent? then return ()
   let (α, e) ← adapt α e
-  if let some structId ← getStructId? α then OrderM.run structId do
-    if (← alreadyInternalizedHere e) then return ()
-    match_expr e with
-    | LE.le _ _ lhs rhs => internalizeCnstr e .le lhs rhs
-    | LT.lt _ _ lhs rhs => if (← hasLt) then internalizeCnstr e .lt lhs rhs
-    | HAdd.hAdd _ _ _ _ _ _ => internalizeTerm e
-    | HSub.hSub _ _ _ _ _ _ => internalizeTerm e
-    | OfNat.ofNat _ _ _ => internalizeTerm e
-    | _ => return ()
+  if let some structId ← getStructId? α then
+    OrderM.run structId do
+      if (← alreadyInternalizedHere e) then return ()
+      match_expr e with
+      | LE.le _ _ lhs rhs => internalizeCnstr e .le lhs rhs
+      | LT.lt _ _ lhs rhs => if (← hasLt) then internalizeCnstr e .lt lhs rhs
+      | HAdd.hAdd _ _ _ _ _ _ => internalizeTerm e
+      | HSub.hSub _ _ _ _ _ _ => internalizeTerm e
+      | OfNat.ofNat _ _ _ => internalizeTerm e
+      | _ => return ()
 
 end Lean.Meta.Grind.Order

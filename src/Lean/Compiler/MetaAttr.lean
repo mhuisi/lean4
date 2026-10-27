@@ -18,13 +18,13 @@ private builtin_initialize metaExt : TagDeclarationExtension ←
   -- remain on the main environment branch
   mkTagDeclarationExtension (asyncMode := .async .mainEnv)
 
-/-- Marks in the environment extension that the given declaration has been declared by the user as `meta`. -/
-def markMeta (env : Environment) (declName : Name) : Environment :=
-  metaExt.tag env declName
+/--
+Marks in the environment extension that the given declaration has been declared by the user as `meta`.
+-/
+def markMeta (env : Environment) (declName : Name) : Environment := metaExt.tag env declName
 
 /-- Returns true iff the user has declared the given declaration as `meta`. -/
-def isMarkedMeta (env : Environment) (declName : Name) : Bool :=
-  metaExt.isTagged env declName
+def isMarkedMeta (env : Environment) (declName : Name) : Bool := metaExt.isTagged env declName
 
 /--
 Set of IR decls that should be made available to any importer. This is a superset of `metaExt`
@@ -38,10 +38,11 @@ private builtin_initialize declMetaExt : SimplePersistentEnvExtension Name NameS
     addImportedFn := fun _ => {}
     addEntryFn := fun s n => s.insert n
     asyncMode := .sync
-    replay? := some <| SimplePersistentEnvExtension.replayOfFilter (!·.contains ·) (·.insert ·)
-    exportEntriesFnEx? := some fun env s entries =>
-      let decls := entries.foldl (init := #[]) fun decls decl => decls.push decl
-      { exported := #[], server := #[], «private» := decls.qsort Name.quickLt }
+    replay? := some <| SimplePersistentEnvExtension.replayOfFilter (! ·.contains ·) (·.insert ·)
+    exportEntriesFnEx? :=
+      some fun env s entries =>
+        let decls := entries.foldl (init := #[]) fun decls decl => decls.push decl
+        { exported := #[], server := #[], «private» := decls.qsort Name.quickLt }
   }
 
 /-- Whether a declaration should be exported for interpretation. -/
@@ -52,14 +53,17 @@ def isDeclMeta (env : Environment) (declName : Name) : Bool :=
     -- The interpreter may call the boxed variant even if the IR does not directly reference it, so
     -- use same visibility as base decl.
     -- Note that boxed decls are created after the `inferVisibility` pass.
-    let inferFor := match declName with
+    let inferFor :=
+      match declName with
       | .str n "_boxed" => n
-      | n               => n
+      | n => n
     -- Check both imported entries and local state (same pattern as `LCNF.findExtEntry?`):
     -- `setDeclMeta` adds to local state, which must be visible even for imported decls (in `leanir`).
-    (env.getModuleIdxFor? declName |>.bind fun idx =>
-      guard <| declMetaExt.getModuleEntries env idx |>.binSearchContains inferFor Name.quickLt).isSome ||
-    (declMetaExt.getState env).contains inferFor
+    (env.getModuleIdxFor? declName
+        |>.bind fun idx =>
+          guard <|
+            declMetaExt.getModuleEntries env idx |>.binSearchContains inferFor Name.quickLt).isSome
+      || (declMetaExt.getState env).contains inferFor
 
 /-- Marks a declaration to be exported for interpretation. -/
 def setDeclMeta (env : Environment) (declName : Name) : Environment :=

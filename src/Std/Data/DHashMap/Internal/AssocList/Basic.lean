@@ -29,7 +29,8 @@ universe w v u w'
 
 namespace Std.DHashMap.Internal
 
-variable {α : Type u} {β : α → Type v} {γ : α → Type w} {δ : Type w} {m : Type w → Type w'} [Monad m]
+variable
+  {α : Type u} {β : α → Type v} {γ : α → Type w} {δ : Type w} {m : Type w → Type w'} [Monad m]
 
 /--
 `AssocList α β` is "the same as" `List (α × β)`, but flattening the structure
@@ -40,46 +41,56 @@ inductive AssocList (α : Type u) (β : α → Type v) where
   | nil
   /-- Internal implementation detail of the hash map -/
   | cons (key : α) (value : β key) (tail : AssocList α β)
-  deriving Inhabited
+deriving Inhabited
 
 namespace AssocList
 
 /-- Internal implementation detail of the hash map -/
-@[specialize] def foldlM (f : δ → (a : α) → β a → m δ) : (init : δ) → AssocList α β → m δ
-  | d, nil         => pure d
+@[specialize]
+def foldlM (f : δ → (a : α) → β a → m δ) : (init : δ) → AssocList α β → m δ
+  | d, nil =>
+    pure d
   | d, cons a b es => do
     let d ← f d a b
     foldlM f d es
 
 /-- Internal implementation detail of the hash map -/
-@[inline] def foldl (f : δ → (α : α) → β α → δ) (init : δ) (as : AssocList α β) : δ :=
+@[inline]
+def foldl (f : δ → (α : α) → β α → δ) (init : δ) (as : AssocList α β) : δ :=
   Id.run (foldlM (pure <| f · · ·) init as)
 
 /-- Internal implementation detail of the hash map -/
-@[specialize] def foldrM (f : (a : α) → β a → δ → m δ) : (init : δ) → AssocList α β → m δ
-  | d, nil         => pure d
+@[specialize]
+def foldrM (f : (a : α) → β a → δ → m δ) : (init : δ) → AssocList α β → m δ
+  | d, nil =>
+    pure d
   | d, cons a b es => do
     let d ← foldrM f d es
     f a b d
 
 /-- Internal implementation detail of the hash map -/
-@[inline] def foldr (f : (a : α) → β a → δ → δ) (init : δ) (as : AssocList α β) : δ :=
+@[inline]
+def foldr (f : (a : α) → β a → δ → δ) (init : δ) (as : AssocList α β) : δ :=
   Id.run (foldrM (pure <| f · · ·) init as)
 
 /-- Internal implementation detail of the hash map -/
-@[inline] def forM (f : (a : α) → β a → m PUnit) (as : AssocList α β) : m PUnit :=
-  as.foldlM (fun _ => f) ⟨⟩
+@[inline]
+def forM (f : (a : α) → β a → m PUnit) (as : AssocList α β) : m PUnit := as.foldlM (fun _ => f) ⟨⟩
 
 /-- Internal implementation detail of the hash map -/
-@[inline] def forInStep (as : AssocList α β) (init : δ) (f : (a : α) → β a → δ → m (ForInStep δ)) :
-    m (ForInStep δ) :=
+@[inline]
+def forInStep (as : AssocList α β) (init : δ) (f : (a : α) → β a → δ → m (ForInStep δ))
+    : m (ForInStep δ) :=
   go as init
-where @[specialize] go : AssocList α β → δ → m (ForInStep δ)
-  | .nil, acc => pure (ForInStep.yield acc)
-  | .cons k v t, acc => do
-    match ← f k v acc with
-    | ForInStep.done d => pure (ForInStep.done d)
-    | ForInStep.yield d => go t d
+where
+  @[specialize]
+  go : AssocList α β → δ → m (ForInStep δ)
+    | .nil, acc =>
+      pure (ForInStep.yield acc)
+    | .cons k v t, acc => do
+      match ← f k v acc with
+      | ForInStep.done d => pure (ForInStep.done d)
+      | ForInStep.yield d => go t d
 
 /-- Internal implementation detail of the hash map -/
 def toList : AssocList α β → List ((a : α) × β a)
@@ -87,8 +98,7 @@ def toList : AssocList α β → List ((a : α) × β a)
   | cons a b es => ⟨a, b⟩ :: es.toList
 
 /-- Internal implementation detail of the hash map -/
-def length (l : AssocList α β) : Nat :=
-  l.foldl (fun n _ _ => n + 1) 0
+def length (l : AssocList α β) : Nat := l.foldl (fun n _ _ => n + 1) 0
 
 section
 
@@ -103,15 +113,23 @@ end
 
 /-- Internal implementation detail of the hash map -/
 def getCast? [BEq α] [LawfulBEq α] (a : α) : AssocList α β → Option (β a)
-  | nil => none
-  | cons k v es => if h : k == a then some (cast (congrArg β (eq_of_beq h)) v)
-      else es.getCast? a
+  | nil =>
+    none
+  | cons k v es =>
+    if h : k == a then
+      some (cast (congrArg β (eq_of_beq h)) v)
+    else
+      es.getCast? a
 
 /-- Internal implementation detail of the hash map -/
 def getEntry? [BEq α] (a : α) : (l : AssocList α β) → Option ((a : α) × β a)
-  | nil => none
-  | cons k v es => if k == a then some ⟨k, v⟩
-      else es.getEntry? a
+  | nil =>
+    none
+  | cons k v es =>
+    if k == a then
+      some ⟨k, v⟩
+    else
+      es.getEntry? a
 
 /-- Internal implementation detail of the hash map -/
 def contains [BEq α] (a : α) : AssocList α β → Bool
@@ -120,18 +138,27 @@ def contains [BEq α] (a : α) : AssocList α β → Bool
 
 /-- Internal implementation detail of the hash map -/
 def get {β : Type v} [BEq α] (a : α) : (l : AssocList α (fun _ => β)) → l.contains a → β
-  | cons k v es, h => if hka : k == a then v else get a es
-      (by rw [← h, contains, Bool.of_not_eq_true hka, Bool.false_or])
+  | cons k v es, h =>
+    if hka : k == a then
+      v
+    else
+      get a es (by rw [← h, contains, Bool.of_not_eq_true hka, Bool.false_or])
 
 /-- Internal implementation detail of the hash map -/
 def getCast [BEq α] [LawfulBEq α] (a : α) : (l : AssocList α β) → l.contains a → β a
-  | cons k v es, h => if hka : k == a then cast (congrArg β (eq_of_beq hka)) v
-      else es.getCast a (by rw [← h, contains, Bool.of_not_eq_true hka, Bool.false_or])
+  | cons k v es, h =>
+    if hka : k == a then
+      cast (congrArg β (eq_of_beq hka)) v
+    else
+      es.getCast a (by rw [← h, contains, Bool.of_not_eq_true hka, Bool.false_or])
 
 /-- Internal implementation detail of the hash map -/
 def getEntry [BEq α] (a : α) : (l : AssocList α β) → l.contains a → (a : α) × β a
-  | cons k v es, h => if hka : k == a then ⟨k, v⟩
-      else es.getEntry a (by rw [← h, contains, Bool.of_not_eq_true hka, Bool.false_or])
+  | cons k v es, h =>
+    if hka : k == a then
+      ⟨k, v⟩
+    else
+      es.getEntry a (by rw [← h, contains, Bool.of_not_eq_true hka, Bool.false_or])
 
 /-- Internal implementation detail of the hash map -/
 def getEntryD [BEq α] (a : α) (fallback : (a : α) × β a) : AssocList α β → (a : α) × β a
@@ -145,8 +172,11 @@ def getEntry! [BEq α] (a : α) [Inhabited ((a : α) × β a)] : AssocList α β
 
 /-- Internal implementation detail of the hash map -/
 def getKey [BEq α] (a : α) : (l : AssocList α β) → l.contains a → α
-  | cons k _ es, h => if hka : k == a then k
-      else es.getKey a (by rw [← h, contains, Bool.of_not_eq_true hka, Bool.false_or])
+  | cons k _ es, h =>
+    if hka : k == a then
+      k
+    else
+      es.getKey a (by rw [← h, contains, Bool.of_not_eq_true hka, Bool.false_or])
 
 /-- Internal implementation detail of the hash map -/
 def getCast! [BEq α] [LawfulBEq α] (a : α) [Inhabited (β a)] : AssocList α β → β a
@@ -170,9 +200,13 @@ def getKey! [BEq α] [Inhabited α] (a : α) : AssocList α β → α
 
 /-- Internal implementation detail of the hash map -/
 def getCastD [BEq α] [LawfulBEq α] (a : α) (fallback : β a) : AssocList α β → β a
-  | nil => fallback
-  | cons k v es => if h : k == a then cast (congrArg β (eq_of_beq h)) v
-      else es.getCastD a fallback
+  | nil =>
+    fallback
+  | cons k v es =>
+    if h : k == a then
+      cast (congrArg β (eq_of_beq h)) v
+    else
+      es.getCastD a fallback
 
 /-- Internal implementation detail of the hash map -/
 def getD {β : Type v} [BEq α] (a : α) (fallback : β) : AssocList α (fun _ => β) → β
@@ -196,9 +230,9 @@ def erase [BEq α] (a : α) : AssocList α β → AssocList α β
 
 /-- Internal implementation detail of the hash map -/
 @[specialize]
-def modify [BEq α] [LawfulBEq α] (a : α) (f : β a → β a) :
-    AssocList α β → AssocList α β
-  | nil => nil
+def modify [BEq α] [LawfulBEq α] (a : α) (f : β a → β a) : AssocList α β → AssocList α β
+  | nil =>
+    nil
   | cons k v l =>
     if h : k == a then
       have h' : k = a := eq_of_beq h
@@ -209,9 +243,10 @@ def modify [BEq α] [LawfulBEq α] (a : α) (f : β a → β a) :
 
 /-- Internal implementation detail of the hash map -/
 @[specialize]
-def alter [BEq α] [LawfulBEq α] (a : α) (f : Option (β a) → Option (β a)) :
-    AssocList α β → AssocList α β
-  | nil => match f none with
+def alter [BEq α] [LawfulBEq α] (a : α) (f : Option (β a) → Option (β a))
+    : AssocList α β → AssocList α β
+  | nil =>
+    match f none with
     | none => nil
     | some b => cons a b nil
   | cons k v l =>
@@ -228,9 +263,10 @@ namespace Const
 
 /-- Internal implementation detail of the hash map -/
 @[specialize]
-def modify [BEq α] {β : Type v} (a : α) (f : β → β) :
-    AssocList α (fun _ => β) → AssocList α (fun _ => β)
-  | nil => nil
+def modify [BEq α] {β : Type v} (a : α) (f : β → β)
+    : AssocList α (fun _ => β) → AssocList α (fun _ => β)
+  | nil =>
+    nil
   | cons k v l =>
     if k == a then
       cons a (f v) l
@@ -239,9 +275,10 @@ def modify [BEq α] {β : Type v} (a : α) (f : β → β) :
 
 /-- Internal implementation detail of the hash map -/
 @[specialize]
-def alter [BEq α] {β : Type v} (a : α) (f : Option β → Option β) :
-    AssocList α (fun _ => β) → AssocList α (fun _ => β)
-  | nil => match f none with
+def alter [BEq α] {β : Type v} (a : α) (f : Option β → Option β)
+    : AssocList α (fun _ => β) → AssocList α (fun _ => β)
+  | nil =>
+    match f none with
     | none => nil
     | some b => AssocList.cons a b nil
   | cons k v l =>
@@ -256,31 +293,35 @@ def alter [BEq α] {β : Type v} (a : α) (f : Option β → Option β) :
 end Const
 
 /-- Internal implementation detail of the hash map -/
-@[inline] def filterMap (f : (a : α) → β a → Option (γ a)) :
-    AssocList α β → AssocList α γ :=
-  go .nil
+@[inline]
+def filterMap (f : (a : α) → β a → Option (γ a)) : AssocList α β → AssocList α γ := go .nil
 where
-  @[specialize] go (acc : AssocList α γ) : AssocList α β → AssocList α γ
-  | nil => acc
-  | cons k v t => match f k v with
-    | none => go acc t
-    | some v' => go (cons k v' acc) t
+  @[specialize]
+  go (acc : AssocList α γ) : AssocList α β → AssocList α γ
+    | nil =>
+      acc
+    | cons k v t =>
+      match f k v with
+      | none => go acc t
+      | some v' => go (cons k v' acc) t
 
 /-- Internal implementation detail of the hash map -/
-@[inline] def map (f : (a : α) → β a → γ a) : AssocList α β → AssocList α γ :=
-  go .nil
+@[inline]
+def map (f : (a : α) → β a → γ a) : AssocList α β → AssocList α γ := go .nil
 where
-  @[specialize] go (acc : AssocList α γ) : AssocList α β → AssocList α γ
-  | nil => acc
-  | cons k v t => go (cons k (f k v) acc) t
+  @[specialize]
+  go (acc : AssocList α γ) : AssocList α β → AssocList α γ
+    | nil => acc
+    | cons k v t => go (cons k (f k v) acc) t
 
 /-- Internal implementation detail of the hash map -/
-@[inline] def filter (f : (a : α) → β a → Bool) : AssocList α β → AssocList α β :=
-  go .nil
+@[inline]
+def filter (f : (a : α) → β a → Bool) : AssocList α β → AssocList α β := go .nil
 where
-  @[specialize] go (acc : AssocList α β) : AssocList α β → AssocList α β
-  | nil => acc
-  | cons k v t => bif f k v then go (cons k v acc) t else go acc t
+  @[specialize]
+  go (acc : AssocList α β) : AssocList α β → AssocList α β
+    | nil => acc
+    | cons k v t => bif f k v then go (cons k v acc) t else go acc t
 
 end AssocList
 

@@ -24,18 +24,18 @@ abbrev CbvOpaqueExtension := SimpleScopedEnvExtension Name (Std.HashSet Name)
 
 builtin_initialize cbvOpaqueExt : CbvOpaqueExtension ←
   registerSimpleScopedEnvExtension {
-    name     := `cbvOpaqueExt
-    initial  := {}
+    name := `cbvOpaqueExt
+    initial := {}
     addEntry := fun s n => s.insert n
   }
 
 builtin_initialize
   registerBuiltinAttribute {
-    ref   := `cbvOpaqueAttr
-    name  := `cbv_opaque
+    ref := `cbvOpaqueAttr
+    name := `cbv_opaque
     descr := "Mark declarations that should not be unfolded by the `cbv` tactic"
     applicationTime := AttributeApplicationTime.afterCompilation
-    add   := fun declName _ kind => do
+    add := fun declName _ kind => do
       if (← isReducible declName) then
         throwError "`@[cbv_opaque]` cannot be applied to a `@[reducible]` declaration: \
           `{.ofConstName declName}` is reducible, so it is unfolded before `cbv` runs"
@@ -45,8 +45,7 @@ builtin_initialize
       modifyEnv fun env => cbvOpaqueExt.modifyState env fun _ => s.erase declName
   }
 
-def cbvOpaque : CoreM (Std.HashSet Name) := do
-  return cbvOpaqueExt.getState (← getEnv)
+def cbvOpaque : CoreM (Std.HashSet Name) := do return cbvOpaqueExt.getState (← getEnv)
 
 def isCbvOpaque (name : Name) : CoreM Bool := do
   return cbvOpaqueExt.getState (← getEnv) |>.contains name

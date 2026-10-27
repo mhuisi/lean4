@@ -739,10 +739,8 @@ public def fmtTermOpen : Fmt := fun
     let openDecl ← fmtOpenDecl openTk decl
     let inTk ← fmt inTk
     let body ← fmt body
-    return Layouts.keywordSeparated openDecl inTk body {
-      allowFlattening := false
-      nestedRhs := false
-    }
+    return
+      Layouts.keywordSeparated openDecl inTk body { allowFlattening := false, nestedRhs := false }
   | _ =>
     throw .partialFormatter
 

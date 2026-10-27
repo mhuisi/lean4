@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.SymM
 import Lean.Meta.Sym.IsClass
@@ -11,20 +12,23 @@ import Lean.Meta.Sym.Util
 import Lean.Meta.Sym.Eta
 namespace Lean.Meta.Sym
 
-/--
-Preprocesses types that used for pattern matching and unification.
--/
-public def preprocessType (type : Expr) (zetaReduceLHSOnly := false) (zetaDelta := false) : MetaM Expr := do
+/-- Preprocesses types that used for pattern matching and unification. -/
+public def preprocessType (type : Expr) (zetaReduceLHSOnly := false) (zetaDelta := false)
+    : MetaM Expr := do
   let type ← Sym.unfoldReducible type
   let type ← Core.betaReduce type
-  let type ← if zetaReduceLHSOnly then
-    forallTelescope type fun xs body => do
-      match_expr body with
-      | f@Eq α lhs rhs => mkForallFVars xs <| mkApp3 f α (← zetaReduce lhs (zetaDelta := zetaDelta)) rhs
-      | f@Iff lhs rhs => mkForallFVars xs <| mkApp2 f (← zetaReduce lhs (zetaDelta := zetaDelta)) rhs
-      | _ => zetaReduce type (zetaDelta := zetaDelta)
-  else
-    zetaReduce type (zetaDelta := zetaDelta)
+  let type ←
+    if zetaReduceLHSOnly then
+      forallTelescope type fun xs body => do
+        match_expr body with
+        | f@Eq α lhs rhs =>
+          mkForallFVars xs <| mkApp3 f α (← zetaReduce lhs (zetaDelta := zetaDelta)) rhs
+        | f@Iff lhs rhs =>
+          mkForallFVars xs <| mkApp2 f (← zetaReduce lhs (zetaDelta := zetaDelta)) rhs
+        | _ =>
+          zetaReduce type (zetaDelta := zetaDelta)
+    else
+      zetaReduce type (zetaDelta := zetaDelta)
   etaReduceAll type
 
 /--

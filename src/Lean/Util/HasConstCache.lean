@@ -21,22 +21,23 @@ unsafe def HasConstCache.containsUnsafe (e : Expr) : StateM (HasConstCache declN
     return r
   else
     match e with
-    | .const n ..        => return declNames.contains n
-    | .app f a           => cache e (← containsUnsafe f <||> containsUnsafe a)
-    | .lam _ d b _       => cache e (← containsUnsafe d <||> containsUnsafe b)
-    | .forallE _ d b _   => cache e (← containsUnsafe d <||> containsUnsafe b)
-    | .letE _ t v b _    => cache e (← containsUnsafe t <||> containsUnsafe v <||> containsUnsafe b)
-    | .mdata _ b         => cache e (← containsUnsafe b)
-    | .proj _ _ b        => cache e (← containsUnsafe b)
-    | _                  => return false
+    | .const n .. => return declNames.contains n
+    | .app f a => cache e (← containsUnsafe f <||> containsUnsafe a)
+    | .lam _ d b _ => cache e (← containsUnsafe d <||> containsUnsafe b)
+    | .forallE _ d b _ => cache e (← containsUnsafe d <||> containsUnsafe b)
+    | .letE _ t v b _ => cache e (← containsUnsafe t <||> containsUnsafe v <||> containsUnsafe b)
+    | .mdata _ b => cache e (← containsUnsafe b)
+    | .proj _ _ b => cache e (← containsUnsafe b)
+    | _ => return false
 where
   cache (e : Expr) (r : Bool) : StateM (HasConstCache declNames) Bool := do
     modify fun ⟨cache⟩ => ⟨cache.insert (beq := ⟨ptrEq⟩) e r⟩
     return r
 
 /--
-  Return true iff `e` contains the constant `declName`.
-  Remark: the results for visited expressions are stored in the state cache. -/
+Return true iff `e` contains the constant `declName`.
+Remark: the results for visited expressions are stored in the state cache.
+-/
 @[implemented_by HasConstCache.containsUnsafe]
 opaque HasConstCache.contains (e : Expr) : StateM (HasConstCache declNames) Bool
 

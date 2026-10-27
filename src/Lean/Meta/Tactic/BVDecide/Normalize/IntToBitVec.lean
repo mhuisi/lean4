@@ -27,18 +27,14 @@ It:
 namespace Lean.Meta.Tactic.BVDecide
 namespace Normalize
 
-/--
-Contains information for the `USize`/`ISize` elimination pass.
--/
+/-- Contains information for the `USize`/`ISize` elimination pass. -/
 structure SizeState where
   /--
   Contains terms of the form `USize.toBitVec e` and `ISize.toBitVec e` that we will translate to
   constant width `BitVec`.
   -/
   relevantTerms : Std.HashSet Expr := {}
-  /--
-  Contains all hypotheses that contain terms from `relevantTerms`
-  -/
+  /-- Contains all hypotheses that contain terms from `relevantTerms` -/
   relevantHyps : Std.HashSet FVarId := {}
 
 abbrev M := StateRefT SizeState MetaM
@@ -72,27 +68,32 @@ def toBitVecOfNatProc : Sym.Simp.Simproc := fun e => do
   | _ => return .rfl
 where
   runProc (expr : Expr) (width : Nat) (thm : Expr) : Sym.Simp.SimpM Sym.Simp.Result := do
-    let some value := Sym.getNatValue? expr | return .rfl
+    let some value := Sym.getNatValue? expr
+      | return .rfl
     let expr ← Sym.share <| toExpr <| BitVec.ofNat width value
     let proof := mkApp thm (toExpr value)
     return .step expr proof
 
-public def addIntToBitVecLemmas (goal : MVarId) (methods : Sym.Simp.Methods) :
-    PreProcessM Sym.Simp.Methods := do
+public def addIntToBitVecLemmas (goal : MVarId) (methods : Sym.Simp.Methods)
+    : PreProcessM Sym.Simp.Methods := do
   let intToBvThms ← symIntToBitVecExt.getTheorems
   let numBitsEq? ← findNumBitsEq goal
   let discharge : Sym.Simp.Discharger :=
-    if let some (width, proof) := numBitsEq? then
-      fun prop => do
-        let prop ← Sym.instantiateMVarsS prop
-        let_expr Eq _ lhs rhs := prop | return .failed
-        unless lhs.isConstOf ``System.Platform.numBits do return .failed
-        let some val := Sym.getNatValue? rhs | return .failed
-        unless width == val do return .failed
-        return .solved proof
+    if let some (width, proof) := numBitsEq? then fun prop => do
+      let prop ← Sym.instantiateMVarsS prop
+      let_expr Eq _ lhs rhs := prop
+        | return .failed
+      unless lhs.isConstOf ``System.Platform.numBits do
+        return .failed
+      let some val := Sym.getNatValue? rhs
+        | return .failed
+      unless width == val do
+        return .failed
+      return .solved proof
     else
       Sym.Simp.dischargeNone
-  return { methods with
+  return {
+    methods with
     pre := methods.pre >> intToBvThms.rewrite (d := discharge) >> toBitVecOfNatProc
   }
 where
@@ -106,12 +107,15 @@ where
         match_expr hyp.type with
         | Eq eqTyp lhs rhs =>
           if lhs.isConstOf ``System.Platform.numBits then
-            let some val ← getNatValue? rhs | return none
+            let some val ← getNatValue? rhs
+              | return none
             return some (val, hyp.value)
           else if rhs.isConstOf ``System.Platform.numBits then
-            let some val ← getNatValue? lhs | return none
+            let some val ← getNatValue? lhs
+              | return none
             return some (val, mkApp4 (mkConst ``Eq.symm [1]) eqTyp lhs rhs hyp.value)
-        | _ => continue
+        | _ =>
+          continue
       return none
 
 public def intToBitVecPass : Pass where
@@ -120,12 +124,9 @@ public def intToBitVecPass : Pass where
     let cfg ← PreProcessM.getConfig
     let goal ← PreProcessM.getTargetMVarId
 
-    let config := {
-      maxSteps := cfg.maxSteps
-    }
+    let config := { maxSteps := cfg.maxSteps }
     let methods ← addIntToBitVecLemmas goal {}
-    goal.withContext do
-      PreProcessM.mapSimpHyps methods config
+    goal.withContext do PreProcessM.mapSimpHyps methods config
 
 end Normalize
 end Lean.Meta.Tactic.BVDecide

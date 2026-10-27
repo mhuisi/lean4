@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Simp.SimpM
 public import Lean.Meta.Sym.Simp.Discharger
@@ -34,10 +35,14 @@ private def postRelation (e e' : Expr) (h? : Option Expr) (cd : Bool) : SimpM Re
   cacheNormal e'.appFn!.appArg! cd
   cacheNormal e'.appArg! cd
   match (← post e'), h? with
-  | .rfl _ cd₂, none => return mkRflResult (done := true) (contextDependent := cd || cd₂)
-  | .rfl _ cd₂, some h => return .step e' h (done := true) (contextDependent := cd || cd₂)
-  | r₂, none => return if cd && !r₂.isContextDependent then r₂.withContextDependent else r₂
-  | r₂, some h => mkEqTransResult e e' h r₂ cd
+  | .rfl _ cd₂, none =>
+    return mkRflResult (done := true) (contextDependent := cd || cd₂)
+  | .rfl _ cd₂, some h =>
+    return .step e' h (done := true) (contextDependent := cd || cd₂)
+  | r₂, none =>
+    return if cd && !r₂.isContextDependent then r₂.withContextDependent else r₂
+  | r₂, some h =>
+    mkEqTransResult e e' h r₂ cd
 
 /--
 Normalizes ring and semiring terms and relations into polynomial normal form
@@ -61,11 +66,16 @@ instead of being split by sign, and with `distrib := false` products of non-cons
 are kept as atoms; with `maxChar? := some c`, terms over a structure whose characteristic is a
 numeral above `c`, or not a numeral, are left as written. See `Arith.normalize?`.
 -/
-def simpArith (d : Discharger := dischargeNone) (lhsOnly : Bool := false) (distrib : Bool := true) (maxChar? : Option Nat := none) : Simproc := fun e => do
-  let r ← Arith.normalize? e simp (lhsOnly := lhsOnly) (distrib := distrib) (maxChar? := maxChar?) fun p => do
-    match (← d p) with
-    | .solved h _ => return some h
-    | .failed _ => return none
+def simpArith
+    (d : Discharger := dischargeNone) (lhsOnly : Bool := false) (distrib : Bool := true)
+    (maxChar? : Option Nat := none)
+    : Simproc := fun e => do
+  let r ←
+    Arith.normalize? e simp (lhsOnly := lhsOnly) (distrib := distrib) (maxChar? := maxChar?)
+      fun p => do
+        match (← d p) with
+        | .solved h _ => return some h
+        | .failed _ => return none
   match r with
   | .rfl true cd =>
     if isRelation e then postRelation e e none cd else return r
@@ -76,14 +86,16 @@ def simpArith (d : Discharger := dischargeNone) (lhsOnly : Bool := false) (distr
     else
       cacheNormal e' cd
       return r
-  | _ => return r
+  | _ =>
+    return r
 
 /--
 Returns `some k` if `e` is `a + (k + 1)` for a numeral `k + 1`, i.e., the normal form of a
 `Nat` polynomial with a positive constant, which is nonzero for every value of its atoms.
 -/
 private def isNatAddSucc? (e : Expr) : Option (Expr × Nat) := do
-  let_expr HAdd.hAdd _ _ _ _ a k := e | none
+  let_expr HAdd.hAdd _ _ _ _ a k := e
+    | none
   let k ← (Sym.getNatValue? k).run
   if k == 0 then none else some (a, k - 1)
 
@@ -103,23 +115,29 @@ The other ground cases (`k = 0`, `0 ≤ k`) are handled by `evalGround`. Intende
 def simpNatRel : Simproc := fun e => do
   match_expr e with
   | Eq α lhs rhs =>
-    let .const ``Nat _ := α | return .rfl
+    let .const ``Nat _ := α
+      | return .rfl
     if isNatZero rhs then
       if let some (a, k) := isNatAddSucc? lhs then
-        return .step (← getFalseExpr) (mkApp2 (mkConst ``Grind.Nat.add_succ_eq_zero_eq_false) a (mkRawNatLit k)) (done := true)
+        return .step (← getFalseExpr)
+          (mkApp2 (mkConst ``Grind.Nat.add_succ_eq_zero_eq_false) a (mkRawNatLit k)) (done := true)
     else if isNatZero lhs then
       if let some (a, k) := isNatAddSucc? rhs then
-        return .step (← getFalseExpr) (mkApp2 (mkConst ``Grind.Nat.zero_eq_add_succ_eq_false) a (mkRawNatLit k)) (done := true)
+        return .step (← getFalseExpr)
+          (mkApp2 (mkConst ``Grind.Nat.zero_eq_add_succ_eq_false) a (mkRawNatLit k)) (done := true)
     return .rfl
   | LE.le α _ lhs rhs =>
-    let .const ``Nat _ := α | return .rfl
+    let .const ``Nat _ := α
+      | return .rfl
     if isNatZero lhs then
       return .step (← getTrueExpr) (mkApp (mkConst ``Grind.Nat.zero_le_eq_true) rhs) (done := true)
     else if isNatZero rhs then
       if let some (a, k) := isNatAddSucc? lhs then
-        return .step (← getFalseExpr) (mkApp2 (mkConst ``Grind.Nat.add_succ_le_zero_eq_false) a (mkRawNatLit k)) (done := true)
+        return .step (← getFalseExpr)
+          (mkApp2 (mkConst ``Grind.Nat.add_succ_le_zero_eq_false) a (mkRawNatLit k)) (done := true)
     return .rfl
-  | _ => return .rfl
+  | _ =>
+    return .rfl
 
 /--
 Cancels the common part of the sides of a `Nat` subtraction (`Arith.cancelNatSub?`), simplifying

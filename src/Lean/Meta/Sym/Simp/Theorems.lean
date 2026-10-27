@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Pattern
 public import Lean.Meta.DiscrTree
@@ -26,18 +27,22 @@ during rewriting.
 -/
 structure Theorem where
   /-- The theorem expression, typically `Expr.const declName` for a named theorem. -/
-  expr    : Expr
+  expr : Expr
   /-- Precomputed pattern extracted from the theorem's type for efficient matching. -/
   pattern : Pattern
   /-- Right-hand side of the equation. -/
-  rhs     : Expr
-  /-- If `true`, the theorem is a permutation rule (e.g., `x + y = y + x`).
+  rhs : Expr
+  /--
+  If `true`, the theorem is a permutation rule (e.g., `x + y = y + x`).
   Rewriting is only applied when the result is strictly less than the input
-  (using `acLt`), preventing infinite loops. -/
-  perm    : Bool
-  /-- Bitmask of the pattern variables that occur in `rhs`: bit `i` is set iff pattern
+  (using `acLt`), preventing infinite loops.
+  -/
+  perm : Bool
+  /--
+  Bitmask of the pattern variables that occur in `rhs`: bit `i` is set iff pattern
   variable `i` occurs in `rhs`. `Theorem.rewrite` uses it to detect hypothesis proofs that
-  become part of the resulting term and must consequently be maximally shared. -/
+  become part of the resulting term and must consequently be maximally shared.
+  -/
   rhsVarMask : Nat
   /--
   If `true`, the theorem is tried only when no other theorem rewrites the term.
@@ -45,7 +50,7 @@ structure Theorem where
   parameter: the equational theorems of `f` take precedence. See `Theorems.rewrite`.
   -/
   fallback : Bool := false
-  deriving Inhabited
+deriving Inhabited
 
 instance : BEq Theorem where
   beq thm₁ thm₂ := thm₁.expr == thm₂.expr
@@ -55,27 +60,33 @@ structure Theorems where
   thms : DiscrTree Theorem := {}
   /-- The theorems with `Theorem.fallback := true`. See `Theorems.rewrite`. -/
   fallback : DiscrTree Theorem := {}
-  deriving Inhabited
+deriving Inhabited
 
 def Theorems.isEmpty (thms : Theorems) : Bool :=
   thms.thms.root.isEmpty && thms.fallback.root.isEmpty
 
 def Theorems.insert (thms : Theorems) (thm : Theorem) : Theorems :=
-  if thm.fallback then
-    { thms with fallback := insertPattern thms.fallback thm.pattern thm }
-  else
-    { thms with thms := insertPattern thms.thms thm.pattern thm }
+  if thm.fallback then {
+    thms with
+    fallback := insertPattern thms.fallback thm.pattern thm
+  }
+  else {
+    thms with
+    thms := insertPattern thms.thms thm.pattern thm
+  }
 
 /-- Returns the theorems matching `e`, excluding the fallback ones. -/
 def Theorems.getMatch (thms : Theorems) (mctx : MetavarContext) (e : Expr) : Array Theorem :=
   Sym.getMatch mctx thms.thms e
 
 /-- Returns the theorems matching a prefix of `e`, excluding the fallback ones. -/
-def Theorems.getMatchWithExtra (thms : Theorems) (mctx : MetavarContext) (e : Expr) : Array (Theorem × Nat) :=
+def Theorems.getMatchWithExtra (thms : Theorems) (mctx : MetavarContext) (e : Expr)
+    : Array (Theorem × Nat) :=
   Sym.getMatchWithExtra mctx thms.thms e
 
 /-- Returns the fallback theorems matching a prefix of `e`. -/
-def Theorems.getFallbackMatchWithExtra (thms : Theorems) (mctx : MetavarContext) (e : Expr) : Array (Theorem × Nat) :=
+def Theorems.getFallbackMatchWithExtra (thms : Theorems) (mctx : MetavarContext) (e : Expr)
+    : Array (Theorem × Nat) :=
   Sym.getMatchWithExtra mctx thms.fallback e
 
 /--
@@ -98,25 +109,38 @@ private partial def isPermAux (a b : Expr) : IsPermM Unit := do
   | .bvar i, .bvar j =>
     let offset ← read
     if i < offset && j < offset then
-      unless i == j do throw ()
+      unless i == j do
+        throw ()
     else if i >= offset && j >= offset then
       let pi := i - offset
       let pj := j - offset
       let fwd ← get
-      if h : pi >= fwd.size then throw () else
-      match fwd[pi] with
-      | none =>
-        -- Check injectivity: pj must not already be a target of another mapping
-        if fwd.contains (some pj) then throw ()
-        set (fwd.set pi (some pj))
-      | some pj' => unless pj == pj' do throw ()
-    else throw ()
-  | .app f₁ a₁, .app f₂ a₂ => isPermAux f₁ f₂; isPermAux a₁ a₂
-  | .mdata _ s, t => isPermAux s t
-  | s, .mdata _ t => isPermAux s t
-  | .forallE _ d₁ b₁ _, .forallE _ d₂ b₂ _ => isPermAux d₁ d₂; withReader (· + 1) (isPermAux b₁ b₂)
-  | .lam _ d₁ b₁ _, .lam _ d₂ b₂ _ => isPermAux d₁ d₂; withReader (· + 1) (isPermAux b₁ b₂)
-  | s, t => unless s == t do throw ()
+      if h : pi >= fwd.size then
+        throw ()
+      else
+        match fwd[pi] with
+        | none =>
+          -- Check injectivity: pj must not already be a target of another mapping
+          if fwd.contains (some pj) then throw ()
+          set (fwd.set pi (some pj))
+        | some pj' =>
+          unless pj == pj' do
+            throw ()
+    else
+      throw ()
+  | .app f₁ a₁, .app f₂ a₂ =>
+    isPermAux f₁ f₂; isPermAux a₁ a₂
+  | .mdata _ s, t =>
+    isPermAux s t
+  | s, .mdata _ t =>
+    isPermAux s t
+  | .forallE _ d₁ b₁ _, .forallE _ d₂ b₂ _ =>
+    isPermAux d₁ d₂; withReader (· + 1) (isPermAux b₁ b₂)
+  | .lam _ d₁ b₁ _, .lam _ d₂ b₂ _ =>
+    isPermAux d₁ d₂; withReader (· + 1) (isPermAux b₁ b₂)
+  | s, t =>
+    unless s == t do
+      throw ()
 
 def isPerm (numVars : Nat) (lhs rhs : Expr) : Bool :=
   ((isPermAux lhs rhs).run 0 |>.run (Array.replicate numVars none)) matches .ok _
@@ -158,19 +182,17 @@ This wrapping must be applied AFTER the proof has been applied to its quantified
 private def wrapProof (pattern : Pattern) (expr : Expr) (adaptation : EqAdaptation) : MetaM Expr :=
   match adaptation with
   | .eq => return expr
-  | .eqFalse =>
-    wrapInner pattern expr fun h => mkAppM ``eq_false #[h]
-  | .iff =>
-    wrapInner pattern expr fun h => mkAppM ``propext #[h]
-  | .eqTrue =>
-    wrapInner pattern expr fun h => mkAppM ``eq_true #[h]
+  | .eqFalse => wrapInner pattern expr fun h => mkAppM ``eq_false #[h]
+  | .iff => wrapInner pattern expr fun h => mkAppM ``propext #[h]
+  | .eqTrue => wrapInner pattern expr fun h => mkAppM ``eq_true #[h]
 where
   /-- Wraps the innermost application of `expr` (after the pattern variables) with `wrap`. -/
   wrapInner (pattern : Pattern) (expr : Expr) (wrap : Expr → MetaM Expr) : MetaM Expr := do
     -- For a named theorem, `expr` is a constant with the universe levels elided (see the
     -- `mkValue` fast path). Instantiate it with the pattern's level params so that `inferType`
     -- succeeds, and `mkValue` can later substitute the matched levels.
-    let expr := match expr with
+    let expr :=
+      match expr with
       | .const declName [] => mkConst declName (pattern.levelParams.map mkLevelParam)
       | _ => expr
     let type ← inferType expr
@@ -200,7 +222,8 @@ theorem, if it is a global declaration.
 -/
 private def ensurePropType (type : Expr) (declName? : Option Name := none) : MetaM Unit := do
   unless (← isProp type) do
-    let decl := match declName? with
+    let decl :=
+      match declName? with
       | some declName => m!" `{.ofConstName declName}`"
       | none => m!""
     throwError "cannot use{decl} as a simp theorem, its type is not a proposition{indentExpr type}"
@@ -209,7 +232,8 @@ private def ensurePropType (type : Expr) (declName? : Option Name := none) : Met
 def mkTheoremFromDecl (declName : Name) : MetaM Theorem := do
   let info ← getConstInfo declName
   ensurePropType info.type declName
-  let (pattern, (rhs, adaptation)) ← mkPatternFromDeclWithKey declName selectEqKey (zetaReduceLHSOnly := true)
+  let (pattern, (rhs, adaptation)) ←
+    mkPatternFromDeclWithKey declName selectEqKey (zetaReduceLHSOnly := true)
   let expr ← wrapProof pattern (mkConst declName) adaptation
   let perm := isPerm pattern.varTypes.size pattern.pattern rhs
   let rhsVarMask := mkRhsVarMask pattern.varTypes.size rhs
@@ -218,7 +242,8 @@ def mkTheoremFromDecl (declName : Name) : MetaM Theorem := do
 /-- Create a `Theorem` from a proof expression. Handles equalities, `¬`, `↔`, and propositions. -/
 def mkTheoremFromExpr (e : Expr) : MetaM Theorem := do
   ensurePropType (← inferType e)
-  let (pattern, (rhs, adaptation)) ← mkPatternFromExprWithKey e [] selectEqKey (zetaReduceLHSOnly := true)
+  let (pattern, (rhs, adaptation)) ←
+    mkPatternFromExprWithKey e [] selectEqKey (zetaReduceLHSOnly := true)
   let expr ← wrapProof pattern e adaptation
   let perm := isPerm pattern.varTypes.size pattern.pattern rhs
   let rhsVarMask := mkRhsVarMask pattern.varTypes.size rhs
@@ -241,7 +266,8 @@ structure DeclTheoremNames where
 /-- Returns `true` if the equational theorem `eqn` has the form `∀ xs, f xs = body`. -/
 private def isUnfoldEqn (declName : Name) (eqn : Name) : MetaM Bool := do
   forallTelescope (← getConstInfo eqn).type fun xs type => do
-    let some (_, lhs, _) := type.eq? | return false
+    let some (_, lhs, _) := type.eq?
+      | return false
     return lhs.getAppFn.isConstOf declName && lhs.getAppArgs == xs
 
 /--
@@ -255,15 +281,19 @@ def getSimpTheoremNames (declName : Name) : MetaM DeclTheoremNames := do
   if (← isProp info.sig.get.type) then
     return { thms := #[declName] }
   unless info.kind matches .defn do
-    throwError "cannot use `{.ofConstName declName}` as a simp theorem, it is not a proposition nor a definition with equational theorems"
+    throwError "cannot use `{.ofConstName declName}` as a simp theorem, it is not a proposition \
+      nor a definition with equational theorems"
   if isUnfoldReducibleCandidate (← getEnv) declName then
     -- The `Sym` preprocessing has already unfolded every application of `declName`.
-    logWarning m!"`{.ofConstName declName}` is a reducible definition, `Sym.simp` unfolds it during preprocessing"
+    logWarning m!"`{.ofConstName declName}` is a reducible definition, `Sym.simp` unfolds it \
+      during preprocessing"
     return { thms := #[] }
   if (← Simp.ignoreEquations declName) then
-    throwError "cannot use `{.ofConstName declName}` as a simp theorem, it is a projection, and `Sym.simp` does not support unfolding projections"
+    throwError "cannot use `{.ofConstName declName}` as a simp theorem, it is a projection, and \
+      `Sym.simp` does not support unfolding projections"
   let some eqns ← getEqnsFor? declName
-    | throwError "cannot use `{.ofConstName declName}` as a simp theorem, it does not have equational theorems"
+    | throwError "cannot use `{.ofConstName declName}` as a simp theorem, it does not have \
+        equational theorems"
   -- Recursive definitions are unfolded by their equational theorems only.
   if (← isRecursiveDefinition declName) then
     return { thms := eqns }
@@ -294,15 +324,18 @@ def SymSimpExtension.getTheorems (ext : SymSimpExtension) : CoreM Theorems :=
 
 def mkSymSimpExt (name : Name := by exact decl_name%) : IO SymSimpExtension :=
   registerSimpleScopedEnvExtension {
-    name     := name
-    initial  := {}
+    name := name
+    initial := {}
     addEntry := fun thms thm => thms.insert thm
     exportEntry? := fun _ thm =>
       match thm.expr with
       | .const declName _ =>
-        if isPrivateName declName then ⟨none, none, some thm⟩
-        else .uniform (some thm)
-      | _ => .uniform (some thm)
+        if isPrivateName declName then
+          ⟨none, none, some thm⟩
+        else
+          .uniform (some thm)
+      | _ =>
+        .uniform (some thm)
   }
 
 abbrev SymSimpExtensionMap := Std.HashMap Name SymSimpExtension

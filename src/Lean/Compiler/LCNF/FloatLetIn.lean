@@ -16,25 +16,15 @@ namespace Lean.Compiler.LCNF
 
 namespace FloatLetIn
 
-/--
-The decision of the float mechanism.
--/
+/-- The decision of the float mechanism. -/
 inductive Decision where
-  /--
-  Push into the arm with name `name`.
-  -/
+  /-- Push into the arm with name `name`. -/
   | arm (name : Name)
-  /--
-  Push into the default arm.
-  -/
+  /-- Push into the default arm. -/
   | default
-  /--
-  Don't move this declaration it is needed where it is right now.
-  -/
+  /-- Don't move this declaration it is needed where it is right now. -/
   | dont
-  /--
-  No decision has been made yet.
-  -/
+  /-- No decision has been made yet. -/
   | unknown
 deriving Hashable, BEq, Inhabited, Repr
 
@@ -42,9 +32,7 @@ def Decision.ofAlt : Alt .pure → Decision
   | .alt name _ _ => .arm name
   | .default _ => .default
 
-/--
-The context for `BaseFloatM`.
--/
+/-- The context for `BaseFloatM`. -/
 structure BaseFloatContext where
   /--
   All the declarations that were collected in the current LCNF basic
@@ -52,13 +40,9 @@ structure BaseFloatContext where
   -/
   decls : List (CodeDecl .pure) := []
 
-/--
-The state for `FloatM`
--/
+/-- The state for `FloatM` -/
 structure FloatState where
-  /--
-  A map from identifiers of declarations to their current decision.
-  -/
+  /-- A map from identifiers of declarations to their current decision. -/
   decision : Std.HashMap FVarId Decision
   /--
   A map from decisions (excluding `unknown`) to the declarations with
@@ -69,42 +53,31 @@ structure FloatState where
   -/
   newArms : Std.HashMap Decision (List (CodeDecl .pure))
 
-/--
-Use to collect relevant declarations for the floating mechanism.
--/
-abbrev BaseFloatM :=  ReaderT BaseFloatContext CompilerM
+/-- Use to collect relevant declarations for the floating mechanism. -/
+abbrev BaseFloatM := ReaderT BaseFloatContext CompilerM
 
-/--
-Use to compute the actual floating.
--/
+/-- Use to compute the actual floating. -/
 abbrev FloatM := StateRefT FloatState BaseFloatM
 
-/--
-Add `decl` to the list of declarations and run `x` with that updated context.
--/
+/-- Add `decl` to the list of declarations and run `x` with that updated context. -/
 def withNewCandidate (decl : CodeDecl .pure) (x : BaseFloatM α) : BaseFloatM α :=
-  withReader (fun r => { r with decls := decl :: r.decls }) do
-    x
+  withReader (fun r => { r with decls := decl :: r.decls }) do x
 
-/--
-Run `x` with an empty list of declarations.
--/
-def withNewScope (x : BaseFloatM α) : BaseFloatM α := do
-  withReader (fun _ => {}) do
-    x
+/-- Run `x` with an empty list of declarations. -/
+def withNewScope (x : BaseFloatM α) : BaseFloatM α := do withReader (fun _ => {}) do x
 
 /--
 Whether to ignore `decl` for the floating mechanism. We want to do this if:
 - `decl`' is storing a typeclass instance
 - `decl` is a projection from a variable that is storing a typeclass instance
 -/
-def ignore? (decl : LetDecl .pure) : BaseFloatM Bool :=  do
-   if (← isArrowClass? decl.type).isSome then
-     return true
-   else if let .proj _ _ fvarId := decl.value then
-     return (← isArrowClass? (← getType fvarId)).isSome
-   else
-     return false
+def ignore? (decl : LetDecl .pure) : BaseFloatM Bool := do
+  if (← isArrowClass? decl.type).isSome then
+    return true
+  else if let .proj _ _ fvarId := decl.value then
+    return (← isArrowClass? (← getType fvarId)).isSome
+  else
+    return false
 
 /--
 Compute the initial decision for all declarations that `BaseFloatM` collected
@@ -127,32 +100,37 @@ def initialDecisions (cs : Cases .pure) : BaseFloatM (Std.HashMap FVarId Decisio
   let typeName := cs.typeName
   if typeName == ``EST.Out || typeName == ``ST.Out then
     return Std.HashMap.ofList <| (← read).decls.map fun decl => (decl.fvarId, .dont)
-  (map, _) ← (← read).decls.foldlM (init := (map, owned)) fun (acc, owned) val => do
-    if let .let decl := val then
-      if (← ignore? decl) then
-        return (acc.insert decl.fvarId .dont, owned)
-    let (dont, owned) ← (visitDecl (← getEnv) val).run owned
-    if dont then
-      return (acc.insert val.fvarId .dont, owned)
-    else
-      return (acc.insert val.fvarId .unknown, owned)
+  (map, _) ←
+    (← read).decls.foldlM (init := (map, owned)) fun (acc, owned) val => do
+      if let .let decl := val then
+        if (← ignore? decl) then
+          return (acc.insert decl.fvarId .dont, owned)
+      let (dont, owned) ← (visitDecl (← getEnv) val).run owned
+      if dont then
+        return (acc.insert val.fvarId .dont, owned)
+      else
+        return (acc.insert val.fvarId .unknown, owned)
 
   if map.contains cs.discr then
     map := map.insert cs.discr .dont
   (_, map) ← goCases cs |>.run map
   return map
 where
-  visitDecl (env : Environment) (value : CodeDecl .pure) : StateRefT (Std.HashSet FVarId) CompilerM Bool := do
+  visitDecl (env : Environment) (value : CodeDecl .pure)
+      : StateRefT (Std.HashSet FVarId) CompilerM Bool := do
     match value with
     | .let decl => visitLetValue env decl.value
     | _ => return false -- will need to investigate whether that can be a problem
 
-  visitLetValue (env : Environment) (value : LetValue .pure) : StateRefT (Std.HashSet FVarId) CompilerM Bool := do
+  visitLetValue (env : Environment) (value : LetValue .pure)
+      : StateRefT (Std.HashSet FVarId) CompilerM Bool := do
     match value with
-    | .proj _ _ x => visitArg (.fvar x) true
+    | .proj _ _ x =>
+      visitArg (.fvar x) true
     | .const nm _ args =>
       match ← getImpureSignature? nm with
-      | none => args.foldlM (fun b arg => visitArg arg false <||> pure b) false
+      | none =>
+        args.foldlM (fun b arg => visitArg arg false <||> pure b) false
       | some sig =>
         let mut res := false
         for h : i in *...args.size do
@@ -160,24 +138,26 @@ where
             res := true
         return res
     | .fvar x args =>
-      args.foldlM (fun b arg => visitArg arg false <||> pure b)
-        (← visitArg (.fvar x) false)
-    | .erased | .lit _ => return false
+      args.foldlM (fun b arg => visitArg arg false <||> pure b) (← visitArg (.fvar x) false)
+    | .erased | .lit _ =>
+      return false
 
   visitArg (var : Arg .pure) (borrowed : Bool) : StateRefT (Std.HashSet FVarId) CompilerM Bool := do
-    let .fvar v := var | return false
+    let .fvar v := var
+      | return false
     let res := (← get).contains v
     unless borrowed do
       modify (·.insert v)
     return res
 
-  goFVar (plannedDecision : Decision) (var : FVarId) : StateRefT (Std.HashMap FVarId Decision) BaseFloatM Unit := do
+  goFVar (plannedDecision : Decision) (var : FVarId)
+      : StateRefT (Std.HashMap FVarId Decision) BaseFloatM Unit := do
     if let some decision := (← get)[var]? then
       if decision matches .unknown then
         modify fun s => s.insert var plannedDecision
       else if decision != plannedDecision then
         modify fun s => s.insert var .dont
-      -- otherwise we already have the proper decision
+  -- otherwise we already have the proper decision
 
   goAlt (alt : Alt .pure) : StateRefT (Std.HashMap FVarId Decision) BaseFloatM Unit :=
     forFVarM (goFVar (.ofAlt alt)) alt
@@ -270,7 +250,8 @@ def float (decl : CodeDecl .pure) : FloatM Unit := do
   modify fun s => { s with newArms := s.newArms.insert arm (decl :: s.newArms[arm]!) }
 where
   goFVar (fvar : FVarId) (arm : Decision) : FloatM Unit := do
-    let some decision := (← get).decision[fvar]? | return ()
+    let some decision := (← get).decision[fvar]?
+      | return ()
     if decision == .unknown then
       modify fun s => { s with decision := s.decision.insert fvar arm }
     else if decision != arm then
@@ -306,34 +287,27 @@ where
   go (code : Code .pure) : BaseFloatM (Code .pure) := do
     match code with
     | .let decl k =>
-      withNewCandidate (.let decl) do
-        go k
+      withNewCandidate (.let decl) do go k
     | .jp decl k =>
-      let value ← withNewScope do
-        go decl.value
+      let value ← withNewScope do go decl.value
       let decl ← decl.updateValue value
-      withNewCandidate (.jp decl) do
-        go k
+      withNewCandidate (.jp decl) do go k
     | .fun decl k =>
-      let value ← withNewScope do
-        go decl.value
+      let value ← withNewScope do go decl.value
       let decl ← decl.updateValue value
-      withNewCandidate (.fun decl) do
-        go k
+      withNewCandidate (.fun decl) do go k
     | .cases cs =>
-      let base := {
-        decision := (← initialDecisions cs)
-        newArms := initialNewArms cs
-      }
+      let base := { decision := (← initialDecisions cs), newArms := initialNewArms cs }
       let (_, res) ← goCases |>.run base
       let remainders := res.newArms[Decision.dont]!
-      let newAlts ← cs.alts.mapMonoM fun alt => do
-        let decision := Decision.ofAlt alt
-        let newCode := res.newArms[decision]!
-        trace[Compiler.floatLetIn] "Size of code that was pushed into arm: {repr decision} {newCode.length}"
-        let fused ← withNewScope do
-          go (attachCodeDecls newCode.toArray alt.getCode)
-        return alt.updateCode fused
+      let newAlts ←
+        cs.alts.mapMonoM fun alt => do
+          let decision := Decision.ofAlt alt
+          let newCode := res.newArms[decision]!
+          trace[Compiler.floatLetIn]
+            "Size of code that was pushed into arm: {repr decision} {newCode.length}"
+          let fused ← withNewScope do go (attachCodeDecls newCode.toArray alt.getCode)
+          return alt.updateCode fused
       let mut newCases := Code.updateCases! code cs.resultType cs.discr newAlts
       return attachCodeDecls remainders.toArray newCases
     | .jmp .. | .return .. | .unreach .. =>
@@ -341,14 +315,12 @@ where
 
 end FloatLetIn
 
-def Decl.floatLetIn (decl : Decl .pure) : CompilerM (Decl .pure) := do
-  FloatLetIn.floatLetIn decl
+def Decl.floatLetIn (decl : Decl .pure) : CompilerM (Decl .pure) := do FloatLetIn.floatLetIn decl
 
 def floatLetIn (phase := Phase.base) (occurrence := 0) : Pass :=
   phase.withPurityCheck .pure fun h =>
     .mkPerDeclaration `floatLetIn phase (h ▸ Decl.floatLetIn) occurrence
 
-builtin_initialize
-  registerTraceClass `Compiler.floatLetIn (inherited := true)
+builtin_initialize registerTraceClass `Compiler.floatLetIn (inherited := true)
 
 end Lean.Compiler.LCNF

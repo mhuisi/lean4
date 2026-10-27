@@ -15,14 +15,20 @@ public section
 namespace Lean.Elab
 
 register_builtin_option autoImplicit : Bool := {
-    defValue := true
-    descr    := "Unbound local variables in declaration headers become implicit arguments. In \"relaxed\" mode (default), any atomic identifier is eligible, otherwise only single character followed by numeric digits are eligible. For example, `def f (x : Vector α n) : Vector α n :=` automatically introduces the implicit variables {α n}."
-  }
+  defValue := true
+  descr :=
+    "Unbound local variables in declaration headers become implicit arguments. In \"relaxed\" mode \
+      (default), any atomic identifier is eligible, otherwise only single character followed by \
+      numeric digits are eligible. For example, `def f (x : Vector α n) : Vector α n :=` \
+      automatically introduces the implicit variables {α n}."
+}
 
 register_builtin_option relaxedAutoImplicit : Bool := {
-    defValue := true
-    descr    := "When \"relaxed\" mode is enabled, any atomic nonempty identifier is eligible for auto bound implicit locals (see option `autoImplicit`)."
-  }
+  defValue := true
+  descr :=
+    "When \"relaxed\" mode is enabled, any atomic nonempty identifier is eligible for auto bound \
+      implicit locals (see option `autoImplicit`)."
+}
 
 /--
 Checks whether a string is a name that can be auto-bound when the `relaxedAutoImplicit` option is
@@ -53,7 +59,8 @@ but it contains additional notes (above and beyond `Unknown identifier`) to atta
 an error message.
 -/
 
-def checkValidAutoBoundImplicitName (n : Name) (allowed : Bool) (relaxed : Bool) : Except MessageData Bool :=
+def checkValidAutoBoundImplicitName (n : Name) (allowed : Bool) (relaxed : Bool)
+    : Except MessageData Bool :=
   match n with
   | .str .anonymous s =>
     if s.isEmpty then
@@ -61,19 +68,21 @@ def checkValidAutoBoundImplicitName (n : Name) (allowed : Bool) (relaxed : Bool)
     else if allowed && (relaxed || isValidAutoBoundSuffix s) then
       .ok true
     else if !allowed then
-      .error <| .note m!"It is not possible to treat `{.ofConstName n}` as an implicitly bound variable here because the `autoImplicit` option is set to `{.ofConstName ``false}`."
+      .error <| .note m!"It is not possible to treat `{.ofConstName n}` as an implicitly bound \
+        variable here because the `autoImplicit` option is set to `{.ofConstName ``false}`."
     else
-      .error <| .note m!"It is not possible to treat `{.ofConstName n}` as an implicitly bound variable here because it has multiple characters while the `relaxedAutoImplicit` option is set to `{.ofConstName ``false}`."
-  | _ => .ok false
+      .error <| .note m!"It is not possible to treat `{.ofConstName n}` as an implicitly bound \
+        variable here because it has multiple characters while the `relaxedAutoImplicit` option is \
+        set to `{.ofConstName ``false}`."
+  | _ =>
+    .ok false
 
 def isValidAutoBoundLevelName (n : Name) (relaxed : Bool) : Bool :=
   match n with
   | .str .anonymous s => !s.isEmpty && (relaxed || (s.front.isLower && isValidAutoBoundSuffix s))
   | _ => false
 
-/--
-Tracks extra context needed within the scope of `Lean.Elab.Term.withAutoBoundImplicit`
--/
+/-- Tracks extra context needed within the scope of `Lean.Elab.Term.withAutoBoundImplicit` -/
 structure AutoBoundImplicitContext where
   /--
   This always matches the `autoImplicit` option; it is duplicated here in
@@ -89,13 +98,16 @@ structure AutoBoundImplicitContext where
 deriving Inhabited
 
 instance : EmptyCollection AutoBoundImplicitContext where
-  emptyCollection := AutoBoundImplicitContext.mk (autoImplicitEnabled := false) (boundVariables := {})
+  emptyCollection :=
+    AutoBoundImplicitContext.mk (autoImplicitEnabled := false) (boundVariables := {})
 
 /--
 Pushes a new variable onto the autoImplicit context, indicating that it needs
 to be bound as an implicit parameter.
 -/
-def AutoBoundImplicitContext.push (ctx : AutoBoundImplicitContext) (x : Expr) :=
-  { ctx with boundVariables := ctx.boundVariables.push x }
+def AutoBoundImplicitContext.push (ctx : AutoBoundImplicitContext) (x : Expr) := {
+  ctx with
+  boundVariables := ctx.boundVariables.push x
+}
 
 end Lean.Elab

@@ -35,12 +35,18 @@ partial def main (e : Expr) (offset : Nat) : M Unit := do
       | .bvar idx =>
         -- `idx ≥ offset` is true if `looseBVarRange` has not overflowed. It currently has the range [0,2^20).
         modify fun s => { s with bvars := s.bvars.insert (idx - offset) }
-      | .fvar .. | .mvar .. | .sort .. | .const .. | .lit .. => pure ()
-      | .app f a => main f offset; main a offset
-      | .lam _ t b _ | .forallE _ t b _ => main t offset; main b (offset + 1)
-      | .letE _ t v b _ => main t offset; main v offset; main b (offset + 1)
-      | .mdata _ e' => main e' offset
-      | .proj _ _ e' => main e' offset
+      | .fvar .. | .mvar .. | .sort .. | .const .. | .lit .. =>
+        pure ()
+      | .app f a =>
+        main f offset; main a offset
+      | .lam _ t b _ | .forallE _ t b _ =>
+        main t offset; main b (offset + 1)
+      | .letE _ t v b _ =>
+        main t offset; main v offset; main b (offset + 1)
+      | .mdata _ e' =>
+        main e' offset
+      | .proj _ _ e' =>
+        main e' offset
 
 end CollectLooseBVars
 

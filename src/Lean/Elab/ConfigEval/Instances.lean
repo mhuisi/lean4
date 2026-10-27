@@ -36,7 +36,7 @@ def evalBoolStx : Term → TermElabM (Bool × Expr) :=
       return false
     else
       match stx with
-      | `(.true)  => return true
+      | `(.true) => return true
       | `(.false) => return false
       | _ => throwUnsupportedSyntax
 
@@ -47,14 +47,14 @@ def evalNatStx : Term → TermElabM (Nat × Expr) :=
 
 def evalIntStx : Term → TermElabM (Int × Expr) :=
   evalTermWithInfo' fun
-  | `($n:num) => return n.getNat
-  | `(-$n:num) => return -n.getNat
-  | _ => throwUnsupportedSyntax
+    | `($n:num) => return n.getNat
+    | `(-$n:num) => return -n.getNat
+    | _ => throwUnsupportedSyntax
 
 def evalStringStx : Term → TermElabM (String × Expr) :=
   evalTermWithInfo' fun
-  | `($s:str) => return s.getString
-  | _ => throwUnsupportedSyntax
+    | `($s:str) => return s.getString
+    | _ => throwUnsupportedSyntax
 
 def evalNameStx : Term → TermElabM (Name × Expr) :=
   evalTermWithInfo' fun stx => do
@@ -69,50 +69,61 @@ def evalNameStx : Term → TermElabM (Name × Expr) :=
         return n
     throwUnsupportedSyntax
 
-def evalOptionStx {α : Type} (typeExpr : Expr) (ev : Term → TermElabM (α × Expr)) : Term → TermElabM (Option α × Expr) :=
+def evalOptionStx {α : Type} (typeExpr : Expr) (ev : Term → TermElabM (α × Expr))
+    : Term → TermElabM (Option α × Expr) :=
   evalTermWithInfo (Expr.app (Expr.const ``Option [0]) typeExpr) fun
-  | `(none) | `(.none) => return (none, Expr.app (Expr.const ``Option.none [0]) typeExpr)
-  | `(some $stx) | `(.some $stx) | stx => do
-    let (v, e) ← ev stx
-    return (some v, mkApp2 (Expr.const ``Option.some [0]) typeExpr e)
+    | `(none) | `(.none) =>
+      return (none, Expr.app (Expr.const ``Option.none [0]) typeExpr)
+    | `(some $stx) | `(.some $stx) | stx => do
+      let (v, e) ← ev stx
+      return (some v, mkApp2 (Expr.const ``Option.some [0]) typeExpr e)
 
-def evalListStx {α : Type} (typeExpr : Expr) (ev : Term → TermElabM (α × Expr)) : Term → TermElabM (List α × Expr) :=
+def evalListStx {α : Type} (typeExpr : Expr) (ev : Term → TermElabM (α × Expr))
+    : Term → TermElabM (List α × Expr) :=
   evalTermWithInfo (Expr.app (Expr.const ``List [0]) typeExpr) fun
-  | `([$[$xs],*]) => do
-    let (vs, es) := (← xs.mapM ev).unzip
-    let e := es.foldr (init := Expr.app (Expr.const ``List.nil [0]) typeExpr) fun x e =>
-      mkApp3 (Expr.const ``List.cons [0]) typeExpr x e
-    return (vs.toList, e)
-  | _ => throwUnsupportedSyntax
+    | `([$[$xs],*]) => do
+      let (vs, es) := (← xs.mapM ev).unzip
+      let e :=
+        es.foldr (init := Expr.app (Expr.const ``List.nil [0]) typeExpr) fun x e =>
+          mkApp3 (Expr.const ``List.cons [0]) typeExpr x e
+      return (vs.toList, e)
+    | _ =>
+      throwUnsupportedSyntax
 
-def evalArrayStx {α : Type} (typeExpr : Expr) (ev : Term → TermElabM (α × Expr)) : Term → TermElabM (Array α × Expr) :=
+def evalArrayStx {α : Type} (typeExpr : Expr) (ev : Term → TermElabM (α × Expr))
+    : Term → TermElabM (Array α × Expr) :=
   evalTermWithInfo (Expr.app (Expr.const ``Array [0]) typeExpr) fun
-  | `(#[$[$xs],*]) => do
-    let (vs, es) := (← xs.mapM ev).unzip
-    let e := es.foldr (init := Expr.app (Expr.const ``List.nil [0]) typeExpr) fun x e =>
-      mkApp3 (Expr.const ``List.cons [0]) typeExpr x e
-    return (vs, mkApp2 (Expr.const ``List.toArray [0]) typeExpr e)
-  | _ => throwUnsupportedSyntax
+    | `(#[$[$xs],*]) => do
+      let (vs, es) := (← xs.mapM ev).unzip
+      let e :=
+        es.foldr (init := Expr.app (Expr.const ``List.nil [0]) typeExpr) fun x e =>
+          mkApp3 (Expr.const ``List.cons [0]) typeExpr x e
+      return (vs, mkApp2 (Expr.const ``List.toArray [0]) typeExpr e)
+    | _ =>
+      throwUnsupportedSyntax
 
-def evalProdStx {α α' : Type} (typeExpr typeExpr' : Expr)
-    (ev : Term → TermElabM (α × Expr)) (ev' : Term → TermElabM (α' × Expr)) :
-    Term → TermElabM ((α × α') × Expr) :=
+def evalProdStx
+    {α α' : Type}
+    (typeExpr typeExpr' : Expr) (ev : Term → TermElabM (α × Expr))
+    (ev' : Term → TermElabM (α' × Expr))
+    : Term → TermElabM ((α × α') × Expr) :=
   evalTermWithInfo (mkApp2 (Expr.const ``Prod [0, 0]) typeExpr typeExpr') fun
-  | `(($x, $x')) => do
-    let (v, e) ← ev x
-    let (v', e') ← ev' x'
-    return ((v, v'), mkApp4 (Expr.const ``Prod.mk [0, 0]) typeExpr typeExpr' e e')
-  | _ => throwUnsupportedSyntax
+    | `(($x, $x')) => do
+      let (v, e) ← ev x
+      let (v', e') ← ev' x'
+      return ((v, v'), mkApp4 (Expr.const ``Prod.mk [0, 0]) typeExpr typeExpr' e e')
+    | _ =>
+      throwUnsupportedSyntax
 
 def evalDataValueStx (stx : Term) : TermElabM (DataValue × Expr) :=
   let mk {α} (c : Name) (f : α → DataValue) (x : α × Expr) := (f x.1, Expr.app (.const c []) x.2)
   (mk ``DataValue.ofBool DataValue.ofBool <$> evalBoolStx stx)
-  <|> (mk ``DataValue.ofNat DataValue.ofNat <$> evalNatStx stx)
-  <|> (mk ``DataValue.ofInt DataValue.ofInt <$> evalIntStx stx)
-  <|> (mk ``DataValue.ofString DataValue.ofString <$> evalStringStx stx)
-  <|> (mk ``DataValue.ofName DataValue.ofName <$> evalNameStx stx)
-  -- skipping `DataValue.ofSyntax` for now
-  <|> throwUnsupportedSyntax
+    <|> (mk ``DataValue.ofNat DataValue.ofNat <$> evalNatStx stx)
+    <|> (mk ``DataValue.ofInt DataValue.ofInt <$> evalIntStx stx)
+    <|> (mk ``DataValue.ofString DataValue.ofString <$> evalStringStx stx)
+    <|> (mk ``DataValue.ofName DataValue.ofName <$> evalNameStx stx)
+    -- skipping `DataValue.ofSyntax` for now
+    <|> throwUnsupportedSyntax
 
 instance : EvalTerm Bool where
   evalTerm := evalBoolStx
@@ -170,18 +181,17 @@ def evalBoolExprCore (e : Expr) : MetaM Bool :=
 def evalBoolExpr : Expr → MetaM Bool :=
   withWHNF (errMsg := m!"\nof type `{.ofConstName ``Bool}`.") evalBoolExprCore
 
-def evalNatExprCore (e : Expr) : MetaM Nat :=
-  (e.nat? <|> e.rawNatLit?).getDM throwUnsupportedExpr
+def evalNatExprCore (e : Expr) : MetaM Nat := (e.nat? <|> e.rawNatLit?).getDM throwUnsupportedExpr
 
 def evalNatExpr : Expr → MetaM Nat :=
   withWHNF (errMsg := m!"\nof type `{.ofConstName ``Nat}`.") evalNatExprCore
 
 def evalIntExprCore (e : Expr) : MetaM Int :=
-  e.int?.getM <|> Int.ofNat <$> evalNatExprCore e <|>
-    match_expr e with
-    | Int.ofNat e' => Int.ofNat <$> evalNatExpr e'
-    | Int.negSucc e' => Int.negSucc <$> evalNatExpr e'
-    | _ => throwUnsupportedExpr
+  e.int?.getM <|> Int.ofNat <$> evalNatExprCore e
+    <|> match_expr e with
+      | Int.ofNat e' => Int.ofNat <$> evalNatExpr e'
+      | Int.negSucc e' => Int.negSucc <$> evalNatExpr e'
+      | _ => throwUnsupportedExpr
 
 def evalIntExpr : Expr → MetaM Int :=
   withWHNF (errMsg := m!"\nof type `{.ofConstName ``Int}`.") evalIntExprCore
@@ -193,8 +203,7 @@ def evalStringExprCore : Expr → MetaM String
 def evalStringExpr : Expr → MetaM String :=
   withWHNF (errMsg := m!"\nof type `{.ofConstName ``String}`.") evalStringExprCore
 
-def evalNameExprCore (e : Expr) : MetaM Name :=
-  e.name?.getDM throwUnsupportedExpr
+def evalNameExprCore (e : Expr) : MetaM Name := e.name?.getDM throwUnsupportedExpr
 
 def evalNameExpr : Expr → MetaM Name :=
   withWHNF (errMsg := m!"\nof type `{.ofConstName ``Name}`.") evalNameExprCore
@@ -206,18 +215,22 @@ def evalOptionExprCore {α : Type} (ev : Expr → MetaM α) (e : Expr) : MetaM (
   | _ => throwUnsupportedExpr
 
 def evalOptionExpr {α : Type} (ev : Expr → MetaM α) (e : Expr) : MetaM (Option α) :=
-  withWHNF (errMsg := m!"\nof type `{.ofConstName ``Option}`.") (evalOptionExprCore ev) e <|> some <$> ev e
+  withWHNF (errMsg := m!"\nof type `{.ofConstName ``Option}`.") (evalOptionExprCore ev) e
+    <|> some <$> ev e
 
-partial def evalListExpr {α : Type} (ev : Expr → MetaM α) (e : Expr) (didWHNF : Bool := false) : MetaM (List α) := do
+partial def evalListExpr {α : Type} (ev : Expr → MetaM α) (e : Expr) (didWHNF : Bool := false)
+    : MetaM (List α) := do
   match_expr (meta := false) e with
-  | List.nil _ => return []
+  | List.nil _ =>
+    return []
   | List.cons _ x xs =>
     let v ← ev x
     let vs ← evalListExpr ev xs (didWHNF := false)
     return v :: vs
   | _ =>
     if didWHNF then
-      throwError "Could not evaluate the expression{indentExpr e}\nof type `{.ofConstName ``List}`."
+      throwError "Could not evaluate the expression{indentExpr e}\
+        \nof type `{.ofConstName ``List}`."
     else
       evalListExpr ev (← whnf e) (didWHNF := true)
 
@@ -230,19 +243,22 @@ partial def evalArrayExpr {α : Type} (ev : Expr → MetaM α) : Expr → MetaM 
 
 def evalDataValueExprCore (e : Expr) : MetaM DataValue :=
   match_expr e with
-  | DataValue.ofBool e => DataValue.ofBool <$> evalBoolExpr e
-  | DataValue.ofNat e => DataValue.ofNat <$> evalNatExpr e
-  | DataValue.ofInt e => DataValue.ofInt <$> evalIntExpr e
-  | DataValue.ofString e => DataValue.ofString <$> evalStringExpr e
-  | DataValue.ofName e => DataValue.ofName <$> evalNameExpr e
+  | DataValue.ofBool e =>
+    DataValue.ofBool <$> evalBoolExpr e
+  | DataValue.ofNat e =>
+    DataValue.ofNat <$> evalNatExpr e
+  | DataValue.ofInt e =>
+    DataValue.ofInt <$> evalIntExpr e
+  | DataValue.ofString e =>
+    DataValue.ofString <$> evalStringExpr e
+  | DataValue.ofName e =>
+    DataValue.ofName <$> evalNameExpr e
   | _ =>
-    (DataValue.ofBool <$> evalBoolExprCore e)
-    <|> (DataValue.ofNat <$> evalNatExprCore e)
-    <|> (DataValue.ofInt <$> evalIntExprCore e)
-    <|> (DataValue.ofString <$> evalStringExprCore e)
-    <|> (DataValue.ofName <$> evalNameExprCore e)
-    -- skipping `DataValue.ofSyntax` for now
-    <|> throwUnsupportedExpr
+    (DataValue.ofBool <$> evalBoolExprCore e) <|> (DataValue.ofNat <$> evalNatExprCore e)
+      <|> (DataValue.ofInt <$> evalIntExprCore e) <|> (DataValue.ofString <$> evalStringExprCore e)
+      <|> (DataValue.ofName <$> evalNameExprCore e)
+      -- skipping `DataValue.ofSyntax` for now
+      <|> throwUnsupportedExpr
 
 def evalDataValueExpr : Expr → MetaM DataValue :=
   withWHNF (errMsg := m!"\nof type `{.ofConstName ``DataValue}`.") evalDataValueExprCore

@@ -434,10 +434,8 @@ public def fmtDoMatch : Fmt := fun
     let withTk ← fmt withTk
     let alts ← fmt alts
     let «match» := Layouts.keywordPrefixedSepFill matchLhs discrs .nonSticky
-    return Layouts.keywordSeparated «match» withTk alts {
-      allowFlattening := false
-      nestedRhs := false
-    }
+    return
+      Layouts.keywordSeparated «match» withTk alts { allowFlattening := false, nestedRhs := false }
   | _ =>
     throw .partialFormatter
 
@@ -453,10 +451,8 @@ public def fmtDoMatchExpr : Fmt := fun
     let «match» := Layouts.pseudoApplication #[matchLhs, discr]
     let withTk ← fmt withTk
     let alts ← fmt alts
-    return Layouts.keywordSeparated «match» withTk alts {
-      allowFlattening := false
-      nestedRhs := false
-    }
+    return
+      Layouts.keywordSeparated «match» withTk alts { allowFlattening := false, nestedRhs := false }
   | _ =>
     throw .partialFormatter
 

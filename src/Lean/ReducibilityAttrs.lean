@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.ScopedEnvExtension
 public section
@@ -38,8 +39,12 @@ See `TransparencyMode` for the full design rationale.
 -- `TransparencyMode`'s constructors are not in unfolding order: reordering them causes a
 -- non-trivial bootstrapping problem.
 inductive ReducibilityStatus where
-  | reducible | semireducible | irreducible | implicitReducible | instanceReducible
-  deriving Inhabited, Repr, BEq
+  | reducible
+  | semireducible
+  | irreducible
+  | implicitReducible
+  | instanceReducible
+deriving Inhabited, Repr, BEq
 
 def ReducibilityStatus.toAttrString : ReducibilityStatus → String
   | .reducible => "[reducible]"
@@ -48,28 +53,35 @@ def ReducibilityStatus.toAttrString : ReducibilityStatus → String
   | .implicitReducible => "[implicit_reducible]"
   | .instanceReducible => "[instance_reducible]"
 
-builtin_initialize reducibilityCoreExt : PersistentEnvExtension (Name × ReducibilityStatus) (Name × ReducibilityStatus) (NameMap ReducibilityStatus) ←
+builtin_initialize reducibilityCoreExt
+    : PersistentEnvExtension (Name × ReducibilityStatus) (Name × ReducibilityStatus)
+      (NameMap ReducibilityStatus) ←
   registerPersistentEnvExtension {
-    name            := `reducibilityCore
-    logWrites       := true
-    mkInitial       := pure {}
-    addImportedFn   := fun _ _ => pure {}
-    addEntryFn      := fun (s : NameMap ReducibilityStatus) (p : Name × ReducibilityStatus) => s.insert p.1 p.2
+    name := `reducibilityCore
+    logWrites := true
+    mkInitial := pure {}
+    addImportedFn := fun _ _ => pure {}
+    addEntryFn := fun (s : NameMap ReducibilityStatus) (p : Name × ReducibilityStatus) =>
+      s.insert p.1 p.2
     exportEntriesFn := fun m =>
       let r : Array (Name × ReducibilityStatus) := m.foldl (fun a n p => a.push (n, p)) #[]
       r.qsort (fun a b => Name.quickLt a.1 b.1)
-    statsFn         := fun s => "reducibility attribute core extension" ++ Format.line ++ "number of local entries: " ++ format s.size
+    statsFn := fun s =>
+      "reducibility attribute core extension" ++ Format.line ++ "number of local entries: "
+        ++ format s.size
     -- attribute is set by `addPreDefinitions`
-    asyncMode       := .async .mainEnv
-    replay? := some <| fun _oldState newState newItems otherState =>
-      newItems.foldl (init := otherState) fun otherState k =>
-        if let some v := newState.find? k then
-          otherState.insert k v
-        else
-          otherState
+    asyncMode := .async .mainEnv
+    replay? :=
+      some <| fun _oldState newState newItems otherState =>
+        newItems.foldl (init := otherState) fun otherState k =>
+          if let some v := newState.find? k then
+            otherState.insert k v
+          else
+            otherState
   }
 
-builtin_initialize reducibilityExtraExt : SimpleScopedEnvExtension (Name × ReducibilityStatus) (SMap Name ReducibilityStatus) ←
+builtin_initialize reducibilityExtraExt
+    : SimpleScopedEnvExtension (Name × ReducibilityStatus) (SMap Name ReducibilityStatus) ←
   registerSimpleScopedEnvExtension {
     name := `reducibilityExtra
     logWrites := true
@@ -83,14 +95,20 @@ def getReducibilityStatusCore (env : Environment) (declName : Name) : Reducibili
   let m := reducibilityExtraExt.getState env
   if let some status := m.find? declName then
     status
-  else match env.getModuleIdxFor? declName with
-  | some modIdx =>
-    match findSortedByName? (reducibilityCoreExt.getModuleEntries env modIdx) declName with
-    | some (_, status) => status
-    | none => .semireducible
-  | none => (reducibilityCoreExt.getState (asyncDecl := declName) env).find? declName |>.getD .semireducible
+  else
+    match env.getModuleIdxFor? declName with
+    | some modIdx =>
+      match findSortedByName? (reducibilityCoreExt.getModuleEntries env modIdx) declName with
+      | some (_, status) => status
+      | none => .semireducible
+    | none =>
+      (reducibilityCoreExt.getState (asyncDecl := declName) env).find? declName
+        |>.getD .semireducible
 
-private def setReducibilityStatusCore (env : Environment) (declName : Name) (status : ReducibilityStatus) (attrKind : AttributeKind) (currNamespace : Name) : Environment :=
+private def setReducibilityStatusCore
+    (env : Environment) (declName : Name) (status : ReducibilityStatus) (attrKind : AttributeKind)
+    (currNamespace : Name)
+    : Environment :=
   if attrKind matches .global then
     match env.getModuleIdxFor? declName with
     | some _ =>
@@ -98,7 +116,8 @@ private def setReducibilityStatusCore (env : Environment) (declName : Name) (sta
       reducibilityExtraExt.addEntry env (declName, status)
     | none =>
       let _ : Inhabited Environment := ⟨env⟩
-      reducibilityCoreExt.addEntry (asyncDecl := declName) (log := .decl declName) env (declName, status)
+      reducibilityCoreExt.addEntry (asyncDecl := declName) (log := .decl declName) env
+        (declName, status)
   else
     -- `scoped` and `local` must be handled by `reducibilityExtraExt`
     reducibilityExtraExt.addCore env (declName, status) attrKind currNamespace
@@ -127,63 +146,88 @@ subsystems such as the ones mentioned above.
 
 register_builtin_option allowUnsafeReducibility : Bool := {
   defValue := false
-  descr    := "enables users to modify the reducibility settings for declarations even when such changes are deemed potentially hazardous. For example, `simp` and type class resolution maintain term indices where reducible declarations are expanded."
+  descr :=
+    "enables users to modify the reducibility settings for declarations even when such changes are \
+      deemed potentially hazardous. For example, `simp` and type class resolution maintain term \
+      indices where reducible declarations are expanded."
 }
 
-private def validate (declName : Name) (status : ReducibilityStatus) (attrKind : AttributeKind) : CoreM Unit := do
-  let suffix := .note "Use `set_option allowUnsafeReducibility true` to override reducibility status validation"
+private def validate (declName : Name) (status : ReducibilityStatus) (attrKind : AttributeKind)
+    : CoreM Unit := do
+  let suffix :=
+    .note "Use `set_option allowUnsafeReducibility true` to override reducibility status validation"
   -- Allow global visibility attributes even on non-exported definitions - they may be relevant for
   -- downstream non-`module`s.
   withoutExporting do
-  unless allowUnsafeReducibility.get (← getOptions) do
-    unless (← getConstInfo declName).isDefinition do
-      throwError "failed to set reducibility status, `{.ofConstName declName}` is not a definition{suffix}"
-    let statusOld := getReducibilityStatusCore (← getEnv) declName
-    match attrKind with
-    | .scoped =>
-      throwError "failed to set reducibility status for `{.ofConstName declName}`, the `scoped` modifier is not recommended for this kind of attribute{suffix}"
-    | .global =>
-      if (← getEnv).getModuleIdxFor? declName matches some _ then
-        throwError "failed to set reducibility status, `{.ofConstName declName}` has not been defined in this file, consider using the `local` modifier{suffix}"
-      match status with
-      | .reducible =>
-        unless statusOld matches .semireducible do
-          throwError "failed to set `[reducible]`, `{.ofConstName declName}` is not currently `[semireducible]`, but `{statusOld.toAttrString}`{suffix}"
-      | .irreducible =>
-        unless statusOld matches .semireducible | .implicitReducible | .instanceReducible do
-          throwError "failed to set `[irreducible]`, `{.ofConstName declName}` is not currently `[semireducible]`, `[implicit_reducible]` nor `[instance_reducible]`, but `{statusOld.toAttrString}`{suffix}"
-      | .implicitReducible =>
-        -- Allow `[semireducible] -> [implicit_reducible]` and the upgrade
-        -- `[instance_reducible] -> [implicit_reducible]` (so instances can be strengthened to
-        -- only unfold during implicit-arg defeq).
-        unless statusOld matches .semireducible | .instanceReducible do
-          throwError "failed to set `[implicit_reducible]`, `{.ofConstName declName}` is not currently `[semireducible]` nor `[instance_reducible]`, but `{statusOld.toAttrString}`{suffix}"
-      | .instanceReducible =>
-        unless statusOld matches .semireducible do
-          throwError "failed to set `[instance_reducible]`, `{.ofConstName declName}` is not currently `[semireducible]`, but `{statusOld.toAttrString}`{suffix}"
-      | .semireducible =>
-        if statusOld matches .semireducible then do
-          throwError "failed to set `[semireducible]` for `{.ofConstName declName}` because it already is `[semireducible]`{suffix}"
-        else
-          throwError "failed to set `[semireducible]` for `{.ofConstName declName}`{suffix}"
-    | .local =>
-      match status with
-      | .reducible =>
-        throwError "failed to set `[local reducible]` for `{.ofConstName declName}`, recall that `[reducible]` affects the term indexing data structures used by `simp` and type class resolution{suffix}"
-      | .irreducible =>
-        unless statusOld matches .semireducible | .implicitReducible | .instanceReducible do
-          throwError "failed to set `[local irreducible]`, `{.ofConstName declName}` is currently `{statusOld.toAttrString}`, `[semireducible]`, `[implicit_reducible]` nor `[instance_reducible]` expected{suffix}"
-      | .implicitReducible =>
-        unless statusOld matches .semireducible | .instanceReducible do
-          throwError "failed to set `[local implicit_reducible]`, `{.ofConstName declName}` is currently `{statusOld.toAttrString}`, `[semireducible]` or `[instance_reducible]` expected{suffix}"
-      | .instanceReducible =>
-        unless statusOld matches .semireducible do
-          throwError "failed to set `[local instance_reducible]`, `{.ofConstName declName}` is currently `{statusOld.toAttrString}`, `[semireducible]` expected{suffix}"
-      | .semireducible =>
-        unless statusOld matches .irreducible do
-          throwError "failed to set `[local semireducible]`, `{.ofConstName declName}` is currently `{statusOld.toAttrString}`, `[irreducible]` expected{suffix}"
+    unless allowUnsafeReducibility.get (← getOptions) do
+      unless (← getConstInfo declName).isDefinition do
+        throwError
+          "failed to set reducibility status, `{.ofConstName declName}` is not a definition{suffix}"
+      let statusOld := getReducibilityStatusCore (← getEnv) declName
+      match attrKind with
+      | .scoped =>
+        throwError "failed to set reducibility status for `{.ofConstName declName}`, the `scoped` \
+          modifier is not recommended for this kind of attribute{suffix}"
+      | .global =>
+        if (← getEnv).getModuleIdxFor? declName matches some _ then
+          throwError "failed to set reducibility status, `{.ofConstName declName}` has not been \
+            defined in this file, consider using the `local` modifier{suffix}"
+        match status with
+        | .reducible =>
+          unless statusOld matches .semireducible do
+            throwError "failed to set `[reducible]`, `{.ofConstName declName}` is not currently \
+              `[semireducible]`, but `{statusOld.toAttrString}`{suffix}"
+        | .irreducible =>
+          unless statusOld matches .semireducible | .implicitReducible | .instanceReducible do
+            throwError "failed to set `[irreducible]`, `{.ofConstName declName}` is not currently \
+              `[semireducible]`, `[implicit_reducible]` nor `[instance_reducible]`, but \
+              `{statusOld.toAttrString}`{suffix}"
+        | .implicitReducible =>
+          -- Allow `[semireducible] -> [implicit_reducible]` and the upgrade
+          -- `[instance_reducible] -> [implicit_reducible]` (so instances can be strengthened to
+          -- only unfold during implicit-arg defeq).
+          unless statusOld matches .semireducible | .instanceReducible do
+            throwError "failed to set `[implicit_reducible]`, `{.ofConstName declName}` is not \
+              currently `[semireducible]` nor `[instance_reducible]`, but \
+              `{statusOld.toAttrString}`{suffix}"
+        | .instanceReducible =>
+          unless statusOld matches .semireducible do
+            throwError "failed to set `[instance_reducible]`, `{.ofConstName declName}` is not \
+              currently `[semireducible]`, but `{statusOld.toAttrString}`{suffix}"
+        | .semireducible =>
+          if statusOld matches .semireducible then do
+            throwError "failed to set `[semireducible]` for `{.ofConstName declName}` because it \
+              already is `[semireducible]`{suffix}"
+          else
+            throwError "failed to set `[semireducible]` for `{.ofConstName declName}`{suffix}"
+      | .local =>
+        match status with
+        | .reducible =>
+          throwError "failed to set `[local reducible]` for `{.ofConstName declName}`, recall that \
+            `[reducible]` affects the term indexing data structures used by `simp` and type class \
+            resolution{suffix}"
+        | .irreducible =>
+          unless statusOld matches .semireducible | .implicitReducible | .instanceReducible do
+            throwError "failed to set `[local irreducible]`, `{.ofConstName declName}` is \
+              currently `{statusOld.toAttrString}`, `[semireducible]`, `[implicit_reducible]` nor \
+              `[instance_reducible]` expected{suffix}"
+        | .implicitReducible =>
+          unless statusOld matches .semireducible | .instanceReducible do
+            throwError "failed to set `[local implicit_reducible]`, `{.ofConstName declName}` is \
+              currently `{statusOld.toAttrString}`, `[semireducible]` or `[instance_reducible]` \
+              expected{suffix}"
+        | .instanceReducible =>
+          unless statusOld matches .semireducible do
+            throwError "failed to set `[local instance_reducible]`, `{.ofConstName declName}` is \
+              currently `{statusOld.toAttrString}`, `[semireducible]` expected{suffix}"
+        | .semireducible =>
+          unless statusOld matches .irreducible do
+            throwError "failed to set `[local semireducible]`, `{.ofConstName declName}` is \
+              currently `{statusOld.toAttrString}`, `[irreducible]` expected{suffix}"
 
-private def addAttr (status : ReducibilityStatus) (declName : Name) (stx : Syntax) (attrKind : AttributeKind) : AttrM Unit := do
+private def addAttr
+    (status : ReducibilityStatus) (declName : Name) (stx : Syntax) (attrKind : AttributeKind)
+    : AttrM Unit := do
   Attribute.Builtin.ensureNoArgs stx
   validate declName status attrKind
   let ns ← getCurrNamespace
@@ -191,30 +235,30 @@ private def addAttr (status : ReducibilityStatus) (declName : Name) (stx : Synta
 
 builtin_initialize
   registerBuiltinAttribute {
-    ref             := by exact decl_name%
-    name            := `irreducible
-    descr           := "irreducible declaration"
-    add             := addAttr .irreducible
+    ref := by exact decl_name%
+    name := `irreducible
+    descr := "irreducible declaration"
+    add := addAttr .irreducible
     applicationTime := .afterTypeChecking
- }
+  }
 
 builtin_initialize
   registerBuiltinAttribute {
-    ref             := by exact decl_name%
-    name            := `reducible
-    descr           := "reducible declaration"
-    add             := addAttr .reducible
+    ref := by exact decl_name%
+    name := `reducible
+    descr := "reducible declaration"
+    add := addAttr .reducible
     applicationTime := .afterTypeChecking
- }
+  }
 
 builtin_initialize
   registerBuiltinAttribute {
-    ref             := by exact decl_name%
-    name            := `semireducible
-    descr           := "semireducible declaration"
-    add             := addAttr .semireducible
+    ref := by exact decl_name%
+    name := `semireducible
+    descr := "semireducible declaration"
+    add := addAttr .semireducible
     applicationTime := .afterTypeChecking
- }
+  }
 
 /--
 Marks a definition as `[implicit_reducible]`, meaning it is unfolded at
@@ -232,12 +276,12 @@ use `[instance_reducible]` instead (which the `instance` command applies automat
 -/
 builtin_initialize
   registerBuiltinAttribute {
-    ref             := by exact decl_name%
-    name            := `implicit_reducible
-    descr           := "implicit reducible declaration"
-    add             := addAttr .implicitReducible
+    ref := by exact decl_name%
+    name := `implicit_reducible
+    descr := "implicit reducible declaration"
+    add := addAttr .implicitReducible
     applicationTime := .afterTypeChecking
- }
+  }
 
 /--
 Marks a definition as `[instance_reducible]`, meaning it is unfolded at
@@ -251,12 +295,12 @@ implicit reducibility level; it will no longer unfold at `.instances` transparen
 -/
 builtin_initialize
   registerBuiltinAttribute {
-    ref             := by exact decl_name%
-    name            := `instance_reducible
-    descr           := "instance reducible declaration"
-    add             := addAttr .instanceReducible
+    ref := by exact decl_name%
+    name := `instance_reducible
+    descr := "instance reducible declaration"
+    add := addAttr .instanceReducible
     applicationTime := .afterTypeChecking
- }
+  }
 
 /-- Return the reducibility attribute for the given declaration. -/
 def getReducibilityStatus [Monad m] [MonadEnv m] (declName : Name) : m ReducibilityStatus := do
@@ -288,8 +332,10 @@ def isImplicitReducible [Monad m] [MonadEnv m] (declName : Name) : m Bool :=
 def isInstanceReducibleCore (env : Environment) (declName : Name) : Bool :=
   getReducibilityStatusCore env declName matches .instanceReducible
 
-/-- Return `true` if the given declaration has been marked as `[instance_reducible]`
-(automatically applied by the `instance` command and by subobject class projections). -/
+/--
+Return `true` if the given declaration has been marked as `[instance_reducible]`
+(automatically applied by the `instance` command and by subobject class projections).
+-/
 def isInstanceReducible [Monad m] [MonadEnv m] (declName : Name) : m Bool :=
   return isInstanceReducibleCore (← getEnv) declName
 

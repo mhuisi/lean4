@@ -21,61 +21,80 @@ should be used only in modules that have perform some kind of canonicalization.
 -/
 
 def isInstOfNatNat (e : Expr) : MetaM Bool := do
-  let_expr instOfNatNat _ ← e | return false
+  let_expr instOfNatNat _ ← e
+    | return false
   return true
 def isInstAddNat (e : Expr) : MetaM Bool := do
-  let_expr instAddNat ← e | return false
+  let_expr instAddNat ← e
+    | return false
   return true
 def isInstSubNat (e : Expr) : MetaM Bool := do
-  let_expr instSubNat ← e | return false
+  let_expr instSubNat ← e
+    | return false
   return true
 def isInstMulNat (e : Expr) : MetaM Bool := do
-  let_expr instMulNat ← e | return false
+  let_expr instMulNat ← e
+    | return false
   return true
 def isInstDivNat (e : Expr) : MetaM Bool := do
-  let_expr Nat.instDiv ← e | return false
+  let_expr Nat.instDiv ← e
+    | return false
   return true
 def isInstModNat (e : Expr) : MetaM Bool := do
-  let_expr Nat.instMod ← e | return false
+  let_expr Nat.instMod ← e
+    | return false
   return true
 def isInstNatPowNat (e : Expr) : MetaM Bool := do
-  let_expr instNatPowNat ← e | return false
+  let_expr instNatPowNat ← e
+    | return false
   return true
 def isInstPowNat (e : Expr) : MetaM Bool := do
-  let_expr instPowNat _ i ← e | return false
+  let_expr instPowNat _ i ← e
+    | return false
   isInstNatPowNat i
 def isInstHAddNat (e : Expr) : MetaM Bool := do
-  let_expr instHAdd _ i ← e | return false
+  let_expr instHAdd _ i ← e
+    | return false
   isInstAddNat i
 def isInstHSubNat (e : Expr) : MetaM Bool := do
-  let_expr instHSub _ i ← e | return false
+  let_expr instHSub _ i ← e
+    | return false
   isInstSubNat i
 def isInstHMulNat (e : Expr) : MetaM Bool := do
-  let_expr instHMul _ i ← e | return false
+  let_expr instHMul _ i ← e
+    | return false
   isInstMulNat i
 def isInstHDivNat (e : Expr) : MetaM Bool := do
-  let_expr instHDiv _ i ← e | return false
+  let_expr instHDiv _ i ← e
+    | return false
   isInstDivNat i
 def isInstHModNat (e : Expr) : MetaM Bool := do
-  let_expr instHMod _ i ← e | return false
+  let_expr instHMod _ i ← e
+    | return false
   isInstModNat i
 def isInstHPowNat (e : Expr) : MetaM Bool := do
-  let_expr instHPow _ _ i ← e | return false
+  let_expr instHPow _ _ i ← e
+    | return false
   isInstPowNat i
 def isInstLTNat (e : Expr) : MetaM Bool := do
-  let_expr instLTNat ← e | return false
+  let_expr instLTNat ← e
+    | return false
   return true
 def isInstLENat (e : Expr) : MetaM Bool := do
-  let_expr instLENat ← e | return false
+  let_expr instLENat ← e
+    | return false
   return true
 def isInstDvdNat (e : Expr) : MetaM Bool := do
-  let_expr Nat.instDvd ← e | return false
+  let_expr Nat.instDvd ← e
+    | return false
   return true
 def isInstAndOpNat (e : Expr) : MetaM Bool := do
-  let_expr Nat.instAndOp ← e | return false
+  let_expr Nat.instAndOp ← e
+    | return false
   return true
 def isInstHAndNat (e : Expr) : MetaM Bool := do
-  let_expr instHAndOfAndOp _ i ← e | return false
+  let_expr instHAndOfAndOp _ i ← e
+    | return false
   isInstAndOpNat i
 end Structural
 

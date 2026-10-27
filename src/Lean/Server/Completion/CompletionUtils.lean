@@ -27,11 +27,14 @@ where
   pattern byte in `lower`/`upper` (via `scan`) so that the hot loop scanning `b` only performs a
   bounds check, a byte load, and two comparisons per byte.
   -/
-  goFastScalar (aSize bSize aPos bPos : USize)
-      (ha : aSize = a.utf8ByteSize.toUSize) (hb : bSize = b.utf8ByteSize.toUSize) : Bool :=
+  goFastScalar
+      (aSize bSize aPos bPos : USize)
+      (ha : aSize = a.utf8ByteSize.toUSize) (hb : bSize = b.utf8ByteSize.toUSize)
+      : Bool :=
     if haPos : aPos < aSize then
-      let aByte := String.Internal.ugetUTF8Byte a aPos
-        (Std.lt_of_lt_of_le (USize.lt_iff_toNat_lt.1 haPos) (ha ▸ USize.toNat_ofNat_le))
+      let aByte :=
+        String.Internal.ugetUTF8Byte a aPos
+          (Std.lt_of_lt_of_le (USize.lt_iff_toNat_lt.1 haPos) (ha ▸ USize.toNat_ofNat_le))
       -- If `a` contains a non-ASCII byte we give up on the fast path
       if aByte &&& 0x80 != 0 then
         go ⟨aPos.toNat⟩ ⟨bPos.toNat⟩
@@ -40,11 +43,15 @@ where
     else
       true
 
-  scan (lower upper : UInt8) (aSize bSize aPos bPos : USize)
-      (ha : aSize = a.utf8ByteSize.toUSize) (hb : bSize = b.utf8ByteSize.toUSize) : Bool :=
+  scan
+      (lower upper : UInt8)
+      (aSize bSize aPos bPos : USize)
+      (ha : aSize = a.utf8ByteSize.toUSize) (hb : bSize = b.utf8ByteSize.toUSize)
+      : Bool :=
     if hbPos : bPos < bSize then
-      let bByte := String.Internal.ugetUTF8Byte b bPos
-        (Std.lt_of_lt_of_le (USize.lt_iff_toNat_lt.1 hbPos) (hb ▸ USize.toNat_ofNat_le))
+      let bByte :=
+        String.Internal.ugetUTF8Byte b bPos
+          (Std.lt_of_lt_of_le (USize.lt_iff_toNat_lt.1 hbPos) (hb ▸ USize.toNat_ofNat_le))
       -- `lower` and `upper` are ASCII, so a non-ASCII byte can never match and it is fine to
       -- check for a match first
       if bByte == lower || bByte == upper then
@@ -81,14 +88,16 @@ inductive HoverInfo : Type where
 
 structure ContextualizedCompletionInfo where
   hoverInfo : HoverInfo
-  ctx       : ContextInfo
-  info      : CompletionInfo
+  ctx : ContextInfo
+  info : CompletionInfo
 
-partial def minimizeGlobalIdentifierInContext (currNamespace : Name) (openDecls : List OpenDecl) (id : Name)
+partial def minimizeGlobalIdentifierInContext
+    (currNamespace : Name) (openDecls : List OpenDecl) (id : Name)
     : Name := Id.run do
   let mut minimized := shortenInCurrentNamespace id currNamespace
   for openDecl in openDecls do
-    let candidate? := match openDecl with
+    let candidate? :=
+      match openDecl with
       | .simple ns except =>
         let candidate := shortenInOpenNamespace id ns
         if ! except.contains candidate then
@@ -128,12 +137,14 @@ partial def getDotCompletionTypeNames (type : Expr) : MetaM (Array Name) :=
   return (← visit type |>.run #[]).2
 where
   visit (type : Expr) : StateRefT (Array Name) MetaM Unit := do
-    let .const typeName _ := type.getAppFn | return ()
+    let .const typeName _ := type.getAppFn
+      | return ()
     modify fun s => s.push typeName
     if isStructure (← getEnv) typeName then
       for parentName in (← getAllParentStructures typeName) do
         modify fun s => s.push parentName
-    let some type ← unfoldDefinitionGuarded? type | return ()
+    let some type ← unfoldDefinitionGuarded? type
+      | return ()
     visit type
 
 /--
@@ -151,7 +162,8 @@ where
         Meta.forallTelescope type fun _ type => visit type
       else
         let type ← instantiateMVars type
-        let .const typeName _ := type.getAppFn | return ()
+        let .const typeName _ := type.getAppFn
+          | return ()
         modify fun s => s.push typeName
         if let some type' ← unfoldDefinitionGuarded? type then
           visit type'

@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 import Init.Grind.Util
@@ -47,7 +48,8 @@ def checkEqc (root : ENode) : GoalM Unit := do
   assert! root.size == size
 
 def checkChild (e : Expr) (child : Expr) : GoalM Bool := do
-  let some childRoot ← getRoot? child | return false
+  let some childRoot ← getRoot? child
+    | return false
   return isSameExpr childRoot e
 
 /--
@@ -57,12 +59,15 @@ These are the parents registered by `isMatchCondFalseHyp` (see `MatchCond.lean`)
 we consider all constructor applications in the class, not only the root.
 -/
 partial def checkMatchCondNestedChild (e : Expr) (lhs pat : Expr) : GoalM Bool := do
-  let some patInfo ← isConstructorApp? pat | return false
+  let some patInfo ← isConstructorApp? pat
+    | return false
   let patArgs := pat.getAppArgs
   for c in (← getEqc lhs) do
-    let some ctorInfo ← isConstructorApp? c | continue
+    let some ctorInfo ← isConstructorApp? c
+      | continue
     let numArgs := ctorInfo.numParams + ctorInfo.numFields
-    unless ctorInfo.name == patInfo.name && pat.getAppNumArgs == numArgs do continue
+    unless ctorInfo.name == patInfo.name && pat.getAppNumArgs == numArgs do
+      continue
     let args := c.getAppArgs
     for i in ctorInfo.numParams...numArgs do
       if patArgs[i]!.getAppFn.isBVar then continue
@@ -71,7 +76,8 @@ partial def checkMatchCondNestedChild (e : Expr) (lhs pat : Expr) : GoalM Bool :
   return false
 
 def checkMatchCondParent (e : Expr) (parent : Expr) : GoalM Bool := do
-  let_expr Grind.MatchCond parent ← parent | return false
+  let_expr Grind.MatchCond parent ← parent
+    | return false
   let mut curr := parent
   repeat
     let .forallE _ d b _ := curr
@@ -83,7 +89,8 @@ def checkMatchCondParent (e : Expr) (parent : Expr) : GoalM Bool := do
     | HEq α lhs _ rhs =>
       if (← checkChild e α <||> checkChild e lhs) then return true -- found it
       if !lhs.hasLooseBVars && (← checkMatchCondNestedChild e lhs rhs) then return true
-    | _ => pure ()
+    | _ =>
+      pure ()
     curr := b
   return false
 
@@ -116,20 +123,20 @@ def checkParents (e : Expr) : GoalM Unit := do
           unless (← checkChild e parent.getAppFn) do
             throwError "e: {e}, parent: {parent}"
           assert! (← checkChild e parent.getAppFn)
-    else
-      -- All the parents are stored in the root of the equivalence class.
-      assert! (← getParents e).isEmpty
+  else
+    -- All the parents are stored in the root of the equivalence class.
+    assert! (← getParents e).isEmpty
 
 def checkPtrEqImpliesStructEq : GoalM Unit := do
   let exprs ← getExprs
   for h₁ : i in *...exprs.size do
     let e₁ := exprs[i]
-    for h₂ : j in (i+1)...exprs.size do
+    for h₂ : j in (i + 1)...exprs.size do
       let e₂ := exprs[j]
       -- We don't have multiple nodes for the same expression
-      assert! !isSameExpr e₁ e₂
+      assert! ! isSameExpr e₁ e₂
       -- and the two expressions must not be structurally equal
-      assert! !Expr.equal e₁ e₂
+      assert! ! Expr.equal e₁ e₂
 
 def checkProofs : GoalM Unit := do
   let eqcs ← getEqcs

@@ -42,11 +42,15 @@ namespace NameGen
 If `e` is an application of a projection to a parent structure, returns the term being projected.
 -/
 private def getParentProjArg (e : Expr) : MetaM (Option Expr) := do
-  let .const c@(.str _ field) _ := e.getAppFn | return none
+  let .const c@(.str _ field) _ := e.getAppFn
+    | return none
   let env ← getEnv
-  let some info := env.getProjectionFnInfo? c | return none
-  unless e.getAppNumArgs == info.numParams + 1 do return none
-  let some (.ctorInfo cVal) := env.find? info.ctorName | return none
+  let some info := env.getProjectionFnInfo? c
+    | return none
+  unless e.getAppNumArgs == info.numParams + 1 do
+    return none
+  let some (.ctorInfo cVal) := env.find? info.ctorName
+    | return none
   if isSubobjectField? env cVal.induct (Name.mkSimple field) |>.isNone then return none
   return e.appArg!
 
@@ -56,65 +60,70 @@ The resulting expression can have loose fvars and be mangled in other ways.
 Expressions can also be replaced by `.bvar 0` if they shouldn't be mentioned.
 -/
 private partial def winnowExpr (e : Expr) : MetaM Expr := do
-  let rec visit (e : Expr) : MonadCacheT Expr Expr MetaM Expr := checkCache e fun _ => do
-    if ← isProof e then
-      return .bvar 0
-    match e with
-    | .app .. =>
-      if let some e' ← getParentProjArg e then
-        return (← visit e')
-      e.withApp fun f args => do
-        -- Visit only the explicit arguments to `f` and also its type (and type family) arguments.
-        -- The reason we visit type arguments is so that, for example, `Decidable (_ < _)` has
-        -- a chance to insert type information. Type families are for reporting things such as type constructors and monads.
-        let mut fty ← inferType f
-        let mut j := 0
-        let mut e' ← visit f
-        for h : i in *...args.size do
-          unless fty.isForall do
-            fty ← withTransparency .all <| whnf <| fty.instantiateRevRange j i args
-            j := i
-          let .forallE _ _ fty' bi := fty | failure
-          fty := fty'
-          let arg := args[i]
-          if ← pure bi.isExplicit <||> (pure !arg.isSort <&&> isTypeFormer arg) then
-            unless (← isProof arg) do
-              e' := .app e' (← visit arg)
-        return e'
-    | .forallE n ty body bi =>
-      withLocalDecl n bi ty fun arg => do
-        -- In a dependent forall the body implies `ty`, so we won't mention it.
-        let ty' ← if body.hasLooseBVars then pure (.bvar 0) else visit ty
-        return .forallE n ty' (← visit (body.instantiate1 arg)) bi
-    | .lam n ty body bi =>
-      if let some e := Expr.etaExpandedStrict? e then
-        visit e
-      else
+  let rec visit (e : Expr) : MonadCacheT Expr Expr MetaM Expr :=
+    checkCache e fun _ => do
+      if ← isProof e then
+        return .bvar 0
+      match e with
+      | .app .. =>
+        if let some e' ← getParentProjArg e then
+          return (← visit e')
+        e.withApp fun f args => do
+          -- Visit only the explicit arguments to `f` and also its type (and type family) arguments.
+          -- The reason we visit type arguments is so that, for example, `Decidable (_ < _)` has
+          -- a chance to insert type information. Type families are for reporting things such as type constructors and monads.
+          let mut fty ← inferType f
+          let mut j := 0
+          let mut e' ← visit f
+          for h : i in *...args.size do
+            unless fty.isForall do
+              fty ← withTransparency .all <| whnf <| fty.instantiateRevRange j i args
+              j := i
+            let .forallE _ _ fty' bi := fty
+              | failure
+            fty := fty'
+            let arg := args[i]
+            if ← pure bi.isExplicit <||> (pure !arg.isSort <&&> isTypeFormer arg) then
+              unless (← isProof arg) do
+                e' := .app e' (← visit arg)
+          return e'
+      | .forallE n ty body bi =>
         withLocalDecl n bi ty fun arg => do
-          -- Don't record the `.lam` since `ty` should be recorded elsewhere in the expression.
-          visit (body.instantiate1 arg)
-    | .letE _n _t v b _ => visit (b.instantiate1 v)
-    | .sort .. =>
-      if e.isProp then return .sort Level.zero
-      else if e.isType then return .sort Level.one
-      else return .sort (.param `u)
-    | .const name .. => return .const name []
-    | .mdata _ e' => visit e'
-    | _ => return .bvar 0
+          -- In a dependent forall the body implies `ty`, so we won't mention it.
+          let ty' ← if body.hasLooseBVars then pure (.bvar 0) else visit ty
+          return .forallE n ty' (← visit (body.instantiate1 arg)) bi
+      | .lam n ty body bi =>
+        if let some e := Expr.etaExpandedStrict? e then
+          visit e
+        else
+          withLocalDecl n bi ty fun arg => do
+            -- Don't record the `.lam` since `ty` should be recorded elsewhere in the expression.
+            visit (body.instantiate1 arg)
+      | .letE _n _t v b _ =>
+        visit (b.instantiate1 v)
+      | .sort .. =>
+        if e.isProp then
+          return .sort Level.zero
+        else if e.isType then
+          return .sort Level.one
+        else
+          return .sort (.param `u)
+      | .const name .. =>
+        return .const name []
+      | .mdata _ e' =>
+        visit e'
+      | _ =>
+        return .bvar 0
   visit e |>.run
 
-/--
-State for name generation.
--/
+/-- State for name generation. -/
 private structure MkNameState where
   /-- Keeps track of expressions already visited so that we do not include them again. -/
   seen : ExprSet := {}
   /-- Keeps track of constants that appear in the generated name. -/
   consts : NameSet := {}
 
-/--
-Monad for name generation.
--/
+/-- Monad for name generation. -/
 private abbrev MkNameM := StateRefT MkNameState MetaM
 
 /--
@@ -130,26 +139,31 @@ where
       return ""
     else
       let s ← visit' e omitTopForall
-      modify fun st => {st with seen := st.seen.insert e}
+      modify fun st => { st with seen := st.seen.insert e }
       return s
   visit' (e : Expr) (omitTopForall : Bool) : MkNameM String := do
     match e with
     | .const name .. =>
-      modify (fun st => {st with consts := st.consts.insert name})
+      modify (fun st => { st with consts := st.consts.insert name })
       return match name.eraseMacroScopes with
-              | .str _ str => str.capitalize
-              | _ => ""
-    | .app f x => (· ++ ·) <$> visit f <*> visit x
+        | .str _ str => str.capitalize
+        | _ => ""
+    | .app f x =>
+      (· ++ ·) <$> visit f <*> visit x
     | .forallE _ ty body _ =>
       let sty ← visit ty
       if omitTopForall && sty == "" then
         visit body true
       else
         ("Forall" ++ sty ++ ·) <$> visit body
-    | .sort .zero => return "Prop"
-    | .sort (.succ _) => return "Type"
-    | .sort _ => return "Sort"
-    | _ => return ""
+    | .sort .zero =>
+      return "Prop"
+    | .sort (.succ _) =>
+      return "Type"
+    | .sort _ =>
+      return "Sort"
+    | _ =>
+      return ""
 
 /--
 Generate a name, while naming the top-level foralls using "Of".
@@ -168,19 +182,24 @@ where
         return (foralls, sb)
       else
         return (("Of" ++ st) :: foralls, sb)
-    | _ => return ([], ← mkBaseNameCore e)
+    | _ =>
+      return ([], ← mkBaseNameCore e)
 
-/--
-Adds all prefixes of `ns` as seen constants.
--/
+/-- Adds all prefixes of `ns` as seen constants. -/
 private def visitNamespace (ns : Name) : MkNameM Unit := do
   match ns with
-  | .anonymous => pure ()
-  | .num ns' _ => visitNamespace ns'
+  | .anonymous =>
+    pure ()
+  | .num ns' _ =>
+    visitNamespace ns'
   | .str ns' _ =>
     let env ← getEnv
     if env.contains ns then
-      modify fun st => {st with seen := st.seen.insert (.const ns []), consts := st.consts.insert ns}
+      modify fun st => {
+        st with
+        seen := st.seen.insert (.const ns [])
+        consts := st.consts.insert ns
+      }
     visitNamespace ns'
 
 /--
@@ -221,17 +240,21 @@ def mkBaseNameWithSuffix (pre : String) (type : Expr) : MetaM Name := do
   let name := pre ++ name
   let project := (← getMainModule).getRoot
   -- Collect the modules for each constant that appeared.
-  let modules ← st.consts.foldlM (init := Array.mkEmpty st.consts.size) fun mods name => return mods.push (← findModuleOf? name)
+  let modules ←
+    st.consts.foldlM (init := Array.mkEmpty st.consts.size) fun mods name =>
+      return mods.push (← findModuleOf? name)
   -- We can avoid adding the suffix if the instance refers to module-local names.
   let isModuleLocal := modules.any Option.isNone
   -- We can also avoid adding the full module suffix if the instance refers to "project"-local names.
   let isProjectLocal := isModuleLocal || modules.any fun mod? => mod?.map (·.getRoot) == project
-  let name := Name.mkSimple <|
-    if !isProjectLocal then
-      s!"{name}{moduleToSuffix project}"
-    else
-      name
-  if Option.isSome <| type.find? (fun e => if let .const n _ := e then n.hasMacroScopes else false) then
+  let name :=
+    Name.mkSimple <|
+      if !isProjectLocal then
+        s!"{name}{moduleToSuffix project}"
+      else
+        name
+  if Option.isSome <|
+      type.find? (fun e => if let .const n _ := e then n.hasMacroScopes else false) then
     mkFreshUserName name
   else
     return name
@@ -243,12 +266,14 @@ Furthermore, uses `mkUnusedBaseName` on the result.
 The result is just a single component name (potentially with macro scopes). To get the actual
 declaration name, the current namespace has to be prepended.
 -/
-def mkBaseNameWithSuffix' (pre : String) (binders : Array Syntax) (type : Syntax) : TermElabM Name := do
+def mkBaseNameWithSuffix' (pre : String) (binders : Array Syntax) (type : Syntax)
+    : TermElabM Name := do
   let name ←
     try
-      Term.withAutoBoundImplicit <| Term.elabBinders binders fun binds => Term.withoutErrToSorry do
-        let ty ← mkForallFVars binds (← Term.elabType type)
-        mkBaseNameWithSuffix pre ty
+      Term.withAutoBoundImplicit <| Term.elabBinders binders fun binds =>
+        Term.withoutErrToSorry do
+          let ty ← mkForallFVars binds (← Term.elabType type)
+          mkBaseNameWithSuffix pre ty
     catch _ =>
       mkFreshUserName <| Name.mkSimple pre
   liftMacroM <| mkUnusedBaseName name
@@ -291,9 +316,9 @@ This function is meant to be used for computing the instance name for generated 
 code.
 -/
 @[specialize]
-def mkInstanceNameOfType (type : Expr)
-    (avoid : Environment → Name → Bool := fun env name => env.contains name) :
-    TermElabM Name := do
+def mkInstanceNameOfType
+    (type : Expr) (avoid : Environment → Name → Bool := fun env name => env.contains name)
+    : TermElabM Name := do
   let mut name ← NameGen.mkBaseNameWithSuffix "inst" type
   name ← findUnusedName ((← getCurrNamespace) ++ name) avoid
   if (type.find? (·.constName?.any isPrivateName)).isSome then

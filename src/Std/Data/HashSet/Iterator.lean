@@ -26,9 +26,7 @@ The iterator yields the elements of the set in order and then terminates.
 * `Finite` instance: always
 * `Productive` instance: always
 -/
-@[inline]
-public def iter {α : Type u} (m : Raw α) :=
-  (m.inner.inner.iter.map fun e => e.1 : Iter α)
+@[inline] public def iter {α : Type u} (m : Raw α) := (m.inner.inner.iter.map fun e => e.1 : Iter α)
 
 end Std.HashSet.Raw
 

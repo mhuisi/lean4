@@ -78,9 +78,7 @@ Creates a new empty tree set. It is also possible and recommended to
 use the empty collection notations `∅` and `{}` to create an empty tree set. `simp` replaces
 `empty` with `∅`.
 -/
-@[inline]
-def empty : ExtTreeSet α cmp :=
-  ⟨ExtTreeMap.empty⟩
+@[inline] def empty : ExtTreeSet α cmp := ⟨ExtTreeMap.empty⟩
 
 instance : EmptyCollection (ExtTreeSet α cmp) where
   emptyCollection := empty
@@ -89,8 +87,7 @@ instance : Inhabited (ExtTreeSet α cmp) where
   default := ∅
 
 @[simp, grind =]
-theorem empty_eq_emptyc : (empty : ExtTreeSet α cmp) = ∅ :=
-  rfl
+theorem empty_eq_emptyc : (empty : ExtTreeSet α cmp) = ∅ := rfl
 
 /--
 Inserts the given element into the set. If the tree set already contains an element that is
@@ -133,9 +130,7 @@ in the set. There is also a `Prop`-valued version of this: `a ∈ t` is equivale
 Observe that this is different behavior than for lists: for lists, `∈` uses `=` and `contains` uses
 `==` for equality checks, while for tree sets, both use the given comparator `cmp`.
 -/
-@[inline]
-def contains [TransCmp cmp] (l : ExtTreeSet α cmp) (a : α) : Bool :=
-  l.inner.contains a
+@[inline] def contains [TransCmp cmp] (l : ExtTreeSet α cmp) (a : α) : Bool := l.inner.contains a
 
 instance [TransCmp cmp] : Membership α (ExtTreeSet α cmp) where
   mem m a := m.contains a
@@ -144,43 +139,34 @@ instance [TransCmp cmp] {m : ExtTreeSet α cmp} {a : α} : Decidable (a ∈ m) :
   inferInstanceAs <| Decidable (m.contains a)
 
 /-- Returns the number of mappings present in the map. -/
-@[inline]
-def size (t : ExtTreeSet α cmp) : Nat :=
-  t.inner.size
+@[inline] def size (t : ExtTreeSet α cmp) : Nat := t.inner.size
 
 /-- Returns `true` if the tree set contains no mappings. -/
-@[inline]
-def isEmpty (t : ExtTreeSet α cmp) : Bool :=
-  t.inner.isEmpty
+@[inline] def isEmpty (t : ExtTreeSet α cmp) : Bool := t.inner.isEmpty
 
 /-- Removes the given key if it exists. -/
 @[inline]
-def erase [TransCmp cmp] (t : ExtTreeSet α cmp) (a : α) : ExtTreeSet α cmp :=
-  ⟨t.inner.erase a⟩
+def erase [TransCmp cmp] (t : ExtTreeSet α cmp) (a : α) : ExtTreeSet α cmp := ⟨t.inner.erase a⟩
 
 /--
 Checks if given key is contained and returns the key if it is, otherwise `none`.
 The result in the `some` case is guaranteed to be pointer equal to the key in the map.
 -/
-@[inline]
-def get? [TransCmp cmp] (t : ExtTreeSet α cmp) (a : α) : Option α :=
-  t.inner.getKey? a
+@[inline] def get? [TransCmp cmp] (t : ExtTreeSet α cmp) (a : α) : Option α := t.inner.getKey? a
 
 /--
 Retrieves the key from the set that matches `a`. Ensures that such a key exists by requiring a proof
 of `a ∈ m`. The result is guaranteed to be pointer equal to the key in the set.
 -/
 @[inline]
-def get [TransCmp cmp] (t : ExtTreeSet α cmp) (a : α) (h : a ∈ t) : α :=
-  t.inner.getKey a h
+def get [TransCmp cmp] (t : ExtTreeSet α cmp) (a : α) (h : a ∈ t) : α := t.inner.getKey a h
 
 /--
 Checks if given key is contained and returns the key if it is, otherwise panics.
 If no panic occurs the result is guaranteed to be pointer equal to the key in the set.
 -/
 @[inline]
-def get! [TransCmp cmp] [Inhabited α] (t : ExtTreeSet α cmp) (a : α) : α :=
-  t.inner.getKey! a
+def get! [TransCmp cmp] [Inhabited α] (t : ExtTreeSet α cmp) (a : α) : α := t.inner.getKey! a
 
 /--
 Checks if given key is contained and returns the key if it is, otherwise `fallback`.
@@ -190,26 +176,17 @@ If they key is contained the result is guaranteed to be pointer equal to the key
 def getD [TransCmp cmp] (t : ExtTreeSet α cmp) (a : α) (fallback : α) : α :=
   t.inner.getKeyD a fallback
 
-/--
-Tries to retrieve the smallest element of the tree set, returning `none` if the set is empty.
--/
-@[inline]
-def min? [TransCmp cmp] (t : ExtTreeSet α cmp) : Option α :=
-  ExtTreeMap.minKey? t.inner
+/-- Tries to retrieve the smallest element of the tree set, returning `none` if the set is empty. -/
+@[inline] def min? [TransCmp cmp] (t : ExtTreeSet α cmp) : Option α := ExtTreeMap.minKey? t.inner
 
-/--
-Given a proof that the tree set is not empty, retrieves the smallest element.
--/
+/-- Given a proof that the tree set is not empty, retrieves the smallest element. -/
 @[inline]
 def min [TransCmp cmp] (t : ExtTreeSet α cmp) (h : t ≠ ∅) : α :=
   ExtTreeMap.minKey t.inner (fun _ => nomatch t)
 
-/--
-Tries to retrieve the smallest element of the tree set, panicking if the set is empty.
--/
+/-- Tries to retrieve the smallest element of the tree set, panicking if the set is empty. -/
 @[inline]
-def min! [TransCmp cmp] [Inhabited α] (t : ExtTreeSet α cmp) : α :=
-  ExtTreeMap.minKey! t.inner
+def min! [TransCmp cmp] [Inhabited α] (t : ExtTreeSet α cmp) : α := ExtTreeMap.minKey! t.inner
 
 /--
 Tries to retrieve the smallest element of the tree set, returning `fallback` if the tree set is empty.
@@ -218,26 +195,17 @@ Tries to retrieve the smallest element of the tree set, returning `fallback` if 
 def minD [TransCmp cmp] (t : ExtTreeSet α cmp) (fallback : α) : α :=
   ExtTreeMap.minKeyD t.inner fallback
 
-/--
-Tries to retrieve the largest element of the tree set, returning `none` if the set is empty.
--/
-@[inline]
-def max? [TransCmp cmp] (t : ExtTreeSet α cmp) : Option α :=
-  ExtTreeMap.maxKey? t.inner
+/-- Tries to retrieve the largest element of the tree set, returning `none` if the set is empty. -/
+@[inline] def max? [TransCmp cmp] (t : ExtTreeSet α cmp) : Option α := ExtTreeMap.maxKey? t.inner
 
-/--
-Given a proof that the tree set is not empty, retrieves the largest element.
--/
+/-- Given a proof that the tree set is not empty, retrieves the largest element. -/
 @[inline]
 def max [TransCmp cmp] (t : ExtTreeSet α cmp) (h : t ≠ ∅) : α :=
   ExtTreeMap.maxKey t.inner (fun _ => nomatch t)
 
-/--
-Tries to retrieve the largest element of the tree set, panicking if the set is empty.
--/
+/-- Tries to retrieve the largest element of the tree set, panicking if the set is empty. -/
 @[inline]
-def max! [TransCmp cmp] [Inhabited α] (t : ExtTreeSet α cmp) : α :=
-  ExtTreeMap.maxKey! t.inner
+def max! [TransCmp cmp] [Inhabited α] (t : ExtTreeSet α cmp) : α := ExtTreeMap.maxKey! t.inner
 
 /--
 Tries to retrieve the largest element of the tree set, returning `fallback` if the tree set is empty.
@@ -429,8 +397,8 @@ def foldr [TransCmp cmp] (f : (a : α) → δ → δ) (init : δ) (t : ExtTreeSe
 
 /-- Partitions a tree set into two tree sets based on a predicate. -/
 @[inline]
-def partition [TransCmp cmp] (f : (a : α) → Bool) (t : ExtTreeSet α cmp) :
-    ExtTreeSet α cmp × ExtTreeSet α cmp :=
+def partition [TransCmp cmp] (f : (a : α) → Bool) (t : ExtTreeSet α cmp)
+    : ExtTreeSet α cmp × ExtTreeSet α cmp :=
   let p := t.inner.partition fun a _ => f a; (⟨p.1⟩, ⟨p.2⟩)
 
 /-- Carries out a monadic action on each element in the tree set in ascending order. -/
@@ -446,7 +414,6 @@ order.
 def forIn [TransCmp cmp] (f : α → δ → m (ForInStep δ)) (init : δ) (t : ExtTreeSet α cmp) : m δ :=
   t.inner.forIn (fun a _ c => f a c) init
 
-
 instance [TransCmp cmp] [Monad m] [LawfulMonad m] : ForM m (ExtTreeSet α cmp) α where
   forM t f := forM f t
 
@@ -455,27 +422,21 @@ instance [TransCmp cmp] [Monad m] [LawfulMonad m] : ForIn m (ExtTreeSet α cmp) 
 
 /-- Check if all elements satisfy the predicate, short-circuiting if a predicate fails. -/
 @[inline]
-def any [TransCmp cmp] (t : ExtTreeSet α cmp) (p : α → Bool) : Bool :=
-  t.inner.any (fun a _ => p a)
+def any [TransCmp cmp] (t : ExtTreeSet α cmp) (p : α → Bool) : Bool := t.inner.any (fun a _ => p a)
 
 /-- Check if any element satisfies the predicate, short-circuiting if a predicate succeeds. -/
 @[inline]
-def all [TransCmp cmp] (t : ExtTreeSet α cmp) (p : α → Bool) : Bool :=
-  t.inner.all (fun a _ => p a)
+def all [TransCmp cmp] (t : ExtTreeSet α cmp) (p : α → Bool) : Bool := t.inner.all (fun a _ => p a)
 
 /-- Transforms the tree set into a list of elements in ascending order. -/
-@[inline]
-def toList [TransCmp cmp] (t : ExtTreeSet α cmp) : List α :=
-  t.inner.keys
+@[inline] def toList [TransCmp cmp] (t : ExtTreeSet α cmp) : List α := t.inner.keys
 
 /-- Transforms a list into a tree set. -/
 def ofList (l : List α) (cmp : α → α → Ordering := by exact compare) : ExtTreeSet α cmp :=
   ⟨ExtTreeMap.unitOfList l cmp⟩
 
 /-- Transforms the tree set into an array of elements in ascending order. -/
-@[inline]
-def toArray [TransCmp cmp] (t : ExtTreeSet α cmp) : Array α :=
-  t.inner.keysArray
+@[inline] def toArray [TransCmp cmp] (t : ExtTreeSet α cmp) : Array α := t.inner.keysArray
 
 /-- Transforms an array into a tree set. -/
 def ofArray (a : Array α) (cmp : α → α → Ordering := by exact compare) : ExtTreeSet α cmp :=
@@ -505,7 +466,8 @@ Note: this precedence behavior is true for `ExtTreeSet` and `ExtTreeSet.Raw`. Th
 appearance.
 -/
 @[inline]
-def insertMany [TransCmp cmp] {ρ} [ForIn Id ρ α] (t : ExtTreeSet α cmp) (l : ρ) : ExtTreeSet α cmp :=
+def insertMany [TransCmp cmp] {ρ} [ForIn Id ρ α] (t : ExtTreeSet α cmp) (l : ρ)
+    : ExtTreeSet α cmp :=
   ⟨ExtTreeMap.insertManyIfNewUnit t.inner l⟩
 
 /--
@@ -515,7 +477,8 @@ to the comparison function, the element contained in the second argument will ap
 This function always merges the smaller set into the larger set.
 -/
 @[inline]
-def union [TransCmp cmp] (t₁ t₂ : ExtTreeSet α cmp) : ExtTreeSet α cmp := ⟨ExtTreeMap.union t₁.inner t₂.inner⟩
+def union [TransCmp cmp] (t₁ t₂ : ExtTreeSet α cmp) : ExtTreeSet α cmp :=
+  ⟨ExtTreeMap.union t₁.inner t₂.inner⟩
 
 instance [TransCmp cmp] : Union (ExtTreeSet α cmp) := ⟨union⟩
 
@@ -525,7 +488,8 @@ Computes the intersection of the given tree sets.
 This function always iterates through the smaller set.
 -/
 @[inline]
-def inter [TransCmp cmp] (t₁ t₂ : ExtTreeSet α cmp) : ExtTreeSet α cmp := ⟨ExtTreeMap.inter t₁.inner t₂.inner⟩
+def inter [TransCmp cmp] (t₁ t₂ : ExtTreeSet α cmp) : ExtTreeSet α cmp :=
+  ⟨ExtTreeMap.inter t₁.inner t₂.inner⟩
 
 instance [TransCmp cmp] : Inter (ExtTreeSet α cmp) := ⟨inter⟩
 
@@ -548,12 +512,14 @@ Computes the difference of the given tree sets.
 This function always iterates through the smaller set.
 -/
 @[inline]
-def diff [TransCmp cmp] (t₁ t₂ : ExtTreeSet α cmp) : ExtTreeSet α cmp := ⟨ExtTreeMap.diff t₁.inner t₂.inner⟩
+def diff [TransCmp cmp] (t₁ t₂ : ExtTreeSet α cmp) : ExtTreeSet α cmp :=
+  ⟨ExtTreeMap.diff t₁.inner t₂.inner⟩
 
 instance [TransCmp cmp] : SDiff (ExtTreeSet α cmp) := ⟨diff⟩
 
-instance {α : Type u} {cmp : α → α → Ordering} [LawfulEqCmp cmp] [TransCmp cmp] : DecidableEq (ExtTreeSet α cmp) :=
-  fun _ _ => decidable_of_iff _ beq_iff_eq
+instance {α : Type u} {cmp : α → α → Ordering} [LawfulEqCmp cmp] [TransCmp cmp]
+    : DecidableEq (ExtTreeSet α cmp) := fun _ _ =>
+  decidable_of_iff _ beq_iff_eq
 
 /--
 Erases multiple items from the tree set by iterating over the given collection and calling erase.

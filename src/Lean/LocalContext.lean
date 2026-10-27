@@ -45,7 +45,7 @@ inductive LocalDeclKind
   This declaration has the `auxDecl` kind.
   -/
   | auxDecl
-  deriving Inhabited, Repr, DecidableEq, Hashable
+deriving Inhabited, Repr, DecidableEq, Hashable
 
 /--
 Determines the local declaration kind of a binder using its name.
@@ -58,16 +58,22 @@ def LocalDeclKind.ofBinderName (binderName : Name) : LocalDeclKind :=
   else
     .default
 
-/-- A declaration for a `LocalContext`. This is used to register which free variables are in scope.
+/--
+A declaration for a `LocalContext`. This is used to register which free variables are in scope.
 
 See `LocalDecl.index`, `LocalDecl.fvarId`, `LocalDecl.userName`, `LocalDecl.type` for accessors for
 arguments common to both constructors.
 -/
 inductive LocalDecl where
-  /-- A local variable without any value.
-  `Lean.LocalContext.mkBinding` creates lambdas or foralls from `cdecl`s. -/
-  | cdecl (index : Nat) (fvarId : FVarId) (userName : Name) (type : Expr) (bi : BinderInfo) (kind : LocalDeclKind)
-  /-- A let-bound free variable, with a value `value : Expr`.
+  /--
+  A local variable without any value.
+  `Lean.LocalContext.mkBinding` creates lambdas or foralls from `cdecl`s.
+  -/
+  | cdecl
+    (index : Nat) (fvarId : FVarId) (userName : Name) (type : Expr) (bi : BinderInfo)
+    (kind : LocalDeclKind)
+  /--
+  A let-bound free variable, with a value `value : Expr`.
   If `nondep := false`, then the variable is definitionally equal to its value.
   If `nondep := true`, then the variable has an opaque value; we call these "have-bound free variables."
   `Lean.LocalContext.mkBinding` creates let/have expressions from `ldecl`s.
@@ -93,20 +99,25 @@ inductive LocalDecl where
     The `have` term syntax makes use of a nondep ldecl as well.
 
   Therefore, `nondep := true` should be used with consideration.
-  Its primary use is in metaprograms that enter `let`/`have` telescopes and wish to reconstruct them. -/
-  | ldecl (index : Nat) (fvarId : FVarId) (userName : Name) (type : Expr) (value : Expr) (nondep : Bool) (kind : LocalDeclKind)
-  deriving Inhabited
+  Its primary use is in metaprograms that enter `let`/`have` telescopes and wish to reconstruct them.
+  -/
+  | ldecl
+    (index : Nat) (fvarId : FVarId) (userName : Name) (type : Expr) (value : Expr) (nondep : Bool)
+    (kind : LocalDeclKind)
+deriving Inhabited
 
 @[export lean_mk_local_decl]
-def mkLocalDeclEx (index : Nat) (fvarId : FVarId) (userName : Name) (type : Expr) (bi : BinderInfo) : LocalDecl :=
+def mkLocalDeclEx (index : Nat) (fvarId : FVarId) (userName : Name) (type : Expr) (bi : BinderInfo)
+    : LocalDecl :=
   .cdecl index fvarId userName type bi .default
 @[export lean_mk_let_decl]
-def mkLetDeclEx (index : Nat) (fvarId : FVarId) (userName : Name) (type : Expr) (val : Expr) : LocalDecl :=
+def mkLetDeclEx (index : Nat) (fvarId : FVarId) (userName : Name) (type : Expr) (val : Expr)
+    : LocalDecl :=
   .ldecl index fvarId userName type val false .default
 @[export lean_local_decl_binder_info]
 def LocalDecl.binderInfoEx : LocalDecl → BinderInfo
   | .cdecl _ _ _ _ bi _ => bi
-  | _                   => BinderInfo.default
+  | _ => BinderInfo.default
 namespace LocalDecl
 
 /--
@@ -115,9 +126,12 @@ Returns true if this is an `ldecl` with a visible value.
 If `allowNondep` is true then includes `ldecl`s with `nondep := true`, whose values are normally hidden.
 -/
 def isLet : LocalDecl → (allowNondep : Bool := false) → Bool
-  | cdecl .., _ => false
-  | ldecl (nondep := false) .., _ => true
-  | ldecl (nondep := true) .., allowNondep => allowNondep
+  | cdecl .., _ =>
+    false
+  | ldecl (nondep := false) .., _ =>
+    true
+  | ldecl (nondep := true) .., allowNondep =>
+    allowNondep
 
 /-- The position of the decl in the local context. -/
 def index : LocalDecl → Nat
@@ -125,8 +139,10 @@ def index : LocalDecl → Nat
   | ldecl (index := i) .. => i
 
 def setIndex : LocalDecl → Nat → LocalDecl
-  | cdecl _  id n t bi k,   idx => cdecl idx id n t bi k
-  | ldecl _  id n t v nd k, idx => ldecl idx id n t v nd k
+  | cdecl _ id n t bi k, idx =>
+    cdecl idx id n t bi k
+  | ldecl _ id n t v nd k, idx =>
+    ldecl idx id n t v nd k
 
 /-- The unique id of the free variable. -/
 def fvarId : LocalDecl → FVarId
@@ -144,25 +160,25 @@ def type : LocalDecl → Expr
   | ldecl (type := t) .. => t
 
 def setType : LocalDecl → Expr → LocalDecl
-  | cdecl idx id n _ bi k, t   => cdecl idx id n t bi k
-  | ldecl idx id n _ v nd k, t => ldecl idx id n t v nd k
+  | cdecl idx id n _ bi k, t =>
+    cdecl idx id n t bi k
+  | ldecl idx id n _ v nd k, t =>
+    ldecl idx id n t v nd k
 
 def binderInfo : LocalDecl → BinderInfo
   | cdecl (bi := bi) .. => bi
-  | ldecl ..            => BinderInfo.default
+  | ldecl .. => BinderInfo.default
 
 def kind : LocalDecl → LocalDeclKind
   | cdecl .. | ldecl .. => ‹_›
 
-def isAuxDecl (d : LocalDecl) : Bool :=
-  d.kind = .auxDecl
+def isAuxDecl (d : LocalDecl) : Bool := d.kind = .auxDecl
 
 /--
 Is the local declaration an implementation-detail hypothesis
 (including auxiliary declarations)?
 -/
-def isImplementationDetail (d : LocalDecl) : Bool :=
-  d.kind != .default
+def isImplementationDetail (d : LocalDecl) : Bool := d.kind != .default
 
 /--
 Returns the value of the `ldecl` if it has a visible value.
@@ -170,9 +186,12 @@ Returns the value of the `ldecl` if it has a visible value.
 If `allowNondep` is true, then allows nondependent `ldecl`s, whose values are normally hidden.
 -/
 def value? : LocalDecl → (allowNondep : Bool := false) → Option Expr
-  | ldecl (nondep := false) (value := v) .., _    => some v
-  | ldecl (nondep := true)  (value := v) .., true => some v
-  | _,                                       _    => none
+  | ldecl (nondep := false) (value := v) .., _ =>
+    some v
+  | ldecl (nondep := true) (value := v) .., true =>
+    some v
+  | _, _ =>
+    none
 
 /--
 Returns the value of the `ldecl` if it has a visible value.
@@ -180,22 +199,28 @@ Returns the value of the `ldecl` if it has a visible value.
 If `allowNondep` is true, then allows nondependent `ldecl`s, whose values are normally hidden.
 -/
 def value : LocalDecl → (allowNondep : Bool := false) → Expr
-  | cdecl ..,                                _     => panic! "let declaration expected"
-  | ldecl (nondep := false) (value := v) .., _     => v
-  | ldecl (nondep := true)  (value := v) .., true  => v
-  | ldecl (nondep := true) ..,               false => panic! "dependent let declaration expected"
+  | cdecl .., _ =>
+    panic! "let declaration expected"
+  | ldecl (nondep := false) (value := v) .., _ =>
+    v
+  | ldecl (nondep := true) (value := v) .., true =>
+    v
+  | ldecl (nondep := true) .., false =>
+    panic! "dependent let declaration expected"
 
-/--
-Returns `true` if `LocalDecl.value?` is not `none`.
--/
+/-- Returns `true` if `LocalDecl.value?` is not `none`. -/
 def hasValue : LocalDecl → (allowNondep : Bool := false) → Bool
-  | cdecl ..,                    _           => false
-  | ldecl (nondep := nondep) .., allowNondep => !nondep || allowNondep
+  | cdecl .., _ =>
+    false
+  | ldecl (nondep := nondep) .., allowNondep =>
+    !nondep || allowNondep
 
 /-- Sets the value of an `ldecl`, otherwise returns `cdecl`s unchanged. -/
 def setValue : LocalDecl → Expr → LocalDecl
-  | ldecl idx id n t _ nd k, v => ldecl idx id n t v nd k
-  | d, _                       => d
+  | ldecl idx id n t _ nd k, v =>
+    ldecl idx id n t v nd k
+  | d, _ =>
+    d
 
 /--
 Sets the `nondep` flag of an `ldecl`, otherwise returns `cdecl`s unchanged.
@@ -231,53 +256,57 @@ letTelescope e fun xs b => do
    so the change of the `nondep` flag does not cause any issues in the `abstractM` system used by `mkLetFVars`.
 -/
 def setNondep : LocalDecl → Bool → LocalDecl
-  | ldecl idx id n t v _ k, nd => ldecl idx id n t v nd k
-  | d, _                       => d
+  | ldecl idx id n t v _ k, nd =>
+    ldecl idx id n t v nd k
+  | d, _ =>
+    d
 
 /-- Returns `true` if this is an `ldecl` with `nondep := true`. -/
 def isNondep : LocalDecl → Bool
   | ldecl (nondep := nondep) .. => nondep
-  | _                           => false
+  | _ => false
 
 def setUserName : LocalDecl → Name → LocalDecl
-  | cdecl index id _ type bi k,     userName => cdecl index id userName type bi k
-  | ldecl index id _ type val nd k, userName => ldecl index id userName type val nd k
+  | cdecl index id _ type bi k, userName =>
+    cdecl index id userName type bi k
+  | ldecl index id _ type val nd k, userName =>
+    ldecl index id userName type val nd k
 
 def setBinderInfo : LocalDecl → BinderInfo → LocalDecl
-  | cdecl index id n type _ k,  bi => cdecl index id n type bi k
-  | ldecl .., _                    => panic! "unexpected let declaration"
+  | cdecl index id n type _ k, bi =>
+    cdecl index id n type bi k
+  | ldecl .., _ =>
+    panic! "unexpected let declaration"
 
-def toExpr (decl : LocalDecl) : Expr :=
-  mkFVar decl.fvarId
+def toExpr (decl : LocalDecl) : Expr := mkFVar decl.fvarId
 
 def hasExprMVar : LocalDecl → Bool
-  | cdecl (type := t) ..              => t.hasExprMVar
+  | cdecl (type := t) .. => t.hasExprMVar
   | ldecl (type := t) (value := v) .. => t.hasExprMVar || v.hasExprMVar
 
-/--
-Set the kind of a `LocalDecl`.
--/
+/-- Set the kind of a `LocalDecl`. -/
 def setKind : LocalDecl → LocalDeclKind → LocalDecl
   | cdecl index fvarId userName type bi _, kind =>
-      cdecl index fvarId userName type bi kind
+    cdecl index fvarId userName type bi kind
   | ldecl index fvarId userName type value nondep _, kind =>
-      ldecl index fvarId userName type value nondep kind
+    ldecl index fvarId userName type value nondep kind
 
 end LocalDecl
 
-/-- A LocalContext is an ordered set of local variable declarations.
+/--
+A LocalContext is an ordered set of local variable declarations.
 It is used to store the free variables (also known as local constants) that
 are in scope. It also maps free variables corresponding to auxiliary declarations
 (recursive references and `where` and `let rec` bindings) to their fully-qualified global names.
 
 When inspecting a goal or expected type in the infoview, the local
 context is all of the variables above the `⊢` symbol.
- -/
+-/
 structure LocalContext where
-  fvarIdToDecl      : PersistentHashMap FVarId LocalDecl := {}
-  decls             : PersistentArray (Option LocalDecl) := {}
-  auxDeclToFullName : FVarIdMap Name                     := {}
-  deriving Inhabited
+  fvarIdToDecl : PersistentHashMap FVarId LocalDecl := {}
+  decls : PersistentArray (Option LocalDecl) := {}
+  auxDeclToFullName : FVarIdMap Name := {}
+deriving Inhabited
 
 namespace LocalContext
 
@@ -286,180 +315,220 @@ def mkEmpty : Unit → LocalContext := fun _ => {}
 
 def empty : LocalContext := {}
 
-def isEmpty (lctx : LocalContext) : Bool :=
-  lctx.fvarIdToDecl.isEmpty
+def isEmpty (lctx : LocalContext) : Bool := lctx.fvarIdToDecl.isEmpty
 
-/-- Low level API for creating local declarations (`LocalDecl.cdecl`).
+/--
+Low level API for creating local declarations (`LocalDecl.cdecl`).
 It is used to implement actions in the monads `Elab` and `Tactic`.
 It should not be used directly since the argument `(fvarId : FVarId)` is
-assumed to be unique. You can create a unique fvarId with `mkFreshFVarId`. -/
-def mkLocalDecl (lctx : LocalContext) (fvarId : FVarId) (userName : Name) (type : Expr) (bi : BinderInfo := BinderInfo.default) (kind : LocalDeclKind := .default) : LocalContext :=
+assumed to be unique. You can create a unique fvarId with `mkFreshFVarId`.
+-/
+def mkLocalDecl
+    (lctx : LocalContext) (fvarId : FVarId) (userName : Name) (type : Expr)
+    (bi : BinderInfo := BinderInfo.default) (kind : LocalDeclKind := .default)
+    : LocalContext :=
   match lctx with
   | { fvarIdToDecl := map, decls := decls, auxDeclToFullName } =>
-    let idx  := decls.size
+    let idx := decls.size
     let decl := LocalDecl.cdecl idx fvarId userName type bi kind
     { fvarIdToDecl := map.insert fvarId decl, decls := decls.push decl, auxDeclToFullName }
 
 -- `mkLocalDecl` without `kind`
 @[export lean_local_ctx_mk_local_decl]
-private def mkLocalDeclExported (lctx : LocalContext) (fvarId : FVarId) (userName : Name) (type : Expr) (bi : BinderInfo) : LocalContext :=
+private def mkLocalDeclExported
+    (lctx : LocalContext) (fvarId : FVarId) (userName : Name) (type : Expr) (bi : BinderInfo)
+    : LocalContext :=
   mkLocalDecl lctx fvarId userName type bi
 
-/-- Low level API for let declarations. Do not use directly.-/
-def mkLetDecl (lctx : LocalContext) (fvarId : FVarId) (userName : Name) (type : Expr) (value : Expr) (nondep := false) (kind : LocalDeclKind := default) : LocalContext :=
+/-- Low level API for let declarations. Do not use directly. -/
+def mkLetDecl
+    (lctx : LocalContext) (fvarId : FVarId) (userName : Name) (type : Expr) (value : Expr)
+    (nondep := false) (kind : LocalDeclKind := default)
+    : LocalContext :=
   match lctx with
   | { fvarIdToDecl := map, decls := decls, auxDeclToFullName } =>
-    let idx  := decls.size
+    let idx := decls.size
     let decl := LocalDecl.ldecl idx fvarId userName type value nondep kind
     { fvarIdToDecl := map.insert fvarId decl, decls := decls.push decl, auxDeclToFullName }
 
 @[export lean_local_ctx_mk_let_decl]
-private def mkLetDeclExported (lctx : LocalContext) (fvarId : FVarId) (userName : Name) (type : Expr) (value : Expr) (nondep : Bool) : LocalContext :=
+private def mkLetDeclExported
+    (lctx : LocalContext) (fvarId : FVarId) (userName : Name) (type : Expr) (value : Expr)
+    (nondep : Bool)
+    : LocalContext :=
   mkLetDecl lctx fvarId userName type value nondep
 
 /-- Low level API for auxiliary declarations. Do not use directly. -/
-def mkAuxDecl (lctx : LocalContext) (fvarId : FVarId) (userName : Name) (type : Expr) (fullName : Name) : LocalContext :=
+def mkAuxDecl
+    (lctx : LocalContext) (fvarId : FVarId) (userName : Name) (type : Expr) (fullName : Name)
+    : LocalContext :=
   match lctx with
   | { fvarIdToDecl := map, decls := decls, auxDeclToFullName } =>
-    let idx  := decls.size
+    let idx := decls.size
     let decl := LocalDecl.cdecl idx fvarId userName type .default .auxDecl
     let auxDeclToFullName := auxDeclToFullName.insert fvarId fullName
     { fvarIdToDecl := map.insert fvarId decl, decls := decls.push decl, auxDeclToFullName }
 
-/-- Low level API for adding a local declaration.
-Do not use directly. -/
+/--
+Low level API for adding a local declaration.
+Do not use directly.
+-/
 def addDecl (lctx : LocalContext) (newDecl : LocalDecl) : LocalContext :=
   match lctx with
   | { fvarIdToDecl := map, decls := decls, auxDeclToFullName } =>
-    let idx     := decls.size
+    let idx := decls.size
     let newDecl := newDecl.setIndex idx
-    { fvarIdToDecl := map.insert newDecl.fvarId newDecl
-      decls        := decls.push newDecl
-      auxDeclToFullName }
+    {
+      fvarIdToDecl := map.insert newDecl.fvarId newDecl
+      decls := decls.push newDecl
+      auxDeclToFullName
+    }
 
 @[export lean_local_ctx_find]
 def find? (lctx : LocalContext) (fvarId : FVarId) : Option LocalDecl :=
   lctx.fvarIdToDecl.find? fvarId
 
-def findFVar? (lctx : LocalContext) (e : Expr) : Option LocalDecl :=
-  lctx.find? e.fvarId!
+def findFVar? (lctx : LocalContext) (e : Expr) : Option LocalDecl := lctx.find? e.fvarId!
 
 def get! (lctx : LocalContext) (fvarId : FVarId) : LocalDecl :=
   match lctx.find? fvarId with
   | some d => d
-  | none   => panic! "unknown free variable"
+  | none => panic! "unknown free variable"
 
-/-- Gets the declaration for expression `e` in the local context.
-If `e` is not a free variable or not present then panics. -/
-def getFVar! (lctx : LocalContext) (e : Expr) : LocalDecl :=
-  lctx.get! e.fvarId!
+/--
+Gets the declaration for expression `e` in the local context.
+If `e` is not a free variable or not present then panics.
+-/
+def getFVar! (lctx : LocalContext) (e : Expr) : LocalDecl := lctx.get! e.fvarId!
 
-def contains (lctx : LocalContext) (fvarId : FVarId) : Bool :=
-  lctx.fvarIdToDecl.contains fvarId
+def contains (lctx : LocalContext) (fvarId : FVarId) : Bool := lctx.fvarIdToDecl.contains fvarId
 
-/-- Returns true when the lctx contains the free variable `e`.
-Panics if `e` is not an fvar. -/
-def containsFVar (lctx : LocalContext) (e : Expr) : Bool :=
-  lctx.contains e.fvarId!
+/--
+Returns true when the lctx contains the free variable `e`.
+Panics if `e` is not an fvar.
+-/
+def containsFVar (lctx : LocalContext) (e : Expr) : Bool := lctx.contains e.fvarId!
 
 def getFVarIds (lctx : LocalContext) : Array FVarId :=
-  lctx.decls.foldl (init := #[]) fun r decl? => match decl? with
+  lctx.decls.foldl (init := #[]) fun r decl? =>
+    match decl? with
     | some decl => r.push decl.fvarId
-    | none      => r
+    | none => r
 
 /-- Return all of the free variables in the given context. -/
-def getFVars (lctx : LocalContext) : Array Expr :=
-  lctx.getFVarIds.map mkFVar
+def getFVars (lctx : LocalContext) : Array Expr := lctx.getFVarIds.map mkFVar
 
 private partial def popTailNoneAux (a : PArray (Option LocalDecl)) : PArray (Option LocalDecl) :=
-  if h : a.size = 0 then a
-  else match a[a.size - 1] with
-    | none   => popTailNoneAux a.pop
+  if h : a.size = 0 then
+    a
+  else
+    match a[a.size - 1] with
+    | none => popTailNoneAux a.pop
     | some _ => a
 
 def erase (lctx : LocalContext) (fvarId : FVarId) : LocalContext :=
   match lctx with
   | { fvarIdToDecl := map, decls := decls, auxDeclToFullName } =>
     match map.find? fvarId with
-    | none      => lctx
-    | some decl =>
-      { fvarIdToDecl      := map.erase fvarId
-        decls             := popTailNoneAux (decls.set decl.index none)
-        auxDeclToFullName :=
-          if decl.isAuxDecl then auxDeclToFullName.erase fvarId else auxDeclToFullName }
+    | none =>
+      lctx
+    | some decl => {
+      fvarIdToDecl := map.erase fvarId
+      decls := popTailNoneAux (decls.set decl.index none)
+      auxDeclToFullName :=
+        if decl.isAuxDecl then auxDeclToFullName.erase fvarId else auxDeclToFullName
+    }
 
 def pop (lctx : LocalContext) : LocalContext :=
   match lctx with
   | { fvarIdToDecl := map, decls := decls, auxDeclToFullName } =>
-    if _ : decls.size = 0 then lctx
-    else match decls[decls.size - 1] with
-      | none      => lctx -- unreachable
-      | some decl =>
-        { fvarIdToDecl      := map.erase decl.fvarId
-          decls             := popTailNoneAux decls.pop
-          auxDeclToFullName :=
-            if decl.isAuxDecl then auxDeclToFullName.erase decl.fvarId else auxDeclToFullName }
+    if _ : decls.size = 0 then
+      lctx
+    else
+      match decls[decls.size - 1] with
+      | none =>
+        lctx -- unreachable
+      | some decl => {
+        fvarIdToDecl := map.erase decl.fvarId
+        decls := popTailNoneAux decls.pop
+        auxDeclToFullName :=
+          if decl.isAuxDecl then auxDeclToFullName.erase decl.fvarId else auxDeclToFullName
+      }
 
 def findFromUserName? (lctx : LocalContext) (userName : Name) : Option LocalDecl :=
   lctx.decls.findSomeRev? fun decl =>
     match decl with
-    | none      => none
+    | none => none
     | some decl => if decl.userName == userName then some decl else none
 
 def getFromUserName! (lctx : LocalContext) (userName : Name) : LocalDecl :=
   match lctx.findFromUserName? userName with
   | some decl => decl
-  | none      => panic! s!"unknown local declaration `{userName}`"
+  | none => panic! s!"unknown local declaration `{userName}`"
 
 def usesUserName (lctx : LocalContext) (userName : Name) : Bool :=
   (lctx.findFromUserName? userName).isSome
 
-private partial def getUnusedNameAux (lctx : LocalContext) (suggestion : Name) (i : Nat) : Name × Nat :=
+private partial def getUnusedNameAux (lctx : LocalContext) (suggestion : Name) (i : Nat)
+    : Name × Nat :=
   let curr := suggestion.appendIndexAfter i
-  if lctx.usesUserName curr then getUnusedNameAux lctx suggestion (i + 1)
-  else (curr, i + 1)
+  if lctx.usesUserName curr then
+    getUnusedNameAux lctx suggestion (i + 1)
+  else
+    (curr, i + 1)
 
 def getUnusedName (lctx : LocalContext) (suggestion : Name) : Name :=
   let suggestion := suggestion.eraseMacroScopes
-  if lctx.usesUserName suggestion then (getUnusedNameAux lctx suggestion 1).1
-  else suggestion
+  if lctx.usesUserName suggestion then
+    (getUnusedNameAux lctx suggestion 1).1
+  else
+    suggestion
 
-def lastDecl (lctx : LocalContext) : Option LocalDecl :=
-  lctx.decls[lctx.decls.size - 1]!
+def lastDecl (lctx : LocalContext) : Option LocalDecl := lctx.decls[lctx.decls.size - 1]!
 
 def setUserName (lctx : LocalContext) (fvarId : FVarId) (userName : Name) : LocalContext :=
   let decl := lctx.get! fvarId
   let decl := decl.setUserName userName
-  { fvarIdToDecl      := lctx.fvarIdToDecl.insert decl.fvarId decl,
-    decls             := lctx.decls.set decl.index decl,
-    auxDeclToFullName := lctx.auxDeclToFullName }
+  {
+    fvarIdToDecl := lctx.fvarIdToDecl.insert decl.fvarId decl
+    decls := lctx.decls.set decl.index decl
+    auxDeclToFullName := lctx.auxDeclToFullName
+  }
 
 def renameUserName (lctx : LocalContext) (fromName : Name) (toName : Name) : LocalContext :=
   match lctx with
   | { fvarIdToDecl := map, decls := decls, auxDeclToFullName } =>
     match lctx.findFromUserName? fromName with
-    | none      => lctx
+    | none =>
+      lctx
     | some decl =>
-      let decl := decl.setUserName toName;
-      { fvarIdToDecl := map.insert decl.fvarId decl,
-        decls        := decls.set decl.index decl,
-        auxDeclToFullName }
+      let decl := decl.setUserName toName
+      {
+        fvarIdToDecl := map.insert decl.fvarId decl
+        decls := decls.set decl.index decl
+        auxDeclToFullName
+      }
 
 /--
 Low-level function for updating the local context.
 Assumptions about `f`, the resulting nested expressions must be definitionally equal to their original values,
 and neither the `index` nor `fvarId` are modified.
 -/
-@[inline] def modifyLocalDecl (lctx : LocalContext) (fvarId : FVarId) (f : LocalDecl → LocalDecl) : LocalContext :=
+@[inline]
+def modifyLocalDecl (lctx : LocalContext) (fvarId : FVarId) (f : LocalDecl → LocalDecl)
+    : LocalContext :=
   match lctx with
   | { fvarIdToDecl := map, decls := decls, auxDeclToFullName } =>
     match lctx.find? fvarId with
-    | none      => lctx
+    | none =>
+      lctx
     | some decl =>
       let decl := f decl
-      { fvarIdToDecl := map.insert decl.fvarId decl
-        decls        := decls.set decl.index decl
-        auxDeclToFullName }
+      {
+        fvarIdToDecl := map.insert decl.fvarId decl
+        decls := decls.set decl.index decl
+        auxDeclToFullName
+      }
 
 /--
 Low-level function for updating every declaration in the local context.
@@ -468,18 +537,18 @@ and neither the `index` nor `fvarId` are modified.
 -/
 def modifyLocalDecls (lctx : LocalContext) (f : LocalDecl → LocalDecl) : LocalContext :=
   lctx.decls.foldl (init := lctx) fun
-    | lctx, none => lctx
+    | lctx, none =>
+      lctx
     | { fvarIdToDecl := map, decls := decls, auxDeclToFullName }, some decl =>
       let decl := f decl
-      { fvarIdToDecl := map.insert decl.fvarId decl
-        decls        := decls.set decl.index decl
-        auxDeclToFullName }
+      {
+        fvarIdToDecl := map.insert decl.fvarId decl
+        decls := decls.set decl.index decl
+        auxDeclToFullName
+      }
 
-/--
-Set the kind of the given fvar.
--/
-def setKind (lctx : LocalContext) (fvarId : FVarId)
-    (kind : LocalDeclKind) : LocalContext :=
+/-- Set the kind of the given fvar. -/
+def setKind (lctx : LocalContext) (fvarId : FVarId) (kind : LocalDeclKind) : LocalContext :=
   lctx.modifyLocalDecl fvarId (·.setKind kind)
 
 def setBinderInfo (lctx : LocalContext) (fvarId : FVarId) (bi : BinderInfo) : LocalContext :=
@@ -489,145 +558,194 @@ def setType (lctx : LocalContext) (fvarId : FVarId) (type : Expr) : LocalContext
   modifyLocalDecl lctx fvarId fun decl => decl.setType type
 
 @[export lean_local_ctx_num_indices]
-def numIndices (lctx : LocalContext) : Nat :=
-  lctx.decls.size
+def numIndices (lctx : LocalContext) : Nat := lctx.decls.size
 
-def getAt? (lctx : LocalContext) (i : Nat) : Option LocalDecl :=
-  lctx.decls[i]!
+def getAt? (lctx : LocalContext) (i : Nat) : Option LocalDecl := lctx.decls[i]!
 
-@[specialize] def foldlM [Monad m] (lctx : LocalContext) (f : β → LocalDecl → m β) (init : β) (start : Nat := 0) : m β :=
-  lctx.decls.foldlM (init := init) (start := start) fun b decl => match decl with
-    | none      => pure b
+@[specialize]
+def foldlM [Monad m] (lctx : LocalContext) (f : β → LocalDecl → m β) (init : β) (start : Nat := 0)
+    : m β :=
+  lctx.decls.foldlM (init := init) (start := start) fun b decl =>
+    match decl with
+    | none => pure b
     | some decl => f b decl
 
-@[specialize] def foldrM [Monad m] (lctx : LocalContext) (f : LocalDecl → β → m β) (init : β) : m β :=
-  lctx.decls.foldrM (init := init) fun decl b => match decl with
-    | none      => pure b
+@[specialize]
+def foldrM [Monad m] (lctx : LocalContext) (f : LocalDecl → β → m β) (init : β) : m β :=
+  lctx.decls.foldrM (init := init) fun decl b =>
+    match decl with
+    | none => pure b
     | some decl => f decl b
 
-@[specialize] def forM [Monad m] (lctx : LocalContext) (f : LocalDecl → m PUnit) (start := 0) : m PUnit :=
-  lctx.decls.forM (start := start) fun decl => match decl with
-    | none      => pure PUnit.unit
+@[specialize]
+def forM [Monad m] (lctx : LocalContext) (f : LocalDecl → m PUnit) (start := 0) : m PUnit :=
+  lctx.decls.forM (start := start) fun decl =>
+    match decl with
+    | none => pure PUnit.unit
     | some decl => f decl
 
-@[specialize] def findDeclM? [Monad m] (lctx : LocalContext) (f : LocalDecl → m (Option β)) : m (Option β) :=
-  lctx.decls.findSomeM? fun decl => match decl with
-    | none      => pure none
+@[specialize]
+def findDeclM? [Monad m] (lctx : LocalContext) (f : LocalDecl → m (Option β)) : m (Option β) :=
+  lctx.decls.findSomeM? fun decl =>
+    match decl with
+    | none => pure none
     | some decl => f decl
 
-@[specialize] def findDeclRevM? [Monad m] (lctx : LocalContext) (f : LocalDecl → m (Option β)) : m (Option β) :=
-  lctx.decls.findSomeRevM? fun decl => match decl with
-    | none      => pure none
+@[specialize]
+def findDeclRevM? [Monad m] (lctx : LocalContext) (f : LocalDecl → m (Option β)) : m (Option β) :=
+  lctx.decls.findSomeRevM? fun decl =>
+    match decl with
+    | none => pure none
     | some decl => f decl
 
 instance [Monad m] : ForIn m LocalContext LocalDecl where
-  forIn lctx init f := lctx.decls.forIn init fun d? b => match d? with
-    | none   => return ForInStep.yield b
-    | some d => f d b
+  forIn lctx init f :=
+    lctx.decls.forIn init fun d? b =>
+      match d? with
+      | none => return ForInStep.yield b
+      | some d => f d b
 
-@[inline] def foldl (lctx : LocalContext) (f : β → LocalDecl → β) (init : β) (start : Nat := 0) : β :=
+@[inline]
+def foldl (lctx : LocalContext) (f : β → LocalDecl → β) (init : β) (start : Nat := 0) : β :=
   Id.run <| lctx.foldlM (pure <| f · ·) init start
 
-@[inline] def foldr (lctx : LocalContext) (f : LocalDecl → β → β) (init : β) : β :=
+@[inline]
+def foldr (lctx : LocalContext) (f : LocalDecl → β → β) (init : β) : β :=
   Id.run <| lctx.foldrM (pure <| f · ·) init
 
-def size (lctx : LocalContext) : Nat :=
-  lctx.foldl (fun n _ => n+1) 0
+def size (lctx : LocalContext) : Nat := lctx.foldl (fun n _ => n + 1) 0
 
-@[inline] def findDecl? (lctx : LocalContext) (f : LocalDecl → Option β) : Option β :=
+@[inline]
+def findDecl? (lctx : LocalContext) (f : LocalDecl → Option β) : Option β :=
   Id.run <| lctx.findDeclM? (pure <| f ·)
 
-@[inline] def findDeclRev? (lctx : LocalContext) (f : LocalDecl → Option β) : Option β :=
+@[inline]
+def findDeclRev? (lctx : LocalContext) (f : LocalDecl → Option β) : Option β :=
   Id.run <| lctx.findDeclRevM? (pure <| f ·)
 
-partial def isSubPrefixOfAux (a₁ a₂ : PArray (Option LocalDecl)) (exceptFVars : Array Expr) (i j : Nat) : Bool :=
+partial def isSubPrefixOfAux
+    (a₁ a₂ : PArray (Option LocalDecl)) (exceptFVars : Array Expr) (i j : Nat)
+    : Bool :=
   if h : i < a₁.size then
     match a₁[i] with
-    | none       => isSubPrefixOfAux a₁ a₂ exceptFVars (i+1) j
+    | none =>
+      isSubPrefixOfAux a₁ a₂ exceptFVars (i + 1) j
     | some decl₁ =>
       if exceptFVars.any fun fvar => fvar.fvarId! == decl₁.fvarId then
-        isSubPrefixOfAux a₁ a₂ exceptFVars (i+1) j
+        isSubPrefixOfAux a₁ a₂ exceptFVars (i + 1) j
       else if h2 : j < a₂.size then
         match a₂[j] with
-        | none       => isSubPrefixOfAux a₁ a₂ exceptFVars i (j+1)
-        | some decl₂ => if decl₁.fvarId == decl₂.fvarId then isSubPrefixOfAux a₁ a₂ exceptFVars (i+1) (j+1) else isSubPrefixOfAux a₁ a₂ exceptFVars i (j+1)
-      else false
-  else true
+        | none =>
+          isSubPrefixOfAux a₁ a₂ exceptFVars i (j + 1)
+        | some decl₂ =>
+          if decl₁.fvarId == decl₂.fvarId then
+            isSubPrefixOfAux a₁ a₂ exceptFVars (i + 1) (j + 1)
+          else
+            isSubPrefixOfAux a₁ a₂ exceptFVars i (j + 1)
+      else
+        false
+  else
+    true
 
-/-- Given `lctx₁ - exceptFVars` of the form `(x_1 : A_1) ... (x_n : A_n)`, then return true
-   iff there is a local context `B_1* (x_1 : A_1) ... B_n* (x_n : A_n)` which is a prefix
-   of `lctx₂` where `B_i`'s are (possibly empty) sequences of local declarations. -/
+/--
+Given `lctx₁ - exceptFVars` of the form `(x_1 : A_1) ... (x_n : A_n)`, then return true
+iff there is a local context `B_1* (x_1 : A_1) ... B_n* (x_n : A_n)` which is a prefix
+of `lctx₂` where `B_i`'s are (possibly empty) sequences of local declarations.
+-/
 def isSubPrefixOf (lctx₁ lctx₂ : LocalContext) (exceptFVars : Array Expr := #[]) : Bool :=
   isSubPrefixOfAux lctx₁.decls lctx₂.decls exceptFVars 0 0
 
-@[inline] def mkBinding (isLambda : Bool) (lctx : LocalContext) (xs : Array Expr) (b : Expr) (usedLetOnly : Bool := true) (generalizeNondepLet := false) : Expr :=
+@[inline]
+def mkBinding
+    (isLambda : Bool) (lctx : LocalContext) (xs : Array Expr) (b : Expr)
+    (usedLetOnly : Bool := true) (generalizeNondepLet := false)
+    : Expr :=
   let b := b.abstract xs
   xs.size.foldRev (init := b) fun i _ b =>
     let x := xs[i]
     let handleCDecl (n : Name) (ty : Expr) (bi : BinderInfo) : Expr :=
-      let ty := ty.abstractRange i xs;
+      let ty := ty.abstractRange i xs
       if isLambda then
         Lean.mkLambda n bi ty b
       else
         Lean.mkForall n bi ty b
     match lctx.findFVar? x with
-    | some (.cdecl _ _ n ty bi _)  =>
+    | some (.cdecl _ _ n ty bi _) =>
       handleCDecl n ty bi
     | some (.ldecl _ _ n ty val nondep _) =>
       if nondep && generalizeNondepLet then
         handleCDecl n ty .default
       else if !usedLetOnly || b.hasLooseBVar 0 then
-        let ty  := ty.abstractRange i xs
+        let ty := ty.abstractRange i xs
         let val := val.abstractRange i xs
         mkLet n ty val b nondep
       else
         b.lowerLooseBVars 1 1
-    | none => panic! "unknown free variable"
+    | none =>
+      panic! "unknown free variable"
 
-/-- Creates the expression `fun x₁ .. xₙ => b` for free variables `xs = #[x₁, .., xₙ]`,
-suitably abstracting `b` and the types for each of the `xᵢ`. -/
-def mkLambda (lctx : LocalContext) (xs : Array Expr) (b : Expr) (usedLetOnly : Bool := true) (generalizeNondepLet := false) : Expr :=
+/--
+Creates the expression `fun x₁ .. xₙ => b` for free variables `xs = #[x₁, .., xₙ]`,
+suitably abstracting `b` and the types for each of the `xᵢ`.
+-/
+def mkLambda
+    (lctx : LocalContext) (xs : Array Expr) (b : Expr)
+    (usedLetOnly : Bool := true) (generalizeNondepLet := false)
+    : Expr :=
   mkBinding true lctx xs b usedLetOnly generalizeNondepLet
 
-/-- Creates the expression `(x₁:α₁) → .. → (xₙ:αₙ) → b` for free variables `xs = #[x₁, .., xₙ]`,
-suitably abstracting `b` and the types for each of the `xᵢ`, `αᵢ`. -/
-def mkForall (lctx : LocalContext) (xs : Array Expr) (b : Expr) (usedLetOnly : Bool := true) (generalizeNondepLet := false) : Expr :=
+/--
+Creates the expression `(x₁:α₁) → .. → (xₙ:αₙ) → b` for free variables `xs = #[x₁, .., xₙ]`,
+suitably abstracting `b` and the types for each of the `xᵢ`, `αᵢ`.
+-/
+def mkForall
+    (lctx : LocalContext) (xs : Array Expr) (b : Expr)
+    (usedLetOnly : Bool := true) (generalizeNondepLet := false)
+    : Expr :=
   mkBinding false lctx xs b usedLetOnly generalizeNondepLet
 
-@[inline] def anyM [Monad m] (lctx : LocalContext) (p : LocalDecl → m Bool) : m Bool :=
-  lctx.decls.anyM fun d => match d with
+@[inline]
+def anyM [Monad m] (lctx : LocalContext) (p : LocalDecl → m Bool) : m Bool :=
+  lctx.decls.anyM fun d =>
+    match d with
     | some decl => p decl
-    | none      => pure false
+    | none => pure false
 
-@[inline] def allM [Monad m] (lctx : LocalContext) (p : LocalDecl → m Bool) : m Bool :=
-  lctx.decls.allM fun d => match d with
+@[inline]
+def allM [Monad m] (lctx : LocalContext) (p : LocalDecl → m Bool) : m Bool :=
+  lctx.decls.allM fun d =>
+    match d with
     | some decl => p decl
-    | none      => pure true
+    | none => pure true
 
 /-- Return `true` if `lctx` contains a local declaration satisfying `p`. -/
-@[inline] def any (lctx : LocalContext) (p : LocalDecl → Bool) : Bool :=
-  Id.run <| lctx.anyM (pure <| p ·)
+@[inline]
+def any (lctx : LocalContext) (p : LocalDecl → Bool) : Bool := Id.run <| lctx.anyM (pure <| p ·)
 
 /-- Return `true` if all declarations in `lctx` satisfy `p`. -/
-@[inline] def all (lctx : LocalContext) (p : LocalDecl → Bool) : Bool :=
-  Id.run <| lctx.allM (pure <| p ·)
+@[inline]
+def all (lctx : LocalContext) (p : LocalDecl → Bool) : Bool := Id.run <| lctx.allM (pure <| p ·)
 
-/-- If option `pp.sanitizeNames` is set to `true`, add tombstone to shadowed local declaration names and ones contains macroscopes. -/
+/--
+If option `pp.sanitizeNames` is set to `true`, add tombstone to shadowed local declaration names and ones contains macroscopes.
+-/
 def sanitizeNames (lctx : LocalContext) : StateM NameSanitizerState LocalContext := do
   let st ← get
-  if !getSanitizeNames st.options then pure lctx else
-    StateT.run' (s := ({} : NameSet)) <|
-      lctx.decls.size.foldRevM (init := lctx) fun i _ lctx => do
-        match lctx.decls[i]! with
-        | none      => pure lctx
-        | some decl =>
-          if decl.userName.hasMacroScopes || (← get).contains decl.userName then do
-            modify fun s => s.insert decl.userName
-            let userNameNew ← liftM <| sanitizeName decl.userName
-            pure <| lctx.setUserName decl.fvarId userNameNew
-          else
-            modify fun s => s.insert decl.userName
-            pure lctx
+  if ! getSanitizeNames st.options then
+    pure lctx
+  else
+    StateT.run' (s := ({} : NameSet)) <| lctx.decls.size.foldRevM (init := lctx) fun i _ lctx => do
+      match lctx.decls[i]! with
+      | none =>
+        pure lctx
+      | some decl =>
+        if decl.userName.hasMacroScopes || (← get).contains decl.userName then do
+          modify fun s => s.insert decl.userName
+          let userNameNew ← liftM <| sanitizeName decl.userName
+          pure <| lctx.setUserName decl.fvarId userNameNew
+        else
+          modify fun s => s.insert decl.userName
+          pure lctx
 
 /--
 Given an `FVarId`, this function returns the corresponding user name,
@@ -644,10 +762,11 @@ Sort the given `FVarId`s by the order in which they appear in `lctx`. If any of
 the `FVarId`s do not appear in `lctx`, the result is unspecified.
 -/
 def sortFVarsByContextOrder (lctx : LocalContext) (hyps : Array FVarId) : Array FVarId :=
-  let hyps := hyps.map fun fvarId =>
-    match lctx.fvarIdToDecl.find? fvarId with
-    | none => (0, fvarId)
-    | some ldecl => (ldecl.index, fvarId)
+  let hyps :=
+    hyps.map fun fvarId =>
+      match lctx.fvarIdToDecl.find? fvarId with
+      | none => (0, fvarId)
+      | some ldecl => (ldecl.index, fvarId)
   hyps.qsort (fun h i => h.fst < i.fst) |>.map (·.snd)
 
 /--
@@ -655,15 +774,17 @@ Batched version of `Lean.LocalContext.findFromUserName?`.
 Finds the visible local declarations for each of the given `userNames` up to a certain `start`
 index exclusively, if any.
 -/
-def findFromUserNames (lctx : LocalContext) (userNames : Std.HashMap Name α) (start := 0) : Array LocalDecl :=
+def findFromUserNames (lctx : LocalContext) (userNames : Std.HashMap Name α) (start := 0)
+    : Array LocalDecl :=
   Array.reverse <| Id.run <| ExceptT.runCatch do
-    let (_, acc) ← lctx.foldrM (init := (userNames, #[])) fun decl (userNames, acc) => do
-      if userNames.isEmpty then throw acc -- stop when we found all user names
-      if decl.index < start then throw acc       -- stop when we passed over the start index
-      if userNames.contains decl.userName then
-        pure (userNames.erase decl.userName, acc.push decl)
-      else
-        pure (userNames, acc)
+    let (_, acc) ←
+      lctx.foldrM (init := (userNames, #[])) fun decl (userNames, acc) => do
+        if userNames.isEmpty then throw acc -- stop when we found all user names
+        if decl.index < start then throw acc -- stop when we passed over the start index
+        if userNames.contains decl.userName then
+          pure (userNames.erase decl.userName, acc.push decl)
+        else
+          pure (userNames, acc)
     return acc.reverse
 
 end LocalContext
@@ -685,15 +806,21 @@ def getLocalHyps [Monad m] [MonadLCtx m] : m (Array Expr) := do
   return hs
 
 def LocalDecl.replaceFVarId (fvarId : FVarId) (e : Expr) (d : LocalDecl) : LocalDecl :=
-  if d.fvarId == fvarId then d
-  else match d with
-    | .cdecl idx id n type bi k => .cdecl idx id n (type.replaceFVarId fvarId e) bi k
-    | .ldecl idx id n type val nondep k => .ldecl idx id n (type.replaceFVarId fvarId e) (val.replaceFVarId fvarId e) nondep k
+  if d.fvarId == fvarId then
+    d
+  else
+    match d with
+    | .cdecl idx id n type bi k =>
+      .cdecl idx id n (type.replaceFVarId fvarId e) bi k
+    | .ldecl idx id n type val nondep k =>
+      .ldecl idx id n (type.replaceFVarId fvarId e) (val.replaceFVarId fvarId e) nondep k
 
 def LocalContext.replaceFVarId (fvarId : FVarId) (e : Expr) (lctx : LocalContext) : LocalContext :=
   let lctx := lctx.erase fvarId
-  { fvarIdToDecl := lctx.fvarIdToDecl.map (·.replaceFVarId fvarId e)
-    decls := lctx.decls.map fun localDecl? => localDecl?.map (·.replaceFVarId fvarId e),
-    auxDeclToFullName := lctx.auxDeclToFullName }
+  {
+    fvarIdToDecl := lctx.fvarIdToDecl.map (·.replaceFVarId fvarId e)
+    decls := lctx.decls.map fun localDecl? => localDecl?.map (·.replaceFVarId fvarId e)
+    auxDeclToFullName := lctx.auxDeclToFullName
+  }
 
 end Lean

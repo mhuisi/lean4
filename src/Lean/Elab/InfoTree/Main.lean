@@ -16,16 +16,18 @@ public section
 
 namespace Lean.Elab.CommandContextInfo
 
-variable [Monad m] [MonadEnv m] [MonadMCtx m] [MonadOptions m] [MonadResolveName m] [MonadNameGenerator m]
+variable
+  [Monad m] [MonadEnv m] [MonadMCtx m] [MonadOptions m] [MonadResolveName m] [MonadNameGenerator m]
 
-def saveNoFileMap : m CommandContextInfo := return {
-    env           := (← getEnv)
-    fileMap       := default
-    mctx          := (← getMCtx)
-    options       := (← getOptions)
+def saveNoFileMap : m CommandContextInfo :=
+  return {
+    env := (← getEnv)
+    fileMap := default
+    mctx := (← getMCtx)
+    options := (← getOptions)
     currNamespace := (← getCurrNamespace)
-    openDecls     := (← getOpenDecls)
-    ngen          := (← getNGen)
+    openDecls := (← getOpenDecls)
+    ngen := (← getNGen)
   }
 
 def save [MonadFileMap m] : m CommandContextInfo := do
@@ -45,35 +47,44 @@ def ContextInfo.runCoreM (info : ContextInfo) (x : CoreM α) : IO α := do
   -- and so we can and should provide access to information regardless whether it is exported.
   let env := info.env.setExporting false
   /-
-    We must execute `x` using the `ngen` stored in `info`. Otherwise, we may create `MVarId`s and `FVarId`s that
-    have been used in `lctx` and `info.mctx`.
+  We must execute `x` using the `ngen` stored in `info`. Otherwise, we may create `MVarId`s and `FVarId`s that
+  have been used in `lctx` and `info.mctx`.
   -/
-  (·.1) <$>
-    (withOptions (fun _ => info.options) x).toIO
-      { currNamespace := info.currNamespace, openDecls := info.openDecls
-        fileName := "<InfoTree>", fileMap := default }
-      { env, ngen := info.ngen }
+  (·.1) <$> (withOptions (fun _ => info.options) x).toIO
+    {
+      currNamespace := info.currNamespace
+      openDecls := info.openDecls
+      fileName := "<InfoTree>"
+      fileMap := default
+    }
+    { env, ngen := info.ngen }
 
 def ContextInfo.runMetaM (info : ContextInfo) (lctx : LocalContext) (x : MetaM α) : IO α := do
   (·.1) <$> info.runCoreM (x.run { lctx := lctx } { mctx := info.mctx })
 
-def ContextInfo.toPPContext (info : ContextInfo) (lctx : LocalContext) : PPContext :=
-  { env  := info.env, mctx := info.mctx, lctx := lctx,
-    opts := info.options, currNamespace := info.currNamespace, openDecls := info.openDecls }
+def ContextInfo.toPPContext (info : ContextInfo) (lctx : LocalContext) : PPContext := {
+  env := info.env
+  mctx := info.mctx
+  lctx := lctx
+  opts := info.options
+  currNamespace := info.currNamespace
+  openDecls := info.openDecls
+}
 
 def ContextInfo.ppSyntax (info : ContextInfo) (lctx : LocalContext) (stx : Syntax) : IO Format := do
-  ppTerm (info.toPPContext lctx) ⟨stx⟩  -- HACK: might not be a term
+  ppTerm (info.toPPContext lctx) ⟨stx⟩ -- HACK: might not be a term
 
 private def formatStxRange (ctx : ContextInfo) (stx : Syntax) : Format :=
-  let pos    := stx.getPos?.getD 0
+  let pos := stx.getPos?.getD 0
   let endPos := stx.getTailPos?.getD pos
   f!"{fmtPos pos stx.getHeadInfo}-{fmtPos endPos stx.getTailInfo}"
-where fmtPos pos info :=
-  let pos := format <| ctx.fileMap.toPosition pos
-  match info with
-  | .original ..                      => pos
-  | .synthetic (canonical := true) .. => f!"{pos}†!"
-  | _                                 => f!"{pos}†"
+where
+  fmtPos pos info :=
+    let pos := format <| ctx.fileMap.toPosition pos
+    match info with
+    | .original .. => pos
+    | .synthetic (canonical := true) .. => f!"{pos}†!"
+    | _ => f!"{pos}†"
 
 private def formatElabInfo (ctx : ContextInfo) (info : ElabInfo) : Format :=
   if info.elaborator.isAnonymous then
@@ -91,16 +102,23 @@ def TermInfo.format (ctx : ContextInfo) (info : TermInfo) : IO Format := do
         Meta.ppExpr (← Meta.inferType info.expr)
       catch _ =>
         pure "<failed-to-infer-type>"
-    return f!"[Term] {← Meta.ppExpr info.expr} {if info.isBinder then "(isBinder := true) " else ""}: {ty} @ {formatElabInfo ctx info.toElabInfo}"
+    return
+      f!"[Term] {← Meta.ppExpr info.expr} {if info.isBinder then "(isBinder := true) " else ""}: \
+        {ty} @ {formatElabInfo ctx info.toElabInfo}"
 
 def PartialTermInfo.format (ctx : ContextInfo) (info : PartialTermInfo) : Format :=
   f!"[PartialTerm] @ {formatElabInfo ctx info.toElabInfo}"
 
 def CompletionInfo.format (ctx : ContextInfo) (info : CompletionInfo) : IO Format :=
   match info with
-  | .dot i (expectedType? := expectedType?) .. => return f!"[Completion-Dot] {← i.format ctx} : {expectedType?}"
-  | .id stx _ _ lctx expectedType? => ctx.runMetaM lctx do return f!"[Completion-Id] {← ctx.ppSyntax lctx stx} : {expectedType?} @ {formatStxRange ctx info.stx}"
-  | _ => return f!"[Completion] {info.stx} @ {formatStxRange ctx info.stx}"
+  | .dot i (expectedType? := expectedType?) .. =>
+    return f!"[Completion-Dot] {← i.format ctx} : {expectedType?}"
+  | .id stx _ _ lctx expectedType? =>
+    ctx.runMetaM lctx do
+      return f!"[Completion-Id] {← ctx.ppSyntax lctx stx} : {expectedType?} @ \
+        {formatStxRange ctx info.stx}"
+  | _ =>
+    return f!"[Completion] {info.stx} @ {formatStxRange ctx info.stx}"
 
 def CommandInfo.format (ctx : ContextInfo) (info : CommandInfo) : IO Format := do
   return f!"[Command] @ {formatElabInfo ctx info.toElabInfo}"
@@ -113,7 +131,8 @@ def ErrorNameInfo.format (ctx : ContextInfo) (info : ErrorNameInfo) : IO Format 
 
 def FieldInfo.format (ctx : ContextInfo) (info : FieldInfo) : IO Format := do
   ctx.runMetaM info.lctx do
-    return f!"[Field] {info.fieldName} : {← Meta.ppExpr (← Meta.inferType info.val)} := {← Meta.ppExpr info.val} @ {formatStxRange ctx info.stx}"
+    return f!"[Field] {info.fieldName} : {← Meta.ppExpr (← Meta.inferType info.val)} := \
+      {← Meta.ppExpr info.val} @ {formatStxRange ctx info.stx}"
 
 def ContextInfo.ppGoals (ctx : ContextInfo) (goals : List MVarId) : IO Format :=
   if goals.isEmpty then
@@ -125,16 +144,23 @@ def TacticInfo.format (ctx : ContextInfo) (info : TacticInfo) : IO Format := do
   let ctxB := { ctx with mctx := info.mctxBefore }
   let ctxA := { ctx with mctx := info.mctxAfter }
   let goalsBefore ← ctxB.ppGoals info.goalsBefore
-  let goalsAfter  ← ctxA.ppGoals info.goalsAfter
-  return f!"[Tactic] @ {formatElabInfo ctx info.toElabInfo}\n{info.stx}\nbefore {goalsBefore}\nafter {goalsAfter}"
+  let goalsAfter ← ctxA.ppGoals info.goalsAfter
+  return f!"[Tactic] @ {formatElabInfo ctx info.toElabInfo}\
+    \n{info.stx}\
+    \nbefore {goalsBefore}\
+    \nafter {goalsAfter}"
 
 def MacroExpansionInfo.format (ctx : ContextInfo) (info : MacroExpansionInfo) : IO Format := do
-  let stx    ← ctx.ppSyntax info.lctx info.stx
+  let stx ← ctx.ppSyntax info.lctx info.stx
   let output ← ctx.ppSyntax info.lctx info.output
-  return f!"[MacroExpansion]\n{stx}\n===>\n{output}"
+  return f!"[MacroExpansion]\
+    \n{stx}\
+    \n===>\
+    \n{output}"
 
 def UserWidgetInfo.format (info : UserWidgetInfo) : Format :=
-  f!"[UserWidget] {info.id}\n{Std.ToFormat.format <| info.props.run' {}}"
+  f!"[UserWidget] {info.id}\
+    \n{Std.ToFormat.format <| info.props.run' {}}"
 
 def FVarAliasInfo.format (info : FVarAliasInfo) : Format :=
   f!"[FVarAlias] {info.userName.eraseMacroScopes}: {info.id.name} -> {info.baseId.name}"
@@ -144,7 +170,8 @@ def FieldRedeclInfo.format (ctx : ContextInfo) (info : FieldRedeclInfo) : Format
 
 def DelabTermInfo.docString? (ppCtx : PPContext) (info : DelabTermInfo) : IO (Option String) := do
   match info.mkDocString? with
-  | none => return none
+  | none =>
+    return none
   | some act =>
     try
       act ppCtx
@@ -152,7 +179,11 @@ def DelabTermInfo.docString? (ppCtx : PPContext) (info : DelabTermInfo) : IO (Op
       return s!"[Error: {ex.toString}]"
 
 def DelabTermInfo.format (ctx : ContextInfo) (info : DelabTermInfo) : IO Format := do
-  let loc := if let some loc := info.location? then f!"{loc.module} {loc.range.pos}-{loc.range.endPos}" else "none"
+  let loc :=
+    if let some loc := info.location? then
+      f!"{loc.module} {loc.range.pos}-{loc.range.endPos}"
+    else
+      "none"
   let docString? ← info.docString? (ctx.toPPContext info.lctx)
   return f!"[DelabTerm] @ {← TermInfo.format ctx info.toTermInfo}\n\
     Location: {loc}\n\
@@ -163,7 +194,8 @@ def ChoiceInfo.format (ctx : ContextInfo) (info : ChoiceInfo) : Format :=
   f!"[Choice] @ {formatElabInfo ctx info.toElabInfo}"
 
 def ChoiceResolutionInfo.format (ctx : ContextInfo) (info : ChoiceResolutionInfo) : Format :=
-  f!"[ChoiceResolution] alternative {info.chosenAltIdx} of {info.stx.getNumArgs} ({(info.stx.getArg info.chosenAltIdx).getKind}) @ {formatStxRange ctx info.stx}"
+  f!"[ChoiceResolution] alternative {info.chosenAltIdx} of {info.stx.getNumArgs} \
+    ({(info.stx.getArg info.chosenAltIdx).getKind}) @ {formatStxRange ctx info.stx}"
 
 def DocInfo.format (ctx : ContextInfo) (info : DocInfo) : Format :=
   f!"[Doc] {info.stx.getKind} @ {formatElabInfo ctx info.toElabInfo}"
@@ -172,24 +204,24 @@ def DocElabInfo.format (ctx : ContextInfo) (info : DocElabInfo) : Format :=
   f!"[DocElab] {info.name} ({repr info.kind}) @ {formatElabInfo ctx info.toElabInfo}"
 
 def Info.format (ctx : ContextInfo) : Info → IO Format
-  | ofTacticInfo i           => i.format ctx
-  | ofTermInfo i             => i.format ctx
-  | ofPartialTermInfo i      => pure <| i.format ctx
-  | ofCommandInfo i          => i.format ctx
-  | ofMacroExpansionInfo i   => i.format ctx
-  | ofOptionInfo i           => i.format ctx
-  | ofErrorNameInfo i        => i.format ctx
-  | ofFieldInfo i            => i.format ctx
-  | ofCompletionInfo i       => i.format ctx
-  | ofUserWidgetInfo i       => pure <| i.format
-  | ofCustomInfo i           => pure <| Std.ToFormat.format i
-  | ofFVarAliasInfo i        => pure <| i.format
-  | ofFieldRedeclInfo i      => pure <| i.format ctx
-  | ofDelabTermInfo i        => i.format ctx
-  | ofChoiceInfo i           => pure <| i.format ctx
+  | ofTacticInfo i => i.format ctx
+  | ofTermInfo i => i.format ctx
+  | ofPartialTermInfo i => pure <| i.format ctx
+  | ofCommandInfo i => i.format ctx
+  | ofMacroExpansionInfo i => i.format ctx
+  | ofOptionInfo i => i.format ctx
+  | ofErrorNameInfo i => i.format ctx
+  | ofFieldInfo i => i.format ctx
+  | ofCompletionInfo i => i.format ctx
+  | ofUserWidgetInfo i => pure <| i.format
+  | ofCustomInfo i => pure <| Std.ToFormat.format i
+  | ofFVarAliasInfo i => pure <| i.format
+  | ofFieldRedeclInfo i => pure <| i.format ctx
+  | ofDelabTermInfo i => i.format ctx
+  | ofChoiceInfo i => pure <| i.format ctx
   | ofChoiceResolutionInfo i => pure <| i.format ctx
-  | ofDocInfo i              => pure <| i.format ctx
-  | ofDocElabInfo i          => pure <| i.format ctx
+  | ofDocInfo i => pure <| i.format ctx
+  | ofDocElabInfo i => pure <| i.format ctx
 
 def PartialContextInfo.format (ctx : PartialContextInfo) : Format :=
   match ctx with
@@ -199,22 +231,28 @@ def PartialContextInfo.format (ctx : PartialContextInfo) : Format :=
 
 partial def InfoTree.format (tree : InfoTree) (ctx? : Option ContextInfo := none) : IO Format := do
   match tree with
-  | hole id     => return .nestD f!"• ?{toString id.name}"
-  | context i t => format t <| i.mergeIntoOuter? ctx?
-  | node i cs   => match ctx? with
-    | none => return "• <context-not-available>"
+  | hole id =>
+    return .nestD f!"• ?{toString id.name}"
+  | context i t =>
+    format t <| i.mergeIntoOuter? ctx?
+  | node i cs =>
+    match ctx? with
+    | none =>
+      return "• <context-not-available>"
     | some ctx =>
       let fmt ← i.format ctx
       if cs.size == 0 then
         return .nestD f!"• {fmt}"
       else
         let ctx? := i.updateContext? ctx?
-        return .nestD f!"• {fmt}{Std.Format.prefixJoin .line (← cs.toList.mapM fun c => format c ctx?)}"
+        return .nestD
+          f!"• {fmt}{Std.Format.prefixJoin .line (← cs.toList.mapM fun c => format c ctx?)}"
 
 section
 variable [Monad m] [MonadInfoTree m]
 
-@[inline] private def modifyInfoTrees (f : PersistentArray InfoTree → PersistentArray InfoTree) : m Unit :=
+@[inline]
+private def modifyInfoTrees (f : PersistentArray InfoTree → PersistentArray InfoTree) : m Unit :=
   modifyInfoState fun s => { s with trees := f s.trees }
 
 /-- Returns the current array of InfoTrees and resets it to an empty array. -/
@@ -234,8 +272,9 @@ def pushInfoLeaf (t : Info) : m Unit := do
 def addCompletionInfo (info : CompletionInfo) : m Unit := do
   pushInfoLeaf <| Info.ofCompletionInfo info
 
-def addConstInfo [MonadEnv m] [MonadError m]
-    (stx : Syntax) (n : Name) (expectedType? : Option Expr := none) : m Unit := do
+def addConstInfo
+    [MonadEnv m] [MonadError m] (stx : Syntax) (n : Name) (expectedType? : Option Expr := none)
+    : m Unit := do
   pushInfoLeaf <| .ofTermInfo {
     elaborator := .anonymous
     lctx := .empty
@@ -244,19 +283,25 @@ def addConstInfo [MonadEnv m] [MonadError m]
     expectedType?
   }
 
-/-- This does the same job as `realizeGlobalConstNoOverload`; resolving an identifier
+/--
+This does the same job as `realizeGlobalConstNoOverload`; resolving an identifier
 syntax to a unique fully resolved name or throwing if there are ambiguities.
 But also adds this resolved name to the infotree. This means that when you hover
-over a name in the source file you will see the fully resolved name in the hover info.-/
-def realizeGlobalConstNoOverloadWithInfo (id : Syntax) (expectedType? : Option Expr := none) : CoreM Name := do
+over a name in the source file you will see the fully resolved name in the hover info.
+-/
+def realizeGlobalConstNoOverloadWithInfo (id : Syntax) (expectedType? : Option Expr := none)
+    : CoreM Name := do
   let n ← realizeGlobalConstNoOverload id
   if (← getInfoState).enabled then
     -- we do not store a specific elaborator since identifiers are special-cased by the server anyway
     addConstInfo id n expectedType?
   return n
 
-/-- Similar to `realizeGlobalConstNoOverloadWithInfo`, except if there are multiple name resolutions then it returns them as a list. -/
-def realizeGlobalConstWithInfos (id : Syntax) (expectedType? : Option Expr := none) : CoreM (List Name) := do
+/--
+Similar to `realizeGlobalConstNoOverloadWithInfo`, except if there are multiple name resolutions then it returns them as a list.
+-/
+def realizeGlobalConstWithInfos (id : Syntax) (expectedType? : Option Expr := none)
+    : CoreM (List Name) := do
   let ns ← realizeGlobalConst id
   if (← getInfoState).enabled then
     for n in ns do
@@ -285,11 +330,8 @@ The `InfoTree`s in `m` are reset before `x` is executed and restored with the ad
 after `x` is executed.
 -/
 def withInfoContext'
-    [MonadFinally m]
-    (x : m α)
-    (mkInfo : α → m (Sum Info MVarId))
-    (mkInfoOnError : m Info) :
-    m α := do
+    [MonadFinally m] (x : m α) (mkInfo : α → m (Sum Info MVarId)) (mkInfoOnError : m Info)
+    : m α := do
   if (← getInfoState).enabled then
     let treesSaved ← getResetInfoTrees
     Prod.fst <$> MonadFinally.tryFinally' x fun a? => do
@@ -299,43 +341,46 @@ def withInfoContext'
         | some a => mkInfo a
       modifyInfoTrees fun trees =>
         match info with
-        | Sum.inl info   => treesSaved.push <| InfoTree.node info trees
+        | Sum.inl info => treesSaved.push <| InfoTree.node info trees
         | Sum.inr mvarId => treesSaved.push <| InfoTree.hole mvarId
   else
     x
 
-/-- Saves the current list of trees `t₀`, runs `x` to produce a new tree list `t₁` and
-runs `mkInfoTree t₁` to get `n : InfoTree` and then restores the trees to be `t₀ ++ [n]`.-/
-def withInfoTreeContext [MonadFinally m] (x : m α) (mkInfoTree : PersistentArray InfoTree → m InfoTree) : m α := do
+/--
+Saves the current list of trees `t₀`, runs `x` to produce a new tree list `t₁` and
+runs `mkInfoTree t₁` to get `n : InfoTree` and then restores the trees to be `t₀ ++ [n]`.
+-/
+def withInfoTreeContext
+    [MonadFinally m] (x : m α) (mkInfoTree : PersistentArray InfoTree → m InfoTree)
+    : m α := do
   if (← getInfoState).enabled then
     let treesSaved ← getResetInfoTrees
     Prod.fst <$> MonadFinally.tryFinally' x fun _ => do
-      let st    ← getInfoState
-      let tree  ← mkInfoTree st.trees
+      let st ← getInfoState
+      let tree ← mkInfoTree st.trees
       modifyInfoTrees fun _ => treesSaved.push tree
   else
     x
 
 /-- Run `x` as a new child infotree node with header given by `mkInfo`. -/
-@[inline] def withInfoContext [MonadFinally m] (x : m α) (mkInfo : m Info) : m α := do
+@[inline]
+def withInfoContext [MonadFinally m] (x : m α) (mkInfo : m Info) : m α := do
   withInfoTreeContext x (fun trees => do return InfoTree.node (← mkInfo) trees)
 
-private def withSavedPartialInfoContext [MonadFinally m]
-    (x : m α)
-    (ctx? : m (Option PartialContextInfo))
+private def withSavedPartialInfoContext
+    [MonadFinally m] (x : m α) (ctx? : m (Option PartialContextInfo))
     : m α := do
   if !(← getInfoState).enabled then
     return ← x
   let treesSaved ← getResetInfoTrees
   Prod.fst <$> MonadFinally.tryFinally' x fun _ => do
-    let st    ← getInfoState
-    let trees ← st.trees.mapM fun tree => do
-      let tree := tree.substitute st.assignment
-      match (← ctx?) with
-      | none =>
-        pure tree
-      | some ctx =>
-        pure <| InfoTree.context ctx tree
+    let st ← getInfoState
+    let trees ←
+      st.trees.mapM fun tree => do
+        let tree := tree.substitute st.assignment
+        match (← ctx?) with
+        | none => pure tree
+        | some ctx => pure <| InfoTree.context ctx tree
     modifyInfoTrees fun _ => treesSaved ++ trees
 
 /--
@@ -344,17 +389,11 @@ Resets the trees state `t₀`, runs `x` to produce a new trees state `t₁` and 
 from the monad state.
 -/
 def withSaveInfoContext
-    [MonadNameGenerator m]
-    [MonadFinally m]
-    [MonadEnv m]
-    [MonadOptions m]
-    [MonadMCtx m]
-    [MonadResolveName m]
-    [MonadFileMap m]
+    [MonadNameGenerator m] [MonadFinally m] [MonadEnv m] [MonadOptions m] [MonadMCtx m]
+    [MonadResolveName m] [MonadFileMap m]
     (x : m α)
     : m α := do
-  withSavedPartialInfoContext x do
-    return some <| .commandCtx (← CommandContextInfo.save)
+  withSavedPartialInfoContext x do return some <| .commandCtx (← CommandContextInfo.save)
 
 /--
 Resets the trees state `t₀`, runs `x` to produce a new trees state `t₁` and sets the state to be
@@ -385,34 +424,42 @@ def assignInfoHoleId (mvarId : MVarId) (infoTree : InfoTree) : m Unit := do
   modifyInfoState fun s => { s with assignment := s.assignment.insert mvarId infoTree }
 end
 
-def withMacroExpansionInfo [MonadFinally m] [Monad m] [MonadInfoTree m] [MonadLCtx m] (stx output : Syntax) (x : m α) : m α :=
-  let mkInfo : m Info := do
-    return Info.ofMacroExpansionInfo {
-      lctx   := (← getLCtx)
-      stx, output
-    }
+def withMacroExpansionInfo
+    [MonadFinally m] [Monad m] [MonadInfoTree m] [MonadLCtx m] (stx output : Syntax) (x : m α)
+    : m α :=
+  let mkInfo : m Info := do return Info.ofMacroExpansionInfo { lctx := (← getLCtx), stx, output }
   withInfoContext x mkInfo
 
 /--
 Runs `x`. The last info tree that is pushed while running `x` is assigned to `mvarId`. All other
 pushed info trees are silently discarded.
 -/
-@[inline] def withInfoHole [MonadFinally m] [Monad m] [MonadInfoTree m] (mvarId : MVarId) (x : m α) : m α := do
+@[inline]
+def withInfoHole [MonadFinally m] [Monad m] [MonadInfoTree m] (mvarId : MVarId) (x : m α)
+    : m α := do
   if (← getInfoState).enabled then
     let treesSaved ← getResetInfoTrees
-    Prod.fst <$> MonadFinally.tryFinally' x fun _ => modifyInfoState fun s =>
-      if h : s.trees.size > 0 then
-        have : s.trees.size - 1 < s.trees.size := Nat.sub_lt h (by decide)
-        { s with trees := treesSaved, assignment := s.assignment.insert mvarId s.trees[s.trees.size - 1] }
-      else
-        { s with trees := treesSaved }
+    Prod.fst <$> MonadFinally.tryFinally' x fun _ =>
+      modifyInfoState fun s =>
+        if h : s.trees.size > 0 then
+          have : s.trees.size - 1 < s.trees.size := Nat.sub_lt h (by decide)
+          {
+            s with
+            trees := treesSaved
+            assignment := s.assignment.insert mvarId s.trees[s.trees.size - 1]
+          }
+        else {
+          s with
+          trees := treesSaved
+        }
   else
     x
 
 def enableInfoTree [MonadInfoTree m] (flag := true) : m Unit :=
   modifyInfoState fun s => { s with enabled := flag }
 
-def withEnableInfoTree [Monad m] [MonadInfoTree m] [MonadFinally m] (flag : Bool) (x : m α) : m α := do
+def withEnableInfoTree [Monad m] [MonadInfoTree m] [MonadFinally m] (flag : Bool) (x : m α)
+    : m α := do
   let saved := (← getInfoState).enabled
   try
     enableInfoTree flag

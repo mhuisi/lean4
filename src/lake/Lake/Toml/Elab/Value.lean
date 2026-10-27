@@ -20,7 +20,8 @@ open Lean
 
 namespace Lake.Toml
 
-@[inline] def elabLit {k : SyntaxNodeKind} (x : TSyntax k) (name : String) : CoreM String := do
+@[inline]
+def elabLit {k : SyntaxNodeKind} (x : TSyntax k) (name : String) : CoreM String := do
   let some spelling := x.raw.isLit? k
     | throwErrorAt x s!"ill-formed {name} syntax"
   return spelling
@@ -36,8 +37,7 @@ def elabBoolean (x : TSyntax ``boolean) : CoreM Bool := do
 --------------------------------------------------------------------------------
 
 def decodeDecNum (s : String) : Nat :=
-  s.foldl (init := 0) fun n c =>
-    if c == '_' then n else n*10 + (c.val - '0'.val).toNat
+  s.foldl (init := 0) fun n c => if c == '_' then n else n * 10 + (c.val - '0'.val).toNat
 
 def decodeSign (s : String) : Bool × String :=
   if s.front == '-' then
@@ -58,11 +58,12 @@ def elabDecInt (x : TSyntax ``decInt) : CoreM Int := do
   return decodeDecInt <| ← elabLit x "decimal integer"
 
 def decodeMantissa (s : String) : Nat × Nat :=
-  let (m,e) := s.foldl (init := (0,s.lengthAssumingAscii)) fun (m,e) c =>
-    match c with
-    | '_' => (m,e)
-    | '.' => (m,0)
-    | c => (m*10 + (c.val - '0'.val).toNat, e+1)
+  let (m, e) :=
+    s.foldl (init := (0, s.lengthAssumingAscii)) fun (m, e) c =>
+      match c with
+      | '_' => (m, e)
+      | '.' => (m, 0)
+      | c => (m * 10 + (c.val - '0'.val).toNat, e + 1)
   (m, if e ≥ s.length then 0 else e)
 
 def decodeFrExp (s : String) : Nat × Int :=
@@ -74,41 +75,44 @@ def decodeFrExp (s : String) : Nat × Int :=
   | [m] =>
     let (m, e) := decodeMantissa m
     (m, Int.negOfNat e)
-  | _ => (0,0)
+  | _ =>
+    (0, 0)
 
 def decodeFloat (s : String) : Float :=
   let (neg, s) := decodeSign s
   if s = "inf" then
-    if neg then -1.0/0 else 1.0/0
+    if neg then -1.0 / 0 else 1.0 / 0
   else if s = "nan" then
-    if neg then -(0.0/0) else 0.0/0
+    if neg then -(0.0 / 0) else 0.0 / 0
   else
     let (m, e) := decodeFrExp s
     let flt := Float.ofScientific m (e < 0) e.natAbs
     if neg then -flt else flt
 
-def elabFloat (x : TSyntax ``float) : CoreM Float := do
-  return decodeFloat <| ← elabLit x "float"
+def elabFloat (x : TSyntax ``float) : CoreM Float := do return decodeFloat <| ← elabLit x "float"
 
 def elabBinNum (x : TSyntax ``binNum) : CoreM Nat := do
   let spelling ← elabLit x "binary number"
-  return spelling.drop 2 |>.foldl (init := 0) fun n c =>
-    if c == '_' then n else n*2 + (c.val - '0'.val).toNat
+  return spelling.drop 2
+    |>.foldl (init := 0) fun n c => if c == '_' then n else n * 2 + (c.val - '0'.val).toNat
 
 def elabOctNum (x : TSyntax ``octNum) : CoreM Nat := do
   let spelling ← elabLit x "octal number"
-  return spelling.drop 2 |>.foldl (init := 0) fun n c =>
-    if c == '_' then n else n*8 + (c.val - '0'.val).toNat
+  return spelling.drop 2
+    |>.foldl (init := 0) fun n c => if c == '_' then n else n * 8 + (c.val - '0'.val).toNat
 
 def decodeHexDigit (c : Char) : Nat :=
-  if c  ≤ '9' then (c.val - '0'.val).toNat
-  else if c  ≤ 'F' then 10 + (c.val - 'A'.val).toNat
-  else 10 + (c.val - 'a'.val).toNat
+  if c ≤ '9' then
+    (c.val - '0'.val).toNat
+  else if c ≤ 'F' then
+    10 + (c.val - 'A'.val).toNat
+  else
+    10 + (c.val - 'a'.val).toNat
 
 def elabHexNum (x : TSyntax ``hexNum) : CoreM Nat := do
   let spelling ← elabLit x "hexadecimal number"
-  return spelling.drop 2 |>.foldl (init := 0) fun n c =>
-    if c == '_' then n else n*16 + decodeHexDigit c
+  return spelling.drop 2
+    |>.foldl (init := 0) fun n c => if c == '_' then n else n * 16 + decodeHexDigit c
 
 def elabDateTime (x : TSyntax ``dateTime) : CoreM DateTime := do
   let spelling ← elabLit x "date-time"
@@ -124,9 +128,10 @@ def elabLiteralString (x : TSyntax ``literalString) : CoreM String := do
   return (← elabLit x "literalString").drop 1 |>.dropEnd 1 |>.copy
 
 def decodeHexDigits (s : Substring.Raw) : Nat :=
-  s.foldl (init := 0) fun n c => n*16 + decodeHexDigit c
+  s.foldl (init := 0) fun n c => n * 16 + decodeHexDigit c
 
-partial def elabBasicStringCore (lit : String) (i : String.Pos.Raw := 0) (out := "") : CoreM String := do
+partial def elabBasicStringCore (lit : String) (i : String.Pos.Raw := 0) (out := "")
+    : CoreM String := do
   if h : i.atEnd lit then
     return out
   else
@@ -146,15 +151,24 @@ partial def elabBasicStringCore (lit : String) (i : String.Pos.Raw := 0) (out :=
             throwError "invalid unicode escape `{escape}`"
         let next := i.next' lit h
         match curr with
-        | 'b'  => elabBasicStringCore lit next (out.push '\x08')
-        | 't'  => elabBasicStringCore lit next (out.push '\t')
-        | 'n'  => elabBasicStringCore lit next (out.push '\n')
-        | 'f'  => elabBasicStringCore lit next (out.push '\x0C')
-        | 'r'  => elabBasicStringCore lit next (out.push '\r')
-        | '\"' => elabBasicStringCore lit next (out.push '"')
-        | '\\' => elabBasicStringCore lit next (out.push '\\')
-        | 'u'  => elabUnicodeEscape (Substring.Raw.mk lit next lit.rawEndPos |>.take 4)
-        | 'U'  => elabUnicodeEscape (Substring.Raw.mk lit next lit.rawEndPos |>.take 8)
+        | 'b' =>
+          elabBasicStringCore lit next (out.push '\x08')
+        | 't' =>
+          elabBasicStringCore lit next (out.push '\t')
+        | 'n' =>
+          elabBasicStringCore lit next (out.push '\n')
+        | 'f' =>
+          elabBasicStringCore lit next (out.push '\x0C')
+        | 'r' =>
+          elabBasicStringCore lit next (out.push '\r')
+        | '\"' =>
+          elabBasicStringCore lit next (out.push '"')
+        | '\\' =>
+          elabBasicStringCore lit next (out.push '\\')
+        | 'u' =>
+          elabUnicodeEscape (Substring.Raw.mk lit next lit.rawEndPos |>.take 4)
+        | 'U' =>
+          elabUnicodeEscape (Substring.Raw.mk lit next lit.rawEndPos |>.take 8)
         | _ =>
           let i := Substring.Raw.mk lit i lit.rawEndPos |>.trimLeft |>.startPos
           elabBasicStringCore lit i out
@@ -189,8 +203,8 @@ def elabString (x : TSyntax ``string) : CoreM String := do
   | `(val|$x:mlBasicString) => elabMlBasicString x
   | _ => throwErrorAt x "ill-formed string syntax"
 
-@[inline] def elabUnquotedKey (x : TSyntax ``unquotedKey) : CoreM String := do
-  elabLit x "unquoted key"
+@[inline]
+def elabUnquotedKey (x : TSyntax ``unquotedKey) : CoreM String := do elabLit x "unquoted key"
 
 public def elabSimpleKey (x : TSyntax ``simpleKey) : CoreM String := do
   match x with
@@ -208,28 +222,32 @@ def elabArray (x : TSyntax ``array) (elabVal : TSyntax ``val → CoreM α) : Cor
     | throwErrorAt x "ill-formed array syntax"
   xs.getElems.mapM elabVal
 
-def elabInlineTable (x : TSyntax ``inlineTable) (elabVal : TSyntax ``val → CoreM Value) : CoreM Table := do
+def elabInlineTable (x : TSyntax ``inlineTable) (elabVal : TSyntax ``val → CoreM Value)
+    : CoreM Table := do
   let `(val|{$kvs,*}) := x
     | throwErrorAt x "ill-formed inline table syntax"
-  let t : NameDict (Option Value) := {}  -- some: static value, none: partial table
-  let t ← kvs.getElems.foldlM (init := t) fun t kv => do
-    let `(keyval|$k = $v) := kv
-      | throwErrorAt kv "ill-formed key-value pair syntax"
-    let `(key|$[$ks].*) := k
-      | throwErrorAt k "ill-formed key syntax"
-    let tailKey := ks.back!
-    let (k, t) ← StateT.run (s := t) <| ks.pop.foldlM (init := Name.anonymous) fun k p => do
-      let k ← k.str <$> elabSimpleKey p
-      if let some v := t.find? k then
-        unless v.isNone do throwErrorAt p m!"cannot redefine key `{k}`"
+  let t : NameDict (Option Value) := {} -- some: static value, none: partial table
+  let t ←
+    kvs.getElems.foldlM (init := t) fun t kv => do
+      let `(keyval|$k = $v) := kv
+        | throwErrorAt kv "ill-formed key-value pair syntax"
+      let `(key|$[$ks].*) := k
+        | throwErrorAt k "ill-formed key syntax"
+      let tailKey := ks.back!
+      let (k, t) ←
+        StateT.run (s := t) <| ks.pop.foldlM (init := Name.anonymous) fun k p => do
+          let k ← k.str <$> elabSimpleKey p
+          if let some v := t.find? k then
+            unless v.isNone do
+              throwErrorAt p m!"cannot redefine key `{k}`"
+          else
+            modify fun t => t.push k none
+          return k
+      let k ← k.str <$> elabSimpleKey tailKey
+      if t.contains k then
+        throwErrorAt tailKey m!"cannot redefine key `{k}`"
       else
-        modify fun t => t.push k none
-      return k
-    let k ← k.str <$> elabSimpleKey tailKey
-    if t.contains k then
-      throwErrorAt tailKey m!"cannot redefine key `{k}`"
-    else
-      return t.push k (← elabVal v)
+        return t.push k (← elabVal v)
   return t.filterMap fun _ v => v
 
 public partial def elabVal (x : TSyntax ``val) : CoreM Value := do

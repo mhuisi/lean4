@@ -26,8 +26,7 @@ def handleLit (lit : Literal Nat) : DimacsM Unit := do
   modify fun s => { s with maxLit := Nat.max s.maxLit lit.1 }
 
 @[inline]
-def incrementClauses : DimacsM Unit := do
-  modify fun s => { s with numClauses := s.numClauses + 1 }
+def incrementClauses : DimacsM Unit := do modify fun s => { s with numClauses := s.numClauses + 1 }
 
 end DimacsM
 

@@ -40,8 +40,8 @@ open PassInstaller
 namespace Pass
 
 def init : Pass where
-  name  := `init
-  run   := fun decls => do
+  name := `init
+  run := fun decls => do
     decls.forM (·.saveBase)
     return decls
   phase := .base
@@ -49,8 +49,8 @@ def init : Pass where
 
 -- Helper pass used for debugging purposes
 def trace (phase := Phase.base) : Pass where
-  name  := `trace
-  run   := pure
+  name := `trace
+  run := pure
   phase := phase
 
 def saveBase : Pass where
@@ -58,9 +58,10 @@ def saveBase : Pass where
   phase := .base
   phaseOut := .base
   name := `saveBase
-  run decls := decls.mapM fun decl => do
-    (← normalizeFVarIds decl).saveBase
-    return decl
+  run decls :=
+    decls.mapM fun decl => do
+      (← normalizeFVarIds decl).saveBase
+      return decl
   shouldAlwaysRunCheck := true
 
 def saveMono : Pass where
@@ -68,9 +69,10 @@ def saveMono : Pass where
   phase := .mono
   phaseOut := .mono
   name := `saveMono
-  run decls := decls.mapM fun decl => do
-    (← normalizeFVarIds decl).saveMono
-    return decl
+  run decls :=
+    decls.mapM fun decl => do
+      (← normalizeFVarIds decl).saveMono
+      return decl
   shouldAlwaysRunCheck := true
 
 def saveImpure : Pass where
@@ -78,11 +80,12 @@ def saveImpure : Pass where
   phase := .impure
   phaseOut := .impure
   name := `saveImpure
-  run decls := decls.mapM fun decl => do
-    let decl ← normalizeFVarIds decl
-    decl.saveImpure
-    modifyEnv fun env => recordFinalImpureDecl env decl.name
-    return decl
+  run decls :=
+    decls.mapM fun decl => do
+      let decl ← normalizeFVarIds decl
+      decl.saveImpure
+      modifyEnv fun env => recordFinalImpureDecl env decl.name
+      return decl
   shouldAlwaysRunCheck := true
 
 end Pass
@@ -117,7 +120,7 @@ def builtinPassManager : PassManager := {
     -- should come last so it can see all created decls
     -- pass must be run for each phase; see `base/monoTransparentDeclsExt`
     inferVisibility (phase := .base),
-    toMono,
+    toMono
   ]
   monoPasses := #[
     simp (occurrence := 3) (phase := .mono),
@@ -129,17 +132,17 @@ def builtinPassManager : PassManager := {
     commonJoinPointArgs,
     simp (occurrence := 4) (phase := .mono),
     floatLetIn (phase := .mono) (occurrence := 2),
-    lambdaLifting,
+    lambdaLifting
   ]
   monoPassesNoLambda := #[
     extendJoinPointContext (phase := .mono) (occurrence := 1),
     simp (occurrence := 5) (phase := .mono),
     elimDeadBranches,
     cse (occurrence := 2) (phase := .mono),
-    saveMono,  -- End of mono phase
+    saveMono, -- End of mono phase
     inferVisibility (phase := .mono),
     extractClosed,
-    toImpure,
+    toImpure
   ]
   impurePasses := #[
     pushProj (occurrence := 0),
@@ -155,7 +158,7 @@ def builtinPassManager : PassManager := {
     detectSimpleGround,
     inferVisibility (phase := .impure),
     toposortPass,
-    saveImpure, -- End of impure phase
+    saveImpure -- End of impure phase
   ]
 }
 
@@ -166,16 +169,17 @@ def runImportedDecls (importedDeclNames : Array (Array Name)) : CoreM PassManage
       m ← runFromDecl m declName
   return m
 
-builtin_initialize passManagerExt : PersistentEnvExtension Name (Name × PassManager) (List Name × PassManager) ←
+builtin_initialize passManagerExt
+    : PersistentEnvExtension Name (Name × PassManager) (List Name × PassManager) ←
   registerPersistentEnvExtension {
     mkInitial := return ([], builtinPassManager)
     addImportedFn := fun ns => return ([], ← ImportM.runCoreM <| runImportedDecls ns)
-    addEntryFn := fun (installerDeclNames, _) (installerDeclName, managerNew) => (installerDeclName :: installerDeclNames, managerNew)
+    addEntryFn := fun (installerDeclNames, _) (installerDeclName, managerNew) =>
+      (installerDeclName :: installerDeclNames, managerNew)
     exportEntriesFn := fun s => s.1.reverse.toArray
   }
 
-def getPassManager : CoreM PassManager :=
-  return passManagerExt.getState (← getEnv) |>.2
+def getPassManager : CoreM PassManager := return passManagerExt.getState (← getEnv) |>.2
 
 def addPass (declName : Name) : CoreM Unit := do
   let info ← getConstInfo declName
@@ -188,11 +192,12 @@ def addPass (declName : Name) : CoreM Unit := do
 
 builtin_initialize
   registerBuiltinAttribute {
-    name  := `cpass
+    name := `cpass
     descr := "compiler passes for the code generator"
-    add   := fun declName stx kind => do
+    add := fun declName stx kind => do
       Attribute.Builtin.ensureNoArgs stx
-      unless kind == AttributeKind.global do throwAttrMustBeGlobal `cpass kind
+      unless kind == AttributeKind.global do
+        throwAttrMustBeGlobal `cpass kind
       ensureAttrDeclIsMeta `cpass declName kind
       discard <| addPass declName
     applicationTime := .afterCompilation

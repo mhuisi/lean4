@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Henrik Böving
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.BVDecide.Prover.Cegar.Basic
 import Lean.Meta.Tactic.BVDecide.Normalize
@@ -28,13 +29,13 @@ public def Cegar.processNewHyps : CegarM ProcessHypResult := do
     let target := .mvarIdTarget (← read).goal
     let ctx := (← CegarM.getTacticContext).preProcessContext
     let ctx :=
-      .new
-        ctx.mode
-        { ctx.config with
-            enums := false,
-            structures := false,
-            fixedInt := false,
-            shortCircuit := false
+      .new ctx.mode
+        {
+          ctx.config with
+          enums := false
+          structures := false
+          fixedInt := false
+          shortCircuit := false
         }
         true
     let caches ← CegarM.takePreProcessCaches
@@ -68,4 +69,3 @@ public def Cegar.processNewHyps : CegarM ProcessHypResult := do
     return .newHyps
 
 end Lean.Meta.Tactic.BVDecide
-

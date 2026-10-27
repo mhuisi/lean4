@@ -12,9 +12,7 @@ public section
 
 namespace Lean.Compiler.LCNF
 
-/--
-A general abstraction for the idea of a scope in the compiler.
--/
+/-- A general abstraction for the idea of a scope in the compiler. -/
 abbrev ScopeM := StateRefT FVarIdSet CompilerM
 
 namespace ScopeM
@@ -23,9 +21,7 @@ def getScope : ScopeM FVarIdSet := get
 def setScope (newScope : FVarIdSet) : ScopeM Unit := set newScope
 def clearScope : ScopeM Unit := setScope {}
 
-/--
-Execute `x` but recover the previous scope after doing so.
--/
+/-- Execute `x` but recover the previous scope after doing so. -/
 def withBackTrackingScope [MonadLiftT ScopeM m] [Monad m] [MonadFinally m] (x : m α) : m α := do
   let scope ← getScope
   try x finally setScope scope
@@ -47,11 +43,8 @@ def isInScope (fvarId : FVarId) : ScopeM Bool := do
   let scope ← getScope
   return scope.contains fvarId
 
-/--
-Add a new `FVarId` to the current scope.
--/
-def addToScope (fvarId : FVarId) : ScopeM Unit :=
-  modify fun scope => scope.insert fvarId
+/-- Add a new `FVarId` to the current scope. -/
+def addToScope (fvarId : FVarId) : ScopeM Unit := modify fun scope => scope.insert fvarId
 
 end ScopeM
 

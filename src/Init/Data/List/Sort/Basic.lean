@@ -38,8 +38,10 @@ tail-recursive merge.
 -/
 def merge (xs ys : List α) (le : α → α → Bool := by exact fun a b => a ≤ b) : List α :=
   match xs, ys with
-  | [], ys => ys
-  | xs, [] => xs
+  | [], ys =>
+    ys
+  | xs, [] =>
+    xs
   | x :: xs, y :: ys =>
     if le x y then
       x :: merge xs (y :: ys) le
@@ -47,7 +49,8 @@ def merge (xs ys : List α) (le : α → α → Bool := by exact fun a b => a �
       y :: merge (x :: xs) ys le
 
 @[simp] theorem nil_merge (ys : List α) : merge [] ys le = ys := by simp [merge]
-@[simp] theorem merge_right (xs : List α) : merge xs [] le = xs := by
+@[simp]
+theorem merge_right (xs : List α) : merge xs [] le = xs := by
   induction xs with
   | nil => simp
   | cons x xs ih => simp [merge]
@@ -57,9 +60,9 @@ Split a list in two equal parts. If the length is odd, the first part will be on
 
 This is an implementation detail of `mergeSort`.
 -/
-def MergeSort.Internal.splitInTwo (l : { l : List α // l.length = n }) :
-    { l : List α // l.length = (n+1)/2 } × { l : List α // l.length = n/2 } :=
-  let r := splitAt ((n+1)/2) l.1
+def MergeSort.Internal.splitInTwo (l : {l : List α // l.length = n})
+    : {l : List α // l.length = (n + 1) / 2} × {l : List α // l.length = n / 2} :=
+  let r := splitAt ((n + 1) / 2) l.1
   (⟨r.1, by simp [r, splitAt_eq, l.2]; omega⟩, ⟨r.2, by simp [r, splitAt_eq, l.2]; omega⟩)
 
 open MergeSort.Internal in
@@ -77,8 +80,10 @@ It is replaced at runtime by an efficient implementation that has been proven to
 -- Because we want the sort to be stable, it is essential that we split the list in two contiguous
 -- sublists.
 def mergeSort : ∀ (xs : List α) (le : α → α → Bool := by exact fun a b => a ≤ b), List α
-  | [], _ => []
-  | [a], _ => [a]
+  | [], _ =>
+    []
+  | [a], _ =>
+    [a]
   | a :: b :: xs, le =>
     let lr := splitInTwo ⟨a :: b :: xs, rfl⟩
     have := by simpa using lr.2.2

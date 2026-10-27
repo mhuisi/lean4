@@ -39,12 +39,16 @@ and the free variable containing the result (`FVarId`). The resulting `FVarId` o
 subset of `Array CodeDecl`. However, this method does try to filter the relevant ones.
 We rely on the `used` var set available in `SimpM` to filter them. See `attachCodeDecls`.
 -/
-partial def inlineProjInst? (e : LetValue .pure) : SimpM (Option (Array (CodeDecl .pure) × FVarId)) := do
-  let .proj _ i s := e | return none
+partial def inlineProjInst? (e : LetValue .pure)
+    : SimpM (Option (Array (CodeDecl .pure) × FVarId)) := do
+  let .proj _ i s := e
+    | return none
   let sType ← getType s
-  unless (← isClass? sType).isSome do return none
+  unless (← isClass? sType).isSome do
+    return none
   let eType ← e.inferType
-  unless  (← isClass? eType).isNone do return none
+  unless (← isClass? eType).isNone do
+    return none
   let (fvarId?, decls) ← visit s [i] |>.run |>.run #[]
   if let some fvarId := fvarId? then
     return some (decls, fvarId)
@@ -52,17 +56,24 @@ partial def inlineProjInst? (e : LetValue .pure) : SimpM (Option (Array (CodeDec
     eraseCodeDecls decls
     return none
 where
-  visit (fvarId : FVarId) (projs : List Nat) : OptionT (StateRefT (Array (CodeDecl .pure)) SimpM) FVarId := do
-    let some letDecl ← findLetDecl? fvarId | failure
+  visit (fvarId : FVarId) (projs : List Nat)
+      : OptionT (StateRefT (Array (CodeDecl .pure)) SimpM) FVarId := do
+    let some letDecl ← findLetDecl? fvarId
+      | failure
     match letDecl.value with
-    | .proj _ i s => visit s (i :: projs)
-    | .fvar .. | .lit .. | .erased => failure
+    | .proj _ i s =>
+      visit s (i :: projs)
+    | .fvar .. | .lit .. | .erased =>
+      failure
     | .const declName us args =>
       if let some (.ctorInfo ctorVal) := (← getEnv).find? declName then
-        let i :: projs := projs | unreachable!
+        let i :: projs := projs
+          | unreachable!
         let arg := args[ctorVal.numParams + i]!
-        let fvarId ← match arg with
-          | .fvar fvarId => pure fvarId
+        let fvarId ←
+          match arg with
+          | .fvar fvarId =>
+            pure fvarId
           | .erased | .type .. =>
             let auxDecl ← mkLetDeclErased
             modify (·.push (.let auxDecl))
@@ -72,7 +83,8 @@ where
         else
           visit fvarId projs
       else
-        let some ⟨.pure, decl⟩ ← getDecl? declName | failure
+        let some ⟨.pure, decl⟩ ← getDecl? declName
+          | failure
         match decl.value with
         | .code code =>
           guard (!decl.recursive && decl.getArity == args.size)
@@ -80,9 +92,11 @@ where
           let code := code.instantiateValueLevelParams decl.levelParams us
           let code ← betaReduce params code args (mustInline := true)
           visitCode code projs
-        | .extern .. => failure
+        | .extern .. =>
+          failure
 
-  visitCode (code : Code .pure) (projs : List Nat) : OptionT (StateRefT (Array (CodeDecl .pure)) SimpM) FVarId := do
+  visitCode (code : Code .pure) (projs : List Nat)
+      : OptionT (StateRefT (Array (CodeDecl .pure)) SimpM) FVarId := do
     match code with
     | .let decl k => modify (·.push (.let decl)); visitCode k projs
     | .fun decl k => modify (·.push (.fun decl)); visitCode k projs

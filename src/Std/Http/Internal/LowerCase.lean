@@ -13,8 +13,7 @@ public import Init.Data.String.Modify
 import Init.Data.String.Lemmas.Modify
 public import Init.Data.String.Csimp
 
-@[expose]
-public section
+@[expose] public section
 
 /-!
 # LowerCase
@@ -28,17 +27,15 @@ namespace Std.Http.Internal
 
 set_option linter.all true
 
-/--
-Predicate asserting that a string is in lowercase form.
--/
-def IsLowerCase (s : String) : Prop :=
-  s.toLower = s
+/-- Predicate asserting that a string is in lowercase form. -/
+def IsLowerCase (s : String) : Prop := s.toLower = s
 
 private theorem Char.toLower_eq_self_iff {c : Char} : c.toLower = c ↔ c.isUpper = false := by
   simp only [Char.toLower, Char.isUpper]
   split <;> rename_i h <;> simpa [UInt32.le_iff_toNat_le, Char.ext_iff] using h
 
-private theorem String.toLower_eq_self_iff {s : String} : s.toLower = s ↔ s.toList.any Char.isUpper = false := by
+private theorem String.toLower_eq_self_iff {s : String}
+    : s.toLower = s ↔ s.toList.any Char.isUpper = false := by
   simp only [String.toLower, ← String.toList_inj, String.toList_map]
   rw (occs := [2]) [← List.map_id s.toList]
   rw [List.map_eq_map_iff]
@@ -55,8 +52,8 @@ private theorem Char.toLower_idempotent (c : Char) : c.toLower.toLower = c.toLow
   split
   · split
     · next h1 h2 =>
-      simp only [UInt32.le_iff_toNat_le, UInt32.toNat_add, seval] at h1 h2
-      omega
+        simp only [UInt32.le_iff_toNat_le, UInt32.toNat_add, seval] at h1 h2
+        omega
     · simp
   · rfl
 
@@ -69,8 +66,7 @@ theorem isLowerCase_toLower {s : String} : IsLowerCase s.toLower := by
   rw [String.map_map, Function.comp_def]
   simp [Char.toLower_idempotent]
 
-theorem isLowerCase_empty : IsLowerCase "" := by
-  simp [IsLowerCase, String.toLower]
+theorem isLowerCase_empty : IsLowerCase "" := by simp [IsLowerCase, String.toLower]
 
 end IsLowerCase
 

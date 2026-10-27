@@ -604,10 +604,8 @@ public def alt (subAlts : Array TaggedDoc) (arrowTk rhs : TaggedDoc) (isComplex 
   let some stickyRhs := getSticky? rhs
     | return ⟨flat, nonStickyDoc⟩
   let stickyDoc := combine #[.withSepAfter lhs ⟨space, nested⟩, stickyRhs.stickyVariant]
-  return ⟨
-    flat,
-    withStickyAlt nonStickyDoc stickyDoc (.ofSticky stickyRhs (allowFlattening := false))
-  ⟩
+  return
+    ⟨flat, withStickyAlt nonStickyDoc stickyDoc (.ofSticky stickyRhs (allowFlattening := false))⟩
 where
   combineSubAlts (subAlts : Array TaggedDoc) : TaggedDoc :=
     if isComplex then

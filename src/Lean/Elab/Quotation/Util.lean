@@ -15,28 +15,35 @@ open Lean.Syntax
 
 register_builtin_option hygiene : Bool := {
   defValue := true
-  descr    := "Annotate identifiers in quotations such that they are resolved relative to the scope at their declaration, not that at their eventual use/expansion, to avoid accidental capturing. Note that quotations/notations already defined are unaffected."
+  descr :=
+    "Annotate identifiers in quotations such that they are resolved relative to the scope at their \
+      declaration, not that at their eventual use/expansion, to avoid accidental capturing. Note \
+      that quotations/notations already defined are unaffected."
 }
 
 def getAntiquotationIds (stx : Syntax) : TermElabM (Array Ident) := do
   let mut ids := #[]
   for stx in stx.topDown (firstChoiceOnly := true) do
-    if (isAntiquot stx || isTokenAntiquot stx) && !isEscapedAntiquot stx then
+    if (isAntiquot stx || isTokenAntiquot stx) && ! isEscapedAntiquot stx then
       let anti := getAntiquotTerm stx
-      if anti.isIdent then ids := ids.push ⟨anti⟩
-      else if anti.isOfKind ``Parser.Term.hole then pure ()
-      else throwErrorAt stx "complex antiquotation not allowed here"
+      if anti.isIdent then
+        ids := ids.push ⟨anti⟩
+      else if anti.isOfKind ``Parser.Term.hole then
+        pure ()
+      else
+        throwErrorAt stx "complex antiquotation not allowed here"
   return ids
 
 /-- Get all pattern vars (as `Syntax.ident`s) in `stx` -/
 partial def getPatternVars (stx : Syntax) : TermElabM (Array Syntax) :=
   if stx.isQuot then
     getAntiquotationIds stx
-  else match stx with
-    | `(_)            => return #[]
-    | `($id:ident)    => return #[id]
+  else
+    match stx with
+    | `(_) => return #[]
+    | `($id:ident) => return #[id]
     | `($id:ident@$e) => return (← getPatternVars e).push id
-    | _               => throwErrorAt stx "unsupported pattern in syntax match{indentD stx}"
+    | _ => throwErrorAt stx "unsupported pattern in syntax match{indentD stx}"
 
 def getPatternsVars (pats : Array Syntax) : TermElabM (Array Syntax) :=
   pats.foldlM (fun vars pat => do return vars ++ (← getPatternVars pat)) #[]
@@ -58,8 +65,9 @@ def resolveSectionVariable (sectionVars : NameMap Name) (id : Name) : List (Name
       let id := { extractionResult with name := id }.review
       match sectionVars.find? id with
       | some newId => [(newId, projs)]
-      | none       => loop p (s::projs)
-    | _, _ => []
+      | none => loop p (s :: projs)
+    | _, _ =>
+      []
   loop extractionResult.name []
 
 end Lean.Elab.Term.Quotation

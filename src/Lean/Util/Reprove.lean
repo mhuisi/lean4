@@ -24,28 +24,30 @@ namespace Lean.Elab.Command
 open Meta
 
 /-- Reproving a declaration with a given tactic sequence -/
-meta def reproveDecl (declName : Name) (tacticSeq : TSyntax `Lean.Parser.Tactic.tacticSeq) : CommandElabM Unit := do
+meta def reproveDecl (declName : Name) (tacticSeq : TSyntax `Lean.Parser.Tactic.tacticSeq)
+    : CommandElabM Unit := do
   let some info := (← getEnv).find? declName
     | throwError "unknown declaration '{declName}'"
 
   let uniqueName ← liftCoreM <| mkFreshUserName `reprove_example
 
-  let value ← liftTermElabM do
-    Term.withDeclName uniqueName do
-      let goal ← mkFreshExprMVar info.type
-      let goalMVar := goal.mvarId!
-      let _goals ← Tactic.run goalMVar do
-        Tactic.evalTactic tacticSeq
-      instantiateMVars goal
+  let value ←
+    liftTermElabM do
+      Term.withDeclName uniqueName do
+        let goal ← mkFreshExprMVar info.type
+        let goalMVar := goal.mvarId!
+        let _goals ← Tactic.run goalMVar do Tactic.evalTactic tacticSeq
+        instantiateMVars goal
 
-  let decl := Declaration.defnDecl {
-    name := uniqueName
-    type := info.type
-    value := value
-    levelParams := info.levelParams
-    hints := ReducibilityHints.opaque
-    safety := DefinitionSafety.safe
-  }
+  let decl :=
+    Declaration.defnDecl {
+      name := uniqueName
+      type := info.type
+      value := value
+      levelParams := info.levelParams
+      hints := ReducibilityHints.opaque
+      safety := DefinitionSafety.safe
+    }
 
   liftCoreM <| addAndCompile decl
 

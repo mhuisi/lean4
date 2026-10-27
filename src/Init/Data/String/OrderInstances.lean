@@ -23,7 +23,8 @@ namespace String
 
 namespace Internal
 
-scoped macro "order" : tactic => `(tactic| {
+scoped macro "order" : tactic =>
+  `(tactic| {
     simp [Pos.Raw.lt_iff, Pos.Raw.le_iff, String.Pos.lt_iff, String.Pos.le_iff, Slice.Pos.lt_iff,
       Slice.Pos.le_iff, Pos.Raw.ext_iff, String.Pos.ext_iff, Slice.Pos.ext_iff] at *;
     try omega })
@@ -55,8 +56,10 @@ namespace Pos
 attribute [grind hom] Pos.le_iff Pos.lt_iff Pos.ext_iff
 
 /-- Range fact for `grind`: positions are bounded by the string size. -/
-@[grind hom_pred] theorem offset_byteIdx_le_utf8ByteSize (s : String) (p : s.Pos) :
-    p.offset.byteIdx ≤ s.utf8ByteSize := p.isValid.le_utf8ByteSize
+@[grind hom_pred]
+theorem offset_byteIdx_le_utf8ByteSize (s : String) (p : s.Pos)
+    : p.offset.byteIdx ≤ s.utf8ByteSize :=
+  p.isValid.le_utf8ByteSize
 
 instance {s : String} : Std.Total (α := s.Pos) (· ≤ ·) := ⟨fun _ _ => by order⟩
 instance {s : String} : Trans (α := s.Pos) (· ≤ ·) (· ≤ ·) (· ≤ ·) := ⟨fun _ _ => by order⟩
@@ -76,8 +79,10 @@ namespace Slice.Pos
 attribute [grind hom] Pos.le_iff Pos.lt_iff Pos.ext_iff
 
 /-- Range fact for `grind`: positions are bounded by the slice size. -/
-@[grind hom_pred] theorem offset_byteIdx_le_utf8ByteSize (s : Slice) (p : s.Pos) :
-    p.offset.byteIdx ≤ s.utf8ByteSize := p.isValidForSlice.le_utf8ByteSize
+@[grind hom_pred]
+theorem offset_byteIdx_le_utf8ByteSize (s : Slice) (p : s.Pos)
+    : p.offset.byteIdx ≤ s.utf8ByteSize :=
+  p.isValidForSlice.le_utf8ByteSize
 
 instance {s : Slice} : Std.Total (α := s.Pos) (· ≤ ·) := ⟨fun _ _ => by order⟩
 instance {s : Slice} : Trans (α := s.Pos) (· ≤ ·) (· ≤ ·) (· ≤ ·) := ⟨fun _ _ => by order⟩

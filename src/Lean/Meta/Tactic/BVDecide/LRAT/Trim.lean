@@ -17,7 +17,6 @@ This module implements the LRAT trimming algorithm described in section 4 of
 "Faster LRAT Checking Than Solving with CaDiCaL" (https://drops.dagstuhl.de/storage/00lipics/lipics-vol271-sat2023/LIPIcs.SAT.2023.21/LIPIcs.SAT.2023.21.pdf).
 -/
 
-
 namespace Lean.Meta.Tactic.BVDecide
 namespace LRAT
 
@@ -25,23 +24,15 @@ open Std.Tactic.BVDecide.LRAT (IntAction)
 
 namespace trim
 
-/--
-The context used for trimming LRAT proofs.
--/
+/-- The context used for trimming LRAT proofs. -/
 structure Context where
-  /--
-  The id of the first proof step.
-  -/
+  /-- The id of the first proof step. -/
   initialId : Nat
-  /--
-  The id of the empty proof step.
-  -/
+  /-- The id of the empty proof step. -/
   addEmptyId : Nat
 
 structure State where
-  /--
-  The proof as a map from proof step ids to their actions.
-  -/
+  /-- The proof as a map from proof step ids to their actions. -/
   proof : Std.HashMap Nat IntAction
   /--
   For each proof step `i` contains  at index `i - initialId` `0` if `i` is unused, `1` if it is
@@ -85,7 +76,8 @@ def run (proof : Array IntAction) (x : M α) : Except String α := do
     | .addEmpty id .. | .addRup id .. | .addRat id .. => acc.insert id a
     | .del .. => acc
   let proof := proof.foldl (init := {}) folder
-  let used := Nat.fold proof.size (init := ByteArray.emptyWithCapacity proof.size) (fun _ _ acc => acc.push 0)
+  let used :=
+    Nat.fold proof.size (init := ByteArray.emptyWithCapacity proof.size) (fun _ _ acc => acc.push 0)
   let lastUse := Array.replicate (initialId + proof.size) (-1)
   let mapped := Array.replicate proof.size 0
   return ReaderT.run x { initialId, addEmptyId } |>.run' { proof, used, mapped, lastUse }
@@ -100,13 +92,9 @@ def getEmptyId : M Nat := do
   let ctx ← read
   return ctx.addEmptyId
 
-@[inline]
-def idIndex (id : Nat) : M Nat := do
-  return id - (← M.getInitialId)
+@[inline] def idIndex (id : Nat) : M Nat := do return id - (← M.getInitialId)
 
-@[inline]
-def getProofStep (id : Nat) : M (Option IntAction) := do
-  return (← get).proof[id]?
+@[inline] def getProofStep (id : Nat) : M (Option IntAction) := do return (← get).proof[id]?
 
 @[inline]
 def consumeProofStep (id : Nat) : M (Option IntAction) := do
@@ -166,7 +154,8 @@ def mapStep (step : IntAction) : M IntAction := do
       return (newHint, newHints)
     let newRatHints ← ratHints.mapM mapper
     return .addRat newId c pivot newRupHints newRatHints
-  | .del .. => unreachable!
+  | .del .. =>
+    unreachable!
 
 end M
 
@@ -203,14 +192,17 @@ where
             go worklist
           | .addRat _ _ _ rupHints ratHints =>
             rupHints.forM (M.updateLastUse · id)
-            for h in rupHints do M.updateLastUse h id
+            for h in rupHints do
+              M.updateLastUse h id
             let folder acc a := acc.push a.fst ++ a.snd
             let ratHints := ratHints.foldl (init := Array.mkEmpty ratHints.size) folder
             ratHints.forM (M.updateLastUse · id)
             worklist := worklist ++ ratHints ++ rupHints
             go worklist
-          | .del .. => go worklist
-        | none => go worklist
+          | .del .. =>
+            go worklist
+        | none =>
+          go worklist
 
 def computeToDelete : M (Std.HashMap Nat (Array Nat)) := do
   let s ← get
@@ -219,8 +211,8 @@ def computeToDelete : M (Std.HashMap Nat (Array Nat)) := do
     let stepId := s.lastUse[clauseId]
     if stepId == -1 then continue
     let stepId := stepId.natAbs
-    toDelete := toDelete.alter stepId
-      fun
+    toDelete :=
+      toDelete.alter stepId fun
         | none => some #[clauseId]
         | some arr => some <| arr.push clauseId
   return toDelete
@@ -258,7 +250,8 @@ def mapping : M (Array IntAction) := do
             for hint in hintB do
               if (← get).lastUse[hint]! == id then
                 deletions := deletions.push hint
-        | _ => pure ()
+        | _ =>
+          pure ()
 
       let newStep ← M.mapStep step
       deletions ← deletions.mapM M.mapIdent
@@ -278,8 +271,7 @@ end trim
 Trim the LRAT `proof` by removing all steps that are not used in reaching the empty clause
 conclusion.
 -/
-public def trim (proof : Array IntAction) : Except String (Array IntAction) := do
-  trim.go.run proof
+public def trim (proof : Array IntAction) : Except String (Array IntAction) := do trim.go.run proof
 
 end LRAT
 end Lean.Meta.Tactic.BVDecide

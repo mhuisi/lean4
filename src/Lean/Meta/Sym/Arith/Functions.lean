@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Arith.MonadRing
 public import Lean.Meta.Sym.Arith.MonadSemiring
@@ -41,9 +42,10 @@ builtin_initialize checkedInstsExt : EnvExtension (Option (IO.Ref (PHashSet (Exp
   registerEnvExtension (some <$> IO.mkRef {})
 
 private def isClosedImported (env : Environment) (e : Expr) : Bool :=
-  !e.hasFVar && !e.hasMVar && !e.hasLevelParam &&
-    (e.find? fun e => match e with
-      | .const c _ => !env.isImportedConst c
+  !e.hasFVar && !e.hasMVar && !e.hasLevelParam
+    && (e.find? fun e =>
+      match e with
+      | .const c _ => ! env.isImportedConst c
       | _ => false).isNone
 
 private def checkInst (declName : Name) (inst inst' : Expr) : MetaM Unit := do
@@ -53,15 +55,22 @@ private def checkInst (declName : Name) (inst inst' : Expr) : MetaM Unit := do
   if let (true, some checked) := (cacheable, checked?) then
     if (← checked.get).contains (inst, inst') then return
   unless (← withReducibleAndInstances <| isDefEq inst inst') do
-    throwError "error while initializing arithmetic operators:\ninstance for `{declName}` {indentExpr inst}\nis not definitionally equal to the expected one {indentExpr inst'}\nwhen only reducible definitions and instances are reduced"
+    throwError "error while initializing arithmetic operators:\
+      \ninstance for `{declName}` {indentExpr inst}\
+      \nis not definitionally equal to the expected one {indentExpr inst'}\
+      \nwhen only reducible definitions and instances are reduced"
   if let (true, some checked) := (cacheable, checked?) then checked.modify (·.insert (inst, inst'))
 
-private def mkUnaryFn (type : Expr) (u : Level) (instDeclName : Name) (declName : Name) (expectedInst : Expr) : m Expr := do
+private def mkUnaryFn
+    (type : Expr) (u : Level) (instDeclName : Name) (declName : Name) (expectedInst : Expr)
+    : m Expr := do
   let inst ← MonadCanon.synthInstance <| mkApp (mkConst instDeclName [u]) type
   checkInst declName inst expectedInst
   canonExpr <| mkApp2 (mkConst declName [u]) type inst
 
-private def mkBinHomoFn (type : Expr) (u : Level) (instDeclName : Name) (declName : Name) (expectedInst : Expr) : m Expr := do
+private def mkBinHomoFn
+    (type : Expr) (u : Level) (instDeclName : Name) (declName : Name) (expectedInst : Expr)
+    : m Expr := do
   let inst ← MonadCanon.synthInstance <| mkApp3 (mkConst instDeclName [u, u, u]) type type type
   checkInst declName inst expectedInst
   canonExpr <| mkApp4 (mkConst declName [u, u, u]) type type type inst
@@ -77,18 +86,21 @@ private def mkNatCastFn (u : Level) (type : Expr) (semiringInst : Expr) : m Expr
   let instType := mkApp (mkConst ``NatCast [u]) type
   -- Note: `Semiring.natCast` is not a global instance, so `NatCast α` may not be available.
   -- When present, verify defeq; otherwise fall back to the semiring field.
-  let inst ← match (← MonadCanon.synthInstance? instType) with
-  | none => pure inst'
-  | some inst => checkInst ``NatCast.natCast inst inst'; pure inst
+  let inst ←
+    match (← MonadCanon.synthInstance? instType) with
+    | none => pure inst'
+    | some inst => checkInst ``NatCast.natCast inst inst'; pure inst
   canonExpr <| mkApp2 (mkConst ``NatCast.natCast [u]) type inst
 
 /--
 `HSMul.hSMul scalar type type inst` with the synthesized instance (checked against the
 structure's `nsmul`/`zsmul` field), or the field itself when no instance is available.
 -/
-private def mkSMulFn (u : Level) (type : Expr) (scalar : Expr) (expectedSMulInst : Expr) : m Expr := do
+private def mkSMulFn (u : Level) (type : Expr) (scalar : Expr) (expectedSMulInst : Expr)
+    : m Expr := do
   let inst' := mkApp3 (mkConst ``instHSMul [0, u]) scalar type expectedSMulInst
-  let inst ← match (← MonadCanon.synthInstance? (mkApp3 (mkConst ``HSMul [0, u, u]) scalar type type)) with
+  let inst ←
+    match (← MonadCanon.synthInstance? (mkApp3 (mkConst ``HSMul [0, u, u]) scalar type type)) with
     | none => pure inst'
     | some inst => checkInst ``HSMul.hSMul inst inst'; pure inst
   canonExpr <| mkApp4 (mkConst ``HSMul.hSMul [0, u, u]) scalar type type inst
@@ -99,21 +111,27 @@ variable [MonadRing m]
 def getNatSMulFn : m Expr := do
   let ring ← getRing
   if let some fn := ring.natSMulFn? then return fn
-  let fn ← mkSMulFn ring.u ring.type Nat.mkType (mkApp2 (mkConst ``Grind.Semiring.nsmul [ring.u]) ring.type ring.semiringInst)
+  let fn ←
+    mkSMulFn ring.u ring.type Nat.mkType
+      (mkApp2 (mkConst ``Grind.Semiring.nsmul [ring.u]) ring.type ring.semiringInst)
   modifyRing fun s => { s with natSMulFn? := some fn }
   return fn
 
 def getIntSMulFn : m Expr := do
   let ring ← getRing
   if let some fn := ring.intSMulFn? then return fn
-  let fn ← mkSMulFn ring.u ring.type Int.mkType (mkApp2 (mkConst ``Grind.Ring.zsmul [ring.u]) ring.type ring.ringInst)
+  let fn ←
+    mkSMulFn ring.u ring.type Int.mkType
+      (mkApp2 (mkConst ``Grind.Ring.zsmul [ring.u]) ring.type ring.ringInst)
   modifyRing fun s => { s with intSMulFn? := some fn }
   return fn
 
 def getAddFn : m Expr := do
   let ring ← getRing
   if let some addFn := ring.addFn? then return addFn
-  let expectedInst := mkApp2 (mkConst ``instHAdd [ring.u]) ring.type <| mkApp2 (mkConst ``Grind.Semiring.toAdd [ring.u]) ring.type ring.semiringInst
+  let expectedInst :=
+    mkApp2 (mkConst ``instHAdd [ring.u]) ring.type <|
+      mkApp2 (mkConst ``Grind.Semiring.toAdd [ring.u]) ring.type ring.semiringInst
   let addFn ← mkBinHomoFn ring.type ring.u ``HAdd ``HAdd.hAdd expectedInst
   modifyRing fun s => { s with addFn? := some addFn }
   return addFn
@@ -121,7 +139,9 @@ def getAddFn : m Expr := do
 def getMulFn : m Expr := do
   let ring ← getRing
   if let some mulFn := ring.mulFn? then return mulFn
-  let expectedInst := mkApp2 (mkConst ``instHMul [ring.u]) ring.type <| mkApp2 (mkConst ``Grind.Semiring.toMul [ring.u]) ring.type ring.semiringInst
+  let expectedInst :=
+    mkApp2 (mkConst ``instHMul [ring.u]) ring.type <|
+      mkApp2 (mkConst ``Grind.Semiring.toMul [ring.u]) ring.type ring.semiringInst
   let mulFn ← mkBinHomoFn ring.type ring.u ``HMul ``HMul.hMul expectedInst
   modifyRing fun s => { s with mulFn? := some mulFn }
   return mulFn
@@ -129,7 +149,9 @@ def getMulFn : m Expr := do
 def getSubFn : m Expr := do
   let ring ← getRing
   if let some subFn := ring.subFn? then return subFn
-  let expectedInst := mkApp2 (mkConst ``instHSub [ring.u]) ring.type <| mkApp2 (mkConst ``Grind.Ring.toSub [ring.u]) ring.type ring.ringInst
+  let expectedInst :=
+    mkApp2 (mkConst ``instHSub [ring.u]) ring.type <|
+      mkApp2 (mkConst ``Grind.Ring.toSub [ring.u]) ring.type ring.ringInst
   let subFn ← mkBinHomoFn ring.type ring.u ``HSub ``HSub.hSub expectedInst
   modifyRing fun s => { s with subFn? := some subFn }
   return subFn
@@ -155,7 +177,8 @@ def getIntCastFn : m Expr := do
   let inst' := mkApp2 (mkConst ``Grind.Ring.intCast [ring.u]) ring.type ring.ringInst
   let instType := mkApp (mkConst ``IntCast [ring.u]) ring.type
   -- Note: `Ring.intCast` is not a global instance. Same pattern as `mkNatCastFn`.
-  let inst ← match (← MonadCanon.synthInstance? instType) with
+  let inst ←
+    match (← MonadCanon.synthInstance? instType) with
     | none => pure inst'
     | some inst => checkInst ``Int.cast inst inst'; pure inst
   let intCastFn ← canonExpr <| mkApp2 (mkConst ``IntCast.intCast [ring.u]) ring.type inst
@@ -189,7 +212,9 @@ def getDivFn : m Expr := do
   let some fieldInst := ring.fieldInst?
     | throwError "internal error: type is not a field{indentExpr ring.type}"
   if let some divFn := ring.divFn? then return divFn
-  let expectedInst := mkApp2 (mkConst ``instHDiv [ring.u]) ring.type <| mkApp2 (mkConst ``Grind.Field.toDiv [ring.u]) ring.type fieldInst
+  let expectedInst :=
+    mkApp2 (mkConst ``instHDiv [ring.u]) ring.type <|
+      mkApp2 (mkConst ``Grind.Field.toDiv [ring.u]) ring.type fieldInst
   let divFn ← mkBinHomoFn ring.type ring.u ``HDiv ``HDiv.hDiv expectedInst
   modifyCommRing fun s => { s with divFn? := some divFn }
   return divFn
@@ -202,14 +227,18 @@ variable [MonadSemiring m]
 def getNatSMulFn' : m Expr := do
   let sr ← getSemiring
   if let some fn := sr.natSMulFn? then return fn
-  let fn ← mkSMulFn sr.u sr.type Nat.mkType (mkApp2 (mkConst ``Grind.Semiring.nsmul [sr.u]) sr.type sr.semiringInst)
+  let fn ←
+    mkSMulFn sr.u sr.type Nat.mkType
+      (mkApp2 (mkConst ``Grind.Semiring.nsmul [sr.u]) sr.type sr.semiringInst)
   modifySemiring fun s => { s with natSMulFn? := some fn }
   return fn
 
 def getAddFn' : m Expr := do
   let sr ← getSemiring
   if let some addFn := sr.addFn? then return addFn
-  let expectedInst := mkApp2 (mkConst ``instHAdd [sr.u]) sr.type <| mkApp2 (mkConst ``Grind.Semiring.toAdd [sr.u]) sr.type sr.semiringInst
+  let expectedInst :=
+    mkApp2 (mkConst ``instHAdd [sr.u]) sr.type <|
+      mkApp2 (mkConst ``Grind.Semiring.toAdd [sr.u]) sr.type sr.semiringInst
   let addFn ← mkBinHomoFn sr.type sr.u ``HAdd ``HAdd.hAdd expectedInst
   modifySemiring fun s => { s with addFn? := some addFn }
   return addFn
@@ -217,7 +246,9 @@ def getAddFn' : m Expr := do
 def getMulFn' : m Expr := do
   let sr ← getSemiring
   if let some mulFn := sr.mulFn? then return mulFn
-  let expectedInst := mkApp2 (mkConst ``instHMul [sr.u]) sr.type <| mkApp2 (mkConst ``Grind.Semiring.toMul [sr.u]) sr.type sr.semiringInst
+  let expectedInst :=
+    mkApp2 (mkConst ``instHMul [sr.u]) sr.type <|
+      mkApp2 (mkConst ``Grind.Semiring.toMul [sr.u]) sr.type sr.semiringInst
   let mulFn ← mkBinHomoFn sr.type sr.u ``HMul ``HMul.hMul expectedInst
   modifySemiring fun s => { s with mulFn? := some mulFn }
   return mulFn
@@ -254,7 +285,8 @@ def getAddRightCancelInst? : m (Option Expr) := do
   let s ← getCommSemiring
   if let some r := s.addRightCancelInst? then return r
   let addRightCancelInst? ← do
-    let some addInst ← MonadCanon.synthInstance? (mkApp (mkConst ``Add [s.u]) s.type) | pure none
+    let some addInst ← MonadCanon.synthInstance? (mkApp (mkConst ``Add [s.u]) s.type)
+      | pure none
     MonadCanon.synthInstance? (mkApp2 (mkConst ``Grind.AddRightCancel [s.u]) s.type addInst)
   modifyCommSemiring fun s => { s with addRightCancelInst? := some addRightCancelInst? }
   return addRightCancelInst?

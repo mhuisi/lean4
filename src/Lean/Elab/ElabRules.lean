@@ -17,16 +17,21 @@ open Lean.Syntax
 open Lean.Parser.Term hiding macroArg
 open Lean.Parser.Command
 
-def elabElabRulesAux (doc? : Option (TSyntax ``docComment))
-    (attrs? : Option (TSepArray ``attrInstance ",")) (attrKind : TSyntax ``attrKind)
-    (k : SyntaxNodeKind) (cat? expty? : Option (Ident)) (alts : Array (TSyntax ``matchAlt)) :
-    CommandElabM Syntax := do
+def elabElabRulesAux
+    (doc? : Option (TSyntax ``docComment)) (attrs? : Option (TSepArray ``attrInstance ","))
+    (attrKind : TSyntax ``attrKind) (k : SyntaxNodeKind) (cat? expty? : Option (Ident))
+    (alts : Array (TSyntax ``matchAlt))
+    : CommandElabM Syntax := do
   let alts ← alts.mapM (checkRuleAltKind "elab_rules" k)
-  let catName ← match cat?, expty? with
-    | some cat, _ => pure cat.getId
-    | _, some _   => pure `term
+  let catName ←
+    match cat?, expty? with
+    | some cat, _ =>
+      pure cat.getId
+    | _, some _ =>
+      pure `term
     -- TODO: infer category from quotation kind, possibly even kind of quoted syntax?
-    | _, _        => throwError "invalid elab_rules command, specify category using `elab_rules : <cat> ...`"
+    | _, _ =>
+      throwError "invalid elab_rules command, specify category using `elab_rules : <cat> ...`"
   let mkAttrs (kind : Name) : CommandElabM (TSyntaxArray ``attrInstance) := do
     let attr ← `(attrInstance| $attrKind:attrKind $(mkIdent kind):ident $(← mkIdentFromRef k):ident)
     pure <| match attrs? with
@@ -69,29 +74,38 @@ def elabElabRulesAux (doc? : Option (TSyntax ``docComment))
     -- If users want this feature, they add their own `elab_rules` macro that uses this one as a fallback.
     throwError "unsupported syntax category `{catName}`"
 
-@[builtin_command_elab «elab_rules»] def elabElabRules : CommandElab :=
-  adaptRulesExpander fun stx => match stx with
-  | `($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind elab_rules $[: $cat?]? $[<= $expty?]? $alts:matchAlt*) =>
-    return (none, ← expandNoKindMacroRulesAux alts "elab_rules" fun kind? alts =>
-      `($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind elab_rules $[(kind := $(mkIdent <$> kind?))]? $[: $cat?]? $[<= $expty?]? $alts:matchAlt*))
-  | `($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind elab_rules (kind := $kind) $[: $cat?]? $[<= $expty?]? $alts:matchAlt*) => do
-    let k ← resolveSyntaxKind kind.getId
-    return (k, ← elabElabRulesAux doc? attrs? attrKind k cat? expty? alts)
-  | _  => throwUnsupportedSyntax
+@[builtin_command_elab «elab_rules»]
+def elabElabRules : CommandElab :=
+  adaptRulesExpander fun stx =>
+    match stx with
+    | `($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind elab_rules $[: $cat?]? $[<= $expty?]? $alts:matchAlt*) =>
+      return (
+        none,
+        ← expandNoKindMacroRulesAux alts "elab_rules" fun kind? alts =>
+          `($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind elab_rules $[(kind := $(mkIdent <$> kind?))]? $[: $cat?]? $[<= $expty?]? $alts:matchAlt*)
+      )
+    | `($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind elab_rules (kind := $kind) $[: $cat?]? $[<= $expty?]? $alts:matchAlt*) =>
+      do
+        let k ← resolveSyntaxKind kind.getId
+        return (k, ← elabElabRulesAux doc? attrs? attrKind k cat? expty? alts)
+    | _ =>
+      throwUnsupportedSyntax
 
 @[builtin_command_elab Lean.Parser.Command.elab]
 def elabElab : CommandElab
   | `($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind
     elab%$tk$[:$prec?]? $[(name := $name?)]? $[(priority := $prio?)]? $args:macroArg* :
       $cat $[<= $expectedType?]? => $rhs) => do
-    let prio    ← liftMacroM <| evalOptPrio prio?
+    let prio ← liftMacroM <| evalOptPrio prio?
     let (stxParts, patArgs) := (← args.mapM expandMacroArg).unzip
-    let kind ← elabSyntax <|← `(
-      $[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind
-      syntax%$tk$[:$prec?]? $[(name := $name?)]? (priority := $(quote prio):num) $[$stxParts]* : $cat)
+    let kind ←
+      elabSyntax <| ← `(
+        $[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind
+        syntax%$tk$[:$prec?]? $[(name := $name?)]? (priority := $(quote prio):num) $[$stxParts]* : $cat)
     let pat := ⟨mkNode kind patArgs⟩
-    elabCommand <|← `(
+    elabCommand <| ← `(
       $[$doc?:docComment]? elab_rules : $cat $[<= $expectedType?]? | `($pat) => $rhs)
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
 end Lean.Elab.Command

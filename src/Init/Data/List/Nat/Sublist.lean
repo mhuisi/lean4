@@ -30,17 +30,20 @@ set_option linter.indexVariables true -- Enforce naming conventions for index va
 
 namespace List
 
-theorem IsSuffix.getElem {xs ys : List α} (h : xs <:+ ys) {i} (hn : i < xs.length) :
-    xs[i] = ys[ys.length - xs.length + i]'(by have := h.length_le; omega) := by
+theorem IsSuffix.getElem {xs ys : List α} (h : xs <:+ ys) {i} (hn : i < xs.length)
+    : xs[i] = ys[ys.length - xs.length + i]'(by have := h.length_le; omega) := by
   rw [getElem_eq_getElem_reverse, h.reverse.getElem, getElem_reverse]
   congr
   have := h.length_le
   omega
 
-theorem suffix_iff_getElem? {l₁ l₂ : List α} : l₁ <:+ l₂ ↔
-    l₁.length ≤ l₂.length ∧ ∀ i (h : i < l₁.length), l₂[i + l₂.length - l₁.length]? = some l₁[i] := by
-  suffices l₁.length ≤ l₂.length ∧ l₁ <:+ l₂ ↔
-      l₁.length ≤ l₂.length ∧ ∀ i (h : i < l₁.length), l₂[i + l₂.length - l₁.length]? = some l₁[i] by
+theorem suffix_iff_getElem? {l₁ l₂ : List α}
+    : l₁ <:+ l₂
+      ↔ l₁.length ≤ l₂.length
+        ∧ ∀ i (h : i < l₁.length), l₂[i + l₂.length - l₁.length]? = some l₁[i] := by
+  suffices l₁.length ≤ l₂.length ∧ l₁ <:+ l₂
+      ↔ l₁.length ≤ l₂.length
+        ∧ ∀ i (h : i < l₁.length), l₂[i + l₂.length - l₁.length]? = some l₁[i] by
     constructor
     · intro h
       exact this.mp ⟨h.length_le, h⟩
@@ -67,8 +70,10 @@ theorem suffix_iff_getElem? {l₁ l₂ : List α} : l₁ <:+ l₂ ↔
     rw [w, getElem_reverse]
     exact Nat.lt_of_lt_of_le h le
 
-theorem suffix_iff_getElem {l₁ l₂ : List α} :
-    l₁ <:+ l₂ ↔ ∃ (_ : l₁.length ≤ l₂.length), ∀ i (_ : i < l₁.length), l₂[i + l₂.length - l₁.length] = l₁[i] := by
+theorem suffix_iff_getElem {l₁ l₂ : List α}
+    : l₁ <:+ l₂
+      ↔ ∃ (_ : l₁.length ≤ l₂.length), ∀ i (_ : i < l₁.length),
+        l₂[i + l₂.length - l₁.length] = l₁[i] := by
   rw [suffix_iff_getElem?]
   constructor
   · rintro ⟨h, w⟩
@@ -82,8 +87,9 @@ theorem suffix_iff_getElem {l₁ l₂ : List α} :
     rw [getElem?_eq_getElem]
     simpa using w
 
-theorem infix_iff_getElem? {l₁ l₂ : List α} : l₁ <:+: l₂ ↔
-    ∃ k, l₁.length + k ≤ l₂.length ∧ ∀ i (h : i < l₁.length), l₂[i + k]? = some l₁[i] := by
+theorem infix_iff_getElem? {l₁ l₂ : List α}
+    : l₁ <:+: l₂
+      ↔ ∃ k, l₁.length + k ≤ l₂.length ∧ ∀ i (h : i < l₁.length), l₂[i + k]? = some l₁[i] := by
   constructor
   · intro h
     obtain ⟨t, p, s⟩ := infix_iff_suffix_prefix.mp h
@@ -115,12 +121,14 @@ theorem infix_iff_getElem? {l₁ l₂ : List α} : l₁ <:+: l₂ ↔
       simp_all
       omega
 
-theorem suffix_iff_eq_append : l₁ <:+ l₂ ↔ take (length l₂ - length l₁) l₂ ++ l₁ = l₂ :=
-  ⟨by rintro ⟨r, rfl⟩; simp only [length_append, Nat.add_sub_cancel_right, take_left], fun e =>
-    ⟨_, e⟩⟩
+theorem suffix_iff_eq_append : l₁ <:+ l₂ ↔ take (length l₂ - length l₁) l₂ ++ l₁ = l₂ := ⟨
+  by rintro ⟨r, rfl⟩; simp only [length_append, Nat.add_sub_cancel_right, take_left],
+  fun e => ⟨_, e⟩
+⟩
 
 @[grind =]
-theorem prefix_take_iff {xs ys : List α} {i : Nat} : xs <+: ys.take i ↔ xs <+: ys ∧ xs.length ≤ i := by
+theorem prefix_take_iff {xs ys : List α} {i : Nat}
+    : xs <+: ys.take i ↔ xs <+: ys ∧ xs.length ≤ i := by
   constructor
   · intro h
     constructor
@@ -134,26 +142,30 @@ theorem prefix_take_iff {xs ys : List α} {i : Nat} : xs <+: ys.take i ↔ xs <+
     rw [hp, List.take_take]
     simp [Nat.min_eq_left, hl, hl']
 
-theorem suffix_iff_eq_drop : l₁ <:+ l₂ ↔ l₁ = drop (length l₂ - length l₁) l₂ :=
-  ⟨fun h => append_cancel_left <| (suffix_iff_eq_append.1 h).trans (take_append_drop _ _).symm,
-    fun e => e.symm ▸ drop_suffix _ _⟩
+theorem suffix_iff_eq_drop : l₁ <:+ l₂ ↔ l₁ = drop (length l₂ - length l₁) l₂ := ⟨
+  fun h => append_cancel_left <| (suffix_iff_eq_append.1 h).trans (take_append_drop _ _).symm,
+  fun e => e.symm ▸ drop_suffix _ _
+⟩
 
-theorem prefix_map_iff_of_injective {f : α → β} (hf : Function.Injective f) :
-    l₁.map f <+: l₂.map f ↔ l₁ <+: l₂ := by
+theorem prefix_map_iff_of_injective {f : α → β} (hf : Function.Injective f)
+    : l₁.map f <+: l₂.map f ↔ l₁ <+: l₂ := by
   simp [prefix_iff_eq_take, ← map_take, map_inj_right hf]
 
-theorem suffix_map_iff_of_injective {f : α → β} (hf : Function.Injective f) :
-    l₁.map f <:+ l₂.map f ↔ l₁ <:+ l₂ := by
+theorem suffix_map_iff_of_injective {f : α → β} (hf : Function.Injective f)
+    : l₁.map f <:+ l₂.map f ↔ l₁ <:+ l₂ := by
   simp [suffix_iff_eq_drop, ← map_drop, map_inj_right hf]
 
-@[grind =] theorem prefix_take_le_iff {xs : List α} (hm : i < xs.length) :
-    xs.take i <+: xs.take j ↔ i ≤ j := by
+@[grind =]
+theorem prefix_take_le_iff {xs : List α} (hm : i < xs.length)
+    : xs.take i <+: xs.take j ↔ i ≤ j := by
   simp only [prefix_iff_eq_take, length_take]
   induction i generalizing xs j with
-  | zero => simp [Nat.min_eq_left, Nat.zero_le, take]
+  | zero =>
+    simp [Nat.min_eq_left, Nat.zero_le, take]
   | succ i IH =>
     cases xs with
-    | nil => simp_all
+    | nil =>
+      simp_all
     | cons x xs =>
       cases j with
       | zero =>
@@ -162,7 +174,8 @@ theorem suffix_map_iff_of_injective {f : α → β} (hf : Function.Injective f) 
         simp only [length_cons, Nat.add_lt_add_iff_right] at hm
         simp [← @IH j xs hm, Nat.min_eq_left, Nat.le_of_lt hm]
 
-@[simp] theorem append_left_sublist_self {xs : List α} (ys : List α) : xs ++ ys <+ ys ↔ xs = [] := by
+@[simp]
+theorem append_left_sublist_self {xs : List α} (ys : List α) : xs ++ ys <+ ys ↔ xs = [] := by
   constructor
   · intro h
     replace h := h.length_le
@@ -171,7 +184,8 @@ theorem suffix_map_iff_of_injective {f : α → β} (hf : Function.Injective f) 
     simp_all
   · rintro rfl
     simp
-@[simp] theorem append_right_sublist_self (xs : List α) {ys : List α} : xs ++ ys <+ xs ↔ ys = [] := by
+@[simp]
+theorem append_right_sublist_self (xs : List α) {ys : List α} : xs ++ ys <+ xs ↔ ys = [] := by
   constructor
   · intro h
     replace h := h.length_le
@@ -181,8 +195,8 @@ theorem suffix_map_iff_of_injective {f : α → β} (hf : Function.Injective f) 
   · rintro rfl
     simp
 
-theorem append_sublist_of_sublist_left {xs ys zs : List α} (h : zs <+ xs) :
-    xs ++ ys <+ zs ↔ ys = [] ∧ xs = zs := by
+theorem append_sublist_of_sublist_left {xs ys zs : List α} (h : zs <+ xs)
+    : xs ++ ys <+ zs ↔ ys = [] ∧ xs = zs := by
   constructor
   · intro h'
     have hl := h.length_le
@@ -194,8 +208,8 @@ theorem append_sublist_of_sublist_left {xs ys zs : List α} (h : zs <+ xs) :
   · rintro ⟨rfl, rfl⟩
     simp
 
-theorem append_sublist_of_sublist_right {xs ys zs : List α} (h : zs <+ ys) :
-    xs ++ ys <+ zs ↔ xs = [] ∧ ys = zs := by
+theorem append_sublist_of_sublist_right {xs ys zs : List α} (h : zs <+ ys)
+    : xs ++ ys <+ zs ↔ xs = [] ∧ ys = zs := by
   constructor
   · intro h'
     have hl := h.length_le

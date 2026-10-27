@@ -24,8 +24,10 @@ first element of the result.
 * {lean}`[1, 1, 2, 3, 2, 4, 4].splitOnPPrepend (· == 2) [0, 5] = [[5, 0, 1, 1], [3], [4, 4]]`
 -/
 noncomputable def splitOnPPrepend (p : α → Bool) : (l : List α) → (acc : List α) → List (List α)
-| [], acc => [acc.reverse]
-| a :: t, acc => if p a then acc.reverse :: splitOnPPrepend p t [] else splitOnPPrepend p t (a::acc)
+  | [], acc =>
+    [acc.reverse]
+  | a :: t, acc =>
+    if p a then acc.reverse :: splitOnPPrepend p t [] else splitOnPPrepend p t (a :: acc)
 
 /--
 Split a list at every element satisfying a predicate. The separators are not in the result.
@@ -33,8 +35,7 @@ Split a list at every element satisfying a predicate. The separators are not in 
 Examples:
 * {lean}`[1, 1, 2, 3, 2, 4, 4].splitOnP (· == 2) = [[1, 1], [3], [4, 4]]`
 -/
-noncomputable def splitOnP (p : α → Bool) (l : List α) : List (List α) :=
-  splitOnPPrepend p l []
+noncomputable def splitOnP (p : α → Bool) (l : List α) : List (List α) := splitOnPPrepend p l []
 
 @[deprecated splitOnPPrepend (since := "2026-02-26")]
 noncomputable def splitOnP.go (p : α → Bool) (l acc : List α) : List (List α) :=
@@ -42,17 +43,22 @@ noncomputable def splitOnP.go (p : α → Bool) (l acc : List α) : List (List �
 
 /-- Tail recursive version of {name}`splitOnP`. -/
 @[inline]
-def splitOnPTR (p : α → Bool) (l : List α) : List (List α) := go l #[] #[] where
-  @[specialize] go : List α → Array α → Array (List α) → List (List α)
-  | [], acc, r => r.toListAppend [acc.toList]
-  | a :: t, acc, r => if p a then go t #[] (r.push acc.toList) else go t (acc.push a) r
+def splitOnPTR (p : α → Bool) (l : List α) : List (List α) := go l #[] #[]
+where
+  @[specialize]
+  go : List α → Array α → Array (List α) → List (List α)
+    | [], acc, r =>
+      r.toListAppend [acc.toList]
+    | a :: t, acc, r =>
+      if p a then go t #[] (r.push acc.toList) else go t (acc.push a) r
 
-@[csimp] theorem splitOnP_eq_splitOnPTR : @splitOnP = @splitOnPTR := by
+@[csimp]
+theorem splitOnP_eq_splitOnPTR : @splitOnP = @splitOnPTR := by
   funext α P l
   simp only [splitOnPTR]
   suffices ∀ xs acc r,
-    splitOnPTR.go P xs acc r = r.toList ++ splitOnPPrepend P xs acc.toList.reverse from
-      (this l #[] #[]).symm
+      splitOnPTR.go P xs acc r = r.toList ++ splitOnPPrepend P xs acc.toList.reverse from
+    (this l #[] #[]).symm
   intro xs acc r
   induction xs generalizing acc r with
   | nil => simp [splitOnPPrepend, splitOnPTR.go]
@@ -64,7 +70,6 @@ Split a list at every occurrence of a separator element. The separators are not 
 Examples:
 * {lean}`[1, 1, 2, 3, 2, 4, 4].splitOn 2 = [[1, 1], [3], [4, 4]]`
 -/
-@[inline] def splitOn [BEq α] (a : α) (as : List α) : List (List α) :=
-  as.splitOnP (· == a)
+@[inline] def splitOn [BEq α] (a : α) (as : List α) : List (List α) := as.splitOnP (· == a)
 
 end List

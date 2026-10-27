@@ -32,21 +32,76 @@ A proposition stating that `s` is a valid HTTP reason phrase: every character pa
 
 Reference: https://httpwg.org/specs/rfc9110.html#reason.phrase
 -/
-abbrev IsValidReasonPhrase (s : String) : Prop :=
-  s.toList.all Char.reasonPhraseChar
+abbrev IsValidReasonPhrase (s : String) : Prop := s.toList.all Char.reasonPhraseChar
 
 /--
 Returns `true` for every status code that has a dedicated named constructor in `Status`.
 Used to ensure `Status.other` is never constructed with a code that already has a name.
 -/
-def isKnownStatusCode (code: UInt16) : Bool :=
-  code matches 100 | 101 | 102 | 103
-  | 200 | 201 | 202 | 203 | 204 | 205 | 206 | 207 | 208 | 226
-  | 300 | 301 | 302 | 303 | 304 | 305 | 306 | 307 | 308
-  | 400 | 401 | 402 | 403 | 404 | 405 | 406 | 407 | 408 | 409 | 410
-  | 411 | 412 | 413 | 414 | 415 | 416 | 417 | 418 | 421 | 422 | 423
-  | 424 | 425 | 426 | 428 | 429 | 431 | 451
-  | 500 | 501 | 502 | 503 | 504 | 505 | 506 | 507 | 508 | 510 | 511
+def isKnownStatusCode (code : UInt16) : Bool :=
+  code matches 100
+    | 101
+    | 102
+    | 103
+    | 200
+    | 201
+    | 202
+    | 203
+    | 204
+    | 205
+    | 206
+    | 207
+    | 208
+    | 226
+    | 300
+    | 301
+    | 302
+    | 303
+    | 304
+    | 305
+    | 306
+    | 307
+    | 308
+    | 400
+    | 401
+    | 402
+    | 403
+    | 404
+    | 405
+    | 406
+    | 407
+    | 408
+    | 409
+    | 410
+    | 411
+    | 412
+    | 413
+    | 414
+    | 415
+    | 416
+    | 417
+    | 418
+    | 421
+    | 422
+    | 423
+    | 424
+    | 425
+    | 426
+    | 428
+    | 429
+    | 431
+    | 451
+    | 500
+    | 501
+    | 502
+    | 503
+    | 504
+    | 505
+    | 506
+    | 507
+    | 508
+    | 510
+    | 511
 
 /--
 A custom HTTP status with a numeric code and a reason phrase. Used to represent status codes
@@ -56,32 +111,19 @@ not enumerated as dedicated constructors in `Status`. The code must be in the ra
 Reference: https://httpwg.org/specs/rfc9110.html#status.codes
 -/
 structure CustomStatus where
-
-  /--
-  The numeric status code.
-  -/
+  /-- The numeric status code. -/
   code : UInt16
-
-  /--
-  The reason phrase associated with the status code.
-  -/
+  /-- The reason phrase associated with the status code. -/
   phrase : String
-
-  /--
-  Proof that the reason phrase contains only valid characters.
-  -/
+  /-- Proof that the reason phrase contains only valid characters. -/
   validReasonPhrase : IsValidReasonPhrase phrase := by decide
-
   /--
   Proof that the code is a valid HTTP status code (100–999), i.e. a three-digit integer
   as required by RFC 9112 §4.
   -/
   validCode : 100 ≤ code ∧ code ≤ 999 := by decide
-
-  /--
-  Proof that the code does not clash with any named `Status` constructor.
-  -/
-  validUnknown : ¬isKnownStatusCode code := by decide
+  /-- Proof that the code does not clash with any named `Status` constructor. -/
+  validUnknown : ¬ isKnownStatusCode code := by decide
 deriving Repr, BEq
 
 instance : Inhabited CustomStatus where
@@ -97,7 +139,7 @@ Attempts to create a `CustomStatus` from a numeric code and a reason phrase stri
 `none` if the phrase contains invalid characters.
 -/
 def ofCodeAndPhrase? (code : UInt16) (phrase : String) : Option CustomStatus :=
-  if h : IsValidReasonPhrase phrase ∧ (100 ≤ code ∧ code ≤ 999) ∧ ¬isKnownStatusCode code then
+  if h : IsValidReasonPhrase phrase ∧ (100 ≤ code ∧ code ≤ 999) ∧ ¬ isKnownStatusCode code then
     some ⟨code, phrase, h.left, h.right.left, h.right.right⟩
   else
     none
@@ -112,324 +154,133 @@ HTTP request. This implementation includes common named statuses and supports cu
 Reference: https://httpwg.org/specs/rfc9110.html#status.codes
 -/
 inductive Status where
-  /--
-  100 Continue
-  -/
+  /-- 100 Continue -/
   | «continue»
-
-  /--
-  101 Switching Protocols
-  -/
+  /-- 101 Switching Protocols -/
   | switchingProtocols
-
-  /--
-  102 Processing
-  -/
+  /-- 102 Processing -/
   | processing
-
-  /--
-  103 Early Hints
-  -/
+  /-- 103 Early Hints -/
   | earlyHints
-
-  /--
-  200 OK
-  -/
+  /-- 200 OK -/
   | ok
-
-  /--
-  201 Created
-  -/
+  /-- 201 Created -/
   | created
-
-  /--
-  202 Accepted
-  -/
+  /-- 202 Accepted -/
   | accepted
-
-  /--
-  203 Non-Authoritative Information
-  -/
+  /-- 203 Non-Authoritative Information -/
   | nonAuthoritativeInformation
-
-  /--
-  204 No Content
-  -/
+  /-- 204 No Content -/
   | noContent
-
-  /--
-  205 Reset Content
-  -/
+  /-- 205 Reset Content -/
   | resetContent
-
-  /--
-  206 Partial Content
-  -/
+  /-- 206 Partial Content -/
   | partialContent
-
-  /--
-  207 Multi-Status
-  -/
+  /-- 207 Multi-Status -/
   | multiStatus
-
-  /--
-  208 Already Reported
-  -/
+  /-- 208 Already Reported -/
   | alreadyReported
-
-  /--
-  226 IM Used
-  -/
+  /-- 226 IM Used -/
   | imUsed
-
-  /--
-  300 Multiple Choices
-  -/
+  /-- 300 Multiple Choices -/
   | multipleChoices
-
-  /--
-  301 Moved Permanently
-  -/
+  /-- 301 Moved Permanently -/
   | movedPermanently
-
-  /--
-  302 Found
-  -/
+  /-- 302 Found -/
   | found
-
-  /--
-  303 See Other
-  -/
+  /-- 303 See Other -/
   | seeOther
-
-  /--
-  304 Not Modified
-  -/
+  /-- 304 Not Modified -/
   | notModified
-
-  /--
-  305 Use Proxy
-  -/
+  /-- 305 Use Proxy -/
   | useProxy
-
-  /--
-  306 Unused
-  -/
+  /-- 306 Unused -/
   | unused
-
-  /--
-  307 Temporary Redirect
-  -/
+  /-- 307 Temporary Redirect -/
   | temporaryRedirect
-
-  /--
-  308 Permanent Redirect
-  -/
+  /-- 308 Permanent Redirect -/
   | permanentRedirect
-
-  /--
-  400 Bad Request
-  -/
+  /-- 400 Bad Request -/
   | badRequest
-
-  /--
-  401 Unauthorized
-  -/
+  /-- 401 Unauthorized -/
   | unauthorized
-
-  /--
-  402 Payment Required
-  -/
+  /-- 402 Payment Required -/
   | paymentRequired
-
-  /--
-  403 Forbidden
-  -/
+  /-- 403 Forbidden -/
   | forbidden
-
-  /--
-  404 Not Found
-  -/
+  /-- 404 Not Found -/
   | notFound
-
-  /--
-  405 Method Not Allowed
-  -/
+  /-- 405 Method Not Allowed -/
   | methodNotAllowed
-
-  /--
-  406 Not Acceptable
-  -/
+  /-- 406 Not Acceptable -/
   | notAcceptable
-
-  /--
-  407 Proxy Authentication Required
-  -/
+  /-- 407 Proxy Authentication Required -/
   | proxyAuthenticationRequired
-
-  /--
-  408 Request Timeout
-  -/
+  /-- 408 Request Timeout -/
   | requestTimeout
-
-  /--
-  409 Conflict
-  -/
+  /-- 409 Conflict -/
   | conflict
-
-  /--
-  410 Gone
-  -/
+  /-- 410 Gone -/
   | gone
-
-  /--
-  411 Length Required
-  -/
+  /-- 411 Length Required -/
   | lengthRequired
-
-  /--
-  412 Precondition Failed
-  -/
+  /-- 412 Precondition Failed -/
   | preconditionFailed
-
-  /--
-  413 Payload Too Large
-  -/
+  /-- 413 Payload Too Large -/
   | payloadTooLarge
-
-  /--
-  414 URI Too Long
-  -/
+  /-- 414 URI Too Long -/
   | uriTooLong
-
-  /--
-  415 Unsupported Media Type
-  -/
+  /-- 415 Unsupported Media Type -/
   | unsupportedMediaType
-
-  /--
-  416 Range Not Satisfiable
-  -/
+  /-- 416 Range Not Satisfiable -/
   | rangeNotSatisfiable
-
-  /--
-  417 Expectation Failed
-  -/
+  /-- 417 Expectation Failed -/
   | expectationFailed
-
-  /--
-  418 I'm a teapot
-  -/
+  /-- 418 I'm a teapot -/
   | imATeapot
-
-  /--
-  421 Misdirected Request
-  -/
+  /-- 421 Misdirected Request -/
   | misdirectedRequest
-
-  /--
-  422 Unprocessable Entity
-  -/
+  /-- 422 Unprocessable Entity -/
   | unprocessableEntity
-
-  /--
-  423 Locked
-  -/
+  /-- 423 Locked -/
   | locked
-
-  /--
-  424 Failed Dependency
-  -/
+  /-- 424 Failed Dependency -/
   | failedDependency
-
-  /--
-  425 Too Early
-  -/
+  /-- 425 Too Early -/
   | tooEarly
-
-  /--
-  426 Upgrade Required
-  -/
+  /-- 426 Upgrade Required -/
   | upgradeRequired
-
-  /--
-  428 Precondition Required
-  -/
+  /-- 428 Precondition Required -/
   | preconditionRequired
-
-  /--
-  429 Too Many Requests
-  -/
+  /-- 429 Too Many Requests -/
   | tooManyRequests
-
-  /--
-  431 Request Header Fields Too Large
-  -/
+  /-- 431 Request Header Fields Too Large -/
   | requestHeaderFieldsTooLarge
-
-  /--
-  451 Unavailable For Legal Reasons
-  -/
+  /-- 451 Unavailable For Legal Reasons -/
   | unavailableForLegalReasons
-
-  /--
-  500 Internal Server Error
-  -/
+  /-- 500 Internal Server Error -/
   | internalServerError
-
-  /--
-  501 Not Implemented
-  -/
+  /-- 501 Not Implemented -/
   | notImplemented
-
-  /--
-  502 Bad Gateway
-  -/
+  /-- 502 Bad Gateway -/
   | badGateway
-
-  /--
-  503 Service Unavailable
-  -/
+  /-- 503 Service Unavailable -/
   | serviceUnavailable
-
-  /--
-  504 Gateway Timeout
-  -/
+  /-- 504 Gateway Timeout -/
   | gatewayTimeout
-
-  /--
-  505 HTTP Version Not Supported
-  -/
+  /-- 505 HTTP Version Not Supported -/
   | httpVersionNotSupported
-
-  /--
-  506 Variant Also Negotiates
-  -/
+  /-- 506 Variant Also Negotiates -/
   | variantAlsoNegotiates
-
-  /--
-  507 Insufficient Storage
-  -/
+  /-- 507 Insufficient Storage -/
   | insufficientStorage
-
-  /--
-  508 Loop Detected
-  -/
+  /-- 508 Loop Detected -/
   | loopDetected
-
-  /--
-  510 Not Extended
-  -/
+  /-- 510 Not Extended -/
   | notExtended
-
-  /--
-  511 Network Authentication Required
-  -/
+  /-- 511 Network Authentication Required -/
   | networkAuthenticationRequired
-
-  /--
-  A custom status code not covered by the standard constructors above.
-  -/
+  /-- A custom status code not covered by the standard constructors above. -/
   | other (status : CustomStatus)
 deriving Repr, Inhabited, BEq
 
@@ -504,78 +355,140 @@ def toCode : Status → UInt16
   | networkAuthenticationRequired => 511
   | other c => c.code
 
-/--
-Converts a `UInt16` to `Status`.
--/
-def ofCode (reasonPhrase : Option { x : String // IsValidReasonPhrase x }) (code: UInt16) : Option Status :=
+/-- Converts a `UInt16` to `Status`. -/
+def ofCode (reasonPhrase : Option {x : String // IsValidReasonPhrase x}) (code : UInt16)
+    : Option Status :=
   match h : code with
-  | 100 => some .«continue»
-  | 101 => some .switchingProtocols
-  | 102 => some .processing
-  | 103 => some .earlyHints
-  | 200 => some .ok
-  | 201 => some .created
-  | 202 => some .accepted
-  | 203 => some .nonAuthoritativeInformation
-  | 204 => some .noContent
-  | 205 => some .resetContent
-  | 206 => some .partialContent
-  | 207 => some .multiStatus
-  | 208 => some .alreadyReported
-  | 226 => some .imUsed
-  | 300 => some .multipleChoices
-  | 301 => some .movedPermanently
-  | 302 => some .found
-  | 303 => some .seeOther
-  | 304 => some .notModified
-  | 305 => some .useProxy
-  | 306 => some .unused
-  | 307 => some .temporaryRedirect
-  | 308 => some .permanentRedirect
-  | 400 => some .badRequest
-  | 401 => some .unauthorized
-  | 402 => some .paymentRequired
-  | 403 => some .forbidden
-  | 404 => some .notFound
-  | 405 => some .methodNotAllowed
-  | 406 => some .notAcceptable
-  | 407 => some .proxyAuthenticationRequired
-  | 408 => some .requestTimeout
-  | 409 => some .conflict
-  | 410 => some .gone
-  | 411 => some .lengthRequired
-  | 412 => some .preconditionFailed
-  | 413 => some .payloadTooLarge
-  | 414 => some .uriTooLong
-  | 415 => some .unsupportedMediaType
-  | 416 => some .rangeNotSatisfiable
-  | 417 => some .expectationFailed
-  | 418 => some .imATeapot
-  | 421 => some .misdirectedRequest
-  | 422 => some .unprocessableEntity
-  | 423 => some .locked
-  | 424 => some .failedDependency
-  | 425 => some .tooEarly
-  | 426 => some .upgradeRequired
-  | 428 => some .preconditionRequired
-  | 429 => some .tooManyRequests
-  | 431 => some .requestHeaderFieldsTooLarge
-  | 451 => some .unavailableForLegalReasons
-  | 500 => some .internalServerError
-  | 501 => some .notImplemented
-  | 502 => some .badGateway
-  | 503 => some .serviceUnavailable
-  | 504 => some .gatewayTimeout
-  | 505 => some .httpVersionNotSupported
-  | 506 => some .variantAlsoNegotiates
-  | 507 => some .insufficientStorage
-  | 508 => some .loopDetected
-  | 510 => some .notExtended
-  | 511 => some .networkAuthenticationRequired
+  | 100 =>
+    some .«continue»
+  | 101 =>
+    some .switchingProtocols
+  | 102 =>
+    some .processing
+  | 103 =>
+    some .earlyHints
+  | 200 =>
+    some .ok
+  | 201 =>
+    some .created
+  | 202 =>
+    some .accepted
+  | 203 =>
+    some .nonAuthoritativeInformation
+  | 204 =>
+    some .noContent
+  | 205 =>
+    some .resetContent
+  | 206 =>
+    some .partialContent
+  | 207 =>
+    some .multiStatus
+  | 208 =>
+    some .alreadyReported
+  | 226 =>
+    some .imUsed
+  | 300 =>
+    some .multipleChoices
+  | 301 =>
+    some .movedPermanently
+  | 302 =>
+    some .found
+  | 303 =>
+    some .seeOther
+  | 304 =>
+    some .notModified
+  | 305 =>
+    some .useProxy
+  | 306 =>
+    some .unused
+  | 307 =>
+    some .temporaryRedirect
+  | 308 =>
+    some .permanentRedirect
+  | 400 =>
+    some .badRequest
+  | 401 =>
+    some .unauthorized
+  | 402 =>
+    some .paymentRequired
+  | 403 =>
+    some .forbidden
+  | 404 =>
+    some .notFound
+  | 405 =>
+    some .methodNotAllowed
+  | 406 =>
+    some .notAcceptable
+  | 407 =>
+    some .proxyAuthenticationRequired
+  | 408 =>
+    some .requestTimeout
+  | 409 =>
+    some .conflict
+  | 410 =>
+    some .gone
+  | 411 =>
+    some .lengthRequired
+  | 412 =>
+    some .preconditionFailed
+  | 413 =>
+    some .payloadTooLarge
+  | 414 =>
+    some .uriTooLong
+  | 415 =>
+    some .unsupportedMediaType
+  | 416 =>
+    some .rangeNotSatisfiable
+  | 417 =>
+    some .expectationFailed
+  | 418 =>
+    some .imATeapot
+  | 421 =>
+    some .misdirectedRequest
+  | 422 =>
+    some .unprocessableEntity
+  | 423 =>
+    some .locked
+  | 424 =>
+    some .failedDependency
+  | 425 =>
+    some .tooEarly
+  | 426 =>
+    some .upgradeRequired
+  | 428 =>
+    some .preconditionRequired
+  | 429 =>
+    some .tooManyRequests
+  | 431 =>
+    some .requestHeaderFieldsTooLarge
+  | 451 =>
+    some .unavailableForLegalReasons
+  | 500 =>
+    some .internalServerError
+  | 501 =>
+    some .notImplemented
+  | 502 =>
+    some .badGateway
+  | 503 =>
+    some .serviceUnavailable
+  | 504 =>
+    some .gatewayTimeout
+  | 505 =>
+    some .httpVersionNotSupported
+  | 506 =>
+    some .variantAlsoNegotiates
+  | 507 =>
+    some .insufficientStorage
+  | 508 =>
+    some .loopDetected
+  | 510 =>
+    some .notExtended
+  | 511 =>
+    some .networkAuthenticationRequired
   | n =>
     let ph := reasonPhrase.getD ⟨"Unknown", by decide⟩
 
-    if h : (100 ≤ n ∧ n ≤ 999) ∧ ¬isKnownStatusCode n then
+    if h : (100 ≤ n ∧ n ≤ 999) ∧ ¬ isKnownStatusCode n then
       some <| .other ⟨n, ph.val, ph.property, h.left, h.right⟩
     else
       none
@@ -586,9 +499,7 @@ and the process is continuing.
 
 Reference: https://httpwg.org/specs/rfc9110.html#status.codes
 -/
-@[inline]
-def isInformational (c : Status) : Bool :=
-  100 ≤ c.toCode ∧ c.toCode < 200
+@[inline] def isInformational (c : Status) : Bool := 100 ≤ c.toCode ∧ c.toCode < 200
 
 /--
 Checks if the status code is a success status, meaning that the request was successfully received,
@@ -596,9 +507,7 @@ understood, and accepted.
 
 Reference: https://httpwg.org/specs/rfc9110.html#status.codes
 -/
-@[inline]
-def isSuccess (c : Status) : Bool :=
-  200 ≤ c.toCode ∧ c.toCode < 300
+@[inline] def isSuccess (c : Status) : Bool := 200 ≤ c.toCode ∧ c.toCode < 300
 
 /--
 Checks if the type of the status code is redirection, meaning that further action needs to be taken
@@ -606,9 +515,7 @@ to complete the request.
 
 Reference: https://httpwg.org/specs/rfc9110.html#status.codes
 -/
-@[inline]
-def isRedirection (c : Status) : Bool :=
-  300 ≤ c.toCode ∧ c.toCode < 400
+@[inline] def isRedirection (c : Status) : Bool := 300 ≤ c.toCode ∧ c.toCode < 400
 
 /--
 Checks if the type of the status code is a client error, meaning that the request contains bad syntax
@@ -616,9 +523,7 @@ or cannot be fulfilled.
 
 Reference: https://httpwg.org/specs/rfc9110.html#status.codes
 -/
-@[inline]
-def isClientError (c : Status) : Bool :=
-  400 ≤ c.toCode ∧ c.toCode < 500
+@[inline] def isClientError (c : Status) : Bool := 400 ≤ c.toCode ∧ c.toCode < 500
 
 /--
 Checks if the type of the status code is a server error, meaning that the server failed to fulfill
@@ -626,18 +531,14 @@ an apparently valid request.
 
 Reference: https://httpwg.org/specs/rfc9110.html#status.codes
 -/
-@[inline]
-def isServerError (c : Status) : Bool :=
-  500 ≤ c.toCode ∧ c.toCode < 600
+@[inline] def isServerError (c : Status) : Bool := 500 ≤ c.toCode ∧ c.toCode < 600
 
 /--
 Checks if the status code indicates an error (either client error 4xx or server error 5xx).
 
 Reference: https://httpwg.org/specs/rfc9110.html#status.codes
 -/
-@[inline]
-def isError (c : Status) : Bool :=
-  c.isClientError ∨ c.isServerError
+@[inline] def isError (c : Status) : Bool := c.isClientError ∨ c.isServerError
 
 /--
 Returns the standard reason phrase for an HTTP status code as defined in RFC 9110.
@@ -714,9 +615,10 @@ instance : ToString Status where
   toString := reasonPhrase
 
 instance : Encode .v11 Status where
-  encode buffer status := buffer
-    |>.writeString (toString <| toCode status)
-    |>.writeChar ' '
-    |>.writeString status.reasonPhrase
+  encode buffer status :=
+    buffer
+      |>.writeString (toString <| toCode status)
+      |>.writeChar ' '
+      |>.writeString status.reasonPhrase
 
 end Std.Http.Status

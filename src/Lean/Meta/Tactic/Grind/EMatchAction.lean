@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Intro
 import Lean.Util.ParamMinimizer
@@ -43,9 +44,9 @@ a non-minimal set of parameters was used.
 -/
 
 structure CollectState where
-  visited       : Std.HashSet ExprPtr := {}
+  visited : Std.HashSet ExprPtr := {}
   collectedThms : Std.HashSet (Origin × EMatchTheoremKind) := {}
-  thms          : Array EMatchTheorem := #[]
+  thms : Array EMatchTheorem := #[]
 
 def collect (e : Expr) (map : EMatch.InstanceMap) : Array EMatchTheorem :=
   let (_, s) := go e |>.run {}
@@ -65,57 +66,68 @@ where
       if let some thm := map[uniqueId]? then
         let key := (thm.origin, thm.kind)
         unless (← get).collectedThms.contains key do
-          modify fun s => { s with collectedThms := s.collectedThms.insert key, thms := s.thms.push thm }
+          modify fun s => {
+            s with
+            collectedThms := s.collectedThms.insert key
+            thms := s.thms.push thm
+          }
     match e with
-    | .lam _ d b _
-    | .forallE _ d b _ => go d; go b
-    | .proj _ _ b
-    | .mdata _ b       => go b
-    | .letE _ t v b _  => go t; go v; go b
-    | .app f a         => go f; go a
+    | .lam _ d b _ | .forallE _ d b _ => go d; go b
+    | .proj _ _ b | .mdata _ b => go b
+    | .letE _ t v b _ => go t; go v; go b
+    | .app f a => go f; go a
     | _ => return ()
 
-/--
-Creates an `instantiate` tactic that takes the `usedThms` as parameters.
--/
-def mkInstantiateTactic (goal : Goal) (usedThms : Array EMatchTheorem) (approx : Bool) : GrindM TGrind := goal.withContext do
-  let entries ← getLocalTheoremAnchors goal
-  let numDigits := getNumDigitsForAnchors entries
-  let mut params : Array (TSyntax ``Parser.Tactic.Grind.thm) := #[]
-  let mut foundFns : NameSet := {}
-  let mut foundLocals : Std.HashSet Grind.Origin := {}
-  for thm in usedThms do
-    unless (← isMatchEqLikeDeclName thm.origin.key) do
-      match thm.origin with
-      | .decl declName =>
-        if let some fnName ← isEqnThm? declName then
-          unless foundFns.contains fnName do
-            foundFns := foundFns.insert fnName
+/-- Creates an `instantiate` tactic that takes the `usedThms` as parameters. -/
+def mkInstantiateTactic (goal : Goal) (usedThms : Array EMatchTheorem) (approx : Bool)
+    : GrindM TGrind :=
+  goal.withContext do
+    let entries ← getLocalTheoremAnchors goal
+    let numDigits := getNumDigitsForAnchors entries
+    let mut params : Array (TSyntax ``Parser.Tactic.Grind.thm) := #[]
+    let mut foundFns : NameSet := {}
+    let mut foundLocals : Std.HashSet Grind.Origin := {}
+    for thm in usedThms do
+      unless (← isMatchEqLikeDeclName thm.origin.key) do
+        match thm.origin with
+        | .decl declName =>
+          if let some fnName ← isEqnThm? declName then
+            unless foundFns.contains fnName do
+              foundFns := foundFns.insert fnName
+              let param ←
+                Grind.globalDeclToInstantiateParamSyntax declName thm.kind thm.minIndexable
+              params := params.push param
+          else
             let param ← Grind.globalDeclToInstantiateParamSyntax declName thm.kind thm.minIndexable
             params := params.push param
-        else
-          let param ← Grind.globalDeclToInstantiateParamSyntax declName thm.kind thm.minIndexable
-          params := params.push param
-      | _ => unless foundLocals.contains thm.origin do
-        foundLocals := foundLocals.insert thm.origin
-        let type ← inferType thm.proof
-        let anchor ← getAnchor type
-        /-
-        **Note**: Distinct local theorems may have the same anchor (e.g., they differ only in
-        inaccessible variables). This is not an error: when replaying the generated tactic,
-        all matching theorems are instantiated. We just report an issue flagging the collision.
-        -/
-        if entries.any fun entry => entry.anchor == anchor && entry.e != type then
-          reportIssue! "anchor `#{anchorToString numDigits anchor}` is ambiguous, distinct local theorems have the same anchor{indentExpr type}\nall of them are instantiated by the generated `instantiate` tactic"
-        let param ← `(Parser.Tactic.Grind.thm| $(← mkAnchorSyntax numDigits anchor):anchor)
-        params := params.push param
-  match params.isEmpty, approx with
-  | true,  false => `(grind| instantiate only)
-  | false, false => `(grind| instantiate only [$params,*])
-  | true,  true  => `(grind| instantiate approx)
-  | false, true  => `(grind| instantiate only approx [$params,*])
+        | _ =>
+          unless foundLocals.contains thm.origin do
+            foundLocals := foundLocals.insert thm.origin
+            let type ← inferType thm.proof
+            let anchor ← getAnchor type
+            /-
+            **Note**: Distinct local theorems may have the same anchor (e.g., they differ only in
+            inaccessible variables). This is not an error: when replaying the generated tactic,
+            all matching theorems are instantiated. We just report an issue flagging the collision.
+            -/
+            if entries.any fun entry => entry.anchor == anchor && entry.e != type then
+              reportIssue! "anchor `#{anchorToString numDigits anchor}` is ambiguous, distinct \
+                local theorems have the same anchor{indentExpr type}\
+                \nall of them are instantiated by the generated `instantiate` tactic"
+            let param ← `(Parser.Tactic.Grind.thm| $(← mkAnchorSyntax numDigits anchor):anchor)
+            params := params.push param
+    match params.isEmpty, approx with
+    | true, false =>
+      `(grind| instantiate only)
+    | false, false =>
+      `(grind| instantiate only [$params,*])
+    | true, true =>
+      `(grind| instantiate approx)
+    | false, true =>
+      `(grind| instantiate only approx [$params,*])
 
-def mkNewSeq (goal : Goal) (thms : Array EMatchTheorem) (seq : List TGrind) (approx : Bool) : GrindM (List TGrind) := do
+def mkNewSeq (goal : Goal) (thms : Array EMatchTheorem) (seq : List TGrind) (approx : Bool)
+    : GrindM (List TGrind) := do
   if thms.isEmpty && !approx then
     return seq
   else
@@ -131,14 +143,15 @@ def getAllTheorems (map : EMatch.InstanceMap) : Array EMatchTheorem × EMatchThe
   let mut thms := #[]
   for (_, thm) in idAndThms do
     unless map.contains { thm } do
-      map  := map.insert { thm } thms.size
+      map := map.insert { thm } thms.size
       thms := thms.push thm
   return (thms, map)
 
 def mkMask (map : EMatchTheoremIds) (thms : Array EMatchTheorem) : CoreM (Array Bool) := do
   let mut result := Array.replicate map.size false
   for thm in thms do
-    let some i := map.get? { thm } | throwError "`grind` internal error, theorem index not found"
+    let some i := map.get? { thm }
+      | throwError "`grind` internal error, theorem index not found"
     result := result.set! i true
   return result
 
@@ -167,18 +180,19 @@ public def instantiate' : Action := fun goal kna kp => do
           let newSeq ← mkNewSeq goal thms seq (approx := false)
           checkSeqAt saved? goal newSeq
         let r ← Util.ParamMinimizer.search initMask testMask
-        let newSeq ← match r.status with
+        let newSeq ←
+          match r.status with
           | .missing => mkNewSeq goal #[] seq (approx := true)
           | .approx => mkNewSeq goal (maskToThms allThms r.paramMask) seq (approx := true)
           | .precise => mkNewSeq goal (maskToThms allThms r.paramMask) seq (approx := false)
         return .closed newSeq
       else
         return .closed []
-    | r => return r
+    | r =>
+      return r
   else
     kna goal
 
-public def instantiate : Action :=
-  instantiate' >> assertAll
+public def instantiate : Action := instantiate' >> assertAll
 
 end Lean.Meta.Grind.Action

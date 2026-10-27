@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Arith.Types
 public section
@@ -23,17 +24,21 @@ of billions of bits.
 def kronSatBits : Nat := 2 ^ 22
 
 /-- `a * b`, or a value of at least `2 ^ kronSatBits` if `a * b` is larger. -/
-def satMul (a b : Nat) : Nat :=
-  if a.log2 + b.log2 < kronSatBits then a * b else 2 ^ kronSatBits
+def satMul (a b : Nat) : Nat := if a.log2 + b.log2 < kronSatBits then a * b else 2 ^ kronSatBits
 
 /--
 `a ^ k`, or a value of at least `2 ^ kronSatBits` if `a ^ k` is larger. A saturated `a` stays
 saturated even for `k = 0`: the kernel still computes the estimate of the base.
 -/
 def satPow (a k : Nat) : Nat :=
-  if kronSatBits ≤ a.log2 then a
-  else if a ≤ 1 then a ^ k
-  else if k * a.log2 < kronSatBits then a ^ k else 2 ^ kronSatBits
+  if kronSatBits ≤ a.log2 then
+    a
+  else if a ≤ 1 then
+    a ^ k
+  else if k * a.log2 < kronSatBits then
+    a ^ k
+  else
+    2 ^ kronSatBits
 
 /-- The degree bound `Grind.CommRing.Expr.degB_k` of `e`. -/
 def exprDegB : RingExpr → Nat
@@ -78,11 +83,17 @@ def exprDegS (B : Nat) : RingExpr → Nat
 terms. Otherwise normalizing `e` only merges terms, and is cheaper than a Kronecker certificate.
 -/
 def exprExpandsSum : RingExpr → Bool
-  | .mul a b => (isSum a && exprDegB b ≥ 1) || (isSum b && exprDegB a ≥ 1) || exprExpandsSum a || exprExpandsSum b
-  | .pow a k => (k ≥ 2 && isSum a) || exprExpandsSum a
-  | .add a b | .sub a b => exprExpandsSum a || exprExpandsSum b
-  | .neg a => exprExpandsSum a
-  | _ => false
+  | .mul a b =>
+    (isSum a && exprDegB b ≥ 1) || (isSum b && exprDegB a ≥ 1) || exprExpandsSum a
+      || exprExpandsSum b
+  | .pow a k =>
+    (k ≥ 2 && isSum a) || exprExpandsSum a
+  | .add a b | .sub a b =>
+    exprExpandsSum a || exprExpandsSum b
+  | .neg a =>
+    exprExpandsSum a
+  | _ =>
+    false
 where
   isSum (e : RingExpr) : Bool := (e matches .add .. || e matches .sub ..) && exprDegB e ≥ 1
 
@@ -134,9 +145,11 @@ monomials have codes at most `maxCode`, if the values at the point stay below `m
 have about `K * maxCode` bits.
 -/
 def kronExponent? (norm maxCode maxBits : Nat) : Option Nat :=
-  if maxCode > maxBits then none else
-  let K := (2 * norm).log2 + 1
-  if K * (maxCode + 1) > maxBits then none else some K
+  if maxCode > maxBits then
+    none
+  else
+    let K := (2 * norm).log2 + 1
+    if K * (maxCode + 1) > maxBits then none else some K
 
 /--
 An upper bound on the codes of the values of `e` and its subterms at the point of the linear
@@ -165,20 +178,31 @@ def kronLinExponent? (l r : RingExpr) (maxBits : Nat) : Option Nat :=
 /-- `Grind.CommRing.InvVars.lookup_k`: the search stops at the first larger variable. -/
 def invLookup (invs : List (Var × Nat)) (x : Var) : Option Nat :=
   match invs with
-  | [] => none
-  | (y, c) :: invs => if x < y then none else if y == x then some c else invLookup invs x
+  | [] =>
+    none
+  | (y, c) :: invs =>
+    if x < y then
+      none
+    else if y == x then
+      some c
+    else
+      invLookup invs x
 
 /--
 The coefficient bound and the denominator `Grind.CommRing.Expr.majQ_k` of `e`, where the variables
 of `invs` denote the inverses of their numerals.
 -/
 def exprMajQ (invs : List (Var × Nat)) : RingExpr → Nat × Nat
-  | .num k | .intCast k => (k.natAbs, 1)
-  | .natCast n => (n, 1)
-  | .var x => match invLookup invs x with
+  | .num k | .intCast k =>
+    (k.natAbs, 1)
+  | .natCast n =>
+    (n, 1)
+  | .var x =>
+    match invLookup invs x with
     | some c => (1, c)
     | none => (1, 1)
-  | .neg a => exprMajQ invs a
+  | .neg a =>
+    exprMajQ invs a
   | .add a b | .sub a b =>
     let (m₁, d₁) := exprMajQ invs a
     let (m₂, d₂) := exprMajQ invs b

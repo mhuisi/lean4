@@ -31,34 +31,38 @@ declaration are easily accessible.
 -/
 builtin_initialize recommendedSpellingByNameExt
     : PersistentEnvExtension (Name × Array RecommendedSpelling) (RecommendedSpelling × Array Name)
-        (NameMap (Array RecommendedSpelling)) ←
+      (NameMap (Array RecommendedSpelling)) ←
   registerPersistentEnvExtension {
-    mkInitial := pure {},
-    addImportedFn := fun _ => pure {},
-    addEntryFn := fun es (rec, xs) => xs.foldl (init := es) fun es x => es.insert x (es.getD x #[] |>.push rec),
+    mkInitial := pure {}
+    addImportedFn := fun _ => pure {}
+    addEntryFn := fun es (rec, xs) =>
+      xs.foldl (init := es) fun es x => es.insert x (es.getD x #[] |>.push rec)
     exportEntriesFn := fun es =>
       es.foldl (fun a src tgt => a.push (src, tgt)) #[] |>.qsort (Name.quickLt ·.1 ·.1)
   }
 
-/-- Recommended spellings for notations, stored in such a way that it is easy to generate a table
-containing every recommended spelling exactly once. -/
+/--
+Recommended spellings for notations, stored in such a way that it is easy to generate a table
+containing every recommended spelling exactly once.
+-/
 builtin_initialize recommendedSpellingExt
     : PersistentEnvExtension RecommendedSpelling RecommendedSpelling (Array RecommendedSpelling) ←
   registerPersistentEnvExtension {
-    mkInitial := pure {},
-    addImportedFn := fun _ => pure {},
-    addEntryFn := Array.push,
+    mkInitial := pure {}
+    addImportedFn := fun _ => pure {}
+    addEntryFn := Array.push
     exportEntriesFn := id
   }
 
 /-- Adds a recommended spelling to the environment. -/
-def addRecommendedSpelling (env : Environment) (rec : RecommendedSpelling) (names : Array Name) : Environment :=
+def addRecommendedSpelling (env : Environment) (rec : RecommendedSpelling) (names : Array Name)
+    : Environment :=
   let env := recommendedSpellingExt.addEntry env rec
   recommendedSpellingByNameExt.addEntry env (rec, names)
 
 /-- Returns the recommended spellings associated with the given declaration name. -/
-def getRecommendedSpellingsForName (env : Environment) (declName : Name) :
-    Array RecommendedSpelling := Id.run do
+def getRecommendedSpellingsForName (env : Environment) (declName : Name)
+    : Array RecommendedSpelling := Id.run do
   let mut spellings := #[]
   for modArr in recommendedSpellingByNameExt.toEnvExtension.getState env |>.importedEntries do
     if let some (_, strs) := modArr.binSearch (declName, #[]) (Name.quickLt ·.1 ·.1) then
@@ -67,17 +71,25 @@ def getRecommendedSpellingsForName (env : Environment) (declName : Name) :
     spellings := spellings ++ strs
   return spellings
 
-/-- Renders the recommended spellings for the given declaration into a string for appending to
-the docstring. -/
+/--
+Renders the recommended spellings for the given declaration into a string for appending to
+the docstring.
+-/
 def getRecommendedSpellingString (env : Environment) (declName : Name) : String := Id.run do
   let spellings := getRecommendedSpellingsForName env declName
-  if spellings.size == 0 then ""
-  else "\n\nConventions for notations in identifiers:\n\n" ++ String.join (spellings.toList.map bullet) |>.trimAsciiEnd |>.copy
+  if spellings.size == 0 then
+    ""
+  else
+    "\n\nConventions for notations in identifiers:\n\n" ++ String.join (spellings.toList.map bullet)
+      |>.trimAsciiEnd
+      |>.copy
 where
   indentLine (str : String) : String :=
     (if str.all Char.isWhitespace then str else "   " ++ str) ++ "\n"
   bullet (spelling : RecommendedSpelling) : String :=
-    let firstLine := s!" * The recommended spelling of `{spelling.«notation»}` in identifiers is `{spelling.recommendedSpelling}`"
+    let firstLine :=
+      s!" * The recommended spelling of `{spelling.«notation»}` in identifiers is \
+        `{spelling.recommendedSpelling}`"
     let additionalInfoLines := spelling.additionalInformation?.map (·.split '\n' |>.toStringList)
     match additionalInfoLines with
     | none | some [] => firstLine ++ ".\n\n"

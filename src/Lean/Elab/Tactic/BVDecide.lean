@@ -100,9 +100,7 @@ open Std.Tactic.BVDecide
 open Std.Tactic.BVDecide.Reflect
 open Meta Tactic.BVDecide
 
-/--
-Get the directory that contains the Lean file which is currently being elaborated.
--/
+/-- Get the directory that contains the Lean file which is currently being elaborated. -/
 def getSrcDir : TermElabM System.FilePath := do
   let ctx ← readThe Lean.Core.Context
   let srcPath := System.FilePath.mk ctx.fileName
@@ -110,19 +108,20 @@ def getSrcDir : TermElabM System.FilePath := do
     | throwError "cannot compute parent directory of `{srcPath}`"
   return srcDir
 
-def mkContext (lratPath : System.FilePath) (cfg : BVDecideConfig)
-    (types : Option (Array Name) := none) : TermElabM TacticContext := do
+def mkContext
+    (lratPath : System.FilePath) (cfg : BVDecideConfig) (types : Option (Array Name) := none)
+    : TermElabM TacticContext := do
   let lratPath := (← getSrcDir) / lratPath
   TacticContext.new lratPath cfg types
 
 @[inherit_doc Lean.Parser.Tactic.bvCheck]
-def bvCheck (g : MVarId) (hypotheses : Array Normalize.Hyp) (ctx : TacticContext) :
-    Grind.GrindM Unit := do
+def bvCheck (g : MVarId) (hypotheses : Array Normalize.Hyp) (ctx : TacticContext)
+    : Grind.GrindM Unit := do
   ReifyM.run (hypotheses := hypotheses) (cfg := ctx.config) do
     discard <| closeWithBVReflection g (lratChecker ctx)
 
-def evalBvCheck (target : Normalize.Target) (ctx : TacticContext) (warn : MetaM Unit) :
-    Grind.GrindM Unit := do
+def evalBvCheck (target : Normalize.Target) (ctx : TacticContext) (warn : MetaM Unit)
+    : Grind.GrindM Unit := do
   Normalize.PreProcessM.run' ctx.preProcessContext target do
     if ← Normalize.bvNormalize then
       warn
@@ -142,16 +141,17 @@ Produce a file with the pattern:
 LeanFileName-DeclName-Line-Col.lrat
 -/
 def getLratFileName : TermElabM System.FilePath := do
-  let some baseName := System.FilePath.mk (← getFileName) |>.fileName | throwError "could not find file name"
-  let some declName ← Term.getDeclName? | throwError "could not find declaration name"
+  let some baseName := System.FilePath.mk (← getFileName) |>.fileName
+    | throwError "could not find file name"
+  let some declName ← Term.getDeclName?
+    | throwError "could not find declaration name"
   let pos := (← getFileMap).toPosition (← getRefPos)
   return s!"{baseName}-{declName}-{pos.line}-{pos.column}.lrat"
 
-def mkContext (cfg : BVDecideConfig) (types : Option (Array Name) := none) :
-    TermElabM TacticContext := do
+def mkContext (cfg : BVDecideConfig) (types : Option (Array Name) := none)
+    : TermElabM TacticContext := do
   let lratPath ← getLratFileName
   BVCheck.mkContext lratPath cfg types
-
 
 inductive TraceAction where
   | normalize
@@ -163,8 +163,9 @@ structure TraceResult where
   action : TraceAction
 
 def evalBvTrace (target : Normalize.Target) (ctx : TacticContext) : Grind.GrindM TraceResult := do
-  let trace ← target.mvarId.withContext do
-    bvDecide target { ctx with config := { ctx.config with trimProofs := false } }
+  let trace ←
+    target.mvarId.withContext do
+      bvDecide target { ctx with config := { ctx.config with trimProofs := false } }
   /-
   Ideally trace.lratCert would be the `ByteArray` version of the proof already and we just write
   it. This isn't yet possible so instead we do the following:
@@ -186,7 +187,8 @@ def evalBvTrace (target : Normalize.Target) (ctx : TacticContext) : Grind.GrindM
         let proof ← loadLRATProof ctx.lratPath
         let trimmed ← IO.ofExcept <| LRAT.trim proof
         dumpLRATProof ctx.lratPath trimmed ctx.config.binaryProofs
-      let some lratFile := ctx.lratPath.fileName | throwError "could not find file name"
+      let some lratFile := ctx.lratPath.fileName
+        | throwError "could not find file name"
       return { lemmas := #[], action := .check lratFile }
     else
       return { lemmas := trace.cegarCert.lemmas, action := .decide }
@@ -206,7 +208,8 @@ def evalBvDecide : Tactic := fun
       liftMetaFinishingTactic fun g => do
         let params ← Grind.mkDefaultParams {}
         discard <| Grind.GrindM.run (params := params) <| bvDecide (.mvarIdTarget g) cfg
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
 open Lean.Meta.Tactic in
 @[builtin_tactic Lean.Parser.Tactic.bvTrace]
@@ -220,10 +223,11 @@ def evalBvTraceTactic : Tactic := fun
     let params ← Grind.mkDefaultParams {}
     Grind.GrindM.run (params := params) do
       let trace ← BVTrace.evalBvTrace (.mvarIdTarget g) ctx
-      let haves ← g.withContext <| trace.lemmas.mapM fun lemma => do
-        let lemmaStx ← PrettyPrinter.delab lemma.hyp.type
-        let proofStx ← lemma.tacticProof
-        `(tactic| have : $lemmaStx := by $(proofStx))
+      let haves ←
+        g.withContext <| trace.lemmas.mapM fun lemma => do
+          let lemmaStx ← PrettyPrinter.delab lemma.hyp.type
+          let proofStx ← lemma.tacticProof
+          `(tactic| have : $lemmaStx := by $(proofStx))
       let withHaves (final : TSyntax `tactic) : MetaM (TSyntax ``Parser.Tactic.tacticSeq) :=
         `(tacticSeq| $(haves.push final)*)
       match trace.action with
@@ -235,10 +239,10 @@ def evalBvTraceTactic : Tactic := fun
           `(tactic| bv_check $cfgStx:optConfig $[$typesStx:bvTypes]? $(quote lratFile.toString))
         TryThis.addSuggestion tk (← withHaves bvCheckStx) (origSpan? := ← getRef)
       | .decide =>
-        let bvDecideStx ←
-          `(tactic| bv_decide $cfgStx:optConfig $[$typesStx:bvTypes]?)
+        let bvDecideStx ← `(tactic| bv_decide $cfgStx:optConfig $[$typesStx:bvTypes]?)
         TryThis.addSuggestion tk (← withHaves bvDecideStx) (origSpan? := ← getRef)
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
 open Lean.Meta.Tactic in
 @[builtin_tactic Lean.Parser.Tactic.bvCheck]
@@ -252,9 +256,11 @@ def evalBvCheckTactic : Tactic := fun
     let params ← Grind.mkDefaultParams {}
     Grind.GrindM.run (params := params) <| BVCheck.evalBvCheck (.mvarIdTarget g) ctx do
       let bvNormalizeStx ← `(tactic| bv_normalize $cfgStx $[$typesStx:bvTypes]?)
-      logWarning m!"This goal can be closed by only applying bv_normalize, no need to keep the LRAT proof around."
+      logWarning m!"This goal can be closed by only applying bv_normalize, no need to keep the \
+        LRAT proof around."
       TryThis.addSuggestion tk bvNormalizeStx (origSpan? := ← getRef)
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
 @[builtin_tactic Lean.Parser.Tactic.bvNormalize]
 def evalBVNormalize : Tactic := fun
@@ -264,19 +270,22 @@ def evalBVNormalize : Tactic := fun
     let types ← elabBVDecideTypes types cfg
     let g ← getMainGoal
     let params ← Grind.mkDefaultParams {}
-    let (_, state) ← Grind.GrindM.run (params := params) do
-      Normalize.bvNormalize.run (.new (.solve types) cfg) (.mvarIdTarget g)
+    let (_, state) ←
+      Grind.GrindM.run (params := params) do
+        Normalize.bvNormalize.run (.new (.solve types) cfg) (.mvarIdTarget g)
     let goal := state.target.mvarId
     if ← goal.isAssigned then
       replaceMainGoal []
     else
-      let hyps := state.hypotheses.map fun hyp => {
-        userName := hyp.name
-        type := hyp.type
-        value := hyp.value
-      }
+      let hyps :=
+        state.hypotheses.map fun hyp => {
+          userName := hyp.name
+          type := hyp.type
+          value := hyp.value
+        }
       let (_, goal) ← MVarId.assertHypotheses goal hyps
       replaceMainGoal [goal]
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
 end Lean.Elab.Tactic.BVDecide

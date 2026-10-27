@@ -11,10 +11,8 @@ public import Lean.Expr
 public section
 namespace Lean
 
-def markBorrowed (e : Expr) : Expr :=
-  mkAnnotation `borrowed e
+def markBorrowed (e : Expr) : Expr := mkAnnotation `borrowed e
 
-def isMarkedBorrowed (e : Expr) : Bool :=
-  annotation? `borrowed e |>.isSome
+def isMarkedBorrowed (e : Expr) : Bool := annotation? `borrowed e |>.isSome
 
 end Lean

@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Simp.SimpM
 import Lean.Meta.Tactic.Simp.Types
@@ -41,7 +42,8 @@ inference on proof terms, which can be arbitrarily complex, and often destroys s
 Helper function for constructing a congruence proof using `congrFun'`, `congrArg`, `congr`.
 For the dependent case, use `mkCongrFun`
 -/
-public def mkCongr (e : Expr) (f a : Expr) (fr : Result) (ar : Result) (_ : e = .app f a) : SymM Result := do
+public def mkCongr (e : Expr) (f a : Expr) (fr : Result) (ar : Result) (_ : e = .app f a)
+    : SymM Result := do
   let mkCongrPrefix (declName : Name) : SymM Expr := do
     let α ← inferType a
     let u ← getLevel α
@@ -52,7 +54,8 @@ public def mkCongr (e : Expr) (f a : Expr) (fr : Result) (ar : Result) (_ : e = 
   -- was context-dependent, the result for `f a` is too: in another local context, either
   -- sub-expression might simplify differently, changing the overall result.
   match fr, ar with
-  | .rfl _ cd₁,  .rfl _ cd₂ => return mkRflResultCD (cd₁ || cd₂)
+  | .rfl _ cd₁, .rfl _ cd₂ =>
+    return mkRflResultCD (cd₁ || cd₂)
   | .step f' hf _ cd₁, .rfl _ cd₂ =>
     let e' ← mkAppS f' a
     let h := mkApp4 (← mkCongrPrefix ``congrFun') f f' hf a
@@ -69,7 +72,8 @@ public def mkCongr (e : Expr) (f a : Expr) (fr : Result) (ar : Result) (_ : e = 
 /-- `mkCongr` for an unchanged function `f`: `.rfl` if `ar` is, otherwise a `congrArg` proof. -/
 public def mkCongrArg (e : Expr) (f a : Expr) (ar : Result) (_ : e = .app f a) : SymM Result := do
   match ar with
-  | .rfl _ cd => return mkRflResultCD cd
+  | .rfl _ cd =>
+    return mkRflResultCD cd
   | .step a' ha _ cd =>
     let α ← inferType a
     let u ← getLevel α
@@ -84,8 +88,11 @@ Returns a proof using `congrFun`
 congrFun.{u, v} {α : Sort u} {β : α → Sort v} {f g : (x : α) → β x} (h : f = g) (a : α) : f a = g a
 ```
 -/
-def mkCongrFun (e : Expr) (f a : Expr) (f' : Expr) (hf : Expr) (_ : e = .app f a)
-    (done := false) (contextDependent := false) : SymM Result := do
+def mkCongrFun
+    (e : Expr) (f a : Expr) (f' : Expr) (hf : Expr)
+    (_ : e = .app f a)
+    (done := false) (contextDependent := false)
+    : SymM Result := do
   let .forallE x _ βx _ ← whnfD (← inferType f)
     | throwError "failed to build congruence proof, function expected{indentExpr f}"
   let α ← inferType a
@@ -123,7 +130,8 @@ then `numArgs = 2` (the extra arguments) and we:
 **Note**: This is a fallback path without specialized optimizations. The common case (correct number of arguments)
 is handled more efficiently by the specific strategies.
 -/
-public def simpOverApplied (e : Expr) (numArgs : Nat) (simpFn : Expr → SimpM Result) : SimpM Result := do
+public def simpOverApplied (e : Expr) (numArgs : Nat) (simpFn : Expr → SimpM Result)
+    : SimpM Result := do
   let rec visit (e : Expr) (i : Nat) : SimpM Result := do
     if i == 0 then
       simpFn e
@@ -136,7 +144,8 @@ public def simpOverApplied (e : Expr) (numArgs : Nat) (simpFn : Expr → SimpM R
       | .app f a =>
         let i := i - 1
         let fr ← visit f i
-        let .forallE _ α β _ ← whnfD (← inferType f) | unreachable!
+        let .forallE _ α β _ ← whnfD (← inferType f)
+          | unreachable!
         if !β.hasLooseBVars then
           if (← isProp α) then
             mkCongr e f a fr .rfl h
@@ -145,10 +154,12 @@ public def simpOverApplied (e : Expr) (numArgs : Nat) (simpFn : Expr → SimpM R
         -- Dependent argument: can't simplify `a` independently.
         -- Propagate `cd` from the function result: if `fr` was context-dependent,
         -- the whole expression is, since `fr` might differ in another context.
-        else match fr with
+        else
+          match fr with
           | .rfl _ cd => return mkRflResultCD cd
           | .step f' hf _ cd => mkCongrFun e f a f' hf h (contextDependent := cd)
-      | _ => unreachable!
+      | _ =>
+        unreachable!
   visit e numArgs
 
 /--
@@ -173,7 +184,8 @@ It only uses congruence (`mkCongrFun`) to propagate changes when the base functi
 - `simpOverApplied`: Fully simplifies both base and extra arguments
 - `propagateOverApplied`: Only simplifies base, appends extra arguments unchanged
 -/
-public def propagateOverApplied (e : Expr) (numArgs : Nat) (simpFn : Expr → SimpM Result) : SimpM Result := do
+public def propagateOverApplied (e : Expr) (numArgs : Nat) (simpFn : Expr → SimpM Result)
+    : SimpM Result := do
   let rec visit (e : Expr) (i : Nat) : SimpM Result := do
     if i == 0 then
       simpFn e
@@ -185,7 +197,8 @@ public def propagateOverApplied (e : Expr) (numArgs : Nat) (simpFn : Expr → Si
         match r with
         | .rfl _ _ => return r
         | .step f' hf done cd => mkCongrFun e f a f' hf h done cd
-      | _ => unreachable!
+      | _ =>
+        unreachable!
   visit e numArgs
 
 /--
@@ -196,7 +209,8 @@ The result is shared via `share` to maintain maximal sharing invariants.
 def whnfToForall (type : Expr) : SymM Expr := do
   if type.isForall then return type
   let type ← whnfD type
-  unless type.isForall do throwError "function type expected{indentD type}"
+  unless type.isForall do
+    throwError "function type expected{indentD type}"
   share type
 
 /--
@@ -213,10 +227,12 @@ suppose `e` is `@HAdd.hAdd Nat Nat Nat instAdd 5` and `n = 1`. It is much more l
 -/
 def getFnType (e : Expr) (n : Nat) : SymM Expr := do
   match n with
-  | 0 => inferType e
-  | n+1 =>
+  | 0 =>
+    inferType e
+  | n + 1 =>
     let type ← getFnType e.appFn! n
-    let .forallE _ _ β _ ← whnfToForall type | unreachable!
+    let .forallE _ _ β _ ← whnfToForall type
+      | unreachable!
     return β
 
 /--
@@ -256,36 +272,40 @@ public def simpFixedPrefix (e : Expr) (prefixSize : Nat) (suffixSize : Nat) : Si
   else
     main (numArgs - prefixSize) e
 where
-  main (n : Nat) (e : Expr) : SimpM Result := do
-    return (← go n e).1
+  main (n : Nat) (e : Expr) : SimpM Result := do return (← go n e).1
 
   go (i : Nat) (e : Expr) : SimpM (Result × Expr) := do
     if i == 0 then
       return (.rfl, default)
     else
-      let .app f a := e | unreachable!
-      let (hf, fType) ← go (i-1) f
+      let .app f a := e
+        | unreachable!
+      let (hf, fType) ← go (i - 1) f
       -- Propagate `cd` from both sub-results. Even when both return `.rfl`,
       -- either might succeed in a different context, changing the result.
       match hf, (← simp a) with
-      | .rfl _ cd₁,  .rfl _ cd₂ => return (mkRflResultCD (cd₁ || cd₂), default)
+      | .rfl _ cd₁, .rfl _ cd₂ =>
+        return (mkRflResultCD (cd₁ || cd₂), default)
       | .step f' hf _ cd₁, .rfl _ cd₂ =>
-        let .forallE _ α β _ ← whnfToForall fType | unreachable!
+        let .forallE _ α β _ ← whnfToForall fType
+          | unreachable!
         let e' ← mkAppS f' a
         let u ← getLevel α
         let v ← getLevel β
         let h := mkApp6 (mkConst ``congrFun' [u, v]) α β f f' hf a
         return (.step e' h (contextDependent := cd₁ || cd₂), β)
       | .rfl _ cd₁, .step a' ha _ cd₂ =>
-        let fType ← getFnType f (i-1)
-        let .forallE _ α β _ ← whnfToForall fType | unreachable!
+        let fType ← getFnType f (i - 1)
+        let .forallE _ α β _ ← whnfToForall fType
+          | unreachable!
         let e' ← mkAppS f a'
         let u ← getLevel α
         let v ← getLevel β
         let h := mkApp6 (mkConst ``congrArg [u, v]) α β a a' f ha
         return (.step e' h (contextDependent := cd₁ || cd₂), β)
       | .step f' hf _ cd₁, .step a' ha _ cd₂ =>
-        let .forallE _ α β _ ← whnfToForall fType | unreachable!
+        let .forallE _ α β _ ← whnfToForall fType
+          | unreachable!
         let e' ← mkAppS f' a'
         let u ← getLevel α
         let v ← getLevel β
@@ -318,10 +338,12 @@ where
         if rewritable[i - 1] then
           mkCongr e f a fr (← simp a) h
         -- Fixed (non-rewritable) argument: propagate `cd` from the function result.
-        else match fr with
+        else
+          match fr with
           | .rfl _ cd => return mkRflResultCD cd
           | .step f' hf _ cd => mkCongrFun e f a f' hf h (contextDependent := cd)
-      | _ => unreachable!
+      | _ =>
+        unreachable!
 
 /--
 Helper function used at `congrThm`. The idea is to initialize `argResults` lazily
@@ -329,7 +351,8 @@ when we get the first non-`.rfl` result.
 -/
 def pushResult (argResults : Array Result) (numEqs : Nat) (result : Result) : Array Result :=
   match result with
-  | .rfl .. => if argResults.size > 0 then argResults.push result else argResults
+  | .rfl .. =>
+    if argResults.size > 0 then argResults.push result else argResults
   | .step .. =>
     if argResults.size < numEqs then
       Array.replicate numEqs .rfl |>.push result
@@ -381,7 +404,7 @@ def simpUsingCongrThm (e : Expr) (thm : CongrTheorem) : SimpM Result := do
   -/
   let mkNonRflResult (argResults : Array Result) (hasInst : Bool) : SimpM Result := do
     let mut proof := thm.proof
-    let mut type  := thm.type
+    let mut type := thm.type
     let mut j := 0 -- index at argResults
     let mut subst := #[]
     -- `subst` with the original arguments in place of the simplified ones, maintained only if
@@ -403,11 +426,13 @@ def simpUsingCongrThm (e : Expr) (thm : CongrTheorem) : SimpM Result := do
         -- The old instance is reused only if its class is unchanged. A definitional comparison
         -- of the classes would unify the old and new arguments, and the congruence theorem
         -- accepts any instance of the new class.
-        let instNew ← if clsNew == type.bindingDomain!.instantiateRev substOld then
-          pure arg
-        else
-          let .some val ← trySynthInstance clsNew | return .rfl
-          pure val
+        let instNew ←
+          if clsNew == type.bindingDomain!.instantiateRev substOld then
+            pure arg
+          else
+            let .some val ← trySynthInstance clsNew
+              | return .rfl
+            pure val
         proof := mkApp proof instNew
         subst := subst.push instNew
         substOld := substOld.push instNew
@@ -427,8 +452,10 @@ def simpUsingCongrThm (e : Expr) (thm : CongrTheorem) : SimpM Result := do
           if hasInst then substOld := substOld.push arg |>.push h
         type := type.bindingBody!.bindingBody!
         j := j + 1
-      | _ => unreachable!
-    let_expr Eq _ _ rhs := type | unreachable!
+      | _ =>
+        unreachable!
+    let_expr Eq _ _ rhs := type
+      | unreachable!
     let rhs := rhs.instantiateRev subst
     let hasCast := argKinds.any (· matches .cast)
     let rhs ← if hasCast then Simp.removeUnnecessaryCasts rhs else pure rhs
@@ -444,17 +471,23 @@ def simpUsingCongrThm (e : Expr) (thm : CongrTheorem) : SimpM Result := do
   -- `anyCD` tracks cd from `.rfl` results that `pushResult` may not store
   -- (due to lazy initialization of `argResults`). Without this, cd from `.rfl`
   -- sub-results would be silently dropped.
-  let rec simpEqArgs (e : Expr) (i : Nat) (numEqs : Nat) (argResults : Array Result)
-      (anyCD : Bool) (hasInst : Bool) : SimpM Result := do
+  let rec simpEqArgs
+      (e : Expr) (i : Nat) (numEqs : Nat) (argResults : Array Result) (anyCD : Bool)
+      (hasInst : Bool)
+      : SimpM Result := do
     match e with
     | .app f a =>
       match argKinds[i]! with
-      | .subsingletonInst => simpEqArgs f (i-1) numEqs argResults anyCD true
-      | .fixed | .cast => simpEqArgs f (i-1) numEqs argResults anyCD hasInst
+      | .subsingletonInst =>
+        simpEqArgs f (i - 1) numEqs argResults anyCD true
+      | .fixed | .cast =>
+        simpEqArgs f (i - 1) numEqs argResults anyCD hasInst
       | .eq =>
         let r ← simp a
-        simpEqArgs f (i-1) (numEqs+1) (pushResult argResults numEqs r) (anyCD || r.isContextDependent) hasInst
-      | _ => unreachable!
+        simpEqArgs f (i - 1) (numEqs + 1) (pushResult argResults numEqs r)
+          (anyCD || r.isContextDependent) hasInst
+      | _ =>
+        unreachable!
     | _ =>
       if argResults.isEmpty then
         return mkRflResultCD anyCD
@@ -514,15 +547,19 @@ public def simpAppArgRange (e : Expr) (start stop : Nat) : SimpM Result := do
         | .rfl _ cd => return mkRflResultCD cd
         | .step f' hf _ cd => mkCongrFun e f a f' hf h (contextDependent := cd)
       if i < stop then
-        let .forallE _ α β _ ← whnfD (← inferType f) | unreachable!
+        let .forallE _ α β _ ← whnfD (← inferType f)
+          | unreachable!
         if !β.hasLooseBVars then
           if (← isProp α) then
             mkCongr e f a fr .rfl h
           else
             mkCongr e f a fr (← simp a) h
-        else skip
-      else skip
-    | _ => unreachable!
+        else
+          skip
+      else
+        skip
+    | _ =>
+      unreachable!
   visit e numArgs
 
 end Lean.Meta.Sym.Simp

@@ -5,6 +5,7 @@ Authors: Joachim Breitner
 -/
 
 module
+
 prelude
 public import Lean.Meta.Basic
 import Lean.Meta.MatchUtil
@@ -32,14 +33,15 @@ public def mkHasNotBitProof (e : Expr) (ns : Array Nat) : MetaM Expr := do
 
   It works to use `Nat.ne_of_beq_eq_false`, though:
   -/
-  let some (_, lhs, rhs) ← matchNe? (mkHasNotBit e ns) | unreachable!
-  return mkApp3 (mkConst ``Nat.ne_of_beq_eq_false)
-    lhs rhs (mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Bool) (mkConst ``Bool.false))
+  let some (_, lhs, rhs) ← matchNe? (mkHasNotBit e ns)
+    | unreachable!
+  return mkApp3 (mkConst ``Nat.ne_of_beq_eq_false) lhs rhs
+    (mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Bool) (mkConst ``Bool.false))
 
 public def isHasNotBit? (e : Expr) : Option Expr :=
   match_expr e with
   | Nat.hasNotBit _mask e' => some e'
-  | _                      => none
+  | _ => none
 
 /--
 Is `e` a `hasNotBit` type that can be refuted?
@@ -52,11 +54,13 @@ public def refutableHasNotBit? (e : Expr) : MetaM (Option Expr) := do
     let bit' ← whnf bit -- reduce ctorIdxApp, to get closed terms
     if bit'.hasFVar then return none
     -- Reduce to get equalities
-    let some (_, lhs, rhs) ← matchNe? (mkApp2 (mkConst `Nat.hasNotBit) mask bit') | unreachable!
+    let some (_, lhs, rhs) ← matchNe? (mkApp2 (mkConst `Nat.hasNotBit) mask bit')
+      | unreachable!
     if (← isDefEq lhs rhs) then
       return some <| mkApp3 (mkConst ``Nat.eq_of_beq_eq_true) lhs rhs reflBoolTrue
     else
       return none
-  | _ => return none
+  | _ =>
+    return none
 
 end Lean

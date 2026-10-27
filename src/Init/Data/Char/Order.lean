@@ -23,7 +23,6 @@ public instance instIsLinearOrder : IsLinearOrder Char := by
   case le_total => constructor; apply Char.le_total
 
 public instance : LawfulOrderLT Char where
-  lt_iff a b := by
-    simp [← Char.not_le, Decidable.imp_iff_not_or, Std.Total.total]
+  lt_iff a b := by simp [← Char.not_le, Decidable.imp_iff_not_or, Std.Total.total]
 
 end Char

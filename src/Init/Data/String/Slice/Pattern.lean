@@ -45,8 +45,7 @@ Examples:
  * {lean}`"red green blue".toSlice.startsWith Char.isLower = true`
 -/
 @[inline]
-def startsWith (s : Slice) (pat : ρ) [ForwardPattern pat] : Bool :=
-  ForwardPattern.startsWith pat s
+def startsWith (s : Slice) (pat : ρ) [ForwardPattern pat] : Bool := ForwardPattern.startsWith pat s
 
 inductive SplitIterator {ρ : Type} (pat : ρ) (s : Slice) [ToForwardSearcher pat σ] where
   | operating (currPos : s.Pos) (searcher : Std.Iter (α := σ s) (SearchStep s))
@@ -61,14 +60,22 @@ inductive PlausibleStep
 
 instance : Std.Iterator (SplitIterator pat s) Id s.Subslice where
   IsPlausibleStep
-    | ⟨.operating _ s⟩, .yield ⟨.operating _ s'⟩ _ => s'.IsPlausibleSuccessorOf s
-    | ⟨.operating _ s⟩, .yield ⟨.atEnd ..⟩ _ => True
-    | ⟨.operating _ s⟩, .skip ⟨.operating _ s'⟩ => s'.IsPlausibleSuccessorOf s
-    | ⟨.operating _ s⟩, .skip ⟨.atEnd ..⟩ => False
-    | ⟨.operating _ s⟩, .done => True
-    | ⟨.atEnd⟩, .yield .. => False
-    | ⟨.atEnd⟩, .skip _ => False
-    | ⟨.atEnd⟩, .done => True
+    | ⟨.operating _ s⟩, .yield ⟨.operating _ s'⟩ _ =>
+      s'.IsPlausibleSuccessorOf s
+    | ⟨.operating _ s⟩, .yield ⟨.atEnd ..⟩ _ =>
+      True
+    | ⟨.operating _ s⟩, .skip ⟨.operating _ s'⟩ =>
+      s'.IsPlausibleSuccessorOf s
+    | ⟨.operating _ s⟩, .skip ⟨.atEnd ..⟩ =>
+      False
+    | ⟨.operating _ s⟩, .done =>
+      True
+    | ⟨.atEnd⟩, .yield .. =>
+      False
+    | ⟨.atEnd⟩, .skip _ =>
+      False
+    | ⟨.atEnd⟩, .done =>
+      True
   step
     | ⟨.operating currPos searcher⟩ =>
       match h : searcher.step with
@@ -77,24 +84,26 @@ instance : Std.Iterator (SplitIterator pat s) Id s.Subslice where
         let nextIt := ⟨.operating endPos searcher'⟩
         pure (.deflate ⟨.yield nextIt slice, by simp [nextIt, hps.isPlausibleSuccessor_of_yield]⟩)
       | ⟨.yield searcher' (.rejected ..), hps⟩ =>
-        pure (.deflate ⟨.skip ⟨.operating currPos searcher'⟩,
-          by simp [hps.isPlausibleSuccessor_of_yield]⟩)
+        pure (.deflate
+          ⟨.skip ⟨.operating currPos searcher'⟩, by simp [hps.isPlausibleSuccessor_of_yield]⟩)
       | ⟨.skip searcher', hps⟩ =>
-        pure (.deflate ⟨.skip ⟨.operating currPos searcher'⟩,
-          by simp [hps.isPlausibleSuccessor_of_skip]⟩)
+        pure (.deflate
+          ⟨.skip ⟨.operating currPos searcher'⟩, by simp [hps.isPlausibleSuccessor_of_skip]⟩)
       | ⟨.done, _⟩ =>
         let slice := s.subsliceFrom currPos
         pure (.deflate ⟨.yield ⟨.atEnd⟩ slice, by simp⟩)
-    | ⟨.atEnd⟩ => pure (.deflate ⟨.done, by simp⟩)
+    | ⟨.atEnd⟩ =>
+      pure (.deflate ⟨.done, by simp⟩)
 
 private def toOption : SplitIterator pat s → Option (Std.Iter (α := σ s) (SearchStep s))
   | .operating _ s => some s
   | .atEnd => none
 
-private def finitenessRelation [Std.Iterators.Finite (σ s) Id] :
-    Std.Iterators.FinitenessRelation (SplitIterator pat s) Id where
-  Rel := InvImage (Option.lt Std.Iter.IsPlausibleSuccessorOf)
-    (SplitIterator.toOption ∘ Std.IterM.internalState)
+private def finitenessRelation [Std.Iterators.Finite (σ s) Id]
+    : Std.Iterators.FinitenessRelation (SplitIterator pat s) Id where
+  Rel :=
+    InvImage (Option.lt Std.Iter.IsPlausibleSuccessorOf)
+      (SplitIterator.toOption ∘ Std.IterM.internalState)
   wf := InvImage.wf _ (Option.wellFounded_lt Std.Iterators.Finite.wf_of_id)
   subrelation {it it'} h := by
     simp_wf
@@ -102,18 +111,21 @@ private def finitenessRelation [Std.Iterators.Finite (σ s) Id] :
     match step with
     | .yield it'' out | .skip it'' =>
       obtain rfl : it' = it'' := by simpa using h.symm
-      simp only [Std.IterM.IsPlausibleStep, Std.Iterator.IsPlausibleStep, instIteratorIdSubslice] at h' -- TODO
+      simp only [Std.IterM.IsPlausibleStep, Std.Iterator.IsPlausibleStep, instIteratorIdSubslice]
+        at h' -- TODO
       revert h'
       match it, it' with
-      | ⟨.operating _ searcher⟩, ⟨.operating _ searcher'⟩ => simp [SplitIterator.toOption, Option.lt]
-      | ⟨.operating _ searcher⟩, ⟨.atEnd⟩ => simp [SplitIterator.toOption, Option.lt]
-      | ⟨.atEnd⟩, _ => simp
+      | ⟨.operating _ searcher⟩, ⟨.operating _ searcher'⟩ =>
+        simp [SplitIterator.toOption, Option.lt]
+      | ⟨.operating _ searcher⟩, ⟨.atEnd⟩ =>
+        simp [SplitIterator.toOption, Option.lt]
+      | ⟨.atEnd⟩, _ =>
+        simp
 
 instance [Std.Iterators.Finite (σ s) Id] : Std.Iterators.Finite (SplitIterator pat s) Id :=
   .of_finitenessRelation finitenessRelation
 
-instance [Monad n] : Std.IteratorLoop (SplitIterator pat s) Id n :=
-  .defaultImplementation
+instance [Monad n] : Std.IteratorLoop (SplitIterator pat s) Id n := .defaultImplementation
 
 end SplitIterator
 
@@ -133,9 +145,10 @@ Examples:
  * {lean}`("baaab".toSlice.splitToSubslice "aa").toStringList == ["b", "ab"]`
 -/
 @[specialize pat, cbv_opaque]
-def splitToSubslice (s : Slice) (pat : ρ) [ToForwardSearcher pat σ] :
-    Std.Iter (α := SplitIterator pat s) s.Subslice :=
-  { internalState := .operating s.startPos (ToForwardSearcher.toSearcher pat s) }
+def splitToSubslice (s : Slice) (pat : ρ) [ToForwardSearcher pat σ]
+    : Std.Iter (α := SplitIterator pat s) s.Subslice := {
+  internalState := .operating s.startPos (ToForwardSearcher.toSearcher pat s)
+}
 
 /--
 Splits a slice at each subslice that matches the pattern {name}`pat`.
@@ -167,44 +180,53 @@ variable {pat : ρ} [ToForwardSearcher pat σ]
 
 instance : Std.Iterator (SplitInclusiveIterator pat s) Id Slice where
   IsPlausibleStep
-    | ⟨.operating _ s⟩, .yield ⟨.operating _ s'⟩ _ => s'.IsPlausibleSuccessorOf s
-    | ⟨.operating _ s⟩, .yield ⟨.atEnd ..⟩ _ => True
-    | ⟨.operating _ s⟩, .skip ⟨.operating _ s'⟩ => s'.IsPlausibleSuccessorOf s
-    | ⟨.operating _ s⟩, .skip ⟨.atEnd ..⟩ => False
-    | ⟨.operating _ s⟩, .done => True
-    | ⟨.atEnd⟩, .yield .. => False
-    | ⟨.atEnd⟩, .skip _ => False
-    | ⟨.atEnd⟩, .done => True
+    | ⟨.operating _ s⟩, .yield ⟨.operating _ s'⟩ _ =>
+      s'.IsPlausibleSuccessorOf s
+    | ⟨.operating _ s⟩, .yield ⟨.atEnd ..⟩ _ =>
+      True
+    | ⟨.operating _ s⟩, .skip ⟨.operating _ s'⟩ =>
+      s'.IsPlausibleSuccessorOf s
+    | ⟨.operating _ s⟩, .skip ⟨.atEnd ..⟩ =>
+      False
+    | ⟨.operating _ s⟩, .done =>
+      True
+    | ⟨.atEnd⟩, .yield .. =>
+      False
+    | ⟨.atEnd⟩, .skip _ =>
+      False
+    | ⟨.atEnd⟩, .done =>
+      True
   step
     | ⟨.operating currPos searcher⟩ =>
       match h : searcher.step with
       | ⟨.yield searcher' (.matched _ endPos), hps⟩ =>
         let slice := s.slice! currPos endPos
         let nextIt := ⟨.operating endPos searcher'⟩
-        pure (.deflate ⟨.yield nextIt slice,
-          by simp [nextIt, hps.isPlausibleSuccessor_of_yield]⟩)
+        pure (.deflate ⟨.yield nextIt slice, by simp [nextIt, hps.isPlausibleSuccessor_of_yield]⟩)
       | ⟨.yield searcher' (.rejected ..), hps⟩ =>
-        pure (.deflate ⟨.skip ⟨.operating currPos searcher'⟩,
-          by simp [hps.isPlausibleSuccessor_of_yield]⟩)
+        pure (.deflate
+          ⟨.skip ⟨.operating currPos searcher'⟩, by simp [hps.isPlausibleSuccessor_of_yield]⟩)
       | ⟨.skip searcher', hps⟩ =>
-        pure (.deflate ⟨.skip ⟨.operating currPos searcher'⟩,
-          by simp [hps.isPlausibleSuccessor_of_skip]⟩)
+        pure (.deflate
+          ⟨.skip ⟨.operating currPos searcher'⟩, by simp [hps.isPlausibleSuccessor_of_skip]⟩)
       | ⟨.done, _⟩ =>
         if currPos != s.endPos then
           let slice := s.sliceFrom currPos
           pure (.deflate ⟨.yield ⟨.atEnd⟩ slice, by simp⟩)
         else
           pure (.deflate ⟨.done, by simp⟩)
-    | ⟨.atEnd⟩ => pure (.deflate ⟨.done, by simp⟩)
+    | ⟨.atEnd⟩ =>
+      pure (.deflate ⟨.done, by simp⟩)
 
 private def toOption : SplitInclusiveIterator pat s → Option (Std.Iter (α := σ s) (SearchStep s))
   | .operating _ s => some s
   | .atEnd => none
 
-private def finitenessRelation [Std.Iterators.Finite (σ s) Id] :
-    Std.Iterators.FinitenessRelation (SplitInclusiveIterator pat s) Id where
-  Rel := InvImage (Option.lt Std.Iter.IsPlausibleSuccessorOf)
-    (SplitInclusiveIterator.toOption ∘ Std.IterM.internalState)
+private def finitenessRelation [Std.Iterators.Finite (σ s) Id]
+    : Std.Iterators.FinitenessRelation (SplitInclusiveIterator pat s) Id where
+  Rel :=
+    InvImage (Option.lt Std.Iter.IsPlausibleSuccessorOf)
+      (SplitInclusiveIterator.toOption ∘ Std.IterM.internalState)
   wf := InvImage.wf _ (Option.wellFounded_lt Std.Iterators.Finite.wf_of_id)
   subrelation {it it'} h := by
     simp_wf
@@ -215,16 +237,17 @@ private def finitenessRelation [Std.Iterators.Finite (σ s) Id] :
       simp only [Std.IterM.IsPlausibleStep, Std.Iterator.IsPlausibleStep, instIteratorId] at h' -- TODO
       revert h'
       match it, it' with
-      | ⟨.operating _ searcher⟩, ⟨.operating _ searcher'⟩ => simp [SplitInclusiveIterator.toOption, Option.lt]
-      | ⟨.operating _ searcher⟩, ⟨.atEnd⟩ => simp [SplitInclusiveIterator.toOption, Option.lt]
-      | ⟨.atEnd⟩, _ => simp
+      | ⟨.operating _ searcher⟩, ⟨.operating _ searcher'⟩ =>
+        simp [SplitInclusiveIterator.toOption, Option.lt]
+      | ⟨.operating _ searcher⟩, ⟨.atEnd⟩ =>
+        simp [SplitInclusiveIterator.toOption, Option.lt]
+      | ⟨.atEnd⟩, _ =>
+        simp
 
-instance [Std.Iterators.Finite (σ s) Id] :
-    Std.Iterators.Finite (SplitInclusiveIterator pat s) Id :=
+instance [Std.Iterators.Finite (σ s) Id] : Std.Iterators.Finite (SplitInclusiveIterator pat s) Id :=
   .of_finitenessRelation finitenessRelation
 
-instance [Monad n] {s} :
-    Std.IteratorLoop (SplitInclusiveIterator pat s) Id n :=
+instance [Monad n] {s} : Std.IteratorLoop (SplitInclusiveIterator pat s) Id n :=
   .defaultImplementation
 
 end SplitInclusiveIterator
@@ -242,9 +265,10 @@ Examples:
  * {lean}`("baaab".toSlice.splitInclusive "aa").toList == ["baa".toSlice, "ab".toSlice]`
 -/
 @[specialize pat]
-def splitInclusive (s : Slice) (pat : ρ) [ToForwardSearcher pat σ] :
-    Std.Iter (α := SplitInclusiveIterator pat s) Slice :=
-  { internalState := .operating s.startPos (ToForwardSearcher.toSearcher pat s) }
+def splitInclusive (s : Slice) (pat : ρ) [ToForwardSearcher pat σ]
+    : Std.Iter (α := SplitInclusiveIterator pat s) Slice := {
+  internalState := .operating s.startPos (ToForwardSearcher.toSearcher pat s)
+}
 
 /--
 If {name}`pat` matches a prefix of {name}`s`, returns the position at the start of the remainder.
@@ -299,8 +323,7 @@ Examples:
  * {lean}`"red green blue".toSlice.dropPrefix Char.isLower == "ed green blue".toSlice`
 -/
 @[specialize pat]
-def dropPrefix (s : Slice) (pat : ρ) [ForwardPattern pat] : Slice :=
-  dropPrefix? s pat |>.getD s
+def dropPrefix (s : Slice) (pat : ρ) [ForwardPattern pat] : Slice := dropPrefix? s pat |>.getD s
 
 /--
 Constructs a new string obtained by replacing all occurrences of {name}`pattern` with
@@ -318,15 +341,15 @@ Examples:
 * {lean}`"aaaaa".toSlice.replace "aa" "b" = "bba"`
 * {lean}`"abc".toSlice.replace "" "k" = "kakbkck"`
 -/
-def replace [ToSlice α] (s : Slice) (pattern : ρ) [ToForwardSearcher pattern σ] (replacement : α) :
-    String :=
+def replace [ToSlice α] (s : Slice) (pattern : ρ) [ToForwardSearcher pattern σ] (replacement : α)
+    : String :=
   (ToForwardSearcher.toSearcher pattern s).fold (init := "") (fun
-    | sofar, .matched .. => sofar ++ ToSlice.toSlice replacement
-    | sofar, .rejected start stop => sofar ++ s.slice! start stop)
+    | sofar, .matched .. =>
+      sofar ++ ToSlice.toSlice replacement
+    | sofar, .rejected start stop =>
+      sofar ++ s.slice! start stop)
 
-/--
-Advances {name}`pos` as long as {name}`pat` matches.
--/
+/-- Advances {name}`pos` as long as {name}`pat` matches. -/
 @[specialize pat]
 def Pos.skipWhile {s : Slice} (pos : s.Pos) (pat : ρ) [ForwardPattern pat] : s.Pos :=
   match pos.skip? pat with
@@ -335,7 +358,8 @@ def Pos.skipWhile {s : Slice} (pos : s.Pos) (pat : ρ) [ForwardPattern pat] : s.
       skipWhile nextCurr pat
     else
       pos
-  | none => pos
+  | none =>
+    pos
 termination_by pos
 
 /--
@@ -343,8 +367,7 @@ Returns the position after the longest prefix of {name}`s` for which {name}`pat`
 (potentially repeatedly).
 -/
 @[inline]
-def skipPrefixWhile (s : Slice) (pat : ρ) [ForwardPattern pat] : s.Pos :=
-  s.startPos.skipWhile pat
+def skipPrefixWhile (s : Slice) (pat : ρ) [ForwardPattern pat] : s.Pos := s.startPos.skipWhile pat
 
 /--
 Creates a new slice that contains the longest prefix of {name}`s` for which {name}`pat` matched
@@ -408,7 +431,9 @@ Examples:
 @[inline]
 def find? (s : Slice) (pat : ρ) [ToForwardSearcher pat σ] : Option s.Pos :=
   let searcher := ToForwardSearcher.toSearcher pat s
-  searcher.findSome? (fun | .matched startPos _ => some startPos | .rejected .. => none)
+  searcher.findSome? (fun
+    | .matched startPos _ => some startPos
+    | .rejected .. => none)
 
 /--
 Finds the position of the first match of the pattern {name}`pat` in a slice {name}`s`. If there
@@ -422,8 +447,7 @@ Examples:
  * {lean}`("coffee tea water".toSlice.find "tea").get! == 't'`
 -/
 @[inline]
-def find (s : Slice) (pat : ρ) [ToForwardSearcher pat σ] : s.Pos :=
-  s.find? pat |>.getD s.endPos
+def find (s : Slice) (pat : ρ) [ToForwardSearcher pat σ] : s.Pos := s.find? pat |>.getD s.endPos
 
 /--
 Checks whether a slice has a match of the pattern {name}`pat` anywhere.
@@ -441,8 +465,7 @@ def contains (s : Slice) (pat : ρ) [ToForwardSearcher pat σ] : Bool :=
   searcher.any (· matches .matched ..)
 
 @[inline, inherit_doc contains]
-def any (s : Slice) (pat : ρ) [ToForwardSearcher pat σ] : Bool :=
-  s.contains pat
+def any (s : Slice) (pat : ρ) [ToForwardSearcher pat σ] : Bool := s.contains pat
 
 /--
 Checks whether a slice only consists of matches of the pattern {name}`pat`.
@@ -459,8 +482,7 @@ Examples:
  * {lean}`"aaaaaaa".toSlice.all "aa" = false`
 -/
 @[inline]
-def all (s : Slice) (pat : ρ) [ForwardPattern pat] : Bool :=
-  s.skipPrefixWhile pat == s.endPos
+def all (s : Slice) (pat : ρ) [ForwardPattern pat] : Bool := s.skipPrefixWhile pat == s.endPos
 
 end ForwardPatternUsers
 
@@ -484,8 +506,7 @@ Examples:
  * {lean}`"red green blue".toSlice.endsWith Char.isLower = true`
 -/
 @[inline]
-def endsWith (s : Slice) (pat : ρ) [BackwardPattern pat]  : Bool :=
-  BackwardPattern.endsWith pat s
+def endsWith (s : Slice) (pat : ρ) [BackwardPattern pat] : Bool := BackwardPattern.endsWith pat s
 
 inductive RevSplitIterator {ρ : Type} (pat : ρ) (s : Slice) [ToBackwardSearcher pat σ] where
   | operating (currPos : s.Pos) (searcher : Std.Iter (α := σ s) (SearchStep s))
@@ -498,14 +519,22 @@ variable [ToBackwardSearcher ρ σ]
 
 instance [Pure m] : Std.Iterator (RevSplitIterator ρ s) m Slice where
   IsPlausibleStep
-    | ⟨.operating _ s⟩, .yield ⟨.operating _ s'⟩ _ => s'.IsPlausibleSuccessorOf s
-    | ⟨.operating _ s⟩, .yield ⟨.atEnd ..⟩ _ => True
-    | ⟨.operating _ s⟩, .skip ⟨.operating _ s'⟩ => s'.IsPlausibleSuccessorOf s
-    | ⟨.operating _ s⟩, .skip ⟨.atEnd ..⟩ => False
-    | ⟨.operating _ s⟩, .done => True
-    | ⟨.atEnd⟩, .yield .. => False
-    | ⟨.atEnd⟩, .skip _ => False
-    | ⟨.atEnd⟩, .done => True
+    | ⟨.operating _ s⟩, .yield ⟨.operating _ s'⟩ _ =>
+      s'.IsPlausibleSuccessorOf s
+    | ⟨.operating _ s⟩, .yield ⟨.atEnd ..⟩ _ =>
+      True
+    | ⟨.operating _ s⟩, .skip ⟨.operating _ s'⟩ =>
+      s'.IsPlausibleSuccessorOf s
+    | ⟨.operating _ s⟩, .skip ⟨.atEnd ..⟩ =>
+      False
+    | ⟨.operating _ s⟩, .done =>
+      True
+    | ⟨.atEnd⟩, .yield .. =>
+      False
+    | ⟨.atEnd⟩, .skip _ =>
+      False
+    | ⟨.atEnd⟩, .done =>
+      True
   step
     | ⟨.operating currPos searcher⟩ =>
       match h : searcher.step with
@@ -514,27 +543,29 @@ instance [Pure m] : Std.Iterator (RevSplitIterator ρ s) m Slice where
         let nextIt := ⟨.operating startPos searcher'⟩
         pure (.deflate ⟨.yield nextIt slice, by simp [nextIt, hps.isPlausibleSuccessor_of_yield]⟩)
       | ⟨.yield searcher' (.rejected ..), hps⟩ =>
-        pure (.deflate ⟨.skip ⟨.operating currPos searcher'⟩,
-          by simp [hps.isPlausibleSuccessor_of_yield]⟩)
+        pure (.deflate
+          ⟨.skip ⟨.operating currPos searcher'⟩, by simp [hps.isPlausibleSuccessor_of_yield]⟩)
       | ⟨.skip searcher', hps⟩ =>
-        pure (.deflate ⟨.skip ⟨.operating currPos searcher'⟩,
-          by simp [hps.isPlausibleSuccessor_of_skip]⟩)
+        pure (.deflate
+          ⟨.skip ⟨.operating currPos searcher'⟩, by simp [hps.isPlausibleSuccessor_of_skip]⟩)
       | ⟨.done, _⟩ =>
         if currPos ≠ s.startPos then
           let slice := s.sliceTo currPos
           pure (.deflate ⟨.yield ⟨.atEnd⟩ slice, by simp⟩)
         else
           pure (.deflate ⟨.done, by simp⟩)
-    | ⟨.atEnd⟩ => pure (.deflate ⟨.done, by simp⟩)
+    | ⟨.atEnd⟩ =>
+      pure (.deflate ⟨.done, by simp⟩)
 
 private def toOption : RevSplitIterator ρ s → Option (Std.Iter (α := σ s) (SearchStep s))
   | .operating _ s => some s
   | .atEnd => none
 
-private def finitenessRelation [Std.Iterators.Finite (σ s) Id] :
-    Std.Iterators.FinitenessRelation (RevSplitIterator ρ s) Id where
-  Rel := InvImage (Option.lt Std.Iter.IsPlausibleSuccessorOf)
-    (RevSplitIterator.toOption ∘ Std.IterM.internalState)
+private def finitenessRelation [Std.Iterators.Finite (σ s) Id]
+    : Std.Iterators.FinitenessRelation (RevSplitIterator ρ s) Id where
+  Rel :=
+    InvImage (Option.lt Std.Iter.IsPlausibleSuccessorOf)
+      (RevSplitIterator.toOption ∘ Std.IterM.internalState)
   wf := InvImage.wf _ (Option.wellFounded_lt Std.Iterators.Finite.wf_of_id)
   subrelation {it it'} h := by
     simp_wf
@@ -545,15 +576,17 @@ private def finitenessRelation [Std.Iterators.Finite (σ s) Id] :
       simp only [Std.IterM.IsPlausibleStep, Std.Iterator.IsPlausibleStep, instIteratorOfPure] at h' -- TODO
       revert h'
       match it, it' with
-      | ⟨.operating _ searcher⟩, ⟨.operating _ searcher'⟩ => simp [RevSplitIterator.toOption, Option.lt]
-      | ⟨.operating _ searcher⟩, ⟨.atEnd⟩ => simp [RevSplitIterator.toOption, Option.lt]
-      | ⟨.atEnd⟩, _ => simp
+      | ⟨.operating _ searcher⟩, ⟨.operating _ searcher'⟩ =>
+        simp [RevSplitIterator.toOption, Option.lt]
+      | ⟨.operating _ searcher⟩, ⟨.atEnd⟩ =>
+        simp [RevSplitIterator.toOption, Option.lt]
+      | ⟨.atEnd⟩, _ =>
+        simp
 
 instance [Std.Iterators.Finite (σ s) Id] : Std.Iterators.Finite (RevSplitIterator ρ s) Id :=
   .of_finitenessRelation finitenessRelation
 
-instance [Monad m] [Monad n] : Std.IteratorLoop (RevSplitIterator ρ s) m n :=
-  .defaultImplementation
+instance [Monad m] [Monad n] : Std.IteratorLoop (RevSplitIterator ρ s) m n := .defaultImplementation
 
 end RevSplitIterator
 
@@ -572,9 +605,10 @@ Examples:
  * {lean}`("coffee tea water".toSlice.revSplit ' ').toList == ["water".toSlice, "tea".toSlice, "coffee".toSlice]`
 -/
 @[specialize pat]
-def revSplit (s : Slice) (pat : ρ) [ToBackwardSearcher pat σ] :
-    Std.Iter (α := RevSplitIterator pat s) Slice :=
-  { internalState := .operating s.endPos (ToBackwardSearcher.toSearcher pat s) }
+def revSplit (s : Slice) (pat : ρ) [ToBackwardSearcher pat σ]
+    : Std.Iter (α := RevSplitIterator pat s) Slice := {
+  internalState := .operating s.endPos (ToBackwardSearcher.toSearcher pat s)
+}
 
 /--
 If {name}`pat` matches a suffix of {name}`s`, returns the position at the beginning of the suffix.
@@ -630,12 +664,9 @@ Examples:
  * {lean}`"red green blue".toSlice.dropSuffix Char.isLower == "red green blu".toSlice`
 -/
 @[specialize pat]
-def dropSuffix (s : Slice) (pat : ρ) [BackwardPattern pat]  : Slice :=
-  dropSuffix? s pat |>.getD s
+def dropSuffix (s : Slice) (pat : ρ) [BackwardPattern pat] : Slice := dropSuffix? s pat |>.getD s
 
-/--
-Rewinds {name}`pos` as long as {name}`pat` matches.
--/
+/-- Rewinds {name}`pos` as long as {name}`pat` matches. -/
 @[specialize pat]
 def Pos.revSkipWhile {s : Slice} (pos : s.Pos) (pat : ρ) [BackwardPattern pat] : s.Pos :=
   match pos.revSkip? pat with
@@ -644,7 +675,8 @@ def Pos.revSkipWhile {s : Slice} (pos : s.Pos) (pat : ρ) [BackwardPattern pat] 
       revSkipWhile nextCurr pat
     else
       pos
-  | none => pos
+  | none =>
+    pos
 termination_by pos.down
 
 /--
@@ -652,8 +684,7 @@ Returns the position at the start of the longest suffix of {name}`s` for which {
 (potentially repeatedly).
 -/
 @[inline]
-def skipSuffixWhile (s : Slice) (pat : ρ) [BackwardPattern pat] : s.Pos :=
-  s.endPos.revSkipWhile pat
+def skipSuffixWhile (s : Slice) (pat : ρ) [BackwardPattern pat] : s.Pos := s.endPos.revSkipWhile pat
 
 /--
 Checks whether a slice only consists of matches of the pattern {name}`pat`, starting from the back
@@ -682,8 +713,7 @@ Examples:
  * {lean}`"aaaaaaa".toSlice.revAll "aa" = false`
 -/
 @[inline]
-def revAll (s : Slice) (pat : ρ) [BackwardPattern pat] : Bool :=
-  s.skipSuffixWhile pat == s.startPos
+def revAll (s : Slice) (pat : ρ) [BackwardPattern pat] : Bool := s.skipSuffixWhile pat == s.startPos
 
 /--
 Creates a new slice that contains the longest suffix of {name}`s` for which {name}`pat` matched
@@ -746,7 +776,9 @@ Examples:
 @[specialize pat]
 def revFind? (s : Slice) (pat : ρ) [ToBackwardSearcher pat σ] : Option s.Pos :=
   let searcher := ToBackwardSearcher.toSearcher pat s
-  searcher.findSome? (fun | .matched startPos _ => some startPos | .rejected .. => none)
+  searcher.findSome? (fun
+    | .matched startPos _ => some startPos
+    | .rejected .. => none)
 
 end BackwardPatternUsers
 
@@ -762,8 +794,7 @@ Examples:
  * {lean}`"  abc   ".toSlice.trimAscii == "abc".toSlice`
  * {lean}`"abc\ndef\n".toSlice.trimAscii == "abc\ndef".toSlice`
 -/
-def trimAscii (s : Slice) : Slice :=
-  s.trimAsciiStart.trimAsciiEnd
+def trimAscii (s : Slice) : Slice := s.trimAsciiStart.trimAsciiEnd
 
 def lines.lineMap (s : Slice) : Slice :=
   if let some s := s.dropSuffix? '\n' then
@@ -783,7 +814,6 @@ Examples:
  * {lean}`"foo\r\nbar\n\nbaz".toSlice.lines.toList  == ["foo".toSlice, "bar".toSlice, "".toSlice, "baz".toSlice]`
  * {lean}`"foo\r\nbar\n\nbaz\r".toSlice.lines.toList  == ["foo".toSlice, "bar".toSlice, "".toSlice, "baz\r".toSlice]`
 -/
-def lines (s : Slice) :=
-  s.splitInclusive '\n' |>.map lines.lineMap
+def lines (s : Slice) := s.splitInclusive '\n' |>.map lines.lineMap
 
 end String.Slice

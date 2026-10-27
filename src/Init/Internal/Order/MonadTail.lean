@@ -7,7 +7,7 @@ module
 
 prelude
 public import Init.Internal.Order.Basic
-import all Init.System.ST  -- for `EST.bind` in `MonadTail` instance
+import all Init.System.ST -- for `EST.bind` in `MonadTail` instance
 
 set_option linter.missingDocs true
 
@@ -28,8 +28,8 @@ class MonadTail (m : Type u → Type v) [Bind m] where
   /-- Every `m β` with `Nonempty β` has a chain-complete partial order. -/
   instCCPO β [Nonempty β] : CCPO (m β)
   /-- Bind is monotone in the second (continuation) argument. -/
-  bind_mono_right {a : m α} {f₁ f₂ : α → m β} [Nonempty β] (h : ∀ x, f₁ x ⊑ f₂ x) :
-    a >>= f₁ ⊑ a >>= f₂
+  bind_mono_right {a : m α} {f₁ f₂ : α → m β} [Nonempty β] (h : ∀ x, f₁ x ⊑ f₂ x)
+    : a >>= f₁ ⊑ a >>= f₂
 
 attribute [implicit_reducible] MonadTail.instCCPO
 attribute [instance] MonadTail.instCCPO
@@ -39,21 +39,21 @@ theorem MonadTail.monotone_bind_right
     (m : Type u → Type v) [Monad m] [MonadTail m]
     {α β : Type u} [Nonempty β]
     {γ : Sort w} [PartialOrder γ]
-    (f : m α) (g : γ → α → m β)
-    (hmono : monotone g) :
-    monotone (fun (x : γ) => f >>= g x) :=
-  fun _ _ h => MonadTail.bind_mono_right (hmono _ _ h)
+    (f : m α)
+    (g : γ → α → m β) (hmono : monotone g)
+    : monotone (fun (x : γ) => f >>= g x) := fun _ _ h =>
+  MonadTail.bind_mono_right (hmono _ _ h)
 
 instance : MonadTail Id where
   instCCPO _ := inferInstanceAs (CCPO (FlatOrder (b := Classical.ofNonempty)))
   bind_mono_right h := h _
 
-instance {σ : Type u} {m : Type u → Type v} [Monad m] [MonadTail m] :
-    MonadTail (StateT σ m) where
+instance {σ : Type u} {m : Type u → Type v} [Monad m] [MonadTail m] : MonadTail (StateT σ m) where
   instCCPO α :=
-    letI : CCPO (σ → m (α × σ)) := @instCCPOPi _ _ fun s =>
-      haveI : Nonempty σ := ⟨s⟩
-      MonadTail.instCCPO _
+    letI : CCPO (σ → m (α × σ)) :=
+      @instCCPOPi _ _ fun s =>
+        haveI : Nonempty σ := ⟨s⟩
+        MonadTail.instCCPO _
     inferInstanceAs (CCPO (σ → m (α × σ)))
   bind_mono_right h := by
     intro s
@@ -64,8 +64,7 @@ instance {σ : Type u} {m : Type u → Type v} [Monad m] [MonadTail m] :
     intro ⟨x, s'⟩
     exact h x s'
 
-instance {ε : Type u} {m : Type u → Type v} [Monad m] [MonadTail m] :
-    MonadTail (ExceptT ε m) where
+instance {ε : Type u} {m : Type u → Type v} [Monad m] [MonadTail m] : MonadTail (ExceptT ε m) where
   instCCPO β := MonadTail.instCCPO (Except ε β)
   bind_mono_right h := by
     apply MonadTail.bind_mono_right (m := m)
@@ -81,8 +80,7 @@ instance : MonadTail (Except ε) where
     | error => exact FlatOrder.rel.refl
     | ok a => exact h a
 
-instance {m : Type u → Type v} [Monad m] [MonadTail m] :
-    MonadTail (OptionT m) where
+instance {m : Type u → Type v} [Monad m] [MonadTail m] : MonadTail (OptionT m) where
   instCCPO β := MonadTail.instCCPO (Option β)
   bind_mono_right h := by
     apply MonadTail.bind_mono_right (m := m)
@@ -95,8 +93,7 @@ instance : MonadTail Option where
   instCCPO _ := inferInstance
   bind_mono_right h := MonoBind.bind_mono_right h
 
-instance {ρ : Type u} {m : Type u → Type v} [Monad m] [MonadTail m] :
-    MonadTail (ReaderT ρ m) where
+instance {ρ : Type u} {m : Type u → Type v} [Monad m] [MonadTail m] : MonadTail (ReaderT ρ m) where
   instCCPO α := inferInstanceAs (CCPO (ρ → m α))
   bind_mono_right h := by
     intro r
@@ -107,7 +104,8 @@ instance {ρ : Type u} {m : Type u → Type v} [Monad m] [MonadTail m] :
     exact h x r
 
 set_option linter.missingDocs false in
-noncomputable def ST.bot' [Nonempty α] (s : Void σ) : @FlatOrder (ST.Out σ α) (.mk Classical.ofNonempty (Classical.choice ⟨s⟩)) :=
+noncomputable def ST.bot' [Nonempty α] (s : Void σ)
+    : @FlatOrder (ST.Out σ α) (.mk Classical.ofNonempty (Classical.choice ⟨s⟩)) :=
   .mk _ (.mk Classical.ofNonempty (Classical.choice ⟨s⟩))
 
 instance [Nonempty α] : CCPO (ST σ α) where
@@ -125,21 +123,18 @@ instance : MonadTail (ST σ) where
     simp only [ST.bind]
     apply h
 
-instance : MonadTail BaseIO :=
-  inferInstanceAs (MonadTail (ST IO.RealWorld))
+instance : MonadTail BaseIO := inferInstanceAs (MonadTail (ST IO.RealWorld))
 
 instance [Nonempty ε] : MonadTail (EST ε σ) where
   instCCPO _ := inferInstance
   bind_mono_right h := MonoBind.bind_mono_right h
 
-instance [Nonempty ε] : MonadTail (EIO ε) :=
-  inferInstanceAs (MonadTail (EST ε IO.RealWorld))
+instance [Nonempty ε] : MonadTail (EIO ε) := inferInstanceAs (MonadTail (EST ε IO.RealWorld))
 
-instance : MonadTail IO :=
-  inferInstanceAs (MonadTail (EIO IO.Error))
+instance : MonadTail IO := inferInstanceAs (MonadTail (EIO IO.Error))
 
-instance {ω : Type} {σ : Type} {m : Type → Type} [Monad m] [MonadTail m] :
-    MonadTail (StateRefT' ω σ m) :=
+instance {ω : Type} {σ : Type} {m : Type → Type} [Monad m] [MonadTail m]
+    : MonadTail (StateRefT' ω σ m) :=
   inferInstanceAs (MonadTail (ReaderT (ST.Ref ω σ) m))
 
 end Lean.Order

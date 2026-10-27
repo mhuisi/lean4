@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Grind.Ring.CommSemiringAdapter
 public import Lean.ToExpr
@@ -22,8 +23,7 @@ def mkIntLitK (k : Int) : Expr :=
   | .ofNat n => mkApp (mkConst ``Int.ofNat) (mkRawNatLit n)
   | .negSucc n => mkApp (mkConst ``Int.negSucc) (mkRawNatLit n)
 
-def ofPower (p : Power) : Expr :=
-  mkApp2 (mkConst ``Power.mk) (mkRawNatLit p.x) (mkRawNatLit p.k)
+def ofPower (p : Power) : Expr := mkApp2 (mkConst ``Power.mk) (mkRawNatLit p.x) (mkRawNatLit p.k)
 
 instance : ToExpr Power where
   toExpr := ofPower

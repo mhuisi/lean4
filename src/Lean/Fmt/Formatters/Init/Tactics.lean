@@ -1159,10 +1159,8 @@ public def fmtWithInductionAlts
     let keyword := Layouts.pseudoApplication #[withTk, withTac?]
     let alts ← alts.mapM fmtInductionAlt
     let alts := Layouts.alts alts
-    return Layouts.keywordSeparated lhs keyword alts {
-      allowFlattening := false
-      nestedRhs := false
-    }
+    return
+      Layouts.keywordSeparated lhs keyword alts { allowFlattening := false, nestedRhs := false }
   | _ =>
     throw .partialFormatter
 

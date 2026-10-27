@@ -30,14 +30,13 @@ abbrev ToposortM pu := ReaderT (TopoCtx pu) StateRefT (TopoState pu) CompilerM
 
 partial def toposort (decls : Array (Decl pu)) : CompilerM (Array (Decl pu)) := do
   let declsMap := .ofArray <| decls.map fun d => (d.name, d)
-  let (_, s) ← go decls |>.run { declsMap } |>.run {
-    seen := .emptyWithCapacity decls.size,
-    order := .emptyWithCapacity decls.size
-  }
+  let (_, s) ←
+    go decls
+      |>.run { declsMap }
+      |>.run { seen := .emptyWithCapacity decls.size, order := .emptyWithCapacity decls.size }
   return s.order
 where
-  go (decls : Array (Decl pu)) : ToposortM pu Unit := do
-    decls.forM process
+  go (decls : Array (Decl pu)) : ToposortM pu Unit := do decls.forM process
 
   process (decl : Decl pu) : ToposortM pu Unit := do
     if (← get).seen.contains decl.name then
@@ -46,7 +45,8 @@ where
     let env ← getEnv
     modify fun s => { s with seen := s.seen.insert decl.name }
     decl.value.forCodeM (·.forM visitConsts)
-    if let some initializer := getBuiltinInitFnNameFor? env decl.name <|> getInitFnNameFor? env decl.name then
+    if let some initializer :=
+        getBuiltinInitFnNameFor? env decl.name <|> getInitFnNameFor? env decl.name then
       visitConst initializer
     modify fun s => { s with order := s.order.push decl }
 
@@ -54,10 +54,10 @@ where
     match code with
     | .let decl _ =>
       match decl.value with
-      | .const declName .. | .fap declName .. | .pap declName .. =>
-        visitConst declName
+      | .const declName .. | .fap declName .. | .pap declName .. => visitConst declName
       | _ => return ()
-    | _ => return ()
+    | _ =>
+      return ()
 
   visitConst (declName : Name) : ToposortM pu Unit := do
     if let some d := (← read).declsMap[declName]? then

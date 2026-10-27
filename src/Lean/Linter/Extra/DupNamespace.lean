@@ -26,7 +26,6 @@ By default, only consecutive duplication is reported: `Nat.Nat.foo` and `One.two
 warning, while `Nat.One.Nat` does not. Setting `linter.extra.dupNamespace.consecutiveOnly` to
 `false` also reports non-consecutive duplication, so that `Nat.One.Nat` triggers a warning as well.
 -/
-
 register_builtin_option linter.extra.dupNamespace : Bool := {
   defValue := false
   descr := "enable the duplicated namespace linter"
@@ -45,8 +44,8 @@ open Lean Parser Elab Command Meta Linter
 If `pos` is a `String.Pos`, then `getNamesFrom pos` returns the array of identifiers
 for the names of the declarations whose syntax begins in position at least `pos`.
 -/
-def getNamesFrom {m} [Monad m] [MonadEnv m] [MonadFileMap m] (pos : String.Pos.Raw) :
-    m (Array Syntax) := do
+def getNamesFrom {m} [Monad m] [MonadEnv m] [MonadFileMap m] (pos : String.Pos.Raw)
+    : m (Array Syntax) := do
   -- declarations from parallelism branches should not be interesting here, so use `local`
   let drs := declRangeExt.toPersistentEnvExtension.getState (asyncMode := .local) (← getEnv)
   let fm ← getFileMap
@@ -68,38 +67,42 @@ def getAliasSyntax {m} [Monad m] [MonadResolveName m] (stx : Syntax) : m (Array 
     let currNamespace ← getCurrNamespace
     for idStx in ids do
       let id := idStx.getId
-      aliases := aliases.push
-        (mkIdentFrom (.ofRange (idStx.raw.getRange?.getD default)) (currNamespace ++ id))
+      aliases :=
+        aliases.push (mkIdentFrom (.ofRange (idStx.raw.getRange?.getD default))
+          (currNamespace ++ id))
   return aliases
 
 @[inherit_doc linter.extra.dupNamespace]
-def dupNamespace : Linter where run := withSetOptionIn fun stx ↦ do
-  if getLinterValue linter.extra.dupNamespace (← getLinterOptions) then
-    let mut aliases := #[]
-    if let some exp := stx.find? (·.isOfKind `Lean.Parser.Command.export) then
-      aliases ← getAliasSyntax exp
-    for id in (← getNamesFrom (stx.getPos?.getD default)) ++ aliases do
-      let declName := id.getId
-      if declName.hasMacroScopes || isPrivateName declName then continue
-      let nm := declName.components
-      let duplicated :=
-        if (← getBoolOption `linter.extra.dupNamespace.consecutiveOnly (defValue := true)) then
-          -- Only check consecutive components
-          nm.zip (nm.tailD []) |>.filterMap fun (x, y) ↦ if x == y then some x else none
-        else
-          -- Collect distinct components which appear more than once.
-          List.eraseDups <| nm.filter (fun comp ↦ nm.count comp > 1)
-      match duplicated with
-      | [] => continue
-      | [ns] =>
-        Linter.logLint linter.extra.dupNamespace id
-          m!"The namespace `{ns}` is duplicated in the declaration \
-          `{.ofConstName (fullNames := true) declName}`."
-      | _ =>
-        let ns := MessageData.andList (duplicated.map (m!"`{·}`"))
-        Linter.logLint linter.extra.dupNamespace id
-          m!"The namespaces {ns} are duplicated in the declaration \
-          `{.ofConstName (fullNames := true) declName}`."
+def dupNamespace : Linter where
+  run :=
+    withSetOptionIn fun stx ↦ do
+      if getLinterValue linter.extra.dupNamespace (← getLinterOptions) then
+        let mut aliases := #[]
+        if let some exp := stx.find? (·.isOfKind `Lean.Parser.Command.export) then
+          aliases ← getAliasSyntax exp
+        for id in (← getNamesFrom (stx.getPos?.getD default)) ++ aliases do
+          let declName := id.getId
+          if declName.hasMacroScopes || isPrivateName declName then continue
+          let nm := declName.components
+          let duplicated :=
+            if (← getBoolOption `linter.extra.dupNamespace.consecutiveOnly (defValue := true)) then
+              -- Only check consecutive components
+              nm.zip (nm.tailD []) |>.filterMap fun (x, y) ↦ if x == y then some x else none
+            else
+              -- Collect distinct components which appear more than once.
+              List.eraseDups <| nm.filter (fun comp ↦ nm.count comp > 1)
+          match duplicated with
+          | [] =>
+            continue
+          | [ns] =>
+            Linter.logLint linter.extra.dupNamespace id
+              m!"The namespace `{ns}` is duplicated in the declaration \
+                `{.ofConstName (fullNames := true) declName}`."
+          | _ =>
+            let ns := MessageData.andList (duplicated.map (m!"`{·}`"))
+            Linter.logLint linter.extra.dupNamespace id
+              m!"The namespaces {ns} are duplicated in the declaration \
+                `{.ofConstName (fullNames := true) declName}`."
 
 end DupNamespaceLinter
 

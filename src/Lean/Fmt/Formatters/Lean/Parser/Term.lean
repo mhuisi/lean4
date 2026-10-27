@@ -1814,10 +1814,8 @@ public def fmtMatchExpr : Fmt := fun
       let lhs := Layouts.pseudoApplication #[matchExprTk, discr]
       let withTk ← fmt withTk
       let alts ← fmt alts
-      return Layouts.keywordSeparated lhs withTk alts {
-        allowFlattening := false
-        nestedRhs := false
-      }
+      return
+        Layouts.keywordSeparated lhs withTk alts { allowFlattening := false, nestedRhs := false }
   | _ =>
     throw .partialFormatter
 

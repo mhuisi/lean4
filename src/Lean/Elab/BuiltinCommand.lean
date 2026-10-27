@@ -25,16 +25,18 @@ public section
 
 namespace Lean.Elab.Command
 
-@[builtin_command_elab moduleDoc] def elabModuleDoc : CommandElab := fun stx => do
+@[builtin_command_elab moduleDoc]
+def elabModuleDoc : CommandElab := fun stx => do
   let some range ← Elab.getDeclarationRange? stx
-    | return  -- must be from partial syntax, ignore
+    | return -- must be from partial syntax, ignore
 
   match stx[1] with
   | Syntax.node _ ``Lean.Parser.Command.commentBody #[.atom _ doc, _] =>
     if getMainVersoModuleDocs (← getEnv) |>.isEmpty then
       modifyEnv fun env => addMainModuleDoc env ⟨doc, range⟩
     else
-      throwError m!"Can't add Markdown-format module docs because there is already Verso-format content present."
+      throwError m!"Can't add Markdown-format module docs because there is already Verso-format \
+        content present."
   | Syntax.node _ ``Lean.Parser.Command.versoCommentBody _ =>
     let view := VersoDocstringView.of ⟨stx⟩
     match view.markup with
@@ -43,35 +45,50 @@ namespace Lean.Elab.Command
       runTermElabM fun _ => reportVersoParseFailure view
     | .document doc =>
       runTermElabM fun _ => addVersoModDocString range doc
-  | _ => throwErrorAt stx "unexpected module doc string{indentD <| stx}"
+  | _ =>
+    throwErrorAt stx "unexpected module doc string{indentD <| stx}"
 
-private def addScope (isNewNamespace : Bool) (header : String) (newNamespace : Name)
-    (isNoncomputable isPublic isMeta : Bool := false) (attrs : List (TSyntax ``Parser.Term.attrInstance) := []) :
-    CommandElabM Unit := do
-  modify fun s => { s with
-    env    := s.env.registerNamespace newNamespace,
-    scopes := { s.scopes.head! with
-      header := header, currNamespace := newNamespace
-      isNoncomputable := s.scopes.head!.isNoncomputable || isNoncomputable
-      isPublic := s.scopes.head!.isPublic || isPublic
-      isMeta := s.scopes.head!.isMeta || isMeta
-      attrs := s.scopes.head!.attrs ++ attrs
-    } :: s.scopes
+private def addScope
+    (isNewNamespace : Bool) (header : String) (newNamespace : Name)
+    (isNoncomputable isPublic isMeta : Bool := false)
+    (attrs : List (TSyntax ``Parser.Term.attrInstance) := [])
+    : CommandElabM Unit := do
+  modify fun s => {
+    s with
+    env := s.env.registerNamespace newNamespace
+    scopes :=
+      {
+        s.scopes.head! with
+        header := header
+        currNamespace := newNamespace
+        isNoncomputable := s.scopes.head!.isNoncomputable || isNoncomputable
+        isPublic := s.scopes.head!.isPublic || isPublic
+        isMeta := s.scopes.head!.isMeta || isMeta
+        attrs := s.scopes.head!.attrs ++ attrs
+      } :: s.scopes
   }
   pushScope
   if isNewNamespace then
     activateScoped newNamespace
 
-private def addScopes (header : Name) (isNewNamespace : Bool) (isNoncomputable isPublic isMeta : Bool := false)
-    (attrs : List (TSyntax ``Parser.Term.attrInstance) := []) : CommandElabM Unit :=
+private def addScopes
+    (header : Name) (isNewNamespace : Bool)
+    (isNoncomputable isPublic isMeta : Bool := false)
+    (attrs : List (TSyntax ``Parser.Term.attrInstance) := [])
+    : CommandElabM Unit :=
   go header
-where go
-  | .anonymous => pure ()
-  | .str p header => do
-    go p
-    let currNamespace ← getCurrNamespace
-    addScope isNewNamespace header (if isNewNamespace then Name.mkStr currNamespace header else currNamespace) isNoncomputable isPublic isMeta attrs
-  | _ => throwError "invalid scope"
+where
+  go
+    | .anonymous =>
+      pure ()
+    | .str p header => do
+      go p
+      let currNamespace ← getCurrNamespace
+      addScope isNewNamespace header
+        (if isNewNamespace then Name.mkStr currNamespace header else currNamespace) isNoncomputable
+        isPublic isMeta attrs
+    | _ =>
+      throwError "invalid scope"
 
 private def addNamespace (header : Name) : CommandElabM Unit :=
   addScopes (isNewNamespace := true) (isNoncomputable := false) (attrs := []) header
@@ -89,38 +106,48 @@ def withNamespace {α} (ns : Name) (elabFn : CommandElabM α) : CommandElabM α 
 
 private def innermostScopeName? : List Scope → Option Name
   | { header := "", .. } :: _ => none
-  | { header := h, .. }  :: _ => some <| .mkSimple h
-  | _                         => some .anonymous -- should not happen
+  | { header := h, .. } :: _ => some <| .mkSimple h
+  | _ => some .anonymous -- should not happen
 
 private def checkEndHeader : Name → List Scope → Option Name
-  | .anonymous, _ => none
+  | .anonymous, _ =>
+    none
   | .str p s, { header := h, .. } :: scopes =>
     if h == s then
       (.str · s) <$> checkEndHeader p scopes
     else
       some <| .mkSimple h
-  | _, _ => some .anonymous -- should not happen
+  | _, _ =>
+    some .anonymous -- should not happen
 
-@[builtin_command_elab «namespace»] def elabNamespace : CommandElab := fun stx =>
+@[builtin_command_elab «namespace»]
+def elabNamespace : CommandElab := fun stx =>
   match stx with
   | `(namespace $n) => addNamespace n.getId
-  | _               => throwUnsupportedSyntax
+  | _ => throwUnsupportedSyntax
 
-@[builtin_command_elab «section»] def elabSection : CommandElab := fun stx => do
+@[builtin_command_elab «section»]
+def elabSection : CommandElab := fun stx => do
   match stx with
   | `(Parser.Command.section| $[@[expose%$expTk]]? $[public%$publicTk]? $[noncomputable%$ncTk]? $[meta%$metaTk]? section $(header?)?) =>
     -- TODO: allow more attributes?
-    let attrs ← if expTk.isSome then
-      pure [← `(Parser.Term.attrInstance| expose)]
-    else
-      pure []
+    let attrs ←
+      if expTk.isSome then
+        pure [← `(Parser.Term.attrInstance| expose)]
+      else
+        pure []
     if let some header := header? then
-      addScopes (isNewNamespace := false) (isNoncomputable := ncTk.isSome) (isPublic := publicTk.isSome) (isMeta := metaTk.isSome) (attrs := attrs) header.getId
+      addScopes (isNewNamespace := false) (isNoncomputable := ncTk.isSome)
+        (isPublic := publicTk.isSome) (isMeta := metaTk.isSome) (attrs := attrs) header.getId
     else
-      addScope (isNewNamespace := false) (isNoncomputable := ncTk.isSome) (isPublic := publicTk.isSome) (isMeta := metaTk.isSome) (attrs := attrs) "" (← getCurrNamespace)
-  | _                        => throwUnsupportedSyntax
+      addScope (isNewNamespace := false) (isNoncomputable := ncTk.isSome)
+        (isPublic := publicTk.isSome) (isMeta := metaTk.isSome) (attrs := attrs) ""
+        (← getCurrNamespace)
+  | _ =>
+    throwUnsupportedSyntax
 
-@[builtin_command_elab InternalSyntax.end_local_scope] def elabEndLocalScope : CommandElab := fun stx => do
+@[builtin_command_elab InternalSyntax.end_local_scope]
+def elabEndLocalScope : CommandElab := fun stx => do
   let depth := stx[1].toNat
   setDelimitsLocal depth
 
@@ -131,13 +158,15 @@ empty scope is reached (so that we do not suggest names like `Foo.«».Bar`).
 If `n` is not specified, will use all scopes in `ss`.
 -/
 private def nameOfScopes : (ss : List Scope) → (n : Nat := ss.length) → Name
-  | _, 0 => .anonymous
-  | [], _ => .anonymous
+  | _, 0 =>
+    .anonymous
+  | [], _ =>
+    .anonymous
   | s :: ss, n + 1 =>
     if s.header == "" then
       .anonymous
     else
-    .str (nameOfScopes ss n) s.header
+      .str (nameOfScopes ss n) s.header
 
 /--
 Returns the first suffix of `base` that begins with `seg`, if one exists.
@@ -153,42 +182,46 @@ where
   `base`, not just a prefix of a suffix.
   -/
   findSuffixMatch : (base : Name) → (seg : Name) → (allowOffset : Bool) → Option Name
-  | _, .anonymous, _ => some .anonymous
-  | .anonymous, _, _ => none
-  | .num p n, seg@(.num p' n'), allowOffset => do
-    if n == n' then
-      if let some nm := findSuffixMatch p p' (allowOffset := false) then
-        return .num nm n
-    if allowOffset then
-      return .num (← findSuffixMatch p seg allowOffset) n
-    else
+    | _, .anonymous, _ =>
+      some .anonymous
+    | .anonymous, _, _ =>
       none
-  | .str p s, seg@(.str p' s'), allowOffset => do
-    if s == s' then
-      if let some nm := findSuffixMatch p p' (allowOffset := false) then
-        return .str nm s
-    if allowOffset then
-      return .str (← findSuffixMatch p seg allowOffset) s
-    else
-      none
-  | .str p s, seg, allowOffset =>
-    if allowOffset then
-      return .str (← findSuffixMatch p seg allowOffset) s
-    else
-      none
-  | .num p n, seg, allowOffset =>
-    if allowOffset then
-      return .num (← findSuffixMatch p seg allowOffset) n
-    else
-      none
+    | .num p n, seg@(.num p' n'), allowOffset => do
+      if n == n' then
+        if let some nm := findSuffixMatch p p' (allowOffset := false) then
+          return .num nm n
+      if allowOffset then
+        return .num (← findSuffixMatch p seg allowOffset) n
+      else
+        none
+    | .str p s, seg@(.str p' s'), allowOffset => do
+      if s == s' then
+        if let some nm := findSuffixMatch p p' (allowOffset := false) then
+          return .str nm s
+      if allowOffset then
+        return .str (← findSuffixMatch p seg allowOffset) s
+      else
+        none
+    | .str p s, seg, allowOffset =>
+      if allowOffset then
+        return .str (← findSuffixMatch p seg allowOffset) s
+      else
+        none
+    | .num p n, seg, allowOffset =>
+      if allowOffset then
+        return .num (← findSuffixMatch p seg allowOffset) n
+      else
+        none
 
 private def throwNoScope : CommandElabM Unit :=
-  throwError m!"Invalid `end`: There is no current scope to end"
-    ++ .note m!"Scopes are introduced using `namespace` and `section`"
+  throwError
+    m!"Invalid `end`: There is no current scope to end"
+      ++ .note m!"Scopes are introduced using `namespace` and `section`"
 
 private def throwMissingName (name : Name) : CommandElabM Unit := do
-  let hint ← liftCoreM <| MessageData.hint m!"To end the current scope `{name}`, specify its name:"
-    #[← `(end $(mkIdent name))] (codeActionPrefix? := "Add scope name: ")
+  let hint ←
+    liftCoreM <| MessageData.hint m!"To end the current scope `{name}`, specify its name:"
+      #[← `(end $(mkIdent name))] (codeActionPrefix? := "Add scope name: ")
   throwError "Missing name after `end`: Expected the current scope name `{name}`{hint}"
 
 /--
@@ -209,52 +242,63 @@ private def mkSingleScopeReplacementHint? (scopes : List Scope) := do
   else
     return none
 
-private def throwTooManyScopeComponents (header : Name) (scopes : List Scope) : CommandElabM Unit := do
-  let hint ← liftCoreM do
-    if let some hint ← mkSingleScopeReplacementHint? scopes then
-      pure hint
-    else
-      let scopesName := nameOfScopes scopes
-      pure <| MessageData.hint' m!"The name after `end` must be `{scopesName}` or some suffix thereof"
+private def throwTooManyScopeComponents (header : Name) (scopes : List Scope)
+    : CommandElabM Unit := do
+  let hint ←
+    liftCoreM do
+      if let some hint ← mkSingleScopeReplacementHint? scopes then
+        pure hint
+      else
+        let scopesName := nameOfScopes scopes
+        pure <|
+          MessageData.hint' m!"The name after `end` must be `{scopesName}` or some suffix thereof"
   throwError m!"Invalid name after `end`: `{header}` contains too many components" ++ hint
 
 private def throwScopeNameMismatch (header : Name) (scopes : List Scope) (endSize : Nat)
     : CommandElabM Unit := do
   let correspondingScopes := nameOfScopes scopes endSize
   let allScopes := nameOfScopes scopes
-  let help ← liftCoreM do
-    if let some hint ← mkSingleScopeReplacementHint? scopes then
-      pure hint
-    else if let some suffix := findSuffixWithPrefix allScopes header then
-      let hintMsg := m!"If you meant to end the outer scope(s) `{header}`, you must end all the \
-        intervening scopes `{suffix}`:"
-      MessageData.hint hintMsg #[← `(end $(mkIdent suffix))]
-        (codeActionPrefix? := "Add intervening scopes: ")
-    else if correspondingScopes != allScopes then
-      pure <| .note m!"The current scopes are `{allScopes}`"
-    else pure .nil
-  throwError m!"Invalid name after `end`: Expected `{correspondingScopes}`, but found `{header}`" ++ help
+  let help ←
+    liftCoreM do
+      if let some hint ← mkSingleScopeReplacementHint? scopes then
+        pure hint
+      else if let some suffix := findSuffixWithPrefix allScopes header then
+        let hintMsg :=
+          m!"If you meant to end the outer scope(s) `{header}`, you must end all the \
+            intervening scopes `{suffix}`:"
+        MessageData.hint hintMsg #[← `(end $(mkIdent suffix))]
+          (codeActionPrefix? := "Add intervening scopes: ")
+      else if correspondingScopes != allScopes then
+        pure <| .note m!"The current scopes are `{allScopes}`"
+      else
+        pure .nil
+  throwError
+    m!"Invalid name after `end`: Expected `{correspondingScopes}`, but found `{header}`" ++ help
 
 private def throwUnnecessaryScopeName (header : Name) : CommandElabM Unit := do
-  let hintMsg := m!"Delete the name `{header}` to end the current unnamed scope; outer named scopes \
-    can then be closed using additional `end` command(s):"
-  let hint ← liftCoreM <| MessageData.hint hintMsg #[← `(end)] (codeActionPrefix? := "Delete name: ")
+  let hintMsg :=
+    m!"Delete the name `{header}` to end the current unnamed scope; outer named scopes \
+      can then be closed using additional `end` command(s):"
+  let hint ←
+    liftCoreM <| MessageData.hint hintMsg #[← `(end)] (codeActionPrefix? := "Delete name: ")
   throwError m!"Unexpected name `{header}` after `end`: The current section is unnamed" ++ hint
 
-@[builtin_command_elab «end»] def elabEnd : CommandElab := fun stx => do
+@[builtin_command_elab «end»]
+def elabEnd : CommandElab := fun stx => do
   let `(end $[$header? $[.%$trailingDotTk?$_]?]?) := stx
     | throwUnsupportedSyntax
   let header? := header?.map (·.getId)
   let danglingDot := trailingDotTk?.join.isSome
-  let endSize : Nat := match header? with
-    | none   => 1
+  let endSize : Nat :=
+    match header? with
+    | none => 1
     | some n => n.getNumParts
   let scopes ← getScopes
   let numScopes := scopes.length
   if numScopes == 1 then
     throwNoScope
   match header? with
-  | none        =>
+  | none =>
     addCompletionInfo <| .endSection stx none false <| scopes.map (·.header)
     if let some name := innermostScopeName? scopes then
       throwMissingName name
@@ -269,7 +313,7 @@ private def throwUnnecessaryScopeName (header : Name) : CommandElabM Unit := do
           throwUnnecessaryScopeName header
         else
           throwScopeNameMismatch header scopes endSize
-  modify fun s => {s with scopes := s.scopes.drop endSize }
+  modify fun s => { s with scopes := s.scopes.drop endSize }
   popScopes endSize
 
 private partial def elabChoiceAux (choiceStx : Syntax) (i : Nat) : CommandElabM Unit :=
@@ -278,20 +322,21 @@ private partial def elabChoiceAux (choiceStx : Syntax) (i : Nat) : CommandElabM 
       (do
         elabCommand (choiceStx.getArg i)
         pushInfoLeaf <| .ofChoiceResolutionInfo { stx := choiceStx, chosenAltIdx := i })
-      (fun _ => elabChoiceAux choiceStx (i+1))
+      (fun _ => elabChoiceAux choiceStx (i + 1))
   else
     throwUnsupportedSyntax
 
-@[builtin_command_elab choice] def elabChoice : CommandElab := fun stx =>
-  elabChoiceAux stx 0
+@[builtin_command_elab choice]
+def elabChoice : CommandElab := fun stx => elabChoiceAux stx 0
 
-@[builtin_command_elab «universe»] def elabUniverse : CommandElab := fun n => do
-  n[1].forArgsM addUnivLevel
+@[builtin_command_elab «universe»]
+def elabUniverse : CommandElab := fun n => do n[1].forArgsM addUnivLevel
 
-@[builtin_command_elab «init_quot»] def elabInitQuot : CommandElab := fun _ => do
-  liftCoreM <| addDecl Declaration.quotDecl
+@[builtin_command_elab «init_quot»]
+def elabInitQuot : CommandElab := fun _ => do liftCoreM <| addDecl Declaration.quotDecl
 
-@[builtin_command_elab «docs_to_verso»] def elabDocsToVerso : CommandElab := fun stx => do
+@[builtin_command_elab «docs_to_verso»]
+def elabDocsToVerso : CommandElab := fun stx => do
   let xs := stx[1].getArgs
   for x in xs do
     if x.getKind == identKind then -- skip commas
@@ -300,8 +345,10 @@ private partial def elabChoiceAux (choiceStx : Syntax) (i : Nat) : CommandElabM 
       -- Add the info afterwards so the hover shows the updated docstring
       addConstInfo x declName
 
-@[builtin_command_elab «export»] def elabExport : CommandElab := fun stx => do
-  let `(export $ns ($ids*)) := stx | throwUnsupportedSyntax
+@[builtin_command_elab «export»]
+def elabExport : CommandElab := fun stx => do
+  let `(export $ns ($ids*)) := stx
+    | throwUnsupportedSyntax
   let nss ← resolveNamespace ns
   let currNamespace ← getCurrNamespace
   if nss == [currNamespace] then throwError "invalid 'export', self export"
@@ -314,39 +361,46 @@ private partial def elabChoiceAux (choiceStx : Syntax) (i : Nat) : CommandElabM 
     aliases := aliases.push (currNamespace ++ id, declName)
   modify fun s => { s with env := aliases.foldl (init := s.env) fun env p => addAlias env p.1 p.2 }
 
-@[builtin_command_elab «open»] def elabOpen : CommandElab
+@[builtin_command_elab «open»]
+def elabOpen : CommandElab
   | `(open $decl:openDecl) => do
     let openDecls ← elabOpenDecl decl
     modifyScope fun scope => { scope with openDecls := openDecls }
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
 open Lean.Parser.Term
 
-private def typelessBinder? : Syntax → Option (Array (TSyntax [`ident, `Lean.Parser.Term.hole]) × BinderInfo)
-  | `(bracketedBinderF|($ids*))     => some (ids, .default)
-  | `(bracketedBinderF|{$ids*})     => some (ids, .implicit)
-  | `(bracketedBinderF|⦃$ids*⦄)     => some (ids, .strictImplicit)
+private def typelessBinder?
+    : Syntax → Option (Array (TSyntax [`ident, `Lean.Parser.Term.hole]) × BinderInfo)
+  | `(bracketedBinderF|($ids*)) => some (ids, .default)
+  | `(bracketedBinderF|{$ids*}) => some (ids, .implicit)
+  | `(bracketedBinderF|⦃$ids*⦄) => some (ids, .strictImplicit)
   | `(bracketedBinderF|[$id:ident]) => some (#[id], .instImplicit)
-  | _                               => none
+  | _ => none
 
-/--  If `id` is an identifier, return true if `ids` contains `id`. -/
-private def containsId (ids : Array (TSyntax [`ident, ``Parser.Term.hole])) (id : TSyntax [`ident, ``Parser.Term.hole]) : Bool :=
+/-- If `id` is an identifier, return true if `ids` contains `id`. -/
+private def containsId
+    (ids : Array (TSyntax [`ident, ``Parser.Term.hole])) (id : TSyntax [`ident, ``Parser.Term.hole])
+    : Bool :=
   id.raw.isIdent && ids.any fun id' => id'.raw.getId == id.raw.getId
 
 /--
-  Auxiliary method for processing binder annotation update commands:
-  `variable (α)`, `variable {α}`, `variable ⦃α⦄`, and `variable [α]`.
-  The argument `binder` is the binder of the `variable` command.
-  The method returns an array containing the "residue", that is, variables that do not correspond to updates.
-  Recall that a `bracketedBinder` can be of the form `(x y)`.
-  ```
-  variable {α β : Type}
-  variable (α γ)
-  ```
-  The second `variable` command updates the binder annotation for `α`, and returns "residue" `γ`.
+Auxiliary method for processing binder annotation update commands:
+`variable (α)`, `variable {α}`, `variable ⦃α⦄`, and `variable [α]`.
+The argument `binder` is the binder of the `variable` command.
+The method returns an array containing the "residue", that is, variables that do not correspond to updates.
+Recall that a `bracketedBinder` can be of the form `(x y)`.
+```
+variable {α β : Type}
+variable (α γ)
+```
+The second `variable` command updates the binder annotation for `α`, and returns "residue" `γ`.
 -/
-private def replaceBinderAnnotation (binder : TSyntax ``Parser.Term.bracketedBinder) : CommandElabM (Array (TSyntax ``Parser.Term.bracketedBinder)) := do
-  let some (binderIds, binderInfo) := typelessBinder? binder | return #[binder]
+private def replaceBinderAnnotation (binder : TSyntax ``Parser.Term.bracketedBinder)
+    : CommandElabM (Array (TSyntax ``Parser.Term.bracketedBinder)) := do
+  let some (binderIds, binderInfo) := typelessBinder? binder
+    | return #[binder]
   let varDecls := (← getScope).varDecls
   let mut varDeclsNew := #[]
   let mut binderIds := binderIds
@@ -354,12 +408,14 @@ private def replaceBinderAnnotation (binder : TSyntax ``Parser.Term.bracketedBin
   let mut modifiedVarDecls := false
   -- Go through declarations in reverse to respect shadowing
   for varDecl in varDecls.reverse do
-    let (ids, ty?, binderInfo') ← match varDecl with
+    let (ids, ty?, binderInfo') ←
+      match varDecl with
       | `(bracketedBinderF|($ids* $[: $ty?]? $(annot?)?)) =>
         if annot?.isSome then
           for binderId in binderIds do
             if containsId ids binderId then
-              throwErrorAt binderId "cannot update binder annotation of variables with default values/tactics"
+              throwErrorAt binderId
+                "cannot update binder annotation of variables with default values/tactics"
         pure (ids, ty?, .default)
       | `(bracketedBinderF|{$ids* $[: $ty?]?}) =>
         pure (ids, ty?, .implicit)
@@ -375,33 +431,42 @@ private def replaceBinderAnnotation (binder : TSyntax ``Parser.Term.bracketedBin
         if containsId ids binderId then
           throwErrorAt binderId "redundant binder annotation update"
       varDeclsNew := varDeclsNew.push varDecl
-    else if binderIds.all fun binderId => !containsId ids binderId then
+    else if binderIds.all fun binderId => ! containsId ids binderId then
       -- `binderIds` and `ids` are disjoint
       varDeclsNew := varDeclsNew.push varDecl
     else
-      let mkBinder (id : TSyntax [`ident, ``Parser.Term.hole]) (binderInfo : BinderInfo) : CommandElabM (TSyntax ``Parser.Term.bracketedBinder) :=
+      let mkBinder (id : TSyntax [`ident, ``Parser.Term.hole]) (binderInfo : BinderInfo)
+          : CommandElabM (TSyntax ``Parser.Term.bracketedBinder) :=
         match binderInfo with
-        | .default => `(bracketedBinderF| ($id $[: $ty?]?))
-        | .implicit => `(bracketedBinderF| {$id $[: $ty?]?})
-        | .strictImplicit => `(bracketedBinderF| {{$id $[: $ty?]?}})
+        | .default =>
+          `(bracketedBinderF| ($id $[: $ty?]?))
+        | .implicit =>
+          `(bracketedBinderF| {$id $[: $ty?]?})
+        | .strictImplicit =>
+          `(bracketedBinderF| {{$id $[: $ty?]?}})
         | .instImplicit => do
           let some ty := ty?
-            | throwErrorAt binder "cannot update binder annotation of variable `{id}` to instance implicit:\n\
-                variable was originally declared without an explicit type"
+            | throwErrorAt binder
+                "cannot update binder annotation of variable `{id}` to instance implicit:\n\
+                  variable was originally declared without an explicit type"
           `(bracketedBinderF| [$(⟨id⟩) : $ty])
       for id in ids.reverse do
-        if let some idx := binderIds.findFinIdx? fun binderId => binderId.raw.isIdent && binderId.raw.getId == id.raw.getId then
+        if let some idx :=
+            binderIds.findFinIdx? fun binderId =>
+              binderId.raw.isIdent && binderId.raw.getId == id.raw.getId then
           binderIds := binderIds.eraseIdx idx
           modifiedVarDecls := true
           let newBinder ← mkBinder id binderInfo
           if binderInfo.isInstImplicit then
             -- We elaborate the new binder to make sure it's valid as instance implicit
             try
-              runTermElabM fun _ => Term.withSynthesize <| Term.withAutoBoundImplicit <|
-                Term.elabBinder newBinder fun _ => pure ()
+              runTermElabM fun _ =>
+                Term.withSynthesize <| Term.withAutoBoundImplicit <|
+                  Term.elabBinder newBinder fun _ => pure ()
             catch e =>
-              throwErrorAt binder m!"cannot update binder annotation of variable `{id}` to instance implicit:\n\
-                {e.toMessageData}"
+              throwErrorAt binder
+                m!"cannot update binder annotation of variable `{id}` to instance implicit:\n\
+                  {e.toMessageData}"
           varDeclsNew := varDeclsNew.push (← mkBinder id binderInfo)
         else
           varDeclsNew := varDeclsNew.push (← mkBinder id binderInfo')
@@ -410,19 +475,20 @@ private def replaceBinderAnnotation (binder : TSyntax ``Parser.Term.bracketedBin
   if binderIds.size != binderIdsIniSize then
     binderIds.mapM fun binderId =>
       match binderInfo with
-        | .default => `(bracketedBinderF| ($binderId))
-        | .implicit => `(bracketedBinderF| {$binderId})
-        | .strictImplicit => `(bracketedBinderF| {{$binderId}})
-        | .instImplicit => throwUnsupportedSyntax
+      | .default => `(bracketedBinderF| ($binderId))
+      | .implicit => `(bracketedBinderF| {$binderId})
+      | .strictImplicit => `(bracketedBinderF| {{$binderId}})
+      | .instImplicit => throwUnsupportedSyntax
   else
     return #[binder]
 
-@[builtin_command_elab «variable»] def elabVariable : CommandElab
+@[builtin_command_elab «variable»]
+def elabVariable : CommandElab
   | `($[$_:visibility]? variable%$tk $binders*) => do
     let binders ← binders.flatMapM replaceBinderAnnotation
     -- Try to elaborate `binders` for sanity checking
-    runTermElabM fun _ => Term.withSynthesize <| Term.withAutoBoundImplicit <|
-      Term.elabBinders binders fun xs => do
+    runTermElabM fun _ =>
+      Term.withSynthesize <| Term.withAutoBoundImplicit <| Term.elabBinders binders fun xs => do
         -- Determine the set of auto-implicits for this variable command and add an inlay hint
         -- for them. We will only actually add the auto-implicits to a type when the variables
         -- declared here are used in some other declaration, but this is nonetheless the right
@@ -430,101 +496,127 @@ private def replaceBinderAnnotation (binder : TSyntax ``Parser.Term.bracketedBin
         let _ ← Term.addAutoBoundImplicits xs (tk.getTailPos? (canonicalOnly := true))
     -- Remark: if we want to produce error messages when variables shadow existing ones, here is the place to do it.
     for binder in binders do
-      let varUIds ← (← getBracketedBinderIds binder) |>.mapM (withFreshMacroScope ∘ MonadQuotation.addMacroScope)
-      modifyScope fun scope => { scope with varDecls := scope.varDecls.push binder, varUIds := scope.varUIds ++ varUIds }
-  | _ => throwUnsupportedSyntax
+      let varUIds ←
+        (← getBracketedBinderIds binder)
+          |>.mapM (withFreshMacroScope ∘ MonadQuotation.addMacroScope)
+      modifyScope fun scope => {
+        scope with
+        varDecls := scope.varDecls.push binder
+        varUIds := scope.varUIds ++ varUIds
+      }
+  | _ =>
+    throwUnsupportedSyntax
 
 open Meta
 
 def elabCheckCore (ignoreStuckTC : Bool) : CommandElab
-  | `(#check%$tk $term) => withoutModifyingEnv <| runTermElabM fun _ => Term.withDeclName `_check do
-    -- show signature for `#check id`/`#check @id`
-    if let `($id:ident) := term then
-      try
-        for c in (← realizeGlobalConstWithInfos term) do
-          addCompletionInfo <| .id term id.getId (danglingDot := false) {} none
-          logInfoAt tk <| .signature c
+  | `(#check%$tk $term) =>
+    withoutModifyingEnv <| runTermElabM fun _ =>
+      Term.withDeclName `_check do
+        -- show signature for `#check id`/`#check @id`
+        if let `($id:ident) := term then
+          try
+            for c in (← realizeGlobalConstWithInfos term) do
+              addCompletionInfo <| .id term id.getId (danglingDot := false) {} none
+              logInfoAt tk <| .signature c
+              return
+          catch _ =>
+            pure () -- identifier might not be a constant but constant + projection
+        let e ← Term.elabTerm term none
+        Term.synthesizeSyntheticMVarsNoPostponing (ignoreStuckTC := ignoreStuckTC)
+        -- Users might be testing out buggy elaborators. Let's typecheck before proceeding:
+        withRef tk <| Meta.check e
+        let e ← Term.levelMVarToParam (← instantiateMVars e)
+        if e.isSyntheticSorry then
           return
-      catch _ => pure ()  -- identifier might not be a constant but constant + projection
-    let e ← Term.elabTerm term none
-    Term.synthesizeSyntheticMVarsNoPostponing (ignoreStuckTC := ignoreStuckTC)
-    -- Users might be testing out buggy elaborators. Let's typecheck before proceeding:
-    withRef tk <| Meta.check e
-    let e ← Term.levelMVarToParam (← instantiateMVars e)
-    if e.isSyntheticSorry then
-      return
-    let type ← inferType e
-    logInfoAt tk m!"{e} : {type}"
-  | _ => throwUnsupportedSyntax
+        let type ← inferType e
+        logInfoAt tk m!"{e} : {type}"
+  | _ =>
+    throwUnsupportedSyntax
 
-@[builtin_command_elab Lean.Parser.Command.check] def elabCheck : CommandElab := elabCheckCore (ignoreStuckTC := true)
+@[builtin_command_elab Lean.Parser.Command.check]
+def elabCheck : CommandElab := elabCheckCore (ignoreStuckTC := true)
 
 declare_command_config_elab elabReduceConfig Command.ReduceConfig
 
-@[builtin_command_elab Lean.reduceCmd] def elabReduce : CommandElab
+@[builtin_command_elab Lean.reduceCmd]
+def elabReduce : CommandElab
   | `(#reduce%$tk $cfg $term) => do
     let cfg ← elabReduceConfig cfg
     go tk term cfg
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 where
   go (tk : Syntax) (term : Syntax) (cfg : Command.ReduceConfig) : CommandElabM Unit :=
-    withoutModifyingEnv <| runTermElabM fun _ => Term.withDeclName `_reduce do
-      let e ← Term.elabTerm term none
-      Term.synthesizeSyntheticMVarsNoPostponing (ignoreStuckTC := cfg.ignoreStuckTC)
-      let e ← instantiateMVars e
-      if cfg.check then
-        -- Users might be testing out buggy elaborators. Let's typecheck before proceeding:
-        withRef tk <| Meta.check e
-      let e ← Term.levelMVarToParam (← instantiateMVars e)
-      withTheReader Core.Context (fun ctx => ctx.setOptions (ctx.options.set `smartUnfolding cfg.smartUnfolding)) do
-        let e ← withTransparency (mode := cfg.transparency) <| reduce e (explicitOnly := !cfg.implicits) (skipProofs := !cfg.proofs) (skipTypes := !cfg.types)
-        logInfoAt tk e
+    withoutModifyingEnv <| runTermElabM fun _ =>
+      Term.withDeclName `_reduce do
+        let e ← Term.elabTerm term none
+        Term.synthesizeSyntheticMVarsNoPostponing (ignoreStuckTC := cfg.ignoreStuckTC)
+        let e ← instantiateMVars e
+        if cfg.check then
+          -- Users might be testing out buggy elaborators. Let's typecheck before proceeding:
+          withRef tk <| Meta.check e
+        let e ← Term.levelMVarToParam (← instantiateMVars e)
+        withTheReader Core.Context
+          (fun ctx => ctx.setOptions (ctx.options.set `smartUnfolding cfg.smartUnfolding))
+          do
+            let e ←
+              withTransparency (mode := cfg.transparency) <|
+                reduce e (explicitOnly := !cfg.implicits) (skipProofs := !cfg.proofs)
+                  (skipTypes := !cfg.types)
+            logInfoAt tk e
 
-def hasNoErrorMessages : CommandElabM Bool := do
-  return !(← get).messages.hasErrors
+def hasNoErrorMessages : CommandElabM Bool := do return !(← get).messages.hasErrors
 
 def failIfSucceeds (x : CommandElabM Unit) : CommandElabM Unit := do
   let resetMessages : CommandElabM MessageLog := do
     let s ← get
-    let messages := s.messages;
-    modify fun s => { s with messages := {} };
+    let messages := s.messages
+    modify fun s => { s with messages := {} }
     pure messages
   let restoreMessages (prevMessages : MessageLog) : CommandElabM Unit := do
     modify fun s => { s with messages := prevMessages ++ s.messages.errorsToInfos }
   let prevMessages ← resetMessages
-  let succeeded ← try
-    x
-    hasNoErrorMessages
-  catch
-    | ex@(Exception.error _ _) => do logException ex; pure false
-    | Exception.internal id _  => do logError (← id.getName); pure false
-  finally
-    restoreMessages prevMessages
+  let succeeded ←
+    try
+      x
+      hasNoErrorMessages
+    catch
+      | ex@(Exception.error _ _) => do logException ex; pure false
+      | Exception.internal id _ => do logError (← id.getName); pure false
+    finally
+      restoreMessages prevMessages
   if succeeded then
     throwError "unexpected success"
 
-@[builtin_command_elab «check_failure»] def elabCheckFailure : CommandElab
+@[builtin_command_elab «check_failure»]
+def elabCheckFailure : CommandElab
   | `(#check_failure $term) => do
     failIfSucceeds <| elabCheckCore (ignoreStuckTC := false) (← `(#check $term))
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
-@[builtin_command_elab «synth»] def elabSynth : CommandElab := fun stx => do
+@[builtin_command_elab «synth»]
+def elabSynth : CommandElab := fun stx => do
   let term := stx[1]
-  withoutModifyingEnv <| runTermElabM fun _ => Term.withDeclName `_synth_cmd do
-    let inst ← Term.elabTerm term none
-    Term.synthesizeSyntheticMVarsNoPostponing
-    let inst ← instantiateMVars inst
-    let val  ← synthInstance inst
-    logInfo val
-    pure ()
+  withoutModifyingEnv <| runTermElabM fun _ =>
+    Term.withDeclName `_synth_cmd do
+      let inst ← Term.elabTerm term none
+      Term.synthesizeSyntheticMVarsNoPostponing
+      let inst ← instantiateMVars inst
+      let val ← synthInstance inst
+      logInfo val
+      pure ()
 
-@[builtin_command_elab «set_option»] def elabSetOption : CommandElab := fun stx => do
+@[builtin_command_elab «set_option»]
+def elabSetOption : CommandElab := fun stx => do
   let (options, decl) ← Elab.elabSetOption stx[1] stx[3]
   withRef stx[1] <| Elab.checkDeprecatedOption (stx[1].getId.eraseMacroScopes) decl
   modify fun s => { s with maxRecDepth := maxRecDepth.get options }
   modifyScope fun scope => { scope with opts := options }
 
-@[builtin_command_elab «unlock_limits»] def elabUnlockLimits : CommandElab := fun _ => do
+@[builtin_command_elab «unlock_limits»]
+def elabUnlockLimits : CommandElab := fun _ => do
   let opts ← getOptions
   let opts := maxHeartbeats.set opts 0
   let opts := maxRecDepth.set opts 0
@@ -534,13 +626,16 @@ def failIfSucceeds (x : CommandElabM Unit) : CommandElabM Unit := do
   modify ({ · with maxRecDepth := 0 })
 
 open Lean.Parser.Command.InternalSyntax in
-@[builtin_macro Lean.Parser.Command.«in»] def expandInCmd : Macro
+@[builtin_macro Lean.Parser.Command.«in»]
+def expandInCmd : Macro
   | `($cmd₁ in%$tk $cmd₂) =>
     -- Limit ref variability for incrementality; see Note [Incremental Macros]
     withRef tk `(section $cmd₁:command $(endLocalScopeSyntax 1):command $cmd₂ end)
-  | _                 => Macro.throwUnsupported
+  | _ =>
+    Macro.throwUnsupported
 
-@[builtin_command_elab Parser.Command.addDocString] def elabAddDeclDoc : CommandElab := fun stx => do
+@[builtin_command_elab Parser.Command.addDocString]
+def elabAddDeclDoc : CommandElab := fun stx => do
   match stx with
   | `($doc:docComment add_decl_doc $id) =>
     let declName ← liftCoreM <| realizeGlobalConstNoOverloadWithInfo id
@@ -552,9 +647,11 @@ open Lean.Parser.Command.InternalSyntax in
       -- in particular `Quot.mk` et al which are added by `init_quot`
       addDeclarationRangesFromSyntax declName stx id
     runTermElabM fun _ => addDocString declName (mkNullNode #[]) doc
-  | _ => throwUnsupportedSyntax
+  | _ =>
+    throwUnsupportedSyntax
 
-@[builtin_command_elab Lean.Parser.Command.include] def elabInclude : CommandElab
+@[builtin_command_elab Lean.Parser.Command.include]
+def elabInclude : CommandElab
   | `(Lean.Parser.Command.include| include $ids*) => do
     let sc ← getScope
     let vars ← sc.varDecls.flatMapM getBracketedBinderIds
@@ -564,75 +661,94 @@ open Lean.Parser.Command.InternalSyntax in
         uids := uids.push sc.varUIds[idx]!
       else
         throwError "invalid 'include', variable `{id}` has not been declared in the current scope"
-    modifyScope fun sc => { sc with
+    modifyScope fun sc => {
+      sc with
       includedVars := sc.includedVars ++ uids.toList
-      omittedVars := sc.omittedVars.filter (!uids.contains ·) }
-  | _ => throwUnsupportedSyntax
+      omittedVars := sc.omittedVars.filter (! uids.contains ·)
+    }
+  | _ =>
+    throwUnsupportedSyntax
 
-@[builtin_command_elab Lean.Parser.Command.omit] def elabOmit : CommandElab
+@[builtin_command_elab Lean.Parser.Command.omit]
+def elabOmit : CommandElab
   | `(Lean.Parser.Command.omit| omit $omits*) => do
     -- TODO: this really shouldn't have to re-elaborate section vars... they should come
     -- pre-elaborated
-    let omittedVars ← runTermElabM fun vars => do
-      Term.synthesizeSyntheticMVarsNoPostponing
-      -- We don't want to store messages produced when elaborating `(getVarDecls s)` because they have already been saved when we elaborated the `variable`(s) command.
-      -- So, we use `Core.resetMessageLog`.
-      Core.resetMessageLog
-      -- resolve each omit to variable user name or type pattern
-      let elaboratedOmits : Array (Sum Name Expr) ← omits.mapM fun
-        | `(ident| $id:ident) => pure <| Sum.inl id.getId
-        | `(Lean.Parser.Term.instBinder| [$id : $_]) => pure <| Sum.inl id.getId
-        | `(Lean.Parser.Term.instBinder| [$ty]) =>
-          Sum.inr <$> Term.withoutErrToSorry (Term.elabTermAndSynthesize ty none)
-        | _ => throwUnsupportedSyntax
-      -- check that each omit is actually used in the end
-      let mut omitsUsed := omits.map fun _ => false
-      let mut omittedVars := #[]
-      let mut revSectionFVars : Std.HashMap FVarId Name := {}
-      for (uid, var) in (← read).sectionFVars do
-        revSectionFVars := revSectionFVars.insert var.fvarId! uid
-      for var in vars do
-        let ldecl ← var.fvarId!.getDecl
-        if let some idx := (← elaboratedOmits.findIdxM? fun
-            | .inl id => return ldecl.userName == id
-            | .inr ty => do
-              let mctx ← getMCtx
-              isDefEq ty ldecl.type <* setMCtx mctx) then
-          if let some uid := revSectionFVars[var.fvarId!]? then
-            omittedVars := omittedVars.push uid
-            omitsUsed := omitsUsed.set! idx true
-          else
-            throwError "invalid 'omit', `{ldecl.userName}` has not been declared in the current scope"
-      for o in omits, used in omitsUsed do
-        unless used do
-          throwError "`{o}` did not match any variables in the current scope"
-      return omittedVars
-    modifyScope fun sc => { sc with
+    let omittedVars ←
+      runTermElabM fun vars => do
+        Term.synthesizeSyntheticMVarsNoPostponing
+        -- We don't want to store messages produced when elaborating `(getVarDecls s)` because they have already been saved when we elaborated the `variable`(s) command.
+        -- So, we use `Core.resetMessageLog`.
+        Core.resetMessageLog
+        -- resolve each omit to variable user name or type pattern
+        let elaboratedOmits : Array (Sum Name Expr) ←
+          omits.mapM fun
+            | `(ident| $id:ident) =>
+              pure <| Sum.inl id.getId
+            | `(Lean.Parser.Term.instBinder| [$id : $_]) =>
+              pure <| Sum.inl id.getId
+            | `(Lean.Parser.Term.instBinder| [$ty]) =>
+              Sum.inr <$> Term.withoutErrToSorry (Term.elabTermAndSynthesize ty none)
+            | _ =>
+              throwUnsupportedSyntax
+        -- check that each omit is actually used in the end
+        let mut omitsUsed := omits.map fun _ => false
+        let mut omittedVars := #[]
+        let mut revSectionFVars : Std.HashMap FVarId Name := {}
+        for (uid, var) in (← read).sectionFVars do
+          revSectionFVars := revSectionFVars.insert var.fvarId! uid
+        for var in vars do
+          let ldecl ← var.fvarId!.getDecl
+          if let some idx :=
+              (← elaboratedOmits.findIdxM? fun
+                | .inl id =>
+                  return ldecl.userName == id
+                | .inr ty => do
+                  let mctx ← getMCtx
+                  isDefEq ty ldecl.type <* setMCtx mctx) then
+            if let some uid := revSectionFVars[var.fvarId!]? then
+              omittedVars := omittedVars.push uid
+              omitsUsed := omitsUsed.set! idx true
+            else
+              throwError
+                "invalid 'omit', `{ldecl.userName}` has not been declared in the current scope"
+        for o in omits, used in omitsUsed do
+          unless used do
+            throwError "`{o}` did not match any variables in the current scope"
+        return omittedVars
+    modifyScope fun sc => {
+      sc with
       omittedVars := sc.omittedVars ++ omittedVars.toList
-      includedVars := sc.includedVars.filter (!omittedVars.contains ·) }
-  | _ => throwUnsupportedSyntax
+      includedVars := sc.includedVars.filter (! omittedVars.contains ·)
+    }
+  | _ =>
+    throwUnsupportedSyntax
 
-@[builtin_command_elab version] def elabVersion : CommandElab := fun _ => do
+@[builtin_command_elab version]
+def elabVersion : CommandElab := fun _ => do
   let mut target := System.Platform.target
   if target.isEmpty then target := "unknown"
   -- Only one should be set, but good to know if multiple are set in error.
   let platforms :=
     (if System.Platform.isWindows then [" Windows"] else [])
-    ++ (if System.Platform.isOSX then [" macOS"] else [])
-    ++ (if System.Platform.isLinux then [" Linux"] else [])
-    ++ (if System.Platform.isEmscripten then [" Emscripten"] else [])
-  logInfo m!"Lean {Lean.versionString}\nTarget: {target}{String.join platforms}"
+      ++ (if System.Platform.isOSX then [" macOS"] else [])
+      ++ (if System.Platform.isLinux then [" Linux"] else [])
+      ++ (if System.Platform.isEmscripten then [" Emscripten"] else [])
+  logInfo m!"Lean {Lean.versionString}\
+    \nTarget: {target}{String.join platforms}"
 
-@[builtin_command_elab Parser.Command.exit] def elabExit : CommandElab := fun _ =>
-  logWarning "using 'exit' to interrupt Lean"
+@[builtin_command_elab Parser.Command.exit]
+def elabExit : CommandElab := fun _ => logWarning "using 'exit' to interrupt Lean"
 
-@[builtin_command_elab Parser.Command.import] def elabImport : CommandElab := fun _ =>
+@[builtin_command_elab Parser.Command.import]
+def elabImport : CommandElab := fun _ =>
   throwError "invalid 'import' command, it must be used in the beginning of the file"
 
-@[builtin_command_elab Parser.Command.eoi] def elabEoi : CommandElab := fun _ =>
-  return
+@[builtin_command_elab Parser.Command.eoi]
+def elabEoi : CommandElab := fun _ => return
 
-@[builtin_command_elab Parser.Command.where] def elabWhere : CommandElab := fun _ => do
+@[builtin_command_elab Parser.Command.where]
+def elabWhere : CommandElab := fun _ => do
   let scope ← getScope
   let mut msg : Array MessageData := #[]
   let isExpose := scope.attrs.any (· matches `(attrInstance| expose))
@@ -642,7 +758,9 @@ open Lean.Parser.Command.InternalSyntax in
     let publicTk? := if scope.isPublic then some Syntax.missing else none
     let ncTk? := if scope.isNoncomputable then some Syntax.missing else none
     let metaTk? := if scope.isMeta then some Syntax.missing else none
-    msg := msg.push <| ← `(Parser.Command.section| $[@[expose%$expTk?]]? $[public%$publicTk?]? $[noncomputable%$ncTk?]? $[meta%$metaTk?]? section)
+    msg :=
+      msg.push <|
+        ← `(Parser.Command.section| $[@[expose%$expTk?]]? $[public%$publicTk?]? $[noncomputable%$ncTk?]? $[meta%$metaTk?]? section)
   -- Namespace
   if !scope.currNamespace.isAnonymous then
     msg := msg.push <| ← `(command| namespace $(mkIdent scope.currNamespace))
@@ -655,14 +773,18 @@ open Lean.Parser.Command.InternalSyntax in
     msg := msg.push <| ← `(command| universe $levels.toArray*)
   -- Variables
   if !scope.varDecls.isEmpty then
-    let varDecls : Array (TSyntax `Lean.Parser.Term.bracketedBinder) := scope.varDecls.map (⟨·.raw.unsetTrailing⟩)
+    let varDecls : Array (TSyntax `Lean.Parser.Term.bracketedBinder) :=
+      scope.varDecls.map (⟨·.raw.unsetTrailing⟩)
     msg := msg.push <| ← `(command| variable $varDecls*)
   -- Included variables
   if !scope.includedVars.isEmpty then
-    msg := msg.push <| ← `(command| include $(scope.includedVars.toArray.map (mkIdent ·.eraseMacroScopes))*)
+    msg :=
+      msg.push <|
+        ← `(command| include $(scope.includedVars.toArray.map (mkIdent ·.eraseMacroScopes))*)
   -- Omitted variables
   if !scope.omittedVars.isEmpty then
-    msg := msg.push <| ← `(command| omit $(scope.omittedVars.toArray.map (mkIdent ·.eraseMacroScopes))*)
+    msg :=
+      msg.push <| ← `(command| omit $(scope.omittedVars.toArray.map (mkIdent ·.eraseMacroScopes))*)
   -- Options
   if let some optionsMsg ← describeOptions scope.opts then
     msg := msg.push optionsMsg
@@ -680,7 +802,8 @@ where
   describeOpenDecls (ds : List OpenDecl) : CommandElabM (Option MessageData) := do
     let mut lines : Array MessageData := #[]
     let mut simple : Array Name := #[]
-    let flush (lines : Array MessageData) (simple : Array Name) : CommandElabM (Array MessageData × Array Name) := do
+    let flush (lines : Array MessageData) (simple : Array Name)
+        : CommandElabM (Array MessageData × Array Name) := do
       if simple.isEmpty then
         return (lines, simple)
       else
@@ -691,13 +814,15 @@ where
         (lines, simple) ← flush lines simple
         let ns := decl.getPrefix
         let «from» := Name.mkSimple decl.getString!
-        lines := lines.push <| ← `(command| open $(mkIdent ns) renaming $(mkIdent «from») → $(mkIdent id))
+        lines :=
+          lines.push <| ← `(command| open $(mkIdent ns) renaming $(mkIdent «from») → $(mkIdent id))
       | .simple ns ex =>
         if ex == [] then
           simple := simple.push ns
         else
           (lines, simple) ← flush lines simple
-          lines := lines.push <| ← `(command| open $(mkIdent ns) hiding $[$(ex.toArray.map mkIdent)]*)
+          lines :=
+            lines.push <| ← `(command| open $(mkIdent ns) hiding $[$(ex.toArray.map mkIdent)]*)
     (lines, _) ← flush lines simple
     return if lines.isEmpty then none else MessageData.joinSep lines.toList "\n"
 
@@ -711,46 +836,48 @@ where
       let (isSet, isUnknown) :=
         match decls.find? name with
         | some decl => (decl.defValue != val, false)
-        | none      => (true, true)
+        | none => (true, true)
       if isSet then
         let cmd : TSyntax `command ←
           match val with
-          | .ofBool true  => `(set_option $(mkIdent name) true)
+          | .ofBool true => `(set_option $(mkIdent name) true)
           | .ofBool false => `(set_option $(mkIdent name) false)
           | .ofString str => `(set_option $(mkIdent name) $(Syntax.mkStrLit str))
-          | .ofNat n      => `(set_option $(mkIdent name) $(Syntax.mkNatLit n))
-          | _             => `(set_option $(mkIdent name) 0 /- unrepresentable value -/)
+          | .ofNat n => `(set_option $(mkIdent name) $(Syntax.mkNatLit n))
+          | _ => `(set_option $(mkIdent name) 0 /- unrepresentable value -/)
         if isUnknown then
           lines := lines.push m!"-- {cmd} -- unknown option"
         else
           lines := lines.push cmd
     return if lines.isEmpty then none else MessageData.joinSep lines.toList "\n"
 
-@[builtin_command_elab Parser.Command.withExporting] def elabWithExporting : CommandElab
-  | `(Parser.Command.withExporting| #with_exporting $cmd) =>
-    withExporting do
-      elabCommand cmd
+@[builtin_command_elab Parser.Command.withExporting]
+def elabWithExporting : CommandElab
+  | `(Parser.Command.withExporting| #with_exporting $cmd) => withExporting do elabCommand cmd
   | _ => throwUnsupportedSyntax
 
-@[builtin_command_elab Parser.Command.dumpAsyncEnvState] def elabDumpAsyncEnvState : CommandElab :=
-  fun _ => do
-    let env ← getEnv
-    IO.eprintln (← env.dbgFormatAsyncState)
+@[builtin_command_elab Parser.Command.dumpAsyncEnvState]
+def elabDumpAsyncEnvState : CommandElab := fun _ => do
+  let env ← getEnv
+  IO.eprintln (← env.dbgFormatAsyncState)
 
 /-- Elaborate `deprecated_module`, marking the current module as deprecated. -/
 @[builtin_command_elab Parser.Command.deprecated_module]
 def elabDeprecatedModule : CommandElab
-  | stx@`(Parser.Command.deprecated_module| deprecated_module $[$msg?]? $[(since := $since?)]?) => do
-    let message? := msg?.map TSyntax.getString
-    let since? := since?.map TSyntax.getString
-    if (deprecatedModuleExt.getState (← getEnv)).isSome then
-      logWarning "module is already marked as deprecated"
-    if since?.isNone then
-      logWarning <| m!"`deprecated_module` should specify the date or library version \
-        at which the deprecation was introduced, using `(since := \"...\")`" ++
-        (← liftCoreM <| Linter.mkSinceHint stx)
-    modifyEnv fun env => env.setDeprecatedModule (some { message?, since? })
-  | _ => throwUnsupportedSyntax
+  | stx@`(Parser.Command.deprecated_module| deprecated_module $[$msg?]? $[(since := $since?)]?) =>
+    do
+      let message? := msg?.map TSyntax.getString
+      let since? := since?.map TSyntax.getString
+      if (deprecatedModuleExt.getState (← getEnv)).isSome then
+        logWarning "module is already marked as deprecated"
+      if since?.isNone then
+        logWarning <|
+          m!"`deprecated_module` should specify the date or library version \
+              at which the deprecation was introduced, using `(since := \"...\")`"
+            ++ (← liftCoreM <| Linter.mkSinceHint stx)
+      modifyEnv fun env => env.setDeprecatedModule (some { message?, since? })
+  | _ =>
+    throwUnsupportedSyntax
 
 /-- Elaborate `#show_deprecated_modules`, displaying all deprecated modules. -/
 @[builtin_command_elab Parser.Command.showDeprecatedModules]
@@ -760,21 +887,27 @@ def elabShowDeprecatedModules : CommandElab := fun _ => do
   for h : idx in [:env.header.moduleNames.size] do
     if let some entry := env.getDeprecatedModuleByIdx? idx then
       let modName := env.header.moduleNames[idx]
-      let msg := match entry.message? with
+      let msg :=
+        match entry.message? with
         | some str => s!"message '{str}'"
         | none => "no message"
-      let replacements := env.header.moduleData[idx]!.imports.filter fun imp =>
-        imp.module != `Init
-      parts := parts.push s!"'{modName}' deprecates to\n{replacements.map (·.module)}\nwith {msg}\n"
+      let replacements := env.header.moduleData[idx]!.imports.filter fun imp => imp.module != `Init
+      parts :=
+        parts.push s!"'{modName}' deprecates to\
+          \n{replacements.map (·.module)}\
+          \nwith {msg}\n"
   -- Also show the current module's deprecation if set.
   if let some entry := deprecatedModuleExt.getState env then
     let modName := env.mainModule
-    let msg := match entry.message? with
+    let msg :=
+      match entry.message? with
       | some str => s!"message '{str}'"
       | none => "no message"
-    let replacements := env.imports.filter fun imp =>
-      imp.module != `Init
-    parts := parts.push s!"'{modName}' deprecates to\n{replacements.map (·.module)}\nwith {msg}\n"
+    let replacements := env.imports.filter fun imp => imp.module != `Init
+    parts :=
+      parts.push s!"'{modName}' deprecates to\
+        \n{replacements.map (·.module)}\
+        \nwith {msg}\n"
   logInfo (String.intercalate "\n" parts.toList)
 
 open Parser.Term in
@@ -782,51 +915,62 @@ open Parser.Term in
 Defines the `Macro` given by the alternatives `alts` of a `deprecated_syntax` command for `kind` and
 returns its name. Throws if the alternatives are invalid, so that the command has no effect.
 -/
-private def elabDeprecatedSyntaxReplacement (kind : SyntaxNodeKind) (alts : Array Syntax) :
-    CommandElabM Name := withRef (mkNullNode alts) do
-  let alts : Array (TSyntax ``matchAlt) := alts.map (⟨·⟩)
-  let catchAllAlt? : Option (Term × Term) := do
-    let #[alt] := alts | none
-    let `(matchAltExpr| | $pat:term => $rhs) := alt | none
-    guard <| pat.raw.isIdent || pat.raw.isOfKind ``hole
-    return (pat, rhs)
-  let body ← if let some (pat, rhs) := catchAllAlt? then `(fun $pat:term => $rhs) else
-    for alt in alts do
-      if let `(matchAltExpr| | $pat:term => $_) := alt then
-        unless pat.raw.isQuot do
-          throwErrorAt pat "invalid deprecated_syntax alternative, expected a syntax quotation \
-            pattern or a single identifier or `_` pattern"
-    mkMacroRulesFun "deprecated_syntax" kind alts
-  let id ← mkAuxDefName (`deprecatedSyntax ++ kind)
-  withExporting do
-    elabCommand <| ← `(public meta def $(mkIdentFrom (← getRef) id):ident : Lean.Macro := $body)
-  let declName := (← getCurrNamespace) ++ id
-  let env ← getEnv
-  -- Elaboration and compilation errors of the alternatives have already been reported
-  let some info := env.find? declName | throwAbortCommand
-  if info.value?.any (·.hasSyntheticSorry) || hasCompileError env declName then
-    throwAbortCommand
-  if (IR.getSorryDep env declName).isSome then
-    throwError "invalid deprecated_syntax alternatives, they must not use `sorry`"
-  -- Section variables used by the alternatives become parameters of the definition
-  unless info.type.isConstOf ``Lean.Macro do
-    throwError "invalid deprecated_syntax alternatives, they must not refer to section variables"
-  return declName
+private def elabDeprecatedSyntaxReplacement (kind : SyntaxNodeKind) (alts : Array Syntax)
+    : CommandElabM Name :=
+  withRef (mkNullNode alts) do
+    let alts : Array (TSyntax ``matchAlt) := alts.map (⟨·⟩)
+    let catchAllAlt? : Option (Term × Term) := do
+      let #[alt] := alts
+        | none
+      let `(matchAltExpr| | $pat:term => $rhs) := alt
+        | none
+      guard <| pat.raw.isIdent || pat.raw.isOfKind ``hole
+      return (pat, rhs)
+    let body ←
+      if let some (pat, rhs) := catchAllAlt? then
+        `(fun $pat:term => $rhs)
+      else
+        for alt in alts do
+          if let `(matchAltExpr| | $pat:term => $_) := alt then
+            unless pat.raw.isQuot do
+              throwErrorAt pat
+                "invalid deprecated_syntax alternative, expected a syntax quotation \
+                  pattern or a single identifier or `_` pattern"
+        mkMacroRulesFun "deprecated_syntax" kind alts
+    let id ← mkAuxDefName (`deprecatedSyntax ++ kind)
+    withExporting do
+      elabCommand <| ← `(public meta def $(mkIdentFrom (← getRef) id):ident : Lean.Macro := $body)
+    let declName := (← getCurrNamespace) ++ id
+    let env ← getEnv
+    -- Elaboration and compilation errors of the alternatives have already been reported
+    let some info := env.find? declName
+      | throwAbortCommand
+    if info.value?.any (·.hasSyntheticSorry) || hasCompileError env declName then
+      throwAbortCommand
+    if (IR.getSorryDep env declName).isSome then
+      throwError "invalid deprecated_syntax alternatives, they must not use `sorry`"
+    -- Section variables used by the alternatives become parameters of the definition
+    unless info.type.isConstOf ``Lean.Macro do
+      throwError "invalid deprecated_syntax alternatives, they must not refer to section variables"
+    return declName
 
-@[builtin_command_elab Parser.Command.deprecatedSyntax] def elabDeprecatedSyntax : CommandElab := fun stx => do
+@[builtin_command_elab Parser.Command.deprecatedSyntax]
+def elabDeprecatedSyntax : CommandElab := fun stx => do
   let id := stx[1]
   let kind ← liftCoreM <| checkSyntaxNodeKindAtNamespaces id.getId (← getCurrNamespace)
   let text? := if stx[2].isNone then none else stx[2][0].isStrLit?
   let since? := if stx[3].isNone then none else stx[3][3].isStrLit?
   if since?.isNone then
-    logWarning <| m!"`deprecated_syntax` should specify the date or library version at which the \
-      deprecation was introduced, using `(since := \"...\")`" ++
-      (← liftCoreM <| Linter.mkSinceHint (mkNullNode (stx.getArgs.extract 0 4)))
-  let replacement? ← if stx[4].isNone then pure none else
-    some <$> elabDeprecatedSyntaxReplacement kind stx[4][0][0].getArgs
-  modifyEnv fun env =>
-    deprecatedSyntaxExt.addEntry env { kind, text?, since? }
-  modifyEnv fun env =>
-    deprecatedSyntaxReplacementExt.addEntry env (kind, replacement?)
+    logWarning <|
+      m!"`deprecated_syntax` should specify the date or library version at which the \
+          deprecation was introduced, using `(since := \"...\")`"
+        ++ (← liftCoreM <| Linter.mkSinceHint (mkNullNode (stx.getArgs.extract 0 4)))
+  let replacement? ←
+    if stx[4].isNone then
+      pure none
+    else
+      some <$> elabDeprecatedSyntaxReplacement kind stx[4][0][0].getArgs
+  modifyEnv fun env => deprecatedSyntaxExt.addEntry env { kind, text?, since? }
+  modifyEnv fun env => deprecatedSyntaxReplacementExt.addEntry env (kind, replacement?)
 
 end Lean.Elab.Command

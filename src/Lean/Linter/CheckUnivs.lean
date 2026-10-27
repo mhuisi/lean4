@@ -28,9 +28,10 @@ themselves; the fix is to provide the universe level explicitly.
 -/
 register_builtin_option linter.checkUnivs : Bool := {
   defValue := true
-  descr := "enable the `checkUnivs` linter, which warns when a declaration has a universe \
-    parameter that only ever occurs in a `max u v` together with another parameter, never \
-    on its own."
+  descr :=
+    "enable the `checkUnivs` linter, which warns when a declaration has a universe \
+      parameter that only ever occurs in a `max u v` together with another parameter, never \
+      on its own."
 }
 
 namespace CheckUnivs
@@ -47,15 +48,17 @@ artifact of referring to `T` and must not count as `u` and `v` occurring on thei
 -/
 private def univParamsGrouped (e : Expr) (selfNames : NameSet) : Std.HashSet (Array Name) :=
   runST fun _ =>
-    let go : StateRefT (Std.HashSet (Array Name)) (ST _) Unit := e.forEach fun
-      | .sort u =>
-        modify (·.insert (CollectLevelParams.visitLevel u {}).params)
-      | .const n us => do
-        if selfNames.contains n then return
-        if let .str p s := n then
-          if selfNames.contains p && s.startsWith "proof_" then return
-        modify (us.foldl (·.insert <| CollectLevelParams.visitLevel · {} |>.params))
-      | _ => pure ()
+    let go : StateRefT (Std.HashSet (Array Name)) (ST _) Unit :=
+      e.forEach fun
+        | .sort u =>
+          modify (·.insert (CollectLevelParams.visitLevel u {}).params)
+        | .const n us => do
+          if selfNames.contains n then return
+          if let .str p s := n then
+            if selfNames.contains p && s.startsWith "proof_" then return
+          modify (us.foldl (·.insert <| CollectLevelParams.visitLevel · {} |>.params))
+        | _ =>
+          pure ()
     Prod.snd <$> go.run {}
 
 /--
@@ -64,43 +67,48 @@ The good parameters are the parameters that occur somewhere in the set as a sing
 All other parameters in the set are bad.
 -/
 private partial def badParams (l : Array (Array Name)) : Array Name :=
-  let goodLevels := l.filterMap fun
-    | #[u] => some u
-    | _ => none
+  let goodLevels :=
+    l.filterMap fun
+      | #[u] => some u
+      | _ => none
   if goodLevels.isEmpty then
     l.flatten.foldl (init := #[]) fun acc x => if acc.contains x then acc else acc.push x
   else
-    badParams <| l.map (·.filter (!goodLevels.contains ·))
+    badParams <| l.map (·.filter (! goodLevels.contains ·))
 
 @[inherit_doc linter.checkUnivs]
-def checkUnivsLinter : Linter where run := withSetOptionIn fun _ => do
-  unless getLinterValue linter.checkUnivs (← getLinterOptions) do return
-  if (← get).messages.hasErrors then return
-  let env ← getEnv
-  let mut seen : NameSet := {}
-  for t in ← getInfoTrees do
-    let decls := getNewDecls t
-    for declName in decls do
-      if seen.contains declName then continue
-      seen := seen.insert declName
-      let some info := env.find? declName | continue
-      -- For an inductive, take constructors into account as well
-      let self : NameSet :=
-        match info with
-        | .inductInfo iv => (.ofList iv.all : NameSet).union (.ofList decls : NameSet)
-        | _              => (.ofList decls)
-      let mut grouped := univParamsGrouped info.type self
-      if let .inductInfo iv := info then
-        for ctor in iv.ctors do
-          if let some cv := env.find? ctor then
-            grouped := (univParamsGrouped cv.type self).toArray.foldl (·.insert ·) grouped
-      let bad := badParams grouped.toArray
-      unless bad.isEmpty do
-        let univs := MessageData.joinSep (bad.toList.map fun u => m!"`{u}`") ", "
-        logLintIf linter.checkUnivs (← getRef)
-          m!"`{.ofConstName declName}`: universes {univs} only occur together. \
-            This usually means there is a `max` expression in the type where none of these \
-            universes appear on their own."
+def checkUnivsLinter : Linter where
+  run :=
+    withSetOptionIn fun _ => do
+      unless getLinterValue linter.checkUnivs (← getLinterOptions) do
+        return
+      if (← get).messages.hasErrors then return
+      let env ← getEnv
+      let mut seen : NameSet := {}
+      for t in ← getInfoTrees do
+        let decls := getNewDecls t
+        for declName in decls do
+          if seen.contains declName then continue
+          seen := seen.insert declName
+          let some info := env.find? declName
+            | continue
+          -- For an inductive, take constructors into account as well
+          let self : NameSet :=
+            match info with
+            | .inductInfo iv => (.ofList iv.all : NameSet).union (.ofList decls : NameSet)
+            | _ => (.ofList decls)
+          let mut grouped := univParamsGrouped info.type self
+          if let .inductInfo iv := info then
+            for ctor in iv.ctors do
+              if let some cv := env.find? ctor then
+                grouped := (univParamsGrouped cv.type self).toArray.foldl (·.insert ·) grouped
+          let bad := badParams grouped.toArray
+          unless bad.isEmpty do
+            let univs := MessageData.joinSep (bad.toList.map fun u => m!"`{u}`") ", "
+            logLintIf linter.checkUnivs (← getRef)
+              m!"`{.ofConstName declName}`: universes {univs} only occur together. \
+                This usually means there is a `max` expression in the type where none of these \
+                universes appear on their own."
 
 builtin_initialize addLinter checkUnivsLinter
 

@@ -27,7 +27,9 @@ def ofScientific (spec : Format) (m : Nat) (e : Int) : UnpackedFloat :=
   else if e < -((2 ^ spec.exponentBits : Int) + m.log2) then
     .zero .positive
   else if 0 ≤ e then
-    mul spec (.finite .positive (m <<< spec.mantissaBits) (-spec.mantissaBits) (by simpa [Nat.pos_iff_ne_zero]))
+    mul spec
+      (.finite .positive (m <<< spec.mantissaBits) (-spec.mantissaBits)
+        (by simpa [Nat.pos_iff_ne_zero]))
       (.finite .positive (10 ^ e.toNat) 0 (Nat.pow_pos (by decide)))
   else
     div spec (.finite .positive m 0 (Nat.pos_iff_ne_zero.2 hm))

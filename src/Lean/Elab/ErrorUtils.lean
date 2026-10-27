@@ -27,18 +27,30 @@ small ordinals (0 through 10 become "zeroth" through "tenth") and postfixes for 
 (212 becomes "212th" and 1292 becomes "1292nd").
 -/
 def Nat.toOrdinal : Nat -> String
-  | 0 => "zeroth"
-  | 1 => "first"
-  | 2 => "second"
-  | 3 => "third"
-  | 4 => "fourth"
-  | 5 => "fifth"
-  | 6 => "sixth"
-  | 7 => "seventh"
-  | 8 => "eighth"
-  | 9 => "ninth"
-  | 10 => "tenth"
-  | n => if n % 100 > 10 && n % 100 < 20 then
+  | 0 =>
+    "zeroth"
+  | 1 =>
+    "first"
+  | 2 =>
+    "second"
+  | 3 =>
+    "third"
+  | 4 =>
+    "fourth"
+  | 5 =>
+    "fifth"
+  | 6 =>
+    "sixth"
+  | 7 =>
+    "seventh"
+  | 8 =>
+    "eighth"
+  | 9 =>
+    "ninth"
+  | 10 =>
+    "tenth"
+  | n =>
+    if n % 100 > 10 && n % 100 < 20 then
       s!"{n}th"
     else if n % 10 == 2 then
       s!"{n}nd"
@@ -76,7 +88,7 @@ def List.toOxford [Append α] [HasOxfordStrings α] : List α -> α
   | [] => HasOxfordStrings.emp
   | [a] => a
   | [a, b] => a ++ HasOxfordStrings.and ++ b
-  | [a, b, c] => a ++ HasOxfordStrings.comma ++ b  ++ HasOxfordStrings.commaAnd ++ c
+  | [a, b, c] => a ++ HasOxfordStrings.comma ++ b ++ HasOxfordStrings.commaAnd ++ c
   | a :: as => a ++ HasOxfordStrings.comma ++ toOxford as
 
 class HasPluralDefaults α where
@@ -101,7 +113,9 @@ Give alternative forms of a string if the `count` is 1 or not.
  - `(1).plural "it" "they" == "it"`
  - `(2).plural "it" "they" == "they"`
 -/
-def Nat.plural [HasPluralDefaults α] (count : Nat)
+def Nat.plural
+    [HasPluralDefaults α]
+    (count : Nat)
     (singular : α := HasPluralDefaults.singular)
     (plural : α := HasPluralDefaults.plural singular) :=
   if count = 1 then

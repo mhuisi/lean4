@@ -15,10 +15,13 @@ namespace Lean.Elab
 
 open Meta
 
-def Term.expandDeclId (currNamespace : Name) (currLevelNames : List Name) (declId : Syntax) (modifiers : Modifiers) : TermElabM ExpandDeclIdResult := do
+def Term.expandDeclId
+    (currNamespace : Name) (currLevelNames : List Name) (declId : Syntax) (modifiers : Modifiers)
+    : TermElabM ExpandDeclIdResult := do
   let r ← Elab.expandDeclId currNamespace currLevelNames declId modifiers
   if (← read).sectionVars.contains r.shortName then
-    throwError "invalid declaration name `{r.shortName}`, there is a section variable with the same name"
+    throwError
+      "invalid declaration name `{r.shortName}`, there is a section variable with the same name"
   return r
 
 builtin_initialize
@@ -35,9 +38,11 @@ unset so as to prevent accidental, incorrect reuse.
 -/
 @[builtin_doc]
 builtin_initialize incrementalAttr : TagAttribute ←
-  registerTagAttribute `incremental "Marks an elaborator (tactic or command, currently) as \
-supporting incremental elaboration. For unmarked elaborators, the corresponding snapshot bundle \
-field in the elaboration context is unset so as to prevent accidental, incorrect reuse."
+  registerTagAttribute `incremental
+    "Marks an elaborator (tactic or command, currently) as \
+      supporting incremental elaboration. For unmarked elaborators, the corresponding snapshot \
+      bundle \
+      field in the elaboration context is unset so as to prevent accidental, incorrect reuse."
 
 builtin_initialize builtinIncrementalElabs : IO.Ref NameSet ← IO.mkRef {}
 
@@ -47,23 +52,23 @@ def addBuiltinIncrementalElab (decl : Name) : IO Unit := do
 @[inherit_doc incrementalAttr, builtin_doc]
 builtin_initialize
   registerBuiltinAttribute {
-    name            := `builtin_incremental
-    descr           := s!"(builtin) {incrementalAttr.attr.descr}"
+    name := `builtin_incremental
+    descr := s!"(builtin) {incrementalAttr.attr.descr}"
     applicationTime := .afterCompilation
-    add             := fun decl stx kind => do
+    add := fun decl stx kind => do
       Attribute.Builtin.ensureNoArgs stx
-      unless kind == AttributeKind.global do throwAttrMustBeGlobal `builtin_incremental kind
+      unless kind == AttributeKind.global do
+        throwAttrMustBeGlobal `builtin_incremental kind
       declareBuiltin decl <| mkApp (mkConst ``addBuiltinIncrementalElab) (toExpr decl)
   }
 
 /-- Checks whether a declaration is annotated with `[builtin_incremental]` or `[incremental]`. -/
 def isIncrementalElab [Monad m] [MonadEnv m] [MonadLiftT IO m] (decl : Name) : m Bool :=
-  (return (← builtinIncrementalElabs.get (m := IO)).contains decl) <||>
-  (return incrementalAttr.hasTag (← getEnv) decl)
+  (return (← builtinIncrementalElabs.get (m := IO)).contains decl)
+    <||> (return incrementalAttr.hasTag (← getEnv) decl)
 
 export Term (TermElabM)
 
-builtin_initialize
-  registerTraceClass `Elab.implicitForall
+builtin_initialize registerTraceClass `Elab.implicitForall
 
 end Lean.Elab

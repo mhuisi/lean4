@@ -43,7 +43,7 @@ inductive ArgKind where
   | value
   /-- `isProof` decides whether the argument is visited. -/
   | unknown
-  deriving Inhabited
+deriving Inhabited
 
 /--
 The `ArgKind` of the first `n` parameters of `fn`, from the binders of its type, which is unfolded
@@ -63,16 +63,23 @@ def argKinds (fn : Expr) (n : Nat) : MetaM (Array ArgKind) := do
         try
           match ← whnfD (← inferType decl.type) with
           | .sort u =>
-            return if u.isAlwaysZero then .proof else if u.isNeverZero then .value else .unknown
-          | _ => return .unknown
+            return
+              if u.isAlwaysZero then
+                .proof
+              else if u.isNeverZero then
+                .value
+              else
+                .unknown
+          | _ =>
+            return .unknown
         catch _ =>
           return .unknown
 
 unsafe structure State where
- visited       : PtrSet Expr := mkPtrSet
- visitedConsts : NameHashSet := {}
- /-- `argKinds` of constant heads, by head and number of arguments. -/
- kinds         : Std.HashMap (Expr × Nat) (Array ArgKind) := {}
+  visited : PtrSet Expr := mkPtrSet
+  visitedConsts : NameHashSet := {}
+  /-- `argKinds` of constant heads, by head and number of arguments. -/
+  kinds : Std.HashMap (Expr × Nat) (Array ArgKind) := {}
 
 unsafe abbrev FoldM := StateT State MetaM
 
@@ -101,21 +108,20 @@ unsafe def fold {α : Type} (f : Name → α → MetaM α) (e : Expr) (acc : α)
         -- Don't visit proofs.
         return acc
     match e with
-    | .forallE n d b bi  =>
+    | .forallE n d b bi =>
       let r ← visit d acc (mayBeProof := false)
-      withLocalDecl n bi d fun x =>
-        visit (b.instantiate1 x) r (mayBeProof := false)
-    | .lam n d b bi      =>
+      withLocalDecl n bi d fun x => visit (b.instantiate1 x) r (mayBeProof := false)
+    | .lam n d b bi =>
       let r ← visit d acc (mayBeProof := false)
-      withLocalDecl n bi d fun x =>
-        visit (b.instantiate1 x) r (mayBeProof := false)
-    | .mdata _ b         => visit b acc mayBeProof
-    | .letE n t v b nondep    =>
+      withLocalDecl n bi d fun x => visit (b.instantiate1 x) r (mayBeProof := false)
+    | .mdata _ b =>
+      visit b acc mayBeProof
+    | .letE n t v b nondep =>
       let r₁ ← visit t acc (mayBeProof := false)
       let r₂ ← visit v r₁
       withLetDecl n t v (nondep := nondep) fun x =>
         visit (b.instantiate1 x) r₂ (mayBeProof := false)
-    | .app ..            =>
+    | .app .. =>
       -- Visit the whole application spine at once, so that the parameter kinds of the head are
       -- computed once per application.
       let fn := e.getAppFn
@@ -123,7 +129,8 @@ unsafe def fold {α : Type} (f : Name → α → MetaM α) (e : Expr) (acc : α)
       let kinds ← headKinds fn args.size
       let mut acc ← visit fn acc (mayBeProof := false)
       for h : i in [0:args.size] do
-        let kind ← if h' : i < kinds.size then
+        let kind ←
+          if h' : i < kinds.size then
             pure kinds[i]
           else
             -- The head's type does not unfold to enough binders without the actual arguments.
@@ -133,8 +140,9 @@ unsafe def fold {α : Type} (f : Name → α → MetaM α) (e : Expr) (acc : α)
         | .value => acc ← visit args[i] acc (mayBeProof := false)
         | .unknown => acc ← visit args[i] acc
       return acc
-    | .proj _ _ b        => visit b acc
-    | .const c _         =>
+    | .proj _ _ b =>
+      visit b acc
+    | .const c _ =>
       if (← get).visitedConsts.contains c then
         return acc
       else
@@ -143,14 +151,17 @@ unsafe def fold {α : Type} (f : Name → α → MetaM α) (e : Expr) (acc : α)
           return acc
         else
           f c acc
-    | _ => return acc
+    | _ =>
+      return acc
   visit e acc
 
-@[inline] unsafe def foldUnsafe {α : Type} (e : Expr) (init : α) (f : Name → α → MetaM α) : MetaM α :=
+@[inline]
+unsafe def foldUnsafe {α : Type} (e : Expr) (init : α) (f : Name → α → MetaM α) : MetaM α :=
   (fold f e init).run' {}
 
-unsafe def relevantConstantsOfEachUnsafe (es : Array Expr)
-    (cancelTk? : Option IO.CancelToken := none) : MetaM (Array (Array Name)) := do
+unsafe def relevantConstantsOfEachUnsafe
+    (es : Array Expr) (cancelTk? : Option IO.CancelToken := none)
+    : MetaM (Array (Array Name)) := do
   let mut kinds := {}
   let mut out := Array.mkEmpty es.size
   for e in es do
@@ -159,7 +170,8 @@ unsafe def relevantConstantsOfEachUnsafe (es : Array Expr)
       if let some tk := cancelTk? then
         if ← tk.isSet then
           throwInterruptException
-    let (consts, s) ← try
+    let (consts, s) ←
+      try
         (fold (fun n ns => return ns.push n) e #[]).run { kinds }
       catch _ =>
         -- For example, a statement that mentions a private auxiliary proof of a module whose
@@ -173,13 +185,17 @@ end FoldRelevantConstantsImpl
 
 /-- Apply `f` to every constant occurring in `e` once, skipping instance arguments and proofs. -/
 @[implemented_by FoldRelevantConstantsImpl.foldUnsafe]
-public opaque foldRelevantConstants {α : Type} (e : Expr) (init : α) (f : Name → α → MetaM α) : MetaM α := pure init
+public opaque foldRelevantConstants {α : Type} (e : Expr) (init : α) (f : Name → α → MetaM α)
+    : MetaM α :=
+  pure init
 
 /-- Collect the constants occurring in `e` (once each), skipping instance arguments and proofs. -/
-public def relevantConstants (e : Expr) : MetaM (Array Name) := foldRelevantConstants e #[] (fun n ns => return ns.push n)
+public def relevantConstants (e : Expr) : MetaM (Array Name) :=
+  foldRelevantConstants e #[] (fun n ns => return ns.push n)
 
 /-- Collect the constants occurring in `e` (once each), skipping instance arguments and proofs. -/
-public def relevantConstantsAsSet (e : Expr) : MetaM NameSet := foldRelevantConstants e ∅ (fun n ns => return ns.insert n)
+public def relevantConstantsAsSet (e : Expr) : MetaM NameSet :=
+  foldRelevantConstants e ∅ (fun n ns => return ns.insert n)
 
 /--
 `relevantConstants` of each expression in `es`. It computes the parameter kinds of each head
@@ -188,35 +204,37 @@ expression whose traversal fails gets `#[]`; interrupts and resource limits stil
 `cancelTk?` is set, this throws an interrupt exception within the next 64 expressions.
 -/
 @[implemented_by FoldRelevantConstantsImpl.relevantConstantsOfEachUnsafe]
-public opaque relevantConstantsOfEach (es : Array Expr)
-    (cancelTk? : Option IO.CancelToken := none) : MetaM (Array (Array Name)) :=
+public opaque relevantConstantsOfEach (es : Array Expr) (cancelTk? : Option IO.CancelToken := none)
+    : MetaM (Array (Array Name)) :=
   pure #[]
 
 end Lean.Expr
 
 open Lean Meta MVarId in
-public def Lean.MVarId.getConstants (g : MVarId) : MetaM NameSet := withContext g do
-  -- `instantiateMVars` is needed so that constants are not lost behind assigned
-  -- metavariables, e.g. the `?motive` left in a goal reached via `induction`.
-  -- Note: this does not recover constants behind non-ground delayed-assigned
-  -- metavariables. Without evidence this matters for premise selection,
-  -- for now we avoid the extra complexity of walking the metavariable graph.
-  let mut c := (← instantiateMVars (← g.getType)).getUsedConstantsAsSet
-  for t in (← getLocalHyps) do
-    c := c ∪ (← instantiateMVars (← inferType t)).getUsedConstantsAsSet
-  return c
+public def Lean.MVarId.getConstants (g : MVarId) : MetaM NameSet :=
+  withContext g do
+    -- `instantiateMVars` is needed so that constants are not lost behind assigned
+    -- metavariables, e.g. the `?motive` left in a goal reached via `induction`.
+    -- Note: this does not recover constants behind non-ground delayed-assigned
+    -- metavariables. Without evidence this matters for premise selection,
+    -- for now we avoid the extra complexity of walking the metavariable graph.
+    let mut c := (← instantiateMVars (← g.getType)).getUsedConstantsAsSet
+    for t in (← getLocalHyps) do
+      c := c ∪ (← instantiateMVars (← inferType t)).getUsedConstantsAsSet
+    return c
 
 open Lean Meta MVarId in
-public def Lean.MVarId.getRelevantConstants (g : MVarId) : MetaM NameSet := withContext g do
-  -- `instantiateMVars` is needed so that constants are not lost behind assigned
-  -- metavariables, e.g. the `?motive` left in a goal reached via `induction`.
-  -- Note: this does not recover constants behind non-ground delayed-assigned
-  -- metavariables. Without evidence this matters for premise selection,
-  -- for now we avoid the extra complexity of walking the metavariable graph.
-  let mut c ← (← instantiateMVars (← g.getType)).relevantConstantsAsSet
-  for t in (← getLocalHyps) do
-    c := c ∪ (← (← instantiateMVars (← inferType t)).relevantConstantsAsSet)
-  return c
+public def Lean.MVarId.getRelevantConstants (g : MVarId) : MetaM NameSet :=
+  withContext g do
+    -- `instantiateMVars` is needed so that constants are not lost behind assigned
+    -- metavariables, e.g. the `?motive` left in a goal reached via `induction`.
+    -- Note: this does not recover constants behind non-ground delayed-assigned
+    -- metavariables. Without evidence this matters for premise selection,
+    -- for now we avoid the extra complexity of walking the metavariable graph.
+    let mut c ← (← instantiateMVars (← g.getType)).relevantConstantsAsSet
+    for t in (← getLocalHyps) do
+      c := c ∪ (← (← instantiateMVars (← inferType t)).relevantConstantsAsSet)
+    return c
 
 @[expose] public section
 
@@ -226,13 +244,10 @@ namespace Lean.LibrarySuggestions
 A `Suggestion` is essentially just an identifier and a confidence score that the identifier is relevant.
 If the premise selection request included information about the intended use (e.g. in the simplifier, in `grind`, etc.)
 the score may be adjusted for that application.
-
 -/
 structure Suggestion where
   name : Name
-  /--
-  The score of the suggestion, as a probability that this suggestion should be used.
-  -/
+  /-- The score of the suggestion, as a probability that this suggestion should be used. -/
   score : Float
   /--
   Optional flag associated with the suggestion, e.g. "←" or "=",
@@ -244,9 +259,7 @@ structure Suggestion where
   flag : Option String := none
 
 structure Config where
-  /--
-  The maximum number of suggestions to return.
-  -/
+  /-- The maximum number of suggestions to return. -/
   maxSuggestions : Nat := 100
   /--
   The tactic that is calling the premise selection, e.g. `simp`, `grind`, or `aesop`.
@@ -276,8 +289,8 @@ abbrev Selector : Type := MVarId → Config → MetaM (Array Suggestion)
 Construct a `Selector` (which acts on an `MVarId`)
 from a function which takes the pretty printed goal.
 -/
-def ppSelector (selector : String → Config → MetaM (Array Suggestion)) (g : MVarId) (c : Config) :
-    MetaM (Array Suggestion) := do
+def ppSelector (selector : String → Config → MetaM (Array Suggestion)) (g : MVarId) (c : Config)
+    : MetaM (Array Suggestion) := do
   selector (toString (← Meta.ppGoal g)) c
 
 namespace Selector
@@ -308,9 +321,10 @@ def combine (selector₁ selector₂ : Selector) : Selector := fun g c => do
 
   for s in suggestions₁ ++ suggestions₂ do
     let key := (s.name, s.flag)
-    dedupMap := dedupMap.alter key fun
-    | none => some s
-    | some s' => if s.score > s'.score then some s else some s'
+    dedupMap :=
+      dedupMap.alter key fun
+        | none => some s
+        | some s' => if s.score > s'.score then some s else some s'
 
   let deduped := dedupMap.valuesArray
   let sorted := deduped.qsort (fun s₁ s₂ => s₁.score > s₂.score)
@@ -331,8 +345,8 @@ def filterGrindAnnotated (selector : Selector) : Selector := fun g c => do
     suggestions.filterM fun s => do
       -- Check if the suggestion's module is grind-annotated
       match env.getModuleIdxFor? s.name with
-      | none => return true  -- Keep suggestions with no module info
-      | some modIdx => return !Lean.Elab.Tactic.Grind.isGrindAnnotatedModule env modIdx
+      | none => return true -- Keep suggestions with no module info
+      | some modIdx => return ! Lean.Elab.Tactic.Grind.isGrindAnnotatedModule env modIdx
   else
     return suggestions
 
@@ -428,7 +442,8 @@ builtin_initialize typePrefixDenyListExt : SimplePersistentEnvExtension Name (Li
 def isDeniedModule (env : Environment) (moduleName : Name) : Bool :=
   (moduleDenyListExt.getState env).any fun p => moduleName.anyS (· == p)
 
-def isDeniedPremise (env : Environment) (name : Name) (allowPrivate : Bool := false) : Bool := Id.run do
+def isDeniedPremise (env : Environment) (name : Name) (allowPrivate : Bool := false)
+    : Bool := Id.run do
   if name == ``sorryAx then return true
   -- Allow private names through if allowPrivate is set (e.g., for currentFile selector)
   if name.isInternalDetail && !(allowPrivate && isPrivateName name) then return true
@@ -439,16 +454,15 @@ def isDeniedPremise (env : Environment) (name : Name) (allowPrivate : Bool := fa
     let moduleName := env.header.modules[moduleIdx.toNat]!.module
     if isDeniedModule env moduleName then
       return true
-  let some ci := env.find? name | return true
+  let some ci := env.find? name
+    | return true
   if let .const fnName _ := ci.type.getForallBody.getAppFn then
     if (typePrefixDenyListExt.getState env).any (fun p => p.isPrefixOf fnName) then return true
   return false
 
 end DenyList
 
-/--
-The trivial premise selector, which returns no suggestions.
--/
+/-- The trivial premise selector, which returns no suggestions. -/
 def empty : Selector := fun _ _ => pure #[]
 
 /-- A random premise selection algorithm, provided solely for testing purposes. -/
@@ -465,7 +479,9 @@ def random (gen : StdGen := ⟨37, 59⟩) : Selector := fun _ cfg => do
       suggestions := suggestions.push { name := name, score := 1.0 / consts.size.toFloat }
   return suggestions
 
-/-- A library suggestion engine that returns locally defined theorems (those in the current file). -/
+/--
+A library suggestion engine that returns locally defined theorems (those in the current file).
+-/
 def currentFile : Selector := fun _ cfg => do
   let env ← getEnv
   let max := cfg.maxSuggestions
@@ -483,7 +499,7 @@ def currentFile : Selector := fun _ cfg => do
 
 builtin_initialize librarySuggestionsExt : SimplePersistentEnvExtension Name (Option Name) ←
   registerSimplePersistentEnvExtension {
-    addEntryFn := fun _ name => some name  -- Last entry wins
+    addEntryFn := fun _ name => some name -- Last entry wins
     addImportedFn := fun entries =>
       -- Take the last selector name from all imported modules
       entries.foldl (init := none) fun acc moduleEntries =>
@@ -503,7 +519,8 @@ Get the currently registered library suggestions selector by looking up the stor
 Returns `none` if no selector is registered or if evaluation fails.
 -/
 unsafe def getSelectorImpl : MetaM (Option Selector) := do
-  let some declName := librarySuggestionsExt.getState (← getEnv) | return none
+  let some declName := librarySuggestionsExt.getState (← getEnv)
+    | return none
   try
     evalConstCheck Selector ``Selector declName
   catch _ =>
@@ -512,12 +529,14 @@ unsafe def getSelectorImpl : MetaM (Option Selector) := do
 @[implemented_by getSelectorImpl]
 opaque getSelector : MetaM (Option Selector)
 
-/-- Generate library suggestions for the given metavariable, using the currently registered library suggestions engine. -/
+/--
+Generate library suggestions for the given metavariable, using the currently registered library suggestions engine.
+-/
 def select (m : MVarId) (c : Config := {}) : MetaM (Array Suggestion) := do
-  let some selector ← getSelector |
-    throwError "No library suggestions engine registered. \
-      (Add `import Lean.LibrarySuggestions.Default` to use Lean's built-in engine, \
-      or use `set_library_suggestions` to configure a custom one.)"
+  let some selector ← getSelector
+    | throwError "No library suggestions engine registered. \
+        (Add `import Lean.LibrarySuggestions.Default` to use Lean's built-in engine, \
+        or use `set_library_suggestions` to configure a custom one.)"
   selector m c
 
 /-!
@@ -535,15 +554,19 @@ open Lean Elab Command in
 def elabSetLibrarySuggestions : CommandElab
   | `(command| set_library_suggestions $selector) => do
     if `Lean.LibrarySuggestions.Basic ∉ (← getEnv).header.moduleNames then
-      logWarning "Add `import Lean.LibrarySuggestions.Basic` before using the `set_library_suggestions` command."
+      logWarning "Add `import Lean.LibrarySuggestions.Basic` before using the \
+        `set_library_suggestions` command."
     -- Generate a fresh name for the selector definition
     let name ← liftMacroM <| Macro.addMacroScope `_librarySuggestions
     -- Elaborate the definition with the library_suggestions attribute
-    elabCommand (← `(@[library_suggestions] public meta def $(mkIdent name) : Selector := $selector))
-  | _ => throwUnsupportedSyntax
+    elabCommand
+      (← `(@[library_suggestions] public meta def $(mkIdent name) : Selector := $selector))
+  | _ =>
+    throwUnsupportedSyntax
 
 open Lean.Elab.Tactic in
-@[builtin_tactic Lean.Parser.Tactic.suggestions] def evalSuggestions : Tactic := fun _ =>
+@[builtin_tactic Lean.Parser.Tactic.suggestions]
+def evalSuggestions : Tactic := fun _ =>
   liftMetaTactic1 fun mvarId => do
     let suggestions ← select mvarId
     let mut msg : MessageData := "Library suggestions:"

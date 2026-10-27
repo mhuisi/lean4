@@ -23,9 +23,7 @@ open Meta Term
 def evalTermWithRef {α : Type} [EvalTerm α] (stx : Term) : TermElabM α :=
   withRef stx <| Prod.fst <$> evalTerm stx
 
-/--
-Evaluate `stx` using either `evalExpr`.
--/
+/-- Evaluate `stx` using either `evalExpr`. -/
 def evalExprWithElab {α : Type} [EvalExpr α] (stx : Term) : TermElabM α :=
   withRef stx do
     let ty? := EvalExpr.expectedType? α
@@ -38,39 +36,36 @@ def evalExprWithElab {α : Type} [EvalExpr α] (stx : Term) : TermElabM α :=
       throwError "Expression contains `sorry`:{indentExpr e}"
     if (← Term.logUnassignedUsingErrorInfos (← getMVars e)) then
       throwAbortTerm
-    catchInternalId unsupportedSyntaxExceptionId
-      (evalExpr e)
-      (fun _ => do
-        let extra := if let some ty := ty? then m!"\nof type `{ty}`" else m!""
-        throwError "Could not evaluate the expression{indentExpr e}{extra}")
+    catchInternalId unsupportedSyntaxExceptionId (evalExpr e) (fun _ => do
+      let extra := if let some ty := ty? then m!"\nof type `{ty}`" else m!""
+      throwError "Could not evaluate the expression{indentExpr e}{extra}")
 
-/--
-Evaluate `stx` using either `evalStx` or `evalExpr`.
--/
+/-- Evaluate `stx` using either `evalStx` or `evalExpr`. -/
 def evalTermOrExprWithElab {α : Type} [EvalTerm α] [EvalExpr α] (stx : Term) : TermElabM α :=
   withRef stx do
-    catchInternalId unsupportedSyntaxExceptionId
-      (Prod.fst <$> evalTerm stx)
-      (fun _ => do
-        evalExprWithElab stx)
+    catchInternalId unsupportedSyntaxExceptionId (Prod.fst <$> evalTerm stx)
+      (fun _ => do evalExprWithElab stx)
 
 private partial def stripParens : Term → Term
   | `(($t)) => stripParens t
   | t => t
 
-@[inline] def EvalTerm.evalTermWithInfo {α : Type}
-    (expectedType? : Option Expr) (f : Term → TermElabM (α × Expr)) (stx : Term) :
-    TermElabM (α × Expr) := do
+@[inline]
+def EvalTerm.evalTermWithInfo
+    {α : Type} (expectedType? : Option Expr) (f : Term → TermElabM (α × Expr)) (stx : Term)
+    : TermElabM (α × Expr) := do
   let (v, e) ← withRef stx <| f (stripParens stx)
   if (← getInfoState).enabled then
     addTermInfo' stx e (expectedType? := expectedType?)
   return (v, e)
 
-/-- Like `evalTermWithInfo`, but uses an existing `ToExpr` instance
-for `expectedType?` and for constructing the expression. -/
-@[inline] def EvalTerm.evalTermWithInfo' {α : Type} [ToExpr α]
-    (f : Term → TermElabM α) :
-    Term → TermElabM (α × Expr) :=
+/--
+Like `evalTermWithInfo`, but uses an existing `ToExpr` instance
+for `expectedType?` and for constructing the expression.
+-/
+@[inline]
+def EvalTerm.evalTermWithInfo' {α : Type} [ToExpr α] (f : Term → TermElabM α)
+    : Term → TermElabM (α × Expr) :=
   evalTermWithInfo (toTypeExpr α) (fun stx => do
     let v ← f stx
     return (v, toExpr v))
@@ -80,21 +75,18 @@ Evaluates `f e`, and if that does `throwUnsupportedExpr`, evaluates `f (← whnf
 If either throw another exception, aborts immediately with that exception.
 If both do `throwUnsupportedExpr`, then this generates an exception.
 -/
-def EvalExpr.withWHNF {α : Type} (f : Expr → MetaM α) (e : Expr) (errMsg : MessageData) : MetaM α := do
-  catchInternalId unsupportedExprExceptionId
-    (f e)
-    (fun _ =>
-      catchInternalId unsupportedExprExceptionId
-        (do f (← whnf e))
-        (fun _ =>
-          throwError "Could not evaluate the expression:{indentExpr e}{errMsg}"))
+def EvalExpr.withWHNF {α : Type} (f : Expr → MetaM α) (e : Expr) (errMsg : MessageData)
+    : MetaM α := do
+  catchInternalId unsupportedExprExceptionId (f e) (fun _ =>
+    catchInternalId unsupportedExprExceptionId (do f (← whnf e))
+      (fun _ => throwError "Could not evaluate the expression:{indentExpr e}{errMsg}"))
 
 def ConfigItem.isAnonymous (item : ConfigItem) : Bool := item.optionComps.isEmpty
 
 def ConfigItem.root (item : ConfigItem) : Syntax :=
   match item.optionComps with
   | c :: _ => c
-  | _      => .missing
+  | _ => .missing
 
 def ConfigItem.getRootStr (item : ConfigItem) : String :=
   if let .str _ s := item.root.getId then
@@ -102,13 +94,12 @@ def ConfigItem.getRootStr (item : ConfigItem) : String :=
   else
     ""
 
-def ConfigItem.prevRoot? (item : ConfigItem) : Option Syntax :=
-  item.prevOptionComps[0]?
+def ConfigItem.prevRoot? (item : ConfigItem) : Option Syntax := item.prevOptionComps[0]?
 
 def ConfigItem.prevRoot (item : ConfigItem) : Syntax :=
   match item.prevOptionComps with
   | c :: _ => c
-  | _      => .missing
+  | _ => .missing
 
 /--
 Gets the current name of the option after any shifting.
@@ -123,25 +114,31 @@ def ConfigItem.getCurrOptionName (item : ConfigItem) : Name :=
 Drops the first component of the `optionName`, returning the new config item.
 The first component is stored at the front of `prevOptionComps`.
 -/
-def ConfigItem.shift (item : ConfigItem) : ConfigItem :=
-  { item with
-    optionComps := item.optionComps.tail
-    prevOptionComps := item.root :: item.prevOptionComps }
+def ConfigItem.shift (item : ConfigItem) : ConfigItem := {
+  item with
+  optionComps := item.optionComps.tail
+  prevOptionComps := item.root :: item.prevOptionComps
+}
 
 def ConfigItem.checkNotBool (item : ConfigItem) : TermElabM Unit := do
   if item.bool?.isSome then
-    throwErrorAt item.option m!"Option is not boolean-valued, so `({item.origOptionName} := ...)` syntax must be used"
+    throwErrorAt item.option
+      m!"Option is not boolean-valued, so `({item.origOptionName} := ...)` syntax must be used"
 
-def ConfigItem.throwInvalidOption {α} (item : ConfigItem) (structName? : Option Name) : TermElabM α :=
+def ConfigItem.throwInvalidOption {α} (item : ConfigItem) (structName? : Option Name)
+    : TermElabM α :=
   let name := item.origOptionName
   let nameMsg := if name.isAnonymous then m!"" else m!" `{name}`"
-  let structMsg := if let some structName := structName? then m!" for `{.ofConstName structName}`" else m!""
+  let structMsg :=
+    if let some structName := structName? then m!" for `{.ofConstName structName}`" else m!""
   throwErrorAt item.option "Invalid configuration option{nameMsg}{structMsg}"
 
-def ConfigItem.throwCannotSetOption {α} (item : ConfigItem) (structName? : Option Name) : TermElabM α :=
+def ConfigItem.throwCannotSetOption {α} (item : ConfigItem) (structName? : Option Name)
+    : TermElabM α :=
   let name := item.origOptionName
   let nameMsg := if name.isAnonymous then m!"" else m!" `{name}`"
-  let structMsg := if let some structName := structName? then m!" for `{.ofConstName structName}`" else m!""
+  let structMsg :=
+    if let some structName := structName? then m!" for `{.ofConstName structName}`" else m!""
   throwErrorAt item.option "Cannot set option{nameMsg}{structMsg} using configuration syntax."
 
 nonrec def ConfigItem.addConstInfo (item : ConfigItem) (projFn : Name) : TermElabM Unit := do
@@ -149,7 +146,8 @@ nonrec def ConfigItem.addConstInfo (item : ConfigItem) (projFn : Name) : TermEla
     if (← getEnv).contains projFn then -- in case we are in Lean prelude
       addConstInfo item.root projFn
 
-nonrec def ConfigItem.addCompletionInfo (item : ConfigItem) (structName : Name) : TermElabM Unit := do
+nonrec def ConfigItem.addCompletionInfo (item : ConfigItem) (structName : Name)
+    : TermElabM Unit := do
   if (← getInfoState).enabled then
     if (← getEnv).contains structName then -- in case we are in Lean prelude
       addCompletionInfo (CompletionInfo.fieldId item.root item.root.getId {} structName)
@@ -184,11 +182,10 @@ On interpretation error, `onErr` is called with the current configuration object
 syntax item. It may process the item itself or otherwise throw an error. We leave it to `onErr`
 to decide what to do for items containing `Syntax.missing`.
 -/
-@[specialize] partial def foldConfigM
-    (init : α) (cfg : Syntax)
-    (k : α → ConfigItem → m α)
-    (onErr : α → Syntax → m α) :
-    m α := do
+@[specialize]
+partial def foldConfigM
+    (init : α) (cfg : Syntax) (k : α → ConfigItem → m α) (onErr : α → Syntax → m α)
+    : m α := do
   let doFail (_ : Unit) : m α := withRef cfg do onErr init cfg
   let atomAsIdent (si : SourceInfo) (val : String) : Ident :=
     let n := if val.contains '.' then String.toName val else Name.mkSimple val
@@ -201,9 +198,12 @@ to decide what to do for items containing `Syntax.missing`.
     | .atom si val => some <| atomAsIdent si val
     | _ => none
   let isPosNeg? (val : String) : Option Bool :=
-    if val == "+" then some true
-    else if val == "-" then some false
-    else none
+    if val == "+" then
+      some true
+    else if val == "-" then
+      some false
+    else
+      none
   if cfg.isOfKind nullKind then
     foldConfigsM init cfg.getArgs k onErr
   else if cfg.getNumArgs == 1 then
@@ -222,26 +222,30 @@ to decide what to do for items containing `Syntax.missing`.
             -- Assuming `cfg.getArg 2` is `:=`
             return ← k init { ref := cfg, option := ident, value := cfg.getArg 3 }
       doFail ()
-    | _ => doFail ()
+    | _ =>
+      doFail ()
   else if let .atom si val := cfg then
-    k init { ref := cfg, option := atomAsIdent si val, bool? := true, value := mkCIdentFrom cfg ``true  }
+    k init {
+      ref := cfg
+      option := atomAsIdent si val
+      bool? := true
+      value := mkCIdentFrom cfg ``true
+    }
   else
     doFail ()
 
-/--
-Like `foldConfigM` but takes an array of configurations or configuration items.
--/
-@[specialize] partial def foldConfigsM (init : α) (cfgs : Array Syntax)
-    (k : α → ConfigItem → m α)
-    (onErr : α → Syntax → m α) :
-    m α := do
+/-- Like `foldConfigM` but takes an array of configurations or configuration items. -/
+@[specialize]
+partial def foldConfigsM
+    (init : α) (cfgs : Array Syntax) (k : α → ConfigItem → m α) (onErr : α → Syntax → m α)
+    : m α := do
   cfgs.foldlM (init := init) fun x cfg' => foldConfigM x cfg' k onErr
 
 end
 
-def EvalConfigItem.trySet {α} (eval : EvalConfigItem α)
-    (config : α) (item : ConfigItem) (logExceptions : Bool) :
-    TermElabM α := do
+def EvalConfigItem.trySet
+    {α} (eval : EvalConfigItem α) (config : α) (item : ConfigItem) (logExceptions : Bool)
+    : TermElabM α := do
   try
     eval.set config item
   catch ex =>
@@ -261,7 +265,9 @@ reported by the parser and return `cfg`. Otherwise, we throw an unsupported synt
 
 If `cfgType?` is present, then it adds completion info when the identifier is missing.
 -/
-def EvalConfigItem.defaultOnErr {α : Type} (cfg : α) (cfgItem : Syntax) (cfgType? : Option Expr := none) : TermElabM α := do
+def EvalConfigItem.defaultOnErr
+    {α : Type} (cfg : α) (cfgItem : Syntax) (cfgType? : Option Expr := none)
+    : TermElabM α := do
   if let some cfgType := cfgType? then
     if (← getInfoState).enabled then
       -- Assumption: the configuration item might be malformed, but if the
@@ -270,7 +276,13 @@ def EvalConfigItem.defaultOnErr {α : Type} (cfg : α) (cfgItem : Syntax) (cfgTy
       if (cfgItem.getArg 0).isAtom && (cfgItem.getArg 1).isMissing then
         -- This expression is used only for its inferred type in the completion system.
         let expr : Expr := mkApp2 (.const ``id [1]) cfgType (.const `_cfg_dummy [])
-        let info := { elaborator := `ConfigEval, stx := cfgItem.getArg 0, lctx := {}, expectedType? := none, expr }
+        let info := {
+          elaborator := `ConfigEval
+          stx := cfgItem.getArg 0
+          lctx := {}
+          expectedType? := none
+          expr
+        }
         addCompletionInfo <| .dot info none
   if cfgItem.hasMissing then
     return cfg
@@ -285,10 +297,11 @@ The `onErr` callback is used for invalid configuration syntax.
 
 Note: this should be run from within `runConfigElab`.
 -/
-def EvalConfigItem.setConfig {α} (eval : EvalConfigItem α)
-    (init : α) (cfg : Syntax)
-    (onErr : α → Syntax → TermElabM α := defaultOnErr)
-    (logExceptions : Bool := false) : TermElabM α :=
+def EvalConfigItem.setConfig
+    {α} (eval : EvalConfigItem α) (init : α)
+    (cfg : Syntax)
+    (onErr : α → Syntax → TermElabM α := defaultOnErr) (logExceptions : Bool := false)
+    : TermElabM α :=
   foldConfigM init cfg (eval.trySet (logExceptions := logExceptions)) onErr
 
 /--
@@ -299,10 +312,11 @@ The `onErr` callback is used for invalid configuration syntax.
 
 Note: this should be run from within `runConfigElab`.
 -/
-def EvalConfigItem.setConfigs {α} (eval : EvalConfigItem α)
-    (init : α) (cfgs : Array Syntax)
-    (onErr : α → Syntax → TermElabM α := defaultOnErr)
-    (logExceptions : Bool := false) : TermElabM α :=
+def EvalConfigItem.setConfigs
+    {α} (eval : EvalConfigItem α) (init : α)
+    (cfgs : Array Syntax)
+    (onErr : α → Syntax → TermElabM α := defaultOnErr) (logExceptions : Bool := false)
+    : TermElabM α :=
   foldConfigsM init cfgs (eval.trySet (logExceptions := logExceptions)) onErr
 
 /--
@@ -312,13 +326,12 @@ This should be used around any configuration elaboration.
 def runConfigElab {α} (mx : TermElabM α) : CoreM α :=
   MetaM.run' <| TermElabM.run' <| withSaveInfoContext mx
 
-/--
-Calls `EvalConfigItem.setConfig'` from within `runConfigElab`.
--/
-def EvalConfigItem.setConfig' {α : Type} (eval : EvalConfigItem α)
-    (init : α) (cfg : Syntax)
-    (onErr : α → Syntax → TermElabM α := defaultOnErr)
-    (logExceptions : Bool := false) : CoreM α := do
+/-- Calls `EvalConfigItem.setConfig'` from within `runConfigElab`. -/
+def EvalConfigItem.setConfig'
+    {α : Type} (eval : EvalConfigItem α) (init : α)
+    (cfg : Syntax)
+    (onErr : α → Syntax → TermElabM α := defaultOnErr) (logExceptions : Bool := false)
+    : CoreM α := do
   if cfg.matchesNull 0 || (cfg.getNumArgs == 1 && (cfg.getArg 0).matchesNull 0) then
     -- These represent an empty null node or an `optConfig`-like syntax with no arguments.
     -- Return without doing `runConfigElab`.
@@ -326,13 +339,12 @@ def EvalConfigItem.setConfig' {α : Type} (eval : EvalConfigItem α)
   else
     runConfigElab (eval.setConfig init cfg onErr logExceptions)
 
-/--
-Calls `EvalConfigItem.setConfigs'` from within `runConfigElab`.
--/
-def EvalConfigItem.setConfigs' {α : Type} (eval : EvalConfigItem α)
-    (init : α) (cfgs : Array Syntax)
-    (onErr : α → Syntax → TermElabM α := defaultOnErr)
-    (logExceptions : Bool := false) : CoreM α := do
+/-- Calls `EvalConfigItem.setConfigs'` from within `runConfigElab`. -/
+def EvalConfigItem.setConfigs'
+    {α : Type} (eval : EvalConfigItem α) (init : α)
+    (cfgs : Array Syntax)
+    (onErr : α → Syntax → TermElabM α := defaultOnErr) (logExceptions : Bool := false)
+    : CoreM α := do
   if cfgs.isEmpty then
     return init
   else

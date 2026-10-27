@@ -34,9 +34,9 @@ existing tactics.
 builtin_initialize tacticAlternativeExt
     : PersistentEnvExtension (Name × Name) (Name × Name) (NameMap Name) ←
   registerPersistentEnvExtension {
-    mkInitial := pure {},
-    addImportedFn := fun _ => pure {},
-    addEntryFn := fun as (src, tgt) => as.insert src tgt,
+    mkInitial := pure {}
+    addImportedFn := fun _ => pure {}
+    addEntryFn := fun as (src, tgt) => as.insert src tgt
     exportEntriesFn := fun es =>
       es.foldl (fun a src tgt => a.push (src, tgt)) #[] |>.qsort (Name.quickLt ·.1 ·.1)
   }
@@ -48,14 +48,14 @@ it.
 def alternativeOfTactic (env : Environment) (tac : Name) : Option Name :=
   match env.getModuleIdxFor? tac with
   | some modIdx =>
-    match (tacticAlternativeExt.getModuleEntries env modIdx).binSearch (tac, .anonymous) (Name.quickLt ·.1 ·.1) with
+    match (tacticAlternativeExt.getModuleEntries env modIdx).binSearch (tac, .anonymous)
+      (Name.quickLt ·.1 ·.1) with
     | some (_, val) => some val
     | none => none
-  | none => tacticAlternativeExt.getState env |>.find? tac
+  | none =>
+    tacticAlternativeExt.getState env |>.find? tac
 
-/--
-Find all alternatives for a given canonical tactic name.
--/
+/-- Find all alternatives for a given canonical tactic name. -/
 def aliases [Monad m] [MonadEnv m] (tac : Name) : m NameSet := do
   let env ← getEnv
   let mut found := {}
@@ -69,10 +69,11 @@ def aliases [Monad m] [MonadEnv m] (tac : Name) : m NameSet := do
 builtin_initialize
   let name := `tactic_alt
   registerBuiltinAttribute {
-    name := name,
-    ref := by exact decl_name%,
+    name := name
+    ref := by exact decl_name%
     add := fun decl stx kind => do
-      unless kind == AttributeKind.global do throwAttrMustBeGlobal name kind
+      unless kind == AttributeKind.global do
+        throwAttrMustBeGlobal name kind
       unless ((← getEnv).getModuleIdxFor? decl).isNone do
         throwAttrDeclInImportedModule name decl
       let `(«tactic_alt»|tactic_alt $tgt) := stx
@@ -92,46 +93,40 @@ builtin_initialize
       if let some tgt' := alternativeOfTactic (← getEnv) tgtName then
         throwError "`{tgtName}` is itself an alternative for `{tgt'}`"
       modifyEnv fun env => tacticAlternativeExt.addEntry env (decl, tgtName)
-
     descr :=
-      "Register a tactic parser as an alternative form of an existing tactic, so they " ++
-      "can be grouped together in documentation.",
+      "Register a tactic parser as an alternative form of an existing tactic, so they "
+        ++ "can be grouped together in documentation."
     -- This runs prior to elaboration because it allows a check for whether the decl is present
     -- in the environment to determine whether we can see if it's a tactic name. This is useful
     -- when the attribute is applied after definition, using an `attribute` command (error checking
     -- for the `@[tactic_alt TAC]` syntax is performed by the parser attribute hook). If this
     -- attribute ran later, then the decl would already be present.
-    applicationTime := .afterCompilation --.beforeElaboration
+    applicationTime := .afterCompilation -- .beforeElaboration
   }
 
-
-/--
-The known tactic tags that allow tactics to be grouped by purpose.
--/
+/-- The known tactic tags that allow tactics to be grouped by purpose. -/
 builtin_initialize knownTacticTagExt
-    : PersistentEnvExtension
-        (Name × String × Option String)
-        (Name × String × Option String)
-        (NameMap (String × Option String)) ←
+    : PersistentEnvExtension (Name × String × Option String) (Name × String × Option String)
+      (NameMap (String × Option String)) ←
   registerPersistentEnvExtension {
-    mkInitial := pure {},
-    addImportedFn := fun _ => pure {},
-    addEntryFn := fun as (src, tgt) => as.insert src tgt,
+    mkInitial := pure {}
+    addImportedFn := fun _ => pure {}
+    addEntryFn := fun as (src, tgt) => as.insert src tgt
     exportEntriesFn := fun es =>
       es.foldl (fun a src tgt => a.push (src, tgt)) #[] |>.qsort (Name.quickLt ·.1 ·.1)
   }
 
-/--
-Get the user-facing name and docstring for a tactic tag.
--/
+/-- Get the user-facing name and docstring for a tactic tag. -/
 def tagInfo [Monad m] [MonadEnv m] (tag : Name) : m (Option (String × Option String)) := do
   let env ← getEnv
   match env.getModuleIdxFor? tag with
   | some modIdx =>
-    match (knownTacticTagExt.getModuleEntries env modIdx).binSearch (tag, default) (Name.quickLt ·.1 ·.1) with
+    match (knownTacticTagExt.getModuleEntries env modIdx).binSearch (tag, default)
+      (Name.quickLt ·.1 ·.1) with
     | some (_, val) => pure (some val)
     | none => pure none
-  | none => pure (knownTacticTagExt.getState env |>.find? tag)
+  | none =>
+    pure (knownTacticTagExt.getState env |>.find? tag)
 
 /-- Enumerate the tactic tags that are available -/
 def allTags [Monad m] [MonadEnv m] : m (List Name) := do
@@ -169,8 +164,8 @@ The first projection in each pair is the tactic name, and the second is the tag 
 builtin_initialize tacticTagExt
     : PersistentEnvExtension (Name × Name) (Name × Name) (NameMap NameSet) ←
   registerPersistentEnvExtension {
-    mkInitial := pure {},
-    addImportedFn := fun _ => pure {},
+    mkInitial := pure {}
+    addImportedFn := fun _ => pure {}
     addEntryFn := fun tags (decl, newTag) => tags.insert decl (tags.getD decl {} |>.insert newTag)
     exportEntriesFn := fun tags => Id.run do
       let mut exported := #[]
@@ -183,10 +178,11 @@ builtin_initialize tacticTagExt
 builtin_initialize
   let name := `tactic_tag
   registerBuiltinAttribute {
-    name := name,
-    ref := by exact decl_name%,
+    name := name
+    ref := by exact decl_name%
     add := fun decl stx kind => do
-      unless kind == AttributeKind.global do throwAttrMustBeGlobal name kind
+      unless kind == AttributeKind.global do
+        throwAttrMustBeGlobal name kind
       let `(«tactic_tag»|tactic_tag $tags*) := stx
         | throwError "Invalid `[{name}]` attribute syntax"
 
@@ -204,22 +200,23 @@ builtin_initialize
         else
           let all ← allTags
           let extra : MessageData :=
-              let count := all.length
-              let name := (m!"`{·}`")
-              let suggestions :=
-                if count == 0 then m!"(no tags defined)"
-                else if count == 1 then
-                  MessageData.joinSep (all.map name) ", "
-                else if count < 10 then
-                  m!"one of " ++ MessageData.joinSep (all.map name) ", "
-                else
-                  m!"one of " ++
-                  MessageData.joinSep (all.take 10 |>.map name) ", " ++ ", ..."
-              m!"(expected {suggestions})"
+            let count := all.length
+            let name := (m!"`{·}`")
+            let suggestions :=
+              if count == 0 then
+                m!"(no tags defined)"
+              else if count == 1 then
+                MessageData.joinSep (all.map name) ", "
+              else if count < 10 then
+                m!"one of " ++ MessageData.joinSep (all.map name) ", "
+              else
+                m!"one of " ++ MessageData.joinSep (all.take 10 |>.map name) ", " ++ ", ..."
+            m!"(expected {suggestions})"
 
           throwErrorAt t (m!"Unknown tag `{tagName}` " ++ extra)
-    descr := "Register a tactic parser as an alternative of an existing tactic, so they can be " ++
-      "grouped together in documentation.",
+    descr :=
+      "Register a tactic parser as an alternative of an existing tactic, so they can be "
+        ++ "grouped together in documentation."
     -- This runs prior to elaboration because it allows a check for whether the decl is present
     -- in the environment to determine whether we can see if it's a tactic name. This is useful
     -- when the attribute is applied after definition, using an `attribute` command (error checking
@@ -237,9 +234,9 @@ instance, new cases tried by `trivial`).
 builtin_initialize tacticDocExtExt
     : PersistentEnvExtension (Name × Array String) (Name × String) (NameMap (Array String)) ←
   registerPersistentEnvExtension {
-    mkInitial := pure {},
-    addImportedFn := fun _ => pure {},
-    addEntryFn := fun es (x, ext) => es.insert x (es.getD x #[] |>.push ext),
+    mkInitial := pure {}
+    addImportedFn := fun _ => pure {}
+    addEntryFn := fun es (x, ext) => es.insert x (es.getD x #[] |>.push ext)
     exportEntriesFn := fun es =>
       es.foldl (fun a src tgt => a.push (src, tgt)) #[] |>.qsort (Name.quickLt ·.1 ·.1)
   }
@@ -258,8 +255,10 @@ def getTacticExtensions (env : Environment) (tactic : Name) : Array String := Id
 /-- Gets the rendered extensions for the given canonical tactic name -/
 def getTacticExtensionString (env : Environment) (tactic : Name) : String := Id.run do
   let exts := getTacticExtensions env tactic
-  if exts.size == 0 then ""
-  else "\n\nExtensions:\n\n" ++ String.join (exts.toList.map bullet) |>.trimAsciiEnd |>.copy
+  if exts.size == 0 then
+    ""
+  else
+    "\n\nExtensions:\n\n" ++ String.join (exts.toList.map bullet) |>.trimAsciiEnd |>.copy
 where
   indentLine (str : String.Slice) : String :=
     (if str.all Char.isWhitespace then str.copy else "   " ++ str) ++ "\n"
@@ -268,7 +267,7 @@ where
     match lines with
     | [] => ""
     | [l] => " * " ++ l ++ "\n\n"
-    | l::ls => " * " ++ l ++ "\n" ++ String.join (ls.map indentLine) ++ "\n\n"
+    | l :: ls => " * " ++ l ++ "\n" ++ String.join (ls.map indentLine) ++ "\n\n"
 
 /--
 The mapping between tactics and their custom names.
@@ -276,43 +275,39 @@ The mapping between tactics and their custom names.
 The first projection in each pair is the tactic name, and the second is the custom name.
 -/
 builtin_initialize tacticNameExt
-    : PersistentEnvExtension
-        (Name × String)
-        (Name × String)
-        (NameMap String) ←
+    : PersistentEnvExtension (Name × String) (Name × String) (NameMap String) ←
   registerPersistentEnvExtension {
-    mkInitial := pure {},
-    addImportedFn := fun _ => pure {},
-    addEntryFn := fun as (src, tgt) => as.insert src tgt,
+    mkInitial := pure {}
+    addImportedFn := fun _ => pure {}
+    addEntryFn := fun as (src, tgt) => as.insert src tgt
     exportEntriesFn := fun es =>
       es.foldl (fun a src tgt => a.push (src, tgt)) #[] |>.qsort (Name.quickLt ·.1 ·.1)
   }
 
-/--
-Finds the custom name assigned to `tac`, or returns `none` if there is no such custom name.
--/
+/-- Finds the custom name assigned to `tac`, or returns `none` if there is no such custom name. -/
 def customTacticName [Monad m] [MonadEnv m] (tac : Name) : m (Option String) := do
   let env ← getEnv
   match env.getModuleIdxFor? tac with
   | some modIdx =>
-    match (tacticNameExt.getModuleEntries env modIdx).binSearch (tac, default) (Name.quickLt ·.1 ·.1) with
+    match (tacticNameExt.getModuleEntries env modIdx).binSearch (tac, default)
+      (Name.quickLt ·.1 ·.1) with
     | some (_, val) => return some val
     | none => return none
-  | none => return tacticNameExt.getState env |>.find? tac
+  | none =>
+    return tacticNameExt.getState env |>.find? tac
 
 builtin_initialize
   let name := `tactic_name
   registerBuiltinAttribute {
-    name := name,
-    ref := by exact decl_name%,
+    name := name
+    ref := by exact decl_name%
     add := fun decl stx kind => do
-      unless kind == AttributeKind.global do throwAttrMustBeGlobal name kind
+      unless kind == AttributeKind.global do
+        throwAttrMustBeGlobal name kind
       let name ←
         match stx with
-        | `(«tactic_name»|tactic_name $name:str) =>
-          pure name.getString
-        | `(«tactic_name»|tactic_name $name:ident) =>
-          pure (name.getId.toString (escape := false))
+        | `(«tactic_name»|tactic_name $name:str) => pure name.getString
+        | `(«tactic_name»|tactic_name $name:ident) => pure (name.getId.toString (escape := false))
         | _ => throwError "Invalid `[{name}]` attribute syntax"
 
       if (← getEnv).find? decl |>.isSome then
@@ -320,9 +315,13 @@ builtin_initialize
           throwErrorAt stx m!"`{.ofConstName decl}` is not a tactic"
         if let some idx := (← getEnv).getModuleIdxFor? decl then
           if let some mod := (← getEnv).allImportedModuleNames[idx]? then
-            throwErrorAt stx m!"`{.ofConstName decl}` is defined in `{mod}`, but custom names can only be added in the tactic's defining module."
+            throwErrorAt stx
+              m!"`{.ofConstName decl}` is defined in `{mod}`, but custom names can only be added \
+                in the tactic's defining module."
           else
-            throwErrorAt stx m!"`{.ofConstName decl}` is defined in an imported module, but custom names can only be added in the tactic's defining module."
+            throwErrorAt stx
+              m!"`{.ofConstName decl}` is defined in an imported module, but custom names can only \
+                be added in the tactic's defining module."
 
       if let some tgt' := alternativeOfTactic (← getEnv) decl then
         throwErrorAt stx "`{.ofConstName decl}` is an alternative form of `{.ofConstName tgt'}`"
@@ -331,10 +330,9 @@ builtin_initialize
         throwError m!"The tactic `{.ofConstName decl}` already has the custom name `{n}`"
 
       modifyEnv fun env => tacticNameExt.addEntry env (decl, name)
-
     descr :=
-      "Registers a custom name for a tactic. This custom name should be a prefix of the " ++
-      "tactic's syntax, because it is used in completion.",
+      "Registers a custom name for a tactic. This custom name should be a prefix of the "
+        ++ "tactic's syntax, because it is used in completion."
     applicationTime := .beforeElaboration
   }
 
@@ -358,7 +356,7 @@ private def tacticDocsOnTactics : ParserAttributeHook where
       if !tags.isEmpty then
         throwError m!"`{.ofConstName declName}` is not a tactic"
     if let some n := tacticNameExt.getState (← getEnv) |>.find? declName then
-      throwError m!"`{MessageData.ofConstName declName}` is not a tactic, but it was assigned a tactic name `{n}`"
+      throwError m!"`{MessageData.ofConstName declName}` is not a tactic, but it was assigned a \
+        tactic name `{n}`"
 
-builtin_initialize
-  registerParserAttributeHook tacticDocsOnTactics
+builtin_initialize registerParserAttributeHook tacticDocsOnTactics

@@ -21,11 +21,10 @@ namespace Std
 
 variable {α : Type w} {m : Type w → Type w'} {β : Type w}
 
-/--
-The internal state of the `IterM.take` iterator combinator.
--/
+/-- The internal state of the `IterM.take` iterator combinator. -/
 @[unbox]
-structure Iterators.Types.Take (α : Type w) (m : Type w → Type w') {β : Type w} [Iterator α m β] where
+structure Iterators.Types.Take
+    (α : Type w) (m : Type w → Type w') {β : Type w} [Iterator α m β] where
   /--
   Internal implementation detail of the iterator library.
   Caution: For `take n`, `countdown` is `n + 1`.
@@ -95,23 +94,29 @@ This combinator incurs an additional O(1) cost with each output of `it`.
 def IterM.toTake [Iterator α m β] [Finite α m] (it : IterM (α := α) m β) :=
   (⟨Take.mk 0 it (Or.inr inferInstance)⟩ : IterM m β)
 
-theorem IterM.take.surjective_of_zero_lt {α : Type w} {m : Type w → Type w'} {β : Type w}
-    [Iterator α m β] (it : IterM (α := Take α m) m β) (h : 0 < it.internalState.countdown) :
-    ∃ (it₀ : IterM (α := α) m β) (k : Nat), it = it₀.take k := by
+theorem IterM.take.surjective_of_zero_lt
+    {α : Type w} {m : Type w → Type w'} {β : Type w} [Iterator α m β]
+    (it : IterM (α := Take α m) m β) (h : 0 < it.internalState.countdown)
+    : ∃ (it₀ : IterM (α := α) m β) (k : Nat), it = it₀.take k := by
   refine ⟨it.internalState.inner, it.internalState.countdown - 1, ?_⟩
   simp [take, Nat.sub_add_cancel (m := 1) (n := it.internalState.countdown) (by omega)]
 
 namespace Iterators.Types
 
-inductive Take.PlausibleStep [Iterator α m β] (it : IterM (α := Take α m) m β) :
-    (step : IterStep (IterM (α := Take α m) m β) β) → Prop where
-  | yield : ∀ {it' out}, it.internalState.inner.IsPlausibleStep (.yield it' out) →
-      (h : it.internalState.countdown ≠ 1) → PlausibleStep it (.yield ⟨it.internalState.countdown - 1, it', it.internalState.finite.imp_left (by omega)⟩ out)
-  | skip : ∀ {it'}, it.internalState.inner.IsPlausibleStep (.skip it') →
-      it.internalState.countdown ≠ 1 → PlausibleStep it (.skip ⟨it.internalState.countdown, it', it.internalState.finite⟩)
+inductive Take.PlausibleStep [Iterator α m β] (it : IterM (α := Take α m) m β)
+    : (step : IterStep (IterM (α := Take α m) m β) β) → Prop where
+  | yield
+    : ∀ {it' out},
+      it.internalState.inner.IsPlausibleStep (.yield it' out) → (h : it.internalState.countdown ≠ 1)
+        → PlausibleStep it
+          (.yield ⟨it.internalState.countdown - 1, it', it.internalState.finite.imp_left (by omega)⟩
+            out)
+  | skip
+    : ∀ {it'},
+      it.internalState.inner.IsPlausibleStep (.skip it') → it.internalState.countdown ≠ 1
+        → PlausibleStep it (.skip ⟨it.internalState.countdown, it', it.internalState.finite⟩)
   | done : it.internalState.inner.IsPlausibleStep .done → PlausibleStep it .done
-  | depleted : it.internalState.countdown = 1 →
-      PlausibleStep it .done
+  | depleted : it.internalState.countdown = 1 → PlausibleStep it .done
 
 @[always_inline, inline]
 instance Take.instIterator [Monad m] [Iterator α m β] : Iterator (Take α m) m β where
@@ -122,12 +127,17 @@ instance Take.instIterator [Monad m] [Iterator α m β] : Iterator (Take α m) m
     else do
       match (← it.internalState.inner.step).inflate with
       | .yield it' out h' =>
-        pure <| .deflate <| .yield ⟨it.internalState.countdown - 1, it', (it.internalState.finite.imp_left (by omega))⟩ out (.yield h' h)
-      | .skip it' h' => pure <| .deflate <| .skip ⟨it.internalState.countdown, it', it.internalState.finite⟩ (.skip h' h)
-      | .done h' => pure <| .deflate <| .done (.done h')
+        pure <| .deflate <| .yield
+          ⟨it.internalState.countdown - 1, it', (it.internalState.finite.imp_left (by omega))⟩ out
+          (.yield h' h)
+      | .skip it' h' =>
+        pure <| .deflate <|
+          .skip ⟨it.internalState.countdown, it', it.internalState.finite⟩ (.skip h' h)
+      | .done h' =>
+        pure <| .deflate <| .done (.done h')
 
-def Take.Rel (m : Type w → Type w') [Monad m] [Iterator α m β] [Productive α m] :
-    IterM (α := Take α m) m β → IterM (α := Take α m) m β → Prop :=
+def Take.Rel (m : Type w → Type w') [Monad m] [Iterator α m β] [Productive α m]
+    : IterM (α := Take α m) m β → IterM (α := Take α m) m β → Prop :=
   open scoped Classical in
   if _ : Finite α m then
     InvImage (Prod.Lex Nat.lt_wfRel.rel IterM.TerminationMeasures.Finite.Rel)
@@ -136,34 +146,39 @@ def Take.Rel (m : Type w → Type w') [Monad m] [Iterator α m β] [Productive �
     InvImage (Prod.Lex Nat.lt_wfRel.rel IterM.TerminationMeasures.Productive.Rel)
       (fun it => (it.internalState.countdown, it.internalState.inner.finitelyManySkips))
 
-theorem Take.rel_of_countdown [Monad m] [Iterator α m β] [Productive α m]
+theorem Take.rel_of_countdown
+    [Monad m] [Iterator α m β] [Productive α m]
     {it it' : IterM (α := Take α m) m β}
-    (h : it'.internalState.countdown < it.internalState.countdown) : Take.Rel m it' it := by
+    (h : it'.internalState.countdown < it.internalState.countdown)
+    : Take.Rel m it' it := by
   simp only [Rel]
   split <;> exact Prod.Lex.left _ _ h
 
-theorem Take.rel_of_inner [Monad m] [Iterator α m β] [Productive α m] {remaining : Nat}
-    {it it' : IterM (α := α) m β}
-    (h : it'.finitelyManySkips.Rel it.finitelyManySkips) :
-    Take.Rel m (it'.take remaining) (it.take remaining) := by
+theorem Take.rel_of_inner
+    [Monad m] [Iterator α m β] [Productive α m]
+    {remaining : Nat} {it it' : IterM (α := α) m β}
+    (h : it'.finitelyManySkips.Rel it.finitelyManySkips)
+    : Take.Rel m (it'.take remaining) (it.take remaining) := by
   simp only [Rel]
   split
   · exact Prod.Lex.right _ (.of_productive h)
   · exact Prod.Lex.right _ h
 
-theorem Take.rel_of_zero_of_inner [Monad m] [Iterator α m β]
+theorem Take.rel_of_zero_of_inner
+    [Monad m] [Iterator α m β]
     {it it' : IterM (α := Take α m) m β}
     (h : it.internalState.countdown = 0) (h' : it'.internalState.countdown = 0)
-    (h'' : haveI := it.internalState.finite.resolve_left (by omega); it'.internalState.inner.finitelyManySteps.Rel it.internalState.inner.finitelyManySteps) :
-    haveI := it.internalState.finite.resolve_left (by omega)
-    Take.Rel m it' it := by
+    (h''
+      : haveI := it.internalState.finite.resolve_left (by omega)
+        it'.internalState.inner.finitelyManySteps.Rel it.internalState.inner.finitelyManySteps)
+    : haveI := it.internalState.finite.resolve_left (by omega)
+      Take.Rel m it' it := by
   haveI := it.internalState.finite.resolve_left (by omega)
-  simp only [Rel, this, ↓reduceDIte, InvImage, h, h']
+  simp only [Rel, this, ↓ reduceDIte, InvImage, h, h']
   exact Prod.Lex.right _ h''
 
-private def Take.instFinitenessRelation [Monad m] [Iterator α m β]
-    [Productive α m] :
-    FinitenessRelation (Take α m) m where
+private def Take.instFinitenessRelation [Monad m] [Iterator α m β] [Productive α m]
+    : FinitenessRelation (Take α m) m where
   Rel := Take.Rel m
   wf := by
     rw [Rel]
@@ -198,17 +213,14 @@ private def Take.instFinitenessRelation [Monad m] [Iterator α m β]
       · obtain ⟨it, k, rfl⟩ := IterM.take.surjective_of_zero_lt it (by omega)
         apply Take.rel_of_inner
         exact IterM.TerminationMeasures.Productive.rel_of_skip h'
-    case done _ =>
-      cases h
-    case depleted _ =>
-      cases h
+    case done _ => cases h
+    case depleted _ => cases h
 
-instance Take.instFinite [Monad m] [Iterator α m β] [Productive α m] :
-    Finite (Take α m) m :=
-  by exact Finite.of_finitenessRelation instFinitenessRelation
+instance Take.instFinite [Monad m] [Iterator α m β] [Productive α m] : Finite (Take α m) m := by
+  exact Finite.of_finitenessRelation instFinitenessRelation
 
-instance Take.instIteratorLoop {n : Type x → Type x'} [Monad m] [Monad n] [Iterator α m β] :
-    IteratorLoop (Take α m) m n :=
+instance Take.instIteratorLoop {n : Type x → Type x'} [Monad m] [Monad n] [Iterator α m β]
+    : IteratorLoop (Take α m) m n :=
   .defaultImplementation
 
 end Std.Iterators.Types

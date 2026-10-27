@@ -6,7 +6,6 @@ Authors: Sofia Rodrigues
 module
 
 prelude
-
 public import Std.Internal.UV.Loop
 public import Std.Internal.UV.Timer
 public import Std.Internal.UV.TCP

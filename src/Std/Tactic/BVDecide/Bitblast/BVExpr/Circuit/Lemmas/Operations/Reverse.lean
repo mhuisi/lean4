@@ -28,15 +28,12 @@ namespace bitblast
 variable [Hashable α] [DecidableEq α]
 
 @[simp]
-theorem denote_blastReverse (aig : AIG α) (target : RefVec aig w)
-    (assign : α → Bool) :
-    ∀ (idx : Nat) (hidx : idx < w),
-        ⟦(blastReverse aig target).aig, (blastReverse aig target).vec.get idx hidx, assign⟧
-          =
-        ⟦aig, target.get (w - 1 - idx) (by omega), assign⟧ := by
+theorem denote_blastReverse (aig : AIG α) (target : RefVec aig w) (assign : α → Bool)
+    : ∀ (idx : Nat) (hidx : idx < w),
+      ⟦(blastReverse aig target).aig, (blastReverse aig target).vec.get idx hidx, assign⟧
+        = ⟦aig, target.get (w - 1 - idx) (by omega), assign⟧ := by
   intro idx hidx
   simp [blastReverse, AIG.RefVec.get]
-
 
 end bitblast
 end BVExpr

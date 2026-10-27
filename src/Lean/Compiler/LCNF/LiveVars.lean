@@ -35,13 +35,9 @@ this algorithm will identify `y` as being live in `B` because it is used through
 namespace Lean.Compiler.LCNF
 
 structure Context where
-  /--
-  A cache for an `FVarIdSet` consisting of just `targetId`.
-  -/
+  /-- A cache for an `FVarIdSet` consisting of just `targetId`. -/
   targetSet : FVarIdSet
-  /--
-  The variable we are trying to determine for whether it is live.
-  -/
+  /-- The variable we are trying to determine for whether it is live. -/
   targetId : FVarId
 
 structure State where
@@ -57,34 +53,40 @@ Determine whether `fvarId` is live in `c`. Assumes that `c` and all of its trans
 join-points are internalized.
 -/
 public partial def Code.isFVarLiveIn (c : Code .impure) (fvarId : FVarId) : CompilerM Bool := do
-  go c |>.run { targetSet := { fvarId }, targetId := fvarId } |>.run' {}
+  go c |>.run { targetSet := {fvarId}, targetId := fvarId } |>.run' {}
 where
   go (c : Code .impure) : LiveM Bool := do
     match c with
-    | .let decl k => (pure <| decl.dependsOn (← read).targetSet) <||> go k
-    | .jp decl k => go decl.value <||> (do markJpVisited decl.fvarId; go k)
+    | .let decl k =>
+      (pure <| decl.dependsOn (← read).targetSet) <||> go k
+    | .jp decl k =>
+      go decl.value <||> (do markJpVisited decl.fvarId; go k)
     | .uset fvarId _ y k _ | .sset fvarId _ _ y _ k _ =>
       visitVar fvarId <||> visitVar y <||> go k
     | .oset fvarId _ y k _ =>
       visitVar fvarId <||> pure (y.dependsOn (← read).targetSet) <||> go k
-    | .cases c => visitVar c.discr <||> c.alts.anyM (go ·.getCode)
+    | .cases c =>
+      visitVar c.discr <||> c.alts.anyM (go ·.getCode)
     | .jmp fvarId args =>
       (pure <| args.any (·.dependsOn (← read).targetSet)) <||> do
         if (← get).visitedJps.contains fvarId then
           return false
         else
-          let some decl ← findFunDecl? fvarId | unreachable!
+          let some decl ← findFunDecl? fvarId
+            | unreachable!
           markJpVisited fvarId
           go decl.value
-    | .return var => visitVar var
-    | .unreach .. => return false
-    | .inc (fvarId := fvarId) (k := k) .. | .dec (fvarId := fvarId) (k := k) ..
-    | .setTag (fvarId := fvarId) (k := k) .. | .del (fvarId := fvarId) (k := k) =>
+    | .return var =>
+      visitVar var
+    | .unreach .. =>
+      return false
+    | .inc (fvarId := fvarId) (k := k) ..
+    | .dec (fvarId := fvarId) (k := k) ..
+    | .setTag (fvarId := fvarId) (k := k) ..
+    | .del (fvarId := fvarId) (k := k) =>
       visitVar fvarId <||> go k
 
-  @[inline]
-  visitVar (x : FVarId) : LiveM Bool :=
-    return x == fvarId
+  @[inline] visitVar (x : FVarId) : LiveM Bool := return x == fvarId
 
   @[inline]
   markJpVisited (jp : FVarId) : LiveM Unit := do

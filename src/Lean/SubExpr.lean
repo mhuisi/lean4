@@ -13,7 +13,8 @@ public section
 
 namespace Lean
 
-/-- A position of a subexpression in an expression.
+/--
+A position of a subexpression in an expression.
 
 We use a simple encoding scheme for expression positions `Pos`:
 every `Expr` constructor has at most 3 direct expression children. Considering an expression's type
@@ -21,15 +22,18 @@ to be one extra child as well, we can injectively map a path of `childIdxs` to a
 by computing the value of the 4-ary representation `1 :: childIdxs`, since n-ary representations
 without leading zeros are unique. Note that `pos` is initialized to `1` (case `childIdxs == []`).
 
-See also `SubExpr`. -/
+See also `SubExpr`.
+-/
 @[expose] def SubExpr.Pos := Nat
 
 namespace SubExpr.Pos
 
 def maxChildren := 4
 
-/-- The coordinate `3 = maxChildren - 1` is
-reserved to denote the type of the expression. -/
+/--
+The coordinate `3 = maxChildren - 1` is
+reserved to denote the type of the expression.
+-/
 def typeCoord : Nat := maxChildren - 1
 
 def asNat : Pos → Nat := id
@@ -43,29 +47,35 @@ def isRoot (p : Pos) : Bool := p.asNat < maxChildren
 
 /-- The coordinate deepest in the Pos. -/
 def head (p : Pos) : Nat :=
-  if p.isRoot then panic! "already at top"
-  else p.asNat % maxChildren
+  if p.isRoot then
+    panic! "already at top"
+  else
+    p.asNat % maxChildren
 
 def tail (p : Pos) : Pos :=
-  if p.isRoot then panic! "already at top"
-  else (p.asNat - p.head) / maxChildren
+  if p.isRoot then
+    panic! "already at top"
+  else
+    (p.asNat - p.head) / maxChildren
 
 def push (p : Pos) (c : Nat) : Pos :=
-  if c >= maxChildren then panic! s!"invalid coordinate {c}"
-  else p.asNat * maxChildren + c
+  if c >= maxChildren then
+    panic! s!"invalid coordinate {c}"
+  else
+    p.asNat * maxChildren + c
 
 variable {α : Type} [Inhabited α]
 
-/-- Fold over the position starting at the root and heading to the leaf-/
-partial def foldl  (f : α → Nat → α) (init : α) (p : Pos) : α :=
+/-- Fold over the position starting at the root and heading to the leaf -/
+partial def foldl (f : α → Nat → α) (init : α) (p : Pos) : α :=
   if p.isRoot then init else f (foldl f init p.tail) p.head
 
-/-- Fold over the position starting at the leaf and heading to the root-/
-partial def foldr  (f : Nat → α → α) (p : Pos) (init : α) : α :=
+/-- Fold over the position starting at the leaf and heading to the root -/
+partial def foldr (f : Nat → α → α) (p : Pos) (init : α) : α :=
   if p.isRoot then init else foldr f p.tail (f p.head init)
 
 /-- monad-fold over the position starting at the root and heading to the leaf -/
-partial def foldlM  [Monad M] (f : α → Nat → M α) (init : α) (p : Pos) : M α :=
+partial def foldlM [Monad M] (f : α → Nat → M α) (init : α) (p : Pos) : M α :=
   have : Inhabited (M α) := inferInstance
   if p.isRoot then pure init else do foldlM f init p.tail >>= (f · p.head)
 
@@ -73,62 +83,67 @@ partial def foldlM  [Monad M] (f : α → Nat → M α) (init : α) (p : Pos) : 
 partial def foldrM [Monad M] (f : Nat → α → M α) (p : Pos) (init : α) : M α :=
   if p.isRoot then pure init else f p.head init >>= foldrM f p.tail
 
-def depth (p : Pos) :=
-  p.foldr (init := 0) fun _ => Nat.succ
+def depth (p : Pos) := p.foldr (init := 0) fun _ => Nat.succ
 
-/-- Returns true if `pred` is true for each coordinate in `p`.-/
+/-- Returns true if `pred` is true for each coordinate in `p`. -/
 def all (pred : Nat → Bool) (p : Pos) : Bool :=
   (Id.run <| OptionT.run (foldrM (fun n a => if pred n then pure a else failure) p ())) |>.isSome
 
 def append : Pos → Pos → Pos := foldl push
 
-/-- Creates a subexpression `Pos` from an array of 'coordinates'.
+/--
+Creates a subexpression `Pos` from an array of 'coordinates'.
 Each coordinate is a number {0,1,2} expressing which child subexpression should be explored.
-The first coordinate in the array corresponds to the root of the expression tree.  -/
-def ofArray (ps : Array Nat) : Pos :=
-  ps.foldl push root
+The first coordinate in the array corresponds to the root of the expression tree.
+-/
+def ofArray (ps : Array Nat) : Pos := ps.foldl push root
 
-/-- Decodes a subexpression `Pos` as a sequence of coordinates `cs : Array Nat`. See `Pos.ofArray` for details.
-`cs[0]` is the coordinate for the root expression. -/
-def toArray (p : Pos) : Array Nat :=
-  foldl Array.push #[] p
+/--
+Decodes a subexpression `Pos` as a sequence of coordinates `cs : Array Nat`. See `Pos.ofArray` for details.
+`cs[0]` is the coordinate for the root expression.
+-/
+def toArray (p : Pos) : Array Nat := foldl Array.push #[] p
 
 def pushBindingDomain (p : Pos) := p.push 0
-def pushBindingBody   (p : Pos) := p.push 1
-def pushLetVarType    (p : Pos) := p.push 0
-def pushLetValue      (p : Pos) := p.push 1
-def pushLetBody       (p : Pos) := p.push 2
-def pushAppFn         (p : Pos) := p.push 0
-def pushAppArg        (p : Pos) := p.push 1
-def pushProj          (p : Pos) := p.push 0
-def pushType          (p : Pos) := p.push Pos.typeCoord
+def pushBindingBody (p : Pos) := p.push 1
+def pushLetVarType (p : Pos) := p.push 0
+def pushLetValue (p : Pos) := p.push 1
+def pushLetBody (p : Pos) := p.push 2
+def pushAppFn (p : Pos) := p.push 0
+def pushAppArg (p : Pos) := p.push 1
+def pushProj (p : Pos) := p.push 0
+def pushType (p : Pos) := p.push Pos.typeCoord
 
-def pushNaryFn (numArgs : Nat) (p : Pos) : Pos :=
-  p.asNat * (maxChildren ^ numArgs)
+def pushNaryFn (numArgs : Nat) (p : Pos) : Pos := p.asNat * (maxChildren ^ numArgs)
 
 def pushNaryArg (numArgs argIdx : Nat) (p : Pos) : Pos :=
   show Nat from p.asNat * (maxChildren ^ (numArgs - argIdx)) + 1
 
 def pushNthBindingDomain : (binderIdx : Nat) → Pos → Pos
-  | 0, p => p.pushBindingDomain
-  | (n+1), p => pushNthBindingDomain n p.pushBindingBody
+  | 0, p =>
+    p.pushBindingDomain
+  | (n + 1), p =>
+    pushNthBindingDomain n p.pushBindingBody
 
 def pushNthBindingBody : (numBinders : Nat) → Pos → Pos
-  | 0, p => p
-  | (n+1), p => pushNthBindingBody n p.pushBindingBody
+  | 0, p =>
+    p
+  | (n + 1), p =>
+    pushNthBindingBody n p.pushBindingBody
 
 protected def toString (p : Pos) : String :=
-  p.toArray.toList
-  |>.map toString
-  |> String.intercalate "/"
-  |> ("/" ++ ·)
+  p.toArray.toList |>.map toString |> String.intercalate "/" |> ("/" ++ ·)
 
 private def ofStringCoord : String → Except String Nat
-  | "0" => .ok 0 | "1" => .ok 1 | "2" => .ok 2 | "3" => .ok 3
+  | "0" => .ok 0
+  | "1" => .ok 1
+  | "2" => .ok 2
+  | "3" => .ok 3
   | c => .error s!"Invalid coordinate {c}"
 
 protected def fromString? : String → Except String Pos
-  | "/" => .ok Pos.root
+  | "/" =>
+    .ok Pos.root
   | s =>
     match String.split s '/' |>.toStringList with
     | "" :: tail => Pos.ofArray <$> tail.toArray.mapM ofStringCoord
@@ -146,7 +161,6 @@ instance : EmptyCollection Pos := ⟨root⟩
 instance : Repr Pos where
   reprPrec p _ := f!"Pos.fromString! {repr p.toString}"
 
-
 -- Note: we can't send the bare Nat over the wire because Json will convert to float
 -- if the nat is too big and least significant bits will be lost.
 instance : ToJson Pos := ⟨toJson ∘ Pos.toString⟩
@@ -154,14 +168,16 @@ instance : FromJson Pos := ⟨fun j => fromJson? j >>= Pos.fromString?⟩
 
 end SubExpr.Pos
 
-/-- A subexpression of some root expression. Both its value and its position
-within the root are stored. -/
+/--
+A subexpression of some root expression. Both its value and its position
+within the root are stored.
+-/
 structure SubExpr where
   /-- The subexpression. -/
   expr : Expr
   /-- The position of the subexpression within the root expression. -/
-  pos  : SubExpr.Pos
-  deriving Inhabited
+  pos : SubExpr.Pos
+deriving Inhabited
 
 namespace SubExpr
 
@@ -198,27 +214,29 @@ inductive GoalLocation where
   | hypValue : FVarId → SubExpr.Pos → GoalLocation
   /-- A subexpression of the goal type. -/
   | target : SubExpr.Pos → GoalLocation
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
-/-- A location within a goal state. It identifies a specific goal together with a `GoalLocation`
-within it. -/
+/--
+A location within a goal state. It identifies a specific goal together with a `GoalLocation`
+within it.
+-/
 structure GoalsLocation where
   /-- Which goal the location is in. -/
   mvarId : MVarId
-  loc    : GoalLocation
-  deriving FromJson, ToJson
+  loc : GoalLocation
+deriving FromJson, ToJson
 
 end SubExpr
 
 open SubExpr in
-/-- Same as `Expr.traverseApp` but also includes a
-`SubExpr.Pos` argument for tracking subexpression position. -/
-def Expr.traverseAppWithPos {M} [Monad M] (visit : Pos → Expr → M Expr) (p : Pos) (e : Expr) : M Expr :=
+/--
+Same as `Expr.traverseApp` but also includes a
+`SubExpr.Pos` argument for tracking subexpression position.
+-/
+def Expr.traverseAppWithPos {M} [Monad M] (visit : Pos → Expr → M Expr) (p : Pos) (e : Expr)
+    : M Expr :=
   match e with
-  | .app f a =>
-    e.updateApp!
-      <$> traverseAppWithPos visit p.pushAppFn f
-      <*> visit p.pushAppArg a
+  | .app f a => e.updateApp! <$> traverseAppWithPos visit p.pushAppFn f <*> visit p.pushAppArg a
   | e => visit p e
 
 end Lean

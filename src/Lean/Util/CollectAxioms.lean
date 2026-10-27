@@ -14,14 +14,13 @@ namespace CollectAxioms
 
 structure State where
   /-- Cache mapping constants to their (sorted) axiom dependencies. -/
-  seen   : NameMap (Array Name) := {}
+  seen : NameMap (Array Name) := {}
   /-- Axioms accumulated for the current constant being processed. -/
   axioms : NameSet := {}
 
 abbrev M := ReaderT Environment $ StateM State
 
-def runM (env : Environment) (x : M α) : α :=
-  x.run env |>.run' {}
+def runM (env : Environment) (x : M α) : α := x.run env |>.run' {}
 
 def insertArray (s : NameSet) (axs : Array Name) : NameSet :=
   axs.foldl (init := s) fun acc ax => acc.insert ax
@@ -34,9 +33,7 @@ When processing a constant not found in `extFind?` or the cache, the function te
 clears the axiom accumulator, recurses into the constant's dependencies, caches the result
 in `seen`, and merges the collected axioms back.
 -/
-partial def collect
-    (extFind? : Environment → Name → Option (Array Name))
-    (c : Name) : M Unit := do
+partial def collect (extFind? : Environment → Name → Option (Array Name)) (c : Name) : M Unit := do
   let env ← read
   -- Check extension for pre-computed axioms (imported declarations)
   if let some axs := extFind? env c then
@@ -54,31 +51,40 @@ partial def collect
   let collectExpr (e : Expr) : M Unit := e.getUsedConstants.forM (collect extFind?)
   -- Take constants from the kernel env, which may differ from the elab env for (async) errors.
   match env.checked.get.find? c with
-  | some (.axiomInfo v)  =>
-      modify fun s => { s with axioms := s.axioms.insert c }
-      collectExpr v.type
-  | some (.defnInfo v)   => collectExpr v.type *> collectExpr v.value
-  | some (.thmInfo v)    => collectExpr v.type *> collectExpr v.value
-  | some (.opaqueInfo v) => collectExpr v.type *> collectExpr v.value
-  | some (.quotInfo _)   => pure ()
-  | some (.ctorInfo v)   => collectExpr v.type
-  | some (.recInfo v)    => collectExpr v.type
-  | some (.inductInfo v) => collectExpr v.type *> v.ctors.forM (collect extFind?)
-  | none                 => pure ()
+  | some (.axiomInfo v) =>
+    modify fun s => { s with axioms := s.axioms.insert c }
+    collectExpr v.type
+  | some (.defnInfo v) =>
+    collectExpr v.type *> collectExpr v.value
+  | some (.thmInfo v) =>
+    collectExpr v.type *> collectExpr v.value
+  | some (.opaqueInfo v) =>
+    collectExpr v.type *> collectExpr v.value
+  | some (.quotInfo _) =>
+    pure ()
+  | some (.ctorInfo v) =>
+    collectExpr v.type
+  | some (.recInfo v) =>
+    collectExpr v.type
+  | some (.inductInfo v) =>
+    collectExpr v.type *> v.ctors.forM (collect extFind?)
+  | none =>
+    pure ()
   -- Cache result (sorted for canonical order) and merge back into saved axioms
   let collected := (← get).axioms
   let result := collected.toArray.qsort Name.lt
-  modify fun s => { s with
-    seen   := s.seen.insert c result
+  modify fun s => {
+    s with
+    seen := s.seen.insert c result
     axioms := insertArray savedAxioms result
   }
 
 /-- Collect axioms for `c` and return its sorted axiom list from the cache. -/
-def collectAndGet
-    (extFind? : Environment → Name → Option (Array Name))
-    (c : Name) : M (Array Name) := do
+def collectAndGet (extFind? : Environment → Name → Option (Array Name)) (c : Name)
+    : M (Array Name) := do
   collect extFind? c
-  let some axs := (← get).seen.find? c | panic! s!"collectAndGet: '{c}' not in seen after collect"
+  let some axs := (← get).seen.find? c
+    | panic! s!"collectAndGet: '{c}' not in seen after collect"
   return axs
 
 end CollectAxioms
@@ -99,16 +105,19 @@ structure ExportedAxiomsState where
 instance : Inhabited ExportedAxiomsState := ⟨{}⟩
 
 /-- Look up pre-computed axioms for an imported declaration. -/
-def ExportedAxiomsState.find? (s : ExportedAxiomsState) (env : Environment)
-    (c : Name) : Option (Array Name) :=
+def ExportedAxiomsState.find? (s : ExportedAxiomsState) (env : Environment) (c : Name)
+    : Option (Array Name) :=
   match env.getModuleIdxFor? c with
   | some modIdx =>
     if h : modIdx.toNat < s.importedModuleEntries.size then
-      match s.importedModuleEntries[modIdx].binSearch (c, #[]) (fun a b => Name.quickLt a.1 b.1) with
+      match s.importedModuleEntries[modIdx].binSearch (c, #[])
+        (fun a b => Name.quickLt a.1 b.1) with
       | some entry => some entry.2
-      | none       => none
-    else none
-  | none => none
+      | none => none
+    else
+      none
+  | none =>
+    none
 
 /--
 Environment extension that records axiom dependencies for all declarations in a module.
@@ -117,12 +126,12 @@ elaboration. During elaboration, `collectAxioms` walks bodies directly. Downstre
 look up pre-computed entries for imported declarations, so axiom collection never crosses
 module boundaries.
 -/
-builtin_initialize exportedAxiomsExt :
-    PersistentEnvExtension (Name × Array Name) (Name × Array Name) ExportedAxiomsState ←
+builtin_initialize exportedAxiomsExt
+    : PersistentEnvExtension (Name × Array Name) (Name × Array Name) ExportedAxiomsState ←
   registerPersistentEnvExtension {
-    mkInitial     := pure {}
+    mkInitial := pure {}
     addImportedFn := fun importedEntries => pure { importedModuleEntries := importedEntries }
-    addEntryFn    := fun s _ => s
+    addEntryFn := fun s _ => s
     exportEntriesFnEx := fun env s =>
       let exportedEnv := env.setExporting true
       let privateEnv := env.setExporting false
@@ -130,19 +139,23 @@ builtin_initialize exportedAxiomsExt :
       -- By pre-computing axiom data for every exported declaration, downstream modules can
       -- look up any imported declaration without walking its body, keeping collection
       -- module-local.
-      let allNames := env.checked.get.constants.foldStage2
-        (fun names name _ =>
-          if (exportedEnv.find? name).isSome then names.push name
-          else names) #[]
+      let allNames :=
+        env.checked.get.constants.foldStage2
+          (fun names name _ =>
+            if (exportedEnv.find? name).isSome then
+              names.push name
+            else
+              names)
+          #[]
       -- Compute axioms within a shared state (for caching across declarations).
       -- Use `privateEnv` so that `collect` can see all constant bodies.
-      let entries := CollectAxioms.runM privateEnv do
-        allNames.mapM fun name =>
-          return (name, ← CollectAxioms.collectAndGet s.find? name)
+      let entries :=
+        CollectAxioms.runM privateEnv do
+          allNames.mapM fun name => return (name, ← CollectAxioms.collectAndGet s.find? name)
       -- Sort by name for binary search at import time.
       let entries := entries.qsort fun a b => Name.quickLt a.1 b.1
       .uniform entries
-    asyncMode     := .mainOnly
+    asyncMode := .mainOnly
   }
 
 /-- Collect all axioms transitively used by a constant. -/
@@ -150,7 +163,6 @@ public def collectAxioms [Monad m] [MonadEnv m] (constName : Name) : m (Array Na
   let env ← getEnv
   let privateEnv := env.setExporting false
   let s := exportedAxiomsExt.getState (asyncMode := .mainOnly) env
-  return CollectAxioms.runM privateEnv do
-    CollectAxioms.collectAndGet s.find? constName
+  return CollectAxioms.runM privateEnv do CollectAxioms.collectAndGet s.find? constName
 
 end Lean

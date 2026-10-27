@@ -20,10 +20,12 @@ goal list. If there were a `first_goal` combinator, it would be like `first_goal
 -/
 
 def elabShow (newType : Term) : TacticM Unit := do
-  let goals@(goal :: _) ← getGoals | throwNoGoalsToBeSolved
+  let goals@(goal :: _) ← getGoals
+    | throwNoGoalsToBeSolved
   go newType goal goals []
 where
-  go (newType : Term) (firstGoal : MVarId) (goals : List MVarId) (prevRev : List MVarId) : TacticM Unit := do
+  go (newType : Term) (firstGoal : MVarId) (goals : List MVarId) (prevRev : List MVarId)
+      : TacticM Unit := do
     match goals with
     | [] =>
       -- re-run first goal for error message
@@ -38,18 +40,18 @@ where
         since `elabChange` elaborates the pattern each time.
         -/
         let state ← saveState
-        Tactic.tryCatch
-          (withoutRecover (tryGoal newType goal goals prevRev simpleError))
-          fun _ => do
+        Tactic.tryCatch (withoutRecover (tryGoal newType goal goals prevRev simpleError)) fun _ =>
+          do
             state.restore true
             go newType firstGoal goals (goal :: prevRev)
-  tryGoal (newType : Term) (goal : MVarId) (goals : List MVarId) (prevRev : List MVarId) (err : Expr → Expr → MetaM MessageData) : TacticM Unit := do
+  tryGoal
+      (newType : Term) (goal : MVarId) (goals : List MVarId) (prevRev : List MVarId)
+      (err : Expr → Expr → MetaM MessageData)
+      : TacticM Unit := do
     let type ← goal.getType
     let tag ← goal.getTag
     goal.withContext do
-      let (tgt', mvars) ← withCollectingNewGoalsFrom
-        (elabChange type newType err)
-        tag `show
+      let (tgt', mvars) ← withCollectingNewGoalsFrom (elabChange type newType err) tag `show
       let goal' ← goal.replaceTargetDefEq tgt'
       let newGoals := goal' :: prevRev.reverseAux (mvars ++ goals)
       setGoals newGoals
@@ -65,7 +67,8 @@ where
       is not definitionally equal to the target{indentExpr tgt}\n\
       (Errors for other goals omitted)"
 
-@[builtin_tactic «show»] def evalShow : Tactic
+@[builtin_tactic «show»]
+def evalShow : Tactic
   | `(tactic| show $newType:term) => elabShow newType
   | _ => throwUnsupportedSyntax
 

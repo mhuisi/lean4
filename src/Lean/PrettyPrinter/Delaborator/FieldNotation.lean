@@ -31,9 +31,11 @@ Otherwise it returns `none`.
 -/
 private def projInfo (c : Name) : MetaM (Option (Name × Nat × Bool × Bool × Bool)) := do
   let env ← getEnv
-  let .str s field := c | return none
+  let .str s field := c
+    | return none
   let field := Name.mkSimple field
-  let some structInfo := getStructureInfo? env s | return none
+  let some structInfo := getStructureInfo? env s
+    | return none
   let isFromClass := isClass env s
   let info ← getConstInfoInduct s
   if let some fieldInfo := getFieldInfo? env s field then
@@ -52,9 +54,7 @@ private def isAppOfBaseName (e : Expr) (baseName : Name) : MetaM Bool := do
   else
     return false
 
-/--
-Like `Lean.Elab.Term.typeMatchesBaseName` but does not use `Function` for pi types.
--/
+/-- Like `Lean.Elab.Term.typeMatchesBaseName` but does not use `Function` for pi types. -/
 private partial def typeMatchesBaseName (type : Expr) (baseName : Name) : MetaM Bool := do
   withReducibleAndInstances do
     if (← isAppOfBaseName type baseName) then
@@ -74,7 +74,8 @@ returns the field name and the index for the argument to be used as the object o
 Otherwise it fails.
 -/
 private def generalizedFieldInfo (c : Name) (args : Array Expr) : MetaM (Name × Nat) := do
-  let .str baseName field := c | failure
+  let .str baseName field := c
+    | failure
   let baseName := privateToUserName baseName
   guard <| !baseName.isAnonymous
   let field := Name.mkSimple field
@@ -112,9 +113,11 @@ private def testAppOf (e : Expr) (c : Name) : MetaM Bool := do
 If `f` is a function that can be used for field notation,
 returns the field name to use and the argument index for the object of the field notation.
 -/
-def fieldNotationCandidate? (f : Expr) (args : Array Expr) (useGeneralizedFieldNotation : Bool) : MetaM (Option (Name × Nat)) := do
+def fieldNotationCandidate? (f : Expr) (args : Array Expr) (useGeneralizedFieldNotation : Bool)
+    : MetaM (Option (Name × Nat)) := do
   let env ← getEnv
-  let .const c .. := f.consumeMData | return none
+  let .const c .. := f.consumeMData
+    | return none
   if (← isInaccessiblePrivateName c) then
     return none
   if c.getPrefix.isAnonymous then return none
@@ -124,9 +127,12 @@ def fieldNotationCandidate? (f : Expr) (args : Array Expr) (useGeneralizedFieldN
   -- Handle structure projections
   if let some (field, numParams, _isTrueProj, isParentProj, isFromClass) ← projInfo c then
     -- Don't use field notation for classes, unless it is a parent projection.
-    unless !isFromClass || isParentProj do return none
-    unless numParams < args.size do return none
-    unless ← testAppOf (← inferType args[numParams]!) c.getPrefix do return none
+    unless !isFromClass || isParentProj do
+      return none
+    unless numParams < args.size do
+      return none
+    unless ← testAppOf (← inferType args[numParams]!) c.getPrefix do
+      return none
     return (field, numParams)
   -- Handle generalized field notation
   if useGeneralizedFieldNotation then
@@ -134,7 +140,8 @@ def fieldNotationCandidate? (f : Expr) (args : Array Expr) (useGeneralizedFieldN
       -- Avoid field notation for theorems
       guard !(← isProof f)
       return ← generalizedFieldInfo c args
-    catch _ => pure ()
+    catch _ =>
+      pure ()
   -- It's not handled by any of the above.
   return none
 
@@ -143,10 +150,14 @@ Returns the field name of the projection if `e` is an application that is a proj
 If `explicit` is `true`, then requires that the structure have no parameters.
 -/
 def parentProj? (explicit : Bool) (e : Expr) : MetaM (Option Name) := do
-  unless e.isApp do return none
-  let .const c .. := e.getAppFn | return none
-  let some (field, numParams, isTrueProj, isParentProj, _isFromClass) ← projInfo c | return none
-  if isTrueProj && isParentProj && (!explicit || numParams == 0) && e.getAppNumArgs == numParams + 1 then
+  unless e.isApp do
+    return none
+  let .const c .. := e.getAppFn
+    | return none
+  let some (field, numParams, isTrueProj, isParentProj, _isFromClass) ← projInfo c
+    | return none
+  if isTrueProj && isParentProj && (!explicit || numParams == 0)
+      && e.getAppNumArgs == numParams + 1 then
     return some field
   else
     return none

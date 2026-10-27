@@ -25,29 +25,36 @@ declaration whose type is a `Prop`. Such a declaration should be written using
 -/
 register_builtin_option linter.defProp : Bool := {
   defValue := true
-  descr := "enable the `defProp` linter, which warns when a `def` is used to introduce \
-    a declaration whose type is a `Prop`; such a declaration should be written using \
-    `theorem` instead."
+  descr :=
+    "enable the `defProp` linter, which warns when a `def` is used to introduce \
+      a declaration whose type is a `Prop`; such a declaration should be written using \
+      `theorem` instead."
 }
 
 namespace DefProp
 
 @[inherit_doc linter.defProp]
-def defPropLinter : Linter where run := withSetOptionIn fun _ => do
-  unless getLinterValue linter.defProp (← getLinterOptions) do
-    return
-  if (← get).messages.hasErrors then
-    return
-  let env ← getEnv
-  for t in ← getInfoTrees do
-    for declName in getDeclsByBody t do
-      let some info := env.find? declName | continue
-      unless info.isDefinition do continue
-      if info.hints.isAbbrev then continue
-      let isPropType ← liftTermElabM <| isProp info.type
-      if isPropType then
-        logLintIf linter.defProp (← getRef) m!"\
-          Definition `{.ofConstName declName}` is a proposition; use `theorem` instead of `def`"
+def defPropLinter : Linter where
+  run :=
+    withSetOptionIn fun _ => do
+      unless getLinterValue linter.defProp (← getLinterOptions) do
+        return
+      if (← get).messages.hasErrors then
+        return
+      let env ← getEnv
+      for t in ← getInfoTrees do
+        for declName in getDeclsByBody t do
+          let some info := env.find? declName
+            | continue
+          unless info.isDefinition do
+            continue
+          if info.hints.isAbbrev then continue
+          let isPropType ← liftTermElabM <| isProp info.type
+          if isPropType then
+            logLintIf linter.defProp (← getRef)
+              m!"\
+                Definition `{.ofConstName declName}` is a proposition; use `theorem` instead of \
+                `def`"
 
 builtin_initialize addLinter defPropLinter
 

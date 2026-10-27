@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 import Lean.Meta.Tactic.Grind.MBTC
@@ -21,7 +22,7 @@ private partial def toRatValue? (a : Expr) : Option Rat :=
   else if a.isAppOfArity ``OfNat.ofNat 3 then
     toRatValue? (a.getArg! 1)
   else if a.isAppOfArity ``Neg.neg 3 then
-    (- ·) <$> toRatValue? a.appArg!
+    (-·) <$> toRatValue? a.appArg!
   else if a.isAppOfArity ``HDiv.hDiv 6 then
     (· / ·) <$> toRatValue? a.appFn!.appArg! <*> toRatValue? a.appArg!
   else if let .lit (.natVal n) := a then
@@ -46,12 +47,16 @@ private def isInterpreted (e : Expr) : GoalM Bool := do
 private def eqAssignment (a b : Expr) : GoalM Bool := do
   let structId₁? := (← get').exprToStructId.find? { expr := a }
   let structId₂? := (← get').exprToStructId.find? { expr := b }
-  let some structId := structId₁? <|> structId₂? | return false
+  let some structId := structId₁? <|> structId₂?
+    | return false
   let s := (← get').structs[structId]!
   -- It is pointless to generate case-splits unless we have support for disequality.
-  unless s.isLinearInst?.isSome do return false
-  let some v₁ := getAssignmentExt? s a | return false
-  let some v₂ := getAssignmentExt? s b | return false
+  unless s.isLinearInst?.isSome do
+    return false
+  let some v₁ := getAssignmentExt? s a
+    | return false
+  let some v₂ := getAssignmentExt? s b
+    | return false
   return v₁ == v₂
 
 def mbtc : GoalM Bool := do

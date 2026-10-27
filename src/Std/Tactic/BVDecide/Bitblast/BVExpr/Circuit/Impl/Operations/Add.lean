@@ -33,31 +33,30 @@ structure FullAdderInput (aig : AIG α) where
 
 namespace FullAdderInput
 
-def cast {aig1 aig2 : AIG α} (val : FullAdderInput aig1) (h : aig1.decls.size ≤ aig2.decls.size) :
-    FullAdderInput aig2 :=
+def cast {aig1 aig2 : AIG α} (val : FullAdderInput aig1) (h : aig1.decls.size ≤ aig2.decls.size)
+    : FullAdderInput aig2 :=
   let ⟨lhs, rhs, cin⟩ := val
   ⟨lhs.cast h, rhs.cast h, cin.cast h⟩
 
 @[simp]
-theorem lhs_cast {aig1 aig2 : AIG α} (s : FullAdderInput aig1)
-    (hcast : aig1.decls.size ≤ aig2.decls.size) :
-    (s.cast hcast).lhs = s.lhs.cast hcast := by
+theorem lhs_cast
+    {aig1 aig2 : AIG α} (s : FullAdderInput aig1) (hcast : aig1.decls.size ≤ aig2.decls.size)
+    : (s.cast hcast).lhs = s.lhs.cast hcast := by
   simp [cast]
 
 @[simp]
-theorem rhs_cast {aig1 aig2 : AIG α} (s : FullAdderInput aig1)
-    (hcast : aig1.decls.size ≤ aig2.decls.size) :
-    (s.cast hcast).rhs = s.rhs.cast hcast := by
+theorem rhs_cast
+    {aig1 aig2 : AIG α} (s : FullAdderInput aig1) (hcast : aig1.decls.size ≤ aig2.decls.size)
+    : (s.cast hcast).rhs = s.rhs.cast hcast := by
   simp [cast]
 
 @[simp]
-theorem cin_cast {aig1 aig2 : AIG α} (s : FullAdderInput aig1)
-    (hcast : aig1.decls.size ≤ aig2.decls.size) :
-    (s.cast hcast).cin = s.cin.cast hcast := by
+theorem cin_cast
+    {aig1 aig2 : AIG α} (s : FullAdderInput aig1) (hcast : aig1.decls.size ≤ aig2.decls.size)
+    : (s.cast hcast).cin = s.cin.cast hcast := by
   simp [cast]
 
 end FullAdderInput
-
 
 def mkFullAdderOut (aig : AIG α) (input : FullAdderInput aig) : AIG.Entrypoint α :=
   -- let subExpr = XOR lhs rhs
@@ -119,7 +118,6 @@ instance : AIG.LawfulOperator α FullAdderInput mkFullAdderCarry where
     apply AIG.LawfulOperator.le_size_of_le_aig_size (f := AIG.mkAndCached)
     apply AIG.LawfulOperator.le_size_of_le_aig_size (f := AIG.mkAndCached)
     apply AIG.LawfulOperator.le_size (f := AIG.mkXorCached)
-
   decl_eq := by
     intros
     simp only [mkFullAdderCarry]
@@ -172,9 +170,11 @@ where
     let ⟨lhs, rhs⟩ := input
     go aig lhs rhs 0 (by omega) cin (.emptyWithCapacity w)
 
-  go (aig : AIG α) (lhs rhs : AIG.RefVec aig w) (curr : Nat) (hcurr : curr ≤ w) (cin : AIG.Ref aig)
-      (s : AIG.RefVec aig curr) :
-      AIG.RefVecEntry α w :=
+  go
+      (aig : AIG α) (lhs rhs : AIG.RefVec aig w)
+      (curr : Nat) (hcurr : curr ≤ w)
+      (cin : AIG.Ref aig) (s : AIG.RefVec aig curr)
+      : AIG.RefVecEntry α w :=
     if hidx : curr < w then
       let lin := lhs.get curr hidx
       let rin := rhs.get curr hidx
@@ -194,9 +194,11 @@ where
 
 namespace blastAdd
 
-theorem go_le_size (aig : AIG α) (curr : Nat) (hcurr : curr ≤ w) (cin : AIG.Ref aig)
-    (s : AIG.RefVec aig curr) (lhs rhs : AIG.RefVec aig w) :
-    aig.decls.size ≤ (go aig lhs rhs curr hcurr cin s).aig.decls.size := by
+theorem go_le_size
+    (aig : AIG α)
+    (curr : Nat) (hcurr : curr ≤ w)
+    (cin : AIG.Ref aig) (s : AIG.RefVec aig curr) (lhs rhs : AIG.RefVec aig w)
+    : aig.decls.size ≤ (go aig lhs rhs curr hcurr cin s).aig.decls.size := by
   unfold go
   dsimp only
   split
@@ -208,10 +210,12 @@ theorem go_le_size (aig : AIG α) (curr : Nat) (hcurr : curr ≤ w) (cin : AIG.R
   · simp
 termination_by w - curr
 
-theorem go_decl_eq (aig : AIG α) (curr : Nat) (hcurr : curr ≤ w) (cin : AIG.Ref aig)
-    (s : AIG.RefVec aig curr) (lhs rhs : AIG.RefVec aig w) :
-    ∀ (idx : Nat) (h1) (h2),
-        (go aig lhs rhs curr hcurr cin s).aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
+theorem go_decl_eq
+    (aig : AIG α)
+    (curr : Nat) (hcurr : curr ≤ w)
+    (cin : AIG.Ref aig) (s : AIG.RefVec aig curr) (lhs rhs : AIG.RefVec aig w)
+    : ∀ (idx : Nat) (h1) (h2),
+      (go aig lhs rhs curr hcurr cin s).aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
   generalize hgo : go aig lhs rhs curr hcurr cin s = res
   unfold go at hgo
   dsimp only at hgo
@@ -219,10 +223,22 @@ theorem go_decl_eq (aig : AIG α) (curr : Nat) (hcurr : curr ≤ w) (cin : AIG.R
   next h =>
     rw [← hgo]
     intro idx h1 h2
-    have h3 : idx < (mkFullAdderOut aig { lhs := lhs.get curr h, rhs := rhs.get curr h, cin := cin }).aig.decls.size := by
+    have h3
+        : idx
+          < (mkFullAdderOut aig {
+            lhs := lhs.get curr h
+            rhs := rhs.get curr h
+            cin := cin
+          }).aig.decls.size := by
       apply AIG.LawfulOperator.lt_size_of_lt_aig_size
       exact h1
-    have h4 : idx < (mkFullAdder aig { lhs := lhs.get curr h, rhs := rhs.get curr h, cin := cin }).aig.decls.size := by
+    have h4
+        : idx
+          < (mkFullAdder aig {
+            lhs := lhs.get curr h
+            rhs := rhs.get curr h
+            cin := cin
+          }).aig.decls.size := by
       apply AIG.LawfulOperator.lt_size_of_lt_aig_size
       exact h3
     rw [go_decl_eq (w := w) (curr := curr + 1) (h1 := h4)]
@@ -253,7 +269,6 @@ instance : AIG.LawfulVecOperator α AIG.BinaryRefVec blastAdd where
     intros
     unfold blastAdd
     split <;> rw [AIG.LawfulVecOperator.decl_eq (f := blastAdd.blast)]
-
 
 end bitblast
 end BVExpr

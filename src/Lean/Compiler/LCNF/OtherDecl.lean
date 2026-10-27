@@ -14,9 +14,7 @@ public section
 
 namespace Lean.Compiler.LCNF
 
-/--
-Return the LCNF type for constructors, inductive types, and foreign functions.
--/
+/-- Return the LCNF type for constructors, inductive types, and foreign functions. -/
 def getOtherDeclType (declName : Name) (us : List Level := []) : CompilerM Expr := do
   match (← getPhase) with
   | .base => getOtherDeclBaseType declName us

@@ -17,38 +17,24 @@ set_option linter.missingDocs true -- keep it documented
 
 namespace Lean.Elab.Tactic.BVDecide
 
-/--
-The various kinds of configurations offered for the SAT solver.
--/
+/-- The various kinds of configurations offered for the SAT solver. -/
 inductive SolverMode where
-  /--
-  Set SAT solver options to improve proof search.
-  -/
+  /-- Set SAT solver options to improve proof search. -/
   | proof
-  /--
-  Set SAT solver options to improve counterexample search.
-  -/
+  /-- Set SAT solver options to improve counterexample search. -/
   | counterexample
-  /--
-  Don't set additional SAT solver flags.
-  -/
+  /-- Don't set additional SAT solver flags. -/
   | default
 
-/--
-The configuration options for `bv_decide`.
--/
+/-- The configuration options for `bv_decide`. -/
 structure BVDecideConfig where
   /-- The number of seconds that the SAT solver is run before aborting. -/
   timeout : Nat := 10
   /-- Whether to run the trimming algorithm on LRAT proofs. -/
   trimProofs : Bool := true
-  /--
-  Whether to use the binary LRAT proof format.
-  -/
+  /-- Whether to use the binary LRAT proof format. -/
   binaryProofs : Bool := true
-  /--
-  Canonicalize with respect to associativity and commutativity.
-  -/
+  /-- Canonicalize with respect to associativity and commutativity. -/
   acNf : Bool := false
   /--
   Split hypotheses of the form `h : (x && y) = true` into `h1 : x = true` and `h2 : y = true`.
@@ -72,18 +58,14 @@ structure BVDecideConfig where
   thus make them accessible for `bv_decide`.
   -/
   fixedInt : Bool := true
-  /--
-  Handle equality on enum inductives by turning them into `BitVec`.
-  -/
+  /-- Handle equality on enum inductives by turning them into `BitVec`. -/
   enums : Bool := true
   /--
   Output the AIG of bv_decide as graphviz into a file called aig.gv in the working directory of the
   Lean process.
   -/
   graphviz : Bool := false
-  /--
-  The maximum number of subexpressions to visit when performing simplification.
-  -/
+  /-- The maximum number of subexpressions to visit when performing simplification. -/
   maxSteps : Nat := Lean.Meta.Simp.defaultMaxSteps
   /--
   Short-circuit multiplication as an abstraction-style optimization that triggers
@@ -100,15 +82,10 @@ structure BVDecideConfig where
   abstraction refinement.
   -/
   uf : Bool := false
-  /--
-  The number of iterations that the CEGAR refinement loop may run up to.
-  -/
+  /-- The number of iterations that the CEGAR refinement loop may run up to. -/
   cegarRounds : Nat := 64
 
-/--
-Whether this configuration requires the solver to use incremental solving.
--/
-def BVDecideConfig.needsIncremental (cfg : BVDecideConfig) : Bool :=
-  cfg.uf
+/-- Whether this configuration requires the solver to use incremental solving. -/
+def BVDecideConfig.needsIncremental (cfg : BVDecideConfig) : Bool := cfg.uf
 
 end Lean.Elab.Tactic.BVDecide

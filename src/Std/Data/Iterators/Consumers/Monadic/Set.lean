@@ -27,8 +27,11 @@ If the iterator is not finite, this function might run forever. Given {givenInst
 the variant {lean}`it.ensureTermination.toHashSet` always terminates after finitely many steps.
 -/
 @[inline]
-public def IterM.toHashSet {α β : Type w} [BEq β] [Hashable β] {m : Type w → Type w'} [Monad m]
-    [Iterator α m β] [IteratorLoop α m m] (it : IterM (α := α) m β) : m (HashSet β) :=
+public def IterM.toHashSet
+    {α β : Type w} [BEq β] [Hashable β]
+    {m : Type w → Type w'} [Monad m] [Iterator α m β] [IteratorLoop α m m]
+    (it : IterM (α := α) m β)
+    : m (HashSet β) :=
   it.fold (init := ∅) fun acc a => acc.insert a
 
 set_option doc.verso true
@@ -40,9 +43,11 @@ This variant terminates after finitely many steps and requires a proof that the 
 finite. If such a proof is not available, consider using {name}`IterM.toHashSet`.
 -/
 @[inline]
-public def IterM.Total.toHashSet {α β : Type w} [BEq β] [Hashable β] {m : Type w → Type w'} [Monad m]
-    [Iterator α m β] [Finite α m] [IteratorLoop α m m] (it : IterM.Total (α := α) m β) :
-    m (HashSet β) :=
+public def IterM.Total.toHashSet
+    {α β : Type w} [BEq β] [Hashable β]
+    {m : Type w → Type w'} [Monad m] [Iterator α m β] [Finite α m] [IteratorLoop α m m]
+    (it : IterM.Total (α := α) m β)
+    : m (HashSet β) :=
   it.it.toHashSet
 
 docs_to_verso IterM.toHashSet
@@ -56,9 +61,11 @@ If the iterator is not finite, this function might run forever. Given {givenInst
 the variant {lean}`it.ensureTermination.toExtHashSet` always terminates after finitely many steps.
 -/
 @[inline]
-public def IterM.toExtHashSet {α β : Type w} [BEq β] [Hashable β] [EquivBEq β] [LawfulHashable β]
+public def IterM.toExtHashSet
+    {α β : Type w} [BEq β] [Hashable β] [EquivBEq β] [LawfulHashable β]
     {m : Type w → Type w'} [Monad m] [Iterator α m β] [IteratorLoop α m m]
-    (it : IterM (α := α) m β) : m (ExtHashSet β) :=
+    (it : IterM (α := α) m β)
+    : m (ExtHashSet β) :=
   it.fold (init := ∅) fun acc a => acc.insert a
 
 set_option doc.verso true
@@ -70,9 +77,11 @@ This variant terminates after finitely many steps and requires a proof that the 
 finite. If such a proof is not available, consider using {name}`IterM.toExtHashSet`.
 -/
 @[inline]
-public def IterM.Total.toExtHashSet {α β : Type w} [BEq β] [Hashable β] [EquivBEq β] [LawfulHashable β]
+public def IterM.Total.toExtHashSet
+    {α β : Type w} [BEq β] [Hashable β] [EquivBEq β] [LawfulHashable β]
     {m : Type w → Type w'} [Monad m] [Iterator α m β] [Finite α m] [IteratorLoop α m m]
-    (it : IterM.Total (α := α) m β) : m (ExtHashSet β) :=
+    (it : IterM.Total (α := α) m β)
+    : m (ExtHashSet β) :=
   it.it.toExtHashSet
 
 docs_to_verso IterM.toExtHashSet
@@ -86,9 +95,10 @@ If the iterator is not finite, this function might run forever. Given {givenInst
 the variant {lean}`it.ensureTermination.toTreeSet` always terminates after finitely many steps.
 -/
 @[inline]
-public def IterM.toTreeSet {α β : Type w} {m : Type w → Type w'} [Monad m]
-    [Iterator α m β] [IteratorLoop α m m] (it : IterM (α := α) m β) (cmp : β → β → Ordering) :
-    m (TreeSet β cmp) :=
+public def IterM.toTreeSet
+    {α β : Type w} {m : Type w → Type w'} [Monad m] [Iterator α m β] [IteratorLoop α m m]
+    (it : IterM (α := α) m β) (cmp : β → β → Ordering)
+    : m (TreeSet β cmp) :=
   it.fold (init := ∅) fun acc a => acc.insert a
 
 set_option doc.verso true
@@ -100,9 +110,11 @@ This variant terminates after finitely many steps and requires a proof that the 
 finite. If such a proof is not available, consider using {name}`IterM.toTreeSet`.
 -/
 @[inline]
-public def IterM.Total.toTreeSet {α β : Type w} {m : Type w → Type w'} [Monad m]
-    [Iterator α m β] [Finite α m] [IteratorLoop α m m] (it : IterM.Total (α := α) m β)
-    (cmp : β → β → Ordering) : m (TreeSet β cmp) :=
+public def IterM.Total.toTreeSet
+    {α β : Type w} {m : Type w → Type w'}
+    [Monad m] [Iterator α m β] [Finite α m] [IteratorLoop α m m]
+    (it : IterM.Total (α := α) m β) (cmp : β → β → Ordering)
+    : m (TreeSet β cmp) :=
   it.it.toTreeSet cmp
 
 docs_to_verso IterM.toTreeSet
@@ -117,9 +129,11 @@ the variant {lean}`it.ensureTermination.toExtTreeSet cmp` always terminates afte
 many steps.
 -/
 @[inline]
-public def IterM.toExtTreeSet {α β : Type w} {m : Type w → Type w'} [Monad m] [Iterator α m β]
-    [IteratorLoop α m m] (it : IterM (α := α) m β) (cmp : β → β → Ordering := by exact compare)
-    [TransCmp cmp] : m (ExtTreeSet β cmp) :=
+public def IterM.toExtTreeSet
+    {α β : Type w} {m : Type w → Type w'} [Monad m] [Iterator α m β] [IteratorLoop α m m]
+    (it : IterM (α := α) m β)
+    (cmp : β → β → Ordering := by exact compare) [TransCmp cmp]
+    : m (ExtTreeSet β cmp) :=
   it.fold (init := ∅) fun acc a => acc.insert a
 
 set_option doc.verso true
@@ -131,9 +145,12 @@ This variant terminates after finitely many steps and requires a proof that the 
 finite. If such a proof is not available, consider using {name}`IterM.toExtTreeSet`.
 -/
 @[inline]
-public def IterM.Total.toExtTreeSet {α β : Type w} {m : Type w → Type w'} [Monad m] [Iterator α m β]
-    [Finite α m] [IteratorLoop α m m] (it : IterM.Total (α := α) m β)
-    (cmp : β → β → Ordering := by exact compare) [TransCmp cmp] : m (ExtTreeSet β cmp) :=
+public def IterM.Total.toExtTreeSet
+    {α β : Type w} {m : Type w → Type w'}
+    [Monad m] [Iterator α m β] [Finite α m] [IteratorLoop α m m]
+    (it : IterM.Total (α := α) m β)
+    (cmp : β → β → Ordering := by exact compare) [TransCmp cmp]
+    : m (ExtTreeSet β cmp) :=
   it.it.toExtTreeSet cmp
 
 docs_to_verso IterM.toExtTreeSet

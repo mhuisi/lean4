@@ -28,43 +28,23 @@ A type-erased body handle. Operations are stored as closures, making it open to 
 that implements `Http.Body`.
 -/
 structure Any where
-
-  /--
-  Receives the next body chunk. Returns `none` at end-of-stream.
-  -/
+  /-- Receives the next body chunk. Returns `none` at end-of-stream. -/
   recv : Async (Option Chunk)
-
-  /--
-  Closes the body stream.
-  -/
+  /-- Closes the body stream. -/
   close : Async Unit
-
-  /--
-  Returns `true` when the body stream is closed.
-  -/
+  /-- Returns `true` when the body stream is closed. -/
   isClosed : Async Bool
-
-  /--
-  Selector that resolves when a chunk is available or EOF is reached.
-  -/
+  /-- Selector that resolves when a chunk is available or EOF is reached. -/
   recvSelector : Selector (Option Chunk)
-
   /--
   Non-blocking receive attempt. Returns `none` if no chunk is immediately available,
   `some (some chunk)` when a chunk is ready, or `some none` at end-of-stream.
   -/
   tryRecv : Async (Option (Option Chunk))
-
-  /--
-  Returns the declared size.
-  -/
+  /-- Returns the declared size. -/
   getKnownSize : Async (Option Body.Length)
-
-  /--
-  Sets the size of the body.
-  -/
+  /-- Sets the size of the body. -/
   setKnownSize : Option Body.Length → Async Unit
-
   /--
   Reset action for a body that can be re-read after being consumed.
   `none` when the underlying body has no way to rewind.
@@ -73,9 +53,7 @@ structure Any where
 
 namespace Any
 
-/--
-Erases a body of any `Http.Body` instance into a `Body.Any`.
--/
+/-- Erases a body of any `Http.Body` instance into a `Body.Any`. -/
 def ofBody [Http.Body α] (body : α) : Any where
   recv := Http.Body.recv body
   close := Http.Body.close body
@@ -85,9 +63,7 @@ def ofBody [Http.Body α] (body : α) : Any where
   getKnownSize := Http.Body.getKnownSize body
   setKnownSize := Http.Body.setKnownSize body
 
-/--
-Erases a replayable body into a `Body.Any`, preserving its reset action.
--/
+/-- Erases a replayable body into a `Body.Any`, preserving its reset action. -/
 def ofReplayableBody [Http.Body α] [Replayable α] (body : α) : Any where
   recv := Http.Body.recv body
   close := Http.Body.close body

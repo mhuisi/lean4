@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Pattern
 public section
@@ -106,7 +107,7 @@ structure Config where
   Prevents infinite loops when conditional rewrite rules trigger recursive discharge attempts.
   -/
   maxDischargeDepth : Nat := 2
-  deriving Inhabited
+deriving Inhabited
 
 /--
 The result of simplifying an expression `e`.
@@ -164,9 +165,10 @@ inductive Result where
   | rfl (done : Bool := false) (contextDependent : Bool := false)
   /--
   Simplified to `e'` with proof `proof : e = e'`.
-  If `done = true`, skip recursive simplification of `e'`. -/
+  If `done = true`, skip recursive simplification of `e'`.
+  -/
   | step (e' : Expr) (proof : Expr) (done : Bool := false) (contextDependent : Bool := false)
-  deriving Inhabited
+deriving Inhabited
 
 /--
 Pre-computed `.rfl` results to avoid dynamic memory allocation.
@@ -174,10 +176,14 @@ Each combination of `done` and `contextDependent` maps to a compile-time constan
 -/
 def mkRflResult (done : Bool := false) (contextDependent : Bool := false) : Result :=
   match done, contextDependent with
-  | false, false => .rfl
-  | false, true  => .rfl false true
-  | true,  false => .rfl true
-  | true,  true  => .rfl true true
+  | false, false =>
+    .rfl
+  | false, true =>
+    .rfl false true
+  | true, false =>
+    .rfl true
+  | true, true =>
+    .rfl true true
 
 /-- Like `mkRflResult` with `done := false`. -/
 def mkRflResultCD (contextDependent : Bool) : Result :=
@@ -200,10 +206,12 @@ instance : Nonempty MethodsRef := by exact MethodsRefPointed.property
 structure Context where
   /-- Simplifier configuration options. -/
   config : Config := {}
-  /-- Size of the local context when simplification started.
-  Used to determine which free variables were introduced during simplification. -/
+  /--
+  Size of the local context when simplification started.
+  Used to determine which free variables were introduced during simplification.
+  -/
   initialLCtxSize : Nat
-  dischargeDepth  : Nat := 0
+  dischargeDepth : Nat := 0
 
 /-- Cache mapping expressions (by pointer equality) to their simplified results. -/
 abbrev Cache := PHashMap ExprPtr Result
@@ -234,32 +242,32 @@ instance : Inhabited (SimpM α) where
 abbrev Simproc := Expr → SimpM Result
 
 structure Methods where
-  pre        : Simproc  := fun _ => return .rfl
-  post       : Simproc  := fun _ => return .rfl
-  deriving Inhabited
+  pre : Simproc := fun _ => return .rfl
+  post : Simproc := fun _ => return .rfl
+deriving Inhabited
 
-unsafe def Methods.toMethodsRefImpl (m : Methods) : MethodsRef :=
-  unsafeCast m
+unsafe def Methods.toMethodsRefImpl (m : Methods) : MethodsRef := unsafeCast m
 
 @[implemented_by Methods.toMethodsRefImpl]
 opaque Methods.toMethodsRef (m : Methods) : MethodsRef
 
-unsafe abbrev MethodsRef.toMethodsImpl (m : MethodsRef) : Methods :=
-  unsafeCast m
+unsafe abbrev MethodsRef.toMethodsImpl (m : MethodsRef) : Methods := unsafeCast m
 
 @[implemented_by MethodsRef.toMethodsImpl]
 opaque MethodsRef.toMethods (m : MethodsRef) : Methods
 
-def getMethods : SimpM Methods :=
-  return MethodsRef.toMethods (← read)
+def getMethods : SimpM Methods := return MethodsRef.toMethods (← read)
 
-/-- Runs a `SimpM` computation with the given methods, configuration, and state.
+/--
+Runs a `SimpM` computation with the given methods, configuration, and state.
 The `transientCache` is always reset (context-dependent results don't survive across
-invocations). The `persistentCache` and `funext` cache are preserved from `s`. -/
-def SimpM.run (x : SimpM α) (methods : Methods := {}) (config : Config := {})
-    (s : State := {}) : SymM (α × State) := do
+invocations). The `persistentCache` and `funext` cache are preserved from `s`.
+-/
+def SimpM.run (x : SimpM α) (methods : Methods := {}) (config : Config := {}) (s : State := {})
+    : SymM (α × State) := do
   let initialLCtxSize := (← getLCtx).decls.size
-  x methods.toMethodsRef { initialLCtxSize, config } |>.run { s with transientCache := {}, numSteps := 0 }
+  x methods.toMethodsRef { initialLCtxSize, config }
+    |>.run { s with transientCache := {}, numSteps := 0 }
 
 /-- Runs a `SimpM` computation with the given methods and configuration. -/
 def SimpM.run' (x : SimpM α) (methods : Methods := {}) (config : Config := {}) : SymM α := do
@@ -270,14 +278,11 @@ set_option compiler.ignoreBorrowAnnotation true in
 @[extern "lean_sym_simp"] -- Forward declaration
 opaque simp : Simproc
 
-def getConfig : SimpM Config :=
-  return (← readThe Context).config
+def getConfig : SimpM Config := return (← readThe Context).config
 
-abbrev pre : Simproc := fun e => do
-  (← getMethods).pre e
+abbrev pre : Simproc := fun e => do (← getMethods).pre e
 
-abbrev post : Simproc := fun e => do
-  (← getMethods).post e
+abbrev post : Simproc := fun e => do (← getMethods).post e
 
 /-- Caches `r` as the final result for `e`, in the transient cache if it is context-dependent. -/
 abbrev cacheResult (e : Expr) (r : Result) : SimpM Result := do
@@ -294,8 +299,10 @@ abbrev withoutModifyingCache (k : SimpM α) : SimpM α := do
   let funext := (← get).funext
   try k finally modify fun s => { s with persistentCache, transientCache, funext }
 
-/-- Saves and restores the transient cache and funext, leaving
-the persistent cache untouched. Used when entering binders. -/
+/--
+Saves and restores the transient cache and funext, leaving
+the persistent cache untouched. Used when entering binders.
+-/
 abbrev withFreshTransientCache (k : SimpM α) : SimpM α := do
   let transientCache := (← get).transientCache
   let funext := (← get).funext
@@ -303,7 +310,8 @@ abbrev withFreshTransientCache (k : SimpM α) : SimpM α := do
 
 end Simp
 
-abbrev simp (e : Expr) (methods :  Simp.Methods := {}) (config : Simp.Config := {}) : SymM Simp.Result := do
+abbrev simp (e : Expr) (methods : Simp.Methods := {}) (config : Simp.Config := {})
+    : SymM Simp.Result := do
   Simp.SimpM.run' (Simp.simp e) methods config
 
 end Lean.Meta.Sym

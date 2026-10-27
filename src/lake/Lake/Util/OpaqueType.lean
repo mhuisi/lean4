@@ -21,25 +21,24 @@ open Lean
 namespace Lake
 
 macro (name := nonemptyTypeCmd)
-  doc?:optional(docComment) vis?:optional(visibility)
-  "nonempty_type " id:ident bs:binder*
-: command => do
-  let bvs ← expandBinders bs
-  let (bs, args) := Array.unzip <| bvs.map fun view =>
-    (view.mkBinder, ⟨view.mkArgument.raw⟩)
-  let nonemptyType := mkIdentFrom id <| id.getId.modifyBase (·.str "nonemptyType")
-  let nonemptyInst := mkIdentFrom id <| id.getId.modifyBase (·.str "instNonempty")
-  let nonemptyTypeApp := Syntax.mkApp nonemptyType args
-  `(
-  private opaque $nonemptyType $[$bs]* : NonemptyType.{0}
-  $[$doc?:docComment]? $[$vis?:visibility]? def $id $[$bs]* : Type := $nonemptyTypeApp |>.type
-  $[$vis?:visibility]? instance $nonemptyInst:ident : Nonempty $(Syntax.mkApp id args) := by
-    exact $nonemptyTypeApp |>.property
-  )
+    doc?:optional(docComment) vis?:optional(visibility) "nonempty_type " id:ident bs:binder*
+    : command =>
+  do
+    let bvs ← expandBinders bs
+    let (bs, args) := Array.unzip <| bvs.map fun view => (view.mkBinder, ⟨view.mkArgument.raw⟩)
+    let nonemptyType := mkIdentFrom id <| id.getId.modifyBase (·.str "nonemptyType")
+    let nonemptyInst := mkIdentFrom id <| id.getId.modifyBase (·.str "instNonempty")
+    let nonemptyTypeApp := Syntax.mkApp nonemptyType args
+    `(
+    private opaque $nonemptyType $[$bs]* : NonemptyType.{0}
+    $[$doc?:docComment]? $[$vis?:visibility]? def $id $[$bs]* : Type := $nonemptyTypeApp |>.type
+    $[$vis?:visibility]? instance $nonemptyInst:ident : Nonempty $(Syntax.mkApp id args) := by
+      exact $nonemptyTypeApp |>.property
+    )
 
 macro (name := hydrateOpaqueTypeCmd)
-  vis?:optional(visibility) "hydrate_opaque_type " oty:ident ty:ident args:ident*
-: command =>
+    vis?:optional(visibility) "hydrate_opaque_type " oty:ident ty:ident args:ident*
+    : command =>
   let mk := mkIdent `mk
   let unsafeMk := mkIdent `unsafeMk
   let instCoeMk := mkIdent `instCoeMk

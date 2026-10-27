@@ -32,52 +32,60 @@ when comparing keys.
 /-- State for the universe level normalizer monad. -/
 structure State where
   /-- Counter for generating new (normalized) universe parameter names. -/
-  nextIdx    : Nat := 1
+  nextIdx : Nat := 1
   /-- Mapping from existing universe parameter names to the new ones. -/
-  map        : Std.HashMap Name Level := {}
+  map : Std.HashMap Name Level := {}
   /-- Parameters that have been normalized. -/
   paramNames : Array Name := #[]
 
 /-- Monad for the universe level normalizer -/
 abbrev M := StateM State
 
-/--
-Normalize universe level parameter names in the given universe level.
--/
+/-- Normalize universe level parameter names in the given universe level. -/
 partial def normLevel (u : Level) : M Level := do
   if !u.hasParam then
     return u
-  else match u with
-    | .zero     => return u
-    | .succ v   => return u.updateSucc! (← normLevel v)
-    | .max v w  => return u.updateMax! (← normLevel v) (← normLevel w)
-    | .imax v w => return u.updateIMax! (← normLevel v) (← normLevel w)
-    | .mvar _   => unreachable!
-    | .param n  => match (← get).map[n]? with
-      | some u => return u
-      | none   =>
+  else
+    match u with
+    | .zero =>
+      return u
+    | .succ v =>
+      return u.updateSucc! (← normLevel v)
+    | .max v w =>
+      return u.updateMax! (← normLevel v) (← normLevel w)
+    | .imax v w =>
+      return u.updateIMax! (← normLevel v) (← normLevel w)
+    | .mvar _ =>
+      unreachable!
+    | .param n =>
+      match (← get).map[n]? with
+      | some u =>
+        return u
+      | none =>
         let u := Level.param <| (`u).appendIndexAfter (← get).nextIdx
-        modify fun { nextIdx, map, paramNames } =>
-          { nextIdx := nextIdx + 1, map := map.insert n u, paramNames := paramNames.push n }
+        modify fun { nextIdx, map, paramNames } => {
+          nextIdx := nextIdx + 1
+          map := map.insert n u
+          paramNames := paramNames.push n
+        }
         return u
 
-/--
-Normalize universe level parameter names in the given expression.
--/
+/-- Normalize universe level parameter names in the given expression. -/
 partial def normExpr (e : Expr) : M Expr := do
   if !e.hasLevelParam then
     return e
-  else match e with
-    | .const _ us      => return e.updateConst! (← us.mapM normLevel)
-    | .sort u          => return e.updateSort! (← normLevel u)
-    | .app f a         => return e.updateApp! (← normExpr f) (← normExpr a)
-    | .letE _ t v b _  => return e.updateLetE! (← normExpr t) (← normExpr v) (← normExpr b)
+  else
+    match e with
+    | .const _ us => return e.updateConst! (← us.mapM normLevel)
+    | .sort u => return e.updateSort! (← normLevel u)
+    | .app f a => return e.updateApp! (← normExpr f) (← normExpr a)
+    | .letE _ t v b _ => return e.updateLetE! (← normExpr t) (← normExpr v) (← normExpr b)
     | .forallE _ d b _ => return e.updateForallE! (← normExpr d) (← normExpr b)
-    | .lam _ d b _     => return e.updateLambdaE! (← normExpr d) (← normExpr b)
-    | .mdata _ b       => return e.updateMData! (← normExpr b)
-    | .proj _ _ b      => return e.updateProj! (← normExpr b)
-    | .mvar _          => unreachable!
-    | _                => return e
+    | .lam _ d b _ => return e.updateLambdaE! (← normExpr d) (← normExpr b)
+    | .mdata _ b => return e.updateMData! (← normExpr b)
+    | .proj _ _ b => return e.updateProj! (← normExpr b)
+    | .mvar _ => unreachable!
+    | _ => return e
 
 end NormLevelParam
 
@@ -102,16 +110,15 @@ See `Decl.setLevelParams`.
 -/
 open Lean.CollectLevelParams
 
-abbrev visitType (type : Expr) : Visitor :=
-  visitExpr type
+abbrev visitType (type : Expr) : Visitor := visitExpr type
 
 def visitArg (arg : Arg .pure) : Visitor :=
   match arg with
   | .erased | .fvar .. => id
   | .type e _ => visitType e
 
-def visitArgs (args : Array (Arg .pure)) : Visitor :=
-  fun s => args.foldl (init := s) fun s arg => visitArg arg s
+def visitArgs (args : Array (Arg .pure)) : Visitor := fun s =>
+  args.foldl (init := s) fun s arg => visitArg arg s
 
 def visitLetValue (e : LetValue .pure) : Visitor :=
   match e with
@@ -119,28 +126,33 @@ def visitLetValue (e : LetValue .pure) : Visitor :=
   | .const _ us args _ => visitLevels us ∘ visitArgs args
   | .fvar _ args => visitArgs args
 
-def visitParam (p : Param .pure) : Visitor :=
-  visitType p.type
+def visitParam (p : Param .pure) : Visitor := visitType p.type
 
-def visitParams (ps : Array (Param .pure)) : Visitor :=
-  fun s => ps.foldl (init := s) fun s p => visitParam p s
+def visitParams (ps : Array (Param .pure)) : Visitor := fun s =>
+  ps.foldl (init := s) fun s p => visitParam p s
 
 mutual
-  partial def visitAlt (alt : Alt .pure) : Visitor :=
-    match alt with
-    | .default k => visitCode k
-    | .alt _ ps k _ => visitCode k ∘ visitParams ps
+partial def visitAlt (alt : Alt .pure) : Visitor :=
+  match alt with
+  | .default k => visitCode k
+  | .alt _ ps k _ => visitCode k ∘ visitParams ps
 
-  partial def visitAlts (alts : Array (Alt .pure)) : Visitor :=
-    fun s => alts.foldl (init := s) fun s alt => visitAlt alt s
+partial def visitAlts (alts : Array (Alt .pure)) : Visitor := fun s =>
+  alts.foldl (init := s) fun s alt => visitAlt alt s
 
-  partial def visitCode : Code .pure → Visitor
-    | .let decl k => visitCode k ∘ visitLetValue decl.value ∘ visitType decl.type
-    | .fun decl k _ | .jp decl k => visitCode k ∘ visitCode decl.value ∘ visitParams decl.params ∘ visitType decl.type
-    | .cases c => visitAlts c.alts ∘ visitType c.resultType
-    | .unreach type => visitType type
-    | .return _ => id
-    | .jmp _ args => visitArgs args
+partial def visitCode : Code .pure → Visitor
+  | .let decl k =>
+    visitCode k ∘ visitLetValue decl.value ∘ visitType decl.type
+  | .fun decl k _ | .jp decl k =>
+    visitCode k ∘ visitCode decl.value ∘ visitParams decl.params ∘ visitType decl.type
+  | .cases c =>
+    visitAlts c.alts ∘ visitType c.resultType
+  | .unreach type =>
+    visitType type
+  | .return _ =>
+    id
+  | .jmp _ args =>
+    visitArgs args
 end
 
 def visitDeclValue : DeclValue .pure → Visitor
@@ -157,7 +169,8 @@ Collect universe level parameters collecting in the type, parameters, and value,
 set `decl.levelParams` with the resulting value.
 -/
 def Decl.setLevelParams (decl : Decl .pure) : Decl .pure :=
-  let levelParams := (visitDeclValue decl.value ∘ visitParams decl.params ∘ visitType decl.type) {} |>.params.toList
+  let levelParams :=
+    (visitDeclValue decl.value ∘ visitParams decl.params ∘ visitType decl.type) {} |>.params.toList
   { decl with levelParams }
 
 end Lean.Compiler.LCNF

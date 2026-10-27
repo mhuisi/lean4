@@ -71,44 +71,39 @@ abbrev leading (xs : Coeffs) : Int := IntList.leading xs
 /-- Shim for `List.map`. -/
 abbrev map (f : Int → Int) (xs : Coeffs) : Coeffs := List.map f xs
 /-- Shim for `.enum.find?`. -/
-abbrev findIdx? (f : Int → Bool) (xs : Coeffs) : Option Nat :=
-  List.findIdx? f xs
+abbrev findIdx? (f : Int → Bool) (xs : Coeffs) : Option Nat := List.findIdx? f xs
 /-- Shim for `IntList.bmod`. -/
 abbrev bmod (x : Coeffs) (m : Nat) : Coeffs := IntList.bmod x m
 /-- Shim for `IntList.bmod_dot_sub_dot_bmod`. -/
-abbrev bmod_dot_sub_dot_bmod (m : Nat) (a b : Coeffs) : Int :=
-  IntList.bmod_dot_sub_dot_bmod m a b
-theorem bmod_length (x : Coeffs) (m : Nat) : (bmod x m).length ≤ x.length :=
-  IntList.bmod_length x m
-theorem dvd_bmod_dot_sub_dot_bmod (m : Nat) (xs ys : Coeffs) :
-    (m : Int) ∣ bmod_dot_sub_dot_bmod m xs ys := IntList.dvd_bmod_dot_sub_dot_bmod m xs ys
+abbrev bmod_dot_sub_dot_bmod (m : Nat) (a b : Coeffs) : Int := IntList.bmod_dot_sub_dot_bmod m a b
+theorem bmod_length (x : Coeffs) (m : Nat) : (bmod x m).length ≤ x.length := IntList.bmod_length x m
+theorem dvd_bmod_dot_sub_dot_bmod (m : Nat) (xs ys : Coeffs)
+    : (m : Int) ∣ bmod_dot_sub_dot_bmod m xs ys :=
+  IntList.dvd_bmod_dot_sub_dot_bmod m xs ys
 
 theorem get_of_length_le {i : Nat} {xs : Coeffs} (h : length xs ≤ i) : get xs i = 0 :=
   IntList.get_of_length_le h
-theorem dot_set_left (xs ys : Coeffs) (i : Nat) (z : Int) :
-    dot (set xs i z) ys = dot xs ys + (z - get xs i) * get ys i :=
+theorem dot_set_left (xs ys : Coeffs) (i : Nat) (z : Int)
+    : dot (set xs i z) ys = dot xs ys + (z - get xs i) * get ys i :=
   IntList.dot_set_left xs ys i z
-theorem dot_sdiv_left (xs ys : Coeffs) {d : Int} (h : d ∣ xs.gcd) :
-    dot (xs.sdiv d) ys = (dot xs ys) / d :=
+theorem dot_sdiv_left (xs ys : Coeffs) {d : Int} (h : d ∣ xs.gcd)
+    : dot (xs.sdiv d) ys = (dot xs ys) / d :=
   IntList.dot_sdiv_left xs ys h
 theorem dot_smul_left (xs ys : Coeffs) (i : Int) : dot (i * xs) ys = i * dot xs ys :=
   IntList.dot_smul_left xs ys i
 theorem dot_distrib_left (xs ys zs : Coeffs) : (xs + ys).dot zs = xs.dot zs + ys.dot zs :=
   IntList.dot_distrib_left xs ys zs
-theorem sub_eq_add_neg (xs ys : Coeffs) : xs - ys = xs + -ys :=
-  IntList.sub_eq_add_neg xs ys
-theorem combo_eq_smul_add_smul (a : Int) (xs : Coeffs) (b : Int) (ys : Coeffs) :
-    combo a xs b ys = (a * xs) + (b * ys) :=
+theorem sub_eq_add_neg (xs ys : Coeffs) : xs - ys = xs + -ys := IntList.sub_eq_add_neg xs ys
+theorem combo_eq_smul_add_smul (a : Int) (xs : Coeffs) (b : Int) (ys : Coeffs)
+    : combo a xs b ys = (a * xs) + (b * ys) :=
   IntList.combo_eq_smul_add_smul a xs b ys
 theorem gcd_dvd_dot_left (xs ys : Coeffs) : (gcd xs : Int) ∣ dot xs ys :=
   IntList.gcd_dvd_dot_left xs ys
-theorem map_length {xs : Coeffs} : (xs.map f).length ≤ xs.length :=
-  Nat.le_of_eq (List.length_map f)
+theorem map_length {xs : Coeffs} : (xs.map f).length ≤ xs.length := Nat.le_of_eq (List.length_map f)
 
 theorem dot_nil_right {xs : Coeffs} : dot xs .nil = 0 := IntList.dot_nil_right
 theorem get_nil : get .nil i = 0 := IntList.get_nil
-theorem dot_neg_left (xs ys : IntList) : dot (-xs) ys = -dot xs ys :=
-  IntList.dot_neg_left xs ys
+theorem dot_neg_left (xs ys : IntList) : dot (-xs) ys = - dot xs ys := IntList.dot_neg_left xs ys
 
 end Coeffs
 

@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 public section
@@ -79,8 +80,7 @@ instance : ToMessageData ActionResult where
 
 namespace Action
 
-def skip : Action := fun goal _ kp =>
-  kp goal
+def skip : Action := fun goal _ kp => kp goal
 
 /--
 If the `goal` is already inconsistent, returns `.closed []`. Otherwise, executes
@@ -97,28 +97,24 @@ def done : Action := fun goal kna _ => do
 - If `x` is not applicable, then `x >> y` is not applicable.
 - If `y` is not applicable, it behaves like a skip.
 -/
-def andThen (x y : Action) : Action := fun goal kna kp =>
-  x goal kna fun goal' => y goal' kp kp
+def andThen (x y : Action) : Action := fun goal kna kp => x goal kna fun goal' => y goal' kp kp
 
-instance : AndThen Action where andThen x y := Action.andThen x (y ())
+instance : AndThen Action where
+  andThen x y := Action.andThen x (y ())
 
-/--
-Choice: tries `x`, if not applicable, tries `y`.
--/
+/-- Choice: tries `x`, if not applicable, tries `y`. -/
 protected def orElse (x y : Action) : Action := fun goal kna kp => do
   x goal (fun goal => y goal kna kp) kp
 
 instance : OrElse Action where
   orElse x y := Action.orElse x (y ())
 
-/--
-Repeats `x` up to `n` times while it remains applicable.
--/
+/-- Repeats `x` up to `n` times while it remains applicable. -/
 def loop (n : Nat) (x : Action) : Action := fun goal _ kp =>
   tryCatchRuntimeEx
     (match n with
-     | 0 => kp goal
-     | n+1 => x goal kp (fun goal' => loop n x goal' kp kp))
+      | 0 => kp goal
+      | n + 1 => x goal kp (fun goal' => loop n x goal' kp kp))
     (fun ex => do
       if ex.isMaxHeartbeat || ex.isMaxRecDepth then
         reportIssue! ex.toMessageData
@@ -126,16 +122,15 @@ def loop (n : Nat) (x : Action) : Action := fun goal _ kp =>
       else
         throw ex)
 
-/-- `loop` reference implementation without `tryCatchRuntimeEx` for proving sanity checking lemmas. -/
+/--
+`loop` reference implementation without `tryCatchRuntimeEx` for proving sanity checking lemmas.
+-/
 def loopRef (n : Nat) (x : Action) : Action := fun goal _ kp =>
   match n with
   | 0 => kp goal
-  | n+1 => x goal kp (fun goal' => loopRef n x goal' kp kp)
+  | n + 1 => x goal kp (fun goal' => loopRef n x goal' kp kp)
 
-
-/--
-Runs action `a` on the given `goal`.
--/
+/-- Runs action `a` on the given `goal`. -/
 def run (goal : Goal) (a : Action) : GrindM ActionResult := do
   let k := fun goal => do
     if goal.inconsistent then
@@ -148,15 +143,11 @@ def run (goal : Goal) (a : Action) : GrindM ActionResult := do
       return .stuck [goal]
   a goal k k
 
-/--
-Executes `x`, but behaves like a `skip` if it is not applicable.
--/
-def skipIfNA (x : Action) : Action := fun goal _ kp =>
-  x goal kp kp
+/-- Executes `x`, but behaves like a `skip` if it is not applicable. -/
+def skipIfNA (x : Action) : Action := fun goal _ kp => x goal kp kp
 
 /-- ``TSyntax `grind`` => ``TSyntax `Lean.Parser.Tactic.Grind.grindStep`` -/
-def mkGrindStep (t : TGrind) : TGrindStep :=
-  mkNode ``Parser.Tactic.Grind.grindStep #[ t, mkNullNode ]
+def mkGrindStep (t : TGrind) : TGrindStep := mkNode ``Parser.Tactic.Grind.grindStep #[t, mkNullNode]
 
 def TGrindStep.getTactic : TGrindStep → TGrind
   | `(Parser.Tactic.Grind.grindStep| $tac:grind $[| $_]?) => tac
@@ -165,10 +156,8 @@ def TGrindStep.getTactic : TGrindStep → TGrind
 def mkGrindSeq (s : List TGrind) : TSyntax ``Parser.Tactic.Grind.grindSeq :=
   let s := s.map fun tac => (mkGrindStep tac).raw
   let s := s.intersperse (mkNullNode #[])
-  mkNode ``Parser.Tactic.Grind.grindSeq #[
-  mkNode ``Parser.Tactic.Grind.grindSeq1Indented #[
-  mkNullNode s.toArray
-  ]]
+  mkNode ``Parser.Tactic.Grind.grindSeq
+    #[mkNode ``Parser.Tactic.Grind.grindSeq1Indented #[mkNullNode s.toArray]]
 
 /--
 Given `[t₁, ..., tₙ]`, returns
@@ -226,11 +215,12 @@ def ungroup : Action := fun goal _ kp => do
     match r with
     | .closed [tac] =>
       match tac with
-      | `(grind| next => $seq;*)
-      | `(grind| · $seq;*) =>
+      | `(grind| next => $seq;*) | `(grind| · $seq;*) =>
         return .closed <| seq.getElems.toList.map TGrindStep.getTactic
-      | _ => return r
-    | _ => return r
+      | _ =>
+        return r
+    | _ =>
+      return r
   else
     return r
 
@@ -245,7 +235,8 @@ def concatTactic (r : ActionResult) (mk : GrindM TGrind) : GrindM ActionResult :
     | .closed seq =>
       let tac ← mk
       return .closed (tac :: seq)
-    | r => return r
+    | r =>
+      return r
   else
     return r
 
@@ -281,7 +272,8 @@ Returns `true` if the tactic sequence `seq` closes `goal` starting at saved stat
 If `s?` is `none` just returns `true`.
 -/
 def checkSeqAt (s? : Option SavedState) (goal : Goal) (seq : List TGrind) : GrindM Bool := do
-  let some s := s? | return true
+  let some s := s?
+    | return true
   Lean.withoutModifyingState do
     s.restore
     let tac ← mkGrindParen seq
@@ -290,7 +282,7 @@ def checkSeqAt (s? : Option SavedState) (goal : Goal) (seq : List TGrind) : Grin
       try
         let subgoals ← evalTactic goal tac
         return subgoals.isEmpty
-      catch _  =>
+      catch _ =>
         return false
 
 /--
@@ -304,23 +296,28 @@ def checkTactic (warnOnly : Bool) : Action := fun goal _ kp => do
   match r with
   | .closed seq =>
     unless (← checkSeqAt s goal seq) do
-      let m := m!"generated tactic cannot close the goal{indentD (← mkGrindNext seq)}\nInitial goal\n{goal.mvarId}"
+      let m :=
+        m!"generated tactic cannot close the goal{indentD (← mkGrindNext seq)}\
+          \nInitial goal\
+          \n{goal.mvarId}"
       if warnOnly then
         logWarning m
       else
         throwError m
     return r
-  | _ => return r
+  | _ =>
+    return r
 
-/--
-Helper action for satellite solvers that use `CheckResult`.
--/
-def solverAction (check : GoalM CheckResult) (mkTac : GrindM TGrind) : Action := fun goal kna kp => do
+/-- Helper action for satellite solvers that use `CheckResult`. -/
+def solverAction (check : GoalM CheckResult) (mkTac : GrindM TGrind)
+    : Action := fun goal kna kp => do
   let saved? ← saveStateIfTracing
   let (result, goal') ← GoalM.run goal check
   match result with
-  | .none       => kna goal'
-  | .progress   => kp goal'
+  | .none =>
+    kna goal'
+  | .progress =>
+    kp goal'
   | .propagated =>
     let goal' ← GoalM.run' goal' processToDo
     if goal'.inconsistent then
@@ -341,10 +338,12 @@ def solverAction (check : GoalM CheckResult) (mkTac : GrindM TGrind) : Action :=
         else
           let tac ← mkTac
           return .closed (tac :: seq)
-      | r => return r
+      | r =>
+        return r
     else
       kp goal'
-  | .closed     => closeWith mkTac
+  | .closed =>
+    closeWith mkTac
 
 def mbtc : Action := fun goal kna kp => do
   let saved? ← saveStateIfTracing
@@ -358,7 +357,8 @@ def mbtc : Action := fun goal kna kp => do
         else
           let tac ← `(grind| mbtc)
           return .closed (tac :: seq)
-      | r => return r
+      | r =>
+        return r
     else
       kp goal'
   else
@@ -372,35 +372,25 @@ attribute [local simp] HAndThen.hAndThen AndThen.andThen Action.andThen
 attribute [local simp] HOrElse.hOrElse OrElse.orElse Action.orElse
 attribute [local simp] skip notApplicable skipIfNA
 
-example (a : Action) : (a >> skip) = a := by
-  funext; simp
+example (a : Action) : (a >> skip) = a := by funext; simp
 
-example (a : Action) : (a >> notApplicable) = a := by
-  funext; simp
+example (a : Action) : (a >> notApplicable) = a := by funext; simp
 
-example (a : Action) : (skip >> a) = a.skipIfNA := by
-  funext; simp
+example (a : Action) : (skip >> a) = a.skipIfNA := by funext; simp
 
-example (a b : Action) : (a.skipIfNA >> b) = a.skipIfNA >> b.skipIfNA := by
-  funext goal kna kp; simp
+example (a b : Action) : (a.skipIfNA >> b) = a.skipIfNA >> b.skipIfNA := by funext goal kna kp; simp
 
-example (a : Action) : (notApplicable >> a) = notApplicable := by
-  funext; simp
+example (a : Action) : (notApplicable >> a) = notApplicable := by funext; simp
 
-example (a : Action) : (notApplicable <|> a) = a := by
-  funext; simp
+example (a : Action) : (notApplicable <|> a) = a := by funext; simp
 
-example (a : Action) : (skip <|> a) = skip := by
-  funext; simp
+example (a : Action) : (skip <|> a) = skip := by funext; simp
 
-example (a b : Action) : (a.skipIfNA <|> b) = a.skipIfNA := by
-  funext; simp
+example (a b : Action) : (a.skipIfNA <|> b) = a.skipIfNA := by funext; simp
 
-example : notApplicable.loopRef n = skip := by
-  funext; cases n <;> simp [loopRef]
+example : notApplicable.loopRef n = skip := by funext; cases n <;> simp [loopRef]
 
-example (a : Action) : a.loopRef 0 = skip := by
-  funext; simp [loopRef]
+example (a : Action) : a.loopRef 0 = skip := by funext; simp [loopRef]
 
 theorem loop_skipIfNA (a : Action) : (a.loopRef n).skipIfNA = a.loopRef n := by
   funext; cases n <;> simp [loopRef]
@@ -411,12 +401,13 @@ example : skip.loopRef n = skip := by
   next ih =>
     rw [← loop_skipIfNA] at ih
     rw [← loop_skipIfNA]
-    funext goal kna kp; simp [loopRef]
+    funext goal kna kp
+    simp [loopRef]
     replace ih := congrFun (congrFun (congrFun ih goal) kp) kp
     simp at ih
     assumption
 
-example (a : Action) : a.loopRef (n+1) = (a >> a.loopRef n).skipIfNA := by
+example (a : Action) : a.loopRef (n + 1) = (a >> a.loopRef n).skipIfNA := by
   funext goal kna kp; simp [loopRef]
 end
 

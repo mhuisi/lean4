@@ -6,7 +6,6 @@ Authors: Joachim Breitner
 module
 
 prelude
-
 public import Lean.Meta.Basic
 import Lean.Meta.Check
 import Lean.Meta.WHNF
@@ -18,10 +17,11 @@ open Meta
 
 register_builtin_option backward.defeqAttrib.useBackward : Bool := {
   defValue := false
-  descr    := "When true, `dsimp` also uses theorems tagged `@[backward_defeq]`, i.e. \
-    theorems inferred to be rfl only at default (not instance) transparency. Set this \
-    locally (e.g. `set_option backward.defeqAttrib.useBackward true in ...`) to restore the \
-    pre-stricter-inference behavior for a specific proof."
+  descr :=
+    "When true, `dsimp` also uses theorems tagged `@[backward_defeq]`, i.e. \
+      theorems inferred to be rfl only at default (not instance) transparency. Set this \
+      locally (e.g. `set_option backward.defeqAttrib.useBackward true in ...`) to restore the \
+      pre-stricter-inference behavior for a specific proof."
 }
 
 /--
@@ -39,8 +39,9 @@ private def withEqLhsRhs (type : Expr) (k : Expr → Expr → MetaM α) : MetaM 
     forallTelescopeReducing type fun _ type => do
       let type ← whnf type
       -- NB: The warning wording should work both for explicit uses of `@[defeq]` as well as the implicit `:= rfl`.
-      let some (_, lhs, rhs) := type.eq? |
-        throwError m!"Not a definitional equality: the conclusion should be an equality, but is{inlineExpr type}"
+      let some (_, lhs, rhs) := type.eq?
+        | throwError m!"Not a definitional equality: the conclusion should be an equality, but \
+            is{inlineExpr type}"
       k lhs rhs
 
 /--
@@ -51,24 +52,29 @@ block for `inferDefEqAttr`.
 -/
 def validateDefEqAttr (declName : Name) : AttrM Unit := do
   let info ← getConstVal declName
-  MetaM.run' do withEqLhsRhs info.type fun lhs rhs => do
-    let ok ← isDefEqCareful lhs rhs
-    unless ok do
-      let config ← getConfig
-      let explanation := MessageData.ofLazyM (es := #[lhs, rhs]) <| withConfig (fun _ => config) do
-        -- match the `smartUnfolding` setting of `isDefEqCareful`
-        let (lhs, rhs) ← withOptions (smartUnfolding.set · false) <|
-          addPPExplicitToExposeDiff lhs rhs
-        let mut msg := m!"Not a definitional equality: the left-hand side{indentExpr lhs}\nis \
-          not definitionally equal to the right-hand side{indentExpr rhs}"
-        if (← getEnv).isExporting then
-          let okPrivately ← withoutExporting <| isDefEqCareful lhs rhs
-          if okPrivately then
-            msg := msg ++ .note m!"This theorem is exported from the current module. \
-              This requires that all definitions that need to be unfolded to prove this \
-              theorem must be exposed."
-        pure msg
-      throwError explanation
+  MetaM.run' do
+    withEqLhsRhs info.type fun lhs rhs => do
+      let ok ← isDefEqCareful lhs rhs
+      unless ok do
+        let config ← getConfig
+        let explanation :=
+          MessageData.ofLazyM (es := #[lhs, rhs]) <| withConfig (fun _ => config) do
+            -- match the `smartUnfolding` setting of `isDefEqCareful`
+            let (lhs, rhs) ←
+              withOptions (smartUnfolding.set · false) <| addPPExplicitToExposeDiff lhs rhs
+            let mut msg :=
+              m!"Not a definitional equality: the left-hand side{indentExpr lhs}\
+                \nis \
+                not definitionally equal to the right-hand side{indentExpr rhs}"
+            if (← getEnv).isExporting then
+              let okPrivately ← withoutExporting <| isDefEqCareful lhs rhs
+              if okPrivately then
+                msg :=
+                  msg ++ .note m!"This theorem is exported from the current module. \
+                    This requires that all definitions that need to be unfolded to prove this \
+                    theorem must be exposed."
+            pure msg
+        throwError explanation
 
 /--
 Marks a theorem as a definitional equality under the permissive transparency rules that
@@ -118,8 +124,7 @@ builtin_initialize defeqAttr : TagAttribute ←
       -- `defeq ⊆ backward_defeq` by also tagging `backward_defeq`.
       validateDefEqAttr declName
       backwardDefeqAttr.setTag declName)
-    (applicationTime := .afterTypeChecking)
-    (asyncMode := .async .mainEnv)
+    (applicationTime := .afterTypeChecking) (asyncMode := .async .mainEnv)
 
 private partial def isRflProofCore (type : Expr) (proof : Expr) : CoreM Bool := do
   match type with
@@ -167,10 +172,10 @@ def inferDefEqAttr (declName : Name) : MetaM Unit := do
         isRflProofCore info.type value
       else
         pure false
-    unless isRfl do return
+    unless isRfl do
+      return
     -- Strict check: defeq at implicit transparency (as used by `dsimp`).
-    let strict ← withEqLhsRhs info.type fun lhs rhs =>
-      withImplicit (isDefEq lhs rhs)
+    let strict ← withEqLhsRhs info.type fun lhs rhs => withImplicit (isDefEq lhs rhs)
     -- Sanity-check: is the theorem also defeq at the permissive (`.default`/`.all`)
     -- transparency we use for `@[backward_defeq]`? If not, log the error that the
     -- legacy inference would have emitted — but still proceed to tag
@@ -180,8 +185,7 @@ def inferDefEqAttr (declName : Name) : MetaM Unit := do
     -- exactly that set under `backward_defeq` so that `useBackward=true` reliably
     -- restores the old behavior.
     try
-      withExporting (isExporting := !isPrivateName declName) do
-        validateDefEqAttr declName
+      withExporting (isExporting := ! isPrivateName declName) do validateDefEqAttr declName
     catch e =>
       unless strict do
         logError m!"Theorem {declName} has a `rfl`-proof but could not be validated \

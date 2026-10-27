@@ -29,9 +29,9 @@ Getter for the registered environment linters. The result is sorted by the linte
 def getEnvLinters (opts? : Option LinterOptions := none) : CoreM (Array NamedEnvLinter) := do
   let mut result := #[]
   for (optName, declName) in envLinterExt.getState (← getEnv) do
-      if opts?.all (isLinterEnabledByOptions optName) then
-        let linter ← getEnvLinter optName declName
-        result := result.binInsert (·.optName.lt ·.optName) linter
+    if opts?.all (isLinterEnabledByOptions optName) then
+      let linter ← getEnvLinter optName declName
+      result := result.binInsert (·.optName.lt ·.optName) linter
   pure result
 
 /--
@@ -47,28 +47,34 @@ def isLinterEnabledFor (env : Environment) (linter : NamedEnvLinter) (decl : Nam
 Runs all the specified linters on all the specified declarations in parallel,
 producing a list of results.
 -/
-def lintCore (decls : Array Name) (linters : Array NamedEnvLinter) :
-    CoreM (Array (NamedEnvLinter × Std.HashMap Name MessageData)) := do
+def lintCore (decls : Array Name) (linters : Array NamedEnvLinter)
+    : CoreM (Array (NamedEnvLinter × Std.HashMap Name MessageData)) := do
   let env ← getEnv
-  let tasks : Array (NamedEnvLinter × Array (Name × Task (Except Exception <| Option MessageData))) ←
+  let tasks
+      : Array (NamedEnvLinter × Array (Name × Task (Except Exception <| Option MessageData))) ←
     linters.mapM fun linter => do
       let decls := decls.filter (isLinterEnabledFor env linter ·)
-      (linter, ·) <$> decls.mapM fun decl => (decl, ·) <$> do
-        let act : MetaM (Option MessageData) := do
-          linter.test decl
-        EIO.asTask <| (← Core.wrapAsync (fun _ =>
-          act |>.run' Elab.Command.mkMetaContext
-        ) (cancelTk? := none)) ()
+      (linter, ·) <$> decls.mapM fun decl =>
+        (decl, ·) <$> do
+          let act : MetaM (Option MessageData) := do linter.test decl
+          EIO.asTask <|
+            (← Core.wrapAsync (fun _ => act |>.run' Elab.Command.mkMetaContext) (cancelTk? := none))
+              ()
 
-  let result ← tasks.mapM fun (linter, decls) => do
-    let mut msgs : Std.HashMap Name MessageData := {}
-    for (declName, msgTask) in decls do
-      let msg? ← match msgTask.get with
-      | Except.ok msg? => pure msg?
-      | Except.error err => pure m!"LINTER FAILED:\n{err.toMessageData}"
-      if let .some msg := msg? then
-        msgs := msgs.insert declName msg
-    pure (linter, msgs)
+  let result ←
+    tasks.mapM fun (linter, decls) => do
+      let mut msgs : Std.HashMap Name MessageData := {}
+      for (declName, msgTask) in decls do
+        let msg? ←
+          match msgTask.get with
+          | Except.ok msg? =>
+            pure msg?
+          | Except.error err =>
+            pure m!"LINTER FAILED:\
+              \n{err.toMessageData}"
+        if let .some msg := msg? then
+          msgs := msgs.insert declName msg
+      pure (linter, msgs)
   return result
 
 /-- Sorts a map with declaration keys as names by line number. -/
@@ -80,73 +86,80 @@ def sortResults (results : Std.HashMap Name α) : CoreM <| Array (Name × α) :=
   pure $ results.toArray.qsort fun (a, _) (b, _) => key.getD a 0 < key.getD b 0
 
 /-- Formats a linter warning as `#check` command with comment. -/
-def printWarning (declName : Name) (warning : MessageData) (useErrorFormat : Bool := false)
-  (filePath : System.FilePath := default) : CoreM MessageData := do
+def printWarning
+    (declName : Name) (warning : MessageData)
+    (useErrorFormat : Bool := false) (filePath : System.FilePath := default)
+    : CoreM MessageData := do
   if useErrorFormat then
     if let some range ← findDeclarationRanges? declName then
-      let msg ← addMessageContextPartial
-        m!"{filePath}:{range.range.pos.line}:{range.range.pos.column + 1}: error: {
-          ← mkConstWithLevelParams declName} {warning}"
+      let msg ←
+        addMessageContextPartial
+          m!"{filePath}:{range.range.pos.line}:{range.range.pos.column + 1}: error: \
+            {← mkConstWithLevelParams declName} {warning}"
       return msg
   addMessageContextPartial m!"#check {← mkConstWithLevelParams declName} /- {warning} -/"
 
 /-- Formats a map of linter warnings using `printWarning`, sorted by line number. -/
-def printWarnings (results : Std.HashMap Name MessageData) (filePath : System.FilePath := default)
-    (useErrorFormat : Bool := false) : CoreM MessageData := do
-  (MessageData.joinSep ·.toList Format.line) <$>
-    (← sortResults results).mapM fun (declName, warning) =>
+def printWarnings
+    (results : Std.HashMap Name MessageData)
+    (filePath : System.FilePath := default) (useErrorFormat : Bool := false)
+    : CoreM MessageData := do
+  (MessageData.joinSep ·.toList Format.line)
+    <$> (← sortResults results).mapM fun (declName, warning) =>
       printWarning declName warning (useErrorFormat := useErrorFormat) (filePath := filePath)
 
-/--
-Formats a map of linter warnings grouped by filename with `-- filename` comments.
--/
-def groupedByFilename (results : Std.HashMap Name MessageData) (useErrorFormat : Bool := false) :
-    CoreM MessageData := do
+/-- Formats a map of linter warnings grouped by filename with `-- filename` comments. -/
+def groupedByFilename (results : Std.HashMap Name MessageData) (useErrorFormat : Bool := false)
+    : CoreM MessageData := do
   let sp ← if useErrorFormat then getSrcSearchPath else pure {}
   let grouped : Std.HashMap Name (System.FilePath × Std.HashMap Name MessageData) ←
     results.foldM (init := {}) fun grouped declName msg => do
       let mod ← findModuleOf? declName
       let mod := mod.getD (← getEnv).mainModule
-      grouped.insert mod <$>
-        match grouped[mod]? with
-        | some (fp, msgs) => pure (fp, msgs.insert declName msg)
+      grouped.insert mod <$> match grouped[mod]? with
+        | some (fp, msgs) =>
+          pure (fp, msgs.insert declName msg)
         | none => do
-          let fp ← if useErrorFormat then
-            pure <| (← sp.findWithExt "lean" mod).getD (modToFilePath "." mod "lean")
-          else pure default
+          let fp ←
+            if useErrorFormat then
+              pure <| (← sp.findWithExt "lean" mod).getD (modToFilePath "." mod "lean")
+            else
+              pure default
           pure (fp, .insert {} declName msg)
   let grouped' := grouped.toArray.qsort fun (a, _) (b, _) => toString a < toString b
-  (MessageData.joinSep · (Format.line ++ Format.line)) <$>
-    grouped'.toList.mapM fun (mod, fp, msgs) => do
-      pure m!"-- {mod}\n{← printWarnings msgs (filePath := fp) (useErrorFormat := useErrorFormat)}"
+  (MessageData.joinSep · (Format.line ++ Format.line))
+    <$> grouped'.toList.mapM fun (mod, fp, msgs) => do
+      pure m!"-- {mod}\
+        \n{← printWarnings msgs (filePath := fp) (useErrorFormat := useErrorFormat)}"
 
-/--
-Formats the linter results as Lean code with comments and `#check` commands.
--/
+/-- Formats the linter results as Lean code with comments and `#check` commands. -/
 def formatLinterResults
-    (results : Array (NamedEnvLinter × Std.HashMap Name MessageData))
-    (decls : Array Name)
-    (groupByFilename : Bool)
-    (whereDesc : String)
-    (numLinters : Nat) (useErrorFormat : Bool := false) :
-    CoreM MessageData := do
-  let formattedResults ← results.filterMapM fun (linter, results) => do
-    if !results.isEmpty then
-      let warnings ←
-        if groupByFilename || useErrorFormat then
-          groupedByFilename results (useErrorFormat := useErrorFormat)
-        else
-          printWarnings results
-      pure $ some m!"/- The `{linter.optName}` linter reports:\n{linter.errorsFound} -/\n{warnings}\n"
-    else
-      pure none
+    (results : Array (NamedEnvLinter × Std.HashMap Name MessageData)) (decls : Array Name)
+    (groupByFilename : Bool) (whereDesc : String) (numLinters : Nat)
+    (useErrorFormat : Bool := false)
+    : CoreM MessageData := do
+  let formattedResults ←
+    results.filterMapM fun (linter, results) => do
+      if !results.isEmpty then
+        let warnings ←
+          if groupByFilename || useErrorFormat then
+            groupedByFilename results (useErrorFormat := useErrorFormat)
+          else
+            printWarnings results
+        pure $ some m!"/- The `{linter.optName}` linter reports:\
+          \n{linter.errorsFound} -/\
+          \n{warnings}\n"
+      else
+        pure none
   let mut s := MessageData.joinSep formattedResults.toList Format.line
   let numAutoDecls := (← decls.filterM isAutoDeclOrPrivate_Internal).size
-  let failed := results.map (·.2.size) |>.foldl (·+·) 0
-  s := m!"-- Found {failed} error{if failed == 1 then "" else "s"
-      } in {decls.size - numAutoDecls} declarations (plus {
-      numAutoDecls} automatically generated ones) {whereDesc
-      } with {numLinters} linters\n\n{s}"
+  let failed := results.map (·.2.size) |>.foldl (· + ·) 0
+  s :=
+    m!"-- Found {failed} error{if failed == 1 then "" else "s"} in {decls.size - numAutoDecls} \
+      declarations (plus {numAutoDecls} automatically generated ones) {whereDesc} with \
+      {numLinters} linters\
+      \n\
+      \n{s}"
   pure s
 
 /-- Get the list of declarations in the current module. -/
@@ -162,9 +175,11 @@ def getDeclsInPackage (pkg : Name) : CoreM (Array Name) := do
   let env ← getEnv
   let mut decls ← getDeclsInCurrModule
   let modules := env.header.moduleNames.map (pkg.isPrefixOf ·)
-  return Id.run <| env.constants.map₁.foldlEntriesM (init := decls) fun decls declName (_, modIdx) =>
-    if modules[modIdx]! then
-      decls.push declName
-    else decls
+  return Id.run <|
+    env.constants.map₁.foldlEntriesM (init := decls) fun decls declName (_, modIdx) =>
+      if modules[modIdx]! then
+        decls.push declName
+      else
+        decls
 
 end Lean.Linter.EnvLinter

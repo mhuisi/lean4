@@ -70,85 +70,120 @@ at its jump. In `StateM Nat`, the disjunct of `__do_jp () 1` in state `t` is
 `n > 0 ∧ r = () ∧ x = 1 ∧ s = t`.
 -/
 
-/-- The lattice instance of `B`, for `Pred = ∀ s₁ … sₙ, B` and the states `ss = #[s₁, …, sₙ]`,
-read off the instance `instCL` of `Pred`, which nests one `instCompleteLatticePi` per state. -/
+/--
+The lattice instance of `B`, for `Pred = ∀ s₁ … sₙ, B` and the states `ss = #[s₁, …, sₙ]`,
+read off the instance `instCL` of `Pred`, which nests one `instCompleteLatticePi` per state.
+-/
 def baseInstance? (instCL : Expr) (ss : Array Expr) : SymM (Option Expr) := do
   let mut inst := instCL
   for s in ss do
-    let_expr instCompleteLatticePi _ _ f := inst | return none
+    let_expr instCompleteLatticePi _ _ f := inst
+      | return none
     inst ← betaS f #[s]
   -- The goals of `vcgen` state `⌜·⌝` with `c`, not with `Assertion.toCompleteLattice (.mk c)`.
-  let_expr Std.WP.Assertion.toCompleteLattice _ a := inst | return some inst
-  let_expr Std.WP.Assertion.mk _ c := a | return some inst
+  let_expr Std.WP.Assertion.toCompleteLattice _ a := inst
+    | return some inst
+  let_expr Std.WP.Assertion.mk _ c := a
+    | return some inst
   return some c
 
-/-- Register the join point `jp := val` that `wpLet?` introduced into the goal
+/--
+Register the join point `jp := val` that `wpLet?` introduced into the goal
 `goal : pre ⊑ wp⟦…⟧ post eposts ss` over the states `ss`. Returns `scope` with `jp`, `goal` with
 `__do_jp_spec : ∀ xs ss, ?H xs ss → ⊤ ⊑ wp⟦jp xs⟧ post eposts ss`, and the goal
 `∀ xs ss, ?H xs ss → ⊤ ⊑ wp⟦val xs⟧ post eposts ss` for the join RHS `val`. Returns `none` if
 `jp` is no `__do_jp` with a lambda RHS under `+jp`, or if the states have no base lattice
-instance. -/
-public def registerJoinPoint (scope : Scope) (goal : MVarId) (jp : FVarId) (val : Expr)
-    (info : WPApp) : VCGenM (Option (Scope × List MVarId)) := goal.withContext do
-  unless (← read).useJP && Lean.Elab.Tactic.Do.isJP (← jp.getUserName) && val.isLambda do
-    return none
-  let goalTy ← goal.getType
-  let_expr PartialOrder.rel α inst _ _ := goalTy | return none
-  let jpTy ← Sym.inferType (.fvar jp)
-  let numParams ← Lean.Elab.Tactic.Do.getNumJoinParams jpTy info.Prog
-  -- `Assertion` is a class abbreviation: `instAL` is `Assertion.mk instCL`, where `instCL` is the
-  -- lattice instance of every elaborated `⌜·⌝`, or it is a local instance.
-  let instCL ← match_expr info.instAL with
-    | Std.WP.Assertion.mk _ instCL => pure instCL
-    | _ =>
-      let lvls := (← Sym.inferType info.instAL).getAppFn.constLevels!
-      mkAppNS (mkConst ``Std.WP.Assertion.toCompleteLattice lvls) #[info.Pred, info.instAL]
-  let lctx ← getLCtx
-  let localInsts ← getLocalInstances
-  let some (hyp, top, specTy, rhsTy) ← forallBoundedTelescope jpTy numParams fun xs _ => do
-      forallBoundedTelescope info.Pred info.excessArgs.size fun ss B => do
-    let some instB ← baseInstance? instCL ss | return none
-    let some u := (← Sym.getLevel B).dec | throwError "vcgen +jp: `{B}` is not a type"
-    let top ← mkAppNS (mkConst ``Lean.Order.top [u]) #[B, instB]
-    let hyp ← mkFreshExprMVarAt lctx localInsts (← mkForallFVarsS (xs ++ ss) (mkSort .zero))
-      .syntheticOpaque
-    let entails (prog : Expr) : VCGenM Expr := do
-      let wp ← mkAppNS (← mkAppNS info.head (info.args.set! 7 prog)) ss
-      let rel ← mkAppNS (mkConst ``PartialOrder.rel goalTy.getAppFn.constLevels!)
-        #[α, inst, top, wp]
-      mkForallFVarsS (xs ++ ss) (← mkForallS `h .default (← mkAppNS hyp (xs ++ ss)) rel)
-    return some (hyp.mvarId!, top, ← entails (← mkAppNS (.fvar jp) xs), ← entails (← betaS val xs))
-    | return none
-  let rhs ← mkFreshExprSyntheticOpaqueMVar rhsTy (← goal.getTag)
-  let goal ← goal.replaceTargetDefEqFast (← mkLetS `__do_jp_spec specTy rhs goalTy)
-  let .goal decls goal ← Sym.introN goal 1
-    | throwError "vcgen +jp: failed to introduce the proof of{indentExpr specTy}"
-  let joinPoint : JoinPoint :=
-    { spec := .fvar decls[0]!, top, hyp, rhsGoal := rhs.mvarId!, numStates := info.excessArgs.size }
-  modify fun s => { s with
-    pendingJoinPoints := s.pendingJoinPoints.insert joinPoint.rhsGoal (joinPoint, #[]) }
-  let scope := { scope with joinPoints := scope.joinPoints.insert jp joinPoint }
-  return some (scope, [goal, joinPoint.rhsGoal])
-
-/-- Close the goal `⊤ ⊑ wp⟦jp args⟧ post eposts ss` of a jump to a join point of `scope` with
-`__do_jp_spec args ss ?pf`, where `finalizeJoinPoint` assigns `?pf : ?H args ss`. A jump with a
-precondition other than `⊤` unfolds `jp` instead. -/
-public def wpJump? (scope : Scope) (goal : MVarId) (info : WPApp) :
-    VCGenM (Option (List MVarId)) := do
-  let some fv := info.prog.getAppFn.fvarId? | return none
-  let some jp := scope.joinPoints.get? fv | return none
+instance.
+-/
+public def registerJoinPoint
+    (scope : Scope) (goal : MVarId) (jp : FVarId) (val : Expr) (info : WPApp)
+    : VCGenM (Option (Scope × List MVarId)) :=
   goal.withContext do
-  let_expr PartialOrder.rel _ _ pre _ := (← goal.getType) | return none
-  unless pre == jp.top do return none
-  unless info.excessArgs.size == jp.numStates do
-    throwError "vcgen +jp: the jump{indentExpr info.prog}\ndoes not have {jp.numStates} states"
-  let args := info.prog.getAppArgs ++ info.excessArgs
-  let pf ← mkFreshExprSyntheticOpaqueMVar (← mkAppNS (.mvar jp.hyp) args)
-  goal.assign (← mkAppNS jp.spec (args.push pf))
-  modify fun s => { s with
-    pendingJoinPoints := s.pendingJoinPoints.modify jp.rhsGoal fun (jp, jumps) =>
-      (jp, jumps.push { proof := pf.mvarId!, args }) }
-  return some []
+    unless (← read).useJP && Lean.Elab.Tactic.Do.isJP (← jp.getUserName) && val.isLambda do
+      return none
+    let goalTy ← goal.getType
+    let_expr PartialOrder.rel α inst _ _ := goalTy
+      | return none
+    let jpTy ← Sym.inferType (.fvar jp)
+    let numParams ← Lean.Elab.Tactic.Do.getNumJoinParams jpTy info.Prog
+    -- `Assertion` is a class abbreviation: `instAL` is `Assertion.mk instCL`, where `instCL` is the
+    -- lattice instance of every elaborated `⌜·⌝`, or it is a local instance.
+    let instCL ←
+      match_expr info.instAL with
+      | Std.WP.Assertion.mk _ instCL =>
+        pure instCL
+      | _ =>
+        let lvls := (← Sym.inferType info.instAL).getAppFn.constLevels!
+        mkAppNS (mkConst ``Std.WP.Assertion.toCompleteLattice lvls) #[info.Pred, info.instAL]
+    let lctx ← getLCtx
+    let localInsts ← getLocalInstances
+    let some (hyp, top, specTy, rhsTy) ←
+        forallBoundedTelescope jpTy numParams fun xs _ => do
+          forallBoundedTelescope info.Pred info.excessArgs.size fun ss B => do
+            let some instB ← baseInstance? instCL ss
+              | return none
+            let some u := (← Sym.getLevel B).dec
+              | throwError "vcgen +jp: `{B}` is not a type"
+            let top ← mkAppNS (mkConst ``Lean.Order.top [u]) #[B, instB]
+            let hyp ←
+              mkFreshExprMVarAt lctx localInsts (← mkForallFVarsS (xs ++ ss) (mkSort .zero))
+                .syntheticOpaque
+            let entails (prog : Expr) : VCGenM Expr := do
+              let wp ← mkAppNS (← mkAppNS info.head (info.args.set! 7 prog)) ss
+              let rel ←
+                mkAppNS (mkConst ``PartialOrder.rel goalTy.getAppFn.constLevels!)
+                  #[α, inst, top, wp]
+              mkForallFVarsS (xs ++ ss) (← mkForallS `h .default (← mkAppNS hyp (xs ++ ss)) rel)
+            return some
+              (hyp.mvarId!, top, ← entails (← mkAppNS (.fvar jp) xs), ← entails (← betaS val xs))
+      | return none
+    let rhs ← mkFreshExprSyntheticOpaqueMVar rhsTy (← goal.getTag)
+    let goal ← goal.replaceTargetDefEqFast (← mkLetS `__do_jp_spec specTy rhs goalTy)
+    let .goal decls goal ← Sym.introN goal 1
+      | throwError "vcgen +jp: failed to introduce the proof of{indentExpr specTy}"
+    let joinPoint : JoinPoint := {
+      spec := .fvar decls[0]!
+      top
+      hyp
+      rhsGoal := rhs.mvarId!
+      numStates := info.excessArgs.size
+    }
+    modify fun s => {
+      s with
+      pendingJoinPoints := s.pendingJoinPoints.insert joinPoint.rhsGoal (joinPoint, #[])
+    }
+    let scope := { scope with joinPoints := scope.joinPoints.insert jp joinPoint }
+    return some (scope, [goal, joinPoint.rhsGoal])
+
+/--
+Close the goal `⊤ ⊑ wp⟦jp args⟧ post eposts ss` of a jump to a join point of `scope` with
+`__do_jp_spec args ss ?pf`, where `finalizeJoinPoint` assigns `?pf : ?H args ss`. A jump with a
+precondition other than `⊤` unfolds `jp` instead.
+-/
+public def wpJump? (scope : Scope) (goal : MVarId) (info : WPApp)
+    : VCGenM (Option (List MVarId)) := do
+  let some fv := info.prog.getAppFn.fvarId?
+    | return none
+  let some jp := scope.joinPoints.get? fv
+    | return none
+  goal.withContext do
+    let_expr PartialOrder.rel _ _ pre _ := (← goal.getType)
+      | return none
+    unless pre == jp.top do
+      return none
+    unless info.excessArgs.size == jp.numStates do
+      throwError "vcgen +jp: the jump{indentExpr info.prog}\
+        \ndoes not have {jp.numStates} states"
+    let args := info.prog.getAppArgs ++ info.excessArgs
+    let pf ← mkFreshExprSyntheticOpaqueMVar (← mkAppNS (.mvar jp.hyp) args)
+    goal.assign (← mkAppNS jp.spec (args.push pf))
+    modify fun s => {
+      s with
+      pendingJoinPoints :=
+        s.pendingJoinPoints.modify jp.rhsGoal fun (jp, jumps) =>
+          (jp, jumps.push { proof := pf.mvarId!, args })
+    }
+    return some []
 
 /-- The locals of `jump` after `__do_jp_spec`. -/
 def jumpLocals (jp : JoinPoint) (jump : Jump) : MetaM (Array LocalDecl) := do
@@ -158,8 +193,10 @@ def jumpLocals (jp : JoinPoint) (jump : Jump) : MetaM (Array LocalDecl) := do
   return lctx.foldl (start := start) (init := #[]) fun ds d =>
     if d.isImplementationDetail && d.value?.isNone then ds else ds.push d
 
-/-- `φ` under the local `d`: a `let` for a `let` local, a conjunct `d.type ∧ φ` for a hypothesis
-that `φ` does not depend on, and `∃ d, φ` otherwise. -/
+/--
+`φ` under the local `d`: a `let` for a `let` local, a conjunct `d.type ∧ φ` for a hypothesis
+that `φ` does not depend on, and `∃ d, φ` otherwise.
+-/
 def bindLocal (d : LocalDecl) (φ : Expr) : VCGenM Expr := do
   -- `mkLambdaFVars`/`mkLetFVars` re-scope a metavariable whose local context contains `d`, such as
   -- the invariant of a loop in the branch.
@@ -173,8 +210,10 @@ def bindLocal (d : LocalDecl) (φ : Expr) : VCGenM Expr := do
 
 /-- The disjunction of `ps[lo:hi]`, balanced so that each disjunct has depth `O(log (hi - lo))`. -/
 partial def mkOrTree (ps : Array Expr) (lo hi : Nat) : Expr :=
-  if hi == lo then mkConst ``False
-  else if hi == lo + 1 then ps[lo]!
+  if hi == lo then
+    mkConst ``False
+  else if hi == lo + 1 then
+    ps[lo]!
   else
     let mid := (lo + hi) / 2
     mkOr (mkOrTree ps lo mid) (mkOrTree ps mid hi)
@@ -183,19 +222,22 @@ partial def mkOrTree (ps : Array Expr) (lo hi : Nat) : Expr :=
 partial def mkOrIntro (φ : Expr) (i lo hi : Nat) (k : Expr → MetaM Expr) : MetaM Expr := do
   if hi == lo + 1 then
     return ← k φ
-  let_expr Or a b := φ | throwError "vcgen +jp: expected a disjunction{indentExpr φ}"
+  let_expr Or a b := φ
+    | throwError "vcgen +jp: expected a disjunction{indentExpr φ}"
   let mid := (lo + hi) / 2
   if i < mid then
     return mkApp3 (mkConst ``Or.inl) a b (← mkOrIntro a i lo mid k)
   else
     return mkApp3 (mkConst ``Or.inr) a b (← mkOrIntro b i mid hi k)
 
-/-- The trie of the `jumps` from local `i` on, over the parameters `xs` of `?H`. Its disjuncts bind
+/--
+The trie of the `jumps` from local `i` on, over the parameters `xs` of `?H`. Its disjuncts bind
 each distinct local `i` of the jumps above the trie of the jumps that share it, and give the
 equations `xs = args` of each jump without local `i`. Returns the path of each jump, the index and
-number of the disjuncts it passes. -/
-partial def mkTrie (xs : Array Expr) (jumps : Array (Jump × Array LocalDecl)) (i : Nat) :
-    VCGenM (Expr × Array (List (Nat × Nat))) := do
+number of the disjuncts it passes.
+-/
+partial def mkTrie (xs : Array Expr) (jumps : Array (Jump × Array LocalDecl)) (i : Nat)
+    : VCGenM (Expr × Array (List (Nat × Nat))) := do
   let mut groups : Array (Array Nat) := #[]
   let mut byLocal : Std.HashMap FVarId Nat := {}
   for h : k in [:jumps.size] do
@@ -210,15 +252,17 @@ partial def mkTrie (xs : Array Expr) (jumps : Array (Jump × Array LocalDecl)) (
   for h : g in [:groups.size] do
     let ks := groups[g]
     let (jump, locals) := jumps[ks[0]!]!
-    let (disjunct, subPaths) ← match locals[i]? with
+    let (disjunct, subPaths) ←
+      match locals[i]? with
       | some d =>
         let (φ, subPaths) ← mkTrie xs (ks.map (jumps[·]!)) (i + 1)
         let decl ← jump.proof.getDecl
         pure (← withLCtx decl.lctx decl.localInstances (bindLocal d φ), subPaths)
       | none =>
-        let eqs ← xs.mapIdxM fun j x => do
-          let α ← Sym.inferType x
-          return mkApp3 (mkConst ``Eq [← Sym.getLevel α]) α x jump.args[j]!
+        let eqs ←
+          xs.mapIdxM fun j x => do
+            let α ← Sym.inferType x
+            return mkApp3 (mkConst ``Eq [← Sym.getLevel α]) α x jump.args[j]!
         pure (mkAndN eqs.toList, #[[]])
     disjuncts := disjuncts.push disjunct
     for (k, path) in ks.zip subPaths do
@@ -233,33 +277,41 @@ partial def mkEqsProof (φ : Expr) : MetaM Expr := do
   | Eq α lhs _ => return mkApp2 (mkConst ``Eq.refl φ.getAppFn.constLevels!) α lhs
   | _ => throwError "vcgen +jp: unexpected equations{indentExpr φ}"
 
-/-- A proof of `φ`, a trie of `mkTrie` at the arguments of a jump, along the `path` of the jump,
-from the witnesses `ws` of its `∃`s and its conjuncts. -/
-partial def mkTrieProof (φ : Expr) (path : List (Nat × Nat)) (ws : List Expr) :
-    MetaM Expr := do
-  let (g, n) :: path := path | throwError "vcgen +jp: empty path into{indentExpr φ}"
+/--
+A proof of `φ`, a trie of `mkTrie` at the arguments of a jump, along the `path` of the jump,
+from the witnesses `ws` of its `∃`s and its conjuncts.
+-/
+partial def mkTrieProof (φ : Expr) (path : List (Nat × Nat)) (ws : List Expr) : MetaM Expr := do
+  let (g, n) :: path := path
+    | throwError "vcgen +jp: empty path into{indentExpr φ}"
   mkOrIntro φ g 0 n fun φ => do
     if path.isEmpty then
       return ← mkEqsProof φ
     if let .letE _ _ v b _ := φ then
       return ← mkTrieProof (b.instantiate1 v) path ws
-    let w :: ws := ws | throwError "vcgen +jp: missing witness for{indentExpr φ}"
+    let w :: ws := ws
+      | throwError "vcgen +jp: missing witness for{indentExpr φ}"
     match_expr φ with
     | Exists α p =>
       return mkApp4 (mkConst ``Exists.intro φ.getAppFn.constLevels!) α p w
         (← mkTrieProof (p.beta #[w]) path ws)
-    | And a b => return mkApp4 (mkConst ``And.intro) a b w (← mkTrieProof b path ws)
-    | _ => throwError "vcgen +jp: unexpected binder{indentExpr φ}"
+    | And a b =>
+      return mkApp4 (mkConst ``And.intro) a b w (← mkTrieProof b path ws)
+    | _ =>
+      throwError "vcgen +jp: unexpected binder{indentExpr φ}"
 
-/-- Assign `?H` of `jp` the trie of its `jumps`, `False` if no jump reaches `jp`, and each jump's
+/--
+Assign `?H` of `jp` the trie of its `jumps`, `False` if no jump reaches `jp`, and each jump's
 `?pf` the proof along its path. `vcgen` processes the RHS goal of `jp` after all goals below the
-registration, so every jump is known by then. -/
+registration, so every jump is known by then.
+-/
 public def finalizeJoinPoint (jp : JoinPoint) (jumps : Array Jump) : VCGenM Unit := do
   let jumps ← jumps.mapM fun jump => return (jump, ← jumpLocals jp jump)
-  let paths ← forallTelescope (← jp.hyp.getType) fun xs _ => do
-    let (φ, paths) ← mkTrie xs jumps 0
-    jp.hyp.assign (← mkLambdaFVars xs φ)
-    return paths
+  let paths ←
+    forallTelescope (← jp.hyp.getType) fun xs _ => do
+      let (φ, paths) ← mkTrie xs jumps 0
+      jp.hyp.assign (← mkLambdaFVars xs φ)
+      return paths
   for ((jump, locals), path) in jumps.zip paths do
     jump.proof.withContext do
       let witnesses := (locals.filter (·.value?.isNone)).map (·.toExpr)

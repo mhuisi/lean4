@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Elab.Tactic.Grind.Basic
 public import Lean.Meta.Sym.DSimp
@@ -16,8 +17,8 @@ open Meta Sym.DSimp
 abbrev SymDSimprocElab := Syntax → GrindTacticM DSimproc
 
 unsafe builtin_initialize symDSimprocElabAttribute : KeyedDeclsAttribute SymDSimprocElab ←
-  mkElabAttribute SymDSimprocElab `builtin_sym_dsimproc `sym_dsimproc
-    `Lean.Parser.Sym.DSimp `Lean.Elab.Tactic.Grind.SymDSimprocElab "sym_dsimproc"
+  mkElabAttribute SymDSimprocElab `builtin_sym_dsimproc `sym_dsimproc `Lean.Parser.Sym.DSimp
+    `Lean.Elab.Tactic.Grind.SymDSimprocElab "sym_dsimproc"
 
 /-- Elaborate a `sym_dsimproc` syntax node into a `DSimproc`. -/
 partial def elabSymDSimproc (stx : Syntax) : GrindTacticM DSimproc := do
@@ -28,9 +29,12 @@ partial def elabSymDSimproc (stx : Syntax) : GrindTacticM DSimproc := do
     catch ex =>
       match ex with
       | .internal id _ =>
-        if id == unsupportedSyntaxExceptionId then continue
-        else throw ex
-      | _ => throw ex
+        if id == unsupportedSyntaxExceptionId then
+          continue
+        else
+          throw ex
+      | _ =>
+        throw ex
   throwErrorAt stx "unsupported sym_dsimproc syntax `{stx.getKind}`"
 
 end Lean.Elab.Tactic.Grind

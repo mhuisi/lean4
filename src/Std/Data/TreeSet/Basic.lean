@@ -74,9 +74,7 @@ Creates a new empty tree set. It is also possible and recommended to
 use the empty collection notations `∅` and `{}` to create an empty tree set. `simp` replaces
 `empty` with `∅`.
 -/
-@[inline]
-def empty : TreeSet α cmp :=
-  ⟨TreeMap.empty⟩
+@[inline] def empty : TreeSet α cmp := ⟨TreeMap.empty⟩
 
 instance : EmptyCollection (TreeSet α cmp) where
   emptyCollection := empty
@@ -92,8 +90,7 @@ structure Equiv (m₁ m₂ : TreeSet α cmp) where
 @[inherit_doc] scoped infix:50 " ~m " => Equiv
 
 @[simp, grind =]
-theorem empty_eq_emptyc : (empty : TreeSet α cmp) = ∅ :=
-  rfl
+theorem empty_eq_emptyc : (empty : TreeSet α cmp) = ∅ := rfl
 
 /--
 Inserts the given element into the set. If the tree set already contains an element that is
@@ -103,9 +100,7 @@ Note: this non-replacement behavior is true for `TreeSet` and `TreeSet.Raw`.
 The `insert` function on `TreeMap`, `DTreeMap`, `TreeMap.Raw` and `DTreeMap.Raw` behaves
 differently: it will overwrite an existing mapping.
 -/
-@[inline]
-def insert (l : TreeSet α cmp) (a : α) : TreeSet α cmp :=
-  ⟨l.inner.insertIfNew a ()⟩
+@[inline] def insert (l : TreeSet α cmp) (a : α) : TreeSet α cmp := ⟨l.inner.insertIfNew a ()⟩
 
 instance : Singleton α (TreeSet α cmp) where
   singleton e := (∅ : TreeSet α cmp).insert e
@@ -137,9 +132,7 @@ in the set. There is also a `Prop`-valued version of this: `a ∈ t` is equivale
 Observe that this is different behavior than for lists: for lists, `∈` uses `=` and `contains` uses
 `==` for equality checks, while for tree sets, both use the given comparator `cmp`.
 -/
-@[inline]
-def contains (l : TreeSet α cmp) (a : α) : Bool :=
-  l.inner.contains a
+@[inline] def contains (l : TreeSet α cmp) (a : α) : Bool := l.inner.contains a
 
 instance : Membership α (TreeSet α cmp) where
   mem m a := m.contains a
@@ -148,159 +141,103 @@ instance {m : TreeSet α cmp} {a : α} : Decidable (a ∈ m) :=
   inferInstanceAs <| Decidable (m.contains a)
 
 /-- Returns the number of mappings present in the map. -/
-@[inline]
-def size (t : TreeSet α cmp) : Nat :=
-  t.inner.size
+@[inline] def size (t : TreeSet α cmp) : Nat := t.inner.size
 
 /-- Returns `true` if the tree set contains no mappings. -/
-@[inline]
-def isEmpty (t : TreeSet α cmp) : Bool :=
-  t.inner.isEmpty
+@[inline] def isEmpty (t : TreeSet α cmp) : Bool := t.inner.isEmpty
 
 /-- Removes the given key if it exists. -/
-@[inline]
-def erase (t : TreeSet α cmp) (a : α) : TreeSet α cmp :=
-  ⟨t.inner.erase a⟩
+@[inline] def erase (t : TreeSet α cmp) (a : α) : TreeSet α cmp := ⟨t.inner.erase a⟩
 
 /--
 Checks if given key is contained and returns the key if it is, otherwise `none`.
 The result in the `some` case is guaranteed to be pointer equal to the key in the map.
 -/
-@[inline]
-def get? (t : TreeSet α cmp) (a : α) : Option α :=
-  t.inner.getKey? a
+@[inline] def get? (t : TreeSet α cmp) (a : α) : Option α := t.inner.getKey? a
 
 /--
 Retrieves the key from the set that matches `a`. Ensures that such a key exists by requiring a proof
 of `a ∈ m`. The result is guaranteed to be pointer equal to the key in the set.
 -/
-@[inline]
-def get (t : TreeSet α cmp) (a : α) (h : a ∈ t) : α :=
-  t.inner.getKey a h
+@[inline] def get (t : TreeSet α cmp) (a : α) (h : a ∈ t) : α := t.inner.getKey a h
 
 /--
 Checks if given key is contained and returns the key if it is, otherwise panics.
 If no panic occurs the result is guaranteed to be pointer equal to the key in the set.
 -/
-@[inline]
-def get! [Inhabited α] (t : TreeSet α cmp) (a : α) : α :=
-  t.inner.getKey! a
+@[inline] def get! [Inhabited α] (t : TreeSet α cmp) (a : α) : α := t.inner.getKey! a
 
 /--
 Checks if given key is contained and returns the key if it is, otherwise `fallback`.
 If they key is contained the result is guaranteed to be pointer equal to the key in the set.
 -/
-@[inline]
-def getD (t : TreeSet α cmp) (a : α) (fallback : α) : α :=
-  t.inner.getKeyD a fallback
+@[inline] def getD (t : TreeSet α cmp) (a : α) (fallback : α) : α := t.inner.getKeyD a fallback
 
-/--
-Tries to retrieve the smallest element of the tree set, returning `none` if the set is empty.
--/
-@[inline]
-def min? (t : TreeSet α cmp) : Option α :=
-  TreeMap.minKey? t.inner
+/-- Tries to retrieve the smallest element of the tree set, returning `none` if the set is empty. -/
+@[inline] def min? (t : TreeSet α cmp) : Option α := TreeMap.minKey? t.inner
 
-/--
-Given a proof that the tree set is not empty, retrieves the smallest element.
--/
-@[inline]
-def min (t : TreeSet α cmp) (h : t.isEmpty = false) : α :=
-  TreeMap.minKey t.inner h
+/-- Given a proof that the tree set is not empty, retrieves the smallest element. -/
+@[inline] def min (t : TreeSet α cmp) (h : t.isEmpty = false) : α := TreeMap.minKey t.inner h
 
-/--
-Tries to retrieve the smallest element of the tree set, panicking if the set is empty.
--/
-@[inline]
-def min! [Inhabited α] (t : TreeSet α cmp) : α :=
-  TreeMap.minKey! t.inner
+/-- Tries to retrieve the smallest element of the tree set, panicking if the set is empty. -/
+@[inline] def min! [Inhabited α] (t : TreeSet α cmp) : α := TreeMap.minKey! t.inner
 
 /--
 Tries to retrieve the smallest element of the tree set, returning `fallback` if the tree set is empty.
 -/
-@[inline]
-def minD (t : TreeSet α cmp) (fallback : α) : α :=
-  TreeMap.minKeyD t.inner fallback
+@[inline] def minD (t : TreeSet α cmp) (fallback : α) : α := TreeMap.minKeyD t.inner fallback
 
-/--
-Tries to retrieve the largest element of the tree set, returning `none` if the set is empty.
--/
-@[inline]
-def max? (t : TreeSet α cmp) : Option α :=
-  TreeMap.maxKey? t.inner
+/-- Tries to retrieve the largest element of the tree set, returning `none` if the set is empty. -/
+@[inline] def max? (t : TreeSet α cmp) : Option α := TreeMap.maxKey? t.inner
 
-/--
-Given a proof that the tree set is not empty, retrieves the largest element.
--/
-@[inline]
-def max (t : TreeSet α cmp) (h : t.isEmpty = false) : α :=
-  TreeMap.maxKey t.inner h
+/-- Given a proof that the tree set is not empty, retrieves the largest element. -/
+@[inline] def max (t : TreeSet α cmp) (h : t.isEmpty = false) : α := TreeMap.maxKey t.inner h
 
-/--
-Tries to retrieve the largest element of the tree set, panicking if the set is empty.
--/
-@[inline]
-def max! [Inhabited α] (t : TreeSet α cmp) : α :=
-  TreeMap.maxKey! t.inner
+/-- Tries to retrieve the largest element of the tree set, panicking if the set is empty. -/
+@[inline] def max! [Inhabited α] (t : TreeSet α cmp) : α := TreeMap.maxKey! t.inner
 
 /--
 Tries to retrieve the largest element of the tree set, returning `fallback` if the tree set is empty.
 -/
-@[inline]
-def maxD (t : TreeSet α cmp) (fallback : α) : α :=
-  TreeMap.maxKeyD t.inner fallback
+@[inline] def maxD (t : TreeSet α cmp) (fallback : α) : α := TreeMap.maxKeyD t.inner fallback
 
 /-- Returns the `n`-th smallest element, or `none` if `n` is at least `t.size`. -/
-@[inline]
-def atIdx? (t : TreeSet α cmp) (n : Nat) : Option α :=
-  TreeMap.keyAtIdx? t.inner n
+@[inline] def atIdx? (t : TreeSet α cmp) (n : Nat) : Option α := TreeMap.keyAtIdx? t.inner n
 
 /-- Returns the `n`-th smallest element. -/
 @[inline]
-def atIdx (t : TreeSet α cmp) (n : Nat) (h : n < t.size) : α :=
-  TreeMap.keyAtIdx t.inner n h
+def atIdx (t : TreeSet α cmp) (n : Nat) (h : n < t.size) : α := TreeMap.keyAtIdx t.inner n h
 
 /-- Returns the `n`-th smallest element, or panics if `n` is at least `t.size`. -/
-@[inline]
-def atIdx! [Inhabited α] (t : TreeSet α cmp) (n : Nat) : α :=
-  TreeMap.keyAtIdx! t.inner n
+@[inline] def atIdx! [Inhabited α] (t : TreeSet α cmp) (n : Nat) : α := TreeMap.keyAtIdx! t.inner n
 
 /-- Returns the `n`-th smallest element, or `fallback` if `n` is at least `t.size`. -/
 @[inline]
-def atIdxD (t : TreeSet α cmp) (n : Nat) (fallback : α) : α :=
-  TreeMap.keyAtIdxD t.inner n fallback
+def atIdxD (t : TreeSet α cmp) (n : Nat) (fallback : α) : α := TreeMap.keyAtIdxD t.inner n fallback
 
 /--
 Tries to retrieve the smallest element that is greater than or equal to the
 given element, returning `none` if no such element exists.
 -/
-@[inline]
-def getGE? (t : TreeSet α cmp) (k : α) : Option α :=
-  TreeMap.getKeyGE? t.inner k
+@[inline] def getGE? (t : TreeSet α cmp) (k : α) : Option α := TreeMap.getKeyGE? t.inner k
 
 /--
 Tries to retrieve the smallest element that is greater than the given element,
 returning `none` if no such element exists.
 -/
-@[inline]
-def getGT? (t : TreeSet α cmp) (k : α) : Option α :=
-  TreeMap.getKeyGT? t.inner k
+@[inline] def getGT? (t : TreeSet α cmp) (k : α) : Option α := TreeMap.getKeyGT? t.inner k
 
 /--
 Tries to retrieve the largest element that is less than or equal to the
 given element, returning `none` if no such element exists.
 -/
-@[inline]
-def getLE? (t : TreeSet α cmp) (k : α) : Option α :=
-  TreeMap.getKeyLE? t.inner k
+@[inline] def getLE? (t : TreeSet α cmp) (k : α) : Option α := TreeMap.getKeyLE? t.inner k
 
 /--
 Tries to retrieve the smallest element that is less than the given element,
 returning `none` if no such element exists.
 -/
-@[inline]
-def getLT? (t : TreeSet α cmp) (k : α) : Option α :=
-  TreeMap.getKeyLT? t.inner k
+@[inline] def getLT? (t : TreeSet α cmp) (k : α) : Option α := TreeMap.getKeyLT? t.inner k
 
 /-!
 `getGE`, `getGT`, `getLE`, `getLT` can be found in `Std.Data.TreeSet.AdditionalOperations`.
@@ -310,72 +247,59 @@ def getLT? (t : TreeSet α cmp) (k : α) : Option α :=
 Tries to retrieve the smallest element that is greater than or equal to the
 given element, panicking if no such element exists.
 -/
-@[inline]
-def getGE! [Inhabited α] (t : TreeSet α cmp) (k : α) : α :=
-  TreeMap.getKeyGE! t.inner k
+@[inline] def getGE! [Inhabited α] (t : TreeSet α cmp) (k : α) : α := TreeMap.getKeyGE! t.inner k
 
 /--
 Tries to retrieve the smallest element that is greater than the given element,
 panicking if no such element exists.
 -/
-@[inline]
-def getGT! [Inhabited α] (t : TreeSet α cmp) (k : α) : α :=
-  TreeMap.getKeyGT! t.inner k
+@[inline] def getGT! [Inhabited α] (t : TreeSet α cmp) (k : α) : α := TreeMap.getKeyGT! t.inner k
 
 /--
 Tries to retrieve the largest element that is less than or equal to the
 given element, panicking if no such element exists.
 -/
-@[inline]
-def getLE! [Inhabited α] (t : TreeSet α cmp) (k : α) : α :=
-  TreeMap.getKeyLE! t.inner k
+@[inline] def getLE! [Inhabited α] (t : TreeSet α cmp) (k : α) : α := TreeMap.getKeyLE! t.inner k
 
 /--
 Tries to retrieve the smallest element that is less than the given element,
 panicking if no such element exists.
 -/
-@[inline]
-def getLT! [Inhabited α] (t : TreeSet α cmp) (k : α) : α :=
-  TreeMap.getKeyLT! t.inner k
+@[inline] def getLT! [Inhabited α] (t : TreeSet α cmp) (k : α) : α := TreeMap.getKeyLT! t.inner k
 
 /--
 Tries to retrieve the smallest element that is greater than or equal to the
 given element, returning `fallback` if no such element exists.
 -/
 @[inline]
-def getGED (t : TreeSet α cmp) (k : α) (fallback : α) : α :=
-  TreeMap.getKeyGED t.inner k fallback
+def getGED (t : TreeSet α cmp) (k : α) (fallback : α) : α := TreeMap.getKeyGED t.inner k fallback
 
 /--
 Tries to retrieve the smallest element that is greater than the given element,
 returning `fallback` if no such element exists.
 -/
 @[inline]
-def getGTD (t : TreeSet α cmp) (k : α) (fallback : α) : α :=
-  TreeMap.getKeyGTD t.inner k fallback
+def getGTD (t : TreeSet α cmp) (k : α) (fallback : α) : α := TreeMap.getKeyGTD t.inner k fallback
 
 /--
 Tries to retrieve the largest element that is less than or equal to the
 given element, returning `fallback` if no such element exists.
 -/
 @[inline]
-def getLED (t : TreeSet α cmp) (k : α) (fallback : α) : α :=
-  TreeMap.getKeyLED t.inner k fallback
+def getLED (t : TreeSet α cmp) (k : α) (fallback : α) : α := TreeMap.getKeyLED t.inner k fallback
 
 /--
 Tries to retrieve the smallest element that is less than the given element,
 returning `fallback` if no such element exists.
 -/
 @[inline]
-def getLTD (t : TreeSet α cmp) (k : α) (fallback : α) : α :=
-  TreeMap.getKeyLTD t.inner k fallback
+def getLTD (t : TreeSet α cmp) (k : α) (fallback : α) : α := TreeMap.getKeyLTD t.inner k fallback
 
-variable  {γ δ: Type w} {m : Type w → Type w₂} [Monad m]
+variable {γ δ : Type w} {m : Type w → Type w₂} [Monad m]
 
 /-- Removes all elements from the tree set for which the given function returns `false`. -/
 @[inline]
-def filter (f : α → Bool) (m : TreeSet α cmp) : TreeSet α cmp :=
-  ⟨m.inner.filter fun a _ => f a⟩
+def filter (f : α → Bool) (m : TreeSet α cmp) : TreeSet α cmp := ⟨m.inner.filter fun a _ => f a⟩
 
 /--
 Monadically computes a value by folding the given function over the elements in the tree set in
@@ -409,9 +333,7 @@ def partition (f : (a : α) → Bool) (t : TreeSet α cmp) : TreeSet α cmp × T
   let p := t.inner.partition fun a _ => f a; (⟨p.1⟩, ⟨p.2⟩)
 
 /-- Carries out a monadic action on each element in the tree set in ascending order. -/
-@[inline]
-def forM (f : α → m PUnit) (t : TreeSet α cmp) : m PUnit :=
-  t.inner.forM (fun a _ => f a)
+@[inline] def forM (f : α → m PUnit) (t : TreeSet α cmp) : m PUnit := t.inner.forM (fun a _ => f a)
 
 /--
 Support for the `for` loop construct in `do` blocks. The iteration happens in ascending
@@ -428,28 +350,20 @@ instance [Monad m] : ForIn m (TreeSet α cmp) α where
   forIn m init f := m.forIn (fun a acc => f a acc) init
 
 /-- Check if all elements satisfy the predicate, short-circuiting if a predicate fails. -/
-@[inline]
-def any (t : TreeSet α cmp) (p : α → Bool) : Bool :=
-  t.inner.any (fun a _ => p a)
+@[inline] def any (t : TreeSet α cmp) (p : α → Bool) : Bool := t.inner.any (fun a _ => p a)
 
 /-- Check if any element satisfies the predicate, short-circuiting if a predicate succeeds. -/
-@[inline]
-def all (t : TreeSet α cmp) (p : α → Bool) : Bool :=
-  t.inner.all (fun a _ => p a)
+@[inline] def all (t : TreeSet α cmp) (p : α → Bool) : Bool := t.inner.all (fun a _ => p a)
 
 /-- Transforms the tree set into a list of elements in ascending order. -/
-@[inline]
-def toList (t : TreeSet α cmp) : List α :=
-  t.inner.keys
+@[inline] def toList (t : TreeSet α cmp) : List α := t.inner.keys
 
 /-- Transforms a list into a tree set. -/
 def ofList (l : List α) (cmp : α → α → Ordering := by exact compare) : TreeSet α cmp :=
   ⟨TreeMap.unitOfList l cmp⟩
 
 /-- Transforms the tree set into an array of elements in ascending order. -/
-@[inline]
-def toArray (t : TreeSet α cmp) : Array α :=
-  t.inner.keysArray
+@[inline] def toArray (t : TreeSet α cmp) : Array α := t.inner.keysArray
 
 /-- Transforms an array into a tree set. -/
 def ofArray (a : Array α) (cmp : α → α → Ordering := by exact compare) : TreeSet α cmp :=
@@ -488,8 +402,7 @@ to the comparison function, the element contained in the second argument will ap
 
 This function always merges the smaller set into the larger set.
 -/
-def union (t₁ t₂ : TreeSet α cmp) : TreeSet α cmp :=
-  ⟨TreeMap.union t₁.inner t₂.inner⟩
+def union (t₁ t₂ : TreeSet α cmp) : TreeSet α cmp := ⟨TreeMap.union t₁.inner t₂.inner⟩
 
 instance : Union (TreeSet α cmp) := ⟨union⟩
 
@@ -498,8 +411,7 @@ Computes the intersection of the given tree sets.
 
 This function always iterates through the smaller set.
 -/
-def inter (t₁ t₂ : TreeSet α cmp) : TreeSet α cmp :=
-  ⟨TreeMap.inter t₁.inner t₂.inner⟩
+def inter (t₁ t₂ : TreeSet α cmp) : TreeSet α cmp := ⟨TreeMap.inter t₁.inner t₂.inner⟩
 
 instance : Inter (TreeSet α cmp) := ⟨inter⟩
 
@@ -508,8 +420,7 @@ Compares two tree sets using Boolean equality on keys.
 
 Returns `true` if the sets contain the same keys, `false` otherwise.
 -/
-def beq (t₁ t₂ : TreeSet α cmp) : Bool :=
-  letI : Ord α := ⟨cmp⟩; TreeMap.beq t₁.inner t₂.inner
+def beq (t₁ t₂ : TreeSet α cmp) : Bool := letI : Ord α := ⟨cmp⟩; TreeMap.beq t₁.inner t₂.inner
 
 instance : BEq (TreeSet α cmp) := ⟨beq⟩
 
@@ -518,8 +429,7 @@ Computes the difference of the given tree sets.
 
 This function always iterates through the smaller set.
 -/
-def diff (t₁ t₂ : TreeSet α cmp) : TreeSet α cmp :=
-  ⟨TreeMap.diff t₁.inner t₂.inner⟩
+def diff (t₁ t₂ : TreeSet α cmp) : TreeSet α cmp := ⟨TreeMap.diff t₁.inner t₂.inner⟩
 
 instance : SDiff (TreeSet α cmp) := ⟨diff⟩
 

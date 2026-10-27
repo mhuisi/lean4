@@ -33,7 +33,8 @@ public def isAppArgsSparse : Array Syntax → Bool
     match arg with
     | `(Parser.Term.namedArgument| ($_:ident := $_:term)) => true
     | _ => false
-  | _ => false
+  | _ =>
+    false
 
 public def fmtFixedApp'
     (f : TaggedDoc) (args : Array Syntax)
@@ -75,7 +76,10 @@ public def fmtAppLike (terms : Array Syntax) : FmtM TaggedDoc := do
       }
       pure (← fmtProjLike lhs dotTk field, format)
     | _ =>
-      pure (← fmt fStx, { parenthesize := true, respectPseudoAlignment := true, sparse := isAppArgsSparse args })
+      pure (
+        ← fmt fStx,
+        { parenthesize := true, respectPseudoAlignment := true, sparse := isAppArgsSparse args }
+      )
   let (app, args') ← fmtFixedApp' f args format
   if args'.size = 1 then
     let arg := args'[0]!
@@ -99,7 +103,8 @@ public def fmtArrayLit (lbTk : Syntax) (elems : Syntax.TSepArray ks ",") (rbTk :
           Layouts.sepArray g <| .fillUsingSpacedSep none .excludeTrailingSep
         else
           Layouts.sepArray g <| .fillUsingSpacedSep none .retainTrailingSep
-      | _, .trailing t => t
+      | _, .trailing t =>
+        t
   let elems := join groups
   return Layouts.bracketed lbTk elems rbTk <| .sparse «break» (stickynessKind := .coequal)
 
