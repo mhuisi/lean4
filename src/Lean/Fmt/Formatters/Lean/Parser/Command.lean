@@ -1010,12 +1010,15 @@ public def fmtWithWeakNamespace : Fmt := fun
 public def fmtDeprecatedSyntax : Fmt := fun
   | `(Parser.Command.deprecatedSyntax|
       deprecated_syntax%$deprecatedSyntaxTk $id:ident $[$msg?:str]?
-        $[ (%$lbTk? since%$sinceTk? :=%$colonEqTk? $since?:str )%$rbTk?]?) => do
+        $[ (%$lbTk? since%$sinceTk? :=%$colonEqTk? $since?:str )%$rbTk?]?
+        $[$matchAlts?:matchAlts]?) => do
     let deprecatedSyntaxTk ← fmt deprecatedSyntaxTk
     let id ← fmt id
     let msg? ← fmt? msg?
     let sinceParam? ← fmtNamedArgumentTerm? lbTk? sinceTk? colonEqTk? since? rbTk?
-    return Layouts.pseudoApplication #[deprecatedSyntaxTk, id, msg?, sinceParam?]
+    let matchAlts? ← fmt? matchAlts?
+    let signature := Layouts.pseudoApplication #[deprecatedSyntaxTk, id, msg?, sinceParam?]
+    return Layouts.matchDeclaration signature matchAlts?
   | _ =>
     throw .partialFormatter
 

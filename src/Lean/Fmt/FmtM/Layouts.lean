@@ -1065,10 +1065,13 @@ public def assignmentDeclaration
     doc
 
 public def matchDeclaration (signature : TaggedDoc) (matchAlts : TaggedDoc) : TaggedDoc :=
-  combine #[
-    .withSepAfter (hardNested signature) ⟨hardNl, nested⟩,
-    matchAlts
-  ]
+  if matchAlts.isAlwaysEmpty then
+    signature
+  else
+    combine #[
+      .withSepAfter (hardNested signature) ⟨hardNl, nested⟩,
+      matchAlts
+    ]
 
 public def whereDeclaration (signature : TaggedDoc) (whereTk : TaggedDoc) (body : TaggedDoc)
     : TaggedDoc :=
