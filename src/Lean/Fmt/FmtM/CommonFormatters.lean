@@ -28,6 +28,13 @@ public def allowAppArgFill : Syntax → Bool
   | `(Parser.Term.namedArgument| ($_:ident := $_:fun)) => false
   | _ => true
 
+public def isAppArgsSparse : Array Syntax → Bool
+  | #[arg] =>
+    match arg with
+    | `(Parser.Term.namedArgument| ($_:ident := $_:term)) => true
+    | _ => false
+  | _ => false
+
 public def fmtFixedApp'
     (f : TaggedDoc) (args : Array Syntax)
     (format : Layouts.Types.ApplicationFormat := {
@@ -62,13 +69,13 @@ public def fmtAppLike (terms : Array Syntax) : FmtM TaggedDoc := do
     | `($lhs:term.%$dotTk$field) =>
       let lhs ← fmt lhs
       let format : Layouts.Types.ApplicationFormat := {
-        sparse := lhs.isBracketed
+        sparse := lhs.isBracketed || isAppArgsSparse args
         parenthesize := true
         respectPseudoAlignment := true
       }
       pure (← fmtProjLike lhs dotTk field, format)
     | _ =>
-      pure (← fmt fStx, { parenthesize := true, respectPseudoAlignment := true })
+      pure (← fmt fStx, { parenthesize := true, respectPseudoAlignment := true, sparse := isAppArgsSparse args })
   let (app, args') ← fmtFixedApp' f args format
   if args'.size = 1 then
     let arg := args'[0]!
