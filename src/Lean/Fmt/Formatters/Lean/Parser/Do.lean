@@ -72,7 +72,7 @@ public def fmtTermReturn : Fmt := fun
   | `(Parser.Term.termReturn| return%$returnTk $[$t?:term]?) => do
     let returnTk ← fmt returnTk
     let t? ← fmt? t?
-    return withPosition <| Layouts.prefixOperator returnTk t? .withSpacing
+    return withPosition <| Layouts.pseudoApplication #[returnTk, t?]
   | _ =>
     throw .partialFormatter
 
@@ -87,7 +87,7 @@ public def fmtDoReturn : Fmt := fun
   | `(Parser.Term.doReturn| return%$returnTk $[$e?:term]?) => do
     let returnTk ← fmt returnTk
     let e? ← fmt? e?
-    return withPosition <| Layouts.prefixOperator returnTk e? .withSpacing
+    return withPosition <| Layouts.pseudoApplication #[returnTk, e?]
   | _ =>
     throw .partialFormatter
 
