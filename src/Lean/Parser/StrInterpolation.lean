@@ -56,10 +56,8 @@ partial def interpolatedStrFn (p : ParserFn) : ParserFn := fun c s =>
       parse startPos c s
 
 @[inline]
-def interpolatedStrNoAntiquot (p : Parser) : Parser := {
-  fn := interpolatedStrFn (withoutPosition p).fn
-  info := mkAtomicInfo "interpolatedStr"
-}
+def interpolatedStrNoAntiquot (p : Parser) : Parser :=
+  { fn := interpolatedStrFn (withoutPosition p).fn, info := mkAtomicInfo "interpolatedStr" }
 
 /--
 The parser `interpolatedStr(p)` parses a string literal like `"foo"` (see `str`), but the string

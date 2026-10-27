@@ -459,8 +459,9 @@ theorem Rxc.Iterator.toArray_eq_match
           #[]
         | some a =>
           if a ≤ it.internalState.upperBound then
-            #[a] ++ (⟨⟨UpwardEnumerable.succ? a, it.internalState.upperBound⟩⟩
-              : Iter (α := Rxc.Iterator α) α).toArray
+            #[a]
+              ++ (⟨⟨UpwardEnumerable.succ? a, it.internalState.upperBound⟩⟩
+                : Iter (α := Rxc.Iterator α) α).toArray
           else
             #[] := by
   rw [← Iter.toArray_toList, toList_eq_match]
@@ -500,8 +501,9 @@ theorem Rxo.Iterator.toArray_eq_match
           #[]
         | some a =>
           if a < it.internalState.upperBound then
-            #[a] ++ (⟨⟨UpwardEnumerable.succ? a, it.internalState.upperBound⟩⟩
-              : Iter (α := Rxo.Iterator α) α).toArray
+            #[a]
+              ++ (⟨⟨UpwardEnumerable.succ? a, it.internalState.upperBound⟩⟩
+                : Iter (α := Rxo.Iterator α) α).toArray
           else
             #[] := by
   rw [← Iter.toArray_toList, toList_eq_match]

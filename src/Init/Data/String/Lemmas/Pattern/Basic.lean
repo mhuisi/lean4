@@ -451,10 +451,9 @@ theorem IsLongestMatch.isLongestMatchAt_ofSliceFrom
 @[simp]
 theorem isLongestMatchAt_startPos_iff {pat : ρ} [PatternModel pat] {s : Slice} {endPos : s.Pos}
     : IsLongestMatchAt pat s.startPos endPos ↔ IsLongestMatch pat endPos := by
-  simpa [isLongestMatchAt_iff] using ⟨
-    fun h => isLongestMatch_of_eq (by simp) (by simp) h,
-    fun h => isLongestMatch_of_eq (by simp) (by simp) h
-  ⟩
+  simpa [isLongestMatchAt_iff] using
+    ⟨ fun h => isLongestMatch_of_eq (by simp) (by simp) h,
+      fun h => isLongestMatch_of_eq (by simp) (by simp) h ⟩
 
 theorem isLongestMatch_iff_isLongestMatchAt_ofSliceFrom
     {pat : ρ} [PatternModel pat] {s : Slice} {base : s.Pos} (endPos : (s.sliceFrom base).Pos)
@@ -489,11 +488,10 @@ theorem IsLongestMatchAt.sliceTo
       (Pos.sliceTo p endPos hp) := by
   simp only [isLongestMatchAt_iff, Pos.sliceTo_le_sliceTo_iff] at ⊢ h
   obtain ⟨h, hp'⟩ := h
-  exact ⟨
-    h,
-    (hp'.sliceTo (Pos.sliceFrom startPos p (Std.le_trans h hp)) (by simpa)).of_eq (by simp)
-      (by ext; simp)
-  ⟩
+  exact
+    ⟨ h,
+      (hp'.sliceTo (Pos.sliceFrom startPos p (Std.le_trans h hp)) (by simpa)).of_eq (by simp)
+        (by ext; simp) ⟩
 
 theorem isLongestMatchAt_of_ofSliceTo
     {pat : ρ} [PatternModel pat]
@@ -622,10 +620,9 @@ theorem IsLongestRevMatch.isLongestRevMatchAt_ofSliceTo
 @[simp]
 theorem isLongestRevMatchAt_endPos_iff {pat : ρ} [PatternModel pat] {s : Slice} {startPos : s.Pos}
     : IsLongestRevMatchAt pat startPos s.endPos ↔ IsLongestRevMatch pat startPos := by
-  simpa [isLongestRevMatchAt_iff] using ⟨
-    fun h => isLongestRevMatch_of_eq (by simp) (by simp) h,
-    fun h => isLongestRevMatch_of_eq (by simp) (by simp) h
-  ⟩
+  simpa [isLongestRevMatchAt_iff] using
+    ⟨ fun h => isLongestRevMatch_of_eq (by simp) (by simp) h,
+      fun h => isLongestRevMatch_of_eq (by simp) (by simp) h ⟩
 
 theorem isLongestRevMatch_iff_isLongestRevMatchAt_ofSliceTo
     {pat : ρ} [PatternModel pat] {s : Slice} {base : s.Pos} (startPos : (s.sliceTo base).Pos)
@@ -660,11 +657,10 @@ theorem IsLongestRevMatchAt.sliceFrom
       (Pos.sliceFrom p endPos (by exact Std.le_trans hp h.le)) := by
   simp only [isLongestRevMatchAt_iff, Pos.sliceFrom_le_sliceFrom_iff] at ⊢ h
   obtain ⟨h, hp'⟩ := h
-  exact ⟨
-    h,
-    (hp'.sliceFrom (Pos.sliceTo endPos p (Std.le_trans hp h)) (by simpa)).of_eq (by simp)
-      (by ext; simp)
-  ⟩
+  exact
+    ⟨ h,
+      (hp'.sliceFrom (Pos.sliceTo endPos p (Std.le_trans hp h)) (by simpa)).of_eq (by simp)
+        (by ext; simp) ⟩
 
 theorem isLongestRevMatchAt_of_ofSliceFrom
     {pat : ρ} [PatternModel pat]
@@ -741,13 +737,10 @@ theorem matchesAt_iff_exists_isMatch {pat : ρ} [PatternModel pat] {s : Slice} {
     : MatchesAt pat pos ↔ ∃ (endPos : s.Pos), ∃ h, IsMatch pat (pos.sliceFrom endPos h) := by
   refine ⟨fun ⟨p, h⟩ => ⟨p, h.le, h.isLongestMatch_sliceFrom.isMatch⟩, fun ⟨p, h₁, h₂⟩ => ?_⟩
   obtain ⟨q, hq⟩ := h₂.exists_isLongestMatch
-  exact ⟨
-    Pos.ofSliceFrom q,
-    ⟨
-      Std.le_trans h₁ (by simpa [← Pos.ofSliceFrom_le_ofSliceFrom_iff] using hq.le_of_isMatch h₂),
-      by simpa using hq
-    ⟩
-  ⟩
+  exact
+    ⟨ Pos.ofSliceFrom q,
+      ⟨ Std.le_trans h₁ (by simpa [← Pos.ofSliceFrom_le_ofSliceFrom_iff] using hq.le_of_isMatch h₂),
+        by simpa using hq ⟩ ⟩
 
 @[simp]
 theorem not_matchesAt_endPos {pat : ρ} [PatternModel pat] [StrictPatternModel pat] {s : Slice}
@@ -764,10 +757,9 @@ theorem matchesAt_iff_matchesAt_ofSliceFrom
   · rintro ⟨endPos, h⟩
     exact ⟨Pos.ofSliceFrom endPos, isLongestMatchAt_iff_isLongestMatchAt_ofSliceFrom.mp h⟩
   · rintro ⟨endPos, h⟩
-    exact ⟨
-      base.sliceFrom endPos (Std.le_trans Slice.Pos.le_ofSliceFrom h.le),
-      isLongestMatchAt_iff_isLongestMatchAt_ofSliceFrom.mpr (by simpa using h)
-    ⟩
+    exact
+      ⟨ base.sliceFrom endPos (Std.le_trans Slice.Pos.le_ofSliceFrom h.le),
+        isLongestMatchAt_iff_isLongestMatchAt_ofSliceFrom.mpr (by simpa using h) ⟩
 
 theorem IsLongestMatchAt.matchesAt
     {pat : ρ} [PatternModel pat]
@@ -804,13 +796,10 @@ theorem revMatchesAt_iff_exists_isRevMatch {pat : ρ} [PatternModel pat] {s : Sl
       ↔ ∃ (startPos : s.Pos), ∃ h, IsRevMatch pat (pos.sliceTo startPos h) := by
   refine ⟨fun ⟨p, h⟩ => ⟨p, h.le, h.isLongestRevMatch_sliceTo.isRevMatch⟩, fun ⟨p, h₁, h₂⟩ => ?_⟩
   obtain ⟨q, hq⟩ := h₂.exists_isLongestRevMatch
-  exact ⟨
-    Pos.ofSliceTo q,
-    ⟨
-      Std.le_trans (by simpa [← Pos.ofSliceTo_le_ofSliceTo_iff] using hq.le_of_isRevMatch h₂) h₁,
-      by simpa using hq
-    ⟩
-  ⟩
+  exact
+    ⟨ Pos.ofSliceTo q,
+      ⟨ Std.le_trans (by simpa [← Pos.ofSliceTo_le_ofSliceTo_iff] using hq.le_of_isRevMatch h₂) h₁,
+        by simpa using hq ⟩ ⟩
 
 @[simp]
 theorem not_revMatchesAt_startPos {pat : ρ} [PatternModel pat] [StrictPatternModel pat] {s : Slice}
@@ -827,10 +816,9 @@ theorem revMatchesAt_iff_revMatchesAt_ofSliceTo
   · rintro ⟨startPos, h⟩
     exact ⟨Pos.ofSliceTo startPos, isLongestRevMatchAt_iff_isLongestRevMatchAt_ofSliceTo.mp h⟩
   · rintro ⟨startPos, h⟩
-    exact ⟨
-      base.sliceTo startPos (Std.le_trans h.le Slice.Pos.ofSliceTo_le),
-      isLongestRevMatchAt_iff_isLongestRevMatchAt_ofSliceTo.mpr (by simpa using h)
-    ⟩
+    exact
+      ⟨ base.sliceTo startPos (Std.le_trans h.le Slice.Pos.ofSliceTo_le),
+        isLongestRevMatchAt_iff_isLongestRevMatchAt_ofSliceTo.mpr (by simpa using h) ⟩
 
 theorem IsLongestRevMatchAt.revMatchesAt
     {pat : ρ} [PatternModel pat]
@@ -1042,12 +1030,11 @@ theorem isValidSearchFrom_cast_iff
     : IsValidSearchFrom pat (pos.cast hst) l
       ↔ IsValidSearchFrom pat pos (l.map (·.cast hst.symm)) := by
   suffices ∀ (s t : Slice) (hst : s.copy = t.copy) (pos : s.Pos) (l : List (SearchStep s)),
-      IsValidSearchFrom pat pos l → IsValidSearchFrom pat (pos.cast hst) (l.map (·.cast hst)) from ⟨
-    fun h => by simpa using this _ _ hst.symm _ _ h,
-    fun h => by
-      have hcomp : (SearchStep.cast hst) ∘ (SearchStep.cast hst.symm) = id := by ext; simp
-      simpa [hcomp] using this _ _ hst _ _ h
-  ⟩
+      IsValidSearchFrom pat pos l → IsValidSearchFrom pat (pos.cast hst) (l.map (·.cast hst)) from
+    ⟨ fun h => by simpa using this _ _ hst.symm _ _ h,
+      fun h => by
+        have hcomp : (SearchStep.cast hst) ∘ (SearchStep.cast hst.symm) = id := by ext; simp
+        simpa [hcomp] using this _ _ hst _ _ h ⟩
   intro s t hst pos l hl
   induction hl with
   | endPos =>
@@ -1178,12 +1165,11 @@ theorem isValidRevSearchFrom_cast_iff
       ↔ IsValidRevSearchFrom pat pos (l.map (·.cast hst.symm)) := by
   suffices ∀ (s t : Slice) (hst : s.copy = t.copy) (pos : s.Pos) (l : List (SearchStep s)),
       IsValidRevSearchFrom pat pos l
-        → IsValidRevSearchFrom pat (pos.cast hst) (l.map (·.cast hst)) from ⟨
-    fun h => by simpa using this _ _ hst.symm _ _ h,
-    fun h => by
-      have hcomp : (SearchStep.cast hst) ∘ (SearchStep.cast hst.symm) = id := by ext; simp
-      simpa [hcomp] using this _ _ hst _ _ h
-  ⟩
+        → IsValidRevSearchFrom pat (pos.cast hst) (l.map (·.cast hst)) from
+    ⟨ fun h => by simpa using this _ _ hst.symm _ _ h,
+      fun h => by
+        have hcomp : (SearchStep.cast hst) ∘ (SearchStep.cast hst.symm) = id := by ext; simp
+        simpa [hcomp] using this _ _ hst _ _ h ⟩
   intro s t hst pos l hl
   induction hl with
   | startPos =>

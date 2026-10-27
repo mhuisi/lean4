@@ -18,14 +18,13 @@ open Lean.Order in
 @[builtin_quantifier_fmt Lean.Order.«term⨅_,_»]
 public def fmtIInf : QuantifierFmt := fun
   | `(⨅%$iInfTk $bs:explicitBinders ,%$commaTk $body:term) =>
-    some {
-      quantifier := iInfTk
-      binders := .binders #[#[explicitBindersToGroup bs]]
-      typeAscriptionTk? := none
-      type? := none
-      commaTk
-      body
-    }
+    some
+      { quantifier := iInfTk
+        binders := .binders #[#[explicitBindersToGroup bs]]
+        typeAscriptionTk? := none
+        type? := none
+        commaTk
+        body }
   | _ =>
     none
 
@@ -33,14 +32,13 @@ open Lean.Order in
 @[builtin_quantifier_fmt Lean.Order.«term⨆_,_»]
 public def fmtISup : QuantifierFmt := fun
   | `(⨆%$iSupTk $bs:explicitBinders ,%$commaTk $body:term) =>
-    some {
-      quantifier := iSupTk
-      binders := .binders #[#[explicitBindersToGroup bs]]
-      typeAscriptionTk? := none
-      type? := none
-      commaTk
-      body
-    }
+    some
+      { quantifier := iSupTk
+        binders := .binders #[#[explicitBindersToGroup bs]]
+        typeAscriptionTk? := none
+        type? := none
+        commaTk
+        body }
   | _ =>
     none
 

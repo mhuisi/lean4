@@ -161,10 +161,8 @@ theorem Internal.map_fst_literals {c : Clause α} : c.literals.map Prod.fst = c.
 
 theorem Internal.getElem_literals {c : Clause α} {i : Nat} (h : i < c.literals.length)
     : c.literals[i]
-      = (
-        c.atoms[i]'(by simpa [length_literals, Internal.size_eq_size_atoms] using h),
-        c.polarity i
-      ) := by
+      = ( c.atoms[i]'(by simpa [length_literals, Internal.size_eq_size_atoms] using h),
+          c.polarity i ) := by
   simp [literals, List.getElem_zipIdx]
 
 protected theorem ext {c1 c2 : Clause α} (h : c1.literals = c2.literals) : c1 = c2 := by
@@ -246,17 +244,15 @@ theorem Internal.mem_iff_exists_getElem {c : Clause α} {l : Literal α}
   rw [← mem_literals_iff, List.mem_iff_getElem]
   constructor
   · rintro ⟨i, h, rfl⟩
-    exact ⟨
-      i,
-      by simpa [length_literals, Internal.size_eq_size_atoms] using h,
-      by rw [Internal.getElem_literals]
-    ⟩
+    exact
+      ⟨ i,
+        by simpa [length_literals, Internal.size_eq_size_atoms] using h,
+        by rw [Internal.getElem_literals] ⟩
   · rintro ⟨i, h, rfl⟩
-    exact ⟨
-      i,
-      by simpa [length_literals, Internal.size_eq_size_atoms] using h,
-      by rw [Internal.getElem_literals]
-    ⟩
+    exact
+      ⟨ i,
+        by simpa [length_literals, Internal.size_eq_size_atoms] using h,
+        by rw [Internal.getElem_literals] ⟩
 
 theorem ne_of_mem_of_negate_mem {c : Clause α} (h1 : l ∈ c) (h2 : l' ∉ c) (h3 : l'.negate ∉ c)
     : l.1 ≠ l'.1 := by

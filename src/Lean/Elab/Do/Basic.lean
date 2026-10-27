@@ -25,14 +25,13 @@ builtin_initialize registerTraceClass `Elab.do
 builtin_initialize registerTraceClass `Elab.do.match
 builtin_initialize registerTraceClass `Elab.do.step
 
-register_builtin_option experimental.intrinsic : Bool := {
-  defValue := false
-  descr :=
-    "acknowledge that the intrinsic verification syntax (the contract clauses of a `def`, \
-      the `assert` element, and the `invariant` and `decreasing` clauses of a loop) is \
-      experimental and \
-      subject to change; `true` silences the warning that each of these forms reports"
-}
+register_builtin_option experimental.intrinsic : Bool :=
+  { defValue := false
+    descr :=
+      "acknowledge that the intrinsic verification syntax (the contract clauses of a `def`, \
+        the `assert` element, and the `invariant` and `decreasing` clauses of a loop) is \
+        experimental and \
+        subject to change; `true` silences the warning that each of these forms reports" }
 
 /--
 Report that an intrinsic verification form is experimental, at the keyword `kw` that introduces
@@ -126,11 +125,8 @@ def MutVar.getId (mutVar : MutVar) : Name := mutVar.ident.getId
 Build an `FVarAliasInfo` recording that the reassignment binding `id` aliases the original
 `let mut` binding represented by `mutVar`.
 -/
-def MutVar.mkAliasInfo (mutVar : MutVar) (id : FVarId) : FVarAliasInfo := {
-  userName := mutVar.getId
-  id
-  baseId := mutVar.baseId
-}
+def MutVar.mkAliasInfo (mutVar : MutVar) (id : FVarId) : FVarAliasInfo :=
+  { userName := mutVar.getId, id, baseId := mutVar.baseId }
 
 instance : ToMessageData MutVar where
   toMessageData mutVar :=
@@ -297,12 +293,11 @@ def mkPureApp (α e : Expr) : DoElabM Expr := do (← read).ops.toDoOps.mkPureAp
 /-- Create a `DoElemCont` returning the result using `pure`. -/
 def DoElemCont.mkPure (resultType : Expr) : TermElabM DoElemCont := do
   let r ← mkFreshUserName `r
-  return {
-    resultName := r
-    resultType
-    k := do let decl ← getLocalDeclFromUserName r; mkPureApp decl.type decl.toExpr
-    kind := .duplicable
-  }
+  return
+    { resultName := r
+      resultType
+      k := do let decl ← getLocalDeclFromUserName r; mkPureApp decl.type decl.toExpr
+      kind := .duplicable }
 
 /-- Create a `ReturnCont` returning the result using `pure`. -/
 def ReturnCont.mkPure (resultType : Expr) : TermElabM ReturnCont := do
@@ -348,11 +343,10 @@ def declareMutVar (x : Ident) (erased : Bool) (k : DoElabM α) : DoElabM α := d
   let fvar ← getFVarFromUserName x.getId
   let mutVar : MutVar := { ident := x, baseId := fvar.fvarId!, erased }
   withReader
-    (fun ctx => {
-      ctx with
-      mutVars := ctx.mutVars.push mutVar
-      mutVarDefs := ctx.mutVarDefs.insert x.getId mutVar
-    })
+    (fun ctx =>
+      { ctx with
+        mutVars := ctx.mutVars.push mutVar
+        mutVarDefs := ctx.mutVarDefs.insert x.getId mutVar })
     k
 
 /-- Register the given names as that of `mut` variables. -/
@@ -361,11 +355,11 @@ def declareMutVars (xs : Array Ident) (erased : Bool) (k : DoElabM α) : DoElabM
   let newMutVars : Array MutVar :=
     xs.zipWith (fun x fvar => { ident := x, baseId := fvar.fvarId!, erased }) fvars
   withReader
-    (fun ctx => {
-      ctx with
-      mutVars := ctx.mutVars ++ newMutVars
-      mutVarDefs := ctx.mutVarDefs.insertMany (newMutVars.map fun mutVar => (mutVar.getId, mutVar))
-    })
+    (fun ctx =>
+      { ctx with
+        mutVars := ctx.mutVars ++ newMutVars
+        mutVarDefs :=
+          ctx.mutVarDefs.insertMany (newMutVars.map fun mutVar => (mutVar.getId, mutVar)) })
     k
 
 /-- Register the given name as that of a `mut` variable if the syntax token `mut` is present. -/
@@ -524,14 +518,13 @@ def DoElemCont.ensureHasTypeAt (dec : DoElemCont) (ref : Syntax) (elementType : 
   unless (← readThe Term.Context).errToSorry do
     throwErrorAt ref errMessage
   logErrorAt ref errMessage
-  return {
-    resultName := ← mkFreshUserName `__r
-    resultType := elementType
-    k := do
-      mapLetDecl dec.resultName dec.resultType (← mkSorry dec.resultType true) (nondep := true)
-        (kind := .implDetail) fun _ => dec.k
-    kind := dec.kind
-  }
+  return
+    { resultName := ← mkFreshUserName `__r
+      resultType := elementType
+      k := do
+        mapLetDecl dec.resultName dec.resultType (← mkSorry dec.resultType true) (nondep := true)
+          (kind := .implDetail) fun _ => dec.k
+      kind := dec.kind }
 
 /--
 Given a continuation `dec` and a reference `ref`, returns a continuation derived from `dec` with result type `PUnit`.
@@ -617,10 +610,8 @@ def DoElemCont.elabAsSyntacticallyDeadCode (dec : DoElemCont) : DoElabM Unit :=
         Core.setMessageLog (log ++ warnings)
 
 /-- Wrap `dec.k` so it elaborates as dead iff `info.noFallthrough`. -/
-def DoElemCont.withDeadCodeFromInfo (dec : DoElemCont) (info : ControlInfo) : DoElemCont := {
-  dec with
-  k := withDeadCode (if info.noFallthrough then .deadSemantically else .alive) dec.k
-}
+def DoElemCont.withDeadCodeFromInfo (dec : DoElemCont) (info : ControlInfo) : DoElemCont :=
+  { dec with k := withDeadCode (if info.noFallthrough then .deadSemantically else .alive) dec.k }
 
 /--
 If `x` is a `mut` variable, record that its current binding aliases the original `let mut` binding,
@@ -849,12 +840,8 @@ well as the changed result type of the `do` block in the loop body.
 def enterLoopBody
     (breakCont continueCont : DoElabM Expr) (returnCont : ReturnCont) (body : DoElabM α)
     : DoElabM α := do
-  let contInfo := {
-    (← read).contInfo.toContInfo with
-    returnCont
-    breakCont
-    continueCont
-  }.toContInfoRef
+  let contInfo :=
+    { (← read).contInfo.toContInfo with returnCont, breakCont, continueCont }.toContInfoRef
   withReader (fun ctx => { ctx with contInfo }) body
 
 /--
@@ -864,11 +851,8 @@ Prepare the context for elaborating the body of a `do` block that does not suppo
 def withoutControl (k : DoElabM Expr) : DoElabM Expr := do
   let error := throwError "This `do` block does not support `break`, `continue` or `return`."
   let rc ← getReturnCont
-  let contInfo := {
-    breakCont := error
-    continueCont := error
-    returnCont := { rc with k _ := error }
-  }
+  let contInfo :=
+    { breakCont := error, continueCont := error, returnCont := { rc with k _ := error } }
   let contInfo := ContInfo.toContInfoRef contInfo
   withReader (fun ctx => { ctx with contInfo }) k
 

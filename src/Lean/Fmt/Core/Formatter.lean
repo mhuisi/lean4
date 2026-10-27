@@ -280,28 +280,23 @@ def Measure.append (m1 m2 : Measure τ) : Measure τ where
 
 /-- Sets whether this measure has pending non-cumulative indentation. -/
 def Measure.setHasPendingNonCumulativeIndentation (m : Measure τ) (nonCumulativeIndentation : Nat)
-    : Measure τ := {
-  m with
-  hasPendingNonCumulativeIndentation := nonCumulativeIndentation > 0
-}
+    : Measure τ :=
+  { m with hasPendingNonCumulativeIndentation := nonCumulativeIndentation > 0 }
 
 /-- Adds a tag to the rendering presented by this measure. -/
-def Measure.addTag (m : Measure τ) (tag : TagId) : Measure τ := {
-  m with
-  output := do
-    let tagStartPos := (← get).rendering.rawEndPos
-    m.output
-    let tagEndPos := (← get).rendering.rawEndPos
-    modify fun out =>
-      let tagRange := (tagStartPos, tagEndPos)
-      {
-        out with
-        tags :=
-          out.tags.alter tag fun
-            | none => some {tagRange}
-            | some ranges => some <| ranges.insert tagRange
-      }
-}
+def Measure.addTag (m : Measure τ) (tag : TagId) : Measure τ :=
+  { m with
+    output := do
+      let tagStartPos := (← get).rendering.rawEndPos
+      m.output
+      let tagEndPos := (← get).rendering.rawEndPos
+      modify fun out =>
+        let tagRange := (tagStartPos, tagEndPos)
+        { out with
+          tags :=
+            out.tags.alter tag fun
+              | none => some {tagRange}
+              | some ranges => some <| ranges.insert tagRange } }
 
 /--
 Determines the measure for a `Doc.free` document from the measure of its inner document, which was
@@ -309,11 +304,8 @@ resolved at `columnPos`. Retains the rendering of the inner document, but discar
 resets the last line length to `columnPos`, so that the surrounding document is resolved as if the
 rendering of the inner document was empty.
 -/
-def Measure.makeFreeAt (m : Measure τ) (columnPos : Nat) : Measure τ := {
-  m with
-  lastLineLength := columnPos
-  cost := 0
-}
+def Measure.makeFreeAt (m : Measure τ) (columnPos : Nat) : Measure τ :=
+  { m with lastLineLength := columnPos, cost := 0 }
 
 /-- Adds a cost to the cost of this measure. -/
 def Measure.addCost (m : Measure τ) (c : τ) : Measure τ := { m with cost := m.cost + c }
@@ -704,26 +696,20 @@ def ResolverM.run (f : ResolverM σ τ α) : ST σ α := f.run' {}
 def getCachedSet?
     (d : Doc τ) (columnPos indentation nonCumulativeIndentation : Nat) (fullness : FullnessState)
     : ResolverM σ τ (Option (MeasureSet τ)) := do
-  return (← get).setCache.get? {
-    docPtr := unsafe .ofKey d
-    columnPos
-    indentation
-    nonCumulativeIndentation
-    fullness
-  }
+  return (← get).setCache.get?
+    { docPtr := unsafe .ofKey d, columnPos, indentation, nonCumulativeIndentation, fullness }
 
 @[inline]
 def setCachedSet
     (d : Doc τ) (columnPos indentation nonCumulativeIndentation : Nat) (fullness : FullnessState)
     (set : MeasureSet τ)
     : ResolverM σ τ Unit :=
-  modify fun state => {
-    state with
-    setCache :=
-      state.setCache.insert
-        { docPtr := unsafe .ofKey d, columnPos, indentation, nonCumulativeIndentation, fullness }
-        set
-  }
+  modify fun state =>
+    { state with
+      setCache :=
+        state.setCache.insert
+          { docPtr := unsafe .ofKey d, columnPos, indentation, nonCumulativeIndentation, fullness }
+          set }
 
 inductive CacheResult (α : Type) where
   | miss
@@ -739,10 +725,8 @@ def getCachedResolvedTainted? (tm : TaintedMeasure τ)
 @[inline]
 def setCachedResolvedTainted (tm : TaintedMeasure τ) (m? : Option (Measure τ))
     : ResolverM σ τ Unit :=
-  modify fun state => {
-    state with
-    resolvedTaintedCache := state.resolvedTaintedCache.insert (unsafe .ofKey tm) m?
-  }
+  modify fun state =>
+    { state with resolvedTaintedCache := state.resolvedTaintedCache.insert (unsafe .ofKey tm) m? }
 
 def Resolver (σ τ : Type) [BEq τ] [Hashable τ] :=
   (d : Doc τ) → (columnPos indentation nonCumulativeIndentation : Nat) → (fullness : FullnessState)
@@ -793,25 +777,21 @@ partial def MeasureSet.resolveCore
     return .set []
   | .newline .. =>
     let lineIndentation := indentation + nonCumulativeIndentation
-    return .set [{
-      lastLineLength := lineIndentation
-      cost := Cost.newlineCost lineIndentation
-      -- Reset the level of non-cumulative indentation so that the next non-cumulative `indented`
-      -- can increase the level of indentation again.
-      hasPendingNonCumulativeIndentation := false
-      output :=
-        modify fun out => {
-          out with
-          rendering := out.rendering ++ "\n" |>.pushn ' ' lineIndentation
-        }
-    }]
+    return .set
+      [ { lastLineLength := lineIndentation
+          cost := Cost.newlineCost lineIndentation
+          -- Reset the level of non-cumulative indentation so that the next non-cumulative `indented`
+          -- can increase the level of indentation again.
+          hasPendingNonCumulativeIndentation := false
+          output :=
+            modify fun out =>
+              { out with rendering := out.rendering ++ "\n" |>.pushn ' ' lineIndentation } } ]
   | .text s =>
-    return .set [{
-      lastLineLength := columnPos + s.chars.length
-      cost := Cost.textCost columnPos s.chars.length
-      hasPendingNonCumulativeIndentation := nonCumulativeIndentation > 0
-      output := modify fun out => { out with rendering := out.rendering ++ s }
-    }]
+    return .set
+      [ { lastLineLength := columnPos + s.chars.length
+          cost := Cost.textCost columnPos s.chars.length
+          hasPendingNonCumulativeIndentation := nonCumulativeIndentation > 0
+          output := modify fun out => { out with rendering := out.rendering ++ s } } ]
   | .tagged id d =>
     let ms ← MeasureSet.resolve d columnPos indentation nonCumulativeIndentation fullness
     return ms.addTag id
@@ -1170,13 +1150,12 @@ public def DefaultCost.ofHeightFallbackPenalty (c : Nat) : DefaultCost w W where
 
 def DefaultCost.zero : DefaultCost w W := .ofCosts 0 0
 
-def DefaultCost.add (c1 c2 : DefaultCost w W) : DefaultCost w W := ⟨
-  c1.failureFallbackPenalty + c2.failureFallbackPenalty,
-  c1.overflowCost + c2.overflowCost,
-  c1.overflowFallbackPenalty + c2.overflowFallbackPenalty,
-  c1.heightCost + c2.heightCost,
-  c1.heightFallbackPenalty + c2.heightFallbackPenalty
-⟩
+def DefaultCost.add (c1 c2 : DefaultCost w W) : DefaultCost w W :=
+  ⟨ c1.failureFallbackPenalty + c2.failureFallbackPenalty,
+    c1.overflowCost + c2.overflowCost,
+    c1.overflowFallbackPenalty + c2.overflowFallbackPenalty,
+    c1.heightCost + c2.heightCost,
+    c1.heightFallbackPenalty + c2.heightFallbackPenalty ⟩
 
 @[no_expose]
 public instance : Zero (DefaultCost w W) where

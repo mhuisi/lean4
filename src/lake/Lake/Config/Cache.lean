@@ -561,15 +561,13 @@ public def downloadArtifactCore (hash : Hash) (url : String) (path : FilePath) :
 def uploadS3 (file : FilePath) (contentType : String) (url : String) (key : String)
     : LoggerIO Unit := do
   let out ←
-    captureProc' {
-      cmd := ← Internal.getCurl
-      args := #[
-        "-s", "-w", "%{stderr}%{json}\n",
-        "--aws-sigv4", "aws:amz:auto:s3", "--user", key,
-        "-X", "PUT", "-T", file.toString, url,
-        "-H", s!"Content-Type: {contentType}"
-      ]
-    }
+    captureProc'
+      { cmd := ← Internal.getCurl
+        args :=
+          #["-s", "-w", "%{stderr}%{json}\n",
+            "--aws-sigv4", "aws:amz:auto:s3", "--user", key,
+            "-X", "PUT", "-T", file.toString, url,
+            "-H", s!"Content-Type: {contentType}"] }
   match Json.parse out.stderr >>= JsonObject.fromJson? with
   | .ok data =>
     let code ←
@@ -721,15 +719,10 @@ structure TransferInfo where
 
 @[inline]
 def TransferInfo.addPath (self : TransferInfo) (path : FilePath) (extra := true) : TransferInfo :=
-  if extra then {
-    self with
-    extraPaths := self.extraPaths.push path
-  }
-  else {
-    self with
-    path
-    extraPaths := self.extraPaths.push self.path
-  }
+  if extra then
+    { self with extraPaths := self.extraPaths.push path }
+  else
+    { self with path, extraPaths := self.extraPaths.push self.path }
 
 structure TransferDict where
   infos : Array TransferInfo
@@ -751,10 +744,8 @@ def TransferDict.addIfNew (self : TransferDict) (url : String) (hash : Hash) (pa
 def TransferDict.add
     (self : TransferDict) (url : String) (hash : Hash) (path : FilePath) (extra := true)
     : TransferDict :=
-  if let some j := self.indices.get? hash then {
-    self with
-    infos := self.infos.modify j (·.addPath path extra)
-  }
+  if let some j := self.indices.get? hash then
+    { self with infos := self.infos.modify j (·.addPath path extra) }
   else
     self.push url hash path
 
@@ -895,23 +886,21 @@ def transferArtifacts (cfg : TransferConfig) : LoggerIO Unit :=
             h.putStrLn s!"url = {info.url.quote}"
             h.putStrLn s!"-o {tmpPath.toString.quote}"
           h.flush
-          return #[
-            "-Z", "-X", "GET", "-L",
-            "--retry", "3", -- intermittent network errors can occur
-            "-s", "-w", "%{stderr}%{json}\n", "--config", path.toString
-          ]
+          return
+            #["-Z", "-X", "GET", "-L",
+              "--retry", "3", -- intermittent network errors can occur
+              "-s", "-w", "%{stderr}%{json}\n", "--config", path.toString]
         | .put =>
           cfg.infos.forM fun info => do
             h.putStrLn s!"-T {info.path.toString.quote}"
             h.putStrLn s!"url = {info.url.quote}"
           h.flush
-          return #[
-            "-Z", "-X", "PUT", "-L",
-            "-H", s!"Content-Type: {artifactContentType}",
-            "--retry", "3", -- intermittent network errors can occur
-            "--aws-sigv4", "aws:amz:auto:s3", "--user", cfg.key,
-            "-s", "-w", "%{stderr}%{json}\n", "--config", path.toString
-          ]
+          return
+            #["-Z", "-X", "PUT", "-L",
+              "-H", s!"Content-Type: {artifactContentType}",
+              "--retry", "3", -- intermittent network errors can occur
+              "--aws-sigv4", "aws:amz:auto:s3", "--user", cfg.key,
+              "-s", "-w", "%{stderr}%{json}\n", "--config", path.toString]
     let child ←
       IO.Process.spawn { cmd := ← Internal.getCurl, args, stdout := .piped, stderr := .piped }
     let s ← monitorTransfer cfg child.stderr child.stdout {}
@@ -993,19 +982,14 @@ where
       let body := Json.arr <| infos.map (toJson ·.hash)
       h.putStr body.compress
       h.flush
-      let args := #[
-        "-X", "POST", "-L", "-d", s!"@{path}",
-        "--retry", "3", -- intermittent network errors can occur
-        "-s", "-w", "%{stderr}%{json}\n",
-        "-H", "Content-Type: application/json"
-      ]
+      let args :=
+        #["-X", "POST", "-L", "-d", s!"@{path}",
+          "--retry", "3", -- intermittent network errors can occur
+          "-s", "-w", "%{stderr}%{json}\n",
+          "-H", "Content-Type: application/json"]
       let args := Reservoir.lakeHeaders.foldl (· ++ #["-H", ·]) args
-      let spawnArgs := {
-        cmd := ← Internal.getCurl
-        args := args.push url
-        stdout := .piped
-        stderr := .piped
-      }
+      let spawnArgs :=
+        { cmd := ← Internal.getCurl, args := args.push url, stdout := .piped, stderr := .piped }
       logVerbose (mkCmdLog spawnArgs)
       let { stdout, stderr, exitCode } ← IO.Process.output spawnArgs
       match Json.parse stdout >>= fromJson? with

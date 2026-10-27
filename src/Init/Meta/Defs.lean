@@ -395,10 +395,8 @@ def mkFreshId {m : Type → Type} [Monad m] [MonadNameGenerator m] : m Name := d
   pure r
 
 instance monadNameGeneratorLift (m n : Type → Type) [MonadLift m n] [MonadNameGenerator m]
-    : MonadNameGenerator n := {
-  getNGen := liftM (getNGen : m _)
-  setNGen := fun ngen => liftM (setNGen ngen : m _)
-}
+    : MonadNameGenerator n :=
+  { getNGen := liftM (getNGen : m _), setNGen := fun ngen => liftM (setNGen ngen : m _) }
 
 namespace Syntax
 
@@ -570,11 +568,10 @@ def getSubstring? (stx : Syntax) (withLeading := true) (withTrailing := true)
     : Option Substring.Raw :=
   match stx.getHeadInfo, stx.getTailInfo with
   | SourceInfo.original lead startPos _ _, SourceInfo.original _ _ trail stopPos =>
-    some {
-      str := lead.str
-      startPos := if withLeading then lead.startPos else startPos
-      stopPos := if withTrailing then trail.stopPos else stopPos
-    }
+    some
+      { str := lead.str
+        startPos := if withLeading then lead.startPos else startPos
+        stopPos := if withTrailing then trail.stopPos else stopPos }
   | _, _ =>
     none
 
@@ -733,8 +730,8 @@ Creates an identifier with its position copied from `src`.
 To refer to a specific constant without a risk of variable capture, use `mkCIdentFrom` instead.
 -/
 def mkIdentFrom (src : Syntax) (val : Name) (canonical := false) : Ident :=
-  ⟨Syntax.ident (SourceInfo.fromRef src canonical) (Name.Internal.Meta.toString val).toRawSubstring
-    val []⟩
+  ⟨ Syntax.ident (SourceInfo.fromRef src canonical) (Name.Internal.Meta.toString val).toRawSubstring
+      val [] ⟩
 
 /--
 Creates a documentation comment whose text is read as Markdown, with its position copied from `src`.
@@ -770,8 +767,8 @@ This variant of `mkIdentFrom` makes sure that the identifier cannot accidentally
 def mkCIdentFrom (src : Syntax) (c : Name) (canonical := false) : Ident :=
   -- Remark: We use the reserved macro scope to make sure there are no accidental collision with our frontend
   let id := addMacroScope `_internal c reservedMacroScope
-  ⟨Syntax.ident (SourceInfo.fromRef src canonical) (Name.Internal.Meta.toString id).toRawSubstring
-    id [.decl c []]⟩
+  ⟨ Syntax.ident (SourceInfo.fromRef src canonical) (Name.Internal.Meta.toString id).toRawSubstring
+      id [.decl c []] ⟩
 
 /--
 Creates an identifier referring to a constant `c`. The identifier's position is copied from the
@@ -1262,12 +1259,11 @@ private partial def splitNameLitAux (ss : Substring.Raw) (acc : List Substring.R
     let curr := Substring.Raw.Internal.front ss
     if isIdBeginEscape curr then
       let escapedPart := Substring.Raw.Internal.takeWhile ss (! isIdEndEscape ·)
-      let escapedPart := {
-        escapedPart with
-        stopPos :=
-          String.Pos.Raw.Internal.min ss.stopPos
-            (String.Internal.next escapedPart.str escapedPart.stopPos)
-      }
+      let escapedPart :=
+        { escapedPart with
+          stopPos :=
+            String.Pos.Raw.Internal.min ss.stopPos
+              (String.Internal.next escapedPart.str escapedPart.stopPos) }
       if ! isIdEndEscape (Substring.Raw.Internal.get escapedPart <|
           Substring.Raw.Internal.prev escapedPart ⟨escapedPart.bsize⟩) then
         []
@@ -1453,8 +1449,8 @@ end TSyntax
 def HygieneInfo.mkIdent (s : HygieneInfo) (val : Name) (canonical := false) : Ident :=
   let src := s.raw[0]
   let id := { extractMacroScopes src.getId with name := val.eraseMacroScopes }.review
-  ⟨Syntax.ident (SourceInfo.fromRef src canonical) (Name.Internal.Meta.toString val).toRawSubstring
-    id []⟩
+  ⟨ Syntax.ident (SourceInfo.fromRef src canonical) (Name.Internal.Meta.toString val).toRawSubstring
+      id [] ⟩
 
 /--
 Converts a runtime value into surface syntax that denotes it.
@@ -1474,9 +1470,10 @@ instance [Quote α k] [CoeHTCT (TSyntax k) (TSyntax [k'])] : Quote α k' :=
   ⟨fun a => quote (k := k) a⟩
 
 instance : Quote Term := ⟨id⟩
-instance : Quote Bool := ⟨fun
-  | true => mkCIdent ``Bool.true
-  | false => mkCIdent ``Bool.false⟩
+instance : Quote Bool :=
+  ⟨ fun
+      | true => mkCIdent ``Bool.true
+      | false => mkCIdent ``Bool.false ⟩
 instance : Quote Char charLitKind := ⟨Syntax.mkCharLit⟩
 instance : Quote String strLitKind := ⟨Syntax.mkStrLit⟩
 instance : Quote Nat numLitKind := ⟨fun n => Syntax.mkNumLit <| toString n⟩
@@ -1502,8 +1499,8 @@ instance : Quote Name `term where
   quote n := private
     match getEscapedNameParts? [] n with
     | some ss =>
-      ⟨mkNode `Lean.Parser.Term.quotedName
-        #[Syntax.mkNameLit (String.Internal.append "`" (String.Internal.intercalate "." ss))]⟩
+      ⟨ mkNode `Lean.Parser.Term.quotedName
+          #[Syntax.mkNameLit (String.Internal.append "`" (String.Internal.intercalate "." ss))] ⟩
     | none =>
       ⟨quoteNameMk n⟩
 
@@ -1639,12 +1636,10 @@ def TSepArray.getElems (sa : TSepArray k sep) : TSyntaxArray k := .mk sa.elemsAn
 
 /-- Adds an element to the end of a separated array, adding a separator as needed. -/
 def TSepArray.push (sa : TSepArray k sep) (e : TSyntax k) : TSepArray k sep :=
-  if sa.elemsAndSeps.isEmpty then {
-    elemsAndSeps := #[e]
-  }
-  else {
-    elemsAndSeps := sa.elemsAndSeps.push (mkAtom sep) |>.push e
-  }
+  if sa.elemsAndSeps.isEmpty then
+    { elemsAndSeps := #[e] }
+  else
+    { elemsAndSeps := sa.elemsAndSeps.push (mkAtom sep) |>.push e }
 
 instance : EmptyCollection (SepArray sep) where
   emptyCollection := ⟨∅⟩

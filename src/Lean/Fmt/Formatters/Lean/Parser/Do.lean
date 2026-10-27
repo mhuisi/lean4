@@ -32,12 +32,12 @@ public def fmtDoExpr : Fmt := fun
 
 public def fmtDoSeqItems (items : TSyntaxArray ``Parser.Term.doSeqItem) : FmtM TaggedDoc := do
   let seq : Syntax.TSepArray `doElem ";" :=
-    ⟨← items.flatMapM fun
-      | `(Parser.Term.doSeqItem| $elem:doElem $[;%$semicolonTk?]?) => do
-        let semicolonTk := semicolonTk?.getD (mkNullNode #[])
-        return #[elem.raw, semicolonTk]
-      | _ =>
-        throw .partialFormatter⟩
+    ⟨ ← items.flatMapM fun
+        | `(Parser.Term.doSeqItem| $elem:doElem $[;%$semicolonTk?]?) => do
+          let semicolonTk := semicolonTk?.getD (mkNullNode #[])
+          return #[elem.raw, semicolonTk]
+        | _ =>
+          throw .partialFormatter ⟩
   fmtSeq seq ``Parser.Term.doNested
 
 @[builtin_fmt Lean.Parser.Term.doSeqIndent]
@@ -434,8 +434,8 @@ public def fmtDoMatch : Fmt := fun
     let withTk ← fmt withTk
     let alts ← fmt alts
     let «match» := Layouts.keywordPrefixedSepFill matchLhs discrs .nonSticky
-    return
-      Layouts.keywordSeparated «match» withTk alts { allowFlattening := false, nestedRhs := false }
+    return Layouts.keywordSeparated «match» withTk alts
+      { allowFlattening := false, nestedRhs := false }
   | _ =>
     throw .partialFormatter
 
@@ -451,8 +451,8 @@ public def fmtDoMatchExpr : Fmt := fun
     let «match» := Layouts.pseudoApplication #[matchLhs, discr]
     let withTk ← fmt withTk
     let alts ← fmt alts
-    return
-      Layouts.keywordSeparated «match» withTk alts { allowFlattening := false, nestedRhs := false }
+    return Layouts.keywordSeparated «match» withTk alts
+      { allowFlattening := false, nestedRhs := false }
   | _ =>
     throw .partialFormatter
 
@@ -500,10 +500,9 @@ public def fmtTryCatchFinally
     | _ =>
       throw .partialFormatter
   if allowFlattening then
-    return oneOf #[
-      flattened <| mk tryTk trySeq handlers finallyTk finallySeq (allowFlattening := true),
-      mk tryTk trySeq handlers finallyTk finallySeq (allowFlattening := false)
-    ]
+    return oneOf
+      #[flattened <| mk tryTk trySeq handlers finallyTk finallySeq (allowFlattening := true),
+        mk tryTk trySeq handlers finallyTk finallySeq (allowFlattening := false)]
   else
     return unflattenable <| mk tryTk trySeq handlers finallyTk finallySeq (allowFlattening := false)
 where

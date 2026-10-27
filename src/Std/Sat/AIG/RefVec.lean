@@ -37,14 +37,13 @@ def cast'
     {aig1 aig2 : AIG α} (s : RefVec aig1 len)
     (h : (∀ {i : Nat} (h : i < len), s.refs[i].gate < aig1.decls.size)
       → ∀ {i : Nat} (h : i < len), s.refs[i].gate < aig2.decls.size)
-    : RefVec aig2 len := {
-  s with
-  hrefs := by
-    intros
-    apply h
-    intros
-    apply s.hrefs
-}
+    : RefVec aig2 len :=
+  { s with
+    hrefs := by
+      intros
+      apply h
+      intros
+      apply s.hrefs }
 
 @[inline, implicit_reducible]
 def cast {aig1 aig2 : AIG α} (s : RefVec aig1 len) (h : aig1.decls.size ≤ aig2.decls.size)
@@ -63,15 +62,13 @@ def get (s : RefVec aig len) (idx : Nat) (hidx : idx < len) : Ref aig :=
 @[inline]
 def push (s : RefVec aig len) (ref : AIG.Ref aig) : RefVec aig (len + 1) :=
   let ⟨refs, hrefs⟩ := s
-  ⟨
-    refs.push (.mk ref.gate ref.invert),
+  ⟨ refs.push (.mk ref.gate ref.invert),
     by
       intro i hi
       simp only [Vector.getElem_push hi]
       split
       · apply hrefs
-      · simp [Ref.hgate]
-  ⟩
+      · simp [Ref.hgate] ⟩
 
 @[simp]
 theorem cast_cast
@@ -111,8 +108,7 @@ theorem get_cast
 def append (lhs : RefVec aig lw) (rhs : RefVec aig rw) : RefVec aig (lw + rw) :=
   let ⟨lrefs, hl⟩ := lhs
   let ⟨rrefs, hr⟩ := rhs
-  ⟨
-    lrefs ++ rrefs,
+  ⟨ lrefs ++ rrefs,
     by
       intro i h
       by_cases hsplit : i < lw
@@ -121,8 +117,7 @@ def append (lhs : RefVec aig lw) (rhs : RefVec aig rw) : RefVec aig (lw + rw) :=
         omega
       · rw [Vector.getElem_append_right]
         · apply hr
-        · omega
-  ⟩
+        · omega ⟩
 
 theorem get_append (lhs : RefVec aig lw) (rhs : RefVec aig rw) (idx : Nat) (hidx : idx < lw + rw)
     : (lhs.append rhs).get idx hidx

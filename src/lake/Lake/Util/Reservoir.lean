@@ -12,10 +12,9 @@ open Lean
 
 namespace Lake
 
-public def Reservoir.lakeHeaders : Array String := #[
-  "X-Reservoir-Api-Version:1.0.0",
-  "X-Lake-Registry-Api-Version:0.1.0"
-]
+public def Reservoir.lakeHeaders : Array String :=
+  #["X-Reservoir-Api-Version:1.0.0",
+    "X-Lake-Registry-Api-Version:0.1.0"]
 
 /-- A Reservoir API response object. -/
 public inductive ReservoirResp (α : Type u)

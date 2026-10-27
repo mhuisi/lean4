@@ -188,13 +188,13 @@ def expandDefContract : Macro := fun stx => do
       ⟨mkNode `Lean.Parser.Term.contractEPosts #[mkAtom "contract_eposts%", eposts]⟩
     `(⦃ $pre ⦄ $fId $args* ⦃ $post; $epostsGadget ⦄)
   let msg : TSyntax `str :=
-    ⟨Syntax.mkStrLit <|
-      if specStep?.isSome then
-        s!"unproved verification conditions for the contract of `{fId.getId}`; \
-          the `where finally | spec => ...` section does not discharge them"
-      else
-        s!"unproved verification conditions for the contract of `{fId.getId}`; \
-          discharge them in a `where finally | spec => ...` section of the definition"⟩
+    ⟨ Syntax.mkStrLit <|
+        if specStep?.isSome then
+          s!"unproved verification conditions for the contract of `{fId.getId}`; \
+            the `where finally | spec => ...` section does not discharge them"
+        else
+          s!"unproved verification conditions for the contract of `{fId.getId}`; \
+            discharge them in a `where finally | spec => ...` section of the definition" ⟩
   -- The section's tactics run on the verification conditions `finish` leaves open; the trailing
   -- `first` reports those that survive them.
   let specTac : TSyntax `tactic ←

@@ -95,11 +95,10 @@ def ofSeconds (s : Second.Offset) : Duration := by
 /-- Creates a new `Duration` out of `Nanosecond.Offset`. -/
 def ofNanoseconds (s : Nanosecond.Offset) : Duration := by
   -- TODO: we should be using `s.toSeconds` here, but the proof below depends on this form.
-  refine ⟨
-    s.tdiv 1000000000 |>.cast (by decide +kernel),
-    Bounded.LE.byMod s.val 1000000000 (by decide),
-    ?_
-  ⟩
+  refine
+    ⟨ s.tdiv 1000000000 |>.cast (by decide +kernel),
+      Bounded.LE.byMod s.val 1000000000 (by decide),
+      ?_ ⟩
 
   cases Int.le_total s.val 0
   next n => exact Or.inr (And.intro (tdiv_neg n (by decide)) (mod_nonpos 1000000000 n (by decide)))

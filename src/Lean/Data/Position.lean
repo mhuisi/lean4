@@ -63,10 +63,8 @@ def getLine (fmap : FileMap) (x : Nat) : Nat := min (x + 1) fmap.getLastLine
 
 partial def ofString (s : String) : FileMap :=
   let rec loop (i : String.Pos.Raw) (ps : Array String.Pos.Raw) : FileMap :=
-    if i.atEnd s then {
-      source := s
-      positions := ps.push i
-    }
+    if i.atEnd s then
+      { source := s, positions := ps.push i }
     else
       let c := i.get s
       let i := i.next s
@@ -87,17 +85,13 @@ partial def toPosition (fmap : FileMap) (pos : String.Pos.Raw) : Position :=
           toColumn (i.next str) (c + 1)
       let rec loop (b e : Nat) :=
         let posB := ps[b]!
-        if e == b + 1 then {
-          line := fmap.getLine b
-          column := toColumn posB 0
-        }
+        if e == b + 1 then
+          { line := fmap.getLine b, column := toColumn posB 0 }
         else
           let m := (b + e) / 2
           let posM := ps[m]!
-          if pos == posM then {
-            line := fmap.getLine m
-            column := 0
-          }
+          if pos == posM then
+            { line := fmap.getLine m, column := 0 }
           else if pos > posM then
             loop m e
           else

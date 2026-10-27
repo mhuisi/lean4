@@ -509,10 +509,8 @@ Mark `mvarId` so that assignments to it must preserve its type up to instance tr
 See `MetavarContext.instanceTypedMVars` and `backward.isDefEq.respectTransparency.instanceSearchTypes`.
 -/
 def _root_.Lean.MVarId.markInstanceTyped [MonadMCtx m] (mvarId : MVarId) : m Unit :=
-  modifyMCtx fun mctx => {
-    mctx with
-    instanceTypedMVars := mctx.instanceTypedMVars.insert mvarId ()
-  }
+  modifyMCtx fun mctx =>
+    { mctx with instanceTypedMVars := mctx.instanceTypedMVars.insert mvarId () }
 
 /--
 Return `true` if assignments to `mvarId` must preserve its type up to instance transparency.
@@ -617,10 +615,8 @@ def assignLevelMVar [MonadMCtx m] (mvarId : LMVarId) (val : Level) : m Unit :=
   modifyMCtx fun m => { m with lAssignment := m.lAssignment.insert mvarId val }
 
 @[export lean_assign_lmvar]
-def assignLevelMVarExp (m : MetavarContext) (mvarId : LMVarId) (val : Level) : MetavarContext := {
-  m with
-  lAssignment := m.lAssignment.insert mvarId val
-}
+def assignLevelMVarExp (m : MetavarContext) (mvarId : LMVarId) (val : Level) : MetavarContext :=
+  { m with lAssignment := m.lAssignment.insert mvarId val }
 
 /--
 Add `mvarId := x` to the metavariable assignment.
@@ -632,10 +628,8 @@ def _root_.Lean.MVarId.assign [MonadMCtx m] (mvarId : MVarId) (val : Expr) : m U
   modifyMCtx fun m => { m with eAssignment := m.eAssignment.insert mvarId val }
 
 @[export lean_assign_mvar]
-def assignExp (m : MetavarContext) (mvarId : MVarId) (val : Expr) : MetavarContext := {
-  m with
-  eAssignment := m.eAssignment.insert mvarId val
-}
+def assignExp (m : MetavarContext) (mvarId : MVarId) (val : Expr) : MetavarContext :=
+  { m with eAssignment := m.eAssignment.insert mvarId val }
 
 /--
 Add a delayed assignment for the given metavariable. You must make sure that
@@ -751,10 +745,8 @@ def instantiateMVarDeclMVars [Monad m] [MonadMCtx m] (mvarId : MVarId) : m Unit 
   let lctx ← instantiateLCtxMVars mvarDecl.lctx
   let type ← instantiateMVars mvarDecl.type
   let (lctx, type) := ShareCommon.shareCommon' (lctx, type)
-  modifyMCtx fun mctx => {
-    mctx with
-    decls := mctx.decls.insert mvarId { mvarDecl with lctx, type }
-  }
+  modifyMCtx fun mctx =>
+    { mctx with decls := mctx.decls.insert mvarId { mvarDecl with lctx, type } }
 
 def instantiateLocalDeclMVars [Monad m] [MonadMCtx m] (localDecl : LocalDecl) : m LocalDecl := do
   match localDecl with
@@ -954,23 +946,21 @@ def addExprMVarDecl
     (mctx : MetavarContext) (mvarId : MVarId) (userName : Name) (lctx : LocalContext)
     (localInstances : LocalInstances) (type : Expr)
     (kind : MetavarKind := MetavarKind.natural) (numScopeArgs : Nat := 0)
-    : MetavarContext := {
-  mctx with
-  mvarCounter := mctx.mvarCounter + 1
-  decls :=
-    mctx.decls.insert mvarId {
-      depth := mctx.depth
-      index := mctx.mvarCounter
-      userName
-      lctx
-      localInstances
-      type
-      kind
-      numScopeArgs
-    }
-  userNames :=
-    if userName.isAnonymous then mctx.userNames else mctx.userNames.insert userName mvarId
-}
+    : MetavarContext :=
+  { mctx with
+    mvarCounter := mctx.mvarCounter + 1
+    decls :=
+      mctx.decls.insert mvarId
+        { depth := mctx.depth
+          index := mctx.mvarCounter
+          userName
+          lctx
+          localInstances
+          type
+          kind
+          numScopeArgs }
+    userNames :=
+      if userName.isAnonymous then mctx.userNames else mctx.userNames.insert userName mvarId }
 
 def addExprMVarDeclExp
     (mctx : MetavarContext) (mvarId : MVarId) (userName : Name) (lctx : LocalContext)
@@ -983,11 +973,10 @@ Low level API for adding/declaring universe level metavariable declarations.
 It is used to implement actions in the monads `MetaM`, `ElabM` and `TacticM`.
 It should not be used directly since the argument `(mvarId : MVarId)` is assumed to be "unique".
 -/
-def addLevelMVarDecl (mctx : MetavarContext) (mvarId : LMVarId) : MetavarContext := {
-  mctx with
-  lmvarCounter := mctx.lmvarCounter + 1
-  lDecls := mctx.lDecls.insert mvarId { depth := mctx.depth, index := mctx.lmvarCounter }
-}
+def addLevelMVarDecl (mctx : MetavarContext) (mvarId : LMVarId) : MetavarContext :=
+  { mctx with
+    lmvarCounter := mctx.lmvarCounter + 1
+    lDecls := mctx.lDecls.insert mvarId { depth := mctx.depth, index := mctx.lmvarCounter } }
 
 def findUserName? (mctx : MetavarContext) (userName : Name) : Option MVarId :=
   mctx.userNames.find? userName
@@ -1001,10 +990,8 @@ only be replaced with defeq expressions.
 -/
 def modifyExprMVarDecl (mctx : MetavarContext) (mvarId : MVarId) (f : MetavarDecl → MetavarDecl)
     : MetavarContext :=
-  if let some mdecl := mctx.decls.find? mvarId then {
-    mctx with
-    decls := mctx.decls.insert mvarId (f mdecl)
-  }
+  if let some mdecl := mctx.decls.find? mvarId then
+    { mctx with decls := mctx.decls.insert mvarId (f mdecl) }
   else
     mctx
 
@@ -1015,13 +1002,11 @@ def setMVarKind (mctx : MetavarContext) (mvarId : MVarId) (kind : MetavarKind) :
 /-- Set the metavariable user facing name. -/
 def setMVarUserName (mctx : MetavarContext) (mvarId : MVarId) (userName : Name) : MetavarContext :=
   let decl := mctx.getDecl mvarId
-  {
-    mctx with
+  { mctx with
     decls := mctx.decls.insert mvarId { decl with userName := userName }
     userNames :=
       let userNames := mctx.userNames.erase decl.userName
-      if userName.isAnonymous then userNames else userNames.insert userName mvarId
-  }
+      if userName.isAnonymous then userNames else userNames.insert userName mvarId }
 
 /--
 Low-level version of `setMVarUserName`.
@@ -1387,13 +1372,12 @@ private partial def elimMVar
     let newMVar := mkMVar newMVarId
     let result := mkMVarApp mvarLCtx newMVar toRevert newMVarKind
     let numScopeArgs := mvarDecl.numScopeArgs + result.getAppNumArgs
-    modify fun s => {
-      s with
-      mctx :=
-        s.mctx.addExprMVarDecl newMVarId Name.anonymous newMVarLCtx newLocalInsts newMVarType
-          newMVarKind numScopeArgs
-      ngen := s.ngen.next
-    }
+    modify fun s =>
+      { s with
+        mctx :=
+          s.mctx.addExprMVarDecl newMVarId Name.anonymous newMVarLCtx newLocalInsts newMVarType
+            newMVarKind numScopeArgs
+        ngen := s.ngen.next }
     if !mvarDecl.kind.isSyntheticOpaque then
       mvarId.assign result
     else
@@ -1559,12 +1543,11 @@ def mkBinding
     : MkBindingM Expr := fun ctx =>
   let mvarIdsToAbstract :=
     xs.foldl (init := {}) fun s x => if x.isMVar then s.insert x.mvarId! else s
-  MkBinding.mkBinding isLambda ctx.lctx xs e usedOnly usedLetOnly etaReduce generalizeNondepLet {
-    preserveOrder := false
-    binderInfoForMVars
-    mvarIdsToAbstract
-    quotContext := ctx.quotContext
-  }
+  MkBinding.mkBinding isLambda ctx.lctx xs e usedOnly usedLetOnly etaReduce generalizeNondepLet
+    { preserveOrder := false
+      binderInfoForMVars
+      mvarIdsToAbstract
+      quotContext := ctx.quotContext }
 
 @[inline]
 def mkLambda
@@ -1591,10 +1574,8 @@ def abstractRange (e : Expr) (n : Nat) (xs : Array Expr) : MkBindingM Expr := fu
 @[inline]
 def collectForwardDeps (toRevert : Array Expr) (preserveOrder : Bool) (generalizeNondepLet := true)
     : MkBindingM (Array Expr) := fun ctx =>
-  MkBinding.collectForwardDeps ctx.lctx toRevert generalizeNondepLet {
-    preserveOrder
-    quotContext := ctx.quotContext
-  }
+  MkBinding.collectForwardDeps ctx.lctx toRevert generalizeNondepLet
+    { preserveOrder, quotContext := ctx.quotContext }
 
 /--
 `isWellFormed lctx e` returns true iff
@@ -1665,11 +1646,8 @@ partial def mkParamName : M Name := do
     modify fun s => { s with nextParamIdx := s.nextParamIdx + 1 }
     mkParamName
   else do
-    modify fun s => {
-      s with
-      nextParamIdx := s.nextParamIdx + 1
-      paramNames := s.paramNames.push newParamName
-    }
+    modify fun s =>
+      { s with nextParamIdx := s.nextParamIdx + 1, paramNames := s.paramNames.push newParamName }
     pure newParamName
 
 partial def visitLevel (u : Level) : M Level := do

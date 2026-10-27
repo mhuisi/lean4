@@ -269,13 +269,12 @@ where
     let pkgDir := wsDir / relPkgDir
     let some pkgDir ← resolvePath? pkgDir
       | error s!"{name}: package directory not found: {pkgDir}"
-    return {
-      pkgDir
-      relPkgDir
-      remoteUrl
-      manifest? := ← Manifest.load (pkgDir / defaultManifestFile) |>.toBaseIO
-      manifestEntry := { name := dep.name, scope := dep.scope, inherited, src }
-    }
+    return
+      { pkgDir
+        relPkgDir
+        remoteUrl
+        manifest? := ← Manifest.load (pkgDir / defaultManifestFile) |>.toBaseIO
+        manifestEntry := { name := dep.name, scope := dep.scope, inherited, src } }
 
 /-- Materializes a manifest package entry, cloning and/or checking it out as necessary. -/
 public def PackageEntry.materialize

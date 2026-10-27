@@ -140,12 +140,11 @@ where
           if (← hasSameType lhs rhs) then
             let varType ← inferType lhs
             let varIdx := (← get).varTypes.size + (← read).offset
-            modify fun s => {
-              s with
-              varTypes := s.varTypes.push varType
-              lhss := s.lhss.push lhs
-              rhss := s.rhss.push rhs
-            }
+            modify fun s =>
+              { s with
+                varTypes := s.varTypes.push varType
+                lhss := s.lhss.push lhs
+                rhss := s.rhss.push rhs }
             return mkBVar varIdx
     match lhs with
     | .lit _ | .sort _ | .mvar _ | .fvar _ | .bvar _ | .const .. =>

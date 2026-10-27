@@ -61,15 +61,11 @@ theorem denote_blastShiftConcat_eq_shiftConcat
 
 theorem blastDivSubtractShift_denote_mem_prefix
     (aig : AIG α) (n d q r : AIG.RefVec aig w) (wn wr : Nat) (start : Nat) (hstart)
-    : ⟦
-        (blastDivSubtractShift aig n d wn wr q r).aig,
-        ⟨
-          start,
+    : ⟦ (blastDivSubtractShift aig n d wn wr q r).aig,
+        ⟨ start,
           inv,
-          by apply Nat.lt_of_lt_of_le; exact hstart; apply blastDivSubtractShift_le_size
-        ⟩,
-        assign
-      ⟧
+          by apply Nat.lt_of_lt_of_le; exact hstart; apply blastDivSubtractShift_le_size ⟩,
+        assign ⟧
       = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply IsPrefix.of
@@ -88,17 +84,12 @@ theorem denote_blastDivSubtractShift_q
     (hq : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, q.get idx hidx, assign⟧ = qbv.getLsbD idx)
     (hr : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, r.get idx hidx, assign⟧ = rbv.getLsbD idx)
     : ∀ (idx : Nat) (hidx : idx < w),
-      ⟦
-        (blastDivSubtractShift aig n d wn wr q r).aig,
+      ⟦ (blastDivSubtractShift aig n d wn wr q r).aig,
         (blastDivSubtractShift aig n d wn wr q r).q.get idx hidx,
-        assign
-      ⟧ = (BitVec.divSubtractShift { n := lhs, d := rhs } {
-          wn := wn
-          wr := wr
-          q := qbv
-          r := rbv
-        }).q.getLsbD
-        idx := by
+        assign ⟧
+        = (BitVec.divSubtractShift { n := lhs, d := rhs }
+            { wn := wn, wr := wr, q := qbv, r := rbv }).q.getLsbD
+          idx := by
   intro idx hidx
   unfold blastDivSubtractShift BitVec.divSubtractShift
   dsimp only
@@ -189,17 +180,12 @@ theorem denote_blastDivSubtractShift_r
     (hright : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, d.get idx hidx, assign⟧ = rhs.getLsbD idx)
     (hr : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, r.get idx hidx, assign⟧ = rbv.getLsbD idx)
     : ∀ (idx : Nat) (hidx : idx < w),
-      ⟦
-        (blastDivSubtractShift aig n d wn wr q r).aig,
+      ⟦ (blastDivSubtractShift aig n d wn wr q r).aig,
         (blastDivSubtractShift aig n d wn wr q r).r.get idx hidx,
-        assign
-      ⟧ = (BitVec.divSubtractShift { n := lhs, d := rhs } {
-          wn := wn
-          wr := wr
-          q := qbv
-          r := rbv
-        }).r.getLsbD
-        idx := by
+        assign ⟧
+        = (BitVec.divSubtractShift { n := lhs, d := rhs }
+            { wn := wn, wr := wr, q := qbv, r := rbv }).r.getLsbD
+          idx := by
   intro idx hidx
   unfold blastDivSubtractShift BitVec.divSubtractShift
   simp only [RefVec.denote_ite, LawfulVecOperator.denote_cast_entry, RefVec.get_cast]
@@ -316,12 +302,8 @@ theorem denote_blastDivSubtractShift_wn
     (lhs rhs : BitVec w) (n d : AIG.RefVec aig w) (wn wr : Nat) (q r : AIG.RefVec aig w)
     (qbv rbv : BitVec w)
     : (blastDivSubtractShift aig n d wn wr q r).wn
-      = (BitVec.divSubtractShift { n := lhs, d := rhs } {
-        wn := wn
-        wr := wr
-        q := qbv
-        r := rbv
-      }).wn := by
+      = (BitVec.divSubtractShift { n := lhs, d := rhs }
+        { wn := wn, wr := wr, q := qbv, r := rbv }).wn := by
   unfold blastDivSubtractShift BitVec.divSubtractShift
   dsimp only
   split <;> simp
@@ -332,12 +314,8 @@ theorem denote_blastDivSubtractShift_wr
     (lhs rhs : BitVec w) (n d : AIG.RefVec aig w) (wn wr : Nat) (q r : AIG.RefVec aig w)
     (qbv rbv : BitVec w)
     : (blastDivSubtractShift aig n d wn wr q r).wr
-      = (BitVec.divSubtractShift { n := lhs, d := rhs } {
-        wn := wn
-        wr := wr
-        q := qbv
-        r := rbv
-      }).wr := by
+      = (BitVec.divSubtractShift { n := lhs, d := rhs }
+        { wn := wn, wr := wr, q := qbv, r := rbv }).wr := by
   unfold blastDivSubtractShift BitVec.divSubtractShift
   dsimp only
   split <;> simp
@@ -438,11 +416,9 @@ theorem denote_go
 
 theorem go_denote_mem_prefix
     (aig : AIG α) (curr : Nat) (n d q r : AIG.RefVec aig w) (wn wr : Nat) (start : Nat) (hstart)
-    : ⟦
-        (go aig curr n d wn wr q r).aig,
+    : ⟦ (go aig curr n d wn wr q r).aig,
         ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
-        assign
-      ⟧
+        assign ⟧
       = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply IsPrefix.of

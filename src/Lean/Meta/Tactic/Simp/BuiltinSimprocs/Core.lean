@@ -103,12 +103,11 @@ builtin_simproc [simp, seval] reduceCtorEq (_ = _) := fun e =>
     | some (c₁, _), some (c₂, _) =>
       if c₁.name != c₂.name then
         withLocalDeclD `h e fun h =>
-          return .done {
-            expr := mkConst ``False
-            proof? :=
-              (← withDefault <|
-                mkEqFalse' (← mkLambdaFVars #[h] (← mkNoConfusion (mkConst ``False) h)))
-          }
+          return .done
+            { expr := mkConst ``False
+              proof? :=
+                (← withDefault <|
+                  mkEqFalse' (← mkLambdaFVars #[h] (← mkNoConfusion (mkConst ``False) h))) }
       else
         return .continue
     | _, _ =>

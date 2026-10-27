@@ -41,19 +41,18 @@ def determineSignatureHelp (tree : Elab.InfoTree) (appStx : Syntax)
             (delab := PrettyPrinter.Delaborator.delabForallWithSignature)
         return some <| ← PrettyPrinter.ppTerm ⟨stx⟩
     | return none
-  return some {
-    signatures := #[{ label := toString fmt : Lsp.SignatureInformation }]
-    activeSignature? := some 0
-    -- We do not mark the active parameter at all, as this would require retaining parameter indices
-    -- through the delaborator.
-    -- However, since we display the signature help using the `TermInfo` of the application,
-    -- not the function itself, this is not a problem:
-    -- The parameters keeps reducing as one adds arguments to the function, and the active
-    -- parameter is then always the first explicit one.
-    -- This feels very intuitive, so we don't need to thread any additional information
-    -- through the delaborator for highlighting the active parameter.
-    activeParameter? := none
-  }
+  return some
+    { signatures := #[{ label := toString fmt : Lsp.SignatureInformation }]
+      activeSignature? := some 0
+      -- We do not mark the active parameter at all, as this would require retaining parameter indices
+      -- through the delaborator.
+      -- However, since we display the signature help using the `TermInfo` of the application,
+      -- not the function itself, this is not a problem:
+      -- The parameters keeps reducing as one adds arguments to the function, and the active
+      -- parameter is then always the first explicit one.
+      -- This feels very intuitive, so we don't need to thread any additional information
+      -- through the delaborator for highlighting the active parameter.
+      activeParameter? := none }
 
 inductive CandidateKind where
   /--

@@ -53,20 +53,18 @@ private def addScope
     (isNoncomputable isPublic isMeta : Bool := false)
     (attrs : List (TSyntax ``Parser.Term.attrInstance) := [])
     : CommandElabM Unit := do
-  modify fun s => {
-    s with
-    env := s.env.registerNamespace newNamespace
-    scopes :=
-      {
-        s.scopes.head! with
-        header := header
-        currNamespace := newNamespace
-        isNoncomputable := s.scopes.head!.isNoncomputable || isNoncomputable
-        isPublic := s.scopes.head!.isPublic || isPublic
-        isMeta := s.scopes.head!.isMeta || isMeta
-        attrs := s.scopes.head!.attrs ++ attrs
-      } :: s.scopes
-  }
+  modify fun s =>
+    { s with
+      env := s.env.registerNamespace newNamespace
+      scopes :=
+        { s.scopes.head! with
+          header := header
+          currNamespace := newNamespace
+          isNoncomputable := s.scopes.head!.isNoncomputable || isNoncomputable
+          isPublic := s.scopes.head!.isPublic || isPublic
+          isMeta := s.scopes.head!.isMeta || isMeta
+          attrs := s.scopes.head!.attrs ++ attrs }
+          :: s.scopes }
   pushScope
   if isNewNamespace then
     activateScoped newNamespace
@@ -499,11 +497,8 @@ def elabVariable : CommandElab
       let varUIds ←
         (← getBracketedBinderIds binder)
           |>.mapM (withFreshMacroScope ∘ MonadQuotation.addMacroScope)
-      modifyScope fun scope => {
-        scope with
-        varDecls := scope.varDecls.push binder
-        varUIds := scope.varUIds ++ varUIds
-      }
+      modifyScope fun scope =>
+        { scope with varDecls := scope.varDecls.push binder, varUIds := scope.varUIds ++ varUIds }
   | _ =>
     throwUnsupportedSyntax
 
@@ -661,11 +656,10 @@ def elabInclude : CommandElab
         uids := uids.push sc.varUIds[idx]!
       else
         throwError "invalid 'include', variable `{id}` has not been declared in the current scope"
-    modifyScope fun sc => {
-      sc with
-      includedVars := sc.includedVars ++ uids.toList
-      omittedVars := sc.omittedVars.filter (! uids.contains ·)
-    }
+    modifyScope fun sc =>
+      { sc with
+        includedVars := sc.includedVars ++ uids.toList
+        omittedVars := sc.omittedVars.filter (! uids.contains ·) }
   | _ =>
     throwUnsupportedSyntax
 
@@ -716,11 +710,10 @@ def elabOmit : CommandElab
           unless used do
             throwError "`{o}` did not match any variables in the current scope"
         return omittedVars
-    modifyScope fun sc => {
-      sc with
-      omittedVars := sc.omittedVars ++ omittedVars.toList
-      includedVars := sc.includedVars.filter (! omittedVars.contains ·)
-    }
+    modifyScope fun sc =>
+      { sc with
+        omittedVars := sc.omittedVars ++ omittedVars.toList
+        includedVars := sc.includedVars.filter (! omittedVars.contains ·) }
   | _ =>
     throwUnsupportedSyntax
 

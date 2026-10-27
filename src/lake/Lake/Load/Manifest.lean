@@ -93,27 +93,24 @@ deriving Inhabited
 namespace PackageEntry
 
 public protected def toJson (entry : PackageEntry) : Json :=
-  let fields := [
-    ("name", toJson entry.name),
-    ("scope", toJson entry.scope),
-    ("configFile", toJson entry.configFile),
-    ("manifestFile", toJson entry.manifestFile?),
-    ("inherited", toJson entry.inherited)
-  ]
+  let fields :=
+    [ ("name", toJson entry.name),
+      ("scope", toJson entry.scope),
+      ("configFile", toJson entry.configFile),
+      ("manifestFile", toJson entry.manifestFile?),
+      ("inherited", toJson entry.inherited) ]
   let fields :=
     match entry.src with
     | .path dir copy =>
-      ("type", "path") :: fields.append [
-        ("dir", toJson dir),
-        ("copy", toJson copy)
-      ]
+      ("type", "path") :: fields.append
+        [ ("dir", toJson dir),
+          ("copy", toJson copy) ]
     | .git url rev inputRev? subDir? =>
-      ("type", "git") :: fields.append [
-        ("url", toJson url),
-        ("rev", toJson rev),
-        ("inputRev", toJson inputRev?),
-        ("subDir", toJson subDir?)
-      ]
+      ("type", "git") :: fields.append
+        [ ("url", toJson url),
+          ("rev", toJson rev),
+          ("inputRev", toJson inputRev?),
+          ("subDir", toJson subDir?) ]
   Json.mkObj fields
 
 public instance : ToJson PackageEntry := ⟨PackageEntry.toJson⟩
@@ -167,39 +164,28 @@ public def setInherited (entry : PackageEntry) : PackageEntry := { entry with in
 
 /-- **For internal use only.** -/
 @[inline]
-public def setConfigFile (path : FilePath) (entry : PackageEntry) : PackageEntry := {
-  entry with
-  configFile := path
-}
+public def setConfigFile (path : FilePath) (entry : PackageEntry) : PackageEntry :=
+  { entry with configFile := path }
 
 /-- **For internal use only.** -/
 @[inline]
-public def setManifestFile (path? : Option FilePath) (entry : PackageEntry) : PackageEntry := {
-  entry with
-  manifestFile? := path?
-}
+public def setManifestFile (path? : Option FilePath) (entry : PackageEntry) : PackageEntry :=
+  { entry with manifestFile? := path? }
 
 /-- **For internal use only.** -/
 @[inline]
-public def inDirectory (pkgDir : FilePath) (entry : PackageEntry) : PackageEntry := {
-  entry with
-  src :=
-    match entry.src with
-    | .path dir => .path (pkgDir / dir)
-    | s => s
-}
+public def inDirectory (pkgDir : FilePath) (entry : PackageEntry) : PackageEntry :=
+  { entry with
+    src :=
+      match entry.src with
+      | .path dir => .path (pkgDir / dir)
+      | s => s }
 
 def ofV6 : PackageEntryV6 → PackageEntry
-  | .path name _opts inherited dir => {
-    name
-    inherited
-    src := .path dir
-  }
-  | .git name _opts inherited url rev inputRev? subDir? => {
-    name
-    inherited
-    src := .git url rev inputRev? subDir?
-  }
+  | .path name _opts inherited dir =>
+    { name, inherited, src := .path dir }
+  | .git name _opts inherited url rev inputRev? subDir? =>
+    { name, inherited, src := .git url rev inputRev? subDir? }
 
 end PackageEntry
 
@@ -214,20 +200,17 @@ public structure Manifest where
 namespace Manifest
 
 /-- Add a package entry to the end of a manifest. -/
-public def addPackage (entry : PackageEntry) (self : Manifest) : Manifest := {
-  self with
-  packages := self.packages.push entry
-}
+public def addPackage (entry : PackageEntry) (self : Manifest) : Manifest :=
+  { self with packages := self.packages.push entry }
 
 public protected def toJson (self : Manifest) : Json :=
-  Json.mkObj [
-    ("version", toJson version),
-    ("fixedToolchain", toJson self.fixedToolchain),
-    ("name", toJson self.name),
-    ("lakeDir", toJson self.lakeDir),
-    ("packagesDir", toJson self.packagesDir?),
-    ("packages", toJson self.packages)
-  ]
+  Json.mkObj
+    [ ("version", toJson version),
+      ("fixedToolchain", toJson self.fixedToolchain),
+      ("name", toJson self.name),
+      ("lakeDir", toJson self.lakeDir),
+      ("packagesDir", toJson self.packagesDir?),
+      ("packages", toJson self.packages) ]
 
 public instance : ToJson Manifest := ⟨Manifest.toJson⟩
 
@@ -327,8 +310,7 @@ public def tryLoadEntries (file : FilePath) : IO (Array PackageEntry) := do
 /-- Serialize manifest package entries to a JSON file. -/
 public def saveEntries (file : FilePath) (entries : Array PackageEntry) : IO PUnit := do
   let contents :=
-    Json.pretty <| Json.mkObj [
-      ("schemaVersion", toJson version),
-      ("packages", toJson entries)
-    ]
+    Json.pretty <| Json.mkObj
+      [ ("schemaVersion", toJson version),
+        ("packages", toJson entries) ]
   IO.FS.writeFile file <| contents.push '\n'

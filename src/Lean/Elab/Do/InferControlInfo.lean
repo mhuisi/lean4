@@ -73,32 +73,30 @@ def ControlInfo.empty : ControlInfo := { numRegularExits := 0, noFallthrough := 
 The `ControlInfo` of a sequence `a; b`: effect flags are unioned, the regular exits are those of
 `b`, and the sequence falls through iff both parts fall through.
 -/
-def ControlInfo.sequence (a b : ControlInfo) : ControlInfo := {
+def ControlInfo.sequence (a b : ControlInfo) : ControlInfo :=
   -- Syntactic fields aggregate unconditionally; the elaborator keeps visiting `b` unless `a` is
   -- a syntactically-terminal element (only top-level `return`/`break`/`continue` are, via
   -- `elabAsSyntacticallyDeadCode`).
-  breaks := a.breaks || b.breaks
-  continues := a.continues || b.continues
-  returnsEarly := a.returnsEarly || b.returnsEarly
-  reassigns := a.reassigns ++ b.reassigns
-  numRegularExits := b.numRegularExits
-  -- Semantic: the sequence is dead if either part is dead.
-  noFallthrough := a.noFallthrough || b.noFallthrough
-}
+  { breaks := a.breaks || b.breaks
+    continues := a.continues || b.continues
+    returnsEarly := a.returnsEarly || b.returnsEarly
+    reassigns := a.reassigns ++ b.reassigns
+    numRegularExits := b.numRegularExits
+    -- Semantic: the sequence is dead if either part is dead.
+    noFallthrough := a.noFallthrough || b.noFallthrough }
 
 /--
 The `ControlInfo` of branches `a | b`: effect flags are unioned, the regular exits are summed, and
 the alternative falls through iff at least one branch falls through.
 -/
-def ControlInfo.alternative (a b : ControlInfo) : ControlInfo := {
-  breaks := a.breaks || b.breaks
-  continues := a.continues || b.continues
-  returnsEarly := a.returnsEarly || b.returnsEarly
-  reassigns := a.reassigns ++ b.reassigns
-  numRegularExits := a.numRegularExits + b.numRegularExits
-  -- Semantic: alternatives are dead only if all branches are dead.
-  noFallthrough := a.noFallthrough && b.noFallthrough
-}
+def ControlInfo.alternative (a b : ControlInfo) : ControlInfo :=
+  { breaks := a.breaks || b.breaks
+    continues := a.continues || b.continues
+    returnsEarly := a.returnsEarly || b.returnsEarly
+    reassigns := a.reassigns ++ b.reassigns
+    numRegularExits := a.numRegularExits + b.numRegularExits
+    -- Semantic: alternatives are dead only if all branches are dead.
+    noFallthrough := a.noFallthrough && b.noFallthrough }
 
 instance : ToMessageData ControlInfo where
   toMessageData info :=
@@ -201,25 +199,23 @@ partial def ofElem (stx : DoElem) : TermElabM ControlInfo := do
   -- For/Repeat
   | `(doElem| for $[$[$_ :]? $_ in $_],* $[$_:doLoopInvariant]? $[$_:doLoopDecreasing]? do $bodySeq) =>
     let info ← ofSeq bodySeq
-    return {
-      info with -- keep only reassigns and returnsEarly
-      numRegularExits := 1
-      continues := false
-      breaks := false
-      noFallthrough := false
-    }
+    return
+      { info with -- keep only reassigns and returnsEarly
+        numRegularExits := 1
+        continues := false
+        breaks := false
+        noFallthrough := false }
   | `(doRepeat| repeat $[$_:doLoopInvariant]? $[$_:doLoopDecreasing]? $bodySeq) =>
     -- A break-less `repeat` never falls through; the elaborator injects an `unreachable!` so the
     -- surrounding continuation still has a polymorphic value to hand back, and any dead-code
     -- warning on subsequent elements is actionable.
     let info ← ofSeq bodySeq
-    return {
-      info with -- keep only reassigns and returnsEarly
-      numRegularExits := if info.breaks then 1 else 0
-      continues := false
-      breaks := false
-      noFallthrough := !info.breaks
-    }
+    return
+      { info with -- keep only reassigns and returnsEarly
+        numRegularExits := if info.breaks then 1 else 0
+        continues := false
+        breaks := false
+        noFallthrough := !info.breaks }
   -- Try
   | `(doElem| try $trySeq:doSeq $[$catches]* $[finally $finSeq?]?) =>
     let mut info ← ofSeq trySeq
@@ -306,10 +302,8 @@ partial def ofLetOrReassign
     | none => pure { : ControlInfo }
     | some body => ofSeq ⟨body⟩
   let info := rhs.sequence (body.alternative otherwise)
-  return {
-    info with
-    reassigns := (reassigned.map TSyntax.getId).foldl NameSet.insert info.reassigns
-  }
+  return
+    { info with reassigns := (reassigned.map TSyntax.getId).foldl NameSet.insert info.reassigns }
 
 partial def ofSeq (stx : DoSeq) : TermElabM ControlInfo := do
   let mut info : ControlInfo := {}

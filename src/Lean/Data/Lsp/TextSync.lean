@@ -23,17 +23,19 @@ inductive TextDocumentSyncKind where
   | full
   | incremental
 
-instance : FromJson TextDocumentSyncKind := ⟨fun j =>
-  match j.getNat? with
-  | Except.ok 0 => return TextDocumentSyncKind.none
-  | Except.ok 1 => return TextDocumentSyncKind.full
-  | Except.ok 2 => return TextDocumentSyncKind.incremental
-  | _ => throw "unknown TextDocumentSyncKind"⟩
+instance : FromJson TextDocumentSyncKind :=
+  ⟨ fun j =>
+      match j.getNat? with
+      | Except.ok 0 => return TextDocumentSyncKind.none
+      | Except.ok 1 => return TextDocumentSyncKind.full
+      | Except.ok 2 => return TextDocumentSyncKind.incremental
+      | _ => throw "unknown TextDocumentSyncKind" ⟩
 
-instance : ToJson TextDocumentSyncKind := ⟨fun
-  | TextDocumentSyncKind.none => 0
-  | TextDocumentSyncKind.full => 1
-  | TextDocumentSyncKind.incremental => 2⟩
+instance : ToJson TextDocumentSyncKind :=
+  ⟨ fun
+      | TextDocumentSyncKind.none => 0
+      | TextDocumentSyncKind.full => 1
+      | TextDocumentSyncKind.incremental => 2 ⟩
 
 structure DidOpenTextDocumentParams where
   textDocument : TextDocumentItem
@@ -58,12 +60,12 @@ instance : FromJson TextDocumentContentChangeEvent where
       <|> (TextDocumentContentChangeEvent.fullChange <$> j.getObjValAs? String "text")
 
 instance TextDocumentContentChangeEvent.hasToJson : ToJson TextDocumentContentChangeEvent :=
-  ⟨fun o =>
-    mkObj $ match o with
-      | TextDocumentContentChangeEvent.rangeChange range text =>
-        [⟨"range", toJson range⟩, ⟨"text", toJson text⟩]
-      | TextDocumentContentChangeEvent.fullChange text =>
-        [⟨"text", toJson text⟩]⟩
+  ⟨ fun o =>
+      mkObj $ match o with
+        | TextDocumentContentChangeEvent.rangeChange range text =>
+          [⟨"range", toJson range⟩, ⟨"text", toJson text⟩]
+        | TextDocumentContentChangeEvent.fullChange text =>
+          [⟨"text", toJson text⟩] ⟩
 
 structure DidChangeTextDocumentParams where
   textDocument : VersionedTextDocumentIdentifier

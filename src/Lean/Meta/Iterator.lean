@@ -40,9 +40,8 @@ def ofList (l : List α) : MetaM (Meta.Iterator α) := do
 Map and filter results of iterator and returning only those values returned
 by `f`.
 -/
-partial def filterMapM (f : α → MetaM (Option β)) (L : Meta.Iterator α) : Meta.Iterator β := {
-  next := _next
-}
+partial def filterMapM (f : α → MetaM (Option β)) (L : Meta.Iterator α) : Meta.Iterator β :=
+  { next := _next }
 where
   _next := do
     match ← L.next with

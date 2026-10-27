@@ -24,16 +24,15 @@ deriving BEq
 
 public builtin_initialize indirectModUseExt
     : SimplePersistentEnvExtension IndirectModUse (Std.HashMap Name (Array ModuleIdx)) ←
-  registerSimplePersistentEnvExtension {
-    addEntryFn s _ := s
-    addImportedFn es := Id.run do
-      let mut s := {}
-      for es in es, modIdx in 0...* do
-        for e in es do
-          s := s.alter e.declName (·.getD #[] |>.push modIdx)
-      return s
-    asyncMode := .sync
-  }
+  registerSimplePersistentEnvExtension
+    { addEntryFn s _ := s
+      addImportedFn es := Id.run do
+        let mut s := {}
+        for es in es, modIdx in 0...* do
+          for e in es do
+            s := s.alter e.declName (·.getD #[] |>.push modIdx)
+        return s
+      asyncMode := .sync }
 
 public def getIndirectModUses (env : Environment) (modIdx : ModuleIdx) : Array IndirectModUse :=
   indirectModUseExt.getModuleEntries env modIdx
@@ -65,14 +64,13 @@ public structure ExtraModUse where
 deriving BEq, Hashable, Repr
 
 builtin_initialize extraModUses : SimplePersistentEnvExtension ExtraModUse (PHashSet ExtraModUse) ←
-  registerSimplePersistentEnvExtension {
-    addEntryFn m k := m.insert k
-    addImportedFn _ := {}
-    exportEntriesFnEx? :=
-      some fun _ _ entries => { exported := #[], server := #[], «private» := entries.toArray }
-    asyncMode := .sync
-    replay? := some <| SimplePersistentEnvExtension.replayOfFilter (·.contains ·) (·.insert ·)
-  }
+  registerSimplePersistentEnvExtension
+    { addEntryFn m k := m.insert k
+      addImportedFn _ := {}
+      exportEntriesFnEx? :=
+        some fun _ _ entries => { exported := #[], server := #[], «private» := entries.toArray }
+      asyncMode := .sync
+      replay? := some <| SimplePersistentEnvExtension.replayOfFilter (·.contains ·) (·.insert ·) }
 
 /-- Returns additional recorded import dependencies of the given module. -/
 public def getExtraModUses (env : Environment) (modIdx : ModuleIdx) : Array ExtraModUse :=
@@ -120,11 +118,8 @@ public def recordExtraModUseFromDecl (declName : Name) (isMeta : Bool) : m Unit 
       recordExtraModUseCore env.header.modules[modIdx]!.module (isMeta := false) (hint := declName)
 
 builtin_initialize isExtraRevModUseExt : SimplePersistentEnvExtension Unit Unit ←
-  registerSimplePersistentEnvExtension {
-    addEntryFn s e := ()
-    addImportedFn _ := ()
-    asyncMode := .sync
-  }
+  registerSimplePersistentEnvExtension
+    { addEntryFn s e := (), addImportedFn _ := (), asyncMode := .sync }
 
 /-- Checks whether this module should be preserved as an import by `shake`. -/
 public def isExtraRevModUse (env : Environment) (modIdx : ModuleIdx) : Bool :=

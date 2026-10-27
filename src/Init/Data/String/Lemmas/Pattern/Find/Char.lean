@@ -43,11 +43,10 @@ theorem find?_char_eq_some_iff_splits {c : Char} {s : Slice} {pos : s.Pos}
     exact absurd hpget (hmin _ hlt)
   · rintro ⟨t, u, hs, hnotin⟩
     have hne := hs.ne_endPos_of_singleton
-    exact ⟨
-      hne,
-      (singleton_append_inj.mp (hs.eq_right (pos.splits_next_right hne))).1.symm,
-      fun pos' hlt hget => hnotin (hs.mem_toList_left_iff.mpr ⟨pos', hlt, hget⟩)
-    ⟩
+    exact
+      ⟨ hne,
+        (singleton_append_inj.mp (hs.eq_right (pos.splits_next_right hne))).1.symm,
+        fun pos' hlt hget => hnotin (hs.mem_toList_left_iff.mpr ⟨pos', hlt, hget⟩) ⟩
 
 theorem Pos.find?_char_eq_some_iff {c : Char} {s : Slice} {pos pos' : s.Pos}
     : pos.find? c = some pos'
@@ -76,24 +75,22 @@ theorem Pos.find?_char_eq_some_iff_splits
     have hu : u = v ++ (singleton c ++ w) :=
       append_right_inj t |>.mp (hs.eq_append.symm.trans (by rw [hsplit.eq_append, append_assoc]))
     have hle : pos ≤ pos' := (hs.le_iff_exists_eq_append hsplit).mpr ⟨v, rfl, hu⟩
-    refine ⟨
-      hle,
-      ⟨hne, (singleton_append_inj.mp (hsplit.eq_right (pos'.splits_next_right hne))).1.symm⟩,
-      fun pos'' hle' hlt hget => hnotin ?_
-    ⟩
+    refine
+      ⟨ hle,
+        ⟨hne, (singleton_append_inj.mp (hsplit.eq_right (pos'.splits_next_right hne))).1.symm⟩,
+        fun pos'' hle' hlt hget => hnotin ?_ ⟩
     obtain ⟨_, hcopy⟩ := Slice.copy_slice_eq_iff_splits.mpr ⟨t, _, hs.of_eq rfl hu, hsplit⟩
     rw [← hcopy]
-    exact mem_toList_copy_iff_exists_get.mpr ⟨
-      pos''.slice pos pos' hle' (Std.le_of_lt hlt),
-      fun h =>
-        Std.ne_of_lt hlt (by
-          rw [← Slice.Pos.ofSlice_slice (h₁ := hle') (h₂ := Std.le_of_lt hlt), h,
-            Slice.Pos.ofSlice_endPos]),
-      by
-        rw [Slice.Pos.get_eq_get_ofSlice]
-        simp [Slice.Pos.ofSlice_slice]
-        exact hget
-    ⟩
+    exact mem_toList_copy_iff_exists_get.mpr
+      ⟨ pos''.slice pos pos' hle' (Std.le_of_lt hlt),
+        fun h =>
+          Std.ne_of_lt hlt (by
+            rw [← Slice.Pos.ofSlice_slice (h₁ := hle') (h₂ := Std.le_of_lt hlt), h,
+              Slice.Pos.ofSlice_endPos]),
+        by
+          rw [Slice.Pos.get_eq_get_ofSlice]
+          simp [Slice.Pos.ofSlice_slice]
+          exact hget ⟩
 
 theorem Pos.find?_char_eq_none_iff {c : Char} {s : Slice} {pos : s.Pos}
     : pos.find? c = none ↔ ∀ pos', pos ≤ pos' → (h : pos' ≠ s.endPos) → pos'.get h ≠ c := by
@@ -115,23 +112,19 @@ theorem Pos.find?_char_eq_some_iff {c : Char} {s : String} {pos pos' : s.Pos}
     ne_eq, endPos_toSlice]
   refine ⟨?_, ?_⟩
   · rintro ⟨pos', ⟨h₁, ⟨h₂, rfl⟩, h₃⟩, rfl⟩
-    refine ⟨
-      by simpa [Pos.ofToSlice_le_iff] using! h₁,
-      ⟨by simpa [← Pos.ofToSlice_inj] using h₂, by simp [Pos.get_ofToSlice]⟩,
-      ?_
-    ⟩
+    refine
+      ⟨ by simpa [Pos.ofToSlice_le_iff] using! h₁,
+        ⟨by simpa [← Pos.ofToSlice_inj] using h₂, by simp [Pos.get_ofToSlice]⟩,
+        ?_ ⟩
     intro pos'' h₄ h₅
     simpa using h₃ pos''.toSlice (by simpa [Pos.toSlice_le] using h₄) (by simpa using! h₅)
   · rintro ⟨h₁, ⟨h₂, hget⟩, h₃⟩
-    refine ⟨
-      pos'.toSlice,
-      ⟨
-        by simpa [Pos.toSlice_le] using h₁,
-        ⟨by simpa [← Pos.toSlice_inj] using h₂, by simpa using hget⟩,
-        fun p hp₁ hp₂ => ?_
-      ⟩,
-      by simp
-    ⟩
+    refine
+      ⟨ pos'.toSlice,
+        ⟨ by simpa [Pos.toSlice_le] using h₁,
+          ⟨by simpa [← Pos.toSlice_inj] using h₂, by simpa using hget⟩,
+          fun p hp₁ hp₂ => ?_ ⟩,
+        by simp ⟩
     simpa using
       h₃ (Pos.ofToSlice p) (by simpa [Pos.ofToSlice_le_iff] using! hp₁) (by simpa using! hp₂)
 
@@ -189,14 +182,11 @@ theorem find?_char_eq_some_iff {c : Char} {s : String} {pos : s.Pos}
     intro pos' hp
     simpa using h' pos'.toSlice hp
   · rintro ⟨⟨h, hget⟩, hmin⟩
-    exact ⟨
-      pos.toSlice,
-      ⟨
-        ⟨by simpa [← Pos.toSlice_inj] using h, by simpa using hget⟩,
-        fun pos' hp => by simpa using hmin (Pos.ofToSlice pos') hp
-      ⟩,
-      by simp
-    ⟩
+    exact
+      ⟨ pos.toSlice,
+        ⟨ ⟨by simpa [← Pos.toSlice_inj] using h, by simpa using hget⟩,
+          fun pos' hp => by simpa using hmin (Pos.ofToSlice pos') hp ⟩,
+        by simp ⟩
 
 theorem find?_char_eq_some_iff_splits {c : Char} {s : String} {pos : s.Pos}
     : s.find? c = some pos ↔ ∃ t u, pos.Splits t (singleton c ++ u) ∧ c ∉ t.toList := by

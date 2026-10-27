@@ -50,18 +50,17 @@ instance [Nonempty β] {f : α → m (α ⊕ β)} {a : α} : Nonempty (Subtype (
 Computational core of `repeatM`: returns the loop value paired with its
 `repeatM.Pred` proof.
 -/
-partial def repeatM.impl [Nonempty β] (f : α → m (α ⊕ β)) (a : α) : Subtype (repeatM.Pred f a) := ⟨
-  repeatM.body f (repeatM.impl f · |>.val) a,
-  by
-    simp only [repeatM.Pred]
-    split <;> rename_i h
-    · have key : (fun x => (repeatM.impl f x).val) = h.choose :=
-        funext fun x => by
-          simpa only [repeatM.Pred, dite_eq_left h] using (repeatM.impl f x).property
-      rw [key]
-      exact congrFun h.choose_spec a
-    · trivial
-⟩
+partial def repeatM.impl [Nonempty β] (f : α → m (α ⊕ β)) (a : α) : Subtype (repeatM.Pred f a) :=
+  ⟨ repeatM.body f (repeatM.impl f · |>.val) a,
+    by
+      simp only [repeatM.Pred]
+      split <;> rename_i h
+      · have key : (fun x => (repeatM.impl f x).val) = h.choose :=
+          funext fun x => by
+            simpa only [repeatM.Pred, dite_eq_left h] using (repeatM.impl f x).property
+        rw [key]
+        exact congrFun h.choose_spec a
+      · trivial ⟩
 
 /--
 An erased version of `repeatM.impl` that eta-expands better in the compiler.

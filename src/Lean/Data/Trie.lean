@@ -204,15 +204,14 @@ partial def matchPrefix
 private partial def toStringAux {α : Type} : Trie α → List Format
   | leaf _ =>
     []
-  | node1 _ c t => [
-    format (repr c), Format.group $ Format.nest 4 $ flip Format.joinSep Format.line $ toStringAux t
-  ]
+  | node1 _ c t =>
+    [ format (repr c),
+      Format.group $ Format.nest 4 $ flip Format.joinSep Format.line $ toStringAux t ]
   | node _ cs ts =>
     List.flatten $ List.zipWith
-      (fun c t => [
-        format (repr c),
-        (Format.group $ Format.nest 4 $ flip Format.joinSep Format.line $ toStringAux t)
-      ])
+      (fun c t =>
+        [ format (repr c),
+          (Format.group $ Format.nest 4 $ flip Format.joinSep Format.line $ toStringAux t) ])
       cs.toList ts.toList
 
 instance {α : Type} : ToString (Trie α) where

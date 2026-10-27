@@ -130,11 +130,10 @@ Examples:
  * `#[1,2,3].toSubarray.popFront.popFront.popFront.popFront.toArray = #[]`
 -/
 def popFront (s : Subarray α) : Subarray α :=
-  if h : s.start < s.stop then ⟨{
-    s.internalRepresentation with
-    start := s.start + 1
-    start_le_stop := Nat.le_of_lt_succ (Nat.add_lt_add_right h 1)
-  }⟩
+  if h : s.start < s.stop then
+    ⟨ { s.internalRepresentation with
+        start := s.start + 1
+        start_le_stop := Nat.le_of_lt_succ (Nat.add_lt_add_right h 1) } ⟩
   else
     s
 
@@ -143,13 +142,12 @@ The empty subarray.
 
 This empty subarray is backed by an empty array.
 -/
-protected def empty : Subarray α := ⟨{
-  array := #[]
-  start := 0
-  stop := 0
-  start_le_stop := Nat.le_refl 0
-  stop_le_array_size := Nat.le_refl 0
-}⟩
+protected def empty : Subarray α :=
+  ⟨ { array := #[]
+      start := 0
+      stop := 0
+      start_le_stop := Nat.le_refl 0
+      stop_le_array_size := Nat.le_refl 0 } ⟩
 
 instance : EmptyCollection (Subarray α) := ⟨Subarray.empty⟩
 
@@ -383,27 +381,24 @@ def toSubarray (as : Array α) (start : Nat := 0) (stop : Nat := as.size) : Suba
   if h₂ : stop ≤ as.size then
     if h₁ : start ≤ stop then
       ⟨{ array := as, start := start, stop := stop, start_le_stop := h₁, stop_le_array_size := h₂ }⟩
-    else ⟨{
-      array := as
-      start := stop
-      stop := stop
-      start_le_stop := Nat.le_refl _
-      stop_le_array_size := h₂
-    }⟩
-  else if h₁ : start ≤ as.size then ⟨{
-    array := as
-    start := start
-    stop := as.size
-    start_le_stop := h₁
-    stop_le_array_size := Nat.le_refl _
-  }⟩
-  else ⟨{
-    array := as
-    start := as.size
-    stop := as.size
-    start_le_stop := Nat.le_refl _
-    stop_le_array_size := Nat.le_refl _
-  }⟩
+    else
+      ⟨ { array := as
+          start := stop
+          stop := stop
+          start_le_stop := Nat.le_refl _
+          stop_le_array_size := h₂ } ⟩
+  else if h₁ : start ≤ as.size then
+    ⟨ { array := as
+        start := start
+        stop := as.size
+        start_le_stop := h₁
+        stop_le_array_size := Nat.le_refl _ } ⟩
+  else
+    ⟨ { array := as
+        start := as.size
+        stop := as.size
+        start_le_stop := Nat.le_refl _
+        stop_le_array_size := Nat.le_refl _ } ⟩
 
 /-- A subarray with the provided bounds. -/
 syntax:max term noWs "[" withoutPosition(term ":" term) "]" : term

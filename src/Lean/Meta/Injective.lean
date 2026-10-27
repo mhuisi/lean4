@@ -119,12 +119,11 @@ private def mkInjectiveTheorem (ctorVal : ConstructorVal) : MetaM Unit := do
       | return ()
     trace[Meta.injective] "type: {type}"
     let value ← mkInjectiveTheoremValue ctorVal.name type
-    addDecl <| Declaration.thmDecl {
-      name
-      levelParams := ctorVal.levelParams
-      type := (← instantiateMVars type)
-      value := (← instantiateMVars value)
-    }
+    addDecl <| Declaration.thmDecl
+      { name
+        levelParams := ctorVal.levelParams
+        type := (← instantiateMVars type)
+        value := (← instantiateMVars value) }
 
 def mkInjectiveEqTheoremNameFor (ctorName : Name) : Name := ctorName ++ `injEq
 
@@ -180,22 +179,20 @@ private def mkInjectiveEqTheorem (ctorVal : ConstructorVal) : MetaM Unit := do
       | return ()
     trace[Meta.injective] "type: {type}"
     let value ← mkInjectiveEqTheoremValue ctorVal type
-    addDecl <| Declaration.thmDecl {
-      name
-      levelParams := ctorVal.levelParams
-      type := (← instantiateMVars type)
-      value := (← instantiateMVars value)
-    }
+    addDecl <| Declaration.thmDecl
+      { name
+        levelParams := ctorVal.levelParams
+        type := (← instantiateMVars type)
+        value := (← instantiateMVars value) }
     addSimpTheorem (ext := simpExtension) name (post := true) (inv := false) AttributeKind.global
       (prio := eval_prio default)
 
-register_builtin_option genInjectivity : Bool := {
-  defValue := true
-  descr :=
-    "generate injectivity theorems for inductive datatype constructors. \
-      Temporarily (for bootstrapping reasons) also controls the generation of the\
-      \n    `ctorIdx` definition."
-}
+register_builtin_option genInjectivity : Bool :=
+  { defValue := true
+    descr :=
+      "generate injectivity theorems for inductive datatype constructors. \
+        Temporarily (for bootstrapping reasons) also controls the generation of the\
+        \n    `ctorIdx` definition." }
 
 def mkInjectiveTheorems (declName : Name) : MetaM Unit := do
   if (← getEnv).contains ``Eq.propIntro && genInjectivity.get (← getOptions)
@@ -310,8 +307,8 @@ private def mkHInjectiveTheorem? (thmName : Name) (ctorVal : ConstructorVal)
     | return none
   let some value ← mkHInjectiveTheoremValue? ctorVal typeInfo
     | return none
-  return
-    some { name := thmName, value, levelParams := ctorVal.levelParams, type := typeInfo.thmType }
+  return some
+    { name := thmName, value, levelParams := ctorVal.levelParams, type := typeInfo.thmType }
 
 builtin_initialize
   registerReservedNamePredicate fun env n =>

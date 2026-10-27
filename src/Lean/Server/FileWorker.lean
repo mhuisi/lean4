@@ -160,10 +160,9 @@ private def mkIleanInfoNotification
 
 private def mkIleanHeaderSetupInfoNotification
     (m : DocumentMeta) (directImports : Array ImportInfo) (isSetupFailure : Bool)
-    : JsonRpc.Notification Lsp.LeanILeanHeaderSetupInfoParams := {
-  method := "$/lean/ileanHeaderSetupInfo"
-  param := { version := m.version, directImports, isSetupFailure }
-}
+    : JsonRpc.Notification Lsp.LeanILeanHeaderSetupInfoParams :=
+  { method := "$/lean/ileanHeaderSetupInfo"
+    param := { version := m.version, directImports, isSetupFailure } }
 
 private def mkIleanInfoUpdateNotification
     : DocumentMeta → Array Elab.InfoTree → BaseIO (JsonRpc.Notification Lsp.LeanIleanInfoParams) :=
@@ -175,10 +174,8 @@ private def mkIleanInfoFinalNotification
 
 /-- Yields a `$/lean/importClosure` notification. -/
 private def mkImportClosureNotification (importClosure : Array DocumentUri)
-    : JsonRpc.Notification Lsp.LeanImportClosureParams := {
-  method := "$/lean/importClosure"
-  param := { importClosure : LeanImportClosureParams }
-}
+    : JsonRpc.Notification Lsp.LeanImportClosureParams :=
+  { method := "$/lean/importClosure", param := { importClosure : LeanImportClosureParams } }
 
 /-- State of `reportSnapshots`. -/
 private structure ReportSnapshotsState where
@@ -192,14 +189,14 @@ private structure ReportSnapshotsState where
   hasFatal := false
 deriving Inhabited
 
-register_builtin_option server.reportDelayMs : Nat := {
-  defValue := 200
-  descr :=
-    "(server) time in milliseconds to wait before reporting progress and diagnostics on \
-      document edit in order to reduce flickering\
-      \n\
-      \nThis option can only be set on the command line, not in the lakefile or via `set_option`."
-}
+register_builtin_option server.reportDelayMs : Nat :=
+  { defValue := 200
+    descr :=
+      "(server) time in milliseconds to wait before reporting progress and diagnostics on \
+        document edit in order to reduce flickering\
+        \n\
+        \nThis option can only be set on the command line, not in the lakefile or via \
+        `set_option`." }
 
 /--
 Type of state stored in `Snapshot.Diagnostics.cacheRef?`.
@@ -287,26 +284,25 @@ where
       -- limit children's reported range to that of the parent, if any, to avoid strange
       -- non-monotonic progress updates; replace `inherit` children's ranges with parent's
       let ts :=
-        node.children.map (fun t' => {
-          t' with
-          reportingRange :=
-            -- NOTE: as `t.reportingRange?` has already gone through this transformation, it should be
-            -- either `some` or `skip` at this point
-            match t.reportingRange, t'.reportingRange with
-            | .some r, .some r' =>
-              let start := max r.start r'.start
-              let stop := min r.stop r'.stop
-              -- ensure `stop ≥ start`, lest we end up with negative ranges if `r` and `r'` are
-              -- disjoint
-              let stop := max start stop
-              .some { start, stop }
-            | _, .some r' =>
-              .some r'
-            | r?, .inherit =>
-              r?
-            | _, _ =>
-              .skip
-        })
+        node.children.map (fun t' =>
+          { t' with
+            reportingRange :=
+              -- NOTE: as `t.reportingRange?` has already gone through this transformation, it should be
+              -- either `some` or `skip` at this point
+              match t.reportingRange, t'.reportingRange with
+              | .some r, .some r' =>
+                let start := max r.start r'.start
+                let stop := min r.stop r'.stop
+                -- ensure `stop ≥ start`, lest we end up with negative ranges if `r` and `r'` are
+                -- disjoint
+                let stop := max start stop
+                .some { start, stop }
+              | _, .some r' =>
+                .some r'
+              | r?, .inherit =>
+                r?
+              | _, _ =>
+                .skip })
       ts.flatMapM handleFinished
     else
       return #[t]
@@ -416,13 +412,12 @@ def setupImports
   let header := stx.toModuleHeader
   let fileSetupResult ←
     setupFile doc header fun stderrLine => do
-      let progressDiagnostic := {
-        range := ⟨⟨0, 0⟩, ⟨1, 0⟩⟩
-        -- make progress visible anywhere in the file
-        fullRange? := some ⟨⟨0, 0⟩, doc.text.utf8PosToLspPos doc.text.source.rawEndPos⟩
-        severity? := DiagnosticSeverity.information
-        message := stderrLine
-      }
+      let progressDiagnostic :=
+        { range := ⟨⟨0, 0⟩, ⟨1, 0⟩⟩
+          -- make progress visible anywhere in the file
+          fullRange? := some ⟨⟨0, 0⟩, doc.text.utf8PosToLspPos doc.text.source.rawEndPos⟩
+          severity? := DiagnosticSeverity.information
+          message := stderrLine }
       chanOut.sync.send <| .ofMsg <| mkPublishDiagnosticsNotification doc #[progressDiagnostic]
   let isSetupError := fileSetupResult matches .importsOutOfDate || fileSetupResult matches .error ..
   chanOut.sync.send <| .ofMsg <|
@@ -432,20 +427,16 @@ def setupImports
   let setup ← do
     match fileSetupResult with
     | .importsOutOfDate =>
-      return .error {
-        diagnostics :=
-          (← Language.diagnosticsOfHeaderError "Imports are out of date and must be rebuilt; \
-            use the \"Restart File\" command in your editor.")
-        result? := none
-        metaSnap := default
-        : Language.Lean.HeaderProcessedSnapshot
-      }
+      return .error
+        { diagnostics :=
+            (← Language.diagnosticsOfHeaderError "Imports are out of date and must be rebuilt; \
+              use the \"Restart File\" command in your editor.")
+          result? := none
+          metaSnap := default
+          : Language.Lean.HeaderProcessedSnapshot }
     | .error msg =>
-      return .error {
-        diagnostics := (← diagnosticsOfHeaderError msg)
-        result? := none
-        metaSnap := default
-      }
+      return .error
+        { diagnostics := (← diagnosticsOfHeaderError msg), result? := none, metaSnap := default }
     | .noLakefile =>
       pure { name := doc.mod, isModule := header.isModule }
     | .success setup =>
@@ -459,15 +450,14 @@ def setupImports
 
   let opts := Elab.inServer.set opts true
 
-  return .ok {
-    mainModuleName := doc.mod
-    package? := setup.package?
-    isModule := strictOr setup.isModule header.isModule
-    imports := setup.imports?.getD header.imports
-    opts
-    importArts := setup.importArts
-    plugins := setup.plugins
-  }
+  return .ok
+    { mainModuleName := doc.mod
+      package? := setup.package?
+      isModule := strictOr setup.isModule header.isModule
+      imports := setup.imports?.getD header.imports
+      opts
+      importArts := setup.importArts
+      plugins := setup.plugins }
 
 /- Worker initialization sequence. -/
 section Initialization
@@ -483,16 +473,13 @@ def initializeWorker
   let timestamp ← IO.monoMsNow
   let partialHandlersRef ←
     IO.mkRef <| Std.TreeMap.ofArray (cmp := compare) <|
-      (← partialLspRequestHandlerMethods).map fun (method, refreshMethod, _) => (
-        method,
-        {
-          refreshMethod
-          requestsInFlight := 0
-          -- Emit a refresh request after a file worker restart.
-          pendingRefreshInfo? :=
-            some { lastRefreshTimestamp := timestamp, successiveRefreshAttempts := 0 }
-        }
-      )
+      (← partialLspRequestHandlerMethods).map fun (method, refreshMethod, _) =>
+        ( method,
+          { refreshMethod
+            requestsInFlight := 0
+            -- Emit a refresh request after a file worker restart.
+            pendingRefreshInfo? :=
+              some { lastRefreshTimestamp := timestamp, successiveRefreshAttempts := 0 } } )
   let processor := Language.Lean.process (setupImports doc opts chanOut)
   let processor ← Language.mkIncrementalProcessor processor
   let initSnap ← processor doc.mkInputContext
@@ -501,32 +488,28 @@ def initializeWorker
       let importClosure ← IO.lazyPure fun _ => getImportClosure? initSnap
       let importClosure ← importClosure.filterMapM (documentUriFromModule? ·)
       chanOut.send <| .ofMsg <| mkImportClosureNotification importClosure
-  let ctx := {
-    chanOut
-    hLog := e
-    initParams
-    processor
-    clientHasWidgets
-    partialHandlersRef
-    pendingServerRequestsRef
-    maxDocVersionRef
-    freshRequestIdRef
-    cmdlineOpts := opts
-  }
+  let ctx :=
+    { chanOut
+      hLog := e
+      initParams
+      processor
+      clientHasWidgets
+      partialHandlersRef
+      pendingServerRequestsRef
+      maxDocVersionRef
+      freshRequestIdRef
+      cmdlineOpts := opts }
   let diagnosticsMutex ← Std.Mutex.new { stickyDiagsRef }
   let doc : EditableDocumentCore := { «meta» := doc, initSnap, diagnosticsMutex }
   let reporterCancelTk ← CancelToken.new
   let reporter ← reportSnapshots ctx doc reporterCancelTk
-  return (
-    ctx,
-    {
-      doc := { doc with reporter }
-      reporterCancelTk
-      pendingRequests := Std.TreeMap.empty
-      rpcSessions := Std.TreeMap.empty
-      importCachingTask? := none
-    }
-  )
+  return
+    ( ctx,
+      { doc := { doc with reporter }
+        reporterCancelTk
+        pendingRequests := Std.TreeMap.empty
+        rpcSessions := Std.TreeMap.empty
+        importCachingTask? := none } )
 where
   /--
   Creates an LSP message output channel along with a reader that sends out read messages on
@@ -622,14 +605,13 @@ def handleDidChange (p : DidChangeTextDocumentParams) : WorkerM Unit := do
   let oldDoc := (← get).doc
   let cancelTk ← RequestCancellationToken.new
   let newVersion := docId.version?.getD 0
-  let rc : RequestContext := {
-    rpcSessions := st.rpcSessions
-    doc := oldDoc
-    cancelTk
-    hLog := ctx.hLog
-    initParams := ctx.initParams
-    serverRequestEmitter := sendUntypedServerRequest ctx
-  }
+  let rc : RequestContext :=
+    { rpcSessions := st.rpcSessions
+      doc := oldDoc
+      cancelTk
+      hLog := ctx.hLog
+      initParams := ctx.initParams
+      serverRequestEmitter := sendUntypedServerRequest ctx }
   RequestM.runInIO (handleOnDidChange p) rc
   if ¬changes.isEmpty then
     let newDocText := foldDocumentChanges changes oldDoc.meta.text
@@ -655,12 +637,11 @@ def handleStaleDependency (_ : LeanStaleDependencyParams) : WorkerM Unit := do
   let importOutOfDateMessage :=
     .text s!"Imports are out of date and should be rebuilt; \
       use the \"Restart File\" command in your editor."
-  let diagnostic := {
-    range := ⟨⟨0, 0⟩, ⟨1, 0⟩⟩
-    fullRange? := some ⟨⟨0, 0⟩, text.utf8PosToLspPos text.source.rawEndPos⟩
-    severity? := DiagnosticSeverity.information
-    message := importOutOfDateMessage
-  }
+  let diagnostic :=
+    { range := ⟨⟨0, 0⟩, ⟨1, 0⟩⟩
+      fullRange? := some ⟨⟨0, 0⟩, text.utf8PosToLspPos text.source.rawEndPos⟩
+      severity? := DiagnosticSeverity.information
+      message := importOutOfDateMessage }
   s.doc.appendStickyDiagnostic diagnostic
   publishDiagnostics ctx s.doc.toEditableDocumentCore
 
@@ -820,11 +801,8 @@ def handlePreRequestSpecialCases?
       | throw (RequestError.invalidParams "Expected a data field on CodeAction.")
     let data ← RequestM.parseRequestParams CodeActionResolveData data
     if data.providerName == importUnknownIdentifiersProvider then
-      return some <| RequestTask.pure {
-        response? := jsonParams
-        serialized := jsonParams.compress
-        isComplete := true
-      }
+      return some <| RequestTask.pure
+        { response? := jsonParams, serialized := jsonParams.compress, isComplete := true }
     if data.providerName == importAllUnknownIdentifiersProvider then
       return some <| ← RequestM.asTask do
         let unknownIdentifierRanges ← waitAllUnknownIdentifierMessageRanges st.doc
@@ -915,25 +893,21 @@ where
   emitResponse (ctx : WorkerContext) (m : OutputMessage) (isComplete : Bool) : IO Unit := do
     ctx.chanOut.sync.send m
     let timestamp ← IO.monoMsNow
-    ctx.modifyPartialHandler method fun h => {
-      h with
-      requestsInFlight := h.requestsInFlight - 1
-      pendingRefreshInfo? :=
-        if isComplete then
-          none
-        else
-          some { lastRefreshTimestamp := timestamp, successiveRefreshAttempts := 0 }
-    }
+    ctx.modifyPartialHandler method fun h =>
+      { h with
+        requestsInFlight := h.requestsInFlight - 1
+        pendingRefreshInfo? :=
+          if isComplete then
+            none
+          else
+            some { lastRefreshTimestamp := timestamp, successiveRefreshAttempts := 0 } }
 
 def handleRequest (id : RequestID) (method : String) (params : Json) : WorkerM Unit := do
   let ctx ← read
   let st ← get
 
-  ctx.modifyPartialHandler method fun h => {
-    h with
-    pendingRefreshInfo? := none
-    requestsInFlight := h.requestsInFlight + 1
-  }
+  ctx.modifyPartialHandler method fun h =>
+    { h with pendingRefreshInfo? := none, requestsInFlight := h.requestsInFlight + 1 }
 
   let hasHandledSpecialCase ← handleStatefulPreRequestSpecialCases id method params
   if hasHandledSpecialCase then
@@ -941,14 +915,13 @@ def handleRequest (id : RequestID) (method : String) (params : Json) : WorkerM U
 
   let cancelTk ← RequestCancellationToken.new
   -- TODO: move into language-specific request handling
-  let rc : RequestContext := {
-    rpcSessions := st.rpcSessions
-    doc := st.doc
-    cancelTk
-    hLog := ctx.hLog
-    initParams := ctx.initParams
-    serverRequestEmitter := sendUntypedServerRequest ctx
-  }
+  let rc : RequestContext :=
+    { rpcSessions := st.rpcSessions
+      doc := st.doc
+      cancelTk
+      hLog := ctx.hLog
+      initParams := ctx.initParams
+      serverRequestEmitter := sendUntypedServerRequest ctx }
   let requestTask? ←
     EIO.toIO' <| RequestM.run (rc := rc) do
       if let some response ← handlePreRequestSpecialCases? st id method params then
@@ -1061,14 +1034,13 @@ def runRefreshTasks : WorkerM (Array (ServerTask Unit)) := do
               -- once there are no pending requests anymore.
               if h.requestsInFlight > 0 then
                 return (false, h)
-              let h := {
-                h with
-                pendingRefreshInfo? :=
-                  some {
-                    lastRefreshTimestamp := currentTimestamp
-                    successiveRefreshAttempts := pendingRefreshInfo.successiveRefreshAttempts + 1
-                  }
-              }
+              let h :=
+                { h with
+                  pendingRefreshInfo? :=
+                    some
+                      { lastRefreshTimestamp := currentTimestamp
+                        successiveRefreshAttempts :=
+                          pendingRefreshInfo.successiveRefreshAttempts + 1 } }
               (true, h)
           if !canRefresh then
             let cancelled ← sleepWithCancellation refreshIntervalMs.toUInt32
@@ -1098,15 +1070,14 @@ def initAndRunWorker (i o e : FS.Stream) (opts : Options) : IO Unit := do
   let ⟨_, param⟩ ← i.readLspNotificationAs "textDocument/didOpen" LeanDidOpenTextDocumentParams
   let doc := param.textDocument
 
-  let doc : DocumentMeta := {
-    uri := doc.uri
-    mod := ← moduleFromDocumentUri doc.uri
-    version := doc.version
-    -- LSP always refers to characters by (line, column),
-    -- so converting CRLF to LF preserves line and column numbers.
-    text := doc.text.crlfToLf.toFileMap
-    dependencyBuildMode := param.dependencyBuildMode?.getD .always
-  }
+  let doc : DocumentMeta :=
+    { uri := doc.uri
+      mod := ← moduleFromDocumentUri doc.uri
+      version := doc.version
+      -- LSP always refers to characters by (line, column),
+      -- so converting CRLF to LF preserves line and column numbers.
+      text := doc.text.crlfToLf.toFileMap
+      dependencyBuildMode := param.dependencyBuildMode?.getD .always }
   let e := e.withPrefix s!"[{param.textDocument.uri}] "
   let _ ← IO.setStderr e
   let (ctx, st) ←
@@ -1127,12 +1098,11 @@ def initAndRunWorker (i o e : FS.Stream) (opts : Options) : IO Unit := do
       throw err
 where
   writeErrorDiag (doc : DocumentMeta) (err : Error) : IO Unit := do
-    o.writeLspMessage <| mkPublishDiagnosticsNotification doc #[{
-      range := ⟨⟨0, 0⟩, ⟨1, 0⟩⟩
-      fullRange? := some ⟨⟨0, 0⟩, doc.text.utf8PosToLspPos doc.text.source.rawEndPos⟩
-      severity? := DiagnosticSeverity.error
-      message := err.toString
-    }]
+    o.writeLspMessage <| mkPublishDiagnosticsNotification doc
+      #[{ range := ⟨⟨0, 0⟩, ⟨1, 0⟩⟩
+          fullRange? := some ⟨⟨0, 0⟩, doc.text.utf8PosToLspPos doc.text.source.rawEndPos⟩
+          severity? := DiagnosticSeverity.error
+          message := err.toString }]
 
 def workerMain (opts : Options) : IO UInt32 := do
   let i ← IO.getStdin

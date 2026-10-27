@@ -93,12 +93,8 @@ def evalImpossible : Tactic := fun stx => do
     let r ← Closure.mkValueTypeClosure (← instantiateMVars negType) proof (zetaDelta := false)
     let auxName ← mkAuxDeclName (kind := `_impossible)
     withOptions (Elab.async.set · false) do
-      addDecl <| .thmDecl {
-        name := auxName
-        levelParams := r.levelParams.toList
-        type := r.type
-        value := r.value
-      }
+      addDecl <| .thmDecl
+        { name := auxName, levelParams := r.levelParams.toList, type := r.type, value := r.value }
   finally
     setGoals restGoals
 

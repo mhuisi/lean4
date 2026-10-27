@@ -221,11 +221,10 @@ meta def runAndCollectMessages (cmd : Syntax) : CommandElabM (Array Message) := 
     modify fun st => { st with snapshotTasks := #[], messages := {} }
     return msgs.toArray
   finally
-    modify fun st => {
-      st with
-      infoState.trees := savedTrees ++ st.infoState.trees
-      messages := saved ++ st.messages
-    }
+    modify fun st =>
+      { st with
+        infoState.trees := savedTrees ++ st.infoState.trees
+        messages := saved ++ st.messages }
 
 /--
 Evaluates a term of type `TracePostprocessor`, with the `Lean.PostprocessTraces` namespace opened so

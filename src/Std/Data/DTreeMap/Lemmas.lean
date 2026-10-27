@@ -6296,16 +6296,14 @@ theorem size_filter_eq_size_iff [TransCmp cmp] [LawfulEqCmp cmp] {f : (a : α) �
   Impl.size_filter_eq_size_iff t.wf
 
 theorem filter_equiv_self_iff [TransCmp cmp] [LawfulEqCmp cmp] {f : (a : α) → β a → Bool}
-    : t.filter f ~m t ↔ ∀ k h, f k (t.get k h) := ⟨
-  fun h => (Impl.filter_equiv_self_iff t.wf).mp h.1,
-  fun h => ⟨(Impl.filter_equiv_self_iff t.wf).mpr h⟩
-⟩
+    : t.filter f ~m t ↔ ∀ k h, f k (t.get k h) :=
+  ⟨ fun h => (Impl.filter_equiv_self_iff t.wf).mp h.1,
+    fun h => ⟨(Impl.filter_equiv_self_iff t.wf).mpr h⟩ ⟩
 
 theorem filter_key_equiv_self_iff [TransCmp cmp] {f : (a : α) → Bool}
-    : t.filter (fun k _ => f k) ~m t ↔ ∀ k h, f (t.getKey k h) := ⟨
-  fun h => (Impl.filter_key_equiv_self_iff t.wf).mp h.1,
-  fun h => ⟨(Impl.filter_key_equiv_self_iff t.wf).mpr h⟩
-⟩
+    : t.filter (fun k _ => f k) ~m t ↔ ∀ k h, f (t.getKey k h) :=
+  ⟨ fun h => (Impl.filter_key_equiv_self_iff t.wf).mp h.1,
+    fun h => ⟨(Impl.filter_key_equiv_self_iff t.wf).mpr h⟩ ⟩
 
 theorem size_filter_key_eq_size_iff [TransCmp cmp] {f : α → Bool}
     : (t.filter fun k _ => f k).size = t.size ↔ ∀ (k : α) (h : k ∈ t), f (t.getKey k h) :=
@@ -6407,10 +6405,9 @@ theorem size_filter_eq_size_iff [TransCmp cmp] {f : α → β → Bool}
   Impl.Const.size_filter_eq_size_iff t.wf
 
 theorem filter_equiv_self_iff [TransCmp cmp] {f : α → β → Bool}
-    : t.filter f ~m t ↔ ∀ k h, f (t.getKey k h) (Const.get t k h) := ⟨
-  fun h => (Impl.Const.filter_equiv_self_iff t.wf).mp h.1,
-  fun h => ⟨(Impl.Const.filter_equiv_self_iff t.wf).mpr h⟩
-⟩
+    : t.filter f ~m t ↔ ∀ k h, f (t.getKey k h) (Const.get t k h) :=
+  ⟨ fun h => (Impl.Const.filter_equiv_self_iff t.wf).mp h.1,
+    fun h => ⟨(Impl.Const.filter_equiv_self_iff t.wf).mpr h⟩ ⟩
 
 theorem get?_filter [TransCmp cmp] {f : α → β → Bool} {k : α}
     : Const.get? (t.filter f) k

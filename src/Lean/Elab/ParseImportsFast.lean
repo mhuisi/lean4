@@ -44,17 +44,13 @@ def State.mkEOIError (s : State) : State := s.mkError "unexpected end of input"
 def State.clearError (s : State) : State := { s with error? := none, badModifier := false }
 
 @[inline]
-def State.next (s : State) (input : String) (pos : String.Pos.Raw) : State := {
-  s with
-  pos := pos.next input
-}
+def State.next (s : State) (input : String) (pos : String.Pos.Raw) : State :=
+  { s with pos := pos.next input }
 
 @[inline]
 def State.next' (s : State) (input : String) (pos : String.Pos.Raw) (h : ¬ pos.atEnd input)
-    : State := {
-  s with
-  pos := pos.next' input h
-}
+    : State :=
+  { s with pos := pos.next' input h }
 
 partial def finishCommentBlock (nesting : Nat) : Parser := fun input s =>
   let input := input
@@ -243,41 +239,26 @@ partial def manyImports (p : Parser) : Parser := fun input s =>
   else
     manyImports p input s
 
-def setIsModule (isModule : Bool) : Parser := fun _ s => {
-  s with
-  isModule
-  isExported := !isModule
-}
+def setIsModule (isModule : Bool) : Parser := fun _ s =>
+  { s with isModule, isExported := !isModule }
 
 def setMeta : Parser := fun _ s =>
-  if s.isModule then {
-    s with
-    isMeta := true
-  }
-  else {
-    s with
-    badModifier := true
-  }
+  if s.isModule then
+    { s with isMeta := true }
+  else
+    { s with badModifier := true }
 
 def setExported : Parser := fun _ s =>
-  if s.isModule then {
-    s with
-    isExported := true
-  }
-  else {
-    s with
-    badModifier := true
-  }
+  if s.isModule then
+    { s with isExported := true }
+  else
+    { s with badModifier := true }
 
 def setImportAll : Parser := fun _ s =>
-  if s.isModule then {
-    s with
-    importAll := true
-  }
-  else {
-    s with
-    badModifier := true
-  }
+  if s.isModule then
+    { s with importAll := true }
+  else
+    { s with badModifier := true }
 
 def main : Parser :=
   keywordCore "module" (setIsModule false) (setIsModule true)

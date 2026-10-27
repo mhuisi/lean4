@@ -26,15 +26,11 @@ By default, only consecutive duplication is reported: `Nat.Nat.foo` and `One.two
 warning, while `Nat.One.Nat` does not. Setting `linter.extra.dupNamespace.consecutiveOnly` to
 `false` also reports non-consecutive duplication, so that `Nat.One.Nat` triggers a warning as well.
 -/
-register_builtin_option linter.extra.dupNamespace : Bool := {
-  defValue := false
-  descr := "enable the duplicated namespace linter"
-}
+register_builtin_option linter.extra.dupNamespace : Bool :=
+  { defValue := false, descr := "enable the duplicated namespace linter" }
 
-register_builtin_option linter.extra.dupNamespace.consecutiveOnly : Bool := {
-  defValue := true
-  descr := "only warn on consecutive duplicated namespaces"
-}
+register_builtin_option linter.extra.dupNamespace.consecutiveOnly : Bool :=
+  { defValue := true, descr := "only warn on consecutive duplicated namespaces" }
 
 namespace DupNamespaceLinter
 

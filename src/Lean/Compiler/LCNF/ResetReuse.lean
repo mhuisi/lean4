@@ -86,12 +86,11 @@ partial def S (x : FVarId) (info : CtorInfo) (c : Code .impure) : ReuseM (Code .
   let w ← mkFreshFVarId
   let (c, changed) ← go w c
   if changed then
-    let decl := {
-      fvarId := w
-      binderName := (← mkFreshBinderName)
-      type := ImpureType.tobject
-      value := .reset info.size x
-    }
+    let decl :=
+      { fvarId := w
+        binderName := (← mkFreshBinderName)
+        type := ImpureType.tobject
+        value := .reset info.size x }
     modifyLCtx fun lctx => lctx.addLetDecl decl
     return .let decl c
   else

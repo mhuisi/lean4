@@ -107,25 +107,23 @@ def State.addEntry (s : State) (e : Entry) : State := { s with map := s.map.inse
 def State.switch (s : State) : State := { s with map := s.map.switch }
 
 builtin_initialize extension : SimplePersistentEnvExtension Entry State ←
-  registerSimplePersistentEnvExtension {
-    addEntryFn := State.addEntry
-    addImportedFn := fun es => (mkStateFromImportedEntries State.addEntry {} es).switch
-    asyncMode := .async .mainEnv
-    logWrites := true
-    exportEntriesFnEx? :=
-      some fun env _ entries =>
-        let all := entries.toArray
-        -- Do not export info for private defs at exported/server levels
-        let exported := all.filter ((env.setExporting true).contains (skipRealize := false) ·.name)
-        { exported, server := exported, «private» := all }
-  }
+  registerSimplePersistentEnvExtension
+    { addEntryFn := State.addEntry
+      addImportedFn := fun es => (mkStateFromImportedEntries State.addEntry {} es).switch
+      asyncMode := .async .mainEnv
+      logWrites := true
+      exportEntriesFnEx? :=
+        some fun env _ entries =>
+          let all := entries.toArray
+          -- Do not export info for private defs at exported/server levels
+          let exported :=
+            all.filter ((env.setExporting true).contains (skipRealize := false) ·.name)
+          { exported, server := exported, «private» := all } }
 
 def addMatcherInfo (env : Environment) (matcherName : Name) (info : MatcherInfo) : Environment :=
   let _ : Inhabited Environment := ⟨env⟩
-  extension.addEntry (asyncDecl := matcherName) (log := .decl matcherName) env {
-    name := matcherName
-    info := info
-  }
+  extension.addEntry (asyncDecl := matcherName) (log := .decl matcherName) env
+    { name := matcherName, info := info }
 
 def getMatcherInfo? (env : Environment) (declName : Name) : Option MatcherInfo := do
   -- avoid blocking on async decls whose names look nothing like matchers

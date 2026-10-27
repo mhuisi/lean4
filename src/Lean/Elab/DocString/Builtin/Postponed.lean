@@ -19,10 +19,9 @@ namespace Lean
 Enables the deferred checks recorded while elaborating Verso docstrings, such as forward
 references.
 -/
-register_builtin_option linter.doc.deferred : Bool := {
-  defValue := true
-  descr := "if true, run the deferred checks recorded while elaborating Verso docstrings"
-}
+register_builtin_option linter.doc.deferred : Bool :=
+  { defValue := true
+    descr := "if true, run the deferred checks recorded while elaborating Verso docstrings" }
 
 end Lean
 
@@ -55,12 +54,11 @@ Maps the name of a deferred check's data (the value of `Dynamic.typeName`) to th
 type.
 -/
 builtin_initialize handlerExt : SimplePersistentEnvExtension (Name × Name) (NameMap Name) ←
-  registerSimplePersistentEnvExtension {
-    addEntryFn := fun m (key, declName) => m.insert key declName
-    addImportedFn := fun nss =>
-      nss.foldl (init := {}) fun m ns =>
-        ns.foldl (init := m) fun m (key, declName) => m.insert key declName
-  }
+  registerSimplePersistentEnvExtension
+    { addEntryFn := fun m (key, declName) => m.insert key declName
+      addImportedFn := fun nss =>
+        nss.foldl (init := {}) fun m ns =>
+          ns.foldl (init := m) fun m (key, declName) => m.insert key declName }
 
 /--
 Builtin deferred check handlers, for bootstrapping. Maps a check's data type name to its handler,
@@ -82,49 +80,45 @@ private unsafe def getHandlerUnsafe (declName : Name) : CoreM DeferredCheckHandl
 private opaque getHandler (declName : Name) : CoreM DeferredCheckHandler
 
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `deferred_doc_check
-    descr :=
-      "Registers a `DeferredCheckHandler` for deferred docstring checks whose data has the named \
-        type."
-    applicationTime := .afterCompilation
-    add := fun decl stx kind => do
-      unless kind == .global do
-        throwError "invalid attribute `deferred_doc_check`, must be global"
-      let key ←
-        if let `(attr|deferred_doc_check $x) := stx then
-          realizeGlobalConstNoOverload x
-        else
-          throwError "invalid `deferred_doc_check` syntax"
-      modifyEnv (handlerExt.addEntry · (key, decl))
-  }
+  registerBuiltinAttribute
+    { name := `deferred_doc_check
+      descr :=
+        "Registers a `DeferredCheckHandler` for deferred docstring checks whose data has the named \
+          type."
+      applicationTime := .afterCompilation
+      add := fun decl stx kind => do
+        unless kind == .global do
+          throwError "invalid attribute `deferred_doc_check`, must be global"
+        let key ←
+          if let `(attr|deferred_doc_check $x) := stx then
+            realizeGlobalConstNoOverload x
+          else
+            throwError "invalid `deferred_doc_check` syntax"
+        modifyEnv (handlerExt.addEntry · (key, decl)) }
 
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `builtin_deferred_doc_check
-    descr :=
-      "Registers a builtin `DeferredCheckHandler` for deferred docstring checks whose data has the \
-        named type."
-    applicationTime := .afterCompilation
-    add := fun decl stx kind => do
-      unless kind == .global do
-        throwError "invalid attribute `builtin_deferred_doc_check`, must be global"
-      let key ←
-        if let `(attr|builtin_deferred_doc_check $x) := stx then
-          realizeGlobalConstNoOverload x
-        else
-          throwError "invalid `builtin_deferred_doc_check` syntax"
-      declareBuiltin decl <| mkApp2 (.const ``addBuiltinHandler []) (toExpr key) (.const decl [])
-  }
+  registerBuiltinAttribute
+    { name := `builtin_deferred_doc_check
+      descr :=
+        "Registers a builtin `DeferredCheckHandler` for deferred docstring checks whose data has \
+          the named type."
+      applicationTime := .afterCompilation
+      add := fun decl stx kind => do
+        unless kind == .global do
+          throwError "invalid attribute `builtin_deferred_doc_check`, must be global"
+        let key ←
+          if let `(attr|builtin_deferred_doc_check $x) := stx then
+            realizeGlobalConstNoOverload x
+          else
+            throwError "invalid `builtin_deferred_doc_check` syntax"
+        declareBuiltin decl <|
+          mkApp2 (.const ``addBuiltinHandler []) (toExpr key) (.const decl []) }
 
 /-- Re-enters the elaboration scope captured at a reference site. -/
 private def withScope (c : DeferredCheck) (act : CoreM α) : CoreM α :=
   withTheReader Core.Context
-    (fun ctx => {
-      ctx.setOptions c.options with
-      currNamespace := c.currNamespace
-      openDecls := c.openDecls
-    })
+    (fun ctx =>
+      { ctx.setOptions c.options with currNamespace := c.currNamespace, openDecls := c.openDecls })
     act
 
 /--

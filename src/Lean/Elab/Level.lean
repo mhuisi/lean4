@@ -45,10 +45,8 @@ def mkFreshLevelMVar : LevelElabM Level := do
   modify fun s => { s with mctx := s.mctx.addLevelMVarDecl mvarId }
   return mkLevelMVar mvarId
 
-register_builtin_option maxUniverseOffset : Nat := {
-  defValue := 32
-  descr := "maximum universe level offset"
-}
+register_builtin_option maxUniverseOffset : Nat :=
+  { defValue := 32, descr := "maximum universe level offset" }
 
 private def checkUniverseOffset [Monad m] [MonadError m] [MonadOptions m] (n : Nat) : m Unit := do
   let max := maxUniverseOffset.get (← getOptions)

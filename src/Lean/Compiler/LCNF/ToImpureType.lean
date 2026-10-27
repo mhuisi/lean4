@@ -213,13 +213,8 @@ public def numSpillObjs (numObjs : Nat) : Nat :=
   if numObjs ≤ maxCtorNumObjs then 0 else (numObjs - 1) / spillLinkIdx
 
 /-- The constructor information of a spill object of constructor `ctorName` with `size` fields. -/
-public def spillCtorInfo (ctorName : Name) (size : Nat) : CtorInfo := {
-  name := ctorName ++ `spill
-  cidx := 0
-  size
-  usize := 0
-  ssize := 0
-}
+public def spillCtorInfo (ctorName : Name) (size : Nat) : CtorInfo :=
+  { name := ctorName ++ `spill, cidx := 0, size, usize := 0, ssize := 0 }
 
 public structure CtorLayout where
   ctorInfo : CtorInfo
@@ -325,16 +320,14 @@ where
         ⟨fields, nextOffset⟩ := adjustScalarsForSize fields 2 nextOffset
       if has1BScalar then
         ⟨fields, nextOffset⟩ := adjustScalarsForSize fields 1 nextOffset
-      return {
-        ctorInfo := {
-          name := ctorName
-          cidx := ctorInfo.cidx
-          size := numObjs
-          usize := numUSize
-          ssize := nextOffset
-        }
-        fieldInfo := fields
-      }
+      return
+        { ctorInfo :=
+            { name := ctorName
+              cidx := ctorInfo.cidx
+              size := numObjs
+              usize := numUSize
+              ssize := nextOffset }
+          fieldInfo := fields }
 
 /--
 Returns the runtime layout of constructor `ctorName`. Requires `compileDecls` to have been run for

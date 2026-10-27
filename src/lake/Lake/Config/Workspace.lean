@@ -67,20 +67,16 @@ public structure Workspace.Raw.WF (ws : Workspace.Raw) : Prop where
 public structure Workspace extends raw : Workspace.Raw, wf : raw.WF
 
 /-- Constructs an arbitrary well-formed workspace with {lean}`n` packages. -/
-noncomputable def Workspace.ofSize (n : Nat) (h : 0 < n) : Workspace := {
-  lakeEnv := default
-  lakeConfig := Classical.ofNonempty
-  lakeCache := Classical.ofNonempty
-  packages :=
-    (0...<n).toArray.map fun i => {
-      (Classical.ofNonempty : Package) with
-      wsIdx := i
-      depIdxs := #[]
-    }
-  size_packages_pos := by simp [Std.Rco.size, Std.Rxo.HasSize.size, Std.Rxc.HasSize.size, h]
-  packages_wsIdx {i} h := by simp [Std.Rco.getElem_toArray_eq, Std.PRange.succMany?]
-  depIdxs_packages := by simp
-}
+noncomputable def Workspace.ofSize (n : Nat) (h : 0 < n) : Workspace :=
+  { lakeEnv := default
+    lakeConfig := Classical.ofNonempty
+    lakeCache := Classical.ofNonempty
+    packages :=
+      (0...<n).toArray.map fun i =>
+        { (Classical.ofNonempty : Package) with wsIdx := i, depIdxs := #[] }
+    size_packages_pos := by simp [Std.Rco.size, Std.Rxo.HasSize.size, Std.Rxc.HasSize.size, h]
+    packages_wsIdx {i} h := by simp [Std.Rco.getElem_toArray_eq, Std.PRange.succMany?]
+    depIdxs_packages := by simp }
 
 theorem Workspace.size_packages_ofSize : (ofSize n h).packages.size = n := by
   simp [ofSize, Std.Rco.size, Std.Rxo.HasSize.size, Std.Rxc.HasSize.size]
@@ -209,21 +205,20 @@ public def packageOverridesFile (self : Workspace) : FilePath :=
 public def addPackage'
     (pkg : Package) (self : Workspace) (h_wsIdx : pkg.wsIdx = self.packages.size)
     (h_depIdxs : pkg.depIdxs = #[])
-    : Workspace := {
-  self with
-  packages := self.packages.push pkg
-  packageMap := self.packageMap.insert pkg.keyName pkg
-  size_packages_pos := by simp
-  packages_wsIdx {i} i_lt := by
-    cases Nat.lt_add_one_iff_lt_or_eq.mp <| Array.size_push .. ▸ i_lt with
-    | inl i_lt => simpa [Array.getElem_push_lt i_lt] using self.packages_wsIdx i_lt
-    | inr i_eq => simpa [i_eq] using h_wsIdx
-  depIdxs_packages {p} p_mem {i} i_mem := by
-    simp only [Array.size_push]
-    cases Array.mem_push.mp p_mem with
-    | inl p_mem => exact Nat.lt_add_one_of_lt <| self.depIdxs_packages p p_mem i i_mem
-    | inr p_eq => simp [p_eq, h_depIdxs] at i_mem
-}
+    : Workspace :=
+  { self with
+    packages := self.packages.push pkg
+    packageMap := self.packageMap.insert pkg.keyName pkg
+    size_packages_pos := by simp
+    packages_wsIdx {i} i_lt := by
+      cases Nat.lt_add_one_iff_lt_or_eq.mp <| Array.size_push .. ▸ i_lt with
+      | inl i_lt => simpa [Array.getElem_push_lt i_lt] using self.packages_wsIdx i_lt
+      | inr i_eq => simpa [i_eq] using h_wsIdx
+    depIdxs_packages {p} p_mem {i} i_mem := by
+      simp only [Array.size_push]
+      cases Array.mem_push.mp p_mem with
+      | inl p_mem => exact Nat.lt_add_one_of_lt <| self.depIdxs_packages p p_mem i i_mem
+      | inr p_eq => simp [p_eq, h_depIdxs] at i_mem }
 
 /-- **For internal use only.** -/
 public theorem packages_addPackage'
@@ -313,10 +308,8 @@ public def findTargetDecl? (name : Name) (self : Workspace)
 
 /-- Add a facet to the workspace. -/
 @[inline]
-public def addFacetConfig {name} (cfg : FacetConfig name) (self : Workspace) : Workspace := {
-  self with
-  facetConfigs := self.facetConfigs.insert cfg
-}
+public def addFacetConfig {name} (cfg : FacetConfig name) (self : Workspace) : Workspace :=
+  { self with facetConfigs := self.facetConfigs.insert cfg }
 
 /-- **For internal use only.** -/
 public theorem packages_addFacetConfig : (addFacetConfig cfg ws).packages = ws.packages := by rfl
@@ -424,19 +417,17 @@ to run executables.
 -/
 public def augmentedEnvVars (self : Workspace) : Array (String × Option String) :=
   let vars :=
-    self.lakeEnv.baseVars ++ #[
-      ("LAKE_CACHE_DIR", some self.lakeCache.dir.toString),
-      ("LAKE_ARTIFACT_CACHE", if let some b := self.enableArtifactCache? then toString b else ""),
-      (
-        "LAKE_RESTORE_ARTIFACTS",
-        if let some b := self.restoreAllArtifacts? then toString b else ""
-      ),
-      ("LEAN_PATH", some self.augmentedLeanPath.toString),
-      ("LEAN_SRC_PATH", some self.augmentedLeanSrcPath.toString),
-      -- Allow the Lean version to change dynamically within core
-      ("LEAN_GITHASH", if self.bootstrap then none else some self.lakeEnv.leanGithash),
-      ("PATH", some self.augmentedPath.toString)
-    ]
+    self.lakeEnv.baseVars
+      ++ #[("LAKE_CACHE_DIR", some self.lakeCache.dir.toString),
+           ( "LAKE_ARTIFACT_CACHE",
+             if let some b := self.enableArtifactCache? then toString b else "" ),
+           ( "LAKE_RESTORE_ARTIFACTS",
+             if let some b := self.restoreAllArtifacts? then toString b else "" ),
+           ("LEAN_PATH", some self.augmentedLeanPath.toString),
+           ("LEAN_SRC_PATH", some self.augmentedLeanSrcPath.toString),
+           -- Allow the Lean version to change dynamically within core
+           ("LEAN_GITHASH", if self.bootstrap then none else some self.lakeEnv.leanGithash),
+           ("PATH", some self.augmentedPath.toString)]
   if Platform.isWindows then
     vars
   else

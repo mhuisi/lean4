@@ -99,11 +99,11 @@ private partial def ensureNoUnassignedLevelMVarsAtPreDef (preDef : PreDefinition
 private def ensureNoUnassignedMVarsAtPreDef (preDef : PreDefinition) : TermElabM PreDefinition := do
   let pendingMVarIds ← getMVarsAtPreDef preDef
   if (← logUnassignedUsingErrorInfos pendingMVarIds) then
-    let preDef := {
-      preDef with
-      value :=
-        (← withRef preDef.ref <| mkLabeledSorry preDef.type (synthetic := true) (unique := true))
-    }
+    let preDef :=
+      { preDef with
+        value :=
+          (← withRef preDef.ref <|
+            mkLabeledSorry preDef.type (synthetic := true) (unique := true)) }
     if (← getMVarsAtPreDef preDef).isEmpty then
       return preDef
     else
@@ -140,21 +140,19 @@ private def addSorried (docCtx : LocalContext × LocalInstances) (preDefs : Arra
       let value ← mkSorry (synthetic := true) preDef.type
       let decl :=
         if preDef.kind.isTheorem then
-          Declaration.thmDecl {
-            name := preDef.declName
-            levelParams := preDef.levelParams
-            type := preDef.type
-            value
-          }
+          Declaration.thmDecl
+            { name := preDef.declName
+              levelParams := preDef.levelParams
+              type := preDef.type
+              value }
         else
-          Declaration.defnDecl {
-            name := preDef.declName
-            levelParams := preDef.levelParams
-            type := preDef.type
-            hints := .abbrev
-            safety := .safe
-            value
-          }
+          Declaration.defnDecl
+            { name := preDef.declName
+              levelParams := preDef.levelParams
+              type := preDef.type
+              hints := .abbrev
+              safety := .safe
+              value }
       addDecl decl
       applyAttributesOf #[preDef] AttributeApplicationTime.afterTypeChecking
       addPreDefDocs docCtx preDef

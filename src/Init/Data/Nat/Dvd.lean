@@ -50,12 +50,11 @@ protected theorem zero_dvd {n : Nat} : 0 ∣ n ↔ n = 0 :=
 protected theorem dvd_add {a b c : Nat} (h₁ : a ∣ b) (h₂ : a ∣ c) : a ∣ b + c :=
   let ⟨d, hd⟩ := h₁; let ⟨e, he⟩ := h₂; ⟨d + e, by simp [Nat.left_distrib, hd, he]⟩
 
-protected theorem dvd_add_iff_right {k m n : Nat} (h : k ∣ m) : k ∣ n ↔ k ∣ m + n := ⟨
-  Nat.dvd_add h,
-  match m, h with
-  | _, ⟨d, rfl⟩ => fun ⟨e, he⟩ =>
-    ⟨e - d, by rw [Nat.mul_sub_left_distrib, ← he, Nat.add_sub_cancel_left]⟩
-⟩
+protected theorem dvd_add_iff_right {k m n : Nat} (h : k ∣ m) : k ∣ n ↔ k ∣ m + n :=
+  ⟨ Nat.dvd_add h,
+    match m, h with
+    | _, ⟨d, rfl⟩ => fun ⟨e, he⟩ =>
+      ⟨e - d, by rw [Nat.mul_sub_left_distrib, ← he, Nat.add_sub_cancel_left]⟩ ⟩
 
 protected theorem dvd_add_iff_left {k m n : Nat} (h : k ∣ n) : k ∣ m ↔ k ∣ m + n := by
   rw [Nat.add_comm]; exact Nat.dvd_add_iff_right h

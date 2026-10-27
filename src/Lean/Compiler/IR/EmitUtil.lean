@@ -35,14 +35,10 @@ abbrev M := ReaderT Environment (StateM State)
 def collect (f : FunId) : M Unit :=
   modify fun { set, order } =>
     let (contained, set) := set.containsThenInsert f
-    if !contained then {
-      set
-      order := order.push f
-    }
-    else {
-      set,
-      order
-    }
+    if !contained then
+      { set, order := order.push f }
+    else
+      { set, order }
 
 partial def collectFnBody : FnBody → M Unit
   | .vdecl _ _ v b =>

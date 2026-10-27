@@ -351,14 +351,13 @@ theorem not_exists_of_forall_not (h : ∀ x, ¬ p x) : ¬ ∃ x, p x := not_exis
 theorem forall_and : (∀ x, p x ∧ q x) ↔ (∀ x, p x) ∧ (∀ x, q x) :=
   ⟨fun h => ⟨fun x => (h x).1, fun x => (h x).2⟩, fun ⟨h₁, h₂⟩ x => ⟨h₁ x, h₂ x⟩⟩
 
-theorem exists_or : (∃ x, p x ∨ q x) ↔ (∃ x, p x) ∨ ∃ x, q x := ⟨
-  fun
-    | ⟨x, .inl h⟩ => .inl ⟨x, h⟩
-    | ⟨x, .inr h⟩ => .inr ⟨x, h⟩,
-  fun
-    | .inl ⟨x, h⟩ => ⟨x, .inl h⟩
-    | .inr ⟨x, h⟩ => ⟨x, .inr h⟩
-⟩
+theorem exists_or : (∃ x, p x ∨ q x) ↔ (∃ x, p x) ∨ ∃ x, q x :=
+  ⟨ fun
+      | ⟨x, .inl h⟩ => .inl ⟨x, h⟩
+      | ⟨x, .inr h⟩ => .inr ⟨x, h⟩,
+    fun
+      | .inl ⟨x, h⟩ => ⟨x, .inl h⟩
+      | .inr ⟨x, h⟩ => ⟨x, .inr h⟩ ⟩
 
 @[simp] theorem exists_false : ¬(∃ _a : α, False) := fun ⟨_, h⟩ => h
 
@@ -679,10 +678,9 @@ theorem Decidable.iff_not_comm [Decidable a] [Decidable b] : (a ↔ ¬b) ↔ (b 
   rw [@iff_def a, @iff_def b]; exact and_congr imp_not_comm not_imp_comm
 
 theorem Decidable.iff_iff_and_or_not_and_not {a b : Prop} [Decidable b]
-    : (a ↔ b) ↔ (a ∧ b) ∨ (¬a ∧ ¬b) := ⟨
-  fun e => if h : b then .inl ⟨e.2 h, h⟩ else .inr ⟨mt e.1 h, h⟩,
-  Or.rec (And.rec iff_of_true) (And.rec iff_of_false)
-⟩
+    : (a ↔ b) ↔ (a ∧ b) ∨ (¬a ∧ ¬b) :=
+  ⟨ fun e => if h : b then .inl ⟨e.2 h, h⟩ else .inr ⟨mt e.1 h, h⟩,
+    Or.rec (And.rec iff_of_true) (And.rec iff_of_false) ⟩
 
 theorem Decidable.iff_iff_not_or_and_or_not [Decidable a] [Decidable b]
     : (a ↔ b) ↔ (¬a ∨ b) ∧ (a ∨ ¬b) := by
@@ -765,10 +763,9 @@ abbrev decidable_of_bool (b : Bool) (h : b ↔ a) : Decidable a :=
 
 protected theorem Decidable.not_forall
     {p : α → Prop} [Decidable (∃ x, ¬ p x)] [∀ x, Decidable (p x)]
-    : (¬ ∀ x, p x) ↔ ∃ x, ¬ p x := ⟨
-  Decidable.not_imp_symm fun nx x => Decidable.not_imp_symm (fun h => ⟨x, h⟩) nx,
-  not_forall_of_exists_not
-⟩
+    : (¬ ∀ x, p x) ↔ ∃ x, ¬ p x :=
+  ⟨ Decidable.not_imp_symm fun nx x => Decidable.not_imp_symm (fun h => ⟨x, h⟩) nx,
+    not_forall_of_exists_not ⟩
 
 protected theorem Decidable.not_forall_not {p : α → Prop} [Decidable (∃ x, p x)]
     : (¬ ∀ x, ¬ p x) ↔ ∃ x, p x :=

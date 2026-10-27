@@ -31,13 +31,12 @@ the Lean source code.
 -/
 @[builtin_doc]
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `builtin_doc
-    descr := "make the docs and location of this declaration available as a builtin"
-    add := fun decl stx _ => do
-      Attribute.Builtin.ensureNoArgs stx
-      declareBuiltinDocStringAndRanges decl
-    applicationTime := AttributeApplicationTime.afterCompilation
-  }
+  registerBuiltinAttribute
+    { name := `builtin_doc
+      descr := "make the docs and location of this declaration available as a builtin"
+      add := fun decl stx _ => do
+        Attribute.Builtin.ensureNoArgs stx
+        declareBuiltinDocStringAndRanges decl
+      applicationTime := AttributeApplicationTime.afterCompilation }
 
 end Lean

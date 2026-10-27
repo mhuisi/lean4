@@ -81,17 +81,16 @@ def mkVarImpl (expr : Expr) : GoalM Var := do
     return var
   let var : Var := (← get').vars.size
   trace[grind.debug.lia.internalize] "{expr} ↦ #{var}"
-  modify' fun s => {
-    s with
-    vars := s.vars.push expr
-    varMap := s.varMap.insert { expr } var
-    dvds := s.dvds.push none
-    lowers := s.lowers.push {}
-    uppers := s.uppers.push {}
-    diseqs := s.diseqs.push {}
-    occurs := s.occurs.push {}
-    elimEqs := s.elimEqs.push none
-  }
+  modify' fun s =>
+    { s with
+      vars := s.vars.push expr
+      varMap := s.varMap.insert { expr } var
+      dvds := s.dvds.push none
+      lowers := s.lowers.push {}
+      uppers := s.uppers.push {}
+      diseqs := s.diseqs.push {}
+      occurs := s.occurs.push {}
+      elimEqs := s.elimEqs.push none }
   cutsatExt.markTerm expr
   assertNatCast expr var
   assertNonneg expr var

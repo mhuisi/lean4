@@ -553,15 +553,14 @@ def applySpecToFootprint
     | throwError "frame: spec rule left no precondition VC for{indentExpr info.prog}"
   let some framedApp := isWPApp? rhs
     | throwError "frame: the weakest footprint is not a `wp` application for{indentExpr info.prog}"
-  let goal : FrameGoal := {
-    frame
-    footprint := fp.mvarId!
-    framedApp
-    specPre := (← preVC.getType).appArg!
-    preVC
-    specProof := target
-    splitLatticeOp?
-  }
+  let goal : FrameGoal :=
+    { frame
+      footprint := fp.mvarId!
+      framedApp
+      specPre := (← preVC.getType).appArg!
+      preVC
+      specProof := target
+      splitLatticeOp? }
   return some (goal, sgs)
 
 /--
@@ -618,14 +617,13 @@ def applySpec
     | return none
   unless thm.conjunctivePre do
     let target ← goal.getType
-    let inferInfo : FrameInferenceInfo := {
-      pre := target.appFn!.appArg!
-      le := target.stripArgsN 2
-      unframedApp := info
-      providedFrame?
-      spec? := thm.global?
-      mkOpApp := do shareCommon (← fp.mkOpAppM info)
-    }
+    let inferInfo : FrameInferenceInfo :=
+      { pre := target.appFn!.appArg!
+        le := target.stripArgsN 2
+        unframedApp := info
+        providedFrame?
+        spec? := thm.global?
+        mkOpApp := do shareCommon (← fp.mkOpAppM info) }
     match ← fp.proc inferInfo with
     | .decline =>
       pure ()

@@ -196,9 +196,8 @@ public structure FrameProcs where
 
 public instance : Inhabited FrameProcs := ⟨{}⟩
 
-public def FrameProcs.insert (s : FrameProcs) (fp : FrameProc) : FrameProcs := {
-  byProg := s.byProg.insert fp.prog fp
-}
+public def FrameProcs.insert (s : FrameProcs) (fp : FrameProc) : FrameProcs :=
+  { byProg := s.byProg.insert fp.prog fp }
 
 /--
 Commit to `frame`, take the whole precondition as the footprint, and discharge the split VC

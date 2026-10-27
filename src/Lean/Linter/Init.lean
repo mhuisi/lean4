@@ -61,24 +61,24 @@ def addBuiltinLinterSet (setName : Name) (linterNames : NameSet) : IO Unit := do
 
 builtin_initialize linterSetsExt
     : PersistentEnvExtension (Name × NameSet) (Name × NameSet) LinterSetsState ←
-  registerPersistentEnvExtension {
-    mkInitial := do
-      let merged :=
-        (← builtinLinterSetsRef.get).foldl (init := {}) fun s (n, ms) => insertLinterSetEntry s n ms
-      return { merged, localEntries := #[] }
-    addImportedFn := fun ess => do
-      let s :=
-        (← builtinLinterSetsRef.get).foldl (init := {}) fun s (n, ms) => insertLinterSetEntry s n ms
-      let merged :=
-        ess.foldl (init := s) fun s es =>
-          es.foldl (init := s) fun s (n, ms) => insertLinterSetEntry s n ms
-      return { merged, localEntries := #[] }
-    addEntryFn := fun st (n, ms) => {
-      merged := insertLinterSetEntry st.merged n ms
-      localEntries := st.localEntries.push (n, ms)
-    }
-    exportEntriesFn := fun st => st.localEntries
-  }
+  registerPersistentEnvExtension
+    { mkInitial := do
+        let merged :=
+          (← builtinLinterSetsRef.get).foldl (init := {}) fun s (n, ms) =>
+            insertLinterSetEntry s n ms
+        return { merged, localEntries := #[] }
+      addImportedFn := fun ess => do
+        let s :=
+          (← builtinLinterSetsRef.get).foldl (init := {}) fun s (n, ms) =>
+            insertLinterSetEntry s n ms
+        let merged :=
+          ess.foldl (init := s) fun s es =>
+            es.foldl (init := s) fun s (n, ms) => insertLinterSetEntry s n ms
+        return { merged, localEntries := #[] }
+      addEntryFn := fun st (n, ms) =>
+        { merged := insertLinterSetEntry st.merged n ms
+          localEntries := st.localEntries.push (n, ms) }
+      exportEntriesFn := fun st => st.localEntries }
 
 /--
 The `LinterOptions` structure is used to determine whether given linters are enabled.
@@ -109,19 +109,17 @@ def getLinterOptions [Monad m] [MonadOptions m] [MonadEnv m] : m LinterOptions :
 
 register_builtin_option linter.all : Bool := { defValue := false, descr := "enable all linters" }
 
-register_builtin_option linter.extra : Bool := {
-  defValue := false
-  descr :=
-    "enables the set of extra linters — linters that are turned off by default and \
-      only available via `lake lint`. An extra linter early-returns unless this option is true."
-}
+register_builtin_option linter.extra : Bool :=
+  { defValue := false
+    descr :=
+      "enables the set of extra linters — linters that are turned off by default and \
+        only available via `lake lint`. An extra linter early-returns unless this option is true." }
 
-register_builtin_option linter.coreInternal : Bool := {
-  defValue := false
-  descr :=
-    "enables the set of core-internal linters — linters that enforce conventions of the \
-      Lean repository itself and are not intended for use by non-core projects."
-}
+register_builtin_option linter.coreInternal : Bool :=
+  { defValue := false
+    descr :=
+      "enables the set of core-internal linters — linters that enforce conventions of the \
+        Lean repository itself and are not intended for use by non-core projects." }
 
 /--
 Global registry of options associated with environment linters.

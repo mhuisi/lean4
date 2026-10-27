@@ -43,18 +43,14 @@ namespace FunModel
 
 namespace Entry
 
-def new (args : Array BVExpr.PackedBitVec) (value : BVExpr.PackedBitVec) (funExpr : Expr)
-    : Entry := {
-  map := {(args, (value, funExpr))}
-}
+def new (args : Array BVExpr.PackedBitVec) (value : BVExpr.PackedBitVec) (funExpr : Expr) : Entry :=
+  { map := {(args, (value, funExpr))} }
 
 def insert
     (entry : Entry) (args : Array BVExpr.PackedBitVec) (value : BVExpr.PackedBitVec)
     (funExpr : Expr)
-    : Entry := {
-  entry with
-  map := entry.map.insert args (value, funExpr)
-}
+    : Entry :=
+  { entry with map := entry.map.insert args (value, funExpr) }
 
 end Entry
 
@@ -84,13 +80,12 @@ model.
 def insert
     (funModel : FunModel) (fn : Expr) (args : Array BVExpr.PackedBitVec)
     (value : BVExpr.PackedBitVec) (funExpr : Expr)
-    : FunModel := {
-  funModel with
-  model :=
-    funModel.model.alter ⟨fn⟩ fun
-      | some entry => some <| entry.insert args value funExpr
-      | none => some <| Entry.new args value funExpr
-}
+    : FunModel :=
+  { funModel with
+    model :=
+      funModel.model.alter ⟨fn⟩ fun
+        | some entry => some <| entry.insert args value funExpr
+        | none => some <| Entry.new args value funExpr }
 
 end FunModel
 
@@ -106,12 +101,11 @@ def addFunctionCongruenceLemma (lhs rhs : Expr) (mask : Array Bool) (pattern : E
   congrLemma ← Sym.share congrLemma
   let congrStatement ← Sym.inferType congrLemma
   trace[Meta.Tactic.bv.uf] m!"new lemma: {congrStatement}"
-  CegarM.pushNewHyp {
-    hyp := { name := `congr, type := congrStatement, value := congrLemma, source := .cegar }
-    tacticProof := do
-      `(tacticSeq| simp +$(mkIdent `contextual):ident only [$(mkIdent ``implies_true):ident])
-    grindProof := do return none
-  }
+  CegarM.pushNewHyp
+    { hyp := { name := `congr, type := congrStatement, value := congrLemma, source := .cegar }
+      tacticProof := do
+        `(tacticSeq| simp +$(mkIdent `contextual):ident only [$(mkIdent ``implies_true):ident])
+      grindProof := do return none }
 where
   getCongrLemmaForPattern (pattern : Expr) : CegarM Expr := do
     let key : Sym.ExprPtr := { expr := pattern }
@@ -119,10 +113,8 @@ where
       return lem
     else
       let lem ← mkCongrLemmaForPattern pattern
-      CegarM.modifyTheoryState fun ts => {
-        ts with
-        funState.congrCache := ts.funState.congrCache.insert key lem
-      }
+      CegarM.modifyTheoryState fun ts =>
+        { ts with funState.congrCache := ts.funState.congrCache.insert key lem }
       return lem
 
   mkCongrLemmaForPattern (pattern : Expr) : CegarM Expr := do

@@ -34,16 +34,15 @@ derived decls such as `_boxed` versions. We store this set primarily to filter e
 `declMapExt`; we persist it in `.olean.private` for the benefit of `shake`.
 -/
 private builtin_initialize declMetaExt : SimplePersistentEnvExtension Name NameSet ←
-  registerSimplePersistentEnvExtension {
-    addImportedFn := fun _ => {}
-    addEntryFn := fun s n => s.insert n
-    asyncMode := .sync
-    replay? := some <| SimplePersistentEnvExtension.replayOfFilter (! ·.contains ·) (·.insert ·)
-    exportEntriesFnEx? :=
-      some fun env s entries =>
-        let decls := entries.foldl (init := #[]) fun decls decl => decls.push decl
-        { exported := #[], server := #[], «private» := decls.qsort Name.quickLt }
-  }
+  registerSimplePersistentEnvExtension
+    { addImportedFn := fun _ => {}
+      addEntryFn := fun s n => s.insert n
+      asyncMode := .sync
+      replay? := some <| SimplePersistentEnvExtension.replayOfFilter (! ·.contains ·) (·.insert ·)
+      exportEntriesFnEx? :=
+        some fun env s entries =>
+          let decls := entries.foldl (init := #[]) fun decls decl => decls.push decl
+          { exported := #[], server := #[], «private» := decls.qsort Name.quickLt } }
 
 /-- Whether a declaration should be exported for interpretation. -/
 def isDeclMeta (env : Environment) (declName : Name) : Bool :=

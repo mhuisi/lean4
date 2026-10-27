@@ -18,10 +18,8 @@ open Lean Meta
 
 namespace Lean
 
-register_builtin_option genCtorIdx : Bool := {
-  defValue := true
-  descr := "generate the `CtorIdx` functions for inductive datatypes"
-}
+register_builtin_option genCtorIdx : Bool :=
+  { defValue := true, descr := "generate the `CtorIdx` functions for inductive datatypes" }
 
 public def mkCtorIdxName (indName : Name) : Name := Name.mkStr indName "ctorIdx"
 
@@ -47,14 +45,13 @@ def mkCtorIdxImpl (indName : Name) (levelParams : List Name) (declType : Expr) :
       mkLambdaFVars args body
 
   let decl :=
-    .defnDecl {
-      name := implName
-      levelParams := levelParams
-      type := declType
-      value := value
-      hints := .opaque
-      safety := .unsafe
-    }
+    .defnDecl
+      { name := implName
+        levelParams := levelParams
+        type := declType
+        value := value
+        hints := .opaque
+        safety := .unsafe }
 
   addDecl decl
 

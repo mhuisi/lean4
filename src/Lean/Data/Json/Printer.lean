@@ -19,19 +19,25 @@ namespace Json
 
 set_option maxRecDepth 1024 in
 /-- This table contains for each UTF-8 byte whether we need to escape a string that contains it. -/
-private def escapeTable : {xs : ByteArray // xs.size = 256} := ⟨
-  ByteArray.mk #[
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
-  ],
-  by rfl
-⟩
+private def escapeTable : {xs : ByteArray // xs.size = 256} :=
+  ⟨ ByteArray.mk
+      #[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1,
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+        0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1],
+    by rfl ⟩
 
 private def escapeAux (acc : String) (c : Char) : String :=
   -- escape ", \, \n and \r, keep all other characters ≥ 0x20 and render characters < 0x20 with \u
@@ -131,25 +137,19 @@ private structure CompressWorkItemQueue where
 
 @[inline]
 private def CompressWorkItemQueue.pushKind (q : CompressWorkItemQueue) (kind : CompressWorkItemKind)
-    : CompressWorkItemQueue := {
-  q with
-  kinds := q.kinds.push kind
-}
+    : CompressWorkItemQueue :=
+  { q with kinds := q.kinds.push kind }
 
 @[inline]
 private def CompressWorkItemQueue.pushValue (q : CompressWorkItemQueue) (value : Json)
-    : CompressWorkItemQueue := {
-  q with
-  values := q.values.push value
-}
+    : CompressWorkItemQueue :=
+  { q with values := q.values.push value }
 
 @[inline]
 private def CompressWorkItemQueue.pushObjectFieldKey
     (q : CompressWorkItemQueue) (objectFieldKey : String)
-    : CompressWorkItemQueue := {
-  q with
-  objectFieldKeys := q.objectFieldKeys.push objectFieldKey
-}
+    : CompressWorkItemQueue :=
+  { q with objectFieldKeys := q.objectFieldKeys.push objectFieldKey }
 
 @[inline]
 private def CompressWorkItemQueue.popKind (q : CompressWorkItemQueue) (h : q.kinds.size ≠ 0)
@@ -217,11 +217,8 @@ where
         let (k, q) := q.popObjectFieldKey!
         let (j, q) := q.popValue!
         if h : q.kinds.size = 0 then
-          go (renderString k acc ++ ":") {
-            kinds := #[.comma, .json]
-            values := #[j]
-            objectFieldKeys := #[]
-          }
+          go (renderString k acc ++ ":")
+            { kinds := #[.comma, .json], values := #[j], objectFieldKeys := #[] }
         else
           let kind := q.kinds[q.kinds.size - 1]
           if kind matches .objectEnd then

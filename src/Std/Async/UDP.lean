@@ -94,36 +94,35 @@ It must not be called in parallel with `recv`.
 Fails with an `IO.Error.resourceExhausted` if the datagram is larger than `size`, and with an
 `IO.Error.invalidArgument` if `size` is 0 or at least 4 GiB, like `recv`.
 -/
-def recvSelector (s : Socket) (size : UInt64) : Selector (ByteArray × Option SocketAddress) := {
-  tryFn := do
-    let readableWaiter ← s.native.waitReadable
+def recvSelector (s : Socket) (size : UInt64) : Selector (ByteArray × Option SocketAddress) :=
+  { tryFn := do
+      let readableWaiter ← s.native.waitReadable
 
-    if ← readableWaiter.isResolved then
-      let res ← s.recv size
-      return some res
-    else
-      s.native.cancelRecv
-      return none
-  registerFn waiter := do
-    let readableWaiter ← s.native.waitReadable
+      if ← readableWaiter.isResolved then
+        let res ← s.recv size
+        return some res
+      else
+        s.native.cancelRecv
+        return none
+    registerFn waiter := do
+      let readableWaiter ← s.native.waitReadable
 
-    -- If we get cancelled the promise will be dropped so prepare for that
-    discard <| IO.mapTask (t := readableWaiter.result?) fun res => do
-      match res with
-      | none =>
-        return ()
-      | some res =>
-        let lose := return ()
-        let win promise := do
-          try
-            discard <| IO.ofExcept res
-            let readPromise ← s.native.recv size
-            discard <| BaseIO.mapTask (t := AsyncTask.ofPromise readPromise) promise.resolve
-          catch e =>
-            promise.resolve (.error e)
-        waiter.race lose win
-  unregisterFn := s.native.cancelRecv
-}
+      -- If we get cancelled the promise will be dropped so prepare for that
+      discard <| IO.mapTask (t := readableWaiter.result?) fun res => do
+        match res with
+        | none =>
+          return ()
+        | some res =>
+          let lose := return ()
+          let win promise := do
+            try
+              discard <| IO.ofExcept res
+              let readPromise ← s.native.recv size
+              discard <| BaseIO.mapTask (t := AsyncTask.ofPromise readPromise) promise.resolve
+            catch e =>
+              promise.resolve (.error e)
+          waiter.race lose win
+    unregisterFn := s.native.cancelRecv }
 
 /-- Gets the local address of the UDP socket. -/
 @[inline] def getSockName (s : Socket) : IO SocketAddress := s.native.getSockName

@@ -35,40 +35,39 @@ private def builtinInsts : Std.HashMap Expr Expr :=
   let nat := Nat.mkType
   let int := Int.mkType
   let us := [Level.zero, Level.zero, Level.zero]
-  Std.HashMap.ofList [
-    (mkApp3 (mkConst ``HAdd us) nat nat nat, Nat.mkInstHAdd),
-    (mkApp3 (mkConst ``HSub us) nat nat nat, Nat.mkInstHSub),
-    (mkApp3 (mkConst ``HMul us) nat nat nat, Nat.mkInstHMul),
-    (mkApp3 (mkConst ``HDiv us) nat nat nat, Nat.mkInstHDiv),
-    (mkApp3 (mkConst ``HMod us) nat nat nat, Nat.mkInstHMod),
-    (mkApp3 (mkConst ``HPow us) nat nat nat, Nat.mkInstHPow),
-    (mkApp (mkConst ``Add [0]) nat, Nat.mkInstAdd),
-    (mkApp (mkConst ``Sub [0]) nat, Nat.mkInstSub),
-    (mkApp (mkConst ``Mul [0]) nat, Nat.mkInstMul),
-    (mkApp (mkConst ``Div [0]) nat, Nat.mkInstDiv),
-    (mkApp (mkConst ``Mod [0]) nat, Nat.mkInstMod),
-    (mkApp2 (mkConst ``Pow [0, 0]) nat nat, Nat.mkInstPow),
-    (mkApp (mkConst ``NatPow [0]) nat, Nat.mkInstNatPow),
-    (mkApp (mkConst ``LT [0]) nat, Nat.mkInstLT),
-    (mkApp (mkConst ``LE [0]) nat, Nat.mkInstLE),
+  Std.HashMap.ofList
+    [ (mkApp3 (mkConst ``HAdd us) nat nat nat, Nat.mkInstHAdd),
+      (mkApp3 (mkConst ``HSub us) nat nat nat, Nat.mkInstHSub),
+      (mkApp3 (mkConst ``HMul us) nat nat nat, Nat.mkInstHMul),
+      (mkApp3 (mkConst ``HDiv us) nat nat nat, Nat.mkInstHDiv),
+      (mkApp3 (mkConst ``HMod us) nat nat nat, Nat.mkInstHMod),
+      (mkApp3 (mkConst ``HPow us) nat nat nat, Nat.mkInstHPow),
+      (mkApp (mkConst ``Add [0]) nat, Nat.mkInstAdd),
+      (mkApp (mkConst ``Sub [0]) nat, Nat.mkInstSub),
+      (mkApp (mkConst ``Mul [0]) nat, Nat.mkInstMul),
+      (mkApp (mkConst ``Div [0]) nat, Nat.mkInstDiv),
+      (mkApp (mkConst ``Mod [0]) nat, Nat.mkInstMod),
+      (mkApp2 (mkConst ``Pow [0, 0]) nat nat, Nat.mkInstPow),
+      (mkApp (mkConst ``NatPow [0]) nat, Nat.mkInstNatPow),
+      (mkApp (mkConst ``LT [0]) nat, Nat.mkInstLT),
+      (mkApp (mkConst ``LE [0]) nat, Nat.mkInstLE),
 
-    (mkApp3 (mkConst ``HAdd us) int int int, Int.mkInstHAdd),
-    (mkApp3 (mkConst ``HSub us) int int int, Int.mkInstHSub),
-    (mkApp3 (mkConst ``HMul us) int int int, Int.mkInstHMul),
-    (mkApp3 (mkConst ``HDiv us) int int int, Int.mkInstHDiv),
-    (mkApp3 (mkConst ``HMod us) int int int, Int.mkInstHMod),
-    (mkApp3 (mkConst ``HPow us) int nat int, Int.mkInstHPow),
-    (mkApp (mkConst ``Add [0]) int, Int.mkInstAdd),
-    (mkApp (mkConst ``Sub [0]) int, Int.mkInstSub),
-    (mkApp (mkConst ``Mul [0]) int, Int.mkInstMul),
-    (mkApp (mkConst ``Div [0]) int, Int.mkInstDiv),
-    (mkApp (mkConst ``Mod [0]) int, Int.mkInstMod),
-    (mkApp2 (mkConst ``Pow [0, 0]) int nat, Int.mkInstPowNat),
-    (mkApp (mkConst ``NatPow [0]) int, Int.mkInstPow),
-    (mkApp (mkConst ``Neg [0]) int, Int.mkInstNeg),
-    (mkApp (mkConst ``LT [0]) int, Int.mkInstLT),
-    (mkApp (mkConst ``LE [0]) int, Int.mkInstLE)
-  ]
+      (mkApp3 (mkConst ``HAdd us) int int int, Int.mkInstHAdd),
+      (mkApp3 (mkConst ``HSub us) int int int, Int.mkInstHSub),
+      (mkApp3 (mkConst ``HMul us) int int int, Int.mkInstHMul),
+      (mkApp3 (mkConst ``HDiv us) int int int, Int.mkInstHDiv),
+      (mkApp3 (mkConst ``HMod us) int int int, Int.mkInstHMod),
+      (mkApp3 (mkConst ``HPow us) int nat int, Int.mkInstHPow),
+      (mkApp (mkConst ``Add [0]) int, Int.mkInstAdd),
+      (mkApp (mkConst ``Sub [0]) int, Int.mkInstSub),
+      (mkApp (mkConst ``Mul [0]) int, Int.mkInstMul),
+      (mkApp (mkConst ``Div [0]) int, Int.mkInstDiv),
+      (mkApp (mkConst ``Mod [0]) int, Int.mkInstMod),
+      (mkApp2 (mkConst ``Pow [0, 0]) int nat, Int.mkInstPowNat),
+      (mkApp (mkConst ``NatPow [0]) int, Int.mkInstPow),
+      (mkApp (mkConst ``Neg [0]) int, Int.mkInstNeg),
+      (mkApp (mkConst ``LT [0]) int, Int.mkInstLT),
+      (mkApp (mkConst ``LE [0]) int, Int.mkInstLE) ]
 
 /--
 Some modules in grind use builtin instances defined directly in core (e.g., `lia`).
@@ -156,67 +155,52 @@ private def builtinAlgebraicInsts : Std.HashMap Expr (Option Expr) :=
   let ltN := mkConst ``instLTNat
   let preN := mkConst ``Grind.instIsPreorderNat
   let linN := mkConst ``Nat.instIsLinearOrder
-  Std.HashMap.ofList [
-    (app ``Grind.CommRing #[int], some crI),
-    (app ``Grind.Ring #[int], some ringI),
-    (app ``Grind.CommSemiring #[int], some csI),
-    (app ``Grind.Semiring #[int], some (app ``Grind.CommSemiring.toSemiring #[int, csI])),
-    (app ``Grind.Field #[int], none),
-    (app ``Grind.NatModule #[int], some nmI),
-    (app ``Grind.NoNatZeroDivisors #[int, nmI], some (mkConst ``Grind.instNoNatZeroDivisorsInt)),
-    (app ``Std.IsPreorder #[int, leI], some preI),
-    (
-      app ``Std.IsPartialOrder #[int, leI],
-      some (app ``Std.PartialOrderPackage.toIsPartialOrder
-        #[int, app ``Std.LinearOrderPackage.toPartialOrderPackage #[int, lopI]])
-    ),
-    (
-      app ``Std.IsLinearPreorder #[int, leI],
-      some (app ``Std.LinearPreorderPackage.toIsLinearPreorder #[int, lppI])
-    ),
-    (app ``Std.IsLinearOrder #[int, leI], some (mkConst ``Grind.instIsLinearOrderInt)),
-    (app ``Std.LawfulOrderLT #[int, ltI, leI], some (mkConst ``Grind.instLawfulOrderLTInt)),
-    (
-      app ``Grind.OrderedRing #[int, srI, leI, ltI, preI],
-      some (mkConst ``Grind.instOrderedRingInt)
-    ),
-    (app ``NatCast #[int], some (mkConst ``instNatCastInt)),
-    (app ``Max #[int], some (mkConst ``Int.instMax)),
-    (app ``Dvd #[int], some (mkConst ``Int.instDvd)),
-    (app ``Grind.CommRing #[nat], none),
-    (app ``Grind.Ring #[nat], none),
-    (app ``Grind.Field #[nat], none),
-    (app ``Grind.CommSemiring #[nat], some csN),
-    (app ``Grind.Semiring #[nat], some srN),
-    (
-      app ``Grind.AddRightCancel #[nat, mkConst ``instAddNat],
-      some (mkConst ``Grind.instAddRightCancelNat)
-    ),
-    (app ``Grind.NatModule #[nat], some nmN),
-    (app ``Grind.NoNatZeroDivisors #[nat, nmN], some (mkConst ``Grind.instNoNatZeroDivisorsNat)),
-    (app ``Std.IsPreorder #[nat, leN], some preN),
-    (
-      app ``Std.IsPartialOrder #[nat, leN],
-      some (app ``Std.IsLinearOrder.toIsPartialOrder #[nat, leN, linN])
-    ),
-    (
-      app ``Std.IsLinearPreorder #[nat, leN],
-      some (app ``Std.IsLinearOrder.toIsLinearPreorder #[nat, leN, linN])
-    ),
-    (app ``Std.IsLinearOrder #[nat, leN], some linN),
-    (app ``Std.LawfulOrderLT #[nat, ltN, leN], some (mkConst ``Grind.instLawfulOrderLTNat)),
-    (
-      app ``Grind.OrderedRing #[nat, srN, leN, ltN, preN],
-      some (mkConst ``Grind.instOrderedRingNat)
-    ),
-    (app ``NatCast #[nat], some (mkConst ``instNatCastNat)),
-    (app ``Max #[nat], some (mkConst ``Nat.instMax)),
-    (app ``Dvd #[nat], some (mkConst ``Nat.instDvd)),
-    (app ``Grind.CommRing #[prop], none),
-    (app ``Grind.Ring #[prop], none),
-    (app ``Grind.CommSemiring #[prop], none),
-    (app ``Grind.Semiring #[prop], none)
-  ]
+  Std.HashMap.ofList
+    [ (app ``Grind.CommRing #[int], some crI),
+      (app ``Grind.Ring #[int], some ringI),
+      (app ``Grind.CommSemiring #[int], some csI),
+      (app ``Grind.Semiring #[int], some (app ``Grind.CommSemiring.toSemiring #[int, csI])),
+      (app ``Grind.Field #[int], none),
+      (app ``Grind.NatModule #[int], some nmI),
+      (app ``Grind.NoNatZeroDivisors #[int, nmI], some (mkConst ``Grind.instNoNatZeroDivisorsInt)),
+      (app ``Std.IsPreorder #[int, leI], some preI),
+      ( app ``Std.IsPartialOrder #[int, leI],
+        some (app ``Std.PartialOrderPackage.toIsPartialOrder
+          #[int, app ``Std.LinearOrderPackage.toPartialOrderPackage #[int, lopI]]) ),
+      ( app ``Std.IsLinearPreorder #[int, leI],
+        some (app ``Std.LinearPreorderPackage.toIsLinearPreorder #[int, lppI]) ),
+      (app ``Std.IsLinearOrder #[int, leI], some (mkConst ``Grind.instIsLinearOrderInt)),
+      (app ``Std.LawfulOrderLT #[int, ltI, leI], some (mkConst ``Grind.instLawfulOrderLTInt)),
+      ( app ``Grind.OrderedRing #[int, srI, leI, ltI, preI],
+        some (mkConst ``Grind.instOrderedRingInt) ),
+      (app ``NatCast #[int], some (mkConst ``instNatCastInt)),
+      (app ``Max #[int], some (mkConst ``Int.instMax)),
+      (app ``Dvd #[int], some (mkConst ``Int.instDvd)),
+      (app ``Grind.CommRing #[nat], none),
+      (app ``Grind.Ring #[nat], none),
+      (app ``Grind.Field #[nat], none),
+      (app ``Grind.CommSemiring #[nat], some csN),
+      (app ``Grind.Semiring #[nat], some srN),
+      ( app ``Grind.AddRightCancel #[nat, mkConst ``instAddNat],
+        some (mkConst ``Grind.instAddRightCancelNat) ),
+      (app ``Grind.NatModule #[nat], some nmN),
+      (app ``Grind.NoNatZeroDivisors #[nat, nmN], some (mkConst ``Grind.instNoNatZeroDivisorsNat)),
+      (app ``Std.IsPreorder #[nat, leN], some preN),
+      ( app ``Std.IsPartialOrder #[nat, leN],
+        some (app ``Std.IsLinearOrder.toIsPartialOrder #[nat, leN, linN]) ),
+      ( app ``Std.IsLinearPreorder #[nat, leN],
+        some (app ``Std.IsLinearOrder.toIsLinearPreorder #[nat, leN, linN]) ),
+      (app ``Std.IsLinearOrder #[nat, leN], some linN),
+      (app ``Std.LawfulOrderLT #[nat, ltN, leN], some (mkConst ``Grind.instLawfulOrderLTNat)),
+      ( app ``Grind.OrderedRing #[nat, srN, leN, ltN, preN],
+        some (mkConst ``Grind.instOrderedRingNat) ),
+      (app ``NatCast #[nat], some (mkConst ``instNatCastNat)),
+      (app ``Max #[nat], some (mkConst ``Nat.instMax)),
+      (app ``Dvd #[nat], some (mkConst ``Nat.instDvd)),
+      (app ``Grind.CommRing #[prop], none),
+      (app ``Grind.Ring #[prop], none),
+      (app ``Grind.CommSemiring #[prop], none),
+      (app ``Grind.Semiring #[prop], none) ]
 
 /-- The semiring of `Int` that `Sym.Arith` classification derives from its commutative ring. -/
 private def intSemiring : Expr :=

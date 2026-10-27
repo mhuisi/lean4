@@ -112,57 +112,46 @@ public def expandBinderCore (binders : Array BinderSyntaxView) (stx : Syntax)
   let k := stx.getKind
   if stx.isIdent || k == ``Term.hole then
     -- binderIdent
-    return binders.push {
-      ref := stx
-      id := ← expandBinderIdent stx
-      type := mkHoleFrom stx
-      info := .default
-    }
+    return binders.push
+      { ref := stx, id := ← expandBinderIdent stx, type := mkHoleFrom stx, info := .default }
   else if k == ``Lean.Parser.Term.explicitBinder then
     -- `(` binderIdent+ binderType (binderDefault <|> binderTactic)? `)`
     let ids ← getBinderIds stx[1]
     let type := stx[2]
     let modifier? := expandBinderModifier stx[3]
     ids.foldlM (init := binders) fun binders id =>
-      return binders.push {
-        ref := stx
-        id := ← expandBinderIdent id
-        type := expandBinderType id type
-        info := .default
-        modifier?
-      }
+      return binders.push
+        { ref := stx
+          id := ← expandBinderIdent id
+          type := expandBinderType id type
+          info := .default
+          modifier? }
   else if k == ``Lean.Parser.Term.implicitBinder then
     -- `{` binderIdent+ binderType `}`
     let ids ← getBinderIds stx[1]
     let type := stx[2]
     ids.foldlM (init := binders) fun binders id =>
-      return binders.push {
-        ref := stx
-        id := ← expandBinderIdent id
-        type := expandBinderType id type
-        info := .implicit
-      }
+      return binders.push
+        { ref := stx
+          id := ← expandBinderIdent id
+          type := expandBinderType id type
+          info := .implicit }
   else if k == ``Lean.Parser.Term.strictImplicitBinder then
     -- `⦃` binderIdent+ binderType `⦄`
     let ids ← getBinderIds stx[1]
     let type := stx[2]
     ids.foldlM (init := binders) fun binders id =>
-      return binders.push {
-        ref := stx
-        id := ← expandBinderIdent id
-        type := expandBinderType id type
-        info := .strictImplicit
-      }
+      return binders.push
+        { ref := stx
+          id := ← expandBinderIdent id
+          type := expandBinderType id type
+          info := .strictImplicit }
   else if k == ``Lean.Parser.Term.instBinder then
     -- `[` optIdent type `]`
     let id := expandOptIdent stx[1]
     let type := stx[2]
-    return binders.push {
-      ref := stx
-      id := ← expandBinderIdent id
-      type := ⟨type⟩
-      info := .instImplicit
-    }
+    return binders.push
+      { ref := stx, id := ← expandBinderIdent id, type := ⟨type⟩, info := .instImplicit }
   else
     Macro.throwUnsupported
 

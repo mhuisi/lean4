@@ -52,14 +52,13 @@ Maps macro syntax categories to a pair of the module containing the declaration 
 depends and the name of that declaration.
 -/
 private def macroDeclMap :=
-  Std.HashMap.ofList [
-    (``throwNamedErrorMacro, (`Lean.Exception, ``Lean.throwNamedError)),
-    (``throwNamedErrorAtMacro, (`Lean.Exception, ``Lean.throwNamedErrorAt)),
-    (``logNamedErrorMacro, (`Lean.Log, ``Lean.logNamedError)),
-    (``logNamedErrorAtMacro, (`Lean.Log, ``Lean.logNamedErrorAt)),
-    (``logNamedWarningMacro, (`Lean.Log, ``Lean.logNamedWarning)),
-    (``logNamedWarningAtMacro, (`Lean.Log, ``Lean.logNamedWarningAt))
-  ]
+  Std.HashMap.ofList
+    [ (``throwNamedErrorMacro, (`Lean.Exception, ``Lean.throwNamedError)),
+      (``throwNamedErrorAtMacro, (`Lean.Exception, ``Lean.throwNamedErrorAt)),
+      (``logNamedErrorMacro, (`Lean.Log, ``Lean.logNamedError)),
+      (``logNamedErrorAtMacro, (`Lean.Log, ``Lean.logNamedErrorAt)),
+      (``logNamedWarningMacro, (`Lean.Log, ``Lean.logNamedWarning)),
+      (``logNamedWarningAtMacro, (`Lean.Log, ``Lean.logNamedWarningAt)) ]
 
 @[builtin_term_elab throwNamedErrorMacro, builtin_term_elab throwNamedErrorAtMacro,
   builtin_term_elab logNamedErrorMacro, builtin_term_elab logNamedErrorAtMacro,

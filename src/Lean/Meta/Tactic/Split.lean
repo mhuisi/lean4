@@ -54,12 +54,11 @@ where
         return .done { expr := e' }
       | none =>
         -- Try lemma
-        let simpTheorem := {
-          origin := .decl matchEqDeclName
-          proof := mkConst matchEqDeclName
-          rfl := (← isRflTheorem matchEqDeclName)
-          backwardRfl := (← isBackwardRflTheorem matchEqDeclName)
-        }
+        let simpTheorem :=
+          { origin := .decl matchEqDeclName
+            proof := mkConst matchEqDeclName
+            rfl := (← isRflTheorem matchEqDeclName)
+            backwardRfl := (← isBackwardRflTheorem matchEqDeclName) }
         match (← withReducible <| Simp.tryTheorem? e simpTheorem) with
         | none => return .continue
         | some r => return .done r

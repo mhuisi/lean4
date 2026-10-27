@@ -111,11 +111,8 @@ def mkVar (e : Expr) : ACM AC.Var := do
   if let some var := s.varMap.find? { expr := e } then
     return var
   let var : AC.Var := s.vars.size
-  modifyStruct fun s => {
-    s with
-    vars := s.vars.push e
-    varMap := s.varMap.insert { expr := e } var
-  }
+  modifyStruct fun s =>
+    { s with vars := s.vars.push e, varMap := s.varMap.insert { expr := e } var }
   addTermOpId e
   acExt.markTerm e
   return var
@@ -167,21 +164,19 @@ where
       else
         pure (none, none)
     let id := (← get').structs.size
-    modify' fun s => {
-      s with
-      structs :=
-        s.structs.push {
-          id
-          type := α
-          u
-          op
-          neutral?
-          assocInst
-          commInst?
-          idempotentInst?
-          neutralInst?
-        }
-    }
+    modify' fun s =>
+      { s with
+        structs :=
+          s.structs.push
+            { id
+              type := α
+              u
+              op
+              neutral?
+              assocInst
+              commInst?
+              idempotentInst?
+              neutralInst? } }
     trace[grind.debug.ac.op]
       "{op}, comm: {commInst?.isSome}, idempotent: {idempotentInst?.isSome}, neutral?: {neutral?}"
     if let some neutral := neutral? then

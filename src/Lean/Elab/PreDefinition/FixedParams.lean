@@ -85,13 +85,12 @@ def Info.init (revDeps : Array (Array (Array Nat))) : Info where
   graph := revDeps.map fun deps => .replicate deps.size (some (.replicate revDeps.size none))
   revDeps
 
-def Info.addSelfCalls (info : Info) : Info := {
-  info with
-  graph :=
-    info.graph.mapIdx fun funIdx paramInfos =>
-      paramInfos.mapIdx fun paramIdx paramInfo? =>
-        paramInfo?.map fun callers => callers.set! funIdx (some paramIdx)
-}
+def Info.addSelfCalls (info : Info) : Info :=
+  { info with
+    graph :=
+      info.graph.mapIdx fun funIdx paramInfos =>
+        paramInfos.mapIdx fun paramIdx paramInfo? =>
+          paramInfo?.map fun callers => callers.set! funIdx (some paramIdx) }
 
 /-- Is this parameter still plausibly a fixed parameter? -/
 def Info.mayBeFixed (callerIdx paramIdx : Nat) (info : Info) : Bool :=
@@ -131,11 +130,11 @@ partial def Info.setCallerParam (calleeIdx argIdx callerIdx paramIdx : Nat) (inf
           info.setVarying calleeIdx argIdx
       else
         -- Set the new entry
-        let info := {
-          info with
-          graph :=
-            info.graph.modify calleeIdx (·.modify argIdx (·.map (·.set! callerIdx (some paramIdx))))
-        }
+        let info :=
+          { info with
+            graph :=
+              info.graph.modify calleeIdx
+                (·.modify argIdx (·.map (·.set! callerIdx (some paramIdx)))) }
         Id.run do
           -- Propagate information about the caller
           let mut info : Info := info
@@ -497,11 +496,10 @@ def FixedParamPerms.erase
     else
       reindex := reindex.push (Option.some toKeep.size)
       toKeep := toKeep.push x
-  let fixedParamPerms' : FixedParamPerms := {
-    numFixed := toKeep.size
-    perms := fixedParamPerms.perms.map (·.map (·.bind (reindex[·]!)))
-    revDeps := fixedParamPerms.revDeps
-  }
+  let fixedParamPerms' : FixedParamPerms :=
+    { numFixed := toKeep.size
+      perms := fixedParamPerms.perms.map (·.map (·.bind (reindex[·]!)))
+      revDeps := fixedParamPerms.revDeps }
   return (fixedParamPerms', toKeep, fvarsToErase)
 
 end Lean.Elab

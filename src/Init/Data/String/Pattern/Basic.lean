@@ -247,17 +247,15 @@ instance (s : Slice) [ForwardPattern pat]
       match h' : ForwardPattern.skipPrefixOfNonempty? pat (s.sliceFrom it.internalState.currPos)
         (by simpa) with
       | some pos =>
-        pure (.deflate ⟨
-          .yield ⟨⟨Slice.Pos.ofSliceFrom pos⟩⟩
-            (.matched it.internalState.currPos (Slice.Pos.ofSliceFrom pos)),
-          by simp [h, h']
-        ⟩)
+        pure (.deflate
+          ⟨ .yield ⟨⟨Slice.Pos.ofSliceFrom pos⟩⟩
+              (.matched it.internalState.currPos (Slice.Pos.ofSliceFrom pos)),
+            by simp [h, h'] ⟩)
       | none =>
-        pure (.deflate ⟨
-          .yield ⟨⟨it.internalState.currPos.next h⟩⟩
-            (.rejected it.internalState.currPos (it.internalState.currPos.next h)),
-          by simp [h, h']
-        ⟩)
+        pure (.deflate
+          ⟨ .yield ⟨⟨it.internalState.currPos.next h⟩⟩
+              (.rejected it.internalState.currPos (it.internalState.currPos.next h)),
+            by simp [h, h'] ⟩)
 
 private def finitenessRelation (s : Slice) [ForwardPattern pat] [StrictForwardPattern pat]
     : Std.Iterators.FinitenessRelation (DefaultForwardSearcher pat s) Id where
@@ -410,17 +408,15 @@ instance (s : Slice) [BackwardPattern pat]
       match h' : BackwardPattern.skipSuffixOfNonempty? pat (s.sliceTo it.internalState.currPos)
         (by simpa) with
       | some pos =>
-        pure (.deflate ⟨
-          .yield ⟨⟨Slice.Pos.ofSliceTo pos⟩⟩
-            (.matched (Slice.Pos.ofSliceTo pos) it.internalState.currPos),
-          by simp [h, h']
-        ⟩)
+        pure (.deflate
+          ⟨ .yield ⟨⟨Slice.Pos.ofSliceTo pos⟩⟩
+              (.matched (Slice.Pos.ofSliceTo pos) it.internalState.currPos),
+            by simp [h, h'] ⟩)
       | none =>
-        pure (.deflate ⟨
-          .yield ⟨⟨it.internalState.currPos.prev h⟩⟩
-            (.rejected (it.internalState.currPos.prev h) it.internalState.currPos),
-          by simp [h, h']
-        ⟩)
+        pure (.deflate
+          ⟨ .yield ⟨⟨it.internalState.currPos.prev h⟩⟩
+              (.rejected (it.internalState.currPos.prev h) it.internalState.currPos),
+            by simp [h, h'] ⟩)
 
 private def finitenessRelation (s : Slice) [BackwardPattern pat] [StrictBackwardPattern pat]
     : Std.Iterators.FinitenessRelation (DefaultBackwardSearcher pat s) Id where

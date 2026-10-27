@@ -28,14 +28,13 @@ deriving Inhabited
 public def addEntry (cache : Cache) (e : CacheEntry) : Cache := cache.insert e.key e.declName
 
 builtin_initialize specCacheExt : SimplePersistentEnvExtension CacheEntry Cache ←
-  registerSimplePersistentEnvExtension {
-    addEntryFn := addEntry
-    addImportedFn := fun es => (mkStateFromImportedEntries addEntry {} es).switch
-    exportEntriesFnEx? :=
-      some fun _ _ entries => { exported := #[], server := #[], «private» := entries.toArray }
-    asyncMode := .sync
-    replay? := some <| SimplePersistentEnvExtension.replayOfFilter (! ·.contains ·.key) addEntry
-  }
+  registerSimplePersistentEnvExtension
+    { addEntryFn := addEntry
+      addImportedFn := fun es => (mkStateFromImportedEntries addEntry {} es).switch
+      exportEntriesFnEx? :=
+        some fun _ _ entries => { exported := #[], server := #[], «private» := entries.toArray }
+      asyncMode := .sync
+      replay? := some <| SimplePersistentEnvExtension.replayOfFilter (! ·.contains ·.key) addEntry }
 
 public def cacheSpec (key : Expr) (declName : Name) : CoreM Unit :=
   modifyEnv fun env => specCacheExt.addEntry env { key, declName }
@@ -108,12 +107,11 @@ def withLetDecl (decl : LetDecl .pure) (x : SpecializeM α) : SpecializeM α := 
     | _ =>
       pure false
   let fvarId := decl.fvarId
-  withReader (x := x) fun ctx => {
-    ctx with
-    scope := ctx.scope.insert fvarId
-    underApplied := if isUnderApplied then ctx.underApplied.insert fvarId else ctx.underApplied
-    ground := if grd then ctx.ground.insert fvarId else ctx.ground
-  }
+  withReader (x := x) fun ctx =>
+    { ctx with
+      scope := ctx.scope.insert fvarId
+      underApplied := if isUnderApplied then ctx.underApplied.insert fvarId else ctx.underApplied
+      ground := if grd then ctx.ground.insert fvarId else ctx.ground }
 
 @[inline]
 def withFunDecl (decl : FunDecl .pure) (x : SpecializeM α) : SpecializeM α := do
@@ -122,11 +120,10 @@ def withFunDecl (decl : FunDecl .pure) (x : SpecializeM α) : SpecializeM α := 
     allFVar (x := decl.value) fun fvarId =>
       !(ctx.scope.contains fvarId) || ctx.ground.contains fvarId
   let fvarId := decl.fvarId
-  withReader (x := x) fun ctx => {
-    ctx with
-    scope := ctx.scope.insert fvarId
-    ground := if grd then ctx.ground.insert fvarId else ctx.ground
-  }
+  withReader (x := x) fun ctx =>
+    { ctx with
+      scope := ctx.scope.insert fvarId
+      ground := if grd then ctx.ground.insert fvarId else ctx.ground }
 
 namespace Collector
 /-!
@@ -334,16 +331,12 @@ where
         modify fun s => s.insert param.fvarId arg
       else
         -- Keep the parameter
-        let param := {
-          param with
-          type := param.type.instantiateLevelParamsNoCache decl.levelParams us
-        }
+        let param :=
+          { param with type := param.type.instantiateLevelParamsNoCache decl.levelParams us }
         params := params.push (← internalizeParam param)
     for param in decl.params[argMask.size...*] do
-      let param := {
-        param with
-        type := param.type.instantiateLevelParamsNoCache decl.levelParams us
-      }
+      let param :=
+        { param with type := param.type.instantiateLevelParamsNoCache decl.levelParams us }
       params := params.push (← internalizeParam param)
     let code := code.instantiateValueLevelParams decl.levelParams us
     let code ← internalizeCode code
@@ -353,17 +346,16 @@ where
     let value := .code code
     let safe := decl.safe
     let recursive := decl.recursive
-    let decl := {
-      name := nameNew
-      levelParams := levelParamsNew
-      params
-      type
-      value
-      safe
-      recursive
-      inlineAttr? := none
-      : Decl .pure
-    }
+    let decl :=
+      { name := nameNew
+        levelParams := levelParamsNew
+        params
+        type
+        value
+        safe
+        recursive
+        inlineAttr? := none
+        : Decl .pure }
     return decl.setLevelParams
 
 /--
@@ -451,11 +443,10 @@ partial def specializeApp? (e : LetValue .pure) : SpecializeM (Option (LetValue 
     let specDecl ← specDecl.simp {}
     let specDecl ← specDecl.simp { etaPoly := true, inlinePartial := true, implementedBy := true }
     trace[Compiler.specialize.step] "new: {specDecl.name}: {← ppDecl specDecl}"
-    modify fun s => {
-      s with
-      workingDecls := s.workingDecls.push specDecl
-      parentMasks := s.parentMasks.insert specDecl.name parentMask
-    }
+    modify fun s =>
+      { s with
+        workingDecls := s.workingDecls.push specDecl
+        parentMasks := s.parentMasks.insert specDecl.name parentMask }
     return some (.const specDecl.name usNew argsNew)
 
 partial def visitFunDecl (funDecl : FunDecl .pure) : SpecializeM (FunDecl .pure) := do
@@ -523,10 +514,8 @@ def updateLocalSpecParamInfo : SpecializeM Unit := do
           (f := fun b i =>
             if !b && (i.causesSpecialization || i matches .fixedInst ..) then .other else i)
       let entry := { entry with paramsInfo := maskInfo entry.paramsInfo }
-      modify fun s => {
-        s with
-        localSpecParamInfo := s.localSpecParamInfo.insert entry.declName entry.paramsInfo
-      }
+      modify fun s =>
+        { s with localSpecParamInfo := s.localSpecParamInfo.insert entry.declName entry.paramsInfo }
 
   trace[Compiler.specialize.step] m!"Info for next round: {(← get).localSpecParamInfo.toList}"
 

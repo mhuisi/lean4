@@ -15,10 +15,8 @@ open Std.Sat
 namespace State
 
 @[inline]
-public def add (s : State) (clause : CNF.Clause Nat) : State := {
-  s with
-  formula := s.formula.push (some clause)
-}
+public def add (s : State) (clause : CNF.Clause Nat) : State :=
+  { s with formula := s.formula.push (some clause) }
 
 @[simp]
 public theorem add_toCNF_eq_toCNF_add {s : State} {c : CNF.Clause Nat}

@@ -226,25 +226,23 @@ def buildNl
     -- the next line.
     let canBreak := next? matches some (.nl ..)
     let glued := nlText ++ (if canBreak then softGapBreak rest else rest)
-    .oneOf #[
-      glued,
-      penalized anchorPenalty (.text "\\") ++ .hardNl ++ glued
-    ]
+    .oneOf
+      #[glued,
+        penalized anchorPenalty (.text "\\") ++ .hardNl ++ glued]
   else
     match next? with
     | some .gap =>
       -- The retained gap directly after this newline provides the mandatory break after it.
       nlText ++ rest
     | _ =>
-      .oneOf #[
+      .oneOf
         -- The newline is placed at the start of the next line, before the content of the line
         -- that it introduces. When the newline and its content overflow the next line, the
         -- content can be broken again at its word boundaries, including directly after the
         -- newline and its trailing whitespace.
-        gapBreak ++ nlText ++ continueAfterBreak next? rest,
-        -- In contexts that must be flattened, the mandatory string gap can be omitted.
-        penalized noBreakPenalty nlText ++ rest
-      ]
+        #[gapBreak ++ nlText ++ continueAfterBreak next? rest,
+          -- In contexts that must be flattened, the mandatory string gap can be omitted.
+          penalized noBreakPenalty nlText ++ rest]
 
 /--
 Renders an interpolation `{term}` before `rest`. `restAfterNext` is the rendering of the elements
@@ -284,13 +282,12 @@ def buildInterp
       -- the closing quote may follow directly after the interpolation.
       rest
   let alone :=
-    .join #[
-      leadingBreak,
-      penalized interpolationBreakPenalty (.text "{"),
-      term,
-      .text "}",
-      after
-    ]
+    .join
+      #[leadingBreak,
+        penalized interpolationBreakPenalty (.text "{"),
+        term,
+        .text "}",
+        after]
   .oneOf #[inline, alone]
 
 /-- Renders the elements of a string literal, including the enclosing quotes. -/
@@ -433,33 +430,29 @@ public def fmtTypeAscription : Fmt := fun
 public def fmtArrow : Fmt.InfixOperation :=
   -- The parser sets the node precedence to `maxPrec` and checks the actual precedence 25 with
   -- an inner `checkPrec`, so that `a → b` can be the left-hand side of any trailing parser.
-  {
-    sparse := true
+  { sparse := true
     separateFinalOperand := true
     precs? := some { prec := 25, lhsPrec := 0, rhsPrec := 25 }
-    extendedChainKinds := {``Parser.Term.depArrow}
-  }
+    extendedChainKinds := {``Parser.Term.depArrow} }
 
 @[builtin_infix_fmt Lean.Parser.Term.depArrow]
-public def fmtDepArrow : Fmt.InfixOperation := {
-  sparse := true
-  separateFinalOperand := true
-  precs? := some { prec := 25, lhsPrec := 0, rhsPrec := 0 }
-  extendedChainKinds := {``Parser.Term.arrow}
-}
+public def fmtDepArrow : Fmt.InfixOperation :=
+  { sparse := true
+    separateFinalOperand := true
+    precs? := some { prec := 25, lhsPrec := 0, rhsPrec := 0 }
+    extendedChainKinds := {``Parser.Term.arrow} }
 
 @[builtin_quantifier_fmt Lean.Parser.Term.forall]
 public def fmtForall : QuantifierFmt := fun
   | `(Parser.Term.forall|
       ∀%$forallTk $binders* $[:%$typeAscriptionTk? $type?:term]? ,%$commaTk $body:term) =>
-    some {
-      quantifier := forallTk
-      binders := .binders #[#[binders]]
-      typeAscriptionTk?
-      type?
-      commaTk
-      body
-    }
+    some
+      { quantifier := forallTk
+        binders := .binders #[#[binders]]
+        typeAscriptionTk?
+        type?
+        commaTk
+        body }
   | _ =>
     none
 
@@ -510,10 +503,9 @@ public def fmtFun : Fmt := fun
     let funTk ← fmt funTk
     let matchAlts ← fmt matchAlts
     if isSingleMatchAlt then
-      return maybeFlattened <| combine #[
-        .withSepAfter funTk ⟨nl, nested⟩,
-        matchAlts
-      ]
+      return maybeFlattened <| combine
+        #[.withSepAfter funTk ⟨nl, nested⟩,
+          matchAlts]
     let doc := Layouts.matchDeclaration funTk matchAlts
     return sticky doc doc .coequal
   | _ =>
@@ -572,11 +564,10 @@ public def deconstructPipeProj : Syntax → FmtM (Option (Syntax × TaggedDoc))
     let id ← fmt id
     let universeAnnotation? ← fmtUniverseAnnotation? lbTk? levels? rbTk?
     let pipeHead :=
-      Layouts.atomic #[
-        pipeProjTk,
-        id,
-        universeAnnotation?
-      ]
+      Layouts.atomic
+        #[pipeProjTk,
+          id,
+          universeAnnotation?]
     let pipe ← fmtFixedApp pipeHead args
     return some (stx', pipe)
   | _ =>
@@ -586,10 +577,8 @@ public def deconstructPipeProj : Syntax → FmtM (Option (Syntax × TaggedDoc))
 public def fmtPipeProj : Fmt := fun stx => fmtPipeProjLike stx deconstructPipeProj
 
 @[builtin_infix_fmt Lean.Parser.Term.subst]
-public def fmtSubst : Fmt.InfixOperation := {
-  sparse := false
-  precs? := some { prec := 75, lhsPrec := 0, rhsPrec := 75 }
-}
+public def fmtSubst : Fmt.InfixOperation :=
+  { sparse := false, precs? := some { prec := 75, lhsPrec := 0, rhsPrec := 75 } }
 
 @[builtin_fmt Lean.Parser.Term.anonymousCtor]
 public def fmtAnonymousCtor : Fmt := fun
@@ -830,10 +819,8 @@ public def fmtMatch : Fmt := fun
     let withTk ← fmt withTk
     let matchAlts ← fmt matchAlts
     let «match» := Layouts.keywordPrefixedSepFill matchLhs matchDiscrs .nonSticky
-    return Layouts.keywordSeparated «match» withTk matchAlts {
-      allowFlattening := false
-      nestedRhs := false
-    }
+    return Layouts.keywordSeparated «match» withTk matchAlts
+      { allowFlattening := false, nestedRhs := false }
   | _ =>
     throw .partialFormatter
 
@@ -1042,10 +1029,9 @@ public def fmtWhereFinally : Fmt := fun
     if hasWhereFinallyAlts then
       let mainFinally := Layouts.keywordPrefixedSeq finallyTk tacticSeq .sticky
       -- This formatting is really ugly, but this is because the syntax itself is really ugly
-      return combine #[
-        .withSepAfter (hardNested mainFinally) ⟨hardNl, nested⟩,
-        whereFinallyAlts
-      ]
+      return combine
+        #[.withSepAfter (hardNested mainFinally) ⟨hardNl, nested⟩,
+          whereFinallyAlts]
     else
       return Layouts.keywordPrefixedSeq finallyTk tacticSeq .sticky
   | _ =>
@@ -1191,11 +1177,10 @@ public def fmtStructInst : Fmt := fun
     let withSignature := Layouts.spacedAtomic #[modifiedStructures, withTk?]
     let typeSignature := Layouts.prefixOperator typeAscriptionTk? type? .withSpacing
     let body :=
-      combine #[
-        .withSepAfter withSignature nl,
-        .withSepAfter (withPosition (join fields)) nl,
-        typeSignature
-      ]
+      combine
+        #[.withSepAfter withSignature nl,
+          .withSepAfter (withPosition (join fields)) nl,
+          typeSignature]
     return Layouts.bracketed lbTk body rbTk <| .sparse nl (stickynessKind := .preferSticky)
   | _ =>
     throw .partialFormatter
@@ -1814,8 +1799,8 @@ public def fmtMatchExpr : Fmt := fun
       let lhs := Layouts.pseudoApplication #[matchExprTk, discr]
       let withTk ← fmt withTk
       let alts ← fmt alts
-      return
-        Layouts.keywordSeparated lhs withTk alts { allowFlattening := false, nestedRhs := false }
+      return Layouts.keywordSeparated lhs withTk alts
+        { allowFlattening := false, nestedRhs := false }
   | _ =>
     throw .partialFormatter
 

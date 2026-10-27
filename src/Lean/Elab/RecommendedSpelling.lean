@@ -22,11 +22,10 @@ def elabRecommendedSpelling : CommandElab
       let declNames ←
         liftTermElabM <| decls.mapM (fun decl => realizeGlobalConstNoOverloadWithInfo decl)
       declNames.forM (recordExtraModUseFromDecl (isMeta := false))
-      let recommendedSpelling : RecommendedSpelling := {
-        «notation» := «notation».getString
-        recommendedSpelling := spelling.getString
-        additionalInformation? := docs.map (·.getDocString)
-      }
+      let recommendedSpelling : RecommendedSpelling :=
+        { «notation» := «notation».getString
+          recommendedSpelling := spelling.getString
+          additionalInformation? := docs.map (·.getDocString) }
       modifyEnv (addRecommendedSpelling · recommendedSpelling declNames)
   | _ =>
     throwError "Malformed recommended spelling command"

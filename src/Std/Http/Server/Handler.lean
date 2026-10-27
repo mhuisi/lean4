@@ -67,37 +67,29 @@ instance : Handler StatelessHandler where
 namespace Handler
 
 /-- Builds a `StatelessHandler` from a request-handling function. -/
-def ofFn (f : Request Body.Stream → ContextAsync (Response Body.Any)) : StatelessHandler := {
-  onRequest := f
-}
+def ofFn (f : Request Body.Stream → ContextAsync (Response Body.Any)) : StatelessHandler :=
+  { onRequest := f }
 
 /-- Builds a `StatelessHandler` from all three callback functions. -/
 def ofFns
     (onRequest : Request Body.Stream → ContextAsync (Response Body.Any))
     (onFailure : IO.Error → Async Unit := fun _ => pure ())
     (onContinue : Request.Head → Async Bool := fun _ => pure true)
-    : StatelessHandler := {
-  onRequest,
-  onFailure,
-  onContinue
-}
+    : StatelessHandler :=
+  { onRequest, onFailure, onContinue }
 
 /--
 Builds a `StatelessHandler` from a request function and a failure callback. Useful for
 attaching error logging to a handler.
 -/
 def withFailure (handler : StatelessHandler) (onFailure : IO.Error → Async Unit)
-    : StatelessHandler := {
-  handler with
-  onFailure
-}
+    : StatelessHandler :=
+  { handler with onFailure }
 
 /-- Builds a `StatelessHandler` from a request function and a continue callback -/
 def withContinue (handler : StatelessHandler) (onContinue : Request.Head → Async Bool)
-    : StatelessHandler := {
-  handler with
-  onContinue
-}
+    : StatelessHandler :=
+  { handler with onContinue }
 
 end Handler
 

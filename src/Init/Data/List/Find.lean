@@ -749,10 +749,9 @@ set_option backward.isDefEq.respectTransparency false in
 /-- `xs.findIdx p = i` iff `p xs[i]` and `¬ p xs [j]` for all `j < i`. -/
 theorem findIdx_eq {p : α → Bool} {xs : List α} {i : Nat} (h : i < xs.length)
     : xs.findIdx p = i ↔ p xs[i] ∧ ∀ j (hji : j < i), p (xs[j]'(Nat.lt_trans hji h)) = false := by
-  refine ⟨
-    fun f ↦ ⟨f ▸ (@findIdx_getElem _ p xs (f ▸ h)), fun _ hji ↦ not_of_lt_findIdx (f ▸ hji)⟩,
-    fun ⟨_, h2⟩ ↦ ?_
-  ⟩
+  refine
+    ⟨ fun f ↦ ⟨f ▸ (@findIdx_getElem _ p xs (f ▸ h)), fun _ hji ↦ not_of_lt_findIdx (f ▸ hji)⟩,
+      fun ⟨_, h2⟩ ↦ ?_ ⟩
   apply Nat.le_antisymm _ (le_findIdx_of_not h h2)
   apply Decidable.byContradiction
   intro h3
@@ -761,13 +760,11 @@ theorem findIdx_eq {p : α → Bool} {xs : List α} {i : Nat} (h : i < xs.length
 
 @[simp]
 theorem lt_findIdx_iff (xs : List α) (p : α → Bool) (i : Nat)
-    : i < xs.findIdx p ↔ ∃ h : i < xs.length, ∀ j, (hj : j ≤ i) → p xs[j] = false := ⟨
-  fun h => ⟨
-    by have := findIdx_le_length (xs := xs) (p := p); omega,
-    fun j hj => by apply not_of_lt_findIdx; omega
-  ⟩,
-  fun ⟨h, w⟩ => by apply lt_findIdx_of_not h; simpa using w
-⟩
+    : i < xs.findIdx p ↔ ∃ h : i < xs.length, ∀ j, (hj : j ≤ i) → p xs[j] = false :=
+  ⟨ fun h =>
+      ⟨ by have := findIdx_le_length (xs := xs) (p := p); omega,
+        fun j hj => by apply not_of_lt_findIdx; omega ⟩,
+    fun ⟨h, w⟩ => by apply lt_findIdx_of_not h; simpa using w ⟩
 
 @[simp, grind =]
 theorem findIdx_map (xs : List α) (f : α → β) (p : β → Bool)

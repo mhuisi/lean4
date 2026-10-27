@@ -152,17 +152,13 @@ public def setPreProcessCaches (caches : Grind.BVDecide.Caches) : CegarM Unit :=
 @[inline]
 public def run (ctx : TacticContext) (x : CegarM (Except CounterExample α))
     : UnsatProver α := fun goal reflectionResult => do
-  let state := {
-    satExpr := reflectionResult.satExpr
-    theoryState := ← TheoryState.new
-    solverTimeBudgetMs := ctx.config.timeout * 1000
-    roundBudget := ctx.config.cegarRounds
-  }
-  let ctx := {
-    goal := goal
-    unusedHypotheses := reflectionResult.unusedHypotheses
-    tacticContext := ctx
-  }
+  let state :=
+    { satExpr := reflectionResult.satExpr
+      theoryState := ← TheoryState.new
+      solverTimeBudgetMs := ctx.config.timeout * 1000
+      roundBudget := ctx.config.cegarRounds }
+  let ctx :=
+    { goal := goal, unusedHypotheses := reflectionResult.unusedHypotheses, tacticContext := ctx }
   StateRefT'.run' (ReaderT.run x ctx) state
 
 public def getSatSolver : CegarM Cadical.Solver := return (← get).theoryState.satSolver

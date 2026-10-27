@@ -31,23 +31,22 @@ public def rewriteRulesPass : Pass where
     let simpConfig := { maxSteps := cfg.maxSteps }
     let discharger := Sym.Simp.mkDischargerFromSimproc Sym.Simp.evalGround
     let cache ← ST.mkRef {}
-    let simpMethods := {
-      pre e := do
-        let res ← Sym.Simp.simpControl e
-        -- We invalidate `done` as we still want to rewrite in the arms, even if the discr cannot
-        -- be resolved.
-        match res with
-        | .rfl _ cd => return .rfl false cd
-        | .step e' proof _ cd => return .step e' proof false cd
-      post :=
-        Sym.Simp.evalGround >> Normalize.rewriteSimproc cache >> bvThms.rewrite (d := discharger)
-    }
+    let simpMethods :=
+      { pre e := do
+          let res ← Sym.Simp.simpControl e
+          -- We invalidate `done` as we still want to rewrite in the arms, even if the discr cannot
+          -- be resolved.
+          match res with
+          | .rfl _ cd => return .rfl false cd
+          | .step e' proof _ cd => return .step e' proof false cd
+        post :=
+          Sym.Simp.evalGround >> Normalize.rewriteSimproc cache
+            >> bvThms.rewrite (d := discharger) }
     let dsimpConfig := { simpConfig with instances := true }
-    let dsimpMethods := {
-      pre :=
-        Sym.DSimp.evalGround >> Sym.DSimp.zeta >> Sym.DSimp.zetaDeltaAll >> Sym.DSimp.beta
-          >> rewriteDsimproc
-    }
+    let dsimpMethods :=
+      { pre :=
+          Sym.DSimp.evalGround >> Sym.DSimp.zeta >> Sym.DSimp.zetaDeltaAll >> Sym.DSimp.beta
+            >> rewriteDsimproc }
 
     let goal ← PreProcessM.getTargetMVarId
     let changed ←

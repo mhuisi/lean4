@@ -38,13 +38,12 @@ def setCommandState (commandState : Command.State) : FrontendM Unit :=
 def runCommandElabM (x : Command.CommandElabM α) : FrontendM α := do
   let ctx ← read
   let s ← get
-  let cmdCtx : Command.Context := {
-    cmdPos := s.cmdPos
-    fileName := ctx.inputCtx.fileName
-    fileMap := ctx.inputCtx.fileMap
-    snap? := none
-    cancelTk? := none
-  }
+  let cmdCtx : Command.Context :=
+    { cmdPos := s.cmdPos
+      fileName := ctx.inputCtx.fileName
+      fileMap := ctx.inputCtx.fileMap
+      snap? := none
+      cancelTk? := none }
   match (← liftM <| EIO.toIO' <| (x cmdCtx).run s.commandState) with
   | Except.error e =>
     throw <| IO.Error.userError s!"unexpected internal error: {← e.toMessageData.toString}"
@@ -70,12 +69,11 @@ def processCommand : FrontendM Bool := do
   let ictx ← getInputContext
   let pstate ← getParserState
   let scope := cmdState.scopes.head!
-  let pmctx := {
-    env := cmdState.env
-    options := scope.opts
-    currNamespace := scope.currNamespace
-    openDecls := scope.openDecls
-  }
+  let pmctx :=
+    { env := cmdState.env
+      options := scope.opts
+      currNamespace := scope.currNamespace
+      openDecls := scope.openDecls }
   match profileit "parsing" scope.opts fun _ =>
     Parser.parseCommand ictx pmctx pstate cmdState.messages with
   | (cmd, ps, messages) =>
@@ -127,18 +125,14 @@ where
       -- In contrast to messages, we should collect info trees only from the top-level command
       -- snapshots as they subsume any info trees reported incrementally by their children.
       let trees := commands.map (·.elabSnap.infoTreeSnap.get.infoTree?) |>.filterMap id |>.toPArray'
-      return {
-        commandState := {
-          snap.elabSnap.resultSnap.get.cmdState with
-          messages
-          infoState.trees := trees
-        }
-        parserState := snap.parserState
-        cmdPos := snap.parserState.pos
-        commands := commands.map (·.stx)
-        inputCtx
-        initialSnap
-      }
+      return
+        { commandState :=
+            { snap.elabSnap.resultSnap.get.cmdState with messages, infoState.trees := trees }
+          parserState := snap.parserState
+          cmdPos := snap.parserState.pos
+          commands := commands.map (·.stx)
+          inputCtx
+          initialSnap }
 
 def IO.processCommands
     (inputCtx : Parser.InputContext) (parserState : Parser.ModuleParserState)
@@ -282,15 +276,13 @@ private def setMainModule (snap : Language.Lean.InitialSnapshot) (m : Name)
   -- `Command.mkState` derives `auxDeclNGen.namePrefix` from `mkPrivateName env .anonymous`, which
   -- bakes in `env.mainModule`. Re-derive so aux decls land in the new module's private namespace
   -- (otherwise `delabConst` flags them as inaccessible and pretty-prints them with `✝`).
-  let newCmdState := {
-    hps.cmdState with
-    env := newEnv
-    auxDeclNGen := { hps.cmdState.auxDeclNGen with namePrefix := mkPrivateName newEnv .anonymous }
-  }
-  let newProcessed : Language.Lean.HeaderProcessedSnapshot := {
-    processed with
-    result? := some { hps with cmdState := newCmdState }
-  }
+  let newCmdState :=
+    { hps.cmdState with
+      env := newEnv
+      auxDeclNGen :=
+        { hps.cmdState.auxDeclNGen with namePrefix := mkPrivateName newEnv .anonymous } }
+  let newProcessed : Language.Lean.HeaderProcessedSnapshot :=
+    { processed with result? := some { hps with cmdState := newCmdState } }
   { snap with result? := some { parsed with processedSnap := .finished none newProcessed } }
 
 def runFrontend
@@ -313,26 +305,24 @@ def runFrontend
   let setup stx := do
     if let some setup := setup? then
       liftM <| setup.dynlibs.forM Lean.loadDynlib
-      return .ok {
-        trustLevel
-        package? := setup.package?
-        mainModuleName := setup.name
-        isModule := strictOr setup.isModule stx.isModule
-        imports := setup.imports?.getD stx.imports
-        plugins := plugins ++ setup.plugins
-        importArts := setup.importArts
-        -- override cmdline options with setup options
-        opts := opts.mergeBy (fun _ _ hOpt => hOpt) setup.options.toOptions
-      }
+      return .ok
+        { trustLevel
+          package? := setup.package?
+          mainModuleName := setup.name
+          isModule := strictOr setup.isModule stx.isModule
+          imports := setup.imports?.getD stx.imports
+          plugins := plugins ++ setup.plugins
+          importArts := setup.importArts
+          -- override cmdline options with setup options
+          opts := opts.mergeBy (fun _ _ hOpt => hOpt) setup.options.toOptions }
     else
-      return .ok {
-        imports := stx.imports
-        isModule := stx.isModule
-        mainModuleName
-        opts
-        trustLevel
-        plugins
-      }
+      return .ok
+        { imports := stx.imports
+          isModule := stx.isModule
+          mainModuleName
+          opts
+          trustLevel
+          plugins }
   let old? ←
     incrLoadFileName?.mapM fun incrFile => do
       let incr ← unsafe loadIncrSnapshot incrFile
@@ -381,10 +371,8 @@ def runFrontend
   -- `regionsToModuleArtifacts`), needed to map the snapshot back in before we can access `env`.
   let saveSnap (incrFile : System.FilePath) (snapToSave : Language.Lean.InitialSnapshot)
       : IO Unit := do
-    let toSave : IncrSnapshot := {
-      snap := snapToSave
-      initModIdxs := getRegularInitAttrModIdxs env
-    }
+    let toSave : IncrSnapshot :=
+      { snap := snapToSave, initModIdxs := getRegularInitAttrModIdxs env }
     let compactor ←
       (unsafe CompactedRegion.save incrFile `_snap toSave env.header.regions none
         (allowClosures := true))
@@ -425,13 +413,12 @@ def runFrontend
         | _ => #[])
     let references := Lean.Server.findModuleRefs inputCtx.fileMap trees (localVars := false)
     let (moduleRefs, decls) ← references.toLspModuleRefs
-    let ilean := {
-      module := mainModuleName
-      directImports := Server.collectImports ⟨snap.stx⟩
-      references := moduleRefs
-      decls
-      : Lean.Server.Ilean
-    }
+    let ilean :=
+      { module := mainModuleName
+        directImports := Server.collectImports ⟨snap.stx⟩
+        references := moduleRefs
+        decls
+        : Lean.Server.Ilean }
     IO.FS.writeFile ileanFileName $ Json.compress $ toJson ilean
 
   if let some out := trace.profiler.output.get? opts then

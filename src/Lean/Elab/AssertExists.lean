@@ -62,10 +62,8 @@ to the environment.
 -/
 builtin_initialize assertExistsExt
     : SimplePersistentEnvExtension AssertExists (Std.HashSet AssertExists) ←
-  registerSimplePersistentEnvExtension {
-    addImportedFn := fun as => as.foldl Std.HashSet.insertMany {}
-    addEntryFn := .insert
-  }
+  registerSimplePersistentEnvExtension
+    { addImportedFn := fun as => as.foldl Std.HashSet.insertMany {}, addEntryFn := .insert }
 
 /--
 `addAssertExistsEntry isDecl declName mod` extends the `AssertExists` environment extension

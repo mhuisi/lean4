@@ -35,11 +35,8 @@ structurally equal to but distinct from the targets'. Internalizing the pattern 
 subterms pointer-equal to every target internalized afterwards, so matching them is `O(1)`.
 -/
 public def _root_.Lean.Meta.Sym.Pattern.shareCommon (p : Pattern) : SymM Pattern := do
-  return {
-    p with
-    pattern := ← Sym.shareCommon p.pattern
-    varTypes := ← p.varTypes.mapM Sym.shareCommon
-  }
+  return
+    { p with pattern := ← Sym.shareCommon p.pattern, varTypes := ← p.varTypes.mapM Sym.shareCommon }
 
 /--
 Instantiates a spec theorem's proof.

@@ -13,13 +13,12 @@ public section
 namespace Lean.Elab.Term.Quotation
 open Lean.Syntax
 
-register_builtin_option hygiene : Bool := {
-  defValue := true
-  descr :=
-    "Annotate identifiers in quotations such that they are resolved relative to the scope at their \
-      declaration, not that at their eventual use/expansion, to avoid accidental capturing. Note \
-      that quotations/notations already defined are unaffected."
-}
+register_builtin_option hygiene : Bool :=
+  { defValue := true
+    descr :=
+      "Annotate identifiers in quotations such that they are resolved relative to the scope at \
+        their declaration, not that at their eventual use/expansion, to avoid accidental \
+        capturing. Note that quotations/notations already defined are unaffected." }
 
 def getAntiquotationIds (stx : Syntax) : TermElabM (Array Ident) := do
   let mut ids := #[]

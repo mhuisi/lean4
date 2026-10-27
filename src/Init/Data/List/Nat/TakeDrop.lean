@@ -669,12 +669,11 @@ theorem getElem_zipWith
       = f (l[i]'(lt_length_left_of_zipWith h)) (l'[i]'(lt_length_right_of_zipWith h)) := by
   rw [← Option.some_inj, ← getElem?_eq_getElem, getElem?_zipWith_eq_some]
   have := lt_length_right_of_zipWith h
-  exact ⟨
-    l[i]'(lt_length_left_of_zipWith h),
-    l'[i],
-    by rw [getElem?_eq_getElem],
-    by rw [getElem?_eq_getElem this]; exact ⟨rfl, rfl⟩
-  ⟩
+  exact
+    ⟨ l[i]'(lt_length_left_of_zipWith h),
+      l'[i],
+      by rw [getElem?_eq_getElem],
+      by rw [getElem?_eq_getElem this]; exact ⟨rfl, rfl⟩ ⟩
 
 theorem zipWith_eq_zipWith_take_min
     : ∀ {l₁ : List α} {l₂ : List β},

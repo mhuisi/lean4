@@ -21,29 +21,27 @@ public def registerOrderedTagAttribute
     (validate : Name → AttrM Unit := fun _ => pure ()) (ref : Name := by exact decl_name%)
     : IO OrderedTagAttribute := do
   let ext ←
-    registerPersistentEnvExtension {
-      name := ref
-      mkInitial := pure {}
-      addImportedFn := fun _ _ => pure {}
-      addEntryFn := fun s n => s.push n
-      exportEntriesFn := fun es => es
-      statsFn := fun s =>
-        "tag attribute" ++ Format.line ++ "number of local entries: " ++ format s.size
-    }
-  let attrImpl : AttributeImpl := {
-    ref := ref
-    name := name
-    descr := descr
-    add := fun decl stx kind => do
-      Attribute.Builtin.ensureNoArgs stx
-      unless kind == AttributeKind.global do
-        throwAttrMustBeGlobal name kind
-      let env ← getEnv
-      unless (env.getModuleIdxFor? decl).isNone do
-        throwAttrDeclInImportedModule name decl
-      validate decl
-      modifyEnv fun env => ext.addEntry env decl
-  }
+    registerPersistentEnvExtension
+      { name := ref
+        mkInitial := pure {}
+        addImportedFn := fun _ _ => pure {}
+        addEntryFn := fun s n => s.push n
+        exportEntriesFn := fun es => es
+        statsFn := fun s =>
+          "tag attribute" ++ Format.line ++ "number of local entries: " ++ format s.size }
+  let attrImpl : AttributeImpl :=
+    { ref := ref
+      name := name
+      descr := descr
+      add := fun decl stx kind => do
+        Attribute.Builtin.ensureNoArgs stx
+        unless kind == AttributeKind.global do
+          throwAttrMustBeGlobal name kind
+        let env ← getEnv
+        unless (env.getModuleIdxFor? decl).isNone do
+          throwAttrDeclInImportedModule name decl
+        validate decl
+        modifyEnv fun env => ext.addEntry env decl }
   registerBuiltinAttribute attrImpl
   return { attr := attrImpl, ext }
 

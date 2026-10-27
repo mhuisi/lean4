@@ -218,12 +218,11 @@ def getParamKinds (f : Expr) (args : Array Expr) : MetaM (Array ParamKind) := do
       xs.foldlM (init := result) fun result x => do
         let l ← x.fvarId!.getDecl
         -- Warning: the defVal might refer to fvars that are only valid in this context
-        pure <| result.push {
-          name := l.userName
-          bInfo := l.binderInfo
-          defVal := l.type.getOptParamDefault?
-          isAutoParam := l.type.isAutoParam
-        }
+        pure <| result.push
+          { name := l.userName
+            bInfo := l.binderInfo
+            defVal := l.type.getOptParamDefault?
+            isAutoParam := l.type.isAutoParam }
   catch _ =>
     pure #[] -- recall that expr may be nonsensical
 
@@ -840,10 +839,10 @@ partial def delabAppMatch : Delab :=
         withBoundedAppFnArgs (1 + info.numDiscrs + info.numAlts)
           (do
             let params := (← getExpr).getAppArgs
-            let matcherTy : SubExpr := {
-              expr := ← instantiateForall (← instantiateTypeLevelParams (← getConstVal c) us) params
-              pos := (← getPos).pushType
-            }
+            let matcherTy : SubExpr :=
+              { expr :=
+                  ← instantiateForall (← instantiateTypeLevelParams (← getConstVal c) us) params
+                pos := (← getPos).pushType }
             guard <| ← isDefEq matcherTy.expr (← inferType (← getExpr))
             return { info, matcherTy })
           (fun st => do
@@ -898,11 +897,10 @@ partial def delabAppMatch : Delab :=
               alts.mapIdxM fun idx alt => do
                 let altTy ← inferType alt
                 withTheReader SubExpr
-                  (fun ctx => {
-                    ctx with
-                    expr := altTy
-                    pos := ctx.pos.pushNthBindingDomain (1 + st.discrs.size + idx)
-                  })
+                  (fun ctx =>
+                    { ctx with
+                      expr := altTy
+                      pos := ctx.pos.pushNthBindingDomain (1 + st.discrs.size + idx) })
                   do
                     usingNames st.varNames[idx]! <|
                       withAppFnArgs (pure #[]) fun pats => return pats.push (← delab)

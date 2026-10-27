@@ -103,15 +103,14 @@ Extension for storing `SpecParamInfo` for declarations being compiled.
 Remark: we only store information for declarations that will be specialized.
 -/
 builtin_initialize specExtension : SimplePersistentEnvExtension SpecEntry SpecState ←
-  registerSimplePersistentEnvExtension {
-    addEntryFn := SpecState.addEntry
-    addImportedFn := fun _ => {}
-    toArrayFn := fun s => sortEntries s.toArray
-    asyncMode := .sync
-    replay? :=
-      some <| SimplePersistentEnvExtension.replayOfFilter (! ·.specInfo.contains ·.declName)
-        SpecState.addEntry
-  }
+  registerSimplePersistentEnvExtension
+    { addEntryFn := SpecState.addEntry
+      addImportedFn := fun _ => {}
+      toArrayFn := fun s => sortEntries s.toArray
+      asyncMode := .sync
+      replay? :=
+        some <| SimplePersistentEnvExtension.replayOfFilter (! ·.specInfo.contains ·.declName)
+          SpecState.addEntry }
 
 /--
 Return `true` if `type` is a type tagged with `@[nospecialize]` or an arrow that produces this kind of type.
@@ -244,18 +243,14 @@ def computeSpecEntries
         if info matches .fixedNeutral && ! hasFwdDeps decl paramsInfo j then
           paramsInfo := paramsInfo.set! j .other
       entries :=
-        entries.push {
-          declName := decl.name
-          paramsInfo
-          alreadySpecialized := alreadySpecialized[i]!
-        }
+        entries.push
+          { declName := decl.name, paramsInfo, alreadySpecialized := alreadySpecialized[i]! }
     return entries
   else
-    return decls.mapIdx fun i decl => {
-      declName := decl.name
-      paramsInfo := Array.replicate decl.params.size .other
-      alreadySpecialized := alreadySpecialized[i]!
-    }
+    return decls.mapIdx fun i decl =>
+      { declName := decl.name
+        paramsInfo := Array.replicate decl.params.size .other
+        alreadySpecialized := alreadySpecialized[i]! }
 
 /--
 Compute and save specialization information for `decls`. Assumes that `decls` is an SCC of user

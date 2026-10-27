@@ -160,20 +160,16 @@ private def spaceUptoLine : Format → Bool → Int → Nat → SpaceResult
   | align force, flatten, m, w =>
     if flatten && !force then
       {}
-    else if w < m then {
-      space := (m - w).toNat
-    }
-    else {
-      foundLine := true
-    }
+    else if w < m then
+      { space := (m - w).toNat }
+    else
+      { foundLine := true }
   | text s, flatten, _, _ =>
     let p := String.Internal.posOf s '\n'
     let off := String.Internal.offsetOfPos s p
-    {
-      foundLine := p != s.rawEndPos
+    { foundLine := p != s.rawEndPos
       foundFlattenedHardLine := flatten && p != s.rawEndPos
-      space := off
-    }
+      space := off }
   | append f₁ f₂, flatten, m, w =>
     merge w (spaceUptoLine f₁ flatten m w) (spaceUptoLine f₂ flatten m)
   | nest n f, flatten, m, w =>
@@ -241,12 +237,8 @@ private def pushGroup
     : m (List WorkGroup) := do
   let k ← currColumn
   -- Flatten group if it + the remainder (gs) fits in the remaining space. For `fill`, measure only up to the next (ungrouped) line break.
-  let g := {
-    fla := .allow (flb == FlattenBehavior.allOrNone)
-    flb := flb
-    items := items
-    : WorkGroup
-  }
+  let g :=
+    { fla := .allow (flb == FlattenBehavior.allOrNone), flb := flb, items := items : WorkGroup }
   let r := spaceUptoLine' [g] k (w - k)
   let r' := merge (w - k) r (spaceUptoLine' gs k)
   -- Prevent flattening if any item contains a hard line break, except within `fill` if it is ungrouped (=> unflattened)
@@ -354,11 +346,10 @@ rendered.
   indentation)
 -/
 def prettyM (f : Format) (w : Nat) (indent : Nat := 0) [Monad m] [MonadPrettyFormat m] : m Unit :=
-  be w [{
-    flb := FlattenBehavior.allOrNone
-    fla := .disallow
-    items := [{ f := f, indent, activeTags := 0 }]
-  }]
+  be w
+    [ { flb := FlattenBehavior.allOrNone
+        fla := .disallow
+        items := [{ f := f, indent, activeTags := 0 }] } ]
 
 /--
 Creates a format `l ++ f ++ r` with a flattening group, nesting the contents by the length of `l`.

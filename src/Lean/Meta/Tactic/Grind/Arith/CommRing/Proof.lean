@@ -290,10 +290,9 @@ private partial def mkPSumTree (B : Expr) (leaves : Array (Expr × Expr)) (lo hi
   let ctx ← getContext
   let allZero (t : Expr) :=
     mkApp5 (mkConst ``Grind.CommRing.PSumTree.AllZero [ring.u]) ring.type ring.ringInst ctx B t
-  return (
-    mkApp2 (mkConst ``Grind.CommRing.PSumTree.node) ta tb,
-    mkApp4 (mkConst ``And.intro) (allZero ta) (allZero tb) ha hb
-  )
+  return
+    ( mkApp2 (mkConst ``Grind.CommRing.PSumTree.node) ta tb,
+      mkApp4 (mkConst ``And.intro) (allZero ta) (allZero tb) ha hb )
 
 /--
 The proof that `p` is `base` plus the multiples `kᵢ * mᵢ * qᵢ` of `leaves`, with the step theorem
@@ -323,18 +322,16 @@ private def mkPackedSum
       | none =>
         let Q ← mkPPolyDecl q B
         let hQ :=
-          mkAppN (mkConst ``Grind.CommRing.PSumTree.leaf_zero [ring.u]) #[
-            ring.type, ring.commRingInst, ctx, BE, ← mkPolyDecl q, Q, eagerReflBoolTrue,
-            mkApp2 (mkConst ``Eq.refl [1]) ppT Q, h
-          ]
+          mkAppN (mkConst ``Grind.CommRing.PSumTree.leaf_zero [ring.u])
+            #[ring.type, ring.commRingInst, ctx, BE, ← mkPolyDecl q, Q, eagerReflBoolTrue,
+              mkApp2 (mkConst ``Eq.refl [1]) ppT Q, h]
         packed := packed.insert q (Q, hQ)
         pure (Q, hQ)
     ls :=
-      ls.push (
-        mkApp4 (mkConst ``Grind.CommRing.PSumTree.leaf) (toExpr k) (← mkMonDecl m)
-          (mkRawNatLit (polyMaxDeg q)) Q,
-        hQ
-      )
+      ls.push
+        ( mkApp4 (mkConst ``Grind.CommRing.PSumTree.leaf) (toExpr k) (← mkMonDecl m)
+            (mkRawNatLit (polyMaxDeg q)) Q,
+          hQ )
   let (t, hAll) ← mkPSumTree BE ls 0 ls.size
   let P ← mkPPolyDecl p B
   let refl := mkApp2 (mkConst ``Eq.refl [1]) ppT P
@@ -563,11 +560,10 @@ partial def _root_.Lean.Meta.Grind.Arith.CommRing.EqCnstr.toExprProof (c : EqCns
     | .superpose k₁ m₁ c₁ k₂ m₂ c₂ =>
       let h ← mkStepPrefix ``Stepwise.superpose ``Stepwise.superposeC
       let hs ← mkMergeHints (← mulMonR k₁ m₁ c₁.p) (← mulMonR k₂ m₂ c₂.p) c.p
-      return mkAppN h #[
-        toExpr k₁, ← mkMonDecl m₁, ← mkPolyDecl c₁.p,
-        toExpr k₂, ← mkMonDecl m₂, ← mkPolyDecl c₂.p,
-        ← mkPolyDecl c.p, hs, ← mkPolyRefl c.p, ← toExprProof c₁, ← toExprProof c₂
-      ]
+      return mkAppN h
+        #[toExpr k₁, ← mkMonDecl m₁, ← mkPolyDecl c₁.p,
+          toExpr k₂, ← mkMonDecl m₂, ← mkPolyDecl c₂.p,
+          ← mkPolyDecl c.p, hs, ← mkPolyRefl c.p, ← toExprProof c₁, ← toExprProof c₂]
     | .simp k₁ c₁ k₂ m₂ c₂ =>
       if k₁ == 1 then
         let (base, steps) ← collectSimps1 c₁ #[(k₂, m₂, c₂, c)]
@@ -598,10 +594,9 @@ partial def _root_.Lean.Meta.Grind.Arith.CommRing.EqCnstr.toExprProof (c : EqCns
           let (qᵢ, hᵢ) := leaves[i]!
           let hs ← mkMergeHints prev.p qᵢ cᵢ.p
           let pr :=
-            mkAppN (← mkStepPrefix ``Stepwise.simp1 ``Stepwise.simp1C) #[
-              ← mkPolyDecl prev.p, toExpr k₂, ← mkMonDecl m₂, ← mkPolyDecl c₂.p,
-              ← mkPolyDecl cᵢ.p, hs, ← mkPolyRefl cᵢ.p, hPrev, hᵢ
-            ]
+            mkAppN (← mkStepPrefix ``Stepwise.simp1 ``Stepwise.simp1C)
+              #[← mkPolyDecl prev.p, toExpr k₂, ← mkMonDecl m₂, ← mkPolyDecl c₂.p,
+                ← mkPolyDecl cᵢ.p, hs, ← mkPolyRefl cᵢ.p, hPrev, hᵢ]
           if i + 1 < steps.size then
             let addr := unsafe (ptrAddrUnsafe cᵢ).toUInt64 >>> 2
             modify fun s => { s with cache := s.cache.insert addr pr }
@@ -610,11 +605,10 @@ partial def _root_.Lean.Meta.Grind.Arith.CommRing.EqCnstr.toExprProof (c : EqCns
         return hPrev
       let h ← mkStepPrefix ``Stepwise.simp ``Stepwise.simpC
       let hs ← mkMergeHints (← mulConstR k₁ c₁.p) (← mulMonR k₂ m₂ c₂.p) c.p
-      return mkAppN h #[
-        toExpr k₁, ← mkPolyDecl c₁.p,
-        toExpr k₂, ← mkMonDecl m₂, ← mkPolyDecl c₂.p,
-        ← mkPolyDecl c.p, hs, ← mkPolyRefl c.p, ← toExprProof c₁, ← toExprProof c₂
-      ]
+      return mkAppN h
+        #[toExpr k₁, ← mkPolyDecl c₁.p,
+          toExpr k₂, ← mkMonDecl m₂, ← mkPolyDecl c₂.p,
+          ← mkPolyDecl c.p, hs, ← mkPolyRefl c.p, ← toExprProof c₁, ← toExprProof c₂]
     | .mul k c₁ =>
       let h ← mkStepPrefix ``Stepwise.mul ``Stepwise.mulC
       return mkApp5 h (← mkPolyDecl c₁.p) (toExpr k) (← mkPolyDecl c.p) eagerReflBoolTrue
@@ -683,11 +677,10 @@ private partial def derivToExprProof (d : PolyDerivation) : ProofM (Int × Poly 
         let (qᵢ, hᵢ) := leaves[i]!
         let hs ← mkMergeHints prev qᵢ pᵢ
         hPrev :=
-          mkAppN (← mkStepPrefix ``Stepwise.d_step1 ``Stepwise.d_step1C) #[
-            toExpr k, ← mkPolyDecl p₀, ← mkPolyDecl prev,
-            toExpr k₂, ← mkMonDecl m₂, ← mkPolyDecl c₂.p, ← mkPolyDecl pᵢ,
-            hs, ← mkPolyRefl pᵢ, hPrev, hᵢ
-          ]
+          mkAppN (← mkStepPrefix ``Stepwise.d_step1 ``Stepwise.d_step1C)
+            #[toExpr k, ← mkPolyDecl p₀, ← mkPolyDecl prev,
+              toExpr k₂, ← mkMonDecl m₂, ← mkPolyDecl c₂.p, ← mkPolyDecl pᵢ,
+              hs, ← mkPolyRefl pᵢ, hPrev, hᵢ]
         prev := pᵢ
       return (k, p₀, hPrev)
   | .step p k₁ d k₂ m₂ c₂ =>
@@ -714,17 +707,15 @@ where
       if k₁ == 1 then
         pure (← mkStepPrefix ``Stepwise.d_step1 ``Stepwise.d_step1C, d.p)
       else
-        pure (
-          mkApp (← mkStepPrefix ``Stepwise.d_stepk ``Stepwise.d_stepkC) (toExpr k₁),
-          ← mulConstR k₁ d.p
-        )
+        pure
+          ( mkApp (← mkStepPrefix ``Stepwise.d_stepk ``Stepwise.d_stepkC) (toExpr k₁),
+            ← mulConstR k₁ d.p )
     let hs ← mkMergeHints a (← mulMonR k₂ m₂ c₂.p) p
     let h :=
-      mkAppN h #[
-        toExpr k, ← mkPolyDecl p₀, ← mkPolyDecl d.p,
-        toExpr k₂, ← mkMonDecl m₂, ← mkPolyDecl c₂.p, ← mkPolyDecl p,
-        hs, ← mkPolyRefl p, h₁, h₂
-      ]
+      mkAppN h
+        #[toExpr k, ← mkPolyDecl p₀, ← mkPolyDecl d.p,
+          toExpr k₂, ← mkMonDecl m₂, ← mkPolyDecl c₂.p, ← mkPolyDecl p,
+          hs, ← mkPolyRefl p, h₁, h₂]
     return (k₁ * k, p₀, h)
 
 open Lean.Grind.CommRing in
@@ -771,10 +762,8 @@ private def mkKronImp? (lhs rhs : RingExpr) (d : PolyDerivation) (k : Int) (p₀
   return some (mkAppN pre
     (#[mkRawNatLit K, mkRawNatLit B, ← mkExprDecl lhs, ← mkExprDecl rhs, ← mkPolyDecl p₀, dp]
       ++ eArgs ++ kArgs
-      ++ #[
-        eagerReflBoolTrue, eagerReflBoolTrue,
-        mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Grind.CommRing.Poly) dp, h₁
-      ]))
+      ++ #[eagerReflBoolTrue, eagerReflBoolTrue,
+           mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Grind.CommRing.Poly) dp, h₁]))
 
 open Lean.Grind.CommRing in
 /--

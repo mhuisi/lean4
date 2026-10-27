@@ -49,13 +49,12 @@ public def Lean.FmtM.Result.ofFinalState (value : α) (s : Fmt.State) : Lean.Fmt
 public def Lean.FmtM.run (ctx : Fmt.Context) (act : FmtM α) : Except Fmt.Error (Result α) := do
   let r :=
     ReaderT.run act ctx
-      |>.run {
-        shareCommonState := default
-        freshTagId := Nat.zero
-        tags := ∅
-        missingFormatters := ∅
-        partialFormatters := ∅
-      }
+      |>.run
+        { shareCommonState := default
+          freshTagId := Nat.zero
+          tags := ∅
+          missingFormatters := ∅
+          partialFormatters := ∅ }
   match r with
   | .ok v s => return .ofFinalState v s
   | .error err _ => throw err
@@ -177,16 +176,14 @@ def hasPostfixFormatter (env : Environment) (opts : Options) (kind : SyntaxNodeK
     guard <| prec == lhsPrec
 
 /-- Parser aliases that do not produce any syntax, i.e. pretty printing hints and input checks. -/
-def emptyParserAliases : Array Name := #[
-  `ws, `noWs, `linebreak, `colGt, `colGe, `colEq, `lineEq, `ppSpace, `ppLine, `ppHardSpace,
-  `ppAllowUngrouped, `ppHardLineUnlessUngrouped
-]
+def emptyParserAliases : Array Name :=
+  #[`ws, `noWs, `linebreak, `colGt, `colGe, `colEq, `lineEq, `ppSpace, `ppLine, `ppHardSpace,
+    `ppAllowUngrouped, `ppHardLineUnlessUngrouped]
 
 /-- Parser aliases that do not produce any syntax beyond that of their argument. -/
-def transparentParserAliases : Array Name := #[
-  `atomic, `group, `patternIgnore, `withPosition, `withoutPosition, `withoutForbidden, `ppGroup,
-  `ppRealGroup, `ppRealFill, `ppIndent, `ppDedent, `ppDedentIfGrouped
-]
+def transparentParserAliases : Array Name :=
+  #[`atomic, `group, `patternIgnore, `withPosition, `withoutPosition, `withoutForbidden, `ppGroup,
+    `ppRealGroup, `ppRealFill, `ppIndent, `ppDedent, `ppDedentIfGrouped]
 
 /--
 Checks whether `descr` exclusively parses atoms, so that the syntax it produces is fully
@@ -390,32 +387,29 @@ public partial def fmtConditional (initialFmt : ConditionalFmt) : Fmt := fun stx
       | break
     let some e ← f elseBody
       | break
-    c := {
-      c with
-      elseIfs :=
-        c.elseIfs.push {
-          elseTk := elseTk
-          ifTk := e.ifTk
-          cond := e.cond
-          thenTk := e.thenTk
-          body := e.thenBody
-        }
-      elseTk? := e.elseTk?
-      elseBody? := e.elseBody?
-    }
+    c :=
+      { c with
+        elseIfs :=
+          c.elseIfs.push
+            { elseTk := elseTk
+              ifTk := e.ifTk
+              cond := e.cond
+              thenTk := e.thenTk
+              body := e.thenBody }
+        elseTk? := e.elseTk?
+        elseBody? := e.elseBody? }
   let ifTk ← fmt c.ifTk
   let cond := c.cond
   let thenTk ← fmt c.thenTk
   let thenBody ← fmt c.thenBody
   let elseIfs : Array (Layouts.Types.ElseIf) ←
     c.elseIfs.mapM fun ei =>
-      return {
-        elseTk := ← fmt ei.elseTk
-        ifTk := ← fmt ei.ifTk
-        cond := ei.cond
-        thenTk := ← fmt ei.thenTk
-        thenBlock := ← fmt ei.body
-      }
+      return
+        { elseTk := ← fmt ei.elseTk
+          ifTk := ← fmt ei.ifTk
+          cond := ei.cond
+          thenTk := ← fmt ei.thenTk
+          thenBlock := ← fmt ei.body }
   let elseTk? := (← c.elseTk?.mapM fmt).getD empty
   let elseBody? := (← c.elseBody?.mapM fmt).getD empty
   return Layouts.conditional ifTk cond thenTk thenBody elseIfs elseTk? elseBody? allowFlattening
@@ -545,10 +539,8 @@ public partial def fmtWith (f : Fmt) (formatterName : Name) : Fmt := fun stx => 
     if let .internal .partialFormatter := e then
       let r ← fmtRaw (isFallback := true) stx
       if let some range := stx.getRange? then
-        modify fun s => {
-          s with
-          partialFormatters := s.partialFormatters.insert range { stx, formatterName }
-        }
+        modify fun s =>
+          { s with partialFormatters := s.partialFormatters.insert range { stx, formatterName } }
       return r
     throw e
 
@@ -709,22 +701,24 @@ public def fmtSepArray (sepArray : Syntax.SepArray sep) : FmtM (TaggedDoc.SepArr
 
 public def fmtSepArrayWith (f : Fmt) (formatterName : Name) (sepArray : Syntax.SepArray sep)
     : FmtM (TaggedDoc.SepArray sep) := do
-  return ⟨← sepArray.elemsAndSeps.mapIdxM fun i d =>
-    if i % 2 = 0 then
-      fmtWith f formatterName d
-    else
-      fmt d⟩
+  return
+    ⟨ ← sepArray.elemsAndSeps.mapIdxM fun i d =>
+        if i % 2 = 0 then
+          fmtWith f formatterName d
+        else
+          fmt d ⟩
 
 public def fmtTSepArray (sepArray : Syntax.TSepArray ks sep) : FmtM (TaggedDoc.SepArray sep) := do
   return ⟨← sepArray.elemsAndSeps.mapM fmt⟩
 
 public def fmtTSepArrayWith (f : Fmt) (formatterName : Name) (sepArray : Syntax.TSepArray ks sep)
     : FmtM (TaggedDoc.SepArray sep) := do
-  return ⟨← sepArray.elemsAndSeps.mapIdxM fun i d =>
-    if i % 2 = 0 then
-      fmtWith f formatterName d
-    else
-      fmt d⟩
+  return
+    ⟨ ← sepArray.elemsAndSeps.mapIdxM fun i d =>
+        if i % 2 = 0 then
+          fmtWith f formatterName d
+        else
+          fmt d ⟩
 
 public def fmtLeadingWithRetainedNewlines (stx : Syntax) (minNewlines := 1) (maxNewlines := 2)
     : FmtM TaggedDoc := do

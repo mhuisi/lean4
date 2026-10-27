@@ -19,12 +19,11 @@ public section
 
 namespace Lean
 
-register_builtin_option tactic.customEliminators : Bool := {
-  defValue := true
-  descr :=
-    "enable using custom eliminators in the `induction` and `cases` tactics \
-      defined using the `@[induction_eliminator]` and `@[cases_eliminator]` attributes"
-}
+register_builtin_option tactic.customEliminators : Bool :=
+  { defValue := true
+    descr :=
+      "enable using custom eliminators in the `induction` and `cases` tactics \
+        defined using the `@[induction_eliminator]` and `@[cases_eliminator]` attributes" }
 
 end Lean
 
@@ -134,12 +133,11 @@ structure State where
 abbrev M := ReaderT Context $ StateRefT State TermElabM
 
 def addNewArg (arg : Expr) : M Unit :=
-  modify fun s => {
-    s with
-    argPos := s.argPos + 1
-    f := mkApp s.f arg
-    fType := s.fType.bindingBody!.instantiate1 arg
-  }
+  modify fun s =>
+    { s with
+      argPos := s.argPos + 1
+      f := mkApp s.f arg
+      fType := s.fType.bindingBody!.instantiate1 arg }
 
 /-- Return the binder name at `fType`. This method assumes `fType` is a function type. -/
 def getBindingName : M Name := return (← get).fType.bindingName!
@@ -391,45 +389,40 @@ where
         let finished ← IO.Promise.new
         let altPromises ← altStxs.mapM fun _ => IO.Promise.new
         let cancelTk? := (← readThe Core.Context).cancelTk?
-        tacSnap.new.resolve {
-          transformed.raw := {
-            -- save all relevant syntax here for comparison with next document version
-            stx := mkNullNode altStxs
-            diagnostics := .empty
-            inner? := none
-            finished := {
-              stx? := mkNullNode altStxs
-              task := finished.resultD default
-              cancelTk?
-              -- Do not cover up progress from `next` as no significant work happens after `next` and
-              -- before `finished` is resolved.
-              reportingRange := .skip
-            }
-          }
-          next :=
-            Array.zipWith
-              (fun stx prom => { stx? := some stx, task := prom.resultD default, cancelTk? })
-              altStxs altPromises
-        }
+        tacSnap.new.resolve
+          { transformed.raw :=
+              -- save all relevant syntax here for comparison with next document version
+              { stx := mkNullNode altStxs
+                diagnostics := .empty
+                inner? := none
+                finished :=
+                  { stx? := mkNullNode altStxs
+                    task := finished.resultD default
+                    cancelTk?
+                    -- Do not cover up progress from `next` as no significant work happens after `next` and
+                    -- before `finished` is resolved.
+                    reportingRange := .skip } }
+            next :=
+              Array.zipWith
+                (fun stx prom => { stx? := some stx, task := prom.resultD default, cancelTk? })
+                altStxs altPromises }
         let toAdmit ←
-          goWithIncremental <| altPromises.mapIdx fun i prom => {
-            old? := do
-              let old ← tacSnap.old?
-              -- waiting is fine here: this is the old version of the snapshot resolved above
-              -- immediately at the beginning of the tactic
-              -- (access to `raw` is fine here as there should be no transformation in this case
-              -- anyway, see `resolve` above)
-              let oldParsed := old.val.get.transformed.raw
-              -- use old version of `mkNullNode altsSyntax` as guard, will be compared with new
-              -- version and picked apart in `applyAltStx`
-              return ⟨oldParsed.stx, (← old.val.get.next[i]?)⟩
-            new := prom
-          }
-        finished.resolve {
-          diagnostics := .empty
-          state? := (← saveState)
-          moreSnaps := (← Core.getAndEmptySnapshotTasks)
-        }
+          goWithIncremental <| altPromises.mapIdx fun i prom =>
+            { old? := do
+                let old ← tacSnap.old?
+                -- waiting is fine here: this is the old version of the snapshot resolved above
+                -- immediately at the beginning of the tactic
+                -- (access to `raw` is fine here as there should be no transformation in this case
+                -- anyway, see `resolve` above)
+                let oldParsed := old.val.get.transformed.raw
+                -- use old version of `mkNullNode altsSyntax` as guard, will be compared with new
+                -- version and picked apart in `applyAltStx`
+                return ⟨oldParsed.stx, (← old.val.get.next[i]?)⟩
+              new := prom }
+        finished.resolve
+          { diagnostics := .empty
+            state? := (← saveState)
+            moreSnaps := (← Core.getAndEmptySnapshotTasks) }
         return toAdmit
 
     goWithIncremental #[]
@@ -506,15 +499,15 @@ where
             for x in subst.domain do
               if let .fvar y := subst.get x then
                 if let some decl ← x.findDecl? then
-                  Elab.pushInfoLeaf
-                    (.ofFVarAliasInfo { id := y, baseId := x, userName := decl.userName })
+                  Elab.pushInfoLeaf (.ofFVarAliasInfo
+                    { id := y, baseId := x, userName := decl.userName })
           altMVarId ←
             if info.provesMotive then
               let (generalized', altMVarId') ← altMVarId'.introNP generalized.size
               altMVarId'.withContext do
                 for x in generalized, y in generalized' do
-                  Elab.pushInfoLeaf
-                    (.ofFVarAliasInfo { id := y, baseId := x, userName := ← y.getUserName })
+                  Elab.pushInfoLeaf (.ofFVarAliasInfo
+                    { id := y, baseId := x, userName := ← y.getUserName })
               pure altMVarId'
             else
               pure altMVarId'
@@ -566,15 +559,15 @@ where
         for x in subst.domain do
           if let .fvar y := subst.get x then
             if let some decl ← x.findDecl? then
-              Elab.pushInfoLeaf
-                (.ofFVarAliasInfo { id := y, baseId := x, userName := decl.userName })
+              Elab.pushInfoLeaf (.ofFVarAliasInfo
+                { id := y, baseId := x, userName := decl.userName })
       altMVarId ←
         if info.provesMotive then
           let (generalized', altMVarId') ← altMVarId'.introNP generalized.size
           altMVarId'.withContext do
             for x in generalized, y in generalized' do
-              Elab.pushInfoLeaf
-                (.ofFVarAliasInfo { id := y, baseId := x, userName := ← y.getUserName })
+              Elab.pushInfoLeaf (.ofFVarAliasInfo
+                { id := y, baseId := x, userName := ← y.getUserName })
           pure altMVarId'
         else
           pure altMVarId'
@@ -720,12 +713,10 @@ These errors are provided with a custom error explanation.
 -/
 def checkForInductionWithNoAlts (tacticKind : String) (optInductionAlts : Syntax)
     : TacticM Unit := do
-  if let (.node _ `null #[
-        .node _ ``Parser.Tactic.inductionAlts #[
-          .atom _ "with",
-          .node _ `null #[.node _ ``Lean.Parser.Tactic.«unknown» #[var, .missing]]
-        ]
-      ]) :=
+  if let (.node _ `null
+        #[.node _ ``Parser.Tactic.inductionAlts
+            #[.atom _ "with",
+              .node _ `null #[.node _ ``Lean.Parser.Tactic.«unknown» #[var, .missing]]]]) :=
       optInductionAlts then
     -- Usually errors are suppressed for syntax containing `.missing` nodes, but this named error is
     -- listed in `Lean.Core.getAndEmptySnapshotTasks` as an error that ignores suppression.
@@ -1098,16 +1089,16 @@ def evalInduction : Tactic := fun stx =>
           return (targets, toTag, elimInfo)
       evalInductionCore stx elimInfo targets toTag
 
-register_builtin_option tactic.fun_induction.unfolding : Bool := {
-  defValue := true
-  descr :=
-    "if set to `true`, then `fun_induction` and `fun_cases` will use the \"unfolding \
-      functional induction (resp. cases) principle\" \
-      (`….induct_unfolding`/`….fun_cases_unfolding`), \
-      which will attempt to replace the function goal of interest in the goal with the appropriate \
-      right-hand-side in each case. If `false`, the regular \"functional induction principle\" \
-      (`….induct`/`….fun_cases`) is used."
-}
+register_builtin_option tactic.fun_induction.unfolding : Bool :=
+  { defValue := true
+    descr :=
+      "if set to `true`, then `fun_induction` and `fun_cases` will use the \"unfolding \
+        functional induction (resp. cases) principle\" \
+        (`….induct_unfolding`/`….fun_cases_unfolding`), \
+        which will attempt to replace the function goal of interest in the goal with the \
+        appropriate \
+        right-hand-side in each case. If `false`, the regular \"functional induction principle\" \
+        (`….induct`/`….fun_cases`) is used." }
 
 /--
 Elaborates the `foo args` of `fun_induction` or `fun_cases`, inferring the args if omitted from the goal

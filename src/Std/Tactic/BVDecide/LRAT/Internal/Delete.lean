@@ -16,10 +16,8 @@ open Std.Sat
 namespace State
 
 @[inline]
-def deleteOne (s : State) (idx : Nat) : State := {
-  s with
-  formula := s.formula.setIfInBounds (idx - 1) none
-}
+def deleteOne (s : State) (idx : Nat) : State :=
+  { s with formula := s.formula.setIfInBounds (idx - 1) none }
 
 theorem entails_deleteOne {s : State} : CNF.Entails s.toCNF (s.deleteOne idx).toCNF := by
   apply CNF.entails_of_all_mem

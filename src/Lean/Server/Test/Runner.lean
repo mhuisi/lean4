@@ -40,10 +40,9 @@ def normalizedRef (ref : RpcRef) : NormalizeM RpcRef := do
     modifyGet fun s =>
       if let some ptr := s.knownPtrs.get? ref.p then
         (ptr, s)
-      else (
-        s.freshPtr,
-        { s with freshPtr := s.freshPtr + 1, knownPtrs := s.knownPtrs.insert ref.p s.freshPtr }
-      )
+      else
+        ( s.freshPtr,
+          { s with freshPtr := s.freshPtr + 1, knownPtrs := s.knownPtrs.insert ref.p s.freshPtr } )
   return ⟨ptr⟩
 
 -- Test-only instances using the most recent version of the RPC wire format.
@@ -73,12 +72,11 @@ structure Hyp where
 deriving FromJson, ToJson
 
 def Hyp.normalize (h : Hyp) : NormalizeM Hyp := do
-  return {
-    h with
-    type := ← h.type.mapM (·.normalize)
-    fvarIds := #[]
-    val? := ← h.val?.mapM (fun val => val.mapM (·.normalize))
-  }
+  return
+    { h with
+      type := ← h.type.mapM (·.normalize)
+      fvarIds := #[]
+      val? := ← h.val?.mapM (fun val => val.mapM (·.normalize)) }
 
 structure InteractiveGoalCore where
   hyps : Array Hyp
@@ -87,12 +85,11 @@ structure InteractiveGoalCore where
 deriving FromJson, ToJson
 
 def InteractiveGoalCore.normalize (g : InteractiveGoalCore) : NormalizeM InteractiveGoalCore := do
-  return {
-    g with
-    hyps := ← g.hyps.mapM (·.normalize)
-    type := ← g.type.mapM (·.normalize)
-    ctx := ← normalizedRef g.ctx
-  }
+  return
+    { g with
+      hyps := ← g.hyps.mapM (·.normalize)
+      type := ← g.type.mapM (·.normalize)
+      ctx := ← normalizedRef g.ctx }
 
 structure InteractiveGoal extends InteractiveGoalCore where
   userName? : Option String
@@ -103,11 +100,10 @@ structure InteractiveGoal extends InteractiveGoalCore where
 deriving FromJson, ToJson
 
 def InteractiveGoal.normalize (goal : InteractiveGoal) : NormalizeM InteractiveGoal := do
-  return {
-    goal with
-    mvarId := { name := .anonymous }
-    toInteractiveGoalCore := ← goal.toInteractiveGoalCore.normalize
-  }
+  return
+    { goal with
+      mvarId := { name := .anonymous }
+      toInteractiveGoalCore := ← goal.toInteractiveGoalCore.normalize }
 
 structure InteractiveGoals where
   goals : Array InteractiveGoal
@@ -122,11 +118,10 @@ structure InteractiveTermGoal extends InteractiveGoalCore where
 deriving FromJson, ToJson
 
 def InteractiveTermGoal.normalize (g : InteractiveTermGoal) : NormalizeM InteractiveTermGoal := do
-  return {
-    g with
-    term := ← normalizedRef g.term
-    toInteractiveGoalCore := ← g.toInteractiveGoalCore.normalize
-  }
+  return
+    { g with
+      term := ← normalizedRef g.term
+      toInteractiveGoalCore := ← g.toInteractiveGoalCore.normalize }
 
 structure WidgetInstance where
   id : Name
@@ -166,10 +161,8 @@ partial def MsgEmbed.normalize (m : MsgEmbed) : NormalizeM MsgEmbed := do
 
 abbrev InteractiveDiagnostic := Lsp.DiagnosticWith (Widget.TaggedText MsgEmbed)
 
-def InteractiveDiagnostic.normalize (d : InteractiveDiagnostic) : InteractiveDiagnostic := {
-  d with
-  message := d.message.mapM MsgEmbed.normalize |>.run {}
-}
+def InteractiveDiagnostic.normalize (d : InteractiveDiagnostic) : InteractiveDiagnostic :=
+  { d with message := d.message.mapM MsgEmbed.normalize |>.run {} }
 
 def normalizeInteractiveDiagnostics (diags : Array InteractiveDiagnostic)
     : Array InteractiveDiagnostic :=
@@ -191,11 +184,11 @@ deriving FromJson, ToJson
 
 def InfoPopup.normalize (p : InfoPopup) : InfoPopup :=
   NormalizeM.run (s := {}) do
-    return {
-      p with
-      type := ← p.type.mapM (fun type => type.mapM (·.normalize))
-      exprExplicit := ← p.exprExplicit.mapM (fun exprExplicit => exprExplicit.mapM (·.normalize))
-    }
+    return
+      { p with
+        type := ← p.type.mapM (fun type => type.mapM (·.normalize))
+        exprExplicit :=
+          ← p.exprExplicit.mapM (fun exprExplicit => exprExplicit.mapM (·.normalize)) }
 
 structure GetGoToLocationParams where
   kind : GoToKind
@@ -260,16 +253,14 @@ instance : FromJson Widget.PanelWidgetInstance where
 deriving instance FromJson for Widget.GetWidgetsResponse
 
 def _root_.Lean.Widget.GetWidgetsResponse.debugJson (r : Widget.GetWidgetsResponse) : Json :=
-  Json.mkObj [(
-    "widgets",
-    Json.arr (r.widgets.map fun w =>
-      Json.mkObj [
-        ("id", toJson w.id),
-        ("javascriptHash", toJson w.javascriptHash),
-        ("props", w.props.run' {}),
-        ("range", toJson w.range?)
-      ])
-  )]
+  Json.mkObj
+    [ ( "widgets",
+        Json.arr (r.widgets.map fun w =>
+          Json.mkObj
+            [ ("id", toJson w.id),
+              ("javascriptHash", toJson w.javascriptHash),
+              ("props", w.props.run' {}),
+              ("range", toJson w.range?) ]) ) ]
 
 open Std.Internal.Parsec in
 open Std.Internal.Parsec.String in
@@ -382,13 +373,12 @@ def rpcRequest (method : Name) [ToJson α] (p : α) (β : Type) [FromJson β] : 
     let connectParams := RpcConnectParams.mk (← get).uri
     let r ← request "$/lean/rpc/connect" connectParams RpcConnected
     modify fun s => { s with rpcSessionId := r.sessionId }
-  let callParams : RpcCallParams := {
-    params := toJson p
-    textDocument := { uri := (← get).uri }
-    position := (← get).pos
-    sessionId := (← get).rpcSessionId.get!
-    method := method
-  }
+  let callParams : RpcCallParams :=
+    { params := toJson p
+      textDocument := { uri := (← get).uri }
+      position := (← get).pos
+      sessionId := (← get).rpcSessionId.get!
+      method := method }
   request "$/lean/rpc/call" callParams β
 
 def rpcRequestWithLoggedResponse
@@ -415,14 +405,13 @@ def logRpcResponse
   discard <| rpcRequestWithLoggedResponse method p β logParam normalize
 
 def reset : RunnerM Unit :=
-  modify fun s => {
-    s with
-    synced := true
-    lineNo := 0
-    lastActualLineNo := 0
-    versionNo := 2
-    rpcSessionId := none
-  }
+  modify fun s =>
+    { s with
+      synced := true
+      lineNo := 0
+      lastActualLineNo := 0
+      versionNo := 2
+      rpcSessionId := none }
 
 def skipLineWithDirective : RunnerM Unit := modify fun s => { s with lineNo := s.lineNo + 1 }
 
@@ -465,14 +454,12 @@ def processEdit : RunnerM Unit := do
     | throw <| IO.userError s!"failed to parse {delete}"
   let some insert := Syntax.decodeStrLit insert
     | throw <| IO.userError s!"failed to parse {insert}"
-  let params : DidChangeTextDocumentParams := {
-    textDocument := { uri := s.uri, version? := s.versionNo }
-    contentChanges := #[
-      TextDocumentContentChangeEvent.rangeChange
-        { start := s.pos, «end» := { s.pos with character := s.pos.character + delete.length } }
-        insert
-    ]
-  }
+  let params : DidChangeTextDocumentParams :=
+    { textDocument := { uri := s.uri, version? := s.versionNo }
+      contentChanges :=
+        #[TextDocumentContentChangeEvent.rangeChange
+            { start := s.pos, «end» := { s.pos with character := s.pos.character + delete.length } }
+            insert] }
   let params := toJson params
   Ipc.writeNotification ⟨"textDocument/didChange", params⟩
   advanceVersionNo
@@ -549,9 +536,8 @@ def processCodeAction : RunnerM Unit := do
 def processInteractiveDiagnostics : RunnerM Unit := do
   let isExpandTraces := (← get).params == "expandTraces"
   let highlightMatchesQuery? := (← get).params.dropPrefix? "highlightMatches:"
-  let params : Widget.GetInteractiveDiagnosticsParams := {
-    lineRange? := some ⟨0, (← get).pos.line + 1⟩
-  }
+  let params : Widget.GetInteractiveDiagnosticsParams :=
+    { lineRange? := some ⟨0, (← get).pos.line + 1⟩ }
   printOutputLn (toJson params)
   let r ←
     rpcRequest `Lean.Widget.getInteractiveDiagnostics params (Array Client.InteractiveDiagnostic)
@@ -563,11 +549,10 @@ def processInteractiveDiagnostics : RunnerM Unit := do
     printOutputLn (toJson r)
   else if let some highlightMatchesQuery := highlightMatchesQuery? then
     for diag in r do
-      let params := {
-        query := highlightMatchesQuery.toString
-        msg := diag.message
-        : Client.HighlightMatchesParams
-      }
+      let params :=
+        { query := highlightMatchesQuery.toString
+          msg := diag.message
+          : Client.HighlightMatchesParams }
       logRpcResponse `Lean.Widget.highlightMatches params
         (β := Widget.TaggedText Client.HighlightedMsgEmbed)
         (normalize := fun msg => msg.mapM (·.normalize))
@@ -577,10 +562,8 @@ def processInteractiveDiagnostics : RunnerM Unit := do
 def processGoals : RunnerM Unit := do
   let withPopups := (← get).params == "withPopups"
   let withGoToLoc := (← get).params == "withGoToLoc"
-  let params : Lsp.PlainGoalParams := {
-    textDocument := { uri := (← get).uri }
-    position := (← get).pos
-  }
+  let params : Lsp.PlainGoalParams :=
+    { textDocument := { uri := (← get).uri }, position := (← get).pos }
   let r ←
     rpcRequestWithLoggedResponse `Lean.Widget.getInteractiveGoals params Client.InteractiveGoals
       (normalize := Client.InteractiveGoals.normalize)
@@ -608,10 +591,8 @@ def processGoals : RunnerM Unit := do
         logRpcResponse `Lean.Widget.getGoToLocation params
 
 def processTermGoal : RunnerM Unit := do
-  let params : Lsp.PlainTermGoalParams := {
-    textDocument := { uri := (← get).uri }
-    position := (← get).pos
-  }
+  let params : Lsp.PlainTermGoalParams :=
+    { textDocument := { uri := (← get).uri }, position := (← get).pos }
   logRpcResponse `Lean.Widget.getInteractiveTermGoal params (β := Option Client.InteractiveTermGoal)
     (normalize := fun g? => g?.mapM (·.normalize))
 
@@ -619,10 +600,8 @@ def processWidgets : RunnerM Unit := do
   let r ← rpcRequest `Lean.Widget.getWidgets (← get).pos Lean.Widget.GetWidgetsResponse
   printOutputLn r.debugJson
   for w in r.widgets do
-    let params : Lean.Widget.GetWidgetSourceParams := {
-      pos := (← get).pos
-      hash := w.javascriptHash
-    }
+    let params : Lean.Widget.GetWidgetSourceParams :=
+      { pos := (← get).pos, hash := w.javascriptHash }
     logRpcResponse `Lean.Widget.getWidgetSource params
 
 def processCompletion : RunnerM Unit := do
@@ -649,11 +628,10 @@ def processOutgoingCallHierarchy : RunnerM Unit := do
   set <| { s with requestNo := callHierarchyRequestNo }
 
 def processReferences : RunnerM Unit := do
-  let p : ReferenceParams := {
-    textDocument := { uri := (← get).uri }
-    position := (← get).pos
-    context := { includeDeclaration := true }
-  }
+  let p : ReferenceParams :=
+    { textDocument := { uri := (← get).uri }
+      position := (← get).pos
+      context := { includeDeclaration := true } }
   logResponse "textDocument/references" p
 
 def processSymbols : RunnerM Unit := do
@@ -675,10 +653,8 @@ def processModuleHierarchyImportedBy : RunnerM Unit := do
   set <| { s with requestNo := moduleHierarchyRequestNo }
 
 def processInlayHints : RunnerM Unit := do
-  let p : InlayHintParams := {
-    textDocument := { uri := (← get).uri }
-    range := { start := ⟨0, 0⟩, «end» := (← get).pos }
-  }
+  let p : InlayHintParams :=
+    { textDocument := { uri := (← get).uri }, range := { start := ⟨0, 0⟩, «end» := (← get).pos } }
   logResponse "textDocument/inlayHint" p
 
 def processGenericRequest : RunnerM Unit := do
@@ -765,42 +741,36 @@ partial def main (args : List String) : IO Unit := do
   -- We want `dbg_trace` tactics to write directly to stderr instead of being caught in reuse
   Ipc.runWith ipcCmd ipcArgs do
     let initializationOptions? := some { hasWidgets? := some true, logCfg? := none }
-    let capabilities := {
-      textDocument? :=
-        some { completion? := some { completionItem? := some { insertReplaceSupport? := true } } }
-      lean? :=
-        some {
-          incrementalDiagnosticSupport? := some true
-          silentDiagnosticSupport? := some true
-          rpcWireFormat? := some .v1
-        }
-    }
+    let capabilities :=
+      { textDocument? :=
+          some { completion? := some { completionItem? := some { insertReplaceSupport? := true } } }
+        lean? :=
+          some
+            { incrementalDiagnosticSupport? := some true
+              silentDiagnosticSupport? := some true
+              rpcWireFormat? := some .v1 } }
     Ipc.writeRequest ⟨0, "initialize", { initializationOptions?, capabilities : InitializeParams }⟩
     let _ ← Ipc.readResponseAs 0 InitializeResult
     Ipc.writeNotification ⟨"initialized", InitializedParams.mk⟩
 
     let text ← IO.FS.readFile path
-    let init : RunnerState := {
-      uri
-      synced := true
-      versionNo := 2
-      rpcSessionId := none
-      lineNo := 0
-      lastActualLineNo := 0
-      pos := ⟨0, 0⟩
-      method := ""
-      params := ""
-      requestNo := 1
-    }
+    let init : RunnerState :=
+      { uri
+        synced := true
+        versionNo := 2
+        rpcSessionId := none
+        lineNo := 0
+        lastActualLineNo := 0
+        pos := ⟨0, 0⟩
+        method := ""
+        params := ""
+        requestNo := 1 }
     RunnerM.run (init := init) do
       for text in text.split "-- RESET" do
-        Ipc.writeNotification ⟨
-          "textDocument/didOpen",
-          {
-            textDocument := { uri := uri, languageId := "lean", version := 1, text := text.copy }
-            : DidOpenTextDocumentParams
-          }
-        ⟩
+        Ipc.writeNotification
+          ⟨ "textDocument/didOpen",
+            { textDocument := { uri := uri, languageId := "lean", version := 1, text := text.copy }
+              : DidOpenTextDocumentParams } ⟩
         reset
         for line in text.split '\n' do
           processLine line.copy

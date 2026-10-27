@@ -16,12 +16,11 @@ open Meta
 
 partial def addSmartUnfoldingDefAux (preDef : PreDefinition) (recFns : Array (Name × Nat))
     : MetaM PreDefinition := do
-  return {
-    preDef with
-    declName := mkSmartUnfoldingNameFor preDef.declName
-    value := (← visit preDef.value)
-    modifiers := default
-  }
+  return
+    { preDef with
+      declName := mkSmartUnfoldingNameFor preDef.declName
+      value := (← visit preDef.value)
+      modifiers := default }
 where
   /--
   Auxiliary method for annotating `match`-alternatives with `markSmartUnfoldingMatch` and `markSmartUnfoldingMatchAlt`.

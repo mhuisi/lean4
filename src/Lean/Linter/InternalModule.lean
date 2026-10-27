@@ -27,12 +27,11 @@ This linter is off by default and is not intended for use by non-core projects. 
 of the `linter.coreInternal` set, so it can also be enabled via `set_option linter.coreInternal
 true`.
 -/
-register_builtin_option linter.coreInternal.internalModule : Bool := {
-  defValue := false
-  descr :=
-    "enable the `internalModule` linter, which warns when a module considered \
-      \"internal\" declares a declaration that is not itself \"internal\"."
-}
+register_builtin_option linter.coreInternal.internalModule : Bool :=
+  { defValue := false
+    descr :=
+      "enable the `internalModule` linter, which warns when a module considered \
+        \"internal\" declares a declaration that is not itself \"internal\"." }
 
 namespace InternalModule
 
@@ -46,11 +45,10 @@ def hasInternalNameComponent : Name → Bool
   | .anonymous => false
 
 /-- A module is internal if it is (a submodule of) one of these modules. -/
-def internalModulePrefixes : Array Name := #[
-  `Init.Omega, `Init.Grind, `Lean, `Lake,
-  -- only used by `tests/pkg/internal_module_linter`
-  `IMLinterTest
-]
+def internalModulePrefixes : Array Name :=
+  #[`Init.Omega, `Init.Grind, `Lean, `Lake,
+    -- only used by `tests/pkg/internal_module_linter`
+    `IMLinterTest]
 
 /-- Whether `mod` is an "internal" module, i.e. one whose declarations should stay internal. -/
 def isInternalModule (mod : Name) : Bool :=

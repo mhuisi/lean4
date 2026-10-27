@@ -80,11 +80,10 @@ private def throwCtorExpected {α} (ident : Option Syntax) : M α := do
   let oneOfThese := if h : candidates.size = 1 then m!"`{candidates[0]}`" else m!"one of these"
   let hint ←
     m!"Using {oneOfThese} would be valid:".hint (ref? := idStx)
-      (candidates.map fun candidate => {
-        suggestion := mkIdent candidate
-        toCodeActionTitle? := .some (s!"Change to {·}")
-        messageData? := .some m!"`{.ofConstName candidate}`"
-      })
+      (candidates.map fun candidate =>
+        { suggestion := mkIdent candidate
+          toCodeActionTitle? := .some (s!"Change to {·}")
+          messageData? := .some m!"`{.ofConstName candidate}`" })
   throwError message ++ hint
 
 private def throwInvalidPattern {α} : M α := throwError "Invalid pattern"
@@ -125,13 +124,12 @@ private def throwInvalidNamedArgs (ctx : Context) (h : !ctx.namedArgs.isEmpty) :
   let hint ← do
     if replacementSpan.getHeadInfo matches .original .. then
       let suggestions :=
-        unused.map fun validName => {
-          suggestion := validName.toString
-          span? := replacementSpan
-          preInfo? := some s!"`{validName}`: "
-          toCodeActionTitle? :=
-            some fun s => s!"Change argument name `{firstNamedArg.name}` to `{s}`"
-        }
+        unused.map fun validName =>
+          { suggestion := validName.toString
+            span? := replacementSpan
+            preInfo? := some s!"`{validName}`: "
+            toCodeActionTitle? :=
+              some fun s => s!"Change argument name `{firstNamedArg.name}` to `{s}`" }
       let hintMsg := m!"Replace `{firstNamedArg.name}` with one of the following parameter names:"
       MessageData.hint (forceList := true) hintMsg suggestions
     else
@@ -171,11 +169,10 @@ where
       let ((name, _), ctx') := getNextParam ctx
       ctx := ctx'
       if let some idx := ctx'.namedArgs.findFinIdx? fun namedArg => namedArg.name == name then
-        ctx := {
-          ctx with
-          namedArgs := ctx.namedArgs.eraseIdx idx
-          usedNames := ctx.usedNames.insert name
-        }
+        ctx :=
+          { ctx with
+            namedArgs := ctx.namedArgs.eraseIdx idx
+            usedNames := ctx.usedNames.insert name }
     if h : !ctx.namedArgs.isEmpty then
       throwInvalidNamedArgs ctx h
 
@@ -310,10 +307,8 @@ partial def collect (stx : Syntax) : M Syntax :=
       Only one parser produces `Term.structInst`, so a `choice` node has at most one such alternative.
       -/
       if let some idx := args.findIdx? (·.isOfKind ``Parser.Term.structInst) then
-        modify fun s => {
-          s with
-          choiceResolutions := s.choiceResolutions.push { stx, chosenAltIdx := idx }
-        }
+        modify fun s =>
+          { s with choiceResolutions := s.choiceResolutions.push { stx, chosenAltIdx := idx } }
         return ← collect args[idx]!
       let stateSaved ← get
       let arg0 ← collect args[0]!
@@ -426,11 +421,10 @@ where
       match ctx.namedArgs.findFinIdx? fun namedArg => namedArg.name == d.1 with
       | some idx =>
         let arg := ctx.namedArgs[idx]
-        let ctx := {
-          ctx with
-          namedArgs := ctx.namedArgs.eraseIdx idx
-          usedNames := ctx.usedNames.insert arg.name
-        }
+        let ctx :=
+          { ctx with
+            namedArgs := ctx.namedArgs.eraseIdx idx
+            usedNames := ctx.usedNames.insert arg.name }
         let ctx ← pushNewArg accessible ctx arg.val
         processCtorAppContext ctx
       | none =>
@@ -464,26 +458,24 @@ where
           return (d.userName, d.binderInfo)
     match fInfo with
     | ConstantInfo.ctorInfo val =>
-      processCtorAppContext {
-        funId := fId
-        explicit := explicit
-        ctorVal? := val
-        paramDecls := paramDecls
-        namedArgs := namedArgs
-        args := args
-        ellipsis := ellipsis
-      }
-    | _ =>
-      if hasMatchPatternAttribute (← getEnv) fName then
-        processCtorAppContext {
-          funId := fId
+      processCtorAppContext
+        { funId := fId
           explicit := explicit
-          ctorVal? := none
+          ctorVal? := val
           paramDecls := paramDecls
           namedArgs := namedArgs
           args := args
-          ellipsis := ellipsis
-        }
+          ellipsis := ellipsis }
+    | _ =>
+      if hasMatchPatternAttribute (← getEnv) fName then
+        processCtorAppContext
+          { funId := fId
+            explicit := explicit
+            ctorVal? := none
+            paramDecls := paramDecls
+            namedArgs := namedArgs
+            args := args
+            ellipsis := ellipsis }
       else
         throwCtorExpected (some fId)
 

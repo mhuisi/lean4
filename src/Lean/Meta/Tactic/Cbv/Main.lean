@@ -106,15 +106,12 @@ is marked done regardless of whether a rule fires. Otherwise it tries in order:
 namespace Lean.Meta.Tactic.Cbv
 open Lean.Meta.Sym.Simp
 
-public register_builtin_option cbv.warning : Bool := {
-  defValue := false
-  descr := "When enabled, displays a warning that the `cbv` tactic is being used."
-}
+public register_builtin_option cbv.warning : Bool :=
+  { defValue := false
+    descr := "When enabled, displays a warning that the `cbv` tactic is being used." }
 
-public register_builtin_option cbv.maxSteps : Nat := {
-  defValue := 100_000
-  descr := "Controls the maximum number of steps for the `cbv` tactic."
-}
+public register_builtin_option cbv.maxSteps : Nat :=
+  { defValue := 100_000, descr := "Controls the maximum number of steps for the `cbv` tactic." }
 
 def tryEquations : Simproc := fun e => do
   unless e.isApp do
@@ -407,10 +404,8 @@ def cbvPost (simprocs : CbvSimprocs) : Simproc :=
   evalGround <|> cbvSimprocDispatch simprocs.eval simprocs.erased <|> handleApp
     <|> cbvSimprocDispatch simprocs.post simprocs.erased
 
-def mkCbvMethods (simprocs : CbvSimprocs) : Methods := {
-  pre := cbvPre simprocs
-  post := cbvPost simprocs
-}
+def mkCbvMethods (simprocs : CbvSimprocs) : Methods :=
+  { pre := cbvPre simprocs, post := cbvPost simprocs }
 
 /--
 Core `cbv` evaluator. It disables the `shareCommon` invariant checks for the duration

@@ -409,10 +409,8 @@ theorem Poly.divConst_k_eq (p : Poly) (a : Int) : p.divConst_k a = p.divConst a 
 
 noncomputable def Poly.substInv_k (p : Poly) (x : Var) (c : Nat) : PolyQ :=
   Bool.rec
-    ⟨
-      (p.mulConst_k (Int.ofNat (Nat.pow c (p.maxDegreeOf_k x)))).cancelVar_k (Int.ofNat c) x,
-      Nat.pow c (p.maxDegreeOf_k x)
-    ⟩
+    ⟨ (p.mulConst_k (Int.ofNat (Nat.pow c (p.maxDegreeOf_k x)))).cancelVar_k (Int.ofNat c) x,
+      Nat.pow c (p.maxDegreeOf_k x) ⟩
     ⟨p, 1⟩ (Nat.beq c 0)
 
 theorem Poly.substInv_k_eq (p : Poly) (x : Var) (c : Nat) : p.substInv_k x c = p.substInv x c := by
@@ -435,10 +433,8 @@ theorem PolyQ.substInv_k_eq (q : PolyQ) (x : Var) (c : Nat)
 noncomputable def PolyQ.reduce_k (q : PolyQ) : PolyQ :=
   Bool.rec
     (Bool.rec q
-      ⟨
-        q.num.divConst_k (Int.ofNat (Nat.gcd q.num.gcdCoeffs_k q.den)),
-        Nat.div q.den (Nat.gcd q.num.gcdCoeffs_k q.den)
-      ⟩
+      ⟨ q.num.divConst_k (Int.ofNat (Nat.gcd q.num.gcdCoeffs_k q.den)),
+        Nat.div q.den (Nat.gcd q.num.gcdCoeffs_k q.den) ⟩
       (((q.num.divConst_k (Int.ofNat (Nat.gcd q.num.gcdCoeffs_k q.den))).mulConst_k
             (Int.ofNat (Nat.gcd q.num.gcdCoeffs_k q.den))).beq'
           q.num
@@ -631,10 +627,8 @@ noncomputable def Poly.cancelVarB_k (c : Int) (x : Var) (p : Poly) : Poly :=
 
 noncomputable def Poly.substInvB_k (p : Poly) (x : Var) (c : Nat) : PolyQ :=
   Bool.rec
-    ⟨
-      (p.mulConst_k (Int.ofNat (Nat.pow c (p.maxDegreeOf_k x)))).cancelVarB_k (Int.ofNat c) x,
-      Nat.pow c (p.maxDegreeOf_k x)
-    ⟩
+    ⟨ (p.mulConst_k (Int.ofNat (Nat.pow c (p.maxDegreeOf_k x)))).cancelVarB_k (Int.ofNat c) x,
+      Nat.pow c (p.maxDegreeOf_k x) ⟩
     ⟨p, 1⟩ (Nat.beq c 0)
 
 noncomputable def PolyQ.substInvB_k (q : PolyQ) (x : Var) (c : Nat) : PolyQ :=
@@ -895,11 +889,10 @@ private theorem denote_sub_of_normQ_cert
       d ≠ 0
         ∧ lhs.denote ctx - rhs.denote ctx = (lhs'.denote ctx - rhs'.denote ctx) * (d : α)⁻¹ := by
   simp only [normQ_cert, Poly.beq'_eq] at h
-  refine ⟨
-    (((lhs.sub rhs).toPolyX_k bal).toPolyQX_k bal invs ainvs).den,
-    Poly.toPolyQX_k_den_ne_zero bal _ invs ainvs,
-    ?_
-  ⟩
+  refine
+    ⟨ (((lhs.sub rhs).toPolyX_k bal).toPolyQX_k bal invs ainvs).den,
+      Poly.toPolyQX_k_den_ne_zero bal _ invs ainvs,
+      ?_ ⟩
   have h₁ := Poly.denote_toPolyQX_k ctx bal ((lhs.sub rhs).toPolyX_k bal) invs ainvs hok hoka
   have h₂ := Expr.denote_toPolyX_k ctx bal (lhs'.sub rhs')
   rw [Expr.denote_toPolyX_k] at h₁

@@ -77,10 +77,9 @@ where
 If `warn.sorry` is set to true, then, so long as the message log does not already have any errors,
 declarations with `sorryAx` generate the "declaration uses `sorry`" warning.
 -/
-register_builtin_option warn.sorry : Bool := {
-  defValue := true
-  descr := "warn about uses of `sorry` in declarations added to the environment"
-}
+register_builtin_option warn.sorry : Bool :=
+  { defValue := true
+    descr := "warn about uses of `sorry` in declarations added to the environment" }
 
 /--
 If the `warn.sorry` option is set to true and there are no errors in the log already,
@@ -197,12 +196,8 @@ private def addDeclCore (decl : Declaration) (forceExpose : Bool) : CoreM Unit :
       -- Do not display reporting range; most uses of `addDecl` are for registering auxiliary decls
       -- users should not worry about and other callers can add a separate task with ranges
       -- themselves, see `MutualDef`.
-      Core.logSnapshotTask {
-        stx? := none
-        reportingRange := .skip
-        task := t
-        cancelTk? := cancelTk
-      }
+      Core.logSnapshotTask
+        { stx? := none, reportingRange := .skip, task := t, cancelTk? := cancelTk }
     else
       try
         doAddAndCommit
@@ -229,12 +224,8 @@ where
     match decl with
     | .defnDecl d | .thmDecl d =>
       let fallbackDecl :=
-        .axiomDecl {
-          name := d.name
-          levelParams := d.levelParams
-          type := d.type
-          isUnsafe := false
-        }
+        .axiomDecl
+          { name := d.name, levelParams := d.levelParams, type := d.type, isUnsafe := false }
       try
         let env ←
           (← getEnv).addDeclAux (← getOptions) fallbackDecl (← read).cancelTk?
@@ -249,12 +240,11 @@ where
     -- otherwise, add as axiom with type `sorry`
     for n in decl.getNames do
       let fallbackDecl :=
-        .axiomDecl {
-          name := n
-          levelParams := []
-          type := mkApp2 (mkConst ``sorryAx [1]) (mkSort 0) (mkConst ``true)
-          isUnsafe := false
-        }
+        .axiomDecl
+          { name := n
+            levelParams := []
+            type := mkApp2 (mkConst ``sorryAx [1]) (mkSort 0) (mkConst ``true)
+            isUnsafe := false }
       try
         let env ←
           (← getEnv).addDeclAux (← getOptions) fallbackDecl (← read).cancelTk?

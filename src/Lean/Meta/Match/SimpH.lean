@@ -47,13 +47,12 @@ replace it everywhere with `lhs`.
 def substRHS (eq : FVarId) (rhs : FVarId) : M Unit := do
   assert! (← get).xs.contains rhs
   let (subst, mvarId) ← substCore (← get).mvarId eq (symm := true)
-  modify fun s => {
-    s with
-    mvarId
-    xs := applySubst subst (s.xs.erase rhs)
-    eqs := applySubst subst s.eqs
-    eqsNew := applySubst subst s.eqsNew
-  }
+  modify fun s =>
+    { s with
+      mvarId
+      xs := applySubst subst (s.xs.erase rhs)
+      eqs := applySubst subst s.eqs
+      eqsNew := applySubst subst s.eqsNew }
 
 def isDone : M Bool := return (← get).eqs.isEmpty
 

@@ -89,10 +89,8 @@ def withoutExposeFromCtors (typeName : Name) (cont : CommandElabM α) : CommandE
         throwError "cannot use `deriving ... @[expose]` with `{.ofConstName typeName}` as it has \
           one or more private constructors"
     withScope
-      (fun sc => {
-        sc with
-        attrs := sc.attrs.filter (! · matches `(Parser.Term.attrInstance| expose))
-      })
+      (fun sc =>
+        { sc with attrs := sc.attrs.filter (! · matches `(Parser.Term.attrInstance| expose)) })
       cont
   else
     cont
@@ -127,12 +125,11 @@ def mkContext (className : Name) (fnPrefix : String) (typeName : Name) (supports
       auxFunNames := auxFunNames.push (instName ++ .mkSimple s!"{fnPrefix}_{i + 1}")
   trace[Elab.Deriving] "instName: {instName} auxFunNames: {auxFunNames}"
   let usePartial := indVal.isNested || typeInfos.size > 1 || (indVal.isRec && !supportsRec)
-  return {
-    instName := instName
-    typeInfos := typeInfos
-    auxFunNames := auxFunNames
-    usePartial := usePartial
-  }
+  return
+    { instName := instName
+      typeInfos := typeInfos
+      auxFunNames := auxFunNames
+      usePartial := usePartial }
 
 def mkLocalInstanceLetDecls (ctx : Context) (className : Name) (argNames : Array Name)
     : TermElabM (Array (TSyntax ``Parser.Term.letDecl)) := do
@@ -199,12 +196,11 @@ def mkHeader (className : Name) (arity : Nat) (indVal : InductiveVal) : TermElab
   let binders :=
     binders ++ (← targetNames.mapM fun targetName =>
       `(explicitBinderF| ($(mkIdent targetName) : $targetType)))
-  return {
-    binders := binders
-    argNames := argNames
-    targetNames := targetNames
-    targetType := targetType
-  }
+  return
+    { binders := binders
+      argNames := argNames
+      targetNames := targetNames
+      targetType := targetType }
 
 def mkDiscrs (header : Header) (indVal : InductiveVal)
     : TermElabM (Array (TSyntax ``Parser.Term.matchDiscr)) := do

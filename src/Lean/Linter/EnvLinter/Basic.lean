@@ -62,10 +62,9 @@ def getEnvLinter (optName declName : Name) : CoreM NamedEnvLinter :=
 /-- Defines the `envLinterExt` extension for adding an environment linter to the default set. -/
 builtin_initialize envLinterExt : SimplePersistentEnvExtension (Name × Name) (NameMap Name) ←
   let addEntryFn := fun m (optName, declName) => m.insert optName declName
-  registerSimplePersistentEnvExtension {
-    addImportedFn := fun nss => nss.foldl (init := {}) fun m ns => ns.foldl (init := m) addEntryFn
-    addEntryFn
-  }
+  registerSimplePersistentEnvExtension
+    { addImportedFn := fun nss => nss.foldl (init := {}) fun m ns => ns.foldl (init := m) addEntryFn
+      addEntryFn }
 
 /--
 Defines the `builtin_env_linter` attribute for registering an environment linter.
@@ -76,36 +75,35 @@ associated with it by providing the option name in the attribute, i.e.
 syntax (name := builtin_env_linter) "builtin_env_linter " ident : attr
 
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `builtin_env_linter
-    descr := "Use this declaration as a linting test in `lake builtin-lint`"
-    add := fun decl stx kind => do
-      unless kind == .global do
-        throwError "invalid attribute `builtin_env_linter`, must be global"
-      let optName ←
-        match stx with
-        | `(attr| builtin_env_linter $id:ident) => pure id.getId
-        | _ => throwError "invalid `builtin_env_linter` syntax: expected an option name argument"
-      let env ← getEnv
-      unless env.contains optName do
-        throwError "invalid attribute `builtin_env_linter`, no constant named `{optName}`; \
-          did you forget `register_builtin_option {optName} : Bool := ...`?"
-      if let some declName := (envLinterExt.getState env).find? optName then
-        Elab.addConstInfo stx declName
-        throwError
-          "invalid attribute `builtin_env_linter`, linter `{optName}` has already been declared"
-      let isPublic := ! isPrivateName decl
-      let isMeta := isMarkedMeta env decl
-      unless isPublic && isMeta do
-        throwError "invalid attribute `builtin_env_linter`, \
-          declaration `{.ofConstName decl}` must be marked as `public` and `meta`\
-          {if isPublic then " but is only marked `public`" else ""}\
-          {if isMeta then " but is only marked `meta`" else ""}"
-      let constInfo ← getConstInfo decl
-      unless ← (isDefEq constInfo.type (mkConst ``EnvLinter)).run' do
-        throwError "`{.ofConstName decl}` must have type `{.ofConstName ``EnvLinter}`, got \
-          `{constInfo.type}`"
-      modifyEnv fun env => envLinterExt.addEntry env (optName, decl)
-  }
+  registerBuiltinAttribute
+    { name := `builtin_env_linter
+      descr := "Use this declaration as a linting test in `lake builtin-lint`"
+      add := fun decl stx kind => do
+        unless kind == .global do
+          throwError "invalid attribute `builtin_env_linter`, must be global"
+        let optName ←
+          match stx with
+          | `(attr| builtin_env_linter $id:ident) => pure id.getId
+          | _ => throwError "invalid `builtin_env_linter` syntax: expected an option name argument"
+        let env ← getEnv
+        unless env.contains optName do
+          throwError "invalid attribute `builtin_env_linter`, no constant named `{optName}`; \
+            did you forget `register_builtin_option {optName} : Bool := ...`?"
+        if let some declName := (envLinterExt.getState env).find? optName then
+          Elab.addConstInfo stx declName
+          throwError
+            "invalid attribute `builtin_env_linter`, linter `{optName}` has already been declared"
+        let isPublic := ! isPrivateName decl
+        let isMeta := isMarkedMeta env decl
+        unless isPublic && isMeta do
+          throwError "invalid attribute `builtin_env_linter`, \
+            declaration `{.ofConstName decl}` must be marked as `public` and `meta`\
+            {if isPublic then " but is only marked `public`" else ""}\
+            {if isMeta then " but is only marked `meta`" else ""}"
+        let constInfo ← getConstInfo decl
+        unless ← (isDefEq constInfo.type (mkConst ``EnvLinter)).run' do
+          throwError "`{.ofConstName decl}` must have type `{.ofConstName ``EnvLinter}`, got \
+            `{constInfo.type}`"
+        modifyEnv fun env => envLinterExt.addEntry env (optName, decl) }
 
 end Lean.Linter.EnvLinter

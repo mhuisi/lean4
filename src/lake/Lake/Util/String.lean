@@ -43,10 +43,9 @@ def lowerHexByte (n : UInt8) : UInt8 :=
 
 theorem isValidChar_of_lt_256 (h : n < 256) : isValidChar n := Or.inl <| Nat.lt_trans h (by decide)
 
-def lowerHexChar (n : UInt8) : Char := ⟨
-  lowerHexByte n |>.toUInt32,
-  isValidChar_of_lt_256 <| UInt32.lt_iff_toNat_lt.mpr <| (lowerHexByte n).toNat_lt
-⟩
+def lowerHexChar (n : UInt8) : Char :=
+  ⟨ lowerHexByte n |>.toUInt32,
+    isValidChar_of_lt_256 <| UInt32.lt_iff_toNat_lt.mpr <| (lowerHexByte n).toNat_lt ⟩
 
 public def lowerHexUInt64 (n : UInt64) : String :=
   String.ofByteArray (ByteArray.emptyWithCapacity 16) ByteArray.isValidUTF8_empty

@@ -41,11 +41,10 @@ namespace Cache
 
 abbrev Inv (assign : Assignment) (aig : AIG BVBit) (cache : Cache aig) : Prop :=
   ∀ k (h1 : k ∈ cache.map), ∀ (i : Nat) (h2 : i < k.w),
-    ⟦
-      aig,
+    ⟦ aig,
       ⟨(cache.map.get k h1)[i].gate, (cache.map.get k h1)[i].invert, cache.hbound ..⟩,
-      assign.toAIGAssignment
-    ⟧ = (k.expr.eval assign).getLsbD i
+      assign.toAIGAssignment ⟧
+      = (k.expr.eval assign).getLsbD i
 
 theorem Inv_empty (aig : AIG BVBit) : Inv assign aig Cache.empty := by
   intro k hk
@@ -137,15 +136,11 @@ theorem goCache_val_eq_bitblast (aig : AIG BVBit) (expr : BVExpr w) (cache : Cac
 theorem go_denote_mem_prefix
     (aig : AIG BVBit)
     (expr : BVExpr w) (assign : Assignment) (cache : Cache aig) (start : Nat) (hstart)
-    : ⟦
-        (go aig expr cache).result.val.aig,
-        ⟨
-          start,
+    : ⟦ (go aig expr cache).result.val.aig,
+        ⟨ start,
           inv,
-          by apply Nat.lt_of_lt_of_le; exact hstart; apply (go aig expr cache).result.property
-        ⟩,
-        assign.toAIGAssignment
-      ⟧
+          by apply Nat.lt_of_lt_of_le; exact hstart; apply (go aig expr cache).result.property ⟩,
+        assign.toAIGAssignment ⟧
       = ⟦aig, ⟨start, inv, hstart⟩, assign.toAIGAssignment⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply IsPrefix.of
@@ -157,15 +152,14 @@ theorem go_denote_mem_prefix
 theorem goCache_denote_mem_prefix
     (aig : AIG BVBit)
     (expr : BVExpr w) (assign : Assignment) (cache : Cache aig) (start : Nat) (hstart)
-    : ⟦
-        (goCache aig expr cache).result.val.aig,
-        ⟨
-          start,
+    : ⟦ (goCache aig expr cache).result.val.aig,
+        ⟨ start,
           inv,
-          by apply Nat.lt_of_lt_of_le; exact hstart; apply (goCache aig expr cache).result.property
-        ⟩,
-        assign.toAIGAssignment
-      ⟧
+          by
+            apply Nat.lt_of_lt_of_le
+            exact hstart
+            apply (goCache aig expr cache).result.property ⟩,
+        assign.toAIGAssignment ⟧
       = ⟦aig, ⟨start, inv, hstart⟩, assign.toAIGAssignment⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply IsPrefix.of
@@ -287,11 +281,10 @@ theorem goCache_denote_eq
     (expr : BVExpr w)
     (assign : Assignment) (cache : Cache aig) (hinv : Cache.Inv assign aig cache)
     : ∀ (idx : Nat) (hidx : idx < w),
-      ⟦
-        (goCache aig expr cache).result.val.aig,
+      ⟦ (goCache aig expr cache).result.val.aig,
         (goCache aig expr cache).result.val.vec.get idx hidx,
-        assign.toAIGAssignment
-      ⟧ = (expr.eval assign).getLsbD idx := by
+        assign.toAIGAssignment ⟧
+        = (expr.eval assign).getLsbD idx := by
   intro idx hidx
   generalize hres : goCache aig expr cache = res
   unfold goCache at hres
@@ -311,11 +304,10 @@ theorem go_denote_eq
     (expr : BVExpr w)
     (assign : Assignment) (cache : Cache aig) (hinv : Cache.Inv assign aig cache)
     : ∀ (idx : Nat) (hidx : idx < w),
-      ⟦
-        (go aig expr cache).result.val.aig,
+      ⟦ (go aig expr cache).result.val.aig,
         (go aig expr cache).result.val.vec.get idx hidx,
-        assign.toAIGAssignment
-      ⟧ = (expr.eval assign).getLsbD idx := by
+        assign.toAIGAssignment ⟧
+        = (expr.eval assign).getLsbD idx := by
   intro idx hidx
   generalize hres : go aig expr cache = res
   unfold go at hres
@@ -539,15 +531,11 @@ theorem bitblast_aig_IsPrefix (aig : AIG BVBit) (input : WithCache (BVExpr w) ai
 theorem bitblast_denote_mem_prefix
     (aig : AIG BVBit) (input : WithCache (BVExpr w) aig)
     (assign : Assignment) (start : Nat) (hstart)
-    : ⟦
-        (bitblast aig input).result.val.aig,
-        ⟨
-          start,
+    : ⟦ (bitblast aig input).result.val.aig,
+        ⟨ start,
           inv,
-          by apply Nat.lt_of_lt_of_le; exact hstart; apply (bitblast aig input).result.property
-        ⟩,
-        assign.toAIGAssignment
-      ⟧
+          by apply Nat.lt_of_lt_of_le; exact hstart; apply (bitblast aig input).result.property ⟩,
+        assign.toAIGAssignment ⟧
       = ⟦aig, ⟨start, inv, hstart⟩, assign.toAIGAssignment⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply bitblast_aig_IsPrefix
@@ -563,11 +551,10 @@ theorem denote_bitblast
     (aig : AIG BVBit) (input : WithCache (BVExpr w) aig)
     (assign : Assignment) (hinv : Cache.Inv assign aig input.cache)
     : ∀ (idx : Nat) (hidx : idx < w),
-      ⟦
-        (bitblast aig input).result.val.aig,
+      ⟦ (bitblast aig input).result.val.aig,
         (bitblast aig input).result.val.vec.get idx hidx,
-        assign.toAIGAssignment
-      ⟧ = (input.val.eval assign).getLsbD idx := by
+        assign.toAIGAssignment ⟧
+        = (input.val.eval assign).getLsbD idx := by
   intros
   rw [← bitblast.goCache_val_eq_bitblast]
   rw [bitblast.goCache_denote_eq]

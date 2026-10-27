@@ -58,13 +58,12 @@ private def addBuiltin (propagatorName : Name) (stx : Syntax) : AttrM Unit := do
 
 /- **Note**: We currently use the same propagators for all `grind` attributes. -/
 builtin_initialize
-  registerBuiltinAttribute {
-    ref := by exact decl_name%
-    name := `grindPropagatorBuiltinAttr
-    descr := "Builtin `grind` propagator procedure"
-    applicationTime := AttributeApplicationTime.afterCompilation
-    erase := fun _ => throwError "Not implemented yet, [-builtin_simproc]"
-    add := fun declName stx _ => addBuiltin declName stx
-  }
+  registerBuiltinAttribute
+    { ref := by exact decl_name%
+      name := `grindPropagatorBuiltinAttr
+      descr := "Builtin `grind` propagator procedure"
+      applicationTime := AttributeApplicationTime.afterCompilation
+      erase := fun _ => throwError "Not implemented yet, [-builtin_simproc]"
+      add := fun declName stx _ => addBuiltin declName stx }
 
 end Lean.Meta.Grind

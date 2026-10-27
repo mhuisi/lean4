@@ -111,15 +111,14 @@ def inlineCandidate? (e : LetValue .pure) : SimpM (Option InlineCandidateInfo) :
     let value := code.instantiateValueLevelParams decl.levelParams us
     let type := decl.instantiateTypeLevelParams us
     incInline
-    return some {
-      isLocal := false
-      fType := type
-      args := args
-      ifReduce := decl.inlineIfReduceAttr
-      recursive := decl.recursive
-      params
-      value
-    }
+    return some
+      { isLocal := false
+        fType := type
+        args := args
+        ifReduce := decl.inlineIfReduceAttr
+        recursive := decl.recursive
+        params
+        value }
   else if let .fvar f args := e then
     let some decl ← findFunDecl'? f
       | return none
@@ -130,14 +129,13 @@ def inlineCandidate? (e : LetValue .pure) : SimpM (Option InlineCandidateInfo) :
     -- Remark: we inline local function declarations even if they are partial applied
     incInlineLocal
     modify fun s => { s with inlineLocal := s.inlineLocal + 1 }
-    return some {
-      isLocal := true
-      fType := (← getType f)
-      args := args
-      params := decl.params
-      value := decl.value
-      ifReduce := false
-    }
+    return some
+      { isLocal := true
+        fType := (← getType f)
+        args := args
+        params := decl.params
+        value := decl.value
+        ifReduce := false }
   else
     return none
 

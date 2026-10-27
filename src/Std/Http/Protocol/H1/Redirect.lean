@@ -190,9 +190,9 @@ private def validatingHeaders : Array Header.Name := #[.ifNoneMatch, .ifModified
 Resource-specific headers that become meaningless when the method changes to GET/HEAD and no body
 is sent.
 -/
-private def resourceSpecificHeaders : Array Header.Name := #[
-  .contentType, .contentLength, .contentEncoding, .contentLanguage, .contentLocation, .lastModified
-]
+private def resourceSpecificHeaders : Array Header.Name :=
+  #[.contentType, .contentLength, .contentEncoding, .contentLanguage, .contentLocation,
+    .lastModified]
 
 /--
 Strips headers that must not survive a cross-origin hop or a method-changing
@@ -259,11 +259,10 @@ private def rewriteTarget
   | .absolute af =>
     -- The fragment is never placed on the wire (RFC 9112 §3.2 / RFC 9110 §7.1), so drop it here
     -- alongside any `userinfo` in the authority.
-    let stripped := {
-      af with
-      authority := af.authority.map (fun auth => { auth with userInfo := none })
-      fragment := none
-    }
+    let stripped :=
+      { af with
+        authority := af.authority.map (fun auth => { auth with userInfo := none })
+        fragment := none }
     if isCrossOrigin then
       .absoluteForm stripped
     else
@@ -412,13 +411,12 @@ def decideRedirect
     RedirectPlan.rewriteTarget location isCrossOrigin request.uri.pathOrRoot
       (RedirectPlan.requestTargetQuery? request.uri) current.scheme
 
-  return .follow {
-    origin := newOrigin
-    target := rewrittenTarget
-    method := newMethod
-    headers := newHeaders
-    bodyAction := bodyAction
-    isCrossOrigin := isCrossOrigin
-  }
+  return .follow
+    { origin := newOrigin
+      target := rewrittenTarget
+      method := newMethod
+      headers := newHeaders
+      bodyAction := bodyAction
+      isCrossOrigin := isCrossOrigin }
 
 end Std.Http.Protocol.H1

@@ -15,54 +15,49 @@ import Lean.Compiler.NoncomputableAttr
 public section
 
 namespace Lean
-register_builtin_option diagnostics : Bool := {
-  defValue := false
-  descr := "collect diagnostic information"
-}
+register_builtin_option diagnostics : Bool :=
+  { defValue := false, descr := "collect diagnostic information" }
 
 builtin_initialize registerTraceClass `diagnostics
 
-register_builtin_option diagnostics.threshold : Nat := {
-  defValue := 20
-  descr := "only diagnostic counters above this threshold are reported by the definitional equality"
-}
+register_builtin_option diagnostics.threshold : Nat :=
+  { defValue := 20
+    descr :=
+      "only diagnostic counters above this threshold are reported by the definitional equality" }
 
-register_builtin_option maxHeartbeats : Nat := {
-  defValue := 200000
-  descr :=
-    "maximum amount of heartbeats per command. A heartbeat is number of (small) memory allocations \
-      (in thousands), 0 means no limit"
-}
+register_builtin_option maxHeartbeats : Nat :=
+  { defValue := 200000
+    descr :=
+      "maximum amount of heartbeats per command. A heartbeat is number of (small) memory \
+        allocations (in thousands), 0 means no limit" }
 
-register_builtin_option Elab.async : Bool := {
-  defValue := false
-  descr :=
-    "perform elaboration using multiple threads where possible\
-      \n\
-      \nThis option defaults to `false` but (when not explicitly set) is overridden to `true` in \
-      the Lean language server and cmdline. \
-      Metaprogramming users driving elaboration directly via e.g. \
-      `Lean.Elab.Command.elabCommandTopLevel` can opt into asynchronous elaboration by setting \
-      this option but then are responsible for processing messages and other data not only in the \
-      resulting command state but also from async tasks in `Lean.Command.Context.snap?` and \
-      `Lean.Command.State.snapshotTasks`."
-}
+register_builtin_option Elab.async : Bool :=
+  { defValue := false
+    descr :=
+      "perform elaboration using multiple threads where possible\
+        \n\
+        \nThis option defaults to `false` but (when not explicitly set) is overridden to `true` in \
+        the Lean language server and cmdline. \
+        Metaprogramming users driving elaboration directly via e.g. \
+        `Lean.Elab.Command.elabCommandTopLevel` can opt into asynchronous elaboration by setting \
+        this option but then are responsible for processing messages and other data not only in \
+        the \
+        resulting command state but also from async tasks in `Lean.Command.Context.snap?` and \
+        `Lean.Command.State.snapshotTasks`." }
 
-register_builtin_option Elab.inServer : Bool := {
-  defValue := false
-  descr :=
-    "true if elaboration is being run inside the Lean language server\
-      \n\
-      \nThis option is set by the file worker and should not be modified otherwise."
-}
+register_builtin_option Elab.inServer : Bool :=
+  { defValue := false
+    descr :=
+      "true if elaboration is being run inside the Lean language server\
+        \n\
+        \nThis option is set by the file worker and should not be modified otherwise." }
 
 /-- Performance option used by cmdline driver. -/
-register_builtin_option internal.cmdlineSnapshots : Bool := {
-  defValue := false
-  descr :=
-    "reduce information stored in snapshots to the minimum necessary \
-      for the cmdline driver: diagnostics per command and final full snapshot"
-}
+register_builtin_option internal.cmdlineSnapshots : Bool :=
+  { defValue := false
+    descr :=
+      "reduce information stored in snapshots to the minimum necessary \
+        for the cmdline driver: diagnostics per command and final full snapshot" }
 
 /--
 If the `diagnostics` option is not already set, gives a message explaining this option.
@@ -208,8 +203,7 @@ one does not import.
 -/
 def ofOptions (opts : Options) : OptionFlags :=
   let getB (n : Name) (d : Bool) : Bool := ((opts.find? n).bind KVMap.Value.ofDataValue?).getD d
-  {
-    bits :=
+  { bits :=
       flag (getB `backward.isDefEq.respectTransparency true) 0x001
         ||| flag (getB `backward.isDefEq.respectTransparency.types true) 0x002
         ||| flag (getB `backward.isDefEq.respectTransparency.instanceSearchTypes true) 0x004
@@ -219,8 +213,7 @@ def ofOptions (opts : Options) : OptionFlags :=
         ||| flag (getB `backward.isDefEq.lazyWhnfCore true) 0x040
         ||| flag (getB `smartUnfolding true) 0x080
         ||| flag (getB `backward.isDefEq.throwOnStuckAfterApp false) 0x100
-        ||| flag (diagnostics.get opts) 0x200
-  }
+        ||| flag (diagnostics.get opts) 0x200 }
 
 end OptionFlags
 
@@ -385,12 +378,8 @@ instance : Nonempty Context := ⟨{ toCold := Classical.ofNonempty }⟩
 Replaces the options, re-resolving the fields derived from them. Changing `options` directly leaves
 `optionFlags` behind, which `optionFlags_eq` rejects; use this instead.
 -/
-def Context.setOptions (ctx : Context) (options : Options) : Context := {
-  ctx with
-  options
-  optionFlags := .ofOptions options
-  optionFlags_eq := rfl
-}
+def Context.setOptions (ctx : Context) (options : Options) : Context :=
+  { ctx with options, optionFlags := .ofOptions options, optionFlags_eq := rfl }
 
 /--
 CoreM is a monad for manipulating the Lean environment.
@@ -449,13 +438,12 @@ def withOptionsUnrestricted (f : Options → Options) (x : CoreM α) : CoreM α 
   if Kernel.isDiagnosticsEnabled (← getEnv) != optionFlags.diag then
     modifyEnv fun env => Kernel.enableDiag env optionFlags.diag
   withReader
-    (fun ctx => {
-      ctx with
-      options
-      optionFlags
-      optionFlags_eq := rfl
-      maxRecDepth := maxRecDepth.get options
-    })
+    (fun ctx =>
+      { ctx with
+        options
+        optionFlags
+        optionFlags_eq := rfl
+        maxRecDepth := maxRecDepth.get options })
     x
 
 instance : MonadWithOptions CoreM where
@@ -607,13 +595,12 @@ def withRestoreOrSaveFull (reusableResult? : Option (α × SavedState)) (act : C
 
 /-- Restore backtrackable parts of the state. -/
 def SavedState.restore (b : SavedState) : CoreM Unit :=
-  modify fun s => {
-    s with
-    env := b.env
-    messages := b.messages
-    infoState := b.infoState
-    snapshotTasks := b.snapshotTasks
-  }
+  modify fun s =>
+    { s with
+      env := b.env
+      messages := b.messages
+      infoState := b.infoState
+      snapshotTasks := b.snapshotTasks }
 
 private def mkFreshNameImp (n : Name) : CoreM Name := do
   withFreshMacroScope do MonadQuotation.addMacroScope n
@@ -683,12 +670,11 @@ Also checks for cancellation, so that recursive elaboration functions
 protected def withIncRecDepth [Monad m] [MonadControlT CoreM m] (x : m α) : m α :=
   controlAt CoreM fun runInBase => do checkInterrupted; withIncRecDepth (runInBase x)
 
-register_builtin_option debug.moduleNameAtTimeout : Bool := {
-  defValue := true
-  descr :=
-    "include module name in deterministic timeout error messages.\
-      \nRemark: we set this option to false to increase the stability of our test suite"
-}
+register_builtin_option debug.moduleNameAtTimeout : Bool :=
+  { defValue := true
+    descr :=
+      "include module name in deterministic timeout error messages.\
+        \nRemark: we set this option to false to increase the stability of our test suite" }
 
 def throwMaxHeartbeat (moduleName : Name) (optionName : Name) (max : Nat) : CoreM Unit := do
   -- unrestricted: message rendering only
@@ -762,12 +748,11 @@ instance : MonadLog CoreM where
         return
 
     let ctx ← read
-    let msg := {
-      msg with
-      data :=
-        MessageData.withNamingContext
-          { currNamespace := ctx.currNamespace, openDecls := ctx.openDecls } msg.data
-    }
+    let msg :=
+      { msg with
+        data :=
+          MessageData.withNamingContext
+            { currNamespace := ctx.currNamespace, openDecls := ctx.openDecls } msg.data }
     modify fun s => { s with messages := s.messages.add msg }
 
 /-- Whether deprecated constants and syntax are reported at `ref`, see `Context.checkDeprecated`. -/
@@ -813,12 +798,11 @@ def wrapAsync {α : Type} (act : α → CoreM β) (cancelTk? : Option IO.CancelT
       |>.run' ctx st
 
 /-- Option for capturing output to stderr during elaboration. -/
-register_builtin_option stderrAsMessages : Bool := {
-  defValue := true
-  descr :=
-    "(server) capture output to the Lean stderr channel (such as from `dbg_trace`) during \
-      elaboration of a command as a diagnostic message"
-}
+register_builtin_option stderrAsMessages : Bool :=
+  { defValue := true
+    descr :=
+      "(server) capture output to the Lean stderr channel (such as from `dbg_trace`) during \
+        elaboration of a command as a diagnostic message" }
 
 /--
 Creates snapshot reporting given `withIsolatedStreams` output and diagnostics and traces from the
@@ -830,20 +814,17 @@ def mkSnapshot?
   let mut msgs := st.messages
   if !output.isEmpty then
     msgs :=
-      msgs.add {
-        fileName := ctx.fileName
-        severity := MessageSeverity.information
-        pos := ctx.fileMap.toPosition <| ctx.ref.getPos?.getD 0
-        data := output
-      }
+      msgs.add
+        { fileName := ctx.fileName
+          severity := MessageSeverity.information
+          pos := ctx.fileMap.toPosition <| ctx.ref.getPos?.getD 0
+          data := output }
   if !msgs.hasUnreported && st.traceState.traces.isEmpty && st.snapshotTasks.isEmpty then
     return none
   return some <| .mk
-    {
-      desc
+    { desc
       diagnostics := (← Language.Snapshot.Diagnostics.ofMessageLog msgs)
-      traces := st.traceState
-    }
+      traces := st.traceState }
     st.snapshotTasks
 
 open Language in
@@ -863,13 +844,12 @@ def wrapAsyncAsSnapshot
       IO.FS.withIsolatedStreams (isolateStderr := stderrAsMessages.get (← getOptions)) do
         let tid ← IO.getTID
         -- reset trace/info state and message log so as not to report them twice
-        modify fun st => {
-          st with
-          messages := st.messages.markAllReported
-          traceState := { tid }
-          snapshotTasks := #[]
-          infoState := {}
-        }
+        modify fun st =>
+          { st with
+            messages := st.messages.markAllReported
+            traceState := { tid }
+            snapshotTasks := #[]
+            infoState := {} }
         try
           withTraceNode `Elab.async (fun _ => return desc) do act a
         catch e =>
@@ -952,10 +932,9 @@ def mkArrow (d b : Expr) : CoreM Expr :=
 /-- Iterated `mkArrow`, creates the expression `a₁ → a₂ → … → aₙ → b`. Also see `arrowDomainsN`. -/
 def mkArrowN (ds : Array Expr) (e : Expr) : CoreM Expr := ds.foldrM mkArrow e
 
-private def supportedRecursors := #[
-  ``Empty.rec, ``False.rec, ``Eq.ndrec, ``Eq.rec, ``Eq.recOn, ``Eq.casesOn, ``False.casesOn,
-  ``Empty.casesOn, ``And.rec, ``And.casesOn
-]
+private def supportedRecursors :=
+  #[``Empty.rec, ``False.rec, ``Eq.ndrec, ``Eq.rec, ``Eq.recOn, ``Eq.casesOn, ``False.casesOn,
+    ``Empty.casesOn, ``And.rec, ``And.casesOn]
 
 /--
 This is a temporary workaround for generating better error messages for the compiler. It can be deleted after we
@@ -1101,9 +1080,8 @@ def isDiagnosticsEnabled : CoreM Bool := return (← getOptionFlags).diag
 def ImportM.runCoreM (x : CoreM α) : ImportM α := do
   let ctx ← read
   let (a, _) ←
-    (withOptions (fun _ => ctx.opts) x).toIO { fileName := "<ImportM>", fileMap := default } {
-      env := ctx.env
-    }
+    (withOptions (fun _ => ctx.opts) x).toIO { fileName := "<ImportM>", fileMap := default }
+      { env := ctx.env }
   return a
 
 /-- Return `true` if the exception was generated by one of our resource limits. -/

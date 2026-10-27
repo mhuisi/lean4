@@ -40,11 +40,10 @@ def setUnsat (u v : NodeId) (kuv : Weight) (huv : Expr) (kvu : Weight) : OrderM 
 
 /-- Sets the new shortest distance `k` between nodes `u` and `v`. -/
 def setDist (u v : NodeId) (k : Weight) : OrderM Unit := do
-  modifyStruct fun s => {
-    s with
-    targets := s.targets.modify u fun es => es.insert v k
-    sources := s.sources.modify v fun es => es.insert u k
-  }
+  modifyStruct fun s =>
+    { s with
+      targets := s.targets.modify u fun es => es.insert v k
+      sources := s.sources.modify v fun es => es.insert u k }
 
 def setProof (u v : NodeId) (p : ProofInfo) : OrderM Unit := do
   modifyStruct fun s => { s with proofs := s.proofs.modify u fun es => es.insert v p }

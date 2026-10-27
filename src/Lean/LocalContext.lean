@@ -378,11 +378,9 @@ def addDecl (lctx : LocalContext) (newDecl : LocalDecl) : LocalContext :=
   | { fvarIdToDecl := map, decls := decls, auxDeclToFullName } =>
     let idx := decls.size
     let newDecl := newDecl.setIndex idx
-    {
-      fvarIdToDecl := map.insert newDecl.fvarId newDecl
+    { fvarIdToDecl := map.insert newDecl.fvarId newDecl
       decls := decls.push newDecl
-      auxDeclToFullName
-    }
+      auxDeclToFullName }
 
 @[export lean_local_ctx_find]
 def find? (lctx : LocalContext) (fvarId : FVarId) : Option LocalDecl :=
@@ -432,12 +430,11 @@ def erase (lctx : LocalContext) (fvarId : FVarId) : LocalContext :=
     match map.find? fvarId with
     | none =>
       lctx
-    | some decl => {
-      fvarIdToDecl := map.erase fvarId
-      decls := popTailNoneAux (decls.set decl.index none)
-      auxDeclToFullName :=
-        if decl.isAuxDecl then auxDeclToFullName.erase fvarId else auxDeclToFullName
-    }
+    | some decl =>
+      { fvarIdToDecl := map.erase fvarId
+        decls := popTailNoneAux (decls.set decl.index none)
+        auxDeclToFullName :=
+          if decl.isAuxDecl then auxDeclToFullName.erase fvarId else auxDeclToFullName }
 
 def pop (lctx : LocalContext) : LocalContext :=
   match lctx with
@@ -448,12 +445,11 @@ def pop (lctx : LocalContext) : LocalContext :=
       match decls[decls.size - 1] with
       | none =>
         lctx -- unreachable
-      | some decl => {
-        fvarIdToDecl := map.erase decl.fvarId
-        decls := popTailNoneAux decls.pop
-        auxDeclToFullName :=
-          if decl.isAuxDecl then auxDeclToFullName.erase decl.fvarId else auxDeclToFullName
-      }
+      | some decl =>
+        { fvarIdToDecl := map.erase decl.fvarId
+          decls := popTailNoneAux decls.pop
+          auxDeclToFullName :=
+            if decl.isAuxDecl then auxDeclToFullName.erase decl.fvarId else auxDeclToFullName }
 
 def findFromUserName? (lctx : LocalContext) (userName : Name) : Option LocalDecl :=
   lctx.decls.findSomeRev? fun decl =>
@@ -489,11 +485,9 @@ def lastDecl (lctx : LocalContext) : Option LocalDecl := lctx.decls[lctx.decls.s
 def setUserName (lctx : LocalContext) (fvarId : FVarId) (userName : Name) : LocalContext :=
   let decl := lctx.get! fvarId
   let decl := decl.setUserName userName
-  {
-    fvarIdToDecl := lctx.fvarIdToDecl.insert decl.fvarId decl
+  { fvarIdToDecl := lctx.fvarIdToDecl.insert decl.fvarId decl
     decls := lctx.decls.set decl.index decl
-    auxDeclToFullName := lctx.auxDeclToFullName
-  }
+    auxDeclToFullName := lctx.auxDeclToFullName }
 
 def renameUserName (lctx : LocalContext) (fromName : Name) (toName : Name) : LocalContext :=
   match lctx with
@@ -503,11 +497,9 @@ def renameUserName (lctx : LocalContext) (fromName : Name) (toName : Name) : Loc
       lctx
     | some decl =>
       let decl := decl.setUserName toName
-      {
-        fvarIdToDecl := map.insert decl.fvarId decl
+      { fvarIdToDecl := map.insert decl.fvarId decl
         decls := decls.set decl.index decl
-        auxDeclToFullName
-      }
+        auxDeclToFullName }
 
 /--
 Low-level function for updating the local context.
@@ -524,11 +516,9 @@ def modifyLocalDecl (lctx : LocalContext) (fvarId : FVarId) (f : LocalDecl → L
       lctx
     | some decl =>
       let decl := f decl
-      {
-        fvarIdToDecl := map.insert decl.fvarId decl
+      { fvarIdToDecl := map.insert decl.fvarId decl
         decls := decls.set decl.index decl
-        auxDeclToFullName
-      }
+        auxDeclToFullName }
 
 /--
 Low-level function for updating every declaration in the local context.
@@ -541,11 +531,9 @@ def modifyLocalDecls (lctx : LocalContext) (f : LocalDecl → LocalDecl) : Local
       lctx
     | { fvarIdToDecl := map, decls := decls, auxDeclToFullName }, some decl =>
       let decl := f decl
-      {
-        fvarIdToDecl := map.insert decl.fvarId decl
+      { fvarIdToDecl := map.insert decl.fvarId decl
         decls := decls.set decl.index decl
-        auxDeclToFullName
-      }
+        auxDeclToFullName }
 
 /-- Set the kind of the given fvar. -/
 def setKind (lctx : LocalContext) (fvarId : FVarId) (kind : LocalDeclKind) : LocalContext :=
@@ -817,10 +805,8 @@ def LocalDecl.replaceFVarId (fvarId : FVarId) (e : Expr) (d : LocalDecl) : Local
 
 def LocalContext.replaceFVarId (fvarId : FVarId) (e : Expr) (lctx : LocalContext) : LocalContext :=
   let lctx := lctx.erase fvarId
-  {
-    fvarIdToDecl := lctx.fvarIdToDecl.map (·.replaceFVarId fvarId e)
+  { fvarIdToDecl := lctx.fvarIdToDecl.map (·.replaceFVarId fvarId e)
     decls := lctx.decls.map fun localDecl? => localDecl?.map (·.replaceFVarId fvarId e)
-    auxDeclToFullName := lctx.auxDeclToFullName
-  }
+    auxDeclToFullName := lctx.auxDeclToFullName }
 
 end Lean

@@ -99,10 +99,9 @@ theorem Slice.copy_ne_empty_iff {s : Slice} : s.copy ≠ "" ↔ s.isEmpty = fals
 
 theorem eq_empty_iff_forall_eq {s : String} : s = "" ↔ ∀ (p q : s.Pos), p = q := by
   rw [← isEmpty_toSlice_iff, Slice.isEmpty_iff_forall_eq]
-  exact ⟨
-    fun h p q => by simpa [Pos.toSlice_inj] using h p.toSlice q.toSlice,
-    fun h p q => by simpa [Pos.ofToSlice_inj] using h (Pos.ofToSlice p) (Pos.ofToSlice q)
-  ⟩
+  exact
+    ⟨ fun h p q => by simpa [Pos.toSlice_inj] using h p.toSlice q.toSlice,
+      fun h p q => by simpa [Pos.ofToSlice_inj] using h (Pos.ofToSlice p) (Pos.ofToSlice q) ⟩
 
 theorem ne_empty_of_lt {s : String} {p q : s.Pos} : p < q → s ≠ "" := by
   rw [← Pos.toSlice_lt_toSlice_iff, ne_eq, ← isEmpty_toSlice_iff, Bool.not_eq_true]

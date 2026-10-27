@@ -518,10 +518,9 @@ theorem PPoly.pairs_k_spec
   | nil =>
     cases pend with
     | none =>
-      exact ⟨
-        by simp [pairs_k, denoteList, add_zero, Option.elim],
-        fun _ _ => by simp [pairs_k, DegList]
-      ⟩
+      exact
+        ⟨ by simp [pairs_k, denoteList, add_zero, Option.elim],
+          fun _ _ => by simp [pairs_k, DegList] ⟩
     | some p =>
       refine ⟨by simp [pairs_k, denoteList, add_zero, Option.elim], fun _ h => ?_⟩
       intro q hq
@@ -532,12 +531,11 @@ theorem PPoly.pairs_k_spec
     cases pend with
     | none =>
       have := ih (some a)
-      refine ⟨
-        ?_,
-        fun h₁ _ =>
-          this.2 (fun q hq => h₁ q (List.mem_cons_of_mem _ hq)) (by
-            intro q hq; cases hq; exact h₁ a (by simp))
-      ⟩
+      refine
+        ⟨ ?_,
+          fun h₁ _ =>
+            this.2 (fun q hq => h₁ q (List.mem_cons_of_mem _ hq)) (by
+              intro q hq; cases hq; exact h₁ a (by simp)) ⟩
       show denoteList ctx B (pairs_k ps (some a)) = _
       rw [this.1]
       simp [Option.elim, denoteList_cons, zero_add]

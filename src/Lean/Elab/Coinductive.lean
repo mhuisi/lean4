@@ -454,8 +454,7 @@ public def elabCoinductive (coinductiveElabData : Array CoinductiveElabData) : T
           match getAttributeImpl env attr.name with
           | .ok impl => impl.applicationTime != .afterCompilation
           | .error _ => true
-      {
-        ref := coinductiveElabData[idx]!.ref
+      { ref := coinductiveElabData[idx]!.ref
         binders := coinductiveElabData[idx]!.ref
         kind := .def
         levelParams := infos[0]!.levelParams
@@ -463,24 +462,21 @@ public def elabCoinductive (coinductiveElabData : Array CoinductiveElabData) : T
         declName := namesAndTypes[idx]!.1
         type := namesAndTypes[idx]!.2
         value := defn
-        termination := {
-          ref := coinductiveElabData[idx]!.ref
-          terminationBy?? := .none
-          terminationBy? := .none
-          partialFixpoint? :=
-            .some {
-              ref := coinductiveElabData[idx]!.ref
-              term? := coinductiveElabData[idx]!.monotonicity?
-              fixpointType :=
-                if coinductiveElabData[idx]!.isGreatest then
-                  .coinductiveFixpoint
-                else
-                  .inductiveFixpoint
-            }
-          decreasingBy? := .none
-          extraParams := 0
-        }
-      }
+        termination :=
+          { ref := coinductiveElabData[idx]!.ref
+            terminationBy?? := .none
+            terminationBy? := .none
+            partialFixpoint? :=
+              .some
+                { ref := coinductiveElabData[idx]!.ref
+                  term? := coinductiveElabData[idx]!.monotonicity?
+                  fixpointType :=
+                    if coinductiveElabData[idx]!.isGreatest then
+                      .coinductiveFixpoint
+                    else
+                      .inductiveFixpoint }
+            decreasingBy? := .none
+            extraParams := 0 } }
   partialFixpoint (← getLCtx, ← getLocalInstances) preDefs
   generateEqLemmas infos
   generateCoinductiveConstructors originalNumParams infos coinductiveElabData

@@ -31,10 +31,8 @@ public def fmtTacticMatch : Fmt := fun
     let withTk ← fmt withTk
     let matchAlts ← fmt matchAlts
     let «match» := Layouts.keywordPrefixedSepFill matchLhs matchDiscrs .nonSticky
-    return Layouts.keywordSeparated «match» withTk matchAlts {
-      allowFlattening := false
-      nestedRhs := false
-    }
+    return Layouts.keywordSeparated «match» withTk matchAlts
+      { allowFlattening := false, nestedRhs := false }
   | _ =>
     throw .partialFormatter
 

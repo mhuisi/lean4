@@ -92,9 +92,8 @@ def getD (headers : Headers) (name : Header.Name) (d : Header.Value) : Header.Va
 
 /-- Inserts a new key-value pair into the headers. -/
 @[inline]
-def insert (headers : Headers) (key : Header.Name) (value : Header.Value) : Headers := {
-  map := headers.map.insert key value
-}
+def insert (headers : Headers) (key : Header.Name) (value : Header.Value) : Headers :=
+  { map := headers.map.insert key value }
 
 /-- Adds a header from string name and value, panicking if either is invalid. -/
 @[inline]
@@ -113,17 +112,15 @@ def insert? (headers : Headers) (name : String) (value : String) : Option Header
 
 /-- Inserts a new key with an array of values. -/
 @[inline]
-def insertMany (headers : Headers) (key : Header.Name) (values : Array Header.Value) : Headers := {
-  map := headers.map.insertMany key values
-}
+def insertMany (headers : Headers) (key : Header.Name) (values : Array Header.Value) : Headers :=
+  { map := headers.map.insertMany key values }
 
 /-- Creates empty headers. -/
 def empty : Headers := { map := ∅ }
 
 /-- Creates headers from a list of key-value pairs. -/
-def ofList (pairs : List (Header.Name × Header.Value)) : Headers := {
-  map := IndexMultiMap.ofList pairs
-}
+def ofList (pairs : List (Header.Name × Header.Value)) : Headers :=
+  { map := IndexMultiMap.ofList pairs }
 
 /-- Checks if a header with the given name exists. -/
 @[inline] def contains (headers : Headers) (name : Header.Name) : Bool := headers.map.contains name
@@ -139,9 +136,8 @@ Names not present are ignored. Cheaper than chaining `erase` calls because
 per `erase` call.
 -/
 @[inline]
-def eraseMany (headers : Headers) (names : Array Header.Name) : Headers := {
-  map := headers.map.eraseMany names
-}
+def eraseMany (headers : Headers) (names : Array Header.Name) : Headers :=
+  { map := headers.map.eraseMany names }
 
 /-- Gets the number of headers. -/
 @[inline] def size (headers : Headers) : Nat := headers.map.size
@@ -190,18 +186,16 @@ def filter (headers : Headers) (f : Header.Name → Header.Value → Bool) : Hea
   headers.filterMap (fun k v => if f k v then some v else none)
 
 /-- Updates all the values of a header if it exists. -/
-def update (headers : Headers) (name : Header.Name) (f : Header.Value → Header.Value) : Headers := {
-  map := headers.map.update name f
-}
+def update (headers : Headers) (name : Header.Name) (f : Header.Value → Header.Value) : Headers :=
+  { map := headers.map.update name f }
 
 /--
 Replaces the last value for the given header name.
 If the header is absent, returns the headers unchanged.
 -/
 @[inline]
-def replaceLast (headers : Headers) (name : Header.Name) (value : Header.Value) : Headers := {
-  map := headers.map.replaceLast name value
-}
+def replaceLast (headers : Headers) (name : Header.Name) (value : Header.Value) : Headers :=
+  { map := headers.map.replaceLast name value }
 
 instance : ToString Headers where
   toString headers :=

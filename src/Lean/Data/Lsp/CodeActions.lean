@@ -46,16 +46,18 @@ inductive CodeActionTriggerKind
   -/
   | automatic
 
-instance : ToJson CodeActionTriggerKind := ⟨fun
-  | .invoked => 1
-  | .automatic => 2⟩
+instance : ToJson CodeActionTriggerKind :=
+  ⟨ fun
+      | .invoked => 1
+      | .automatic => 2 ⟩
 
-instance : FromJson CodeActionTriggerKind := ⟨fun j => do
-  let n ← j.getNat?
-  match n with
-  | 1 => return CodeActionTriggerKind.invoked
-  | 2 => return CodeActionTriggerKind.automatic
-  | n => throw s!"Unexpected CodeActionTriggerKind {n}"⟩
+instance : FromJson CodeActionTriggerKind :=
+  ⟨ fun j => do
+      let n ← j.getNat?
+      match n with
+      | 1 => return CodeActionTriggerKind.invoked
+      | 2 => return CodeActionTriggerKind.automatic
+      | n => throw s!"Unexpected CodeActionTriggerKind {n}" ⟩
 
 /--
 Contains additional diagnostic information about the context in which a code action is run.

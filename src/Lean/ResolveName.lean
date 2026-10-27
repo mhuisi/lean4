@@ -68,10 +68,9 @@ def addAliasEntry (s : AliasState) (e : AliasEntry) : AliasState :=
   | some es => if es.contains e.2 then s else s.insert e.1 (e.2 :: es)
 
 builtin_initialize aliasExtension : SimplePersistentEnvExtension AliasEntry AliasState ←
-  registerSimplePersistentEnvExtension {
-    addEntryFn := addAliasEntry
-    addImportedFn := fun es => mkStateFromImportedEntries addAliasEntry {} es |>.switch
-  }
+  registerSimplePersistentEnvExtension
+    { addEntryFn := addAliasEntry
+      addImportedFn := fun es => mkStateFromImportedEntries addAliasEntry {} es |>.switch }
 
 /-- Add alias `a` for `e` -/
 def addAlias (env : Environment) (a : Name) (e : Name) : Environment :=
@@ -104,20 +103,18 @@ private def containsDeclOrReserved (env : Environment) (declName : Name) : Bool 
   -- avoid blocking from `Environment.contains` if possible
   env.containsOnBranch declName || isReservedName env declName || env.contains declName
 
-register_builtin_option backward.privateInPublic : Bool := {
-  defValue := false
-  descr :=
-    "(module system) Export `private` declarations, allowing for arbitrary access to \
-      them while code is being ported to the module system. Such accesses will generate warnings\
-      \n    unless `backward.privateInPublic.warn` is disabled."
-}
+register_builtin_option backward.privateInPublic : Bool :=
+  { defValue := false
+    descr :=
+      "(module system) Export `private` declarations, allowing for arbitrary access to \
+        them while code is being ported to the module system. Such accesses will generate warnings\
+        \n    unless `backward.privateInPublic.warn` is disabled." }
 
-register_builtin_option backward.privateInPublic.warn : Bool := {
-  defValue := true
-  descr :=
-    "(module system) Warn on accesses to `private` declarations that are allowed only by \
-      `backward.privateInPublic` being enabled."
-}
+register_builtin_option backward.privateInPublic.warn : Bool :=
+  { defValue := true
+    descr :=
+      "(module system) Warn on accesses to `private` declarations that are allowed only by \
+        `backward.privateInPublic` being enabled." }
 
 private partial def resolvePrivateName (env : Environment) (opts : Options) (declName : Name)
     : Option Name := do
@@ -538,10 +535,8 @@ def resolveLocalName [MonadLCtx m] (n : Name) : m (Option (Expr × List String))
       : Option LocalDecl := do
     let fullDeclView := extractMacroScopes fullDeclName
     /- First cleanup private name annotations -/
-    let fullDeclView := {
-      fullDeclView with
-      name := (privateToUserName? fullDeclView.name).getD fullDeclView.name
-    }
+    let fullDeclView :=
+      { fullDeclView with name := (privateToUserName? fullDeclView.name).getD fullDeclView.name }
     let fullDeclName := fullDeclView.review
     let localDeclNameView := extractMacroScopes localDecl.userName
     /-

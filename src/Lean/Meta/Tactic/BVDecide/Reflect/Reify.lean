@@ -54,12 +54,11 @@ def checkFunAtom (e : Expr) : LemmaM (Option (Array Expr)) := do
     if interpretedMask.all (· == false) then return none
 
     let funPattern ← getFunctionPattern e interpretedMask
-    ReifyM.modifyTheoryState fun ts => {
-      ts with
-      funState.atoms := ts.funState.atoms.push { funExpr := e, isBoolAtom := isBoolAtom }
-      funState.masks := ts.funState.masks.push interpretedMask
-      funState.patterns := ts.funState.patterns.push funPattern
-    }
+    ReifyM.modifyTheoryState fun ts =>
+      { ts with
+        funState.atoms := ts.funState.atoms.push { funExpr := e, isBoolAtom := isBoolAtom }
+        funState.masks := ts.funState.masks.push interpretedMask
+        funState.patterns := ts.funState.patterns.push funPattern }
     trace[Meta.Tactic.bv] m!"Registered fun atom: {e}, mask: {interpretedMask}"
 
     let mut subAtoms := #[]

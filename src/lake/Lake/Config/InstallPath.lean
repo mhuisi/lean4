@@ -197,15 +197,14 @@ public def LakeInstall.ofLean (lean : LeanInstall) : LakeInstall where
   binDir := lean.binDir
   libDir := lean.leanLibDir
   lake := lean.binDir / lakeExe
-  sharedDynlib := {
-    name := "Lake_shared"
-    deps := lean.sharedDynlibs
-    path :=
-      if Platform.isWindows then
-        lean.binDir / "libLake_shared.dll"
-      else
-        lean.leanLibDir / s!"libLake_shared.{sharedLibExt}"
-  }
+  sharedDynlib :=
+    { name := "Lake_shared"
+      deps := lean.sharedDynlibs
+      path :=
+        if Platform.isWindows then
+          lean.binDir / "libLake_shared.dll"
+        else
+          lean.leanLibDir / s!"libLake_shared.{sharedLibExt}" }
 
 /-! ## Detection Functions -/
 
@@ -305,14 +304,12 @@ where
   @[inline] withCustomCc (i : LeanInstall) cc := { i with cc }
   withInternalCc (i : LeanInstall) cc :=
     let ccLinkFlags := getInternalLinkerFlags sysroot
-    {
-      i with
+    { i with
       cc
       customCc := false
       ccFlags := i.cFlags ++ getInternalCFlags sysroot
       ccLinkStaticFlags := ccLinkFlags ++ i.linkStaticFlags
-      ccLinkSharedFlags := ccLinkFlags ++ i.linkSharedFlags
-    }
+      ccLinkSharedFlags := ccLinkFlags ++ i.linkSharedFlags }
 
 /--
 Attempt to detect the installation of the given `lean` command

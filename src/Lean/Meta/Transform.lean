@@ -51,9 +51,8 @@ partial def transform
     (post : Expr → m TransformStep := fun e => return .done e)
     : m Expr :=
   let _ : STWorld IO.RealWorld m := ⟨⟩
-  let _ : MonadLiftT (ST IO.RealWorld) m := {
-    monadLift := fun x => liftM (m := CoreM) (liftM (m := ST IO.RealWorld) x)
-  }
+  let _ : MonadLiftT (ST IO.RealWorld) m :=
+    { monadLift := fun x => liftM (m := CoreM) (liftM (m := ST IO.RealWorld) x) }
   let rec visit (e : Expr) : MonadCacheT ExprStructEq Expr m Expr :=
     checkCache { val := e : ExprStructEq } fun _ =>
       Core.withIncRecDepth do
@@ -112,9 +111,8 @@ partial def transformWithCache
     (skipConstInApp := false) (skipInstances := false)
     : m (Expr × Std.HashMap ExprStructEq Expr) :=
   let _ : STWorld IO.RealWorld m := ⟨⟩
-  let _ : MonadLiftT (ST IO.RealWorld) m := {
-    monadLift := fun x => liftM (m := MetaM) (liftM (m := ST IO.RealWorld) x)
-  }
+  let _ : MonadLiftT (ST IO.RealWorld) m :=
+    { monadLift := fun x => liftM (m := MetaM) (liftM (m := ST IO.RealWorld) x) }
   let rec visit (e : Expr) : MonadCacheT ExprStructEq Expr m Expr :=
     checkCache { val := e : ExprStructEq } fun _ =>
       Meta.withIncRecDepth do

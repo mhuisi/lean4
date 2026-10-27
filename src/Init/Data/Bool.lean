@@ -565,10 +565,9 @@ theorem forall_bool' {p : Bool → Prop} (b : Bool) : (∀ x, p x) ↔ p b ∧ p
 
 /-! ### exists -/
 
-theorem exists_bool' {p : Bool → Prop} (b : Bool) : (∃ x, p x) ↔ p b ∨ p !b := ⟨
-  fun ⟨x, hx⟩ ↦ by cases x <;> cases b <;> first | exact .inl ‹_› | exact .inr ‹_›,
-  fun h ↦ by cases h <;> exact ⟨_, ‹_›⟩
-⟩
+theorem exists_bool' {p : Bool → Prop} (b : Bool) : (∃ x, p x) ↔ p b ∨ p !b :=
+  ⟨ fun ⟨x, hx⟩ ↦ by cases x <;> cases b <;> first | exact .inl ‹_› | exact .inr ‹_›,
+    fun h ↦ by cases h <;> exact ⟨_, ‹_›⟩ ⟩
 
 @[simp] theorem exists_bool {p : Bool → Prop} : (∃ b, p b) ↔ p false ∨ p true := exists_bool' false
 

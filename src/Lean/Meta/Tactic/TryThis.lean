@@ -51,11 +51,10 @@ private def tryThisProvider : CodeActionProvider := fun params snap => do
       return result
     unless params.range.start.line ≤ stxRange.end.line do
       return result
-    result.push {
-      eager.title := codeActionTitle
-      eager.kind? := "quickfix"
-      eager.edit? := some <| .ofTextEdit doc.versionedIdentifier edit
-    }
+    result.push
+      { eager.title := codeActionTitle
+        eager.kind? := "quickfix"
+        eager.edit? := some <| .ofTextEdit doc.versionedIdentifier edit }
 
 /-! # Formatting -/
 
@@ -65,10 +64,9 @@ def delabToRefinableSyntax (e : Expr) : MetaM Term :=
 
 /-- Delaborate `e` into a suggestion suitable for use by `refine`. -/
 def delabToRefinableSuggestion (e : Expr) : MetaM Suggestion :=
-  return {
-    suggestion := ← delabToRefinableSyntax e
-    messageData? := ← addMessageContext <| toMessageData e
-  }
+  return
+    { suggestion := ← delabToRefinableSyntax e
+      messageData? := ← addMessageContext <| toMessageData e }
 
 /--
 Add a "try this" suggestion. This has two effects:

@@ -61,10 +61,9 @@ def evalSimpTrace : Tactic := fun stx =>
           simp?%$tk $[!%$bang]? $cfg:optConfig $(discharger)? $[only%$o]? $[[$args,*]]? $(loc)?) =>
         -- Check if premise selection is enabled
         let config ← elabSimpConfig cfg (kind := .simp)
-        let mut argsArray : TSyntaxArray [
-            `Lean.Parser.Tactic.simpStar, `Lean.Parser.Tactic.simpErase,
-            `Lean.Parser.Tactic.simpLemma
-          ] :=
+        let mut argsArray : TSyntaxArray
+            [ `Lean.Parser.Tactic.simpStar, `Lean.Parser.Tactic.simpErase,
+              `Lean.Parser.Tactic.simpLemma ] :=
           if let some a := args then a.getElems else #[]
         if config.suggestions then
           -- Get premise suggestions from the premise selector

@@ -19,31 +19,27 @@ open Lean Meta
 
 def _root_.Lean.Meta.Grind.Params.insertCasesTypes
     (params : Grind.Params) (declName : Name) (eager : Bool)
-    : Grind.Params := {
-  params with
-  extensions :=
-    params.extensions.modify 0 fun ext => {
-      ext with
-      casesTypes := ext.casesTypes.insert declName eager
-    }
-}
+    : Grind.Params :=
+  { params with
+    extensions :=
+      params.extensions.modify 0 fun ext =>
+        { ext with casesTypes := ext.casesTypes.insert declName eager } }
 
 def _root_.Lean.Meta.Grind.Params.eraseCasesTypes (params : Grind.Params) (declName : Name)
     : CoreM Grind.Params := do
   unless params.extensions.any fun ext => ext.casesTypes.contains declName do
     Grind.throwNotMarkedWithGrindAttribute declName
-  return {
-    params with
-    extensions :=
-      params.extensions.modify 0 fun ext => { ext with casesTypes := ext.casesTypes.erase declName }
-  }
+  return
+    { params with
+      extensions :=
+        params.extensions.modify 0 fun ext =>
+          { ext with casesTypes := ext.casesTypes.erase declName } }
 
 def _root_.Lean.Meta.Grind.Params.insertFunCC (params : Grind.Params) (declName : Name)
-    : Grind.Params := {
-  params with
-  extensions :=
-    params.extensions.modify 0 fun ext => { ext with funCC := ext.funCC.insert declName }
-}
+    : Grind.Params :=
+  { params with
+    extensions :=
+      params.extensions.modify 0 fun ext => { ext with funCC := ext.funCC.insert declName } }
 
 def _root_.Lean.Meta.Grind.Params.containsEMatch (params : Grind.Params) (declName : Name) : Bool :=
   params.extensions.any fun ext => ext.ematch.contains (.decl declName)
@@ -53,11 +49,11 @@ def _root_.Lean.Meta.Grind.Params.isInjectiveTheorem (params : Grind.Params) (de
   params.extensions.any fun ext => ext.inj.contains (.decl declName)
 
 def _root_.Lean.Meta.Grind.Params.eraseEMatchCore (params : Grind.Params) (declName : Name)
-    : Grind.Params := {
-  params with
-  extensions :=
-    params.extensions.modify 0 fun ext => { ext with ematch := ext.ematch.erase (.decl declName) }
-}
+    : Grind.Params :=
+  { params with
+    extensions :=
+      params.extensions.modify 0 fun ext =>
+        { ext with ematch := ext.ematch.erase (.decl declName) } }
 
 def _root_.Lean.Meta.Grind.Params.eraseEMatch (params : Grind.Params) (declName : Name)
     : MetaM Grind.Params := do
@@ -74,11 +70,10 @@ def _root_.Lean.Meta.Grind.Params.eraseEMatch (params : Grind.Params) (declName 
     return params.eraseEMatchCore declName
 
 def _root_.Lean.Meta.Grind.Params.eraseInj (params : Grind.Params) (declName : Name)
-    : Grind.Params := {
-  params with
-  extensions :=
-    params.extensions.modify 0 fun ext => { ext with inj := ext.inj.erase (.decl declName) }
-}
+    : Grind.Params :=
+  { params with
+    extensions :=
+      params.extensions.modify 0 fun ext => { ext with inj := ext.inj.erase (.decl declName) } }
 
 def _root_.Lean.Meta.Grind.ExtensionStateArray.getKindsFor
     (s : Grind.ExtensionStateArray) (origin : Grind.Origin)
@@ -282,10 +277,10 @@ def processTermParam
       match kind with
       | .eqBoth gen =>
         ensureNoMinIndexable minIndexable
-        return {
-          params with
-          extra := params.extra.push (← mkThm (.eqLhs gen) idx) |>.push (← mkThm (.eqRhs gen) idx)
-        }
+        return
+          { params with
+            extra :=
+              params.extra.push (← mkThm (.eqLhs gen) idx) |>.push (← mkThm (.eqRhs gen) idx) }
       | _ =>
         if kind matches .eqLhs _ | .eqRhs _ then
           ensureNoMinIndexable minIndexable
@@ -528,11 +523,10 @@ public def withParams
   else
     let mut params := params
     if only then
-      params := {
-        params with
-        extensions := params.extensions.map fun ext => { ext with ematch := {} }
-        anchorRefs? := none
-      }
+      params :=
+        { params with
+          extensions := params.extensions.map fun ext => { ext with ematch := {} }
+          anchorRefs? := none }
     params ← elabGrindParams params ps (only := only) (incremental := true)
     let anchorRefs? := params.anchorRefs?
     withReader (fun c => { c with params, ctx.anchorRefs? := anchorRefs? }) do
@@ -541,13 +535,12 @@ public def withParams
         let goal ← getMainGoal
         let goal ←
           liftGrindM do
-            pure {
-              goal with
-              -- **TODO**: cleanup injective theorems
-              ematch.thmMap := {}
-              ematch.thms := (← filterThms goal.ematch.thms)
-              ematch.newThms := (← filterThms goal.ematch.newThms)
-            }
+            pure
+              { goal with
+                -- **TODO**: cleanup injective theorems
+                ematch.thmMap := {}
+                ematch.thms := (← filterThms goal.ematch.thms)
+                ematch.newThms := (← filterThms goal.ematch.newThms) }
         replaceMainGoal [goal]
       liftGoalM do Grind.assertExtra params
       -- **TODO**: `cases` parameters

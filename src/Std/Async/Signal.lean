@@ -188,21 +188,20 @@ dropped, and a signal that arrives afterwards is kept and reported by the next s
 `s`. For a repeating `s`, a signal that arrives while another selector wins the same select may be
 lost.
 -/
-def selector (s : Signal.Waiter) : Selector Unit := {
-  tryFn := do
-    let signalWaiter ← s.native.next
-    -- Also when `signalWaiter` is already resolved: a repeating signal otherwise keeps the loop's
-    -- reference to it, so it would keep listening after it is dropped.
-    s.native.cancel
-    -- A signal that arrived before `cancel` resolved `signalWaiter` instead of being kept.
-    if ← signalWaiter.isResolved then
-      return some ()
-    return none
-  registerFn waiter := do
-    let signalWaiter ← s.wait
-    discard <| AsyncTask.mapIO (x := signalWaiter) fun _ => do
-      let lose := return ()
-      let win promise := promise.resolve (.ok ())
-      waiter.race lose win
-  unregisterFn := s.native.cancel
-}
+def selector (s : Signal.Waiter) : Selector Unit :=
+  { tryFn := do
+      let signalWaiter ← s.native.next
+      -- Also when `signalWaiter` is already resolved: a repeating signal otherwise keeps the loop's
+      -- reference to it, so it would keep listening after it is dropped.
+      s.native.cancel
+      -- A signal that arrived before `cancel` resolved `signalWaiter` instead of being kept.
+      if ← signalWaiter.isResolved then
+        return some ()
+      return none
+    registerFn waiter := do
+      let signalWaiter ← s.wait
+      discard <| AsyncTask.mapIO (x := signalWaiter) fun _ => do
+        let lose := return ()
+        let win promise := promise.resolve (.ok ())
+        waiter.race lose win
+    unregisterFn := s.native.cancel }

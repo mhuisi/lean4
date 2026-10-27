@@ -30,10 +30,8 @@ def withFVar (fvarId : FVarId) (x : PullM α) : PullM α :=
 @[inline]
 def withParams (ps : Array (Param .pure)) (x : PullM α) : PullM α :=
   withReader
-    (fun ctx => {
-      ctx with
-      included := ps.foldl (init := ctx.included) fun s p => s.insert p.fvarId
-    })
+    (fun ctx =>
+      { ctx with included := ps.foldl (init := ctx.included) fun s p => s.insert p.fvarId })
     x
 
 @[inline]

@@ -107,11 +107,8 @@ def mkProjections (n : Name) (projDecls : Array StructProjDecl) (instImplicit : 
               let projType := projType.inferImplicit indVal.numParams (considerRange := true)
               let projType := projType.updateForallBinderInfos paramInfoOverrides
               let projVal := lctx.mkLambda projArgs <| Expr.proj n i self
-              let cval : ConstantVal := {
-                name := projName
-                levelParams := indVal.levelParams
-                type := projType
-              }
+              let cval : ConstantVal :=
+                { name := projName, levelParams := indVal.levelParams, type := projType }
               withRef ref do
                 if isProp then
                   let env ← getEnv

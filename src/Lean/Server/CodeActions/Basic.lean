@@ -79,37 +79,35 @@ def addBuiltinCodeActionProvider (decl : Name) (provider : CodeActionProvider) :
   builtinCodeActionProviders.modify (·.insert decl provider)
 
 builtin_initialize codeActionProviderExt : SimplePersistentEnvExtension Name NameSet ←
-  registerSimplePersistentEnvExtension {
-    addImportedFn := fun nss => nss.foldl (fun acc ns => ns.foldl NameSet.insert acc) ∅
-    addEntryFn := fun s n => s.insert n
-    toArrayFn := fun es => es.toArray.qsort Name.quickLt
-  }
+  registerSimplePersistentEnvExtension
+    { addImportedFn := fun nss => nss.foldl (fun acc ns => ns.foldl NameSet.insert acc) ∅
+      addEntryFn := fun s n => s.insert n
+      toArrayFn := fun es => es.toArray.qsort Name.quickLt }
 
 builtin_initialize
   let mkAttr (builtin : Bool) (name : Name) :=
-    registerBuiltinAttribute {
-      name
-      descr :=
-        (if builtin then "(builtin) " else "") ++ "Use to decorate methods for suggesting code \
-          actions. This is a low-level interface for making code actions."
-      applicationTime := .afterCompilation
-      add := fun decl stx kind => do
-        if !builtin then
-          ensureAttrDeclIsMeta `name decl kind
-        Attribute.Builtin.ensureNoArgs stx
-        unless kind == AttributeKind.global do
-          throwAttrMustBeGlobal name kind
-        let declType := (← getConstInfo decl).type
-        unless declType.isConstOf ``CodeActionProvider do
-          throwAttrDeclNotOfExpectedType name decl declType
-            (mkConst ``Lean.Server.CodeActionProvider)
-        let env ← getEnv
-        if builtin then
-          let h := mkConst decl
-          declareBuiltin decl <| mkApp2 (mkConst ``addBuiltinCodeActionProvider) (toExpr decl) h
-        else
-          setEnv <| codeActionProviderExt.addEntry env decl
-    }
+    registerBuiltinAttribute
+      { name
+        descr :=
+          (if builtin then "(builtin) " else "") ++ "Use to decorate methods for suggesting code \
+            actions. This is a low-level interface for making code actions."
+        applicationTime := .afterCompilation
+        add := fun decl stx kind => do
+          if !builtin then
+            ensureAttrDeclIsMeta `name decl kind
+          Attribute.Builtin.ensureNoArgs stx
+          unless kind == AttributeKind.global do
+            throwAttrMustBeGlobal name kind
+          let declType := (← getConstInfo decl).type
+          unless declType.isConstOf ``CodeActionProvider do
+            throwAttrDeclNotOfExpectedType name decl declType
+              (mkConst ``Lean.Server.CodeActionProvider)
+          let env ← getEnv
+          if builtin then
+            let h := mkConst decl
+            declareBuiltin decl <| mkApp2 (mkConst ``addBuiltinCodeActionProvider) (toExpr decl) h
+          else
+            setEnv <| codeActionProviderExt.addEntry env decl }
   mkAttr true `builtin_code_action_provider
   mkAttr false `code_action_provider
 

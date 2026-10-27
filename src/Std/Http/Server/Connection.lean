@@ -91,13 +91,12 @@ private def pollNextEvent
   let expectedBytes :=
     sources.expect |>.getD config.defaultPayloadBytes |>.min config.maximumRecvSize |>.toUInt64
 
-  let mut selectables : Array (Selectable (Recv β)) := #[
-    .case sources.connectionContext.doneSelector (fun _ => do
-      let reason ← sources.connectionContext.getCancellationReason
-      match reason with
-      | some .deadline => pure .timeout
-      | _ => pure .shutdown)
-  ]
+  let mut selectables : Array (Selectable (Recv β)) :=
+    #[.case sources.connectionContext.doneSelector (fun _ => do
+        let reason ← sources.connectionContext.getCancellationReason
+        match reason with
+        | some .deadline => pure .timeout
+        | _ => pure .shutdown)]
 
   if let some socket := sources.socket then
     selectables :=
@@ -151,11 +150,10 @@ private def handleContinueEvent
     | .error _ => discard <| continueChannel.send false
 
   let canContinue ←
-    Selectable.one #[
-      .case continueChannel.recvSelector pure,
-      .case connectionContext.doneSelector (fun _ => pure false),
-      .case (← Selector.sleep config.lingeringTimeout) (fun _ => pure false)
-    ]
+    Selectable.one
+      #[.case continueChannel.recvSelector pure,
+        .case connectionContext.doneSelector (fun _ => pure false),
+        .case (← Selector.sleep config.lingeringTimeout) (fun _ => pure false)]
 
   let status := if canContinue then Status.«continue» else Status.expectationFailed
   return (machine.canContinue status, !canContinue)
@@ -167,10 +165,10 @@ and the response does not already include one.
 private def prepareResponseHead (config : Config) (head : Response.Head) : Async Response.Head := do
   if config.generateDate ∧ ¬ head.headers.contains Header.Name.date then
     let now := DateTime.ofTimestamp (← Timestamp.now) TimeZone.ZoneRules.UTC
-    return {
-      head with
-      headers := head.headers.insert Header.Name.date (Header.Value.ofString! now.toHTTPDateString)
-    }
+    return
+      { head with
+        headers :=
+          head.headers.insert Header.Name.date (Header.Value.ofString! now.toHTTPDateString) }
   else
     return head
 
@@ -237,13 +235,12 @@ private def processH1Events
       pure ()
     | .endHeaders head =>
       -- Sets the pending head and removes the KeepAlive or Header timeout.
-      st := {
-        st with
-        currentTimeout := config.lingeringTimeout
-        keepAliveTimeout := none
-        headerTimeout := none
-        pendingHead := some head
-      }
+      st :=
+        { st with
+          currentTimeout := config.lingeringTimeout
+          keepAliveTimeout := none
+          headerTimeout := none
+          pendingHead := some head }
 
       if let some length := head.getSize true then
         -- Sets the size of the body that is going out of the connection.
@@ -266,16 +263,15 @@ private def processH1Events
 
       let newStream ← Body.mkStream
 
-      st := {
-        st with
-        requestStream := newStream
-        response := ← Std.Channel.new
-        respStream := none
-        keepAliveTimeout := some config.keepAliveTimeout.val
-        currentTimeout := config.keepAliveTimeout.val
-        headerTimeout := none
-        handlerDispatched := false
-      }
+      st :=
+        { st with
+          requestStream := newStream
+          response := ← Std.Channel.new
+          respStream := none
+          keepAliveTimeout := some config.keepAliveTimeout.val
+          currentTimeout := config.keepAliveTimeout.val
+          headerTimeout := none
+          handlerDispatched := false }
     | .failed err =>
       Handler.onFailure handler (toString err)
 
@@ -351,11 +347,10 @@ private def handleRecvEvent
 
     -- After the first byte after idle we switch from keep-alive timeout to per-request header timeout.
     if st.keepAliveTimeout.isSome then
-      st := {
-        st with
-        keepAliveTimeout := none
-        headerTimeout := some <| (← Timestamp.now) + config.headerTimeout
-      }
+      st :=
+        { st with
+          keepAliveTimeout := none
+          headerTimeout := some <| (← Timestamp.now) + config.headerTimeout }
 
     return ({ st with machine := st.machine.feed bs }, false)
   | .bytes none =>
@@ -387,33 +382,24 @@ private def handleRecvEvent
     return (state, true)
   | .timeout =>
     Handler.onFailure handler "request header timeout"
-    return (
-      {
-        state with
-        machine := state.machine.closeWithError .requestTimeout
-        handlerDispatched := false
-      },
-      false
-    )
+    return
+      ( { state with
+          machine := state.machine.closeWithError .requestTimeout
+          handlerDispatched := false },
+        false )
   | .shutdown =>
-    return (
-      {
-        state with
-        machine := state.machine.closeWithError .serviceUnavailable
-        handlerDispatched := false
-      },
-      false
-    )
+    return
+      ( { state with
+          machine := state.machine.closeWithError .serviceUnavailable
+          handlerDispatched := false },
+        false )
   | .response (.error err) =>
     Handler.onFailure handler err
-    return (
-      {
-        state with
-        machine := state.machine.closeWithError .internalServerError
-        handlerDispatched := false
-      },
-      false
-    )
+    return
+      ( { state with
+          machine := state.machine.closeWithError .internalServerError
+          handlerDispatched := false },
+        false )
   | .response (.ok res) =>
     if state.machine.failed then
       if ¬(← Body.isClosed res.body) then Body.close res.body
@@ -434,15 +420,12 @@ private def handleRecvEvent
             Handler.onFailure handler e
             pure (newMachine, some body, true)
 
-      return (
-        {
-          state with
-          machine := drainedMachine
-          handlerDispatched := false
-          respStream := drainedRespStream
-        },
-        shouldClose
-      )
+      return
+        ( { state with
+            machine := drainedMachine
+            handlerDispatched := false
+            respStream := drainedRespStream },
+          shouldClose )
 
 /--
 Computes the active `PollSources` for the current connection state.
@@ -475,17 +458,16 @@ private def buildPollSources
     state.requiresData ∨ !state.handlerDispatched ∨ state.respStream.isSome
       ∨ state.machine.writer.sentMessage ∨ (state.machine.canPullBody ∧ requestBodyInterested)
 
-  return {
-    socket := if pollSocket then some socket else none
-    expect := state.expectData
-    response := if state.handlerDispatched then some state.response else none
-    responseBody := state.respStream
-    requestBody := requestBody
-    timeout := state.currentTimeout
-    keepAliveTimeout := state.keepAliveTimeout
-    headerTimeout := state.headerTimeout
-    connectionContext := connectionContext
-  }
+  return
+    { socket := if pollSocket then some socket else none
+      expect := state.expectData
+      response := if state.handlerDispatched then some state.response else none
+      responseBody := state.respStream
+      requestBody := requestBody
+      timeout := state.currentTimeout
+      keepAliveTimeout := state.keepAliveTimeout
+      headerTimeout := state.headerTimeout
+      connectionContext := connectionContext }
 
 /--
 Runs the main request/response processing loop for a single connection.
@@ -502,19 +484,18 @@ private def handle
   let socket := connection.socket
   let initStream ← Body.mkStream
 
-  let mut state : ConnectionState (Handler.ResponseBody σ) := {
-    machine := connection.machine
-    requestStream := initStream
-    keepAliveTimeout := some config.keepAliveTimeout.val
-    currentTimeout := config.keepAliveTimeout.val
-    headerTimeout := none
-    response := ← Std.Channel.new
-    respStream := none
-    requiresData := false
-    expectData := none
-    handlerDispatched := false
-    pendingHead := none
-  }
+  let mut state : ConnectionState (Handler.ResponseBody σ) :=
+    { machine := connection.machine
+      requestStream := initStream
+      keepAliveTimeout := some config.keepAliveTimeout.val
+      currentTimeout := config.keepAliveTimeout.val
+      headerTimeout := none
+      response := ← Std.Channel.new
+      respStream := none
+      requiresData := false
+      expectData := none
+      handlerDispatched := false
+      pendingHead := none }
 
   while ¬state.machine.halted do
     -- Phase 1: advance the state machine and flush any output.

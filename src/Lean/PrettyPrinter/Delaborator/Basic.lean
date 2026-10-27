@@ -115,26 +115,25 @@ special casing. If the term is an `Expr.mdata` with a single key `k`, `mdata.k` 
 -/
 @[builtin_doc]
 unsafe builtin_initialize delabAttribute : KeyedDeclsAttribute Delab ←
-  KeyedDeclsAttribute.init {
-    builtinName := `builtin_delab
-    name := `delab
-    descr := "Register a delaborator"
-    valueTypeName := `Lean.PrettyPrinter.Delaborator.Delab
-    evalKey := fun _ stx => do
-      let stx ← Attribute.Builtin.getIdent stx
-      let kind := stx.getId
-      if (← Elab.getInfoState).enabled && !kind.isAtomic && kind.getRoot == `app then
-        let c := kind.replacePrefix `app .anonymous
-        -- Create identifier dropping `app` prefix, for completions and term info
-        let stx' :=
-          mkIdentFrom (mkNullNode (Syntax.identComponents stx).tail.toArray) c (canonical := true)
-        Elab.addCompletionInfo <|
-          .id stx' c (danglingDot := false) (lctx := {}) (expectedType? := none)
-        if (← getEnv).contains c then
-          recordExtraModUseFromDecl (isMeta := false) c
-          Elab.addConstInfo stx' c none
-      pure kind
-  }
+  KeyedDeclsAttribute.init
+    { builtinName := `builtin_delab
+      name := `delab
+      descr := "Register a delaborator"
+      valueTypeName := `Lean.PrettyPrinter.Delaborator.Delab
+      evalKey := fun _ stx => do
+        let stx ← Attribute.Builtin.getIdent stx
+        let kind := stx.getId
+        if (← Elab.getInfoState).enabled && !kind.isAtomic && kind.getRoot == `app then
+          let c := kind.replacePrefix `app .anonymous
+          -- Create identifier dropping `app` prefix, for completions and term info
+          let stx' :=
+            mkIdentFrom (mkNullNode (Syntax.identComponents stx).tail.toArray) c (canonical := true)
+          Elab.addCompletionInfo <|
+            .id stx' c (danglingDot := false) (lctx := {}) (expectedType? := none)
+          if (← getEnv).contains c then
+            recordExtraModUseFromDecl (isMeta := false) c
+            Elab.addConstInfo stx' c none
+        pure kind }
 
 /--
 `@[app_delab c]` registers a delaborator for applications with head constant `c`.
@@ -223,14 +222,13 @@ def addTermInfo (pos : Pos) (stx : Syntax) (e : Expr) (isBinder : Bool := false)
   modify fun s => { s with infos := s.infos.insert pos info }
 where
   mkTermInfo stx e isBinder :=
-    return {
-      elaborator := `Delab
-      stx := stx
-      lctx := (← getLCtx)
-      expectedType? := none
-      expr := e
-      isBinder := isBinder
-    }
+    return
+      { elaborator := `Delab
+        stx := stx
+        lctx := (← getLCtx)
+        expectedType? := none
+        expr := e
+        isBinder := isBinder }
 
 def addFieldInfo (pos : Pos) (projName fieldName : Name) (stx : Syntax) (val : Expr)
     : DelabM Unit := do
@@ -238,13 +236,8 @@ def addFieldInfo (pos : Pos) (projName fieldName : Name) (stx : Syntax) (val : E
   modify fun s => { s with infos := s.infos.insert pos info }
 where
   mkFieldInfo projName fieldName stx val :=
-    return {
-      projName := projName
-      fieldName := fieldName
-      lctx := (← getLCtx)
-      val := val
-      stx := stx
-    }
+    return
+      { projName := projName, fieldName := fieldName, lctx := (← getLCtx), val := val, stx := stx }
 
 /--
 Adds `DelabTermInfo` at the given position.
@@ -259,12 +252,11 @@ def addDelabTermInfo
     (explicit : Bool := true)
     : DelabM Unit := do
   let info :=
-    Info.ofDelabTermInfo {
-      toTermInfo := ← addTermInfo.mkTermInfo stx e (isBinder := isBinder)
-      location? := location?
-      mkDocString? := mkDocString? <|> docString?.map (fun _ => pure ·)
-      explicit := explicit
-    }
+    Info.ofDelabTermInfo
+      { toTermInfo := ← addTermInfo.mkTermInfo stx e (isBinder := isBinder)
+        location? := location?
+        mkDocString? := mkDocString? <|> docString?.map (fun _ => pure ·)
+        explicit := explicit }
   modify fun s => { s with infos := s.infos.insert pos info }
 
 /--
@@ -520,15 +512,14 @@ syntax and don't have access to the expression tree.
 -/
 @[builtin_doc]
 unsafe builtin_initialize appUnexpanderAttribute : KeyedDeclsAttribute Unexpander ←
-  KeyedDeclsAttribute.init {
-    name := `app_unexpander
-    descr := "Register an unexpander for applications of a given constant."
-    valueTypeName := `Lean.PrettyPrinter.Unexpander
-    evalKey := fun _ stx => do
-      let id ← Elab.realizeGlobalConstNoOverloadWithInfo (← Attribute.Builtin.getIdent stx)
-      recordExtraModUseFromDecl (isMeta := false) id
-      return id
-  }
+  KeyedDeclsAttribute.init
+    { name := `app_unexpander
+      descr := "Register an unexpander for applications of a given constant."
+      valueTypeName := `Lean.PrettyPrinter.Unexpander
+      evalKey := fun _ stx => do
+        let id ← Elab.realizeGlobalConstNoOverloadWithInfo (← Attribute.Builtin.getIdent stx)
+        recordExtraModUseFromDecl (isMeta := false) id
+        return id }
 
 end Delaborator
 
@@ -568,14 +559,13 @@ def delabCore (e : Expr) (optionsPerPos : OptionsPerPos := {}) (delab : DelabM �
     let (stx, { infos := infos, .. }) ←
       catchInternalId Delaborator.delabFailureId
         -- Clear the ref to ensure that quotations in delaborators start with blank source info.
-        (MonadRef.withRef .missing delab {
-            optionsPerPos := optionsPerPos
-            currNamespace := (← getCurrNamespace)
-            openDecls := (← getOpenDecls)
-            subExpr := SubExpr.mkRoot e
-            inPattern := opts.getInPattern
-            lctxInitIndices := (← getLCtx).numIndices
-          }
+        (MonadRef.withRef .missing delab
+            { optionsPerPos := optionsPerPos
+              currNamespace := (← getCurrNamespace)
+              openDecls := (← getOpenDecls)
+              subExpr := SubExpr.mkRoot e
+              inPattern := opts.getInPattern
+              lctxInitIndices := (← getLCtx).numIndices }
           |>.run { : Delaborator.State })
         (fun _ => unreachable!)
     return (stx, infos)

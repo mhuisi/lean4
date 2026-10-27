@@ -41,12 +41,12 @@ def throwInvalidNamedArg (namedArg : NamedArg) (fn? : Option Name) (validNames :
       if span?.getHeadInfo matches .original .. then
         MessageData.hint (forceList := true)
             "Perhaps you meant one of the following parameter names:" <|
-          validNames.map fun name => {
-            suggestion := .string name.toString
-            preInfo? := some s!"`{name.toString}`: "
-            span?
-            toCodeActionTitle? := some fun s => s!"Change argument name `{namedArg.name}` to `{s}`"
-          }
+          validNames.map fun name =>
+            { suggestion := .string name.toString
+              preInfo? := some s!"`{name.toString}`: "
+              span?
+              toCodeActionTitle? :=
+                some fun s => s!"Change argument name `{namedArg.name}` to `{s}`" }
       else
         let validNamesMsg := MessageData.orList <| validNames.map (m!"`{·}`") |>.toList
         pure <| MessageData.hint'
@@ -113,11 +113,11 @@ private def findDeprecatedBinderName? (namedArgs : List NamedArg) (f : Expr) (bi
         let span? := namedArg.ref[1]
         let hint ←
           if span?.getHeadInfo matches .original .. then
-            MessageData.hint "Rename this argument:" #[{
-              suggestion := .string entry.newArg?.get!.toString
-              span?
-              toCodeActionTitle? := some fun s => s!"Rename argument `{entry.oldArg}` to `{s}`"
-            }]
+            MessageData.hint "Rename this argument:"
+              #[{ suggestion := .string entry.newArg?.get!.toString
+                  span?
+                  toCodeActionTitle? :=
+                    some fun s => s!"Rename argument `{entry.oldArg}` to `{s}`" }]
           else
             pure .nil
         logWarningAt namedArg.ref <| .tagged ``deprecatedArgExt msg ++ hint
@@ -398,12 +398,11 @@ private def synthesizePendingAndNormalizeFunType : M Unit := do
                 let msg := formatDeprecatedArgMsg entry
                 let hint ←
                   if namedArg.ref.getHeadInfo matches .original .. then
-                    MessageData.hint "Delete this argument:" #[{
-                      suggestion := .string ""
-                      span? := namedArg.ref
-                      toCodeActionTitle? :=
-                        some fun _ => s!"Delete deprecated argument `{entry.oldArg}`"
-                    }]
+                    MessageData.hint "Delete this argument:"
+                      #[{ suggestion := .string ""
+                          span? := namedArg.ref
+                          toCodeActionTitle? :=
+                            some fun _ => s!"Delete deprecated argument `{entry.oldArg}`" }]
                   else
                     pure .nil
                 throwErrorAt namedArg.ref (msg ++ hint)
@@ -436,12 +435,8 @@ private def addNewArg (argName : Name) (arg : Expr) : M Unit := do
   let s ← get
   trace[Elab.app.args]
     "arg {s.paramIdx + 1}{if argName.hasMacroScopes then m!"" else m!" ({argName})"}: {arg}"
-  modify fun s => {
-    s with
-    f := mkApp s.f arg
-    fArgs := s.fArgs.push arg
-    fType := s.fType.bindingBody!
-  }
+  modify fun s =>
+    { s with f := mkApp s.f arg, fArgs := s.fArgs.push arg, fType := s.fType.bindingBody! }
   if arg.isMVar then
     registerMVarArgName arg.mvarId! argName
 
@@ -1361,12 +1356,11 @@ partial def main : M Expr := do
   let .forallE binderName binderType body binderInfo ← whnfForall (← get).fType
     | finalize
   let addArgAndContinue (arg : Expr) : M Expr := do
-    modify fun s => {
-      s with
-      idx := s.idx + 1
-      f := mkApp s.f arg
-      fType := body.instantiateBetaRevRange 0 1 #[arg]
-    }
+    modify fun s =>
+      { s with
+        idx := s.idx + 1
+        f := mkApp s.f arg
+        fType := body.instantiateBetaRevRange 0 1 #[arg] }
     saveArgInfo arg binderName
     main
   let idx := (← get).idx
@@ -1477,14 +1471,13 @@ def elabAppArgs
           trace[Elab.app.args]
             "the first {numImplicitParams} parameters are overridden to be implicit"
         ElabAppArgs.main.run { explicit, ellipsis, resultIsOutParamSupport, numImplicitParams }
-          |>.run' {
-            args := args.toList
-            expectedType?
-            f
-            fType
-            namedArgs := namedArgs.toList
-            propagateExpected := (← propagateExpectedTypeFor f)
-          }
+          |>.run'
+            { args := args.toList
+              expectedType?
+              f
+              fType
+              namedArgs := namedArgs.toList
+              propagateExpected := (← propagateExpectedTypeFor f) }
 where
   /-- Return `some info` if we should elaborate as an eliminator. -/
   elabAsElim? : TermElabM (Option ElabElimInfo) := do
@@ -1604,11 +1597,10 @@ private partial def mkTupleHint (eType : Expr) (idx : Nat) (ref : Syntax)
       let mut projComps := List.replicate (idx - 1) "2"
       if idx < numComps then projComps := projComps ++ ["1"]
       let proj := ".".intercalate projComps
-      let sug := {
-        suggestion := proj
-        span? := ref
-        toCodeActionTitle? := some (s!"Change projection `{idx}` to `{·}`")
-      }
+      let sug :=
+        { suggestion := proj
+          span? := ref
+          toCodeActionTitle? := some (s!"Change projection `{idx}` to `{·}`") }
       MessageData.hint
         m!"n-tuples in Lean are actually nested pairs. To access the \
           {idx.toOrdinal} component of this tuple, use the projection `.{proj}` instead:"
@@ -1778,19 +1770,17 @@ where
       else if suggestions.size = 1 then
         MessageData.hint (ref? := ref)
           m!"Perhaps you meant `{.ofConstName suggestions[0]}` in place of `{fullName}`:"
-          (suggestions.map fun suggestion => {
-            preInfo? := .some s!"."
-            suggestion := suggestion.getString!
-            toCodeActionTitle? := .some (s!"Change to .{·}")
-            diffGranularity := .all
-          })
+          (suggestions.map fun suggestion =>
+            { preInfo? := .some s!"."
+              suggestion := suggestion.getString!
+              toCodeActionTitle? := .some (s!"Change to .{·}")
+              diffGranularity := .all })
       else
         MessageData.hint (ref? := ref) m!"Perhaps you meant one of these in place of `{fullName}`:"
-          (suggestions.map fun suggestion => {
-            suggestion := suggestion.getString!
-            toCodeActionTitle? := .some (s!"Change to .{·}")
-            messageData? := .some m!"`{.ofConstName suggestion}`"
-          })
+          (suggestions.map fun suggestion =>
+            { suggestion := suggestion.getString!
+              toCodeActionTitle? := .some (s!"Change to .{·}")
+              messageData? := .some m!"`{.ofConstName suggestion}`" })
 
     -- By using `mkUnknownIdentifierMessage`, the tag `Lean.unknownIdentifierMessageTag` is
     -- incorporated within the message, as required for the "import unknown identifier" code action.
@@ -2049,11 +2039,8 @@ private def elabAppLValsAux
         let projFn ← withRef lval.getRef <| mkConst info.projFn levels
         let projFn ← addProjTermInfo lval.getRef projFn
         let baseStructInfo ← getConstInfoInduct baseStructName
-        let namedArg : NamedArg := {
-          name := `self
-          val := Arg.expr f
-          numImplicitParams := baseStructInfo.numParams
-        }
+        let namedArg : NamedArg :=
+          { name := `self, val := Arg.expr f, numImplicitParams := baseStructInfo.numParams }
         if lvals.isEmpty then
           let namedArgs ← addNamedArg namedArgs namedArg
           elabAppArgs projFn namedArgs args expectedType? explicit ellipsis
@@ -2210,11 +2197,10 @@ where
       | suggestions =>
         let oneOfThese :=
           if h : suggestions.size = 1 then m!"`{.ofConstName suggestions[0]}" else m!"one of these"
-        m!"Using {oneOfThese} would be unambiguous:".hint (suggestions.map fun suggestion => {
-          suggestion := mkIdent suggestion
-          toCodeActionTitle? := .some (s!"Change to {·}")
-          messageData? := .some m!"`{.ofConstName suggestion}`"
-        })
+        m!"Using {oneOfThese} would be unambiguous:".hint (suggestions.map fun suggestion =>
+          { suggestion := mkIdent suggestion
+            toCodeActionTitle? := .some (s!"Change to {·}")
+            messageData? := .some m!"`{.ofConstName suggestion}`" })
     throwNamedError lean.invalidDottedIdent
       (m!"Invalid dotted identifier notation: The expected type of `.{id}` could not be determined"
         ++ hint)
@@ -2526,12 +2512,11 @@ private def elabAppAux
                   if !trees.isEmpty then
                     let ctx ← CommandContextInfo.save
                     pure <| some <| .context (.commandCtx ctx) <| .node
-                      (.ofPartialTermInfo {
-                        elaborator := .anonymous
-                        stx := (← getRef)
-                        lctx := (← getLCtx)
-                        expectedType?
-                      })
+                      (.ofPartialTermInfo
+                        { elaborator := .anonymous
+                          stx := (← getRef)
+                          lctx := (← getLCtx)
+                          expectedType? })
                       trees
                   else
                     pure none

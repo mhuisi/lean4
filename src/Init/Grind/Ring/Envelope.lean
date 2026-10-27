@@ -300,35 +300,34 @@ theorem neg_zsmul (i : Int) (a : Q α) : zsmul (-i) a = neg (zsmul i a) := by
       simp [this]
 
 @[instance_reducible]
-def ofSemiring : Ring (Q α) := {
-  nsmul := ⟨nsmul⟩
-  zsmul := ⟨zsmul⟩
-  ofNat := fun n => ⟨natCast n⟩
-  natCast := ⟨natCast⟩
-  intCast := ⟨intCast⟩
-  npow := ⟨npow⟩
-  add
-  sub
-  mul
-  neg
-  add_comm
-  add_assoc
-  add_zero
-  neg_add_cancel
-  sub_eq_add_neg
-  mul_one
-  one_mul
-  zero_mul
-  mul_zero
-  mul_assoc
-  left_distrib
-  right_distrib
-  pow_zero
-  pow_succ
-  intCast_neg
-  ofNat_succ
-  neg_zsmul
-}
+def ofSemiring : Ring (Q α) :=
+  { nsmul := ⟨nsmul⟩
+    zsmul := ⟨zsmul⟩
+    ofNat := fun n => ⟨natCast n⟩
+    natCast := ⟨natCast⟩
+    intCast := ⟨intCast⟩
+    npow := ⟨npow⟩
+    add
+    sub
+    mul
+    neg
+    add_comm
+    add_assoc
+    add_zero
+    neg_add_cancel
+    sub_eq_add_neg
+    mul_one
+    one_mul
+    zero_mul
+    mul_zero
+    mul_assoc
+    left_distrib
+    right_distrib
+    pow_zero
+    pow_succ
+    intCast_neg
+    ofNat_succ
+    neg_zsmul }
 
 attribute [instance] ofSemiring
 
@@ -628,10 +627,8 @@ theorem mul_comm (a b : OfSemiring.Q α) : OfSemiring.mul a b = OfSemiring.mul b
   ac_rfl
 
 @[instance_reducible]
-def ofCommSemiring : CommRing (OfSemiring.Q α) := {
-  OfSemiring.ofSemiring with
-  mul_comm := mul_comm
-}
+def ofCommSemiring : CommRing (OfSemiring.Q α) :=
+  { OfSemiring.ofSemiring with mul_comm := mul_comm }
 
 attribute [instance high] ofCommSemiring
 instance (priority := high) [CommRing (OfSemiring.Q α)] : Add (OfSemiring.Q α) := by infer_instance

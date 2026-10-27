@@ -127,13 +127,13 @@ This linter fires only on theorems. (This includes `lemma`s and `instance`s of `
 The constants recognised as `Decidable*` are `Decidable`, `DecidablePred`, `DecidableRel`,
 `DecidableEq`, `DecidableLE`, and `DecidableLT`.
 -/
-register_builtin_option linter.extra.unusedDecidableInType : Bool := {
-  defValue := false
-  descr :=
-    "enable the unused `Decidable*` instance linter, which lints against `Decidable*` \
-      instances in the hypotheses of theorems which are not used in the type, and can therefore be \
-      replaced by a use of `classical` in the proof."
-}
+register_builtin_option linter.extra.unusedDecidableInType : Bool :=
+  { defValue := false
+    descr :=
+      "enable the unused `Decidable*` instance linter, which lints against `Decidable*` \
+        instances in the hypotheses of theorems which are not used in the type, and can therefore \
+        be \
+        replaced by a use of `classical` in the proof." }
 
 namespace UnusedDecidableInType
 
@@ -272,12 +272,11 @@ private def onUnusedInstancesWhere
           let unusedEverywhereInstances := decl.type.getUnusedForallInstanceBinderIdxsWhere p
           let unusedParams : Array Parameter ←
             unusedInstances.mapM fun idx =>
-              return {
-                fvar? := fvars[idx]?
-                type? := ← fvars[idx]?.mapM (inferType ·)
-                idx
-                appearsInTypeProof := ! unusedEverywhereInstances.contains idx
-              }
+              return
+                { fvar? := fvars[idx]?
+                  type? := ← fvars[idx]?.mapM (inferType ·)
+                  idx
+                  appearsInTypeProof := ! unusedEverywhereInstances.contains idx }
           logOnUnused unusedParams
 
 /--

@@ -434,59 +434,55 @@ def linkTarget : Lean.Parser.Parser :=
 open Lean.Parser in
 /-- Matches the literal characters of `s`, producing a single atom that takes a position binder. -/
 private def atomOf (s : String) : Lean.Parser.Parser :=
-  tokenWithAntiquot {
-    fn :=
-      rawFn (trailingWs := true) fun c st =>
-        let chars :=
-          s.foldl (init := (fun _ st => st : ParserFn)) fun p ch =>
-            p >> satisfyFn (· == ch) ch.toString
-        let st' := chars c st
-        -- The characters are read one at a time, so a failure names the one that did not match. The
-        -- atom is what was expected, and reporting it at the start says where it would have begun.
-        if st'.hasError then st'.mkErrorAt s!"'{s}'" st.pos else st'
-  }
+  tokenWithAntiquot
+    { fn :=
+        rawFn (trailingWs := true) fun c st =>
+          let chars :=
+            s.foldl (init := (fun _ st => st : ParserFn)) fun p ch =>
+              p >> satisfyFn (· == ch) ch.toString
+          let st' := chars c st
+          -- The characters are read one at a time, so a failure names the one that did not match. The
+          -- atom is what was expected, and reporting it at the start says where it would have begun.
+          if st'.hasError then st'.mkErrorAt s!"'{s}'" st.pos else st' }
 
 open Lean.Parser in
 /-- Matches a run of one or more `c`, producing a single atom. -/
 private def charRun (ch : Char) : Lean.Parser.Parser :=
-  tokenWithAntiquot {
-    fn :=
-      rawFn (trailingWs := true) fun c st =>
-        let st' := takeWhile1Fn (· == ch) s!"'{ch}'" c st
-        if st'.hasError then st'.mkErrorAt s!"one or more '{ch}'" st.pos else st'
-  }
+  tokenWithAntiquot
+    { fn :=
+        rawFn (trailingWs := true) fun c st =>
+          let st' := takeWhile1Fn (· == ch) s!"'{ch}'" c st
+          if st'.hasError then st'.mkErrorAt s!"one or more '{ch}'" st.pos else st' }
 
 open Lean.Parser in
 /-- Matches an unordered list item's marker, producing a single atom. -/
 private def bulletAtom : Lean.Parser.Parser :=
   onFirstUse fun _ =>
-    tokenWithAntiquot {
+    tokenWithAntiquot
       -- A single scan, so that nothing pushes a wrapper node beside the atom.
-      fn :=
-        rawFn (trailingWs := true) fun c s =>
-          if h : c.atEnd s.pos then
-            s.mkEOIError
-          else
-            let ch := c.get' s.pos h
-            if ch == '*' || ch == '-' || ch == '+' then
-              s.next' c s.pos h
+      { fn :=
+          rawFn (trailingWs := true) fun c s =>
+            if h : c.atEnd s.pos then
+              s.mkEOIError
             else
-              s.mkErrorAt "'*', '-', or '+'" s.pos
-    }
+              let ch := c.get' s.pos h
+              if ch == '*' || ch == '-' || ch == '+' then
+                s.next' c s.pos h
+              else
+                s.mkErrorAt "'*', '-', or '+'" s.pos }
 
 open Lean.Parser in
 /-- Matches an ordered list item's marker, producing a single atom. -/
 private def numberAtom : Lean.Parser.Parser :=
   onFirstUse fun _ =>
-    tokenWithAntiquot {
-      fn :=
-        rawFn (trailingWs := true) fun c s =>
-          let s' :=
-            (takeWhile1Fn (·.isDigit) "'0'-'9'"
-                >> satisfyFn (fun c => c == '.' || c == ')') "'.' or ')'")
-              c s
-          if s'.hasError then s'.mkErrorAt "a number followed by '.' or ')'" s.pos else s'
-    }
+    tokenWithAntiquot
+      { fn :=
+          rawFn (trailingWs := true) fun c s =>
+            let s' :=
+              (takeWhile1Fn (·.isDigit) "'0'-'9'"
+                  >> satisfyFn (fun c => c == '.' || c == ')') "'.' or ')'")
+                c s
+            if s'.hasError then s'.mkErrorAt "a number followed by '.' or ')'" s.pos else s' }
 
 open Lean.Parser Lean.Parser.Term in
 /--
@@ -496,13 +492,12 @@ The fields occur between delimiters that are not otherwise tokens, so `%%%` is a
 token table while reading them.
 -/
 private def metadataContentsLit : Lean.Parser.Parser :=
-  onFirstUse fun _ => {
-    fn :=
-      adaptUncacheableContextFn
-        (fun c => { c with tokens := c.tokens.insert "%%%" "%%%" })
-        (withAntiquot (mkAntiquot "metadataContents" ``Lean.Parser.Term.structInstFields)
-          (structInstFields (sepByIndent structInstField ", " (allowTrailingSep := true)))).fn
-  }
+  onFirstUse fun _ =>
+    { fn :=
+        adaptUncacheableContextFn
+          (fun c => { c with tokens := c.tokens.insert "%%%" "%%%" })
+          (withAntiquot (mkAntiquot "metadataContents" ``Lean.Parser.Term.structInstFields)
+            (structInstFields (sepByIndent structInstField ", " (allowTrailingSep := true)))).fn }
 
 open Lean.Parser in
 /--
@@ -619,9 +614,8 @@ open Lean.Parser in
 /-- Inline code, used on its own and as the content of mathematical notation. -/
 private def inlineCode : Lean.Parser.Parser :=
   onFirstUse fun _ =>
-    nodeWithAntiquot "code" `Lean.Doc.Parser.Inline.code {
-      fn := matchingDelimiterLengths codeDelimiter '`' versoCode
-    }
+    nodeWithAntiquot "code" `Lean.Doc.Parser.Inline.code
+      { fn := matchingDelimiterLengths codeDelimiter '`' versoCode }
 
 -- The inline productions are mutually recursive. Recursive `Parser` values cannot express that,
 -- so the `*Quot` definitions below break the recursion at the `ParserFn` level.
@@ -643,14 +637,12 @@ private partial def textQuot : ParserFn :=
   (nodeWithAntiquot "text" `Lean.Doc.Parser.Inline.text versoText).fn
 
 private partial def emphQuot : ParserFn :=
-  (nodeWithAntiquot "emph" `Lean.Doc.Parser.Inline.emph {
-    fn := matchingDelimiterLengths emphDelimiter '_' (many (atomic { fn := inlineQuot }))
-  }).fn
+  (nodeWithAntiquot "emph" `Lean.Doc.Parser.Inline.emph
+    { fn := matchingDelimiterLengths emphDelimiter '_' (many (atomic { fn := inlineQuot })) }).fn
 
 private partial def boldQuot : ParserFn :=
-  (nodeWithAntiquot "bold" `Lean.Doc.Parser.Inline.bold {
-    fn := matchingDelimiterLengths boldDelimiter '*' (many (atomic { fn := inlineQuot }))
-  }).fn
+  (nodeWithAntiquot "bold" `Lean.Doc.Parser.Inline.bold
+    { fn := matchingDelimiterLengths boldDelimiter '*' (many (atomic { fn := inlineQuot })) }).fn
 
 private partial def displayMathQuot : ParserFn :=
   (nodeWithAntiquot "display_math" `Lean.Doc.Parser.Inline.display_math
@@ -987,13 +979,12 @@ Each sits in a node of its own, so that a quotation can splice one in place of w
 `VersoDelimiter.view` or `TSyntax.getVersoDelimiter` to read its characters.
 -/
 abbrev VersoDelimiter :=
-  TSyntax [
-    ``Parser.emphDelimiter, ``Parser.boldDelimiter,
-    ``Parser.codeDelimiter, ``Parser.codeBlockFence,
-    ``Parser.directiveDelimiter, ``Parser.headerMarker,
-    ``Parser.listMarker, ``Parser.inlineMathMarker,
-    ``Parser.displayMathMarker
-  ]
+  TSyntax
+    [ ``Parser.emphDelimiter, ``Parser.boldDelimiter,
+      ``Parser.codeDelimiter, ``Parser.codeBlockFence,
+      ``Parser.directiveDelimiter, ``Parser.headerMarker,
+      ``Parser.listMarker, ``Parser.inlineMathMarker,
+      ``Parser.displayMathMarker ]
 
 end
 

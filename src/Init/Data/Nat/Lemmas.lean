@@ -34,13 +34,12 @@ and later these theorems should be organised into other files more systematicall
 namespace Nat
 
 @[simp]
-theorem exists_ne_zero {P : Nat → Prop} : (∃ n, ¬ n = 0 ∧ P n) ↔ ∃ n, P (n + 1) := ⟨
-  fun ⟨n, h, w⟩ => by
-    cases n with
-    | zero => simp at h
-    | succ n => exact ⟨n, w⟩,
-  fun ⟨n, w⟩ => ⟨n + 1, by simp, w⟩
-⟩
+theorem exists_ne_zero {P : Nat → Prop} : (∃ n, ¬ n = 0 ∧ P n) ↔ ∃ n, P (n + 1) :=
+  ⟨ fun ⟨n, h, w⟩ => by
+      cases n with
+      | zero => simp at h
+      | succ n => exact ⟨n, w⟩,
+    fun ⟨n, w⟩ => ⟨n + 1, by simp, w⟩ ⟩
 
 @[simp]
 theorem exists_eq_add_one : (∃ n, a = n + 1) ↔ 0 < a :=
@@ -830,10 +829,9 @@ protected theorem lt_iff_lt_of_mul_eq_mul (ha : a ≠ 0) (hbd : a = b * d) (hce 
 
 theorem mul_self_lt_mul_self {m n : Nat} (h : m < n) : m * m < n * n := mul_lt_mul'' h h
 
-theorem mul_self_le_mul_self_iff {m n : Nat} : m * m ≤ n * n ↔ m ≤ n := ⟨
-  fun h => Nat.le_of_not_lt fun h' => Nat.not_le_of_gt (mul_self_lt_mul_self h') h,
-  mul_self_le_mul_self
-⟩
+theorem mul_self_le_mul_self_iff {m n : Nat} : m * m ≤ n * n ↔ m ≤ n :=
+  ⟨ fun h => Nat.le_of_not_lt fun h' => Nat.not_le_of_gt (mul_self_lt_mul_self h') h,
+    mul_self_le_mul_self ⟩
 
 theorem mul_self_lt_mul_self_iff {m n : Nat} : m * m < n * n ↔ m < n := by
   simp only [← Nat.not_le, mul_self_le_mul_self_iff]
@@ -1605,12 +1603,11 @@ theorem div_add_mod' (a b : Nat) : a / b * b + a % b = a := by
   rw [Nat.mul_comm]; exact div_add_mod _ _
 
 /-- See also `Nat.divModEquiv` for a similar statement as an `Equiv`. -/
-protected theorem div_mod_unique (h : 0 < b) : a / b = d ∧ a % b = c ↔ c + b * d = a ∧ c < b := ⟨
-  fun ⟨e₁, e₂⟩ ↦ e₁ ▸ e₂ ▸ ⟨mod_add_div _ _, mod_lt _ h⟩,
-  fun ⟨h₁, h₂⟩ ↦
-    h₁
-      ▸ by rw [add_mul_div_left _ _ h, add_mul_mod_self_left]; simp [div_eq_of_lt, mod_eq_of_lt, h₂]
-⟩
+protected theorem div_mod_unique (h : 0 < b) : a / b = d ∧ a % b = c ↔ c + b * d = a ∧ c < b :=
+  ⟨ fun ⟨e₁, e₂⟩ ↦ e₁ ▸ e₂ ▸ ⟨mod_add_div _ _, mod_lt _ h⟩,
+    fun ⟨h₁, h₂⟩ ↦
+      h₁ ▸ by
+        rw [add_mul_div_left _ _ h, add_mul_mod_self_left]; simp [div_eq_of_lt, mod_eq_of_lt, h₂] ⟩
 
 /-- If `m` and `n` are equal mod `k`, `m - n` is zero mod `k`. -/
 theorem sub_mod_eq_zero_of_mod_eq (h : m % k = n % k) : (m - n) % k = 0 := by
@@ -1695,21 +1692,19 @@ theorem mod_div_self (m n : Nat) : m % n / n = 0 := by
   case succ n => exact Nat.div_eq_of_lt (m.mod_lt n.succ_pos)
 
 theorem mod_eq_iff {a b c : Nat}
-    : a % b = c ↔ (b = 0 ∧ a = c) ∨ (c < b ∧ Exists fun k => a = b * k + c) := ⟨
-  fun h =>
-    if w : b = 0 then
-      .inl ⟨w, by simpa [w] using h⟩
-    else
-      .inr ⟨
-        by subst h; exact Nat.mod_lt a (zero_lt_of_ne_zero w),
-        a / b,
-        by subst h; exact (div_add_mod a b).symm
-      ⟩,
-  by
-    rintro (⟨rfl, rfl⟩ | ⟨w, h, rfl⟩)
-    · simp_all
-    · rw [mul_add_mod, mod_eq_of_lt w]
-⟩
+    : a % b = c ↔ (b = 0 ∧ a = c) ∨ (c < b ∧ Exists fun k => a = b * k + c) :=
+  ⟨ fun h =>
+      if w : b = 0 then
+        .inl ⟨w, by simpa [w] using h⟩
+      else
+        .inr
+          ⟨ by subst h; exact Nat.mod_lt a (zero_lt_of_ne_zero w),
+            a / b,
+            by subst h; exact (div_add_mod a b).symm ⟩,
+    by
+      rintro (⟨rfl, rfl⟩ | ⟨w, h, rfl⟩)
+      · simp_all
+      · rw [mul_add_mod, mod_eq_of_lt w] ⟩
 
 theorem mod_eq_sub_iff {a b c : Nat} (h₁ : 0 < c) (h : c ≤ b) : a % b = b - c ↔ b ∣ a + c := by
   rw [Nat.mod_eq_iff]
@@ -1819,10 +1814,9 @@ theorem not_dvd_of_lt_of_lt_mul_succ (h1 : n * k < m) (h2 : m < n * (k + 1)) : �
 /-- `n` is not divisible by `a` iff it is between `a * k` and `a * (k + 1)` for some `k`. -/
 theorem not_dvd_iff_lt_mul_succ (n : Nat) {a : Nat} (ha : 0 < a)
     : ¬ a ∣ n ↔ (∃ k : Nat, a * k < n ∧ n < a * (k + 1)) := by
-  refine Iff.symm ⟨
-    fun ⟨k, hk1, hk2⟩ => not_dvd_of_lt_of_lt_mul_succ hk1 hk2,
-    fun han => ⟨n / a, ⟨Nat.lt_of_le_of_ne (mul_div_le n a) ?_, lt_mul_div_succ _ ha⟩⟩
-  ⟩
+  refine Iff.symm
+    ⟨ fun ⟨k, hk1, hk2⟩ => not_dvd_of_lt_of_lt_mul_succ hk1 hk2,
+      fun han => ⟨n / a, ⟨Nat.lt_of_le_of_ne (mul_div_le n a) ?_, lt_mul_div_succ _ ha⟩⟩ ⟩
   exact mt (⟨n / a, Eq.symm ·⟩) han
 
 theorem div_lt_div_of_lt_of_dvd {a b d : Nat} (hdb : d ∣ b) (h : a < b) : a / d < b / d := by
@@ -2063,14 +2057,12 @@ noncomputable instance decidableExistsLT'
     isFalse (by simp)
   | (k + 1), p, I =>
     @decidable_of_iff _ ((∃ m, ∃ h : m < k, p m (by omega)) ∨ p k (by omega))
-      ⟨
-        by rintro (⟨m, h, w⟩ | w); exact ⟨m, by omega, w⟩; exact ⟨k, by omega, w⟩,
+      ⟨ by rintro (⟨m, h, w⟩ | w); exact ⟨m, by omega, w⟩; exact ⟨k, by omega, w⟩,
         fun ⟨m, h, w⟩ =>
           if h' : m < k then
             .inl ⟨m, h', w⟩
           else by
-            obtain rfl := (by omega : m = k); exact .inr w
-      ⟩
+            obtain rfl := (by omega : m = k); exact .inr w ⟩
       (@instDecidableOr _ _
         (decidableExistsLT' (p := fun m h => p m (by omega)) (I := fun m h => I m (by omega)))
         inferInstance)
@@ -2099,7 +2091,6 @@ instance decidableExistsLE' {p : (m : Nat) → m ≤ k → Prop} [I : ∀ m h, D
     exact ⟨fun ⟨h, w⟩ => ⟨le_of_lt_succ h, w⟩, fun ⟨h, w⟩ => ⟨lt_add_one_of_le h, w⟩⟩
 
 instance decidableExistsFin (P : Fin n → Prop) [DecidablePred P] : Decidable (∃ i, P i) :=
-  decidable_of_iff (∃ k, k < n ∧ ((h : k < n) → P ⟨k, h⟩)) ⟨
-    fun ⟨k, a⟩ => Exists.intro ⟨k, a.left⟩ (a.right a.left),
-    fun ⟨i, e⟩ => Exists.intro i.val ⟨i.isLt, fun _ => e⟩
-  ⟩
+  decidable_of_iff (∃ k, k < n ∧ ((h : k < n) → P ⟨k, h⟩))
+    ⟨ fun ⟨k, a⟩ => Exists.intro ⟨k, a.left⟩ (a.right a.left),
+      fun ⟨i, e⟩ => Exists.intro i.val ⟨i.isLt, fun _ => e⟩ ⟩

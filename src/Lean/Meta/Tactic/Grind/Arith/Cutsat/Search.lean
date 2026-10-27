@@ -362,16 +362,10 @@ def resolveRealLowerUpperConflict (c₁ c₂ : LeCnstr) : GoalM Bool := do
   else
     let k := p.gcdCoeffs'
     let c :=
-      if k == 1 then {
-        p
-        h := .combine c₁ c₂
-        : LeCnstr
-      }
-      else {
-        p := p.div k
-        h := .combineDivCoeffs c₁ c₂ k
-        : LeCnstr
-      }
+      if k == 1 then
+        { p, h := .combine c₁ c₂ : LeCnstr }
+      else
+        { p := p.div k, h := .combineDivCoeffs c₁ c₂ k : LeCnstr }
     trace[grind.debug.lia.search.conflict] "resolved: {← c.pp}"
     c.assert
     return true
@@ -434,11 +428,8 @@ splits `c₁` and resolve with `c₂`.
 def resolveCooperDiseq (c₁ : DiseqCnstr) (c₂ : LeCnstr) (c₃? : Option DvdCnstr) : SearchM Unit := do
   -- Ensure the coefficient is positive
   let c₁ :=
-    if c₁.p.leadCoeff > 0 then {
-      p := c₁.p.mul (-1)
-      h := .neg c₁
-      : DiseqCnstr
-    }
+    if c₁.p.leadCoeff > 0 then
+      { p := c₁.p.mul (-1), h := .neg c₁ : DiseqCnstr }
     else
       c₁
   let c₁ ← c₁.split
@@ -456,11 +447,8 @@ splits `c` and resolve with `c₁`.
 -/
 def resolveRatDiseq (c₁ : LeCnstr) (c : DiseqCnstr) : SearchM Unit := do
   let c :=
-    if c.p.leadCoeff < 0 then {
-      p := c.p.mul (-1)
-      h := .neg c
-      : DiseqCnstr
-    }
+    if c.p.leadCoeff < 0 then
+      { p := c.p.mul (-1), h := .neg c : DiseqCnstr }
     else
       c
   let c₂ ← c.split

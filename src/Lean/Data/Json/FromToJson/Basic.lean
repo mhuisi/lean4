@@ -83,9 +83,10 @@ instance : ToJson Json := ⟨id⟩
 instance : FromJson JsonNumber := ⟨Json.getNum?⟩
 instance : ToJson JsonNumber := ⟨Json.num⟩
 
-instance : FromJson Unit := ⟨fun
-  | .obj .empty => .ok ()
-  | json => .error s!"expected \{} to decode Unit, got {json}"⟩
+instance : FromJson Unit :=
+  ⟨ fun
+      | .obj .empty => .ok ()
+      | json => .error s!"expected \{} to decode Unit, got {json}" ⟩
 instance : ToJson Unit := ⟨fun _ => Json.obj {}⟩
 instance : FromJson Empty where
   fromJson? j :=

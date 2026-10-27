@@ -109,22 +109,21 @@ def wait (x : Notify) : IO (AsyncTask Unit) :=
       | none => throw (IO.userError "notify dropped")
 
 /-- Creates a selector that waits for notifications -/
-def selector (notify : Notify) : Selector Unit := {
-  tryFn := do return none
-  registerFn := fun waiter => do
-    notify.state.atomically do
-      modify fun st => { st with consumers := st.consumers.enqueue (.select waiter) }
-  unregisterFn := do
-    notify.state.atomically do
-      let st ← get
+def selector (notify : Notify) : Selector Unit :=
+  { tryFn := do return none
+    registerFn := fun waiter => do
+      notify.state.atomically do
+        modify fun st => { st with consumers := st.consumers.enqueue (.select waiter) }
+    unregisterFn := do
+      notify.state.atomically do
+        let st ← get
 
-      let consumers ←
-        st.consumers.filterM fun
-          | .normal _ => return true
-          | .select waiter => return !(← waiter.checkFinished)
+        let consumers ←
+          st.consumers.filterM fun
+            | .normal _ => return true
+            | .select waiter => return !(← waiter.checkFinished)
 
-      set { st with consumers }
-}
+        set { st with consumers } }
 
 end Notify
 end Std

@@ -32,43 +32,40 @@ NB: if `a` is written to but this stream is never read from,
 the output will *not* be duplicated. Use this if you only care
 about the data that was actually read.
 -/
-def chainRight (a : Stream) (b : Stream) (flushEagerly : Bool := false) : Stream := {
-  a with
-  flush := a.flush *> b.flush
-  read := fun sz => do
-    let bs ← a.read sz
-    b.write bs
-    if flushEagerly then b.flush
-    pure bs
-  getLine := do
-    let ln ← a.getLine
-    b.putStr ln
-    if flushEagerly then b.flush
-    pure ln
-}
+def chainRight (a : Stream) (b : Stream) (flushEagerly : Bool := false) : Stream :=
+  { a with
+    flush := a.flush *> b.flush
+    read := fun sz => do
+      let bs ← a.read sz
+      b.write bs
+      if flushEagerly then b.flush
+      pure bs
+    getLine := do
+      let ln ← a.getLine
+      b.putStr ln
+      if flushEagerly then b.flush
+      pure ln }
 
 /-- Like `tee a | b` on Unix. See `chainOut`. -/
-def chainLeft (a : Stream) (b : Stream) (flushEagerly : Bool := false) : Stream := {
-  b with
-  flush := a.flush *> b.flush
-  write := fun bs => do
-    a.write bs
-    if flushEagerly then a.flush
-    b.write bs
-  putStr := fun s => do
-    a.putStr s
-    if flushEagerly then a.flush
-    b.putStr s
-}
+def chainLeft (a : Stream) (b : Stream) (flushEagerly : Bool := false) : Stream :=
+  { b with
+    flush := a.flush *> b.flush
+    write := fun bs => do
+      a.write bs
+      if flushEagerly then a.flush
+      b.write bs
+    putStr := fun s => do
+      a.putStr s
+      if flushEagerly then a.flush
+      b.putStr s }
 
 /-- Prefixes all written outputs with `pre`. -/
-def withPrefix (a : Stream) (pre : String) : Stream := {
-  a with
-  write := fun bs => do
-    a.putStr pre
-    a.write bs
-  putStr := fun s => a.putStr (pre ++ s)
-}
+def withPrefix (a : Stream) (pre : String) : Stream :=
+  { a with
+    write := fun bs => do
+      a.putStr pre
+      a.write bs
+    putStr := fun s => a.putStr (pre ++ s) }
 
 end FS.Stream
 end Lean.IO
@@ -141,12 +138,11 @@ def mkPublishDiagnosticsNotification
     (m : DocumentMeta) (diagnostics : Array Lsp.Diagnostic) (isIncremental : Option Bool := none)
     : JsonRpc.Notification Lsp.PublishDiagnosticsParams where
   method := "textDocument/publishDiagnostics"
-  param := {
-    uri := m.uri
-    version? := some m.version
-    isIncremental? := isIncremental
-    diagnostics := diagnostics
-  }
+  param :=
+    { uri := m.uri
+      version? := some m.version
+      isIncremental? := isIncremental
+      diagnostics := diagnostics }
 
 /-- Constructs a `$/lean/fileProgress` notification. -/
 def mkFileProgressNotification
@@ -160,10 +156,9 @@ def mkFileProgressAtPosNotification
     (m : DocumentMeta) (pos : String.Pos.Raw)
     (kind : LeanFileProgressKind := LeanFileProgressKind.processing)
     : JsonRpc.Notification Lsp.LeanFileProgressParams :=
-  mkFileProgressNotification m #[{
-    range := ⟨m.text.utf8PosToLspPos pos, m.text.utf8PosToLspPos m.text.source.rawEndPos⟩
-    kind := kind
-  }]
+  mkFileProgressNotification m
+    #[{ range := ⟨m.text.utf8PosToLspPos pos, m.text.utf8PosToLspPos m.text.source.rawEndPos⟩
+        kind := kind }]
 
 /-- Constructs a `$/lean/fileProgress` notification marking processing as done. -/
 def mkFileProgressDoneNotification (m : DocumentMeta)

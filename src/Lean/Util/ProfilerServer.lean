@@ -26,18 +26,12 @@ open _root_.Std Async Http
 /-- Best-effort: spawn the platform-specific "open this URL in the default browser" command. -/
 def openInBrowser (url : String) : IO Unit := do
   let args : IO.Process.SpawnArgs :=
-    if System.Platform.isWindows then {
-      cmd := "cmd"
-      args := #["/c", "start", "", url]
-    }
-    else if System.Platform.isOSX then {
-      cmd := "open"
-      args := #[url]
-    }
-    else {
-      cmd := "xdg-open"
-      args := #[url]
-    }
+    if System.Platform.isWindows then
+      { cmd := "cmd", args := #["/c", "start", "", url] }
+    else if System.Platform.isOSX then
+      { cmd := "open", args := #[url] }
+    else
+      { cmd := "xdg-open", args := #[url] }
   try
     let child ← IO.Process.spawn { args with stdout := .null, stderr := .null, stdin := .null }
     discard child.wait

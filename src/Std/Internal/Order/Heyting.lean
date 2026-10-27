@@ -155,11 +155,10 @@ end Derived
 
 /-- `⊤ ⊑ (P ⇨ Q)` iff `P ⊑ Q`. -/
 theorem top_le_himp_iff {l : Type u} [CompleteLattice l] [Heyting l] (P Q : l)
-    : ((⊤ : l) ⊑ P ⇨ Q) ↔ (P ⊑ Q) := ⟨
-  fun h =>
-    rel_trans (le_meet _ _ _ (le_top _) rel_refl) (rel_trans (meet_mono_left h) himp_meet_le),
-  fun h => le_himp (meet_le_of_right_le h)
-⟩
+    : ((⊤ : l) ⊑ P ⇨ Q) ↔ (P ⊑ Q) :=
+  ⟨ fun h =>
+      rel_trans (le_meet _ _ _ (le_top _) rel_refl) (rel_trans (meet_mono_left h) himp_meet_le),
+    fun h => le_himp (meet_le_of_right_le h) ⟩
 
 end Lean.Order
 

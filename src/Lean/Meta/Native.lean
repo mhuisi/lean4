@@ -49,14 +49,13 @@ public def nativeEqTrue (tacticName : Name) (e : Expr) (axiomDeclRange? : Option
     withoutModifyingEnv do
       let auxDeclName ← mkAuxDeclName <| `_native ++ tacticName ++ `decl
       let decl :=
-        Declaration.defnDecl {
-          name := auxDeclName
-          levelParams := levels
-          type := mkConst ``Bool
-          value := e
-          hints := .abbrev
-          safety := .safe
-        }
+        Declaration.defnDecl
+          { name := auxDeclName
+            levelParams := levels
+            type := mkConst ``Bool
+            value := e
+            hints := .abbrev
+            safety := .safe }
       modifyEnv (markMeta · auxDeclName)
       try
         -- disable async/separate codegen so we can catch its exceptions; we don't want to report
@@ -80,12 +79,11 @@ public def nativeEqTrue (tacticName : Name) (e : Expr) (axiomDeclRange? : Option
 
   let auxAxiomName ← mkAuxDeclName <| `_native ++ tacticName ++ `ax
   let axDecl :=
-    Declaration.axiomDecl {
-      name := auxAxiomName
-      levelParams := levels
-      type := mkApp3 (mkConst ``Eq [1]) (mkConst ``Bool) e (mkConst ``Bool.true)
-      isUnsafe := false
-    }
+    Declaration.axiomDecl
+      { name := auxAxiomName
+        levelParams := levels
+        type := mkApp3 (mkConst ``Eq [1]) (mkConst ``Bool) e (mkConst ``Bool.true)
+        isUnsafe := false }
   addDecl axDecl
   if let some ref := axiomDeclRange? then
     Elab.addDeclarationRangesFromSyntax auxAxiomName ref

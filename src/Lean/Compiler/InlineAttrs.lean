@@ -65,18 +65,14 @@ Changes the inlining behavior. This attribute comes in several variants:
 @[builtin_doc]
 builtin_initialize inlineAttrs : EnumAttributes InlineAttributeKind ←
   registerEnumAttributes
-    [
-      (`inline, "mark definition to be inlined", .inline),
-      (
-        `inline_if_reduce,
+    [ (`inline, "mark definition to be inlined", .inline),
+      ( `inline_if_reduce,
         "mark definition to be inlined when resultant term after reduction is not a `cases_on` \
           application",
-        .inlineIfReduce
-      ),
+        .inlineIfReduce ),
       (`noinline, "mark definition to never be inlined", .noinline),
       (`macro_inline, "mark definition to always be inlined before ANF conversion", .macroInline),
-      (`always_inline, "mark definition to be always inlined", .alwaysInline)
-    ]
+      (`always_inline, "mark definition to be always inlined", .alwaysInline) ]
     fun declName kind => do
       if kind matches .macroInline then
         if !(checkIsDefinition (← getEnv) declName |>.isOk) then

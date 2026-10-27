@@ -73,10 +73,9 @@ public def captureProc? (args : IO.Process.SpawnArgs) : BaseIO (Option String) :
 public def testProc (args : IO.Process.SpawnArgs) : BaseIO Bool :=
   EIO.catchExceptions (h := fun _ => pure false) do
     let child ←
-      IO.Process.spawn {
-        args with
-        stdin := IO.Process.Stdio.null
-        stdout := IO.Process.Stdio.null
-        stderr := IO.Process.Stdio.null
-      }
+      IO.Process.spawn
+        { args with
+          stdin := IO.Process.Stdio.null
+          stdout := IO.Process.Stdio.null
+          stderr := IO.Process.Stdio.null }
     return (← child.wait) == 0

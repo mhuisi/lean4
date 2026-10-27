@@ -225,20 +225,14 @@ theorem go_decl_eq
     intro idx h1 h2
     have h3
         : idx
-          < (mkFullAdderOut aig {
-            lhs := lhs.get curr h
-            rhs := rhs.get curr h
-            cin := cin
-          }).aig.decls.size := by
+          < (mkFullAdderOut aig
+            { lhs := lhs.get curr h, rhs := rhs.get curr h, cin := cin }).aig.decls.size := by
       apply AIG.LawfulOperator.lt_size_of_lt_aig_size
       exact h1
     have h4
         : idx
-          < (mkFullAdder aig {
-            lhs := lhs.get curr h
-            rhs := rhs.get curr h
-            cin := cin
-          }).aig.decls.size := by
+          < (mkFullAdder aig
+            { lhs := lhs.get curr h, rhs := rhs.get curr h, cin := cin }).aig.decls.size := by
       apply AIG.LawfulOperator.lt_size_of_lt_aig_size
       exact h3
     rw [go_decl_eq (w := w) (curr := curr + 1) (h1 := h4)]

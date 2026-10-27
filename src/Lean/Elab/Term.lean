@@ -51,16 +51,15 @@ def addBuiltinIncrementalElab (decl : Name) : IO Unit := do
 
 @[inherit_doc incrementalAttr, builtin_doc]
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `builtin_incremental
-    descr := s!"(builtin) {incrementalAttr.attr.descr}"
-    applicationTime := .afterCompilation
-    add := fun decl stx kind => do
-      Attribute.Builtin.ensureNoArgs stx
-      unless kind == AttributeKind.global do
-        throwAttrMustBeGlobal `builtin_incremental kind
-      declareBuiltin decl <| mkApp (mkConst ``addBuiltinIncrementalElab) (toExpr decl)
-  }
+  registerBuiltinAttribute
+    { name := `builtin_incremental
+      descr := s!"(builtin) {incrementalAttr.attr.descr}"
+      applicationTime := .afterCompilation
+      add := fun decl stx kind => do
+        Attribute.Builtin.ensureNoArgs stx
+        unless kind == AttributeKind.global do
+          throwAttrMustBeGlobal `builtin_incremental kind
+        declareBuiltin decl <| mkApp (mkConst ``addBuiltinIncrementalElab) (toExpr decl) }
 
 /-- Checks whether a declaration is annotated with `[builtin_incremental]` or `[incremental]`. -/
 def isIncrementalElab [Monad m] [MonadEnv m] [MonadLiftT IO m] (decl : Name) : m Bool :=

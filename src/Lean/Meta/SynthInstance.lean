@@ -18,33 +18,29 @@ import Lean.Util.CollectFVars
 public section
 namespace Lean.Meta
 
-register_builtin_option synthInstance.maxHeartbeats : Nat := {
-  defValue := 20000
-  descr :=
-    "maximum amount of heartbeats per typeclass resolution problem. A heartbeat is number of \
-      (small) memory allocations (in thousands), 0 means no limit"
-}
+register_builtin_option synthInstance.maxHeartbeats : Nat :=
+  { defValue := 20000
+    descr :=
+      "maximum amount of heartbeats per typeclass resolution problem. A heartbeat is number of \
+        (small) memory allocations (in thousands), 0 means no limit" }
 
-register_builtin_option debug.synthInstance.checkCacheHits : Bool := {
-  defValue := false
-  descr :=
-    "differentially validate type class resolution cache hits: rerun every served query and panic \
-      if the result differs from the cached one, which means a dependency of the entry was not \
-      recorded (roughly doubles resolution cost)"
-}
+register_builtin_option debug.synthInstance.checkCacheHits : Bool :=
+  { defValue := false
+    descr :=
+      "differentially validate type class resolution cache hits: rerun every served query and \
+        panic if the result differs from the cached one, which means a dependency of the entry was \
+        not recorded (roughly doubles resolution cost)" }
 
-register_builtin_option synthInstance.maxSize : Nat := {
-  defValue := 128
-  descr :=
-    "maximum number of instances used to construct a solution in the type class instance synthesis \
-      procedure"
-}
+register_builtin_option synthInstance.maxSize : Nat :=
+  { defValue := 128
+    descr :=
+      "maximum number of instances used to construct a solution in the type class instance \
+        synthesis procedure" }
 
-register_builtin_option backward.synthInstance.canonInstances : Bool := {
-  defValue := true
-  descr :=
-    "use optimization that relies on 'morally canonical' instances during type class resolution"
-}
+register_builtin_option backward.synthInstance.canonInstances : Bool :=
+  { defValue := true
+    descr :=
+      "use optimization that relies on 'morally canonical' instances during type class resolution" }
 
 namespace SynthInstance
 
@@ -255,10 +251,9 @@ def getInstances (type : Expr) : MetaM (Array Instance) := do
               -- private instances must not leak into public scope
               return none
             else
-              return some {
-                val := e.val.updateConst! (← us.mapM (fun _ => mkFreshLevelMVar))
-                synthOrder := e.synthOrder
-              }
+              return some
+                { val := e.val.updateConst! (← us.mapM (fun _ => mkFreshLevelMVar))
+                  synthOrder := e.synthOrder }
           | _ =>
             panic! "global instance is not a constant"
       for linst in localInstances do
@@ -283,14 +278,13 @@ def mkGeneratorNode? (key mvar : Expr) : MetaM (Option GeneratorNode) := do
     return none
   else
     let mctx ← getMCtx
-    return some {
-      mvar
-      key
-      mctx
-      instances
-      typeHasMVars := mvarType.hasMVar
-      currInstanceIdx := instances.size
-    }
+    return some
+      { mvar
+        key
+        mctx
+        instances
+        typeHasMVars := mvarType.hasMVar
+        currInstanceIdx := instances.size }
 
 /--
 Create a new generator node for `mvar` and add `waiter` as its waiter.
@@ -304,11 +298,10 @@ def newSubgoal (mctx : MetavarContext) (key : Expr) (mvar : Expr) (waiter : Wait
         pure ((), m!"no instances for {key}")
       | some node =>
         let entry : TableEntry := { waiters := #[waiter] }
-        modify fun s => {
-          s with
-          generatorStack := s.generatorStack.push node
-          tableEntries := s.tableEntries.insert key entry
-        }
+        modify fun s =>
+          { s with
+            generatorStack := s.generatorStack.push node
+            tableEntries := s.tableEntries.insert key entry }
         pure ((), m!"new goal {key}")
 
 def findEntry? (key : Expr) : SynthM (Option TableEntry) := do return (← get).tableEntries[key]?
@@ -380,11 +373,10 @@ def getSubgoals
       subst := #[]
       unless instType.isForall do
         break
-  return {
-    instVal := instVal.instantiateRev subst
-    instTypeBody := instType.instantiateRev subst
-    subgoals := inst.synthOrder.map (mvars[·]!) |>.toList
-  }
+  return
+    { instVal := instVal.instantiateRev subst
+      instTypeBody := instType.instantiateRev subst
+      subgoals := inst.synthOrder.map (mvars[·]!) |>.toList }
 
 /--
 Try to synthesize metavariable `mvar` using the instance `inst`.
@@ -615,10 +607,9 @@ def consume (cNode : ConsumerNode) : SynthM Unit := do
     SetLike (@Submodule R M _inst_1 _inst_2 _inst_3) M
   ```
   -/
-  let cNode := {
-    cNode with
-    subgoals := ← withMCtx cNode.mctx do cNode.subgoals.filterM (not <$> ·.mvarId!.isAssigned)
-  }
+  let cNode :=
+    { cNode with
+      subgoals := ← withMCtx cNode.mctx do cNode.subgoals.filterM (not <$> ·.mvarId!.isAssigned) }
   match cNode.subgoals with
   | [] =>
     addAnswer cNode
@@ -649,19 +640,17 @@ def consume (cNode : ConsumerNode) : SynthM Unit := do
                 let trAnswr := Expr.betaRev transformer #[← instantiateMVars a.result.expr]
                 let trAnswrType ← inferType trAnswr
                 pure { a with result.expr := trAnswr, resultType := trAnswrType }
-          modify fun s => {
-            s with
-            resumeStack := answers'.foldl (fun s answer => s.push (cNode, answer)) s.resumeStack
-            tableEntries :=
-              s.tableEntries.insert key' { entry' with waiters := entry'.waiters.push waiter }
-          }
+          modify fun s =>
+            { s with
+              resumeStack := answers'.foldl (fun s answer => s.push (cNode, answer)) s.resumeStack
+              tableEntries :=
+                s.tableEntries.insert key' { entry' with waiters := entry'.waiters.push waiter } }
     | some entry =>
-      modify fun s => {
-        s with
-        resumeStack := entry.answers.foldl (fun s answer => s.push (cNode, answer)) s.resumeStack
-        tableEntries :=
-          s.tableEntries.insert key { entry with waiters := entry.waiters.push waiter }
-      }
+      modify fun s =>
+        { s with
+          resumeStack := entry.answers.foldl (fun s answer => s.push (cNode, answer)) s.resumeStack
+          tableEntries :=
+            s.tableEntries.insert key { entry with waiters := entry.waiters.push waiter } }
 
 def getTop : SynthM GeneratorNode := return (← get).generatorStack.back!
 
@@ -738,13 +727,12 @@ def resume : SynthM Unit := do
                 {← instantiateMVars subgoal} of {← instantiateMVars goal}")
           do
             trace[Meta.synthInstance.resume] "size: {cNode.size + answer.size}"
-            consume {
-              key := cNode.key
-              mvar := cNode.mvar
-              subgoals := rest
-              mctx
-              size := cNode.size + answer.size
-            }
+            consume
+              { key := cNode.key
+                mvar := cNode.mvar
+                subgoals := rest
+                mctx
+                size := cNode.size + answer.size }
 
 def step : SynthM Bool := do
   checkSystem
@@ -1086,10 +1074,8 @@ private def insertCacheEntry
     : MetaM Unit := do
   if persist then
     -- not `Meta.modifyEnv`, which would clear `Meta.Cache`
-    modifyThe Core.State fun s => {
-      s with
-      env := s.env.setSynthCache (s.env.synthCache.insertEntry key entry)
-    }
+    modifyThe Core.State fun s =>
+      { s with env := s.env.setSynthCache (s.env.synthCache.insertEntry key entry) }
   modifyCache fun c => { c with synthInstance := c.synthInstance.insertEntry key entry }
 
 /--
@@ -1115,19 +1101,15 @@ private def findCachedResult? (key : SynthInstanceCacheKey)
   if entry.deps.baseTrackedGen != env.trackedGen
       || entry.deps.baseChangeLogPos != env.declChangeLog.size then
     -- Re-stamped, so that later lookups skip the environment checks just done.
-    let entry := {
-      entry with
-      deps := {
-        entry.deps with
-        baseTrackedGen := env.trackedGen
-        baseChangeLogPos := env.declChangeLog.size
-      }
-    }
+    let entry :=
+      { entry with
+        deps :=
+          { entry.deps with
+            baseTrackedGen := env.trackedGen
+            baseChangeLogPos := env.declChangeLog.size } }
     if persistent then
-      modifyThe Core.State fun s => {
-        s with
-        env := s.env.setSynthCache (s.env.synthCache.insertEntry key entry)
-      }
+      modifyThe Core.State fun s =>
+        { s with env := s.env.setSynthCache (s.env.synthCache.insertEntry key entry) }
     else
       modifyCache fun c => { c with synthInstance := c.synthInstance.insertEntry key entry }
   return entry
@@ -1221,12 +1203,11 @@ private partial def addFVars (e : Expr) : M Unit := do
         return
     addFVars type
     if (← get).bail then return
-    modify fun s => {
-      s with
-      fvarSet := s.fvarSet.insert id
-      types := s.types.push (type.abstract s.idx2fvar)
-      idx2fvar := s.idx2fvar.push (.fvar id)
-    }
+    modify fun s =>
+      { s with
+        fvarSet := s.fvarSet.insert id
+        types := s.types.push (type.abstract s.idx2fvar)
+        idx2fvar := s.idx2fvar.push (.fvar id) }
 
 /-- The free-variable-normalized cache context for a query; see `normalizeContext?`. -/
 private structure Context where
@@ -1263,8 +1244,8 @@ private def getClosure? (localInsts : LocalInstances) : MetaM (Option SynthNormC
       none
     else
       some { fvarSet := st.fvarSet, idx2fvar := st.idx2fvar, types := st.types }
-  modifyMCtx
-    (·.setSynthNormMemo { localInsts, decls := st.decls, closure?, stuckType? := st.stuckType? })
+  modifyMCtx (·.setSynthNormMemo
+    { localInsts, decls := st.decls, closure?, stuckType? := st.stuckType? })
   return closure?
 
 /--
@@ -1279,21 +1260,17 @@ private def normalizeContext? (cacheKeyType : Expr) (localInsts : LocalInstances
   let some closure ← getClosure? localInsts
     | return none
   -- Seed from the memoized closure; the query type may extend it with further free variables.
-  let st0 : State := {
-    fvarSet := closure.fvarSet
-    idx2fvar := closure.idx2fvar
-    types := closure.types
-  }
+  let st0 : State :=
+    { fvarSet := closure.fvarSet, idx2fvar := closure.idx2fvar, types := closure.types }
   let (_, st) ← (addFVars cacheKeyType).run st0
   -- without free variables, the key is context-free as it is
   if st.bail || st.idx2fvar.isEmpty then return none
   let canonLocalInsts := localInsts.map fun li => { li with fvar := li.fvar.abstract st.idx2fvar }
-  return some {
-    normType := cacheKeyType.abstract st.idx2fvar
-    canonLocalInsts
-    fvarTypes := st.types
-    idx2fvar := st.idx2fvar
-  }
+  return some
+    { normType := cacheKeyType.abstract st.idx2fvar
+      canonLocalInsts
+      fvarTypes := st.types
+      idx2fvar := st.idx2fvar }
 
 end SynthNorm
 
@@ -1365,14 +1342,13 @@ The `Meta.Config` of every type class resolution query. It replaces the ambient 
 which is not part of the cache key, so that e.g. a `canUnfoldPredicateConfig` set by `simp` cannot
 leak into cached results.
 -/
-private def synthInstanceConfig : Config := {
-  isDefEqStuckEx := true
-  transparency := .instances
-  foApprox := true
-  ctxApprox := true
-  constApprox := false
-  univApprox := false
-}
+private def synthInstanceConfig : Config :=
+  { isDefEqStuckEx := true
+    transparency := .instances
+    foApprox := true
+    ctxApprox := true
+    constApprox := false
+    univApprox := false }
 
 def synthInstanceCore? (type : Expr) (maxResultSize? : Option Nat := none)
     : MetaM (Option Expr) := do
@@ -1390,19 +1366,15 @@ def synthInstanceCore? (type : Expr) (maxResultSize? : Option Nat := none)
   let base ← getOptionsUnrestricted
   let env ← getEnv
   let parentDeps ←
-    modifyGetThe Core.State fun s => (
-      s.recordedDeps,
-      {
-        s with
-        recordedDeps := {
-          base
-          baseTrackedGen := env.trackedGen
-          baseChangeLogPos := env.declChangeLog.size
-          baseConstGen := env.constGen
-        }
-        env := env.markRecordingStart.setRecordingDeps true
-      }
-    )
+    modifyGetThe Core.State fun s =>
+      ( s.recordedDeps,
+        { s with
+          recordedDeps :=
+            { base
+              baseTrackedGen := env.trackedGen
+              baseChangeLogPos := env.declChangeLog.size
+              baseConstGen := env.constGen }
+          env := env.markRecordingStart.setRecordingDeps true } )
   try
     withTheReader Core.Context (fun ctx => { ctx with isRecordingDeps := true }) do
       withTraceNode `Meta.synthInstance (fun _ => return m!"{← instantiateMVars type}") do
@@ -1413,15 +1385,14 @@ def synthInstanceCore? (type : Expr) (maxResultSize? : Option Nat := none)
             let { type, cacheKeyType, kind } ← preprocess type
             -- Recorded once per query, covering every read of the instance table on the search path.
             recordExtGenAccess instanceExtension.ext.toEnvExtension
-            let cacheKey := {
-              localInsts
-              type := cacheKeyType
-              synthPendingDepth := (← read).synthPendingDepth
-              maxResultSize
-              optionFlags := (← getOptionFlags)
-              tracing := (← isTracingEnabledFor `Meta.synthInstance)
-              isExporting := (← getEnv).isExporting
-            }
+            let cacheKey :=
+              { localInsts
+                type := cacheKeyType
+                synthPendingDepth := (← read).synthPendingDepth
+                maxResultSize
+                optionFlags := (← getOptionFlags)
+                tracing := (← isTracingEnabledFor `Meta.synthInstance)
+                isExporting := (← getEnv).isExporting }
             -- Free variables are normalized in the key, so that structurally identical queries in different
             -- local contexts share an entry.
             let rawKey : SynthInstanceCacheKey := cacheKey
@@ -1435,12 +1406,11 @@ def synthInstanceCore? (type : Expr) (maxResultSize? : Option Nat := none)
                 SynthNorm.normalizeContext? cacheKeyType localInsts
             let cacheKey :=
               match norm? with
-              | some c => {
-                cacheKey with
-                localInsts := c.canonLocalInsts
-                type := c.normType
-                normFVarTypes := c.fvarTypes
-              }
+              | some c =>
+                { cacheKey with
+                  localInsts := c.canonLocalInsts
+                  type := c.normType
+                  normFVarTypes := c.fvarTypes }
               | none =>
                 cacheKey
             let runSearch : MetaM (Option AbstractMVarsResult) :=
@@ -1534,11 +1504,11 @@ def synthInstanceCore? (type : Expr) (maxResultSize? : Option Nat := none)
                 pure rawEntry?
               | some c =>
                 (← findCachedResult? cacheKey).mapM fun entry => do
-                  let entry := {
-                    entry with
-                    result? :=
-                      entry.result?.map fun r => { r with expr := r.expr.instantiateRev c.idx2fvar }
-                  }
+                  let entry :=
+                    { entry with
+                      result? :=
+                        entry.result?.map fun r =>
+                          { r with expr := r.expr.instantiateRev c.idx2fvar } }
                   insertCacheEntry rawKey entry (persist := false)
                   return entry
             match entry? with
@@ -1546,10 +1516,8 @@ def synthInstanceCore? (type : Expr) (maxResultSize? : Option Nat := none)
               trace[Meta.synthInstance.cache] "cached: {type}"
               -- The used entry's dependencies become dependencies of the enclosing query, if any.
               if parentRecording then
-                modifyThe Core.State fun s => {
-                  s with
-                  recordedDeps := entry.deps.mergeInto s.recordedDeps
-                }
+                modifyThe Core.State fun s =>
+                  { s with recordedDeps := entry.deps.mergeInto s.recordedDeps }
               checkHit entry.result?
               let result? ← applyCachedAbstractResult? type entry.result?
               trace[Meta.synthInstance] "result {result?} (cached)"
@@ -1564,11 +1532,11 @@ def synthInstanceCore? (type : Expr) (maxResultSize? : Option Nat := none)
               return result?
   finally
     -- Restore the enclosing accumulator, merging this query's dependencies into it.
-    modifyThe Core.State fun s => {
-      s with
-      env := s.env.setRecordingDeps parentRecording
-      recordedDeps := if parentRecording then s.recordedDeps.mergeInto parentDeps else parentDeps
-    }
+    modifyThe Core.State fun s =>
+      { s with
+        env := s.env.setRecordingDeps parentRecording
+        recordedDeps :=
+          if parentRecording then s.recordedDeps.mergeInto parentDeps else parentDeps }
 
 def synthInstance? (type : Expr) (maxResultSize? : Option Nat := none) : MetaM (Option Expr) := do
   -- unrestricted: profiler collection only
@@ -1634,10 +1602,9 @@ private def synthPendingImp (mvarId : MVarId) : MetaM Bool :=
                 mvarId.assign val
                 return true
 
-register_builtin_option trace.Meta.synthInstance : Bool := {
-  defValue := false
-  descr := "track the backtracking attempt to synthesize type class instances"
-}
+register_builtin_option trace.Meta.synthInstance : Bool :=
+  { defValue := false
+    descr := "track the backtracking attempt to synthesize type class instances" }
 
 builtin_initialize
   registerTraceClass `Meta.synthPending

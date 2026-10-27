@@ -145,11 +145,10 @@ def AltLHS.collectFVars (altLHS : AltLHS) : StateRefT CollectFVars.State MetaM U
   altLHS.patterns.forM fun p => p.collectFVars
 
 def instantiateAltLHSMVars (altLHS : AltLHS) : MetaM AltLHS :=
-  return {
-    altLHS with
-    fvarDecls := (← altLHS.fvarDecls.mapM instantiateLocalDeclMVars)
-    patterns := (← altLHS.patterns.mapM instantiatePatternMVars)
-  }
+  return
+    { altLHS with
+      fvarDecls := (← altLHS.fvarDecls.mapM instantiateLocalDeclMVars)
+      patterns := (← altLHS.patterns.mapM instantiatePatternMVars) }
 
 /-- `Match` alternative -/
 structure Alt where
@@ -196,24 +195,22 @@ partial def toMessageData (alt : Alt) : MetaM MessageData := do
           \n  | {lhs} ≋ {rhs}"
     addMessageContext msg
 
-def applyFVarSubst (s : FVarSubst) (alt : Alt) : Alt := {
-  alt with
-  patterns := alt.patterns.map fun p => p.applyFVarSubst s
-  fvarDecls := alt.fvarDecls.map fun d => d.applyFVarSubst s
-  rhs := alt.rhs.applyFVarSubst s
-  cnstrs := alt.cnstrs.map fun (lhs, rhs) => (lhs.applyFVarSubst s, rhs.applyFVarSubst s)
-}
+def applyFVarSubst (s : FVarSubst) (alt : Alt) : Alt :=
+  { alt with
+    patterns := alt.patterns.map fun p => p.applyFVarSubst s
+    fvarDecls := alt.fvarDecls.map fun d => d.applyFVarSubst s
+    rhs := alt.rhs.applyFVarSubst s
+    cnstrs := alt.cnstrs.map fun (lhs, rhs) => (lhs.applyFVarSubst s, rhs.applyFVarSubst s) }
 
-def replaceFVarId (fvarId : FVarId) (v : Expr) (alt : Alt) : Alt := {
-  alt with
-  patterns := alt.patterns.map fun p => p.replaceFVarId fvarId v
-  rhs := alt.rhs.replaceFVarId fvarId v
-  fvarDecls :=
-    let decls := alt.fvarDecls.filter fun d => d.fvarId != fvarId
-    decls.map (·.replaceFVarId fvarId v)
-  cnstrs :=
-    alt.cnstrs.map fun (lhs, rhs) => (lhs.replaceFVarId fvarId v, rhs.replaceFVarId fvarId v)
-}
+def replaceFVarId (fvarId : FVarId) (v : Expr) (alt : Alt) : Alt :=
+  { alt with
+    patterns := alt.patterns.map fun p => p.replaceFVarId fvarId v
+    rhs := alt.rhs.replaceFVarId fvarId v
+    fvarDecls :=
+      let decls := alt.fvarDecls.filter fun d => d.fvarId != fvarId
+      decls.map (·.replaceFVarId fvarId v)
+    cnstrs :=
+      alt.cnstrs.map fun (lhs, rhs) => (lhs.replaceFVarId fvarId v, rhs.replaceFVarId fvarId v) }
 
 /-- Return `true` if `fvarId` is one of the alternative pattern variables -/
 def isLocalDecl (fvarId : FVarId) (alt : Alt) : Bool :=

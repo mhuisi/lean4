@@ -30,19 +30,13 @@ instance : ToFormat UnificationHints where
 
 private def config : ConfigWithKey := { iota := false, proj := .no : Config }.toConfigWithKey
 
-def UnificationHints.add (hints : UnificationHints) (e : UnificationHintEntry)
-    : UnificationHints := {
-  hints with
-  discrTree := hints.discrTree.insertKeyValue e.keys e.val
-}
+def UnificationHints.add (hints : UnificationHints) (e : UnificationHintEntry) : UnificationHints :=
+  { hints with discrTree := hints.discrTree.insertKeyValue e.keys e.val }
 
 builtin_initialize unificationHintExtension
     : SimpleScopedEnvExtension UnificationHintEntry UnificationHints ←
-  registerSimpleScopedEnvExtension {
-    addEntry := UnificationHints.add
-    initial := {}
-    trackGen := true
-  }
+  registerSimpleScopedEnvExtension
+    { addEntry := UnificationHints.add, initial := {}, trackGen := true }
 
 structure UnificationConstraint where
   lhs : Expr
@@ -99,13 +93,12 @@ def addUnificationHint (declName : Name) (kind : AttributeKind) : MetaM Unit :=
         unificationHintExtension.add { keys := keys, val := declName } kind
 
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `unification_hint
-    descr := "unification hint"
-    add := fun declName stx kind => do
-      Attribute.Builtin.ensureNoArgs stx
-      discard <| addUnificationHint declName kind |>.run
-  }
+  registerBuiltinAttribute
+    { name := `unification_hint
+      descr := "unification hint"
+      add := fun declName stx kind => do
+        Attribute.Builtin.ensureNoArgs stx
+        discard <| addUnificationHint declName kind |>.run }
 
 /--
 Returns the unification hints in effect, recording their generation inside a recording computation

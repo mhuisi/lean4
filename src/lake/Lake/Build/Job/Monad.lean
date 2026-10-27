@@ -228,10 +228,8 @@ message to replay; classification uses `JobState.canceled`.
 -/
 @[inline]
 def canceledResult (s : JobState) : JobResult α :=
-  .error s.log.endPos {
-    s.logEntry (.trace "canceled after earlier build failure") with
-    canceled := true
-  }
+  .error s.log.endPos
+    { s.logEntry (.trace "canceled after earlier build failure") with canceled := true }
 
 /--
 Apply `f` asynchronously to the job's output.

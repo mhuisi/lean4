@@ -95,14 +95,13 @@ theorem not_nil_lex_iff : ¬ Lex r [] l ↔ l = [] := by
 
 theorem nil_lt_iff [LT α] {l : List α} : [] < l ↔ l ≠ [] := by cases l <;> simp
 
-theorem cons_lex_cons_iff : Lex r (a :: l₁) (b :: l₂) ↔ r a b ∨ a = b ∧ Lex r l₁ l₂ := ⟨
-  fun
-    | .rel h => .inl h
-    | .cons h => .inr ⟨rfl, h⟩,
-  fun
-    | .inl h => Lex.rel h
-    | .inr ⟨rfl, h⟩ => Lex.cons h
-⟩
+theorem cons_lex_cons_iff : Lex r (a :: l₁) (b :: l₂) ↔ r a b ∨ a = b ∧ Lex r l₁ l₂ :=
+  ⟨ fun
+      | .rel h => .inl h
+      | .cons h => .inr ⟨rfl, h⟩,
+    fun
+      | .inl h => Lex.rel h
+      | .inr ⟨rfl, h⟩ => Lex.cons h ⟩
 
 theorem cons_lt_cons_iff [LT α] {a b} {l₁ l₂ : List α}
     : (a :: l₁) < (b :: l₂) ↔ a < b ∨ a = b ∧ l₁ < l₂ := by

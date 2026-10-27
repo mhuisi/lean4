@@ -82,15 +82,11 @@ variable {α : Type} [Hashable α] [DecidableEq α]
 @[inherit_doc denote.go_eq_of_isPrefix]
 theorem denote.eq_of_isPrefix
     (entry : Entrypoint α) (newAIG : AIG α) (hprefix : IsPrefix entry.aig.decls newAIG.decls)
-    : ⟦
-        newAIG,
-        ⟨
-          entry.ref.gate,
+    : ⟦ newAIG,
+        ⟨ entry.ref.gate,
           entry.ref.invert,
-          (by have := entry.ref.hgate; have := hprefix.size_le; omega)
-        ⟩,
-        assign
-      ⟧
+          (by have := entry.ref.hgate; have := hprefix.size_le; omega) ⟩,
+        assign ⟧
       = ⟦entry, assign⟧ := by
   unfold denote
   rw [Bool.bne_left_inj]

@@ -65,12 +65,11 @@ private theorem rel_of_isEqv {r : α → α → Bool} {xs ys : Array α}
 
 theorem isEqv_iff_rel {xs ys : Array α} {r}
     : Array.isEqv xs ys r
-      ↔ ∃ h : xs.size = ys.size, ∀ (i : Nat) (h' : i < xs.size), r (xs[i]) (ys[i]'(h ▸ h')) := ⟨
-  rel_of_isEqv,
-  fun ⟨h, w⟩ => by
-    simp only [isEqv, ← h, ↓ reduceDIte]
-    exact isEqvAux_of_rel h (by simp [h]) w
-⟩
+      ↔ ∃ h : xs.size = ys.size, ∀ (i : Nat) (h' : i < xs.size), r (xs[i]) (ys[i]'(h ▸ h')) :=
+  ⟨ rel_of_isEqv,
+    fun ⟨h, w⟩ => by
+      simp only [isEqv, ← h, ↓ reduceDIte]
+      exact isEqvAux_of_rel h (by simp [h]) w ⟩
 
 theorem isEqv_eq_decide (xs ys : Array α) (r)
     : Array.isEqv xs ys r

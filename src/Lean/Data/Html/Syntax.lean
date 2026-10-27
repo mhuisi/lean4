@@ -268,12 +268,10 @@ then it is discarded.
 -/
 private def flushWs (acc : TextAcc) : TextAcc :=
   let keep := acc.pendingWs && !(acc.out.isEmpty && acc.pendingNewline)
-  {
-    acc with
+  { acc with
     out := if keep then acc.out.push ' ' else acc.out
     pendingWs := false
-    pendingNewline := false
-  }
+    pendingNewline := false }
 
 /--
 Returns the accumulated text.
@@ -542,15 +540,14 @@ def ElementView.of := @Element.view
 def contentWith (itemFn : ParserFn) : Parser :=
   let antiquotP := mkAntiquot "content" contentKind
   let contentFn := nodeFn contentKind (manyAux itemFn)
-  { -- Collects the tokens and node kinds of all items
-    -- so that they are registered along with any syntax that uses `content`.
-    info :=
+  -- so that they are registered along with any syntax that uses `content`.
+  { info := -- Collects the tokens and node kinds of all items
       orelseInfo antiquotP.info <| nodeInfo contentKind <| noFirstTokenInfo <|
         andthenInfo (elementWith skip).info <| andthenInfo interpMany.info <|
           andthenInfo interp.info <| andthenInfo comment.info text.info
     -- Antiquotations are only recognized inside quotations, so that `$` is text in literals.
-    fn c s := if c.quotDepth > 0 then (withAntiquotFn antiquotP.fn contentFn) c s else contentFn c s
-  }
+    fn c s :=
+      if c.quotDepth > 0 then (withAntiquotFn antiquotP.fn contentFn) c s else contentFn c s }
 
 private partial def contentItemFn : ParserFn := fun c s =>
   let i := s.pos

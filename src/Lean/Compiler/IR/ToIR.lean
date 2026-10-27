@@ -42,14 +42,10 @@ def bindVar (fvarId : FVarId) : M VarId := do
 def bindJoinPoint (fvarId : FVarId) : M JoinPointId := do
   modifyGet fun s =>
     let joinPointId := { idx := s.nextJpId }
-    ⟨
-      joinPointId,
-      {
-        s with
+    ⟨ joinPointId,
+      { s with
         joinPoints := s.joinPoints.insertIfNew fvarId joinPointId
-        nextJpId := s.nextJpId + 1
-      }
-    ⟩
+        nextJpId := s.nextJpId + 1 } ⟩
 
 def bindErased (fvarId : FVarId) : M Unit := do
   modify fun s => { s with vars := s.vars.insertIfNew fvarId .erased }

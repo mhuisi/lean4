@@ -244,11 +244,9 @@ theorem go_denote_mem_prefix
     (f : (aig : AIG α) → BinaryInput aig → Entrypoint α)
     [LawfulOperator α BinaryInput f] [LawfulZipOperator α f]
     (start : Nat) (hstart)
-    : ⟦
-        (go aig curr s hcurr lhs rhs f).aig,
+    : ⟦ (go aig curr s hcurr lhs rhs f).aig,
         ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
-        assign
-      ⟧
+        assign ⟧
       = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply IsPrefix.of
@@ -265,11 +263,9 @@ theorem denote_go
     [LawfulOperator α BinaryInput f] [LawfulZipOperator α f]
     : ∀ (idx : Nat) (hidx1 : idx < len),
       curr ≤ idx
-        → ⟦
-            (go aig curr s hcurr lhs rhs f).aig,
+        → ⟦ (go aig curr s hcurr lhs rhs f).aig,
             (go aig curr s hcurr lhs rhs f).vec.get idx hidx1,
-            assign
-          ⟧
+            assign ⟧
           = ⟦f aig ⟨lhs.get idx hidx1, rhs.get idx hidx1⟩, assign⟧ := by
   intro idx hidx1 hidx2
   generalize hgo : go aig curr s hcurr lhs rhs f = res

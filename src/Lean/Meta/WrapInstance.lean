@@ -67,27 +67,22 @@ Given an instance `i : I` and expected type `I'` (where `I'` must be mvar-free),
 
 namespace Lean.Meta
 
-public register_builtin_option backward.inferInstanceAs.wrap : Bool := {
-  defValue := true
-  descr := "wrap instance bodies in `inferInstanceAs` and the default `deriving` handler"
-}
+public register_builtin_option backward.inferInstanceAs.wrap : Bool :=
+  { defValue := true
+    descr := "wrap instance bodies in `inferInstanceAs` and the default `deriving` handler" }
 
-public register_builtin_option backward.inferInstanceAs.wrap.reuseSubInstances : Bool := {
-  defValue := true
-  descr :=
-    "when recursing into sub-instances, reuse existing instances for the target type instead of \
-      re-wrapping them, which can be important to avoid non-defeq instance diamonds"
-}
+public register_builtin_option backward.inferInstanceAs.wrap.reuseSubInstances : Bool :=
+  { defValue := true
+    descr :=
+      "when recursing into sub-instances, reuse existing instances for the target type instead of \
+        re-wrapping them, which can be important to avoid non-defeq instance diamonds" }
 
-public register_builtin_option backward.inferInstanceAs.wrap.instances : Bool := {
-  defValue := true
-  descr := "wrap non-reducible instances in auxiliary definitions to fix their types"
-}
+public register_builtin_option backward.inferInstanceAs.wrap.instances : Bool :=
+  { defValue := true
+    descr := "wrap non-reducible instances in auxiliary definitions to fix their types" }
 
-public register_builtin_option backward.inferInstanceAs.wrap.data : Bool := {
-  defValue := true
-  descr := "wrap data fields in auxiliary definitions to fix their types"
-}
+public register_builtin_option backward.inferInstanceAs.wrap.data : Bool :=
+  { defValue := true, descr := "wrap data fields in auxiliary definitions to fix their types" }
 
 builtin_initialize registerTraceClass `Meta.wrapInstance
 

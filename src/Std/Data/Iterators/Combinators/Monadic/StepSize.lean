@@ -68,23 +68,22 @@ instance StepSizeIterator.instIterator [Iterator α m β] [IteratorAccess α m] 
             ∧ it'.internalState.nextIdx = it.internalState.n
   step it :=
     (fun s =>
-        .deflate ⟨
-          s.1.mapIterator (⟨⟨it.internalState.n, it.internalState.n, ·⟩⟩),
-          by
-            simp only [IterStep.mapIterator_mapIterator]
-            refine cast ?_ s.property
-            rw (occs := [1]) [← IterStep.mapIterator_id (step := s.val)]
-            congr,
-          by
-            intro it' out
-            cases s.val
-            · simp only [IterStep.mapIterator_yield, IterStep.yield.injEq, and_imp]
-              rintro h _
-              simp [← h]
-            · simp
-            · simp
-            done
-        ⟩)
+        .deflate
+          ⟨ s.1.mapIterator (⟨⟨it.internalState.n, it.internalState.n, ·⟩⟩),
+            by
+              simp only [IterStep.mapIterator_mapIterator]
+              refine cast ?_ s.property
+              rw (occs := [1]) [← IterStep.mapIterator_id (step := s.val)]
+              congr,
+            by
+              intro it' out
+              cases s.val
+              · simp only [IterStep.mapIterator_yield, IterStep.yield.injEq, and_imp]
+                rintro h _
+                simp [← h]
+              · simp
+              · simp
+              done ⟩)
       <$> it.internalState.inner.nextAtIdx? it.internalState.nextIdx
 
 def StepSizeIterator.instFinitenessRelation

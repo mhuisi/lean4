@@ -88,11 +88,10 @@ theorem noRepetition_append_cons_of_noRepetition_append_singleton
     : NoRepetition a (l ++ a :: m) := by
   simp [noRepetition_iff] at h h' ⊢
   simp [List.infix_append_iff_ne_nil]
-  refine ⟨
-    (h <| List.infix_append_of_infix_left ·),
-    h',
-    fun l₁ hl₁ l₂ hl₂ h₁ h₂ h₃ => h (List.IsSuffix.isInfix ?_)
-  ⟩
+  refine
+    ⟨ (h <| List.infix_append_of_infix_left ·),
+      h',
+      fun l₁ hl₁ l₂ hl₂ h₁ h₂ h₃ => h (List.IsSuffix.isInfix ?_) ⟩
   obtain ⟨rfl, rfl⟩ : l₁ = [a] ∧ l₂ = [a] := by
     match l₁, hl₁, l₂, hl₂ with
     | [b], _, [c], _ =>

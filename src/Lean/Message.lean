@@ -261,14 +261,13 @@ def composePreservingKind : MessageData → MessageData → MessageData
 /-- An empty message. -/
 def nil : MessageData := ofFormat Format.nil
 
-def mkPPContext (nCtx : NamingContext) (ctx : MessageDataContext) : PPContext := {
-  env := ctx.env
-  mctx := ctx.mctx
-  lctx := ctx.lctx
-  opts := ctx.opts
-  currNamespace := nCtx.currNamespace
-  openDecls := nCtx.openDecls
-}
+def mkPPContext (nCtx : NamingContext) (ctx : MessageDataContext) : PPContext :=
+  { env := ctx.env
+    mctx := ctx.mctx
+    lctx := ctx.lctx
+    opts := ctx.opts
+    currNamespace := nCtx.currNamespace
+    openDecls := nCtx.openDecls }
 
 def ofSyntax (stx : Syntax) : MessageData :=
   -- discard leading/trailing whitespace
@@ -346,23 +345,20 @@ def withExprHover
     (location? : Option DeclarationLocation := none) (docString? : Option String := none)
     (mkDocString? : Option (PPContext → IO String) := none) (explicit : Bool := false)
     : MessageData :=
-  .ofFormatWithInfos {
-    fmt := .tag 0 fmt
-    infos :=
-      .ofList [(
-        0,
-        Elab.Info.ofDelabTermInfo {
-          expr
-          lctx
-          location?
-          explicit
-          stx := .missing -- unused for delaborator hovers
-          expectedType? := none -- unused for delaborator hovers
-          elaborator := `Delab.withExprHover
-          mkDocString? := mkDocString? <|> docString?.map (fun _ => pure ·)
-        }
-      )]
-  }
+  .ofFormatWithInfos
+    { fmt := .tag 0 fmt
+      infos :=
+        .ofList
+          [ ( 0,
+              Elab.Info.ofDelabTermInfo
+                { expr
+                  lctx
+                  location?
+                  explicit
+                  stx := .missing -- unused for delaborator hovers
+                  expectedType? := none -- unused for delaborator hovers
+                  elaborator := `Delab.withExprHover
+                  mkDocString? := mkDocString? <|> docString?.map (fun _ => pure ·) } ) ] }
 
 /--
 Calls `withExprHover`, but uses the current local context if one is not given.
@@ -408,10 +404,8 @@ where
 Maximum number of trace node children to display by default to prevent slowdowns from rendering. In
 the info view, more children can be expanded interactively.
 -/
-register_builtin_option maxTraceChildren : Nat := {
-  defValue := 50
-  descr := "Maximum number of trace node children to display"
-}
+register_builtin_option maxTraceChildren : Nat :=
+  { defValue := 50, descr := "Maximum number of trace node children to display" }
 
 partial def formatAux : NamingContext → Option MessageDataContext → MessageData → BaseIO Format
   | _, _, ofFormatWithInfos fmt =>
@@ -480,10 +474,11 @@ instance : Coe Expr MessageData := ⟨ofExpr⟩
 instance : Coe Name MessageData := ⟨ofName⟩
 instance : Coe Syntax MessageData := ⟨ofSyntax⟩
 instance : Coe MVarId MessageData := ⟨ofGoal⟩
-instance : Coe (Option Expr) MessageData := ⟨fun o =>
-  match o with
-  | none => "none"
-  | some e => ofExpr e⟩
+instance : Coe (Option Expr) MessageData :=
+  ⟨ fun o =>
+      match o with
+      | none => "none"
+      | some e => ofExpr e ⟩
 
 partial def arrayExpr.toMessageData (es : Array Expr) (i : Nat) (acc : MessageData) : MessageData :=
   if h : i < es.size then
@@ -747,10 +742,8 @@ def reportedPlusUnreported : MessageLog → PersistentArray Message
 
 def hasUnreported (log : MessageLog) : Bool := !log.unreported.isEmpty
 
-def add (msg : Message) (log : MessageLog) : MessageLog := {
-  log with
-  unreported := log.unreported.push msg
-}
+def add (msg : Message) (log : MessageLog) : MessageLog :=
+  { log with unreported := log.unreported.push msg }
 
 protected def append (l₁ l₂ : MessageLog) : MessageLog where
   reported := l₁.reported ++ l₂.reported
@@ -767,43 +760,36 @@ def hasErrors (log : MessageLog) : Bool :=
   log.reported.any (·.severity matches .error) || log.unreported.any (·.severity matches .error)
 
 /-- Moves `unreported` messages to `reported`. -/
-def markAllReported (log : MessageLog) : MessageLog := {
-  log with
-  unreported := {}
-  reported := log.reported ++ log.unreported
-}
+def markAllReported (log : MessageLog) : MessageLog :=
+  { log with unreported := {}, reported := log.reported ++ log.unreported }
 
-def errorsToWarnings (log : MessageLog) : MessageLog := {
-  unreported :=
-    log.unreported.map (fun m =>
-      match m.severity with
-      | MessageSeverity.error => { m with severity := MessageSeverity.warning }
-      | _ => m)
-}
+def errorsToWarnings (log : MessageLog) : MessageLog :=
+  { unreported :=
+      log.unreported.map (fun m =>
+        match m.severity with
+        | MessageSeverity.error => { m with severity := MessageSeverity.warning }
+        | _ => m) }
 
-def errorsToInfos (log : MessageLog) : MessageLog := {
-  unreported :=
-    log.unreported.map (fun m =>
-      match m.severity with
-      | MessageSeverity.error => { m with severity := MessageSeverity.information }
-      | _ => m)
-}
+def errorsToInfos (log : MessageLog) : MessageLog :=
+  { unreported :=
+      log.unreported.map (fun m =>
+        match m.severity with
+        | MessageSeverity.error => { m with severity := MessageSeverity.information }
+        | _ => m) }
 
-def getInfoMessages (log : MessageLog) : MessageLog := {
-  unreported :=
-    log.unreported.filter fun m =>
-      match m.severity with
-      | MessageSeverity.information => true
-      | _ => false
-}
+def getInfoMessages (log : MessageLog) : MessageLog :=
+  { unreported :=
+      log.unreported.filter fun m =>
+        match m.severity with
+        | MessageSeverity.information => true
+        | _ => false }
 
-def getWarningMessages (log : MessageLog) : MessageLog := {
-  unreported :=
-    log.unreported.filter fun m =>
-      match m.severity with
-      | MessageSeverity.warning => true
-      | _ => false
-}
+def getWarningMessages (log : MessageLog) : MessageLog :=
+  { unreported :=
+      log.unreported.filter fun m =>
+        match m.severity with
+        | MessageSeverity.warning => true
+        | _ => false }
 
 def forM {m : Type → Type} [Monad m] (log : MessageLog) (f : Message → m Unit) : m Unit :=
   log.unreported.forM f
@@ -932,14 +918,16 @@ instance [ToMessageData α] : ToMessageData (List α) :=
   ⟨fun as => MessageData.ofList <| as.map toMessageData⟩
 instance [ToMessageData α] : ToMessageData (Array α) := ⟨fun as => toMessageData as.toList⟩
 instance [ToMessageData α] : ToMessageData (Subarray α) := ⟨fun as => toMessageData as.toList⟩
-instance [ToMessageData α] : ToMessageData (Option α) := ⟨fun
-  | none => "none"
-  | some e => "some (" ++ toMessageData e ++ ")"⟩
+instance [ToMessageData α] : ToMessageData (Option α) :=
+  ⟨ fun
+      | none => "none"
+      | some e => "some (" ++ toMessageData e ++ ")" ⟩
 instance [ToMessageData α] [ToMessageData β] : ToMessageData (α × β) :=
   ⟨fun (a, b) => .paren <| toMessageData a ++ "," ++ Format.line ++ toMessageData b⟩
-instance : ToMessageData (Option Expr) := ⟨fun
-  | none => "<not-available>"
-  | some e => toMessageData e⟩
+instance : ToMessageData (Option Expr) :=
+  ⟨ fun
+      | none => "<not-available>"
+      | some e => toMessageData e ⟩
 
 syntax:max "m!" interpolatedStr(term) : term
 

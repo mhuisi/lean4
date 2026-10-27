@@ -602,15 +602,13 @@ theorem Iter.isPlausibleSuccessorOf_iff_exists
   simp only [IsPlausibleSuccessorOf, IterM.IsPlausibleSuccessorOf]
   constructor
   · rintro ⟨step, h₁, h₂⟩
-    exact ⟨
-      step.mapIterator IterM.toIter,
-      by cases step <;> simp_all [IterStep.successor, Iter.IsPlausibleStep]
-    ⟩
+    exact
+      ⟨ step.mapIterator IterM.toIter,
+        by cases step <;> simp_all [IterStep.successor, Iter.IsPlausibleStep] ⟩
   · rintro ⟨step, h₁, h₂⟩
-    exact ⟨
-      step.mapIterator Iter.toIterM,
-      by cases step <;> simp_all [IterStep.successor, Iter.IsPlausibleStep]
-    ⟩
+    exact
+      ⟨ step.mapIterator Iter.toIterM,
+        by cases step <;> simp_all [IterStep.successor, Iter.IsPlausibleStep] ⟩
 
 theorem Iter.IsPlausibleStep.isPlausibleSuccessor_of_yield
     {α : Type w} {β : Type w} [Iterator α Id β]

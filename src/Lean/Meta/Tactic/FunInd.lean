@@ -966,12 +966,11 @@ where
     addDecl <|
       Declaration.thmDecl { name := inductName, levelParams := us, type := eTyp, value := e' }
 
-    setFunIndInfo {
-      funName := name
-      funIndName := inductName
-      levelMask := usMask
-      params := paramMask.map (cond · .param .dropped) ++ #[.target]
-    }
+    setFunIndInfo
+      { funName := name
+        funIndName := inductName
+        levelMask := usMask
+        params := paramMask.map (cond · .param .dropped) ++ #[.target] }
 
 /--
 Given a realizer for `foo.mutual_induct`, defines `foo.induct`, `bar.induct` etc.
@@ -1261,11 +1260,10 @@ where
           let _ :: indLevels := us
             | throwError "Too few universe parameters in .brecOn application:{indentExpr body}"
 
-          let group : Structural.IndGroupInst := {
-            Structural.IndGroupInfo.ofInductiveVal indInfo with
-            levels := indLevels
-            params := brecOnArgs
-          }
+          let group : Structural.IndGroupInst :=
+            { Structural.IndGroupInfo.ofInductiveVal indInfo with
+              levels := indLevels
+              params := brecOnArgs }
 
           -- We also need to know the number of indices of each type former, including the auxiliary
           -- type formers that do not have IndInfo. We can read it off the motives types of the recursor.
@@ -1465,12 +1463,8 @@ where
         else
           params := params.push .target
 
-      setFunIndInfo {
-        funName := names[0]!
-        funIndName := inductName
-        levelMask := usMask
-        params := params
-      }
+      setFunIndInfo
+        { funName := names[0]!, funIndName := inductName, levelMask := usMask, params := params }
 
 /--
 Given an expression `fun x y z => body`, returns a bit mask of the function's arity length
@@ -1611,12 +1605,8 @@ def deriveCases (unfolding : Bool) (name : Name) : MetaM Unit := do
             paramKinds := paramKinds.push .dropped
           j := j + 1
 
-      setFunIndInfo {
-        funName := name
-        funIndName := casesName
-        levelMask := usMask
-        params := paramKinds
-      }
+      setFunIndInfo
+        { funName := name, funIndName := casesName, levelMask := usMask, params := paramKinds }
 
 /--
 Given a recursively defined function `foo`, derives `foo.induct`. See the module doc for details.

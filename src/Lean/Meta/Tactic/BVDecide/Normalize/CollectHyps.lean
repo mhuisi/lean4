@@ -67,12 +67,11 @@ where
     for prop in trueEqc do
       if prop == trueExpr then
         continue
-      recordHyp {
-        name := .anonymous
-        type := prop
-        value := ← mkOfEqTrue (← Grind.mkEqTrueProof prop)
-        source := .grind
-      }
+      recordHyp
+        { name := .anonymous
+          type := prop
+          value := ← mkOfEqTrue (← Grind.mkEqTrueProof prop)
+          source := .grind }
 
   /-- Collect all false propositions. -/
   collectFalse : CollectM Unit := do
@@ -81,12 +80,11 @@ where
     for prop in falseEqc do
       if prop == falseExpr then
         continue
-      recordHyp {
-        name := .anonymous
-        type := ← Sym.share <| mkNot prop
-        value := ← mkOfEqFalse (← Grind.mkEqFalseProof prop)
-        source := .grind
-      }
+      recordHyp
+        { name := .anonymous
+          type := ← Sym.share <| mkNot prop
+          value := ← mkOfEqFalse (← Grind.mkEqFalseProof prop)
+          source := .grind }
 
   /-- Collect equalities for all types that we consider relevant. -/
   collectRelevantEqualities : CollectM Unit := do
@@ -102,12 +100,11 @@ where
           unless homogeneous do
             unless ← Grind.hasSameType e representative do
               continue
-          recordHyp {
-            name := .anonymous
-            type := ← Sym.share (← mkEq e representative)
-            value := ← Grind.mkEqProof e representative
-            source := .grind
-          }
+          recordHyp
+            { name := .anonymous
+              type := ← Sym.share (← mkEq e representative)
+              value := ← Grind.mkEqProof e representative
+              source := .grind }
 
   analyzeClass (root : Expr) : CollectM (Option Expr) := do
     let type ← Sym.inferType root
@@ -165,12 +162,11 @@ where
     let eqc ← Grind.getEqc numBits
     if eqc.isEmpty then return ()
     if let some constant := eqc.find? (Sym.getNatValue? · |>.isSome) then
-      recordHyp {
-        name := .anonymous
-        type := ← Sym.share (← mkEq numBits constant)
-        value := ← Grind.mkEqProof numBits constant
-        source := .grind
-      }
+      recordHyp
+        { name := .anonymous
+          type := ← Sym.share (← mkEq numBits constant)
+          value := ← Grind.mkEqProof numBits constant
+          source := .grind }
 
   /--
   Heuristic for choosing a canonical representative for a class: If the class contains a constant we
@@ -185,12 +181,11 @@ where
       return some default
 
 def recordLocalHyp (fvarId : FVarId) : Sym.SymM Hyp := do
-  return {
-    name := ← fvarId.getUserName
-    type := ← Sym.instantiateMVarsS (← fvarId.getType)
-    value := mkFVar fvarId
-    source := .lctx fvarId
-  }
+  return
+    { name := ← fvarId.getUserName
+      type := ← Sym.instantiateMVarsS (← fvarId.getType)
+      value := mkFVar fvarId
+      source := .lctx fvarId }
 
 def symByContradiction (goal : MVarId) : Sym.SymM (Array FVarId × MVarId) := do
   let (fvarIds, goal) ←
@@ -232,12 +227,11 @@ def setupTarget : PreProcessM (Option (Array Hyp)) := do
     PreProcessM.setTarget <| .mvarIdTarget g
     g.withContext do
       return some <| ← (← getPropHyps).mapM fun fvarId =>
-        return {
-          name := ← fvarId.getUserName
-          type := ← Sym.instantiateMVarsS (← fvarId.getType)
-          value := mkFVar fvarId
-          source := .lctx fvarId
-        }
+        return
+          { name := ← fvarId.getUserName
+            type := ← Sym.instantiateMVarsS (← fvarId.getType)
+            value := mkFVar fvarId
+            source := .lctx fvarId }
   | .grindTarget g =>
     let isPush ← PreProcessM.isPushMode
     let (introduced, g) ← if isPush then pure (#[], g) else setupGrindTarget g
@@ -250,12 +244,11 @@ def setupTarget : PreProcessM (Option (Array Hyp)) := do
           introduced.filterMapM fun fvarId => do
             unless ← isProp (← fvarId.getType) do
               return none
-            return some {
-              name := ← fvarId.getUserName
-              type := ← Grind.preprocessLight (← fvarId.getType)
-              value := mkFVar fvarId
-              source := .lctx fvarId
-            }
+            return some
+              { name := ← fvarId.getUserName
+                type := ← Grind.preprocessLight (← fvarId.getType)
+                value := mkFVar fvarId
+                source := .lctx fvarId }
         return hypotheses ++ introduced
     PreProcessM.setTarget <| .grindTarget g
     return hyps

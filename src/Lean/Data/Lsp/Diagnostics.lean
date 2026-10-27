@@ -31,19 +31,21 @@ inductive DiagnosticSeverity where
   | hint
 deriving Inhabited, BEq, Ord
 
-instance : FromJson DiagnosticSeverity := ⟨fun j =>
-  match j.getNat? with
-  | Except.ok 1 => return DiagnosticSeverity.error
-  | Except.ok 2 => return DiagnosticSeverity.warning
-  | Except.ok 3 => return DiagnosticSeverity.information
-  | Except.ok 4 => return DiagnosticSeverity.hint
-  | _ => throw s!"unknown DiagnosticSeverity '{j}'"⟩
+instance : FromJson DiagnosticSeverity :=
+  ⟨ fun j =>
+      match j.getNat? with
+      | Except.ok 1 => return DiagnosticSeverity.error
+      | Except.ok 2 => return DiagnosticSeverity.warning
+      | Except.ok 3 => return DiagnosticSeverity.information
+      | Except.ok 4 => return DiagnosticSeverity.hint
+      | _ => throw s!"unknown DiagnosticSeverity '{j}'" ⟩
 
-instance : ToJson DiagnosticSeverity := ⟨fun
-  | DiagnosticSeverity.error => 1
-  | DiagnosticSeverity.warning => 2
-  | DiagnosticSeverity.information => 3
-  | DiagnosticSeverity.hint => 4⟩
+instance : ToJson DiagnosticSeverity :=
+  ⟨ fun
+      | DiagnosticSeverity.error => 1
+      | DiagnosticSeverity.warning => 2
+      | DiagnosticSeverity.information => 3
+      | DiagnosticSeverity.hint => 4 ⟩
 
 /-- Some languages have specific codes for each error type. -/
 inductive DiagnosticCode where
@@ -51,14 +53,16 @@ inductive DiagnosticCode where
   | string (s : String)
 deriving Inhabited, BEq, Ord
 
-instance : FromJson DiagnosticCode := ⟨fun
-  | num (i : Int) => return DiagnosticCode.int i
-  | str s => return DiagnosticCode.string s
-  | j => throw s!"expected string or integer diagnostic code, got '{j}'"⟩
+instance : FromJson DiagnosticCode :=
+  ⟨ fun
+      | num (i : Int) => return DiagnosticCode.int i
+      | str s => return DiagnosticCode.string s
+      | j => throw s!"expected string or integer diagnostic code, got '{j}'" ⟩
 
-instance : ToJson DiagnosticCode := ⟨fun
-  | DiagnosticCode.int i => i
-  | DiagnosticCode.string s => s⟩
+instance : ToJson DiagnosticCode :=
+  ⟨ fun
+      | DiagnosticCode.int i => i
+      | DiagnosticCode.string s => s ⟩
 
 /-- Tags representing additional metadata about the diagnostic. -/
 inductive DiagnosticTag where
@@ -68,15 +72,17 @@ inductive DiagnosticTag where
   | deprecated
 deriving Inhabited, BEq, Ord
 
-instance : FromJson DiagnosticTag := ⟨fun j =>
-  match j.getNat? with
-  | Except.ok 1 => return DiagnosticTag.unnecessary
-  | Except.ok 2 => return DiagnosticTag.deprecated
-  | _ => throw "unknown DiagnosticTag"⟩
+instance : FromJson DiagnosticTag :=
+  ⟨ fun j =>
+      match j.getNat? with
+      | Except.ok 1 => return DiagnosticTag.unnecessary
+      | Except.ok 2 => return DiagnosticTag.deprecated
+      | _ => throw "unknown DiagnosticTag" ⟩
 
-instance : ToJson DiagnosticTag := ⟨fun
-  | DiagnosticTag.unnecessary => (1 : Nat)
-  | DiagnosticTag.deprecated => (2 : Nat)⟩
+instance : ToJson DiagnosticTag :=
+  ⟨ fun
+      | DiagnosticTag.unnecessary => (1 : Nat)
+      | DiagnosticTag.deprecated => (2 : Nat) ⟩
 
 /--
 Custom diagnostic tags provided by the language server.

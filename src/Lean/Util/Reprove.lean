@@ -40,14 +40,13 @@ meta def reproveDecl (declName : Name) (tacticSeq : TSyntax `Lean.Parser.Tactic.
         instantiateMVars goal
 
   let decl :=
-    Declaration.defnDecl {
-      name := uniqueName
-      type := info.type
-      value := value
-      levelParams := info.levelParams
-      hints := ReducibilityHints.opaque
-      safety := DefinitionSafety.safe
-    }
+    Declaration.defnDecl
+      { name := uniqueName
+        type := info.type
+        value := value
+        levelParams := info.levelParams
+        hints := ReducibilityHints.opaque
+        safety := DefinitionSafety.safe }
 
   liftCoreM <| addAndCompile decl
 

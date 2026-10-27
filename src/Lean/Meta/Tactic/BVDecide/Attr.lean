@@ -27,22 +27,21 @@ builtin_initialize registerTraceClass `Meta.Tactic.sat
 builtin_initialize registerTraceClass `Meta.Tactic.bv
 builtin_initialize registerTraceClass `Meta.Tactic.bv.uf
 
-register_builtin_option sat.solver : String := {
-  defValue := ""
-  descr :=
-    "Name of the SAT solver used by Lean.Elab.Tactic.BVDecide tactics.\
-      \n\
-      \n     1. If this is set to something besides the empty string they will use that binary.\
-      \n\
-      \n     2. If this is set to the empty string they will check if there is a cadical binary \
-      next to the\
-      executing program. Usually that program is going to be `lean` itself and we do ship a\
-      `cadical` next to it.\
-      \n\
-      \n     3. If that does not succeed try to call `cadical` from PATH. The empty string default \
-      indicates\
-      to use the one that ships with Lean."
-}
+register_builtin_option sat.solver : String :=
+  { defValue := ""
+    descr :=
+      "Name of the SAT solver used by Lean.Elab.Tactic.BVDecide tactics.\
+        \n\
+        \n     1. If this is set to something besides the empty string they will use that binary.\
+        \n\
+        \n     2. If this is set to the empty string they will check if there is a cadical binary \
+        next to the\
+        executing program. Usually that program is going to be `lean` itself and we do ship a\
+        `cadical` next to it.\
+        \n\
+        \n     3. If that does not succeed try to call `cadical` from PATH. The empty string \
+        default indicates\
+        to use the one that ships with Lean." }
 
 declare_config_elab elabBVDecideConfig Lean.Elab.Tactic.BVDecide.BVDecideConfig
 
@@ -94,15 +93,14 @@ builtin_initialize metaIntToBitVecExt : Meta.SimpExtension ←
     "meta simp theorems used to convert UIntX/IntX statements into BitVec ones"
 
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `int_toBitVec
-    descr := "simp theorems used to convert UIntX/IntX statements into BitVec ones"
-    add := fun declName stx attrKind => do
-      let env ← getEnv
-      let metaImpl ← IO.ofExcept <| getAttributeImpl env metaIntToBitVecName
-      metaImpl.add declName stx attrKind
-      let symImpl ← IO.ofExcept <| getAttributeImpl env symIntToBitVecName
-      symImpl.add declName stx attrKind
-  }
+  registerBuiltinAttribute
+    { name := `int_toBitVec
+      descr := "simp theorems used to convert UIntX/IntX statements into BitVec ones"
+      add := fun declName stx attrKind => do
+        let env ← getEnv
+        let metaImpl ← IO.ofExcept <| getAttributeImpl env metaIntToBitVecName
+        metaImpl.add declName stx attrKind
+        let symImpl ← IO.ofExcept <| getAttributeImpl env symIntToBitVecName
+        symImpl.add declName stx attrKind }
 
 end Lean.Meta.Tactic.BVDecide

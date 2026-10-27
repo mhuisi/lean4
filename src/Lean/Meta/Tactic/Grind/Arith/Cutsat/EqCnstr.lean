@@ -36,18 +36,14 @@ private def _root_.Int.Internal.Linear.Poly.substVar (p : Poly)
 def EqCnstr.norm (c : EqCnstr) : EqCnstr :=
   if c.p.isSorted then
     c
-  else {
-    p := c.p.norm
-    h := .norm c
-  }
+  else
+    { p := c.p.norm, h := .norm c }
 
 def DiseqCnstr.norm (c : DiseqCnstr) : DiseqCnstr :=
   if c.p.isSorted then
     c
-  else {
-    p := c.p.norm
-    h := .norm c
-  }
+  else
+    { p := c.p.norm, h := .norm c }
 
 /--
 Given an equation `c₁` containing the monomial `a*x`, and a disequality constraint `c₂`
@@ -101,10 +97,8 @@ def DiseqCnstr.assert (c : DiseqCnstr) : GoalM Unit := do
   let c :=
     if k == 1 then
       c
-    else {
-      p := c.p.div k
-      h := .divCoeffs c
-    }
+    else
+      { p := c.p.div k, h := .divCoeffs c }
   if (← c.findLe) then
     return ()
   let .add _ x _ := c.p
@@ -424,11 +418,10 @@ multiplies them by `k`.
 -/
 private def EqCnstr.elimNonUnit (c : EqCnstr) (k : Int) (x : Var) : GoalM Unit := do
   let m : Int := k.natAbs + 1
-  let dvd : DvdCnstr := {
-    d := m
-    p := c.p.bmodCoeffs m.natAbs
-    h := .bmodCoeffs { d := m, p := c.p, h := .ofEqZero c } 1
-  }
+  let dvd : DvdCnstr :=
+    { d := m
+      p := c.p.bmodCoeffs m.natAbs
+      h := .bmodCoeffs { d := m, p := c.p, h := .ofEqZero c } 1 }
   let e := dvd.p.toLinearExpr
   let a ← shareCommon (← denoteLinearExpr e)
   let t ← shareCommon (mkIntDiv a (toExpr m))
@@ -463,10 +456,8 @@ def EqCnstr.assertImpl (c : EqCnstr) : GoalM Unit :=
     let c :=
       if k == 1 then
         c
-      else {
-        p := c.p.div k
-        h := .divCoeffs c
-      }
+      else
+        { p := c.p.div k, h := .divCoeffs c }
     let some (k, x) := c.p.pickVarToElim?
       | c.throwUnexpected
     if k.natAbs == 1 then

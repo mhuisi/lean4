@@ -28,10 +28,8 @@ open JsonRpc
 
 def fileChanged : RequestError := { code := ErrorCode.contentModified, message := "File changed." }
 
-def methodNotFound (method : String) : RequestError := {
-  code := ErrorCode.methodNotFound
-  message := s!"No request handler found for '{method}'"
-}
+def methodNotFound (method : String) : RequestError :=
+  { code := ErrorCode.methodNotFound, message := s!"No request handler found for '{method}'" }
 
 def invalidParams (message : String) : RequestError := { code := ErrorCode.invalidParams, message }
 
@@ -39,33 +37,27 @@ def internalError (message : String) : RequestError := { code := ErrorCode.inter
 
 def requestCancelled : RequestError := { code := ErrorCode.requestCancelled, message := "" }
 
-def rpcNeedsReconnect : RequestError := {
-  code := ErrorCode.rpcNeedsReconnect
-  message := "Outdated RPC session"
-}
+def rpcNeedsReconnect : RequestError :=
+  { code := ErrorCode.rpcNeedsReconnect, message := "Outdated RPC session" }
 
 def ofException (e : Lean.Exception) : IO RequestError :=
   return internalError (← e.toMessageData.toString)
 
 def ofIoError (e : IO.Error) : RequestError := internalError (toString e)
 
-def toLspResponseError (id : RequestID) (e : RequestError) : ResponseError Unit := {
-  id := id
-  code := e.code
-  message := e.message
-}
+def toLspResponseError (id : RequestID) (e : RequestError) : ResponseError Unit :=
+  { id := id, code := e.code, message := e.message }
 
 end RequestError
 
 def parseRequestParams (paramType : Type) [FromJson paramType] (params : Json)
     : Except RequestError paramType :=
   fromJson? params
-    |>.mapError fun inner => {
-      code := JsonRpc.ErrorCode.invalidParams
-      message :=
-        s!"Cannot parse request params: {params.compress}\
-          \n{inner}"
-    }
+    |>.mapError fun inner =>
+      { code := JsonRpc.ErrorCode.invalidParams
+        message :=
+          s!"Cannot parse request params: {params.compress}\
+            \n{inner}" }
 
 inductive ServerRequestResponse (α : Type) where
   | success (response : α)
@@ -330,11 +322,8 @@ def registerLspRequestHandler
     let params ← RequestM.parseRequestParams paramType j
     let t ← handler params
     pure <| t.mapCheap <| Except.map fun r =>
-      if let some serialize := serialize? then {
-        response? := none
-        serialized := serialize r
-        isComplete := true
-      }
+      if let some serialize := serialize? then
+        { response? := none, serialized := serialize r, isComplete := true }
       else
         let j := toJson r
         { response? := some j, serialized := j.compress, isComplete := true }
@@ -502,17 +491,16 @@ private def overrideStatefulLspRequestHandler
       set <| didChangeTask.mapCheap <| fun _ => ()
 
   statefulRequestHandlers.modify fun rhs =>
-    rhs.insert method {
-      fileSource,
-      pureHandle,
-      handle,
-      pureOnDidChange,
-      onDidChange,
-      lastTaskMutex,
-      initState,
-      stateRef,
-      completeness
-    }
+    rhs.insert method
+      { fileSource,
+        pureHandle,
+        handle,
+        pureOnDidChange,
+        onDidChange,
+        lastTaskMutex,
+        initState,
+        stateRef,
+        completeness }
 
 private def registerStatefulLspRequestHandler
     (method : String) (completeness : RequestHandlerCompleteness)

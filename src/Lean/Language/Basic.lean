@@ -149,12 +149,8 @@ def SnapshotTask.map
     (t : SnapshotTask α) (f : α → β)
     (stx? : Option Syntax := t.stx?)
     (reportingRange : SnapshotTask.ReportingRange := t.reportingRange) (sync := false)
-    : SnapshotTask β := {
-  stx?
-  cancelTk? := t.cancelTk?
-  reportingRange
-  task := t.task.map (sync := sync) f
-}
+    : SnapshotTask β :=
+  { stx?, cancelTk? := t.cancelTk?, reportingRange, task := t.task.map (sync := sync) f }
 
 /--
 Chains two snapshot tasks. The processed syntax and the reporting range are taken from the first
@@ -169,12 +165,11 @@ def SnapshotTask.bindIO
     (cancelTk? : Option IO.CancelToken)
     (sync := false)
     : BaseIO (SnapshotTask β) := do
-  return {
-    stx?
-    reportingRange
-    cancelTk?
-    task := (← BaseIO.bindTask (sync := sync) t.task fun a => (·.task) <$> (act a))
-  }
+  return
+    { stx?
+      reportingRange
+      cancelTk?
+      task := (← BaseIO.bindTask (sync := sync) t.task fun a => (·.task) <$> (act a)) }
 
 /-- Synchronously waits on the result of the task. -/
 def SnapshotTask.get (t : SnapshotTask α) : α := t.task.get
@@ -263,10 +258,8 @@ def SnapshotTreeTransform.transformInfoTree? (trans : SnapshotTreeTransform) (t 
 def SnapshotTreeTransform.compose (outer inner : SnapshotTreeTransform)
     : SnapshotTreeTransform where
   addTrailing :=
-    if inner.addTrailing.stopPos == outer.addTrailing.startPos then {
-      inner.addTrailing with
-      stopPos := outer.addTrailing.stopPos
-    }
+    if inner.addTrailing.stopPos == outer.addTrailing.startPos then
+      { inner.addTrailing with stopPos := outer.addTrailing.stopPos }
     else
       inner.addTrailing
 
@@ -327,10 +320,8 @@ instance [ToSnapshotTree α] : ToSnapshotTree (TransformedSnap α) where
 
 /-- Composes an outer transformation with a snapshot-transform pair. -/
 def TransformedSnap.compose (outer : SnapshotTreeTransform) (s : TransformedSnap α)
-    : TransformedSnap α := {
-  s with
-  transform := outer.compose s.transform
-}
+    : TransformedSnap α :=
+  { s with transform := outer.compose s.transform }
 
 /--
 Lifts a typed snapshot inside a task to a `SnapshotTree` task by mapping with `f`, propagating the
@@ -419,16 +410,12 @@ partial def SnapshotTree.foldM [Monad m] (s : SnapshotTree) (f : α → Snapshot
 Option for printing end position of each message in addition to start position. Used for testing
 message ranges in the test suite.
 -/
-register_builtin_option printMessageEndPos : Bool := {
-  defValue := false
-  descr := "print end position of each message in addition to start position"
-}
+register_builtin_option printMessageEndPos : Bool :=
+  { defValue := false, descr := "print end position of each message in addition to start position" }
 
 /-- Maximum number of errors to report. -/
-register_builtin_option maxErrors : Nat := {
-  defValue := 100
-  descr := "maximum number of errors to report (0 for no limit)"
-}
+register_builtin_option maxErrors : Nat :=
+  { defValue := 100, descr := "maximum number of errors to report (0 for no limit)" }
 
 /--
 Reports messages on stdout and returns the new total number of errors reported.
@@ -443,22 +430,19 @@ private def reportMessages
   let includeEndPos := printMessageEndPos.get opts
   msgLog.unreported.foldlM (init := numErrors) fun numErrors msg => do
     let msg : Message :=
-      if let some severity := severityOverrides.find? msg.kind then {
-        msg with
-        severity
-      }
+      if let some severity := severityOverrides.find? msg.kind then
+        { msg with severity }
       else
         msg
     let numErrors := numErrors + (if msg.severity matches .error then 1 else 0)
     let maxErrorsReached := maxErrors.get opts != 0 && numErrors > maxErrors.get opts
     let msg : Message :=
-      if maxErrorsReached then {
-        msg with
-        data :=
-          s!"maximum number of errors ({maxErrors.get opts}; from option `maxErrors`) reached, \
-            exiting"
-        severity := .error
-      }
+      if maxErrorsReached then
+        { msg with
+          data :=
+            s!"maximum number of errors ({maxErrors.get opts}; from option `maxErrors`) reached, \
+              exiting"
+          severity := .error }
       else
         msg
     unless msg.isSilent do
@@ -520,12 +504,11 @@ def Snapshot.Diagnostics.ofMessageLog (msgLog : Lean.MessageLog) : BaseIO Snapsh
 /-- Creates diagnostics from a single error message that should span the whole file. -/
 def diagnosticsOfHeaderError (msg : String) : ProcessingM Snapshot.Diagnostics := do
   let msgLog :=
-    MessageLog.empty.add {
-      fileName := "<input>"
-      pos := ⟨1, 0⟩
-      endPos := (← read).fileMap.toPosition (← read).fileMap.source.rawEndPos
-      data := msg
-    }
+    MessageLog.empty.add
+      { fileName := "<input>"
+        pos := ⟨1, 0⟩
+        endPos := (← read).fileMap.toPosition (← read).fileMap.source.rawEndPos
+        data := msg }
   Snapshot.Diagnostics.ofMessageLog msgLog
 
 /--

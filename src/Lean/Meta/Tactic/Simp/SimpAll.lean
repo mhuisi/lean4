@@ -50,14 +50,13 @@ private def initEntries : M Unit := do
       if hsNonDeps.contains h then
         -- We only simplify nondependent hypotheses
         let type ← instantiateMVars localDecl.type
-        let entry : Entry := {
-          fvarId := h
-          userName := localDecl.userName
-          id := .fvar h
-          origType := type
-          type
-          proof
-        }
+        let entry : Entry :=
+          { fvarId := h
+            userName := localDecl.userName
+            id := .fvar h
+            origType := type
+            type
+            proof }
         modify fun s => { s with entries := s.entries.push entry }
 
 private abbrev getSimpTheorems : M SimpTheoremsArray := return (← get).ctx.simpTheorems
@@ -111,12 +110,11 @@ private partial def loop : M Bool := do
         simpThmsNew ←
           simpThmsNew.addTheorem (.other idNew) (← mkExpectedTypeHint proofNew typeNew)
             (config := ctx.indexConfig)
-        modify fun s => {
-          s with
-          modified := true
-          ctx := ctx.setSimpTheorems simpThmsNew
-          entries[i] := { entry with type := typeNew, proof := proofNew, id := .other idNew }
-        }
+        modify fun s =>
+          { s with
+            modified := true
+            ctx := ctx.setSimpTheorems simpThmsNew
+            entries[i] := { entry with type := typeNew, proof := proofNew, id := .other idNew } }
   -- simplify target
   let mvarId := (← get).mvarId
   let (r, stats) ← simpTarget mvarId (← get).ctx simprocs (stats := { (← get) with })

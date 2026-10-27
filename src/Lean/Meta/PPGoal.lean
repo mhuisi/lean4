@@ -12,39 +12,30 @@ public section
 
 namespace Lean.Meta
 
-register_builtin_option pp.auxDecls : Bool := {
-  defValue := false
-  descr := "display auxiliary declarations used to compile recursive functions"
-}
+register_builtin_option pp.auxDecls : Bool :=
+  { defValue := false
+    descr := "display auxiliary declarations used to compile recursive functions" }
 
-register_builtin_option pp.implementationDetailHyps : Bool := {
-  defValue := false
-  descr := "display implementation detail hypotheses in the local context"
-}
+register_builtin_option pp.implementationDetailHyps : Bool :=
+  { defValue := false, descr := "display implementation detail hypotheses in the local context" }
 
-register_builtin_option pp.inaccessibleNames : Bool := {
-  defValue := true
-  descr := "display inaccessible declarations in the local context"
-}
+register_builtin_option pp.inaccessibleNames : Bool :=
+  { defValue := true, descr := "display inaccessible declarations in the local context" }
 
-register_builtin_option pp.showLetValues : Bool := {
-  defValue := false
-  descr := "always display let-declaration values in the info view"
-}
+register_builtin_option pp.showLetValues : Bool :=
+  { defValue := false, descr := "always display let-declaration values in the info view" }
 
-register_builtin_option pp.showLetValues.threshold : Nat := {
-  defValue := 0
-  descr :=
-    "when `pp.showLetValues` is false, the maximum size of a term allowed before it is replaced by \
-      `⋯`"
-}
+register_builtin_option pp.showLetValues.threshold : Nat :=
+  { defValue := 0
+    descr :=
+      "when `pp.showLetValues` is false, the maximum size of a term allowed before it is replaced \
+        by `⋯`" }
 
-register_builtin_option pp.showLetValues.tactic.threshold : Nat := {
-  defValue := 255
-  descr :=
-    "when `pp.showLetValues` is false, the maximum size of a term allowed before it is replaced by \
-      `⋯`, for tactic goals"
-}
+register_builtin_option pp.showLetValues.tactic.threshold : Nat :=
+  { defValue := 255
+    descr :=
+      "when `pp.showLetValues` is false, the maximum size of a term allowed before it is replaced \
+        by `⋯`, for tactic goals" }
 
 /--
 Given the current values of the options `pp.showLetValues` and `pp.showLetValues.threshold`,
@@ -104,8 +95,9 @@ def ppGoal (mvarId : MVarId) : MetaM Format := do
             return fmt
           | some type =>
             let typeFmt ← ppExpr type
-            return fmt ++ (Format.joinSep ids.reverse (format " ") ++ " :"
-              ++ Format.nest indent (Format.line ++ typeFmt)).group
+            return fmt
+              ++ (Format.joinSep ids.reverse (format " ") ++ " :"
+                ++ Format.nest indent (Format.line ++ typeFmt)).group
       let rec ppVars
           (varNames : List Name) (prevType? : Option Expr) (fmt : Format) (localDecl : LocalDecl)
           : MetaM (List Name × Option Expr × Format) := do

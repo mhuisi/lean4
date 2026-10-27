@@ -28,8 +28,8 @@ where
     let pat ←
       match stx with
       | `(stx| $s:str) | `(stx| &$s:str) =>
-        pure ⟨mkNode `token_antiquot
-          #[← liftMacroM <| strLitToPattern s, mkAtom "%", mkAtom "$", id]⟩
+        pure
+          ⟨mkNode `token_antiquot #[← liftMacroM <| strLitToPattern s, mkAtom "%", mkAtom "$", id]⟩
       | `(stx| optional($stx)) =>
         mkSplicePat `optional stx id "?"
       | `(stx| many($stx)) | `(stx| many1($stx)) =>

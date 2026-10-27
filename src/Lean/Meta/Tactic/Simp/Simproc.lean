@@ -47,15 +47,15 @@ def SimprocDecl.lt (decl₁ decl₂ : SimprocDecl) : Bool := Name.quickLt decl�
 
 builtin_initialize simprocDeclExt
     : PersistentEnvExtension SimprocDecl SimprocDecl SimprocDeclExtState ←
-  registerPersistentEnvExtension {
-    mkInitial := return { builtin := (← builtinSimprocDeclsRef.get).keys }
-    addImportedFn := fun _ => return { builtin := (← builtinSimprocDeclsRef.get).keys }
-    addEntryFn := fun s d => { s with newEntries := s.newEntries.insert d.declName d.keys }
-    exportEntriesFn := fun s =>
-      let result :=
-        s.newEntries.foldl (init := #[]) fun result declName keys => result.push { declName, keys }
-      result.qsort SimprocDecl.lt
-  }
+  registerPersistentEnvExtension
+    { mkInitial := return { builtin := (← builtinSimprocDeclsRef.get).keys }
+      addImportedFn := fun _ => return { builtin := (← builtinSimprocDeclsRef.get).keys }
+      addEntryFn := fun s d => { s with newEntries := s.newEntries.insert d.declName d.keys }
+      exportEntriesFn := fun s =>
+        let result :=
+          s.newEntries.foldl (init := #[]) fun result declName keys =>
+            result.push { declName, keys }
+        result.qsort SimprocDecl.lt }
 
 def getSimprocDeclKeys? (declName : Name) : CoreM (Option (Array SimpTheoremKey)) := do
   let env ← getEnv
@@ -94,10 +94,8 @@ def registerBuiltinSimprocCore
   if (← builtinSimprocDeclsRef.get).keys.contains declName then
     throw (IO.userError s!"Invalid builtin simproc declaration `{privateToUserName declName}`: \
       This builtin simproc has already been declared")
-  builtinSimprocDeclsRef.modify fun { keys, procs } => {
-    keys := keys.insert declName key
-    procs := procs.insert declName proc
-  }
+  builtinSimprocDeclsRef.modify fun { keys, procs } =>
+    { keys := keys.insert declName key, procs := procs.insert declName proc }
 
 def registerBuiltinSimproc (declName : Name) (key : Array SimpTheoremKey) (proc : Simproc)
     : IO Unit := do
@@ -116,10 +114,8 @@ def registerSimproc (declName : Name) (keys : Array SimpTheoremKey) : CoreM Unit
     throwError "Invalid simproc declaration `{.ofConstName declName}`: This simproc has already \
       been declared"
   modifyEnv fun env =>
-    simprocDeclExt.modifyState env fun s => {
-      s with
-      newEntries := s.newEntries.insert declName keys
-    }
+    simprocDeclExt.modifyState env fun s =>
+      { s with newEntries := s.newEntries.insert declName keys }
 
 instance : BEq SimprocEntry where
   beq e₁ e₂ := e₁.declName == e₂.declName
@@ -127,11 +123,8 @@ instance : BEq SimprocEntry where
 instance : ToFormat SimprocEntry where
   format e := format e.declName
 
-def Simprocs.erase (s : Simprocs) (declName : Name) : Simprocs := {
-  s with
-  erased := s.erased.insert declName
-  simprocNames := s.simprocNames.erase declName
-}
+def Simprocs.erase (s : Simprocs) (declName : Name) : Simprocs :=
+  { s with erased := s.erased.insert declName, simprocNames := s.simprocNames.erase declName }
 
 /-- Builtin simprocs. -/
 builtin_initialize builtinSimprocsRef : IO.Ref Simprocs ← IO.mkRef {}
@@ -180,19 +173,12 @@ def Simprocs.addCore
     (s : Simprocs) (keys : Array SimpTheoremKey) (declName : Name) (post : Bool)
     (proc : Sum Simproc DSimproc)
     : Simprocs :=
-  let s := {
-    s with
-    simprocNames := s.simprocNames.insert declName
-    erased := s.erased.erase declName
-  }
-  if post then {
-    s with
-    post := s.post.insertKeyValue keys { declName, keys, post, proc }
-  }
-  else {
-    s with
-    pre := s.pre.insertKeyValue keys { declName, keys, post, proc }
-  }
+  let s :=
+    { s with simprocNames := s.simprocNames.insert declName, erased := s.erased.erase declName }
+  if post then
+    { s with post := s.post.insertKeyValue keys { declName, keys, post, proc } }
+  else
+    { s with pre := s.pre.insertKeyValue keys { declName, keys, post, proc } }
 
 /-- Implements attributes `builtin_simproc` and `builtin_sevalproc`. -/
 def addSimprocBuiltinAttrCore
@@ -366,10 +352,8 @@ def dsimprocArrayCore (post : Bool) (ss : SimprocsArray) (e : Expr) : SimpM DSte
   else
     return .continue
 
-register_builtin_option simprocs : Bool := {
-  defValue := true
-  descr := "Enable/disable `simproc`s (simplification procedures)."
-}
+register_builtin_option simprocs : Bool :=
+  { defValue := true, descr := "Enable/disable `simproc`s (simplification procedures)." }
 
 def userPreSimprocs (s : SimprocsArray) : Simproc := fun e => do
   unless simprocs.get (← getOptions) do
@@ -393,17 +377,16 @@ def userPostDSimprocs (s : SimprocsArray) : DSimproc := fun e => do
 
 def mkSimprocExt (name : Name := by exact decl_name%) (ref? : Option (IO.Ref Simprocs))
     : IO SimprocExtension :=
-  registerScopedEnvExtension {
-    name := name
-    mkInitial :=
-      if let some ref := ref? then
-        ref.get
-      else
-        return {}
-    ofOLeanEntry := fun _ => toSimprocEntry
-    toOLeanEntry := fun e => e.toSimprocOLeanEntry
-    addEntry := fun s e => s.addCore e.keys e.declName e.post e.proc
-  }
+  registerScopedEnvExtension
+    { name := name
+      mkInitial :=
+        if let some ref := ref? then
+          ref.get
+        else
+          return {}
+      ofOLeanEntry := fun _ => toSimprocEntry
+      toOLeanEntry := fun e => e.toSimprocOLeanEntry
+      addEntry := fun s e => s.addCore e.keys e.declName e.post e.proc }
 
 def addSimprocAttr
     (attrName : Name) (ext : SimprocExtension) (declName : Name) (stx : Syntax)
@@ -417,14 +400,13 @@ def addSimprocAttr
 
 def mkSimprocAttr (attrName : Name) (attrDescr : String) (ext : SimprocExtension) (name : Name)
     : IO Unit := do
-  registerBuiltinAttribute {
-    ref := name
-    name := attrName
-    descr := attrDescr
-    applicationTime := AttributeApplicationTime.afterCompilation
-    add := addSimprocAttr attrName ext
-    erase := eraseSimprocAttr ext
-  }
+  registerBuiltinAttribute
+    { ref := name
+      name := attrName
+      descr := attrDescr
+      applicationTime := AttributeApplicationTime.afterCompilation
+      add := addSimprocAttr attrName ext
+      erase := eraseSimprocAttr ext }
 
 abbrev SimprocExtensionMap := Std.HashMap Name SimprocExtension
 
@@ -466,24 +448,22 @@ private def addBuiltin (declName : Name) (stx : Syntax) (addDeclName : Name) : A
   go.run' {}
 
 builtin_initialize
-  registerBuiltinAttribute {
-    ref := by exact decl_name%
-    name := `simprocBuiltinAttr
-    descr := "Builtin simplification procedure"
-    applicationTime := AttributeApplicationTime.afterCompilation
-    erase := fun _ => throwError "Not implemented yet, [-builtin_simproc]"
-    add := fun declName stx _ => addBuiltin declName stx ``addSimprocBuiltinAttr
-  }
+  registerBuiltinAttribute
+    { ref := by exact decl_name%
+      name := `simprocBuiltinAttr
+      descr := "Builtin simplification procedure"
+      applicationTime := AttributeApplicationTime.afterCompilation
+      erase := fun _ => throwError "Not implemented yet, [-builtin_simproc]"
+      add := fun declName stx _ => addBuiltin declName stx ``addSimprocBuiltinAttr }
 
 builtin_initialize
-  registerBuiltinAttribute {
-    ref := by exact decl_name%
-    name := `sevalprocBuiltinAttr
-    descr := "Builtin symbolic evaluation procedure"
-    applicationTime := AttributeApplicationTime.afterCompilation
-    erase := fun _ => throwError "Not implemented yet, [-builtin_sevalproc]"
-    add := fun declName stx _ => addBuiltin declName stx ``addSEvalprocBuiltinAttr
-  }
+  registerBuiltinAttribute
+    { ref := by exact decl_name%
+      name := `sevalprocBuiltinAttr
+      descr := "Builtin symbolic evaluation procedure"
+      applicationTime := AttributeApplicationTime.afterCompilation
+      erase := fun _ => throwError "Not implemented yet, [-builtin_sevalproc]"
+      add := fun declName stx _ => addBuiltin declName stx ``addSEvalprocBuiltinAttr }
 
 def getSimprocs : CoreM Simprocs := return simprocExtension.getState (← getEnv)
 

@@ -147,11 +147,10 @@ def tidy (f : Fact) : Fact :=
   | none => f
 
 /-- `combo`, implemented on `Fact`. -/
-def combo (a : Int) (f : Fact) (b : Int) (g : Fact) : Fact := {
-  coeffs := .combo a f.coeffs b g.coeffs
-  constraint := .combo a f.constraint b g.constraint
-  justification := .combo a f.justification b g.justification
-}
+def combo (a : Int) (f : Fact) (b : Int) (g : Fact) : Fact :=
+  { coeffs := .combo a f.coeffs b g.coeffs
+    constraint := .combo a f.constraint b g.constraint
+    justification := .combo a f.justification b g.justification }
 
 end Fact
 
@@ -230,24 +229,22 @@ without checking if there is already a constraint for these coefficients.
 -/
 def insertConstraint (p : Problem) : Fact → Problem
   | f@⟨x, s, j⟩ =>
-    if s.isImpossible then {
-      p with
-      possible := false
-      proveFalse? := some (proveFalse j p.assumptions)
-      explanation? := Thunk.mk fun _ => j.toString
-      proveFalse?_spec := rfl
-    }
-    else {
-      p with
-      numVars := max p.numVars x.length
-      constraints := p.constraints.insert x f
-      proveFalse?_spec := p.proveFalse?_spec
-      equalities :=
-        if f.constraint.isExact then
-          p.equalities.insert x
-        else
-          p.equalities
-    }
+    if s.isImpossible then
+      { p with
+        possible := false
+        proveFalse? := some (proveFalse j p.assumptions)
+        explanation? := Thunk.mk fun _ => j.toString
+        proveFalse?_spec := rfl }
+    else
+      { p with
+        numVars := max p.numVars x.length
+        constraints := p.constraints.insert x f
+        proveFalse?_spec := p.proveFalse?_spec
+        equalities :=
+          if f.constraint.isExact then
+            p.equalities.insert x
+          else
+            p.equalities }
 
 /--
 Add a constraint into the problem,
@@ -399,11 +396,10 @@ def addInequality (p : Problem) (const : Int) (coeffs : Coeffs) (prf? : Option P
   let prf := prf?.getD (do mkSorry (← mkFreshExprMVar none) false)
   let i := p.assumptions.size
   let p' := { p with assumptions := p.assumptions.push (addInequality_proof const coeffs prf) }
-  let f : Fact := {
-    coeffs
-    constraint := { lowerBound := some (-const), upperBound := none }
-    justification := .assumption _ _ i
-  }
+  let f : Fact :=
+    { coeffs
+      constraint := { lowerBound := some (-const), upperBound := none }
+      justification := .assumption _ _ i }
   let f := p.replayEliminations f
   let f := f.tidy
   p'.addConstraint f
@@ -418,11 +414,10 @@ def addEquality (p : Problem) (const : Int) (coeffs : Coeffs) (prf? : Option Pro
   let prf := prf?.getD (do mkSorry (← mkFreshExprMVar none) false)
   let i := p.assumptions.size
   let p' := { p with assumptions := p.assumptions.push (addEquality_proof const coeffs prf) }
-  let f : Fact := {
-    coeffs
-    constraint := { lowerBound := some (-const), upperBound := some (-const) }
-    justification := .assumption _ _ i
-  }
+  let f : Fact :=
+    { coeffs
+      constraint := { lowerBound := some (-const), upperBound := some (-const) }
+      justification := .assumption _ _ i }
   let f := p.replayEliminations f
   let f := f.tidy
   p'.addConstraint f
@@ -489,25 +484,21 @@ def fourierMotzkinData (p : Problem) : Array FourierMotzkinData := Id.run do
       let x := Coeffs.get xs i
       data :=
         data.modify i fun d =>
-          if x = 0 then {
-            d with
-            irrelevant := f :: d.irrelevant
-          }
+          if x = 0 then
+            { d with irrelevant := f :: d.irrelevant }
           else Id.run do
             let s' := s.scale x
             let mut d' := d
             if s'.lowerBound.isSome then
-              d' := {
-                d' with
-                lowerBounds := (f, x) :: d'.lowerBounds
-                lowerExact := d'.lowerExact && x.natAbs = 1
-              }
+              d' :=
+                { d' with
+                  lowerBounds := (f, x) :: d'.lowerBounds
+                  lowerExact := d'.lowerExact && x.natAbs = 1 }
             if s'.upperBound.isSome then
-              d' := {
-                d' with
-                upperBounds := (f, x) :: d'.upperBounds
-                upperExact := d'.upperExact && x.natAbs = 1
-              }
+              d' :=
+                { d' with
+                  upperBounds := (f, x) :: d'.upperBounds
+                  upperExact := d'.upperExact && x.natAbs = 1 }
             return d'
   return data
 

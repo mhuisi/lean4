@@ -40,23 +40,22 @@ namespace Internal.Raw
 
 open Lean Elab Meta Tactic
 
-private meta def baseNames : Array Name := #[
-  ``Raw.empty_eq, ``Raw.emptyc_eq,
-  ``insert_eq, ``insertIfNew_eq, ``erase_eq, ``contains_eq,
-  ``containsThenInsert_fst_eq, ``containsThenInsert_snd_eq,
-  ``containsThenInsertIfNew_fst_eq, ``containsThenInsertIfNew_snd_eq,
-  ``getThenInsertIfNew?_fst_eq, ``getThenInsertIfNew?_snd_eq,
-  ``Const.getThenInsertIfNew?_snd_eq, ``Const.getThenInsertIfNew?_fst_eq,
-  ``map_eq, ``filter_eq, ``filterMap_eq,
-  ``get?_eq, ``get_eq, ``get!_eq, ``getD_eq,
-  ``Const.get?_eq, ``Const.get_eq, ``Const.getD_eq, ``Const.get!_eq,
-  ``getKey?_eq, ``getKey_eq, ``getKey!_eq, ``getKeyD_eq,
-  ``insertMany_eq, ``Const.insertMany_eq, ``Const.insertManyIfNewUnit_eq, ``ofArray_eq,
-  ``Const.ofArray_eq,
-  ``ofList_eq, ``Const.ofList_eq, ``Const.unitOfList_eq, ``Const.unitOfArray_eq,
-  ``alter_eq, ``Const.alter_eq, ``modify_eq, ``Const.modify_eq, ``union_eq, ``inter_eq, ``diff_eq,
-  ``beq_eq, ``Const.beq_eq
-]
+private meta def baseNames : Array Name :=
+  #[``Raw.empty_eq, ``Raw.emptyc_eq,
+    ``insert_eq, ``insertIfNew_eq, ``erase_eq, ``contains_eq,
+    ``containsThenInsert_fst_eq, ``containsThenInsert_snd_eq,
+    ``containsThenInsertIfNew_fst_eq, ``containsThenInsertIfNew_snd_eq,
+    ``getThenInsertIfNew?_fst_eq, ``getThenInsertIfNew?_snd_eq,
+    ``Const.getThenInsertIfNew?_snd_eq, ``Const.getThenInsertIfNew?_fst_eq,
+    ``map_eq, ``filter_eq, ``filterMap_eq,
+    ``get?_eq, ``get_eq, ``get!_eq, ``getD_eq,
+    ``Const.get?_eq, ``Const.get_eq, ``Const.getD_eq, ``Const.get!_eq,
+    ``getKey?_eq, ``getKey_eq, ``getKey!_eq, ``getKeyD_eq,
+    ``insertMany_eq, ``Const.insertMany_eq, ``Const.insertManyIfNewUnit_eq, ``ofArray_eq,
+    ``Const.ofArray_eq,
+    ``ofList_eq, ``Const.ofList_eq, ``Const.unitOfList_eq, ``Const.unitOfArray_eq,
+    ``alter_eq, ``Const.alter_eq, ``modify_eq, ``Const.modify_eq, ``union_eq, ``inter_eq, ``diff_eq,
+    ``beq_eq, ``Const.beq_eq]
 
 /-- Internal implementation detail of the hash map -/
 scoped syntax "simp_to_raw" ("using" term)? : tactic
@@ -5373,10 +5372,9 @@ end Const
 end Equiv
 
 theorem equiv_emptyWithCapacity_iff_isEmpty [EquivBEq α] [LawfulHashable α] {c : Nat} (h : m.WF)
-    : m ~m emptyWithCapacity c ↔ m.isEmpty := ⟨
-  fun h' => (Raw₀.equiv_emptyWithCapacity_iff_isEmpty ⟨m, h.size_buckets_pos⟩ h).mp h',
-  fun h' => (Raw₀.equiv_emptyWithCapacity_iff_isEmpty ⟨m, h.size_buckets_pos⟩ h).mpr h'
-⟩
+    : m ~m emptyWithCapacity c ↔ m.isEmpty :=
+  ⟨ fun h' => (Raw₀.equiv_emptyWithCapacity_iff_isEmpty ⟨m, h.size_buckets_pos⟩ h).mp h',
+    fun h' => (Raw₀.equiv_emptyWithCapacity_iff_isEmpty ⟨m, h.size_buckets_pos⟩ h).mpr h' ⟩
 
 theorem equiv_empty_iff_isEmpty [EquivBEq α] [LawfulHashable α] (h : m.WF) : m ~m ∅ ↔ m.isEmpty :=
   equiv_emptyWithCapacity_iff_isEmpty h

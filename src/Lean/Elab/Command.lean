@@ -151,14 +151,13 @@ instance : MonadExceptOf Exception CommandElabM where
   throw := throw
   tryCatch := Command.tryCatch
 
-def mkState (env : Environment) (messages : MessageLog := {}) (opts : Options := {}) : State := {
-  env := env
-  messages := messages
-  scopes := [{ header := "", opts }]
-  maxRecDepth := maxRecDepth.get opts
-  -- Outside of declarations, fall back to a module-specific prefix
-  auxDeclNGen := .ofPrefix <| mkPrivateName env .anonymous
-}
+def mkState (env : Environment) (messages : MessageLog := {}) (opts : Options := {}) : State :=
+  { env := env
+    messages := messages
+    scopes := [{ header := "", opts }]
+    maxRecDepth := maxRecDepth.get opts
+    -- Outside of declarations, fall back to a module-specific prefix
+    auxDeclNGen := .ofPrefix <| mkPrivateName env .anonymous }
 
 /-
 Linters should be loadable as plugins, so store in a global IO ref instead of an attribute managed by the
@@ -213,15 +212,14 @@ unsafe def registerStatefulLinterImpl
     throw <| .userError "stateful linters can only be registered during initialization"
   let ls ← statefulLintersRef.get
   let idx := ls.size
-  statefulLintersRef.set <| ls.push {
-    init := unsafeCast init
-    pre := fun stx prev =>
-      (·.map unsafeCast) <$> pre stx (unsafeCast prev[idx]!) (fun l => l.prevState prev)
-    post := fun stx prev preSt =>
-      unsafeCast <$> post stx (unsafeCast prev[idx]!) ((preSt[idx]!).map unsafeCast)
-        (fun l => l.prevState prev)
-        (fun l => l.preState preSt)
-  }
+  statefulLintersRef.set <| ls.push
+    { init := unsafeCast init
+      pre := fun stx prev =>
+        (·.map unsafeCast) <$> pre stx (unsafeCast prev[idx]!) (fun l => l.prevState prev)
+      post := fun stx prev preSt =>
+        unsafeCast <$> post stx (unsafeCast prev[idx]!) ((preSt[idx]!).map unsafeCast)
+          (fun l => l.prevState prev)
+          (fun l => l.preState preSt) }
   return ⟨idx⟩
 
 @[inherit_doc registerStatefulLinterImpl, implemented_by registerStatefulLinterImpl]
@@ -291,50 +289,47 @@ private def runCore (x : CoreM α) : CommandElabM α := do
   let heartbeats ← IO.getNumHeartbeats
   let env := Kernel.resetDiag s.env
   let scope := s.scopes.head!
-  let coreCtx : Core.Context := {
-    fileName := ctx.fileName
-    fileMap := ctx.fileMap
-    currRecDepth := ctx.currRecDepth
-    maxRecDepth := s.maxRecDepth
-    ref := ctx.ref
-    currNamespace := scope.currNamespace
-    openDecls := scope.openDecls
-    initHeartbeats := heartbeats
-    quotContext := (← MonadQuotation.getMainModule)
-    currMacroScope := ctx.currMacroScope
-    options := scope.opts
-    cancelTk? := ctx.cancelTk?
-    suppressElabErrors := ctx.suppressElabErrors
-    checkDeprecated := ctx.checkDeprecated
-  }
+  let coreCtx : Core.Context :=
+    { fileName := ctx.fileName
+      fileMap := ctx.fileMap
+      currRecDepth := ctx.currRecDepth
+      maxRecDepth := s.maxRecDepth
+      ref := ctx.ref
+      currNamespace := scope.currNamespace
+      openDecls := scope.openDecls
+      initHeartbeats := heartbeats
+      quotContext := (← MonadQuotation.getMainModule)
+      currMacroScope := ctx.currMacroScope
+      options := scope.opts
+      cancelTk? := ctx.cancelTk?
+      suppressElabErrors := ctx.suppressElabErrors
+      checkDeprecated := ctx.checkDeprecated }
   let x : EIO _ _ :=
-    x.run coreCtx {
-      env
-      ngen := s.ngen
-      auxDeclNGen := s.auxDeclNGen
-      nextMacroScope := s.nextMacroScope
-      infoState.enabled := s.infoState.enabled
-      -- accumulate lazy assignments from all `CoreM` lifts
-      infoState.lazyAssignment := s.infoState.lazyAssignment
-      traceState := s.traceState
-      snapshotTasks := s.snapshotTasks
-    }
+    x.run coreCtx
+      { env
+        ngen := s.ngen
+        auxDeclNGen := s.auxDeclNGen
+        nextMacroScope := s.nextMacroScope
+        infoState.enabled := s.infoState.enabled
+        -- accumulate lazy assignments from all `CoreM` lifts
+        infoState.lazyAssignment := s.infoState.lazyAssignment
+        traceState := s.traceState
+        snapshotTasks := s.snapshotTasks }
   let (ea, coreS) ← liftM x
-  modify fun s => {
-    s with
-    env := coreS.env
-    nextMacroScope := coreS.nextMacroScope
-    ngen := coreS.ngen
-    auxDeclNGen := coreS.auxDeclNGen
-    infoState.trees := s.infoState.trees.append coreS.infoState.trees
-    -- we assume substitution of `assignment` has already happened, but for lazy assignments we only
-    -- do it at the very end
-    infoState.lazyAssignment := coreS.infoState.lazyAssignment
-    traceState.traces :=
-      coreS.traceState.traces.map fun t => { t with ref := replaceRef t.ref ctx.ref }
-    snapshotTasks := coreS.snapshotTasks
-    messages := s.messages ++ coreS.messages
-  }
+  modify fun s =>
+    { s with
+      env := coreS.env
+      nextMacroScope := coreS.nextMacroScope
+      ngen := coreS.ngen
+      auxDeclNGen := coreS.auxDeclNGen
+      infoState.trees := s.infoState.trees.append coreS.infoState.trees
+      -- we assume substitution of `assignment` has already happened, but for lazy assignments we only
+      -- do it at the very end
+      infoState.lazyAssignment := coreS.infoState.lazyAssignment
+      traceState.traces :=
+        coreS.traceState.traces.map fun t => { t with ref := replaceRef t.ref ctx.ref }
+      snapshotTasks := coreS.snapshotTasks
+      messages := s.messages ++ coreS.messages }
   return ea
 
 def liftCoreM (x : CoreM α) : CommandElabM α := do MonadExcept.ofExcept (← runCore (observing x))
@@ -366,12 +361,11 @@ instance : MonadLog CommandElabM where
         return
     let currNamespace ← getCurrNamespace
     let openDecls ← getOpenDecls
-    let msg := {
-      msg with
-      data :=
-        MessageData.withNamingContext { currNamespace := currNamespace, openDecls := openDecls }
-          msg.data
-    }
+    let msg :=
+      { msg with
+        data :=
+          MessageData.withNamingContext { currNamespace := currNamespace, openDecls := openDecls }
+            msg.data }
     modify fun s => { s with messages := s.messages.add msg }
 
 def runLinters
@@ -408,11 +402,8 @@ def runLinters
                 if newInfoState.enabled then
                   producedInfoTrees.modify fun old =>
                     old.append (newInfoState.trees.foldl (·.push ·) {} (start := originalSize))
-                modify fun s => {
-                  savedState with
-                  messages := s.messages
-                  traceState := s.traceState
-                }
+                modify fun s =>
+                  { savedState with messages := s.messages, traceState := s.traceState }
                 let oldStateSize := (Linter.codeQualityLogExt.getState (env := savedState.env)).size
                 producedCodeQualityEntries.modify (· ++ newState.extract oldStateSize)
 
@@ -449,11 +440,8 @@ def runModuleLinters
                   logException ex
               finally
                 let newState := Linter.codeQualityLogExt.getState (← get).env
-                modify fun s => {
-                  savedState with
-                  messages := s.messages
-                  traceState := s.traceState
-                }
+                modify fun s =>
+                  { savedState with messages := s.messages, traceState := s.traceState }
                 let oldStateSize := (Linter.codeQualityLogExt.getState (env := savedState.env)).size
                 producedCodeQualityEntries.modify (· ++ newState.extract oldStateSize)
       if let some codeQualityEntriesPromise := codeQualityEntriesPromise? then
@@ -555,12 +543,11 @@ def wrapAsyncAsSnapshot
       IO.FS.withIsolatedStreams (isolateStderr := Core.stderrAsMessages.get (← getOptions)) do
         let tid ← IO.getTID
         -- reset trace state and message log so as not to report them twice
-        modify fun st => {
-          st with
-          messages := st.messages.markAllReported
-          traceState := { tid }
-          snapshotTasks := #[]
-        }
+        modify fun st =>
+          { st with
+            messages := st.messages.markAllReported
+            traceState := { tid }
+            snapshotTasks := #[] }
         try
           withTraceNode `Elab.async (fun _ => return desc) do act a
         catch e =>
@@ -575,18 +562,15 @@ def wrapAsyncAsSnapshot
       let mut msgs := st.messages
       if !output.isEmpty then
         msgs :=
-          msgs.add {
-            fileName := ctx.fileName
-            severity := MessageSeverity.information
-            pos := ctx.fileMap.toPosition <| ctx.ref.getPos?.getD 0
-            data := output
-          }
+          msgs.add
+            { fileName := ctx.fileName
+              severity := MessageSeverity.information
+              pos := ctx.fileMap.toPosition <| ctx.ref.getPos?.getD 0
+              data := output }
       return .mk
-        {
-          desc
+        { desc
           diagnostics := (← Language.Snapshot.Diagnostics.ofMessageLog msgs)
-          traces := st.traceState
-        }
+          traces := st.traceState }
         st.snapshotTasks
     -- interrupt or abort exception as `try catch` above should have caught any others
     | .error _ =>
@@ -602,11 +586,10 @@ def runLintersAsync (stx : Syntax) : CommandElabM Unit := do
   if ! Elab.async.get (← getOptions) then
     withoutModifyingEnv do
       runLinters stx (codeQualityEntriesPromise? := lintersCodeQualityEntriesPromise)
-      modify fun s => {
-        s with
-        codeQualityEntryTasks :=
-          s.codeQualityEntryTasks.push (lintersCodeQualityEntriesPromise.resultD #[])
-      }
+      modify fun s =>
+        { s with
+          codeQualityEntryTasks :=
+            s.codeQualityEntryTasks.push (lintersCodeQualityEntriesPromise.resultD #[]) }
     return
 
   -- We create a promise for the info trees produced by the linters
@@ -616,11 +599,10 @@ def runLintersAsync (stx : Syntax) : CommandElabM Unit := do
   let mut snaps := (← get).snapshotTasks
   if let some elabSnap := (← read).snap? then
     snaps :=
-      snaps.push {
-        stx? := none
-        cancelTk? := none
-        task := elabSnap.new.result!.map (sync := true) toSnapshotTree
-      }
+      snaps.push
+        { stx? := none
+          cancelTk? := none
+          task := elabSnap.new.result!.map (sync := true) toSnapshotTree }
   let tree := SnapshotTree.mk { diagnostics := .empty } snaps
   let treeTask ← tree.waitAll
 
@@ -640,18 +622,16 @@ def runLintersAsync (stx : Syntax) : CommandElabM Unit := do
     BaseIO.bindTask (sync := true) (t := (← getInfoState).substituteLazy) fun infoSt =>
       BaseIO.mapTask (t := treeTask) fun _ => lintAct infoSt
   logSnapshotTask { stx? := none, task, cancelTk? := cancelTk }
-  modify fun s => {
-    s with
-    codeQualityEntryTasks :=
-      s.codeQualityEntryTasks.push (lintersCodeQualityEntriesPromise.resultD #[])
-  }
+  modify fun s =>
+    { s with
+      codeQualityEntryTasks :=
+        s.codeQualityEntryTasks.push (lintersCodeQualityEntriesPromise.resultD #[]) }
 
   let infoHole ← liftCoreM mkFreshMVarId
-  modifyInfoState fun s => {
-    s with
-    trees := s.trees.modify 0 (pushInfoChild · (.hole infoHole))
-    lazyAssignment := s.lazyAssignment |>.insert infoHole (lintersInfoPromise.resultD default)
-  }
+  modifyInfoState fun s =>
+    { s with
+      trees := s.trees.modify 0 (pushInfoChild · (.hole infoHole))
+      lazyAssignment := s.lazyAssignment |>.insert infoHole (lintersInfoPromise.resultD default) }
 
 open Language in
 /--
@@ -661,10 +641,10 @@ set.
 def runModuleLintersAsync (cmds : Array Syntax) : CommandElabM Unit := do
   if (← moduleLintersRef.get).isEmpty then return
   let codeQualityEntriesPromise ← IO.Promise.new (α := Array Linter.CodeQualityLogEntry)
-  modify fun s => {
-    s with
-    codeQualityEntryTasks := s.codeQualityEntryTasks.push (codeQualityEntriesPromise.resultD #[])
-  }
+  modify fun s =>
+    { s with
+      codeQualityEntryTasks :=
+        s.codeQualityEntryTasks.push (codeQualityEntriesPromise.resultD #[]) }
   if ! Elab.async.get (← getOptions) then
     withoutModifyingEnv do runModuleLinters cmds codeQualityEntriesPromise
     return
@@ -687,22 +667,20 @@ def runStatefulLintersAsync (stx : Syntax) : CommandElabM Unit := do
     let postSt ←
       withoutModifyingEnv <| runStatefulLinters stx prev
         (codeQualityEntriesPromise? := statefulLintersCodeQualityEntriesPromise)
-    modify fun s => {
-      s with
-      prevLinterStates := some (.pure postSt)
-      codeQualityEntryTasks :=
-        s.codeQualityEntryTasks.push <| statefulLintersCodeQualityEntriesPromise.resultD #[]
-    }
+    modify fun s =>
+      { s with
+        prevLinterStates := some (.pure postSt)
+        codeQualityEntryTasks :=
+          s.codeQualityEntryTasks.push <| statefulLintersCodeQualityEntriesPromise.resultD #[] }
     return
 
   let mut snaps := (← get).snapshotTasks
   if let some elabSnap := (← read).snap? then
     snaps :=
-      snaps.push {
-        stx? := none
-        cancelTk? := none
-        task := elabSnap.new.result!.map (sync := true) toSnapshotTree
-      }
+      snaps.push
+        { stx? := none
+          cancelTk? := none
+          task := elabSnap.new.result!.map (sync := true) toSnapshotTree }
   let tree := SnapshotTree.mk { diagnostics := .empty } snaps
   let treeTask ← tree.waitAll
 
@@ -732,16 +710,14 @@ def runStatefulLintersAsync (stx : Syntax) : CommandElabM Unit := do
   logSnapshotTask { stx? := none, task, cancelTk? := cancelTk }
 
   let infoHole ← liftCoreM mkFreshMVarId
-  modifyInfoState fun s => {
-    s with
-    trees := s.trees.modify 0 (pushInfoChild · (.hole infoHole))
-    lazyAssignment := s.lazyAssignment |>.insert infoHole (lintersInfoPromise.resultD default)
-  }
-  modify fun s => {
-    s with
-    codeQualityEntryTasks :=
-      s.codeQualityEntryTasks.push <| statefulLintersCodeQualityEntriesPromise.resultD #[]
-  }
+  modifyInfoState fun s =>
+    { s with
+      trees := s.trees.modify 0 (pushInfoChild · (.hole infoHole))
+      lazyAssignment := s.lazyAssignment |>.insert infoHole (lintersInfoPromise.resultD default) }
+  modify fun s =>
+    { s with
+      codeQualityEntryTasks :=
+        s.codeQualityEntryTasks.push <| statefulLintersCodeQualityEntriesPromise.resultD #[] }
 
 /--
 Registers a command elaborator for the given syntax node kind.
@@ -765,16 +741,15 @@ private def mkInfoTree (elaborator : Name) (stx : Syntax) (trees : PersistentArr
   let scope := s.scopes.head!
   let tree := InfoTree.node (Info.ofCommandInfo { elaborator, stx }) trees
   let ctx :=
-    PartialContextInfo.commandCtx {
-      env := s.env
-      cmdEnv? := some s.env
-      fileMap := ctx.fileMap
-      mctx := {}
-      currNamespace := scope.currNamespace
-      openDecls := scope.openDecls
-      options := scope.opts
-      ngen := s.ngen
-    }
+    PartialContextInfo.commandCtx
+      { env := s.env
+        cmdEnv? := some s.env
+        fileMap := ctx.fileMap
+        mctx := {}
+        currNamespace := scope.currNamespace
+        openDecls := scope.openDecls
+        options := scope.opts
+        ngen := s.ngen }
   return InfoTree.context ctx tree
 
 /--
@@ -788,15 +763,14 @@ def withoutCommandIncrementality (cond : Bool) (act : CommandElabM α) : Command
     if let some old := (← read).snap?.bind (·.old?) then
       old.val.cancelRec
   withReader
-    (fun ctx => {
-      ctx with
-      snap? :=
-        ctx.snap?.filter fun snap => Id.run do
-          if let some old := snap.old? then
-            if cond && opts.getBool `trace.Elab.reuse then
-              dbg_trace "reuse stopped: guard failed at {old.stx}"
-          return !cond
-    })
+    (fun ctx =>
+      { ctx with
+        snap? :=
+          ctx.snap?.filter fun snap => Id.run do
+            if let some old := snap.old? then
+              if cond && opts.getBool `trace.Elab.reuse then
+                dbg_trace "reuse stopped: guard failed at {old.stx}"
+            return !cond })
     act
 
 /--
@@ -831,10 +805,8 @@ def withMacroExpansion (beforeStx afterStx : Syntax) (x : CommandElabM α) : Com
       pure <| .ofMacroExpansionInfo { stx := beforeStx, output := afterStx, lctx := .empty })
     do
       withReader
-        (fun ctx => {
-          ctx with
-          macroStack := { before := beforeStx, after := afterStx } :: ctx.macroStack
-        })
+        (fun ctx =>
+          { ctx with macroStack := { before := beforeStx, after := afterStx } :: ctx.macroStack })
         x
 
 instance : MonadMacroAdapter CommandElabM where
@@ -917,22 +889,18 @@ where
                           if old.newStx.isOfKind nullKind then old.newStx.getArgs else #[old.newStx]
                       let cmdPromises ← cmds.mapM fun _ => IO.Promise.new
                       let cancelTk? := (← read).cancelTk?
-                      snap.new.resolve <| .ofTyped {
-                        diagnostics := .empty
-                        macroDecl := decl
-                        newStx := stxNew
-                        newNextMacroScope := nextMacroScope
-                        hasTraces
-                        next :=
-                          Array.zipWith
-                            (fun cmdPromise cmd => {
-                              stx? := some cmd
-                              task := cmdPromise.resultD default
-                              cancelTk?
-                            })
-                            cmdPromises cmds
-                        : MacroExpandedSnapshot
-                      }
+                      snap.new.resolve <| .ofTyped
+                        { diagnostics := .empty
+                          macroDecl := decl
+                          newStx := stxNew
+                          newNextMacroScope := nextMacroScope
+                          hasTraces
+                          next :=
+                            Array.zipWith
+                              (fun cmdPromise cmd =>
+                                { stx? := some cmd, task := cmdPromise.resultD default, cancelTk? })
+                              cmdPromises cmds
+                          : MacroExpandedSnapshot }
                       -- After the first command whose syntax tree changed, we must disable
                       -- incremental reuse
                       let mut reusedCmds := true
@@ -942,17 +910,14 @@ where
                       for cmd in cmds, cmdPromise in cmdPromises, i in *...cmds.size do
                         let oldCmd? := oldCmds?.bind (·[i]?)
                         withReader
-                          ({
-                            · with
-                            snap? :=
-                              some {
-                                new := cmdPromise
-                                old? := do
-                                  guard reusedCmds
-                                  let old ← oldSnap?
-                                  return { stx := (← oldCmd?), val := (← old.next[i]?) }
-                              }
-                          })
+                          ({ · with
+                             snap? :=
+                               some
+                                 { new := cmdPromise
+                                   old? := do
+                                     guard reusedCmds
+                                     let old ← oldSnap?
+                                     return { stx := (← oldCmd?), val := (← old.next[i]?) } } })
                           do
                             if oldSnap?.isSome && (← read).snap?.isNone then
                               oldSnap?.bind (·.next[i]?) |>.forM (·.cancelRec)
@@ -979,10 +944,9 @@ where
 builtin_initialize registerTraceClass `Elab.input
 
 /-- Option for showing elaboration errors from partial syntax errors. -/
-register_builtin_option showPartialSyntaxErrors : Bool := {
-  defValue := false
-  descr := "show elaboration errors from partial syntax trees (i.e. after parser recovery)"
-}
+register_builtin_option showPartialSyntaxErrors : Bool :=
+  { defValue := false
+    descr := "show elaboration errors from partial syntax trees (i.e. after parser recovery)" }
 
 builtin_initialize
   registerTraceClass `Elab.info
@@ -1014,17 +978,13 @@ def withInitQuotContext (hint? : Option UInt64) (act : CommandElabM Unit) : Comm
   let quotCtx := (← getMainModule).num idx |>.str "_hygCtx"
   let nextMacroScope := (← get).nextMacroScope
   try
-    modify fun st => {
-      st with
-      usedQuotCtxts := st.usedQuotCtxts.insert quotCtx
-      nextMacroScope := firstFrontendMacroScope + 1
-    }
+    modify fun st =>
+      { st with
+        usedQuotCtxts := st.usedQuotCtxts.insert quotCtx
+        nextMacroScope := firstFrontendMacroScope + 1 }
     withReader
-      (fun ctx => {
-        ctx with
-        quotContext? := some quotCtx
-        currMacroScope := firstFrontendMacroScope
-      })
+      (fun ctx =>
+        { ctx with quotContext? := some quotCtx, currMacroScope := firstFrontendMacroScope })
       act
   finally
     modify ({ · with nextMacroScope })
@@ -1044,20 +1004,15 @@ def elabCommandTopLevel (stx : Syntax) : CommandElabM Unit :=
   withRef stx do
     profileitM Exception "elaboration" (← getOptions) do
       withReader
-        ({
-          · with
-          suppressElabErrors := stx.hasMissing && ! showPartialSyntaxErrors.get (← getOptions)
-        })
+        ({ · with
+           suppressElabErrors := stx.hasMissing && ! showPartialSyntaxErrors.get (← getOptions) })
         do
           -- initialize quotation context using hash of input string
           let ss? := stx.getSubstring? (withLeading := false) (withTrailing := false)
           withInitQuotContext (ss?.map (hash ·.toString.trimAscii.copy)) do
             -- Reset messages and info state, which are both per-command
-            modify fun st => {
-              st with
-              messages := {}
-              infoState := { enabled := st.infoState.enabled }
-            }
+            modify fun st =>
+              { st with messages := {}, infoState := { enabled := st.infoState.enabled } }
             try
               -- We should *not* factor out `elabCommand`'s `withLogging` to here since it would make its error
               -- recovery more coarse. In particular, if `c` in `set_option ... in $c` fails, the remaining
@@ -1099,10 +1054,10 @@ instance {α} : Inhabited (CommandElabM α) where
 The environment linter framework needs to be able to run linters with the same context
 as `liftTermElabM`, so we expose that context as a public function here.
 -/
-def mkMetaContext : Meta.Context := {
-  keyedConfig :=
-    Meta.Config.toConfigWithKey { foApprox := true, ctxApprox := true, quasiPatternApprox := true }
-}
+def mkMetaContext : Meta.Context :=
+  { keyedConfig :=
+      Meta.Config.toConfigWithKey
+        { foApprox := true, ctxApprox := true, quasiPatternApprox := true } }
 
 open Lean.Parser.Term in
 /-- Return identifier names in the given bracketed binder. -/
@@ -1119,12 +1074,11 @@ private def mkTermContext (ctx : Context) (s : State) : CommandElabM Term.Contex
   let mut sectionVars := {}
   for id in (← scope.varDecls.flatMapM getBracketedBinderIds), uid in scope.varUIds do
     sectionVars := sectionVars.insert id uid
-  return {
-    macroStack := ctx.macroStack
-    sectionVars := sectionVars
-    isNoncomputableSection := scope.isNoncomputable
-    isMetaSection := scope.isMeta
-  }
+  return
+    { macroStack := ctx.macroStack
+      sectionVars := sectionVars
+      isNoncomputableSection := scope.isNoncomputable
+      isMetaSection := scope.isMeta }
 
 /--
 Lift the `TermElabM` monadic action `x` into a `CommandElabM` monadic action.
@@ -1162,9 +1116,8 @@ def liftTermElabM (x : TermElabM α) : CommandElabM α := do
   -- `CommandElabM`)
   let _ := MonadAlwaysExcept.except (m := TermElabM)
   let x : MetaM _ :=
-    (observing (try x finally Meta.reportDiag)).run (← mkTermContext ctx s) {
-      levelNames := scope.levelNames
-    }
+    (observing (try x finally Meta.reportDiag)).run (← mkTermContext ctx s)
+      { levelNames := scope.levelNames }
   let x : CoreM _ := x.run mkMetaContext {}
   let ((ea, _), _) ← runCore x
   MonadExcept.ofExcept ea
@@ -1230,13 +1183,12 @@ In particular, the current scope is always the first element.
 def getScopes : CommandElabM (List Scope) := do pure (← get).scopes
 
 def modifyScope (f : Scope → Scope) : CommandElabM Unit :=
-  modify fun s => {
-    s with
-    scopes :=
-      match s.scopes with
-      | h :: t => f h :: t
-      | [] => unreachable!
-  }
+  modify fun s =>
+    { s with
+      scopes :=
+        match s.scopes with
+        | h :: t => f h :: t
+        | [] => unreachable! }
 
 def withScope (f : Scope → Scope) (x : CommandElabM α) : CommandElabM α := do
   match (← get).scopes with
@@ -1268,42 +1220,38 @@ private def liftCommandElabMCore (cmd : CommandElabM α) (throwOnError : Bool) :
   let s : Core.State ← get
   let ctx : Core.Context ← read
   let (a, commandState) ←
-    cmd.run {
-        fileName := ctx.fileName
-        fileMap := ctx.fileMap
-        currRecDepth := ctx.currRecDepth
-        currMacroScope := ctx.currMacroScope
-        ref := ctx.ref
-        snap? := none
-        cancelTk? := ctx.cancelTk?
-        suppressElabErrors := ctx.suppressElabErrors
-        checkDeprecated := ctx.checkDeprecated
-      }
-      |>.run {
-        env := s.env
-        nextMacroScope := s.nextMacroScope
-        maxRecDepth := ctx.maxRecDepth
-        ngen := s.ngen
-        auxDeclNGen := s.auxDeclNGen
-        scopes := [{ header := "", opts := ctx.options }]
-        infoState.enabled := s.infoState.enabled
-      }
-  modify fun coreState => {
-    coreState with
-    env := commandState.env
-    nextMacroScope := commandState.nextMacroScope
-    ngen := commandState.ngen
-    auxDeclNGen := commandState.auxDeclNGen
-    traceState.traces := coreState.traceState.traces ++ commandState.traceState.traces
-  }
+    cmd.run
+        { fileName := ctx.fileName
+          fileMap := ctx.fileMap
+          currRecDepth := ctx.currRecDepth
+          currMacroScope := ctx.currMacroScope
+          ref := ctx.ref
+          snap? := none
+          cancelTk? := ctx.cancelTk?
+          suppressElabErrors := ctx.suppressElabErrors
+          checkDeprecated := ctx.checkDeprecated }
+      |>.run
+        { env := s.env
+          nextMacroScope := s.nextMacroScope
+          maxRecDepth := ctx.maxRecDepth
+          ngen := s.ngen
+          auxDeclNGen := s.auxDeclNGen
+          scopes := [{ header := "", opts := ctx.options }]
+          infoState.enabled := s.infoState.enabled }
+  modify fun coreState =>
+    { coreState with
+      env := commandState.env
+      nextMacroScope := commandState.nextMacroScope
+      ngen := commandState.ngen
+      auxDeclNGen := commandState.auxDeclNGen
+      traceState.traces := coreState.traceState.traces ++ commandState.traceState.traces }
   if throwOnError then
     if let some err := commandState.messages.toArray.find? (·.severity matches .error) then
       throwError err.data
-  modify fun coreState => {
-    coreState with
-    infoState.trees := coreState.infoState.trees.append commandState.infoState.trees
-    messages := coreState.messages ++ commandState.messages
-  }
+  modify fun coreState =>
+    { coreState with
+      infoState.trees := coreState.infoState.trees.append commandState.infoState.trees
+      messages := coreState.messages ++ commandState.messages }
   return a
 
 /--

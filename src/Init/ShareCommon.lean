@@ -56,19 +56,17 @@ structure StateFactoryBuilder where
 
 unsafe def StateFactory.mkImpl : StateFactoryBuilder → StateFactory
   | { Map, mkMap, mapFind?, mapInsert, Set, mkSet, setFind?, setInsert } =>
-    unsafeCast {
-      Map := @Map Object Object ⟨Object.ptrEq⟩ ⟨Object.ptrHash⟩
-      Set := @Set Object ⟨Object.eq⟩ ⟨Object.hash⟩
-      mkState := fun _ => (
-        @mkMap Object Object ⟨Object.ptrEq⟩ ⟨Object.ptrHash⟩ 1024,
-        @mkSet Object ⟨Object.eq⟩ ⟨Object.hash⟩ 1024
-      )
-      mapFind? := @mapFind? Object Object ⟨Object.ptrEq⟩ ⟨Object.ptrHash⟩
-      mapInsert := @mapInsert Object Object ⟨Object.ptrEq⟩ ⟨Object.ptrHash⟩
-      setFind? := @setFind? Object ⟨Object.eq⟩ ⟨Object.hash⟩
-      setInsert := @setInsert Object ⟨Object.eq⟩ ⟨Object.hash⟩
-      : StateFactoryImpl
-    }
+    unsafeCast
+      { Map := @Map Object Object ⟨Object.ptrEq⟩ ⟨Object.ptrHash⟩
+        Set := @Set Object ⟨Object.eq⟩ ⟨Object.hash⟩
+        mkState := fun _ =>
+          ( @mkMap Object Object ⟨Object.ptrEq⟩ ⟨Object.ptrHash⟩ 1024,
+            @mkSet Object ⟨Object.eq⟩ ⟨Object.hash⟩ 1024 )
+        mapFind? := @mapFind? Object Object ⟨Object.ptrEq⟩ ⟨Object.ptrHash⟩
+        mapInsert := @mapInsert Object Object ⟨Object.ptrEq⟩ ⟨Object.ptrHash⟩
+        setFind? := @setFind? Object ⟨Object.eq⟩ ⟨Object.hash⟩
+        setInsert := @setInsert Object ⟨Object.eq⟩ ⟨Object.hash⟩
+        : StateFactoryImpl }
 
 @[implemented_by StateFactory.mkImpl]
 opaque StateFactory.mk : StateFactoryBuilder → StateFactory

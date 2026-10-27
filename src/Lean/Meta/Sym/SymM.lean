@@ -363,21 +363,17 @@ def withoutFoldProjsCheck [MonadWithReaderOf Context m] (x : m α) : m α :=
 
 def withoutShareCommonChecks [MonadWithReaderOf Context m] (x : m α) : m α :=
   withTheReader Context
-    (fun ctx => {
-      ctx with
-      config.enforceFoldProjs := false
-      config.enforceUnfoldReducible := false
-    })
+    (fun ctx =>
+      { ctx with config.enforceFoldProjs := false, config.enforceUnfoldReducible := false })
     x
 
 /-- Returns the `AlphaShareCommon` context with the checks enabled by the current configuration. -/
 private def checkedShareCtx : SymM AlphaShareCommon.Context := do
   let config := (← readThe Context).config
-  return {
-    env := (← getEnv)
-    checkReducible := config.enforceUnfoldReducible
-    checkProj := config.enforceFoldProjs
-  }
+  return
+    { env := (← getEnv)
+      checkReducible := config.enforceUnfoldReducible
+      checkProj := config.enforceFoldProjs }
 
 /--
 Restores the `SymM` invariants enabled in the current configuration.
@@ -548,10 +544,9 @@ opaque SymExtension.getStateCore (ext : SymExtension σ) (extensions : Array Sym
 def SymExtension.getState (ext : SymExtension σ) : SymM σ := do ext.getStateCore (← get).extensions
 
 private unsafe def SymExtension.modifyStateImpl (ext : SymExtension σ) (f : σ → σ) : SymM Unit := do
-  modify fun s => {
-    s with
-    extensions := s.extensions.modify ext.id fun state => unsafeCast (f (unsafeCast state))
-  }
+  modify fun s =>
+    { s with
+      extensions := s.extensions.modify ext.id fun state => unsafeCast (f (unsafeCast state)) }
 
 @[implemented_by SymExtension.modifyStateImpl]
 opaque SymExtension.modifyState (ext : SymExtension σ) (f : σ → σ) : SymM Unit

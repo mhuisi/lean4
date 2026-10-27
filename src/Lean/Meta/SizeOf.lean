@@ -155,14 +155,13 @@ partial def mkSizeOfFn (recName : Name) (declName : Name) : MetaM Unit := do
               trace[Meta.sizeOf] "declName: {declName}"
               trace[Meta.sizeOf] "type: {sizeOfType}"
               trace[Meta.sizeOf] "val: {sizeOfValue}"
-              addDecl <| Declaration.defnDecl {
-                name := declName
-                levelParams := levelParams
-                type := sizeOfType
-                value := sizeOfValue
-                safety := DefinitionSafety.safe
-                hints := ReducibilityHints.abbrev
-              }
+              addDecl <| Declaration.defnDecl
+                { name := declName
+                  levelParams := levelParams
+                  type := sizeOfType
+                  value := sizeOfValue
+                  safety := DefinitionSafety.safe
+                  hints := ReducibilityHints.abbrev }
               enableRealizationsForConst declName
 
 /--
@@ -410,12 +409,11 @@ private partial def mkSizeOfAuxLemma (lhs rhs : Expr) : M Expr :=
                 let thmValue ← mkSizeOfAuxLemmaProof info lhsNew
                 let thmValue ← mkLambdaFVars thmParams thmValue
                 trace[Meta.sizeOf] "thmValue: {thmValue}"
-                addDecl <| Declaration.thmDecl {
-                  name := thmName
-                  levelParams := thmLevelParams
-                  type := thmType
-                  value := thmValue
-                }
+                addDecl <| Declaration.thmDecl
+                  { name := thmName
+                    levelParams := thmLevelParams
+                    type := thmType
+                    value := thmValue }
                 return mkAppN (mkConst thmName us) lhs.getAppArgs
 
 end
@@ -500,12 +498,11 @@ private def mkSizeOfSpecTheorem
             unless (← isDefEq (← inferType thmValue) thmType) do
               throwError "type mismatch"
             pure thmValue
-        addDecl <| Declaration.thmDecl {
-          name := thmName
-          levelParams := ctorInfo.levelParams
-          type := thmType
-          value := thmValue
-        }
+        addDecl <| Declaration.thmDecl
+          { name := thmName
+            levelParams := ctorInfo.levelParams
+            type := thmType
+            value := thmValue }
         simpAttr.add thmName default .global
         grindAttr.add thmName grindAttrStx .global
 
@@ -518,15 +515,12 @@ private def mkSizeOfSpecTheorems
       mkSizeOfSpecTheorem indInfo sizeOfFns recMap ctorName
   return ()
 
-register_builtin_option genSizeOf : Bool := {
-  defValue := true
-  descr := "generate `SizeOf` instance for inductive types and structures"
-}
+register_builtin_option genSizeOf : Bool :=
+  { defValue := true, descr := "generate `SizeOf` instance for inductive types and structures" }
 
-register_builtin_option genSizeOfSpec : Bool := {
-  defValue := true
-  descr := "generate `SizeOf` specification theorems for automatically generated instances"
-}
+register_builtin_option genSizeOfSpec : Bool :=
+  { defValue := true
+    descr := "generate `SizeOf` specification theorems for automatically generated instances" }
 
 def mkSizeOfInstances (typeName : Name) : MetaM Unit := do
   prependError m!"failed to generate `SizeOf` instance for `{.ofConstName typeName}`:" do
@@ -558,14 +552,13 @@ def mkSizeOfInstances (typeName : Name) : MetaM Unit := do
                       trace[Meta.sizeOf] ">> {instDeclName} : {instDeclType}"
                       -- We expose the `sizeOf` instance so that the `spec` theorems can be publicly `defeq`
                       withExporting do
-                        addDecl <| Declaration.defnDecl {
-                          name := instDeclName
-                          levelParams := indInfo.levelParams
-                          type := instDeclType
-                          value := instDeclValue
-                          safety := .safe
-                          hints := .abbrev
-                        }
+                        addDecl <| Declaration.defnDecl
+                          { name := instDeclName
+                            levelParams := indInfo.levelParams
+                            type := instDeclType
+                            value := instDeclValue
+                            safety := .safe
+                            hints := .abbrev }
                       registerInstance instDeclName AttributeKind.global (eval_prio default)
                       enableRealizationsForConst instDeclName
             if genSizeOfSpec.get (← getOptions) then

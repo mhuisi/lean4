@@ -38,10 +38,8 @@ public def isAppArgsSparse : Array Syntax → Bool
 
 public def fmtFixedApp'
     (f : TaggedDoc) (args : Array Syntax)
-    (format : Layouts.Types.ApplicationFormat := {
-      parenthesize := true
-      respectPseudoAlignment := true
-    })
+    (format : Layouts.Types.ApplicationFormat :=
+      { parenthesize := true, respectPseudoAlignment := true })
     : FmtM (TaggedDoc × Array TaggedDoc) := do
   let mut args : Array (Fillable TaggedDoc) ←
     args.mapM fun arg => do return ({ v := ← fmt arg, allowFill := allowAppArgFill arg })
@@ -52,10 +50,8 @@ public def fmtFixedApp'
 
 public def fmtFixedApp
     (f : TaggedDoc) (args : Array Syntax)
-    (format : Layouts.Types.ApplicationFormat := {
-      parenthesize := true
-      respectPseudoAlignment := true
-    })
+    (format : Layouts.Types.ApplicationFormat :=
+      { parenthesize := true, respectPseudoAlignment := true })
     : FmtM TaggedDoc := do
   let (app, _) ← fmtFixedApp' f args format
   return app
@@ -69,17 +65,15 @@ public def fmtAppLike (terms : Array Syntax) : FmtM TaggedDoc := do
     match fStx with
     | `($lhs:term.%$dotTk$field) =>
       let lhs ← fmt lhs
-      let format : Layouts.Types.ApplicationFormat := {
-        sparse := lhs.isBracketed || isAppArgsSparse args
-        parenthesize := true
-        respectPseudoAlignment := true
-      }
+      let format : Layouts.Types.ApplicationFormat :=
+        { sparse := lhs.isBracketed || isAppArgsSparse args
+          parenthesize := true
+          respectPseudoAlignment := true }
       pure (← fmtProjLike lhs dotTk field, format)
     | _ =>
-      pure (
-        ← fmt fStx,
-        { parenthesize := true, respectPseudoAlignment := true, sparse := isAppArgsSparse args }
-      )
+      pure
+        ( ← fmt fStx,
+          { parenthesize := true, respectPseudoAlignment := true, sparse := isAppArgsSparse args } )
   let (app, args') ← fmtFixedApp' f args format
   if args'.size = 1 then
     let arg := args'[0]!
@@ -149,11 +143,10 @@ public meta def explicitBinderF := Parser.Term.explicitBinder
 public meta def implicitBinderF := Parser.Term.implicitBinder
 public meta def strictImplicitBinderF := Parser.Term.strictImplicitBinder
 
-public abbrev binderKinds : List Name := [
-  `ident,
-  ``Parser.Term.hole,
-  ``Parser.Term.bracketedBinder
-]
+public abbrev binderKinds : List Name :=
+  [ `ident,
+    ``Parser.Term.hole,
+    ``Parser.Term.bracketedBinder ]
 
 inductive BinderKind where
   | explicit
@@ -264,34 +257,25 @@ structure PendingBinderGroup where
   types : Std.HashSet Syntax
 deriving Inhabited
 
-def PendingBinderGroup.empty : PendingBinderGroup := {
-  binders := #[]
-  kinds := ∅
-  dependents := ∅
-  defaultKinds := ∅
-  types := ∅
-}
+def PendingBinderGroup.empty : PendingBinderGroup :=
+  { binders := #[], kinds := ∅, dependents := ∅, defaultKinds := ∅, types := ∅ }
 
-def PendingBinderGroup.init (b : BinderWithDependents) : PendingBinderGroup := {
-  binders := #[b]
-  kinds := {b.kind}
-  dependents := b.dependents.foldr Std.HashSet.union {}
-  defaultKinds := {b.default?.isSome}
-  types := b.type?.map ({·}) |>.getD {}
-}
+def PendingBinderGroup.init (b : BinderWithDependents) : PendingBinderGroup :=
+  { binders := #[b]
+    kinds := {b.kind}
+    dependents := b.dependents.foldr Std.HashSet.union {}
+    defaultKinds := {b.default?.isSome}
+    types := b.type?.map ({·}) |>.getD {} }
 
-def PendingBinderGroup.merge (g1 g2 : PendingBinderGroup) : PendingBinderGroup := {
-  binders := g1.binders ++ g2.binders
-  kinds := g1.kinds.union g2.kinds
-  dependents := g1.dependents.union g2.dependents
-  defaultKinds := g1.defaultKinds.union g2.defaultKinds
-  types := g1.types.union g2.types
-}
+def PendingBinderGroup.merge (g1 g2 : PendingBinderGroup) : PendingBinderGroup :=
+  { binders := g1.binders ++ g2.binders
+    kinds := g1.kinds.union g2.kinds
+    dependents := g1.dependents.union g2.dependents
+    defaultKinds := g1.defaultKinds.union g2.defaultKinds
+    types := g1.types.union g2.types }
 
-def PendingBinderGroup.reverse (g : PendingBinderGroup) : PendingBinderGroup := {
-  g with
-  binders := g.binders.reverse
-}
+def PendingBinderGroup.reverse (g : PendingBinderGroup) : PendingBinderGroup :=
+  { g with binders := g.binders.reverse }
 
 public def groupBinders (binders : TSyntaxArray binderKinds) : BinderGroups := Id.run do
   if binders.isEmpty then
@@ -723,13 +707,12 @@ public def fmtAssignmentDeclaration
   let terminationSuffixTrailingDoc :=
     (← terminationSuffix?.mapM fmtTrailingWithRetainedNewlinesAndComments).getD empty
   let whereDecls? ← fmt? whereDecls?
-  return Layouts.retainedWhitespace #[
-    mainDeclDoc,
-    mainDeclTrailingDoc,
-    terminationSuffixDoc,
-    terminationSuffixTrailingDoc,
-    whereDecls?
-  ]
+  return Layouts.retainedWhitespace
+    #[mainDeclDoc,
+      mainDeclTrailingDoc,
+      terminationSuffixDoc,
+      terminationSuffixTrailingDoc,
+      whereDecls?]
 
 public def fmtMatchDeclaration
     (declTk : Syntax) (namedPrio? : Option Syntax) (declId? : Option Syntax)
@@ -748,13 +731,12 @@ public def fmtMatchDeclaration
   let terminationSuffixTrailingDoc :=
     (← terminationSuffix?.mapM fmtTrailingWithRetainedNewlinesAndComments).getD empty
   let whereDecls? ← fmt? whereDecls?
-  return Layouts.retainedWhitespace #[
-    mainDeclDoc,
-    mainDeclTrailingDoc,
-    terminationSuffixDoc,
-    terminationSuffixTrailingDoc,
-    whereDecls?
-  ]
+  return Layouts.retainedWhitespace
+    #[mainDeclDoc,
+      mainDeclTrailingDoc,
+      terminationSuffixDoc,
+      terminationSuffixTrailingDoc,
+      whereDecls?]
 
 public def fmtWhereDeclaration
     (declTk : Syntax) (namedPrio? : Option Syntax) (declId? : Option Syntax)
@@ -772,11 +754,10 @@ public def fmtWhereDeclaration
   let whereDecls? ← fmt? whereDecls?
   let fields := Layouts.sepLines fieldsDoc (includeSeps := false)
   let mainDecl := Layouts.whereDeclaration signature «where» fields
-  return Layouts.retainedWhitespace #[
-    mainDecl,
-    mainDeclTrailingDoc,
-    whereDecls?
-  ]
+  return Layouts.retainedWhitespace
+    #[mainDecl,
+      mainDeclTrailingDoc,
+      whereDecls?]
 
 public def fmtInductiveLike
     (tks : Array Syntax) (declId : TSyntax ``Parser.Command.declId)
@@ -805,15 +786,14 @@ public def fmtInductiveLike
     let computedFieldsDoc ← fmt computedFields
     let computedFieldsTrailingDoc ← fmtTrailingWithRetainedNewlinesAndComments computedFields
     let optDerivingTrailingDoc ← fmtTrailingWithRetainedNewlinesAndComments optDeriving
-    return Layouts.retainedWhitespace #[
-      mainDeclDoc,
-      mainDeclTrailingDoc,
-      computedFieldsDoc,
-      computedFieldsTrailingDoc,
-      optDerivingDoc,
-      optDerivingTrailingDoc,
-      monotonicityByDoc?
-    ]
+    return Layouts.retainedWhitespace
+      #[mainDeclDoc,
+        mainDeclTrailingDoc,
+        computedFieldsDoc,
+        computedFieldsTrailingDoc,
+        optDerivingDoc,
+        optDerivingTrailingDoc,
+        monotonicityByDoc?]
 
 public def fmtStructureLike
     (tk : Syntax) (declId : TSyntax ``Parser.Command.declId)

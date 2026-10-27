@@ -64,10 +64,8 @@ def getBetterRef (ref : Syntax) (macroStack : MacroStack) : Syntax :=
     | some elem => elem.before
     | none => ref
 
-register_builtin_option pp.macroStack : Bool := {
-  defValue := false
-  descr := "display macro expansion stack"
-}
+register_builtin_option pp.macroStack : Bool :=
+  { defValue := false, descr := "display macro expansion stack" }
 
 def addMacroStack {m} [Monad m] [MonadOptions m] (msgData : MessageData) (macroStack : MacroStack)
     : m MessageData := do
@@ -123,8 +121,7 @@ unsafe def mkElabAttribute
     (attrDeclName : Name := by exact decl_name%)
     : IO (KeyedDeclsAttribute γ) :=
   KeyedDeclsAttribute.init
-    {
-      builtinName := attrBuiltinName
+    { builtinName := attrBuiltinName
       name := attrName
       descr := kind ++ " elaborator"
       valueTypeName := typeName
@@ -140,8 +137,7 @@ unsafe def mkElabAttribute
         return kind
       onAdded := fun builtin declName kind => do
         if builtin then
-          declareBuiltinDocStringAndRanges declName
-    }
+          declareBuiltinDocStringAndRanges declName }
     attrDeclName
 
 unsafe def mkMacroAttributeUnsafe (ref : Name) : IO (KeyedDeclsAttribute Macro) :=
@@ -188,10 +184,9 @@ class MonadMacroAdapter (m : Type → Type) extends MonadQuotation m where
   setNextMacroScope : MacroScope → m Unit
 
 @[always_inline]
-instance (m n) [MonadLift m n] [MonadQuotation n] [MonadMacroAdapter m] : MonadMacroAdapter n := {
-  getNextMacroScope := liftM (MonadMacroAdapter.getNextMacroScope : m _)
-  setNextMacroScope := fun s => liftM (MonadMacroAdapter.setNextMacroScope s : m _)
-}
+instance (m n) [MonadLift m n] [MonadQuotation n] [MonadMacroAdapter m] : MonadMacroAdapter n :=
+  { getNextMacroScope := liftM (MonadMacroAdapter.getNextMacroScope : m _)
+    setNextMacroScope := fun s => liftM (MonadMacroAdapter.setNextMacroScope s : m _) }
 
 instance : MonadMacroAdapter CoreM where
   getNextMacroScope := return (← get).nextMacroScope
@@ -207,32 +202,30 @@ def liftMacroM
   let currNamespace ← getCurrNamespace
   let openDecls ← getOpenDecls
   let methods :=
-    Macro.mkMethods {
+    Macro.mkMethods
       -- TODO: record recursive expansions in info tree?
-      expandMacro? := fun stx => do
-        match (← expandMacroImpl? env stx) with
-        | some (_, stx?) => liftExcept stx?
-        | none => return none
-      hasDecl := fun declName => do
-        -- this is used (by mkUnusedBaseName) to find available names, so check
-        -- for both private and public names
-        let env := env.setExporting false
-        return env.contains (mkPrivateName env declName)
-          || env.contains (privateToUserName declName)
-      getCurrNamespace := return currNamespace
-      resolveNamespace := fun n => return ResolveName.resolveNamespace env currNamespace openDecls n
-      resolveGlobalName := fun n =>
-        return ResolveName.resolveGlobalName env opts currNamespace openDecls n
-    }
+      { expandMacro? := fun stx => do
+          match (← expandMacroImpl? env stx) with
+          | some (_, stx?) => liftExcept stx?
+          | none => return none
+        hasDecl := fun declName => do
+          -- this is used (by mkUnusedBaseName) to find available names, so check
+          -- for both private and public names
+          let env := env.setExporting false
+          return env.contains (mkPrivateName env declName)
+            || env.contains (privateToUserName declName)
+        getCurrNamespace := return currNamespace
+        resolveNamespace := fun n =>
+          return ResolveName.resolveNamespace env currNamespace openDecls n
+        resolveGlobalName := fun n =>
+          return ResolveName.resolveGlobalName env opts currNamespace openDecls n }
   match x
-    {
-      methods := methods
+    { methods := methods
       ref := ← getRef
       currMacroScope := ← MonadQuotation.getCurrMacroScope
       quotContext := ← MonadQuotation.getContext
       currRecDepth := ← MonadRecDepth.getRecDepth
-      maxRecDepth := ← MonadRecDepth.getMaxRecDepth
-    }
+      maxRecDepth := ← MonadRecDepth.getMaxRecDepth }
     { macroScope := (← MonadMacroAdapter.getNextMacroScope) } with
   | EStateM.Result.error Macro.Exception.unsupportedSyntax _ =>
     throwUnsupportedSyntax

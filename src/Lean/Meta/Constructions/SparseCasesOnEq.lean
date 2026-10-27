@@ -76,12 +76,8 @@ where
           let type ← mkForallFVars (xs ++ hyps) eq
           let val ← mkLambdaFVars (xs ++ hyps) val
 
-          addDecl (.thmDecl {
-            name := thmName
-            levelParams := info.levelParams
-            type := type
-            value := val
-          })
+          addDecl (.thmDecl
+            { name := thmName, levelParams := info.levelParams, type := type, value := val })
 
 def isName (env : Environment) (n : Name) : Bool :=
   if let .str p "else_eq" := n then

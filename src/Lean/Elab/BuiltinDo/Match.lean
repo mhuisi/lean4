@@ -219,12 +219,11 @@ private def compileMatch
   let numDiscrs := discrs.size
   let matcherName ← Term.mkAuxName `match
   let matcherResult ←
-    Meta.Match.mkMatcher {
-      matcherName
-      matchType
-      lhss
-      discrInfos := discrs.map fun discr => { hName? := discr.h?.map (·.getId) }
-    }
+    Meta.Match.mkMatcher
+      { matcherName
+        matchType
+        lhss
+        discrInfos := discrs.map fun discr => { hName? := discr.h?.map (·.getId) } }
   Term.reportMatcherResultErrors lhss matcherResult
   matcherResult.addMatcher
   let motive ←

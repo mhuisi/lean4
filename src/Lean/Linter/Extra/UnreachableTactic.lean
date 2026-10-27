@@ -29,10 +29,8 @@ or anything else there and no error would result.
 A common source of such things is `simp <;> tac` in the case that `simp` improves and
 closes a subgoal that was previously being closed by `tac`.
 -/
-register_builtin_option linter.extra.unreachableTactic : Bool := {
-  defValue := false
-  descr := "enable the 'unreachable tactic' linter"
-}
+register_builtin_option linter.extra.unreachableTactic : Bool :=
+  { defValue := false, descr := "enable the 'unreachable tactic' linter" }
 namespace UnreachableTactic
 
 /-- The monad for collecting used tactic syntaxes. -/
@@ -122,8 +120,9 @@ def unreachableTacticLinter : Linter where
       let unreachable := map.toArray
       let key (r : Lean.Syntax.Range) := (r.start.byteIdx, (-r.stop.byteIdx : Int))
       let mut last : Lean.Syntax.Range := ⟨0, 0⟩
-      for (r, stx)
-          in let _ := @lexOrd; let _ := @ltOfOrd.{0}; unreachable.qsort (key ·.1 < key ·.1) do
+      for
+          (r, stx)
+            in let _ := @lexOrd; let _ := @ltOfOrd.{0}; unreachable.qsort (key ·.1 < key ·.1) do
         if last.start ≤ r.start && r.stop ≤ last.stop then continue
         logLintIf linter.extra.unreachableTactic stx "this tactic is never executed"
         last := r

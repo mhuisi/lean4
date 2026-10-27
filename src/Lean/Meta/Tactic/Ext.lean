@@ -38,13 +38,10 @@ deriving Inhabited
 
 /-- The environment extension to track `@[ext]` theorems. -/
 builtin_initialize extExtension : SimpleScopedEnvExtension ExtTheorem ExtTheorems ←
-  registerSimpleScopedEnvExtension {
-    addEntry := fun { tree, erased } thm => {
-      tree := tree.insertKeyValue thm.keys thm
-      erased := erased.erase thm.declName
-    }
-    initial := {}
-  }
+  registerSimpleScopedEnvExtension
+    { addEntry := fun { tree, erased } thm =>
+        { tree := tree.insertKeyValue thm.keys thm, erased := erased.erase thm.declName }
+      initial := {} }
 
 /--
 Gets the list of `@[ext]` theorems corresponding to the key `ty`,
@@ -65,10 +62,8 @@ removing it from the state's list of `Entry`s.
 
 This is triggered by `attribute [-ext] name`.
 -/
-def ExtTheorems.eraseCore (d : ExtTheorems) (declName : Name) : ExtTheorems := {
-  d with
-  erased := d.erased.insert declName
-}
+def ExtTheorems.eraseCore (d : ExtTheorems) (declName : Name) : ExtTheorems :=
+  { d with erased := d.erased.insert declName }
 
 /-- Returns `true` if `d` contains theorem with name `declName`. -/
 def ExtTheorems.contains (d : ExtTheorems) (declName : Name) : Bool :=

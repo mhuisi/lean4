@@ -73,11 +73,9 @@ theorem go_denote_mem_prefix
     (distance : Nat) (input : AIG.RefVec aig w)
     (curr : Nat) (hcurr : curr ≤ w) (s : AIG.RefVec aig curr)
     (start : Nat) (hstart)
-    : ⟦
-        (go aig input distance curr hcurr s).aig,
+    : ⟦ (go aig input distance curr hcurr s).aig,
         ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
-        assign
-      ⟧
+        assign ⟧
       = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply IsPrefix.of
@@ -92,11 +90,9 @@ theorem go_denote_eq
     (curr : Nat) (hcurr : curr ≤ w) (s : AIG.RefVec aig curr)
     : ∀ (idx : Nat) (hidx1 : idx < w),
       curr ≤ idx
-        → ⟦
-            (go aig input distance curr hcurr s).aig,
+        → ⟦ (go aig input distance curr hcurr s).aig,
             (go aig input distance curr hcurr s).vec.get idx hidx1,
-            assign
-          ⟧
+            assign ⟧
           = if hidx : (distance + idx) < w then
               ⟦aig, input.get (distance + idx) (by omega), assign⟧
             else
@@ -154,11 +150,10 @@ end blastShiftRightConst
 @[simp]
 theorem denote_blastShiftRightConst (aig : AIG α) (target : ShiftTarget aig w) (assign : α → Bool)
     : ∀ (idx : Nat) (hidx : idx < w),
-      ⟦
-        (blastShiftRightConst aig target).aig,
+      ⟦ (blastShiftRightConst aig target).aig,
         (blastShiftRightConst aig target).vec.get idx hidx,
-        assign
-      ⟧ = if hidx : (target.distance + idx) < w then
+        assign ⟧
+        = if hidx : (target.distance + idx) < w then
             ⟦aig, target.vec.get (target.distance + idx) (by omega), assign⟧
           else
             false := by
@@ -243,11 +238,10 @@ end blastArithShiftRightConst
 theorem denote_blastArithShiftRightConst
     (aig : AIG α) (target : ShiftTarget aig w) (assign : α → Bool)
     : ∀ (idx : Nat) (hidx : idx < w),
-      ⟦
-        (blastArithShiftRightConst aig target).aig,
+      ⟦ (blastArithShiftRightConst aig target).aig,
         (blastArithShiftRightConst aig target).vec.get idx hidx,
-        assign
-      ⟧ = if hidx : (target.distance + idx) < w then
+        assign ⟧
+        = if hidx : (target.distance + idx) < w then
             ⟦aig, target.vec.get (target.distance + idx) (by omega), assign⟧
           else
             ⟦aig, target.vec.get (w - 1) (by omega), assign⟧ := by
@@ -482,11 +476,10 @@ theorem denote_blastArithShiftRight
     (hright : ∀ (idx : Nat) (hidx : idx < target.n),
       ⟦aig, target.distance.get idx hidx, assign⟧ = rhs.getLsbD idx)
     : ∀ (idx : Nat) (hidx : idx < w0),
-      ⟦
-        (blastArithShiftRight aig target).aig,
+      ⟦ (blastArithShiftRight aig target).aig,
         (blastArithShiftRight aig target).vec.get idx hidx,
-        assign
-      ⟧ = (BitVec.sshiftRight' lhs rhs).getLsbD idx := by
+        assign ⟧
+        = (BitVec.sshiftRight' lhs rhs).getLsbD idx := by
   intro idx hidx
   rw [BitVec.sshiftRight_eq_sshiftRightRec]
   generalize hres : blastArithShiftRight aig target = res

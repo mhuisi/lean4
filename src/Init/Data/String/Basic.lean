@@ -424,10 +424,9 @@ theorem Pos.Raw.IsValid.isValidUTF8_extract_utf8ByteSize
 
 theorem Pos.Raw.isValid_iff_exists_append {s : String} {p : Pos.Raw}
     : p.IsValid s ↔ ∃ s₁ s₂ : String, s = s₁ ++ s₂ ∧ p = s₁.rawEndPos := by
-  refine ⟨
-    fun h => ⟨⟨_, h.isValidUTF8_extract_zero⟩, ⟨_, h.isValidUTF8_extract_utf8ByteSize⟩, ?_, ?_⟩,
-    ?_
-  ⟩
+  refine
+    ⟨ fun h => ⟨⟨_, h.isValidUTF8_extract_zero⟩, ⟨_, h.isValidUTF8_extract_utf8ByteSize⟩, ?_, ?_⟩,
+      ?_ ⟩
   · apply String.toByteArray_inj.1
     have := Pos.Raw.le_iff.1 h.le_rawEndPos
     simp_all [← size_toByteArray]
@@ -501,12 +500,11 @@ theorem Pos.Raw.isValid_append {s t : String} {p : Pos.Raw}
 
 theorem Pos.Raw.IsValid.append_left {t : String} {p : Pos.Raw} (h : p.IsValid t) (s : String)
     : (s + p).IsValid (s ++ t) :=
-  isValid_append.2 (Or.inr ⟨
-    by simp [Pos.Raw.le_iff],
-    by
-      suffices p = s + p - s by simp [← this, h]
-      simp [Pos.Raw.ext_iff]
-  ⟩)
+  isValid_append.2 (Or.inr
+    ⟨ by simp [Pos.Raw.le_iff],
+      by
+        suffices p = s + p - s by simp [← this, h]
+        simp [Pos.Raw.ext_iff] ⟩)
 
 theorem Pos.Raw.IsValid.append_right {s : String} {p : Pos.Raw} (h : p.IsValid s) (t : String)
     : p.IsValid (s ++ t) :=

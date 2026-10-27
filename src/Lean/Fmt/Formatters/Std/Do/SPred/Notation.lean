@@ -36,7 +36,5 @@ public def fmtSPredTautology : Fmt := fun
     throw .partialFormatter
 
 @[builtin_infix_fmt Std.Do.«term_⊣⊢ₛ_»]
-public def fmtSPredBientails : Fmt.InfixOperation := {
-  sparse := true
-  precs? := some { prec := 25, lhsPrec := 25, rhsPrec := 25 }
-}
+public def fmtSPredBientails : Fmt.InfixOperation :=
+  { sparse := true, precs? := some { prec := 25, lhsPrec := 25, rhsPrec := 25 } }

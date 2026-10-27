@@ -14,21 +14,19 @@ public section
 
 namespace Lean.Elab
 
-register_builtin_option autoImplicit : Bool := {
-  defValue := true
-  descr :=
-    "Unbound local variables in declaration headers become implicit arguments. In \"relaxed\" mode \
-      (default), any atomic identifier is eligible, otherwise only single character followed by \
-      numeric digits are eligible. For example, `def f (x : Vector α n) : Vector α n :=` \
-      automatically introduces the implicit variables {α n}."
-}
+register_builtin_option autoImplicit : Bool :=
+  { defValue := true
+    descr :=
+      "Unbound local variables in declaration headers become implicit arguments. In \"relaxed\" \
+        mode (default), any atomic identifier is eligible, otherwise only single character \
+        followed by numeric digits are eligible. For example, `def f (x : Vector α n) : Vector α n \
+        :=` automatically introduces the implicit variables {α n}." }
 
-register_builtin_option relaxedAutoImplicit : Bool := {
-  defValue := true
-  descr :=
-    "When \"relaxed\" mode is enabled, any atomic nonempty identifier is eligible for auto bound \
-      implicit locals (see option `autoImplicit`)."
-}
+register_builtin_option relaxedAutoImplicit : Bool :=
+  { defValue := true
+    descr :=
+      "When \"relaxed\" mode is enabled, any atomic nonempty identifier is eligible for auto bound \
+        implicit locals (see option `autoImplicit`)." }
 
 /--
 Checks whether a string is a name that can be auto-bound when the `relaxedAutoImplicit` option is
@@ -105,9 +103,7 @@ instance : EmptyCollection AutoBoundImplicitContext where
 Pushes a new variable onto the autoImplicit context, indicating that it needs
 to be bound as an implicit parameter.
 -/
-def AutoBoundImplicitContext.push (ctx : AutoBoundImplicitContext) (x : Expr) := {
-  ctx with
-  boundVariables := ctx.boundVariables.push x
-}
+def AutoBoundImplicitContext.push (ctx : AutoBoundImplicitContext) (x : Expr) :=
+  { ctx with boundVariables := ctx.boundVariables.push x }
 
 end Lean.Elab

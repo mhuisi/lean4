@@ -503,10 +503,9 @@ theorem signExtend_neg_of_le {v w : Nat} (h : w ≤ v) (b : BitVec v)
   rw [dite_eq_left (by omega), dite_eq_left (by omega)]
   simp only [getLsbD_signExtend, Bool.and_eq_true, decide_eq_true_eq, Bool.ite_eq_true_distrib,
     Bool.bne_right_inj, decide_eq_decide]
-  exact ⟨
-    fun ⟨j, hj₁, hj₂⟩ => ⟨j, ⟨hj₁, ⟨by omega, by rwa [ite_eq_left (by omega)]⟩⟩⟩,
-    fun ⟨j, hj₁, hj₂, hj₃⟩ => ⟨j, hj₁, by rwa [ite_eq_left (by omega)] at hj₃⟩
-  ⟩
+  exact
+    ⟨ fun ⟨j, hj₁, hj₂⟩ => ⟨j, ⟨hj₁, ⟨by omega, by rwa [ite_eq_left (by omega)]⟩⟩⟩,
+      fun ⟨j, hj₁, hj₂, hj₃⟩ => ⟨j, hj₁, by rwa [ite_eq_left (by omega)] at hj₃⟩ ⟩
 
 /-- This is false if `v < w` and `b = intMin`. See also `signExtend_neg_of_le`. -/
 @[simp]
@@ -880,17 +879,16 @@ def DivModState.init (w : Nat) : DivModState w := { wn := w, wr := 0, q := 0#w, 
 theorem DivModState.lawful_init {w : Nat} (args : DivModArgs w) (hd : 0#w < args.d)
     : DivModState.Lawful args (DivModState.init w) := by
   simp only [BitVec.DivModState.init]
-  exact {
-    hwrn := by simp only; omega
-    hdPos := by assumption
-    hrLtDivisor := by simp [BitVec.lt_def] at hd ⊢; assumption
-    hrWidth := by simp
-    hqWidth := by simp
-    hdiv := by
-      simp only [toNat_ofNat, zero_mod, Nat.mul_zero, Nat.add_zero]
-      rw [Nat.shiftRight_eq_div_pow]
-      apply Nat.div_eq_of_lt args.n.isLt
-  }
+  exact
+    { hwrn := by simp only; omega
+      hdPos := by assumption
+      hrLtDivisor := by simp [BitVec.lt_def] at hd ⊢; assumption
+      hrWidth := by simp
+      hqWidth := by simp
+      hdiv := by
+        simp only [toNat_ofNat, zero_mod, Nat.mul_zero, Nat.add_zero]
+        rw [Nat.shiftRight_eq_div_pow]
+        apply Nat.div_eq_of_lt args.n.isLt }
 
 /--
 A lawful DivModState with a fully consumed dividend (`wn = 0`) witnesses that the
@@ -953,18 +951,16 @@ def divSubtractShift (args : DivModArgs w) (qr : DivModState w) : DivModState w 
   let wn := qr.wn - 1
   let wr := qr.wr + 1
   let r' := shiftConcat qr.r (n.getLsbD wn)
-  if r' < d then {
-    q := qr.q.shiftConcat false -- If `r' < d`, then we do not have a quotient bit.
-    r := r'
-    wn
-    wr
-  }
-  else {
-    q := qr.q.shiftConcat true -- Otherwise, `r' ≥ d`, and we have a quotient bit.
-    r := r' - d -- we subtract to maintain the invariant that `r < d`.
-    wn
-    wr
-  }
+  if r' < d then
+    { q := qr.q.shiftConcat false -- If `r' < d`, then we do not have a quotient bit.
+      r := r'
+      wn
+      wr }
+  else
+    { q := qr.q.shiftConcat true -- Otherwise, `r' ≥ d`, and we have a quotient bit.
+      r := r' - d -- we subtract to maintain the invariant that `r < d`.
+      wn
+      wr }
 
 /--
 The value of shifting right by `wn - 1` equals shifting by `wn` and grabbing the lsb at `(wn - 1)`.
@@ -1101,18 +1097,10 @@ theorem divRec_succ' (m : Nat) (args : DivModArgs w) (qr : DivModState w)
         let wr := qr.wr + 1
         let r' := shiftConcat qr.r (args.n.getLsbD wn)
         let input : DivModState _ :=
-          if r' < args.d then {
-            q := qr.q.shiftConcat false
-            r := r'
-            wn
-            wr
-          }
-          else {
-            q := qr.q.shiftConcat true
-            r := r' - args.d
-            wn
-            wr
-          }
+          if r' < args.d then
+            { q := qr.q.shiftConcat false, r := r', wn, wr }
+          else
+            { q := qr.q.shiftConcat true, r := r' - args.d, wn, wr }
         divRec m args input := by
   simp [divRec_succ, divSubtractShift]
 

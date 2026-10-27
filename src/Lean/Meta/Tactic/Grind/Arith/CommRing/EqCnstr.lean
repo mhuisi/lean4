@@ -548,14 +548,8 @@ private def processNewDiseqCommSemiring (a b : Expr) : SemiringM Unit := do
         | return ()
       let some p ← (ra.sub rb).toPolyM?
         | return ()
-      addNewDiseq {
-        lhs := a
-        rhs := b
-        rlhs := ra
-        rrhs := rb
-        d := .input p
-        ofSemiring? := some (sa, sb)
-      }
+      addNewDiseq
+        { lhs := a, rhs := b, rlhs := ra, rrhs := rb, d := .input p, ofSemiring? := some (sa, sb) }
   else
     -- If semiring does not have `AddRightCancel`,
     -- we may still normalize and check whether lhs and rhs are equal

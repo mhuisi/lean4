@@ -51,10 +51,9 @@ def elabForIn : TermElab := fun stx expectedType? => do
     | .some inst =>
       let forInFn ← mkConst ``forIn
       elabAppArgs forInFn
-        (namedArgs := #[
-          { name := `m, val := Arg.expr m }, { name := `α, val := Arg.expr elemType },
-          { name := `self, val := Arg.expr inst }
-        ])
+        (namedArgs :=
+          #[{ name := `m, val := Arg.expr m }, { name := `α, val := Arg.expr elemType },
+            { name := `self, val := Arg.expr inst }])
         (args := #[Arg.expr colE, Arg.stx init, Arg.stx body]) (expectedType? := expectedType?)
         (explicit := false) (ellipsis := false) (resultIsOutParamSupport := false)
     | .undef =>
@@ -85,10 +84,9 @@ def elabForIn' : TermElab := fun stx expectedType? => do
     | .some inst =>
       let forInFn ← mkConst ``forIn'
       elabAppArgs forInFn
-        (namedArgs := #[
-          { name := `m, val := Arg.expr m }, { name := `α, val := Arg.expr elemType },
-          { name := `self, val := Arg.expr inst }
-        ])
+        (namedArgs :=
+          #[{ name := `m, val := Arg.expr m }, { name := `α, val := Arg.expr elemType },
+            { name := `self, val := Arg.expr inst }])
         (args := #[Arg.expr colE, Arg.stx init, Arg.stx body]) (expectedType? := expectedType?)
         (explicit := false) (ellipsis := false) (resultIsOutParamSupport := false)
     | .undef =>

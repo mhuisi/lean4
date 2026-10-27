@@ -157,8 +157,8 @@ def copySlice
     (src : @& ByteArray) (srcOff : Nat) (dest : ByteArray) (destOff len : Nat)
     (exact : Bool := true)
     : ByteArray :=
-  ⟨dest.data.extract 0 destOff ++ src.data.extract srcOff (srcOff + len)
-    ++ dest.data.extract (destOff + min len (src.data.size - srcOff)) dest.data.size⟩
+  ⟨ dest.data.extract 0 destOff ++ src.data.extract srcOff (srcOff + len)
+      ++ dest.data.extract (destOff + min len (src.data.size - srcOff)) dest.data.size ⟩
 
 /--
 Copies the bytes with indices {name}`b` (inclusive) to {name}`e` (exclusive) to a new

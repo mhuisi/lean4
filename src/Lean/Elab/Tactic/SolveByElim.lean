@@ -61,11 +61,9 @@ def parseArgs (s : Option (TSyntax ``args)) : Bool × List Term × List Term :=
       | `(arg| $t:term) => some (Sum.inl t)
       | _ => panic! "Unreachable parse of solve_by_elim arguments."
   let args := args.toList
-  (
-    args.contains none,
+  ( args.contains none,
     args.filterMap fun o => o.bind Sum.getLeft?,
-    args.filterMap fun o => o.bind Sum.getRight?
-  )
+    args.filterMap fun o => o.bind Sum.getRight? )
 
 /-- Parse the `using ...` argument for `solve_by_elim`. -/
 def parseUsing (s : Option (TSyntax ``using_)) : Array Ident :=

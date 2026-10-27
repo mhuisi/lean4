@@ -249,11 +249,8 @@ private def EqCnstr.assert (c : EqCnstr) : LinearM Unit := do
   unless (← getStruct).caseSplits do
     if (← isImpliedEq c) then
       propagateImpEq (← ensureLeadCoeffPos c)
-  modifyStruct fun s => {
-    s with
-    elimEqs := s.elimEqs.set x (some c)
-    elimStack := x :: s.elimStack
-  }
+  modifyStruct fun s =>
+    { s with elimEqs := s.elimEqs.set x (some c), elimStack := x :: s.elimStack }
   updateOccs a x c
 
 private def processNewCommRingEq (a b : Expr) : LinearM Unit := do trace[Meta.debug] "{a}, {b}"

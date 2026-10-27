@@ -32,13 +32,11 @@ theorem Spec.forIn'_cnfClause
     (step : ∀ pref cur suff (h : xs.literals = pref ++ cur :: suff) b,
       Triple (f cur (by simp [← CNF.Clause.mem_literals_iff, h]) b)
         (inv.1 (⟨pref, cur :: suff, h.symm⟩, b))
-        (
-          fun r =>
+        ( fun r =>
             match r with
             | .yield b' => inv.1 (⟨pref ++ [cur], suff, by simp [h]⟩, b')
             | .done b' => inv.1 (⟨xs.literals, [], by simp⟩, b'),
-          inv.2
-        ))
+          inv.2 ))
     : Triple (forIn' xs init f) (inv.1 (⟨[], xs.literals, rfl⟩, init))
       (fun b => inv.1 (⟨xs.literals, [], by simp⟩, b), inv.2) := by
   simp only [CNF.Clause.forIn'_eq_forIn'_literals]
@@ -49,13 +47,12 @@ theorem Spec.forIn_cnfClause
     {xs : CNF.Clause α} {init : β} {f : Literal α → β → m (ForInStep β)}
     (inv : Invariant xs.literals β ps)
     (step : ∀ pref cur suff (h : xs.literals = pref ++ cur :: suff) b,
-      Triple (f cur b) (inv.1 (⟨pref, cur :: suff, h.symm⟩, b)) (
-        fun r =>
-          match r with
-          | .yield b' => inv.1 (⟨pref ++ [cur], suff, by simp [h]⟩, b')
-          | .done b' => inv.1 (⟨xs.literals, [], by simp⟩, b'),
-        inv.2
-      ))
+      Triple (f cur b) (inv.1 (⟨pref, cur :: suff, h.symm⟩, b))
+        ( fun r =>
+            match r with
+            | .yield b' => inv.1 (⟨pref ++ [cur], suff, by simp [h]⟩, b')
+            | .done b' => inv.1 (⟨xs.literals, [], by simp⟩, b'),
+          inv.2 ))
     : Triple (forIn xs init f) (inv.1 (⟨[], xs.literals, rfl⟩, init))
       (fun b => inv.1 (⟨xs.literals, [], by simp⟩, b), inv.2) := by
   simp only [← forIn'_eq_forIn]

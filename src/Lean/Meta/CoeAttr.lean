@@ -82,14 +82,13 @@ def registerCoercion (name : Name) (info : Option CoeFnInfo := none) : MetaM Uni
   modifyEnv fun env => coeExt.addEntry env (name, info)
 
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `coe
-    descr := "Adds a definition as a coercion"
-    add := fun decl _stx kind =>
-      MetaM.run' do
-        unless kind == .global do
-          throwAttrMustBeGlobal `coe kind
-        registerCoercion decl
-  }
+  registerBuiltinAttribute
+    { name := `coe
+      descr := "Adds a definition as a coercion"
+      add := fun decl _stx kind =>
+        MetaM.run' do
+          unless kind == .global do
+            throwAttrMustBeGlobal `coe kind
+          registerCoercion decl }
 
 end Lean.Meta

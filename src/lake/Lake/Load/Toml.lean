@@ -583,15 +583,10 @@ def loadLakeConfigCore (path : FilePath) (lakeEnv : Lake.Env) : LogIO LoadedLake
         return { config, defaultCacheService, defaultCacheUploadService?, cacheServices }
       else
         let cacheServices := cacheServices.insert `reservoir defaultService
-        let defaultServiceConfig := {
-          name := "reservoir"
-          kind := .reservoir
-          apiEndpoint := lakeEnv.reservoirApiUrl
-        }
-        let config := {
-          config with
-          cache.services := config.cache.services.push defaultServiceConfig
-        }
+        let defaultServiceConfig :=
+          { name := "reservoir", kind := .reservoir, apiEndpoint := lakeEnv.reservoirApiUrl }
+        let config :=
+          { config with cache.services := config.cache.services.push defaultServiceConfig }
         return { config, defaultCacheService, defaultCacheUploadService?, cacheServices }
     else
       errorWithLog <| errs.forM fun { ref, msg } =>
@@ -602,17 +597,12 @@ def loadLakeConfigCore (path : FilePath) (lakeEnv : Lake.Env) : LogIO LoadedLake
 
 def LoadedLakeConfig.mkDefault (lakeEnv : Lake.Env) : LoadedLakeConfig :=
   let defaultService := .reservoirService lakeEnv.reservoirApiUrl
-  let defaultServiceConfig := {
-    name := "reservoir"
-    kind := .reservoir
-    apiEndpoint := lakeEnv.reservoirApiUrl
-  }
-  {
-    config.cache.services := #[defaultServiceConfig]
+  let defaultServiceConfig :=
+    { name := "reservoir", kind := .reservoir, apiEndpoint := lakeEnv.reservoirApiUrl }
+  { config.cache.services := #[defaultServiceConfig]
     defaultCacheService := defaultService
     defaultCacheUploadService? := none
-    cacheServices := NameMap.empty.insert `reservoir defaultService
-  }
+    cacheServices := NameMap.empty.insert `reservoir defaultService }
 
 /--
 **For internal use only.**

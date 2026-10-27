@@ -19,10 +19,9 @@ public section
 
 namespace Lean.Meta
 
-register_builtin_option synthInstance.checkSynthOrder : Bool := {
-  defValue := true
-  descr := "check that instances do not introduce metavariable in non-out-params"
-}
+register_builtin_option synthInstance.checkSynthOrder : Bool :=
+  { defValue := true
+    descr := "check that instances do not introduce metavariable in non-out-params" }
 
 /-
 Note: we want to use iota reduction when indexing instances. Otherwise,
@@ -83,22 +82,16 @@ deriving Inhabited
 
 def addInstanceEntry (d : Instances) (e : InstanceEntry) : Instances :=
   match e.globalName? with
-  | some n => {
-    d with
-    discrTree := d.discrTree.insertKeyValue e.keys e
-    instanceNames := d.instanceNames.insert n e
-    erased := d.erased.erase n
-  }
-  | none => {
-    d with
-    discrTree := d.discrTree.insertKeyValue e.keys e
-  }
+  | some n =>
+    { d with
+      discrTree := d.discrTree.insertKeyValue e.keys e
+      instanceNames := d.instanceNames.insert n e
+      erased := d.erased.erase n }
+  | none =>
+    { d with discrTree := d.discrTree.insertKeyValue e.keys e }
 
-def Instances.eraseCore (d : Instances) (declName : Name) : Instances := {
-  d with
-  erased := d.erased.insert declName
-  instanceNames := d.instanceNames.erase declName
-}
+def Instances.eraseCore (d : Instances) (declName : Name) : Instances :=
+  { d with erased := d.erased.insert declName, instanceNames := d.instanceNames.erase declName }
 
 def Instances.erase [Monad m] [MonadError m] (d : Instances) (declName : Name) : m Instances := do
   unless d.instanceNames.contains declName do
@@ -106,16 +99,15 @@ def Instances.erase [Monad m] [MonadError m] (d : Instances) (declName : Name) :
   return d.eraseCore declName
 
 builtin_initialize instanceExtension : SimpleScopedEnvExtension InstanceEntry Instances ←
-  registerSimpleScopedEnvExtension {
-    initial := {}
-    addEntry := addInstanceEntry
-    exportEntry? := fun _ e =>
-      if e.globalName?.any (! isPrivateName ·) then
-        .uniform (some e)
-      else
-        ⟨none, none, some e⟩
-    trackGen := true
-  }
+  registerSimpleScopedEnvExtension
+    { initial := {}
+      addEntry := addInstanceEntry
+      exportEntry? := fun _ e =>
+        if e.globalName?.any (! isPrivateName ·) then
+          .uniform (some e)
+        else
+          ⟨none, none, some e⟩
+      trackGen := true }
 
 private def mkInstanceKey (e : Expr) : MetaM (Array InstanceKey) := do
   let type ← inferType e
@@ -300,10 +292,8 @@ def checkNonClassInstance (c : Expr) : MetaM Unit := do
         is not a type class."
 
 -- This option is registered in Lean.Elab.MutualDef.
-private def warnClassDefReducibility : Lean.Option Bool := {
-  defValue := true
-  name := `warn.classDefReducibility
-}
+private def warnClassDefReducibility : Lean.Option Bool :=
+  { defValue := true, name := `warn.classDefReducibility }
 
 def addInstance (declName : Name) (attrKind : AttributeKind) (prio : Nat) : MetaM Unit := do
   let c ← mkConstWithLevelParams declName
@@ -367,17 +357,16 @@ This corresponds to the `instance (priority := prio)` notation.
 -/
 @[builtin_doc]
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `instance
-    descr := "type class instance"
-    add := fun declName stx attrKind => do
-      let prio ← getAttrParamOptPrio stx[1]
-      discard <| addInstance declName attrKind prio |>.run {} {}
-    erase := fun declName => do
-      let s := instanceExtension.getState (← getEnv)
-      let s ← s.erase declName
-      modifyEnv fun env => instanceExtension.modifyState env fun _ => s
-  }
+  registerBuiltinAttribute
+    { name := `instance
+      descr := "type class instance"
+      add := fun declName stx attrKind => do
+        let prio ← getAttrParamOptPrio stx[1]
+        discard <| addInstance declName attrKind prio |>.run {} {}
+      erase := fun declName => do
+        let s := instanceExtension.getState (← getEnv)
+        let s ← s.erase declName
+        modifyEnv fun env => instanceExtension.modifyState env fun _ => s }
 
 -- `genRecorded := true` below: every resolution query records the instance-table generation when it
 -- starts (`Lean.recordExtGenAccess` in `synthInstanceCore?`), which covers every read of the table
@@ -425,28 +414,25 @@ deriving Inhabited
 def addDefaultInstanceEntry (d : DefaultInstances) (e : DefaultInstanceEntry) : DefaultInstances :=
   let d := { d with priorities := d.priorities.insert e.priority }
   match d.defaultInstances.find? e.className with
-  | some insts => {
-    d with
-    defaultInstances :=
-      d.defaultInstances.insert e.className <| (e.instanceName, e.priority) :: insts
-  }
-  | none => {
-    d with
-    defaultInstances := d.defaultInstances.insert e.className [(e.instanceName, e.priority)]
-  }
+  | some insts =>
+    { d with
+      defaultInstances :=
+        d.defaultInstances.insert e.className <| (e.instanceName, e.priority) :: insts }
+  | none =>
+    { d with
+      defaultInstances := d.defaultInstances.insert e.className [(e.instanceName, e.priority)] }
 
 builtin_initialize defaultInstanceExtension
     : SimplePersistentEnvExtension DefaultInstanceEntry DefaultInstances ←
-  registerSimplePersistentEnvExtension {
-    addEntryFn := addDefaultInstanceEntry
-    addImportedFn := fun es => (mkStateFromImportedEntries addDefaultInstanceEntry {} es)
-    exportEntriesFnEx? :=
-      some fun env _ entries =>
-        let all := entries.toArray
-        let exported :=
-          all.filter ((env.setExporting true).contains (skipRealize := false) ·.instanceName)
-        { exported, server := exported, «private» := all }
-  }
+  registerSimplePersistentEnvExtension
+    { addEntryFn := addDefaultInstanceEntry
+      addImportedFn := fun es => (mkStateFromImportedEntries addDefaultInstanceEntry {} es)
+      exportEntriesFnEx? :=
+        some fun env _ entries =>
+          let all := entries.toArray
+          let exported :=
+            all.filter ((env.setExporting true).contains (skipRealize := false) ·.instanceName)
+          { exported, server := exported, «private» := all } }
 
 def addDefaultInstance (declName : Name) (prio : Nat := 0) : MetaM Unit := do
   match (← getEnv).find? declName with
@@ -459,25 +445,21 @@ def addDefaultInstance (declName : Name) (prio : Nat := 0) : MetaM Unit := do
         unless isClass (← getEnv) className do
           throwError "invalid default instance `{.ofConstName declName}`, it has type \
             `({className} ...)`, but `{.ofConstName className}` is not a type class"
-        setEnv <| defaultInstanceExtension.addEntry (← getEnv) {
-          className := className
-          instanceName := declName
-          priority := prio
-        }
+        setEnv <| defaultInstanceExtension.addEntry (← getEnv)
+          { className := className, instanceName := declName, priority := prio }
       | _ =>
         throwError "invalid default instance `{.ofConstName declName}`, type must be of the form \
           `(C ...)` where `C` is a type class"
 
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `default_instance
-    descr := "type class default instance"
-    add := fun declName stx kind => do
-      let prio ← getAttrParamOptPrio stx[1]
-      unless kind == AttributeKind.global do
-        throwAttrMustBeGlobal `default_instance kind
-      discard <| addDefaultInstance declName prio |>.run {} {}
-  }
+  registerBuiltinAttribute
+    { name := `default_instance
+      descr := "type class default instance"
+      add := fun declName stx kind => do
+        let prio ← getAttrParamOptPrio stx[1]
+        unless kind == AttributeKind.global do
+          throwAttrMustBeGlobal `default_instance kind
+        discard <| addDefaultInstance declName prio |>.run {} {} }
   registerTraceClass `Meta.synthOrder
 
 def getDefaultInstancesPriorities [Monad m] [MonadEnv m] : m PrioritySet :=

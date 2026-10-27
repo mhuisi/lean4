@@ -25,14 +25,13 @@ namespace Sum
 protected theorem «forall» {p : α ⊕ β → Prop} : (∀ x, p x) ↔ (∀ a, p (inl a)) ∧ ∀ b, p (inr b) :=
   ⟨fun h => ⟨fun _ => h _, fun _ => h _⟩, fun ⟨h₁, h₂⟩ => Sum.rec h₁ h₂⟩
 
-protected theorem «exists» {p : α ⊕ β → Prop} : (∃ x, p x) ↔ (∃ a, p (inl a)) ∨ ∃ b, p (inr b) := ⟨
-  fun
-    | ⟨inl a, h⟩ => Or.inl ⟨a, h⟩
-    | ⟨inr b, h⟩ => Or.inr ⟨b, h⟩,
-  fun
-    | Or.inl ⟨a, h⟩ => ⟨inl a, h⟩
-    | Or.inr ⟨b, h⟩ => ⟨inr b, h⟩
-⟩
+protected theorem «exists» {p : α ⊕ β → Prop} : (∃ x, p x) ↔ (∃ a, p (inl a)) ∨ ∃ b, p (inr b) :=
+  ⟨ fun
+      | ⟨inl a, h⟩ => Or.inl ⟨a, h⟩
+      | ⟨inr b, h⟩ => Or.inr ⟨b, h⟩,
+    fun
+      | Or.inl ⟨a, h⟩ => ⟨inl a, h⟩
+      | Or.inr ⟨b, h⟩ => ⟨inr b, h⟩ ⟩
 
 theorem forall_sum {γ : α ⊕ β → Sort _} {p : (∀ ab, γ ab) → Prop}
     : (∀ fab, p fab) ↔ (∀ fa fb, p (Sum.rec fa fb)) := by

@@ -248,23 +248,19 @@ of the header is always collected as it is available without waiting for any com
 public partial def moduleData (initSnap : Language.Lean.InitialSnapshot)
     : Task ModuleData := Id.run do
   let headerStx := initSnap.stx
-  let acc : ModuleData := {
-    headerData := { stx := headerStx, parserState? := none, cmdState? := none }
-    cmdData := #[]
-  }
+  let acc : ModuleData :=
+    { headerData := { stx := headerStx, parserState? := none, cmdState? := none }, cmdData := #[] }
   let some headerParsedState := initSnap.result?
     | return .pure { acc with hasParseErrors := true }
-  let acc := {
-    acc with
-    headerData := { acc.headerData with parserState? := some headerParsedState.parserState }
-  }
+  let acc :=
+    { acc with
+      headerData := { acc.headerData with parserState? := some headerParsedState.parserState } }
   headerParsedState.processedSnap.task.bind (sync := true) fun headerProcessedSnap => Id.run do
     let some headerProcessedState := headerProcessedSnap.result?
       | return .pure acc
-    let acc := {
-      acc with
-      headerData := { acc.headerData with cmdState? := some headerProcessedState.cmdState }
-    }
+    let acc :=
+      { acc with
+        headerData := { acc.headerData with cmdState? := some headerProcessedState.cmdState } }
     go headerProcessedState.firstCmdSnap acc
 where
   go
@@ -273,16 +269,14 @@ where
       : Task ModuleData :=
     cmdParsedSnapTask.task.bind (sync := true) fun cmdParsedSnap =>
       cmdParsedSnap.elabSnap.resultSnap.task.bind (sync := true) fun cmdResultSnap => Id.run do
-        let acc := {
-          acc with
-          cmdData :=
-            acc.cmdData.push {
-              stx := cmdParsedSnap.stx
-              parserState := cmdParsedSnap.parserState
-              cmdState := cmdResultSnap.cmdState
-            }
-          hasParseErrors := acc.hasParseErrors || cmdParsedSnap.diagnostics.msgLog.hasErrors
-        }
+        let acc :=
+          { acc with
+            cmdData :=
+              acc.cmdData.push
+                { stx := cmdParsedSnap.stx
+                  parserState := cmdParsedSnap.parserState
+                  cmdState := cmdResultSnap.cmdState }
+            hasParseErrors := acc.hasParseErrors || cmdParsedSnap.diagnostics.msgLog.hasErrors }
         let some nextCmdParsedSnapTask := cmdParsedSnap.nextCmdSnap?
           | return .pure acc
         go nextCmdParsedSnapTask acc

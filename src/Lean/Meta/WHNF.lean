@@ -57,12 +57,11 @@ def mkSmartUnfoldingNameFor (declName : Name) : Name := Name.mkStr declName smar
 def hasSmartUnfoldingDecl (env : Environment) (declName : Name) : Bool :=
   env.contains (mkSmartUnfoldingNameFor declName)
 
-register_builtin_option smartUnfolding : Bool := {
-  defValue := true
-  descr :=
-    "when computing weak head normal form, use auxiliary definition created for functions defined \
-      by structural recursion"
-}
+register_builtin_option smartUnfolding : Bool :=
+  { defValue := true
+    descr :=
+      "when computing weak head normal form, use auxiliary definition created for functions \
+        defined by structural recursion" }
 
 /--
 Add auxiliary annotation to indicate the `match`-expression `e` must be reduced when performing smart unfolding.
@@ -917,10 +916,9 @@ on class fields work as the user expects by temporarily bumping to `.instances` 
 
 See `unfoldDefault` for the implementation.
 -/
-register_builtin_option backward.whnf.reducibleClassField : Bool := {
-  defValue := true
-  descr := "enables better support for unfolding type class fields marked as `[reducible]`"
-}
+register_builtin_option backward.whnf.reducibleClassField : Bool :=
+  { defValue := true
+    descr := "enables better support for unfolding type class fields marked as `[reducible]`" }
 
 /--
 Default unfolding function. `e` is of the form `f.{us} a₁ ... aₙ`, and `fInfo` is the `ConstantInfo` for `f`.

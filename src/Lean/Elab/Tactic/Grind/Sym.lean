@@ -209,13 +209,8 @@ internalized context and a single round of E-matching with few instances. A fail
 redoes the whole search, since the `grind` state is discarded after each attempt, so the search
 is kept small.
 -/
-def defaultDischargerConfig (cfg : Lean.Grind.Config) : Lean.Grind.Config := {
-  cfg with
-  ematch := 1
-  gen := 1
-  genLocal := 1
-  instances := 20
-}
+def defaultDischargerConfig (cfg : Lean.Grind.Config) : Lean.Grind.Config :=
+  { cfg with ematch := 1, gen := 1, genLocal := 1, instances := 20 }
 
 /--
 Creates the discharger of the default `Sym.simp` variant: `grind` on `goal` with

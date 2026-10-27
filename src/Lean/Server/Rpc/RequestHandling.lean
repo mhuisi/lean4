@@ -54,10 +54,8 @@ def handleRpcCall (p : Lsp.RpcCallParams) : RequestM (RequestTask Json) := do
     let text := doc.meta.text
     let callPos := text.lspPosToUtf8Pos p.position
     let throwNotFound :=
-      throwThe RequestError {
-        code := .methodNotFound
-        message := s!"No RPC method '{p.method}' found"
-      }
+      throwThe RequestError
+        { code := .methodNotFound, message := s!"No RPC method '{p.method}' found" }
     bindWaitFindSnap doc (notFoundX := throwNotFound)
       (fun s => s.endPos >= callPos || (userRpcProcedures.find? s.env p.method).isSome)
       fun snap => do
@@ -67,10 +65,9 @@ def handleRpcCall (p : Lsp.RpcCallParams) : RequestM (RequestTask Json) := do
           | .ok x =>
             x.wrapper p.sessionId p.params
           | .error e =>
-            throwThe RequestError {
-              code := .internalError
-              message := s!"Failed to evaluate RPC constant '{procName}': {e}"
-            }
+            throwThe RequestError
+              { code := .internalError
+                message := s!"Failed to evaluate RPC constant '{procName}': {e}" }
         else
           throwNotFound
 
@@ -85,22 +82,19 @@ def wrapRpcProcedure
     let rc ← read
 
     let some seshRef := rc.rpcSessions.get? seshId
-      | throwThe RequestError {
-          code := JsonRpc.ErrorCode.rpcNeedsReconnect
-          message := s!"Outdated RPC session"
-        }
+      | throwThe RequestError
+          { code := JsonRpc.ErrorCode.rpcNeedsReconnect, message := s!"Outdated RPC session" }
 
     let v ← do
       match rpcDecode j (← seshRef.get).objects with
       | Except.ok v =>
         pure v
       | Except.error e =>
-        throwThe RequestError {
-          code := JsonRpc.ErrorCode.invalidParams
-          message :=
-            s!"Cannot decode params in RPC call '{method}({j.compress})'\
-              \n{e}"
-        }
+        throwThe RequestError
+          { code := JsonRpc.ErrorCode.invalidParams
+            message :=
+              s!"Cannot decode params in RPC call '{method}({j.compress})'\
+                \n{e}" }
 
     let t ← handler v
 
@@ -141,31 +135,29 @@ def registerRpcProcedure (method : Name) : CoreM Unit := do
       let c ← Lean.Elab.Term.elabTerm stx procT
       instantiateMVars c
   let decl :=
-    Declaration.defnDecl {
-      name := wrappedName
-      type := procT
-      value := proc
-      safety := DefinitionSafety.safe
-      levelParams := []
-      hints := ReducibilityHints.opaque
-    }
+    Declaration.defnDecl
+      { name := wrappedName
+        type := procT
+        value := proc
+        safety := DefinitionSafety.safe
+        levelParams := []
+        hints := ReducibilityHints.opaque }
   addDecl decl
   modifyEnv (markMeta · wrappedName)
   compileDecl decl
   setEnv <| userRpcProcedures.insert (← getEnv) method wrappedName
 
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `server_rpc_method
-    descr :=
-      "Marks a function as a Lean server RPC method.\
-        \n    Shorthand for `registerRpcProcedure`.\
-        \n    The function must have type `α → RequestM (RequestTask β)` with\
-        \n    `[RpcEncodable α]` and `[RpcEncodable β]`."
-    applicationTime := AttributeApplicationTime.afterCompilation
-    add := fun decl _ attrKind => do
-      ensureAttrDeclIsMeta `server_rpc_method decl attrKind
-      registerRpcProcedure decl
-  }
+  registerBuiltinAttribute
+    { name := `server_rpc_method
+      descr :=
+        "Marks a function as a Lean server RPC method.\
+          \n    Shorthand for `registerRpcProcedure`.\
+          \n    The function must have type `α → RequestM (RequestTask β)` with\
+          \n    `[RpcEncodable α]` and `[RpcEncodable β]`."
+      applicationTime := AttributeApplicationTime.afterCompilation
+      add := fun decl _ attrKind => do
+        ensureAttrDeclIsMeta `server_rpc_method decl attrKind
+        registerRpcProcedure decl }
 
 end Lean.Server

@@ -124,21 +124,19 @@ where
 
     return some <| .simpleEnum inductiveInfo handledCtors
 
-def builtinTypes : Array Name := #[
-  ``BitVec, ``Bool,
-  ``UInt8, ``UInt16, ``UInt32, ``UInt64, ``USize,
-  ``Int8, ``Int16, ``Int32, ``Int64, ``ISize
-]
+def builtinTypes : Array Name :=
+  #[``BitVec, ``Bool,
+    ``UInt8, ``UInt16, ``UInt32, ``UInt64, ``USize,
+    ``Int8, ``Int16, ``Int32, ``Int64, ``ISize]
 
 @[inline] def isBuiltIn (n : Name) : Bool := builtinTypes.contains n
 
 public def addDefaultTypeAnalysisLemmas (methods : Sym.Simp.Methods)
     : PreProcessM Sym.Simp.Methods := do
   let mut lemmas : Sym.Simp.Theorems := {}
-  let relevantNames := #[
-    ``dite_eq_ite,
-    ``Std.Tactic.BVDecide.Normalize.BitVec.getElem_eq_getLsbD
-  ]
+  let relevantNames :=
+    #[``dite_eq_ite,
+      ``Std.Tactic.BVDecide.Normalize.BitVec.getElem_eq_getLsbD]
   for name in relevantNames do
     lemmas := lemmas.insert (← Sym.Simp.mkTheoremFromDecl name)
 

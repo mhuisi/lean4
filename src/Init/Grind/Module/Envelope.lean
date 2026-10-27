@@ -252,23 +252,22 @@ theorem zsmul_natCast_eq_nsmul (n : Nat) (a : Q α) : zsmul (n : Int) a = nsmul 
   omega
 
 @[instance_reducible]
-def ofNatModule : IntModule (Q α) := {
-  nsmul := ⟨nsmul⟩
-  zsmul := ⟨zsmul⟩
-  zero
-  add
-  sub
-  neg
-  add_comm
-  add_assoc
-  add_zero
-  neg_add_cancel
-  sub_eq_add_neg
-  one_zsmul
-  zero_zsmul
-  add_zsmul
-  zsmul_natCast_eq_nsmul
-}
+def ofNatModule : IntModule (Q α) :=
+  { nsmul := ⟨nsmul⟩
+    zsmul := ⟨zsmul⟩
+    zero
+    add
+    sub
+    neg
+    add_comm
+    add_assoc
+    add_zero
+    neg_add_cancel
+    sub_eq_add_neg
+    one_zsmul
+    zero_zsmul
+    add_zsmul
+    zsmul_natCast_eq_nsmul }
 
 attribute [instance] ofNatModule
 

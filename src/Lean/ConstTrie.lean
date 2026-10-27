@@ -160,11 +160,9 @@ def parentOf : Name → Name
 def Builder.addName (b : Builder α) (cur : Name) : Builder α :=
   if _ : cur != .anonymous && ! b.seen.contains cur then
     Builder.addName
-      {
-        b with
+      { b with
         seen := b.seen.insert cur
-        children := b.children.alter (parentOf cur) fun cs? => some ((cs?.getD #[]).push cur)
-      }
+        children := b.children.alter (parentOf cur) fun cs? => some ((cs?.getD #[]).push cur) }
       (parentOf cur)
   else
     b
@@ -602,9 +600,8 @@ declarations must have been ruled out beforehand, e.g. using `collectDuplicates`
 -/
 public def mergeModuleTreesLazy
     (trees : Array (Nat × ConstTrie α)) (resolve : Array (α × Nat) → Option (α × Nat) := (·[0]?))
-    : ImportedConsts α := {
-  tree := mergeLazy resolve .anonymous trees
-}
+    : ImportedConsts α :=
+  { tree := mergeLazy resolve .anonymous trees }
 
 end ImportedConsts
 
@@ -670,9 +667,8 @@ Replaces the node for `n` using `f`. `n` must be a prefix shared by several modu
 `Duplicate` name; single-module subtrees are never modified. The result has no cache of its own.
 -/
 public def modifyAt (t : ImportedConsts α) (n : Name) (f : ImportedTree α → ImportedTree α)
-    : ImportedConsts α := {
-  tree := t.tree.modifyAt n f
-}
+    : ImportedConsts α :=
+  { tree := t.tree.modifyAt n f }
 
 public def foldlM [Monad m] (t : ImportedConsts α) (f : σ → Name → α → m σ) (init : σ) : m σ :=
   t.tree.foldlM f init

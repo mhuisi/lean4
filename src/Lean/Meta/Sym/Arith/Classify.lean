@@ -97,21 +97,20 @@ private def tryCommRingQ? (type base semiringInst commSemiringInst : Expr) : Sym
   trace[grind.ring] "NoNatZeroDivisors available: {noZeroDivInst?.isSome}"
   trace[grind.ring] "PowIdentity available: false"
   let id := (← getArithState).rings.size
-  let ring : CommRing := {
-    id
-    semiringId? := none
-    type
-    u
-    semiringInst := semiringInstQ
-    ringInst
-    commSemiringInst := commSemiringInstQ
-    commRingInst
-    charInst?
-    symbolicChar := charInfo.symbolic
-    noZeroDivInst?
-    fieldInst? := none
-    powIdentityInst? := none
-  }
+  let ring : CommRing :=
+    { id
+      semiringId? := none
+      type
+      u
+      semiringInst := semiringInstQ
+      ringInst
+      commSemiringInst := commSemiringInstQ
+      commRingInst
+      charInst?
+      symbolicChar := charInfo.symbolic
+      noZeroDivInst?
+      fieldInst? := none
+      powIdentityInst? := none }
   modifyArithState fun s => { s with rings := s.rings.push ring }
   return some id
 
@@ -133,21 +132,20 @@ private def tryCommRingCore? (type : Expr) : SymM (Option Nat) := do
   trace[grind.ring] "PowIdentity available: {powIdentityInst?.isSome}"
   let semiringId? := none
   let id := (← getArithState).rings.size
-  let ring : CommRing := {
-    id
-    semiringId?
-    type
-    u
-    semiringInst
-    ringInst
-    commSemiringInst
-    commRingInst
-    charInst? := charInfo.inst?
-    symbolicChar := charInfo.symbolic
-    noZeroDivInst?
-    fieldInst?
-    powIdentityInst?
-  }
+  let ring : CommRing :=
+    { id
+      semiringId?
+      type
+      u
+      semiringInst
+      ringInst
+      commSemiringInst
+      commRingInst
+      charInst? := charInfo.inst?
+      symbolicChar := charInfo.symbolic
+      noZeroDivInst?
+      fieldInst?
+      powIdentityInst? }
   modifyArithState fun s => { s with rings := s.rings.push ring }
   return some id
 
@@ -172,15 +170,14 @@ private def tryNonCommRing? (type : Expr) : SymM (Option Nat) := do
   trace[grind.ring] "new ring: {type}"
   let charInfo ← getCharInfo u type semiringInst
   let id := (← getArithState).ncRings.size
-  let ring : Ring := {
-    id
-    type
-    u
-    semiringInst
-    ringInst
-    charInst? := charInfo.inst?
-    symbolicChar := charInfo.symbolic
-  }
+  let ring : Ring :=
+    { id
+      type
+      u
+      semiringInst
+      ringInst
+      charInst? := charInfo.inst?
+      symbolicChar := charInfo.symbolic }
   modifyArithState fun s => { s with ncRings := s.ncRings.push ring }
   return some id
 
@@ -229,14 +226,8 @@ private def tryNonCommSemiring? (type : Expr) : SymM (Option Nat) := do
     | return none
   let charInfo ← getCharInfo u type semiringInst
   let id := (← getArithState).ncSemirings.size
-  let semiring : Semiring := {
-    id
-    type
-    u
-    semiringInst
-    charInst? := charInfo.inst?
-    symbolicChar := charInfo.symbolic
-  }
+  let semiring : Semiring :=
+    { id, type, u, semiringInst, charInst? := charInfo.inst?, symbolicChar := charInfo.symbolic }
   modifyArithState fun s => { s with ncSemirings := s.ncSemirings.push semiring }
   return some id
 
@@ -330,25 +321,24 @@ private def tryOrder? (type : Expr) : SymM (Option Nat) := do
       | .none =>
         pure (none, none, true, none, none, false)
   let id := (← getArithState).orders.size
-  let order : Order := {
-    id,
-    type,
-    u,
-    leInst,
-    isPreorderInst,
-    ltInst?,
-    leFn,
-    isPartialInst?,
-    ringInst?,
-    orderedRingInst?,
-    isLinearPreInst?,
-    ltFn?,
-    lawfulOrderLTInst?,
-    ringId?,
-    semiringId?,
-    isCommSemiring,
-    isCommRing
-  }
+  let order : Order :=
+    { id,
+      type,
+      u,
+      leInst,
+      isPreorderInst,
+      ltInst?,
+      leFn,
+      isPartialInst?,
+      ringInst?,
+      orderedRingInst?,
+      isLinearPreInst?,
+      ltFn?,
+      lawfulOrderLTInst?,
+      ringId?,
+      semiringId?,
+      isCommSemiring,
+      isCommRing }
   modifyArithState fun s => { s with orders := s.orders.push order }
   return some id
 
@@ -360,10 +350,8 @@ def classifyOrder? (type : Expr) : SymM (Option Nat) := do
   if let some id? := (← getArithState).typeOrderClassify.find? { expr := type } then
     return id?
   let id? ← tryOrder? type
-  modifyArithState fun s => {
-    s with
-    typeOrderClassify := s.typeOrderClassify.insert { expr := type } id?
-  }
+  modifyArithState fun s =>
+    { s with typeOrderClassify := s.typeOrderClassify.insert { expr := type } id? }
   return id?
 
 end Lean.Meta.Sym.Arith

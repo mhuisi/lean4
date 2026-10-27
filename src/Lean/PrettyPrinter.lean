@@ -28,12 +28,11 @@ def ppUsing (e : Expr) (delab : Expr → MetaM Term) : MetaM Format := do
   let lctx := (← getLCtx).sanitizeNames.run' { options := (← getOptions) }
   Meta.withLCtx' lctx do ppTerm (← delab e)
 
-register_builtin_option pp.exprSizes : Bool := {
-  defValue := false
-  descr :=
-    "(pretty printer) prefix each embedded expression with its sizes in the format \
-      (size disregarding sharing/size with sharing/size with max sharing)"
-}
+register_builtin_option pp.exprSizes : Bool :=
+  { defValue := false
+    descr :=
+      "(pretty printer) prefix each embedded expression with its sizes in the format \
+        (size disregarding sharing/size with sharing/size with max sharing)" }
 
 private def maybePrependExprSizes (e : Expr) (f : Format) : MetaM Format := do
   if pp.exprSizes.get (← getOptions) then
@@ -122,13 +121,12 @@ private def withoutContext {m} [MonadExcept Exception m] (x : m α) : m α :=
     | ex => throw ex
 
 builtin_initialize
-  ppFnsRef.set {
-    ppExprWithInfos := fun ctx e => ctx.runMetaM <| withoutContext <| ppExprWithInfos e
-    ppConstNameWithInfos := fun ctx n => ctx.runMetaM <| withoutContext <| ppConstNameWithInfos n
-    ppTerm := fun ctx stx => ctx.runCoreM <| withoutContext <| ppTerm stx
-    ppLevel := fun ctx l => ctx.runMetaM <| withoutContext <| ppLevel l
-    ppGoal := fun ctx mvarId => ctx.runMetaM <| withoutContext <| Meta.ppGoal mvarId
-  }
+  ppFnsRef.set
+    { ppExprWithInfos := fun ctx e => ctx.runMetaM <| withoutContext <| ppExprWithInfos e
+      ppConstNameWithInfos := fun ctx n => ctx.runMetaM <| withoutContext <| ppConstNameWithInfos n
+      ppTerm := fun ctx stx => ctx.runCoreM <| withoutContext <| ppTerm stx
+      ppLevel := fun ctx l => ctx.runMetaM <| withoutContext <| ppLevel l
+      ppGoal := fun ctx mvarId => ctx.runMetaM <| withoutContext <| Meta.ppGoal mvarId }
 
 builtin_initialize registerTraceClass `PrettyPrinter
 

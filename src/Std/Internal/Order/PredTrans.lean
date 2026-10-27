@@ -411,10 +411,11 @@ instance
     [MonadExceptOf ε (PredTrans Pred EPosts)]
     : MonadExceptOf ε (PredTrans Pred ((ε' → Pred) × EPosts)) where
   throw e := liftExcept (MonadExceptOf.throw (m := PredTrans Pred EPosts) e)
-  tryCatch x handle := ⟨fun post eposts =>
-    (MonadExceptOf.tryCatch (m := PredTrans Pred EPosts) (x.popExcept eposts.fst) fun e =>
-        (handle e).popExcept eposts.fst).apply
-      post eposts.snd⟩
+  tryCatch x handle :=
+    ⟨ fun post eposts =>
+        (MonadExceptOf.tryCatch (m := PredTrans Pred EPosts) (x.popExcept eposts.fst) fun e =>
+            (handle e).popExcept eposts.fst).apply
+          post eposts.snd ⟩
 
 /-!
 ## State Instances

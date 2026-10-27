@@ -203,11 +203,10 @@ def internalize (e : Expr) (parent? : Option Expr) : GoalM Unit := do
       trace_goal[grind.ring.internalize] "[{ringId}]: {e}"
       setTermRingId e
       ringExt.markTerm e
-      modifyCommRingState fun s => {
-        s with
-        denote := s.denote.insert { expr := e } re
-        denoteEntries := s.denoteEntries.push (e, re)
-      }
+      modifyCommRingState fun s =>
+        { s with
+          denote := s.denote.insert { expr := e } re
+          denoteEntries := s.denoteEntries.push (e, re) }
       processPowIdentityVars
   else if let some semiringId ← getCommSemiringId? type then
     SemiringM.run semiringId do

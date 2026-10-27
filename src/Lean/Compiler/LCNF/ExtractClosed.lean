@@ -244,14 +244,13 @@ where
     else
       let name := (← read).baseName ++ (`_closed).appendIndexAfter (← get).decls.size
       cacheClosedTermName env closedExpr name |> setEnv
-      let decl := {
-        name
-        levelParams := []
-        type := decl.type
-        params := #[]
-        value := .code closedCode
-        inlineAttr? := some .noinline
-      }
+      let decl :=
+        { name
+          levelParams := []
+          type := decl.type
+          params := #[]
+          value := .code closedCode
+          inlineAttr? := some .noinline }
       decl.saveMono
       modify fun s => { s with decls := s.decls.push decl }
       return name

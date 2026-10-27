@@ -34,12 +34,8 @@ inductive ReduceMode where
   | reduceSimpleOnly
   | none
 
-private def config : ConfigWithKey := {
-  transparency := .reducible
-  iota := false
-  proj := .no
-  : Config
-}.toConfigWithKey
+private def config : ConfigWithKey :=
+  { transparency := .reducible, iota := false, proj := .no : Config }.toConfigWithKey
 
 mutual
 

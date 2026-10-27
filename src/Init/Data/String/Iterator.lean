@@ -169,12 +169,11 @@ This function is faster that `String.Iterator.next` due to avoiding a run-time b
 @[inline]
 def next' (it : Iterator) (h : it.hasNext) : Iterator :=
   match it with
-  | ⟨s, i⟩ => ⟨
-    s,
-    i.next' s (by
-      simpa only [hasNext, rawEndPos, decide_eq_true_eq, Pos.Raw.atEnd, ge_iff_le, Nat.not_le] using
-        h)
-  ⟩
+  | ⟨s, i⟩ =>
+    ⟨ s,
+      i.next' s (by
+        simpa only [hasNext, rawEndPos, decide_eq_true_eq, Pos.Raw.atEnd, ge_iff_le, Nat.not_le]
+          using h) ⟩
 
 /-- Moves the iterator's position to the end of the string, just past the last character. -/
 @[inline]

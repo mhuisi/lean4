@@ -160,12 +160,12 @@ private def parsePosixTzP (extended : Bool := false) : Parser RecurringRule := d
   let startRule ← skip *> posixParseRule extended
   let endRule ← skipChar ',' *> posixParseRule extended
 
-  return {
-    stdName
-    stdOffset
-    dst :=
-      some { name := dstName, offset := dstOffset, start := some startRule, end_ := some endRule }
-  }
+  return
+    { stdName
+      stdOffset
+      dst :=
+        some
+          { name := dstName, offset := dstOffset, start := some startRule, end_ := some endRule } }
 
 /--
 Parse a POSIX TZ footer string into a `RecurringRule`, returning an error on failure.

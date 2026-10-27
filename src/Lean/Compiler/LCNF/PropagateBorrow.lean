@@ -57,11 +57,8 @@ where
       let new := old.join v
       if old == new then
         s
-      else {
-        s with
-        values := s.values.insert fvarId new
-        modified := true
-      }
+      else
+        { s with values := s.values.insert fvarId new, modified := true }
 
   getParams (f : Name) : InferM (Array (Param .impure)) := do
     let some sig ← getImpureSignature? f

@@ -121,10 +121,8 @@ def addLeadingParser
     let addTokens (tks : List Token) : Except String ParserCategories :=
       let tks := tks.map Name.mkSimple
       let tables :=
-        tks.eraseDups.foldl (init := cat.tables) fun tables tk => {
-          tables with
-          leadingTable := tables.leadingTable.insert tk (p, prio)
-        }
+        tks.eraseDups.foldl (init := cat.tables) fun tables tk =>
+          { tables with leadingTable := tables.leadingTable.insert tk (p, prio) }
       pure $ categories.insert catName { cat with kinds, tables }
     match p.info.firstTokens with
     | FirstTokens.tokens tks =>
@@ -139,10 +137,8 @@ private def addTrailingParserAux (tables : PrattParsingTables) (p : TrailingPars
     : PrattParsingTables :=
   let addTokens (tks : List Token) : PrattParsingTables :=
     let tks := tks.map fun tk => Name.mkSimple tk
-    tks.eraseDups.foldl (init := tables) fun tables tk => {
-      tables with
-      trailingTable := tables.trailingTable.insert tk (p, prio)
-    }
+    tks.eraseDups.foldl (init := tables) fun tables tk =>
+      { tables with trailingTable := tables.trailingTable.insert tk (p, prio) }
   match p.info.firstTokens with
   | FirstTokens.tokens tks => addTokens tks
   | FirstTokens.optTokens tks => addTokens tks
@@ -187,17 +183,13 @@ def ParserExtension.addEntryImpl (s : State) (e : Entry) : State :=
     match addTokenConfig s.tokens tk with
     | Except.ok tokens => { s with tokens }
     | Except.error e => panic! s!"ParserExtension.addEntryImpl: {e}"
-  | Entry.kind k => {
-    s with
-    kinds := s.kinds.insert k
-  }
+  | Entry.kind k =>
+    { s with kinds := s.kinds.insert k }
   | Entry.category catName declName behavior =>
     if s.categories.contains catName then
       s
-    else {
-      s with
-      categories := s.categories.insert catName { declName, behavior }
-    }
+    else
+      { s with categories := s.categories.insert catName { declName, behavior } }
   | Entry.parser catName declName leading parser prio =>
     match addParser s.categories catName declName leading parser prio with
     | Except.ok categories => { s with categories }
@@ -378,22 +370,20 @@ def runParserAttributeHooks (catName : Name) (declName : Name) (builtin : Bool) 
   hooks.forM fun hook => hook.postAdd catName declName builtin
 
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `run_builtin_parser_attribute_hooks
-    descr := "explicitly run hooks normally activated by builtin parser attributes"
-    add := fun decl stx _ => do
-      Attribute.Builtin.ensureNoArgs stx
-      runParserAttributeHooks Name.anonymous decl (builtin := true)
-  }
+  registerBuiltinAttribute
+    { name := `run_builtin_parser_attribute_hooks
+      descr := "explicitly run hooks normally activated by builtin parser attributes"
+      add := fun decl stx _ => do
+        Attribute.Builtin.ensureNoArgs stx
+        runParserAttributeHooks Name.anonymous decl (builtin := true) }
 
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `run_parser_attribute_hooks
-    descr := "explicitly run hooks normally activated by parser attributes"
-    add := fun decl stx _ => do
-      Attribute.Builtin.ensureNoArgs stx
-      runParserAttributeHooks Name.anonymous decl (builtin := false)
-  }
+  registerBuiltinAttribute
+    { name := `run_parser_attribute_hooks
+      descr := "explicitly run hooks normally activated by parser attributes"
+      add := fun decl stx _ => do
+        Attribute.Builtin.ensureNoArgs stx
+        runParserAttributeHooks Name.anonymous decl (builtin := false) }
 
 private def ParserExtension.OLeanEntry.toEntry (s : State) : OLeanEntry → ImportM Entry
   | token tk =>
@@ -407,12 +397,11 @@ private def ParserExtension.OLeanEntry.toEntry (s : State) : OLeanEntry → Impo
     return Entry.parser catName declName leading p prio
 
 builtin_initialize parserExtension : ParserExtension ←
-  registerScopedEnvExtension {
-    mkInitial := ParserExtension.mkInitial
-    addEntry := ParserExtension.addEntryImpl
-    toOLeanEntry := ParserExtension.Entry.toOLeanEntry
-    ofOLeanEntry := ParserExtension.OLeanEntry.toEntry
-  }
+  registerScopedEnvExtension
+    { mkInitial := ParserExtension.mkInitial
+      addEntry := ParserExtension.addEntryImpl
+      toOLeanEntry := ParserExtension.Entry.toOLeanEntry
+      ofOLeanEntry := ParserExtension.OLeanEntry.toEntry }
 
 def getParserCategory? (env : Environment) (catName : Name) : Option ParserCategory :=
   (parserExtension.getState env).categories.find? catName
@@ -447,17 +436,15 @@ unsafe def evalParserConstUnsafe (declName : Name) (evalFallback? : Option Parse
     : ParserFn := fun ctx s =>
   unsafeBaseIO do
     let categories := (parserExtension.getState ctx.env).categories
-    match (← (mkParserOfConstant categories declName {
-      env := ctx.env
-      opts := ctx.options
-    }).toBaseIO) with
+    match (← (mkParserOfConstant categories declName
+      { env := ctx.env, opts := ctx.options }).toBaseIO) with
     | .ok (_, p) =>
       -- We should manually register `p`'s tokens before invoking it as it might not be part of any syntax category (yet)
       return adaptUncacheableContextFn
-        (fun ctx => {
-          ctx with
-          tokens := p.info.collectTokens [] |>.foldl (fun tks tk => tks.insert tk tk) ctx.tokens
-        })
+        (fun ctx =>
+          { ctx with
+            tokens :=
+              p.info.collectTokens [] |>.foldl (fun tks tk => tks.insert tk tk) ctx.tokens })
         p.fn ctx s
     | .error e =>
       if let some evalFallback := evalFallback? then
@@ -468,10 +455,9 @@ unsafe def evalParserConstUnsafe (declName : Name) (evalFallback? : Option Parse
 @[implemented_by evalParserConstUnsafe]
 opaque evalParserConst (declName : Name) (evalFallback? : Option ParserFn := none) : ParserFn
 
-register_builtin_option internal.parseQuotWithCurrentStage : Bool := {
-  defValue := false
-  descr := "(Lean bootstrapping) use parsers from the current stage inside quotations"
-}
+register_builtin_option internal.parseQuotWithCurrentStage : Bool :=
+  { defValue := false
+    descr := "(Lean bootstrapping) use parsers from the current stage inside quotations" }
 
 /--
 Interpret `declName` if possible and inside a quotation, or else run `p`. The `ParserInfo` will always be taken from `p`.
@@ -636,14 +622,13 @@ def registerBuiltinParserAttribute
     | throw (IO.userError "`declName` should be in Lean.Parser.Category")
   let catName := Name.mkSimple s
   addBuiltinParserCategory catName declName behavior
-  registerBuiltinAttribute {
-    ref := ref
-    name := attrName
-    descr := "Builtin parser"
-    add := fun declName stx kind =>
-      liftM $ BuiltinParserAttribute.add attrName catName declName stx kind
-    applicationTime := AttributeApplicationTime.afterCompilation
-  }
+  registerBuiltinAttribute
+    { ref := ref
+      name := attrName
+      descr := "Builtin parser"
+      add := fun declName stx kind =>
+        liftM $ BuiltinParserAttribute.add attrName catName declName stx kind
+      applicationTime := AttributeApplicationTime.afterCompilation }
 
 private def ParserAttribute.add
     (_attrName : Name) (catName : Name) (declName : Name) (stx : Syntax) (attrKind : AttributeKind)
@@ -909,12 +894,10 @@ def parserOfStackFn (offset : Nat) : ParserFn := fun ctx s => Id.run do
         (fun ctx =>
           -- static quotations such as `(e) do not use the interpreter unless the above option is set,
           -- so for consistency neither should dynamic quotations using this function
-          {
-            ctx with
+          { ctx with
             options :=
               ctx.options.set `interpreter.prefer_native
-                (! internal.parseQuotWithCurrentStage.get ctx.options)
-          })
+                (! internal.parseQuotWithCurrentStage.get ctx.options) })
         (evalParserConst parserName) ctx s
     | [.alias alias] =>
       match alias with

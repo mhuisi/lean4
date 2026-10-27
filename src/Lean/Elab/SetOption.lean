@@ -12,10 +12,8 @@ public import Init.Syntax
 public section
 namespace Lean.Elab
 
-register_builtin_option linter.deprecated.options : Bool := {
-  defValue := true
-  descr := "if true, generate deprecation warnings for deprecated options"
-}
+register_builtin_option linter.deprecated.options : Bool :=
+  { defValue := true, descr := "if true, generate deprecation warnings for deprecated options" }
 
 variable [Monad m] [MonadOptions m] [MonadError m] [MonadLiftT (EIO Exception) m] [MonadInfoTree m]
 

@@ -88,14 +88,13 @@ def succ? (c : Char) : Option Char :=
   else if h₁ : c.val = 0xd7ff then
     some ⟨0xe000, by decide⟩
   else if h₂ : c.val < 0x10ffff then
-    some ⟨
-      c.val + 1,
-      by
-        simp only [UInt32.lt_iff_toNat_lt, UInt32.reduceToNat, Nat.not_lt, ← UInt32.toNat_inj,
-            UInt32.isValidChar, Nat.isValidChar, UInt32.toNat_add, Nat.reducePow]
-          at *
-        grind
-    ⟩
+    some
+      ⟨ c.val + 1,
+        by
+          simp only [UInt32.lt_iff_toNat_lt, UInt32.reduceToNat, Nat.not_lt, ← UInt32.toNat_inj,
+              UInt32.isValidChar, Nat.isValidChar, UInt32.toNat_add, Nat.reducePow]
+            at *
+          grind ⟩
   else
     none
 

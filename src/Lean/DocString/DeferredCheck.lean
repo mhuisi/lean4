@@ -67,12 +67,11 @@ information so they can be found by the linter.
 -/
 builtin_initialize deferredCheckExt
     : PersistentEnvExtension DeferredCheck DeferredCheck (Array DeferredCheck) ←
-  registerPersistentEnvExtension {
-    mkInitial := pure #[]
-    addImportedFn := fun _ => pure #[]
-    addEntryFn := Array.push
-    exportEntriesFn := id
-    asyncMode := .sync
-  }
+  registerPersistentEnvExtension
+    { mkInitial := pure #[]
+      addImportedFn := fun _ => pure #[]
+      addEntryFn := Array.push
+      exportEntriesFn := id
+      asyncMode := .sync }
 
 end Lean.Doc

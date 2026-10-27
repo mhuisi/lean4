@@ -16,28 +16,26 @@ open ShareCommon
 namespace Lean.ShareCommon
 
 def objectFactory :=
-  StateFactory.mk {
-    Map := Std.HashMap
-    mkMap := (Std.HashMap.emptyWithCapacity ·)
-    mapFind? := (·.get?)
-    mapInsert := (·.insert)
-    Set := Std.HashSet
-    mkSet := (Std.HashSet.emptyWithCapacity ·)
-    setFind? := (·.get?)
-    setInsert := (·.insert)
-  }
+  StateFactory.mk
+    { Map := Std.HashMap
+      mkMap := (Std.HashMap.emptyWithCapacity ·)
+      mapFind? := (·.get?)
+      mapInsert := (·.insert)
+      Set := Std.HashSet
+      mkSet := (Std.HashSet.emptyWithCapacity ·)
+      setFind? := (·.get?)
+      setInsert := (·.insert) }
 
 def persistentObjectFactory :=
-  StateFactory.mk {
-    Map := PersistentHashMap
-    mkMap := fun _ => .empty
-    mapFind? := (·.find?)
-    mapInsert := (·.insert)
-    Set := PersistentHashSet
-    mkSet := fun _ => .empty
-    setFind? := (·.find?)
-    setInsert := (·.insert)
-  }
+  StateFactory.mk
+    { Map := PersistentHashMap
+      mkMap := fun _ => .empty
+      mapFind? := (·.find?)
+      mapInsert := (·.insert)
+      Set := PersistentHashSet
+      mkSet := fun _ => .empty
+      setFind? := (·.find?)
+      setInsert := (·.insert) }
 
 abbrev ShareCommonT := _root_.ShareCommonT objectFactory
 abbrev PShareCommonT := _root_.ShareCommonT persistentObjectFactory

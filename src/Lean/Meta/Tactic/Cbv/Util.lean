@@ -41,8 +41,7 @@ abbrev isInt32Value (e : Expr) : Bool := (Sym.getInt32Value? e).isSome
 abbrev isInt64Value (e : Expr) : Bool := (Sym.getInt64Value? e).isSome
 
 public def isVal (e : Expr) : Bool :=
-  [
-    isNatValue,
+  [ isNatValue,
     isStringValue,
     isIntValue,
     isBitVecValue,
@@ -55,8 +54,7 @@ public def isVal (e : Expr) : Bool :=
     isInt8Value,
     isInt16Value,
     isInt32Value,
-    isInt64Value
-  ].any
+    isInt64Value ].any
     (· e)
 
 /--

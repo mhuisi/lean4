@@ -160,10 +160,8 @@ public def mkIndPredBRecOnF
     forallBoundedTelescope FType (some 1) fun below _ => do
       let below := below[0]!
       let belowName := (← inferType below).getForallBody.getAppFn.constName!
-      let ctx := {
-        belows := .insert {} indicesMajorArgs.back!.fvarId! (belowName, below)
-        motives := {}
-      }
+      let ctx :=
+        { belows := .insert {} indicesMajorArgs.back!.fvarId! (belowName, below), motives := {} }
       let (valueNew, matchers) ←
         (withDeclNameForAuxNaming recArgInfo.fnName <|
             replaceIndPredRecApps recArgInfos positions params ctx value).run

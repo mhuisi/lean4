@@ -140,15 +140,8 @@ deriving Inhabited, BEq
 def mkDefinitionValEx
     (name : Name) (levelParams : List Name) (type : Expr) (value : Expr) (hints : ReducibilityHints)
     (safety : DefinitionSafety) (all : List Name)
-    : DefinitionVal := {
-  name,
-  levelParams,
-  type,
-  hints,
-  safety,
-  value,
-  all
-}
+    : DefinitionVal :=
+  { name, levelParams, type, hints, safety, value, all }
 
 @[export lean_definition_val_get_safety]
 def DefinitionVal.getSafetyEx (v : DefinitionVal) : DefinitionSafety := v.safety
@@ -341,19 +334,18 @@ deriving Inhabited, BEq
 def mkInductiveValEx
     (name : Name) (levelParams : List Name) (type : Expr) (numParams numIndices : Nat)
     (all ctors : List Name) (numNested : Nat) (isRec isUnsafe isReflexive : Bool)
-    : InductiveVal := {
-  name := name
-  levelParams := levelParams
-  type := type
-  numParams := numParams
-  numIndices := numIndices
-  all := all
-  ctors := ctors
-  numNested := numNested
-  isRec := isRec
-  isUnsafe := isUnsafe
-  isReflexive := isReflexive
-}
+    : InductiveVal :=
+  { name := name
+    levelParams := levelParams
+    type := type
+    numParams := numParams
+    numIndices := numIndices
+    all := all
+    ctors := ctors
+    numNested := numNested
+    isRec := isRec
+    isUnsafe := isUnsafe
+    isReflexive := isReflexive }
 
 @[export lean_inductive_val_is_rec]
 def InductiveVal.isRecEx (v : InductiveVal) : Bool := v.isRec
@@ -382,16 +374,8 @@ deriving Inhabited, BEq
 def mkConstructorValEx
     (name : Name) (levelParams : List Name) (type : Expr) (induct : Name)
     (cidx numParams numFields : Nat) (isUnsafe : Bool)
-    : ConstructorVal := {
-  name,
-  levelParams,
-  type,
-  induct,
-  cidx,
-  numParams,
-  numFields,
-  isUnsafe
-}
+    : ConstructorVal :=
+  { name, levelParams, type, induct, cidx, numParams, numFields, isUnsafe }
 
 @[export lean_constructor_val_is_unsafe]
 def ConstructorVal.isUnsafeEx (v : ConstructorVal) : Bool := v.isUnsafe
@@ -439,19 +423,8 @@ def mkRecursorValEx
     (name : Name) (levelParams : List Name) (type : Expr) (all : List Name)
     (numParams numIndices numMotives numMinors : Nat) (rules : List RecursorRule)
     (k isUnsafe : Bool)
-    : RecursorVal := {
-  name,
-  levelParams,
-  type,
-  all,
-  numParams,
-  numIndices,
-  numMotives,
-  numMinors,
-  rules,
-  k,
-  isUnsafe
-}
+    : RecursorVal :=
+  { name, levelParams, type, all, numParams, numIndices, numMotives, numMinors, rules, k, isUnsafe }
 
 @[export lean_recursor_k]
 def RecursorVal.kEx (v : RecursorVal) : Bool := v.k
@@ -486,13 +459,8 @@ structure QuotVal extends ConstantVal where
 deriving Inhabited, BEq
 
 @[export lean_mk_quot_val]
-def mkQuotValEx (name : Name) (levelParams : List Name) (type : Expr) (kind : QuotKind)
-    : QuotVal := {
-  name := name
-  levelParams := levelParams
-  type := type
-  kind := kind
-}
+def mkQuotValEx (name : Name) (levelParams : List Name) (type : Expr) (kind : QuotKind) : QuotVal :=
+  { name := name, levelParams := levelParams, type := type, kind := kind }
 
 /-- Information associated with constant declarations. -/
 inductive ConstantInfo where

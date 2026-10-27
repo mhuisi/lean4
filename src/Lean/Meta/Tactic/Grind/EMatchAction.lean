@@ -66,11 +66,8 @@ where
       if let some thm := map[uniqueId]? then
         let key := (thm.origin, thm.kind)
         unless (← get).collectedThms.contains key do
-          modify fun s => {
-            s with
-            collectedThms := s.collectedThms.insert key
-            thms := s.thms.push thm
-          }
+          modify fun s =>
+            { s with collectedThms := s.collectedThms.insert key, thms := s.thms.push thm }
     match e with
     | .lam _ d b _ | .forallE _ d b _ => go d; go b
     | .proj _ _ b | .mdata _ b => go b

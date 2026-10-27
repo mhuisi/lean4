@@ -13,19 +13,18 @@ public section
 
 namespace Lean
 
-register_builtin_option profiler : Bool := {
-  defValue := false
-  descr :=
-    "show exclusive execution times of various Lean components\
-      \n\
-      \nSee also `trace.profiler` for an alternative profiling system with structured output."
-}
+register_builtin_option profiler : Bool :=
+  { defValue := false
+    descr :=
+      "show exclusive execution times of various Lean components\
+        \n\
+        \nSee also `trace.profiler` for an alternative profiling system with structured output." }
 
-register_builtin_option profiler.threshold : Nat := {
-  defValue := 100
-  descr :=
-    "threshold in milliseconds, profiling times under threshold will not be reported individually"
-}
+register_builtin_option profiler.threshold : Nat :=
+  { defValue := 100
+    descr :=
+      "threshold in milliseconds, profiling times under threshold will not be reported \
+        individually" }
 
 @[export lean_get_profiler]
 private def get_profiler (o : Options) : Bool := profiler.get o

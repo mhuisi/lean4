@@ -150,10 +150,9 @@ theorem isLongestMatchAt_iff_extract {pat s : Slice} {pos₁ pos₂ : s.Pos} (h 
   refine ⟨fun ⟨h, h'⟩ => ?_, fun h' => ?_⟩
   · simp [← h', toByteArray_copy_slice]
   · rw [← Slice.toByteArray_copy_ne_empty_iff, ← h', ne_eq, ByteArray.extract_eq_empty_iff] at h
-    exact ⟨
-      by simp [Pos.le_iff, Pos.Raw.le_iff]; omega,
-      by simp [← h', ← toByteArray_inj, toByteArray_copy_slice]
-    ⟩
+    exact
+      ⟨ by simp [Pos.le_iff, Pos.Raw.le_iff]; omega,
+        by simp [← h', ← toByteArray_inj, toByteArray_copy_slice] ⟩
 
 theorem isLongestRevMatchAt_iff_extract
     {pat s : Slice} {pos₁ pos₂ : s.Pos} (h : pat.isEmpty = false)
@@ -164,10 +163,9 @@ theorem isLongestRevMatchAt_iff_extract
   refine ⟨fun ⟨h, h'⟩ => ?_, fun h' => ?_⟩
   · simp [← h', toByteArray_copy_slice]
   · rw [← Slice.toByteArray_copy_ne_empty_iff, ← h', ne_eq, ByteArray.extract_eq_empty_iff] at h
-    exact ⟨
-      by simp [Pos.le_iff, Pos.Raw.le_iff]; omega,
-      by simp [← h', ← toByteArray_inj, toByteArray_copy_slice]
-    ⟩
+    exact
+      ⟨ by simp [Pos.le_iff, Pos.Raw.le_iff]; omega,
+        by simp [← h', ← toByteArray_inj, toByteArray_copy_slice] ⟩
 
 theorem offset_of_isLongestMatchAt
     {pat s : Slice} {pos₁ pos₂ : s.Pos}
@@ -196,18 +194,16 @@ theorem offset_of_isLongestRevMatchAt
 theorem matchesAt_iff_splits {pat s : Slice} {pos : s.Pos}
     : MatchesAt pat pos ↔ ∃ t₁ t₂, pos.Splits t₁ (pat.copy ++ t₂) := by
   simp only [matchesAt_iff_exists_isLongestMatchAt, isLongestMatchAt_iff_splits]
-  exact ⟨
-    fun ⟨e, t₁, t₂, ht₁, ht₂⟩ => ⟨t₁, t₂, ht₁⟩,
-    fun ⟨t₁, t₂, ht⟩ => ⟨ht.rotateRight, t₁, t₂, ht, ht.splits_rotateRight⟩
-  ⟩
+  exact
+    ⟨ fun ⟨e, t₁, t₂, ht₁, ht₂⟩ => ⟨t₁, t₂, ht₁⟩,
+      fun ⟨t₁, t₂, ht⟩ => ⟨ht.rotateRight, t₁, t₂, ht, ht.splits_rotateRight⟩ ⟩
 
 theorem revMatchesAt_iff_splits {pat s : Slice} {pos : s.Pos}
     : RevMatchesAt pat pos ↔ ∃ t₁ t₂, pos.Splits (t₁ ++ pat.copy) t₂ := by
   simp only [revMatchesAt_iff_exists_isLongestRevMatchAt, isLongestRevMatchAt_iff_splits]
-  exact ⟨
-    fun ⟨e, t₁, t₂, ht₁, ht₂⟩ => ⟨t₁, t₂, ht₂⟩,
-    fun ⟨t₁, t₂, ht⟩ => ⟨ht.rotateLeft, t₁, t₂, ht.splits_rotateLeft, ht⟩
-  ⟩
+  exact
+    ⟨ fun ⟨e, t₁, t₂, ht₁, ht₂⟩ => ⟨t₁, t₂, ht₂⟩,
+      fun ⟨t₁, t₂, ht⟩ => ⟨ht.rotateLeft, t₁, t₂, ht.splits_rotateLeft, ht⟩ ⟩
 
 theorem exists_matchesAt_iff_eq_append {pat s : Slice}
     : (∃ (pos : s.Pos), MatchesAt pat pos) ↔ ∃ t₁ t₂, s.copy = t₁ ++ pat.copy ++ t₂ := by
@@ -331,14 +327,12 @@ theorem isLongestMatch_iff_isLongestMatch_toSlice {pat : String} {s : Slice} {po
 
 theorem isLongestRevMatch_iff_isLongestRevMatch_toSlice {pat : String} {s : Slice} {pos : s.Pos}
     : IsLongestRevMatch (ρ := String) pat pos ↔ IsLongestRevMatch (ρ := Slice) pat.toSlice pos where
-  mp h := ⟨
-    isRevMatch_iff_slice.1 h.isRevMatch,
-    fun p hp hm => h.not_isRevMatch p hp (isRevMatch_iff_slice.2 hm)
-  ⟩
-  mpr h := ⟨
-    isRevMatch_iff_slice.2 h.isRevMatch,
-    fun p hp hm => h.not_isRevMatch p hp (isRevMatch_iff_slice.1 hm)
-  ⟩
+  mp h :=
+    ⟨ isRevMatch_iff_slice.1 h.isRevMatch,
+      fun p hp hm => h.not_isRevMatch p hp (isRevMatch_iff_slice.2 hm) ⟩
+  mpr h :=
+    ⟨ isRevMatch_iff_slice.2 h.isRevMatch,
+      fun p hp hm => h.not_isRevMatch p hp (isRevMatch_iff_slice.1 hm) ⟩
 
 theorem isLongestMatchAt_iff_isLongestMatchAt_toSlice {pat : String} {s : Slice} {pos₁ pos₂ : s.Pos}
     : IsLongestMatchAt (ρ := String) pat pos₁ pos₂

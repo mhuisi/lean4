@@ -97,13 +97,12 @@ def isImportCompletionRequest
 
 def collectAvailableImportsFromLake : IO (Option AvailableImports) := do
   let lakePath ← Lean.determineLakePath
-  let spawnArgs : IO.Process.SpawnArgs := {
-    stdin := IO.Process.Stdio.null
-    stdout := IO.Process.Stdio.piped
-    stderr := IO.Process.Stdio.piped
-    cmd := lakePath.toString
-    args := #["available-imports"]
-  }
+  let spawnArgs : IO.Process.SpawnArgs :=
+    { stdin := IO.Process.Stdio.null
+      stdout := IO.Process.Stdio.piped
+      stderr := IO.Process.Stdio.piped
+      cmd := lakePath.toString
+      args := #["available-imports"] }
   let lakeProc ← IO.Process.spawn spawnArgs
   let stdout := String.trimAscii (← lakeProc.stdout.readToEnd) |>.copy
   let exitCode ← lakeProc.wait
@@ -140,10 +139,8 @@ Sets the `data?` field of every `CompletionItem` in `completionList` using `para
 def addCompletionItemData (uri : DocumentUri) (pos : Lsp.Position) (completionList : CompletionList)
     : CompletionList :=
   let data := { uri, pos : Lean.Lsp.ResolvableCompletionItemData }
-  {
-    completionList with
-    items := completionList.items.map fun item => { item with data? := some <| toJson data }
-  }
+  { completionList with
+    items := completionList.items.map fun item => { item with data? := some <| toJson data } }
 
 def find
     (uri : DocumentUri) (pos : Lsp.Position) (text : FileMap)
@@ -153,17 +150,13 @@ def find
   let completionPos := text.lspPosToUtf8Pos pos
   if isImportNameCompletionRequest headerStx completionPos then
     let allAvailableImportNameCompletions := availableImports.toArray.map ({ label := toString · })
-    addCompletionItemData uri pos {
-      isIncomplete := false
-      items := allAvailableImportNameCompletions
-    }
+    addCompletionItemData uri pos
+      { isIncomplete := false, items := allAvailableImportNameCompletions }
   else if isImportCmdCompletionRequest headerStx completionPos then
     let allAvailableFullImportCompletions :=
       availableImports.toArray.map ({ label := s!"import {·}" })
-    addCompletionItemData uri pos {
-      isIncomplete := false
-      items := allAvailableFullImportCompletions
-    }
+    addCompletionItemData uri pos
+      { isIncomplete := false, items := allAvailableFullImportCompletions }
   else
     let completionNames : Array Name :=
       computePartialImportCompletions headerStx completionPos availableImports

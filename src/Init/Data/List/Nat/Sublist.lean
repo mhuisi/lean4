@@ -121,10 +121,9 @@ theorem infix_iff_getElem? {l₁ l₂ : List α}
       simp_all
       omega
 
-theorem suffix_iff_eq_append : l₁ <:+ l₂ ↔ take (length l₂ - length l₁) l₂ ++ l₁ = l₂ := ⟨
-  by rintro ⟨r, rfl⟩; simp only [length_append, Nat.add_sub_cancel_right, take_left],
-  fun e => ⟨_, e⟩
-⟩
+theorem suffix_iff_eq_append : l₁ <:+ l₂ ↔ take (length l₂ - length l₁) l₂ ++ l₁ = l₂ :=
+  ⟨ by rintro ⟨r, rfl⟩; simp only [length_append, Nat.add_sub_cancel_right, take_left],
+    fun e => ⟨_, e⟩ ⟩
 
 @[grind =]
 theorem prefix_take_iff {xs ys : List α} {i : Nat}
@@ -142,10 +141,9 @@ theorem prefix_take_iff {xs ys : List α} {i : Nat}
     rw [hp, List.take_take]
     simp [Nat.min_eq_left, hl, hl']
 
-theorem suffix_iff_eq_drop : l₁ <:+ l₂ ↔ l₁ = drop (length l₂ - length l₁) l₂ := ⟨
-  fun h => append_cancel_left <| (suffix_iff_eq_append.1 h).trans (take_append_drop _ _).symm,
-  fun e => e.symm ▸ drop_suffix _ _
-⟩
+theorem suffix_iff_eq_drop : l₁ <:+ l₂ ↔ l₁ = drop (length l₂ - length l₁) l₂ :=
+  ⟨ fun h => append_cancel_left <| (suffix_iff_eq_append.1 h).trans (take_append_drop _ _).symm,
+    fun e => e.symm ▸ drop_suffix _ _ ⟩
 
 theorem prefix_map_iff_of_injective {f : α → β} (hf : Function.Injective f)
     : l₁.map f <+: l₂.map f ↔ l₁ <+: l₂ := by

@@ -132,10 +132,9 @@ theorem Pattern.Model.posFind?_eq_none_iff
     {s : Slice} {pos : s.Pos}
     : pos.find? pat = none ↔ ∀ pos', pos ≤ pos' → ¬ MatchesAt pat pos' := by
   rw [Pos.find?_eq_find?_sliceFrom, Option.map_eq_none_iff, Pattern.Model.find?_eq_none_iff]
-  simpa only [matchesAt_iff_matchesAt_ofSliceFrom] using ⟨
-    fun h p hp => by simpa using h (Pos.sliceFrom _ _ hp),
-    fun h p => by simpa using h _ Pos.le_ofSliceFrom
-  ⟩
+  simpa only [matchesAt_iff_matchesAt_ofSliceFrom] using
+    ⟨ fun h p hp => by simpa using h (Pos.sliceFrom _ _ hp),
+      fun h p => by simpa using h _ Pos.le_ofSliceFrom ⟩
 
 end Slice
 

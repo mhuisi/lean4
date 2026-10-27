@@ -34,17 +34,19 @@ inductive Trace where
   | messages
   | verbose
 
-instance : FromJson Trace := ⟨fun j =>
-  match j.getStr? with
-  | Except.ok "off" => return Trace.off
-  | Except.ok "messages" => return Trace.messages
-  | Except.ok "verbose" => return Trace.verbose
-  | _ => throw "unknown trace"⟩
+instance : FromJson Trace :=
+  ⟨ fun j =>
+      match j.getStr? with
+      | Except.ok "off" => return Trace.off
+      | Except.ok "messages" => return Trace.messages
+      | Except.ok "verbose" => return Trace.verbose
+      | _ => throw "unknown trace" ⟩
 
-instance Trace.hasToJson : ToJson Trace := ⟨fun
-  | Trace.off => "off"
-  | Trace.messages => "messages"
-  | Trace.verbose => "verbose"⟩
+instance Trace.hasToJson : ToJson Trace :=
+  ⟨ fun
+      | Trace.off => "off"
+      | Trace.messages => "messages"
+      | Trace.verbose => "verbose" ⟩
 
 local instance [BEq α] [Hashable α] [ToJson α] : ToJson (Std.HashSet α) where
   toJson s := .arr <| s.toArray.map toJson
@@ -101,15 +103,14 @@ instance : FromJson InitializeParams where
     let capabilities ← j.getObjValAs? ClientCapabilities "capabilities"
     let trace := (j.getObjValAs? Trace "trace").toOption.getD Trace.off
     let workspaceFolders? := j.getObjValAs? (Array WorkspaceFolder) "workspaceFolders"
-    return ⟨
-      processId?.toOption,
-      clientInfo?.toOption,
-      rootUri?.toOption,
-      initializationOptions?.toOption,
-      capabilities,
-      trace,
-      workspaceFolders?.toOption
-    ⟩
+    return
+      ⟨ processId?.toOption,
+        clientInfo?.toOption,
+        rootUri?.toOption,
+        initializationOptions?.toOption,
+        capabilities,
+        trace,
+        workspaceFolders?.toOption ⟩
 
 inductive InitializedParams where
   | mk

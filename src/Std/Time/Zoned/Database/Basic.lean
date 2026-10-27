@@ -50,14 +50,13 @@ def convertLocalTimeType (index : Nat) (tz : TZif.TZifV1) (identifier : String)
   let wallflag := convertWall (tz.stdWallIndicators.getD index true)
   let utLocal := convertUt (tz.utLocalIndicators.getD index true)
 
-  return {
-    gmtOffset := offset
-    isDst := localType.isDst
-    abbreviation
-    wall := wallflag
-    utLocal
-    identifier
-  }
+  return
+    { gmtOffset := offset
+      isDst := localType.isDst
+      abbreviation
+      wall := wallflag
+      utLocal
+      identifier }
 
 /-- Converts a transition. -/
 def convertTransition (times : Array LocalTimeType) (index : Nat) (tz : TZif.TZifV1)

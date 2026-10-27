@@ -324,17 +324,15 @@ def simpUsingDecide : Simproc := fun e => do
     let d ← mkDecide e
     let r ← withDefault <| whnf d
     if r.isConstOf ``true then
-      return .done {
-        expr := mkConst ``True
-        proof? :=
-          mkAppN (mkConst ``eq_true_of_decide) #[e, d.appArg!, (← mkEqRefl (mkConst ``true))]
-      }
+      return .done
+        { expr := mkConst ``True
+          proof? :=
+            mkAppN (mkConst ``eq_true_of_decide) #[e, d.appArg!, (← mkEqRefl (mkConst ``true))] }
     else if r.isConstOf ``false then
-      return .done {
-        expr := mkConst ``False
-        proof? :=
-          mkAppN (mkConst ``eq_false_of_decide) #[e, d.appArg!, (← mkEqRefl (mkConst ``false))]
-      }
+      return .done
+        { expr := mkConst ``False
+          proof? :=
+            mkAppN (mkConst ``eq_false_of_decide) #[e, d.appArg!, (← mkEqRefl (mkConst ``false))] }
     else
       return .continue
   catch _ =>
@@ -411,12 +409,11 @@ def simpMatchDiscrs? (info : MatcherInfo) (e : Expr) : SimpM (Option Result) := 
 def simpMatchCore (matcherName : Name) (e : Expr) : SimpM Step := do
   for matchEq in (← Match.getEquationsFor matcherName).eqnNames do
     -- Try lemma
-    match (← withReducible <| Simp.tryTheorem? e {
-      origin := .decl matchEq
-      proof := mkConst matchEq
-      rfl := (← isRflTheorem matchEq)
-      backwardRfl := (← isBackwardRflTheorem matchEq)
-    }) with
+    match (← withReducible <| Simp.tryTheorem? e
+      { origin := .decl matchEq
+        proof := mkConst matchEq
+        rfl := (← isRflTheorem matchEq)
+        backwardRfl := (← isBackwardRflTheorem matchEq) }) with
     | none => pure ()
     | some r => return .visit r
   return .continue
@@ -492,12 +489,11 @@ def sevalGround : Simproc := fun e => do
     for eqn in eqns do
       -- TODO: cache SimpTheorem to avoid calls to `isRflTheorem`
       if let some result ←
-          Simp.tryTheorem? e {
-            origin := .decl eqn
-            proof := mkConst eqn
-            rfl := (← isRflTheorem eqn)
-            backwardRfl := (← isBackwardRflTheorem eqn)
-          } then
+          Simp.tryTheorem? e
+            { origin := .decl eqn
+              proof := mkConst eqn
+              rfl := (← isRflTheorem eqn)
+              backwardRfl := (← isBackwardRflTheorem eqn) } then
         trace[Meta.Tactic.simp.ground] "unfolded, {e} => {result.expr}"
         return .visit result
     return .continue
@@ -520,14 +516,13 @@ def postSEval (s : SimprocsArray) : Simproc := rewritePost >> userPostSimprocs s
 
 def mkSEvalMethods : CoreM Methods := do
   let s ← getSEvalSimprocs
-  return {
-    pre := preSEval #[s]
-    post := postSEval #[s]
-    dpre := dpreDefault #[s]
-    dpost := dpostDefault #[s]
-    discharge? := dischargeGround
-    wellBehavedDischarge := true
-  }
+  return
+    { pre := preSEval #[s]
+      post := postSEval #[s]
+      dpre := dpreDefault #[s]
+      dpost := dpostDefault #[s]
+      discharge? := dischargeGround
+      wellBehavedDischarge := true }
 
 def mkSEvalContext : MetaM Context := do
   let s ← getSEvalTheorems
@@ -686,14 +681,13 @@ def dischargeDefault? (e : Expr) : SimpM (Option Expr) := do
 abbrev Discharge := Expr → SimpM (Option Expr)
 
 def mkMethods (s : SimprocsArray) (discharge? : Discharge) (wellBehavedDischarge : Bool)
-    : Methods := {
-  pre := preDefault s
-  post := postDefault s
-  dpre := dpreDefault s
-  dpost := dpostDefault s
-  discharge?
-  wellBehavedDischarge
-}
+    : Methods :=
+  { pre := preDefault s
+    post := postDefault s
+    dpre := dpreDefault s
+    dpost := dpostDefault s
+    discharge?
+    wellBehavedDischarge }
 
 def mkDefaultMethodsCore (simprocs : SimprocsArray) : Methods :=
   mkMethods simprocs dischargeDefault? (wellBehavedDischarge := true)

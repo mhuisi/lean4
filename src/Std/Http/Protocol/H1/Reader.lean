@@ -112,73 +112,56 @@ If the current input is exhausted, replaces it; otherwise compacts the buffer
 by discarding already-parsed bytes before appending.
 -/
 @[inline]
-def feed (data : ByteArray) (reader : Reader dir) : Reader dir := {
-  reader with
-  input :=
-    if reader.input.atEnd then
-      data.iter
-    else
-      (reader.input.array.extract reader.input.pos reader.input.array.size ++ data).iter
-}
+def feed (data : ByteArray) (reader : Reader dir) : Reader dir :=
+  { reader with
+    input :=
+      if reader.input.atEnd then
+        data.iter
+      else
+        (reader.input.array.extract reader.input.pos reader.input.array.size ++ data).iter }
 
 /-- Replaces the reader's input iterator with a new one. -/
 @[inline]
-def setInput (input : ByteArray.Iterator) (reader : Reader dir) : Reader dir := {
-  reader with
-  input
-}
+def setInput (input : ByteArray.Iterator) (reader : Reader dir) : Reader dir :=
+  { reader with input }
 
 /-- Updates the message head being constructed. -/
 @[inline]
-def setMessageHead (messageHead : Message.Head dir) (reader : Reader dir) : Reader dir := {
-  reader with
-  messageHead
-}
+def setMessageHead (messageHead : Message.Head dir) (reader : Reader dir) : Reader dir :=
+  { reader with messageHead }
 
 /-- Adds a header to the current message head. -/
 @[inline]
 def addHeader (name : Header.Name) (value : Header.Value) (reader : Reader dir) : Reader dir :=
   match dir with
-  | .sending | .receiving => {
-    reader with
-    messageHead := {
-      reader.messageHead with
-      headers := reader.messageHead.headers.insert name value
-    }
-  }
+  | .sending | .receiving =>
+    { reader with
+      messageHead :=
+        { reader.messageHead with headers := reader.messageHead.headers.insert name value } }
 
 /-- Closes the reader, transitioning to the closed state. -/
 @[inline]
-def close (reader : Reader dir) : Reader dir := {
-  reader with
-  state := .closed
-  noMoreInput := true
-}
+def close (reader : Reader dir) : Reader dir :=
+  { reader with state := .closed, noMoreInput := true }
 
 /-- Marks the current message as complete and prepares for the next message. -/
 @[inline]
-def markComplete (reader : Reader dir) : Reader dir := {
-  reader with
-  state := .complete
-  messageCount := reader.messageCount + 1
-}
+def markComplete (reader : Reader dir) : Reader dir :=
+  { reader with state := .complete, messageCount := reader.messageCount + 1 }
 
 /-- Transitions the reader to a failed state with the given error. -/
 @[inline]
-def fail (error : Error) (reader : Reader dir) : Reader dir := {
-  reader with
-  state := .failed error
-}
+def fail (error : Error) (reader : Reader dir) : Reader dir :=
+  { reader with state := .failed error }
 
 /-- Resets the reader to parse a new message on the same connection. -/
 @[inline]
-def reset (reader : Reader dir) : Reader dir := {
-  reader with
-  state := .needStartLine
-  bodyBytesRead := 0
-  headerBytesRead := 0
-  messageHead := {}
-}
+def reset (reader : Reader dir) : Reader dir :=
+  { reader with
+    state := .needStartLine
+    bodyBytesRead := 0
+    headerBytesRead := 0
+    messageHead := {} }
 
 /-- Checks if more input is needed to continue parsing. -/
 @[inline]
@@ -201,47 +184,33 @@ def remainingBytes (reader : Reader dir) : Nat := reader.input.array.size - read
 
 /-- Advances the input iterator by n bytes. -/
 @[inline]
-def advance (n : Nat) (reader : Reader dir) : Reader dir := {
-  reader with
-  input := reader.input.forward n
-}
+def advance (n : Nat) (reader : Reader dir) : Reader dir :=
+  { reader with input := reader.input.forward n }
 
 /-- Transitions to the state for reading headers. -/
 @[inline]
-def startHeaders (reader : Reader dir) : Reader dir := {
-  reader with
-  state := .needHeader 0
-  bodyBytesRead := 0
-  headerBytesRead := 0
-}
+def startHeaders (reader : Reader dir) : Reader dir :=
+  { reader with state := .needHeader 0, bodyBytesRead := 0, headerBytesRead := 0 }
 
 /-- Adds body bytes parsed for the current message. -/
 @[inline]
-def addBodyBytes (n : Nat) (reader : Reader dir) : Reader dir := {
-  reader with
-  bodyBytesRead := reader.bodyBytesRead + n
-}
+def addBodyBytes (n : Nat) (reader : Reader dir) : Reader dir :=
+  { reader with bodyBytesRead := reader.bodyBytesRead + n }
 
 /-- Adds header bytes accumulated for the current message. -/
 @[inline]
-def addHeaderBytes (n : Nat) (reader : Reader dir) : Reader dir := {
-  reader with
-  headerBytesRead := reader.headerBytesRead + n
-}
+def addHeaderBytes (n : Nat) (reader : Reader dir) : Reader dir :=
+  { reader with headerBytesRead := reader.headerBytesRead + n }
 
 /-- Transitions to the state for reading a fixed-length body. -/
 @[inline]
-def startFixedBody (size : Nat) (reader : Reader dir) : Reader dir := {
-  reader with
-  state := .readBody (.fixed size)
-}
+def startFixedBody (size : Nat) (reader : Reader dir) : Reader dir :=
+  { reader with state := .readBody (.fixed size) }
 
 /-- Transitions to the state for reading chunked transfer encoding. -/
 @[inline]
-def startChunkedBody (reader : Reader dir) : Reader dir := {
-  reader with
-  state := .readBody .chunkedSize
-}
+def startChunkedBody (reader : Reader dir) : Reader dir :=
+  { reader with state := .readBody .chunkedSize }
 
 /-- Marks that no more input will be provided (connection closed). -/
 @[inline]

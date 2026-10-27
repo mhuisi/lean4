@@ -16,17 +16,14 @@ namespace Lean.Linter
 
 open Lean Elab.Command
 
-register_builtin_option linter.fmt.missing : Bool := {
-  defValue := false
-  descr := "enable the 'missing formatter' linter"
-}
+register_builtin_option linter.fmt.missing : Bool :=
+  { defValue := false, descr := "enable the 'missing formatter' linter" }
 
-register_builtin_option linter.fmt.missing.ignorePrivate : Bool := {
-  defValue := false
-  descr :=
-    "make the 'missing formatter' linter ignore syntax with a private node kind, which is \
-      what `local syntax`, `local macro` and `local notation` produce"
-}
+register_builtin_option linter.fmt.missing.ignorePrivate : Bool :=
+  { defValue := false
+    descr :=
+      "make the 'missing formatter' linter ignore syntax with a private node kind, which is \
+        what `local syntax`, `local macro` and `local notation` produce" }
 
 /--
 Whether `kind` is exempt from being reported. A private kind stems from a `local` syntax
@@ -46,13 +43,12 @@ private def checkMissingFormatter (stx : Syntax) : CommandElabM Unit := do
   let infoTrees : Thunk (PersistentArray Elab.InfoTree) :=
     .mk fun _ => infoState.substituteLazy.get.trees
   let lineInfos := Fmt.collectSyntaxLineInfos stx
-  let ctx := {
-    env
-    text
-    resolveChoiceNode := fun range => infoTrees.get.findSome? (Fmt.findChoiceResolution? · range)
-    opts
-    lineInfos
-  }
+  let ctx :=
+    { env
+      text
+      resolveChoiceNode := fun range => infoTrees.get.findSome? (Fmt.findChoiceResolution? · range)
+      opts
+      lineInfos }
   -- An aborting error hides all missing formatters of the command, so it is reported as well.
   let r ←
     match FmtM.run ctx (Fmt.fmt stx) with

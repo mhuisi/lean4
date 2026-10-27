@@ -143,11 +143,10 @@ def mkDecl (userName : Name) (type value : Expr) (nondep : Bool) : M Expr := do
     return (← get).decls[idx]!.fvar
   let fvar ← mkFVarS (← mkFreshFVarId)
   let idx := (← get).decls.size
-  modify fun s => {
-    s with
-    decls := s.decls.push { fvar, userName, type, value, nondep }
-    valueMap := s.valueMap.insert key idx
-  }
+  modify fun s =>
+    { s with
+      decls := s.decls.push { fvar, userName, type, value, nondep }
+      valueMap := s.valueMap.insert key idx }
   return fvar
 
 /--

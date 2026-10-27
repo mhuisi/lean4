@@ -377,10 +377,9 @@ theorem Invariants.inc
     : Invariants pat s needlePos.inc stackPos.inc where
   isEmpty_eq_false := h₀.isEmpty_eq_false
   partialMatch :=
-    partialMatch_add_one_add_one_iff.2 ⟨
-      h₀.partialMatch,
-      ⟨_, _, by simpa [getUTF8Byte_eq_getUTF8Byte_copy, String.getUTF8Byte] using h⟩
-    ⟩
+    partialMatch_add_one_add_one_iff.2
+      ⟨ h₀.partialMatch,
+        ⟨_, _, by simpa [getUTF8Byte_eq_getUTF8Byte_copy, String.getUTF8Byte] using h⟩ ⟩
   isValidForSlice' := by simp
 
 theorem Invariants.isValidForSlice
@@ -516,11 +515,10 @@ theorem Invariants.isValidSearchFrom_toList
         · simp only [base, Pos.Raw.unoffsetBy_zero, Pos.le_iff, offset_pos, lt_posGT_iff]
           intro pos hp₁ hp₂
           obtain rfl : stackPos = pos.offset := Std.le_antisymm hp₁ hp₂
-          simpa [matchesAt_iff_getElem h.isEmpty_eq_false] using fun h => ⟨
-            0,
-            by simpa,
-            by simpa [getUTF8Byte_eq_getUTF8Byte_copy, String.getUTF8Byte] using! Ne.symm h₂
-          ⟩
+          simpa [matchesAt_iff_getElem h.isEmpty_eq_false] using fun h =>
+            ⟨ 0,
+              by simpa,
+              by simpa [getUTF8Byte_eq_getUTF8Byte_copy, String.getUTF8Byte] using! Ne.symm h₂ ⟩
 
       · cases ht
         simp only [getElem_buildTable] at hit''

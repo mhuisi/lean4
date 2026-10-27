@@ -83,10 +83,8 @@ private partial def introNImp
     let (fvars, mvarId) ← loop n lctx #[] 0 s mvarType
     return (fvars.map Expr.fvarId!, mvarId)
 
-register_builtin_option tactic.hygienic : Bool := {
-  defValue := true
-  descr := "make sure tactics are hygienic"
-}
+register_builtin_option tactic.hygienic : Bool :=
+  { defValue := true, descr := "make sure tactics are hygienic" }
 
 /--
 Like `mkFreshBinderNameForTactic`, but takes the local context and `tactic.hygienic` value explicitly.

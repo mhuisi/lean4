@@ -72,27 +72,25 @@ def toDecl (declName : Name) : CompilerM (Decl .pure) := do
   if let some externAttrData := getExternAttrData? env declName then
     let type ← Meta.MetaM.run' (toLCNFType info.type)
     let params ← paramsFromTypeBinders type
-    return {
-      name := declName
-      params
-      type
-      value := .extern externAttrData
-      levelParams := info.levelParams
-      safe
-      inlineAttr?
-    }
+    return
+      { name := declName
+        params
+        type
+        value := .extern externAttrData
+        levelParams := info.levelParams
+        safe
+        inlineAttr? }
   else if hasInitAttr env declName then
     let type ← Meta.MetaM.run' (toLCNFType info.type)
     let params ← paramsFromTypeBinders type
-    return {
-      name := declName
-      params
-      type
-      value := .extern { entries := [] }
-      levelParams := info.levelParams
-      safe
-      inlineAttr?
-    }
+    return
+      { name := declName
+        params
+        type
+        value := .extern { entries := [] }
+        levelParams := info.levelParams
+        safe
+        inlineAttr? }
   else
     let some value := info.value? (allowOpaque := true)
       | throwError "declaration `{.ofConstName declName}` does not have a value"
@@ -106,26 +104,24 @@ def toDecl (declName : Name) : CompilerM (Decl .pure) := do
     let mut decl ←
       if let .fun decl (.return _) := code then
         eraseFunDecl decl (recursive := false)
-        pure {
-          name := declName
-          params := decl.params
-          type
-          value := .code decl.value
-          levelParams := info.levelParams
-          safe
-          inlineAttr?
-          : Decl .pure
-        }
+        pure
+          { name := declName
+            params := decl.params
+            type
+            value := .code decl.value
+            levelParams := info.levelParams
+            safe
+            inlineAttr?
+            : Decl .pure }
       else
-        pure {
-          name := declName
-          params := #[]
-          type
-          value := .code code
-          levelParams := info.levelParams
-          safe
-          inlineAttr?
-        }
+        pure
+          { name := declName
+            params := #[]
+            type
+            value := .code code
+            levelParams := info.levelParams
+            safe
+            inlineAttr? }
     /- `toLCNF` may eta-reduce simple declarations. -/
     decl ← decl.etaExpand
     if compiler.ignoreBorrowAnnotation.get (← getOptions) then

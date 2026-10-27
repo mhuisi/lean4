@@ -51,13 +51,11 @@ open Lean.Parser in
 private def mkVersoParseMessage (ictx : InputContext) (pos : String.Pos.Raw) (e : Parser.Error)
     : Message :=
   let (pos, endPos?, e) := Doc.Parser.locateError ictx pos e
-  {
-    fileName := ictx.fileName
+  { fileName := ictx.fileName
     pos := ictx.fileMap.toPosition pos
     endPos := endPos?.map ictx.fileMap.toPosition
     keepFullRange := true
-    data := toString e
-  }
+    data := toString e }
 
 open Lean.Doc in
 /--
@@ -100,15 +98,13 @@ The comment's body must have been parsed as Verso markup, which `isVersoDocComme
 -/
 def VersoDocstringView.of (docComment : TSyntax [``docComment, ``moduleDoc]) : VersoDocstringView :=
   let body := docComment.raw[1]
-  {
-    opener := docComment.raw[0]
+  { opener := docComment.raw[0]
     markup :=
       if body[0].isOfKind Doc.parseFailureKind then
         .parseFailure body[0][0]
       else
         .document ⟨body[0]⟩
-    closer := body[1]
-  }
+    closer := body[1] }
 
 /--
 The report for a documentation comment that cannot be parsed because the part `what` names has no
@@ -168,12 +164,11 @@ def parseVersoDocStringAt (openPos startPos endPos : String.Pos.Raw)
   let ictx : InputContext :=
     .mk text.source (← getFileName) (fileMap := text) (endPos := endPos)
       (endPos_valid := endPos_valid)
-  let pmctx : ParserModuleContext := {
-    env
-    options := ← getOptions
-    currNamespace := (← getCurrNamespace)
-    openDecls := (← getOpenDecls)
-  }
+  let pmctx : ParserModuleContext :=
+    { env
+      options := ← getOptions
+      currNamespace := (← getCurrNamespace)
+      openDecls := (← getOpenDecls) }
   let blockCtxt := .forDocString text openPos startPos endPos
   let s := mkParserState text.source |>.setPos startPos
   -- TODO parse one block at a time for error recovery purposes
@@ -270,12 +265,11 @@ def versoDocStringOfText (declName : Name) (binders : Syntax) (docComment : Stri
   let env ← getEnv
   let ictx : InputContext := .mk docComment (← getFileName)
   let text := ictx.fileMap
-  let pmctx : ParserModuleContext := {
-    env
-    options := ← getOptions
-    currNamespace := (← getCurrNamespace)
-    openDecls := (← getOpenDecls)
-  }
+  let pmctx : ParserModuleContext :=
+    { env
+      options := ← getOptions
+      currNamespace := (← getCurrNamespace)
+      openDecls := (← getOpenDecls) }
   let s := mkParserState docComment
   -- TODO parse one block at a time for error recovery purposes
   let s := Doc.Parser.documentFn.run ictx pmctx (getTokenTable env) s

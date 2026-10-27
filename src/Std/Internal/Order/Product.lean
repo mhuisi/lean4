@@ -420,11 +420,10 @@ theorem Prod.fst_himp (a b : α × β) : (a ⇨ b).fst = a.fst ⇨ b.fst := by
   · rintro ⟨y, h⟩
     exact Prod.fst_meet a (x, y) ▸ h.1
   · intro h
-    exact ⟨
-      ⊥,
-      (Prod.fst_meet a (x, ⊥)).symm ▸ h,
-      (Prod.snd_meet a (x, ⊥)).symm ▸ rel_trans (meet_le_right _ _) (bot_le _)
-    ⟩
+    exact
+      ⟨ ⊥,
+        (Prod.fst_meet a (x, ⊥)).symm ▸ h,
+        (Prod.snd_meet a (x, ⊥)).symm ▸ rel_trans (meet_le_right _ _) (bot_le _) ⟩
 
 theorem Prod.snd_himp (a b : α × β) : (a ⇨ b).snd = a.snd ⇨ b.snd := by
   unfold himp PreservesSup.upperAdjoint
@@ -436,11 +435,10 @@ theorem Prod.snd_himp (a b : α × β) : (a ⇨ b).snd = a.snd ⇨ b.snd := by
   · rintro ⟨x, h⟩
     exact Prod.snd_meet a (x, y) ▸ h.2
   · intro h
-    exact ⟨
-      ⊥,
-      (Prod.fst_meet a (⊥, y)).symm ▸ rel_trans (meet_le_right _ _) (bot_le _),
-      (Prod.snd_meet a (⊥, y)).symm ▸ h
-    ⟩
+    exact
+      ⟨ ⊥,
+        (Prod.fst_meet a (⊥, y)).symm ▸ rel_trans (meet_le_right _ _) (bot_le _),
+        (Prod.snd_meet a (⊥, y)).symm ▸ h ⟩
 
 end Prod
 

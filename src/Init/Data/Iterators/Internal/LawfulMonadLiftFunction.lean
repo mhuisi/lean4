@@ -82,10 +82,8 @@ instance [LawfulMonadLiftFunction lift]
     : letI : MonadLift m n := ⟨lift (α := _)⟩
       LawfulMonadLift m n :=
   letI : MonadLift m n := ⟨lift (α := _)⟩
-  {
-    monadLift_pure := LawfulMonadLiftFunction.lift_pure
-    monadLift_bind := LawfulMonadLiftFunction.lift_bind
-  }
+  { monadLift_pure := LawfulMonadLiftFunction.lift_pure
+    monadLift_bind := LawfulMonadLiftFunction.lift_bind }
 
 section LiftBind
 

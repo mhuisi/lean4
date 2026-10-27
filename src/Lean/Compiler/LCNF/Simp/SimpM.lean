@@ -117,11 +117,10 @@ def withInlining (value : LetValue .pure) (recursive : Bool) (x : SimpM α) : Si
   if let .const declName _ _ := value then
     let numOccs ← check declName
     withReader
-      (fun ctx => {
-        ctx with
-        inlineStack := declName :: ctx.inlineStack
-        inlineStackOccs := ctx.inlineStackOccs.insert declName numOccs
-      })
+      (fun ctx =>
+        { ctx with
+          inlineStack := declName :: ctx.inlineStack
+          inlineStackOccs := ctx.inlineStackOccs.insert declName numOccs })
       x
   else
     x

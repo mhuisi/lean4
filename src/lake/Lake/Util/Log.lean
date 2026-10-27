@@ -157,10 +157,8 @@ public def LogEntry.ofSerialMessage (msg : SerialMessage) : LogEntry :=
     else
       s!"{msg.caption.trimAscii}:\
         \n{msg.data.trimAscii}"
-  {
-    level := .ofMessageSeverity msg.severity
-    message := mkErrorStringWithPos msg.fileName msg.pos str none
-  }
+  { level := .ofMessageSeverity msg.severity
+    message := mkErrorStringWithPos msg.fileName msg.pos str none }
 
 public def LogEntry.ofMessage (msg : Message) : BaseIO LogEntry := do
   -- Remark: The inline here avoids a new message allocation when `msg` is shared

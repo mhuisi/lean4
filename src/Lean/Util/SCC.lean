@@ -45,36 +45,33 @@ private def getDataOf (a : α) : M α Data := do
   | none => pure {}
 
 private def push (a : α) : M α Unit :=
-  modify fun s => {
-    s with
-    stack := a :: s.stack
-    nextIndex := s.nextIndex + 1
-    data := s.data.insert a { index? := s.nextIndex, lowlink? := s.nextIndex, onStack := true }
-  }
+  modify fun s =>
+    { s with
+      stack := a :: s.stack
+      nextIndex := s.nextIndex + 1
+      data := s.data.insert a { index? := s.nextIndex, lowlink? := s.nextIndex, onStack := true } }
 
 private def modifyDataOf (a : α) (f : Data → Data) : M α Unit :=
-  modify fun s => {
-    s with
-    data :=
-      match s.data[a]? with
-      | none => s.data
-      | some d => s.data.insert a (f d)
-  }
+  modify fun s =>
+    { s with
+      data :=
+        match s.data[a]? with
+        | none => s.data
+        | some d => s.data.insert a (f d) }
 
 private def resetOnStack (a : α) : M α Unit := modifyDataOf a fun d => { d with onStack := false }
 
 private def updateLowLinkOf (a : α) (v : Option Nat) : M α Unit :=
-  modifyDataOf a fun d => {
-    d with
-    lowlink? :=
-      match d.lowlink?, v with
-      | i, none =>
-        i
-      | none, i =>
-        i
-      | some i, some j =>
-        if i < j then i else j
-  }
+  modifyDataOf a fun d =>
+    { d with
+      lowlink? :=
+        match d.lowlink?, v with
+        | i, none =>
+          i
+        | none, i =>
+          i
+        | some i, some j =>
+          if i < j then i else j }
 
 private def addSCC (a : α) : M α Unit := do
   let rec add

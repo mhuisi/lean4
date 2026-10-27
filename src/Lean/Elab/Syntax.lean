@@ -206,10 +206,9 @@ where
             | `(stx| $sym:str) => pure sym
             | _ => return arg'
           let sym := sym.getString
-          return (
-            ← `(ParserDescr.nodeWithAntiquot $(quote sym) $(quote (Name.str `token sym)) $(arg'.1)),
-            1
-          )
+          return
+            ( ← `(ParserDescr.nodeWithAntiquot $(quote sym) $(quote (Name.str `token sym)) $(arg'.1)),
+              1 )
       else
         pure args'
     let (args', stackSz) :=
@@ -268,10 +267,9 @@ where
       else
         ensureUnaryOutput <$> withNestedParser do process stx[4][1]
     let allowTrailingSep := !stx[5].isNone
-    return (
-      ← `((with_annotate_term $(stx[0]) @ParserDescr.sepBy) $p $sep $psep $(quote allowTrailingSep)),
-      1
-    )
+    return
+      ( ← `((with_annotate_term $(stx[0]) @ParserDescr.sepBy) $p $sep $psep $(quote allowTrailingSep)),
+        1 )
 
   processSepBy1 (stx : Syntax) := do
     let p ← ensureUnaryOutput <$> withNestedParser do process stx[1]
@@ -282,10 +280,9 @@ where
       else
         ensureUnaryOutput <$> withNestedParser do process stx[4][1]
     let allowTrailingSep := !stx[5].isNone
-    return (
-      ← `((with_annotate_term $(stx[0]) @ParserDescr.sepBy1) $p $sep $psep $(quote allowTrailingSep)),
-      1
-    )
+    return
+      ( ← `((with_annotate_term $(stx[0]) @ParserDescr.sepBy1) $p $sep $psep $(quote allowTrailingSep)),
+        1 )
 
   isValidAtom (s : String) : Bool :=
     -- Pretty-printing instructions shouldn't affect validity
@@ -324,10 +321,9 @@ where
     let atom ← validAtom stx[1]
     let asciiAtom ← validAtom stx[3]
     let preserveForPP := !stx[4].isNone
-    return (
-      ← `((with_annotate_term $(stx[0]) @ParserDescr.unicodeSymbol) $(quote atom) $(quote asciiAtom) $(quote preserveForPP)),
-      1
-    )
+    return
+      ( ← `((with_annotate_term $(stx[0]) @ParserDescr.unicodeSymbol) $(quote atom) $(quote asciiAtom) $(quote preserveForPP)),
+        1 )
 
 end Term
 

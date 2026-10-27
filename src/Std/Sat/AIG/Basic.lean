@@ -340,13 +340,12 @@ structure AIG (α : Type) [DecidableEq α] [Hashable α] where
 namespace AIG
 
 /-- An `AIG` with an empty AIG and cache. -/
-def empty : AIG α := {
-  decls := #[.false]
-  cache := Cache.empty
-  hdag := IsDAG.empty
-  hzero := by simp
-  hconst := by simp
-}
+def empty : AIG α :=
+  { decls := #[.false]
+    cache := Cache.empty
+    hdag := IsDAG.empty
+    hzero := by simp
+    hconst := by simp }
 
 /-- Every atom occurs at most once in an `AIG`. -/
 theorem atom_unique
@@ -374,17 +373,13 @@ structure Ref (aig : AIG α) where
 /-- A `Ref` into `aig1` is also valid for `aig2` if `aig1` is smaller than `aig2`. -/
 @[inline, implicit_reducible]
 def Ref.cast {aig1 aig2 : AIG α} (ref : Ref aig1) (h : aig1.decls.size ≤ aig2.decls.size)
-    : Ref aig2 := {
-  ref with
-  hgate := by have := ref.hgate; omega
-}
+    : Ref aig2 :=
+  { ref with hgate := by have := ref.hgate; omega }
 
 /-- Flip the polarity of `Ref` if `inv` is set. -/
 @[inline]
-def Ref.flip {aig : AIG α} (ref : Ref aig) (inv : Bool) : Ref aig := {
-  ref with
-  invert := inv ^^ ref.invert
-}
+def Ref.flip {aig : AIG α} (ref : Ref aig) (inv : Bool) : Ref aig :=
+  { ref with invert := inv ^^ ref.invert }
 
 /-- Flip the polarity of `Ref`. -/
 @[inline] def Ref.not {aig : AIG α} (ref : Ref aig) : Ref aig := ref.flip true
@@ -398,22 +393,16 @@ structure BinaryInput (aig : AIG α) where
 @[inline]
 def BinaryInput.cast
     {aig1 aig2 : AIG α} (input : BinaryInput aig1) (h : aig1.decls.size ≤ aig2.decls.size)
-    : BinaryInput aig2 := {
-  input with
-  lhs := input.lhs.cast h
-  rhs := input.rhs.cast h
-}
+    : BinaryInput aig2 :=
+  { input with lhs := input.lhs.cast h, rhs := input.rhs.cast h }
 
 /--
 Flip the current inverter settings of the `BinaryInput` if `linv` or `rinv` is set respectively.
 -/
 @[inline]
 def BinaryInput.invert {aig : AIG α} (input : BinaryInput aig) (linv rinv : Bool)
-    : BinaryInput aig := {
-  input with
-  lhs := input.lhs.flip linv
-  rhs := input.rhs.flip rinv
-}
+    : BinaryInput aig :=
+  { input with lhs := input.lhs.flip linv, rhs := input.rhs.flip rinv }
 
 /--
 A collection of 3 of `Ref`s, useful for `LawfulOperator`s that act on three `Ref`s at a time,
@@ -428,12 +417,8 @@ structure TernaryInput (aig : AIG α) where
 @[inline]
 def TernaryInput.cast
     {aig1 aig2 : AIG α} (input : TernaryInput aig1) (h : aig1.decls.size ≤ aig2.decls.size)
-    : TernaryInput aig2 := {
-  input with
-  discr := input.discr.cast h
-  lhs := input.lhs.cast h
-  rhs := input.rhs.cast h
-}
+    : TernaryInput aig2 :=
+  { input with discr := input.discr.cast h, lhs := input.lhs.cast h, rhs := input.rhs.cast h }
 
 /--
 An entrypoint into an `AIG`. This can be used to evaluate a circuit, starting at a certain node,

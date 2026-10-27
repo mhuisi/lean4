@@ -58,9 +58,8 @@ If the inner function returns `false`, deeper subexpressions will not be visited
 -/
 partial def forEachExpr' (input : Expr) (fn : Expr → m Bool) : m Unit := do
   let _ : STWorld IO.RealWorld m := ⟨⟩
-  let _ : MonadLiftT (ST IO.RealWorld) m := {
-    monadLift := fun x => liftM (m := MetaM) (liftM (m := ST IO.RealWorld) x)
-  }
+  let _ : MonadLiftT (ST IO.RealWorld) m :=
+    { monadLift := fun x => liftM (m := MetaM) (liftM (m := ST IO.RealWorld) x) }
   let rec visit (e : Expr) : MonadCacheT Expr Unit m Unit :=
     checkCache e fun _ => do
       if (← liftM (fn e)) then

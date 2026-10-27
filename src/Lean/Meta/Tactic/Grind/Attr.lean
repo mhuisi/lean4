@@ -64,15 +64,14 @@ private def NormSymEntry.declName? : NormSymEntry → Option Name
     some declName
 
 builtin_initialize normSymExt : SimpleScopedEnvExtension NormSymEntry NormSymTheorems ←
-  registerSimpleScopedEnvExtension {
-    initial := {}
-    addEntry := NormSymTheorems.addEntry
-    exportEntry? := fun _ e =>
-      if let some declName := e.declName? then
-        if isPrivateName declName then ⟨none, none, some e⟩ else .uniform (some e)
-      else
-        .uniform (some e)
-  }
+  registerSimpleScopedEnvExtension
+    { initial := {}
+      addEntry := NormSymTheorems.addEntry
+      exportEntry? := fun _ e =>
+        if let some declName := e.declName? then
+          if isPrivateName declName then ⟨none, none, some e⟩ else .uniform (some e)
+        else
+          .uniform (some e) }
 
 /-- The `Sym.simp` theorem of a `[grind norm]` theorem, or `none` if it cannot be converted. -/
 private def mkNormSymTheorem? (thm : SimpTheorem) : MetaM (Option Sym.Simp.Theorem) := do
@@ -286,136 +285,136 @@ private def mkGrindAttr
     (attrName : Name) (minIndexable : Bool) (showInfo : Bool) (ext : Extension)
     (ref : Name := by exact decl_name%)
     : IO Unit :=
-  registerBuiltinAttribute {
-    ref := ref
-    name :=
-      match minIndexable, showInfo with
-      | false, false =>
-        attrName
-      | false, true =>
-        attrName.appendAfter "?"
-      | true, false =>
-        attrName.appendAfter "!"
-      | true, true =>
-        attrName.appendAfter "!?"
-    descr :=
-      let header :=
+  registerBuiltinAttribute
+    { ref := ref
+      name :=
         match minIndexable, showInfo with
         | false, false =>
-          s!"The `[{attrName}]` attribute is used to annotate declarations."
+          attrName
         | false, true =>
-          s!"The `[{attrName}?]` attribute is identical to the `[{attrName}]` attribute, but \
-            displays inferred pattern information."
+          attrName.appendAfter "?"
         | true, false =>
-          s!"The `[{attrName}!]` attribute is used to annotate declarations, but selecting minimal \
-            indexable subterms."
+          attrName.appendAfter "!"
         | true, true =>
-          s!"The `[{attrName}!?]` attribute is identical to the `[{attrName}!]` attribute, but \
-            displays inferred pattern information."
-      header ++ s!"\
-        \
-        When applied to an equational theorem, `[{attrName} =]`, `[{attrName} =_]`, or \
-        `[{attrName} _=_]`\
-        will mark the theorem for use in heuristic instantiations by the `{attrName}` tactic,\
-        \n      using respectively the left-hand side, the right-hand side, or both sides of the \
-        theorem.\
-        When applied to a function, `[{attrName} =]` automatically annotates the equational \
-        theorems associated with that function.\
-        When applied to a theorem `[{attrName} ←]` will instantiate the theorem whenever it \
-        encounters the conclusion of the theorem\
-        \n      (that is, it will use the theorem for backwards reasoning).\
-        When applied to a theorem `[{attrName} →]` will instantiate the theorem whenever it \
-        encounters sufficiently many of the propositional hypotheses\
-        \n      (that is, it will use the theorem for forwards reasoning).\
-        \
-        The attribute `[{attrName}]` by itself will effectively try `[{attrName} ←]` (if the \
-        conclusion is sufficient for instantiation) and then `[{attrName} →]`.\
-        \
-        The `grind` tactic utilizes annotated theorems to add instances of matching patterns into \
-        the local context during proof search.\
-        For example, if a theorem `@[{attrName} =] theorem foo_idempotent : foo (foo x) = foo x` \
-        is annotated,\
-        `grind` will add an instance of this theorem to the local context whenever it encounters \
-        the pattern `foo (foo x)`."
-    applicationTime := .afterCompilation
-    add := fun declName stx attrKind =>
-      MetaM.run' do
-        recordExtraModUseFromDecl (isMeta := false) declName
-        -- `[grind] def` should be allowed without `[expose]` so make body accessible unconditionally.
-        -- When the body is not available (i.e. the def equations are private), the attribute will not
-        -- be exported; see `ematchTheoremsExt.exportEntry?`.
-        withoutExporting do
-          match (← getAttrKindFromOpt stx) with
-          | .symbol prio =>
-            unless attrName == `grind do
-              throwError "symbol priorities must be set using the default `[grind]` attribute"
-            addSymbolPriorityAttr declName attrKind prio
-          | .norm post inv =>
-            unless attrName == `grind do
-              throwError "normalizer must be set using the default `[grind]` attribute"
-            addNormTheorem declName post inv attrKind
-          | .unfold =>
-            unless attrName == `grind do
-              throwError "declaration to unfold must be set using the default `[grind]` attribute"
-            unless (← addNormDeclToUnfold declName attrKind) do
-              throwError "cannot mark declaration to be unfolded by `grind`"
-          | .homo fallback =>
-            unless attrName == `grind do
-              throwError "homomorphism rules must be set using the default `[grind]` attribute"
-            addHomoAttr declName attrKind fallback
-          | .homoPred =>
-            unless attrName == `grind do
-              throwError "homomorphism predicates must be set using the default `[grind]` attribute"
-            addHomoPredAttr declName attrKind
-          | .cases eager =>
-            ext.addCasesAttr declName eager attrKind
-          | .funCC =>
-            ext.addFunCCAttr declName attrKind
-          | .ext =>
-            ext.addExtAttr declName attrKind
-          | .ematch .user =>
-            throwInvalidUsrModifier
-          | .ematch k =>
-            ext.addEMatchAttr declName attrKind k (← getGlobalSymbolPriorities)
-              (minIndexable := minIndexable) (showInfo := showInfo)
-          | .intro =>
-            if let some info ← isCasesAttrPredicateCandidate? declName false then
-              for ctor in info.ctors do
-                ext.addEMatchAttr ctor attrKind (.default false) (← getGlobalSymbolPriorities)
-                  (minIndexable := minIndexable) (showInfo := showInfo)
-            else
-              throwError "invalid `[{attrName} intro]`, `{.ofConstName declName}` is not an \
-                inductive predicate"
-          | .infer =>
-            if let some declName ← isCasesAttrCandidate? declName false then
-              ext.addCasesAttr declName false attrKind
-              if let some info ← isInductivePredicate? declName then
-                -- If it is an inductive predicate,
-                -- we also add the constructors (intro rules) as E-matching rules
+          attrName.appendAfter "!?"
+      descr :=
+        let header :=
+          match minIndexable, showInfo with
+          | false, false =>
+            s!"The `[{attrName}]` attribute is used to annotate declarations."
+          | false, true =>
+            s!"The `[{attrName}?]` attribute is identical to the `[{attrName}]` attribute, but \
+              displays inferred pattern information."
+          | true, false =>
+            s!"The `[{attrName}!]` attribute is used to annotate declarations, but selecting \
+              minimal indexable subterms."
+          | true, true =>
+            s!"The `[{attrName}!?]` attribute is identical to the `[{attrName}!]` attribute, but \
+              displays inferred pattern information."
+        header ++ s!"\
+          \
+          When applied to an equational theorem, `[{attrName} =]`, `[{attrName} =_]`, or \
+          `[{attrName} _=_]`\
+          will mark the theorem for use in heuristic instantiations by the `{attrName}` tactic,\
+          \n      using respectively the left-hand side, the right-hand side, or both sides of the \
+          theorem.\
+          When applied to a function, `[{attrName} =]` automatically annotates the equational \
+          theorems associated with that function.\
+          When applied to a theorem `[{attrName} ←]` will instantiate the theorem whenever it \
+          encounters the conclusion of the theorem\
+          \n      (that is, it will use the theorem for backwards reasoning).\
+          When applied to a theorem `[{attrName} →]` will instantiate the theorem whenever it \
+          encounters sufficiently many of the propositional hypotheses\
+          \n      (that is, it will use the theorem for forwards reasoning).\
+          \
+          The attribute `[{attrName}]` by itself will effectively try `[{attrName} ←]` (if the \
+          conclusion is sufficient for instantiation) and then `[{attrName} →]`.\
+          \
+          The `grind` tactic utilizes annotated theorems to add instances of matching patterns \
+          into the local context during proof search.\
+          For example, if a theorem `@[{attrName} =] theorem foo_idempotent : foo (foo x) = foo x` \
+          is annotated,\
+          `grind` will add an instance of this theorem to the local context whenever it encounters \
+          the pattern `foo (foo x)`."
+      applicationTime := .afterCompilation
+      add := fun declName stx attrKind =>
+        MetaM.run' do
+          recordExtraModUseFromDecl (isMeta := false) declName
+          -- `[grind] def` should be allowed without `[expose]` so make body accessible unconditionally.
+          -- When the body is not available (i.e. the def equations are private), the attribute will not
+          -- be exported; see `ematchTheoremsExt.exportEntry?`.
+          withoutExporting do
+            match (← getAttrKindFromOpt stx) with
+            | .symbol prio =>
+              unless attrName == `grind do
+                throwError "symbol priorities must be set using the default `[grind]` attribute"
+              addSymbolPriorityAttr declName attrKind prio
+            | .norm post inv =>
+              unless attrName == `grind do
+                throwError "normalizer must be set using the default `[grind]` attribute"
+              addNormTheorem declName post inv attrKind
+            | .unfold =>
+              unless attrName == `grind do
+                throwError "declaration to unfold must be set using the default `[grind]` attribute"
+              unless (← addNormDeclToUnfold declName attrKind) do
+                throwError "cannot mark declaration to be unfolded by `grind`"
+            | .homo fallback =>
+              unless attrName == `grind do
+                throwError "homomorphism rules must be set using the default `[grind]` attribute"
+              addHomoAttr declName attrKind fallback
+            | .homoPred =>
+              unless attrName == `grind do
+                throwError
+                  "homomorphism predicates must be set using the default `[grind]` attribute"
+              addHomoPredAttr declName attrKind
+            | .cases eager =>
+              ext.addCasesAttr declName eager attrKind
+            | .funCC =>
+              ext.addFunCCAttr declName attrKind
+            | .ext =>
+              ext.addExtAttr declName attrKind
+            | .ematch .user =>
+              throwInvalidUsrModifier
+            | .ematch k =>
+              ext.addEMatchAttr declName attrKind k (← getGlobalSymbolPriorities)
+                (minIndexable := minIndexable) (showInfo := showInfo)
+            | .intro =>
+              if let some info ← isCasesAttrPredicateCandidate? declName false then
                 for ctor in info.ctors do
                   ext.addEMatchAttr ctor attrKind (.default false) (← getGlobalSymbolPriorities)
                     (minIndexable := minIndexable) (showInfo := showInfo)
-            else
-              ext.addEMatchAttrAndSuggest stx declName attrKind (← getGlobalSymbolPriorities)
-                (minIndexable := minIndexable) (showInfo := showInfo)
-          | .inj =>
-            ext.addInjectiveAttr declName attrKind
-    erase := fun declName =>
-      MetaM.run' do
-        if showInfo then
-          throwError "`[{attrName}?]` is a helper attribute for displaying inferred patterns, if \
-            you want to remove the attribute, consider using `[{attrName}]` instead"
-        if (← isCasesAttrCandidate declName false) then
-          ext.eraseCasesAttr declName
-        else if (← ext.isExtTheorem declName) then
-          ext.eraseExtAttr declName
-        else if (← ext.isInjectiveTheorem declName) then
-          ext.eraseInjectiveAttr declName
-        else if (← ext.hasFunCCAttr declName) then
-          ext.eraseFunCCAttr declName
-        else
-          ext.eraseEMatchAttr declName
-  }
+              else
+                throwError "invalid `[{attrName} intro]`, `{.ofConstName declName}` is not an \
+                  inductive predicate"
+            | .infer =>
+              if let some declName ← isCasesAttrCandidate? declName false then
+                ext.addCasesAttr declName false attrKind
+                if let some info ← isInductivePredicate? declName then
+                  -- If it is an inductive predicate,
+                  -- we also add the constructors (intro rules) as E-matching rules
+                  for ctor in info.ctors do
+                    ext.addEMatchAttr ctor attrKind (.default false) (← getGlobalSymbolPriorities)
+                      (minIndexable := minIndexable) (showInfo := showInfo)
+              else
+                ext.addEMatchAttrAndSuggest stx declName attrKind (← getGlobalSymbolPriorities)
+                  (minIndexable := minIndexable) (showInfo := showInfo)
+            | .inj =>
+              ext.addInjectiveAttr declName attrKind
+      erase := fun declName =>
+        MetaM.run' do
+          if showInfo then
+            throwError "`[{attrName}?]` is a helper attribute for displaying inferred patterns, if \
+              you want to remove the attribute, consider using `[{attrName}]` instead"
+          if (← isCasesAttrCandidate declName false) then
+            ext.eraseCasesAttr declName
+          else if (← ext.isExtTheorem declName) then
+            ext.eraseExtAttr declName
+          else if (← ext.isInjectiveTheorem declName) then
+            ext.eraseInjectiveAttr declName
+          else if (← ext.hasFunCCAttr declName) then
+            ext.eraseFunCCAttr declName
+          else
+            ext.eraseEMatchAttr declName }
 
 /-
 private def registerDefaultGrindAttr (minIndexable : Bool) (showInfo : Bool) : IO Unit :=

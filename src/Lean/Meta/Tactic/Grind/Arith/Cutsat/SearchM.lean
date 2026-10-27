@@ -116,21 +116,17 @@ def saveReorderRequest : SearchM Bool := do
   let some e := (← get).reorderRequest?
     | return false
   let key : ExprPtr := { expr := e }
-  modify' fun s => {
-    s with
-    penalties := s.penalties.insert key ((s.penalties.find? key).getD 0 + 1)
-    numReorderRequests := s.numReorderRequests + 1
-  }
+  modify' fun s =>
+    { s with
+      penalties := s.penalties.insert key ((s.penalties.find? key).getD 0 + 1)
+      numReorderRequests := s.numReorderRequests + 1 }
   return true
 
 def mkCase (kind : CaseKind) : SearchM FVarId := do
   let fvarId ← mkFreshFVarId
   let saved ← get'
-  modify fun s => {
-    s with
-    cases := s.cases.push { saved, fvarId, kind }
-    decVars := s.decVars.insert fvarId
-  }
+  modify fun s =>
+    { s with cases := s.cases.push { saved, fvarId, kind }, decVars := s.decVars.insert fvarId }
   modify' fun s => { s with caseSplits := true }
   return fvarId
 

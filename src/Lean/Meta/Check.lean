@@ -177,10 +177,9 @@ where
           -- Then bodies must not be defeq.
           withLocalDeclD na ta fun arg => do
             let (ba', bb') ← visit (ba.instantiate1 arg) (bb.instantiate1 arg)
-            return (
-              Expr.forallE na ta (ba'.abstract #[arg]) bia,
-              Expr.forallE nb tb (bb'.abstract #[arg]) bib
-            )
+            return
+              ( Expr.forallE na ta (ba'.abstract #[arg]) bia,
+                Expr.forallE nb tb (bb'.abstract #[arg]) bib )
       | .lam na ta ba bia, .lam nb tb bb bib =>
         if !(← isDefEq ta tb) then
           let (ta, tb) ← visit ta tb

@@ -136,12 +136,11 @@ def Needs.sub (needs : Needs) (k : NeedsKind) (s : Bitset) : Needs :=
   needs.modify k (fun s' => s' ^^^ (s' ∩ s))
 
 instance : Union Needs where
-  union a b := {
-    pub := a.pub ∪ b.pub
-    priv := a.priv ∪ b.priv
-    metaPub := a.metaPub ∪ b.metaPub
-    metaPriv := a.metaPriv ∪ b.metaPriv
-  }
+  union a b :=
+    { pub := a.pub ∪ b.pub
+      priv := a.priv ∪ b.priv
+      metaPub := a.metaPub ∪ b.metaPub
+      metaPriv := a.metaPriv ∪ b.metaPriv }
 
 /--
 The list of edits that will be applied in `--fix`. `edits[i] = (removed, added)` where:
@@ -445,12 +444,11 @@ def decodeHeader
     panic! s!"unexpected header syntax {stx}"
 
 def decodeImport : TSyntax ``Parser.Module.import → Import
-  | `(Parser.Module.import| $[public%$pubTk?]? $[meta%$metaTk?]? import $[all%$allTk?]? $id) => {
-    module := id.getId
-    isExported := pubTk?.isSome
-    isMeta := metaTk?.isSome
-    importAll := allTk?.isSome
-  }
+  | `(Parser.Module.import| $[public%$pubTk?]? $[meta%$metaTk?]? import $[all%$allTk?]? $id) =>
+    { module := id.getId
+      isExported := pubTk?.isSome
+      isMeta := metaTk?.isSome
+      importAll := allTk?.isSome }
   | stx =>
     panic! s!"unexpected syntax {stx}"
 
@@ -471,10 +469,8 @@ def visitModule
     : StateT State IO Unit := do
   let modName := (← get).modNames[i]!
   if isExtraRevModUse (← get).env i then
-    modify fun s => {
-      s with
-      preserve := s.preserve.union (if args.addPublic then .pub else .priv) {i}
-    }
+    modify fun s =>
+      { s with preserve := s.preserve.union (if args.addPublic then .pub else .priv) {i} }
     if args.trace then
       IO.eprintln s!"Preserving `{modName}` because of recorded extra rev use"
 
@@ -485,10 +481,8 @@ def visitModule
 
   let (module?, prelude?, imports) := decodeHeader headerStx
   if module?.any (·.raw.getTrailing?.any (·.toString.contains "shake: keep-downstream")) then
-    modify fun s => {
-      s with
-      preserve := s.preserve.union (if args.addPublic then .pub else .priv) {i}
-    }
+    modify fun s =>
+      { s with preserve := s.preserve.union (if args.addPublic then .pub else .priv) {i} }
 
   let s ← get
 
@@ -670,10 +664,8 @@ def visitModule
       toRemove := toRemove.push imp
 
   -- mark and report the removals
-  modify fun s => {
-    s with
-    edits := toRemove.foldl (init := s.edits) fun edits imp => edits.remove modName imp
-  }
+  modify fun s =>
+    { s with edits := toRemove.foldl (init := s.edits) fun edits imp => edits.remove modName imp }
 
   if !toAdd.isEmpty || !toRemove.isEmpty || args.explain then
     if let some path ← srcSearchPath.findModuleWithExt "lean" s.modNames[i]! then
@@ -702,10 +694,8 @@ def visitModule
       pure ()
 
   -- mark and report the additions
-  modify fun s => {
-    s with
-    edits := toAdd.foldl (init := s.edits) fun edits imp => edits.add s.modNames[i]! imp
-  }
+  modify fun s =>
+    { s with edits := toAdd.foldl (init := s.edits) fun edits imp => edits.add s.modNames[i]! imp }
 
   if !toAdd.isEmpty then
     println! "  add {toAdd}"

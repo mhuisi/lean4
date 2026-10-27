@@ -19,12 +19,11 @@ public section
 
 namespace Int
 
-def add_of_le {a b : Int} (h : a ≤ b) : {c : Nat // b = a + c} := ⟨
-  (b - a).toNat,
-  by
-    rw [Int.toNat_of_nonneg (Int.sub_nonneg_of_le h), ← Int.add_sub_assoc, Int.add_comm,
-      Int.add_sub_cancel]
-⟩
+def add_of_le {a b : Int} (h : a ≤ b) : {c : Nat // b = a + c} :=
+  ⟨ (b - a).toNat,
+    by
+      rw [Int.toNat_of_nonneg (Int.sub_nonneg_of_le h), ← Int.add_sub_assoc, Int.add_comm,
+        Int.add_sub_cancel] ⟩
 
 theorem dvd_of_mul_dvd {a b c : Int} (w : a * b ∣ a * c) (h : 0 < a) : b ∣ c := by
   obtain ⟨z, w⟩ := w
@@ -189,21 +188,19 @@ theorem cooper_resolution_dvd_left
           ∧ a * d ∣ c * k + c * p + a * s) := by
   constructor
   · rintro ⟨x, h₁, h₂, h₃⟩
-    exact ⟨
-      resolve_left a c d p x,
-      le_zero_resolve_left a c d p x h₁,
-      resolve_left_lt_lcm a c d p x a_pos d_pos h₁,
-      resolve_left_ineq a c d p x a_pos b_pos h₁ h₂,
-      resolve_left_dvd₁ a c d p x h₁,
-      resolve_left_dvd₂ a c d p x h₁ h₃
-    ⟩
+    exact
+      ⟨ resolve_left a c d p x,
+        le_zero_resolve_left a c d p x h₁,
+        resolve_left_lt_lcm a c d p x a_pos d_pos h₁,
+        resolve_left_ineq a c d p x a_pos b_pos h₁ h₂,
+        resolve_left_dvd₁ a c d p x h₁,
+        resolve_left_dvd₂ a c d p x h₁ h₃ ⟩
   · rintro ⟨k, h₁, h₂, h₃, h₄, h₅⟩
-    exact ⟨
-      resolve_left_inv a p k,
-      le_mul_resolve_left_inv a p k h₁ h₄,
-      mul_resolve_left_inv_le a p k a_pos h₃ h₄,
-      resolve_left_inv_dvd a c d p k a_pos h₄ h₅
-    ⟩
+    exact
+      ⟨ resolve_left_inv a p k,
+        le_mul_resolve_left_inv a p k h₁ h₄,
+        mul_resolve_left_inv_le a p k a_pos h₃ h₄,
+        resolve_left_inv_dvd a c d p k a_pos h₄ h₅ ⟩
 
 /-- Right Cooper resolution of an upper and lower bound with divisibility constraint. -/
 theorem cooper_resolution_dvd_right
@@ -223,12 +220,11 @@ theorem cooper_resolution_dvd_right
     exact h
   constructor
   · rintro ⟨x, lower, upper, dvd⟩
-    have h : (∃ x, -q ≤ b * x ∧ a * x ≤ -p ∧ d ∣ -c * x + s) := ⟨
-      -x,
-      Int.mul_neg _ _ ▸ Int.neg_le_neg upper,
-      Int.mul_neg _ _ ▸ Int.neg_le_neg lower,
-      by rwa [Int.neg_mul_neg _ _]
-    ⟩
+    have h : (∃ x, -q ≤ b * x ∧ a * x ≤ -p ∧ d ∣ -c * x + s) :=
+      ⟨ -x,
+        Int.mul_neg _ _ ▸ Int.neg_le_neg upper,
+        Int.mul_neg _ _ ▸ Int.neg_le_neg lower,
+        by rwa [Int.neg_mul_neg _ _] ⟩
     replace h := (cooper_resolution_dvd_left b_pos a_pos d_pos).mp h
     exact h
   · intro h

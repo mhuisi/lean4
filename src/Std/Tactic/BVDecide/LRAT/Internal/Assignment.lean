@@ -63,10 +63,8 @@ private theorem get?_eq_bind {a : Assignment}
 @[simp] theorem get?_empty : Assignment.empty.get? atom = none := by simp [get?_eq_bind, empty]
 
 @[inline]
-def insert (a : Assignment) (atom : Nat) (b : Bool) : Assignment := {
-  a with
-  assign := a.assign.insert atom (.ofBool b)
-}
+def insert (a : Assignment) (atom : Nat) (b : Bool) : Assignment :=
+  { a with assign := a.assign.insert atom (.ofBool b) }
 
 @[simp]
 theorem get?_insert_of_eq {a : Assignment} (h : atom = atom')

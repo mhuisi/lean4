@@ -79,18 +79,14 @@ def minView
     ⟨k, v, ⟨r, hr, ✓⟩⟩
   | inner _ k' v' l' r' =>
     let ⟨dk, dv, ⟨dt, hdt, hdt'⟩⟩ := minView k' v' l' r' ✓ ✓ ✓
-    ⟨
-      dk,
+    ⟨ dk,
       dv,
-      ⟨
-        balanceRErase k v dt r ✓ ✓ (by
+      ⟨ balanceRErase k v dt r ✓ ✓ (by
           as_aux_lemma =>
             exact hlr.erase_left (by simp only [hdt', hl.eq, size_inner]; omega)
               (by simp only [hdt', hl.eq, size_inner]; omega)),
         ✓,
-        ✓
-      ⟩
-    ⟩
+        ✓ ⟩ ⟩
 
 /--
 Slower version of `minView` which can be used in the absence of balance information but still
@@ -114,18 +110,14 @@ def maxView
     ⟨k, v, ⟨l, hl, ✓⟩⟩
   | inner _ k' v' l' r' =>
     let ⟨dk, dv, ⟨dt, hdt, hdt'⟩⟩ := maxView k' v' l' r' ✓ ✓ ✓
-    ⟨
-      dk,
+    ⟨ dk,
       dv,
-      ⟨
-        balanceLErase k v l dt ✓ ✓ (by
+      ⟨ balanceLErase k v l dt ✓ ✓ (by
           as_aux_lemma =>
             simp only [hdt', size_inner, hr.eq] at *
             apply hlr.erase_right <;> omega),
         ✓,
-        ✓
-      ⟩
-    ⟩
+        ✓ ⟩ ⟩
 
 /--
 Slower version of `maxView` which can be used in the absence of balance information but still

@@ -103,15 +103,14 @@ If `try?` is true, `try?` will be used as a fallback discharger (via grind inter
 def solveByElim
     (required : List Expr) (exfalso : Bool) (goals : List MVarId) (maxDepth : Nat)
     (grind : Bool := false) (try? : Bool := false) := do
-  let cfg : SolveByElimConfig := {
-    maxDepth
-    exfalso := exfalso
-    symm := true
-    commitIndependentGoals := true
-    transparency := ← getTransparency
-    -- `constructor` has been observed to significantly slow down `exact?` in Mathlib.
-    constructor := false
-  }
+  let cfg : SolveByElimConfig :=
+    { maxDepth
+      exfalso := exfalso
+      symm := true
+      commitIndependentGoals := true
+      transparency := ← getTransparency
+      -- `constructor` has been observed to significantly slow down `exact?` in Mathlib.
+      constructor := false }
   -- Add grind or try? as a fallback discharger (tried after intro/constructor fail)
   let cfg :=
     if try? then

@@ -68,10 +68,9 @@ public instance [Monad m] [LawfulMonad m] [WP m ps] [WPSound m ps]
     obtain ⟨X, hX⟩ :=
       Classical.skolem.mp fun s =>
         (WPSound.ensures_of_wp (m := m) (ps := ps) (hwp s)).exists_refinement
-    refine ⟨⟨
-      fun s => X s >>= fun r => pure (⟨r.val.1, r.property⟩, r.val.2),
-      ⟨fun {β} k => funext fun s => ?_⟩
-    ⟩⟩
+    refine
+      ⟨ ⟨ fun s => X s >>= fun r => pure (⟨r.val.1, r.property⟩, r.val.2),
+          ⟨fun {β} k => funext fun s => ?_⟩ ⟩ ⟩
     show (X s >>= fun r : {p : α × σ // P p.1} => pure (⟨r.val.1, r.property⟩, r.val.2))
         >>= (fun (b : {a // P a} × σ) => (k b.1.val).run b.2)
       = x.run s >>= (fun (a : α × σ) => (k a.1).run a.2)
@@ -93,16 +92,15 @@ public instance [Monad m] [LawfulMonad m] [WP m .pure] [WPSound m .pure]
       simp [PostCond.entails]
       intro r <;> cases r <;> simp
     obtain ⟨X, hX⟩ := (WPSound.ensures_of_wp (m := m) (ps := .pure) hwp_inner).exists_refinement
-    refine ⟨⟨
-      ExceptT.mk
-        (X >>= fun ⟨r, h⟩ =>
-          match r, h with
-          | .ok a, hp =>
-            pure (.ok ⟨a, hp⟩)
-          | .error e, _ =>
-            pure (.error e)),
-      ⟨fun {β} k => ?_⟩
-    ⟩⟩
+    refine
+      ⟨ ⟨ ExceptT.mk
+            (X >>= fun ⟨r, h⟩ =>
+              match r, h with
+              | .ok a, hp =>
+                pure (.ok ⟨a, hp⟩)
+              | .error e, _ =>
+                pure (.error e)),
+          ⟨fun {β} k => ?_⟩ ⟩ ⟩
     show ExceptT.mk _ >>= _ = x >>= k
     simp only [Bind.bind, ExceptT.bind, ExceptT.mk]
     rw [bind_assoc]
@@ -123,16 +121,15 @@ public instance [Monad m] [LawfulMonad m] [WP m .pure] [WPSound m .pure]
       simp [PostCond.entails]
       intro r <;> cases r <;> simp
     obtain ⟨X, hX⟩ := (WPSound.ensures_of_wp (m := m) (ps := .pure) hwp_inner).exists_refinement
-    refine ⟨⟨
-      OptionT.mk
-        (X >>= fun ⟨r, h⟩ =>
-          match r, h with
-          | some a, hp =>
-            pure (some ⟨a, hp⟩)
-          | none, _ =>
-            pure none),
-      ⟨fun {β} k => ?_⟩
-    ⟩⟩
+    refine
+      ⟨ ⟨ OptionT.mk
+            (X >>= fun ⟨r, h⟩ =>
+              match r, h with
+              | some a, hp =>
+                pure (some ⟨a, hp⟩)
+              | none, _ =>
+                pure none),
+          ⟨fun {β} k => ?_⟩ ⟩ ⟩
     show OptionT.mk _ >>= _ = x >>= k
     simp only [Bind.bind, OptionT.bind, OptionT.mk]
     rw [bind_assoc]

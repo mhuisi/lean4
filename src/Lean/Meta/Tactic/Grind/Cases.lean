@@ -38,10 +38,8 @@ def isBuiltinEagerCases (declName : Name) : Bool := builtinEagerCases.contains d
 def CasesTypes.contains (s : CasesTypes) (declName : Name) : Bool := s.casesMap.contains declName
 
 /-- Removes the given declaration from `s`. -/
-def CasesTypes.erase (s : CasesTypes) (declName : Name) : CasesTypes := {
-  s with
-  casesMap := s.casesMap.erase declName
-}
+def CasesTypes.erase (s : CasesTypes) (declName : Name) : CasesTypes :=
+  { s with casesMap := s.casesMap.erase declName }
 
 def CasesTypes.find? (s : CasesTypes) (declName : Name) : Option Bool := s.casesMap.find? declName
 

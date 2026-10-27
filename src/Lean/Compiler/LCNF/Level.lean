@@ -63,11 +63,8 @@ partial def normLevel (u : Level) : M Level := do
         return u
       | none =>
         let u := Level.param <| (`u).appendIndexAfter (← get).nextIdx
-        modify fun { nextIdx, map, paramNames } => {
-          nextIdx := nextIdx + 1
-          map := map.insert n u
-          paramNames := paramNames.push n
-        }
+        modify fun { nextIdx, map, paramNames } =>
+          { nextIdx := nextIdx + 1, map := map.insert n u, paramNames := paramNames.push n }
         return u
 
 /-- Normalize universe level parameter names in the given expression. -/

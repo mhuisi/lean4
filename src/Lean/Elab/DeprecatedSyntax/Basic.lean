@@ -16,10 +16,8 @@ public section
 
 namespace Lean.Linter
 
-register_builtin_option linter.deprecated.syntax : Bool := {
-  defValue := true
-  descr := "if true, generate warnings when deprecated syntax is used"
-}
+register_builtin_option linter.deprecated.syntax : Bool :=
+  { defValue := true, descr := "if true, generate warnings when deprecated syntax is used" }
 
 end Lean.Linter
 
@@ -36,10 +34,9 @@ structure SyntaxDeprecationEntry where
 
 builtin_initialize deprecatedSyntaxExt
     : SimplePersistentEnvExtension SyntaxDeprecationEntry (NameMap SyntaxDeprecationEntry) ←
-  registerSimplePersistentEnvExtension {
-    addImportedFn := mkStateFromImportedEntries (fun m e => m.insert e.kind e) {}
-    addEntryFn := fun m e => m.insert e.kind e
-  }
+  registerSimplePersistentEnvExtension
+    { addImportedFn := mkStateFromImportedEntries (fun m e => m.insert e.kind e) {}
+      addEntryFn := fun m e => m.insert e.kind e }
 
 private def insertReplacement (m : NameMap Name) : SyntaxNodeKind × Option Name → NameMap Name
   | (kind, some declName) => m.insert kind declName
@@ -51,10 +48,9 @@ latest `deprecated_syntax` command for that kind, if any.
 -/
 builtin_initialize deprecatedSyntaxReplacementExt
     : SimplePersistentEnvExtension (SyntaxNodeKind × Option Name) (NameMap Name) ←
-  registerSimplePersistentEnvExtension {
-    addImportedFn := mkStateFromImportedEntries insertReplacement {}
-    addEntryFn := insertReplacement
-  }
+  registerSimplePersistentEnvExtension
+    { addImportedFn := mkStateFromImportedEntries insertReplacement {}
+      addEntryFn := insertReplacement }
 
 /-- Whether `kind` is marked by `deprecated_syntax`. -/
 def isDeprecatedSyntax (env : Environment) (kind : SyntaxNodeKind) : Bool :=

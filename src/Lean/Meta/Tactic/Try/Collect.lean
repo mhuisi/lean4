@@ -130,10 +130,8 @@ def checkInductive (localDecl : LocalDecl) : M Unit := do
     | return ()
   if (← isEligible declName) then
     unless (← Grind.isGlobalSplit declName) do
-      modify fun s => {
-        s with
-        indCandidates := s.indCandidates.push { fvarId := localDecl.fvarId, val }
-      }
+      modify fun s =>
+        { s with indCandidates := s.indCandidates.push { fvarId := localDecl.fvarId, val } }
 
 unsafe abbrev Cache := PtrSet Expr
 

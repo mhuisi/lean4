@@ -53,23 +53,20 @@ macro (name := declareSimpLikeTactic)
   do
     let (kind, tkn, stx) ←
       if opt.raw.isNone then
-        pure (
-          ← `(``simp),
-          ← `("simp"),
-          ← `($[$doc?:docComment]? syntax (name := $tacName) $tacToken:str optConfig (discharger)? (&" only")? (" [" (simpStar <|> simpErase <|> simpLemma),* "]")? (location)? : tactic)
-        )
+        pure
+          ( ← `(``simp),
+            ← `("simp"),
+            ← `($[$doc?:docComment]? syntax (name := $tacName) $tacToken:str optConfig (discharger)? (&" only")? (" [" (simpStar <|> simpErase <|> simpLemma),* "]")? (location)? : tactic) )
       else if opt.raw[0].getKind == ``simpAllKind then
-        pure (
-          ← `(``simpAll),
-          ← `("simp_all"),
-          ← `($[$doc?:docComment]? syntax (name := $tacName) $tacToken:str optConfig (discharger)? (&" only")? (" [" (simpErase <|> simpLemma),* "]")? : tactic)
-        )
+        pure
+          ( ← `(``simpAll),
+            ← `("simp_all"),
+            ← `($[$doc?:docComment]? syntax (name := $tacName) $tacToken:str optConfig (discharger)? (&" only")? (" [" (simpErase <|> simpLemma),* "]")? : tactic) )
       else
-        pure (
-          ← `(``dsimp),
-          ← `("dsimp"),
-          ← `($[$doc?:docComment]? syntax (name := $tacName) $tacToken:str optConfig (discharger)? (&" only")? (" [" (simpErase <|> simpLemma),* "]")? (location)? : tactic)
-        )
+        pure
+          ( ← `(``dsimp),
+            ← `("dsimp"),
+            ← `($[$doc?:docComment]? syntax (name := $tacName) $tacToken:str optConfig (discharger)? (&" only")? (" [" (simpErase <|> simpLemma),* "]")? (location)? : tactic) )
     `($stx:command
       @[macro $tacName] meta def expandSimp : Macro := fun s => do
         let cfg ← `(optConfig| $cfg)

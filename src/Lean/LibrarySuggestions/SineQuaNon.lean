@@ -33,17 +33,15 @@ Constants which should not be used as triggers.
 Use `run_cmd modifyEnv fun env => triggerDenyListExt.addEntry env trigger` to add a trigger to the deny list.
 -/
 builtin_initialize triggerDenyListExt : SimplePersistentEnvExtension Name NameSet ←
-  registerSimplePersistentEnvExtension {
-    addEntryFn := (·.insert)
-    addImportedFn :=
-      mkStateFromImportedEntries (·.insert)
-        (NameSet.ofList [
-          `Eq, `BEq, `BEq.beq, `LE.le, `LT.lt, `GE.ge, `GT.gt,
-          `Bool.not, `Bool.and, `Bool.or, `Bool.xor, `Bool.true, `Bool.false,
-          `Not, `And, `Or, `Xor,
-          `ite, `dite, `Exists, `OfNat, `OfNat.ofNat, `SizeOf, `SizeOf.sizeOf
-        ])
-  }
+  registerSimplePersistentEnvExtension
+    { addEntryFn := (·.insert)
+      addImportedFn :=
+        mkStateFromImportedEntries (·.insert)
+          (NameSet.ofList
+            [ `Eq, `BEq, `BEq.beq, `LE.le, `LT.lt, `GE.ge, `GT.gt,
+              `Bool.not, `Bool.and, `Bool.or, `Bool.xor, `Bool.true, `Bool.false,
+              `Not, `And, `Or, `Xor,
+              `ite, `dite, `Exists, `OfNat, `OfNat.ofNat, `SizeOf, `SizeOf.sizeOf ]) }
 
 /--
 Return the constants in `consts` that are not in `denyList` and are approximately least frequent
@@ -188,10 +186,10 @@ where
               if pastTriggers'.contains n || denyList.contains n then
                 pure ⟨pastTriggers', triggersQueue'⟩
               else
-                pure <| ⟨
-                  pastTriggers'.insert n,
-                  triggersQueue'.insert (qf * depthFactor * (← frequencyScore n frequencyWeight), n)
-                ⟩
+                pure <|
+                  ⟨ pastTriggers'.insert n,
+                    triggersQueue'.insert
+                      (qf * depthFactor * (← frequencyScore n frequencyWeight), n) ⟩
         go denyList pastTriggers' triggersQueue' (acceptedTheorems.push (q, qf))
           (queuedTheorems.erase (qf, q))
 

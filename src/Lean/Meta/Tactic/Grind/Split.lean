@@ -539,14 +539,12 @@ def splitCore
       mvarIds.mapIdx fun i mvarId =>
         let numSplits := goal.split.num
         let numSplits := if i > 0 || isRec then numSplits + 1 else numSplits
-        {
-          goal with
+        { goal with
           mvarId
           goalStack
           split.num := numSplits
           split.trace :=
-            { expr := cExpr, i, num := numSubgoals, source := c.source } :: goal.split.trace
-        }
+            { expr := cExpr, i, num := numSubgoals, source := c.source } :: goal.split.trace }
     /-
     **Note**: Stuck goals are returned to the caller, and they may be processed after this split completes,
     e.g., by the next tactic in `grind => ...` mode. By then, the declarations hoisted to `goal` have been

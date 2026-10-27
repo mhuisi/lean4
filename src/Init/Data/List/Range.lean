@@ -131,10 +131,9 @@ theorem range'_append
 theorem range'_append_1 {s m n : Nat} : range' s m ++ range' (s + m) n = range' s (m + n) := by
   simpa using range'_append (step := 1)
 
-theorem range'_sublist_right {s m n : Nat} : range' s m step <+ range' s n step ↔ m ≤ n := ⟨
-  fun h => by simpa only [length_range'] using h.length_le,
-  fun h => by rw [← add_sub_of_le h, ← range'_append]; apply sublist_append_left
-⟩
+theorem range'_sublist_right {s m n : Nat} : range' s m step <+ range' s n step ↔ m ≤ n :=
+  ⟨ fun h => by simpa only [length_range'] using h.length_le,
+    fun h => by rw [← add_sub_of_le h, ← range'_append]; apply sublist_append_left ⟩
 
 theorem range'_subset_right {s m n : Nat} (step0 : 0 < step)
     : range' s m step ⊆ range' s n step ↔ m ≤ n := by

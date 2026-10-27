@@ -121,10 +121,8 @@ where
       let level ← withLCtx' lctx <| getLevel t
       let fvarId ← mkFreshFVarId
       let decl := LocalDecl.ldecl 0 fvarId n t v true .default
-      let info := {
-        info with
-        haveInfo := info.haveInfo.push { typeBackDeps, valueBackDeps, decl, level }
-      }
+      let info :=
+        { info with haveInfo := info.haveInfo.push { typeBackDeps, valueBackDeps, decl, level } }
       let lctx := lctx.addDecl decl
       let fvars := fvars.push (mkFVar fvarId)
       collect b (numHaves + 1) info lctx fvars
@@ -360,14 +358,13 @@ private def simpHaveTelescopeAux
           | ``have_val_congr'
           | ``have_body_congr'
           | ``have_congr')
-        return {
-          expr := rhs
-          exprType
-          exprInit := lhs
-          exprResult := expr
-          proof := proof''
-          modified := true
-        }
+        return
+          { expr := rhs
+            exprType
+            exprInit := lhs
+            exprResult := expr
+            proof := proof''
+            modified := true }
       if let some res := detectSimpHaveLemma proof then
         return res
       return { expr, exprType, exprInit := e, exprResult := expr, proof, modified := true }

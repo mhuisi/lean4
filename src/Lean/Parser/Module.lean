@@ -57,13 +57,11 @@ private partial def mkErrorMessage
     if let some trailing := lastTrailing stk then
       if trailing.stopPos == pos then
         pos := trailing.startPos
-  {
-    fileName := c.fileName
+  { fileName := c.fileName
     pos := c.fileMap.toPosition pos
     endPos := c.fileMap.toPosition <$> endPos?
     keepFullRange := true
-    data := toString e
-  }
+    data := toString e }
 where
   -- Error recovery might lead to there being some "junk" on the stack
   lastTrailing (s : SyntaxStack) : Option Substring.Raw :=
@@ -93,13 +91,11 @@ def parseHeader (inputCtx : InputContext)
   if let `(Module.header| $[module%$moduleTk?]? $[prelude]? $importsStx*) := stx then
     let mkError ref msg : Message :=
       let pos := ref.getPos?.getD 0
-      {
-        fileName := inputCtx.fileName
+      { fileName := inputCtx.fileName
         pos := inputCtx.fileMap.toPosition pos
         endPos := inputCtx.fileMap.toPosition <| ref.getTailPos?.getD pos
         keepFullRange := true
-        data := msg
-      }
+        data := msg }
     for stx in importsStx do
       if let `(Module.import| $[public%$pubTk?]? $[meta%$metaTk?]? import $[all%$allTk?]? $mod) :=
           stx then
@@ -162,10 +158,8 @@ partial def parseCommand
     let pos' := pos
     let p := andthenFn whitespace topLevelCommandParserFn
     let s :=
-      p.run inputCtx pmctx (getTokenTable pmctx.env) {
-        cache := initCacheForInput inputCtx.inputString
-        pos
-      }
+      p.run inputCtx pmctx (getTokenTable pmctx.env)
+        { cache := initCacheForInput inputCtx.inputString, pos }
     -- save errors from sub-recoveries
     for (rpos, rstk, recovered) in s.recoveredErrors do
       messages := messages.add <| mkErrorMessage inputCtx rpos rstk recovered

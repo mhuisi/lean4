@@ -31,14 +31,11 @@ def State.switch : State → State
   | { map, thmNames } => { map := map.switch, thmNames := thmNames.switch }
 
 builtin_initialize ext : SimpleScopedEnvExtension Entry State ←
-  registerSimpleScopedEnvExtension {
-    initial := {}
-    addEntry := fun { map, thmNames } e => {
-      map := map.insert e.fromDeclName e
-      thmNames := thmNames.insert e.thmName
-    }
-    finalizeImport := fun s => s.switch
-  }
+  registerSimpleScopedEnvExtension
+    { initial := {}
+      addEntry := fun { map, thmNames } e =>
+        { map := map.insert e.fromDeclName e, thmNames := thmNames.insert e.thmName }
+      finalizeImport := fun s => s.switch }
 
 private def isConstantReplacement? (declName : Name) : CoreM (Option Entry) := do
   let info ← getConstVal declName
@@ -75,14 +72,13 @@ axioms (like `sorryAx`).
 -/
 @[builtin_init, builtin_doc]
 private def initFn :=
-  registerBuiltinAttribute {
-    name := `csimp
-    descr := "simplification theorem for the compiler"
-    add := fun declName stx attrKind => do
-      Attribute.Builtin.ensureNoArgs stx
-      ensureAttrDeclIsPublic `csimp declName attrKind
-      discard <| add declName attrKind
-  }
+  registerBuiltinAttribute
+    { name := `csimp
+      descr := "simplification theorem for the compiler"
+      add := fun declName stx attrKind => do
+        Attribute.Builtin.ensureNoArgs stx
+        ensureAttrDeclIsPublic `csimp declName attrKind
+        discard <| add declName attrKind }
 
 /-- If `e` (as a whole) matches a `[csimp]` theorem, returns the replacement expression. -/
 def replaceConstant? (env : Environment) (e : Expr) : CoreM (Option Expr) := do

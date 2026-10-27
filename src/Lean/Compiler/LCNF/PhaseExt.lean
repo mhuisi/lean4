@@ -77,25 +77,24 @@ instance : Inhabited (DeclExt pu) :=
   inferInstanceAs (Inhabited (PersistentEnvExtension (Decl pu) (Decl pu) (DeclExtState pu)))
 
 def mkDeclExt (phase : Phase) (name : Name := by exact decl_name%) : IO (DeclExt phase.toPurity) :=
-  registerPersistentEnvExtension {
-    name
-    mkInitial := pure {}
-    addImportedFn := fun _ => pure {}
-    addEntryFn := fun s decl => s.insert decl.name decl
-    exportEntriesFnEx env s := Id.run do
-      let all := sortedEntries s declLt
-      let exported :=
-        all.filterMap fun decl => do
-          guard <| isDeclPublic env decl.name
-          if isDeclTransparent env phase decl.name then
-            some decl
-          else
-            some { decl with value := .extern { entries := [.opaque] } }
-      return { exported, server := exported, «private» := all }
-    statsFn := statsFn
-    asyncMode := .sync
-    replay? := some (replayFn phase)
-  }
+  registerPersistentEnvExtension
+    { name
+      mkInitial := pure {}
+      addImportedFn := fun _ => pure {}
+      addEntryFn := fun s decl => s.insert decl.name decl
+      exportEntriesFnEx env s := Id.run do
+        let all := sortedEntries s declLt
+        let exported :=
+          all.filterMap fun decl => do
+            guard <| isDeclPublic env decl.name
+            if isDeclTransparent env phase decl.name then
+              some decl
+            else
+              some { decl with value := .extern { entries := [.opaque] } }
+        return { exported, server := exported, «private» := all }
+      statsFn := statsFn
+      asyncMode := .sync
+      replay? := some (replayFn phase) }
 
 builtin_initialize baseExt : DeclExt .pure ← mkDeclExt .base
 builtin_initialize monoExt : DeclExt .pure ← mkDeclExt .mono
@@ -122,22 +121,21 @@ private abbrev findSigAtSorted? (sigs : Array (Signature pu)) (declName : Name)
 
 def mkSigDeclExt (phase : Phase) (name : Name := by exact decl_name%)
     : IO (SigExt phase.toPurity) :=
-  registerPersistentEnvExtension {
-    name
-    mkInitial := pure {}
-    addImportedFn := fun _ => pure {}
-    addEntryFn := fun s sig => s.insert sig.name sig
-    exportEntriesFnEx env s := Id.run do
-      let all := sortedEntries s sigLt
-      let exported :=
-        all.filterMap fun sig => do
-          guard <| isDeclPublic env sig.name
-          some sig
-      return { exported, server := exported, «private» := all }
-    statsFn := statsFn
-    asyncMode := .sync
-    replay? := some (replayFn phase)
-  }
+  registerPersistentEnvExtension
+    { name
+      mkInitial := pure {}
+      addImportedFn := fun _ => pure {}
+      addEntryFn := fun s sig => s.insert sig.name sig
+      exportEntriesFnEx env s := Id.run do
+        let all := sortedEntries s sigLt
+        let exported :=
+          all.filterMap fun sig => do
+            guard <| isDeclPublic env sig.name
+            some sig
+        return { exported, server := exported, «private» := all }
+      statsFn := statsFn
+      asyncMode := .sync
+      replay? := some (replayFn phase) }
 
 builtin_initialize impureSigExt : SigExt .impure ← mkSigDeclExt .impure
 

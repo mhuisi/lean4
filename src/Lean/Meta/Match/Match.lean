@@ -62,34 +62,31 @@ public section
 
 namespace Lean.Meta.Match
 
-register_builtin_option backward.match.sparseCases : Bool := {
-  defValue := true
-  descr :=
-    "if true (the default), generate and use sparse case constructs when splitting inductive\
-      \n    types. In some cases this will prevent Lean from noticing that a match statement is \
-      complete\
-      \n    because it performs less case-splitting for the unreachable case. In this case, give \
-      explicit\
-      \n    patterns to perform the deeper split with `by contradiction` as the right-hand side.\
-      \n     ,"
-}
+register_builtin_option backward.match.sparseCases : Bool :=
+  { defValue := true
+    descr :=
+      "if true (the default), generate and use sparse case constructs when splitting inductive\
+        \n    types. In some cases this will prevent Lean from noticing that a match statement is \
+        complete\
+        \n    because it performs less case-splitting for the unreachable case. In this case, give \
+        explicit\
+        \n    patterns to perform the deeper split with `by contradiction` as the right-hand side.\
+        \n     ," }
 
-register_builtin_option backward.match.rowMajor : Bool := {
-  defValue := true
-  descr :=
-    "If true (the default), match compilation will split the discrimnants based \
-      on position of the first constructor pattern in the first alternative. If false, \
-      it splits them from left to right, which can lead to unnecessary code bloat."
-}
+register_builtin_option backward.match.rowMajor : Bool :=
+  { defValue := true
+    descr :=
+      "If true (the default), match compilation will split the discrimnants based \
+        on position of the first constructor pattern in the first alternative. If false, \
+        it splits them from left to right, which can lead to unnecessary code bloat." }
 
-register_builtin_option match.maxCounterExamples : Nat := {
-  defValue := 5
-  descr :=
-    "Maximum number of missing-case counter-examples to generate. \
-      When this limit is reached, the match compiler stops exploring further \
-      case splits for counter-example generation. Increase if you need to see \
-      all missing cases."
-}
+register_builtin_option match.maxCounterExamples : Nat :=
+  { defValue := 5
+    descr :=
+      "Maximum number of missing-case counter-examples to generate. \
+        When this limit is reached, the match compiler stops exploring further \
+        case splits for counter-example generation. Increase if you need to see \
+        all missing cases." }
 
 private def mkIncorrectNumberOfPatternsMsg
     [ToMessageData α] (discrepancyKind : String) (expected actual : Nat) (pats : List α) :=
@@ -222,21 +219,17 @@ where
         let rhs := if hasParams then mkAppN minor xs else mkApp minor (mkConst `Unit.unit)
         let minors := minors.push minor
         let altInfos :=
-          altInfos.push {
-            numFields := xs.size
-            numOverlaps := notAltHs.size
-            hasUnitThunk := !hasParams
-          }
+          altInfos.push
+            { numFields := xs.size, numOverlaps := notAltHs.size, hasUnitThunk := !hasParams }
         let fvarDecls ← lhs.fvarDecls.mapM instantiateLocalDeclMVars
-        let alt := {
-          ref := lhs.ref
-          idx := idx
-          rhs := rhs
-          fvarDecls := fvarDecls
-          patterns := lhs.patterns
-          cnstrs := []
-          notAltIdxs := notAltIdxs
-        }
+        let alt :=
+          { ref := lhs.ref
+            idx := idx
+            rhs := rhs
+            fvarDecls := fvarDecls
+            patterns := lhs.patterns
+            cnstrs := []
+            notAltIdxs := notAltIdxs }
         let alts := alt :: alts
         loop lhss alts minors altInfos (notAlts.push notAlt) overlappingAlts
 
@@ -696,13 +689,12 @@ private def processConstructor (p : Problem) : MetaM (Array Problem) := do
               return { alt with patterns := fields.map .inaccessible ++ ps }
             | _ =>
               unreachable!
-        return {
-          p with
-          mvarId := subgoal.mvarId
-          vars := newVars
-          alts := newAlts
-          examples := examples
-        }
+        return
+          { p with
+            mvarId := subgoal.mvarId
+            vars := newVars
+            alts := newAlts
+            examples := examples }
       else
         -- A catch-all case
         let subst := subgoal.subst
@@ -715,13 +707,12 @@ private def processConstructor (p : Problem) : MetaM (Array Problem) := do
             | .ctor .. :: _ => false
             | _ => true
         let newAlts := newAlts.map fun alt => alt.applyFVarSubst subst
-        return {
-          p with
-          mvarId := subgoal.mvarId
-          alts := newAlts
-          vars := newVars
-          examples := examples
-        }
+        return
+          { p with
+            mvarId := subgoal.mvarId
+            alts := newAlts
+            vars := newVars
+            examples := examples }
 
 private def processNonVariable (p : Problem) : MetaM Problem :=
   withGoalOf p do
@@ -805,13 +796,8 @@ private def processValue (p : Problem) : MetaM (Array Problem) := do
           | .inaccessible _ :: ps => { alt with patterns := ps }
           | _ => unreachable!
       let newVars := xs.map fun x => x.applyFVarSubst subst
-      return {
-        p with
-        mvarId := subgoal.mvarId
-        vars := newVars
-        alts := newAlts
-        examples := examples
-      }
+      return
+        { p with mvarId := subgoal.mvarId, vars := newVars, alts := newAlts, examples := examples }
     else
       -- else branch for value
       let newAlts := p.alts.filter isFirstPatternInaccessible
@@ -849,22 +835,15 @@ private def processArrayLit (p : Problem) : MetaM (Array Problem) := do
       let newAlts :=
         newAlts.map fun alt =>
           match alt.patterns with
-          | .arrayLit _ pats :: ps => {
-            alt with
-            patterns := pats ++ ps
-          }
+          | .arrayLit _ pats :: ps =>
+            { alt with patterns := pats ++ ps }
           | .inaccessible _ :: ps =>
             let patterns := elems.map (fun elem => .inaccessible (mkFVar elem)) ++ ps
             { alt with patterns }
           | _ =>
             unreachable!
-      return {
-        p with
-        mvarId := subgoal.mvarId
-        vars := newVars
-        alts := newAlts
-        examples := examples
-      }
+      return
+        { p with mvarId := subgoal.mvarId, vars := newVars, alts := newAlts, examples := examples }
     else
       -- else branch
       let newAlts := p.alts.filter isFirstPatternInaccessible
@@ -896,10 +875,9 @@ private def expandIntValuePattern (p : Problem) : MetaM Problem := do
           if i >= 0 then
             return { alt with patterns := .ctor ``Int.ofNat [] [] [.val (toExpr i.toNat)] :: ps }
           else
-            return {
-              alt with
-              patterns := .ctor ``Int.negSucc [] [] [.val (toExpr (-(i + 1)).toNat)] :: ps
-            }
+            return
+              { alt with
+                patterns := .ctor ``Int.negSucc [] [] [.val (toExpr (-(i + 1)).toNat)] :: ps }
         | _ =>
           return alt
       | _ =>
@@ -915,10 +893,9 @@ private def expandFinValuePattern (p : Problem) : MetaM Problem := do
         | return alt
       let p ← mkLt (toExpr v.val) (toExpr n)
       let h ← mkDecideProof p
-      return {
-        alt with
-        patterns := .ctor ``Fin.mk [] [toExpr n] [.val (toExpr v.val), .inaccessible h] :: ps
-      }
+      return
+        { alt with
+          patterns := .ctor ``Fin.mk [] [toExpr n] [.val (toExpr v.val), .inaccessible h] :: ps }
   return { p with alts := alts }
 
 private def expandBitVecValuePattern (p : Problem) : MetaM Problem := do
@@ -978,11 +955,10 @@ private def List.moveToFront [Inhabited α] (as : List α) (i : Nat) : List α :
 private def moveToFront (p : Problem) (i : Nat) : Problem :=
   if i == 0 then
     p
-  else if i < p.vars.length then {
-    p with
-    vars := List.moveToFront p.vars i
-    alts := p.alts.map fun alt => { alt with patterns := List.moveToFront alt.patterns i }
-  }
+  else if i < p.vars.length then
+    { p with
+      vars := List.moveToFront p.vars i
+      alts := p.alts.map fun alt => { alt with patterns := List.moveToFront alt.patterns i } }
   else
     p
 
@@ -1113,11 +1089,10 @@ private def isFirstVarDoneTransition (p : Problem) : Bool := Id.run do
       | .inaccessible e => e == x
       | _ => false
 
-private def processFirstVarDone (p : Problem) : Problem := {
-  p with
-  vars := p.vars.tail!
-  alts := p.alts.map fun alt => { alt with patterns := alt.patterns.tail! }
-}
+private def processFirstVarDone (p : Problem) : Problem :=
+  { p with
+    vars := p.vars.tail!
+    alts := p.alts.map fun alt => { alt with patterns := alt.patterns.tail! } }
 
 private def tracedForM (xs : Array α) (process : α → StateRefT State MetaM Unit)
     : StateRefT State MetaM Unit :=
@@ -1239,10 +1214,8 @@ private def getUElimPos? (matcherLevels : List Level) (uElim : Level) : MetaM (O
     | some pos => return some pos
 
 /- See comment at `mkMatcher` before `mkAuxDefinition` -/
-register_builtin_option bootstrap.genMatcherCode : Bool := {
-  defValue := true
-  descr := "disable code generation for auxiliary matcher function"
-}
+register_builtin_option bootstrap.genMatcherCode : Bool :=
+  { defValue := true, descr := "disable code generation for auxiliary matcher function" }
 
 private structure MatcherKey where
   value : Expr
@@ -1266,11 +1239,8 @@ def mkMatcherAuxDefinition (name : Name) (type : Expr) (value : Expr) (isSplitte
   let result ← Closure.mkValueTypeClosure type value (zetaDelta := false)
   let env ← getEnv
   let mkMatcherConst name := mkAppN (mkConst name result.levelArgs.toList) result.exprArgs
-  let key := {
-    value := result.value
-    compile
-    isPrivate := env.header.isModule && isPrivateName name
-  }
+  let key :=
+    { value := result.value, compile, isPrivate := env.header.isModule && isPrivateName name }
   let mut nameNew? := none
   unless isSplitter do
     nameNew? := (matcherExt.getState env).find? key
@@ -1388,26 +1358,24 @@ def mkMatcher (input : MkMatcherInput) : MetaM MatcherResult :=
         let addMatcher :=
           match addMatcher with
           | some addMatcher =>
-            addMatcher <| {
-              numParams := matcher.getAppNumArgs
-              altInfos
-              discrInfos
-              numDiscrs
-              uElimPos?
-              overlaps := s.overlaps
-            }
+            addMatcher <|
+              { numParams := matcher.getAppNumArgs
+                altInfos
+                discrInfos
+                numDiscrs
+                uElimPos?
+                overlaps := s.overlaps }
           | none =>
             pure ()
 
         trace[Meta.Match.debug] "matcher: {matcher}"
         let unusedAltIdxs :=
           lhss.length.fold (init := []) fun i _ r => if s.used.contains i then r else i :: r
-        return {
-          matcher
-          counterExamples := s.counterExamples
-          unusedAltIdxs := unusedAltIdxs.reverse
-          addMatcher
-        }
+        return
+          { matcher
+            counterExamples := s.counterExamples
+            unusedAltIdxs := unusedAltIdxs.reverse
+            addMatcher }
 
       let motiveType ← mkForallFVars discrs (mkSort uElimGen)
       trace[Meta.Match.debug] "motiveType: {motiveType}"
@@ -1426,12 +1394,11 @@ def mkMatcher (input : MkMatcherInput) : MetaM MatcherResult :=
                 \n{mvar.mvarId!}"
               let examples := discrs'.toList.map fun discr => Example.var discr.fvarId!
               let (_, s) ←
-                (process {
-                    mvarId := mvar.mvarId!
-                    vars := discrs'.toList
-                    alts := alts
-                    examples := examples
-                  }).run
+                (process
+                    { mvarId := mvar.mvarId!
+                      vars := discrs'.toList
+                      alts := alts
+                      examples := examples }).run
                   {}
               let val ← mkLambdaFVars discrs' mvar
               trace[Meta.Match.debug] "matcher\
@@ -1458,12 +1425,11 @@ def mkMatcher (input : MkMatcherInput) : MetaM MatcherResult :=
             let mvar ← mkFreshExprMVar mvarType
             let examples := discrs.toList.map fun discr => Example.var discr.fvarId!
             let (_, s) ←
-              (process {
-                  mvarId := mvar.mvarId!
-                  vars := discrs.toList
-                  alts := alts
-                  examples := examples
-                }).run
+              (process
+                  { mvarId := mvar.mvarId!
+                    vars := discrs.toList
+                    alts := alts
+                    examples := examples }).run
                 {}
             let args := #[motive] ++ discrs ++ minors
             let type ← mkForallFVars args mvarType
@@ -1500,12 +1466,11 @@ def getMkMatcherInputInContext (matcherApp : MatcherApp) (unfoldNamed : Bool)
             let ctx ← getLCtx
             let localDecls := xs.map ctx.getFVar!
             let patterns ← args.mapM Match.toPattern
-            return {
-              ref := Syntax.missing
-              fvarDecls := localDecls.toList
-              patterns := patterns.toList
-              : Match.AltLHS
-            }
+            return
+              { ref := Syntax.missing
+                fvarDecls := localDecls.toList
+                patterns := patterns.toList
+                : Match.AltLHS }
 
   return { matcherName, matchType, discrInfos := matcherInfo.discrInfos, lhss := lhss.toList }
 

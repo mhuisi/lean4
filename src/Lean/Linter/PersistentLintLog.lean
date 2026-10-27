@@ -23,16 +23,12 @@ structure LintEntry where
   file : String
 
 builtin_initialize lintLogExt : PersistentEnvExtension LintEntry LintEntry (Array LintEntry) ←
-  registerPersistentEnvExtension {
-    mkInitial := pure #[]
-    addImportedFn := fun _ => pure #[]
-    addEntryFn := Array.push
-    exportEntriesFnEx := fun _ entries => {
-      exported := #[]
-      server := entries
-      «private» := entries
-    }
-  }
+  registerPersistentEnvExtension
+    { mkInitial := pure #[]
+      addImportedFn := fun _ => pure #[]
+      addEntryFn := Array.push
+      exportEntriesFnEx := fun _ entries =>
+        { exported := #[], server := entries, «private» := entries } }
 
 def getAllLints (env : Environment) : Array (Name × Array LintEntry) :=
   env.header.moduleNames.mapIdx fun i mod =>
@@ -50,16 +46,12 @@ structure CodeQualityLogEntry where
 
 builtin_initialize codeQualityLogExt
     : PersistentEnvExtension CodeQualityLogEntry CodeQualityLogEntry (Array CodeQualityLogEntry) ←
-  registerPersistentEnvExtension {
-    mkInitial := pure #[]
-    addImportedFn := fun _ => pure #[]
-    addEntryFn := Array.push
-    exportEntriesFnEx := fun _ entries => {
-      exported := #[]
-      server := entries
-      «private» := entries
-    }
-  }
+  registerPersistentEnvExtension
+    { mkInitial := pure #[]
+      addImportedFn := fun _ => pure #[]
+      addEntryFn := Array.push
+      exportEntriesFnEx := fun _ entries =>
+        { exported := #[], server := entries, «private» := entries } }
 
 def getAllCodeQualityEntries (env : Environment) : Array (Name × Array CodeQualityLogEntry) :=
   env.header.moduleNames.mapIdx fun i mod =>
@@ -87,8 +79,8 @@ def recordLints
       if kind.isAnonymous then
         return env
       let sm ← m.serialize
-      return
-        lintLogExt.addEntry env { linter := kind, message := sm, position?, file := m.fileName }
+      return lintLogExt.addEntry env
+        { linter := kind, message := sm, position?, file := m.fileName }
 
 /--
 Records the code quality entry `e` into `codeQualityLogExt` so that it is persisted into the

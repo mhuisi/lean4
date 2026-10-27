@@ -59,10 +59,8 @@ public def getMetaData? (α) [TypeName α] (d : TaggedDoc) : Option α :=
 public def addMetaData
     [Inhabited α] [TypeName α]
     (d : TaggedDoc) (metaData : α) (propagate : α → (Doc FmtCost → Doc FmtCost) → α)
-    : TaggedDoc := {
-  d with
-  metaData := { v := Dynamic.mk metaData, propagate := propagateDynamic } :: d.metaData
-}
+    : TaggedDoc :=
+  { d with metaData := { v := Dynamic.mk metaData, propagate := propagateDynamic } :: d.metaData }
 where
   propagateDynamic (v : Dynamic) (f : Doc FmtCost → Doc FmtCost) : Dynamic :=
     let v := v.get? α |>.get!
@@ -196,10 +194,8 @@ deriving Inhabited, TypeName
 
 public def sticky (nonStickyVariant : TaggedDoc) (stickyVariant : TaggedDoc) (kind : StickynessKind)
     : TaggedDoc :=
-  nonStickyVariant.addMetaData (Sticky.mk stickyVariant kind) fun v f => {
-    stickyVariant := propagateMetaData v.stickyVariant f
-    kind := v.kind
-  }
+  nonStickyVariant.addMetaData (Sticky.mk stickyVariant kind) fun v f =>
+    { stickyVariant := propagateMetaData v.stickyVariant f, kind := v.kind }
 
 public def getSticky? (doc : TaggedDoc) : Option Sticky := doc.getMetaData? Sticky
 
@@ -231,26 +227,22 @@ public def withStickyAlt.Config.ofSticky (s : Sticky) (allowFlattening : Bool :=
 public def withStickyAlt (doc stickyDoc : TaggedDoc) (cfg : withStickyAlt.Config) : TaggedDoc :=
   match cfg with
   | .coequal =>
-    oneOf #[
-      unflattenable stickyDoc,
-      doc
-    ]
+    oneOf
+      #[unflattenable stickyDoc,
+        doc]
   | .preferUnsticky =>
-    oneOf #[
-      doc,
-      withHeightFallbackPenalty (unflattenable stickyDoc)
-    ]
+    oneOf
+      #[doc,
+        withHeightFallbackPenalty (unflattenable stickyDoc)]
   | .preferSticky (allowFlattening := true) =>
-    oneOf #[
-      unflattenable stickyDoc,
-      flattened doc,
-      withOverflowFallbackPenalty doc
-    ]
+    oneOf
+      #[unflattenable stickyDoc,
+        flattened doc,
+        withOverflowFallbackPenalty doc]
   | .preferSticky (allowFlattening := false) =>
-    oneOf #[
-      unflattenable stickyDoc,
-      withOverflowFallbackPenalty doc
-    ]
+    oneOf
+      #[unflattenable stickyDoc,
+        withOverflowFallbackPenalty doc]
 
 public structure Sep where
   s : TaggedDoc
@@ -337,11 +329,11 @@ public structure SepArray (sep : String) where
   elemsAndSeps : Array TaggedDoc
 
 public def SepArray.mapElems (a : SepArray sep) (f : TaggedDoc → TaggedDoc) : SepArray sep :=
-  ⟨a.elemsAndSeps.mapIdx fun i sepOrElem =>
-    if i % 2 = 0 then
-      f sepOrElem
-    else
-      sepOrElem⟩
+  ⟨ a.elemsAndSeps.mapIdx fun i sepOrElem =>
+      if i % 2 = 0 then
+        f sepOrElem
+      else
+        sepOrElem ⟩
 
 public def SepArray.pushElem (a : SepArray sep) (elem : TaggedDoc) : SepArray sep :=
   if a.elemsAndSeps.size % 2 == 0 then
@@ -393,9 +385,8 @@ public structure PseudoDedented where
 deriving Inhabited, TypeName
 
 public def pseudoDedented (indentedVariant dedentedVariant : TaggedDoc) : TaggedDoc :=
-  indentedVariant.addMetaData (PseudoDedented.mk dedentedVariant) fun v f => {
-    dedentedVariant := propagateMetaData v.dedentedVariant f
-  }
+  indentedVariant.addMetaData (PseudoDedented.mk dedentedVariant) fun v f =>
+    { dedentedVariant := propagateMetaData v.dedentedVariant f }
 
 public def getPseudoDedented? (doc : TaggedDoc) : Option PseudoDedented :=
   doc.getMetaData? PseudoDedented

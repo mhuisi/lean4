@@ -82,22 +82,16 @@ namespace Builder
 def new : Builder := {}
 
 /-- Sets the HTTP status code for the response being built. -/
-def status (builder : Builder) (status : Status) : Builder := {
-  builder with
-  line := { builder.line with status := status }
-}
+def status (builder : Builder) (status : Status) : Builder :=
+  { builder with line := { builder.line with status := status } }
 
 /-- Sets the headers for the response being built. -/
-def headers (builder : Builder) (headers : Headers) : Builder := {
-  builder with
-  line := { builder.line with headers }
-}
+def headers (builder : Builder) (headers : Headers) : Builder :=
+  { builder with line := { builder.line with headers } }
 
 /-- Adds a single header to the response being built. -/
-def header (builder : Builder) (key : Header.Name) (value : Header.Value) : Builder := {
-  builder with
-  line := { builder.line with headers := builder.line.headers.insert key value }
-}
+def header (builder : Builder) (key : Header.Name) (value : Header.Value) : Builder :=
+  { builder with line := { builder.line with headers := builder.line.headers.insert key value } }
 
 /-- Adds a single header to the response being built, panics if the header is invalid. -/
 def header! (builder : Builder) (key : String) (value : String) : Builder :=
@@ -112,33 +106,23 @@ Returns `none` if the header name or value is invalid.
 def header? (builder : Builder) (key : String) (value : String) : Option Builder := do
   let key ← Header.Name.ofString? key
   let value ← Header.Value.ofString? value
-  pure <| {
-    builder with
-    line := { builder.line with headers := builder.line.headers.insert key value }
-  }
+  pure <|
+    { builder with line := { builder.line with headers := builder.line.headers.insert key value } }
 
 /-- Inserts a typed extension value into the response being built. -/
-def extension (builder : Builder) [TypeName α] (data : α) : Builder := {
-  builder with
-  extensions := builder.extensions.insert data
-}
+def extension (builder : Builder) [TypeName α] (data : α) : Builder :=
+  { builder with extensions := builder.extensions.insert data }
 
 /-- Builds and returns the final HTTP Response with the specified body. -/
-def body (builder : Builder) (body : t) : Response t := {
-  line := builder.line
-  body := body
-  extensions := builder.extensions
-}
+def body (builder : Builder) (body : t) : Response t :=
+  { line := builder.line, body := body, extensions := builder.extensions }
 
 /--
 Builds and returns the final HTTP Response with an empty body (`{}`).
 Requires an `EmptyCollection` instance for the response body type.
 -/
-def build [EmptyCollection t] (builder : Builder) : Response t := {
-  line := builder.line
-  body := {}
-  extensions := builder.extensions
-}
+def build [EmptyCollection t] (builder : Builder) : Response t :=
+  { line := builder.line, body := {}, extensions := builder.extensions }
 
 end Builder
 

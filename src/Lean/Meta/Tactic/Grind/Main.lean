@@ -83,25 +83,24 @@ def mkOnlyParams (config : Grind.Config) : MetaM Params := do
 def mkMethods (evalTactic? : Option EvalTactic := none) : CoreM Methods := do
   let builtinPropagators ← builtinPropagatorsRef.get
   let evalTactic : EvalTactic := evalTactic?.getD EvalTactic.skip
-  return {
-    evalTactic
-    propagateUp := fun e => do
-      propagateForallPropUp e
-      propagateReflCmp e
-      let .const declName _ := e.getAppFn
-        | return ()
-      propagateProjEq e
-      propagateCtorIdxUp e
-      if let some props := builtinPropagators.up[declName]? then
-        props.forM fun prop => prop e
-    propagateDown := fun e => do
-      propagateForallPropDown e
-      propagateLawfulEqCmp e
-      let .const declName _ := e.getAppFn
-        | return ()
-      if let some props := builtinPropagators.down[declName]? then
-        props.forM fun prop => prop e
-  }
+  return
+    { evalTactic
+      propagateUp := fun e => do
+        propagateForallPropUp e
+        propagateReflCmp e
+        let .const declName _ := e.getAppFn
+          | return ()
+        propagateProjEq e
+        propagateCtorIdxUp e
+        if let some props := builtinPropagators.up[declName]? then
+          props.forM fun prop => prop e
+      propagateDown := fun e => do
+        propagateForallPropDown e
+        propagateLawfulEqCmp e
+        let .const declName _ := e.getAppFn
+          | return ()
+        if let some props := builtinPropagators.down[declName]? then
+          props.forM fun prop => prop e }
 
 -- A `simp` discharger that does not use assumptions.
 -- We use it to make sure we don't have to reset the `simp` cache used in `grind`.
@@ -142,20 +141,19 @@ def GrindM.run (x : GrindM α) (params : Params) (evalTactic? : Option EvalTacti
         let debug := grind.debug.get (← getOptions)
         let ematchDiag := grind.ematch.diagnostics.get (← getOptions)
         Sym.Arith.setExpThreshold config.exp
-        x (← mkMethods evalTactic?).toMethodsRef {
-            config,
-            identity,
-            activeSolvers,
-            anchorRefs?,
-            simpMethods,
-            symSimpMethods,
-            symDSimpMethods,
-            simp,
-            extensions,
-            symPrios,
-            debug,
-            ematchDiag
-          }
+        x (← mkMethods evalTactic?).toMethodsRef
+            { config,
+              identity,
+              activeSolvers,
+              anchorRefs?,
+              simpMethods,
+              symSimpMethods,
+              symDSimpMethods,
+              simp,
+              extensions,
+              symPrios,
+              debug,
+              ematchDiag }
           |>.run' {}
 
 private def mkCleanState (mvarId : MVarId) : GrindM Clean.State :=
@@ -236,11 +234,10 @@ private def splitDiagInfoToMessageData (ss : Array SplitDiagInfo) : MetaM Messag
   let data ←
     ss.mapM fun { c, lctx, numCases, gen, splitSource } => do
       let header := m!"{c}"
-      return MessageData.withContext { env, mctx, lctx, opts } <| .trace { cls } header #[
-        .trace { cls } m!"source: {splitSource.toMessageData}" #[],
-        .trace { cls } m!"generation: {gen}" #[],
-        .trace { cls } m!"# cases: {numCases}" #[]
-      ]
+      return MessageData.withContext { env, mctx, lctx, opts } <| .trace { cls } header
+        #[.trace { cls } m!"source: {splitSource.toMessageData}" #[],
+          .trace { cls } m!"generation: {gen}" #[],
+          .trace { cls } m!"# cases: {numCases}" #[]]
   return .trace { cls } "Case splits" data
 
 -- Diagnostics information for the whole search
@@ -415,16 +412,8 @@ def mkResult (params : Params) (failure? : Option Goal) : GrindM Result := do
       if let some msg ← mkGlobalDiag counters simp splitDiags ematchDiags then
         logInfo msg
   let rings := (← Sym.Arith.getArithState).rings
-  return {
-    failure?
-    issues
-    config := params.config
-    counters
-    simp
-    splitDiags
-    ematchDiags
-    rings
-  }
+  return
+    { failure?, issues, config := params.config, counters, simp, splitDiags, ematchDiags, rings }
 
 def GrindM.runAtGoal
     (mvarId : MVarId) (params : Params) (k : Goal → GrindM α)
@@ -440,10 +429,8 @@ def GrindM.runAtGoal
 def main (mvarId : MVarId) (params : Params) : MetaM Result := do
   profileitM Exception "grind" (← getOptions) do
     let params :=
-      if grind.unusedLemmaThreshold.get (← getOptions) > 0 then {
-        params with
-        config.markInstances := true
-      }
+      if grind.unusedLemmaThreshold.get (← getOptions) > 0 then
+        { params with config.markInstances := true }
       else
         params
     GrindM.runAtGoal mvarId params fun goal => do

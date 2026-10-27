@@ -281,16 +281,15 @@ def withInferTypeConfig (x : MetaM α) : MetaM α :=
       x
     else
       withConfig
-        (fun cfg => {
-          cfg with
-          beta := true
-          iota := true
-          zeta := true
-          zetaHave := true
-          zetaDelta := true
-          proj := .yesWithDelta
-          etaStruct := .all
-        })
+        (fun cfg =>
+          { cfg with
+            beta := true
+            iota := true
+            zeta := true
+            zetaHave := true
+            zetaDelta := true
+            proj := .yesWithDelta
+            etaStruct := .all })
         x
 
 set_option compiler.ignoreBorrowAnnotation true in

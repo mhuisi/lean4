@@ -334,11 +334,8 @@ public def ofHash (hash : Hash) (caption := "<hash>") : BuildTrace := { caption,
 public instance : Coe Hash BuildTrace := ⟨ofHash⟩
 
 @[inline]
-public def ofMTime (mtime : MTime) (caption := "<mtime>") : BuildTrace := {
-  caption
-  hash := Hash.nil
-  mtime
-}
+public def ofMTime (mtime : MTime) (caption := "<mtime>") : BuildTrace :=
+  { caption, hash := Hash.nil, mtime }
 
 public instance : Coe MTime BuildTrace := ⟨ofMTime⟩
 

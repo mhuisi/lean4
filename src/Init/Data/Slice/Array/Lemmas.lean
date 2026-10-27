@@ -33,22 +33,19 @@ theorem step_eq {it : Iter (α := SubarrayIterator α) α}
       = if h : it.1.xs.start < it.1.xs.stop then
           haveI := it.1.xs.start_le_stop
           haveI := it.1.xs.stop_le_array_size
-          ⟨
-            .yield ⟨⟨it.1.xs.array, it.1.xs.start + 1, it.1.xs.stop, by omega, by assumption⟩⟩
+          ⟨ .yield ⟨⟨it.1.xs.array, it.1.xs.start + 1, it.1.xs.stop, by omega, by assumption⟩⟩
               (it.1.xs.array[it.1.xs.start]'(by omega)),
             (by
               simp_all [Iter.IsPlausibleStep, IterM.IsPlausibleStep, Iterator.IsPlausibleStep,
                 instIteratorSubarrayIteratorId, -- TODO
-                SubarrayIterator.step, Iter.toIterM])
-          ⟩
-        else ⟨
-          .done,
-          (by
-            simpa [Iter.IsPlausibleStep, IterM.IsPlausibleStep, Iterator.IsPlausibleStep,
-                instIteratorSubarrayIteratorId, -- TODO
-                SubarrayIterator.step]
-              using h)
-        ⟩ := by
+                SubarrayIterator.step, Iter.toIterM]) ⟩
+        else
+          ⟨ .done,
+            (by
+              simpa [Iter.IsPlausibleStep, IterM.IsPlausibleStep, Iterator.IsPlausibleStep,
+                  instIteratorSubarrayIteratorId, -- TODO
+                  SubarrayIterator.step]
+                using h) ⟩ := by
   simp only [Iter.step, IterM.Step.toPure, Iter.toIter_toIterM, IterStep.mapIterator, IterM.step,
     Iterator.step, SubarrayIterator.step, Id.run_pure, Shrink.inflate_deflate]
   by_cases h : it.internalState.xs.start < it.internalState.xs.stop
@@ -203,13 +200,11 @@ public theorem Array.toSubarray_eq_toSubarray_of_min_eq_min
 @[cbv_eval]
 public theorem Array.toSubarray_eq_min {xs : Array α} {lo hi : Nat}
     : xs.toSubarray lo hi
-      = ⟨⟨
-        xs,
-        min lo (min hi xs.size),
-        min hi xs.size,
-        Nat.min_le_right _ _,
-        Nat.min_le_right _ _
-      ⟩⟩ := by
+      = ⟨ ⟨ xs,
+            min lo (min hi xs.size),
+            min hi xs.size,
+            Nat.min_le_right _ _,
+            Nat.min_le_right _ _ ⟩ ⟩ := by
   simp only [Array.toSubarray]
   split <;> split <;> simp [Nat.min_eq_right (Nat.le_of_not_ge _), *]
 

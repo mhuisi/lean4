@@ -57,11 +57,10 @@ def fork (root : CancellationContext) : BaseIO CancellationContext := do
     let st ← get
     let newId := st.id
 
-    set {
-      st with
-      id := newId + 1
-      tokens := st.tokens.insert newId (token, #[]) |>.modify root.id (.map (·) (.push · newId))
-    }
+    set
+      { st with
+        id := newId + 1
+        tokens := st.tokens.insert newId (token, #[]) |>.modify root.id (.map (·) (.push · newId)) }
 
     return { state := root.state, token, id := newId, parent? := some root.id }
 

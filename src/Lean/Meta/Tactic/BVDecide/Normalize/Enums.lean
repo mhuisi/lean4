@@ -97,14 +97,13 @@ def getEnumToBitVecFor (declName : Name) : MetaM Name := do
           Nat.fold domainSize (init := recOn)
             (fun i _ acc => mkApp acc <| toExpr <| BitVec.ofNat bvSize i)
         mkLambdaFVars #[x] translator
-    addDecl <| .defnDecl {
-      name := enumToBitVecName
-      type := (← mkArrow declType bvType)
-      levelParams := levelParamNames
-      value := translator
-      hints := .regular (getMaxHeight env translator + 1)
-      safety := .safe
-    }
+    addDecl <| .defnDecl
+      { name := enumToBitVecName
+        type := (← mkArrow declType bvType)
+        levelParams := levelParamNames
+        value := translator
+        hints := .regular (getMaxHeight env translator + 1)
+        safety := .safe }
   return enumToBitVecName
 
 /--
@@ -196,12 +195,11 @@ def getEqIffEnumToBitVecEqFor (declName : Name) : MetaM Name := do
         let value ← mkAppM ``BitVec.eq_iff_eq_of_inv #[enumToBitVec, inv, invProof]
         mkLetFVars #[inv] value
 
-    addDecl <| .thmDecl {
-      name := eqIffEnumToBitVecEqName
-      levelParams := levelParamNames
-      type := type
-      value := value
-    }
+    addDecl <| .thmDecl
+      { name := eqIffEnumToBitVecEqName
+        levelParams := levelParamNames
+        type := type
+        value := value }
   return eqIffEnumToBitVecEqName
 
 /--
@@ -237,12 +235,8 @@ def getEnumToBitVecLeFor (declName : Name) : MetaM Name := do
         let cases ← enumCases declName motive x ctors case
         return (← mkForallFVars #[x] statement, ← mkLambdaFVars #[x] cases)
 
-    addDecl <| .thmDecl {
-      name := enumToBitVecLeName
-      levelParams := levelParamNames
-      type := type
-      value := value
-    }
+    addDecl <| .thmDecl
+      { name := enumToBitVecLeName, levelParams := levelParamNames, type := type, value := value }
   return enumToBitVecLeName
 
 /--
@@ -295,8 +289,8 @@ where
             let fvars := #[a, x] ++ hs
             return (← mkForallFVars fvars type, ← mkLambdaFVars fvars cases)
 
-    return
-      .thmDecl { name := thmName, levelParams := levelParamNames, type := type, value := value }
+    return .thmDecl
+      { name := thmName, levelParams := levelParamNames, type := type, value := value }
 
   handleEnumWithDefault
       (declName : Name) (thmName : Name) (inductiveInfo : InductiveVal)
@@ -358,8 +352,8 @@ where
             let fvars := #[a, x] ++ hs
             return (← mkForallFVars fvars type, ← mkLambdaFVars fvars cases)
 
-    return
-      .thmDecl { name := thmName, levelParams := levelParamNames, type := type, value := value }
+    return .thmDecl
+      { name := thmName, levelParams := levelParamNames, type := type, value := value }
 
 /--
 Obtain a theorem that translates `.match_x` applications on enum inductives to chains of `cond`
@@ -473,12 +467,12 @@ public partial def enumsPass : Pass where
         let lemma ← getMatchEqCondForAux matcher kind
         relevantLemmas := relevantLemmas.insert (← Sym.Simp.mkTheoremFromDecl lemma)
 
-      methods := {
-        methods with
-        pre := methods.pre >> applyIteSimproc toBitVecFns >> applyCondSimproc toBitVecFns
-        post :=
-          methods.post >> relevantLemmas.rewrite >> enumEqToBitVecEq enumIndex >> enumToBitVecCtor
-      }
+      methods :=
+        { methods with
+          pre := methods.pre >> applyIteSimproc toBitVecFns >> applyCondSimproc toBitVecFns
+          post :=
+            methods.post >> relevantLemmas.rewrite >> enumEqToBitVecEq enumIndex
+              >> enumToBitVecCtor }
 
       -- Desugaring matches could have potentially revealed new opportunities to do stuff with
       -- structures. Thus we must also re run lemmas that handle structure projections in the

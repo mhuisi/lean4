@@ -107,10 +107,9 @@ theorem iff_congr {p₁ p₂ q₁ q₂ : Prop} (h₁ : p₁ ↔ p₂) (h₂ : q�
 theorem implies_dep_congr_ctx
     {p₁ p₂ q₁ : Prop} (h₁ : p₁ = p₂) {q₂ : p₂ → Prop} (h₂ : (h : p₂) → q₁ = q₂ h)
     : (p₁ → q₁) = ((h : p₂) → q₂ h) :=
-  propext ⟨
-    fun hl hp₂ => (h₂ hp₂).mp (hl (h₁.mpr hp₂)),
-    fun hr hp₁ => (h₂ (h₁.mp hp₁)).mpr (hr (h₁.mp hp₁))
-  ⟩
+  propext
+    ⟨ fun hl hp₂ => (h₂ hp₂).mp (hl (h₁.mpr hp₂)),
+      fun hr hp₁ => (h₂ (h₁.mp hp₁)).mpr (hr (h₁.mp hp₁)) ⟩
 
 theorem implies_congr_ctx {p₁ p₂ q₁ q₂ : Prop} (h₁ : p₁ = p₂) (h₂ : p₂ → q₁ = q₂)
     : (p₁ → q₁) = (p₂ → q₂) :=
@@ -325,11 +324,10 @@ theorem and_imp : (a ∧ b → c) ↔ (a → b → c) :=
 @[simp] theorem not_and : ¬(a ∧ b) ↔ (a → ¬b) := and_imp
 @[simp]
 theorem or_self (p : Prop) : (p ∨ p) = p :=
-  propext ⟨
-    fun
-      | .inl h | .inr h => h,
-    .inl
-  ⟩
+  propext
+    ⟨ fun
+        | .inl h | .inr h => h,
+      .inl ⟩
 instance : Std.IdempotentOp Or := ⟨or_self⟩
 @[simp] theorem or_true (p : Prop) : (p ∨ True) = True := eq_true (.inr trivial)
 @[simp] theorem true_or (p : Prop) : (True ∨ p) = True := eq_true (.inl trivial)

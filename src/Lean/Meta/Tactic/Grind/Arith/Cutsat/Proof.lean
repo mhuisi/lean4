@@ -689,11 +689,10 @@ private partial def LeCnstr.toExprProof (c' : LeCnstr) : ProofM Expr :=
         (← c₁.toExprProof) (← c₂.toExprProof)
     | .combineDivCoeffs c₁ c₂ k =>
       let p := c₁.p.mul c₂.p.leadCoeff.natAbs |>.combine (c₂.p.mul c₁.p.leadCoeff.natAbs)
-      return mkAppN (mkConst ``Int.Internal.Linear.le_combine_coeff_rfl) #[
-        ← getContext, ← mkPolyDecl c₁.p, ← mkPolyDecl c₂.p, ← mkPolyDecl p, ← mkPolyDecl c'.p,
-        toExpr k,
-        ← mkPolyRefl p, eagerReflBoolTrue, ← mkPolyRefl c'.p, ← c₁.toExprProof, ← c₂.toExprProof
-      ]
+      return mkAppN (mkConst ``Int.Internal.Linear.le_combine_coeff_rfl)
+        #[← getContext, ← mkPolyDecl c₁.p, ← mkPolyDecl c₂.p, ← mkPolyDecl p, ← mkPolyDecl c'.p,
+          toExpr k,
+          ← mkPolyRefl p, eagerReflBoolTrue, ← mkPolyRefl c'.p, ← c₁.toExprProof, ← c₂.toExprProof]
     | .subst x c₁ c₂ =>
       let a := c₁.p.coeff x
       let thm :=
@@ -701,10 +700,9 @@ private partial def LeCnstr.toExprProof (c' : LeCnstr) : ProofM Expr :=
           mkConst ``Int.Internal.Linear.eq_le_subst_nonneg_rfl
         else
           mkConst ``Int.Internal.Linear.eq_le_subst_nonpos_rfl
-      return mkAppN thm #[
-        ← getContext, ← mkVarDecl x, ← mkPolyDecl c₁.p, ← mkPolyDecl c₂.p, ← mkPolyDecl c'.p,
-        eagerReflBoolTrue, ← mkPolyRefl c'.p, ← c₁.toExprProof, ← c₂.toExprProof
-      ]
+      return mkAppN thm
+        #[← getContext, ← mkVarDecl x, ← mkPolyDecl c₁.p, ← mkPolyDecl c₂.p, ← mkPolyDecl c'.p,
+          eagerReflBoolTrue, ← mkPolyRefl c'.p, ← c₁.toExprProof, ← c₂.toExprProof]
     | .ofLeDiseq c₁ c₂ =>
       return mkApp7 (mkConst ``Int.Internal.Linear.le_of_le_diseq) (← getContext)
         (← mkPolyDecl c₁.p) (← mkPolyDecl c₂.p) (← mkPolyDecl c'.p) eagerReflBoolTrue
@@ -778,10 +776,9 @@ private partial def DiseqCnstr.toExprProof (c' : DiseqCnstr) : ProofM Expr :=
       return mkApp5 (mkConst ``Int.Internal.Linear.diseq_neg) (← getContext) (← mkPolyDecl c.p)
         (← mkPolyDecl c'.p) eagerReflBoolTrue (← c.toExprProof)
     | .subst x c₁ c₂ =>
-      return mkAppN (mkConst ``Int.Internal.Linear.eq_diseq_subst_rfl) #[
-        ← getContext, ← mkVarDecl x, ← mkPolyDecl c₁.p, ← mkPolyDecl c₂.p, ← mkPolyDecl c'.p,
-        eagerReflBoolTrue, ← mkPolyRefl c'.p, ← c₁.toExprProof, ← c₂.toExprProof
-      ]
+      return mkAppN (mkConst ``Int.Internal.Linear.eq_diseq_subst_rfl)
+        #[← getContext, ← mkVarDecl x, ← mkPolyDecl c₁.p, ← mkPolyDecl c₂.p, ← mkPolyDecl c'.p,
+          eagerReflBoolTrue, ← mkPolyRefl c'.p, ← c₁.toExprProof, ← c₂.toExprProof]
     | .reorder c =>
       withPrevEpoch <| c.toExprProof
     | .commRingNorm c e p =>

@@ -2174,10 +2174,9 @@ theorem size_filter_eq_size_iff [TransCmp cmp] {f : α → Bool} (h : t.WF)
   TreeMap.Raw.size_filter_eq_size_iff h.out
 
 theorem filter_equiv_self_iff [TransCmp cmp] {f : (a : α) → Bool} (h : t.WF)
-    : (t.filter f) ~m t ↔ ∀ (a : α) (h : a ∈ t), f (t.get a h) = true := ⟨
-  fun h' => (TreeMap.Raw.filter_equiv_self_iff h.out).mp h'.1,
-  fun h' => ⟨(TreeMap.Raw.filter_equiv_self_iff h.out).mpr h'⟩
-⟩
+    : (t.filter f) ~m t ↔ ∀ (a : α) (h : a ∈ t), f (t.get a h) = true :=
+  ⟨ fun h' => (TreeMap.Raw.filter_equiv_self_iff h.out).mp h'.1,
+    fun h' => ⟨(TreeMap.Raw.filter_equiv_self_iff h.out).mpr h'⟩ ⟩
 
 @[simp, grind =]
 theorem get?_filter [TransCmp cmp] {f : α → Bool} {k : α} (h : t.WF)

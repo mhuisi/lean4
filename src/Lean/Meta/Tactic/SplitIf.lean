@@ -141,12 +141,11 @@ private partial def findIfToSplit? (e : Expr) : MetaM (Option (Expr × Expr)) :=
   else
     return none
 
-register_builtin_option backward.split : Bool := {
-  defValue := true
-  descr :=
-    "use the old semantics for the `split` tactic where nested `if-then-else` terms could be \
-      simplified too"
-}
+register_builtin_option backward.split : Bool :=
+  { defValue := true
+    descr :=
+      "use the old semantics for the `split` tactic where nested `if-then-else` terms could be \
+        simplified too" }
 
 namespace SplitIf
 /--

@@ -76,10 +76,9 @@ open Lean Meta Elab
 
 namespace Lean.Elab.WF.GuessLex
 
-register_builtin_option showInferredTerminationBy : Bool := {
-  defValue := false
-  descr := "In recursive definitions, show the inferred `termination_by` measure."
-}
+register_builtin_option showInferredTerminationBy : Bool :=
+  { defValue := false
+    descr := "In recursive definitions, show the inferred `termination_by` measure." }
 
 /--
 Given a predefinition, return the variable names in the outermost lambdas.

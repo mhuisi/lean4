@@ -669,8 +669,7 @@ public def LinearPreorderPackage.ofOrd
   haveI := args.transOrd
   letI := args.le
   haveI := args.lawfulOrderOrd
-  {
-    toOrd := args.ord
+  { toOrd := args.ord
     toLE := args.le
     toLT := args.lt
     toBEq := args.beq
@@ -687,8 +686,7 @@ public def LinearPreorderPackage.ofOrd
     le_refl a := by simp
     le_total a b := by
       cases h : compare a b <;> simp [h, ← isLE_compare (a := a), ← isGE_compare (a := a)]
-    le_trans a b c := by simpa [← isLE_compare] using TransOrd.isLE_trans
-  }
+    le_trans a b c := by simpa [← isLE_compare] using TransOrd.isLE_trans }
 
 end LinearPreorder
 
@@ -817,8 +815,7 @@ public def LinearOrderPackage.ofOrd
   haveI : LawfulEqOrd α := ⟨args.eq_of_compare _ _⟩
   letI : Min α := args.min
   letI : Max α := args.max
-  {
-    toMin := args.min
+  { toMin := args.min
     toMax := args.max
     le_antisymm := Antisymm.antisymm
     toLawfulOrderMin := by
@@ -826,8 +823,7 @@ public def LinearOrderPackage.ofOrd
       infer_instance
     toLawfulOrderMax := by
       haveI : LawfulOrderLeftLeaningMax α := .of_eq (by simpa [isGE_compare] using args.max_eq)
-      infer_instance
-  }
+      infer_instance }
 
 end LinearOrder
 

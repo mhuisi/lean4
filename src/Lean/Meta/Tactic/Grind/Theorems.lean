@@ -103,11 +103,8 @@ def Theorems.insert [TheoremLike α] (s : Theorems α) (thm : α) : Theorems α 
 def Theorems.contains (s : Theorems α) (origin : Origin) : Bool := s.origins.contains origin
 
 /-- Marks the theorem with the given origin as `erased` -/
-def Theorems.erase (s : Theorems α) (origin : Origin) : Theorems α := {
-  s with
-  erased := s.erased.insert origin
-  origins := s.origins.erase origin
-}
+def Theorems.erase (s : Theorems α) (origin : Origin) : Theorems α :=
+  { s with erased := s.erased.insert origin, origins := s.origins.erase origin }
 
 /-- Returns `true` if the theorem has been marked as erased. -/
 def Theorems.isErased (s : Theorems α) (origin : Origin) : Bool := s.erased.contains origin

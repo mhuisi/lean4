@@ -37,11 +37,8 @@ abbrev SearchM := StateRefT Search.State LinearM
 def mkCase (c : DiseqCnstr) : SearchM FVarId := do
   let fvarId ← mkFreshFVarId
   let saved ← getStruct
-  modify fun s => {
-    s with
-    cases := s.cases.push { saved, fvarId, c }
-    decVars := s.decVars.insert fvarId
-  }
+  modify fun s =>
+    { s with cases := s.cases.push { saved, fvarId, c }, decVars := s.decVars.insert fvarId }
   modifyStruct fun s => { s with caseSplits := true }
   return fvarId
 

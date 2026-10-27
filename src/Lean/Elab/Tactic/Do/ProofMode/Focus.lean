@@ -54,15 +54,11 @@ def FocusResult.refl (u : Level) (σs : Expr) (restHyps : Expr) (focusHyp : Expr
   let proof := mkApp2 (mkConst ``SPred.bientails.refl [u]) σs (SPred.mkAnd! u σs restHyps focusHyp)
   { restHyps, focusHyp, proof }
 
-def FocusResult.restGoal (res : FocusResult) (goal : MGoal) : MGoal := {
-  goal with
-  hyps := res.restHyps
-}
+def FocusResult.restGoal (res : FocusResult) (goal : MGoal) : MGoal :=
+  { goal with hyps := res.restHyps }
 
-def FocusResult.recombineGoal (res : FocusResult) (goal : MGoal) : MGoal := {
-  goal with
-  hyps := SPred.mkAnd! goal.u goal.σs res.restHyps res.focusHyp
-}
+def FocusResult.recombineGoal (res : FocusResult) (goal : MGoal) : MGoal :=
+  { goal with hyps := SPred.mkAnd! goal.u goal.σs res.restHyps res.focusHyp }
 
 /-- Turn a proof for `(res.recombineGoal goal).toExpr` into one for `goal.toExpr`. -/
 def FocusResult.rewriteHyps (res : FocusResult) (goal : MGoal) : Expr → Expr :=

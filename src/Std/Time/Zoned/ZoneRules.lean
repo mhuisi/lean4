@@ -176,17 +176,14 @@ def fixedOffsetZone
     (identifier : Option String := none) (abbreviation : Option String := none)
     : ZoneRules :=
   let offset : Offset := { second }
-  {
-    transitions := #[]
-    initialLocalTimeType := {
-      gmtOffset := offset
-      isDst := false
-      abbreviation := abbreviation.getD (offset.toIsoString true)
-      wall := .standard
-      utLocal := .ut
-      identifier := identifier.getD (offset.toIsoString true)
-    }
-  }
+  { transitions := #[]
+    initialLocalTimeType :=
+      { gmtOffset := offset
+        isDst := false
+        abbreviation := abbreviation.getD (offset.toIsoString true)
+        wall := .standard
+        utLocal := .ut
+        identifier := identifier.getD (offset.toIsoString true) } }
 
 /-- Creates ZoneRules with a fixed offset of UTC (GMT+0). -/
 @[inline] def UTC : ZoneRules := fixedOffsetZone 0 (some "UTC") (some "UTC")
@@ -210,13 +207,12 @@ def findLocalTimeTypeForTimestamp (zr : ZoneRules) (timestamp : Timestamp)
 
   let tz := rule.timezoneAt timestamp
 
-  return {
-    t.localTimeType with
-    gmtOffset := tz.offset
-    isDst := tz.isDST
-    abbreviation := tz.abbreviation
-    identifier := tz.name
-  }
+  return
+    { t.localTimeType with
+      gmtOffset := tz.offset
+      isDst := tz.isDST
+      abbreviation := tz.abbreviation
+      identifier := tz.name }
 
 /--
 Finds the `LocalTimeType` for a given wall-clock time (seconds since 1970-01-01T00:00:00 in local time).
@@ -240,13 +236,12 @@ def findLocalTimeTypeForWallTime (zr : ZoneRules) (wallTime : WallTime) : LocalT
     -- Convert wall time to an approximate UTC timestamp using the last known offset.
     let approxUtc : Timestamp := wallTime.toTimestamp ltt.gmtOffset
     let tz := rule.timezoneAt approxUtc
-    return {
-      ltt with
-      gmtOffset := tz.offset
-      isDst := tz.isDST
-      abbreviation := tz.abbreviation
-      identifier := tz.name
-    }
+    return
+      { ltt with
+        gmtOffset := tz.offset
+        isDst := tz.isDST
+        abbreviation := tz.abbreviation
+        identifier := tz.name }
 
   return ltt
 

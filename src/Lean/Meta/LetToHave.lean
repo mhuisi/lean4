@@ -354,10 +354,9 @@ where
       match decl with
       | .cdecl _ _ n t bi _ => do
         let t := t.abstractRange i fvars
-        pure {
-          expr := Expr.lam n t res.expr bi
-          type? := res.type?.map fun type => Expr.forallE n t type bi
-        }
+        pure
+          { expr := Expr.lam n t res.expr bi
+            type? := res.type?.map fun type => Expr.forallE n t type bi }
       | .ldecl _ _ n t v nondep _ => do
         let nondep ←
           if nondep then
@@ -368,15 +367,14 @@ where
             pure false
         let t := t.abstractRange i fvars
         let v := v.abstractRange i fvars
-        pure {
-          expr := Expr.letE n t v res.expr nondep
-          type? :=
-            res.type?.map fun type =>
-              if type.hasLooseBVar 0 then
-                Expr.letE n t v type nondep
-              else
-                type.lowerLooseBVars 1 1
-        }
+        pure
+          { expr := Expr.letE n t v res.expr nondep
+            type? :=
+              res.type?.map fun type =>
+                if type.hasLooseBVar 0 then
+                  Expr.letE n t v type nondep
+                else
+                  type.lowerLooseBVars 1 1 }
 
 private partial def visitProj (e : Expr) (structName : Name) (idx : Nat) (struct : Result)
     : M Result := do

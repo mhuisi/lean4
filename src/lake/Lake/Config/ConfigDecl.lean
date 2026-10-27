@@ -49,13 +49,12 @@ public structure NConfigDecl (p n : Name) extends PConfigDecl p where
 public structure KConfigDecl (k : Name) extends ConfigDecl where
   kind_eq : toConfigDecl.kind = k := by rfl
 
-public instance : Nonempty (NConfigDecl pkg name) := ⟨{
-  pkg
-  name
-  kind := .anonymous
-  config := Classical.ofNonempty
-  wf_data := by simp [Name.isAnonymous_iff_eq_anonymous]
-}⟩
+public instance : Nonempty (NConfigDecl pkg name) :=
+  ⟨ { pkg
+      name
+      kind := .anonymous
+      config := Classical.ofNonempty
+      wf_data := by simp [Name.isAnonymous_iff_eq_anonymous] } ⟩
 
 @[inline]
 public def ConfigDecl.partialKey (self : ConfigDecl) : PartialBuildKey :=

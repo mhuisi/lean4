@@ -121,11 +121,9 @@ namespace fold
 
 theorem denote_go_and
     {aig : AIG α} (acc : AIG.Ref aig) (curr : Nat) (hcurr : curr ≤ len) (input : RefVec aig len)
-    : ⟦
-        (go aig acc curr len input mkAndCached).aig,
+    : ⟦ (go aig acc curr len input mkAndCached).aig,
         (go aig acc curr len input mkAndCached).ref,
-        assign
-      ⟧
+        assign ⟧
       = (⟦aig, acc, assign⟧
         ∧ (∀ (idx : Nat) (hidx1 : idx < len),
           curr ≤ idx → ⟦aig, input.get idx hidx1, assign⟧)) := by

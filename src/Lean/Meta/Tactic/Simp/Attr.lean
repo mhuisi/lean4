@@ -40,42 +40,41 @@ def addDeclToUnfold
 def mkSimpAttr
     (attrName : Name) (attrDescr : String) (ext : SimpExtension) (ref : Name := by exact decl_name%)
     : IO Unit :=
-  registerBuiltinAttribute {
-    ref := ref
-    name := attrName
-    descr := attrDescr
-    applicationTime := AttributeApplicationTime.afterCompilation
-    add := fun declName stx attrKind => do
-      if (← isSimproc declName <||> isBuiltinSimproc declName) then
-        let simprocAttrName := simpAttrNameToSimprocAttrName attrName
-        Attribute.add declName simprocAttrName stx attrKind
-      else
-        let go : MetaM Unit := do
-          let info ← getAsyncConstInfo declName
-          let post :=
-            if stx[1].isNone then true else stx[1][0].getKind == ``Lean.Parser.Tactic.simpPost
-          let inv := !stx[2].isNone
-          let prio ← getAttrParamOptPrio stx[3]
-          if (← isProp info.sig.get.type) then
-            addSimpTheorem ext declName post (inv := inv) attrKind prio
-          else
-            unless (← addDeclToUnfold ext declName post inv prio attrKind) do
-              throwError
-                m!"Cannot add `simp` attribute to `{.ofConstName declName}`: It is not a \
-                    proposition nor a definition (to unfold)"
-                  ++ .note m!"The `[simp]` attribute can be added to lemmas that should be \
-                    automatically used by the simplifier \
-                    and to definitions that the simplifier should automatically unfold"
-        discard <| go.run {} {}
-    erase := fun declName => do
-      if (← isSimproc declName <||> isBuiltinSimproc declName) then
-        let simprocAttrName := simpAttrNameToSimprocAttrName attrName
-        Attribute.erase declName simprocAttrName
-      else
-        let s := ext.getState (← getEnv)
-        let s ← s.erase (.decl declName)
-        modifyEnv fun env => ext.modifyState env fun _ => s
-  }
+  registerBuiltinAttribute
+    { ref := ref
+      name := attrName
+      descr := attrDescr
+      applicationTime := AttributeApplicationTime.afterCompilation
+      add := fun declName stx attrKind => do
+        if (← isSimproc declName <||> isBuiltinSimproc declName) then
+          let simprocAttrName := simpAttrNameToSimprocAttrName attrName
+          Attribute.add declName simprocAttrName stx attrKind
+        else
+          let go : MetaM Unit := do
+            let info ← getAsyncConstInfo declName
+            let post :=
+              if stx[1].isNone then true else stx[1][0].getKind == ``Lean.Parser.Tactic.simpPost
+            let inv := !stx[2].isNone
+            let prio ← getAttrParamOptPrio stx[3]
+            if (← isProp info.sig.get.type) then
+              addSimpTheorem ext declName post (inv := inv) attrKind prio
+            else
+              unless (← addDeclToUnfold ext declName post inv prio attrKind) do
+                throwError
+                  m!"Cannot add `simp` attribute to `{.ofConstName declName}`: It is not a \
+                      proposition nor a definition (to unfold)"
+                    ++ .note m!"The `[simp]` attribute can be added to lemmas that should be \
+                      automatically used by the simplifier \
+                      and to definitions that the simplifier should automatically unfold"
+          discard <| go.run {} {}
+      erase := fun declName => do
+        if (← isSimproc declName <||> isBuiltinSimproc declName) then
+          let simprocAttrName := simpAttrNameToSimprocAttrName attrName
+          Attribute.erase declName simprocAttrName
+        else
+          let s := ext.getState (← getEnv)
+          let s ← s.erase (.decl declName)
+          modifyEnv fun env => ext.modifyState env fun _ => s }
 
 /--
 Registers the given name as a custom simp set. Applying the name as an attribute to a name adds it

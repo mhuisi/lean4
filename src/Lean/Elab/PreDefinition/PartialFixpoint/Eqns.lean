@@ -59,14 +59,13 @@ def mkFixEq (declNameNonRec : Name) : MetaM Name := do
           throwError "mkFixEq: unexpected body of `{.ofConstName declNameNonRec}`:{indentExpr body}"
         let F := body.appFn!.appArg!
         return (← mkForallFVars xs (← inferType F), ← mkLambdaFVars xs F)
-    addDecl <| .defnDecl {
-      name := functionalName
-      type := functionalType
-      value := functionalValue
-      levelParams := info.levelParams
-      hints := .abbrev
-      safety := .safe
-    }
+    addDecl <| .defnDecl
+      { name := functionalName
+        type := functionalType
+        value := functionalValue
+        levelParams := info.levelParams
+        hints := .abbrev
+        safety := .safe }
     modifyEnv (addNoncomputable · functionalName)
     let (type, value) ←
       lambdaTelescope info.value fun xs body => do
@@ -93,14 +92,8 @@ public def registerEqnsInfo
           pure none
       modifyEnv fun env =>
         preDefs.foldl (init := env) fun env preDef =>
-          eqnInfoExt.insert env preDef.declName {
-            preDef with
-            declNames
-            declNameNonRec
-            fixedParamPerms
-            fixpointType
-            fixEq?
-          }
+          eqnInfoExt.insert env preDef.declName
+            { preDef with declNames, declNameNonRec, fixedParamPerms, fixpointType, fixEq? }
 
 def deltaLHSUntilFix (declName declNameNonRec : Name) (mvarId : MVarId) : MetaM MVarId :=
   mvarId.withContext do
@@ -198,12 +191,8 @@ where
         let type ← letToHave type
         let value ← mkLambdaFVars xs goal
 
-        addDecl <| (← mkThmOrUnsafeDef {
-          name := name
-          levelParams := info.levelParams
-          type := type
-          value := value
-        })
+        addDecl <| (← mkThmOrUnsafeDef
+          { name := name, levelParams := info.levelParams, type := type, value := value })
 
 def getUnfoldFor? (declName : Name) : MetaM (Option Name) := do
   let name := mkEqLikeNameFor (← getEnv) declName unfoldThmSuffix

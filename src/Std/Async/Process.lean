@@ -120,24 +120,23 @@ def setPriority (pid : PId) (priority : Int64) : IO Unit :=
 /-- Retrieves resource usage statistics. -/
 @[inline]
 def getResourceUsage : IO ResourceUsageStats :=
-  UV.System.getrusage <&> fun rusage => {
-    cpuUserTime := .ofNat <| UInt64.toNat rusage.userTime
-    cpuSystemTime := .ofNat <| UInt64.toNat rusage.systemTime
-    peakResidentSetSizeKb := rusage.maxRSS
-    sharedMemorySizeKb := rusage.ixRSS
-    unsharedDataSizeKb := rusage.idRSS
-    unsharedStackSizeKb := rusage.isRSS
-    minorPageFaults := rusage.minFlt
-    majorPageFaults := rusage.majFlt
-    swapOperations := rusage.nSwap
-    blockInputOps := rusage.inBlock
-    blockOutputOps := rusage.outBlock
-    messagesSent := rusage.msgSent
-    messagesReceived := rusage.msgRecv
-    signalsReceived := rusage.signals
-    voluntaryContextSwitches := rusage.voluntaryCS
-    involuntaryContextSwitches := rusage.involuntaryCS
-  }
+  UV.System.getrusage <&> fun rusage =>
+    { cpuUserTime := .ofNat <| UInt64.toNat rusage.userTime
+      cpuSystemTime := .ofNat <| UInt64.toNat rusage.systemTime
+      peakResidentSetSizeKb := rusage.maxRSS
+      sharedMemorySizeKb := rusage.ixRSS
+      unsharedDataSizeKb := rusage.idRSS
+      unsharedStackSizeKb := rusage.isRSS
+      minorPageFaults := rusage.minFlt
+      majorPageFaults := rusage.majFlt
+      swapOperations := rusage.nSwap
+      blockInputOps := rusage.inBlock
+      blockOutputOps := rusage.outBlock
+      messagesSent := rusage.msgSent
+      messagesReceived := rusage.msgRecv
+      signalsReceived := rusage.signals
+      voluntaryContextSwitches := rusage.voluntaryCS
+      involuntaryContextSwitches := rusage.involuntaryCS }
 
 /-- Returns the absolute path of the current executable. -/
 @[inline] def getExecutablePath : IO FilePath := FilePath.mk <$> UV.System.exePath

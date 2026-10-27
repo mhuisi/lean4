@@ -34,19 +34,17 @@ public def fmtHeader : Fmt := fun
             return Layouts.pseudoApplication #[tks, mod]
         | _ =>
           throw .partialFormatter
-    return Layouts.spacedLines #[
-      moduleTk?,
-      Layouts.lines <| #[preludeTk?] ++ imports
-    ]
+    return Layouts.spacedLines
+      #[moduleTk?,
+        Layouts.lines <| #[preludeTk?] ++ imports]
   | _ =>
     throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Module.module]
 public def fmtModule : Fmt := fun stx => do
-  let Syntax.node _ ``Parser.Module.module #[
-        headerStx,
-        Syntax.node _ `Lean.Parser.Module.cmds cmdStxs
-      ] :=
+  let Syntax.node _ ``Parser.Module.module
+        #[headerStx,
+          Syntax.node _ `Lean.Parser.Module.cmds cmdStxs] :=
       stx
     | throw .partialFormatter
   let docs := (← headerDocs headerStx) ++ (← cmdDocs cmdStxs)

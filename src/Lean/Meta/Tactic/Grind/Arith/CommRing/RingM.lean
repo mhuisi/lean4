@@ -173,11 +173,8 @@ def mkVarCore [MonadLiftT GoalM m] [Monad m] [MonadRingState m] [MonadSetTermId 
   if let some var := s.varMap.find? { expr := e } then
     return var
   let var : Var := s.vars.size
-  modifyRingState fun s => {
-    s with
-    vars := s.vars.push e
-    varMap := s.varMap.insert { expr := e } var
-  }
+  modifyRingState fun s =>
+    { s with vars := s.vars.push e, varMap := s.varMap.insert { expr := e } var }
   MonadSetTermId.setTermId e
   ringExt.markTerm e
   return var

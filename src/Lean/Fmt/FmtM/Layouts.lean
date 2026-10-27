@@ -121,10 +121,9 @@ public def sepArray (sepArray : SepArray sep) (format : Types.SepArrayFormat)
   | .joinUsingNl allowFlattening afterElem? _ =>
     let joinedUsingNl := joinUsingNl sepArray afterElem?
     if allowFlattening then
-      oneOf #[
-        flattened <| joinUsingSep sepArray afterElem? (afterSep? := space),
-        joinedUsingNl
-      ]
+      oneOf
+        #[flattened <| joinUsingSep sepArray afterElem? (afterSep? := space),
+          joinedUsingNl]
     else
       joinedUsingNl
   | .fillUsingSep afterElem? afterSep? _ =>
@@ -390,10 +389,9 @@ public def infixOperator (chain : Array TaggedDoc) (format : Types.InfixOperator
       fillWrapping combinedChain nested
   if !isHeadless && !format.trailingOperator then
     doc :=
-      oneOf #[
-        compactFirstOperation combinedChain,
-        doc
-      ]
+      oneOf
+        #[compactFirstOperation combinedChain,
+          doc]
   let lastOperand := chain[chain.size - 1]!
   if let some doc' :=
       addStickyAlt? doc lastOperand isTailless combinedChain #[.coequal, .preferSticky] then
@@ -419,10 +417,9 @@ where
     let stickyCombinedChain :=
       combinedChain.set! (combinedChain.size - 1) lastOperandSticky.stickyVariant
     let stickyDoc :=
-      combineFlat #[
-        flattened (combineFlat stickyCombinedChain.pop),
-        stickyCombinedChain.back!
-      ]
+      combineFlat
+        #[flattened (combineFlat stickyCombinedChain.pop),
+          stickyCombinedChain.back!]
     return withStickyAlt doc stickyDoc (.ofSticky lastOperandSticky)
   addDenseAlt?
       (doc : TaggedDoc) (lastOperand : TaggedDoc) (isTailless : Bool)
@@ -432,10 +429,9 @@ where
     guard <| !isTailless
     guard <| format.trailingOperator || combinedChain.size = 2
     guard <| permitDenseLayout lastOperand format.respectPseudoAlignment
-    return fallbackOnHeight doc <| combineFlat #[
-      flattened (combineFlat combinedChain.pop),
-      combinedChain.back!
-    ]
+    return fallbackOnHeight doc <| combineFlat
+      #[flattened (combineFlat combinedChain.pop),
+        combinedChain.back!]
   normalize (chain : Array TaggedDoc) : Array TaggedDoc × Bool × Bool := Id.run do
     let chainSizeBeforeSuffixTrim := chain.size
     let chain := chain.popWhile (·.isAlwaysEmpty)
@@ -500,17 +496,15 @@ where
       else
         combinedChain[1]!
     let compactFirstOperation :=
-      combineFlat #[
-        firstOperand,
-        guarded compactFirstOperationAssertion secondOperand
-      ]
+      combineFlat
+        #[firstOperand,
+          guarded compactFirstOperationAssertion secondOperand]
     let compactedChain := #[compactFirstOperation] ++ combinedChain[2...*]
     fill compactedChain
-  compactFirstOperationAssertion : Assertion := {
-    id := `Lean.Fmt.Layouts.infixOperator.compactFirstOperationAssertion
-    assertion columnPos indentation nonCumulativeIndentation :=
-      columnPos <= indentation + nonCumulativeIndentation
-  }
+  compactFirstOperationAssertion : Assertion :=
+    { id := `Lean.Fmt.Layouts.infixOperator.compactFirstOperationAssertion
+      assertion columnPos indentation nonCumulativeIndentation :=
+        columnPos <= indentation + nonCumulativeIndentation }
   combineFlat (docs : Array TaggedDoc) : TaggedDoc :=
     if format.spacing then
       Layouts.spacedAtomic docs
@@ -574,10 +568,9 @@ public def bracketed
     -- The less indented variant dominates, so the closing bracket is rendered at the minimum of the
     -- indentation and the column of the opening bracket, never to the right of the opening bracket.
     let stickyVariant :=
-      mkSelfDelimited (isBracketed := true) <| oneOf #[
-        sparse,
-        aligned sparse
-      ]
+      mkSelfDelimited (isBracketed := true) <| oneOf
+        #[sparse,
+          aligned sparse]
     let nonStickyVariant := maybeFlattened stickyVariant
     return sticky nonStickyVariant stickyVariant preferStickyVariant
 
@@ -705,22 +698,18 @@ public def keywordPrefixedSepArray
     return keywordPrefixedTerm keyword sepArray.elemsAndSeps[0]! format
   let sepArrayFirstElemFlattened : SepArray sep := ⟨sepArray.elemsAndSeps.modify 0 flattened⟩
   let nonStickyDoc :=
-    oneOf #[
-      combine #[
-        .withSepAfter (hardNested keyword) ⟨space, nested⟩,
-        (Layouts.sepArray sepArrayFirstElemFlattened format.sepArrayFormat)
-      ],
-      combine #[
-        .withSepAfter (hardNested keyword) ⟨hardNl, nested⟩,
-        (Layouts.sepArray sepArray format.sepArrayFormat)
-      ]
-    ]
+    oneOf
+      #[combine
+          #[.withSepAfter (hardNested keyword) ⟨space, nested⟩,
+            (Layouts.sepArray sepArrayFirstElemFlattened format.sepArrayFormat)],
+        combine
+          #[.withSepAfter (hardNested keyword) ⟨hardNl, nested⟩,
+            (Layouts.sepArray sepArray format.sepArrayFormat)]]
   if format.isSticky then
     let stickyDoc :=
-      combine #[
-        .withSepAfter (flattened keyword) ⟨nl, nested⟩,
-        Layouts.sepArray sepArray format.sepArrayFormat
-      ]
+      combine
+        #[.withSepAfter (flattened keyword) ⟨nl, nested⟩,
+          Layouts.sepArray sepArray format.sepArrayFormat]
     return sticky nonStickyDoc stickyDoc .coequal
   return nonStickyDoc
 
@@ -820,10 +809,9 @@ where
     guard <| permitDenseLayout terms.back! format.respectPseudoAlignment
     return oneOf #[dense terms, app]
   dense (terms : Array TaggedDoc) : TaggedDoc :=
-    combine #[
-      flattened (joinUsing space terms.pop),
-      .withSepBefore terms.back! space
-    ]
+    combine
+      #[flattened (joinUsing space terms.pop),
+        .withSepBefore terms.back! space]
 
 public def application
     (terms : Array TaggedDoc)
@@ -876,9 +864,9 @@ public def metaApplication (lb : TaggedDoc) (terms : Array metaApplication.Term)
           | .sep s => .sep s
           | .elems es => .elems <| es.modify 0 hardNested
   let terms' : SepArray "," :=
-    ⟨terms.map fun
-      | .sep s => s
-      | .elems elems => Layouts.fill elems⟩
+    ⟨ terms.map fun
+        | .sep s => s
+        | .elems elems => Layouts.fill elems ⟩
   let terms' := Layouts.sepFill terms'
   Layouts.bracketed lb terms' rb .dense
 
@@ -939,10 +927,8 @@ public def collection
     (format : Types.ArrayLitFormat := {}) :=
   let elems := Layouts.sepArray.normalize elems .excludeTrailingSep
   let elems : SepArray sep :=
-    if elems.numElems > 1 then {
-      elems with
-      elemsAndSeps := elems.elemsAndSeps.modify 0 hardNested
-    }
+    if elems.numElems > 1 then
+      { elems with elemsAndSeps := elems.elemsAndSeps.modify 0 hardNested }
     else
       elems
   let fields := Layouts.sepFill elems
@@ -1039,23 +1025,20 @@ public def assignmentDeclaration
         signature
       else
         let lhs :=
-          combine #[
-            .withSepAfter (hardNested signature) space,
-            separationTk
-          ]
+          combine
+            #[.withSepAfter (hardNested signature) space,
+              separationTk]
         stickyCombine lhs ⟨nl, nested⟩ body
   if sticky then
     let (stickyVariant, kind) :=
       let lhs :=
-        combine #[
-          .withSepAfter (flattened signature) space,
-          separationTk
-        ]
-      if let some stickyBody := getSticky? body then (
-        stickyCombine lhs ⟨nl, nested⟩ body
-          (allowFlattening := !(stickyBody.kind matches .preferSticky)),
-        stickyBody.kind
-      )
+        combine
+          #[.withSepAfter (flattened signature) space,
+            separationTk]
+      if let some stickyBody := getSticky? body then
+        ( stickyCombine lhs ⟨nl, nested⟩ body
+            (allowFlattening := !(stickyBody.kind matches .preferSticky)),
+          stickyBody.kind )
       else
         (stickyCombine lhs ⟨nl, nested⟩ body, .coequal)
     TaggedDoc.sticky doc stickyVariant kind
@@ -1066,10 +1049,9 @@ public def matchDeclaration (signature : TaggedDoc) (matchAlts : TaggedDoc) : Ta
   if matchAlts.isAlwaysEmpty then
     signature
   else
-    combine #[
-      .withSepAfter (hardNested signature) ⟨hardNl, nested⟩,
-      matchAlts
-    ]
+    combine
+      #[.withSepAfter (hardNested signature) ⟨hardNl, nested⟩,
+        matchAlts]
 
 public def whereDeclaration (signature : TaggedDoc) (whereTk : TaggedDoc) (body : TaggedDoc)
     : TaggedDoc :=
@@ -1101,10 +1083,9 @@ public def letDecl
       nl
     else
       space
-  nested <| maybeFlattened <| combine #[
-    .withSepAfter signature signatureSep,
-    decl
-  ]
+  nested <| maybeFlattened <| combine
+    #[.withSepAfter signature signatureSep,
+      decl]
 
 public structure Types.QuantifierHead where
   quantifier : TaggedDoc
@@ -1152,10 +1133,9 @@ public def conditional
   let allowFlattening := allowFlattening && elseIfs.isEmpty
   let elseIfs := #[⟨empty, ifTk, cond, thenTk, thenBlock⟩] ++ elseIfs
   if allowFlattening then
-    oneOf #[
-      flattened <| mk elseIfs elseTk elseBlock (allowFlattening := true),
-      mk elseIfs elseTk elseBlock (allowFlattening := false)
-    ]
+    oneOf
+      #[flattened <| mk elseIfs elseTk elseBlock (allowFlattening := true),
+        mk elseIfs elseTk elseBlock (allowFlattening := false)]
   else
     unflattenable <| mk elseIfs elseTk elseBlock (allowFlattening := false)
 where
@@ -1170,10 +1150,9 @@ where
         let head := Layouts.pseudoApplication #[tk, cond]
         let «then» := attachBlockToToken thenTk thenBlock allowFlattening
         let trailingThen :=
-          combine #[
-            .withSepAfter (hardNested head) space,
-            «then»
-          ]
+          combine
+            #[.withSepAfter (hardNested head) space,
+              «then»]
         trailingThen
     let «else» := attachBlockToToken elseTk elseBlock allowFlattening
     let blocks := elseIfs.push «else»

@@ -274,12 +274,11 @@ theorem add_emod_eq_add_emod_right {m n k : Int} (i : Int) (H : m % n = k % n)
     : (m + i) % n = (k + i) % n := by
   rw [← emod_add_emod, ← emod_add_emod k, H]
 
-theorem emod_add_cancel_right {m n k : Int} (i) : (m + i) % n = (k + i) % n ↔ m % n = k % n := ⟨
-  fun H => by
-    have := add_emod_eq_add_emod_right (-i) H
-    rwa [Int.add_neg_cancel_right, Int.add_neg_cancel_right] at this,
-  add_emod_eq_add_emod_right _
-⟩
+theorem emod_add_cancel_right {m n k : Int} (i) : (m + i) % n = (k + i) % n ↔ m % n = k % n :=
+  ⟨ fun H => by
+      have := add_emod_eq_add_emod_right (-i) H
+      rwa [Int.add_neg_cancel_right, Int.add_neg_cancel_right] at this,
+    add_emod_eq_add_emod_right _ ⟩
 
 @[simp]
 theorem mul_emod_left (a b : Int) : (a * b) % b = 0 := by

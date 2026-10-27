@@ -264,10 +264,8 @@ private def padAndModify [Inhabited α] (a : Array α) (i : Nat) (f : α → α)
 def State.getRing (s : State) (ringId : Nat) : CommRingState := s.rings.getD ringId {}
 
 @[inline]
-def State.modifyRing (s : State) (ringId : Nat) (f : CommRingState → CommRingState) : State := {
-  s with
-  rings := padAndModify s.rings ringId f
-}
+def State.modifyRing (s : State) (ringId : Nat) (f : CommRingState → CommRingState) : State :=
+  { s with rings := padAndModify s.rings ringId f }
 
 /--
 Solver state of the commutative semiring `semiringId`; empty if this goal has not used it yet.
@@ -277,19 +275,15 @@ def State.getSemiring (s : State) (semiringId : Nat) : SemiringState :=
 
 @[inline]
 def State.modifySemiring (s : State) (semiringId : Nat) (f : SemiringState → SemiringState)
-    : State := {
-  s with
-  semirings := padAndModify s.semirings semiringId f
-}
+    : State :=
+  { s with semirings := padAndModify s.semirings semiringId f }
 
 /-- Solver state of the non-commutative ring `ringId`; empty if this goal has not used it yet. -/
 def State.getNCRing (s : State) (ringId : Nat) : RingState := s.ncRings.getD ringId {}
 
 @[inline]
-def State.modifyNCRing (s : State) (ringId : Nat) (f : RingState → RingState) : State := {
-  s with
-  ncRings := padAndModify s.ncRings ringId f
-}
+def State.modifyNCRing (s : State) (ringId : Nat) (f : RingState → RingState) : State :=
+  { s with ncRings := padAndModify s.ncRings ringId f }
 
 /--
 Solver state of the non-commutative semiring `semiringId`; empty if this goal has not used it yet.
@@ -299,10 +293,8 @@ def State.getNCSemiring (s : State) (semiringId : Nat) : SemiringState :=
 
 @[inline]
 def State.modifyNCSemiring (s : State) (semiringId : Nat) (f : SemiringState → SemiringState)
-    : State := {
-  s with
-  ncSemirings := padAndModify s.ncSemirings semiringId f
-}
+    : State :=
+  { s with ncSemirings := padAndModify s.ncSemirings semiringId f }
 
 /-- Access to the per-goal state of the current (commutative or not) ring. -/
 class MonadRingState (m : Type → Type) where

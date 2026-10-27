@@ -110,20 +110,19 @@ etc. as well as in `leanir` to do separate compilation of all defs.
 -/
 builtin_initialize postponedCompileDeclsExt
     : SimplePersistentEnvExtension PostponedCompileDecls (NameMap PostponedCompileDecls) ←
-  registerSimplePersistentEnvExtension {
-    addImportedFn := fun _ => {}
-    addEntryFn := fun s e => e.declNames.foldl (·.insert · e) s
-    toArrayFn := fun es => es.toArray
-    asyncMode := .sync
-    replay? :=
-      some <| SimplePersistentEnvExtension.replayOfFilter
-        (fun s e => ! e.declNames.any s.contains)
-        (fun s e => e.declNames.foldl (·.insert · e) s)
-    exportEntriesFnEx? :=
-      some fun _ _ es =>
-        -- `leanir` imports the target module privately
-        { exported := #[], server := #[], «private» := es.toArray }
-  }
+  registerSimplePersistentEnvExtension
+    { addImportedFn := fun _ => {}
+      addEntryFn := fun s e => e.declNames.foldl (·.insert · e) s
+      toArrayFn := fun es => es.toArray
+      asyncMode := .sync
+      replay? :=
+        some <| SimplePersistentEnvExtension.replayOfFilter
+          (fun s e => ! e.declNames.any s.contains)
+          (fun s e => e.declNames.foldl (·.insert · e) s)
+      exportEntriesFnEx? :=
+        some fun _ _ es =>
+          -- `leanir` imports the target module privately
+          { exported := #[], server := #[], «private» := es.toArray } }
 
 def resumeCompilation (declName : Name) (baseOpts : Options) : CoreM Unit := do
   let some decls := postponedCompileDeclsExt.getState (← getEnv) |>.find? declName
@@ -161,10 +160,8 @@ partial def run (declNames : Array Name) (baseOpts : Options) : CompilerM Unit :
       if let some fnName := Compiler.getImplementedBy? (← getEnv) declName then
         if (← getEnv).header.isModule && (← compiler.postponeCompile.getM) then
           -- must postpone here as well so that visibility marking happens in the correct process
-          modifyEnv (postponedCompileDeclsExt.addEntry · {
-            declNames := #[declName]
-            options := ← getOptions
-          })
+          modifyEnv (postponedCompileDeclsExt.addEntry ·
+            { declNames := #[declName], options := ← getOptions })
         else
           -- Ensure the impl target is compiled first so `getLocalDeclAt?` succeeds
           resumeCompilation fnName baseOpts
@@ -192,10 +189,8 @@ partial def run (declNames : Array Name) (baseOpts : Options) : CompilerM Unit :
 
     -- Now that we have done all input checks, check for postponement
     if (← getEnv).header.isModule && (← compiler.postponeCompile.getM) then
-      modifyEnv (postponedCompileDeclsExt.addEntry · {
-        declNames := decls.map (·.name)
-        options := ← getOptions
-      })
+      modifyEnv (postponedCompileDeclsExt.addEntry ·
+        { declNames := decls.map (·.name), options := ← getOptions })
       -- meta defs are compiled locally so they are available for execution/compilation without
       -- importing `.ir` but still marked for `leanir` compilation so that we do not have to persist
       -- module-local compilation information between the two processes

@@ -59,19 +59,18 @@ protected def orElse' {δ} [Backtrackable δ σ] (x₁ x₂ : EStateM ε σ α) 
     ok
 
 @[always_inline]
-instance : MonadFinally (EStateM ε σ) := {
-  tryFinally' := fun x h s =>
-    let r := x s
-    match r with
-    | Result.ok a s =>
-      match h (some a) s with
-      | Result.ok b s => Result.ok (a, b) s
-      | Result.error e s => Result.error e s
-    | Result.error e₁ s =>
-      match h none s with
-      | Result.ok _ s => Result.error e₁ s
-      | Result.error e₂ s => Result.error e₂ s
-}
+instance : MonadFinally (EStateM ε σ) :=
+  { tryFinally' := fun x h s =>
+      let r := x s
+      match r with
+      | Result.ok a s =>
+        match h (some a) s with
+        | Result.ok b s => Result.ok (a, b) s
+        | Result.error e s => Result.error e s
+      | Result.error e₁ s =>
+        match h none s with
+        | Result.ok _ s => Result.error e₁ s
+        | Result.error e₂ s => Result.error e₂ s }
 
 /--
 Converts a state monad action into a state monad action with exceptions.

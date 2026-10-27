@@ -81,34 +81,36 @@ inductive ErrorCode where
   | workerCrashed
 deriving Inhabited, BEq
 
-instance : FromJson ErrorCode := ⟨fun
-  | num (-32700 : Int) => return ErrorCode.parseError
-  | num (-32600 : Int) => return ErrorCode.invalidRequest
-  | num (-32601 : Int) => return ErrorCode.methodNotFound
-  | num (-32602 : Int) => return ErrorCode.invalidParams
-  | num (-32603 : Int) => return ErrorCode.internalError
-  | num (-32002 : Int) => return ErrorCode.serverNotInitialized
-  | num (-32001 : Int) => return ErrorCode.unknownErrorCode
-  | num (-32801 : Int) => return ErrorCode.contentModified
-  | num (-32800 : Int) => return ErrorCode.requestCancelled
-  | num (-32900 : Int) => return ErrorCode.rpcNeedsReconnect
-  | num (-32901 : Int) => return ErrorCode.workerExited
-  | num (-32902 : Int) => return ErrorCode.workerCrashed
-  | _ => throw "expected error code"⟩
+instance : FromJson ErrorCode :=
+  ⟨ fun
+      | num (-32700 : Int) => return ErrorCode.parseError
+      | num (-32600 : Int) => return ErrorCode.invalidRequest
+      | num (-32601 : Int) => return ErrorCode.methodNotFound
+      | num (-32602 : Int) => return ErrorCode.invalidParams
+      | num (-32603 : Int) => return ErrorCode.internalError
+      | num (-32002 : Int) => return ErrorCode.serverNotInitialized
+      | num (-32001 : Int) => return ErrorCode.unknownErrorCode
+      | num (-32801 : Int) => return ErrorCode.contentModified
+      | num (-32800 : Int) => return ErrorCode.requestCancelled
+      | num (-32900 : Int) => return ErrorCode.rpcNeedsReconnect
+      | num (-32901 : Int) => return ErrorCode.workerExited
+      | num (-32902 : Int) => return ErrorCode.workerCrashed
+      | _ => throw "expected error code" ⟩
 
-instance : ToJson ErrorCode := ⟨fun
-  | ErrorCode.parseError => (-32700 : Int)
-  | ErrorCode.invalidRequest => (-32600 : Int)
-  | ErrorCode.methodNotFound => (-32601 : Int)
-  | ErrorCode.invalidParams => (-32602 : Int)
-  | ErrorCode.internalError => (-32603 : Int)
-  | ErrorCode.serverNotInitialized => (-32002 : Int)
-  | ErrorCode.unknownErrorCode => (-32001 : Int)
-  | ErrorCode.contentModified => (-32801 : Int)
-  | ErrorCode.requestCancelled => (-32800 : Int)
-  | ErrorCode.rpcNeedsReconnect => (-32900 : Int)
-  | ErrorCode.workerExited => (-32901 : Int)
-  | ErrorCode.workerCrashed => (-32902 : Int)⟩
+instance : ToJson ErrorCode :=
+  ⟨ fun
+      | ErrorCode.parseError => (-32700 : Int)
+      | ErrorCode.invalidRequest => (-32600 : Int)
+      | ErrorCode.methodNotFound => (-32601 : Int)
+      | ErrorCode.invalidParams => (-32602 : Int)
+      | ErrorCode.internalError => (-32603 : Int)
+      | ErrorCode.serverNotInitialized => (-32002 : Int)
+      | ErrorCode.unknownErrorCode => (-32001 : Int)
+      | ErrorCode.contentModified => (-32801 : Int)
+      | ErrorCode.requestCancelled => (-32800 : Int)
+      | ErrorCode.rpcNeedsReconnect => (-32900 : Int)
+      | ErrorCode.workerExited => (-32901 : Int)
+      | ErrorCode.workerCrashed => (-32902 : Int) ⟩
 
 /--
 A JSON-RPC message.
@@ -253,43 +255,40 @@ instance : LT RequestID := RequestID.ltProp
 instance (a b : RequestID) : Decidable (a < b) :=
   inferInstanceAs (Decidable (RequestID.lt a b = true))
 
-instance : FromJson RequestID := ⟨fun j =>
-  match j with
-  | str s => return RequestID.str s
-  | num n => return RequestID.num n
-  | _ => throw "a request id needs to be a number or a string"⟩
+instance : FromJson RequestID :=
+  ⟨ fun j =>
+      match j with
+      | str s => return RequestID.str s
+      | num n => return RequestID.num n
+      | _ => throw "a request id needs to be a number or a string" ⟩
 
-instance : ToJson RequestID := ⟨fun rid =>
-  match rid with
-  | RequestID.str s => s
-  | RequestID.num n => num n
-  | RequestID.null => null⟩
+instance : ToJson RequestID :=
+  ⟨ fun rid =>
+      match rid with
+      | RequestID.str s => s
+      | RequestID.num n => num n
+      | RequestID.null => null ⟩
 
-instance : ToJson Message := ⟨fun m =>
-  mkObj $
-    ⟨"jsonrpc", "2.0"⟩ :: match m with
-      | Message.request id method params? =>
-        [
-          ⟨"id", toJson id⟩,
-          ⟨"method", method⟩
-        ] ++ opt "params" params?
-      | Message.notification method params? =>
-        ⟨"method", method⟩ :: opt "params" params?
-      | Message.response id result => [
-        ⟨"id", toJson id⟩,
-        ⟨"result", result⟩
-      ]
-      | Message.responseError id code message data? => [
-        ⟨"id", toJson id⟩,
-        ⟨
-          "error",
-          mkObj $
-            [
-              ⟨"code", toJson code⟩,
-              ⟨"message", message⟩
-            ] ++ opt "data" data?
-        ⟩
-      ]⟩
+instance : ToJson Message :=
+  ⟨ fun m =>
+      mkObj $
+        ⟨"jsonrpc", "2.0"⟩ :: match m with
+          | Message.request id method params? =>
+            [ ⟨"id", toJson id⟩,
+              ⟨"method", method⟩ ]
+              ++ opt "params" params?
+          | Message.notification method params? =>
+            ⟨"method", method⟩ :: opt "params" params?
+          | Message.response id result =>
+            [ ⟨"id", toJson id⟩,
+              ⟨"result", result⟩ ]
+          | Message.responseError id code message data? =>
+            [ ⟨"id", toJson id⟩,
+              ⟨ "error",
+                mkObj $
+                  [ ⟨"code", toJson code⟩,
+                    ⟨"message", message⟩ ]
+                    ++ opt "data" data? ⟩ ] ⟩
 
 instance : FromJson Message where
   fromJson? j := do

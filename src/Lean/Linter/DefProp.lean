@@ -23,13 +23,12 @@ Enables the `defProp` linter, which warns when a `def` is used to introduce a
 declaration whose type is a `Prop`. Such a declaration should be written using
 `theorem` instead.
 -/
-register_builtin_option linter.defProp : Bool := {
-  defValue := true
-  descr :=
-    "enable the `defProp` linter, which warns when a `def` is used to introduce \
-      a declaration whose type is a `Prop`; such a declaration should be written using \
-      `theorem` instead."
-}
+register_builtin_option linter.defProp : Bool :=
+  { defValue := true
+    descr :=
+      "enable the `defProp` linter, which warns when a `def` is used to introduce \
+        a declaration whose type is a `Prop`; such a declaration should be written using \
+        `theorem` instead." }
 
 namespace DefProp
 

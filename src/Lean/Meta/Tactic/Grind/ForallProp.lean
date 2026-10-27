@@ -224,10 +224,8 @@ builtin_simproc_decl simpForall ((a : _) → _) := fun e => do
       match_expr b with
       | True =>
         -- `d` may be a type, e.g. after the body of `∀ t : α, p t` has been simplified to `True`.
-        return .done {
-          expr := mkConst ``True
-          proof? := mkApp (mkConst ``implies_true [← getLevel d]) d
-        }
+        return .done
+          { expr := mkConst ``True, proof? := mkApp (mkConst ``implies_true [← getLevel d]) d }
       | False =>
         if (← isProp d) then
           return .visit { expr := mkNot d, proof? := mkApp (mkConst ``Grind.imp_false_eq) d }
@@ -330,8 +328,8 @@ builtin_simproc_decl simpExists (Exists _) := fun e => do
       let u := ex.constLevels!
       let nonempty := mkApp (mkConst ``Nonempty u) α
       if let some nonemptyInst ← synthInstanceMeta? nonempty then
-        return
-          .visit { expr := b, proof? := mkApp3 (mkConst ``Grind.exists_const u) α nonemptyInst b }
+        return .visit
+          { expr := b, proof? := mkApp3 (mkConst ``Grind.exists_const u) α nonemptyInst b }
   return .continue
 
 def addForallSimproc (s : Simprocs) : CoreM Simprocs := do

@@ -52,11 +52,10 @@ def elabMacroRules : CommandElab :=
     | `($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind macro_rules%$tk $alts:matchAlt*) =>
       -- exclude command prefix from synthetic position used for e.g. jumping to the macro definition
       withRef (mkNullNode #[tk, mkNullNode alts]) do
-        return (
-          none,
-          ← expandNoKindMacroRulesAux alts "macro_rules" fun kind? alts =>
-            `($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind macro_rules $[(kind := $(mkIdent <$> kind?))]? $alts:matchAlt*)
-        )
+        return
+          ( none,
+            ← expandNoKindMacroRulesAux alts "macro_rules" fun kind? alts =>
+              `($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind macro_rules $[(kind := $(mkIdent <$> kind?))]? $alts:matchAlt*) )
     | `($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind macro_rules%$tk (kind := $kind) | $x:ident => $rhs) =>
       withRef (mkNullNode #[tk, rhs]) do
         let attr ← `(attrInstance| $attrKind:attrKind macro $kind)
@@ -67,11 +66,10 @@ def elabMacroRules : CommandElab :=
         let vis := Parser.Command.visibility.ofAttrKind attrKind
         -- An invalid kind is reported by the `macro` attribute
         let k? ← (some <$> resolveSyntaxKind kind.getId) <|> pure none
-        return (
-          k?,
-          ← `($[$doc?:docComment]? @[$attrs,*] $vis:visibility
-            aux_def $(mkIdentFrom tk kind.getId (canonical := true)) $kind : Macro := fun $x:ident => $rhs)
-        )
+        return
+          ( k?,
+            ← `($[$doc?:docComment]? @[$attrs,*] $vis:visibility
+              aux_def $(mkIdentFrom tk kind.getId (canonical := true)) $kind : Macro := fun $x:ident => $rhs) )
     | `($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind macro_rules%$tk (kind := $kind) $alts:matchAlt*) =>
       withExporting (isExporting := ! attrKind matches `(attrKind| local)) do
         withRef (mkNullNode #[tk, mkNullNode alts]) do

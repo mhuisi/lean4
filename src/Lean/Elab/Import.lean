@@ -33,12 +33,11 @@ def HeaderSyntax.imports (stx : HeaderSyntax) (includeInit : Bool := true) : Arr
       else
         #[]
     imports ++ importsStx.map fun
-      | `(Parser.Module.import| $[public%$publicTk]? $[meta%$metaTk]? import $[all%$allTk]? $n) => {
-        module := n.getId
-        importAll := allTk.isSome
-        isExported := publicTk.isSome || moduleTk.isNone
-        isMeta := metaTk.isSome
-      }
+      | `(Parser.Module.import| $[public%$publicTk]? $[meta%$metaTk]? import $[all%$allTk]? $n) =>
+        { module := n.getId
+          importAll := allTk.isSome
+          isExported := publicTk.isSome || moduleTk.isNone
+          isMeta := metaTk.isSome }
       | _ =>
         unreachable!
   | _ =>
@@ -97,14 +96,13 @@ def checkDeprecatedImports
         match env.getDeprecatedModuleByIdx? idx with
         | some entry =>
           let pos := importPositions.find? imp.module |>.getD startPos
-          messages.add {
-            fileName := inputCtx.fileName
-            pos := inputCtx.fileMap.toPosition pos
-            severity := .warning
-            data :=
-              .tagged ``deprecatedModuleExt <|
-                formatDeprecatedModuleWarning env idx imp.module entry
-          }
+          messages.add
+            { fileName := inputCtx.fileName
+              pos := inputCtx.fileMap.toPosition pos
+              severity := .warning
+              data :=
+                .tagged ``deprecatedModuleExt <|
+                  formatDeprecatedModuleWarning env idx imp.module entry }
         | none =>
           messages
       | none =>
@@ -112,13 +110,12 @@ def checkDeprecatedImports
 
 private def osForbiddenChars : Array Char := #['<', '>', '"', '|', '?', '*', '!']
 
-private def osForbiddenNames : Array String := #[
-  "CON", "PRN", "AUX", "NUL",
-  "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
-  "COM¹", "COM²", "COM³",
-  "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
-  "LPT¹", "LPT²", "LPT³"
-]
+private def osForbiddenNames : Array String :=
+  #["CON", "PRN", "AUX", "NUL",
+    "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+    "COM¹", "COM²", "COM³",
+    "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    "LPT¹", "LPT²", "LPT³"]
 
 private def checkComponentPortability (comp : String) : Option String :=
   if osForbiddenNames.contains comp.toUpper then
@@ -141,12 +138,11 @@ where
       let messages :=
         match checkComponentPortability s with
         | some reason =>
-          messages.add {
-            fileName := inputCtx.fileName
-            pos := inputCtx.fileMap.toPosition startPos
-            severity := .error
-            data := s!"module name '{mainModule}' is not portable: {reason}"
-          }
+          messages.add
+            { fileName := inputCtx.fileName
+              pos := inputCtx.fileMap.toPosition startPos
+              severity := .error
+              data := s!"module name '{mainModule}' is not portable: {reason}" }
         | none =>
           messages
       go parent messages

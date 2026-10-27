@@ -80,11 +80,9 @@ deriving Inhabited
 def CbvEvalState.addEntry (s : CbvEvalState) (e : CbvEvalEntry) : CbvEvalState :=
   let lemmas := (s.lemmas.find? e.appFn).getD {}
   let entries := (s.entries.find? e.appFn).getD {}
-  {
-    s with
+  { s with
     lemmas := s.lemmas.insert e.appFn (lemmas.insert e.thm)
-    entries := s.entries.insert e.appFn <| entries.push e
-  }
+    entries := s.entries.insert e.appFn <| entries.push e }
 
 /-- Rebuild the `Theorems` for a given `appFn` from the entries that target it. -/
 private def CbvEvalState.rebuildLemmas
@@ -117,40 +115,40 @@ def CbvEvalState.erase (s : CbvEvalState) (declName : Name) : Option CbvEvalStat
 abbrev CbvEvalExtension := SimpleScopedEnvExtension CbvEvalEntry CbvEvalState
 
 builtin_initialize cbvEvalExt : CbvEvalExtension ←
-  registerSimpleScopedEnvExtension {
-    name := `cbvEvalExt
-    initial := {}
-    addEntry := CbvEvalState.addEntry
-    exportEntry? := fun _ entry =>
-      match entry.thm.declName with
-      | none =>
-        ⟨none, none, none⟩
-      | some n =>
-        if isPrivateName n then
-          ⟨none, none, some entry⟩
-        else
-          .uniform (some entry)
-  }
+  registerSimpleScopedEnvExtension
+    { name := `cbvEvalExt
+      initial := {}
+      addEntry := CbvEvalState.addEntry
+      exportEntry? := fun _ entry =>
+        match entry.thm.declName with
+        | none =>
+          ⟨none, none, none⟩
+        | some n =>
+          if isPrivateName n then
+            ⟨none, none, some entry⟩
+          else
+            .uniform (some entry) }
 
 def getCbvEvalLemmas (target : Name) : CoreM (Option Theorems) := do
   let s := cbvEvalExt.getState (← getEnv)
   return (s.lemmas.find? target)
 
 builtin_initialize
-  registerBuiltinAttribute {
-    ref := `cbvEvalAttr
-    name := `cbv_eval
-    descr := "Register a theorem as a rewrite rule for `cbv` evaluation of a given definition."
-    applicationTime := AttributeApplicationTime.afterCompilation
-    add := fun lemmaName stx kind => do
-      let inv := !stx[1].isNone
-      let (entry, _) ← MetaM.run (mkCbvTheoremFromConst lemmaName (inv := inv)) {}
-      cbvEvalExt.add entry kind
-    erase := fun declName => do
-      let s := cbvEvalExt.getState (← getEnv)
-      match s.erase declName with
-      | some s' => modifyEnv fun env => cbvEvalExt.modifyState env fun _ => s'
-      | none => logWarning m!"`{.ofConstName declName}` does not have the `[cbv_eval]` attribute"
-  }
+  registerBuiltinAttribute
+    { ref := `cbvEvalAttr
+      name := `cbv_eval
+      descr := "Register a theorem as a rewrite rule for `cbv` evaluation of a given definition."
+      applicationTime := AttributeApplicationTime.afterCompilation
+      add := fun lemmaName stx kind => do
+        let inv := !stx[1].isNone
+        let (entry, _) ← MetaM.run (mkCbvTheoremFromConst lemmaName (inv := inv)) {}
+        cbvEvalExt.add entry kind
+      erase := fun declName => do
+        let s := cbvEvalExt.getState (← getEnv)
+        match s.erase declName with
+        | some s' =>
+          modifyEnv fun env => cbvEvalExt.modifyState env fun _ => s'
+        | none =>
+          logWarning m!"`{.ofConstName declName}` does not have the `[cbv_eval]` attribute" }
 
 end Lean.Meta.Tactic.Cbv

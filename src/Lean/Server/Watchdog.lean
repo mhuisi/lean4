@@ -77,12 +77,11 @@ open JsonRpc
 open System.Uri
 
 section Utils
-def workerCfg : Process.StdioConfig := {
-  stdin := Process.Stdio.piped
-  stdout := Process.Stdio.piped
-  -- We pass workers' stderr through to the editor.
-  stderr := Process.Stdio.inherit
-}
+def workerCfg : Process.StdioConfig :=
+  { stdin := Process.Stdio.piped
+    stdout := Process.Stdio.piped
+    -- We pass workers' stderr through to the editor.
+    stderr := Process.Stdio.inherit }
 
 /-- Events that worker-specific tasks signal to the main thread. -/
 inductive WorkerEvent where
@@ -120,11 +119,10 @@ def empty : RequestQueueMap where
 instance : EmptyCollection RequestQueueMap where
   emptyCollection := .empty
 
-def enqueue (m : RequestQueueMap) (req : JsonRpc.Request Json) : RequestQueueMap := {
-  i := m.i + 1
-  reqs := m.reqs.insert req.id (m.i, req)
-  queue := m.queue.insert m.i (req.id, req)
-}
+def enqueue (m : RequestQueueMap) (req : JsonRpc.Request Json) : RequestQueueMap :=
+  { i := m.i + 1
+    reqs := m.reqs.insert req.id (m.i, req)
+    queue := m.queue.insert m.i (req.id, req) }
 
 def erase (m : RequestQueueMap) (id : RequestID) : RequestQueueMap := Id.run do
   let some (i, _) := m.reqs.get? id
@@ -159,10 +157,9 @@ def clearWorkerRequestData (d : RequestData) (uri : DocumentUri) : RequestData :
   let requestQueues := d.requestQueues.erase uri
   return { requestQueues, uriByRequest : RequestData }
 
-def enqueue (d : RequestData) (uri : DocumentUri) (req : JsonRpc.Request Json) : RequestData := {
-  requestQueues := d.requestQueues.insertIfNew uri ∅ |>.modify uri (·.enqueue req)
-  uriByRequest := d.uriByRequest.insert req.id uri
-}
+def enqueue (d : RequestData) (uri : DocumentUri) (req : JsonRpc.Request Json) : RequestData :=
+  { requestQueues := d.requestQueues.insertIfNew uri ∅ |>.modify uri (·.enqueue req)
+    uriByRequest := d.uriByRequest.insert req.id uri }
 
 def erase (d : RequestData) (uri : DocumentUri) (id : RequestID) : RequestData where
   requestQueues := d.requestQueues.modify uri (·.erase id)
@@ -306,10 +303,9 @@ def ServerRequestData.trackOutboundRequest
     (data : ServerRequestData) (sourceUri : DocumentUri) (localID : RequestID)
     : RequestID × ServerRequestData :=
   let globalID := data.freshServerRequestID
-  let data := {
-    pendingServerRequests := data.pendingServerRequests.insert globalID ⟨sourceUri, localID⟩
-    freshServerRequestID := globalID + 1
-  }
+  let data :=
+    { pendingServerRequests := data.pendingServerRequests.insert globalID ⟨sourceUri, localID⟩
+      freshServerRequestID := globalID + 1 }
   (globalID, data)
 
 def ServerRequestData.translateInboundResponse (data : ServerRequestData) (globalID : RequestID)
@@ -443,12 +439,11 @@ def eraseFileWorker (uri : DocumentUri) : ServerM Unit := do
         let rd := rd.modifyFinalizedWorkerILeanVersions (·.erase uri)
         (pending, rd)
     for pendingWaitForILeanRequest in pendingWaitForILeanRequests do
-      writeMessage {
-        id := pendingWaitForILeanRequest.id
-        code := ErrorCode.contentModified
-        message := s!"The file worker for {uri} has been terminated."
-        : ResponseError Unit
-      }
+      writeMessage
+        { id := pendingWaitForILeanRequest.id
+          code := ErrorCode.contentModified
+          message := s!"The file worker for {uri} has been terminated."
+          : ResponseError Unit }
 
 def setWorkerState (fw : FileWorker) (s : WorkerState) : ServerM Unit := do
   fw.state.atomically <| set s
@@ -623,20 +618,14 @@ def handleQueryModule (fw : FileWorker) (id : RequestID) (params : LeanQueryModu
             m1.fastCompare m2 == .gt
         let result : LeanQueriedModule :=
           sorted.take 10
-            |>.toArray.map fun m => {
-              module := m.mod
-              decl := m.ident.decl
-              isExactMatch := m.ident.isExactMatch
-            }
+            |>.toArray.map fun m =>
+              { module := m.mod, decl := m.ident.decl, isExactMatch := m.ident.isExactMatch }
         queryResults := queryResults.push result
       if ← cancelTk.isSet then
         emitServerRequestResponseError fw { id, code := ErrorCode.requestCancelled, message := "" }
         return
-      emitServerRequestResponse fw {
-        id
-        result := { queryResults }
-        : Response LeanQueryModuleResponse
-      }
+      emitServerRequestResponse fw
+        { id, result := { queryResults } : Response LeanQueryModuleResponse }
   return (task.mapCheap (fun _ => ()), cancelTk)
 
 /--
@@ -690,15 +679,13 @@ def bendLocationLinks (fw : FileWorker) (req : JsonRpc.Request Json) (r : Array 
       let some definitionInfo := refs.definitionOf? ident
         | return ll
       let newTargetRange := definitionInfo.location.range
-      return some {
-        ll with
-        toLocationLink := {
-          originSelectionRange? := ll.originSelectionRange?
-          targetUri := definitionInfo.location.uri
-          targetRange := newTargetRange
-          targetSelectionRange := newTargetRange
-        }
-      }
+      return some
+        { ll with
+          toLocationLink :=
+            { originSelectionRange? := ll.originSelectionRange?
+              targetUri := definitionInfo.location.uri
+              targetRange := newTargetRange
+              targetSelectionRange := newTargetRange } }
   if r.all (·.isDefault) then
     -- The file worker produced fallback location links.
     -- Let's see if we can obtain better ones using the .ileans, just to be safe.
@@ -829,13 +816,12 @@ def startFileWorker (m : DocumentMeta) : ServerM Unit := do
   let st ← read
   writeMessage <| mkFileProgressAtPosNotification m 0
   let workerProc ←
-    Process.spawn {
-      toStdioConfig := workerCfg
-      cmd := st.workerPath.toString
-      args := #["--worker"] ++ st.args.toArray ++ #[m.uri]
-      -- open session for `kill` above
-      setsid := true
-    }
+    Process.spawn
+      { toStdioConfig := workerCfg
+        cmd := st.workerPath.toString
+        args := #["--worker"] ++ st.args.toArray ++ #[m.uri]
+        -- open session for `kill` above
+        setsid := true }
   let exitCode ← Std.Mutex.new none
   let initialDependencyBuildMode := m.dependencyBuildMode
   let updatedDependencyBuildMode :=
@@ -846,13 +832,12 @@ def startFileWorker (m : DocumentMeta) : ServerM Unit := do
     else
       initialDependencyBuildMode
   -- The task will never access itself, so this is fine
-  let fw : FileWorker := {
-    doc := { m with dependencyBuildMode := updatedDependencyBuildMode }
-    proc := workerProc
-    exitCode
-    commTask? := none
-    state := ← Std.Mutex.new WorkerState.running
-  }
+  let fw : FileWorker :=
+    { doc := { m with dependencyBuildMode := updatedDependencyBuildMode }
+      proc := workerProc
+      exitCode
+      commTask? := none
+      state := ← Std.Mutex.new WorkerState.running }
   -- Adds `fw` without `commTask` so that `forwardMessages` can find it in `fileWorkersRef`.
   -- At the time of writing this comment, this isn't necessary since `forwardMessages` never uses
   -- `fileWorkersRef`, but it's still good to prevent potential future race conditions.
@@ -860,19 +845,13 @@ def startFileWorker (m : DocumentMeta) : ServerM Unit := do
   let commTask ← forwardMessages fw
   let fw : FileWorker := { fw with commTask? := some commTask }
   fw.stdin.writeLspRequest ⟨0, "initialize", st.initParams⟩
-  fw.stdin.writeLspNotification {
-    method := "textDocument/didOpen"
-    param := {
-      textDocument := {
-        uri := m.uri
-        languageId := "lean"
-        version := m.version
-        text := m.text.source
-      }
-      dependencyBuildMode? := initialDependencyBuildMode
-      : LeanDidOpenTextDocumentParams
-    }
-  }
+  fw.stdin.writeLspNotification
+    { method := "textDocument/didOpen"
+      param :=
+        { textDocument :=
+            { uri := m.uri, languageId := "lean", version := m.version, text := m.text.source }
+          dependencyBuildMode? := initialDependencyBuildMode
+          : LeanDidOpenTextDocumentParams } }
   updateFileWorkers fw
   let reqQueue ← st.requestData.getRequestQueue m.uri
   for (_, msg) in reqQueue do
@@ -931,10 +910,8 @@ is out-of-date.
 -/
 def notifyAboutStaleDependency (uri : DocumentUri) (staleDependency : DocumentUri) : ServerM Unit :=
   let notification :=
-    Notification.mk "$/lean/staleDependency" {
-      staleDependency := staleDependency
-      : LeanStaleDependencyParams
-    }
+    Notification.mk "$/lean/staleDependency"
+      { staleDependency := staleDependency : LeanStaleDependencyParams }
   tryWriteMessage uri notification
 end ServerM
 
@@ -984,15 +961,15 @@ private def callHierarchyItemOf? (refs : References) (ident : RefIdent)
 
     -- Remove private header from name
     let label := Lean.privateToUserName? definitionName |>.getD definitionName
-    return {
-      name := label.toString
-      kind := SymbolKind.constant
-      uri := definitionLocation.uri
-      range := definitionLocation.range
-      selectionRange := definitionLocation.range
-      data? :=
-        toJson { module := definitionModule.toName, name := definitionName : CallHierarchyItemData }
-    }
+    return
+      { name := label.toString
+        kind := SymbolKind.constant
+        uri := definitionLocation.uri
+        range := definitionLocation.range
+        selectionRange := definitionLocation.range
+        data? :=
+          toJson
+            { module := definitionModule.toName, name := definitionName : CallHierarchyItemData } }
   | _ =>
     let some ⟨parentDeclNameString, parentDeclRange, parentDeclSelectionRange⟩ := parentDecl?
       | none
@@ -1001,21 +978,16 @@ private def callHierarchyItemOf? (refs : References) (ident : RefIdent)
     -- Remove private header from name
     let label := Lean.privateToUserName? parentDeclName |>.getD parentDeclName
 
-    some {
-      name := label.toString
-      kind := SymbolKind.constant
-      uri := definitionLocation.uri
-      range := parentDeclRange
-      selectionRange := parentDeclSelectionRange
-      data? :=
-        toJson {
+    some
+      { name := label.toString
+        kind := SymbolKind.constant
+        uri := definitionLocation.uri
+        range := parentDeclRange
+        selectionRange := parentDeclSelectionRange
+        data? :=
           -- Assumption: The parent declaration of a reference lives in the same module
           -- as the reference.
-          module := definitionModule
-          name := parentDeclName
-          : CallHierarchyItemData
-        }
-    }
+          toJson { module := definitionModule, name := parentDeclName : CallHierarchyItemData } }
 
 def handlePrepareCallHierarchy (p : CallHierarchyPrepareParams)
     : ReaderT ReferenceRequestContext IO (Array CallHierarchyItem) := do
@@ -1050,17 +1022,16 @@ def handleCallHierarchyIncomingCalls (p : CallHierarchyIncomingCallsParams)
       -- Remove private header from name
       let label := Lean.privateToUserName? parentDeclName |>.getD parentDeclName
 
-      return {
-        «from» := {
-          name := label.toString
-          kind := SymbolKind.constant
-          uri := location.uri
-          range := parentDeclRange
-          selectionRange := parentDeclSelectionRange
-          data? := toJson { module := refModule, name := parentDeclName : CallHierarchyItemData }
-        }
-        fromRanges := #[location.range]
-      }
+      return
+        { «from» :=
+            { name := label.toString
+              kind := SymbolKind.constant
+              uri := location.uri
+              range := parentDeclRange
+              selectionRange := parentDeclSelectionRange
+              data? :=
+                toJson { module := refModule, name := parentDeclName : CallHierarchyItemData } }
+          fromRanges := #[location.range] }
 
   return collapseSameIncomingCalls incomingCalls |>.qsort (·.«from».name < ·.«from».name)
 
@@ -1070,10 +1041,8 @@ where
       : Array CallHierarchyIncomingCall :=
     let grouped := incomingCalls.groupByKey (·.«from»)
     let collapsed :=
-      grouped.toArray.map fun ⟨_, group⟩ => {
-        «from» := group[0]!.«from»
-        fromRanges := group.flatMap (·.fromRanges)
-      }
+      grouped.toArray.map fun ⟨_, group⟩ =>
+        { «from» := group[0]!.«from», fromRanges := group.flatMap (·.fromRanges) }
     collapsed
 
 def handleCallHierarchyOutgoingCalls (p : CallHierarchyOutgoingCallsParams)
@@ -1115,10 +1084,8 @@ where
       : Array CallHierarchyOutgoingCall :=
     let grouped := outgoingCalls.groupByKey (·.to)
     let collapsed :=
-      grouped.toArray.map fun ⟨_, group⟩ => {
-        to := group[0]!.to
-        fromRanges := group.flatMap (·.fromRanges)
-      }
+      grouped.toArray.map fun ⟨_, group⟩ =>
+        { to := group[0]!.to, fromRanges := group.flatMap (·.fromRanges) }
     collapsed
 
 def handlePrepareModuleHierarchy (p : LeanPrepareModuleHierarchyParams)
@@ -1142,10 +1109,9 @@ def handleModuleHierarchyImports (p : LeanModuleHierarchyImportsParams)
       |>.valuesArray.map ModuleImport.collapseIdenticalImports?
       |>.map (·.get!)
   let directImports := sortModuleImports directImports
-  return directImports.map fun i => {
-    module := { name := i.module.toString, uri := i.uri, data? := none }
-    kind := { isPrivate := i.isPrivate, isAll := i.isAll, metaKind := i.metaKind }
-  }
+  return directImports.map fun i =>
+    { module := { name := i.module.toString, uri := i.uri, data? := none }
+      kind := { isPrivate := i.isPrivate, isAll := i.isAll, metaKind := i.metaKind } }
 
 def handleModuleHierarchyImportedBy (p : LeanModuleHierarchyImportedByParams)
     : ReaderT ReferenceRequestContext IO (Array LeanImport) := do
@@ -1153,10 +1119,9 @@ def handleModuleHierarchyImportedBy (p : LeanModuleHierarchyImportedByParams)
   let references := (← read).references
   let importedBy := references.importedBy module
   let importedBy := sortModuleImports importedBy
-  return importedBy.map fun i => {
-    module := { name := i.module.toString, uri := i.uri, data? := none }
-    kind := { isPrivate := i.isPrivate, isAll := i.isAll, metaKind := i.metaKind }
-  }
+  return importedBy.map fun i =>
+    { module := { name := i.module.toString, uri := i.uri, data? := none }
+      kind := { isPrivate := i.isPrivate, isAll := i.isAll, metaKind := i.metaKind } }
 
 def handleWorkspaceSymbol (p : WorkspaceSymbolParams)
     : ReaderT ReferenceRequestContext IO (Array SymbolInformation) := do
@@ -1178,11 +1143,10 @@ def handleWorkspaceSymbol (p : WorkspaceSymbolParams)
   let symbols :=
     symbols.toList.mergeSort ltSymbol
       |>.extract 0 1000
-      |>.map fun m => {
-        name := m.ident.1
-        kind := SymbolKind.constant
-        location := { uri := m.modUri, range := m.range }
-      }
+      |>.map fun m =>
+        { name := m.ident.1
+          kind := SymbolKind.constant
+          location := { uri := m.modUri, range := m.range } }
   return symbols.toArray
 
 def handlePrepareRename (p : PrepareRenameParams)
@@ -1218,17 +1182,16 @@ end RequestHandling
 section NotificationHandling
 def handleDidOpen (p : LeanDidOpenTextDocumentParams) : ServerM Unit := do
   let doc := p.textDocument
-  startFileWorker {
-    uri := doc.uri
-    mod := ← moduleFromDocumentUri doc.uri
-    version := doc.version
-    /-
-    Note (kmill): LSP always refers to characters by (line, column),
-    so converting CRLF to LF preserves line and column numbers.
-    -/
-    text := doc.text.crlfToLf.toFileMap
-    dependencyBuildMode := p.dependencyBuildMode?.getD .always
-  }
+  startFileWorker
+    { uri := doc.uri
+      mod := ← moduleFromDocumentUri doc.uri
+      version := doc.version
+      /-
+      Note (kmill): LSP always refers to characters by (line, column),
+      so converting CRLF to LF preserves line and column numbers.
+      -/
+      text := doc.text.crlfToLf.toFileMap
+      dependencyBuildMode := p.dependencyBuildMode?.getD .always }
 
 def handleDidChange (p : DidChangeTextDocumentParams) : ServerM Unit := do
   let doc := p.textDocument
@@ -1325,16 +1288,15 @@ def forwardRequestToWorker (id : RequestID) (method : String) (params : Json) : 
     For example, VSCode sometimes sends requests just after closing a file,
     and RPC clients may also do so, e.g. due to remaining timers.
     -/
-    writeMessage {
-      id := id
-      /-
-      Some clients (VSCode) also send requests *before* opening a file. We reply
-      with `contentModified` as that does not display a "request failed" popup.
-      -/
-      code := ErrorCode.contentModified
-      message := s!"Cannot process request to closed file '{toString fileId}'"
-      : ResponseError Unit
-    }
+    writeMessage
+      { id := id
+        /-
+        Some clients (VSCode) also send requests *before* opening a file. We reply
+        with `contentModified` as that does not display a "request failed" popup.
+        -/
+        code := ErrorCode.contentModified
+        message := s!"Cannot process request to closed file '{toString fileId}'"
+        : ResponseError Unit }
     return
   let r := Request.mk id method params
   tryWriteMessage fileId r
@@ -1357,12 +1319,11 @@ def handleReferenceRequest
       catch
         -- TODO Do fancier error handling, like in file worker?
         | e =>
-          writeMessage {
-            id := id
-            code := ErrorCode.internalError
-            message := s!"Failed to process request {id}: {e}"
-            : ResponseError Unit
-          }
+          writeMessage
+            { id := id
+              code := ErrorCode.internalError
+              message := s!"Failed to process request {id}: {e}"
+              : ResponseError Unit }
 
 def handleRequest (id : RequestID) (method : String) (params : Json) : ServerM Unit := do
   let ctx ← read
@@ -1397,12 +1358,11 @@ def handleRequest (id : RequestID) (method : String) (params : Json) : ServerM U
       | writeMessage { id, result := ⟨⟩ : Response WaitForILeans }
         return
     if let none ← getFileWorker? uri then
-      writeMessage {
-        id
-        code := ErrorCode.contentModified
-        message := s!"Cannot process '$/lean/waitForILeans' request to closed file '{uri}'"
-        : ResponseError Unit
-      }
+      writeMessage
+        { id
+          code := ErrorCode.contentModified
+          message := s!"Cannot process '$/lean/waitForILeans' request to closed file '{uri}'"
+          : ResponseError Unit }
       return
     ctx.referenceData.atomically do
       let deferResponse :=
@@ -1540,75 +1500,66 @@ partial def mainLoop (clientTask : ServerTask ServerEvent) : ServerM Unit := do
       mainLoop clientTask
 end MainLoop
 
-def mkLeanServerCapabilities : ServerCapabilities := {
-  textDocumentSync? :=
-    some {
-      openClose := true
-      change := TextDocumentSyncKind.incremental
-      willSave := false
-      willSaveWaitUntil := false
-      save? := some { includeText := true }
-    }
-  -- refine
-  completionProvider? := some { triggerCharacters? := some #["."], resolveProvider := true }
-  hoverProvider := true
-  declarationProvider := true
-  definitionProvider := true
-  typeDefinitionProvider := true
-  referencesProvider := true
-  callHierarchyProvider := true
-  renameProvider? := some { prepareProvider := true }
-  workspaceSymbolProvider := true
-  documentHighlightProvider := true
-  documentSymbolProvider := true
-  foldingRangeProvider := true
-  semanticTokensProvider? :=
-    some {
-      legend := {
-        tokenTypes := SemanticTokenType.names
-        tokenModifiers := SemanticTokenModifier.names
-      }
-      full := true
-      range := true
-    }
-  codeActionProvider? :=
-    some {
-      resolveProvider? := true
-      codeActionKinds? := some #["quickfix", "refactor", "source.organizeImports"]
-    }
-  inlayHintProvider? := some { resolveProvider? := false }
-  signatureHelpProvider? := some { triggerCharacters? := some #[" "] }
-  colorProvider? := some {}
-  documentFormattingProvider? := some {}
-  experimental? :=
-    some {
-      moduleHierarchyProvider? := some {}
-      rpcProvider? := some { highlightMatchesProvider? := some {}, rpcWireFormat? := some .v1 }
-    }
-}
+def mkLeanServerCapabilities : ServerCapabilities :=
+  { textDocumentSync? :=
+      some
+        { openClose := true
+          change := TextDocumentSyncKind.incremental
+          willSave := false
+          willSaveWaitUntil := false
+          save? := some { includeText := true } }
+    -- refine
+    completionProvider? := some { triggerCharacters? := some #["."], resolveProvider := true }
+    hoverProvider := true
+    declarationProvider := true
+    definitionProvider := true
+    typeDefinitionProvider := true
+    referencesProvider := true
+    callHierarchyProvider := true
+    renameProvider? := some { prepareProvider := true }
+    workspaceSymbolProvider := true
+    documentHighlightProvider := true
+    documentSymbolProvider := true
+    foldingRangeProvider := true
+    semanticTokensProvider? :=
+      some
+        { legend :=
+            { tokenTypes := SemanticTokenType.names, tokenModifiers := SemanticTokenModifier.names }
+          full := true
+          range := true }
+    codeActionProvider? :=
+      some
+        { resolveProvider? := true
+          codeActionKinds? := some #["quickfix", "refactor", "source.organizeImports"] }
+    inlayHintProvider? := some { resolveProvider? := false }
+    signatureHelpProvider? := some { triggerCharacters? := some #[" "] }
+    colorProvider? := some {}
+    documentFormattingProvider? := some {}
+    experimental? :=
+      some
+        { moduleHierarchyProvider? := some {}
+          rpcProvider? :=
+            some { highlightMatchesProvider? := some {}, rpcWireFormat? := some .v1 } } }
 
 def initAndRunWatchdogAux : ServerM Unit := do
   let st ← read
   try
     discard $ st.hIn.readLspNotificationAs "initialized" InitializedParams
-    writeMessage {
-      id := RequestID.str "register_lean_watcher"
-      method := "client/registerCapability"
-      param :=
-        some {
-          registrations := #[{
-            id := "lean_watcher"
-            method := "workspace/didChangeWatchedFiles"
-            registerOptions :=
-              some <| toJson {
-                watchers := #[{ globPattern := "**/*.lean" }, { globPattern := "**/*.ilean" }]
-                : DidChangeWatchedFilesRegistrationOptions
-              }
-          }]
-          : RegistrationParams
-        }
-      : Request (Option RegistrationParams)
-    }
+    writeMessage
+      { id := RequestID.str "register_lean_watcher"
+        method := "client/registerCapability"
+        param :=
+          some
+            { registrations :=
+                #[{ id := "lean_watcher"
+                    method := "workspace/didChangeWatchedFiles"
+                    registerOptions :=
+                      some <| toJson
+                        { watchers :=
+                            #[{ globPattern := "**/*.lean" }, { globPattern := "**/*.ilean" }]
+                          : DidChangeWatchedFilesRegistrationOptions } }]
+              : RegistrationParams }
+        : Request (Option RegistrationParams) }
     let clientTask ← runClientTask
     mainLoop clientTask
   catch err =>
@@ -1630,12 +1581,11 @@ def initAndRunWatchdogAux : ServerM Unit := do
       break
     | .request id _ _ =>
       -- The LSP spec suggests that requests after 'shutdown' should be errored in this manner.
-      writeMessage {
-        id
-        code := .invalidRequest
-        message := "Request received after 'shutdown' request."
-        : ResponseError Unit
-      }
+      writeMessage
+        { id
+          code := .invalidRequest
+          message := "Request received after 'shutdown' request."
+          : ResponseError Unit }
     | _ =>
       -- Ignore all other message types.
       continue
@@ -1738,12 +1688,11 @@ def runMessageLoggingTask (logData : LogData) : IO Unit := do
 def initAndRunWatchdog (args : List String) (i o : FS.Stream) : IO Unit := do
   let workerPath ← findWorkerPath
   let referenceData : Std.Mutex ReferenceData ←
-    Std.Mutex.new {
-      loadingTask := ServerTask.pure ()
-      references := .empty
-      finalizedWorkerILeanVersions := ∅
-      pendingWaitForILeanRequests := #[]
-    }
+    Std.Mutex.new
+      { loadingTask := ServerTask.pure ()
+        references := .empty
+        finalizedWorkerILeanVersions := ∅
+        pendingWaitForILeanRequests := #[] }
   startLoadingReferences referenceData
   let fileWorkersRef ← IO.mkRef ({} : Std.TreeMap DocumentUri FileWorker)
   let serverRequestData ←
@@ -1751,14 +1700,12 @@ def initAndRunWatchdog (args : List String) (i o : FS.Stream) : IO Unit := do
   let importData ← IO.mkRef ⟨Std.TreeMap.empty, Std.TreeMap.empty⟩
   let requestData ← RequestDataMutex.new
   let initRequest ← i.readLspRequestAs "initialize" InitializeParams
-  o.writeLspResponse {
-    id := initRequest.id
-    result := {
-      capabilities := mkLeanServerCapabilities
-      serverInfo? := some { name := "Lean 4 Server", version? := "0.3.0" }
-      : InitializeResult
-    }
-  }
+  o.writeLspResponse
+    { id := initRequest.id
+      result :=
+        { capabilities := mkLeanServerCapabilities
+          serverInfo? := some { name := "Lean 4 Server", version? := "0.3.0" }
+          : InitializeResult } }
   let logCfg ←
     Logging.LogConfig.ofLspLogConfig <| initRequest.param.initializationOptions?.bind (·.logCfg?)
   let logChan? ←
@@ -1768,20 +1715,19 @@ def initAndRunWatchdog (args : List String) (i o : FS.Stream) : IO Unit := do
       pure none
   let logData : LogData := { cfg := logCfg, chan? := logChan? }
   runMessageLoggingTask logData
-  ReaderT.run initAndRunWatchdogAux {
-    hIn := i
-    hOut := o
-    logData
-    args := args
-    fileWorkersRef := fileWorkersRef
-    initParams := initRequest.param
-    referenceData
-    workerPath
-    serverRequestData
-    importData
-    requestData
-    : ServerContext
-  }
+  ReaderT.run initAndRunWatchdogAux
+    { hIn := i
+      hOut := o
+      logData
+      args := args
+      fileWorkersRef := fileWorkersRef
+      initParams := initRequest.param
+      referenceData
+      workerPath
+      serverRequestData
+      importData
+      requestData
+      : ServerContext }
 
 def watchdogMain (args : List String) : IO UInt32 := do
   let i ← IO.getStdin

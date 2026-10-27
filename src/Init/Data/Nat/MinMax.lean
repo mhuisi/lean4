@@ -70,10 +70,9 @@ protected theorem le_min_of_le_of_le {a b c : Nat} : a ≤ b → a ≤ c → a �
   | inl h => rw [Nat.min_eq_left h]; assumption
   | inr h => rw [Nat.min_eq_right h]; assumption
 
-protected theorem le_min {a b c : Nat} : a ≤ min b c ↔ a ≤ b ∧ a ≤ c := ⟨
-  fun h => ⟨Nat.le_trans h (Nat.min_le_left ..), Nat.le_trans h (Nat.min_le_right ..)⟩,
-  fun ⟨h₁, h₂⟩ => Nat.le_min_of_le_of_le h₁ h₂
-⟩
+protected theorem le_min {a b c : Nat} : a ≤ min b c ↔ a ≤ b ∧ a ≤ c :=
+  ⟨ fun h => ⟨Nat.le_trans h (Nat.min_le_left ..), Nat.le_trans h (Nat.min_le_right ..)⟩,
+    fun ⟨h₁, h₂⟩ => Nat.le_min_of_le_of_le h₁ h₂ ⟩
 
 protected theorem lt_min {a b c : Nat} : a < min b c ↔ a < b ∧ a < c := Nat.le_min
 
@@ -134,10 +133,9 @@ protected theorem max_le_of_le_of_le {a b c : Nat} : a ≤ c → b ≤ c → max
   | inl h => rw [Nat.max_eq_right h]; assumption
   | inr h => rw [Nat.max_eq_left h]; assumption
 
-protected theorem max_le {a b c : Nat} : max a b ≤ c ↔ a ≤ c ∧ b ≤ c := ⟨
-  fun h => ⟨Nat.le_trans (Nat.le_max_left ..) h, Nat.le_trans (Nat.le_max_right ..) h⟩,
-  fun ⟨h₁, h₂⟩ => Nat.max_le_of_le_of_le h₁ h₂
-⟩
+protected theorem max_le {a b c : Nat} : max a b ≤ c ↔ a ≤ c ∧ b ≤ c :=
+  ⟨ fun h => ⟨Nat.le_trans (Nat.le_max_left ..) h, Nat.le_trans (Nat.le_max_right ..) h⟩,
+    fun ⟨h₁, h₂⟩ => Nat.max_le_of_le_of_le h₁ h₂ ⟩
 
 protected theorem max_lt {a b c : Nat} : max a b < c ↔ a < c ∧ b < c :=
   match c with

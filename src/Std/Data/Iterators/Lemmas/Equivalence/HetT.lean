@@ -72,45 +72,41 @@ instance {α : Type v} : Small.{v} α :=
   ⟨⟨{ Target := α, deflate := id, inflate := id, deflate_inflate := rfl, inflate_deflate := rfl }⟩⟩
 
 instance {α : Type v} [Small.{u} α] {p : α → Prop} : Small.{u} (Subtype p) where
-  h := ⟨{
-    Target := Subtype (p ∘ USquash.inflate : USquash.{u} α → Prop)
-    deflate x := ⟨USquash.deflate x.1, by simp [x.2]⟩
-    inflate x := ⟨USquash.inflate x.1, x.2⟩
-    deflate_inflate := by simp
-    inflate_deflate := by simp
-  }⟩
+  h :=
+    ⟨ { Target := Subtype (p ∘ USquash.inflate : USquash.{u} α → Prop)
+        deflate x := ⟨USquash.deflate x.1, by simp [x.2]⟩
+        inflate x := ⟨USquash.inflate x.1, x.2⟩
+        deflate_inflate := by simp
+        inflate_deflate := by simp } ⟩
 
 instance {α : Type v} {x : α} : Small.{u} (Subtype (x = ·)) where
-  h := ⟨{
-    Target := PUnit
-    deflate _ := .unit
-    inflate _ := ⟨x, rfl⟩
-    deflate_inflate := rfl
-    inflate_deflate := by rintro ⟨_, rfl⟩; rfl
-  }⟩
+  h :=
+    ⟨ { Target := PUnit
+        deflate _ := .unit
+        inflate _ := ⟨x, rfl⟩
+        deflate_inflate := rfl
+        inflate_deflate := by rintro ⟨_, rfl⟩; rfl } ⟩
 
 instance {α : Type v} {x : α} : Small.{u} (Subtype (· = x)) where
-  h := ⟨{
-    Target := PUnit
-    deflate _ := .unit
-    inflate _ := ⟨x, rfl⟩
-    deflate_inflate := rfl
-    inflate_deflate := by rintro ⟨_, rfl⟩; rfl
-  }⟩
+  h :=
+    ⟨ { Target := PUnit
+        deflate _ := .unit
+        inflate _ := ⟨x, rfl⟩
+        deflate_inflate := rfl
+        inflate_deflate := by rintro ⟨_, rfl⟩; rfl } ⟩
 
 theorem Small.of_surjective
     (α : Type v) {β : Type w} (f : α → β) [Small.{u} α] (h : ∀ b, ∃ a, f a = b)
     : Small.{u} β where
-  h := ⟨{
-    Target := Quot (fun a a' : USquash α => f a.inflate = f a'.inflate)
-    deflate b := Quot.mk _ (.deflate (h b).choose)
-    inflate := Quot.lift (f ·.inflate) (fun a a' => id)
-    deflate_inflate {x} := by
-      rcases x.exists_rep with ⟨x, rfl⟩
-      apply Quot.sound
-      simp [(h (f x.inflate)).choose_spec]
-    inflate_deflate {b} := by simp [(h b).choose_spec]
-  }⟩
+  h :=
+    ⟨ { Target := Quot (fun a a' : USquash α => f a.inflate = f a'.inflate)
+        deflate b := Quot.mk _ (.deflate (h b).choose)
+        inflate := Quot.lift (f ·.inflate) (fun a a' => id)
+        deflate_inflate {x} := by
+          rcases x.exists_rep with ⟨x, rfl⟩
+          apply Quot.sound
+          simp [(h (f x.inflate)).choose_spec]
+        inflate_deflate {b} := by simp [(h b).choose_spec] } ⟩
 
 instance {α : Type v} {β : Type w} {f : α → β} [Small.{u} α] : Small.{u} {b : β // ∃ a, f a = b} :=
   .of_surjective α (fun a => ⟨f a, a, rfl⟩) (fun b => ⟨b.2.choose, by ext; exact b.2.choose_spec⟩)
@@ -120,13 +116,12 @@ theorem Small.map
     : Small.{u} {b // ∃ a h, f a h = b} :=
   .of_surjective {a // P a}
     (fun x => ⟨f x.1 x.2, x.1, x.2, rfl⟩)
-    (fun y => ⟨
-      ⟨y.2.choose, y.2.choose_spec.choose⟩,
-      (by
-        simp only
-        ext
-        exact y.2.choose_spec.choose_spec)
-    ⟩)
+    (fun y =>
+      ⟨ ⟨y.2.choose, y.2.choose_spec.choose⟩,
+        (by
+          simp only
+          ext
+          exact y.2.choose_spec.choose_spec) ⟩)
 
 instance {α : Type v} {β : α → Type w} [Small.{u} α] [∀ a, Small.{u} (β a)]
     : Small.{u} ((a : α) × β a) :=
@@ -225,12 +220,10 @@ protected noncomputable def HetT.pmap
     : HetT m β :=
   have : Small.{w} (Subtype x.Property) := x.small
   have := Small.map x.Property f
-  ⟨
-    fun b => ∃ a h, f a h = b,
+  ⟨ fun b => ∃ a h, f a h = b,
     inferInstance,
     (fun a => .deflate ⟨f a.inflate.1 a.inflate.2, a.inflate.1, by simp [a.inflate.property]⟩)
-      <$> x.operation
-  ⟩
+      <$> x.operation ⟩
 
 /-- A universe-heterogeneous version of `Functor.map`. -/
 @[implicit_reducible]
@@ -250,13 +243,11 @@ protected noncomputable def HetT.pbind
   have := x.small
   have := fun a h => (f a h).small
   have := Small.pbind x.Property (fun a h b => (f a h).Property b) inferInstance inferInstance
-  ⟨
-    fun b => ∃ a h, (f a h).Property b,
+  ⟨ fun b => ∃ a h, (f a h).Property b,
     inferInstance,
     x.operation >>= fun a =>
       ((fun b => .deflate ⟨b.inflate.1, a.inflate.1, a.inflate.2, b.inflate.2⟩)
-        <$> (f a.inflate.1 a.inflate.2).operation)
-  ⟩
+        <$> (f a.inflate.1 a.inflate.2).operation) ⟩
 
 /-- A universe-heterogeneous version of `Bind.bind`. -/
 @[implicit_reducible]
@@ -266,13 +257,11 @@ protected noncomputable def HetT.bind
   have := x.small
   have := fun a => (f a).small
   have := Small.bind x.Property (fun a b => (f a).Property b) inferInstance inferInstance
-  ⟨
-    fun b => ∃ a, x.Property a ∧ (f a).Property b,
+  ⟨ fun b => ∃ a, x.Property a ∧ (f a).Property b,
     inferInstance,
     x.operation >>= fun a =>
       ((fun b => .deflate ⟨b.inflate.1, a.inflate.1, a.inflate.2, b.inflate.2⟩)
-        <$> (f a.inflate).operation)
-  ⟩
+        <$> (f a.inflate).operation) ⟩
 
 noncomputable instance {m : Type w → Type w'} [Functor m] : Functor (HetT m) where
   map := HetT.map

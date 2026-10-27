@@ -71,21 +71,15 @@ def CbvSimprocs.addCore
     (proc : Simproc)
     : CbvSimprocs :=
   let entry : CbvSimprocEntry := { declName, phase, keys, proc }
-  let s := {
-    s with
-    simprocNames := s.simprocNames.insert declName
-    erased := s.erased.erase declName
-  }
+  let s :=
+    { s with simprocNames := s.simprocNames.insert declName, erased := s.erased.erase declName }
   match phase with
   | .pre => { s with pre := s.pre.insertKeyValue keys entry }
   | .eval => { s with eval := s.eval.insertKeyValue keys entry }
   | .post => { s with post := s.post.insertKeyValue keys entry }
 
-def CbvSimprocs.erase (s : CbvSimprocs) (declName : Name) : CbvSimprocs := {
-  s with
-  erased := s.erased.insert declName
-  simprocNames := s.simprocNames.erase declName
-}
+def CbvSimprocs.erase (s : CbvSimprocs) (declName : Name) : CbvSimprocs :=
+  { s with erased := s.erased.insert declName, simprocNames := s.simprocNames.erase declName }
 
 structure BuiltinCbvSimprocs where
   keys : Std.HashMap Name (Array DiscrTree.Key) := {}
@@ -102,10 +96,8 @@ def registerBuiltinCbvSimproc (declName : Name) (keys : Array DiscrTree.Key) (pr
   if (← builtinCbvSimprocDeclsRef.get).keys.contains declName then
     throw (IO.userError s!"Invalid builtin cbv simproc declaration \
       `{privateToUserName declName}`: It has already been declared")
-  builtinCbvSimprocDeclsRef.modify fun { keys := ks, procs } => {
-    keys := ks.insert declName keys
-    procs := procs.insert declName proc
-  }
+  builtinCbvSimprocDeclsRef.modify fun { keys := ks, procs } =>
+    { keys := ks.insert declName keys, procs := procs.insert declName proc }
 
 structure CbvSimprocDecl where
   declName : Name
@@ -121,15 +113,15 @@ deriving Inhabited
 
 builtin_initialize cbvSimprocDeclExt
     : PersistentEnvExtension CbvSimprocDecl CbvSimprocDecl CbvSimprocDeclExtState ←
-  registerPersistentEnvExtension {
-    mkInitial := return { builtin := (← builtinCbvSimprocDeclsRef.get).keys }
-    addImportedFn := fun _ => return { builtin := (← builtinCbvSimprocDeclsRef.get).keys }
-    addEntryFn := fun s d => { s with newEntries := s.newEntries.insert d.declName d.keys }
-    exportEntriesFn := fun s =>
-      let result :=
-        s.newEntries.foldl (init := #[]) fun result declName keys => result.push { declName, keys }
-      result.qsort CbvSimprocDecl.lt
-  }
+  registerPersistentEnvExtension
+    { mkInitial := return { builtin := (← builtinCbvSimprocDeclsRef.get).keys }
+      addImportedFn := fun _ => return { builtin := (← builtinCbvSimprocDeclsRef.get).keys }
+      addEntryFn := fun s d => { s with newEntries := s.newEntries.insert d.declName d.keys }
+      exportEntriesFn := fun s =>
+        let result :=
+          s.newEntries.foldl (init := #[]) fun result declName keys =>
+            result.push { declName, keys }
+        result.qsort CbvSimprocDecl.lt }
 
 def getCbvSimprocDeclKeys? (declName : Name) : CoreM (Option (Array DiscrTree.Key)) := do
   let env ← getEnv
@@ -162,10 +154,8 @@ def registerCbvSimproc (declName : Name) (keys : Array DiscrTree.Key) : CoreM Un
     throwError "Invalid cbv simproc declaration `{.ofConstName declName}`: \
       It has already been declared"
   modifyEnv fun env =>
-    cbvSimprocDeclExt.modifyState env fun s => {
-      s with
-      newEntries := s.newEntries.insert declName keys
-    }
+    cbvSimprocDeclExt.modifyState env fun s =>
+      { s with newEntries := s.newEntries.insert declName keys }
 
 abbrev CbvSimprocExtension := ScopedEnvExtension CbvSimprocOLeanEntry CbvSimprocEntry CbvSimprocs
 
@@ -191,13 +181,12 @@ def toCbvSimprocEntry (e : CbvSimprocOLeanEntry) : ImportM CbvSimprocEntry := do
 builtin_initialize builtinCbvSimprocsRef : IO.Ref CbvSimprocs ← IO.mkRef {}
 
 builtin_initialize cbvSimprocExtension : CbvSimprocExtension ←
-  registerScopedEnvExtension {
-    name := `cbvSimprocExt
-    mkInitial := builtinCbvSimprocsRef.get
-    ofOLeanEntry := fun _ => toCbvSimprocEntry
-    toOLeanEntry := fun e => e.toCbvSimprocOLeanEntry
-    addEntry := fun s e => s.addCore e.keys e.declName e.phase e.proc
-  }
+  registerScopedEnvExtension
+    { name := `cbvSimprocExt
+      mkInitial := builtinCbvSimprocsRef.get
+      ofOLeanEntry := fun _ => toCbvSimprocEntry
+      toOLeanEntry := fun e => e.toCbvSimprocOLeanEntry
+      addEntry := fun s e => s.addCore e.keys e.declName e.phase e.proc }
 
 def eraseCbvSimprocAttr (declName : Name) : AttrM Unit := do
   let s := cbvSimprocExtension.getState (← getEnv)
@@ -252,24 +241,22 @@ private def addBuiltinCbvSimproc (declName : Name) (stx : Syntax) : AttrM Unit :
   go.run' {}
 
 builtin_initialize
-  registerBuiltinAttribute {
-    ref := by exact decl_name%
-    name := `cbvSimprocAttr
-    descr := "Cbv simplification procedure"
-    applicationTime := AttributeApplicationTime.afterCompilation
-    add := fun declName stx attrKind => addCbvSimprocAttr declName stx attrKind
-    erase := fun declName => eraseCbvSimprocAttr declName
-  }
+  registerBuiltinAttribute
+    { ref := by exact decl_name%
+      name := `cbvSimprocAttr
+      descr := "Cbv simplification procedure"
+      applicationTime := AttributeApplicationTime.afterCompilation
+      add := fun declName stx attrKind => addCbvSimprocAttr declName stx attrKind
+      erase := fun declName => eraseCbvSimprocAttr declName }
 
 builtin_initialize
-  registerBuiltinAttribute {
-    ref := by exact decl_name%
-    name := `cbvSimprocBuiltinAttr
-    descr := "Builtin cbv simplification procedure"
-    applicationTime := AttributeApplicationTime.afterCompilation
-    erase := fun _ => throwError "Not implemented yet, [-builtin_cbv_simproc]"
-    add := fun declName stx _ => addBuiltinCbvSimproc declName stx
-  }
+  registerBuiltinAttribute
+    { ref := by exact decl_name%
+      name := `cbvSimprocBuiltinAttr
+      descr := "Builtin cbv simplification procedure"
+      applicationTime := AttributeApplicationTime.afterCompilation
+      erase := fun _ => throwError "Not implemented yet, [-builtin_cbv_simproc]"
+      add := fun declName stx _ => addBuiltinCbvSimproc declName stx }
 
 def getCbvSimprocs : CoreM CbvSimprocs := return cbvSimprocExtension.getState (← getEnv)
 

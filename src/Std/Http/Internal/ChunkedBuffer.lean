@@ -42,20 +42,16 @@ namespace ChunkedBuffer
 
 /-- Append a single `ByteArray` to the `ChunkedBuffer`. -/
 @[inline]
-def push (c : ChunkedBuffer) (b : ByteArray) : ChunkedBuffer := {
-  data := c.data.push b
-  size := c.size + b.size
-}
+def push (c : ChunkedBuffer) (b : ByteArray) : ChunkedBuffer :=
+  { data := c.data.push b, size := c.size + b.size }
 
 /-- Writes a `ByteArray` to the `ChunkedBuffer`. -/
 @[inline] def write (buffer : ChunkedBuffer) (data : ByteArray) : ChunkedBuffer := buffer.push data
 
 /-- Writes a `ChunkedBuffer` to the `ChunkedBuffer`. -/
 @[inline]
-def append (buffer : ChunkedBuffer) (data : ChunkedBuffer) : ChunkedBuffer := {
-  data := buffer.data ++ data.data
-  size := buffer.size + data.size
-}
+def append (buffer : ChunkedBuffer) (data : ChunkedBuffer) : ChunkedBuffer :=
+  { data := buffer.data ++ data.data, size := buffer.size + data.size }
 
 /--
 Writes a `Char` to the `ChunkedBuffer`. Only the low byte is written (`Char.toUInt8`),
@@ -82,10 +78,8 @@ def toByteArray (cb : ChunkedBuffer) : ByteArray :=
 
 /-- Build from an array of ByteArrays directly. -/
 @[inline]
-def ofArray (bs : Array ByteArray) : ChunkedBuffer := {
-  data := bs
-  size := bs.foldl (· + ·.size) 0
-}
+def ofArray (bs : Array ByteArray) : ChunkedBuffer :=
+  { data := bs, size := bs.foldl (· + ·.size) 0 }
 
 /-- Checks whether the buffer is empty. -/
 @[inline] def isEmpty (bb : ChunkedBuffer) : Bool := bb.size = 0

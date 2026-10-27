@@ -47,12 +47,10 @@ theorem maybeNormalize_eq {num den g} (dvd_num dvd_den den_nz reduced)
 
 theorem normalize_eq {num den} (den_nz)
     : normalize num den den_nz
-      = {
-        num := num / num.natAbs.gcd den
-        den := den / num.natAbs.gcd den
-        den_nz := normalize.den_nz den_nz rfl
-        reduced := normalize.reduced den_nz rfl
-      } := by
+      = { num := num / num.natAbs.gcd den
+          den := den / num.natAbs.gcd den
+          den_nz := normalize.den_nz den_nz rfl
+          reduced := normalize.reduced den_nz rfl } := by
   simp only [normalize, maybeNormalize_eq, Int.divExact_eq_ediv]
 
 @[simp]
@@ -632,12 +630,10 @@ protected theorem mul_div_cancel {a b : Rat} (hb : b ≠ 0) : a * b / b = a := b
 
 theorem pow_def (q : Rat) (n : Nat)
     : q ^ n
-      = ⟨
-        q.num ^ n,
-        q.den ^ n,
-        by simp [q.den_nz],
-        by rw [Int.natAbs_pow]; exact q.reduced.pow _ _
-      ⟩ :=
+      = ⟨ q.num ^ n,
+          q.den ^ n,
+          by simp [q.den_nz],
+          by rw [Int.natAbs_pow]; exact q.reduced.pow _ _ ⟩ :=
   rfl
 
 @[simp] theorem num_pow (q : Rat) (n : Nat) : (q ^ n).num = q.num ^ n := rfl

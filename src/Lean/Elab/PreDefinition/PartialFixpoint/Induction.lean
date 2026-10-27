@@ -156,11 +156,10 @@ def mkIsMeetProof
           let_expr is_meet σ inst a b w := ty
             | throwError "mkIsMeetProof: unexpected proof type{indentExpr ty}"
           proof ←
-            mkAppOptM ``is_meet_pi #[
-              ← inferType t,
-              ← mkLambdaFVars #[t] σ, ← mkLambdaFVars #[t] inst, ← mkLambdaFVars #[t] a,
-              ← mkLambdaFVars #[t] b, ← mkLambdaFVars #[t] w, ← mkLambdaFVars #[t] proof
-            ]
+            mkAppOptM ``is_meet_pi
+              #[← inferType t,
+                ← mkLambdaFVars #[t] σ, ← mkLambdaFVars #[t] inst, ← mkLambdaFVars #[t] a,
+                ← mkLambdaFVars #[t] b, ← mkLambdaFVars #[t] w, ← mkLambdaFVars #[t] proof]
         return proof
   let mut proof := componentProofs.back!
   for j in (Array.range (predTypes.size - 1)).reverse do

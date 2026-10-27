@@ -40,11 +40,10 @@ public def collectLineInfos (s : String.Slice) : Array (LineInfo s) := Id.run do
       lineIndentation := lineIndentation + 1
     else if c == '\n' then
       r :=
-        r.push {
-          length := lineLength
-          indentation := lineIndentation
-          range := s.subslice! lineStartPos pos
-        }
+        r.push
+          { length := lineLength
+            indentation := lineIndentation
+            range := s.subslice! lineStartPos pos }
       lineLength := 0
       lineIndentation := 0
       lineStartPos := pos'
@@ -54,11 +53,10 @@ public def collectLineInfos (s : String.Slice) : Array (LineInfo s) := Id.run do
       foundNonSpaceChar := true
     pos := pos'
   r :=
-    r.push {
-      length := lineLength
-      indentation := lineIndentation
-      range := s.subslice! lineStartPos pos
-    }
+    r.push
+      { length := lineLength
+        indentation := lineIndentation
+        range := s.subslice! lineStartPos pos }
   return r
 
 /-- The part of a token that lies on a single line. -/
@@ -93,17 +91,15 @@ the line.
 public partial def collectSyntaxLineInfos (stx : Syntax) : Array SyntaxLineInfo :=
   let startPos := stx.getStartPos?.getD ⟨0⟩
   let (_, s) :=
-    StateT.run (go stx) {
-      finishedLines := #[]
-      pendingLine := {
-        length := 0
-        indentation := 0
-        line := ""
-        tokenRanges := #[]
-        startPos
-        endPos := startPos
-      }
-    }
+    StateT.run (go stx)
+      { finishedLines := #[]
+        pendingLine :=
+          { length := 0
+            indentation := 0
+            line := ""
+            tokenRanges := #[]
+            startPos
+            endPos := startPos } }
   s.finishedLines.push s.pendingLine
 
 where
@@ -145,35 +141,33 @@ where
     let pendingLine' := lineInfos[0]!
     let mut startPos := pendingLine.startPos
     let endPos := pendingLine.endPos.increaseBy pendingLine'.range.toSlice.utf8ByteSize
-    let combinedPendingLine : SyntaxLineInfo := {
-      length := pendingLine.length + pendingLine'.length
-      indentation :=
-        if pendingLine.indentation < pendingLine.length || isToken then
-          pendingLine.indentation
-        else
-          pendingLine.indentation + pendingLine'.indentation
-      line := pendingLine.line ++ pendingLine'.range.toString
-      tokenRanges := pendingLine.tokenRanges ++ lineTokenRanges
-      startPos
-      endPos
-    }
+    let combinedPendingLine : SyntaxLineInfo :=
+      { length := pendingLine.length + pendingLine'.length
+        indentation :=
+          if pendingLine.indentation < pendingLine.length || isToken then
+            pendingLine.indentation
+          else
+            pendingLine.indentation + pendingLine'.indentation
+        line := pendingLine.line ++ pendingLine'.range.toString
+        tokenRanges := pendingLine.tokenRanges ++ lineTokenRanges
+        startPos
+        endPos }
     let mut newLineInfos := #[combinedPendingLine]
     startPos := endPos + '\n'
     for lineInfo in lineInfos[1...*] do
       let endPos := startPos.increaseBy lineInfo.range.toSlice.utf8ByteSize
       newLineInfos :=
-        newLineInfos.push {
-          length := lineInfo.length
-          indentation :=
-            if !isToken then
-              lineInfo.indentation
-            else
-              0
-          line := lineInfo.range.toString
-          tokenRanges := lineTokenRanges
-          startPos
-          endPos
-        }
+        newLineInfos.push
+          { length := lineInfo.length
+            indentation :=
+              if !isToken then
+                lineInfo.indentation
+              else
+                0
+            line := lineInfo.range.toString
+            tokenRanges := lineTokenRanges
+            startPos
+            endPos }
       startPos := endPos + '\n'
     let pendingLine := newLineInfos.back!
     let finishedLines := newLineInfos.pop

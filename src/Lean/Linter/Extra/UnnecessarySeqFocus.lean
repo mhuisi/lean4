@@ -41,10 +41,8 @@ example : True := by
   | unit => trivial
 ```
 -/
-register_builtin_option linter.extra.unnecessarySeqFocus : Bool := {
-  defValue := false
-  descr := "enable the 'unnecessary <;>' linter"
-}
+register_builtin_option linter.extra.unnecessarySeqFocus : Bool :=
+  { defValue := false, descr := "enable the 'unnecessary <;>' linter" }
 
 namespace UnnecessarySeqFocus
 
@@ -66,22 +64,21 @@ def addBuiltinMultigoalKinds (ks : Array SyntaxNodeKind) : IO Unit :=
   multigoalKindsRef.modify fun s => ks.foldl (·.insert ·) s
 
 builtin_initialize
-  addBuiltinMultigoalKinds #[
-    ``Parser.Tactic.«tacticNext_=>_»,
-    ``Parser.Tactic.allGoals,
-    ``Parser.Tactic.anyGoals,
-    ``Parser.Tactic.case,
-    ``Parser.Tactic.case',
-    ``Parser.Tactic.Conv.«convNext__=>_»,
-    ``Parser.Tactic.Conv.allGoals,
-    ``Parser.Tactic.Conv.anyGoals,
-    ``Parser.Tactic.Conv.case,
-    ``Parser.Tactic.Conv.case',
-    ``Parser.Tactic.rotateLeft,
-    ``Parser.Tactic.rotateRight,
-    ``Parser.Tactic.show,
-    ``Parser.Tactic.tacticStop_
-  ]
+  addBuiltinMultigoalKinds
+    #[``Parser.Tactic.«tacticNext_=>_»,
+      ``Parser.Tactic.allGoals,
+      ``Parser.Tactic.anyGoals,
+      ``Parser.Tactic.case,
+      ``Parser.Tactic.case',
+      ``Parser.Tactic.Conv.«convNext__=>_»,
+      ``Parser.Tactic.Conv.allGoals,
+      ``Parser.Tactic.Conv.anyGoals,
+      ``Parser.Tactic.Conv.case,
+      ``Parser.Tactic.Conv.case',
+      ``Parser.Tactic.rotateLeft,
+      ``Parser.Tactic.rotateRight,
+      ``Parser.Tactic.show,
+      ``Parser.Tactic.tacticStop_]
 
 /-- Whether `k` is a multigoal tactic kind, per `multigoalKindsRef`. -/
 def isMultigoalKind (k : SyntaxNodeKind) : BaseIO Bool :=

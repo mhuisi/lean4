@@ -40,35 +40,31 @@ namespace Lean.Elab.Tactic.AutoTry
 open Lean Elab Term Tactic Command Try Meta
 
 /-- Run `try?` on empty proofs (e.g. empty `by`, empty `· `, empty `case h => `). -/
-register_builtin_option autoTry.onEmptyProof : Bool := {
-  defValue := false
-  descr := "run `try?` on empty proofs and empty subproofs and report any suggestions"
-}
+register_builtin_option autoTry.onEmptyProof : Bool :=
+  { defValue := false
+    descr := "run `try?` on empty proofs and empty subproofs and report any suggestions" }
 
 /--
 Former name of `autoTry.onEmptyProof`. Kept as an alias so that `set_option
 tactic.tryOnEmptyBy true` in code written against earlier releases continues to enable
 the empty-`by` suggestion. Use `autoTry.onEmptyProof` in new code.
 -/
-register_builtin_option tactic.tryOnEmptyBy : Bool := {
-  defValue := false
-  descr := "deprecated alias for `autoTry.onEmptyProof`"
-  deprecation? := some { since := "2026-06-29", text? := some "use `autoTry.onEmptyProof` instead" }
-}
+register_builtin_option tactic.tryOnEmptyBy : Bool :=
+  { defValue := false
+    descr := "deprecated alias for `autoTry.onEmptyProof`"
+    deprecation? :=
+      some { since := "2026-06-29", text? := some "use `autoTry.onEmptyProof` instead" } }
 
 /-- Run `try?` whenever there are unsolved goals (and not other errors). -/
-register_builtin_option autoTry.onUnsolvedGoal : Bool := {
-  defValue := false
-  descr :=
-    "run `try?` on each proof or subproof that left a goal unsolved and report \
-      any suggestions"
-}
+register_builtin_option autoTry.onUnsolvedGoal : Bool :=
+  { defValue := false
+    descr :=
+      "run `try?` on each proof or subproof that left a goal unsolved and report \
+        any suggestions" }
 
 /-- Run `try?` on each `sorry` tactic. -/
-register_builtin_option autoTry.onSorry : Bool := {
-  defValue := false
-  descr := "run `try?` on each `sorry` tactic and report any suggestions"
-}
+register_builtin_option autoTry.onSorry : Bool :=
+  { defValue := false, descr := "run `try?` on each `sorry` tactic and report any suggestions" }
 
 /--
 When enabled, autoTry logs an info message for each emitted suggestion describing the
@@ -77,12 +73,11 @@ Intended for tests: the [apply] widget normally hides the separator characters t
 edit inserts, so without this option there is no way for `#guard_msgs` to verify the
 exact text being inserted on click.
 -/
-register_builtin_option debug.autoTry.showEdits : Bool := {
-  defValue := false
-  descr :=
-    "if set, autoTry logs an info message per emitted suggestion showing the edit's \
-      source range and the literal replacement text (for testing the widget data)"
-}
+register_builtin_option debug.autoTry.showEdits : Bool :=
+  { defValue := false
+    descr :=
+      "if set, autoTry logs an info message per emitted suggestion showing the edit's \
+        source range and the literal replacement text (for testing the widget data)" }
 
 builtin_initialize registerTraceClass `autoTry
 
@@ -103,19 +98,16 @@ def runMetaMInScope
   let core : CoreM α := Prod.fst <$> x.run { lctx } { mctx }
   let (res, newCoreState) ←
     (withOptions (fun _ => opts) core).toIO
-      {
-        currNamespace := namingCtx.currNamespace
+      { currNamespace := namingCtx.currNamespace
         openDecls := namingCtx.openDecls
         fileName := cmdCtx.fileName
         fileMap := cmdCtx.fileMap
-        cancelTk? := cmdCtx.cancelTk?
-      }
+        cancelTk? := cmdCtx.cancelTk? }
       { env, ngen := {} }
-  modify fun s => {
-    s with
-    messages := s.messages ++ newCoreState.messages
-    traceState.traces := s.traceState.traces ++ newCoreState.traceState.traces
-  }
+  modify fun s =>
+    { s with
+      messages := s.messages ++ newCoreState.messages
+      traceState.traces := s.traceState.traces ++ newCoreState.traceState.traces }
   return res
 
 def isSorryTactic (stx : Syntax) : Bool :=
@@ -317,19 +309,16 @@ def collectTriggerPoints
         if let .ofTacticInfo tacInfo := info then
           if isSorryTactic tacInfo.stx then
             if let some goal := tacInfo.goalsBefore.head? then
-              let namingCtx : NamingContext := {
-                currNamespace := ctx.currNamespace
-                openDecls := ctx.openDecls
-              }
-              return acc.push {
-                kind := .sorryTactic
-                ref := tacInfo.stx
-                env := ctx.env
-                mctx := tacInfo.mctxBefore
-                opts := ctx.options
-                namingCtx
-                goal
-              }
+              let namingCtx : NamingContext :=
+                { currNamespace := ctx.currNamespace, openDecls := ctx.openDecls }
+              return acc.push
+                { kind := .sorryTactic
+                  ref := tacInfo.stx
+                  env := ctx.env
+                  mctx := tacInfo.mctxBefore
+                  opts := ctx.options
+                  namingCtx
+                  goal }
         return acc
   -- Unsolved-goal triggers come from the message log.
   if onUnsolved || onEmpty then
@@ -350,10 +339,8 @@ def collectTriggerPoints
         continue
       let some endPos := msg.endPos
         | continue
-      let msgRange : Lean.Syntax.Range := {
-        start := fileMap.ofPosition msg.pos
-        stop := fileMap.ofPosition endPos
-      }
+      let msgRange : Lean.Syntax.Range :=
+        { start := fileMap.ofPosition msg.pos, stop := fileMap.ofPosition endPos }
       unless cmdRange.includes msgRange do
         continue
       let some (body, insertPos) := findTacticSeqBody cmd msgRange
@@ -373,15 +360,14 @@ def collectTriggerPoints
         if seen.contains (msgRange, mvarId) then continue
         seen := seen.insert (msgRange, mvarId)
         acc :=
-          acc.push {
-            kind := .unsolvedGoal body insertPos
-            ref
-            env := msgCtx.env
-            mctx := msgCtx.mctx
-            opts := msgCtx.opts
-            namingCtx
-            goal := mvarId
-          }
+          acc.push
+            { kind := .unsolvedGoal body insertPos
+              ref
+              env := msgCtx.env
+              mctx := msgCtx.mctx
+              opts := msgCtx.opts
+              namingCtx
+              goal := mvarId }
   return acc
 
 /--
@@ -442,12 +428,11 @@ def emitAppendSuggestions
         let pos := fileMap.toPosition insertPos
         let dLine := pos.line - cmdLine + 1 -- match `#guard_msgs (positions := true)`: +N:COL
         logInfoAt ref m!"autoTry edit: insert {repr editText} at +{dLine}:{pos.column}"
-      return ({
-          suggestion := .string editText
-          messageData? := some (toMessageData tac)
-          toCodeActionTitle? := some (fun _ => "Try this: " ++ cleanText)
-        }
-        : Tactic.TryThis.Suggestion)
+      return
+        ({ suggestion := .string editText
+           messageData? := some (toMessageData tac)
+           toCodeActionTitle? := some (fun _ => "Try this: " ++ cleanText) }
+          : Tactic.TryThis.Suggestion)
   liftCoreM <|
     if formatted.size == 1 then
       Tactic.TryThis.addSuggestion ref formatted[0]! (origSpan? := origSpan)

@@ -52,15 +52,14 @@ programming languages.
 -/
 @[builtin_doc]
 builtin_initialize exportAttr : ParametricAttribute Name ←
-  registerParametricAttribute {
-    name := `export
-    descr := "name to be used by code generators"
-    getParam := fun _ stx => do
-      let exportName ← Attribute.Builtin.getId stx
-      unless isValidCppName exportName do
-        throwError "Invalid `export` function name: `{exportName}` is not a valid C++ identifier"
-      return exportName
-  }
+  registerParametricAttribute
+    { name := `export
+      descr := "name to be used by code generators"
+      getParam := fun _ stx => do
+        let exportName ← Attribute.Builtin.getId stx
+        unless isValidCppName exportName do
+          throwError "Invalid `export` function name: `{exportName}` is not a valid C++ identifier"
+        return exportName }
 
 @[export lean_get_export_name_for]
 def getExportNameFor? (env : Environment) (n : Name) : Option Name := exportAttr.getParam? env n

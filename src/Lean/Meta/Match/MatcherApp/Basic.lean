@@ -36,18 +36,17 @@ def matchMatcherApp? [Monad m] [MonadEnv m] [MonadError m] (e : Expr) (alsoCases
       let args := e.getAppArgs
       if args.size < info.arity then
         return none
-      return some {
-        info with
-        matcherName := declName
-        matcherLevels := declLevels.toArray
-        params := args.extract 0 info.numParams
-        motive := args[info.getMotivePos]!
-        discrs := args[(info.numParams + 1)...(info.numParams + 1 + info.numDiscrs)]
-        alts :=
-          args[(info.numParams + 1 + info.numDiscrs)
-            ...(info.numParams + 1 + info.numDiscrs + info.numAlts)]
-        remaining := args[(info.numParams + 1 + info.numDiscrs + info.numAlts)...args.size]
-      }
+      return some
+        { info with
+          matcherName := declName
+          matcherLevels := declLevels.toArray
+          params := args.extract 0 info.numParams
+          motive := args[info.getMotivePos]!
+          discrs := args[(info.numParams + 1)...(info.numParams + 1 + info.numDiscrs)]
+          alts :=
+            args[(info.numParams + 1 + info.numDiscrs)
+              ...(info.numParams + 1 + info.numDiscrs + info.numAlts)]
+          remaining := args[(info.numParams + 1 + info.numDiscrs + info.numAlts)...args.size] }
 
     if alsoCasesOn && isCasesOnRecursor (← getEnv) declName then
       let indName := declName.getPrefix
@@ -70,27 +69,25 @@ def matchMatcherApp? [Monad m] [MonadEnv m] [MonadError m] (e : Expr) (alsoCases
         info.ctors.toArray.mapM fun ctor => do
           let .ctorInfo ctorInfo ← getConstInfo ctor
             | panic! "expected constructor"
-          return {
-            numFields := ctorInfo.numFields
-            numOverlaps := 0
-            hasUnitThunk := false
-            : Match.AltParamInfo
-          }
-      return some {
-        numParams := params.size
-        numDiscrs := discrs.size
-        matcherName := declName
-        matcherLevels := declLevels.toArray
-        uElimPos?
-        discrInfos
-        params
-        motive
-        discrs
-        alts
-        remaining
-        altInfos
-        overlaps := {} -- CasesOn constructor have no overlaps
-      }
+          return
+            { numFields := ctorInfo.numFields
+              numOverlaps := 0
+              hasUnitThunk := false
+              : Match.AltParamInfo }
+      return some
+        { numParams := params.size
+          numDiscrs := discrs.size
+          matcherName := declName
+          matcherLevels := declLevels.toArray
+          uElimPos?
+          discrInfos
+          params
+          motive
+          discrs
+          alts
+          remaining
+          altInfos
+          overlaps := {} } -- CasesOn constructor have no overlaps
 
   return none
 

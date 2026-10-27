@@ -57,10 +57,9 @@ attribute [Std.Internal.tree_tac] Balanced.leaf
 @[Std.Internal.tree_tac]
 theorem balanced_inner_iff {sz k v l r}
     : Balanced (Impl.inner sz k v l r : Impl α β)
-      ↔ Balanced l ∧ Balanced r ∧ BalancedAtRoot l.size r.size ∧ sz = l.size + 1 + r.size := ⟨
-  by rintro (_ | ⟨h₁, h₂, h₃, h₄⟩); exact ⟨h₁, h₂, h₃, h₄⟩,
-  fun ⟨h₁, h₂, h₃, h₄⟩ => .inner h₁ h₂ h₃ h₄
-⟩
+      ↔ Balanced l ∧ Balanced r ∧ BalancedAtRoot l.size r.size ∧ sz = l.size + 1 + r.size :=
+  ⟨ by rintro (_ | ⟨h₁, h₂, h₃, h₄⟩); exact ⟨h₁, h₂, h₃, h₄⟩,
+    fun ⟨h₁, h₂, h₃, h₄⟩ => .inner h₁ h₂ h₃ h₄ ⟩
 
 @[simp]
 theorem balancedAtRoot_zero_zero : BalancedAtRoot 0 0 := by simp only [BalancedAtRoot]; omega

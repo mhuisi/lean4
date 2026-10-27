@@ -22,10 +22,11 @@ deriving BEq
 namespace OpenDecl
 instance : Inhabited OpenDecl := ⟨simple Name.anonymous []⟩
 
-instance : ToString OpenDecl := ⟨fun decl =>
-  match decl with
-  | explicit id decl => toString id ++ " → " ++ toString decl
-  | simple ns ex => toString ns ++ (if ex == [] then "" else " hiding " ++ toString ex)⟩
+instance : ToString OpenDecl :=
+  ⟨ fun decl =>
+      match decl with
+      | explicit id decl => toString id ++ " → " ++ toString decl
+      | simple ns ex => toString ns ++ (if ex == [] then "" else " hiding " ++ toString ex) ⟩
 
 end OpenDecl
 

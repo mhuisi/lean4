@@ -26,28 +26,20 @@ public def fmtPrecParen : Fmt := fun
     throw .partialFormatter
 
 @[builtin_infix_fmt Lean.Parser.Syntax.addPrec]
-public def fmtAddPrec : Fmt.InfixOperation := {
-  sparse := false
-  precs? := some { prec := 65, lhsPrec := 0, rhsPrec := 66 }
-}
+public def fmtAddPrec : Fmt.InfixOperation :=
+  { sparse := false, precs? := some { prec := 65, lhsPrec := 0, rhsPrec := 66 } }
 
 @[builtin_infix_fmt Lean.Parser.Syntax.subPrec]
-public def fmtSubPrec : Fmt.InfixOperation := {
-  sparse := false
-  precs? := some { prec := 65, lhsPrec := 0, rhsPrec := 66 }
-}
+public def fmtSubPrec : Fmt.InfixOperation :=
+  { sparse := false, precs? := some { prec := 65, lhsPrec := 0, rhsPrec := 66 } }
 
 @[builtin_infix_fmt Lean.Parser.Syntax.addPrio]
-public def fmtAddPrio : Fmt.InfixOperation := {
-  sparse := false
-  precs? := some { prec := 65, lhsPrec := 0, rhsPrec := 66 }
-}
+public def fmtAddPrio : Fmt.InfixOperation :=
+  { sparse := false, precs? := some { prec := 65, lhsPrec := 0, rhsPrec := 66 } }
 
 @[builtin_infix_fmt Lean.Parser.Syntax.subPrio]
-public def fmtSubPrio : Fmt.InfixOperation := {
-  sparse := false
-  precs? := some { prec := 65, lhsPrec := 0, rhsPrec := 66 }
-}
+public def fmtSubPrio : Fmt.InfixOperation :=
+  { sparse := false, precs? := some { prec := 65, lhsPrec := 0, rhsPrec := 66 } }
 
 @[builtin_fmt «prio(_)»]
 public def fmtPrioParen : Fmt := fun
@@ -118,10 +110,8 @@ public def fmtStxNotFollowedBy : Fmt := fun
     throw .partialFormatter
 
 @[builtin_infix_fmt «stx_<|>_»]
-public def fmtStxOrelse : Fmt.InfixOperation := {
-  sparse := false
-  precs? := some { prec := 2, lhsPrec := 2, rhsPrec := 1 }
-}
+public def fmtStxOrelse : Fmt.InfixOperation :=
+  { sparse := false, precs? := some { prec := 2, lhsPrec := 2, rhsPrec := 1 } }
 
 @[builtin_fmt «term¬_», builtin_fmt term!_]
 public def fmtTermNot : Fmt := fmtPrefixOperator
@@ -149,40 +139,28 @@ public def fmtTermInv : Fmt := fun
     throw .partialFormatter
 
 @[builtin_infix_fmt «term_∈_»]
-public def fmtTermMem : Fmt.InfixOperation := {
-  sparse := false
-  precs? := some { prec := 50, lhsPrec := 50, rhsPrec := 50 }
-}
+public def fmtTermMem : Fmt.InfixOperation :=
+  { sparse := false, precs? := some { prec := 50, lhsPrec := 50, rhsPrec := 50 } }
 
 @[builtin_infix_fmt «term_∉_»]
-public def fmtTermNotMem : Fmt.InfixOperation := {
-  sparse := false
-  precs? := some { prec := 50, lhsPrec := 50, rhsPrec := 50 }
-}
+public def fmtTermNotMem : Fmt.InfixOperation :=
+  { sparse := false, precs? := some { prec := 50, lhsPrec := 50, rhsPrec := 50 } }
 
 @[builtin_infix_fmt «term_≤_»]
-public def fmtTermLe : Fmt.InfixOperation := {
-  sparse := true
-  precs? := some { prec := 50, lhsPrec := 51, rhsPrec := 51 }
-}
+public def fmtTermLe : Fmt.InfixOperation :=
+  { sparse := true, precs? := some { prec := 50, lhsPrec := 51, rhsPrec := 51 } }
 
 @[builtin_infix_fmt «term_≥_»]
-public def fmtTermGe : Fmt.InfixOperation := {
-  sparse := true
-  precs? := some { prec := 50, lhsPrec := 51, rhsPrec := 51 }
-}
+public def fmtTermGe : Fmt.InfixOperation :=
+  { sparse := true, precs? := some { prec := 50, lhsPrec := 51, rhsPrec := 51 } }
 
 @[builtin_infix_fmt «term_∧_»]
-public def fmtTermAnd : Fmt.InfixOperation := {
-  sparse := false
-  precs? := some { prec := 35, lhsPrec := 36, rhsPrec := 35 }
-}
+public def fmtTermAnd : Fmt.InfixOperation :=
+  { sparse := false, precs? := some { prec := 35, lhsPrec := 36, rhsPrec := 35 } }
 
 @[builtin_infix_fmt «term_∨_»]
-public def fmtTermOr : Fmt.InfixOperation := {
-  sparse := false
-  precs? := some { prec := 30, lhsPrec := 31, rhsPrec := 30 }
-}
+public def fmtTermOr : Fmt.InfixOperation :=
+  { sparse := false, precs? := some { prec := 30, lhsPrec := 31, rhsPrec := 30 } }
 
 public structure PipeOperator where
   lhs : Syntax

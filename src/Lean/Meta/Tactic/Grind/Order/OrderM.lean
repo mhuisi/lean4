@@ -36,10 +36,8 @@ def getStruct : OrderM Struct := do
 
 def modifyStruct (f : Struct → Struct) : OrderM Unit := do
   let structId ← getStructId
-  modify' fun s => {
-    s with
-    structs := (s.structs.rightpad (structId + 1) { id := structId }).modify structId f
-  }
+  modify' fun s =>
+    { s with structs := (s.structs.rightpad (structId + 1) { id := structId }).modify structId f }
 
 def getExpr (u : NodeId) : OrderM Expr := do return (← getStruct).nodes[u]!
 

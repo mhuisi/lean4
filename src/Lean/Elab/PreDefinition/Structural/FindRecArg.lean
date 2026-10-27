@@ -114,19 +114,15 @@ def getRecArgInfo (fnName : Name) (fixedParamPerm : FixedParamPerm) (xs : Array 
                   match xs.idxOf? index with
                   | some i => i
                   | none => unreachable!
-              let indGroupInst := {
-                IndGroupInfo.ofInductiveVal indInfo with
-                levels := us
-                params := indParams
-              }
-              return {
-                fnName := fnName
-                fixedParamPerm := fixedParamPerm
-                recArgPos := i
-                indicesPos := indicesPos
-                indGroupInst := indGroupInst
-                indIdx := indIdx
-              }
+              let indGroupInst :=
+                { IndGroupInfo.ofInductiveVal indInfo with levels := us, params := indParams }
+              return
+                { fnName := fnName
+                  fixedParamPerm := fixedParamPerm
+                  recArgPos := i
+                  indicesPos := indicesPos
+                  indGroupInst := indGroupInst
+                  indIdx := indIdx }
   else
     throwError "the index #{i + 1} exceeds {xs.size}, the number of parameters"
 
@@ -245,14 +241,13 @@ def argsInGroup
               match args.idxOf? index with
               | some i => i
               | none => unreachable!
-          return .some {
-            fnName := recArgInfo.fnName
-            fixedParamPerm := recArgInfo.fixedParamPerm
-            recArgPos := recArgInfo.recArgPos
-            indicesPos := indicesPos
-            indGroupInst := group
-            indIdx := indIdx
-          }
+          return .some
+            { fnName := recArgInfo.fnName
+              fixedParamPerm := recArgInfo.fixedParamPerm
+              recArgPos := recArgInfo.recArgPos
+              indicesPos := indicesPos
+              indGroupInst := group
+              indIdx := indIdx }
       return .none
 
 def maxCombinationSize : Nat := 10

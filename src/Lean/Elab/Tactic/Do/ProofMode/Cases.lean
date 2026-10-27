@@ -188,10 +188,8 @@ partial def mCasesCore
     let (_a, goal₁, prf₁) ← mCasesCore u σs H₁ p k
     let (a, _goal₂, prf₂) ← mCasesCore u σs H₂ (.alts ps) k
     let (Q, _H₁) ← getQH goal₁
-    let goal := {
-      goal₁ with
-      hyps := SPred.mkAnd! u σs Q (mkApp3 (mkConst ``SPred.or [u]) σs H₁ H₂)
-    }
+    let goal :=
+      { goal₁ with hyps := SPred.mkAnd! u σs Q (mkApp3 (mkConst ``SPred.or [u]) σs H₁ H₂) }
     let prf := mkApp7 (mkConst ``SPred.and_or_elim_r [u]) σs Q H₁ H₂ goal.target prf₁ prf₂
     return (a, goal, prf)
 

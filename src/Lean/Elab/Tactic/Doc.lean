@@ -203,11 +203,10 @@ def allTacticDocs (includeUnnamed : Bool := true) : MetaM (Array TacticDoc) := d
         continue
 
     docs :=
-      docs.push {
-        internalName := tac
-        userName := userName
-        tags := tacTags.getD tac {}
-        docString := ← findDocString? env tac
-        extensionDocs := getTacticExtensions env tac
-      }
+      docs.push
+        { internalName := tac
+          userName := userName
+          tags := tacTags.getD tac {}
+          docString := ← findDocString? env tac
+          extensionDocs := getTacticExtensions env tac }
   return docs

@@ -113,17 +113,16 @@ where
     let type ← code.inferType
     let type ← mkForallParams params type
     let value := .code code
-    let decl := {
-      name := nameNew
-      levelParams := []
-      params
-      type
-      value
-      safe
-      inlineAttr?
-      recursive := false
-      : Decl .pure
-    }
+    let decl :=
+      { name := nameNew
+        levelParams := []
+        params
+        type
+        value
+        safe
+        inlineAttr?
+        recursive := false
+        : Decl .pure }
     return decl.setLevelParams
 
 def etaContractibleDecl? (decl : FunDecl .pure) : LiftM (Option (LetDecl .pure)) := do
@@ -192,14 +191,13 @@ partial def Decl.lambdaLifting
     (decl : Decl .pure) (liftInstParamOnly : Bool) (allowEtaContraction : Bool) (suffix : Name)
     (inheritInlineAttrs := false) (minSize := 0)
     : CompilerM (Array (Decl .pure)) := do
-  let ctx := {
-    mainDecl := decl
-    liftInstParamOnly
-    suffix
-    inheritInlineAttrs
-    minSize
-    allowEtaContraction
-  }
+  let ctx :=
+    { mainDecl := decl
+      liftInstParamOnly
+      suffix
+      inheritInlineAttrs
+      minSize
+      allowEtaContraction }
   let (decl, s) ← LambdaLifting.main decl |>.run ctx |>.run {} |>.run {}
   return s.decls.push decl
 

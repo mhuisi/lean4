@@ -72,10 +72,8 @@ structure ParamMap where
 namespace ParamMap
 
 @[inline]
-def insert (pm : ParamMap) (k : Key) (ps : Array (Param .impure)) : ParamMap := {
-  pm with
-  map := pm.map.insert k ps
-}
+def insert (pm : ParamMap) (k : Key) (ps : Array (Param .impure)) : ParamMap :=
+  { pm with map := pm.map.insert k ps }
 
 @[inline] def erase (pm : ParamMap) (k : Key) : ParamMap := { pm with map := pm.map.erase k }
 
@@ -92,13 +90,12 @@ where
       match decl.value with
       | .code code =>
         let exported := isExport (← getEnv) decl.name
-        modify fun m => {
-          m with
-          map := m.map.insert (.decl decl.name) (initParamsIfNotExported exported decl.params)
-          annotatedBorrows :=
-            decl.params.foldl (init := m.annotatedBorrows) fun acc p =>
-              if p.borrow then acc.insert p.fvarId else acc
-        }
+        modify fun m =>
+          { m with
+            map := m.map.insert (.decl decl.name) (initParamsIfNotExported exported decl.params)
+            annotatedBorrows :=
+              decl.params.foldl (init := m.annotatedBorrows) fun acc p =>
+                if p.borrow then acc.insert p.fvarId else acc }
         goCode decl.name code
       | .extern .. =>
         return ()
@@ -115,13 +112,12 @@ where
   goCode (declName : Name) (code : Code .impure) : InitM Unit := do
     match code with
     | .jp decl k =>
-      modify fun m => {
-        m with
-        map := m.map.insert (.jp declName decl.fvarId) (initParams decl.params)
-        annotatedBorrows :=
-          decl.params.foldl (init := m.annotatedBorrows) fun acc p =>
-            if p.borrow then acc.insert p.fvarId else acc
-      }
+      modify fun m =>
+        { m with
+          map := m.map.insert (.jp declName decl.fvarId) (initParams decl.params)
+          annotatedBorrows :=
+            decl.params.foldl (init := m.annotatedBorrows) fun acc p =>
+              if p.borrow then acc.insert p.fvarId else acc }
       goCode declName decl.value
       goCode declName k
     | .cases cs =>

@@ -46,33 +46,28 @@ deriving Inhabited
 
 namespace ClassState
 
-def addEntry (s : ClassState) (entry : ClassEntry) : ClassState := {
-  s with
-  outParamMap := s.outParamMap.insert entry.name entry.outParams
-  outLevelParamMap := s.outLevelParamMap.insert entry.name entry.outLevelParams
-}
+def addEntry (s : ClassState) (entry : ClassEntry) : ClassState :=
+  { s with
+    outParamMap := s.outParamMap.insert entry.name entry.outParams
+    outLevelParamMap := s.outLevelParamMap.insert entry.name entry.outLevelParams }
 
 /--
 Switch the state into persistent mode. We switch to this mode after
 we read all imported .olean files.
 Recall that we use a `SMap` for implementing the state of the type class environment extension.
 -/
-def switch (s : ClassState) : ClassState := {
-  s with
-  outParamMap := s.outParamMap.switch
-  outLevelParamMap := s.outLevelParamMap.switch
-}
+def switch (s : ClassState) : ClassState :=
+  { s with outParamMap := s.outParamMap.switch, outLevelParamMap := s.outLevelParamMap.switch }
 
 end ClassState
 
 /-- Type class environment extension -/
 -- TODO: add support for scoped instances
 builtin_initialize classExtension : SimplePersistentEnvExtension ClassEntry ClassState ←
-  registerSimplePersistentEnvExtension {
-    logWrites := true
-    addEntryFn := ClassState.addEntry
-    addImportedFn := fun es => (mkStateFromImportedEntries ClassState.addEntry {} es).switch
-  }
+  registerSimplePersistentEnvExtension
+    { logWrites := true
+      addEntryFn := ClassState.addEntry
+      addImportedFn := fun es => (mkStateFromImportedEntries ClassState.addEntry {} es).switch }
 
 /-- Return `true` if `n` is the name of type class in the given environment. -/
 def isClass (env : Environment) (n : Name) : Bool :=
@@ -184,11 +179,8 @@ def addClass (env : Environment) (clsName : Name) : Except MessageData Environme
   let outParams ← checkOutParam 0 #[] #[] decl.type
   let outLevelParams := computeOutLevelParams decl.type outParams decl.levelParams
   -- `log` necessary: `attribute [class]` may be applied to an existing declaration
-  return classExtension.addEntry (log := .decl clsName) env {
-    name := clsName
-    outParams
-    outLevelParams
-  }
+  return classExtension.addEntry (log := .decl clsName) env
+    { name := clsName, outParams, outLevelParams }
 
 /--
 Registers an inductive type or structure as a type class. Using `class` or `class inductive` is
@@ -196,44 +188,43 @@ generally preferred over using `@[class] structure` or `@[class] inductive` dire
 -/
 @[builtin_init, builtin_doc]
 private def init :=
-  registerBuiltinAttribute {
-    name := `class
-    descr := "type class"
-    add := fun decl stx kind => do
-      let env ← getEnv
-      Attribute.Builtin.ensureNoArgs stx
-      unless kind == AttributeKind.global do
-        throwAttrMustBeGlobal `class kind
-      let env ← ofExcept (addClass env decl)
-      setEnv env
-  }
+  registerBuiltinAttribute
+    { name := `class
+      descr := "type class"
+      add := fun decl stx kind => do
+        let env ← getEnv
+        Attribute.Builtin.ensureNoArgs stx
+        unless kind == AttributeKind.global do
+          throwAttrMustBeGlobal `class kind
+        let env ← ofExcept (addClass env decl)
+        setEnv env }
 
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `univ_out_params
-    descr := "universe output parameters for a type class"
-    add := fun decl stx kind => do
-      unless kind == AttributeKind.global do
-        throwAttrMustBeGlobal `univ_out_params kind
-      let env ← getEnv
-      unless isClass env decl do
-        throwError "invalid `univ_out_params`, `{decl}` is not a class"
-      let info ← getConstInfo decl
-      let us := info.levelParams
-      let args := stx[1].getArgs
-      args.forM fun arg => do
-        unless us.contains arg.getId do
-          throwErrorAt arg "`{arg}` is not a universe parameter of `{decl}`"
-      let args := args.map (·.getId)
-      let mut outLevelParams : Array Nat := #[]
-      let mut i := 0
-      for u in us do
-        if args.contains u then
-          outLevelParams := outLevelParams.push i
-        i := i + 1
-      let outParams := getOutParamPositions? env decl |>.getD #[]
-      modifyEnv fun env =>
-        classExtension.addEntry (log := .decl decl) env { name := decl, outParams, outLevelParams }
-  }
+  registerBuiltinAttribute
+    { name := `univ_out_params
+      descr := "universe output parameters for a type class"
+      add := fun decl stx kind => do
+        unless kind == AttributeKind.global do
+          throwAttrMustBeGlobal `univ_out_params kind
+        let env ← getEnv
+        unless isClass env decl do
+          throwError "invalid `univ_out_params`, `{decl}` is not a class"
+        let info ← getConstInfo decl
+        let us := info.levelParams
+        let args := stx[1].getArgs
+        args.forM fun arg => do
+          unless us.contains arg.getId do
+            throwErrorAt arg "`{arg}` is not a universe parameter of `{decl}`"
+        let args := args.map (·.getId)
+        let mut outLevelParams : Array Nat := #[]
+        let mut i := 0
+        for u in us do
+          if args.contains u then
+            outLevelParams := outLevelParams.push i
+          i := i + 1
+        let outParams := getOutParamPositions? env decl |>.getD #[]
+        modifyEnv fun env =>
+          classExtension.addEntry (log := .decl decl) env
+            { name := decl, outParams, outLevelParams } }
 
 end Lean

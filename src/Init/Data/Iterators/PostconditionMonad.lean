@@ -91,10 +91,9 @@ Given a function `α → PostconditionT m β`, returns a function
 protected def PostconditionT.bind
     {m : Type w → Type w'} [Monad m]
     {α : Type w} {β : Type w} (x : PostconditionT m α) (f : α → PostconditionT m β)
-    : PostconditionT m β := ⟨
-  fun b => ∃ a, x.Property a ∧ (f a).Property b,
-  x.operation >>= fun a => (fun b => ⟨b.val, a.val, a.property, b.property⟩) <$> (f a).operation
-⟩
+    : PostconditionT m β :=
+  ⟨ fun b => ∃ a, x.Property a ∧ (f a).Property b,
+    x.operation >>= fun a => (fun b => ⟨b.val, a.val, a.property, b.property⟩) <$> (f a).operation ⟩
 
 /--
 A version of `bind` that provides a proof of the previous postcondition to the mapping function.
@@ -103,10 +102,9 @@ A version of `bind` that provides a proof of the previous postcondition to the m
 protected def PostconditionT.pbind
     {m : Type w → Type w'} [Monad m]
     {α : Type w} {β : Type w} (x : PostconditionT m α) (f : Subtype x.Property → PostconditionT m β)
-    : PostconditionT m β := ⟨
-  fun b => ∃ a, (f a).Property b,
-  x.operation >>= fun a => (fun b => ⟨b.val, a, b.property⟩) <$> (f a).operation
-⟩
+    : PostconditionT m β :=
+  ⟨ fun b => ∃ a, (f a).Property b,
+    x.operation >>= fun a => (fun b => ⟨b.val, a, b.property⟩) <$> (f a).operation ⟩
 
 /-- Lifts an operation from `m` to `PostConditionT m` and then applies `PostconditionT.map`. -/
 @[always_inline, inline]

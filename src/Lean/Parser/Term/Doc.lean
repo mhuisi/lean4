@@ -32,14 +32,13 @@ declaration are easily accessible.
 builtin_initialize recommendedSpellingByNameExt
     : PersistentEnvExtension (Name × Array RecommendedSpelling) (RecommendedSpelling × Array Name)
       (NameMap (Array RecommendedSpelling)) ←
-  registerPersistentEnvExtension {
-    mkInitial := pure {}
-    addImportedFn := fun _ => pure {}
-    addEntryFn := fun es (rec, xs) =>
-      xs.foldl (init := es) fun es x => es.insert x (es.getD x #[] |>.push rec)
-    exportEntriesFn := fun es =>
-      es.foldl (fun a src tgt => a.push (src, tgt)) #[] |>.qsort (Name.quickLt ·.1 ·.1)
-  }
+  registerPersistentEnvExtension
+    { mkInitial := pure {}
+      addImportedFn := fun _ => pure {}
+      addEntryFn := fun es (rec, xs) =>
+        xs.foldl (init := es) fun es x => es.insert x (es.getD x #[] |>.push rec)
+      exportEntriesFn := fun es =>
+        es.foldl (fun a src tgt => a.push (src, tgt)) #[] |>.qsort (Name.quickLt ·.1 ·.1) }
 
 /--
 Recommended spellings for notations, stored in such a way that it is easy to generate a table
@@ -47,12 +46,11 @@ containing every recommended spelling exactly once.
 -/
 builtin_initialize recommendedSpellingExt
     : PersistentEnvExtension RecommendedSpelling RecommendedSpelling (Array RecommendedSpelling) ←
-  registerPersistentEnvExtension {
-    mkInitial := pure {}
-    addImportedFn := fun _ => pure {}
-    addEntryFn := Array.push
-    exportEntriesFn := id
-  }
+  registerPersistentEnvExtension
+    { mkInitial := pure {}
+      addImportedFn := fun _ => pure {}
+      addEntryFn := Array.push
+      exportEntriesFn := id }
 
 /-- Adds a recommended spelling to the environment. -/
 def addRecommendedSpelling (env : Environment) (rec : RecommendedSpelling) (names : Array Name)

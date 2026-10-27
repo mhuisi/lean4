@@ -77,10 +77,8 @@ public def mkLatticeOpRuleCached (rhs : Expr) (op : LatticeOp) : VCGenM Backward
   let key := (ExprPtr.mk (rhs.getAppPrefix op.numConst), rhs.getAppNumArgs)
   if let some rule := (← get).latticeBackwardRuleCache[key]? then return rule
   let rule ← (← mkLatticeOpRule rhs op).shareCommon
-  modify fun st => {
-    st with
-    latticeBackwardRuleCache := st.latticeBackwardRuleCache.insert key rule
-  }
+  modify fun st =>
+    { st with latticeBackwardRuleCache := st.latticeBackwardRuleCache.insert key rule }
   return rule
 
 /--

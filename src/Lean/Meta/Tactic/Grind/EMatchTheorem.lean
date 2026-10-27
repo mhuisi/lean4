@@ -32,10 +32,8 @@ structure SymbolPriorityEntry where
 deriving Inhabited
 
 /-- Removes the given declaration from `s`. -/
-def SymbolPriorities.erase (s : SymbolPriorities) (declName : Name) : SymbolPriorities := {
-  s with
-  map := s.map.erase declName
-}
+def SymbolPriorities.erase (s : SymbolPriorities) (declName : Name) : SymbolPriorities :=
+  { s with map := s.map.erase declName }
 
 /-- Returns `declName` priority for E-matching pattern inference in `s`. -/
 def SymbolPriorities.getPrio (s : SymbolPriorities) (declName : Name) : Nat :=
@@ -53,10 +51,8 @@ def SymbolPriorities.contains (s : SymbolPriorities) (declName : Name) : Bool :=
 
 private builtin_initialize symbolPrioExt
     : SimpleScopedEnvExtension SymbolPriorityEntry SymbolPriorities ←
-  registerSimpleScopedEnvExtension {
-    initial := {}
-    addEntry := fun s { declName, prio } => s.insert declName prio
-  }
+  registerSimpleScopedEnvExtension
+    { initial := {}, addEntry := fun s { declName, prio } => s.insert declName prio }
 
 def resetSymbolPrioExt : CoreM Unit := do
   modifyEnv fun env => symbolPrioExt.modifyState env fun _ => {}
@@ -1233,15 +1229,12 @@ where
     | _ =>
       return ()
 
-register_builtin_option backward.grind.inferPattern : Bool := {
-  defValue := false
-  descr := "use old E-matching pattern inference"
-}
+register_builtin_option backward.grind.inferPattern : Bool :=
+  { defValue := false, descr := "use old E-matching pattern inference" }
 
-register_builtin_option backward.grind.checkInferPatternDiscrepancy : Bool := {
-  defValue := false
-  descr := "check whether old and new pattern inference procedures infer the same pattern"
-}
+register_builtin_option backward.grind.checkInferPatternDiscrepancy : Bool :=
+  { defValue := false
+    descr := "check whether old and new pattern inference procedures infer the same pattern" }
 
 private def collectPatterns?
     (proof : Expr) (xs : Array Expr) (searchPlaces : Array Expr) (symPrios : SymbolPriorities)
@@ -1408,16 +1401,15 @@ def mkEMatchTheoremUsingSingletonPatterns
       for (p, symbols) in s do
         let patterns := [p]
         logPatternWhen showInfo origin patterns
-        let thm : EMatchTheorem := {
-          proof
-          patterns
-          numParams
-          symbols
-          levelParams
-          origin
-          kind := .default false
-          minIndexable := false
-        }
+        let thm : EMatchTheorem :=
+          { proof
+            patterns
+            numParams
+            symbols
+            levelParams
+            origin
+            kind := .default false
+            minIndexable := false }
         thms := thms.push thm
       return thms
 where
@@ -1640,23 +1632,19 @@ private def save (ref : Syntax) (thm : EMatchTheorem) (isParam : Bool) (minIndex
         pure <| .tsyntax (← `(Parser.Tactic.grindParam|!$(← thm.kind.toSyntax)$(⟨ref⟩):ident))
       | true, false =>
         pure <| .tsyntax (← `(Parser.Tactic.grindParam|$(← thm.kind.toSyntax) $(⟨ref⟩):ident))
-    modify fun s => {
-      s with
-      thms := s.thms.push thm
-      suggestions :=
-        s.suggestions.push {
-          suggestion
-          -- **Note**: small hack to include brackets in the suggestion
-          preInfo? := some openBracket
-          -- **Note**: appears only in the info view.
-          postInfo? := some msg
-        }
-    }
+    modify fun s =>
+      { s with
+        thms := s.thms.push thm
+        suggestions :=
+          s.suggestions.push
+            { suggestion
+              -- **Note**: small hack to include brackets in the suggestion
+              preInfo? := some openBracket
+              -- **Note**: appears only in the info view.
+              postInfo? := some msg } }
 
-register_builtin_option grind.param.codeAction : Bool := {
-  defValue := false
-  descr := "code-action for `grind` parameters"
-}
+register_builtin_option grind.param.codeAction : Bool :=
+  { defValue := false, descr := "code-action for `grind` parameters" }
 
 /-- Helper type for generating suggestions for `grind` parameters -/
 inductive MinIndexableMode where

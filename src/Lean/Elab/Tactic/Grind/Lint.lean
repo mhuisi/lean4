@@ -13,22 +13,16 @@ import Lean.Meta.Tactic.TryThis
 namespace Lean.Elab.Tactic.Grind
 
 builtin_initialize skipExt : SimplePersistentEnvExtension Name NameSet ←
-  registerSimplePersistentEnvExtension {
-    addEntryFn := (·.insert)
-    addImportedFn := mkStateFromImportedEntries (·.insert) {}
-  }
+  registerSimplePersistentEnvExtension
+    { addEntryFn := (·.insert), addImportedFn := mkStateFromImportedEntries (·.insert) {} }
 
 builtin_initialize skipSuffixExt : SimplePersistentEnvExtension Name NameSet ←
-  registerSimplePersistentEnvExtension {
-    addEntryFn := (·.insert)
-    addImportedFn := mkStateFromImportedEntries (·.insert) {}
-  }
+  registerSimplePersistentEnvExtension
+    { addEntryFn := (·.insert), addImportedFn := mkStateFromImportedEntries (·.insert) {} }
 
 builtin_initialize muteExt : SimplePersistentEnvExtension Name NameSet ←
-  registerSimplePersistentEnvExtension {
-    addEntryFn := (·.insert)
-    addImportedFn := mkStateFromImportedEntries (·.insert) {}
-  }
+  registerSimplePersistentEnvExtension
+    { addEntryFn := (·.insert), addImportedFn := mkStateFromImportedEntries (·.insert) {} }
 
 open Command Meta Lean.Meta.Grind
 
@@ -70,16 +64,15 @@ def elabGrindLintMute : CommandElab := fun stx => do
       modifyEnv fun env => muteExt.addEntry env declName
 
 /-- Default configuration for `#grind_lint`. -/
-def defaultConfig : Grind.Config := {
-  splits := 0
-  lookahead := false
-  mbtc := false
-  ematch := 20
-  instances := 100
-  gen := 10
-  min := 10
-  detailed := 50
-}
+def defaultConfig : Grind.Config :=
+  { splits := 0
+    lookahead := false
+    mbtc := false
+    ematch := 20
+    instances := 100
+    gen := 10
+    min := 10
+    detailed := 50 }
 
 def mkConfig (items : Array (TSyntax `Lean.Parser.Tactic.configItem)) : TermElabM Grind.Config := do
   elabConfigItems defaultConfig items

@@ -225,11 +225,12 @@ inductive DocumentChange where
   | delete : DeleteFile → DocumentChange
   | edit : TextDocumentEdit → DocumentChange
 
-instance : ToJson DocumentChange := ⟨fun
-  | .create x => Json.setObjVal! (toJson x) "kind" "create"
-  | .rename x => Json.setObjVal! (toJson x) "kind" "rename"
-  | .delete x => Json.setObjVal! (toJson x) "kind" "delete"
-  | .edit x => toJson x⟩
+instance : ToJson DocumentChange :=
+  ⟨ fun
+      | .create x => Json.setObjVal! (toJson x) "kind" "create"
+      | .rename x => Json.setObjVal! (toJson x) "kind" "rename"
+      | .delete x => Json.setObjVal! (toJson x) "kind" "delete"
+      | .edit x => toJson x ⟩
 
 instance : FromJson DocumentChange where
   fromJson? j :=
@@ -282,33 +283,31 @@ namespace WorkspaceEdit
 instance : EmptyCollection WorkspaceEdit := ⟨{}⟩
 
 instance : Append WorkspaceEdit where
-  append x y := {
-    changes? :=
-      match x.changes?, y.changes? with
-      | v, none
-      | none, v =>
-        v
-      | some x, some y =>
-        x.mergeWith (fun _ v₁ v₂ => v₁ ++ v₂) y
-    documentChanges? :=
-      match x.documentChanges?, y.documentChanges? with
-      | v, none
-      | none, v =>
-        v
-      | some x, some y =>
-        x ++ y
-    changeAnnotations? :=
-      match x.changeAnnotations?, y.changeAnnotations? with
-      | v, none
-      | none, v =>
-        v
-      | some x, some y =>
-        x.mergeWith (fun _ _v₁ v₂ => v₂) y
-  }
+  append x y :=
+    { changes? :=
+        match x.changes?, y.changes? with
+        | v, none
+        | none, v =>
+          v
+        | some x, some y =>
+          x.mergeWith (fun _ v₁ v₂ => v₁ ++ v₂) y
+      documentChanges? :=
+        match x.documentChanges?, y.documentChanges? with
+        | v, none
+        | none, v =>
+          v
+        | some x, some y =>
+          x ++ y
+      changeAnnotations? :=
+        match x.changeAnnotations?, y.changeAnnotations? with
+        | v, none
+        | none, v =>
+          v
+        | some x, some y =>
+          x.mergeWith (fun _ _v₁ v₂ => v₂) y }
 
-def ofTextDocumentEdit (e : TextDocumentEdit) : WorkspaceEdit := {
-  documentChanges? := #[DocumentChange.edit e]
-}
+def ofTextDocumentEdit (e : TextDocumentEdit) : WorkspaceEdit :=
+  { documentChanges? := #[DocumentChange.edit e] }
 
 def ofTextEdit (doc : VersionedTextDocumentIdentifier) (te : TextEdit) : WorkspaceEdit :=
   ofTextDocumentEdit { textDocument := doc, edits := #[te] }
@@ -382,14 +381,16 @@ inductive MarkupKind where
   | markdown
 deriving DecidableEq, Hashable
 
-instance : FromJson MarkupKind := ⟨fun
-  | str "plaintext" => Except.ok MarkupKind.plaintext
-  | str "markdown" => Except.ok MarkupKind.markdown
-  | _ => throw "unknown MarkupKind"⟩
+instance : FromJson MarkupKind :=
+  ⟨ fun
+      | str "plaintext" => Except.ok MarkupKind.plaintext
+      | str "markdown" => Except.ok MarkupKind.markdown
+      | _ => throw "unknown MarkupKind" ⟩
 
-instance : ToJson MarkupKind := ⟨fun
-  | MarkupKind.plaintext => str "plaintext"
-  | MarkupKind.markdown => str "markdown"⟩
+instance : ToJson MarkupKind :=
+  ⟨ fun
+      | MarkupKind.plaintext => str "plaintext"
+      | MarkupKind.markdown => str "markdown" ⟩
 
 structure MarkupContent where
   kind : MarkupKind

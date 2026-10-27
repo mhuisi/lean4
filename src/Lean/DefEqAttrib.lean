@@ -15,14 +15,13 @@ public section
 namespace Lean
 open Meta
 
-register_builtin_option backward.defeqAttrib.useBackward : Bool := {
-  defValue := false
-  descr :=
-    "When true, `dsimp` also uses theorems tagged `@[backward_defeq]`, i.e. \
-      theorems inferred to be rfl only at default (not instance) transparency. Set this \
-      locally (e.g. `set_option backward.defeqAttrib.useBackward true in ...`) to restore the \
-      pre-stricter-inference behavior for a specific proof."
-}
+register_builtin_option backward.defeqAttrib.useBackward : Bool :=
+  { defValue := false
+    descr :=
+      "When true, `dsimp` also uses theorems tagged `@[backward_defeq]`, i.e. \
+        theorems inferred to be rfl only at default (not instance) transparency. Set this \
+        locally (e.g. `set_option backward.defeqAttrib.useBackward true in ...`) to restore the \
+        pre-stricter-inference behavior for a specific proof." }
 
 /--
 There are defeq theorems that only hold at transparency `.all`, but also others that hold

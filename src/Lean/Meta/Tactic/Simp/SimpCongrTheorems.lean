@@ -36,24 +36,22 @@ def SimpCongrTheorems.get (d : SimpCongrTheorems) (declName : Name) : List SimpC
   | none => []
   | some cs => cs
 
-def addSimpCongrTheoremEntry (d : SimpCongrTheorems) (e : SimpCongrTheorem) : SimpCongrTheorems := {
-  d with
-  lemmas :=
-    match d.lemmas.find? e.funName with
-    | none => d.lemmas.insert e.funName [e]
-    | some es => d.lemmas.insert e.funName <| insert es
-}
+def addSimpCongrTheoremEntry (d : SimpCongrTheorems) (e : SimpCongrTheorem) : SimpCongrTheorems :=
+  { d with
+    lemmas :=
+      match d.lemmas.find? e.funName with
+      | none => d.lemmas.insert e.funName [e]
+      | some es => d.lemmas.insert e.funName <| insert es }
 where
   insert : List SimpCongrTheorem → List SimpCongrTheorem
     | [] => [e]
     | e' :: es => if e.priority ≥ e'.priority then e :: e' :: es else e' :: insert es
 
 builtin_initialize congrExtension : SimpleScopedEnvExtension SimpCongrTheorem SimpCongrTheorems ←
-  registerSimpleScopedEnvExtension {
-    initial := {}
-    addEntry := addSimpCongrTheoremEntry
-    finalizeImport := fun s => { s with lemmas := s.lemmas.switch }
-  }
+  registerSimpleScopedEnvExtension
+    { initial := {}
+      addEntry := addSimpCongrTheoremEntry
+      finalizeImport := fun s => { s with lemmas := s.lemmas.switch } }
 
 def mkSimpCongrTheorem (declName : Name) (prio : Nat) : MetaM SimpCongrTheorem :=
   withReducible do
@@ -116,12 +114,11 @@ def mkSimpCongrTheorem (declName : Name) (prio : Nat) : MetaM SimpCongrTheorem :
                 foundMVars := foundMVars.insert x.mvarId! |>.insert rhsFn.mvarId!
                 hypothesesPos := hypothesesPos.push i
             i := i + 1
-          return {
-            theoremName := declName
-            funName := lhsFn.constName!
-            hypothesesPos := hypothesesPos
-            priority := prio
-          }
+          return
+            { theoremName := declName
+              funName := lhsFn.constName!
+              hypothesesPos := hypothesesPos
+              priority := prio }
 where
   /-- Return `true` if `t` contains a metavariable that is not in `mvarSet` -/
   onlyMVarsAt (t : Expr) (mvarSet : MVarIdSet) : Bool :=
@@ -160,13 +157,12 @@ theorem Option.pbind_congr
 -/
 @[builtin_doc]
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `congr
-    descr := "congruence theorem"
-    add := fun declName stx attrKind => do
-      let prio ← getAttrParamOptPrio stx[1]
-      discard <| addSimpCongrTheorem declName attrKind prio |>.run {} {}
-  }
+  registerBuiltinAttribute
+    { name := `congr
+      descr := "congruence theorem"
+      add := fun declName stx attrKind => do
+        let prio ← getAttrParamOptPrio stx[1]
+        discard <| addSimpCongrTheorem declName attrKind prio |>.run {} {} }
 
 def getSimpCongrTheorems : CoreM SimpCongrTheorems := return congrExtension.getState (← getEnv)
 

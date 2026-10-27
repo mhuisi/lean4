@@ -42,11 +42,10 @@ theorem go_denote_eq
     (hacc : ∀ (idx : Nat) (hidx : idx < w),
       ⟦aig, acc.get idx hidx, assign⟧ = (BitVec.mulRec lexpr rexpr curr).getLsbD idx)
     : ∀ (idx : Nat) (hidx : idx < w),
-      ⟦
-        (go aig lhs rhs (curr + 1) acc).aig,
+      ⟦ (go aig lhs rhs (curr + 1) acc).aig,
         (go aig lhs rhs (curr + 1) acc).vec.get idx hidx,
-        assign
-      ⟧ = (BitVec.mulRec lexpr rexpr w).getLsbD idx := by
+        assign ⟧
+        = (BitVec.mulRec lexpr rexpr w).getLsbD idx := by
   intro idx hidx
   generalize hgo : go aig lhs rhs (curr + 1) acc = res
   unfold go at hgo

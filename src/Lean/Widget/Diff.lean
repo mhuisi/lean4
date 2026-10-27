@@ -11,10 +11,10 @@ public import Lean.Widget.InteractiveGoal
 
 namespace Lean.Widget
 
-register_builtin_option showTacticDiff : Bool := {
-  defValue := true
-  descr := "When true, interactive goals for tactics will be decorated with diffing information. "
-}
+register_builtin_option showTacticDiff : Bool :=
+  { defValue := true
+    descr :=
+      "When true, interactive goals for tactics will be decorated with diffing information. " }
 
 open Server Lean SubExpr
 
@@ -66,10 +66,9 @@ structure ExprDiff where
 
 instance : EmptyCollection ExprDiff := ⟨{}⟩
 instance : Append ExprDiff where
-  append a b := {
-    changesBefore := Std.TreeMap.mergeWith (fun _ _ b => b) a.changesBefore b.changesBefore
-    changesAfter := Std.TreeMap.mergeWith (fun _ _ b => b) a.changesAfter b.changesAfter
-  }
+  append a b :=
+    { changesBefore := Std.TreeMap.mergeWith (fun _ _ b => b) a.changesBefore b.changesBefore
+      changesAfter := Std.TreeMap.mergeWith (fun _ _ b => b) a.changesAfter b.changesAfter }
 instance : ToString ExprDiff where
   toString x :=
     let f := fun (p : PosMap ExprDiffTag) =>
@@ -78,22 +77,16 @@ instance : ToString ExprDiff where
       \nafter: {f x.changesAfter}"
 
 /-- Add a tag at the given position to the `changesBefore` dict. -/
-def ExprDiff.insertBeforeChange (p : Pos) (d : ExprDiffTag := .change) (δ : ExprDiff)
-    : ExprDiff := {
-  δ with
-  changesBefore := δ.changesBefore.insert p d
-}
+def ExprDiff.insertBeforeChange (p : Pos) (d : ExprDiffTag := .change) (δ : ExprDiff) : ExprDiff :=
+  { δ with changesBefore := δ.changesBefore.insert p d }
 
 /-- Add a tag at the given position to the `changesAfter` dict. -/
-def ExprDiff.insertAfterChange (p : Pos) (d : ExprDiffTag := .change) (δ : ExprDiff) : ExprDiff := {
-  δ with
-  changesAfter := δ.changesAfter.insert p d
-}
+def ExprDiff.insertAfterChange (p : Pos) (d : ExprDiffTag := .change) (δ : ExprDiff) : ExprDiff :=
+  { δ with changesAfter := δ.changesAfter.insert p d }
 
-def ExprDiff.withChangePos (before after : Pos) (d : ExprDiffTag := .change) : ExprDiff := {
-  changesAfter := Std.TreeMap.empty.insert after d
-  changesBefore := Std.TreeMap.empty.insert before d
-}
+def ExprDiff.withChangePos (before after : Pos) (d : ExprDiffTag := .change) : ExprDiff :=
+  { changesAfter := Std.TreeMap.empty.insert after d
+    changesBefore := Std.TreeMap.empty.insert before d }
 
 /-- Add a tag to the diff at the positions given by `before` and `after`. -/
 def ExprDiff.withChange (before after : SubExpr) (d : ExprDiffTag := .change) : ExprDiff :=
@@ -310,14 +303,10 @@ public def diffInteractiveGoals (useAfter : Bool) (info : Elab.TacticInfo) (igs�
           let some g₀ :=
               goals₀.find? (fun g₀ => if useAfter then isParent g₀ g₁ else isParent g₁ g₀)
             | return
-                if useAfter then {
-                  ig₁ with
-                  isInserted? := true
-                }
-                else {
-                  ig₁ with
-                  isRemoved? := true
-                }
+                if useAfter then
+                  { ig₁ with isInserted? := true }
+                else
+                  { ig₁ with isRemoved? := true }
           let ig₁ ← diffInteractiveGoal useAfter g₀ ig₁
           return ig₁))
     return { igs₁ with goals := goals }

@@ -178,36 +178,32 @@ private def addTraceNode
     let msg ← addMessageContext msg
     modifyTraces fun _ => oldTraces.push { ref, msg }
 
-register_builtin_option trace.profiler : Bool := {
-  defValue := false
-  descr :=
-    "activate nested traces with execution time above `trace.profiler.threshold` and annotate with \
-      time"
-}
+register_builtin_option trace.profiler : Bool :=
+  { defValue := false
+    descr :=
+      "activate nested traces with execution time above `trace.profiler.threshold` and annotate \
+        with \
+        time" }
 
-register_builtin_option trace.profiler.threshold : Nat := {
-  defValue := 10
-  descr :=
-    "threshold in milliseconds (or heartbeats if `trace.profiler.useHeartbeats` is true), \
-      traces below threshold will not be activated"
-}
+register_builtin_option trace.profiler.threshold : Nat :=
+  { defValue := 10
+    descr :=
+      "threshold in milliseconds (or heartbeats if `trace.profiler.useHeartbeats` is true), \
+        traces below threshold will not be activated" }
 
-register_builtin_option trace.profiler.useHeartbeats : Bool := {
-  defValue := false
-  descr := "if true, measure and report heartbeats instead of seconds"
-}
+register_builtin_option trace.profiler.useHeartbeats : Bool :=
+  { defValue := false, descr := "if true, measure and report heartbeats instead of seconds" }
 
-register_builtin_option trace.profiler.output : String := {
-  defValue := ""
-  descr := "output `trace.profiler` data in Firefox Profiler-compatible format to given file path"
-}
+register_builtin_option trace.profiler.output : String :=
+  { defValue := ""
+    descr :=
+      "output `trace.profiler` data in Firefox Profiler-compatible format to given file path" }
 
-register_builtin_option trace.profiler.serve : Bool := {
-  defValue := false
-  descr :=
-    "serve the `trace.profiler` data over HTTP and open it in `https://profiler.firefox.com`; \
-      blocks until interrupted with Ctrl+C"
-}
+register_builtin_option trace.profiler.serve : Bool :=
+  { defValue := false
+    descr :=
+      "serve the `trace.profiler` data over HTTP and open it in `https://profiler.firefox.com`; \
+        blocks until interrupted with Ctrl+C" }
 
 /--
 True if the `trace.profiler` data should be retained for export - either to a file
@@ -218,15 +214,14 @@ that would otherwise consume the trace state as messages must leave it intact.
 def trace.profiler.isExporting (opts : Options) : Bool :=
   (trace.profiler.output.get? opts).isSome || trace.profiler.serve.get opts
 
-register_builtin_option trace.profiler.output.pp : Bool := {
-  defValue := false
-  descr :=
-    "if false, limit text in exported trace nodes to trace class name and `TraceData.tag`, if any\
-      \n\
-      \nThis is useful when we are interested in the time taken by specific subsystems instead of \
-      specific \
-      invocations, which is the common case."
-}
+register_builtin_option trace.profiler.output.pp : Bool :=
+  { defValue := false
+    descr :=
+      "if false, limit text in exported trace nodes to trace class name and `TraceData.tag`, if any\
+        \n\
+        \nThis is useful when we are interested in the time taken by specific subsystems instead \
+        of specific \
+        invocations, which is the common case." }
 
 @[inline]
 private def withStartStop [Monad m] [MonadLiftT BaseIO m] (opts : Options) (act : m α)
@@ -400,12 +395,11 @@ def registerTraceClass
     (traceClassName : Name) (inherited := false) (ref : Name := by exact decl_name%)
     : IO Unit := do
   let optionName := `trace ++ traceClassName
-  registerOption optionName {
-    name := optionName
-    declName := ref
-    defValue := false
-    descr := "enable/disable tracing for the given module and submodules"
-  }
+  registerOption optionName
+    { name := optionName
+      declName := ref
+      defValue := false
+      descr := "enable/disable tracing for the given module and submodules" }
   if inherited then
     inheritedTraceOptions.modify (·.insert optionName)
 

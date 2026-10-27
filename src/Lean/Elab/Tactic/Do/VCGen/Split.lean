@@ -120,16 +120,15 @@ def withAbstract
   | .matcher matcherApp => do
     -- Abstract the discriminants as a dependent telescope: a later discriminant's type may mention an earlier one.
     let discrDecls :=
-      matcherApp.discrs.mapIdx fun i discr => (
-        (`discr).appendIndexAfter (i + 1),
-        fun (prior : Array Expr) =>
-          liftMetaM do
-            let mut ty ← inferType discr
-            for j in *...i do
-              if matcherApp.discrs[j]!.isFVar then
-                ty := ty.replaceFVar matcherApp.discrs[j]! prior[j]!
-            return ty
-      )
+      matcherApp.discrs.mapIdx fun i discr =>
+        ( (`discr).appendIndexAfter (i + 1),
+          fun (prior : Array Expr) =>
+            liftMetaM do
+              let mut ty ← inferType discr
+              for j in *...i do
+                if matcherApp.discrs[j]!.isFVar then
+                  ty := ty.replaceFVar matcherApp.discrs[j]! prior[j]!
+              return ty )
     withLocalDeclsD discrDecls fun discrs => do
       -- Non-dependent motive: fun _ ... _ => mα
       let motive ←
@@ -154,14 +153,13 @@ def withAbstract
       let altNamesTypes := origAltTypes.mapIdx fun i ty => ((`alt).appendIndexAfter (i + 1), ty)
       withLocalDeclsDND altNamesTypes fun alts => do
         -- Eta-expand fvar alts so `splitWith`/`matcherApp.transform` can `instantiateLambda` them.
-        let abstractMatcherApp : MatcherApp := {
-          matcherApp with
-          matcherLevels := matcherLevels
-          discrs := discrs
-          motive := motive
-          alts := (← liftMetaM <| alts.mapM etaExpand)
-          remaining := #[]
-        }
+        let abstractMatcherApp : MatcherApp :=
+          { matcherApp with
+            matcherLevels := matcherLevels
+            discrs := discrs
+            motive := motive
+            alts := (← liftMetaM <| alts.mapM etaExpand)
+            remaining := #[] }
         k (.matcher abstractMatcherApp) (discrs ++ alts)
 
 def splitWith

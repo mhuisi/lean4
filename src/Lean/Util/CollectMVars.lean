@@ -57,11 +57,8 @@ partial def main : Expr → Visitor
   | Expr.mvar mvarId => fun s =>
     if s.mvarSet.contains mvarId then
       s
-    else {
-      s with
-      mvarSet := s.mvarSet.insert mvarId
-      result := s.result.push mvarId
-    }
+    else
+      { s with mvarSet := s.mvarSet.insert mvarId, result := s.result.push mvarId }
   | _ =>
     id
 end

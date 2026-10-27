@@ -33,10 +33,8 @@ public def empty : RBDict α β cmp := { items := #[], indices := {} }
 
 public instance : EmptyCollection (RBDict α β cmp) := ⟨RBDict.empty⟩
 
-public def mkEmpty (capacity : Nat) : RBDict α β cmp := {
-  items := .mkEmpty capacity
-  indices := {}
-}
+public def mkEmpty (capacity : Nat) : RBDict α β cmp :=
+  { items := .mkEmpty capacity, indices := {} }
 
 public def ofArray (items : Array (α × β)) : RBDict α β cmp :=
   let indices := items.size.fold (init := ∅) fun i _ indices => indices.insert items[i].1 i
@@ -65,26 +63,20 @@ public def findEntry? (k : α) (t : RBDict α β cmp) : Option (α × β) := do
 
 @[inline] public def find? (k : α) (t : RBDict α β cmp) : Option β := do return (← t.findEntry? k).2
 
-public def push (k : α) (v : β) (t : RBDict α β cmp) : RBDict α β cmp := {
-  items := t.items.push ⟨k, v⟩
-  indices := t.indices.insert k t.items.size
-}
+public def push (k : α) (v : β) (t : RBDict α β cmp) : RBDict α β cmp :=
+  { items := t.items.push ⟨k, v⟩, indices := t.indices.insert k t.items.size }
 
 @[specialize]
 public def alter (k : α) (f : Option β → β) (t : RBDict α β cmp) : RBDict α β cmp :=
-  if let some i := t.findIdx? k then {
-    t with
-    items := t.items.modify i fun (k, v) => (k, f (some v))
-  }
+  if let some i := t.findIdx? k then
+    { t with items := t.items.modify i fun (k, v) => (k, f (some v)) }
   else
     t.push k (f none)
 
 public def insert (k : α) (v : β) (t : RBDict α β cmp) : RBDict α β cmp :=
   if let some i := t.findIdx? k then
-    if h : i < t.items.size then {
-      t with
-      items := t.items.set i (k, v)
-    }
+    if h : i < t.items.size then
+      { t with items := t.items.set i (k, v) }
     else
       t.push k v
   else
@@ -116,10 +108,8 @@ public def append (self other : RBDict α β cmp) : RBDict α β cmp := self.app
 public instance : Append (RBDict α β cmp) := ⟨RBDict.append⟩
 
 @[inline]
-public def map (f : α → β → γ) (t : RBDict α β cmp) : RBDict α γ cmp := {
-  t with
-  items := t.items.map fun ⟨k, v⟩ => ⟨k, f k v⟩
-}
+public def map (f : α → β → γ) (t : RBDict α β cmp) : RBDict α γ cmp :=
+  { t with items := t.items.map fun ⟨k, v⟩ => ⟨k, f k v⟩ }
 
 @[inline]
 public def filter (p : α → β → Bool) (t : RBDict α β cmp) : RBDict α β cmp :=

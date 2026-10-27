@@ -28,10 +28,8 @@ partial def headBetaUnderLambda (f : Expr) : Expr := Id.run do
 /-- Environment extensions for monotonicity lemmas -/
 builtin_initialize monotoneExt
     : SimpleScopedEnvExtension (Name × Array DiscrTree.Key) (DiscrTree Name) ←
-  registerSimpleScopedEnvExtension {
-    addEntry := fun dt (n, ks) => dt.insertKeyValue ks n
-    initial := {}
-  }
+  registerSimpleScopedEnvExtension
+    { addEntry := fun dt (n, ks) => dt.insertKeyValue ks n, initial := {} }
 
 /--
 Registers a monotonicity theorem for `partial_fixpoint`.
@@ -42,23 +40,22 @@ for functions defined using `partial_fixpoint`.
 -/
 @[builtin_doc]
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `partial_fixpoint_monotone
-    descr := "monotonicity theorem"
-    add := fun decl _ kind =>
-      MetaM.run' do
-        let declTy := (← getConstInfo decl).type
-        let (xs, _, targetTy) ← withReducible <| forallMetaTelescopeReducing declTy
-        let_expr monotone α inst_α β inst_β f := targetTy
-          | throwError "`[partial_fixpoint_monotone]` attribute only applies to lemmas proving \
-              {.ofConstName ``monotone}"
-        let f := f.headBeta
-        let f ← if f.isLambda then pure f else etaExpand f
-        let f := headBetaUnderLambda f
-        lambdaBoundedTelescope f 1 fun _ e => do
-          let key ← withReducible <| DiscrTree.mkPath e
-          monotoneExt.add (decl, key) kind
-  }
+  registerBuiltinAttribute
+    { name := `partial_fixpoint_monotone
+      descr := "monotonicity theorem"
+      add := fun decl _ kind =>
+        MetaM.run' do
+          let declTy := (← getConstInfo decl).type
+          let (xs, _, targetTy) ← withReducible <| forallMetaTelescopeReducing declTy
+          let_expr monotone α inst_α β inst_β f := targetTy
+            | throwError "`[partial_fixpoint_monotone]` attribute only applies to lemmas proving \
+                {.ofConstName ``monotone}"
+          let f := f.headBeta
+          let f ← if f.isLambda then pure f else etaExpand f
+          let f := headBetaUnderLambda f
+          lambdaBoundedTelescope f 1 fun _ e => do
+            let key ← withReducible <| DiscrTree.mkPath e
+            monotoneExt.add (decl, key) kind }
 
 /-- Finds tagged monotonicity theorems of the form `monotone (fun x => e)`. -/
 def findMonoThms (e : Expr) : MetaM (Array Name) := do (monotoneExt.getState (← getEnv)).getMatch e

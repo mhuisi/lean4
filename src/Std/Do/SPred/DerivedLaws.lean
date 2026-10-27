@@ -105,15 +105,13 @@ theorem or_self : P ∨ P ⊣⊢ₛ P := bientails.iff.mpr ⟨or_elim .rfl .rfl,
 theorem and_comm : P ∧ Q ⊣⊢ₛ Q ∧ P := bientails.iff.mpr ⟨and_symm, and_symm⟩
 theorem or_comm : P ∨ Q ⊣⊢ₛ Q ∨ P := bientails.iff.mpr ⟨or_symm, or_symm⟩
 theorem and_assoc : (P ∧ Q) ∧ R ⊣⊢ₛ P ∧ Q ∧ R :=
-  bientails.iff.mpr ⟨
-    and_intro (and_elim_l' and_elim_l) (and_mono_l and_elim_r),
-    and_intro (and_mono_r and_elim_l) (and_elim_r' and_elim_r)
-  ⟩
+  bientails.iff.mpr
+    ⟨ and_intro (and_elim_l' and_elim_l) (and_mono_l and_elim_r),
+      and_intro (and_mono_r and_elim_l) (and_elim_r' and_elim_r) ⟩
 theorem or_assoc : (P ∨ Q) ∨ R ⊣⊢ₛ P ∨ Q ∨ R :=
-  bientails.iff.mpr ⟨
-    or_elim (or_mono_r or_intro_l) (or_intro_r' or_intro_r),
-    or_elim (or_intro_l' or_intro_l) (or_mono_l or_intro_r)
-  ⟩
+  bientails.iff.mpr
+    ⟨ or_elim (or_mono_r or_intro_l) (or_intro_r' or_intro_r),
+      or_elim (or_intro_l' or_intro_l) (or_mono_l or_intro_r) ⟩
 theorem and_eq_right : (P ⊢ₛ Q) ↔ P ⊣⊢ₛ Q ∧ P :=
   Iff.intro
     (fun h => bientails.iff.mpr ⟨and_intro h .rfl, and_elim_r⟩)
@@ -132,16 +130,14 @@ theorem or_eq_right : (P ⊢ₛ Q) ↔ Q ⊣⊢ₛ P ∨ Q :=
     (fun h => or_intro_l.trans h.mpr)
 
 theorem and_or_left : P ∧ (Q ∨ R) ⊣⊢ₛ (P ∧ Q) ∨ (P ∧ R) :=
-  bientails.iff.mpr ⟨
-    and_or_elim_r or_intro_l or_intro_r,
-    or_elim (and_intro and_elim_l (or_intro_l' and_elim_r))
-      (and_intro and_elim_l (or_intro_r' and_elim_r))
-  ⟩
+  bientails.iff.mpr
+    ⟨ and_or_elim_r or_intro_l or_intro_r,
+      or_elim (and_intro and_elim_l (or_intro_l' and_elim_r))
+        (and_intro and_elim_l (or_intro_r' and_elim_r)) ⟩
 theorem or_and_left : P ∨ (Q ∧ R) ⊣⊢ₛ (P ∨ Q) ∧ (P ∨ R) :=
-  bientails.iff.mpr ⟨
-    or_elim (and_intro or_intro_l or_intro_l) (and_mono or_intro_r or_intro_r),
-    and_or_elim_l (or_intro_l' and_elim_l) (and_or_elim_r (or_intro_l' and_elim_r) or_intro_r)
-  ⟩
+  bientails.iff.mpr
+    ⟨ or_elim (and_intro or_intro_l or_intro_l) (and_mono or_intro_r or_intro_r),
+      and_or_elim_l (or_intro_l' and_elim_l) (and_or_elim_r (or_intro_l' and_elim_r) or_intro_r) ⟩
 theorem or_and_right : (P ∨ Q) ∧ R ⊣⊢ₛ (P ∧ R) ∨ (Q ∧ R) :=
   and_comm.trans (and_or_left.trans (or_congr and_comm and_comm))
 theorem and_or_right : (P ∧ Q) ∨ R ⊣⊢ₛ (P ∨ R) ∧ (Q ∨ R) :=
@@ -189,15 +185,13 @@ theorem pure_elim_l {φ : Prop} (h : φ → Q ⊢ₛ R) : ⌜φ⌝ ∧ Q ⊢ₛ 
 theorem pure_elim_r {φ : Prop} (h : φ → Q ⊢ₛ R) : Q ∧ ⌜φ⌝ ⊢ₛ R := and_comm.mp.trans (pure_elim_l h)
 theorem pure_true {φ : Prop} (h : φ) : ⌜φ⌝ ⊣⊢ₛ (⌜True⌝ : SPred σs) := eq_true h ▸ .rfl
 theorem pure_and {φ₁ φ₂ : Prop} : ⌜φ₁⌝ ∧ (⌜φ₂⌝ : SPred σs) ⊣⊢ₛ ⌜φ₁ ∧ φ₂⌝ :=
-  bientails.iff.mpr ⟨
-    pure_elim and_elim_l fun h => and_elim_r' <| pure_mono <| And.intro h,
-    and_intro (pure_mono And.left) (pure_mono And.right)
-  ⟩
+  bientails.iff.mpr
+    ⟨ pure_elim and_elim_l fun h => and_elim_r' <| pure_mono <| And.intro h,
+      and_intro (pure_mono And.left) (pure_mono And.right) ⟩
 theorem pure_or {φ₁ φ₂ : Prop} : ⌜φ₁⌝ ∨ (⌜φ₂⌝ : SPred σs) ⊣⊢ₛ ⌜φ₁ ∨ φ₂⌝ :=
-  bientails.iff.mpr ⟨
-    or_elim (pure_mono Or.inl) (pure_mono Or.inr),
-    pure_elim' (·.elim (or_intro_l' ∘ pure_intro) (or_intro_r' ∘ pure_intro))
-  ⟩
+  bientails.iff.mpr
+    ⟨ or_elim (pure_mono Or.inl) (pure_mono Or.inr),
+      pure_elim' (·.elim (or_intro_l' ∘ pure_intro) (or_intro_r' ∘ pure_intro)) ⟩
 theorem pure_imp_2 {φ₁ φ₂ : Prop} : ⌜φ₁ → φ₂⌝ ⊢ₛ (⌜φ₁⌝ → ⌜φ₂⌝ : SPred σs) :=
   imp_intro <| pure_and.mp.trans <| pure_mono (And.elim id)
 theorem pure_imp {φ₁ φ₂ : Prop} : (⌜φ₁⌝ → ⌜φ₂⌝ : SPred σs) ⊣⊢ₛ ⌜φ₁ → φ₂⌝ := by
@@ -218,10 +212,9 @@ theorem pure_forall {φ : α → Prop} : (∀ x, (⌜φ x⌝ : SPred σs)) ⊣�
     exact pure_intro fun x => Classical.not_not.1 <| mt (⟨x, ·⟩) h
 
 theorem pure_exists {φ : α → Prop} : (∃ x, ⌜φ x⌝ : SPred σs) ⊣⊢ₛ ⌜∃ x, φ x⌝ :=
-  bientails.iff.mpr ⟨
-    exists_elim fun a => pure_mono (⟨a, ·⟩),
-    pure_elim' fun ⟨x, h⟩ => (pure_intro h).trans (exists_intro' x .rfl)
-  ⟩
+  bientails.iff.mpr
+    ⟨ exists_elim fun a => pure_mono (⟨a, ·⟩),
+      pure_elim' fun ⟨x, h⟩ => (pure_intro h).trans (exists_intro' x .rfl) ⟩
 
 theorem down_pure_intro {φ : Prop} (h : φ) : (pure (σs := []) φ).down := by simp [h]
 

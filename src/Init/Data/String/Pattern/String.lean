@@ -96,14 +96,12 @@ deriving Inhabited
 
 @[inline]
 def iter (pat : Slice) (s : Slice) : Std.Iter (α := ForwardSliceSearcher s) (SearchStep s) :=
-  if h : pat.utf8ByteSize = 0 then {
-    internalState := .emptyBefore s.startPos
-  }
-  else {
-    internalState :=
-      .proper pat (buildTable pat) rfl s.startPos.offset pat.startPos.offset
-        (by simp [Pos.Raw.lt_iff]; omega)
-  }
+  if h : pat.utf8ByteSize = 0 then
+    { internalState := .emptyBefore s.startPos }
+  else
+    { internalState :=
+        .proper pat (buildTable pat) rfl s.startPos.offset pat.startPos.offset
+          (by simp [Pos.Raw.lt_iff]; omega) }
 
 instance (s : Slice) : Std.Iterator (ForwardSliceSearcher s) Id (SearchStep s) where
   IsPlausibleStep it
@@ -159,34 +157,31 @@ instance (s : Slice) : Std.Iterator (ForwardSliceSearcher s) Id (SearchStep s) w
             let res :=
               .matched (s.pos! (nextStackPos.unoffsetBy nextNeedlePos)) (s.pos! nextStackPos)
             -- Invariants still satisfied
-            pure (.deflate ⟨
-              .yield
-                ⟨.proper needle table htable nextStackPos 0
-                  (by simp [Pos.Raw.lt_iff] at hn ⊢; omega)⟩
-                res,
-              by
-                simpa using ⟨
-                  _,
-                  _,
-                  ⟨rfl, rfl⟩,
-                  by simp [Pos.Raw.lt_iff] at hn ⊢; omega,
-                  Or.inl (by simp [nextStackPos, Pos.Raw.lt_iff] at h₁ ⊢; omega)
-                ⟩
-            ⟩)
+            pure (.deflate
+              ⟨ .yield
+                  ⟨ .proper needle table htable nextStackPos 0
+                      (by simp [Pos.Raw.lt_iff] at hn ⊢; omega) ⟩
+                  res,
+                by
+                  simpa using
+                    ⟨ _,
+                      _,
+                      ⟨rfl, rfl⟩,
+                      by simp [Pos.Raw.lt_iff] at hn ⊢; omega,
+                      Or.inl (by simp [nextStackPos, Pos.Raw.lt_iff] at h₁ ⊢; omega) ⟩ ⟩)
           else
             -- Invariants still satisfied
-            pure (.deflate ⟨
-              .skip ⟨.proper needle table htable nextStackPos nextNeedlePos
-                (by simp [Pos.Raw.lt_iff, nextNeedlePos, Pos.Raw.ext_iff] at h hn ⊢; omega)⟩,
-              by
-                simpa using ⟨
-                  _,
-                  _,
-                  ⟨rfl, rfl⟩,
-                  by simp [nextNeedlePos, Pos.Raw.lt_iff, Pos.Raw.ext_iff] at h hn ⊢; omega,
-                  Or.inl (by simp [nextStackPos, Pos.Raw.lt_iff] at h₁ ⊢; omega)
-                ⟩
-            ⟩)
+            pure (.deflate
+              ⟨ .skip
+                  ⟨ .proper needle table htable nextStackPos nextNeedlePos
+                      (by simp [Pos.Raw.lt_iff, nextNeedlePos, Pos.Raw.ext_iff] at h hn ⊢; omega) ⟩,
+                by
+                  simpa using
+                    ⟨ _,
+                      _,
+                      ⟨rfl, rfl⟩,
+                      by simp [nextNeedlePos, Pos.Raw.lt_iff, Pos.Raw.ext_iff] at h hn ⊢; omega,
+                      Or.inl (by simp [nextStackPos, Pos.Raw.lt_iff] at h₁ ⊢; omega) ⟩ ⟩)
         else if hnp : needlePos = 0 then
           -- Safety: by invariant 2
           let basePos := s.pos! stackPos
@@ -195,24 +190,22 @@ instance (s : Slice) : Std.Iterator (ForwardSliceSearcher s) Id (SearchStep s) w
           let nextStackPos := s.posGT stackPos h₁
           let res := .rejected basePos nextStackPos
           -- Invariants still satisfied
-          pure (.deflate ⟨
-            .yield
-              ⟨.proper needle table htable nextStackPos.offset 0
-                (by simp [Pos.Raw.lt_iff] at hn ⊢; omega)⟩
-              res,
-            by
-              simpa using ⟨
-                _,
-                _,
-                ⟨rfl, rfl⟩,
-                by simp [Pos.Raw.lt_iff] at hn ⊢; omega,
-                Or.inl (by
-                  have := lt_offset_posGT (h := h₁)
-                  have t₀ := (posGT _ _ h₁).isValidForSlice.le_utf8ByteSize
-                  simp [nextStackPos, Pos.Raw.lt_iff] at this ⊢
-                  omega)
-              ⟩
-          ⟩)
+          pure (.deflate
+            ⟨ .yield
+                ⟨ .proper needle table htable nextStackPos.offset 0
+                    (by simp [Pos.Raw.lt_iff] at hn ⊢; omega) ⟩
+                res,
+              by
+                simpa using
+                  ⟨ _,
+                    _,
+                    ⟨rfl, rfl⟩,
+                    by simp [Pos.Raw.lt_iff] at hn ⊢; omega,
+                    Or.inl (by
+                      have := lt_offset_posGT (h := h₁)
+                      have t₀ := (posGT _ _ h₁).isValidForSlice.le_utf8ByteSize
+                      simp [nextStackPos, Pos.Raw.lt_iff] at this ⊢
+                      omega) ⟩ ⟩)
         else
           let newNeedlePos := table[needlePos.byteIdx - 1]'(by simp [Pos.Raw.lt_iff] at hn; omega)
           if newNeedlePos = 0 then
@@ -223,24 +216,23 @@ instance (s : Slice) : Std.Iterator (ForwardSliceSearcher s) Id (SearchStep s) w
             let nextStackPos := s.posGE stackPos (Pos.Raw.le_of_lt h₁)
             let res := .rejected basePos nextStackPos
             -- Invariants still satisfied
-            pure (.deflate ⟨
-              .yield
-                ⟨.proper needle table htable nextStackPos.offset 0
-                  (by simp [Pos.Raw.lt_iff] at hn ⊢; omega)⟩
-                res,
-              by
-                simpa using ⟨
-                  _,
-                  _,
-                  ⟨rfl, rfl⟩,
-                  by simp [Pos.Raw.lt_iff] at hn ⊢; omega,
-                  by
-                    have h₂ := le_offset_posGE (h := Pos.Raw.le_of_lt h₁)
-                    have h₃ := (s.posGE _ (Pos.Raw.le_of_lt h₁)).isValidForSlice.le_utf8ByteSize
-                    simp [Pos.Raw.le_iff, Pos.Raw.lt_iff, Pos.Raw.ext_iff, nextStackPos] at ⊢ h₂ hnp
-                    omega
-                ⟩
-            ⟩)
+            pure (.deflate
+              ⟨ .yield
+                  ⟨ .proper needle table htable nextStackPos.offset 0
+                      (by simp [Pos.Raw.lt_iff] at hn ⊢; omega) ⟩
+                  res,
+                by
+                  simpa using
+                    ⟨ _,
+                      _,
+                      ⟨rfl, rfl⟩,
+                      by simp [Pos.Raw.lt_iff] at hn ⊢; omega,
+                      by
+                        have h₂ := le_offset_posGE (h := Pos.Raw.le_of_lt h₁)
+                        have h₃ := (s.posGE _ (Pos.Raw.le_of_lt h₁)).isValidForSlice.le_utf8ByteSize
+                        simp [Pos.Raw.le_iff, Pos.Raw.lt_iff, Pos.Raw.ext_iff, nextStackPos]
+                          at ⊢ h₂ hnp
+                        omega ⟩ ⟩)
           else
             -- Safety: by invariant 2
             let oldBasePos := s.pos! (stackPos.unoffsetBy needlePos)
@@ -248,28 +240,27 @@ instance (s : Slice) : Std.Iterator (ForwardSliceSearcher s) Id (SearchStep s) w
             let newBasePos := s.pos! (stackPos.unoffsetBy ⟨newNeedlePos⟩)
             let res := .rejected oldBasePos newBasePos
             -- Invariants still satisfied by definition of the prefix table
-            pure (.deflate ⟨
-              .yield
-                ⟨.proper needle table htable stackPos ⟨newNeedlePos⟩ (by
-                  subst htable
-                  have :=
-                    getElem_buildTable_le needle (needlePos.byteIdx - 1)
-                      (by simp [Pos.Raw.lt_iff] at hn; omega)
-                  simp [newNeedlePos, Pos.Raw.lt_iff] at hn ⊢
-                  omega)⟩
-                res,
-              by
-                simp only [proper.injEq, heq_eq_eq, true_and, exists_and_left, exists_prop,
-                  reduceCtorEq, or_false]
-                refine ⟨_, _, ⟨rfl, rfl⟩, ?_, Or.inr ⟨rfl, ?_⟩⟩
-                all_goals
-                  subst htable
-                  have :=
-                    getElem_buildTable_le needle (needlePos.byteIdx - 1)
-                      (by simp [Pos.Raw.lt_iff] at hn; omega)
-                  simp [newNeedlePos, Pos.Raw.lt_iff] at hn hnp ⊢
-                  omega
-            ⟩)
+            pure (.deflate
+              ⟨ .yield
+                  ⟨ .proper needle table htable stackPos ⟨newNeedlePos⟩ (by
+                      subst htable
+                      have :=
+                        getElem_buildTable_le needle (needlePos.byteIdx - 1)
+                          (by simp [Pos.Raw.lt_iff] at hn; omega)
+                      simp [newNeedlePos, Pos.Raw.lt_iff] at hn ⊢
+                      omega) ⟩
+                  res,
+                by
+                  simp only [proper.injEq, heq_eq_eq, true_and, exists_and_left, exists_prop,
+                    reduceCtorEq, or_false]
+                  refine ⟨_, _, ⟨rfl, rfl⟩, ?_, Or.inr ⟨rfl, ?_⟩⟩
+                  all_goals
+                    subst htable
+                    have :=
+                      getElem_buildTable_le needle (needlePos.byteIdx - 1)
+                        (by simp [Pos.Raw.lt_iff] at hn; omega)
+                    simp [newNeedlePos, Pos.Raw.lt_iff] at hn hnp ⊢
+                    omega ⟩)
       else if stackPos.unoffsetBy needlePos < s.rawEndPos then
         let basePos := stackPos.unoffsetBy needlePos
         -- Safety: by invariant 2

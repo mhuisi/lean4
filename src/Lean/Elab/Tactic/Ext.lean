@@ -129,12 +129,8 @@ def realizeExtTheorem (structName : Name) (flat : Bool) : TermElabM Name := do
         if pf.hasMVar then
           throwError "Internal error: Synthesized `ext` proof contains metavariables{indentD pf}"
         let info ← getConstInfo structName
-        addDecl <| Declaration.thmDecl {
-          name := extName
-          type
-          value := pf
-          levelParams := info.levelParams
-        }
+        addDecl <| Declaration.thmDecl
+          { name := extName, type, value := pf, levelParams := info.levelParams }
         modifyEnv fun env => addProtected env extName
         addDeclarationRangesFromSyntax extName (← getRef)
     catch e =>
@@ -168,12 +164,8 @@ def realizeExtIffTheorem (extName : Name) : TermElabM Name := do
         if pf.hasMVar then
           throwError
             "Internal error: Synthesized `ext_iff` proof contains metavariables{indentD pf}"
-        addDecl <| Declaration.thmDecl {
-          name := extIffName
-          type
-          value := pf
-          levelParams := info.levelParams
-        }
+        addDecl <| Declaration.thmDecl
+          { name := extIffName, type, value := pf, levelParams := info.levelParams }
         -- Only declarations in a namespace can be protected:
         unless extIffName.isAtomic do
           modifyEnv fun env => addProtected env extIffName
@@ -193,44 +185,43 @@ def realizeExtIffTheorem (extName : Name) : TermElabM Name := do
 open Ext
 
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `ext
-    descr := "Marks a theorem as an extensionality theorem"
-    add := fun declName stx kind =>
-      MetaM.run' <| TermElabM.run' do
-        let `(attr| ext $[(iff := false%$iffFalse?)]? $[(flat := false%$flatFalse?)]? $(prio)?) :=
-            stx
-          | throwError "Invalid `[ext]` attribute syntax"
-        let iff := iffFalse?.isNone
-        let flat := flatFalse?.isNone
-        let mut declName := declName
-        if isStructure (← getEnv) declName then
-          declName ← withRef stx <| realizeExtTheorem declName flat
-        else if let some stx := flatFalse? then
-          throwErrorAt stx "Unexpected `flat` configuration on `[ext]` theorem"
-        -- Validate and add theorem to environment extension
-        let declTy := (← getConstInfo declName).type
-        let (_, _, declTy) ← withDefault <| forallMetaTelescopeReducing declTy
-        let failNotEq :=
-          throwError "\
-            `[ext]` attribute only applies to structures and to theorems proving `x = y` where `x` \
-            and `y` are variables, \
-            but this theorem proves{indentD declTy}"
-        let some (ty, lhs, rhs) := declTy.eq?
-          | failNotEq
-        unless lhs.isMVar && rhs.isMVar do
-          failNotEq
-        let keys ← withReducible <| DiscrTree.mkPath ty
-        let priority ← liftMacroM <| evalPrio (prio.getD (← `(prio| default)))
-        extExtension.add { declName, keys, priority } kind
-        -- Realize iff theorem
-        if iff then
-          discard <| withRef stx <| realizeExtIffTheorem declName
-    erase := fun declName => do
-      let s := extExtension.getState (← getEnv)
-      let s ← s.erase declName
-      modifyEnv fun env => extExtension.modifyState env fun _ => s
-  }
+  registerBuiltinAttribute
+    { name := `ext
+      descr := "Marks a theorem as an extensionality theorem"
+      add := fun declName stx kind =>
+        MetaM.run' <| TermElabM.run' do
+          let `(attr| ext $[(iff := false%$iffFalse?)]? $[(flat := false%$flatFalse?)]? $(prio)?) :=
+              stx
+            | throwError "Invalid `[ext]` attribute syntax"
+          let iff := iffFalse?.isNone
+          let flat := flatFalse?.isNone
+          let mut declName := declName
+          if isStructure (← getEnv) declName then
+            declName ← withRef stx <| realizeExtTheorem declName flat
+          else if let some stx := flatFalse? then
+            throwErrorAt stx "Unexpected `flat` configuration on `[ext]` theorem"
+          -- Validate and add theorem to environment extension
+          let declTy := (← getConstInfo declName).type
+          let (_, _, declTy) ← withDefault <| forallMetaTelescopeReducing declTy
+          let failNotEq :=
+            throwError "\
+              `[ext]` attribute only applies to structures and to theorems proving `x = y` where \
+              `x` and `y` are variables, \
+              but this theorem proves{indentD declTy}"
+          let some (ty, lhs, rhs) := declTy.eq?
+            | failNotEq
+          unless lhs.isMVar && rhs.isMVar do
+            failNotEq
+          let keys ← withReducible <| DiscrTree.mkPath ty
+          let priority ← liftMacroM <| evalPrio (prio.getD (← `(prio| default)))
+          extExtension.add { declName, keys, priority } kind
+          -- Realize iff theorem
+          if iff then
+            discard <| withRef stx <| realizeExtIffTheorem declName
+      erase := fun declName => do
+        let s := extExtension.getState (← getEnv)
+        let s ← s.erase declName
+        modifyEnv fun env => extExtension.modifyState env fun _ => s }
 
 /-!
 ### Implementation of `ext` tactic

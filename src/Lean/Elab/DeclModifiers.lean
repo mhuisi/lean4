@@ -14,10 +14,8 @@ public section
 
 namespace Lean
 
-register_builtin_option linter.redundantVisibility : Bool := {
-  defValue := false
-  descr := "warn on redundant `private`/`public` visibility modifiers"
-}
+register_builtin_option linter.redundantVisibility : Bool :=
+  { defValue := false, descr := "warn on redundant `private`/`public` visibility modifiers" }
 
 namespace Elab
 
@@ -34,13 +32,12 @@ def checkNotAlreadyDeclared
   let env := env.setExporting false
   withEnv env do -- also set as context for any exceptions
     let addInfo declName := do
-      pushInfoLeaf <| .ofTermInfo {
-        elaborator := .anonymous
-        lctx := {}
-        expectedType? := none
-        stx := (← getRef)
-        expr := (← mkConstWithLevelParams declName)
-      }
+      pushInfoLeaf <| .ofTermInfo
+        { elaborator := .anonymous
+          lctx := {}
+          expectedType? := none
+          stx := (← getRef)
+          expr := (← mkConstWithLevelParams declName) }
     if env.contains declName then
       addInfo declName
       match privateToUserName? declName with
@@ -178,46 +175,42 @@ def Modifiers.isMeta (m : Modifiers) : Bool := m.computeKind matches .meta
 def Modifiers.isNoncomputable (m : Modifiers) : Bool := m.computeKind matches .noncomputable
 
 /-- Adds attribute `attr` in `modifiers` -/
-def Modifiers.addAttr (modifiers : Modifiers) (attr : Attribute) : Modifiers := {
-  modifiers with
-  attrs := modifiers.attrs.push attr
-}
+def Modifiers.addAttr (modifiers : Modifiers) (attr : Attribute) : Modifiers :=
+  { modifiers with attrs := modifiers.attrs.push attr }
 
 /-- Adds attribute `attr` in `modifiers`, at the beginning -/
-def Modifiers.addFirstAttr (modifiers : Modifiers) (attr : Attribute) : Modifiers := {
-  modifiers with
-  attrs := #[attr] ++ modifiers.attrs
-}
+def Modifiers.addFirstAttr (modifiers : Modifiers) (attr : Attribute) : Modifiers :=
+  { modifiers with attrs := #[attr] ++ modifiers.attrs }
 
 /-- Filters attributes using `p` -/
-def Modifiers.filterAttrs (modifiers : Modifiers) (p : Attribute → Bool) : Modifiers := {
-  modifiers with
-  attrs := modifiers.attrs.filter p
-}
+def Modifiers.filterAttrs (modifiers : Modifiers) (p : Attribute → Bool) : Modifiers :=
+  { modifiers with attrs := modifiers.attrs.filter p }
 
 /-- Returns `true` if `modifiers` contains an attribute satisfying `p`. -/
 def Modifiers.anyAttr (modifiers : Modifiers) (p : Attribute → Bool) : Bool := modifiers.attrs.any p
 
-instance : ToFormat Modifiers := ⟨fun m =>
-  let components : List Format :=
-    (match m.docString? with
-        | some str => [f!"/--{str}-/"]
-        | none => [])
-      ++ (match m.visibility with
-        | .regular => []
-        | .private => [f!"private"]
-        | .public => [f!"public"])
-      ++ (if m.isProtected then [f!"protected"] else [])
-      ++ (match m.computeKind with
-        | .regular => []
-        | .meta => [f!"meta"]
-        | .noncomputable => [f!"noncomputable"])
-      ++ (match m.recKind with
-        | RecKind.partial => [f!"partial"]
-        | RecKind.nonrec => [f!"nonrec"]
-        | _ => [])
-      ++ (if m.isUnsafe then [f!"unsafe"] else []) ++ m.attrs.toList.map (fun attr => format attr)
-  Format.bracket "{" (Format.joinSep components ("," ++ Format.line)) "}"⟩
+instance : ToFormat Modifiers :=
+  ⟨ fun m =>
+      let components : List Format :=
+        (match m.docString? with
+            | some str => [f!"/--{str}-/"]
+            | none => [])
+          ++ (match m.visibility with
+            | .regular => []
+            | .private => [f!"private"]
+            | .public => [f!"public"])
+          ++ (if m.isProtected then [f!"protected"] else [])
+          ++ (match m.computeKind with
+            | .regular => []
+            | .meta => [f!"meta"]
+            | .noncomputable => [f!"noncomputable"])
+          ++ (match m.recKind with
+            | RecKind.partial => [f!"partial"]
+            | RecKind.nonrec => [f!"nonrec"]
+            | _ => [])
+          ++ (if m.isUnsafe then [f!"unsafe"] else [])
+          ++ m.attrs.toList.map (fun attr => format attr)
+      Format.bracket "{" (Format.joinSep components ("," ++ Format.line)) "}" ⟩
 
 instance : ToString Modifiers := ⟨toString ∘ format⟩
 
@@ -269,16 +262,15 @@ def elabModifiers (stx : TSyntax ``Parser.Command.declModifiers) (isExample := f
     match attrsStx.getOptional? with
     | none => pure #[]
     | some attrs => elabDeclAttrs attrs
-  return {
-    stx
-    docString?
-    visibility
-    isProtected
-    computeKind
-    recKind
-    attrs
-    isUnsafe := !unsafeStx.isNone
-  }
+  return
+    { stx
+      docString?
+      visibility
+      isProtected
+      computeKind
+      recKind
+      attrs
+      isUnsafe := !unsafeStx.isNone }
 
 /--
 Ensure the function has not already been declared, and apply the given visibility setting to `declName`.
@@ -317,10 +309,8 @@ def mkDeclName (currNamespace : Name) (modifiers : Modifiers) (shortName : Name)
     throwError "invalid declaration name `_root_`, `_root_` is a prefix used to refer to the \
       'root' namespace"
   let declName :=
-    if isRootName then {
-      view with
-      name := name.replacePrefix `_root_ Name.anonymous
-    }.review
+    if isRootName then
+      { view with name := name.replacePrefix `_root_ Name.anonymous }.review
     else
       currNamespace ++ shortName
   if isRootName then

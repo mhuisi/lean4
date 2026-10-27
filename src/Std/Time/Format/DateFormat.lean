@@ -114,10 +114,8 @@ namespace DateFormatSymbols
 def enUS : DateFormatSymbols where
   monthLong :=
     Vector.mk
-      #[
-        "January", "February", "March", "April", "May", "June", "July", "August", "September",
-        "October", "November", "December"
-      ]
+      #["January", "February", "March", "April", "May", "June", "July", "August", "September",
+        "October", "November", "December"]
       (by decide)
   monthShort :=
     Vector.mk #["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -142,12 +140,8 @@ def enUS : DateFormatSymbols where
   amNarrow := "a"
   pmNarrow := "p"
   dayPeriodShort := { am := "AM", pm := "PM", noon := "noon", midnight := "midnight" }
-  dayPeriodLong := {
-    am := "ante meridiem"
-    pm := "post meridiem"
-    noon := "noon"
-    midnight := "midnight"
-  }
+  dayPeriodLong :=
+    { am := "ante meridiem", pm := "post meridiem", noon := "noon", midnight := "midnight" }
   dayPeriodNarrow := { am := "a", pm := "p", noon := "n", midnight := "mi" }
   extendedDayPeriodShort :=
     Vector.mk

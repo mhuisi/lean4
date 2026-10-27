@@ -86,11 +86,8 @@ def elabKeyval (kv : TSyntax ``keyval) : TomlElabM Unit := do
     throwErrorAt tailKeyStx "cannot redefine {ty} key `{k}`"
   else
     let v ← elabVal v
-    modify fun s => {
-      s with
-      items := s.items.push ⟨kStx, k, v⟩
-      keyTys := s.keyTys.insert k .value
-    }
+    modify fun s =>
+      { s with items := s.items.push ⟨kStx, k, v⟩, keyTys := s.keyTys.insert k .value }
 
 def elabHeaderKeys (ks : Array (TSyntax ``simpleKey)) : TomlElabM Name := do
   modify fun s =>
@@ -124,12 +121,11 @@ def elabStdTable (x : TSyntax ``stdTable) : TomlElabM Unit :=
     if let some ty := (← get).keyTys.find? k then
       unless ty matches .headerPrefix do
         throwErrorAt tailKey m!"cannot redefine {ty} key `{k}`"
-    modify fun s => {
-      s with
-      currKey := k
-      keyTys := s.keyTys.insert k .stdTable
-      items := s.items.push ⟨x, k, .table x {}⟩
-    }
+    modify fun s =>
+      { s with
+        currKey := k
+        keyTys := s.keyTys.insert k .stdTable
+        items := s.items.push ⟨x, k, .table x {}⟩ }
 
 def elabArrayTable (x : TSyntax ``arrayTable) : TomlElabM Unit :=
   withRef x do
@@ -145,27 +141,24 @@ def elabArrayTable (x : TSyntax ``arrayTable) : TomlElabM Unit :=
         let s ← get
         let some keyTys := s.arrParents.find? k >>= s.arrKeyTys.find?
           | throwError "(internal) bad array key `{k}`"
-        modify fun s => {
-          s with
-          keyTys
-          currKey := k
-          currArrKey := k
-          items := s.items.push ⟨x, k, .array x #[.table x {}]⟩
-        }
+        modify fun s =>
+          { s with
+            keyTys
+            currKey := k
+            currArrKey := k
+            items := s.items.push ⟨x, k, .array x #[.table x {}]⟩ }
       else
         throwErrorAt tailKey s!"cannot redefine {ty} key `{k}`"
     else
       modify fun s =>
         let keyTys := s.keyTys.insert k .array
-        {
-          s with
+        { s with
           keyTys
           currKey := k
           currArrKey := k
           arrKeyTys := s.arrKeyTys.insert s.currArrKey keyTys
           arrParents := s.arrParents.insert k s.currArrKey
-          items := s.items.push ⟨x, k, .array x #[.table x {}]⟩
-        }
+          items := s.items.push ⟨x, k, .array x #[.table x {}]⟩ }
 
 def elabExpression (x : TSyntax ``expression) : TomlElabM Unit := do
   match x with

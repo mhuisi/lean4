@@ -344,11 +344,10 @@ def new
   ⟨ba, valid⟩
 
 instance : ToString (EncodedString r) where
-  toString es := ⟨
-    es.toByteArray,
-    isValidUTF8_of_isAsciiByte es.toByteArray
-      (all_of_all_of_imp es.valid (fun c h => by simp [isEncodedChar] at h; exact h.left))
-  ⟩
+  toString es :=
+    ⟨ es.toByteArray,
+      isValidUTF8_of_isAsciiByte es.toByteArray
+        (all_of_all_of_imp es.valid (fun c h => by simp [isEncodedChar] at h; exact h.left)) ⟩
 
 /--
 Decodes an `EncodedString` back to a regular `String`. Converts percent-encoded sequences (e.g., "%20")
@@ -495,11 +494,10 @@ def encode (s : String) (r : UInt8 → Bool := isQueryChar) : EncodedQueryString
 /--
 Converts an `EncodedQueryString` to a `String`, given a proof that all characters satisfying `r` are ASCII.
 -/
-def toString (es : EncodedQueryString r) : String := ⟨
-  es.toByteArray,
-  isValidUTF8_of_isAsciiByte es.toByteArray
-    (all_of_all_of_imp es.valid (fun c h => isEncodedQueryChar_isAscii c h))
-⟩
+def toString (es : EncodedQueryString r) : String :=
+  ⟨ es.toByteArray,
+    isValidUTF8_of_isAsciiByte es.toByteArray
+      (all_of_all_of_imp es.valid (fun c h => isEncodedQueryChar_isAscii c h)) ⟩
 
 /--
 Decodes an `EncodedQueryString` back to a regular `String`. Converts percent-encoded sequences and '+'

@@ -36,10 +36,9 @@ def PartialContextInfo.mergeIntoOuter?
   | .autoImplicitCtx _, none =>
     panic! "Unexpected incomplete InfoTree context info."
   | .commandCtx innerInfo, some outer =>
-    some {
-      outer with
-      toCommandContextInfo := { innerInfo with cmdEnv? := outer.cmdEnv? <|> innerInfo.cmdEnv? }
-    }
+    some
+      { outer with
+        toCommandContextInfo := { innerInfo with cmdEnv? := outer.cmdEnv? <|> innerInfo.cmdEnv? } }
   | .parentDeclCtx innerParentDecl, some outer =>
     some { outer with parentDecl? := innerParentDecl }
   | .autoImplicitCtx innerAutoImplicits, some outer =>
@@ -97,11 +96,10 @@ partial def InfoTree.substitute (tree : InfoTree) (assignment : PersistentHashMa
 
 /-- Applies `s.lazyAssignment` to `s.trees`, asynchronously. -/
 def InfoState.substituteLazy (s : InfoState) : Task InfoState :=
-  Task.mapList (tasks := s.lazyAssignment.toList.map (·.2)) fun _ => {
-    s with
-    trees := s.trees.map (·.substitute <| s.lazyAssignment.map (·.get))
-    lazyAssignment := {}
-  }
+  Task.mapList (tasks := s.lazyAssignment.toList.map (·.2)) fun _ =>
+    { s with
+      trees := s.trees.map (·.substitute <| s.lazyAssignment.map (·.get))
+      lazyAssignment := {} }
 
 structure LinterInfoGroup where
 deriving TypeName

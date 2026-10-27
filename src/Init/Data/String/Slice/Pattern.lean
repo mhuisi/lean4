@@ -146,9 +146,8 @@ Examples:
 -/
 @[specialize pat, cbv_opaque]
 def splitToSubslice (s : Slice) (pat : ρ) [ToForwardSearcher pat σ]
-    : Std.Iter (α := SplitIterator pat s) s.Subslice := {
-  internalState := .operating s.startPos (ToForwardSearcher.toSearcher pat s)
-}
+    : Std.Iter (α := SplitIterator pat s) s.Subslice :=
+  { internalState := .operating s.startPos (ToForwardSearcher.toSearcher pat s) }
 
 /--
 Splits a slice at each subslice that matches the pattern {name}`pat`.
@@ -266,9 +265,8 @@ Examples:
 -/
 @[specialize pat]
 def splitInclusive (s : Slice) (pat : ρ) [ToForwardSearcher pat σ]
-    : Std.Iter (α := SplitInclusiveIterator pat s) Slice := {
-  internalState := .operating s.startPos (ToForwardSearcher.toSearcher pat s)
-}
+    : Std.Iter (α := SplitInclusiveIterator pat s) Slice :=
+  { internalState := .operating s.startPos (ToForwardSearcher.toSearcher pat s) }
 
 /--
 If {name}`pat` matches a prefix of {name}`s`, returns the position at the start of the remainder.
@@ -606,9 +604,8 @@ Examples:
 -/
 @[specialize pat]
 def revSplit (s : Slice) (pat : ρ) [ToBackwardSearcher pat σ]
-    : Std.Iter (α := RevSplitIterator pat s) Slice := {
-  internalState := .operating s.endPos (ToBackwardSearcher.toSearcher pat s)
-}
+    : Std.Iter (α := RevSplitIterator pat s) Slice :=
+  { internalState := .operating s.endPos (ToBackwardSearcher.toSearcher pat s) }
 
 /--
 If {name}`pat` matches a suffix of {name}`s`, returns the position at the beginning of the suffix.

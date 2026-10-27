@@ -173,12 +173,11 @@ public def mkCasesOnSameCtor (declName : Name) (indName : Name) : MetaM Unit := 
                       match ctorName with
                       | Name.str _ s => Name.mkSimple s
                       | _ => Name.mkSimple s!"alt{i + 1}"
-                    let altInfo := {
-                      numFields := zs12.size
-                      numOverlaps := 0
-                      hasUnitThunk := zs12.isEmpty
-                      : Match.AltParamInfo
-                    }
+                    let altInfo :=
+                      { numFields := zs12.size
+                        numOverlaps := 0
+                        hasUnitThunk := zs12.isEmpty
+                        : Match.AltParamInfo }
                     return ((name, e), altInfo)
               withLocalDeclsDND altTypes fun alts => do
                 forallBoundedTelescope t0 (some (info.numIndices + 1)) fun ism1' _ =>
@@ -227,14 +226,13 @@ public def mkCasesOnSameCtor (declName : Name) (indName : Name) : MetaM Unit := 
                       .defnDecl (← mkDefinitionValInferringUnsafe (name := declName)
                         (levelParams := casesOnInfo.levelParams) (type := (← inferType e))
                         (value := e) (hints := ReducibilityHints.abbrev))
-                    let matcherInfo : MatcherInfo := {
-                      numParams := info.numParams
-                      numDiscrs := info.numIndices + 3
-                      altInfos
-                      uElimPos? := some 0
-                      discrInfos := #[{}, {}, {}]
-                      overlaps := {}
-                    }
+                    let matcherInfo : MatcherInfo :=
+                      { numParams := info.numParams
+                        numDiscrs := info.numIndices + 3
+                        altInfos
+                        uElimPos? := some 0
+                        discrInfos := #[{}, {}, {}]
+                        overlaps := {} }
 
                     -- Compare attributes with `mkMatcherAuxDefinition`
                     withExporting (isExporting := ! isPrivateName declName) do addDecl decl

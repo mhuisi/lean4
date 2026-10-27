@@ -153,10 +153,8 @@ public structure StructInstFieldDecl where
 deriving Inhabited, TypeName
 
 public def mkStructInstFieldDecl (format : (signature : TaggedDoc) → TaggedDoc) : TaggedDoc :=
-  failure.addMetaData (StructInstFieldDecl.mk format) fun v f => {
-    v with
-    format signature := propagateMetaData (v.format signature) f
-  }
+  failure.addMetaData (StructInstFieldDecl.mk format) fun v f =>
+    { v with format signature := propagateMetaData (v.format signature) f }
 
 public def getStructInstFieldDecl? (doc : TaggedDoc) : Option StructInstFieldDecl :=
   doc.getMetaData? StructInstFieldDecl

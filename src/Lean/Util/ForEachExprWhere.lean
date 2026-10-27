@@ -34,10 +34,8 @@ structure State where
   -/
   checked : Std.HashSet Expr
 
-unsafe def initCache : State := {
-  visited := .replicate cacheSize.toNat (cast lcProof notAnExpr)
-  checked := {}
-}
+unsafe def initCache : State :=
+  { visited := .replicate cacheSize.toNat (cast lcProof notAnExpr), checked := {} }
 
 abbrev ForEachM {ω : Type} (m : Type → Type) [STWorld ω m] := StateRefT' ω State m
 

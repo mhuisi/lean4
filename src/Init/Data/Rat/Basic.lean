@@ -65,18 +65,13 @@ def Rat.maybeNormalize
     (num : Int) (den g : Nat) (dvd_num : ↑g ∣ num) (dvd_den : g ∣ den) (den_nz : den / g ≠ 0)
     (reduced : (num / g).natAbs.Coprime (den / g))
     : Rat :=
-  if hg : g = 1 then {
-    num
-    den
-    den_nz := by simp [hg] at den_nz; exact den_nz
-    reduced := by simp [hg] at reduced; exact reduced
-  }
-  else {
-    num := num.divExact g dvd_num
-    den := den.divExact g dvd_den
-    den_nz
-    reduced
-  }
+  if hg : g = 1 then
+    { num
+      den
+      den_nz := by simp [hg] at den_nz; exact den_nz
+      reduced := by simp [hg] at reduced; exact reduced }
+  else
+    { num := num.divExact g dvd_num, den := den.divExact g dvd_den, den_nz, reduced }
 
 theorem Rat.normalize.dvd_num {num : Int} {den g : Nat} (e : g = num.natAbs.gcd den)
     : ↑g ∣ num := by
@@ -186,8 +181,7 @@ want to unfold it. Use `Rat.mul_def` instead.)
 protected def mul (a b : Rat) : Rat :=
   let g1 := Nat.gcd a.num.natAbs b.den
   let g2 := Nat.gcd b.num.natAbs a.den
-  {
-    num := a.num.divExact g1 (normalize.dvd_num rfl) * b.num.divExact g2 (normalize.dvd_num rfl)
+  { num := a.num.divExact g1 (normalize.dvd_num rfl) * b.num.divExact g2 (normalize.dvd_num rfl)
     den := a.den.divExact g2 (normalize.dvd_den rfl) * b.den.divExact g1 (normalize.dvd_den rfl)
     den_nz :=
       Nat.ne_of_gt <| Nat.mul_pos (Nat.div_gcd_pos_of_pos_right _ a.den_pos)
@@ -200,8 +194,7 @@ protected def mul (a b : Rat) : Rat :=
       · exact Nat.coprime_div_gcd_div_gcd (Nat.gcd_pos_of_pos_right _ b.den_pos)
       · exact Nat.coprime_div_gcd_div_gcd (Nat.gcd_pos_of_pos_right _ a.den_pos)
       · exact b.reduced.coprime_div_left (Nat.gcd_dvd_left ..)
-          |>.coprime_div_right (Nat.gcd_dvd_right ..)
-  }
+          |>.coprime_div_right (Nat.gcd_dvd_right ..) }
 
 instance : Mul Rat := ⟨Rat.mul⟩
 
@@ -211,18 +204,16 @@ because you don't want to unfold it. Use `Rat.inv_def` instead.)
 -/
 @[irreducible]
 protected def inv (a : Rat) : Rat :=
-  if h : a.num < 0 then {
-    num := -a.den
-    den := a.num.natAbs
-    den_nz := by exact Nat.ne_of_gt (Int.natAbs_pos.2 (Int.ne_of_lt h))
-    reduced := by exact Int.natAbs_neg a.den ▸ a.reduced.symm
-  }
-  else if h : a.num > 0 then {
-    num := a.den
-    den := a.num.natAbs
-    den_nz := by exact Nat.ne_of_gt (Int.natAbs_pos.2 (Int.ne_of_gt h))
-    reduced := by exact a.reduced.symm
-  }
+  if h : a.num < 0 then
+    { num := -a.den
+      den := a.num.natAbs
+      den_nz := by exact Nat.ne_of_gt (Int.natAbs_pos.2 (Int.ne_of_lt h))
+      reduced := by exact Int.natAbs_neg a.den ▸ a.reduced.symm }
+  else if h : a.num > 0 then
+    { num := a.den
+      den := a.num.natAbs
+      den_nz := by exact Nat.ne_of_gt (Int.natAbs_pos.2 (Int.ne_of_gt h))
+      reduced := by exact a.reduced.symm }
   else
     a
 
@@ -307,11 +298,8 @@ instance : Add Rat := ⟨Rat.add⟩
 
 /-- Negation of rational numbers. -/
 @[implicit_reducible]
-protected def neg (a : Rat) : Rat := {
-  a with
-  num := -a.num
-  reduced := by rw [Int.natAbs_neg]; exact a.reduced
-}
+protected def neg (a : Rat) : Rat :=
+  { a with num := -a.num, reduced := by rw [Int.natAbs_neg]; exact a.reduced }
 
 instance : Neg Rat := ⟨Rat.neg⟩
 

@@ -118,32 +118,30 @@ namespace SolveByElimConfig
 instance : Coe SolveByElimConfig BacktrackConfig := ⟨(·.toApplyRulesConfig.toBacktrackConfig)⟩
 
 /-- Create or modify a `Config` which allows a class of goals to be returned as subgoals. -/
-def accept (cfg : SolveByElimConfig := {}) (test : MVarId → MetaM Bool) : SolveByElimConfig := {
-  cfg with
-  discharge := fun g => do
-    if (← test g) then
-      pure none
-    else
-      cfg.discharge g
-}
+def accept (cfg : SolveByElimConfig := {}) (test : MVarId → MetaM Bool) : SolveByElimConfig :=
+  { cfg with
+    discharge := fun g => do
+      if (← test g) then
+        pure none
+      else
+        cfg.discharge g }
 
 /--
 Create or modify a `Config` which runs a tactic on the main goal.
 If that tactic fails, fall back to the `proc` behaviour of `cfg`.
 -/
 def mainGoalProc (cfg : SolveByElimConfig := {}) (proc : MVarId → MetaM (List MVarId))
-    : SolveByElimConfig := {
-  cfg with
-  proc := fun orig goals =>
-    match goals with
-    | [] =>
-      cfg.proc orig []
-    | g :: gs =>
-      try
-        return (← proc g) ++ gs
-      catch _ =>
-        cfg.proc orig goals
-}
+    : SolveByElimConfig :=
+  { cfg with
+    proc := fun orig goals =>
+      match goals with
+      | [] =>
+        cfg.proc orig []
+      | g :: gs =>
+        try
+          return (← proc g) ++ gs
+        catch _ =>
+          cfg.proc orig goals }
 
 /-- Create or modify a `Config` which calls `intro` on each goal before applying lemmas. -/
 -- Because `SolveByElim` works on each goal in sequence, even though
@@ -167,14 +165,13 @@ Return `none` to return the goal as a new subgoal, or `some goals` to replace it
 -/
 def withDischarge
     (cfg : SolveByElimConfig := {}) (discharge : MVarId → MetaM (Option (List MVarId)))
-    : SolveByElimConfig := {
-  cfg with
-  discharge := fun g =>
-    try
-      discharge g
-    catch _ =>
-      cfg.discharge g
-}
+    : SolveByElimConfig :=
+  { cfg with
+    discharge := fun g =>
+      try
+        discharge g
+      catch _ =>
+        cfg.discharge g }
 
 /--
 Create or modify a `SolveByElimConfig` which calls `intro` on any goal for which no lemma applies.
@@ -200,12 +197,11 @@ Create or modify a `Config` which rejects branches for which `test`,
 applied to the instantiations of the original goals, fails or returns `false`.
 -/
 def testPartialSolutions (cfg : SolveByElimConfig := {}) (test : List Expr → MetaM Bool)
-    : SolveByElimConfig := {
-  cfg with
-  proc := fun orig goals => do
-    guard <| ← test (← orig.mapM fun m => m.withContext do instantiateMVars (.mvar m))
-    cfg.proc orig goals
-}
+    : SolveByElimConfig :=
+  { cfg with
+    proc := fun orig goals => do
+      guard <| ← test (← orig.mapM fun m => m.withContext do instantiateMVars (.mvar m))
+      cfg.proc orig goals }
 
 /--
 Create or modify a `SolveByElimConfig` which rejects complete solutions for which `test`,

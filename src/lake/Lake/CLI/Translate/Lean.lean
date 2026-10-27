@@ -381,11 +381,8 @@ def Package.mkTargetCommands
 /-- Create a Lean module that encodes the declarative configuration of the package. -/
 public def Package.mkLeanConfig (pkg : Package) : TSyntax ``module :=
   Unhygienic.run do
-    let pkgConfig : PackageConfig pkg.keyName pkg.origName := {
-      pkg.config with
-      testDriver := pkg.testDriver
-      lintDriver := pkg.lintDriver
-    }
+    let pkgConfig : PackageConfig pkg.keyName pkg.origName :=
+      { pkg.config with testDriver := pkg.testDriver, lintDriver := pkg.lintDriver }
     let defaultTargets := pkg.defaultTargets.foldl NameSet.insert NameSet.empty
     `(module|
     import $(mkIdent `Lake)

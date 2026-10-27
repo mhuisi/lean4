@@ -84,14 +84,13 @@ meta def elabShowPanelWidgetsCmd : CommandElab
             if wiExpr.hasMVar then
               throwError
                 "failed to compile expression, it contains metavariables{indentExpr wiExpr}"
-            addAndCompile <| Declaration.defnDecl {
-              name
-              levelParams := []
-              type := mkConst ``WidgetInstance
-              value := wiExpr
-              hints := .opaque
-              safety := .safe
-            }
+            addAndCompile <| Declaration.defnDecl
+              { name
+                levelParams := []
+                type := mkConst ``WidgetInstance
+                value := wiExpr
+                hints := .opaque
+                safety := .safe }
             if let .global := attr then
               addPanelWidgetGlobal wi.javascriptHash name
             else

@@ -17,10 +17,8 @@ public section
 namespace Lean.Meta
 namespace Simp
 
-register_builtin_option backward.dsimp.instances : Bool := {
-  defValue := false
-  descr := "Let `dsimp` and `simp` simplify instance terms"
-}
+register_builtin_option backward.dsimp.instances : Bool :=
+  { defValue := false, descr := "Let `dsimp` and `simp` simplify instance terms" }
 
 /-- The result of simplifying some expression `e`. -/
 structure Result where
@@ -147,40 +145,38 @@ private def updateArith (c : Config) : CoreM Config := do
 /-- Converts `Simp.Config` into `Meta.ConfigWithKey` used for indexing. -/
 private def mkIndexConfig (c : Config) : MetaM ConfigWithKey := do
   let curr ← Meta.getConfig
-  return {
-    curr with
-    beta := c.beta
-    iota := c.iota
-    zeta := c.zeta
-    zetaHave := c.zetaHave
-    zetaUnused := c.zetaUnused
-    zetaDelta := c.zetaDelta
-    etaStruct := c.etaStruct
-    /-
-    When indexing terms we disable projection to ensure a term such as `f ((a, b).1)`
-    is an instance of the pattern `f (?x.1)`
-    -/
-    proj := .no
-    transparency := .reducible
-    : Meta.Config
-  }.toConfigWithKey
+  return
+    { curr with
+      beta := c.beta
+      iota := c.iota
+      zeta := c.zeta
+      zetaHave := c.zetaHave
+      zetaUnused := c.zetaUnused
+      zetaDelta := c.zetaDelta
+      etaStruct := c.etaStruct
+      /-
+      When indexing terms we disable projection to ensure a term such as `f ((a, b).1)`
+      is an instance of the pattern `f (?x.1)`
+      -/
+      proj := .no
+      transparency := .reducible
+      : Meta.Config }.toConfigWithKey
 
 /-- Converts `Simp.Config` into `Meta.ConfigWithKey` used for `isDefEq`. -/
 private def mkMetaConfig (c : Config) : MetaM ConfigWithKey := do
   let curr ← Meta.getConfig
-  return {
-    curr with
-    beta := c.beta
-    iota := c.iota
-    zeta := c.zeta
-    zetaHave := c.zetaHave
-    zetaUnused := c.zetaUnused
-    zetaDelta := c.zetaDelta
-    etaStruct := c.etaStruct
-    proj := if c.proj then .yesWithDelta else .no
-    transparency := .reducible
-    : Meta.Config
-  }.toConfigWithKey
+  return
+    { curr with
+      beta := c.beta
+      iota := c.iota
+      zeta := c.zeta
+      zetaHave := c.zetaHave
+      zetaUnused := c.zetaUnused
+      zetaDelta := c.zetaDelta
+      etaStruct := c.etaStruct
+      proj := if c.proj then .yesWithDelta else .no
+      transparency := .reducible
+      : Meta.Config }.toConfigWithKey
 
 def mkContext
     (config : Config := {}) (simpTheorems : SimpTheoremsArray := {})
@@ -192,46 +188,37 @@ def mkContext
       pure { config with instances := true }
     else
       pure config
-  return {
-    config
-    userConfig
-    simpTheorems
-    congrTheorems
-    metaConfig := (← mkMetaConfig config)
-    indexConfig := (← mkIndexConfig config)
-  }
+  return
+    { config
+      userConfig
+      simpTheorems
+      congrTheorems
+      metaConfig := (← mkMetaConfig config)
+      indexConfig := (← mkIndexConfig config) }
 
 def Context.setConfig (context : Context) (config : Config) : MetaM Context := do
-  return {
-    context with
-    config
-    metaConfig := (← mkMetaConfig config)
-    indexConfig := (← mkIndexConfig config)
-  }
+  return
+    { context with
+      config
+      metaConfig := (← mkMetaConfig config)
+      indexConfig := (← mkIndexConfig config) }
 
-def Context.setSimpTheorems (c : Context) (simpTheorems : SimpTheoremsArray) : Context := {
-  c with
-  simpTheorems
-}
+def Context.setSimpTheorems (c : Context) (simpTheorems : SimpTheoremsArray) : Context :=
+  { c with simpTheorems }
 
 def Context.setLctxInitIndices (c : Context) : MetaM Context :=
   return { c with lctxInitIndices := (← getLCtx).numIndices }
 
 def Context.setAutoUnfold (c : Context) : Context := { c with config.autoUnfold := true }
 
-def Context.setFailIfUnchanged (c : Context) (flag : Bool) : Context := {
-  c with
-  config.failIfUnchanged := flag
-}
+def Context.setFailIfUnchanged (c : Context) (flag : Bool) : Context :=
+  { c with config.failIfUnchanged := flag }
 
 def Context.setMemoize (c : Context) (flag : Bool) : Context := { c with config.memoize := flag }
 
 def Context.setZetaDeltaSet (c : Context) (zetaDeltaSet : FVarIdSet) (initUsedZetaDelta : FVarIdSet)
-    : Context := {
-  c with
-  zetaDeltaSet
-  initUsedZetaDelta
-}
+    : Context :=
+  { c with zetaDeltaSet, initUsedZetaDelta }
 
 def Context.isDeclToUnfold (ctx : Context) (declName : Name) : Bool :=
   ctx.simpTheorems.isDeclToUnfold declName
@@ -337,14 +324,8 @@ opaque dsimp (e : Expr) : SimpM Expr
 @[inline]
 def modifyDiag (f : Diagnostics → Diagnostics) : SimpM Unit := do
   if (← isDiagnosticsEnabled) then
-    modify fun { cache, congrCache, dsimpCache, usedTheorems, numSteps, diag } => {
-      cache
-      congrCache
-      dsimpCache
-      usedTheorems
-      numSteps
-      diag := f diag
-    }
+    modify fun { cache, congrCache, dsimpCache, usedTheorems, numSteps, diag } =>
+      { cache, congrCache, dsimpCache, usedTheorems, numSteps, diag := f diag }
 
 /--
 Result type for a simplification procedure. We have `pre` and `post` simplification procedures.
@@ -576,10 +557,8 @@ def recordTheoremWithBadKeys (thm : SimpTheorem) : SimpM Unit := do
     -- check whether it is already there
     if unsafe s.thmsWithBadKeys.any fun thm' => ptrEq thm thm' then
       s
-    else {
-      s with
-      thmsWithBadKeys := s.thmsWithBadKeys.push thm
-    }
+    else
+      { s with thmsWithBadKeys := s.thmsWithBadKeys.push thm }
 
 def Result.getProof (r : Result) : MetaM Expr := do
   match r.proof? with

@@ -20,13 +20,12 @@ open Lean Parser Elab Tactic Meta Do SpecAttr
 builtin_initialize registerTraceClass `Elab.Tactic.Do.vcgen
 builtin_initialize registerTraceClass `Elab.Tactic.Do.vcgen.split
 
-register_builtin_option mvcgen.warning : Bool := {
-  defValue := true
-  descr :=
-    "this option has no effect; `mvcgen` reports a deprecation warning controlled by \
-      `linter.deprecated.syntax`"
-  deprecation? := some { since := "2026-09-23", text? := some "this option has no effect" }
-}
+register_builtin_option mvcgen.warning : Bool :=
+  { defValue := true
+    descr :=
+      "this option has no effect; `mvcgen` reports a deprecation warning controlled by \
+        `linter.deprecated.syntax`"
+    deprecation? := some { since := "2026-09-23", text? := some "this option has no effect" } }
 
 inductive Fuel where
   | limited (n : Nat)
@@ -271,13 +270,12 @@ def mkSpecContext (optConfig : Syntax) (lemmas : Syntax) (ignoreStarArg := false
           specThms := specThms.insert thm
         catch _ =>
           continue
-  return {
-    config
-    specThms
-    simpCtx := res.ctx
-    simprocs := res.simprocs
-    initialCtxSize := (← getLCtx).numIndices
-  }
+  return
+    { config
+      specThms
+      simpCtx := res.ctx
+      simprocs := res.simprocs
+      initialCtxSize := (← getLCtx).numIndices }
 
 def withLocalSpecs [Monad m] [MonadControlT VCGenM m] (xs : Array Expr) (k : m α) : m α :=
   controlAt VCGenM fun runInBase => do

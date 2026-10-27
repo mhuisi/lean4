@@ -259,11 +259,10 @@ macro "declare_uint_theorems" typeName:ident bits:term:arg : command =>
           cmds.push <|
             ← `(@[simp] theorem toNat_toUInt64 (x : $typeName) : x.toUInt64.toNat = x.toNat := (rfl))
     unless isUSize do
-      let names := #[
-        `le_iff_toBitVec_le, `lt_iff_toBitVec_lt, `eq_iff_toBitVec_eq, `ne_iff_toBitVec_ne,
-        `toBitVec_add, `toBitVec_sub, `toBitVec_mul, `toBitVec_div, `toBitVec_mod, `toBitVec_neg,
-        `toBitVec_min, `toBitVec_max
-      ]
+      let names :=
+        #[`le_iff_toBitVec_le, `lt_iff_toBitVec_lt, `eq_iff_toBitVec_eq, `ne_iff_toBitVec_ne,
+          `toBitVec_add, `toBitVec_sub, `toBitVec_mul, `toBitVec_div, `toBitVec_mod, `toBitVec_neg,
+          `toBitVec_min, `toBitVec_max]
       let idents := names.map fun n => mkIdent (typeName.getId ++ n)
       cmds := cmds.push <| ← `(attribute [int_toBitVec] $idents*)
     cmds := cmds.push <| ← `(end $typeName)

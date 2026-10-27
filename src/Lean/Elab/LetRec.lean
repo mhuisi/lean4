@@ -80,20 +80,19 @@ private def mkLetRecDeclView (letRec : Syntax) : TermElabM LetRecView := do
           liftMacroM <| expandMatchAltsIntoMatch decl decl[3]
       let termination ← elabTerminationHints ⟨attrDeclStx[3]⟩
       decls :=
-        decls.push {
-          ref := declId
-          attrs
-          shortDeclName
-          declName
-          parentName?
-          binderIds
-          binders := binderStx
-          type
-          mvar
-          valStx
-          termination
-          docString? := docStr?
-        }
+        decls.push
+          { ref := declId
+            attrs
+            shortDeclName
+            declName
+            parentName?
+            binderIds
+            binders := binderStx
+            type
+            mvar
+            valStx
+            termination
+            docString? := docStr? }
     else
       throwUnsupportedSyntax
   return { decls, body := letRec[3] }
@@ -138,22 +137,21 @@ private def registerLetRecsToLift
     views.mapIdxM fun i view => do
       let value := values[i]!
       let termination := view.termination.rememberExtraParams view.binderIds.size value
-      pure {
-        ref := view.ref
-        fvarId := fvars[i]!.fvarId!
-        attrs := view.attrs
-        shortDeclName := view.shortDeclName
-        declName := view.declName
-        parentName? := view.parentName?
-        lctx
-        localInstances
-        type := view.type
-        val := value
-        mvarId := view.mvar.mvarId!
-        termination
-        binders := view.binders
-        docString? := view.docString?
-      }
+      pure
+        { ref := view.ref
+          fvarId := fvars[i]!.fvarId!
+          attrs := view.attrs
+          shortDeclName := view.shortDeclName
+          declName := view.declName
+          parentName? := view.parentName?
+          lctx
+          localInstances
+          type := view.type
+          val := value
+          mvarId := view.mvar.mvarId!
+          termination
+          binders := view.binders
+          docString? := view.docString? }
   modify fun s => { s with letRecsToLift := toLift.toList ++ s.letRecsToLift }
 
 @[builtin_term_elab «letrec»]

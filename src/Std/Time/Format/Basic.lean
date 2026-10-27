@@ -677,10 +677,9 @@ private def parseDayPeriodFrom (dp : DayPeriodSymbols) : Parser DayPeriod :=
     <|> pstring dp.am *> pure .am <|> pstring dp.pm *> pure .pm
 
 private def parseExtendedDayPeriodFrom (arr : Vector String 6) : Parser ExtendedDayPeriod :=
-  let pairs : Array (String × ExtendedDayPeriod) := #[
-    (arr.get 0, .midnight), (arr.get 1, .night), (arr.get 2, .morning),
-    (arr.get 3, .noon), (arr.get 4, .afternoon), (arr.get 5, .evening)
-  ]
+  let pairs : Array (String × ExtendedDayPeriod) :=
+    #[(arr.get 0, .midnight), (arr.get 1, .night), (arr.get 2, .morning),
+      (arr.get 3, .noon), (arr.get 4, .afternoon), (arr.get 5, .evening)]
   parseFromSymbols pairs
 
 private def exactly (parse : Parser α) (size : Nat) : Parser (Array α) :=
@@ -1042,12 +1041,11 @@ private def markerOfExtendedDayPeriod : ExtendedDayPeriod → HourMarker
 private def build (builder : DateBuilder) (aw : Awareness) : Option DateTime :=
   let offset := builder.O <|> builder.X <|> builder.x <|> builder.Z |>.getD Offset.zero
 
-  let tz : TimeZone := {
-    offset
-    name := builder.V <|> builder.v <|> builder.z |>.getD (offset.toIsoString true)
-    abbreviation := builder.zabbrev |>.getD (offset.toIsoString true)
-    isDST := false
-  }
+  let tz : TimeZone :=
+    { offset
+      name := builder.V <|> builder.v <|> builder.z |>.getD (offset.toIsoString true)
+      abbreviation := builder.zabbrev |>.getD (offset.toIsoString true)
+      isDST := false }
 
   let month := builder.M <|> builder.L |>.getD 0
   let day := builder.d |>.getD 0

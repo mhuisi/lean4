@@ -73,11 +73,9 @@ theorem go_denote_mem_prefix
     (distance : Nat) (input : AIG.RefVec aig w)
     (curr : Nat) (hcurr : curr ≤ w) (s : AIG.RefVec aig curr)
     (start : Nat) (hstart)
-    : ⟦
-        (go aig input distance curr hcurr s).aig,
+    : ⟦ (go aig input distance curr hcurr s).aig,
         ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
-        assign
-      ⟧
+        assign ⟧
       = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply IsPrefix.of
@@ -92,11 +90,9 @@ theorem go_denote_eq
     (curr : Nat) (hcurr : curr ≤ w) (s : AIG.RefVec aig curr)
     : ∀ (idx : Nat) (hidx1 : idx < w),
       curr ≤ idx
-        → ⟦
-            (go aig input distance curr hcurr s).aig,
+        → ⟦ (go aig input distance curr hcurr s).aig,
             (go aig input distance curr hcurr s).vec.get idx hidx1,
-            assign
-          ⟧
+            assign ⟧
           = if hidx : idx < distance then
               false
             else
@@ -158,11 +154,10 @@ end blastShiftLeftConst
 @[simp]
 theorem denote_blastShiftLeftConst (aig : AIG α) (target : ShiftTarget aig w) (assign : α → Bool)
     : ∀ (idx : Nat) (hidx : idx < w),
-      ⟦
-        (blastShiftLeftConst aig target).aig,
+      ⟦ (blastShiftLeftConst aig target).aig,
         (blastShiftLeftConst aig target).vec.get idx hidx,
-        assign
-      ⟧ = if hidx : idx < target.distance then
+        assign ⟧
+        = if hidx : idx < target.distance then
             false
           else
             ⟦aig, target.vec.get (idx - target.distance) (by omega), assign⟧ := by

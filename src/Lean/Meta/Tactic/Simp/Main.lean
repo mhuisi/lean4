@@ -19,15 +19,12 @@ public section
 namespace Lean.Meta
 namespace Simp
 
-register_builtin_option backward.dsimp.proofs : Bool := {
-  defValue := false
-  descr := "Let `dsimp` simplify proof terms"
-}
+register_builtin_option backward.dsimp.proofs : Bool :=
+  { defValue := false, descr := "Let `dsimp` simplify proof terms" }
 
-register_builtin_option debug.simp.check.have : Bool := {
-  defValue := false
-  descr := "(simp) enable consistency checks for `have` telescope simplification"
-}
+register_builtin_option debug.simp.check.have : Bool :=
+  { defValue := false
+    descr := "(simp) enable consistency checks for `have` telescope simplification" }
 
 builtin_initialize congrHypothesisExceptionId : InternalExceptionId ←
   registerInternalExceptionId `congrHypothesisFailed
@@ -375,15 +372,13 @@ def simpArrow (e : Expr) : SimpM Result := do
           problem.
           -/
           if rq.expr.containsFVar h.fvarId! then
-            return {
-              expr := (← mkForallFVars #[h] rq.expr)
-              proof? := (← withDefault <| mkImpDepCongrCtx (← rp.getProof) hq)
-            }
+            return
+              { expr := (← mkForallFVars #[h] rq.expr)
+                proof? := (← withDefault <| mkImpDepCongrCtx (← rp.getProof) hq) }
           else
-            return {
-              expr := e.updateForallE! rp.expr rq.expr
-              proof? := (← withDefault <| mkImpCongrCtx (← rp.getProof) hq)
-            }
+            return
+              { expr := e.updateForallE! rp.expr rq.expr
+                proof? := (← withDefault <| mkImpCongrCtx (← rp.getProof) hq) }
   else
     mkImpCongr e rp (← simp q)
 

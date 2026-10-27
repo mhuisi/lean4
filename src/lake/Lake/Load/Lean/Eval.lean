@@ -207,16 +207,15 @@ public def LakefileConfig.loadFromEnv (env : Environment) (opts : Options)
       return decls
 
   -- Fill in the Package
-  return {
-    pkgDecl,
-    depConfigs,
-    facetDecls,
-    targetDecls,
-    targetDeclMap,
-    defaultTargets,
-    scripts,
-    defaultScripts,
-    testDriver,
-    lintDriver,
-    postUpdateHooks
-  }
+  return
+    { pkgDecl,
+      depConfigs,
+      facetDecls,
+      targetDecls,
+      targetDeclMap,
+      defaultTargets,
+      scripts,
+      defaultScripts,
+      testDriver,
+      lintDriver,
+      postUpdateHooks }

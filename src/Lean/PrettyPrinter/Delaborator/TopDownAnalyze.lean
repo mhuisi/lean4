@@ -29,78 +29,68 @@ that are not strictly necessary.
 namespace Lean
 open Meta SubExpr
 
-register_builtin_option pp.analyze : Bool := {
-  defValue := false
-  descr :=
-    "(pretty printer analyzer) try to determine annotations sufficient to ensure round-tripping"
-}
+register_builtin_option pp.analyze : Bool :=
+  { defValue := false
+    descr :=
+      "(pretty printer analyzer) try to determine annotations sufficient to ensure round-tripping" }
 
-register_builtin_option pp.analyze.checkInstances : Bool := {
+register_builtin_option pp.analyze.checkInstances : Bool :=
   -- TODO: It would be great to make this default to `true`, but currently, `MessageData` does not
   -- include the `LocalInstances`, so this will be very over-aggressive in inserting instances
   -- that would otherwise be easy to synthesize. We may consider threading the instances in the future,
   -- or at least tracking a bool for whether the instances have been lost.
-  defValue := false
-  descr := "(pretty printer analyzer) confirm that instances can be re-synthesized"
-}
+  { defValue := false
+    descr := "(pretty printer analyzer) confirm that instances can be re-synthesized" }
 
-register_builtin_option pp.analyze.typeAscriptions : Bool := {
-  defValue := true
-  descr := "(pretty printer analyzer) add type ascriptions when deemed necessary"
-}
+register_builtin_option pp.analyze.typeAscriptions : Bool :=
+  { defValue := true
+    descr := "(pretty printer analyzer) add type ascriptions when deemed necessary" }
 
-register_builtin_option pp.analyze.trustSubst : Bool := {
-  defValue := false
-  descr :=
-    "(pretty printer analyzer) always 'pretend' applications that can delab to ▸ are 'regular'"
-}
+register_builtin_option pp.analyze.trustSubst : Bool :=
+  { defValue := false
+    descr :=
+      "(pretty printer analyzer) always 'pretend' applications that can delab to ▸ are 'regular'" }
 
-register_builtin_option pp.analyze.trustOfNat : Bool := {
-  defValue := true
-  descr :=
-    "(pretty printer analyzer) always 'pretend' `OfNat.ofNat` applications can elab bottom-up"
-}
+register_builtin_option pp.analyze.trustOfNat : Bool :=
+  { defValue := true
+    descr :=
+      "(pretty printer analyzer) always 'pretend' `OfNat.ofNat` applications can elab bottom-up" }
 
-register_builtin_option pp.analyze.trustOfScientific : Bool := {
-  defValue := true
-  descr :=
-    "(pretty printer analyzer) always 'pretend' `OfScientific.ofScientific` applications can elab \
-      bottom-up"
-}
+register_builtin_option pp.analyze.trustOfScientific : Bool :=
+  { defValue := true
+    descr :=
+      "(pretty printer analyzer) always 'pretend' `OfScientific.ofScientific` applications can \
+        elab bottom-up" }
 
 -- TODO: this is an arbitrary special case of a more general principle.
-register_builtin_option pp.analyze.trustSubtypeMk : Bool := {
-  defValue := true
-  descr := "(pretty printer analyzer) assume the implicit arguments of Subtype.mk can be inferred"
-}
+register_builtin_option pp.analyze.trustSubtypeMk : Bool :=
+  { defValue := true
+    descr :=
+      "(pretty printer analyzer) assume the implicit arguments of Subtype.mk can be inferred" }
 
-register_builtin_option pp.analyze.trustId : Bool := {
-  defValue := true
-  descr := "(pretty printer analyzer) always assume an implicit `fun x => x` can be inferred"
-}
+register_builtin_option pp.analyze.trustId : Bool :=
+  { defValue := true
+    descr := "(pretty printer analyzer) always assume an implicit `fun x => x` can be inferred" }
 
-register_builtin_option pp.analyze.trustKnownFOType2TypeHOFuns : Bool := {
-  defValue := true
-  descr :=
-    "(pretty printer analyzer) omit higher-order functions whose values seem to be knownType2Type"
-}
+register_builtin_option pp.analyze.trustKnownFOType2TypeHOFuns : Bool :=
+  { defValue := true
+    descr :=
+      "(pretty printer analyzer) omit higher-order functions whose values seem to be \
+        knownType2Type" }
 
-register_builtin_option pp.analyze.omitMax : Bool := {
-  defValue := true
-  descr :=
-    "(pretty printer analyzer) omit universe `max` annotations (these constraints can actually \
-      hurt)"
-}
+register_builtin_option pp.analyze.omitMax : Bool :=
+  { defValue := true
+    descr :=
+      "(pretty printer analyzer) omit universe `max` annotations (these constraints can actually \
+        hurt)" }
 
-register_builtin_option pp.analyze.knowsType : Bool := {
-  defValue := true
-  descr := "(pretty printer analyzer) assume the type of the original expression is known"
-}
+register_builtin_option pp.analyze.knowsType : Bool :=
+  { defValue := true
+    descr := "(pretty printer analyzer) assume the type of the original expression is known" }
 
-register_builtin_option pp.analyze.explicitHoles : Bool := {
-  defValue := false
-  descr := "(pretty printer analyzer) use `_` for explicit arguments that can be inferred"
-}
+register_builtin_option pp.analyze.explicitHoles : Bool :=
+  { defValue := false
+    descr := "(pretty printer analyzer) use `_` for explicit arguments that can be inferred" }
 
 def getPPAnalyze (o : Options) : Bool := o.get pp.analyze.name pp.analyze.defValue
 def getPPAnalyzeCheckInstances (o : Options) : Bool :=
@@ -193,12 +183,11 @@ def isHBinOp (e : Expr) : Bool := Id.run do
 
   -- Note: we leave out `HPow.hPow because we expect its homogeneous
   -- version will change soon
-  let ops := #[
-    `HOr.hOr, `HXor.hXor, `HAnd.hAnd,
-    `HAppend.hAppend, `HOrElse.hOrElse, `HAndThen.hAndThen,
-    `HAdd.hAdd, `HSub.hSub, `HMul.hMul, `HDiv.hDiv, `HMod.hMod,
-    `HShiftLeft.hShiftLeft, `HShiftRight
-  ]
+  let ops :=
+    #[`HOr.hOr, `HXor.hXor, `HAnd.hAnd,
+      `HAppend.hAppend, `HOrElse.hOrElse, `HAndThen.hAndThen,
+      `HAdd.hAdd, `HSub.hSub, `HMul.hMul, `HDiv.hDiv, `HMod.hMod,
+      `HShiftLeft.hShiftLeft, `HShiftRight]
   ops.any fun op => op == f.constName!
 
 def replaceLPsWithVars (e : Expr) : MetaM Expr := do
@@ -428,12 +417,11 @@ where
         || (getPPAnalyzeTrustSubtypeMk (← getOptions) && (← getExpr).isAppOfArity ``Subtype.mk 4)
 
     analyzeAppStagedCore { f, fType, args, mvars, bInfos, forceRegularApp }
-      |>.run' {
-        bottomUps := .replicate args.size false
-        higherOrders := .replicate args.size false
-        provideds := .replicate args.size false
-        funBinders := .replicate args.size false
-      }
+      |>.run'
+        { bottomUps := .replicate args.size false
+          higherOrders := .replicate args.size false
+          provideds := .replicate args.size false
+          funBinders := .replicate args.size false }
 
     if !rest.isEmpty then
       -- Note: this shouldn't happen for type-correct terms

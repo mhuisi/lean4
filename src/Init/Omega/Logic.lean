@@ -31,17 +31,18 @@ theorem Decidable.and_or_not_and_not_of_iff {p q : Prop} [Decidable q] (h : p �
   Decidable.iff_iff_and_or_not_and_not.mp h
 
 theorem Decidable.not_iff_iff_and_not_or_not_and [Decidable a] [Decidable b]
-    : (¬(a ↔ b)) ↔ (a ∧ ¬b) ∨ ((¬a) ∧ b) := ⟨
-  fun e =>
-    if hb : b then
-      .inr ⟨fun ha => e ⟨fun _ => hb, fun _ => ha⟩, hb⟩
-    else
-      .inl ⟨
-        if ha : a then ha else False.elim (e ⟨fun ha' => absurd ha' ha, fun hb' => absurd hb' hb⟩),
-        hb
-      ⟩,
-  Or.rec (And.rec fun ha nb w => nb (w.mp ha)) (And.rec fun na hb w => na (w.mpr hb))
-⟩
+    : (¬(a ↔ b)) ↔ (a ∧ ¬b) ∨ ((¬a) ∧ b) :=
+  ⟨ fun e =>
+      if hb : b then
+        .inr ⟨fun ha => e ⟨fun _ => hb, fun _ => ha⟩, hb⟩
+      else
+        .inl
+          ⟨ if ha : a then
+              ha
+            else
+              False.elim (e ⟨fun ha' => absurd ha' ha, fun hb' => absurd hb' hb⟩),
+            hb ⟩,
+    Or.rec (And.rec fun ha nb w => nb (w.mp ha)) (And.rec fun na hb w => na (w.mpr hb)) ⟩
 
 theorem Decidable.and_not_or_not_and_of_not_iff [Decidable a] [Decidable b] (h : ¬(a ↔ b))
     : a ∧ ¬b ∨ ¬a ∧ b :=

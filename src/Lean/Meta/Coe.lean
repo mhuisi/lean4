@@ -72,10 +72,8 @@ partial def expandCoe (e : Expr) : MetaM (Expr × List Name) :=
               return .visit e'.headBeta
         return .continue
 
-register_builtin_option autoLift : Bool := {
-  defValue := true
-  descr := "Insert monadic lifts (i.e., `liftM` and coercions) when needed."
-}
+register_builtin_option autoLift : Bool :=
+  { defValue := true, descr := "Insert monadic lifts (i.e., `liftM` and coercions) when needed." }
 
 /-- Coerces `expr` to `expectedType` using `CoeT`. -/
 def coerceSimpleRecordingNames? (expr expectedType : Expr)

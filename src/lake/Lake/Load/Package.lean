@@ -34,35 +34,30 @@ and the load configuaration.
 -/
 public def mkPackage (loadCfg : LoadConfig) (fileCfg : LakefileConfig) (wsIdx := loadCfg.pkgIdx)
     : Package :=
-  let {
-      pkgDir := dir
-      relPkgDir := relDir
-      configFile
-      relConfigFile
-      relManifestFile
-      scope
-      remoteUrl
-      ..
-    } :=
+  let { pkgDir := dir
+        relPkgDir := relDir
+        configFile
+        relConfigFile
+        relManifestFile
+        scope
+        remoteUrl
+        .. } :=
     loadCfg
-  let {
-      depConfigs
-      defaultTargets
-      scripts
-      defaultScripts
-      testDriver
-      lintDriver
-      -- destructing needed for type-correctness
-      pkgDecl
-      targetDecls
-      targetDeclMap
-      postUpdateHooks
-      ..
-    } :=
+  let { depConfigs
+        defaultTargets
+        scripts
+        defaultScripts
+        testDriver
+        lintDriver
+        -- destructing needed for type-correctness
+        pkgDecl
+        targetDecls
+        targetDeclMap
+        postUpdateHooks
+        .. } :=
     fileCfg
   let { baseName, keyName, origName, config } := pkgDecl
-  {
-    wsIdx,
+  { wsIdx,
     baseName,
     keyName,
     origName,
@@ -82,8 +77,7 @@ public def mkPackage (loadCfg : LoadConfig) (fileCfg : LakefileConfig) (wsIdx :=
     defaultScripts,
     testDriver,
     lintDriver,
-    postUpdateHooks
-  }
+    postUpdateHooks }
 
 @[simp] public theorem wsIdx_mkPackage : (mkPackage l f i).wsIdx = i := by rfl
 @[simp] public theorem depIdxs_mkPackage : (mkPackage l f i).depIdxs = #[] := by rfl

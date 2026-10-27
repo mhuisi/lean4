@@ -13,10 +13,8 @@ public section
 
 namespace Lean.Linter
 
-register_builtin_option linter.suspiciousUnexpanderPatterns : Bool := {
-  defValue := true
-  descr := "enable the 'suspicious unexpander patterns' linter"
-}
+register_builtin_option linter.suspiciousUnexpanderPatterns : Bool :=
+  { defValue := true, descr := "enable the 'suspicious unexpander patterns' linter" }
 
 def getLinterSuspiciousUnexpanderPatterns (o : LinterOptions) : Bool :=
   getLinterValue linter.suspiciousUnexpanderPatterns o

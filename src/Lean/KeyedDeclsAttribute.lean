@@ -97,21 +97,19 @@ private def Table.insert (table : Table γ) (v : AttributeEntry γ) : Table γ :
   | some vs => SMap.insert table v.key (v :: vs)
   | none => SMap.insert table v.key [v]
 
-def ExtensionState.insert (s : ExtensionState γ) (v : AttributeEntry γ) : ExtensionState γ := {
-  table := s.table.insert v
-  newEntries := v.toOLeanEntry :: s.newEntries
-  declNames := s.declNames.insert v.declName
-  erased := s.erased.erase v.declName
-}
+def ExtensionState.insert (s : ExtensionState γ) (v : AttributeEntry γ) : ExtensionState γ :=
+  { table := s.table.insert v
+    newEntries := v.toOLeanEntry :: s.newEntries
+    declNames := s.declNames.insert v.declName
+    erased := s.erased.erase v.declName }
 
 def addBuiltin (attr : KeyedDeclsAttribute γ) (key : Key) (declName : Name) (value : γ) : IO Unit :=
   attr.tableRef.modify fun m => m.insert { key, declName, value, isBuiltin := true }
 
-def mkStateOfTable (table : Table γ) : ExtensionState γ := {
-  table
-  declNames :=
-    table.fold (init := {}) fun s _ es => es.foldl (init := s) fun s e => s.insert e.declName
-}
+def mkStateOfTable (table : Table γ) : ExtensionState γ :=
+  { table
+    declNames :=
+      table.fold (init := {}) fun s _ es => es.foldl (init := s) fun s e => s.insert e.declName }
 
 def ExtensionState.erase (s : ExtensionState γ) (attrName : Name) (declName : Name)
     : CoreM (ExtensionState γ) := do
@@ -125,70 +123,66 @@ protected unsafe def init {γ} (df : Def γ) (attrDeclName : Name := by exact de
     : IO (KeyedDeclsAttribute γ) := do
   let tableRef ← IO.mkRef ({} : Table γ)
   let ext : Extension γ ←
-    registerScopedEnvExtension {
-      name := attrDeclName
-      mkInitial := return mkStateOfTable (← tableRef.get)
-      ofOLeanEntry := fun _ entry => do
-        let ctx ← read
-        match ctx.env.evalConstCheck γ ctx.opts df.valueTypeName entry.declName with
-        | Except.ok f => return { toOLeanEntry := entry, value := f, isBuiltin := false }
-        | Except.error ex => throw (IO.userError ex)
-      addEntry := fun s e => s.insert e
-      toOLeanEntry := (·.toOLeanEntry)
-    }
+    registerScopedEnvExtension
+      { name := attrDeclName
+        mkInitial := return mkStateOfTable (← tableRef.get)
+        ofOLeanEntry := fun _ entry => do
+          let ctx ← read
+          match ctx.env.evalConstCheck γ ctx.opts df.valueTypeName entry.declName with
+          | Except.ok f => return { toOLeanEntry := entry, value := f, isBuiltin := false }
+          | Except.error ex => throw (IO.userError ex)
+        addEntry := fun s e => s.insert e
+        toOLeanEntry := (·.toOLeanEntry) }
   unless df.builtinName.isAnonymous do
-    registerBuiltinAttribute {
-      ref := attrDeclName
-      name := df.builtinName
-      descr := "(builtin) " ++ df.descr
-      add := fun declName stx kind => do
-        unless kind == AttributeKind.global do
-          throwAttrMustBeGlobal df.builtinName kind
-        let key ← df.evalKey true stx
-        let decl ← getConstInfo declName
-        let throwUnexpectedType :=
-          throwAttrDeclNotOfExpectedType df.builtinName declName decl.type
-            (mkConst df.valueTypeName)
-        match decl.type with
-        | Expr.const c _ =>
-          if c != df.valueTypeName then
+    registerBuiltinAttribute
+      { ref := attrDeclName
+        name := df.builtinName
+        descr := "(builtin) " ++ df.descr
+        add := fun declName stx kind => do
+          unless kind == AttributeKind.global do
+            throwAttrMustBeGlobal df.builtinName kind
+          let key ← df.evalKey true stx
+          let decl ← getConstInfo declName
+          let throwUnexpectedType :=
+            throwAttrDeclNotOfExpectedType df.builtinName declName decl.type
+              (mkConst df.valueTypeName)
+          match decl.type with
+          | Expr.const c _ =>
+            if c != df.valueTypeName then
+              throwUnexpectedType
+            else
+              /-
+              builtin_initialize @addBuiltin $(mkConst valueTypeName) $(mkConst attrDeclName) $(key) $(declName) $(mkConst declName)
+              -/
+              let val :=
+                mkAppN (mkConst ``addBuiltin)
+                  #[mkConst df.valueTypeName, mkConst attrDeclName, toExpr key, toExpr declName,
+                    mkConst declName]
+              declareBuiltin declName val
+              df.onAdded true declName key
+          | _ =>
             throwUnexpectedType
-          else
-            /-
-            builtin_initialize @addBuiltin $(mkConst valueTypeName) $(mkConst attrDeclName) $(key) $(declName) $(mkConst declName)
-            -/
-            let val :=
-              mkAppN (mkConst ``addBuiltin) #[
-                mkConst df.valueTypeName, mkConst attrDeclName, toExpr key, toExpr declName,
-                mkConst declName
-              ]
-            declareBuiltin declName val
-            df.onAdded true declName key
+        applicationTime := AttributeApplicationTime.afterCompilation }
+  registerBuiltinAttribute
+    { ref := attrDeclName
+      name := df.name
+      descr := df.descr
+      erase := fun declName => do
+        let s := ext.getState (← getEnv)
+        let s ← s.erase df.name declName
+        modifyEnv fun env => ext.modifyState env fun _ => s
+      add := fun declName stx attrKind => do
+        ensureAttrDeclIsMeta attrDeclName declName attrKind
+        let key ← df.evalKey false stx
+        match IR.getSorryDep (← getEnv) declName with
+        | none =>
+          let val ← evalConstCheck γ df.valueTypeName declName
+          ext.add { key := key, declName := declName, value := val, isBuiltin := true } attrKind
+          df.onAdded false declName key
         | _ =>
-          throwUnexpectedType
-      applicationTime := AttributeApplicationTime.afterCompilation
-    }
-  registerBuiltinAttribute {
-    ref := attrDeclName
-    name := df.name
-    descr := df.descr
-    erase := fun declName => do
-      let s := ext.getState (← getEnv)
-      let s ← s.erase df.name declName
-      modifyEnv fun env => ext.modifyState env fun _ => s
-    add := fun declName stx attrKind => do
-      ensureAttrDeclIsMeta attrDeclName declName attrKind
-      let key ← df.evalKey false stx
-      match IR.getSorryDep (← getEnv) declName with
-      | none =>
-        let val ← evalConstCheck γ df.valueTypeName declName
-        ext.add { key := key, declName := declName, value := val, isBuiltin := true } attrKind
-        df.onAdded false declName key
-      | _ =>
-        -- If the declaration contains `sorry`, we skip `evalConstCheck` to avoid unnecessary bizarre error message
-        pure ()
-    applicationTime := AttributeApplicationTime.afterCompilation
-  }
+          -- If the declaration contains `sorry`, we skip `evalConstCheck` to avoid unnecessary bizarre error message
+          pure ()
+      applicationTime := AttributeApplicationTime.afterCompilation }
   pure { defn := df, tableRef := tableRef, ext := ext }
 
 /-- Retrieve entries tagged with `[attr key]` or `[builtinAttr key]`. -/

@@ -218,11 +218,10 @@ private partial def replaceRecApps
                       \nat application{indentExpr e}"
                   let belowForAlt := xs[numParams]!
                   mkLambdaFVars xs (← loop belowForAlt altBody)
-            pure {
-              matcherApp with
-              alts := altsNew
-              discrs := (← matcherApp.discrs.mapM (loop below))
-            }.toExpr
+            pure
+              { matcherApp with
+                alts := altsNew
+                discrs := (← matcherApp.discrs.mapM (loop below)) }.toExpr
           else
             trace[Elab.definition.structural] "`matcherApp.addArg?` failed"
             processApp e

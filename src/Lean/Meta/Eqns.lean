@@ -16,22 +16,20 @@ public section
 
 namespace Lean.Meta
 
-register_builtin_option backward.eqns.nonrecursive : Bool := {
-  defValue := true
-  descr := "Create fine-grained equational lemmas even for non-recursive definitions."
-  deprecation? := some { since := "2026-03-30" }
-}
+register_builtin_option backward.eqns.nonrecursive : Bool :=
+  { defValue := true
+    descr := "Create fine-grained equational lemmas even for non-recursive definitions."
+    deprecation? := some { since := "2026-03-30" } }
 
-register_builtin_option backward.eqns.deepRecursiveSplit : Bool := {
-  defValue := true
-  descr :=
-    "Create equational lemmas for recursive functions like for non-recursive \
-      functions. If disabled, match statements in recursive function definitions \
-      that do not contain recursive calls do not cause further splits in the \
-      equational lemmas. This was the behavior before Lean 4.12, and the purpose of \
-      this option is to help migrating old code."
-  deprecation? := some { since := "2026-03-30" }
-}
+register_builtin_option backward.eqns.deepRecursiveSplit : Bool :=
+  { defValue := true
+    descr :=
+      "Create equational lemmas for recursive functions like for non-recursive \
+        functions. If disabled, match statements in recursive function definitions \
+        that do not contain recursive calls do not cause further splits in the \
+        equational lemmas. This was the behavior before Lean 4.12, and the purpose of \
+        this option is to help migrating old code."
+    deprecation? := some { since := "2026-03-30" } }
 
 /--
 These options affect the generation of equational theorems in a significant way. For these, their
@@ -213,22 +211,21 @@ Stores in the `eqnsExt` environment extension that `eqThms` are the equational t
 private def registerEqnThms (declName : Name) (eqThms : Array Name) : CoreM Unit := do
   -- unlogged: populated on demand and write-once, thus no observable change
   modifyEnv fun env =>
-    eqnsExt.modifyState (log := .unlogged) env fun s => {
-      s with
-      mapInv :=
-        eqThms.foldl (init := s.mapInv) fun mapInv eqThm =>
-          have : Inhabited _ := ⟨mapInv⟩
-          -- Write-once, as for `MapDeclarationExtension.insert`. Re-registration with the same parent is
-          -- idempotent (e.g. `alreadyGenerated?` re-registers realized equations).
-          match mapInv.find? eqThm with
-          | some prev =>
-            if prev != declName then
-              panic! s!"equation theorem `{eqThm}` is already registered for `{prev}`"
-            else
-              mapInv
-          | none =>
-            mapInv.insert eqThm declName
-    }
+    eqnsExt.modifyState (log := .unlogged) env fun s =>
+      { s with
+        mapInv :=
+          eqThms.foldl (init := s.mapInv) fun mapInv eqThm =>
+            have : Inhabited _ := ⟨mapInv⟩
+            -- Write-once, as for `MapDeclarationExtension.insert`. Re-registration with the same parent is
+            -- idempotent (e.g. `alreadyGenerated?` re-registers realized equations).
+            match mapInv.find? eqThm with
+            | some prev =>
+              if prev != declName then
+                panic! s!"equation theorem `{eqThm}` is already registered for `{prev}`"
+              else
+                mapInv
+            | none =>
+              mapInv.insert eqThm declName }
 
 /--
 Equation theorems are generated on demand, check whether they were generated in an imported file.

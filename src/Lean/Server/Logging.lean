@@ -24,18 +24,16 @@ public def LogConfig.ofLspLogConfig (lspCfg? : Option Lsp.LogConfig) : IO LogCon
   let logFileName := s!"LSP_{time}.log"
   let defaultLogFile : System.FilePath := System.FilePath.join "." logFileName
   let some lspCfg := lspCfg?
-    | return {
-        isEnabled := false
-        logFile := defaultLogFile
-        allowedMethods? := none
-        disallowedMethods? := none
-      }
-  return {
-    isEnabled := true
-    logFile := lspCfg.logDir?.map (System.FilePath.join · logFileName) |>.getD defaultLogFile
-    allowedMethods? := lspCfg.allowedMethods?
-    disallowedMethods? := lspCfg.disallowedMethods?
-  }
+    | return
+        { isEnabled := false
+          logFile := defaultLogFile
+          allowedMethods? := none
+          disallowedMethods? := none }
+  return
+    { isEnabled := true
+      logFile := lspCfg.logDir?.map (System.FilePath.join · logFileName) |>.getD defaultLogFile
+      allowedMethods? := lspCfg.allowedMethods?
+      disallowedMethods? := lspCfg.disallowedMethods? }
 
 open Lean
 
@@ -107,12 +105,8 @@ public def writeLogEntry
     : IO Unit := do
   if ! isMsgAllowed cfg pending msg then
     return
-  let entry : LogEntry := {
-    time := ← Std.Time.DateTime.now
-    direction
-    kind := .ofMessage msg
-    msg
-  }
+  let entry : LogEntry :=
+    { time := ← Std.Time.DateTime.now, direction, kind := .ofMessage msg, msg }
   let entry := toJson entry |>.compress
   log.putStrLn entry
   log.flush

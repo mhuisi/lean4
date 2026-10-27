@@ -28,19 +28,14 @@ structure State where
 Returns a state that already contains `fvarSet` and `fvarIds`. Free variables in `fvarSet` are not
 collected again, so `fvarSet` can contain variables that are not in `fvarIds`.
 -/
-def State.ofFVarSet (fvarSet : FVarIdSet) (fvarIds : Array FVarId := #[]) : State := {
-  fvarSet,
-  fvarIds
-}
+def State.ofFVarSet (fvarSet : FVarIdSet) (fvarIds : Array FVarId := #[]) : State :=
+  { fvarSet, fvarIds }
 
 instance : EmptyCollection State := ⟨State.ofFVarSet {}⟩
 instance : Inhabited State := ⟨{}⟩
 
-def State.add (s : State) (fvarId : FVarId) : State := {
-  s with
-  fvarSet := s.fvarSet.insert fvarId
-  fvarIds := s.fvarIds.push fvarId
-}
+def State.add (s : State) (fvarId : FVarId) : State :=
+  { s with fvarSet := s.fvarSet.insert fvarId, fvarIds := s.fvarIds.push fvarId }
 
 abbrev Visitor := State → State
 

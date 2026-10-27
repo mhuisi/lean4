@@ -49,14 +49,13 @@ where
   -/
   mkAuxDecl (name : Name) (value type : Expr) : CoreM Unit :=
     withOptions (fun opt => opt.set `compiler.extract_closed false) do
-      addAndCompile <| .defnDecl {
-        name := name
-        levelParams := []
-        type := type
-        value := value
-        hints := .abbrev
-        safety := .safe
-      }
+      addAndCompile <| .defnDecl
+        { name := name
+          levelParams := []
+          type := type
+          value := value
+          hints := .abbrev
+          safety := .safe }
 
 /-- Run a SAT solver to obtain an LRAT certificate and use it to produce a proof of UNSAT. -/
 public def lratBitblaster (ctx : TacticContext)
@@ -96,12 +95,11 @@ public def lratBitblaster (ctx : TacticContext)
       let equations := reconstructCounterExample entry.aig assignment atomsAssignment
       let equations :=
         equations.filterMap fun (lhs, synth, rhs) => if synth then none else some (lhs, rhs)
-      return .error {
-        goal
-        unusedHypotheses := reflectionResult.unusedHypotheses
-        equations
-        functionAtoms := #[]
-      }
+      return .error
+        { goal
+          unusedHypotheses := reflectionResult.unusedHypotheses
+          equations
+          functionAtoms := #[] }
 
 /-- Given a pre-existing LRAT certificate in `ctx.lratPath` use it to produce a proof of UNSAT. -/
 public def lratChecker (ctx : TacticContext)

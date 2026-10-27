@@ -45,17 +45,16 @@ theorem find?_bool_eq_some_iff_splits {p : Char → Bool} {s : Slice} {pos : s.P
   rw [find?_bool_eq_some_iff]
   refine ⟨?_, ?_⟩
   · rintro ⟨h, hp, hmin⟩
-    exact ⟨
-      _,
-      _,
-      _,
-      pos.splits_next_right h,
-      hp,
-      fun d hd => by
-        obtain ⟨pos', hlt, hpget⟩ := (pos.splits_next_right h).mem_toList_left_iff.mp hd
-        subst hpget
-        exact hmin _ hlt
-    ⟩
+    exact
+      ⟨ _,
+        _,
+        _,
+        pos.splits_next_right h,
+        hp,
+        fun d hd => by
+          obtain ⟨pos', hlt, hpget⟩ := (pos.splits_next_right h).mem_toList_left_iff.mp hd
+          subst hpget
+          exact hmin _ hlt ⟩
   · rintro ⟨t, c, u, hs, hpc, hmin⟩
     have hne := hs.ne_endPos_of_singleton
     refine ⟨hne, ?_, fun pos' hlt => hmin _ (hs.mem_toList_left_iff.mpr ⟨pos', hlt, rfl⟩)⟩
@@ -116,16 +115,15 @@ theorem Pos.find?_bool_eq_some_iff_splits
       exact hpc
     · obtain ⟨_, hcopy⟩ := Slice.copy_slice_eq_iff_splits.mpr ⟨t, _, hs.of_eq rfl hu, hsplit⟩
       rw [← hcopy]
-      exact mem_toList_copy_iff_exists_get.mpr ⟨
-        pos''.slice pos pos' hle' (Std.le_of_lt hlt),
-        fun h =>
-          Std.ne_of_lt hlt (by
-            rw [← Slice.Pos.ofSlice_slice (h₁ := hle') (h₂ := Std.le_of_lt hlt), h,
-              Slice.Pos.ofSlice_endPos]),
-        by
-          rw [Slice.Pos.get_eq_get_ofSlice]
-          simp [Slice.Pos.ofSlice_slice]
-      ⟩
+      exact mem_toList_copy_iff_exists_get.mpr
+        ⟨ pos''.slice pos pos' hle' (Std.le_of_lt hlt),
+          fun h =>
+            Std.ne_of_lt hlt (by
+              rw [← Slice.Pos.ofSlice_slice (h₁ := hle') (h₂ := Std.le_of_lt hlt), h,
+                Slice.Pos.ofSlice_endPos]),
+          by
+            rw [Slice.Pos.get_eq_get_ofSlice]
+            simp [Slice.Pos.ofSlice_slice] ⟩
 
 theorem Pos.find?_bool_eq_none_iff {p : Char → Bool} {s : Slice} {pos : s.Pos}
     : pos.find? p = none ↔ ∀ pos', pos ≤ pos' → (h : pos' ≠ s.endPos) → p (pos'.get h) = false := by
@@ -205,23 +203,19 @@ theorem Pos.find?_bool_eq_some_iff {p : Char → Bool} {s : String} {pos pos' : 
     endPos_toSlice]
   refine ⟨?_, ?_⟩
   · rintro ⟨pos', ⟨h₁, ⟨h₂, hp⟩, h₃⟩, rfl⟩
-    refine ⟨
-      by simpa [Pos.ofToSlice_le_iff] using! h₁,
-      ⟨by simpa [← Pos.ofToSlice_inj] using h₂, by simpa [Pos.get_ofToSlice] using hp⟩,
-      ?_
-    ⟩
+    refine
+      ⟨ by simpa [Pos.ofToSlice_le_iff] using! h₁,
+        ⟨by simpa [← Pos.ofToSlice_inj] using h₂, by simpa [Pos.get_ofToSlice] using hp⟩,
+        ?_ ⟩
     intro pos'' h₄ h₅
     simpa using h₃ pos''.toSlice (by simpa [Pos.toSlice_le] using h₄) (by simpa using! h₅)
   · rintro ⟨h₁, ⟨h₂, hp⟩, h₃⟩
-    refine ⟨
-      pos'.toSlice,
-      ⟨
-        by simpa [Pos.toSlice_le] using h₁,
-        ⟨by simpa [← Pos.toSlice_inj] using h₂, by simpa using hp⟩,
-        fun p hp₁ hp₂ => ?_
-      ⟩,
-      by simp
-    ⟩
+    refine
+      ⟨ pos'.toSlice,
+        ⟨ by simpa [Pos.toSlice_le] using h₁,
+          ⟨by simpa [← Pos.toSlice_inj] using h₂, by simpa using hp⟩,
+          fun p hp₁ hp₂ => ?_ ⟩,
+        by simp ⟩
     simpa using
       h₃ (Pos.ofToSlice p) (by simpa [Pos.ofToSlice_le_iff] using! hp₁) (by simpa using! hp₂)
 
@@ -299,14 +293,11 @@ theorem find?_bool_eq_some_iff {p : Char → Bool} {s : String} {pos : s.Pos}
     intro pos' hp
     simpa using h' pos'.toSlice hp
   · rintro ⟨⟨h, hp⟩, hmin⟩
-    exact ⟨
-      pos.toSlice,
-      ⟨
-        ⟨by simpa [← Pos.toSlice_inj] using h, by simpa using hp⟩,
-        fun pos' hp => by simpa using hmin (Pos.ofToSlice pos') hp
-      ⟩,
-      by simp
-    ⟩
+    exact
+      ⟨ pos.toSlice,
+        ⟨ ⟨by simpa [← Pos.toSlice_inj] using h, by simpa using hp⟩,
+          fun pos' hp => by simpa using hmin (Pos.ofToSlice pos') hp ⟩,
+        by simp ⟩
 
 theorem find?_bool_eq_some_iff_splits {p : Char → Bool} {s : String} {pos : s.Pos}
     : s.find? p = some pos

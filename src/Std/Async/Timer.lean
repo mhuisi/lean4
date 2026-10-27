@@ -74,25 +74,24 @@ Create a `Selector` that resolves once `s` has finished. `s` only starts when it
 Selectable. Every select or `Selectable.tryOne` that checks `s` before it has finished starts it again
 from `duration`, so a `Sleep` that is checked more often than `duration` never finishes.
 -/
-def selector (s : Sleep) : Selector Unit := {
-  tryFn := do
-    let sleepWaiter ← s.native.next
-    if ← sleepWaiter.isResolved then
-      return some ()
-    else
-      s.native.cancel
-      return none
-  registerFn waiter := do
-    let sleepWaiter ← s.native.next
-    BaseIO.chainTask sleepWaiter.result? fun
-      | none => do
-        return ()
-      | some _ =>
-        let lose := return ()
-        let win promise := promise.resolve (.ok ())
-        waiter.race lose win
-  unregisterFn := s.native.cancel
-}
+def selector (s : Sleep) : Selector Unit :=
+  { tryFn := do
+      let sleepWaiter ← s.native.next
+      if ← sleepWaiter.isResolved then
+        return some ()
+      else
+        s.native.cancel
+        return none
+    registerFn waiter := do
+      let sleepWaiter ← s.native.next
+      BaseIO.chainTask sleepWaiter.result? fun
+        | none => do
+          return ()
+        | some _ =>
+          let lose := return ()
+          let win promise := promise.resolve (.ok ())
+          waiter.race lose win
+    unregisterFn := s.native.cancel }
 
 end Sleep
 

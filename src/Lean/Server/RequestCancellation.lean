@@ -23,12 +23,11 @@ structure RequestCancellationToken where
 namespace RequestCancellationToken
 
 def new : BaseIO RequestCancellationToken := do
-  return {
-    cancelledByCancelRequest := ← IO.CancelToken.new
-    cancelledByEdit := ← IO.CancelToken.new
-    requestCancellationPromise := ← IO.Promise.new
-    editCancellationPromise := ← IO.Promise.new
-  }
+  return
+    { cancelledByCancelRequest := ← IO.CancelToken.new
+      cancelledByEdit := ← IO.CancelToken.new
+      requestCancellationPromise := ← IO.Promise.new
+      editCancellationPromise := ← IO.Promise.new }
 
 def cancelByCancelRequest (tk : RequestCancellationToken) : BaseIO Unit := do
   tk.cancelledByCancelRequest.set

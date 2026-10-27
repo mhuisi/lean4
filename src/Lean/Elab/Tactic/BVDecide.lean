@@ -278,11 +278,8 @@ def evalBVNormalize : Tactic := fun
       replaceMainGoal []
     else
       let hyps :=
-        state.hypotheses.map fun hyp => {
-          userName := hyp.name
-          type := hyp.type
-          value := hyp.value
-        }
+        state.hypotheses.map fun hyp =>
+          { userName := hyp.name, type := hyp.type, value := hyp.value }
       let (_, goal) ← MVarId.assertHypotheses goal hyps
       replaceMainGoal [goal]
   | _ =>

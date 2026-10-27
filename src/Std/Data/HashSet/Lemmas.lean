@@ -1350,10 +1350,9 @@ variable {m m₁ m₂ : HashSet α}
 
 @[simp]
 theorem equiv_emptyWithCapacity_iff_isEmpty [EquivBEq α] [LawfulHashable α] {c : Nat}
-    : m ~m emptyWithCapacity c ↔ m.isEmpty := ⟨
-  fun ⟨h⟩ => HashMap.equiv_emptyWithCapacity_iff_isEmpty.mp h,
-  fun h => ⟨HashMap.equiv_emptyWithCapacity_iff_isEmpty.mpr h⟩
-⟩
+    : m ~m emptyWithCapacity c ↔ m.isEmpty :=
+  ⟨ fun ⟨h⟩ => HashMap.equiv_emptyWithCapacity_iff_isEmpty.mp h,
+    fun h => ⟨HashMap.equiv_emptyWithCapacity_iff_isEmpty.mpr h⟩ ⟩
 
 @[simp]
 theorem equiv_empty_iff_isEmpty [EquivBEq α] [LawfulHashable α] : m ~m ∅ ↔ m.isEmpty :=

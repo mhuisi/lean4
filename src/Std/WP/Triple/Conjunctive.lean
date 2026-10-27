@@ -42,8 +42,8 @@ theorem and
     {pre₁ pre₂ : Pred} {post₁ post₂ : Value → Pred} {eposts₁ eposts₂ : EPosts}
     (h₁ : Triple x pre₁ post₁ eposts₁) (h₂ : Triple x pre₂ post₂ eposts₂)
     : Triple x (pre₁ ⊓ pre₂) (post₁ ⊓ post₂) (eposts₁ ⊓ eposts₂) :=
-  ⟨PartialOrder.rel_trans (meet_mono h₁.le_wp h₂.le_wp)
-    (WPConjunctive.wp_meet_wp_le post₁ post₂ eposts₁ eposts₂)⟩
+  ⟨ PartialOrder.rel_trans (meet_mono h₁.le_wp h₂.le_wp)
+      (WPConjunctive.wp_meet_wp_le post₁ post₂ eposts₁ eposts₂) ⟩
 
 /--
 Modus ponens for two Hoare triple specifications of a program `x`. This theorem separates proofs.
@@ -73,10 +73,10 @@ theorem observe
     (hp : ∀ C : Pred, wp obs (fun _ => C) ⊥ ⊑ C) (h : Triple obs pre post eposts)
     (hgoal : Triple obs pre (post ⇨ fun _ => wp prog post' eposts') (eposts ⇨ ⊥))
     : Triple prog pre post' eposts' :=
-  ⟨PartialOrder.rel_trans (le_meet _ _ _ PartialOrder.rel_refl PartialOrder.rel_refl) <|
-    PartialOrder.rel_trans (mp h hgoal).le_wp <|
-      PartialOrder.rel_trans (WP.wp_monotone (meet_le_right _ _) (meet_le_right _ _))
-        (hp (wp prog post' eposts'))⟩
+  ⟨ PartialOrder.rel_trans (le_meet _ _ _ PartialOrder.rel_refl PartialOrder.rel_refl) <|
+      PartialOrder.rel_trans (mp h hgoal).le_wp <|
+        PartialOrder.rel_trans (WP.wp_monotone (meet_le_right _ _) (meet_le_right _ _))
+          (hp (wp prog post' eposts')) ⟩
 
 end Triple
 

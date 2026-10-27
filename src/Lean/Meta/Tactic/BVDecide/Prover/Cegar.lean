@@ -57,12 +57,11 @@ where
         lastCex.filterMap fun (lhs, synth, rhs) => if synth then none else some (lhs, rhs)
 
       let funState := (← getThe BVDecide.State).theoryState.funState
-      return .error {
-        goal := (← read).goal
-        unusedHypotheses := (← read).unusedHypotheses
-        equations := equations
-        functionAtoms := funState.atoms.map (·.funExpr)
-      }
+      return .error
+        { goal := (← read).goal
+          unusedHypotheses := (← read).unusedHypotheses
+          equations := equations
+          functionAtoms := funState.atoms.map (·.funExpr) }
 
   configureSolver : CegarM Unit := do
     let solver ← CegarM.getSatSolver

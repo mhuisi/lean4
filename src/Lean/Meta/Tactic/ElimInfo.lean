@@ -97,14 +97,13 @@ def getElimExprInfo (elimExpr : Expr) (baseDeclName? : Option Name := none) : Me
               let altDeclName := base ++ name
               if env.contains altDeclName then some altDeclName else none
             altsInfo := altsInfo.push { name, declName?, numFields, provesMotive }
-      pure {
-        elimExpr
-        elimType
-        motivePos
-        targetsPos
-        altsInfo
-        numComplexMotiveArgs := complexMotiveArgs.size
-      }
+      pure
+        { elimExpr
+          elimType
+          motivePos
+          targetsPos
+          altsInfo
+          numComplexMotiveArgs := complexMotiveArgs.size }
 
 def getElimInfo (elimName : Name) (baseDeclName? : Option Name := none) : MetaM ElimInfo := do
   getElimExprInfo (← mkConstWithFreshMVarLevels elimName) baseDeclName?
@@ -168,11 +167,10 @@ def addCustomEliminatorEntry (es : CustomEliminators) (e : CustomEliminator) : C
 
 builtin_initialize customEliminatorExt
     : SimpleScopedEnvExtension CustomEliminator CustomEliminators ←
-  registerSimpleScopedEnvExtension {
-    initial := {}
-    addEntry := addCustomEliminatorEntry
-    finalizeImport := fun { map := map } => { map := map.switch }
-  }
+  registerSimpleScopedEnvExtension
+    { initial := {}
+      addEntry := addCustomEliminatorEntry
+      finalizeImport := fun { map := map } => { map := map.switch } }
 
 def mkCustomEliminator (elimName : Name) (induction : Bool) : MetaM CustomEliminator := do
   let elimInfo ← getElimInfo elimName
@@ -239,12 +237,11 @@ example (x : Three) (p : Three → Prop) : p x := by
 -/
 @[builtin_doc]
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `induction_eliminator
-    descr := "custom `rec`-like eliminator for the `induction` tactic"
-    add := fun declName _ attrKind => do
-      discard <| addCustomEliminator declName attrKind (induction := true) |>.run {} {}
-  }
+  registerBuiltinAttribute
+    { name := `induction_eliminator
+      descr := "custom `rec`-like eliminator for the `induction` tactic"
+      add := fun declName _ attrKind => do
+        discard <| addCustomEliminator declName attrKind (induction := true) |>.run {} {} }
 
 /--
 Registers a custom eliminator for the `cases` tactic.
@@ -279,12 +276,11 @@ example (x : Three) (p : Three → Prop) : p x := by
 -/
 @[builtin_doc]
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `cases_eliminator
-    descr := "custom `casesOn`-like eliminator for the `cases` tactic"
-    add := fun declName _ attrKind => do
-      discard <| addCustomEliminator declName attrKind (induction := false) |>.run {} {}
-  }
+  registerBuiltinAttribute
+    { name := `cases_eliminator
+      descr := "custom `casesOn`-like eliminator for the `cases` tactic"
+      add := fun declName _ attrKind => do
+        discard <| addCustomEliminator declName attrKind (induction := false) |>.run {} {} }
 
 /--
 Gets all the eliminators defined using the `@[induction_eliminator]` and `@[cases_eliminator]` attributes.

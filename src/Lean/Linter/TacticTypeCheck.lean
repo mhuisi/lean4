@@ -21,10 +21,9 @@ Warn when the goal target is not type-correct at `.implicit` transparency.
 This can happen when e.g. `unfold` leaves hypotheses whose types still refer to
 the pre-unfolded definition, preventing `rw`/`simp` from matching patterns.
 -/
-register_builtin_option linter.tacticCheckInstances : Bool := {
-  defValue := false
-  descr := "enable the linter that type-checks every tactic goal at `.implicit` transparency"
-}
+register_builtin_option linter.tacticCheckInstances : Bool :=
+  { defValue := false
+    descr := "enable the linter that type-checks every tactic goal at `.implicit` transparency" }
 
 /-- A linter that runs `Meta.check _ .implicit` on every tactic goal. -/
 def tacticCheckInstances : Linter where

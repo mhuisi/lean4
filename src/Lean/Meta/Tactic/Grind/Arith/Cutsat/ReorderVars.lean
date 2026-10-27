@@ -37,10 +37,8 @@ private def updateUpper (a : Nat) (x : Var) : CollectM Unit := do
 
 private def updateMin (a : Nat) (x : Var) : CollectM Unit := do
   modify fun infos =>
-    infos.modify x fun info => {
-      info with
-      minCoeff := if info.minCoeff == 0 then a else min a info.minCoeff
-    }
+    infos.modify x fun info =>
+      { info with minCoeff := if info.minCoeff == 0 then a else min a info.minCoeff }
 
 private def updateVarCoeff (a : Int) (x : Var) : CollectM Unit := do
   updateMin a.natAbs x
@@ -126,30 +124,17 @@ def _root_.Int.Internal.Linear.Poly.reorder (p : Poly) (old2new : Array Var) : P
   | .add a x p => .add a old2new[x]! (p.reorder old2new)
 
 -- Remark: `{ c with ... }` would copy `c.depth?`, see `reorderVars`.
-def DvdCnstr.reorder (c : DvdCnstr) (old2new : Array Var) : DvdCnstr := {
-  d := c.d
-  p := c.p.reorder old2new
-  h := .reorder c
-  : DvdCnstr
-}.norm
+def DvdCnstr.reorder (c : DvdCnstr) (old2new : Array Var) : DvdCnstr :=
+  { d := c.d, p := c.p.reorder old2new, h := .reorder c : DvdCnstr }.norm
 
-def EqCnstr.reorder (c : EqCnstr) (old2new : Array Var) : EqCnstr := {
-  p := c.p.reorder old2new
-  h := .reorder c
-  : EqCnstr
-}.norm
+def EqCnstr.reorder (c : EqCnstr) (old2new : Array Var) : EqCnstr :=
+  { p := c.p.reorder old2new, h := .reorder c : EqCnstr }.norm
 
-def LeCnstr.reorder (c : LeCnstr) (old2new : Array Var) : LeCnstr := {
-  p := c.p.reorder old2new
-  h := .reorder c
-  : LeCnstr
-}.norm
+def LeCnstr.reorder (c : LeCnstr) (old2new : Array Var) : LeCnstr :=
+  { p := c.p.reorder old2new, h := .reorder c : LeCnstr }.norm
 
-def DiseqCnstr.reorder (c : DiseqCnstr) (old2new : Array Var) : DiseqCnstr := {
-  p := c.p.reorder old2new
-  h := .reorder c
-  : DiseqCnstr
-}.norm
+def DiseqCnstr.reorder (c : DiseqCnstr) (old2new : Array Var) : DiseqCnstr :=
+  { p := c.p.reorder old2new, h := .reorder c : DiseqCnstr }.norm
 
 def reorderVarMap [Inhabited α] (m : PArray α) (new2old : Array Var) : PArray α := Id.run do
   let mut r := {}
@@ -209,23 +194,22 @@ def reorderVars (force := false) : GoalM Unit := do
   equations are stored directly, so we record the current depth here.
   -/
   let depth ← getGoalStackDepth
-  modify' fun s => {
-    s with
-    vars := reorderVarMap s.vars new2old
-    varMap := s.varMap.map fun x => old2new[x]!
-    varsHistory := s.varsHistory.push (s.vars, s.varMap)
-    natDef := s.natDef.map fun x => old2new[x]!
-    dvds := s.dvds.map fun _ => none
-    lowers := s.lowers.map fun _ => {}
-    uppers := s.uppers.map fun _ => {}
-    diseqs := s.diseqs.map fun _ => {}
-    elimEqs :=
-      reorderVarMap s.elimEqs new2old
-        |>.map fun c? => c?.map fun c => { c.reorder old2new with depth? := some depth }
-    elimStack := s.elimStack.map fun x => old2new[x]!
-    occurs := s.occurs.map fun _ => {}
-    diseqSplits := {}
-  }
+  modify' fun s =>
+    { s with
+      vars := reorderVarMap s.vars new2old
+      varMap := s.varMap.map fun x => old2new[x]!
+      varsHistory := s.varsHistory.push (s.vars, s.varMap)
+      natDef := s.natDef.map fun x => old2new[x]!
+      dvds := s.dvds.map fun _ => none
+      lowers := s.lowers.map fun _ => {}
+      uppers := s.uppers.map fun _ => {}
+      diseqs := s.diseqs.map fun _ => {}
+      elimEqs :=
+        reorderVarMap s.elimEqs new2old
+          |>.map fun c? => c?.map fun c => { c.reorder old2new with depth? := some depth }
+      elimStack := s.elimStack.map fun x => old2new[x]!
+      occurs := s.occurs.map fun _ => {}
+      diseqSplits := {} }
   for c in dvds do
     c.assert
   for c in ineqs do

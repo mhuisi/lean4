@@ -390,12 +390,11 @@ theorem exists_cell_of_updateCell
         ∧ (l.updateCell k f hlb).impl.toListModel.Perm
           ((f (List.findCell l.toListModel (compare k))).inner.toList ++ l')
         ∧ (containsKey k l' = false) := by
-  refine ⟨
-    l.toListModel.filter (compare k ·.1 == .gt) ++ l.toListModel.filter (compare k ·.1 == .lt),
-    ?_,
-    ?_,
-    ?_
-  ⟩
+  refine
+    ⟨ l.toListModel.filter (compare k ·.1 == .gt) ++ l.toListModel.filter (compare k ·.1 == .lt),
+      ?_,
+      ?_,
+      ?_ ⟩
   · conv => lhs; rw [toListModel_eq_append (compare k) hlo]
     simpa using List.perm_append_comm_assoc _ _ _
   · conv => lhs; rw [toListModel_updateCell hlb hlo]
@@ -406,9 +405,10 @@ theorem exists_cell_of_updateCell
       <;> simp_all [← not_compare_eq_iff_beq_eq_false]
 
 theorem Ordered.distinctKeys [BEq α] [Ord α] [LawfulBEqOrd α] {l : Impl α β} (h : l.Ordered)
-    : DistinctKeys l.toListModel := ⟨by
-  rw [keys_eq_map, List.pairwise_map]
-  exact h.imp (fun h => by simp [← LawfulBEqOrd.not_compare_eq_iff_beq_eq_false, h])⟩
+    : DistinctKeys l.toListModel :=
+  ⟨ by
+      rw [keys_eq_map, List.pairwise_map]
+      exact h.imp (fun h => by simp [← LawfulBEqOrd.not_compare_eq_iff_beq_eq_false, h]) ⟩
 
 /-- This is the general theorem to show that modification operations are correct. -/
 theorem toListModel_updateCell_perm
@@ -583,10 +583,9 @@ theorem applyCell_eq_apply_toListModel
   rw [hfg, hg₁ _ _ _ _ hperm, hg]
   · simp only [containsKey_append, Bool.or_eq_false_iff, containsKey_eq_false_iff_forall_mem_keys,
       keys_eq_map, List.mem_map, forall_exists_index, and_imp, forall_apply_eq_imp_iff₂]
-    exact ⟨
-      fun p hp => by simp [hll p hp, ← not_compare_eq_iff_beq_eq_false],
-      fun p hp => by simp [hrr p hp, ← not_compare_eq_iff_beq_eq_false]
-    ⟩
+    exact
+      ⟨ fun p hp => by simp [hll p hp, ← not_compare_eq_iff_beq_eq_false],
+        fun p hp => by simp [hrr p hp, ← not_compare_eq_iff_beq_eq_false] ⟩
   · refine ⟨?_⟩
     rw [keys_eq_map, List.pairwise_map]
     exact hd.imp (fun hp => by simp_all [← not_compare_eq_iff_beq_eq_false])

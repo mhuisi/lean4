@@ -247,10 +247,8 @@ instance : ToSnapshotTree TacticFinishedSnapshot where
 
 /-- Applies the given transformation to the `TacticFinishedSnapshot`. -/
 def TacticFinishedSnapshot.transform (s : TacticFinishedSnapshot) (trans : SnapshotTreeTransform)
-    : TacticFinishedSnapshot := {
-  s with
-  moreSnaps := s.moreSnaps.map (·.map (sync := true) (·.transform trans))
-}
+    : TacticFinishedSnapshot :=
+  { s with moreSnaps := s.moreSnaps.map (·.map (sync := true) (·.transform trans)) }
 
 /-- Snapshot just before execution of a tactic. -/
 structure TacticParsedSnapshotInner (α : Type) extends Language.Snapshot where
@@ -266,10 +264,9 @@ instance : Inhabited (TacticParsedSnapshotInner α) where
 
 partial instance [ToSnapshotTree α] : ToSnapshotTree (TacticParsedSnapshotInner α) where
   toSnapshotTreeM s :=
-    return ⟨
-      ← Snapshot.transform s.toSnapshot,
-      (← s.inner?.toArray.mapM (·.transform)) ++ #[← s.finished.transform]
-    ⟩
+    return
+      ⟨ ← Snapshot.transform s.toSnapshot,
+        (← s.inner?.toArray.mapM (·.transform)) ++ #[← s.finished.transform] ⟩
 
 structure TacticParsedSnapshot where
   transformed : TransformedSnap (TacticParsedSnapshotInner TacticParsedSnapshot)
@@ -484,11 +481,8 @@ of tactics, to be generalized) via `withNarrowed(Arg)TacticReuse`.
 def withReuseContext [Monad m] [MonadWithReaderOf Core.Context m] (stx : Syntax) (act : m α)
     : m α := do
   withTheReader Core.Context
-    (fun ctx => {
-      ctx with
-      ref := stx
-      suppressElabErrors := ctx.suppressElabErrors && stx.hasMissing
-    })
+    (fun ctx =>
+      { ctx with ref := stx, suppressElabErrors := ctx.suppressElabErrors && stx.hasMissing })
     act
 
 /--
@@ -515,18 +509,16 @@ def withNarrowedTacticReuse
   let opts ← getOptions
   let ctx ← readThe Term.Context
   withTheReader Term.Context
-    (fun ctx => {
-      ctx with
-      tacSnap? :=
-        ctx.tacSnap?.map fun tacSnap => {
-          tacSnap with
-          old? :=
-            tacSnap.old?.bind fun old => do
-              let (oldOuter, oldInner) := split old.stx
-              guard <| outer.eqWithInfoAndTraceReuse opts oldOuter
-              return { old with stx := oldInner }
-        }
-    })
+    (fun ctx =>
+      { ctx with
+        tacSnap? :=
+          ctx.tacSnap?.map fun tacSnap =>
+            { tacSnap with
+              old? :=
+                tacSnap.old?.bind fun old => do
+                  let (oldOuter, oldInner) := split old.stx
+                  guard <| outer.eqWithInfoAndTraceReuse opts oldOuter
+                  return { old with stx := oldInner } } })
     do
       if let some oldOuter := ctx.tacSnap?.bind (·.old?) then
         if (← read).tacSnap?.bind (·.old?) |>.isNone then
@@ -560,15 +552,14 @@ def withoutTacticIncrementality
     : m α := do
   let opts ← getOptions
   withTheReader Term.Context
-    (fun ctx => {
-      ctx with
-      tacSnap? :=
-        ctx.tacSnap?.filter fun tacSnap => Id.run do
-          if let some old := tacSnap.old? then
-            if cond && opts.getBool `trace.Elab.reuse then
-              dbg_trace "reuse stopped: guard failed at {old.stx}"
-          return !cond
-    })
+    (fun ctx =>
+      { ctx with
+        tacSnap? :=
+          ctx.tacSnap?.filter fun tacSnap => Id.run do
+            if let some old := tacSnap.old? then
+              if cond && opts.getBool `trace.Elab.reuse then
+                dbg_trace "reuse stopped: guard failed at {old.stx}"
+            return !cond })
     act
 
 /-- Disables incremental tactic reuse for `act` if `cond` is true. -/
@@ -577,18 +568,16 @@ def withoutTacticReuse
     : m α := do
   let opts ← getOptions
   withTheReader Term.Context
-    (fun ctx => {
-      ctx with
-      tacSnap? :=
-        ctx.tacSnap?.map fun tacSnap => {
-          tacSnap with
-          old? :=
-            tacSnap.old?.filter fun old => Id.run do
-              if cond && opts.getBool `trace.Elab.reuse then
-                dbg_trace "reuse stopped: guard failed at {old.stx}"
-              return !cond
-        }
-    })
+    (fun ctx =>
+      { ctx with
+        tacSnap? :=
+          ctx.tacSnap?.map fun tacSnap =>
+            { tacSnap with
+              old? :=
+                tacSnap.old?.filter fun old => Id.run do
+                  if cond && opts.getBool `trace.Elab.reuse then
+                    dbg_trace "reuse stopped: guard failed at {old.stx}"
+                  return !cond } })
     act
 
 @[inherit_doc Core.wrapAsyncAsSnapshot]
@@ -810,11 +799,10 @@ private def withoutModifyingStateWithInfoAndMessagesImpl (x : TermElabM α) : Te
   try
     withSaveInfoContext x
   finally
-    let saved := {
-      saved with
-      meta.core.infoState := (← getInfoState)
-      meta.core.messages := (← getThe Core.State).messages
-    }
+    let saved :=
+      { saved with
+        meta.core.infoState := (← getInfoState)
+        meta.core.messages := (← getThe Core.State).messages }
     restoreState saved
 
 /--
@@ -838,15 +826,14 @@ def getInfoTreeWithContext? : TermElabM (Option InfoTree) := do
   let ctx ← readThe Core.Context
   let s ← getThe Core.State
   let ctx :=
-    PartialContextInfo.commandCtx {
-      env := s.env
-      fileMap := ctx.fileMap
-      mctx := {}
-      currNamespace := ctx.currNamespace
-      openDecls := ctx.openDecls
-      options := ctx.options
-      ngen := s.ngen
-    }
+    PartialContextInfo.commandCtx
+      { env := s.env
+        fileMap := ctx.fileMap
+        mctx := {}
+        currNamespace := ctx.currNamespace
+        openDecls := ctx.openDecls
+        options := ctx.options
+        ngen := s.ngen }
   return InfoTree.context ctx t
 
 /-- For testing `TermElabM` methods. The #eval command will sign the error. -/
@@ -865,11 +852,10 @@ def liftLevelM (x : LevelElabM α) : TermElabM α := do
   let ctx ← read
   let mctx ← getMCtx
   let ngen ← getNGen
-  let lvlCtx : Level.Context := {
-    options := (← getOptions)
-    ref := (← getRef)
-    autoBoundImplicit := ctx.autoBoundImplicitContext.map (·.autoImplicitEnabled) |>.getD false
-  }
+  let lvlCtx : Level.Context :=
+    { options := (← getOptions)
+      ref := (← getRef)
+      autoBoundImplicit := ctx.autoBoundImplicitContext.map (·.autoImplicitEnabled) |>.getD false }
   match (x lvlCtx).run { ngen := ngen, mctx := mctx, levelNames := (← getLevelNames) } with
   | .ok a newS => setMCtx newS.mctx; setNGen newS.ngen; setLevelNames newS.levelNames; pure a
   | .error ex _ => throw ex
@@ -881,10 +867,8 @@ def withPushMacroExpansionStack
     [MonadWithReaderOf Context m] (beforeStx afterStx : Syntax) (x : m α)
     : m α :=
   withTheReader Context
-    (fun ctx => {
-      ctx with
-      macroStack := { before := beforeStx, after := afterStx } :: ctx.macroStack
-    })
+    (fun ctx =>
+      { ctx with macroStack := { before := beforeStx, after := afterStx } :: ctx.macroStack })
     x
 
 /-- Elaborate `x` with `stx` on the macro stack and produce macro expansion info -/
@@ -914,13 +898,12 @@ def elabToSyntax
       trace[Elab.step] "elabToSyntax hint: {hint}"
     fixedTermElab ty?
   withReader
-    (fun ctx => {
-      ctx with
-      fixedTermElabs := ctx.fixedTermElabs.push fixedTermElab.toFixedTermElabRef
-    })
+    (fun ctx =>
+      { ctx with fixedTermElabs := ctx.fixedTermElabs.push fixedTermElab.toFixedTermElabRef })
     do
-      k ⟨Syntax.node (.fromRef ref) ``Lean.Parser.Term.elabToSyntax
-        #[mkAtom "elabToSyntax% ", Syntax.mkNatLit ctx.fixedTermElabs.size]⟩
+      k
+        ⟨ Syntax.node (.fromRef ref) ``Lean.Parser.Term.elabToSyntax
+            #[mkAtom "elabToSyntax% ", Syntax.mkNatLit ctx.fixedTermElabs.size] ⟩
 
 @[builtin_term_elab Lean.Parser.Term.elabToSyntax]
 def elabFixedTermElab : TermElab := fun stx expectedType? => do
@@ -937,11 +920,10 @@ The method `synthesizeSyntheticMVars` is used to process the metavariables on th
 -/
 def registerSyntheticMVar (stx : Syntax) (mvarId : MVarId) (kind : SyntheticMVarKind)
     : TermElabM Unit := do
-  modify fun s => {
-    s with
-    syntheticMVars := s.syntheticMVars.insert mvarId { stx, kind }
-    pendingMVars := mvarId :: s.pendingMVars
-  }
+  modify fun s =>
+    { s with
+      syntheticMVars := s.syntheticMVars.insert mvarId { stx, kind }
+      pendingMVars := mvarId :: s.pendingMVars }
 
 def registerSyntheticMVarWithCurrRef (mvarId : MVarId) (kind : SyntheticMVarKind)
     : TermElabM Unit := do
@@ -1469,10 +1451,8 @@ def mkCoe
         withoutMacroStackAtErr do
           match ← coerceCollectingNames? e expectedType with
           | .some (eNew, expandedCoeDecls) =>
-            pushInfoLeaf (.ofCustomInfo {
-              stx := ← getRef
-              value := Dynamic.mk <| CoeExpansionTrace.mk expandedCoeDecls
-            })
+            pushInfoLeaf (.ofCustomInfo
+              { stx := ← getRef, value := Dynamic.mk <| CoeExpansionTrace.mk expandedCoeDecls })
             return eNew
           | .none =>
             failure
@@ -1601,31 +1581,28 @@ def withExpectedType (expectedType? : Option Expr) (x : Expr → TermElabM Expr)
 
 /-- Save relevant context for term elaboration postponement. -/
 def saveContext : TermElabM SavedContext :=
-  return {
-    macroStack := (← read).macroStack
-    declName? := (← read).declName?
-    options := (← getOptions)
-    openDecls := (← getOpenDecls)
-    errToSorry := (← read).errToSorry
-    levelNames := (← get).levelNames
-    fixedTermElabs := (← read).fixedTermElabs
-    checkDeprecated := (← readThe Core.Context).checkDeprecated
-  }
+  return
+    { macroStack := (← read).macroStack
+      declName? := (← read).declName?
+      options := (← getOptions)
+      openDecls := (← getOpenDecls)
+      errToSorry := (← read).errToSorry
+      levelNames := (← get).levelNames
+      fixedTermElabs := (← read).fixedTermElabs
+      checkDeprecated := (← readThe Core.Context).checkDeprecated }
 
 /-- Execute `x` with the context saved using `saveContext`. -/
 def withSavedContext (savedCtx : SavedContext) (x : TermElabM α) : TermElabM α := do
-  withReader (fun ctx => {
-      ctx with
-      declName? := savedCtx.declName?
-      macroStack := savedCtx.macroStack
-      errToSorry := savedCtx.errToSorry
-      fixedTermElabs := savedCtx.fixedTermElabs
-    }) <|
-    withTheReader Core.Context (fun ctx => {
-        ctx.setOptions savedCtx.options with
-        openDecls := savedCtx.openDecls
-        checkDeprecated := savedCtx.checkDeprecated
-      }) <|
+  withReader (fun ctx =>
+      { ctx with
+        declName? := savedCtx.declName?
+        macroStack := savedCtx.macroStack
+        errToSorry := savedCtx.errToSorry
+        fixedTermElabs := savedCtx.fixedTermElabs }) <|
+    withTheReader Core.Context (fun ctx =>
+        { ctx.setOptions savedCtx.options with
+          openDecls := savedCtx.openDecls
+          checkDeprecated := savedCtx.checkDeprecated }) <|
       withLevelNames savedCtx.levelNames x
 
 /--
@@ -1642,10 +1619,9 @@ private def postponeElabTermCore (stx : Syntax) (expectedType? : Option Expr) : 
 def getSyntheticMVarDecl? (mvarId : MVarId) : TermElabM (Option SyntheticMVarDecl) :=
   return (← get).syntheticMVars.get? mvarId
 
-register_builtin_option debug.byAsSorry : Bool := {
-  defValue := false
-  descr := "replace `by ..` blocks with `sorry` IF the expected type is a proposition"
-}
+register_builtin_option debug.byAsSorry : Bool :=
+  { defValue := false
+    descr := "replace `by ..` blocks with `sorry` IF the expected type is a proposition" }
 
 /--
 Creates a new metavariable of type `type` that will be synthesized using the tactic code.
@@ -1744,15 +1720,14 @@ def mkTermInfo
     unless (← hasInfoHoleFor mvarId) do
       return Sum.inr mvarId
   let e := removeSaveInfoAnnotation e
-  return Sum.inl <| Info.ofTermInfo {
-    elaborator
-    lctx := lctx?.getD (← getLCtx)
-    expr := e
-    stx
-    expectedType?
-    isBinder
-    isDisplayableTerm
-  }
+  return Sum.inl <| Info.ofTermInfo
+    { elaborator
+      lctx := lctx?.getD (← getLCtx)
+      expr := e
+      stx
+      expectedType?
+      isBinder
+      isDisplayableTerm }
 
 def mkPartialTermInfo
     (elaborator : Name) (stx : Syntax)
@@ -2357,10 +2332,8 @@ def withoutAutoBoundImplicit (k : TermElabM α) : TermElabM α := do
 partial def withAutoBoundImplicitForbiddenPred (p : Name → Bool) (x : TermElabM α)
     : TermElabM α := do
   withReader
-    (fun ctx => {
-      ctx with
-      autoBoundImplicitForbidden := fun n => p n || ctx.autoBoundImplicitForbidden n
-    })
+    (fun ctx =>
+      { ctx with autoBoundImplicitForbidden := fun n => p n || ctx.autoBoundImplicitForbidden n })
     x
 
 /--
@@ -2426,15 +2399,14 @@ def addAutoBoundImplicitsInlayHint (autos : Array Expr) (inlayHintPos : String.P
     let tooltip :=
       "\n".intercalate <| description :: codeBlockStart :: typeInfos.toList ++ [codeBlockEnd]
     return { ih with tooltip? := tooltip }
-  pushInfoLeaf <| .ofCustomInfo {
-    position := inlayHintPos
-    label := .name formattedHint
-    textEdits := #[{ range := ⟨inlayHintPos, inlayHintPos⟩, newText := formattedHint }]
-    kind? := some .parameter
-    lctx := ← getLCtx
-    deferredResolution
-    : InlayHint
-  }.toCustomInfo
+  pushInfoLeaf <| .ofCustomInfo
+    { position := inlayHintPos
+      label := .name formattedHint
+      textEdits := #[{ range := ⟨inlayHintPos, inlayHintPos⟩, newText := formattedHint }]
+      kind? := some .parameter
+      lctx := ← getLCtx
+      deferredResolution
+      : InlayHint }.toCustomInfo
 
 /--
 Return `autoBoundImplicits ++ xs`

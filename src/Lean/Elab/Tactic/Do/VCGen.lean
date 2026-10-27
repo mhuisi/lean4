@@ -307,14 +307,13 @@ where
         let prf ←
           onSplit goal info name fun idx params doGoal => do
             let altLCtxIdx := (← getLCtx).numIndices
-            let info : JumpSiteInfo := {
-              numJoinParams
-              altParams := params
-              altIdx := idx
-              altLCtxIdx
-              hyps := hypsMVars[idx]!.mvarId!
-              joinPrf
-            }
+            let info : JumpSiteInfo :=
+              { numJoinParams
+                altParams := params
+                altIdx := idx
+                altLCtxIdx
+                hyps := hypsMVars[idx]!.mvarId!
+                joinPrf }
             withJP fv.fvarId! info doGoal
         mkLetFVars #[joinPrf] prf
 

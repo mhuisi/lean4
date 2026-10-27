@@ -122,10 +122,8 @@ private def recordStuckTC (instMVar : MVarId) : TermElabM Unit :=
     let type ← instantiateMVars (← instMVar.getType)
     let mvarIds ← getMVars type
     let levelMVarIds := (collectLevelMVars {} type).result
-    modify fun s => {
-      s with
-      stuckTCMVars := s.stuckTCMVars.insert instMVar (mvarIds, levelMVarIds)
-    }
+    modify fun s =>
+      { s with stuckTCMVars := s.stuckTCMVars.insert instMVar (mvarIds, levelMVarIds) }
 
 /--
 Try to synthesize `mvarId` by starting using a default instance with the given priority.
@@ -538,13 +536,13 @@ private def TacticMVarKind.maybeWithoutRecovery (kind : TacticMVarKind) (m : Tac
   else
     m
 
-register_builtin_option backward.proofsInPublic : Bool := {
-  defValue := false
-  descr :=
-    "(module system) Do not abstract proofs used in the public scope into auxiliary \
-      theorems. Enabling this option may lead to failures or, when `backward.privateInPublic` and \
-      its `warn` sub-option are enabled, additional warnings from private accesses."
-}
+register_builtin_option backward.proofsInPublic : Bool :=
+  { defValue := false
+    descr :=
+      "(module system) Do not abstract proofs used in the public scope into auxiliary \
+        theorems. Enabling this option may lead to failures or, when `backward.privateInPublic` \
+        and \
+        its `warn` sub-option are enabled, additional warnings from private accesses." }
 
 mutual
 
@@ -651,10 +649,9 @@ private partial def synthesizeSyntheticMVar
             mvarId.assign e
             return true
         if let .some (coerced, expandedCoeDecls) ← coerceCollectingNames? e expectedType then
-          pushInfoLeaf (.ofCustomInfo {
-            stx := mvarSyntheticDecl.stx
-            value := Dynamic.mk <| CoeExpansionTrace.mk expandedCoeDecls
-          })
+          pushInfoLeaf (.ofCustomInfo
+            { stx := mvarSyntheticDecl.stx
+              value := Dynamic.mk <| CoeExpansionTrace.mk expandedCoeDecls })
           if (← occursCheck mvarId coerced) then
             mvarId.assign coerced
             return true

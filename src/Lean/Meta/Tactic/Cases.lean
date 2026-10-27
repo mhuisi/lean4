@@ -37,10 +37,9 @@ private def mkEqAndProof (lhs rhs : Expr) : MetaM (Expr × Expr) := do
   if (← isDefEq lhsType rhsType) then
     pure (mkApp3 (mkConst ``Eq [u]) lhsType lhs rhs, mkApp2 (mkConst ``Eq.refl [u]) lhsType lhs)
   else
-    pure (
-      mkApp4 (mkConst ``HEq [u]) lhsType lhs rhsType rhs,
-      mkApp2 (mkConst ``HEq.refl [u]) lhsType lhs
-    )
+    pure
+      ( mkApp4 (mkConst ``HEq [u]) lhsType lhs rhsType rhs,
+        mkApp2 (mkConst ``HEq.refl [u]) lhsType lhs )
 
 partial def withNewEqs (targets targetsNew : Array Expr) (k : Array Expr → Array Expr → MetaM α)
     : MetaM α :=
@@ -137,12 +136,11 @@ def generalizeIndices' (mvarId : MVarId) (e : Expr) (varName? : Option Name := n
                   mvarId.assign (mkAppN (mkApp (mkAppN newMVar indices) e) newRefls)
                   let (indicesFVarIds, newMVarId) ← newMVar.mvarId!.introNP newIndices.size
                   let (fvarId, newMVarId) ← newMVarId.intro1P
-                  return {
-                    mvarId := newMVarId
-                    indicesFVarIds := indicesFVarIds
-                    fvarId := fvarId
-                    numEqs := newEqs.size
-                  }
+                  return
+                    { mvarId := newMVarId
+                      indicesFVarIds := indicesFVarIds
+                      fvarId := fvarId
+                      numEqs := newEqs.size }
 
 /--
 Similar to `generalizeTargets` but customized for the `casesOn` motive.
@@ -199,12 +197,11 @@ private def mkCasesContext? (majorFVarId : FVarId) : MetaM (Option Context) := d
           else if ! env.contains (Name.mkStr ival.name "casesOn") then
             pure none
           else
-            return some {
-              inductiveVal := ival
-              majorDecl := majorDecl
-              majorTypeFn := f
-              majorTypeArgs := args
-            }
+            return some
+              { inductiveVal := ival
+                majorDecl := majorDecl
+                majorTypeFn := f
+                majorTypeArgs := args }
 
 /--
 We say the major premise has independent indices IF
@@ -257,10 +254,8 @@ private def toCasesSubgoals
       let ctorApp := mkAppN (mkAppN (mkConst ctorName us) params) s.fields
       let subst := s.subst.erase majorFVarId |>.insert majorFVarId ctorApp
       { s with ctorName := ctorName, subst }
-    else {
-      s with
-      ctorName := none
-    }
+    else
+      { s with ctorName := none }
 
 partial def unifyEqs?
     (numEqs : Nat) (mvarId : MVarId) (subst : FVarSubst) (caseName? : Option Name := none)
@@ -283,8 +278,8 @@ private def unifyCasesEqs (numEqs : Nat) (subgoals : Array CasesSubgoal)
     | none =>
       pure none
     | some (mvarId, subst) =>
-      return
-        some { s with mvarId := mvarId, subst := subst, fields := s.fields.map (subst.apply ·) }
+      return some
+        { s with mvarId := mvarId, subst := subst, fields := s.fields.map (subst.apply ·) }
 
 private def inductionCasesOn
     (mvarId : MVarId) (majorFVarId : FVarId) (givenNames : Array AltVarNames) (ctx : Context)

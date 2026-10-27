@@ -53,14 +53,13 @@ def mkAuxLemma
     let decl :=
       if env.hasUnsafe type || env.hasUnsafe value then
         -- `result` contains unsafe code, thus we cannot use a theorem.
-        Declaration.defnDecl {
-          name := auxName
-          hints := ReducibilityHints.opaque
-          safety := DefinitionSafety.unsafe
-          levelParams
-          type
-          value
-        }
+        Declaration.defnDecl
+          { name := auxName
+            hints := ReducibilityHints.opaque
+            safety := DefinitionSafety.unsafe
+            levelParams
+            type
+            value }
       else
         Declaration.thmDecl { name := auxName, levelParams, type, value }
     addDecl (forceExpose := forceExpose) decl

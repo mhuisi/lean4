@@ -182,13 +182,12 @@ def name
     if let some (e, fields) := (← resolveLocalName n.getId) then
       let t ← Meta.inferType e
       if fields.isEmpty then
-        pushInfoLeaf <| .ofTermInfo {
-          elaborator := .anonymous
-          stx := n
-          lctx := ← getLCtx
-          expr := e
-          expectedType? := some t
-        }
+        pushInfoLeaf <| .ofTermInfo
+          { elaborator := .anonymous
+            stx := n
+            lctx := ← getLCtx
+            expr := e
+            expectedType? := some t }
         let data : Data.Local := { name := x, lctx := ← getLCtx, type := t, fvarId := e.fvarId! }
         return .custom data #[.code s.getVersoCode]
   match scope with
@@ -266,25 +265,23 @@ def module (checked : flag true) (xs : TSyntaxArray ``Parser.inline)
                 | pure none
               let some e := braceClose.getPos?
                 | pure none
-              pure <| some {
-                span? :=
-                  some (Syntax.mkStrLit (String.Pos.Raw.extract (← getFileMap).source b e)
-                    (info := .synthetic b e))
-                previewSpan? := some ref
-                suggestion := ""
-                : Meta.Hint.Suggestion
-              }
+              pure <| some
+                { span? :=
+                    some (Syntax.mkStrLit (String.Pos.Raw.extract (← getFileMap).source b e)
+                      (info := .synthetic b e))
+                  previewSpan? := some ref
+                  suggestion := ""
+                  : Meta.Hint.Suggestion }
             else
               pure none
           else
             pure none
         | some (.role { args := #[], braceClose, content := #[_], .. }) =>
-          pure <| some {
-            span? := some braceClose
-            previewSpan? := some ref
-            suggestion := " -checked}"
-            : Meta.Hint.Suggestion
-          }
+          pure <| some
+            { span? := some braceClose
+              previewSpan? := some ref
+              suggestion := " -checked}"
+              : Meta.Hint.Suggestion }
         | _ =>
           pure none
       let ss :=
@@ -787,10 +784,8 @@ structure DocCode where
   code : Array (String × Option DocHighlight) := #[]
 
 /-- Adds the provided string `str`, with optional highlighting `hl?`, to the end of the code. -/
-def DocCode.push (code : DocCode) (str : String) (hl? : Option DocHighlight := none) : DocCode := {
-  code with
-  code := code.code.push (str, hl?)
-}
+def DocCode.push (code : DocCode) (str : String) (hl? : Option DocHighlight := none) : DocCode :=
+  { code with code := code.code.push (str, hl?) }
 
 instance : HAppend DocCode String DocCode where
   hAppend
@@ -952,39 +947,30 @@ def lean
       let text ← getFileMap
       let endPos := code.raw.getTailPos? true |>.getD text.source.rawEndPos
       let endPos := if endPos ≤ text.source.rawEndPos then endPos else text.source.rawEndPos
-      pure (
-        text,
-        mkInputContext text.source (← getFileName) (endPos := endPos)
-          (endPos_valid := by simp only [endPos]; split <;> simp [*]),
-        pos
-      )
+      pure
+        ( text,
+          mkInputContext text.source (← getFileName) (endPos := endPos)
+            (endPos_valid := by simp only [endPos]; split <;> simp [*]),
+          pos )
     else
       let ictx := mkInputContext code.getVersoCodeBlock (← getFileName)
       pure (ictx.fileMap, ictx, (0 : String.Pos.Raw))
-  let cctx : Command.Context := {
-    fileName := ← getFileName
-    fileMap := text
-    snap? := none
-    cancelTk? := none
-  }
+  let cctx : Command.Context :=
+    { fileName := ← getFileName, fileMap := text, snap? := none, cancelTk? := none }
   let scopes := (← get).scopes
   let ((cmds, cmdState), trees) ←
     withHighlightingInfoTrees do
-      let mut cmdState : Command.State := {
-        env
-        maxRecDepth := ← MonadRecDepth.getMaxRecDepth
-        scopes
-      }
+      let mut cmdState : Command.State :=
+        { env, maxRecDepth := ← MonadRecDepth.getMaxRecDepth, scopes }
       let mut pstate : Parser.ModuleParserState := { pos, recovering := false, hasLeading := false }
       let mut cmds := #[]
       repeat
         let scope := cmdState.scopes.head!
-        let pmctx := {
-          env := cmdState.env
-          options := scope.opts
-          currNamespace := scope.currNamespace
-          openDecls := scope.openDecls
-        }
+        let pmctx :=
+          { env := cmdState.env
+            options := scope.opts
+            currNamespace := scope.currNamespace
+            openDecls := scope.openDecls }
         let (cmd, ps', messages) := Parser.parseCommand ictx pmctx pstate cmdState.messages
         cmds := cmds.push cmd
         pstate := ps'
@@ -1234,11 +1220,10 @@ def option (xs : TSyntaxArray ``Parser.inline) : DocM (Inline ElabInline) := do
             pure <| .const constName sig.fmt
           | _ =>
             pure <| .literal stx[3].getKind none
-        let code := #[
-          ("set_option", some .keyword), (" ", none),
-          (toString optionName, some <| .option optionName decl.declName), (" ", none),
-          (valStr, some valHl)
-        ]
+        let code :=
+          #[("set_option", some .keyword), (" ", none),
+            (toString optionName, some <| .option optionName decl.declName), (" ", none),
+            (valStr, some valHl)]
         return .custom (Data.SetOption.mk ⟨code⟩) #[.code s.getVersoCode]
       catch
         | e =>

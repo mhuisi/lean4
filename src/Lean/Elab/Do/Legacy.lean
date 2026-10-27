@@ -637,10 +637,8 @@ Remark: `stx` is the syntax for the declaration (e.g., `letDecl`), and `xs` are 
 declared by it. It is an array because we have let-declarations that declare multiple variables.
 Example: `let (x, y) := t`
 -/
-def mkVarDeclCore (xs : Array Var) (stx : Syntax) (c : CodeBlock) : CodeBlock := {
-  code := Code.decl xs stx c.code
-  uvars := eraseVars c.uvars xs
-}
+def mkVarDeclCore (xs : Array Var) (stx : Syntax) (c : CodeBlock) : CodeBlock :=
+  { code := Code.decl xs stx c.code, uvars := eraseVars c.uvars xs }
 
 /--
 Extending code blocks with reassignments: `x : t := v` and `x : t ← v`.
@@ -673,10 +671,8 @@ def mkIte
     : TermElabM CodeBlock := do
   let x? := optIdent.getOptional?
   let (thenBranch, elseBranch) ← homogenize thenBranch elseBranch
-  return {
-    code := .ite ref x? optIdent cond thenBranch.code elseBranch.code
-    uvars := thenBranch.uvars
-  }
+  return
+    { code := .ite ref x? optIdent cond thenBranch.code elseBranch.code, uvars := thenBranch.uvars }
 
 private def mkUnit : MacroM Syntax := ``((⟨⟩ : PUnit))
 
@@ -697,13 +693,8 @@ def mkMatch
   let alts ←
     alts.mapM fun alt => do
       let rhs ← extendUpdatedVars alt.rhs ws
-      return {
-        ref := alt.ref
-        vars := alt.vars
-        patterns := alt.patterns
-        rhs := rhs.code
-        : Alt Code
-      }
+      return
+        { ref := alt.ref, vars := alt.vars, patterns := alt.patterns, rhs := rhs.code : Alt Code }
   return { code := .match ref genParam discrs optMotive alts, uvars := ws }
 
 def mkMatchExpr
@@ -891,13 +882,12 @@ structure DoIfView where
   elseBranch : Syntax
 
 /-- This method assumes `expandDoIf?` is not applicable. -/
-private def mkDoIfView (doIf : Syntax) : DoIfView := {
-  ref := doIf
-  optIdent := doIf[1][0]
-  cond := doIf[1][1]
-  thenBranch := doIf[3]
-  elseBranch := doIf[5][1]
-}
+private def mkDoIfView (doIf : Syntax) : DoIfView :=
+  { ref := doIf
+    optIdent := doIf[1][0]
+    cond := doIf[1][1]
+    thenBranch := doIf[3]
+    elseBranch := doIf[5][1] }
 
 /--
 We use `MProd` instead of `Prod` to group values when expanding the

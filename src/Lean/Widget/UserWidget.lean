@@ -50,44 +50,42 @@ private abbrev ModuleRegistry :=
   SimplePersistentEnvExtension (UInt64 × Name × Expr) (Std.TreeMap UInt64 (Name × Expr))
 
 private builtin_initialize moduleRegistry : ModuleRegistry ←
-  registerSimplePersistentEnvExtension {
-    addImportedFn := fun xss => xss.foldl (Array.foldl (fun s n => s.insert n.1 n.2)) ∅
-    addEntryFn := fun s n => s.insert n.1 n.2
-    toArrayFn := fun es => es.toArray
-  }
+  registerSimplePersistentEnvExtension
+    { addImportedFn := fun xss => xss.foldl (Array.foldl (fun s n => s.insert n.1 n.2)) ∅
+      addEntryFn := fun s n => s.insert n.1 n.2
+      toArrayFn := fun es => es.toArray }
 
 /-- Registers a widget module. Its type must implement `Lean.Widget.ToModule`. -/
 builtin_initialize widgetModuleAttrImpl : AttributeImpl ←
   let mkAttr (builtin : Bool) (name : Name) := do
-    let impl := {
-      name
-      descr :=
-        (if builtin then "(builtin) " else "")
-          ++ "Registers a widget module. Its type must implement Lean.Widget.ToModule."
-      applicationTime := .afterCompilation
-      add := fun decl stx kind =>
-        Prod.fst <$> MetaM.run do
-          withoutExporting do -- result should be private anyway
-            Attribute.Builtin.ensureNoArgs stx
-            unless kind == AttributeKind.global do
-              throwAttrMustBeGlobal name kind
-            let e ← mkAppM ``ToModule.toModule #[.const decl []]
-            let mod ← evalModule e
-            let env ← getEnv
-            unless builtin do -- don't warn on collision between previous and current stage
-              if let some _ := (← builtinModulesRef.get).get? mod.javascriptHash then
-                logWarning m!"A builtin widget module with the same hash (JS source code) was \
-                  already registered."
-            if let some (n, _) := moduleRegistry.getState env |>.get? mod.javascriptHash then
-              logWarning m!"A widget module with the same hash (JS source code) was already \
-                registered at {.ofConstName n true}."
-            let env ← getEnv
-            if builtin then
-              let h := mkConst decl
-              declareBuiltin decl <| mkApp2 (mkConst ``addBuiltinModule) (toExpr decl) h
-            else
-              setEnv <| moduleRegistry.addEntry env (mod.javascriptHash, decl, e)
-    }
+    let impl :=
+      { name
+        descr :=
+          (if builtin then "(builtin) " else "")
+            ++ "Registers a widget module. Its type must implement Lean.Widget.ToModule."
+        applicationTime := .afterCompilation
+        add := fun decl stx kind =>
+          Prod.fst <$> MetaM.run do
+            withoutExporting do -- result should be private anyway
+              Attribute.Builtin.ensureNoArgs stx
+              unless kind == AttributeKind.global do
+                throwAttrMustBeGlobal name kind
+              let e ← mkAppM ``ToModule.toModule #[.const decl []]
+              let mod ← evalModule e
+              let env ← getEnv
+              unless builtin do -- don't warn on collision between previous and current stage
+                if let some _ := (← builtinModulesRef.get).get? mod.javascriptHash then
+                  logWarning m!"A builtin widget module with the same hash (JS source code) was \
+                    already registered."
+              if let some (n, _) := moduleRegistry.getState env |>.get? mod.javascriptHash then
+                logWarning m!"A widget module with the same hash (JS source code) was already \
+                  registered at {.ofConstName n true}."
+              let env ← getEnv
+              if builtin then
+                let h := mkConst decl
+                declareBuiltin decl <| mkApp2 (mkConst ``addBuiltinModule) (toExpr decl) h
+              else
+                setEnv <| moduleRegistry.addEntry env (mod.javascriptHash, decl, e) }
     registerBuiltinAttribute impl
     return impl
   /-
@@ -171,10 +169,8 @@ private abbrev PanelWidgetsExt :=
   SimpleScopedEnvExtension (UInt64 × Name) (Std.TreeMap UInt64 (List PanelWidgetsExtEntry))
 
 private builtin_initialize panelWidgetsExt : PanelWidgetsExt ←
-  registerSimpleScopedEnvExtension {
-    addEntry := fun s (h, n) => s.insert h (.global n :: s.getD h [])
-    initial := .empty
-  }
+  registerSimpleScopedEnvExtension
+    { addEntry := fun s (h, n) => s.insert h (.global n :: s.getD h []), initial := .empty }
 
 def evalPanelWidgets : MetaM (Array WidgetInstance) := do
   let mut ret := #[]
@@ -338,11 +334,10 @@ def getWidgets (pos : Lean.Lsp.Position) : RequestM (RequestTask GetWidgetsRespo
                   |>.mapM fun _ => do
                     let uwd ← evalUserWidgetDefinition wi.id
                     return uwd.name
-              return {
-                wi with
-                range? := Lean.Syntax.Range.toLspRange filemap <$> Syntax.getRange? wi.stx
-                name?
-              }
+              return
+                { wi with
+                  range? := Lean.Syntax.Range.toLspRange filemap <$> Syntax.getRange? wi.stx
+                  name? }
           return { widgets := ws' ++ ws }
       | _ =>
         return ⟨∅⟩

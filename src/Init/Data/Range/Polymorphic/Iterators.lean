@@ -329,11 +329,10 @@ theorem Internal.isPlausibleIndirectOutput_iter_iff
   · rintro ⟨hl, hu⟩
     rw [LawfulUpwardEnumerableLT.lt_iff] at hl
     obtain ⟨n, hn⟩ := hl
-    exact ⟨
-      n,
-      by simp [Internal.iter, hn, ← UpwardEnumerable.succMany?_add_one_eq_succ?_bind_succMany?],
-      hu
-    ⟩
+    exact
+      ⟨ n,
+        by simp [Internal.iter, hn, ← UpwardEnumerable.succMany?_add_one_eq_succ?_bind_succMany?],
+        hu ⟩
 
 @[no_expose, default_instance]
 instance
@@ -410,11 +409,10 @@ theorem Internal.isPlausibleIndirectOutput_iter_iff
   · rintro ⟨hl, hu⟩
     rw [LawfulUpwardEnumerableLT.lt_iff] at hl
     obtain ⟨n, hn⟩ := hl
-    exact ⟨
-      n,
-      by simp [Internal.iter, hn, ← UpwardEnumerable.succMany?_add_one_eq_succ?_bind_succMany?],
-      hu
-    ⟩
+    exact
+      ⟨ n,
+        by simp [Internal.iter, hn, ← UpwardEnumerable.succMany?_add_one_eq_succ?_bind_succMany?],
+        hu ⟩
 
 @[no_expose, default_instance]
 instance

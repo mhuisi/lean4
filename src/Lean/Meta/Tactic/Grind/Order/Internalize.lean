@@ -120,14 +120,13 @@ def mkCommRingCnstr? (s : Sym.Arith.Order) (kind : CnstrKind) (lhs rhs : Expr)
     : RingM (Option (Cnstr Expr)) := do
   if ! isArithTerm lhs && ! isArithTerm rhs then
     let e ← mkDenote0 s kind lhs rhs
-    return some {
-      u := lhs
-      v := rhs
-      k := 0
-      e
-      kind
-      h? := some (mkCnstrNorm0 s (← getRing).ringInst kind lhs rhs)
-    }
+    return some
+      { u := lhs
+        v := rhs
+        k := 0
+        e
+        kind
+        h? := some (mkCnstrNorm0 s (← getRing).ringInst kind lhs rhs) }
   let some lhs ← reify? lhs (skipVar := false)
     | return none
   let some rhs ← reify? rhs (skipVar := false)
@@ -155,14 +154,13 @@ def mkNonCommRingCnstr? (s : Sym.Arith.Order) (kind : CnstrKind) (lhs rhs : Expr
     : NonCommRingM (Option (Cnstr Expr)) := do
   if ! isArithTerm lhs && ! isArithTerm rhs then
     let e ← mkDenote0 s kind lhs rhs
-    return some {
-      u := lhs
-      v := rhs
-      k := 0
-      e
-      kind
-      h? := some (mkCnstrNorm0 s (← getRing).ringInst kind lhs rhs)
-    }
+    return some
+      { u := lhs
+        v := rhs
+        k := 0
+        e
+        kind
+        h? := some (mkCnstrNorm0 s (← getRing).ringInst kind lhs rhs) }
   let some lhs ← ncreify? lhs (skipVar := false)
     | return none
   let some rhs ← ncreify? rhs (skipVar := false)
@@ -201,11 +199,10 @@ def setStructId (e : Expr) : OrderM Unit := do
   modify' fun s => { s with exprToStructId := s.exprToStructId.insert { expr := e } structId }
 
 def updateTermMap (e eNew h α : Expr) : GoalM Unit := do
-  modify' fun s => {
-    s with
-    termMap := s.termMap.insert { expr := e } { e := eNew, h, α }
-    termMapInv := s.termMapInv.insert { expr := eNew } (e, h)
-  }
+  modify' fun s =>
+    { s with
+      termMap := s.termMap.insert { expr := e } { e := eNew, h, α }
+      termMapInv := s.termMapInv.insert { expr := eNew } (e, h) }
 
 /--
 Returns the `Nat` term `a` whose translation by `Arith.Cutsat.natToInt` may be the `Int` term `e`.
@@ -237,14 +234,13 @@ def mkNode (e : Expr) : OrderM NodeId := do
     return nodeId
   let nodeId : NodeId := (← getStruct).nodes.size
   trace[grind.order.internalize.term] "{e} ↦ #{nodeId}"
-  modifyStruct fun s => {
-    s with
-    nodes := s.nodes.push e
-    nodeMap := s.nodeMap.insert { expr := e } nodeId
-    sources := s.sources.push {}
-    targets := s.targets.push {}
-    proofs := s.proofs.push {}
-  }
+  modifyStruct fun s =>
+    { s with
+      nodes := s.nodes.push e
+      nodeMap := s.nodeMap.insert { expr := e } nodeId
+      sources := s.sources.push {}
+      targets := s.targets.push {}
+      proofs := s.proofs.push {} }
   setStructId e
   /-
   **Note**: not all node expressions have been internalized because this solver
@@ -314,13 +310,12 @@ def internalizeCnstr (e : Expr) (kind : CnstrKind) (lhs rhs : Expr) : OrderM Uni
       propagateEqFalse c e v u k k'
       return ()
   setStructId e
-  modifyStruct fun s => {
-    s with
-    cnstrs := s.cnstrs.insert { expr := e } c
-    cnstrsOf :=
-      let cs := if let some cs := s.cnstrsOf.find? (u, v) then (c, e) :: cs else [(c, e)]
-      s.cnstrsOf.insert (u, v) cs
-  }
+  modifyStruct fun s =>
+    { s with
+      cnstrs := s.cnstrs.insert { expr := e } c
+      cnstrsOf :=
+        let cs := if let some cs := s.cnstrsOf.find? (u, v) then (c, e) :: cs else [(c, e)]
+        s.cnstrsOf.insert (u, v) cs }
 
 /--
 Normalization result. A nested term `e` is normalized as `a + k` and

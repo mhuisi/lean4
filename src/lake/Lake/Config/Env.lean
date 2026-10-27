@@ -180,28 +180,27 @@ public def compute
   let reservoirBaseUrl ← getUrlD "RESERVOIR_API_BASE_URL" "https://reservoir.lean-lang.org/api"
   let toolchain ← computeToolchain
   let userHome? ← getUserHome?
-  addCacheDirs userHome? toolchain {
-    lake
-    lean
-    elan?
-    pkgUrlMap := ← computePkgUrlMap
-    reservoirApiUrl := ← getUrlD "RESERVOIR_API_URL" s!"{reservoirBaseUrl}/v1"
-    noCache := (noCache <|> (← IO.getEnv "LAKE_NO_CACHE").bind envToBool?).getD false
-    enableArtifactCache? := (← IO.getEnv "LAKE_ARTIFACT_CACHE").bind envToBool?
-    restoreAllArtifacts? := (← IO.getEnv "LAKE_RESTORE_ARTIFACTS").bind envToBool?
-    lakeConfig? :=
-      (← IO.getEnv "LAKE_CONFIG") <|> userHome?.map (· / ".lake" / "config.toml" |>.toString)
-    cacheKey? := (← IO.getEnv "LAKE_CACHE_KEY").map (·.trimAscii.copy)
-    cacheArtifactEndpoint? := (← IO.getEnv "LAKE_CACHE_ARTIFACT_ENDPOINT").map normalizeUrl
-    cacheRevisionEndpoint? := (← IO.getEnv "LAKE_CACHE_REVISION_ENDPOINT").map normalizeUrl
-    cacheService? := (← IO.getEnv "LAKE_CACHE_SERVICE").map (.ofString ·.trimAscii.copy)
-    githashOverride := (← IO.getEnv "LEAN_GITHASH").getD ""
-    toolchain
-    initLeanPath := ← getSearchPath "LEAN_PATH"
-    initLeanSrcPath := ← getSearchPath "LEAN_SRC_PATH"
-    initSharedLibPath := ← getSearchPath sharedLibPathEnvVar
-    initPath := ← getSearchPath "PATH"
-  }
+  addCacheDirs userHome? toolchain
+    { lake
+      lean
+      elan?
+      pkgUrlMap := ← computePkgUrlMap
+      reservoirApiUrl := ← getUrlD "RESERVOIR_API_URL" s!"{reservoirBaseUrl}/v1"
+      noCache := (noCache <|> (← IO.getEnv "LAKE_NO_CACHE").bind envToBool?).getD false
+      enableArtifactCache? := (← IO.getEnv "LAKE_ARTIFACT_CACHE").bind envToBool?
+      restoreAllArtifacts? := (← IO.getEnv "LAKE_RESTORE_ARTIFACTS").bind envToBool?
+      lakeConfig? :=
+        (← IO.getEnv "LAKE_CONFIG") <|> userHome?.map (· / ".lake" / "config.toml" |>.toString)
+      cacheKey? := (← IO.getEnv "LAKE_CACHE_KEY").map (·.trimAscii.copy)
+      cacheArtifactEndpoint? := (← IO.getEnv "LAKE_CACHE_ARTIFACT_ENDPOINT").map normalizeUrl
+      cacheRevisionEndpoint? := (← IO.getEnv "LAKE_CACHE_REVISION_ENDPOINT").map normalizeUrl
+      cacheService? := (← IO.getEnv "LAKE_CACHE_SERVICE").map (.ofString ·.trimAscii.copy)
+      githashOverride := (← IO.getEnv "LEAN_GITHASH").getD ""
+      toolchain
+      initLeanPath := ← getSearchPath "LEAN_PATH"
+      initLeanSrcPath := ← getSearchPath "LEAN_SRC_PATH"
+      initSharedLibPath := ← getSearchPath sharedLibPathEnvVar
+      initPath := ← getSearchPath "PATH" }
 where
   addCacheDirs userHome? toolchain env := do
     if let some dir ← IO.getEnv "LAKE_CACHE_DIR" then
@@ -281,53 +280,50 @@ Combines the initial path of the environment with that of the Lean installation.
 public def sharedLibPath (env : Env) : SearchPath := env.lean.sharedLibPath ++ env.initSharedLibPath
 
 /-- Unset toolchain-specific environment variables. -/
-public def noToolchainVars (env : Env) : Array (String × Option String) := #[
-  ("ELAN_TOOLCHAIN", none),
-  ("LAKE", none),
-  (
-    "LAKE_CACHE_DIR",
-    if env.noSystemCache then some "" else env.lakeSystemCache?.map (·.dir.toString)
-  ),
-  ("LAKE_OVERRIDE_LEAN", none),
-  ("LAKE_HOME", none),
-  ("LEAN", none),
-  ("LEAN_GITHASH", none),
-  ("LEAN_SYSROOT", none),
-  ("LEAN_AR", none)
-]
+public def noToolchainVars (env : Env) : Array (String × Option String) :=
+  #[("ELAN_TOOLCHAIN", none),
+    ("LAKE", none),
+    ( "LAKE_CACHE_DIR",
+      if env.noSystemCache then some "" else env.lakeSystemCache?.map (·.dir.toString) ),
+    ("LAKE_OVERRIDE_LEAN", none),
+    ("LAKE_HOME", none),
+    ("LEAN", none),
+    ("LEAN_GITHASH", none),
+    ("LEAN_SYSROOT", none),
+    ("LEAN_AR", none)]
 
 /-- Environment variable settings that are not augmented by a Lake workspace. -/
-public def baseVars (env : Env) : Array (String × Option String) := #[
-  ("ELAN", env.elan?.map (·.elan.toString)),
-  ("ELAN_HOME", env.elan?.map (·.home.toString)),
-  ("ELAN_TOOLCHAIN", if env.toolchain.isEmpty then none else env.toolchain),
-  ("LAKE", env.lake.lake.toString),
-  ("LAKE_HOME", env.lake.home.toString),
-  ("LAKE_CONFIG", if let some path := env.lakeConfig? then path.toString else ""),
-  ("LAKE_PKG_URL_MAP", toJson env.pkgUrlMap |>.compress),
-  ("LAKE_NO_CACHE", toString env.noCache),
-  ("LAKE_CACHE_KEY", env.cacheKey?),
-  ("LAKE_CACHE_ARTIFACT_ENDPOINT", env.cacheArtifactEndpoint?),
-  ("LAKE_CACHE_REVISION_ENDPOINT", env.cacheRevisionEndpoint?),
-  ("LAKE_CACHE_SERVICE", env.cacheService?.map (·.toString)),
-  ("LEAN", env.lean.lean.toString),
-  ("LEAN_SYSROOT", env.lean.sysroot.toString),
-  ("LEAN_AR", env.lean.ar.toString),
-  ("LEAN_CC", env.lean.leanCc?)
-]
+public def baseVars (env : Env) : Array (String × Option String) :=
+  #[("ELAN", env.elan?.map (·.elan.toString)),
+    ("ELAN_HOME", env.elan?.map (·.home.toString)),
+    ("ELAN_TOOLCHAIN", if env.toolchain.isEmpty then none else env.toolchain),
+    ("LAKE", env.lake.lake.toString),
+    ("LAKE_HOME", env.lake.home.toString),
+    ("LAKE_CONFIG", if let some path := env.lakeConfig? then path.toString else ""),
+    ("LAKE_PKG_URL_MAP", toJson env.pkgUrlMap |>.compress),
+    ("LAKE_NO_CACHE", toString env.noCache),
+    ("LAKE_CACHE_KEY", env.cacheKey?),
+    ("LAKE_CACHE_ARTIFACT_ENDPOINT", env.cacheArtifactEndpoint?),
+    ("LAKE_CACHE_REVISION_ENDPOINT", env.cacheRevisionEndpoint?),
+    ("LAKE_CACHE_SERVICE", env.cacheService?.map (·.toString)),
+    ("LEAN", env.lean.lean.toString),
+    ("LEAN_SYSROOT", env.lean.sysroot.toString),
+    ("LEAN_AR", env.lean.ar.toString),
+    ("LEAN_CC", env.lean.leanCc?)]
 
 /-- Environment variable settings for the `Lake.Env`. -/
 public def vars (env : Env) : Array (String × Option String) :=
   let vars :=
-    env.baseVars ++ #[
-      ("LAKE_CACHE_DIR", if let some cache := env.lakeCache? then cache.dir.toString else ""),
-      ("LAKE_ARTIFACT_CACHE", if let some b := env.enableArtifactCache? then toString b else ""),
-      ("LAKE_RESTORE_ARTIFACTS", if let some b := env.restoreAllArtifacts? then toString b else ""),
-      ("LEAN_PATH", some env.leanPath.toString),
-      ("LEAN_SRC_PATH", some env.leanSrcPath.toString),
-      ("LEAN_GITHASH", env.leanGithash),
-      ("PATH", some env.path.toString)
-    ]
+    env.baseVars
+      ++ #[("LAKE_CACHE_DIR", if let some cache := env.lakeCache? then cache.dir.toString else ""),
+           ( "LAKE_ARTIFACT_CACHE",
+             if let some b := env.enableArtifactCache? then toString b else "" ),
+           ( "LAKE_RESTORE_ARTIFACTS",
+             if let some b := env.restoreAllArtifacts? then toString b else "" ),
+           ("LEAN_PATH", some env.leanPath.toString),
+           ("LEAN_SRC_PATH", some env.leanSrcPath.toString),
+           ("LEAN_GITHASH", env.leanGithash),
+           ("PATH", some env.path.toString)]
   if Platform.isWindows then
     vars
   else

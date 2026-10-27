@@ -132,17 +132,14 @@ def parseQuotedStrLit (p : ParserFn) (strLit : StrLit) : m Syntax := do
   let s := p.run ictx { env, options := ← getOptions } (getTokenTable env) s
 
   if !s.allErrors.isEmpty then
-    let s := {
-      s with
-      pos := reposition text pos str s.pos
-      recoveredErrors :=
-        s.recoveredErrors.map fun | (ePos, stk, err) => (reposition text pos str ePos, stk, err)
-      errorMsg :=
-        s.errorMsg.map fun (e : Error) => {
-          e with
-          unexpectedTk := repositionSyntax text pos str e.unexpectedTk
-        }
-    }
+    let s :=
+      { s with
+        pos := reposition text pos str s.pos
+        recoveredErrors :=
+          s.recoveredErrors.map fun | (ePos, stk, err) => (reposition text pos str ePos, stk, err)
+        errorMsg :=
+          s.errorMsg.map fun (e : Error) =>
+            { e with unexpectedTk := repositionSyntax text pos str e.unexpectedTk } }
     throwError (s.toErrorMsg ictx)
   else if ictx.atEnd s.pos then
     pure <| repositionSyntax text pos str s.stxStack.back

@@ -226,16 +226,14 @@ public theorem IsLinearPreorder.of_lt
     : haveI := LE.ofLT α
       IsLinearPreorder α :=
   letI := LE.ofLT α
-  {
-    le_trans := by simpa [LE.ofLT] using! fun a b c hab hbc => not_lt_trans.trans hbc hab
+  { le_trans := by simpa [LE.ofLT] using! fun a b c hab hbc => not_lt_trans.trans hbc hab
     le_total a b := by
       apply Or.symm
       open Classical in
       simpa [LE.ofLT, Decidable.imp_iff_not_or] using! lt_asymm.asymm a b
     le_refl a := by
       open Classical in
-      simpa [LE.ofLT] using! lt_asymm.asymm a a
-  }
+      simpa [LE.ofLT] using! lt_asymm.asymm a a }
 
 public instance
     {α : Type u} [LT α] [Std.Asymm (α := α) (· < ·)] [Trans (α := α) (¬ · < ·) (¬ · < ·) (¬ · < ·)]
@@ -256,10 +254,8 @@ public theorem IsLinearOrder.of_lt
       IsLinearOrder α :=
   letI := LE.ofLT α
   haveI : IsLinearPreorder α := .of_lt
-  {
-    le_antisymm := by
-      simpa [LE.ofLT] using! fun a b hab hba => lt_trichotomous.trichotomous a b hba hab
-  }
+  { le_antisymm := by
+      simpa [LE.ofLT] using! fun a b hab hba => lt_trichotomous.trichotomous a b hba hab }
 
 public instance
     {α : Type u} [LT α] [Std.Asymm (α := α) (· < ·)] [Trans (α := α) (¬ · < ·) (¬ · < ·) (¬ · < ·)]
@@ -277,12 +273,10 @@ public theorem LawfulOrderInf.of_lt
     : haveI := LE.ofLT α
       LawfulOrderInf α :=
   letI := LE.ofLT α
-  {
-    le_min_iff a b c := by
+  { le_min_iff a b c := by
       open Classical in
       simp only [LE.le, ← not_or, Decidable.not_iff_not]
-      simpa [Decidable.imp_iff_not_or] using min_lt_iff a b c
-  }
+      simpa [Decidable.imp_iff_not_or] using min_lt_iff a b c }
 
 /--
 Derives a `LawfulOrderMin α` instance for `LE.ofLT` from two properties involving
@@ -308,12 +302,10 @@ public theorem LawfulOrderSup.of_lt
     : haveI := LE.ofLT α
       LawfulOrderSup α :=
   letI := LE.ofLT α
-  {
-    max_le_iff a b c := by
+  { max_le_iff a b c := by
       open Classical in
       simp only [LE.le, ← not_or, Decidable.not_iff_not]
-      simpa [Decidable.imp_iff_not_or] using lt_max_iff a b c
-  }
+      simpa [Decidable.imp_iff_not_or] using lt_max_iff a b c }
 
 /--
 Derives a `LawfulOrderMax α` instance for `LE.ofLT` from two properties involving `LT α` and

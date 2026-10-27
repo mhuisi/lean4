@@ -699,10 +699,9 @@ theorem coeSucc_eq_succ {a : Fin n} : a.castSucc + 1 = a.succ := by
 theorem lt_succ {a : Fin n} : a.castSucc < a.succ := by
   rw [castSucc, lt_def, val_castAdd, val_succ]; exact Nat.lt_succ_self a.val
 
-theorem exists_castSucc_eq {n : Nat} {i : Fin (n + 1)} : (∃ j, castSucc j = i) ↔ i ≠ last n := ⟨
-  fun ⟨j, hj⟩ => hj ▸ Fin.ne_of_lt j.castSucc_lt_last,
-  fun hi => ⟨i.castLT <| Fin.val_lt_last hi, rfl⟩
-⟩
+theorem exists_castSucc_eq {n : Nat} {i : Fin (n + 1)} : (∃ j, castSucc j = i) ↔ i ≠ last n :=
+  ⟨ fun ⟨j, hj⟩ => hj ▸ Fin.ne_of_lt j.castSucc_lt_last,
+    fun hi => ⟨i.castLT <| Fin.val_lt_last hi, rfl⟩ ⟩
 
 theorem succ_castSucc {n : Nat} (i : Fin n) : i.castSucc.succ = i.succ.castSucc := rfl
 
@@ -1104,10 +1103,9 @@ theorem cases_succ' {n} {motive : Fin (n + 1) → Sort _} {zero succ} {i : Nat} 
 theorem forall_fin_succ {P : Fin (n + 1) → Prop} : (∀ i, P i) ↔ P 0 ∧ ∀ i : Fin n, P i.succ :=
   ⟨fun H => ⟨H 0, fun _ => H _⟩, fun ⟨H0, H1⟩ i => Fin.cases H0 H1 i⟩
 
-theorem exists_fin_succ {P : Fin (n + 1) → Prop} : (∃ i, P i) ↔ P 0 ∨ ∃ i : Fin n, P i.succ := ⟨
-  fun ⟨i, h⟩ => Fin.cases Or.inl (fun i hi => Or.inr ⟨i, hi⟩) i h,
-  fun h => (h.elim fun h => ⟨0, h⟩) fun ⟨i, hi⟩ => ⟨i.succ, hi⟩
-⟩
+theorem exists_fin_succ {P : Fin (n + 1) → Prop} : (∃ i, P i) ↔ P 0 ∨ ∃ i : Fin n, P i.succ :=
+  ⟨ fun ⟨i, h⟩ => Fin.cases Or.inl (fun i hi => Or.inr ⟨i, hi⟩) i h,
+    fun h => (h.elim fun h => ⟨0, h⟩) fun ⟨i, hi⟩ => ⟨i.succ, hi⟩ ⟩
 
 @[simp]
 theorem forall_fin_zero {p : Fin 0 → Prop} : (∀ i, p i) ↔ True :=

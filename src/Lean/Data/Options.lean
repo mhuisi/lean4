@@ -224,13 +224,12 @@ protected def setIfNotSet [KVMap.Value α] (opts : Options) (opt : Lean.Option �
 protected def register
     [KVMap.Value α] (name : Name) (decl : Lean.Option.Decl α) (ref : Name := by exact decl_name%)
     : IO (Lean.Option α) := do
-  registerOption name {
-    name
-    declName := ref
-    defValue := KVMap.Value.toDataValue decl.defValue
-    descr := decl.descr
-    deprecation? := decl.deprecation?
-  }
+  registerOption name
+    { name
+      declName := ref
+      defValue := KVMap.Value.toDataValue decl.defValue
+      descr := decl.descr
+      deprecation? := decl.deprecation? }
   return { name := name, defValue := decl.defValue }
 
 macro (name := registerBuiltinOption)

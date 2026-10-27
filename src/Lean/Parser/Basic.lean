@@ -82,21 +82,18 @@ def checkStackTopFn (p : Syntax → Bool) (msg : String) : ParserFn := fun _ s =
   else
     s.mkUnexpectedError msg
 
-def checkStackTop (p : Syntax → Bool) (msg : String) : Parser := {
-  info := epsilonInfo
-  fn := checkStackTopFn p msg
-}
+def checkStackTop (p : Syntax → Bool) (msg : String) : Parser :=
+  { info := epsilonInfo, fn := checkStackTopFn p msg }
 
 def andthenFn (p q : ParserFn) : ParserFn := fun c s =>
   let s := p c s
   if s.hasError then s else q c s
 
 @[noinline]
-def andthenInfo (p q : ParserInfo) : ParserInfo := {
-  collectTokens := p.collectTokens ∘ q.collectTokens
-  collectKinds := p.collectKinds ∘ q.collectKinds
-  firstTokens := p.firstTokens.seq q.firstTokens
-}
+def andthenInfo (p q : ParserInfo) : ParserInfo :=
+  { collectTokens := p.collectTokens ∘ q.collectTokens
+    collectKinds := p.collectKinds ∘ q.collectKinds
+    firstTokens := p.firstTokens.seq q.firstTokens }
 
 instance : AndThen ParserFn where
   andThen p1 p2 := andthenFn p1 (p2 ())
@@ -127,16 +124,13 @@ def trailingNodeFn (n : SyntaxNodeKind) (p : ParserFn) : ParserFn := fun c s =>
   s.mkTrailingNode n iniSz
 
 @[noinline]
-def nodeInfo (n : SyntaxNodeKind) (p : ParserInfo) : ParserInfo := {
-  collectTokens := p.collectTokens
-  collectKinds := fun s => (p.collectKinds s).insert n
-  firstTokens := p.firstTokens
-}
+def nodeInfo (n : SyntaxNodeKind) (p : ParserInfo) : ParserInfo :=
+  { collectTokens := p.collectTokens
+    collectKinds := fun s => (p.collectKinds s).insert n
+    firstTokens := p.firstTokens }
 
-def node (n : SyntaxNodeKind) (p : Parser) : Parser := {
-  info := nodeInfo n p.info
-  fn := nodeFn n p.fn
-}
+def node (n : SyntaxNodeKind) (p : Parser) : Parser :=
+  { info := nodeInfo n p.info, fn := nodeFn n p.fn }
 
 def errorFn (msg : String) : ParserFn := fun _ s => s.mkUnexpectedError msg
 
@@ -181,10 +175,8 @@ def checkLhsPrec (prec : Nat) : Parser := { info := epsilonInfo, fn := checkLhsP
 def setLhsPrecFn (prec : Nat) : ParserFn := fun _ s =>
   if s.hasError then
     s
-  else {
-    s with
-    lhsPrec := prec
-  }
+  else
+    { s with lhsPrec := prec }
 
 def setLhsPrec (prec : Nat) : Parser := { info := epsilonInfo, fn := setLhsPrecFn prec }
 
@@ -203,10 +195,8 @@ def suppressInsideQuot : Parser → Parser :=
 def leadingNode (n : SyntaxNodeKind) (prec : Nat) (p : Parser) : Parser :=
   checkPrec prec >> node n p >> setLhsPrec prec
 
-def trailingNodeAux (n : SyntaxNodeKind) (p : Parser) : TrailingParser := {
-  info := nodeInfo n p.info
-  fn := trailingNodeFn n p.fn
-}
+def trailingNodeAux (n : SyntaxNodeKind) (p : Parser) : TrailingParser :=
+  { info := nodeInfo n p.info, fn := trailingNodeFn n p.fn }
 
 def trailingNode (n : SyntaxNodeKind) (prec lhsPrec : Nat) (p : Parser) : TrailingParser :=
   checkPrec prec >> checkLhsPrec lhsPrec >> trailingNodeAux n p >> setLhsPrec prec
@@ -275,11 +265,10 @@ def orelseFnCore (p q : ParserFn) (antiquotBehavior := OrElseOnAntiquotBehavior.
 def orelseFn (p q : ParserFn) : ParserFn := orelseFnCore p q
 
 @[noinline]
-def orelseInfo (p q : ParserInfo) : ParserInfo := {
-  collectTokens := p.collectTokens ∘ q.collectTokens
-  collectKinds := p.collectKinds ∘ q.collectKinds
-  firstTokens := p.firstTokens.merge q.firstTokens
-}
+def orelseInfo (p q : ParserInfo) : ParserInfo :=
+  { collectTokens := p.collectTokens ∘ q.collectTokens
+    collectKinds := p.collectKinds ∘ q.collectKinds
+    firstTokens := p.firstTokens.merge q.firstTokens }
 
 instance : OrElse ParserFn where
   orElse p1 p2 := orelseFn p1 (p2 ())
@@ -300,10 +289,8 @@ instance : OrElse Parser where
   orElse a b := orelse a (b ())
 
 @[noinline]
-def noFirstTokenInfo (info : ParserInfo) : ParserInfo := {
-  collectTokens := info.collectTokens
-  collectKinds := info.collectKinds
-}
+def noFirstTokenInfo (info : ParserInfo) : ParserInfo :=
+  { collectTokens := info.collectTokens, collectKinds := info.collectKinds }
 
 def atomicFn (p : ParserFn) : ParserFn := fun c s =>
   let iniPos := s.pos
@@ -344,13 +331,12 @@ def recoverFn (p : ParserFn) (recover : RecoveryContext → ParserFn) : ParserFn
     let s' := recover ⟨iniPos, iniSz⟩ c { s with errorMsg := none }
     if s'.hasError then
       s
-    else {
-      s with
-      pos := s'.pos
-      errorMsg := none
-      stxStack := s'.stxStack
-      recoveredErrors := s.recoveredErrors.push (s'.pos, s'.stxStack, msg)
-    }
+    else
+      { s with
+        pos := s'.pos
+        errorMsg := none
+        stxStack := s'.stxStack
+        recoveredErrors := s.recoveredErrors.push (s'.pos, s'.stxStack, msg) }
   else
     s
 
@@ -388,16 +374,13 @@ def optionalFn (p : ParserFn) : ParserFn := fun c s =>
   s.mkNode nullKind iniSz
 
 @[noinline]
-def optionalInfo (p : ParserInfo) : ParserInfo := {
-  collectTokens := p.collectTokens
-  collectKinds := p.collectKinds
-  firstTokens := p.firstTokens.toOptional
-}
+def optionalInfo (p : ParserInfo) : ParserInfo :=
+  { collectTokens := p.collectTokens
+    collectKinds := p.collectKinds
+    firstTokens := p.firstTokens.toOptional }
 
-def optionalNoAntiquot (p : Parser) : Parser := {
-  info := optionalInfo p.info
-  fn := optionalFn p.fn
-}
+def optionalNoAntiquot (p : Parser) : Parser :=
+  { info := optionalInfo p.info, fn := optionalFn p.fn }
 
 def lookaheadFn (p : ParserFn) : ParserFn := fun c s =>
   let iniSz := s.stackSize
@@ -500,27 +483,21 @@ def sepBy1Fn (allowTrailingSep : Bool) (p : ParserFn) (sep : ParserFn) : ParserF
   sepByFnAux p sep allowTrailingSep iniSz false c s
 
 @[noinline]
-def sepByInfo (p sep : ParserInfo) : ParserInfo := {
-  collectTokens := p.collectTokens ∘ sep.collectTokens
-  collectKinds := p.collectKinds ∘ sep.collectKinds
-}
+def sepByInfo (p sep : ParserInfo) : ParserInfo :=
+  { collectTokens := p.collectTokens ∘ sep.collectTokens
+    collectKinds := p.collectKinds ∘ sep.collectKinds }
 
 @[noinline]
-def sepBy1Info (p sep : ParserInfo) : ParserInfo := {
-  collectTokens := p.collectTokens ∘ sep.collectTokens
-  collectKinds := p.collectKinds ∘ sep.collectKinds
-  firstTokens := p.firstTokens
-}
+def sepBy1Info (p sep : ParserInfo) : ParserInfo :=
+  { collectTokens := p.collectTokens ∘ sep.collectTokens
+    collectKinds := p.collectKinds ∘ sep.collectKinds
+    firstTokens := p.firstTokens }
 
-def sepByNoAntiquot (p sep : Parser) (allowTrailingSep : Bool := false) : Parser := {
-  info := sepByInfo p.info sep.info
-  fn := sepByFn allowTrailingSep p.fn sep.fn
-}
+def sepByNoAntiquot (p sep : Parser) (allowTrailingSep : Bool := false) : Parser :=
+  { info := sepByInfo p.info sep.info, fn := sepByFn allowTrailingSep p.fn sep.fn }
 
-def sepBy1NoAntiquot (p sep : Parser) (allowTrailingSep : Bool := false) : Parser := {
-  info := sepBy1Info p.info sep.info
-  fn := sepBy1Fn allowTrailingSep p.fn sep.fn
-}
+def sepBy1NoAntiquot (p sep : Parser) (allowTrailingSep : Bool := false) : Parser :=
+  { info := sepBy1Info p.info sep.info, fn := sepBy1Fn allowTrailingSep p.fn sep.fn }
 
 /-- Apply `f` to the syntax object produced by `p` -/
 def withResultOfFn (p : ParserFn) (f : Syntax → Syntax) : ParserFn := fun c s =>
@@ -532,15 +509,11 @@ def withResultOfFn (p : ParserFn) (f : Syntax → Syntax) : ParserFn := fun c s 
     s.popSyntax.pushSyntax (f stx)
 
 @[noinline]
-def withResultOfInfo (p : ParserInfo) : ParserInfo := {
-  collectTokens := p.collectTokens
-  collectKinds := p.collectKinds
-}
+def withResultOfInfo (p : ParserInfo) : ParserInfo :=
+  { collectTokens := p.collectTokens, collectKinds := p.collectKinds }
 
-def withResultOf (p : Parser) (f : Syntax → Syntax) : Parser := {
-  info := withResultOfInfo p.info
-  fn := withResultOfFn p.fn f
-}
+def withResultOf (p : Parser) (f : Syntax → Syntax) : Parser :=
+  { info := withResultOfInfo p.info, fn := withResultOfFn p.fn f }
 
 def many1Unbox (p : Parser) : Parser :=
   withResultOf (many1NoAntiquot p) fun stx => if stx.getNumArgs == 1 then stx.getArg 0 else stx
@@ -1129,14 +1102,12 @@ private def updateTokenCache (startPos : String.Pos.Raw) (s : ParserState) : Par
       s
     else
       let tk := stack.back
-      ⟨
-        stack,
+      ⟨ stack,
         lhsPrec,
         pos,
         ⟨{ startPos := startPos, stopPos := pos, token := tk }, catCache⟩,
         none,
-        errs
-      ⟩
+        errs ⟩
   | other =>
     other
 
@@ -1192,10 +1163,8 @@ def satisfySymbolFn (p : String → Bool) (expected : List String) : ParserFn :=
 def symbolFnAux (sym : String) (errorMsg : String) : ParserFn :=
   satisfySymbolFn (fun s => s == sym) [errorMsg]
 
-def symbolInfo (sym : String) : ParserInfo := {
-  collectTokens := fun tks => sym :: tks
-  firstTokens := FirstTokens.tokens [sym]
-}
+def symbolInfo (sym : String) : ParserInfo :=
+  { collectTokens := fun tks => sym :: tks, firstTokens := FirstTokens.tokens [sym] }
 
 def symbolFn (sym : String) : ParserFn := symbolFnAux sym ("'" ++ sym ++ "'")
 
@@ -1230,13 +1199,12 @@ def nonReservedSymbolFnAux (sym : String) (errorMsg : String) : ParserFn := fun 
 
 def nonReservedSymbolFn (sym : String) : ParserFn := nonReservedSymbolFnAux sym ("'" ++ sym ++ "'")
 
-def nonReservedSymbolInfo (sym : String) (includeIdent : Bool) : ParserInfo := {
-  firstTokens :=
-    if includeIdent then
-      .tokens [sym, "ident"]
-    else
-      .tokens [sym]
-}
+def nonReservedSymbolInfo (sym : String) (includeIdent : Bool) : ParserInfo :=
+  { firstTokens :=
+      if includeIdent then
+        .tokens [sym, "ident"]
+      else
+        .tokens [sym] }
 
 def nonReservedSymbolNoAntiquot (sym : String) (includeIdent := false) : Parser :=
   let sym := sym.trimAscii.copy
@@ -1320,18 +1288,15 @@ problems for the use of `"foo"` and `"+"` as separate tokens in other parsers.
 This parser has arity 0 - it does not capture anything.
 -/
 @[builtin_doc]
-def checkNoWsBefore (errorMsg : String := "no space before") : Parser := {
-  info := epsilonInfo
-  fn := checkNoWsBeforeFn errorMsg
-}
+def checkNoWsBefore (errorMsg : String := "no space before") : Parser :=
+  { info := epsilonInfo, fn := checkNoWsBeforeFn errorMsg }
 
 def unicodeSymbolFnAux (sym asciiSym : String) (expected : List String) : ParserFn :=
   satisfySymbolFn (fun s => s == sym || s == asciiSym) expected
 
-def unicodeSymbolInfo (sym asciiSym : String) : ParserInfo := {
-  collectTokens := fun tks => sym :: asciiSym :: tks
-  firstTokens := FirstTokens.tokens [sym, asciiSym]
-}
+def unicodeSymbolInfo (sym asciiSym : String) : ParserInfo :=
+  { collectTokens := fun tks => sym :: asciiSym :: tks
+    firstTokens := FirstTokens.tokens [sym, asciiSym] }
 
 def unicodeSymbolFn (sym asciiSym : String) : ParserFn :=
   unicodeSymbolFnAux sym asciiSym ["'" ++ sym ++ "', '" ++ asciiSym ++ "'"]
@@ -1437,10 +1402,8 @@ def hygieneInfoFn : ParserFn := fun c s => Id.run do
   let str := c.mkEmptySubstringAt s.pos
   finish s.pos str str s
 
-def hygieneInfoNoAntiquot : Parser := {
-  fn := hygieneInfoFn
-  info := nodeInfo hygieneInfoKind epsilonInfo
-}
+def hygieneInfoNoAntiquot : Parser :=
+  { fn := hygieneInfoFn, info := nodeInfo hygieneInfoKind epsilonInfo }
 
 namespace ParserState
 
@@ -1734,10 +1697,8 @@ def withForbidden (tk : Token) (p : Parser) : Parser :=
     (fun c =>
       if c.forbiddenTks.contains tk then
         c
-      else {
-        c with
-        forbiddenTks := c.forbiddenTks.push tk
-      })
+      else
+        { c with forbiddenTks := c.forbiddenTks.push tk })
     p
 
 /-- Appends the tokens from `tks` missing from `init`; the tokens in `tks` must be distinct. -/
@@ -1762,14 +1723,10 @@ This parser has the same arity as `p` - it just forwards the results of `p`.
 def withForbiddens (tks : Array Token) (p : Parser) (_h : tks.toList.Nodup := by decide) : Parser :=
   adaptCacheableContext
     (fun c =>
-      if c.forbiddenTks.isEmpty then {
-        c with
-        forbiddenTks := tks
-      }
-      else {
-        c with
-        forbiddenTks := mergeForbiddenTks c.forbiddenTks tks
-      })
+      if c.forbiddenTks.isEmpty then
+        { c with forbiddenTks := tks }
+      else
+        { c with forbiddenTks := mergeForbiddenTks c.forbiddenTks tks })
     p
 
 /--
@@ -1960,22 +1917,21 @@ def termParser (prec : Nat := 0) : Parser := categoryParser `term prec
 
 /-- Fail if previous token is immediately followed by ':'. -/
 @[builtin_doc]
-def checkNoImmediateColon : Parser := {
-  fn := fun c s =>
-    let prev := s.stxStack.back
-    if checkTailNoWs prev then
-      let i := s.pos
-      if h : c.atEnd i then
-        s
-      else
-        let curr := c.get' i h
-        if curr == ':' then
-          s.mkUnexpectedError "unexpected ':'"
-        else
+def checkNoImmediateColon : Parser :=
+  { fn := fun c s =>
+      let prev := s.stxStack.back
+      if checkTailNoWs prev then
+        let i := s.pos
+        if h : c.atEnd i then
           s
-    else
-      s
-}
+        else
+          let curr := c.get' i h
+          if curr == ':' then
+            s.mkUnexpectedError "unexpected ':'"
+          else
+            s
+      else
+        s }
 
 def setExpectedFn (expected : List String) (p : ParserFn) : ParserFn := fun c s =>
   match p c s with
@@ -2068,10 +2024,8 @@ def withAntiquotFn
 
 /-- Optimized version of `mkAntiquot ... <|> p`. -/
 @[builtin_doc]
-def withAntiquot (antiquotP p : Parser) : Parser := {
-  fn := withAntiquotFn antiquotP.fn p.fn
-  info := orelseInfo antiquotP.info p.info
-}
+def withAntiquot (antiquotP p : Parser) : Parser :=
+  { fn := withAntiquotFn antiquotP.fn p.fn, info := orelseInfo antiquotP.info p.info }
 
 /--
 Like `withAntiquot`, but uses `OrElseOnAntiquotBehavior.acceptLhs` instead of `.takeLongest`.
@@ -2080,10 +2034,9 @@ This is useful when `p` has side effects on the parser stack that would not be u
 backtracking.
 -/
 @[builtin_doc]
-def withAntiquotAcceptLhs (antiquotP p : Parser) : Parser := {
-  fn := withAntiquotFn antiquotP.fn p.fn (antiquotBehavior := .acceptLhs)
-  info := orelseInfo antiquotP.info p.info
-}
+def withAntiquotAcceptLhs (antiquotP p : Parser) : Parser :=
+  { fn := withAntiquotFn antiquotP.fn p.fn (antiquotBehavior := .acceptLhs)
+    info := orelseInfo antiquotP.info p.info }
 
 def withoutInfo (p : Parser) : Parser := { fn := p.fn }
 
@@ -2241,10 +2194,8 @@ def fieldIdxFn : ParserFn := fun c s =>
     s.mkErrorAt "field index" iniPos initStackSz
 
 def fieldIdx : Parser :=
-  withAntiquot (mkAntiquot "fieldIdx" `fieldIdx) {
-    fn := fieldIdxFn
-    info := mkAtomicInfo "fieldIdx"
-  }
+  withAntiquot (mkAntiquot "fieldIdx" `fieldIdx)
+    { fn := fieldIdxFn, info := mkAtomicInfo "fieldIdx" }
 
 def skip : Parser := { fn := fun _ s => s, info := epsilonInfo }
 

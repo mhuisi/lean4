@@ -134,33 +134,32 @@ def wait (x : CancellationToken) : IO (AsyncTask Unit) :=
       | none => throw (IO.userError "cancellation token dropped")
 
 /-- Creates a selector that waits for cancellation. -/
-def selector (token : CancellationToken) : Selector Unit := {
-  tryFn := do
-    if ← token.isCancelled then
-      return some ()
-    else
-      return none
-  registerFn := fun waiter => do
-    token.state.atomically do
-      let st ← get
-
-      if st.reason.isSome then
-        discard <| waiter.race (return false) (fun promise => do
-          promise.resolve (.ok ())
-          return true)
+def selector (token : CancellationToken) : Selector Unit :=
+  { tryFn := do
+      if ← token.isCancelled then
+        return some ()
       else
-        modify fun st => { st with consumers := st.consumers.enqueue (.select waiter) }
-  unregisterFn := do
-    token.state.atomically do
-      let st ← get
+        return none
+    registerFn := fun waiter => do
+      token.state.atomically do
+        let st ← get
 
-      let consumers ←
-        st.consumers.filterM fun
-          | .normal _ => return true
-          | .select waiter => return !(← waiter.checkFinished)
+        if st.reason.isSome then
+          discard <| waiter.race (return false) (fun promise => do
+            promise.resolve (.ok ())
+            return true)
+        else
+          modify fun st => { st with consumers := st.consumers.enqueue (.select waiter) }
+    unregisterFn := do
+      token.state.atomically do
+        let st ← get
 
-      set { st with consumers }
-}
+        let consumers ←
+          st.consumers.filterM fun
+            | .normal _ => return true
+            | .select waiter => return !(← waiter.checkFinished)
+
+        set { st with consumers } }
 
 end CancellationToken
 end Std

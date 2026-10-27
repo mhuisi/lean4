@@ -60,80 +60,65 @@ The built-in splits are the `LatticeOp` values in `builtinLatticeOps`.
 -/
 
 /-- The lattice meet `⊓`: distributes via `meet_apply`, closes with `le_meet`. -/
-public def LatticeOp.meet : LatticeOp := {
-  head := ``meet
-  rewrites := #[``meet_apply]
-  terminal? := ``le_meet
-}
+public def LatticeOp.meet : LatticeOp :=
+  { head := ``meet, rewrites := #[``meet_apply], terminal? := ``le_meet }
 /-- Heyting implication `⇨`: distributes via `himp_apply`, closes with `le_himp_of_meet_le_left`. -/
-public def LatticeOp.himp : LatticeOp := {
-  head := ``Lean.Order.himp
-  rewrites := #[``himp_apply]
-  terminal? := ``Lean.Order.le_himp_of_meet_le_left
-}
+public def LatticeOp.himp : LatticeOp :=
+  { head := ``Lean.Order.himp
+    rewrites := #[``himp_apply]
+    terminal? := ``Lean.Order.le_himp_of_meet_le_left }
 /--
 The pure assertion `⌜·⌝`: distributes via `ofProp_apply`, closes with the `⊤`-fixed
 `CompleteLattice.top_le_ofProp`. It decomposes `pre ⊑ ⌜p⌝` only when `pre` is `⊤`: the subgoal `p`
 of any other `pre` would drop `pre`, and the terminal fails to apply.
 -/
-public def LatticeOp.ofProp : LatticeOp := {
-  head := ``Lean.Order.CompleteLattice.ofProp
-  rewrites := #[``Lean.Order.CompleteLattice.ofProp_apply]
-  terminal? := ``Lean.Order.CompleteLattice.top_le_ofProp
-}
+public def LatticeOp.ofProp : LatticeOp :=
+  { head := ``Lean.Order.CompleteLattice.ofProp
+    rewrites := #[``Lean.Order.CompleteLattice.ofProp_apply]
+    terminal? := ``Lean.Order.CompleteLattice.top_le_ofProp }
 /-- The lattice top `⊤`: distributes via `top_apply`, closes with `le_top`. -/
-public def LatticeOp.top : LatticeOp := {
-  head := ``Lean.Order.top
-  rewrites := #[``Lean.Order.top_apply]
-  terminal? := ``le_top
-}
+public def LatticeOp.top : LatticeOp :=
+  { head := ``Lean.Order.top, rewrites := #[``Lean.Order.top_apply], terminal? := ``le_top }
 /-- The conjunction `∧` on the `Prop` lattice: closes with `le_and`. -/
-public def LatticeOp.and : LatticeOp := {
-  head := ``And
-  numConst := 0
-  terminal? := ``Lean.Order.le_and
-}
+public def LatticeOp.and : LatticeOp :=
+  { head := ``And, numConst := 0, terminal? := ``Lean.Order.le_and }
 /-- The existential `∃ h : a, b h` over a proposition `a`: closes with `le_exists_prop`. -/
-public def LatticeOp.exists : LatticeOp := {
-  head := ``Exists
-  numConst := 1
-  terminal? := ``Lean.Order.le_exists_prop
-  applies? := fun rhs =>
-    match rhs.getAppFn with
-    | .const _ [u] => u.isZero
-    | _ => false
-}
+public def LatticeOp.exists : LatticeOp :=
+  { head := ``Exists
+    numConst := 1
+    terminal? := ``Lean.Order.le_exists_prop
+    applies? := fun rhs =>
+      match rhs.getAppFn with
+      | .const _ [u] => u.isZero
+      | _ => false }
 /--
 The magic-wand residual `upperAdjoint f b`: framed for its excess state arguments, closes with
 `le_upperAdjoint`.
 -/
-public def LatticeOp.upperAdjoint : LatticeOp := {
-  head := ``Lean.Order.PreservesSup.upperAdjoint
-  rewrites :=
-    #[``Lean.Order.FrameOp.upperAdjoint_pointwise_apply, ``Lean.Order.FrameOp.upperAdjoint_ignore]
-  terminal? := ``Lean.Order.PreservesSup.le_upperAdjoint
-}
+public def LatticeOp.upperAdjoint : LatticeOp :=
+  { head := ``Lean.Order.PreservesSup.upperAdjoint
+    rewrites :=
+      #[``Lean.Order.FrameOp.upperAdjoint_pointwise_apply, ``Lean.Order.FrameOp.upperAdjoint_ignore]
+    terminal? := ``Lean.Order.PreservesSup.le_upperAdjoint }
 /-- Indexed infimum `iInf`/`⨅`: distributes via `iInf_apply`, closes with `le_iInf`. -/
-public def LatticeOp.iInf : LatticeOp := {
-  head := ``Lean.Order.iInf
-  numConst := 3
-  rewrites := #[``Lean.Order.iInf_apply]
-  terminal? := ``Lean.Order.le_iInf
-}
+public def LatticeOp.iInf : LatticeOp :=
+  { head := ``Lean.Order.iInf
+    numConst := 3
+    rewrites := #[``Lean.Order.iInf_apply]
+    terminal? := ``Lean.Order.le_iInf }
 /--
 Indexed supremum `iSup`/`⨆` over a proposition: distributes via `iSup_apply`, closes with
 `le_iSup_prop`.
 -/
-public def LatticeOp.iSup : LatticeOp := {
-  head := ``Lean.Order.iSup
-  numConst := 3
-  rewrites := #[``Lean.Order.iSup_apply]
-  terminal? := ``Lean.Order.le_iSup_prop
-  applies? := fun rhs =>
-    match rhs.getAppFn with
-    | .const _ [_, v] => v.isZero
-    | _ => false
-}
+public def LatticeOp.iSup : LatticeOp :=
+  { head := ``Lean.Order.iSup
+    numConst := 3
+    rewrites := #[``Lean.Order.iSup_apply]
+    terminal? := ``Lean.Order.le_iSup_prop
+    applies? := fun rhs =>
+      match rhs.getAppFn with
+      | .const _ [_, v] => v.isZero
+      | _ => false }
 /--
 Whether the `fst`/`snd` rewrites decompose the projected operand: a `⊥`/`⊤`, a
 companion application `FrameOp.prod`, or a wand `upperAdjoint (FrameOp.prod …)`, whose component
@@ -149,28 +134,24 @@ def projectsRewritableOperand (rhs : Expr) : Bool :=
     | _ =>
       false
 
-public def LatticeOp.fst : LatticeOp := {
-  head := ``Prod.fst
-  numConst := 3
-  applies? := projectsRewritableOperand
-  rewrites := #[
-    ``Prod.fst_bot, ``Prod.fst_top, ``Lean.Order.bot_apply, ``Lean.Order.top_apply,
-    ``Lean.Order.FrameOp.prod_fst, ``Lean.Order.FrameOp.pointwise_apply,
-    ``Lean.Order.FrameOp.ignore_apply,
-    ``Lean.Order.FrameOp.upperAdjoint_prod_fst
-  ]
-}
-public def LatticeOp.snd : LatticeOp := {
-  head := ``Prod.snd
-  numConst := 3
-  applies? := projectsRewritableOperand
-  rewrites := #[
-    ``Prod.snd_bot, ``Prod.snd_top, ``Lean.Order.bot_apply, ``Lean.Order.top_apply,
-    ``Lean.Order.FrameOp.prod_snd, ``Lean.Order.FrameOp.pointwise_apply,
-    ``Lean.Order.FrameOp.ignore_apply,
-    ``Lean.Order.FrameOp.upperAdjoint_prod_snd
-  ]
-}
+public def LatticeOp.fst : LatticeOp :=
+  { head := ``Prod.fst
+    numConst := 3
+    applies? := projectsRewritableOperand
+    rewrites :=
+      #[``Prod.fst_bot, ``Prod.fst_top, ``Lean.Order.bot_apply, ``Lean.Order.top_apply,
+        ``Lean.Order.FrameOp.prod_fst, ``Lean.Order.FrameOp.pointwise_apply,
+        ``Lean.Order.FrameOp.ignore_apply,
+        ``Lean.Order.FrameOp.upperAdjoint_prod_fst] }
+public def LatticeOp.snd : LatticeOp :=
+  { head := ``Prod.snd
+    numConst := 3
+    applies? := projectsRewritableOperand
+    rewrites :=
+      #[``Prod.snd_bot, ``Prod.snd_top, ``Lean.Order.bot_apply, ``Lean.Order.top_apply,
+        ``Lean.Order.FrameOp.prod_snd, ``Lean.Order.FrameOp.pointwise_apply,
+        ``Lean.Order.FrameOp.ignore_apply,
+        ``Lean.Order.FrameOp.upperAdjoint_prod_snd] }
 
 /-- The built-in connective splits, whose rewrites and terminals seed every saturation. -/
 public def builtinLatticeOps : Array LatticeOp :=

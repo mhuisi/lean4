@@ -69,11 +69,10 @@ partial def visitCode (code : Code .pure) : M (Code .pure) := do
           | panic! "expected struct constructor"
         let params ← mkFieldParamsForCtorType ctorInfo.type ctorInfo.numParams ctorInfo.numFields
         let fvars := params.map (·.fvarId)
-        modify fun s => {
-          s with
-          projMap := s.projMap.insert base fvars
-          fvarMap := s.fvarMap.insert decl.fvarId fvars[i]!
-        }
+        modify fun s =>
+          { s with
+            projMap := s.projMap.insert base fvars
+            fvarMap := s.fvarMap.insert decl.fvarId fvars[i]! }
         let k ← visitCode k
         modify fun s => { s with projMap := s.projMap.erase base }
         let resultType ← toMonoType (← k.inferType)

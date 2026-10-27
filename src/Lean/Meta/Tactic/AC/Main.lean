@@ -50,13 +50,12 @@ def getInstance (cls : Name) (exprs : Array Expr) : MetaM (Option Expr) := do
 
 def preContext (expr : Expr) : MetaM (Option PreContext) := do
   if let some assoc := ← getInstance ``Associative #[expr] then
-    return some {
-      assoc
-      op := expr
-      id := 0
-      comm := ← getInstance ``Commutative #[expr]
-      idem := ← getInstance ``IdempotentOp #[expr]
-    }
+    return some
+      { assoc
+        op := expr
+        id := 0
+        comm := ← getInstance ``Commutative #[expr]
+        idem := ← getInstance ``IdempotentOp #[expr] }
 
   return none
 

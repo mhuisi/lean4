@@ -42,13 +42,12 @@ private abbrev M := ReaderT Context $ StateRefT State $ CancellableT MetaM
 private def addItem (item : CompletionItem) (id? : Option CompletionIdentifier := none)
     : M Unit := do
   let ctx ← read
-  let data := {
-    uri := ctx.uri
-    pos := ctx.pos
-    cPos? := ctx.completionInfoPos
-    id?
-    : ResolvableCompletionItemData
-  }
+  let data :=
+    { uri := ctx.uri
+      pos := ctx.pos
+      cPos? := ctx.completionInfoPos
+      id?
+      : ResolvableCompletionItemData }
   let item := { item with data? := data }
   modify fun s => { s with items := s.items.push item }
 
@@ -69,21 +68,19 @@ private def addUnresolvedCompletionItemForDecl (label : Name) (declName : Name) 
       (← getCompletionTagsForDecl declName)
 
 private def addKeywordCompletionItem (keyword : String) : M Unit := do
-  let item := {
-    label := keyword
-    detail? := "keyword"
-    documentation? := none
-    kind? := CompletionItemKind.keyword
-  }
+  let item :=
+    { label := keyword
+      detail? := "keyword"
+      documentation? := none
+      kind? := CompletionItemKind.keyword }
   addItem item
 
 private def addNamespaceCompletionItem (ns : Name) : M Unit := do
-  let item := {
-    label := ns.toString
-    detail? := "namespace"
-    documentation? := none
-    kind? := CompletionItemKind.module
-  }
+  let item :=
+    { label := ns.toString
+      detail? := "namespace"
+      documentation? := none
+      kind? := CompletionItemKind.module }
   addItem item
 
 private def runM
@@ -497,12 +494,11 @@ def fieldIdCompletion
         | continue
       if ! idStr.charactersIn fieldName then
         continue
-      let item := {
-        label := fieldName
-        detail? := "field"
-        documentation? := none
-        kind? := CompletionItemKind.field
-      }
+      let item :=
+        { label := fieldName
+          detail? := "field"
+          documentation? := none
+          kind? := CompletionItemKind.field }
       addItem item
 
 /--
@@ -550,14 +546,14 @@ def optionCompletion
     let (decls : Std.TreeMap _ _ _) ← getOptionDecls
     let opts ← getOptions
     -- `stx` is from `"set_option " >> ident`
-    return trailingDotCompletion decls stx[1] caps ctx fun name decl textEdit? => {
-      label := name.toString
-      detail? := s!"({opts.get name decl.defValue}), {decl.descr}"
-      documentation? := none
-      kind? := CompletionItemKind.property -- TODO: investigate whether this is the best kind for options.
-      textEdit?
-      data? := { uri, pos, cPos? := completionInfoPos, id? := none : ResolvableCompletionItemData }
-    }
+    return trailingDotCompletion decls stx[1] caps ctx fun name decl textEdit? =>
+      { label := name.toString
+        detail? := s!"({opts.get name decl.defValue}), {decl.descr}"
+        documentation? := none
+        kind? := CompletionItemKind.property -- TODO: investigate whether this is the best kind for options.
+        textEdit?
+        data? :=
+          { uri, pos, cPos? := completionInfoPos, id? := none : ResolvableCompletionItemData } }
 
 def errorNameCompletion
     (uri : DocumentUri) (pos : Lsp.Position) (completionInfoPos : Nat) (ctx : ContextInfo)
@@ -565,16 +561,16 @@ def errorNameCompletion
     : IO (Array ResolvableCompletionItem) :=
   ctx.runMetaM {} do
     let explanations ← getErrorExplanations
-    return trailingDotCompletion explanations partialId caps ctx fun name explan textEdit? => {
-      label := name.toString
-      detail? := "error name"
-      documentation? := some { kind := .markdown, value := explan.summaryWithSeverity }
-      -- TODO: whatever we decide about the kind for options above is also likely relevant here
-      kind? := CompletionItemKind.property
-      textEdit?
-      tags? := explan.metadata.removedVersion?.map fun _ => #[CompletionItemTag.deprecated]
-      data? := { uri, pos, cPos? := completionInfoPos, id? := none : ResolvableCompletionItemData }
-    }
+    return trailingDotCompletion explanations partialId caps ctx fun name explan textEdit? =>
+      { label := name.toString
+        detail? := "error name"
+        documentation? := some { kind := .markdown, value := explan.summaryWithSeverity }
+        -- TODO: whatever we decide about the kind for options above is also likely relevant here
+        kind? := CompletionItemKind.property
+        textEdit?
+        tags? := explan.metadata.removedVersion?.map fun _ => #[CompletionItemTag.deprecated]
+        data? :=
+          { uri, pos, cPos? := completionInfoPos, id? := none : ResolvableCompletionItemData } }
 
 def tacticCompletion
     (uri : DocumentUri) (pos : Lsp.Position) (completionInfoPos : Nat) (ctx : ContextInfo)
@@ -583,24 +579,15 @@ def tacticCompletion
     -- Don't include tactics that are identified only by their internal parser name
     let allTacticDocs ← Tactic.Doc.allTacticDocs (includeUnnamed := false)
     let items : Array ResolvableCompletionItem :=
-      allTacticDocs.map fun tacticDoc => {
-        label := tacticDoc.userName
-        detail? := none
-        documentation? :=
-          tacticDoc.docString.map fun docString => {
-            value := docString
-            kind := MarkupKind.markdown
-            : MarkupContent
-          }
-        kind? := CompletionItemKind.keyword
-        data? := {
-          uri
-          pos
-          cPos? := completionInfoPos
-          id? := none
-          : ResolvableCompletionItemData
-        }
-      }
+      allTacticDocs.map fun tacticDoc =>
+        { label := tacticDoc.userName
+          detail? := none
+          documentation? :=
+            tacticDoc.docString.map fun docString =>
+              { value := docString, kind := MarkupKind.markdown : MarkupContent }
+          kind? := CompletionItemKind.keyword
+          data? :=
+            { uri, pos, cPos? := completionInfoPos, id? := none : ResolvableCompletionItemData } }
     return items
 
 private def findEndSectionCompletionCandidates
@@ -639,10 +626,10 @@ def endSectionCompletion
     idComponents := idComponents.push ""
   let scopeNames := scopeNames.toArray.pop.takeWhile (!·.isEmpty) |>.reverse
   let candidates := findEndSectionCompletionCandidates idComponents scopeNames
-  return candidates.map fun candidate => {
-    label := candidate
-    kind? := CompletionItemKind.module
-    data? := { uri, pos, cPos? := completionInfoPos, id? := none : ResolvableCompletionItemData }
-  }
+  return candidates.map fun candidate =>
+    { label := candidate
+      kind? := CompletionItemKind.module
+      data? :=
+        { uri, pos, cPos? := completionInfoPos, id? := none : ResolvableCompletionItemData } }
 
 end Lean.Server.Completion

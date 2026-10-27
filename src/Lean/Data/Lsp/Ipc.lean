@@ -91,16 +91,15 @@ partial def readResponseAs (expectedID : RequestID) (α) [FromJson α] : IpcM (R
 
 def waitForExit : IpcM UInt32 := do (← read).wait
 
-def normalizePublishDiagnosticsParams (p : PublishDiagnosticsParams) : PublishDiagnosticsParams := {
-  p with
-  diagnostics :=
-    -- Sort diagnostics by range and message to erase non-determinism in the order of diagnostics
-    -- induced by parallelism. This isn't complete, but it will hopefully be plenty for all tests.
-    let sorted :=
-      p.diagnostics.toList.mergeSort fun d1 d2 =>
-        compare d1.fullRange d2.fullRange |>.then (compare d1.message d2.message) |>.isLE
-    sorted.toArray
-}
+def normalizePublishDiagnosticsParams (p : PublishDiagnosticsParams) : PublishDiagnosticsParams :=
+  { p with
+    diagnostics :=
+      -- Sort diagnostics by range and message to erase non-determinism in the order of diagnostics
+      -- induced by parallelism. This isn't complete, but it will hopefully be plenty for all tests.
+      let sorted :=
+        p.diagnostics.toList.mergeSort fun d1 d2 =>
+          compare d1.fullRange d2.fullRange |>.then (compare d1.message d2.message) |>.isLE
+      sorted.toArray }
 
 /--
 Merges a new `textDocument/publishDiagnostics` notification into a previously accumulated one.
@@ -119,11 +118,10 @@ def mergePublishDiagnosticsParams
   let some prev := prev?
     | return replace
   if next.isIncremental?.getD false then
-    return {
-      next with
-      diagnostics := prev.diagnostics ++ next.diagnostics
-      isIncremental? := some false
-    }
+    return
+      { next with
+        diagnostics := prev.diagnostics ++ next.diagnostics
+        isIncremental? := some false }
   return replace
 
 /--
@@ -138,11 +136,10 @@ deterministic anymore as what messages are dropped depends on wall-clock timing.
 partial def collectDiagnostics
     (waitForDiagnosticsId : RequestID := 0) (target : DocumentUri) (version : Nat)
     : IpcM (Option (Notification PublishDiagnosticsParams)) := do
-  writeRequest ⟨
-    waitForDiagnosticsId,
-    "textDocument/waitForDiagnostics",
-    WaitForDiagnosticsParams.mk target version
-  ⟩
+  writeRequest
+    ⟨ waitForDiagnosticsId,
+      "textDocument/waitForDiagnostics",
+      WaitForDiagnosticsParams.mk target version ⟩
   loop none
 where
   loop (accumulated? : Option PublishDiagnosticsParams) := do
@@ -203,11 +200,10 @@ deriving FromJson, ToJson
 
 partial def expandIncomingCallHierarchy (requestNo : Nat) (uri : DocumentUri) (pos : Lsp.Position)
     : IpcM (Array CallHierarchy × Nat) := do
-  writeRequest {
-    id := requestNo
-    method := "textDocument/prepareCallHierarchy"
-    param := { textDocument := { uri }, position := pos : CallHierarchyPrepareParams }
-  }
+  writeRequest
+    { id := requestNo
+      method := "textDocument/prepareCallHierarchy"
+      param := { textDocument := { uri }, position := pos : CallHierarchyPrepareParams } }
   let r ← readResponseAs requestNo (Option (Array CallHierarchyItem))
   let mut requestNo := requestNo + 1
   let roots := r.result.getD #[]
@@ -224,11 +220,10 @@ where
       : IpcM (CallHierarchy × Nat) := do
     if visited.contains item.name then
       return ({ item, fromRanges := #[], children := #[] }, requestNo)
-    writeRequest {
-      id := requestNo
-      method := "callHierarchy/incomingCalls"
-      param := { item : CallHierarchyIncomingCallsParams }
-    }
+    writeRequest
+      { id := requestNo
+        method := "callHierarchy/incomingCalls"
+        param := { item : CallHierarchyIncomingCallsParams } }
     let r ← readResponseAs requestNo (Option (Array CallHierarchyIncomingCall))
     let visited : Std.TreeSet String := visited.insert item.name
     let mut requestNo := requestNo + 1
@@ -242,11 +237,10 @@ where
 
 partial def expandOutgoingCallHierarchy (requestNo : Nat) (uri : DocumentUri) (pos : Lsp.Position)
     : IpcM (Array CallHierarchy × Nat) := do
-  writeRequest {
-    id := requestNo
-    method := "textDocument/prepareCallHierarchy"
-    param := { textDocument := { uri }, position := pos : CallHierarchyPrepareParams }
-  }
+  writeRequest
+    { id := requestNo
+      method := "textDocument/prepareCallHierarchy"
+      param := { textDocument := { uri }, position := pos : CallHierarchyPrepareParams } }
   let r ← readResponseAs requestNo (Option (Array CallHierarchyItem))
   let mut requestNo := requestNo + 1
   let roots := r.result.getD #[]
@@ -263,11 +257,10 @@ where
       : IpcM (CallHierarchy × Nat) := do
     if visited.contains item.name then
       return ({ item, fromRanges := #[], children := #[] }, requestNo)
-    writeRequest {
-      id := requestNo
-      method := "callHierarchy/outgoingCalls"
-      param := { item : CallHierarchyOutgoingCallsParams }
-    }
+    writeRequest
+      { id := requestNo
+        method := "callHierarchy/outgoingCalls"
+        param := { item : CallHierarchyOutgoingCallsParams } }
     let r ← readResponseAs requestNo (Option (Array CallHierarchyOutgoingCall))
     let visited : Std.TreeSet String := visited.insert item.name
     let mut requestNo := requestNo + 1
@@ -286,11 +279,10 @@ deriving FromJson, ToJson
 
 partial def expandModuleHierarchyImports (requestNo : Nat) (uri : DocumentUri)
     : IpcM (Option ModuleHierarchy × Nat) := do
-  writeRequest {
-    id := requestNo
-    method := "$/lean/prepareModuleHierarchy"
-    param := { textDocument := { uri } : LeanPrepareModuleHierarchyParams }
-  }
+  writeRequest
+    { id := requestNo
+      method := "$/lean/prepareModuleHierarchy"
+      param := { textDocument := { uri } : LeanPrepareModuleHierarchyParams } }
   let r ← readResponseAs requestNo (Option LeanModule)
   let mut requestNo := requestNo + 1
   let some root := r.result
@@ -304,11 +296,10 @@ where
       : IpcM (ModuleHierarchy × Nat) := do
     if visited.contains item.module.name then
       return ({ item, children := #[] }, requestNo)
-    writeRequest {
-      id := requestNo
-      method := "$/lean/moduleHierarchy/imports"
-      param := { module := item.module : LeanModuleHierarchyImportsParams }
-    }
+    writeRequest
+      { id := requestNo
+        method := "$/lean/moduleHierarchy/imports"
+        param := { module := item.module : LeanModuleHierarchyImportsParams } }
     let r ← readResponseAs requestNo (Array LeanImport)
     let visited : Std.TreeSet String := visited.insert item.module.name
     let mut requestNo := requestNo + 1
@@ -322,11 +313,10 @@ where
 
 partial def expandModuleHierarchyImportedBy (requestNo : Nat) (uri : DocumentUri)
     : IpcM (Option ModuleHierarchy × Nat) := do
-  writeRequest {
-    id := requestNo
-    method := "$/lean/prepareModuleHierarchy"
-    param := { textDocument := { uri } : LeanPrepareModuleHierarchyParams }
-  }
+  writeRequest
+    { id := requestNo
+      method := "$/lean/prepareModuleHierarchy"
+      param := { textDocument := { uri } : LeanPrepareModuleHierarchyParams } }
   let r ← readResponseAs requestNo (Option LeanModule)
   let mut requestNo := requestNo + 1
   let some root := r.result
@@ -340,11 +330,10 @@ where
       : IpcM (ModuleHierarchy × Nat) := do
     if visited.contains item.module.name then
       return ({ item, children := #[] }, requestNo)
-    writeRequest {
-      id := requestNo
-      method := "$/lean/moduleHierarchy/importedBy"
-      param := { module := item.module : LeanModuleHierarchyImportedByParams }
-    }
+    writeRequest
+      { id := requestNo
+        method := "$/lean/moduleHierarchy/importedBy"
+        param := { module := item.module : LeanModuleHierarchyImportedByParams } }
     let r ← readResponseAs requestNo (Array LeanImport)
     let visited : Std.TreeSet String := visited.insert item.module.name
     let mut requestNo := requestNo + 1

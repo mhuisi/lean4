@@ -502,10 +502,8 @@ Returns the longest common prefix of two substrings.
 
 The returned substring uses the same underlying string as `s`.
 -/
-def commonPrefix (s t : Substring.Raw) : Substring.Raw := {
-  s with
-  stopPos := loop s.startPos t.startPos
-}
+def commonPrefix (s t : Substring.Raw) : Substring.Raw :=
+  { s with stopPos := loop s.startPos t.startPos }
 where
   /-- Returns the ending position of the common prefix, working up from `spos, tpos`. -/
   loop spos tpos :=
@@ -524,10 +522,8 @@ Returns the longest common suffix of two substrings.
 
 The returned substring uses the same underlying string as `s`.
 -/
-def commonSuffix (s t : Substring.Raw) : Substring.Raw := {
-  s with
-  startPos := loop s.stopPos t.stopPos
-}
+def commonSuffix (s t : Substring.Raw) : Substring.Raw :=
+  { s with startPos := loop s.stopPos t.stopPos }
 where
   /-- Returns the starting position of the common prefix, working down from `spos, tpos`. -/
   loop spos tpos :=

@@ -281,10 +281,8 @@ Returns the parent path by removing the last segment. If the path is empty, retu
 def parent (p : Path) : Path :=
   if p.segments.isEmpty then
     p
-  else {
-    p with
-    segments := p.segments.pop
-  }
+  else
+    { p with segments := p.segments.pop }
 
 /--
 Joins two paths. If the second path is absolute, it is returned as-is. Otherwise, the second path's
@@ -293,22 +291,16 @@ segments are appended to the first path.
 def join (p1 : Path) (p2 : Path) : Path :=
   if p2.absolute then
     p2
-  else {
-    p1 with
-    segments := p1.segments ++ p2.segments
-  }
+  else
+    { p1 with segments := p1.segments ++ p2.segments }
 
 /-- Appends a single segment to the path. The segment will be percent-encoded. -/
-def append (p : Path) (segment : String) : Path := {
-  p with
-  segments := p.segments.push (EncodedSegment.encode segment)
-}
+def append (p : Path) (segment : String) : Path :=
+  { p with segments := p.segments.push (EncodedSegment.encode segment) }
 
 /-- Appends an already-encoded segment to the path. -/
-def appendEncoded (p : Path) (segment : EncodedSegment) : Path := {
-  p with
-  segments := p.segments.push segment
-}
+def appendEncoded (p : Path) (segment : EncodedSegment) : Path :=
+  { p with segments := p.segments.push segment }
 
 /--
 Removes dot segments from the path according to RFC 3986 Section 5.2.4. This handles "."
@@ -587,10 +579,8 @@ def setScheme! (b : Builder) (scheme : String) : Builder :=
 Sets the user information with username and optional password.
 The strings will be automatically percent-encoded.
 -/
-def setUserInfo (b : Builder) (username : String) (password : Option String := none) : Builder := {
-  b with
-  userInfo := some (UserInfo.ofStrings username password)
-}
+def setUserInfo (b : Builder) (username : String) (password : Option String := none) : Builder :=
+  { b with userInfo := some (UserInfo.ofStrings username password) }
 
 /--
 Sets the host as a domain name, returning `none` if the name contains invalid characters.
@@ -615,16 +605,12 @@ def setHost! (b : Builder) (name : String) : Builder :=
   | none => panic! s!"invalid domain name: {name.quote}"
 
 /-- Sets the host as an IPv4 address. -/
-def setHostIPv4 (b : Builder) (addr : Net.IPv4Addr) : Builder := {
-  b with
-  host := some (Host.ipv4 addr)
-}
+def setHostIPv4 (b : Builder) (addr : Net.IPv4Addr) : Builder :=
+  { b with host := some (Host.ipv4 addr) }
 
 /-- Sets the host as an IPv6 address. -/
-def setHostIPv6 (b : Builder) (addr : Net.IPv6Addr) : Builder := {
-  b with
-  host := some (Host.ipv6 addr)
-}
+def setHostIPv6 (b : Builder) (addr : Net.IPv6Addr) : Builder :=
+  { b with host := some (Host.ipv6 addr) }
 
 /-- Sets the port number. -/
 def setPort (b : Builder) (port : UInt16) : Builder := { b with port := .value port }
@@ -635,36 +621,28 @@ def setPath (b : Builder) (segments : Array String) : Builder := { b with pathSe
 /--
 Appends a single segment to the path. The segment will be automatically percent-encoded when building.
 -/
-def appendPathSegment (b : Builder) (segment : String) : Builder := {
-  b with
-  pathSegments := b.pathSegments.push segment
-}
+def appendPathSegment (b : Builder) (segment : String) : Builder :=
+  { b with pathSegments := b.pathSegments.push segment }
 
 /--
 Adds a query parameter with a value. Both key and value will be automatically percent-encoded when
 building.
 -/
-def addQueryParam (b : Builder) (key : String) (value : String) : Builder := {
-  b with
-  query := b.query.push (key, some value)
-}
+def addQueryParam (b : Builder) (key : String) (value : String) : Builder :=
+  { b with query := b.query.push (key, some value) }
 
 /--
 Adds a query parameter without a value (flag parameter). The key will be automatically
 percent-encoded when building.
 -/
-def addQueryFlag (b : Builder) (key : String) : Builder := {
-  b with
-  query := b.query.push (key, none)
-}
+def addQueryFlag (b : Builder) (key : String) : Builder :=
+  { b with query := b.query.push (key, none) }
 
 /--
 Replaces all query parameters. Keys and values will be automatically percent-encoded when building.
 -/
-def setQuery (b : Builder) (query : Array (String × Option String)) : Builder := {
-  b with
-  query := query
-}
+def setQuery (b : Builder) (query : Array (String × Option String)) : Builder :=
+  { b with query := query }
 
 /--
 Sets the fragment identifier. The fragment will be automatically percent-encoded when building.
@@ -691,21 +669,17 @@ def build (b : Builder) : URI :=
 
   let query := URI.Query.ofList query.toList
 
-  {
-    scheme
+  { scheme
     authority := authority
     path
     query := if query.isEmpty then none else some query
-    fragment := b.fragment
-  }
+    fragment := b.fragment }
 
 end Builder
 
 /-- Returns a new URI with the scheme replaced. -/
-def withScheme! (uri : URI) (scheme : String) : URI := {
-  uri with
-  scheme := URI.Scheme.ofString! scheme
-}
+def withScheme! (uri : URI) (scheme : String) : URI :=
+  { uri with scheme := URI.Scheme.ofString! scheme }
 
 /-- Returns a new URI with the authority replaced. -/
 def withAuthority (uri : URI) (authority : Option URI.Authority) : URI := { uri with authority }

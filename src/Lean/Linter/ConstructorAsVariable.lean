@@ -22,10 +22,10 @@ open Lean.Linter (logLint)
 A linter that warns when bound variable names are the same as constructor names for their types,
 modulo namespaces.
 -/
-register_builtin_option linter.constructorNameAsVariable : Bool := {
-  defValue := true
-  descr := "enable the linter that warns when bound variable names are nullary constructor names"
-}
+register_builtin_option linter.constructorNameAsVariable : Bool :=
+  { defValue := true
+    descr :=
+      "enable the linter that warns when bound variable names are nullary constructor names" }
 
 /--
 Reports when bound variables' names overlap with constructor names for their type. This is to warn
@@ -99,8 +99,9 @@ def constructorNameAsVariable : Linter where
 
     -- Sort the outputs by position, excluding those that are also defining global constants.
     -- Global constants occur for example in `structure` fields
-    for (range, declStx, userName, ctorName)
-        in (← warnings.get).toArray.qsort (·.1.start < ·.1.start) do
+    for
+        (range, declStx, userName, ctorName)
+          in (← warnings.get).toArray.qsort (·.1.start < ·.1.start) do
       unless (← constRanges.get).contains range do
         logLint linter.constructorNameAsVariable declStx <|
           m!"Local variable '{userName}' resembles constructor '{ctorName}' - "

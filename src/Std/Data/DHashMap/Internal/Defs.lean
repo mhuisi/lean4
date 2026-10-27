@@ -179,10 +179,9 @@ namespace Raw₀
 
 /-- Internal implementation detail of the hash map -/
 @[inline]
-def emptyWithCapacity (capacity := 8) : Raw₀ α β := ⟨
-  ⟨0, Array.replicate (numBucketsForCapacity capacity).nextPowerOfTwo AssocList.nil⟩,
-  by simpa using Nat.pos_of_isPowerOfTwo (Nat.isPowerOfTwo_nextPowerOfTwo _)
-⟩
+def emptyWithCapacity (capacity := 8) : Raw₀ α β :=
+  ⟨ ⟨0, Array.replicate (numBucketsForCapacity capacity).nextPowerOfTwo AssocList.nil⟩,
+    by simpa using Nat.pos_of_isPowerOfTwo (Nat.isPowerOfTwo_nextPowerOfTwo _) ⟩
 
 -- Take `hash` as a function instead of `Hashable α` as per
 -- https://github.com/leanprover/lean4/issues/4191
@@ -201,10 +200,9 @@ def expand [Hashable α] (data : {d : Array (AssocList α β) // 0 < d.size})
   let ⟨data, hd⟩ := data
   let nbuckets := data.size * 2
   -- `propagateMark` is necessary so the resized hashmap is also forcibly linear
-  go 0 data ⟨
-    data.propagateMark (Array.replicate nbuckets AssocList.nil),
-    by simpa [nbuckets] using Nat.mul_pos hd Nat.two_pos
-  ⟩
+  go 0 data
+    ⟨ data.propagateMark (Array.replicate nbuckets AssocList.nil),
+      by simpa [nbuckets] using Nat.mul_pos hd Nat.two_pos ⟩
 where
   /--
   Inner loop of `expand`. Copies elements `source[i...*]` into `target`,

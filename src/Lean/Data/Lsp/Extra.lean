@@ -75,15 +75,17 @@ inductive LeanFileProgressKind
   | fatalError
 deriving Inhabited, BEq
 
-instance : FromJson LeanFileProgressKind := ⟨fun j =>
-  match j.getNat? with
-  | Except.ok 1 => return LeanFileProgressKind.processing
-  | Except.ok 2 => return LeanFileProgressKind.fatalError
-  | _ => throw s!"unknown LeanFileProgressKind '{j}'"⟩
+instance : FromJson LeanFileProgressKind :=
+  ⟨ fun j =>
+      match j.getNat? with
+      | Except.ok 1 => return LeanFileProgressKind.processing
+      | Except.ok 2 => return LeanFileProgressKind.fatalError
+      | _ => throw s!"unknown LeanFileProgressKind '{j}'" ⟩
 
-instance : ToJson LeanFileProgressKind := ⟨fun
-  | LeanFileProgressKind.processing => 1
-  | LeanFileProgressKind.fatalError => 2⟩
+instance : ToJson LeanFileProgressKind :=
+  ⟨ fun
+      | LeanFileProgressKind.processing => 1
+      | LeanFileProgressKind.fatalError => 2 ⟩
 
 structure LeanFileProgressProcessingInfo where
   range : Range

@@ -40,10 +40,11 @@ instance : ToString Char := ⟨fun c => Char.toString c⟩
 
 instance : ToString Bool := ⟨fun b => cond b "true" "false"⟩
 
-instance {p : Prop} : ToString (Decidable p) := ⟨fun h =>
-  match h with
-  | Decidable.isTrue _ => "true"
-  | Decidable.isFalse _ => "false"⟩
+instance {p : Prop} : ToString (Decidable p) :=
+  ⟨ fun h =>
+      match h with
+      | Decidable.isTrue _ => "true"
+      | Decidable.isFalse _ => "false" ⟩
 
 instance : ToString PUnit.{u + 1} := ⟨fun _ => "()"⟩
 
@@ -77,30 +78,35 @@ def addParenHeuristic (s : String) : String :=
   else
     String.Internal.append (String.Internal.append "(" s) ")"
 
-instance {α : Type u} [ToString α] : ToString (Option α) := ⟨fun
-  | none =>
-    "none"
-  | (some a) =>
-    String.Internal.append (String.Internal.append "(some " (addParenHeuristic (toString a))) ")"⟩
+instance {α : Type u} [ToString α] : ToString (Option α) :=
+  ⟨ fun
+      | none =>
+        "none"
+      | (some a) =>
+        String.Internal.append (String.Internal.append "(some " (addParenHeuristic (toString a)))
+          ")" ⟩
 
-instance {α : Type u} {β : Type v} [ToString α] [ToString β] : ToString (Sum α β) := ⟨fun
-  | (inl a) =>
-    String.Internal.append (String.Internal.append "(inl " (addParenHeuristic (toString a))) ")"
-  | (inr b) =>
-    String.Internal.append (String.Internal.append "(inr " (addParenHeuristic (toString b))) ")"⟩
+instance {α : Type u} {β : Type v} [ToString α] [ToString β] : ToString (Sum α β) :=
+  ⟨ fun
+      | (inl a) =>
+        String.Internal.append (String.Internal.append "(inl " (addParenHeuristic (toString a))) ")"
+      | (inr b) =>
+        String.Internal.append (String.Internal.append "(inr " (addParenHeuristic (toString b)))
+          ")" ⟩
 
-instance {α : Type u} {β : Type v} [ToString α] [ToString β] : ToString (α × β) := ⟨fun (a, b) =>
-  String.Internal.append
-    (String.Internal.append (String.Internal.append (String.Internal.append "(" (toString a)) ", ")
-      (toString b))
-    ")"⟩
+instance {α : Type u} {β : Type v} [ToString α] [ToString β] : ToString (α × β) :=
+  ⟨ fun (a, b) =>
+      String.Internal.append
+        (String.Internal.append
+          (String.Internal.append (String.Internal.append "(" (toString a)) ", ") (toString b))
+        ")" ⟩
 
 instance {α : Type u} {β : α → Type v} [ToString α] [∀ x, ToString (β x)] : ToString (Sigma β) :=
-  ⟨fun ⟨a, b⟩ =>
-    String.Internal.append
-      (String.Internal.append
-        (String.Internal.append (String.Internal.append "⟨" (toString a)) ", ") (toString b))
-      "⟩"⟩
+  ⟨ fun ⟨a, b⟩ =>
+      String.Internal.append
+        (String.Internal.append
+          (String.Internal.append (String.Internal.append "⟨" (toString a)) ", ") (toString b))
+        "⟩" ⟩
 
 instance {α : Type u} {p : α → Prop} [ToString α] : ToString (Subtype p) :=
   ⟨fun s => toString (val s)⟩

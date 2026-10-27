@@ -67,12 +67,8 @@ def makePopup : WithRpcRef InfoWithCtx → RequestM (RequestTask InfoPopup)
             pure <| some <| TaggedText.text fi.fieldName.toString
           | _ =>
             pure none
-        return {
-          type := type?
-          exprExplicit := exprExplicit?
-          doc := ← i.info.docString?
-          : InfoPopup
-        }
+        return
+          { type := type?, exprExplicit := exprExplicit?, doc := ← i.info.docString? : InfoPopup }
 where
   maybeWithoutTopLevelHighlight : Bool → CodeWithInfos → CodeWithInfos
     | true, .tag _ tt =>
@@ -139,13 +135,12 @@ builtin_initialize
           | return #[]
         let some nm := ti.expr.getAppFn.constName?
           | return #[]
-        let ctx : GoToContext := {
-          doc := rc.doc.meta
-          kind
-          infoTree? := none
-          originInfo? := none
-          children := PersistentArray.empty
-        }
+        let ctx : GoToContext :=
+          { doc := rc.doc.meta
+            kind
+            infoTree? := none
+            originInfo? := none
+            children := PersistentArray.empty }
         GoToM.run ctx i.ctx ti.lctx do
           let ls ← locationLinksFromDecl nm
           return ls.map (·.toLocationLink)

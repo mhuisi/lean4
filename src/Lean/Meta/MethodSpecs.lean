@@ -119,11 +119,8 @@ overloaded `Cls.op` operation, and similarly `instClsT.op_spec_<n>` based on the
 -/
 @[builtin_doc]
 builtin_initialize methodSpecsAttr : ParametricAttribute MethodSpecsAttrData ← do
-  let impl : ParametricAttributeImpl MethodSpecsAttrData := {
-    name := `method_specs
-    descr := "generate method specification theorems"
-    getParam
-  }
+  let impl : ParametricAttributeImpl MethodSpecsAttrData :=
+    { name := `method_specs, descr := "generate method specification theorems", getParam }
   let ext ←
     registerParametricAttributeExt (α := MethodSpecsAttrData) impl.ref impl.preserveOrder
       (logWrites := true) impl.filterExport
@@ -169,12 +166,8 @@ def rewriteThm (ctx : Simp.Context) (simprocs : Simprocs) (eqThmName destThmName
   let eqThmApp := mkConst eqThmName (thmInfo.levelParams.map mkLevelParam)
   let value :=
     mkAppN (mkConst ``Eq.mp [0]) #[thmInfo.type, result.expr, ← result.getProof, eqThmApp]
-  addDecl <| Declaration.thmDecl {
-    name := destThmName
-    levelParams := thmInfo.levelParams
-    type := result.expr
-    value := value
-  }
+  addDecl <| Declaration.thmDecl
+    { name := destThmName, levelParams := thmInfo.levelParams, type := result.expr, value := value }
 
 def genSpecs (instName : Name) : MetaM Unit := do
   let methodSpecsInfo ← getMethodSpecsInfo instName

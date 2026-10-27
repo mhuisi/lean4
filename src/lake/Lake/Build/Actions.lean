@@ -32,11 +32,10 @@ public def compileLeanIR
     : LogIO Unit := do
   createParentDirs irFile
   createParentDirs cFile
-  proc {
-    cmd := leanir.toString
-    args := #[setupFile.toString, irFile.toString, cFile.toString]
-    env := #[("LEAN_PATH", leanPath.toString)]
-  }
+  proc
+    { cmd := leanir.toString
+      args := #[setupFile.toString, irFile.toString, cFile.toString]
+      env := #[("LEAN_PATH", leanPath.toString)] }
 
 public def compileLeanModule
     (leanFile relLeanFile : FilePath) (setup : ModuleSetup) (setupFile : FilePath)
@@ -103,10 +102,9 @@ public def compileO
     (oFile srcFile : FilePath) (moreArgs : Array String := #[]) (compiler : FilePath := "cc")
     : LogIO Unit := do
   createParentDirs oFile
-  proc {
-    cmd := compiler.toString
-    args := #["-c", "-o", oFile.toString, srcFile.toString] ++ moreArgs
-  }
+  proc
+    { cmd := compiler.toString
+      args := #["-c", "-o", oFile.toString, srcFile.toString] ++ moreArgs }
 
 public def mkArgs (basePath : FilePath) (args : Array String) : LogIO (Array String) := do
   -- Use response file to avoid potentially exceeding CLI length limits.
@@ -141,24 +139,22 @@ public def compileSharedLib
     (linker : FilePath := "cc") (macosxDeploymentTarget? : Option String := none)
     : LogIO Unit := do
   createParentDirs libFile
-  proc {
-    cmd := linker.toString
-    args := #["-shared", "-o", libFile.toString] ++ (← mkArgs libFile linkArgs)
-    -- See `BuildConfig.macosxDeploymentTarget?` for details
-    env := macosxDeploymentTarget?.elim #[] fun ver => #[("MACOSX_DEPLOYMENT_TARGET", some ver)]
-  }
+  proc
+    { cmd := linker.toString
+      args := #["-shared", "-o", libFile.toString] ++ (← mkArgs libFile linkArgs)
+      -- See `BuildConfig.macosxDeploymentTarget?` for details
+      env := macosxDeploymentTarget?.elim #[] fun ver => #[("MACOSX_DEPLOYMENT_TARGET", some ver)] }
 
 public def compileExe
     (binFile : FilePath) (linkArgs : Array String)
     (linker : FilePath := "cc") (macosxDeploymentTarget? : Option String := none)
     : LogIO Unit := do
   createParentDirs binFile
-  proc {
-    cmd := linker.toString
-    args := #["-o", binFile.toString] ++ (← mkArgs binFile linkArgs)
-    -- See `BuildConfig.macosxDeploymentTarget?` for details
-    env := macosxDeploymentTarget?.elim #[] fun ver => #[("MACOSX_DEPLOYMENT_TARGET", some ver)]
-  }
+  proc
+    { cmd := linker.toString
+      args := #["-o", binFile.toString] ++ (← mkArgs binFile linkArgs)
+      -- See `BuildConfig.macosxDeploymentTarget?` for details
+      env := macosxDeploymentTarget?.elim #[] fun ver => #[("MACOSX_DEPLOYMENT_TARGET", some ver)] }
 
 /-- Download a file using `curl`, clobbering any existing file. -/
 public def download (url : String) (file : FilePath) (headers : Array String := #[])
@@ -189,9 +185,8 @@ public def tar
     args := args.push "-z"
   for path in excludePaths do
     args := args.push s!"--exclude={path}"
-  proc (quiet := true) {
-    cmd := "tar"
-    args := args ++ #["-f", file.toString, "-C", dir.toString, "."]
-    -- don't pack `._` files on MacOS
-    env := if Platform.isOSX then #[("COPYFILE_DISABLE", "true")] else #[]
-  }
+  proc (quiet := true)
+    { cmd := "tar"
+      args := args ++ #["-f", file.toString, "-C", dir.toString, "."]
+      -- don't pack `._` files on MacOS
+      env := if Platform.isOSX then #[("COPYFILE_DISABLE", "true")] else #[] }

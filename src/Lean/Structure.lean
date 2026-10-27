@@ -97,13 +97,12 @@ deriving Inhabited
 
 private builtin_initialize structureExt
     : PersistentEnvExtension StructureInfo StructureInfo (Unit × StructureState) ←
-  registerPersistentEnvExtension {
-    logWrites := true
-    mkInitial := pure ((), {})
-    addImportedFn := fun _ => pure ((), {})
-    addEntryFn := fun (_, s) e => ((), { s with map := s.map.insert e.structName e })
-    exportEntriesFn := fun (_, s) => s.map.toArray |>.map (·.snd) |>.qsort StructureInfo.lt
-  }
+  registerPersistentEnvExtension
+    { logWrites := true
+      mkInitial := pure ((), {})
+      addImportedFn := fun _ => pure ((), {})
+      addEntryFn := fun (_, s) e => ((), { s with map := s.map.insert e.structName e })
+      exportEntriesFn := fun (_, s) => s.map.toArray |>.map (·.snd) |>.qsort StructureInfo.lt }
 
 /--
 A descriptor for a structure, for constructing a `StructureInfo` via `Lean.registerStructure`.
@@ -127,11 +126,10 @@ def registerStructure (env : Environment) (e : StructureDescr) : Environment :=
   if structureExt.getState env |>.snd.map.contains e.structName then
     panic! s!"structure `{e.structName}` is already registered"
   else
-    structureExt.addEntry (log := .decl e.structName) env {
-      structName := e.structName
-      fieldNames := e.fields.map fun e => e.fieldName
-      fieldInfo := e.fields.qsort StructureFieldInfo.lt
-    }
+    structureExt.addEntry (log := .decl e.structName) env
+      { structName := e.structName
+        fieldNames := e.fields.map fun e => e.fieldName
+        fieldInfo := e.fields.qsort StructureFieldInfo.lt }
 
 /--
 Sets parent projection info for a structure defined in the current module.
@@ -474,10 +472,8 @@ private def setStructureResolutionOrder
     : m Unit :=
   -- unlogged: a mere cache of a pure computation over tracked inputs
   modifyEnv fun env =>
-    structureResolutionExt.modifyState (log := .unlogged) env fun s => {
-      s with
-      resolutions := s.resolutions.insert structName resolutionOrder
-    }
+    structureResolutionExt.modifyState (log := .unlogged) env fun s =>
+      { s with resolutions := s.resolutions.insert structName resolutionOrder }
 
 /-- "The `badParent` must come after the `conflicts`. -/
 structure StructureResolutionOrderConflict where
@@ -533,11 +529,10 @@ partial def mergeStructureResolutionOrders
       let conflicts :=
         resOrders |>.filter (·[1...*].any (· == name)) |>.map (·[0]!) |>.qsort Name.lt |>.eraseReps
       defects :=
-        defects.push {
-          isDirectParent := parentNames.contains name
-          badParent := name
-          conflicts := conflicts.map fun c => (parentNames.contains c, c)
-        }
+        defects.push
+          { isDirectParent := parentNames.contains name
+            badParent := name
+            conflicts := conflicts.map fun c => (parentNames.contains c, c) }
 
     resOrder := resOrder.push name
     resOrders :=

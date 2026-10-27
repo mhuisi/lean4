@@ -64,10 +64,8 @@ def elabRegisterSymSimp : CommandElab := fun stx => do
   validateOptionSimprocSyntax pre?
   validateOptionSimprocSyntax post?
   validateOptionDischargerSyntax discharger?
-  let config := {
-    maxSteps := maxSteps?.getD 100_000
-    maxDischargeDepth := maxDischargeDepth?.getD 2
-  }
+  let config :=
+    { maxSteps := maxSteps?.getD 100_000, maxDischargeDepth := maxDischargeDepth?.getD 2 }
   let variant : SymSimpVariant := { pre?, post?, discharger?, config }
   modifyEnv fun env => symSimpVariantExtension.addEntry env { name, variant }
 

@@ -117,14 +117,13 @@ partial def compileParserExpr (e : Expr) : MetaM Expr := do
               let paramTy ← replaceParserTy ctx <$> inferType param
               return mkForall `_ BinderInfo.default paramTy ty
         let decl :=
-          Declaration.defnDecl {
-            name := c'
-            levelParams := []
-            type := ty
-            value := value
-            hints := ReducibilityHints.opaque
-            safety := DefinitionSafety.safe
-          }
+          Declaration.defnDecl
+            { name := c'
+              levelParams := []
+              type := ty
+              value := value
+              hints := ReducibilityHints.opaque
+              safety := DefinitionSafety.safe }
         -- usually `meta` is inferred during compilation for auxiliary definitions, but as
         -- `ctx.combinatorAttr` may enforce correct use of the modifier, infer now.
         addAndCompile decl (markMeta := isMarkedMeta (← getEnv) c)
@@ -181,22 +180,21 @@ def compileEmbeddedParsers : ParserDescr → MetaM Unit
 
 /-- Precondition: `α` must match `ctx.tyName`. -/
 unsafe def registerParserCompiler {α} (ctx : Context α) : IO Unit := do
-  Parser.registerParserAttributeHook {
-    postAdd := fun catName constName builtin =>
-      withoutExporting do -- needs to look through defs
-        let info ← getConstInfo constName
-        if info.type.isConstOf ``Lean.ParserDescr
-            || info.type.isConstOf ``Lean.TrailingParserDescr then
-          let d ←
-            evalConstCheck ParserDescr `Lean.ParserDescr constName
-              <|> evalConstCheck TrailingParserDescr `Lean.TrailingParserDescr constName
-          compileEmbeddedParsers ctx d (builtin := builtin) |>.run'
-        else
-          -- `[run_builtin_parser_attribute_hooks]` => force compilation even if imported, do not apply `ctx.categoryAttr`.
-          let force := catName.isAnonymous
-          discard (compileParserExpr ctx (mkConst constName) (builtin := builtin)
-            (force := force)).run'
-  }
+  Parser.registerParserAttributeHook
+    { postAdd := fun catName constName builtin =>
+        withoutExporting do -- needs to look through defs
+          let info ← getConstInfo constName
+          if info.type.isConstOf ``Lean.ParserDescr
+              || info.type.isConstOf ``Lean.TrailingParserDescr then
+            let d ←
+              evalConstCheck ParserDescr `Lean.ParserDescr constName
+                <|> evalConstCheck TrailingParserDescr `Lean.TrailingParserDescr constName
+            compileEmbeddedParsers ctx d (builtin := builtin) |>.run'
+          else
+            -- `[run_builtin_parser_attribute_hooks]` => force compilation even if imported, do not apply `ctx.categoryAttr`.
+            let force := catName.isAnonymous
+            discard (compileParserExpr ctx (mkConst constName) (builtin := builtin)
+              (force := force)).run' }
 
 end ParserCompiler
 end Lean

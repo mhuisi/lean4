@@ -81,32 +81,27 @@ namespace Lean.Linter
 open Lean.Elab.Command Lean.Server
 
 /-- Enables or disables all unused variable linter warnings -/
-register_builtin_option linter.unusedVariables : Bool := {
-  defValue := true
-  descr := "enable the 'unused variables' linter"
-}
+register_builtin_option linter.unusedVariables : Bool :=
+  { defValue := true, descr := "enable the 'unused variables' linter" }
 /-- Enables or disables unused variable linter warnings in function arguments -/
-register_builtin_option linter.unusedVariables.funArgs : Bool := {
-  defValue := true
-  descr := "enable the 'unused variables' linter to mark unused function arguments"
-}
+register_builtin_option linter.unusedVariables.funArgs : Bool :=
+  { defValue := true
+    descr := "enable the 'unused variables' linter to mark unused function arguments" }
 /-- Enables or disables unused variable linter warnings in patterns -/
-register_builtin_option linter.unusedVariables.patternVars : Bool := {
-  defValue := true
-  descr := "enable the 'unused variables' linter to mark unused pattern variables"
-}
+register_builtin_option linter.unusedVariables.patternVars : Bool :=
+  { defValue := true
+    descr := "enable the 'unused variables' linter to mark unused pattern variables" }
 /-- Enables linting variables defined in tactic blocks, may be expensive for complex proofs -/
-register_builtin_option linter.unusedVariables.analyzeTactics : Bool := {
-  defValue := false
-  descr :=
-    "enable analysis of local variables in presence of tactic proofs\
-      \n\
-      \nBy default, the linter will limit itself to linting a declaration's parameters \
-      whenever tactic proofs are present as these can be expensive to analyze. Enabling this \
-      option extends linting to local variables both inside and outside tactic proofs, \
-      though it can also lead to some false negatives as intermediate tactic states may \
-      reference some variables without the declaration ultimately depending on them."
-}
+register_builtin_option linter.unusedVariables.analyzeTactics : Bool :=
+  { defValue := false
+    descr :=
+      "enable analysis of local variables in presence of tactic proofs\
+        \n\
+        \nBy default, the linter will limit itself to linting a declaration's parameters \
+        whenever tactic proofs are present as these can be expensive to analyze. Enabling this \
+        option extends linting to local variables both inside and outside tactic proofs, \
+        though it can also lead to some false negatives as intermediate tactic states may \
+        reference some variables without the declaration ultimately depending on them." }
 
 /-- Gets the status of `linter.unusedVariables` -/
 def getLinterUnusedVariables (o : LinterOptions) : Bool := getLinterValue linter.unusedVariables o
@@ -162,15 +157,14 @@ def addBuiltinUnusedVariablesIgnoreFn (h : IgnoreFunction) : IO Unit :=
 /-- An extension which keeps track of registered `IgnoreFunction`s. -/
 builtin_initialize unusedVariablesIgnoreFnsExt
     : PersistentEnvExtension Name (Name × IgnoreFunction) (List Name × Array IgnoreFunction) ←
-  registerPersistentEnvExtension {
-    mkInitial := return ([], ← builtinUnusedVariablesIgnoreFnsRef.get)
-    addImportedFn := fun as => do
-      ([], ·) <$> as.foldlM (init := ← builtinUnusedVariablesIgnoreFnsRef.get) fun s as =>
-        as.foldlM (init := s) fun s n => s.push <$> mkIgnoreFn n
-    addEntryFn := fun (entries, s) (n, h) => (n :: entries, s.push h)
-    exportEntriesFn := fun s => s.1.reverse.toArray
-    statsFn := fun s => format "number of local entries: " ++ format s.1.length
-  }
+  registerPersistentEnvExtension
+    { mkInitial := return ([], ← builtinUnusedVariablesIgnoreFnsRef.get)
+      addImportedFn := fun as => do
+        ([], ·) <$> as.foldlM (init := ← builtinUnusedVariablesIgnoreFnsRef.get) fun s as =>
+          as.foldlM (init := s) fun s n => s.push <$> mkIgnoreFn n
+      addEntryFn := fun (entries, s) (n, h) => (n :: entries, s.push h)
+      exportEntriesFn := fun s => s.1.reverse.toArray
+      statsFn := fun s => format "number of local entries: " ++ format s.1.length }
 
 /--
 Adds the `@[{builtin_}unused_variables_ignore_fn]` attribute, which is applied
@@ -178,28 +172,27 @@ to declarations of type `IgnoreFunction` for use by the unused variables linter.
 -/
 builtin_initialize
   let mkAttr (builtin : Bool) (name : Name) :=
-    registerBuiltinAttribute {
-      name
-      descr :=
-        (if builtin then "(builtin) " else "") ++ "Marks a function of type \
-          `Lean.Linter.IgnoreFunction` for suppressing unused variable warnings"
-      applicationTime := .afterCompilation
-      add := fun decl stx kind => do
-        Attribute.Builtin.ensureNoArgs stx
-        if !builtin then
-          ensureAttrDeclIsMeta name decl kind
-        unless kind == AttributeKind.global do
-          throwAttrMustBeGlobal name kind
-        let declType := (← getConstInfo decl).type
-        unless declType.isConstOf ``IgnoreFunction do
-          throwAttrDeclNotOfExpectedType name decl declType (mkConst ``Lean.Linter.IgnoreFunction)
-        let env ← getEnv
-        if builtin then
-          let h := mkConst decl
-          declareBuiltin decl <| mkApp (mkConst ``addBuiltinUnusedVariablesIgnoreFn) h
-        else
-          setEnv <| unusedVariablesIgnoreFnsExt.addEntry env (decl, ← mkIgnoreFn decl)
-    }
+    registerBuiltinAttribute
+      { name
+        descr :=
+          (if builtin then "(builtin) " else "") ++ "Marks a function of type \
+            `Lean.Linter.IgnoreFunction` for suppressing unused variable warnings"
+        applicationTime := .afterCompilation
+        add := fun decl stx kind => do
+          Attribute.Builtin.ensureNoArgs stx
+          if !builtin then
+            ensureAttrDeclIsMeta name decl kind
+          unless kind == AttributeKind.global do
+            throwAttrMustBeGlobal name kind
+          let declType := (← getConstInfo decl).type
+          unless declType.isConstOf ``IgnoreFunction do
+            throwAttrDeclNotOfExpectedType name decl declType (mkConst ``Lean.Linter.IgnoreFunction)
+          let env ← getEnv
+          if builtin then
+            let h := mkConst decl
+            declareBuiltin decl <| mkApp (mkConst ``addBuiltinUnusedVariablesIgnoreFn) h
+          else
+            setEnv <| unusedVariablesIgnoreFnsExt.addEntry env (decl, ← mkIgnoreFn decl) }
   mkAttr true `builtin_unused_variables_ignore_fn
   mkAttr false `unused_variables_ignore_fn
 
@@ -288,8 +281,9 @@ builtin_initialize
     ! getLinterUnusedVariablesFunArgs opts && stack.matches [`null, none, `null, none]
       && (stack[3]?
         |>.any fun (stx, pos) =>
-          pos == 0 && [``Lean.Parser.Command.optDeclSig, ``Lean.Parser.Command.declSig].any
-            (stx.isOfKind ·)))
+          pos == 0
+            && [``Lean.Parser.Command.optDeclSig, ``Lean.Parser.Command.declSig].any
+              (stx.isOfKind ·)))
 
 /--
 Function argument in function definition (when `linter.unusedVariables.funArgs` is false)
@@ -455,10 +449,8 @@ where
                   -- NOTE: we include it even if no tactics are present as at least for parameters we want
                   -- to lint only truly unused binders
                   let (e, _) := instantiateMVarsCore ci.mctx value
-                  modify fun s => {
-                    s with
-                    assignments := s.assignments.push (.insert {} ⟨.anonymous⟩ e)
-                  }
+                  modify fun s =>
+                    { s with assignments := s.assignments.push (.insert {} ⟨.anonymous⟩ e) }
                   let tacticsPresent :=
                     children.any (·.findInfo? (· matches .ofTacticInfo ..) |>.isSome)
                   withReader (· || tacticsPresent) do go children.toArray ci
@@ -497,20 +489,18 @@ where
                   if s.startsWith "_" then return true
                 -- Record this either as a new `fvarDefs`, or an alias of an existing one
                 modify fun s =>
-                  if let some ref := s.fvarDefs[range]? then {
-                    s with
-                    fvarDefs := s.fvarDefs.insert range { ref with aliases := ref.aliases.push id }
-                  }
-                  else {
-                    s with
-                    fvarDefs :=
-                      s.fvarDefs.insert range {
-                        userName := ldecl.userName
-                        stx
-                        opts := opts.toOptions
-                        aliases := #[id]
-                      }
-                  }
+                  if let some ref := s.fvarDefs[range]? then
+                    { s with
+                      fvarDefs :=
+                        s.fvarDefs.insert range { ref with aliases := ref.aliases.push id } }
+                  else
+                    { s with
+                      fvarDefs :=
+                        s.fvarDefs.insert range
+                          { userName := ldecl.userName
+                            stx
+                            opts := opts.toOptions
+                            aliases := #[id] } }
               else
                 -- Found a direct use, keep track of it
                 modify fun s => { s with fvarUses := s.fvarUses.insert id }

@@ -27,15 +27,12 @@ deriving Inhabited
 
 namespace InstGraph
 
-def registerNode (graph : InstGraph) (info : EMatchDiagInfo) : InstGraph := {
-  graph with
-  info := graph.info.insert info.target { children := {}, lctx := info.lctx }
-}
+def registerNode (graph : InstGraph) (info : EMatchDiagInfo) : InstGraph :=
+  { graph with info := graph.info.insert info.target { children := {}, lctx := info.lctx } }
 
-def addEdge (graph : InstGraph) (src dst : EMatchDiagNode) : InstGraph := {
-  graph with
-  info := graph.info.modify src fun info => { info with children := info.children.insert dst }
-}
+def addEdge (graph : InstGraph) (src dst : EMatchDiagNode) : InstGraph :=
+  { graph with
+    info := graph.info.modify src fun info => { info with children := info.children.insert dst } }
 
 def ofTrace (trace : Array EMatchDiagInfo) : InstGraph := Id.run do
   let mut graph := trace.foldl (init := {}) registerNode

@@ -40,9 +40,10 @@ opaque Idbg.idbgClientLoop
 
 instance : Coe Name Import := ⟨({ module := · })⟩
 
-instance : ToString Import := ⟨fun imp =>
-  s!"{if imp.isExported then "public " else ""}{if imp.isMeta then "meta " else ""}import \
-    {if imp.importAll then "all " else ""}{imp.module}"⟩
+instance : ToString Import :=
+  ⟨ fun imp =>
+      s!"{if imp.isExported then "public " else ""}{if imp.isMeta then "meta " else ""}import \
+        {if imp.importAll then "all " else ""}{imp.module}" ⟩
 
 /-- Phases for which some IR is available for execution. -/
 inductive IRPhases where

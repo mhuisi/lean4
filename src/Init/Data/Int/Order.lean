@@ -26,12 +26,11 @@ namespace Int
 
 /-! ## Order properties of the integers -/
 
-theorem nonneg_def {a : Int} : NonNeg a ↔ ∃ n : Nat, a = n := ⟨
-  fun ⟨n⟩ => ⟨n, rfl⟩,
-  fun h =>
-    match a, h with
-    | _, ⟨n, rfl⟩ => ⟨n⟩
-⟩
+theorem nonneg_def {a : Int} : NonNeg a ↔ ∃ n : Nat, a = n :=
+  ⟨ fun ⟨n⟩ => ⟨n, rfl⟩,
+    fun h =>
+      match a, h with
+      | _, ⟨n, rfl⟩ => ⟨n⟩ ⟩
 
 theorem NonNeg.elim {a : Int} : NonNeg a → ∃ n : Nat, a = n := nonneg_def.1
 
@@ -61,14 +60,13 @@ protected theorem le_total (a b : Int) : a ≤ b ∨ b ≤ a :=
     rwa [show -(b - a) = a - b by simp [Int.neg_add, Int.add_comm, Int.sub_eq_add_neg]] at H
 
 @[simp, norm_cast]
-theorem ofNat_le {m n : Nat} : (↑m : Int) ≤ ↑n ↔ m ≤ n := ⟨
-  fun h =>
-    let ⟨k, hk⟩ := le.dest h
-    Nat.le.intro <| Int.ofNat.inj <| (Int.natCast_add m k).trans hk,
-  fun h =>
-    let ⟨k, (hk : m + k = n)⟩ := Nat.le.dest h
-    le.intro k (by rw [← hk]; rfl)
-⟩
+theorem ofNat_le {m n : Nat} : (↑m : Int) ≤ ↑n ↔ m ≤ n :=
+  ⟨ fun h =>
+      let ⟨k, hk⟩ := le.dest h
+      Nat.le.intro <| Int.ofNat.inj <| (Int.natCast_add m k).trans hk,
+    fun h =>
+      let ⟨k, (hk : m + k = n)⟩ := Nat.le.dest h
+      le.intro k (by rw [← hk]; rfl) ⟩
 
 theorem eq_ofNat_of_zero_le {a : Int} (h : 0 ≤ a) : ∃ n : Nat, a = n := by
   have t := le.dest_sub h; rwa [Int.sub_zero] at t
@@ -272,10 +270,9 @@ protected theorem add_le_add_left {a b : Int} (h : a ≤ b) (c : Int) : c + a �
   let ⟨n, hn⟩ := le.dest h; le.intro n <| by rw [Int.add_assoc, hn]
 
 protected theorem add_lt_add_left {a b : Int} (h : a < b) (c : Int) : c + a < c + b :=
-  Int.lt_iff_le_and_ne.2 ⟨
-    Int.add_le_add_left (Int.le_of_lt h) _,
-    fun heq => b.lt_irrefl <| by rwa [Int.add_left_cancel heq] at h
-  ⟩
+  Int.lt_iff_le_and_ne.2
+    ⟨ Int.add_le_add_left (Int.le_of_lt h) _,
+      fun heq => b.lt_irrefl <| by rwa [Int.add_left_cancel heq] at h ⟩
 
 protected theorem add_le_add_right {a b : Int} (h : a ≤ b) (c : Int) : a + c ≤ b + c :=
   Int.add_comm c a ▸ Int.add_comm c b ▸ Int.add_le_add_left h c
@@ -469,10 +466,9 @@ protected theorem min_eq_left {a b : Int} (h : a ≤ b) : min a b = a := by simp
 protected theorem min_eq_right {a b : Int} (h : b ≤ a) : min a b = b := by
   rw [Int.min_comm a b]; exact Int.min_eq_left h
 
-protected theorem le_min {a b c : Int} : a ≤ min b c ↔ a ≤ b ∧ a ≤ c := ⟨
-  fun h => ⟨Int.le_trans h (Int.min_le_left ..), Int.le_trans h (Int.min_le_right ..)⟩,
-  fun ⟨h₁, h₂⟩ => by rw [Int.min_def]; split <;> assumption
-⟩
+protected theorem le_min {a b c : Int} : a ≤ min b c ↔ a ≤ b ∧ a ≤ c :=
+  ⟨ fun h => ⟨Int.le_trans h (Int.min_le_left ..), Int.le_trans h (Int.min_le_right ..)⟩,
+    fun ⟨h₁, h₂⟩ => by rw [Int.min_def]; split <;> assumption ⟩
 
 protected theorem lt_min {a b c : Int} : a < min b c ↔ a < b ∧ a < c := Int.le_min
 
@@ -516,10 +512,9 @@ protected theorem max_eq_right {a b : Int} (h : a ≤ b) : max a b = b := by sim
 protected theorem max_eq_left {a b : Int} (h : b ≤ a) : max a b = a := by
   rw [← Int.max_comm b a]; exact Int.max_eq_right h
 
-protected theorem max_le {a b c : Int} : max a b ≤ c ↔ a ≤ c ∧ b ≤ c := ⟨
-  fun h => ⟨Int.le_trans (Int.le_max_left ..) h, Int.le_trans (Int.le_max_right ..) h⟩,
-  fun ⟨h₁, h₂⟩ => by rw [Int.max_def]; split <;> assumption
-⟩
+protected theorem max_le {a b c : Int} : max a b ≤ c ↔ a ≤ c ∧ b ≤ c :=
+  ⟨ fun h => ⟨Int.le_trans (Int.le_max_left ..) h, Int.le_trans (Int.le_max_right ..) h⟩,
+    fun ⟨h₁, h₂⟩ => by rw [Int.max_def]; split <;> assumption ⟩
 
 protected theorem max_lt {a b c : Int} : max a b < c ↔ a < c ∧ b < c := by
   simp only [Int.lt_iff_add_one_le]
@@ -646,13 +641,12 @@ TODO: rename `natAbs_ofNat'` to `natAbs_ofNat` once the current deprecated alias
 @[simp] theorem natAbs_one : natAbs (1 : Int) = (1 : Nat) := rfl
 
 @[simp]
-theorem natAbs_eq_zero : natAbs a = 0 ↔ a = 0 := ⟨
-  fun H =>
-    match a with
-    | ofNat _ => congrArg ofNat H
-    | -[_+1] => absurd H (succ_ne_zero _),
-  fun e => e ▸ rfl
-⟩
+theorem natAbs_eq_zero : natAbs a = 0 ↔ a = 0 :=
+  ⟨ fun H =>
+      match a with
+      | ofNat _ => congrArg ofNat H
+      | -[_+1] => absurd H (succ_ne_zero _),
+    fun e => e ▸ rfl ⟩
 
 @[simp] theorem natAbs_pos : 0 < natAbs a ↔ a ≠ 0 := by rw [Nat.pos_iff_ne_zero, Ne, natAbs_eq_zero]
 

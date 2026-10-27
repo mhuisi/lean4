@@ -52,42 +52,41 @@ builtin_initialize interpretedModInits : IO.Ref NameSet ← IO.mkRef {}
 
 unsafe def registerInitAttrUnsafe (attrName : Name) (runAfterImport : Bool) (ref : Name)
     : IO (ParametricAttribute Name) :=
-  registerParametricAttribute {
-    ref := ref
-    name := attrName
-    descr := "initialization procedure for global references"
-    -- We want to run `[init]` in declaration order
-    preserveOrder := true
-    getParam := fun declName stx =>
-      withoutExporting do
-        let decl ← getConstInfo declName
-        match (← Attribute.Builtin.getIdent? stx) with
-        | some initFnName =>
-          let initFnName ← Elab.realizeGlobalConstNoOverloadWithInfo initFnName
-          let initDecl ← getConstInfo initFnName
-          match getIOTypeArg initDecl.type with
+  registerParametricAttribute
+    { ref := ref
+      name := attrName
+      descr := "initialization procedure for global references"
+      -- We want to run `[init]` in declaration order
+      preserveOrder := true
+      getParam := fun declName stx =>
+        withoutExporting do
+          let decl ← getConstInfo declName
+          match (← Attribute.Builtin.getIdent? stx) with
+          | some initFnName =>
+            let initFnName ← Elab.realizeGlobalConstNoOverloadWithInfo initFnName
+            let initDecl ← getConstInfo initFnName
+            match getIOTypeArg initDecl.type with
+            | none =>
+              throwError
+                "initialization function `{initFnName}` must have type of the form `IO <type>`"
+            | some initTypeArg =>
+              if decl.type == initTypeArg then
+                pure initFnName
+              else
+                throwError "initialization function `{initFnName}` type mismatch"
           | none =>
-            throwError
-              "initialization function `{initFnName}` must have type of the form `IO <type>`"
-          | some initTypeArg =>
-            if decl.type == initTypeArg then
-              pure initFnName
+            if isIOUnit decl.type then
+              pure Name.anonymous
             else
-              throwError "initialization function `{initFnName}` type mismatch"
-        | none =>
-          if isIOUnit decl.type then
-            pure Name.anonymous
-          else
-            throwError "initialization function must have type `IO Unit`"
-    -- Save `meta initialize` in .olean; `initialize`s of any kind will be stored in .ir by
-    -- `exportIREntries` analogously to `Lean.IR.declMapExt` so we can run them when meta-imported,
-    -- even without the .olean file.
-    filterExport := fun env declName _ =>
-      -- TODO: The interpreter currently depends on `[builtin_init]` to be exported for
-      -- `prefer_native` handling but this is incorrect with private imports anyway and should be
-      -- replaced by consulting a builtin list.
-      !runAfterImport || isMarkedMeta env declName
-  }
+              throwError "initialization function must have type `IO Unit`"
+      -- Save `meta initialize` in .olean; `initialize`s of any kind will be stored in .ir by
+      -- `exportIREntries` analogously to `Lean.IR.declMapExt` so we can run them when meta-imported,
+      -- even without the .olean file.
+      filterExport := fun env declName _ =>
+        -- TODO: The interpreter currently depends on `[builtin_init]` to be exported for
+        -- `prefer_native` handling but this is incorrect with private imports anyway and should be
+        -- replaced by consulting a builtin list.
+        !runAfterImport || isMarkedMeta env declName }
 
 @[implemented_by registerInitAttrUnsafe]
 private opaque registerInitAttrInner (attrName : Name) (runAfterImport : Bool) (ref : Name)
@@ -166,14 +165,13 @@ def declareBuiltin (forDecl : Name) (value : Expr) : CoreM Unit :=
     let name ← mkAuxDeclName (kind := `_regBuiltin ++ forDecl)
     let type := mkApp (mkConst `IO) (mkConst `Unit)
     let decl :=
-      Declaration.defnDecl {
-        name
-        levelParams := []
-        type
-        value
-        hints := ReducibilityHints.opaque
-        safety := DefinitionSafety.safe
-      }
+      Declaration.defnDecl
+        { name
+          levelParams := []
+          type
+          value
+          hints := ReducibilityHints.opaque
+          safety := DefinitionSafety.safe }
     addAndCompile decl
     IO.ofExcept (setBuiltinInitAttr (← getEnv) name) >>= setEnv
 

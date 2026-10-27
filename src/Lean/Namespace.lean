@@ -19,35 +19,34 @@ abbrev State := SMap Name Environment.Visibility
 
 /-- Environment extension for tracking all `namespace` declared by users. -/
 builtin_initialize namespacesExt : PersistentEnvExtension Name Name State ←
-  registerPersistentEnvExtension {
-    mkInitial := pure {}
-    addImportedFn := fun as => do
-      let env := (← read).env
-      /-
-      We compute a `HashMap` and then convert to `SMap` to improve Lean startup time.
-      Note: we have used `perf` to profile Lean startup cost when processing a file containing just `import Lean`.
-      6.18% of the runtime is here. It was 9.31% before the `HashMap` optimization.
-      -/
-      let capacity := as.foldl (init := 0) fun r e => r + e.size
-      let mut map : Std.HashMap Name Environment.Visibility :=
-        Std.HashMap.emptyWithCapacity capacity
-      for mod in env.header.modules, modEntries in as do
-        let vis := if mod.isExported then .public else .private
-        for e in modEntries do
-          map :=
-            map.alter e fun
-              | some .public => some .public
-              | _ => some vis
-      return SMap.fromHashMap map |>.switch
-    -- local entries are not from private imports, so mark public
-    addEntryFn := fun s n => s.insert n .public
-    exportEntriesFn s :=
-      let entries := s.map₂.toArray.map (·.1)
-      entries.qsort (·.quickLt)
-    -- Namespaces from local helper constants can be disregarded in other environment branches. We
-    -- do *not* want `getNamespaces` to have to wait on all prior branches.
-    asyncMode := .local
-  }
+  registerPersistentEnvExtension
+    { mkInitial := pure {}
+      addImportedFn := fun as => do
+        let env := (← read).env
+        /-
+        We compute a `HashMap` and then convert to `SMap` to improve Lean startup time.
+        Note: we have used `perf` to profile Lean startup cost when processing a file containing just `import Lean`.
+        6.18% of the runtime is here. It was 9.31% before the `HashMap` optimization.
+        -/
+        let capacity := as.foldl (init := 0) fun r e => r + e.size
+        let mut map : Std.HashMap Name Environment.Visibility :=
+          Std.HashMap.emptyWithCapacity capacity
+        for mod in env.header.modules, modEntries in as do
+          let vis := if mod.isExported then .public else .private
+          for e in modEntries do
+            map :=
+              map.alter e fun
+                | some .public => some .public
+                | _ => some vis
+        return SMap.fromHashMap map |>.switch
+      -- local entries are not from private imports, so mark public
+      addEntryFn := fun s n => s.insert n .public
+      exportEntriesFn s :=
+        let entries := s.map₂.toArray.map (·.1)
+        entries.qsort (·.quickLt)
+      -- Namespaces from local helper constants can be disregarded in other environment branches. We
+      -- do *not* want `getNamespaces` to have to wait on all prior branches.
+      asyncMode := .local }
 
 namespace Environment
 

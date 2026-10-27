@@ -48,19 +48,13 @@ def DvdCnstr.norm (c : DvdCnstr) : DvdCnstr :=
   let c :=
     if c.p.isSorted then
       c
-    else {
-      d := c.d
-      p := c.p.norm
-      h := .norm c
-    }
+    else
+      { d := c.d, p := c.p.norm, h := .norm c }
   let g := c.p.gcdCoeffs c.d
   let g := if c.d < 0 then -g else g
   let c :=
-    if c.p.getConst % g == 0 && g != 1 then {
-      d := c.d / g
-      p := c.p.div g
-      h := .divCoeffs c
-    }
+    if c.p.getConst % g == 0 && g != 1 then
+      { d := c.d / g, p := c.p.div g, h := .divCoeffs c }
     else
       c
   c.bmodCoeffs
@@ -126,12 +120,11 @@ partial def DvdCnstr.assert (c : DvdCnstr) : GoalM Unit :=
       -/
       let α_d₂_p₁ := p₁.mul (α * d₂)
       let β_d₁_p₂ := p₂.mul (β * d₁)
-      let combine := {
-        d := d₁ * d₂
-        p := .add d x (α_d₂_p₁.combine β_d₁_p₂)
-        h := .solveCombine c c'
-        : DvdCnstr
-      }
+      let combine :=
+        { d := d₁ * d₂
+          p := .add d x (α_d₂_p₁.combine β_d₁_p₂)
+          h := .solveCombine c c'
+          : DvdCnstr }
       modify' fun s => { s with dvds := s.dvds.set x none }
       combine.assert
       let a₂_p₁ := p₁.mul a₂

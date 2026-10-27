@@ -30,13 +30,11 @@ public def Cegar.processNewHyps : CegarM ProcessHypResult := do
     let ctx := (← CegarM.getTacticContext).preProcessContext
     let ctx :=
       .new ctx.mode
-        {
-          ctx.config with
+        { ctx.config with
           enums := false
           structures := false
           fixedInt := false
-          shortCircuit := false
-        }
+          shortCircuit := false }
         true
     let caches ← CegarM.takePreProcessCaches
     let (solved, state) ←

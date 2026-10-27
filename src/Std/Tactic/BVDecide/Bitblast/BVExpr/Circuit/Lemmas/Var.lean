@@ -64,11 +64,9 @@ theorem go_get (aig : AIG BVBit) (a : Nat) (curr : Nat) (hcurr : curr ≤ w) (s 
 
 theorem go_denote_mem_prefix
     (aig : AIG BVBit) (idx : Nat) (hidx) (s : AIG.RefVec aig idx) (a : Nat) (start : Nat) (hstart)
-    : ⟦
-        (go aig w a idx s hidx).aig,
+    : ⟦ (go aig w a idx s hidx).aig,
         ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
-        assign
-      ⟧
+        assign ⟧
       = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply IsPrefix.of
@@ -83,11 +81,9 @@ theorem go_denote_eq
     (curr : Nat) (hcurr : curr ≤ w) (s : AIG.RefVec aig curr)
     : ∀ (idx : Nat) (hidx1 : idx < w),
       curr ≤ idx
-        → ⟦
-            (go aig w a curr s hcurr).aig,
+        → ⟦ (go aig w a curr s hcurr).aig,
             (go aig w a curr s hcurr).vec.get idx hidx1,
-            assign.toAIGAssignment
-          ⟧
+            assign.toAIGAssignment ⟧
           = ((BVExpr.var (w := w) a).eval assign).getLsbD idx := by
   intro idx hidx1 hidx2
   generalize hgo : go aig w a curr s hcurr = res

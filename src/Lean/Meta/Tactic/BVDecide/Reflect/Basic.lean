@@ -327,14 +327,13 @@ def lookup (e : Expr) (width : Nat) (synthetic : Bool) : ReifyM Nat := do
       modifyGetThe State fun s =>
         let newAtom := { width, synthetic, atomNumber := s.atoms.size }
         let newAtomNumber := s.atoms.size
-        let s := {
-          s with
-          atoms := s.atoms.insert key newAtom
-          -- must clear the caches as they depend on `atoms`.
-          atomsAssignmentExprCache := none
-          atomsAssignmentMapCache := none
-          evalsAtCache := {}
-        }
+        let s :=
+          { s with
+            atoms := s.atoms.insert key newAtom
+            -- must clear the caches as they depend on `atoms`.
+            atomsAssignmentExprCache := none
+            atomsAssignmentMapCache := none
+            evalsAtCache := {} }
         (newAtomNumber, s)
     return ident
 

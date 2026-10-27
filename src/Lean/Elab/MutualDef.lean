@@ -26,14 +26,13 @@ have the module system enabled.
 -/
 @[builtin_doc]
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `expose
-    descr := "(module system) Make bodies of definitions available to importing modules."
-    add := fun _ _ _ => do
-      -- Attribute will be filtered out by `MutualDef`
-      throwError
-        "Cannot add attribute `[expose]`: This attribute can only be added when declaring a `def`"
-  }
+  registerBuiltinAttribute
+    { name := `expose
+      descr := "(module system) Make bodies of definitions available to importing modules."
+      add := fun _ _ _ => do
+        -- Attribute will be filtered out by `MutualDef`
+        throwError "Cannot add attribute `[expose]`: This attribute can only be added when \
+          declaring a `def`" }
 
 /--
 Negates a previous `@[expose]` attribute. This is useful for declaring definitions that shouldn't.
@@ -44,14 +43,13 @@ have the module system enabled.
 -/
 @[builtin_doc]
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `no_expose
-    descr := "(module system) Negate previous `[expose]` attribute."
-    add := fun _ _ _ => do
-      -- Attribute will be filtered out by `MutualDef`
-      throwError "Cannot add attribute `[no_expose]`: This attribute can only be added when \
-        declaring a `def`"
-  }
+  registerBuiltinAttribute
+    { name := `no_expose
+      descr := "(module system) Negate previous `[expose]` attribute."
+      add := fun _ _ _ => do
+        -- Attribute will be filtered out by `MutualDef`
+        throwError "Cannot add attribute `[no_expose]`: This attribute can only be added when \
+          declaring a `def`" }
 
 /-- `DefView` plus header elaboration data and snapshot. -/
 structure DefViewElabHeader extends DefView, DefViewElabHeaderData where
@@ -250,11 +248,8 @@ private def elabHeaders
           oldTacSnap? := do
             guard reuseTac
             some ⟨(← old.tacStx?), (← old.tacSnap?)⟩
-          let newHeader : DefViewElabHeader := {
-            view, old.view with
-            bodySnap? := none
-            tacSnap? := none
-          } -- filled below
+          let newHeader : DefViewElabHeader :=
+            { view, old.view with bodySnap? := none, tacSnap? := none } -- filled below
           reusableResult? := some (newHeader, old.state)
         else
           reuseBody := false
@@ -295,56 +290,44 @@ private def elabHeaders
                       let pendingMVarIds ← getMVars type
                       discard <| logUnassignedUsingErrorInfos pendingMVarIds <|
                         getPendingMVarErrorMessage views
-                    let newHeader : DefViewElabHeaderData := {
-                      declName
-                      shortDeclName
-                      type
-                      levelNames
-                      binderIds
-                      numParams := xs.size
-                    }
-                    let newHeader : DefViewElabHeader := {
-                      view, newHeader with
-                      bodySnap? := none
-                      tacSnap? := none
-                    }
+                    let newHeader : DefViewElabHeaderData :=
+                      { declName, shortDeclName, type, levelNames, binderIds, numParams := xs.size }
+                    let newHeader : DefViewElabHeader :=
+                      { view, newHeader with bodySnap? := none, tacSnap? := none }
                     check headers newHeader
                     return newHeader
       if let some snap := view.headerSnap? then
         let (tacStx?, newTacTask?) ← mkTacTask view.value tacPromise
         let cancelTk? := (← readThe Core.Context).cancelTk?
-        let bodySnap := {
-          stx? := view.value
-          reportingRange :=
-            .ofOptionInheriting <|
-              if newTacTask?.isSome then
-                -- Only use first line of body as range when we have incremental tactics as otherwise we
-                -- would cover their progress
-                view.ref.getPos?.map fun pos => ⟨pos, pos⟩
-              else
-                getBodyTerm? view.value |>.getD view.value |>.getRange?
-          task := bodyPromise.resultD default
-          -- We should not cancel the entire body early if we have tactics
-          cancelTk? := guard newTacTask?.isNone *> cancelTk?
-        }
-        snap.new.resolve <| some {
-          diagnostics :=
-            (← Language.Snapshot.Diagnostics.ofMessageLog (← Core.getAndEmptyMessageLog))
-          moreSnaps := (← Core.getAndEmptySnapshotTasks)
-          view := newHeader.toDefViewElabHeaderData
-          state := newState
-          tacStx?
-          tacSnap? := newTacTask?
-          bodyStx := view.value
-          bodySnap
-        }
-        newHeader := {
-          newHeader with
-          -- We should only forward the promise if we are actually waiting on the
-          -- corresponding task; otherwise, diagnostics assigned to it will be lost
-          tacSnap? := guard newTacTask?.isSome *> some { old? := oldTacSnap?, new := tacPromise }
-          bodySnap? := some { old? := oldBodySnap?, new := bodyPromise }
-        }
+        let bodySnap :=
+          { stx? := view.value
+            reportingRange :=
+              .ofOptionInheriting <|
+                if newTacTask?.isSome then
+                  -- Only use first line of body as range when we have incremental tactics as otherwise we
+                  -- would cover their progress
+                  view.ref.getPos?.map fun pos => ⟨pos, pos⟩
+                else
+                  getBodyTerm? view.value |>.getD view.value |>.getRange?
+            task := bodyPromise.resultD default
+            -- We should not cancel the entire body early if we have tactics
+            cancelTk? := guard newTacTask?.isNone *> cancelTk? }
+        snap.new.resolve <| some
+          { diagnostics :=
+              (← Language.Snapshot.Diagnostics.ofMessageLog (← Core.getAndEmptyMessageLog))
+            moreSnaps := (← Core.getAndEmptySnapshotTasks)
+            view := newHeader.toDefViewElabHeaderData
+            state := newState
+            tacStx?
+            tacSnap? := newTacTask?
+            bodyStx := view.value
+            bodySnap }
+        newHeader :=
+          { newHeader with
+            -- We should only forward the promise if we are actually waiting on the
+            -- corresponding task; otherwise, diagnostics assigned to it will be lost
+            tacSnap? := guard newTacTask?.isSome *> some { old? := oldTacSnap?, new := tacPromise }
+            bodySnap? := some { old? := oldBodySnap?, new := bodyPromise } }
       headers := headers.push newHeader
     return headers
 where
@@ -521,21 +504,17 @@ where
         modify (·.add ldecl.fvarId)
   getFVars (e : Expr) : MetaM (Array FVarId) := (·.2.fvarIds) <$> e.collectFVars.run {}
 
-register_builtin_option deprecated.oldSectionVars : Bool := {
-  defValue := false
-  descr :=
-    "re-enable deprecated behavior of including exactly the section variables used in a declaration"
-}
+register_builtin_option deprecated.oldSectionVars : Bool :=
+  { defValue := false
+    descr :=
+      "re-enable deprecated behavior of including exactly the section variables used in a \
+        declaration" }
 
-register_builtin_option linter.unusedSectionVars : Bool := {
-  defValue := true
-  descr := "enable the 'unused section variables in theorem body' linter"
-}
+register_builtin_option linter.unusedSectionVars : Bool :=
+  { defValue := true, descr := "enable the 'unused section variables in theorem body' linter" }
 
-register_builtin_option debug.proofAsSorry : Bool := {
-  defValue := false
-  descr := "replace the bodies (proofs) of theorems with `sorry`"
-}
+register_builtin_option debug.proofAsSorry : Bool :=
+  { defValue := false, descr := "replace the bodies (proofs) of theorems with `sorry`" }
 
 /--
 Returns true if `k` is a theorem, option `debug.proofAsSorry` is set to true, and the environment contains the axiom `sorryAx`.
@@ -648,12 +627,12 @@ private def elabFunValues
                                       theorem ..."
                               return val
     if let some snap := header.bodySnap? then
-      snap.new.resolve <| some {
-        diagnostics := (← Language.Snapshot.Diagnostics.ofMessageLog (← Core.getAndEmptyMessageLog))
-        moreSnaps := (← Core.getAndEmptySnapshotTasks)
-        state
-        value := val
-      }
+      snap.new.resolve <| some
+        { diagnostics :=
+            (← Language.Snapshot.Diagnostics.ofMessageLog (← Core.getAndEmptyMessageLog))
+          moreSnaps := (← Core.getAndEmptySnapshotTasks)
+          state
+          value := val }
     return val
 
 private def collectUsed
@@ -1016,11 +995,10 @@ private def pushLocalDecl
     (kind : LocalDeclKind)
     : StateRefT ClosureState TermElabM (Array FVarId) := do
   let type ← preprocess type
-  modify fun s => {
-    s with
-    newLocalDecls := s.newLocalDecls.push <| LocalDecl.cdecl default fvarId userName type bi kind
-    exprArgs := s.exprArgs.push (mkFVar fvarId)
-  }
+  modify fun s =>
+    { s with
+      newLocalDecls := s.newLocalDecls.push <| LocalDecl.cdecl default fvarId userName type bi kind
+      exprArgs := s.exprArgs.push (mkFVar fvarId) }
   return pushNewVars toProcess (collectFVars {} type)
 
 private partial def mkClosureForAux (toProcess : Array FVarId)
@@ -1048,27 +1026,25 @@ private partial def mkClosureForAux (toProcess : Array FVarId)
         /- Dependent let-decl. -/
         let type ← preprocess type
         let val ← preprocess val
-        modify fun s => {
-          s with
-          newLetDecls := s.newLetDecls.push <| .ldecl default fvarId userName type val false k
-          /-
-          We don't want to interleave let and lambda declarations in our closure. So, we expand any occurrences of fvarId
-          at `newLocalDecls` and `localDecls`
-          -/
-          newLocalDecls := s.newLocalDecls.map (·.replaceFVarId fvarId val)
-          localDecls := s.localDecls.map (·.replaceFVarId fvarId val)
-        }
+        modify fun s =>
+          { s with
+            newLetDecls := s.newLetDecls.push <| .ldecl default fvarId userName type val false k
+            /-
+            We don't want to interleave let and lambda declarations in our closure. So, we expand any occurrences of fvarId
+            at `newLocalDecls` and `localDecls`
+            -/
+            newLocalDecls := s.newLocalDecls.map (·.replaceFVarId fvarId val)
+            localDecls := s.localDecls.map (·.replaceFVarId fvarId val) }
         mkClosureForAux (pushNewVars toProcess (collectFVars (collectFVars {} type) val))
 
 private partial def mkClosureFor (freeVars : Array FVarId) (localDecls : Array LocalDecl)
     : TermElabM ClosureState := do
   let (_, s) ← mkClosureForAux freeVars |>.run { localDecls := localDecls }
-  return {
-    s with
-    newLocalDecls := s.newLocalDecls.reverse
-    newLetDecls := s.newLetDecls.reverse
-    exprArgs := s.exprArgs.reverse
-  }
+  return
+    { s with
+      newLocalDecls := s.newLocalDecls.reverse
+      newLetDecls := s.newLetDecls.reverse
+      exprArgs := s.exprArgs.reverse }
 
 structure LetRecClosure where
   ref : Syntax
@@ -1096,12 +1072,11 @@ private def mkLetRecClosureFor (toLift : LetRecToLift) (freeVars : Array FVarId)
       let val := Closure.mkLambda cleanLocalDecls <| Closure.mkLambda s.newLetDecls val
       let c := mkAppN (Lean.mkConst toLift.declName) s.exprArgs
       toLift.mvarId.assign c
-      return {
-        ref := toLift.ref
-        localDecls := s.newLocalDecls
-        closed := c
-        toLift := { toLift with val, type }
-      }
+      return
+        { ref := toLift.ref
+          localDecls := s.newLocalDecls
+          closed := c
+          toLift := { toLift with val, type } }
 
 private def mkLetRecClosures
     (sectionVars : Array Expr) (mainFVarIds : Array FVarId) (recFVarIds : Array FVarId)
@@ -1176,18 +1151,17 @@ def pushMain
       unless (← isProp type) do
         throwErrorAt header.ref
           "type of theorem `{header.declName}` is not a proposition{indentExpr type}"
-    return preDefs.push {
-      ref := getDeclarationSelectionRef header.ref
-      kind := header.kind
-      declName := header.declName
-      binders := header.binders
-      numSectionVars := sectionVars.size
-      levelParams := [] -- we set it later
-      modifiers := header.modifiers
-      type
-      value
-      termination
-    }
+    return preDefs.push
+      { ref := getDeclarationSelectionRef header.ref
+        kind := header.kind
+        declName := header.declName
+        binders := header.binders
+        numSectionVars := sectionVars.size
+        levelParams := [] -- we set it later
+        modifiers := header.modifiers
+        type
+        value
+        termination }
 
 def pushLetRecs
     (preDefs : Array PreDefinition) (letRecClosures : List LetRecClosure) (kind : DefKind)
@@ -1209,17 +1183,16 @@ def pushLetRecs
         pure kind
     if modifiers.isMeta then
       modifyEnv (markMeta · c.toLift.declName)
-    return preDefs.push {
-      ref := c.ref
-      declName := c.toLift.declName
-      levelParams := [] -- we set it later
-      binders := c.toLift.binders
-      modifiers := { modifiers with attrs := c.toLift.attrs, docString? := c.toLift.docString? }
-      kind
-      type
-      value
-      termination := c.toLift.termination
-    }
+    return preDefs.push
+      { ref := c.ref
+        declName := c.toLift.declName
+        levelParams := [] -- we set it later
+        binders := c.toLift.binders
+        modifiers := { modifiers with attrs := c.toLift.attrs, docString? := c.toLift.docString? }
+        kind
+        type
+        value
+        termination := c.toLift.termination }
 
 def getKindForLetRecs (mainHeaders : Array DefViewElabHeader) : DefKind :=
   if mainHeaders.any fun h => h.kind.isTheorem then
@@ -1227,18 +1200,17 @@ def getKindForLetRecs (mainHeaders : Array DefViewElabHeader) : DefKind :=
   else
     DefKind.«def»
 
-def getModifiersForLetRecs (mainHeaders : Array DefViewElabHeader) : Modifiers := {
-  computeKind :=
-    if mainHeaders.any (·.modifiers.isNoncomputable) then
-      .noncomputable
-    else if mainHeaders.any (·.modifiers.isMeta) then
-      .meta
-    else
-      .regular
-  recKind :=
-    if mainHeaders.any fun h => h.modifiers.isPartial then RecKind.partial else RecKind.default
-  isUnsafe := mainHeaders.any fun h => h.modifiers.isUnsafe
-}
+def getModifiersForLetRecs (mainHeaders : Array DefViewElabHeader) : Modifiers :=
+  { computeKind :=
+      if mainHeaders.any (·.modifiers.isNoncomputable) then
+        .noncomputable
+      else if mainHeaders.any (·.modifiers.isMeta) then
+        .meta
+      else
+        .regular
+    recKind :=
+      if mainHeaders.any fun h => h.modifiers.isPartial then RecKind.partial else RecKind.default
+    isUnsafe := mainHeaders.any fun h => h.modifiers.isUnsafe }
 
 /--
 - `sectionVars`:   The section variables used in the `mutual` block.
@@ -1262,11 +1234,10 @@ def main
         withLCtx toLift.lctx toLift.localInstances do
           Meta.check toLift.type
           Meta.check toLift.val
-          return {
-            toLift with
-            val := (← instantiateMVarsProfiling toLift.val)
-            type := (← instantiateMVarsProfiling toLift.type)
-          }
+          return
+            { toLift with
+              val := (← instantiateMVarsProfiling toLift.val)
+              type := (← instantiateMVarsProfiling toLift.type) }
     let letRecClosures ← mkLetRecClosures sectionVars mainFVarIds recFVarIds letRecsToLift
     -- mkLetRecClosures assign metavariables that were placeholders for the lifted declarations.
     let mainVals ← mainVals.mapM (instantiateMVarsProfiling ·)
@@ -1280,10 +1251,9 @@ def main
     let mainVals := mainVals.map r.apply
     let mainHeaders := mainHeaders.map fun h => { h with type := r.apply h.type }
     let letRecClosures :=
-      letRecClosures.map fun c => {
-        c with
-        toLift := { c.toLift with type := r.apply c.toLift.type, val := r.apply c.toLift.val }
-      }
+      letRecClosures.map fun c =>
+        { c with
+          toLift := { c.toLift with type := r.apply c.toLift.type, val := r.apply c.toLift.val } }
     let letRecKind := getKindForLetRecs mainHeaders
     let letRecMods := getModifiersForLetRecs mainHeaders
     pushMain (← pushLetRecs #[] letRecClosures letRecKind letRecMods) sectionVars mainHeaders
@@ -1307,11 +1277,10 @@ private def levelMVarToParamHeaders (views : Array DefView) (headers : Array Def
       if ← pure view.kind.isTheorem <||> isProp header.type then
         newHeaders ←
           withLevelNames header.levelNames do
-            return newHeaders.push {
-              header with
-              type := (← levelMVarToParam header.type)
-              levelNames := (← getLevelNames)
-            }
+            return newHeaders.push
+              { header with
+                type := (← levelMVarToParam header.type)
+                levelNames := (← getLevelNames) }
       else
         newHeaders := newHeaders.push header
     return newHeaders
@@ -1337,22 +1306,17 @@ private def checkAllDeclNamesDistinct (preDefs : Array PreDefinition) : TermElab
 structure AsyncBodyInfo where
 deriving TypeName
 
-register_builtin_option warn.classDefReducibility : Bool := {
-  defValue := true
-  descr :=
-    "warn when a `def` of class type is not marked `@[reducible]`, `@[instance_reducible]`, or \
-      `@[implicit_reducible]`"
-}
+register_builtin_option warn.classDefReducibility : Bool :=
+  { defValue := true
+    descr :=
+      "warn when a `def` of class type is not marked `@[reducible]`, `@[instance_reducible]`, or \
+        `@[implicit_reducible]`" }
 
-register_builtin_option warn.exposeOnPrivate : Bool := {
-  defValue := true
-  descr := "warn about uses of `@[expose]` on private declarations"
-}
+register_builtin_option warn.exposeOnPrivate : Bool :=
+  { defValue := true, descr := "warn about uses of `@[expose]` on private declarations" }
 
-register_builtin_option warn.redundantExpose : Bool := {
-  defValue := true
-  descr := "warn about redundant `@[expose]`/`@[no_expose]` attributes"
-}
+register_builtin_option warn.redundantExpose : Bool :=
+  { defValue := true, descr := "warn about redundant `@[expose]`/`@[no_expose]` attributes" }
 
 def elabMutualDef (vars : Array Expr) (sc : Command.Scope) (views : Array DefView)
     : TermElabM Unit :=
@@ -1491,11 +1455,10 @@ where
     -- insert a hole for the proof info trees in the main info tree
     let infoHole ← mkFreshMVarId
     let infoPromise ← IO.Promise.new
-    modifyInfoState fun s => {
-      s with
-      trees := s.trees.push <| .hole infoHole
-      lazyAssignment := s.lazyAssignment.insert infoHole <| infoPromise.resultD default
-    }
+    modifyInfoState fun s =>
+      { s with
+        trees := s.trees.push <| .hole infoHole
+        lazyAssignment := s.lazyAssignment.insert infoHole <| infoPromise.resultD default }
 
     -- now start new thread for body elaboration, then nested thread for kernel checking
     let cancelTk ← IO.CancelToken.new
@@ -1524,11 +1487,8 @@ where
     Core.logSnapshotTask { stx? := none, task := (← BaseIO.asTask (act ())), cancelTk? := cancelTk }
     -- Also add explicit snapshot task for showing progress of kernel checking; `addDecl` does not
     -- do this by default
-    Core.logSnapshotTask {
-      stx? := none
-      cancelTk? := none
-      task := (← getEnv).checked.map fun _ => default
-    }
+    Core.logSnapshotTask
+      { stx? := none, cancelTk? := none, task := (← getEnv).checked.map fun _ => default }
     withDeprecationContextFromAttrs view.modifiers.attrs do
       applyAttributesAt declId.declName view.modifiers.attrs .afterTypeChecking
       applyAttributesAt declId.declName view.modifiers.attrs .afterCompilation
@@ -1597,11 +1557,10 @@ where
             do
               withSaveInfoContext do -- save adjusted env in info tree
                 let headers :=
-                  headers.map fun header => {
-                    header with
-                    modifiers.attrs :=
-                      header.modifiers.attrs.filter (! ·.name ∈ [`expose, `no_expose])
-                  }
+                  headers.map fun header =>
+                    { header with
+                      modifiers.attrs :=
+                        header.modifiers.attrs.filter (! ·.name ∈ [`expose, `no_expose]) }
                 let values ←
                   try
                     let values ← elabFunValues headers vars sc
@@ -1632,10 +1591,8 @@ where
                 for header in headers, value in values do
                   let whereFinally ← declValToWhereFinally header.value
                   let exprsWithHoles :=
-                    (exprsWithHoles.getD header.declName #[]).push {
-                      ref := header.ref
-                      expr := value
-                    }
+                    (exprsWithHoles.getD header.declName #[]).push
+                      { ref := header.ref, expr := value }
                   fillHolesFromWhereFinally header.declName exprsWithHoles whereFinally
                     header.modifiers.attrs
                 -- Compilation should take place without unused section vars, but all section vars should be
@@ -1740,12 +1697,8 @@ private def logGoalsAccomplishedSnapshotTask
         | _ =>
           continue
   let logGoalsAccomplishedTask ← BaseIO.mapTask (t := ← tree.waitAll) logGoalsAccomplishedAct
-  Core.logSnapshotTask {
-    stx? := none
-    reportingRange := .skip
-    task := logGoalsAccomplishedTask
-    cancelTk? := none
-  }
+  Core.logSnapshotTask
+    { stx? := none, reportingRange := .skip, task := logGoalsAccomplishedTask, cancelTk? := none }
 
 end Term
 namespace Command
@@ -1769,34 +1722,31 @@ def elabMutualDef (ds : Array Syntax) : CommandElabM Unit := do
       view := view.markDefEq
     let fullHeaderRef := mkNullNode #[d[0], view.headerRef]
     if let some snap := snap? then
-      view := {
-        view with
-        headerSnap? :=
-          some {
-            old? := do
-              -- transitioning from `Context.snap?` to `DefView.headerSnap?` invariant: if the
-              -- elaboration context and state are unchanged, and the syntax of this as well as all
-              -- previous headers is unchanged, then the elaboration result for this header (which
-              -- includes state from elaboration of previous headers!) should be unchanged.
-              guard reusedAllHeaders
-              let old ← snap.old?
-              -- blocking wait, `HeadersParsedSnapshot` (and hopefully others) should be quick
-              let old ← old.val.get.toTyped? DefsParsedSnapshot
-              let oldParsed ← old.defs[i]?
-              guard <| fullHeaderRef.eqWithInfoAndTraceReuse opts oldParsed.fullHeaderRef
-              -- no syntax guard to store, we already did the necessary checks
-              return ⟨.missing, oldParsed.headerProcessedSnap⟩
-            new := headerPromise
-          }
-      }
+      view :=
+        { view with
+          headerSnap? :=
+            some
+              { old? := do
+                  -- transitioning from `Context.snap?` to `DefView.headerSnap?` invariant: if the
+                  -- elaboration context and state are unchanged, and the syntax of this as well as all
+                  -- previous headers is unchanged, then the elaboration result for this header (which
+                  -- includes state from elaboration of previous headers!) should be unchanged.
+                  guard reusedAllHeaders
+                  let old ← snap.old?
+                  -- blocking wait, `HeadersParsedSnapshot` (and hopefully others) should be quick
+                  let old ← old.val.get.toTyped? DefsParsedSnapshot
+                  let oldParsed ← old.defs[i]?
+                  guard <| fullHeaderRef.eqWithInfoAndTraceReuse opts oldParsed.fullHeaderRef
+                  -- no syntax guard to store, we already did the necessary checks
+                  return ⟨.missing, oldParsed.headerProcessedSnap⟩
+                new := headerPromise } }
       if snap.old?.isSome && (view.headerSnap?.bind (·.old?)).isNone then
         snap.old?.forM (·.val.cancelRec)
       let cancelTk? := (← read).cancelTk?
       defs :=
-        defs.push {
-          fullHeaderRef
-          headerProcessedSnap := { stx? := d, task := headerPromise.resultD default, cancelTk? }
-        }
+        defs.push
+          { fullHeaderRef
+            headerProcessedSnap := { stx? := d, task := headerPromise.resultD default, cancelTk? } }
       reusedAllHeaders := reusedAllHeaders && view.headerSnap?.any (·.old?.isSome)
     views := views.push view
   let defsParsedSnap := { defs, diagnostics := .empty : DefsParsedSnapshot }

@@ -24,10 +24,8 @@ open Lean Meta
 
 /-- Environment extensions for `refl` lemmas -/
 initialize reflExt : SimpleScopedEnvExtension (Name × Array DiscrTree.Key) (DiscrTree Name) ←
-  registerSimpleScopedEnvExtension {
-    addEntry := fun dt (n, ks) => dt.insertKeyValue ks n
-    initial := {}
-  }
+  registerSimpleScopedEnvExtension
+    { addEntry := fun dt (n, ks) => dt.insertKeyValue ks n, initial := {} }
 
 /--
 Tags reflexivity lemmas to be used by the `rfl` tactic.
@@ -39,26 +37,25 @@ special case in the `rfl` tactic.
 -/
 @[builtin_doc]
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `refl
-    descr := "reflexivity relation"
-    add := fun decl _ kind =>
-      MetaM.run' do
-        let declTy := (← getConstInfo decl).type
-        let (_, _, targetTy) ← withReducible <| forallMetaTelescopeReducing declTy
-        let fail :=
-          throwError "`[refl]` attribute only applies to lemmas of the form `x ∼ x`, but this \
-            declaration is not:\
-            {inlineExprTrailing declTy}"
-        let .app (.app rel lhs) rhs := targetTy
-          | fail
-        if let .app (.const ``Eq [_]) _ := rel then
-          throwError "`[refl]` attribute may not be used on `Eq.refl`"
-        unless ← withNewMCtxDepth <| isDefEq lhs rhs do
-          fail
-        let key ← DiscrTree.mkPath rel
-        reflExt.add (decl, key) kind
-  }
+  registerBuiltinAttribute
+    { name := `refl
+      descr := "reflexivity relation"
+      add := fun decl _ kind =>
+        MetaM.run' do
+          let declTy := (← getConstInfo decl).type
+          let (_, _, targetTy) ← withReducible <| forallMetaTelescopeReducing declTy
+          let fail :=
+            throwError "`[refl]` attribute only applies to lemmas of the form `x ∼ x`, but this \
+              declaration is not:\
+              {inlineExprTrailing declTy}"
+          let .app (.app rel lhs) rhs := targetTy
+            | fail
+          if let .app (.const ``Eq [_]) _ := rel then
+            throwError "`[refl]` attribute may not be used on `Eq.refl`"
+          unless ← withNewMCtxDepth <| isDefEq lhs rhs do
+            fail
+          let key ← DiscrTree.mkPath rel
+          reflExt.add (decl, key) kind }
 
 open Elab Tactic
 

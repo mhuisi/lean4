@@ -312,12 +312,8 @@ def mkBRecOnFromRec (recName : Name) (nParams : Nat) (all : Array Name) (brecOnN
       let thm_type ← mkForallFVars below_params thm_type
       let thm_val ← mkLambdaFVars below_params thm_val
       let thm_decl ←
-        mkThmOrUnsafeDef {
-          name := brecOnEqName
-          levelParams := blps
-          type := thm_type
-          value := thm_val
-        }
+        mkThmOrUnsafeDef
+          { name := brecOnEqName, levelParams := blps, type := thm_type, value := thm_val }
       addDecl thm_decl
       modifyEnv fun env => addProtected env brecOnEqName
 

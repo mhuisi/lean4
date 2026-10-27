@@ -177,10 +177,8 @@ where
   go (revLams : Array (Name × Expr × BinderInfo)) (revAppArgs : Array Expr) (e : Expr) : Expr :=
     if let some (u, _σs) := parseEmptyHyp? e then
       emptyHyp u σs
-    else if let some hyp := parseHyp? e then {
-      hyp with
-      p := wrap revLams revAppArgs hyp.p
-    }.toExpr
+    else if let some hyp := parseHyp? e then
+      { hyp with p := wrap revLams revAppArgs hyp.p }.toExpr
     else if let some (u, _σs, lhs, rhs) := parseAnd? e then
       SPred.mkAnd! u σs (go revLams revAppArgs lhs) (go revLams revAppArgs rhs)
     else if let .lam x ty body info := e then

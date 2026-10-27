@@ -22,17 +22,14 @@ namespace Lean.Linter
 
 open Meta
 
-register_builtin_option linter.deprecated : Bool := {
-  defValue := true
-  descr := "if true, generate deprecation warnings"
-}
+register_builtin_option linter.deprecated : Bool :=
+  { defValue := true, descr := "if true, generate deprecation warnings" }
 
-register_builtin_option linter.deprecated.deprecatedTarget : Bool := {
-  defValue := true
-  descr :=
-    "if true, warn when a `@[deprecated]` attribute points at a declaration that is \
-      itself deprecated"
-}
+register_builtin_option linter.deprecated.deprecatedTarget : Bool :=
+  { defValue := true
+    descr :=
+      "if true, warn when a `@[deprecated]` attribute points at a declaration that is \
+        itself deprecated" }
 
 structure DeprecationEntry where
   newName? : Option Name := none
@@ -55,13 +52,12 @@ def mkSinceHint (stx : Syntax) : CoreM MessageData := do
   let some insertPos := stx.getTailPos? (canonicalOnly := true)
     | return .nil
   let since := s!"(since := \"{(← currentDate).toLeanDateString}\")"
-  MessageData.hint "Add the current date:" (ref? := stx) #[{
-    suggestion := " " ++ since
-    messageData? := some since
-    span? := Syntax.ofRange ⟨insertPos, insertPos⟩
-    diffGranularity := .none
-    toCodeActionTitle? := some fun _ => s!"Try this: {since}"
-  }]
+  MessageData.hint "Add the current date:" (ref? := stx)
+    #[{ suggestion := " " ++ since
+        messageData? := some since
+        span? := Syntax.ofRange ⟨insertPos, insertPos⟩
+        diffGranularity := .none
+        toCodeActionTitle? := some fun _ => s!"Try this: {since}" }]
 
 /--
 This is the predicate we use to decide whether the old and new type of a declaration differ for the
@@ -79,97 +75,96 @@ builtin_initialize deprecatedAttr : ParametricAttribute DeprecationEntry ←
   let ext ←
     registerParametricAttributeExt (α := DeprecationEntry) `Lean.Linter.deprecatedAttr
       (preserveOrder := false)
-  registerParametricAttributeForExt (ext := ext) {
-    name := `deprecated
-    descr := "mark declaration as deprecated"
-    getParam := fun declName stx => do
-      let `(attr| deprecated $[$id?]? $[$text?]? $[$typeChanged?]? $[(since := $since?)]?) := stx
-        | throwError "Invalid `[deprecated]` attribute syntax"
-      let newName? ← id?.mapM Elab.realizeGlobalConstNoOverloadWithInfo
-      if newName? == some declName then
-        throwError "Invalid `[deprecated]` attribute: `{.ofConstName declName true}` cannot be \
-          deprecated in favor of itself"
-      if let some newName := newName? then
-        recordExtraModUseFromDecl (isMeta := false) newName
-        if getLinterValue linter.deprecated (← getLinterOptions) then
-          let env ← getEnv
-          if linter.deprecated.deprecatedTarget.get (← getOptions) then
-            let disableNote : MessageData :=
-              .note m!"This warning can be disabled with \
-                `set_option {linter.deprecated.deprecatedTarget.name} false`"
-            if let some entry :=
-                ParametricAttribute.getParamFromExt? ext (preserveOrder := false) env newName then
-              match entry.newName? with
-              | none =>
-                logWarning <|
-                  m!"`{.ofConstName newName true}` is itself deprecated, but without an \
-                      explicit replacement; `{.ofConstName declName true}` is being deprecated in \
-                      favor \
-                      of a deprecated declaration"
-                    ++ disableNote
-              | some next =>
-                if next != newName then
-                  let mut msg :=
-                    m!"`{.ofConstName newName true}` is itself deprecated in favor of \
-                        `{.ofConstName next true}`; consider deprecating \
-                        `{.ofConstName declName true}` \
-                        in favor of `{.ofConstName next true}` instead"
+  registerParametricAttributeForExt (ext := ext)
+    { name := `deprecated
+      descr := "mark declaration as deprecated"
+      getParam := fun declName stx => do
+        let `(attr| deprecated $[$id?]? $[$text?]? $[$typeChanged?]? $[(since := $since?)]?) := stx
+          | throwError "Invalid `[deprecated]` attribute syntax"
+        let newName? ← id?.mapM Elab.realizeGlobalConstNoOverloadWithInfo
+        if newName? == some declName then
+          throwError "Invalid `[deprecated]` attribute: `{.ofConstName declName true}` cannot be \
+            deprecated in favor of itself"
+        if let some newName := newName? then
+          recordExtraModUseFromDecl (isMeta := false) newName
+          if getLinterValue linter.deprecated (← getLinterOptions) then
+            let env ← getEnv
+            if linter.deprecated.deprecatedTarget.get (← getOptions) then
+              let disableNote : MessageData :=
+                .note m!"This warning can be disabled with \
+                  `set_option {linter.deprecated.deprecatedTarget.name} false`"
+              if let some entry :=
+                  ParametricAttribute.getParamFromExt? ext (preserveOrder := false) env newName then
+                match entry.newName? with
+                | none =>
+                  logWarning <|
+                    m!"`{.ofConstName newName true}` is itself deprecated, but without an \
+                        explicit replacement; `{.ofConstName declName true}` is being deprecated \
+                        in favor \
+                        of a deprecated declaration"
                       ++ disableNote
-                  if let some id := id? then
-                    if (id.raw.getRange? (canonicalOnly := true)).isSome then
-                      if let some replacement ←
-                          MetaM.run' <| unresolveNameGlobalAvoidingLocals? next then
-                        msg :=
-                          msg ++ (← MessageData.hint
-                            m!"Deprecate in favor of `{.ofConstName next true}` instead:"
-                            #[replacement.toString] (ref? := some id.raw))
-                  logWarning msg
-          if let some oldDecl := env.find? declName then
-            if let some newDecl := env.find? newName then
-              if ← MetaM.run' <| areTypesReduciblyDefEq oldDecl newDecl then
-                if typeChanged?.isSome then
-                  logWarning "The `+typeChanged` marker is not needed because the updated constant \
-                    has the same type."
-              else if typeChanged?.isNone then
-                let insertPos? :=
-                  text?.bind (·.raw.getTailPos? (canonicalOnly := true))
-                    <|> id?.bind (·.raw.getTailPos? (canonicalOnly := true))
-                let hint ←
-                  if let some insertPos := insertPos? then
-                    MessageData.hint "Add `+typeChanged`:" #[{
-                      suggestion := " +typeChanged"
-                      messageData? := some "+typeChanged"
-                      span? := Syntax.ofRange ⟨insertPos, insertPos⟩
-                      diffGranularity := .none
-                      toCodeActionTitle? := some fun _ => "Try this: +typeChanged"
-                    }]
-                  else
-                    pure <| MessageData.hint' "Add `+typeChanged` to silence this warning."
-                logWarning <|
-                  m!"The updated constant has a different type:\
-                      {indentExpr newDecl.type}\
-                      \ninstead of{indentExpr oldDecl.type}\
-                      \n\n\
-                      This suggests that addressing the deprecation might be more involved than \
-                      simply replacing the old name with the new name. This is often expected, but \
-                      sometimes it indicates that the deprecation is in favor of the wrong \
-                      declaration, or that there is a mistake in one of the statements.\
-                      \n\n\
-                      If the type difference is intentional, use `+typeChanged` to silence this \
-                      warning."
-                    ++ hint
-      let text? := text?.map TSyntax.getString
-      let since? := since?.map TSyntax.getString
-      if id?.isNone && text?.isNone then
-        logWarning
-          "`[deprecated]` attribute should specify either a new name or a deprecation message"
-      if since?.isNone then
-        logWarning <|
-          m!"`[deprecated]` attribute should specify the date or library version at which the \
-              deprecation was introduced, using `(since := \"...\")`"
-            ++ (← mkSinceHint stx)
-      return { newName?, text?, since? }
-  }
+                | some next =>
+                  if next != newName then
+                    let mut msg :=
+                      m!"`{.ofConstName newName true}` is itself deprecated in favor of \
+                          `{.ofConstName next true}`; consider deprecating \
+                          `{.ofConstName declName true}` \
+                          in favor of `{.ofConstName next true}` instead"
+                        ++ disableNote
+                    if let some id := id? then
+                      if (id.raw.getRange? (canonicalOnly := true)).isSome then
+                        if let some replacement ←
+                            MetaM.run' <| unresolveNameGlobalAvoidingLocals? next then
+                          msg :=
+                            msg ++ (← MessageData.hint
+                              m!"Deprecate in favor of `{.ofConstName next true}` instead:"
+                              #[replacement.toString] (ref? := some id.raw))
+                    logWarning msg
+            if let some oldDecl := env.find? declName then
+              if let some newDecl := env.find? newName then
+                if ← MetaM.run' <| areTypesReduciblyDefEq oldDecl newDecl then
+                  if typeChanged?.isSome then
+                    logWarning "The `+typeChanged` marker is not needed because the updated \
+                      constant has the same type."
+                else if typeChanged?.isNone then
+                  let insertPos? :=
+                    text?.bind (·.raw.getTailPos? (canonicalOnly := true))
+                      <|> id?.bind (·.raw.getTailPos? (canonicalOnly := true))
+                  let hint ←
+                    if let some insertPos := insertPos? then
+                      MessageData.hint "Add `+typeChanged`:"
+                        #[{ suggestion := " +typeChanged"
+                            messageData? := some "+typeChanged"
+                            span? := Syntax.ofRange ⟨insertPos, insertPos⟩
+                            diffGranularity := .none
+                            toCodeActionTitle? := some fun _ => "Try this: +typeChanged" }]
+                    else
+                      pure <| MessageData.hint' "Add `+typeChanged` to silence this warning."
+                  logWarning <|
+                    m!"The updated constant has a different type:\
+                        {indentExpr newDecl.type}\
+                        \ninstead of{indentExpr oldDecl.type}\
+                        \n\n\
+                        This suggests that addressing the deprecation might be more involved than \
+                        simply replacing the old name with the new name. This is often expected, \
+                        but \
+                        sometimes it indicates that the deprecation is in favor of the wrong \
+                        declaration, or that there is a mistake in one of the statements.\
+                        \n\n\
+                        If the type difference is intentional, use `+typeChanged` to silence this \
+                        warning."
+                      ++ hint
+        let text? := text?.map TSyntax.getString
+        let since? := since?.map TSyntax.getString
+        if id?.isNone && text?.isNone then
+          logWarning
+            "`[deprecated]` attribute should specify either a new name or a deprecation message"
+        if since?.isNone then
+          logWarning <|
+            m!"`[deprecated]` attribute should specify the date or library version at which the \
+                deprecation was introduced, using `(since := \"...\")`"
+              ++ (← mkSinceHint stx)
+        return { newName?, text?, since? } }
 
 def setDeprecated
     {m} [Monad m] [MonadEnv m] [MonadError m] (declName : Name) (entry : DeprecationEntry)

@@ -20,16 +20,15 @@ namespace Lean.Elab.Deriving.DecEq
 open Lean.Parser.Term
 open Meta
 
-register_builtin_option deriving.decEq.linear_construction_threshold : Nat := {
-  defValue := 10
-  descr :=
-    "If the inductive data type has this many or more constructors, use a different \
-      implementation for deciding equality that avoids the quadratic code size produced by the \
-      default implementation.\
-      \n\n\
-      The alternative construction compiles to less efficient code in some cases, so by default \
-      it is only used for inductive types with 10 or more constructors."
-}
+register_builtin_option deriving.decEq.linear_construction_threshold : Nat :=
+  { defValue := 10
+    descr :=
+      "If the inductive data type has this many or more constructors, use a different \
+        implementation for deciding equality that avoids the quadratic code size produced by the \
+        default implementation.\
+        \n\n\
+        The alternative construction compiles to less efficient code in some cases, so by default \
+        it is only used for inductive types with 10 or more constructors." }
 
 def mkDecEqHeader (indVal : InductiveVal) : TermElabM Header := do mkHeader `DecidableEq 2 indVal
 
@@ -240,14 +239,13 @@ partial def mkEnumOfNat (declName : Name) : MetaM Unit := do
     let value ← mkNatLookupTable n enumType ctors
     let value ← mkLambdaFVars #[n] value
     let type ← mkArrow (mkConst ``Nat) enumType
-    addAndCompile <| Declaration.defnDecl {
-      name := Name.mkStr declName "ofNat"
-      levelParams := indVal.levelParams
-      safety := DefinitionSafety.safe
-      hints := ReducibilityHints.abbrev
-      value
-      type
-    }
+    addAndCompile <| Declaration.defnDecl
+      { name := Name.mkStr declName "ofNat"
+        levelParams := indVal.levelParams
+        safety := DefinitionSafety.safe
+        hints := ReducibilityHints.abbrev
+        value
+        type }
 
 def mkEnumOfNatThm (declName : Name) : MetaM Unit := do
   let indVal ← getConstInfoInduct declName
@@ -268,12 +266,11 @@ def mkEnumOfNatThm (declName : Name) : MetaM Unit := do
       value := mkApp value (mkApp rflEnum (mkConst ctor levels))
     value ← mkLambdaFVars #[x] value
     let type ← mkForallFVars #[x] resultType
-    addAndCompile <| Declaration.thmDecl {
-      name := Name.mkStr declName "ofNat_ctorIdx"
-      levelParams := indVal.levelParams
-      value
-      type
-    }
+    addAndCompile <| Declaration.thmDecl
+      { name := Name.mkStr declName "ofNat_ctorIdx"
+        levelParams := indVal.levelParams
+        value
+        type }
 
 def mkDecEqEnum (declName : Name) : CommandElabM Unit := do
   let cmd ←

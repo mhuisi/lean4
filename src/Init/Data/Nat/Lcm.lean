@@ -107,10 +107,9 @@ theorem lcm_dvd {m n k : Nat} (H1 : m ∣ k) (H2 : n ∣ k) : lcm m n ∣ k := b
     rw [gcd_mul_lcm, ← gcd_mul_right, Nat.mul_comm n k]
     exact dvd_gcd (Nat.mul_dvd_mul_left _ H2) (Nat.mul_dvd_mul_right H1 _)
 
-theorem lcm_dvd_iff {m n k : Nat} : lcm m n ∣ k ↔ m ∣ k ∧ n ∣ k := ⟨
-  fun h => ⟨Nat.dvd_trans (dvd_lcm_left _ _) h, Nat.dvd_trans (dvd_lcm_right _ _) h⟩,
-  fun ⟨hm, hn⟩ => lcm_dvd hm hn
-⟩
+theorem lcm_dvd_iff {m n k : Nat} : lcm m n ∣ k ↔ m ∣ k ∧ n ∣ k :=
+  ⟨ fun h => ⟨Nat.dvd_trans (dvd_lcm_left _ _) h, Nat.dvd_trans (dvd_lcm_right _ _) h⟩,
+    fun ⟨hm, hn⟩ => lcm_dvd hm hn ⟩
 
 theorem lcm_eq_left_iff_dvd : lcm m n = m ↔ n ∣ m := by
   refine (Nat.eq_zero_or_pos m).elim (by rintro rfl; simp) (fun hm => ?_)
@@ -158,11 +157,10 @@ theorem lcm_eq_iff {n m l : Nat} : lcm n m = l ↔ n ∣ l ∧ m ∣ l ∧ (∀ 
 
 theorem lcm_div {m n k : Nat} (hkm : k ∣ m) (hkn : k ∣ n) : lcm (m / k) (n / k) = lcm m n / k := by
   refine (Nat.eq_zero_or_pos k).elim (by rintro rfl; simp) (fun hk =>
-    lcm_eq_iff.2 ⟨
-      Nat.div_dvd_div hkm (dvd_lcm_left m n),
-      Nat.div_dvd_div hkn (dvd_lcm_right m n),
-      fun c hc₁ hc₂ => ?_
-    ⟩)
+    lcm_eq_iff.2
+      ⟨ Nat.div_dvd_div hkm (dvd_lcm_left m n),
+        Nat.div_dvd_div hkn (dvd_lcm_right m n),
+        fun c hc₁ hc₂ => ?_ ⟩)
   rw [div_dvd_iff_dvd_mul _ hk] at hc₁ hc₂ ⊢
   · exact lcm_dvd hc₁ hc₂
   · exact Nat.dvd_trans hkm (dvd_lcm_left _ _)

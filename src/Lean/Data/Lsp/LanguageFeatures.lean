@@ -152,11 +152,10 @@ deriving BEq, Hashable
 
 instance : ToJson ResolvableCompletionItemData where
   toJson d := Id.run do
-    let mut arr : Array Json := #[
-      toJson d.uri,
-      d.pos.line,
-      d.pos.character
-    ]
+    let mut arr : Array Json :=
+      #[toJson d.uri,
+        d.pos.line,
+        d.pos.character]
     if let some cPos := d.cPos? then
       arr := arr.push <| toJson cPos
     if let some id := d.id? then
@@ -477,12 +476,11 @@ inductive SemanticTokenType where
 deriving ToJson, FromJson, BEq, Hashable
 
 -- must be in the same order as the constructors
-def SemanticTokenType.names : Array String := #[
-  "keyword", "variable", "property", "function", "namespace", "type", "class",
-  "enum", "interface", "struct", "typeParameter", "parameter", "enumMember",
-  "event", "method", "macro", "modifier", "comment", "string", "number",
-  "regexp", "operator", "decorator", "leanSorryLike"
-]
+def SemanticTokenType.names : Array String :=
+  #["keyword", "variable", "property", "function", "namespace", "type", "class",
+    "enum", "interface", "struct", "typeParameter", "parameter", "enumMember",
+    "event", "method", "macro", "modifier", "comment", "string", "number",
+    "regexp", "operator", "decorator", "leanSorryLike"]
 
 def SemanticTokenType.toNat (tokenType : SemanticTokenType) : Nat := tokenType.ctorIdx
 
@@ -511,10 +509,9 @@ inductive SemanticTokenModifier where
 deriving ToJson, FromJson
 
 -- must be in the same order as the constructors
-def SemanticTokenModifier.names : Array String := #[
-  "declaration", "definition", "readonly", "static", "deprecated", "abstract",
-  "async", "modification", "documentation", "defaultLibrary"
-]
+def SemanticTokenModifier.names : Array String :=
+  #["declaration", "definition", "readonly", "static", "deprecated", "abstract",
+    "async", "modification", "documentation", "defaultLibrary"]
 
 def SemanticTokenModifier.toNat (modifier : SemanticTokenModifier) : Nat := modifier.ctorIdx
 

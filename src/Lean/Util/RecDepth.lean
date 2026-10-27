@@ -12,9 +12,8 @@ public section
 
 namespace Lean
 
-register_builtin_option maxRecDepth : Nat := {
-  defValue := defaultMaxRecDepth
-  descr := "maximum recursion depth for many Lean procedures, 0 means no limit"
-}
+register_builtin_option maxRecDepth : Nat :=
+  { defValue := defaultMaxRecDepth
+    descr := "maximum recursion depth for many Lean procedures, 0 means no limit" }
 
 end Lean

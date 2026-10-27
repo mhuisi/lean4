@@ -86,11 +86,8 @@ builtin_initialize simpleGroundDeclExt : EnvExtension SimpleGroundExtState ←
 /-- Record `declName` as mapping to the simple ground expr `expr`. -/
 public def addSimpleGroundDecl (env : Environment) (declName : Name) (expr : SimpleGroundExpr)
     : Environment :=
-  simpleGroundDeclExt.modifyState env fun s => {
-    s with
-    constNames := s.constNames.insert declName expr
-    revNames := declName :: s.revNames
-  }
+  simpleGroundDeclExt.modifyState env fun s =>
+    { s with constNames := s.constNames.insert declName expr, revNames := declName :: s.revNames }
 
 /-- Attempt to fetch a `SimpleGroundExpr` associated with `declName` if it exists. -/
 public def getSimpleGroundExpr (env : Environment) (declName : Name) : Option SimpleGroundExpr :=
@@ -114,16 +111,15 @@ public def getSimpleGroundExprWithResolvedRefs (env : Environment) (declName : N
 public def isSimpleGroundDecl (env : Environment) (declName : Name) : Bool :=
   (simpleGroundDeclExt.getState env).constNames.contains declName
 
-public def uint64ToByteArrayLE (n : UInt64) : Array UInt8 := #[
-  n.toUInt8,
-  (n >>> 0x08).toUInt8,
-  (n >>> 0x10).toUInt8,
-  (n >>> 0x18).toUInt8,
-  (n >>> 0x20).toUInt8,
-  (n >>> 0x28).toUInt8,
-  (n >>> 0x30).toUInt8,
-  (n >>> 0x38).toUInt8
-]
+public def uint64ToByteArrayLE (n : UInt64) : Array UInt8 :=
+  #[n.toUInt8,
+    (n >>> 0x08).toUInt8,
+    (n >>> 0x10).toUInt8,
+    (n >>> 0x18).toUInt8,
+    (n >>> 0x20).toUInt8,
+    (n >>> 0x28).toUInt8,
+    (n >>> 0x30).toUInt8,
+    (n >>> 0x38).toUInt8]
 
 inductive SimpleGroundValue where
   | arg (arg : SimpleGroundArg)

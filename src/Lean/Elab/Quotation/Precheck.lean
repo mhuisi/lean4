@@ -27,20 +27,18 @@ protected def withNewLocal (l : Name) (x : PrecheckM α) : PrecheckM α :=
 protected def withNewLocals (ls : Array Name) (x : PrecheckM α) : PrecheckM α :=
   withReader (fun ctx => { ctx with quotLCtx := ls.foldl NameSet.insert ctx.quotLCtx }) x
 
-register_builtin_option quotPrecheck : Bool := {
-  defValue := true
-  descr :=
-    "Enable eager name analysis on notations in order to find unbound identifiers early.\
-      \nNote that type-sensitive syntax (\"elaborators\") needs special support for this kind of \
-      check, so it might need to be turned off when using such syntax."
-}
+register_builtin_option quotPrecheck : Bool :=
+  { defValue := true
+    descr :=
+      "Enable eager name analysis on notations in order to find unbound identifiers early.\
+        \nNote that type-sensitive syntax (\"elaborators\") needs special support for this kind of \
+        check, so it might need to be turned off when using such syntax." }
 
-register_builtin_option quotPrecheck.allowSectionVars : Bool := {
-  defValue := false
-  descr :=
-    "Allow occurrences of section variables in checked quotations, it is useful when declaring \
-      local notation."
-}
+register_builtin_option quotPrecheck.allowSectionVars : Bool :=
+  { defValue := false
+    descr :=
+      "Allow occurrences of section variables in checked quotations, it is useful when declaring \
+        local notation." }
 
 /--
 Registers a double backtick syntax quotation pre-check.
@@ -53,12 +51,11 @@ unfolded, and identifier-less syntax is ultimately assumed to be well-formed.
 -/
 @[builtin_doc]
 unsafe builtin_initialize precheckAttribute : KeyedDeclsAttribute Precheck ←
-  KeyedDeclsAttribute.init {
-    builtinName := `builtin_quot_precheck
-    name := `quot_precheck
-    descr := "Register a double backtick syntax quotation pre-check."
-    valueTypeName := ``Precheck
-  }
+  KeyedDeclsAttribute.init
+    { builtinName := `builtin_quot_precheck
+      name := `quot_precheck
+      descr := "Register a double backtick syntax quotation pre-check."
+      valueTypeName := ``Precheck }
 
 partial def precheck : Precheck := fun stx => do
   checkDeprecatedQuotedSyntax stx

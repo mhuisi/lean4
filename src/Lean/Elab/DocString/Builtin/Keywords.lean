@@ -543,13 +543,10 @@ public def kw!
         if let some (.role { name, .. }) := InlineView.of ⟨← getRef⟩ then
           let kwName ← unresolveNameGlobalAvoidingLocals ``kw
           let kwSuggestionsName ← unresolveNameGlobalAvoidingLocals ``kw?
-          let ss := #[
-            { suggestion := s!"{kwName}", postInfo? := some "for automatic resolution" },
-            {
-              suggestion := s!"{kwSuggestionsName}"
-              postInfo? := some "for automatic resolution with suggestions"
-            }
-          ]
+          let ss :=
+            #[{ suggestion := s!"{kwName}", postInfo? := some "for automatic resolution" },
+              { suggestion := s!"{kwSuggestionsName}"
+                postInfo? := some "for automatic resolution with suggestions" }]
           m!"Use one of the other keyword roles.".hint ss (ref? := name)
         else
           pure m!""

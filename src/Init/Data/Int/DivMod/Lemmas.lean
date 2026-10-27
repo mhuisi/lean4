@@ -75,10 +75,9 @@ protected theorem dvd_mul_self_add {a b c : Int} : a ∣ b * a + c ↔ a ∣ c :
 @[simp]
 protected theorem dvd_self_mul_add {a b c : Int} : a ∣ a * b + c ↔ a ∣ c := by
   rw [Int.mul_comm, Int.dvd_mul_self_add]
-protected theorem dvd_iff_dvd_of_dvd_sub {a b c : Int} (H : a ∣ b - c) : a ∣ b ↔ a ∣ c := ⟨
-  fun h => Int.sub_sub_self b c ▸ Int.dvd_sub h H,
-  fun h => Int.sub_add_cancel b c ▸ Int.dvd_add H h
-⟩
+protected theorem dvd_iff_dvd_of_dvd_sub {a b c : Int} (H : a ∣ b - c) : a ∣ b ↔ a ∣ c :=
+  ⟨ fun h => Int.sub_sub_self b c ▸ Int.dvd_sub h H,
+    fun h => Int.sub_add_cancel b c ▸ Int.dvd_add H h ⟩
 
 protected theorem dvd_iff_dvd_of_dvd_add {a b c : Int} (H : a ∣ b + c) : a ∣ b ↔ a ∣ c := by
   rw [← Int.sub_neg] at H; rw [Int.dvd_iff_dvd_of_dvd_sub H, Int.dvd_neg]
@@ -137,10 +136,9 @@ theorem eq_one_of_mul_eq_one_left {a b : Int} (H : 0 ≤ b) (H' : a * b = 1) : b
 instance decidableDvd : DecidableRel (α := Int) (· ∣ ·) := fun a b =>
   decidable_of_decidable_of_iff (p := b % a = 0) (by exact (dvd_iff_emod_eq_zero ..).symm)
 
-protected theorem mul_dvd_mul_iff_left {a b c : Int} (h : a ≠ 0) : (a * b) ∣ (a * c) ↔ b ∣ c := ⟨
-  by rintro ⟨d, h'⟩; exact ⟨d, by rw [Int.mul_assoc] at h'; exact (mul_eq_mul_left_iff h).mp h'⟩,
-  by rintro ⟨d, rfl⟩; exact ⟨d, by simp [Int.mul_assoc]⟩
-⟩
+protected theorem mul_dvd_mul_iff_left {a b c : Int} (h : a ≠ 0) : (a * b) ∣ (a * c) ↔ b ∣ c :=
+  ⟨ by rintro ⟨d, h'⟩; exact ⟨d, by rw [Int.mul_assoc] at h'; exact (mul_eq_mul_left_iff h).mp h'⟩,
+    by rintro ⟨d, rfl⟩; exact ⟨d, by simp [Int.mul_assoc]⟩ ⟩
 
 protected theorem mul_dvd_mul_iff_right {a b c : Int} (h : a ≠ 0) : (b * a) ∣ (c * a) ↔ b ∣ c := by
   rw [Int.mul_comm b a, Int.mul_comm c a]
@@ -2412,12 +2410,11 @@ theorem add_fmod_eq_add_fmod_right {m n k : Int} (i : Int) (H : m.fmod n = k.fmo
   rw [H]
 
 theorem fmod_add_cancel_right {m n k : Int} (i)
-    : (m + i).fmod n = (k + i).fmod n ↔ m.fmod n = k.fmod n := ⟨
-  fun H => by
-    have := add_fmod_eq_add_fmod_right (-i) H
-    rwa [Int.add_neg_cancel_right, Int.add_neg_cancel_right] at this,
-  add_fmod_eq_add_fmod_right _
-⟩
+    : (m + i).fmod n = (k + i).fmod n ↔ m.fmod n = k.fmod n :=
+  ⟨ fun H => by
+      have := add_fmod_eq_add_fmod_right (-i) H
+      rwa [Int.add_neg_cancel_right, Int.add_neg_cancel_right] at this,
+    add_fmod_eq_add_fmod_right _ ⟩
 
 @[simp]
 theorem mul_fmod_left (a b : Int) : (a * b).fmod b = 0 :=
@@ -2838,12 +2835,11 @@ theorem add_bmod_eq_add_bmod_right (i : Int) (H : bmod x n = bmod y n)
     : bmod (x + i) n = bmod (y + i) n := by
   rw [← bmod_add_bmod, ← @bmod_add_bmod y, H]
 
-theorem bmod_add_cancel_right (i : Int) : bmod (x + i) n = bmod (y + i) n ↔ bmod x n = bmod y n := ⟨
-  fun H => by
-    have := add_bmod_eq_add_bmod_right (-i) H
-    rwa [Int.add_neg_cancel_right, Int.add_neg_cancel_right] at this,
-  fun H => by rw [← bmod_add_bmod, H, bmod_add_bmod]
-⟩
+theorem bmod_add_cancel_right (i : Int) : bmod (x + i) n = bmod (y + i) n ↔ bmod x n = bmod y n :=
+  ⟨ fun H => by
+      have := add_bmod_eq_add_bmod_right (-i) H
+      rwa [Int.add_neg_cancel_right, Int.add_neg_cancel_right] at this,
+    fun H => by rw [← bmod_add_bmod, H, bmod_add_bmod] ⟩
 
 theorem bmod_add_cancel_left (i : Int) : bmod (i + x) n = bmod (i + y) n ↔ bmod x n = bmod y n := by
   rw [Int.add_comm i, Int.add_comm i, bmod_add_cancel_right]

@@ -100,11 +100,8 @@ def addRecursorRule (ridx : Nat) (r : Lean.RecursorRule) : M Unit := do
 def addConst (name : Lean.Name) (d : Lean.ConstantInfo) : M Unit := do
   if (← get).constMap.contains name then
     fail s!"Duplicate declaration: {name}"
-  modify fun s => {
-    s with
-    constMap := s.constMap.insert name d
-    constOrder := s.constOrder.push name
-  }
+  modify fun s =>
+    { s with constMap := s.constMap.insert name d, constOrder := s.constOrder.push name }
 
 @[inline]
 def parseJsonObj (line : String) : M (Std.TreeMap.Raw String Json) := do
@@ -459,19 +456,18 @@ def parseInductInfo (json : Json) : M Unit := do
   let all ← getNameList allIdxs
   let ctors ← getNameList ctorsIdxs
 
-  addConst name <| .inductInfo {
-    name,
-    levelParams,
-    type,
-    numParams,
-    numIndices,
-    all,
-    ctors,
-    numNested,
-    isRec,
-    isUnsafe,
-    isReflexive
-  }
+  addConst name <| .inductInfo
+    { name,
+      levelParams,
+      type,
+      numParams,
+      numIndices,
+      all,
+      ctors,
+      numNested,
+      isRec,
+      isUnsafe,
+      isReflexive }
 
 def parseCtorInfo (json : Json) : M Unit := do
   let .obj data := json
@@ -546,19 +542,18 @@ def parseRecInfo (json : Json) : M Unit := do
       let rhs ← getExpr rhsIdx
       return { ctor, nfields, rhs }
 
-  addConst name <| .recInfo {
-    name,
-    levelParams,
-    type,
-    all,
-    numParams,
-    numIndices,
-    numMotives,
-    numMinors,
-    rules,
-    k,
-    isUnsafe
-  }
+  addConst name <| .recInfo
+    { name,
+      levelParams,
+      type,
+      all,
+      numParams,
+      numIndices,
+      numMotives,
+      numMinors,
+      rules,
+      k,
+      isUnsafe }
 
 def parseInductive (data : Std.TreeMap.Raw String Json) : M Unit := do
   let some (.arr types) := data["types"]?

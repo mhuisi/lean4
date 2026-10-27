@@ -136,50 +136,39 @@ def isInterpreted (e : Expr) : MetaM Bool := do
   | _ =>
     return false
 
-register_builtin_option grind.debug : Bool := {
-  defValue := false
-  descr := "check invariants after updates"
-}
+register_builtin_option grind.debug : Bool :=
+  { defValue := false, descr := "check invariants after updates" }
 
-register_builtin_option backward.grind.normalizer : Bool := {
-  defValue := true
-  descr := "use the legacy `simp`-based `grind` normalizer instead of the `Sym.simp`-based one"
-}
+register_builtin_option backward.grind.normalizer : Bool :=
+  { defValue := true
+    descr := "use the legacy `simp`-based `grind` normalizer instead of the `Sym.simp`-based one" }
 
-register_builtin_option grind.debug.proofs : Bool := {
-  defValue := false
-  descr := "check proofs between the elements of all equivalence classes"
-}
+register_builtin_option grind.debug.proofs : Bool :=
+  { defValue := false, descr := "check proofs between the elements of all equivalence classes" }
 
-register_builtin_option grind.warning : Bool := {
-  defValue := false
-  descr := "generate a warning whenever `grind` is used"
-}
+register_builtin_option grind.warning : Bool :=
+  { defValue := false, descr := "generate a warning whenever `grind` is used" }
 
-register_builtin_option grind.unusedLemmaThreshold : Nat := {
-  defValue := 0
-  descr :=
-    "report E-matching lemmas activated at least this many times but not used in the proof (0 = \
-      disabled)"
-}
+register_builtin_option grind.unusedLemmaThreshold : Nat :=
+  { defValue := 0
+    descr :=
+      "report E-matching lemmas activated at least this many times but not used in the proof (0 = \
+        disabled)" }
 
-register_builtin_option grind.ematch.diagnostics : Bool := {
-  defValue := false
-  descr := "enable E-matching theorem instantiation diagnostics"
-}
+register_builtin_option grind.ematch.diagnostics : Bool :=
+  { defValue := false, descr := "enable E-matching theorem instantiation diagnostics" }
 
-register_builtin_option grind.ematch.diagnostics.costThreshold : Nat := {
-  defValue := 10
-  descr :=
-    "report E-matching instances that were at least this costly (roughly the size of their \
-      transitive closure of follow up instances)"
-}
+register_builtin_option grind.ematch.diagnostics.costThreshold : Nat :=
+  { defValue := 10
+    descr :=
+      "report E-matching instances that were at least this costly (roughly the size of their \
+        transitive closure of follow up instances)" }
 
-register_builtin_option grind.ematch.diagnostics.branchThreshold : Nat := {
-  defValue := 10
-  descr :=
-    "report E-matching instances that participated in at least this many other instances directly"
-}
+register_builtin_option grind.ematch.diagnostics.branchThreshold : Nat :=
+  { defValue := 10
+    descr :=
+      "report E-matching instances that participated in at least this many other instances \
+        directly" }
 
 /--
 Anchors are used to reference terms, local theorems, and case-splits in the `grind` state.
@@ -572,10 +561,8 @@ private def saveEMatchTheorem (thm : EMatchTheorem) : GrindM Unit := do
   if let .fvar fvarId := thm.origin then
     unless (← get).counters.fvarUserNames.contains fvarId do
       let userName ← fvarId.getUserName
-      modify fun s => {
-        s with
-        counters.fvarUserNames := s.counters.fvarUserNames.insert fvarId userName
-      }
+      modify fun s =>
+        { s with counters.fvarUserNames := s.counters.fvarUserNames.insert fvarId userName }
   modify fun s => { s with counters.thm := incCounter s.counters.thm thm.origin }
 
 def getEMatchTheoremNumInstances (thm : EMatchTheorem) : GrindM Nat := do
@@ -594,10 +581,8 @@ def saveSplitDiagInfo (c : Expr) (gen : Nat) (numCases : Nat) (splitSource : Spl
     : GrindM Unit := do
   if (← isDiagnosticsEnabled) then
     let lctx ← getLCtx
-    modify fun s => {
-      s with
-      splitDiags := s.splitDiags.push { c, gen, lctx, numCases, splitSource }
-    }
+    modify fun s =>
+      { s with splitDiags := s.splitDiags.push { c, gen, lctx, numCases, splitSource } }
 
 def saveEMatchDiagInfo (sources : List EMatchDiagNode) (target : EMatchDiagNode) : GrindM Unit := do
   if (← isEmatchDiagEnabled) then
@@ -911,10 +896,8 @@ structure ParentSet where
   parents : List Expr := []
 deriving Inhabited
 
-def ParentSet.insert (ps : ParentSet) (p : Expr) : ParentSet := {
-  ps with
-  parents := ps.parents.insert p
-}
+def ParentSet.insert (ps : ParentSet) (p : Expr) : ParentSet :=
+  { ps with parents := ps.parents.insert p }
 
 def ParentSet.isEmpty (ps : ParentSet) : Bool := ps.parents.isEmpty
 
@@ -1326,21 +1309,16 @@ def hoistDecl
     return fvarId
   let fvarId ← mkFreshFVarId
   let decl := { fvarId, name, type, value? := some (← value), nondep }
-  modifyThe State fun s => {
-    s with
-    hoistedDecls :=
-      s.hoistedDecls.modify goal.mvarId fun decls =>
-        let decls :=
-          if front then {
-            decls with
-            front := decls.front.push decl
-          }
-          else {
-            decls with
-            decls := decls.decls.push decl
-          }
-        { decls with keys := decls.keys.insert key fvarId }
-  }
+  modifyThe State fun s =>
+    { s with
+      hoistedDecls :=
+        s.hoistedDecls.modify goal.mvarId fun decls =>
+          let decls :=
+            if front then
+              { decls with front := decls.front.push decl }
+            else
+              { decls with decls := decls.decls.push decl }
+          { decls with keys := decls.keys.insert key fvarId } }
   return fvarId
 
 /--
@@ -1355,15 +1333,13 @@ def reserveHoistedDecl (depth : Nat) (key : HoistKey) (type : Expr) : GoalM (FVa
   let some decls := (← getThe State).hoistedDecls[goal.mvarId]?
     | throwError "`grind` internal error, case split at depth {depth} is not in progress"
   let fvarId ← mkFreshFVarId
-  modifyThe State fun s => {
-    s with
-    hoistedDecls :=
-      s.hoistedDecls.modify goal.mvarId fun decls => {
-        decls with
-        decls := decls.decls.push { fvarId, type, value? := none }
-        keys := decls.keys.insert key fvarId
-      }
-  }
+  modifyThe State fun s =>
+    { s with
+      hoistedDecls :=
+        s.hoistedDecls.modify goal.mvarId fun decls =>
+          { decls with
+            decls := decls.decls.push { fvarId, type, value? := none }
+            keys := decls.keys.insert key fvarId } }
   return (fvarId, decls.decls.size)
 
 /--
@@ -1372,14 +1348,11 @@ enclosing case split at `depth`, see `reserveHoistedDecl`.
 -/
 def setHoistedDeclValue (depth : Nat) (idx : Nat) (value : Expr) : GoalM Unit := do
   let goal ← getGoalAtDepth depth
-  modifyThe State fun s => {
-    s with
-    hoistedDecls :=
-      s.hoistedDecls.modify goal.mvarId fun decls => {
-        decls with
-        decls := decls.decls.modify idx ({ · with value? := some value })
-      }
-  }
+  modifyThe State fun s =>
+    { s with
+      hoistedDecls :=
+        s.hoistedDecls.modify goal.mvarId fun decls =>
+          { decls with decls := decls.decls.modify idx ({ · with value? := some value }) } }
 
 /--
 Executes `k`, which proves `goal` using case splits, while declarations can be hoisted to `goal`,
@@ -1520,10 +1493,10 @@ def addNewRawFact
         with proof{indentExpr proof}\
         \nwhich has type{indentExpr (← inferType proof)}\n\
         which is not definitionally equal with `reducible` transparency setting"
-  modify fun s => {
-    s with
-    newRawFacts := s.newRawFacts.enqueue { proof, prop, generation, splitSource, ematchDiagSource }
-  }
+  modify fun s =>
+    { s with
+      newRawFacts :=
+        s.newRawFacts.enqueue { proof, prop, generation, splitSource, ematchDiagSource } }
 
 /-- Returns the number of theorem instances generated so far. -/
 def getNumTheoremInstances : GoalM Nat := do return (← get).ematch.numInstances
@@ -1732,10 +1705,8 @@ def registerParent (parent : Expr) (child : Expr) : GoalM Unit := do
   let childRoot := (← getRoot? child).getD child
   let parents :=
     if let some parents := (← get).parents.find? { expr := childRoot } then parents else {}
-  modify fun s => {
-    s with
-    parents := s.parents.insert { expr := childRoot } (parents.insert parent)
-  }
+  modify fun s =>
+    { s with parents := s.parents.insert { expr := childRoot } (parents.insert parent) }
 
 /--
 Returns the set of expressions `e` is a child of, or an expression in
@@ -1764,30 +1735,28 @@ def copyParentsTo (parents : ParentSet) (root : Expr) : GoalM Unit := do
 def mkENodeCore (e : Expr) (interpreted ctor : Bool) (generation : Nat) (funCC : Bool)
     : GoalM Unit := do
   let ematchDiagSource := (← readThe Context).ematchDiagSource
-  let n := {
-    self := e
-    next := e
-    root := e
-    congr := e
-    size := 1
-    flipped := false
-    heqProofs := false
-    hasLambdas := e.isLambda
-    mt := (← get).ematch.gmt
-    idx := (← get).nextIdx
-    interpreted
-    ctor
-    generation
-    funCC
-    ematchDiagSource
-  }
-  modify fun s => {
-    s with
-    enodeMap := s.enodeMap.insert { expr := e } n
-    exprs := s.exprs.push e
-    congrTable := unsafe unsafeCast s.congrTable
-    nextIdx := s.nextIdx + 1
-  }
+  let n :=
+    { self := e
+      next := e
+      root := e
+      congr := e
+      size := 1
+      flipped := false
+      heqProofs := false
+      hasLambdas := e.isLambda
+      mt := (← get).ematch.gmt
+      idx := (← get).nextIdx
+      interpreted
+      ctor
+      generation
+      funCC
+      ematchDiagSource }
+  modify fun s =>
+    { s with
+      enodeMap := s.enodeMap.insert { expr := e } n
+      exprs := s.exprs.push e
+      congrTable := unsafe unsafeCast s.congrTable
+      nextIdx := s.nextIdx + 1 }
 
 /--
 Creates an `ENode` for `e` if one does not already exist.
@@ -1800,11 +1769,10 @@ def mkENode (e : Expr) (generation : Nat) (funCC : Bool := false) : GoalM Unit :
   mkENodeCore e interpreted ctor generation funCC
 
 def setENode (e : Expr) (n : ENode) : GoalM Unit :=
-  modify fun s => {
-    s with
-    enodeMap := s.enodeMap.insert { expr := e } n
-    congrTable := unsafe unsafeCast s.congrTable
-  }
+  modify fun s =>
+    { s with
+      enodeMap := s.enodeMap.insert { expr := e } n
+      congrTable := unsafe unsafeCast s.congrTable }
 
 /-- Returns `true` if type of `t` is definitionally equal to `α` -/
 def hasType (t α : Expr) : MetaM Bool := do isDefEqD (← inferType t) α
@@ -2129,11 +2097,10 @@ private def updateSplitArgPosMap (sinfo : SplitInfo) : GoalM Unit := do
 def addSplitCandidate (sinfo : SplitInfo) : GoalM Unit := do
   unless (← isKnownCaseSplit sinfo) do
     trace_goal[grind.split.candidate] "{sinfo.getExpr}"
-    modify fun s => {
-      s with
-      split.added := s.split.added.insert sinfo
-      split.candidates := sinfo :: s.split.candidates
-    }
+    modify fun s =>
+      { s with
+        split.added := s.split.added.insert sinfo
+        split.candidates := sinfo :: s.split.candidates }
     updateSplitArgPosMap sinfo
 
 inductive ActivateNextGuardResult where
@@ -2178,14 +2145,13 @@ def addTheoremInstance
     let thms := (← get).ematch.delayedThmInsts.find? { expr := guard } |>.getD []
     let thms := { thm, proof, prop, generation, guards, sources } :: thms
     trace_goal[grind.ematch.instance.delayed] "`{thm.origin.pp}` waiting{indentExpr guard}"
-    modify fun s => {
-      s with
-      ematch.delayedThmInsts := s.ematch.delayedThmInsts.insert { expr := guard } thms
-      ematch.numDelayedInstances := s.ematch.numDelayedInstances + 1
-      -- Bump numInstances for delayed instances too, so that uniqueId generation
-      -- in EMatch.instantiateTheorem' doesn't produce collisions.
-      ematch.numInstances := s.ematch.numInstances + 1
-    }
+    modify fun s =>
+      { s with
+        ematch.delayedThmInsts := s.ematch.delayedThmInsts.insert { expr := guard } thms
+        ematch.numDelayedInstances := s.ematch.numDelayedInstances + 1
+        -- Bump numInstances for delayed instances too, so that uniqueId generation
+        -- in EMatch.instantiateTheorem' doesn't produce collisions.
+        ematch.numInstances := s.ematch.numInstances + 1 }
 
 def DelayedTheoremInstance.check (delayed : DelayedTheoremInstance) : GoalM Unit := do
   addTheoremInstance delayed.thm delayed.proof delayed.prop delayed.generation delayed.guards
@@ -2299,18 +2265,17 @@ def registerSolverExtension {σ : Type} (mkInitial : IO σ) : IO (SolverExtensio
       "failed to register `grind` solver, extensions can only be registered during initialization")
   let exts ← solverExtensionsRef.get
   let id := exts.size
-  let ext : SolverExtension σ := {
-    id
-    mkInitial
-    enabled := fun _ => true
-    internalize := fun _ _ => return ()
-    newEq := fun _ _ => return ()
-    newDiseq := fun _ _ => return ()
-    action := Action.notApplicable
-    check := fun _ _ => return false
-    checkInv := fun _ _ => return ()
-    mbtc := fun _ _ => return false
-  }
+  let ext : SolverExtension σ :=
+    { id
+      mkInitial
+      enabled := fun _ => true
+      internalize := fun _ _ => return ()
+      newEq := fun _ _ => return ()
+      newDiseq := fun _ _ => return ()
+      action := Action.notApplicable
+      check := fun _ _ => return false
+      checkInv := fun _ _ => return ()
+      mbtc := fun _ _ => return false }
   solverExtensionsRef.modify fun exts => exts.push (unsafe unsafeCast ext)
   return ext
 
@@ -2334,17 +2299,8 @@ def SolverExtension.setMethods
   unless ext.id < (← solverExtensionsRef.get).size do
     throw (IO.userError "failed to register `grind` solver methods, invalid solver id")
   solverExtensionsRef.modify fun exts =>
-    exts.modify ext.id fun s => {
-      s with
-      enabled
-      internalize
-      newEq
-      newDiseq
-      mbtc
-      action
-      check
-      checkInv
-    }
+    exts.modify ext.id fun s =>
+      { s with enabled, internalize, newEq, newDiseq, mbtc, action, check, checkInv }
 
 /-- Returns initial state for registered solvers. -/
 def Solvers.mkInitialStates : IO (Array SolverExtensionState) := do
@@ -2361,10 +2317,10 @@ instance : Inhabited (GoalM σ) where
 
 private unsafe def SolverExtension.modifyStateImpl (ext : SolverExtension σ) (f : σ → σ)
     : GoalM Unit := do
-  modify fun s => {
-    s with
-    sstates := s.sstates.modify ext.id fun solverState => unsafeCast (f (unsafeCast solverState))
-  }
+  modify fun s =>
+    { s with
+      sstates :=
+        s.sstates.modify ext.id fun solverState => unsafeCast (f (unsafeCast solverState)) }
 
 @[implemented_by SolverExtension.modifyStateImpl]
 opaque SolverExtension.modifyState (ext : SolverExtension σ) (f : σ → σ) : GoalM Unit

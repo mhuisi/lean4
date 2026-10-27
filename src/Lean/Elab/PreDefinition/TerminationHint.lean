@@ -134,10 +134,8 @@ how many parameters came from the function header (`headerParams`).
 -/
 def TerminationHints.rememberExtraParams
     (headerParams : Nat) (hints : TerminationHints) (value : Expr)
-    : TerminationHints := {
-  hints with
-  extraParams := value.getNumHeadLambdas - headerParams
-}
+    : TerminationHints :=
+  { hints with extraParams := value.getNumHeadLambdas - headerParams }
 
 /--
 Checks that `termination_by` binds at most as many variables are present in the outermost
@@ -217,14 +215,13 @@ def elabTerminationHints {m} [Monad m] [MonadError m] (stx : TSyntax ``suffix)
         match d with
         | `(decreasingBy|decreasing_by $tactic) => pure { ref := d, tactic }
         | _ => throwErrorAt d "unexpected `decreasing_by` syntax"
-    return {
-      ref := stx
-      terminationBy??
-      terminationBy?
-      partialFixpoint?
-      decreasingBy?
-      extraParams := 0
-    }
+    return
+      { ref := stx
+        terminationBy??
+        terminationBy?
+        partialFixpoint?
+        decreasingBy?
+        extraParams := 0 }
   | _ =>
     throwErrorAt stx s!"Unexpected Termination.suffix syntax: {stx} of kind {stx.raw.getKind}"
 

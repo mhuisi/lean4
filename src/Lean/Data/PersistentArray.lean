@@ -95,14 +95,10 @@ partial def setAux : PersistentArrayNode α → USize → USize → α → Persi
     leaf (cs.set! i.toNat a)
 
 def set (t : PersistentArray α) (i : Nat) (a : α) : PersistentArray α :=
-  if i >= t.tailOff then {
-    t with
-    tail := t.tail.set! (i - t.tailOff) a
-  }
-  else {
-    t with
-    root := setAux t.root (USize.ofNat i) t.shift a
-  }
+  if i >= t.tailOff then
+    { t with tail := t.tail.set! (i - t.tailOff) a }
+  else
+    { t with root := setAux t.root (USize.ofNat i) t.shift a }
 
 @[specialize]
 partial def modifyAux [Inhabited α] (f : α → α)
@@ -117,14 +113,10 @@ partial def modifyAux [Inhabited α] (f : α → α)
 
 @[specialize]
 def modify [Inhabited α] (t : PersistentArray α) (i : Nat) (f : α → α) : PersistentArray α :=
-  if i >= t.tailOff then {
-    t with
-    tail := t.tail.modify (i - t.tailOff) f
-  }
-  else {
-    t with
-    root := modifyAux f t.root (USize.ofNat i) t.shift
-  }
+  if i >= t.tailOff then
+    { t with tail := t.tail.modify (i - t.tailOff) f }
+  else
+    { t with root := modifyAux f t.root (USize.ofNat i) t.shift }
 
 partial def mkNewPath (shift : USize) (a : Array α) : PersistentArrayNode α :=
   if shift == 0 then
@@ -148,21 +140,19 @@ partial def insertNewLeaf : PersistentArrayNode α → USize → USize → Array
     n -- unreachable
 
 def mkNewTail (t : PersistentArray α) : PersistentArray α :=
-  if t.size <= (mul2Shift 1 (t.shift + initShift)).toNat then {
-    t with
-    tail := mkEmptyArray
-    root := insertNewLeaf t.root (USize.ofNat (t.size - 1)) t.shift t.tail
-    tailOff := t.size
-  }
-  else {
-    t with
-    tail := #[]
-    root :=
-      let n := mkEmptyArray.push t.root
-      node (n.push (mkNewPath t.shift t.tail))
-    shift := t.shift + initShift
-    tailOff := t.size
-  }
+  if t.size <= (mul2Shift 1 (t.shift + initShift)).toNat then
+    { t with
+      tail := mkEmptyArray
+      root := insertNewLeaf t.root (USize.ofNat (t.size - 1)) t.shift t.tail
+      tailOff := t.size }
+  else
+    { t with
+      tail := #[]
+      root :=
+        let n := mkEmptyArray.push t.root
+        node (n.push (mkNewPath t.shift t.tail))
+      shift := t.shift + initShift
+      tailOff := t.size }
 
 def tooBig : Nat := USize.size / 8
 
@@ -197,11 +187,8 @@ partial def popLeaf : PersistentArrayNode α → Option (Array α) × Array (Per
     (some vs, emptyArray)
 
 def pop (t : PersistentArray α) : PersistentArray α :=
-  if t.tail.size > 0 then {
-    t with
-    tail := t.tail.pop
-    size := t.size - 1
-  }
+  if t.tail.size > 0 then
+    { t with tail := t.tail.pop, size := t.size - 1 }
   else
     match popLeaf t.root with
     | (none, _) =>
@@ -210,20 +197,14 @@ def pop (t : PersistentArray α) : PersistentArray α :=
       let last := last.pop
       let newSize := t.size - 1
       let newTailOff := newSize - last.size
-      if h : ∃ _ : newRoots.size = 1, newRoots[0].isNode then {
-        root := newRoots[0]'(have := h.1; by omega)
-        shift := t.shift - initShift
-        size := newSize
-        tail := last
-        tailOff := newTailOff
-      }
-      else {
-        t with
-        root := node newRoots
-        size := newSize
-        tail := last
-        tailOff := newTailOff
-      }
+      if h : ∃ _ : newRoots.size = 1, newRoots[0].isNode then
+        { root := newRoots[0]'(have := h.1; by omega)
+          shift := t.shift - initShift
+          size := newSize
+          tail := last
+          tailOff := newTailOff }
+      else
+        { t with root := node newRoots, size := newSize, tail := last, tailOff := newTailOff }
 
 section
 variable {m : Type v → Type w} [Monad m]
@@ -437,16 +418,11 @@ structure Stats where
 
 partial def collectStats : PersistentArrayNode α → Stats → Nat → Stats
   | node cs, s, d =>
-    cs.foldl (fun s c => collectStats c s (d + 1)) {
-      s with
-      numNodes := s.numNodes + 1
-      depth := Nat.max d s.depth
-    }
-  | leaf _, s, d => {
-    s with
-    numNodes := s.numNodes + 1
-    depth := Nat.max d s.depth
-  }
+    cs.foldl
+      (fun s c => collectStats c s (d + 1))
+      { s with numNodes := s.numNodes + 1, depth := Nat.max d s.depth }
+  | leaf _, s, d =>
+    { s with numNodes := s.numNodes + 1, depth := Nat.max d s.depth }
 
 def stats (r : PersistentArray α) : Stats :=
   collectStats r.root { numNodes := 0, depth := 0, tailSize := r.tail.size } 0

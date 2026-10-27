@@ -38,11 +38,10 @@ theorem Iter.forIn'_eq
           it.toIterM init _
           (fun _ => id)
           (fun out h acc =>
-            return ⟨
-              ← f out (Iter.isPlausibleIndirectOutput_iff_isPlausibleIndirectOutput_toIterM.mpr h)
-                acc,
-              trivial
-            ⟩) := by
+            return
+              ⟨ ← f out (Iter.isPlausibleIndirectOutput_iff_isPlausibleIndirectOutput_toIterM.mpr h)
+                  acc,
+                trivial ⟩) := by
   simp only [ForIn'.forIn']
   have : ∀ a b c, f a b c = (Subtype.val <$> (⟨·, trivial⟩) <$> f a b c) := by simp
   simp +singlePass only [this]

@@ -120,10 +120,9 @@ def versoCommentBodyFn : ParserFn := fun c s =>
 
 def versoCommentBody : Parser :=
   -- The markup is a document, or a parse failure node when it does not parse.
-  let info := {
-    Doc.Parser.documentInfo with
-    collectKinds := (Doc.Parser.documentInfo.collectKinds · |>.insert Doc.parseFailureKind)
-  }
+  let info :=
+    { Doc.Parser.documentInfo with
+      collectKinds := (Doc.Parser.documentInfo.collectKinds · |>.insert Doc.parseFailureKind) }
   node `Lean.Parser.Command.versoCommentBody { info, fn := versoCommentBodyFn }
 
 @[combinator_parenthesizer versoCommentBody]

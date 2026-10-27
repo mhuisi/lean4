@@ -74,16 +74,12 @@ Otherwise, `ref` is added to `i.usages`.
 -/
 def addRef (i : RefInfo) (ref : Reference) : RefInfo :=
   match i, ref with
-  | { definition := none, .. }, { isBinder := true, .. } => {
-    i with
-    definition := ref
-  }
+  | { definition := none, .. }, { isBinder := true, .. } =>
+    { i with definition := ref }
   | { definition := some .., .. }, { isBinder := true, .. } =>
     i
-  | { usages, .. }, { isBinder := false, .. } => {
-    i with
-    usages := usages.push ref
-  }
+  | { usages, .. }, { isBinder := false, .. } =>
+    { i with usages := usages.push ref }
 
 /-- Converts `i` to a JSON-serializable `Lsp.RefInfo` and collects its decls. -/
 def toLspRefInfo (i : RefInfo) : StateT Decls BaseIO Lsp.RefInfo := do
@@ -273,20 +269,19 @@ def identOf (ci : ContextInfo) (i : Info) : Option (RefIdent × Bool) := do
     | _ =>
       none
   | Info.ofFieldInfo fi =>
-    some (
-      RefIdent.const (← getModuleContainingDecl? ci.env fi.projName).toString fi.projName.toString,
-      false
-    )
+    some
+      ( RefIdent.const (← getModuleContainingDecl? ci.env fi.projName).toString
+          fi.projName.toString,
+        false )
   | Info.ofOptionInfo oi =>
-    some (
-      RefIdent.const (← getModuleContainingDecl? ci.env oi.declName).toString oi.declName.toString,
-      false
-    )
+    some
+      ( RefIdent.const (← getModuleContainingDecl? ci.env oi.declName).toString
+          oi.declName.toString,
+        false )
   | Info.ofDocElabInfo dei =>
-    some (
-      RefIdent.const (← getModuleContainingDecl? ci.env dei.name).toString dei.name.toString,
-      false
-    )
+    some
+      ( RefIdent.const (← getModuleContainingDecl? ci.env dei.name).toString dei.name.toString,
+        false )
   | _ =>
     none
 
@@ -301,14 +296,8 @@ def findReferences (text : FileMap) (trees : Array InfoTree) : Array Reference :
           let some range := info.range?
             | return
           if info.stx.getHeadInfo matches .original .. then -- we are not interested in canonical syntax here
-            modify (·.push {
-              ident
-              range := range.toLspRange text
-              stx := info.stx
-              ci
-              info
-              isBinder
-            }))
+            modify (·.push
+              { ident, range := range.toLspRange text, stx := info.stx, ci, info, isBinder }))
     get
 
 /--
@@ -484,12 +473,11 @@ def ModuleImport.collapseIdenticalImports? (identicalImports : Array ModuleImpor
     let «import» := identicalImports[i]
     guard <| acc.module == «import».module
     guard <| acc.uri == «import».uri
-    acc := {
-      acc with
-      isAll := acc.isAll || «import».isAll
-      isPrivate := acc.isPrivate && «import».isPrivate
-      metaKind := collapseMetaKinds acc.metaKind «import».metaKind
-    }
+    acc :=
+      { acc with
+        isAll := acc.isAll || «import».isAll
+        isPrivate := acc.isPrivate && «import».isPrivate
+        metaKind := collapseMetaKinds acc.metaKind «import».metaKind }
   return acc
 where
   collapseMetaKinds : LeanImportMetaKind → LeanImportMetaKind → LeanImportMetaKind
@@ -539,13 +527,12 @@ def DirectImports.convertImportInfos (infos : Array Lsp.ImportInfo) : IO DirectI
       let module := i.module.toName
       let some uri ← documentUriFromModule? module
         | return none
-      return some {
-        uri
-        module
-        isAll := i.isAll
-        isPrivate := i.isPrivate
-        metaKind := if i.isMeta then .meta else .nonMeta
-      }
+      return some
+        { uri
+          module
+          isAll := i.isAll
+          isPrivate := i.isPrivate
+          metaKind := if i.isMeta then .meta else .nonMeta }
   let index :=
     ordered.groupByKey (·.module) |>.toArray |> Std.TreeMap.ofArray (cmp := Name.quickCmp)
   return { ordered, index }
@@ -616,25 +603,21 @@ def addIlean (self : References) (path : System.FilePath) (ilean : Ilean) : IO R
   let some moduleUri ← documentUriFromModule? ilean.module
     | return self
   let directImports ← DirectImports.convertImportInfos ilean.directImports
-  return {
-    self with
-    ileans :=
-      self.ileans.insert ilean.module {
-        moduleUri
-        ileanPath := path
-        directImports
-        refs := ilean.references
-        decls := ilean.decls
-      }
-  }
+  return
+    { self with
+      ileans :=
+        self.ileans.insert ilean.module
+          { moduleUri
+            ileanPath := path
+            directImports
+            refs := ilean.references
+            decls := ilean.decls } }
 
 /-- Removes the ilean file data at `path` from `self`. -/
 def removeIlean (self : References) (path : System.FilePath) : References :=
   let namesToRemove := self.ileans.filter (fun _ { ileanPath, .. } => ileanPath == path)
-  namesToRemove.foldl (init := self) fun self name _ => {
-    self with
-    ileans := self.ileans.erase name
-  }
+  namesToRemove.foldl (init := self) fun self name _ =>
+    { self with ileans := self.ileans.erase name }
 
 /--
 Replaces the direct imports of a worker for the module `name` in `self` with
@@ -647,42 +630,28 @@ def updateWorkerSetupInfo
   let directImports ← DirectImports.convertImportInfos directImports
   let isSetupFailure? := some isSetupFailure
   let some workerRefs := self.workers[name]?
-    | return {
-        self with
-        workers :=
-          self.workers.insert name {
-            moduleUri
-            version
-            directImports
-            isSetupFailure?
-            refs := ∅
-            decls := ∅
-          }
-      }
+    | return
+        { self with
+          workers :=
+            self.workers.insert name
+              { moduleUri, version, directImports, isSetupFailure?, refs := ∅, decls := ∅ } }
   match compare version workerRefs.version with
   | .lt =>
     return self
   | .gt =>
-    return {
-      self with
-      workers :=
-        self.workers.insert name {
-          moduleUri
-          version
-          directImports
-          isSetupFailure?
-          refs := ∅
-          decls := ∅
-        }
-    }
+    return
+      { self with
+        workers :=
+          self.workers.insert name
+            { moduleUri, version, directImports, isSetupFailure?, refs := ∅, decls := ∅ } }
   | .eq =>
     let refs := workerRefs.refs
     let decls := workerRefs.decls
-    return {
-      self with
-      workers :=
-        self.workers.insert name { moduleUri, version, directImports, isSetupFailure?, refs, decls }
-    }
+    return
+      { self with
+        workers :=
+          self.workers.insert name
+            { moduleUri, version, directImports, isSetupFailure?, refs, decls } }
 
 /--
 Updates the worker references in `self` with the `refs` of the worker managing the module `name`.
@@ -694,46 +663,37 @@ def updateWorkerRefs
     (refs : Lsp.ModuleRefs) (decls : Lsp.Decls)
     : IO References := do
   let some workerRefs := self.workers[name]?
-    | return {
-        self with
-        workers :=
-          self.workers.insert name {
-            moduleUri
-            version
-            directImports := ∅
-            isSetupFailure? := none
-            refs
-            decls
-          }
-      }
+    | return
+        { self with
+          workers :=
+            self.workers.insert name
+              { moduleUri, version, directImports := ∅, isSetupFailure? := none, refs, decls } }
   let directImports := workerRefs.directImports
   let isSetupFailure? := workerRefs.isSetupFailure?
   match compare version workerRefs.version with
   | .lt =>
     return self
   | .gt =>
-    return {
-      self with
-      workers :=
-        self.workers.insert name { moduleUri, version, directImports, isSetupFailure?, refs, decls }
-    }
+    return
+      { self with
+        workers :=
+          self.workers.insert name
+            { moduleUri, version, directImports, isSetupFailure?, refs, decls } }
   | .eq =>
     let mergedRefs :=
       refs.foldl (init := workerRefs.refs) fun m ident info =>
         m.getD ident Lsp.RefInfo.empty |>.merge info |> m.insert ident
     let mergedDecls := workerRefs.decls.insertMany decls
-    return {
-      self with
-      workers :=
-        self.workers.insert name {
-          moduleUri
-          version
-          directImports
-          isSetupFailure?
-          refs := mergedRefs
-          decls := mergedDecls
-        }
-    }
+    return
+      { self with
+        workers :=
+          self.workers.insert name
+            { moduleUri
+              version
+              directImports
+              isSetupFailure?
+              refs := mergedRefs
+              decls := mergedDecls } }
 
 /--
 Replaces the worker references in `self` with the `refs` of the worker managing the module `name`
@@ -744,41 +704,32 @@ def finalizeWorkerRefs
     (refs : Lsp.ModuleRefs) (decls : Lsp.Decls)
     : IO References := do
   let some workerRefs := self.workers[name]?
-    | return {
-        self with
-        workers :=
-          self.workers.insert name {
-            moduleUri
-            version
-            directImports := ∅
-            isSetupFailure? := none
-            refs
-            decls
-          }
-      }
+    | return
+        { self with
+          workers :=
+            self.workers.insert name
+              { moduleUri, version, directImports := ∅, isSetupFailure? := none, refs, decls } }
   let directImports := workerRefs.directImports
   let isSetupFailure? := workerRefs.isSetupFailure?
   match compare version workerRefs.version with
   | .lt =>
     return self
   | .gt =>
-    return {
-      self with
-      workers :=
-        self.workers.insert name { moduleUri, version, directImports, isSetupFailure?, refs, decls }
-    }
+    return
+      { self with
+        workers :=
+          self.workers.insert name
+            { moduleUri, version, directImports, isSetupFailure?, refs, decls } }
   | .eq =>
-    return {
-      self with
-      workers :=
-        self.workers.insert name { moduleUri, version, directImports, isSetupFailure?, refs, decls }
-    }
+    return
+      { self with
+        workers :=
+          self.workers.insert name
+            { moduleUri, version, directImports, isSetupFailure?, refs, decls } }
 
 /-- Erases all worker references in `self` for the worker managing `name`. -/
-def removeWorkerRefs (self : References) (name : Name) : References := {
-  self with
-  workers := self.workers.erase name
-}
+def removeWorkerRefs (self : References) (name : Name) : References :=
+  { self with workers := self.workers.erase name }
 
 /--
 Map from each module to all of its references.
@@ -964,13 +915,12 @@ def importedBy (self : References) (requestedMod : Name) : Array ModuleImport :=
       | continue
     let importOfRequestedMod := ModuleImport.collapseIdenticalImports? importsOfRequestedMod |>.get!
     result :=
-      result.push {
-        module := importedByModule
-        uri := importedByModuleUri
-        isAll := importOfRequestedMod.isAll
-        isPrivate := importOfRequestedMod.isPrivate
-        metaKind := importOfRequestedMod.metaKind
-      }
+      result.push
+        { module := importedByModule
+          uri := importedByModuleUri
+          isAll := importOfRequestedMod.isAll
+          isPrivate := importOfRequestedMod.isPrivate
+          metaKind := importOfRequestedMod.metaKind }
   return result
 
 end References

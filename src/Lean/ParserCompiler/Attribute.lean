@@ -23,22 +23,20 @@ deriving Inhabited
 def registerCombinatorAttribute (name : Name) (descr : String) (ref : Name := by exact decl_name%)
     : IO CombinatorAttribute := do
   let ext : SimplePersistentEnvExtension (Name × Name) (NameMap Name) ←
-    registerSimplePersistentEnvExtension {
-      name := ref
-      addImportedFn := mkStateFromImportedEntries (fun s p => s.insert p.1 p.2) {}
-      addEntryFn := fun (s : NameMap Name) (p : Name × Name) => s.insert p.1 p.2
-    }
-  let attrImpl : AttributeImpl := {
-    ref := ref
-    name := name
-    descr := descr
-    add := fun decl stx _ => do
-      let env ← getEnv
-      let parserDeclName ←
-        Elab.realizeGlobalConstNoOverloadWithInfo (← Attribute.Builtin.getIdent stx)
-      recordExtraModUseFromDecl (isMeta := false) parserDeclName
-      setEnv <| ext.addEntry env (parserDeclName, decl)
-  }
+    registerSimplePersistentEnvExtension
+      { name := ref
+        addImportedFn := mkStateFromImportedEntries (fun s p => s.insert p.1 p.2) {}
+        addEntryFn := fun (s : NameMap Name) (p : Name × Name) => s.insert p.1 p.2 }
+  let attrImpl : AttributeImpl :=
+    { ref := ref
+      name := name
+      descr := descr
+      add := fun decl stx _ => do
+        let env ← getEnv
+        let parserDeclName ←
+          Elab.realizeGlobalConstNoOverloadWithInfo (← Attribute.Builtin.getIdent stx)
+        recordExtraModUseFromDecl (isMeta := false) parserDeclName
+        setEnv <| ext.addEntry env (parserDeclName, decl) }
   registerBuiltinAttribute attrImpl
   pure { impl := attrImpl, ext := ext }
 

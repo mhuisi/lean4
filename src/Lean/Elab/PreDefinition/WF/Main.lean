@@ -41,10 +41,10 @@ def wfRecursion
       let numSectionVars := preDefs[0]!.numSectionVars
       let preDefs' ←
         preDefs.mapM fun preDef => do
-          return {
-            preDef with
-            value := (← unfoldIfArgIsAppOf (preDefs.map (·.declName)) numSectionVars preDef.value)
-          }
+          return
+            { preDef with
+              value :=
+                (← unfoldIfArgIsAppOf (preDefs.map (·.declName)) numSectionVars preDef.value) }
       let unaryPreDef ← packMutual fixedParamPerms argsPacker preDefs'
       return (fixedParamPerms, argsPacker, unaryPreDef)
   trace[Elab.definition.wf] "unaryPreDef:{indentD unaryPreDef.value}"

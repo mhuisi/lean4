@@ -239,20 +239,19 @@ def mkMonitorContext
   let showOptional := isVerbose
   let showTime := isVerbose || !useAnsi
   let updateFrequency := 100
-  return {
-    jobs
-    out
-    failLv
-    outLv
-    minAction
-    showOptional
-    useAnsi
-    showProgress
-    showTime
-    updateFrequency
-    cancelTk?
-    failFast := cfg.failFast
-  }
+  return
+    { jobs
+      out
+      failLv
+      outLv
+      minAction
+      showOptional
+      useAnsi
+      showProgress
+      showTime
+      updateFrequency
+      cancelTk?
+      failFast := cfg.failFast }
 
 def monitorJobs'
     (ctx : MonitorContext) (initJobs : Array OpaqueJob)
@@ -270,18 +269,17 @@ public def monitorJobs
     (showOptional useAnsi showProgress showTime : Bool)
     (resetCtrl : String := "") (initFailures : Array String := #[]) (updateFrequency := 100)
     : BaseIO MonitorResult := do
-  let ctx := {
-    jobs,
-    out,
-    failLv,
-    outLv,
-    minAction,
-    showOptional,
-    useAnsi,
-    showProgress,
-    showTime,
-    updateFrequency
-  }
+  let ctx :=
+    { jobs,
+      out,
+      failLv,
+      outLv,
+      minAction,
+      showOptional,
+      useAnsi,
+      showProgress,
+      showTime,
+      updateFrequency }
   monitorJobs' ctx initJobs initFailures resetCtrl
 
 /-- Exit code to return if `--no-build` is set and a build is required. -/
@@ -346,10 +344,9 @@ def monitorJob (ctx : MonitorContext) (job : Job α) : BaseIO (BuildResult α) :
       return { toMonitorResult := result, out := .ok a }
     else
       -- Computation job failed but was unreported in the monitor. This should be impossible.
-      return {
-        toMonitorResult := result
-        out := .error <| "uncaught top-level build failure (this is likely a bug in Lake)"
-      }
+      return
+        { toMonitorResult := result
+          out := .error <| "uncaught top-level build failure (this is likely a bug in Lake)" }
   else
     return { toMonitorResult := result, out := .error "build failed" }
 
@@ -357,53 +354,51 @@ def mkBuildContext
     (ws : Workspace) (cfg : BuildConfig) (jobs : JobQueue)
     (cancelTk? : Option IO.CancelToken := none)
     : BaseIO BuildContext :=
-  return {
-    opaqueWs := ws
-    toBuildConfig := {
-      cfg with
-      macosxDeploymentTarget? :=
+  return
+    { opaqueWs := ws
+      toBuildConfig :=
+        { cfg with
+          macosxDeploymentTarget? :=
+            ← id do
+              if System.Platform.isOSX then
+                match cfg.macosxDeploymentTarget? with
+                | some ver =>
+                  return some ver
+                | none =>
+                  -- TODO: Consider adding `MACOSX_DEPLOYMENT_TARGET` to `Lake.Env`
+                  return some <| (← IO.getEnv "MACOSX_DEPLOYMENT_TARGET").getD "99.0"
+              else
+                return cfg.macosxDeploymentTarget? }
+      outputsRef? :=
         ← id do
-          if System.Platform.isOSX then
-            match cfg.macosxDeploymentTarget? with
-            | some ver =>
-              return some ver
-            | none =>
-              -- TODO: Consider adding `MACOSX_DEPLOYMENT_TARGET` to `Lake.Env`
-              return some <| (← IO.getEnv "MACOSX_DEPLOYMENT_TARGET").getD "99.0"
+          if cfg.outputsFile?.isSome && cfg.outputsIdx < ws.packages.size then
+            some <$> CacheRef.mk
           else
-            return cfg.macosxDeploymentTarget?
-    }
-    outputsRef? :=
-      ← id do
-        if cfg.outputsFile?.isSome && cfg.outputsIdx < ws.packages.size then
-          some <$> CacheRef.mk
-        else
-          return none
-    registeredJobs := jobs
-    leanTrace :=
-      .ofHash (pureHash ws.lakeEnv.leanGithash)
-        s!"Lean {Lean.versionStringCore}, commit {ws.lakeEnv.leanGithash}"
-    cancelTk?
-    leanIncludeDirs :=
-      ← ws.packages.mapM fun pkg => do
-        unless pkg.bootstrap do
-          return none
-        let dir := pkg.bootstrapIncludeDir
-        let mut trace := BuildTrace.nil "Lean includes"
-        -- Must be kept up-to-date with the files `lean.h` can include
-        for header in #["lean.h", "config.h", "version.h", "mimalloc.h"] do
-          let leanH := TextFilePath.mk <| dir / "lean" / header
-          match ← (computeTrace (n := IO) leanH).toBaseIO with
-          | .ok fileTrace =>
-            trace := trace.mix fileTrace
-          | .error (.noFileOrDirectory ..) =>
-            -- some headers (e.g., `mimalloc.h`) are optional
-            -- missing required headers will be caught during compilation
-            continue
-          | _ =>
             return none
-        return some (dir, trace)
-  }
+      registeredJobs := jobs
+      leanTrace :=
+        .ofHash (pureHash ws.lakeEnv.leanGithash)
+          s!"Lean {Lean.versionStringCore}, commit {ws.lakeEnv.leanGithash}"
+      cancelTk?
+      leanIncludeDirs :=
+        ← ws.packages.mapM fun pkg => do
+          unless pkg.bootstrap do
+            return none
+          let dir := pkg.bootstrapIncludeDir
+          let mut trace := BuildTrace.nil "Lean includes"
+          -- Must be kept up-to-date with the files `lean.h` can include
+          for header in #["lean.h", "config.h", "version.h", "mimalloc.h"] do
+            let leanH := TextFilePath.mk <| dir / "lean" / header
+            match ← (computeTrace (n := IO) leanH).toBaseIO with
+            | .ok fileTrace =>
+              trace := trace.mix fileTrace
+            | .error (.noFileOrDirectory ..) =>
+              -- some headers (e.g., `mimalloc.h`) are optional
+              -- missing required headers will be caught during compilation
+              continue
+            | _ =>
+              return none
+          return some (dir, trace) }
 
 def Workspace.startBuild (bctx : BuildContext) (build : FetchM α) (caption := "job computation")
     : BaseIO (Job α) := do
@@ -449,11 +444,11 @@ def monitorBuild (mctx : MonitorContext) (job : Job (Job α)) : BaseIO (BuildRes
       return { result with out := .ok a }
     else
       -- Job failed but was unreported in the monitor. It was likely not properly registered.
-      return {
-        result with
-        out :=
-          .error <| "uncaught top-level build failure (this is likely a bug in the build script)"
-      }
+      return
+        { result with
+          out :=
+            .error <|
+              "uncaught top-level build failure (this is likely a bug in the build script)" }
   | .error e =>
     return { result with out := .error e }
 

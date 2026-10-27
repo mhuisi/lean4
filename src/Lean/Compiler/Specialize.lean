@@ -86,13 +86,12 @@ specialized.
 -/
 @[builtin_doc]
 builtin_initialize specializeAttr : ParametricAttribute (Array Nat) ←
-  registerParametricAttribute {
-    name := `specialize
-    descr := "mark definition to always be specialized"
-    getParam := fun declName stx => do
-      let args := stx[1].getArgs
-      elabSpecArgs declName args |>.run'
-  }
+  registerParametricAttribute
+    { name := `specialize
+      descr := "mark definition to always be specialized"
+      getParam := fun declName stx => do
+        let args := stx[1].getArgs
+        elabSpecArgs declName args |>.run' }
 
 def getSpecializationArgs? (env : Environment) (declName : Name) : Option (Array Nat) :=
   specializeAttr.getParam? env declName

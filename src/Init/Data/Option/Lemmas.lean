@@ -35,14 +35,13 @@ theorem some_ne_none (x : α) : some x ≠ none := nofun
 protected theorem «forall» {p : Option α → Prop} : (∀ x, p x) ↔ p none ∧ ∀ x, p (some x) :=
   ⟨fun h => ⟨h _, fun _ => h _⟩, fun h x => Option.casesOn x h.1 h.2⟩
 
-protected theorem «exists» {p : Option α → Prop} : (∃ x, p x) ↔ p none ∨ ∃ x, p (some x) := ⟨
-  fun
-    | ⟨none, hx⟩ => .inl hx
-    | ⟨some x, hx⟩ => .inr ⟨x, hx⟩,
-  fun
-    | .inl h => ⟨_, h⟩
-    | .inr ⟨_, hx⟩ => ⟨_, hx⟩
-⟩
+protected theorem «exists» {p : Option α → Prop} : (∃ x, p x) ↔ p none ∨ ∃ x, p (some x) :=
+  ⟨ fun
+      | ⟨none, hx⟩ => .inl hx
+      | ⟨some x, hx⟩ => .inr ⟨x, hx⟩,
+    fun
+      | .inl h => ⟨_, h⟩
+      | .inr ⟨_, hx⟩ => ⟨_, hx⟩ ⟩
 
 theorem eq_none_or_eq_some (a : Option α) : a = none ∨ ∃ x, a = some x :=
   Option.exists.mp exists_eq'
@@ -177,18 +176,16 @@ theorem ne_none_iff_exists : o ≠ none ↔ ∃ x, some x = o := by cases o <;> 
 theorem ne_none_iff_exists' : o ≠ none ↔ ∃ x, o = some x :=
   ne_none_iff_exists.trans <| exists_congr fun _ => eq_comm
 
-theorem exists_ne_none {p : Option α → Prop} : (∃ x, x ≠ none ∧ p x) ↔ ∃ x, p (some x) := ⟨
-  fun ⟨x, hx, hp⟩ => ⟨x.get <| ne_none_iff_isSome.1 hx, by rwa [some_get]⟩,
-  fun ⟨x, hx⟩ => ⟨some x, some_ne_none x, hx⟩
-⟩
+theorem exists_ne_none {p : Option α → Prop} : (∃ x, x ≠ none ∧ p x) ↔ ∃ x, p (some x) :=
+  ⟨ fun ⟨x, hx, hp⟩ => ⟨x.get <| ne_none_iff_isSome.1 hx, by rwa [some_get]⟩,
+    fun ⟨x, hx⟩ => ⟨some x, some_ne_none x, hx⟩ ⟩
 
-theorem forall_ne_none {p : Option α → Prop} : (∀ x (_ : x ≠ none), p x) ↔ ∀ x, p (some x) := ⟨
-  fun h x => h (some x) (some_ne_none x),
-  fun h x hx => by
-    have := h <| x.get <| ne_none_iff_isSome.1 hx
-    simp [some_get] at this ⊢
-    exact this
-⟩
+theorem forall_ne_none {p : Option α → Prop} : (∀ x (_ : x ≠ none), p x) ↔ ∀ x, p (some x) :=
+  ⟨ fun h x => h (some x) (some_ne_none x),
+    fun h x hx => by
+      have := h <| x.get <| ne_none_iff_isSome.1 hx
+      simp [some_get] at this ⊢
+      exact this ⟩
 
 @[simp] theorem pure_def : pure = @some α := rfl
 

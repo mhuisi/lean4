@@ -81,25 +81,24 @@ formatting syntax of kind `k`.
 -/
 @[builtin_doc]
 unsafe builtin_initialize formatterAttribute : KeyedDeclsAttribute Formatter ←
-  KeyedDeclsAttribute.init {
-    builtinName := `builtin_formatter
-    name := `formatter
-    descr := "Register a formatter for a parser."
-    valueTypeName := `Lean.PrettyPrinter.Formatter
-    evalKey := fun builtin stx => do
-      let env ← getEnv
-      let stx ← Attribute.Builtin.getIdent stx
-      let id := stx.getId
-      -- `isValidSyntaxNodeKind` is updated only in the next stage for new `[builtin*Parser]`s, but we try to
-      -- synthesize a formatter for it immediately, so we just check for a declaration in this case
-      unless (builtin && (env.find? id).isSome) || Parser.isValidSyntaxNodeKind env id do
-        throwError "Invalid `[formatter]` argument: Unknown syntax kind `{id}`"
-      if (← getEnv).contains id then
-        recordExtraModUseFromDecl (isMeta := false) id
-        if (← Elab.getInfoState).enabled then
-          Elab.addConstInfo stx id none
-      pure id
-  }
+  KeyedDeclsAttribute.init
+    { builtinName := `builtin_formatter
+      name := `formatter
+      descr := "Register a formatter for a parser."
+      valueTypeName := `Lean.PrettyPrinter.Formatter
+      evalKey := fun builtin stx => do
+        let env ← getEnv
+        let stx ← Attribute.Builtin.getIdent stx
+        let id := stx.getId
+        -- `isValidSyntaxNodeKind` is updated only in the next stage for new `[builtin*Parser]`s, but we try to
+        -- synthesize a formatter for it immediately, so we just check for a declaration in this case
+        unless (builtin && (env.find? id).isSome) || Parser.isValidSyntaxNodeKind env id do
+          throwError "Invalid `[formatter]` argument: Unknown syntax kind `{id}`"
+        if (← getEnv).contains id then
+          recordExtraModUseFromDecl (isMeta := false) id
+          if (← Elab.getInfoState).enabled then
+            Elab.addConstInfo stx id none
+        pure id }
 
 /--
 Registers a formatter for a parser combinator.
@@ -127,12 +126,11 @@ open Lean.Parser
 
 def throwBacktrack {α} : FormatterM α := throw $ Exception.internal backtrackExceptionId
 
-instance : Syntax.MonadTraverser FormatterM := ⟨{
-  get := State.stxTrav <$> get
-  set := fun t => modify (fun st => { st with stxTrav := t })
-  modifyGet := fun f =>
-    modifyGet (fun st => let (a, t) := f st.stxTrav; (a, { st with stxTrav := t }))
-}⟩
+instance : Syntax.MonadTraverser FormatterM :=
+  ⟨ { get := State.stxTrav <$> get
+      set := fun t => modify (fun st => { st with stxTrav := t })
+      modifyGet := fun f =>
+        modifyGet (fun st => let (a, t) := f st.stxTrav; (a, { st with stxTrav := t })) } ⟩
 
 open Syntax.MonadTraverser
 
@@ -193,19 +191,13 @@ def indent (x : Formatter) (indent : Option Int := none) : Formatter := do
 
 def fill (x : Formatter) : Formatter := do
   concat x
-  modify fun st => {
-    st with
-    stack := st.stack.modify (st.stack.size - 1) Format.fill
-    isUngrouped := false
-  }
+  modify fun st =>
+    { st with stack := st.stack.modify (st.stack.size - 1) Format.fill, isUngrouped := false }
 
 def group (x : Formatter) : Formatter := do
   concat x
-  modify fun st => {
-    st with
-    stack := st.stack.modify (st.stack.size - 1) Format.group
-    isUngrouped := false
-  }
+  modify fun st =>
+    { st with stack := st.stack.modify (st.stack.size - 1) Format.group, isUngrouped := false }
 
 /--
 If `pos?` has a position, run `x` and tag its results with that position,
@@ -214,15 +206,14 @@ if they are not already tagged. Otherwise just run `x`.
 def withMaybeTag (pos? : Option String.Pos.Raw) (x : FormatterM Unit) : Formatter := do
   if let some p := pos? then
     concat x
-    modify fun st => {
-      st with
-      stack :=
-        st.stack.modify (st.stack.size - 1) fun fmt =>
-          if fmt matches Format.tag .. then
-            fmt
-          else
-            Format.tag p.byteIdx fmt
-    }
+    modify fun st =>
+      { st with
+        stack :=
+          st.stack.modify (st.stack.size - 1) fun fmt =>
+            if fmt matches Format.tag .. then
+              fmt
+            else
+              Format.tag p.byteIdx fmt }
   else
     x
 
@@ -326,10 +317,8 @@ def categoryParser.formatter (cat : Name) : Formatter := do
   concat <| categoryFormatterCore cat
   unless (← get).isUngrouped do
     let indent := Std.Format.getIndent (← read).options
-    modify fun st => {
-      st with
-      stack := st.stack.modify (st.stack.size - 1) fun fmt => fmt.nest indent |>.fill
-    }
+    modify fun st =>
+      { st with stack := st.stack.modify (st.stack.size - 1) fun fmt => fmt.nest indent |>.fill }
 
 def categoryFormatter (cat : Name) : Formatter := fill <| indent <| categoryFormatterCore cat
 
@@ -420,19 +409,17 @@ def pushToken (info : SourceInfo) (tk : String) (ident : Bool) : FormatterM Unit
     if !insertSpace then
       -- extend `leadWord` if not prefixed by whitespace
       push tk
-      modify fun st => {
-        st with
-        leadWord := if tk.trimAsciiStart == tk.toSlice then tk ++ st.leadWord else ""
-        leadWordIdent := ident
-      }
+      modify fun st =>
+        { st with
+          leadWord := if tk.trimAsciiStart == tk.toSlice then tk ++ st.leadWord else ""
+          leadWordIdent := ident }
     else
       pushLine
       push tk
-      modify fun st => {
-        st with
-        leadWord := if tk.trimAsciiStart == tk.toSlice then tk else ""
-        leadWordIdent := ident
-      }
+      modify fun st =>
+        { st with
+          leadWord := if tk.trimAsciiStart == tk.toSlice then tk else ""
+          leadWordIdent := ident }
   else
     -- already separated => use `tk` as is
     if st.leadWord == "" then
@@ -442,11 +429,10 @@ def pushToken (info : SourceInfo) (tk : String) (ident : Bool) : FormatterM Unit
       push tk.trimAsciiEnd.copy
     else
       push tk -- preserve special whitespace for tokens like ":=\n"
-    modify fun st => {
-      st with
-      leadWord := if tk.trimAsciiStart == tk.toSlice then tk else ""
-      leadWordIdent := ident
-    }
+    modify fun st =>
+      { st with
+        leadWord := if tk.trimAsciiStart == tk.toSlice then tk else ""
+        leadWordIdent := ident }
 
   if let SourceInfo.original ss _ _ _ := info then
     -- preserve non-whitespace content (comments)
@@ -654,17 +640,15 @@ def registerAlias (aliasName : Name) (v : FormatterAliasValue) : IO Unit := do
 
 instance : Coe Formatter FormatterAliasValue := { coe := AliasValue.const }
 instance : Coe (Formatter → Formatter) FormatterAliasValue := { coe := AliasValue.unary }
-instance : Coe (Formatter → Formatter → Formatter) FormatterAliasValue := {
-  coe := AliasValue.binary
-}
+instance : Coe (Formatter → Formatter → Formatter) FormatterAliasValue :=
+  { coe := AliasValue.binary }
 
 end Formatter
 open Formatter
 
-register_builtin_option pp.oneline : Bool := {
-  defValue := false
-  descr := "(pretty printer) elide all but first line of pretty printer output"
-}
+register_builtin_option pp.oneline : Bool :=
+  { defValue := false
+    descr := "(pretty printer) elide all but first line of pretty printer output" }
 
 namespace OneLine
 /-!

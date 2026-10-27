@@ -93,8 +93,7 @@ instance OptionT.instWP [WP m ps] : WP (OptionT m) (.except PUnit ps) where
 
 instance EStateM.instWP : WP (EStateM ε σ) (.except ε (.arg σ .pure)) where
   wp x := -- Could define as PredTrans.mkExcept (PredTrans.modifyGetM (fun s => pure (EStateM.Result.toExceptState (x s))))
-    {
-      trans := fun Q s =>
+    { trans := fun Q s =>
         match x.run s with
         | .ok a s' => Q.1 a s'
         | .error e s' => Q.2.1 e s'
@@ -103,8 +102,7 @@ instance EStateM.instWP : WP (EStateM ε σ) (.except ε (.arg σ .pure)) where
         apply SPred.bientails.of_eq
         ext s
         dsimp
-        cases (x.run s) <;> simp
-    }
+        cases (x.run s) <;> simp }
 
 instance State.instWP : WP (StateM σ) (.arg σ .pure) :=
   inferInstanceAs (WP (StateT σ Id) (.arg σ .pure))

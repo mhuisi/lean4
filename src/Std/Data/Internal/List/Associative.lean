@@ -505,10 +505,9 @@ theorem containsKey_of_mem_keys
 @[simp] theorem DistinctKeys.nil [BEq α] : DistinctKeys ([] : List ((a : α) × β a)) := ⟨by simp⟩
 
 theorem DistinctKeys.def [BEq α] {l : List ((a : α) × β a)}
-    : DistinctKeys l ↔ l.Pairwise (fun a b => (a.1 == b.1) = false) := ⟨
-  fun h => by simpa [keys_eq_map, List.pairwise_map] using h.distinct,
-  fun h => ⟨by simpa [keys_eq_map, List.pairwise_map] using h⟩
-⟩
+    : DistinctKeys l ↔ l.Pairwise (fun a b => (a.1 == b.1) = false) :=
+  ⟨ fun h => by simpa [keys_eq_map, List.pairwise_map] using h.distinct,
+    fun h => ⟨by simpa [keys_eq_map, List.pairwise_map] using h⟩ ⟩
 
 open Std.Internal.List
 

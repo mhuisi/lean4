@@ -77,10 +77,8 @@ builtin_grind_propagator propagateNatShiftRight ↑ HShiftRight.hShiftRight :=
   propagateNatBinOp ``HShiftRight.hShiftRight ``Grind.Nat.shiftRight_congr (· >>> ·)
 
 private def supportedSemiring : Std.HashSet Name :=
-  [
-    ``Nat, ``Int, ``Rat, ``BitVec, ``UInt8, ``UInt16, ``UInt32, ``Int64, ``Int8, ``Int16, ``Int32,
-    ``Int64
-  ].foldl
+  [ ``Nat, ``Int, ``Rat, ``BitVec, ``UInt8, ``UInt16, ``UInt32, ``Int64, ``Int8, ``Int16, ``Int32,
+    ``Int64 ].foldl
     (init := {}) (·.insert ·)
 
 private def isSupportedSemiringQuick (type : Expr) : Bool := Id.run do

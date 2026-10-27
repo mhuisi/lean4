@@ -872,22 +872,22 @@ theorem Equiv.union_left
     {m₃ : Raw α} [EquivBEq α] [LawfulHashable α]
     (h₁ : m₁.WF) (h₂ : m₂.WF) (h₃ : m₃.WF) (equiv : m₁ ~m m₂)
     : (m₁ ∪ m₃) ~m (m₂ ∪ m₃) :=
-  ⟨@HashMap.Raw.Equiv.union_left _ _ _ _ m₁.inner m₂.inner m₃.inner _ _ h₁.out h₂.out h₃.out
-    equiv.1⟩
+  ⟨ @HashMap.Raw.Equiv.union_left _ _ _ _ m₁.inner m₂.inner m₃.inner _ _ h₁.out h₂.out h₃.out
+      equiv.1 ⟩
 
 theorem Equiv.union_right
     {m₃ : Raw α} [EquivBEq α] [LawfulHashable α]
     (h₁ : m₁.WF) (h₂ : m₂.WF) (h₃ : m₃.WF) (equiv : m₂ ~m m₃)
     : (m₁ ∪ m₂) ~m (m₁ ∪ m₃) :=
-  ⟨@HashMap.Raw.Equiv.union_right _ _ _ _ m₁.inner m₂.inner m₃.inner _ _ h₁.out h₂.out h₃.out
-    equiv.1⟩
+  ⟨ @HashMap.Raw.Equiv.union_right _ _ _ _ m₁.inner m₂.inner m₃.inner _ _ h₁.out h₂.out h₃.out
+      equiv.1 ⟩
 
 theorem Equiv.union_congr
     {m₃ m₄ : Raw α} [EquivBEq α] [LawfulHashable α]
     (h₁ : m₁.WF) (h₂ : m₂.WF) (h₃ : m₃.WF) (h₄ : m₄.WF) (equiv₁ : m₁ ~m m₃) (equiv₂ : m₂ ~m m₄)
     : (m₁ ∪ m₂) ~m (m₃ ∪ m₄) :=
-  ⟨@HashMap.Raw.Equiv.union_congr _ _ _ _ m₁.inner m₂.inner m₃.inner m₄.inner _ _ h₁.out h₂.out
-    h₃.out h₄.out equiv₁.1 equiv₂.1⟩
+  ⟨ @HashMap.Raw.Equiv.union_congr _ _ _ _ m₁.inner m₂.inner m₃.inner m₄.inner _ _ h₁.out h₂.out
+      h₃.out h₄.out equiv₁.1 equiv₂.1 ⟩
 
 /- get? -/
 theorem get?_union [EquivBEq α] [LawfulHashable α] (h₁ : m₁.WF) (h₂ : m₂.WF) {k : α}
@@ -1016,22 +1016,22 @@ theorem Equiv.inter_left
     {m₃ : Raw α} [EquivBEq α] [LawfulHashable α]
     (h₁ : m₁.WF) (h₂ : m₂.WF) (h₃ : m₃.WF) (equiv : m₁ ~m m₂)
     : (m₁ ∩ m₃) ~m (m₂ ∩ m₃) :=
-  ⟨@HashMap.Raw.Equiv.inter_left _ _ _ _ m₁.inner m₂.inner m₃.inner _ _ h₁.out h₂.out h₃.out
-    equiv.1⟩
+  ⟨ @HashMap.Raw.Equiv.inter_left _ _ _ _ m₁.inner m₂.inner m₃.inner _ _ h₁.out h₂.out h₃.out
+      equiv.1 ⟩
 
 theorem Equiv.inter_right
     {m₃ : Raw α} [EquivBEq α] [LawfulHashable α]
     (h₁ : m₁.WF) (h₂ : m₂.WF) (h₃ : m₃.WF) (equiv : m₂ ~m m₃)
     : (m₁ ∩ m₂) ~m (m₁ ∩ m₃) :=
-  ⟨@HashMap.Raw.Equiv.inter_right _ _ _ _ m₁.inner m₂.inner m₃.inner _ _ h₁.out h₂.out h₃.out
-    equiv.1⟩
+  ⟨ @HashMap.Raw.Equiv.inter_right _ _ _ _ m₁.inner m₂.inner m₃.inner _ _ h₁.out h₂.out h₃.out
+      equiv.1 ⟩
 
 theorem Equiv.inter_congr
     {m₃ m₄ : Raw α} [EquivBEq α] [LawfulHashable α]
     (h₁ : m₁.WF) (h₂ : m₂.WF) (h₃ : m₃.WF) (h₄ : m₄.WF) (equiv₁ : m₁ ~m m₃) (equiv₂ : m₂ ~m m₄)
     : (m₁ ∩ m₂) ~m (m₃ ∩ m₄) :=
-  ⟨@HashMap.Raw.Equiv.inter_congr _ _ _ _ m₁.inner m₂.inner m₃.inner m₄.inner _ _ h₁.out h₂.out
-    h₃.out h₄.out equiv₁.1 equiv₂.1⟩
+  ⟨ @HashMap.Raw.Equiv.inter_congr _ _ _ _ m₁.inner m₂.inner m₃.inner m₄.inner _ _ h₁.out h₂.out
+      h₃.out h₄.out equiv₁.1 equiv₂.1 ⟩
 
 /- get? -/
 theorem get?_inter [EquivBEq α] [LawfulHashable α] (h₁ : m₁.WF) (h₂ : m₂.WF) {k : α}
@@ -1206,15 +1206,15 @@ theorem Equiv.diff_right
     {m₃ : Raw α} [EquivBEq α] [LawfulHashable α]
     (h₁ : m₁.WF) (h₂ : m₂.WF) (h₃ : m₃.WF) (equiv : m₂ ~m m₃)
     : (m₁ \ m₂) ~m (m₁ \ m₃) :=
-  ⟨@HashMap.Raw.Equiv.diff_right _ _ _ _ m₁.inner m₂.inner m₃.inner _ _ h₁.out h₂.out h₃.out
-    equiv.1⟩
+  ⟨ @HashMap.Raw.Equiv.diff_right _ _ _ _ m₁.inner m₂.inner m₃.inner _ _ h₁.out h₂.out h₃.out
+      equiv.1 ⟩
 
 theorem Equiv.diff_congr
     {m₃ m₄ : Raw α} [EquivBEq α] [LawfulHashable α]
     (h₁ : m₁.WF) (h₂ : m₂.WF) (h₃ : m₃.WF) (h₄ : m₄.WF) (equiv₁ : m₁ ~m m₃) (equiv₂ : m₂ ~m m₄)
     : (m₁ \ m₂) ~m (m₃ \ m₄) :=
-  ⟨@HashMap.Raw.Equiv.diff_congr _ _ _ _ m₁.inner m₂.inner m₃.inner m₄.inner _ _ h₁.out h₂.out
-    h₃.out h₄.out equiv₁.1 equiv₂.1⟩
+  ⟨ @HashMap.Raw.Equiv.diff_congr _ _ _ _ m₁.inner m₂.inner m₃.inner m₄.inner _ _ h₁.out h₂.out
+      h₃.out h₄.out equiv₁.1 equiv₂.1 ⟩
 
 /- get? -/
 theorem get?_diff [EquivBEq α] [LawfulHashable α] (h₁ : m₁.WF) (h₂ : m₂.WF) {k : α}
@@ -1506,10 +1506,9 @@ theorem of_forall_mem_iff [LawfulBEq α] (h₁ : m₁.WF) (h₂ : m₂.WF) (h : 
 end Equiv
 
 theorem equiv_emptyWithCapacity_iff_isEmpty [EquivBEq α] [LawfulHashable α] {c : Nat} (h : m.WF)
-    : m ~m emptyWithCapacity c ↔ m.isEmpty := ⟨
-  fun ⟨h'⟩ => (HashMap.Raw.equiv_emptyWithCapacity_iff_isEmpty h.1).mp h',
-  fun h' => ⟨(HashMap.Raw.equiv_emptyWithCapacity_iff_isEmpty h.1).mpr h'⟩
-⟩
+    : m ~m emptyWithCapacity c ↔ m.isEmpty :=
+  ⟨ fun ⟨h'⟩ => (HashMap.Raw.equiv_emptyWithCapacity_iff_isEmpty h.1).mp h',
+    fun h' => ⟨(HashMap.Raw.equiv_emptyWithCapacity_iff_isEmpty h.1).mpr h'⟩ ⟩
 
 theorem equiv_empty_iff_isEmpty [EquivBEq α] [LawfulHashable α] (h : m.WF) : m ~m ∅ ↔ m.isEmpty :=
   equiv_emptyWithCapacity_iff_isEmpty h
@@ -1595,10 +1594,9 @@ theorem size_filter_eq_size_iff [EquivBEq α] [LawfulHashable α] {f : α → Bo
   HashMap.Raw.size_filter_eq_size_iff h.out
 
 theorem filter_equiv_self_iff [EquivBEq α] [LawfulHashable α] {f : (a : α) → Bool} (h : m.WF)
-    : (m.filter f) ~m m ↔ ∀ (a : α) (h : a ∈ m), f (m.get a h) = true := ⟨
-  fun h' => (HashMap.Raw.filter_equiv_self_iff h.out).mp h'.1,
-  fun h' => ⟨(HashMap.Raw.filter_equiv_self_iff h.out).mpr h'⟩
-⟩
+    : (m.filter f) ~m m ↔ ∀ (a : α) (h : a ∈ m), f (m.get a h) = true :=
+  ⟨ fun h' => (HashMap.Raw.filter_equiv_self_iff h.out).mp h'.1,
+    fun h' => ⟨(HashMap.Raw.filter_equiv_self_iff h.out).mpr h'⟩ ⟩
 
 @[simp, grind =]
 theorem get?_filter [EquivBEq α] [LawfulHashable α] {f : α → Bool} {k : α} (h : m.WF)

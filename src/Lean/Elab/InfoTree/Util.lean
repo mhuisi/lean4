@@ -334,12 +334,11 @@ partial def InfoTree.hoverableInfoAtM?
       | return none
     if ! r.contains hoverPos includeStop || !isEligibleInfoKind then
       return none
-    let priority : HoverableInfoPrio := {
-      isHoverPosOnStop := r.stop == hoverPos
-      size := r.start.byteDistance r.stop
-      isVariableInfo := info matches .ofTermInfo { expr := .fvar .., .. }
-      isPartialTermInfo := info matches .ofPartialTermInfo ..
-    }
+    let priority : HoverableInfoPrio :=
+      { isHoverPosOnStop := r.stop == hoverPos
+        size := r.start.byteDistance r.stop
+        isVariableInfo := info matches .ofTermInfo { expr := .fvar .., .. }
+        isPartialTermInfo := info matches .ofPartialTermInfo .. }
     let result := { ctx, info, children }
     return some (priority, result)
   let results ← t.visitM (m := m) (postNode := postNode)
@@ -429,16 +428,14 @@ where
       let tpFmt ← Meta.ppExpr tp
       if let .const c _ := e then
         let eFmt ← PrettyPrinter.ppSignature c
-        return (
-          some {
-            eFmt with
-            fmt :=
-              f!"```lean\
-                \n{eFmt.fmt}\
-                \n```"
-          },
-          ← fmtModule? c
-        )
+        return
+          ( some
+              { eFmt with
+                fmt :=
+                  f!"```lean\
+                    \n{eFmt.fmt}\
+                    \n```" },
+            ← fmtModule? c )
       let eFmt ← Meta.ppExpr e
       let lctx ← getLCtx
       -- Try not to show too scary internals
@@ -453,21 +450,19 @@ where
         else
           isAtomicFormat eFmt
       let fmt := if showTerm then f!"{eFmt} : {tpFmt}" else tpFmt
-      return (
-        some f!"```lean\
-          \n{fmt}\
-          \n```",
-        none
-      )
+      return
+        ( some f!"```lean\
+            \n{fmt}\
+            \n```",
+          none )
     | Info.ofFieldInfo fi =>
       let tp ← Meta.inferType fi.val
       let tpFmt ← Meta.ppExpr tp
-      return (
-        some f!"```lean\
-          \n{fi.fieldName} : {tpFmt}\
-          \n```",
-        none
-      )
+      return
+        ( some f!"```lean\
+            \n{fi.fieldName} : {tpFmt}\
+            \n```",
+          none )
     | _ =>
       return (none, none)
 
@@ -539,17 +534,16 @@ partial def InfoTree.goalsAt? (text : FileMap) (t : InfoTree) (hoverPos : String
       if pos ≤ hoverPos ∧ (hoverPos.byteIdx < tailPos.byteIdx + max 1 trailSize || atEOF) then
         -- overwrite bottom-up results according to "innermost" heuristics documented above
         if gs.isEmpty || hoverPos ≥ tailPos && gs.all (·.indented) then
-          return [{
-            ctxInfo := ctx
-            tacticInfo := ti
-            useAfter := hoverPos > pos && ! cs.any (hasNestedTactic pos tailPos)
-            indented := col > hoverCol
-            hangingBy := isByBlock i.stx
-            -- use goals just before cursor as fall-back only
-            -- thus for `(by foo)`, placing the cursor after `foo` shows its state as long
-            -- as there is no state on `)`
-            priority := if hoverPos.byteIdx == tailPos.byteIdx + trailSize then 0 else 1
-          }]
+          return
+            [ { ctxInfo := ctx
+                tacticInfo := ti
+                useAfter := hoverPos > pos && ! cs.any (hasNestedTactic pos tailPos)
+                indented := col > hoverCol
+                hangingBy := isByBlock i.stx
+                -- use goals just before cursor as fall-back only
+                -- thus for `(by foo)`, placing the cursor after `foo` shows its state as long
+                -- as there is no state on `)`
+                priority := if hoverPos.byteIdx == tailPos.byteIdx + trailSize then 0 else 1 } ]
       return gs
   let maxPrio? := gs.map (·.priority) |>.max?
   gs.filter (some ·.priority == maxPrio?)

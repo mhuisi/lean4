@@ -33,11 +33,10 @@ deriving Inhabited
 /-- Persistent environment extension mapping variant names to their definitions. -/
 builtin_initialize symDSimpVariantExtension
     : SimpleScopedEnvExtension SymDSimpVariantEntry (Std.HashMap Name SymDSimpVariant) ←
-  registerSimpleScopedEnvExtension {
-    name := `symDSimpVariantExtension
-    initial := {}
-    addEntry := fun map entry => map.insert entry.name entry.variant
-  }
+  registerSimpleScopedEnvExtension
+    { name := `symDSimpVariantExtension
+      initial := {}
+      addEntry := fun map entry => map.insert entry.name entry.variant }
 
 /-- Look up a named `Sym.dsimp` variant. -/
 def getSymDSimpVariant? (env : Environment) (name : Name) : Option SymDSimpVariant :=

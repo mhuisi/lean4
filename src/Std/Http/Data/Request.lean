@@ -97,22 +97,16 @@ def new : Builder := {}
 namespace Builder
 
 /-- Sets the HTTP method for the request being built. -/
-def method (builder : Builder) (method : Method) : Builder := {
-  builder with
-  line := { builder.line with method := method }
-}
+def method (builder : Builder) (method : Method) : Builder :=
+  { builder with line := { builder.line with method := method } }
 
 /-- Sets the HTTP version for the request being built. -/
-def version (builder : Builder) (version : Version) : Builder := {
-  builder with
-  line := { builder.line with version := version }
-}
+def version (builder : Builder) (version : Version) : Builder :=
+  { builder with line := { builder.line with version := version } }
 
 /-- Sets the request target/URI for the request being built. -/
-def uri (builder : Builder) (uri : RequestTarget) : Builder := {
-  builder with
-  line := { builder.line with uri := uri }
-}
+def uri (builder : Builder) (uri : RequestTarget) : Builder :=
+  { builder with line := { builder.line with uri := uri } }
 
 /-- Sets the request target/URI for the request being built -/
 def uri! (builder : Builder) (uri : String) : Builder :=
@@ -120,16 +114,12 @@ def uri! (builder : Builder) (uri : String) : Builder :=
   { builder with line := { builder.line with uri } }
 
 /-- Sets the headers for the request being built -/
-def headers (builder : Builder) (headers : Headers) : Builder := {
-  builder with
-  line := { builder.line with headers }
-}
+def headers (builder : Builder) (headers : Headers) : Builder :=
+  { builder with line := { builder.line with headers } }
 
 /-- Adds a single header to the request being built. -/
-def header (builder : Builder) (key : Header.Name) (value : Header.Value) : Builder := {
-  builder with
-  line := { builder.line with headers := builder.line.headers.insert key value }
-}
+def header (builder : Builder) (key : Header.Name) (value : Header.Value) : Builder :=
+  { builder with line := { builder.line with headers := builder.line.headers.insert key value } }
 
 /-- Adds a single header to the request being built, panics if the header is invalid. -/
 def header! (builder : Builder) (key : String) (value : String) : Builder :=
@@ -144,10 +134,8 @@ Returns `none` if the header name or value is invalid.
 def header? (builder : Builder) (key : String) (value : String) : Option Builder := do
   let key ← Header.Name.ofString? key
   let value ← Header.Value.ofString? value
-  pure <| {
-    builder with
-    line := { builder.line with headers := builder.line.headers.insert key value }
-  }
+  pure <|
+    { builder with line := { builder.line with headers := builder.line.headers.insert key value } }
 
 /-- Adds a header to the request being built only if the Option Header.Value is some. -/
 def headerOpt (builder : Builder) (key : Header.Name) (value : Option Header.Value) : Builder :=
@@ -156,17 +144,12 @@ def headerOpt (builder : Builder) (key : Header.Name) (value : Option Header.Val
   | none => builder
 
 /-- Inserts a typed extension value into the request being built. -/
-def extension (builder : Builder) [TypeName α] (data : α) : Builder := {
-  builder with
-  extensions := builder.extensions.insert data
-}
+def extension (builder : Builder) [TypeName α] (data : α) : Builder :=
+  { builder with extensions := builder.extensions.insert data }
 
 /-- Builds and returns the final HTTP Request with the specified body. -/
-def body (builder : Builder) (body : t) : Request t := {
-  line := builder.line
-  body := body
-  extensions := builder.extensions
-}
+def body (builder : Builder) (body : t) : Request t :=
+  { line := builder.line, body := body, extensions := builder.extensions }
 
 end Builder
 

@@ -18,16 +18,15 @@ namespace Lean.Elab.Deriving.BEq
 open Lean.Parser.Term
 open Meta
 
-register_builtin_option deriving.beq.linear_construction_threshold : Nat := {
-  defValue := 10
-  descr :=
-    "If the inductive data type has this many or more constructors, use a different \
-      implementation for implementing `BEq` that avoids the quadratic code size produced by the \
-      default implementation.\
-      \n\n\
-      The alternative construction compiles to less efficient code in some cases, so by default \
-      it is only used for inductive types with 10 or more constructors."
-}
+register_builtin_option deriving.beq.linear_construction_threshold : Nat :=
+  { defValue := 10
+    descr :=
+      "If the inductive data type has this many or more constructors, use a different \
+        implementation for implementing `BEq` that avoids the quadratic code size produced by the \
+        default implementation.\
+        \n\n\
+        The alternative construction compiles to less efficient code in some cases, so by default \
+        it is only used for inductive types with 10 or more constructors." }
 
 def mkBEqHeader (indVal : InductiveVal) : TermElabM Header := do mkHeader `BEq 2 indVal
 

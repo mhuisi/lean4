@@ -104,11 +104,10 @@ def isExtractableLet (fvars : List Expr) (n : Name) (t v : Expr) : M (Bool × Na
 /-- Adds the `decl` to the `decls` list. Assumes that `decl` is an ldecl with `nondep := false`. -/
 def addDecl (decl : LocalDecl) (isLet : Bool) : M Unit := do
   let cfg ← read
-  modify fun s => {
-    s with
-    decls := s.decls.push { decl, isLet }
-    valueMap := if cfg.merge then s.valueMap.insert decl.value decl.fvarId else s.valueMap
-  }
+  modify fun s =>
+    { s with
+      decls := s.decls.push { decl, isLet }
+      valueMap := if cfg.merge then s.valueMap.insert decl.value decl.fvarId else s.valueMap }
 
 /-- Removes and returns all local declarations that (transitively) depend on `fvar`. -/
 def flushDecls (fvar : FVarId) : M (Array LocalDecl') := do
@@ -153,10 +152,10 @@ Makes sure the declaration for `fvarId` is marked with `isLet := true`.
 Used in `lift + merge` mode to ensure that, after merging, if any version was a `let` then it's a `let` rather than a `have`.
 -/
 def ensureIsLet (fvarId : FVarId) : M Unit := do
-  modify fun s => {
-    s with
-    decls := s.decls.map fun d => if d.decl.fvarId == fvarId then { d with isLet := true } else d
-  }
+  modify fun s =>
+    { s with
+      decls :=
+        s.decls.map fun d => if d.decl.fvarId == fvarId then { d with isLet := true } else d }
 
 /--
 Ensures that the given `fvarId` is in context by adding `decls` from the state.

@@ -115,24 +115,23 @@ scoped macro "empty" : tactic => `(tactic| { intros; simp_all [List.isEmpty_iff]
 open Lean
 
 private meta def modifyMap : Std.DHashMap Name (fun _ => Name) :=
-  .ofList [
-    ⟨`insert, ``toListModel_insert⟩,
-    ⟨`erase, ``toListModel_erase⟩,
-    ⟨`insertIfNew, ``toListModel_insertIfNew⟩,
-    ⟨`insertMany, ``toListModel_insertMany_list⟩,
-    ⟨`union, ``toListModel_union⟩,
-    ⟨`inter, ``toListModel_inter⟩,
-    ⟨`diff, ``toListModel_diff⟩,
-    ⟨`Const.insertMany, ``Const.toListModel_insertMany_list⟩,
-    ⟨`Const.insertManyIfNewUnit, ``Const.toListModel_insertManyIfNewUnit_list⟩,
-    ⟨`alter, ``toListModel_alter⟩,
-    ⟨`modify, ``toListModel_modify⟩,
-    ⟨`Const.alter, ``Const.toListModel_alter⟩,
-    ⟨`Const.modify, ``Const.toListModel_modify⟩,
-    ⟨`filter, ``toListModel_filter⟩,
-    ⟨`map, ``toListModel_map⟩,
-    ⟨`filterMap, ``toListModel_filterMap⟩
-  ]
+  .ofList
+    [ ⟨`insert, ``toListModel_insert⟩,
+      ⟨`erase, ``toListModel_erase⟩,
+      ⟨`insertIfNew, ``toListModel_insertIfNew⟩,
+      ⟨`insertMany, ``toListModel_insertMany_list⟩,
+      ⟨`union, ``toListModel_union⟩,
+      ⟨`inter, ``toListModel_inter⟩,
+      ⟨`diff, ``toListModel_diff⟩,
+      ⟨`Const.insertMany, ``Const.toListModel_insertMany_list⟩,
+      ⟨`Const.insertManyIfNewUnit, ``Const.toListModel_insertManyIfNewUnit_list⟩,
+      ⟨`alter, ``toListModel_alter⟩,
+      ⟨`modify, ``toListModel_modify⟩,
+      ⟨`Const.alter, ``Const.toListModel_alter⟩,
+      ⟨`Const.modify, ``Const.toListModel_modify⟩,
+      ⟨`filter, ``toListModel_filter⟩,
+      ⟨`map, ``toListModel_map⟩,
+      ⟨`filterMap, ``toListModel_filterMap⟩ ]
 
 private theorem perm_map_congr_left
     {α : Type u} {β : Type v} {l l' : List α} {f : α → β} {l₂ : List β} (h : l.Perm l')
@@ -145,49 +144,44 @@ private theorem perm_keys_congr_left
   simp [List.keys_eq_map, perm_map_congr_left h]
 
 private meta def queryMap : Std.DHashMap Name (fun _ => Name × Array (MacroM (TSyntax `term))) :=
-  .ofList [
-    ⟨`isEmpty, (``Raw.isEmpty_eq_isEmpty, #[`(_root_.List.Perm.isEmpty_eq)])⟩,
-    ⟨`contains, (``contains_eq_containsKey, #[`(containsKey_of_perm)])⟩,
-    ⟨`size, (``Raw.size_eq_length, #[`(_root_.List.Perm.length_eq)])⟩,
-    ⟨`get?, (``get?_eq_getValueCast?, #[`(getValueCast?_of_perm _)])⟩,
-    ⟨`Const.get?, (``Const.get?_eq_getValue?, #[`(getValue?_of_perm _)])⟩,
-    ⟨`Const.get, (``Const.get_eq_getValue, #[`(getValue_of_perm _)])⟩,
-    ⟨`get, (``get_eq_getValueCast, #[`(getValueCast_of_perm _)])⟩,
-    ⟨`get!, (``get!_eq_getValueCast!, #[`(getValueCast!_of_perm _)])⟩,
-    ⟨`getD, (``getD_eq_getValueCastD, #[`(getValueCastD_of_perm _)])⟩,
-    ⟨`Const.get!, (``Const.get!_eq_getValue!, #[`(getValue!_of_perm _)])⟩,
-    ⟨`Const.getD, (``Const.getD_eq_getValueD, #[`(getValueD_of_perm _)])⟩,
-    ⟨`getKey?, (``getKey?_eq_getKey?, #[`(getKey?_of_perm _)])⟩,
-    ⟨`getKey, (``getKey_eq_getKey, #[`(getKey_of_perm _)])⟩,
-    ⟨`getKeyD, (``getKeyD_eq_getKeyD, #[`(getKeyD_of_perm _)])⟩,
-    ⟨`getKey!, (``getKey!_eq_getKey!, #[`(getKey!_of_perm _)])⟩,
-    ⟨`getEntry, (``getEntry_eq_getEntry, #[`(getEntry_of_perm _)])⟩,
-    ⟨`getEntry?, (``getEntry?_eq_getEntry?, #[`(getEntry?_of_perm _)])⟩,
-    ⟨`getEntryD, (``getEntryD_eq_getEntryD, #[`(getEntryD_of_perm _)])⟩,
-    ⟨`getEntry!, (``getEntry!_eq_getEntry!, #[`(getEntry!_of_perm _)])⟩,
-    ⟨`all, (``Raw.all_eq_all_toListModel, #[])⟩,
-    ⟨`toList, (``Raw.toList_eq_toListModel, #[])⟩,
-    ⟨`Const.beq, (``Raw₀.Const.beq_eq_beqModel, #[])⟩,
-    ⟨`beq, (``beq_eq_beqModel, #[])⟩,
-    ⟨`keys, (``Raw.keys_eq_keys_toListModel, #[`(perm_keys_congr_left)])⟩,
-    ⟨`Const.toList, (``Raw.Const.toList_eq_toListModel_map, #[`(perm_map_congr_left)])⟩,
-    ⟨`foldM, (``Raw.foldM_eq_foldlM_toListModel, #[])⟩,
-    ⟨`fold, (``Raw.fold_eq_foldl_toListModel, #[])⟩,
-    ⟨`foldRevM, (``Raw.foldRevM_eq_foldrM_toListModel, #[])⟩,
-    ⟨`foldRev, (``Raw.foldRev_eq_foldr_toListModel, #[])⟩,
-    ⟨`forIn, (``Raw.forIn_eq_forIn_toListModel, #[])⟩,
-    ⟨`forM, (``Raw.forM_eq_forM_toListModel, #[])⟩,
-    ⟨`toArray, (``Raw.toArray_eq_toArray_toListModel, #[])⟩,
-    ⟨`keysArray, (``Raw.keysArray_eq_toArray_keys_toListModel, #[])⟩,
-    ⟨`Const.toArray, (``Raw.Const.toArray_eq_toArray_map_toListModel, #[])⟩,
-    ⟨
-      `Equiv,
-      (
-        ``Raw.equiv_iff_toListModel_perm,
-        #[`(_root_.List.Perm.congr_left), `(_root_.List.Perm.congr_right)]
-      )
-    ⟩
-  ]
+  .ofList
+    [ ⟨`isEmpty, (``Raw.isEmpty_eq_isEmpty, #[`(_root_.List.Perm.isEmpty_eq)])⟩,
+      ⟨`contains, (``contains_eq_containsKey, #[`(containsKey_of_perm)])⟩,
+      ⟨`size, (``Raw.size_eq_length, #[`(_root_.List.Perm.length_eq)])⟩,
+      ⟨`get?, (``get?_eq_getValueCast?, #[`(getValueCast?_of_perm _)])⟩,
+      ⟨`Const.get?, (``Const.get?_eq_getValue?, #[`(getValue?_of_perm _)])⟩,
+      ⟨`Const.get, (``Const.get_eq_getValue, #[`(getValue_of_perm _)])⟩,
+      ⟨`get, (``get_eq_getValueCast, #[`(getValueCast_of_perm _)])⟩,
+      ⟨`get!, (``get!_eq_getValueCast!, #[`(getValueCast!_of_perm _)])⟩,
+      ⟨`getD, (``getD_eq_getValueCastD, #[`(getValueCastD_of_perm _)])⟩,
+      ⟨`Const.get!, (``Const.get!_eq_getValue!, #[`(getValue!_of_perm _)])⟩,
+      ⟨`Const.getD, (``Const.getD_eq_getValueD, #[`(getValueD_of_perm _)])⟩,
+      ⟨`getKey?, (``getKey?_eq_getKey?, #[`(getKey?_of_perm _)])⟩,
+      ⟨`getKey, (``getKey_eq_getKey, #[`(getKey_of_perm _)])⟩,
+      ⟨`getKeyD, (``getKeyD_eq_getKeyD, #[`(getKeyD_of_perm _)])⟩,
+      ⟨`getKey!, (``getKey!_eq_getKey!, #[`(getKey!_of_perm _)])⟩,
+      ⟨`getEntry, (``getEntry_eq_getEntry, #[`(getEntry_of_perm _)])⟩,
+      ⟨`getEntry?, (``getEntry?_eq_getEntry?, #[`(getEntry?_of_perm _)])⟩,
+      ⟨`getEntryD, (``getEntryD_eq_getEntryD, #[`(getEntryD_of_perm _)])⟩,
+      ⟨`getEntry!, (``getEntry!_eq_getEntry!, #[`(getEntry!_of_perm _)])⟩,
+      ⟨`all, (``Raw.all_eq_all_toListModel, #[])⟩,
+      ⟨`toList, (``Raw.toList_eq_toListModel, #[])⟩,
+      ⟨`Const.beq, (``Raw₀.Const.beq_eq_beqModel, #[])⟩,
+      ⟨`beq, (``beq_eq_beqModel, #[])⟩,
+      ⟨`keys, (``Raw.keys_eq_keys_toListModel, #[`(perm_keys_congr_left)])⟩,
+      ⟨`Const.toList, (``Raw.Const.toList_eq_toListModel_map, #[`(perm_map_congr_left)])⟩,
+      ⟨`foldM, (``Raw.foldM_eq_foldlM_toListModel, #[])⟩,
+      ⟨`fold, (``Raw.fold_eq_foldl_toListModel, #[])⟩,
+      ⟨`foldRevM, (``Raw.foldRevM_eq_foldrM_toListModel, #[])⟩,
+      ⟨`foldRev, (``Raw.foldRev_eq_foldr_toListModel, #[])⟩,
+      ⟨`forIn, (``Raw.forIn_eq_forIn_toListModel, #[])⟩,
+      ⟨`forM, (``Raw.forM_eq_forM_toListModel, #[])⟩,
+      ⟨`toArray, (``Raw.toArray_eq_toArray_toListModel, #[])⟩,
+      ⟨`keysArray, (``Raw.keysArray_eq_toArray_keys_toListModel, #[])⟩,
+      ⟨`Const.toArray, (``Raw.Const.toArray_eq_toArray_map_toListModel, #[])⟩,
+      ⟨ `Equiv,
+        ( ``Raw.equiv_iff_toListModel_perm,
+          #[`(_root_.List.Perm.congr_left), `(_root_.List.Perm.congr_right)] ) ⟩ ]
 
 /-- Internal implementation detail of the hash map -/
 scoped syntax "simp_to_model" (" [" (ident,*) "]")? ("using" term)? : tactic

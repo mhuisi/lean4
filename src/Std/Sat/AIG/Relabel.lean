@@ -82,8 +82,7 @@ def relabel (r : α → β) (aig : AIG α) (hinj : ∀ x y, x ∈ aig → y ∈ 
     have := hinj x y hmemx hmemy (by rw [← hbx, ← hby])
     subst this
     exact aig.atom_unique hx hy
-  {
-    decls
+  { decls
     cache := Cache.ofAtoms decls huniq
     hdag := by
       intro idx lhs rhs hbound hgate
@@ -92,8 +91,7 @@ def relabel (r : α → β) (aig : AIG α) (hinj : ∀ x y, x ∈ aig → y ∈ 
       apply aig.hdag
       assumption
     hzero := by simp [decls, aig.hzero]
-    hconst := by simp [decls, aig.hconst, Decl.relabel]
-  }
+    hconst := by simp [decls, aig.hconst, Decl.relabel] }
 
 @[simp]
 theorem relabel_size_eq_size {aig : AIG α} {r : α → β} {hinj}
@@ -127,11 +125,9 @@ theorem relabel_gate
 @[simp]
 theorem denote_relabel (aig : AIG α) (r : α → β) {hinj} (start : Nat) {hidx} (assign : β → Bool)
     : ⟦aig.relabel r hinj, ⟨start, invert, hidx⟩, assign⟧
-      = ⟦
-        aig,
-        ⟨start, invert, by rw [← relabel_size_eq_size (r := r) (hinj := hinj)]; omega⟩,
-        (assign ∘ r)
-      ⟧ := by
+      = ⟦ aig,
+          ⟨start, invert, by rw [← relabel_size_eq_size (r := r) (hinj := hinj)]; omega⟩,
+          (assign ∘ r) ⟧ := by
   apply denote_idx_trichotomy
   · intro heq1
     have heq2 := relabel_false heq1
@@ -206,11 +202,8 @@ namespace Entrypoint
 def relabel
     (r : α → β) (entry : Entrypoint α)
     (hinj : ∀ x y, x ∈ entry.aig → y ∈ entry.aig → r x = r y → x = y)
-    : Entrypoint β := {
-  entry with
-  aig := entry.aig.relabel r hinj
-  ref.hgate := by simp [entry.ref.hgate]
-}
+    : Entrypoint β :=
+  { entry with aig := entry.aig.relabel r hinj, ref.hgate := by simp [entry.ref.hgate] }
 
 @[simp]
 theorem relabel_size_eq {entry : Entrypoint α} {r : α → β} {hinj}

@@ -23,12 +23,11 @@ import Lean.Meta.Sym.ProofInstInfo
 open Lean Parser Meta Elab Tactic Sym
 open Lean.Elab.Tactic.Do Lean.Elab.Tactic.VCGen.SpecAttr
 
-register_builtin_option experimental.vcgen : Bool := {
-  defValue := false
-  descr :=
-    "acknowledge that the `vcgen` tactic is experimental and subject to change; `true` \
-      silences the warning that each `vcgen` call reports"
-}
+register_builtin_option experimental.vcgen : Bool :=
+  { defValue := false
+    descr :=
+      "acknowledge that the `vcgen` tactic is experimental and subject to change; `true` \
+        silences the warning that each `vcgen` call reports" }
 
 namespace Lean.Elab.Tactic.VCGen
 
@@ -458,17 +457,16 @@ def parseArgs (stx : Syntax) (goal : MVarId) : TermElabM ParsedArgs :=
         elabFrameDB progTy stx[4][1].getArgs
     let invariantAlts? ← parseInvariantMap stx[5]
     let hypSimpMethods ← elabSimplifyingAssumptions stx[6]
-    let ctx := {
-      ctx with
-      hypSimpMethods
-      frameProcs
-      useJP := config.jp
-      errorOnMissingSpec := config.errorOnMissingSpec
-      debug := config.debug
-      internalize := config.internalize
-      invariantAlts := invariantAlts?.getD {}
-      untilPat?
-    }
+    let ctx :=
+      { ctx with
+        hypSimpMethods
+        frameProcs
+        useJP := config.jp
+        errorOnMissingSpec := config.errorOnMissingSpec
+        debug := config.debug
+        internalize := config.internalize
+        invariantAlts := invariantAlts?.getD {}
+        untilPat? }
     return { config, ctx, scope, invariantAlts?, frameDB }
 
 /-- `vcgen` step inside `sym => …` blocks. -/

@@ -180,11 +180,9 @@ theorem go_denote_mem_prefix
     (input : RefVec aig len)
     (f : (aig : AIG α) → Ref aig → Entrypoint α) [LawfulOperator α Ref f] [LawfulMapOperator α f]
     (start : Nat) (hstart)
-    : ⟦
-        (go aig curr hcurr s input f).aig,
+    : ⟦ (go aig curr hcurr s input f).aig,
         ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
-        assign
-      ⟧
+        assign ⟧
       = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply IsPrefix.of
@@ -200,11 +198,9 @@ theorem denote_go
     (f : (aig : AIG α) → Ref aig → Entrypoint α) [LawfulOperator α Ref f] [LawfulMapOperator α f]
     : ∀ (idx : Nat) (hidx1 : idx < len),
       curr ≤ idx
-        → ⟦
-            (go aig curr hcurr s input f).aig,
+        → ⟦ (go aig curr hcurr s input f).aig,
             (go aig curr hcurr s input f).vec.get idx hidx1,
-            assign
-          ⟧
+            assign ⟧
           = ⟦f aig (input.get idx hidx1), assign⟧ := by
   intro idx hidx1 hidx2
   generalize hgo : go aig curr hcurr s input f = res

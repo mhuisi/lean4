@@ -167,14 +167,13 @@ builtin_initialize noFallbackAttr : TagAttribute ←
 
 def mkTacticInfo (mctxBefore : MetavarContext) (goalsBefore : List MVarId) (stx : Syntax)
     : TacticM Info :=
-  return Info.ofTacticInfo {
-    elaborator := (← read).elaborator
-    mctxBefore := mctxBefore
-    goalsBefore := goalsBefore
-    stx := stx
-    mctxAfter := (← getMCtx)
-    goalsAfter := (← getUnsolvedGoals)
-  }
+  return Info.ofTacticInfo
+    { elaborator := (← read).elaborator
+      mctxBefore := mctxBefore
+      goalsBefore := goalsBefore
+      stx := stx
+      mctxAfter := (← getMCtx)
+      goalsAfter := (← getUnsolvedGoals) }
 
 def mkInitialTacticInfo (stx : Syntax) : TacticM (TacticM Info) := do
   let mctxBefore ← getMCtx
@@ -317,33 +316,27 @@ where
                 let promise ← IO.Promise.new
                 -- Store new unfolding in the snapshot tree
                 let cancelTk? := (← readThe Core.Context).cancelTk?
-                snap.new.resolve {
-                  transformed.raw := {
-                    stx := stx'
-                    diagnostics := .empty
-                    inner? := none
-                    finished :=
-                      .finished stx' {
+                snap.new.resolve
+                  { transformed.raw :=
+                      { stx := stx'
                         diagnostics := .empty
-                        state? := (← Tactic.saveState)
-                        moreSnaps := #[]
-                      }
-                  }
-                  next := #[{ stx? := stx', task := promise.resultD default, cancelTk? }]
-                }
+                        inner? := none
+                        finished :=
+                          .finished stx'
+                            { diagnostics := .empty
+                              state? := (← Tactic.saveState)
+                              moreSnaps := #[] } }
+                    next := #[{ stx? := stx', task := promise.resultD default, cancelTk? }] }
                 -- Update `tacSnap?` to old unfolding
                 withTheReader Term.Context
-                  ({
-                    · with
-                    tacSnap? :=
-                      some {
-                        new := promise
-                        old? := do
-                          let old ← old?
-                          -- (access to `raw`: as above)
-                          return ⟨old.transformed.raw.stx, (← old.next[0]?)⟩
-                      }
-                  })
+                  ({ · with
+                     tacSnap? :=
+                       some
+                         { new := promise
+                           old? := do
+                             let old ← old?
+                             -- (access to `raw`: as above)
+                             return ⟨old.transformed.raw.stx, (← old.next[0]?)⟩ } })
                   do evalTactic stx'
                 return
             evalTactic stx'
@@ -505,10 +498,8 @@ def saveTacticInfoForToken (stx : Syntax) : TacticM Unit := do
 def withMacroExpansion (beforeStx afterStx : Syntax) (x : TacticM α) : TacticM α :=
   withMacroExpansionInfo beforeStx afterStx do
     withTheReader Term.Context
-      (fun ctx => {
-        ctx with
-        macroStack := { before := beforeStx, after := afterStx } :: ctx.macroStack
-      })
+      (fun ctx =>
+        { ctx with macroStack := { before := beforeStx, after := afterStx } :: ctx.macroStack })
       x
 
 /-- Adapt a syntax transformation to a regular tactic evaluator. -/

@@ -1755,11 +1755,8 @@ def emitLLVM (env : Environment) (modName : Name) (filepath : String) : IO Unit 
   LLVM.llvmInitializeTargetInfo
   let llvmctx ← LLVM.createContext
   let module ← LLVM.createModule llvmctx modName.toString
-  let emitLLVMCtx : EmitLLVM.Context llvmctx := {
-    env := env
-    modName := modName
-    llvmmodule := module
-  }
+  let emitLLVMCtx : EmitLLVM.Context llvmctx :=
+    { env := env, modName := modName, llvmmodule := module }
   let initState := { var2val := default, jp2bb := default : EmitLLVM.State llvmctx }
   let out? ← ((EmitLLVM.main (llvmctx := llvmctx)).run initState).run emitLLVMCtx
   match out? with

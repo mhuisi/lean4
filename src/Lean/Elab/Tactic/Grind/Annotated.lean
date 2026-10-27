@@ -19,11 +19,10 @@ These modules contain theorems that have been manually reviewed/annotated for gr
 so they should be excluded from premise selection when the caller is "grind".
 -/
 builtin_initialize grindAnnotatedExt : SimplePersistentEnvExtension Name NameSet ←
-  registerSimplePersistentEnvExtension {
-    addEntryFn := fun s modName => s.insert modName
-    addImportedFn := fun entries => entries.foldl (fun s arr => arr.foldl NameSet.insert s) ∅
-    asyncMode := .sync
-  }
+  registerSimplePersistentEnvExtension
+    { addEntryFn := fun s modName => s.insert modName
+      addImportedFn := fun entries => entries.foldl (fun s arr => arr.foldl NameSet.insert s) ∅
+      asyncMode := .sync }
 
 /-- Check if a module has been marked as grind-annotated. -/
 public def isGrindAnnotatedModule (env : Environment) (modIdx : ModuleIdx) : Bool :=

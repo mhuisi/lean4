@@ -82,47 +82,46 @@ private abbrev findAtSorted? (decls : Array Decl) (declName : Name) : Option Dec
   decls.binSearch tmpDecl declLt
 
 builtin_initialize declMapExt : SimplePersistentEnvExtension Decl DeclMap ←
-  registerSimplePersistentEnvExtension {
-    addImportedFn := fun _ => {}
-    addEntryFn := fun s d => s.insert d.name d
-    -- Store `meta` closure only in `.olean`, turn all other decls into opaque externs.
-    -- Leave storing the remainder for `meta import` and server `#eval` to `exportIREntries` below.
-    exportEntriesFnEx? :=
-      some fun env s entries =>
-        let decls := entries.foldl (init := #[]) fun decls decl => decls.push decl
-        let entries := sortDecls decls
-        -- Do not save all IR even in .olean.private as it will be in .ir anyway
-        .uniform <|
-          if env.header.isModule then
-            entries.filterMap fun d => do
-              if isDeclMeta env d.name then
-                return d
-              guard <| Compiler.LCNF.isDeclPublic env d.name
-              -- TODO: boxed `[extern]`s are created eagerly by lean but we need to see their IR in
-              -- leanir. It would be nicer to make them part of standard `compileDecls` so they can be
-              -- postponed like anyone else.
-              if Compiler.LCNF.isBoxedName d.name && isExtern env d.name.getPrefix then
-                return d
-              -- Bodies of imported IR decls are not relevant for codegen, only interpretation
-              match d with
-              | .fdecl f xs ty b info =>
-                if let some (.str _ s) := getExportNameFor? env f then
-                  return .extern f xs ty { entries := [.standard `all s] }
-                else
-                  return .extern f xs ty { entries := [.opaque] }
-              | d =>
-                some d
-          else
-            entries
-    -- Written to on codegen environment branch but accessed from other elaboration branches when
-    -- calling into the interpreter. We cannot use `async` as the IR declarations added may not
-    -- share a name prefix with the top-level Lean declaration being compiled, e.g. from
-    -- specialization.
-    asyncMode := .sync
-    replay? :=
-      some <| SimplePersistentEnvExtension.replayOfFilter (! ·.contains ·.name)
-        (fun s d => s.insert d.name d)
-  }
+  registerSimplePersistentEnvExtension
+    { addImportedFn := fun _ => {}
+      addEntryFn := fun s d => s.insert d.name d
+      -- Store `meta` closure only in `.olean`, turn all other decls into opaque externs.
+      -- Leave storing the remainder for `meta import` and server `#eval` to `exportIREntries` below.
+      exportEntriesFnEx? :=
+        some fun env s entries =>
+          let decls := entries.foldl (init := #[]) fun decls decl => decls.push decl
+          let entries := sortDecls decls
+          -- Do not save all IR even in .olean.private as it will be in .ir anyway
+          .uniform <|
+            if env.header.isModule then
+              entries.filterMap fun d => do
+                if isDeclMeta env d.name then
+                  return d
+                guard <| Compiler.LCNF.isDeclPublic env d.name
+                -- TODO: boxed `[extern]`s are created eagerly by lean but we need to see their IR in
+                -- leanir. It would be nicer to make them part of standard `compileDecls` so they can be
+                -- postponed like anyone else.
+                if Compiler.LCNF.isBoxedName d.name && isExtern env d.name.getPrefix then
+                  return d
+                -- Bodies of imported IR decls are not relevant for codegen, only interpretation
+                match d with
+                | .fdecl f xs ty b info =>
+                  if let some (.str _ s) := getExportNameFor? env f then
+                    return .extern f xs ty { entries := [.standard `all s] }
+                  else
+                    return .extern f xs ty { entries := [.opaque] }
+                | d =>
+                  some d
+            else
+              entries
+      -- Written to on codegen environment branch but accessed from other elaboration branches when
+      -- calling into the interpreter. We cannot use `async` as the IR declarations added may not
+      -- share a name prefix with the top-level Lean declaration being compiled, e.g. from
+      -- specialization.
+      asyncMode := .sync
+      replay? :=
+        some <| SimplePersistentEnvExtension.replayOfFilter (! ·.contains ·.name)
+          (fun s d => s.insert d.name d) }
 
 @[export lean_ir_export_entries]
 private def exportIREntries (env : Environment) : Array (Name × Array EnvExtensionEntry) :=
@@ -143,11 +142,9 @@ private def exportIREntries (env : Environment) : Array (Name × Array EnvExtens
   -- safety: cast to erased type
   let modPkg : Array EnvExtensionEntry := unsafe unsafeCast modPkg
 
-  #[
-    (declMapExt.name, irEntries),
+  #[(declMapExt.name, irEntries),
     (Lean.regularInitAttr.ext.name, initDecls),
-    (modPkgExt.name, modPkg)
-  ]
+    (modPkgExt.name, modPkg)]
 
 def findEnvDecl (env : Environment) (declName : Name) : Option Decl :=
   Compiler.LCNF.findExtEntry? env declMapExt declName findAtSorted? (·.2.find?)

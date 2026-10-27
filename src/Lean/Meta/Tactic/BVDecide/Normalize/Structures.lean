@@ -94,13 +94,12 @@ public def addStructureSimpLemmas (methods : Sym.Simp.Methods) : PreProcessM Sym
       projFns := projFns.insert projFn
       projFnIndex :=
         projFnIndex.insert projFn { arity, offset := proj + constInfo.numParams, ctorName := ctor }
-  return {
-    methods with
-    post := methods.post >> extTheorems.rewrite
-    pre :=
-      methods.pre >> applyIteSimproc projFns >> applyCondSimproc projFns
-        >> projCtorProc projFnIndex ctorIndex
-  }
+  return
+    { methods with
+      post := methods.post >> extTheorems.rewrite
+      pre :=
+        methods.pre >> applyIteSimproc projFns >> applyCondSimproc projFns
+          >> projCtorProc projFnIndex ctorIndex }
 where
   findExtIffThms (info : InductiveVal) : MetaM (Array Name) := do
     let pat ← mkConstAppWithMVars info.name
@@ -153,12 +152,11 @@ public partial def structuresPass : Pass where
           let projType ← Sym.inferType projValue
           if ← Meta.isProp projType then
             newHyps :=
-              newHyps.push {
-                name := `h
-                type := projType
-                value := projValue
-                source := .structureProjection projValue
-              }
+              newHyps.push
+                { name := `h
+                  type := projType
+                  value := projValue
+                  source := .structureProjection projValue }
           else
             let .const const us := projType.getAppFn
               | continue

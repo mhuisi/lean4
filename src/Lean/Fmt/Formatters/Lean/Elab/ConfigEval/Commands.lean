@@ -130,10 +130,9 @@ public def fmtDefEvalConfigItemCmd : Fmt := fun
     let signature := Layouts.globalSignature #[defTk, itemId] binders empty empty
     let «for» := Layouts.keywordPrefixedTerm forTk structId .nonSticky
     let signature :=
-      Layouts.blocks #[
-        { block := signature, hardNestedIfFirst := false },
-        { block := «for» }
-      ]
+      Layouts.blocks
+        #[{ block := signature, hardNestedIfFirst := false },
+          { block := «for» }]
     let decl ← fmtWithConfigEntries signature configEntries?
     fmtDeclWithModifiers docComment? none #[visibility?, attrKind] decl
   | _ =>

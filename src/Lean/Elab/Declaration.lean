@@ -132,12 +132,11 @@ def elabAxiom (modifiers : Modifiers) (stx : Syntax) : CommandElabM Unit := do
               | Except.ok levelParams =>
                 let type ← instantiateMVars type
                 let decl :=
-                  Declaration.axiomDecl {
-                    name := declName
-                    levelParams := levelParams
-                    type := type
-                    isUnsafe := modifiers.isUnsafe
-                  }
+                  Declaration.axiomDecl
+                    { name := declName
+                      levelParams := levelParams
+                      type := type
+                      isUnsafe := modifiers.isUnsafe }
                 trace[Elab.axiom] "{declName} : {type}"
                 Term.ensureNoUnassignedMVars decl
                 addDecl decl

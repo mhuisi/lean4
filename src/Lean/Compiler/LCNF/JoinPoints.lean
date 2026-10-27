@@ -92,19 +92,14 @@ private def addCandidate (fvarId : FVarId) (arity : Nat) : FindM Unit := do
 /-- Add a new join point dependency from `src` to `dst`. -/
 private def addDependency (src : FVarId) (target : FVarId) : FindM Unit := do
   modifyCandidates fun cs =>
-    cs.modify target fun targetInfo => {
-      targetInfo with
-      associated := targetInfo.associated.insert src
-    }
+    cs.modify target fun targetInfo =>
+      { targetInfo with associated := targetInfo.associated.insert src }
 
 @[inline]
 private def withFnBody (decl : FunDecl .pure) (x : FindM α) : FindM α :=
   withReader
-    (fun ctx => {
-      ctx with
-      definitionDepth := ctx.definitionDepth + 1
-      currentFunction := some decl.fvarId
-    })
+    (fun ctx =>
+      { ctx with definitionDepth := ctx.definitionDepth + 1, currentFunction := some decl.fvarId })
     do x
 
 @[inline]

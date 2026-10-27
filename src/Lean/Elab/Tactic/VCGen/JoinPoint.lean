@@ -141,17 +141,14 @@ public def registerJoinPoint
     let goal ← goal.replaceTargetDefEqFast (← mkLetS `__do_jp_spec specTy rhs goalTy)
     let .goal decls goal ← Sym.introN goal 1
       | throwError "vcgen +jp: failed to introduce the proof of{indentExpr specTy}"
-    let joinPoint : JoinPoint := {
-      spec := .fvar decls[0]!
-      top
-      hyp
-      rhsGoal := rhs.mvarId!
-      numStates := info.excessArgs.size
-    }
-    modify fun s => {
-      s with
-      pendingJoinPoints := s.pendingJoinPoints.insert joinPoint.rhsGoal (joinPoint, #[])
-    }
+    let joinPoint : JoinPoint :=
+      { spec := .fvar decls[0]!
+        top
+        hyp
+        rhsGoal := rhs.mvarId!
+        numStates := info.excessArgs.size }
+    modify fun s =>
+      { s with pendingJoinPoints := s.pendingJoinPoints.insert joinPoint.rhsGoal (joinPoint, #[]) }
     let scope := { scope with joinPoints := scope.joinPoints.insert jp joinPoint }
     return some (scope, [goal, joinPoint.rhsGoal])
 
@@ -177,12 +174,11 @@ public def wpJump? (scope : Scope) (goal : MVarId) (info : WPApp)
     let args := info.prog.getAppArgs ++ info.excessArgs
     let pf ← mkFreshExprSyntheticOpaqueMVar (← mkAppNS (.mvar jp.hyp) args)
     goal.assign (← mkAppNS jp.spec (args.push pf))
-    modify fun s => {
-      s with
-      pendingJoinPoints :=
-        s.pendingJoinPoints.modify jp.rhsGoal fun (jp, jumps) =>
-          (jp, jumps.push { proof := pf.mvarId!, args })
-    }
+    modify fun s =>
+      { s with
+        pendingJoinPoints :=
+          s.pendingJoinPoints.modify jp.rhsGoal fun (jp, jumps) =>
+            (jp, jumps.push { proof := pf.mvarId!, args }) }
     return some []
 
 /-- The locals of `jump` after `__do_jp_spec`. -/

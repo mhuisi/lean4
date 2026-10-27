@@ -274,19 +274,18 @@ def emitFileHeader : EmitM Unit := do
   env.imports.forM fun m => emit (" " ++ toString m)
   emitLn ""
   emitLn "#include <lean/lean.h>"
-  emitLns [
-    "#if defined(__clang__)",
-    "#pragma clang diagnostic ignored \"-Wunused-parameter\"",
-    "#pragma clang diagnostic ignored \"-Wunused-label\"",
-    "#elif defined(__GNUC__) && !defined(__CLANG__)",
-    "#pragma GCC diagnostic ignored \"-Wunused-parameter\"",
-    "#pragma GCC diagnostic ignored \"-Wunused-label\"",
-    "#pragma GCC diagnostic ignored \"-Wunused-but-set-variable\"",
-    "#endif",
-    "#ifdef __cplusplus",
-    "extern \"C\" {",
-    "#endif"
-  ]
+  emitLns
+    [ "#if defined(__clang__)",
+      "#pragma clang diagnostic ignored \"-Wunused-parameter\"",
+      "#pragma clang diagnostic ignored \"-Wunused-label\"",
+      "#elif defined(__GNUC__) && !defined(__CLANG__)",
+      "#pragma GCC diagnostic ignored \"-Wunused-parameter\"",
+      "#pragma GCC diagnostic ignored \"-Wunused-label\"",
+      "#pragma GCC diagnostic ignored \"-Wunused-but-set-variable\"",
+      "#endif",
+      "#ifdef __cplusplus",
+      "extern \"C\" {",
+      "#endif" ]
 
 def ctorScalarSizeExpression (usize : Nat) (ssize : Nat) : String :=
   if usize == 0 then
@@ -1083,13 +1082,12 @@ def emitInitFn (phases : IRPhases) : EmitM Unit := do
   if let some fn := leanInitFn? then
     emitLn s!"void {fn}();"
   let initialized := s!"_G_{mkModuleInitializationPrefix phases}initialized"
-  emitLns [
-    s!"static bool {initialized} = false;",
-    s!"LEAN_EXPORT lean_object* {← getModInitFn (phases := phases)}(uint8_t builtin) \{",
-    "lean_object * res;",
-    s!"if ({initialized}) return lean_io_result_mk_ok(lean_box(0));",
-    s!"{initialized} = true;"
-  ]
+  emitLns
+    [ s!"static bool {initialized} = false;",
+      s!"LEAN_EXPORT lean_object* {← getModInitFn (phases := phases)}(uint8_t builtin) \{",
+      "lean_object * res;",
+      s!"if ({initialized}) return lean_io_result_mk_ok(lean_box(0));",
+      s!"{initialized} = true;" ]
   if let some fn := leanInitFn? then
     emitLn s!"{fn}();"
   impInitFns.forM fun fn => do
@@ -1113,13 +1111,12 @@ def emitLegacyInitFn : EmitM Unit := do
       emitLn s!"lean_object* {fn}(uint8_t builtin);"
       return some fn
   let initialized := s!"_G_initialized"
-  emitLns [
-    s!"static bool {initialized} = false;",
-    s!"LEAN_EXPORT lean_object* {← getModInitFn (phases := .all)}(uint8_t builtin) \{",
-    "lean_object * res;",
-    s!"if ({initialized}) return lean_io_result_mk_ok(lean_box(0));",
-    s!"{initialized} = true;"
-  ]
+  emitLns
+    [ s!"static bool {initialized} = false;",
+      s!"LEAN_EXPORT lean_object* {← getModInitFn (phases := .all)}(uint8_t builtin) \{",
+      "lean_object * res;",
+      s!"if ({initialized}) return lean_io_result_mk_ok(lean_box(0));",
+      s!"{initialized} = true;" ]
   impInitFns.forM fun fn => do
     withErrRet do emit s!"{fn}(builtin)"
     emitLn "lean_dec_ref(res);"
@@ -1143,73 +1140,68 @@ where
     if ps.size != 1 && ps.size != 2 then
       throwError "invalid main function, incorrect arity when generating code"
     let env ← getEnv
-    emitLns [
-      "char ** lean_setup_args(int argc, char ** argv);",
-      "#if defined(WIN32) || defined(_WIN32)",
-      "#include <windows.h>",
-      "#endif",
-      "lean_object* run_main(int argc, char ** argv) {"
-    ]
+    emitLns
+      [ "char ** lean_setup_args(int argc, char ** argv);",
+        "#if defined(WIN32) || defined(_WIN32)",
+        "#include <windows.h>",
+        "#endif",
+        "lean_object* run_main(int argc, char ** argv) {" ]
     if ps.size == 2 then
-      emitLns [
-        "    lean_object* in = lean_box(0);",
-        "    int i = argc;",
-        "    while (i > 1) {",
-        "      lean_object* n;",
-        "      i--;",
-        "      n = lean_alloc_ctor(1,2,0); lean_ctor_set(n, 0, lean_mk_string(argv[i])); \
-          lean_ctor_set(n, 1, in);",
-        "      in = n;",
-        "    }"
-      ]
+      emitLns
+        [ "    lean_object* in = lean_box(0);",
+          "    int i = argc;",
+          "    while (i > 1) {",
+          "      lean_object* n;",
+          "      i--;",
+          "      n = lean_alloc_ctor(1,2,0); lean_ctor_set(n, 0, lean_mk_string(argv[i])); \
+            lean_ctor_set(n, 1, in);",
+          "      in = n;",
+          "    }" ]
       emitLn <| "    return " ++ leanMainFn ++ "(in);"
     else
       emitLn <| "    return " ++ leanMainFn ++ "();"
-    emitLns [
-      "}",
-      "int main(int argc, char ** argv) {",
-      "#if defined(WIN32) || defined(_WIN32)",
-      "  SetErrorMode(SEM_FAILCRITICALERRORS);",
-      "  SetConsoleOutputCP(CP_UTF8);",
-      "#endif",
-      "  lean_object* res;",
-      "  argv = lean_setup_args(argc, argv);",
-      s!"  res = {← getModInitFn (phases := if env.header.isModule then .runtime else .all)}(1 /* \
-        builtin */);",
-      "  lean_io_mark_end_initialization();",
-      "  if (lean_io_result_is_ok(res)) {",
-      "    lean_dec_ref(res);",
-      "    lean_init_task_manager();",
-      "    res = lean_run_main(&run_main, argc, argv);",
-      "  }"
-    ]
+    emitLns
+      [ "}",
+        "int main(int argc, char ** argv) {",
+        "#if defined(WIN32) || defined(_WIN32)",
+        "  SetErrorMode(SEM_FAILCRITICALERRORS);",
+        "  SetConsoleOutputCP(CP_UTF8);",
+        "#endif",
+        "  lean_object* res;",
+        "  argv = lean_setup_args(argc, argv);",
+        s!"  res = {← getModInitFn (phases := if env.header.isModule then .runtime else .all)}(1 \
+          /* builtin */);",
+        "  lean_io_mark_end_initialization();",
+        "  if (lean_io_result_is_ok(res)) {",
+        "    lean_dec_ref(res);",
+        "    lean_init_task_manager();",
+        "    res = lean_run_main(&run_main, argc, argv);",
+        "  }" ]
     -- `IO _`
     let retTy := env.find? `main |>.get! |>.type |>.getForallBody
     -- either `UInt32` or `(P)Unit`
     let retTy := retTy.appArg!
     let hasExitCode := retTy.isConstOf ``UInt32
     -- finalize at least the task manager to avoid leak sanitizer false positives from tasks outliving the main thread
-    emitLns [
-      "  lean_finalize_task_manager();",
-      "  if (lean_io_result_is_ok(res)) {",
-      "    int ret = "
-        ++ if hasExitCode then "lean_unbox_uint32(lean_io_result_get_value(res));" else "0;",
-      "    lean_dec_ref(res);",
-      "    return ret;",
-      "  } else {",
-      "    lean_io_result_show_error(res);",
-      "    lean_dec_ref(res);",
-      "    return 1;",
-      "  }"
-    ]
+    emitLns
+      [ "  lean_finalize_task_manager();",
+        "  if (lean_io_result_is_ok(res)) {",
+        "    int ret = "
+          ++ if hasExitCode then "lean_unbox_uint32(lean_io_result_get_value(res));" else "0;",
+        "    lean_dec_ref(res);",
+        "    return ret;",
+        "  } else {",
+        "    lean_io_result_show_error(res);",
+        "    lean_dec_ref(res);",
+        "    return 1;",
+        "  }" ]
     emitLn "}"
 
 def emitFileFooter : EmitM Unit :=
-  emitLns [
-    "#ifdef __cplusplus",
-    "}",
-    "#endif"
-  ]
+  emitLns
+    [ "#ifdef __cplusplus",
+      "}",
+      "#endif" ]
 
 def main : EmitM Unit := do
   emitFileHeader

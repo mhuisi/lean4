@@ -14,12 +14,11 @@ public section
 
 namespace Lean.Meta
 
-register_builtin_option debug.terminalTacticsAsSorry : Bool := {
-  defValue := false
-  descr :=
-    "when enabled, terminal tactics such as `grind` and `omega` are replaced with `sorry`. Useful \
-      for debugging and fixing bootstrapping issues"
-}
+register_builtin_option debug.terminalTacticsAsSorry : Bool :=
+  { defValue := false
+    descr :=
+      "when enabled, terminal tactics such as `grind` and `omega` are replaced with `sorry`. \
+        Useful for debugging and fixing bootstrapping issues" }
 
 /-- Get the user name of the given metavariable. -/
 def _root_.Lean.MVarId.getTag (mvarId : MVarId) : MetaM Name := return (← mvarId.getDecl).userName
@@ -189,11 +188,10 @@ def _root_.Lean.MVarId.isSubsingleton (g : MVarId) : MetaM Bool := do
   catch _ =>
     return false
 
-register_builtin_option tactic.skipAssignedInstances : Bool := {
-  defValue := true
-  descr :=
-    "in the `rw` and `simp` tactics, if an instance implicit argument is assigned, do not try to \
-      synthesize instance."
-}
+register_builtin_option tactic.skipAssignedInstances : Bool :=
+  { defValue := true
+    descr :=
+      "in the `rw` and `simp` tactics, if an instance implicit argument is assigned, do not try to \
+        synthesize instance." }
 
 end Lean.Meta

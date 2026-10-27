@@ -119,20 +119,16 @@ def computeIdQuery? (doc : EditableDocument) (ctx : Elab.ContextInfo) (stx : Syn
     | none
   let some tailPos := stx.getTailPos? (canonicalOnly := true)
     | none
-  return {
-    identifier := id.toString
-    openNamespaces := collectOpenNamespaces ctx.currNamespace ctx.openDecls
-    ctx
-    determineInsertion decl :=
-      let minimizedId := minimizeGlobalIdentifierInContext ctx.currNamespace ctx.openDecls decl
-      {
-        fullName := minimizedId
-        edit := {
-          range := doc.meta.text.utf8RangeToLspRange ⟨pos, tailPos⟩
-          newText := minimizedId.toString
-        }
-      }
-  }
+  return
+    { identifier := id.toString
+      openNamespaces := collectOpenNamespaces ctx.currNamespace ctx.openDecls
+      ctx
+      determineInsertion decl :=
+        let minimizedId := minimizeGlobalIdentifierInContext ctx.currNamespace ctx.openDecls decl
+        { fullName := minimizedId
+          edit :=
+            { range := doc.meta.text.utf8RangeToLspRange ⟨pos, tailPos⟩
+              newText := minimizedId.toString } } }
 
 def computeDotQuery? (doc : EditableDocument) (ctx : Elab.ContextInfo) (ti : Elab.TermInfo)
     : IO (Option Query) := do
@@ -152,15 +148,14 @@ def computeDotQuery? (doc : EditableDocument) (ctx : Elab.ContextInfo) (ti : Ela
     | return none
   if typeNames.isEmpty then
     return none
-  return some {
-    identifier := String.Pos.Raw.extract text.source pos tailPos
-    openNamespaces := typeNames.map (.allExcept · #[])
-    ctx
-    determineInsertion decl := {
-      fullName := decl
-      edit := { range := text.utf8RangeToLspRange ⟨pos, tailPos⟩, newText := decl.getString! }
-    }
-  }
+  return some
+    { identifier := String.Pos.Raw.extract text.source pos tailPos
+      openNamespaces := typeNames.map (.allExcept · #[])
+      ctx
+      determineInsertion decl :=
+        { fullName := decl
+          edit :=
+            { range := text.utf8RangeToLspRange ⟨pos, tailPos⟩, newText := decl.getString! } } }
 
 def computeDotIdQuery?
     (doc : EditableDocument) (ctx : Elab.ContextInfo) (stx : Syntax) (id : Name)
@@ -175,18 +170,15 @@ def computeDotIdQuery?
   let typeNames : Array Name ← ctx.runMetaM lctx <| getDotIdCompletionTypeNames expectedType
   if typeNames.isEmpty then
     return none
-  return some {
-    identifier := id.toString
-    openNamespaces := typeNames.map (.allExcept · #[])
-    ctx
-    determineInsertion decl := {
-      fullName := decl
-      edit := {
-        range := doc.meta.text.utf8RangeToLspRange ⟨pos, tailPos⟩
-        newText := decl.getString!
-      }
-    }
-  }
+  return some
+    { identifier := id.toString
+      openNamespaces := typeNames.map (.allExcept · #[])
+      ctx
+      determineInsertion decl :=
+        { fullName := decl
+          edit :=
+            { range := doc.meta.text.utf8RangeToLspRange ⟨pos, tailPos⟩
+              newText := decl.getString! } } }
 
 def computeQueries (doc : EditableDocument) (requestedPos : String.Pos.Raw)
     : RequestM (Array Query) := do
@@ -217,20 +209,16 @@ def importUnknownIdentifiersProvider : Name := `unknownIdentifiers
 
 def mkUnknownIdentifierCodeActionData
     (params : CodeActionParams) (name := importUnknownIdentifiersProvider)
-    : CodeActionResolveData := {
-  params
-  providerName := name
-  providerResultIndex := 0
-  : CodeActionResolveData
-}
+    : CodeActionResolveData :=
+  { params, providerName := name, providerResultIndex := 0 : CodeActionResolveData }
 
 def importAllUnknownIdentifiersCodeAction (params : CodeActionParams) (kind : String)
-    : CodeAction := {
-  title := "Import all unambiguous unknown identifiers"
-  kind? := kind
-  data? :=
-    some <| toJson <| mkUnknownIdentifierCodeActionData params importAllUnknownIdentifiersProvider
-}
+    : CodeAction :=
+  { title := "Import all unambiguous unknown identifiers"
+    kind? := kind
+    data? :=
+      some <| toJson <|
+        mkUnknownIdentifierCodeActionData params importAllUnknownIdentifiersProvider }
 
 private def mkImportText (ctx : Elab.ContextInfo) (mod : Name) : String := Id.run do
   let mut text := s!"import {mod}\n"
@@ -258,30 +246,24 @@ def handleUnknownIdentifierCodeAction
   if queries.isEmpty then
     return #[]
   let responseTask ←
-    RequestM.sendServerRequest LeanQueryModuleParams LeanQueryModuleResponse "$/lean/queryModule" {
-      sourceRequestID := id
-      queries := queries.map (·.toLeanModuleQuery)
-      : LeanQueryModuleParams
-    }
+    RequestM.sendServerRequest LeanQueryModuleParams LeanQueryModuleResponse "$/lean/queryModule"
+      { sourceRequestID := id
+        queries := queries.map (·.toLeanModuleQuery)
+        : LeanQueryModuleParams }
   let r ←
-    ServerTask.waitAny [
-      responseTask.mapCheap Sum.inl,
-      rc.cancelTk.requestCancellationTask.mapCheap Sum.inr
-    ]
+    ServerTask.waitAny
+      [ responseTask.mapCheap Sum.inl,
+        rc.cancelTk.requestCancellationTask.mapCheap Sum.inr ]
   let .inl (.success response) := r
     | RequestM.checkCancelled
       return #[]
   let headerStx := doc.initSnap.stx
   let importInsertionPos : Lsp.Position :=
     match headerStx.getTailPos? with
-    | some headerTailPos => {
-      line := (text.utf8PosToLspPos headerTailPos |>.line) + 1
-      character := 0
-    }
-    | none => {
-      line := 0
-      character := 0
-    }
+    | some headerTailPos =>
+      { line := (text.utf8PosToLspPos headerTailPos |>.line) + 1, character := 0 }
+    | none =>
+      { line := 0, character := 0 }
   let importInsertionRange : Lsp.Range := ⟨importInsertionPos, importInsertionPos⟩
   let mut unknownIdentifierCodeActions := #[]
   let mut hasUnambiguousImportCodeAction := false
@@ -296,33 +278,27 @@ def handleUnknownIdentifierCodeAction
       let insertion := query.determineInsertion decl
       if !isDeclInEnv then
         unknownIdentifierCodeActions :=
-          unknownIdentifierCodeActions.push {
-            title := s!"Import {insertion.fullName} from {mod}"
-            kind? := kind
-            edit? :=
-              WorkspaceEdit.ofTextDocumentEdit {
-                textDocument := doc.versionedIdentifier
-                edits := #[
-                  { range := importInsertionRange, newText := mkImportText query.ctx mod },
-                  insertion.edit
-                ]
-              }
-            data? := some <| toJson <| mkUnknownIdentifierCodeActionData params
-          }
+          unknownIdentifierCodeActions.push
+            { title := s!"Import {insertion.fullName} from {mod}"
+              kind? := kind
+              edit? :=
+                WorkspaceEdit.ofTextDocumentEdit
+                  { textDocument := doc.versionedIdentifier
+                    edits :=
+                      #[{ range := importInsertionRange, newText := mkImportText query.ctx mod },
+                        insertion.edit] }
+              data? := some <| toJson <| mkUnknownIdentifierCodeActionData params }
         if isExactMatch then
           hasUnambiguousImportCodeAction := true
       else
         unknownIdentifierCodeActions :=
-          unknownIdentifierCodeActions.push {
-            title := s!"Change to {insertion.fullName}"
-            kind? := kind
-            edit? :=
-              WorkspaceEdit.ofTextDocumentEdit {
-                textDocument := doc.versionedIdentifier
-                edits := #[insertion.edit]
-              }
-            data? := some <| toJson <| mkUnknownIdentifierCodeActionData params
-          }
+          unknownIdentifierCodeActions.push
+            { title := s!"Change to {insertion.fullName}"
+              kind? := kind
+              edit? :=
+                WorkspaceEdit.ofTextDocumentEdit
+                  { textDocument := doc.versionedIdentifier, edits := #[insertion.edit] }
+              data? := some <| toJson <| mkUnknownIdentifierCodeActionData params }
   if hasUnambiguousImportCodeAction then
     unknownIdentifierCodeActions :=
       unknownIdentifierCodeActions.push <| importAllUnknownIdentifiersCodeAction params "quickfix"
@@ -341,24 +317,19 @@ def handleResolveImportAllUnknownIdentifiersCodeAction?
   if queries.isEmpty then
     return none
   let responseTask ←
-    RequestM.sendServerRequest LeanQueryModuleParams LeanQueryModuleResponse "$/lean/queryModule" {
-      sourceRequestID := id
-      queries := queries.map (·.toLeanModuleQuery)
-      : LeanQueryModuleParams
-    }
+    RequestM.sendServerRequest LeanQueryModuleParams LeanQueryModuleResponse "$/lean/queryModule"
+      { sourceRequestID := id
+        queries := queries.map (·.toLeanModuleQuery)
+        : LeanQueryModuleParams }
   let .success response := responseTask.get
     | return none
   let headerStx := doc.initSnap.stx
   let importInsertionPos : Lsp.Position :=
     match headerStx.getTailPos? with
-    | some headerTailPos => {
-      line := (text.utf8PosToLspPos headerTailPos |>.line) + 1
-      character := 0
-    }
-    | none => {
-      line := 0
-      character := 0
-    }
+    | some headerTailPos =>
+      { line := (text.utf8PosToLspPos headerTailPos |>.line) + 1, character := 0 }
+    | none =>
+      { line := 0, character := 0 }
   let importInsertionRange : Lsp.Range := ⟨importInsertionPos, importInsertionPos⟩
   let mut edits : Array TextEdit := #[]
   let mut imports : Std.HashSet Name := ∅
@@ -373,7 +344,6 @@ def handleResolveImportAllUnknownIdentifiersCodeAction?
       edits := edits.push { range := importInsertionRange, newText := mkImportText q.ctx mod }
     edits := edits.push insertion.edit
     imports := imports.insert mod
-  return some {
-    action with
-    edit? := WorkspaceEdit.ofTextDocumentEdit { textDocument := doc.versionedIdentifier, edits }
-  }
+  return some
+    { action with
+      edit? := WorkspaceEdit.ofTextDocumentEdit { textDocument := doc.versionedIdentifier, edits } }

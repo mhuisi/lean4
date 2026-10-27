@@ -33,23 +33,16 @@ private structure RenderWorkItemStack where
 namespace RenderWorkItemStack
 
 @[inline]
-private def pushKind (q : RenderWorkItemStack) (kind : RenderWorkItemKind)
-    : RenderWorkItemStack := {
-  q with
-  kinds := q.kinds.push kind
-}
+private def pushKind (q : RenderWorkItemStack) (kind : RenderWorkItemKind) : RenderWorkItemStack :=
+  { q with kinds := q.kinds.push kind }
 
 @[inline]
-private def pushHtml (q : RenderWorkItemStack) (value : Html) : RenderWorkItemStack := {
-  q with
-  htmls := q.htmls.push value
-}
+private def pushHtml (q : RenderWorkItemStack) (value : Html) : RenderWorkItemStack :=
+  { q with htmls := q.htmls.push value }
 
 @[inline]
-private def pushStr (q : RenderWorkItemStack) (str : String) : RenderWorkItemStack := {
-  q with
-  strs := q.strs.push str
-}
+private def pushStr (q : RenderWorkItemStack) (str : String) : RenderWorkItemStack :=
+  { q with strs := q.strs.push str }
 
 @[inline]
 private def popKind (q : RenderWorkItemStack) (h : q.kinds.size ≠ 0)

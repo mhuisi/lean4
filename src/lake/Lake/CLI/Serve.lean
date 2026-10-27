@@ -49,10 +49,8 @@ public def setupFile
   if configFile.toString.isEmpty then
     return noConfigFileCode
   else if configFile == path then do
-    let setup : ModuleSetup := {
-      name := configModuleName
-      plugins := #[loadConfig.lakeEnv.lake.sharedLib]
-    }
+    let setup : ModuleSetup :=
+      { name := configModuleName, plugins := #[loadConfig.lakeEnv.lake.sharedLib] }
     print! (toJson setup).compress
   else if let some errLog := (← IO.getEnv invalidConfigEnvVar) then
     eprint! errLog
@@ -99,8 +97,7 @@ public def serve (config : LoadConfig) (args : Array String) : IO UInt32 := do
     else
       IO.eprintln "warning: package configuration has errors, falling back to plain `lean --server`"
       pure (config.lakeEnv.baseVars.push (invalidConfigEnvVar, log.toString), #[])
-  (← IO.Process.spawn {
-    cmd := config.lakeEnv.lean.lean.toString
-    args := #["--server"] ++ moreServerArgs ++ args
-    env := extraEnv
-  }).wait
+  (← IO.Process.spawn
+    { cmd := config.lakeEnv.lean.lean.toString
+      args := #["--server"] ++ moreServerArgs ++ args
+      env := extraEnv }).wait

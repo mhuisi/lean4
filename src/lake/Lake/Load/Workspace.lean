@@ -37,21 +37,20 @@ public def loadWorkspaceRoot (config : LoadConfig) : LogIO Workspace := do
   let root := mkPackage config fileCfg 0
   have wsIdx_root : root.wsIdx = 0 := wsIdx_mkPackage
   let facetConfigs := fileCfg.facetDecls.foldl (·.insert ·.config) initFacetConfigs
-  return {
-    lakeEnv := config.lakeEnv
-    lakeCache := computeLakeCache root config.lakeEnv
-    lakeConfig
-    lakeArgs? := config.lakeArgs?
-    facetConfigs
-    packages := #[root]
-    packageMap := DNameMap.empty.insert root.keyName root
-    size_packages_pos := by simp
-    packages_wsIdx {i} h := by
-      cases i with
-      | zero => simp [wsIdx_root]
-      | succ => simp at h
-    depIdxs_packages := by simp [root]
-  }
+  return
+    { lakeEnv := config.lakeEnv
+      lakeCache := computeLakeCache root config.lakeEnv
+      lakeConfig
+      lakeArgs? := config.lakeArgs?
+      facetConfigs
+      packages := #[root]
+      packageMap := DNameMap.empty.insert root.keyName root
+      size_packages_pos := by simp
+      packages_wsIdx {i} h := by
+        cases i with
+        | zero => simp [wsIdx_root]
+        | succ => simp at h
+      depIdxs_packages := by simp [root] }
 
 /--
 Load a `Workspace` for a Lake package by

@@ -58,12 +58,11 @@ the right answer: `?m := StateT σ id`
 Haskell would work on this example since it always uses
 first-order unification.
 -/
-def setElabConfig (cfg : Meta.Config) : Meta.Config := {
-  cfg with
-  foApprox := true
-  ctxApprox := true
-  constApprox := false
-  quasiPatternApprox := false
-}
+def setElabConfig (cfg : Meta.Config) : Meta.Config :=
+  { cfg with
+    foApprox := true
+    ctxApprox := true
+    constApprox := false
+    quasiPatternApprox := false }
 
 end Lean.Elab.Term

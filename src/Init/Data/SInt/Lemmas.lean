@@ -72,11 +72,10 @@ macro "declare_int_theorems" typeName:ident _bits:term:arg : command =>
 
         )
     unless isISize do
-      let names := #[
-        `le_iff_toBitVec_sle, `lt_iff_toBitVec_slt, `eq_iff_toBitVec_eq, `ne_iff_toBitVec_ne,
-        `toBitVec_add, `toBitVec_sub, `toBitVec_mul, `toBitVec_div, `toBitVec_mod, `toBitVec_min,
-        `toBitVec_max
-      ]
+      let names :=
+        #[`le_iff_toBitVec_sle, `lt_iff_toBitVec_slt, `eq_iff_toBitVec_eq, `ne_iff_toBitVec_ne,
+          `toBitVec_add, `toBitVec_sub, `toBitVec_mul, `toBitVec_div, `toBitVec_mod, `toBitVec_min,
+          `toBitVec_max]
       let idents := names.map fun n => mkIdent (typeName.getId ++ n)
       cmds := cmds.push <| ← `(attribute [int_toBitVec] $idents*)
     cmds := cmds.push <| ← `(end $typeName)

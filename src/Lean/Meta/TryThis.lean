@@ -223,11 +223,8 @@ An option allowing the user to customize the ideal input width. Defaults to 100.
 This option controls output format when
 the output is intended to be copied back into a lean file
 -/
-register_builtin_option format.inputWidth : Nat := {
-  /- The default maximum width of an ideal line in source code. -/
-  defValue := 100
-  descr := "ideal input width"
-}
+/- The default maximum width of an ideal line in source code. -/
+register_builtin_option format.inputWidth : Nat := { defValue := 100, descr := "ideal input width" }
 
 /-- Get the input width specified in the options -/
 def getInputWidth (o : Options) : Nat := format.inputWidth.get o

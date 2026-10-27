@@ -48,21 +48,20 @@ open Meta
 
 builtin_initialize registerTraceClass `Elab.inductive
 
-register_builtin_option inductive.autoPromoteIndices : Bool := {
-  defValue := true
-  descr := "Promote indices to parameters in inductive types whenever possible."
-}
+register_builtin_option inductive.autoPromoteIndices : Bool :=
+  { defValue := true
+    descr := "Promote indices to parameters in inductive types whenever possible." }
 
-register_builtin_option bootstrap.inductiveCheckResultingUniverse : Bool := {
-  defValue := true
-  descr :=
-    "by default the `inductive`/`structure` commands report an error if the resulting universe is \
-      not zero, \
-      but may be zero for some universe parameters. Reason: unless this type is a subsingleton, \
-      it is hardly what the user wants since it can only eliminate into `Prop`. \
-      In the `Init` package, we define subsingletons, and we use this option to disable the check. \
-      This option may be deleted in the future after we improve the validator"
-}
+register_builtin_option bootstrap.inductiveCheckResultingUniverse : Bool :=
+  { defValue := true
+    descr :=
+      "by default the `inductive`/`structure` commands report an error if the resulting universe \
+        is not zero, \
+        but may be zero for some universe parameters. Reason: unless this type is a subsingleton, \
+        it is hardly what the user wants since it can only eliminate into `Prop`. \
+        In the `Init` package, we define subsingletons, and we use this option to disable the \
+        check. \
+        This option may be deleted in the future after we improve the validator" }
 
 /--
 View of a constructor. Only `ref`, `modifiers`, `declName`, and `declId` are required by the mutual inductive elaborator itself.
@@ -217,12 +216,11 @@ An inductive type elaborator should have type `Lean.Elab.Command.InductiveElabDe
 -/
 @[builtin_doc]
 builtin_initialize inductiveElabAttr : KeyedDeclsAttribute InductiveElabDescr ←
-  unsafe KeyedDeclsAttribute.init {
-    builtinName := `builtin_inductive_elab
-    name := `inductive_elab
-    descr := "Register an elaborator for inductive types"
-    valueTypeName := ``InductiveElabDescr
-  }
+  unsafe KeyedDeclsAttribute.init
+    { builtinName := `builtin_inductive_elab
+      name := `inductive_elab
+      descr := "Register an elaborator for inductive types"
+      valueTypeName := ``InductiveElabDescr }
 
 /--
 Returns true if the syntax participates in the mutual inductive elaborator.
@@ -399,8 +397,8 @@ private def elabHeadersAux (views : Array InductiveView) (i : Nat) (acc : Array 
               trace[Elab.inductive] "header params: {params}, type: {type}"
               let levelNames ← Term.getLevelNames
               let type ← mkForallFVars params type
-              return
-                acc.push { levelNames, numParams := params.size, type, view, origParams := params }
+              return acc.push
+                { levelNames, numParams := params.size, type, view, origParams := params }
       elabHeadersAux views (i + 1) acc
     else
       return acc
@@ -433,11 +431,8 @@ private def withInductiveLocalDecls
           let r := rs[i]
           for param in params, origParam in r.origParams do
             if let .fvar origFVar := origParam then
-              Elab.pushInfoLeaf <| .ofFVarAliasInfo {
-                id := param.fvarId!
-                baseId := origFVar
-                userName := ← param.fvarId!.getUserName
-              }
+              Elab.pushInfoLeaf <| .ofFVarAliasInfo
+                { id := param.fvarId!, baseId := origFVar, userName := ← param.fvarId!.getUserName }
           withAuxDecl r.view.shortDeclName r.type r.view.declName fun indFVar =>
             loop (i + 1) (indFVars.push indFVar)
         else
@@ -1423,15 +1418,14 @@ private def buildFinalizeContext
       lctx.modifyLocalDecl r.indFVar.fvarId! fun decl =>
         decl.setUserName (`_indFVar ++ decl.userName)
 
-  pure {
-    elabs := elabs'
-    levelParams
-    params := vars ++ params
-    replaceIndFVars := mkReplaceIndFVars views newIndFVars levelParams vars
-    mctx := ← getMCtx
-    lctx
-    localInsts := ← getLocalInstances
-  }
+  pure
+    { elabs := elabs'
+      levelParams
+      params := vars ++ params
+      replaceIndFVars := mkReplaceIndFVars views newIndFVars levelParams vars
+      mctx := ← getMCtx
+      lctx
+      localInsts := ← getLocalInstances }
 
 def replaceIndFVars (numParams : Nat) (oldFVars : Array Expr) (calls : Array Expr)
     : Expr → Expr := fun e =>
@@ -1682,20 +1676,19 @@ private def mkInductiveDeclCore
       | .error msg =>
         throwErrorAt view0.declId msg
       | .ok levelParams =>
-        callback {
-          views := views
-          elabs' := elabs'
-          indFVars := indFVars
-          vars := vars
-          levelParams := levelParams
-          indTypes := indTypes
-          isUnsafe := isUnsafe
-          rs := rs
-          params := params
-          isCoinductive := isCoinductive
-          numVars := numVars
-          numParams := numParams
-        }
+        callback
+          { views := views
+            elabs' := elabs'
+            indFVars := indFVars
+            vars := vars
+            levelParams := levelParams
+            indTypes := indTypes
+            isUnsafe := isUnsafe
+            rs := rs
+            params := params
+            isCoinductive := isCoinductive
+            numVars := numVars
+            numParams := numParams }
 
 private def withElaboratedHeaders
     (vars : Array Expr) (elabs : Array InductiveElabStep1)
@@ -1741,10 +1734,9 @@ private def mkAuxConstructions (declNames : Array Name) : TermElabM Unit := do
 
 def updateViewWithFunctorName (view : InductiveView) : InductiveView :=
   let newCtors :=
-    view.ctors.map (fun ctor => {
-      ctor with
-      declName := ctor.declName.updatePrefix (addFunctorPostfix ctor.declName.getPrefix)
-    })
+    view.ctors.map (fun ctor =>
+      { ctor with
+        declName := ctor.declName.updatePrefix (addFunctorPostfix ctor.declName.getPrefix) })
   { view with declName := addFunctorPostfix view.declName, ctors := newCtors }
 
 private def elabInductiveViews (vars : Array Expr) (elabs : Array InductiveElabStep1)
@@ -1842,11 +1834,12 @@ private def applyComputedFields (indViews : Array InductiveView) : CommandElabM 
             def%$ref $(mkIdent <| `_root_ ++ declName ++ fieldId):ident : $type $matchAlts:matchAlts)
     let computedFieldNames := indView.computedFields.map fun { fieldId, .. } => declName ++ fieldId
     computedFields := computedFields.push (declName, computedFieldNames)
-  withScope (fun scope => {
-      scope with
-      opts :=
-        scope.opts |>.set `bootstrap.genMatcherCode false |>.set `elaboratingComputedFields true
-    }) <|
+  withScope (fun scope =>
+      { scope with
+        opts :=
+          scope.opts
+            |>.set `bootstrap.genMatcherCode false
+            |>.set `elaboratingComputedFields true }) <|
     elabCommand <| ← `(mutual $computedFieldDefs* end)
 
   liftTermElabM do

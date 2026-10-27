@@ -82,10 +82,8 @@ def tryRecv (stream : StreamMap α β) : Async (Option (α × β)) :=
   Selectable.tryOne selectables
 
 /-- Remove a stream by name -/
-def unregister [BEq α] (sm : StreamMap α β) (name : α) : StreamMap α β := {
-  sm with
-  streams := sm.streams.filter (fun (n, _) => n != name)
-}
+def unregister [BEq α] (sm : StreamMap α β) (name : α) : StreamMap α β :=
+  { sm with streams := sm.streams.filter (fun (n, _) => n != name) }
 
 /-- Check if a stream with the given name exists -/
 def contains [BEq α] (sm : StreamMap α β) (name : α) : Bool :=
@@ -105,9 +103,8 @@ def get? [BEq α] (sm : StreamMap α β) (name : α) : Option (Selector β) :=
   sm.streams.find? (fun (n, _) => n == name) |>.map (·.2.1)
 
 /-- Filter streams based on their names -/
-def filterByName (sm : StreamMap α β) (pred : α → Bool) : StreamMap α β := {
-  streams := sm.streams.filter (fun (name, _) => pred name)
-}
+def filterByName (sm : StreamMap α β) (pred : α → Bool) : StreamMap α β :=
+  { streams := sm.streams.filter (fun (name, _) => pred name) }
 
 /-- Convert to array of name-selector pairs -/
 def toArray (sm : StreamMap α β) : Array (α × Selector β) :=

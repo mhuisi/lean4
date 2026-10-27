@@ -101,10 +101,8 @@ partial def insertAtCollisionNodeAux [BEq α] : CollisionNode α β → Nat → 
       let k' := keys[i]
       if k == k' then
         let j : Fin vals.size := ⟨i, by rw [← heq]; assumption⟩
-        ⟨
-          Node.collision (keys.set i k) (vals.set j v) (size_set heq ⟨i, h⟩ j k v),
-          IsCollisionNode.mk _ _ _
-        ⟩
+        ⟨ Node.collision (keys.set i k) (vals.set j v) (size_set heq ⟨i, h⟩ j k v),
+          IsCollisionNode.mk _ _ _ ⟩
       else
         insertAtCollisionNodeAux n (i + 1) k v
     else
@@ -566,18 +564,14 @@ structure Stats where
   maxDepth : Nat := 0
 
 partial def collectStats : Node α β → Stats → Nat → Stats
-  | Node.collision keys _ _, stats, depth => {
-    stats with
-    numNodes := stats.numNodes + 1
-    numCollisions := stats.numCollisions + keys.size - 1
-    maxDepth := Nat.max stats.maxDepth depth
-  }
-  | Node.entries entries, stats, depth =>
-    let stats := {
-      stats with
+  | Node.collision keys _ _, stats, depth =>
+    { stats with
       numNodes := stats.numNodes + 1
-      maxDepth := Nat.max stats.maxDepth depth
-    }
+      numCollisions := stats.numCollisions + keys.size - 1
+      maxDepth := Nat.max stats.maxDepth depth }
+  | Node.entries entries, stats, depth =>
+    let stats :=
+      { stats with numNodes := stats.numNodes + 1, maxDepth := Nat.max stats.maxDepth depth }
     entries.foldl
       (fun stats entry =>
         match entry with

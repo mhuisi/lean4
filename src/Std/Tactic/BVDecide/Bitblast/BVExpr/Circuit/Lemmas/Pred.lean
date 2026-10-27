@@ -35,15 +35,11 @@ theorem bitblast_aig_IsPrefix (aig : AIG BVBit) (input : BVExpr.WithCache BVPred
 theorem bitblast_denote_mem_prefix
     (aig : AIG BVBit) (input : BVExpr.WithCache BVPred aig)
     (assign : BVExpr.Assignment) (start : Nat) (hstart)
-    : ⟦
-        (bitblast aig input).result.val.aig,
-        ⟨
-          start,
+    : ⟦ (bitblast aig input).result.val.aig,
+        ⟨ start,
           inv,
-          by apply Nat.lt_of_lt_of_le; exact hstart; apply (bitblast aig input).result.property
-        ⟩,
-        assign.toAIGAssignment
-      ⟧
+          by apply Nat.lt_of_lt_of_le; exact hstart; apply (bitblast aig input).result.property ⟩,
+        assign.toAIGAssignment ⟧
       = ⟦aig, ⟨start, inv, hstart⟩, assign.toAIGAssignment⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply bitblast_aig_IsPrefix
@@ -77,11 +73,9 @@ theorem bitblast_Inv_of_Inv
 theorem denote_bitblast
     (aig : AIG BVBit) (input : BVExpr.WithCache BVPred aig)
     (assign : BVExpr.Assignment) (hinv : BVExpr.Cache.Inv assign aig input.cache)
-    : ⟦
-        (bitblast aig input).result.val.aig,
+    : ⟦ (bitblast aig input).result.val.aig,
         (bitblast aig input).result.val.ref,
-        assign.toAIGAssignment
-      ⟧
+        assign.toAIGAssignment ⟧
       = input.val.eval assign := by
   rcases input with ⟨pred, cache⟩
   cases pred with

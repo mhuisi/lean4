@@ -15,10 +15,8 @@ structure CasesTypes where
   casesMap : PHashMap Name Bool := {}
 deriving Inhabited
 
-def CasesTypes.insert (s : CasesTypes) (declName : Name) (eager : Bool) : CasesTypes := {
-  s with
-  casesMap := s.casesMap.insert declName eager
-}
+def CasesTypes.insert (s : CasesTypes) (declName : Name) (eager : Bool) : CasesTypes :=
+  { s with casesMap := s.casesMap.insert declName eager }
 
 abbrev ExtTheorems := PHashSet Name
 
@@ -28,10 +26,8 @@ deriving Inhabited
 
 /-- Inserts `declName ↦ prio` into `s`. -/
 def SymbolPriorities.insert (s : SymbolPriorities) (declName : Name) (prio : Nat)
-    : SymbolPriorities := {
-  s with
-  map := s.map.insert declName prio
-}
+    : SymbolPriorities :=
+  { s with map := s.map.insert declName prio }
 
 inductive EMatchTheoremKind where
   | eqLhs (gen : Bool)
@@ -194,25 +190,24 @@ def ExtensionState.addEntry (s : ExtensionState) (e : Entry) : ExtensionState :=
   | .inj thm => { s with inj := s.inj.insert thm }
 
 def mkExtension (name : Name := by exact decl_name%) : IO Extension :=
-  registerSimpleScopedEnvExtension {
-    name := name
-    initial := {}
-    addEntry := ExtensionState.addEntry
-    exportEntry? := fun _ e =>
-      -- export only annotations on public decls
-      let declName :=
-        match e with
-        | .inj thm | .ematch thm =>
-          match thm.origin with
-          | .decl declName => declName
-          | _ => unreachable!
-        | .ext declName | .cases declName _ | .funCC declName =>
-          declName
-      if isPrivateName declName then
-        ⟨none, none, some e⟩
-      else
-        .uniform (some e)
-  }
+  registerSimpleScopedEnvExtension
+    { name := name
+      initial := {}
+      addEntry := ExtensionState.addEntry
+      exportEntry? := fun _ e =>
+        -- export only annotations on public decls
+        let declName :=
+          match e with
+          | .inj thm | .ematch thm =>
+            match thm.origin with
+            | .decl declName => declName
+            | _ => unreachable!
+          | .ext declName | .cases declName _ | .funCC declName =>
+            declName
+        if isPrivateName declName then
+          ⟨none, none, some e⟩
+        else
+          .uniform (some e) }
 
 /--
 `grind` is parametrized by a collection of `ExtensionState`. The motivation is to allow

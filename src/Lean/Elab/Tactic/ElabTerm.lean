@@ -166,10 +166,8 @@ def withCollectingNewGoalsFrom
   -/
   if allowNaturalHoles then
     withTheReader Term.Context
-      (fun ctx => {
-        ctx with
-        holesAsSyntheticOpaque := ctx.holesAsSyntheticOpaque || allowNaturalHoles
-      })
+      (fun ctx =>
+        { ctx with holesAsSyntheticOpaque := ctx.holesAsSyntheticOpaque || allowNaturalHoles })
       do
         /-
         We also enable the assignment of synthetic metavariables, otherwise we will fail to
@@ -352,11 +350,8 @@ private def evalConstructorCore (stx : Syntax) (cfg : Parser.Tactic.ConstructorC
     if ctors.size > 1 then
       let others := ctors.toList.drop 1
       let othersMsg := MessageData.andList (others.map fun c => m!"`{MessageData.ofConstName c}`")
-      let suggestion : Meta.Hint.Suggestion := {
-        suggestion := "constructor!"
-        span? := stx[0]
-        diffGranularity := .none
-      }
+      let suggestion : Meta.Hint.Suggestion :=
+        { suggestion := "constructor!", span? := stx[0], diffGranularity := .none }
       let hint ←
         MessageData.hint
           m!"Use `constructor!` to apply the first matching constructor without this warning:"

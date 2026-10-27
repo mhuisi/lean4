@@ -2569,13 +2569,12 @@ theorem Fin.eq_of_val_eq {n} : ∀ {i j : Fin n}, Eq i.val j.val → Eq i j
 
 theorem Fin.val_eq_of_eq {n} {i j : Fin n} (h : Eq i j) : Eq i.val j.val := h ▸ rfl
 
-instance (n : Nat) : DecidableEq (Fin n) := fun i j => {
-  decide := decide (Eq i.val j.val)
-  reflects_decide :=
-    match instDecidableEqNat i.val j.val with
-    | isTrue h => Fin.eq_of_val_eq h
-    | isFalse h => fun h' => absurd (Fin.val_eq_of_eq h') h
-}
+instance (n : Nat) : DecidableEq (Fin n) := fun i j =>
+  { decide := decide (Eq i.val j.val)
+    reflects_decide :=
+      match instDecidableEqNat i.val j.val with
+      | isTrue h => Fin.eq_of_val_eq h
+      | isFalse h => fun h' => absurd (Fin.val_eq_of_eq h') h }
 
 instance {n} : LT (Fin n) where
   lt a b := LT.lt a.val b.val
@@ -3112,10 +3111,10 @@ This function is overridden with a native implementation.
 @[extern "lean_uint32_of_nat", implicit_reducible]
 def Char.ofNatAux (n : @& Nat) (h : n.isValidChar) : Char where
   val :=
-    ⟨BitVec.ofNatLT n
-      -- We would conventionally use `by exact` here to enter a private context, but `exact` does not
-      -- exist here yet.
-      (private_decl% isValidChar_UInt32 h)⟩
+    ⟨ BitVec.ofNatLT n
+        -- We would conventionally use `by exact` here to enter a private context, but `exact` does not
+        -- exist here yet.
+        (private_decl% isValidChar_UInt32 h) ⟩
   valid := h
 
 /--
@@ -3126,10 +3125,9 @@ returned instead.
 def Char.ofNat (n : Nat) : Char :=
   dite (n.isValidChar)
     (fun h => Char.ofNatAux n h)
-    (fun _ => {
-      val := ⟨BitVec.ofNatLT 0 (of_decide_eq_true rfl)⟩
-      valid := Or.inl (of_decide_eq_true rfl)
-    })
+    (fun _ =>
+      { val := ⟨BitVec.ofNatLT 0 (of_decide_eq_true rfl)⟩
+        valid := Or.inl (of_decide_eq_true rfl) })
 
 theorem Char.ext : ∀ {c d : Char}, Eq c.val d.val → Eq c d
   | ⟨_, _⟩, ⟨_, _⟩, rfl => rfl
@@ -3143,13 +3141,12 @@ theorem Char.ne_of_val_ne {c d : Char} (h : Not (Eq c.val d.val)) : Not (Eq c d)
 theorem Char.val_ne_of_ne {c d : Char} (h : Not (Eq c d)) : Not (Eq c.val d.val) := fun h' =>
   absurd (ext h') h
 
-instance : DecidableEq Char := fun c d => {
-  decide := decide (Eq c.val d.val)
-  reflects_decide :=
-    match instDecidableEqUInt32 c.val d.val with
-    | isTrue h => Char.ext h
-    | isFalse h => Char.ne_of_val_ne h
-}
+instance : DecidableEq Char := fun c d =>
+  { decide := decide (Eq c.val d.val)
+    reflects_decide :=
+      match instDecidableEqUInt32 c.val d.val with
+      | isTrue h => Char.ext h
+      | isFalse h => Char.ne_of_val_ne h }
 
 /-- Returns the number of bytes required to encode this `Char` in UTF-8. -/
 @[implicit_reducible, inline]
@@ -6026,12 +6023,11 @@ private def extractImported (scps : List MacroScope) (mainModule : Name)
     : Name → List Name → MacroScopesView
   | n@(Name.str p str), parts =>
     match beq str "_@" with
-    | true => {
-      name := p
-      ctx := mainModule
-      imported := assembleParts parts Name.anonymous
-      scopes := scps
-    }
+    | true =>
+      { name := p
+        ctx := mainModule
+        imported := assembleParts parts Name.anonymous
+        scopes := scps }
     | false =>
       extractImported scps mainModule p (List.cons n parts)
   | n@(Name.num p _), parts =>
@@ -6042,12 +6038,11 @@ private def extractImported (scps : List MacroScope) (mainModule : Name)
 private def extractMainModule (scps : List MacroScope) : Name → List Name → MacroScopesView
   | n@(Name.str p str), parts =>
     match beq str "_@" with
-    | true => {
-      name := p
-      ctx := assembleParts parts Name.anonymous
-      imported := Name.anonymous
-      scopes := scps
-    }
+    | true =>
+      { name := p
+        ctx := assembleParts parts Name.anonymous
+        imported := Name.anonymous
+        scopes := scps }
     | false =>
       extractMainModule scps p (List.cons n parts)
   | n@(Name.num _ _), acc =>
@@ -6081,12 +6076,11 @@ def addMacroScope (ctx : Name) (n : Name) (scp : MacroScope) : Name :=
     match beq view.ctx ctx with
     | true =>
       Name.mkNum n scp
-    | false => {
-      view with
-      imported := view.scopes.foldl Name.mkNum (Name.appendCore view.imported view.ctx)
-      ctx := ctx
-      scopes := List.cons scp List.nil
-    }.review
+    | false =>
+      { view with
+        imported := view.scopes.foldl Name.mkNum (Name.appendCore view.imported view.ctx)
+        ctx := ctx
+        scopes := List.cons scp List.nil }.review
   | false =>
     Name.mkNum (Name.mkStr (Name.appendCore (Name.mkStr n "_@") ctx) "_hyg") scp
 

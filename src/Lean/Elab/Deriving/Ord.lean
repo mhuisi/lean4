@@ -14,16 +14,15 @@ import Lean.Meta.Constructions.CasesOnSameCtor
 import Lean.Meta.SameCtorUtils
 import Init.Data.Array.OfFn
 
-register_builtin_option deriving.ord.linear_construction_threshold : Nat := {
-  defValue := 10
-  descr :=
-    "If the inductive data type has this many or more constructors, use a different \
-      implementation for implementing `Ord` that avoids the quadratic code size produced by the \
-      default implementation.\
-      \n\n\
-      The alternative construction compiles to less efficient code in some cases, so by default \
-      it is only used for inductive types with 10 or more constructors."
-}
+register_builtin_option deriving.ord.linear_construction_threshold : Nat :=
+  { defValue := 10
+    descr :=
+      "If the inductive data type has this many or more constructors, use a different \
+        implementation for implementing `Ord` that avoids the quadratic code size produced by the \
+        default implementation.\
+        \n\n\
+        The alternative construction compiles to less efficient code in some cases, so by default \
+        it is only used for inductive types with 10 or more constructors." }
 
 namespace Lean.Elab.Deriving.Ord
 open Lean.Parser.Term
@@ -80,11 +79,10 @@ where
           let ltPatterns := indPatterns ++ #[lPat, ← `(_)]
           let gtPatterns := indPatterns ++ #[← `(_), lPat] -- Use the lPat again, we don’t want the `.(a)` pattern here
           let rhs ← rhsCont (← `(Ordering.eq))
-          pure #[
-            ← `(matchAltExpr| | $[$(patterns):term],* => $rhs:term),
-            ← `(matchAltExpr| | $[$(ltPatterns):term],* => Ordering.lt),
-            ← `(matchAltExpr| | $[$(gtPatterns):term],* => Ordering.gt)
-          ]
+          pure
+            #[← `(matchAltExpr| | $[$(patterns):term],* => $rhs:term),
+              ← `(matchAltExpr| | $[$(ltPatterns):term],* => Ordering.lt),
+              ← `(matchAltExpr| | $[$(gtPatterns):term],* => Ordering.gt)]
       alts := alts ++ (alt : Array (TSyntax ``matchAlt))
     return alts.pop.pop
 

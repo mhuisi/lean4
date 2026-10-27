@@ -352,11 +352,8 @@ def runTextLinters
           counts.insert e.linter (counts.getD e.linter 0 + 1)
       for (linter, count) in counts do
         codeQualityEntries :=
-          codeQualityEntries.push {
-            name := linter.toString
-            source := .module m
-            value := .scalar count.toFloat
-          }
+          codeQualityEntries.push
+            { name := linter.toString, source := .module m, value := .scalar count.toFloat }
     return .codeQualityChecks codeQualityEntries
 
 /--
@@ -434,11 +431,10 @@ def runEnvironmentLinters
             counts := counts.insert key (counts.getD key 0 + 1)
           for ((declMod, declName), count) in counts do
             codeQualityEntries :=
-              codeQualityEntries.push {
-                name := linter.optName.toString
-                source := .declaration declMod declName
-                value := .scalar count.toFloat
-              }
+              codeQualityEntries.push
+                { name := linter.optName.toString
+                  source := .declaration declMod declName
+                  value := .scalar count.toFloat }
         return .codeQualityChecks codeQualityEntries
   return outcome
 
@@ -495,10 +491,9 @@ public def run (args : Args) : IO UInt32 := do
         (loadExts := true) (level := level)
 
     -- We create `LinterOptions` out of the passed overrides
-    let linterOpts : Lean.Linter.LinterOptions := {
-      toOptions := args.linterOverrides.foldl (init := {}) fun o (n, b) => o.setBool n b
-      linterSets := (Lean.Linter.linterSetsExt.getState env).merged
-    }
+    let linterOpts : Lean.Linter.LinterOptions :=
+      { toOptions := args.linterOverrides.foldl (init := {}) fun o (n, b) => o.setBool n b
+        linterSets := (Lean.Linter.linterSetsExt.getState env).merged }
 
     let textLintingOutcome ← runTextLinters args linterOpts env mod
     match textLintingOutcome with

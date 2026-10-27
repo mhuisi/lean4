@@ -99,14 +99,8 @@ def declareTacticSyntax (tactic : Syntax) (name? : Option Name := none) : TermEl
     let value ← quoteAutoTactic tactic
     trace[Elab.autoParam] value
     let decl :=
-      Declaration.defnDecl {
-        name
-        levelParams := []
-        type
-        value
-        hints := .opaque
-        safety := DefinitionSafety.safe
-      }
+      Declaration.defnDecl
+        { name, levelParams := [], type, value, hints := .opaque, safety := DefinitionSafety.safe }
     addDecl decl
     modifyEnv (markMeta · name)
     compileDecl decl
@@ -159,34 +153,31 @@ private def toBinderViews (stx : Syntax) : TermElabM (Array BinderView) := do
     let type := stx[2]
     let optModifier := stx[3]
     ids.mapM fun id => do
-      pure {
-        ref := id
-        id := (← expandBinderIdent id)
-        type := (← expandBinderModifier (expandBinderType id type) optModifier)
-        bi := .default
-      }
+      pure
+        { ref := id
+          id := (← expandBinderIdent id)
+          type := (← expandBinderModifier (expandBinderType id type) optModifier)
+          bi := .default }
   else if k == ``Lean.Parser.Term.implicitBinder then
     -- `{` binderIdent+ binderType `}`
     let ids ← getBinderIds stx[1]
     let type := stx[2]
     ids.mapM fun id => do
-      pure {
-        ref := id
-        id := (← expandBinderIdent id)
-        type := expandBinderType id type
-        bi := .implicit
-      }
+      pure
+        { ref := id
+          id := (← expandBinderIdent id)
+          type := expandBinderType id type
+          bi := .implicit }
   else if k == ``Lean.Parser.Term.strictImplicitBinder then
     -- `⦃` binderIdent+ binderType `⦄`
     let ids ← getBinderIds stx[1]
     let type := stx[2]
     ids.mapM fun id => do
-      pure {
-        ref := id
-        id := (← expandBinderIdent id)
-        type := expandBinderType id type
-        bi := .strictImplicit
-      }
+      pure
+        { ref := id
+          id := (← expandBinderIdent id)
+          type := expandBinderType id type
+          bi := .strictImplicit }
   else if k == ``Lean.Parser.Term.instBinder then
     -- `[` optIdent type `]`
     let id ← expandOptIdent stx[1]
@@ -222,10 +213,10 @@ private def ensureAtomicBinderName (binderView : BinderView) : TermElabM Unit :=
   unless n.isAtomic do
     throwErrorAt binderView.id "invalid binder name `{n}`, it must be atomic"
 
-register_builtin_option checkBinderAnnotations : Bool := {
-  defValue := true
-  descr := "check whether type is a class instance whenever the binder annotation `[...]` is used"
-}
+register_builtin_option checkBinderAnnotations : Bool :=
+  { defValue := true
+    descr :=
+      "check whether type is a class instance whenever the binder annotation `[...]` is used" }
 
 /-- Throw an error if `type` is not a valid local instance. -/
 private partial def checkLocalInstanceParameters (type : Expr) : TermElabM Unit := do
@@ -803,26 +794,16 @@ structure LetConfig where
   eq? : Option Ident := none
 
 def LetConfig.setFrom (config : LetConfig) (key : Syntax) (val : Bool) : LetConfig :=
-  if key.isOfKind ``Parser.Term.letOptNondep then {
-    config with
-    nondep := val
-  }
-  else if key.isOfKind ``Parser.Term.letOptUsedOnly then {
-    config with
-    usedOnly := val
-  }
-  else if key.isOfKind ``Parser.Term.letOptZeta then {
-    config with
-    zeta := val
-  }
-  else if key.isOfKind ``Parser.Term.letOptPostponeValue then {
-    config with
-    postponeValue := val
-  }
-  else if key.isOfKind ``Parser.Term.letOptGeneralize then {
-    config with
-    generalize := val
-  }
+  if key.isOfKind ``Parser.Term.letOptNondep then
+    { config with nondep := val }
+  else if key.isOfKind ``Parser.Term.letOptUsedOnly then
+    { config with usedOnly := val }
+  else if key.isOfKind ``Parser.Term.letOptZeta then
+    { config with zeta := val }
+  else if key.isOfKind ``Parser.Term.letOptPostponeValue then
+    { config with postponeValue := val }
+  else if key.isOfKind ``Parser.Term.letOptGeneralize then
+    { config with generalize := val }
   else
     config
 
@@ -840,10 +821,8 @@ def mkLetConfig (letConfig : Syntax) (initConfig : LetConfig) : TermElabM LetCon
     | `(letOptEq| (eq := $n:ident)) =>
       config := { config with eq? := n }
     | `(letOptEq| (eq := $b)) =>
-      config := {
-        config with
-        eq? := mkIdentFrom b (canonical := true) (← mkFreshBinderNameForTactic `h)
-      }
+      config :=
+        { config with eq? := mkIdentFrom b (canonical := true) (← mkFreshBinderNameForTactic `h) }
     | _ =>
       pure ()
   return config

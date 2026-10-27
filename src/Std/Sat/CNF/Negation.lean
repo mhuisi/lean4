@@ -107,14 +107,13 @@ theorem isNegationOf_of_isNegationOf_of_biEntails (h1 : IsNegationOf f1 c) (h2 :
   rw [← h1 a]
   exact ⟨h2.right a, h2.left a⟩
 
-theorem isNegationOf_append_comm_left : IsNegationOf (f1 ++ f2) c ↔ IsNegationOf (f2 ++ f1) c := ⟨
-  fun h =>
-    isNegationOf_of_isNegationOf_of_biEntails h
-      (biEntails_def.mpr ⟨entails_append_comm, entails_append_comm⟩),
-  fun h =>
-    isNegationOf_of_isNegationOf_of_biEntails h
-      (biEntails_def.mpr ⟨entails_append_comm, entails_append_comm⟩)
-⟩
+theorem isNegationOf_append_comm_left : IsNegationOf (f1 ++ f2) c ↔ IsNegationOf (f2 ++ f1) c :=
+  ⟨ fun h =>
+      isNegationOf_of_isNegationOf_of_biEntails h
+        (biEntails_def.mpr ⟨entails_append_comm, entails_append_comm⟩),
+    fun h =>
+      isNegationOf_of_isNegationOf_of_biEntails h
+        (biEntails_def.mpr ⟨entails_append_comm, entails_append_comm⟩) ⟩
 
 theorem isNegationOf_append_comm_right : IsNegationOf f (c1 ++ c2) ↔ IsNegationOf f (c2 ++ c1) := by
   rw [isNegationOf_def, isNegationOf_def]

@@ -194,10 +194,8 @@ def withJp (fvarId : FVarId) (x : CheckM α) : CheckM α := do
 def withParams (params : Array (Param .pure)) (x : CheckM α) : CheckM α := do
   params.forM (addFVarId ·.fvarId)
   withReader
-    (fun ctx => {
-      ctx with
-      vars := params.foldl (init := ctx.vars) fun vars p => vars.insert p.fvarId
-    })
+    (fun ctx =>
+      { ctx with vars := params.foldl (init := ctx.vars) fun vars p => vars.insert p.fvarId })
     x
 
 mutual

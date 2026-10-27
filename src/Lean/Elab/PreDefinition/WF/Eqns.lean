@@ -46,13 +46,8 @@ public def registerEqnsInfo
       let declNames := preDefs.map (·.declName)
       modifyEnv fun env =>
         preDefs.foldl (init := env) fun env preDef =>
-          eqnInfoExt.insert env preDef.declName {
-            preDef with
-            declNames
-            declNameNonRec
-            argsPacker
-            fixedParamPerms
-          }
+          eqnInfoExt.insert env preDef.declName
+            { preDef with declNames, declNameNonRec, argsPacker, fixedParamPerms }
 
 /--
 This is a hack to fix fallout from #8519, where a non-exposed wfrec definition `foo`
@@ -71,12 +66,11 @@ def copyPrivateUnfoldTheorem : GetUnfoldEqnFn := fun declName => do
         let unfoldName' := mkPrivateNameCore mod (.str (privateToUserName declName) unfoldThmSuffix)
         if let some (.thmInfo info) := (← getEnv).find? unfoldName' then
           realizeConst declName name do
-            addDecl <| Declaration.thmDecl {
-              name
-              type := info.type
-              value := .const unfoldName' (info.levelParams.map mkLevelParam)
-              levelParams := info.levelParams
-            }
+            addDecl <| Declaration.thmDecl
+              { name
+                type := info.type
+                value := .const unfoldName' (info.levelParams.map mkLevelParam)
+                levelParams := info.levelParams }
           return name
       return none
 

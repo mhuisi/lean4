@@ -14,10 +14,8 @@ public section
 namespace Lean.Linter
 open Elab.Command
 
-register_builtin_option linter.omit : Bool := {
-  defValue := false
-  descr := "enable the 'avoid omit' linter"
-}
+register_builtin_option linter.omit : Bool :=
+  { defValue := false, descr := "enable the 'avoid omit' linter" }
 
 def «omit» : Linter where
   run stx := do

@@ -160,10 +160,9 @@ private def save (e : Expr) (r : Expr) : M Expr := do
   let prev := (← get).set.findD { expr := r } dummy
   if isSameExpr prev.expr dummy.expr then
     -- `r` is new
-    modify fun { set, map } => {
-      set := set.insert { expr := r }
-      map := map.insert { expr := e } r |>.insert { expr := r } r
-    }
+    modify fun { set, map } =>
+      { set := set.insert { expr := r }
+        map := map.insert { expr := e } r |>.insert { expr := r } r }
     return r
   else
     let r := prev.expr

@@ -114,11 +114,10 @@ def ConfigItem.getCurrOptionName (item : ConfigItem) : Name :=
 Drops the first component of the `optionName`, returning the new config item.
 The first component is stored at the front of `prevOptionComps`.
 -/
-def ConfigItem.shift (item : ConfigItem) : ConfigItem := {
-  item with
-  optionComps := item.optionComps.tail
-  prevOptionComps := item.root :: item.prevOptionComps
-}
+def ConfigItem.shift (item : ConfigItem) : ConfigItem :=
+  { item with
+    optionComps := item.optionComps.tail
+    prevOptionComps := item.root :: item.prevOptionComps }
 
 def ConfigItem.checkNotBool (item : ConfigItem) : TermElabM Unit := do
   if item.bool?.isSome then
@@ -225,12 +224,8 @@ partial def foldConfigM
     | _ =>
       doFail ()
   else if let .atom si val := cfg then
-    k init {
-      ref := cfg
-      option := atomAsIdent si val
-      bool? := true
-      value := mkCIdentFrom cfg ``true
-    }
+    k init
+      { ref := cfg, option := atomAsIdent si val, bool? := true, value := mkCIdentFrom cfg ``true }
   else
     doFail ()
 
@@ -276,13 +271,12 @@ def EvalConfigItem.defaultOnErr
       if (cfgItem.getArg 0).isAtom && (cfgItem.getArg 1).isMissing then
         -- This expression is used only for its inferred type in the completion system.
         let expr : Expr := mkApp2 (.const ``id [1]) cfgType (.const `_cfg_dummy [])
-        let info := {
-          elaborator := `ConfigEval
-          stx := cfgItem.getArg 0
-          lctx := {}
-          expectedType? := none
-          expr
-        }
+        let info :=
+          { elaborator := `ConfigEval
+            stx := cfgItem.getArg 0
+            lctx := {}
+            expectedType? := none
+            expr }
         addCompletionInfo <| .dot info none
   if cfgItem.hasMissing then
     return cfg

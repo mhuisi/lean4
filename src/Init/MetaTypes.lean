@@ -422,20 +422,19 @@ structure ConfigCtx extends Config where
 A neutral configuration for `simp`, turning off all reductions and other built-in simplifications.
 -/
 @[expose]
-def neutralConfig : Simp.Config := {
-  zeta := false
-  beta := false
-  eta := false
-  iota := false
-  proj := false
-  decide := false
-  arith := false
-  autoUnfold := false
-  ground := false
-  zetaDelta := false
-  zetaUnused := false
-  letToHave := false
-}
+def neutralConfig : Simp.Config :=
+  { zeta := false
+    beta := false
+    eta := false
+    iota := false
+    proj := false
+    decide := false
+    arith := false
+    autoUnfold := false
+    ground := false
+    zetaDelta := false
+    zetaUnused := false
+    letToHave := false }
 
 structure NormCastConfig extends Simp.Config where
   zeta := false

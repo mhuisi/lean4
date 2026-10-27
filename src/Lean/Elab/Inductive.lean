@@ -68,12 +68,11 @@ private def inductiveSyntaxToView (modifiers : Modifiers) (decl : Syntax) (isCoi
               -- everything after the constructor name (yielding invalid syntax with the desired range)
               let previewSpan? :=
                 ctor.modifyArgs (·[2...4].toArray.modify 0 (·.modifyArgs (·[1...*])))
-              MessageData.hint "Remove `private` modifier from constructor" #[{
-                suggestion := ""
-                span? := Syntax.ofRange range
-                previewSpan?
-                toCodeActionTitle? := some fun _ => "Delete `private` modifier"
-              }]
+              MessageData.hint "Remove `private` modifier from constructor"
+                #[{ suggestion := ""
+                    span? := Syntax.ofRange range
+                    previewSpan?
+                    toCodeActionTitle? := some fun _ => "Delete `private` modifier" }]
             throwError
               m!"Constructor cannot be marked `private` because it is already in a `private` \
                   inductive datatype"
@@ -91,25 +90,23 @@ private def inductiveSyntaxToView (modifiers : Modifiers) (decl : Syntax) (isCoi
           addDeclarationRangesFromSyntax ctorName ctor ctor[3]
           if modifiers.isMeta then
             modifyEnv (markMeta · ctorName)
-          return {
-            ref := ctor
-            declId := ctor[3]
-            modifiers := ctorModifiers
-            declName := ctorName
-            binders := binders
-            type? := type?
-            : CtorView
-          }
+          return
+            { ref := ctor
+              declId := ctor[3]
+              modifiers := ctorModifiers
+              declName := ctorName
+              binders := binders
+              type? := type?
+              : CtorView }
     let computedFields ←
       (decl[5].getOptional?.map (·[1].getArgs) |>.getD #[]).mapM fun cf =>
         withRef cf do
-          return {
-            ref := cf
-            modifiers := cf[0]
-            fieldId := cf[1].getId
-            type := ⟨cf[3]⟩
-            matchAlts := ⟨cf[4]⟩
-          }
+          return
+            { ref := cf
+              modifiers := cf[0]
+              fieldId := cf[1].getId
+              type := ⟨cf[3]⟩
+              matchAlts := ⟨cf[4]⟩ }
     let classes ← getOptDerivingClasses decl[6]
     -- Wrap the `monotonicity_by` tactic block into a `by` term; the fixpoint machinery
     -- elaborates it against the `monotone` goal of this predicate's functor.
@@ -119,25 +116,24 @@ private def inductiveSyntaxToView (modifiers : Modifiers) (decl : Syntax) (isCoi
       -- https://github.com/leanprover/lean4/issues/5236
       withRef decl[0] <| Linter.logLintIf Linter.linter.deprecated decl[3]
         "`inductive ... :=` has been deprecated in favor of `inductive ... where`"
-    return {
-      ref := decl
-      shortDeclName := name
-      derivingClasses := classes
-      allowIndices := true
-      allowSortPolymorphism := true
-      declId
-      modifiers
-      isClass
-      declName
-      levelNames
-      binders
-      type?
-      ctors
-      computedFields
-      docString?
-      isCoinductive := isCoinductive
-      monotonicity?
-    }
+    return
+      { ref := decl
+        shortDeclName := name
+        derivingClasses := classes
+        allowIndices := true
+        allowSortPolymorphism := true
+        declId
+        modifiers
+        isClass
+        declName
+        levelNames
+        binders
+        type?
+        ctors
+        computedFields
+        docString?
+        isCoinductive := isCoinductive
+        monotonicity? }
 
 private def isInductiveFamily (numParams : Nat) (indFVar : Expr) : TermElabM Bool := do
   let indFVarType ← inferType indFVar
@@ -393,12 +389,11 @@ where
 def mkInductiveElabDescr (isCoinductive := false) : InductiveElabDescr where
   mkInductiveView (modifiers : Modifiers) (stx : Syntax) := do
     let view ← inductiveSyntaxToView modifiers stx isCoinductive
-    return {
-      view
-      elabCtors := fun rs r params => do
-        let ctors ← elabCtors (rs.map (·.indFVar)) params r
-        return { ctors }
-    }
+    return
+      { view
+        elabCtors := fun rs r params => do
+          let ctors ← elabCtors (rs.map (·.indFVar)) params r
+          return { ctors } }
 
 @[builtin_inductive_elab Lean.Parser.Command.inductive,
   builtin_inductive_elab Lean.Parser.Command.classInductive]

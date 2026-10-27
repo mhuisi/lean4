@@ -22,10 +22,8 @@ open Lean Meta
 
 namespace Lean.Elab.Tactic
 
-register_builtin_option linter.tactic.unusedName : Bool := {
-  defValue := true
-  descr := "enable the 'unused name' tactic linter"
-}
+register_builtin_option linter.tactic.unusedName : Bool :=
+  { defValue := true, descr := "enable the 'unused name' tactic linter" }
 
 /-!
 ### `extract_lets`

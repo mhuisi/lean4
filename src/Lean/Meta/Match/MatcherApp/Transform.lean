@@ -117,13 +117,12 @@ def addArg (matcherApp : MatcherApp) (e : Expr) : MetaM MatcherApp :=
         "failed to add argument to matcher application, type error when constructing the new motive"
     let auxType ← inferType aux
     let alts ← updateAlts eType auxType matcherApp.altNumParams matcherApp.alts false 0
-    return {
-      matcherApp with
-      matcherLevels := matcherLevels
-      motive := motive
-      alts := alts
-      remaining := #[e] ++ matcherApp.remaining
-    }
+    return
+      { matcherApp with
+        matcherLevels := matcherLevels
+        motive := motive
+        alts := alts
+        remaining := #[e] ++ matcherApp.remaining }
 
 /-- Similar to `MatcherApp.addArg`, but returns `none` on failure. -/
 def addArg? (matcherApp : MatcherApp) (e : Expr) : MetaM (Option MatcherApp) :=
@@ -345,12 +344,11 @@ def transform
           addHEqualities := addHEqualities.push none
           discrInfos' := discrInfos'.push di
 
-      return (
-        ← mkLambdaFVars motiveArgs motiveBody',
-        ← getLevel motiveBody',
-        addHEqualities,
-        discrInfos'
-      )
+      return
+        ( ← mkLambdaFVars motiveArgs motiveBody',
+          ← getLevel motiveBody',
+          addHEqualities,
+          discrInfos' )
 
   let matcherLevels ←
     match matcherApp.uElimPos? with
@@ -437,17 +435,16 @@ def transform
 
     remaining' := remaining' ++ (← onRemaining matcherApp.remaining)
 
-    return {
-      matcherApp with
-      matcherName := splitter
-      matcherLevels := matcherLevels
-      params := params'
-      motive := motive'
-      discrs := discrs'
-      discrInfos := discrInfos'
-      alts := alts'
-      remaining := remaining'
-    }
+    return
+      { matcherApp with
+        matcherName := splitter
+        matcherLevels := matcherLevels
+        params := params'
+        motive := motive'
+        discrs := discrs'
+        discrInfos := discrInfos'
+        alts := alts'
+        remaining := remaining' }
   else
     let aux := mkAppN (mkConst matcherApp.matcherName matcherLevels.toList) params'
     let aux := mkApp aux motive'
@@ -473,16 +470,15 @@ def transform
 
     remaining' := remaining' ++ (← onRemaining matcherApp.remaining)
 
-    return {
-      matcherApp with
-      matcherLevels := matcherLevels
-      params := params'
-      motive := motive'
-      discrs := discrs'
-      discrInfos := discrInfos'
-      alts := alts'
-      remaining := remaining'
-    }
+    return
+      { matcherApp with
+        matcherLevels := matcherLevels
+        params := params'
+        motive := motive'
+        discrs := discrs'
+        discrInfos := discrInfos'
+        alts := alts'
+        remaining := remaining' }
 
 /--
 Given a `MatcherApp`, replaces the motive with one that is inferred from the actual types of the
@@ -533,14 +529,13 @@ def inferMatchType (matcherApp : MatcherApp) : MetaM MatcherApp := do
         match matcherApp.uElimPos? with
         | none => pure matcherApp.matcherLevels
         | some pos => pure <| matcherApp.matcherLevels.set! pos Level.one
-      let typeMatcherApp := {
-        matcherApp with
-        motive := propMotive
-        matcherLevels := matcherLevels
-        discrs := motiveArgs
-        alts := propAlts
-        remaining := #[]
-      }
+      let typeMatcherApp :=
+        { matcherApp with
+          motive := propMotive
+          matcherLevels := matcherLevels
+          discrs := motiveArgs
+          alts := propAlts
+          remaining := #[] }
       mkArrowN extraParams typeMatcherApp.toExpr)
     (onAlt := fun _altIdx expAltType _altFVars alt => do
       let altType ← inferType alt

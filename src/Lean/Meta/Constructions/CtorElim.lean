@@ -230,13 +230,12 @@ types where we did not generate them immediately (due to `set_option genCtorIdx 
 -/
 @[builtin_doc]
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `gen_constructor_elims
-    descr := "generate the `.toCtorIdx` and `.ctor.elim` definitions for the given inductive"
-    add := fun decl _stx kind =>
-      MetaM.run' do
-        unless kind == .global do
-          throwAttrMustBeGlobal `gen_constructor_elims kind
-        mkCtorIdx decl
-        mkCtorElim decl
-  }
+  registerBuiltinAttribute
+    { name := `gen_constructor_elims
+      descr := "generate the `.toCtorIdx` and `.ctor.elim` definitions for the given inductive"
+      add := fun decl _stx kind =>
+        MetaM.run' do
+          unless kind == .global do
+            throwAttrMustBeGlobal `gen_constructor_elims kind
+          mkCtorIdx decl
+          mkCtorElim decl }

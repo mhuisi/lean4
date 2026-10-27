@@ -1088,13 +1088,12 @@ theorem Poly.pairs_k_nonneg
     cases pend with
     | none =>
       have := ih (some a) hps.2 (fun p h => by cases h; exact hps.1)
-      exact ⟨
-        this.1,
-        by
-          rw [show pairs_k combine_k (a :: ps) none = pairs_k combine_k ps (some a) from rfl,
-            this.2]
-          simp [denoteSList]
-      ⟩
+      exact
+        ⟨ this.1,
+          by
+            rw [show pairs_k combine_k (a :: ps) none = pairs_k combine_k ps (some a) from rfl,
+              this.2]
+            simp [denoteSList] ⟩
     | some p =>
       have hc := combine_k_nonneg ctx (hpend p rfl) hps.1
       have := ih none hps.2 (fun _ h => by cases h)
@@ -1112,13 +1111,12 @@ theorem Poly.foldr_k_nonneg (ps : List Poly) (hps : NonnegList ps)
   | cons a ps ih =>
     have := ih hps.2
     have hc := combine_k_nonneg ctx hps.1 this.1
-    exact ⟨
-      hc.1,
-      by
-        rw [show foldr_k combine_k (a :: ps) = combine_k a (foldr_k combine_k ps) from rfl, hc.2,
-          this.2]
-        rfl
-    ⟩
+    exact
+      ⟨ hc.1,
+        by
+          rw [show foldr_k combine_k (a :: ps) = combine_k a (foldr_k combine_k ps) from rfl, hc.2,
+            this.2]
+          rfl ⟩
 
 theorem Poly.sumGo_k_nonneg (fuel ps : List Poly) (hps : NonnegList ps)
     : (sumGo_k combine_k fuel ps).NonnegCoeffs
@@ -1135,15 +1133,14 @@ theorem Poly.sumGo_k_nonneg (fuel ps : List Poly) (hps : NonnegList ps)
     | a :: b :: ps, hps =>
       have hp := pairs_k_nonneg ctx (a :: b :: ps) none hps (fun _ h => by cases h)
       have := ih _ hp.1
-      exact ⟨
-        this.1,
-        by
-          rw [show sumGo_k combine_k (_ :: fuel) (a :: b :: ps)
-                = sumGo_k combine_k fuel (pairs_k combine_k (a :: b :: ps) none) from
-              rfl,
-            this.2, hp.2]
-          simp
-      ⟩
+      exact
+        ⟨ this.1,
+          by
+            rw [show sumGo_k combine_k (_ :: fuel) (a :: b :: ps)
+                  = sumGo_k combine_k fuel (pairs_k combine_k (a :: b :: ps) none) from
+                rfl,
+              this.2, hp.2]
+            simp ⟩
 
 theorem Poly.sumB_k_nonneg (ps : List Poly) (hps : NonnegList ps)
     : (sumB_k combine_k ps).NonnegCoeffs ∧ (sumB_k combine_k ps).denoteS ctx = denoteSList ctx ps :=
@@ -1178,13 +1175,12 @@ theorem Poly.mulB_k_nonneg {p₁ p₂ : Poly} (h₁ : p₁.NonnegCoeffs) (h₂ :
   | num k =>
     cases h₁
     rename_i hk
-    refine ⟨
-      by
-        show (p₂.mulConst_k k).NonnegCoeffs
-        rw [mulConst_k_eq_mulConst]
-        exact mulConst_NonnegCoeffs hk h₂,
-      ?_
-    ⟩
+    refine
+      ⟨ by
+          show (p₂.mulConst_k k).NonnegCoeffs
+          rw [mulConst_k_eq_mulConst]
+          exact mulConst_NonnegCoeffs hk h₂,
+        ?_ ⟩
     show (p₂.mulConst_k k).denoteS ctx = _
     rw [mulConst_k_eq_mulConst, denoteS_mulConst ctx k p₂ hk h₂]
     simp [denoteS]
@@ -1193,13 +1189,12 @@ theorem Poly.mulB_k_nonneg {p₁ p₂ : Poly} (h₁ : p₁.NonnegCoeffs) (h₂ :
     | num k =>
       cases h₂
       rename_i hk
-      refine ⟨
-        by
-          show ((Poly.add k₁ m₁ q₁).mulConst_k k).NonnegCoeffs
-          rw [mulConst_k_eq_mulConst]
-          exact mulConst_NonnegCoeffs hk h₁,
-        ?_
-      ⟩
+      refine
+        ⟨ by
+            show ((Poly.add k₁ m₁ q₁).mulConst_k k).NonnegCoeffs
+            rw [mulConst_k_eq_mulConst]
+            exact mulConst_NonnegCoeffs hk h₁,
+          ?_ ⟩
       show ((Poly.add k₁ m₁ q₁).mulConst_k k).denoteS ctx = _
       rw [mulConst_k_eq_mulConst, denoteS_mulConst ctx k _ hk h₁, CommSemiring.mul_comm]
       simp [denoteS]
@@ -1211,13 +1206,12 @@ theorem Poly.mulB_k_nonneg {p₁ p₂ : Poly} (h₁ : p₁.NonnegCoeffs) (h₂ :
         subst hpm
         cases hp
         rename_i hk _
-        refine ⟨
-          by
-            show (q.mulMon_k k m).NonnegCoeffs
-            rw [mulMon_k_eq_mulMon]
-            exact mulMon_NonnegCoeffs m hk hq,
-          ?_
-        ⟩
+        refine
+          ⟨ by
+              show (q.mulMon_k k m).NonnegCoeffs
+              rw [mulMon_k_eq_mulMon]
+              exact mulMon_NonnegCoeffs m hk hq,
+            ?_ ⟩
         show (q.mulMon_k k m).denoteS ctx = _
         rw [mulMon_k_eq_mulMon, denoteS_mulMon ctx k m q hk hq]
         simp [denoteS]
@@ -1246,12 +1240,11 @@ theorem Poly.powB_k_nonneg {p : Poly} (k : Nat) (h : p.NonnegCoeffs)
       exact ⟨h, by simp [powB_k, Semiring.pow_succ, Semiring.pow_zero]⟩
     | succ k =>
       have hm := mulB_k_nonneg ctx h ih.1
-      exact ⟨
-        hm.1,
-        by
-          rw [show powB_k p (k + 2) = p.mulB_k (powB_k p (k + 1)) from rfl, hm.2, ih.2,
-            Semiring.pow_succ (n := k + 1), CommSemiring.mul_comm]
-      ⟩
+      exact
+        ⟨ hm.1,
+          by
+            rw [show powB_k p (k + 2) = p.mulB_k (powB_k p (k + 1)) from rfl, hm.2, ih.2,
+              Semiring.pow_succ (n := k + 1), CommSemiring.mul_comm] ⟩
 
 theorem Expr.powLeafSB_k_nonneg
     (a : Expr) (k : Nat) {p : Poly} (hp : p.NonnegCoeffs) (h : p.denoteS ctx = a.denoteS ctx)
@@ -1304,10 +1297,9 @@ theorem Expr.sumsSB_k_nonneg (e : Expr) (acc : List Poly) (hacc : Poly.NonnegLis
   | intCast n =>
     exact ⟨⟨.num 0 (by decide), hacc⟩, by show denoteSInt 0 + _ = _; simp [denoteS_intCast]⟩
   | var x =>
-    refine ⟨
-      ⟨by simp [Poly.ofVar, Poly.ofMon]; exact .add _ _ _ (by decide) (.num _ (by decide)), hacc⟩,
-      ?_
-    ⟩
+    refine
+      ⟨ ⟨by simp [Poly.ofVar, Poly.ofMon]; exact .add _ _ _ (by decide) (.num _ (by decide)), hacc⟩,
+        ?_ ⟩
     show (Poly.ofVar x).denoteS ctx + _ = _
     rw [Poly.denoteS_ofVar]
     rfl
@@ -1316,12 +1308,11 @@ theorem Expr.sumsSB_k_nonneg (e : Expr) (acc : List Poly) (hacc : Poly.NonnegLis
   | add a b iha ihb =>
     have hb := ihb acc hacc
     have ha := iha _ hb.1
-    exact ⟨
-      ha.1,
-      by
-        rw [show (Expr.add a b).sumsSB_k acc = a.sumsSB_k (b.sumsSB_k acc) from rfl, ha.2, hb.2,
-          denoteS_add, Semiring.add_assoc]
-    ⟩
+    exact
+      ⟨ ha.1,
+        by
+          rw [show (Expr.add a b).sumsSB_k acc = a.sumsSB_k (b.sumsSB_k acc) from rfl, ha.2, hb.2,
+            denoteS_add, Semiring.add_assoc] ⟩
   | sub a b _ _ =>
     exact ⟨⟨.num 0 (by decide), hacc⟩, by show denoteSInt 0 + _ = _; simp [denoteS_sub]⟩
   | mul a b iha ihb =>
@@ -1352,13 +1343,12 @@ theorem Expr.toPolySX_k_nonneg (bal : Bool) (e : Expr)
     exact ⟨toPolyS_NonnegCoeffs, denoteS_toPolyS ctx e⟩
   · have h := e.sumsSB_k_nonneg ctx [] trivial
     have := Poly.sumB_k_nonneg ctx _ h.1
-    exact ⟨
-      this.1,
-      by
-        show (Poly.sumB_k Poly.combine_k (e.sumsSB_k [])).denoteS ctx = _
-        rw [this.2, h.2]
-        simp [Poly.denoteSList]
-    ⟩
+    exact
+      ⟨ this.1,
+        by
+          show (Poly.sumB_k Poly.combine_k (e.sumsSB_k [])).denoteS ctx = _
+          rw [this.2, h.2]
+          simp [Poly.denoteSList] ⟩
 
 end
 

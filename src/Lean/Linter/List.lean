@@ -28,21 +28,19 @@ are `i`, `j`, or `k`,
 and similarly that the only variables appearing as a width (e.g. in `List.replicate n a` or `Vector α n`)
 are `n` or `m`.
 -/
-register_builtin_option linter.indexVariables : Bool := {
-  defValue := false
-  descr :=
-    "Validate that variables appearing as an index (e.g. in `xs[i]` or `xs.take i`) are only `i`, \
-      `j`, or `k`."
-}
+register_builtin_option linter.indexVariables : Bool :=
+  { defValue := false
+    descr :=
+      "Validate that variables appearing as an index (e.g. in `xs[i]` or `xs.take i`) are only \
+        `i`, `j`, or `k`." }
 
 /--
 `set_option linter.listVariables true` enables a strict linter that
 validates that all `List`/`Array`/`Vector` variables use standardized names.
 -/
-register_builtin_option linter.listVariables : Bool := {
-  defValue := false
-  descr := "Validate that all `List`/`Array`/`Vector` variables use allowed names."
-}
+register_builtin_option linter.listVariables : Bool :=
+  { defValue := false
+    descr := "Validate that all `List`/`Array`/`Vector` variables use allowed names." }
 
 open Lean Elab Command
 

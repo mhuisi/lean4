@@ -51,10 +51,8 @@ def getRefPosition : m Position := do
   return fileMap.toPosition (← getRefPos)
 
 /-- If `warningAsError` is set to `true`, then warning messages are treated as errors. -/
-register_builtin_option warningAsError : Bool := {
-  defValue := false
-  descr := "treat warnings as errors"
-}
+register_builtin_option warningAsError : Bool :=
+  { defValue := false, descr := "treat warnings as errors" }
 
 /-- A widget for displaying error names and explanation links. -/
 -- Note that we cannot tag this as a `builtin_widget_module` in this module because doing so would
@@ -87,15 +85,13 @@ private def MessageData.appendDescriptionWidgetIfNamed (msg : MessageData) : Mes
   match msg.stripNestedTags.errorName? with
   | some errorName =>
     let url := manualRoot ++ s!"find/?domain={errorExplanationManualDomain}&name={errorName}"
-    let inst := {
-      id := ``errorDescriptionWidget
-      javascriptHash := errorDescriptionWidget.javascriptHash
-      props :=
-        return Json.mkObj [
-          ("code", toString errorName),
-          ("explanationUrl", url)
-        ]
-    }
+    let inst :=
+      { id := ``errorDescriptionWidget
+        javascriptHash := errorDescriptionWidget.javascriptHash
+        props :=
+          return Json.mkObj
+            [ ("code", toString errorName),
+              ("explanationUrl", url) ] }
     -- Note: we do not generate corresponding message data for the widget because it pollutes
     -- console output
     msg.composePreservingKind <| .ofWidget inst .nil
@@ -119,14 +115,13 @@ def logAt
     let endPos := ref.getTailPos?.getD pos
     let fileMap ← getFileMap
     let msgData ← addMessageContext msgData.appendDescriptionWidgetIfNamed
-    logMessage {
-      fileName := (← getFileName)
-      pos := fileMap.toPosition pos
-      endPos := fileMap.toPosition endPos
-      data := msgData
-      severity
-      isSilent
-    }
+    logMessage
+      { fileName := (← getFileName)
+        pos := fileMap.toPosition pos
+        endPos := fileMap.toPosition endPos
+        data := msgData
+        severity
+        isSilent }
 
 /-- Log a new error message using the given message data. The position is provided by `ref`. -/
 def logErrorAt (ref : Syntax) (msgData : MessageData) : m Unit :=

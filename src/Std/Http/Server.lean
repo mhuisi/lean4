@@ -148,10 +148,9 @@ def serve
               pure false
 
           let result ←
-            Selectable.one #[
-              .case (server.acceptSelector) (fun x => pure <| some x),
-              .case (← ContextAsync.doneSelector) (fun _ => pure none)
-            ]
+            Selectable.one
+              #[.case (server.acceptSelector) (fun x => pure <| some x),
+                .case (← ContextAsync.doneSelector) (fun _ => pure none)]
 
           match result with
           | some client =>

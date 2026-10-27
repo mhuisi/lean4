@@ -162,12 +162,11 @@ partial def casesNatToMono (c : Cases .pure) (_ : c.typeName == ``Nat) : ToMonoM
         if ctorName == ``Nat.succ then
           let p := ps[0]!
           let oneDecl ← mkLetDecl `one natType (.lit (.nat 1))
-          let subOneDecl := {
-            fvarId := p.fvarId
-            binderName := p.binderName
-            type := natType
-            value := .const ``Nat.sub [] #[.fvar c.discr, .fvar oneDecl.fvarId]
-          }
+          let subOneDecl :=
+            { fvarId := p.fvarId
+              binderName := p.binderName
+              type := natType
+              value := .const ``Nat.sub [] #[.fvar c.discr, .fvar oneDecl.fvarId] }
           modifyLCtx fun lctx => lctx.addLetDecl subOneDecl
           return .alt ``Bool.false #[] (.let oneDecl (.let subOneDecl (← k.toMono)))
         else
@@ -195,21 +194,19 @@ partial def casesIntToMono (c : Cases .pure) (_ : c.typeName == ``Int) : ToMonoM
         if ctorName == ``Int.negSucc then
           let absDecl ← mkLetDecl `abs natType (.const ``Int.natAbs [] #[.fvar c.discr])
           let oneDecl ← mkLetDecl `one natType (.lit (.nat 1))
-          let subOneDecl := {
-            fvarId := p.fvarId
-            binderName := p.binderName
-            type := natType
-            value := .const ``Nat.sub [] #[.fvar absDecl.fvarId, .fvar oneDecl.fvarId]
-          }
+          let subOneDecl :=
+            { fvarId := p.fvarId
+              binderName := p.binderName
+              type := natType
+              value := .const ``Nat.sub [] #[.fvar absDecl.fvarId, .fvar oneDecl.fvarId] }
           modifyLCtx fun lctx => lctx.addLetDecl subOneDecl
           return .alt ``Bool.true #[] (.let absDecl (.let oneDecl (.let subOneDecl (← k.toMono))))
         else
-          let absDecl := {
-            fvarId := p.fvarId
-            binderName := p.binderName
-            type := natType
-            value := .const ``Int.natAbs [] #[.fvar c.discr]
-          }
+          let absDecl :=
+            { fvarId := p.fvarId
+              binderName := p.binderName
+              type := natType
+              value := .const ``Int.natAbs [] #[.fvar c.discr] }
           modifyLCtx fun lctx => lctx.addLetDecl absDecl
           return .alt ``Bool.false #[] (.let absDecl (← k.toMono))
   return .let zeroNatDecl
@@ -223,12 +220,11 @@ partial def casesUIntToMono (c : Cases .pure) (uintName : Name) (_ : c.typeName 
     | unreachable!
   eraseParams ps
   let p := ps[0]!
-  let decl := {
-    fvarId := p.fvarId
-    binderName := p.binderName
-    type := anyExpr
-    value := .const (.str uintName "toBitVec") [] #[.fvar c.discr]
-  }
+  let decl :=
+    { fvarId := p.fvarId
+      binderName := p.binderName
+      type := anyExpr
+      value := .const (.str uintName "toBitVec") [] #[.fvar c.discr] }
   modifyLCtx fun lctx => lctx.addLetDecl decl
   let k ← k.toMono
   return .let decl k
@@ -241,12 +237,11 @@ partial def casesArrayToMono (c : Cases .pure) (_ : c.typeName == ``Array)
     | unreachable!
   eraseParams ps
   let p := ps[0]!
-  let decl := {
-    fvarId := p.fvarId
-    binderName := p.binderName
-    type := anyExpr
-    value := .const ``Array.toList [] #[.erased, .fvar c.discr]
-  }
+  let decl :=
+    { fvarId := p.fvarId
+      binderName := p.binderName
+      type := anyExpr
+      value := .const ``Array.toList [] #[.erased, .fvar c.discr] }
   modifyLCtx fun lctx => lctx.addLetDecl decl
   let k ← k.toMono
   return .let decl k
@@ -259,12 +254,11 @@ partial def casesByteArrayToMono (c : Cases .pure) (_ : c.typeName == ``ByteArra
     | unreachable!
   eraseParams ps
   let p := ps[0]!
-  let decl := {
-    fvarId := p.fvarId
-    binderName := p.binderName
-    type := anyExpr
-    value := .const ``ByteArray.data [] #[.fvar c.discr]
-  }
+  let decl :=
+    { fvarId := p.fvarId
+      binderName := p.binderName
+      type := anyExpr
+      value := .const ``ByteArray.data [] #[.fvar c.discr] }
   modifyLCtx fun lctx => lctx.addLetDecl decl
   let k ← k.toMono
   return .let decl k
@@ -277,12 +271,11 @@ partial def casesFloatArrayToMono (c : Cases .pure) (_ : c.typeName == ``FloatAr
     | unreachable!
   eraseParams ps
   let p := ps[0]!
-  let decl := {
-    fvarId := p.fvarId
-    binderName := p.binderName
-    type := anyExpr
-    value := .const ``FloatArray.data [] #[.fvar c.discr]
-  }
+  let decl :=
+    { fvarId := p.fvarId
+      binderName := p.binderName
+      type := anyExpr
+      value := .const ``FloatArray.data [] #[.fvar c.discr] }
   modifyLCtx fun lctx => lctx.addLetDecl decl
   let k ← k.toMono
   return .let decl k
@@ -295,12 +288,11 @@ partial def casesStringToMono (c : Cases .pure) (_ : c.typeName == ``String)
     | unreachable!
   eraseParams ps
   let p := ps[0]!
-  let decl := {
-    fvarId := p.fvarId
-    binderName := p.binderName
-    type := anyExpr
-    value := .const ``String.toByteArray [] #[.fvar c.discr]
-  }
+  let decl :=
+    { fvarId := p.fvarId
+      binderName := p.binderName
+      type := anyExpr
+      value := .const ``String.toByteArray [] #[.fvar c.discr] }
   modifyLCtx fun lctx => lctx.addLetDecl decl
   let k ← k.toMono
   return .let decl k
@@ -313,12 +305,11 @@ partial def casesFloatToMono (c : Cases .pure) (_ : c.typeName == ``Float)
     | unreachable!
   eraseParams ps
   let p := ps[0]!
-  let decl := {
-    fvarId := p.fvarId
-    binderName := p.binderName
-    type := anyExpr
-    value := .const ``Float.toModel [] #[.fvar c.discr]
-  }
+  let decl :=
+    { fvarId := p.fvarId
+      binderName := p.binderName
+      type := anyExpr
+      value := .const ``Float.toModel [] #[.fvar c.discr] }
   modifyLCtx fun lctx => lctx.addLetDecl decl
   let k ← k.toMono
   return .let decl k
@@ -331,12 +322,11 @@ partial def casesFloat32ToMono (c : Cases .pure) (_ : c.typeName == ``Float32)
     | unreachable!
   eraseParams ps
   let p := ps[0]!
-  let decl := {
-    fvarId := p.fvarId
-    binderName := p.binderName
-    type := anyExpr
-    value := .const ``Float32.toModel [] #[.fvar c.discr]
-  }
+  let decl :=
+    { fvarId := p.fvarId
+      binderName := p.binderName
+      type := anyExpr
+      value := .const ``Float32.toModel [] #[.fvar c.discr] }
   modifyLCtx fun lctx => lctx.addLetDecl decl
   let k ← k.toMono
   return .let decl k
@@ -352,13 +342,12 @@ partial def casesThunkToMono (c : Cases .pure) (_ : c.typeName == ``Thunk)
   let letValue := .const ``Thunk.get [] #[.erased, .fvar c.discr]
   let letDecl ← mkLetDecl (← mkFreshBinderName `_x) anyExpr letValue
   let paramType := .const `PUnit []
-  let decl := ⟨
-    p.fvarId,
-    p.binderName,
-    #[← mkAuxParam paramType],
-    (← mkArrow paramType anyExpr),
-    .let letDecl (.return letDecl.fvarId)
-  ⟩
+  let decl :=
+    ⟨ p.fvarId,
+      p.binderName,
+      #[← mkAuxParam paramType],
+      (← mkArrow paramType anyExpr),
+      .let letDecl (.return letDecl.fvarId) ⟩
   modifyLCtx fun lctx => lctx.addFunDecl decl
   let k ← k.toMono
   return .fun decl k
@@ -371,12 +360,11 @@ partial def casesTaskToMono (c : Cases .pure) (_ : c.typeName == ``Task)
     | unreachable!
   eraseParams ps
   let p := ps[0]!
-  let decl := {
-    fvarId := p.fvarId
-    binderName := p.binderName
-    type := anyExpr
-    value := .const ``Task.get [] #[.erased, .fvar c.discr]
-  }
+  let decl :=
+    { fvarId := p.fvarId
+      binderName := p.binderName
+      type := anyExpr
+      value := .const ``Task.get [] #[.erased, .fvar c.discr] }
   modifyLCtx fun lctx => lctx.addLetDecl decl
   let k ← k.toMono
   return .let decl k
@@ -392,12 +380,11 @@ partial def trivialStructToMono (info : TrivialStructureInfo) (c : Cases .pure)
   let p := ps[info.fieldIdx]!
   eraseParams ps
   /- We reuse `p`s `fvarId` to avoid substitution -/
-  let decl := {
-    fvarId := p.fvarId
-    binderName := p.binderName
-    type := (← toMonoType p.type)
-    value := .fvar c.discr #[]
-  }
+  let decl :=
+    { fvarId := p.fvarId
+      binderName := p.binderName
+      type := (← toMonoType p.type)
+      value := .fvar c.discr #[] }
   modifyLCtx fun lctx => lctx.addLetDecl decl
   let k ← k.toMono
   return .let decl k

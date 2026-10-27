@@ -114,13 +114,12 @@ attribute [simp] Nat.not_lt_zero
 theorem and_forall_add_one {p : Nat → Prop} : p 0 ∧ (∀ n, p (n + 1)) ↔ ∀ n, p n :=
   ⟨fun h n => Nat.casesOn n h.1 h.2, fun h => ⟨h _, fun _ => h _⟩⟩
 
-theorem or_exists_add_one : p 0 ∨ (Exists fun n => p (n + 1)) ↔ Exists p := ⟨
-  fun h => h.elim (fun h0 => ⟨0, h0⟩) fun ⟨n, hn⟩ => ⟨n + 1, hn⟩,
-  fun ⟨n, h⟩ =>
-    match n with
-    | 0 => Or.inl h
-    | n + 1 => Or.inr ⟨n, h⟩
-⟩
+theorem or_exists_add_one : p 0 ∨ (Exists fun n => p (n + 1)) ↔ Exists p :=
+  ⟨ fun h => h.elim (fun h0 => ⟨0, h0⟩) fun ⟨n, hn⟩ => ⟨n + 1, hn⟩,
+    fun ⟨n, h⟩ =>
+      match n with
+      | 0 => Or.inl h
+      | n + 1 => Or.inr ⟨n, h⟩ ⟩
 
 /-! # Helper "packing" theorems -/
 
@@ -596,12 +595,11 @@ protected abbrev lt_iff_le_not_le := @Nat.lt_iff_le_and_not_ge
 protected theorem lt_iff_le_and_ne {m n : Nat} : m < n ↔ m ≤ n ∧ m ≠ n :=
   ⟨fun h => ⟨Nat.le_of_lt h, Nat.ne_of_lt h⟩, fun h => Nat.lt_of_le_of_ne h.1 h.2⟩
 
-protected theorem ne_iff_lt_or_gt {a b : Nat} : a ≠ b ↔ a < b ∨ b < a := ⟨
-  Nat.lt_or_gt_of_ne,
-  fun
-    | .inl h => Nat.ne_of_lt h
-    | .inr h => Nat.ne_of_gt h
-⟩
+protected theorem ne_iff_lt_or_gt {a b : Nat} : a ≠ b ↔ a < b ∨ b < a :=
+  ⟨ Nat.lt_or_gt_of_ne,
+    fun
+      | .inl h => Nat.ne_of_lt h
+      | .inr h => Nat.ne_of_gt h ⟩
 
 /-- Alias for `Nat.ne_iff_lt_or_gt`. -/
 protected abbrev lt_or_gt := @Nat.ne_iff_lt_or_gt
@@ -618,12 +616,11 @@ protected theorem eq_or_lt_of_not_lt {a b : Nat} (hnlt : ¬ a < b) : a = b ∨ b
 protected theorem lt_or_eq_of_le {n m : Nat} (h : n ≤ m) : n < m ∨ n = m :=
   (Nat.lt_or_ge ..).imp_right (Nat.le_antisymm h)
 
-protected theorem le_iff_lt_or_eq {n m : Nat} : n ≤ m ↔ n < m ∨ n = m := ⟨
-  Nat.lt_or_eq_of_le,
-  fun
-    | .inl h => Nat.le_of_lt h
-    | .inr rfl => Nat.le_refl _
-⟩
+protected theorem le_iff_lt_or_eq {n m : Nat} : n ≤ m ↔ n < m ∨ n = m :=
+  ⟨ Nat.lt_or_eq_of_le,
+    fun
+      | .inl h => Nat.le_of_lt h
+      | .inr rfl => Nat.le_refl _ ⟩
 
 protected theorem lt_succ_iff : m < succ n ↔ m ≤ n := ⟨le_of_lt_succ, lt_succ_of_le⟩
 

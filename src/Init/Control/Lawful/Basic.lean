@@ -254,8 +254,7 @@ theorem LawfulMonad.mk'
     : LawfulMonad m :=
   have map_pure {α β} (g : α → β) (x : α) : g <$> (pure x : m α) = pure (g x) := by
     rw [← bind_pure_comp]; simp [pure_bind]
-  {
-    id_map
+  { id_map
     bind_pure_comp
     bind_map
     pure_bind
@@ -268,8 +267,7 @@ theorem LawfulMonad.mk'
     map_const := funext fun x => funext (map_const x)
     seqLeft_eq := by simp [seqLeft_eq, ← bind_map, ← bind_pure_comp, pure_bind, bind_assoc]
     seqRight_eq := fun x y => by
-      rw [seqRight_eq, ← bind_map, ← bind_pure_comp, bind_assoc]; simp [pure_bind, id_map]
-  }
+      rw [seqRight_eq, ← bind_map, ← bind_pure_comp, bind_assoc]; simp [pure_bind, id_map] }
 
 /-! # Id -/
 

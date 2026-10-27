@@ -178,11 +178,8 @@ abbrev ExprCnstr.denote (ctx : Context) (c : ExprCnstr) : Prop :=
   else
     c.lhs.denote ctx ≤ c.rhs.denote ctx
 
-def ExprCnstr.toPoly (c : ExprCnstr) : PolyCnstr := {
-  c with
-  lhs := c.lhs.toPoly
-  rhs := c.rhs.toPoly
-}
+def ExprCnstr.toPoly (c : ExprCnstr) : PolyCnstr :=
+  { c with lhs := c.lhs.toPoly, rhs := c.rhs.toPoly }
 
 def ExprCnstr.toNormPoly (c : ExprCnstr) : PolyCnstr :=
   let (lhs, rhs) := Poly.cancel c.lhs.toNormPoly c.rhs.toNormPoly
@@ -206,11 +203,8 @@ where
     | [] => e
     | (k, v) :: p => go (.add e (monomialToExpr k v)) p
 
-def PolyCnstr.toExpr (c : PolyCnstr) : ExprCnstr := {
-  c with
-  lhs := c.lhs.toExpr
-  rhs := c.rhs.toExpr
-}
+def PolyCnstr.toExpr (c : PolyCnstr) : ExprCnstr :=
+  { c with lhs := c.lhs.toExpr, rhs := c.rhs.toExpr }
 
 attribute [local simp]
   Nat.add_comm Nat.add_assoc Nat.add_left_comm Nat.right_distrib Nat.left_distrib Nat.mul_assoc
@@ -843,20 +837,16 @@ noncomputable def Expr.toNormPoly_k (e : Expr) : Poly := Poly.norm_k e.toPoly_k
 theorem Expr.toNormPoly_k_eq (e : Expr) : e.toNormPoly_k = e.toNormPoly := by
   simp only [toNormPoly_k, Expr.toNormPoly, Expr.toPoly_k_eq, Poly.norm_k_eq]
 
-noncomputable def ExprCnstr.toPoly_k (c : ExprCnstr) : PolyCnstr := {
-  eq := c.eq
-  lhs := c.lhs.toPoly_k
-  rhs := c.rhs.toPoly_k
-}
+noncomputable def ExprCnstr.toPoly_k (c : ExprCnstr) : PolyCnstr :=
+  { eq := c.eq, lhs := c.lhs.toPoly_k, rhs := c.rhs.toPoly_k }
 
 theorem ExprCnstr.toPoly_k_eq (c : ExprCnstr) : c.toPoly_k = c.toPoly := by
   simp only [toPoly_k, ExprCnstr.toPoly, Expr.toPoly_k_eq]
 
-noncomputable def ExprCnstr.toNormPoly_k (c : ExprCnstr) : PolyCnstr := {
-  eq := c.eq
-  lhs := (Poly.cancel_k c.lhs.toNormPoly_k c.rhs.toNormPoly_k).1
-  rhs := (Poly.cancel_k c.lhs.toNormPoly_k c.rhs.toNormPoly_k).2
-}
+noncomputable def ExprCnstr.toNormPoly_k (c : ExprCnstr) : PolyCnstr :=
+  { eq := c.eq
+    lhs := (Poly.cancel_k c.lhs.toNormPoly_k c.rhs.toNormPoly_k).1
+    rhs := (Poly.cancel_k c.lhs.toNormPoly_k c.rhs.toNormPoly_k).2 }
 
 theorem ExprCnstr.toNormPoly_k_eq (c : ExprCnstr) : c.toNormPoly_k = c.toNormPoly := by
   simp only [toNormPoly_k, ExprCnstr.toNormPoly, Poly.cancel_k_eq, Expr.toNormPoly_k_eq]

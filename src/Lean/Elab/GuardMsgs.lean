@@ -24,10 +24,9 @@ open Lean Parser.Tactic Elab Command
 
 namespace Lean
 
-register_builtin_option guard_msgs.diff : Bool := {
-  defValue := true
-  descr := "When true, show a diff between expected and actual messages if they don't match. "
-}
+register_builtin_option guard_msgs.diff : Bool :=
+  { defValue := true
+    descr := "When true, show a diff between expected and actual messages if they don't match. " }
 
 end Lean
 
@@ -290,38 +289,33 @@ def guardMsgsCodeAction : CommandCodeAction := fun _ _ _ node => do
   let some (stx, res) := res
     | return #[]
   let doc ← readDoc
-  let eager := {
-    title := "Update #guard_msgs with generated message"
-    kind? := "quickfix"
-    isPreferred? := true
-  }
-  pure #[{
-    eager
-    lazy? :=
-      some do
-        let some start := stx.getPos? true
-          | return eager
-        let some tail := stx.setArg 0 mkNullNode |>.getPos? true
-          | return eager
-        let res := revealTrailingWhitespace res
-        let newText :=
-          if res.isEmpty then
-            ""
-          else if res.length ≤ 100 - 7 && ! res.contains '\n' then -- TODO: configurable line length?
-            s!"/-- {res} -/\n"
-          else
-            s!"/--\
-              \n{res}\
-              \n-/\n"
-        pure {
-          eager with
-          edit? :=
-            some <| .ofTextEdit doc.versionedIdentifier {
-              range := doc.meta.text.utf8RangeToLspRange ⟨start, tail⟩
-              newText
-            }
-        }
-  }]
+  let eager :=
+    { title := "Update #guard_msgs with generated message"
+      kind? := "quickfix"
+      isPreferred? := true }
+  pure
+    #[{ eager
+        lazy? :=
+          some do
+            let some start := stx.getPos? true
+              | return eager
+            let some tail := stx.setArg 0 mkNullNode |>.getPos? true
+              | return eager
+            let res := revealTrailingWhitespace res
+            let newText :=
+              if res.isEmpty then
+                ""
+              else if res.length ≤ 100 - 7 && ! res.contains '\n' then -- TODO: configurable line length?
+                s!"/-- {res} -/\n"
+              else
+                s!"/--\
+                  \n{res}\
+                  \n-/\n"
+            pure
+              { eager with
+                edit? :=
+                  some <| .ofTextEdit doc.versionedIdentifier
+                    { range := doc.meta.text.utf8RangeToLspRange ⟨start, tail⟩, newText } } }]
 
 @[builtin_command_elab Lean.guardPanicCmd]
 def elabGuardPanic : CommandElab

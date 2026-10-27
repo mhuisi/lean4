@@ -519,22 +519,20 @@ def foldEntries (init : NameMap Name) (es : Array (Array (Name × Name))) : Name
 /-- Registry for custom inline element renderers that maps element type names to renderer names. -/
 public builtin_initialize docInlineMdExt
     : PersistentEnvExtension (Name × Name) (Name × Name) MdRendererState ←
-  registerPersistentEnvExtension {
-    mkInitial := pure {}
-    addImportedFn := fun es => return { imported := foldEntries {} es }
-    addEntryFn := fun s (tag, w) => { s with current := s.current.insert tag w }
-    exportEntriesFn := fun s => s.current.toArray
-  }
+  registerPersistentEnvExtension
+    { mkInitial := pure {}
+      addImportedFn := fun es => return { imported := foldEntries {} es }
+      addEntryFn := fun s (tag, w) => { s with current := s.current.insert tag w }
+      exportEntriesFn := fun s => s.current.toArray }
 
 /-- Registry for custom block element renderers that maps element type names to renderer names. -/
 public builtin_initialize docBlockMdExt
     : PersistentEnvExtension (Name × Name) (Name × Name) MdRendererState ←
-  registerPersistentEnvExtension {
-    mkInitial := pure {}
-    addImportedFn := fun es => return { imported := foldEntries {} es }
-    addEntryFn := fun s (tag, w) => { s with current := s.current.insert tag w }
-    exportEntriesFn := fun s => s.current.toArray
-  }
+  registerPersistentEnvExtension
+    { mkInitial := pure {}
+      addImportedFn := fun es => return { imported := foldEntries {} es }
+      addEntryFn := fun s (tag, w) => { s with current := s.current.insert tag w }
+      exportEntriesFn := fun s => s.current.toArray }
 
 /-- Builtin inline renderers, for bootstrapping. -/
 builtin_initialize builtinInlineMdRenderers : IO.Ref (NameMap InlineMdRenderer) ← IO.mkRef {}

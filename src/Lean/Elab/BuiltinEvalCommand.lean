@@ -20,22 +20,19 @@ public section
 namespace Lean.Elab.Command
 open Meta Internal.ErrorUtils
 
-register_builtin_option eval.pp : Bool := {
-  defValue := true
-  descr :=
-    "('#eval' command) enables using 'ToExpr' instances to pretty print the result, \
-      otherwise uses 'Repr' or 'ToString' instances"
-}
+register_builtin_option eval.pp : Bool :=
+  { defValue := true
+    descr :=
+      "('#eval' command) enables using 'ToExpr' instances to pretty print the result, \
+        otherwise uses 'Repr' or 'ToString' instances" }
 
-register_builtin_option eval.type : Bool := {
-  defValue := false -- TODO: set to 'true'
-  descr := "('#eval' command) enables pretty printing the type of the result"
-}
+register_builtin_option eval.type : Bool :=
+  { defValue := false -- TODO: set to 'true'
+    descr := "('#eval' command) enables pretty printing the type of the result" }
 
-register_builtin_option eval.derive.repr : Bool := {
-  defValue := true
-  descr := "('#eval' command) enables auto-deriving 'Repr' instances as a fallback"
-}
+register_builtin_option eval.derive.repr : Bool :=
+  { defValue := true
+    descr := "('#eval' command) enables auto-deriving 'Repr' instances as a fallback" }
 
 builtin_initialize registerTraceClass `Elab.eval
 

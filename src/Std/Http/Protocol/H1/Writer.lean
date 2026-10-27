@@ -156,11 +156,9 @@ during the chunked-encoding write step — see `writeChunkedBody`.
 def addUserData (data : Array Chunk) (writer : Writer dir) : Writer dir :=
   if writer.canAcceptData then
     let extraBytes := data.foldl (fun acc c => acc + c.data.size) 0
-    {
-      writer with
+    { writer with
       userData := writer.userData ++ data
-      userDataBytes := writer.userDataBytes + extraBytes
-    }
+      userDataBytes := writer.userDataBytes + extraBytes }
   else
     writer
 
@@ -182,25 +180,19 @@ def writeFixedBody (writer : Writer dir) (limitSize : Nat) : Writer dir × Nat :
             let acc := if takeSize = 0 then acc else acc.push dataPart
             let size := size + takeSize
             if takeSize < chunk.data.size then
-              let pendingChunk : Chunk := {
-                chunk with
-                data := chunk.data.extract takeSize chunk.data.size
-              }
+              let pendingChunk : Chunk :=
+                { chunk with data := chunk.data.extract takeSize chunk.data.size }
               (acc, pending.push pendingChunk, size)
             else
               (acc, pending, size))
         (#[], #[], 0)
     let outputData := writer.outputData.append (ChunkedBuffer.ofArray chunks)
     let remaining := limitSize - totalSize
-    (
-      {
-        writer with
+    ( { writer with
         userData := pending
         outputData
-        userDataBytes := writer.userDataBytes - totalSize
-      },
-      remaining
-    )
+        userDataBytes := writer.userDataBytes - totalSize },
+      remaining )
 
 /--
 Writes accumulated user data to output using chunked transfer encoding.
@@ -212,12 +204,10 @@ def writeChunkedBody (writer : Writer dir) : Writer dir :=
     writer
   else
     let data := writer.userData.filter (fun c => !c.data.isEmpty)
-    {
-      writer with
+    { writer with
       userData := #[]
       userDataBytes := 0
-      outputData := data.foldl (Encode.encode .v11) writer.outputData
-    }
+      outputData := data.foldl (Encode.encode .v11) writer.outputData }
 
 /-- Writes the final chunk terminator (0\r\n\r\n) and transitions to complete state. -/
 def writeFinalChunk (writer : Writer dir) : Writer dir :=
@@ -228,12 +218,11 @@ def writeFinalChunk (writer : Writer dir) : Writer dir :=
 Writes accumulated user data to output as raw bytes (HTTP/1.0 connection-close framing).
 No chunk framing is added; the peer reads until the connection closes.
 -/
-def writeRawBody (writer : Writer dir) : Writer dir := {
-  writer with
-  outputData := writer.userData.foldl (fun buf c => buf.write c.data) writer.outputData
-  userData := #[]
-  userDataBytes := 0
-}
+def writeRawBody (writer : Writer dir) : Writer dir :=
+  { writer with
+    outputData := writer.userData.foldl (fun buf c => buf.write c.data) writer.outputData
+    userData := #[]
+    userDataBytes := 0 }
 
 /-- Extracts all accumulated output data and returns it with a cleared output buffer. -/
 @[inline]
@@ -246,11 +235,8 @@ def takeOutput (writer : Writer dir) : Option (Writer dir × ByteArray) :=
 def setState (state : Writer.State) (writer : Writer dir) : Writer dir := { writer with state }
 
 /-- Writes the message headers to the output buffer. -/
-private def writeHeaders (messageHead : Message.Head dir.swap) (writer : Writer dir)
-    : Writer dir := {
-  writer with
-  outputData := Internal.Encode.encode (v := .v11) writer.outputData messageHead
-}
+private def writeHeaders (messageHead : Message.Head dir.swap) (writer : Writer dir) : Writer dir :=
+  { writer with outputData := Internal.Encode.encode (v := .v11) writer.outputData messageHead }
 
 /-- Checks if the connection should be kept alive based on the Connection header. -/
 def shouldKeepAlive (writer : Writer dir) : Bool :=

@@ -1203,10 +1203,9 @@ def Doc.fillWith (ds : Array (Doc τ)) (sep : Nat → FillSep (Doc τ)) : Doc τ
     let { flat, broken } := sep (i - 1)
     let lastMaybeFlattened := .oneOf #[lastFlattened, lastNotFlattened]
     lastFlattened :=
-      .oneOf #[
-        .join #[lastFlattened, flat, .flattened d],
-        .join #[lastMaybeFlattened, broken, .hardNl, .flattened d]
-      ]
+      .oneOf
+        #[.join #[lastFlattened, flat, .flattened d],
+          .join #[lastMaybeFlattened, broken, .hardNl, .flattened d]]
     lastNotFlattened := .join #[lastMaybeFlattened, broken, .hardNl, d]
   return .oneOf #[lastFlattened, lastNotFlattened]
 
@@ -1252,10 +1251,8 @@ def Doc.fillUsingSpaceWithSoftBoundaries (boundaryPenalty : τ) (dss : Array (Ar
   let isBoundary := dss.flatMap (·.mapIdx fun i _ => i == 0)
   let sep : Doc τ := .text " "
   let boundarySep : Doc τ := .costing boundaryPenalty sep
-  fillWith dss.flatten fun i => {
-    flat := if isBoundary[i + 1]! then boundarySep else sep
-    broken := .empty
-  }
+  fillWith dss.flatten fun i =>
+    { flat := if isBoundary[i + 1]! then boundarySep else sep, broken := .empty }
 
 /--
 Appends multiple flattened documents with optional newlines between them, wrapping the entire
@@ -1283,10 +1280,9 @@ def Doc.fillWrappingWith (ds : Array (Doc τ)) (wrap : Doc τ → Doc τ) (sep :
     | some flat =>
       let wrappedBrokenRest := wrap <| .join #[.hardNl, restMaybeFlattened]
       restFlattened :=
-        .oneOf #[
-          .join #[.flattened d, wrap <| .join #[flat, restFlattened]],
-          .join #[.flattened d, wrappedBrokenRest]
-        ]
+        .oneOf
+          #[.join #[.flattened d, wrap <| .join #[flat, restFlattened]],
+            .join #[.flattened d, wrappedBrokenRest]]
       restNotFlattened := .join #[d, wrappedBrokenRest]
     | none =>
       -- `nl` rather than `hardNl` so that the whole document can still be flattened onto one line.

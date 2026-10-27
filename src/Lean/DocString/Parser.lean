@@ -326,22 +326,20 @@ where
     | _ => none
   dropFirst : Syntax → Syntax
     | .node info k #[.atom (.original leading start trailing stop) val] =>
-      .node info k #[
-        .atom
-          (.original { leading with startPos := start + ' ', stopPos := start + ' ' } (start + ' ')
-            trailing stop)
-          (val.drop 1).copy
-      ]
+      .node info k
+        #[.atom
+            (.original { leading with startPos := start + ' ', stopPos := start + ' ' }
+              (start + ' ') trailing stop)
+            (val.drop 1).copy]
     | stx =>
       stx
   dropLast : Syntax → Syntax
     | .node info k #[.atom (.original leading start trailing stop) val] =>
-      .node info k #[
-        .atom
-          (.original leading start { trailing with startPos := trailing.startPos - ' ' }
-            (stop - ' '))
-          (val.dropEnd 1).copy
-      ]
+      .node info k
+        #[.atom
+            (.original leading start { trailing with startPos := trailing.startPos - ' ' }
+              (stop - ' '))
+            (val.dropEnd 1).copy]
     | stx =>
       stx
 
@@ -523,11 +521,9 @@ def unterminatedError
       s!"{what} opened on line {(c.fileMap.toPosition openPos).line}"
     else
       what
-  {
-    unexpectedTk := opener
+  { unexpectedTk := opener
     unexpected := s!"unterminated {what}"
-    expected := [s!"'{opener.getAtomVal}'"]
-  }
+    expected := [s!"'{opener.getAtomVal}'"] }
 
 /--
 At the end of the input, reports the construct `what` as unterminated with `unterminatedError`.
@@ -583,10 +579,10 @@ code at the opener.
 def unclosedCodeError (c : ParserContext) (openPos openStop : String.Pos.Raw) (count : Nat)
     : Error :=
   match longerBackticks? c count openStop with
-  | some (seqStart, seqStop) => {
-    unexpectedTk := atomAt c seqStart seqStop
-    unexpected := s!"too many backticks: expected {count} but got {seqStart.byteDistance seqStop}"
-  }
+  | some (seqStart, seqStop) =>
+    { unexpectedTk := atomAt c seqStart seqStop
+      unexpected :=
+        s!"too many backticks: expected {count} but got {seqStart.byteDistance seqStop}" }
   | none =>
     unterminatedError c openPos openStop "inline code"
 
@@ -922,13 +918,12 @@ def recoverPendingError (recover : ParserFn) : ParserFn := fun c s =>
     let s' := recover c { s with errorMsg := none }
     if s'.hasError then
       s
-    else {
-      s with
-      pos := s'.pos
-      errorMsg := none
-      stxStack := s'.stxStack
-      recoveredErrors := s.recoveredErrors.push (errPos, s'.stxStack, msg)
-    }
+    else
+      { s with
+        pos := s'.pos
+        errorMsg := none
+        stxStack := s'.stxStack
+        recoveredErrors := s.recoveredErrors.push (errPos, s'.stxStack, msg) }
   else
     s
 
@@ -1263,10 +1258,8 @@ where
   orUnclosedAt (openPos openStop : String.Pos.Raw) (count : Nat) (p : ParserFn)
       : ParserFn := fun c s =>
     let s := p c s
-    if s.hasError then {
-      s with
-      errorMsg := some (unclosedCodeError c openPos openStop count)
-    }
+    if s.hasError then
+      { s with errorMsg := some (unclosedCodeError c openPos openStop count) }
     else
       s
   /--
@@ -1345,10 +1338,8 @@ partial def linkTargetFn (tail : ParserFn := skipFn) : ParserFn := fun c s =>
   if s.hasError then
     match s.errorMsg with
     | some e =>
-      s.setError {
-        e with
-        expected := ["link target '(url)' or '[ref]' (use '\\[' for a literal '[')"]
-      }
+      s.setError
+        { e with expected := ["link target '(url)' or '[ref]' (use '\\[' for a literal '[')"] }
     | none =>
       s
   else
@@ -1581,9 +1572,8 @@ public def BlockCtxt.forDocString
   -- We look for non-whitespace characters that appear after a newline and check their column.
   let baseColumn := minContentIndent text startPos endPos baseColumn
   let position := text.toPosition startPos
-  if position.column ≤ baseColumn then {
-    baseColumn
-  }
+  if position.column ≤ baseColumn then
+    { baseColumn }
   else
     -- Skip leading spaces to find where content actually starts
     let pos := Id.run do
@@ -1693,16 +1683,12 @@ public def lookaheadOrderedListMarker (p : OrderedListType → Int → ParserFn)
     else
       let digits := c.extract numPos s.pos
       match digits.toNat? with
-      | none => {
-        s.mkError s!"digits, got '{digits}'" with
-        pos := iniPos
-      }
+      | none =>
+        { s.mkError s!"digits, got '{digits}'" with pos := iniPos }
       | some n =>
         let i := s.pos
-        if h : c.atEnd i then {
-          s.mkEOIError with
-          pos := iniPos
-        }
+        if h : c.atEnd i then
+          { s.mkEOIError with pos := iniPos }
         else
           let (s, next, type) :=
             match c.get' i h with
@@ -1710,21 +1696,16 @@ public def lookaheadOrderedListMarker (p : OrderedListType → Int → ParserFn)
               (s.next' c i h, (chFn ' ' <|> chFn '\n'), OrderedListType.numDot)
             | ')' =>
               (s.next' c i h, (chFn ' ' <|> chFn '\n'), OrderedListType.parenAfter)
-            | other => (
-              s.setError { unexpected := s!"unexpected '{other}'", expected := ["'.'", "')'"] },
-              skipFn,
-              .numDot
-            )
-          if s.hasError then {
-            s with
-            pos := iniPos
-          }
+            | other =>
+              ( s.setError { unexpected := s!"unexpected '{other}'", expected := ["'.'", "')'"] },
+                skipFn,
+                .numDot )
+          if s.hasError then
+            { s with pos := iniPos }
           else
             let s := next c s
-            if s.hasError then {
-              s with
-              pos := iniPos
-            }
+            if s.hasError then
+              { s with pos := iniPos }
             else
               p type n c (s.shrinkStack iniSz |>.setPos numPos)
 
@@ -2187,9 +2168,8 @@ where
     if h : c.atEnd s'.pos then
       s
     else if c.get' s'.pos h == '\t' then
-      let err : Error := {
-        unexpected := "tabs are not allowed; please configure your editor to expand them"
-      }
+      let err : Error :=
+        { unexpected := "tabs are not allowed; please configure your editor to expand them" }
       -- `skipBlank` skips the tab and the rest of a line with nothing else on it, so that a line
       -- indented with a tab still parses and a line of only whitespace ends the block before it.
       let s'' := skipBlank c (s'.next' c s'.pos h)
@@ -2255,11 +2235,8 @@ partial def earlyStopErrorFn (ctxt : BlockCtxt) : ParserFn := fun c s =>
     -- A recovered error at the position where the blocks stopped is the error that stopped them.
     if s.recoveredErrors.any (·.1 == errPos) then
       s
-    else {
-      s with
-      errorMsg := some e
-      pos := errPos
-    }
+    else
+      { s with errorMsg := some e, pos := errPos }
 
 /--
 Parses a document: the whitespace it starts with, then zero or more blocks.
@@ -2329,29 +2306,31 @@ public def locateError (ictx : InputContext) (pos : String.Pos.Raw) (e : Error)
     (pos, some stop, e)
 
 /-- The syntax kinds of the nodes that `documentFn` produces. -/
-public def documentKinds : List SyntaxNodeKind := [
+public def documentKinds : List SyntaxNodeKind :=
   -- the document and its literal content
-  ``document, versoTextKind, versoRefKind, versoLinkUrlKind, versoLinkRefUrlKind, versoImageAltKind,
-  versoCodeKind, versoCodeLineKind, versoCodeBlockKind,
-  -- delimiters and markers
-  ``headerMarker, ``listMarker, ``emphDelimiter, ``boldDelimiter, ``codeDelimiter, ``codeBlockFence,
-  ``directiveDelimiter, ``inlineMathMarker, ``displayMathMarker,
-  -- argument values and arguments
-  ``ArgVal.str, ``ArgVal.ident, ``ArgVal.num, ``Arg.anon, ``Arg.named, ``Arg.named_no_paren,
-  ``Arg.flag_on, ``Arg.flag_off,
-  -- link targets
-  ``LinkTarget.url, ``LinkTarget.ref,
-  -- inline elements
-  ``Inline.text, ``Inline.emph, ``Inline.bold, ``Inline.code, ``Inline.inline_math,
-  ``Inline.display_math, ``Inline.link, ``Inline.image, ``Inline.footnote, ``Inline.linebreak,
-  ``Inline.role,
-  -- list items
-  ``ListItem.item, ``DescItem.item,
-  -- block elements
-  ``Block.para, ``Block.ul, ``Block.ol, ``Block.dl, ``Block.blockquote, ``Block.codeblock,
-  ``Block.directive, ``Block.header, ``Block.link_ref, ``Block.footnote_ref, ``Block.metadata_block,
-  ``Block.command
-]
+  [ ``document, versoTextKind, versoRefKind, versoLinkUrlKind, versoLinkRefUrlKind,
+    versoImageAltKind,
+    versoCodeKind, versoCodeLineKind, versoCodeBlockKind,
+    -- delimiters and markers
+    ``headerMarker, ``listMarker, ``emphDelimiter, ``boldDelimiter, ``codeDelimiter,
+    ``codeBlockFence,
+    ``directiveDelimiter, ``inlineMathMarker, ``displayMathMarker,
+    -- argument values and arguments
+    ``ArgVal.str, ``ArgVal.ident, ``ArgVal.num, ``Arg.anon, ``Arg.named, ``Arg.named_no_paren,
+    ``Arg.flag_on, ``Arg.flag_off,
+    -- link targets
+    ``LinkTarget.url, ``LinkTarget.ref,
+    -- inline elements
+    ``Inline.text, ``Inline.emph, ``Inline.bold, ``Inline.code, ``Inline.inline_math,
+    ``Inline.display_math, ``Inline.link, ``Inline.image, ``Inline.footnote, ``Inline.linebreak,
+    ``Inline.role,
+    -- list items
+    ``ListItem.item, ``DescItem.item,
+    -- block elements
+    ``Block.para, ``Block.ul, ``Block.ol, ``Block.dl, ``Block.blockquote, ``Block.codeblock,
+    ``Block.directive, ``Block.header, ``Block.link_ref, ``Block.footnote_ref,
+    ``Block.metadata_block,
+    ``Block.command ]
 
 /--
 Parser information for Verso markup.

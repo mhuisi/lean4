@@ -19,10 +19,8 @@ open scoped Lean.Parser.Tactic
 Enables the unnecessary `rwa` linter, which reports when `rw` closes the goal without needing the
 final closing step.
 -/
-register_builtin_option linter.unnecessaryRwa : Bool := {
-  defValue := true
-  descr := "enable the unnecessary `rwa` linter"
-}
+register_builtin_option linter.unnecessaryRwa : Bool :=
+  { defValue := true, descr := "enable the unnecessary `rwa` linter" }
 
 private def logUnnecessaryRwa
     (initialState : SavedState) (ref : Syntax) (replacement : TSyntax `tactic)
@@ -31,11 +29,8 @@ private def logUnnecessaryRwa
     return
   let mut msg := m!"`rw` already closes the goal"
   if ← Meta.Tactic.TryThis.isValidTactic initialState replacement then
-    let suggestion : Meta.Hint.Suggestion := {
-      suggestion := replacement
-      span? := ref
-      diffGranularity := .none
-    }
+    let suggestion : Meta.Hint.Suggestion :=
+      { suggestion := replacement, span? := ref, diffGranularity := .none }
     let hint ← MessageData.hint "Use `rw` instead of `rwa`:" #[suggestion] (ref? := ref)
     msg := msg ++ hint
   Linter.logLint linter.unnecessaryRwa ref msg

@@ -71,11 +71,9 @@ theorem go_denote_mem_prefix
     (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w)
     (newWidth curr : Nat) (hcurr : curr ≤ newWidth) (s : AIG.RefVec aig curr)
     (start : Nat) (hstart)
-    : ⟦
-        (go aig w input newWidth curr hcurr s).aig,
+    : ⟦ (go aig w input newWidth curr hcurr s).aig,
         ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
-        assign
-      ⟧
+        assign ⟧
       = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply IsPrefix.of
@@ -90,11 +88,9 @@ theorem go_denote_eq
     (assign : α → Bool)
     : ∀ (idx : Nat) (hidx1 : idx < newWidth),
       curr ≤ idx
-        → ⟦
-            (go aig w input newWidth curr hcurr s).aig,
+        → ⟦ (go aig w input newWidth curr hcurr s).aig,
             (go aig w input newWidth curr hcurr s).vec.get idx hidx1,
-            assign
-          ⟧
+            assign ⟧
           = if hidx : idx < w then
               ⟦aig, input.get idx hidx, assign⟧
             else

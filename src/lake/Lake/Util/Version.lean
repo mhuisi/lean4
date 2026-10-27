@@ -506,10 +506,8 @@ namespace VerRange
 public instance : ToString VerRange := ⟨VerRange.toString⟩
 
 @[inline]
-public def ofClauses (clauses : Array (Array VerComparator)) : VerRange := {
-  toString := fmtOrs clauses
-  clauses
-}
+public def ofClauses (clauses : Array (Array VerComparator)) : VerRange :=
+  { toString := fmtOrs clauses, clauses }
 where
   fmtOrs ors :=
     if h : ors.size = 0 then

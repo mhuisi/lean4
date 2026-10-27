@@ -88,12 +88,11 @@ def forEligibleDeclsM
   -- map₂ are exactly the local decls
   env.constants.map₂.forM fun name c => do
     if allowCompletion env name then
-      f name {
-        info := c
-        -- Lazily compute the kind and the tags when needed.
-        kind := getCompletionKindForDecl c
-        tags := getCompletionTagsForDecl name
-      }
+      f name
+        { info := c
+          -- Lazily compute the kind and the tags when needed.
+          kind := getCompletionKindForDecl c
+          tags := getCompletionTagsForDecl name }
 
 /-- Checks whether this declaration can appear in completion results. -/
 def allowCompletion

@@ -66,13 +66,12 @@ where
           let hCongr :=
             mkApp4 (mkConst ``forall_congr [u]) p (← mkLambdaFVars #[x] rest)
               (← mkLambdaFVars #[x] (mkAnd a b)) (← mkLambdaFVars #[x] h)
-          return some (
-            lhs,
-            rhs,
-            some (mkEqTransCoreProp t (← mkForallFVars #[x] (mkAnd a b)) (mkAnd lhs rhs) hCongr
-              hAnd),
-            true
-          )
+          return some
+            ( lhs,
+              rhs,
+              some (mkEqTransCoreProp t (← mkForallFVars #[x] (mkAnd a b)) (mkAnd lhs rhs) hCongr
+                hAnd),
+              true )
       else
         let some (a, b, h?, dep) ← go rest
           | return none
@@ -83,11 +82,10 @@ where
         let some h := h?
           | return some (lhs, rhs, some hAnd, dep)
         let hCongr := mkApp4 (mkConst ``implies_congr_right [u, 0]) p rest (mkAnd a b) h
-        return some (
-          lhs,
-          rhs,
-          some (mkEqTransCoreProp t (mkForall n bi p (mkAnd a b)) (mkAnd lhs rhs) hCongr hAnd),
-          dep
-        )
+        return some
+          ( lhs,
+            rhs,
+            some (mkEqTransCoreProp t (mkForall n bi p (mkAnd a b)) (mkAnd lhs rhs) hCongr hAnd),
+            dep )
 
 end Lean.Meta.Grind

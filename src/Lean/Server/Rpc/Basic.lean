@@ -137,12 +137,11 @@ def rpcStoreRef [TypeName α] (obj : WithRpcRef α) : StateM RpcObjectStore Lsp.
     return ref
   | none =>
     let ref : Lsp.RpcRef := ⟨st.nextRef⟩
-    set {
-      st with
-      aliveRefs := st.aliveRefs.insert ref ⟨.mk obj.val, obj.id, 1⟩
-      refsById := st.refsById.insert obj.id ref
-      nextRef := st.nextRef + 1
-    }
+    set
+      { st with
+        aliveRefs := st.aliveRefs.insert ref ⟨.mk obj.val, obj.id, 1⟩
+        refsById := st.refsById.insert obj.id ref
+        nextRef := st.nextRef + 1 }
     return ref
 
 def rpcGetRef (α) [TypeName α] (r : Lsp.RpcRef)
@@ -162,11 +161,8 @@ def rpcReleaseRef (r : Lsp.RpcRef) : StateM RpcObjectStore Bool := do
     | return false
   let referencedObj := { referencedObj with rc := referencedObj.rc - 1 }
   if referencedObj.rc == 0 then
-    set {
-      st with
-      aliveRefs := st.aliveRefs.erase r
-      refsById := st.refsById.erase referencedObj.id
-    }
+    set
+      { st with aliveRefs := st.aliveRefs.erase r, refsById := st.refsById.erase referencedObj.id }
   else
     set { st with aliveRefs := st.aliveRefs.insert r referencedObj }
   return true

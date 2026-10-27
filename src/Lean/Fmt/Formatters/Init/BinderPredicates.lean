@@ -86,27 +86,25 @@ public def fmtBinderPredSSuperset : Fmt := fun
 @[builtin_quantifier_fmt Lean.«term∀__,_»]
 public def fmtForallBinderPred : QuantifierFmt := fun
   | `(∀%$forallTk $x:binderIdent $pred:binderPred ,%$commaTk $body:term) =>
-    some {
-      quantifier := forallTk
-      binders := .pred x pred
-      typeAscriptionTk? := none
-      type? := none
-      commaTk
-      body
-    }
+    some
+      { quantifier := forallTk
+        binders := .pred x pred
+        typeAscriptionTk? := none
+        type? := none
+        commaTk
+        body }
   | _ =>
     none
 
 @[builtin_quantifier_fmt Lean.«term∃__,_»]
 public def fmtExistsBinderPred : QuantifierFmt := fun
   | `(∃%$existsTk $x:binderIdent $pred:binderPred ,%$commaTk $body:term) =>
-    some {
-      quantifier := existsTk
-      binders := .pred x pred
-      typeAscriptionTk? := none
-      type? := none
-      commaTk
-      body
-    }
+    some
+      { quantifier := existsTk
+        binders := .pred x pred
+        typeAscriptionTk? := none
+        type? := none
+        commaTk
+        body }
   | _ =>
     none

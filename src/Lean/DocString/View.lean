@@ -130,13 +130,13 @@ def mkVersoRefNameFrom (src : Syntax) (value : String) (canonical := false) : Ve
 
 /-- Builds a link URL token containing `value`, with its position taken from `src`. -/
 def mkVersoLinkUrlFrom (src : Syntax) (value : String) (canonical := false) : VersoLinkUrl :=
-  ⟨Syntax.mkLit versoLinkUrlKind (escapeVersoLinkUrl value)
-    (info := SourceInfo.fromRef src canonical)⟩
+  ⟨ Syntax.mkLit versoLinkUrlKind (escapeVersoLinkUrl value)
+      (info := SourceInfo.fromRef src canonical) ⟩
 
 /-- Builds an image's alternate text containing `value`, with its position taken from `src`. -/
 def mkVersoImageAltFrom (src : Syntax) (value : String) (canonical := false) : VersoImageAlt :=
-  ⟨Syntax.mkLit versoImageAltKind (escapeVersoImageAlt value)
-    (info := SourceInfo.fromRef src canonical)⟩
+  ⟨ Syntax.mkLit versoImageAltKind (escapeVersoImageAlt value)
+      (info := SourceInfo.fromRef src canonical) ⟩
 
 /--
 Builds the URL of a link reference definition containing `value`, with its position taken from
@@ -452,15 +452,14 @@ matched separately from the name and arguments.
 def RoleView.of (stx : TSyntax ``Parser.inline) : Option RoleView :=
   match stx with
   | `(Parser.Inline.role| {%$bo $name:ident $args* }%$bc [%$so $inl* ]%$sc) =>
-    some {
-      stx
-      braceOpen := bo
-      name
-      args
-      braceClose := bc
-      brackets := some (so, sc)
-      content := inl
-    }
+    some
+      { stx
+        braceOpen := bo
+        name
+        args
+        braceClose := bc
+        brackets := some (so, sc)
+        content := inl }
   | `(Parser.Inline.role| {%$bo $name:ident $args* }%$bc $inl:inline*) =>
     some { stx, braceOpen := bo, name, args, braceClose := bc, brackets := none, content := inl }
   | _ =>

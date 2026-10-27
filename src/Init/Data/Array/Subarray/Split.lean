@@ -28,29 +28,27 @@ namespace Subarray
 Removes the first `i` elements of the subarray. If there are `i` or fewer elements, the resulting
 subarray is empty.
 -/
-def drop (arr : Subarray α) (i : Nat) : Subarray α := ⟨{
-  array := arr.array
-  start := min (arr.start + i) arr.stop
-  stop := arr.stop
-  start_le_stop := by omega
-  stop_le_array_size := arr.stop_le_array_size
-}⟩
+def drop (arr : Subarray α) (i : Nat) : Subarray α :=
+  ⟨ { array := arr.array
+      start := min (arr.start + i) arr.stop
+      stop := arr.stop
+      start_le_stop := by omega
+      stop_le_array_size := arr.stop_le_array_size } ⟩
 
 /--
 Keeps only the first `i` elements of the subarray. If there are `i` or fewer elements, the resulting
 subarray is empty.
 -/
-def take (arr : Subarray α) (i : Nat) : Subarray α := ⟨{
-  array := arr.array
-  start := arr.start
-  stop := min (arr.start + i) arr.stop
-  start_le_stop := by
-    have := arr.start_le_stop
-    omega
-  stop_le_array_size := by
-    have := arr.stop_le_array_size
-    omega
-}⟩
+def take (arr : Subarray α) (i : Nat) : Subarray α :=
+  ⟨ { array := arr.array
+      start := arr.start
+      stop := min (arr.start + i) arr.stop
+      start_le_stop := by
+        have := arr.start_le_stop
+        omega
+      stop_le_array_size := by
+        have := arr.stop_le_array_size
+        omega } ⟩
 
 /--
 Splits a subarray into two parts, the first of which contains the first `i` elements and the second

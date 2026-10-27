@@ -177,12 +177,11 @@ private def getMatchGeneralizing? : Syntax → Option Bool
 /-- Given the `stx` of a single match alternative, return a corresponding `TermMatchAltView`. -/
 def getMatchAlt (k : SyntaxNodeKinds) : Syntax → Option (MatchAltView k)
   | alt@`(matchAltExpr| | $patterns,* => $rhs) =>
-    some {
-      ref := alt
-      patterns := patterns
-      lhs := alt[1] -- this is the ref `$patterns,*`
-      rhs := ⟨rhs⟩
-    }
+    some
+      { ref := alt
+        patterns := patterns
+        lhs := alt[1] -- this is the ref `$patterns,*`
+        rhs := ⟨rhs⟩ }
   | _ =>
     none
 
@@ -1034,13 +1033,11 @@ where
       (altViews : Array TermMatchAltView) (first? : Option (SavedState × Exception))
       : TermElabM (Array Discr × Expr × Array (AltLHS × Expr) × Bool) := do
     let s ← saveState
-    let {
-        discrs := discrs'
-        toClear := toClear'
-        matchType := matchType'
-        altViews := altViews'
-        refined
-      } ←
+    let { discrs := discrs'
+          toClear := toClear'
+          matchType := matchType'
+          altViews := altViews'
+          refined } ←
       generalize discrs matchType altViews generalizing?
     match (← altViews'.mapM (fun altView =>
         elabMatchAltView discrs' altView matchType' (toClear ++ toClear'))
@@ -1154,10 +1151,8 @@ where
 def mkMatcher (input : Meta.Match.MkMatcherInput) : TermElabM MatcherResult :=
   Meta.Match.mkMatcher input
 
-register_builtin_option match.ignoreUnusedAlts : Bool := {
-  defValue := false
-  descr := "if true, do not generate error if an alternative is not used"
-}
+register_builtin_option match.ignoreUnusedAlts : Bool :=
+  { defValue := false, descr := "if true, do not generate error if an alternative is not used" }
 
 /--
 Constructs a "redundant alternative" error message.
@@ -1307,12 +1302,11 @@ private def elabMatchAux
     let numDiscrs := discrs.size
     let matcherName ← mkAuxName `match
     let matcherResult ←
-      mkMatcher {
-        matcherName
-        matchType
-        discrInfos := discrs.map fun discr => { hName? := discr.h?.map (·.getId) }
-        lhss := altLHSS
-      }
+      mkMatcher
+        { matcherName
+          matchType
+          discrInfos := discrs.map fun discr => { hName? := discr.h?.map (·.getId) }
+          lhss := altLHSS }
     reportMatcherResultErrors altLHSS matcherResult
     matcherResult.addMatcher
     let motive ←

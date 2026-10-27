@@ -232,12 +232,8 @@ def partialFixpoint (docCtx : LocalContext × LocalInstances) (preDefs : Array P
         preDefs[0]!.declName ++ `mutual
     let packedType' ← mkForallFVars fixedArgs packedType
     let packedValue' ← mkLambdaFVars fixedArgs packedValue
-    let preDefNonRec := {
-      preDefs[0]! with
-      declName := declName
-      type := packedType'
-      value := packedValue'
-    }
+    let preDefNonRec :=
+      { preDefs[0]! with declName := declName, type := packedType', value := packedValue' }
 
     let preDefsNonrec ←
       preDefs.mapIdxM fun fidx preDef => do

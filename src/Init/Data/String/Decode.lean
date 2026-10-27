@@ -112,21 +112,18 @@ public def String.utf8EncodeCharFast (c : Char) : List UInt8 :=
   let v := c.val
   if v ≤ 0x7f then
     [v.toUInt8]
-  else if v ≤ 0x7ff then [
-    (v >>> 6).toUInt8 &&& 0x1f ||| 0xc0,
-    v.toUInt8 &&& 0x3f ||| 0x80
-  ]
-  else if v ≤ 0xffff then [
-    (v >>> 12).toUInt8 &&& 0x0f ||| 0xe0,
-    (v >>> 6).toUInt8 &&& 0x3f ||| 0x80,
-    v.toUInt8 &&& 0x3f ||| 0x80
-  ]
-  else [
-    (v >>> 18).toUInt8 &&& 0x07 ||| 0xf0,
-    (v >>> 12).toUInt8 &&& 0x3f ||| 0x80,
-    (v >>> 6).toUInt8 &&& 0x3f ||| 0x80,
-    v.toUInt8 &&& 0x3f ||| 0x80
-  ]
+  else if v ≤ 0x7ff then
+    [ (v >>> 6).toUInt8 &&& 0x1f ||| 0xc0,
+      v.toUInt8 &&& 0x3f ||| 0x80 ]
+  else if v ≤ 0xffff then
+    [ (v >>> 12).toUInt8 &&& 0x0f ||| 0xe0,
+      (v >>> 6).toUInt8 &&& 0x3f ||| 0x80,
+      v.toUInt8 &&& 0x3f ||| 0x80 ]
+  else
+    [ (v >>> 18).toUInt8 &&& 0x07 ||| 0xf0,
+      (v >>> 12).toUInt8 &&& 0x3f ||| 0x80,
+      (v >>> 6).toUInt8 &&& 0x3f ||| 0x80,
+      v.toUInt8 &&& 0x3f ||| 0x80 ]
 
 theorem Nat.add_two_pow_eq_or_of_lt {b : Nat} (i : Nat) (b_lt : b < 2 ^ i) (a : Nat)
     : b + 2 ^ i * a = b ||| 2 ^ i * a := by
@@ -206,11 +203,9 @@ public theorem String.utf8EncodeChar_eq_cons_cons {c : Char}
 public theorem String.utf8EncodeChar_eq_cons_cons_cons {c : Char}
     : c.utf8Size = 3
       → String.utf8EncodeChar c
-        = [
-          (c.val >>> 12).toUInt8 &&& 0x0f ||| 0xe0,
-          (c.val >>> 6).toUInt8 &&& 0x3f ||| 0x80,
-          c.val.toUInt8 &&& 0x3f ||| 0x80
-        ] := by
+        = [ (c.val >>> 12).toUInt8 &&& 0x0f ||| 0xe0,
+            (c.val >>> 6).toUInt8 &&& 0x3f ||| 0x80,
+            c.val.toUInt8 &&& 0x3f ||| 0x80 ] := by
   rw [← length_utf8EncodeChar, utf8EncodeChar_eq_utf8EncodeCharFast]
   fun_cases utf8EncodeCharFast
   all_goals simp_all <;> (repeat' apply And.intro) <;> rfl
@@ -218,12 +213,10 @@ public theorem String.utf8EncodeChar_eq_cons_cons_cons {c : Char}
 public theorem String.utf8EncodeChar_eq_cons_cons_cons_cons {c : Char}
     : c.utf8Size = 4
       → String.utf8EncodeChar c
-        = [
-          (c.val >>> 18).toUInt8 &&& 0x07 ||| 0xf0,
-          (c.val >>> 12).toUInt8 &&& 0x3f ||| 0x80,
-          (c.val >>> 6).toUInt8 &&& 0x3f ||| 0x80,
-          c.val.toUInt8 &&& 0x3f ||| 0x80
-        ] := by
+        = [ (c.val >>> 18).toUInt8 &&& 0x07 ||| 0xf0,
+            (c.val >>> 12).toUInt8 &&& 0x3f ||| 0x80,
+            (c.val >>> 6).toUInt8 &&& 0x3f ||| 0x80,
+            c.val.toUInt8 &&& 0x3f ||| 0x80 ] := by
   rw [← length_utf8EncodeChar, utf8EncodeChar_eq_utf8EncodeCharFast]
   fun_cases utf8EncodeCharFast
   all_goals simp_all <;> (repeat' apply And.intro) <;> rfl
@@ -270,10 +263,8 @@ theorem String.toBitVec_getElem_utf8EncodeChar_one_of_utf8Size_eq_two
 
 theorem String.map_toBitVec_utf8EncodeChar_of_utf8Size_eq_two {c : Char} (h : c.utf8Size = 2)
     : (String.utf8EncodeChar c).map UInt8.toBitVec
-      = [
-        0b110#3 ++ c.val.toBitVec.extractLsb' 6 5,
-        0b10#2 ++ c.val.toBitVec.extractLsb' 0 6
-      ] := by
+      = [ 0b110#3 ++ c.val.toBitVec.extractLsb' 6 5,
+          0b10#2 ++ c.val.toBitVec.extractLsb' 0 6 ] := by
   rw [List.eq_getElem_of_length_eq_two (String.utf8EncodeChar c) (length_utf8EncodeChar _ ▸ h),
     List.map_cons, List.map_cons, List.map_nil,
     String.toBitVec_getElem_utf8EncodeChar_zero_of_utf8Size_eq_two h,
@@ -301,11 +292,9 @@ theorem String.toBitVec_getElem_utf8EncodeChar_two_of_utf8Size_eq_three
 
 theorem String.map_toBitVec_utf8EncodeChar_of_utf8Size_eq_three {c : Char} (h : c.utf8Size = 3)
     : (String.utf8EncodeChar c).map UInt8.toBitVec
-      = [
-        0b1110#4 ++ c.val.toBitVec.extractLsb' 12 4,
-        0b10#2 ++ c.val.toBitVec.extractLsb' 6 6,
-        0b10#2 ++ c.val.toBitVec.extractLsb' 0 6
-      ] := by
+      = [ 0b1110#4 ++ c.val.toBitVec.extractLsb' 12 4,
+          0b10#2 ++ c.val.toBitVec.extractLsb' 6 6,
+          0b10#2 ++ c.val.toBitVec.extractLsb' 0 6 ] := by
   rw [List.eq_getElem_of_length_eq_three (String.utf8EncodeChar c) (length_utf8EncodeChar _ ▸ h),
     List.map_cons, List.map_cons, List.map_cons, List.map_nil,
     String.toBitVec_getElem_utf8EncodeChar_zero_of_utf8Size_eq_three h,
@@ -340,12 +329,10 @@ theorem String.toBitVec_getElem_utf8EncodeChar_three_of_utf8Size_eq_four
 
 theorem String.map_toBitVec_utf8EncodeChar_of_utf8Size_eq_four {c : Char} (h : c.utf8Size = 4)
     : (String.utf8EncodeChar c).map UInt8.toBitVec
-      = [
-        0b11110#5 ++ c.val.toBitVec.extractLsb' 18 3,
-        0b10#2 ++ c.val.toBitVec.extractLsb' 12 6,
-        0b10#2 ++ c.val.toBitVec.extractLsb' 6 6,
-        0b10#2 ++ c.val.toBitVec.extractLsb' 0 6
-      ] := by
+      = [ 0b11110#5 ++ c.val.toBitVec.extractLsb' 18 3,
+          0b10#2 ++ c.val.toBitVec.extractLsb' 12 6,
+          0b10#2 ++ c.val.toBitVec.extractLsb' 6 6,
+          0b10#2 ++ c.val.toBitVec.extractLsb' 0 6 ] := by
   rw [List.eq_getElem_of_length_eq_four (String.utf8EncodeChar c) (length_utf8EncodeChar _ ▸ h),
     List.map_cons, List.map_cons, List.map_cons, List.map_cons, List.map_nil,
     String.toBitVec_getElem_utf8EncodeChar_zero_of_utf8Size_eq_four h,
@@ -1019,9 +1006,10 @@ theorem assemble₃_eq_some_iff_utf8EncodeChar_eq {w x y : UInt8} {c : Char}
   · intro h
     have h₀ : (String.utf8EncodeChar c).length = 3 := congrArg List.length h
     have hc : c.utf8Size = 3 := String.length_utf8EncodeChar _ ▸ h₀
-    obtain ⟨rfl, rfl, rfl⟩
-        : w = (String.utf8EncodeChar c)[0] ∧ x = (String.utf8EncodeChar c)[1]
-          ∧ y = (String.utf8EncodeChar c)[2] := by
+    obtain
+        ⟨rfl, rfl, rfl⟩
+          : w = (String.utf8EncodeChar c)[0] ∧ x = (String.utf8EncodeChar c)[1]
+            ∧ y = (String.utf8EncodeChar c)[2] := by
       simp [h]
     refine ⟨parseFirstByte_utf8EncodeChar_eq_twoMore hc, ?_⟩
     apply assemble₃_eq_some_of_toBitVec
@@ -1217,9 +1205,10 @@ theorem assemble₄_eq_some_iff_utf8EncodeChar_eq {w x y z : UInt8} {c : Char}
   · intro h
     have h₀ : (String.utf8EncodeChar c).length = 4 := congrArg List.length h
     have hc : c.utf8Size = 4 := String.length_utf8EncodeChar _ ▸ h₀
-    obtain ⟨rfl, rfl, rfl, rfl⟩
-        : w = (String.utf8EncodeChar c)[0] ∧ x = (String.utf8EncodeChar c)[1]
-          ∧ y = (String.utf8EncodeChar c)[2] ∧ z = (String.utf8EncodeChar c)[3] := by
+    obtain
+        ⟨rfl, rfl, rfl, rfl⟩
+          : w = (String.utf8EncodeChar c)[0] ∧ x = (String.utf8EncodeChar c)[1]
+            ∧ y = (String.utf8EncodeChar c)[2] ∧ z = (String.utf8EncodeChar c)[3] := by
       simp [h]
     refine ⟨parseFirstByte_utf8EncodeChar_eq_threeMore hc, ?_⟩
     apply assemble₄_eq_some_of_toBitVec

@@ -43,13 +43,11 @@ elab_rules : tactic
     let ctx ← readThe Elab.Term.Context
     let some tacSnap := ctx.tacSnap?
       | unreachable!
-    tacSnap.new.resolve {
-      transformed.raw := {
-        diagnostics := (← Language.Snapshot.Diagnostics.ofMessageLog (← Core.getMessageLog))
-        stx := default
-        finished := default
-      }
-    }
+    tacSnap.new.resolve
+      { transformed.raw :=
+          { diagnostics := (← Language.Snapshot.Diagnostics.ofMessageLog (← Core.getMessageLog))
+            stx := default
+            finished := default } }
 
     let ctx ← readThe Core.Context
     let some cancelTk := ctx.cancelTk?
@@ -93,13 +91,11 @@ elab_rules : tactic
     let ctx ← readThe Elab.Term.Context
     let some tacSnap := ctx.tacSnap?
       | unreachable!
-    tacSnap.new.resolve {
-      transformed.raw := {
-        diagnostics := (← Language.Snapshot.Diagnostics.ofMessageLog (← Core.getMessageLog))
-        stx := default
-        finished := default
-      }
-    }
+    tacSnap.new.resolve
+      { transformed.raw :=
+          { diagnostics := (← Language.Snapshot.Diagnostics.ofMessageLog (← Core.getMessageLog))
+            stx := default
+            finished := default } }
 
     while true do
       if (← (← getUnblockedCancelTk).isSet) then

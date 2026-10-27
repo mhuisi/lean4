@@ -156,12 +156,11 @@ public def mkSparseCasesOn (indName : Name) (ctors : Array Name) : MetaM Name :=
   setReducibleAttribute declName
   modifyEnv fun env => markSparseCasesOn env declName
   modifyEnv fun env =>
-    sparseCasesOnInfoExt.insert env declName {
-      indName
-      majorPos := indInfo.numParams + 1 + indInfo.numIndices
-      arity := indInfo.numParams + 1 + indInfo.numIndices + 1 + ctors.size + 1
-      insterestingCtors := ctors
-    }
+    sparseCasesOnInfoExt.insert env declName
+      { indName
+        majorPos := indInfo.numParams + 1 + indInfo.numIndices
+        arity := indInfo.numParams + 1 + indInfo.numIndices + 1 + ctors.size + 1
+        insterestingCtors := ctors }
   enableRealizationsForConst declName
   pure declName
 

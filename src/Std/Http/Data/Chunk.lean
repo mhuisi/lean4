@@ -173,11 +173,8 @@ def empty : Chunk := { data := .empty, extensions := #[] }
 def ofByteArray (data : ByteArray) : Chunk := { data := data, extensions := #[] }
 
 /-- Adds an extension to a chunk. -/
-def insertExtension (chunk : Chunk) (key : Chunk.ExtensionName) (value : ExtensionValue)
-    : Chunk := {
-  chunk with
-  extensions := chunk.extensions.push (key, some value)
-}
+def insertExtension (chunk : Chunk) (key : Chunk.ExtensionName) (value : ExtensionValue) : Chunk :=
+  { chunk with extensions := chunk.extensions.push (key, some value) }
 
 /-- Interprets the chunk data as a UTF-8 encoded string. -/
 def toString? (chunk : Chunk) : Option String := String.fromUTF8? chunk.data
@@ -212,15 +209,13 @@ def empty : Trailer := { headers := .empty }
 
 /-- Inserts a trailer header field. -/
 @[inline]
-def insert (trailer : Trailer) (name : Header.Name) (value : Header.Value) : Trailer := {
-  headers := trailer.headers.insert name value
-}
+def insert (trailer : Trailer) (name : Header.Name) (value : Header.Value) : Trailer :=
+  { headers := trailer.headers.insert name value }
 
 /-- Inserts a trailer header field from string name and value, panicking if either is invalid. -/
 @[inline]
-def insert! (trailer : Trailer) (name : String) (value : String) : Trailer := {
-  headers := trailer.headers.insert! name value
-}
+def insert! (trailer : Trailer) (name : String) (value : String) : Trailer :=
+  { headers := trailer.headers.insert! name value }
 
 /--
 Retrieves the first value for the given trailer header name.
@@ -243,9 +238,8 @@ def contains (trailer : Trailer) (name : Header.Name) : Bool := trailer.headers.
 
 /-- Removes a trailer header with the given name. -/
 @[inline]
-def erase (trailer : Trailer) (name : Header.Name) : Trailer := {
-  headers := trailer.headers.erase name
-}
+def erase (trailer : Trailer) (name : Header.Name) : Trailer :=
+  { headers := trailer.headers.erase name }
 
 /-- Gets the number of trailer headers. -/
 @[inline] def size (trailer : Trailer) : Nat := trailer.headers.size

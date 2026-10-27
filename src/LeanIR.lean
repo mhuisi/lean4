@@ -44,15 +44,14 @@ def mkIRData (env : Environment) : IO ModuleData := do
   let irEntries := exportIREntries env
   let irExtNames := irEntries.map (·.1)
   let modEntries := (← mkModuleData env .private).entries.filter (! irExtNames.contains ·.1)
-  return {
-    env.header with
-    entries := irEntries ++ modEntries
-    constants := default
-    constNames := default
-    -- make sure to include all names in case only `.ir` is loaded
-    -- TODO: `.private` because `import all` may require otherwise unreachable IR entries
-    extraConstNames := getIRExtraConstNames env .private (includeDecls := true)
-  }
+  return
+    { env.header with
+      entries := irEntries ++ modEntries
+      constants := default
+      constNames := default
+      -- make sure to include all names in case only `.ir` is loaded
+      -- TODO: `.private` because `import all` may require otherwise unreachable IR entries
+      extraConstNames := getIRExtraConstNames env .private (includeDecls := true) }
 
 def setConfigOption (opts : Options) (arg : String) : IO Options := do
   let some arg := arg.dropPrefix? "-D"
@@ -98,10 +97,9 @@ public def main (args : List String) : IO UInt32 := do
         importModulesCore (globalLevel := .exported) (loadIRSig := true) (arts := setup.importArts)
             imports
           |>.run
-      let s := {
-        s with
-        moduleNameMap := s.moduleNameMap.modify modName fun m => { m with irPhases := .runtime }
-      }
+      let s :=
+        { s with
+          moduleNameMap := s.moduleNameMap.modify modName fun m => { m with irPhases := .runtime } }
       -- level exported because otherwise we would try to load the current module's `.ir`
       finalizeImport (leakEnv := true) (loadExts := false) (level := .exported) (loadIRSig := true)
         s imports opts
@@ -113,10 +111,8 @@ public def main (args : List String) : IO UInt32 := do
     let s := ext.toEnvExtension.getState env
     let newState ← ext.addImportedFn s.importedEntries { env := env, opts := {} }
     -- unlogged: nothing has been recorded against this environment yet
-    return ext.toEnvExtension.setState (asyncMode := .sync) (log := .unlogged) env {
-      s with
-      state := newState
-    }
+    return ext.toEnvExtension.setState (asyncMode := .sync) (log := .unlogged) env
+      { s with state := newState }
 
   let env ← initExt Lean.Compiler.CSimp.ext.ext env
   let env ← initExt Meta.instanceExtension.ext env
@@ -144,10 +140,8 @@ public def main (args : List String) : IO UInt32 := do
         if isExtern env (unbox d.name) then (d :: decls, m.insert d.name d) else (decls, m))
       is.state
   let env :=
-    Lean.IR.declMapExt.toEnvExtension.setState (asyncMode := .sync) env {
-      is with
-      state := newState
-    }
+    Lean.IR.declMapExt.toEnvExtension.setState (asyncMode := .sync) env
+      { is with state := newState }
 
   let some mod := env.header.moduleData[modIdx]?
     | unreachable!
@@ -192,10 +186,9 @@ public def main (args : List String) : IO UInt32 := do
 
   -- Save, basing `.ir` on top of `.ir.sig`
   let irSigFile := (irFile : System.FilePath).addExtension "sig"
-  saveModuleDataParts (env.mainModule ++ `ir) #[
-    (irSigFile, ← mkIRSigData env),
-    (irFile, ← mkIRData env)
-  ]
+  saveModuleDataParts (env.mainModule ++ `ir)
+    #[(irSigFile, ← mkIRSigData env),
+      (irFile, ← mkIRData env)]
 
   let .ok out ← IO.FS.Handle.mk c .write |>.toBaseIO
     | IO.eprintln s!"failed to create '{c}'"

@@ -123,14 +123,13 @@ unsafe builtin_initialize grindTacElabAttribute : KeyedDeclsAttribute GrindTacti
 
 def mkTacticInfo (mctxBefore : MetavarContext) (goalsBefore : List MVarId) (stx : Syntax)
     : GrindTacticM Info :=
-  return Info.ofTacticInfo {
-    elaborator := (← read).elaborator
-    mctxBefore := mctxBefore
-    goalsBefore := goalsBefore
-    stx := stx
-    mctxAfter := (← getMCtx)
-    goalsAfter := (← getUnsolvedGoalMVarIds)
-  }
+  return Info.ofTacticInfo
+    { elaborator := (← read).elaborator
+      mctxBefore := mctxBefore
+      goalsBefore := goalsBefore
+      stx := stx
+      mctxAfter := (← getMCtx)
+      goalsAfter := (← getUnsolvedGoalMVarIds) }
 
 def mkInitialTacticInfo (stx : Syntax) : GrindTacticM (GrindTacticM Info) := do
   let mctxBefore ← getMCtx
@@ -324,10 +323,8 @@ def saveTacticInfoForToken (stx : Syntax) : GrindTacticM Unit := do
 def withMacroExpansion (beforeStx afterStx : Syntax) (x : GrindTacticM α) : GrindTacticM α :=
   withMacroExpansionInfo beforeStx afterStx do
     withTheReader Term.Context
-      (fun ctx => {
-        ctx with
-        macroStack := { before := beforeStx, after := afterStx } :: ctx.macroStack
-      })
+      (fun ctx =>
+        { ctx with macroStack := { before := beforeStx, after := afterStx } :: ctx.macroStack })
       x
 
 /-- Adapt a syntax transformation to a regular tactic evaluator. -/
@@ -479,15 +476,14 @@ def mkEvalTactic' (elaborator : Name) (params : Params) (sym : Bool)
       Term.TermElabM.run' (ctx := termCtx) (s := termState) do
         let (_, s) ←
           GrindTacticM.run
-            (ctx := {
-              recover := false
-              methods
-              ctx := grindCtx
-              sctx := symCtx
-              params
-              elaborator
-              sym
-            })
+            (ctx :=
+              { recover := false
+                methods
+                ctx := grindCtx
+                sctx := symCtx
+                params
+                elaborator
+                sym })
             (s := { grindState, symState, goals := [goal] })
             do
               evalGrindTactic stx.raw

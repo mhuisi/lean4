@@ -227,21 +227,19 @@ where
     -/
     -- TODO: improve performance: we only need to collect terms that may propagate.
     let toPropagateDown ← getEqc lhs
-    setENode lhsNode.root {
-      (← getENode lhsRoot.self) with -- We must retrieve `lhsRoot` since it was updated.
-      next := rhsRoot.next
-    }
+    setENode lhsNode.root
+      { (← getENode lhsRoot.self) with -- We must retrieve `lhsRoot` since it was updated.
+        next := rhsRoot.next }
     let heqProofs := isHEq || rhsRoot.heqProofs || lhsRoot.heqProofs
     -- We must also retrieve `rhsRoot`: it may be a parent of `lhsRoot.self`, and
     -- `reinsertParents` may have updated its `congr` field. See #15871.
     let rhsRoot ← getENode rhsRoot.self
-    setENode rhsNode.root {
-      rhsRoot with
-      next := lhsRoot.next
-      size := rhsRoot.size + lhsRoot.size
-      hasLambdas := rhsRoot.hasLambdas || lhsRoot.hasLambdas
-      heqProofs
-    }
+    setENode rhsNode.root
+      { rhsRoot with
+        next := lhsRoot.next
+        size := rhsRoot.size + lhsRoot.size
+        hasLambdas := rhsRoot.hasLambdas || lhsRoot.hasLambdas
+        heqProofs }
     propagateBeta lams₁ fns₁
     propagateBeta lams₂ fns₂
     let toPropagateSolvers ← Solvers.mergeTerms rhsRoot lhsRoot heqProofs
@@ -264,10 +262,8 @@ where
     for e in toPropagateDown do
       let some delayedThms := (← get).ematch.delayedThmInsts.find? { expr := e }
         | pure ()
-      modify fun s => {
-        s with
-        ematch.delayedThmInsts := s.ematch.delayedThmInsts.erase { expr := e }
-      }
+      modify fun s =>
+        { s with ematch.delayedThmInsts := s.ematch.delayedThmInsts.erase { expr := e } }
       delayedThms.forM (·.check)
 
   updateRoots (lhs : Expr) (rootNew : Expr) : GoalM Unit := do

@@ -33,13 +33,12 @@ existing tactics.
 -/
 builtin_initialize tacticAlternativeExt
     : PersistentEnvExtension (Name × Name) (Name × Name) (NameMap Name) ←
-  registerPersistentEnvExtension {
-    mkInitial := pure {}
-    addImportedFn := fun _ => pure {}
-    addEntryFn := fun as (src, tgt) => as.insert src tgt
-    exportEntriesFn := fun es =>
-      es.foldl (fun a src tgt => a.push (src, tgt)) #[] |>.qsort (Name.quickLt ·.1 ·.1)
-  }
+  registerPersistentEnvExtension
+    { mkInitial := pure {}
+      addImportedFn := fun _ => pure {}
+      addEntryFn := fun as (src, tgt) => as.insert src tgt
+      exportEntriesFn := fun es =>
+        es.foldl (fun a src tgt => a.push (src, tgt)) #[] |>.qsort (Name.quickLt ·.1 ·.1) }
 
 /--
 If `tac` is registered as the alternative form of another tactic, then return the canonical name for
@@ -68,53 +67,51 @@ def aliases [Monad m] [MonadEnv m] (tac : Name) : m NameSet := do
 
 builtin_initialize
   let name := `tactic_alt
-  registerBuiltinAttribute {
-    name := name
-    ref := by exact decl_name%
-    add := fun decl stx kind => do
-      unless kind == AttributeKind.global do
-        throwAttrMustBeGlobal name kind
-      unless ((← getEnv).getModuleIdxFor? decl).isNone do
-        throwAttrDeclInImportedModule name decl
-      let `(«tactic_alt»|tactic_alt $tgt) := stx
-        | throwError "Invalid `[{name}]` attribute syntax"
+  registerBuiltinAttribute
+    { name := name
+      ref := by exact decl_name%
+      add := fun decl stx kind => do
+        unless kind == AttributeKind.global do
+          throwAttrMustBeGlobal name kind
+        unless ((← getEnv).getModuleIdxFor? decl).isNone do
+          throwAttrDeclInImportedModule name decl
+        let `(«tactic_alt»|tactic_alt $tgt) := stx
+          | throwError "Invalid `[{name}]` attribute syntax"
 
-      let tgtName ← Lean.Elab.realizeGlobalConstNoOverloadWithInfo tgt
-      recordExtraModUseFromDecl (isMeta := false) tgtName
+        let tgtName ← Lean.Elab.realizeGlobalConstNoOverloadWithInfo tgt
+        recordExtraModUseFromDecl (isMeta := false) tgtName
 
-      if !(isTactic (← getEnv) tgtName) then throwErrorAt tgt "`{tgtName}` is not a tactic"
-      -- If the target is a known syntax kind, ensure that it's a tactic
-      let cats := getSyntaxNodeKindCategories (← getEnv) decl
-      if !cats.isEmpty && cats.all (· ≠ `tactic) then
-        let catNames := cats.map fun c => m!"`{c}`"
-        let s := if catNames.size > 1 then m!"ies" else m!"y"
-        throwError "`{decl}` is not a tactic (it is in the categor{s} {.andList catNames.toList})"
+        if !(isTactic (← getEnv) tgtName) then throwErrorAt tgt "`{tgtName}` is not a tactic"
+        -- If the target is a known syntax kind, ensure that it's a tactic
+        let cats := getSyntaxNodeKindCategories (← getEnv) decl
+        if !cats.isEmpty && cats.all (· ≠ `tactic) then
+          let catNames := cats.map fun c => m!"`{c}`"
+          let s := if catNames.size > 1 then m!"ies" else m!"y"
+          throwError "`{decl}` is not a tactic (it is in the categor{s} {.andList catNames.toList})"
 
-      if let some tgt' := alternativeOfTactic (← getEnv) tgtName then
-        throwError "`{tgtName}` is itself an alternative for `{tgt'}`"
-      modifyEnv fun env => tacticAlternativeExt.addEntry env (decl, tgtName)
-    descr :=
-      "Register a tactic parser as an alternative form of an existing tactic, so they "
-        ++ "can be grouped together in documentation."
-    -- This runs prior to elaboration because it allows a check for whether the decl is present
-    -- in the environment to determine whether we can see if it's a tactic name. This is useful
-    -- when the attribute is applied after definition, using an `attribute` command (error checking
-    -- for the `@[tactic_alt TAC]` syntax is performed by the parser attribute hook). If this
-    -- attribute ran later, then the decl would already be present.
-    applicationTime := .afterCompilation -- .beforeElaboration
-  }
+        if let some tgt' := alternativeOfTactic (← getEnv) tgtName then
+          throwError "`{tgtName}` is itself an alternative for `{tgt'}`"
+        modifyEnv fun env => tacticAlternativeExt.addEntry env (decl, tgtName)
+      descr :=
+        "Register a tactic parser as an alternative form of an existing tactic, so they "
+          ++ "can be grouped together in documentation."
+      -- This runs prior to elaboration because it allows a check for whether the decl is present
+      -- in the environment to determine whether we can see if it's a tactic name. This is useful
+      -- when the attribute is applied after definition, using an `attribute` command (error checking
+      -- for the `@[tactic_alt TAC]` syntax is performed by the parser attribute hook). If this
+      -- attribute ran later, then the decl would already be present.
+      applicationTime := .afterCompilation } -- .beforeElaboration
 
 /-- The known tactic tags that allow tactics to be grouped by purpose. -/
 builtin_initialize knownTacticTagExt
     : PersistentEnvExtension (Name × String × Option String) (Name × String × Option String)
       (NameMap (String × Option String)) ←
-  registerPersistentEnvExtension {
-    mkInitial := pure {}
-    addImportedFn := fun _ => pure {}
-    addEntryFn := fun as (src, tgt) => as.insert src tgt
-    exportEntriesFn := fun es =>
-      es.foldl (fun a src tgt => a.push (src, tgt)) #[] |>.qsort (Name.quickLt ·.1 ·.1)
-  }
+  registerPersistentEnvExtension
+    { mkInitial := pure {}
+      addImportedFn := fun _ => pure {}
+      addEntryFn := fun as (src, tgt) => as.insert src tgt
+      exportEntriesFn := fun es =>
+        es.foldl (fun a src tgt => a.push (src, tgt)) #[] |>.qsort (Name.quickLt ·.1 ·.1) }
 
 /-- Get the user-facing name and docstring for a tactic tag. -/
 def tagInfo [Monad m] [MonadEnv m] (tag : Name) : m (Option (String × Option String)) := do
@@ -163,67 +160,65 @@ The first projection in each pair is the tactic name, and the second is the tag 
 -/
 builtin_initialize tacticTagExt
     : PersistentEnvExtension (Name × Name) (Name × Name) (NameMap NameSet) ←
-  registerPersistentEnvExtension {
-    mkInitial := pure {}
-    addImportedFn := fun _ => pure {}
-    addEntryFn := fun tags (decl, newTag) => tags.insert decl (tags.getD decl {} |>.insert newTag)
-    exportEntriesFn := fun tags => Id.run do
-      let mut exported := #[]
-      for (decl, dTags) in tags do
-        for t in dTags do
-          exported := exported.push (decl, t)
-      exported
-  }
+  registerPersistentEnvExtension
+    { mkInitial := pure {}
+      addImportedFn := fun _ => pure {}
+      addEntryFn := fun tags (decl, newTag) => tags.insert decl (tags.getD decl {} |>.insert newTag)
+      exportEntriesFn := fun tags => Id.run do
+        let mut exported := #[]
+        for (decl, dTags) in tags do
+          for t in dTags do
+            exported := exported.push (decl, t)
+        exported }
 
 builtin_initialize
   let name := `tactic_tag
-  registerBuiltinAttribute {
-    name := name
-    ref := by exact decl_name%
-    add := fun decl stx kind => do
-      unless kind == AttributeKind.global do
-        throwAttrMustBeGlobal name kind
-      let `(«tactic_tag»|tactic_tag $tags*) := stx
-        | throwError "Invalid `[{name}]` attribute syntax"
+  registerBuiltinAttribute
+    { name := name
+      ref := by exact decl_name%
+      add := fun decl stx kind => do
+        unless kind == AttributeKind.global do
+          throwAttrMustBeGlobal name kind
+        let `(«tactic_tag»|tactic_tag $tags*) := stx
+          | throwError "Invalid `[{name}]` attribute syntax"
 
-      if (← getEnv).find? decl |>.isSome then
-        if !(isTactic (← getEnv) decl) then
-          throwErrorAt stx "`{.ofConstName decl}` is not a tactic"
+        if (← getEnv).find? decl |>.isSome then
+          if !(isTactic (← getEnv) decl) then
+            throwErrorAt stx "`{.ofConstName decl}` is not a tactic"
 
-      if let some tgt' := alternativeOfTactic (← getEnv) decl then
-        throwErrorAt stx "`{.ofConstName decl}` is an alternative form of `{.ofConstName tgt'}`"
+        if let some tgt' := alternativeOfTactic (← getEnv) decl then
+          throwErrorAt stx "`{.ofConstName decl}` is an alternative form of `{.ofConstName tgt'}`"
 
-      for t in tags do
-        let tagName := t.getId
-        if let some _ ← tagInfo tagName then
-          modifyEnv (tacticTagExt.addEntry · (decl, tagName))
-        else
-          let all ← allTags
-          let extra : MessageData :=
-            let count := all.length
-            let name := (m!"`{·}`")
-            let suggestions :=
-              if count == 0 then
-                m!"(no tags defined)"
-              else if count == 1 then
-                MessageData.joinSep (all.map name) ", "
-              else if count < 10 then
-                m!"one of " ++ MessageData.joinSep (all.map name) ", "
-              else
-                m!"one of " ++ MessageData.joinSep (all.take 10 |>.map name) ", " ++ ", ..."
-            m!"(expected {suggestions})"
+        for t in tags do
+          let tagName := t.getId
+          if let some _ ← tagInfo tagName then
+            modifyEnv (tacticTagExt.addEntry · (decl, tagName))
+          else
+            let all ← allTags
+            let extra : MessageData :=
+              let count := all.length
+              let name := (m!"`{·}`")
+              let suggestions :=
+                if count == 0 then
+                  m!"(no tags defined)"
+                else if count == 1 then
+                  MessageData.joinSep (all.map name) ", "
+                else if count < 10 then
+                  m!"one of " ++ MessageData.joinSep (all.map name) ", "
+                else
+                  m!"one of " ++ MessageData.joinSep (all.take 10 |>.map name) ", " ++ ", ..."
+              m!"(expected {suggestions})"
 
-          throwErrorAt t (m!"Unknown tag `{tagName}` " ++ extra)
-    descr :=
-      "Register a tactic parser as an alternative of an existing tactic, so they can be "
-        ++ "grouped together in documentation."
-    -- This runs prior to elaboration because it allows a check for whether the decl is present
-    -- in the environment to determine whether we can see if it's a tactic name. This is useful
-    -- when the attribute is applied after definition, using an `attribute` command (error checking
-    -- for the `@[tactic_tag ...]` syntax is performed by the parser attribute hook). If this
-    -- attribute ran later, then the decl would already be present.
-    applicationTime := .beforeElaboration
-  }
+            throwErrorAt t (m!"Unknown tag `{tagName}` " ++ extra)
+      descr :=
+        "Register a tactic parser as an alternative of an existing tactic, so they can be "
+          ++ "grouped together in documentation."
+      -- This runs prior to elaboration because it allows a check for whether the decl is present
+      -- in the environment to determine whether we can see if it's a tactic name. This is useful
+      -- when the attribute is applied after definition, using an `attribute` command (error checking
+      -- for the `@[tactic_tag ...]` syntax is performed by the parser attribute hook). If this
+      -- attribute ran later, then the decl would already be present.
+      applicationTime := .beforeElaboration }
 
 /--
 Extensions to tactic documentation.
@@ -233,13 +228,12 @@ instance, new cases tried by `trivial`).
 -/
 builtin_initialize tacticDocExtExt
     : PersistentEnvExtension (Name × Array String) (Name × String) (NameMap (Array String)) ←
-  registerPersistentEnvExtension {
-    mkInitial := pure {}
-    addImportedFn := fun _ => pure {}
-    addEntryFn := fun es (x, ext) => es.insert x (es.getD x #[] |>.push ext)
-    exportEntriesFn := fun es =>
-      es.foldl (fun a src tgt => a.push (src, tgt)) #[] |>.qsort (Name.quickLt ·.1 ·.1)
-  }
+  registerPersistentEnvExtension
+    { mkInitial := pure {}
+      addImportedFn := fun _ => pure {}
+      addEntryFn := fun es (x, ext) => es.insert x (es.getD x #[] |>.push ext)
+      exportEntriesFn := fun es =>
+        es.foldl (fun a src tgt => a.push (src, tgt)) #[] |>.qsort (Name.quickLt ·.1 ·.1) }
 
 /-- Gets the extensions declared for the documentation for the given canonical tactic name -/
 def getTacticExtensions (env : Environment) (tactic : Name) : Array String := Id.run do
@@ -276,13 +270,12 @@ The first projection in each pair is the tactic name, and the second is the cust
 -/
 builtin_initialize tacticNameExt
     : PersistentEnvExtension (Name × String) (Name × String) (NameMap String) ←
-  registerPersistentEnvExtension {
-    mkInitial := pure {}
-    addImportedFn := fun _ => pure {}
-    addEntryFn := fun as (src, tgt) => as.insert src tgt
-    exportEntriesFn := fun es =>
-      es.foldl (fun a src tgt => a.push (src, tgt)) #[] |>.qsort (Name.quickLt ·.1 ·.1)
-  }
+  registerPersistentEnvExtension
+    { mkInitial := pure {}
+      addImportedFn := fun _ => pure {}
+      addEntryFn := fun as (src, tgt) => as.insert src tgt
+      exportEntriesFn := fun es =>
+        es.foldl (fun a src tgt => a.push (src, tgt)) #[] |>.qsort (Name.quickLt ·.1 ·.1) }
 
 /-- Finds the custom name assigned to `tac`, or returns `none` if there is no such custom name. -/
 def customTacticName [Monad m] [MonadEnv m] (tac : Name) : m (Option String) := do
@@ -298,43 +291,42 @@ def customTacticName [Monad m] [MonadEnv m] (tac : Name) : m (Option String) := 
 
 builtin_initialize
   let name := `tactic_name
-  registerBuiltinAttribute {
-    name := name
-    ref := by exact decl_name%
-    add := fun decl stx kind => do
-      unless kind == AttributeKind.global do
-        throwAttrMustBeGlobal name kind
-      let name ←
-        match stx with
-        | `(«tactic_name»|tactic_name $name:str) => pure name.getString
-        | `(«tactic_name»|tactic_name $name:ident) => pure (name.getId.toString (escape := false))
-        | _ => throwError "Invalid `[{name}]` attribute syntax"
+  registerBuiltinAttribute
+    { name := name
+      ref := by exact decl_name%
+      add := fun decl stx kind => do
+        unless kind == AttributeKind.global do
+          throwAttrMustBeGlobal name kind
+        let name ←
+          match stx with
+          | `(«tactic_name»|tactic_name $name:str) => pure name.getString
+          | `(«tactic_name»|tactic_name $name:ident) => pure (name.getId.toString (escape := false))
+          | _ => throwError "Invalid `[{name}]` attribute syntax"
 
-      if (← getEnv).find? decl |>.isSome then
-        if !(isTactic (← getEnv) decl) then
-          throwErrorAt stx m!"`{.ofConstName decl}` is not a tactic"
-        if let some idx := (← getEnv).getModuleIdxFor? decl then
-          if let some mod := (← getEnv).allImportedModuleNames[idx]? then
-            throwErrorAt stx
-              m!"`{.ofConstName decl}` is defined in `{mod}`, but custom names can only be added \
-                in the tactic's defining module."
-          else
-            throwErrorAt stx
-              m!"`{.ofConstName decl}` is defined in an imported module, but custom names can only \
-                be added in the tactic's defining module."
+        if (← getEnv).find? decl |>.isSome then
+          if !(isTactic (← getEnv) decl) then
+            throwErrorAt stx m!"`{.ofConstName decl}` is not a tactic"
+          if let some idx := (← getEnv).getModuleIdxFor? decl then
+            if let some mod := (← getEnv).allImportedModuleNames[idx]? then
+              throwErrorAt stx
+                m!"`{.ofConstName decl}` is defined in `{mod}`, but custom names can only be added \
+                  in the tactic's defining module."
+            else
+              throwErrorAt stx
+                m!"`{.ofConstName decl}` is defined in an imported module, but custom names can \
+                  only be added in the tactic's defining module."
 
-      if let some tgt' := alternativeOfTactic (← getEnv) decl then
-        throwErrorAt stx "`{.ofConstName decl}` is an alternative form of `{.ofConstName tgt'}`"
+        if let some tgt' := alternativeOfTactic (← getEnv) decl then
+          throwErrorAt stx "`{.ofConstName decl}` is an alternative form of `{.ofConstName tgt'}`"
 
-      if let some n ← customTacticName decl then
-        throwError m!"The tactic `{.ofConstName decl}` already has the custom name `{n}`"
+        if let some n ← customTacticName decl then
+          throwError m!"The tactic `{.ofConstName decl}` already has the custom name `{n}`"
 
-      modifyEnv fun env => tacticNameExt.addEntry env (decl, name)
-    descr :=
-      "Registers a custom name for a tactic. This custom name should be a prefix of the "
-        ++ "tactic's syntax, because it is used in completion."
-    applicationTime := .beforeElaboration
-  }
+        modifyEnv fun env => tacticNameExt.addEntry env (decl, name)
+      descr :=
+        "Registers a custom name for a tactic. This custom name should be a prefix of the "
+          ++ "tactic's syntax, because it is used in completion."
+      applicationTime := .beforeElaboration }
 
 -- Note: this error handler doesn't prevent all cases of non-tactics being added to the data
 -- structure. But the module will throw errors during elaboration, and there doesn't seem to be

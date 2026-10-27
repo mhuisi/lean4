@@ -144,12 +144,11 @@ theorem length_pos_iff {l : List α} : 0 < length l ↔ l ≠ [] :=
 
 theorem ne_nil_iff_length_pos {l : List α} : l ≠ [] ↔ 0 < length l := length_pos_iff.symm
 
-theorem length_eq_one_iff {l : List α} : length l = 1 ↔ ∃ a, l = [a] := ⟨
-  fun h =>
-    match l, h with
-    | [_], _ => ⟨_, rfl⟩,
-  fun ⟨_, h⟩ => by simp [h]
-⟩
+theorem length_eq_one_iff {l : List α} : length l = 1 ↔ ∃ a, l = [a] :=
+  ⟨ fun h =>
+      match l, h with
+      | [_], _ => ⟨_, rfl⟩,
+    fun ⟨_, h⟩ => by simp [h] ⟩
 
 /-! ### cons -/
 
@@ -354,9 +353,8 @@ theorem eq_getElem_of_length_eq_three
 theorem eq_getElem_of_length_eq_four
     : (l : List α) → (hl : l.length = 4)
       → l
-        = [
-          l[0]'(hl ▸ by decide), l[1]'(hl ▸ by decide), l[2]'(hl ▸ by decide), l[3]'(hl ▸ by decide)
-        ]
+        = [ l[0]'(hl ▸ by decide), l[1]'(hl ▸ by decide), l[2]'(hl ▸ by decide),
+            l[3]'(hl ▸ by decide) ]
   | [_, _, _, _], _ => rfl
 
 /-! ### getD
@@ -378,12 +376,11 @@ theorem getD_cons_succ : getD (x :: xs) (n + 1) d = getD xs n d := by simp
 theorem not_mem_nil {a : α} : ¬ a ∈ [] := nofun
 
 @[simp, grind =]
-theorem mem_cons : a ∈ b :: l ↔ a = b ∨ a ∈ l := ⟨
-  fun h => by cases h <;> simp [Membership.mem, *],
-  fun
-    | Or.inl rfl => by constructor!
-    | Or.inr h => by constructor; assumption
-⟩
+theorem mem_cons : a ∈ b :: l ↔ a = b ∨ a ∈ l :=
+  ⟨ fun h => by cases h <;> simp [Membership.mem, *],
+    fun
+      | Or.inl rfl => by constructor!
+      | Or.inr h => by constructor; assumption ⟩
 
 theorem eq_or_mem_of_mem_cons {a b : α} {l : List α} : a ∈ b :: l → a = b ∨ a ∈ l :=
   List.mem_cons.mp
@@ -453,12 +450,11 @@ theorem eq_of_mem_singleton : a ∈ [b] → a = b
 theorem mem_singleton {a b : α} : a ∈ [b] ↔ a = b := by simp
 
 theorem forall_mem_cons {p : α → Prop} {a : α} {l : List α}
-    : (∀ x, x ∈ a :: l → p x) ↔ p a ∧ ∀ x, x ∈ l → p x := ⟨
-  fun H => ⟨H _ (.head ..), fun _ h => H _ (.tail _ h)⟩,
-  fun ⟨H₁, H₂⟩ _ => fun
-    | .head .. => H₁
-    | .tail _ h => H₂ _ h
-⟩
+    : (∀ x, x ∈ a :: l → p x) ↔ p a ∧ ∀ x, x ∈ l → p x :=
+  ⟨ fun H => ⟨H _ (.head ..), fun _ h => H _ (.tail _ h)⟩,
+    fun ⟨H₁, H₂⟩ _ => fun
+      | .head .. => H₁
+      | .tail _ h => H₂ _ h ⟩
 
 theorem forall_mem_ne {a : α} {l : List α} : (∀ a' : α, a' ∈ l → ¬ a = a') ↔ a ∉ l :=
   ⟨fun h m => h _ m rfl, fun h _ m e => h (e.symm ▸ m)⟩
@@ -2493,23 +2489,20 @@ theorem tail_replicate {n : Nat} {a : α} : (replicate n a).tail = replicate (n 
   cases n <;> simp [replicate_succ]
 
 @[simp]
-theorem replicate_inj : replicate n a = replicate m b ↔ n = m ∧ (n = 0 ∨ a = b) := ⟨
-  fun h =>
-    have eq : n = m := by simpa using congrArg length h
-    ⟨
-      eq,
-      by
-        subst eq
-        by_cases w : n = 0
-        · simp_all
-        · right
-          have p := congrArg (·[0]?) h
-          replace w : 0 < n := by exact zero_lt_of_ne_zero w
-          simp only [getElem?_replicate, ite_eq_left w] at p
-          simp_all
-    ⟩,
-  by rintro ⟨rfl, rfl | rfl⟩ <;> rfl
-⟩
+theorem replicate_inj : replicate n a = replicate m b ↔ n = m ∧ (n = 0 ∨ a = b) :=
+  ⟨ fun h =>
+      have eq : n = m := by simpa using congrArg length h
+      ⟨ eq,
+        by
+          subst eq
+          by_cases w : n = 0
+          · simp_all
+          · right
+            have p := congrArg (·[0]?) h
+            replace w : 0 < n := by exact zero_lt_of_ne_zero w
+            simp only [getElem?_replicate, ite_eq_left w] at p
+            simp_all ⟩,
+    by rintro ⟨rfl, rfl | rfl⟩ <;> rfl ⟩
 
 theorem eq_replicate_of_mem {a : α}
     : ∀ {l : List α}, (∀ (b) (_ : b ∈ l), b = a) → l = replicate l.length a
@@ -2520,10 +2513,9 @@ theorem eq_replicate_of_mem {a : α}
     rw [length_cons, replicate, ← eq_replicate_of_mem H₂]
 
 theorem eq_replicate_iff {a : α} {n} {l : List α}
-    : l = replicate n a ↔ length l = n ∧ ∀ (b) (_ : b ∈ l), b = a := ⟨
-  fun h => h ▸ ⟨length_replicate .., fun _ => eq_of_mem_replicate⟩,
-  fun ⟨e, al⟩ => e ▸ eq_replicate_of_mem al
-⟩
+    : l = replicate n a ↔ length l = n ∧ ∀ (b) (_ : b ∈ l), b = a :=
+  ⟨ fun h => h ▸ ⟨length_replicate .., fun _ => eq_of_mem_replicate⟩,
+    fun ⟨e, al⟩ => e ▸ eq_replicate_of_mem al ⟩
 
 theorem map_eq_replicate_iff {l : List α} {f : α → β} {b : β}
     : l.map f = replicate l.length b ↔ ∀ x ∈ l, f x = b := by
@@ -2562,10 +2554,9 @@ theorem append_eq_replicate_iff {l₁ l₂ : List α} {a : α}
     : l₁ ++ l₂ = replicate n a
       ↔ l₁.length + l₂.length = n ∧ l₁ = replicate l₁.length a ∧ l₂ = replicate l₂.length a := by
   simp only [eq_replicate_iff, length_append, mem_append, true_and, and_congr_right_iff]
-  exact fun _ => {
-    mp := fun h => ⟨fun b m => h b (Or.inl m), fun b m => h b (Or.inr m)⟩
-    mpr := fun h b x => Or.casesOn x (fun m => h.left b m) fun m => h.right b m
-  }
+  exact fun _ =>
+    { mp := fun h => ⟨fun b m => h b (Or.inl m), fun b m => h b (Or.inr m)⟩
+      mpr := fun h b x => Or.casesOn x (fun m => h.left b m) fun m => h.right b m }
 
 theorem replicate_eq_append_iff {l₁ l₂ : List α} {a : α}
     : replicate n a = l₁ ++ l₂

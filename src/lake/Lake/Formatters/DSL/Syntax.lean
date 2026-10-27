@@ -203,8 +203,9 @@ def toDeclarationBinders (binder? : Option SimpleBinder) : FmtM (TSyntaxArray bi
         mkNullNode #[typeAscriptionTk, type.raw]
       | _, _ =>
         mkNullNode
-    return #[⟨mkNode ``Parser.Term.explicitBinder
-      #[lbTk, mkNullNode #[id], binderType, mkNullNode, rbTk]⟩]
+    return
+      #[⟨ mkNode ``Parser.Term.explicitBinder
+            #[lbTk, mkNullNode #[id], binderType, mkNullNode, rbTk] ⟩]
   | _ =>
     throw .partialFormatter
 
@@ -385,20 +386,18 @@ def fmtMetaIfBranch (head : TaggedDoc) (kwTk : Syntax) (branch : TSyntax ``cmdDo
     let cmds ← fmtArrayWithRetainedIntermediateNewlinesAndComments cmds
     -- The commands of the group must be indented so that `many1Indent` does not extend the group
     -- to the commands that follow the `meta if`.
-    return nested <| Layouts.retainedWhitespace #[
-      Layouts.spacedAtomic #[head, kwTk, doTk],
-      doTrailingDoc,
-      cmds
-    ]
+    return nested <| Layouts.retainedWhitespace
+      #[Layouts.spacedAtomic #[head, kwTk, doTk],
+        doTrailingDoc,
+        cmds]
   | `(cmdDo| $cmd:command) =>
     let kwTrailingDoc ← fmtTrailingWithRetainedNewlinesAndComments kwTk
     let kwTk ← fmt kwTk
     let cmd ← fmt cmd
-    return nested <| Layouts.retainedWhitespace #[
-      Layouts.spacedAtomic #[head, kwTk],
-      kwTrailingDoc,
-      cmd
-    ]
+    return nested <| Layouts.retainedWhitespace
+      #[Layouts.spacedAtomic #[head, kwTk],
+        kwTrailingDoc,
+        cmd]
   | _ =>
     throw .partialFormatter
 

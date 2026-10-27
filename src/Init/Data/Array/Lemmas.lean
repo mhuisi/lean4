@@ -2413,14 +2413,13 @@ theorem flatten_eq_push_iff {xss : Array (Array α)} {ys : Array α} {y : α}
     · rintro (⟨as, bs, rfl, rfl, h⟩ | ⟨as, bs, c, cs, ds, rfl, rfl, h⟩)
       · rw [List.singleton_eq_flatten_iff] at h
         obtain ⟨xs, ys, rfl, h₁, h₂⟩ := h
-        exact ⟨
-          ((as ++ xs).map List.toArray).toArray,
-          #[],
-          (ys.map List.toArray).toArray,
-          by simp,
-          by simpa using h₂,
-          by rw [flatten_toArray_map_toArray]; simpa
-        ⟩
+        exact
+          ⟨ ((as ++ xs).map List.toArray).toArray,
+            #[],
+            (ys.map List.toArray).toArray,
+            by simp,
+            by simpa using h₂,
+            by rw [flatten_toArray_map_toArray]; simpa ⟩
       · rw [List.singleton_eq_append_iff] at h
         obtain (⟨h₁, h₂⟩ | ⟨h₁, h₂⟩) := h
         · simp at h₁

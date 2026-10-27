@@ -72,12 +72,10 @@ def FunDeclInfoMap.addMustInline (s : FunDeclInfoMap) (fvarId : FVarId) : FunDec
 def FunDeclInfoMap.restore (s : FunDeclInfoMap) (fvarId : FVarId) (saved? : Option FunDeclInfo)
     : FunDeclInfoMap :=
   match s, saved? with
-  | { map }, none => {
-    map := map.erase fvarId
-  }
-  | { map }, some saved => {
-    map := map.insert fvarId saved
-  }
+  | { map }, none =>
+    { map := map.erase fvarId }
+  | { map }, some saved =>
+    { map := map.insert fvarId saved }
 
 /--
 Traverse `code` and update function occurrence map.

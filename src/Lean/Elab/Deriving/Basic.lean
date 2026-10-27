@@ -248,12 +248,11 @@ def processDefDeriving
     let isPropType ← isProp result.type
     if isPropType then
       let decl ←
-        mkThmOrUnsafeDef {
-          name := instName
-          levelParams := result.levelParams.toList
-          type := result.type
-          value := result.value
-        }
+        mkThmOrUnsafeDef
+          { name := instName
+            levelParams := result.levelParams.toList
+            type := result.type
+            value := result.value }
       addDecl decl
     else
       let hints := ReducibilityHints.regular (getMaxHeight env result.value + 1)
@@ -315,19 +314,18 @@ def registerDerivingHandler (className : Name) (handler : DerivingHandler) : IO 
 def applyDerivingHandlers (className : Name) (typeNames : Array Name) (setExpose := false)
     : CommandElabM Unit := do
   withScope
-    (fun sc => {
-      sc with
-      attrs :=
-        if setExpose then
-          Unhygienic.run `(Parser.Term.attrInstance| expose) :: sc.attrs
-        else
-          sc.attrs
-      -- Deactivate some linting options that only make writing deriving handlers more painful.
-      opts := sc.opts.set `warn.exposeOnPrivate false
-      -- When any of the types are private, the deriving handler will need access to the private scope
-      -- and should create private instances.
-      isPublic := ! typeNames.any isPrivateName
-    })
+    (fun sc =>
+      { sc with
+        attrs :=
+          if setExpose then
+            Unhygienic.run `(Parser.Term.attrInstance| expose) :: sc.attrs
+          else
+            sc.attrs
+        -- Deactivate some linting options that only make writing deriving handlers more painful.
+        opts := sc.opts.set `warn.exposeOnPrivate false
+        -- When any of the types are private, the deriving handler will need access to the private scope
+        -- and should create private instances.
+        isPublic := ! typeNames.any isPrivateName })
     do
       withTraceNode `Elab.Deriving
         (fun _ => return m!"running deriving handlers for `{.ofConstName className}`")

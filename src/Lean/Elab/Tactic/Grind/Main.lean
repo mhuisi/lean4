@@ -158,12 +158,8 @@ def elabResetGrindAttrs : CommandElab := fun _ =>
     -- `[grind symbol 0] Eq` after a `reset_grind_attr%` command.
     -- Grind.resetSymbolPrioExt
     modifyEnv fun env =>
-      Grind.grindExt.modifyState env fun ext => {
-        ext with
-        casesTypes := {}
-        inj := {}
-        ematch := {}
-      }
+      Grind.grindExt.modifyState env fun ext =>
+        { ext with casesTypes := {}, inj := {}, ematch := {} }
 -- We don't reset homomorphism.
 -- modifyEnv fun env => Grind.homoExt.modifyState env fun _ => {}
 -- modifyEnv fun env => Grind.homoPredExt.modifyState env fun _ => {}
@@ -288,10 +284,8 @@ def grind
     let params ←
       mkGrindParams config only ps mvarId (extensions? := extensions?) (identity := identity)
     let params :=
-      if Grind.grind.unusedLemmaThreshold.get (← getOptions) > 0 then {
-        params with
-        config.markInstances := true
-      }
+      if Grind.grind.unusedLemmaThreshold.get (← getOptions) > 0 then
+        { params with config.markInstances := true }
       else
         params
     Grind.withProtectedMCtx config mvarId fun mvarId' => do

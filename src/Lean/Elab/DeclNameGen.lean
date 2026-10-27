@@ -195,11 +195,8 @@ private def visitNamespace (ns : Name) : MkNameM Unit := do
   | .str ns' _ =>
     let env ← getEnv
     if env.contains ns then
-      modify fun st => {
-        st with
-        seen := st.seen.insert (.const ns [])
-        consts := st.consts.insert ns
-      }
+      modify fun st =>
+        { st with seen := st.seen.insert (.const ns []), consts := st.consts.insert ns }
     visitNamespace ns'
 
 /--

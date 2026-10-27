@@ -284,16 +284,16 @@ where
     let allCmdData : Array Language.Lean.CommandData :=
       #[⟨headerStx, headerParserState, headerCmdState⟩] ++ moduleData.cmdData
     let lineInfos := collectSyntaxLineInfos modStx
-    let ctx : Fmt.Context := {
-      lineInfos
-      env := finalCmdState.env
-      text
-      resolveChoiceNode := fun range => do
-        let infoTree ←
-          Language.Lean.findInfoTreeAtPos initialSnap text range.start (includeStop := false) |>.get
-        findChoiceResolution? infoTree range
-      opts := finalCmdState.scopes[0]!.opts
-    }
+    let ctx : Fmt.Context :=
+      { lineInfos
+        env := finalCmdState.env
+        text
+        resolveChoiceNode := fun range => do
+          let infoTree ←
+            Language.Lean.findInfoTreeAtPos initialSnap text range.start (includeStop := false)
+              |>.get
+          findChoiceResolution? infoTree range
+        opts := finalCmdState.scopes[0]!.opts }
     let renderedHeader ← commandMain ctx headerStx fatal
     let parallelism ← getParallelism
     let renderedCommandsMutex : Std.Mutex (Std.TreeMap Nat (Except Error String)) ← Std.Mutex.new ∅
@@ -342,12 +342,11 @@ where
     let inputWithRenderedCommand :=
       input.extract input.startPos startPos ++ renderedCommand ++ input.extract endPos input.endPos
     let ictx := Parser.InputContext.mk inputWithRenderedCommand initialSnap.ictx.fileName
-    let pmctx := {
-      env := prevCmdData.cmdState.env
-      options := prevCmdData.cmdState.scopes[0]!.opts
-      currNamespace := prevCmdData.cmdState.scopes[0]!.currNamespace
-      openDecls := prevCmdData.cmdState.scopes[0]!.openDecls
-    }
+    let pmctx :=
+      { env := prevCmdData.cmdState.env
+        options := prevCmdData.cmdState.scopes[0]!.opts
+        currNamespace := prevCmdData.cmdState.scopes[0]!.currNamespace
+        openDecls := prevCmdData.cmdState.scopes[0]!.openDecls }
     let parserState := { prevCmdData.parserState with pos := rawStartPos }
     let (stx, _, msgLog) := Parser.parseCommand ictx pmctx parserState MessageLog.empty
     if msgLog.hasErrors || stx.hasMissing then

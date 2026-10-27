@@ -20,10 +20,8 @@ namespace Lean.Linter.Coe
 `set_option linter.deprecatedCoercions true` enables a linter emitting warnings on deprecated
 coercions.
 -/
-register_builtin_option linter.deprecatedCoercions : Bool := {
-  defValue := true
-  descr := "Validate that no deprecated coercions are used."
-}
+register_builtin_option linter.deprecatedCoercions : Bool :=
+  { defValue := true, descr := "Validate that no deprecated coercions are used." }
 
 /-- Checks whether the "deprecated coercions" linter is enabled. -/
 def shouldWarnOnDeprecatedCoercions [Monad m] [MonadOptions m] : m Bool :=

@@ -85,11 +85,10 @@ structure HeaderProcessedSnapshot extends Language.Snapshot where
 deriving Nonempty
 instance : Language.ToSnapshotTree HeaderProcessedSnapshot where
   toSnapshotTreeM s :=
-    return ⟨
-      ← s.toSnapshot.transform,
-      (← s.tacSnap?.toArray.mapM (·.transform)) ++ #[← s.bodySnap.transform]
-        ++ (← s.moreSnaps.mapM (·.transform))
-    ⟩
+    return
+      ⟨ ← s.toSnapshot.transform,
+        (← s.tacSnap?.toArray.mapM (·.transform)) ++ #[← s.bodySnap.transform]
+          ++ (← s.moreSnaps.mapM (·.transform)) ⟩
 
 /-- State before elaboration of a mutual definition. -/
 structure DefParsed where
@@ -146,10 +145,9 @@ Prepends the `defeq` attribute, removing existing ones if there are any.
 The `defeq` attribute's validator also tags `backward_defeq` on success, so the
 superset invariant `defeq ⊆ backward_defeq` is preserved.
 -/
-def DefView.markDefEq (view : DefView) : DefView := {
-  view with
-  modifiers := view.modifiers.filterAttrs (·.name != `defeq) |>.addFirstAttr { name := `defeq }
-}
+def DefView.markDefEq (view : DefView) : DefView :=
+  { view with
+    modifiers := view.modifiers.filterAttrs (·.name != `defeq) |>.addFirstAttr { name := `defeq } }
 
 namespace Command
 open Meta
@@ -159,8 +157,7 @@ def mkDefViewOfAbbrev (modifiers : Modifiers) (stx : Syntax) : DefView :=
   let (binders, type) := expandOptDeclSig stx[2]
   let modifiers := modifiers.addAttr { name := `inline }
   let modifiers := modifiers.addAttr { name := `reducible }
-  {
-    ref := stx
+  { ref := stx
     headerRef := mkNullNode stx.getArgs[*...3]
     kind := DefKind.abbrev
     modifiers
@@ -168,15 +165,13 @@ def mkDefViewOfAbbrev (modifiers : Modifiers) (stx : Syntax) : DefView :=
     binders
     type? := type
     value := stx[3]
-    docString? := modifiers.docString?
-  }
+    docString? := modifiers.docString? }
 
 def mkDefViewOfDef (modifiers : Modifiers) (stx : Syntax) : DefView :=
   -- leading_parser "def " >> declId >> optDeclSig >> declVal >> optDefDeriving
   let (binders, type) := expandOptDeclSig stx[2]
   let deriving? := if stx[4].isNone then none else some stx[4][1].getSepArgs
-  {
-    ref := stx
+  { ref := stx
     headerRef := mkNullNode stx.getArgs[*...3]
     kind := DefKind.def
     modifiers
@@ -185,14 +180,12 @@ def mkDefViewOfDef (modifiers : Modifiers) (stx : Syntax) : DefView :=
     type? := type
     value := stx[3]
     deriving?
-    docString? := modifiers.docString?
-  }
+    docString? := modifiers.docString? }
 
 def mkDefViewOfTheorem (modifiers : Modifiers) (stx : Syntax) : DefView :=
   -- leading_parser "theorem " >> declId >> declSig >> declVal
   let (binders, type) := expandDeclSig stx[2]
-  {
-    ref := stx
+  { ref := stx
     headerRef := mkNullNode stx.getArgs[*...3]
     kind := DefKind.theorem
     modifiers
@@ -200,8 +193,7 @@ def mkDefViewOfTheorem (modifiers : Modifiers) (stx : Syntax) : DefView :=
     binders
     type? := some type
     value := stx[3]
-    docString? := modifiers.docString?
-  }
+    docString? := modifiers.docString? }
 
 def mkDefViewOfInstance (modifiers : Modifiers) (stx : Syntax) : CommandElabM DefView := do
   -- leading_parser Term.attrKind >> "instance " >> optNamedPrio >> optional declId >> declSig >> declVal
@@ -223,17 +215,16 @@ def mkDefViewOfInstance (modifiers : Modifiers) (stx : Syntax) : CommandElabM De
       trace[Elab.instance.mkInstanceName] "generated {(← getCurrNamespace) ++ id}"
       pure <|
         mkNode ``Parser.Command.declId #[mkIdentFrom stx[1] id (canonical := true), mkNullNode]
-  return {
-    ref := stx
-    headerRef := mkNullNode stx.getArgs[*...5]
-    kind := DefKind.instance
-    modifiers := modifiers
-    declId := declId
-    binders := binders
-    type? := type
-    value := stx[5]
-    docString? := modifiers.docString?
-  }
+  return
+    { ref := stx
+      headerRef := mkNullNode stx.getArgs[*...5]
+      kind := DefKind.instance
+      modifiers := modifiers
+      declId := declId
+      binders := binders
+      type? := type
+      value := stx[5]
+      docString? := modifiers.docString? }
 
 def mkDefViewOfOpaque (modifiers : Modifiers) (stx : Syntax) : CommandElabM DefView := do
   -- leading_parser "opaque " >> declId >> declSig >> optional declValSimple
@@ -246,25 +237,23 @@ def mkDefViewOfOpaque (modifiers : Modifiers) (stx : Syntax) : CommandElabM DefV
       let val ←
         if modifiers.isUnsafe then `(default_or_ofNonempty% unsafe) else `(default_or_ofNonempty%)
       `(Parser.Command.declValSimple| := $val)
-  return {
-    ref := stx
-    headerRef := mkNullNode stx.getArgs[*...3]
-    kind := DefKind.opaque
-    modifiers := modifiers
-    declId := stx[1]
-    binders := binders
-    type? := some type
-    value := val
-    docString? := modifiers.docString?
-  }
+  return
+    { ref := stx
+      headerRef := mkNullNode stx.getArgs[*...3]
+      kind := DefKind.opaque
+      modifiers := modifiers
+      declId := stx[1]
+      binders := binders
+      type? := some type
+      value := val
+      docString? := modifiers.docString? }
 
 def mkDefViewOfExample (modifiers : Modifiers) (stx : Syntax) : DefView :=
   -- leading_parser "example " >> declSig >> declVal
   let (binders, type) := expandOptDeclSig stx[1]
   let id := mkIdentFrom stx[0] `_example (canonical := true)
   let declId := mkNode ``Parser.Command.declId #[id, mkNullNode]
-  {
-    ref := stx
+  { ref := stx
     headerRef := mkNullNode stx.getArgs[*...2]
     kind := DefKind.example
     modifiers := modifiers
@@ -272,8 +261,7 @@ def mkDefViewOfExample (modifiers : Modifiers) (stx : Syntax) : DefView :=
     binders := binders
     type? := type
     value := stx[2]
-    docString? := modifiers.docString?
-  }
+    docString? := modifiers.docString? }
 
 def isDefLike (stx : Syntax) : Bool :=
   let declKind := stx.getKind
@@ -285,10 +273,8 @@ def mkDefView (modifiers : Modifiers) (stx : Syntax) : CommandElabM DefView := d
   let declKind := stx.getKind
   let modifiers :=
     if modifiers.computeKind == .regular && (← getScope).isMeta
-        && declKind != ``Parser.Command.theorem && declKind != ``Parser.Command.example then {
-      modifiers with
-      computeKind := .meta
-    }
+        && declKind != ``Parser.Command.theorem && declKind != ``Parser.Command.example then
+      { modifiers with computeKind := .meta }
     else
       modifiers
   if declKind == ``Parser.Command.«abbrev» then

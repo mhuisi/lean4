@@ -79,42 +79,32 @@ def Histogram.addLeft (histogram : Histogram α lsize rsize) (index : Fin lsize)
     : Histogram α lsize rsize :=
   match histogram.get? val with
   | none =>
-    histogram.insert val {
-      leftCount := 1
-      leftIndex := some index
-      leftWF := by simp
-      rightCount := 0
-      rightIndex := none
-      rightWF := by simp
-    }
+    histogram.insert val
+      { leftCount := 1
+        leftIndex := some index
+        leftWF := by simp
+        rightCount := 0
+        rightIndex := none
+        rightWF := by simp }
   | some x =>
-    histogram.insert val {
-      x with
-      leftCount := x.leftCount + 1
-      leftIndex := some index
-      leftWF := by simp
-    }
+    histogram.insert val
+      { x with leftCount := x.leftCount + 1, leftIndex := some index, leftWF := by simp }
 
 /-- Add an element from the right array to a histogram -/
 def Histogram.addRight (histogram : Histogram α lsize rsize) (index : Fin rsize) (val : α)
     : Histogram α lsize rsize :=
   match histogram.get? val with
   | none =>
-    histogram.insert val {
-      leftCount := 0
-      leftIndex := none
-      leftWF := by simp
-      rightCount := 1
-      rightIndex := some index
-      rightWF := by simp
-    }
+    histogram.insert val
+      { leftCount := 0
+        leftIndex := none
+        leftWF := by simp
+        rightCount := 1
+        rightIndex := some index
+        rightWF := by simp }
   | some x =>
-    histogram.insert val {
-      x with
-      rightCount := x.leftCount + 1
-      rightIndex := some index
-      rightWF := by simp
-    }
+    histogram.insert val
+      { x with rightCount := x.leftCount + 1, rightIndex := some index, rightWF := by simp }
 
 /-- Given two `Subarray`s, find their common prefix and return their differing suffixes -/
 def matchPrefix (left right : Subarray α) : Array α × Subarray α × Subarray α :=
@@ -136,11 +126,10 @@ def matchSuffix (left right : Subarray α) : Subarray α × Subarray α × Array
     if _ : i < left.size ∧ i < right.size then
       if left[left.size - i - 1]'(by omega) == right[right.size - i - 1]'(by omega) then
         go i.succ
-      else (
-        left.take (left.size - i),
-        right.take (right.size - i),
-        (left.drop (left.size - i)).toArray
-      )
+      else
+        ( left.take (left.size - i),
+          right.take (right.size - i),
+          (left.drop (left.size - i)).toArray )
     else
       (left.take (left.size - i), right.take (right.size - i), (left.drop (left.size - i)).toArray)
     termination_by left.size - i

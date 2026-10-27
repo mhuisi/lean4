@@ -193,11 +193,8 @@ public def mapResult
     [OptDataKind β]
     (f : JobResult α → JobResult β) (self : Job α)
     (prio := Task.Priority.default) (sync := false)
-    : Job β := {
-  self with
-  task := self.task.map f prio sync
-  kind := inferInstance
-}
+    : Job β :=
+  { self with task := self.task.map f prio sync, kind := inferInstance }
 
 @[inline]
 public def mapOk
@@ -237,10 +234,7 @@ public instance : CoeOut (JobTask α) OpaqueJobTask := ⟨.toOpaque⟩
 public abbrev OpaqueJob := Job Opaque
 
 /-- Forget the value of a job. Implemented as a no-op cast on the task. -/
-public def Job.toOpaque (job : Job α) : OpaqueJob := {
-  job with
-  task := job.task.toOpaque
-  kind := .anonymous
-}
+public def Job.toOpaque (job : Job α) : OpaqueJob :=
+  { job with task := job.task.toOpaque, kind := .anonymous }
 
 public instance : CoeOut (Job α) OpaqueJob := ⟨.toOpaque⟩

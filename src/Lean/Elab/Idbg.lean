@@ -121,29 +121,23 @@ partial def exprToJson : Expr → Json
   | .app fn arg =>
     Json.mkObj [("app", Json.arr #[exprToJson fn, exprToJson arg])]
   | .lam n ty b bi =>
-    Json.mkObj [(
-      "lam",
-      Json.mkObj [
-        ("name", nameToJson n), ("type", exprToJson ty), ("body", exprToJson b),
-        ("bi", binderInfoToJson bi)
-      ]
-    )]
+    Json.mkObj
+      [ ( "lam",
+          Json.mkObj
+            [ ("name", nameToJson n), ("type", exprToJson ty), ("body", exprToJson b),
+              ("bi", binderInfoToJson bi) ] ) ]
   | .forallE n ty b bi =>
-    Json.mkObj [(
-      "forallE",
-      Json.mkObj [
-        ("name", nameToJson n), ("type", exprToJson ty), ("body", exprToJson b),
-        ("bi", binderInfoToJson bi)
-      ]
-    )]
+    Json.mkObj
+      [ ( "forallE",
+          Json.mkObj
+            [ ("name", nameToJson n), ("type", exprToJson ty), ("body", exprToJson b),
+              ("bi", binderInfoToJson bi) ] ) ]
   | .letE n ty v b nd =>
-    Json.mkObj [(
-      "letE",
-      Json.mkObj [
-        ("name", nameToJson n), ("type", exprToJson ty), ("value", exprToJson v),
-        ("body", exprToJson b), ("nondep", nd)
-      ]
-    )]
+    Json.mkObj
+      [ ( "letE",
+          Json.mkObj
+            [ ("name", nameToJson n), ("type", exprToJson ty), ("value", exprToJson v),
+              ("body", exprToJson b), ("nondep", nd) ] ) ]
   | .lit l =>
     Json.mkObj [("lit", literalToJson l)]
   | .mdata _ e =>
@@ -262,14 +256,8 @@ def idbgLoadEnv (imports : Array Import) : IO Environment := do
 def idbgCompileAndEval (α : Type) [Nonempty α] (env : Environment) (type value : Expr) : IO α := do
   let name := `_idbg
   let decl :=
-    Declaration.defnDecl {
-      name
-      levelParams := []
-      type
-      value
-      hints := .opaque
-      safety := .unsafe
-    }
+    Declaration.defnDecl
+      { name, levelParams := [], type, value, hints := .opaque, safety := .unsafe }
   let ((), { env := env', .. }) ←
     (addAndCompile decl).toIO { fileName := "<idbg>", fileMap := default, options := {} } { env }
   match unsafe env'.evalConst α {} name (checkMeta := false) with
@@ -367,20 +355,16 @@ def elabIdbgCore (e : Syntax) (body : TSyntax `term) (ref : Syntax) (expectedTyp
   -- Skip if expression contains sorry (partial input during editing).
   if Elab.inServer.get (← getOptions) && !abstractedValue.hasSorry then
     let json :=
-      Json.mkObj [
-        ("type", exprToJson abstractedType),
-        ("value", exprToJson abstractedValue)
-      ]
+      Json.mkObj
+        [ ("type", exprToJson abstractedType),
+          ("value", exprToJson abstractedValue) ]
     let cancelTk ← IO.CancelToken.new
     let act ←
       Core.wrapAsyncAsSnapshot (cancelTk? := cancelTk) fun () => do
         if let some result ← idbgServer siteId json then
           logInfoAt ref m!"idbg: {result}"
-    Core.logSnapshotTask {
-      stx? := some ref
-      task := (← BaseIO.asTask (act ()))
-      cancelTk? := cancelTk
-    }
+    Core.logSnapshotTask
+      { stx? := some ref, task := (← BaseIO.asTask (act ())), cancelTk? := cancelTk }
 
   -- Generate runtime code: `idbgClientLoop siteId imports apply >>= fun _ => body`
   let siteLit := Syntax.mkStrLit siteId

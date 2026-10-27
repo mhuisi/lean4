@@ -98,12 +98,12 @@ namespace IntModule
 
 variable {M : Type u} [IntModule M]
 
-instance (priority := 100) toNatModule [I : IntModule M] : NatModule M := {
-  I with
-  zero_nsmul a := by rw [← zsmul_natCast_eq_nsmul, Int.natCast_zero, zero_zsmul]
-  add_one_nsmul n a := by
-    rw [← zsmul_natCast_eq_nsmul, Int.natCast_add_one, add_zsmul, zsmul_natCast_eq_nsmul, one_zsmul]
-}
+instance (priority := 100) toNatModule [I : IntModule M] : NatModule M :=
+  { I with
+    zero_nsmul a := by rw [← zsmul_natCast_eq_nsmul, Int.natCast_zero, zero_zsmul]
+    add_one_nsmul n a := by
+      rw [← zsmul_natCast_eq_nsmul, Int.natCast_add_one, add_zsmul, zsmul_natCast_eq_nsmul,
+        one_zsmul] }
 
 end IntModule
 
@@ -125,10 +125,9 @@ open AddCommMonoid
 
 theorem add_neg_cancel (a : M) : a + -a = 0 := by rw [add_comm, neg_add_cancel]
 
-theorem add_left_inj {a b : M} (c : M) : a + c = b + c ↔ a = b := ⟨
-  fun h => by simpa [add_assoc, add_neg_cancel, add_zero] using (congrArg (· + -c) h),
-  fun g => congrArg (· + c) g
-⟩
+theorem add_left_inj {a b : M} (c : M) : a + c = b + c ↔ a = b :=
+  ⟨ fun h => by simpa [add_assoc, add_neg_cancel, add_zero] using (congrArg (· + -c) h),
+    fun g => congrArg (· + c) g ⟩
 
 theorem add_right_inj (a b c : M) : a + b = a + c ↔ b = c := by
   rw [add_comm a b, add_comm a c, add_left_inj]
@@ -137,12 +136,11 @@ theorem neg_zero : (-0 : M) = 0 := by rw [← add_left_inj 0, neg_add_cancel, ad
 
 theorem neg_neg (a : M) : -(-a) = a := by rw [← add_left_inj (-a), neg_add_cancel, add_neg_cancel]
 
-theorem neg_eq_zero (a : M) : -a = 0 ↔ a = 0 := ⟨
-  fun h => by
-    replace h := congrArg (-·) h
-    simpa [neg_neg, neg_zero] using h,
-  fun h => by rw [h, neg_zero]
-⟩
+theorem neg_eq_zero (a : M) : -a = 0 ↔ a = 0 :=
+  ⟨ fun h => by
+      replace h := congrArg (-·) h
+      simpa [neg_neg, neg_zero] using h,
+    fun h => by rw [h, neg_zero] ⟩
 
 theorem neg_add (a b : M) : -(a + b) = -a + -b := by
   rw [← add_left_inj (a + b), neg_add_cancel, add_assoc (-a), add_comm a b, ← add_assoc (-b),

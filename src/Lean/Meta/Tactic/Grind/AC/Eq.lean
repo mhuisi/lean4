@@ -223,12 +223,8 @@ private def mkEqCnstr (lhs rhs : AC.Seq) (h : EqCnstrProof) : ACM EqCnstr := do
   return { lhs, rhs, h, id }
 
 private def EqCnstr.orient (c : EqCnstr) : EqCnstr :=
-  if compare c.rhs c.lhs == .gt then {
-    c with
-    lhs := c.rhs
-    rhs := c.lhs
-    h := .swap c
-  }
+  if compare c.rhs c.lhs == .gt then
+    { c with lhs := c.rhs, rhs := c.lhs, h := .swap c }
   else
     c
 

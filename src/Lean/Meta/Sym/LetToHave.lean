@@ -327,12 +327,11 @@ partial def withBinder
     | none => lctx.mkLocalDecl fvarId n type
   withLCtx lctx {} do
     withReader
-      (fun ctx => {
-        ctx with
-        xs := ctx.xs.push x
-        numCandidates := ctx.numCandidates + (if isCandidate then 1 else 0)
-        cleanSuffix := if tainted then 0 else ctx.cleanSuffix + 1
-      })
+      (fun ctx =>
+        { ctx with
+          xs := ctx.xs.push x
+          numCandidates := ctx.numCandidates + (if isCandidate then 1 else 0)
+          cleanSuffix := if tainted then 0 else ctx.cleanSuffix + 1 })
       do withNewScope do k x
 
 /--
@@ -438,16 +437,15 @@ public def letToHave (e : Expr) : SymM Expr := do
   withoutExporting <| withNewMCtxDepth <| withTrackingZetaDelta <|
     withTransparency TransparencyMode.all <|
       withConfig
-        (fun cfg => {
-          cfg with
-          beta := true
-          iota := true
-          zeta := true
-          zetaHave := true
-          zetaDelta := true
-          proj := .yesWithDelta
-          etaStruct := .all
-        })
+        (fun cfg =>
+          { cfg with
+            beta := true
+            iota := true
+            zeta := true
+            zetaHave := true
+            zetaDelta := true
+            proj := .yesWithDelta
+            etaStruct := .all })
         do
           withLCtx (← getLCtx) {} do
             let x : M Expr := do if (← hasDepLet e) then visit e else return e

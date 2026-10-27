@@ -25,15 +25,14 @@ open Meta
 A **very** simple `try?` tactic implementation.
 -/
 
-register_builtin_option debug.tactic.try.onlyUserSuggestions : Bool := {
-  defValue := false
-  descr :=
-    "if set, `try?` skips its built-in suggestion branches \
-      (simple, simp, grind, simp_all, induction/fun_induction, exact?) and only \
-      runs tactics produced by user-registered `@[try_suggestion]` generators. \
-      Primarily intended for tests that want to exercise the `try?` machinery \
-      without paying for library search and other expensive default branches."
-}
+register_builtin_option debug.tactic.try.onlyUserSuggestions : Bool :=
+  { defValue := false
+    descr :=
+      "if set, `try?` skips its built-in suggestion branches \
+        (simple, simp, grind, simp_all, induction/fun_induction, exact?) and only \
+        runs tactics produced by user-registered `@[try_suggestion]` generators. \
+        Primarily intended for tests that want to exercise the `try?` machinery \
+        without paying for library search and other expensive default branches." }
 
 declare_config_elab elabTryConfig Try.Config
 
@@ -317,28 +316,26 @@ deriving Inhabited
 /-- Environment extension for user try suggestion generators (supports local scoping) -/
 builtin_initialize trySuggestionExtension
     : SimpleScopedEnvExtension TrySuggestionEntry (Array TrySuggestionEntry) ←
-  registerSimpleScopedEnvExtension {
-    addEntry := fun entries entry =>
-      -- Insert new entry and maintain sorted order by priority (higher = runs first)
-      (entries.push entry).qsort (·.prio > ·.prio)
-    initial := #[]
-  }
+  registerSimpleScopedEnvExtension
+    { addEntry := fun entries entry =>
+        -- Insert new entry and maintain sorted order by priority (higher = runs first)
+        (entries.push entry).qsort (·.prio > ·.prio)
+      initial := #[] }
 
 /-- Register the @[try_suggestion prio] attribute -/
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `try_suggestion
-    descr := "Register a tactic suggestion generator for try? (runs after built-in tactics)"
-    add := fun declName stx kind => do
-      let prio ←
-        match stx with
-        | `(attr| try_suggestion $n:num) => pure n.getNat
-        | `(attr| try_suggestion) => pure 1000 -- Default priority
-        | _ => throwError "invalid `try_suggestion` attribute syntax"
-      let attrKind :=
-        if kind == AttributeKind.local then AttributeKind.local else AttributeKind.global
-      trySuggestionExtension.add { name := declName, prio := prio } attrKind
-  }
+  registerBuiltinAttribute
+    { name := `try_suggestion
+      descr := "Register a tactic suggestion generator for try? (runs after built-in tactics)"
+      add := fun declName stx kind => do
+        let prio ←
+          match stx with
+          | `(attr| try_suggestion $n:num) => pure n.getNat
+          | `(attr| try_suggestion) => pure 1000 -- Default priority
+          | _ => throwError "invalid `try_suggestion` attribute syntax"
+        let attrKind :=
+          if kind == AttributeKind.local then AttributeKind.local else AttributeKind.global
+        trySuggestionExtension.add { name := declName, prio := prio } attrKind }
 
 /-- Elaborate `register_try?_tactic` command -/
 @[builtin_command_elab registerTryTactic]

@@ -139,14 +139,8 @@ public abbrev mkConfigDecl
     (pkg name kind : Name) (config : ConfigType kind pkg name)
     [FamilyDef (CustomData pkg) name (ConfigTarget kind)]
     [FamilyDef DataType kind (ConfigTarget kind)]
-    : KConfigDecl kind := {
-  pkg
-  name
-  kind
-  config
-  wf_data := fun _ => by simp
-  kind_eq := rfl
-}
+    : KConfigDecl kind :=
+  { pkg, name, kind, config, wf_data := fun _ => by simp, kind_eq := rfl }
 
 def mkConfigDeclDef
     (tyName attr kind : Name) [ConfigInfo tyName] [delTyName : TypeName (KConfigDecl kind)]

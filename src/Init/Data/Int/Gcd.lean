@@ -92,10 +92,9 @@ theorem dvd_coe_gcd {a b c : Int} (ha : c ∣ a) (hb : c ∣ b) : c ∣ (gcd a b
 theorem dvd_gcd {a b : Int} {c : Nat} (ha : (c : Int) ∣ a) (hb : (c : Int) ∣ b) : c ∣ gcd a b :=
   ofNat_dvd.1 (dvd_coe_gcd ha hb)
 
-theorem dvd_coe_gcd_iff {a b c : Int} : c ∣ (gcd a b : Int) ↔ c ∣ a ∧ c ∣ b := ⟨
-  fun h => ⟨Int.dvd_trans h (gcd_dvd_left _ _), Int.dvd_trans h (gcd_dvd_right _ _)⟩,
-  fun ⟨ha, hb⟩ => dvd_coe_gcd ha hb
-⟩
+theorem dvd_coe_gcd_iff {a b c : Int} : c ∣ (gcd a b : Int) ↔ c ∣ a ∧ c ∣ b :=
+  ⟨ fun h => ⟨Int.dvd_trans h (gcd_dvd_left _ _), Int.dvd_trans h (gcd_dvd_right _ _)⟩,
+    fun ⟨ha, hb⟩ => dvd_coe_gcd ha hb ⟩
 
 theorem dvd_gcd_iff {a b : Int} {c : Nat} : c ∣ gcd a b ↔ (c : Int) ∣ a ∧ (c : Int) ∣ b := by
   rw [← ofNat_dvd, dvd_coe_gcd_iff]
@@ -379,20 +378,14 @@ theorem gcd_eq_iff {a b : Int} {g : Nat}
 def dvdProdDvdOfDvdProd {k m n : Int} (h : k ∣ m * n)
     : {d : {m' // m' ∣ m} × {n' // n' ∣ n} // k = d.1.val * d.2.val} :=
   let d₀ := Nat.dvdProdDvdOfDvdProd (natAbs_mul _ _ ▸ natAbs_dvd_natAbs.2 h)
-  if hk : 0 ≤ k then ⟨
-    ⟨
-      ⟨d₀.val.1.val, ofNat_dvd_left.2 d₀.val.1.property⟩,
-      ⟨d₀.val.2.val, ofNat_dvd_left.2 d₀.val.2.property⟩
-    ⟩,
-    (eq_natAbs_of_nonneg hk).trans (by simp [d₀.property])
-  ⟩
-  else ⟨
-    ⟨
-      ⟨-d₀.val.1.val, by simpa using ofNat_dvd_left.2 d₀.val.1.property⟩,
-      ⟨d₀.val.2.val, ofNat_dvd_left.2 d₀.val.2.property⟩
-    ⟩,
-    (eq_neg_natAbs_of_nonpos (Int.le_of_not_le hk)).trans (by simp [d₀.property, Int.neg_mul])
-  ⟩
+  if hk : 0 ≤ k then
+    ⟨ ⟨ ⟨d₀.val.1.val, ofNat_dvd_left.2 d₀.val.1.property⟩,
+        ⟨d₀.val.2.val, ofNat_dvd_left.2 d₀.val.2.property⟩ ⟩,
+      (eq_natAbs_of_nonneg hk).trans (by simp [d₀.property]) ⟩
+  else
+    ⟨ ⟨ ⟨-d₀.val.1.val, by simpa using ofNat_dvd_left.2 d₀.val.1.property⟩,
+        ⟨d₀.val.2.val, ofNat_dvd_left.2 d₀.val.2.property⟩ ⟩,
+      (eq_neg_natAbs_of_nonpos (Int.le_of_not_le hk)).trans (by simp [d₀.property, Int.neg_mul]) ⟩
 
 protected theorem dvd_mul {a b c : Int} : c ∣ a * b ↔ ∃ c₁ c₂, c₁ ∣ a ∧ c₂ ∣ b ∧ c₁ * c₂ = c := by
   refine ⟨fun h => ?_, ?_⟩
@@ -556,10 +549,9 @@ theorem coe_lcm_dvd {a b c : Int} (ha : a ∣ c) (hb : b ∣ c) : (lcm a b : Int
 theorem lcm_dvd {a b : Int} {c : Nat} (ha : a ∣ (c : Int)) (hb : b ∣ (c : Int)) : lcm a b ∣ c :=
   ofNat_dvd.1 (coe_lcm_dvd ha hb)
 
-theorem coe_lcm_dvd_iff {a b c : Int} : (lcm a b : Int) ∣ c ↔ a ∣ c ∧ b ∣ c := ⟨
-  fun h => ⟨Int.dvd_trans (dvd_lcm_left _ _) h, Int.dvd_trans (dvd_lcm_right _ _) h⟩,
-  fun ⟨ha, hb⟩ => coe_lcm_dvd ha hb
-⟩
+theorem coe_lcm_dvd_iff {a b c : Int} : (lcm a b : Int) ∣ c ↔ a ∣ c ∧ b ∣ c :=
+  ⟨ fun h => ⟨Int.dvd_trans (dvd_lcm_left _ _) h, Int.dvd_trans (dvd_lcm_right _ _) h⟩,
+    fun ⟨ha, hb⟩ => coe_lcm_dvd ha hb ⟩
 
 theorem lcm_dvd_iff {a b : Int} {c : Nat} : lcm a b ∣ c ↔ a ∣ (c : Int) ∧ b ∣ (c : Int) := by
   rw [← ofNat_dvd, coe_lcm_dvd_iff]

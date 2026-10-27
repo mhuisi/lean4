@@ -113,19 +113,18 @@ def mkImplType : M Name := do
     read
   let name := name ++ `_impl
   addDecl <| .inductDecl levelParams numParams (isUnsafe := isUnsafe) -- Note: inlining is disabled with unsafe inductives
-    [{
-      name
-      type
-      ctors :=
-        ← ctors.mapM fun ctor => do
-          forallTelescope (← inferType (mkAppN (mkConst ctor lparams) params)) fun fields retTy =>
-            do
-              let retTy := mkAppN (mkConst name lparams) retTy.getAppArgs
-              let type ←
-                mkForallFVars
-                  (params ++ (if ← isScalarField ctor then #[] else compFieldVars) ++ fields) retTy
-              return { name := ctor ++ `_impl, type }
-    }]
+    [ { name
+        type
+        ctors :=
+          ← ctors.mapM fun ctor => do
+            forallTelescope (← inferType (mkAppN (mkConst ctor lparams) params)) fun fields retTy =>
+              do
+                let retTy := mkAppN (mkConst name lparams) retTy.getAppArgs
+                let type ←
+                  mkForallFVars
+                    (params ++ (if ← isScalarField ctor then #[] else compFieldVars) ++ fields)
+                    retTy
+                return { name := ctor ++ `_impl, type } } ]
   return name
 
 def overrideCasesOn : M Unit := do
@@ -140,25 +139,22 @@ def overrideCasesOn : M Unit := do
       mkLambdaFVars (params ++ xs) <|
         mkAppN (mkConst (mkCasesOnName (name ++ `_impl)) (casesOn.levelParams.map mkLevelParam)) <|
           params
-            ++ #[
-              ← withLocalDeclD `a majorImplTy fun majorImpl => do
-                withLetDecl `m (← inferType constMotive) constMotive fun m => do
-                  mkLambdaFVars (#[m] ++ indices ++ #[majorImpl]) m
-            ]
+            ++ #[← withLocalDeclD `a majorImplTy fun majorImpl => do
+                   withLetDecl `m (← inferType constMotive) constMotive fun m => do
+                     mkLambdaFVars (#[m] ++ indices ++ #[majorImpl]) m]
             ++ indices ++ #[← mkUnsafeCastTo majorImplTy major]
             ++ (← minors.zipWithM (bs := ctors.toArray) fun minor ctor => do
               forallTelescope (← inferType minor) fun args _ => do
                 mkLambdaFVars ((if ← isScalarField ctor then #[] else compFieldVars) ++ args)
                   (← mkUnsafeCastTo constMotive (mkAppN minor args)))
   let nameOverride := mkCasesOnName name ++ `_override
-  addDecl <| .defnDecl {
-    casesOn with
-    name := nameOverride
-    all := [nameOverride]
-    value
-    hints := .opaque
-    safety := .unsafe
-  }
+  addDecl <| .defnDecl
+    { casesOn with
+      name := nameOverride
+      all := [nameOverride]
+      value
+      hints := .opaque
+      safety := .unsafe }
   setInlineAttribute (mkCasesOnName name ++ `_override)
   setImplementedBy (mkCasesOnName name) (mkCasesOnName name ++ `_override)
 
@@ -174,16 +170,15 @@ def overrideConstructors : M Unit := do
             pure #[]
           else
             compFields.mapM (getComputedFieldValue · ctorTerm)
-      addDecl <| .defnDecl {
-        name := ctor ++ `_override
-        levelParams
-        type := ← inferType (mkConst ctor lparams)
-        value :=
-          ← mkLambdaFVars (params ++ fields) <| ← mkUnsafeCastTo retTy <|
-            mkAppN (mkConst (ctor ++ `_impl) lparams) (params ++ computedFieldVals ++ fields)
-        hints := .opaque
-        safety := .unsafe
-      }
+      addDecl <| .defnDecl
+        { name := ctor ++ `_override
+          levelParams
+          type := ← inferType (mkConst ctor lparams)
+          value :=
+            ← mkLambdaFVars (params ++ fields) <| ← mkUnsafeCastTo retTy <|
+              mkAppN (mkConst (ctor ++ `_impl) lparams) (params ++ computedFieldVals ++ fields)
+          hints := .opaque
+          safety := .unsafe }
       setImplementedBy ctor (ctor ++ `_override)
       if ← isScalarField ctor then setInlineAttribute (ctor ++ `_override)
 
@@ -206,19 +201,18 @@ def overrideComputedFields : M Unit := do
               else
                 mkLambdaFVars (compFieldVars ++ fields) cf
       let cfnOverride := cfn ++ `_override
-      addDecl <| .defnDecl {
-        name := cfnOverride
-        levelParams
-        type := ← mkForallFVars (params ++ indices ++ #[val]) (← inferType cf)
-        value :=
-          ← mkLambdaFVars (params ++ indices ++ #[val]) <|
-            ← mkAppOptM (mkCasesOnName (name ++ `_impl))
-              ((params ++ #[← mkLambdaFVars (indices.push xImpl) (← inferType cf)] ++ indices
-                  ++ #[← mkUnsafeCastTo (← inferType xImpl) val] ++ cases).map
-                some)
-        safety := .unsafe
-        hints := .opaque
-      }
+      addDecl <| .defnDecl
+        { name := cfnOverride
+          levelParams
+          type := ← mkForallFVars (params ++ indices ++ #[val]) (← inferType cf)
+          value :=
+            ← mkLambdaFVars (params ++ indices ++ #[val]) <|
+              ← mkAppOptM (mkCasesOnName (name ++ `_impl))
+                ((params ++ #[← mkLambdaFVars (indices.push xImpl) (← inferType cf)] ++ indices
+                    ++ #[← mkUnsafeCastTo (← inferType xImpl) val] ++ cases).map
+                  some)
+          safety := .unsafe
+          hints := .opaque }
       if let some inlineAttr := Compiler.getInlineAttribute? (← getEnv) cfn then
         setInlineAttribute cfnOverride inlineAttr
       setImplementedBy cfn cfnOverride
@@ -233,10 +227,9 @@ def mkComputedFieldOverrides (declName : Name) (compFields : Array Name) : MetaM
       let params := paramsIndices[*...ind.numParams].toArray
       let indices := paramsIndices[ind.numParams...*].toArray
       let compFieldVars :=
-        compFields.map fun fieldDeclName => (
-          fieldDeclName.updatePrefix .anonymous,
-          fun _ => do inferType (← mkAppM fieldDeclName (params ++ indices ++ #[val]))
-        )
+        compFields.map fun fieldDeclName =>
+          ( fieldDeclName.updatePrefix .anonymous,
+            fun _ => do inferType (← mkAppM fieldDeclName (params ++ indices ++ #[val])) )
       withLocalDeclsD compFieldVars fun compFieldVars => do
         let ctx := { ind with lparams, params, compFields, compFieldVars, indices, val }
         ReaderT.run (r := ctx) do

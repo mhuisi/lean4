@@ -20,15 +20,14 @@ variable
   [Monad m] [MonadEnv m] [MonadMCtx m] [MonadOptions m] [MonadResolveName m] [MonadNameGenerator m]
 
 def saveNoFileMap : m CommandContextInfo :=
-  return {
-    env := (← getEnv)
-    fileMap := default
-    mctx := (← getMCtx)
-    options := (← getOptions)
-    currNamespace := (← getCurrNamespace)
-    openDecls := (← getOpenDecls)
-    ngen := (← getNGen)
-  }
+  return
+    { env := (← getEnv)
+      fileMap := default
+      mctx := (← getMCtx)
+      options := (← getOptions)
+      currNamespace := (← getCurrNamespace)
+      openDecls := (← getOpenDecls)
+      ngen := (← getNGen) }
 
 def save [MonadFileMap m] : m CommandContextInfo := do
   let ctx ← saveNoFileMap
@@ -51,25 +50,22 @@ def ContextInfo.runCoreM (info : ContextInfo) (x : CoreM α) : IO α := do
   have been used in `lctx` and `info.mctx`.
   -/
   (·.1) <$> (withOptions (fun _ => info.options) x).toIO
-    {
-      currNamespace := info.currNamespace
+    { currNamespace := info.currNamespace
       openDecls := info.openDecls
       fileName := "<InfoTree>"
-      fileMap := default
-    }
+      fileMap := default }
     { env, ngen := info.ngen }
 
 def ContextInfo.runMetaM (info : ContextInfo) (lctx : LocalContext) (x : MetaM α) : IO α := do
   (·.1) <$> info.runCoreM (x.run { lctx := lctx } { mctx := info.mctx })
 
-def ContextInfo.toPPContext (info : ContextInfo) (lctx : LocalContext) : PPContext := {
-  env := info.env
-  mctx := info.mctx
-  lctx := lctx
-  opts := info.options
-  currNamespace := info.currNamespace
-  openDecls := info.openDecls
-}
+def ContextInfo.toPPContext (info : ContextInfo) (lctx : LocalContext) : PPContext :=
+  { env := info.env
+    mctx := info.mctx
+    lctx := lctx
+    opts := info.options
+    currNamespace := info.currNamespace
+    openDecls := info.openDecls }
 
 def ContextInfo.ppSyntax (info : ContextInfo) (lctx : LocalContext) (stx : Syntax) : IO Format := do
   ppTerm (info.toPPContext lctx) ⟨stx⟩ -- HACK: might not be a term
@@ -275,13 +271,12 @@ def addCompletionInfo (info : CompletionInfo) : m Unit := do
 def addConstInfo
     [MonadEnv m] [MonadError m] (stx : Syntax) (n : Name) (expectedType? : Option Expr := none)
     : m Unit := do
-  pushInfoLeaf <| .ofTermInfo {
-    elaborator := .anonymous
-    lctx := .empty
-    expr := (← mkConstWithLevelParams n)
-    stx
-    expectedType?
-  }
+  pushInfoLeaf <| .ofTermInfo
+    { elaborator := .anonymous
+      lctx := .empty
+      expr := (← mkConstWithLevelParams n)
+      stx
+      expectedType? }
 
 /--
 This does the same job as `realizeGlobalConstNoOverload`; resolving an identifier
@@ -443,15 +438,11 @@ def withInfoHole [MonadFinally m] [Monad m] [MonadInfoTree m] (mvarId : MVarId) 
       modifyInfoState fun s =>
         if h : s.trees.size > 0 then
           have : s.trees.size - 1 < s.trees.size := Nat.sub_lt h (by decide)
-          {
-            s with
+          { s with
             trees := treesSaved
-            assignment := s.assignment.insert mvarId s.trees[s.trees.size - 1]
-          }
-        else {
-          s with
-          trees := treesSaved
-        }
+            assignment := s.assignment.insert mvarId s.trees[s.trees.size - 1] }
+        else
+          { s with trees := treesSaved }
   else
     x
 

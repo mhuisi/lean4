@@ -341,11 +341,10 @@ def withNewScope (x : M α) : M α := do
   try
     x
   finally
-    let saved := {
-      saved with
-      typeCache := (← get).typeCache
-      isTypeFormerTypeCache := (← get).isTypeFormerTypeCache
-    }
+    let saved :=
+      { saved with
+        typeCache := (← get).typeCache
+        isTypeFormerTypeCache := (← get).isTypeFormerTypeCache }
     set saved
 
 /--
@@ -393,11 +392,10 @@ def mkLetDecl (binderName : Name) (type : Expr) (value : Expr) (type' : Expr) (a
     | .fvar fvarId => pure <| .fvar fvarId #[]
     | .erased | .type .. => pure .erased
   let letDecl ← LCNF.mkLetDecl binderName type' value'
-  modify fun s => {
-    s with
-    lctx := s.lctx.mkLetDecl letDecl.fvarId binderName type value false
-    seq := s.seq.push <| .let letDecl
-  }
+  modify fun s =>
+    { s with
+      lctx := s.lctx.mkLetDecl letDecl.fvarId binderName type value false
+      seq := s.seq.push <| .let letDecl }
   return letDecl
 
 def visitLambda (e : Expr) : M (Array (Param .pure) × Expr × Option Expr) := do
@@ -851,10 +849,10 @@ where
             -- We can rely on `toMono` erasing ctor params eventually; we do not do so here so that type
             -- inference on the value is preserved.
             withReader
-              (fun ctx => {
-                ctx with
-                ignoreNoncomputable := ctx.ignoreNoncomputable || ctorInfo?.any (idx < ·.numParams)
-              })
+              (fun ctx =>
+                { ctx with
+                  ignoreNoncomputable :=
+                    ctx.ignoreNoncomputable || ctorInfo?.any (idx < ·.numParams) })
               do visitAppArg arg
         if hasNeverExtractAttribute env declName then
           modify fun s => { s with shouldCache := false }

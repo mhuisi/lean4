@@ -74,18 +74,15 @@ def SorryLabelView.decode? (name : Name) : Option SorryLabelView := do
   if let .num (.num (.num (.num (.num (.num module posLine) posCol) endLine) endCol) charUtf16)
         endCharUtf16 :=
       name then
-    return {
-      module? :=
-        some {
-          module
-          range := {
-            pos := ⟨posLine, posCol⟩
-            endPos := ⟨endLine, endCol⟩
-            charUtf16
-            endCharUtf16
-          }
-        }
-    }
+    return
+      { module? :=
+          some
+            { module
+              range :=
+                { pos := ⟨posLine, posCol⟩
+                  endPos := ⟨endLine, endCol⟩
+                  charUtf16
+                  endCharUtf16 } } }
   else
     failure
 
@@ -104,18 +101,15 @@ def mkLabeledSorry (type : Expr) (synthetic : Bool) (unique : Bool) : MetaM Expr
   let tag ←
     if let (some startSPos, some endSPos) := ((← getRef).getPos?, (← getRef).getTailPos?) then
       let fileMap ← getFileMap
-      SorryLabelView.encode {
-        module? :=
-          some {
-            module := (← getMainModule)
-            range := {
-              pos := fileMap.toPosition startSPos
-              endPos := fileMap.toPosition endSPos
-              charUtf16 := (fileMap.utf8PosToLspPos startSPos).character
-              endCharUtf16 := (fileMap.utf8PosToLspPos endSPos).character
-            }
-          }
-      }
+      SorryLabelView.encode
+        { module? :=
+            some
+              { module := (← getMainModule)
+                range :=
+                  { pos := fileMap.toPosition startSPos
+                    endPos := fileMap.toPosition endSPos
+                    charUtf16 := (fileMap.utf8PosToLspPos startSPos).character
+                    endCharUtf16 := (fileMap.utf8PosToLspPos endSPos).character } } }
     else
       SorryLabelView.encode {}
   if unique then

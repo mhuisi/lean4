@@ -22,13 +22,8 @@ public def withGrindTacticM (k : Tactic.Grind.GrindTacticM α) : CommandElabM α
         let symCtx ← readThe Sym.Context
         let grindState ← get
         let symState ← getThe Sym.State
-        let ctx := {
-          elaborator := `registerSymSimp
-          ctx := grindCtx
-          sctx := symCtx
-          methods
-          params
-        }
+        let ctx :=
+          { elaborator := `registerSymSimp, ctx := grindCtx, sctx := symCtx, methods, params }
         return (ctx, { grindState, symState, goals := [] })
     let (a, _) ← Tactic.Grind.GrindTacticM.run k ctx state
     return a

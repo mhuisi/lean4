@@ -37,36 +37,32 @@ Overview of types in this module:
 
 namespace Lean.Meta
 
-register_builtin_option backward.dsimp.useDefEqAttr : Bool := {
-  defValue := true
-  descr :=
-    "Use `defeq` attribute rather than checking theorem body to decide whether a theorem \
-      can be used in `dsimp` or with `implicitDefEqProofs`."
-}
+register_builtin_option backward.dsimp.useDefEqAttr : Bool :=
+  { defValue := true
+    descr :=
+      "Use `defeq` attribute rather than checking theorem body to decide whether a theorem \
+        can be used in `dsimp` or with `implicitDefEqProofs`." }
 
-register_builtin_option debug.tactic.simp.checkDefEqAttr : Bool := {
-  defValue := false
-  descr :=
-    "If true, whenever `dsimp` fails to apply a rewrite rule because it is not marked as \
-      `defeq`, check whether it would have been considered as a rfl theorem before the \
-      introduction \
-      of the `defeq` attribute, and warn if it was. Note that this is a costly check."
-}
+register_builtin_option debug.tactic.simp.checkDefEqAttr : Bool :=
+  { defValue := false
+    descr :=
+      "If true, whenever `dsimp` fails to apply a rewrite rule because it is not marked as \
+        `defeq`, check whether it would have been considered as a rfl theorem before the \
+        introduction \
+        of the `defeq` attribute, and warn if it was. Note that this is a costly check." }
 
-register_builtin_option warning.simp.varHead : Bool := {
-  defValue := true
-  descr :=
-    "If true, warns when the head symbol of the left-hand side of a `@[simp]` theorem \
-      is a variable. Such lemmas are tried on every simp step, which can be slow."
-}
+register_builtin_option warning.simp.varHead : Bool :=
+  { defValue := true
+    descr :=
+      "If true, warns when the head symbol of the left-hand side of a `@[simp]` theorem \
+        is a variable. Such lemmas are tried on every simp step, which can be slow." }
 
-register_builtin_option warning.simp.otherHead : Bool := {
-  defValue := true
-  descr :=
-    "If true, warns when the left-hand side of a `@[simp]` theorem is headed by a \
-      `.other` key in the discrimination tree (e.g. a lambda expression). Such lemmas can cause \
-      slowdowns."
-}
+register_builtin_option warning.simp.otherHead : Bool :=
+  { defValue := true
+    descr :=
+      "If true, warns when the left-hand side of a `@[simp]` theorem is headed by a \
+        `.other` key in the discrimination tree (e.g. a lambda expression). Such lemmas can cause \
+        slowdowns." }
 
 /--
 An `Origin` is an identifier for simp theorems which indicates roughly
@@ -298,13 +294,12 @@ instance : BEq SimpTheorem where
   beq e₁ e₂ := e₁.proof == e₂.proof
 
 /-- Configuration for `MetaM` used to process global simp theorems -/
-def simpGlobalConfig : ConfigWithKey := {
-  iota := false
-  proj := .no
-  zetaDelta := false
-  transparency := .reducible
-  : Config
-}.toConfigWithKey
+def simpGlobalConfig : ConfigWithKey :=
+  { iota := false
+    proj := .no
+    zetaDelta := false
+    transparency := .reducible
+    : Config }.toConfigWithKey
 
 @[inline] def withSimpGlobalConfig : MetaM α → MetaM α := withConfigWithKey simpGlobalConfig
 
@@ -450,12 +445,11 @@ private def mkSimpTheoremKeys (type : Expr) (noIndexAtArgs : Bool) (checkLhs : B
     | none =>
       throwError "Unexpected kind of simp theorem{indentExpr type}"
 
-register_builtin_option simp.rfl.checkTransparency : Bool := {
-  defValue := false
-  descr :=
-    "if true, Lean generates a warning if the left and right-hand sides of the `[simp]` equation \
-      are not definitionally equal at the restricted transparency level used by `simp` "
-}
+register_builtin_option simp.rfl.checkTransparency : Bool :=
+  { defValue := false
+    descr :=
+      "if true, Lean generates a warning if the left and right-hand sides of the `[simp]` equation \
+        are not definitionally equal at the restricted transparency level used by `simp` " }
 
 private def mkSimpTheoremCore
     (origin : Origin) (e : Expr) (levelParams : Array Name) (proof : Expr) (post : Bool)
@@ -519,11 +513,10 @@ def mkSimpTheoremFromConst
               (noIndexAtArgs := false) (checkLhs := checkLhs))
       return r
     else
-      return #[
-        ← withoutExporting do
-          mkSimpTheoremCore origin (mkConst declName us) #[] (mkConst declName) post prio
-            (noIndexAtArgs := false) (checkLhs := checkLhs)
-      ]
+      return
+        #[← withoutExporting do
+            mkSimpTheoremCore origin (mkConst declName us) #[] (mkConst declName) post prio
+              (noIndexAtArgs := false) (checkLhs := checkLhs)]
 
 def SimpTheorem.getValue (simpThm : SimpTheorem) : MetaM Expr := do
   if simpThm.proof.isConst && simpThm.levelParams.isEmpty then
@@ -695,31 +688,21 @@ private def eraseFwdIfBwd (d : SimpTheorems) (e : SimpTheorem) : SimpTheorems :=
   else
     d
 
-def SimpTheorems.unerase (d : SimpTheorems) (thmId : Origin) : SimpTheorems := {
-  d with
-  erased := d.erased.erase thmId
-}
+def SimpTheorems.unerase (d : SimpTheorems) (thmId : Origin) : SimpTheorems :=
+  { d with erased := d.erased.erase thmId }
 
 def SimpTheorems.addSimpTheorem (d : SimpTheorems) (e : SimpTheorem) : SimpTheorems :=
   -- Erase the converse, if it exists
   let d := eraseFwdIfBwd d e
-  if e.post then {
-    d with
-    post := d.post.insertKeyValue e.keys e
-    lemmaNames := updateLemmaNames d.lemmaNames
-  }
-  else {
-    d with
-    pre := d.pre.insertKeyValue e.keys e
-    lemmaNames := updateLemmaNames d.lemmaNames
-  }
+  if e.post then
+    { d with post := d.post.insertKeyValue e.keys e, lemmaNames := updateLemmaNames d.lemmaNames }
+  else
+    { d with pre := d.pre.insertKeyValue e.keys e, lemmaNames := updateLemmaNames d.lemmaNames }
 where
   updateLemmaNames (s : PHashSet Origin) : PHashSet Origin := s.insert e.origin
 
-def SimpTheorems.addDeclToUnfoldCore (d : SimpTheorems) (declName : Name) : SimpTheorems := {
-  d with
-  toUnfold := d.toUnfold.insert declName
-}
+def SimpTheorems.addDeclToUnfoldCore (d : SimpTheorems) (declName : Name) : SimpTheorems :=
+  { d with toUnfold := d.toUnfold.insert declName }
 
 def SimpTheorems.addLetDeclToUnfold (d : SimpTheorems) (fvarId : FVarId) : SimpTheorems :=
   -- A small hack that relies on the fact that constants and `FVarId` names should be disjoint.
@@ -738,10 +721,8 @@ def SimpTheorems.isLemma (d : SimpTheorems) (thmId : Origin) : Bool := d.lemmaNa
 
 /-- Register the equational theorems for the given definition. -/
 def SimpTheorems.registerDeclToUnfoldThms (d : SimpTheorems) (declName : Name) (eqThms : Array Name)
-    : SimpTheorems := {
-  d with
-  toUnfoldThms := d.toUnfoldThms.insert declName eqThms
-}
+    : SimpTheorems :=
+  { d with toUnfoldThms := d.toUnfoldThms.insert declName eqThms }
 
 def SimpTheorems.erase
     [Monad m] [MonadLog m] [AddMessageContext m] [MonadOptions m]
@@ -806,27 +787,26 @@ def addSimpTheorem
     ext.add (SimpEntry.thm simpThm) attrKind
 
 def mkSimpExt (name : Name := by exact decl_name%) : IO SimpExtension :=
-  registerSimpleScopedEnvExtension {
-    name := name
-    initial := {}
-    addEntry := fun d e => d.addSimpEntry e
-    exportEntry? := fun _ e =>
-      -- export only annotations on public decls
-      let declName :=
-        match e with
-        | .thm t =>
-          match t.origin with
-          | .decl n _ _ => n
-          | _ => unreachable!
-        | .toUnfold n =>
-          n
-        | .toUnfoldThms n _ =>
-          n
-      if isPrivateName declName then
-        ⟨none, none, some e⟩
-      else
-        .uniform (some e)
-  }
+  registerSimpleScopedEnvExtension
+    { name := name
+      initial := {}
+      addEntry := fun d e => d.addSimpEntry e
+      exportEntry? := fun _ e =>
+        -- export only annotations on public decls
+        let declName :=
+          match e with
+          | .thm t =>
+            match t.origin with
+            | .decl n _ _ => n
+            | _ => unreachable!
+          | .toUnfold n =>
+            n
+          | .toUnfoldThms n _ =>
+            n
+        if isPrivateName declName then
+          ⟨none, none, some e⟩
+        else
+          .uniform (some e) }
 
 abbrev SimpExtensionMap := Std.HashMap Name SimpExtension
 

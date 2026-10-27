@@ -13,13 +13,12 @@ public section
 
 namespace Lean.Linter
 
-register_builtin_option linter.ambiguousOpen : Bool := {
-  defValue := true
-  descr :=
-    "if true, warn when the namespace of an `open` declaration could also refer to a \
-      namespace that is silently not opened, e.g. `open B` inside `namespace A` only opens `A.B` \
-      even if the namespace `B` exists as well"
-}
+register_builtin_option linter.ambiguousOpen : Bool :=
+  { defValue := true
+    descr :=
+      "if true, warn when the namespace of an `open` declaration could also refer to a \
+        namespace that is silently not opened, e.g. `open B` inside `namespace A` only opens `A.B` \
+        even if the namespace `B` exists as well" }
 
 /--
 Collects all namespaces `p ++ id` where `p` is a prefix of `ns` (innermost first, ending with the

@@ -12,15 +12,14 @@ public section
 
 namespace Lean
 
-register_builtin_option exponentiation.threshold : Nat := {
-  defValue := 256
-  descr :=
-    "maximum value for \
-      which exponentiation operations are safe to evaluate. When an exponent \
-      is a value greater than this threshold, the exponentiation will not be evaluated, \
-      and a warning will be logged. This helps to prevent the system from becoming \
-      unresponsive due to excessively large computations."
-}
+register_builtin_option exponentiation.threshold : Nat :=
+  { defValue := 256
+    descr :=
+      "maximum value for \
+        which exponentiation operations are safe to evaluate. When an exponent \
+        is a value greater than this threshold, the exponentiation will not be evaluated, \
+        and a warning will be logged. This helps to prevent the system from becoming \
+        unresponsive due to excessively large computations." }
 
 /--
 Returns `true` if `n` is `≤ exponentiation.threshold`. Otherwise,

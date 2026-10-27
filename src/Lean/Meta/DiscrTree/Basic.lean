@@ -78,11 +78,10 @@ instance [ToFormat α] : ToFormat (Trie α) := ⟨Trie.format⟩
 partial def format [ToFormat α] (d : DiscrTree α) : Format :=
   let (_, r) :=
     d.root.foldl
-      (fun (p : Bool × Format) k c => (
-        false,
-        p.2 ++ (if p.1 then Format.nil else Format.line)
-          ++ Format.paren (Std.format k ++ " => " ++ Std.format c)
-      ))
+      (fun (p : Bool × Format) k c =>
+        ( false,
+          p.2 ++ (if p.1 then Format.nil else Format.line)
+            ++ Format.paren (Std.format k ++ " => " ++ Std.format c) ))
       (true, Format.nil)
   Format.group r
 
@@ -198,13 +197,11 @@ def insertKeyValue [BEq α] (d : DiscrTree α) (keys : Array Key) (v : α) : Dis
     panic! "invalid key sequence"
   else
     let k := keys[0]!
-    {
-      d with
+    { d with
       root :=
         d.root.alter k fun
           | none => some <| createNodes keys v 1
-          | some c => insertAux keys v 1 c
-    }
+          | some c => insertAux keys v 1 c }
 
 @[deprecated insertKeyValue (since := "2026-01-02")]
 def insertCore [BEq α] (d : DiscrTree α) (keys : Array Key) (v : α) : DiscrTree α :=

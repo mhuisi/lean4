@@ -244,11 +244,9 @@ theorem go_denote_mem_prefix
     (aig : AIG α)
     (curr : Nat) (hcurr : curr ≤ w)
     (discr : Ref aig) (lhs rhs : RefVec aig w) (s : RefVec aig curr) (start : Nat) (hstart)
-    : ⟦
-        (go aig curr hcurr discr lhs rhs s).aig,
+    : ⟦ (go aig curr hcurr discr lhs rhs s).aig,
         ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
-        assign
-      ⟧
+        assign ⟧
       = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply IsPrefix.of
@@ -264,11 +262,9 @@ theorem denote_go
     (discr : Ref aig) (lhs rhs : RefVec aig w) (s : RefVec aig curr)
     : ∀ (idx : Nat) (hidx1 : idx < w),
       curr ≤ idx
-        → ⟦
-            (go aig curr hcurr discr lhs rhs s).aig,
+        → ⟦ (go aig curr hcurr discr lhs rhs s).aig,
             (go aig curr hcurr discr lhs rhs s).vec.get idx hidx1,
-            assign
-          ⟧
+            assign ⟧
           = if ⟦aig, discr, assign⟧ then
               ⟦aig, lhs.get idx hidx1, assign⟧
             else

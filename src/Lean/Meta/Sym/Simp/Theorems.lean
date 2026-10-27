@@ -66,14 +66,10 @@ def Theorems.isEmpty (thms : Theorems) : Bool :=
   thms.thms.root.isEmpty && thms.fallback.root.isEmpty
 
 def Theorems.insert (thms : Theorems) (thm : Theorem) : Theorems :=
-  if thm.fallback then {
-    thms with
-    fallback := insertPattern thms.fallback thm.pattern thm
-  }
-  else {
-    thms with
-    thms := insertPattern thms.thms thm.pattern thm
-  }
+  if thm.fallback then
+    { thms with fallback := insertPattern thms.fallback thm.pattern thm }
+  else
+    { thms with thms := insertPattern thms.thms thm.pattern thm }
 
 /-- Returns the theorems matching `e`, excluding the fallback ones. -/
 def Theorems.getMatch (thms : Theorems) (mctx : MetavarContext) (e : Expr) : Array Theorem :=
@@ -323,20 +319,19 @@ def SymSimpExtension.getTheorems (ext : SymSimpExtension) : CoreM Theorems :=
   return ext.getState (← getEnv)
 
 def mkSymSimpExt (name : Name := by exact decl_name%) : IO SymSimpExtension :=
-  registerSimpleScopedEnvExtension {
-    name := name
-    initial := {}
-    addEntry := fun thms thm => thms.insert thm
-    exportEntry? := fun _ thm =>
-      match thm.expr with
-      | .const declName _ =>
-        if isPrivateName declName then
-          ⟨none, none, some thm⟩
-        else
-          .uniform (some thm)
-      | _ =>
-        .uniform (some thm)
-  }
+  registerSimpleScopedEnvExtension
+    { name := name
+      initial := {}
+      addEntry := fun thms thm => thms.insert thm
+      exportEntry? := fun _ thm =>
+        match thm.expr with
+        | .const declName _ =>
+          if isPrivateName declName then
+            ⟨none, none, some thm⟩
+          else
+            .uniform (some thm)
+        | _ =>
+          .uniform (some thm) }
 
 abbrev SymSimpExtensionMap := Std.HashMap Name SymSimpExtension
 

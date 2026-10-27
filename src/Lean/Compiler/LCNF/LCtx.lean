@@ -44,14 +44,12 @@ def LCtx.eraseParam (lctx : LCtx) (param : Param pu) : LCtx :=
 
 def LCtx.eraseParams (lctx : LCtx) (ps : Array (Param pu)) : LCtx :=
   match pu with
-  | .pure => {
-    lctx with
-    paramsPure := ps.foldl (init := lctx.paramsPure) fun params p => params.erase p.fvarId
-  }
-  | .impure => {
-    lctx with
-    paramsImpure := ps.foldl (init := lctx.paramsImpure) fun params p => params.erase p.fvarId
-  }
+  | .pure =>
+    { lctx with
+      paramsPure := ps.foldl (init := lctx.paramsPure) fun params p => params.erase p.fvarId }
+  | .impure =>
+    { lctx with
+      paramsImpure := ps.foldl (init := lctx.paramsImpure) fun params p => params.erase p.fvarId }
 
 def LCtx.eraseLetDecl (lctx : LCtx) (decl : LetDecl pu) : LCtx :=
   match pu with

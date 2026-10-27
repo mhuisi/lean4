@@ -342,12 +342,11 @@ def ShellOptions.process (opts : ShellOptions) (opt : Char) (optArg? : Option St
   | 'I' => -- `-I, --stdin`
     return { opts with useStdin := true }
   | 'r' => -- `--run`
-    return {
-      opts with
-      run := true
-      -- can't get IR if it's postponed
-      leanOpts := Compiler.compiler.postponeCompile.set opts.leanOpts false
-    }
+    return
+      { opts with
+        run := true
+        -- can't get IR if it's postponed
+        leanOpts := Compiler.compiler.postponeCompile.set opts.leanOpts false }
   | 'o' => -- `--o, olean=fname`
     return { opts with oleanFileName? := ← checkOptArg "o" optArg? }
   | 'i' => -- `--i, ilean=fname`
@@ -471,10 +470,9 @@ where
 
 @[export lean_shell_main]
 def shellMain (args : List String) (opts : ShellOptions) : IO UInt32 := do
-  let opts := {
-    opts with
-    leanOpts := opts.leanOpts.mergeBy (fun _ _ v => v) (Internal.getOptionOverrides ())
-  }
+  let opts :=
+    { opts with
+      leanOpts := opts.leanOpts.mergeBy (fun _ _ v => v) (Internal.getOptionOverrides ()) }
   if opts.printPrefix then
     IO.println (← getBuildDir)
     return 0

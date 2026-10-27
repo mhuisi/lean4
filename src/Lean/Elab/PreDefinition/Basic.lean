@@ -18,10 +18,9 @@ namespace Lean.Elab
 open Meta
 open Term
 
-register_builtin_option cleanup.letToHave : Bool := {
-  defValue := true
-  descr := "Enables transforming `let`s to `have`s after elaborating declarations."
-}
+register_builtin_option cleanup.letToHave : Bool :=
+  { defValue := true
+    descr := "Enables transforming `let`s to `have`s after elaborating declarations." }
 
 /--
 A (potentially recursive) definition.
@@ -40,19 +39,16 @@ structure PreDefinition where
   termination : TerminationHints
 deriving Inhabited
 
-def PreDefinition.filterAttrs (preDef : PreDefinition) (p : Attribute → Bool) : PreDefinition := {
-  preDef with
-  modifiers := preDef.modifiers.filterAttrs p
-}
+def PreDefinition.filterAttrs (preDef : PreDefinition) (p : Attribute → Bool) : PreDefinition :=
+  { preDef with modifiers := preDef.modifiers.filterAttrs p }
 
 /-- Applies `Lean.instantiateMVars` to the types of values of each predefinition. -/
 def instantiateMVarsAtPreDecls (preDefs : Array PreDefinition) : TermElabM (Array PreDefinition) :=
   preDefs.mapM fun preDef => do
-    pure {
-      preDef with
-      type := (← instantiateMVars preDef.type)
-      value := (← instantiateMVars preDef.value)
-    }
+    pure
+      { preDef with
+        type := (← instantiateMVars preDef.type)
+        value := (← instantiateMVars preDef.value) }
 
 /-- Applies `Lean.Elab.Term.levelMVarToParam` to the types of each predefinition. -/
 def levelMVarToParamTypesPreDecls (preDefs : Array PreDefinition)
@@ -93,12 +89,11 @@ def fixLevelParams (preDefs : Array PreDefinition) (scopeLevelNames allUserLevel
               none
           | _ =>
             none
-      return preDefs.map fun preDef => {
-        preDef with
-        type := fixExpr preDef.type
-        value := fixExpr preDef.value
-        levelParams := levelParams
-      }
+      return preDefs.map fun preDef =>
+        { preDef with
+          type := fixExpr preDef.type
+          value := fixExpr preDef.value
+          levelParams := levelParams }
 
 def applyAttributesOf (preDefs : Array PreDefinition) (applicationTime : AttributeApplicationTime)
     : TermElabM Unit := do
@@ -142,12 +137,11 @@ def abstractNestedProofs (preDef : PreDefinition) (cache := true) : MetaM PreDef
 /-- Auxiliary method for (temporarily) adding pre definition as an axiom -/
 def addAsAxiom (preDef : PreDefinition) : MetaM Unit := do
   withRef preDef.ref do
-    addDecl <| Declaration.axiomDecl {
-      name := preDef.declName
-      levelParams := preDef.levelParams
-      type := preDef.type
-      isUnsafe := preDef.modifiers.isUnsafe
-    }
+    addDecl <| Declaration.axiomDecl
+      { name := preDef.declName
+        levelParams := preDef.levelParams
+        type := preDef.type
+        isUnsafe := preDef.modifiers.isUnsafe }
 
 private def shouldGenCodeFor (preDef : PreDefinition) : Bool :=
   !preDef.kind.isTheorem && !preDef.modifiers.isNoncomputable
@@ -159,10 +153,9 @@ private def compileDecl (decl : Declaration) : TermElabM Unit := do
       !(← read).isNoncomputableSection || decl.getTopLevelNames.any (isMarkedMeta (← getEnv)))
     decl
 
-register_builtin_option diagnostics.threshold.proofSize : Nat := {
-  defValue := 16384
-  descr := "only display proof statistics when proof has at least this number of terms"
-}
+register_builtin_option diagnostics.threshold.proofSize : Nat :=
+  { defValue := 16384
+    descr := "only display proof statistics when proof has at least this number of terms" }
 
 private def reportTheoremDiag (d : TheoremVal) : TermElabM Unit := do
   if (← isDiagnosticsEnabled) then
@@ -208,24 +201,22 @@ private def addNonRecAux
     let preDef ← letToHaveType preDef
     let preDef ← if cleanupValue then letToHaveValue preDef else pure preDef
     let mkDefDecl : TermElabM Declaration :=
-      return Declaration.defnDecl {
-        name := preDef.declName
-        levelParams := preDef.levelParams
-        type := preDef.type
-        value := preDef.value
-        hints := ReducibilityHints.regular (getMaxHeight (← getEnv) preDef.value + 1)
-        safety :=
-          if preDef.modifiers.isUnsafe then DefinitionSafety.unsafe else DefinitionSafety.safe
-        all
-      }
+      return Declaration.defnDecl
+        { name := preDef.declName
+          levelParams := preDef.levelParams
+          type := preDef.type
+          value := preDef.value
+          hints := ReducibilityHints.regular (getMaxHeight (← getEnv) preDef.value + 1)
+          safety :=
+            if preDef.modifiers.isUnsafe then DefinitionSafety.unsafe else DefinitionSafety.safe
+          all }
     let mkThmDecl : TermElabM Declaration := do
-      let d := {
-        name := preDef.declName
-        levelParams := preDef.levelParams
-        type := preDef.type
-        value := preDef.value
-        all
-      }
+      let d :=
+        { name := preDef.declName
+          levelParams := preDef.levelParams
+          type := preDef.type
+          value := preDef.value
+          all }
       reportTheoremDiag d
       return Declaration.thmDecl d
     let decl ←
@@ -233,25 +224,23 @@ private def addNonRecAux
       | DefKind.«theorem» =>
         mkThmDecl
       | DefKind.«opaque» =>
-        pure <| Declaration.opaqueDecl {
-          name := preDef.declName
-          levelParams := preDef.levelParams
-          type := preDef.type
-          value := preDef.value
-          isUnsafe := preDef.modifiers.isUnsafe
-          all
-        }
+        pure <| Declaration.opaqueDecl
+          { name := preDef.declName
+            levelParams := preDef.levelParams
+            type := preDef.type
+            value := preDef.value
+            isUnsafe := preDef.modifiers.isUnsafe
+            all }
       | DefKind.«abbrev» =>
-        pure <| Declaration.defnDecl {
-          name := preDef.declName
-          levelParams := preDef.levelParams
-          type := preDef.type
-          value := preDef.value
-          hints := ReducibilityHints.«abbrev»
-          safety :=
-            if preDef.modifiers.isUnsafe then DefinitionSafety.unsafe else DefinitionSafety.safe
-          all
-        }
+        pure <| Declaration.defnDecl
+          { name := preDef.declName
+            levelParams := preDef.levelParams
+            type := preDef.type
+            value := preDef.value
+            hints := ReducibilityHints.«abbrev»
+            safety :=
+              if preDef.modifiers.isUnsafe then DefinitionSafety.unsafe else DefinitionSafety.safe
+            all }
       | DefKind.def | DefKind.example =>
         mkDefDecl
       | DefKind.«instance» =>
@@ -322,15 +311,14 @@ def addAndCompileUnsafe
     let all := preDefs.toList.map (·.declName)
     let decl :=
       Declaration.mutualDefnDecl <| ← preDefs.toList.mapM fun preDef =>
-        return {
-          name := preDef.declName
-          levelParams := preDef.levelParams
-          type := preDef.type
-          value := preDef.value
-          hints := ReducibilityHints.opaque
-          safety
-          all
-        }
+        return
+          { name := preDef.declName
+            levelParams := preDef.levelParams
+            type := preDef.type
+            value := preDef.value
+            hints := ReducibilityHints.opaque
+            safety
+            all }
     addDecl decl
     applyAttributesOf preDefs AttributeApplicationTime.afterTypeChecking
     compileDecl decl
@@ -345,21 +333,20 @@ def addAndCompilePartialRec (docCtx : LocalContext × LocalInstances) (preDefs :
     : TermElabM Unit := do
   if preDefs.all shouldGenCodeFor then
     withEnableInfoTree false do
-      addAndCompileUnsafe docCtx (safety := DefinitionSafety.partial) <| preDefs.map fun preDef => {
-        preDef with
-        declName := Compiler.mkUnsafeRecName preDef.declName
-        value :=
-          preDef.value.replace fun e =>
-            match e with
-            | Expr.const declName us =>
-              if preDefs.any fun preDef => preDef.declName == declName then
-                some <| mkConst (Compiler.mkUnsafeRecName declName) us
-              else
+      addAndCompileUnsafe docCtx (safety := DefinitionSafety.partial) <| preDefs.map fun preDef =>
+        { preDef with
+          declName := Compiler.mkUnsafeRecName preDef.declName
+          value :=
+            preDef.value.replace fun e =>
+              match e with
+              | Expr.const declName us =>
+                if preDefs.any fun preDef => preDef.declName == declName then
+                  some <| mkConst (Compiler.mkUnsafeRecName declName) us
+                else
+                  none
+              | _ =>
                 none
-            | _ =>
-              none
-        modifiers := default
-      }
+          modifiers := default }
 
 private def containsRecFn (recFnNames : Array Name) (e : Expr) : Bool :=
   (e.find? fun e => e.isConst && recFnNames.contains e.constName!).isSome

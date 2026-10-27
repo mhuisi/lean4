@@ -176,13 +176,12 @@ theorem ofNat_add (a b : Nat) : OfNat.ofNat (α := α) (a + b) = OfNat.ofNat a +
   | zero => rw [Nat.add_zero, add_zero]
   | succ b ih => rw [Nat.add_succ, ofNat_succ, ih, ofNat_succ b, add_assoc]
 
-instance toNatModule [I : Semiring α] : NatModule α := {
-  I with
-  zero_nsmul a := by rw [nsmul_eq_natCast_mul, ← ofNat_eq_natCast, zero_mul]
-  add_one_nsmul n a := by
-    rw [nsmul_eq_natCast_mul, ← ofNat_eq_natCast, ofNat_add, right_distrib, ofNat_eq_natCast,
-      ← nsmul_eq_natCast_mul, ofNat_eq_natCast, natCast_one, one_mul]
-}
+instance toNatModule [I : Semiring α] : NatModule α :=
+  { I with
+    zero_nsmul a := by rw [nsmul_eq_natCast_mul, ← ofNat_eq_natCast, zero_mul]
+    add_one_nsmul n a := by
+      rw [nsmul_eq_natCast_mul, ← ofNat_eq_natCast, ofNat_add, right_distrib, ofNat_eq_natCast,
+        ← nsmul_eq_natCast_mul, ofNat_eq_natCast, natCast_one, one_mul] }
 
 theorem natCast_add (a b : Nat) : ((a + b : Nat) : α) = ((a : α) + (b : α)) := by
   rw [← ofNat_eq_natCast, ← ofNat_eq_natCast, ofNat_add, ofNat_eq_natCast, ofNat_eq_natCast]
@@ -355,14 +354,13 @@ theorem zsmul_eq_intCast_mul {k : Int} {a : α} : (k • a : α) = (k : α) * a 
     rw [intCast_neg, neg_mul, neg_zsmul, intCast_natCast, zsmul_natCast_eq_nsmul,
       nsmul_eq_natCast_mul]
 
-instance toIntModule [I : Ring α] : IntModule α := {
-  I, Semiring.toNatModule (α := α) with
-  zero_zsmul a := by rw [← Int.natCast_zero, zsmul_natCast_eq_nsmul, zero_nsmul]
-  one_zsmul a := by rw [← Int.natCast_one, zsmul_natCast_eq_nsmul, one_nsmul]
-  add_zsmul n m a := by
-    rw [zsmul_eq_intCast_mul, intCast_add, right_distrib, zsmul_eq_intCast_mul,
-      zsmul_eq_intCast_mul]
-}
+instance toIntModule [I : Ring α] : IntModule α :=
+  { I, Semiring.toNatModule (α := α) with
+    zero_zsmul a := by rw [← Int.natCast_zero, zsmul_natCast_eq_nsmul, zero_nsmul]
+    one_zsmul a := by rw [← Int.natCast_one, zsmul_natCast_eq_nsmul, one_nsmul]
+    add_zsmul n m a := by
+      rw [zsmul_eq_intCast_mul, intCast_add, right_distrib, zsmul_eq_intCast_mul,
+        zsmul_eq_intCast_mul] }
 
 private theorem intCast_mul_aux (x y : Nat) : ((x * y : Int) : α) = ((x : α) * (y : α)) := by
   rw [Int.ofNat_mul_ofNat, intCast_natCast, natCast_mul]

@@ -19,13 +19,12 @@ namespace Lean
 public def registerModuleEnvExtension
     [Inhabited σ] (mkInitial : IO σ) (name : Name := by exact decl_name%)
     : IO (ModuleEnvExtension σ) :=
-  registerPersistentEnvExtension {
-    name := name
-    mkInitial := mkInitial
-    addImportedFn := fun _ _ => mkInitial
-    addEntryFn := fun s _ => s
-    exportEntriesFn := fun s => #[s]
-  }
+  registerPersistentEnvExtension
+    { name := name
+      mkInitial := mkInitial
+      addImportedFn := fun _ _ => mkInitial
+      addEntryFn := fun s _ => s
+      exportEntriesFn := fun s => #[s] }
 
 namespace ModuleEnvExtension
 

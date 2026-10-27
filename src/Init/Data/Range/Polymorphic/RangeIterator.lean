@@ -313,77 +313,76 @@ instance Iterator.instIteratorAccess
     [UpwardEnumerable α] [LE α] [DecidableLE α] [LawfulUpwardEnumerable α]
     [LawfulUpwardEnumerableLE α]
     : IteratorAccess (Rxc.Iterator α) Id where
-  nextAtIdx? it n := ⟨
-    match it.internalState.next.bind (UpwardEnumerable.succMany? n) with
-    | none =>
-      .done
-    | some next =>
-      if next ≤ it.internalState.upperBound then
-        .yield ⟨⟨UpwardEnumerable.succ? next, it.internalState.upperBound⟩⟩ next
-      else
-        .done,
-    (by
-      induction n generalizing it
-      · split <;> rename_i heq
-        · apply IterM.IsPlausibleNthOutputStep.done
-          simp only [Monadic.isPlausibleStep_iff, Monadic.step]
-          simp only [Option.bind_eq_none_iff, succMany?_zero, reduceCtorEq, imp_false] at heq
-          cases heq' : it.internalState.next
-          · simp
-          · rw [heq'] at heq
-            exfalso
-            exact heq _ rfl
-        · cases heq' : it.internalState.next
-          · simp [heq'] at heq
-          simp only [heq', Option.bind_some, succMany?_zero, Option.some.injEq] at heq
-          cases heq
-          split <;> rename_i heq''
-          · apply IterM.IsPlausibleNthOutputStep.zero_yield
-            simp [Monadic.isPlausibleStep_iff, Monadic.step, heq', heq'']
+  nextAtIdx? it n :=
+    ⟨ match it.internalState.next.bind (UpwardEnumerable.succMany? n) with
+      | none =>
+        .done
+      | some next =>
+        if next ≤ it.internalState.upperBound then
+          .yield ⟨⟨UpwardEnumerable.succ? next, it.internalState.upperBound⟩⟩ next
+        else
+          .done,
+      (by
+        induction n generalizing it
+        · split <;> rename_i heq
           · apply IterM.IsPlausibleNthOutputStep.done
-            simp [Monadic.isPlausibleStep_iff, Monadic.step, heq', heq'']
-      · rename_i n ih
-        split <;> rename_i heq
-        · cases heq' : it.internalState.next
-          · apply IterM.IsPlausibleNthOutputStep.done
-            simp only [Monadic.isPlausibleStep_iff, Monadic.step, heq']
-          · rename_i out
-            simp only [heq', Option.bind_some, succMany?_add_one_eq_succ?_bind_succMany?] at heq
-            specialize ih ⟨⟨UpwardEnumerable.succ? out, it.internalState.upperBound⟩⟩
-            simp only [heq] at ih
-            by_cases heq'' : out ≤ it.internalState.upperBound
-            · apply IterM.IsPlausibleNthOutputStep.yield
-              · simp only [Monadic.isPlausibleStep_iff, Monadic.step, heq', heq'', ↓ reduceIte,
-                  IterStep.yield.injEq]
-                exact ⟨rfl, rfl⟩
-              · exact ih
+            simp only [Monadic.isPlausibleStep_iff, Monadic.step]
+            simp only [Option.bind_eq_none_iff, succMany?_zero, reduceCtorEq, imp_false] at heq
+            cases heq' : it.internalState.next
+            · simp
+            · rw [heq'] at heq
+              exfalso
+              exact heq _ rfl
+          · cases heq' : it.internalState.next
+            · simp [heq'] at heq
+            simp only [heq', Option.bind_some, succMany?_zero, Option.some.injEq] at heq
+            cases heq
+            split <;> rename_i heq''
+            · apply IterM.IsPlausibleNthOutputStep.zero_yield
+              simp [Monadic.isPlausibleStep_iff, Monadic.step, heq', heq'']
             · apply IterM.IsPlausibleNthOutputStep.done
               simp [Monadic.isPlausibleStep_iff, Monadic.step, heq', heq'']
-        · cases heq' : it.internalState.next
-          · simp [heq'] at heq
-          rename_i out
-          simp only [heq', Option.bind_some] at heq
-          have hle : UpwardEnumerable.LE out _ := ⟨n + 1, heq⟩
-          simp only [succMany?_add_one_eq_succ?_bind_succMany?] at heq
-          specialize ih ⟨⟨UpwardEnumerable.succ? out, it.internalState.upperBound⟩⟩
-          simp only [heq] at ih
-          by_cases hout : out ≤ it.internalState.upperBound
-          · apply IterM.IsPlausibleNthOutputStep.yield
-            · simp only [Monadic.isPlausibleStep_iff, Monadic.step, heq', hout, ↓ reduceIte,
-                IterStep.yield.injEq]
-              exact ⟨rfl, rfl⟩
-            · apply ih
-          · rename_i next
-            haveI := UpwardEnumerable.instLETransOfLawfulUpwardEnumerableLE (α := α)
-            have :=
-              hout.imp (fun h : next ≤ it.internalState.upperBound => by
-                rw [← UpwardEnumerable.le_iff] at hle
-                exact Trans.trans hle h)
-            simp only [this, ↓ reduceIte]
-            simp only [this, ↓ reduceIte] at ih
-            apply IterM.IsPlausibleNthOutputStep.done
-            simp [Monadic.isPlausibleStep_iff, Monadic.step, heq', hout])
-  ⟩
+        · rename_i n ih
+          split <;> rename_i heq
+          · cases heq' : it.internalState.next
+            · apply IterM.IsPlausibleNthOutputStep.done
+              simp only [Monadic.isPlausibleStep_iff, Monadic.step, heq']
+            · rename_i out
+              simp only [heq', Option.bind_some, succMany?_add_one_eq_succ?_bind_succMany?] at heq
+              specialize ih ⟨⟨UpwardEnumerable.succ? out, it.internalState.upperBound⟩⟩
+              simp only [heq] at ih
+              by_cases heq'' : out ≤ it.internalState.upperBound
+              · apply IterM.IsPlausibleNthOutputStep.yield
+                · simp only [Monadic.isPlausibleStep_iff, Monadic.step, heq', heq'', ↓ reduceIte,
+                    IterStep.yield.injEq]
+                  exact ⟨rfl, rfl⟩
+                · exact ih
+              · apply IterM.IsPlausibleNthOutputStep.done
+                simp [Monadic.isPlausibleStep_iff, Monadic.step, heq', heq'']
+          · cases heq' : it.internalState.next
+            · simp [heq'] at heq
+            rename_i out
+            simp only [heq', Option.bind_some] at heq
+            have hle : UpwardEnumerable.LE out _ := ⟨n + 1, heq⟩
+            simp only [succMany?_add_one_eq_succ?_bind_succMany?] at heq
+            specialize ih ⟨⟨UpwardEnumerable.succ? out, it.internalState.upperBound⟩⟩
+            simp only [heq] at ih
+            by_cases hout : out ≤ it.internalState.upperBound
+            · apply IterM.IsPlausibleNthOutputStep.yield
+              · simp only [Monadic.isPlausibleStep_iff, Monadic.step, heq', hout, ↓ reduceIte,
+                  IterStep.yield.injEq]
+                exact ⟨rfl, rfl⟩
+              · apply ih
+            · rename_i next
+              haveI := UpwardEnumerable.instLETransOfLawfulUpwardEnumerableLE (α := α)
+              have :=
+                hout.imp (fun h : next ≤ it.internalState.upperBound => by
+                  rw [← UpwardEnumerable.le_iff] at hle
+                  exact Trans.trans hle h)
+              simp only [this, ↓ reduceIte]
+              simp only [this, ↓ reduceIte] at ih
+              apply IterM.IsPlausibleNthOutputStep.done
+              simp [Monadic.isPlausibleStep_iff, Monadic.step, heq', hout]) ⟩
 
 instance Iterator.instLawfulDeterministicIterator [UpwardEnumerable α] [LE α] [DecidableLE α]
     : LawfulDeterministicIterator (Rxc.Iterator α) Id where
@@ -946,77 +945,76 @@ instance Iterator.instIteratorAccess
     [UpwardEnumerable α] [LT α] [DecidableLT α] [LawfulUpwardEnumerable α]
     [LawfulUpwardEnumerableLT α]
     : IteratorAccess (Rxo.Iterator α) Id where
-  nextAtIdx? it n := ⟨
-    match it.internalState.next.bind (UpwardEnumerable.succMany? n) with
-    | none =>
-      .done
-    | some next =>
-      if next < it.internalState.upperBound then
-        .yield ⟨⟨UpwardEnumerable.succ? next, it.internalState.upperBound⟩⟩ next
-      else
-        .done,
-    (by
-      induction n generalizing it
-      · split <;> rename_i heq
-        · apply IterM.IsPlausibleNthOutputStep.done
-          simp only [Monadic.isPlausibleStep_iff, Monadic.step]
-          simp only [Option.bind_eq_none_iff, succMany?_zero, reduceCtorEq, imp_false] at heq
-          cases heq' : it.internalState.next
-          · simp
-          · rw [heq'] at heq
-            exfalso
-            exact heq _ rfl
-        · cases heq' : it.internalState.next
-          · simp [heq'] at heq
-          simp only [heq', Option.bind_some, succMany?_zero, Option.some.injEq] at heq
-          cases heq
-          split <;> rename_i heq''
-          · apply IterM.IsPlausibleNthOutputStep.zero_yield
-            simp [Monadic.isPlausibleStep_iff, Monadic.step, heq', heq'']
+  nextAtIdx? it n :=
+    ⟨ match it.internalState.next.bind (UpwardEnumerable.succMany? n) with
+      | none =>
+        .done
+      | some next =>
+        if next < it.internalState.upperBound then
+          .yield ⟨⟨UpwardEnumerable.succ? next, it.internalState.upperBound⟩⟩ next
+        else
+          .done,
+      (by
+        induction n generalizing it
+        · split <;> rename_i heq
           · apply IterM.IsPlausibleNthOutputStep.done
-            simp [Monadic.isPlausibleStep_iff, Monadic.step, heq', heq'']
-      · rename_i n ih
-        split <;> rename_i heq
-        · cases heq' : it.internalState.next
-          · apply IterM.IsPlausibleNthOutputStep.done
-            simp only [Monadic.isPlausibleStep_iff, Monadic.step, heq']
-          · rename_i out
-            simp only [heq', Option.bind_some, succMany?_add_one_eq_succ?_bind_succMany?] at heq
-            specialize ih ⟨⟨UpwardEnumerable.succ? out, it.internalState.upperBound⟩⟩
-            simp only [heq] at ih
-            by_cases heq'' : out < it.internalState.upperBound
-            · apply IterM.IsPlausibleNthOutputStep.yield
-              · simp only [Monadic.isPlausibleStep_iff, Monadic.step, heq', heq'', ↓ reduceIte,
-                  IterStep.yield.injEq]
-                exact ⟨rfl, rfl⟩
-              · exact ih
+            simp only [Monadic.isPlausibleStep_iff, Monadic.step]
+            simp only [Option.bind_eq_none_iff, succMany?_zero, reduceCtorEq, imp_false] at heq
+            cases heq' : it.internalState.next
+            · simp
+            · rw [heq'] at heq
+              exfalso
+              exact heq _ rfl
+          · cases heq' : it.internalState.next
+            · simp [heq'] at heq
+            simp only [heq', Option.bind_some, succMany?_zero, Option.some.injEq] at heq
+            cases heq
+            split <;> rename_i heq''
+            · apply IterM.IsPlausibleNthOutputStep.zero_yield
+              simp [Monadic.isPlausibleStep_iff, Monadic.step, heq', heq'']
             · apply IterM.IsPlausibleNthOutputStep.done
               simp [Monadic.isPlausibleStep_iff, Monadic.step, heq', heq'']
-        · cases heq' : it.internalState.next
-          · simp [heq'] at heq
-          rename_i out
-          simp only [heq', Option.bind_some] at heq
-          have hlt : UpwardEnumerable.LT out _ := ⟨n, heq⟩
-          simp only [succMany?_add_one_eq_succ?_bind_succMany?] at heq
-          specialize ih ⟨⟨UpwardEnumerable.succ? out, it.internalState.upperBound⟩⟩
-          simp only [heq] at ih
-          by_cases hout : out < it.internalState.upperBound
-          · apply IterM.IsPlausibleNthOutputStep.yield
-            · simp only [Monadic.isPlausibleStep_iff, Monadic.step, heq', hout, ↓ reduceIte,
-                IterStep.yield.injEq]
-              exact ⟨rfl, rfl⟩
-            · apply ih
-          · rename_i next
-            haveI := UpwardEnumerable.instLTTransOfLawfulUpwardEnumerableLT (α := α)
-            have :=
-              hout.imp (fun h : next < it.internalState.upperBound => by
-                rw [← UpwardEnumerable.lt_iff] at hlt
-                exact Trans.trans hlt h)
-            simp only [this, ↓ reduceIte]
-            simp only [this, ↓ reduceIte] at ih
-            apply IterM.IsPlausibleNthOutputStep.done
-            simp [Monadic.isPlausibleStep_iff, Monadic.step, heq', hout])
-  ⟩
+        · rename_i n ih
+          split <;> rename_i heq
+          · cases heq' : it.internalState.next
+            · apply IterM.IsPlausibleNthOutputStep.done
+              simp only [Monadic.isPlausibleStep_iff, Monadic.step, heq']
+            · rename_i out
+              simp only [heq', Option.bind_some, succMany?_add_one_eq_succ?_bind_succMany?] at heq
+              specialize ih ⟨⟨UpwardEnumerable.succ? out, it.internalState.upperBound⟩⟩
+              simp only [heq] at ih
+              by_cases heq'' : out < it.internalState.upperBound
+              · apply IterM.IsPlausibleNthOutputStep.yield
+                · simp only [Monadic.isPlausibleStep_iff, Monadic.step, heq', heq'', ↓ reduceIte,
+                    IterStep.yield.injEq]
+                  exact ⟨rfl, rfl⟩
+                · exact ih
+              · apply IterM.IsPlausibleNthOutputStep.done
+                simp [Monadic.isPlausibleStep_iff, Monadic.step, heq', heq'']
+          · cases heq' : it.internalState.next
+            · simp [heq'] at heq
+            rename_i out
+            simp only [heq', Option.bind_some] at heq
+            have hlt : UpwardEnumerable.LT out _ := ⟨n, heq⟩
+            simp only [succMany?_add_one_eq_succ?_bind_succMany?] at heq
+            specialize ih ⟨⟨UpwardEnumerable.succ? out, it.internalState.upperBound⟩⟩
+            simp only [heq] at ih
+            by_cases hout : out < it.internalState.upperBound
+            · apply IterM.IsPlausibleNthOutputStep.yield
+              · simp only [Monadic.isPlausibleStep_iff, Monadic.step, heq', hout, ↓ reduceIte,
+                  IterStep.yield.injEq]
+                exact ⟨rfl, rfl⟩
+              · apply ih
+            · rename_i next
+              haveI := UpwardEnumerable.instLTTransOfLawfulUpwardEnumerableLT (α := α)
+              have :=
+                hout.imp (fun h : next < it.internalState.upperBound => by
+                  rw [← UpwardEnumerable.lt_iff] at hlt
+                  exact Trans.trans hlt h)
+              simp only [this, ↓ reduceIte]
+              simp only [this, ↓ reduceIte] at ih
+              apply IterM.IsPlausibleNthOutputStep.done
+              simp [Monadic.isPlausibleStep_iff, Monadic.step, heq', hout]) ⟩
 
 instance Iterator.instLawfulDeterministicIterator [UpwardEnumerable α] [LT α] [DecidableLT α]
     : LawfulDeterministicIterator (Rxo.Iterator α) Id where
@@ -1488,53 +1486,52 @@ instance Iterator.instProductive [UpwardEnumerable α] [LawfulUpwardEnumerable �
 
 instance Iterator.instIteratorAccess [UpwardEnumerable α] [LawfulUpwardEnumerable α]
     : IteratorAccess (Rxi.Iterator α) Id where
-  nextAtIdx? it n := ⟨
-    match it.internalState.next.bind (UpwardEnumerable.succMany? n) with
-    | none => .done
-    | some next => .yield ⟨⟨UpwardEnumerable.succ? next⟩⟩ next,
-    (by
-      induction n generalizing it
-      · split <;> rename_i heq
-        · apply IterM.IsPlausibleNthOutputStep.done
-          simp only [Monadic.isPlausibleStep_iff, Monadic.step]
-          simp only [Option.bind_eq_none_iff, succMany?_zero, reduceCtorEq, imp_false] at heq
-          cases heq' : it.internalState.next
-          · simp
-          · rw [heq'] at heq
-            exfalso
-            exact heq _ rfl
-        · cases heq' : it.internalState.next
-          · simp [heq'] at heq
-          simp only [heq', Option.bind_some, succMany?_zero, Option.some.injEq] at heq
-          cases heq
-          · apply IterM.IsPlausibleNthOutputStep.zero_yield
-            simp [Monadic.isPlausibleStep_iff, Monadic.step, heq']
-      · rename_i n ih
-        split <;> rename_i heq
-        · cases heq' : it.internalState.next
+  nextAtIdx? it n :=
+    ⟨ match it.internalState.next.bind (UpwardEnumerable.succMany? n) with
+      | none => .done
+      | some next => .yield ⟨⟨UpwardEnumerable.succ? next⟩⟩ next,
+      (by
+        induction n generalizing it
+        · split <;> rename_i heq
           · apply IterM.IsPlausibleNthOutputStep.done
-            simp only [Monadic.isPlausibleStep_iff, Monadic.step, heq']
-          · rename_i out
-            simp only [heq', Option.bind_some, succMany?_add_one_eq_succ?_bind_succMany?] at heq
+            simp only [Monadic.isPlausibleStep_iff, Monadic.step]
+            simp only [Option.bind_eq_none_iff, succMany?_zero, reduceCtorEq, imp_false] at heq
+            cases heq' : it.internalState.next
+            · simp
+            · rw [heq'] at heq
+              exfalso
+              exact heq _ rfl
+          · cases heq' : it.internalState.next
+            · simp [heq'] at heq
+            simp only [heq', Option.bind_some, succMany?_zero, Option.some.injEq] at heq
+            cases heq
+            · apply IterM.IsPlausibleNthOutputStep.zero_yield
+              simp [Monadic.isPlausibleStep_iff, Monadic.step, heq']
+        · rename_i n ih
+          split <;> rename_i heq
+          · cases heq' : it.internalState.next
+            · apply IterM.IsPlausibleNthOutputStep.done
+              simp only [Monadic.isPlausibleStep_iff, Monadic.step, heq']
+            · rename_i out
+              simp only [heq', Option.bind_some, succMany?_add_one_eq_succ?_bind_succMany?] at heq
+              specialize ih ⟨⟨UpwardEnumerable.succ? out⟩⟩
+              simp only [heq] at ih
+              · apply IterM.IsPlausibleNthOutputStep.yield
+                · simp only [Monadic.isPlausibleStep_iff, Monadic.step, heq', IterStep.yield.injEq]
+                  exact ⟨rfl, rfl⟩
+                · exact ih
+          · cases heq' : it.internalState.next
+            · simp [heq'] at heq
+            rename_i out
+            simp only [heq', Option.bind_some] at heq
+            have hlt : UpwardEnumerable.LT out _ := ⟨n, heq⟩
+            simp only [succMany?_add_one_eq_succ?_bind_succMany?] at heq
             specialize ih ⟨⟨UpwardEnumerable.succ? out⟩⟩
             simp only [heq] at ih
             · apply IterM.IsPlausibleNthOutputStep.yield
               · simp only [Monadic.isPlausibleStep_iff, Monadic.step, heq', IterStep.yield.injEq]
                 exact ⟨rfl, rfl⟩
-              · exact ih
-        · cases heq' : it.internalState.next
-          · simp [heq'] at heq
-          rename_i out
-          simp only [heq', Option.bind_some] at heq
-          have hlt : UpwardEnumerable.LT out _ := ⟨n, heq⟩
-          simp only [succMany?_add_one_eq_succ?_bind_succMany?] at heq
-          specialize ih ⟨⟨UpwardEnumerable.succ? out⟩⟩
-          simp only [heq] at ih
-          · apply IterM.IsPlausibleNthOutputStep.yield
-            · simp only [Monadic.isPlausibleStep_iff, Monadic.step, heq', IterStep.yield.injEq]
-              exact ⟨rfl, rfl⟩
-            · apply ih)
-  ⟩
+              · apply ih) ⟩
 
 instance Iterator.instLawfulDeterministicIterator [UpwardEnumerable α]
     : LawfulDeterministicIterator (Rxi.Iterator α) Id where

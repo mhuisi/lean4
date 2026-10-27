@@ -81,18 +81,16 @@ where
         | return none
       let mkEqTrue (lhs : Expr) : Sym.SymM Expr :=
         Sym.share <| mkApp3 (mkConst ``Eq [1]) (mkConst ``Bool) lhs (mkConst ``Bool.true)
-      let leftHyp : Hyp := {
-        name := hyp.name
-        type := ← mkEqTrue lhs
-        value := mkApp3 (mkConst ``Std.Tactic.BVDecide.Normalize.Bool.and_left) lhs rhs hyp.value
-        source := .andFlattened hyp.source
-      }
-      let rightHyp : Hyp := {
-        name := hyp.name
-        type := ← mkEqTrue rhs
-        value := mkApp3 (mkConst ``Std.Tactic.BVDecide.Normalize.Bool.and_right) lhs rhs hyp.value
-        source := .andFlattened hyp.source
-      }
+      let leftHyp : Hyp :=
+        { name := hyp.name
+          type := ← mkEqTrue lhs
+          value := mkApp3 (mkConst ``Std.Tactic.BVDecide.Normalize.Bool.and_left) lhs rhs hyp.value
+          source := .andFlattened hyp.source }
+      let rightHyp : Hyp :=
+        { name := hyp.name
+          type := ← mkEqTrue rhs
+          value := mkApp3 (mkConst ``Std.Tactic.BVDecide.Normalize.Bool.and_right) lhs rhs hyp.value
+          source := .andFlattened hyp.source }
       return some (leftHyp, rightHyp)
 
 end Normalize

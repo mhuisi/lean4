@@ -798,12 +798,11 @@ private def normalizeExpr (e : Expr) (zetaDeltaImpl : Bool := true) : StructInst
 
 private def addStructFieldAux (fieldName : Name) (e : Expr) : StructInstM Unit := do
   trace[Elab.structInst] "field {fieldName} := {.nestD e}"
-  modify fun s => {
-    s with
-    type := s.type.bindingBody!
-    fields := s.fields.push e
-    fieldMap := s.fieldMap.insert fieldName e
-  }
+  modify fun s =>
+    { s with
+      type := s.type.bindingBody!
+      fields := s.fields.push e
+      fieldMap := s.fieldMap.insert fieldName e }
 
 private def addStructField (fieldView : ExpandedField) (e : Expr) : StructInstM Unit := do
   let fieldName := fieldView.name
@@ -813,13 +812,8 @@ private def addStructField (fieldView : ExpandedField) (e : Expr) : StructInstM 
     if let some fieldInfo := getFieldInfo? env structName fieldName then
       -- Nested fields may have multiple occurrences, which each need terminfo
       fieldView.forRefsM fun ref => do
-        pushInfoLeaf <| Info.ofFieldInfo {
-          projName := fieldInfo.projFn
-          fieldName
-          lctx := (← getLCtx)
-          val := e
-          stx := ref
-        }
+        pushInfoLeaf <| Info.ofFieldInfo
+          { projName := fieldInfo.projFn, fieldName, lctx := (← getLCtx), val := e, stx := ref }
 
 private def elabStructField (fieldName : Name) (stx : Term) (fieldType : Expr)
     : StructInstM Expr := do
@@ -983,10 +977,8 @@ private def synthOptParamFields : StructInstM Unit := do
               -- and *not* solved for by unification. Users expect explicit fields to be required to be provided by some explicit means.
               pendingFields :=
                 pendingFields.map fun pending =>
-                  if pending.fieldName = selected.fieldName then {
-                    pending with
-                    val? := none
-                  }
+                  if pending.fieldName = selected.fieldName then
+                    { pending with val? := none }
                   else
                     pending
             toRemove := toRemove.push selected.fieldName
@@ -1166,10 +1158,9 @@ private def getParentStructType (parentStructName : Name) : StructInstM (Expr ×
 
 /-- Creates projection notation for the given structure field. -/
 private def mkProjStx (s : Syntax) (fieldName : Name) : Syntax :=
-  mkNode ``Parser.Term.explicit #[
-    mkAtomFrom s "@",
-    mkNode ``Parser.Term.proj #[s, mkAtomFrom s ".", mkIdentFrom s fieldName]
-  ]
+  mkNode ``Parser.Term.explicit
+    #[mkAtomFrom s "@",
+      mkNode ``Parser.Term.proj #[s, mkAtomFrom s ".", mkIdentFrom s fieldName]]
 
 private def processField (loop : StructInstM α) (field : ExpandedField) (fieldType : Expr)
     : StructInstM α :=
@@ -1222,13 +1213,12 @@ private def processField (loop : StructInstM α) (field : ExpandedField) (fieldT
         let parentVal ← elabTermEnsuringType val parentTy
         -- Add terminfo so that the `toParent` field has some hover information.
         if let some projName := projName? then
-          pushInfoTree <| InfoTree.node (children := {}) <| Info.ofFieldInfo {
-            projName
-            fieldName := parentFieldName
-            lctx := (← getLCtx)
-            val := parentVal
-            stx := field.ref
-          }
+          pushInfoTree <| InfoTree.node (children := {}) <| Info.ofFieldInfo
+            { projName
+              fieldName := parentFieldName
+              lctx := (← getLCtx)
+              val := parentVal
+              stx := field.ref }
         let parentVal ← instantiateMVars parentVal
         if parentVal.isFVar then
           -- Reuse the fvar rather than add a new decl to the environment.
@@ -1281,10 +1271,8 @@ private def processNoField
   -- Default case: natural metavariable, register it for optParams
   let fieldType := fieldType.consumeTypeAnnotations
   discard <| addStructFieldMVar fieldName fieldType
-  modify fun s => {
-    s with
-    optParamFields := s.optParamFields.push (fieldName, fieldType, binfo.isExplicit)
-  }
+  modify fun s =>
+    { s with optParamFields := s.optParamFields.push (fieldName, fieldType, binfo.isExplicit) }
   loop
 
 private partial def loop : StructInstM Expr :=
@@ -1437,25 +1425,24 @@ private def elabStructInstView (s : StructInstView) (structName : Name) (structT
     let useInhabited := s.sources.useInhabited
     let (val, _) ←
       main
-        |>.run {
-          view := s
-          structName
-          structType
-          levels
-          params
-          fieldViews := fields
-          val := ctorFn
-          -- See the note in `ElabAppArgs.processExplicitArg`
-          -- For structure instances though, there's a sense in which app-style ellipsis mode is always enabled,
-          -- so we do not specifically check for it to disable defaults.
-          -- An effect of this is that if a user forgets `..` they'll be reminded with a "Fields missing" error.
-          useDefaults := !(← readThe Term.Context).inPattern || useInhabited
-          -- Similarly, for patterns we disable using parent instances to fill in fields
-          useParentInstanceFields := !(← readThe Term.Context).inPattern || useInhabited
-          -- In ellipsis mode, unsynthesized missing fields become metavariables, rather than being an error
-          unsynthesizedAsMVars := ellipsis
-          useInhabited := useInhabited
-        }
+        |>.run
+          { view := s
+            structName
+            structType
+            levels
+            params
+            fieldViews := fields
+            val := ctorFn
+            -- See the note in `ElabAppArgs.processExplicitArg`
+            -- For structure instances though, there's a sense in which app-style ellipsis mode is always enabled,
+            -- so we do not specifically check for it to disable defaults.
+            -- An effect of this is that if a user forgets `..` they'll be reminded with a "Fields missing" error.
+            useDefaults := !(← readThe Term.Context).inPattern || useInhabited
+            -- Similarly, for patterns we disable using parent instances to fill in fields
+            useParentInstanceFields := !(← readThe Term.Context).inPattern || useInhabited
+            -- In ellipsis mode, unsynthesized missing fields become metavariables, rather than being an error
+            unsynthesizedAsMVars := ellipsis
+            useInhabited := useInhabited }
         |>.run { type := ctorFnType }
     return val
 

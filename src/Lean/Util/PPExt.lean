@@ -12,22 +12,15 @@ import Init.Data.Format.Macro
 public section
 
 namespace Lean
-register_builtin_option pp.raw : Bool := {
-  defValue := false
-  descr := "(pretty printer) print raw expression/syntax tree"
-}
-register_builtin_option pp.raw.showInfo : Bool := {
-  defValue := false
-  descr := "(pretty printer) print `SourceInfo` metadata with raw printer"
-}
-register_builtin_option pp.raw.maxDepth : Nat := {
-  defValue := 32
-  descr := "(pretty printer) maximum `Syntax` depth for raw printer"
-}
-register_builtin_option pp.rawOnError : Bool := {
-  defValue := false
-  descr := "(pretty printer) fallback to 'raw' printer when pretty printer fails"
-}
+register_builtin_option pp.raw : Bool :=
+  { defValue := false, descr := "(pretty printer) print raw expression/syntax tree" }
+register_builtin_option pp.raw.showInfo : Bool :=
+  { defValue := false, descr := "(pretty printer) print `SourceInfo` metadata with raw printer" }
+register_builtin_option pp.raw.maxDepth : Nat :=
+  { defValue := 32, descr := "(pretty printer) maximum `Syntax` depth for raw printer" }
+register_builtin_option pp.rawOnError : Bool :=
+  { defValue := false
+    descr := "(pretty printer) fallback to 'raw' printer when pretty printer fails" }
 
 abbrev PrettyPrinter.InfoPerPos := Std.TreeMap Nat Elab.Info
 /--
@@ -56,13 +49,12 @@ def formatRawTerm (ctx : PPContext) (stx : Term) : Format :=
 def formatRawGoal (mvarId : MVarId) : Format := "goal " ++ format (mkMVar mvarId)
 
 builtin_initialize ppFnsRef : IO.Ref PPFns ←
-  IO.mkRef {
-    ppExprWithInfos := fun _ e => return format (toString e)
-    ppConstNameWithInfos := fun _ n => return format n
-    ppTerm := fun ctx stx => return formatRawTerm ctx stx
-    ppLevel := fun ctx l => return l.format true ctx.mctx.findLevelIndex?
-    ppGoal := fun _ mvarId => return formatRawGoal mvarId
-  }
+  IO.mkRef
+    { ppExprWithInfos := fun _ e => return format (toString e)
+      ppConstNameWithInfos := fun _ n => return format n
+      ppTerm := fun ctx stx => return formatRawTerm ctx stx
+      ppLevel := fun ctx l => return l.format true ctx.mctx.findLevelIndex?
+      ppGoal := fun _ mvarId => return formatRawGoal mvarId }
 
 builtin_initialize ppExt : EnvExtension PPFns ← registerEnvExtension ppFnsRef.get
 
@@ -72,10 +64,8 @@ captured inside a region with restricted extension access (e.g. a trace message 
 during type class resolution): rendering happens outside the restricted computation and cannot
 contaminate its caches. Lift the restriction from the captured environment.
 -/
-private def PPContext.unrestricted (ctx : PPContext) : PPContext := {
-  ctx with
-  env := ctx.env.setRecordingDeps false
-}
+private def PPContext.unrestricted (ctx : PPContext) : PPContext :=
+  { ctx with env := ctx.env.setRecordingDeps false }
 
 def ppExprWithInfos (ctx : PPContext) (e : Expr) : BaseIO FormatWithInfos := do
   let ctx := ctx.unrestricted

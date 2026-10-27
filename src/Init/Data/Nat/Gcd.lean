@@ -107,10 +107,9 @@ theorem dvd_gcd : k ∣ m → k ∣ n → k ∣ gcd m n := by
   | H0 n => rw [gcd_zero_left]; exact kn
   | H1 n m _ IH => rw [gcd_rec]; exact IH ((dvd_mod_iff km).2 kn) km
 
-theorem dvd_gcd_iff : k ∣ gcd m n ↔ k ∣ m ∧ k ∣ n := ⟨
-  fun h => let ⟨h₁, h₂⟩ := gcd_dvd m n; ⟨Nat.dvd_trans h h₁, Nat.dvd_trans h h₂⟩,
-  fun ⟨h₁, h₂⟩ => dvd_gcd h₁ h₂
-⟩
+theorem dvd_gcd_iff : k ∣ gcd m n ↔ k ∣ m ∧ k ∣ n :=
+  ⟨ fun h => let ⟨h₁, h₂⟩ := gcd_dvd m n; ⟨Nat.dvd_trans h h₁, Nat.dvd_trans h h₂⟩,
+    fun ⟨h₁, h₂⟩ => dvd_gcd h₁ h₂ ⟩
 
 theorem gcd_comm (m n : Nat) : gcd m n = gcd n m :=
   Nat.dvd_antisymm (dvd_gcd (gcd_dvd_right m n) (gcd_dvd_left m n))
@@ -398,10 +397,9 @@ theorem gcd_eq_iff {a b : Nat} : gcd a b = g ↔ g ∣ a ∧ g ∣ b ∧ (∀ c,
 /-- Represent a divisor of `m * n` as a product of a divisor of `m` and a divisor of `n`. -/
 def dvdProdDvdOfDvdProd {k m n : Nat} (h : k ∣ m * n)
     : {d : {m' // m' ∣ m} × {n' // n' ∣ n} // k = d.1.val * d.2.val} :=
-  if h0 : gcd k m = 0 then ⟨
-    ⟨⟨0, eq_zero_of_gcd_eq_zero_right h0 ▸ Nat.dvd_refl 0⟩, ⟨n, Nat.dvd_refl n⟩⟩,
-    eq_zero_of_gcd_eq_zero_left h0 ▸ (Nat.zero_mul n).symm
-  ⟩
+  if h0 : gcd k m = 0 then
+    ⟨ ⟨⟨0, eq_zero_of_gcd_eq_zero_right h0 ▸ Nat.dvd_refl 0⟩, ⟨n, Nat.dvd_refl n⟩⟩,
+      eq_zero_of_gcd_eq_zero_left h0 ▸ (Nat.zero_mul n).symm ⟩
   else by
     have hd : gcd k m * (k / gcd k m) = k := Nat.mul_div_cancel' (gcd_dvd_left k m)
     refine ⟨⟨⟨gcd k m, gcd_dvd_right k m⟩, ⟨k / gcd k m, ?_⟩⟩, hd.symm⟩

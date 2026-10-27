@@ -57,12 +57,11 @@ theorem Iter.Intermediate.zip_inj [Iterator α₁ Id β₁]
 theorem Iter.Intermediate.zip_surj [Iterator α₁ Id β₁]
     : ∀ it : Iter (α := Zip α₁ Id α₂ β₂) (β₁ × β₂), ∃ it₁ memo it₂,
       it = Intermediate.zip it₁ memo it₂ := by
-  refine fun it => ⟨
-    it.internalState.left.toIter,
-    (fun x => ⟨x.1, x.2.choose.toIter, x.2.choose_spec⟩) <$> it.internalState.memoizedLeft,
-    it.internalState.right.toIter,
-    ?_
-  ⟩
+  refine fun it =>
+    ⟨ it.internalState.left.toIter,
+      (fun x => ⟨x.1, x.2.choose.toIter, x.2.choose_spec⟩) <$> it.internalState.memoizedLeft,
+      it.internalState.right.toIter,
+      ?_ ⟩
   simp only [zip, toIterM_toIter, Option.map_eq_map, Option.map_map]
   change it
     = (IterM.Intermediate.zip _ (Option.map id it.internalState.memoizedLeft)

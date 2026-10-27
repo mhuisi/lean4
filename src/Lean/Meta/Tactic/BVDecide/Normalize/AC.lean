@@ -143,14 +143,10 @@ def VarStateM.exprToVar (e : Expr) : VarStateM VarIndex := do
   | none =>
     modifyGet fun s =>
       let nextIndex := s.exprToVarIndex.size
-      (
-        nextIndex,
-        {
-          s with
+      ( nextIndex,
+        { s with
           exprToVarIndex := s.exprToVarIndex.insert e nextIndex
-          varToExpr := s.varToExpr.push e
-        }
-      )
+          varToExpr := s.varToExpr.push e } )
 
 /-- Return the expression that is represented by a specific variable index. -/
 def VarStateM.varToExpr (idx : VarIndex) : VarStateM Expr := do

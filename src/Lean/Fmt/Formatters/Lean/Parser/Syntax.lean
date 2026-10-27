@@ -21,10 +21,9 @@ public def metaDeclarationSignature
     Layouts.pseudoApplication <|
       #[Layouts.prefixOperator declTk declSuffix? .withoutSpacing] ++ declParams
   let lhs := Layouts.horizontalOrVertical #[fullDeclTk, metaSignature?]
-  hardNested <| Layouts.horizontalOrVertical #[
-    lhs,
-    Layouts.prefixOperator colonTk? kind? .withSpacing
-  ]
+  hardNested <| Layouts.horizontalOrVertical
+    #[lhs,
+      Layouts.prefixOperator colonTk? kind? .withSpacing]
 
 public def fmtMetaDeclarationSignature
     (declTk : Syntax) (declSuffix? : Option Syntax) (declParams : Array TaggedDoc)
@@ -157,15 +156,14 @@ public def fmtSyntaxSepBy : Fmt := fun
       let comma₃Tk? ← fmt? comma₃Tk?
       let allowTrailingSepTk? ← fmt? allowTrailingSepTk?
       let rbTk ← fmt rbTk
-      let terms := #[
-        .elems args,
-        .sep comma₁Tk,
-        .elems #[sepStr],
-        .sep comma₂Tk?,
-        .elems sepParserArgs,
-        .sep comma₃Tk?,
-        .elems #[allowTrailingSepTk?]
-      ]
+      let terms :=
+        #[.elems args,
+          .sep comma₁Tk,
+          .elems #[sepStr],
+          .sep comma₂Tk?,
+          .elems sepParserArgs,
+          .sep comma₃Tk?,
+          .elems #[allowTrailingSepTk?]]
       return Layouts.metaApplication lbTk terms rbTk
   | _ =>
     throw .partialFormatter
@@ -184,15 +182,14 @@ public def fmtSyntaxSepBy1 : Fmt := fun
       let sepParserArgs ← fmtArray <| sepParserArgs?.getD #[]
       let comma₃Tk? ← fmt? comma₃Tk?
       let allowTrailingSepTk? ← fmt? allowTrailingSepTk?
-      let terms := #[
-        .elems args,
-        .sep comma₁Tk,
-        .elems #[sepStr],
-        .sep comma₂Tk?,
-        .elems sepParserArgs,
-        .sep comma₃Tk?,
-        .elems #[allowTrailingSepTk?]
-      ]
+      let terms :=
+        #[.elems args,
+          .sep comma₁Tk,
+          .elems #[sepStr],
+          .sep comma₂Tk?,
+          .elems sepParserArgs,
+          .sep comma₃Tk?,
+          .elems #[allowTrailingSepTk?]]
       let rbTk ← fmt rbTk
       return Layouts.metaApplication lbTk terms rbTk
   | _ =>
@@ -223,10 +220,9 @@ public def fmtSyntaxUnicodeAtom : Fmt := fun
     let asciiStr ← fmt asciiStr
     let comma₂Tk? ← fmt? comma₂Tk?
     let preserveForPPTk? ← fmt? preserveForPPTk?
-    let terms := #[
-      .elems #[unicodeStr], .sep comma₁Tk, .elems #[asciiStr], .sep comma₂Tk?,
-      .elems #[preserveForPPTk?]
-    ]
+    let terms :=
+      #[.elems #[unicodeStr], .sep comma₁Tk, .elems #[asciiStr], .sep comma₂Tk?,
+        .elems #[preserveForPPTk?]]
     let rbTk ← fmt rbTk
     return Layouts.metaApplication lbTk terms rbTk
   | _ =>

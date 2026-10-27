@@ -44,11 +44,10 @@ public def reductionPass : Pass where
   run' := do
     let cfg ← PreProcessM.getConfig
     let config := { maxSteps := cfg.maxSteps, instances := true }
-    let methods := {
-      pre :=
-        Sym.DSimp.evalGround >> Sym.DSimp.zeta >> Sym.DSimp.zetaDeltaAll >> Sym.DSimp.beta
-          >> Sym.DSimp.dsimpMatch >> dsimpProj'
-    }
+    let methods :=
+      { pre :=
+          Sym.DSimp.evalGround >> Sym.DSimp.zeta >> Sym.DSimp.zetaDeltaAll >> Sym.DSimp.beta
+            >> Sym.DSimp.dsimpMatch >> dsimpProj' }
 
     let goal ← PreProcessM.getTargetMVarId
     goal.withContext do PreProcessM.dsimpHyps .reduction methods config

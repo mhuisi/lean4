@@ -86,16 +86,12 @@ def LiveVars.erase (liveVars : LiveVars) (fvarId : FVarId) : LiveVars :=
   { vars, borrows }
 
 @[inline]
-def LiveVars.insertBorrow (liveVars : LiveVars) (fvarId : FVarId) : LiveVars := {
-  liveVars with
-  borrows := liveVars.borrows.insert fvarId
-}
+def LiveVars.insertBorrow (liveVars : LiveVars) (fvarId : FVarId) : LiveVars :=
+  { liveVars with borrows := liveVars.borrows.insert fvarId }
 
 @[inline]
-def LiveVars.insertLive (liveVars : LiveVars) (fvarId : FVarId) : LiveVars := {
-  liveVars with
-  vars := liveVars.vars.insert fvarId
-}
+def LiveVars.insertLive (liveVars : LiveVars) (fvarId : FVarId) : LiveVars :=
+  { liveVars with vars := liveVars.vars.insert fvarId }
 
 abbrev JPLiveVarMap := FVarIdMap LiveVars
 
@@ -179,10 +175,8 @@ def Context.addDerivedValue (ctx : Context) (parents : Array FVarId) (child : FV
         derivedValMap.modify parent fun info => { info with children := child :: info.children }
   { ctx with derivedValMap }
 
-def Context.addUnconditionalBorrow (ctx : Context) (fvarId : FVarId) : Context := {
-  ctx with
-  unconditionalBorrows := fvarId :: ctx.unconditionalBorrows
-}
+def Context.addUnconditionalBorrow (ctx : Context) (fvarId : FVarId) : Context :=
+  { ctx with unconditionalBorrows := fvarId :: ctx.unconditionalBorrows }
 
 def Context.addDerivedLetValue (ctx : Context) (parents : Array FVarId) (decl : LetDecl .impure)
     : Context :=
@@ -223,13 +217,12 @@ def withParams (ps : Array (Param .impure)) (x : RcM α) : RcM α := do
   let update := fun ctx =>
     ps.foldl (init := ctx) fun ctx p =>
       let varMap :=
-        ctx.varMap.insert p.fvarId {
-          isPossibleRef := p.type.isPossibleRef
-          isDefiniteRef := p.type.isDefiniteRef
-          persistent := false
-          idx := ctx.idx
-          ctorInfo := none
-        }
+        ctx.varMap.insert p.fvarId
+          { isPossibleRef := p.type.isPossibleRef
+            isDefiniteRef := p.type.isDefiniteRef
+            persistent := false
+            idx := ctx.idx
+            ctorInfo := none }
       let ctx := { ctx with idx := ctx.idx + 1, varMap }
       let ctx := ctx.addDerivedValue #[] p.fvarId
       if p.borrow && p.type.isPossibleRef then ctx.addUnconditionalBorrow p.fvarId else ctx
@@ -242,13 +235,12 @@ def withLetDecl (decl : LetDecl .impure) (x : RcM α) : RcM α := do
     | .ctor ctorInfo .. => some ctorInfo
     | _ => none
   let update := fun ctx =>
-    let varInfo := {
-      isPossibleRef := decl.type.isPossibleRef
-      isDefiniteRef := decl.type.isDefiniteRef
-      persistent := decl.value.isPersistent
-      idx := ctx.idx
-      ctorInfo := ctorInfo
-    }
+    let varInfo :=
+      { isPossibleRef := decl.type.isPossibleRef
+        isDefiniteRef := decl.type.isDefiniteRef
+        persistent := decl.value.isPersistent
+        idx := ctx.idx
+        ctorInfo := ctorInfo }
     let ctx := { ctx with varMap := ctx.varMap.insert decl.fvarId varInfo, idx := ctx.idx + 1 }
     ctx.addDerivedLetDecl decl
   withReader update do x
@@ -256,24 +248,18 @@ def withLetDecl (decl : LetDecl .impure) (x : RcM α) : RcM α := do
 @[inline]
 def withCtorAlt (discr : FVarId) (c : CtorInfo) (x : RcM α) : RcM α := do
   withReader
-    (fun ctx => {
-      ctx with
-      varMap :=
-        match ctx.varMap.get? discr with
-        | some info =>
-          let isPossibleRef := c.isRef
-          let isDefiniteRef := c.isRef
-          ctx.varMap.insert discr {
-            info with
-            isPossibleRef
-            isDefiniteRef
-            idx := ctx.idx + 1
-            ctorInfo := some c
-          }
-        | none =>
-          ctx.varMap
-      idx := ctx.idx + 1
-    })
+    (fun ctx =>
+      { ctx with
+        varMap :=
+          match ctx.varMap.get? discr with
+          | some info =>
+            let isPossibleRef := c.isRef
+            let isDefiniteRef := c.isRef
+            ctx.varMap.insert discr
+              { info with isPossibleRef, isDefiniteRef, idx := ctx.idx + 1, ctorInfo := some c }
+          | none =>
+            ctx.varMap
+        idx := ctx.idx + 1 })
     do x
 
 /--

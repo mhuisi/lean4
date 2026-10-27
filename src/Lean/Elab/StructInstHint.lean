@@ -123,11 +123,10 @@ def mkMissingFieldsHint (fields : Array (Name × Option Expr)) (stx : Syntax)
   let insPos := view.lastFieldTailPos?.getD <| interveningLineEndPos?.getD view.leaderTailPos
   let width := Tactic.TryThis.format.inputWidth.get (← getOptions)
   -- Limit only the span of the suggestion so the code action appears everywhere in the structure
-  let suggestion := {
-    suggestion := suggestionText.pretty width indent (col insPos)
-    span? := Syntax.ofRange ⟨insPos, insPos⟩
-    toCodeActionTitle? := some fun _ => "Add missing fields"
-  }
+  let suggestion :=
+    { suggestion := suggestionText.pretty width indent (col insPos)
+      span? := Syntax.ofRange ⟨insPos, insPos⟩
+      toCodeActionTitle? := some fun _ => "Add missing fields" }
   MessageData.hint m!"Add missing fields:" #[suggestion]
 where
   /--
@@ -145,16 +144,15 @@ where
       else
         (stx[1][1], true)
     let fields := stx[2][0].getSepArgs
-    some {
-      leaderPos := (← leader.getPos?)
-      leaderTailPos := (← leader.getTailPos?)
-      openingPos := (← stx[0].getPos?)
-      closingPos := (← stx[5].getPos?)
-      numFields := fields.size
-      initFieldPos? := fields[0]?.bind (·.getPos?)
-      lastFieldTailPos? := fields[fields.size - 1]?.bind (·.getTailPos?)
-      hasWith
-    }
+    some
+      { leaderPos := (← leader.getPos?)
+        leaderTailPos := (← leader.getTailPos?)
+        openingPos := (← stx[0].getPos?)
+        closingPos := (← stx[5].getPos?)
+        numFields := fields.size
+        initFieldPos? := fields[0]?.bind (·.getPos?)
+        lastFieldTailPos? := fields[fields.size - 1]?.bind (·.getTailPos?)
+        hasWith }
 
   /--
   Returns the position of the end of the line that contains the position `pos`.

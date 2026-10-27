@@ -33,21 +33,18 @@ def InlayHintKind.toLspInlayHintKind : InlayHintKind → Lsp.InlayHintKind
   | .type => .type
   | .parameter => .parameter
 
-def InlayHintTextEdit.toLspTextEdit (text : FileMap) (e : InlayHintTextEdit) : Lsp.TextEdit := {
-  range := text.utf8RangeToLspRange e.range
-  newText := e.newText
-}
+def InlayHintTextEdit.toLspTextEdit (text : FileMap) (e : InlayHintTextEdit) : Lsp.TextEdit :=
+  { range := text.utf8RangeToLspRange e.range, newText := e.newText }
 
 def InlayHintInfo.toLspInlayHint (text : FileMap) (i : InlayHintInfo) : IO Lsp.InlayHint := do
-  return {
-    position := text.utf8PosToLspPos i.position
-    label := ← i.label.toLspInlayHintLabel text
-    kind? := i.kind?.map (·.toLspInlayHintKind)
-    textEdits? := some <| i.textEdits.map (·.toLspTextEdit text)
-    tooltip? := do return .markdown { kind := .markdown, value := ← i.tooltip? }
-    paddingLeft? := i.paddingLeft
-    paddingRight? := i.paddingRight
-  }
+  return
+    { position := text.utf8PosToLspPos i.position
+      label := ← i.label.toLspInlayHintLabel text
+      kind? := i.kind?.map (·.toLspInlayHintKind)
+      textEdits? := some <| i.textEdits.map (·.toLspTextEdit text)
+      tooltip? := do return .markdown { kind := .markdown, value := ← i.tooltip? }
+      paddingLeft? := i.paddingLeft
+      paddingRight? := i.paddingRight }
 
 end Lean.Elab
 
@@ -83,27 +80,23 @@ def applyEditToHint?
       panic! s!"Got position {p} that should have been invalidated by edit at range \
         {range.start}-{range.stop}"
   let shiftRange (r : Lean.Syntax.Range) : Lean.Syntax.Range := ⟨shift r.start, shift r.stop⟩
-  return {
-    ihi with
-    position := shift ihi.position
-    textEdits := ihi.textEdits.map fun edit => { edit with range := shiftRange edit.range }
-    label :=
-      match ihi.label with
-      | .name s =>
-        .name s
-      | .parts ps =>
-        .parts <| ps.map fun p => {
-          p with
-          location? :=
-            p.location?.map fun loc =>
-              if loc.module == hintMod then {
-                loc with
-                range := shiftRange loc.range
-              }
-              else
-                loc
-        }
-  }
+  return
+    { ihi with
+      position := shift ihi.position
+      textEdits := ihi.textEdits.map fun edit => { edit with range := shiftRange edit.range }
+      label :=
+        match ihi.label with
+        | .name s =>
+          .name s
+        | .parts ps =>
+          .parts <| ps.map fun p =>
+            { p with
+              location? :=
+                p.location?.map fun loc =>
+                  if loc.module == hintMod then
+                    { loc with range := shiftRange loc.range }
+                  else
+                    loc } }
 
 structure InlayHintState where
   oldInlayHints : Array Elab.InlayHintInfo
@@ -112,12 +105,11 @@ structure InlayHintState where
   isFirstRequestAfterEdit : Bool
 deriving TypeName, Inhabited
 
-def InlayHintState.init : InlayHintState := {
-  oldInlayHints := #[]
-  oldFinishedSnaps := 0
-  lastEditTimestamp? := none
-  isFirstRequestAfterEdit := false
-}
+def InlayHintState.init : InlayHintState :=
+  { oldInlayHints := #[]
+    oldFinishedSnaps := 0
+    lastEditTimestamp? := none
+    isFirstRequestAfterEdit := false }
 
 def handleInlayHints (p : InlayHintParams) (s : InlayHintState)
     : RequestM (LspResponse (Array InlayHint) × InlayHintState) := do
@@ -171,10 +163,9 @@ def handleInlayHints (p : InlayHintParams) (s : InlayHintState)
   -- so in addition to re-using old inlay hints from parts of the file that haven't been processed
   -- yet, we also re-use old inlay hints from parts of the file that have been processed already
   -- with the current state of the document.
-  let invalidOldInlayHintsRange : Lean.Syntax.Range := {
-    start := snaps[oldFinishedSnaps - 1]?.map (·.endPos) |>.getD ⟨0⟩
-    stop := snaps[finishedSnaps - 1]?.map (·.endPos) |>.getD ⟨0⟩
-  }
+  let invalidOldInlayHintsRange : Lean.Syntax.Range :=
+    { start := snaps[oldFinishedSnaps - 1]?.map (·.endPos) |>.getD ⟨0⟩
+      stop := snaps[finishedSnaps - 1]?.map (·.endPos) |>.getD ⟨0⟩ }
   let oldInlayHints :=
     s.oldInlayHints.filter fun (ihi : Elab.InlayHintInfo) =>
       ! invalidOldInlayHintsRange.contains ihi.position
@@ -201,13 +192,12 @@ def handleInlayHintsDidChange (p : DidChangeTextDocumentParams)
   let s ← get
   let updatedOldInlayHints ← updateOldInlayHints s.oldInlayHints
   let lastEditTimestamp? ← determineLastEditTimestamp? s.oldInlayHints
-  set <| {
-    s with
-    oldInlayHints := updatedOldInlayHints
-    oldFinishedSnaps := 0
-    lastEditTimestamp?
-    isFirstRequestAfterEdit := true
-  }
+  set <|
+    { s with
+      oldInlayHints := updatedOldInlayHints
+      oldFinishedSnaps := 0
+      lastEditTimestamp?
+      isFirstRequestAfterEdit := true }
 
 where
 

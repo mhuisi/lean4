@@ -78,13 +78,8 @@ public instance : ToJson BuildMetadata := ⟨BuildMetadata.toJson⟩
 Construct build metadata from a trace stub.
 That is, the very old version of the trace file format that just contained a hash.
 -/
-public def BuildMetadata.ofStub (hash : Hash) : BuildMetadata := {
-  depHash := hash
-  inputs := #[]
-  outputs? := none
-  log := {}
-  synthetic := false
-}
+public def BuildMetadata.ofStub (hash : Hash) : BuildMetadata :=
+  { depHash := hash, inputs := #[], outputs? := none, log := {}, synthetic := false }
 
 public def BuildMetadata.fromJsonObject? (obj : JsonObject) : Except String BuildMetadata := do
   let depHash ←
@@ -124,13 +119,8 @@ public def BuildMetadata.parse (contents : String) : Except String BuildMetadata
   Json.parse contents >>= fromJson?
 
 /-- Construct build metadata from a cached input-to-output mapping. -/
-public def BuildMetadata.ofFetch (inputHash : Hash) (outputs : Json) : BuildMetadata := {
-  depHash := inputHash
-  outputs? := outputs
-  synthetic := true
-  inputs := #[]
-  log := {}
-}
+public def BuildMetadata.ofFetch (inputHash : Hash) (outputs : Json) : BuildMetadata :=
+  { depHash := inputHash, outputs? := outputs, synthetic := true, inputs := #[], log := {} }
 
 partial def serializeInputs (inputs : Array BuildTrace) : Array (String × Json) :=
   inputs.foldl (init := {}) fun r trace =>

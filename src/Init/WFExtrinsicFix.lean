@@ -278,16 +278,14 @@ public def partialExtrinsicFix
     (fun a recur =>
       F a.1 fun a' hR =>
         recur
-          ⟨
-            a',
+          ⟨ a',
             by
               rcases a.property with ha | ha
               · exact Or.inr (TransGen.single (ha ▸ hR))
               · apply Or.inr
                 apply TransGen.trans ?_ ‹_›
                 apply TransGen.single
-                assumption
-          ⟩
+                assumption ⟩
           ‹_›)
     ⟨a, Or.inl rfl⟩
 
@@ -299,39 +297,34 @@ public theorem partialExtrinsicFix_eq_apply_of_acc
   rw [extrinsicFix_eq_apply]
   congr
   ext a' hR
-  let f (x : {x : α // x = a' ∨ TransGen R x a'}) : {x : α // x = a ∨ TransGen R x a} := ⟨
-    x.val,
-    by
-      cases x.property
-      · rename_i h
-        rw [h]
-        exact Or.inr (.single hR)
-      · rename_i h
-        apply Or.inr
-        refine TransGen.trans h ?_
-        exact .single hR
-  ⟩
+  let f (x : {x : α // x = a' ∨ TransGen R x a'}) : {x : α // x = a ∨ TransGen R x a} :=
+    ⟨ x.val,
+      by
+        cases x.property
+        · rename_i h
+          rw [h]
+          exact Or.inr (.single hR)
+        · rename_i h
+          apply Or.inr
+          refine TransGen.trans h ?_
+          exact .single hR ⟩
   have :=
     extrinsicFix_invImage (C := (C ·.val)) (R := (R ·.1 ·.1)) (f := f)
       (F := fun a r =>
         F a.1 fun a' hR =>
           r
-            ⟨
-              a',
+            ⟨ a',
               Or.inr (by
-                rcases a.2 with ha | ha; exact .single (ha ▸ hR); exact .trans (.single hR) ‹_›)
-            ⟩
+                rcases a.2 with ha | ha; exact .single (ha ▸ hR); exact .trans (.single hR) ‹_›) ⟩
             hR)
       (F' := fun a r =>
         F a.1 fun a' hR =>
           r
-            ⟨
-              a',
+            ⟨ a',
               by
                 rcases a.2 with ha | ha
                 exact .inr (.single (ha ▸ hR))
-                exact .inr (.trans (.single hR) ‹_›)
-            ⟩
+                exact .inr (.trans (.single hR) ‹_›) ⟩
             hR)
   unfold InvImage at this
   rw [this]
@@ -404,15 +397,13 @@ public def partialExtrinsicFix₂
     (fun a b recur =>
       F a b.1 fun a' b' hR =>
         recur a'
-          ⟨
-            b',
+          ⟨ b',
             Or.inr (by
               rcases b.property with hb | hb
               · exact .single (hb ▸ hR)
               · apply TransGen.trans ?_ ‹_›
                 apply TransGen.single
-                assumption)
-          ⟩
+                assumption) ⟩
           ‹_›)
     a ⟨b, Or.inl rfl⟩
 
@@ -526,15 +517,13 @@ public def partialExtrinsicFix₃
     (fun a b c recur =>
       F a b c.1 fun a' b' c' hR =>
         recur a' b'
-          ⟨
-            c',
+          ⟨ c',
             Or.inr (by
               rcases c.property with hb | hb
               · exact .single (hb ▸ hR)
               · apply TransGen.trans ?_ ‹_›
                 apply TransGen.single
-                assumption)
-          ⟩
+                assumption) ⟩
           ‹_›)
     a b ⟨c, Or.inl rfl⟩
 

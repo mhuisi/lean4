@@ -109,14 +109,13 @@ private def updateAppMap (e : Expr) : GoalM Unit := do
   let key := e.toHeadIndex
   updateIndicesFound key
   trace_goal[grind.debug.appMap] "{e} => {repr key}"
-  modify fun s => {
-    s with
-    appMap :=
-      if let some es := s.appMap.find? key then
-        s.appMap.insert key (e :: es)
-      else
-        s.appMap.insert key [e]
-  }
+  modify fun s =>
+    { s with
+      appMap :=
+        if let some es := s.appMap.find? key then
+          s.appMap.insert key (e :: es)
+        else
+          s.appMap.insert key [e] }
   saveAppOf key
 
 private def forbiddenSplitTypes := [``Eq, ``HEq, ``True, ``False]
@@ -297,11 +296,10 @@ def preprocessTheorem (thm : EMatchTheorem) (generation : Nat) : GoalM EMatchThe
   -- Recall that we use the proof as part of the key for a set of instances found so far.
   -- We don't want to use structural equality when comparing keys.
   let proof ← shareCommon thm.proof
-  return {
-    thm with
-    proof
-    patterns := (← thm.patterns.mapM (internalizePattern · generation thm.origin))
-  }
+  return
+    { thm with
+      proof
+      patterns := (← thm.patterns.mapM (internalizePattern · generation thm.origin)) }
 
 def activateTheorem (thm : EMatchTheorem) (generation : Nat) : GoalM Unit := do
   let thm ← preprocessTheorem thm generation
@@ -509,10 +507,9 @@ where
         -- else
         let currSplitSource := (← readThe Context).splitSource
         addSplitCandidate (.arg other.app parent i eq currSplitSource)
-    modify fun s => {
-      s with
-      split.argsAt := s.split.argsAt.insert (f, i) ({ arg, type, app := parent } :: others)
-    }
+    modify fun s =>
+      { s with
+        split.argsAt := s.split.argsAt.insert (f, i) ({ arg, type, app := parent } :: others) }
     return ()
 
 /-- Applies `addSplitCandidatesForExt` if `funext` is enabled. -/

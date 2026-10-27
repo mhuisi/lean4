@@ -43,17 +43,14 @@ private def ensureDefEq (a b : Expr) : MetaM Unit := do
 
 private def addZeroLtOne (one : Var) : LinearM Unit := do
   let p := Poly.add (-1) one .nil
-  modifyStruct fun s => {
-    s with
-    lowers := s.lowers.modify one fun cs => cs.push { p, h := .oneGtZero, strict := true }
-  }
+  modifyStruct fun s =>
+    { s with
+      lowers := s.lowers.modify one fun cs => cs.push { p, h := .oneGtZero, strict := true } }
 
 private def addZeroNeOne (one : Var) : LinearM Unit := do
   let p := Poly.add 1 one .nil
-  modifyStruct fun s => {
-    s with
-    diseqs := s.diseqs.modify one fun cs => cs.push { p, h := .oneNeZero }
-  }
+  modifyStruct fun s =>
+    { s with diseqs := s.diseqs.modify one fun cs => cs.push { p, h := .oneNeZero } }
 
 private def isNonTrivialIsCharInst (isCharInst? : Option (Expr × Nat)) : Bool :=
   match isCharInst? with
@@ -306,38 +303,37 @@ where
     let ltFn? ←
       ltInstQ?.mapM fun ltInstQ => internalizeFn <| mkApp2 (mkConst ``LT.lt [u]) type ltInstQ
     let id := (← get').structs.size
-    let struct : Struct := {
-      id
-      type
-      u
-      intModuleInst
-      leInst? := leInstQ?
-      ltInst? := ltInstQ?
-      lawfulOrderLTInst? := lawfulOrderLTInstQ?
-      isPreorderInst? := isPreorderInstQ?
-      orderedAddInst? := orderedAddInstQ?
-      isLinearInst? := isLinearInstQ?
-      noNatDivInst? := noNatDivInstQ?
-      leFn?
-      ltFn?
-      addFn
-      subFn
-      negFn
-      zsmulFn
-      nsmulFn
-      zsmulFn? := some zsmulFn
-      nsmulFn? := some nsmulFn
-      zero
-      ofNatZero
-      one? := none
-      ringInst? := none
-      commRingInst? := none
-      orderedRingInst? := none
-      charInst? := none
-      ringId? := none
-      fieldInst? := none
-      homomulFn? := none
-    }
+    let struct : Struct :=
+      { id
+        type
+        u
+        intModuleInst
+        leInst? := leInstQ?
+        ltInst? := ltInstQ?
+        lawfulOrderLTInst? := lawfulOrderLTInstQ?
+        isPreorderInst? := isPreorderInstQ?
+        orderedAddInst? := orderedAddInstQ?
+        isLinearInst? := isLinearInstQ?
+        noNatDivInst? := noNatDivInstQ?
+        leFn?
+        ltFn?
+        addFn
+        subFn
+        negFn
+        zsmulFn
+        nsmulFn
+        zsmulFn? := some zsmulFn
+        nsmulFn? := some nsmulFn
+        zero
+        ofNatZero
+        one? := none
+        ringInst? := none
+        commRingInst? := none
+        orderedRingInst? := none
+        charInst? := none
+        ringId? := none
+        fieldInst? := none
+        homomulFn? := none }
     modify' fun s => { s with structs := s.structs.push struct }
     return some id
 
@@ -359,10 +355,8 @@ where
       **IMPORTANT** We mark the type as a "forbiddenNatModule". It would be pointless to recheck everything in
       in `getNatStructId?`
       -/
-      modify' fun s => {
-        s with
-        forbiddenNatModules := s.forbiddenNatModules.insert { expr := type }
-      }
+      modify' fun s =>
+        { s with forbiddenNatModules := s.forbiddenNatModules.insert { expr := type } }
       return none
     let commRingInst? ← getCommRingInst? ringId?
     let ringInst? ← mkRingInst? u type commRingInst?
@@ -380,10 +374,8 @@ where
     -- preorderInst? may have been reset, check again whether this module is needed.
     if (← getConfig).ring && ringId?.isSome && isPreorderInst?.isNone then
       -- See comment above
-      modify' fun s => {
-        s with
-        forbiddenNatModules := s.forbiddenNatModules.insert { expr := type }
-      }
+      modify' fun s =>
+        { s with forbiddenNatModules := s.forbiddenNatModules.insert { expr := type } }
       return none
     let isPartialInst? ←
       checkToFieldDefEq? leInst? isPreorderInst? isPartialInst? ``Std.IsPartialOrder.toIsPreorder u
@@ -452,38 +444,37 @@ where
       else
         pure none
     let id := (← get').structs.size
-    let struct : Struct := {
-      id,
-      type,
-      u,
-      intModuleInst,
-      leInst?,
-      ltInst?,
-      lawfulOrderLTInst?,
-      isPreorderInst?,
-      orderedAddInst?,
-      isLinearInst?,
-      noNatDivInst?,
-      leFn?,
-      ltFn?,
-      addFn,
-      subFn,
-      negFn,
-      zsmulFn,
-      nsmulFn,
-      zsmulFn?,
-      nsmulFn?,
-      zero,
-      one?,
-      ringInst?,
-      commRingInst?,
-      orderedRingInst?,
-      charInst?,
-      ringId?,
-      fieldInst?,
-      ofNatZero,
-      homomulFn?
-    }
+    let struct : Struct :=
+      { id,
+        type,
+        u,
+        intModuleInst,
+        leInst?,
+        ltInst?,
+        lawfulOrderLTInst?,
+        isPreorderInst?,
+        orderedAddInst?,
+        isLinearInst?,
+        noNatDivInst?,
+        leFn?,
+        ltFn?,
+        addFn,
+        subFn,
+        negFn,
+        zsmulFn,
+        nsmulFn,
+        zsmulFn?,
+        nsmulFn?,
+        zero,
+        one?,
+        ringInst?,
+        commRingInst?,
+        orderedRingInst?,
+        charInst?,
+        ringId?,
+        fieldInst?,
+        ofNatZero,
+        homomulFn? }
     modify' fun s => { s with structs := s.structs.push struct }
     if let some one := one? then
       if ringInst?.isSome then
@@ -549,25 +540,24 @@ where
       internalizeFn <| mkApp4 (mkConst ``HSMul.hSMul [0, u, u]) Nat.mkType type type smulInst
     let rfl_q := mkApp (mkConst ``Eq.refl [.succ u]) q
     let id := (← get').natStructs.size
-    let natStruct : NatStruct := {
-      id,
-      structId,
-      u,
-      type,
-      natModuleInst,
-      leInst?,
-      ltInst?,
-      lawfulOrderLTInst?,
-      isPreorderInst?,
-      isLinearInst?,
-      orderedAddInst?,
-      addRightCancelInst?,
-      rfl_q,
-      zero,
-      toQFn,
-      addFn,
-      smulFn
-    }
+    let natStruct : NatStruct :=
+      { id,
+        structId,
+        u,
+        type,
+        natModuleInst,
+        leInst?,
+        ltInst?,
+        lawfulOrderLTInst?,
+        isPreorderInst?,
+        isLinearInst?,
+        orderedAddInst?,
+        addRightCancelInst?,
+        rfl_q,
+        zero,
+        toQFn,
+        addFn,
+        smulFn }
     modify' fun s => { s with natStructs := s.natStructs.push natStruct }
     return some id
 

@@ -54,10 +54,9 @@ def errorExplanationManualDomain := "Manual.errorExplanation"
 -- TODO: we may wish to make this more general for domains that require additional arguments
 /-- Maps `lean-manual` URL paths to their corresponding manual domains. -/
 private def domainMap : Std.HashMap String String :=
-  Std.HashMap.ofList [
-    ("section", "Verso.Genre.Manual.section"),
-    ("errorExplanation", errorExplanationManualDomain)
-  ]
+  Std.HashMap.ofList
+    [ ("section", "Verso.Genre.Manual.section"),
+      ("errorExplanation", errorExplanationManualDomain) ]
 
 /-- The valid domain abbreviations in the manual. -/
 def manualDomains : List String := domainMap.keys

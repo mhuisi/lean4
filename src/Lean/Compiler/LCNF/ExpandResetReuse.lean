@@ -125,10 +125,9 @@ partial def eraseProjIncFor (nFields : Nat) (targetId : FVarId) (ds : Array (Cod
 
 def mkIf (discr : FVarId) (discrType : Expr) (resultType : Expr) (t e : Code .impure)
     : CompilerM (Code .impure) := do
-  return .cases <| .mk discrType.getAppFn.constName! resultType discr #[
-    .ctorAlt { name := ``Bool.false, cidx := 0, size := 0, usize := 0, ssize := 0 } e,
-    .ctorAlt { name := ``Bool.true, cidx := 1, size := 0, usize := 0, ssize := 0 } t
-  ]
+  return .cases <| .mk discrType.getAppFn.constName! resultType discr
+    #[.ctorAlt { name := ``Bool.false, cidx := 0, size := 0, usize := 0, ssize := 0 } e,
+      .ctorAlt { name := ``Bool.true, cidx := 1, size := 0, usize := 0, ssize := 0 } t]
 
 def remapSets (targetId : FVarId) (sets : Array (CodeDecl .impure))
     : CompilerM (Array (CodeDecl .impure)) :=
@@ -232,12 +231,8 @@ partial def processResetCont
       let (selfSets, necessarySets) ← partitionSelfSets origAllocId succeedingSets
       let k := attachCodeDecls necessarySets k
 
-      let param := {
-        fvarId := decl.fvarId
-        binderName := decl.binderName
-        type := decl.type
-        borrow := false
-      }
+      let param :=
+        { fvarId := decl.fvarId, binderName := decl.binderName, type := decl.type, borrow := false }
       let contJp ← mkFunDecl (← mkFreshBinderName `reusejp) currentRetType #[param] k
 
       let slowPath ← mkSlowPath decl c xs contJp.fvarId selfSets
@@ -348,12 +343,8 @@ where
     let isSharedParam ← mkParam (← mkFreshBinderName `isShared) uint8 false
     let k ← processResetCont decl.fvarId k origAllocId isSharedParam.fvarId currentRetType
     let k ← k.expandResetReuse #[] currentRetType
-    let allocParam := {
-      fvarId := decl.fvarId
-      binderName := decl.binderName
-      type := tobject
-      borrow := false
-    }
+    let allocParam :=
+      { fvarId := decl.fvarId, binderName := decl.binderName, type := tobject, borrow := false }
     let resetJp ←
       mkFunDecl (← mkFreshBinderName `resetjp) currentRetType #[allocParam, isSharedParam] k
     let isSharedDecl ← mkLetDecl (← mkFreshBinderName `isSharedCheck) uint8 (.isShared origAllocId)

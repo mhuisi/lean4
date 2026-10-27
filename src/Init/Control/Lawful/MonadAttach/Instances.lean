@@ -80,12 +80,11 @@ public instance [Monad m] [LawfulMonad m] [MonadAttach m] [LawfulMonadAttach m]
           show Subtype (fun a : Except _ _ =>
               match a with
               | .ok a => P a
-              | .error e => True) from ⟨
-            match a with
-            | .ok a => .ok a.1
-            | .error e => .error e,
-            by cases a <;> simp [Subtype.property]
-          ⟩)
+              | .error e => True) from
+            ⟨ match a with
+              | .ok a => .ok a.1
+              | .error e => .error e,
+              by cases a <;> simp [Subtype.property] ⟩)
         <$> show m _ from x
     have := LawfulMonadAttach.canReturn_map_imp (m := m) (x := x') (a := .ok a)
     simp only at this

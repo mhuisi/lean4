@@ -378,10 +378,9 @@ def ediv (bounded : Bounded.LE n m) (num : Int) (h : num > 0) : Bounded.LE (n / 
 
 /-- Expand the range of a bounded value. -/
 @[inline]
-def expand (bounded : Bounded.LE lo hi) (h : hi ≤ nhi) (h₁ : nlo ≤ lo) : Bounded.LE nlo nhi := ⟨
-  bounded.val,
-  And.intro (Int.le_trans h₁ bounded.property.left) (Int.le_trans bounded.property.right h)
-⟩
+def expand (bounded : Bounded.LE lo hi) (h : hi ≤ nhi) (h₁ : nlo ≤ lo) : Bounded.LE nlo nhi :=
+  ⟨ bounded.val,
+    And.intro (Int.le_trans h₁ bounded.property.left) (Int.le_trans bounded.property.right h) ⟩
 
 /--
 Expand the bottom of the bounded to a number `nhi` is `hi` is less or equal to the previous higher bound.

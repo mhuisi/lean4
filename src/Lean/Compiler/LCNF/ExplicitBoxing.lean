@@ -62,14 +62,13 @@ def mkBoxedVersion (sig : Signature .impure) : CompilerM (Decl .impure) := do
       let decl ← mkLetDecl `r sig.type.boxed (.box sig.type appDecl.fvarId)
       body := body.push <| .let decl
       pure <| attachCodeDecls body (.return decl.fvarId)
-  let decl := {
-    name := mkBoxedName sig.name
-    levelParams := []
-    type := sig.type.boxed
-    params := newParams
-    value := .code value
-    inlineAttr? := none
-  }
+  let decl :=
+    { name := mkBoxedName sig.name
+      levelParams := []
+      type := sig.type.boxed
+      params := newParams
+      value := .code value
+      inlineAttr? := none }
   decl.saveImpure
   return decl
 
@@ -151,25 +150,21 @@ def mkCast (fvarId : FVarId) (fvarIdType : Expr) (expectedType : Expr)
       let x1 ← mkLetDecl .anonymous fvarIdType v
       let x2 ← mkLetDecl .anonymous expectedType (.box fvarIdType x1.fvarId)
       let body : Code .impure := .let x1 <| .let x2 <| .return x2.fvarId
-      let auxDecl : Decl .impure := {
-        name := (← read).currDecl ++ ((`_boxed_const).appendIndexAfter (← get).nextAuxIdx)
-        levelParams := []
-        type := expectedType
-        params := #[]
-        value := .code body
-        inlineAttr? := none
-      }
+      let auxDecl : Decl .impure :=
+        { name := (← read).currDecl ++ ((`_boxed_const).appendIndexAfter (← get).nextAuxIdx)
+          levelParams := []
+          type := expectedType
+          params := #[]
+          value := .code body
+          inlineAttr? := none }
       match ← cacheAuxDecl auxDecl with
       | .alreadyCached auxName =>
         auxDecl.erase
         let auxConst := .fap auxName #[]
         return auxConst
       | .new =>
-        modify fun s => {
-          s with
-          auxDecls := s.auxDecls.push auxDecl
-          nextAuxIdx := s.nextAuxIdx + 1
-        }
+        modify fun s =>
+          { s with auxDecls := s.auxDecls.push auxDecl, nextAuxIdx := s.nextAuxIdx + 1 }
         auxDecl.saveImpure
         let auxConst := .fap auxDecl.name #[]
         return auxConst

@@ -99,8 +99,8 @@ def _root_.Lean.MVarId.assertAfter
   let mut subst := {}
   for f in fvarIds, fNew in fvarIdsNew do
     subst := subst.insert f (mkFVar fNew)
-    Elab.pushInfoLeaf
-      (.ofFVarAliasInfo { id := fNew, baseId := f, userName := (lctx.get! fNew).userName })
+    Elab.pushInfoLeaf (.ofFVarAliasInfo
+      { id := fNew, baseId := f, userName := (lctx.get! fNew).userName })
   return { fvarId := fvarIdNew, mvarId, subst }
 
 /--

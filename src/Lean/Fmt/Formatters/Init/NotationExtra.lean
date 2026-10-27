@@ -29,18 +29,15 @@ public def fmtTermMatches : Fmt := fun
     let primaryPat := nested <| pats.elemsAndSeps[0]!
     let secondaryPats := fmtSecondaryPats <| pats.elemsAndSeps[1...*].toArray
     let matchesBlock :=
-      maybeFlattened <| oneOf #[
-        combine #[
-          .withSepAfter matchesTk space,
-          .withSepAfter (flattened primaryPat) ⟨nl, nested⟩,
-          secondaryPats
-        ],
-        combine #[
-          .withSepAfter matchesTk ⟨nl, nested⟩,
-          .withSepAfter primaryPat nl,
-          secondaryPats
-        ]
-      ]
+      maybeFlattened <| oneOf
+        #[combine
+            #[.withSepAfter matchesTk space,
+              .withSepAfter (flattened primaryPat) ⟨nl, nested⟩,
+              secondaryPats],
+          combine
+            #[.withSepAfter matchesTk ⟨nl, nested⟩,
+              .withSepAfter primaryPat nl,
+              secondaryPats]]
     return Layouts.spacedAtomic #[hardNested lhs, matchesBlock]
   | _ =>
     throw .partialFormatter
@@ -81,86 +78,78 @@ public def explicitBindersToGroup (bs : TSyntax ``Lean.explicitBinders) : Array 
 @[builtin_quantifier_fmt «term∃_,_»]
 public def fmtExists : QuantifierFmt := fun
   | `(∃%$exTk $bs:explicitBinders ,%$commaTk $body:term) =>
-    some {
-      quantifier := exTk
-      binders := .binders #[#[explicitBindersToGroup bs]]
-      typeAscriptionTk? := none
-      type? := none
-      commaTk
-      body
-    }
+    some
+      { quantifier := exTk
+        binders := .binders #[#[explicitBindersToGroup bs]]
+        typeAscriptionTk? := none
+        type? := none
+        commaTk
+        body }
   | _ =>
     none
 
 @[builtin_quantifier_fmt «termExists_,_»]
 public def fmtExistsKeyword : QuantifierFmt := fun
   | `(exists%$existsTk $bs:explicitBinders ,%$commaTk $body:term) =>
-    some {
-      quantifier := existsTk
-      binders := .binders #[#[explicitBindersToGroup bs]]
-      typeAscriptionTk? := none
-      type? := none
-      commaTk
-      body
-    }
+    some
+      { quantifier := existsTk
+        binders := .binders #[#[explicitBindersToGroup bs]]
+        typeAscriptionTk? := none
+        type? := none
+        commaTk
+        body }
   | _ =>
     none
 
 @[builtin_quantifier_fmt «termΣ_,_»]
 public def fmtSigma : QuantifierFmt := fun
   | `(Σ%$sigmaTk $bs:explicitBinders ,%$commaTk $body:term) =>
-    some {
-      quantifier := sigmaTk
-      binders := .binders #[#[explicitBindersToGroup bs]]
-      typeAscriptionTk? := none
-      type? := none
-      commaTk
-      body
-    }
+    some
+      { quantifier := sigmaTk
+        binders := .binders #[#[explicitBindersToGroup bs]]
+        typeAscriptionTk? := none
+        type? := none
+        commaTk
+        body }
   | _ =>
     none
 
 @[builtin_quantifier_fmt «termΣ'_,_»]
 public def fmtPSigma : QuantifierFmt := fun
   | `(Σ'%$psigmaTk $bs:explicitBinders ,%$commaTk $body:term) =>
-    some {
-      quantifier := psigmaTk
-      binders := .binders #[#[explicitBindersToGroup bs]]
-      typeAscriptionTk? := none
-      type? := none
-      commaTk
-      body
-    }
+    some
+      { quantifier := psigmaTk
+        binders := .binders #[#[explicitBindersToGroup bs]]
+        typeAscriptionTk? := none
+        type? := none
+        commaTk
+        body }
   | _ =>
     none
 
 @[builtin_infix_fmt «term_×_»]
-public def fmtTimes : Fmt.InfixOperation := {
-  sparse := false
-  precs? := some { prec := 35, lhsPrec := 36, rhsPrec := 35 }
-  extendedChainKinds := {``«term_×__1»}
-}
+public def fmtTimes : Fmt.InfixOperation :=
+  { sparse := false
+    precs? := some { prec := 35, lhsPrec := 36, rhsPrec := 35 }
+    extendedChainKinds := {``«term_×__1»} }
 
 @[builtin_infix_fmt «term_×__1»]
-public def fmtSigmaTimes : Fmt.InfixOperation := {
-  sparse := false
-  precs? := some { prec := 35, lhsPrec := 0, rhsPrec := 35 }
-  extendedChainKinds := {``«term_×_»}
-}
+public def fmtSigmaTimes : Fmt.InfixOperation :=
+  { sparse := false
+    precs? := some { prec := 35, lhsPrec := 0, rhsPrec := 35 }
+    extendedChainKinds := {``«term_×_»} }
 
 @[builtin_infix_fmt «term_×'_»]
-public def fmtTimes' : Fmt.InfixOperation := {
-  sparse := false
-  precs? := some { prec := 35, lhsPrec := 36, rhsPrec := 35 }
-  extendedChainKinds := {``«term_×'__1»}
-}
+public def fmtTimes' : Fmt.InfixOperation :=
+  { sparse := false
+    precs? := some { prec := 35, lhsPrec := 36, rhsPrec := 35 }
+    extendedChainKinds := {``«term_×'__1»} }
 
 @[builtin_infix_fmt «term_×'__1»]
-public def fmtPSigmaTimes : Fmt.InfixOperation := {
-  sparse := false
-  precs? := some { prec := 35, lhsPrec := 0, rhsPrec := 35 }
-  extendedChainKinds := {``«term_×'_»}
-}
+public def fmtPSigmaTimes : Fmt.InfixOperation :=
+  { sparse := false
+    precs? := some { prec := 35, lhsPrec := 0, rhsPrec := 35 }
+    extendedChainKinds := {``«term_×'_»} }
 
 @[builtin_fmt «term{_}»]
 public def fmtSetNotation : Fmt := fun
@@ -168,10 +157,8 @@ public def fmtSetNotation : Fmt := fun
   | _ => throw .partialFormatter
 
 @[builtin_infix_fmt Lean.unifConstraint]
-public def fmtUnifConstraint : Fmt.InfixOperation := {
-  sparse := true
-  precs? := some { prec := 0, lhsPrec := 0, rhsPrec := 0 }
-}
+public def fmtUnifConstraint : Fmt.InfixOperation :=
+  { sparse := true, precs? := some { prec := 0, lhsPrec := 0, rhsPrec := 0 } }
 
 @[builtin_fmt Lean.«command__Unif_hint____Where_|_-⊢__»]
 public def fmtUnifHint : Fmt := fun
@@ -258,11 +245,10 @@ public def fmtCalcStepLike (pred : Syntax) (colonEqTk? proof? : Option Syntax)
   let shortProofPred :=
     Layouts.infixOperator #[lhs, op, flattened rhs] <| .sparse (alignedOperators := true)
   let shortProofVariant :=
-    combine #[
-      .withSepAfter shortProofPred space,
-      .withSepAfter colonEqTk? space,
-      flattened proof?
-    ]
+    combine
+      #[.withSepAfter shortProofPred space,
+        .withSepAfter colonEqTk? space,
+        flattened proof?]
   let longProofPred := Layouts.infixOperator #[lhs, op, rhs] .sparse
   let longProofVariant := Layouts.assignmentDeclaration longProofPred colonEqTk? proof?
   return fallbackOnOverflow shortProofVariant longProofVariant

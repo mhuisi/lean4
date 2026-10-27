@@ -63,11 +63,10 @@ public def fmtWithOptConfig (signature : TaggedDoc) (config : OptConfig) : FmtM 
     let fields := withPosition <| Layouts.sepLines fields (includeSeps := false)
     let structVal := Layouts.bracketed lbTk fields rbTk <| .sparse nl
     let mainDecl := Layouts.assignmentDeclaration signature empty structVal
-    return Layouts.retainedWhitespace #[
-      mainDecl,
-      mainDeclTrailingDoc,
-      whereDecls?
-    ]
+    return Layouts.retainedWhitespace
+      #[mainDecl,
+        mainDeclTrailingDoc,
+        whereDecls?]
   | `(optConfig| where%$whereTk $fields:declField;* $[$whereDecls?:whereDecls]?) =>
     let whereTkDoc ← fmt whereTk
     let fieldsDoc ← fmtTSepArray fields
@@ -76,10 +75,9 @@ public def fmtWithOptConfig (signature : TaggedDoc) (config : OptConfig) : FmtM 
     let whereDecls? ← fmt? whereDecls?
     let fieldsDoc := withPosition <| Layouts.sepLines fieldsDoc (includeSeps := false)
     let mainDecl := Layouts.whereDeclaration signature whereTkDoc fieldsDoc
-    return Layouts.retainedWhitespace #[
-      mainDecl,
-      mainDeclTrailingDoc,
-      whereDecls?
-    ]
+    return Layouts.retainedWhitespace
+      #[mainDecl,
+        mainDeclTrailingDoc,
+        whereDecls?]
   | _ =>
     throw .partialFormatter

@@ -130,25 +130,24 @@ for parenthesizing syntax of kind `k`.
 -/
 @[builtin_doc]
 unsafe builtin_initialize parenthesizerAttribute : KeyedDeclsAttribute Parenthesizer ←
-  KeyedDeclsAttribute.init {
-    builtinName := `builtin_parenthesizer
-    name := `parenthesizer
-    descr := "Register a parenthesizer for a parser."
-    valueTypeName := `Lean.PrettyPrinter.Parenthesizer
-    evalKey := fun builtin stx => do
-      let env ← getEnv
-      let stx ← Attribute.Builtin.getIdent stx
-      let id := stx.getId
-      -- `isValidSyntaxNodeKind` is updated only in the next stage for new `[builtin*Parser]`s, but we try to
-      -- synthesize a parenthesizer for it immediately, so we just check for a declaration in this case
-      unless (builtin && (env.find? id).isSome) || Parser.isValidSyntaxNodeKind env id do
-        throwError "Invalid `[parenthesizer]` argument: Unknown syntax kind `{id}`"
-      if (← getEnv).contains id then
-        recordExtraModUseFromDecl (isMeta := false) id
-        if (← Elab.getInfoState).enabled then
-          Elab.addConstInfo stx id none
-      pure id
-  }
+  KeyedDeclsAttribute.init
+    { builtinName := `builtin_parenthesizer
+      name := `parenthesizer
+      descr := "Register a parenthesizer for a parser."
+      valueTypeName := `Lean.PrettyPrinter.Parenthesizer
+      evalKey := fun builtin stx => do
+        let env ← getEnv
+        let stx ← Attribute.Builtin.getIdent stx
+        let id := stx.getId
+        -- `isValidSyntaxNodeKind` is updated only in the next stage for new `[builtin*Parser]`s, but we try to
+        -- synthesize a parenthesizer for it immediately, so we just check for a declaration in this case
+        unless (builtin && (env.find? id).isSome) || Parser.isValidSyntaxNodeKind env id do
+          throwError "Invalid `[parenthesizer]` argument: Unknown syntax kind `{id}`"
+        if (← getEnv).contains id then
+          recordExtraModUseFromDecl (isMeta := false) id
+          if (← Elab.getInfoState).enabled then
+            Elab.addConstInfo stx id none
+        pure id }
 
 abbrev CategoryParenthesizer := (prec : Nat) → Parenthesizer
 
@@ -164,24 +163,23 @@ category will never be parenthesized, but still traversed for parenthesizing nes
 @[builtin_doc]
 unsafe builtin_initialize categoryParenthesizerAttribute
     : KeyedDeclsAttribute CategoryParenthesizer ←
-  KeyedDeclsAttribute.init {
-    builtinName := `builtin_category_parenthesizer
-    name := `category_parenthesizer
-    descr := "Register a parenthesizer for a syntax category."
-    valueTypeName := `Lean.PrettyPrinter.CategoryParenthesizer
-    evalKey := fun _ stx => do
-      let env ← getEnv
-      let stx ← Attribute.Builtin.getIdent stx
-      let id := stx.getId
-      let some cat := (Parser.parserExtension.getState env).categories.find? id
-        | throwError
-            "Invalid `[category_parenthesizer]` argument: Unknown parser category `{toString id}`"
-      if (← getEnv).contains cat.declName then
-        recordExtraModUseFromDecl (isMeta := false) cat.declName
-        if (← Elab.getInfoState).enabled then
-          Elab.addConstInfo stx cat.declName none
-      pure id
-  }
+  KeyedDeclsAttribute.init
+    { builtinName := `builtin_category_parenthesizer
+      name := `category_parenthesizer
+      descr := "Register a parenthesizer for a syntax category."
+      valueTypeName := `Lean.PrettyPrinter.CategoryParenthesizer
+      evalKey := fun _ stx => do
+        let env ← getEnv
+        let stx ← Attribute.Builtin.getIdent stx
+        let id := stx.getId
+        let some cat := (Parser.parserExtension.getState env).categories.find? id
+          | throwError
+              "Invalid `[category_parenthesizer]` argument: Unknown parser category `{toString id}`"
+        if (← getEnv).contains cat.declName then
+          recordExtraModUseFromDecl (isMeta := false) cat.declName
+          if (← Elab.getInfoState).enabled then
+            Elab.addConstInfo stx cat.declName none
+        pure id }
 
 /--
 Registers a parenthesizer for a parser combinator.
@@ -205,21 +203,19 @@ open _root_.Std.Format
 
 def throwBacktrack {α} : ParenthesizerM α := throw $ Exception.internal backtrackExceptionId
 
-instance : Syntax.MonadTraverser ParenthesizerM := ⟨{
-  get := State.stxTrav <$> get
-  set := fun t => modify (fun st => { st with stxTrav := t })
-  modifyGet := fun f =>
-    modifyGet (fun st => let (a, t) := f st.stxTrav; (a, { st with stxTrav := t }))
-}⟩
+instance : Syntax.MonadTraverser ParenthesizerM :=
+  ⟨ { get := State.stxTrav <$> get
+      set := fun t => modify (fun st => { st with stxTrav := t })
+      modifyGet := fun f =>
+        modifyGet (fun st => let (a, t) := f st.stxTrav; (a, { st with stxTrav := t })) } ⟩
 
 open Syntax.MonadTraverser
 
 def addPrecCheck (prec : Nat) : ParenthesizerM Unit :=
-  modify fun st => {
-    st with
-    contPrec := Nat.min (st.contPrec.getD prec) prec
-    minPrec := Nat.min (st.minPrec.getD prec) prec
-  }
+  modify fun st =>
+    { st with
+      contPrec := Nat.min (st.contPrec.getD prec) prec
+      minPrec := Nat.min (st.minPrec.getD prec) prec }
 
 /-- Execute `x` at the right-most child of the current node, if any, then advance to the left. -/
 def visitArgs (x : ParenthesizerM Unit) : ParenthesizerM Unit := do
@@ -230,11 +226,10 @@ def visitArgs (x : ParenthesizerM Unit) : ParenthesizerM Unit := do
 
 -- Macro scopes in the parenthesizer output are ultimately ignored by the pretty printer,
 -- so give a trivial implementation.
-instance : MonadQuotation ParenthesizerM := {
-  getCurrMacroScope := pure default
-  getContext := pure default
-  withFreshMacroScope := fun x => x
-}
+instance : MonadQuotation ParenthesizerM :=
+  { getCurrMacroScope := pure default
+    getContext := pure default
+    withFreshMacroScope := fun x => x }
 
 /--
 Run `x` and parenthesize the result using `mkParen` if necessary.
@@ -642,12 +637,10 @@ def registerAlias (aliasName : Name) (v : ParenthesizerAliasValue) : IO Unit := 
   Parser.registerAliasCore parenthesizerAliasesRef aliasName v
 
 instance : Coe Parenthesizer ParenthesizerAliasValue := { coe := AliasValue.const }
-instance : Coe (Parenthesizer → Parenthesizer) ParenthesizerAliasValue := {
-  coe := AliasValue.unary
-}
-instance : Coe (Parenthesizer → Parenthesizer → Parenthesizer) ParenthesizerAliasValue := {
-  coe := AliasValue.binary
-}
+instance : Coe (Parenthesizer → Parenthesizer) ParenthesizerAliasValue :=
+  { coe := AliasValue.unary }
+instance : Coe (Parenthesizer → Parenthesizer → Parenthesizer) ParenthesizerAliasValue :=
+  { coe := AliasValue.binary }
 
 end Parenthesizer
 open Parenthesizer
@@ -659,9 +652,8 @@ def parenthesize (parenthesizer : Parenthesizer) (stx : Syntax) : CoreM Syntax :
   catchInternalId backtrackExceptionId
     (do
       let (_, st) ←
-        (parenthesizer { forceParens := getPPParens opts }).run {
-          stxTrav := Syntax.Traverser.fromSyntax stx
-        }
+        (parenthesizer { forceParens := getPPParens opts }).run
+          { stxTrav := Syntax.Traverser.fromSyntax stx }
       pure st.stxTrav.cur)
     (fun _ => throwError "parenthesize: uncaught backtrack exception")
 

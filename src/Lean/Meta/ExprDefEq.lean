@@ -14,19 +14,18 @@ namespace Lean.Meta
 
 open Lean
 
-register_builtin_option backward.isDefEq.lazyProjDelta : Bool := {
-  defValue := true
-  descr :=
-    "use lazy delta reduction when solving unification constrains of the form `(f a).i =?= (g b).i`"
-}
+register_builtin_option backward.isDefEq.lazyProjDelta : Bool :=
+  { defValue := true
+    descr :=
+      "use lazy delta reduction when solving unification constrains of the form `(f a).i =?= (g \
+        b).i`" }
 
-register_builtin_option backward.isDefEq.lazyWhnfCore : Bool := {
-  defValue := true
-  descr :=
-    "specifies transparency mode when normalizing constraints of the form `(f a).i =?= s`, if \
-      `true` only reducible definitions and instances are unfolded when reducing `f a`. Otherwise, \
-      the default setting is used"
-}
+register_builtin_option backward.isDefEq.lazyWhnfCore : Bool :=
+  { defValue := true
+    descr :=
+      "specifies transparency mode when normalizing constraints of the form `(f a).i =?= s`, if \
+        `true` only reducible definitions and instances are unfolded when reducing `f a`. \
+        Otherwise, the default setting is used" }
 
 /--
 Controls how implicit arguments are handled in `isDefEq` during proof automation.
@@ -49,24 +48,22 @@ they are bumped to `.implicit`.
 See `isDefEqArgs` for the implementation, `backward.isDefEq.implicitBump` for the implicit
 argument bump, and `TransparencyMode` for the overall design.
 -/
-register_builtin_option backward.isDefEq.respectTransparency : Bool := {
-  defValue := true
-  descr :=
-    "if true (the default), do not bump transparency to `.default` \
-      when checking whether implicit arguments are definitionally equal"
-}
+register_builtin_option backward.isDefEq.respectTransparency : Bool :=
+  { defValue := true
+    descr :=
+      "if true (the default), do not bump transparency to `.default` \
+        when checking whether implicit arguments are definitionally equal" }
 
 /--
 Controls the transparency used to check whether the type of metavariable matches the type of the
 term being assigned to it.
 -/
-register_builtin_option backward.isDefEq.respectTransparency.types : Bool := {
-  defValue := true
-  descr :=
-    "if true, do not bump transparency to `.default` \
-      when checking whether the type of a metavariable matches the type of the term being assigned \
-      to it."
-}
+register_builtin_option backward.isDefEq.respectTransparency.types : Bool :=
+  { defValue := true
+    descr :=
+      "if true, do not bump transparency to `.default` \
+        when checking whether the type of a metavariable matches the type of the term being \
+        assigned to it." }
 
 /--
 Controls whether non-instance implicit arguments get their transparency bumped to
@@ -84,12 +81,11 @@ to `.implicit`; other implicit arguments stay at the caller's transparency.
 
 This option only has an effect when `backward.isDefEq.respectTransparency` is `true`.
 -/
-register_builtin_option backward.isDefEq.implicitBump : Bool := {
-  defValue := true
-  descr :=
-    "if true, bump transparency to `.implicit` for non-instance implicit arguments, \
-      not just instance-implicit ones"
-}
+register_builtin_option backward.isDefEq.implicitBump : Bool :=
+  { defValue := true
+    descr :=
+      "if true, bump transparency to `.implicit` for non-instance implicit arguments, \
+        not just instance-implicit ones" }
 
 /--
 Controls what happens if a definitional equality check is stuck on a metavariable after a failing
@@ -103,10 +99,8 @@ and only throws if those don't help either.
 Besides being expected to succeed more often, the new behavior is usually faster because it calls
 `isDefEqOnFailure` only once.
 -/
-register_builtin_option backward.isDefEq.throwOnStuckAfterApp : Bool := {
-  defValue := false
-  descr := "if true, immediately throw a stuck exception"
-}
+register_builtin_option backward.isDefEq.throwOnStuckAfterApp : Bool :=
+  { defValue := false, descr := "if true, immediately throw a stuck exception" }
 
 /--
 When an instance is applied during instance search, its arguments are filled with metavariables
@@ -126,17 +120,16 @@ current unification attempt, fails.
 With `false`, the old, more lenient behavior is restored (the behavior before the fix for issue
 #9077).
 -/
-register_builtin_option backward.isDefEq.respectTransparency.instanceSearchTypes : Bool := {
-  defValue := true
-  descr :=
-    "if true, require assignments to instance metavariables to preserve the metavariable's\
-      \n  type up to `.instances` transparency during instance search"
-}
+register_builtin_option backward.isDefEq.respectTransparency.instanceSearchTypes : Bool :=
+  { defValue := true
+    descr :=
+      "if true, require assignments to instance metavariables to preserve the metavariable's\
+        \n  type up to `.instances` transparency during instance search" }
 
-register_builtin_option trace.Meta.isDefEq.printTransparency : Bool := {
-  defValue := false
-  descr := "if true, prefix `Meta.isDefEq` `=?=` trace messages with the current transparency level"
-}
+register_builtin_option trace.Meta.isDefEq.printTransparency : Bool :=
+  { defValue := false
+    descr :=
+      "if true, prefix `Meta.isDefEq` `=?=` trace messages with the current transparency level" }
 
 /--
 Return `true` if `e` is of the form `fun (x_1 ... x_n) => ?m y_1 ... y_k)`, and `?m` is unassigned.
@@ -368,15 +361,14 @@ def withImplicitConfig (x : MetaM α) : MetaM α := do
       x
     else
       withConfig
-        (fun cfg => {
-          cfg with
-          beta := true
-          iota := true
-          zeta := true
-          zetaHave := true
-          zetaDelta := true
-          proj := .yesWithDelta
-        })
+        (fun cfg =>
+          { cfg with
+            beta := true
+            iota := true
+            zeta := true
+            zetaHave := true
+            zetaDelta := true
+            proj := .yesWithDelta })
         x
 
 /--
@@ -469,15 +461,14 @@ def withExactInstancesConfig (x : MetaM α) : MetaM α := do
       x
     else
       withConfig
-        (fun cfg => {
-          cfg with
-          beta := true
-          iota := true
-          zeta := true
-          zetaHave := true
-          zetaDelta := true
-          proj := .yesWithDelta
-        })
+        (fun cfg =>
+          { cfg with
+            beta := true
+            iota := true
+            zeta := true
+            zetaHave := true
+            zetaDelta := true
+            proj := .yesWithDelta })
         x
 
 private partial def isDefEqArgs (f : Expr) (args₁ args₂ : Array Expr) : MetaM Bool := do
@@ -1132,14 +1123,13 @@ def run
     (v : Expr)
     : MetaM (Option Expr) := do
   let mvarDecl ← mvarId.getDecl
-  let ctx := {
-    mvarId := mvarId
-    mvarDecl := mvarDecl
-    fvars := fvars
-    hasCtxLocals := hasCtxLocals
-    rhs := v
-    : Context
-  }
+  let ctx :=
+    { mvarId := mvarId
+      mvarDecl := mvarDecl
+      fvars := fvars
+      hasCtxLocals := hasCtxLocals
+      rhs := v
+      : Context }
   let x : CheckAssignmentM (Option Expr) :=
     catchInternalIds [outOfScopeExceptionId, checkAssignmentExceptionId]
       (do let e ← x; return some e) (fun _ => pure none)

@@ -112,17 +112,13 @@ structure SpecTheorems where
   erased : PHashSet SpecProof := {}
 deriving Inhabited
 
-def SpecTheorems.insert (d : SpecTheorems) (e : SpecTheorem) : SpecTheorems := {
-  d with
-  specs := d.specs.insertKeyValue e.keys e
-}
+def SpecTheorems.insert (d : SpecTheorems) (e : SpecTheorem) : SpecTheorems :=
+  { d with specs := d.specs.insertKeyValue e.keys e }
 
 def SpecTheorems.isErased (d : SpecTheorems) (thmId : SpecProof) : Bool := d.erased.contains thmId
 
-def SpecTheorems.erase (d : SpecTheorems) (thmId : SpecProof) : SpecTheorems := {
-  d with
-  erased := d.erased.insert thmId
-}
+def SpecTheorems.erase (d : SpecTheorems) (thmId : SpecProof) : SpecTheorems :=
+  { d with erased := d.erased.insert thmId }
 
 abbrev SpecExtension := SimpleScopedEnvExtension SpecEntry SpecTheorems
 
@@ -154,14 +150,13 @@ where
     | .lit .. | .fvar .. | .bvar .. | .sort .. | .const .. =>
       return 0
 
-def simpSPredConfig : ConfigWithKey := {
-  simpGlobalConfig.config with
-  iota := true
-  beta := true
-  zeta := true
-  zetaDelta := true
-  proj := .yesWithDelta
-}.toConfigWithKey
+def simpSPredConfig : ConfigWithKey :=
+  { simpGlobalConfig.config with
+    iota := true
+    beta := true
+    zeta := true
+    zetaDelta := true
+    proj := .yesWithDelta }.toConfigWithKey
 
 /--
 If `σs : List Type`, then `e : SPred σs`.
@@ -403,10 +398,8 @@ def SpecTheorems.insert (d : SpecTheorems) (e : SpecTheorem) : SpecTheorems :=
 
 def SpecTheorems.isErased (d : SpecTheorems) (thmId : SpecProof) : Bool := d.erased.contains thmId
 
-def SpecTheorems.erase (d : SpecTheorems) (thmId : SpecProof) : SpecTheorems := {
-  d with
-  erased := d.erased.insert thmId
-}
+def SpecTheorems.erase (d : SpecTheorems) (thmId : SpecProof) : SpecTheorems :=
+  { d with erased := d.erased.insert thmId }
 
 abbrev SpecExtension := SimpleScopedEnvExtension SpecEntry SpecTheorems
 
@@ -463,13 +456,12 @@ def eraseUnusedVarsFromPattern (p : Sym.Pattern) : Sym.Pattern := Id.run do
     p.checkTypeMask?.bind fun mask =>
       let newMask := kept.map (mask[·]!)
       if newMask.all (· == false) then none else some newMask
-  return {
-    p with
-    varTypes := newVarTypes
-    pattern := newPattern
-    varInfos? := newVarInfos?
-    checkTypeMask? := newCheckTypeMask?
-  }
+  return
+    { p with
+      varTypes := newVarTypes
+      pattern := newPattern
+      varInfos? := newVarInfos?
+      checkTypeMask? := newCheckTypeMask? }
 
 /--
 The application-argument index of `declName`'s program parameter `x`, read from its signature.
@@ -567,13 +559,12 @@ private def etaExpandEqPattern (pattern : Sym.Pattern) (eqTy : Expr) : Sym.Patte
     let liftedPattern := pattern.pattern.liftLooseBVars 0 k
     let newBVars := Array.ofFn (n := k) fun i => mkBVar (k - 1 - i)
     let newPatternExpr := mkAppN liftedPattern newBVars
-    let newPattern : Sym.Pattern := {
-      pattern with
-      varTypes := pattern.varTypes ++ extraDomains
-      pattern := newPatternExpr
-      varInfos? := none
-      checkTypeMask? := none
-    }
+    let newPattern : Sym.Pattern :=
+      { pattern with
+        varTypes := pattern.varTypes ++ extraDomains
+        pattern := newPatternExpr
+        varInfos? := none
+        checkTypeMask? := none }
     (newPattern, k)
 
 /--
@@ -600,13 +591,12 @@ def mkSpecTheoremFromSimpDecl? (declName : Name) (prio : Nat) : MetaM (Option Sp
   -- progress (e.g. `getThe.eq_1 : getThe σ = MonadStateOf.get` after reducible unfolding).
   if pattern.pattern == rhs then return none
   let (pattern, etaArgs) := etaExpandEqPattern pattern eqTy
-  return some {
-    pattern
-    proof := .global declName
-    kind := .simp etaArgs
-    priority := prio
-    conjunctivePre := true
-  }
+  return some
+    { pattern
+      proof := .global declName
+      kind := .simp etaArgs
+      priority := prio
+      conjunctivePre := true }
 
 /--
 Create a `SpecTheorem` from an elaborated equational proof term `proof : ∀ xs, lhs = rhs`, keyed on
@@ -623,13 +613,12 @@ def mkSpecTheoremFromSimpExpr?
       return (lhs, (eqTy, rhs))
   if pattern.pattern == rhs then return none
   let (pattern, etaArgs) := etaExpandEqPattern pattern eqTy
-  return some {
-    pattern
-    proof := .stx (← mkFreshId) ref proof
-    kind := .simp etaArgs
-    priority := prio
-    conjunctivePre := true
-  }
+  return some
+    { pattern
+      proof := .stx (← mkFreshId) ref proof
+      kind := .simp etaArgs
+      priority := prio
+      conjunctivePre := true }
 
 /--
 The unfold theorem `declName.eq_def` through which a definition in a simp set's `toUnfold`

@@ -133,14 +133,13 @@ meta def elabStoreTraceAs : CommandElab
     -- Declare `declName : CoreM StoredTrace` so that the trace can be inspected by arbitrary
     -- metaprograms. The declaration body merely references the trace data, which is kept in an
     -- in-memory environment extension, so declaring it is cheap even for very large traces.
-    liftCoreM <| addAndCompile (markMeta := true) <| .defnDecl {
-      name := declName
-      levelParams := []
-      type := mkApp (mkConst ``CoreM) (mkConst ``Lean.PostprocessTraces.StoredTrace)
-      value := mkApp (mkConst ``Lean.PostprocessTraces.findStoredTrace) (toExpr declName)
-      hints := .abbrev
-      safety := .safe
-    }
+    liftCoreM <| addAndCompile (markMeta := true) <| .defnDecl
+      { name := declName
+        levelParams := []
+        type := mkApp (mkConst ``CoreM) (mkConst ``Lean.PostprocessTraces.StoredTrace)
+        value := mkApp (mkConst ``Lean.PostprocessTraces.findStoredTrace) (toExpr declName)
+        hints := .abbrev
+        safety := .safe }
     liftCoreM <| addDocStringCore declName
       s!"A trace stored by `store_traces_as` (`{(← getFileName)}`); \
         inspect it with `#trace_roots {id.getId}` and \

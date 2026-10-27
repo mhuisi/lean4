@@ -98,25 +98,23 @@ namespace Bounded
 /-- Creates a new `Bounded` channel. -/
 private def new {α} (capacity : Nat := 16) (h : capacity > 0 := by decide)
     : BaseIO (Bounded α) := do
-  return {
-    state :=
-      ← Mutex.new {
-        producers := .empty
-        waiters := .empty
-        buffer :=
-          ← Vector.mapM
-            (fun _ => IO.mkRef { pos := 0, value := none, remaining := 0 })
-            (Vector.replicate capacity ())
-        receivers := .empty
-        nextId := 0
-        closed := false
-        pos := 0
-        size := 0
-        read := ⟨0, h⟩
-        write := ⟨0, h⟩
-        capacity := ⟨capacity, h⟩
-      }
-  }
+  return
+    { state :=
+        ← Mutex.new
+          { producers := .empty
+            waiters := .empty
+            buffer :=
+              ← Vector.mapM
+                (fun _ => IO.mkRef { pos := 0, value := none, remaining := 0 })
+                (Vector.replicate capacity ())
+            receivers := .empty
+            nextId := 0
+            closed := false
+            pos := 0
+            size := 0
+            read := ⟨0, h⟩
+            write := ⟨0, h⟩
+            capacity := ⟨capacity, h⟩ } }
 
 /-- Subscribes a new `Receiver` in the `Bounded` channel. -/
 private def subscribe (bd : Bounded α) : IO (Receiver α) := do

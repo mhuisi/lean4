@@ -149,11 +149,8 @@ def extract (c : InputContext) : String.Pos.Raw → String.Pos.Raw → String :=
 
 /-- Extracts a substring of the input string, bounded by `startPos` and `stopPos`. -/
 @[inline]
-def substring (c : InputContext) (startPos stopPos : String.Pos.Raw) : Substring.Raw := {
-  str := c.inputString
-  startPos
-  stopPos := min stopPos c.endPos
-}
+def substring (c : InputContext) (startPos stopPos : String.Pos.Raw) : Substring.Raw :=
+  { str := c.inputString, startPos, stopPos := min stopPos c.endPos }
 
 /-- Return character after position `pos` -/
 @[inline]
@@ -211,11 +208,8 @@ instance : Coe ParserContext InputContext := ⟨(·.toInputContext)⟩
 /-- Modifies the ending position of a parser context. -/
 def ParserContext.setEndPos
     (c : ParserContext) (endPos : String.Pos.Raw) (endPos_valid : endPos ≤ c.inputString.rawEndPos)
-    : ParserContext := {
-  c with
-  endPos
-  endPos_valid
-}
+    : ParserContext :=
+  { c with endPos, endPos_valid }
 
 structure Error where
   /--
@@ -252,11 +246,10 @@ instance : ToString Error where
 def merge (e₁ e₂ : Error) : Error :=
   match e₂ with
   -- We expect errors to be merged to be about the same token, so unconditionally copy second `unexpectedTk`
-  | { unexpectedTk, unexpected := u, .. } => {
-    unexpectedTk
-    unexpected := if u == "" then e₁.unexpected else u
-    expected := e₁.expected ++ e₂.expected
-  }
+  | { unexpectedTk, unexpected := u, .. } =>
+    { unexpectedTk
+      unexpected := if u == "" then e₁.unexpected else u
+      expected := e₁.expected ++ e₂.expected }
 
 end Error
 
@@ -305,18 +298,14 @@ def size (stack : SyntaxStack) : Nat := stack.raw.size - stack.drop
 
 def isEmpty (stack : SyntaxStack) : Bool := stack.size == 0
 
-def shrink (stack : SyntaxStack) (n : Nat) : SyntaxStack := {
-  stack with
-  raw := stack.raw.shrink (stack.drop + n)
-}
+def shrink (stack : SyntaxStack) (n : Nat) : SyntaxStack :=
+  { stack with raw := stack.raw.shrink (stack.drop + n) }
 
 def push (stack : SyntaxStack) (a : Syntax) : SyntaxStack := { stack with raw := stack.raw.push a }
 
 def pop (stack : SyntaxStack) : SyntaxStack :=
-  if stack.size > 0 then {
-    stack with
-    raw := stack.raw.pop
-  }
+  if stack.size > 0 then
+    { stack with raw := stack.raw.pop }
   else
     stack
 
@@ -360,39 +349,27 @@ namespace ParserState
 
 def stackSize (s : ParserState) : Nat := s.stxStack.size
 
-def restore (s : ParserState) (iniStackSz : Nat) (iniPos : String.Pos.Raw) : ParserState := {
-  s with
-  stxStack := s.stxStack.shrink iniStackSz
-  errorMsg := none
-  pos := iniPos
-}
+def restore (s : ParserState) (iniStackSz : Nat) (iniPos : String.Pos.Raw) : ParserState :=
+  { s with stxStack := s.stxStack.shrink iniStackSz, errorMsg := none, pos := iniPos }
 
 @[expose] def setPos (s : ParserState) (pos : String.Pos.Raw) : ParserState := { s with pos := pos }
 
 def setCache (s : ParserState) (cache : ParserCache) : ParserState := { s with cache := cache }
 
-def pushSyntax (s : ParserState) (n : Syntax) : ParserState := {
-  s with
-  stxStack := s.stxStack.push n
-}
+def pushSyntax (s : ParserState) (n : Syntax) : ParserState :=
+  { s with stxStack := s.stxStack.push n }
 
 def popSyntax (s : ParserState) : ParserState := { s with stxStack := s.stxStack.pop }
 
-def shrinkStack (s : ParserState) (iniStackSz : Nat) : ParserState := {
-  s with
-  stxStack := s.stxStack.shrink iniStackSz
-}
+def shrinkStack (s : ParserState) (iniStackSz : Nat) : ParserState :=
+  { s with stxStack := s.stxStack.shrink iniStackSz }
 
-def next (s : ParserState) (c : ParserContext) (pos : String.Pos.Raw) : ParserState := {
-  s with
-  pos := c.next pos
-}
+def next (s : ParserState) (c : ParserContext) (pos : String.Pos.Raw) : ParserState :=
+  { s with pos := c.next pos }
 
 def next' (s : ParserState) (c : ParserContext) (pos : String.Pos.Raw) (h : ¬ c.atEnd pos)
-    : ParserState := {
-  s with
-  pos := c.next' pos h
-}
+    : ParserState :=
+  { s with pos := c.next' pos h }
 
 def mkNode (s : ParserState) (k : SyntaxNodeKind) (iniStackSz : Nat) : ParserState :=
   match s with
@@ -613,11 +590,10 @@ def withCacheFn (parserName : Name) (p : ParserFn) : ParserFn := fun c s => Id.r
   let s := withStackDrop initStackSz p c { s with lhsPrec := 0, errorMsg := none }
   if s.stxStack.raw.size != initStackSz + 1 then
     panic! s!"withCacheFn: unexpected stack growth {s.stxStack.raw}"
-  return {
-    s with
-    cache.parserCache :=
-      s.cache.parserCache.insert key ⟨s.stxStack.back, s.lhsPrec, s.pos, s.errorMsg⟩
-  }
+  return
+    { s with
+      cache.parserCache :=
+        s.cache.parserCache.insert key ⟨s.stxStack.back, s.lhsPrec, s.pos, s.errorMsg⟩ }
 
 @[inherit_doc withCacheFn, builtin_doc]
 def withCache (parserName : Name) : Parser → Parser := withFn (withCacheFn parserName)

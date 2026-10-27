@@ -137,14 +137,13 @@ def addInteractiveHypothesisBundle
     throwError "Can only add a nonzero number of ids as an InteractiveHypothesisBundle."
   let fvarIds := ids.map Prod.snd
   let names := ids.map Prod.fst
-  return hyps.push {
-    names
-    fvarIds
-    type := (← ppExprTagged type)
-    val? := (← value?.mapM ppLetValueExprTagged)
-    isInstance? := if (← isClass? type).isSome then true else none
-    isType? := if (← instantiateMVars type).isSort then true else none
-  }
+  return hyps.push
+    { names
+      fvarIds
+      type := (← ppExprTagged type)
+      val? := (← value?.mapM ppLetValueExprTagged)
+      isInstance? := if (← isClass? type).isSome then true else none
+      isType? := if (← instantiateMVars type).isSort then true else none }
 where
   ppLetValueExprTagged (value : Expr) : MetaM CodeWithInfos := do
     if ← ppGoal.shouldShowLetValue tactic value then
@@ -224,13 +223,12 @@ def goalToInteractive (mvarId : MVarId) : MetaM InteractiveGoal := do
       match mvarDecl.userName with
       | Name.anonymous => none
       | name => some <| toString name.eraseMacroScopes
-    return {
-      hyps
-      type := goalFmt
-      ctx := ← WithRpcRef.mk { ← Elab.CommandContextInfo.save with }
-      userName?
-      goalPrefix := getGoalPrefix mvarDecl
-      mvarId
-    }
+    return
+      { hyps
+        type := goalFmt
+        ctx := ← WithRpcRef.mk { ← Elab.CommandContextInfo.save with }
+        userName?
+        goalPrefix := getGoalPrefix mvarDecl
+        mvarId }
 
 end Lean.Widget

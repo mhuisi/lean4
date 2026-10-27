@@ -17,9 +17,10 @@ inductive RecursorUnivLevelPos where
   | motive -- marks where the universe of the motive should go
   | majorType (idx : Nat) -- marks where the #idx universe of the major premise type goes
 
-instance : ToString RecursorUnivLevelPos := ⟨fun
-  | RecursorUnivLevelPos.motive => "<motive-univ>"
-  | RecursorUnivLevelPos.majorType idx => toString idx⟩
+instance : ToString RecursorUnivLevelPos :=
+  ⟨ fun
+      | RecursorUnivLevelPos.motive => "<motive-univ>"
+      | RecursorUnivLevelPos.majorType idx => toString idx ⟩
 
 structure RecursorInfo where
   recursorName : Name
@@ -53,17 +54,19 @@ def numMinors (info : RecursorInfo) : Nat :=
   let r := r - info.motivePos - 1
   r - (info.majorPos + 1 - info.firstIndexPos)
 
-instance : ToString RecursorInfo := ⟨fun info =>
-  "{\n" ++ "  name           := " ++ toString info.recursorName ++ "\n" ++ "  type           := "
-    ++ toString info.typeName ++ "\n" ++ "  univs          := " ++ toString info.univLevelPos
-    ++ "\n" ++ "  depElim        := " ++ toString info.depElim ++ "\n" ++ "  recursive      := "
-    ++ toString info.recursive ++ "\n" ++ "  numArgs        := " ++ toString info.numArgs ++ "\n"
-    ++ "  numParams      := " ++ toString info.numParams ++ "\n" ++ "  numIndices     := "
-    ++ toString info.numIndices ++ "\n" ++ "  numMinors      := " ++ toString info.numMinors ++ "\n"
-    ++ "  major          := " ++ toString info.majorPos ++ "\n" ++ "  motive         := "
-    ++ toString info.motivePos ++ "\n" ++ "  paramsAtMajor  := " ++ toString info.paramsPos ++ "\n"
-    ++ "  indicesAtMajor := " ++ toString info.indicesPos ++ "\n" ++ "  produceMotive  := "
-    ++ toString info.produceMotive ++ "\n" ++ "}"⟩
+instance : ToString RecursorInfo :=
+  ⟨ fun info =>
+      "{\n" ++ "  name           := " ++ toString info.recursorName ++ "\n"
+        ++ "  type           := " ++ toString info.typeName ++ "\n" ++ "  univs          := "
+        ++ toString info.univLevelPos ++ "\n" ++ "  depElim        := " ++ toString info.depElim
+        ++ "\n" ++ "  recursive      := " ++ toString info.recursive ++ "\n"
+        ++ "  numArgs        := " ++ toString info.numArgs ++ "\n" ++ "  numParams      := "
+        ++ toString info.numParams ++ "\n" ++ "  numIndices     := " ++ toString info.numIndices
+        ++ "\n" ++ "  numMinors      := " ++ toString info.numMinors ++ "\n"
+        ++ "  major          := " ++ toString info.majorPos ++ "\n" ++ "  motive         := "
+        ++ toString info.motivePos ++ "\n" ++ "  paramsAtMajor  := " ++ toString info.paramsPos
+        ++ "\n" ++ "  indicesAtMajor := " ++ toString info.indicesPos ++ "\n"
+        ++ "  produceMotive  := " ++ toString info.produceMotive ++ "\n" ++ "}" ⟩
 
 end RecursorInfo
 
@@ -249,18 +252,17 @@ private def mkRecursorInfoCore (declName : Name) (majorPos? : Option Nat) : Meta
             let univLevelPos ← getUnivLevelPos declName cinfo.levelParams motiveLvl Ilevels
             let (produceMotive, recursive) ←
               getProduceMotiveAndRecursive xs numParams numIndices majorPos motive
-            pure {
-              recursorName := declName
-              typeName := Iname
-              univLevelPos := univLevelPos
-              majorPos := majorPos
-              depElim := depElim
-              recursive := recursive
-              produceMotive := produceMotive
-              paramsPos := paramsPos
-              indicesPos := indicesPos
-              numArgs := xs.size
-            }
+            pure
+              { recursorName := declName
+                typeName := Iname
+                univLevelPos := univLevelPos
+                majorPos := majorPos
+                depElim := depElim
+                recursive := recursive
+                produceMotive := produceMotive
+                paramsPos := paramsPos
+                indicesPos := indicesPos
+                numArgs := xs.size }
         | _ =>
           throwError "invalid user defined recursor `{.ofConstName declName}`, type of the major \
             premise must be of the form (I ...), where I is a constant"
@@ -276,13 +278,12 @@ def Attribute.Recursor.getMajorPos (stx : Syntax) : AttrM Nat := do
     throwErrorAt stx "unexpected attribute argument, numeral expected"
 
 builtin_initialize recursorAttribute : ParametricAttribute Nat ←
-  registerParametricAttribute {
-    name := `recursor
-    descr := "user defined recursor, numerical parameter specifies position of the major premise"
-    getParam := fun _ stx => Attribute.Recursor.getMajorPos stx
-    afterSet := fun declName majorPos => do
-      discard <| mkRecursorInfoCore declName (some majorPos) |>.run'
-  }
+  registerParametricAttribute
+    { name := `recursor
+      descr := "user defined recursor, numerical parameter specifies position of the major premise"
+      getParam := fun _ stx => Attribute.Recursor.getMajorPos stx
+      afterSet := fun declName majorPos => do
+        discard <| mkRecursorInfoCore declName (some majorPos) |>.run' }
 
 def getMajorPos? (env : Environment) (declName : Name) : Option Nat :=
   recursorAttribute.getParam? env declName

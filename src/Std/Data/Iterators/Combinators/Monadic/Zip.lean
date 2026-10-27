@@ -133,10 +133,9 @@ def Zip.Rel₁ [Finite α₁ m] [Productive α₂ m]
   InvImage
     (Prod.Lex IterM.TerminationMeasures.Finite.Rel
       (Prod.Lex (Option.lt emptyRelation) IterM.TerminationMeasures.Productive.Rel))
-    (fun it => (
-      it.internalState.left.finitelyManySteps,
-      (it.internalState.memoizedLeft, it.internalState.right.finitelyManySkips)
-    ))
+    (fun it =>
+      ( it.internalState.left.finitelyManySteps,
+        (it.internalState.memoizedLeft, it.internalState.right.finitelyManySkips) ))
 
 theorem Zip.rel₁_of_left
     [Finite α₁ m] [Productive α₂ m]
@@ -203,10 +202,9 @@ def Zip.Rel₂ [Productive α₁ m] [Finite α₂ m]
   InvImage
     (Prod.Lex IterM.TerminationMeasures.Finite.Rel
       (Prod.Lex (Option.SomeLtNone.lt emptyRelation) IterM.TerminationMeasures.Productive.Rel))
-    (fun it => (
-      it.internalState.right.finitelyManySteps,
-      (it.internalState.memoizedLeft, it.internalState.left.finitelyManySkips)
-    ))
+    (fun it =>
+      ( it.internalState.right.finitelyManySteps,
+        (it.internalState.memoizedLeft, it.internalState.left.finitelyManySkips) ))
 
 theorem Zip.rel₂_of_right
     [Productive α₁ m] [Finite α₂ m]
@@ -274,10 +272,9 @@ def Zip.Rel₃ [Productive α₁ m] [Productive α₂ m]
     (Prod.Lex (Option.SomeLtNone.lt emptyRelation)
       (Prod.Lex (IterM.TerminationMeasures.Productive.Rel)
         IterM.TerminationMeasures.Productive.Rel))
-    (fun it => (
-      it.internalState.memoizedLeft,
-      (it.internalState.left.finitelyManySkips, it.internalState.right.finitelyManySkips)
-    ))
+    (fun it =>
+      ( it.internalState.memoizedLeft,
+        (it.internalState.left.finitelyManySkips, it.internalState.right.finitelyManySkips) ))
 
 theorem Zip.rel₃_of_memoizedLeft
     [Productive α₁ m] [Productive α₂ m]

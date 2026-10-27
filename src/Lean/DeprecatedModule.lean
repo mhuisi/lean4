@@ -17,10 +17,8 @@ structure DeprecatedModuleEntry where
   since? : Option String := none
 deriving Inhabited
 
-register_builtin_option linter.deprecated.module : Bool := {
-  defValue := true
-  descr := "if true, generate warnings when importing deprecated modules"
-}
+register_builtin_option linter.deprecated.module : Bool :=
+  { defValue := true, descr := "if true, generate warnings when importing deprecated modules" }
 
 builtin_initialize deprecatedModuleExt : ModuleEnvExtension <| Option DeprecatedModuleEntry ←
   registerModuleEnvExtension <| pure none

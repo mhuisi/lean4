@@ -138,10 +138,8 @@ abbrev HomoPredTheorems := NameMap (List HomoPredTheorem)
 /-- Extension backing the `@[grind hom_pred]` attribute. -/
 builtin_initialize homoPredExt
     : SimpleScopedEnvExtension (Name × HomoPredTheorem) HomoPredTheorems ←
-  registerSimpleScopedEnvExtension {
-    initial := {}
-    addEntry := fun s (key, thm) => s.insert key (thm :: (s.find? key).getD [])
-  }
+  registerSimpleScopedEnvExtension
+    { initial := {}, addEntry := fun s (key, thm) => s.insert key (thm :: (s.find? key).getD []) }
 
 /-- Returns the homomorphism predicates tagged with the `[grind hom_pred]` attribute. -/
 def getHomoPredTheorems : CoreM HomoPredTheorems := return homoPredExt.getState (← getEnv)

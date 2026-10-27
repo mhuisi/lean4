@@ -454,22 +454,15 @@ structure LocalContext where
   vars : Std.TreeMap Index LocalContextEntry := {}
   jps : Std.TreeMap Index (Array Param × FnBody) := {}
 
-def LocalContext.addLocal (ctx : LocalContext) (x : VarId) (t : IRType) (v : Expr)
-    : LocalContext := {
-  ctx with
-  vars := ctx.vars.insert x.idx (LocalContextEntry.localVar t v)
-}
+def LocalContext.addLocal (ctx : LocalContext) (x : VarId) (t : IRType) (v : Expr) : LocalContext :=
+  { ctx with vars := ctx.vars.insert x.idx (LocalContextEntry.localVar t v) }
 
 def LocalContext.addJP (ctx : LocalContext) (j : JoinPointId) (xs : Array Param) (b : FnBody)
-    : LocalContext := {
-  ctx with
-  jps := ctx.jps.insert j.idx (xs, b)
-}
+    : LocalContext :=
+  { ctx with jps := ctx.jps.insert j.idx (xs, b) }
 
-def LocalContext.addParam (ctx : LocalContext) (p : Param) : LocalContext := {
-  ctx with
-  vars := ctx.vars.insert p.x.idx (LocalContextEntry.param p.ty)
-}
+def LocalContext.addParam (ctx : LocalContext) (p : Param) : LocalContext :=
+  { ctx with vars := ctx.vars.insert p.x.idx (LocalContextEntry.param p.ty) }
 
 def LocalContext.addParams (ctx : LocalContext) (ps : Array Param) : LocalContext :=
   ps.foldl LocalContext.addParam ctx
@@ -492,10 +485,8 @@ def LocalContext.isLocalVar (ctx : LocalContext) (x : VarId) : Bool :=
   | some (LocalContextEntry.localVar _ _) => true
   | _ => false
 
-def LocalContext.eraseJoinPointDecl (ctx : LocalContext) (j : JoinPointId) : LocalContext := {
-  ctx with
-  jps := ctx.jps.erase j.idx
-}
+def LocalContext.eraseJoinPointDecl (ctx : LocalContext) (j : JoinPointId) : LocalContext :=
+  { ctx with jps := ctx.jps.erase j.idx }
 
 def LocalContext.getType (ctx : LocalContext) (x : VarId) : Option IRType :=
   match ctx.vars.get? x.idx with
@@ -633,10 +624,9 @@ instance : BEq FnBody := ⟨FnBody.beq⟩
 abbrev VarIdSet := Std.TreeSet VarId (fun x y => compare x.idx y.idx)
 
 def mkIf (x : VarId) (t e : FnBody) : FnBody :=
-  FnBody.case `Bool x IRType.uint8 #[
-    Alt.ctor { name := ``Bool.false, cidx := 0, size := 0, usize := 0, ssize := 0 } e,
-    Alt.ctor { name := ``Bool.true, cidx := 1, size := 0, usize := 0, ssize := 0 } t
-  ]
+  FnBody.case `Bool x IRType.uint8
+    #[Alt.ctor { name := ``Bool.false, cidx := 0, size := 0, usize := 0, ssize := 0 } e,
+      Alt.ctor { name := ``Bool.true, cidx := 1, size := 0, usize := 0, ssize := 0 } t]
 
 def getUnboxOpName (t : IRType) : String :=
   match t with

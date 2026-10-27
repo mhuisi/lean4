@@ -23,18 +23,17 @@ extensions underlying {name}`ParametricAttribute` attributes, but it differs in 
 -/
 def mkExistingToIncorrect
     : IO (PersistentEnvExtension (Name × Array Name) (Name × Array Name) (NameMap NameSet)) :=
-  registerPersistentEnvExtension {
-    name := `Lean.identifierSuggestForAttr.existingToIncorrect
-    mkInitial := pure {}
-    addImportedFn := fun _ => pure {}
-    addEntryFn := fun table (trueName, altNames) =>
-      table.alter trueName fun old =>
-        altNames.foldl (β := NameSet) (init := old.getD {}) fun accum altName =>
-          accum.insert altName
-    exportEntriesFn table :=
-      table.toArray.map (fun (trueName, altNames) => (trueName, altNames.toArray))
-        |>.qsort (lt := fun a b => Name.quickLt a.1 b.1)
-  }
+  registerPersistentEnvExtension
+    { name := `Lean.identifierSuggestForAttr.existingToIncorrect
+      mkInitial := pure {}
+      addImportedFn := fun _ => pure {}
+      addEntryFn := fun table (trueName, altNames) =>
+        table.alter trueName fun old =>
+          altNames.foldl (β := NameSet) (init := old.getD {}) fun accum altName =>
+            accum.insert altName
+      exportEntriesFn table :=
+        table.toArray.map (fun (trueName, altNames) => (trueName, altNames.toArray))
+          |>.qsort (lt := fun a b => Name.quickLt a.1 b.1) }
 
 /--
 Create the extension mapping incorrect identifiers to the existing identifiers we want to suggest as
@@ -43,17 +42,16 @@ attributes.
 -/
 def mkIncorrectToExisting
     : IO (PersistentEnvExtension (Name × Array Name) (Name × Array Name) (NameMap NameSet)) :=
-  registerPersistentEnvExtension {
-    name := `Lean.identifierSuggestForAttr.incorrectToExisting
-    mkInitial := pure {}
-    addImportedFn := fun _ => pure {}
-    addEntryFn := fun table (trueName, altNames) =>
-      altNames.foldl (init := table) fun accum altName =>
-        accum.alter altName fun old => old.getD {} |>.insert trueName
-    exportEntriesFn table :=
-      table.toArray.map (fun (altName, trueNames) => (altName, trueNames.toArray))
-        |>.qsort (lt := fun a b => Name.quickLt a.1 b.1)
-  }
+  registerPersistentEnvExtension
+    { name := `Lean.identifierSuggestForAttr.incorrectToExisting
+      mkInitial := pure {}
+      addImportedFn := fun _ => pure {}
+      addEntryFn := fun table (trueName, altNames) =>
+        altNames.foldl (init := table) fun accum altName =>
+          accum.alter altName fun old => old.getD {} |>.insert trueName
+      exportEntriesFn table :=
+        table.toArray.map (fun (altName, trueNames) => (altName, trueNames.toArray))
+          |>.qsort (lt := fun a b => Name.quickLt a.1 b.1) }
 
 builtin_initialize identifierSuggestionsImpl
     : (PersistentEnvExtension (Name × Array Name) (Name × Array Name) (NameMap NameSet))
@@ -61,30 +59,29 @@ builtin_initialize identifierSuggestionsImpl
   let existingToIncorrect ← mkExistingToIncorrect
   let incorrectToExisting ← mkIncorrectToExisting
 
-  registerBuiltinAttribute {
-    name := `suggest_for
-    descr :=
-      "suggest other (incorrect, not-existing) identifiers that someone might use when they \
-        actually want this definition"
-    add (decl : Name) (stx : Syntax) (kind : AttributeKind) := do
-      unless kind == AttributeKind.global do
-        throwAttrMustBeGlobal `suggest_for kind
-      let altSyntaxIds : Array Syntax ←
-        match stx with
-        -- Attributes parsed _after_ the suggest_for notation is added
-        | .node _ ``suggest_for #[.atom _ "suggest_for", .node _ `null ids] =>
-          pure ids
-        -- Attributes parsed _before the suggest_for notation is added
-        | .node _ ``Parser.Attr.simple #[.ident _ _ `suggest_for [], .node _ `null #[id]] =>
-          pure #[id]
-        | _ =>
-          throwError "Invalid `[suggest_for]` attribute syntax {repr stx}"
-      if isPrivateName decl then
-        throwError "Cannot make suggestions for private names"
-      let altIds := altSyntaxIds.map (·.getId)
-      modifyEnv (existingToIncorrect.addEntry · (decl, altIds))
-      modifyEnv (incorrectToExisting.addEntry · (decl, altIds))
-  }
+  registerBuiltinAttribute
+    { name := `suggest_for
+      descr :=
+        "suggest other (incorrect, not-existing) identifiers that someone might use when they \
+          actually want this definition"
+      add (decl : Name) (stx : Syntax) (kind : AttributeKind) := do
+        unless kind == AttributeKind.global do
+          throwAttrMustBeGlobal `suggest_for kind
+        let altSyntaxIds : Array Syntax ←
+          match stx with
+          -- Attributes parsed _after_ the suggest_for notation is added
+          | .node _ ``suggest_for #[.atom _ "suggest_for", .node _ `null ids] =>
+            pure ids
+          -- Attributes parsed _before the suggest_for notation is added
+          | .node _ ``Parser.Attr.simple #[.ident _ _ `suggest_for [], .node _ `null #[id]] =>
+            pure #[id]
+          | _ =>
+            throwError "Invalid `[suggest_for]` attribute syntax {repr stx}"
+        if isPrivateName decl then
+          throwError "Cannot make suggestions for private names"
+        let altIds := altSyntaxIds.map (·.getId)
+        modifyEnv (existingToIncorrect.addEntry · (decl, altIds))
+        modifyEnv (incorrectToExisting.addEntry · (decl, altIds)) }
 
   return (existingToIncorrect, incorrectToExisting)
 
@@ -156,11 +153,9 @@ public def throwUnknownNameWithSuggestions
       m!"Perhaps you meant {alternative}{inPlaceOfThis}:".hint
         (suggestions.map fun suggestion =>
           let modified := modifySuggestion suggestion
-          {
-            suggestion := s!"{modified}"
+          { suggestion := s!"{modified}"
             toCodeActionTitle? := .some (s!"Change to {·}")
-            messageData? := .some m!"`{.ofConstName suggestion}`"
-          })
+            messageData? := .some m!"`{.ofConstName suggestion}`" })
         ref
   throwUnknownIdentifierAt (declHint := declHint) ref
     (m!"Unknown {idOrConst} `{.ofConstName constName}`" ++ extraMsg ++ hint)

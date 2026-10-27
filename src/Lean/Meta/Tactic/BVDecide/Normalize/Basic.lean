@@ -163,14 +163,13 @@ def adjustConfig (mode : Mode) (config : BVDecideConfig) : BVDecideConfig :=
   match mode with
   | .solve .. =>
     config
-  | .push => {
-    config with
-    enums := false
-    fixedInt := false
-    structures := false
-    embeddedConstraintSubst := false
-    andFlattening := false
-  }
+  | .push =>
+    { config with
+      enums := false
+      fixedInt := false
+      structures := false
+      embeddedConstraintSubst := false
+      andFlattening := false }
 
 end Mode
 
@@ -221,14 +220,10 @@ def get : SimpCacheId → Grind.BVDecide.Caches → Sym.Simp.Cache
     caches.ac
 
 def set : SimpCacheId → Sym.Simp.Cache → Grind.BVDecide.Caches → Grind.BVDecide.Caches
-  | .rewrite, cache, caches => {
-    caches with
-    rewriteSimp := cache
-  }
-  | .ac, cache, caches => {
-    caches with
-    ac := cache
-  }
+  | .rewrite, cache, caches =>
+    { caches with rewriteSimp := cache }
+  | .ac, cache, caches =>
+    { caches with ac := cache }
 
 end SimpCacheId
 
@@ -241,14 +236,10 @@ def get : DSimpCacheId → Grind.BVDecide.Caches → Sym.DSimp.Cache
     caches.reduction
 
 def set : DSimpCacheId → Sym.DSimp.Cache → Grind.BVDecide.Caches → Grind.BVDecide.Caches
-  | .rewrite, cache, caches => {
-    caches with
-    rewriteDSimp := cache
-  }
-  | .reduction, cache, caches => {
-    caches with
-    reduction := cache
-  }
+  | .rewrite, cache, caches =>
+    { caches with rewriteDSimp := cache }
+  | .reduction, cache, caches =>
+    { caches with reduction := cache }
 
 end DSimpCacheId
 

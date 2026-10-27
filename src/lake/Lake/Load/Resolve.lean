@@ -79,8 +79,7 @@ def Workspace.setDepIdxs
     (h_wsIdx : pkg.wsIdx < self.packages.size) (h_depIdxs : ∀ i ∈ depIdxs, i < self.packages.size)
     : Workspace :=
   let pkg := { pkg with depIdxs }
-  {
-    self with
+  { self with
     packages := self.packages.set pkg.wsIdx pkg h_wsIdx
     packageMap := self.packageMap.insert pkg.keyName pkg
     size_packages_pos := by simp [self.size_packages_pos]
@@ -95,8 +94,7 @@ def Workspace.setDepIdxs
       simp only [Array.size_set]
       cases Array.mem_or_eq_of_mem_set p_mem with
       | inl p_mem => exact self.depIdxs_packages p p_mem i i_mem
-      | inr p_eq => apply h_depIdxs; simpa only [p_eq, pkg] using i_mem
-  }
+      | inr p_eq => apply h_depIdxs; simpa only [p_eq, pkg] using i_mem }
 
 @[local simp]
 theorem Workspace.size_packages_setDepIdxs
@@ -106,11 +104,10 @@ theorem Workspace.size_packages_setDepIdxs
 def Workspace.updateDepPkgs (self : Workspace) : Workspace :=
   let s
       : {pkgs : Vector Package self.packages.size
-        // ∀ i, (h : i < pkgs.size) → pkgs[i].wsIdx = i ∧ ∀ j ∈ pkgs[i].depIdxs, j < pkgs.size} := ⟨
-    self.packages.toVector,
-    fun i i_lt =>
-      ⟨self.packages_wsIdx i_lt, self.depIdxs_packages self.packages[i] (Array.getElem_mem ..)⟩
-  ⟩
+        // ∀ i, (h : i < pkgs.size) → pkgs[i].wsIdx = i ∧ ∀ j ∈ pkgs[i].depIdxs, j < pkgs.size} :=
+    ⟨ self.packages.toVector,
+      fun i i_lt =>
+        ⟨self.packages_wsIdx i_lt, self.depIdxs_packages self.packages[i] (Array.getElem_mem ..)⟩ ⟩
   -- Set `depPkgs` in reverse order (starting from a leaf package).
   -- Since the workspace's packages are topologically sorted, no recursion is necessary.
   let ⟨pkgs, h⟩ :=
@@ -127,16 +124,14 @@ def Workspace.updateDepPkgs (self : Workspace) : Workspace :=
         · next i_eq => simpa [i_eq] using h j j_lt
         · exact h j j_lt
       ⟨pkgs', h⟩
-  {
-    self with
+  { self with
     packages := pkgs.toArray
     packageMap := pkgs.foldl (fun map pkg => map.insert pkg.keyName pkg) {}
     size_packages_pos := by simp [self.size_packages_pos]
     packages_wsIdx {i} i_lt := h i (pkgs.size_toArray.subst i_lt) |>.1
     depIdxs_packages p p_mem := by
       have ⟨i, i_lt, p_eq⟩ := Array.mem_iff_getElem.mp p_mem
-      simpa [← p_eq] using h i (pkgs.size_toArray.subst i_lt) |>.2
-  }
+      simpa [← p_eq] using h i (pkgs.size_toArray.subst i_lt) |>.2 }
 
 structure ResolveState (start : Nat) where
   ws : Workspace
@@ -147,12 +142,8 @@ structure ResolveState (start : Nat) where
 namespace ResolveState
 
 @[inline]
-def init (ws : Workspace) (size : Nat) : ResolveState ws.packages.size := {
-  ws
-  depIdxs := Array.mkEmpty size
-  lt_of_mem := by simp
-  start_le := Nat.le_refl ..
-}
+def init (ws : Workspace) (size : Nat) : ResolveState ws.packages.size :=
+  { ws, depIdxs := Array.mkEmpty size, lt_of_mem := by simp, start_le := Nat.le_refl .. }
 
 @[inline]
 def reuseDep (s : ResolveState n) (wsIdx : Fin s.ws.packages.size) : ResolveState n :=
@@ -372,19 +363,13 @@ structure ToolchainState where
 @[inline]
 def ToolchainState.replace
     (src : Name) (tc? : Option ToolchainVer) (fixed : Bool) (self : ToolchainState)
-    : ToolchainState := {
-  self with
-  src
-  tc?
-  fixed
-}
+    : ToolchainState :=
+  { self with src, tc?, fixed }
 
 @[inline]
 def ToolchainState.addClash (src : Name) (ver : ToolchainVer) (fixed : Bool) (self : ToolchainState)
-    : ToolchainState := {
-  self with
-  clashes := self.clashes.push { src, ver, fixed }
-}
+    : ToolchainState :=
+  { self with clashes := self.clashes.push { src, ver, fixed } }
 
 /--
 Update the workspace's `lean-toolchain` if necessary.
@@ -447,11 +432,10 @@ def Workspace.updateToolchain (ws : Workspace) (rootDeps : Array MaterializedDep
         IO.Process.exit restartCode.toUInt8
     logInfo s!"restarting Lake via Elan"
     let child ←
-      IO.Process.spawn {
-        cmd := elanInstall.elan.toString
-        args := #["run", "--install", tc.toString, "lake"] ++ lakeArgs
-        env := ws.lakeEnv.noToolchainVars
-      }
+      IO.Process.spawn
+        { cmd := elanInstall.elan.toString
+          args := #["run", "--install", tc.toString, "lake"] ++ lakeArgs
+          env := ws.lakeEnv.noToolchainVars }
     IO.Process.exit (← child.wait).toUInt8
   else
     logInfo s!"toolchain not updated; no toolchain information found"
@@ -557,13 +541,12 @@ def Workspace.writeManifest (ws : Workspace) (entries : NameMap PackageEntry) : 
         arr.push <| entry.setManifestFile pkg.relManifestFile |>.setConfigFile pkg.relConfigFile
       | none =>
         arr -- should only be the case for the root
-  let manifest : Manifest := {
-    name := ws.root.baseName
-    fixedToolchain := ws.root.fixedToolchain
-    lakeDir := ws.relLakeDir
-    packagesDir? := ws.relPkgsDir
-    packages := manifestEntries
-  }
+  let manifest : Manifest :=
+    { name := ws.root.baseName
+      fixedToolchain := ws.root.fixedToolchain
+      lakeDir := ws.relLakeDir
+      packagesDir? := ws.relPkgsDir
+      packages := manifestEntries }
   manifest.save ws.manifestFile
 
 /-- Run a package's `post_update` hooks. -/

@@ -26,10 +26,8 @@ namespace Lean.Meta.Symm
 /-- Environment extensions for symm lemmas -/
 builtin_initialize symmExt
     : SimpleScopedEnvExtension (Name × Array DiscrTree.Key) (DiscrTree Name) ←
-  registerSimpleScopedEnvExtension {
-    addEntry := fun dt (n, ks) => dt.insertKeyValue ks n
-    initial := {}
-  }
+  registerSimpleScopedEnvExtension
+    { addEntry := fun dt (n, ks) => dt.insertKeyValue ks n, initial := {} }
 
 /--
 Tags symmetry lemmas to be used by the `symm` tactic.
@@ -38,23 +36,23 @@ A symmetry lemma should be of the form `r x y → r y x` where `r` is an arbitra
 -/
 @[builtin_doc]
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `symm
-    descr := "symmetric relation"
-    add := fun decl _ kind =>
-      MetaM.run' do
-        let declTy := (← getConstInfo decl).type
-        let (xs, _, targetTy) ← withReducible <| forallMetaTelescopeReducing declTy
-        let fail :=
-          throwError "@[symm] attribute only applies to lemmas proving x ∼ y → y ∼ x, got {declTy}"
-        let some _ := xs.back?
-          | fail
-        let targetTy ← reduce targetTy
-        let .app (.app rel _) _ := targetTy
-          | fail
-        let key ← withReducible <| DiscrTree.mkPath rel
-        symmExt.add (decl, key) kind
-  }
+  registerBuiltinAttribute
+    { name := `symm
+      descr := "symmetric relation"
+      add := fun decl _ kind =>
+        MetaM.run' do
+          let declTy := (← getConstInfo decl).type
+          let (xs, _, targetTy) ← withReducible <| forallMetaTelescopeReducing declTy
+          let fail :=
+            throwError
+              "@[symm] attribute only applies to lemmas proving x ∼ y → y ∼ x, got {declTy}"
+          let some _ := xs.back?
+            | fail
+          let targetTy ← reduce targetTy
+          let .app (.app rel _) _ := targetTy
+            | fail
+          let key ← withReducible <| DiscrTree.mkPath rel
+          symmExt.add (decl, key) kind }
 
 end Lean.Meta.Symm
 

@@ -269,13 +269,12 @@ def expandAssert : Macro
   | _ =>
     Macro.throwUnsupported
 
-register_builtin_option debugAssertions : Bool := {
-  defValue := false
-  descr :=
-    "enable `debug_assert!` statements\
-      \n\
-      \nDefaults to `false` unless the Lake `buildType` is `debug`."
-}
+register_builtin_option debugAssertions : Bool :=
+  { defValue := false
+    descr :=
+      "enable `debug_assert!` statements\
+        \n\
+        \nDefaults to `false` unless the Lake `buildType` is `debug`." }
 
 @[builtin_term_elab Lean.Parser.Term.debugAssert]
 def elabDebugAssert : TermElab :=
@@ -664,13 +663,12 @@ def elabUnsafe : TermElab := fun stx expectedType? =>
       modifyEnv (markMeta · implName)
     setInlineAttribute unsafeFn .alwaysInline
     compileDecls #[unsafeFn]
-    addDecl <| Declaration.opaqueDecl {
-      name := implName
-      type := unsafeDefn.type
-      levelParams := unsafeDefn.levelParams
-      value := (← mkOfNonempty unsafeDefn.type)
-      isUnsafe := false
-    }
+    addDecl <| Declaration.opaqueDecl
+      { name := implName
+        type := unsafeDefn.type
+        levelParams := unsafeDefn.levelParams
+        value := (← mkOfNonempty unsafeDefn.type)
+        isUnsafe := false }
     setImplementedBy implName unsafeFn
     return mkAppN (Lean.mkConst implName unsafeLvls) t.getAppArgs
   | _ =>

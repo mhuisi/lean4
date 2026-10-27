@@ -412,13 +412,13 @@ theorem Poly.insert_k_eq (k : Int) (v : Var) (p : Poly) : p.insert_k k v = p.ins
       = _
     have hz : (Int.add k k' == 0) = Int.beqZero_k (Int.add_k k k') := by
       rw [Int.beqZero_k_eq, Int.add_k_eq]
-    show _
-      = (bif Nat.blt v' v then
-           .add k v (.add k' v' p)
-         else bif Nat.beq v v' then
-           (if (Int.add k k' == 0) = true then p else .add (Int.add k k') v' p)
-         else
-           .add k' v' (p.insert k v))
+    show
+      _ = (bif Nat.blt v' v then
+             .add k v (.add k' v' p)
+           else bif Nat.beq v v' then
+             (if (Int.add k k' == 0) = true then p else .add (Int.add k k') v' p)
+           else
+             .add k' v' (p.insert k v))
     rw [ih, hz, show Int.add k k' = Int.add_k k k' by rw [Int.add_k_eq]]
     cases Nat.blt v' v <;> cases Nat.beq v v' <;> cases Int.beqZero_k (Int.add_k k k') <;> rfl
 

@@ -43,14 +43,15 @@ def mkSymSimpAttr
     (attrName : Name) (attrDescr : String) (ext : SymSimpExtension)
     (ref : Name := by exact decl_name%)
     : IO Unit :=
-  registerBuiltinAttribute {
-    ref := ref
-    name := attrName
-    descr := attrDescr
-    applicationTime := AttributeApplicationTime.afterCompilation
-    add := fun declName _ attrKind => do discard <| (addSymSimpDecl ext declName attrKind).run {} {}
-    erase := fun _declName => do throwError "Erasing `Sym.simp` attributes is not supported yet."
-  }
+  registerBuiltinAttribute
+    { ref := ref
+      name := attrName
+      descr := attrDescr
+      applicationTime := AttributeApplicationTime.afterCompilation
+      add := fun declName _ attrKind => do
+        discard <| (addSymSimpDecl ext declName attrKind).run {} {}
+      erase := fun _declName => do
+        throwError "Erasing `Sym.simp` attributes is not supported yet." }
 
 /--
 Registers a named `Sym.Simp` theorem set. Each set gets its own attribute

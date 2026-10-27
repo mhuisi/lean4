@@ -211,12 +211,11 @@ def mkBRecOn (ctx : Context) : MetaM Unit := do
           let vars := ctx.params ++ ctx.motives ++ majors ++ newMinors
           let proof ← mkLambdaFVars vars proof
           let type ← mkForallFVars vars type
-          addDecl <| .thmDecl {
-            name := ctx.brecOnNames[i]!
-            levelParams := ctx.levelParams
-            type := type
-            value := proof
-          }
+          addDecl <| .thmDecl
+            { name := ctx.brecOnNames[i]!
+              levelParams := ctx.levelParams
+              type := type
+              value := proof }
 
 /-- Generates the auxiliary lemmas `below` and `brecOn` for a recursive inductive predicate. -/
 public def mkBelow (indName : Name) : MetaM Unit :=
@@ -244,17 +243,16 @@ public def mkBelow (indName : Name) : MetaM Unit :=
       let brecOnNames :=
         indVal.all.toArray.map (· ++ `brecOn)
           ++ (Array.range' 1 indVal.numNested).map (indVal.all.head! ++ `brecOn).appendIndexAfter
-      let ctx := {
-        levelParams,
-        largeElim,
-        params,
-        motives,
-        motiveToIdx,
-        minors,
-        recNames,
-        belowNames,
-        brecOnNames
-      }
+      let ctx :=
+        { levelParams,
+          largeElim,
+          params,
+          motives,
+          motiveToIdx,
+          minors,
+          recNames,
+          belowNames,
+          brecOnNames }
       mkBelowInductives ctx
       mkBRecOn ctx
 
@@ -372,11 +370,10 @@ public partial def mkBelowMatcher
           let (newLHS, newDeclsAdd) ← addBelowPattern belowName i lhssArray[j]
           newLHSs := newLHSs.push newLHS
           newDecls := newDecls.modify j (· ++ newDeclsAdd)
-        input := {
-          input with
-          discrInfos := input.discrInfos.insertIdx! (i + 1) {}
-          lhss := newLHSs.toList
-        }
+        input :=
+          { input with
+            discrInfos := input.discrInfos.insertIdx! (i + 1) {}
+            lhss := newLHSs.toList }
         matchTypeAdd := matchTypeAdd.push (i, belowName)
       if matchTypeAdd.isEmpty then
         return none

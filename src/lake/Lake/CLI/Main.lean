@@ -134,18 +134,17 @@ def LakeOptions.computeEnv (opts : LakeOptions) : EIO CliError Lake.Env := do
 public def LakeOptions.mkLoadConfig (opts : LakeOptions) : EIO CliError LoadConfig := do
   let some wsDir ← resolvePath? opts.rootDir
     | throw <| .missingRootDir opts.rootDir
-  return {
-    lakeArgs? := opts.args.toArray
-    lakeEnv := ← opts.computeEnv
-    wsDir
-    relConfigFile := opts.configFile
-    packageOverrides := opts.packageOverrides
-    lakeOpts := opts.configOpts
-    leanOpts := Lean.Options.empty
-    reconfigure := opts.reconfigure
-    updateDeps := opts.updateDeps
-    updateToolchain := opts.updateToolchain
-  }
+  return
+    { lakeArgs? := opts.args.toArray
+      lakeEnv := ← opts.computeEnv
+      wsDir
+      relConfigFile := opts.configFile
+      packageOverrides := opts.packageOverrides
+      lakeOpts := opts.configOpts
+      leanOpts := Lean.Options.empty
+      reconfigure := opts.reconfigure
+      updateDeps := opts.updateDeps
+      updateToolchain := opts.updateToolchain }
 
 /-- Make a `BuildConfig` from a `LakeOptions`. -/
 def LakeOptions.mkBuildConfig
@@ -281,10 +280,8 @@ def flushLinterOptions : CliM PUnit := do
   modifyThe LakeOptions fun opts => { opts with builtinLint.linterOverrides := #[] }
 
 def modifyLintOnlyFlag (b : Bool) : CliM PUnit := do
-  modifyThe LakeOptions fun opts => {
-    opts with
-    builtinLint := { opts.builtinLint with lintOnly := b }
-  }
+  modifyThe LakeOptions fun opts =>
+    { opts with builtinLint := { opts.builtinLint with lintOnly := b } }
 
 /--
 Parses a comma-separated list of Boolean-valued `Lean.Option` names.
@@ -303,21 +300,18 @@ def parseLintersSpec (spec : String) : CliM PUnit := do
     if s.startsWith "." then
       s := "linter" ++ s
     entries := entries.push (s.toName, optionValue)
-  modifyThe LakeOptions fun opts => {
-    opts with
-    runBuiltinLint := true
-    builtinLint.linterOverrides := opts.builtinLint.linterOverrides ++ entries
-  }
+  modifyThe LakeOptions fun opts =>
+    { opts with
+      runBuiltinLint := true
+      builtinLint.linterOverrides := opts.builtinLint.linterOverrides ++ entries }
 
 def setShakeAddDownstream (opt : String) (isExported : Bool) : CliM PUnit := do
   let mod ← takeOptArg opt "module to add"
   if (← getThe LakeOptions).shake.addDownstream?.isSome then
     error
       "at most one of `--add-downstream` and `--add-public-downstream` can be used, and only once"
-  modifyThe LakeOptions fun opts => {
-    opts with
-    shake.addDownstream? := some { module := mod.toName, isExported }
-  }
+  modifyThe LakeOptions fun opts =>
+    { opts with shake.addDownstream? := some { module := mod.toName, isExported } }
 
 def lakeLongOption : (opt : String) → CliM PUnit
   | "--quiet" =>
@@ -408,10 +402,8 @@ def lakeLongOption : (opt : String) → CliM PUnit
   | "--packages" => do
     let file ← takeOptArg "--packages" "package overrides file"
     let overrides ← Manifest.loadEntries file
-    modifyThe LakeOptions fun opts => {
-      opts with
-      packageOverrides := opts.packageOverrides ++ overrides
-    }
+    modifyThe LakeOptions fun opts =>
+      { opts with packageOverrides := opts.packageOverrides ++ overrides }
   | "--dir" => do
     let rootDir ← takeOptArg "--dir" "path"
     modifyThe LakeOptions ({ · with rootDir })
@@ -454,13 +446,12 @@ def lakeLongOption : (opt : String) → CliM PUnit
       let s := raw.trimAscii
       unless s.isEmpty do
         checks := checks.push s.toName
-    modifyThe LakeOptions fun opts => {
-      opts with
-      runBuiltinLint := true
-      builtinOnly := true
-      builtinLint.checks := opts.builtinLint.checks ++ checks
-      builtinLint.mode := .codeQuality
-    }
+    modifyThe LakeOptions fun opts =>
+      { opts with
+        runBuiltinLint := true
+        builtinOnly := true
+        builtinLint.checks := opts.builtinLint.checks ++ checks
+        builtinLint.mode := .codeQuality }
   -- Samply options
   | "--raw" =>
     modifyThe LakeOptions ({ · with samplyRaw := true })
@@ -488,10 +479,8 @@ def lakeLongOption : (opt : String) → CliM PUnit
     modifyThe LakeOptions ({ · with shake.fix := true })
   | "--only" => do
     let mod ← takeOptArg "--only" "minimize only this module"
-    modifyThe LakeOptions fun opts => {
-      opts with
-      shake.onlyMods := opts.shake.onlyMods.push mod.toName
-    }
+    modifyThe LakeOptions fun opts =>
+      { opts with shake.onlyMods := opts.shake.onlyMods.push mod.toName }
   | "--add-downstream" =>
     setShakeAddDownstream "--add-downstream" (isExported := false)
   | "--add-public-downstream" =>
@@ -517,11 +506,10 @@ def lakeLongOption : (opt : String) → CliM PUnit
     throw <| CliError.unknownLongOption opt
 
 def lakeOption :=
-  option {
-    short := lakeShortOption
-    long := lakeLongOption
-    longShort := shortOptionWithArg lakeShortOption
-  }
+  option
+    { short := lakeShortOption
+      long := lakeLongOption
+      longShort := shortOptionWithArg lakeShortOption }
 
 /-! ## Actions -/
 
@@ -1466,19 +1454,18 @@ protected def reservoirConfig : CliM PUnit := do
       pkg.licenseFiles.filterMapM fun relPath => do
         return if (← (pkg.dir / relPath).pathExists) then some relPath else none
     let readmeFile := if (← pkg.readmeFile.pathExists) then some pkg.relReadmeFile else none
-    let cfg : ReservoirConfig := {
-      name := pkg.baseName.toString
-      version := pkg.version
-      versionTags := repoTags.filter pkg.versionTags.matches
-      description := pkg.description
-      homepage := pkg.homepage
-      keywords := pkg.keywords
-      platformIndependent := pkg.platformIndependent
-      license := pkg.license
-      licenseFiles := licenseFiles
-      readmeFile := readmeFile
-      doIndex := pkg.reservoir
-    }
+    let cfg : ReservoirConfig :=
+      { name := pkg.baseName.toString
+        version := pkg.version
+        versionTags := repoTags.filter pkg.versionTags.matches
+        description := pkg.description
+        homepage := pkg.homepage
+        keywords := pkg.keywords
+        platformIndependent := pkg.platformIndependent
+        license := pkg.license
+        licenseFiles := licenseFiles
+        readmeFile := readmeFile
+        doIndex := pkg.reservoir }
     IO.println (toJson cfg).pretty
 
 protected def versionTags : CliM PUnit := do

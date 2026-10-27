@@ -80,10 +80,8 @@ private def updateHasFwdDeps (pinfo : Array ParamInfo) (backDeps : Array Nat) : 
     pinfo.mapIdx fun i info =>
       if info.hasFwdDeps then
         info
-      else if backDeps.contains i then {
-        info with
-        hasFwdDeps := true
-      }
+      else if backDeps.contains i then
+        { info with hasFwdDeps := true }
       else
         info
 
@@ -125,15 +123,15 @@ private def getFunInfoAux (fn : Expr) (maxArgs? : Option Nat) : MetaM FunInfo :=
           let isInstance := className?.isSome && !decl.binderInfo.isExplicit
           paramInfo := updateHasFwdDeps paramInfo backDeps
           paramInfo :=
-            paramInfo.push {
-              backDeps
-              dependsOnHigherOrderOutParam
-              isInstance
-              binderInfo := decl.binderInfo
-              isProp := (← isProp decl.type)
-              isDecInst :=
-                (← forallTelescopeReducing decl.type fun _ type => return type.isAppOf ``Decidable)
-            }
+            paramInfo.push
+              { backDeps
+                dependsOnHigherOrderOutParam
+                isInstance
+                binderInfo := decl.binderInfo
+                isProp := (← isProp decl.type)
+                isDecInst :=
+                  (← forallTelescopeReducing decl.type fun _ type =>
+                    return type.isAppOf ``Decidable) }
           if isInstance then
             /- Collect higher order output parameters of this class IF `isInstance` is `true` -/
             let some className := className?

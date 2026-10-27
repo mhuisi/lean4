@@ -43,27 +43,23 @@ builtin_initialize labelExtensionMapRef : IO.Ref LabelExtensionMap ← IO.mkRef 
 
 /-- Helper function for `registerLabelAttr`. -/
 def mkLabelExt (name : Name := by exact decl_name%) : IO LabelExtension :=
-  registerSimpleScopedEnvExtension {
-    name := name
-    initial := #[]
-    addEntry := fun d e => if d.contains e then d else d.push e
-  }
+  registerSimpleScopedEnvExtension
+    { name := name, initial := #[], addEntry := fun d e => if d.contains e then d else d.push e }
 
 /-- Helper function for `registerLabelAttr`. -/
 def mkLabelAttr
     (attrName : Name) (attrDescr : String) (ext : LabelExtension)
     (ref : Name := by exact decl_name%)
     : IO Unit :=
-  registerBuiltinAttribute {
-    ref := ref
-    name := attrName
-    descr := attrDescr
-    applicationTime := AttributeApplicationTime.afterCompilation
-    add := fun declName _ kind => ext.add declName kind
-    erase := fun declName => do
-      let s := ext.getState (← getEnv)
-      modifyEnv fun env => ext.modifyState env fun _ => s.erase declName
-  }
+  registerBuiltinAttribute
+    { ref := ref
+      name := attrName
+      descr := attrDescr
+      applicationTime := AttributeApplicationTime.afterCompilation
+      add := fun declName _ kind => ext.add declName kind
+      erase := fun declName => do
+        let s := ext.getState (← getEnv)
+        modifyEnv fun env => ext.modifyState env fun _ => s.erase declName }
 
 /--
 Construct a new "label attribute",

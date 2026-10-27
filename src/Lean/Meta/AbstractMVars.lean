@@ -69,12 +69,11 @@ private partial def abstractLevelMVars (u : Level) : M Level := do
         | none =>
           let paramId := Name.mkNum `_abstMVar s.nextParamIdx
           let u := mkLevelParam paramId
-          modify fun s => {
-            s with
-            nextParamIdx := s.nextParamIdx + 1
-            lmap := s.lmap.insert mvarId u
-            paramNames := s.paramNames.push paramId
-          }
+          modify fun s =>
+            { s with
+              nextParamIdx := s.nextParamIdx + 1
+              lmap := s.lmap.insert mvarId u
+              paramNames := s.paramNames.push paramId }
           return u
 
 /-- Abstracts metavariables in `e`. Assumes `instantiateMVars` has been applied to `e`. -/
@@ -122,13 +121,12 @@ partial def abstractExprMVars (e : Expr) : M Expr := do
               pure <| (`x).appendIndexAfter (← get).fvars.size
             else
               pure decl.userName
-          modify fun s => {
-            s with
-            emap := s.emap.insert mvarId fvar
-            fvars := s.fvars.push fvar
-            mvars := s.mvars.push e
-            lctx := s.lctx.mkLocalDecl fvarId userName type
-          }
+          modify fun s =>
+            { s with
+              emap := s.emap.insert mvarId fvar
+              fvars := s.fvars.push fvar
+              mvars := s.mvars.push e
+              lctx := s.lctx.mkLocalDecl fvarId userName type }
           return fvar
 
 end AbstractMVars
@@ -160,12 +158,8 @@ def abstractMVars (e : Expr) (levels : Bool := true) : MetaM AbstractMVarsResult
   let e ← instantiateMVars e
   let (e, s) :=
     AbstractMVars.abstractExprMVars e
-      |>.run {
-        mctx := (← getMCtx)
-        lctx := (← getLCtx)
-        ngen := (← getNGen)
-        abstractLevels := levels
-      }
+      |>.run
+        { mctx := (← getMCtx), lctx := (← getLCtx), ngen := (← getNGen), abstractLevels := levels }
   setNGen s.ngen
   setMCtx s.mctx
   let e := s.lctx.mkLambda s.fvars e

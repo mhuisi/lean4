@@ -61,10 +61,8 @@ def CodeWithInfos.mergePosMap
 
 def CodeWithInfos.pretty (tt : CodeWithInfos) := tt.stripTags
 
-def SubexprInfo.withDiffTag (tag : DiffTag) (c : SubexprInfo) : SubexprInfo := {
-  c with
-  diffStatus? := some tag
-}
+def SubexprInfo.withDiffTag (tag : DiffTag) (c : SubexprInfo) : SubexprInfo :=
+  { c with diffStatus? := some tag }
 
 /-- Tags pretty-printed code with infos from the delaborator. -/
 partial def tagCodeInfos
@@ -78,10 +76,8 @@ where
       | none =>
         go subTt
       | some i =>
-        let t : SubexprInfo := {
-          info := ← WithRpcRef.mk { ctx, info := i, children := .empty }
-          subexprPos := n
-        }
+        let t : SubexprInfo :=
+          { info := ← WithRpcRef.mk { ctx, info := i, children := .empty }, subexprPos := n }
         return TaggedText.tag t (← go subTt)
 
 open PrettyPrinter Delaborator in
@@ -95,15 +91,14 @@ def ppExprTagged (e : Expr) (delab : Delab := Delaborator.delab) : MetaM CodeWit
     return .text (toString e)
   let ⟨fmt, infos⟩ ← PrettyPrinter.ppExprWithInfos e (delab := delab)
   let tt := TaggedText.prettyTagged fmt
-  let ctx := {
-    env := (← getEnv)
-    mctx := (← getMCtx)
-    options := (← getOptions)
-    currNamespace := (← getCurrNamespace)
-    openDecls := (← getOpenDecls)
-    fileMap := default
-    ngen := (← getNGen)
-  }
+  let ctx :=
+    { env := (← getEnv)
+      mctx := (← getMCtx)
+      options := (← getOptions)
+      currNamespace := (← getCurrNamespace)
+      openDecls := (← getOpenDecls)
+      fileMap := default
+      ngen := (← getNGen) }
   tagCodeInfos ctx infos tt
 
 end Lean.Widget

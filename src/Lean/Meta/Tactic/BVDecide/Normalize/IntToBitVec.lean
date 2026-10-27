@@ -92,10 +92,8 @@ public def addIntToBitVecLemmas (goal : MVarId) (methods : Sym.Simp.Methods)
       return .solved proof
     else
       Sym.Simp.dischargeNone
-  return {
-    methods with
-    pre := methods.pre >> intToBvThms.rewrite (d := discharge) >> toBitVecOfNatProc
-  }
+  return
+    { methods with pre := methods.pre >> intToBvThms.rewrite (d := discharge) >> toBitVecOfNatProc }
 where
   /--
   Builds an expression of type: `System.Platform.numBits = const` from the hypotheses in the context

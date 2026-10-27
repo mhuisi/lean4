@@ -102,11 +102,8 @@ partial def replayConstant (name : Name) : M Unit := do
           let nparams := info.numParams
           let all ← info.all.mapM fun n => do pure <| ((← read).newConstants[n]!)
           for o in all do
-            modify fun s => {
-              s with
-              remaining := s.remaining.erase o.name
-              pending := s.pending.erase o.name
-            }
+            modify fun s =>
+              { s with remaining := s.remaining.erase o.name, pending := s.pending.erase o.name }
           let ctorInfo ←
             all.mapM fun ci => do
               pure (ci, ← ci.inductiveVal!.ctors.mapM fun n => do pure ((← read).newConstants[n]!))
@@ -115,20 +112,17 @@ partial def replayConstant (name : Name) : M Unit := do
             for ctor in ctors do
               replayConstants ctor.getUsedConstantsAsSet
           let types : List InductiveType :=
-            ctorInfo.map fun ⟨ci, ctors⟩ => {
-              name := ci.name
-              type := ci.type
-              ctors := ctors.map fun ci => { name := ci.name, type := ci.type }
-            }
+            ctorInfo.map fun ⟨ci, ctors⟩ =>
+              { name := ci.name
+                type := ci.type
+                ctors := ctors.map fun ci => { name := ci.name, type := ci.type } }
           addDecl (Declaration.inductDecl lparams nparams types false)
         -- We postpone checking constructors,
         -- and at the end make sure they are identical
         -- to the constructors generated when we replay the inductives.
         | .ctorInfo info =>
-          modify fun s => {
-            s with
-            postponedConstructors := s.postponedConstructors.insert info.name
-          }
+          modify fun s =>
+            { s with postponedConstructors := s.postponedConstructors.insert info.name }
         -- Similarly we postpone checking recursors.
         | .recInfo info =>
           modify fun s => { s with postponedRecursors := s.postponedRecursors.insert info.name }

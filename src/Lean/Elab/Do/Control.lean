@@ -250,14 +250,13 @@ def EffectForwarder.ofCont (info : ControlInfo) (dec : DoElemCont) : DoElabM Eff
   if needContinue then
     continueBase? := some controlStack
     controlStack := ControlStack.continueT mi controlStack
-  return {
-    origCont := dec
-    returnBase?
-    breakBase?
-    continueBase?
-    liftedStack := controlStack
-    liftedDoBlockResultType := (← controlStack.stM dec.resultType)
-  }
+  return
+    { origCont := dec
+      returnBase?
+      breakBase?
+      continueBase?
+      liftedStack := controlStack
+      liftedDoBlockResultType := (← controlStack.stM dec.resultType) }
 
 /--
 Elaborate `elabElem` in the lifted stack: install `break`/`continue`/`return`
@@ -290,11 +289,8 @@ def EffectForwarder.lift (l : EffectForwarder) (elabElem : DoElemCont → DoElab
     | some returnBase => { oldReturnCont with k := returnBase.mkReturn }
     | _ => oldReturnCont
   let contInfo := ContInfo.toContInfoRef { breakCont, continueCont, returnCont }
-  let pureCont := {
-    l.origCont with
-    k := l.liftedStack.mkPure l.origCont.resultName
-    kind := .duplicable
-  }
+  let pureCont :=
+    { l.origCont with k := l.liftedStack.mkPure l.origCont.resultName, kind := .duplicable }
   withReader (fun ctx => { ctx with contInfo, doBlockResultType := l.liftedDoBlockResultType }) do
     elabElem pureCont
 

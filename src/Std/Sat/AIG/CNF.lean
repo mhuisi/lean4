@@ -221,8 +221,7 @@ def Cache.cast
   -- Crucial: never refer to `aig1` here so it can be erased at runtime.
   have hsize := hprefix.size_le
   have hmarks := cache.hmarks
-  {
-    marks := cache.marks ++ Array.replicate (aig2.decls.size - cache.marks.size) false
+  { marks := cache.marks ++ Array.replicate (aig2.decls.size - cache.marks.size) false
     hmarks := by simp; omega
     inv := by
       intro assign heval idx hbound hmarked
@@ -241,8 +240,7 @@ def Cache.cast
       have h2 : aig2.decls[i]'(by omega) = .atom a := by
         rw [hprefix.idx_eq i hi]
         exact hia
-      rw [projectLeftAssign_atom h2, projectLeftAssign_atom hia]
-  }
+      rw [projectLeftAssign_atom h2, projectLeftAssign_atom hia] }
 
 /-- Add a `Decl.false` to a `Cache`. -/
 def Cache.addFalse
@@ -250,22 +248,21 @@ def Cache.addFalse
     (idx : Nat) (h : idx < aig.decls.size) (htip : aig.decls[idx]'h = .false)
     : {out : Cache aig (cnf ++ Decl.falseToCNF idx) // Cache.IsExtensionBy cache out idx h} :=
   have hmarkbound : idx < cache.marks.size := by have := cache.hmarks; omega
-  let out := {
-    cache with
-    marks := cache.marks.set idx true
-    hmarks := by simp [cache.hmarks]
-    inv := by
-      intro assign heval idx hbound hmarked
-      rw [Array.getElem_set] at hmarked
-      split at hmarked
-      next heq =>
-        simp [heq] at htip heval
-        simp [denote_idx_false htip, heval]
-      next heq =>
-        simp only [CNF.eval_append, Decl.falseToCNF_eval, Bool.and_eq_true, beq_iff_eq] at heval
-        have := cache.inv assign heval.left idx hbound hmarked
-        rw [this]
-  }
+  let out :=
+    { cache with
+      marks := cache.marks.set idx true
+      hmarks := by simp [cache.hmarks]
+      inv := by
+        intro assign heval idx hbound hmarked
+        rw [Array.getElem_set] at hmarked
+        split at hmarked
+        next heq =>
+          simp [heq] at htip heval
+          simp [denote_idx_false htip, heval]
+        next heq =>
+          simp only [CNF.eval_append, Decl.falseToCNF_eval, Bool.and_eq_true, beq_iff_eq] at heval
+          have := cache.inv assign heval.left idx hbound hmarked
+          rw [this] }
   ⟨out, IsExtensionBy_set cache out idx hmarkbound (by simp [out])⟩
 
 /-- Add a `Decl.atom` to a cache. -/
@@ -274,19 +271,18 @@ def Cache.addAtom
     (idx : Nat) (h : idx < aig.decls.size) (htip : aig.decls[idx]'h = .atom a)
     : {out : Cache aig cnf // Cache.IsExtensionBy cache out idx h} :=
   have hmarkbound : idx < cache.marks.size := by have := cache.hmarks; omega
-  let out := {
-    cache with
-    marks := cache.marks.set idx true
-    hmarks := by simp [cache.hmarks]
-    inv := by
-      intro assign heval idx hbound hmarked
-      rw [Array.getElem_set] at hmarked
-      split at hmarked
-      next heq =>
-        subst heq
-        simp [denote_idx_atom htip, projectLeftAssign_atom htip]
-      next heq => exact cache.inv assign heval idx hbound hmarked
-  }
+  let out :=
+    { cache with
+      marks := cache.marks.set idx true
+      hmarks := by simp [cache.hmarks]
+      inv := by
+        intro assign heval idx hbound hmarked
+        rw [Array.getElem_set] at hmarked
+        split at hmarked
+        next heq =>
+          subst heq
+          simp [denote_idx_atom htip, projectLeftAssign_atom htip]
+        next heq => exact cache.inv assign heval idx hbound hmarked }
   ⟨out, IsExtensionBy_set cache out idx hmarkbound (by simp [out])⟩
 
 /-- Add a `Decl.gate` to a cache. -/
@@ -299,28 +295,27 @@ def Cache.addGate
       // Cache.IsExtensionBy cache out idx h} :=
   have := aig.hdag h htip
   have hmarkbound : idx < cache.marks.size := by have := cache.hmarks; omega
-  let out := {
-    cache with
-    marks := cache.marks.set idx true
-    hmarks := by simp [cache.hmarks]
-    inv := by
-      intro assign heval idx hbound hmarked
-      rw [Array.getElem_set] at hmarked
-      split at hmarked
-      next heq =>
-        simp only [heq, CNF.eval_append, Decl.gateToCNF_eval, Bool.and_eq_true, beq_iff_eq]
-          at htip heval
-        have hleval := cache.inv assign heval.left lhs.gate (by omega) hl
-        have hreval := cache.inv assign heval.left rhs.gate (by omega) hr
-        simp only [denote_idx_gate htip, Bool.bne_false, heval]
-        generalize lhs.invert = linv
-        generalize rhs.invert = rinv
-        cases linv <;> cases rinv <;> simp [hleval, hreval]
-      next heq =>
-        simp only [CNF.eval_append, Decl.gateToCNF_eval, Bool.and_eq_true, beq_iff_eq] at heval
-        have := cache.inv assign heval.left idx hbound hmarked
-        rw [this]
-  }
+  let out :=
+    { cache with
+      marks := cache.marks.set idx true
+      hmarks := by simp [cache.hmarks]
+      inv := by
+        intro assign heval idx hbound hmarked
+        rw [Array.getElem_set] at hmarked
+        split at hmarked
+        next heq =>
+          simp only [heq, CNF.eval_append, Decl.gateToCNF_eval, Bool.and_eq_true, beq_iff_eq]
+            at htip heval
+          have hleval := cache.inv assign heval.left lhs.gate (by omega) hl
+          have hreval := cache.inv assign heval.left rhs.gate (by omega) hr
+          simp only [denote_idx_gate htip, Bool.bne_false, heval]
+          generalize lhs.invert = linv
+          generalize rhs.invert = rinv
+          cases linv <;> cases rinv <;> simp [hleval, hreval]
+        next heq =>
+          simp only [CNF.eval_append, Decl.gateToCNF_eval, Bool.and_eq_true, beq_iff_eq] at heval
+          have := cache.inv assign heval.left idx hbound hmarked
+          rw [this] }
   ⟨out, IsExtensionBy_set cache out idx hmarkbound (by simp [out])⟩
 
 /-- Add an if-then-else gate to a cache. -/
@@ -343,29 +338,29 @@ def Cache.addIte
           ifFalse.invert)
       // Cache.IsExtensionBy cache out idx h} :=
   have hmarkbound : idx < cache.marks.size := by have := cache.hmarks; omega
-  let out := {
-    cache with
-    marks := cache.marks.set idx true
-    hmarks := by simp [cache.hmarks]
-    inv := by
-      intro assign heval idx hbound hmarked
-      rw [Array.getElem_set] at hmarked
-      split at hmarked
-      next heq =>
-        simp only [heq, CNF.eval_append, Decl.iteToCNF_eval, Bool.and_eq_true, beq_iff_eq] at heval
-        subst heq
-        have hceval := cache.inv assign heval.left cond.gate (by omega) hc
-        have hteval := cache.inv assign heval.left ifTrue.gate (by omega) ht
-        have hfeval := cache.inv assign heval.left ifFalse.gate (by omega) hf
-        have {fi : Fanin} {aig : AIG α} {h} {assign : α → Bool}
-            : ⟦aig, ⟨fi.gate, fi.invert, h⟩, assign⟧
-              = (⟦aig, ⟨fi.gate, false, h⟩, assign⟧ ^^ fi.invert) := by
-          cases fi.invert <;> simp
-        simp [hdenote, heval, this, hceval, hteval, hfeval]
-      next heq =>
-        simp only [CNF.eval_append, Decl.iteToCNF_eval, Bool.and_eq_true, beq_iff_eq] at heval
-        rw [cache.inv assign heval.left idx hbound hmarked]
-  }
+  let out :=
+    { cache with
+      marks := cache.marks.set idx true
+      hmarks := by simp [cache.hmarks]
+      inv := by
+        intro assign heval idx hbound hmarked
+        rw [Array.getElem_set] at hmarked
+        split at hmarked
+        next heq =>
+          simp only [heq, CNF.eval_append, Decl.iteToCNF_eval, Bool.and_eq_true, beq_iff_eq]
+            at heval
+          subst heq
+          have hceval := cache.inv assign heval.left cond.gate (by omega) hc
+          have hteval := cache.inv assign heval.left ifTrue.gate (by omega) ht
+          have hfeval := cache.inv assign heval.left ifFalse.gate (by omega) hf
+          have {fi : Fanin} {aig : AIG α} {h} {assign : α → Bool}
+              : ⟦aig, ⟨fi.gate, fi.invert, h⟩, assign⟧
+                = (⟦aig, ⟨fi.gate, false, h⟩, assign⟧ ^^ fi.invert) := by
+            cases fi.invert <;> simp
+          simp [hdenote, heval, this, hceval, hteval, hfeval]
+        next heq =>
+          simp only [CNF.eval_append, Decl.iteToCNF_eval, Bool.and_eq_true, beq_iff_eq] at heval
+          rw [cache.inv assign heval.left idx hbound hmarked] }
   ⟨out, IsExtensionBy_set cache out idx hmarkbound (by simp [out])⟩
 
 /--
@@ -759,15 +754,13 @@ where
             · exact hrstate
 
           let ⟨ret, hretstate⟩ := rstate.addGate upper h heq this.trueAt hrstate.trueAt
-          ⟨
-            ret,
+          ⟨ ret,
             by
               apply toCNF.State.IsExtensionBy_trans_right
               · exact hlstate
               · apply toCNF.State.IsExtensionBy_trans_right
                 · exact hrstate
-                · exact hretstate
-          ⟩
+                · exact hretstate ⟩
   termination_by upper
   decreasing_by all_goals omega
 

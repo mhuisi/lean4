@@ -79,11 +79,10 @@ def elabElabRules : CommandElab :=
   adaptRulesExpander fun stx =>
     match stx with
     | `($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind elab_rules $[: $cat?]? $[<= $expty?]? $alts:matchAlt*) =>
-      return (
-        none,
-        ← expandNoKindMacroRulesAux alts "elab_rules" fun kind? alts =>
-          `($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind elab_rules $[(kind := $(mkIdent <$> kind?))]? $[: $cat?]? $[<= $expty?]? $alts:matchAlt*)
-      )
+      return
+        ( none,
+          ← expandNoKindMacroRulesAux alts "elab_rules" fun kind? alts =>
+            `($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind elab_rules $[(kind := $(mkIdent <$> kind?))]? $[: $cat?]? $[<= $expty?]? $alts:matchAlt*) )
     | `($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind elab_rules (kind := $kind) $[: $cat?]? $[<= $expty?]? $alts:matchAlt*) =>
       do
         let k ← resolveSyntaxKind kind.getId

@@ -80,10 +80,9 @@ theorem Pos.posGE_offset {s : Slice} {p : s.Pos} : s.posGE p.offset (by simp) = 
 
 @[simp]
 theorem offset_posGE_eq_self_iff {s : Slice} {p : String.Pos.Raw} {h}
-    : (s.posGE p h).offset = p ↔ p.IsValidForSlice s := ⟨
-  fun h' => by simpa [h'] using (s.posGE p h).isValidForSlice,
-  fun h' => by simpa using congrArg Pos.offset (Pos.posGE_offset (p := s.pos p h'))
-⟩
+    : (s.posGE p h).offset = p ↔ p.IsValidForSlice s :=
+  ⟨ fun h' => by simpa [h'] using (s.posGE p h).isValidForSlice,
+    fun h' => by simpa using congrArg Pos.offset (Pos.posGE_offset (p := s.pos p h')) ⟩
 
 theorem posGE_eq_pos {s : Slice} {p : String.Pos.Raw} (h : p.IsValidForSlice s)
     : s.posGE p h.le_rawEndPos = s.pos p h := by
@@ -157,10 +156,9 @@ theorem Pos.posLE_offset {s : Slice} {p : s.Pos} : s.posLE p.offset = p := by
 
 @[simp]
 theorem offset_posLE_eq_self_iff {s : Slice} {p : String.Pos.Raw}
-    : (s.posLE p).offset = p ↔ p.IsValidForSlice s := ⟨
-  fun h' => by simpa [h'] using (s.posLE p).isValidForSlice,
-  fun h' => by simpa using congrArg Pos.offset (Pos.posLE_offset (p := s.pos p h'))
-⟩
+    : (s.posLE p).offset = p ↔ p.IsValidForSlice s :=
+  ⟨ fun h' => by simpa [h'] using (s.posLE p).isValidForSlice,
+    fun h' => by simpa using congrArg Pos.offset (Pos.posLE_offset (p := s.pos p h')) ⟩
 
 theorem posLE_eq_pos {s : Slice} {p : String.Pos.Raw} (h : p.IsValidForSlice s)
     : s.posLE p = s.pos p h := by
@@ -335,10 +333,9 @@ theorem Pos.posGE_offset {s : String} {p : s.Pos} : s.posGE p.offset (by simp) =
 
 @[simp]
 theorem offset_posGE_eq_self_iff {s : String} {p : String.Pos.Raw} {h}
-    : (s.posGE p h).offset = p ↔ p.IsValid s := ⟨
-  fun h' => by simpa [h'] using (s.posGE p h).isValid,
-  fun h' => by simpa using congrArg Pos.offset (Pos.posGE_offset (p := s.pos p h'))
-⟩
+    : (s.posGE p h).offset = p ↔ p.IsValid s :=
+  ⟨ fun h' => by simpa [h'] using (s.posGE p h).isValid,
+    fun h' => by simpa using congrArg Pos.offset (Pos.posGE_offset (p := s.pos p h')) ⟩
 
 theorem posGE_eq_pos {s : String} {p : String.Pos.Raw} (h : p.IsValid s)
     : s.posGE p h.le_rawEndPos = s.pos p h := by
@@ -419,10 +416,9 @@ theorem Pos.posLE_offset {s : String} {p : s.Pos} : s.posLE p.offset = p := by
 
 @[simp]
 theorem offset_posLE_eq_self_iff {s : String} {p : String.Pos.Raw}
-    : (s.posLE p).offset = p ↔ p.IsValid s := ⟨
-  fun h' => by simpa [h'] using (s.posLE p).isValid,
-  fun h' => by simpa using congrArg Pos.offset (Pos.posLE_offset (p := s.pos p h'))
-⟩
+    : (s.posLE p).offset = p ↔ p.IsValid s :=
+  ⟨ fun h' => by simpa [h'] using (s.posLE p).isValid,
+    fun h' => by simpa using congrArg Pos.offset (Pos.posLE_offset (p := s.pos p h')) ⟩
 
 theorem posLE_eq_pos {s : String} {p : String.Pos.Raw} (h : p.IsValid s)
     : s.posLE p = s.pos p h := by

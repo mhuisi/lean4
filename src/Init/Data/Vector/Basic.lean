@@ -350,10 +350,9 @@ def firstM {α : Type u} {m : Type v → Type w} [Alternative m] (f : α → m �
   xs.toArray.firstM f
 
 @[inline, expose]
-def flatten (xs : Vector (Vector α n) m) : Vector α (m * n) := ⟨
-  (xs.toArray.map Vector.toArray).flatten,
-  by rcases xs; simp_all [Function.comp_def, Array.map_const']
-⟩
+def flatten (xs : Vector (Vector α n) m) : Vector α (m * n) :=
+  ⟨ (xs.toArray.map Vector.toArray).flatten,
+    by rcases xs; simp_all [Function.comp_def, Array.map_const'] ⟩
 
 @[inline, expose]
 def flatMap (xs : Vector α n) (f : α → Vector β m) : Vector β (n * m) :=

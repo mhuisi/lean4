@@ -44,12 +44,11 @@ instance : ToJson ImportInfo where
 instance : FromJson ImportInfo where
   fromJson?
     | .arr #[moduleJson, isPrivateJson, isAllJson, isMetaJson] => do
-      return {
-        module := ← fromJson? moduleJson
-        isPrivate := ← fromJson? isPrivateJson
-        isAll := ← fromJson? isAllJson
-        isMeta := ← fromJson? isMetaJson
-      }
+      return
+        { module := ← fromJson? moduleJson
+          isPrivate := ← fromJson? isPrivateJson
+          isAll := ← fromJson? isAllJson
+          isMeta := ← fromJson? isMetaJson }
     | _ =>
       .error "Expected array, got other JSON type"
 
@@ -133,39 +132,36 @@ def DeclInfo.range (i : DeclInfo) : Lsp.Range :=
   ⟨⟨i.rangeStartPosLine, i.rangeStartPosCharacter⟩, ⟨i.rangeEndPosLine, i.rangeEndPosCharacter⟩⟩
 
 /-- Selection range of this parent decl. -/
-def DeclInfo.selectionRange (i : DeclInfo) : Lsp.Range := ⟨
-  ⟨i.selectionRangeStartPosLine, i.selectionRangeStartPosCharacter⟩,
-  ⟨i.selectionRangeEndPosLine, i.selectionRangeEndPosCharacter⟩
-⟩
+def DeclInfo.selectionRange (i : DeclInfo) : Lsp.Range :=
+  ⟨ ⟨i.selectionRangeStartPosLine, i.selectionRangeStartPosCharacter⟩,
+    ⟨i.selectionRangeEndPosLine, i.selectionRangeEndPosCharacter⟩ ⟩
 
 instance : ToJson DeclInfo where
   toJson i :=
-    Json.arr #[
-      i.rangeStartPosLine,
-      i.rangeStartPosCharacter,
-      i.rangeEndPosLine,
-      i.rangeEndPosCharacter,
-      i.selectionRangeStartPosLine,
-      i.selectionRangeStartPosCharacter,
-      i.selectionRangeEndPosLine,
-      i.selectionRangeEndPosCharacter
-    ]
+    Json.arr
+      #[i.rangeStartPosLine,
+        i.rangeStartPosCharacter,
+        i.rangeEndPosLine,
+        i.rangeEndPosCharacter,
+        i.selectionRangeStartPosLine,
+        i.selectionRangeStartPosCharacter,
+        i.selectionRangeEndPosLine,
+        i.selectionRangeEndPosCharacter]
 
 instance : FromJson DeclInfo where
   fromJson?
     | .arr xs => do
       if xs.size != 8 then
         throw s!"Expected list of length 8, not length {xs.size}"
-      return {
-        rangeStartPosLine := ← fromJson? xs[0]!
-        rangeStartPosCharacter := ← fromJson? xs[1]!
-        rangeEndPosLine := ← fromJson? xs[2]!
-        rangeEndPosCharacter := ← fromJson? xs[3]!
-        selectionRangeStartPosLine := ← fromJson? xs[4]!
-        selectionRangeStartPosCharacter := ← fromJson? xs[5]!
-        selectionRangeEndPosLine := ← fromJson? xs[6]!
-        selectionRangeEndPosCharacter := ← fromJson? xs[7]!
-      }
+      return
+        { rangeStartPosLine := ← fromJson? xs[0]!
+          rangeStartPosCharacter := ← fromJson? xs[1]!
+          rangeEndPosLine := ← fromJson? xs[2]!
+          rangeEndPosCharacter := ← fromJson? xs[3]!
+          selectionRangeStartPosLine := ← fromJson? xs[4]!
+          selectionRangeStartPosCharacter := ← fromJson? xs[5]!
+          selectionRangeEndPosLine := ← fromJson? xs[6]!
+          selectionRangeEndPosCharacter := ← fromJson? xs[7]! }
     | _ =>
       throw "Expected list"
 
@@ -236,10 +232,9 @@ instance : ToJson RefInfo where
       let range := [l.startPosLine, l.startPosCharacter, l.endPosLine, l.endPosCharacter].map toJson
       let parentDecl := l.parentDecl?.map ([toJson ·]) |>.getD []
       range ++ parentDecl
-    Json.mkObj [
-      ("definition", toJson $ i.definition?.map locationToList),
-      ("usages", toJson $ i.usages.map locationToList)
-    ]
+    Json.mkObj
+      [ ("definition", toJson $ i.definition?.map locationToList),
+        ("usages", toJson $ i.usages.map locationToList) ]
 
 instance : FromJson RefInfo where
   -- This implementation is optimized to prevent redundant intermediate allocations.
@@ -253,13 +248,12 @@ instance : FromJson RefInfo where
         let endPosLine ← fromJson? a[2]
         let endPosCharacter ← fromJson? a[3]
         if h' : a.size = 5 then
-          return {
-            startPosLine
-            startPosCharacter
-            endPosLine
-            endPosCharacter
-            parentDecl := ← fromJson? a[4]
-          }
+          return
+            { startPosLine
+              startPosCharacter
+              endPosLine
+              endPosCharacter
+              parentDecl := ← fromJson? a[4] }
         else
           return { startPosLine, startPosCharacter, endPosLine, endPosCharacter, parentDecl := "" }
     let definition? ← j.getObjValAs? (Option $ Array Json) "definition"

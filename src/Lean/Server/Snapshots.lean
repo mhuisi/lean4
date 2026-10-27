@@ -49,13 +49,12 @@ open Command in
 /-- Use the command state in the given snapshot to run a `CommandElabM`. -/
 def runCommandElabM (snap : Snapshot) (doc : DocumentMeta) (c : CommandElabM α)
     : EIO Exception α := do
-  let ctx : Command.Context := {
-    cmdPos := snap.stx.getPos? |>.getD 0
-    fileName := doc.uri
-    fileMap := doc.text
-    snap? := none
-    cancelTk? := none
-  }
+  let ctx : Command.Context :=
+    { cmdPos := snap.stx.getPos? |>.getD 0
+      fileName := doc.uri
+      fileMap := doc.text
+      snap? := none
+      cancelTk? := none }
   c.run ctx |>.run' snap.cmdState
 
 /-- Run a `CoreM` computation using the data in the given snapshot. -/

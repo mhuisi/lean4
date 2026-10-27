@@ -117,12 +117,11 @@ theorem endsWith_iff {pat s : Slice} : endsWith pat s ↔ ∃ t, s.copy = t ++ p
     simp only [size_toByteArray] at h₂
     simpa [Pos.Raw.byteIdx_unoffsetBy, byteIdx_rawEndPos, h₂] using pat.isValidUTF8
   · rintro ⟨t, rfl⟩
-    exact ⟨
-      by simp,
-      by
-        rw [Nat.sub_add_cancel (by simp)]
-        exact ByteArray.extract_append_eq_right (by simp) (by simp)
-    ⟩
+    exact
+      ⟨ by simp,
+        by
+          rw [Nat.sub_add_cancel (by simp)]
+          exact ByteArray.extract_append_eq_right (by simp) (by simp) ⟩
 
 theorem skipSuffix?_eq_some_iff {pat s : Slice} {pos : s.Pos}
     : skipSuffix? pat s = some pos ↔ (s.sliceFrom pos).copy = pat.copy := by

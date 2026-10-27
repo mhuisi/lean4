@@ -371,13 +371,12 @@ def addIntEquality (p : MetaProblem) (h x : Expr) : OmegaM MetaProblem := do
   let (lc, prf, facts) ← asLinearCombo x
   let newFacts : List Expr := facts.filter (p.processedFacts.contains · = false)
   trace[omega] "Adding proof of {lc} = 0"
-  pure <| {
-    p with
-    facts := newFacts ++ p.facts
-    problem :=
-      ← (p.problem.addEquality lc.const lc.coeffs (some do mkEqTrans (← mkEqSymm (← prf)) h))
-        |>.solveEqualities
-  }
+  pure <|
+    { p with
+      facts := newFacts ++ p.facts
+      problem :=
+        ← (p.problem.addEquality lc.const lc.coeffs (some do mkEqTrans (← mkEqSymm (← prf)) h))
+          |>.solveEqualities }
 
 /--
 Add an integer inequality to the `Problem`.
@@ -388,13 +387,13 @@ def addIntInequality (p : MetaProblem) (h y : Expr) : OmegaM MetaProblem := do
   let (lc, prf, facts) ← asLinearCombo y
   let newFacts : List Expr := facts.filter (p.processedFacts.contains · = false)
   trace[omega] "Adding proof of {lc} ≥ 0"
-  pure <| {
-    p with
-    facts := newFacts ++ p.facts
-    problem :=
-      ← (p.problem.addInequality lc.const lc.coeffs (some do mkAppM ``le_of_le_of_eq #[h, (← prf)]))
-        |>.solveEqualities
-  }
+  pure <|
+    { p with
+      facts := newFacts ++ p.facts
+      problem :=
+        ← (p.problem.addInequality lc.const lc.coeffs
+            (some do mkAppM ``le_of_le_of_eq #[h, (← prf)]))
+          |>.solveEqualities }
 
 /-- Given a fact `h` with type `¬ P`, return a more useful fact obtained by pushing the negation. -/
 def pushNot (h P : Expr) : MetaM (Option Expr) := do

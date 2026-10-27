@@ -315,11 +315,10 @@ private def mkForInLoopGadget
       -- `WhileInvariant.mk` keeps the clause's declared type on the term. A bare lambda carries the
       -- unfolded type, and a specification's instance arguments are synthesized before the check that
       -- would unfold it.
-      return (
-        (invClause : Syntax),
-        ← `($(mkIdent ``Std.WP.WhileInvariant.mk)
-          fun $exitVar:ident $(g.statePat) => $(← g.wrapErasedProjs invBody))
-      )
+      return
+        ( (invClause : Syntax),
+          ← `($(mkIdent ``Std.WP.WhileInvariant.mk)
+            fun $exitVar:ident $(g.statePat) => $(← g.wrapErasedProjs invBody)) )
   let varArg? ←
     dec?.mapM fun decClause => do
       let (binders, body) ←
@@ -417,10 +416,9 @@ def elabDoFor : DoElab := fun stx dec => do
   let s ← mkFreshUserName `__s
   let xh : Array (Name × (Array Expr → DoElabM Expr)) :=
     match h?, p? with
-    | some h, some d => #[
-      (x.getId, fun _ => pure α),
-      (h.getId, fun x => pure (mkApp5 (mkConst ``Membership.mem [uα, uρ]) α ρ d xs x[0]!))
-    ]
+    | some h, some d =>
+      #[(x.getId, fun _ => pure α),
+        (h.getId, fun x => pure (mkApp5 (mkConst ``Membership.mem [uα, uρ]) α ρ d xs x[0]!))]
     | _, _ =>
       #[(x.getId, fun _ => pure α)]
 
@@ -442,13 +440,12 @@ def elabDoFor : DoElab := fun stx dec => do
                 let (tuple, _tupleTy) ← mkProdMkN (← useLoopMutVars none) mi.u
                 let done := mkApp2 (mkConst ``ForInStep.done [mi.u]) σ tuple
                 mkPureApp newDoBlockResultType done
-              let returnCont := {
-                oldReturnCont with
-                k := fun e => do
-                  let (tuple, _tupleTy) ← mkProdMkN (← useLoopMutVars (some e)) mi.u
-                  let done := mkApp2 (mkConst ``ForInStep.done [mi.u]) σ tuple
-                  mkPureApp newDoBlockResultType done
-              }
+              let returnCont :=
+                { oldReturnCont with
+                  k := fun e => do
+                    let (tuple, _tupleTy) ← mkProdMkN (← useLoopMutVars (some e)) mi.u
+                    let done := mkApp2 (mkConst ``ForInStep.done [mi.u]) σ tuple
+                    mkPureApp newDoBlockResultType done }
               enterLoopBody breakCont continueCont returnCont do
                 -- Elaborate the loop body, which must have result type `PUnit`, just like the whole `for` loop.
                 elabDoSeq body { dec with k := continueCont, kind := .duplicable }
@@ -457,14 +454,13 @@ def elabDoFor : DoElab := fun stx dec => do
   -- termination the program has to state.
   let mut forIn := mkApp app body
   unless inv?.isNone && dec?.isNone do
-    let g : ForInApp := {
-      xs
-      init := preS
-      body
-      σ
-      statePat := ← mkStatePat loopMutVars info.returnsEarly
-      erasedMutVars := loopMutVars.filter (·.erased)
-    }
+    let g : ForInApp :=
+      { xs
+        init := preS
+        body
+        σ
+        statePat := ← mkStatePat loopMutVars info.returnsEarly
+        erasedMutVars := loopMutVars.filter (·.erased) }
     if (← instantiateMVars ρ).isConstOf ``Lean.Loop then
       if let some e ← mkForInLoopGadget g inv? dec? then forIn := e
     else if let some decClause := dec? then

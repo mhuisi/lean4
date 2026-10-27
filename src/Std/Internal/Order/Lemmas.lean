@@ -166,22 +166,18 @@ theorem join_assoc : (P ⊔ Q) ⊔ R = P ⊔ (Q ⊔ R) :=
     (join_le _ _ _ (le_join_of_le_left (left_le_join _ _))
       (join_le _ _ _ (le_join_of_le_left (right_le_join _ _)) (right_le_join _ _)))
 
-theorem le_iff_meet_eq_right : (P ⊑ Q) ↔ Q ⊓ P = P := ⟨
-  fun h => rel_antisymm (meet_le_right _ _) (le_meet _ _ _ h rel_refl),
-  fun h => h ▸ meet_le_left _ _
-⟩
-theorem le_iff_meet_eq_left : (P ⊑ Q) ↔ P ⊓ Q = P := ⟨
-  fun h => rel_antisymm (meet_le_left _ _) (le_meet _ _ _ rel_refl h),
-  fun h => h ▸ meet_le_right _ _
-⟩
-theorem le_iff_join_eq_left : (P ⊑ Q) ↔ Q ⊔ P = Q := ⟨
-  fun h => rel_antisymm (join_le _ _ _ rel_refl h) (left_le_join _ _),
-  fun h => h ▸ right_le_join _ _
-⟩
-theorem le_iff_join_eq_right : (P ⊑ Q) ↔ P ⊔ Q = Q := ⟨
-  fun h => rel_antisymm (join_le _ _ _ h rel_refl) (right_le_join _ _),
-  fun h => h ▸ left_le_join _ _
-⟩
+theorem le_iff_meet_eq_right : (P ⊑ Q) ↔ Q ⊓ P = P :=
+  ⟨ fun h => rel_antisymm (meet_le_right _ _) (le_meet _ _ _ h rel_refl),
+    fun h => h ▸ meet_le_left _ _ ⟩
+theorem le_iff_meet_eq_left : (P ⊑ Q) ↔ P ⊓ Q = P :=
+  ⟨ fun h => rel_antisymm (meet_le_left _ _) (le_meet _ _ _ rel_refl h),
+    fun h => h ▸ meet_le_right _ _ ⟩
+theorem le_iff_join_eq_left : (P ⊑ Q) ↔ Q ⊔ P = Q :=
+  ⟨ fun h => rel_antisymm (join_le _ _ _ rel_refl h) (left_le_join _ _),
+    fun h => h ▸ right_le_join _ _ ⟩
+theorem le_iff_join_eq_right : (P ⊑ Q) ↔ P ⊔ Q = Q :=
+  ⟨ fun h => rel_antisymm (join_le _ _ _ h rel_refl) (right_le_join _ _),
+    fun h => h ▸ left_le_join _ _ ⟩
 
 theorem top_meet : (⊤ : l) ⊓ P = P :=
   rel_antisymm (meet_le_right _ _) (le_meet _ _ _ (le_top _) rel_refl)
@@ -211,14 +207,12 @@ theorem meet_right_comm : (P ⊓ Q) ⊓ R = (P ⊓ R) ⊓ Q := by
 
 theorem le_top_iff : (Q ⊑ (⊤ : l)) ↔ True := iff_true_intro (le_top _)
 theorem bot_le_iff : ((⊥ : l) ⊑ Q) ↔ True := iff_true_intro (bot_le _)
-theorem join_le_iff : (P ⊔ Q ⊑ R) ↔ (P ⊑ R ∧ Q ⊑ R) := ⟨
-  fun h => ⟨rel_trans (left_le_join _ _) h, rel_trans (right_le_join _ _) h⟩,
-  fun h => join_le _ _ _ h.1 h.2
-⟩
-theorem le_meet_iff : (P ⊑ Q ⊓ R) ↔ (P ⊑ Q ∧ P ⊑ R) := ⟨
-  fun h => ⟨rel_trans h (meet_le_left _ _), rel_trans h (meet_le_right _ _)⟩,
-  fun h => le_meet _ _ _ h.1 h.2
-⟩
+theorem join_le_iff : (P ⊔ Q ⊑ R) ↔ (P ⊑ R ∧ Q ⊑ R) :=
+  ⟨ fun h => ⟨rel_trans (left_le_join _ _) h, rel_trans (right_le_join _ _) h⟩,
+    fun h => join_le _ _ _ h.1 h.2 ⟩
+theorem le_meet_iff : (P ⊑ Q ⊓ R) ↔ (P ⊑ Q ∧ P ⊑ R) :=
+  ⟨ fun h => ⟨rel_trans h (meet_le_left _ _), rel_trans h (meet_le_right _ _)⟩,
+    fun h => le_meet _ _ _ h.1 h.2 ⟩
 theorem iSup_le_iff {ι : Type _} {Φ : ι → l} : (iSup Φ ⊑ P) ↔ ∀ i, Φ i ⊑ P :=
   ⟨fun h i => rel_trans (le_iSup _ i) h, iSup_le _ _⟩
 theorem le_iInf_iff {ι : Type _} {Φ : ι → l} : (P ⊑ iInf Φ) ↔ ∀ i, P ⊑ Φ i :=

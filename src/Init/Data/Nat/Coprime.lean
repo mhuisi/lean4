@@ -75,13 +75,12 @@ theorem exists_coprime (m n : Nat)
     refine ⟨1, 1, gcd_one_left 1, ?_⟩
     simp [h0]
   | inr hpos =>
-    exact ⟨
-      _,
-      _,
-      coprime_div_gcd_div_gcd hpos,
-      (Nat.div_mul_cancel (gcd_dvd_left m n)).symm,
-      (Nat.div_mul_cancel (gcd_dvd_right m n)).symm
-    ⟩
+    exact
+      ⟨ _,
+        _,
+        coprime_div_gcd_div_gcd hpos,
+        (Nat.div_mul_cancel (gcd_dvd_left m n)).symm,
+        (Nat.div_mul_cancel (gcd_dvd_right m n)).symm ⟩
 
 theorem exists_coprime' (H : 0 < gcd m n)
     : ∃ g m' n', 0 < g ∧ Coprime m' n' ∧ m = m' * g ∧ n = n' * g :=
@@ -130,10 +129,9 @@ theorem Coprime.coprime_div_left (cmn : Coprime m n) (dvd : a ∣ m) : Coprime (
 theorem Coprime.coprime_div_right (cmn : Coprime m n) (dvd : a ∣ n) : Coprime m (n / a) :=
   (cmn.symm.coprime_div_left dvd).symm
 
-theorem coprime_mul_iff_left : Coprime (m * n) k ↔ Coprime m k ∧ Coprime n k := ⟨
-  fun h => ⟨h.coprime_mul_right, h.coprime_mul_left⟩,
-  fun ⟨h, _⟩ => by rwa [coprime_iff_gcd_eq_one, h.gcd_mul_left_cancel n]
-⟩
+theorem coprime_mul_iff_left : Coprime (m * n) k ↔ Coprime m k ∧ Coprime n k :=
+  ⟨ fun h => ⟨h.coprime_mul_right, h.coprime_mul_left⟩,
+    fun ⟨h, _⟩ => by rwa [coprime_iff_gcd_eq_one, h.gcd_mul_left_cancel n] ⟩
 
 theorem coprime_mul_iff_right : Coprime k (m * n) ↔ Coprime k m ∧ Coprime k n := by
   rw [@coprime_comm k, @coprime_comm k, @coprime_comm k, coprime_mul_iff_left]

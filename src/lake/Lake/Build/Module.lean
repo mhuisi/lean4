@@ -354,92 +354,85 @@ def ModuleImportInfo.addImport
     (info : ModuleImportInfo) (nonModule : Bool) (imp : Import) (expInfo : ModuleMetaExportInfo)
     : ModuleImportInfo :=
   let info :=
-    if nonModule then {
-      info with
-      directArts := info.directArts.insert imp.module expInfo.allArts
-      trace := info.trace.mix expInfo.legacyTransTrace |>.mix expInfo.allArtsTrace.withoutInputs
-    }
-    else if imp.importAll then {
-      info with
-      directArts := info.directArts.insert imp.module expInfo.allArts
-      trace := info.trace.mix expInfo.allTransTrace |>.mix expInfo.allArtsTrace.withoutInputs
-    }
+    if nonModule then
+      { info with
+        directArts := info.directArts.insert imp.module expInfo.allArts
+        trace := info.trace.mix expInfo.legacyTransTrace |>.mix expInfo.allArtsTrace.withoutInputs }
+    else if imp.importAll then
+      { info with
+        directArts := info.directArts.insert imp.module expInfo.allArts
+        trace := info.trace.mix expInfo.allTransTrace |>.mix expInfo.allArtsTrace.withoutInputs }
     else
       let info :=
         if ! info.directArts.contains imp.module then -- do not demote `import all`
           { info with directArts := info.directArts.insert imp.module expInfo.arts }
         else
           info
-      {
-        info with
+      { info with
         trace :=
           if imp.isMeta then
             info.trace.mix expInfo.metaTransTrace |>.mix expInfo.metaArtsTrace.withoutInputs
           else
-            info.trace.mix expInfo.transTrace |>.mix expInfo.artsTrace.withoutInputs
-      }
-  let info := {
-    info with
-    legacyTransTrace :=
-      info.legacyTransTrace
-        |>.mix expInfo.legacyTransTrace
-        |>.mix expInfo.allArtsTrace.withoutInputs
-        |>.withoutInputs
-  }
-  let info := {
-    info with
-    allTransTrace :=
-      if imp.importAll then
-        info.allTransTrace
-          |>.mix expInfo.allTransTrace
+            info.trace.mix expInfo.transTrace |>.mix expInfo.artsTrace.withoutInputs }
+  let info :=
+    { info with
+      legacyTransTrace :=
+        info.legacyTransTrace
+          |>.mix expInfo.legacyTransTrace
           |>.mix expInfo.allArtsTrace.withoutInputs
-          |>.withoutInputs
-      else if imp.isMeta then
-        info.allTransTrace
+          |>.withoutInputs }
+  let info :=
+    { info with
+      allTransTrace :=
+        if imp.importAll then
+          info.allTransTrace
+            |>.mix expInfo.allTransTrace
+            |>.mix expInfo.allArtsTrace.withoutInputs
+            |>.withoutInputs
+        else if imp.isMeta then
+          info.allTransTrace
+            |>.mix expInfo.metaTransTrace
+            |>.mix expInfo.metaArtsTrace.withoutInputs
+            |>.withoutInputs
+        else
+          info.allTransTrace
+            |>.mix expInfo.transTrace
+            |>.mix expInfo.artsTrace.withoutInputs
+            |>.withoutInputs }
+  let info :=
+    { info with
+      metaTransTrace :=
+        info.metaTransTrace
           |>.mix expInfo.metaTransTrace
           |>.mix expInfo.metaArtsTrace.withoutInputs
-          |>.withoutInputs
-      else
-        info.allTransTrace
-          |>.mix expInfo.transTrace
-          |>.mix expInfo.artsTrace.withoutInputs
-          |>.withoutInputs
-  }
-  let info := {
-    info with
-    metaTransTrace :=
-      info.metaTransTrace
-        |>.mix expInfo.metaTransTrace
-        |>.mix expInfo.metaArtsTrace.withoutInputs
-        |>.withoutInputs
-  }
-  let info := {
-    info with
-    irSigTrace :=
-      if nonModule || imp.importAll then
-        info.irSigTrace |>.mix expInfo.allTransTrace |>.mix expInfo.allArtsTrace.withoutInputs
-      else
-        info.irSigTrace |>.mix expInfo.irSigTransTrace |>.mix expInfo.irSigArtsTrace.withoutInputs
-  }
-  if imp.isExported then {
-    info with
-    transTrace :=
-      if imp.isMeta then
-        info.transTrace
-          |>.mix expInfo.metaTransTrace
-          |>.mix expInfo.metaArtsTrace.withoutInputs
-          |>.withoutInputs
-      else
-        info.transTrace
-          |>.mix expInfo.transTrace
-          |>.mix expInfo.artsTrace.withoutInputs
-          |>.withoutInputs
-    irSigTransTrace :=
-      info.irSigTransTrace
-        |>.mix expInfo.irSigTransTrace
-        |>.mix expInfo.irSigArtsTrace.withoutInputs
-        |>.withoutInputs
-  }
+          |>.withoutInputs }
+  let info :=
+    { info with
+      irSigTrace :=
+        if nonModule || imp.importAll then
+          info.irSigTrace |>.mix expInfo.allTransTrace |>.mix expInfo.allArtsTrace.withoutInputs
+        else
+          info.irSigTrace
+            |>.mix expInfo.irSigTransTrace
+            |>.mix expInfo.irSigArtsTrace.withoutInputs }
+  if imp.isExported then
+    { info with
+      transTrace :=
+        if imp.isMeta then
+          info.transTrace
+            |>.mix expInfo.metaTransTrace
+            |>.mix expInfo.metaArtsTrace.withoutInputs
+            |>.withoutInputs
+        else
+          info.transTrace
+            |>.mix expInfo.transTrace
+            |>.mix expInfo.artsTrace.withoutInputs
+            |>.withoutInputs
+      irSigTransTrace :=
+        info.irSigTransTrace
+          |>.mix expInfo.irSigTransTrace
+          |>.mix expInfo.irSigArtsTrace.withoutInputs
+          |>.withoutInputs }
   else
     info
 
@@ -545,12 +538,11 @@ def Module.computeExportInfo (mod : Module) : FetchM (Job ModuleExportInfo) := d
     let input ← (← mod.input.fetch).await
     let importInfo ← (← mod.importInfo.fetch).await
     let artsTrace := BuildTrace.nil s!"{mod.name}:importArts"
-    return {
-      srcTrace := input.trace
-      arts := ⟨#[#[arts.olean.path]]⟩
-      artsTrace := artsTrace.mix arts.olean.trace
-      transTrace := importInfo.transTrace
-    }
+    return
+      { srcTrace := input.trace
+        arts := ⟨#[#[arts.olean.path]]⟩
+        artsTrace := artsTrace.mix arts.olean.trace
+        transTrace := importInfo.transTrace }
 
 /-- The `ModuleFacetConfig` for the builtin `exportInfoFacet`. -/
 public def Module.exportInfoFacetConfig : ModuleFacetConfig exportInfoFacet :=
@@ -575,41 +567,39 @@ def Module.computeMetaExportInfo (mod : Module) : FetchM (Job ModuleMetaExportIn
           | error noIRSigError
         let some ir := arts.ir?
           | error noIRError
-        return {
-          info with
-          -- NOTE: always includes `.server` and full `.ir` as this data is used by the server and we
-          -- do not distinguish between it and cmdline build here (TODO: this is too dangerous!)
-          arts := .ofArrays #[#[arts.olean.path, oleanServer.path], #[irSig.path, ir.path]]
-          metaArtsTrace := metaArtsTrace.mix arts.olean.trace |>.mix irSig.trace |>.mix ir.trace
-          irSigArtsTrace := irSigArtsTrace.mix arts.olean.trace |>.mix irSig.trace
-          allArts :=
-            .ofArrays
-              #[#[arts.olean.path, oleanServer.path, oleanPrivate.path], #[irSig.path, ir.path]]
-          allArtsTrace :=
-            allArtsTrace.mix arts.olean.trace
-              |>.mix oleanServer.trace
-              |>.mix oleanPrivate.trace
-              |>.mix irSig.trace
-              |>.mix ir.trace
-          transTrace := importInfo.transTrace
-          metaTransTrace := importInfo.metaTransTrace
-          allTransTrace := importInfo.allTransTrace
-          legacyTransTrace := importInfo.legacyTransTrace
-          irSigTransTrace := importInfo.irSigTransTrace
-        }
+        return
+          { info with
+            -- NOTE: always includes `.server` and full `.ir` as this data is used by the server and we
+            -- do not distinguish between it and cmdline build here (TODO: this is too dangerous!)
+            arts := .ofArrays #[#[arts.olean.path, oleanServer.path], #[irSig.path, ir.path]]
+            metaArtsTrace := metaArtsTrace.mix arts.olean.trace |>.mix irSig.trace |>.mix ir.trace
+            irSigArtsTrace := irSigArtsTrace.mix arts.olean.trace |>.mix irSig.trace
+            allArts :=
+              .ofArrays
+                #[#[arts.olean.path, oleanServer.path, oleanPrivate.path], #[irSig.path, ir.path]]
+            allArtsTrace :=
+              allArtsTrace.mix arts.olean.trace
+                |>.mix oleanServer.trace
+                |>.mix oleanPrivate.trace
+                |>.mix irSig.trace
+                |>.mix ir.trace
+            transTrace := importInfo.transTrace
+            metaTransTrace := importInfo.metaTransTrace
+            allTransTrace := importInfo.allTransTrace
+            legacyTransTrace := importInfo.legacyTransTrace
+            irSigTransTrace := importInfo.irSigTransTrace }
       else
-        return {
-          info with
-          metaArtsTrace := metaArtsTrace.mix arts.olean.trace
-          irSigArtsTrace := irSigArtsTrace.mix arts.olean.trace
-          allArts := ⟨#[#[arts.olean.path]]⟩
-          allArtsTrace := allArtsTrace.mix arts.olean.trace
-          transTrace := importInfo.transTrace
-          metaTransTrace := importInfo.metaTransTrace
-          allTransTrace := importInfo.allTransTrace
-          legacyTransTrace := importInfo.legacyTransTrace
-          irSigTransTrace := importInfo.irSigTransTrace
-        }
+        return
+          { info with
+            metaArtsTrace := metaArtsTrace.mix arts.olean.trace
+            irSigArtsTrace := irSigArtsTrace.mix arts.olean.trace
+            allArts := ⟨#[#[arts.olean.path]]⟩
+            allArtsTrace := allArtsTrace.mix arts.olean.trace
+            transTrace := importInfo.transTrace
+            metaTransTrace := importInfo.metaTransTrace
+            allTransTrace := importInfo.allTransTrace
+            legacyTransTrace := importInfo.legacyTransTrace
+            irSigTransTrace := importInfo.irSigTransTrace }
 
 /-- The `ModuleFacetConfig` for the builtin `metaExportInfoFacet`. -/
 public def Module.metaExportInfoFacetConfig : ModuleFacetConfig metaExportInfoFacet :=
@@ -711,18 +701,17 @@ def Module.recFetchPreSetup (mod : Module) : FetchM (Job ModulePreSetup) :=
                 addPureTrace mod.name "Module.name"
                 addPureTrace mod.pkg.id? "Package.id?"
                 addPureTrace mod.leanArgs "Module.leanArgs"
-                return {
-                  trace := ← getTrace
-                  srcFile := input.path
-                  srcMTime := input.trace.mtime
-                  isModule := input.header.isModule
-                  directImports := input.imports
-                  directImportArts := info.directArts
-                  irSigTrace := info.irSigTrace
-                  dynlibs
-                  plugins
-                  leanOptions
-                }
+                return
+                  { trace := ← getTrace
+                    srcFile := input.path
+                    srcMTime := input.trace.mtime
+                    isModule := input.header.isModule
+                    directImports := input.imports
+                    directImportArts := info.directArts
+                    irSigTrace := info.irSigTrace
+                    dynlibs
+                    plugins
+                    leanOptions }
 where
   traceOptions (opts : LeanOptions) (caption := "opts") : BuildTrace :=
     opts.values.foldl (init := .nil caption) fun t n v =>
@@ -748,16 +737,15 @@ public def Module.depsFacetConfig : ModuleFacetConfig depsFacet :=
 def mkModuleSetup (mod : Module) (presetup : ModulePreSetup) : FetchM ModuleSetup := do
   let importArts ←
     fetchTransImportArts presetup.directImports presetup.directImportArts !presetup.isModule
-  return {
-    name := mod.name
-    isModule := presetup.isModule
-    package? := mod.pkg.id?
-    imports? := none
-    importArts
-    dynlibs := presetup.dynlibs.map (·.path)
-    plugins := presetup.plugins.map (·.path)
-    options := presetup.leanOptions
-  }
+  return
+    { name := mod.name
+      isModule := presetup.isModule
+      package? := mod.pkg.id?
+      imports? := none
+      importArts
+      dynlibs := presetup.dynlibs.map (·.path)
+      plugins := presetup.plugins.map (·.path)
+      options := presetup.leanOptions }
 
 /-- Recursively compute the contents of a `setup.json` for the module. -/
 def Module.recFetchSetup (mod : Module) : FetchM (Job ModuleSetup) :=
@@ -840,17 +828,16 @@ def ModuleOutputDescrs.resolve
     (descrs : ModuleOutputDescrs) (service? : Option CacheServiceName)
     (scope? : Option CacheServiceScope)
     : JobM ModuleOutputArtifacts := do
-  let arts : ModuleOutputArtifacts := {
-    isModule := descrs.isModule
-    olean := ← resolve descrs.olean
-    oleanServer? := ← descrs.oleanServer?.mapM resolve
-    oleanPrivate? := ← descrs.oleanPrivate?.mapM resolve
-    irSig? := ← descrs.irSig?.mapM resolve
-    ir? := ← descrs.ir?.mapM resolve
-    ilean := ← resolve descrs.ilean
-    c? := ← descrs.c?.mapM resolve
-    ltar? := ← descrs.ltar?.mapM resolve
-  }
+  let arts : ModuleOutputArtifacts :=
+    { isModule := descrs.isModule
+      olean := ← resolve descrs.olean
+      oleanServer? := ← descrs.oleanServer?.mapM resolve
+      oleanPrivate? := ← descrs.oleanPrivate?.mapM resolve
+      irSig? := ← descrs.irSig?.mapM resolve
+      ir? := ← descrs.ir?.mapM resolve
+      ilean := ← resolve descrs.ilean
+      c? := ← descrs.c?.mapM resolve
+      ltar? := ← descrs.ltar?.mapM resolve }
   if Lean.Internal.hasLLVMBackend () then
     let some descr := descrs.bc?
       | error "LLVM backend enabled but module outputs lack bitcode"
@@ -908,18 +895,17 @@ instance : ResolveOutputs ModuleOutputs := ⟨resolveModuleOutputs⟩
 def Module.cacheOutputArtifacts
     (mod : Module) (isModule : Bool) (useLocalFile : Bool) (postponesCompile : Bool)
     : JobM ModuleOutputArtifacts := do
-  return {
-    isModule
-    olean := ← cache mod.oleanFile "olean"
-    oleanServer? := ← cacheIf? isModule mod.oleanServerFile "olean.server"
-    oleanPrivate? := ← cacheIf? isModule mod.oleanPrivateFile "olean.private"
-    irSig? := ← cacheIf? (isModule && !postponesCompile) mod.irSigFile "ir.sig"
-    ir? := ← cacheIf? (isModule && !postponesCompile) mod.irFile "ir"
-    ilean := ← cache mod.ileanFile "ilean"
-    c? := ← cacheIf? (!(isModule && postponesCompile)) mod.cFile "c"
-    bc? := ← cacheIf? (Lean.Internal.hasLLVMBackend ()) mod.bcFile "bc"
-    ltar? := ← cacheIf? (← mod.ltarFile.pathExists) mod.ltarFile "ltar"
-  }
+  return
+    { isModule
+      olean := ← cache mod.oleanFile "olean"
+      oleanServer? := ← cacheIf? isModule mod.oleanServerFile "olean.server"
+      oleanPrivate? := ← cacheIf? isModule mod.oleanPrivateFile "olean.private"
+      irSig? := ← cacheIf? (isModule && !postponesCompile) mod.irSigFile "ir.sig"
+      ir? := ← cacheIf? (isModule && !postponesCompile) mod.irFile "ir"
+      ilean := ← cache mod.ileanFile "ilean"
+      c? := ← cacheIf? (!(isModule && postponesCompile)) mod.cFile "c"
+      bc? := ← cacheIf? (Lean.Internal.hasLLVMBackend ()) mod.bcFile "bc"
+      ltar? := ← cacheIf? (← mod.ltarFile.pathExists) mod.ltarFile "ltar" }
 where
   @[inline]
   cache file ext := do
@@ -938,18 +924,17 @@ def Module.restoreNeededArtifacts (mod : Module) (cached : ModuleOutputArtifacts
 
 def Module.restoreAllArtifacts (mod : Module) (cached : ModuleOutputArtifacts)
     : JobM ModuleOutputArtifacts := do
-  return {
-    cached with
-    olean := ← restoreArtifact mod.oleanFile cached.olean
-    oleanServer? := ← restoreSome mod.oleanServerFile cached.oleanServer?
-    oleanPrivate? := ← restoreSome mod.oleanPrivateFile cached.oleanPrivate?
-    ilean := ← restoreArtifact mod.ileanFile cached.ilean
-    irSig? := ← restoreSome mod.irSigFile cached.irSig?
-    ir? := ← restoreSome mod.irFile cached.ir?
-    c? := ← restoreSome mod.cFile cached.c?
-    bc? := ← restoreSome mod.bcFile cached.bc?
-    ltar? := ← restoreSome mod.ltarFile cached.ltar?
-  }
+  return
+    { cached with
+      olean := ← restoreArtifact mod.oleanFile cached.olean
+      oleanServer? := ← restoreSome mod.oleanServerFile cached.oleanServer?
+      oleanPrivate? := ← restoreSome mod.oleanPrivateFile cached.oleanPrivate?
+      ilean := ← restoreArtifact mod.ileanFile cached.ilean
+      irSig? := ← restoreSome mod.irSigFile cached.irSig?
+      ir? := ← restoreSome mod.irFile cached.ir?
+      c? := ← restoreSome mod.cFile cached.c?
+      bc? := ← restoreSome mod.bcFile cached.bc?
+      ltar? := ← restoreSome mod.ltarFile cached.ltar? }
 where
   @[inline] restoreSome file art? := art?.mapM (restoreArtifact file ·)
 
@@ -1014,17 +999,16 @@ public protected def Module.getMTime
 public instance : GetMTime Module := ⟨Module.getMTime (isModule := false)⟩
 
 def ModuleOutputArtifacts.setMTime (self : ModuleOutputArtifacts) (mtime : MTime)
-    : ModuleOutputArtifacts := {
-  self with
-  olean := { self.olean with mtime }
-  oleanServer? := self.oleanServer?.map ({ · with mtime })
-  oleanPrivate? := self.oleanPrivate?.map ({ · with mtime })
-  ilean := { self.ilean with mtime }
-  irSig? := self.irSig?.map ({ · with mtime })
-  ir? := self.ir?.map ({ · with mtime })
-  c? := self.c?.map ({ · with mtime })
-  bc? := self.bc?.map ({ · with mtime })
-}
+    : ModuleOutputArtifacts :=
+  { self with
+    olean := { self.olean with mtime }
+    oleanServer? := self.oleanServer?.map ({ · with mtime })
+    oleanPrivate? := self.oleanPrivate?.map ({ · with mtime })
+    ilean := { self.ilean with mtime }
+    irSig? := self.irSig?.map ({ · with mtime })
+    ir? := self.ir?.map ({ · with mtime })
+    c? := self.c?.map ({ · with mtime })
+    bc? := self.bc?.map ({ · with mtime }) }
 
 def Module.mkArtifacts (mod : Module) (srcFile : FilePath) (isModule : Bool) : ModuleArtifacts where
   lean? := srcFile
@@ -1039,13 +1023,12 @@ def Module.mkArtifacts (mod : Module) (srcFile : FilePath) (isModule : Bool) : M
 
 def Module.computeIRArtifacts (mod : Module) (elabArts : ModuleOutputArtifacts) (reuse : Bool)
     : FetchM ModuleOutputArtifacts :=
-  return {
-    elabArts with
-    irSig? := some <| ← compute mod.irSigFile "ir.sig"
-    ir? := some <| ← compute mod.irFile "ir"
-    c? := some <| ← compute mod.cFile "c"
-    ltar? := if reuse then elabArts.ltar? else none
-  }
+  return
+    { elabArts with
+      irSig? := some <| ← compute mod.irSigFile "ir.sig"
+      ir? := some <| ← compute mod.irFile "ir"
+      c? := some <| ← compute mod.cFile "c"
+      ltar? := if reuse then elabArts.ltar? else none }
 where
   @[inline]
   compute file ext := do
@@ -1054,18 +1037,17 @@ where
 
 def Module.computeArtifacts (mod : Module) (isModule : Bool) (skipIR : Bool)
     : FetchM ModuleOutputArtifacts :=
-  return {
-    isModule
-    olean := ← compute mod.oleanFile "olean"
-    oleanServer? := ← computeIf isModule mod.oleanServerFile "olean.server"
-    oleanPrivate? := ← computeIf isModule mod.oleanPrivateFile "olean.private"
-    ilean := ← compute mod.ileanFile "ilean"
-    irSig? := ← computeIf (isModule && !skipIR) mod.irSigFile "ir.sig"
-    ir? := ← computeIf (isModule && !skipIR) mod.irFile "ir"
-    c? := ← computeIf (!(isModule && skipIR)) mod.cFile "c"
-    bc? := ← computeIf (Lean.Internal.hasLLVMBackend ()) mod.bcFile "bc"
-    ltar? := ← computeIf (← mod.ltarFile.pathExists) mod.ltarFile "ltar"
-  }
+  return
+    { isModule
+      olean := ← compute mod.oleanFile "olean"
+      oleanServer? := ← computeIf isModule mod.oleanServerFile "olean.server"
+      oleanPrivate? := ← computeIf isModule mod.oleanPrivateFile "olean.private"
+      ilean := ← compute mod.ileanFile "ilean"
+      irSig? := ← computeIf (isModule && !skipIR) mod.irSigFile "ir.sig"
+      ir? := ← computeIf (isModule && !skipIR) mod.irFile "ir"
+      c? := ← computeIf (!(isModule && skipIR)) mod.cFile "c"
+      bc? := ← computeIf (Lean.Internal.hasLLVMBackend ()) mod.bcFile "bc"
+      ltar? := ← computeIf (← mod.ltarFile.pathExists) mod.ltarFile "ltar" }
 where
   @[inline]
   compute file ext := do
@@ -1086,13 +1068,12 @@ def Module.packLtar (self : Module) (arts : ModuleOutputArtifacts) : JobM Artifa
     id do
       -- `-s` strips the `depHash` so archive bytes depend only on outputs.
       -- Consumers reinject the hash on unpack (see `Module.unpackLtar`).
-      let mut args := #[
-        "-s",
-        "-C", self.leanLibDir.toString,
-        "-C", self.irDir.toString,
-        self.ltarFile.toString,
-        self.fileName "trace"
-      ]
+      let mut args :=
+        #["-s",
+          "-C", self.leanLibDir.toString,
+          "-C", self.irDir.toString,
+          self.ltarFile.toString,
+          self.fileName "trace"]
       let addArt args idx art := args.push "-i" |>.push idx |>.push (self.fileName art.ext)
       -- Note: oleans parts must be in the order of `.olean`, `.olean.server`, `.olean.private`
       args := addArt args "0" arts.olean
@@ -1121,17 +1102,14 @@ def Module.packLtar (self : Module) (arts : ModuleOutputArtifacts) : JobM Artifa
 def Module.unpackLtar (self : Module) (ltar : FilePath) (inputHash : Hash) : JobM Unit := do
   -- Archive has no `depHash` (packed with `-s`); supply it via `-j -` JSON stdin.
   let input :=
-    Json.arr #[
-      Json.mkObj [
-        ("file", toJson ltar.toString),
-        ("hash", toJson inputHash.hex)
-      ]
-    ]
-  let args := #[
-    "-C", self.leanLibDir.toString,
-    "-C", self.irDir.toString,
-    "-x", "-j", "-"
-  ]
+    Json.arr
+      #[Json.mkObj
+          [ ("file", toJson ltar.toString),
+            ("hash", toJson inputHash.hex) ]]
+  let args :=
+    #["-C", self.leanLibDir.toString,
+      "-C", self.irDir.toString,
+      "-x", "-j", "-"]
   proc (quiet := true) (input? := input.compress) { cmd := (← getLeantar).toString, args }
 
 def Module.recBuildLtar (self : Module) : FetchM (Job FilePath) := do
@@ -1699,16 +1677,15 @@ def setupEditedModule (mod : Module) (header : ModuleHeader) : FetchM (Job Modul
             pluginsJob.mapM fun plugins => do
               let { dynlibs, plugins } ← computeModuleDeps impLibs externLibs dynlibs plugins
               let transImpArts ← fetchTransImportArts directImports info.directArts !header.isModule
-              return {
-                name := mod.name
-                package? := mod.pkg.id?
-                isModule := header.isModule
-                imports? := none
-                importArts := transImpArts
-                dynlibs := dynlibs.map (·.path)
-                plugins := plugins.map (·.path)
-                options := mod.serverOptions
-              }
+              return
+                { name := mod.name
+                  package? := mod.pkg.id?
+                  isModule := header.isModule
+                  imports? := none
+                  importArts := transImpArts
+                  dynlibs := dynlibs.map (·.path)
+                  plugins := plugins.map (·.path)
+                  options := mod.serverOptions }
 
 /--
 Computes the module setup of Lean code external to the workspace,
@@ -1741,15 +1718,14 @@ def setupExternalModule (fileName : String) (header : ModuleHeader) (leanOpts : 
             externLibsJob.mapM fun externLibs => do
               let { dynlibs, plugins } ← computeModuleDeps impLibs externLibs dynlibs plugins
               let transImpArts ← fetchTransImportArts imports info.directArts !header.isModule
-              return {
-                name := `_unknown
-                isModule := header.isModule
-                imports? := none
-                importArts := transImpArts
-                dynlibs := dynlibs.map (·.path)
-                plugins := plugins.map (·.path)
-                options := leanOpts
-              }
+              return
+                { name := `_unknown
+                  isModule := header.isModule
+                  imports? := none
+                  importArts := transImpArts
+                  dynlibs := dynlibs.map (·.path)
+                  plugins := plugins.map (·.path)
+                  options := leanOpts }
 
 /--
 Computes the module setup of edited Lean code for the Lean language server,
@@ -1797,10 +1773,7 @@ where
     return args
   mkSpawnArgs leanFile setup cfgArgs := do
     let args ← mkArgs leanFile setup cfgArgs
-    let spawnArgs : IO.Process.SpawnArgs := {
-      args := args ++ moreArgs
-      cmd := (← getLean).toString
-      env := (← getAugmentedEnv)
-    }
+    let spawnArgs : IO.Process.SpawnArgs :=
+      { args := args ++ moreArgs, cmd := (← getLean).toString, env := (← getAugmentedEnv) }
     logVerbose (mkCmdLog spawnArgs)
     return spawnArgs

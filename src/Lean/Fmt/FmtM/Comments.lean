@@ -194,15 +194,13 @@ def PendingComment.finalize (p : PendingComment) : Comment :=
   let content :=
     normalizeCommentContent p.raw p.kind.startSymbol p.kind.endSymbol p.startColumnOffset <|
       p.kind matches .lineComment
-  {
-    kind := p.kind
+  { kind := p.kind
     placement := p.placement
     originalTokenRange := p.originalTokenRange
     originalWhitespaceRange := ⟨p.startPos, p.endPos⟩
     originalWhitespaceKind := p.originalWhitespaceKind
     content
-    emptyLineBefore := p.emptyLineBefore
-  }
+    emptyLineBefore := p.emptyLineBefore }
 
 /--
 Advances `columnOffset` by pretending that `s` is appended at `columnOffset`.
@@ -232,13 +230,12 @@ public def parseComments
     (originalWhitespaceKind : Comment.Whitespace) (initialWs : String.Slice)
     : Array Comment := Id.run do
   let (_, s) :=
-    StateT.run go {
-      firstNewlinePos := initialWs.find '\n' |>.str.offset
-      ws := initialWs
-      closedComments := #[]
-      openComment? := none
-      commentNestingLevel := 0
-    }
+    StateT.run go
+      { firstNewlinePos := initialWs.find '\n' |>.str.offset
+        ws := initialWs
+        closedComments := #[]
+        openComment? := none
+        commentNestingLevel := 0 }
   let comments := groupComments s.closedComments
   let finalized := comments.map (·.finalize)
   return finalized
@@ -269,16 +266,12 @@ where
     terminateEndOfWhitespaceComment
 
   advanceBy (pre : String) : StateM parseComments.State Unit := do
-    modify fun s => {
-      s with
-      ws := s.ws.dropPrefix pre
-      openComment? :=
-        s.openComment?.map fun openComment => {
-          openComment with
-          raw := openComment.raw ++ pre
-          endPos := openComment.endPos + pre
-        }
-    }
+    modify fun s =>
+      { s with
+        ws := s.ws.dropPrefix pre
+        openComment? :=
+          s.openComment?.map fun openComment =>
+            { openComment with raw := openComment.raw ++ pre, endPos := openComment.endPos + pre } }
 
   skip : StateM parseComments.State Unit := do
     let some c := (← get).ws.front?
@@ -304,27 +297,25 @@ where
     let success ← tryParse kind.startSymbol
     if !success then
       return false
-    modify fun s => {
-      s with
-      openComment? :=
-        some {
-          kind
-          placement :=
-            if originalWhitespaceKind matches .leading || isAfterNewline then
-              .onLineBeforeToken
-            else
-              .afterToken
-          originalTokenRange
-          originalWhitespaceRange := ⟨0, 0⟩
-          originalWhitespaceKind
-          raw := kind.startSymbol
-          content := #[]
-          startColumnOffset := commentStartColumnOffset
-          startPos := commentRawStartPos
-          endPos := commentRawStartPos + kind.startSymbol
-        }
-      commentNestingLevel := 1
-    }
+    modify fun s =>
+      { s with
+        openComment? :=
+          some
+            { kind
+              placement :=
+                if originalWhitespaceKind matches .leading || isAfterNewline then
+                  .onLineBeforeToken
+                else
+                  .afterToken
+              originalTokenRange
+              originalWhitespaceRange := ⟨0, 0⟩
+              originalWhitespaceKind
+              raw := kind.startSymbol
+              content := #[]
+              startColumnOffset := commentStartColumnOffset
+              startPos := commentRawStartPos
+              endPos := commentRawStartPos + kind.startSymbol }
+        commentNestingLevel := 1 }
     return true
 
   tryCloseComment : StateM parseComments.State Bool := do
@@ -337,12 +328,11 @@ where
     let closedComment := (← get).openComment?.get!
     let commentNestingLevel := (← get).commentNestingLevel - 1
     if !kind.hasNesting || commentNestingLevel == 0 then
-      modify fun s => {
-        s with
-        closedComments := s.closedComments.push closedComment
-        openComment? := none
-        commentNestingLevel
-      }
+      modify fun s =>
+        { s with
+          closedComments := s.closedComments.push closedComment
+          openComment? := none
+          commentNestingLevel }
     else
       modify fun s => { s with openComment? := some closedComment, commentNestingLevel }
     return true
@@ -365,11 +355,8 @@ where
     if ! openComment.kind.endSymbol.chars.all Char.isWhitespace then
       return
     let closedComment := openComment
-    modify fun s => {
-      s with
-      closedComments := s.closedComments.push closedComment
-      openComment? := none
-    }
+    modify fun s =>
+      { s with closedComments := s.closedComments.push closedComment, openComment? := none }
 
   groupComments (comments : Array PendingComment) : Array PendingComment := Id.run do
     if comments.isEmpty then
@@ -389,23 +376,22 @@ where
         grouped := grouped.push group
         group := { c with emptyLineBefore }
         continue
-      group := {
-        kind := .lineComment
-        placement := group.placement
-        originalTokenRange := group.originalTokenRange
-        originalWhitespaceRange :=
-          ⟨group.originalWhitespaceRange.start, c.originalWhitespaceRange.stop⟩
-        originalWhitespaceKind := group.originalWhitespaceKind
-        content := #[]
-        emptyLineBefore := group.emptyLineBefore
-        -- This is strictly speaking not a proper `raw` representation for the entire group,
-        -- since it does not contain the whitespace in-between `group` and `c`,
-        -- but this is not a problem since `PendingComment.finalize` can handle this disparity.
-        raw := group.raw ++ c.raw
-        startColumnOffset := group.startColumnOffset
-        startPos := group.startPos
-        endPos := c.endPos
-      }
+      group :=
+        { kind := .lineComment
+          placement := group.placement
+          originalTokenRange := group.originalTokenRange
+          originalWhitespaceRange :=
+            ⟨group.originalWhitespaceRange.start, c.originalWhitespaceRange.stop⟩
+          originalWhitespaceKind := group.originalWhitespaceKind
+          content := #[]
+          emptyLineBefore := group.emptyLineBefore
+          -- This is strictly speaking not a proper `raw` representation for the entire group,
+          -- since it does not contain the whitespace in-between `group` and `c`,
+          -- but this is not a problem since `PendingComment.finalize` can handle this disparity.
+          raw := group.raw ++ c.raw
+          startColumnOffset := group.startColumnOffset
+          startPos := group.startPos
+          endPos := c.endPos }
     grouped := grouped.push group
     return grouped
 
@@ -519,14 +505,13 @@ where
       goClaims ctx arg
 
   mkInitialState (claims : Std.HashMap Syntax.Range collectComments.Claim)
-      : collectComments.State := {
-    claimedComments := .ofArray claims.keysArray
-    comments :=
-      claims.fold (init := {}) fun comments _ claim =>
-        comments.alter claim.associatedRange fun
-          | none => some #[claim.comment]
-          | some comments => some <| comments.push claim.comment
-  }
+      : collectComments.State :=
+    { claimedComments := .ofArray claims.keysArray
+      comments :=
+        claims.fold (init := {}) fun comments _ claim =>
+          comments.alter claim.associatedRange fun
+            | none => some #[claim.comment]
+            | some comments => some <| comments.push claim.comment }
 
   go (stx : Syntax) : collectComments.M Unit := do
     match stx with
@@ -580,13 +565,12 @@ where
             range
         | _, _ =>
           range
-      modify fun s => {
-        s with
-        comments :=
-          s.comments.alter range fun
-            | none => some #[newComment]
-            | some comments => some <| comments.push newComment
-      }
+      modify fun s =>
+        { s with
+          comments :=
+            s.comments.alter range fun
+              | none => some #[newComment]
+              | some comments => some <| comments.push newComment }
   toSlice (s : Substring.Raw) : collectComments.M String.Slice := do
     let some s := s.toSlice?
       | throw <| .elaboration <|
@@ -675,11 +659,10 @@ where
       if let some (_, rangeForPreviousRangeFallback, tagsForPreviousRangeFallback, _) :=
           binSearchRightmost syntaxToTagsByStop range.stop (·.1.stop) (· < ·) then
         r :=
-          r.push (
-            tagsForPreviousRangeFallback[0]!,
-            rangeForPreviousRangeFallback,
-            commentsWithPreviousRangeFallback
-          )
+          r.push
+            ( tagsForPreviousRangeFallback[0]!,
+              rangeForPreviousRangeFallback,
+              commentsWithPreviousRangeFallback )
     if !commentsWithNextRangeFallback.isEmpty then
       if let some (_, rangeForNextRangeFallback, tagsForNextRangeFallback, _) :=
           binSearchLeftmost syntaxToTagsByStart range.start (·.1.start) (· < ·) then
@@ -711,10 +694,9 @@ where
         let sep := if next?.any (isSeparatedByEmptyLine c) then .hardNl ++ .hardNl else .hardNl
         let doc := .aligned <| Doc.free (doc ++ sep) ++ result
         result :=
-          .oneOf #[
-            doc,
-            Doc.costing (DefaultCost.ofFailureFallbackPenalty penalty) result
-          ]
+          .oneOf
+            #[doc,
+              Doc.costing (DefaultCost.ofFailureFallbackPenalty penalty) result]
       | .beforeClosestNextNewline =>
         let renderings := c.render
         let afterLineDocs := renderings.map (Doc.final <| renderingToDoc ·)
@@ -722,10 +704,9 @@ where
         let afterLineDoc := .oneOf afterLineDocs
         let afterLineDoc := result ++ Doc.free (.text " " ++ afterLineDoc)
         result :=
-          .oneOf #[
-            afterLineDoc,
-            Doc.costing (DefaultCost.ofFailureFallbackPenalty penalty) result
-          ]
+          .oneOf
+            #[afterLineDoc,
+              Doc.costing (DefaultCost.ofFailureFallbackPenalty penalty) result]
       | .afterToken =>
         let renderings := c.render.filter (!·.isMultiLine)
         let afterTokenDocs := renderings.map (renderingToDoc ·)
@@ -737,11 +718,10 @@ where
         let afterLineDoc := .oneOf afterLineDocs
         let afterLineDoc := result ++ Doc.free (.text " " ++ afterLineDoc)
         result :=
-          .oneOf #[
-            afterTokenDoc,
-            afterLineDoc,
-            Doc.costing (DefaultCost.ofFailureFallbackPenalty penalty) result
-          ]
+          .oneOf
+            #[afterTokenDoc,
+              afterLineDoc,
+              Doc.costing (DefaultCost.ofFailureFallbackPenalty penalty) result]
       next? := c
     return result
   goMemoized (v : Doc FmtCost) : StateM tryInsertingComments.State tryInsertingComments.Result := do

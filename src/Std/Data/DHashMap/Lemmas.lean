@@ -1919,25 +1919,25 @@ theorem mem_of_mem_union_of_not_mem_left [EquivBEq α] [LawfulHashable α] {k : 
 /- Equiv -/
 theorem Equiv.union_left {m₃ : DHashMap α β} [EquivBEq α] [LawfulHashable α] (equiv : m₁ ~m m₂)
     : (m₁ ∪ m₃) ~m (m₂ ∪ m₃) :=
-  ⟨@Raw₀.Equiv.union_left α β _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩
-    ⟨m₃.1, m₃.2.size_buckets_pos⟩ _ _ m₁.2 m₂.2 m₃.2 equiv.1⟩
+  ⟨ @Raw₀.Equiv.union_left α β _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩
+      ⟨m₃.1, m₃.2.size_buckets_pos⟩ _ _ m₁.2 m₂.2 m₃.2 equiv.1 ⟩
 
 theorem Equiv.union_right {m₃ : DHashMap α β} [EquivBEq α] [LawfulHashable α] (equiv : m₂ ~m m₃)
     : (m₁ ∪ m₂) ~m (m₁ ∪ m₃) :=
-  ⟨@Raw₀.Equiv.union_right α β _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩
-    ⟨m₃.1, m₃.2.size_buckets_pos⟩ _ _ m₁.2 m₂.2 m₃.2 equiv.1⟩
+  ⟨ @Raw₀.Equiv.union_right α β _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩
+      ⟨m₃.1, m₃.2.size_buckets_pos⟩ _ _ m₁.2 m₂.2 m₃.2 equiv.1 ⟩
 
 theorem union_insert_right_equiv_insert_union [EquivBEq α] [LawfulHashable α] {p : (a : α) × β a}
     : (m₁ ∪ (m₂.insert p.fst p.snd)) ~m ((m₁ ∪ m₂).insert p.fst p.snd) :=
-  ⟨@Raw₀.union_insert_right_equiv_insert_union _ _ _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩
-    ⟨m₂.1, m₂.2.size_buckets_pos⟩ _ _ p m₁.2 m₂.2⟩
+  ⟨ @Raw₀.union_insert_right_equiv_insert_union _ _ _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩
+      ⟨m₂.1, m₂.2.size_buckets_pos⟩ _ _ p m₁.2 m₂.2 ⟩
 
 theorem Equiv.union_congr
     {m₃ m₄ : DHashMap α β} [EquivBEq α] [LawfulHashable α] (equiv₁ : m₁ ~m m₃) (equiv₂ : m₂ ~m m₄)
     : (m₁ ∪ m₂) ~m (m₃ ∪ m₄) :=
-  ⟨@Raw₀.Equiv.union_congr _ _ _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩
-    ⟨m₃.1, m₃.2.size_buckets_pos⟩ ⟨m₄.1, m₄.2.size_buckets_pos⟩ _ _ m₁.2 m₂.2 m₃.2 m₄.2 equiv₁.1
-    equiv₂.1⟩
+  ⟨ @Raw₀.Equiv.union_congr _ _ _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩
+      ⟨m₃.1, m₃.2.size_buckets_pos⟩ ⟨m₄.1, m₄.2.size_buckets_pos⟩ _ _ m₁.2 m₂.2 m₃.2 m₄.2 equiv₁.1
+      equiv₂.1 ⟩
 
 @[deprecated union_insert_right_equiv_insert_union (since := "2025-11-03")]
 theorem union_insert_right_equiv_union_insert [EquivBEq α] [LawfulHashable α] {p : (a : α) × β a}
@@ -2236,20 +2236,20 @@ theorem not_mem_inter_of_not_mem_right [EquivBEq α] [LawfulHashable α] {k : α
 /- Equiv -/
 theorem Equiv.inter_left {m₃ : DHashMap α β} [EquivBEq α] [LawfulHashable α] (equiv : m₁ ~m m₂)
     : (m₁ ∩ m₃) ~m (m₂ ∩ m₃) :=
-  ⟨@Raw₀.Equiv.inter_left α β _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩
-    ⟨m₃.1, m₃.2.size_buckets_pos⟩ _ _ m₁.2 m₂.2 m₃.2 equiv.1⟩
+  ⟨ @Raw₀.Equiv.inter_left α β _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩
+      ⟨m₃.1, m₃.2.size_buckets_pos⟩ _ _ m₁.2 m₂.2 m₃.2 equiv.1 ⟩
 
 theorem Equiv.inter_right {m₃ : DHashMap α β} [EquivBEq α] [LawfulHashable α] (equiv : m₂ ~m m₃)
     : (m₁ ∩ m₂) ~m (m₁ ∩ m₃) :=
-  ⟨@Raw₀.Equiv.inter_right α β _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩
-    ⟨m₃.1, m₃.2.size_buckets_pos⟩ _ _ m₁.2 m₂.2 m₃.2 equiv.1⟩
+  ⟨ @Raw₀.Equiv.inter_right α β _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩
+      ⟨m₃.1, m₃.2.size_buckets_pos⟩ _ _ m₁.2 m₂.2 m₃.2 equiv.1 ⟩
 
 theorem Equiv.inter_congr
     {m₃ m₄ : DHashMap α β} [EquivBEq α] [LawfulHashable α] (equiv₁ : m₁ ~m m₃) (equiv₂ : m₂ ~m m₄)
     : (m₁ ∩ m₂) ~m (m₃ ∩ m₄) :=
-  ⟨@Raw₀.Equiv.inter_congr α β _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩
-    ⟨m₃.1, m₃.2.size_buckets_pos⟩ ⟨m₄.1, m₄.2.size_buckets_pos⟩ _ _ m₁.2 m₂.2 m₃.2 m₄.2 equiv₁.1
-    equiv₂.1⟩
+  ⟨ @Raw₀.Equiv.inter_congr α β _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩
+      ⟨m₃.1, m₃.2.size_buckets_pos⟩ ⟨m₄.1, m₄.2.size_buckets_pos⟩ _ _ m₁.2 m₂.2 m₃.2 m₄.2 equiv₁.1
+      equiv₂.1 ⟩
 
 /- get? -/
 theorem get?_inter [LawfulBEq α] {k : α} : (m₁ ∩ m₂).get? k = if k ∈ m₂ then m₁.get? k else none :=
@@ -2598,20 +2598,20 @@ theorem not_mem_diff_of_mem_right [EquivBEq α] [LawfulHashable α] {k : α} (me
 /- Equiv -/
 theorem Equiv.diff_left {m₃ : DHashMap α β} [EquivBEq α] [LawfulHashable α] (equiv : m₁ ~m m₂)
     : (m₁ \ m₃) ~m (m₂ \ m₃) :=
-  ⟨@Raw₀.Equiv.diff_left α β _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩
-    ⟨m₃.1, m₃.2.size_buckets_pos⟩ _ _ m₁.2 m₂.2 m₃.2 equiv.1⟩
+  ⟨ @Raw₀.Equiv.diff_left α β _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩
+      ⟨m₃.1, m₃.2.size_buckets_pos⟩ _ _ m₁.2 m₂.2 m₃.2 equiv.1 ⟩
 
 theorem Equiv.diff_right {m₃ : DHashMap α β} [EquivBEq α] [LawfulHashable α] (equiv : m₂ ~m m₃)
     : (m₁ \ m₂) ~m (m₁ \ m₃) :=
-  ⟨@Raw₀.Equiv.diff_right α β _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩
-    ⟨m₃.1, m₃.2.size_buckets_pos⟩ _ _ m₁.2 m₂.2 m₃.2 equiv.1⟩
+  ⟨ @Raw₀.Equiv.diff_right α β _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩
+      ⟨m₃.1, m₃.2.size_buckets_pos⟩ _ _ m₁.2 m₂.2 m₃.2 equiv.1 ⟩
 
 theorem Equiv.diff_congr
     {m₃ m₄ : DHashMap α β} [EquivBEq α] [LawfulHashable α] (equiv₁ : m₁ ~m m₃) (equiv₂ : m₂ ~m m₄)
     : (m₁ \ m₂) ~m (m₃ \ m₄) :=
-  ⟨@Raw₀.Equiv.diff_congr α β _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩
-    ⟨m₃.1, m₃.2.size_buckets_pos⟩ ⟨m₄.1, m₄.2.size_buckets_pos⟩ _ _ m₁.2 m₂.2 m₃.2 m₄.2 equiv₁.1
-    equiv₂.1⟩
+  ⟨ @Raw₀.Equiv.diff_congr α β _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩
+      ⟨m₃.1, m₃.2.size_buckets_pos⟩ ⟨m₄.1, m₄.2.size_buckets_pos⟩ _ _ m₁.2 m₂.2 m₃.2 m₄.2 equiv₁.1
+      equiv₂.1 ⟩
 
 /- get? -/
 theorem get?_diff [LawfulBEq α] {k : α} : (m₁ \ m₂).get? k = if k ∈ m₂ then none else m₁.get? k :=
@@ -4592,10 +4592,9 @@ def isSetoid (α β) [BEq α] [Hashable α] : Setoid (DHashMap α β) where
 
 @[simp]
 theorem equiv_emptyWithCapacity_iff_isEmpty [EquivBEq α] [LawfulHashable α] {c : Nat}
-    : m ~m emptyWithCapacity c ↔ m.isEmpty := ⟨
-  fun ⟨h⟩ => (Raw₀.equiv_emptyWithCapacity_iff_isEmpty ⟨m.1, m.2.size_buckets_pos⟩ m.2).mp h,
-  fun h => ⟨(Raw₀.equiv_emptyWithCapacity_iff_isEmpty ⟨m.1, m.2.size_buckets_pos⟩ m.2).mpr h⟩
-⟩
+    : m ~m emptyWithCapacity c ↔ m.isEmpty :=
+  ⟨ fun ⟨h⟩ => (Raw₀.equiv_emptyWithCapacity_iff_isEmpty ⟨m.1, m.2.size_buckets_pos⟩ m.2).mp h,
+    fun h => ⟨(Raw₀.equiv_emptyWithCapacity_iff_isEmpty ⟨m.1, m.2.size_buckets_pos⟩ m.2).mpr h⟩ ⟩
 
 @[simp]
 theorem equiv_empty_iff_isEmpty [EquivBEq α] [LawfulHashable α] : m ~m ∅ ↔ m.isEmpty :=
@@ -4974,16 +4973,14 @@ theorem size_filter_eq_size_iff [LawfulBEq α] {f : (a : α) → β a → Bool}
   Raw₀.size_filter_eq_size_iff ⟨m.1, _⟩ m.2
 
 theorem filter_equiv_self_iff [LawfulBEq α] {f : (a : α) → β a → Bool}
-    : m.filter f ~m m ↔ ∀ k h, f k (m.get k h) := ⟨
-  fun h => (Raw₀.filter_equiv_self_iff ⟨m.1, _⟩ m.2).mp h.1,
-  fun h => ⟨(Raw₀.filter_equiv_self_iff ⟨m.1, _⟩ m.2).mpr h⟩
-⟩
+    : m.filter f ~m m ↔ ∀ k h, f k (m.get k h) :=
+  ⟨ fun h => (Raw₀.filter_equiv_self_iff ⟨m.1, _⟩ m.2).mp h.1,
+    fun h => ⟨(Raw₀.filter_equiv_self_iff ⟨m.1, _⟩ m.2).mpr h⟩ ⟩
 
 theorem filter_key_equiv_self_iff [EquivBEq α] [LawfulHashable α] {f : (a : α) → Bool}
-    : m.filter (fun k _ => f k) ~m m ↔ ∀ k h, f (m.getKey k h) := ⟨
-  fun h => (Raw₀.filter_key_equiv_self_iff ⟨m.1, _⟩ m.2).mp h.1,
-  fun h => ⟨(Raw₀.filter_key_equiv_self_iff ⟨m.1, _⟩ m.2).mpr h⟩
-⟩
+    : m.filter (fun k _ => f k) ~m m ↔ ∀ k h, f (m.getKey k h) :=
+  ⟨ fun h => (Raw₀.filter_key_equiv_self_iff ⟨m.1, _⟩ m.2).mp h.1,
+    fun h => ⟨(Raw₀.filter_key_equiv_self_iff ⟨m.1, _⟩ m.2).mpr h⟩ ⟩
 
 theorem size_filter_key_eq_size_iff [EquivBEq α] [LawfulHashable α] {f : α → Bool}
     : (m.filter fun k _ => f k).size = m.size ↔ ∀ (k : α) (h : k ∈ m), f (m.getKey k h) :=
@@ -5083,10 +5080,9 @@ theorem size_filter_eq_size_iff [EquivBEq α] [LawfulHashable α] {f : α → β
   Raw₀.Const.size_filter_eq_size_iff ⟨m.1, _⟩ m.2
 
 theorem filter_equiv_self_iff [EquivBEq α] [LawfulHashable α] {f : α → β → Bool}
-    : m.filter f ~m m ↔ ∀ k h, f (m.getKey k h) (Const.get m k h) := ⟨
-  fun h => (Raw₀.Const.filter_equiv_self_iff ⟨m.1, _⟩ m.2).mp h.1,
-  fun h => ⟨(Raw₀.Const.filter_equiv_self_iff ⟨m.1, _⟩ m.2).mpr h⟩
-⟩
+    : m.filter f ~m m ↔ ∀ k h, f (m.getKey k h) (Const.get m k h) :=
+  ⟨ fun h => (Raw₀.Const.filter_equiv_self_iff ⟨m.1, _⟩ m.2).mp h.1,
+    fun h => ⟨(Raw₀.Const.filter_equiv_self_iff ⟨m.1, _⟩ m.2).mpr h⟩ ⟩
 
 theorem get?_filter [EquivBEq α] [LawfulHashable α] {f : α → β → Bool} {k : α}
     : Const.get? (m.filter f) k

@@ -59,11 +59,9 @@ theorem denote_mkFullAdderCarry (assign : α → Bool) (aig : AIG α) (input : F
 
 theorem mkFullAdder_denote_mem_prefix
     (aig : AIG α) (input : FullAdderInput aig) (start : Nat) (hstart)
-    : ⟦
-        (mkFullAdder aig input).aig,
+    : ⟦ (mkFullAdder aig input).aig,
         ⟨start, inv, Nat.lt_of_lt_of_le hstart (FullAdderOutput.hle _)⟩,
-        assign
-      ⟧
+        assign ⟧
       = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   unfold mkFullAdder
   dsimp only
@@ -75,11 +73,9 @@ theorem go_denote_mem_prefix
     (aig : AIG α)
     (curr : Nat) (hcurr : curr ≤ w)
     (cin : Ref aig) (s : AIG.RefVec aig curr) (lhs rhs : AIG.RefVec aig w) (start : Nat) (hstart)
-    : ⟦
-        (go aig lhs rhs curr hcurr cin s).aig,
+    : ⟦ (go aig lhs rhs curr hcurr cin s).aig,
         ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
-        assign
-      ⟧
+        assign ⟧
       = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply IsPrefix.of
@@ -142,11 +138,9 @@ theorem go_denote_eq
     (hcin : ⟦aig, cin, assign⟧ = BitVec.carry curr lhsExpr rhsExpr false)
     : ∀ (idx : Nat) (hidx1 : idx < w),
       curr ≤ idx
-        → ⟦
-            (go aig lhs rhs curr hcurr cin s).aig,
+        → ⟦ (go aig lhs rhs curr hcurr cin s).aig,
             (go aig lhs rhs curr hcurr cin s).vec.get idx hidx1,
-            assign
-          ⟧
+            assign ⟧
           = ⟦aig, lhs.get idx hidx1, assign⟧.xor
             (⟦aig, rhs.get idx hidx1, assign⟧.xor (BitVec.carry idx lhsExpr rhsExpr false)) := by
   intro idx hidx1 hidx2

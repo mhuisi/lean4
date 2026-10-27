@@ -92,33 +92,32 @@ where
         let finished ← IO.Promise.new
         let inner ← IO.Promise.new
         let cancelTk? := (← readThe Core.Context).cancelTk?
-        snap.new.resolve {
-          transformed.transform.addTrailing := untrimmedTac.getTrailing?.getD default
-          transformed.raw := {
-            desc := tac.getKind.toString
-            diagnostics := .empty
-            stx := tac
-            inner? := some { stx? := tac, task := inner.resultD default, cancelTk? }
-            finished := {
-              stx? := tac
-              task := finished.resultD default
-              cancelTk?
-              -- Do not report range as it is identical to `inner?`'s and should not cover up
-              -- incremental reporting done in the latter.
-              reportingRange := .skip
-            }
-          }
-          next := #[{
-            stx? := stxs
-            task := next.resultD default
-            cancelTk?
-            -- Do not fall back to `inherit` if there are no more tactics as that would cover up
-            -- incremental reporting done in `inner?`. Do use default range in all other cases so that
-            -- reporting ranges are properly nested.
-            reportingRange :=
-              if stxs.getNumArgs == 0 then .skip else SnapshotTask.defaultReportingRange stxs
-          }]
-        }
+        snap.new.resolve
+          { transformed.transform.addTrailing := untrimmedTac.getTrailing?.getD default
+            transformed.raw :=
+              { desc := tac.getKind.toString
+                diagnostics := .empty
+                stx := tac
+                inner? := some { stx? := tac, task := inner.resultD default, cancelTk? }
+                finished :=
+                  { stx? := tac
+                    task := finished.resultD default
+                    cancelTk?
+                    -- Do not report range as it is identical to `inner?`'s and should not cover up
+                    -- incremental reporting done in the latter.
+                    reportingRange := .skip } }
+            next :=
+              #[{ stx? := stxs
+                  task := next.resultD default
+                  cancelTk?
+                  -- Do not fall back to `inherit` if there are no more tactics as that would cover up
+                  -- incremental reporting done in `inner?`. Do use default range in all other cases so that
+                  -- reporting ranges are properly nested.
+                  reportingRange :=
+                    if stxs.getNumArgs == 0 then
+                      .skip
+                    else
+                      SnapshotTask.defaultReportingRange stxs }] }
         -- Run `tac` in a fresh info tree state and store resulting state in snapshot for
         -- incremental reporting, then add back saved trees. Here we rely on `evalTactic`
         -- producing at most one info tree as otherwise `getInfoTreeWithContext?` would panic.
@@ -129,13 +128,12 @@ where
               -- set up nested reuse; `evalTactic` will check for `isIncrementalElab`
               (tacSnap? := some { old? := oldInner?, new := inner })
               do Term.withReuseContext tac do evalTactic tac
-          finished.resolve {
-            diagnostics :=
-              (← Language.Snapshot.Diagnostics.ofMessageLog (← Core.getAndEmptyMessageLog))
-            infoTree? := (← Term.getInfoTreeWithContext?)
-            state? := state
-            moreSnaps := (← Core.getAndEmptySnapshotTasks)
-          }
+          finished.resolve
+            { diagnostics :=
+                (← Language.Snapshot.Diagnostics.ofMessageLog (← Core.getAndEmptyMessageLog))
+              infoTree? := (← Term.getInfoTreeWithContext?)
+              state? := state
+              moreSnaps := (← Core.getAndEmptySnapshotTasks) }
         finally
           -- New trees are not guarded by a transformation here so add back trailing eagerly. Unlikely
           -- to be a bottleneck but could be optimized by adding a transformation node to `InfoTree`.
@@ -143,10 +141,8 @@ where
           unless trailing.isEmpty do
             -- Substitute info holes first so that term-level tactic blocks ending in the same token
             -- as `tac` (e.g. `exact foo <| by ...`) regain the trailing whitespace as well.
-            modifyInfoState fun s => {
-              s with
-              trees := s.trees.map (·.substitute s.assignment |>.addTrailing trailing)
-            }
+            modifyInfoState fun s =>
+              { s with trees := s.trees.map (·.substitute s.assignment |>.addTrailing trailing) }
           modifyInfoState fun s => { s with trees := trees ++ s.trees }
 
         withTheReader Term.Context ({ · with tacSnap? := some { new := next, old? := oldNext? } })
@@ -650,12 +646,11 @@ where
     .group <| .nest 2 <| .ofFormat .line ++ .joinSep items sep
 
   mkSuggestions (names : Array Name) :=
-    names.map fun name => {
-      suggestion := name.toString
-      toCodeActionTitle? := some fun s => s!"Change case name: {s}"
-      preInfo? := if names.size == 1 then none else s!"`{name}`: "
-      : Hint.Suggestion
-    }
+    names.map fun name =>
+      { suggestion := name.toString
+        toCodeActionTitle? := some fun s => s!"Change case name: {s}"
+        preInfo? := if names.size == 1 then none else s!"`{name}`: "
+        : Hint.Suggestion }
 
 @[builtin_tactic «case», builtin_incremental]
 def evalCase : Tactic

@@ -1963,12 +1963,11 @@ where
       none
     | a :: l, i, h =>
       if p a then
-        some ⟨
-          i,
-          by
-            simp only [Nat.add_comm _ i] at h
-            exact Nat.lt_of_add_right_lt (Nat.lt_of_succ_le (Nat.le_of_eq h))
-        ⟩
+        some
+          ⟨ i,
+            by
+              simp only [Nat.add_comm _ i] at h
+              exact Nat.lt_of_add_right_lt (Nat.lt_of_succ_le (Nat.le_of_eq h)) ⟩
       else
         go l (i + 1) (by simp at h; simpa [← Nat.add_assoc, Nat.add_right_comm] using h)
 

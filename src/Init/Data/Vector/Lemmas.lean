@@ -551,10 +551,8 @@ theorem toArray_swapIfInBounds {xs : Vector α n} {i j}
 
 theorem toArray_swapAt {xs : Vector α n} {i x} (h : i < n)
     : ((xs.swapAt i x).fst, (xs.swapAt i x).snd.toArray)
-      = (
-        (xs.toArray.swapAt i x (by simpa using h)).fst,
-        (xs.toArray.swapAt i x (by simpa using h)).snd
-      ) :=
+      = ( (xs.toArray.swapAt i x (by simpa using h)).fst,
+          (xs.toArray.swapAt i x (by simpa using h)).snd ) :=
   rfl
 
 theorem toArray_swapAt! {xs : Vector α n} {i x}

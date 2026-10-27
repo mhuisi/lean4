@@ -72,10 +72,8 @@ deriving instance RpcEncodable for Lsp.DiagnosticWith
 namespace InteractiveDiagnostic
 open MsgEmbed
 
-partial def toDiagnostic (diag : InteractiveDiagnostic) : Lsp.Diagnostic := {
-  diag with
-  message := prettyTt diag.message
-}
+partial def toDiagnostic (diag : InteractiveDiagnostic) : Lsp.Diagnostic :=
+  { diag with message := prettyTt diag.message }
 where
   prettyTt (tt : InteractiveMessage) : String :=
     let tt : InteractiveMessage :=
@@ -92,14 +90,13 @@ where
 
 end InteractiveDiagnostic
 
-private def mkPPContext (nCtx : NamingContext) (ctx : MessageDataContext) : PPContext := {
-  env := ctx.env
-  mctx := ctx.mctx
-  lctx := ctx.lctx
-  opts := ctx.opts
-  currNamespace := nCtx.currNamespace
-  openDecls := nCtx.openDecls
-}
+private def mkPPContext (nCtx : NamingContext) (ctx : MessageDataContext) : PPContext :=
+  { env := ctx.env
+    mctx := ctx.mctx
+    lctx := ctx.lctx
+    opts := ctx.opts
+    currNamespace := nCtx.currNamespace
+    openDecls := nCtx.openDecls }
 
 /-! The `msgToInteractive` algorithm turns a `MessageData` into `InteractiveMessage` in two stages.
 
@@ -145,16 +142,15 @@ where
     let t ← pushEmbed EmbedFmt.ignoreTags
     return Format.tag t fmt
 
-  mkContextInfo (nCtx : NamingContext) (ctx : MessageDataContext) : Elab.ContextInfo := {
-    env := ctx.env
-    mctx := ctx.mctx
-    fileMap := default
-    options := ctx.opts
-    currNamespace := nCtx.currNamespace
-    openDecls := nCtx.openDecls
-    -- Hack: to make sure unique ids created at `ppExprWithInfos` do not collide with ones in `ctx.mctx`
-    ngen := { namePrefix := `_diag }
-  }
+  mkContextInfo (nCtx : NamingContext) (ctx : MessageDataContext) : Elab.ContextInfo :=
+    { env := ctx.env
+      mctx := ctx.mctx
+      fileMap := default
+      options := ctx.opts
+      currNamespace := nCtx.currNamespace
+      openDecls := nCtx.openDecls
+      -- Hack: to make sure unique ids created at `ppExprWithInfos` do not collide with ones in `ctx.mctx`
+      ngen := { namePrefix := `_diag } }
 
   go (nCtx : NamingContext) : Option MessageDataContext → MessageData → MsgFmtM Format
     | none, ofFormatWithInfos ⟨fmt, _⟩ =>
@@ -270,10 +266,8 @@ def msgToInteractiveDiagnostic (text : FileMap) (m : Message) (hasWidgets : Bool
       This is a workaround to avoid big blocks of "red squiggly lines" on VS Code.
       -/
       let endPos :=
-        if !m.keepFullRange && endPos.line > m.pos.line then {
-          line := m.pos.line + 1
-          column := 0
-        }
+        if !m.keepFullRange && endPos.line > m.pos.line then
+          { line := m.pos.line + 1, column := 0 }
         else
           endPos
       text.leanPosToLspPos endPos
@@ -307,16 +301,15 @@ def msgToInteractiveDiagnostic (text : FileMap) (m : Message) (hasWidgets : Bool
     | .ok msg => msg
     | .error ex => TaggedText.text s!"[error when printing message: {ex.toString}]"
   let code? := (errorNameOfKind? m.kind).map (.string ·.toString)
-  pure {
-    range
-    fullRange? := some fullRange
-    severity?
-    source?
-    message
-    tags?
-    leanTags?
-    isSilent?
-    code?
-  }
+  pure
+    { range
+      fullRange? := some fullRange
+      severity?
+      source?
+      message
+      tags?
+      leanTags?
+      isSilent?
+      code? }
 
 end Lean.Widget

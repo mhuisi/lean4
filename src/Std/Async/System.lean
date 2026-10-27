@@ -116,27 +116,24 @@ def Environment.get? (env : Environment) (key : String) : Option String := env.t
 /-- Gets information about the operating system. -/
 def getSystemInfo : IO OSInfo := do
   let uname ← UV.System.osUname
-  return {
-    name := uname.sysname
-    release := uname.release
-    version := uname.version
-    machine := uname.machine
-  }
+  return
+    { name := uname.sysname
+      release := uname.release
+      version := uname.version
+      machine := uname.machine }
 
 /-- Gets information about the CPU cores. -/
 def getCPUInfo : IO (Array CPUInfo) := do
   let cpuinfo ← UV.System.cpuInfo
-  return cpuinfo.map fun coreInfo => {
-    model := coreInfo.model
-    speed := UInt64.toNat <| coreInfo.speed
-    times := {
-      userTime := Millisecond.Offset.ofNat <| UInt64.toNat <| coreInfo.times.user
-      niceTime := Millisecond.Offset.ofNat <| UInt64.toNat <| coreInfo.times.nice
-      systemTime := Millisecond.Offset.ofNat <| UInt64.toNat <| coreInfo.times.sys
-      idleTime := Millisecond.Offset.ofNat <| UInt64.toNat <| coreInfo.times.idle
-      interruptTime := Millisecond.Offset.ofNat <| UInt64.toNat <| coreInfo.times.irq
-    }
-  }
+  return cpuinfo.map fun coreInfo =>
+    { model := coreInfo.model
+      speed := UInt64.toNat <| coreInfo.speed
+      times :=
+        { userTime := Millisecond.Offset.ofNat <| UInt64.toNat <| coreInfo.times.user
+          niceTime := Millisecond.Offset.ofNat <| UInt64.toNat <| coreInfo.times.nice
+          systemTime := Millisecond.Offset.ofNat <| UInt64.toNat <| coreInfo.times.sys
+          idleTime := Millisecond.Offset.ofNat <| UInt64.toNat <| coreInfo.times.idle
+          interruptTime := Millisecond.Offset.ofNat <| UInt64.toNat <| coreInfo.times.irq } }
 
 /-- Gets the system uptime in seconds. -/
 @[inline] def getUpTime : IO Second.Offset := do return .ofNat <| UInt64.toNat (← UV.System.uptime)
@@ -180,13 +177,12 @@ On Windows systems, `userId`, `groupId` and `shell` are set to none
 -/
 def getCurrentUser : IO SystemUser := do
   let passwd ← UV.System.osGetPasswd
-  return {
-    userId := (UserId.mk ∘ UInt64.toNat) <$> passwd.uid
-    groupId := (GroupId.mk ∘ UInt64.toNat) <$> passwd.gid
-    username := passwd.username
-    homeDir := passwd.homedir
-    shell := passwd.shell
-  }
+  return
+    { userId := (UserId.mk ∘ UInt64.toNat) <$> passwd.uid
+      groupId := (GroupId.mk ∘ UInt64.toNat) <$> passwd.gid
+      username := passwd.username
+      homeDir := passwd.homedir
+      shell := passwd.shell }
 
 /--
 Gets the group by its ID, or `none` if there is no such group. Throws an `IO.Error.invalidArgument`
@@ -196,11 +192,10 @@ for an ID that does not fit the operating system's group ID type, and an
 def getGroup (groupId : GroupId) : IO (Option GroupInfo) := do
   let groupInfo ← UV.System.osGetGroup groupId.toNat
 
-  return groupInfo <&> fun group => {
-    groupName := group.groupname
-    groupId := GroupId.mk <| UInt64.toNat group.gid
-    members := group.members
-  }
+  return groupInfo <&> fun group =>
+    { groupName := group.groupname
+      groupId := GroupId.mk <| UInt64.toNat group.gid
+      members := group.members }
 
 end System
 end Async

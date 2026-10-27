@@ -657,11 +657,10 @@ instance [PartialOrder α] [PartialOrder β] : PartialOrder (α ×' β) where
 theorem is_meet_pprod
     [PartialOrder α] [PartialOrder β]
     {x y w : α ×' β} (h₁ : is_meet x.1 y.1 w.1) (h₂ : is_meet x.2 y.2 w.2)
-    : is_meet x y w := ⟨
-  ⟨h₁.1, h₂.1⟩,
-  ⟨h₁.2.1, h₂.2.1⟩,
-  fun z hzx hzy => ⟨h₁.2.2 z.1 hzx.1 hzy.1, h₂.2.2 z.2 hzx.2 hzy.2⟩
-⟩
+    : is_meet x y w :=
+  ⟨ ⟨h₁.1, h₂.1⟩,
+    ⟨h₁.2.1, h₂.2.1⟩,
+    fun z hzx hzy => ⟨h₁.2.2 z.1 hzx.1 hzy.1, h₂.2.2 z.2 hzx.2 hzy.2⟩ ⟩
 
 @[partial_fixpoint_monotone]
 theorem PProd.monotone_mk

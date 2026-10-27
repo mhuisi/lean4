@@ -78,10 +78,8 @@ public def find?' (m : ConstMap) (n : Name) : Option ConstantInfo :=
 public def contains (m : ConstMap) (n : Name) : Bool :=
   m.map₂.contains n || (m.map₁.findConstCached? n).isSome
 
-public def insert (m : ConstMap) (n : Name) (v : ConstantInfo) : ConstMap := {
-  m with
-  map₂ := m.map₂.insert n v
-}
+public def insert (m : ConstMap) (n : Name) (v : ConstantInfo) : ConstMap :=
+  { m with map₂ := m.map₂.insert n v }
 
 /-- Folds over the constants declared in the current module. -/
 @[inline]

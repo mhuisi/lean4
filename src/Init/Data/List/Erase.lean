@@ -90,15 +90,13 @@ theorem exists_of_eraseP
         nomatch pb pa
       | .tail _ al =>
         let ⟨c, l₁, l₂, h₁, h₂, h₃, h₄⟩ := exists_of_eraseP al pa
-        ⟨
-          c,
+        ⟨ c,
           b :: l₁,
           l₂,
           (forall_mem_cons ..).2 ⟨pb, h₁⟩,
           h₂,
           by rw [h₃, cons_append],
-          by simp [pb, h₄]
-        ⟩
+          by simp [pb, h₄] ⟩
 
 -- The arguments are explicit here, so this lemma can be used as a case split.
 theorem exists_or_eq_self_of_eraseP (p) (l : List α)

@@ -147,31 +147,27 @@ public structure SatOptions where
 
 namespace SatOptions
 
-public def ofMode (mode : Elab.Tactic.BVDecide.SolverMode) : SatOptions := {
-  configuration :=
-    match mode with
-    | .proof => "unsat"
-    | .counterexample => "sat"
-    | .default => "default"
-  longOptions := #[]
-  options :=
-    /-
-    Bitwuzla sets this option and it does improve performance practically:
-    https://github.com/bitwuzla/bitwuzla/blob/0e81e616af4d4421729884f01928b194c3536c76/src/sat/cadical.cpp#L34
-    -/
-    #[("shrink", 0)]
-}
+public def ofMode (mode : Elab.Tactic.BVDecide.SolverMode) : SatOptions :=
+  { configuration :=
+      match mode with
+      | .proof => "unsat"
+      | .counterexample => "sat"
+      | .default => "default"
+    longOptions := #[]
+    options :=
+      /-
+      Bitwuzla sets this option and it does improve performance practically:
+      https://github.com/bitwuzla/bitwuzla/blob/0e81e616af4d4421729884f01928b194c3536c76/src/sat/cadical.cpp#L34
+      -/
+      #[("shrink", 0)] }
 
-public def addLrat (opts : SatOptions) (binary : Bool) : SatOptions := {
-  opts with
-  longOptions := opts.longOptions ++ #["lrat", "quiet"]
-  options := opts.options.push ("binary", binary.toUInt32.toInt32)
-}
+public def addLrat (opts : SatOptions) (binary : Bool) : SatOptions :=
+  { opts with
+    longOptions := opts.longOptions ++ #["lrat", "quiet"]
+    options := opts.options.push ("binary", binary.toUInt32.toInt32) }
 
-public def addIncremental (opts : SatOptions) : SatOptions := {
-  opts with
-  options := opts.options.push ("ilb", 2)
-}
+public def addIncremental (opts : SatOptions) : SatOptions :=
+  { opts with options := opts.options.push ("ilb", 2) }
 
 public def toArgs (opts : SatOptions) : Array String := Id.run do
   let mut args := #[]

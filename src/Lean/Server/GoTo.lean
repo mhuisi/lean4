@@ -101,14 +101,13 @@ def locationLinksFromDecl (declName : Name) : GoToM (Array LeanLocationLink) := 
     let i ← ctx.originInfo?
     let r ← i.range?
     return r.toLspRange ctx.doc.text
-  let ll : LeanLocationLink := {
-    originSelectionRange?
-    targetUri := declModUri
-    targetRange := ranges.range.toLspRange
-    targetSelectionRange := ranges.selectionRange.toLspRange
-    ident? := some ⟨declModName, declName.eraseMacroScopes⟩
-    isDefault := false
-  }
+  let ll : LeanLocationLink :=
+    { originSelectionRange?
+      targetUri := declModUri
+      targetRange := ranges.range.toLspRange
+      targetSelectionRange := ranges.selectionRange.toLspRange
+      ident? := some ⟨declModName, declName.eraseMacroScopes⟩
+      isDefault := false }
   return #[ll]
 where
   declMod? : GoToM (Option (Name × DocumentUri)) := do
@@ -134,14 +133,13 @@ def locationLinksFromBinder (id : FVarId) : GoToM (Array LeanLocationLink) := do
     let i ← ctx.originInfo?
     let r ← i.range?
     return r.toLspRange doc.text
-  let ll : LeanLocationLink := {
-    originSelectionRange?
-    targetUri := doc.uri
-    targetRange := binderInfoRange
-    targetSelectionRange := binderInfoRange
-    ident? := none
-    isDefault := false
-  }
+  let ll : LeanLocationLink :=
+    { originSelectionRange?
+      targetUri := doc.uri
+      targetRange := binderInfoRange
+      targetSelectionRange := binderInfoRange
+      ident? := none
+      isDefault := false }
   return #[ll]
 where
   binderInfo? : GoToM (Option Info) := do
@@ -162,14 +160,13 @@ def locationLinksFromImport (i : CommandInfo) : GoToM (Array LeanLocationLink) :
   let originSelectionRange? := do
     let r ← mod.raw.getRange? (canonicalOnly := true)
     return r.toLspRange ctx.doc.text
-  let ll : LeanLocationLink := {
-    originSelectionRange?
-    targetUri := modUri
-    targetRange := range
-    targetSelectionRange := range
-    ident? := none
-    isDefault := false
-  }
+  let ll : LeanLocationLink :=
+    { originSelectionRange?
+      targetUri := modUri
+      targetRange := range
+      targetSelectionRange := range
+      ident? := none
+      isDefault := false }
   return #[ll]
 
 def locationLinksDefault : GoToM (Array LeanLocationLink) := do
@@ -211,14 +208,13 @@ def locationLinksFromErrorNameInfo (eni : ErrorNameInfo) : GoToM (Array LeanLoca
   let originSelectionRange? := do
     let r ← eni.stx.getRange? (canonicalOnly := true)
     return r.toLspRange ctx.doc.text
-  let link : LeanLocationLink := {
-    originSelectionRange?
-    targetUri := modUri
-    targetRange := range
-    targetSelectionRange := range
-    ident? := none
-    isDefault := false
-  }
+  let link : LeanLocationLink :=
+    { originSelectionRange?
+      targetUri := modUri
+      targetRange := range
+      targetSelectionRange := range
+      ident? := none
+      isDefault := false }
   return #[link]
 
 def locationLinksFromInstanceProjection (e : Expr) : GoToM (Array LeanLocationLink) := do
@@ -274,14 +270,13 @@ def locationLinksFromDelabTermInfo (dti : DelabTermInfo) : GoToM (Array LeanLoca
   let originSelectionRange? := do
     let r ← Info.ofDelabTermInfo dti |>.range?
     return r.toLspRange ctx.doc.text
-  let result : LeanLocationLink := {
-    originSelectionRange?
-    targetUri
-    targetRange := range
-    targetSelectionRange := range
-    ident? := none
-    isDefault := false
-  }
+  let result : LeanLocationLink :=
+    { originSelectionRange?
+      targetUri
+      targetRange := range
+      targetSelectionRange := range
+      ident? := none
+      isDefault := false }
   return #[result]
 
 def locationLinksFromFieldInfo (fi : FieldInfo) : GoToM (Array LeanLocationLink) := do
@@ -306,13 +301,8 @@ def locationLinksOfInfo
     (doc : DocumentMeta) (kind : GoToKind) (ictx : InfoWithCtx)
     (infoTree? : Option InfoTree := none)
     : IO (Array LeanLocationLink) := do
-  let ctx : GoToContext := {
-    doc
-    kind
-    infoTree?
-    originInfo? := some ictx.info
-    children := ictx.children
-  }
+  let ctx : GoToContext :=
+    { doc, kind, infoTree?, originInfo? := some ictx.info, children := ictx.children }
   GoToM.run ctx ictx.ctx ictx.info.lctx do
     let ll ←
       match ictx.info with

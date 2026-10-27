@@ -155,9 +155,8 @@ partial def Trie.mapArraysM (t : DiscrTree.Trie α) (f : Array α → m (Array �
 @[inline]
 def mapArraysM (d : DiscrTree α) (f : Array α → m (Array β)) : m (DiscrTree β) := do
   let root ← d.root.mapM (fun t => t.mapArraysM f)
-  pure {
-    root := root.foldl (init := root) fun acc k t => if t.isEmptyNode then acc.erase k else acc
-  }
+  pure
+    { root := root.foldl (init := root) fun acc k t => if t.isEmptyNode then acc.erase k else acc }
 
 /-- Apply a function to the array of values at each node in a `DiscrTree`. -/
 @[inline]

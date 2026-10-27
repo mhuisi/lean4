@@ -2919,10 +2919,9 @@ variable {m m₁ m₂ : HashMap α β}
 
 @[simp]
 theorem equiv_emptyWithCapacity_iff_isEmpty [EquivBEq α] [LawfulHashable α] {c : Nat}
-    : m ~m emptyWithCapacity c ↔ m.isEmpty := ⟨
-  fun ⟨h⟩ => DHashMap.equiv_emptyWithCapacity_iff_isEmpty.mp h,
-  fun h => ⟨DHashMap.equiv_emptyWithCapacity_iff_isEmpty.mpr h⟩
-⟩
+    : m ~m emptyWithCapacity c ↔ m.isEmpty :=
+  ⟨ fun ⟨h⟩ => DHashMap.equiv_emptyWithCapacity_iff_isEmpty.mp h,
+    fun h => ⟨DHashMap.equiv_emptyWithCapacity_iff_isEmpty.mpr h⟩ ⟩
 
 @[simp]
 theorem equiv_empty_iff_isEmpty [EquivBEq α] [LawfulHashable α] : m ~m ∅ ↔ m.isEmpty :=
@@ -3180,10 +3179,9 @@ theorem size_filter_eq_size_iff [EquivBEq α] [LawfulHashable α] {f : α → β
   DHashMap.Const.size_filter_eq_size_iff
 
 theorem filter_equiv_self_iff [EquivBEq α] [LawfulHashable α] {f : α → β → Bool}
-    : m.filter f ~m m ↔ ∀ k h, f (m.getKey k h) (m[k]'h) := ⟨
-  fun h => DHashMap.Const.filter_equiv_self_iff.mp h.1,
-  fun h => ⟨DHashMap.Const.filter_equiv_self_iff.mpr h⟩
-⟩
+    : m.filter f ~m m ↔ ∀ k h, f (m.getKey k h) (m[k]'h) :=
+  ⟨ fun h => DHashMap.Const.filter_equiv_self_iff.mp h.1,
+    fun h => ⟨DHashMap.Const.filter_equiv_self_iff.mpr h⟩ ⟩
 
 @[simp]
 theorem getElem?_filter [EquivBEq α] [LawfulHashable α] {f : α → β → Bool} {k : α}

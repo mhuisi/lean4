@@ -36,9 +36,9 @@ theorem bind
     (x : m α) (f : α → m β) (mid : α → Pred)
     (hx : Triple x pre mid eposts) (hf : ∀ a, Triple (f a) (mid a) post eposts)
     : Triple (x >>= f) pre post eposts :=
-  ⟨PartialOrder.rel_trans hx.le_wp
-    (PartialOrder.rel_trans (WP.wp_monotone_post (fun a => (hf a).le_wp))
-      (WPMonad.bind_le_wp_bind x f post eposts))⟩
+  ⟨ PartialOrder.rel_trans hx.le_wp
+      (PartialOrder.rel_trans (WP.wp_monotone_post (fun a => (hf a).le_wp))
+        (WPMonad.bind_le_wp_bind x f post eposts)) ⟩
 
 theorem map [LawfulMonad m] (f : α → β) (x : m α) (h : Triple x pre (fun a => post (f a)) eposts)
     : Triple (f <$> x) pre post eposts :=

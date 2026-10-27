@@ -181,16 +181,15 @@ private def parseTZifV1 : Parser TZifV1 := do
   let stdWallIndicators ← parseIndicators header.isstdcnt
   let utLocalIndicators ← parseIndicators header.isutcnt
 
-  return {
-    header,
-    transitionTimes,
-    transitionIndices,
-    localTimeTypes,
-    abbreviations,
-    leapSeconds,
-    stdWallIndicators,
-    utLocalIndicators
-  }
+  return
+    { header,
+      transitionTimes,
+      transitionIndices,
+      localTimeTypes,
+      abbreviations,
+      leapSeconds,
+      stdWallIndicators,
+      utLocalIndicators }
 
 private def parseFooter : Parser (Option String) := do
   let char ← pu8
@@ -217,17 +216,16 @@ private def parseTZifV2 : Parser (Option TZifV2) :=
     let stdWallIndicators ← parseIndicators header.isstdcnt
     let utLocalIndicators ← parseIndicators header.isutcnt
 
-    return {
-      header
-      transitionTimes
-      transitionIndices
-      localTimeTypes
-      abbreviations
-      leapSeconds
-      stdWallIndicators
-      utLocalIndicators
-      footer := ← parseFooter
-    }
+    return
+      { header
+        transitionTimes
+        transitionIndices
+        localTimeTypes
+        abbreviations
+        leapSeconds
+        stdWallIndicators
+        utLocalIndicators
+        footer := ← parseFooter }
 
 /-- Parses a TZif file, which may be in either version 1 or version 2 format. -/
 def parse : Parser TZif := do

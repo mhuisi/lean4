@@ -63,15 +63,12 @@ structure CommandElaboratingSnapshot extends Snapshot where
 deriving Nonempty
 instance : ToSnapshotTree CommandElaboratingSnapshot where
   toSnapshotTreeM s :=
-    return ⟨
-      ← Snapshot.transform s.toSnapshot,
-      #[
-        ← s.elabSnap.transform,
-        ← s.resultSnap.transform,
-        ← s.infoTreeSnap.transform,
-        ← s.reportSnap.transform
-      ]
-    ⟩
+    return
+      ⟨ ← Snapshot.transform s.toSnapshot,
+        #[← s.elabSnap.transform,
+          ← s.resultSnap.transform,
+          ← s.infoTreeSnap.transform,
+          ← s.reportSnap.transform] ⟩
 
 /-- State after a command has been parsed. -/
 structure CommandParsedSnapshot extends Snapshot where
@@ -88,11 +85,10 @@ partial instance : ToSnapshotTree CommandParsedSnapshot where
   toSnapshotTreeM := go
 where
   go s := do
-    return ⟨
-      ← Snapshot.transform s.toSnapshot,
-      #[.finished s.stx (← toSnapshotTreeM s.elabSnap)]
-        |> pushOpt (← s.nextCmdSnap?.mapM (·.transformWith go))
-    ⟩
+    return
+      ⟨ ← Snapshot.transform s.toSnapshot,
+        #[.finished s.stx (← toSnapshotTreeM s.elabSnap)]
+          |> pushOpt (← s.nextCmdSnap?.mapM (·.transformWith go)) ⟩
 
 /-- State after successful importing. -/
 structure HeaderProcessedState where
@@ -113,10 +109,9 @@ structure HeaderProcessedSnapshot extends Snapshot where
   isFatal := result?.isNone
 instance : ToSnapshotTree HeaderProcessedSnapshot where
   toSnapshotTreeM s :=
-    return ⟨
-      ← Snapshot.transform s.toSnapshot,
-      #[← s.metaSnap.transform] |> pushOpt (← s.result?.mapM (·.firstCmdSnap.transform))
-    ⟩
+    return
+      ⟨ ← Snapshot.transform s.toSnapshot,
+        #[← s.metaSnap.transform] |> pushOpt (← s.result?.mapM (·.firstCmdSnap.transform)) ⟩
 
 /-- State after successfully parsing the module header. -/
 structure HeaderParsedState where
@@ -142,10 +137,9 @@ structure HeaderParsedSnapshot extends Snapshot where
 
 instance : ToSnapshotTree HeaderParsedSnapshot where
   toSnapshotTreeM s :=
-    return ⟨
-      ← Snapshot.transform s.toSnapshot,
-      #[← s.metaSnap.transform] |> pushOpt (← s.result?.mapM (·.processedSnap.transform))
-    ⟩
+    return
+      ⟨ ← Snapshot.transform s.toSnapshot,
+        #[← s.metaSnap.transform] |> pushOpt (← s.result?.mapM (·.processedSnap.transform)) ⟩
 
 /-- Shortcut accessor to the final header state, if successful. -/
 def HeaderParsedSnapshot.processedResult (snap : HeaderParsedSnapshot)

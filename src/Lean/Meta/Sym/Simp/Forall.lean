@@ -123,26 +123,24 @@ partial def simpArrows (e : Expr) (infos : List ArrowInfo) (simpBody : Simproc)
         return
           (.step (← getTrueExpr) (mkApp (mkConst ``false_arrow) q) (contextDependent := cd), [])
       | .step _ h _ cd =>
-        return (
-          .step (← getTrueExpr) (mkApp3 (mkConst ``false_arrow_congr) p q h)
-            (contextDependent := cd),
-          []
-        )
+        return
+          ( .step (← getTrueExpr) (mkApp3 (mkConst ``false_arrow_congr) p q h)
+              (contextDependent := cd),
+            [] )
     let (q_r, infos') ← simpArrows q infos' simpBody
     if (← isTrueExpr (q_r.getResultExpr q)) then
       let cd := p_r.isContextDependent || q_r.isContextDependent
       match q_r with
       | .rfl _ _ =>
-        return (
-          .step (← getTrueExpr) (mkApp (mkConst ``arrow_true [info.u]) p) (contextDependent := cd),
-          []
-        )
+        return
+          ( .step (← getTrueExpr) (mkApp (mkConst ``arrow_true [info.u]) p)
+              (contextDependent := cd),
+            [] )
       | .step _ h _ _ =>
-        return (
-          .step (← getTrueExpr) (mkApp3 (mkConst ``arrow_true_congr [info.u]) p q h)
-            (contextDependent := cd),
-          []
-        )
+        return
+          ( .step (← getTrueExpr) (mkApp3 (mkConst ``arrow_true_congr [info.u]) p q h)
+              (contextDependent := cd),
+            [] )
     match p_r, q_r with
     | .rfl _ cd₁, .rfl _ cd₂ =>
       let cd := cd₁ || cd₂
@@ -153,10 +151,9 @@ partial def simpArrows (e : Expr) (infos : List ArrowInfo) (simpBody : Simproc)
     | .step p' h _ cd₁, .rfl _ cd₂ =>
       let cd := cd₁ || cd₂
       if (← isTrueExpr p') && info.v.isZero then
-        return (
-          .step q (mkApp3 (mkConst ``true_arrow_congr_left) p q h) (contextDependent := cd),
-          infos'
-        )
+        return
+          ( .step q (mkApp3 (mkConst ``true_arrow_congr_left) p q h) (contextDependent := cd),
+            infos' )
       else
         let e' ← mkAppS₂ f p' q
         let proof := mkApp4 (mkConst ``arrow_congr_left f.constLevels!) p p' q h
@@ -164,21 +161,19 @@ partial def simpArrows (e : Expr) (infos : List ArrowInfo) (simpBody : Simproc)
     | .rfl _ cd₁, .step q' h _ cd₂ =>
       let cd := cd₁ || cd₂
       if (← isTrueExpr p) && info.v.isZero then
-        return (
-          .step q' (mkApp3 (mkConst ``true_arrow_congr_right) q q' h) (contextDependent := cd),
-          infos'
-        )
+        return
+          ( .step q' (mkApp3 (mkConst ``true_arrow_congr_right) q q' h) (contextDependent := cd),
+            infos' )
       else
         let e' ← mkAppS₂ f p q'
         let proof := mkApp4 (mkConst ``arrow_congr_right f.constLevels!) p q q' h
         return (.step e' proof (contextDependent := cd), info :: infos')
     | .step p' h₁ _ cd₁, .step q' h₂ _ cd₂ =>
       if (← isTrueExpr p') && info.v.isZero then
-        return (
-          .step q' (mkApp5 (mkConst ``true_arrow_congr) p q q' h₁ h₂)
-            (contextDependent := cd₁ || cd₂),
-          infos'
-        )
+        return
+          ( .step q' (mkApp5 (mkConst ``true_arrow_congr) p q q' h₁ h₂)
+              (contextDependent := cd₁ || cd₂),
+            infos' )
       else
         let e' ← mkAppS₂ f p' q'
         let proof := mkApp6 (mkConst ``arrow_congr f.constLevels!) p p' q q' h₁ h₂

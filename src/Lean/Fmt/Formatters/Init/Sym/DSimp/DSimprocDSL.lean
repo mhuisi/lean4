@@ -15,16 +15,12 @@ import Init.Data
 namespace Lean.Fmt
 
 @[builtin_infix_fmt Lean.Parser.Sym.DSimp.andThen]
-public def fmtSymDSimprocAndThen : Fmt.InfixOperation := {
-  sparse := false
-  precs? := some { prec := 60, lhsPrec := 61, rhsPrec := 60 }
-}
+public def fmtSymDSimprocAndThen : Fmt.InfixOperation :=
+  { sparse := false, precs? := some { prec := 60, lhsPrec := 61, rhsPrec := 60 } }
 
 @[builtin_infix_fmt Lean.Parser.Sym.DSimp.orElse]
-public def fmtSymDSimprocOrElse : Fmt.InfixOperation := {
-  sparse := false
-  precs? := some { prec := 20, lhsPrec := 21, rhsPrec := 20 }
-}
+public def fmtSymDSimprocOrElse : Fmt.InfixOperation :=
+  { sparse := false, precs? := some { prec := 20, lhsPrec := 21, rhsPrec := 20 } }
 
 @[builtin_fmt Lean.Parser.Sym.DSimp.rewriteInline]
 public def fmtSymDSimpRewriteInline : Fmt := fun

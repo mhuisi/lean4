@@ -412,10 +412,9 @@ Premises from a module whose name has one of the following components are not re
 Use `run_cmd modifyEnv fun env => moduleDenyListExt.addEntry env module` to add a module to the deny list.
 -/
 builtin_initialize moduleDenyListExt : SimplePersistentEnvExtension String (List String) ←
-  registerSimplePersistentEnvExtension {
-    addEntryFn := (·.cons)
-    addImportedFn := mkStateFromImportedEntries (·.cons) ["Lake", "Lean", "Internal", "Tactic"]
-  }
+  registerSimplePersistentEnvExtension
+    { addEntryFn := (·.cons)
+      addImportedFn := mkStateFromImportedEntries (·.cons) ["Lake", "Lean", "Internal", "Tactic"] }
 
 /--
 A premise whose name has one of the following components is not retrieved.
@@ -423,10 +422,9 @@ A premise whose name has one of the following components is not retrieved.
 Use `run_cmd modifyEnv fun env => nameDenyListExt.addEntry env name` to add a name to the deny list.
 -/
 builtin_initialize nameDenyListExt : SimplePersistentEnvExtension String (List String) ←
-  registerSimplePersistentEnvExtension {
-    addEntryFn := (·.cons)
-    addImportedFn := mkStateFromImportedEntries (·.cons) ["Lake", "Lean", "Internal", "Tactic"]
-  }
+  registerSimplePersistentEnvExtension
+    { addEntryFn := (·.cons)
+      addImportedFn := mkStateFromImportedEntries (·.cons) ["Lake", "Lean", "Internal", "Tactic"] }
 
 /--
 A premise whose `type.getForallBody.getAppFn` is a constant that has one of these prefixes is not retrieved.
@@ -434,10 +432,8 @@ A premise whose `type.getForallBody.getAppFn` is a constant that has one of thes
 Use `run_cmd modifyEnv fun env => typePrefixDenyListExt.addEntry env typePrefix` to add a type prefix to the deny list.
 -/
 builtin_initialize typePrefixDenyListExt : SimplePersistentEnvExtension Name (List Name) ←
-  registerSimplePersistentEnvExtension {
-    addEntryFn := (·.cons)
-    addImportedFn := mkStateFromImportedEntries (·.cons) [`Lake, `Lean]
-  }
+  registerSimplePersistentEnvExtension
+    { addEntryFn := (·.cons), addImportedFn := mkStateFromImportedEntries (·.cons) [`Lake, `Lean] }
 
 def isDeniedModule (env : Environment) (moduleName : Name) : Bool :=
   (moduleDenyListExt.getState env).any fun p => moduleName.anyS (· == p)
@@ -498,13 +494,12 @@ def currentFile : Selector := fun _ cfg => do
   return suggestions
 
 builtin_initialize librarySuggestionsExt : SimplePersistentEnvExtension Name (Option Name) ←
-  registerSimplePersistentEnvExtension {
-    addEntryFn := fun _ name => some name -- Last entry wins
-    addImportedFn := fun entries =>
-      -- Take the last selector name from all imported modules
-      entries.foldl (init := none) fun acc moduleEntries =>
-        moduleEntries.foldl (init := acc) fun _ name => some name
-  }
+  registerSimplePersistentEnvExtension
+    { addEntryFn := fun _ name => some name -- Last entry wins
+      addImportedFn := fun entries =>
+        -- Take the last selector name from all imported modules
+        entries.foldl (init := none) fun acc moduleEntries =>
+          moduleEntries.foldl (init := acc) fun _ name => some name }
 
 /-- Attribute for registering library suggestions selectors. -/
 builtin_initialize librarySuggestionsAttr : TagAttribute ←

@@ -26,13 +26,12 @@ that only ever occurs in a `max u v` together with another parameter, never on i
 This usually means that the type contains a `max u v` where neither `u` nor `v` occur by
 themselves; the fix is to provide the universe level explicitly.
 -/
-register_builtin_option linter.checkUnivs : Bool := {
-  defValue := true
-  descr :=
-    "enable the `checkUnivs` linter, which warns when a declaration has a universe \
-      parameter that only ever occurs in a `max u v` together with another parameter, never \
-      on its own."
-}
+register_builtin_option linter.checkUnivs : Bool :=
+  { defValue := true
+    descr :=
+      "enable the `checkUnivs` linter, which warns when a declaration has a universe \
+        parameter that only ever occurs in a `max u v` together with another parameter, never \
+        on its own." }
 
 namespace CheckUnivs
 

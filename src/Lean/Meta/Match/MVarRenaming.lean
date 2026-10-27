@@ -22,10 +22,8 @@ def MVarRenaming.find? (s : MVarRenaming) (mvarId : MVarId) : Option MVarId := s
 
 def MVarRenaming.find! (s : MVarRenaming) (mvarId : MVarId) : MVarId := (s.find? mvarId).get!
 
-def MVarRenaming.insert (s : MVarRenaming) (mvarId mvarId' : MVarId) : MVarRenaming := {
-  s with
-  map := s.map.insert mvarId mvarId'
-}
+def MVarRenaming.insert (s : MVarRenaming) (mvarId mvarId' : MVarId) : MVarRenaming :=
+  { s with map := s.map.insert mvarId mvarId' }
 
 def MVarRenaming.apply (s : MVarRenaming) (e : Expr) : Expr :=
   if !e.hasMVar then

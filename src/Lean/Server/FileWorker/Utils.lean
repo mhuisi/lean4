@@ -30,11 +30,10 @@ private partial def mkCmdSnaps (initSnap : Language.Lean.InitialSnapshot)
       let some headerSuccess := headerProcessed.result?
         | return .pure <| .ok .nil
       return .pure <| .ok <|
-        .cons {
-            stx := initSnap.stx
-            mpState := headerParsed.parserState
-            cmdState := headerSuccess.cmdState
-          } <|
+        .cons
+            { stx := initSnap.stx
+              mpState := headerParsed.parserState
+              cmdState := headerSuccess.cmdState } <|
           .delayed <| headerSuccess.firstCmdSnap.task.asServerTask.bindCheap go
 where
   go cmdParsed :=
@@ -176,10 +175,8 @@ structure EditableDocument extends EditableDocumentCore where
 namespace EditableDocument
 
 /-- Construct a VersionedTextDocumentIdentifier from an EditableDocument - -/
-def versionedIdentifier (ed : EditableDocument) : Lsp.VersionedTextDocumentIdentifier := {
-  uri := ed.meta.uri
-  version? := some ed.meta.version
-}
+def versionedIdentifier (ed : EditableDocument) : Lsp.VersionedTextDocumentIdentifier :=
+  { uri := ed.meta.uri, version? := some ed.meta.version }
 
 end EditableDocument
 
@@ -201,10 +198,8 @@ def new (wireFormat : Lsp.RpcWireFormat) : IO (UInt64 × RpcSession) := do
   let newSesh := { objects := { wireFormat }, expireTime := (← IO.monoMsNow) + keepAliveTimeMs }
   return (newId, newSesh)
 
-def keptAlive (monoMsNow : Nat) (s : RpcSession) : RpcSession := {
-  s with
-  expireTime := monoMsNow + keepAliveTimeMs
-}
+def keptAlive (monoMsNow : Nat) (s : RpcSession) : RpcSession :=
+  { s with expireTime := monoMsNow + keepAliveTimeMs }
 
 def hasExpired (s : RpcSession) : IO Bool := return s.expireTime ≤ (← IO.monoMsNow)
 

@@ -184,12 +184,8 @@ structure State (α : Type) [DecidableEq α] [Hashable α] (decls : Array (Decl 
 namespace State
 
 /-- The basic initial state. -/
-def empty {decls : Array (Decl α)} : State α decls 0 := {
-  max := 0
-  map := {}
-  inv1 := Inv1.empty
-  inv2 := Inv2.empty
-}
+def empty {decls : Array (Decl α)} : State α decls 0 :=
+  { max := 0, map := {}, inv1 := Inv1.empty, inv2 := Inv2.empty }
 
 /-- Insert a `Decl.atom` into the `State` structure. -/
 def addAtom
@@ -197,50 +193,46 @@ def addAtom
     (a : α) (h : decls[idx]'hidx = .atom a)
     : State α decls (idx + 1) :=
   match hmap : state.map[a]? with
-  | some _ => {
-    state with
-    inv2 := by
-      apply Inv2.oldAtom
-      · exact state.inv2
-      · assumption
-      · assumption
-  }
-  | none => {
-    max := state.max + 1
-    map := state.map.insert a state.max
-    inv1 := by
-      apply State.Inv1.insert
-      · exact state.inv1
-      · assumption
-    inv2 := by
-      apply Inv2.newAtom
-      · exact state.inv2
-      · assumption
-      · assumption
-  }
+  | some _ =>
+    { state with
+      inv2 := by
+        apply Inv2.oldAtom
+        · exact state.inv2
+        · assumption
+        · assumption }
+  | none =>
+    { max := state.max + 1
+      map := state.map.insert a state.max
+      inv1 := by
+        apply State.Inv1.insert
+        · exact state.inv1
+        · assumption
+      inv2 := by
+        apply Inv2.newAtom
+        · exact state.inv2
+        · assumption
+        · assumption }
 
 /-- Insert a `Decl.false` into the `State` structure. -/
 def addFalse
     {decls : Array (Decl α)} {hidx} (state : State α decls idx) (h : decls[idx]'hidx = .false)
-    : State α decls (idx + 1) := {
-  state with
-  inv2 := by
-    apply Inv2.false
-    · exact state.inv2
-    · assumption
-}
+    : State α decls (idx + 1) :=
+  { state with
+    inv2 := by
+      apply Inv2.false
+      · exact state.inv2
+      · assumption }
 
 /-- Insert a `Decl.gate` into the `State` structure. -/
 def addGate
     {decls : Array (Decl α)} {hidx} (state : State α decls idx)
     (lhs rhs : Fanin) (h : decls[idx]'hidx = .gate lhs rhs)
-    : State α decls (idx + 1) := {
-  state with
-  inv2 := by
-    apply Inv2.gate
-    · exact state.inv2
-    · assumption
-}
+    : State α decls (idx + 1) :=
+  { state with
+    inv2 := by
+      apply Inv2.gate
+      · exact state.inv2
+      · assumption }
 
 /-- Build up a `State` that has all atoms of an `AIG` inserted. -/
 def ofAIGAux (aig : AIG α) : State α aig.decls aig.decls.size := go aig.decls 0 .empty
@@ -349,11 +341,8 @@ Map an `Entrypoint` with arbitrary atom identifiers to one that uses `Nat` as at
 This is useful for preparing an `AIG` for CNF translation if it doesn't already use `Nat`
 identifiers.
 -/
-def relabelNat (entry : Entrypoint α) : Entrypoint Nat := {
-  entry with
-  aig := entry.aig.relabelNat
-  ref.hgate := by simp [entry.ref.hgate]
-}
+def relabelNat (entry : Entrypoint α) : Entrypoint Nat :=
+  { entry with aig := entry.aig.relabelNat, ref.hgate := by simp [entry.ref.hgate] }
 
 /-- `relabelNat` preserves unsatisfiablility. -/
 theorem relabelNat_unsat_iff {entry : Entrypoint α} : (entry.relabelNat).Unsat ↔ entry.Unsat := by

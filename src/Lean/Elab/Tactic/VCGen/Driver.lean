@@ -153,13 +153,12 @@ public partial def run
     (goal : Grind.Goal) (ctx : Context) (scope : Scope)
     (stepLimit? : Option Nat := none) (frameDB : FrameDB := {})
     : Grind.GrindM Result := do
-  let initState : State := {
-    fuel :=
-      match stepLimit? with
-      | some n => .limited n
-      | none => .unlimited
-    frameDB
-  }
+  let initState : State :=
+    { fuel :=
+        match stepLimit? with
+        | some n => .limited n
+        | none => .unlimited
+      frameDB }
   -- VCGen temporarily violates the `SymM` folded-projections invariant: `reduceHead?`
   -- exposes kernel projections in intermediate terms and restores the invariant in its
   -- final result, so the `shareCommon` kernel-projection check is disabled.
@@ -175,11 +174,10 @@ public partial def run
   let vcs ← state.vcs.filterM (not <$> ·.mvarId.isAssigned)
   let unmatchedFrames :=
     state.frameDB.entries.filterMap fun e => if e.retired then none else some e.frameStx
-  return {
-    invariants := state.invariants
-    vcs
-    inlineHandledInvariants := state.inlineHandledInvariants
-    unmatchedFrames
-  }
+  return
+    { invariants := state.invariants
+      vcs
+      inlineHandledInvariants := state.inlineHandledInvariants
+      unmatchedFrames }
 
 end Lean.Elab.Tactic.VCGen

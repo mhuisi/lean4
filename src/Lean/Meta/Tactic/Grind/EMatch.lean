@@ -165,10 +165,8 @@ private def saveSource (c : Choice) (e : Expr) : GoalM Choice := do
     | return c
   return { c with sources := c.sources.insert { origin := o, proof := p } }
 
-private def unassign (c : Choice) (bidx : Nat) : Choice := {
-  c with
-  assignment := c.assignment.set! bidx unassigned
-}
+private def unassign (c : Choice) (bidx : Nat) : Choice :=
+  { c with assignment := c.assignment.set! bidx unassigned }
 
 /--
 Returns `true` if the function `pFn` of a pattern is equivalent to the function `eFn`.
@@ -239,10 +237,8 @@ private def matchArg? (c : Choice) (pArg : Expr) (eArg : Expr) : OptionT GoalM C
   else
     return { c with cnstrs := .match none pArg eArg :: c.cnstrs }
 
-private def Choice.updateGen (c : Choice) (gen : Nat) : Choice := {
-  c with
-  gen := Nat.max gen c.gen
-}
+private def Choice.updateGen (c : Choice) (gen : Nat) : Choice :=
+  { c with gen := Nat.max gen c.gen }
 
 private def pushChoice (c : Choice) : M Unit :=
   modify fun s => { s with choiceStack := c :: s.choiceStack }
@@ -1063,14 +1059,13 @@ private def ematchCore (extraThms : Array EMatchTheorem) : GoalM InstanceMap := 
       return {}
     else
       let (_, s) ← go (← get).ematch.thms (← get).ematch.newThms |>.run
-      modify fun s => {
-        s with
-        -- **Note**: Ground theorems should be instantiated once. So, we filter them.
-        ematch.thms := s.ematch.thms ++ (s.ematch.newThms.filter fun thm => thm.numParams > 0)
-        ematch.newThms := {}
-        ematch.gmt := s.ematch.gmt + 1
-        ematch.num := s.ematch.num + 1
-      }
+      modify fun s =>
+        { s with
+          -- **Note**: Ground theorems should be instantiated once. So, we filter them.
+          ematch.thms := s.ematch.thms ++ (s.ematch.newThms.filter fun thm => thm.numParams > 0)
+          ematch.newThms := {}
+          ematch.gmt := s.ematch.gmt + 1
+          ematch.num := s.ematch.num + 1 }
       return s.instanceMap
 
 /--
@@ -1100,10 +1095,8 @@ def ematchOnly (thms : Array EMatchTheorem) : GoalM Bool := do
   let numInstances := (← get).ematch.numInstances
   let (_, s) ← go |>.run
   if (← getConfig).markInstances then
-    modifyThe Grind.State fun st => {
-      st with
-      instanceMap := st.instanceMap.insertMany s.instanceMap.toArray
-    }
+    modifyThe Grind.State fun st =>
+      { st with instanceMap := st.instanceMap.insertMany s.instanceMap.toArray }
   return (← get).ematch.numInstances != numInstances
 where
   go : EMatch.M Unit := do

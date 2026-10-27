@@ -20,10 +20,8 @@ open Meta Parser Tactic
 Enables the 'unused rcases pattern' linter. This will warn when a pattern is ignored by
 `rcases`, `rintro`, `ext` and similar tactics.
 -/
-public register_option linter.unusedRCasesPattern : Bool := {
-  defValue := true
-  descr := "enable the 'unused rcases pattern' linter"
-}
+public register_option linter.unusedRCasesPattern : Bool :=
+  { defValue := true, descr := "enable the 'unused rcases pattern' linter" }
 
 public instance : Coe Ident (TSyntax `rcasesPat) where
   coe stx := Unhygienic.run `(rcasesPat| $stx:ident)

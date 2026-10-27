@@ -73,11 +73,8 @@ partial def collect (extFind? : Environment → Name → Option (Array Name)) (c
   -- Cache result (sorted for canonical order) and merge back into saved axioms
   let collected := (← get).axioms
   let result := collected.toArray.qsort Name.lt
-  modify fun s => {
-    s with
-    seen := s.seen.insert c result
-    axioms := insertArray savedAxioms result
-  }
+  modify fun s =>
+    { s with seen := s.seen.insert c result, axioms := insertArray savedAxioms result }
 
 /-- Collect axioms for `c` and return its sorted axiom list from the cache. -/
 def collectAndGet (extFind? : Environment → Name → Option (Array Name)) (c : Name)
@@ -128,35 +125,34 @@ module boundaries.
 -/
 builtin_initialize exportedAxiomsExt
     : PersistentEnvExtension (Name × Array Name) (Name × Array Name) ExportedAxiomsState ←
-  registerPersistentEnvExtension {
-    mkInitial := pure {}
-    addImportedFn := fun importedEntries => pure { importedModuleEntries := importedEntries }
-    addEntryFn := fun s _ => s
-    exportEntriesFnEx := fun env s =>
-      let exportedEnv := env.setExporting true
-      let privateEnv := env.setExporting false
-      -- Collect current-module declarations visible in the exported view.
-      -- By pre-computing axiom data for every exported declaration, downstream modules can
-      -- look up any imported declaration without walking its body, keeping collection
-      -- module-local.
-      let allNames :=
-        env.checked.get.constants.foldStage2
-          (fun names name _ =>
-            if (exportedEnv.find? name).isSome then
-              names.push name
-            else
-              names)
-          #[]
-      -- Compute axioms within a shared state (for caching across declarations).
-      -- Use `privateEnv` so that `collect` can see all constant bodies.
-      let entries :=
-        CollectAxioms.runM privateEnv do
-          allNames.mapM fun name => return (name, ← CollectAxioms.collectAndGet s.find? name)
-      -- Sort by name for binary search at import time.
-      let entries := entries.qsort fun a b => Name.quickLt a.1 b.1
-      .uniform entries
-    asyncMode := .mainOnly
-  }
+  registerPersistentEnvExtension
+    { mkInitial := pure {}
+      addImportedFn := fun importedEntries => pure { importedModuleEntries := importedEntries }
+      addEntryFn := fun s _ => s
+      exportEntriesFnEx := fun env s =>
+        let exportedEnv := env.setExporting true
+        let privateEnv := env.setExporting false
+        -- Collect current-module declarations visible in the exported view.
+        -- By pre-computing axiom data for every exported declaration, downstream modules can
+        -- look up any imported declaration without walking its body, keeping collection
+        -- module-local.
+        let allNames :=
+          env.checked.get.constants.foldStage2
+            (fun names name _ =>
+              if (exportedEnv.find? name).isSome then
+                names.push name
+              else
+                names)
+            #[]
+        -- Compute axioms within a shared state (for caching across declarations).
+        -- Use `privateEnv` so that `collect` can see all constant bodies.
+        let entries :=
+          CollectAxioms.runM privateEnv do
+            allNames.mapM fun name => return (name, ← CollectAxioms.collectAndGet s.find? name)
+        -- Sort by name for binary search at import time.
+        let entries := entries.qsort fun a b => Name.quickLt a.1 b.1
+        .uniform entries
+      asyncMode := .mainOnly }
 
 /-- Collect all axioms transitively used by a constant. -/
 public def collectAxioms [Monad m] [MonadEnv m] (constName : Name) : m (Array Name) := do

@@ -162,13 +162,11 @@ theorem get_attachWith
 @[simp, grind =]
 theorem getD_attachWith {p : α → Prop} {o : Option α} {h} {fallback}
     : (o.attachWith p h).getD fallback
-      = ⟨
-        o.getD fallback.val,
-        by
-          cases o
-          · exact fallback.property
-          · exact h _ (by simp)
-      ⟩ := by
+      = ⟨ o.getD fallback.val,
+          by
+            cases o
+            · exact fallback.property
+            · exact h _ (by simp) ⟩ := by
   cases o <;> simp
 
 theorem toList_attach (o : Option α)

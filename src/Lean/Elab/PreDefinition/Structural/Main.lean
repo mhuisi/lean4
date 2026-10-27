@@ -106,15 +106,14 @@ private def elimMutualRecursion
           ensureNoRecFn (preDefs.map (·.declName)) fValue
           let fType ← Meta.letToHave (← inferType fValue)
           let fHeight := getMaxHeight (← getEnv) fValue
-          addDecl (.defnDecl {
-            name := fName
-            levelParams := preDefs[idx]!.levelParams
-            type := fType
-            value := fValue
-            hints := .abbrev
-            safety := if preDefs[idx]!.modifiers.isUnsafe then .unsafe else .safe
-            all := [fName]
-          })
+          addDecl (.defnDecl
+            { name := fName
+              levelParams := preDefs[idx]!.levelParams
+              type := fType
+              value := fValue
+              hints := .abbrev
+              safety := if preDefs[idx]!.modifiers.isUnsafe then .unsafe else .safe
+              all := [fName] })
           modifyEnv (setDefHeightOverride · fName fHeight)
           setReducibleAttribute fName
           return mkAppN (mkConst fName us) xs
@@ -138,8 +137,8 @@ private def elimMutualRecursion
           -- NB: Do not eta-contract here, other code (e.g. FunInd) expects this to have the
           -- same number of head lambdas as the original definition
           mkLambdaFVars (fixedParamPerms.perms[i]!.buildArgs xs ys) (valueNew.beta ys)
-    return
-      preDefs.zipWith (bs := valuesNew) fun preDef valueNew => { preDef with value := valueNew }
+    return preDefs.zipWith (bs := valuesNew) fun preDef valueNew =>
+      { preDef with value := valueNew }
 
 private def inferRecArgPos
     (preDefs : Array PreDefinition) (termMeasure?s : Array (Option TerminationMeasure))
@@ -167,10 +166,8 @@ private def inferRecArgPos
         fixedParamPerms.erase xs (recArgInfos.map (·.indicesAndRecArgPos))
       -- We may have to turn some fixed parameters into varying parameters
       let recArgInfos :=
-        recArgInfos.mapIdx fun i recArgInfo => {
-          recArgInfo with
-          fixedParamPerm := fixedParamPerms'.perms[i]!
-        }
+        recArgInfos.mapIdx fun i recArgInfo =>
+          { recArgInfo with fixedParamPerm := fixedParamPerms'.perms[i]! }
       if xs'.size != xs.size then
         trace[Elab.definition.structural]
           "Reduced fixed params from {xs} to {xs'}, erasing {toErase.map mkFVar}"

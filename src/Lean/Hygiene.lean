@@ -69,10 +69,9 @@ private def mkInaccessibleUserName (unicode : Bool) : Name → Name
   | n =>
     n
 
-register_builtin_option pp.sanitizeNames : Bool := {
-  defValue := true
-  descr := "add suffix to shadowed/inaccessible variables when pretty printing"
-}
+register_builtin_option pp.sanitizeNames : Bool :=
+  { defValue := true
+    descr := "add suffix to shadowed/inaccessible variables when pretty printing" }
 
 def getSanitizeNames (o : Options) : Bool := pp.sanitizeNames.get o
 

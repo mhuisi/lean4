@@ -53,25 +53,19 @@ where
   go (code : Code .impure) : M (Code .impure) := do
     match code with
     | .inc fvarId n check persistent k _ =>
-      modify fun s => {
-        s with
-        incTotal := s.incTotal.alter fvarId (fun v? => some ((v?.getD 0) + n))
-      }
+      modify fun s =>
+        { s with incTotal := s.incTotal.alter fvarId (fun v? => some ((v?.getD 0) + n)) }
       let k ← go k
-      modify fun s => {
-        s with
-        incAccum := s.incAccum.alter fvarId (fun v? => some ((v?.getD 0) + n))
-      }
+      modify fun s =>
+        { s with incAccum := s.incAccum.alter fvarId (fun v? => some ((v?.getD 0) + n)) }
       let s ← get
       if s.incAccum[fvarId]! == s.incTotal[fvarId]! then
         return .inc fvarId s.incTotal[fvarId]! check persistent k
       else
         return k
     | .dec fvarId n check persistent objs? k _ =>
-      modify fun s => {
-        s with
-        decTotal := s.decTotal.alter fvarId (fun v? => some ((v?.getD 0) + n))
-      }
+      modify fun s =>
+        { s with decTotal := s.decTotal.alter fvarId (fun v? => some ((v?.getD 0) + n)) }
       let k ← go k
       let s ← get
       if ! s.decPlaced.contains fvarId then

@@ -197,11 +197,9 @@ theorem go_isPrefix_aig {aig : AIG BVBit} (cache : BVExpr.Cache aig)
   · apply go_le_size
 
 theorem go_denote_mem_prefix (aig : AIG BVBit) (cache : BVExpr.Cache aig) (hstart)
-    : ⟦
-        (go aig expr cache).result.val.aig,
+    : ⟦ (go aig expr cache).result.val.aig,
         ⟨start, inv, go_lt_size_of_lt_aig_size (h := hstart) ..⟩,
-        assign
-      ⟧
+        assign ⟧
       = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply go_isPrefix_aig

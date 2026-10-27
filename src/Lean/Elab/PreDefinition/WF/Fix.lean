@@ -19,10 +19,8 @@ public section
 namespace Lean.Elab.WF
 open Lean Meta
 
-register_builtin_option debug.definition.wf.replaceRecApps : Bool := {
-  defValue := false
-  descr := "Type check every step of the well-founded definition translation"
-}
+register_builtin_option debug.definition.wf.replaceRecApps : Bool :=
+  { defValue := false, descr := "Type check every step of the well-founded definition translation" }
 
 /--
 Creates a subgoal for a recursive call, as an unsolved `MVar`. The goal is cleaned up, and
@@ -154,11 +152,10 @@ where
                 let FAlt := xs[numParams]!
                 let altBody' ← loop FAlt altBody
                 mkLambdaFVars xs altBody'
-          return {
-            matcherApp with
-            alts := altsNew
-            discrs := (← matcherApp.discrs.mapM (loop F))
-          }.toExpr
+          return
+            { matcherApp with
+              alts := altsNew
+              discrs := (← matcherApp.discrs.mapM (loop F)) }.toExpr
         else
           processApp F e
       | none =>

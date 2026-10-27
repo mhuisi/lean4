@@ -210,10 +210,8 @@ where
           apply AIG.LawfulVecOperator.le_size_of_le_aig_size (f := bitblast.blastRotateRight)
           dsimp only at heaig
           assumption
-        ⟨
-          ⟨res, this⟩,
-          cache.cast (AIG.LawfulVecOperator.le_size (f := bitblast.blastRotateRight) ..)
-        ⟩
+        ⟨ ⟨res, this⟩,
+          cache.cast (AIG.LawfulVecOperator.le_size (f := bitblast.blastRotateRight) ..) ⟩
       | .arithShiftRightConst distance =>
         let res := bitblast.blastArithShiftRightConst eaig ⟨evec, distance⟩
         have := by
@@ -221,10 +219,8 @@ where
             (f := bitblast.blastArithShiftRightConst)
           dsimp only at heaig
           assumption
-        ⟨
-          ⟨res, this⟩,
-          cache.cast (AIG.LawfulVecOperator.le_size (f := bitblast.blastArithShiftRightConst) ..)
-        ⟩
+        ⟨ ⟨res, this⟩,
+          cache.cast (AIG.LawfulVecOperator.le_size (f := bitblast.blastArithShiftRightConst) ..) ⟩
       | .reverse =>
         let res := bitblast.blastReverse eaig evec
         have := by
@@ -311,10 +307,8 @@ where
         apply AIG.LawfulVecOperator.le_size_of_le_aig_size (f := bitblast.blastArithShiftRight)
         dsimp only at hlaig hraig
         omega
-      ⟨
-        ⟨res, this⟩,
-        cache.cast (AIG.LawfulVecOperator.le_size (f := bitblast.blastArithShiftRight) ..)
-      ⟩
+      ⟨ ⟨res, this⟩,
+        cache.cast (AIG.LawfulVecOperator.le_size (f := bitblast.blastArithShiftRight) ..) ⟩
   termination_by (sizeOf expr, 0)
 
 namespace bitblast

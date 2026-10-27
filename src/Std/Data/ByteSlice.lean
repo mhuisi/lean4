@@ -129,22 +129,20 @@ The empty byte slice.
 
 This empty byte slice is backed by an empty byte array.
 -/
-protected def empty : ByteSlice := ⟨{
-  byteArray := ByteArray.mk #[]
-  start := 0
-  stop := 0
-  start_le_stop := Nat.le_refl 0
-  stop_le_size_byteArray := Nat.le_refl 0
-}⟩
+protected def empty : ByteSlice :=
+  ⟨ { byteArray := ByteArray.mk #[]
+      start := 0
+      stop := 0
+      start_le_stop := Nat.le_refl 0
+      stop_le_size_byteArray := Nat.le_refl 0 } ⟩
 
 /-- Creates a new ByteSlice of a ByteArray -/
-protected def ofByteArray (ba : ByteArray) : ByteSlice := ⟨{
-  byteArray := ba
-  start := 0
-  stop := ba.size
-  start_le_stop := Nat.zero_le _
-  stop_le_size_byteArray := Nat.le_refl _
-}⟩
+protected def ofByteArray (ba : ByteArray) : ByteSlice :=
+  ⟨ { byteArray := ba
+      start := 0
+      stop := ba.size
+      start_le_stop := Nat.zero_le _
+      stop_le_size_byteArray := Nat.le_refl _ } ⟩
 
 instance : EmptyCollection (ByteSlice) := ⟨ByteSlice.empty⟩
 
@@ -228,28 +226,25 @@ def slice (s : ByteSlice) (start : Nat := 0) (stop : Nat := s.size) : ByteSlice 
   let actualStart := s.start + min start s.size
   let actualStop := s.start + min stop s.size
   if h₂ : actualStop ≤ s.byteArray.size then
-    if h₁ : actualStart ≤ actualStop then ⟨{
-      byteArray := s.byteArray
-      start := actualStart
-      stop := actualStop
-      start_le_stop := h₁
-      stop_le_size_byteArray := h₂
-    }⟩
-    else ⟨{
-      byteArray := s.byteArray
-      start := actualStop
-      stop := actualStop
-      start_le_stop := Nat.le_refl _
-      stop_le_size_byteArray := h₂
-    }⟩
-  else ⟨{
-    byteArray := s.byteArray
-    start := s.start
-    stop := s.start
-    start_le_stop := Nat.le_refl _
-    stop_le_size_byteArray :=
-      Nat.le_trans (Nat.le_refl _) (Nat.le_trans s.start_le_stop s.stop_le_size_byteArray)
-  }⟩
+    if h₁ : actualStart ≤ actualStop then
+      ⟨ { byteArray := s.byteArray
+          start := actualStart
+          stop := actualStop
+          start_le_stop := h₁
+          stop_le_size_byteArray := h₂ } ⟩
+    else
+      ⟨ { byteArray := s.byteArray
+          start := actualStop
+          stop := actualStop
+          start_le_stop := Nat.le_refl _
+          stop_le_size_byteArray := h₂ } ⟩
+  else
+    ⟨ { byteArray := s.byteArray
+        start := s.start
+        stop := s.start
+        start_le_stop := Nat.le_refl _
+        stop_le_size_byteArray :=
+          Nat.le_trans (Nat.le_refl _) (Nat.le_trans s.start_le_stop s.stop_le_size_byteArray) } ⟩
 
 /--
 Checks if the byte slice contains a specific byte value.
@@ -279,34 +274,30 @@ Additionally, the starting index is clamped to the ending index.
 -/
 def toByteSlice (as : ByteArray) (start : Nat := 0) (stop : Nat := as.size) : ByteSlice :=
   if h₂ : stop ≤ as.size then
-    if h₁ : start ≤ stop then ⟨{
-      byteArray := as
-      start := start
-      stop := stop
-      start_le_stop := h₁
-      stop_le_size_byteArray := h₂
-    }⟩
-    else ⟨{
-      byteArray := as
-      start := stop
-      stop := stop
-      start_le_stop := Nat.le_refl _
-      stop_le_size_byteArray := h₂
-    }⟩
-  else if h₁ : start ≤ as.size then ⟨{
-    byteArray := as
-    start := start
-    stop := as.size
-    start_le_stop := h₁
-    stop_le_size_byteArray := Nat.le_refl _
-  }⟩
-  else ⟨{
-    byteArray := as
-    start := as.size
-    stop := as.size
-    start_le_stop := Nat.le_refl _
-    stop_le_size_byteArray := Nat.le_refl _
-  }⟩
+    if h₁ : start ≤ stop then
+      ⟨ { byteArray := as
+          start := start
+          stop := stop
+          start_le_stop := h₁
+          stop_le_size_byteArray := h₂ } ⟩
+    else
+      ⟨ { byteArray := as
+          start := stop
+          stop := stop
+          start_le_stop := Nat.le_refl _
+          stop_le_size_byteArray := h₂ } ⟩
+  else if h₁ : start ≤ as.size then
+    ⟨ { byteArray := as
+        start := start
+        stop := as.size
+        start_le_stop := h₁
+        stop_le_size_byteArray := Nat.le_refl _ } ⟩
+  else
+    ⟨ { byteArray := as
+        start := as.size
+        stop := as.size
+        start_le_stop := Nat.le_refl _
+        stop_le_size_byteArray := Nat.le_refl _ } ⟩
 
 end ByteArray
 

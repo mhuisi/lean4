@@ -45,12 +45,11 @@ def mkNoConfusionCtorArg (ctorName : Name) (P : Expr) : MetaM Expr := do
                 t := mkForall name .default eq t
               mkLambdaFVars (xs1 ++ fields1 ++ xs2 ++ fields2) t
 
-register_builtin_option backward.linearNoConfusionType : Bool := {
-  defValue := true
-  descr :=
-    "use the linear-size construction for the `noConfusionType` declaration of an inductive type. \
-      Set to false to use the previous, simpler but quadratic-size construction. "
-}
+register_builtin_option backward.linearNoConfusionType : Bool :=
+  { defValue := true
+    descr :=
+      "use the linear-size construction for the `noConfusionType` declaration of an inductive \
+        type. Set to false to use the previous, simpler but quadratic-size construction. " }
 
 def mkNoConfusionTypeName (indName : Name) : Name := Name.str indName "noConfusionType"
 
@@ -415,14 +414,13 @@ where
               let ctorIdx := mkConst (mkCtorIdxName enumName) us
               mkLambdaFVars #[P, x, y] (← mkAppM ``noConfusionTypeEnum #[ctorIdx, P, x, y])
           let declName := Name.mkStr enumName "noConfusionType"
-          addDecl <| Declaration.defnDecl {
-            name := declName
-            levelParams := v :: info.levelParams
-            type := declType
-            value := declValue
-            safety := DefinitionSafety.safe
-            hints := ReducibilityHints.abbrev
-          }
+          addDecl <| Declaration.defnDecl
+            { name := declName
+              levelParams := v :: info.levelParams
+              type := declType
+              value := declValue
+              safety := DefinitionSafety.safe
+              hints := ReducibilityHints.abbrev }
           setReducibleAttribute declName
 
   mkNoConfusion : MetaM Unit := do
@@ -446,14 +444,13 @@ where
                 else
                   mkAppOptM ``noConfusionEnum #[none, ctorIdx, P, x, y, h]
             let declName := Name.mkStr enumName "noConfusion"
-            addDecl <| Declaration.defnDecl {
-              name := declName
-              levelParams := v :: info.levelParams
-              type := declType
-              value := declValue
-              safety := DefinitionSafety.safe
-              hints := ReducibilityHints.abbrev
-            }
+            addDecl <| Declaration.defnDecl
+              { name := declName
+                levelParams := v :: info.levelParams
+                type := declType
+                value := declValue
+                safety := DefinitionSafety.safe
+                hints := ReducibilityHints.abbrev }
             setReducibleAttribute declName
             modifyEnv fun env => markNoConfusion env declName (.regular 4 1 2)
 

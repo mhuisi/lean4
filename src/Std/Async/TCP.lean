@@ -69,27 +69,27 @@ def tryAccept (s : Server) : IO (Option Client) := do
 Creates a `Selector` that resolves once `s` has a connection available. Calling this function
 does not start the connection wait, so it must not be called in parallel with `accept`.
 -/
-def acceptSelector (s : TCP.Socket.Server) : Selector Client := {
-  tryFn := s.tryAccept
-  registerFn waiter := do
-    let ready ← s.native.waitAcceptable
+def acceptSelector (s : TCP.Socket.Server) : Selector Client :=
+  { tryFn := s.tryAccept
+    registerFn waiter := do
+      let ready ← s.native.waitAcceptable
 
-    -- If we get cancelled the promise will be dropped so prepare for that
-    IO.chainTask (t := ready.result?) fun
-      | none =>
-        pure ()
-      | some res =>
-        waiter.race (lose := pure ()) fun promise => do
-          -- A connection is pending, so this accept does not wait.
-          match ← (do IO.ofExcept res; s.tryAccept).toBaseIO with
-          | .ok (some client) =>
-            promise.resolve (.ok client)
-          | .ok none =>
-            promise.resolve (.error (.userError "the pending connection was accepted concurrently"))
-          | .error e =>
-            promise.resolve (.error e)
-  unregisterFn := s.native.cancelAccept
-}
+      -- If we get cancelled the promise will be dropped so prepare for that
+      IO.chainTask (t := ready.result?) fun
+        | none =>
+          pure ()
+        | some res =>
+          waiter.race (lose := pure ()) fun promise => do
+            -- A connection is pending, so this accept does not wait.
+            match ← (do IO.ofExcept res; s.tryAccept).toBaseIO with
+            | .ok (some client) =>
+              promise.resolve (.ok client)
+            | .ok none =>
+              promise.resolve (.error (.userError
+                "the pending connection was accepted concurrently"))
+            | .error e =>
+              promise.resolve (.error e)
+    unregisterFn := s.native.cancelAccept }
 
 /-- Gets the local address of the server socket. -/
 @[inline] def getSockName (s : Server) : IO SocketAddress := s.native.getSockName
@@ -158,36 +158,35 @@ and provides that data. Calling this function does not starts the data wait, so 
 in parallel with `recv?`. Fails with an `IO.Error.invalidArgument` if `size` is 0 or at least 4 GiB,
 like `recv?`.
 -/
-def recvSelector (s : TCP.Socket.Client) (size : UInt64) : Selector (Option ByteArray) := {
-  tryFn := do
-    let readableWaiter ← s.native.waitReadable
+def recvSelector (s : TCP.Socket.Client) (size : UInt64) : Selector (Option ByteArray) :=
+  { tryFn := do
+      let readableWaiter ← s.native.waitReadable
 
-    if ← readableWaiter.isResolved then
-      let res ← s.recv? size
-      return some res
-    else
-      s.native.cancelRecv
-      return none
-  registerFn waiter := do
-    let readableWaiter ← s.native.waitReadable
+      if ← readableWaiter.isResolved then
+        let res ← s.recv? size
+        return some res
+      else
+        s.native.cancelRecv
+        return none
+    registerFn waiter := do
+      let readableWaiter ← s.native.waitReadable
 
-    -- If we get cancelled the promise will be dropped so prepare for that
-    discard <| IO.mapTask (t := readableWaiter.result?) fun res => do
-      match res with
-      | none =>
-        return ()
-      | some res =>
-        let lose := return ()
-        let win promise := do
-          try
-            discard <| IO.ofExcept res
-            let readPromise ← s.native.recv? size
-            discard <| BaseIO.mapTask (t := AsyncTask.ofPromise readPromise) promise.resolve
-          catch e =>
-            promise.resolve (.error e)
-        waiter.race lose win
-  unregisterFn := s.native.cancelRecv
-}
+      -- If we get cancelled the promise will be dropped so prepare for that
+      discard <| IO.mapTask (t := readableWaiter.result?) fun res => do
+        match res with
+        | none =>
+          return ()
+        | some res =>
+          let lose := return ()
+          let win promise := do
+            try
+              discard <| IO.ofExcept res
+              let readPromise ← s.native.recv? size
+              discard <| BaseIO.mapTask (t := AsyncTask.ofPromise readPromise) promise.resolve
+            catch e =>
+              promise.resolve (.error e)
+          waiter.race lose win
+    unregisterFn := s.native.cancelRecv }
 
 /-- Shuts down the write side of the client socket. -/
 @[inline] def shutdown (s : Client) : Async Unit := Async.ofPromise <| s.native.shutdown

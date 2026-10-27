@@ -916,10 +916,8 @@ opaque Code.updateDel! (c : Code pu) (fvarId' : FVarId) (k' : Code pu) : Code pu
 private unsafe def updateParamCoreImp (p : Param pu) (type : Expr) : Param pu :=
   if ptrEq type p.type then
     p
-  else {
-    p with
-    type
-  }
+  else
+    { p with type }
 
 /--
 Low-level update `Param` function. It does not update the local context.
@@ -933,11 +931,8 @@ private unsafe def updateLetDeclCoreImp (decl : LetDecl pu) (type : Expr) (value
     : LetDecl pu :=
   if ptrEq type decl.type && ptrEq value decl.value then
     decl
-  else {
-    decl with
-    type
-    value
-  }
+  else
+    { decl with type, value }
 
 /--
 Low-level update `LetDecl` function. It does not update the local context.
@@ -1404,10 +1399,8 @@ See comment at `recursive` field.
 partial def markRecDecls (decls : Array (Decl pu)) : Array (Decl pu) :=
   let (_, isRec) := go |>.run {}
   decls.map fun decl =>
-    if isRec.contains decl.name then {
-      decl with
-      recursive := true
-    }
+    if isRec.contains decl.name then
+      { decl with recursive := true }
     else
       decl
 where

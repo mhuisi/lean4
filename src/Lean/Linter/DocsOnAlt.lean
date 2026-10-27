@@ -18,10 +18,8 @@ namespace Lean.Linter
 open Elab.Command Parser Command
 open Parser.Term hiding «set_option»
 
-register_builtin_option linter.tactic.docsOnAlt : Bool := {
-  defValue := true
-  descr := "enable the 'documentation on tactic alternatives' linter"
-}
+register_builtin_option linter.tactic.docsOnAlt : Bool :=
+  { defValue := true, descr := "enable the 'documentation on tactic alternatives' linter" }
 
 private def getLinterDocsOnAlt (o : LinterOptions) : Bool :=
   getLinterValue linter.tactic.docsOnAlt o

@@ -17,10 +17,8 @@ namespace Lean.Linter
 open Elab.Command Parser Command
 open Parser.Term hiding «set_option»
 
-register_builtin_option linter.missingDocs : Bool := {
-  defValue := false
-  descr := "enable the 'missing documentation' linter"
-}
+register_builtin_option linter.missingDocs : Bool :=
+  { defValue := false, descr := "enable the 'missing documentation' linter" }
 
 def getLinterMissingDocs (o : LinterOptions) : Bool := getLinterValue linter.missingDocs o
 
@@ -57,15 +55,14 @@ builtin_initialize builtinHandlersRef : IO.Ref (NameMap Handler) ← IO.mkRef {}
 builtin_initialize missingDocsExt
     : PersistentEnvExtension (Name × Name) (Name × Name × Handler)
       (List (Name × Name) × NameMap Handler) ←
-  registerPersistentEnvExtension {
-    mkInitial := return ([], ← builtinHandlersRef.get)
-    addImportedFn := fun as => do
-      ([], ·) <$> as.foldlM (init := ← builtinHandlersRef.get) fun s as =>
-        as.foldlM (init := s) fun s (n, k) => s.insert k <$> mkHandler n
-    addEntryFn := fun (entries, s) (n, k, h) => ((n, k) :: entries, s.insert k h)
-    exportEntriesFn := fun s => s.1.reverse.toArray
-    statsFn := fun s => format "number of local entries: " ++ format s.1.length
-  }
+  registerPersistentEnvExtension
+    { mkInitial := return ([], ← builtinHandlersRef.get)
+      addImportedFn := fun as => do
+        ([], ·) <$> as.foldlM (init := ← builtinHandlersRef.get) fun s as =>
+          as.foldlM (init := s) fun s (n, k) => s.insert k <$> mkHandler n
+      addEntryFn := fun (entries, s) (n, k, h) => ((n, k) :: entries, s.insert k h)
+      exportEntriesFn := fun s => s.1.reverse.toArray
+      statsFn := fun s => format "number of local entries: " ++ format s.1.length }
 
 def addHandler (env : Environment) (declName key : Name) (h : Handler) : Environment :=
   missingDocsExt.addEntry env (declName, key, h)
@@ -84,39 +81,38 @@ def addBuiltinHandler (key : Name) (h : Handler) : IO Unit :=
 
 builtin_initialize
   let mkAttr (builtin : Bool) (name : Name) :=
-    registerBuiltinAttribute {
-      name
-      descr :=
-        (if builtin then "(builtin) " else "")
-          ++ "adds a syntax traversal for the missing docs linter"
-      applicationTime := .afterCompilation
-      add := fun declName stx kind => do
-        unless kind == AttributeKind.global do
-          throwAttrMustBeGlobal name kind
-        if !builtin then
-          ensureAttrDeclIsMeta name declName kind
-        let env ← getEnv
-        unless builtin || (env.getModuleIdxFor? declName).isNone do
-          throwAttrDeclInImportedModule name declName
-        let decl ← getConstInfo declName
-        let fnNameStx ← Attribute.Builtin.getIdent stx
-        let key ← Elab.realizeGlobalConstNoOverloadWithInfo fnNameStx
-        recordExtraModUseFromDecl (isMeta := false) key
-        unless decl.levelParams.isEmpty
-            && (decl.type == .const ``Handler [] || decl.type == .const ``SimpleHandler []) do
-          throwError
-            m!"Unexpected type for missing docs handler: Expected `{.ofConstName ``Handler}` or \
-              `{.ofConstName ``SimpleHandler}`, but `{declName}` has type{indentExpr decl.type}"
-        if builtin then
-          let h :=
-            if decl.type == .const ``SimpleHandler [] then
-              mkApp (mkConst ``SimpleHandler.toHandler) (mkConst declName)
-            else
-              mkConst declName
-          declareBuiltin declName <| mkApp2 (mkConst ``addBuiltinHandler) (toExpr key) h
-        else
-          setEnv <| missingDocsExt.addEntry env (declName, key, ← mkHandler declName)
-    }
+    registerBuiltinAttribute
+      { name
+        descr :=
+          (if builtin then "(builtin) " else "")
+            ++ "adds a syntax traversal for the missing docs linter"
+        applicationTime := .afterCompilation
+        add := fun declName stx kind => do
+          unless kind == AttributeKind.global do
+            throwAttrMustBeGlobal name kind
+          if !builtin then
+            ensureAttrDeclIsMeta name declName kind
+          let env ← getEnv
+          unless builtin || (env.getModuleIdxFor? declName).isNone do
+            throwAttrDeclInImportedModule name declName
+          let decl ← getConstInfo declName
+          let fnNameStx ← Attribute.Builtin.getIdent stx
+          let key ← Elab.realizeGlobalConstNoOverloadWithInfo fnNameStx
+          recordExtraModUseFromDecl (isMeta := false) key
+          unless decl.levelParams.isEmpty
+              && (decl.type == .const ``Handler [] || decl.type == .const ``SimpleHandler []) do
+            throwError
+              m!"Unexpected type for missing docs handler: Expected `{.ofConstName ``Handler}` or \
+                `{.ofConstName ``SimpleHandler}`, but `{declName}` has type{indentExpr decl.type}"
+          if builtin then
+            let h :=
+              if decl.type == .const ``SimpleHandler [] then
+                mkApp (mkConst ``SimpleHandler.toHandler) (mkConst declName)
+              else
+                mkConst declName
+            declareBuiltin declName <| mkApp2 (mkConst ``addBuiltinHandler) (toExpr key) h
+          else
+            setEnv <| missingDocsExt.addEntry env (declName, key, ← mkHandler declName) }
   mkAttr true `builtin_missing_docs_handler
   mkAttr false `missing_docs_handler
 

@@ -99,29 +99,24 @@ def utf8PosToLspPos (text : FileMap) (pos : String.Pos.Raw) : Lsp.Position :=
   text.leanPosToLspPos (text.toPosition pos)
 
 /-- Gets the LSP range from a `Lean.Syntax.Range`. -/
-def utf8RangeToLspRange (text : FileMap) (range : Lean.Syntax.Range) : Lsp.Range := {
-  start := text.utf8PosToLspPos range.start
-  «end» := text.utf8PosToLspPos range.stop
-}
+def utf8RangeToLspRange (text : FileMap) (range : Lean.Syntax.Range) : Lsp.Range :=
+  { start := text.utf8PosToLspPos range.start, «end» := text.utf8PosToLspPos range.stop }
 
 /-- Gets the LSP range of syntax `stx`. -/
 def lspRangeOfStx? (text : FileMap) (stx : Syntax) (canonicalOnly := false) : Option Lsp.Range :=
   text.utf8RangeToLspRange <$> stx.getRange? canonicalOnly
 
-def lspRangeToUtf8Range (text : FileMap) (range : Lsp.Range) : Lean.Syntax.Range := {
-  start := text.lspPosToUtf8Pos range.start
-  stop := text.lspPosToUtf8Pos range.end
-}
+def lspRangeToUtf8Range (text : FileMap) (range : Lsp.Range) : Lean.Syntax.Range :=
+  { start := text.lspPosToUtf8Pos range.start, stop := text.lspPosToUtf8Pos range.end }
 
 end FileMap
 
 def DeclarationRange.ofFilePositions (text : FileMap) (pos : Position) (endPos : Position)
-    : DeclarationRange := {
-  pos
-  charUtf16 := text.leanPosToLspPos pos |>.character
-  endPos
-  endCharUtf16 := text.leanPosToLspPos endPos |>.character
-}
+    : DeclarationRange :=
+  { pos
+    charUtf16 := text.leanPosToLspPos pos |>.character
+    endPos
+    endCharUtf16 := text.leanPosToLspPos endPos |>.character }
 
 def DeclarationRange.ofStringPositions
     (text : FileMap) (pos : String.Pos.Raw) (endPos : String.Pos.Raw)
@@ -133,9 +128,7 @@ Convert the Lean `DeclarationRange` to an LSP `Range` by turning the 1-indexed l
 0-indexed line numbering and converting the character offset within the line to a UTF-16 indexed
 offset.
 -/
-def DeclarationRange.toLspRange (r : DeclarationRange) : Lsp.Range := {
-  start := ⟨r.pos.line - 1, r.charUtf16⟩
-  «end» := ⟨r.endPos.line - 1, r.endCharUtf16⟩
-}
+def DeclarationRange.toLspRange (r : DeclarationRange) : Lsp.Range :=
+  { start := ⟨r.pos.line - 1, r.charUtf16⟩, «end» := ⟨r.endPos.line - 1, r.endCharUtf16⟩ }
 
 end Lean

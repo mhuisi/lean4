@@ -63,10 +63,8 @@ def setTermNonCommSemiringId (e : Expr) : NonCommSemiringM Unit := do
     unless semiringId' == semiringId do
       reportIssue! "expression in two different semirings{indentExpr e}"
     return ()
-  modify' fun s => {
-    s with
-    exprToNCSemiringId := s.exprToNCSemiringId.insert { expr := e } semiringId
-  }
+  modify' fun s =>
+    { s with exprToNCSemiringId := s.exprToNCSemiringId.insert { expr := e } semiringId }
 
 instance : MonadSetTermId NonCommSemiringM where
   setTermId e := setTermNonCommSemiringId e

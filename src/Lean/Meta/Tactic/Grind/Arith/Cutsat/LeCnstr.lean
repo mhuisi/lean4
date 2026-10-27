@@ -21,15 +21,11 @@ def LeCnstr.norm (c : LeCnstr) : LeCnstr :=
   let c :=
     if c.p.isSorted then
       c
-    else {
-      p := c.p.norm
-      h := .norm c
-    }
+    else
+      { p := c.p.norm, h := .norm c }
   let k := c.p.gcdCoeffs'
-  if k != 1 then {
-    p := c.p.div k
-    h := .divCoeffs c
-  }
+  if k != 1 then
+    { p := c.p.div k, h := .divCoeffs c }
   else
     c
 
@@ -70,15 +66,11 @@ def LeCnstr.erase (c : LeCnstr) : GoalM Unit := do
   let .add a x _ := c.p
     | c.throwUnexpected
   if a < 0 then
-    modify' fun s => {
-      s with
-      lowers := s.lowers.modify x fun cs' => cs'.filter fun c' => c'.p != c.p
-    }
+    modify' fun s =>
+      { s with lowers := s.lowers.modify x fun cs' => cs'.filter fun c' => c'.p != c.p }
   else
-    modify' fun s => {
-      s with
-      uppers := s.uppers.modify x fun cs' => cs'.filter fun c' => c'.p != c.p
-    }
+    modify' fun s =>
+      { s with uppers := s.uppers.modify x fun cs' => cs'.filter fun c' => c'.p != c.p }
 
 /--
 Given a lower (upper) bound constraint `c`, tries to find
@@ -116,10 +108,8 @@ where
     for c' in cs' do
       if c.p == c'.p || c.p.isNegEq c'.p then
         -- Remove `c'`
-        modify' fun s => {
-          s with
-          diseqs := s.diseqs.modify x fun cs' => cs'.filter fun c => c.p != c'.p
-        }
+        modify' fun s =>
+          { s with diseqs := s.diseqs.modify x fun cs' => cs'.filter fun c => c.p != c'.p }
         return some { p := c.p.addConst 1, h := .ofLeDiseq c c' }
     return none
 

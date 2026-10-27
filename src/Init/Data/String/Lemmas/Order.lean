@@ -256,13 +256,11 @@ theorem Slice.Pos.ofSliceTo_lt_iff {s : Slice} {p₀ : s.Pos} {p : (s.sliceTo p�
 
 theorem Slice.Pos.lt_ofSliceTo_iff {s : Slice} {p₀ : s.Pos} {p : (s.sliceTo p₀).Pos} {q : s.Pos}
     : q < Pos.ofSliceTo p ↔ ∃ h, Slice.Pos.sliceTo p₀ q h < p := by
-  refine ⟨
-    fun h => ⟨
-      Std.le_of_lt (Std.lt_of_le_of_lt (Std.le_refl q) (Std.lt_of_lt_of_le h Pos.ofSliceTo_le)),
-      ?_
-    ⟩,
-    fun ⟨h, h'⟩ => ?_
-  ⟩
+  refine
+    ⟨ fun h =>
+        ⟨ Std.le_of_lt (Std.lt_of_le_of_lt (Std.le_refl q) (Std.lt_of_lt_of_le h Pos.ofSliceTo_le)),
+          ?_ ⟩,
+      fun ⟨h, h'⟩ => ?_ ⟩
   · simp +singlePass only [← Pos.sliceTo_ofSliceTo (p := p)]
     rwa [Pos.sliceTo_lt_sliceTo_iff]
   · simp +singlePass only [← Pos.ofSliceTo_sliceTo (h := h)]

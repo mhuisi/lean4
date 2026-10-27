@@ -53,10 +53,9 @@ public def fmtDeclId : Fmt := fun
   | `(Parser.Command.declId| $declId:ident $[.{%$lbTk? $universeIds?:ident,* }%$rbTk?]?) => do
     let declId ← fmt declId
     let universeAnnotation? ← fmtUniverseAnnotation? lbTk? universeIds? rbTk?
-    return Layouts.atomic #[
-      declId,
-      universeAnnotation?
-    ]
+    return Layouts.atomic
+      #[declId,
+        universeAnnotation?]
   | _ =>
     throw .partialFormatter
 
@@ -739,8 +738,8 @@ public def fmtTermOpen : Fmt := fun
     let openDecl ← fmtOpenDecl openTk decl
     let inTk ← fmt inTk
     let body ← fmt body
-    return
-      Layouts.keywordSeparated openDecl inTk body { allowFlattening := false, nestedRhs := false }
+    return Layouts.keywordSeparated openDecl inTk body
+      { allowFlattening := false, nestedRhs := false }
   | _ =>
     throw .partialFormatter
 
@@ -771,10 +770,8 @@ public def fmtTermSetOption : Fmt := fun
       let indentedVariant :=
         Layouts.keywordSeparated setOption inTk body { allowFlattening := false, nestedRhs := true }
       let dedentedVariant :=
-        Layouts.keywordSeparated setOption inTk body {
-          allowFlattening := false
-          nestedRhs := false
-        }
+        Layouts.keywordSeparated setOption inTk body
+          { allowFlattening := false, nestedRhs := false }
       return pseudoDedented indentedVariant dedentedVariant
   | _ =>
     throw .partialFormatter
@@ -789,10 +786,8 @@ public def fmtTacticSetOption : Fmt := fun
       let setOption := Layouts.pseudoApplication #[setOptionTk, optionId, optionValue]
       let inTk ← fmt inTk
       let tacs ← fmt tacs
-      return Layouts.keywordSeparated setOption inTk tacs {
-        allowFlattening := false
-        nestedRhs := false
-      }
+      return Layouts.keywordSeparated setOption inTk tacs
+        { allowFlattening := false, nestedRhs := false }
   | _ =>
     throw .partialFormatter
 

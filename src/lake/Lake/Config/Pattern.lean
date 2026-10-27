@@ -86,10 +86,8 @@ Matches a value that satisfies an arbitrary predicate
 (optionally identified by a `Name`).
 -/
 @[inline]
-public def Pattern.ofFn (f : α → Bool) (name := Name.anonymous) : Pattern α β := {
-  filter := f
-  name
-}
+public def Pattern.ofFn (f : α → Bool) (name := Name.anonymous) : Pattern α β :=
+  { filter := f, name }
 
 public instance : Coe (α → Bool) (Pattern α β) := ⟨.ofFn⟩
 
@@ -99,11 +97,8 @@ Matches a string that satisfies the declarative pattern.
 -/
 @[inline]
 public def Pattern.ofDescr [IsPattern β α] (descr : PatternDescr α β) (name := Name.anonymous)
-    : Pattern α β := {
-  filter := (descr =~ ·)
-  descr? := descr
-  name
-}
+    : Pattern α β :=
+  { filter := (descr =~ ·), descr? := descr, name }
 
 public instance [IsPattern β α] : Coe (PatternDescr α β) (Pattern α β) := ⟨(.ofDescr ·)⟩
 
@@ -122,11 +117,8 @@ public def Pattern.any [IsPattern β α] (ps : Array (Pattern α β)) : Pattern 
 public def PatternDescr.empty : PatternDescr α β := .any #[]
 
 @[inherit_doc PatternDescr.empty]
-public def Pattern.empty : Pattern α β := {
-  filter := fun _ => false
-  descr? := some .empty
-  name := `empty
-}
+public def Pattern.empty : Pattern α β :=
+  { filter := fun _ => false, descr? := some .empty, name := `empty }
 
 public instance : EmptyCollection (PatternDescr α β) := ⟨.empty⟩
 public instance : EmptyCollection (Pattern α β) := ⟨.empty⟩
@@ -135,11 +127,8 @@ public instance : EmptyCollection (Pattern α β) := ⟨.empty⟩
 public def PatternDescr.star : PatternDescr α β := .all #[]
 
 @[inherit_doc PatternDescr.star]
-public def Pattern.star : Pattern α β := {
-  filter := fun _ => true
-  descr? := some .star
-  name := `star
-}
+public def Pattern.star : Pattern α β :=
+  { filter := fun _ => true, descr? := some .star, name := `star }
 
 /-! ## String Patterns -/
 
@@ -181,11 +170,8 @@ public def StrPat.endsWith (affix : String) : StrPat := StrPatDescr.endsWith aff
 public def StrPatDescr.beq (s : String) : StrPatDescr := .mem #[s]
 
 @[inherit_doc StrPatDescr.beq, inline]
-public def StrPat.beq (s : String) : StrPat := {
-  filter := (· == s)
-  descr? := some <| StrPatDescr.beq s
-  name := `beq
-}
+public def StrPat.beq (s : String) : StrPat :=
+  { filter := (· == s), descr? := some <| StrPatDescr.beq s, name := `beq }
 
 public instance : Coe String StrPatDescr := ⟨.beq⟩
 public instance : Coe String StrPat := ⟨.beq⟩

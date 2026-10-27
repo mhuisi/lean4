@@ -193,11 +193,8 @@ where
                     hs := hs.push h
                 trace[Meta.Match.matchEqs] "hs: {hs}"
                 let hasUnitThunk := ys.isEmpty && hs.isEmpty && numDiscrEqs = 0
-                let splitterAltInfo := {
-                  numFields := ys.size
-                  numOverlaps := hs.size
-                  hasUnitThunk
-                }
+                let splitterAltInfo :=
+                  { numFields := ys.size, numOverlaps := hs.size, hasUnitThunk }
                 -- Create a proposition for representing terms that do not match `patterns`
                 let mut notAlt := mkConst ``False
                 for discr in discrs.toArray.reverse, pattern in patterns.reverse do
@@ -217,12 +214,11 @@ where
                   let thmType ← mkForallFVars (params ++ #[motive] ++ ys ++ alts) thmType
                   let thmType ← unfoldNamedPattern thmType
                   let thmVal ← proveCondEqThm matchDeclName thmType
-                  addDecl <| Declaration.thmDecl {
-                    name := thmName
-                    levelParams := constInfo.levelParams
-                    type := thmType
-                    value := thmVal
-                  }
+                  addDecl <| Declaration.thmDecl
+                    { name := thmName
+                      levelParams := constInfo.levelParams
+                      type := thmType
+                      value := thmVal }
                   return (notAlt, splitterAltInfo, argMask)
           notAlts := notAlts.push notAlt
           splitterAltInfos := splitterAltInfos.push splitterAltInfo
@@ -235,11 +231,10 @@ where
 
         if needsSplitter then
           withMkMatcherInput matchDeclName (unfoldNamed := true) fun matcherInput => do
-            let matcherInput := {
-              matcherInput with
-              matcherName := splitterName
-              isSplitter := some matchInfo.overlaps
-            }
+            let matcherInput :=
+              { matcherInput with
+                matcherName := splitterName
+                isSplitter := some matchInfo.overlaps }
             let res ← Match.mkMatcher matcherInput
             res.addMatcher -- TODO: Do not set matcherinfo for the splitter!
         else
@@ -247,14 +242,13 @@ where
           -- This match statement does not need a splitter, we can use itself for that.
           -- (We still have to generate a declaration to satisfy the realizable constant)
           let decl :=
-            Declaration.defnDecl {
-              name := splitterName
-              levelParams := constInfo.levelParams
-              type := constInfo.type
-              value := mkConst matchDeclName us
-              hints := .abbrev
-              safety := .safe
-            }
+            Declaration.defnDecl
+              { name := splitterName
+                levelParams := constInfo.levelParams
+                type := constInfo.type
+                value := mkConst matchDeclName us
+                hints := .abbrev
+                safety := .safe }
           addDecl decl
           setInlineAttribute splitterName
           compileDecl (logErrors := false) decl
@@ -344,12 +338,11 @@ where
                         (heqPos := params.size + 1 + discrs.size + alts.size + altVars.size)
                         (heqNum := heqs.size)
                     unless (← getEnv).contains thmName do
-                      addDecl <| Declaration.thmDecl {
-                        name := thmName
-                        levelParams := constInfo.levelParams
-                        type := thmType
-                        value := thmVal
-                      }
+                      addDecl <| Declaration.thmDecl
+                        { name := thmName
+                          levelParams := constInfo.levelParams
+                          type := thmType
+                          value := thmVal }
                     return notAlt
             notAlts := notAlts.push notAlt
             idx := idx + 1

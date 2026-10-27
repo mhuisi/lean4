@@ -162,13 +162,12 @@ theorem zipWith_eq_append_iff {f : α → β → γ} {as : Vector α (n + m)} {b
   constructor
   · rintro ⟨as₁, as₂, bs₁, bs₂, h, rfl, rfl, rfl, rfl⟩
     simp only [Array.size_append, Array.size_zipWith] at h₁ h₂
-    exact ⟨
-      mk as₁ (by simp; omega),
-      mk as₂ (by simp; omega),
-      mk bs₁ (by simp; omega),
-      mk bs₂ (by simp; omega),
-      by simp
-    ⟩
+    exact
+      ⟨ mk as₁ (by simp; omega),
+        mk as₂ (by simp; omega),
+        mk bs₁ (by simp; omega),
+        mk bs₂ (by simp; omega),
+        by simp ⟩
   · rintro ⟨⟨as₁, hw⟩, ⟨as₂, hx⟩, ⟨bs₁, hy⟩, ⟨bs₂, hz⟩, rfl, rfl, w₁, w₂⟩
     simp only at w₁ w₂
     exact ⟨as₁, as₂, bs₁, bs₂, by simpa [hw, hy] using ⟨w₁, w₂⟩⟩

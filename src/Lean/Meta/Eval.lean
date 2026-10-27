@@ -34,14 +34,8 @@ unsafe def evalExprCore
     let type ← inferType value
     checkType type
     let decl :=
-      Declaration.defnDecl {
-        name
-        levelParams := us.toList
-        type
-        value
-        hints := ReducibilityHints.opaque
-        safety
-      }
+      Declaration.defnDecl
+        { name, levelParams := us.toList, type, value, hints := ReducibilityHints.opaque, safety }
     modifyEnv (markMeta · name)
     -- compilation will invariably wait on `checked`
     let _ ← traceBlock "compiler env" (← getEnv).checked

@@ -92,75 +92,70 @@ end Pass
 
 open Pass
 
-def builtinPassManager : PassManager := {
-  basePasses := #[
-    init,
-    pullInstances,
-    cse (shouldElimFunDecls := false),
-    simp,
-    floatLetIn,
-    findJoinPoints,
-    pullFunDecls,
-    reduceJpArity,
-    /-
-    We apply `implementedBy` replacements before `specialize` to ensure we specialize the replacement.
-    One possible improvement is to perform only the replacements if the target declaration is a specialization target,
-    and on phase 2 (aka mono) perform the remaining replacements.
-    -/
-    simp { etaPoly := true, inlinePartial := true, implementedBy := true } (occurrence := 1),
-    eagerLambdaLifting,
-    -- Should be as early as possible but after `eagerLambdaLifting` to make sure instances are
-    -- checked without nested functions whose bodies specialization does not require access to.
-    checkTemplateVisibility,
-    specialize,
-    findJoinPoints (occurrence := 1),
-    simp (occurrence := 2),
-    cse (shouldElimFunDecls := false) (occurrence := 1),
-    saveBase, -- End of base phase
-    -- should come last so it can see all created decls
-    -- pass must be run for each phase; see `base/monoTransparentDeclsExt`
-    inferVisibility (phase := .base),
-    toMono
-  ]
-  monoPasses := #[
-    simp (occurrence := 3) (phase := .mono),
-    reduceJpArity (phase := .mono),
-    structProjCases,
-    extendJoinPointContext (phase := .mono) (occurrence := 0),
-    floatLetIn (phase := .mono) (occurrence := 1),
-    reduceArity,
-    commonJoinPointArgs,
-    simp (occurrence := 4) (phase := .mono),
-    floatLetIn (phase := .mono) (occurrence := 2),
-    lambdaLifting
-  ]
-  monoPassesNoLambda := #[
-    extendJoinPointContext (phase := .mono) (occurrence := 1),
-    simp (occurrence := 5) (phase := .mono),
-    elimDeadBranches,
-    cse (occurrence := 2) (phase := .mono),
-    saveMono, -- End of mono phase
-    inferVisibility (phase := .mono),
-    extractClosed,
-    toImpure
-  ]
-  impurePasses := #[
-    pushProj (occurrence := 0),
-    insertResetReuse,
-    elimDeadVars (phase := .impure) (occurrence := 0),
-    simpCase,
-    inferBorrow,
-    explicitBoxing,
-    explicitRc,
-    expandResetReuse,
-    coalesceRC,
-    pushProj (occurrence := 1),
-    detectSimpleGround,
-    inferVisibility (phase := .impure),
-    toposortPass,
-    saveImpure -- End of impure phase
-  ]
-}
+def builtinPassManager : PassManager :=
+  { basePasses :=
+      #[init,
+        pullInstances,
+        cse (shouldElimFunDecls := false),
+        simp,
+        floatLetIn,
+        findJoinPoints,
+        pullFunDecls,
+        reduceJpArity,
+        /-
+        We apply `implementedBy` replacements before `specialize` to ensure we specialize the replacement.
+        One possible improvement is to perform only the replacements if the target declaration is a specialization target,
+        and on phase 2 (aka mono) perform the remaining replacements.
+        -/
+        simp { etaPoly := true, inlinePartial := true, implementedBy := true } (occurrence := 1),
+        eagerLambdaLifting,
+        -- Should be as early as possible but after `eagerLambdaLifting` to make sure instances are
+        -- checked without nested functions whose bodies specialization does not require access to.
+        checkTemplateVisibility,
+        specialize,
+        findJoinPoints (occurrence := 1),
+        simp (occurrence := 2),
+        cse (shouldElimFunDecls := false) (occurrence := 1),
+        saveBase, -- End of base phase
+        -- should come last so it can see all created decls
+        -- pass must be run for each phase; see `base/monoTransparentDeclsExt`
+        inferVisibility (phase := .base),
+        toMono]
+    monoPasses :=
+      #[simp (occurrence := 3) (phase := .mono),
+        reduceJpArity (phase := .mono),
+        structProjCases,
+        extendJoinPointContext (phase := .mono) (occurrence := 0),
+        floatLetIn (phase := .mono) (occurrence := 1),
+        reduceArity,
+        commonJoinPointArgs,
+        simp (occurrence := 4) (phase := .mono),
+        floatLetIn (phase := .mono) (occurrence := 2),
+        lambdaLifting]
+    monoPassesNoLambda :=
+      #[extendJoinPointContext (phase := .mono) (occurrence := 1),
+        simp (occurrence := 5) (phase := .mono),
+        elimDeadBranches,
+        cse (occurrence := 2) (phase := .mono),
+        saveMono, -- End of mono phase
+        inferVisibility (phase := .mono),
+        extractClosed,
+        toImpure]
+    impurePasses :=
+      #[pushProj (occurrence := 0),
+        insertResetReuse,
+        elimDeadVars (phase := .impure) (occurrence := 0),
+        simpCase,
+        inferBorrow,
+        explicitBoxing,
+        explicitRc,
+        expandResetReuse,
+        coalesceRC,
+        pushProj (occurrence := 1),
+        detectSimpleGround,
+        inferVisibility (phase := .impure),
+        toposortPass,
+        saveImpure] } -- End of impure phase
 
 def runImportedDecls (importedDeclNames : Array (Array Name)) : CoreM PassManager := do
   let mut m := builtinPassManager
@@ -171,13 +166,12 @@ def runImportedDecls (importedDeclNames : Array (Array Name)) : CoreM PassManage
 
 builtin_initialize passManagerExt
     : PersistentEnvExtension Name (Name × PassManager) (List Name × PassManager) ←
-  registerPersistentEnvExtension {
-    mkInitial := return ([], builtinPassManager)
-    addImportedFn := fun ns => return ([], ← ImportM.runCoreM <| runImportedDecls ns)
-    addEntryFn := fun (installerDeclNames, _) (installerDeclName, managerNew) =>
-      (installerDeclName :: installerDeclNames, managerNew)
-    exportEntriesFn := fun s => s.1.reverse.toArray
-  }
+  registerPersistentEnvExtension
+    { mkInitial := return ([], builtinPassManager)
+      addImportedFn := fun ns => return ([], ← ImportM.runCoreM <| runImportedDecls ns)
+      addEntryFn := fun (installerDeclNames, _) (installerDeclName, managerNew) =>
+        (installerDeclName :: installerDeclNames, managerNew)
+      exportEntriesFn := fun s => s.1.reverse.toArray }
 
 def getPassManager : CoreM PassManager := return passManagerExt.getState (← getEnv) |>.2
 
@@ -191,17 +185,16 @@ def addPass (declName : Name) : CoreM Unit := do
     throwAttrDeclNotOfExpectedType `cpass declName info.type (mkConst ``PassInstaller)
 
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `cpass
-    descr := "compiler passes for the code generator"
-    add := fun declName stx kind => do
-      Attribute.Builtin.ensureNoArgs stx
-      unless kind == AttributeKind.global do
-        throwAttrMustBeGlobal `cpass kind
-      ensureAttrDeclIsMeta `cpass declName kind
-      discard <| addPass declName
-    applicationTime := .afterCompilation
-  }
+  registerBuiltinAttribute
+    { name := `cpass
+      descr := "compiler passes for the code generator"
+      add := fun declName stx kind => do
+        Attribute.Builtin.ensureNoArgs stx
+        unless kind == AttributeKind.global do
+          throwAttrMustBeGlobal `cpass kind
+        ensureAttrDeclIsMeta `cpass declName kind
+        discard <| addPass declName
+      applicationTime := .afterCompilation }
 
 builtin_initialize
   registerTraceClass `Compiler.saveBase (inherited := true)

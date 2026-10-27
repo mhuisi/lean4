@@ -322,23 +322,21 @@ theorem find?_flatten_eq_some_iff {xss : Array (Array α)} {p : α → Bool} {a 
   intro w
   constructor
   · rintro ⟨as, ys, ⟨⟨zs, bs, rfl⟩, h₁, h₂⟩⟩
-    exact ⟨
-      as.toArray.map List.toArray,
-      ys.toArray,
-      ⟨zs.toArray, bs.toArray.map List.toArray, by simp⟩,
-      by simpa using h₁,
-      by simpa using h₂
-    ⟩
+    exact
+      ⟨ as.toArray.map List.toArray,
+        ys.toArray,
+        ⟨zs.toArray, bs.toArray.map List.toArray, by simp⟩,
+        by simpa using h₁,
+        by simpa using h₂ ⟩
   · rintro ⟨as, ys, ⟨⟨zs, bs, h⟩, h₁, h₂⟩⟩
     replace h := congrArg (·.map Array.toList) (congrArg Array.toList h)
     simp [Function.comp_def] at h
-    exact ⟨
-      as.toList.map Array.toList,
-      ys.toList,
-      ⟨zs.toList, bs.toList.map Array.toList, by simpa using h⟩,
-      by simpa using h₁,
-      by simpa using h₂
-    ⟩
+    exact
+      ⟨ as.toList.map Array.toList,
+        ys.toList,
+        ⟨zs.toList, bs.toList.map Array.toList, by simpa using h⟩,
+        by simpa using h₁,
+        by simpa using h₂ ⟩
 
 @[simp, grind =]
 theorem find?_flatMap {xs : Array α} {f : α → Array β} {p : β → Bool}
@@ -488,10 +486,9 @@ set_option backward.isDefEq.respectTransparency false in
 /-- `xs.findIdx p = i` iff `p xs[i]` and `¬ p xs [j]` for all `j < i`. -/
 theorem findIdx_eq {p : α → Bool} {xs : Array α} {i : Nat} (h : i < xs.size)
     : xs.findIdx p = i ↔ p xs[i] ∧ ∀ j (hji : j < i), p (xs[j]'(Nat.lt_trans hji h)) = false := by
-  refine ⟨
-    fun f ↦ ⟨f ▸ (@findIdx_getElem _ p xs (f ▸ h)), fun _ hji ↦ not_of_lt_findIdx (f ▸ hji)⟩,
-    fun ⟨_, h2⟩ ↦ ?_
-  ⟩
+  refine
+    ⟨ fun f ↦ ⟨f ▸ (@findIdx_getElem _ p xs (f ▸ h)), fun _ hji ↦ not_of_lt_findIdx (f ▸ hji)⟩,
+      fun ⟨_, h2⟩ ↦ ?_ ⟩
   apply Nat.le_antisymm _ (le_findIdx_of_not h h2)
   apply Decidable.byContradiction
   intro h3

@@ -107,20 +107,19 @@ public structure BackwardRules where
 
 /-- Build the backward rules used by `solve` from their underlying lemmas. -/
 public def mkBackwardRules : MetaM BackwardRules := do
-  return {
-    tripleIntro := ← mkBackwardRuleFromDecl ``Std.WP.Triple.intro
-    stateArgIntro := ← mkBackwardRuleFromDecl ``Lean.Order.le_of_forall_le
-    propPreIntro := ← mkBackwardRuleFromDecl ``Lean.Order.le_of_imp_top_le
-    ofPropPreIntro := ← mkBackwardRuleFromDecl ``Lean.Order.CompleteLattice.ofProp_le
-    ofPropMeetPreIntro := ← mkBackwardRuleFromDecl ``Lean.Order.CompleteLattice.ofProp_meet_le
-    iSupPreIntro := ← mkBackwardRuleFromDecl ``Lean.Order.iSup_le
-    truePreIntro := ← mkBackwardRuleFromDecl ``Lean.Order.true_le_of_top_le
-    elimPre := ← mkBackwardRuleFromDecl ``Lean.Order.top_le_prop
-    andIntro := ← mkBackwardRuleFromDecl ``And.intro
-    refl := ← mkBackwardRuleFromDecl ``Lean.Order.PartialOrder.rel_refl
-    meetTop := ← mkBackwardRuleFromDecl ``Lean.Order.meet_top_le_of_le
-    forallIntro := ← mkBackwardRuleFromDecl ``Lean.Order.le_forall
-  }
+  return
+    { tripleIntro := ← mkBackwardRuleFromDecl ``Std.WP.Triple.intro
+      stateArgIntro := ← mkBackwardRuleFromDecl ``Lean.Order.le_of_forall_le
+      propPreIntro := ← mkBackwardRuleFromDecl ``Lean.Order.le_of_imp_top_le
+      ofPropPreIntro := ← mkBackwardRuleFromDecl ``Lean.Order.CompleteLattice.ofProp_le
+      ofPropMeetPreIntro := ← mkBackwardRuleFromDecl ``Lean.Order.CompleteLattice.ofProp_meet_le
+      iSupPreIntro := ← mkBackwardRuleFromDecl ``Lean.Order.iSup_le
+      truePreIntro := ← mkBackwardRuleFromDecl ``Lean.Order.true_le_of_top_le
+      elimPre := ← mkBackwardRuleFromDecl ``Lean.Order.top_le_prop
+      andIntro := ← mkBackwardRuleFromDecl ``And.intro
+      refl := ← mkBackwardRuleFromDecl ``Lean.Order.PartialOrder.rel_refl
+      meetTop := ← mkBackwardRuleFromDecl ``Lean.Order.meet_top_le_of_le
+      forallIntro := ← mkBackwardRuleFromDecl ``Lean.Order.le_forall }
 
 public structure Context where
   /-- Pre-built backward rules used by `solve`. -/
@@ -278,10 +277,8 @@ public structure State where
 
 public abbrev VCGenM := ReaderT Context (StateRefT State Grind.GrindM)
 
-public def Scope.insertSpec (s : Scope) (thm : SpecTheorem) : Scope := {
-  s with
-  specs := s.specs.insert thm
-}
+public def Scope.insertSpec (s : Scope) (thm : SpecTheorem) : Scope :=
+  { s with specs := s.specs.insert thm }
 
 /--
 Walk `goal`'s local context from `scope.nextDeclIdx` onward, registering any
@@ -311,12 +308,11 @@ public def outOfFuel : VCGenM Bool :=
 
 /-- Decrement remaining fuel by one. No-op when fuel is `.unlimited` or already at zero. -/
 public def burnOne : VCGenM Unit :=
-  modify fun s => {
-    s with
-    fuel :=
-      match s.fuel with
-      | .limited (n + 1) => .limited n
-      | other => other
-  }
+  modify fun s =>
+    { s with
+      fuel :=
+        match s.fuel with
+        | .limited (n + 1) => .limited n
+        | other => other }
 
 end Lean.Elab.Tactic.VCGen

@@ -128,11 +128,10 @@ deriving Inhabited
 
 /-- The `norm_cast` extension data. -/
 builtin_initialize normCastExt : NormCastExtension ←
-  pure {
-    up := ← mkSimpExt (decl_name% ++ `up)
-    down := ← mkSimpExt (decl_name% ++ `down)
-    squash := ← mkSimpExt (decl_name% ++ `squash)
-  }
+  pure
+    { up := ← mkSimpExt (decl_name% ++ `up)
+      down := ← mkSimpExt (decl_name% ++ `down)
+      squash := ← mkSimpExt (decl_name% ++ `squash) }
 
 /-- `addElim decl` adds `decl` as an `elim` lemma to be used by `norm_cast`. -/
 def addElim (decl : Name) (kind := AttributeKind.global) (prio := eval_prio default) : MetaM Unit :=
@@ -169,20 +168,19 @@ def addInfer (decl : Name) (kind := AttributeKind.global) (prio := eval_prio def
   | Label.move => addMove decl kind prio
 
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `norm_cast
-    descr := "attribute for norm_cast"
-    add := fun decl stx kind =>
-      MetaM.run' do
-        let `(attr| norm_cast $[$label:normCastLabel]? $[$prio]?) := stx
-          | unreachable!
-        let prio := (prio.bind (·.1.isNatLit?)).getD (eval_prio default)
-        match label.bind (·.1.isStrLit?) with
-        | "elim" => addElim decl kind prio
-        | "move" => addMove decl kind prio
-        | "squash" => addSquash decl kind prio
-        | none => addInfer decl kind prio
-        | _ => unreachable!
-  }
+  registerBuiltinAttribute
+    { name := `norm_cast
+      descr := "attribute for norm_cast"
+      add := fun decl stx kind =>
+        MetaM.run' do
+          let `(attr| norm_cast $[$label:normCastLabel]? $[$prio]?) := stx
+            | unreachable!
+          let prio := (prio.bind (·.1.isNatLit?)).getD (eval_prio default)
+          match label.bind (·.1.isStrLit?) with
+          | "elim" => addElim decl kind prio
+          | "move" => addMove decl kind prio
+          | "squash" => addSquash decl kind prio
+          | none => addInfer decl kind prio
+          | _ => unreachable! }
 
 end Lean.Meta.NormCast

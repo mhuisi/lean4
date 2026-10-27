@@ -302,18 +302,17 @@ private abbrev findAtSorted? (entries : Array (Name × Value)) (fid : Name) : Op
 /-- Storing `FunctionSummaries` for all functions in a `.olean`. -/
 builtin_initialize functionSummariesExt
     : SimplePersistentEnvExtension (Name × Value) FunctionSummaries ←
-  registerSimplePersistentEnvExtension {
-    addImportedFn := fun _ => {}
-    addEntryFn := fun s ⟨e, n⟩ => s.insert e n
-    exportEntriesFnEx? :=
-      some fun _ s _ =>
-        -- preserved for non-modules, make non-persistent at some point?
-        { exported := #[], server := #[], «private» := s.toArray.qsort decLt }
-    asyncMode := .sync -- compilation is non-parallel anyway
-    replay? :=
-      some <| SimplePersistentEnvExtension.replayOfFilter (! ·.contains ·.1)
-        (fun s ⟨e, n⟩ => s.insert e n)
-  }
+  registerSimplePersistentEnvExtension
+    { addImportedFn := fun _ => {}
+      addEntryFn := fun s ⟨e, n⟩ => s.insert e n
+      exportEntriesFnEx? :=
+        some fun _ s _ =>
+          -- preserved for non-modules, make non-persistent at some point?
+          { exported := #[], server := #[], «private» := s.toArray.qsort decLt }
+      asyncMode := .sync -- compilation is non-parallel anyway
+      replay? :=
+        some <| SimplePersistentEnvExtension.replayOfFilter (! ·.contains ·.1)
+          (fun s ⟨e, n⟩ => s.insert e n) }
 
 /-- Add a `Value` for a function name. -/
 def addFunctionSummary (env : Environment) (fid : Name) (v : Value) : Environment :=
@@ -679,12 +678,8 @@ def Decl.elimDeadBranches (decls : Array (Decl .pure)) : CompilerM (Array (Decl 
 
   decls.mapIdxM fun i decl => if decl.safe then elimDead assignments[i]! decl else return decl
 
-def elimDeadBranches : Pass := {
-  name := `elimDeadBranches
-  run := Decl.elimDeadBranches
-  phase := .mono
-  phaseOut := .mono
-}
+def elimDeadBranches : Pass :=
+  { name := `elimDeadBranches, run := Decl.elimDeadBranches, phase := .mono, phaseOut := .mono }
 
 builtin_initialize registerTraceClass `Compiler.elimDeadBranches (inherited := true)
 

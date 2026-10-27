@@ -541,10 +541,8 @@ public def fmtFirst : Fmt := fun
     throw .partialFormatter
 
 @[builtin_infix_fmt Lean.Parser.Tactic.«tactic_<;>_»]
-public def fmtSeqFocus : Fmt.InfixOperation := {
-  sparse := false
-  precs? := some { prec := 1, lhsPrec := 0, rhsPrec := 2 }
-}
+public def fmtSeqFocus : Fmt.InfixOperation :=
+  { sparse := false, precs? := some { prec := 1, lhsPrec := 0, rhsPrec := 2 } }
 
 @[builtin_fmt Lean.Parser.Tactic.paren]
 public def fmtTacticParen : Fmt := fun
@@ -1159,8 +1157,8 @@ public def fmtWithInductionAlts
     let keyword := Layouts.pseudoApplication #[withTk, withTac?]
     let alts ← alts.mapM fmtInductionAlt
     let alts := Layouts.alts alts
-    return
-      Layouts.keywordSeparated lhs keyword alts { allowFlattening := false, nestedRhs := false }
+    return Layouts.keywordSeparated lhs keyword alts
+      { allowFlattening := false, nestedRhs := false }
   | _ =>
     throw .partialFormatter
 

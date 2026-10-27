@@ -24,10 +24,8 @@ def getUnicode (o : Options) : Bool := o.get `format.unicode defUnicode
 
 register_builtin_option format.width : Nat := { defValue := defWidth, descr := "indentation" }
 
-register_builtin_option format.unicode : Bool := {
-  defValue := defUnicode
-  descr := "unicode characters"
-}
+register_builtin_option format.unicode : Bool :=
+  { defValue := defUnicode, descr := "unicode characters" }
 
 register_builtin_option format.indent : Nat := { defValue := defIndent, descr := "indentation" }
 

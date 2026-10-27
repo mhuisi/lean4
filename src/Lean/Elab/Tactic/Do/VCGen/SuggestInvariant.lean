@@ -30,11 +30,10 @@ def getSPredGoalHypsAndTarget (type : Expr) : MetaM (Option (Level × Expr × Ex
   let args := type.getAppArgs
   if (type.isAppOf ``Std.Tactic.Do.MGoalEntails || type.isAppOf ``SPred.entails)
       && args.size > 2 then
-    return (
-      type.getAppFn.constLevels![0]!,
-      (type.getArg! 1).beta args[3:],
-      (type.getArg! 2).beta args[3:]
-    )
+    return
+      ( type.getAppFn.constLevels![0]!,
+        (type.getArg! 1).beta args[3:],
+        (type.getArg! 2).beta args[3:] )
   let some decl := (← getLCtx).lastDecl
     | return none
   let hyps := decl.type.consumeMData
@@ -103,14 +102,8 @@ def classifyInvariantUse (assertion : Expr) (inv : MVarId) : ClassifyInvariantUs
     letMuts := letMuts.push (acc.getArg! 2)
     acc := acc.getArg! 3
   letMuts := letMuts.push acc
-  return .success {
-    conditionIdx
-    cursorPrefix := pref
-    cursorSuffix := suff
-    letMuts
-    letMutsTuple
-    stateArgs
-  }
+  return .success
+    { conditionIdx, cursorPrefix := pref, cursorSuffix := suff, letMuts, letMutsTuple, stateArgs }
 
 /--
 Returns `some (ρ, σ)` if `letMutsTy` is of the form `Prod (Option ρ) σ` and every VC in `vcs`
@@ -314,10 +307,9 @@ def collectInvariantHints (vcs : Array MVarId) (inv : MVarId) (xs : Expr) (letMu
           -- logWarning m!"Reverted to {eqLetMuts}"
           if let some suffixPoint := suffixPoint? then
             suffixPoint? :=
-              some {
-                suffixPoint with
-                letMutsPred := SPredNil.mkAnd lvl suffixPoint.letMutsPred eqLetMuts
-              }
+              some
+                { suffixPoint with
+                  letMutsPred := SPredNil.mkAnd lvl suffixPoint.letMutsPred eqLetMuts }
           else
             suffixPoint? := some { lvl, cursorPred := mkPure eqNil, letMutsPred := eqLetMuts }
     if let some (_ps, lhs, rhs) := target.app3? ``ExceptConds.entails then

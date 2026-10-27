@@ -243,15 +243,14 @@ public def importConfigFile (cfg : LoadConfig) : LogIO Environment := do
       -/
       match (← IO.FS.removeFile olean |>.toBaseIO) with
       | .ok _ | .error (.noFileOrDirectory ..) =>
-        h.putStrLn <| Json.pretty <| toJson {
-          platform := System.Platform.target
-          leanHash := cfg.lakeEnv.leanGithash
-          configHash
-          idx := cfg.pkgIdx
-          name := cfg.pkgName
-          options := lakeOpts
-          : ConfigTrace
-        }
+        h.putStrLn <| Json.pretty <| toJson
+          { platform := System.Platform.target
+            leanHash := cfg.lakeEnv.leanGithash
+            configHash
+            idx := cfg.pkgIdx
+            name := cfg.pkgName
+            options := lakeOpts
+            : ConfigTrace }
         -- Flush before `truncate` (which sets the file size without flushing buffered
         -- writes) and before the slow elaboration below, so a process killed
         -- mid-elaboration leaves a valid trace rather than a NUL-byte size placeholder.

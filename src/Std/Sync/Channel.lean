@@ -382,21 +382,19 @@ private structure Bounded (α : Type) where
 namespace Bounded
 
 private def new (capacity : Nat) (hcap : 0 < capacity) : BaseIO (Bounded α) := do
-  return {
-    state :=
-      ← Mutex.new {
-        producers := ∅
-        consumers := ∅
-        capacity := capacity
-        buf := ← Vector.range capacity |>.mapM (fun _ => IO.mkRef none)
-        bufCount := 0
-        sendIdx := 0
-        hsend := hcap
-        recvIdx := 0
-        hrecv := hcap
-        closed := false
-      }
-  }
+  return
+    { state :=
+        ← Mutex.new
+          { producers := ∅
+            consumers := ∅
+            capacity := capacity
+            buf := ← Vector.range capacity |>.mapM (fun _ => IO.mkRef none)
+            bufCount := 0
+            sendIdx := 0
+            hsend := hcap
+            recvIdx := 0
+            hrecv := hcap
+            closed := false } }
 
 @[inline]
 private def incMod (idx : Nat) (cap : Nat) : Nat :=
@@ -416,12 +414,11 @@ private def trySend' (v : α) : AtomicT (Bounded.State α) BaseIO Bool := do
     return false
   else
     st.buf[st.sendIdx]'st.hsend |>.set (some v)
-    st := {
-      st with
-      bufCount := st.bufCount + 1
-      sendIdx := incMod st.sendIdx st.capacity
-      hsend := incMod_lt st.hsend
-    }
+    st :=
+      { st with
+        bufCount := st.bufCount + 1
+        sendIdx := incMod st.sendIdx st.capacity
+        hsend := incMod_lt st.hsend }
 
     if let some (consumer, consumers) := st.consumers.dequeue? then
       consumer.resolve true
@@ -474,12 +471,8 @@ private def tryRecv' [Monad m] [MonadLiftT (ST IO.RealWorld) m] [MonadLiftT Base
   else
     let val ← st.buf[st.recvIdx]'st.hrecv |>.swap none
     let nextRecvIdx := incMod st.recvIdx st.capacity
-    st := {
-      st with
-      bufCount := st.bufCount - 1
-      recvIdx := nextRecvIdx
-      hrecv := incMod_lt st.hrecv
-    }
+    st :=
+      { st with bufCount := st.bufCount - 1, recvIdx := nextRecvIdx, hrecv := incMod_lt st.hrecv }
 
     if let some (producer, producers) := st.producers.dequeue? then
       producer.resolve true
@@ -829,8 +822,7 @@ open Async in
 /-- Creates a `Selector` that resolves once `ch` has data available and provides that data. -/
 def recvSelector [Inhabited α] (ch : Channel α) : Selector α :=
   let sel := CloseableChannel.recvSelector ch.inner
-  {
-    tryFn := ch.tryRecv
+  { tryFn := ch.tryRecv
     registerFn waiter := do
       let original := waiter.promise
       let intermediate ← IO.Promise.new
@@ -842,8 +834,7 @@ def recvSelector [Inhabited α] (ch : Channel α) : Selector α :=
         | some res =>
           -- `res` can only be `.err` or `.ok some` as we are in a non closeable channel.
           original.resolve (res.map Option.get!)
-    unregisterFn := sel.unregisterFn
-  }
+    unregisterFn := sel.unregisterFn }
 
 @[inherit_doc CloseableChannel.forAsync]
 partial def forAsync

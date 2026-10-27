@@ -18,20 +18,18 @@ open RequestM
 /--
 `SyntaxNodeKind`s for which the syntax node and its children receive no semantic highlighting.
 -/
-def noHighlightKinds : Array SyntaxNodeKind := #[
+def noHighlightKinds : Array SyntaxNodeKind :=
   -- usually have special highlighting by the client
-  ``Lean.Parser.Term.sorry,
-  ``Lean.Parser.Term.type,
-  ``Lean.Parser.Term.prop,
-  -- not really keywords
-  `antiquotName
-]
+  #[``Lean.Parser.Term.sorry,
+    ``Lean.Parser.Term.type,
+    ``Lean.Parser.Term.prop,
+    -- not really keywords
+    `antiquotName]
 
-def docKinds : Array SyntaxNodeKind := #[
-  ``Lean.Parser.Command.plainDocComment,
-  ``Lean.Parser.Command.docComment,
-  ``Lean.Parser.Command.moduleDoc
-]
+def docKinds : Array SyntaxNodeKind :=
+  #[``Lean.Parser.Command.plainDocComment,
+    ``Lean.Parser.Command.docComment,
+    ``Lean.Parser.Command.moduleDoc]
 
 -- TODO: make extensible, or don't
 /-- Keywords for which a specific semantic token is provided. -/
@@ -121,10 +119,8 @@ processed, but are superseded by the current token.
 -/
 private def HandleOverlapState.insertSurrounding
     (st : HandleOverlapState) (s : AbsoluteLspSemanticToken)
-    : HandleOverlapState := {
-  st with
-  surrounding := go st.surrounding
-}
+    : HandleOverlapState :=
+  { st with surrounding := go st.surrounding }
 where
   go
     | [] => [s]
@@ -149,13 +145,12 @@ private def HandleOverlapState.untilToken
       -- we end it now
       let endNow : Bool := if let some t := nextToken? then curr.tailPos ≤ t.pos else true
       if endNow then
-        st := {
-          st with
-          nonOverlapping := st.nonOverlapping.push curr
-          -- Because all surrounding tokens end later than the current token, the new current token
-          -- is non-empty.
-          current? := takeBest st.surrounding |>.map ({ · with pos := curr.tailPos })
-        }
+        st :=
+          { st with
+            nonOverlapping := st.nonOverlapping.push curr
+            -- Because all surrounding tokens end later than the current token, the new current token
+            -- is non-empty.
+            current? := takeBest st.surrounding |>.map ({ · with pos := curr.tailPos }) }
       -- If the current token extends past the start of the next token,
       -- then all remaining surrounding tokens also extend past the start of the next token,
       -- which are all lower priority than the current token.
@@ -215,18 +210,17 @@ private def HandleOverlapState.token (st : HandleOverlapState) (t : AbsoluteLspS
         return st.insertSurrounding t
 
   -- Transition to t, save current if it's longer than t
-  let st := {
-    st with
-    current? := some t
-    nonOverlapping :=
-      let curr := { curr with tailPos := t.pos }
-      -- Only save the token if it actually takes up space. This step is what filters out
-      -- actual duplicates.
-      if curr.pos < curr.tailPos then
-        st.nonOverlapping.push curr
-      else
-        st.nonOverlapping
-  }
+  let st :=
+    { st with
+      current? := some t
+      nonOverlapping :=
+        let curr := { curr with tailPos := t.pos }
+        -- Only save the token if it actually takes up space. This step is what filters out
+        -- actual duplicates.
+        if curr.pos < curr.tailPos then
+          st.nonOverlapping.push curr
+        else
+          st.nonOverlapping }
   if curr.tailPos > t.tailPos then
     return st.insertSurrounding curr
   else
@@ -270,12 +264,11 @@ def handleOverlappingSemanticTokens (tokens : Array AbsoluteLspSemanticToken)
   let tokens :=
     tokens.toList.mergeSort fun ⟨pos1, tailPos1, _, _⟩ ⟨pos2, tailPos2, _, _⟩ =>
       pos1 < pos2 || pos1 == pos2 && tailPos1 ≤ tailPos2
-  let mut st : HandleOverlapState := {
-    current? := none
-    -- Reserve 10% for overlaps
-    nonOverlapping := Array.mkEmpty ((count * 11) / 10)
-    surrounding := []
-  }
+  let mut st : HandleOverlapState :=
+    { current? := none
+      -- Reserve 10% for overlaps
+      nonOverlapping := Array.mkEmpty ((count * 11) / 10)
+      surrounding := [] }
   for t in tokens do
     st := st.token t
   st := st.untilToken none

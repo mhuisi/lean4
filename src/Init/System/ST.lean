@@ -148,9 +148,10 @@ def runST {α : Type} (x : (σ : Type) → ST σ α) : α :=
   | .mk a _ => a
 
 @[always_inline]
-instance {ε σ} : MonadLift (ST σ) (EST ε σ) := ⟨fun x s =>
-  match x s with
-  | .mk a s => .ok a s⟩
+instance {ε σ} : MonadLift (ST σ) (EST ε σ) :=
+  ⟨ fun x s =>
+      match x s with
+      | .mk a s => .ok a s ⟩
 
 namespace ST
 

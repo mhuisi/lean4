@@ -220,10 +220,8 @@ open Elab in
 def handlePlainGoal (p : PlainGoalParams) : RequestM (RequestTask (Option PlainGoal)) := do
   let t ← getInteractiveGoals p
   return t.mapCheap <| Except.map <| Option.map <| fun { goals, .. } =>
-    if goals.isEmpty then {
-      goals := #[]
-      rendered := "no goals"
-    }
+    if goals.isEmpty then
+      { goals := #[], rendered := "no goals" }
     else
       let goalStrs := goals.map (toString ·.pretty)
       let goalBlocks :=
@@ -269,10 +267,8 @@ partial def handleDocumentHighlight (p : DocumentHighlightParams)
     | `(doElem|return%$i $e) => Id.run do
       if let some range := i.getRange? then
         if range.contains pos then
-          return some {
-            range := doRange?.getD (range.toLspRange text)
-            kind? := DocumentHighlightKind.text
-          }
+          return some
+            { range := doRange?.getD (range.toLspRange text), kind? := DocumentHighlightKind.text }
       highlightReturn? doRange? e
     | `(do%$i $elems) =>
       highlightReturn? (i.getRange?.get!.toLspRange text) elems
@@ -322,14 +318,13 @@ def NamespaceEntry.finish (text : FileMap) (syms : Array DocumentSymbol) (endStx
       | some endStx => (mkNullNode #[stx, endStx]).getRange?.get!
       | none => { stx.getRange?.get! with stop := text.source.rawEndPos }
     let name := name.foldr (fun x y => y ++ x) Name.anonymous
-    prevSiblings.push <| DocumentSymbol.mk {
+    prevSiblings.push <| DocumentSymbol.mk
       -- anonymous sections are represented by `«»` name components
-      name := if name == `«» then "<section>" else name.toString
-      kind := .namespace
-      range := range.toLspRange text
-      selectionRange := selection.getRange?.getD range |>.toLspRange text
-      children? := syms
-    }
+      { name := if name == `«» then "<section>" else name.toString
+        kind := .namespace
+        range := range.toLspRange text
+        selectionRange := selection.getRange?.getD range |>.toLspRange text
+        children? := syms }
 
 open Parser.Command in
 partial def handleDocumentSymbol (_ : DocumentSymbolParams)
@@ -381,10 +376,8 @@ where
           let (name, selection) :=
             match stx with
             | `($_:declModifiers $_:attrKind instance $[$np:namedPrio]? $[$id$[.{$ls,*}]?]? $sig:declSig $_) =>
-              (
-                (·.getId.toString) <$> id |>.getD s!"instance {sig.raw.reprint.getD ""}",
-                id.map (·.raw) |>.getD sig
-              )
+              ( (·.getId.toString) <$> id |>.getD s!"instance {sig.raw.reprint.getD ""}",
+                id.map (·.raw) |>.getD sig )
             | _ =>
               match stx.getArg 1 |>.getArg 1 with
               | `(declId|$id$[.{$ls,*}]?) =>
@@ -394,12 +387,11 @@ where
                 (stx10.isIdOrAtom?.getD "<unknown>", stx10)
           if let some selRange := selection.getRange? then
             let sym :=
-              DocumentSymbol.mk {
-                name := name
-                kind := SymbolKind.method
-                range := stxRange.toLspRange text
-                selectionRange := selRange.toLspRange text
-              }
+              DocumentSymbol.mk
+                { name := name
+                  kind := SymbolKind.method
+                  range := stxRange.toLspRange text
+                  selectionRange := selRange.toLspRange text }
             return ← toDocumentSymbols text stxs (syms.push sym) stack
         toDocumentSymbols text stxs syms stack
 

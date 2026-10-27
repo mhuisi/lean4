@@ -29,13 +29,12 @@ partial def runLakeSetupFile
   let mut args := #["setup-file", filePath.toString, "-"]
   if m.dependencyBuildMode matches .never then
     args := args.push "--no-build" |>.push "--no-cache"
-  let spawnArgs : Process.SpawnArgs := {
-    stdin := Process.Stdio.piped
-    stdout := Process.Stdio.piped
-    stderr := Process.Stdio.piped
-    cmd := lakePath.toString
-    args
-  }
+  let spawnArgs : Process.SpawnArgs :=
+    { stdin := Process.Stdio.piped
+      stdout := Process.Stdio.piped
+      stderr := Process.Stdio.piped
+      cmd := lakePath.toString
+      args }
   let lakeProc ← Process.spawn spawnArgs
   let (stdin, lakeProc) ← lakeProc.takeStdin
   stdin.putStrLn (toJson header).compress

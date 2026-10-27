@@ -153,16 +153,15 @@ An extension which keeps track of the builtin `FmtProvider`s together with those
 builtin_initialize fmtProvidersExt
     : PersistentEnvExtension (Name × Nat) (Name × FmtProviderEntry)
       (Array (Name × Nat) × Array FmtProviderEntry) ←
-  registerPersistentEnvExtension {
-    mkInitial := return (#[], ← builtinFmtProvidersRef.get)
-    addImportedFn := fun as => do
-      (#[], ·) <$> as.foldlM (init := ← builtinFmtProvidersRef.get) fun s as =>
-        as.foldlM (init := s) fun s (declName, priority) =>
-          return insertFmtProvider s { priority, provider := ← mkFmtProvider declName }
-    addEntryFn := fun (names, providers) (declName, entry) =>
-      (names.push (declName, entry.priority), insertFmtProvider providers entry)
-    exportEntriesFn := (·.1)
-  }
+  registerPersistentEnvExtension
+    { mkInitial := return (#[], ← builtinFmtProvidersRef.get)
+      addImportedFn := fun as => do
+        (#[], ·) <$> as.foldlM (init := ← builtinFmtProvidersRef.get) fun s as =>
+          as.foldlM (init := s) fun s (declName, priority) =>
+            return insertFmtProvider s { priority, provider := ← mkFmtProvider declName }
+      addEntryFn := fun (names, providers) (declName, entry) =>
+        (names.push (declName, entry.priority), insertFmtProvider providers entry)
+      exportEntriesFn := (·.1) }
 
 /-- The registered `FmtProvider`s, ordered by decreasing priority. -/
 public def getFmtProviders (env : Environment) : Array FmtProviderEntry :=
@@ -175,23 +174,22 @@ responsible for. Its optional argument is the provider's priority, which default
 `addBuiltinFmtProvider` for the priorities used by core.
 -/
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `fmt_provider
-    descr :=
-      "Registers a function of type `Lean.Fmt.FmtProvider` that determines the \
-        formatters of the syntax node kinds it is responsible for."
-    applicationTime := .afterCompilation
-    add := fun decl stx kind => do
-      let priority ← Attribute.Builtin.getPrio stx
-      ensureAttrDeclIsMeta `fmt_provider decl kind
-      unless kind == AttributeKind.global do
-        throwAttrMustBeGlobal `fmt_provider kind
-      let declType := (← getConstInfo decl).type
-      unless declType.isConstOf ``FmtProvider do
-        throwAttrDeclNotOfExpectedType `fmt_provider decl declType (mkConst ``FmtProvider)
-      let entry := { priority, provider := ← mkFmtProvider decl }
-      setEnv <| fmtProvidersExt.addEntry (← getEnv) (decl, entry)
-  }
+  registerBuiltinAttribute
+    { name := `fmt_provider
+      descr :=
+        "Registers a function of type `Lean.Fmt.FmtProvider` that determines the \
+          formatters of the syntax node kinds it is responsible for."
+      applicationTime := .afterCompilation
+      add := fun decl stx kind => do
+        let priority ← Attribute.Builtin.getPrio stx
+        ensureAttrDeclIsMeta `fmt_provider decl kind
+        unless kind == AttributeKind.global do
+          throwAttrMustBeGlobal `fmt_provider kind
+        let declType := (← getConstInfo decl).type
+        unless declType.isConstOf ``FmtProvider do
+          throwAttrDeclNotOfExpectedType `fmt_provider decl declType (mkConst ``FmtProvider)
+        let entry := { priority, provider := ← mkFmtProvider decl }
+        setEnv <| fmtProvidersExt.addEntry (← getEnv) (decl, entry) }
 
 /-- Whether the comment was placed in leading or trailing whitespace in the input `Syntax`. -/
 public inductive Comment.Whitespace where
@@ -291,16 +289,15 @@ with `@[comment_collector]`, ordered by decreasing priority.
 builtin_initialize commentCollectorsExt
     : PersistentEnvExtension (Name × Nat) (Name × CommentCollectorEntry)
       (Array (Name × Nat) × Array CommentCollectorEntry) ←
-  registerPersistentEnvExtension {
-    mkInitial := return (#[], ← builtinCommentCollectorsRef.get)
-    addImportedFn := fun as => do
-      (#[], ·) <$> as.foldlM (init := ← builtinCommentCollectorsRef.get) fun s as =>
-        as.foldlM (init := s) fun s (declName, priority) =>
-          return insertCommentCollector s { priority, collector := ← mkCommentCollector declName }
-    addEntryFn := fun (names, collectors) (declName, entry) =>
-      (names.push (declName, entry.priority), insertCommentCollector collectors entry)
-    exportEntriesFn := (·.1)
-  }
+  registerPersistentEnvExtension
+    { mkInitial := return (#[], ← builtinCommentCollectorsRef.get)
+      addImportedFn := fun as => do
+        (#[], ·) <$> as.foldlM (init := ← builtinCommentCollectorsRef.get) fun s as =>
+          as.foldlM (init := s) fun s (declName, priority) =>
+            return insertCommentCollector s { priority, collector := ← mkCommentCollector declName }
+      addEntryFn := fun (names, collectors) (declName, entry) =>
+        (names.push (declName, entry.priority), insertCommentCollector collectors entry)
+      exportEntriesFn := (·.1) }
 
 /-- The registered `CommentCollector`s, ordered by decreasing priority. -/
 public def getCommentCollectors (env : Environment) : Array CommentCollectorEntry :=
@@ -313,24 +310,24 @@ syntax nodes they are responsible for are associated with. Its optional argument
 priority, which defaults to `1000`; see `addBuiltinCommentCollector`.
 -/
 builtin_initialize
-  registerBuiltinAttribute {
-    name := `comment_collector
-    descr :=
-      "Registers a function of type `Lean.Fmt.CommentCollector` that determines the \
-        syntax ranges that the comments of the syntax nodes it is responsible for are associated \
-        with."
-    applicationTime := .afterCompilation
-    add := fun decl stx kind => do
-      let priority ← Attribute.Builtin.getPrio stx
-      ensureAttrDeclIsMeta `comment_collector decl kind
-      unless kind == AttributeKind.global do
-        throwAttrMustBeGlobal `comment_collector kind
-      let declType := (← getConstInfo decl).type
-      unless declType.isConstOf ``CommentCollector do
-        throwAttrDeclNotOfExpectedType `comment_collector decl declType (mkConst ``CommentCollector)
-      let entry := { priority, collector := ← mkCommentCollector decl }
-      setEnv <| commentCollectorsExt.addEntry (← getEnv) (decl, entry)
-  }
+  registerBuiltinAttribute
+    { name := `comment_collector
+      descr :=
+        "Registers a function of type `Lean.Fmt.CommentCollector` that determines the \
+          syntax ranges that the comments of the syntax nodes it is responsible for are associated \
+          with."
+      applicationTime := .afterCompilation
+      add := fun decl stx kind => do
+        let priority ← Attribute.Builtin.getPrio stx
+        ensureAttrDeclIsMeta `comment_collector decl kind
+        unless kind == AttributeKind.global do
+          throwAttrMustBeGlobal `comment_collector kind
+        let declType := (← getConstInfo decl).type
+        unless declType.isConstOf ``CommentCollector do
+          throwAttrDeclNotOfExpectedType `comment_collector decl declType
+            (mkConst ``CommentCollector)
+        let entry := { priority, collector := ← mkCommentCollector decl }
+        setEnv <| commentCollectorsExt.addEntry (← getEnv) (decl, entry) }
 
 /--
 The `FmtProvider` of an attribute that registers formatters keyed by syntax node kind, where `mk`
@@ -360,13 +357,12 @@ def evalFmtAttributeKey
   pure id
 
 public unsafe builtin_initialize fmtAttribute : KeyedDeclsAttribute Fmt ←
-  KeyedDeclsAttribute.init {
-    builtinName := `builtin_fmt
-    name := `fmt
-    descr := "Register an Fmt formatter for a syntax node kind."
-    valueTypeName := `Lean.Fmt
-    evalKey := evalFmtAttributeKey `fmt [moduleKind, cmdsKind, headerKind]
-  }
+  KeyedDeclsAttribute.init
+    { builtinName := `builtin_fmt
+      name := `fmt
+      descr := "Register an Fmt formatter for a syntax node kind."
+      valueTypeName := `Lean.Fmt
+      evalKey := evalFmtAttributeKey `fmt [moduleKind, cmdsKind, headerKind] }
 
 /--
 Determines whether the given term, when it occurs as an argument of an application,
@@ -392,14 +388,13 @@ public def addBuiltinStickyTermFn (f : StickyTermFn) : IO Unit :=
 /-- An extension which keeps track of registered `StickyTermFn`s. -/
 builtin_initialize stickyTermFnsExt
     : PersistentEnvExtension Name (Name × StickyTermFn) (Array Name × Array StickyTermFn) ←
-  registerPersistentEnvExtension {
-    mkInitial := return (#[], ← builtinStickyTermFnsRef.get)
-    addImportedFn := fun as => do
-      (#[], ·) <$> as.foldlM (init := ← builtinStickyTermFnsRef.get) fun s as =>
-        as.foldlM (init := s) fun s n => s.push <$> mkStickyTermFn n
-    addEntryFn := fun (names, fns) (n, f) => (names.push n, fns.push f)
-    exportEntriesFn := (·.1)
-  }
+  registerPersistentEnvExtension
+    { mkInitial := return (#[], ← builtinStickyTermFnsRef.get)
+      addImportedFn := fun as => do
+        (#[], ·) <$> as.foldlM (init := ← builtinStickyTermFnsRef.get) fun s as =>
+          as.foldlM (init := s) fun s n => s.push <$> mkStickyTermFn n
+      addEntryFn := fun (names, fns) (n, f) => (names.push n, fns.push f)
+      exportEntriesFn := (·.1) }
 
 /--
 Adds the `@[{builtin_}fmt_sticky_term]` attribute, which is applied to declarations of type
@@ -407,27 +402,26 @@ Adds the `@[{builtin_}fmt_sticky_term]` attribute, which is applied to declarati
 -/
 builtin_initialize
   let mkAttr (builtin : Bool) (name : Name) :=
-    registerBuiltinAttribute {
-      name
-      descr :=
-        (if builtin then "(builtin) " else "")
-          ++ "Marks a function of type `Lean.Fmt.StickyTermFn` that determines whether a term \
-            propagates the stickiness of its right-hand side in applications."
-      applicationTime := .afterCompilation
-      add := fun decl stx kind => do
-        Attribute.Builtin.ensureNoArgs stx
-        if !builtin then
-          ensureAttrDeclIsMeta name decl kind
-        unless kind == AttributeKind.global do
-          throwAttrMustBeGlobal name kind
-        let declType := (← getConstInfo decl).type
-        unless declType.isConstOf ``StickyTermFn do
-          throwAttrDeclNotOfExpectedType name decl declType (mkConst ``StickyTermFn)
-        if builtin then
-          declareBuiltin decl <| mkApp (mkConst ``addBuiltinStickyTermFn) (mkConst decl)
-        else
-          setEnv <| stickyTermFnsExt.addEntry (← getEnv) (decl, ← mkStickyTermFn decl)
-    }
+    registerBuiltinAttribute
+      { name
+        descr :=
+          (if builtin then "(builtin) " else "")
+            ++ "Marks a function of type `Lean.Fmt.StickyTermFn` that determines whether a term \
+              propagates the stickiness of its right-hand side in applications."
+        applicationTime := .afterCompilation
+        add := fun decl stx kind => do
+          Attribute.Builtin.ensureNoArgs stx
+          if !builtin then
+            ensureAttrDeclIsMeta name decl kind
+          unless kind == AttributeKind.global do
+            throwAttrMustBeGlobal name kind
+          let declType := (← getConstInfo decl).type
+          unless declType.isConstOf ``StickyTermFn do
+            throwAttrDeclNotOfExpectedType name decl declType (mkConst ``StickyTermFn)
+          if builtin then
+            declareBuiltin decl <| mkApp (mkConst ``addBuiltinStickyTermFn) (mkConst decl)
+          else
+            setEnv <| stickyTermFnsExt.addEntry (← getEnv) (decl, ← mkStickyTermFn decl) }
   mkAttr true `builtin_fmt_sticky_term
   mkAttr false `fmt_sticky_term
 
@@ -462,13 +456,12 @@ public structure InfixOperation where
 deriving Inhabited, BEq
 
 public unsafe builtin_initialize infixFmtAttribute : KeyedDeclsAttribute InfixOperation ←
-  KeyedDeclsAttribute.init {
-    builtinName := `builtin_infix_fmt
-    name := `infix_fmt
-    descr := "Register an Fmt infix operation formatter for a syntax node kind."
-    valueTypeName := `Lean.Fmt.InfixOperation
-    evalKey := evalFmtAttributeKey `infix_fmt
-  }
+  KeyedDeclsAttribute.init
+    { builtinName := `builtin_infix_fmt
+      name := `infix_fmt
+      descr := "Register an Fmt infix operation formatter for a syntax node kind."
+      valueTypeName := `Lean.Fmt.InfixOperation
+      evalKey := evalFmtAttributeKey `infix_fmt }
 
 public structure Conditional.ElseIf where
   elseTk : Syntax
@@ -489,13 +482,12 @@ public structure Conditional where
 public abbrev ConditionalFmt := Syntax → FmtM (Option Conditional)
 
 public unsafe builtin_initialize conditionalFmtAttribute : KeyedDeclsAttribute ConditionalFmt ←
-  KeyedDeclsAttribute.init {
-    builtinName := `builtin_conditional_fmt
-    name := `conditional_fmt
-    descr := "Register an Fmt conditional formatter for a syntax node kind."
-    valueTypeName := `Lean.Fmt.ConditionalFmt
-    evalKey := evalFmtAttributeKey `conditional_fmt
-  }
+  KeyedDeclsAttribute.init
+    { builtinName := `builtin_conditional_fmt
+      name := `conditional_fmt
+      descr := "Register an Fmt conditional formatter for a syntax node kind."
+      valueTypeName := `Lean.Fmt.ConditionalFmt
+      evalKey := evalFmtAttributeKey `conditional_fmt }
 
 /-- Binders partitioned into layout groups, as produced by `groupBinders`. -/
 public abbrev BinderGroups := Array (Array (Array Syntax))
@@ -517,10 +509,9 @@ public structure QuantifierComponents extends QuantifierHeadComponents where
 public abbrev QuantifierFmt := Syntax → Option QuantifierComponents
 
 public unsafe builtin_initialize quantifierFmtAttribute : KeyedDeclsAttribute QuantifierFmt ←
-  KeyedDeclsAttribute.init {
-    builtinName := `builtin_quantifier_fmt
-    name := `quantifier_fmt
-    descr := "Register an Fmt quantifier formatter for a syntax node kind."
-    valueTypeName := `Lean.Fmt.QuantifierFmt
-    evalKey := evalFmtAttributeKey `quantifier_fmt
-  }
+  KeyedDeclsAttribute.init
+    { builtinName := `builtin_quantifier_fmt
+      name := `quantifier_fmt
+      descr := "Register an Fmt quantifier formatter for a syntax node kind."
+      valueTypeName := `Lean.Fmt.QuantifierFmt
+      evalKey := evalFmtAttributeKey `quantifier_fmt }

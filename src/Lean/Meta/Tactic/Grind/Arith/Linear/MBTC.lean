@@ -60,10 +60,7 @@ private def eqAssignment (a b : Expr) : GoalM Bool := do
   return v₁ == v₂
 
 def mbtc : GoalM Bool := do
-  Grind.mbtc {
-    hasTheoryVar := hasTheoryVar
-    isInterpreted := isInterpreted
-    eqAssignment := eqAssignment
-  }
+  Grind.mbtc
+    { hasTheoryVar := hasTheoryVar, isInterpreted := isInterpreted, eqAssignment := eqAssignment }
 
 end Lean.Meta.Grind.Arith.Linear

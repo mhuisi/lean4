@@ -14,10 +14,9 @@ public section
 
 namespace Lean.Elab.Term
 
-register_builtin_option backward.do.legacy : Bool := {
-  defValue := false
-  descr := "Use the legacy `do` elaborator instead of the new, extensible implementation."
-}
+register_builtin_option backward.do.legacy : Bool :=
+  { defValue := false
+    descr := "Use the legacy `do` elaborator instead of the new, extensible implementation." }
 
 private def toDoElem (newKind : SyntaxNodeKind) : Macro := fun stx => do
   let stx := stx.setKind newKind

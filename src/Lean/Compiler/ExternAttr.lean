@@ -60,18 +60,17 @@ private def syntaxToExternAttrData (stx : Syntax) : AttrM ExternAttrData := do
   return { entries := entries.toList }
 
 builtin_initialize externAttr : ParametricAttribute ExternAttrData ←
-  registerParametricAttribute {
-    name := `extern
-    descr := "builtin and foreign functions"
-    getParam := fun _ stx => syntaxToExternAttrData stx
-    afterSet := fun declName externAttrData => do
-      let env ← getEnv
-      if env.isProjectionFn declName || env.isConstructor declName then
-        if let some (.thmInfo ..) := env.find? declName then
-          -- We should not mark theorems as extern
-          return ()
-        compileDecls #[declName]
-  }
+  registerParametricAttribute
+    { name := `extern
+      descr := "builtin and foreign functions"
+      getParam := fun _ stx => syntaxToExternAttrData stx
+      afterSet := fun declName externAttrData => do
+        let env ← getEnv
+        if env.isProjectionFn declName || env.isConstructor declName then
+          if let some (.thmInfo ..) := env.find? declName then
+            -- We should not mark theorems as extern
+            return ()
+          compileDecls #[declName] }
 
 def getExternAttrData? (env : Environment) (n : Name) : Option ExternAttrData :=
   externAttr.getParam? env n

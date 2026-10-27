@@ -48,26 +48,25 @@ def SimplePersistentEnvExtension.replayOfFilter (p : σ → α → Bool) (addEnt
 def registerSimplePersistentEnvExtension
     {α σ : Type} [Inhabited σ] (descr : SimplePersistentEnvExtensionDescr α σ)
     : IO (SimplePersistentEnvExtension α σ) :=
-  registerPersistentEnvExtension {
-    name := descr.name
-    mkInitial := pure ([], descr.addImportedFn #[])
-    addImportedFn := fun as => pure ([], descr.addImportedFn as)
-    addEntryFn := fun s e =>
-      match s with
-      | (entries, s) => (e :: entries, descr.addEntryFn s e)
-    exportEntriesFnEx env s :=
-      match descr.exportEntriesFnEx? with
-      | some fn => fn env s.2 s.1.reverse
-      | none => .uniform (descr.toArrayFn s.1.reverse)
-    statsFn := fun s => format "number of local entries: " ++ format s.1.length
-    asyncMode := descr.asyncMode
-    logWrites := descr.logWrites
-    replay? :=
-      descr.replay?.map fun replay oldState newState _ (entries, s) =>
-        let newEntries := takeNewEntries newState.1 oldState.1
-        let (newEntries, s) := replay newEntries newState.2 s
-        (newEntries ++ entries, s)
-  }
+  registerPersistentEnvExtension
+    { name := descr.name
+      mkInitial := pure ([], descr.addImportedFn #[])
+      addImportedFn := fun as => pure ([], descr.addImportedFn as)
+      addEntryFn := fun s e =>
+        match s with
+        | (entries, s) => (e :: entries, descr.addEntryFn s e)
+      exportEntriesFnEx env s :=
+        match descr.exportEntriesFnEx? with
+        | some fn => fn env s.2 s.1.reverse
+        | none => .uniform (descr.toArrayFn s.1.reverse)
+      statsFn := fun s => format "number of local entries: " ++ format s.1.length
+      asyncMode := descr.asyncMode
+      logWrites := descr.logWrites
+      replay? :=
+        descr.replay?.map fun replay oldState newState _ (entries, s) =>
+          let newEntries := takeNewEntries newState.1 oldState.1
+          let (newEntries, s) := replay newEntries newState.2 s
+          (newEntries ++ entries, s) }
 
 namespace SimplePersistentEnvExtension
 
@@ -245,15 +244,14 @@ def mkTagDeclarationExtension
     (name : Name := by exact decl_name%) (asyncMode : EnvExtension.AsyncMode := .mainOnly)
     (logWrites : Bool := false)
     : IO TagDeclarationExtension :=
-  registerSimplePersistentEnvExtension {
-    name := name
-    logWrites := logWrites
-    addImportedFn := fun _ => {}
-    addEntryFn := fun s n => s.insert n
-    toArrayFn := fun es => es.toArray.qsort Name.quickLt
-    asyncMode
-    replay? := some <| SimplePersistentEnvExtension.replayOfFilter (! ·.contains ·) (·.insert ·)
-  }
+  registerSimplePersistentEnvExtension
+    { name := name
+      logWrites := logWrites
+      addImportedFn := fun _ => {}
+      addEntryFn := fun s n => s.insert n
+      toArrayFn := fun es => es.toArray.qsort Name.quickLt
+      asyncMode
+      replay? := some <| SimplePersistentEnvExtension.replayOfFilter (! ·.contains ·) (·.insert ·) }
 
 namespace TagDeclarationExtension
 
@@ -302,22 +300,21 @@ def mkMapDeclarationExtension
         all.filter fun (n, _) => (env.setExporting true).contains (skipRealize := false) n
       { exported, server := exported, «private» := all })
     : IO (MapDeclarationExtension α) :=
-  .mk <$> registerPersistentEnvExtension {
-    name := name
-    logWrites := logWrites
-    mkInitial := pure {}
-    addImportedFn := fun _ => pure {}
-    addEntryFn := fun s (n, v) => s.insert n v
-    exportEntriesFnEx env s := exportEntriesFn env s
-    asyncMode
-    replay? :=
-      some fun _ newState newConsts s =>
-        newConsts.foldl (init := s) fun s c =>
-          if let some a := newState.find? c then
-            s.insert c a
-          else
-            s
-  }
+  .mk <$> registerPersistentEnvExtension
+    { name := name
+      logWrites := logWrites
+      mkInitial := pure {}
+      addImportedFn := fun _ => pure {}
+      addEntryFn := fun s (n, v) => s.insert n v
+      exportEntriesFnEx env s := exportEntriesFn env s
+      asyncMode
+      replay? :=
+        some fun _ newState newConsts s =>
+          newConsts.foldl (init := s) fun s c =>
+            if let some a := newState.find? c then
+              s.insert c a
+            else
+              s }
 
 namespace MapDeclarationExtension
 

@@ -111,11 +111,9 @@ theorem denote_blastReplicate
     (aig : AIG α) (target : ReplicateTarget aig newWidth) (assign : α → Bool)
     : ∀ (idx : Nat) (hidx : idx < newWidth),
       ⟦(blastReplicate aig target).aig, (blastReplicate aig target).vec.get idx hidx, assign⟧
-        = ⟦
-          aig,
-          target.inner.get (idx % target.w) (blastReplicate.aux2 (target.h ▸ hidx)),
-          assign
-        ⟧ := by
+        = ⟦ aig,
+            target.inner.get (idx % target.w) (blastReplicate.aux2 (target.h ▸ hidx)),
+            assign ⟧ := by
   intro idx hidx
   rcases target with ⟨n, input, h⟩
   unfold blastReplicate

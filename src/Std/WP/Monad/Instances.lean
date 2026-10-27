@@ -241,10 +241,11 @@ instance Except.instWPMonad : WPMonad (Except ε) Prop (ε → Prop) where
 
 /-- `EStateM ε σ`'s `WP` interpretation combining state and exceptions. -/
 instance EStateM.wpInst {α : Type} : WP (EStateM ε σ α) α (σ → Prop) (ε → σ → Prop) where
-  trans x := ⟨fun post eposts s =>
-    match x s with
-    | .ok a s' => post a s'
-    | .error el s' => eposts el s'⟩
+  trans x :=
+    ⟨ fun post eposts s =>
+        match x s with
+        | .ok a s' => post a s'
+        | .error el s' => eposts el s' ⟩
   trans_monotone x := fun post post' eposts eposts' heposts hpost s => by
     cases hxs : x s with
     | ok a s' => simpa [hxs] using hpost a s'

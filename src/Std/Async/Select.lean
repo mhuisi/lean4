@@ -118,51 +118,50 @@ registering with one of them fails, the error is reported through the `Waiter` u
 was already won, in which case the winner's result takes priority.
 -/
 def Selectable.combine (selectables : Array (Selectable α)) : IO (Selector α) := do
-  return {
-    tryFn := do
-      let gen ← IO.stdGenRef.get
-      let (selectables, gen) := shuffleIt selectables gen
-      IO.stdGenRef.set gen
+  return
+    { tryFn := do
+        let gen ← IO.stdGenRef.get
+        let (selectables, gen) := shuffleIt selectables gen
+        IO.stdGenRef.set gen
 
-      for selectable in selectables do
-        if let some val ← selectable.selector.tryFn then
-          return some (← selectable.cont val)
+        for selectable in selectables do
+          if let some val ← selectable.selector.tryFn then
+            return some (← selectable.cont val)
 
-      return none
-    registerFn := fun waiter => do
-      let gen ← IO.stdGenRef.get
-      let (selectables, gen) := shuffleIt selectables gen
-      IO.stdGenRef.set gen
+        return none
+      registerFn := fun waiter => do
+        let gen ← IO.stdGenRef.get
+        let (selectables, gen) := shuffleIt selectables gen
+        IO.stdGenRef.set gen
 
-      for selectable in selectables do
-        if ← waiter.checkFinished then
-          return
+        for selectable in selectables do
+          if ← waiter.checkFinished then
+            return
 
-        let waiterPromise ← IO.Promise.new
+          let waiterPromise ← IO.Promise.new
 
-        try
-          selectable.selector.registerFn (waiter.withPromise waiterPromise)
-        catch e =>
-          waiter.race (lose := pure ()) (win := fun promise => promise.resolve (.error e))
-          return
+          try
+            selectable.selector.registerFn (waiter.withPromise waiterPromise)
+          catch e =>
+            waiter.race (lose := pure ()) (win := fun promise => promise.resolve (.error e))
+            return
 
-        discard <| IO.bindTask (t := waiterPromise.result?) fun res? => do
-          match res? with
-          | none =>
-            return (Task.pure (.ok ()))
-          | some res =>
-            let deliver : Async Unit :=
-              try
-                let val ← IO.ofExcept res
-                waiter.promise.resolve (.ok (← selectable.cont val))
-              catch e =>
-                waiter.promise.resolve (.error e)
+          discard <| IO.bindTask (t := waiterPromise.result?) fun res? => do
+            match res? with
+            | none =>
+              return (Task.pure (.ok ()))
+            | some res =>
+              let deliver : Async Unit :=
+                try
+                  let val ← IO.ofExcept res
+                  waiter.promise.resolve (.ok (← selectable.cont val))
+                catch e =>
+                  waiter.promise.resolve (.error e)
 
-            deliver.toBaseIO
-    unregisterFn := do
-      for selectable in selectables do
-        try selectable.selector.unregisterFn catch _ => pure ()
-  }
+              deliver.toBaseIO
+      unregisterFn := do
+        for selectable in selectables do
+          try selectable.selector.unregisterFn catch _ => pure () }
 
 /--
 Performs fair multiplexing on the `Selectable`s in `selectables`, which loses no data from

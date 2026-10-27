@@ -19,20 +19,19 @@ Precomputed values of `10 ^ e` for `0 ≤ e ≤ 22`. In this range, the values c
 exactly.
 -/
 @[expose]
-def Float.exactlyRepresentablePowersOfTen : Array Float := #[
-  Float.ofBits 0x3FF0000000000000, Float.ofBits 0x4024000000000000,
-  Float.ofBits 0x4059000000000000, Float.ofBits 0x408F400000000000,
-  Float.ofBits 0x40C3880000000000, Float.ofBits 0x40F86A0000000000,
-  Float.ofBits 0x412E848000000000, Float.ofBits 0x416312D000000000,
-  Float.ofBits 0x4197D78400000000, Float.ofBits 0x41CDCD6500000000,
-  Float.ofBits 0x4202A05F20000000, Float.ofBits 0x42374876E8000000,
-  Float.ofBits 0x426D1A94A2000000, Float.ofBits 0x42A2309CE5400000,
-  Float.ofBits 0x42D6BCC41E900000, Float.ofBits 0x430C6BF526340000,
-  Float.ofBits 0x4341C37937E08000, Float.ofBits 0x4376345785D8A000,
-  Float.ofBits 0x43ABC16D674EC800, Float.ofBits 0x43E158E460913D00,
-  Float.ofBits 0x4415AF1D78B58C40, Float.ofBits 0x444B1AE4D6E2EF50,
-  Float.ofBits 0x4480F0CF064DD592
-]
+def Float.exactlyRepresentablePowersOfTen : Array Float :=
+  #[Float.ofBits 0x3FF0000000000000, Float.ofBits 0x4024000000000000,
+    Float.ofBits 0x4059000000000000, Float.ofBits 0x408F400000000000,
+    Float.ofBits 0x40C3880000000000, Float.ofBits 0x40F86A0000000000,
+    Float.ofBits 0x412E848000000000, Float.ofBits 0x416312D000000000,
+    Float.ofBits 0x4197D78400000000, Float.ofBits 0x41CDCD6500000000,
+    Float.ofBits 0x4202A05F20000000, Float.ofBits 0x42374876E8000000,
+    Float.ofBits 0x426D1A94A2000000, Float.ofBits 0x42A2309CE5400000,
+    Float.ofBits 0x42D6BCC41E900000, Float.ofBits 0x430C6BF526340000,
+    Float.ofBits 0x4341C37937E08000, Float.ofBits 0x4376345785D8A000,
+    Float.ofBits 0x43ABC16D674EC800, Float.ofBits 0x43E158E460913D00,
+    Float.ofBits 0x4415AF1D78B58C40, Float.ofBits 0x444B1AE4D6E2EF50,
+    Float.ofBits 0x4480F0CF064DD592]
 
 @[expose]
 protected def Float.ofScientific (m : Nat) (s : Bool) (e : Nat) : Float :=
@@ -92,12 +91,11 @@ Precomputed values of `10 ^ e` for `0 ≤ e ≤ 10 `. In this range, the values 
 exactly.
 -/
 @[expose]
-def Float32.exactlyRepresentablePowersOfTen : Array Float32 := #[
-  Float32.ofBits 0x3F800000, Float32.ofBits 0x41200000, Float32.ofBits 0x42C80000,
-  Float32.ofBits 0x447A0000, Float32.ofBits 0x461C4000, Float32.ofBits 0x47C35000,
-  Float32.ofBits 0x49742400, Float32.ofBits 0x4B189680, Float32.ofBits 0x4CBEBC20,
-  Float32.ofBits 0x4E6E6B28, Float32.ofBits 0x501502F9
-]
+def Float32.exactlyRepresentablePowersOfTen : Array Float32 :=
+  #[Float32.ofBits 0x3F800000, Float32.ofBits 0x41200000, Float32.ofBits 0x42C80000,
+    Float32.ofBits 0x447A0000, Float32.ofBits 0x461C4000, Float32.ofBits 0x47C35000,
+    Float32.ofBits 0x49742400, Float32.ofBits 0x4B189680, Float32.ofBits 0x4CBEBC20,
+    Float32.ofBits 0x4E6E6B28, Float32.ofBits 0x501502F9]
 
 @[expose]
 protected def Float32.ofScientific (m : Nat) (s : Bool) (e : Nat) : Float32 :=

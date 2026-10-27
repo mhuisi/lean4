@@ -37,10 +37,9 @@ macro "declare_bitwise_int_theorems" typeName:ident bits:term:arg : command =>
 
           )
     unless isISize do
-      let names := #[
-        `toBitVec_not, `toBitVec_and, `toBitVec_or, `toBitVec_xor, `toBitVec_shiftLeft,
-        `toBitVec_shiftRight, `toBitVec_abs
-      ]
+      let names :=
+        #[`toBitVec_not, `toBitVec_and, `toBitVec_or, `toBitVec_xor, `toBitVec_shiftLeft,
+          `toBitVec_shiftRight, `toBitVec_abs]
       let idents := names.map fun n => mkIdent (typeName.getId ++ n)
       cmds := cmds.push <| ← `(attribute [int_toBitVec] $idents*)
     cmds := cmds.push <| ← `(end $typeName)

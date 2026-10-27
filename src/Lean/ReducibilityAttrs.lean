@@ -56,40 +56,38 @@ def ReducibilityStatus.toAttrString : ReducibilityStatus → String
 builtin_initialize reducibilityCoreExt
     : PersistentEnvExtension (Name × ReducibilityStatus) (Name × ReducibilityStatus)
       (NameMap ReducibilityStatus) ←
-  registerPersistentEnvExtension {
-    name := `reducibilityCore
-    logWrites := true
-    mkInitial := pure {}
-    addImportedFn := fun _ _ => pure {}
-    addEntryFn := fun (s : NameMap ReducibilityStatus) (p : Name × ReducibilityStatus) =>
-      s.insert p.1 p.2
-    exportEntriesFn := fun m =>
-      let r : Array (Name × ReducibilityStatus) := m.foldl (fun a n p => a.push (n, p)) #[]
-      r.qsort (fun a b => Name.quickLt a.1 b.1)
-    statsFn := fun s =>
-      "reducibility attribute core extension" ++ Format.line ++ "number of local entries: "
-        ++ format s.size
-    -- attribute is set by `addPreDefinitions`
-    asyncMode := .async .mainEnv
-    replay? :=
-      some <| fun _oldState newState newItems otherState =>
-        newItems.foldl (init := otherState) fun otherState k =>
-          if let some v := newState.find? k then
-            otherState.insert k v
-          else
-            otherState
-  }
+  registerPersistentEnvExtension
+    { name := `reducibilityCore
+      logWrites := true
+      mkInitial := pure {}
+      addImportedFn := fun _ _ => pure {}
+      addEntryFn := fun (s : NameMap ReducibilityStatus) (p : Name × ReducibilityStatus) =>
+        s.insert p.1 p.2
+      exportEntriesFn := fun m =>
+        let r : Array (Name × ReducibilityStatus) := m.foldl (fun a n p => a.push (n, p)) #[]
+        r.qsort (fun a b => Name.quickLt a.1 b.1)
+      statsFn := fun s =>
+        "reducibility attribute core extension" ++ Format.line ++ "number of local entries: "
+          ++ format s.size
+      -- attribute is set by `addPreDefinitions`
+      asyncMode := .async .mainEnv
+      replay? :=
+        some <| fun _oldState newState newItems otherState =>
+          newItems.foldl (init := otherState) fun otherState k =>
+            if let some v := newState.find? k then
+              otherState.insert k v
+            else
+              otherState }
 
 builtin_initialize reducibilityExtraExt
     : SimpleScopedEnvExtension (Name × ReducibilityStatus) (SMap Name ReducibilityStatus) ←
-  registerSimpleScopedEnvExtension {
-    name := `reducibilityExtra
-    logWrites := true
-    entryDecl? := some (·.1)
-    initial := {}
-    addEntry := fun d (declName, status) => d.insert declName status
-    finalizeImport := fun d => d.switch
-  }
+  registerSimpleScopedEnvExtension
+    { name := `reducibilityExtra
+      logWrites := true
+      entryDecl? := some (·.1)
+      initial := {}
+      addEntry := fun d (declName, status) => d.insert declName status
+      finalizeImport := fun d => d.switch }
 
 def getReducibilityStatusCore (env : Environment) (declName : Name) : ReducibilityStatus :=
   let m := reducibilityExtraExt.getState env
@@ -144,13 +142,12 @@ The TC synth cache has learned to track such changes but it has not yet been int
 subsystems such as the ones mentioned above.
 -/
 
-register_builtin_option allowUnsafeReducibility : Bool := {
-  defValue := false
-  descr :=
-    "enables users to modify the reducibility settings for declarations even when such changes are \
-      deemed potentially hazardous. For example, `simp` and type class resolution maintain term \
-      indices where reducible declarations are expanded."
-}
+register_builtin_option allowUnsafeReducibility : Bool :=
+  { defValue := false
+    descr :=
+      "enables users to modify the reducibility settings for declarations even when such changes \
+        are deemed potentially hazardous. For example, `simp` and type class resolution maintain \
+        term indices where reducible declarations are expanded." }
 
 private def validate (declName : Name) (status : ReducibilityStatus) (attrKind : AttributeKind)
     : CoreM Unit := do
@@ -234,31 +231,28 @@ private def addAttr
   modifyEnv fun env => setReducibilityStatusCore env declName status attrKind ns
 
 builtin_initialize
-  registerBuiltinAttribute {
-    ref := by exact decl_name%
-    name := `irreducible
-    descr := "irreducible declaration"
-    add := addAttr .irreducible
-    applicationTime := .afterTypeChecking
-  }
+  registerBuiltinAttribute
+    { ref := by exact decl_name%
+      name := `irreducible
+      descr := "irreducible declaration"
+      add := addAttr .irreducible
+      applicationTime := .afterTypeChecking }
 
 builtin_initialize
-  registerBuiltinAttribute {
-    ref := by exact decl_name%
-    name := `reducible
-    descr := "reducible declaration"
-    add := addAttr .reducible
-    applicationTime := .afterTypeChecking
-  }
+  registerBuiltinAttribute
+    { ref := by exact decl_name%
+      name := `reducible
+      descr := "reducible declaration"
+      add := addAttr .reducible
+      applicationTime := .afterTypeChecking }
 
 builtin_initialize
-  registerBuiltinAttribute {
-    ref := by exact decl_name%
-    name := `semireducible
-    descr := "semireducible declaration"
-    add := addAttr .semireducible
-    applicationTime := .afterTypeChecking
-  }
+  registerBuiltinAttribute
+    { ref := by exact decl_name%
+      name := `semireducible
+      descr := "semireducible declaration"
+      add := addAttr .semireducible
+      applicationTime := .afterTypeChecking }
 
 /--
 Marks a definition as `[implicit_reducible]`, meaning it is unfolded at
@@ -275,13 +269,12 @@ To mark a potential *type class instance* — so it can be unfolded during type 
 use `[instance_reducible]` instead (which the `instance` command applies automatically).
 -/
 builtin_initialize
-  registerBuiltinAttribute {
-    ref := by exact decl_name%
-    name := `implicit_reducible
-    descr := "implicit reducible declaration"
-    add := addAttr .implicitReducible
-    applicationTime := .afterTypeChecking
-  }
+  registerBuiltinAttribute
+    { ref := by exact decl_name%
+      name := `implicit_reducible
+      descr := "implicit reducible declaration"
+      add := addAttr .implicitReducible
+      applicationTime := .afterTypeChecking }
 
 /--
 Marks a definition as `[instance_reducible]`, meaning it is unfolded at
@@ -294,13 +287,12 @@ Applying `[implicit_reducible]` to an `[instance_reducible]` declaration moves i
 implicit reducibility level; it will no longer unfold at `.instances` transparency.
 -/
 builtin_initialize
-  registerBuiltinAttribute {
-    ref := by exact decl_name%
-    name := `instance_reducible
-    descr := "instance reducible declaration"
-    add := addAttr .instanceReducible
-    applicationTime := .afterTypeChecking
-  }
+  registerBuiltinAttribute
+    { ref := by exact decl_name%
+      name := `instance_reducible
+      descr := "instance reducible declaration"
+      add := addAttr .instanceReducible
+      applicationTime := .afterTypeChecking }
 
 /-- Return the reducibility attribute for the given declaration. -/
 def getReducibilityStatus [Monad m] [MonadEnv m] (declName : Name) : m ReducibilityStatus := do

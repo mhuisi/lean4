@@ -159,12 +159,11 @@ def visitExpr (f : Expr → ClosureM Expr) (e : Expr) : ClosureM Expr := do
 def mkNewLevelParam (u : Level) : ClosureM Level := do
   let s ← get
   let p := (`u).appendIndexAfter s.nextLevelIdx
-  modify fun s => {
-    s with
-    levelParams := s.levelParams.push p
-    nextLevelIdx := s.nextLevelIdx + 1
-    levelArgs := s.levelArgs.push u
-  }
+  modify fun s =>
+    { s with
+      levelParams := s.levelParams.push p
+      nextLevelIdx := s.nextLevelIdx + 1
+      levelArgs := s.levelArgs.push u }
   pure $ mkLevelParam p
 
 partial def collectLevelAux : Level → ClosureM Level
@@ -259,12 +258,11 @@ partial def collectExprAux (e : Expr) : ClosureM Expr := do
           mkLambdaFVars args <| mkAppN e args
       else
         pure e
-    modify fun s => {
-      s with
-      newLocalDeclsForMVars :=
-        s.newLocalDeclsForMVars.push $ .cdecl default newFVarId userName type .default .default
-      exprMVarArgs := s.exprMVarArgs.push e'
-    }
+    modify fun s =>
+      { s with
+        newLocalDeclsForMVars :=
+          s.newLocalDeclsForMVars.push $ .cdecl default newFVarId userName type .default .default
+        exprMVarArgs := s.exprMVarArgs.push e' }
     return mkFVar newFVarId
   | Expr.fvar fvarId =>
     match (← read).zetaDelta, (← fvarId.getValue?) with
@@ -311,10 +309,9 @@ def pushFVarArg (e : Expr) : ClosureM Unit :=
 def pushLocalDecl (newFVarId : FVarId) (userName : Name) (type : Expr) (bi := BinderInfo.default)
     : ClosureM Unit := do
   let type ← collectExpr type
-  modify fun s => {
-    s with
-    newLocalDecls := s.newLocalDecls.push <| .cdecl default newFVarId userName type bi .default
-  }
+  modify fun s =>
+    { s with
+      newLocalDecls := s.newLocalDecls.push <| .cdecl default newFVarId userName type bi .default }
 
 partial def process : ClosureM Unit := do
   match (← pickNextToProcess?) with
@@ -346,19 +343,16 @@ partial def process : ClosureM Unit := do
         /- Dependent let-decl -/
         let type ← collectExpr type
         let val ← collectExpr val
-        modify fun s => {
-          s with
-          newLetDecls :=
-            s.newLetDecls.push <| .ldecl default newFVarId userName type val false .default
-        }
+        modify fun s =>
+          { s with
+            newLetDecls :=
+              s.newLetDecls.push <| .ldecl default newFVarId userName type val false .default }
         /-
         We don't want to interleave let and lambda declarations in our closure. So, we expand any occurrences of newFVarId
         at `newLocalDecls`
         -/
-        modify fun s => {
-          s with
-          newLocalDecls := s.newLocalDecls.map (·.replaceFVarId newFVarId val)
-        }
+        modify fun s =>
+          { s with newLocalDecls := s.newLocalDecls.map (·.replaceFVarId newFVarId val) }
         process
 
 @[inline]
@@ -444,12 +438,11 @@ private partial def sortDecls
         return true
       else
         return false
-    modify fun s => {
-      s with
-      newDecls := s.newDecls.push decl
-      newArgs := s.newArgs.push arg
-      doneMark := s.doneMark.insert decl.fvarId
-    }
+    modify fun s =>
+      { s with
+        newDecls := s.newDecls.push decl
+        newArgs := s.newArgs.push arg
+        doneMark := s.doneMark.insert decl.fvarId }
 
   let s₀ := { newDecls := .emptyWithCapacity m.size, newArgs := .emptyWithCapacity m.size }
   StateT.run' (s := s₀) do
@@ -472,13 +465,12 @@ def mkValueTypeClosure (type : Expr) (value : Expr) (zetaDelta : Bool)
   let type := mkForall newLocalDecls (mkForall newLetDecls type)
   let value := mkLambda newLocalDecls (mkLambda newLetDecls value)
   assert! !value.hasFVar -- In case https://github.com/leanprover/lean4/issues/10705 resurfaces in a new way
-  pure {
-    type := type
-    value := value
-    levelParams := s.levelParams
-    levelArgs := s.levelArgs
-    exprArgs := newArgs
-  }
+  pure
+    { type := type
+      value := value
+      levelParams := s.levelParams
+      levelArgs := s.levelArgs
+      exprArgs := newArgs }
 
 end Closure
 

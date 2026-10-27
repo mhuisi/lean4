@@ -118,15 +118,13 @@ structure VersoDocString where
   subsections : Array (Doc.Part ElabInline ElabBlock Empty)
 deriving Inhabited
 
-register_builtin_option doc.verso : Bool := {
-  defValue := false
-  descr := "whether to use Verso syntax in docstrings"
-}
+register_builtin_option doc.verso : Bool :=
+  { defValue := false, descr := "whether to use Verso syntax in docstrings" }
 
-register_builtin_option doc.verso.module : Bool := {
-  defValue := false
-  descr := "whether to use Verso syntax in module docstrings (falls back to `doc.verso` if not set)"
-}
+register_builtin_option doc.verso.module : Bool :=
+  { defValue := false
+    descr :=
+      "whether to use Verso syntax in module docstrings (falls back to `doc.verso` if not set)" }
 
 private builtin_initialize builtinDocStrings : IO.Ref (NameMap String) ← IO.mkRef {}
 builtin_initialize docStringExt : MapDeclarationExtension String ←
@@ -255,14 +253,13 @@ structure ModuleDoc where
 
 private builtin_initialize moduleDocExt
     : SimplePersistentEnvExtension ModuleDoc (PersistentArray ModuleDoc) ←
-  registerSimplePersistentEnvExtension {
-    addImportedFn := fun _ => {}
-    addEntryFn := fun s e => s.push e
-    exportEntriesFnEx? :=
-      some fun _ _ es =>
-        let ents := es.toArray
-        { exported := #[], server := ents, «private» := ents }
-  }
+  registerSimplePersistentEnvExtension
+    { addImportedFn := fun _ => {}
+      addEntryFn := fun s e => s.push e
+      exportEntriesFnEx? :=
+        some fun _ _ es =>
+          let ents := es.toArray
+          { exported := #[], server := ents, «private» := ents } }
 
 def addMainModuleDoc (env : Environment) (doc : ModuleDoc) : Environment :=
   moduleDocExt.addEntry env doc
@@ -323,23 +320,18 @@ def terminalNesting (snippet : Snippet) : Option Nat :=
     none
 
 def addBlock (snippet : Snippet) (block : Doc.Block ElabInline ElabBlock) : Snippet :=
-  if h : snippet.sections.size = 0 then {
-    snippet with
-    text := snippet.text.push block
-  }
-  else {
-    snippet with
-    sections[snippet.sections.size - 1].2.2.content :=
-      snippet.sections[snippet.sections.size - 1].2.2.content.push block
-  }
+  if h : snippet.sections.size = 0 then
+    { snippet with text := snippet.text.push block }
+  else
+    { snippet with
+      sections[snippet.sections.size - 1].2.2.content :=
+        snippet.sections[snippet.sections.size - 1].2.2.content.push block }
 
 def addPart
     (snippet : Snippet) (level : Nat) (range : DeclarationRange)
     (part : Doc.Part ElabInline ElabBlock Empty)
-    : Snippet := {
-  snippet with
-  sections := snippet.sections.push (level, range, part)
-}
+    : Snippet :=
+  { snippet with sections := snippet.sections.push (level, range, part) }
 
 end VersoModuleDocs.Snippet
 
@@ -380,10 +372,8 @@ def add! (docs : VersoModuleDocs) (snippet : Snippet) : VersoModuleDocs :=
       true
   if not ok then
     panic! "Can't nest this snippet here"
-  else {
-    docs with
-    snippets := docs.snippets.push snippet
-  }
+  else
+    { docs with snippets := docs.snippets.push snippet }
 
 private structure DocFrame where
   content : Array (Doc.Block ElabInline ElabBlock)
@@ -403,18 +393,16 @@ private def DocContext.close (ctx : DocContext) : Except String DocContext := do
     throw "Can't close a section: none are open"
   else
     let last := ctx.context.back
-    pure {
-      content := last.content
-      priorParts :=
-        last.priorParts.push {
-          title := last.title
-          titleString := last.titleString
-          metadata := none
-          content := ctx.content
-          subParts := ctx.priorParts
-        }
-      context := ctx.context.pop
-    }
+    pure
+      { content := last.content
+        priorParts :=
+          last.priorParts.push
+            { title := last.title
+              titleString := last.titleString
+              metadata := none
+              content := ctx.content
+              subParts := ctx.priorParts }
+        context := ctx.context.pop }
 
 private partial def DocContext.closeAll (ctx : DocContext) : Except String DocContext := do
   if ctx.context.size = 0 then
@@ -459,14 +447,13 @@ end VersoModuleDocs
 
 private builtin_initialize versoModuleDocExt
     : SimplePersistentEnvExtension VersoModuleDocs.Snippet VersoModuleDocs ←
-  registerSimplePersistentEnvExtension {
-    addImportedFn := fun _ => {}
-    addEntryFn := fun s e => s.add! e
-    exportEntriesFnEx? :=
-      some fun _ _ es =>
-        let ents := es.toArray
-        { exported := #[], server := ents, «private» := ents }
-  }
+  registerSimplePersistentEnvExtension
+    { addImportedFn := fun _ => {}
+      addEntryFn := fun s e => s.add! e
+      exportEntriesFnEx? :=
+        some fun _ _ es =>
+          let ents := es.toArray
+          { exported := #[], server := ents, «private» := ents } }
 
 /--
 Returns the Verso module docs for the current main module.

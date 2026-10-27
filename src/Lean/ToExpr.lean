@@ -226,13 +226,11 @@ instance : ToExpr Name where
 
 instance {α : Type u} [ToLevel.{u}] [ToExpr α] : ToExpr (Option α) :=
   let type := toTypeExpr α
-  {
-    toExpr := fun o =>
+  { toExpr := fun o =>
       match o with
       | none => mkApp (mkConst ``Option.none [toLevel.{u}]) type
       | some a => mkApp2 (mkConst ``Option.some [toLevel.{u}]) type (toExpr a)
-    toTypeExpr := mkApp (mkConst ``Option [toLevel.{u}]) type
-  }
+    toTypeExpr := mkApp (mkConst ``Option [toLevel.{u}]) type }
 
 private def List.toExprAux [ToExpr α] (nilFn : Expr) (consFn : Expr) : List α → Expr
   | [] => nilFn
@@ -242,27 +240,21 @@ instance {α : Type u} [ToLevel.{u}] [ToExpr α] : ToExpr (List α) :=
   let type := toTypeExpr α
   let nil := mkApp (mkConst ``List.nil [toLevel.{u}]) type
   let cons := mkApp (mkConst ``List.cons [toLevel.{u}]) type
-  {
-    toExpr := private List.toExprAux nil cons
-    toTypeExpr := mkApp (mkConst ``List [toLevel.{u}]) type
-  }
+  { toExpr := private List.toExprAux nil cons
+    toTypeExpr := mkApp (mkConst ``List [toLevel.{u}]) type }
 
 instance {α : Type u} [ToLevel.{u}] [ToExpr α] : ToExpr (Array α) :=
   let type := toTypeExpr α
-  {
-    toExpr := fun as => mkApp2 (mkConst ``List.toArray [toLevel.{u}]) type (toExpr as.toList)
-    toTypeExpr := mkApp (mkConst ``Array [toLevel.{u}]) type
-  }
+  { toExpr := fun as => mkApp2 (mkConst ``List.toArray [toLevel.{u}]) type (toExpr as.toList)
+    toTypeExpr := mkApp (mkConst ``Array [toLevel.{u}]) type }
 
 instance {α : Type u} {β : Type v} [ToLevel.{u}] [ToLevel.{v}] [ToExpr α] [ToExpr β]
     : ToExpr (α × β) :=
   let αType := toTypeExpr α
   let βType := toTypeExpr β
-  {
-    toExpr := fun ⟨a, b⟩ =>
+  { toExpr := fun ⟨a, b⟩ =>
       mkApp4 (mkConst ``Prod.mk [toLevel.{u}, toLevel.{v}]) αType βType (toExpr a) (toExpr b)
-    toTypeExpr := mkApp2 (mkConst ``Prod [toLevel.{u}, toLevel.{v}]) αType βType
-  }
+    toTypeExpr := mkApp2 (mkConst ``Prod [toLevel.{u}, toLevel.{v}]) αType βType }
 
 instance : ToExpr Literal where
   toTypeExpr := mkConst ``Literal

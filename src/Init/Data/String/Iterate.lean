@@ -27,9 +27,8 @@ deriving Inhabited
 /-- Creates an iterator over the valid positions within {name}`s`, starting at {name}`p`. -/
 @[cbv_opaque]
 def positionsFrom {s : Slice} (p : s.Pos)
-    : Std.Iter (α := PosIterator s) {p : s.Pos // p ≠ s.endPos} := {
-  internalState := { currPos := p }
-}
+    : Std.Iter (α := PosIterator s) {p : s.Pos // p ≠ s.endPos} :=
+  { internalState := { currPos := p } }
 
 set_option doc.verso false
 /--
@@ -115,9 +114,8 @@ Creates an iterator over all valid positions within {name}`s` that are strictly 
 {name}`p`, starting from the position before {name}`p` and iterating towards the first one.
 -/
 def revPositionsFrom (s : Slice) (p : s.Pos)
-    : Std.Iter (α := RevPosIterator s) {p : s.Pos // p ≠ s.endPos} := {
-  internalState := { currPos := p }
-}
+    : Std.Iter (α := RevPosIterator s) {p : s.Pos // p ≠ s.endPos} :=
+  { internalState := { currPos := p } }
 
 set_option doc.verso false
 /--
@@ -204,9 +202,8 @@ Examples:
  * {lean}`"abc".toSlice.bytes.toList = [97, 98, 99]`
  * {lean}`"ab∀c".toSlice.bytes.toList = [97, 98, 226, 136, 128, 99]`
 -/
-def bytes (s : Slice) : Std.Iter (α := ByteIterator) UInt8 := {
-  internalState := { s, offset := s.startPos.offset }
-}
+def bytes (s : Slice) : Std.Iter (α := ByteIterator) UInt8 :=
+  { internalState := { s, offset := s.startPos.offset } }
 
 set_option doc.verso true
 
@@ -270,9 +267,8 @@ Examples:
  * {lean}`"abc".toSlice.revBytes.toList = [99, 98, 97]`
  * {lean}`"ab∀c".toSlice.revBytes.toList = [99, 128, 136, 226, 98, 97]`
 -/
-def revBytes (s : Slice) : Std.Iter (α := RevByteIterator) UInt8 := {
-  internalState := { s, offset := s.endPos.offset, hinv := by simp }
-}
+def revBytes (s : Slice) : Std.Iter (α := RevByteIterator) UInt8 :=
+  { internalState := { s, offset := s.endPos.offset, hinv := by simp } }
 
 set_option doc.verso true
 

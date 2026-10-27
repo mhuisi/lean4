@@ -68,9 +68,8 @@ builtin_simproc_decl expandPow01 (_ ^ _) := fun e => do
   return .continue
 
 private def notField : Std.HashSet Name :=
-  [
-    ``Nat, ``Int, ``BitVec, ``UInt8, ``UInt16, ``UInt32, ``Int64, ``Int8, ``Int16, ``Int32, ``Int64
-  ].foldl
+  [ ``Nat, ``Int, ``BitVec, ``UInt8, ``UInt16, ``UInt32, ``Int64, ``Int8, ``Int16, ``Int32,
+    ``Int64 ].foldl
     (init := {}) (·.insert ·)
 
 private def isNotFieldQuick (type : Expr) : Bool := Id.run do
@@ -96,10 +95,8 @@ builtin_simproc_decl expandDiv (_ / _) := fun e => do
     | return .continue
   let expr :=
     mkApp6 (mkConst ``HMul.hMul us) α α α mulInst a (mkApp3 (mkConst ``Inv.inv [u]) α invInst b)
-  return .visit {
-    expr
-    proof? := some <| mkApp4 (mkConst ``Grind.Field.div_eq_mul_inv [u]) α fieldInst a b
-  }
+  return .visit
+    { expr, proof? := some <| mkApp4 (mkConst ``Grind.Field.div_eq_mul_inv [u]) α fieldInst a b }
 
 builtin_simproc_decl normFieldInv (_⁻¹) := fun e => do
   let_expr Inv.inv α _ a ← e

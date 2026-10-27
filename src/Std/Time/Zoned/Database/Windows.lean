@@ -44,10 +44,8 @@ def getZoneRules (id : String) : IO TimeZone.ZoneRules := do
 
     if let some res := result then
       transitions :=
-        transitions.push {
-          time := Second.Offset.ofInt start.toInt
-          localTimeType := toLocalTime res.snd
-        }
+        transitions.push
+          { time := Second.Offset.ofInt start.toInt, localTimeType := toLocalTime res.snd }
 
       -- Avoid zone rules for more than year 3000
       if res.fst ≤ start ∨ res.fst >= 32503690800 then
@@ -60,14 +58,13 @@ def getZoneRules (id : String) : IO TimeZone.ZoneRules := do
   return { transitions, initialLocalTimeType }
 
 where
-  toLocalTime (res : TimeZone) : TimeZone.LocalTimeType := {
-    gmtOffset := res.offset
-    abbreviation := res.abbreviation
-    identifier := res.name
-    isDst := res.isDST
-    wall := .wall
-    utLocal := .local
-  }
+  toLocalTime (res : TimeZone) : TimeZone.LocalTimeType :=
+    { gmtOffset := res.offset
+      abbreviation := res.abbreviation
+      identifier := res.name
+      isDst := res.isDST
+      wall := .wall
+      utLocal := .local }
 
 end Windows
 

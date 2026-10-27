@@ -18,10 +18,8 @@ namespace Lean
 Enables the 'unnecessary `simpa`' linter. This will report if a use of
 `simpa` could be proven using `simp` or `simp at h` instead.
 -/
-register_builtin_option linter.unnecessarySimpa : Bool := {
-  defValue := true
-  descr := "enable the 'unnecessary simpa' linter"
-}
+register_builtin_option linter.unnecessarySimpa : Bool :=
+  { defValue := true, descr := "enable the 'unnecessary simpa' linter" }
 
 end Lean
 
@@ -37,11 +35,8 @@ private def logUnnecessarySimpa
     : TacticM Unit := do
   let mut msg := m!"`simp` already closes the goal"
   if ← Meta.Tactic.TryThis.isValidTactic initialState replacement then
-    let suggestion : Meta.Hint.Suggestion := {
-      suggestion := replacement
-      span? := ref
-      diffGranularity := .none
-    }
+    let suggestion : Meta.Hint.Suggestion :=
+      { suggestion := replacement, span? := ref, diffGranularity := .none }
     let hint ← MessageData.hint "Use `simp` instead of `simpa`:" #[suggestion] (ref? := ref)
     msg := msg ++ hint
   logLint linter.unnecessarySimpa ref msg

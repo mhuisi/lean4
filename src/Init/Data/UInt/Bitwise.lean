@@ -43,10 +43,9 @@ macro "declare_bitwise_uint_theorems" typeName:ident bits:term:arg : command =>
         @[simp] protected theorem toNat_shiftRight (a b : $typeName) : (a >>> b).toNat = a.toNat >>> (b.toNat % $bits) := by simp [toNat, -toNat_toBitVec]
           )
     unless isUSize do
-      let names := #[
-        `toBitVec_not, `toBitVec_and, `toBitVec_or, `toBitVec_xor, `toBitVec_shiftLeft,
-        `toBitVec_shiftRight
-      ]
+      let names :=
+        #[`toBitVec_not, `toBitVec_and, `toBitVec_or, `toBitVec_xor, `toBitVec_shiftLeft,
+          `toBitVec_shiftRight]
       let idents := names.map fun n => mkIdent (typeName.getId ++ n)
       cmds := cmds.push <| ← `(attribute [int_toBitVec] $idents*)
     cmds := cmds.push <| ← `(end $typeName)
@@ -1103,10 +1102,9 @@ theorem UInt64.ofFin_shiftLeft_mod (a b : Fin UInt64.size)
 theorem USize.ofFin_shiftLeft_mod (a b : Fin USize.size)
     : USize.ofFin
         (a
-          <<< (b % ⟨
-            System.Platform.numBits,
-            by cases System.Platform.numBits_eq <;> simp_all [USize.size]
-          ⟩))
+          <<< (b
+            % ⟨ System.Platform.numBits,
+                by cases System.Platform.numBits_eq <;> simp_all [USize.size] ⟩))
       = USize.ofFin a <<< USize.ofFin b := by
   apply USize.toFin_inj.1
   rw [toFin_ofFin, USize.shiftLeft_eq_shiftLeft_mod, USize.toFin_shiftLeft, toFin_ofFin,
@@ -1264,10 +1262,9 @@ theorem UInt64.ofFin_shiftRight_mod (a b : Fin UInt64.size)
 theorem USize.ofFin_shiftRight_mod (a b : Fin USize.size)
     : USize.ofFin
         (a
-          >>> (b % ⟨
-            System.Platform.numBits,
-            by cases System.Platform.numBits_eq <;> simp_all [USize.size]
-          ⟩))
+          >>> (b
+            % ⟨ System.Platform.numBits,
+                by cases System.Platform.numBits_eq <;> simp_all [USize.size] ⟩))
       = USize.ofFin a >>> USize.ofFin b := by
   apply USize.toFin_inj.1
   rw [toFin_ofFin, USize.shiftRight_eq_shiftRight_mod, USize.toFin_shiftRight, toFin_ofFin,

@@ -177,12 +177,12 @@ public def run
     let (samplyArgs, progArgs) := splitOnDash passthrough
     IO.eprintln "Recording profile..."
     let recorder ←
-      IO.Process.spawn {
-        cmd := "samply"
-        env
-        args :=
-          #["record", "--save-only", "-o", rawProfile] ++ samplyArgs ++ #["--", binary] ++ progArgs
-      }
+      IO.Process.spawn
+        { cmd := "samply"
+          env
+          args :=
+            #["record", "--save-only", "-o", rawProfile] ++ samplyArgs ++ #["--", binary]
+              ++ progArgs }
     let exitCode ← recorder.wait
     if exitCode != 0 then
       throw <| IO.userError s!"samply record failed (exit {exitCode})"
@@ -197,17 +197,15 @@ public def run
     IO.FS.writeFile samplyLog ""
     -- `exec` ensures cleanup kills samply itself, rather than just its shell.
     let samplyProc ←
-      IO.Process.spawn {
-        cmd := "sh"
-        args := #[
-          "-c",
-          s!"exec samply load --no-open -P {port} {shellQuote rawProfile} \
-            >{shellQuote samplyLog} 2>&1"
-        ]
-        stdout := .null
-        stderr := .null
-        stdin := .null
-      }
+      IO.Process.spawn
+        { cmd := "sh"
+          args :=
+            #["-c",
+              s!"exec samply load --no-open -P {port} {shellQuote rawProfile} \
+                >{shellQuote samplyLog} 2>&1"]
+          stdout := .null
+          stderr := .null
+          stdin := .null }
     try
       let token ← waitForServer samplyLog samplyProc port
       let serverUrl := s!"http://127.0.0.1:{port}/{token}"
@@ -217,13 +215,10 @@ public def run
       let (symbReq, funcMaps) ← buildSymbolicationRequest profile
       let symbResp ←
         IO.Process.run
-          {
-            cmd := "curl"
-            args := #[
-              "--fail", "-sS", "--noproxy", "*", s!"{serverUrl}/symbolicate/v5",
-              "-H", "Content-Type: application/json", "--data-binary", "@-"
-            ]
-          }
+          { cmd := "curl"
+            args :=
+              #["--fail", "-sS", "--noproxy", "*", s!"{serverUrl}/symbolicate/v5",
+                "-H", "Content-Type: application/json", "--data-binary", "@-"] }
           (some symbReq.compress)
       let result ← applySymbols profile (← IO.ofExcept <| Json.parse symbResp) funcMaps
       let tmpJson := tmpDir / "demangled.json"

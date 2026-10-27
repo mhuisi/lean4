@@ -447,16 +447,14 @@ def mkSuggestionsMessage
     let codeActionTitle :=
       codeActionTitleOverride?.getD <| (codeActionPrefix?.getD "Try this: ") ++ suggestionText
     let info :=
-      Info.ofCustomInfo {
-        stx := ref
-        value :=
-          Dynamic.mk {
-            edit
-            suggestion := suggestion.toTryThisSuggestion
-            codeActionTitle
-            : TryThisInfo
-          }
-      }
+      Info.ofCustomInfo
+        { stx := ref
+          value :=
+            Dynamic.mk
+              { edit
+                suggestion := suggestion.toTryThisSuggestion
+                codeActionTitle
+                : TryThisInfo } }
     pushInfoLeaf info
     let map ← getFileMap
     let rangeContents := String.Pos.Raw.extract map.source range.start range.stop
@@ -484,8 +482,7 @@ def mkSuggestionsMessage
       if !isDiffSuggestion then
         let applyButton :=
           MessageData.ofWidget
-            {
-              id := ``textInsertionWidget
+            { id := ``textInsertionWidget
               javascriptHash := textInsertionWidget.javascriptHash
               props :=
                 return json% {
@@ -496,8 +493,7 @@ def mkSuggestionsMessage
                     hoverText: "Apply suggestion",
                     linkText: "[apply]"
                   }
-                }
-            }
+                } }
             "[apply]"
         m!"\n{applyButton} {preInfo}{toMessageData suggestion}{postInfo}"
       else
@@ -510,11 +506,9 @@ def mkSuggestionsMessage
             mkDiffString edits
         let diffWidget :=
           MessageData.ofWidget
-            {
-              id := ``tryThisDiffWidget
+            { id := ``tryThisDiffWidget
               javascriptHash := tryThisDiffWidget.javascriptHash
-              props := return json
-            }
+              props := return json }
             diffString
         let msg := m!"{preInfo}{diffWidget}{postInfo}"
         if suggestions.size == 1 && !forceList then

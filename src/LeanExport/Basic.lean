@@ -85,13 +85,12 @@ public def initState (env : Environment) (cliOptions : List String := []) : M Un
           recursorMap.alter indName <| fun
             | none => some <| NameSet.empty.insert recVal.name
             | some recNames => some <| recNames.insert recVal.name
-  modify fun st => {
-    st with
-    exportMData := cliOptions.any (· == "--export-mdata")
-    exportUnsafe := cliOptions.any (· == "--export-unsafe")
-    ignoreMissing := cliOptions.any (· == "--ignore-missing")
-    recursorMap
-  }
+  modify fun st =>
+    { st with
+      exportMData := cliOptions.any (· == "--export-mdata")
+      exportUnsafe := cliOptions.any (· == "--export-unsafe")
+      ignoreMissing := cliOptions.any (· == "--ignore-missing")
+      recursorMap }
 
 /--
 For a given primitive (name, level, expr) to be exported:
@@ -120,21 +119,17 @@ def dumpName (n : Name) : M Nat :=
     | .anonymous =>
       unreachable!
     | .str n s =>
-      return .mkObj [(
-        "str",
-        .mkObj [
-          ("pre", ← dumpName n),
-          ("str", s)
-        ]
-      )]
+      return .mkObj
+        [ ( "str",
+            .mkObj
+              [ ("pre", ← dumpName n),
+                ("str", s) ] ) ]
     | .num n i =>
-      return .mkObj [(
-        "num",
-        .mkObj [
-          ("pre", ← dumpName n),
-          ("i", i)
-        ]
-      )]
+      return .mkObj
+        [ ( "num",
+            .mkObj
+              [ ("pre", ← dumpName n),
+                ("i", i) ] ) ]
 
 def dumpLevel (l : Level) : M Nat :=
   getIdx l "il" (·.visitedLevels) ({ · with visitedLevels := · }) do
@@ -191,13 +186,11 @@ public partial def dumpExprAux (e : Expr) : M Nat := do
     | .fvar .. | .mvar .. =>
       panic! "cannot export free variables or metavariables"
     | .mdata a e' =>
-      return .mkObj [(
-        "mdata",
-        .mkObj [
-          ("data", a.toJson),
-          ("expr", ← dumpExprAux e')
-        ]
-      )]
+      return .mkObj
+        [ ( "mdata",
+            .mkObj
+              [ ("data", a.toJson),
+                ("expr", ← dumpExprAux e') ] ) ]
     | .bvar i =>
       return .mkObj [("bvar", i)]
     | .lit (.natVal i) =>
@@ -207,61 +200,49 @@ public partial def dumpExprAux (e : Expr) : M Nat := do
     | .sort l =>
       return .mkObj [("sort", ← dumpLevel l)]
     | .const n us =>
-      return .mkObj [(
-        "const",
-        .mkObj [
-          ("name", ← dumpName n),
-          ("us", (← us.mapM dumpLevel).toJson)
-        ]
-      )]
+      return .mkObj
+        [ ( "const",
+            .mkObj
+              [ ("name", ← dumpName n),
+                ("us", (← us.mapM dumpLevel).toJson) ] ) ]
     | .app f a =>
-      return .mkObj [(
-        "app",
-        .mkObj [
-          ("fn", ← dumpExprAux f),
-          ("arg", ← dumpExprAux a)
-        ]
-      )]
+      return .mkObj
+        [ ( "app",
+            .mkObj
+              [ ("fn", ← dumpExprAux f),
+                ("arg", ← dumpExprAux a) ] ) ]
     | .lam n d b bi =>
-      return .mkObj [(
-        "lam",
-        .mkObj [
-          ("name", ← dumpName n),
-          ("type", ← dumpExprAux d),
-          ("body", ← dumpExprAux b),
-          ("binderInfo", bi.toJson)
-        ]
-      )]
+      return .mkObj
+        [ ( "lam",
+            .mkObj
+              [ ("name", ← dumpName n),
+                ("type", ← dumpExprAux d),
+                ("body", ← dumpExprAux b),
+                ("binderInfo", bi.toJson) ] ) ]
     | .forallE n d b bi =>
-      return .mkObj [(
-        "forallE",
-        .mkObj [
-          ("name", ← dumpName n),
-          ("type", ← dumpExprAux d),
-          ("body", ← dumpExprAux b),
-          ("binderInfo", bi.toJson)
-        ]
-      )]
+      return .mkObj
+        [ ( "forallE",
+            .mkObj
+              [ ("name", ← dumpName n),
+                ("type", ← dumpExprAux d),
+                ("body", ← dumpExprAux b),
+                ("binderInfo", bi.toJson) ] ) ]
     | .letE n d v b nondep =>
-      return .mkObj [(
-        "letE",
-        .mkObj [
-          ("name", ← dumpName n),
-          ("type", ← dumpExprAux d),
-          ("value", ← dumpExprAux v),
-          ("body", ← dumpExprAux b),
-          ("nondep", nondep)
-        ]
-      )]
+      return .mkObj
+        [ ( "letE",
+            .mkObj
+              [ ("name", ← dumpName n),
+                ("type", ← dumpExprAux d),
+                ("value", ← dumpExprAux v),
+                ("body", ← dumpExprAux b),
+                ("nondep", nondep) ] ) ]
     | .proj s i e =>
-      return .mkObj [(
-        "proj",
-        .mkObj [
-          ("typeName", ← dumpName s),
-          ("idx", i),
-          ("struct", ← dumpExprAux e)
-        ]
-      )]
+      return .mkObj
+        [ ( "proj",
+            .mkObj
+              [ ("typeName", ← dumpName s),
+                ("idx", i),
+                ("struct", ← dumpExprAux e) ] ) ]
 where
   dumpNatDeps : M Unit := do
     let nat := ``Nat
@@ -291,57 +272,49 @@ public partial def dumpConstant (c : Name) : M Unit := do
   match declar with
   | .axiomInfo val => do
     dumpDeps val.type
-    dumpObj [(
-      "axiom",
-      Json.mkObj [
-        ("name", ← dumpName val.name),
-        ("levelParams", ← dumpUparams val.levelParams),
-        ("type", ← dumpExpr val.type),
-        ("isUnsafe", val.isUnsafe)
-      ]
-    )]
+    dumpObj
+      [ ( "axiom",
+          Json.mkObj
+            [ ("name", ← dumpName val.name),
+              ("levelParams", ← dumpUparams val.levelParams),
+              ("type", ← dumpExpr val.type),
+              ("isUnsafe", val.isUnsafe) ] ) ]
   | .defnInfo val => do
     dumpDeps val.type
     dumpDeps val.value
-    dumpObj [(
-      "def",
-      Json.mkObj [
-        ("name", ← dumpName val.name),
-        ("levelParams", ← dumpUparams val.levelParams),
-        ("type", ← dumpExpr val.type),
-        ("value", ← dumpExpr val.value),
-        ("hints", val.hints.toJson),
-        ("safety", val.safety.toJson),
-        ("all", ← dumpNames val.all)
-      ]
-    )]
+    dumpObj
+      [ ( "def",
+          Json.mkObj
+            [ ("name", ← dumpName val.name),
+              ("levelParams", ← dumpUparams val.levelParams),
+              ("type", ← dumpExpr val.type),
+              ("value", ← dumpExpr val.value),
+              ("hints", val.hints.toJson),
+              ("safety", val.safety.toJson),
+              ("all", ← dumpNames val.all) ] ) ]
   | .opaqueInfo val => do
     dumpDeps val.type
     dumpDeps val.value
-    dumpObj [(
-      "opaque",
-      Json.mkObj [
-        ("name", ← dumpName val.name),
-        ("levelParams", ← dumpUparams val.levelParams),
-        ("type", ← dumpExpr val.type),
-        ("value", ← dumpExpr val.value),
-        ("all", ← dumpNames val.all),
-        ("isUnsafe", val.isUnsafe)
-      ]
-    )]
+    dumpObj
+      [ ( "opaque",
+          Json.mkObj
+            [ ("name", ← dumpName val.name),
+              ("levelParams", ← dumpUparams val.levelParams),
+              ("type", ← dumpExpr val.type),
+              ("value", ← dumpExpr val.value),
+              ("all", ← dumpNames val.all),
+              ("isUnsafe", val.isUnsafe) ] ) ]
   | .thmInfo val => do
     dumpDeps val.type
     dumpDeps val.value
-    dumpObj [(
-      "thm",
-      Json.mkObj [
-        ("name", ← dumpName val.name),
-        ("levelParams", ← dumpUparams val.levelParams),
-        ("type", ← dumpExpr val.type),
-        ("value", ← dumpExpr val.value),
-        ("all", ← dumpNames val.all)
-      ]
-    )]
+    dumpObj
+      [ ( "thm",
+          Json.mkObj
+            [ ("name", ← dumpName val.name),
+              ("levelParams", ← dumpUparams val.levelParams),
+              ("type", ← dumpExpr val.type),
+              ("value", ← dumpExpr val.value),
+              ("all", ← dumpNames val.all) ] ) ]
   | .quotInfo _ =>
     -- Always dump full Quot package in the sensible order
     dumpConstant ``Eq
@@ -352,15 +325,13 @@ public partial def dumpConstant (c : Name) : M Unit := do
           else
             panic! s!"Constant {c} not found in environment."
       modify fun st => { st with visitedConstants := st.visitedConstants.insert c }
-      dumpObj [(
-        "quot",
-        .mkObj [
-          ("name", ← dumpName val.name),
-          ("levelParams", ← dumpUparams val.levelParams),
-          ("type", ← dumpExpr val.type),
-          ("kind", val.kind.toJson)
-        ]
-      )]
+      dumpObj
+        [ ( "quot",
+            .mkObj
+              [ ("name", ← dumpName val.name),
+                ("levelParams", ← dumpUparams val.levelParams),
+                ("type", ← dumpExpr val.type),
+                ("kind", val.kind.toJson) ] ) ]
   | .inductInfo baseIndVal => do
     let mut indVals := #[]
     let mut ctorVals := #[]
@@ -414,54 +385,49 @@ public partial def dumpConstant (c : Name) : M Unit := do
 
     let inductiveValsJson ←
       indVals.mapM <| fun indVal => do
-        pure <| Json.mkObj [
-          ("name", ← dumpName indVal.name),
-          ("levelParams", ← dumpUparams indVal.levelParams),
-          ("type", ← dumpExpr indVal.type),
-          ("numParams", indVal.numParams),
-          ("numIndices", indVal.numIndices),
-          ("all", ← dumpNames indVal.all),
-          ("ctors", ← dumpNames indVal.ctors),
-          ("numNested", indVal.numNested),
-          ("isRec", indVal.isRec),
-          ("isReflexive", indVal.isReflexive),
-          ("isUnsafe", indVal.isUnsafe)
-        ]
+        pure <| Json.mkObj
+          [ ("name", ← dumpName indVal.name),
+            ("levelParams", ← dumpUparams indVal.levelParams),
+            ("type", ← dumpExpr indVal.type),
+            ("numParams", indVal.numParams),
+            ("numIndices", indVal.numIndices),
+            ("all", ← dumpNames indVal.all),
+            ("ctors", ← dumpNames indVal.ctors),
+            ("numNested", indVal.numNested),
+            ("isRec", indVal.isRec),
+            ("isReflexive", indVal.isReflexive),
+            ("isUnsafe", indVal.isUnsafe) ]
     let ctorValsJson ←
       ctorVals.mapM <| fun ctorVal => do
-        pure <| Json.mkObj [
-          ("name", ← dumpName ctorVal.name),
-          ("levelParams", ← dumpUparams ctorVal.levelParams),
-          ("type", ← dumpExpr ctorVal.type),
-          ("induct", ← dumpName ctorVal.induct),
-          ("cidx", ctorVal.cidx),
-          ("numParams", ctorVal.numParams),
-          ("numFields", ctorVal.numFields),
-          ("isUnsafe", ctorVal.isUnsafe)
-        ]
+        pure <| Json.mkObj
+          [ ("name", ← dumpName ctorVal.name),
+            ("levelParams", ← dumpUparams ctorVal.levelParams),
+            ("type", ← dumpExpr ctorVal.type),
+            ("induct", ← dumpName ctorVal.induct),
+            ("cidx", ctorVal.cidx),
+            ("numParams", ctorVal.numParams),
+            ("numFields", ctorVal.numFields),
+            ("isUnsafe", ctorVal.isUnsafe) ]
     let recursorValsJson ←
       recursorVals.mapM <| fun recursorVal => do
-        pure <| Json.mkObj [
-          ("name", ← dumpName recursorVal.name),
-          ("levelParams", ← dumpUparams recursorVal.levelParams),
-          ("type", ← dumpExpr recursorVal.type),
-          ("all", ← dumpNames recursorVal.all),
-          ("numParams", recursorVal.numParams),
-          ("numIndices", recursorVal.numIndices),
-          ("numMotives", recursorVal.numMotives),
-          ("numMinors", recursorVal.numMinors),
-          ("rules", (← recursorVal.rules.mapM dumpRecRule).toJson),
-          ("k", recursorVal.k),
-          ("isUnsafe", recursorVal.isUnsafe)
-        ]
-    dumpObj [(
-      "inductive",
-      Json.mkObj [
-        ("types", inductiveValsJson.toJson),
-        ("ctors", ctorValsJson.toJson),
-        ("recs", recursorValsJson.toJson)
-      ]
-    )]
+        pure <| Json.mkObj
+          [ ("name", ← dumpName recursorVal.name),
+            ("levelParams", ← dumpUparams recursorVal.levelParams),
+            ("type", ← dumpExpr recursorVal.type),
+            ("all", ← dumpNames recursorVal.all),
+            ("numParams", recursorVal.numParams),
+            ("numIndices", recursorVal.numIndices),
+            ("numMotives", recursorVal.numMotives),
+            ("numMinors", recursorVal.numMinors),
+            ("rules", (← recursorVal.rules.mapM dumpRecRule).toJson),
+            ("k", recursorVal.k),
+            ("isUnsafe", recursorVal.isUnsafe) ]
+    dumpObj
+      [ ( "inductive",
+          Json.mkObj
+            [ ("types", inductiveValsJson.toJson),
+              ("ctors", ctorValsJson.toJson),
+              ("recs", recursorValsJson.toJson) ] ) ]
   | .ctorInfo val =>
     dumpConstant val.induct
   | .recInfo val =>
@@ -473,36 +439,31 @@ where
       dumpConstant c
   /- Return these for inclusion inline with the exported `recInfo`. -/
   dumpRecRule (rule : RecursorRule) : M Json := do
-    return Json.mkObj [
-      ("ctor", ← dumpName rule.ctor),
-      ("nfields", rule.nfields),
-      ("rhs", ← dumpExpr rule.rhs)
-    ]
+    return Json.mkObj
+      [ ("ctor", ← dumpName rule.ctor),
+        ("nfields", rule.nfields),
+        ("rhs", ← dumpExpr rule.rhs) ]
   dumpObj (fields : List (String × Json)) : M Unit := IO.println <| Json.mkObj fields |>.compress
 
 end
 
 def exportMetadata : Json :=
   let leanMeta :=
-    Json.mkObj [
-      ("version", versionString),
-      ("githash", githash)
-    ]
+    Json.mkObj
+      [ ("version", versionString),
+        ("githash", githash) ]
   let exporterMeta :=
-    Json.mkObj [
-      ("name", "lean4export"),
-      ("version", "3.1.0")
-    ]
+    Json.mkObj
+      [ ("name", "lean4export"),
+        ("version", "3.1.0") ]
   let formatMeta := Json.mkObj [("version", "3.1.0")]
 
-  Json.mkObj [(
-    "meta",
-    Json.mkObj [
-      ("exporter", exporterMeta),
-      ("lean", leanMeta),
-      ("format", formatMeta)
-    ]
-  )]
+  Json.mkObj
+    [ ( "meta",
+        Json.mkObj
+          [ ("exporter", exporterMeta),
+            ("lean", leanMeta),
+            ("format", formatMeta) ] ) ]
 
 public def dumpMetadata : M Unit := do IO.println exportMetadata.compress
 

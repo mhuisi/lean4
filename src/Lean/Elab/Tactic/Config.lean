@@ -45,33 +45,16 @@ structure ConfigItemView where
 def mkConfigItemViews (c : TSyntaxArray ``configItem) : Array ConfigItemView :=
   c.map fun item =>
     match item with
-    | `(configItem| ($option:ident := $value)) => {
-      ref := item
-      option
-      value
-    }
-    | `(configItem| +$option) => {
-      ref := item
-      option
-      bool := true
-      value := mkCIdentFrom item ``true
-    }
-    | `(configItem| -$option) => {
-      ref := item
-      option
-      bool := true
-      value := mkCIdentFrom item ``false
-    }
-    | `(config| (config%$tk := $value)) => {
-      ref := item
-      option := mkCIdentFrom tk `config
-      value := value
-    }
-    | _ => {
-      ref := item
-      option := ⟨Syntax.missing⟩
-      value := ⟨Syntax.missing⟩
-    }
+    | `(configItem| ($option:ident := $value)) =>
+      { ref := item, option, value }
+    | `(configItem| +$option) =>
+      { ref := item, option, bool := true, value := mkCIdentFrom item ``true }
+    | `(configItem| -$option) =>
+      { ref := item, option, bool := true, value := mkCIdentFrom item ``false }
+    | `(config| (config%$tk := $value)) =>
+      { ref := item, option := mkCIdentFrom tk `config, value := value }
+    | _ =>
+      { ref := item, option := ⟨Syntax.missing⟩, value := ⟨Syntax.missing⟩ }
 
 /--
 Expands a field access into full field access like `toB.toA.x`.

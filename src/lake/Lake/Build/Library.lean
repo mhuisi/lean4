@@ -109,13 +109,11 @@ def LeanLib.recBuildStatic (self : LeanLib) (shouldExport : Bool) : FetchM (Job 
               let filelistPath := libFile.addExtension "filelist"
               let h ← IO.FS.Handle.mk filelistPath .write
               oFiles.forM fun f => h.putStr s!"{f}\n"
-              proc {
-                cmd := "libtool"
-                args := #[
-                  "-static", "-o", libFile.toString,
-                  "-filelist", filelistPath.toString
-                ]
-              }
+              proc
+                { cmd := "libtool"
+                  args :=
+                    #["-static", "-o", libFile.toString,
+                      "-filelist", filelistPath.toString] }
             else if System.Platform.isWindows then
               -- The Lean core build requires a thin static library
               -- with exported symbols as part of its build process on Windows.

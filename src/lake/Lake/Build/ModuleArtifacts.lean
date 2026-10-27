@@ -60,18 +60,17 @@ public protected def ModuleOutputDescrs.fromJson? (val : Json)
   let oleanHashes : Array ArtifactDescr ← obj.get "o"
   let some olean := oleanHashes[0]?
     | throw "expected at least one 'o' (.olean) hash"
-  return {
-    isModule := (← obj.get? "m").getD (oleanHashes.size > 1)
-    olean := olean
-    oleanServer? := oleanHashes[1]?
-    oleanPrivate? := oleanHashes[2]?
-    ilean := ← obj.get "i"
-    irSig? := ← obj.get? "rs"
-    ir? := ← obj.get? "r"
-    c? := ← obj.get? "c"
-    bc? := ← obj.get? "b"
-    ltar? := ← obj.get? "l"
-  }
+  return
+    { isModule := (← obj.get? "m").getD (oleanHashes.size > 1)
+      olean := olean
+      oleanServer? := oleanHashes[1]?
+      oleanPrivate? := oleanHashes[2]?
+      ilean := ← obj.get "i"
+      irSig? := ← obj.get? "rs"
+      ir? := ← obj.get? "r"
+      c? := ← obj.get? "c"
+      bc? := ← obj.get? "b"
+      ltar? := ← obj.get? "l" }
 
 public instance : FromJson ModuleOutputDescrs := ⟨ModuleOutputDescrs.fromJson?⟩
 

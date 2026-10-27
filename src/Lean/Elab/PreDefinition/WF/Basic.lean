@@ -13,13 +13,12 @@ public section
 
 namespace Lean.Elab.WF
 
-register_builtin_option debug.rawDecreasingByGoal : Bool := {
-  defValue := false
-  descr :=
-    "Shows the raw `decreasing_by` goal including internal implementation detail \
-      instead of cleaning it up with the `clean_wf` tactic. Can be enabled for debugging \
-      purposes. Please report an issue if you have to use this option for other reasons."
-}
+register_builtin_option debug.rawDecreasingByGoal : Bool :=
+  { defValue := false
+    descr :=
+      "Shows the raw `decreasing_by` goal including internal implementation detail \
+        instead of cleaning it up with the `clean_wf` tactic. Can be enabled for debugging \
+        purposes. Please report an issue if you have to use this option for other reasons." }
 
 open Lean Elab Tactic
 

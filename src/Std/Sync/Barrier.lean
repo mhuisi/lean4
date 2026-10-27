@@ -33,11 +33,10 @@ structure Barrier where
 
 /-- Creates a new barrier that can block a given number of threads. -/
 def Barrier.new (numThreads : Nat) : BaseIO Barrier := do
-  return {
-    lock := ← Mutex.new { count := 0, generationId := 0 }
-    cvar := ← Condvar.new
-    numThreads := numThreads
-  }
+  return
+    { lock := ← Mutex.new { count := 0, generationId := 0 }
+      cvar := ← Condvar.new
+      numThreads := numThreads }
 
 /--
 Blocks the current thread until all threads have rendezvoused here.

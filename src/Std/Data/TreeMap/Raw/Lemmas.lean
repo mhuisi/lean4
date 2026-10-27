@@ -4295,10 +4295,9 @@ theorem size_filter_eq_size_iff [TransCmp cmp] {f : α → β → Bool} (h : t.W
   DTreeMap.Raw.Const.size_filter_eq_size_iff h.out
 
 theorem filter_equiv_self_iff [TransCmp cmp] {f : α → β → Bool} (h : t.WF)
-    : (t.filter f) ~m t ↔ ∀ (a : α) (h : a ∈ t), f (t.getKey a h) t[a] := ⟨
-  fun h' => (DTreeMap.Raw.Const.filter_equiv_self_iff h.out).mp h'.1,
-  fun h' => ⟨(DTreeMap.Raw.Const.filter_equiv_self_iff h.out).mpr h'⟩
-⟩
+    : (t.filter f) ~m t ↔ ∀ (a : α) (h : a ∈ t), f (t.getKey a h) t[a] :=
+  ⟨ fun h' => (DTreeMap.Raw.Const.filter_equiv_self_iff h.out).mp h'.1,
+    fun h' => ⟨(DTreeMap.Raw.Const.filter_equiv_self_iff h.out).mpr h'⟩ ⟩
 
 @[simp]
 theorem getElem?_filter [TransCmp cmp] {f : α → β → Bool} {k : α} (h : t.WF)

@@ -102,14 +102,13 @@ deriving Nonempty, TypeName
 /-- Creates a rendezvous body stream. -/
 def mkStream : Async Stream := do
   let state ←
-    Mutex.new {
-      pendingProducer := none
-      pendingConsumer := none
-      interestWaiter := none
-      closed := false
-      knownSize := none
-      closeError := none
-    }
+    Mutex.new
+      { pendingProducer := none
+        pendingConsumer := none
+        interestWaiter := none
+        closed := false
+        knownSize := none
+        closeError := none }
   return { state }
 
 namespace Channel
@@ -165,11 +164,10 @@ private def tryRecv' [Monad m] [MonadLiftT (ST IO.RealWorld) m] [MonadLiftT Base
     : AtomicT State m (Option Chunk) := do
   let st ← get
   if let some producer := st.pendingProducer then
-    set {
-      st with
-      pendingProducer := none
-      knownSize := decreaseKnownSize st.knownSize producer.chunk
-    }
+    set
+      { st with
+        pendingProducer := none
+        knownSize := decreaseKnownSize st.knownSize producer.chunk }
     discard <| producer.done.resolve true
     return some producer.chunk
   else
@@ -205,14 +203,13 @@ private def close' [Monad m] [MonadLiftT (ST IO.RealWorld) m] [MonadLiftT BaseIO
   if let some producer := st.pendingProducer then
     discard <| producer.done.resolve false
 
-  set {
-    st with
-    pendingProducer := none
-    pendingConsumer := none
-    interestWaiter := none
-    pendingIncompleteChunk := none
-    closed := true
-  }
+  set
+    { st with
+      pendingProducer := none
+      pendingConsumer := none
+      interestWaiter := none
+      pendingIncompleteChunk := none
+      closed := true }
 
 end Channel
 
@@ -304,10 +301,8 @@ This function does not overwrite an existing error.
 def closeWithError (stream : Stream) (err : IO.Error) : Async Unit :=
   stream.state.atomically do
     modify fun st =>
-      if st.closeError.isNone then {
-        st with
-        closeError := some err
-      }
+      if st.closeError.isNone then
+        { st with closeError := some err }
       else
         st
 
@@ -372,10 +367,9 @@ protected def forIn'
     : ContextAsync β :=
   ContextAsync.forIn acc fun _ acc => do
     let data ←
-      Selectable.one #[
-        .case stream.recvSelector pure,
-        .case (← ContextAsync.doneSelector) (fun _ => pure none)
-      ]
+      Selectable.one
+        #[.case stream.recvSelector pure,
+          .case (← ContextAsync.doneSelector) (fun _ => pure none)]
 
     if let some chunk := data then
       step chunk acc
@@ -397,10 +391,9 @@ instance : NextChunk Async where
 
 instance : NextChunk ContextAsync where
   nextChunk stream := do
-    Selectable.one #[
-      .case stream.recvSelector pure,
-      .case (← ContextAsync.doneSelector) (fun _ => pure none)
-    ]
+    Selectable.one
+      #[.case stream.recvSelector pure,
+        .case (← ContextAsync.doneSelector) (fun _ => pure none)]
 
 /--
 Reads all remaining chunks and decodes them into `α`.
@@ -468,10 +461,10 @@ private def collapseForSend (stream : Stream) (chunk : Chunk) (incomplete : Bool
 
     let merged :=
       match st.pendingIncompleteChunk with
-      | some pending => {
-        data := pending.data ++ chunk.data
-        extensions := if pending.extensions.isEmpty then chunk.extensions else pending.extensions
-      }
+      | some pending =>
+        { data := pending.data ++ chunk.data
+          extensions :=
+            if pending.extensions.isEmpty then chunk.extensions else pending.extensions }
       | none =>
         chunk
 
@@ -500,11 +493,10 @@ private partial def send' (stream : Stream) (chunk : Chunk) : Async Unit := do
         let success ← consumer.resolve (.ok (some chunk))
 
         if success then
-          set {
-            st with
-            pendingConsumer := none
-            knownSize := Channel.decreaseKnownSize st.knownSize chunk
-          }
+          set
+            { st with
+              pendingConsumer := none
+              knownSize := Channel.decreaseKnownSize st.knownSize chunk }
           return .ok (some true)
         else
           set { st with pendingConsumer := none }

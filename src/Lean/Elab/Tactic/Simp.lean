@@ -109,25 +109,17 @@ private declare_config_elab elabDSimpConfigCore DSimp.ConfigWithOptions where
 
 end
 
-register_builtin_option tactic.simp.user.exampleBool : Bool := {
-  defValue := false
-  descr := "(simp user option) example Bool-valued option, for testing"
-}
+register_builtin_option tactic.simp.user.exampleBool : Bool :=
+  { defValue := false, descr := "(simp user option) example Bool-valued option, for testing" }
 
-register_builtin_option tactic.simp.user.exampleNat : Nat := {
-  defValue := 0
-  descr := "(simp user option) example Nat-valued option, for testing"
-}
+register_builtin_option tactic.simp.user.exampleNat : Nat :=
+  { defValue := 0, descr := "(simp user option) example Nat-valued option, for testing" }
 
-register_builtin_option tactic.simp.user.exampleInt : Int := {
-  defValue := 0
-  descr := "(simp user option) example Int-valued option, for testing"
-}
+register_builtin_option tactic.simp.user.exampleInt : Int :=
+  { defValue := 0, descr := "(simp user option) example Int-valued option, for testing" }
 
-register_builtin_option tactic.simp.user.exampleString : String := {
-  defValue := ""
-  descr := "(simp user option) example String-valued option, for testing"
-}
+register_builtin_option tactic.simp.user.exampleString : String :=
+  { defValue := "", descr := "(simp user option) example String-valued option, for testing" }
 
 inductive SimpKind where
   | simp
@@ -648,11 +640,11 @@ where
           withRef ref do
             Simp.checkLoops (force := force) ctx (methods := Simp.mkDefaultMethodsCore simprocs) thm
 
-register_builtin_option tactic.simp.trace : Bool := {
-  defValue := false
-  descr :=
-    "When tracing is enabled, calls to `simp` or `dsimp` will print an equivalent `simp only` call."
-}
+register_builtin_option tactic.simp.trace : Bool :=
+  { defValue := false
+    descr :=
+      "When tracing is enabled, calls to `simp` or `dsimp` will print an equivalent `simp only` \
+        call." }
 
 /--
 If `stx` is the syntax of a `simp`, `simp_all` or `dsimp` tactic invocation, and
@@ -722,23 +714,23 @@ def mkSimpOnly (stx : Syntax) (usedSimps : Simp.UsedSimps) : MetaM Syntax := do
 def traceSimpCall (stx : Syntax) (usedSimps : Simp.UsedSimps) : MetaM Unit := do
   logInfoAt stx[0] m!"Try this: {← mkSimpOnly stx usedSimps}"
 
-register_builtin_option linter.unusedSimpArgs : Bool := {
-  defValue := true
-  descr :=
-    "enable the linter that warns when explicit `simp` arguments are unused.\n\
-      \n\
-      The linter suggests removing the unused arguments. This hint may not be correct in the case \
-      that `simp [← thm]` is given, when `thm` has the `@[simp]` attribute, and it is relevant \
-      that \
-      `thm` it disabled (which is a side-effect of specifying `← thm`). In that case, replace \
-      it with `simp [- thm]`.\n\
-      \n\
-      When one `simp` invocation is run multiple times (e.g. `all_goals simp [thm]`), it warns \
-      about simp arguments that are unused in all invocations. For this reason, the linter \
-      does not warn about uses of `simp` inside a macro, as there it is usually not possible to \
-      see \
-      all invocations."
-}
+register_builtin_option linter.unusedSimpArgs : Bool :=
+  { defValue := true
+    descr :=
+      "enable the linter that warns when explicit `simp` arguments are unused.\n\
+        \n\
+        The linter suggests removing the unused arguments. This hint may not be correct in the \
+        case \
+        that `simp [← thm]` is given, when `thm` has the `@[simp]` attribute, and it is relevant \
+        that \
+        `thm` it disabled (which is a side-effect of specifying `← thm`). In that case, replace \
+        it with `simp [- thm]`.\n\
+        \n\
+        When one `simp` invocation is run multiple times (e.g. `all_goals simp [thm]`), it warns \
+        about simp arguments that are unused in all invocations. For this reason, the linter \
+        does not warn about uses of `simp` inside a macro, as there it is usually not possible to \
+        see \
+        all invocations." }
 
 structure UnusedSimpArgsInfo where
   mask : Array Bool

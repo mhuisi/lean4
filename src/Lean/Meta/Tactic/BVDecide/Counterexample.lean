@@ -120,11 +120,10 @@ def addUninterpretedSymbol (e : Expr) : DiagnosisM Unit :=
 
 @[inline]
 def addFunctionSymbol (e : Expr) : DiagnosisM Unit :=
-  modify fun s => {
-    s with
-    functionSymbolSet := s.functionSymbolSet.insert e
-    functionSymbols := s.functionSymbols.push e
-  }
+  modify fun s =>
+    { s with
+      functionSymbolSet := s.functionSymbolSet.insert e
+      functionSymbols := s.functionSymbols.push e }
 
 @[inline]
 def isFunctionSymbol (e : Expr) : DiagnosisM Bool := return (← get).functionSymbolSet.contains e

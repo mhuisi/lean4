@@ -540,16 +540,14 @@ namespace MatchResult
 def push (r : MatchResult α) (score : Nat) (e : Array α) : MatchResult α :=
   if e.isEmpty then
     r
-  else if score < r.elts.size then {
-    elts := r.elts.modify score (·.push e)
-  }
+  else if score < r.elts.size then
+    { elts := r.elts.modify score (·.push e) }
   else
     let rec loop (a : Array (Array (Array α))) :=
       if a.size < score then
         loop (a.push #[])
-      else {
-        elts := a.push #[e]
-      }
+      else
+        { elts := a.push #[e] }
       termination_by score - a.size
     loop r.elts
 
@@ -700,10 +698,8 @@ def modifyAt (d : PreDiscrTree α) (k : Key) (f : Array (LazyEntry α) → Array
   | .none =>
     let roots := roots.insert k tries.size
     { roots, tries := tries.push (f #[]) }
-  | .some i => {
-    roots
-    tries := tries.modify i f
-  }
+  | .some i =>
+    { roots, tries := tries.modify i f }
 
 /-- Add an entry to the pre-discrimination tree. -/
 def push (d : PreDiscrTree α) (k : Key) (e : LazyEntry α) : PreDiscrTree α :=
@@ -1008,14 +1004,13 @@ def createImportedDiscrTree
   pure <| r.tree.toLazy
 
 /-- Creates the core context used for initializing a tree using the current context. -/
-def createTreeCtx (ctx : Core.Context) : Core.Context := {
-  fileName := ctx.fileName
-  fileMap := ctx.fileMap
-  options := ctx.options
-  maxRecDepth := ctx.maxRecDepth
-  maxHeartbeats := 0
-  ref := ctx.ref
-}
+def createTreeCtx (ctx : Core.Context) : Core.Context :=
+  { fileName := ctx.fileName
+    fileMap := ctx.fileMap
+    options := ctx.options
+    maxRecDepth := ctx.maxRecDepth
+    maxHeartbeats := 0
+    ref := ctx.ref }
 
 def findImportMatches
     (ref : IO.Ref (Option (LazyDiscrTree α)))
