@@ -35,22 +35,19 @@ public def fmtGuardExprLike (guardExprTk lhs equal rhs : Syntax) : FmtM TaggedDo
 public def fmtGuardExpr : Fmt := fun
   | `(Parser.Tactic.guardExpr| guard_expr%$guardExprTk $lhs:term $equal:equal $rhs:term) =>
     fmtGuardExprLike guardExprTk lhs equal rhs
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.guardExprConv]
 public def fmtGuardExprConv : Fmt := fun
   | `(Parser.Tactic.guardExprConv| guard_expr%$guardExprTk $lhs:term $equal:equal $rhs:term) =>
     fmtGuardExprLike guardExprTk lhs equal rhs
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.guardExprCmd]
 public def fmtGuardExprCmd : Fmt := fun
   | `(Parser.Command.guardExprCmd| #guard_expr%$guardExprTk $lhs:term $equal:equal $rhs:term) =>
     fmtGuardExprLike guardExprTk lhs equal rhs
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtGuardTargetLike (guardTargetTk equal rhs : Syntax) : FmtM TaggedDoc := do
   let guardTargetTk ← fmt guardTargetTk
@@ -63,15 +60,13 @@ public def fmtGuardTargetLike (guardTargetTk equal rhs : Syntax) : FmtM TaggedDo
 public def fmtGuardTarget : Fmt := fun
   | `(Parser.Tactic.guardTarget| guard_target%$guardTargetTk $equal:equal $rhs:term) =>
     fmtGuardTargetLike guardTargetTk equal rhs
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.guardTargetConv]
 public def fmtGuardTargetConv : Fmt := fun
   | `(Parser.Tactic.guardTargetConv| guard_target%$guardTargetTk $equal:equal $rhs:term) =>
     fmtGuardTargetLike guardTargetTk equal rhs
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtGuardHypLike (guardHypTk hyp : Syntax) (colon? type? colonEq? value? : Option Syntax)
     : FmtM TaggedDoc := do
@@ -90,16 +85,14 @@ public def fmtGuardHyp : Fmt := fun
   | `(Parser.Tactic.guardHyp|
       guard_hyp%$guardHypTk $hyp:term $[$colon?:colon $type?:term]? $[$colonEq?:colonEq $value?:term]?) =>
     fmtGuardHypLike guardHypTk hyp colon? type? colonEq? value?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.guardHypConv]
 public def fmtGuardHypConv : Fmt := fun
   | `(Parser.Tactic.guardHypConv|
       guard_hyp%$guardHypTk $hyp:term $[$colon?:colon $type?:term]? $[$colonEq?:colonEq $value?:term]?) =>
     fmtGuardHypLike guardHypTk hyp colon? type? colonEq? value?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.guardCmd]
 public def fmtGuardCmd : Fmt := fun
@@ -107,5 +100,4 @@ public def fmtGuardCmd : Fmt := fun
     let guardTk ← fmt guardTk
     let t ← fmt t
     return Layouts.pseudoApplication #[guardTk, t]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

@@ -25,8 +25,8 @@ during a build, the lock file was deemed too disruptive for users.
 open System
 namespace Lake
 
-@[inline] public partial def busyAcquireLockFile (lockFile : FilePath) : IO PUnit := do
-  busyLoop true
+@[inline]
+public partial def busyAcquireLockFile (lockFile : FilePath) : IO PUnit := do busyLoop true
 where
   busyLoop firstTime :=
     try
@@ -49,15 +49,17 @@ where
       | e => throw e
 
 /-- Busy wait to acquire the lock of `lockFile`, run `act`, and then release the lock. -/
-@[inline] public def withLockFile
-  [Monad m] [MonadFinally m] [MonadLiftT IO m] (lockFile : FilePath) (act : m α)
-: m α := do
+@[inline]
+public def withLockFile
+    [Monad m] [MonadFinally m] [MonadLiftT IO m] (lockFile : FilePath) (act : m α)
+    : m α := do
   try
     busyAcquireLockFile lockFile; act
-  finally show IO _ from do
-    try
-      IO.FS.removeFile lockFile
-    catch
-      | .noFileOrDirectory .. => IO.eprintln <|
-        s!"warning: `{lockFile}` was deleted before the lock was released"
-      | e => throw e
+  finally
+    show IO _ from do
+      try
+        IO.FS.removeFile lockFile
+      catch
+        | .noFileOrDirectory .. =>
+          IO.eprintln <| s!"warning: `{lockFile}` was deleted before the lock was released"
+        | e => throw e

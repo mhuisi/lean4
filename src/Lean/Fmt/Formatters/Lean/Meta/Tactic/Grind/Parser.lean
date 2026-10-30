@@ -58,92 +58,79 @@ public def fmtGrindEqCnstr
 public def fmtGrindIsValue : Fmt := fun
   | `(Parser.Command.GrindCnstr.isValue| is_value%$isValueTk $id:ident $[;%$semiTk?]?) =>
     fmtGrindIdentCnstr isValueTk id semiTk?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.GrindCnstr.isStrictValue]
 public def fmtGrindIsStrictValue : Fmt := fun
   | `(Parser.Command.GrindCnstr.isStrictValue| is_strict_value%$isStrictValueTk $id:ident $[;%$semiTk?]?) =>
     fmtGrindIdentCnstr isStrictValueTk id semiTk?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.GrindCnstr.notValue]
 public def fmtGrindNotValue : Fmt := fun
   | `(Parser.Command.GrindCnstr.notValue| not_value%$notValueTk $id:ident $[;%$semiTk?]?) =>
     fmtGrindIdentCnstr notValueTk id semiTk?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.GrindCnstr.notStrictValue]
 public def fmtGrindNotStrictValue : Fmt := fun
   | `(Parser.Command.GrindCnstr.notStrictValue| not_strict_value%$notStrictValueTk $id:ident $[;%$semiTk?]?) =>
     fmtGrindIdentCnstr notStrictValueTk id semiTk?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.GrindCnstr.isGround]
 public def fmtGrindIsGround : Fmt := fun
   | `(Parser.Command.GrindCnstr.isGround| is_ground%$isGroundTk $id:ident $[;%$semiTk?]?) =>
     fmtGrindIdentCnstr isGroundTk id semiTk?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.GrindCnstr.sizeLt]
 public def fmtGrindSizeLt : Fmt := fun
   | `(Parser.Command.GrindCnstr.sizeLt| size%$sizeTk $id:ident <%$ltTk $n:num $[;%$semiTk?]?) =>
     fmtGrindIdentLtCnstr sizeTk id ltTk n semiTk?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.GrindCnstr.depthLt]
 public def fmtGrindDepthLt : Fmt := fun
   | `(Parser.Command.GrindCnstr.depthLt| depth%$depthTk $id:ident <%$ltTk $n:num $[;%$semiTk?]?) =>
     fmtGrindIdentLtCnstr depthTk id ltTk n semiTk?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.GrindCnstr.genLt]
 public def fmtGrindGenLt : Fmt := fun
   | `(Parser.Command.GrindCnstr.genLt| gen%$genTk <%$ltTk $n:num $[;%$semiTk?]?) =>
     fmtGrindLtCnstr genTk ltTk n semiTk?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.GrindCnstr.maxInsts]
 public def fmtGrindMaxInsts : Fmt := fun
   | `(Parser.Command.GrindCnstr.maxInsts| max_insts%$maxInstsTk <%$ltTk $n:num $[;%$semiTk?]?) =>
     fmtGrindLtCnstr maxInstsTk ltTk n semiTk?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.GrindCnstr.guard]
 public def fmtGrindGuard : Fmt := fun
   | `(Parser.Command.GrindCnstr.guard| guard%$guardTk $t:term $[;%$semiTk?]?) =>
     fmtGrindTermCnstr guardTk t semiTk?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.GrindCnstr.check]
 public def fmtGrindCheck : Fmt := fun
   | `(Parser.Command.GrindCnstr.check| check%$checkTk $t:term $[;%$semiTk?]?) =>
     fmtGrindTermCnstr checkTk t semiTk?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.GrindCnstr.notDefEq]
 public def fmtGrindNotDefEq : Fmt := fun
   | `(Parser.Command.GrindCnstr.notDefEq| $id:ident =/=%$eqTk $t:term $[;%$semiTk?]?) =>
     fmtGrindEqCnstr id eqTk t semiTk?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.GrindCnstr.defEq]
 public def fmtGrindDefEq : Fmt := fun
   | `(Parser.Command.GrindCnstr.defEq| $id:ident =?=%$eqTk $t:term $[;%$semiTk?]?) =>
     fmtGrindEqCnstr id eqTk t semiTk?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.grindPattern]
 public def fmtGrindPattern : Fmt := fun
@@ -168,8 +155,7 @@ public def fmtGrindPattern : Fmt := fun
     let mainDecl := Layouts.assignmentDeclaration header arrowTk patterns
     let cnstrs := Layouts.lines cnstrs
     return Layouts.whereDeclaration mainDecl whereTk? cnstrs
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.initGrindNorm]
 public def fmtInitGrindNorm : Fmt := fun
@@ -181,5 +167,4 @@ public def fmtInitGrindNorm : Fmt := fun
     let postTheorems ← fmtArray postTheorems
     return nested <| Layouts.horizontalOrVertical <|
       #[initGrindNormTk] ++ preTheorems ++ #[pipeTk] ++ postTheorems
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

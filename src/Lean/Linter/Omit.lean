@@ -24,7 +24,8 @@ def «omit» : Linter where
     unless getLinterValue linter.omit (← getLinterOptions) do
       return
     if let some stx := stx.find? (·.isOfKind ``Lean.Parser.Command.«omit») then
-      logLint linter.omit stx m!"`omit` should be avoided in favor of restructuring your \
-        `variable` declarations"
+      logLint linter.omit stx
+        m!"`omit` should be avoided in favor of restructuring your \
+          `variable` declarations"
 
 builtin_initialize addLinter «omit»

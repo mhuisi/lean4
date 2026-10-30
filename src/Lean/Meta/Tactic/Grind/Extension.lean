@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Theorems
 public section
@@ -12,20 +13,25 @@ namespace Lean.Meta.Grind
 /-- Types that `grind` will case-split on. -/
 structure CasesTypes where
   casesMap : PHashMap Name Bool := {}
-  deriving Inhabited
+deriving Inhabited
 
-def CasesTypes.insert (s : CasesTypes) (declName : Name) (eager : Bool) : CasesTypes :=
-  { s with casesMap := s.casesMap.insert declName eager }
+def CasesTypes.insert (s : CasesTypes) (declName : Name) (eager : Bool) : CasesTypes := {
+  s with
+  casesMap := s.casesMap.insert declName eager
+}
 
 abbrev ExtTheorems := PHashSet Name
 
 structure SymbolPriorities where
   map : PHashMap Name Nat := {}
-  deriving Inhabited
+deriving Inhabited
 
 /-- Inserts `declName ↦ prio` into `s`. -/
-def SymbolPriorities.insert (s : SymbolPriorities) (declName : Name) (prio : Nat) : SymbolPriorities :=
-  { s with map := s.map.insert declName prio }
+def SymbolPriorities.insert (s : SymbolPriorities) (declName : Name) (prio : Nat)
+    : SymbolPriorities := {
+  s with
+  map := s.map.insert declName prio
+}
 
 inductive EMatchTheoremKind where
   | eqLhs (gen : Bool)
@@ -38,31 +44,31 @@ inductive EMatchTheoremKind where
   | rightLeft
   | default (gen : Bool)
   | user /- pattern specified using `grind_pattern` command -/
-  deriving Inhabited, BEq, Repr, Hashable
+deriving Inhabited, BEq, Repr, Hashable
 
 structure CnstrRHS where
   /-- Abstracted universe level param names in the `rhs` -/
   levelNames : Array Name
   /-- Number of abstracted metavariable in the `rhs` -/
-  numMVars   : Nat
+  numMVars : Nat
   /-- The actual `rhs`. -/
-  expr       : Expr
-  deriving Inhabited, BEq, Repr
+  expr : Expr
+deriving Inhabited, BEq, Repr
 
-/--
-Grind patterns may have constraints associated with them.
--/
+/-- Grind patterns may have constraints associated with them. -/
 inductive EMatchTheoremConstraint where
   | /--
     A constraint of the form `lhs =/= rhs`.
     The `lhs` is one of the bound variables, and the `rhs` an abstract term that must not be definitionally
-    equal to a term `t` assigned to `lhs`. -/
-    notDefEq  (lhs : Nat) (rhs : CnstrRHS)
+    equal to a term `t` assigned to `lhs`.
+    -/
+    notDefEq (lhs : Nat) (rhs : CnstrRHS)
   | /--
     A constraint of the form `lhs =?= rhs`.
     The `lhs` is one of the bound variables, and the `rhs` an abstract term that must be definitionally
-    equal to a term `t` assigned to `lhs`. -/
-    defEq  (lhs : Nat) (rhs : CnstrRHS)
+    equal to a term `t` assigned to `lhs`.
+    -/
+    defEq (lhs : Nat) (rhs : CnstrRHS)
   | /--
     A constraint of the form `size lhs < n`. The `lhs` is one of the bound variables.
     The size is computed ignoring implicit terms, but sharing is not taken into account.
@@ -73,9 +79,7 @@ inductive EMatchTheoremConstraint where
     The depth is computed in constant time using the `approxDepth` field attached to expressions.
     -/
     depthLt (lhs : Nat) (n : Nat)
-  | /--
-    Instantiates the theorem only if its generation is less than `n`
-    -/
+  | /-- Instantiates the theorem only if its generation is less than `n` -/
     genLt (n : Nat)
   | /--
     Constraints of the form `is_ground x`. Instantiates the theorem only if
@@ -98,16 +102,14 @@ inductive EMatchTheoremConstraint where
     It instructs `grind` to postpone the instantiation of the theorem until `e` is known to be `true`.
     -/
     guard (e : Expr)
-  | /--
-    Similar to `guard`, but checks whether `e` is implied by asserting `¬e`.
-    -/
+  | /-- Similar to `guard`, but checks whether `e` is implied by asserting `¬e`. -/
     check (e : Expr)
   | /--
     Constraints of the form `not_value x` and `not_strict_value x`.
     They are the negations of `is_value x` and `is_strict_value x`.
     -/
     notValue (bvarIdx : Nat) (strict : Bool)
-  deriving Inhabited, Repr, BEq
+deriving Inhabited, Repr, BEq
 
 /-- A theorem for heuristic instantiation based on E-matching. -/
 structure EMatchTheorem where
@@ -116,19 +118,19 @@ structure EMatchTheorem where
   Recall that it is non-empty only when we elaborate an expression provided by the user.
   When `proof` is just a constant, we can use the universe parameter names stored in the declaration.
   -/
-  levelParams  : Array Name
-  proof        : Expr
-  numParams    : Nat
-  patterns     : List Expr
+  levelParams : Array Name
+  proof : Expr
+  numParams : Nat
+  patterns : List Expr
   /-- Contains all symbols used in `patterns`. -/
-  symbols      : List HeadIndex
-  origin       : Origin
+  symbols : List HeadIndex
+  origin : Origin
   /-- The `kind` is used for generating the `patterns`. We save it here to implement `grind?`. -/
-  kind         : EMatchTheoremKind
+  kind : EMatchTheoremKind
   /-- Stores whether patterns were inferred using the minimal indexable subexpression condition. -/
   minIndexable : Bool
-  cnstrs       : List EMatchTheoremConstraint := []
-  deriving Inhabited
+  cnstrs : List EMatchTheoremConstraint := []
+deriving Inhabited
 
 instance : TheoremLike EMatchTheorem where
   getSymbols thm := thm.symbols
@@ -139,12 +141,14 @@ instance : TheoremLike EMatchTheorem where
 
 /-- A theorem marked with `@[grind inj]` -/
 structure InjectiveTheorem where
-  levelParams  : Array Name
-  proof        : Expr
-  /-- Contains all symbols used in the term `f` at the theorem's conclusion: `Function.Injective f`. -/
-  symbols      : List HeadIndex
-  origin       : Origin
-  deriving Inhabited
+  levelParams : Array Name
+  proof : Expr
+  /--
+  Contains all symbols used in the term `f` at the theorem's conclusion: `Function.Injective f`.
+  -/
+  symbols : List HeadIndex
+  origin : Origin
+deriving Inhabited
 
 instance : TheoremLike InjectiveTheorem where
   getSymbols thm := thm.symbols
@@ -159,7 +163,7 @@ inductive Entry where
   | cases (declName : Name) (eager : Bool)
   | ematch (thm : EMatchTheorem)
   | inj (thm : InjectiveTheorem)
-  deriving Inhabited
+deriving Inhabited
 
 /-
 **Note**: We currently have a single normalization and symbol priority sets for all `grind` attributes.
@@ -173,11 +177,11 @@ are met. Cons: users would not be able to write `grind only [attr_1, attr_2]`.
 
 structure ExtensionState where
   casesTypes : CasesTypes := {}
-  extThms    : ExtTheorems := {}
-  funCC      : NameSet := {}
-  ematch     : Theorems EMatchTheorem := {}
-  inj        : Theorems InjectiveTheorem := {}
-  deriving Inhabited
+  extThms : ExtTheorems := {}
+  funCC : NameSet := {}
+  ematch : Theorems EMatchTheorem := {}
+  inj : Theorems InjectiveTheorem := {}
+deriving Inhabited
 
 abbrev Extension := SimpleScopedEnvExtension Entry ExtensionState
 
@@ -191,19 +195,22 @@ def ExtensionState.addEntry (s : ExtensionState) (e : Entry) : ExtensionState :=
 
 def mkExtension (name : Name := by exact decl_name%) : IO Extension :=
   registerSimpleScopedEnvExtension {
-    name     := name
-    initial  := {}
+    name := name
+    initial := {}
     addEntry := ExtensionState.addEntry
     exportEntry? := fun _ e =>
       -- export only annotations on public decls
-      let declName := match e with
+      let declName :=
+        match e with
         | .inj thm | .ematch thm =>
           match thm.origin with
           | .decl declName => declName
           | _ => unreachable!
         | .ext declName | .cases declName _ | .funCC declName => declName
-      if isPrivateName declName then ⟨none, none, some e⟩
-      else .uniform (some e)
+      if isPrivateName declName then
+        ⟨none, none, some e⟩
+      else
+        .uniform (some e)
   }
 
 /--

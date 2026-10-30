@@ -27,18 +27,20 @@ set_option linter.indexVariables true -- Enforce naming conventions for index va
 namespace List
 
 set_option linter.listVariables false in
-/-- Given a list `is` of monotonically increasing indices into `l`, getting each index
-  produces a sublist of `l`.  -/
-theorem map_getElem_sublist {l : List α} {is : List (Fin l.length)} (h : is.Pairwise (· < ·)) :
-    is.map (l[·]) <+ l := by
-  suffices ∀ j l', l' = l.drop j → (∀ i ∈ is, j ≤ i) → map (l[·]) is <+ l'
-    from this 0 l (by simp) (by simp)
+/--
+Given a list `is` of monotonically increasing indices into `l`, getting each index
+produces a sublist of `l`.
+-/
+theorem map_getElem_sublist {l : List α} {is : List (Fin l.length)} (h : is.Pairwise (· < ·))
+    : is.map (l[·]) <+ l := by
+  suffices ∀ j l', l' = l.drop j → (∀ i ∈ is, j ≤ i) → map (l[·]) is <+ l' from
+    this 0 l (by simp) (by simp)
   rintro j l' rfl his
   induction is generalizing j with
   | nil => simp
   | cons hd tl IH =>
     simp only [Fin.getElem_fin, map_cons]
-    have := IH h.of_cons (hd+1) (pairwise_cons.mp h).1
+    have := IH h.of_cons (hd + 1) (pairwise_cons.mp h).1
     specialize his hd (.head _)
     have := (drop_eq_getElem_cons ..).symm ▸ this.cons_cons (get l hd)
     have := Sublist.append (nil_sublist (take hd l |>.drop j)) this
@@ -46,10 +48,12 @@ theorem map_getElem_sublist {l : List α} {is : List (Fin l.length)} (h : is.Pai
     simp [Nat.min_eq_left (Nat.le_of_lt hd.isLt), his]
 
 set_option linter.listVariables false in
-/-- Given a sublist `l' <+ l`, there exists an increasing list of indices `is` such that
-  `l' = is.map fun i => l[i]`. -/
-theorem sublist_eq_map_getElem {l l' : List α} (h : l' <+ l) : ∃ is : List (Fin l.length),
-    l' = is.map (l[·]) ∧ is.Pairwise (· < ·) := by
+/--
+Given a sublist `l' <+ l`, there exists an increasing list of indices `is` such that
+`l' = is.map fun i => l[i]`.
+-/
+theorem sublist_eq_map_getElem {l l' : List α} (h : l' <+ l)
+    : ∃ is : List (Fin l.length), l' = is.map (l[·]) ∧ is.Pairwise (· < ·) := by
   induction h with
   | slnil => exact ⟨[], by simp⟩
   | cons _ _ IH =>
@@ -58,7 +62,7 @@ theorem sublist_eq_map_getElem {l l' : List α} (h : l' <+ l) : ∃ is : List (F
     set_option backward.isDefEq.respectTransparency false in
     simpa [Function.comp_def, pairwise_map]
   | cons_cons _ _ IH =>
-    rcases IH with ⟨is,IH⟩
+    rcases IH with ⟨is, IH⟩
     refine ⟨⟨0, by simp [Nat.zero_lt_succ]⟩ :: is.map (·.succ), ?_⟩
     set_option backward.isDefEq.respectTransparency false in
     simp [Function.comp_def, pairwise_map, IH, ← get_eq_getElem, get_cons_zero, get_cons_succ']
@@ -78,14 +82,16 @@ theorem pairwise_le_finRange (n : Nat) : Pairwise (· ≤ ·) (finRange n) := by
   exact Fin.le_of_lt hlt
 
 /-- The list `List.finRange n` has no duplicate entries. -/
-theorem nodup_finRange (n : Nat) : (finRange n).Nodup :=
-  (pairwise_lt_finRange n).imp Fin.ne_of_lt
+theorem nodup_finRange (n : Nat) : (finRange n).Nodup := (pairwise_lt_finRange n).imp Fin.ne_of_lt
 
-/-- In a list with no duplicates, `idxOf` recovers the index of the element at
-each position. -/
+/--
+In a list with no duplicates, `idxOf` recovers the index of the element at
+each position.
+-/
 @[simp]
-theorem Nodup.idxOf_getElem [BEq α] [LawfulBEq α] {xs : List α} (H : Nodup xs)
-    (i : Nat) (h : i < xs.length) : idxOf xs[i] xs = i := by
+theorem Nodup.idxOf_getElem
+    [BEq α] [LawfulBEq α] {xs : List α} (H : Nodup xs) (i : Nat) (h : i < xs.length)
+    : idxOf xs[i] xs = i := by
   induction xs generalizing i with
   | nil => exact absurd h (Nat.not_lt_zero i)
   | cons a l ih =>

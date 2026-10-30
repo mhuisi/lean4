@@ -90,8 +90,7 @@ public def fmtPrecedence : Fmt := fun
     let colonTk ← fmt colonTk
     let prec ← fmt prec
     return Layouts.prefixOperator colonTk prec .withoutSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Syntax.paren]
 public def fmtSyntaxParen : Fmt := fun
@@ -103,8 +102,7 @@ public def fmtSyntaxParen : Fmt := fun
       args := args.modify 0 hardNested
     let args' := Layouts.fill args
     return Layouts.parens lbTk args' rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Syntax.cat]
 public def fmtSyntaxCat : Fmt := fun
@@ -112,8 +110,7 @@ public def fmtSyntaxCat : Fmt := fun
     let catId ← fmt catId
     let prec? ← fmt? prec?
     return Layouts.prefixOperator catId prec? .withoutSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Syntax.unary]
 public def fmtSyntaxUnary : Fmt := fun
@@ -124,8 +121,7 @@ public def fmtSyntaxUnary : Fmt := fun
     let rbTk ← fmt rbTk
     let lb := Layouts.atomic #[parserId, lbTk]
     return Layouts.metaApplication lb #[.elems args] rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Syntax.binary]
 public def fmtSyntaxBinary : Fmt := fun
@@ -139,8 +135,7 @@ public def fmtSyntaxBinary : Fmt := fun
     let lb := Layouts.atomic #[parserId, lbTk]
     let terms := #[.elems args₁, .sep commaTk, .elems args₂]
     return Layouts.metaApplication lb terms rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Syntax.sepBy]
 public def fmtSyntaxSepBy : Fmt := fun
@@ -167,8 +162,7 @@ public def fmtSyntaxSepBy : Fmt := fun
         .elems #[allowTrailingSepTk?]
       ]
       return Layouts.metaApplication lbTk terms rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Syntax.sepBy1]
 public def fmtSyntaxSepBy1 : Fmt := fun
@@ -195,8 +189,7 @@ public def fmtSyntaxSepBy1 : Fmt := fun
       ]
       let rbTk ← fmt rbTk
       return Layouts.metaApplication lbTk terms rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Syntax.atom]
 public def fmtSyntaxAtom : Fmt := fun
@@ -209,8 +202,7 @@ public def fmtSyntaxNonReserved : Fmt := fun
     let ampTk ← fmt ampTk
     let atomStr ← fmt atomStr
     return Layouts.atomic #[ampTk, atomStr]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Syntax.unicodeAtom]
 public def fmtSyntaxUnicodeAtom : Fmt := fun
@@ -229,15 +221,13 @@ public def fmtSyntaxUnicodeAtom : Fmt := fun
     ]
     let rbTk ← fmt rbTk
     return Layouts.metaApplication lbTk terms rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.namedName]
 public def fmtNamedName : Fmt := fun
   | `(Parser.Command.namedName| (%$lbTk name%$nameTk :=%$colonEqTk $name:ident )%$rbTk) =>
     fmtNamedArgumentTerm lbTk nameTk colonEqTk name rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.identPrec]
 public def fmtIdentPrec : Fmt := fun
@@ -245,8 +235,7 @@ public def fmtIdentPrec : Fmt := fun
     let id ← fmt id
     let prec? ← fmt? prec?
     return Layouts.prefixOperator id prec? .withoutSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.prefix]
 public def fmtPrefix : Fmt := fmtAtomic
@@ -279,8 +268,7 @@ public def fmtMixfix : Fmt := fun
     -- Mixfix bodies are elaborated as quotations, so we format them as such
     fmtMetaAssignmentDeclaration docComment? attributes? #[attrKind] mixfixKind prec
       #[namedName?, namedPrio?] metaSignature none none darrowTk rhs (rawBody := true)
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.notation]
 public def fmtNotation : Fmt := fun
@@ -298,8 +286,7 @@ public def fmtNotation : Fmt := fun
     -- Notation bodies are elaborated as quotations, so we format them as such
     fmtMetaAssignmentDeclaration docComment? attributes? #[attrKind] notationTk prec?
       #[namedName?, namedPrio?] metaSignature none none darrowTk rhs (rawBody := true)
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.macro_rules]
 public def fmtMacroRules : Fmt := fun
@@ -312,8 +299,7 @@ public def fmtMacroRules : Fmt := fun
     let kindParam? ← fmtNamedArgumentTerm? lbTk? kindTk? colonEqTk? kindId? rbTk?
     fmtMetaMatchDeclaration docComment? attributes? #[attrKind] macroRulesTk none #[kindParam?]
       empty none none alts
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.syntax]
 public def fmtSyntaxCmd : Fmt := fun
@@ -331,8 +317,7 @@ public def fmtSyntaxCmd : Fmt := fun
     let signature ←
       fmtMetaDeclarationSignature syntaxTk prec? #[namedName?, namedPrio?] metaSignature colonTk cat
     fmtDeclWithModifiers docComment? attributes? #[attrKind] signature
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.syntaxAbbrev]
 public def fmtSyntaxAbbrev : Fmt := fun
@@ -347,8 +332,7 @@ public def fmtSyntaxAbbrev : Fmt := fun
     let body := withPosition <| Layouts.fill args
     let decl := Layouts.assignmentDeclaration signature colonEqTk body
     fmtDeclWithModifiers docComment? none #[visibility?] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.catBehaviorBoth]
 public def fmtCatBehaviorBoth : Fmt := fmtAtomic
@@ -368,8 +352,7 @@ public def fmtDeclareSyntaxCat : Fmt := fun
     let behaviorParam? ← fmtNamedArgumentTerm? lbTk? behaviorTk? colonEqTk? behavior? rbTk?
     let decl := Layouts.pseudoApplication #[declareSyntaxCatTk, catId, behaviorParam?]
     return Layouts.lines #[docComment?, decl]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.macroArg]
 public def fmtMacroArg : Fmt := fun
@@ -378,16 +361,14 @@ public def fmtMacroArg : Fmt := fun
     let colonTk? ← fmt? colonTk?
     let arg ← fmt arg
     return Layouts.atomicInfixOperator #[id?, colonTk?, arg]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.macroRhs]
 public def fmtMacroRhs : Fmt := fun
   | `(Parser.Command.macroRhs| $rhs:term) => do
     let rhs ← fmt rhs
     return withPosition rhs
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.macro]
 public def fmtMacro : Fmt := fun
@@ -405,8 +386,7 @@ public def fmtMacro : Fmt := fun
     let metaSignature := Layouts.fill args
     fmtMetaAssignmentDeclaration docComment? attributes? #[attrKind] macroTk prec?
       #[namedName?, namedPrio?] metaSignature colonTk cat darrowTk rhs (rawBody := false)
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.elab_rules]
 public def fmtElabRules : Fmt := fun
@@ -424,8 +404,7 @@ public def fmtElabRules : Fmt := fun
     let alts ← fmt alts
     let decl := Layouts.matchDeclaration signature alts
     fmtDeclWithModifiers docComment? attributes? #[attrKind] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.elab]
 public def fmtElab : Fmt := fun
@@ -448,8 +427,7 @@ public def fmtElab : Fmt := fun
         leTk? expectedType?
     let decl := Layouts.assignmentDeclaration signature darrowTk rhs
     fmtDeclWithModifiers docComment? attributes? #[attrKind] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.binderPredicate]
 public def fmtBinderPredicate : Fmt := fun
@@ -467,5 +445,4 @@ public def fmtBinderPredicate : Fmt := fun
     let metaSignature := Layouts.fill <| #[binderId] ++ args
     fmtMetaAssignmentDeclaration docComment? attributes? #[attrKind?] binderPredicateTk none
       #[namedName?, namedPrio?] metaSignature none none darrowTk rhs (rawBody := false)
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

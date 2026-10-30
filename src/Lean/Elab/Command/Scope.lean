@@ -27,19 +27,21 @@ structure Scope where
   named `a`, `b`, and `c`.
   This is used for checking the `end` command. The "base scope" has `""` as its header.
   -/
-  header        : String
+  header : String
   /--
   The current state of all set options at this point in the scope. Note that this is the
   full current set of options and does *not* simply contain the options set
   while this scope has been active.
   -/
-  opts          : Options := {}
+  opts : Options := {}
   /-- The current namespace. The top-level namespace is represented by `Name.anonymous`. -/
   currNamespace : Name := Name.anonymous
   /-- All currently `open`ed namespaces and names. -/
-  openDecls     : List OpenDecl := []
-  /-- The current list of names for universe level variables to use for new declarations. This is managed by the `universe` command. -/
-  levelNames    : List Name := []
+  openDecls : List OpenDecl := []
+  /--
+  The current list of names for universe level variables to use for new declarations. This is managed by the `universe` command.
+  -/
+  levelNames : List Name := []
   /--
   The current list of binders to use for new declarations.
   This is managed by the `variable` command.
@@ -49,7 +51,7 @@ structure Scope where
   This is also used by commands, such as `#check`, to create an initial local context,
   even if they do not work with binders per se.
   -/
-  varDecls      : Array (TSyntax ``Parser.Term.bracketedBinder) := #[]
+  varDecls : Array (TSyntax ``Parser.Term.bracketedBinder) := #[]
   /--
   Globally unique internal identifiers for the `varDecls`.
   There is one identifier per variable introduced by the binders
@@ -58,11 +60,11 @@ structure Scope where
   This is used by `TermElabM` in `Lean.Elab.Term.Context` to help with processing macros
   that capture these variables.
   -/
-  varUIds       : Array Name := #[]
+  varUIds : Array Name := #[]
   /-- `include`d section variable names (from `varUIds`) -/
-  includedVars  : List Name := []
+  includedVars : List Name := []
   /-- `omit`ted section variable names (from `varUIds`) -/
-  omittedVars  : List Name := []
+  omittedVars : List Name := []
   /--
   If true (default: false), all declarations that fail to compile
   automatically receive the `noncomputable` modifier.
@@ -84,4 +86,4 @@ structure Scope where
   parent scopes.
   -/
   attrs : List (TSyntax ``Parser.Term.attrInstance) := []
-  deriving Inhabited
+deriving Inhabited

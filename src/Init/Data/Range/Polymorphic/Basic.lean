@@ -34,16 +34,15 @@ class LawfulHasSize (α : Type u) [LE α] [UpwardEnumerable α] [HasSize α] whe
   If the smallest value in the range satisfies the upper bound and has no successor, the size is
   one.
   -/
-  size_eq_one_of_succ?_eq_none (lo hi : α)
-      (h : lo ≤ hi) (h' : UpwardEnumerable.succ? lo = none) :
-      HasSize.size lo hi = 1
+  size_eq_one_of_succ?_eq_none (lo hi : α) (h : lo ≤ hi) (h' : UpwardEnumerable.succ? lo = none)
+    : HasSize.size lo hi = 1
   /--
   If the smallest value in the range satisfies the upper bound and has a successor, the size is
-  one larger than the size of the range starting at the successor. -/
-  size_eq_succ_of_succ?_eq_some (lo hi lo' : α)
-      (h : lo ≤ hi)
-      (h' : UpwardEnumerable.succ? lo = some lo') :
-      HasSize.size lo hi = HasSize.size lo' hi + 1
+  one larger than the size of the range starting at the successor.
+  -/
+  size_eq_succ_of_succ?_eq_some
+    (lo hi lo' : α) (h : lo ≤ hi) (h' : UpwardEnumerable.succ? lo = some lo')
+    : HasSize.size lo hi = HasSize.size lo' hi + 1
 
 /--
 This typeclass provides support for the size function for ranges with closed lower bound
@@ -57,13 +56,12 @@ condition is captured by the typeclass
 -/
 add_decl_doc HasSize
 
-export LawfulHasSize (size_eq_zero_of_not_le size_eq_one_of_succ?_eq_none
-  size_eq_succ_of_succ?_eq_some)
+export LawfulHasSize
+  (size_eq_zero_of_not_le size_eq_one_of_succ?_eq_none size_eq_succ_of_succ?_eq_some)
 
-theorem size_eq_zero_iff_not_le {α : Type u}
-    [LE α] [UpwardEnumerable α] [HasSize α] [LawfulHasSize α]
-    {lo hi : α} :
-    HasSize.size lo hi = 0 ↔ ¬ lo ≤ hi := by
+theorem size_eq_zero_iff_not_le
+    {α : Type u} [LE α] [UpwardEnumerable α] [HasSize α] [LawfulHasSize α] {lo hi : α}
+    : HasSize.size lo hi = 0 ↔ ¬ lo ≤ hi := by
   open Classical in
   match h : decide (lo ≤ hi) with
   | true =>
@@ -75,10 +73,9 @@ theorem size_eq_zero_iff_not_le {α : Type u}
     simp only [decide_eq_false_iff_not] at h
     simp [h, LawfulHasSize.size_eq_zero_of_not_le]
 
-theorem size_pos_iff_le {α : Type u}
-    [LE α] [UpwardEnumerable α] [HasSize α] [LawfulHasSize α]
-    {lo hi : α} :
-    0 < HasSize.size lo hi ↔ lo ≤ hi := by
+theorem size_pos_iff_le
+    {α : Type u} [LE α] [UpwardEnumerable α] [HasSize α] [LawfulHasSize α] {lo hi : α}
+    : 0 < HasSize.size lo hi ↔ lo ≤ hi := by
   have := size_eq_zero_iff_not_le (lo := lo) (hi := hi)
   open Classical in
   match h : decide (lo ≤ hi) with
@@ -109,16 +106,15 @@ class LawfulHasSize (α : Type u) [LT α] [UpwardEnumerable α] [HasSize α] whe
   If the smallest value in the range satisfies the upper bound and has no successor, the size is
   one.
   -/
-  size_eq_one_of_succ?_eq_none (lo hi : α)
-      (h : lo < hi) (h' : UpwardEnumerable.succ? lo = none) :
-      HasSize.size lo hi = 1
+  size_eq_one_of_succ?_eq_none (lo hi : α) (h : lo < hi) (h' : UpwardEnumerable.succ? lo = none)
+    : HasSize.size lo hi = 1
   /--
   If the smallest value in the range satisfies the upper bound and has a successor, the size is
-  one larger than the size of the range starting at the successor. -/
-  size_eq_succ_of_succ?_eq_some (lo hi lo' : α)
-      (h : lo < hi)
-      (h' : UpwardEnumerable.succ? lo = some lo') :
-      HasSize.size lo hi = HasSize.size lo' hi + 1
+  one larger than the size of the range starting at the successor.
+  -/
+  size_eq_succ_of_succ?_eq_some
+    (lo hi lo' : α) (h : lo < hi) (h' : UpwardEnumerable.succ? lo = some lo')
+    : HasSize.size lo hi = HasSize.size lo' hi + 1
 
 /--
 This typeclass provides support for the size function for ranges with open lower bound
@@ -132,13 +128,12 @@ condition is captured by the typeclass
 -/
 add_decl_doc HasSize
 
-export LawfulHasSize (size_eq_zero_of_not_le size_eq_one_of_succ?_eq_none
-  size_eq_succ_of_succ?_eq_some)
+export LawfulHasSize
+  (size_eq_zero_of_not_le size_eq_one_of_succ?_eq_none size_eq_succ_of_succ?_eq_some)
 
-theorem size_eq_zero_iff_not_le {α : Type u}
-    [LT α] [UpwardEnumerable α] [HasSize α] [LawfulHasSize α]
-    {lo hi : α} :
-    HasSize.size lo hi = 0 ↔ ¬ lo < hi := by
+theorem size_eq_zero_iff_not_le
+    {α : Type u} [LT α] [UpwardEnumerable α] [HasSize α] [LawfulHasSize α] {lo hi : α}
+    : HasSize.size lo hi = 0 ↔ ¬ lo < hi := by
   open Classical in
   match h : decide (lo < hi) with
   | true =>
@@ -150,10 +145,9 @@ theorem size_eq_zero_iff_not_le {α : Type u}
     simp only [decide_eq_false_iff_not] at h
     simp [h, LawfulHasSize.size_eq_zero_of_not_le]
 
-theorem size_pos_iff_lt {α : Type u}
-    [LT α] [UpwardEnumerable α] [HasSize α] [LawfulHasSize α]
-    {lo hi : α} :
-    0 < HasSize.size lo hi ↔ lo < hi := by
+theorem size_pos_iff_lt
+    {α : Type u} [LT α] [UpwardEnumerable α] [HasSize α] [LawfulHasSize α] {lo hi : α}
+    : 0 < HasSize.size lo hi ↔ lo < hi := by
   have := size_eq_zero_iff_not_le (lo := lo) (hi := hi)
   open Classical in
   match h : decide (lo < hi) with
@@ -182,15 +176,13 @@ class LawfulHasSize (α : Type u) [UpwardEnumerable α] [HasSize α] where
   If the smallest value in the range satisfies the upper bound and has no successor, the size is
   one.
   -/
-  size_eq_one_of_succ?_eq_none (lo : α)
-      (h : UpwardEnumerable.succ? lo = none) :
-      HasSize.size lo = 1
+  size_eq_one_of_succ?_eq_none (lo : α) (h : UpwardEnumerable.succ? lo = none) : HasSize.size lo = 1
   /--
   If the smallest value in the range satisfies the upper bound and has a successor, the size is
-  one larger than the size of the range starting at the successor. -/
-  size_eq_succ_of_succ?_eq_some (lo lo' : α)
-      (h : UpwardEnumerable.succ? lo = some lo') :
-      HasSize.size lo = HasSize.size lo' + 1
+  one larger than the size of the range starting at the successor.
+  -/
+  size_eq_succ_of_succ?_eq_some (lo lo' : α) (h : UpwardEnumerable.succ? lo = some lo')
+    : HasSize.size lo = HasSize.size lo' + 1
 
 /--
 This typeclass provides support for the size function for ranges with closed lower bound
@@ -206,8 +198,8 @@ add_decl_doc HasSize
 
 export LawfulHasSize (size_eq_one_of_succ?_eq_none size_eq_succ_of_succ?_eq_some)
 
-theorem size_pos {α : Type u} [UpwardEnumerable α] [HasSize α] [LawfulHasSize α] {lo : α} :
-    HasSize.size lo > 0 := by
+theorem size_pos {α : Type u} [UpwardEnumerable α] [HasSize α] [LawfulHasSize α] {lo : α}
+    : HasSize.size lo > 0 := by
   open Classical in
   match hs : UpwardEnumerable.succ? lo with
   | none => simp [LawfulHasSize.size_eq_one_of_succ?_eq_none (h := hs)]
@@ -226,19 +218,13 @@ This function returns a meaningful value given {name}`LawfulUpwardEnumerable` an
 {name}`LawfulUpwardEnumerableLE` instances.
 -/
 @[inline]
-def isEmpty [LE α] [DecidableLE α] [UpwardEnumerable α]
-    (r : Rcc α) : Bool :=
-  ¬ r.lower ≤ r.upper
+def isEmpty [LE α] [DecidableLE α] [UpwardEnumerable α] (r : Rcc α) : Bool := ¬ r.lower ≤ r.upper
 
-theorem mem_iff [LE α] {r : Rcc α} {a : α} :
-    a ∈ r ↔ r.lower ≤ a ∧ a ≤ r.upper :=
-  Iff.rfl
+theorem mem_iff [LE α] {r : Rcc α} {a : α} : a ∈ r ↔ r.lower ≤ a ∧ a ≤ r.upper := Iff.rfl
 
-theorem lower_le_of_mem [LE α] (h : a ∈ r) : r.lower ≤ a :=
-  h.1
+theorem lower_le_of_mem [LE α] (h : a ∈ r) : r.lower ≤ a := h.1
 
-theorem le_upper_of_mem [LE α] (h : a ∈ r) : a ≤ r.upper :=
-  h.2
+theorem le_upper_of_mem [LE α] (h : a ∈ r) : a ≤ r.upper := h.2
 
 end Rcc
 
@@ -253,21 +239,16 @@ This function returns a meaningful value given {name}`LawfulUpwardEnumerable` an
 {name}`LawfulUpwardEnumerableLT` instances.
 -/
 @[inline]
-def isEmpty [LT α] [DecidableLT α] [UpwardEnumerable α] (r : Rco α) : Bool :=
-  ¬ r.lower < r.upper
+def isEmpty [LT α] [DecidableLT α] [UpwardEnumerable α] (r : Rco α) : Bool := ¬ r.lower < r.upper
 
-theorem mem_iff [LE α] [LT α] :
-    a ∈ r ↔ r.lower ≤ a ∧ a < r.upper :=
-  Iff.rfl
+theorem mem_iff [LE α] [LT α] : a ∈ r ↔ r.lower ≤ a ∧ a < r.upper := Iff.rfl
 
-theorem lower_le_of_mem [LE α] [LT α] (h : a ∈ r) : r.lower ≤ a :=
-  h.1
+theorem lower_le_of_mem [LE α] [LT α] (h : a ∈ r) : r.lower ≤ a := h.1
 
-theorem lt_upper_of_mem [LE α] [LT α] (h : a ∈ r) : a < r.upper :=
-  h.2
+theorem lt_upper_of_mem [LE α] [LT α] (h : a ∈ r) : a < r.upper := h.2
 
-theorem Internal.get_elem_helper_upper_open [LE α] [LT α] (h₁ : a ∈ r) (h₂ : r.upper = hi) :
-    a < hi :=
+theorem Internal.get_elem_helper_upper_open [LE α] [LT α] (h₁ : a ∈ r) (h₂ : r.upper = hi)
+    : a < hi :=
   h₂ ▸ r.lt_upper_of_mem h₁
 
 end Rco
@@ -282,16 +263,11 @@ This function exists for completeness and always returns false:
 The closed lower bound is contained in the range, so
 left-closed right-unbounded ranges are never empty.
 -/
-@[inline]
-def isEmpty [UpwardEnumerable α] (_ : Rci α) : Bool :=
-  false
+@[inline] def isEmpty [UpwardEnumerable α] (_ : Rci α) : Bool := false
 
-theorem mem_iff [LE α] :
-    a ∈ r ↔ r.lower ≤ a :=
-  Iff.rfl
+theorem mem_iff [LE α] : a ∈ r ↔ r.lower ≤ a := Iff.rfl
 
-theorem lower_le_of_mem [LE α] (h : a ∈ r) : r.lower ≤ a :=
-  h
+theorem lower_le_of_mem [LE α] (h : a ∈ r) : r.lower ≤ a := h
 
 end Rci
 
@@ -306,19 +282,13 @@ This function returns a meaningful value given {name}`LawfulUpwardEnumerable` an
 {name}`LawfulUpwardEnumerableLT` instances.
 -/
 @[inline]
-def isEmpty [LT α] [DecidableLT α] [UpwardEnumerable α]
-    (r : Roc α) : Bool :=
-  ¬ r.lower < r.upper
+def isEmpty [LT α] [DecidableLT α] [UpwardEnumerable α] (r : Roc α) : Bool := ¬ r.lower < r.upper
 
-theorem mem_iff [LE α] [LT α] {r : Roc α} {a : α} :
-    a ∈ r ↔ r.lower < a ∧ a ≤ r.upper :=
-  Iff.rfl
+theorem mem_iff [LE α] [LT α] {r : Roc α} {a : α} : a ∈ r ↔ r.lower < a ∧ a ≤ r.upper := Iff.rfl
 
-theorem lower_le_of_mem [LE α] [LT α] (h : a ∈ r) : r.lower < a :=
-  h.1
+theorem lower_le_of_mem [LE α] [LT α] (h : a ∈ r) : r.lower < a := h.1
 
-theorem le_upper_of_mem [LE α] [LT α] (h : a ∈ r) : a ≤ r.upper :=
-  h.2
+theorem le_upper_of_mem [LE α] [LT α] (h : a ∈ r) : a ≤ r.upper := h.2
 
 end Roc
 
@@ -336,18 +306,14 @@ This function returns a meaningful value given {name}`LawfulUpwardEnumerable` an
 def isEmpty [LT α] [DecidableLT α] [UpwardEnumerable α] (r : Roo α) : Bool :=
   ∀ a, UpwardEnumerable.succ? r.lower = some a → ¬ a < r.upper
 
-theorem mem_iff [LT α] :
-    a ∈ r ↔ r.lower < a ∧ a < r.upper :=
-  Iff.rfl
+theorem mem_iff [LT α] : a ∈ r ↔ r.lower < a ∧ a < r.upper := Iff.rfl
 
-theorem lower_le_of_mem [LT α] (h : a ∈ r) : r.lower < a :=
-  h.1
+theorem lower_le_of_mem [LT α] (h : a ∈ r) : r.lower < a := h.1
 
-theorem lt_upper_of_mem [LT α] (h : a ∈ r) : a < r.upper :=
-  h.2
+theorem lt_upper_of_mem [LT α] (h : a ∈ r) : a < r.upper := h.2
 
-theorem Internal.get_elem_helper_upper_open [LE α] [LT α] (h₁ : a ∈ r) (h₂ : r.upper = hi) :
-    a < hi :=
+theorem Internal.get_elem_helper_upper_open [LE α] [LT α] (h₁ : a ∈ r) (h₂ : r.upper = hi)
+    : a < hi :=
   h₂ ▸ r.lt_upper_of_mem h₁
 
 end Roo
@@ -362,15 +328,11 @@ Checks whether the range contains any value.
 This function returns a meaningful value given a {name}`LawfulUpwardEnumerable` instance.
 -/
 @[inline]
-def isEmpty [UpwardEnumerable α] (r : Roi α) : Bool :=
-  UpwardEnumerable.succ? r.lower |>.isNone
+def isEmpty [UpwardEnumerable α] (r : Roi α) : Bool := UpwardEnumerable.succ? r.lower |>.isNone
 
-theorem mem_iff [LT α] :
-    a ∈ r ↔ r.lower < a :=
-  Iff.rfl
+theorem mem_iff [LT α] : a ∈ r ↔ r.lower < a := Iff.rfl
 
-theorem lower_le_of_mem [LT α] (h : a ∈ r) : r.lower < a :=
-  h
+theorem lower_le_of_mem [LT α] (h : a ∈ r) : r.lower < a := h
 
 end Roi
 
@@ -384,15 +346,11 @@ This function exists for completeness and always returns false:
 The closed upper bound is contained in the range, so
 left-unbounded right-closed ranges are never empty.
 -/
-@[inline]
-def isEmpty [UpwardEnumerable α] (_ : Ric α) : Bool :=
-  false
+@[inline] def isEmpty [UpwardEnumerable α] (_ : Ric α) : Bool := false
 
-theorem mem_iff [LE α] : a ∈ r ↔ a ≤ r.upper :=
-  Iff.rfl
+theorem mem_iff [LE α] : a ∈ r ↔ a ≤ r.upper := Iff.rfl
 
-theorem le_upper_of_mem [LE α] [LT α] (h : a ∈ r) : a ≤ r.upper :=
-  h
+theorem le_upper_of_mem [LE α] [LT α] (h : a ∈ r) : a ≤ r.upper := h
 
 end Ric
 
@@ -410,14 +368,12 @@ This function returns a meaningful value given {name}`LawfulUpwardEnumerable`,
 def isEmpty [LT α] [DecidableLT α] [UpwardEnumerable α] [Least? α] (r : Rio α) : Bool :=
   ∀ a, Least?.least? (α := α) = some a → ¬ a < r.upper
 
-theorem mem_iff [LT α] : a ∈ r ↔ a < r.upper :=
-  Iff.rfl
+theorem mem_iff [LT α] : a ∈ r ↔ a < r.upper := Iff.rfl
 
-theorem lt_upper_of_mem [LT α] (h : a ∈ r) : a < r.upper :=
-  h
+theorem lt_upper_of_mem [LT α] (h : a ∈ r) : a < r.upper := h
 
-theorem Internal.get_elem_helper_upper_open [LE α] [LT α] (h₁ : a ∈ r) (h₂ : r.upper = hi) :
-    a < hi :=
+theorem Internal.get_elem_helper_upper_open [LE α] [LT α] (h₁ : a ∈ r) (h₂ : r.upper = hi)
+    : a < hi :=
   h₂ ▸ r.lt_upper_of_mem h₁
 
 end Rio
@@ -432,12 +388,9 @@ Checks whether the range contains any value.
 This function returns a meaningful value given {name}`LawfulUpwardEnumerable` and
 {name}`LawfulUpwardEnumerableLeast?` instances.
 -/
-@[inline]
-def isEmpty [Least? α] (_ : Rii α) : Bool :=
-  (Least?.least? (α := α)).isNone
+@[inline] def isEmpty [Least? α] (_ : Rii α) : Bool := (Least?.least? (α := α)).isNone
 
-theorem mem : a ∈ r :=
-  True.intro
+theorem mem : a ∈ r := True.intro
 
 end Rii
 

@@ -17,7 +17,7 @@ namespace Char
 
 @[deprecated Char.ext (since := "2025-10-26")]
 protected theorem eq_of_val_eq : {a b : Char} → a.val = b.val → a = b
-  | ⟨_,_⟩, ⟨_,_⟩, rfl => rfl
+  | ⟨_, _⟩, ⟨_, _⟩, rfl => rfl
 
 theorem le_def {a b : Char} : a ≤ b ↔ a.1 ≤ b.1 := .rfl
 theorem lt_def {a b : Char} : a < b ↔ a.1 < b.1 := .rfl
@@ -32,8 +32,8 @@ theorem lt_iff_val_lt_val {a b : Char} : a < b ↔ a.val < b.val := Iff.rfl
 protected theorem le_trans {a b c : Char} : a ≤ b → b ≤ c → a ≤ c := UInt32.le_trans
 protected theorem lt_trans {a b c : Char} : a < b → b < c → a < c := UInt32.lt_trans
 protected theorem le_total (a b : Char) : a ≤ b ∨ b ≤ a := UInt32.le_total a.1 b.1
-protected theorem le_antisymm {a b : Char} : a ≤ b → b ≤ a → a = b :=
-  fun h₁ h₂ => Char.ext (UInt32.le_antisymm h₁ h₂)
+protected theorem le_antisymm {a b : Char} : a ≤ b → b ≤ a → a = b := fun h₁ h₂ =>
+  Char.ext (UInt32.le_antisymm h₁ h₂)
 protected theorem lt_asymm {a b : Char} (h : a < b) : ¬ b < a := UInt32.lt_asymm h
 protected theorem ne_of_lt {a b : Char} (h : a < b) : a ≠ b := Char.ne_of_val_ne (UInt32.ne_of_lt h)
 
@@ -76,21 +76,18 @@ instance leTotal : Std.Total (· ≤ · : Char → Char → Prop) where
 theorem notLTTotal : Std.Total (¬ · < · : Char → Char → Prop) where
   total := fun x y => by simpa using Char.le_total y x
 
-@[simp] theorem ofNat_toNat (c : Char) : Char.ofNat c.toNat = c := by
+@[simp]
+theorem ofNat_toNat (c : Char) : Char.ofNat c.toNat = c := by
   rw [Char.ofNat, dite_eq_left]
   rfl
 
-@[simp]
-theorem toUInt8_val {c : Char} : c.val.toUInt8 = c.toUInt8 := rfl
+@[simp] theorem toUInt8_val {c : Char} : c.val.toUInt8 = c.toUInt8 := rfl
 
-@[simp]
-theorem toString_eq_singleton {c : Char} : c.toString = String.singleton c := rfl
+@[simp] theorem toString_eq_singleton {c : Char} : c.toString = String.singleton c := rfl
 
-@[simp]
-theorem toNat_val {c : Char} : c.val.toNat = c.toNat := rfl
+@[simp] theorem toNat_val {c : Char} : c.val.toNat = c.toNat := rfl
 
-theorem val_inj {c d : Char} : c.val = d.val ↔ c = d :=
-  Char.ext_iff.symm
+theorem val_inj {c d : Char} : c.val = d.val ↔ c = d := Char.ext_iff.symm
 
 theorem toNat_inj {c d : Char} : c.toNat = d.toNat ↔ c = d := by
   simp [← toNat_val, ← val_inj, ← UInt32.toNat_inj]
@@ -99,7 +96,6 @@ theorem isDigit_iff_toNat {c : Char} : c.isDigit ↔ '0'.toNat ≤ c.toNat ∧ c
   simp [isDigit, UInt32.le_iff_toNat_le]
 
 @[simp]
-theorem toNat_mk {val : UInt32} {h} : (Char.mk val h).toNat = val.toNat := by
-  simp [← toNat_val]
+theorem toNat_mk {val : UInt32} {h} : (Char.mk val h).toNat = val.toNat := by simp [← toNat_val]
 
 end Char

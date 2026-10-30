@@ -19,346 +19,328 @@ open Lean (Name)
 /-- The default module of an executable in `std` package. -/
 public def defaultExeRoot : Name := `Main
 
-def gitignoreContents :=
-s!"/{defaultLakeDir}
-"
+def gitignoreContents := s!"/{defaultLakeDir}\n"
 
-def basicFileContents :=
-s!"def hello := \"world\"
-"
+def basicFileContents := s!"def hello := \"world\"\n"
 
 def libRootFileContents (libName : String) (libRoot : Name) :=
-s!"-- This module serves as the root of the `{libName}` library.
--- Import modules here that should be built as part of the library.
-import {libRoot}.Basic
-"
+  s!"-- This module serves as the root of the `{libName}` library.\
+    \n-- Import modules here that should be built as part of the library.\
+    \nimport {libRoot}.Basic\n"
 
-def mathLibRootFileContents (libRoot : Name) :=
-s!"import {libRoot}.Basic
-"
+def mathLibRootFileContents (libRoot : Name) := s!"import {libRoot}.Basic\n"
 
-def mainFileName : FilePath :=
-  s!"{defaultExeRoot}.lean"
+def mainFileName : FilePath := s!"{defaultExeRoot}.lean"
 
 def mainFileContents (libRoot : Name) :=
-s!"import {libRoot}
-
-def main : IO Unit :=
-  IO.println s!\"Hello, \{hello}!\"
-"
+  s!"import {libRoot}\
+    \n\
+    \ndef main : IO Unit :=\
+    \n  IO.println s!\"Hello, \{hello}!\"\n"
 
 def exeFileContents :=
-s!"def main : IO Unit :=
-  IO.println s!\"Hello, world!\"
-"
+  s!"def main : IO Unit :=\
+    \n  IO.println s!\"Hello, world!\"\n"
 
 def stdLeanConfigFileContents (pkgName libRoot exeName : String) :=
-s!"import Lake
-open Lake DSL
-
-package {repr pkgName} where
-  version := v!\"0.1.0\"
-
-lean_lib {libRoot} where
-  -- add library configuration options here
-
-@[default_target]
-lean_exe {repr exeName} where
-  root := `Main
-"
+  s!"import Lake\
+    \nopen Lake DSL\
+    \n\
+    \npackage {repr pkgName} where\
+    \n  version := v!\"0.1.0\"\
+    \n\
+    \nlean_lib {libRoot} where\
+    \n  -- add library configuration options here\
+    \n\
+    \n@[default_target]\
+    \nlean_exe {repr exeName} where\
+    \n  root := `Main\n"
 
 def stdTomlConfigFileContents (pkgName libRoot exeName : String) :=
-s!"name = {repr pkgName}
-version = \"0.1.0\"
-defaultTargets = [{repr exeName}]
-
-[[lean_lib]]
-name = {repr libRoot}
-
-[[lean_exe]]
-name = {repr exeName}
-root = \"Main\"
-"
+  s!"name = {repr pkgName}\
+    \nversion = \"0.1.0\"\
+    \ndefaultTargets = [{repr exeName}]\
+    \n\
+    \n[[lean_lib]]\
+    \nname = {repr libRoot}\
+    \n\
+    \n[[lean_exe]]\
+    \nname = {repr exeName}\
+    \nroot = \"Main\"\n"
 
 def exeLeanConfigFileContents (pkgName exeName : String) :=
-s!"import Lake
-open Lake DSL
-
-package {repr pkgName} where
-  version := v!\"0.1.0\"
-
-@[default_target]
-lean_exe {repr exeName} where
-  root := `Main
-"
+  s!"import Lake\
+    \nopen Lake DSL\
+    \n\
+    \npackage {repr pkgName} where\
+    \n  version := v!\"0.1.0\"\
+    \n\
+    \n@[default_target]\
+    \nlean_exe {repr exeName} where\
+    \n  root := `Main\n"
 
 def exeTomlConfigFileContents (pkgName exeName : String) :=
-s!"name = {repr pkgName}
-version = \"0.1.0\"
-defaultTargets = [{repr exeName}]
-
-[[lean_exe]]
-name = {repr exeName}
-root = \"Main\"
-"
+  s!"name = {repr pkgName}\
+    \nversion = \"0.1.0\"\
+    \ndefaultTargets = [{repr exeName}]\
+    \n\
+    \n[[lean_exe]]\
+    \nname = {repr exeName}\
+    \nroot = \"Main\"\n"
 
 def libLeanConfigFileContents (pkgName libRoot : String) :=
-s!"import Lake
-open Lake DSL
-
-package {repr pkgName} where
-  version := v!\"0.1.0\"
-
-@[default_target]
-lean_lib {libRoot} where
-  -- add library configuration options here
-"
+  s!"import Lake\
+    \nopen Lake DSL\
+    \n\
+    \npackage {repr pkgName} where\
+    \n  version := v!\"0.1.0\"\
+    \n\
+    \n@[default_target]\
+    \nlean_lib {libRoot} where\
+    \n  -- add library configuration options here\n"
 
 def libTomlConfigFileContents (pkgName libRoot : String) :=
-s!"name = {repr pkgName}
-version = \"0.1.0\"
-defaultTargets = [{repr libRoot}]
-
-[[lean_lib]]
-name = {repr libRoot}
-"
+  s!"name = {repr pkgName}\
+    \nversion = \"0.1.0\"\
+    \ndefaultTargets = [{repr libRoot}]\
+    \n\
+    \n[[lean_lib]]\
+    \nname = {repr libRoot}\n"
 
 def mathLaxLeanConfigFileContents (pkgName libRoot rev : String) :=
-s!"import Lake
-open Lake DSL
-
-package {repr pkgName} where
-  version := v!\"0.1.0\"
-  keywords := #[\"math\"]
-  leanOptions := #[
-    ⟨`pp.unicode.fun, true⟩ -- pretty-prints `fun a ↦ b`
-  ]
-
-require \"leanprover-community\" / \"mathlib\" @ git {repr rev}
-
-@[default_target]
-lean_lib {libRoot} where
-  -- add any library configuration options here
-"
+  s!"import Lake\
+    \nopen Lake DSL\
+    \n\
+    \npackage {repr pkgName} where\
+    \n  version := v!\"0.1.0\"\
+    \n  keywords := #[\"math\"]\
+    \n  leanOptions := #[\
+    \n    ⟨`pp.unicode.fun, true⟩ -- pretty-prints `fun a ↦ b`\
+    \n  ]\
+    \n\
+    \nrequire \"leanprover-community\" / \"mathlib\" @ git {repr rev}\
+    \n\
+    \n@[default_target]\
+    \nlean_lib {libRoot} where\
+    \n  -- add any library configuration options here\n"
 
 def mathLaxTomlConfigFileContents (pkgName libRoot rev : String) :=
-s!"name = {repr pkgName}
-version = \"0.1.0\"
-keywords = [\"math\"]
-defaultTargets = [{repr libRoot}]
-
-[leanOptions]
-pp.unicode.fun = true # pretty-prints `fun a ↦ b`
-
-[[require]]
-name = \"mathlib\"
-scope = \"leanprover-community\"
-rev = {repr rev}
-
-[[lean_lib]]
-name = {repr libRoot}
-"
+  s!"name = {repr pkgName}\
+    \nversion = \"0.1.0\"\
+    \nkeywords = [\"math\"]\
+    \ndefaultTargets = [{repr libRoot}]\
+    \n\
+    \n[leanOptions]\
+    \npp.unicode.fun = true # pretty-prints `fun a ↦ b`\
+    \n\
+    \n[[require]]\
+    \nname = \"mathlib\"\
+    \nscope = \"leanprover-community\"\
+    \nrev = {repr rev}\
+    \n\
+    \n[[lean_lib]]\
+    \nname = {repr libRoot}\n"
 
 def mathLeanConfigFileContents (pkgName libRoot rev : String) :=
-s!"import Lake
-open Lake DSL
-
-package {repr pkgName} where
-  version := v!\"0.1.0\"
-  keywords := #[\"math\"]
-  leanOptions := #[
-    ⟨`pp.unicode.fun, true⟩, -- pretty-prints `fun a ↦ b`
-    ⟨`relaxedAutoImplicit, false⟩,
-    ⟨`maxSynthPendingDepth, .ofNat 3⟩,
-    ⟨`weak.linter.mathlibStandardSet, true⟩,
-  ]
-
-require \"leanprover-community\" / \"mathlib\" @ git {repr rev}
-
-@[default_target]
-lean_lib {libRoot} where
-  -- add any library configuration options here
-"
+  s!"import Lake\
+    \nopen Lake DSL\
+    \n\
+    \npackage {repr pkgName} where\
+    \n  version := v!\"0.1.0\"\
+    \n  keywords := #[\"math\"]\
+    \n  leanOptions := #[\
+    \n    ⟨`pp.unicode.fun, true⟩, -- pretty-prints `fun a ↦ b`\
+    \n    ⟨`relaxedAutoImplicit, false⟩,\
+    \n    ⟨`maxSynthPendingDepth, .ofNat 3⟩,\
+    \n    ⟨`weak.linter.mathlibStandardSet, true⟩,\
+    \n  ]\
+    \n\
+    \nrequire \"leanprover-community\" / \"mathlib\" @ git {repr rev}\
+    \n\
+    \n@[default_target]\
+    \nlean_lib {libRoot} where\
+    \n  -- add any library configuration options here\n"
 
 def mathTomlConfigFileContents (pkgName libRoot rev : String) :=
-s!"name = {repr pkgName}
-version = \"0.1.0\"
-keywords = [\"math\"]
-defaultTargets = [{repr libRoot}]
-
-[leanOptions]
-pp.unicode.fun = true # pretty-prints `fun a ↦ b`
-relaxedAutoImplicit = false
-weak.linter.mathlibStandardSet = true
-maxSynthPendingDepth = 3
-
-[[require]]
-name = \"mathlib\"
-scope = \"leanprover-community\"
-rev = {repr rev}
-
-[[lean_lib]]
-name = {repr libRoot}
-"
+  s!"name = {repr pkgName}\
+    \nversion = \"0.1.0\"\
+    \nkeywords = [\"math\"]\
+    \ndefaultTargets = [{repr libRoot}]\
+    \n\
+    \n[leanOptions]\
+    \npp.unicode.fun = true # pretty-prints `fun a ↦ b`\
+    \nrelaxedAutoImplicit = false\
+    \nweak.linter.mathlibStandardSet = true\
+    \nmaxSynthPendingDepth = 3\
+    \n\
+    \n[[require]]\
+    \nname = \"mathlib\"\
+    \nscope = \"leanprover-community\"\
+    \nrev = {repr rev}\
+    \n\
+    \n[[lean_lib]]\
+    \nname = {repr libRoot}\n"
 
 def readmeFileContents (pkgName : String) := s!"# {pkgName}"
 
-def mathReadmeFileContents (pkgName : String) := s!"# {pkgName}
-
-## GitHub configuration
-
-To set up your new GitHub repository, follow these steps:
-
-* Under your repository name, click **Settings**.
-* In the **Actions** section of the sidebar, click \"General\".
-* Check the box **Allow GitHub Actions to create and approve pull requests**.
-* Click the **Pages** section of the settings sidebar.
-* In the **Source** dropdown menu, select \"GitHub Actions\".
-
-After following the steps above, you can remove this section from the README file.
-"
+def mathReadmeFileContents (pkgName : String) :=
+  s!"# {pkgName}\
+    \n\
+    \n## GitHub configuration\
+    \n\
+    \nTo set up your new GitHub repository, follow these steps:\
+    \n\
+    \n* Under your repository name, click **Settings**.\
+    \n* In the **Actions** section of the sidebar, click \"General\".\
+    \n* Check the box **Allow GitHub Actions to create and approve pull requests**.\
+    \n* Click the **Pages** section of the settings sidebar.\
+    \n* In the **Source** dropdown menu, select \"GitHub Actions\".\
+    \n\
+    \nAfter following the steps above, you can remove this section from the README file.\n"
 
 def leanActionWorkflowContents :=
-"name: Lean Action CI
-
-on:
-  push:
-  pull_request:
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v7
-      - uses: leanprover/lean-action@v1
-"
+  "name: Lean Action CI\
+    \n\
+    \non:\
+    \n  push:\
+    \n  pull_request:\
+    \n  workflow_dispatch:\
+    \n\
+    \njobs:\
+    \n  build:\
+    \n    runs-on: ubuntu-latest\
+    \n\
+    \n    steps:\
+    \n      - uses: actions/checkout@v7\
+    \n      - uses: leanprover/lean-action@v1\n"
 
 def mathBuildActionWorkflowContents :=
-"name: Lean Action CI
-
-on:
-  push:
-  pull_request:
-  workflow_dispatch:
-
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
-permissions:
-  contents: read # Read access to repository contents
-  pages: write # Write access to GitHub Pages
-  id-token: write # Write access to ID tokens
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v7
-      - uses: leanprover/lean-action@v1
-      - uses: leanprover-community/docgen-action@v1
-"
+  "name: Lean Action CI\
+    \n\
+    \non:\
+    \n  push:\
+    \n  pull_request:\
+    \n  workflow_dispatch:\
+    \n\
+    \n# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages\
+    \npermissions:\
+    \n  contents: read # Read access to repository contents\
+    \n  pages: write # Write access to GitHub Pages\
+    \n  id-token: write # Write access to ID tokens\
+    \n\
+    \njobs:\
+    \n  build:\
+    \n    runs-on: ubuntu-latest\
+    \n\
+    \n    steps:\
+    \n      - uses: actions/checkout@v7\
+    \n      - uses: leanprover/lean-action@v1\
+    \n      - uses: leanprover-community/docgen-action@v1\n"
 
 def mathUpdateActionWorkflowContents :=
-"name: Update Dependencies
-
-on:
-  # schedule:             # Sets a schedule to trigger the workflow
-  #   - cron: \"0 8 * * *\" # Every day at 08:00 AM UTC (see https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule)
-  workflow_dispatch:    # Allows the workflow to be triggered manually via the GitHub interface
-
-jobs:
-  check-for-updates: # Determines which updates to apply.
-    runs-on: ubuntu-latest
-    outputs:
-      is-update-available: ${{ steps.check-for-updates.outputs.is-update-available }}
-      new-tags: ${{ steps.check-for-updates.outputs.new-tags }}
-    steps:
-      - name: Run the action
-        id: check-for-updates
-        uses: leanprover-community/mathlib-update-action@v1
-        # START CONFIGURATION BLOCK 1
-        # END CONFIGURATION BLOCK 1
-  do-update: # Runs the upgrade, tests it, and makes a PR/issue/commit.
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write      # Grants permission to push changes to the repository
-      issues: write        # Grants permission to create or update issues
-      pull-requests: write # Grants permission to create or update pull requests
-    needs: check-for-updates
-    if: ${{ needs.check-for-updates.outputs.is-update-available == 'true' }}
-    strategy: # Runs for each update discovered by the `check-for-updates` job.
-      max-parallel: 1 # Ensures that the PRs/issues are created in order.
-      matrix:
-        tag: ${{ fromJSON(needs.check-for-updates.outputs.new-tags) }}
-    steps:
-      - name: Run the action
-        id: update-the-repo
-        uses: leanprover-community/mathlib-update-action/do-update@v1
-        with:
-          tag: ${{ matrix.tag }}
-          # START CONFIGURATION BLOCK 2
-          on_update_succeeds: pr # Create a pull request if the update succeeds
-          on_update_fails: issue # Create an issue if the update fails
-          # END CONFIGURATION BLOCK 2
-"
+  "name: Update Dependencies\
+    \n\
+    \non:\
+    \n  # schedule:             # Sets a schedule to trigger the workflow\
+    \n  #   - cron: \"0 8 * * *\" # Every day at 08:00 AM UTC (see \
+    https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule)\
+    \n  workflow_dispatch:    # Allows the workflow to be triggered manually via the GitHub \
+    interface\
+    \n\
+    \njobs:\
+    \n  check-for-updates: # Determines which updates to apply.\
+    \n    runs-on: ubuntu-latest\
+    \n    outputs:\
+    \n      is-update-available: ${{ steps.check-for-updates.outputs.is-update-available }}\
+    \n      new-tags: ${{ steps.check-for-updates.outputs.new-tags }}\
+    \n    steps:\
+    \n      - name: Run the action\
+    \n        id: check-for-updates\
+    \n        uses: leanprover-community/mathlib-update-action@v1\
+    \n        # START CONFIGURATION BLOCK 1\
+    \n        # END CONFIGURATION BLOCK 1\
+    \n  do-update: # Runs the upgrade, tests it, and makes a PR/issue/commit.\
+    \n    runs-on: ubuntu-latest\
+    \n    permissions:\
+    \n      contents: write      # Grants permission to push changes to the repository\
+    \n      issues: write        # Grants permission to create or update issues\
+    \n      pull-requests: write # Grants permission to create or update pull requests\
+    \n    needs: check-for-updates\
+    \n    if: ${{ needs.check-for-updates.outputs.is-update-available == 'true' }}\
+    \n    strategy: # Runs for each update discovered by the `check-for-updates` job.\
+    \n      max-parallel: 1 # Ensures that the PRs/issues are created in order.\
+    \n      matrix:\
+    \n        tag: ${{ fromJSON(needs.check-for-updates.outputs.new-tags) }}\
+    \n    steps:\
+    \n      - name: Run the action\
+    \n        id: update-the-repo\
+    \n        uses: leanprover-community/mathlib-update-action/do-update@v1\
+    \n        with:\
+    \n          tag: ${{ matrix.tag }}\
+    \n          # START CONFIGURATION BLOCK 2\
+    \n          on_update_succeeds: pr # Create a pull request if the update succeeds\
+    \n          on_update_fails: issue # Create an issue if the update fails\
+    \n          # END CONFIGURATION BLOCK 2\n"
 
 def createReleaseActionWorkflowContents :=
-"name: Create Release
-
-on:
-  push:
-    branches:
-      - 'main'
-      - 'master'
-    paths:
-      - 'lean-toolchain'
-
-jobs:
-  lean-release-tag:
-    name: Add Lean release tag
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-    - name: lean-release-tag action
-      uses: leanprover-community/lean-release-tag@v1
-      with:
-        do-release: true
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-"
+  "name: Create Release\
+    \n\
+    \non:\
+    \n  push:\
+    \n    branches:\
+    \n      - 'main'\
+    \n      - 'master'\
+    \n    paths:\
+    \n      - 'lean-toolchain'\
+    \n\
+    \njobs:\
+    \n  lean-release-tag:\
+    \n    name: Add Lean release tag\
+    \n    runs-on: ubuntu-latest\
+    \n    permissions:\
+    \n      contents: write\
+    \n    steps:\
+    \n    - name: lean-release-tag action\
+    \n      uses: leanprover-community/lean-release-tag@v1\
+    \n      with:\
+    \n        do-release: true\
+    \n        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n"
 
 /-- Lake package template identifier. -/
 public inductive InitTemplate
-| std | exe | lib | mathLax | math
+  | std
+  | exe
+  | lib
+  | mathLax
+  | math
 deriving Repr, DecidableEq
 
 public instance : Inhabited InitTemplate := ⟨.std⟩
 
 public def InitTemplate.ofString? : String → Option InitTemplate
-| "std" => some .std
-| "exe" => some .exe
-| "lib" => some .lib
-| "math-lax" => some .mathLax
-| "math" => some .math
-| _ => none
+  | "std" => some .std
+  | "exe" => some .exe
+  | "lib" => some .lib
+  | "math-lax" => some .mathLax
+  | "math" => some .math
+  | _ => none
 
 def escapeIdent (id : String) : String :=
   Lean.idBeginEscape.toString ++ id ++ Lean.idEndEscape.toString
 
 def escapeName! : Name → String
-| .anonymous        => unreachable!
-| .str .anonymous s => escapeIdent s
-| .str n s          => escapeName! n ++ "." ++ escapeIdent s
-| _                 => unreachable!
+  | .anonymous => unreachable!
+  | .str .anonymous s => escapeIdent s
+  | .str n s => escapeName! n ++ "." ++ escapeIdent s
+  | _ => unreachable!
 
 def dotlessName (name : Name) :=
   name.toString false |>.map fun chr => if chr == '.' then '-' else chr
 
 def InitTemplate.configFileContents
-  (tmp : InitTemplate) (lang : ConfigLang) (pkgName : Name) (root : Name)
-  (leanVer? : Option LeanVer)
-: String :=
+    (tmp : InitTemplate) (lang : ConfigLang) (pkgName : Name) (root : Name)
+    (leanVer? : Option LeanVer)
+    : String :=
   let pkgNameStr := dotlessName pkgName
   let mathRev := leanVer?.elim "master" (s!"v{·.toString}")
   match tmp, lang with
@@ -406,31 +388,33 @@ def createLeanActionWorkflow (dir : FilePath) (tmp : InitTemplate) : LogIO PUnit
 
 /-- Initialize a new Lake package in the given directory with the given name. -/
 def initPkg
-  (dir : FilePath) (name : Name) (tmp : InitTemplate) (lang : ConfigLang)
-  (env : Lake.Env) (offline := false)
-: LoggerIO PUnit := do
-  let configFile :=  dir / defaultConfigFile.addExtension lang.fileExtension
+    (dir : FilePath) (name : Name) (tmp : InitTemplate) (lang : ConfigLang) (env : Lake.Env)
+    (offline := false)
+    : LoggerIO PUnit := do
+  let configFile := dir / defaultConfigFile.addExtension lang.fileExtension
   if (← configFile.pathExists) then
     error "package already initialized"
 
   createLeanActionWorkflow dir tmp
   -- determine the name to use for the root
   -- use upper camel case unless the specific module name already exists
-  let (root, rootFile?) ← id do
-    let root := name
-    let rootFile := Lean.modToFilePath dir root "lean"
-    if tmp = .exe || (← rootFile.pathExists) then
-      return (root, none)
-    else
-      let root := toUpperCamelCase name
+  let (root, rootFile?) ←
+    id do
+      let root := name
       let rootFile := Lean.modToFilePath dir root "lean"
-      if (← rootFile.pathExists) then
+      if tmp = .exe || (← rootFile.pathExists) then
         return (root, none)
       else
-        return (root, rootFile)
+        let root := toUpperCamelCase name
+        let rootFile := Lean.modToFilePath dir root "lean"
+        if (← rootFile.pathExists) then
+          return (root, none)
+        else
+          return (root, rootFile)
 
   -- Compute the Lean version from the environment toolchain
-  let leanVer? := match ToolchainVer.ofString env.toolchain with
+  let leanVer? :=
+    match ToolchainVer.ofString env.toolchain with
     | .release ver => some ver
     | _ => none
 
@@ -444,10 +428,11 @@ def initPkg
     unless (← basicFile.pathExists) do
       IO.FS.createDirAll libDir
       IO.FS.writeFile basicFile basicFileContents
-    let rootContents := if tmp = .math then
-      mathLibRootFileContents root
-    else
-      libRootFileContents root.toString root
+    let rootContents :=
+      if tmp = .math then
+        mathLibRootFileContents root
+      else
+        libRootFileContents root.toString root
     IO.FS.writeFile rootFile rootContents
   if tmp matches .std | .exe then
     let mainFile := dir / mainFileName
@@ -460,7 +445,8 @@ def initPkg
   -- Initialize a README.md file if none exists.
   let readmeFile := dir / "README.md"
   unless (← readmeFile.pathExists) do
-    let contents := if tmp = .math then
+    let contents :=
+      if tmp = .math then
         mathReadmeFileContents <| dotlessName name
       else
         readmeFileContents <| dotlessName name
@@ -488,13 +474,13 @@ def initPkg
   -/
   let toolchainFile := dir / toolchainFileName
   if env.toolchain.isEmpty then
-      -- Empty githash implies dev build
-      unless env.lean.githash.isEmpty do
-        unless (← toolchainFile.pathExists) do
-          logWarning "could not create a `lean-toolchain` file for the new package; \
-            no known toolchain name for the current Elan/Lean/Lake"
-    else
-      IO.FS.writeFile toolchainFile <| env.toolchain ++ "\n"
+    -- Empty githash implies dev build
+    unless env.lean.githash.isEmpty do
+      unless (← toolchainFile.pathExists) do
+        logWarning "could not create a `lean-toolchain` file for the new package; \
+          no known toolchain name for the current Elan/Lean/Lake"
+  else
+    IO.FS.writeFile toolchainFile <| env.toolchain ++ "\n"
   if tmp matches .mathLax | .math then
     if leanVer?.isNone then
       logWarning "creating a new math package with a non-release Lean toolchain; \
@@ -510,26 +496,27 @@ def validatePkgName (pkgName : String) : LogIO PUnit := do
     error "reserved package name"
 
 public def init
-  (name : String) (tmp : InitTemplate) (lang : ConfigLang)
-  (env : Lake.Env) (cwd : FilePath := ".") (offline := false)
-: LoggerIO PUnit := do
-  let name ← id do
-    if name == "." then
-      let path ← IO.FS.realPath cwd
-      match path.fileName with
-      | some dirName => return dirName
-      | none => error s!"illegal package name: could not derive one from '{path}'"
-    else
-      return name
+    (name : String) (tmp : InitTemplate) (lang : ConfigLang) (env : Lake.Env)
+    (cwd : FilePath := ".") (offline := false)
+    : LoggerIO PUnit := do
+  let name ←
+    id do
+      if name == "." then
+        let path ← IO.FS.realPath cwd
+        match path.fileName with
+        | some dirName => return dirName
+        | none => error s!"illegal package name: could not derive one from '{path}'"
+      else
+        return name
   let name := name.trimAscii.copy
   validatePkgName name
   IO.FS.createDirAll cwd
   initPkg cwd (stringToLegalOrSimpleName name) tmp lang env offline
 
 public def new
-  (name : String) (tmp : InitTemplate) (lang : ConfigLang)
-  (env : Lake.Env) (cwd : FilePath := ".") (offline := false)
-: LoggerIO PUnit := do
+    (name : String) (tmp : InitTemplate) (lang : ConfigLang) (env : Lake.Env)
+    (cwd : FilePath := ".") (offline := false)
+    : LoggerIO PUnit := do
   let name := name.trimAscii.copy
   validatePkgName name
   let name := stringToLegalOrSimpleName name

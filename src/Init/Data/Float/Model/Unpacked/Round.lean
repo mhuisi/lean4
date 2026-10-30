@@ -28,9 +28,7 @@ is sufficient information for rounding `y` according to the various IEEE roundin
 rules.
 -/
 inductive Accuracy where
-  /--
-  The approximation is exactly equal to the infinitely precise value.
-  -/
+  /-- The approximation is exactly equal to the infinitely precise value. -/
   | exact
   /--
   The approximation is strictly smaller than the infinitely precise value,
@@ -64,7 +62,7 @@ structure ExtendedMantissa where
   mantissa : Nat
   /-- The next bit after the least significant bit of the mantissa. -/
   roundBit : Bool
-  /-- The bitwise `or` of all bits that are even less significant than the round bit.  -/
+  /-- The bitwise `or` of all bits that are even less significant than the round bit. -/
   stickyBit : Bool
 
 namespace ExtendedMantissa
@@ -76,11 +74,8 @@ def accuracy : ExtendedMantissa → Accuracy
   | ⟨_, true, false⟩ => .inexact .eq
   | ⟨_, true, true⟩ => .inexact .gt
 
-/--
-Extracts the mantissa, rounded according to the data in the residual bits.
--/
-def roundedMantissa (em : ExtendedMantissa) : Nat :=
-  em.accuracy.roundToNearestEven em.mantissa
+/-- Extracts the mantissa, rounded according to the data in the residual bits. -/
+def roundedMantissa (em : ExtendedMantissa) : Nat := em.accuracy.roundToNearestEven em.mantissa
 
 /--
 Transforms a mantissa and an accuracy into an extended mantissa with the
@@ -116,8 +111,8 @@ not the other way around. The result will only conform to the given specificatio
 the exponent was not too large to begin with. If this may be the case, you should call
 `round` instead.
 -/
-def shiftToExponent (mantissa : Nat) (exponent : Int)
-    (accuracy : Accuracy) (targetExponent : Int) : ExtendedMantissa × Int :=
+def shiftToExponent (mantissa : Nat) (exponent : Int) (accuracy : Accuracy) (targetExponent : Int)
+    : ExtendedMantissa × Int :=
   let shiftAmount := (targetExponent - exponent).toNat -- negative to 0
   let initialExtendedMantissa := ExtendedMantissa.ofMantissaAndAccuracy mantissa accuracy
   (initialExtendedMantissa >>> shiftAmount, exponent + shiftAmount)
@@ -132,8 +127,8 @@ not the other way around. The result will only conform to the given specificatio
 the exponent was not too large to begin with. If this may be the case, you should call
 `round` instead.
 -/
-def shiftToTargetExponent (spec : Format) (mantissa : Nat) (exponent : Int)
-    (accuracy : Accuracy) : ExtendedMantissa × Int :=
+def shiftToTargetExponent (spec : Format) (mantissa : Nat) (exponent : Int) (accuracy : Accuracy)
+    : ExtendedMantissa × Int :=
   let targetExponent := spec.targetExponent (totalExponent mantissa exponent)
   shiftToExponent mantissa exponent accuracy targetExponent
 
@@ -146,7 +141,9 @@ not the other way around. The result will only conform to the given specificatio
 the exponent was not too large to begin with. If this may be the case, you should call
 `round` instead.
 -/
-def roundWithAccuracy (spec : Format) (sign : Sign) (mantissa : Nat) (exponent : Int) (accuracy : Accuracy) : UnpackedFloat :=
+def roundWithAccuracy
+    (spec : Format) (sign : Sign) (mantissa : Nat) (exponent : Int) (accuracy : Accuracy)
+    : UnpackedFloat :=
   -- First shift: this performs the bulk of the shifting
   let (em₁, e₁) := shiftToTargetExponent spec mantissa exponent accuracy
   -- Round mantissa

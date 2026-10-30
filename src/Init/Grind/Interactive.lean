@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Grind.Attr
 public section
@@ -11,32 +12,32 @@ namespace Lean.Parser.Tactic
 
 syntax anchor := "#" noWs hexnum
 
-syntax grindLemma    := ppGroup((Attr.grindMod ppSpace)? term)
+syntax grindLemma := ppGroup((Attr.grindMod ppSpace)? term)
 /--
 The `!` modifier instructs `grind` to consider only minimal indexable subexpressions
 when selecting patterns.
 -/
 syntax grindLemmaMin := ppGroup("!" (Attr.grindMod ppSpace)? term)
 
-syntax grindErase    := "-" ident
+syntax grindErase := "-" ident
 /--
 The `!` modifier instructs `grind` to consider only minimal indexable subexpressions
 when selecting patterns.
 -/
-syntax grindParam    := grindErase <|> grindLemmaMin <|> atomic(anchor) <|> grindLemma
+syntax grindParam := grindErase <|> grindLemmaMin <|> atomic(anchor) <|> grindLemma
 
 namespace Grind
 declare_syntax_cat grind_filter (behavior := both)
 
 syntax:max ident : grind_filter
-syntax:max &"gen" " < "  num  : grind_filter
-syntax:max &"gen" " = "  num  : grind_filter
-syntax:max &"gen" " != " num  : grind_filter
-syntax:max &"gen" " ≤ "  num  : grind_filter
-syntax:max &"gen" " <= " num  : grind_filter
-syntax:max &"gen" " > "  num  : grind_filter
-syntax:max &"gen" " ≥ "  num  : grind_filter
-syntax:max &"gen" " >= " num  : grind_filter
+syntax:max &"gen" " < " num : grind_filter
+syntax:max &"gen" " = " num : grind_filter
+syntax:max &"gen" " != " num : grind_filter
+syntax:max &"gen" " ≤ " num : grind_filter
+syntax:max &"gen" " <= " num : grind_filter
+syntax:max &"gen" " > " num : grind_filter
+syntax:max &"gen" " ≥ " num : grind_filter
+syntax:max &"gen" " >= " num : grind_filter
 syntax:max "(" grind_filter ")" : grind_filter
 syntax:35 grind_filter:35 " && " grind_filter:36 : grind_filter
 syntax:35 grind_filter:35 " || " grind_filter:36 : grind_filter
@@ -44,8 +45,10 @@ syntax:max "!" grind_filter:40 : grind_filter
 
 syntax grindFilter := (colGt grind_filter)?
 
-/-- `grind` is the syntax category for a "grind interactive tactic".
-A `grind` tactic is a program which receives a `grind` goal. -/
+/--
+`grind` is the syntax category for a "grind interactive tactic".
+A `grind` tactic is a program which receives a `grind` goal.
+-/
 declare_syntax_cat grind (behavior := both)
 
 -- The `colGt` before `"|"` prevents the step from consuming a `|` that belongs to an enclosing
@@ -56,8 +59,10 @@ syntax grindSeq1Indented := sepBy1IndentSemicolon(grindStep)
 syntax grindSeqBracketed := "{" withoutPosition(sepByIndentSemicolon(grindStep)) "}"
 syntax grindSeq := grindSeqBracketed <|> grindSeq1Indented
 
-/-- `(grindSeq)` runs the `grindSeq` in sequence on the current list of targets.
-This is pure grouping with no added effects. -/
+/--
+`(grindSeq)` runs the `grindSeq` in sequence on the current list of targets.
+This is pure grouping with no added effects.
+-/
 syntax (name := paren) "(" withoutPosition(grindSeq) ")" : grind
 
 /-- `skip` does nothing. -/
@@ -83,11 +88,14 @@ Instantiates theorems using E-matching.
 The `approx` modifier is just a marker for users to easily identify automatically generated `instantiate` tactics
 that may have redundant arguments.
 -/
-syntax (name := instantiate) "instantiate" (&" only")? (&" approx")? (" [" withoutPosition(thm,*,?) "]")? : grind
+syntax (name := instantiate)
+  "instantiate" (&" only")? (&" approx")? (" [" withoutPosition(thm,*,?) "]")?
+  : grind
 
 /-- Shorthand for `instantiate only` -/
 syntax (name := use) "use" " [" withoutPosition(thm,*,?) "]" : grind
-macro_rules | `(grind| use%$u [$ts:thm,*]) => `(grind| instantiate%$u only [$ts,*])
+macro_rules
+  | `(grind| use%$u [$ts:thm,*]) => `(grind| instantiate%$u only [$ts,*])
 
 -- **Note**: Should we rename the following tactics to `trace_`?
 /-- Shows asserted facts. -/
@@ -104,9 +112,7 @@ syntax (name := showCases) "show_cases" ppSpace grindFilter : grind
 syntax (name := «showState») "show_state" ppSpace grindFilter : grind
 /-- Show active local theorems and their anchors for heuristic instantiation. -/
 syntax (name := showLocalThms) "show_local_thms" : grind
-/--
-`show_term tac` runs `tac`, then displays the generated proof in the InfoView.
--/
+/-- `show_term tac` runs `tac`, then displays the generated proof in the InfoView. -/
 syntax (name := showTerm) "show_term " grindSeq : grind
 
 /-- Shows the pending goals. -/
@@ -147,12 +153,16 @@ syntax (name := casesNext) "cases_next" : grind
 syntax (name := done) "done" : grind
 
 /-- `finish` tries to close the current goal using `grind`'s default strategy -/
-syntax (name := finish) "finish" (ppSpace configItem)*
-    (ppSpace &"only")? (" [" withoutPosition(grindParam,*) "]")? : grind
+syntax (name := finish)
+  "finish" (ppSpace configItem)* (ppSpace &"only")? (" [" withoutPosition(grindParam,*) "]")?
+  : grind
 
-/-- `finish?` tries to close the current goal using `grind`'s default strategy and suggests a tactic script. -/
-syntax (name := finishTrace) "finish?" (ppSpace configItem)*
-    (ppSpace &"only")? (" [" withoutPosition(grindParam,*) "]")? : grind
+/--
+`finish?` tries to close the current goal using `grind`'s default strategy and suggests a tactic script.
+-/
+syntax (name := finishTrace)
+  "finish?" (ppSpace configItem)* (ppSpace &"only")? (" [" withoutPosition(grindParam,*) "]")?
+  : grind
 
 /--
 The `have` tactic is for adding opaque definitions and hypotheses to the local context of the main goal.
@@ -214,18 +224,18 @@ syntax (name := anyGoals) "any_goals " grindSeq : grind
 `with_annotate_state stx t` annotates the lexical range of `stx : Syntax` with
 the initial and final state of running tactic `t`.
 -/
-scoped syntax (name := withAnnotateState)
-  "with_annotate_state " rawStx ppSpace grind : grind
+scoped syntax (name := withAnnotateState) "with_annotate_state " rawStx ppSpace grind : grind
 
 /--
 `tac <;> tac'` runs `tac` on the main goal and `tac'` on each produced goal,
 concatenating all goals produced by `tac'`.
 -/
-macro:1 x:grind tk:" <;> " y:grind:2 : grind => `(grind|
-  focus
-    $x:grind
-    with_annotate_state $tk skip
-    all_goals $y:grind)
+macro:1 x:grind tk:" <;> " y:grind:2 : grind =>
+  `(grind|
+    focus
+      $x:grind
+      with_annotate_state $tk skip
+      all_goals $y:grind)
 
 /-- `first (tac) ...` runs each `tac` until one succeeds, or else fails. -/
 syntax (name := first) "first " withPosition((ppDedent(ppLine) colGe "(" grindSeq ")")+) : grind
@@ -266,64 +276,79 @@ syntax (name := exposeNames) "expose_names" : grind
 
 /--
 `set_option opt val in tacs` (the tactic) acts like `set_option opt val` at the command level,
-but it sets the option only within the tactics `tacs`. -/
-syntax (name := setOption) "set_option " (ident (noWs "." noWs ident)?) ppSpace optionValue " in " grindSeq : grind
+but it sets the option only within the tactics `tacs`.
+-/
+syntax (name := setOption)
+  "set_option " (ident (noWs "." noWs ident)?) ppSpace optionValue " in " grindSeq
+  : grind
 
 /--
 `set_config configItem+ in tacs` executes `tacs` with the updated configuration options `configItem+`
 -/
 syntax (name := setConfig) "set_config " configItem+ " in " grindSeq : grind
 
-/--
-Proves `<term>` using the current `grind` state and default search strategy.
--/
+/-- Proves `<term>` using the current `grind` state and default search strategy. -/
 syntax (name := haveSilent) "have" (ppSpace ident)? ppSpace ": " term : grind
 
-/--
-Adds new case-splits using model-based theory combination.
--/
+/-- Adds new case-splits using model-based theory combination. -/
 syntax (name := mbtc) "mbtc" : grind
 
-/-- `intro x₁ ... xₙ` introduces binders and internalizes them into the E-graph.
+/--
+`intro x₁ ... xₙ` introduces binders and internalizes them into the E-graph.
 Only available in `sym =>` mode.
 `intro` with no arguments introduces one binder with an inaccessible name.
-Use `intro (internalize := false)` or `intro~` to skip internalization. -/
-syntax (name := symIntro) "intro" (ppSpace "(" &"internalize" " := " (&"true" <|> &"false") ")")? (ppSpace colGt binderIdent)* : grind
+Use `intro (internalize := false)` or `intro~` to skip internalization.
+-/
+syntax (name := symIntro)
+  "intro" (ppSpace "(" &"internalize" " := " (&"true" <|> &"false") ")")?
+  (ppSpace colGt binderIdent)*
+  : grind
 
 /-- `intro~ x₁ ... xₙ` is shorthand for `intro (internalize := false)`. -/
 syntax (name := symIntroLight) "intro" noWs "~" (ppSpace colGt binderIdent)* : grind
 
 macro_rules
-| `(grind| intro~ $ids*) => `(grind| intro (internalize := false) $ids*)
+  | `(grind| intro~ $ids*) => `(grind| intro (internalize := false) $ids*)
 
-/-- `intros` introduces all remaining binders and internalizes them.
+/--
+`intros` introduces all remaining binders and internalizes them.
 Only available in `sym =>` mode.
-Use `intros (internalize := false)` or `intros~` to skip internalization. -/
-syntax (name := symIntros) "intros" (ppSpace "(" &"internalize" " := " (&"true" <|> &"false") ")")? : grind
+Use `intros (internalize := false)` or `intros~` to skip internalization.
+-/
+syntax (name := symIntros) "intros" (ppSpace "(" &"internalize" " := " (&"true" <|> &"false") ")")?
+  : grind
 
 /-- `intros~` is shorthand for `intros (internalize := false)`. -/
 syntax (name := symIntrosLight) "intros" noWs "~" : grind
 
 macro_rules
-| `(grind| intros~) => `(grind| intros (internalize := false))
+  | `(grind| intros~) => `(grind| intros (internalize := false))
 
-/-- `apply t` applies theorem `t` as a backward rule.
+/--
+`apply t` applies theorem `t` as a backward rule.
 Only available in `sym =>` mode.
-When used with `repeat`, the backward rule is cached for efficiency. -/
+When used with `repeat`, the backward rule is cached for efficiency.
+-/
 syntax (name := symApply) "apply " term : grind
 
-/-- `internalize` internalizes hypotheses into the grind E-graph.
+/--
+`internalize` internalizes hypotheses into the grind E-graph.
 Only available in `sym =>` mode.
 - `internalize` internalizes the next hypothesis.
-- `internalize <num>` internalizes the next `<num>` hypotheses. -/
+- `internalize <num>` internalizes the next `<num>` hypotheses.
+-/
 syntax (name := symInternalize) "internalize" (ppSpace num)? : grind
 
-/-- `internalize_all` internalizes all pending hypotheses into the grind E-graph.
-Only available in `sym =>` mode. -/
+/--
+`internalize_all` internalizes all pending hypotheses into the grind E-graph.
+Only available in `sym =>` mode.
+-/
 syntax (name := symInternalizeAll) "internalize_all" : grind
 
-/-- `by_contra` applies proof by contradiction, negating the target and making it `False`.
-Only available in `sym =>` mode. -/
+/--
+`by_contra` applies proof by contradiction, negating the target and making it `False`.
+Only available in `sym =>` mode.
+-/
 syntax (name := symByContra) "by_contra" : grind
 
 /--
@@ -375,7 +400,6 @@ syntax (name := symRw) "rw " rwRuleSeq : grind
 
 /-- `exact e` closes the main goal if its target type matches that of `e`. -/
 macro "exact " e:term : grind => `(grind| tactic => exact $e:term)
-
 
 /--
 `cbv` performs simplification that closely mimics call-by-value evaluation.

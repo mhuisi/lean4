@@ -18,15 +18,16 @@ set_option linter.unusedVariables.funArgs false in
 @[never_extract, extern "lean_dbg_trace"]
 def dbgTrace {α : Type u} (s : String) (f : Unit → α) : α := f ()
 
-def dbgTraceVal {α : Type u} [ToString α] (a : α) : α :=
-  dbgTrace (toString a) (fun _ => a)
+def dbgTraceVal {α : Type u} [ToString α] (a : α) : α := dbgTrace (toString a) (fun _ => a)
 
 set_option linter.unusedVariables.funArgs false in
 /-- Display the given message if `a` is shared, that is, RC(a) > 1 -/
 @[never_extract, extern "lean_dbg_trace_if_shared"]
 def dbgTraceIfShared {α : Type u} (s : @& String) (a : α) : α := a
 
-/-- Print stack trace to stderr before evaluating given closure. Currently supported on Linux only. -/
+/--
+Print stack trace to stderr before evaluating given closure. Currently supported on Linux only.
+-/
 @[never_extract, extern "lean_dbg_stack_trace"]
 def dbgStackTrace {α : Type u} (f : Unit → α) : α := f ()
 
@@ -41,25 +42,28 @@ def dbgStackTraceIf {α : Type u} (cond : Bool) (f : Unit → α) : α :=
 @[extern "lean_dbg_sleep"]
 def dbgSleep {α : Type u} (ms : UInt32) (f : Unit → α) : α := f ()
 
-@[noinline] def mkPanicMessage (modName : String) (line col : Nat) (msg : String) : String :=
+@[noinline]
+def mkPanicMessage (modName : String) (line col : Nat) (msg : String) : String :=
   String.Internal.append
     (String.Internal.append
       (String.Internal.append
         (String.Internal.append
           (String.Internal.append
-            (String.Internal.append
-              (String.Internal.append "PANIC at " modName)
-              ":")
+            (String.Internal.append (String.Internal.append "PANIC at " modName) ":")
             (toString line))
           ":")
         (toString col))
       ": ")
     msg
 
-@[never_extract, inline, expose] def panicWithPos {α : Sort u} [Inhabited α] (modName : String) (line col : Nat) (msg : String) : α :=
+@[never_extract, inline, expose]
+def panicWithPos {α : Sort u} [Inhabited α] (modName : String) (line col : Nat) (msg : String)
+    : α :=
   panic (mkPanicMessage modName line col msg)
 
-@[noinline, expose] def mkPanicMessageWithDecl (modName : String) (declName : String) (line col : Nat) (msg : String) : String :=
+@[noinline, expose]
+def mkPanicMessageWithDecl (modName : String) (declName : String) (line col : Nat) (msg : String)
+    : String :=
   String.Internal.append
     (String.Internal.append
       (String.Internal.append
@@ -67,10 +71,7 @@ def dbgSleep {α : Type u} (ms : UInt32) (f : Unit → α) : α := f ()
           (String.Internal.append
             (String.Internal.append
               (String.Internal.append
-                (String.Internal.append
-                  (String.Internal.append "PANIC at " declName)
-                  " ")
-                modName)
+                (String.Internal.append (String.Internal.append "PANIC at " declName) " ") modName)
               ":")
             (toString line))
           ":")
@@ -78,7 +79,11 @@ def dbgSleep {α : Type u} (ms : UInt32) (f : Unit → α) : α := f ()
       ": ")
     msg
 
-@[never_extract, inline, expose] def panicWithPosWithDecl {α : Sort u} [Inhabited α] (modName : String) (declName : String) (line col : Nat) (msg : String) : α :=
+@[never_extract, inline, expose]
+def panicWithPosWithDecl
+    {α : Sort u} [Inhabited α]
+    (modName : String) (declName : String) (line col : Nat) (msg : String)
+    : α :=
   panic (mkPanicMessageWithDecl modName declName line col msg)
 
 /--
@@ -99,7 +104,10 @@ unsafe because it can distinguish between definitionally equal values.
 unsafe opaque isExclusiveUnsafe {α : Type u} (a : @& α) : Bool
 
 set_option linter.unusedVariables.funArgs false in
-@[inline] unsafe def withPtrAddrUnsafe {α : Type u} {β : Type v} (a : α) (k : USize → β) (h : ∀ u₁ u₂, k u₁ = k u₂) : β :=
+@[inline]
+unsafe def withPtrAddrUnsafe
+    {α : Type u} {β : Type v} (a : α) (k : USize → β) (h : ∀ u₁ u₂, k u₁ = k u₂)
+    : β :=
   k (ptrAddrUnsafe a)
 
 /--
@@ -119,7 +127,7 @@ function is unsafe because it can distinguish between definitionally equal value
 -/
 unsafe def ptrEqList : (as bs : List α) → Bool
   | [], [] => true
-  | a::as, b::bs => if ptrEq a b then ptrEqList as bs else false
+  | a :: as, b :: bs => if ptrEq a b then ptrEqList as bs else false
   | _, _ => false
 
 /--
@@ -153,7 +161,9 @@ def withPtrEq (a b : MyType) (k : Unit → Bool) (_h : a = b → k () = true) : 
 end MyType
 ```
 -/
-@[inline] unsafe def withPtrEqUnsafe {α : Type u} (a b : α) (k : Unit → Bool) (_h : a = b → k () = true) : Bool :=
+@[inline]
+unsafe def withPtrEqUnsafe {α : Type u} (a b : α) (k : Unit → Bool) (_h : a = b → k () = true)
+    : Bool :=
   if ptrEq a b then true else k ()
 
 @[deprecated "See the docstring of `withPtrEqUnsafe`" (since := "2026-09-21")]
@@ -165,12 +175,14 @@ Build a `DecidableEq` instance that short-circuits using `withPtrEq` where possi
 Since the general-purpose `withPtrEqUnsafe` is unsafe, users need to provide their own `withPtrEq`
 function; see the comment on `withPtrEqUnsafe`.
 -/
-@[inline] def withPtrEqDecEq {α : Type u}
-    (withPtrEq : (a b : α) → (k : Unit → Bool) → (h : a = b → k () = true) → Bool)
-    (hw : ∀ a b k h, withPtrEq a b k h = k ())
-    (a b : α) (k : Unit → Decidable (a = b)) : Decidable (a = b) where
+@[inline]
+def withPtrEqDecEq
+    {α : Type u} (withPtrEq : (a b : α) → (k : Unit → Bool) → (h : a = b → k () = true) → Bool)
+    (hw : ∀ a b k h, withPtrEq a b k h = k ()) (a b : α) (k : Unit → Decidable (a = b))
+    : Decidable (a = b) where
   decide := withPtrEq a b (fun _ => toBoolUsing (k ())) (toBoolUsing_eq_true (k ()))
   reflects_decide := by simpa [hw] using reflects_toBoolUsing
 
 @[implemented_by withPtrAddrUnsafe]
-def withPtrAddr {α : Type u} {β : Type v} (a : α) (k : USize → β) (h : ∀ u₁ u₂, k u₁ = k u₂) : β := k 0
+def withPtrAddr {α : Type u} {β : Type v} (a : α) (k : USize → β) (h : ∀ u₁ u₂, k u₁ = k u₂) : β :=
+  k 0

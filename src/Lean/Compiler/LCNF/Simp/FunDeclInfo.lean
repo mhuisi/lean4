@@ -23,30 +23,22 @@ a big problem in practice because we run the simplifier multiple times, and this
 is recomputed from scratch at the beginning of each simplification step.
 -/
 inductive FunDeclInfo where
-  /--
-  Local function is applied once, and must be inlined.
-  -/
+  /-- Local function is applied once, and must be inlined. -/
   | once
   /--
   Local function is applied many times or occur as an argument of another function,
   and will only be inlined if it is small.
   -/
   | many
-  /--
-  Function must be inlined.
-  -/
+  /-- Function must be inlined. -/
   | mustInline
-  deriving Repr, Inhabited
+deriving Repr, Inhabited
 
-/--
-Local function declaration statistics.
--/
+/-- Local function declaration statistics. -/
 structure FunDeclInfoMap where
-  /--
-  Mapping from local function name to inlining information.
-  -/
+  /-- Mapping from local function name to inlining information. -/
   map : Std.HashMap FVarId FunDeclInfo := {}
-  deriving Inhabited
+deriving Inhabited
 
 def FunDeclInfoMap.format (s : FunDeclInfoMap) : CompilerM Format := do
   let mut result := Format.nil
@@ -55,20 +47,16 @@ def FunDeclInfoMap.format (s : FunDeclInfoMap) : CompilerM Format := do
     result := result ++ "\n" ++ f!"{binderName} ↦ {repr info}"
   return result
 
-/--
-Add new occurrence for the local function with binder name `key`.
--/
+/-- Add new occurrence for the local function with binder name `key`. -/
 def FunDeclInfoMap.add (s : FunDeclInfoMap) (fvarId : FVarId) : FunDeclInfoMap :=
   match s with
   | { map } =>
     match map[fvarId]? with
     | some .once => { map := map.insert fvarId .many }
-    | none       => { map := map.insert fvarId .once }
-    | _          => { map }
+    | none => { map := map.insert fvarId .once }
+    | _ => { map }
 
-/--
-Add new occurrence for the local function occurring as an argument for another function.
--/
+/-- Add new occurrence for the local function occurring as an argument for another function. -/
 def FunDeclInfoMap.addHo (s : FunDeclInfoMap) (fvarId : FVarId) : FunDeclInfoMap :=
   match s with
   | { map } =>
@@ -76,14 +64,13 @@ def FunDeclInfoMap.addHo (s : FunDeclInfoMap) (fvarId : FVarId) : FunDeclInfoMap
     | some .once | none => { map := map.insert fvarId .many }
     | _ => { map }
 
-/--
-Add new occurrence for the local function with binder name `key`.
--/
+/-- Add new occurrence for the local function with binder name `key`. -/
 def FunDeclInfoMap.addMustInline (s : FunDeclInfoMap) (fvarId : FVarId) : FunDeclInfoMap :=
   match s with
   | { map } => { map := map.insert fvarId .mustInline }
 
-def FunDeclInfoMap.restore (s : FunDeclInfoMap) (fvarId : FVarId) (saved? : Option FunDeclInfo) : FunDeclInfoMap :=
+def FunDeclInfoMap.restore (s : FunDeclInfoMap) (fvarId : FVarId) (saved? : Option FunDeclInfo)
+    : FunDeclInfoMap :=
   match s, saved? with
   | { map }, none => { map := map.erase fvarId }
   | { map }, some saved => { map := map.insert fvarId saved }
@@ -95,14 +82,16 @@ If `mustInline := true`, then all local function declarations occurring in
 `code` are tagged as `.mustInline`.
 Recall that we use `.mustInline` for local function declarations occurring in type class instances.
 -/
-partial def FunDeclInfoMap.update (s : FunDeclInfoMap) (code : Code .pure) (mustInline := false) : CompilerM FunDeclInfoMap := do
+partial def FunDeclInfoMap.update (s : FunDeclInfoMap) (code : Code .pure) (mustInline := false)
+    : CompilerM FunDeclInfoMap := do
   let (_, s) ← go code |>.run s
   return s
 where
   addArgOcc (arg : Arg .pure) : StateRefT FunDeclInfoMap CompilerM Unit := do
     match arg with
     | .fvar fvarId =>
-      let some funDecl ← findFunDecl'? (pu := .pure) fvarId | return ()
+      let some funDecl ← findFunDecl'? (pu := .pure) fvarId
+        | return ()
       modify fun s => s.addHo funDecl.fvarId
     | .erased .. | .type .. => return ()
 
@@ -111,7 +100,8 @@ where
     | .erased | .lit .. | .proj .. => return ()
     | .const _ _ args => args.forM addArgOcc
     | .fvar fvarId args =>
-      let some funDecl ← findFunDecl'? (pu := .pure) fvarId | return ()
+      let some funDecl ← findFunDecl'? (pu := .pure) fvarId
+        | return ()
       modify fun s => s.add funDecl.fvarId
       args.forM addArgOcc
 
@@ -123,9 +113,12 @@ where
     | .fun decl k =>
       if mustInline then
         modify fun s => s.addMustInline decl.fvarId
+      go decl.value
+      go k
+    | .jp decl k =>
       go decl.value; go k
-    | .jp decl k => go decl.value; go k
-    | .cases c => c.alts.forM fun alt => go alt.getCode
+    | .cases c =>
+      c.alts.forM fun alt => go alt.getCode
     | .jmp fvarId args =>
       let funDecl ← getFunDecl (pu := .pure) fvarId
       modify fun s => s.add funDecl.fvarId

@@ -30,33 +30,21 @@ instance : ToExpr LRAT.IntAction where
     | .addEmpty id hints =>
       mkApp4 (mkConst ``LRAT.Action.addEmpty [.zero, .zero]) beta alpha (toExpr id) (toExpr hints)
     | .addRup id c hints =>
-      mkApp5 (mkConst ``LRAT.Action.addRup [.zero, .zero])
-        beta
-        alpha
-        (toExpr id)
-        (toExpr c)
+      mkApp5 (mkConst ``LRAT.Action.addRup [.zero, .zero]) beta alpha (toExpr id) (toExpr c)
         (toExpr hints)
     | .addRat id c pivot rupHints ratHints =>
-      mkApp7 (mkConst ``LRAT.Action.addRat [.zero, .zero])
-        beta
-        alpha
-        (toExpr id)
-        (toExpr c)
-        (toExpr pivot)
-        (toExpr rupHints)
-        (toExpr ratHints)
-    | .del ids =>
-      mkApp3 (mkConst ``LRAT.Action.del [.zero, .zero]) beta alpha (toExpr ids)
+      mkApp7 (mkConst ``LRAT.Action.addRat [.zero, .zero]) beta alpha (toExpr id) (toExpr c)
+        (toExpr pivot) (toExpr rupHints) (toExpr ratHints)
+    | .del ids => mkApp3 (mkConst ``LRAT.Action.del [.zero, .zero]) beta alpha (toExpr ids)
   toTypeExpr := mkConst ``LRAT.IntAction
-
-
 
 /-- An LRAT proof read from a file. This will get parsed using native evaluation. -/
 public abbrev LratCert := String
 
 namespace LratCert
 
-public def load (lratPath : System.FilePath) (trimProofs : Bool) : Core.CoreM (Array LRAT.IntAction) := do
+public def load (lratPath : System.FilePath) (trimProofs : Bool)
+    : Core.CoreM (Array LRAT.IntAction) := do
   let proofInput ← IO.FS.readBinFile lratPath
   let proof ←
     withTraceNode `Meta.Tactic.sat (fun _ => return s!"Parsing LRAT file") do
@@ -95,13 +83,14 @@ Run an external SAT solver on the `CNF` to obtain an LRAT proof.
 
 This will obtain an `LratCert` if the formula is UNSAT and throw errors otherwise.
 -/
-public def runExternal (cnf : CNF Nat) (solver : System.FilePath) (lratPath : System.FilePath)
-    (trimProofs : Bool) (timeout : Nat) (binaryProofs : Bool) (solverMode : Elab.Tactic.BVDecide.SolverMode) :
-    CoreM (Except (Array (Bool × Nat)) LratCert) := do
+public def runExternal
+    (cnf : CNF Nat) (solver : System.FilePath) (lratPath : System.FilePath) (trimProofs : Bool)
+    (timeout : Nat) (binaryProofs : Bool) (solverMode : Elab.Tactic.BVDecide.SolverMode)
+    : CoreM (Except (Array (Bool × Nat)) LratCert) := do
   IO.FS.withTempFile fun cnfHandle cnfPath => do
     withTraceNode `Meta.Tactic.sat (fun _ => return "Serializing SAT problem to DIMACS file") do
       -- lazyPure to prevent compiler lifting
-      cnfHandle.putStr  (← IO.lazyPure (fun _ => cnf.dimacs))
+      cnfHandle.putStr (← IO.lazyPure (fun _ => cnf.dimacs))
       cnfHandle.flush
 
     let res ←
@@ -115,6 +104,5 @@ public def runExternal (cnf : CNF Nat) (solver : System.FilePath) (lratPath : Sy
         LratCert.ofFile lratPath trimProofs
 
     return .ok lratProof
-
 
 end Lean.Meta.Tactic.BVDecide

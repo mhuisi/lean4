@@ -16,8 +16,8 @@ namespace Expr
 namespace FoldConstsImpl
 
 unsafe structure State where
- visited       : PtrSet Expr := mkPtrSet
- visitedConsts : NameHashSet := {}
+  visited : PtrSet Expr := mkPtrSet
+  visitedConsts : NameHashSet := {}
 
 unsafe abbrev FoldM := StateM State
 
@@ -26,24 +26,25 @@ unsafe def fold {α : Type} (f : Name → α → α) (e : Expr) (acc : α) : Fol
     if (← get).visitedConsts.contains c then
       return acc
     else
-      modify fun s => { s with visitedConsts := s.visitedConsts.insert c };
+      modify fun s => { s with visitedConsts := s.visitedConsts.insert c }
       return f c acc
   let rec visit (e : Expr) (acc : α) : FoldM α := do
     if (← get).visited.contains e then
       return acc
     modify fun s => { s with visited := s.visited.insert e }
     match e with
-    | .forallE _ d b _   => visit b (← visit d acc)
-    | .lam _ d b _       => visit b (← visit d acc)
-    | .mdata _ b         => visit b acc
-    | .letE _ t v b _    => visit b (← visit v (← visit t acc))
-    | .app f a           => visit a (← visit f acc)
+    | .forallE _ d b _ => visit b (← visit d acc)
+    | .lam _ d b _ => visit b (← visit d acc)
+    | .mdata _ b => visit b acc
+    | .letE _ t v b _ => visit b (← visit v (← visit t acc))
+    | .app f a => visit a (← visit f acc)
     | .proj typeName _ b => visit b (← visitConst typeName acc)
-    | .const c _         => visitConst c acc
+    | .const c _ => visitConst c acc
     | _ => return acc
   visit e acc
 
-@[inline] unsafe def foldUnsafe {α : Type} (e : Expr) (init : α) (f : Name → α → α) : α :=
+@[inline]
+unsafe def foldUnsafe {α : Type} (e : Expr) (init : α) (f : Name → α → α) : α :=
   (fold f e init).run' {}
 
 end FoldConstsImpl
@@ -52,12 +53,10 @@ end FoldConstsImpl
 @[implemented_by FoldConstsImpl.foldUnsafe]
 opaque foldConsts {α : Type} (e : Expr) (init : α) (f : Name → α → α) : α := init
 
-def getUsedConstants (e : Expr) : Array Name :=
-  e.foldConsts #[] fun c cs => cs.push c
+def getUsedConstants (e : Expr) : Array Name := e.foldConsts #[] fun c cs => cs.push c
 
 /-- Like `Expr.getUsedConstants`, but produce a `NameSet`. -/
-def getUsedConstantsAsSet (e : Expr) : NameSet :=
-  e.foldConsts {} fun c cs => cs.insert c
+def getUsedConstantsAsSet (e : Expr) : NameSet := e.foldConsts {} fun c cs => cs.insert c
 
 end Expr
 
@@ -66,12 +65,13 @@ namespace ConstantInfo
 /-- Return all names appearing in the type or value of a `ConstantInfo`. -/
 def getUsedConstantsAsSet (c : ConstantInfo) : NameSet :=
   c.type.getUsedConstantsAsSet ++ match c.value? (allowOpaque := true) with
-  | some v => v.getUsedConstantsAsSet
-  | none => match c with
-    | .inductInfo val => .ofList val.ctors
-    | .ctorInfo val => ({} : NameSet).insert val.name
-    | .recInfo val => .ofList val.all
-    | _ => {}
+    | some v => v.getUsedConstantsAsSet
+    | none =>
+      match c with
+      | .inductInfo val => .ofList val.ctors
+      | .ctorInfo val => ({} : NameSet).insert val.name
+      | .recInfo val => .ofList val.all
+      | _ => {}
 
 end ConstantInfo
 end Lean

@@ -23,8 +23,7 @@ structure AndFlattenCache where
 
 abbrev FlattenM := StateRefT AndFlattenCache PreProcessM
 
-@[inline]
-def FlattenM.isCached (e : Expr) : FlattenM Bool := return (← get).cache.contains ⟨e⟩
+@[inline] def FlattenM.isCached (e : Expr) : FlattenM Bool := return (← get).cache.contains ⟨e⟩
 
 @[inline]
 def FlattenM.cache (e : Expr) : FlattenM Unit :=
@@ -66,32 +65,33 @@ where
         modify (fun s => { s with hypsToAdd := s.hypsToAdd.push hyp })
         splitAnds worklist
 
-  trySplit (hyp : Hyp) :
-      StateRefT AndFlattenState FlattenM (Option (Hyp × Hyp)) := do
+  trySplit (hyp : Hyp) : StateRefT AndFlattenState FlattenM (Option (Hyp × Hyp)) := do
     let typ := hyp.type
     if ← FlattenM.isCached typ then
       return none
     else
       FlattenM.cache typ
-      let_expr Eq _ eqLhs eqRhs := typ | return none
-      let_expr Bool.and lhs rhs := eqLhs | return none
-      let_expr Bool.true := eqRhs | return none
+      let_expr Eq _ eqLhs eqRhs := typ
+        | return none
+      let_expr Bool.and lhs rhs := eqLhs
+        | return none
+      let_expr Bool.true := eqRhs
+        | return none
       let mkEqTrue (lhs : Expr) : Sym.SymM Expr :=
         Sym.share <| mkApp3 (mkConst ``Eq [1]) (mkConst ``Bool) lhs (mkConst ``Bool.true)
       let leftHyp : Hyp := {
-        name := hyp.name,
-        type := ← mkEqTrue lhs,
+        name := hyp.name
+        type := ← mkEqTrue lhs
         value := mkApp3 (mkConst ``Std.Tactic.BVDecide.Normalize.Bool.and_left) lhs rhs hyp.value
         source := .andFlattened hyp.source
       }
       let rightHyp : Hyp := {
-        name := hyp.name,
-        type := ← mkEqTrue rhs,
+        name := hyp.name
+        type := ← mkEqTrue rhs
         value := mkApp3 (mkConst ``Std.Tactic.BVDecide.Normalize.Bool.and_right) lhs rhs hyp.value
         source := .andFlattened hyp.source
       }
       return some (leftHyp, rightHyp)
-
 
 end Normalize
 end Lean.Meta.Tactic.BVDecide

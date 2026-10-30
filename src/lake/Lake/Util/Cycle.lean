@@ -20,12 +20,12 @@ public def formatCycle [ToString κ] (cycle : Cycle κ) : String :=
   "\n".intercalate <| cycle.map (s!"  {·}")
 
 /-- A monad equipped with a call stack. -/
-public class MonadCallStackOf (κ :  semiOutParam (Type u)) (m : Type u → Type v) where
+public class MonadCallStackOf (κ : semiOutParam (Type u)) (m : Type u → Type v) where
   getCallStack : m (CallStack κ)
   withCallStack (stack : CallStack κ) (x : m α) : m α
 
 /-- Similar to `MonadCallStackOf`, but `κ` is an `outParam` for convenience. -/
-public class MonadCallStack (κ :  outParam (Type u)) (m : Type u → Type v) where
+public class MonadCallStack (κ : outParam (Type u)) (m : Type u → Type v) where
   getCallStack : m (CallStack κ)
   withCallStack (stack : CallStack κ) (x : m α) : m α
 
@@ -35,16 +35,19 @@ public instance [MonadCallStackOf κ m] : MonadCallStack κ m where
   getCallStack := MonadCallStackOf.getCallStack
   withCallStack := MonadCallStackOf.withCallStack
 
-public instance [MonadLift m n] [MonadFunctor m n] [MonadCallStackOf κ m] : MonadCallStackOf κ n where
+public instance [MonadLift m n] [MonadFunctor m n] [MonadCallStackOf κ m]
+    : MonadCallStackOf κ n where
   getCallStack := liftM (m := m) getCallStack
   withCallStack s := monadMap (m := m) (withCallStack s ·)
 
 /-- A monad equipped with a call stack and the ability to error on a cycle. -/
-public class MonadCycleOf (κ :  semiOutParam (Type u)) (m : Type u → Type v) extends MonadCallStackOf κ m where
+public class MonadCycleOf (κ : semiOutParam (Type u)) (m : Type u → Type v)
+    extends MonadCallStackOf κ m where
   throwCycle (cycle : Cycle κ) : m α
 
 /-- Similar to `MonadCycle`, but `κ` is an `outParam` for convenience. -/
-public class MonadCycle (κ :  outParam (Type u)) (m : Type u → Type v) extends MonadCallStack κ m where
+public class MonadCycle (κ : outParam (Type u)) (m : Type u → Type v)
+    extends MonadCallStack κ m where
   throwCycle (cycle : Cycle κ) : m α
 
 export MonadCycle (throwCycle)
@@ -76,9 +79,8 @@ public instance [Monad m] : MonadCycleOf κ (CycleT κ m) where
 Add `key` to the monad's `CallStack` before invoking `act`.
 If adding `key` produces a cycle, the cyclic call stack is thrown.
 -/
-@[inline] public def guardCycle
-  [BEq κ] [Monad m] [MonadCycle κ m] (key : κ) (act : m α)
-: m α := do
+@[inline]
+public def guardCycle [BEq κ] [Monad m] [MonadCycle κ m] (key : κ) (act : m α) : m α := do
   let parents ← getCallStack
   if parents.contains key then
     throwCycle <| key :: (parents.partition (· != key)).1 ++ [key]

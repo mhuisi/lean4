@@ -21,12 +21,10 @@ the given specification.
 def add (spec : Format) : UnpackedFloat → UnpackedFloat → UnpackedFloat
   | .notANumber, _ => .notANumber
   | _, .notANumber => .notANumber
-  | .infinity sign₁, .infinity sign₂ =>
-    if sign₁ == sign₂ then .infinity sign₁ else .notANumber
+  | .infinity sign₁, .infinity sign₂ => if sign₁ == sign₂ then .infinity sign₁ else .notANumber
   | .infinity s, _ => .infinity s
   | _, .infinity s => .infinity s
-  | .zero sign₁, .zero sign₂ =>
-    if sign₁ == sign₂ then .zero sign₁ else .zero .positive
+  | .zero sign₁, .zero sign₂ => if sign₁ == sign₂ then .zero sign₁ else .zero .positive
   | .zero _, y => y
   | x, .zero _ => x
   | .finite s₁ m₁ e₁ _, .finite s₂ m₂ e₂ _ =>

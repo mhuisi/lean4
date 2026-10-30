@@ -23,14 +23,21 @@ structure State where
 
 abbrev PullM := ReaderT Context $ StateRefT State CompilerM
 
-@[inline] def withFVar (fvarId : FVarId) (x : PullM α) : PullM α :=
+@[inline]
+def withFVar (fvarId : FVarId) (x : PullM α) : PullM α :=
   withReader (fun ctx => { ctx with included := ctx.included.insert fvarId }) x
 
-@[inline] def withParams (ps : Array (Param .pure)) (x : PullM α) : PullM α :=
-  withReader (fun ctx => { ctx with included := ps.foldl (init := ctx.included) fun s p => s.insert p.fvarId }) x
+@[inline]
+def withParams (ps : Array (Param .pure)) (x : PullM α) : PullM α :=
+  withReader
+    (fun ctx => {
+      ctx with
+      included := ps.foldl (init := ctx.included) fun s p => s.insert p.fvarId
+    })
+    x
 
-@[inline] def withNewScope (x : PullM α) : PullM α :=
-  withReader (fun ctx => { ctx with included := {} }) x
+@[inline]
+def withNewScope (x : PullM α) : PullM α := withReader (fun ctx => { ctx with included := {} }) x
 
 partial def withCheckpoint (x : PullM (Code .pure)) : PullM (Code .pure) := do
   let toPullSizeSaved := (← get).toPull.size
@@ -40,11 +47,11 @@ partial def withCheckpoint (x : PullM (Code .pure)) : PullM (Code .pure) := do
     if h : i < toPull.size then
       let letDecl := toPull[i]
       if letDecl.dependsOn included then
-        let c ← go (i+1) (included.insert letDecl.fvarId)
+        let c ← go (i + 1) (included.insert letDecl.fvarId)
         return .let letDecl c
       else
         modify (·.push letDecl)
-        go (i+1) included
+        go (i + 1) included
     else
       return c
   let (c, keep) := go toPullSizeSaved (← read).included |>.run #[]
@@ -63,39 +70,42 @@ def shouldPull (decl : LetDecl .pure) : PullM Bool := do
   return false
 
 mutual
-  partial def pullAlt (alt : (Alt .pure)) : PullM (Alt .pure) :=
-    match alt with
-    | .default k => return alt.updateCode (← withNewScope <| pullDecls k)
-    | .alt _ params k => return alt.updateCode (← withNewScope <| withParams params <| pullDecls k)
+partial def pullAlt (alt : (Alt .pure)) : PullM (Alt .pure) :=
+  match alt with
+  | .default k => return alt.updateCode (← withNewScope <| pullDecls k)
+  | .alt _ params k => return alt.updateCode (← withNewScope <| withParams params <| pullDecls k)
 
-  partial def pullDecls (code : Code .pure) : PullM (Code .pure) := do
-    match code with
-    | .cases c =>
-      withCheckpoint do
-        let alts ← c.alts.mapMonoM pullAlt
-        return code.updateAlts! alts
-    | .let decl k =>
-      if (← shouldPull decl) then
-        pullDecls k
-      else
-        withFVar decl.fvarId do return code.updateCont! (← pullDecls k)
-    | .fun decl k | .jp decl k =>
-      withCheckpoint do
-        let value ← withParams decl.params <| pullDecls decl.value
-        let decl ← decl.updateValue value
-        withFVar decl.fvarId do return code.updateFun! decl (← pullDecls k)
-    | _ => return code
+partial def pullDecls (code : Code .pure) : PullM (Code .pure) := do
+  match code with
+  | .cases c =>
+    withCheckpoint do
+      let alts ← c.alts.mapMonoM pullAlt
+      return code.updateAlts! alts
+  | .let decl k =>
+    if (← shouldPull decl) then
+      pullDecls k
+    else
+      withFVar decl.fvarId do return code.updateCont! (← pullDecls k)
+  | .fun decl k | .jp decl k =>
+    withCheckpoint do
+      let value ← withParams decl.params <| pullDecls decl.value
+      let decl ← decl.updateValue value
+      withFVar decl.fvarId do return code.updateFun! decl (← pullDecls k)
+  | _ => return code
 
 end
 
-def PullM.run (x : PullM α) (isCandidateFn : LetDecl .pure → FVarIdSet → CompilerM Bool) : CompilerM α :=
+def PullM.run (x : PullM α) (isCandidateFn : LetDecl .pure → FVarIdSet → CompilerM Bool)
+    : CompilerM α :=
   x { isCandidateFn } |>.run' {}
 
 end PullLetDecls
 
 open PullLetDecls
 
-def Decl.pullLetDecls (decl : Decl .pure) (isCandidateFn : LetDecl .pure → FVarIdSet → CompilerM Bool) : CompilerM (Decl .pure) := do
+def Decl.pullLetDecls
+    (decl : Decl .pure) (isCandidateFn : LetDecl .pure → FVarIdSet → CompilerM Bool)
+    : CompilerM (Decl .pure) := do
   PullM.run (isCandidateFn := isCandidateFn) do
     withParams decl.params do
       let value ← decl.value.mapCodeM pullDecls
@@ -120,10 +130,8 @@ def Decl.pullInstances (decl : Decl .pure) : CompilerM (Decl .pure) :=
     else
       return false
 
-def pullInstances : Pass :=
-  .mkPerDeclaration `pullInstances .base Decl.pullInstances
+def pullInstances : Pass := .mkPerDeclaration `pullInstances .base Decl.pullInstances
 
-builtin_initialize
-  registerTraceClass `Compiler.pullInstances (inherited := true)
+builtin_initialize registerTraceClass `Compiler.pullInstances (inherited := true)
 
 end Lean.Compiler.LCNF

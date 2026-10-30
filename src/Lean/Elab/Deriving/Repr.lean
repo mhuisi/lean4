@@ -19,15 +19,13 @@ open _root_.Std
 
 def mkReprHeader (indVal : InductiveVal) : TermElabM Header := do
   let header ← mkHeader `Repr 1 indVal
-  return { header with
-    binders := header.binders.push (← `(bracketedBinderF| (prec : Nat)))
-  }
+  return { header with binders := header.binders.push (← `(bracketedBinderF| (prec : Nat))) }
 
 def mkBodyForStruct (header : Header) (indVal : InductiveVal) : TermElabM Term := do
   let ctorVal ← getConstInfoCtor indVal.ctors.head!
   let fieldNames := getStructureFields (← getEnv) indVal.name
-  let numParams  := indVal.numParams
-  let target     := mkIdent header.targetNames[0]!
+  let numParams := indVal.numParams
+  let target := mkIdent header.targetNames[0]!
   forallTelescopeReducing ctorVal.type fun xs _ => do
     let mut fields ← `(Format.nil)
     if xs.size != numParams + fieldNames.size then
@@ -41,11 +39,15 @@ def mkBodyForStruct (header : Header) (indVal : InductiveVal) : TermElabM Term :
       if (← isType x <||> isProof x) then
         fields ← `($fields ++ $fieldNameLit ++ " := " ++ "_")
       else
-        let indent := Syntax.mkNumLit <| toString ((toString fieldName |>.chars.length) + " := ".lengthAssumingAscii)
-        fields ← `($fields ++ $fieldNameLit ++ " := " ++ (Format.group (Format.nest $indent (repr ($target.$(mkIdent fieldName):ident)))))
+        let indent :=
+          Syntax.mkNumLit <|
+            toString ((toString fieldName |>.chars.length) + " := ".lengthAssumingAscii)
+        fields ←
+          `($fields ++ $fieldNameLit ++ " := " ++ (Format.group (Format.nest $indent (repr ($target.$(mkIdent fieldName):ident)))))
     `(Format.bracket "{ " $fields:term " }")
 
-def mkBodyForInduct (header : Header) (indVal : InductiveVal) (auxFunName : Name) : TermElabM Term := do
+def mkBodyForInduct (header : Header) (indVal : InductiveVal) (auxFunName : Name)
+    : TermElabM Term := do
   let discrs ← mkDiscrs header indVal
   let alts ← mkAlts
   `(match $[$discrs],* with $alts:matchAlt*)
@@ -54,33 +56,36 @@ where
     let mut alts := #[]
     for ctorName in indVal.ctors do
       let ctorInfo ← getConstInfoCtor ctorName
-      let alt ← forallTelescopeReducing ctorInfo.type fun xs _ => do
-        let mut patterns := #[]
-        -- add `_` pattern for indices
-        for _ in *...indVal.numIndices do
-          patterns := patterns.push (← `(_))
-        let mut ctorArgs := #[]
-        let mut rhs : Term := Syntax.mkStrLit (toString ctorInfo.name)
-        rhs ← `(Format.text $rhs)
-        for h : i in *...xs.size do
-          -- Note: some inductive parameters are explicit if they were promoted from indices,
-          -- so we process all constructor arguments in the same loop.
-          let x := xs[i]
-          let a ← mkIdent <$> if i < indVal.numParams then pure header.argNames[i]! else mkFreshUserName `a
-          if i < indVal.numParams then
-            -- add `_` for inductive parameters, they are inaccessible
-            ctorArgs := ctorArgs.push (← `(_))
-          else
-            ctorArgs := ctorArgs.push a
-          if (← x.fvarId!.getBinderInfo).isExplicit then
-            if (← inferType x).isAppOf indVal.name then
-              rhs ← `($rhs ++ Format.line ++ $(mkIdent auxFunName):ident $a:ident max_prec)
-            else if (← isType x <||> isProof x) then
-              rhs ← `($rhs ++ Format.line ++ "_")
+      let alt ←
+        forallTelescopeReducing ctorInfo.type fun xs _ => do
+          let mut patterns := #[]
+          -- add `_` pattern for indices
+          for _ in *...indVal.numIndices do
+            patterns := patterns.push (← `(_))
+          let mut ctorArgs := #[]
+          let mut rhs : Term := Syntax.mkStrLit (toString ctorInfo.name)
+          rhs ← `(Format.text $rhs)
+          for h : i in *...xs.size do
+            -- Note: some inductive parameters are explicit if they were promoted from indices,
+            -- so we process all constructor arguments in the same loop.
+            let x := xs[i]
+            let a ←
+              mkIdent
+                <$> if i < indVal.numParams then pure header.argNames[i]! else mkFreshUserName `a
+            if i < indVal.numParams then
+              -- add `_` for inductive parameters, they are inaccessible
+              ctorArgs := ctorArgs.push (← `(_))
             else
-              rhs ← `($rhs ++ Format.line ++ reprArg $a)
-        patterns := patterns.push (← `(@$(mkIdent ctorName):ident $ctorArgs:term*))
-        `(matchAltExpr| | $[$patterns:term],* => Repr.addAppParen (Format.group (Format.nest (if prec >= max_prec then 1 else 2) ($rhs:term))) prec)
+              ctorArgs := ctorArgs.push a
+            if (← x.fvarId!.getBinderInfo).isExplicit then
+              if (← inferType x).isAppOf indVal.name then
+                rhs ← `($rhs ++ Format.line ++ $(mkIdent auxFunName):ident $a:ident max_prec)
+              else if (← isType x <||> isProof x) then
+                rhs ← `($rhs ++ Format.line ++ "_")
+              else
+                rhs ← `($rhs ++ Format.line ++ reprArg $a)
+          patterns := patterns.push (← `(@$(mkIdent ctorName):ident $ctorArgs:term*))
+          `(matchAltExpr| | $[$patterns:term],* => Repr.addAppParen (Format.group (Format.nest (if prec >= max_prec then 1 else 2) ($rhs:term))) prec)
       alts := alts.push alt
     return alts
 
@@ -92,13 +97,13 @@ def mkBody (header : Header) (indVal : InductiveVal) (auxFunName : Name) : TermE
 
 def mkAuxFunction (ctx : Context) (i : Nat) : TermElabM Command := do
   let auxFunName := ctx.auxFunNames[i]!
-  let indVal     := ctx.typeInfos[i]!
-  let header     ← mkReprHeader indVal
-  let mut body   ← mkBody header indVal auxFunName
+  let indVal := ctx.typeInfos[i]!
+  let header ← mkReprHeader indVal
+  let mut body ← mkBody header indVal auxFunName
   if ctx.usePartial then
     let letDecls ← mkLocalInstanceLetDecls ctx `Repr header.argNames
     body ← mkLet letDecls body
-  let binders    := header.binders
+  let binders := header.binders
   if ctx.usePartial then
     `(@[no_expose] partial def $(mkIdent auxFunName):ident $binders:bracketedBinder* : Format := $body:term)
   else

@@ -16,48 +16,36 @@ open Internal
 
 set_option linter.all true
 
-/--
-Defines the enumeration for days of the week. Each variant corresponds to a day of the week.
--/
+/-- Defines the enumeration for days of the week. Each variant corresponds to a day of the week. -/
 inductive Weekday
   /-- Monday. -/
   | monday
-
   /-- Tuesday. -/
   | tuesday
-
   /-- Wednesday. -/
   | wednesday
-
   /-- Thursday. -/
   | thursday
-
   /-- Friday. -/
   | friday
-
   /-- Saturday. -/
   | saturday
-
-    /-- Sunday. -/
+  /-- Sunday. -/
   | sunday
 deriving Repr, Inhabited, DecidableEq
 
 namespace Weekday
 
-/--
-`Ordinal` represents a bounded value for weekdays, which ranges between 1 and 7.
--/
-@[expose] def Ordinal := Bounded.LE 1 7
+/-- `Ordinal` represents a bounded value for weekdays, which ranges between 1 and 7. -/
+@[expose]
+def Ordinal := Bounded.LE 1 7
 deriving Repr, DecidableEq, LT, LE
 
-instance {x y : Ordinal} : Decidable (x ≤ y) :=
-  inferInstanceAs (Decidable (x.val ≤ y.val))
+instance {x y : Ordinal} : Decidable (x ≤ y) := inferInstanceAs (Decidable (x.val ≤ y.val))
 
-instance {x y : Ordinal} : Decidable (x < y) :=
-  inferInstanceAs (Decidable (x.val < y.val))
+instance {x y : Ordinal} : Decidable (x < y) := inferInstanceAs (Decidable (x.val < y.val))
 
-instance : OfNat Ordinal n :=
-  inferInstanceAs (OfNat (Bounded.LE 1 (1 + (6 : Nat))) n)
+instance : OfNat Ordinal n := inferInstanceAs (OfNat (Bounded.LE 1 (1 + (6 : Nat))) n)
 
 instance : Inhabited Ordinal where
   default := 1
@@ -81,9 +69,7 @@ def ofOrdinal : Ordinal → Weekday
   | 6 => .saturday
   | 7 => .sunday
 
-/--
-Converts a `Weekday` to a `Ordinal`.
--/
+/-- Converts a `Weekday` to a `Ordinal`. -/
 def toOrdinal : Weekday → Ordinal
   | .monday => 1
   | .tuesday => 2
@@ -104,9 +90,7 @@ theorem toOrdinal.inj {a b : Weekday} (h : toOrdinal a = toOrdinal b) : a = b :=
 instance : LawfulEqOrd Weekday where
   eq_of_compare := toOrdinal.inj ∘ LawfulEqOrd.eq_of_compare (α := Ordinal)
 
-/--
-Converts a `Weekday` to a `Nat`.
--/
+/-- Converts a `Weekday` to a `Nat`. -/
 def toNat : Weekday → Nat
   | .monday => 1
   | .tuesday => 2
@@ -116,9 +100,7 @@ def toNat : Weekday → Nat
   | .saturday => 6
   | .sunday => 7
 
-/--
-Converts a `Nat` to an `Option Weekday`.
--/
+/-- Converts a `Nat` to an `Option Weekday`. -/
 def ofNat? : Nat → Option Weekday
   | 1 => some .monday
   | 2 => some .tuesday
@@ -129,18 +111,14 @@ def ofNat? : Nat → Option Weekday
   | 7 => some .sunday
   | _ => none
 
-/--
-Converts a `Nat` to a `Weekday`. Panics if the value provided is invalid.
--/
+/-- Converts a `Nat` to a `Weekday`. Panics if the value provided is invalid. -/
 @[inline]
 def ofNat! (n : Nat) : Weekday :=
   match ofNat? n with
   | some res => res
   | none => panic! "invalid weekday"
 
-/--
-Gets the next `Weekday`.
--/
+/-- Gets the next `Weekday`. -/
 def next : Weekday → Weekday
   | .monday => .tuesday
   | .tuesday => .wednesday
@@ -150,9 +128,7 @@ def next : Weekday → Weekday
   | .saturday => .sunday
   | .sunday => .monday
 
-/--
-Check if it's a weekend.
--/
+/-- Check if it's a weekend. -/
 def isWeekend : Weekday → Bool
   | .saturday => true
   | .sunday => true

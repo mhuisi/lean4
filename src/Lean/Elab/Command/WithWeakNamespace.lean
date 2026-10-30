@@ -10,7 +10,8 @@ public import Lean.Elab.Command
 
 namespace Lean.Elab.Command
 
-/-- Adds the name to the namespace, `_root_`-aware.
+/--
+Adds the name to the namespace, `_root_`-aware.
 ```
 resolveNamespaceRelative `A `B.b == `A.B.b
 resolveNamespaceRelative `A `_root_.B.c == `B.c

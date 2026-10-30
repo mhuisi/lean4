@@ -26,10 +26,8 @@ abbrev cacheSize : USize := 8192 - 1
 private def notAnExpr : Unit × Unit := ⟨⟨⟩, ⟨⟩⟩
 
 structure State where
-  /--
-  Implements caching trick similar to the one used at `FindExpr` and `ReplaceExpr`.
-  -/
-  visited : Array Expr   -- Remark: our "unsafe" implementation relies on the fact that `notAnExpr` is not a valid Expr
+  /-- Implements caching trick similar to the one used at `FindExpr` and `ReplaceExpr`. -/
+  visited : Array Expr -- Remark: our "unsafe" implementation relies on the fact that `notAnExpr` is not a valid Expr
   /--
   Set of visited subterms that satisfy the predicate `p`.
   We have to use this set to make sure `f` is applied at most once of each subterm that satisfies `p`.
@@ -64,7 +62,8 @@ def checked (e : Expr) : ForEachM m Bool := do
     return false
 
 /-- `Expr.forEachWhere` (unsafe) implementation -/
-unsafe def visit (p : Expr → Bool) (f : Expr → m Unit) (e : Expr) (stopWhenVisited : Bool := false) : m Unit := do
+unsafe def visit (p : Expr → Bool) (f : Expr → m Unit) (e : Expr) (stopWhenVisited : Bool := false)
+    : m Unit := do
   go e |>.run' initCache
 where
   go (e : Expr) : StateRefT' ω State m Unit := do
@@ -75,22 +74,26 @@ where
           if stopWhenVisited then
             return ()
       match e with
-      | .forallE _ d b _   => go d; go b
-      | .lam _ d b _       => go d; go b
-      | .letE _ t v b _    => go t; go v; go b
-      | .app f a           => go f; go a
-      | .mdata _ b         => go b
-      | .proj _ _ b        => go b
-      | _                  => return ()
+      | .forallE _ d b _ => go d; go b
+      | .lam _ d b _ => go d; go b
+      | .letE _ t v b _ => go t; go v; go b
+      | .app f a => go f; go a
+      | .mdata _ b => go b
+      | .proj _ _ b => go b
+      | _ => return ()
 
 end ForEachExprWhere
 
 /--
-  `e.forEachWhere p f` applies `f` to each subterm that satisfies `p`.
-  If `stopWhenVisited` is `true`, the function doesn't visit subterms of terms
-  which satisfy `p`.
+`e.forEachWhere p f` applies `f` to each subterm that satisfies `p`.
+If `stopWhenVisited` is `true`, the function doesn't visit subterms of terms
+which satisfy `p`.
 -/
 @[implemented_by ForEachExprWhere.visit]
-opaque Expr.forEachWhere {ω : Type} {m : Type → Type} [STWorld ω m] [MonadLiftT (ST ω) m] [Monad m] (p : Expr → Bool) (f : Expr → m Unit) (e : Expr) (stopWhenVisited : Bool := false) : m Unit
+opaque Expr.forEachWhere
+  {ω : Type} {m : Type → Type} [STWorld ω m] [MonadLiftT (ST ω) m] [Monad m]
+  (p : Expr → Bool) (f : Expr → m Unit) (e : Expr)
+  (stopWhenVisited : Bool := false)
+  : m Unit
 
 end Lean

@@ -25,20 +25,23 @@ when it does not parse, its errors are logged and the text is empty.
 -/
 private def docCommentMarkdown (doc : TSyntax ``docComment) : CommandElabM String := do
   if isVersoDocComment doc then
-    let some blocks ← liftCoreM (parseVersoDocString doc) | return ""
+    let some blocks ← liftCoreM (parseVersoDocString doc)
+      | return ""
     let ((text, subsections), _) ← liftTermElabM <| (Doc.elabBlocks blocks).execForModule
-    liftCoreM <| Doc.MarkdownM.run' <| Doc.ToMarkdown.toMarkdown ({ text, subsections } : VersoDocString)
+    liftCoreM <| Doc.MarkdownM.run' <|
+      Doc.ToMarkdown.toMarkdown ({ text, subsections } : VersoDocString)
   else
     getDocStringText doc
 
-@[builtin_command_elab «tactic_extension»] def elabTacticExtension : CommandElab
+@[builtin_command_elab «tactic_extension»]
+def elabTacticExtension : CommandElab
   | `(«tactic_extension»|tactic_extension%$cmd $_) => do
     throwErrorAt cmd "Missing documentation comment"
   | `(«tactic_extension»|$docs:docComment tactic_extension $tac:ident) => do
     let tacName ← liftTermElabM <| realizeGlobalConstNoOverloadWithInfo tac
 
     if let some tgt' := alternativeOfTactic (← getEnv) tacName then
-        throwErrorAt tac "`{.ofConstName tacName}` is an alternative form of `{.ofConstName tgt'}`"
+      throwErrorAt tac "`{.ofConstName tacName}` is an alternative form of `{.ofConstName tgt'}`"
     if !(isTactic (← getEnv) tacName) then
       throwErrorAt tac "`{.ofConstName tacName}` is not a tactic"
 
@@ -47,7 +50,8 @@ private def docCommentMarkdown (doc : TSyntax ``docComment) : CommandElabM Strin
     pure ()
   | _ => throwError "Malformed tactic extension command"
 
-@[builtin_command_elab «register_tactic_tag»] def elabRegisterTacticTag : CommandElab
+@[builtin_command_elab «register_tactic_tag»]
+def elabRegisterTacticTag : CommandElab
   | `(«register_tactic_tag»|$[$doc:docComment]? register_tactic_tag $tag:ident $user:str) => do
     let docstring ← doc.mapM docCommentMarkdown
     modifyEnv (knownTacticTagExt.addEntry · (tag.getId, user.getString, docstring))
@@ -69,8 +73,7 @@ def firstTacticTokens [Monad m] [MonadEnv m] : m (NameMap String) := do
       |>.importedEntries
       |>.push ((tacticNameExt.exportEntriesFn env (tacticNameExt.getState env)).exported)
       |>.foldl (init := {}) fun names inMods =>
-        inMods.foldl (init := names) fun names (k, n) =>
-          names.insert k n
+        inMods.foldl (init := names) fun names (k, n) => names.insert k n
 
   firstTokens := addFirstTokens tactics tactics.tables.leadingTable firstTokens
   firstTokens := addFirstTokens tactics tactics.tables.trailingTable firstTokens
@@ -99,21 +102,22 @@ identifiable leading token, then that token is shown. Otherwise, the underlying 
 without an `@`. The name includes metadata that makes infoview hovers and the like work. This
 only works for global constants, as the local context is not included.
 -/
-private def showParserName [Monad m] [MonadEnv m] (firsts : NameMap String) (n : Name) : m MessageData := do
+private def showParserName [Monad m] [MonadEnv m] (firsts : NameMap String) (n : Name)
+    : m MessageData := do
   let env ← getEnv
-  let params :=
-    env.constants.find?' n |>.map (·.levelParams.map Level.param) |>.getD []
+  let params := env.constants.find?' n |>.map (·.levelParams.map Level.param) |>.getD []
 
   let tok := ((← customTacticName n) <|> firsts.get? n).map Std.Format.text |>.getD (format n)
   pure m!"`{.withExprHover tok (.const n params) {}}`"
 
-/--
-Displays all available tactic tags, with documentation.
--/
-@[builtin_command_elab printTacTags] def elabPrintTacTags : CommandElab := fun _stx => do
+/-- Displays all available tactic tags, with documentation. -/
+@[builtin_command_elab printTacTags]
+def elabPrintTacTags : CommandElab := fun _stx => do
   let all :=
     tacticTagExt.toEnvExtension.getState (← getEnv)
-      |>.importedEntries |>.push ((tacticTagExt.exportEntriesFn (← getEnv) (tacticTagExt.getState (← getEnv))).exported)
+      |>.importedEntries
+      |>.push ((tacticTagExt.exportEntriesFn (← getEnv)
+        (tacticTagExt.getState (← getEnv))).exported)
   let mut mapping : NameMap NameSet := {}
   for arr in all do
     for (tac, tag) in arr do
@@ -123,32 +127,34 @@ Displays all available tactic tags, with documentation.
 
   let showDocs : Option String → MessageData
     | none => .nil
-    | some d => Format.line ++ MessageData.joinSep ((d.split '\n').map (toMessageData ∘ String.Slice.copy)).toList Format.line
+    | some d =>
+      Format.line ++ MessageData.joinSep
+        ((d.split '\n').map (toMessageData ∘ String.Slice.copy)).toList Format.line
 
   let showTactics (tag : Name) : CommandElabM MessageData := do
     match mapping.find? tag with
     | none => pure .nil
     | some tacs =>
-      if tacs.isEmpty then pure .nil
+      if tacs.isEmpty then
+        pure .nil
       else
         let tacs := tacs.toArray.qsort (·.toString < ·.toString) |>.toList
         pure (Format.line ++ MessageData.joinSep (← tacs.mapM (showParserName firsts)) ", ")
 
-  let tagDescrs ← (← allTagsWithInfo).mapM fun (name, userName, docs) => do
-    pure <| m!"• " ++
-      MessageData.nestD (m!"`{name}`" ++
-        (if name.toString != userName then m!" — \"{userName}\"" else MessageData.nil) ++
-        showDocs docs ++
-        (← showTactics name))
+  let tagDescrs ←
+    (← allTagsWithInfo).mapM fun (name, userName, docs) => do
+      pure <|
+        m!"• " ++ MessageData.nestD
+          (m!"`{name}`"
+            ++ (if name.toString != userName then m!" — \"{userName}\"" else MessageData.nil)
+            ++ showDocs docs ++ (← showTactics name))
 
   let tagList : MessageData :=
     m!"Available tags: {MessageData.nestD (Format.line ++ .joinSep tagDescrs Format.line)}"
 
   logInfo tagList
 
-/--
-The information needed to display all documentation for a tactic.
--/
+/-- The information needed to display all documentation for a tactic. -/
 structure TacticDoc where
   /-- The name of the canonical parser for the tactic -/
   internalName : Name
@@ -164,7 +170,8 @@ structure TacticDoc where
 def allTacticDocs (includeUnnamed : Bool := true) : MetaM (Array TacticDoc) := do
   let env ← getEnv
   let allTags :=
-    tacticTagExt.toEnvExtension.getState env |>.importedEntries
+    tacticTagExt.toEnvExtension.getState env
+      |>.importedEntries
       |>.push ((tacticTagExt.exportEntriesFn env (tacticTagExt.getState env)).exported)
   let mut tacTags : NameMap NameSet := {}
   for arr in allTags do
@@ -184,15 +191,19 @@ def allTacticDocs (includeUnnamed : Bool := true) : MetaM (Array TacticDoc) := d
 
     let userName? : Option String := firstTokens.get? tac
     let userName ←
-      if let some n := userName? then pure n
-      else if includeUnnamed then pure tac.toString
-      else continue
+      if let some n := userName? then
+        pure n
+      else if includeUnnamed then
+        pure tac.toString
+      else
+        continue
 
-    docs := docs.push {
-      internalName := tac,
-      userName := userName,
-      tags := tacTags.getD tac {},
-      docString := ← findDocString? env tac,
-      extensionDocs := getTacticExtensions env tac
-    }
+    docs :=
+      docs.push {
+        internalName := tac
+        userName := userName
+        tags := tacTags.getD tac {}
+        docString := ← findDocString? env tac
+        extensionDocs := getTacticExtensions env tac
+      }
   return docs

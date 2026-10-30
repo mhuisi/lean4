@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Util
 import Lean.Meta.Tactic.Grind.Util
@@ -35,8 +36,7 @@ it assumes the `lhs` does not have loose bound variables.
 **Note**: This function is an approximation. It may return `true` for terms that do not
 correspond to match-conditions.
 -/
-partial def isMatchCondCandidate (e : Expr) : Bool :=
-  e.isForall && go e
+partial def isMatchCondCandidate (e : Expr) : Bool := e.isForall && go e
 where
   go (e : Expr) : Bool :=
     if let .forallE _ d b _ := e then
@@ -65,40 +65,42 @@ private def addMatchCondsToSplitter (splitterType : Expr) (numAlts : Nat) : Expr
   if numAlts == 0 then return splitterType
   let .forallE _ alt b _ := splitterType
     | return splitterType
-  return splitterType.updateForallE! (addMatchCondsToAlt alt) (addMatchCondsToSplitter b (numAlts-1))
+  return splitterType.updateForallE! (addMatchCondsToAlt alt)
+    (addMatchCondsToSplitter b (numAlts - 1))
 
-def casesMatch (mvarId : MVarId) (e : Expr) : MetaM (List MVarId) := mvarId.withContext do
-  let some app ← matchMatcherApp? e
-    | throwTacticEx `grind.casesMatch mvarId m!"`match`-expression expected{indentExpr e}"
-  let (motive, eqRefls) ← mkMotiveAndRefls app
-  let target ← mvarId.getType
-  let mut us := app.matcherLevels
-  if let some i := app.uElimPos? then
-    us := us.set! i (← getLevel target)
-  let splitterName := (← Match.getEquationsFor app.matcherName).splitterName
-  let splitterApp := mkConst splitterName us.toList
-  let splitterApp := mkAppN splitterApp app.params
-  let splitterApp := mkApp splitterApp motive
-  let splitterApp := mkAppN splitterApp app.discrs
-  let numAlts := app.alts.size
-  let splitterType ← inferType splitterApp
-  let splitterType := addMatchCondsToSplitter splitterType app.alts.size
-  let (mvars, _, _) ← forallMetaBoundedTelescope splitterType numAlts (kind := .syntheticOpaque)
-  let splitterApp := mkAppN splitterApp mvars
-  let val := mkAppN splitterApp eqRefls
-  mvarId.assign val
-  updateTags mvars
-  return mvars.toList.map (·.mvarId!)
+def casesMatch (mvarId : MVarId) (e : Expr) : MetaM (List MVarId) :=
+  mvarId.withContext do
+    let some app ← matchMatcherApp? e
+      | throwTacticEx `grind.casesMatch mvarId m!"`match`-expression expected{indentExpr e}"
+    let (motive, eqRefls) ← mkMotiveAndRefls app
+    let target ← mvarId.getType
+    let mut us := app.matcherLevels
+    if let some i := app.uElimPos? then
+      us := us.set! i (← getLevel target)
+    let splitterName := (← Match.getEquationsFor app.matcherName).splitterName
+    let splitterApp := mkConst splitterName us.toList
+    let splitterApp := mkAppN splitterApp app.params
+    let splitterApp := mkApp splitterApp motive
+    let splitterApp := mkAppN splitterApp app.discrs
+    let numAlts := app.alts.size
+    let splitterType ← inferType splitterApp
+    let splitterType := addMatchCondsToSplitter splitterType app.alts.size
+    let (mvars, _, _) ← forallMetaBoundedTelescope splitterType numAlts (kind := .syntheticOpaque)
+    let splitterApp := mkAppN splitterApp mvars
+    let val := mkAppN splitterApp eqRefls
+    mvarId.assign val
+    updateTags mvars
+    return mvars.toList.map (·.mvarId!)
 where
   mkMotiveAndRefls (app : MatcherApp) : MetaM (Expr × Array Expr) := do
     let dummy := mkSort 0
     let aux := mkApp (mkAppN e.getAppFn app.params) dummy
     forallBoundedTelescope (← inferType aux) app.discrs.size fun xs _ => do
-    withNewEqs app.discrs xs fun eqs eqRefls => do
-      let type ← mvarId.getType
-      let type ← mkForallFVars eqs type
-      let motive ← mkLambdaFVars xs type
-      return (motive, eqRefls)
+      withNewEqs app.discrs xs fun eqs eqRefls => do
+        let type ← mvarId.getType
+        let type ← mkForallFVars eqs type
+        let motive ← mkLambdaFVars xs type
+        return (motive, eqRefls)
 
   updateTags (mvars : Array Expr) : MetaM Unit := do
     let tag ← mvarId.getTag

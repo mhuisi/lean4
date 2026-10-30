@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.HeadIndex
 public import Lean.Meta.Basic
@@ -28,21 +29,21 @@ inductive Origin where
   | stx (id : Name) (ref : Syntax)
   /-- It is local, but we don't have a local hypothesis for it. -/
   | local (id : Name)
-  deriving Inhabited, Repr
+deriving Inhabited, Repr
 
 /-- A unique identifier corresponding to the origin. -/
 def Origin.key : Origin → Name
   | .decl declName => declName
-  | .fvar fvarId   => fvarId.name
-  | .stx id _      => id
-  | .local id      => id
+  | .fvar fvarId => fvarId.name
+  | .stx id _ => id
+  | .local id => id
 
 def Origin.pp (o : Origin) : MessageData :=
   match o with
   | .decl declName => MessageData.ofConstName declName
-  | .fvar fvarId   => mkFVar fvarId
-  | .stx _ ref     => ref
-  | .local id      => id
+  | .fvar fvarId => mkFVar fvarId
+  | .stx _ ref => ref
+  | .local id => id
 
 instance : BEq Origin where
   beq a b := a.key == b.key
@@ -56,10 +57,10 @@ structure Theorems (α : Type) where
   /-- Set of theorem ids that have been inserted using `insert`. -/
   private origins : PHashSet Origin := {}
   /-- Theorems that have been marked as erased -/
-  private erased  : PHashSet Origin := {}
+  private erased : PHashSet Origin := {}
   /-- Mapping from origin to E-matching theorems associated with this origin. -/
   private omap : PHashMap Origin (List α) := {}
-  deriving Inhabited
+deriving Inhabited
 
 class TheoremLike (α : Type) where
   getSymbols : α → List HeadIndex
@@ -86,27 +87,30 @@ def Theorems.insert [TheoremLike α] (s : Theorems α) (thm : α) : Theorems α 
   let origin := getOrigin thm
   let origins := origins.insert origin
   let erased := erased.erase origin
-  let smap := if let some thms := smap.find? declName then
-    smap.insert declName (thm::thms)
-  else
-    smap.insert declName [thm]
-  let omap := if let some thms := omap.find? origin then
-    omap.insert origin (thm::thms)
-  else
-    omap.insert origin [thm]
+  let smap :=
+    if let some thms := smap.find? declName then
+      smap.insert declName (thm :: thms)
+    else
+      smap.insert declName [thm]
+  let omap :=
+    if let some thms := omap.find? origin then
+      omap.insert origin (thm :: thms)
+    else
+      omap.insert origin [thm]
   return { smap, origins, erased, omap }
 
 /-- Returns `true` if `s` contains a theorem with the given origin. -/
-def Theorems.contains (s : Theorems α) (origin : Origin) : Bool :=
-  s.origins.contains origin
+def Theorems.contains (s : Theorems α) (origin : Origin) : Bool := s.origins.contains origin
 
 /-- Marks the theorem with the given origin as `erased` -/
-def Theorems.erase (s : Theorems α) (origin : Origin) : Theorems α :=
-  { s with erased := s.erased.insert origin, origins := s.origins.erase origin }
+def Theorems.erase (s : Theorems α) (origin : Origin) : Theorems α := {
+  s with
+  erased := s.erased.insert origin
+  origins := s.origins.erase origin
+}
 
 /-- Returns `true` if the theorem has been marked as erased. -/
-def Theorems.isErased (s : Theorems α) (origin : Origin) : Bool :=
-  s.erased.contains origin
+def Theorems.isErased (s : Theorems α) (origin : Origin) : Bool := s.erased.contains origin
 
 /--
 Retrieves theorems from `s` associated with the given symbol. See `Theorems.insert`.
@@ -119,9 +123,7 @@ def Theorems.retrieve? (s : Theorems α) (sym : Name) : Option (List α × Theor
   else
     none
 
-/--
-Returns theorems associated with the given origin.
--/
+/-- Returns theorems associated with the given origin. -/
 def Theorems.find (s : Theorems α) (origin : Origin) : List α :=
   if let some thms := s.omap.find? origin then
     thms
@@ -147,11 +149,11 @@ def getProofWithFreshMVarLevels [TheoremLike α] (thm : α) : MetaM Expr := do
 def Theorems.eraseDecl (s : Theorems α) (declName : Name) : MetaM (Theorems α) := do
   let throwErr {α} : MetaM α :=
     throwError "`{.ofConstName declName}` is not marked with the `[grind]` attribute"
-  if !wasOriginallyTheorem (← getEnv) declName then
+  if ! wasOriginallyTheorem (← getEnv) declName then
     if let some eqns ← getEqnsFor? declName then
-       unless eqns.all fun eqn => s.contains (.decl eqn) do
-         throwErr
-       return eqns.foldl (init := s) fun s eqn => s.erase (.decl eqn)
+      unless eqns.all fun eqn => s.contains (.decl eqn) do
+        throwErr
+      return eqns.foldl (init := s) fun s eqn => s.erase (.decl eqn)
     else
       throwErr
   else
@@ -159,8 +161,7 @@ def Theorems.eraseDecl (s : Theorems α) (declName : Name) : MetaM (Theorems α)
       throwErr
     return s.erase <| .decl declName
 
-def Theorems.getOrigins (s : Theorems α) : List Origin :=
-  s.origins.toList
+def Theorems.getOrigins (s : Theorems α) : List Origin := s.origins.toList
 
 def Theorems.mkEmpty (α : Type) : Theorems α := {}
 
@@ -184,7 +185,8 @@ This avoids the need for efficiently merging the `Theorems α` data structure.
 abbrev TheoremsArray (α : Type) := Array (Theorems α)
 
 @[specialize]
-def TheoremsArray.retrieve? (s : TheoremsArray α) (sym : Name) : Option (List α × TheoremsArray α) := Id.run do
+def TheoremsArray.retrieve? (s : TheoremsArray α) (sym : Name)
+    : Option (List α × TheoremsArray α) := Id.run do
   /-
   We must scan all elements. Multiple elements may contain theorems associated with `sym`.
   Moreover, `TheoremsArray.insert` always reinserts partially activated theorems into the
@@ -199,9 +201,10 @@ def TheoremsArray.retrieve? (s : TheoremsArray α) (sym : Name) : Option (List �
   if result.isEmpty then return none
   return some (result, s)
 
-def TheoremsArray.insert [TheoremLike α] (s : TheoremsArray α) (thm : α) : TheoremsArray α := Id.run do
+def TheoremsArray.insert [TheoremLike α] (s : TheoremsArray α) (thm : α)
+    : TheoremsArray α := Id.run do
   if s.isEmpty then
-    let thms := { : Theorems α}
+    let thms := { : Theorems α }
     #[thms.insert thm]
   else
     s.modify 0 (·.insert thm)

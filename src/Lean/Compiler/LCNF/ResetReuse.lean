@@ -68,12 +68,14 @@ structure Context where
 abbrev ReuseM := ReaderT Context CompilerM
 
 def mayReuse (c₁ c₂ : CtorInfo) : ReuseM Bool :=
-  return c₁.size == c₂.size && c₁.usize == c₂.usize && c₁.ssize == c₂.ssize &&
-  /- The following condition is a heuristic.
-     If `relaxedReuse = false`, then we don't want to reuse cells from
-     different constructors even when they are compatible
-     because it produces counterintuitive behavior. -/
-  ((← read).relaxedReuse || c₁.name.getPrefix == c₂.name.getPrefix)
+  return c₁.size == c₂.size && c₁.usize == c₂.usize && c₁.ssize == c₂.ssize
+    /-
+    The following condition is a heuristic.
+    If `relaxedReuse = false`, then we don't want to reuse cells from
+    different constructors even when they are compatible
+    because it produces counterintuitive behavior.
+    -/
+    && ((← read).relaxedReuse || c₁.name.getPrefix == c₂.name.getPrefix)
 
 /--
 This function corresponds to `S` from the paper. Assuming that `x` is dead in `c`, `S` attempts to
@@ -85,9 +87,9 @@ partial def S (x : FVarId) (info : CtorInfo) (c : Code .impure) : ReuseM (Code .
   let (c, changed) ← go w c
   if changed then
     let decl := {
-      fvarId := w,
-      binderName := (← mkFreshBinderName),
-      type := ImpureType.tobject,
+      fvarId := w
+      binderName := (← mkFreshBinderName)
+      type := ImpureType.tobject
       value := .reset info.size x
     }
     modifyLCtx fun lctx => lctx.addLetDecl decl
@@ -114,38 +116,30 @@ where
       else
         goK k
     | .cases cs =>
-      let result ← cs.alts.mapM fun alt => do
-        let (altCode, changed) ← go w alt.getCode
-        return (alt.updateCode altCode, changed)
+      let result ←
+        cs.alts.mapM fun alt => do
+          let (altCode, changed) ← go w alt.getCode
+          return (alt.updateCode altCode, changed)
       let (alts, altsChanged) := result.unzip
       return (c.updateAlts! alts, altsChanged.any id)
     | .return .. | .jmp .. | .unreach .. => return (c, false)
-    | .sset _ _ _ _ _ k _ | .uset _ _ _ k _ | .let _ k =>
-      goK k
+    | .sset _ _ _ _ _ k _ | .uset _ _ _ k _ | .let _ k => goK k
     | .inc .. | .dec .. | .setTag .. | .oset .. | .del .. => unreachable!
 
 def isCtorUsing (instr : CodeDecl .impure) (x : FVarId) : Bool :=
   match instr with
-  | .let { value := .ctor _ args _, .. } => args.any (·.dependsOn { x })
+  | .let { value := .ctor _ args _, .. } => args.any (·.dependsOn {x})
   | _ => false
 
 inductive UseClassification where
-  /--
-  The value under scrutiny is passed as an owned argument to a function
-  -/
+  /-- The value under scrutiny is passed as an owned argument to a function -/
   | ownedArg
-  /--
-  The value under scrutiny is used but not as an owned argument.
-  -/
+  /-- The value under scrutiny is used but not as an owned argument. -/
   | other
-  /--
-  The value under scrutiny is not used.
-  -/
+  /-- The value under scrutiny is not used. -/
   | none
 
-/--
-Check how the variable `x` is used in `instr` if at all.
--/
+/-- Check how the variable `x` is used in `instr` if at all. -/
 def classifyUse (instr : CodeDecl .impure) (x : FVarId) : ReuseM UseClassification := do
   match instr with
   | .let { value := e@(.fap f args _), .. } =>
@@ -163,23 +157,22 @@ def classifyUse (instr : CodeDecl .impure) (x : FVarId) : ReuseM UseClassificati
               | .none, false => .ownedArg
       return result
     else
-      if e.dependsOn { x } then
+      if e.dependsOn {x} then
         return .ownedArg
       else
         return .none
   | .let { value := e@(.pap ..), .. } | .let { value := e@(.fvar ..), .. } =>
-    if e.dependsOn { x } then
+    if e.dependsOn {x} then
       return .ownedArg
     else
       return .none
   | _ =>
-    if instr.dependsOn { x } then
+    if instr.dependsOn {x} then
       return .other
     else
       return .none
 
 mutual
-
 
 /--
 This function corresponds to `D` from the paper. It looks for positions in `c` where `x` is not live
@@ -212,7 +205,7 @@ where
         return (c, false)
     | .jp decl k =>
       let (k, found) ← go k
-      let (value, _ /- found' -/ ) ← go decl.value
+      let (value, _ /- found' -/) ← go decl.value
       /-
       If `found' == true`, then `go k` must also have returned `(k, true)` since
       we assume the IR does not have dead join points. So, if `x` is live in `decl`,
@@ -235,15 +228,12 @@ where
           return (c.updateCont! k, true)
         else
           match (← classifyUse instr x) with
-          | .ownedArg =>
-            return (c.updateCont! k, true)
+          | .ownedArg => return (c.updateCont! k, true)
           | .other =>
             let k ← S x info k
             return (c.updateCont! k, true)
-          | .none =>
-            return (c.updateCont! k, false)
-    | .return .. | .jmp .. | .unreach .. =>
-      return (c, ← c.isFVarLiveIn x)
+          | .none => return (c.updateCont! k, false)
+    | .return .. | .jmp .. | .unreach .. => return (c, ← c.isFVarLiveIn x)
     | .inc .. | .dec .. | .setTag .. | .oset .. | .del .. => unreachable!
 
 end
@@ -258,37 +248,37 @@ partial def Code.insertResetReuse (c : Code .impure) : ReuseM (Code .impure) := 
     let alreadyFound := (← read).alreadyFound.contains cs.discr
     let borrowed := (← read).ownedness.getD cs.discr .bot == .borrow
     withReader (fun ctx => { ctx with alreadyFound := ctx.alreadyFound.insert cs.discr }) do
-      let alts ← cs.alts.mapM fun alt => do
-        let alt ← alt.mapCodeM (·.insertResetReuse)
-        match alt with
-        | .ctorAlt info k =>
-          if info.isScalar || alreadyFound || borrowed then
-            -- If `alreadyFound`, then we don't try to reuse memory cell to avoid
-            -- double reset.
-            return alt
-          else
-            return alt.updateCode (← D cs.discr info k)
-        | .default .. => return alt
+      let alts ←
+        cs.alts.mapM fun alt => do
+          let alt ← alt.mapCodeM (·.insertResetReuse)
+          match alt with
+          | .ctorAlt info k =>
+            if info.isScalar || alreadyFound || borrowed then
+              -- If `alreadyFound`, then we don't try to reuse memory cell to avoid
+              -- double reset.
+              return alt
+            else
+              return alt.updateCode (← D cs.discr info k)
+          | .default .. => return alt
       return c.updateAlts! alts
   | .jp decl k =>
     let value ← decl.value.insertResetReuse
     let decl ← decl.updateValue value
     let k ← k.insertResetReuse
     return c.updateFun! decl k
-  | .let _ k | .uset _ _ _ k _ | .sset _ _ _ _ _ k _  =>
-    return c.updateCont! (← k.insertResetReuse)
+  | .let _ k | .uset _ _ _ k _ | .sset _ _ _ _ _ k _ => return c.updateCont! (← k.insertResetReuse)
   | .return .. | .jmp .. | .unreach .. => return c
   | .inc .. | .dec .. | .setTag .. | .oset .. | .del .. => unreachable!
 
 partial def Decl.insertResetReuseCore (decl : Decl .impure) : ReuseM (Decl .impure) := do
-  let value ← decl.value.mapCodeM fun code => do
-    let alreadyFound ←
-      if (← read).relaxedReuse then
-        pure (← (collectResets code).run {}).snd
-      else
-        pure {}
-    withReader (fun ctx => { ctx with alreadyFound }) do
-      code.insertResetReuse
+  let value ←
+    decl.value.mapCodeM fun code => do
+      let alreadyFound ←
+        if (← read).relaxedReuse then
+          pure (← (collectResets code).run {}).snd
+        else
+          pure {}
+      withReader (fun ctx => { ctx with alreadyFound }) do code.insertResetReuse
   return { decl with value }
 where
   collectResets (c : Code .impure) : StateRefT (PersistentHashSet FVarId) CompilerM Unit := do
@@ -302,7 +292,6 @@ where
     | .cases c => c.alts.forM (collectResets ·.getCode)
     | .unreach .. | .return .. | .jmp .. => return ()
     | .inc .. | .dec .. | .setTag .. | .oset .. | .del .. => unreachable!
-
 
 def Decl.insertResetReuse (decl : Decl .impure) : CompilerM (Decl .impure) := do
   /-
@@ -327,7 +316,6 @@ def Decl.insertResetReuse (decl : Decl .impure) : CompilerM (Decl .impure) := do
 public def insertResetReuse : Pass :=
   Pass.mkPerDeclaration `resetReuse .impure Decl.insertResetReuse 0
 
-builtin_initialize
-  registerTraceClass `Compiler.resetReuse (inherited := true)
+builtin_initialize registerTraceClass `Compiler.resetReuse (inherited := true)
 
 end Lean.Compiler.LCNF

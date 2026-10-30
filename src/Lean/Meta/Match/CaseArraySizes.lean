@@ -15,10 +15,10 @@ namespace Lean.Meta
 
 public structure CaseArraySizesSubgoal where
   mvarId : MVarId
-  elems  : Array FVarId := #[]
+  elems : Array FVarId := #[]
   diseqs : Array FVarId := #[]
-  subst  : FVarSubst := {}
-  deriving Inhabited
+  subst : FVarSubst := {}
+deriving Inhabited
 
 public def getArrayArgType (a : Expr) : MetaM Expr := do
   let aType ← inferType a
@@ -28,41 +28,46 @@ public def getArrayArgType (a : Expr) : MetaM Expr := do
   pure aType.appArg!
 
 def mkArrayGetLit (a : Expr) (i : Nat) (n : Nat) (h : Expr) : MetaM Expr := do
-  let lt    ← mkLt (mkRawNatLit i) (mkRawNatLit n)
+  let lt ← mkLt (mkRawNatLit i) (mkRawNatLit n)
   let ltPrf ← mkDecideProof lt
   mkAppM `Array.getLit #[a, mkRawNatLit i, h, ltPrf]
 
-partial def introArrayLit (mvarId : MVarId) (a : Expr) (n : Nat) (xNamePrefix : Name) (aSizeEqN : Expr) : MetaM MVarId := do
+partial def introArrayLit
+    (mvarId : MVarId) (a : Expr) (n : Nat) (xNamePrefix : Name) (aSizeEqN : Expr)
+    : MetaM MVarId := do
   let α ← getArrayArgType a
   let rec loop (i : Nat) (xs : Array Expr) (args : Array Expr) := do
     if i < n then
-      withLocalDeclD (xNamePrefix.appendIndexAfter (i+1)) α fun xi => do
+      withLocalDeclD (xNamePrefix.appendIndexAfter (i + 1)) α fun xi => do
         let xs := xs.push xi
         let ai ← mkArrayGetLit a i n aSizeEqN
         let args := args.push ai
-        loop (i+1) xs args
+        loop (i + 1) xs args
     else
-      let xsLit     ← mkArrayLit α xs.toList
-      let aEqXsLit  ← mkEq a xsLit
+      let xsLit ← mkArrayLit α xs.toList
+      let aEqXsLit ← mkEq a xsLit
       let aEqLitPrf ← mkAppM ``Array.toArrayLit_eq #[a, mkRawNatLit n, aSizeEqN]
       withLocalDeclD `hEqALit aEqXsLit fun heq => do
-        let target    ← mvarId.getType
+        let target ← mvarId.getType
         let newTarget ← mkForallFVars (xs.push heq) target
         pure (newTarget, args.push aEqLitPrf)
   let (newTarget, args) ← loop 0 #[] #[]
   let tag ← mvarId.getTag
-  let newMVar   ← mkFreshExprSyntheticOpaqueMVar newTarget tag
+  let newMVar ← mkFreshExprSyntheticOpaqueMVar newTarget tag
   mvarId.assign (mkAppN newMVar args)
   pure newMVar.mvarId!
 
 /--
-  Split goal `... |- C a` into sizes.size + 1 subgoals
-  1) `..., x_1 ... x_{sizes[0]} |- C #[x_1, ... x_{sizes[0]}]`
-  ...
-  n) `..., x_1 ... x_{sizes[n-1]}  |- C #[x_1, ..., x_{sizes[n-1]}]`
-  n+1) `..., (h_1 : a.size != sizes[0]), ..., (h_n : a.size != sizes[n-1]) |- C a`
-  where `n = sizes.size` -/
-public def caseArraySizes (mvarId : MVarId) (fvarId : FVarId) (sizes : Array Nat) (xNamePrefix := `x) (hNamePrefix := `h) : MetaM (Array CaseArraySizesSubgoal) :=
+Split goal `... |- C a` into sizes.size + 1 subgoals
+1) `..., x_1 ... x_{sizes[0]} |- C #[x_1, ... x_{sizes[0]}]`
+...
+n) `..., x_1 ... x_{sizes[n-1]}  |- C #[x_1, ..., x_{sizes[n-1]}]`
+n+1) `..., (h_1 : a.size != sizes[0]), ..., (h_n : a.size != sizes[n-1]) |- C a`
+where `n = sizes.size`
+-/
+public def caseArraySizes
+    (mvarId : MVarId) (fvarId : FVarId) (sizes : Array Nat) (xNamePrefix := `x) (hNamePrefix := `h)
+    : MetaM (Array CaseArraySizesSubgoal) :=
   mvarId.withContext do
     let a := mkFVar fvarId
     let aSize ← mkAppM `Array.size #[a]
@@ -71,15 +76,15 @@ public def caseArraySizes (mvarId : MVarId) (fvarId : FVarId) (sizes : Array Nat
     let (hEq, mvarId) ← mvarId.intro1
     let subgoals ← caseValues mvarId aSizeFVarId (sizes.map mkRawNatLit) hNamePrefix
     subgoals.mapIdxM fun i subgoal => do
-      let subst  := subgoal.subst
+      let subst := subgoal.subst
       let mvarId := subgoal.mvarId
       if h : i < sizes.size then
-        let hEqSz  := (subst.get hEq).fvarId!
+        let hEqSz := (subst.get hEq).fvarId!
         let n := sizes[i]
         mvarId.withContext do
           let hEqSzSymm ← mkEqSymm (mkFVar hEqSz)
           let mvarId ← introArrayLit mvarId a n xNamePrefix hEqSzSymm
-          let (xs, mvarId)  ← mvarId.introN n
+          let (xs, mvarId) ← mvarId.introN n
           let (hEqLit, mvarId) ← mvarId.intro1
           let mvarId ← mvarId.clear hEqSz
           let (subst, mvarId) ← substCore mvarId hEqLit (symm := false) subst

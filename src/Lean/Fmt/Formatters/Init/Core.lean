@@ -19,5 +19,4 @@ public def fmtEmptyBraces : Fmt := fun
     let lbTk ← fmt lbTk
     let rbTk ← fmt rbTk
     return Layouts.atomic #[lbTk, rbTk]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

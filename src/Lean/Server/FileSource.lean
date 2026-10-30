@@ -17,74 +17,52 @@ class FileSource (α : Type) where
   fileSource : α → DocumentUri
 export FileSource (fileSource)
 
-instance : FileSource Location :=
-  ⟨fun l => l.uri⟩
+instance : FileSource Location := ⟨fun l => l.uri⟩
 
-instance : FileSource TextDocumentIdentifier :=
-  ⟨fun i => i.uri⟩
+instance : FileSource TextDocumentIdentifier := ⟨fun i => i.uri⟩
 
-instance : FileSource VersionedTextDocumentIdentifier :=
-  ⟨fun i => i.uri⟩
+instance : FileSource VersionedTextDocumentIdentifier := ⟨fun i => i.uri⟩
 
-instance : FileSource TextDocumentEdit :=
-  ⟨fun e => fileSource e.textDocument⟩
+instance : FileSource TextDocumentEdit := ⟨fun e => fileSource e.textDocument⟩
 
-instance : FileSource TextDocumentItem :=
-  ⟨fun i => i.uri⟩
+instance : FileSource TextDocumentItem := ⟨fun i => i.uri⟩
 
-instance : FileSource TextDocumentPositionParams :=
-  ⟨fun p => fileSource p.textDocument⟩
+instance : FileSource TextDocumentPositionParams := ⟨fun p => fileSource p.textDocument⟩
 
-instance : FileSource DidOpenTextDocumentParams :=
-  ⟨fun p => fileSource p.textDocument⟩
+instance : FileSource DidOpenTextDocumentParams := ⟨fun p => fileSource p.textDocument⟩
 
-instance : FileSource DidChangeTextDocumentParams :=
-  ⟨fun p => fileSource p.textDocument⟩
+instance : FileSource DidChangeTextDocumentParams := ⟨fun p => fileSource p.textDocument⟩
 
-instance : FileSource DidSaveTextDocumentParams :=
-  ⟨fun p => fileSource p.textDocument⟩
+instance : FileSource DidSaveTextDocumentParams := ⟨fun p => fileSource p.textDocument⟩
 
-instance : FileSource DidCloseTextDocumentParams :=
-  ⟨fun p => fileSource p.textDocument⟩
+instance : FileSource DidCloseTextDocumentParams := ⟨fun p => fileSource p.textDocument⟩
 
-instance : FileSource CompletionParams :=
-  ⟨fun h => fileSource h.toTextDocumentPositionParams⟩
+instance : FileSource CompletionParams := ⟨fun h => fileSource h.toTextDocumentPositionParams⟩
 
-instance : FileSource HoverParams :=
-  ⟨fun h => fileSource h.toTextDocumentPositionParams⟩
+instance : FileSource HoverParams := ⟨fun h => fileSource h.toTextDocumentPositionParams⟩
 
-instance : FileSource DeclarationParams :=
-  ⟨fun h => fileSource h.toTextDocumentPositionParams⟩
+instance : FileSource DeclarationParams := ⟨fun h => fileSource h.toTextDocumentPositionParams⟩
 
-instance : FileSource DefinitionParams :=
-  ⟨fun h => fileSource h.toTextDocumentPositionParams⟩
+instance : FileSource DefinitionParams := ⟨fun h => fileSource h.toTextDocumentPositionParams⟩
 
-instance : FileSource TypeDefinitionParams :=
-  ⟨fun h => fileSource h.toTextDocumentPositionParams⟩
+instance : FileSource TypeDefinitionParams := ⟨fun h => fileSource h.toTextDocumentPositionParams⟩
 
-instance : FileSource ReferenceParams :=
-  ⟨fun h => fileSource h.toTextDocumentPositionParams⟩
+instance : FileSource ReferenceParams := ⟨fun h => fileSource h.toTextDocumentPositionParams⟩
 
-instance : FileSource WaitForDiagnosticsParams :=
-  ⟨fun p => p.uri⟩
+instance : FileSource WaitForDiagnosticsParams := ⟨fun p => p.uri⟩
 
 instance : FileSource DocumentHighlightParams :=
   ⟨fun h => fileSource h.toTextDocumentPositionParams⟩
 
-instance : FileSource DocumentSymbolParams :=
-  ⟨fun p => fileSource p.textDocument⟩
+instance : FileSource DocumentSymbolParams := ⟨fun p => fileSource p.textDocument⟩
 
-instance : FileSource SemanticTokensParams :=
-  ⟨fun p => fileSource p.textDocument⟩
+instance : FileSource SemanticTokensParams := ⟨fun p => fileSource p.textDocument⟩
 
-instance : FileSource SemanticTokensRangeParams :=
-  ⟨fun p => fileSource p.textDocument⟩
+instance : FileSource SemanticTokensRangeParams := ⟨fun p => fileSource p.textDocument⟩
 
-instance : FileSource FoldingRangeParams :=
-  ⟨fun p => fileSource p.textDocument⟩
+instance : FileSource FoldingRangeParams := ⟨fun p => fileSource p.textDocument⟩
 
-instance : FileSource PlainGoalParams :=
-  ⟨fun p => fileSource p.textDocument⟩
+instance : FileSource PlainGoalParams := ⟨fun p => fileSource p.textDocument⟩
 
 instance : FileSource PlainTermGoalParams where
   fileSource p := fileSource p.textDocument
@@ -140,8 +118,7 @@ def CompletionItem.getFileSource! (item : CompletionItem) : DocumentUri :=
     | .arr _ =>
       let uri ← fromJson? <| ← data.getArrVal? 0
       return uri
-    | _ =>
-      throw s!"unexpected completion item data: {data}"
+    | _ => throw s!"unexpected completion item data: {data}"
   match r with
   | Except.ok id => id
   | Except.error e => panic! e

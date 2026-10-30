@@ -20,8 +20,7 @@ public def fmtJsonTerm : Fmt := fun
     let jsonTk ← fmt jsonTk
     let json ← fmt json
     return Layouts.pseudoApplication #[jsonTk, json]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Json.«json{_}»]
 public def fmtJsonObject : Fmt := fun
@@ -31,8 +30,7 @@ public def fmtJsonObject : Fmt := fun
     let rbTk ← fmt rbTk
     let fields := Layouts.sepArray fields <| .joinUsingSep none nl
     return Layouts.bracketed lbTk fields rbTk <| .sparse nl (stickynessKind := .preferSticky)
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Json.jsonField]
 public def fmtJsonField : Fmt := fun
@@ -42,8 +40,7 @@ public def fmtJsonField : Fmt := fun
     let value ← fmt value
     let lhs := Layouts.atomic #[hardNested key, colonTk]
     return maybeFlattened <| stickyCombine lhs ⟨nl, nested⟩ value
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Json.jsonIdent]
 public def fmtJsonIdent : Fmt := fun
@@ -62,8 +59,7 @@ public def fmtJsonNum : Fmt := fun
     let minusTk? ← fmt? minusTk?
     let n ← fmt n
     return Layouts.prefixOperator minusTk? n .withoutSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Json.«json-__1»]
 public def fmtJsonScientific : Fmt := fun
@@ -71,8 +67,7 @@ public def fmtJsonScientific : Fmt := fun
     let minusTk? ← fmt? minusTk?
     let n ← fmt n
     return Layouts.prefixOperator minusTk? n .withoutSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Json.json_]
 public def fmtJsonStr : Fmt := fun

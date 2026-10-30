@@ -27,24 +27,21 @@ Returns an iterator over the given range. This iterator will emit the elements o
 in increasing order.
 -/
 @[always_inline, inline]
-def Std.Rcc.iter (r : Rcc α) : Iter (α := Rxc.Iterator α) α :=
-  ⟨⟨some r.lower, r.upper⟩⟩
+def Std.Rcc.iter (r : Rcc α) : Iter (α := Rxc.Iterator α) α := ⟨⟨some r.lower, r.upper⟩⟩
 
 /--
 Returns an iterator over the given range. This iterator will emit the elements of the range
 in increasing order.
 -/
 @[always_inline, inline]
-def Std.Rco.iter (r : Rco α) : Iter (α := Rxo.Iterator α) α :=
-  ⟨⟨some r.lower, r.upper⟩⟩
+def Std.Rco.iter (r : Rco α) : Iter (α := Rxo.Iterator α) α := ⟨⟨some r.lower, r.upper⟩⟩
 
 /--
 Returns an iterator over the given range. This iterator will emit the elements of the range
 in increasing order.
 -/
 @[always_inline, inline]
-def Std.Rci.iter (r : Rci α) : Iter (α := Rxi.Iterator α) α :=
-  ⟨⟨some r.lower⟩⟩
+def Std.Rci.iter (r : Rci α) : Iter (α := Rxi.Iterator α) α := ⟨⟨some r.lower⟩⟩
 
 /--
 Returns an iterator over the given range. This iterator will emit the elements of the range
@@ -75,21 +72,18 @@ Returns an iterator over the given range. This iterator will emit the elements o
 in increasing order.
 -/
 @[always_inline, inline]
-def Std.Ric.iter [Least? α] (r : Ric α) : Iter (α := Rxc.Iterator α) α :=
-  ⟨⟨Least?.least?, r.upper⟩⟩
+def Std.Ric.iter [Least? α] (r : Ric α) : Iter (α := Rxc.Iterator α) α := ⟨⟨Least?.least?, r.upper⟩⟩
 
 /--
 Returns an iterator over the given range. This iterator will emit the elements of the range
 in increasing order.
 -/
 @[always_inline, inline]
-def Std.Rio.iter [Least? α] (r : Rio α) : Iter (α := Rxo.Iterator α) α :=
-  ⟨⟨Least?.least?, r.upper⟩⟩
+def Std.Rio.iter [Least? α] (r : Rio α) : Iter (α := Rxo.Iterator α) α := ⟨⟨Least?.least?, r.upper⟩⟩
 
 /--
 Returns an iterator over the given range. This iterator will emit the elements of the range
 in increasing order.
 -/
 @[always_inline, inline]
-def Std.Rii.iter [Least? α] (_ : Rii α) : Iter (α := Rxi.Iterator α) α :=
-  ⟨⟨Least?.least?⟩⟩
+def Std.Rii.iter [Least? α] (_ : Rii α) : Iter (α := Rxi.Iterator α) α := ⟨⟨Least?.least?⟩⟩

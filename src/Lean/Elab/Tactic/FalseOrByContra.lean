@@ -35,26 +35,31 @@ open Lean Meta Elab Tactic
 -- but fall back to a classical instance. When it is `some true`, we always use the classical instance.
 -- When it is `some false`, if there is no `Decidable` instance we don't introduce the double negation,
 -- and fall back to `False.elim`.
-partial def falseOrByContra (g : MVarId) (useClassical : Option Bool := none) : MetaM (Option MVarId) := do
+partial def falseOrByContra (g : MVarId) (useClassical : Option Bool := none)
+    : MetaM (Option MVarId) := do
   let ty ← whnfR (← g.getType)
   match ty with
   | .const ``False _ => return g
-  | .forallE ..
-  | .app (.const ``Not _) _ =>
+  | .forallE .. | .app (.const ``Not _) _ =>
     -- We set the transparency back to default; otherwise this breaks when run by a `simp` discharger.
     falseOrByContra (← withTransparency default g.intro1P).2 useClassical
   | _ =>
-    let gs ← if (← isProp ty) then
-      match useClassical with
-      | some true => some <$> g.applyConst ``Classical.byContradiction
-      | some false =>
-        try some <$> g.applyConst ``Decidable.byContradiction
-        catch _ => pure none
-      | none =>
-        try some <$> g.applyConst ``Decidable.byContradiction
-        catch _ => some <$> g.applyConst ``Classical.byContradiction
-    else
-      pure none
+    let gs ←
+      if (← isProp ty) then
+        match useClassical with
+        | some true => some <$> g.applyConst ``Classical.byContradiction
+        | some false =>
+          try
+            some <$> g.applyConst ``Decidable.byContradiction
+          catch _ =>
+            pure none
+        | none =>
+          try
+            some <$> g.applyConst ``Decidable.byContradiction
+          catch _ =>
+            some <$> g.applyConst ``Classical.byContradiction
+      else
+        pure none
     match gs with
     | some [] => return none
     | some [g] => return some (← g.intro1).2
@@ -67,7 +72,7 @@ partial def falseOrByContra (g : MVarId) (useClassical : Option Bool := none) : 
 
 @[builtin_tactic Lean.Parser.Tactic.falseOrByContra]
 def elabFalseOrByContra : Tactic
-   | `(tactic| false_or_by_contra) => do liftMetaTactic1 (falseOrByContra ·)
-   | _ => no_error_if_unused% throwUnsupportedSyntax
+  | `(tactic| false_or_by_contra) => do liftMetaTactic1 (falseOrByContra ·)
+  | _ => no_error_if_unused% throwUnsupportedSyntax
 
 end Lean.MVarId

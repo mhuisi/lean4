@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Elab.Tactic.Grind.Basic
 public import Lean.Meta.Tactic.Grind.Filter
@@ -11,7 +12,8 @@ namespace Lean.Elab.Tactic.Grind
 open Meta Lean.Meta.Grind
 
 public partial def elabFilter (filter? : Option (TSyntax `grind_filter)) : GrindTacticM Filter := do
-  let some filter := filter? | return .true
+  let some filter := filter?
+    | return .true
   go filter
 where
   go (filter : TSyntax `grind_filter) : GrindTacticM Filter := do
@@ -25,13 +27,13 @@ where
     | `(grind_filter| $a:grind_filter || $b:grind_filter) => return .or (← go a) (← go b)
     | `(grind_filter| ! $a:grind_filter) => return .not (← go a)
     | `(grind_filter| ($a:grind_filter)) => go a
-    | `(grind_filter| gen = $n:num)  => let n := n.getNat; return .gen fun x => x == n
-    | `(grind_filter| gen > $n:num)  => let n := n.getNat; return .gen fun x => x > n
-    | `(grind_filter| gen ≥ $n:num)  => let n := n.getNat; return .gen fun x => x ≥ n
+    | `(grind_filter| gen = $n:num) => let n := n.getNat; return .gen fun x => x == n
+    | `(grind_filter| gen > $n:num) => let n := n.getNat; return .gen fun x => x > n
+    | `(grind_filter| gen ≥ $n:num) => let n := n.getNat; return .gen fun x => x ≥ n
     | `(grind_filter| gen >= $n:num) => let n := n.getNat; return .gen fun x => x ≥ n
-    | `(grind_filter| gen ≤ $n:num)  => let n := n.getNat; return .gen fun x => x ≤ n
+    | `(grind_filter| gen ≤ $n:num) => let n := n.getNat; return .gen fun x => x ≤ n
     | `(grind_filter| gen <= $n:num) => let n := n.getNat; return .gen fun x => x ≤ n
-    | `(grind_filter| gen < $n:num)  => let n := n.getNat; return .gen fun x => x < n
+    | `(grind_filter| gen < $n:num) => let n := n.getNat; return .gen fun x => x < n
     | `(grind_filter| gen != $n:num) => let n := n.getNat; return .gen fun x => x != n
     | _ => throwUnsupportedSyntax
 

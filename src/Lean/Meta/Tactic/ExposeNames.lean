@@ -31,8 +31,8 @@ private def getLCtxWithExposedNames : MetaM LocalContext := do
     return lctx
   let mut next : Std.HashMap Name Nat := {}
   -- Remark: Shadowed variables may be inserted later.
-  toRename := toRename.qsort fun fvarId₁ fvarId₂ =>
-    (lctx.get! fvarId₁).index < (lctx.get! fvarId₂).index
+  toRename :=
+    toRename.qsort fun fvarId₁ fvarId₂ => (lctx.get! fvarId₁).index < (lctx.get! fvarId₂).index
   for fvarId in toRename do
     let localDecl := lctx.get! fvarId
     let mut baseName := localDecl.userName
@@ -44,7 +44,7 @@ private def getLCtxWithExposedNames : MetaM LocalContext := do
     let mut userName := baseName
     let mut i := next[baseName]?.getD 0
     repeat
-      if !map.contains userName then
+      if ! map.contains userName then
         break
       i := i + 1
       userName := baseName.appendIndexAfter i
@@ -57,12 +57,15 @@ private def getLCtxWithExposedNames : MetaM LocalContext := do
 Creates a new goal whose local context has been "exposed" so that every local declaration has a clear, accessible name.
 If no local declarations require renaming, the original goal is returned unchanged.
 -/
-def _root_.Lean.MVarId.exposeNames (mvarId : MVarId) : MetaM MVarId := mvarId.withContext do
-  mvarId.checkNotAssigned `expose_names
-  let lctx ← getLCtxWithExposedNames
-  let mvarNew ← mkFreshExprMVarAt lctx (← getLocalInstances) (← mvarId.getType) .syntheticOpaque (← mvarId.getTag)
-  mvarId.assign mvarNew
-  return mvarNew.mvarId!
+def _root_.Lean.MVarId.exposeNames (mvarId : MVarId) : MetaM MVarId :=
+  mvarId.withContext do
+    mvarId.checkNotAssigned `expose_names
+    let lctx ← getLCtxWithExposedNames
+    let mvarNew ←
+      mkFreshExprMVarAt lctx (← getLocalInstances) (← mvarId.getType) .syntheticOpaque
+        (← mvarId.getTag)
+    mvarId.assign mvarNew
+    return mvarNew.mvarId!
 
 /-- Creates a temporary local context where all names are exposed, and executes `k` -/
 def withExposedNames (k : MetaM α) : MetaM α := do

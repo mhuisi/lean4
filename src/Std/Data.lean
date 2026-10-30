@@ -18,7 +18,6 @@ public import Std.Data.ExtHashSet
 public import Std.Data.ExtDTreeMap
 public import Std.Data.ExtTreeMap
 public import Std.Data.ExtTreeSet
-
 -- The imports above only import the modules needed to work with the version which bundles
 -- the well-formedness invariant, so we need to additionally import the files that deal with the
 -- unbundled version
@@ -31,7 +30,6 @@ public import Std.Data.HashSet.RawDecidableEquiv
 public import Std.Data.DTreeMap.Raw
 public import Std.Data.TreeMap.Raw
 public import Std.Data.TreeSet.Raw
-
 public import Std.Data.Iterators
 public import Std.Data.ByteSlice
 public import Std.Data.String

@@ -23,5 +23,4 @@ public def fmtReprove : Fmt := fun
     let ids := Layouts.fill ids
     let signature := Layouts.pseudoApplication #[reproveTk, ids]
     return Layouts.keywordSeparated signature byTk seq
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

@@ -27,20 +27,26 @@ def zetaDeltaTarget (declFVarId : FVarId) : TacticM Unit := do
   replaceMainGoal [← Meta.zetaDeltaTarget (← getMainGoal) declFVarId]
 
 /-- "unfold " ident+ (location)? -/
-@[builtin_tactic Lean.Parser.Tactic.unfold] def evalUnfold : Tactic := fun stx => do
+@[builtin_tactic Lean.Parser.Tactic.unfold]
+def evalUnfold : Tactic := fun stx => do
   let loc := expandOptLocation stx[2]
   for declNameId in stx[1].getArgs do
     go declNameId loc
 where
-  go (declNameId : Syntax) (loc : Location) : TacticM Unit := withMainContext <| withRef declNameId do
-    let e ← withoutRecover <| elabTermForApply declNameId (mayPostpone := false)
-    match e with
-    | .const declName _ =>
-      withLocation loc (unfoldLocalDecl declName) (unfoldTarget declName) (throwTacticEx `unfold · m!"did not unfold '{declName}'")
-    | .fvar declFVarId =>
-      unless ← declFVarId.isLetVar do
-        throwError "Tactic `unfold` failed: Local variable `{Expr.fvar declFVarId}` has no definition"
-      withLocation loc (zetaDeltaLocalDecl declFVarId) (zetaDeltaTarget declFVarId) (throwTacticEx `unfold · m!"did not unfold '{e}'")
-    | _ => throwTacticEx `unfold (← getMainGoal) m!"expression {e} is not a global or local constant"
+  go (declNameId : Syntax) (loc : Location) : TacticM Unit :=
+    withMainContext <| withRef declNameId do
+      let e ← withoutRecover <| elabTermForApply declNameId (mayPostpone := false)
+      match e with
+      | .const declName _ =>
+        withLocation loc (unfoldLocalDecl declName) (unfoldTarget declName)
+          (throwTacticEx `unfold · m!"did not unfold '{declName}'")
+      | .fvar declFVarId =>
+        unless ← declFVarId.isLetVar do
+          throwError
+            "Tactic `unfold` failed: Local variable `{Expr.fvar declFVarId}` has no definition"
+        withLocation loc (zetaDeltaLocalDecl declFVarId) (zetaDeltaTarget declFVarId)
+          (throwTacticEx `unfold · m!"did not unfold '{e}'")
+      | _ =>
+        throwTacticEx `unfold (← getMainGoal) m!"expression {e} is not a global or local constant"
 
 end Lean.Elab.Tactic

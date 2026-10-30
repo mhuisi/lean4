@@ -19,32 +19,35 @@ open Lean.Parser.Command
 
 /-- Wrap all occurrences of the given `ident` nodes in antiquotations -/
 private partial def antiquote (vars : Array Syntax) : Syntax → Syntax
-  | stx => match stx with
-  | `($id:ident) =>
-    if vars.any (fun var => var.getId == id.getId) then
-      mkAntiquotNode id (kind := `term) (isPseudoKind := true)
-    else
-      stx
-  | _ => match stx with
-    | Syntax.node i k args => Syntax.node i k (args.map (antiquote vars))
-    | stx => stx
+  | stx =>
+    match stx with
+    | `($id:ident) =>
+      if vars.any (fun var => var.getId == id.getId) then
+        mkAntiquotNode id (kind := `term) (isPseudoKind := true)
+      else
+        stx
+    | _ =>
+      match stx with
+      | Syntax.node i k args => Syntax.node i k (args.map (antiquote vars))
+      | stx => stx
 
- def addInheritDocDefault (rhs : Term) (attrs? : Option (TSepArray ``attrInstance ",")) :
-    Option (TSepArray ``attrInstance ",") :=
+def addInheritDocDefault (rhs : Term) (attrs? : Option (TSepArray ``attrInstance ","))
+    : Option (TSepArray ``attrInstance ",") :=
   attrs?.map fun attrs =>
     match rhs with
     | `($f:ident $_args*) | `($f:ident) =>
-      attrs.getElems.map fun stx => Unhygienic.run do
-        if let `(attrInstance| $attr:ident) := stx then
-          if attr.getId.eraseMacroScopes == `inherit_doc then
-            return ← `(attrInstance| $attr:ident $f:ident)
-        pure ⟨stx⟩
+      attrs.getElems.map fun stx =>
+        Unhygienic.run do
+          if let `(attrInstance| $attr:ident) := stx then
+            if attr.getId.eraseMacroScopes == `inherit_doc then
+              return ← `(attrInstance| $attr:ident $f:ident)
+          pure ⟨stx⟩
     | _ => attrs
 
 /-- Convert `notation` command lhs item into a `syntax` command item -/
 def expandNotationItemIntoSyntaxItem : TSyntax ``notationItem → MacroM (TSyntax `stx)
   | `(notationItem| $_:ident$[:$prec?]?) => `(stx| term $[:$prec?]?)
-  | `(notationItem| $s:str)              => `(stx| $s:str)
+  | `(notationItem| $s:str) => `(stx| $s:str)
   -- TODO(kmill): use after stage0 update
   -- | `(notationItem| $u:unicodeAtom)      => `(stx| $u:unicodeAtom)
   -- | _                                    => Macro.throwUnsupported
@@ -74,17 +77,20 @@ def expandNotationItemIntoPattern (stx : Syntax) : MacroM Syntax :=
 
 def removeParenthesesAux (parens body : Syntax) : Syntax :=
   match parens.getHeadInfo, body.getHeadInfo, body.getTailInfo, parens.getTailInfo with
-  | .original lead _ _ _, .original _ pos trail pos',
-    .original endLead endPos _ endPos', .original _ _ endTrail _ =>
-      body.setHeadInfo (.original lead pos trail pos') |>.setTailInfo (.original endLead endPos endTrail endPos')
+  | .original lead _ _ _, .original _ pos trail pos', .original endLead endPos _ endPos',
+      .original _ _ endTrail _ =>
+    body.setHeadInfo (.original lead pos trail pos')
+      |>.setTailInfo (.original endLead endPos endTrail endPos')
   | _, _, _, _ => body
 
 partial def removeParentheses (stx : Syntax) : MacroM Syntax := do
   match stx with
-  | `(($h:hygieneInfo $e)) => pure $ removeParenthesesAux stx (← removeParentheses $ (← Term.expandCDot? e h.getHygieneInfo).getD e)
+  | `(($h:hygieneInfo $e)) =>
+    pure $ removeParenthesesAux stx
+      (← removeParentheses $ (← Term.expandCDot? e h.getHygieneInfo).getD e)
   | _ =>
     match stx with
-    | .node info kind args => pure $ .node info kind (←args.mapM removeParentheses)
+    | .node info kind args => pure $ .node info kind (← args.mapM removeParentheses)
     | _ => pure stx
 
 partial def hasDuplicateAntiquot (stxs : Array Syntax) : Bool := Id.run do
@@ -99,16 +105,20 @@ partial def hasDuplicateAntiquot (stxs : Array Syntax) : Bool := Id.run do
           seen := seen.insert ident
   pure false
 
-/-- Try to derive an unexpander from a notation.
-    The notation must be of the form `notation ... => c body`
-    where `c` is a declaration in the current scope and `body` any syntax
-    that contains each variable from the LHS at most once. -/
+/--
+Try to derive an unexpander from a notation.
+The notation must be of the form `notation ... => c body`
+where `c` is a declaration in the current scope and `body` any syntax
+that contains each variable from the LHS at most once.
+-/
 def mkUnexpander (attrKind : TSyntax ``attrKind) (pat qrhs : Term) : OptionT MacroM Syntax := do
-  let (c, args) ← match qrhs with
+  let (c, args) ←
+    match qrhs with
     | `($c:ident $args*) => pure (c, args)
-    | `($c:ident)        => pure (c, #[])
-    | _                  => failure
-  let [(c, [])] ← Macro.resolveGlobalName c.getId | failure
+    | `($c:ident) => pure (c, #[])
+    | _ => failure
+  let [(c, [])] ← Macro.resolveGlobalName c.getId
+    | failure
   /-
   Try to remove all non semantic parenthesis. Since the parenthesizer
   runs after appUnexpanders we should not match on parenthesis that the user
@@ -121,7 +131,7 @@ def mkUnexpander (attrKind : TSyntax ``attrKind) (pat qrhs : Term) : OptionT Mac
   The user could mention the same antiquotation from the lhs multiple
   times on the rhs, this heuristic does not support this.
   -/
-  guard !hasDuplicateAntiquot args
+  guard ! hasDuplicateAntiquot args
   -- replace head constant with antiquotation so we're not dependent on the exact pretty printing of the head
   -- The reference is attached to the syntactic representation of the called function itself, not the entire function application
   let lhs ← `($$f:ident)
@@ -132,7 +142,8 @@ def mkUnexpander (attrKind : TSyntax ``attrKind) (pat qrhs : Term) : OptionT Mac
       | `($lhs)             => withRef f `($pat)
       | _                   => throw ())
 
-@[builtin_command_elab Lean.Parser.Command.notation] def elabNotation : CommandElab
+@[builtin_command_elab Lean.Parser.Command.notation]
+def elabNotation : CommandElab
   | ref@`($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind
       notation $[: $prec?]? $[(name := $name?)]? $[(priority := $prio?)]? $items* => $rhs) => do
     let attrs? := addInheritDocDefault rhs attrs?
@@ -140,8 +151,9 @@ def mkUnexpander (attrKind : TSyntax ``attrKind) (pat qrhs : Term) : OptionT Mac
     -- build parser
     let syntaxParts ← liftMacroM <| items.mapM expandNotationItemIntoSyntaxItem
     let cat := mkIdentFrom ref `term
-    let kind ← elabSyntax (← `($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind
-      syntax $[: $prec?]? $[(name := $name?)]? (priority := $(quote prio)) $[$syntaxParts]* : $cat))
+    let kind ←
+      elabSyntax (← `($[$doc?:docComment]? $[@[$attrs?,*]]? $attrKind:attrKind
+        syntax $[: $prec?]? $[(name := $name?)]? (priority := $(quote prio)) $[$syntaxParts]* : $cat))
     -- build macro rules
     let vars := items.filter fun item => item.raw.getKind == ``identPrec
     let vars := vars.map fun var => var.raw[0]
@@ -153,8 +165,7 @@ def mkUnexpander (attrKind : TSyntax ``attrKind) (pat qrhs : Term) : OptionT Mac
       -- Make sure the quotation pre-checker takes section variables into account for local notation.
       let opts ← getOptions
       let opts := Term.Quotation.quotPrecheck.allowSectionVars.set opts true
-      withScope (fun sc => { sc with opts }) do
-        elabCommand macroDecl
+      withScope (fun sc => { sc with opts }) do elabCommand macroDecl
     else
       elabCommand macroDecl
     if let some delabDecl := (← liftMacroM <| mkUnexpander attrKind pat qrhs |>.run) then

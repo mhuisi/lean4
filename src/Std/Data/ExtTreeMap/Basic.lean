@@ -75,8 +75,7 @@ structure ExtTreeMap (α : Type u) (β : Type v) (cmp : α → α → Ordering :
 namespace ExtTreeMap
 
 @[inline, inherit_doc ExtDTreeMap.empty]
-def empty : ExtTreeMap α β cmp :=
-  ⟨ExtDTreeMap.empty⟩
+def empty : ExtTreeMap α β cmp := ⟨ExtDTreeMap.empty⟩
 
 instance : EmptyCollection (ExtTreeMap α β cmp) where
   emptyCollection := empty
@@ -84,8 +83,7 @@ instance : EmptyCollection (ExtTreeMap α β cmp) where
 instance : Inhabited (ExtTreeMap α β cmp) := ⟨∅⟩
 
 @[simp, grind =]
-theorem empty_eq_emptyc : (empty : ExtTreeMap α β cmp) = ∅ :=
-  rfl
+theorem empty_eq_emptyc : (empty : ExtTreeMap α β cmp) = ∅ := rfl
 
 @[inline, inherit_doc ExtDTreeMap.insert]
 def insert [TransCmp cmp] (l : ExtTreeMap α β cmp) (a : α) (b : β) : ExtTreeMap α β cmp :=
@@ -105,25 +103,26 @@ def insertIfNew [TransCmp cmp] (t : ExtTreeMap α β cmp) (a : α) (b : β) : Ex
   ⟨t.inner.insertIfNew a b⟩
 
 @[inline, inherit_doc ExtDTreeMap.containsThenInsert]
-def containsThenInsert [TransCmp cmp] (t : ExtTreeMap α β cmp) (a : α) (b : β) : Bool × ExtTreeMap α β cmp :=
+def containsThenInsert [TransCmp cmp] (t : ExtTreeMap α β cmp) (a : α) (b : β)
+    : Bool × ExtTreeMap α β cmp :=
   let p := t.inner.containsThenInsert a b
   (p.1, ⟨p.2⟩)
 
 @[inline, inherit_doc ExtDTreeMap.containsThenInsertIfNew]
-def containsThenInsertIfNew [TransCmp cmp] (t : ExtTreeMap α β cmp) (a : α) (b : β) :
-    Bool × ExtTreeMap α β cmp :=
+def containsThenInsertIfNew [TransCmp cmp] (t : ExtTreeMap α β cmp) (a : α) (b : β)
+    : Bool × ExtTreeMap α β cmp :=
   let p := t.inner.containsThenInsertIfNew a b
   (p.1, ⟨p.2⟩)
 
 @[inline, inherit_doc ExtDTreeMap.getThenInsertIfNew?]
-def getThenInsertIfNew? [TransCmp cmp] (t : ExtTreeMap α β cmp) (a : α) (b : β) : Option β × ExtTreeMap α β cmp :=
+def getThenInsertIfNew? [TransCmp cmp] (t : ExtTreeMap α β cmp) (a : α) (b : β)
+    : Option β × ExtTreeMap α β cmp :=
   letI : Ord α := ⟨cmp⟩
   let p := ExtDTreeMap.Const.getThenInsertIfNew? t.inner a b
   (p.1, ⟨p.2⟩)
 
 @[inline, inherit_doc ExtDTreeMap.contains]
-def contains [TransCmp cmp] (l : ExtTreeMap α β cmp) (a : α) : Bool :=
-  l.inner.contains a
+def contains [TransCmp cmp] (l : ExtTreeMap α β cmp) (a : α) : Bool := l.inner.contains a
 
 instance [TransCmp cmp] : Membership α (ExtTreeMap α β cmp) where
   mem m a := m.contains a
@@ -132,16 +131,13 @@ instance [TransCmp cmp] {m : ExtTreeMap α β cmp} {a : α} : Decidable (a ∈ m
   inferInstanceAs <| Decidable (m.contains a)
 
 @[inline, inherit_doc ExtDTreeMap.size]
-def size (t : ExtTreeMap α β cmp) : Nat :=
-  t.inner.size
+def size (t : ExtTreeMap α β cmp) : Nat := t.inner.size
 
 @[inline, inherit_doc ExtDTreeMap.isEmpty]
-def isEmpty (t : ExtTreeMap α β cmp) : Bool :=
-  t.inner.isEmpty
+def isEmpty (t : ExtTreeMap α β cmp) : Bool := t.inner.isEmpty
 
 @[inline, inherit_doc ExtDTreeMap.erase]
-def erase [TransCmp cmp] (t : ExtTreeMap α β cmp) (a : α) : ExtTreeMap α β cmp :=
-  ⟨t.inner.erase a⟩
+def erase [TransCmp cmp] (t : ExtTreeMap α β cmp) (a : α) : ExtTreeMap α β cmp := ⟨t.inner.erase a⟩
 
 @[inline, inherit_doc ExtDTreeMap.Const.get?]
 def get? [TransCmp cmp] (t : ExtTreeMap α β cmp) (a : α) : Option β :=
@@ -165,16 +161,13 @@ instance [TransCmp cmp] : GetElem? (ExtTreeMap α β cmp) α β (fun m a => a �
   getElem! m a := m.get! a
 
 @[inline, inherit_doc ExtDTreeMap.getKey?]
-def getKey? [TransCmp cmp] (t : ExtTreeMap α β cmp) (a : α) : Option α :=
-  t.inner.getKey? a
+def getKey? [TransCmp cmp] (t : ExtTreeMap α β cmp) (a : α) : Option α := t.inner.getKey? a
 
 @[inline, inherit_doc ExtDTreeMap.getKey]
-def getKey [TransCmp cmp] (t : ExtTreeMap α β cmp) (a : α) (h : a ∈ t) : α :=
-  t.inner.getKey a h
+def getKey [TransCmp cmp] (t : ExtTreeMap α β cmp) (a : α) (h : a ∈ t) : α := t.inner.getKey a h
 
 @[inline, inherit_doc ExtDTreeMap.getKey!]
-def getKey! [TransCmp cmp] [Inhabited α] (t : ExtTreeMap α β cmp) (a : α) : α :=
-  t.inner.getKey! a
+def getKey! [TransCmp cmp] [Inhabited α] (t : ExtTreeMap α β cmp) (a : α) : α := t.inner.getKey! a
 
 @[inline, inherit_doc ExtDTreeMap.getKeyD]
 def getKeyD [TransCmp cmp] (t : ExtTreeMap α β cmp) (a : α) (fallback : α) : α :=
@@ -213,32 +206,28 @@ def maxEntryD [TransCmp cmp] (t : ExtTreeMap α β cmp) (fallback : α × β) : 
   ExtDTreeMap.Const.maxEntryD t.inner fallback
 
 @[inline, inherit_doc ExtDTreeMap.minKey?]
-def minKey? [TransCmp cmp] (t : ExtTreeMap α β cmp) : Option α :=
-  ExtDTreeMap.minKey? t.inner
+def minKey? [TransCmp cmp] (t : ExtTreeMap α β cmp) : Option α := ExtDTreeMap.minKey? t.inner
 
 @[inline, inherit_doc ExtDTreeMap.minKey]
 def minKey [TransCmp cmp] (t : ExtTreeMap α β cmp) (h : t ≠ ∅) : α :=
   ExtDTreeMap.minKey t.inner (fun _ => nomatch t)
 
 @[inline, inherit_doc ExtDTreeMap.minKey!]
-def minKey! [TransCmp cmp] [Inhabited α] (t : ExtTreeMap α β cmp) : α :=
-  ExtDTreeMap.minKey! t.inner
+def minKey! [TransCmp cmp] [Inhabited α] (t : ExtTreeMap α β cmp) : α := ExtDTreeMap.minKey! t.inner
 
 @[inline, inherit_doc ExtDTreeMap.minKeyD]
 def minKeyD [TransCmp cmp] (t : ExtTreeMap α β cmp) (fallback : α) : α :=
   ExtDTreeMap.minKeyD t.inner fallback
 
 @[inline, inherit_doc ExtDTreeMap.maxKey?]
-def maxKey? [TransCmp cmp] (t : ExtTreeMap α β cmp) : Option α :=
-  ExtDTreeMap.maxKey? t.inner
+def maxKey? [TransCmp cmp] (t : ExtTreeMap α β cmp) : Option α := ExtDTreeMap.maxKey? t.inner
 
 @[inline, inherit_doc ExtDTreeMap.maxKey]
 def maxKey [TransCmp cmp] (t : ExtTreeMap α β cmp) (h : t ≠ ∅) : α :=
   ExtDTreeMap.maxKey t.inner (fun _ => nomatch t)
 
 @[inline, inherit_doc ExtDTreeMap.maxKey!]
-def maxKey! [TransCmp cmp] [Inhabited α] (t : ExtTreeMap α β cmp) : α :=
-  ExtDTreeMap.maxKey! t.inner
+def maxKey! [TransCmp cmp] [Inhabited α] (t : ExtTreeMap α β cmp) : α := ExtDTreeMap.maxKey! t.inner
 
 @[inline, inherit_doc ExtDTreeMap.maxKeyD]
 def maxKeyD [TransCmp cmp] (t : ExtTreeMap α β cmp) (fallback : α) : α :=
@@ -293,23 +282,23 @@ def getEntryLT? [TransCmp cmp] (t : ExtTreeMap α β cmp) (k : α) : Option (α 
   ExtDTreeMap.Const.getEntryLT? t.inner k
 
 @[inline, inherit_doc ExtDTreeMap.Const.getEntryGE]
-def getEntryGE [TransCmp cmp] (t : ExtTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, (cmp a k).isGE) :
-    α × β :=
+def getEntryGE [TransCmp cmp] (t : ExtTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, (cmp a k).isGE)
+    : α × β :=
   ExtDTreeMap.Const.getEntryGE t.inner k h
 
 @[inline, inherit_doc DTreeMap.Const.getEntryGT]
-def getEntryGT [TransCmp cmp] (t : ExtTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, cmp a k = .gt) :
-    α × β :=
+def getEntryGT [TransCmp cmp] (t : ExtTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, cmp a k = .gt)
+    : α × β :=
   ExtDTreeMap.Const.getEntryGT t.inner k h
 
 @[inline, inherit_doc DTreeMap.Const.getEntryLE]
-def getEntryLE [TransCmp cmp] (t : ExtTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, (cmp a k).isLE) :
-    α × β :=
+def getEntryLE [TransCmp cmp] (t : ExtTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, (cmp a k).isLE)
+    : α × β :=
   ExtDTreeMap.Const.getEntryLE t.inner k h
 
 @[inline, inherit_doc DTreeMap.Const.getEntryLT]
-def getEntryLT [TransCmp cmp] (t : ExtTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, cmp a k = .lt) :
-    α × β :=
+def getEntryLT [TransCmp cmp] (t : ExtTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, cmp a k = .lt)
+    : α × β :=
   ExtDTreeMap.Const.getEntryLT t.inner k h
 
 @[inline, inherit_doc ExtDTreeMap.Const.getEntryGE!]
@@ -411,16 +400,14 @@ def getKeyLTD [TransCmp cmp] (t : ExtTreeMap α β cmp) (k : α) (fallback : α)
 variable {δ : Type w} {m : Type w → Type w₂} [Monad m] [LawfulMonad m]
 
 @[inline, inherit_doc ExtDTreeMap.filter]
-def filter (f : α → β → Bool) (m : ExtTreeMap α β cmp) : ExtTreeMap α β cmp :=
-  ⟨m.inner.filter f⟩
+def filter (f : α → β → Bool) (m : ExtTreeMap α β cmp) : ExtTreeMap α β cmp := ⟨m.inner.filter f⟩
 
 @[inline, inherit_doc ExtDTreeMap.filterMap]
 def filterMap (f : (a : α) → β → Option γ) (m : ExtTreeMap α β cmp) : ExtTreeMap α γ cmp :=
   ⟨m.inner.filterMap f⟩
 
 @[inline, inherit_doc ExtDTreeMap.map]
-def map (f : α → β → γ) (t : ExtTreeMap α β cmp) : ExtTreeMap α γ cmp :=
-  ⟨t.inner.map f⟩
+def map (f : α → β → γ) (t : ExtTreeMap α β cmp) : ExtTreeMap α γ cmp := ⟨t.inner.map f⟩
 
 @[inline, inherit_doc ExtDTreeMap.foldlM]
 def foldlM [TransCmp cmp] (f : δ → (a : α) → β → m δ) (init : δ) (t : ExtTreeMap α β cmp) : m δ :=
@@ -439,16 +426,16 @@ def foldr [TransCmp cmp] (f : (a : α) → β → δ → δ) (init : δ) (t : Ex
   t.inner.foldr f init
 
 @[inline, inherit_doc ExtDTreeMap.partition]
-def partition [TransCmp cmp] (f : (a : α) → β → Bool) (t : ExtTreeMap α β cmp) :
-    ExtTreeMap α β cmp × ExtTreeMap α β cmp :=
+def partition [TransCmp cmp] (f : (a : α) → β → Bool) (t : ExtTreeMap α β cmp)
+    : ExtTreeMap α β cmp × ExtTreeMap α β cmp :=
   let p := t.inner.partition f; (⟨p.1⟩, ⟨p.2⟩)
 
 @[inline, inherit_doc ExtDTreeMap.forM]
-def forM [TransCmp cmp] (f : α → β → m PUnit) (t : ExtTreeMap α β cmp) : m PUnit :=
-  t.inner.forM f
+def forM [TransCmp cmp] (f : α → β → m PUnit) (t : ExtTreeMap α β cmp) : m PUnit := t.inner.forM f
 
 @[inline, inherit_doc ExtDTreeMap.forIn]
-def forIn [TransCmp cmp] (f : α → β → δ → m (ForInStep δ)) (init : δ) (t : ExtTreeMap α β cmp) : m δ :=
+def forIn [TransCmp cmp] (f : α → β → δ → m (ForInStep δ)) (init : δ) (t : ExtTreeMap α β cmp)
+    : m δ :=
   t.inner.forIn (fun a b c => f a b c) init
 
 instance [TransCmp cmp] [Monad m] [LawfulMonad m] : ForM m (ExtTreeMap α β cmp) (α × β) where
@@ -458,28 +445,22 @@ instance [TransCmp cmp] [Monad m] [LawfulMonad m] : ForIn m (ExtTreeMap α β cm
   forIn m init f := forIn (fun a b acc => f ⟨a, b⟩ acc) init m
 
 @[inline, inherit_doc ExtDTreeMap.any]
-def any [TransCmp cmp] (t : ExtTreeMap α β cmp) (p : α → β → Bool) : Bool :=
-  t.inner.any p
+def any [TransCmp cmp] (t : ExtTreeMap α β cmp) (p : α → β → Bool) : Bool := t.inner.any p
 
 @[inline, inherit_doc ExtDTreeMap.all]
-def all [TransCmp cmp] (t : ExtTreeMap α β cmp) (p : α → β → Bool) : Bool :=
-  t.inner.all p
+def all [TransCmp cmp] (t : ExtTreeMap α β cmp) (p : α → β → Bool) : Bool := t.inner.all p
 
 @[inline, inherit_doc ExtDTreeMap.keys]
-def keys [TransCmp cmp] (t : ExtTreeMap α β cmp) : List α :=
-  t.inner.keys
+def keys [TransCmp cmp] (t : ExtTreeMap α β cmp) : List α := t.inner.keys
 
 @[inline, inherit_doc ExtDTreeMap.keysArray]
-def keysArray [TransCmp cmp] (t : ExtTreeMap α β cmp) : Array α :=
-  t.inner.keysArray
+def keysArray [TransCmp cmp] (t : ExtTreeMap α β cmp) : Array α := t.inner.keysArray
 
 @[inline, inherit_doc ExtDTreeMap.values]
-def values [TransCmp cmp] (t : ExtTreeMap α β cmp) : List β :=
-  t.inner.values
+def values [TransCmp cmp] (t : ExtTreeMap α β cmp) : List β := t.inner.values
 
 @[inline, inherit_doc ExtDTreeMap.valuesArray]
-def valuesArray [TransCmp cmp] (t : ExtTreeMap α β cmp) : Array β :=
-  t.inner.valuesArray
+def valuesArray [TransCmp cmp] (t : ExtTreeMap α β cmp) : Array β := t.inner.valuesArray
 
 @[inline, inherit_doc ExtDTreeMap.Const.toList]
 def toList [TransCmp cmp] (t : ExtTreeMap α β cmp) : List (α × β) :=
@@ -502,7 +483,8 @@ def ofArray (a : Array (α × β)) (cmp : α → α → Ordering := by exact com
   ⟨ExtDTreeMap.Const.ofArray a cmp⟩
 
 @[inline, inherit_doc ExtDTreeMap.Const.unitOfArray]
-def unitOfArray (a : Array α) (cmp : α → α → Ordering := by exact compare) : ExtTreeMap α Unit cmp :=
+def unitOfArray (a : Array α) (cmp : α → α → Ordering := by exact compare)
+    : ExtTreeMap α Unit cmp :=
   ⟨ExtDTreeMap.Const.unitOfArray a cmp⟩
 
 @[inline, inherit_doc ExtDTreeMap.Const.modify]
@@ -510,28 +492,34 @@ def modify [TransCmp cmp] (t : ExtTreeMap α β cmp) (a : α) (f : β → β) : 
   ⟨ExtDTreeMap.Const.modify t.inner a f⟩
 
 @[inline, inherit_doc ExtDTreeMap.Const.alter]
-def alter [TransCmp cmp] (t : ExtTreeMap α β cmp) (a : α) (f : Option β → Option β) : ExtTreeMap α β cmp :=
+def alter [TransCmp cmp] (t : ExtTreeMap α β cmp) (a : α) (f : Option β → Option β)
+    : ExtTreeMap α β cmp :=
   ⟨ExtDTreeMap.Const.alter t.inner a f⟩
 
 @[inline, inherit_doc ExtDTreeMap.Const.mergeWith]
-def mergeWith [TransCmp cmp] (mergeFn : α → β → β → β) (t₁ t₂ : ExtTreeMap α β cmp) : ExtTreeMap α β cmp :=
+def mergeWith [TransCmp cmp] (mergeFn : α → β → β → β) (t₁ t₂ : ExtTreeMap α β cmp)
+    : ExtTreeMap α β cmp :=
   ⟨ExtDTreeMap.Const.mergeWith mergeFn t₁.inner t₂.inner⟩
 
 @[inline, inherit_doc ExtDTreeMap.Const.insertMany]
-def insertMany [TransCmp cmp] {ρ} [ForIn Id ρ (α × β)] (t : ExtTreeMap α β cmp) (l : ρ) : ExtTreeMap α β cmp :=
+def insertMany [TransCmp cmp] {ρ} [ForIn Id ρ (α × β)] (t : ExtTreeMap α β cmp) (l : ρ)
+    : ExtTreeMap α β cmp :=
   ⟨ExtDTreeMap.Const.insertMany t.inner l⟩
 
 @[inline, inherit_doc ExtDTreeMap.Const.insertManyIfNewUnit]
-def insertManyIfNewUnit [TransCmp cmp] {ρ} [ForIn Id ρ α] (t : ExtTreeMap α Unit cmp) (l : ρ) : ExtTreeMap α Unit cmp :=
+def insertManyIfNewUnit [TransCmp cmp] {ρ} [ForIn Id ρ α] (t : ExtTreeMap α Unit cmp) (l : ρ)
+    : ExtTreeMap α Unit cmp :=
   ⟨ExtDTreeMap.Const.insertManyIfNewUnit t.inner l⟩
 
 @[inline, inherit_doc ExtDTreeMap.union]
-def union [TransCmp cmp] (t₁ t₂ : ExtTreeMap α β cmp) : ExtTreeMap α β cmp := ⟨ExtDTreeMap.union t₁.inner t₂.inner⟩
+def union [TransCmp cmp] (t₁ t₂ : ExtTreeMap α β cmp) : ExtTreeMap α β cmp :=
+  ⟨ExtDTreeMap.union t₁.inner t₂.inner⟩
 
 instance [TransCmp cmp] : Union (ExtTreeMap α β cmp) := ⟨union⟩
 
 @[inline, inherit_doc ExtDTreeMap.inter]
-def inter [TransCmp cmp] (t₁ t₂ : ExtTreeMap α β cmp) : ExtTreeMap α β cmp := ⟨ExtDTreeMap.inter t₁.inner t₂.inner⟩
+def inter [TransCmp cmp] (t₁ t₂ : ExtTreeMap α β cmp) : ExtTreeMap α β cmp :=
+  ⟨ExtDTreeMap.inter t₁.inner t₂.inner⟩
 
 instance [TransCmp cmp] : Inter (ExtTreeMap α β cmp) := ⟨inter⟩
 
@@ -541,7 +529,8 @@ instance [TransCmp cmp] [BEq β] : BEq (ExtTreeMap α β cmp) where
 instance [TransCmp cmp] [BEq β] [ReflBEq β] : ReflBEq (ExtTreeMap α β cmp) where
   rfl := ExtDTreeMap.Const.beq_of_eq _ _ rfl
 
-instance [TransCmp cmp] [LawfulEqCmp cmp] [BEq β] [LawfulBEq β] : LawfulBEq (ExtTreeMap α β cmp) where
+instance [TransCmp cmp] [LawfulEqCmp cmp] [BEq β] [LawfulBEq β]
+    : LawfulBEq (ExtTreeMap α β cmp) where
   eq_of_beq {a} {b} hyp := by
     have ⟨_⟩ := a
     have ⟨_⟩ := b
@@ -549,15 +538,20 @@ instance [TransCmp cmp] [LawfulEqCmp cmp] [BEq β] [LawfulBEq β] : LawfulBEq (E
     exact ExtDTreeMap.Const.eq_of_beq _ _ hyp
 
 @[inline, inherit_doc ExtDTreeMap.diff]
-def diff [TransCmp cmp] (t₁ t₂ : ExtTreeMap α β cmp) : ExtTreeMap α β cmp := ⟨ExtDTreeMap.diff t₁.inner t₂.inner⟩
+def diff [TransCmp cmp] (t₁ t₂ : ExtTreeMap α β cmp) : ExtTreeMap α β cmp :=
+  ⟨ExtDTreeMap.diff t₁.inner t₂.inner⟩
 
 instance [TransCmp cmp] : SDiff (ExtTreeMap α β cmp) := ⟨diff⟩
 
-instance {α : Type u} {β : Type v} {cmp : α → α → Ordering} [LawfulEqCmp cmp] [TransCmp cmp] [BEq β] [LawfulBEq β] : DecidableEq (ExtTreeMap α β cmp) :=
-  fun _ _ => decidable_of_iff _ beq_iff_eq
+instance
+    {α : Type u} {β : Type v} {cmp : α → α → Ordering}
+    [LawfulEqCmp cmp] [TransCmp cmp] [BEq β] [LawfulBEq β]
+    : DecidableEq (ExtTreeMap α β cmp) := fun _ _ =>
+  decidable_of_iff _ beq_iff_eq
 
 @[inline, inherit_doc ExtDTreeMap.eraseMany]
-def eraseMany [TransCmp cmp] {ρ} [ForIn Id ρ α] (t : ExtTreeMap α β cmp) (l : ρ) : ExtTreeMap α β cmp :=
+def eraseMany [TransCmp cmp] {ρ} [ForIn Id ρ α] (t : ExtTreeMap α β cmp) (l : ρ)
+    : ExtTreeMap α β cmp :=
   ⟨t.inner.eraseMany l⟩
 
 instance [TransCmp cmp] [Repr α] [Repr β] : Repr (ExtTreeMap α β cmp) where

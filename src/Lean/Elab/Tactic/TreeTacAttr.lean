@@ -14,7 +14,7 @@ open Lean.Meta
 
 namespace Std.Internal
 
-builtin_initialize treeTacExt : SimpExtension
-  ← registerSimpAttr `Std.Internal.tree_tac "simp theorems used by internal DTreeMap lemmas"
+builtin_initialize treeTacExt : SimpExtension ←
+  registerSimpAttr `Std.Internal.tree_tac "simp theorems used by internal DTreeMap lemmas"
 
 end Std.Internal

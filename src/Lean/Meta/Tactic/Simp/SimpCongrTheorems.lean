@@ -15,98 +15,115 @@ public section
 namespace Lean.Meta
 
 /--
-  Data for user-defined theorems marked with the `congr` attribute.
+Data for user-defined theorems marked with the `congr` attribute.
 
-  This type should be confused with `CongrTheorem` which represents different kinds of automatically
-  generated congruence theorems. The `simp` tactic also uses some of them.
+This type should be confused with `CongrTheorem` which represents different kinds of automatically
+generated congruence theorems. The `simp` tactic also uses some of them.
 -/
 structure SimpCongrTheorem where
-  theoremName   : Name
-  funName       : Name
+  theoremName : Name
+  funName : Name
   hypothesesPos : Array Nat
-  priority      : Nat
+  priority : Nat
 deriving Inhabited, Repr
 
 structure SimpCongrTheorems where
   lemmas : SMap Name (List SimpCongrTheorem) := {}
-  deriving Inhabited, Repr
+deriving Inhabited, Repr
 
 def SimpCongrTheorems.get (d : SimpCongrTheorems) (declName : Name) : List SimpCongrTheorem :=
   match d.lemmas.find? declName with
-  | none    => []
+  | none => []
   | some cs => cs
 
-def addSimpCongrTheoremEntry (d : SimpCongrTheorems) (e : SimpCongrTheorem) : SimpCongrTheorems :=
-  { d with lemmas :=
-      match d.lemmas.find? e.funName with
-      | none    => d.lemmas.insert e.funName [e]
-      | some es => d.lemmas.insert e.funName <| insert es }
+def addSimpCongrTheoremEntry (d : SimpCongrTheorems) (e : SimpCongrTheorem) : SimpCongrTheorems := {
+  d with
+  lemmas :=
+    match d.lemmas.find? e.funName with
+    | none => d.lemmas.insert e.funName [e]
+    | some es => d.lemmas.insert e.funName <| insert es
+}
 where
   insert : List SimpCongrTheorem → List SimpCongrTheorem
-    | []     => [e]
-    | e'::es => if e.priority ≥ e'.priority then e::e'::es else e' :: insert es
+    | [] => [e]
+    | e' :: es => if e.priority ≥ e'.priority then e :: e' :: es else e' :: insert es
 
 builtin_initialize congrExtension : SimpleScopedEnvExtension SimpCongrTheorem SimpCongrTheorems ←
   registerSimpleScopedEnvExtension {
-    initial        := {}
-    addEntry       := addSimpCongrTheoremEntry
+    initial := {}
+    addEntry := addSimpCongrTheoremEntry
     finalizeImport := fun s => { s with lemmas := s.lemmas.switch }
   }
 
-def mkSimpCongrTheorem (declName : Name) (prio : Nat) : MetaM SimpCongrTheorem := withReducible do
-  let c ← mkConstWithLevelParams declName
-  let (xs, bis, type) ← forallMetaTelescopeReducing (← inferType c)
-  match type.eqOrIff? with
-  | none => throwError "Invalid `congr` theorem: Theorem is not an equality or iff{indentExpr type}"
-  | some (lhs, rhs) =>
-    lhs.withApp fun lhsFn lhsArgs => rhs.withApp fun rhsFn rhsArgs => do
-      unless lhsFn.isConst && rhsFn.isConst && lhsFn.constName! == rhsFn.constName! && lhsArgs.size == rhsArgs.size do
-        throwError "Invalid `congr` theorem: The left- and right-hand sides of the equality are not applications of the same function{indentExpr type}"
-      let mut foundMVars : MVarIdSet := {}
-      for lhsArg in lhsArgs do
-        for mvarId in (lhsArg.collectMVars {}).result do
-          foundMVars := foundMVars.insert mvarId
-      let mut i : Nat := 0
-      let mut hypothesesPos := #[]
-      for x in xs, bi in bis do
-        if bi.isExplicit && !foundMVars.contains x.mvarId! then
-          let rhsFn? ← forallTelescopeReducing (← inferType x) fun ys xType => do
-            match xType.eqOrIff? with
-            | none => pure none -- skip
-            | some (xLhs, xRhs) =>
-              let mut j : Nat := 0
-              for y in ys do
-                let yType ← inferType y
-                unless onlyMVarsAt yType foundMVars do
-                  throwError "Invalid `congr` theorem: Argument #{j+1} of parameter #{i+1} contains unresolved parameter{indentExpr yType}"
-                j := j + 1
-              unless onlyMVarsAt xLhs foundMVars do
-                throwError "Invalid `congr` theorem: Parameter #{i+1} is not a valid hypothesis because its left-hand side contains unresolved parameters{indentExpr xLhs}"
-              let xRhsFn := xRhs.getAppFn
-              unless xRhsFn.isMVar do
-                throwError "Invalid `congr` theorem: Parameter #{i+1} is not a valid hypothesis because its right-hand side head is not a metavariable{indentExpr xRhs}"
-              unless !foundMVars.contains xRhsFn.mvarId! do
-                throwError "Invalid `congr` theorem: Parameter #{i+1} is not a valid hypothesis because its right-hand side head was already resolved{indentExpr xRhs}"
-              for arg in xRhs.getAppArgs do
-                unless arg.isFVar do
-                  throwError "Invalid `congr` theorem: Parameter #{i+1} is not a valid hypothesis because its right-hand side argument is not a local variable{indentExpr xRhs}"
-              pure (some xRhsFn)
-          match rhsFn? with
-          | none       => pure ()
-          | some rhsFn =>
-            foundMVars    := foundMVars.insert x.mvarId! |>.insert rhsFn.mvarId!
-            hypothesesPos := hypothesesPos.push i
-        i := i + 1
-      return {
-        theoremName   := declName
-        funName       := lhsFn.constName!
-        hypothesesPos := hypothesesPos
-        priority      := prio
-      }
+def mkSimpCongrTheorem (declName : Name) (prio : Nat) : MetaM SimpCongrTheorem :=
+  withReducible do
+    let c ← mkConstWithLevelParams declName
+    let (xs, bis, type) ← forallMetaTelescopeReducing (← inferType c)
+    match type.eqOrIff? with
+    | none =>
+      throwError "Invalid `congr` theorem: Theorem is not an equality or iff{indentExpr type}"
+    | some (lhs, rhs) =>
+      lhs.withApp fun lhsFn lhsArgs =>
+        rhs.withApp fun rhsFn rhsArgs => do
+          unless lhsFn.isConst && rhsFn.isConst && lhsFn.constName! == rhsFn.constName!
+              && lhsArgs.size == rhsArgs.size do
+            throwError "Invalid `congr` theorem: The left- and right-hand sides of the equality \
+              are not applications of the same function{indentExpr type}"
+          let mut foundMVars : MVarIdSet := {}
+          for lhsArg in lhsArgs do
+            for mvarId in (lhsArg.collectMVars {}).result do
+              foundMVars := foundMVars.insert mvarId
+          let mut i : Nat := 0
+          let mut hypothesesPos := #[]
+          for x in xs, bi in bis do
+            if bi.isExplicit && ! foundMVars.contains x.mvarId! then
+              let rhsFn? ←
+                forallTelescopeReducing (← inferType x) fun ys xType => do
+                  match xType.eqOrIff? with
+                  | none => pure none -- skip
+                  | some (xLhs, xRhs) =>
+                    let mut j : Nat := 0
+                    for y in ys do
+                      let yType ← inferType y
+                      unless onlyMVarsAt yType foundMVars do
+                        throwError "Invalid `congr` theorem: Argument #{j + 1} of parameter \
+                          #{i + 1} contains unresolved parameter{indentExpr yType}"
+                      j := j + 1
+                    unless onlyMVarsAt xLhs foundMVars do
+                      throwError "Invalid `congr` theorem: Parameter #{i + 1} is not a valid \
+                        hypothesis because its left-hand side contains unresolved \
+                        parameters{indentExpr xLhs}"
+                    let xRhsFn := xRhs.getAppFn
+                    unless xRhsFn.isMVar do
+                      throwError
+                        "Invalid `congr` theorem: Parameter #{i + 1} is not a valid hypothesis \
+                          because its right-hand side head is not a metavariable{indentExpr xRhs}"
+                    unless ! foundMVars.contains xRhsFn.mvarId! do
+                      throwError
+                        "Invalid `congr` theorem: Parameter #{i + 1} is not a valid hypothesis \
+                          because its right-hand side head was already resolved{indentExpr xRhs}"
+                    for arg in xRhs.getAppArgs do
+                      unless arg.isFVar do
+                        throwError "Invalid `congr` theorem: Parameter #{i + 1} is not a valid \
+                          hypothesis because its right-hand side argument is not a local \
+                          variable{indentExpr xRhs}"
+                    pure (some xRhsFn)
+              match rhsFn? with
+              | none => pure ()
+              | some rhsFn =>
+                foundMVars := foundMVars.insert x.mvarId! |>.insert rhsFn.mvarId!
+                hypothesesPos := hypothesesPos.push i
+            i := i + 1
+          return {
+            theoremName := declName
+            funName := lhsFn.constName!
+            hypothesesPos := hypothesesPos
+            priority := prio
+          }
 where
   /-- Return `true` if `t` contains a metavariable that is not in `mvarSet` -/
   onlyMVarsAt (t : Expr) (mvarSet : MVarIdSet) : Bool :=
-    Option.isNone <| t.find? fun e => e.isMVar && !mvarSet.contains e.mvarId!
+    Option.isNone <| t.find? fun e => e.isMVar && ! mvarSet.contains e.mvarId!
 
 def addSimpCongrTheorem (declName : Name) (attrKind : AttributeKind) (prio : Nat) : MetaM Unit := do
   let lemma ← mkSimpCongrTheorem declName prio
@@ -142,14 +159,13 @@ theorem Option.pbind_congr
 @[builtin_doc]
 builtin_initialize
   registerBuiltinAttribute {
-    name  := `congr
+    name := `congr
     descr := "congruence theorem"
-    add   := fun declName stx attrKind => do
+    add := fun declName stx attrKind => do
       let prio ← getAttrParamOptPrio stx[1]
       discard <| addSimpCongrTheorem declName attrKind prio |>.run {} {}
   }
 
-def getSimpCongrTheorems : CoreM SimpCongrTheorems :=
-  return congrExtension.getState (← getEnv)
+def getSimpCongrTheorems : CoreM SimpCongrTheorems := return congrExtension.getState (← getEnv)
 
 end Lean.Meta

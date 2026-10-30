@@ -31,7 +31,6 @@ def nameToIRType (n : Name) : IRType :=
   | ``lcVoid => .void
   | _ => unreachable!
 
-
 def toIRType (type : Lean.Expr) : IRType :=
   match type with
   | LCNF.ImpureType.float => .float

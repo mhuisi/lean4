@@ -27,8 +27,7 @@ The iterator yields the elements of the map in order and then terminates.
 * `Productive` instance: always
 -/
 @[inline]
-public def iter {α : Type u} {β : α → Type v}
-    {cmp : α → α → Ordering} (m : Raw α β cmp) :=
+public def iter {α : Type u} {β : α → Type v} {cmp : α → α → Ordering} (m : Raw α β cmp) :=
   (Internal.Zipper.iterOfTree m.inner : Iter ((a : α) × β a))
 
 /--
@@ -43,8 +42,7 @@ The key and value types must live in the same universe.
 * `Productive` instance: always
 -/
 @[inline]
-public def keysIter {α : Type u} {β : α → Type u}
-    {cmp : α → α → Ordering} (m : Raw α β cmp) :=
+public def keysIter {α : Type u} {β : α → Type u} {cmp : α → α → Ordering} (m : Raw α β cmp) :=
   (m.iter.map fun e => e.1 : Iter α)
 
 /--
@@ -59,26 +57,27 @@ The key and value types must live in the same universe.
 * `Productive` instance: always
 -/
 @[inline]
-public def valuesIter {α : Type u} {β : Type u}
-    {cmp : α → α → Ordering} (m : Raw α (fun _ => β) cmp) :=
+public def valuesIter
+    {α : Type u} {β : Type u} {cmp : α → α → Ordering} (m : Raw α (fun _ => β) cmp) :=
   (m.iter.map fun e => e.2 : Iter β)
 
 @[simp]
-public theorem toList_iter {cmp : α → α → Ordering} (m : Raw α β cmp) :
-    (m.iter).toList = m.toList := by
+public theorem toList_iter {cmp : α → α → Ordering} (m : Raw α β cmp)
+    : (m.iter).toList = m.toList := by
   rw [iter, toList]
   apply Internal.Zipper.toList_iterOfTree
 
 @[simp]
-public theorem keysIter_toList {cmp : α → α → Ordering} (m : Raw α β cmp) :
-    (m.keysIter).toList = m.keys := by
+public theorem keysIter_toList {cmp : α → α → Ordering} (m : Raw α β cmp)
+    : (m.keysIter).toList = m.keys := by
   rw [keysIter, keys, iter, ← Internal.Impl.map_fst_toList_eq_keys]
   rw [Iter.toList_map, Internal.Zipper.toList_iterOfTree]
 
 @[simp]
-public theorem valuesIter_toList {cmp : α → α → Ordering} (m : Raw α (fun _ => β) cmp) :
-    (m.valuesIter).toList = m.values := by
-  rw [valuesIter, values, iter, Internal.Impl.values_eq_map_snd, ← Internal.Impl.toList_eq_toListModel]
+public theorem valuesIter_toList {cmp : α → α → Ordering} (m : Raw α (fun _ => β) cmp)
+    : (m.valuesIter).toList = m.values := by
+  rw [valuesIter, values, iter, Internal.Impl.values_eq_map_snd,
+    ← Internal.Impl.toList_eq_toListModel]
   rw [Iter.toList_map, Internal.Zipper.toList_iterOfTree]
 
 end Std.DTreeMap.Raw

@@ -38,10 +38,10 @@ The standard library does not provide a `Productive` instance for this case.
 This combinator incurs an additional O(1) cost with each output of `it₁` and `it₂`.
 -/
 @[cbv_opaque, inline, expose]
-def Iter.append {α₁ : Type w} {α₂ : Type w} {β : Type w}
-    [Iterator α₁ Id β] [Iterator α₂ Id β]
-    (it₁ : Iter (α := α₁) β) (it₂ : Iter (α := α₂) β) :
-    Iter (α := Append α₁ α₂ Id β) β :=
+def Iter.append
+    {α₁ : Type w} {α₂ : Type w} {β : Type w} [Iterator α₁ Id β] [Iterator α₂ Id β]
+    (it₁ : Iter (α := α₁) β) (it₂ : Iter (α := α₂) β)
+    : Iter (α := Append α₁ α₂ Id β) β :=
   (it₁.toIterM.append it₂.toIterM).toIter
 
 /--
@@ -71,9 +71,9 @@ The standard library does not provide a `Productive` instance for this case.
 This combinator incurs an additional O(1) cost with each output of `it₂`.
 -/
 @[inline, expose]
-def Iter.Intermediate.appendSnd {α₂ : Type w} {β : Type w}
-    [Iterator α₂ Id β] (α₁ : Type w) (it₂ : Iter (α := α₂) β) :
-    Iter (α := Append α₁ α₂ Id β) β :=
+def Iter.Intermediate.appendSnd
+    {α₂ : Type w} {β : Type w} [Iterator α₂ Id β] (α₁ : Type w) (it₂ : Iter (α := α₂) β)
+    : Iter (α := Append α₁ α₂ Id β) β :=
   (IterM.Intermediate.appendSnd α₁ it₂.toIterM).toIter
 
 end Std

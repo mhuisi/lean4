@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.SymM
 public import Lean.Meta.Transform
@@ -17,13 +18,20 @@ Similar to `withLocalDecl`, but the free variable passed to `k` is registered in
 `SymM` share set. Use it when the free variable is substituted into maximally shared
 terms, e.g. via `instantiateRevS`.
 -/
-public def withLocalDeclS [Monad n] [MonadControlT MetaM n] [MonadLiftT SymM n]
-    (name : Name) (bi : BinderInfo) (type : Expr) (k : Expr → n α) : n α :=
+public def withLocalDeclS
+    [Monad n] [MonadControlT MetaM n] [MonadLiftT SymM n]
+    (name : Name) (bi : BinderInfo) (type : Expr) (k : Expr → n α)
+    : n α :=
   withLocalDecl name bi type fun x => do k (← (mkFVarS x.fvarId! : SymM Expr))
 
-/-- `withLetDecl` variant that registers the free variable in the share set. See `withLocalDeclS`. -/
-public def withLetDeclS [Monad n] [MonadControlT MetaM n] [MonadLiftT SymM n]
-    (name : Name) (type val : Expr) (k : Expr → n α) (nondep := false) : n α :=
+/--
+`withLetDecl` variant that registers the free variable in the share set. See `withLocalDeclS`.
+-/
+public def withLetDeclS
+    [Monad n] [MonadControlT MetaM n] [MonadLiftT SymM n]
+    (name : Name) (type val : Expr) (k : Expr → n α)
+    (nondep := false)
+    : n α :=
   withLetDecl name type val (nondep := nondep) fun x => do k (← (mkFVarS x.fvarId! : SymM Expr))
 
 /--
@@ -46,7 +54,8 @@ def preprocessLCtx (lctx : LocalContext) : SymM LocalContext := do
   let mut decls := {}
   let mut index := 0
   for decl in lctx do
-    let decl ← match decl with
+    let decl ←
+      match decl with
       | .cdecl _ fvarId userName type bi kind =>
         let type ← preprocessExpr type
         pure <| LocalDecl.cdecl index fvarId userName type bi kind
@@ -67,11 +76,14 @@ public def preprocessMVar (mvarId : MVarId) : SymM MVarId := do
   let mvarDecl ← mvarId.getDecl
   let lctx ← preprocessLCtx mvarDecl.lctx
   let type ← preprocessExpr mvarDecl.type
-  let mvarNew ← mkFreshExprMVarAt lctx mvarDecl.localInstances type .syntheticOpaque mvarDecl.userName
+  let mvarNew ←
+    mkFreshExprMVarAt lctx mvarDecl.localInstances type .syntheticOpaque mvarDecl.userName
   mvarId.assign mvarNew
   return mvarNew.mvarId!
 
-/-- Debug helper: throws if any subexpression of `e` is not in the table of maximally shared terms. -/
+/--
+Debug helper: throws if any subexpression of `e` is not in the table of maximally shared terms.
+-/
 public def _root_.Lean.Expr.checkMaxShared (e : Expr) (msg := "") : SymM Unit := do
   e.forEach fun e => do
     if let some prev := (← get).share.set.find? { expr := e } then
@@ -84,20 +96,20 @@ where
     let msg := if msg == "" then msg else s!"[{msg}] "
     throwError "{msg}term is not in the maximally shared table{indentExpr e}"
 
-/-- Debug helper: throws if any subexpression of the goal's target type is not in the table of maximally shared. -/
+/--
+Debug helper: throws if any subexpression of the goal's target type is not in the table of maximally shared.
+-/
 public def _root_.Lean.MVarId.checkMaxShared (mvarId : MVarId) (msg := "") : SymM Unit := do
   (← mvarId.getDecl).type.checkMaxShared msg
 
 /-- Quick filter for checking whether we can skip `normalizeLevels`. -/
 def levelsAlreadyNormalized (e : Expr) : Bool :=
   Option.isNone <| e.find? fun
-    | .const _ us => us.any (! ·.isAlreadyNormalizedCheap)
+    | .const _ us => us.any (!·.isAlreadyNormalizedCheap)
     | .sort u => !u.isAlreadyNormalizedCheap
     | _ => false
 
-/--
-Normalizes universe levels in constants and sorts.
--/
+/-- Normalizes universe levels in constants and sorts. -/
 public def normalizeLevels (e : Expr) : CoreM Expr := do
   if levelsAlreadyNormalized e then return e
   let pre (e : Expr) := do

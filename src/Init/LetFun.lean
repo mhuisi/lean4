@@ -6,7 +6,6 @@ Authors: Leonardo de Moura, Mario Carneiro
 module
 
 prelude
-
 import Init.Notation
 
 /--

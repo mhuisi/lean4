@@ -25,18 +25,17 @@ private structure BarrierState where
 A `Barrier` will block `n - 1` threads which call `Barrier.wait` and then wake up all threads at
 once when the `n`-th thread calls `Barrier.wait`.
 -/
-structure Barrier where private mk ::
+structure Barrier where
+  private mk ::
   private lock : Mutex BarrierState
   private cvar : Condvar
   numThreads : Nat
 
-/--
-Creates a new barrier that can block a given number of threads.
--/
+/-- Creates a new barrier that can block a given number of threads. -/
 def Barrier.new (numThreads : Nat) : BaseIO Barrier := do
   return {
-    lock := ← Mutex.new { count := 0, generationId := 0 },
-    cvar := ← Condvar.new,
+    lock := ← Mutex.new { count := 0, generationId := 0 }
+    cvar := ← Condvar.new
     numThreads := numThreads
   }
 
@@ -53,8 +52,7 @@ def Barrier.wait (barrier : Barrier) : BaseIO Bool := do
     let localGen := (← get).generationId
     modify fun s => { s with count := s.count + 1 }
     if (← get).count < barrier.numThreads then
-      barrier.cvar.waitUntil barrier.lock.mutex do
-        return (← get).generationId != localGen
+      barrier.cvar.waitUntil barrier.lock.mutex do return (← get).generationId != localGen
       return false
     else
       modify fun s => { count := 0, generationId := s.generationId + 1 }

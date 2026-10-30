@@ -68,7 +68,8 @@ An unexpander for the `wp⟦...⟧` notation, causing it to be shown correctly i
 -/
 @[app_unexpander PredTrans.apply]
 protected meta def unexpandWP : Lean.PrettyPrinter.Unexpander
-  | `($_ $e) => match e with
+  | `($_ $e) =>
+    match e with
     | `(wp ($x : $ty)) => `(wp⟦$x : $ty⟧)
     | `(wp $e) => `(wp⟦$e⟧)
     | _ => throw ()
@@ -91,7 +92,9 @@ instance OptionT.instWP [WP m ps] : WP (OptionT m) (.except PUnit ps) where
 
 instance EStateM.instWP : WP (EStateM ε σ) (.except ε (.arg σ .pure)) where
   wp x := -- Could define as PredTrans.mkExcept (PredTrans.modifyGetM (fun s => pure (EStateM.Result.toExceptState (x s))))
-    { trans := fun Q s => match x.run s with
+    {
+      trans := fun Q s =>
+        match x.run s with
         | .ok a s' => Q.1 a s'
         | .error e s' => Q.2.1 e s'
       conjunctiveRaw := by
@@ -116,10 +119,15 @@ Soundness lemma for `EStateM.run`.
 Useful if you want to prove a property about an expression `x` defined as `EStateM.run prog s` and
 you want to use `mvcgen` to reason about `prog`.
 -/
-theorem EStateM.of_wp_run_eq {α} {x : EStateM.Result ε σ α} {prog : EStateM ε σ α} (h : EStateM.run prog s = x) (P : EStateM.Result ε σ α → Prop) :
-    (⊢ₛ wp⟦prog⟧ post⟨fun a s' => ⌜P (EStateM.Result.ok a s')⌝, fun e s' => ⌜P (EStateM.Result.error e s')⌝⟩ s) → P x := by
+theorem EStateM.of_wp_run_eq
+    {α} {x : EStateM.Result ε σ α} {prog : EStateM ε σ α}
+    (h : EStateM.run prog s = x) (P : EStateM.Result ε σ α → Prop)
+    : (⊢ₛ wp⟦prog⟧
+        post⟨fun a s' => ⌜P (EStateM.Result.ok a s')⌝, fun e s' => ⌜P (EStateM.Result.error e s')⌝⟩
+        s)
+      → P x := by
   intro hspec
   simp only [wp, PredTrans.apply] at hspec
   split at hspec
-  case h_1 a s' heq => rw[← heq] at hspec; exact h ▸ hspec True.intro
-  case h_2 e s' heq => rw[← heq] at hspec; exact h ▸ hspec True.intro
+  case h_1 a s' heq => rw [← heq] at hspec; exact h ▸ hspec True.intro
+  case h_2 e s' heq => rw [← heq] at hspec; exact h ▸ hspec True.intro

@@ -7,7 +7,6 @@ Authors: David Thrane Christiansen
 module
 
 prelude
-
 public import Init.Data.Ord
 import Init.Data.Nat.Compare
 public import Init.Data.Array.GetLit
@@ -18,9 +17,7 @@ namespace Lean.Doc
 
 public section
 
-/--
-How to render mathematical content.
--/
+/-- How to render mathematical content. -/
 inductive MathMode where
   /-- The math content is part of the text flow. -/
   | inline
@@ -28,25 +25,15 @@ inductive MathMode where
   | display
 deriving Repr, BEq, Hashable, Ord
 
-/--
-Inline content that is part of the text flow.
--/
+/-- Inline content that is part of the text flow. -/
 inductive Inline (i : Type u) : Type u where
-  /--
-  Textual content.
-  -/
+  /-- Textual content. -/
   | text (string : String)
-  /--
-  Emphasis, typically rendered using italic text.
-  -/
+  /-- Emphasis, typically rendered using italic text. -/
   | emph (content : Array (Inline i))
-  /--
-  Strong emphasis, typically rendered using bold text.
-  -/
+  /-- Strong emphasis, typically rendered using bold text. -/
   | bold (content : Array (Inline i))
-  /--
-  Inline literal code, typically rendered in a monospace font.
-  -/
+  /-- Inline literal code, typically rendered in a monospace font. -/
   | code (string : String)
   /--
   Embedded TeX math, to be rendered by an engine such as TeX or KaTeX. The `mode` determines whether
@@ -54,26 +41,18 @@ inductive Inline (i : Type u) : Type u where
   purposes of document structure.
   -/
   | math (mode : MathMode) (string : String)
-  /--
-  A user's line break. These are typically ignored when rendering, but don't need to be.
-  -/
+  /-- A user's line break. These are typically ignored when rendering, but don't need to be. -/
   | linebreak (string : String)
-  /--
-  A link to some URL.
-  -/
+  /-- A link to some URL. -/
   | link (content : Array (Inline i)) (url : String)
   /--
   A footnote. In Verso's concrete syntax, their contents are specified elsewhere, but elaboration
   places the contents at the use site.
   -/
   | footnote (name : String) (content : Array (Inline i))
-  /--
-  An image. `alt` should be displayed if the image can't be shown.
-  -/
+  /-- An image. `alt` should be displayed if the image can't be shown. -/
   | image (alt : String) (url : String)
-  /--
-  A sequence of inline elements.
-  -/
+  /-- A sequence of inline elements. -/
   | concat (content : Array (Inline i))
   /--
   A genre-specific inline element. `container` specifies what kind of element it is, and `content`
@@ -83,8 +62,7 @@ inductive Inline (i : Type u) : Type u where
 deriving BEq, Ord, Repr, Inhabited
 
 /-- Rewrites using a proof that two inline element types are equal. -/
-def Inline.cast (inlines_eq : i = i') (x : Inline i) : Inline i' :=
-  inlines_eq ▸ x
+def Inline.cast (inlines_eq : i = i') (x : Inline i) : Inline i' := inlines_eq ▸ x
 
 instance : Append (Inline i) where
   append
@@ -112,37 +90,21 @@ structure DescItem (α : Type u) (β : Type v) where
   desc : Array β
 deriving Repr, BEq, Ord, Inhabited
 
-/--
-Block-level content in a document.
--/
+/-- Block-level content in a document. -/
 inductive Block (i : Type u) (b : Type v) : Type (max u v) where
-  /--
-  A paragraph.
-  -/
+  /-- A paragraph. -/
   | para (contents : Array (Inline i))
-  /--
-  A code block.
-  -/
+  /-- A code block. -/
   | code (content : String)
-  /--
-  An unordered list.
-  -/
+  /-- An unordered list. -/
   | ul (items : Array (ListItem (Block i b)))
-  /--
-  An ordered list.
-  -/
+  /-- An ordered list. -/
   | ol (start : Int) (items : Array (ListItem (Block i b)))
-  /--
-  A description list that associates explanatory text with shorter items.
-  -/
+  /-- A description list that associates explanatory text with shorter items. -/
   | dl (items : Array (DescItem (Inline i) (Block i b)))
-  /--
-  A quotation.
-  -/
+  /-- A quotation. -/
   | blockquote (items : Array (Block i b))
-  /--
-  Multiple blocks, merged.
-  -/
+  /-- Multiple blocks, merged. -/
   | concat (content : Array (Block i b))
   /--
   A genre-specific block. `container` specifies what kind of block it is, while `content` specifies
@@ -158,9 +120,7 @@ def Block.empty : Block i b := .concat #[]
 def Block.cast (inlines_eq : i = i') (blocks_eq : b = b') (x : Block i b) : Block i' b' :=
   inlines_eq ▸ blocks_eq ▸ x
 
-/--
-A logical division of a document.
--/
+/-- A logical division of a document. -/
 structure Part (i : Type u) (b : Type v) (p : Type w) : Type (max u v w) where
   /-- The part's title -/
   title : Array (Inline i)
@@ -177,8 +137,8 @@ structure Part (i : Type u) (b : Type v) (p : Type w) : Type (max u v w) where
 deriving BEq, Ord, Repr, Inhabited
 
 /-- Rewrites using proofs that inline element types, block types, and metadata types are equal. -/
-def Part.cast (inlines_eq : i = i') (blocks_eq : b = b') (metadata_eq : p = p')
-    (x : Part i b p) : Part i' b' p' :=
+def Part.cast (inlines_eq : i = i') (blocks_eq : b = b') (metadata_eq : p = p') (x : Part i b p)
+    : Part i' b' p' :=
   inlines_eq ▸ blocks_eq ▸ metadata_eq ▸ x
 
 /--

@@ -17,30 +17,22 @@ namespace Time
 namespace Nanosecond
 namespace Offset
 
-/--
-Convert `Nanosecond.Offset` into `Day.Offset`.
--/
+/-- Convert `Nanosecond.Offset` into `Day.Offset`. -/
 @[inline]
 def toDays (nanoseconds : Nanosecond.Offset) : Day.Offset :=
   nanoseconds.div 86400000000000 |>.cast (by decide +kernel)
 
-/--
-Convert `Day.Offset` into `Nanosecond.Offset`.
--/
+/-- Convert `Day.Offset` into `Nanosecond.Offset`. -/
 @[inline]
 def ofDays (days : Day.Offset) : Nanosecond.Offset :=
   days.mul 86400000000000 |>.cast (by decide +kernel)
 
-/--
-Convert `Nanosecond.Offset` into `Week.Offset`.
--/
+/-- Convert `Nanosecond.Offset` into `Week.Offset`. -/
 @[inline]
 def toWeeks (nanoseconds : Nanosecond.Offset) : Week.Offset :=
   nanoseconds.div 604800000000000 |>.cast (by decide +kernel)
 
-/--
-Convert `Week.Offset` into `Nanosecond.Offset`.
--/
+/-- Convert `Week.Offset` into `Nanosecond.Offset`. -/
 @[inline]
 def ofWeeks (weeks : Week.Offset) : Nanosecond.Offset :=
   weeks.mul 604800000000000 |>.cast (by decide +kernel)
@@ -51,30 +43,21 @@ end Nanosecond
 namespace Millisecond
 namespace Offset
 
-/--
-Convert `Millisecond.Offset` into `Day.Offset`.
--/
+/-- Convert `Millisecond.Offset` into `Day.Offset`. -/
 @[inline]
 def toDays (milliseconds : Millisecond.Offset) : Day.Offset :=
   milliseconds.div 86400000 |>.cast (by decide +kernel)
 
-/--
-Convert `Day.Offset` into `Millisecond.Offset`.
--/
+/-- Convert `Day.Offset` into `Millisecond.Offset`. -/
 @[inline]
-def ofDays (days : Day.Offset) : Millisecond.Offset :=
-  days.mul 86400000 |>.cast (by decide +kernel)
+def ofDays (days : Day.Offset) : Millisecond.Offset := days.mul 86400000 |>.cast (by decide +kernel)
 
-/--
-Convert `Millisecond.Offset` into `Week.Offset`.
--/
+/-- Convert `Millisecond.Offset` into `Week.Offset`. -/
 @[inline]
 def toWeeks (milliseconds : Millisecond.Offset) : Week.Offset :=
   milliseconds.div 604800000 |>.cast (by decide +kernel)
 
-/--
-Convert `Week.Offset` into `Millisecond.Offset`.
--/
+/-- Convert `Week.Offset` into `Millisecond.Offset`. -/
 @[inline]
 def ofWeeks (weeks : Week.Offset) : Millisecond.Offset :=
   weeks.mul 604800000 |>.cast (by decide +kernel)
@@ -85,33 +68,22 @@ end Millisecond
 namespace Second
 namespace Offset
 
-/--
-Convert `Second.Offset` into `Day.Offset`.
--/
+/-- Convert `Second.Offset` into `Day.Offset`. -/
 @[inline]
-def toDays (seconds : Second.Offset) : Day.Offset :=
-  seconds.div 86400 |>.cast (by decide +kernel)
+def toDays (seconds : Second.Offset) : Day.Offset := seconds.div 86400 |>.cast (by decide +kernel)
 
-/--
-Convert `Day.Offset` into `Second.Offset`.
--/
+/-- Convert `Day.Offset` into `Second.Offset`. -/
 @[inline]
-def ofDays (days : Day.Offset) : Second.Offset :=
-  days.mul 86400 |>.cast (by decide +kernel)
+def ofDays (days : Day.Offset) : Second.Offset := days.mul 86400 |>.cast (by decide +kernel)
 
-/--
-Convert `Second.Offset` into `Week.Offset`.
--/
+/-- Convert `Second.Offset` into `Week.Offset`. -/
 @[inline]
 def toWeeks (seconds : Second.Offset) : Week.Offset :=
   seconds.div 604800 |>.cast (by decide +kernel)
 
-/--
-Convert `Week.Offset` into `Second.Offset`.
--/
+/-- Convert `Week.Offset` into `Second.Offset`. -/
 @[inline]
-def ofWeeks (weeks : Week.Offset) : Second.Offset :=
-  weeks.mul 604800 |>.cast (by decide +kernel)
+def ofWeeks (weeks : Week.Offset) : Second.Offset := weeks.mul 604800 |>.cast (by decide +kernel)
 
 end Offset
 end Second
@@ -119,33 +91,21 @@ end Second
 namespace Minute
 namespace Offset
 
-/--
-Convert `Minute.Offset` into `Day.Offset`.
--/
+/-- Convert `Minute.Offset` into `Day.Offset`. -/
 @[inline]
-def toDays (minutes : Minute.Offset) : Day.Offset :=
-  minutes.div 1440 |>.cast (by decide +kernel)
+def toDays (minutes : Minute.Offset) : Day.Offset := minutes.div 1440 |>.cast (by decide +kernel)
 
-/--
-Convert `Day.Offset` into `Minute.Offset`.
--/
+/-- Convert `Day.Offset` into `Minute.Offset`. -/
 @[inline]
-def ofDays (days : Day.Offset) : Minute.Offset :=
-  days.mul 1440 |>.cast (by decide +kernel)
+def ofDays (days : Day.Offset) : Minute.Offset := days.mul 1440 |>.cast (by decide +kernel)
 
-/--
-Convert `Minute.Offset` into `Week.Offset`.
--/
+/-- Convert `Minute.Offset` into `Week.Offset`. -/
 @[inline]
-def toWeeks (minutes : Minute.Offset) : Week.Offset :=
-  minutes.div 10080 |>.cast (by decide +kernel)
+def toWeeks (minutes : Minute.Offset) : Week.Offset := minutes.div 10080 |>.cast (by decide +kernel)
 
-/--
-Convert `Week.Offset` into `Minute.Offset`.
--/
+/-- Convert `Week.Offset` into `Minute.Offset`. -/
 @[inline]
-def ofWeeks (weeks : Week.Offset) : Minute.Offset :=
-  weeks.mul 10080 |>.cast (by decide +kernel)
+def ofWeeks (weeks : Week.Offset) : Minute.Offset := weeks.mul 10080 |>.cast (by decide +kernel)
 
 end Offset
 end Minute
@@ -153,33 +113,19 @@ end Minute
 namespace Hour
 namespace Offset
 
-/--
-Convert `Hour.Offset` into `Day.Offset`.
--/
-@[inline]
-def toDays (hours : Hour.Offset) : Day.Offset :=
-  hours.div 24 |>.cast (by decide +kernel)
+/-- Convert `Hour.Offset` into `Day.Offset`. -/
+@[inline] def toDays (hours : Hour.Offset) : Day.Offset := hours.div 24 |>.cast (by decide +kernel)
 
-/--
-Convert `Day.Offset` into `Hour.Offset`.
--/
-@[inline]
-def ofDays (days : Day.Offset) : Hour.Offset :=
-  days.mul 24 |>.cast (by decide +kernel)
+/-- Convert `Day.Offset` into `Hour.Offset`. -/
+@[inline] def ofDays (days : Day.Offset) : Hour.Offset := days.mul 24 |>.cast (by decide +kernel)
 
-/--
-Convert `Hour.Offset` into `Week.Offset`.
--/
+/-- Convert `Hour.Offset` into `Week.Offset`. -/
 @[inline]
-def toWeeks (hours : Hour.Offset) : Week.Offset :=
-  hours.div 168 |>.cast (by decide +kernel)
+def toWeeks (hours : Hour.Offset) : Week.Offset := hours.div 168 |>.cast (by decide +kernel)
 
-/--
-Convert `Week.Offset` into `Hour.Offset`.
--/
+/-- Convert `Week.Offset` into `Hour.Offset`. -/
 @[inline]
-def ofWeeks (weeks : Week.Offset) : Hour.Offset :=
-  weeks.mul 168 |>.cast (by decide +kernel)
+def ofWeeks (weeks : Week.Offset) : Hour.Offset := weeks.mul 168 |>.cast (by decide +kernel)
 
 end Offset
 end Hour

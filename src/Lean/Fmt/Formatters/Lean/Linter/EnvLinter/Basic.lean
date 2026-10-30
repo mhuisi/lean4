@@ -19,5 +19,4 @@ public def fmtBuiltinEnvLinter : Fmt := fun
     let linterTk ← fmt linterTk
     let optionId ← fmt optionId
     return Layouts.pseudoApplication #[linterTk, optionId]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

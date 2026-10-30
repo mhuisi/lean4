@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Simp.SimpM
 import Lean.Meta.AppBuilder
@@ -107,8 +108,8 @@ public def dischargeSimpSelf : Discharger := fun e => do
   if (← readThe Context).dischargeDepth > (← getConfig).maxDischargeDepth then
     return .failed
   withoutModifyingCache do
-  withTheReader Context (fun ctx => { ctx with dischargeDepth := ctx.dischargeDepth + 1 }) do
-    return resultToDischargeResult e (← simp e)
+    withTheReader Context (fun ctx => { ctx with dischargeDepth := ctx.dischargeDepth + 1 }) do
+      return resultToDischargeResult e (← simp e)
 
 /--
 A discharger that fails to prove any side condition.
@@ -121,8 +122,7 @@ returns `.failed` for all propositions, effectively disabling conditional rewrit
 - Performance: Avoiding expensive discharge attempts when conditions are unlikely to hold
 - Controlled rewriting: Explicitly disabling conditional rules in specific contexts
 -/
-public def dischargeNone : Discharger := fun _ =>
-  return .failed
+public def dischargeNone : Discharger := fun _ => return .failed
 
 /--
 A discharger for testing that proves side conditions using hypotheses from the

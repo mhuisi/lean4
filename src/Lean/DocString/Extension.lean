@@ -25,7 +25,6 @@ public section
 
 namespace Lean
 
-
 /--
 Saved data that describes a custom inline element.
 
@@ -47,7 +46,8 @@ inductive ElabInline where
   | deferred (index : Nat)
 
 instance : Repr ElabInline where
-  reprPrec v _ := match v with
+  reprPrec v _ :=
+    match v with
     | .custom val => .group <| "ElabInline.custom" ++ .line ++ "(.mk " ++ repr val.typeName ++ " _)"
     | .deferred index => .group <| "ElabInline.deferred" ++ .line ++ repr index
 
@@ -72,7 +72,8 @@ inductive ElabBlock where
   | deferred (index : Nat)
 
 instance : Repr ElabBlock where
-  reprPrec v _ := match v with
+  reprPrec v _ :=
+    match v with
     | .custom val => .group <| "ElabBlock.custom" ++ .line ++ "(.mk " ++ repr val.typeName ++ " _)"
     | .deferred index => .group <| "ElabBlock.deferred" ++ .line ++ repr index
 
@@ -80,32 +81,36 @@ instance : Repr ElabBlock where
 A custom inline element `val`. The type `α` determines how it is interpreted. In contexts where `α`
 is not understood, `content` is used as a fallback.
 -/
-@[inline] def Doc.Inline.custom {α} [TypeName α] (val : α)
-    (content : Array (Doc.Inline ElabInline)) : Doc.Inline ElabInline :=
+@[inline]
+def Doc.Inline.custom {α} [TypeName α] (val : α) (content : Array (Doc.Inline ElabInline))
+    : Doc.Inline ElabInline :=
   .other (.custom (.mk val)) content
 
 /--
 An inline element with a deferred check. The `index` is a 0-based index into the current docstring's
 deferred checks, in source order. Block and inline deferred elements share a counter.
 -/
-@[inline] def Doc.Inline.deferred (index : Nat)
-    (content : Array (Doc.Inline ElabInline)) : Doc.Inline ElabInline :=
+@[inline]
+def Doc.Inline.deferred (index : Nat) (content : Array (Doc.Inline ElabInline))
+    : Doc.Inline ElabInline :=
   .other (.deferred index) content
 
 /--
 A custom block element `val`. The type `α` determines how it is interpreted. In contexts where `α`
 is not understood, `content` is used as a fallback.
 -/
-@[inline] def Doc.Block.custom {α} [TypeName α] (val : α)
-    (content : Array (Doc.Block ElabInline ElabBlock)) : Doc.Block ElabInline ElabBlock :=
+@[inline]
+def Doc.Block.custom {α} [TypeName α] (val : α) (content : Array (Doc.Block ElabInline ElabBlock))
+    : Doc.Block ElabInline ElabBlock :=
   .other (.custom (.mk val)) content
 
 /--
 A block element with a deferred check. The `index` is a 0-based index into the current docstring's
 deferred checks, in source order. Block and inline deferred elements share a counter.
 -/
-@[inline] def Doc.Block.deferred (index : Nat)
-    (content : Array (Doc.Block ElabInline ElabBlock)) : Doc.Block ElabInline ElabBlock :=
+@[inline]
+def Doc.Block.deferred (index : Nat) (content : Array (Doc.Block ElabInline ElabBlock))
+    : Doc.Block ElabInline ElabBlock :=
   .other (.deferred index) content
 
 structure VersoDocString where
@@ -114,31 +119,30 @@ structure VersoDocString where
 deriving Inhabited
 
 register_builtin_option doc.verso : Bool := {
-  defValue := false,
+  defValue := false
   descr := "whether to use Verso syntax in docstrings"
 }
 
 register_builtin_option doc.verso.module : Bool := {
-  defValue := false,
+  defValue := false
   descr := "whether to use Verso syntax in module docstrings (falls back to `doc.verso` if not set)"
 }
 
 private builtin_initialize builtinDocStrings : IO.Ref (NameMap String) ← IO.mkRef {}
 builtin_initialize docStringExt : MapDeclarationExtension String ←
-  mkMapDeclarationExtension
-    (asyncMode := .async .asyncEnv)
+  mkMapDeclarationExtension (asyncMode := .async .asyncEnv)
     (exportEntriesFn := fun _ s =>
       let ents := s.toArray
       { exported := #[], server := ents, «private» := ents })
 private builtin_initialize inheritDocStringExt : MapDeclarationExtension Name ←
-  mkMapDeclarationExtension (exportEntriesFn := fun _ s =>
-    let ents := s.toArray
-    { exported := #[], server := ents, «private» := ents })
+  mkMapDeclarationExtension
+    (exportEntriesFn := fun _ s =>
+      let ents := s.toArray
+      { exported := #[], server := ents, «private» := ents })
 
 private builtin_initialize builtinVersoDocStrings : IO.Ref (NameMap VersoDocString) ← IO.mkRef {}
 builtin_initialize versoDocStringExt : MapDeclarationExtension VersoDocString ←
-  mkMapDeclarationExtension
-    (asyncMode := .async .asyncEnv)
+  mkMapDeclarationExtension (asyncMode := .async .asyncEnv)
     (exportEntriesFn := fun _ s =>
       let ents := s.toArray
       { exported := #[], server := ents, «private» := ents })
@@ -154,42 +158,47 @@ Links to the Lean manual aren't validated.
 def addBuiltinDocString (declName : Name) (docString : String) : IO Unit := do
   builtinDocStrings.modify (·.insert declName docString)
 
-/--
-Removes a builtin docstring from the compiler. This is used when translating between formats.
--/
+/-- Removes a builtin docstring from the compiler. This is used when translating between formats. -/
 def removeBuiltinDocString (declName : Name) : IO Unit := do
   builtinDocStrings.modify (·.erase declName)
 
-/--
-Retrieves all builtin Verso docstrings.
--/
-def getBuiltinVersoDocStrings : IO (NameMap VersoDocString) :=
-  builtinVersoDocStrings.get
+/-- Retrieves all builtin Verso docstrings. -/
+def getBuiltinVersoDocStrings : IO (NameMap VersoDocString) := builtinVersoDocStrings.get
 
 /-- Throws if `declName` already has a Markdown or Verso docstring. -/
 def throwIfHasDocString [Monad m] [MonadError m] [MonadEnv m] (declName : Name) : m Unit := do
   let env ← getEnv
   -- only the state visible on this branch, as in `MapDeclarationExtension.insert`
-  if docStringExt.contains (asyncMode := .local) env declName ||
-      versoDocStringExt.contains (asyncMode := .local) env declName then
+  if docStringExt.contains (asyncMode := .local) env declName
+      || versoDocStringExt.contains (asyncMode := .local) env declName then
     throwError m!"invalid doc string, declaration `{.ofConstName declName}` already has one"
 
 /--
 Sets the docstring of `declName`, replacing an existing one: metaprograms extend docstrings this way
 (e.g. by appending cross-reference links). Only `add_decl_doc` rejects a second docstring.
 -/
-def addDocStringCore [Monad m] [MonadError m] [MonadEnv m] [MonadLiftT BaseIO m] (declName : Name) (docString : String) : m Unit := do
+def addDocStringCore
+    [Monad m] [MonadError m] [MonadEnv m] [MonadLiftT BaseIO m]
+    (declName : Name) (docString : String)
+    : m Unit := do
   unless (← getEnv).getModuleIdxFor? declName |>.isNone do
-    throwError m!"invalid doc string, declaration `{.ofConstName declName}` is in an imported module"
+    throwError
+      m!"invalid doc string, declaration `{.ofConstName declName}` is in an imported module"
   modifyEnv fun env =>
     docStringExt.insert env declName docString.removeLeadingSpaces (allowOverwrite := true)
 
-def removeDocStringCore [Monad m] [MonadError m] [MonadEnv m] [MonadLiftT BaseIO m] (declName : Name) : m Unit := do
+def removeDocStringCore
+    [Monad m] [MonadError m] [MonadEnv m] [MonadLiftT BaseIO m] (declName : Name)
+    : m Unit := do
   unless (← getEnv).getModuleIdxFor? declName |>.isNone do
-    throwError m!"invalid doc string removal, declaration `{.ofConstName declName}` is in an imported module"
+    throwError
+      m!"invalid doc string removal, declaration `{.ofConstName declName}` is in an imported module"
   modifyEnv fun env => docStringExt.modifyState env (·.erase declName) (asyncMode := .mainOnly)
 
-def addDocStringCore' [Monad m] [MonadError m] [MonadEnv m] [MonadLiftT BaseIO m] (declName : Name) (docString? : Option String) : m Unit :=
+def addDocStringCore'
+    [Monad m] [MonadError m] [MonadEnv m] [MonadLiftT BaseIO m]
+    (declName : Name) (docString? : Option String)
+    : m Unit :=
   match docString? with
   | some docString => addDocStringCore declName docString
   | none => return ()
@@ -200,7 +209,8 @@ For Markdown docstrings, the result is a string; for Verso docstrings, it's a `V
 
 Docstrings to be shown to a user should be looked up with `Lean.findDocString?` instead.
 -/
-partial def findInternalDocString? (env : Environment) (declName : Name) (includeBuiltin := true) : IO (Option (String ⊕ VersoDocString)) := do
+partial def findInternalDocString? (env : Environment) (declName : Name) (includeBuiltin := true)
+    : IO (Option (String ⊕ VersoDocString)) := do
   if let some target := inheritDocStringExt.find? (level := .server) env declName then
     return (← findInternalDocString? env target includeBuiltin)
   match docStringExt.find? (level := .server) env declName with
@@ -216,23 +226,26 @@ partial def findInternalDocString? (env : Environment) (declName : Name) (includ
       return some (.inr doc)
   return none
 
-def addInheritedDocString [Monad m] [MonadError m] [MonadEnv m] [MonadLiftT IO m]
-    (declName target : Name) : m Unit := do
+def addInheritedDocString
+    [Monad m] [MonadError m] [MonadEnv m] [MonadLiftT IO m] (declName target : Name)
+    : m Unit := do
   unless (← getEnv).getModuleIdxFor? declName |>.isNone do
-    throwError "invalid `[inherit_doc]` attribute, declaration `{.ofConstName declName}` is in an imported module"
+    throwError "invalid `[inherit_doc]` attribute, declaration `{.ofConstName declName}` is in an \
+      imported module"
   if inheritDocStringExt.find? (level := .server) (← getEnv) declName |>.isSome then
-    throwError "invalid `[inherit_doc]` attribute, declaration `{.ofConstName declName}` already has an `[inherit_doc]` attribute"
+    throwError "invalid `[inherit_doc]` attribute, declaration `{.ofConstName declName}` already \
+      has an `[inherit_doc]` attribute"
   if inheritDocStringExt.find? (level := .server) (← getEnv) target == some declName then
     throwError "invalid `[inherit_doc]` attribute, cycle detected"
   -- A public declaration cannot alias the docstring of a private one: the private target is not
   -- exported, so importers have no module index for it and cannot resolve the alias. Copy the
   -- resolved docstring eagerly instead (the target must be local/import, so the docstring is
   -- available).
-  if !isPrivateName declName && isPrivateName target then
+  if ! isPrivateName declName && isPrivateName target then
     match ← findInternalDocString? (← getEnv) target with
-    | some (.inl md)    => modifyEnv (docStringExt.insert · declName md)
+    | some (.inl md) => modifyEnv (docStringExt.insert · declName md)
     | some (.inr verso) => modifyEnv (versoDocStringExt.insert · declName verso)
-    | none              => modifyEnv (inheritDocStringExt.insert · declName target)
+    | none => modifyEnv (inheritDocStringExt.insert · declName target)
   else
     modifyEnv (inheritDocStringExt.insert · declName target)
 
@@ -240,39 +253,35 @@ structure ModuleDoc where
   doc : String
   declarationRange : DeclarationRange
 
-private builtin_initialize moduleDocExt :
-    SimplePersistentEnvExtension ModuleDoc (PersistentArray ModuleDoc) ← registerSimplePersistentEnvExtension {
-  addImportedFn := fun _ => {}
-  addEntryFn    := fun s e => s.push e
-  exportEntriesFnEx? := some fun _ _ es =>
-    let ents := es.toArray
-    { exported := #[], server := ents, «private» := ents }
-}
+private builtin_initialize moduleDocExt
+    : SimplePersistentEnvExtension ModuleDoc (PersistentArray ModuleDoc) ←
+  registerSimplePersistentEnvExtension {
+    addImportedFn := fun _ => {}
+    addEntryFn := fun s e => s.push e
+    exportEntriesFnEx? :=
+      some fun _ _ es =>
+        let ents := es.toArray
+        { exported := #[], server := ents, «private» := ents }
+  }
 
 def addMainModuleDoc (env : Environment) (doc : ModuleDoc) : Environment :=
   moduleDocExt.addEntry env doc
 
-def getMainModuleDoc (env : Environment) : PersistentArray ModuleDoc :=
-  moduleDocExt.getState env
+def getMainModuleDoc (env : Environment) : PersistentArray ModuleDoc := moduleDocExt.getState env
 
 def getModuleDoc? (env : Environment) (moduleName : Name) : Option (Array ModuleDoc) :=
-  env.getModuleIdx? moduleName |>.map fun modIdx =>
-    moduleDocExt.getModuleEntries (level := .server) env modIdx
+  env.getModuleIdx? moduleName
+    |>.map fun modIdx => moduleDocExt.getModuleEntries (level := .server) env modIdx
 
-def getDocStringText [Monad m] [MonadError m] (stx : TSyntax `Lean.Parser.Command.docComment) : m String :=
+def getDocStringText [Monad m] [MonadError m] (stx : TSyntax `Lean.Parser.Command.docComment)
+    : m String :=
   match stx.raw[1] with
-  | Syntax.node _ `Lean.Parser.Command.commentBody #[.atom _ text, _] =>
-    return text
-  | _ =>
-    throwErrorAt stx "unexpected doc string{indentD stx}"
+  | Syntax.node _ `Lean.Parser.Command.commentBody #[.atom _ text, _] => return text
+  | _ => throwErrorAt stx "unexpected doc string{indentD stx}"
 
-/--
-Checks whether `stx` is a docstring that was parsed as Verso rather than Markdown.
--/
+/-- Checks whether `stx` is a docstring that was parsed as Verso rather than Markdown. -/
 def isVersoDocComment (stx : TSyntax `Lean.Parser.Command.docComment) : Bool :=
   stx.raw[1].isOfKind `Lean.Parser.Command.versoCommentBody
-
-
 
 /--
 A snippet of a Verso module text.
@@ -298,9 +307,7 @@ structure VersoModuleDocs.Snippet where
   None of these parts may contain sub-parts.
   -/
   sections : Array (Nat × DeclarationRange × Doc.Part ElabInline ElabBlock Empty) := #[]
-  /--
-  The location of the snippet in the source file.
-  -/
+  /-- The location of the snippet in the source file. -/
   declarationRange : DeclarationRange
 deriving Inhabited, Repr
 
@@ -310,20 +317,29 @@ def canNestIn (level : Nat) (snippet : Snippet) : Bool :=
   if let some s := snippet.sections[0]? then s.1 ≤ level + 1 else true
 
 def terminalNesting (snippet : Snippet) : Option Nat :=
-  if let some s := snippet.sections.back? then s.1
-  else none
+  if let some s := snippet.sections.back? then
+    s.1
+  else
+    none
 
 def addBlock (snippet : Snippet) (block : Doc.Block ElabInline ElabBlock) : Snippet :=
-  if h : snippet.sections.size = 0 then
-    { snippet with text := snippet.text.push block }
-  else
-    { snippet with
-      sections[snippet.sections.size - 1].2.2.content :=
-        snippet.sections[snippet.sections.size - 1].2.2.content.push block }
+  if h : snippet.sections.size = 0 then {
+    snippet with
+    text := snippet.text.push block
+  }
+  else {
+    snippet with
+    sections[snippet.sections.size - 1].2.2.content :=
+      snippet.sections[snippet.sections.size - 1].2.2.content.push block
+  }
 
-def addPart (snippet : Snippet) (level : Nat) (range : DeclarationRange) (part : Doc.Part ElabInline ElabBlock Empty) : Snippet :=
-  { snippet with
-    sections := snippet.sections.push (level, range, part) }
+def addPart
+    (snippet : Snippet) (level : Nat) (range : DeclarationRange)
+    (part : Doc.Part ElabInline ElabBlock Empty)
+    : Snippet := {
+  snippet with
+  sections := snippet.sections.push (level, range, part)
+}
 
 end VersoModuleDocs.Snippet
 
@@ -337,10 +353,8 @@ def VersoModuleDocs.terminalNesting : VersoModuleDocs → Option Nat
 instance : Repr VersoModuleDocs where
   reprPrec v _ :=
     .group <| .nest 2 <|
-      "{ " ++
-      (.group <| .nest 2 <| "snippets := " ++ .line ++ repr v.snippets.toArray) ++ .line ++
-      (.group <| .nest 2 <| "snippets := " ++ .line ++ repr v.snippets.toArray) ++
-      " }"
+      "{ " ++ (.group <| .nest 2 <| "snippets := " ++ .line ++ repr v.snippets.toArray) ++ .line
+        ++ (.group <| .nest 2 <| "snippets := " ++ .line ++ repr v.snippets.toArray) ++ " }"
 
 namespace VersoModuleDocs
 
@@ -349,8 +363,8 @@ def isEmpty (docs : VersoModuleDocs) : Bool := docs.snippets.isEmpty
 def canAdd (docs : VersoModuleDocs) (snippet : Snippet) : Bool :=
   if let some level := docs.terminalNesting then
     snippet.canNestIn level
-  else true
-
+  else
+    true
 
 def add (docs : VersoModuleDocs) (snippet : Snippet) : Except String VersoModuleDocs := do
   unless docs.canAdd snippet do
@@ -362,12 +376,14 @@ def add! (docs : VersoModuleDocs) (snippet : Snippet) : VersoModuleDocs :=
   let ok :=
     if let some level := docs.terminalNesting then
       snippet.canNestIn level
-    else true
+    else
+      true
   if not ok then
     panic! "Can't nest this snippet here"
-  else
-    { docs with snippets := docs.snippets.push snippet }
-
+  else {
+    docs with
+    snippets := docs.snippets.push snippet
+  }
 
 private structure DocFrame where
   content : Array (Doc.Block ElabInline ElabBlock)
@@ -388,14 +404,15 @@ private def DocContext.close (ctx : DocContext) : Except String DocContext := do
   else
     let last := ctx.context.back
     pure {
-      content := last.content,
-      priorParts := last.priorParts.push {
-        title := last.title,
-        titleString := last.titleString,
-        metadata := none,
-        content := ctx.content,
-        subParts := ctx.priorParts,
-      },
+      content := last.content
+      priorParts :=
+        last.priorParts.push {
+          title := last.title
+          titleString := last.titleString
+          metadata := none
+          content := ctx.content
+          subParts := ctx.priorParts
+        }
       context := ctx.context.pop
     }
 
@@ -405,25 +422,34 @@ private partial def DocContext.closeAll (ctx : DocContext) : Except String DocCo
   else
     (← ctx.close).closeAll
 
-private partial def DocContext.addPart (ctx : DocContext) (partLevel : Nat) (part : Doc.Part ElabInline ElabBlock Empty) : Except String DocContext := do
-  if partLevel > ctx.level then throw s!"Invalid nesting: expected at most {ctx.level} but got {partLevel}"
-  else if partLevel = ctx.level then pure { ctx with priorParts := ctx.priorParts.push part }
+private partial def DocContext.addPart
+    (ctx : DocContext) (partLevel : Nat) (part : Doc.Part ElabInline ElabBlock Empty)
+    : Except String DocContext := do
+  if partLevel > ctx.level then
+    throw s!"Invalid nesting: expected at most {ctx.level} but got {partLevel}"
+  else if partLevel = ctx.level then
+    pure { ctx with priorParts := ctx.priorParts.push part }
   else
     let ctx ← ctx.close
     ctx.addPart partLevel part
 
-private def DocContext.addBlocks (ctx : DocContext) (blocks : Array (Doc.Block ElabInline ElabBlock)) : Except String DocContext := do
-  if ctx.priorParts.isEmpty then pure { ctx with content := ctx.content ++ blocks }
-  else throw "Can't add content after sub-parts"
+private def DocContext.addBlocks
+    (ctx : DocContext) (blocks : Array (Doc.Block ElabInline ElabBlock))
+    : Except String DocContext := do
+  if ctx.priorParts.isEmpty then
+    pure { ctx with content := ctx.content ++ blocks }
+  else
+    throw "Can't add content after sub-parts"
 
-private def DocContext.addSnippet (ctx : DocContext) (snippet : Snippet) : Except String DocContext := do
+private def DocContext.addSnippet (ctx : DocContext) (snippet : Snippet)
+    : Except String DocContext := do
   let mut ctx ← ctx.addBlocks snippet.text
   for (l, _, p) in snippet.sections do
     ctx ← ctx.addPart l p
   return ctx
 
 def assemble (docs : VersoModuleDocs) : Except String VersoDocString := do
-  let mut ctx : DocContext := {content := #[], priorParts := #[], context := #[]}
+  let mut ctx : DocContext := { content := #[], priorParts := #[], context := #[] }
   for snippet in docs.snippets do
     ctx ← ctx.addSnippet snippet
   ctx ← ctx.closeAll
@@ -431,15 +457,16 @@ def assemble (docs : VersoModuleDocs) : Except String VersoDocString := do
 
 end VersoModuleDocs
 
-private builtin_initialize versoModuleDocExt :
-    SimplePersistentEnvExtension VersoModuleDocs.Snippet VersoModuleDocs ← registerSimplePersistentEnvExtension {
-  addImportedFn := fun _ => {}
-  addEntryFn    := fun s e => s.add! e
-  exportEntriesFnEx? := some fun _ _ es =>
-    let ents := es.toArray
-    { exported := #[], server := ents, «private» := ents }
-}
-
+private builtin_initialize versoModuleDocExt
+    : SimplePersistentEnvExtension VersoModuleDocs.Snippet VersoModuleDocs ←
+  registerSimplePersistentEnvExtension {
+    addImportedFn := fun _ => {}
+    addEntryFn := fun s e => s.add! e
+    exportEntriesFnEx? :=
+      some fun _ _ es =>
+        let ents := es.toArray
+        { exported := #[], server := ents, «private» := ents }
+  }
 
 /--
 Returns the Verso module docs for the current main module.
@@ -447,23 +474,22 @@ Returns the Verso module docs for the current main module.
 During elaboration, this will return the modules docs that have been added thus far, rather than
 those for the entire module.
 -/
-def getMainVersoModuleDocs (env : Environment) : VersoModuleDocs :=
-  versoModuleDocExt.getState env
+def getMainVersoModuleDocs (env : Environment) : VersoModuleDocs := versoModuleDocExt.getState env
 
 @[deprecated getMainVersoModuleDocs (since := "2026-01-21")]
 def getVersoModuleDocs := @getMainVersoModuleDocs
 
+/-- Returns all snippets of the Verso module docs from the indicated module, if they exist. -/
+def getVersoModuleDoc? (env : Environment) (moduleName : Name)
+    : Option (Array VersoModuleDocs.Snippet) :=
+  env.getModuleIdx? moduleName
+    |>.map fun modIdx => versoModuleDocExt.getModuleEntries (level := .server) env modIdx
 
-/--
-Returns all snippets of the Verso module docs from the indicated module, if they exist.
--/
-def getVersoModuleDoc? (env : Environment) (moduleName : Name) :
-    Option (Array VersoModuleDocs.Snippet) :=
-  env.getModuleIdx? moduleName |>.map fun modIdx =>
-    versoModuleDocExt.getModuleEntries (level := .server) env modIdx
-
-def addVersoModuleDocSnippet (env : Environment) (snippet : VersoModuleDocs.Snippet) : Except String Environment :=
+def addVersoModuleDocSnippet (env : Environment) (snippet : VersoModuleDocs.Snippet)
+    : Except String Environment :=
   let docs := getMainVersoModuleDocs env
   if docs.canAdd snippet then
     pure <| versoModuleDocExt.addEntry env snippet
-  else throw s!"Can't add - incorrect nesting {docs.terminalNesting.map (s!"(expected at most {·})") |>.getD ""})"
+  else
+    throw s!"Can't add - incorrect nesting \
+      {docs.terminalNesting.map (s!"(expected at most {·})") |>.getD ""})"

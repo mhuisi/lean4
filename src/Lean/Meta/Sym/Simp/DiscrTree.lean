@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Pattern
 public import Lean.Meta.DiscrTree.Util
@@ -65,22 +66,24 @@ def pushAllArgs (e : Expr) (todo : Array Expr) : Array Expr :=
 Pushes arguments of an application onto the todo stack, replacing proof/instance arguments
 with dummy bound variables (which become `Key.star` wildcards).
 -/
-def pushArgsUsingInfo (infos : Array ProofInstArgInfo) (i : Nat) (e : Expr) (todo : Array Expr) : Array Expr :=
+def pushArgsUsingInfo (infos : Array ProofInstArgInfo) (i : Nat) (e : Expr) (todo : Array Expr)
+    : Array Expr :=
   match e with
   | .app f a =>
     if ignoreArg infos i then
       -- **Note**: We use a dummy bvar, it will be transformed into a `Key.star` later.
       let dummyBVar := .bvar 1000000
-      pushArgsUsingInfo infos (i-1) f (todo.push dummyBVar)
+      pushArgsUsingInfo infos (i - 1) f (todo.push dummyBVar)
     else
-      pushArgsUsingInfo infos (i-1) f (todo.push a)
+      pushArgsUsingInfo infos (i - 1) f (todo.push a)
   | _ => todo
 
 /--
 Computes the discrimination tree key for an expression and pushes its subterms onto the todo stack.
 Returns `Key.star` for bound variables and `noindex`-annotated terms.
 -/
-def pushArgs (root : Bool) (fnInfos : AssocList Name ProofInstInfo) (todo : Array Expr) (e : Expr) : Key × Array Expr :=
+def pushArgs (root : Bool) (fnInfos : AssocList Name ProofInstInfo) (todo : Array Expr) (e : Expr)
+    : Key × Array Expr :=
   if hasNoindexAnnotation e then
     (.star, todo)
   else
@@ -94,23 +97,26 @@ def pushArgs (root : Bool) (fnInfos : AssocList Name ProofInstInfo) (todo : Arra
         (.star, todo)
       else
         let numArgs := e.getAppNumArgs
-        let todo := if let some info := fnInfos.find? declName then
-          pushArgsUsingInfo info.argsInfo (numArgs - 1) e todo
-        else
-          pushAllArgs e todo
+        let todo :=
+          if let some info := fnInfos.find? declName then
+            pushArgsUsingInfo info.argsInfo (numArgs - 1) e todo
+          else
+            pushAllArgs e todo
         (.const declName numArgs, todo)
-    | .fvar fvarId   =>
+    | .fvar fvarId =>
       let numArgs := e.getAppNumArgs
       let todo := pushAllArgs e todo
       (.fvar fvarId numArgs, todo)
     | _ => (.other, todo)
 
 /-- Work-list based traversal that builds the key sequence for a pattern. -/
-partial def mkPathAux (root : Bool) (fnInfos : AssocList Name ProofInstInfo) (todo : Array Expr) (keys : Array Key) : Array Key :=
+partial def mkPathAux
+    (root : Bool) (fnInfos : AssocList Name ProofInstInfo) (todo : Array Expr) (keys : Array Key)
+    : Array Key :=
   if todo.isEmpty then
     keys
   else
-    let e    := todo.back!
+    let e := todo.back!
     let todo := todo.pop
     let (k, todo) := pushArgs root fnInfos todo e
     mkPathAux false fnInfos todo (keys.push k)
@@ -133,10 +139,10 @@ abbrev findKey? (cs : Array (Key × Trie α)) (k : Key) : Option (Key × Trie α
 
 def getKey (e : Expr) : Key :=
   match e.getAppFn' with
-  | .lit v            => .lit v
+  | .lit v => .lit v
   | .const declName _ => .const declName e.getAppNumArgs'
-  | .fvar fvarId      => .fvar fvarId e.getAppNumArgs'
-  | .forallE ..       => .arrow
+  | .fvar fvarId => .fvar fvarId e.getAppNumArgs'
+  | .forallE .. => .arrow
   | _ => .other
 
 /--
@@ -157,7 +163,7 @@ partial def resolveAssignedMVars (mctx : MetavarContext) (e : Expr) : Expr :=
   else
     e
 
-/-- Push `e` arguments/children into the `todo` stack.  -/
+/-- Push `e` arguments/children into the `todo` stack. -/
 def pushArgsTodo (todo : Array Expr) (e : Expr) : Array Expr :=
   match e with
   | .app f a => pushArgsTodo (todo.push a) f
@@ -165,21 +171,21 @@ def pushArgsTodo (todo : Array Expr) (e : Expr) : Array Expr :=
   | .mdata _ e => pushArgsTodo todo e
   | _ => todo
 
-partial def getMatchLoop (mctx : MetavarContext) (todo : Array Expr) (c : Trie α) (result : Array α) : Array α :=
+partial def getMatchLoop (mctx : MetavarContext) (todo : Array Expr) (c : Trie α) (result : Array α)
+    : Array α :=
   match c with
   | .chain key child =>
     if todo.isEmpty then
       result
     else
-      let e     := resolveAssignedMVars mctx <| etaReduce todo.back!
-      let todo  := todo.pop
+      let e := resolveAssignedMVars mctx <| etaReduce todo.back!
+      let todo := todo.pop
       if key == .star then
         getMatchLoop mctx todo child result
       else if key == getKey e then
         getMatchLoop mctx (pushArgsTodo todo e) child result
       else
         result
-
   | .node vs cs =>
     let csize := cs.size
     if todo.isEmpty then
@@ -187,18 +193,21 @@ partial def getMatchLoop (mctx : MetavarContext) (todo : Array Expr) (c : Trie �
     else if h : csize = 0 then
       result
     else
-      let e     := resolveAssignedMVars mctx <| etaReduce todo.back!
-      let todo  := todo.pop
+      let e := resolveAssignedMVars mctx <| etaReduce todo.back!
+      let todo := todo.pop
       let first := cs[0] /- Recall that `Key.star` is the minimal key -/
-        /- We must always visit `Key.star` edges since they are wildcards.
-          Thus, `todo` is not used linearly when there is `Key.star` edge
-          and there is an edge for `k` and `k != Key.star`. -/
-      let result := if first.1 == .star then
+      /-
+      We must always visit `Key.star` edges since they are wildcards.
+      Thus, `todo` is not used linearly when there is `Key.star` edge
+      and there is an edge for `k` and `k != Key.star`.
+      -/
+      let result :=
+        if first.1 == .star then
           getMatchLoop mctx todo first.2 result
         else
           result
       match findKey? cs (getKey e) with
-      | none   => result
+      | none => result
       | some c => getMatchLoop mctx (pushArgsTodo todo e) c.2 result
 
 /--
@@ -206,12 +215,13 @@ Retrieves all values whose patterns match the expression `e`.
 `mctx` is used to resolve assigned metavariables during retrieval; see `resolveAssignedMVars`.
 -/
 public def getMatch (mctx : MetavarContext) (d : DiscrTree α) (e : Expr) : Array α :=
-  let result := match d.root.find? .star with
-  | none   => .mkEmpty initCapacity
-  | some c => c.nodeValues
+  let result :=
+    match d.root.find? .star with
+    | none => .mkEmpty initCapacity
+    | some c => c.nodeValues
   let e := resolveAssignedMVars mctx <| etaReduce e
   match d.root.find? (getKey e) with
-  | none   => result
+  | none => result
   | some c => getMatchLoop mctx (pushArgsTodo #[] e) c result
 
 /--
@@ -221,14 +231,15 @@ extra (ignored) arguments.
 This is useful for rewriting: if a pattern matches `f x` but `e` is `f x y z`, we can
 still apply the rewrite and return `(value, 2)` indicating 2 extra arguments.
 -/
-public partial def getMatchWithExtra (mctx : MetavarContext) (d : DiscrTree α) (e : Expr) : Array (α × Nat) :=
+public partial def getMatchWithExtra (mctx : MetavarContext) (d : DiscrTree α) (e : Expr)
+    : Array (α × Nat) :=
   let e := resolveAssignedMVars mctx <| etaReduce e
   let e := e.consumeMData
   let result := getMatch mctx d e
   let result := result.map (·, 0)
   if !e.isApp then
     result
-  else if !mayMatchPrefix (getKey e) then
+  else if ! mayMatchPrefix (getKey e) then
     result
   else
     go e.appFn! 1 result
@@ -240,9 +251,9 @@ where
       else
         mayMatchPrefix k
     match k with
-    | .const f (n+1)  => cont (.const f n)
-    | .fvar f (n+1)   => cont (.fvar f n)
-    | _               => false
+    | .const f (n + 1) => cont (.const f n)
+    | .fvar f (n + 1) => cont (.fvar f n)
+    | _ => false
 
   go (e : Expr) (numExtra : Nat) (result : Array (α × Nat)) : Array (α × Nat) :=
     let result := result ++ (getMatch mctx d e).map (., numExtra)

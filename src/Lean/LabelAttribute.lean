@@ -44,25 +44,26 @@ builtin_initialize labelExtensionMapRef : IO.Ref LabelExtensionMap ← IO.mkRef 
 /-- Helper function for `registerLabelAttr`. -/
 def mkLabelExt (name : Name := by exact decl_name%) : IO LabelExtension :=
   registerSimpleScopedEnvExtension {
-    name     := name
-    initial  := #[]
+    name := name
+    initial := #[]
     addEntry := fun d e => if d.contains e then d else d.push e
   }
 
 /-- Helper function for `registerLabelAttr`. -/
-def mkLabelAttr (attrName : Name) (attrDescr : String) (ext : LabelExtension)
-  (ref : Name := by exact decl_name%) : IO Unit :=
-registerBuiltinAttribute {
-  ref   := ref
-  name  := attrName
-  descr := attrDescr
-  applicationTime := AttributeApplicationTime.afterCompilation
-  add   := fun declName _ kind =>
-    ext.add declName kind
-  erase := fun declName => do
-    let s := ext.getState (← getEnv)
-    modifyEnv fun env => ext.modifyState env fun _ => s.erase declName
-}
+def mkLabelAttr
+    (attrName : Name) (attrDescr : String) (ext : LabelExtension)
+    (ref : Name := by exact decl_name%)
+    : IO Unit :=
+  registerBuiltinAttribute {
+    ref := ref
+    name := attrName
+    descr := attrDescr
+    applicationTime := AttributeApplicationTime.afterCompilation
+    add := fun declName _ kind => ext.add declName kind
+    erase := fun declName => do
+      let s := ext.getState (← getEnv)
+      modifyEnv fun env => ext.modifyState env fun _ => s.erase declName
+  }
 
 /--
 Construct a new "label attribute",
@@ -70,8 +71,8 @@ which does nothing except keep track of the names of the declarations with that 
 
 Users will generally use the `register_label_attr` macro defined below.
 -/
-def registerLabelAttr (attrName : Name) (attrDescr : String)
-    (ref : Name := by exact decl_name%) : IO LabelExtension := do
+def registerLabelAttr (attrName : Name) (attrDescr : String) (ref : Name := by exact decl_name%)
+    : IO LabelExtension := do
   let ext ← mkLabelExt ref
   mkLabelAttr attrName attrDescr ext ref
   labelExtensionMapRef.modify fun map => map.insert attrName ext
@@ -82,16 +83,22 @@ Initialize a new "label" attribute.
 Declarations tagged with the attribute can be retrieved using `Lean.labelled`.
 -/
 macro (name := _root_.Lean.Parser.Command.registerLabelAttr)
-  doc:(docComment)? "register_label_attr " id:ident : command => do
-  let str := id.getId.toString
-  let idParser := mkIdentFrom id (`Parser.Attr ++ id.getId)
-  let descr := quote ((doc.map (·.getDocString) |>.getD ("labelled declarations for " ++ id.getId.toString)).removeLeadingSpaces)
-  `($[$doc:docComment]? initialize ext : Lean.LabelExtension ←
-      registerLabelAttr $(quote id.getId) $descr $(quote id.getId)
-    $[$doc:docComment]? syntax (name := $idParser:ident) $(quote str):str : attr)
+    doc:(docComment)? "register_label_attr " id:ident
+    : command =>
+  do
+    let str := id.getId.toString
+    let idParser := mkIdentFrom id (`Parser.Attr ++ id.getId)
+    let descr :=
+      quote ((doc.map (·.getDocString)
+        |>.getD ("labelled declarations for " ++ id.getId.toString)).removeLeadingSpaces)
+    `($[$doc:docComment]? initialize ext : Lean.LabelExtension ←
+        registerLabelAttr $(quote id.getId) $descr $(quote id.getId)
+      $[$doc:docComment]? syntax (name := $idParser:ident) $(quote str):str : attr)
 
-/-- When `attrName` is an attribute created using `register_labelled_attr`,
-return the names of all declarations labelled using that attribute. -/
+/--
+When `attrName` is an attribute created using `register_labelled_attr`,
+return the names of all declarations labelled using that attribute.
+-/
 def labelled (attrName : Name) : CoreM (Array Name) := do
   match (← labelExtensionMapRef.get)[attrName]? with
   | none => throwError "No extension named {attrName}"

@@ -30,73 +30,71 @@ cannot be created directly with `Iter.zip`.
 
 `Intermediate.zip` is meant to be used only for verification purposes.
 -/
-noncomputable def Iter.Intermediate.zip [Iterator α₁ Id β₁]
+noncomputable def Iter.Intermediate.zip
+    [Iterator α₁ Id β₁]
     (it₁ : Iter (α := α₁) β₁)
-    (memo : (Option { out : β₁ //
-        ∃ it : Iter (α := α₁) β₁, it.toIterM.IsPlausibleOutput out }))
-    (it₂ : Iter (α := α₂) β₂) :
-    Iter (α := Zip α₁ Id α₂ β₂) (β₁ × β₂) :=
-  (IterM.Intermediate.zip
-    it₁.toIterM
-    ((fun x => ⟨x.1, x.2.choose.toIterM, x.2.choose_spec⟩) <$> memo)
-    it₂.toIterM).toIter
+    (memo : (Option {out : β₁ // ∃ it : Iter (α := α₁) β₁, it.toIterM.IsPlausibleOutput out}))
+    (it₂ : Iter (α := α₂) β₂)
+    : Iter (α := Zip α₁ Id α₂ β₂) (β₁ × β₂) :=
+  (IterM.Intermediate.zip it₁.toIterM
+    ((fun x => ⟨x.1, x.2.choose.toIterM, x.2.choose_spec⟩) <$> memo) it₂.toIterM).toIter
 
-theorem Iter.Intermediate.zip_inj [Iterator α₁ Id β₁] :
-    ∀ {it₁ it₁' : Iter (α := α₁) β₁} {memo memo'} {it₂ it₂' : Iter (α := α₂) β₂},
+theorem Iter.Intermediate.zip_inj [Iterator α₁ Id β₁]
+    : ∀ {it₁ it₁' : Iter (α := α₁) β₁} {memo memo'} {it₂ it₂' : Iter (α := α₂) β₂},
       zip it₁ memo it₂ = zip it₁' memo' it₂' ↔ it₁ = it₁' ∧ memo = memo' ∧ it₂ = it₂' := by
   intro it₁ it₁' memo memo' it₂ it₂'
   apply Iff.intro
   · intro h
-    cases it₁; cases it₁'; cases it₂; cases it₂'
-    obtain _ | ⟨⟨_⟩⟩ := memo <;> obtain _ | ⟨⟨_⟩⟩ := memo' <;>
-      simp_all [toIterM, IterM.toIter, zip, IterM.Intermediate.zip, Option.map_eq_map]
+    cases it₁
+    cases it₁'
+    cases it₂
+    cases it₂'
+    obtain _ | ⟨⟨_⟩⟩ := memo <;> obtain _ | ⟨⟨_⟩⟩ := memo'
+      <;> simp_all [toIterM, IterM.toIter, zip, IterM.Intermediate.zip, Option.map_eq_map]
   · rintro ⟨rfl, rfl, rfl⟩
     rfl
 
-theorem Iter.Intermediate.zip_surj [Iterator α₁ Id β₁] :
-    ∀ it : Iter (α := Zip α₁ Id α₂ β₂) (β₁ × β₂), ∃ it₁ memo it₂, it = Intermediate.zip it₁ memo it₂ := by
-  refine fun it => ⟨it.internalState.left.toIter,
-      (fun x => ⟨x.1, x.2.choose.toIter, x.2.choose_spec⟩) <$> it.internalState.memoizedLeft,
-      it.internalState.right.toIter, ?_⟩
+theorem Iter.Intermediate.zip_surj [Iterator α₁ Id β₁]
+    : ∀ it : Iter (α := Zip α₁ Id α₂ β₂) (β₁ × β₂), ∃ it₁ memo it₂,
+      it = Intermediate.zip it₁ memo it₂ := by
+  refine fun it => ⟨
+    it.internalState.left.toIter,
+    (fun x => ⟨x.1, x.2.choose.toIter, x.2.choose_spec⟩) <$> it.internalState.memoizedLeft,
+    it.internalState.right.toIter,
+    ?_
+  ⟩
   simp only [zip, toIterM_toIter, Option.map_eq_map, Option.map_map]
-  change it = (IterM.Intermediate.zip _ (Option.map id it.internalState.memoizedLeft) it.internalState.right).toIter
+  change it
+    = (IterM.Intermediate.zip _ (Option.map id it.internalState.memoizedLeft)
+      it.internalState.right).toIter
   simp only [Option.map_id_fun, id_eq]
   rfl
 
-theorem Iter.zip_eq_intermediateZip [Iterator α₁ Id β₁]
-    [Iterator α₂ Id β₂]
-    (it₁ : Iter (α := α₁) β₁) (it₂ : Iter (α := α₂) β₂) :
-    it₁.zip it₂ = Intermediate.zip it₁ none it₂ := by
+theorem Iter.zip_eq_intermediateZip
+    [Iterator α₁ Id β₁] [Iterator α₂ Id β₂] (it₁ : Iter (α := α₁) β₁) (it₂ : Iter (α := α₂) β₂)
+    : it₁.zip it₂ = Intermediate.zip it₁ none it₂ := by
   rfl
 
 theorem Iter.step_intermediateZip
     [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
     {it₁ : Iter (α := α₁) β₁}
-    {memo : Option { out : β₁ //
-        ∃ it : Iter (α := α₁) β₁, it.toIterM.IsPlausibleOutput out }}
-    {it₂ : Iter (α := α₂) β₂} :
-    (Intermediate.zip it₁ memo it₂).step = (
-      match memo with
-      | none =>
-        match it₁.step with
-        | .yield it₁' out hp =>
-          .skip (Intermediate.zip it₁' (some ⟨out, _, _, hp⟩) it₂)
-            (.yieldLeft rfl hp)
-        | .skip it₁' hp =>
-          .skip (Intermediate.zip it₁' none it₂)
-            (.skipLeft rfl hp)
-        | .done hp =>
-          .done (.doneLeft rfl hp)
-      | some out₁ =>
-        match it₂.step with
-        | .yield it₂' out₂ hp =>
-          .yield (Intermediate.zip it₁ none it₂') (out₁, out₂)
-            (.yieldRight (it := Intermediate.zip it₁ (some out₁) it₂ |>.toIterM) rfl hp)
-        | .skip it₂' hp =>
-          .skip (Intermediate.zip it₁ (some out₁) it₂')
-            (.skipRight rfl hp)
-        | .done hp =>
-          .done (.doneRight rfl hp)) := by
+    {memo : Option {out : β₁ // ∃ it : Iter (α := α₁) β₁, it.toIterM.IsPlausibleOutput out}}
+    {it₂ : Iter (α := α₂) β₂}
+    : (Intermediate.zip it₁ memo it₂).step
+      = (match memo with
+        | none =>
+          match it₁.step with
+          | .yield it₁' out hp =>
+            .skip (Intermediate.zip it₁' (some ⟨out, _, _, hp⟩) it₂) (.yieldLeft rfl hp)
+          | .skip it₁' hp => .skip (Intermediate.zip it₁' none it₂) (.skipLeft rfl hp)
+          | .done hp => .done (.doneLeft rfl hp)
+        | some out₁ =>
+          match it₂.step with
+          | .yield it₂' out₂ hp =>
+            .yield (Intermediate.zip it₁ none it₂') (out₁, out₂)
+              (.yieldRight (it := Intermediate.zip it₁ (some out₁) it₂ |>.toIterM) rfl hp)
+          | .skip it₂' hp => .skip (Intermediate.zip it₁ (some out₁) it₂') (.skipRight rfl hp)
+          | .done hp => .done (.doneRight rfl hp)) := by
   simp only [Intermediate.zip, IterM.step_intermediateZip, Iter.step, toIterM_toIter]
   cases memo
   case none =>
@@ -108,13 +106,15 @@ theorem Iter.step_intermediateZip
       PlausibleIterStep.done, Id.run_bind, Option.map_none]
     cases it₂.toIterM.step.run.inflate using PlausibleIterStep.casesOn <;> simp
 
-theorem Iter.toList_intermediateZip_of_finite [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
-    {it₁ : Iter (α := α₁) β₁} {memo} {it₂ : Iter (α := α₂) β₂}
-    [Finite α₁ Id] [Finite α₂ Id] :
-    (Intermediate.zip it₁ memo it₂).toList = ((memo.map Subtype.val).toList ++ it₁.toList).zip it₂.toList := by
+theorem Iter.toList_intermediateZip_of_finite
+    [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
+    {it₁ : Iter (α := α₁) β₁} {memo} {it₂ : Iter (α := α₂) β₂} [Finite α₁ Id] [Finite α₂ Id]
+    : (Intermediate.zip it₁ memo it₂).toList
+      = ((memo.map Subtype.val).toList ++ it₁.toList).zip it₂.toList := by
   generalize h : Intermediate.zip it₁ memo it₂ = it
   revert h it₁ memo it₂
-  induction it using Iter.inductSteps with | step _ ihy ihs
+  induction it using Iter.inductSteps with
+  | step _ ihy ihs
   rintro it₁ memo it₂ rfl
   rw [Iter.toList_eq_match_step]
   match hs : (Intermediate.zip it₁ memo it₂).step with
@@ -178,15 +178,16 @@ theorem Iter.toList_intermediateZip_of_finite [Iterator α₁ Id β₁] [Iterato
       · cases hs
         simp
 
-theorem Iter.atIdxSlow?_intermediateZip [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
-    [Productive α₁ Id] [Productive α₂ Id]
-    {it₁ : Iter (α := α₁) β₁} {memo} {it₂ : Iter (α := α₂) β₂} {n : Nat} :
-    (Intermediate.zip it₁ memo it₂).atIdxSlow? n =
-      (match memo with
-      | none => do return (← it₁.atIdxSlow? n, ← it₂.atIdxSlow? n)
-      | some memo => match n with
-        | 0 => do return (memo.val, ← it₂.atIdxSlow? n)
-        | n' + 1 => do return (← it₁.atIdxSlow? n', ← it₂.atIdxSlow? (n' + 1))) := by
+theorem Iter.atIdxSlow?_intermediateZip
+    [Iterator α₁ Id β₁] [Iterator α₂ Id β₂] [Productive α₁ Id] [Productive α₂ Id]
+    {it₁ : Iter (α := α₁) β₁} {memo} {it₂ : Iter (α := α₂) β₂} {n : Nat}
+    : (Intermediate.zip it₁ memo it₂).atIdxSlow? n
+      = (match memo with
+        | none => do return (← it₁.atIdxSlow? n, ← it₂.atIdxSlow? n)
+        | some memo =>
+          match n with
+          | 0 => do return (memo.val, ← it₂.atIdxSlow? n)
+          | n' + 1 => do return (← it₁.atIdxSlow? n', ← it₂.atIdxSlow? (n' + 1))) := by
   generalize h : Intermediate.zip it₁ memo it₂ = it
   revert h it₁ memo it₂
   induction n, it using atIdxSlow?.induct_unfolding
@@ -195,14 +196,15 @@ theorem Iter.atIdxSlow?_intermediateZip [Iterator α₁ Id β₁] [Iterator α�
     rw [atIdxSlow?]
     simp only [Option.pure_def, Option.bind_eq_bind]
     simp only [step_intermediateZip, PlausibleIterStep.skip, PlausibleIterStep.done,
-      PlausibleIterStep.yield] at h'
+        PlausibleIterStep.yield]
+      at h'
     split at h'
     · split at h' <;> cases h'
     · split at h' <;> cases h'
       rename_i hs₂
       rw [atIdxSlow?_eq_match, hs₂]
       simp
-  case yield_succ it it' out h  h' n ih =>
+  case yield_succ it it' out h h' n ih =>
     rintro it₁ memo it₂ rfl
     simp only [Nat.succ_eq_add_one, Option.pure_def, Option.bind_eq_bind]
     cases memo
@@ -256,26 +258,26 @@ theorem Iter.atIdxSlow?_intermediateZip [Iterator α₁ Id β₁] [Iterator α�
         Option.bind_none, Option.bind_fun_none]
       split <;> rfl
 
-theorem Iter.atIdxSlow?_zip {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
-    [Productive α₁ Id] [Productive α₂ Id]
-    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂} {n : Nat} :
-    (it₁.zip it₂).atIdxSlow? n = do return (← it₁.atIdxSlow? n, ← it₂.atIdxSlow? n) := by
+theorem Iter.atIdxSlow?_zip
+    {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂] [Productive α₁ Id] [Productive α₂ Id]
+    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂} {n : Nat}
+    : (it₁.zip it₂).atIdxSlow? n = do return (← it₁.atIdxSlow? n, ← it₂.atIdxSlow? n) := by
   rw [zip_eq_intermediateZip, atIdxSlow?_intermediateZip]
 
 @[cbv_eval, simp]
-theorem Iter.toList_zip_of_finite {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
-    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂}
-    [Finite α₁ Id] [Finite α₂ Id] :
-    (it₁.zip it₂).toList = it₁.toList.zip it₂.toList := by
+theorem Iter.toList_zip_of_finite
+    {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
+    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂} [Finite α₁ Id] [Finite α₂ Id]
+    : (it₁.zip it₂).toList = it₁.toList.zip it₂.toList := by
   simp [zip_eq_intermediateZip, Iter.toList_intermediateZip_of_finite]
 
-theorem Iter.toList_zip_of_finite_left {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
-    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂}
-    [Finite α₁ Id] [Productive α₂ Id] :
-    (it₁.zip it₂).toList = it₁.toList.zip (it₂.take it₁.toList.length).toList := by
+theorem Iter.toList_zip_of_finite_left
+    {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
+    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂} [Finite α₁ Id] [Productive α₂ Id]
+    : (it₁.zip it₂).toList = it₁.toList.zip (it₂.take it₁.toList.length).toList := by
   ext
-  simp only [List.getElem?_zip_eq_some, getElem?_toList_eq_atIdxSlow?, atIdxSlow?_zip, Option.pure_def, Option.bind_eq_bind,
-    atIdxSlow?_take, Option.ite_none_right_eq_some]
+  simp only [List.getElem?_zip_eq_some, getElem?_toList_eq_atIdxSlow?, atIdxSlow?_zip,
+    Option.pure_def, Option.bind_eq_bind, atIdxSlow?_take, Option.ite_none_right_eq_some]
   constructor
   · intro h
     simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
@@ -289,13 +291,13 @@ theorem Iter.toList_zip_of_finite_left {α₁ α₂ β₁ β₂} [Iterator α₁
   · rintro ⟨h₁, h₂, h₃⟩
     simp [h₁, h₃]
 
-theorem Iter.toList_zip_of_finite_right {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
-    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂}
-    [Productive α₁ Id] [Finite α₂ Id] :
-    (it₁.zip it₂).toList = (it₁.take it₂.toList.length).toList.zip it₂.toList := by
+theorem Iter.toList_zip_of_finite_right
+    {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
+    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂} [Productive α₁ Id] [Finite α₂ Id]
+    : (it₁.zip it₂).toList = (it₁.take it₂.toList.length).toList.zip it₂.toList := by
   ext
-  simp only [List.getElem?_zip_eq_some, getElem?_toList_eq_atIdxSlow?, atIdxSlow?_zip, Option.pure_def, Option.bind_eq_bind,
-    atIdxSlow?_take, Option.ite_none_right_eq_some]
+  simp only [List.getElem?_zip_eq_some, getElem?_toList_eq_atIdxSlow?, atIdxSlow?_zip,
+    Option.pure_def, Option.bind_eq_bind, atIdxSlow?_take, Option.ite_none_right_eq_some]
   constructor
   · intro h
     simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
@@ -310,48 +312,48 @@ theorem Iter.toList_zip_of_finite_right {α₁ α₂ β₁ β₂} [Iterator α�
     simp [h₂, h₃]
 
 @[simp]
-theorem Iter.toListRev_zip_of_finite {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
-    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂}
-    [Finite α₁ Id] [Finite α₂ Id] :
-    (it₁.zip it₂).toListRev = (it₁.toList.zip it₂.toList).reverse := by
+theorem Iter.toListRev_zip_of_finite
+    {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
+    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂} [Finite α₁ Id] [Finite α₂ Id]
+    : (it₁.zip it₂).toListRev = (it₁.toList.zip it₂.toList).reverse := by
   simp [toListRev_eq]
 
-theorem Iter.toListRev_zip_of_finite_left {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
-    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂}
-    [Finite α₁ Id] [Productive α₂ Id] :
-    (it₁.zip it₂).toListRev = (it₁.toList.zip (it₂.take it₁.toList.length).toList).reverse := by
+theorem Iter.toListRev_zip_of_finite_left
+    {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
+    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂} [Finite α₁ Id] [Productive α₂ Id]
+    : (it₁.zip it₂).toListRev = (it₁.toList.zip (it₂.take it₁.toList.length).toList).reverse := by
   simp [toListRev_eq, toList_zip_of_finite_left]
 
-theorem Iter.toListRev_zip_of_finite_right {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
-    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂}
-    [Productive α₁ Id] [Finite α₂ Id] :
-    (it₁.zip it₂).toListRev = ((it₁.take it₂.toList.length).toList.zip it₂.toList).reverse := by
+theorem Iter.toListRev_zip_of_finite_right
+    {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
+    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂} [Productive α₁ Id] [Finite α₂ Id]
+    : (it₁.zip it₂).toListRev = ((it₁.take it₂.toList.length).toList.zip it₂.toList).reverse := by
   simp [toListRev_eq, toList_zip_of_finite_right]
 
 @[cbv_eval, simp]
-theorem Iter.toArray_zip_of_finite {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
-    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂}
-    [Finite α₁ Id] [Finite α₂ Id] :
-    (it₁.zip it₂).toArray = it₁.toArray.zip it₂.toArray := by
+theorem Iter.toArray_zip_of_finite
+    {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
+    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂} [Finite α₁ Id] [Finite α₂ Id]
+    : (it₁.zip it₂).toArray = it₁.toArray.zip it₂.toArray := by
   simp [← toArray_toList]
 
-theorem Iter.toArray_zip_of_finite_left {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
-    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂}
-    [Finite α₁ Id] [Productive α₂ Id]:
-    (it₁.zip it₂).toArray = it₁.toArray.zip (it₂.take it₁.toArray.size).toArray := by
+theorem Iter.toArray_zip_of_finite_left
+    {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
+    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂} [Finite α₁ Id] [Productive α₂ Id]
+    : (it₁.zip it₂).toArray = it₁.toArray.zip (it₂.take it₁.toArray.size).toArray := by
   simp [← toArray_toList, toList_zip_of_finite_left]
 
-theorem Iter.toArray_zip_of_finite_right {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
-    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂}
-    [Productive α₁ Id] [Finite α₂ Id] :
-    (it₁.zip it₂).toArray = (it₁.take it₂.toArray.size).toArray.zip it₂.toArray := by
+theorem Iter.toArray_zip_of_finite_right
+    {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
+    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂} [Productive α₁ Id] [Finite α₂ Id]
+    : (it₁.zip it₂).toArray = (it₁.take it₂.toArray.size).toArray.zip it₂.toArray := by
   simp [← toArray_toList, toList_zip_of_finite_right]
 
 @[simp]
-theorem Iter.toList_take_zip {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
-    [Productive α₁ Id] [Productive α₂ Id]
-    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂} {n : Nat} :
-    ((it₁.zip it₂).take n).toList = (it₁.take n).toList.zip (it₂.take n).toList := by
+theorem Iter.toList_take_zip
+    {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂] [Productive α₁ Id] [Productive α₂ Id]
+    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂} {n : Nat}
+    : ((it₁.zip it₂).take n).toList = (it₁.take n).toList.zip (it₂.take n).toList := by
   rw [← toList_zip_of_finite]
   apply toList_eq_of_atIdxSlow?_eq
   intro k
@@ -359,17 +361,17 @@ theorem Iter.toList_take_zip {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁]
   split <;> rfl
 
 @[simp]
-theorem Iter.toListRev_take_zip {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
-    [Productive α₁ Id] [Productive α₂ Id]
-    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂} {n : Nat} :
-    ((it₁.zip it₂).take n).toListRev = ((it₁.take n).toList.zip (it₂.take n).toList).reverse := by
+theorem Iter.toListRev_take_zip
+    {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂] [Productive α₁ Id] [Productive α₂ Id]
+    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂} {n : Nat}
+    : ((it₁.zip it₂).take n).toListRev = ((it₁.take n).toList.zip (it₂.take n).toList).reverse := by
   simp [toListRev_eq]
 
 @[simp]
-theorem Iter.toArray_take_zip {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂]
-    [Productive α₁ Id] [Productive α₂ Id]
-    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂} {n : Nat} :
-    ((it₁.zip it₂).take n).toArray = ((it₁.take n).toList.zip (it₂.take n).toList).toArray := by
+theorem Iter.toArray_take_zip
+    {α₁ α₂ β₁ β₂} [Iterator α₁ Id β₁] [Iterator α₂ Id β₂] [Productive α₁ Id] [Productive α₂ Id]
+    {it₁ : Iter (α := α₁) β₁} {it₂ : Iter (α := α₂) β₂} {n : Nat}
+    : ((it₁.zip it₂).take n).toArray = ((it₁.take n).toList.zip (it₂.take n).toList).toArray := by
   simp [← toArray_toList]
 
 end Std

@@ -18,10 +18,13 @@ This module defines attributes that influence pretty printer output.
 
 namespace Lean
 
-/-- Marks a structure to be pretty printed using the anonymous constructor notation (`⟨a, b, c⟩`). -/
+/--
+Marks a structure to be pretty printed using the anonymous constructor notation (`⟨a, b, c⟩`).
+-/
 @[builtin_doc]
 builtin_initialize ppUsingAnonymousConstructorAttr : TagAttribute ←
-  registerTagAttribute `pp_using_anonymous_constructor "mark structure to be pretty printed using `⟨a,b,c⟩` notation"
+  registerTagAttribute `pp_using_anonymous_constructor
+    "mark structure to be pretty printed using `⟨a,b,c⟩` notation"
 
 /-- Marks a declaration to never be pretty printed using field notation. -/
 @[builtin_doc]
@@ -34,9 +37,7 @@ Returns whether or not the given declaration has the `@[pp_using_anonymous_const
 def hasPPUsingAnonymousConstructorAttribute (env : Environment) (declName : Name) : Bool :=
   ppUsingAnonymousConstructorAttr.hasTag env declName
 
-/--
-Returns whether or not the given declaration has the `@[pp_nodot]` attribute.
--/
+/-- Returns whether or not the given declaration has the `@[pp_nodot]` attribute. -/
 def hasPPNoDotAttribute (env : Environment) (declName : Name) : Bool :=
   ppNoDotAttr.hasTag env declName
 

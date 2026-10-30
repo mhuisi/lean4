@@ -55,9 +55,7 @@ structure Context where
 
 structure State where
   decls : Array (Decl .pure) := {}
-  /--
-  Cache for `shouldExtractFVar` in order to avoid superlinear behavior.
-  -/
+  /-- Cache for `shouldExtractFVar` in order to avoid superlinear behavior. -/
   fvarDecisionCache : Std.HashMap FVarId Bool := {}
 
 abbrev M := ReaderT Context $ StateRefT State CompilerM
@@ -71,7 +69,8 @@ partial def shouldExtractLetValue (isRoot : Bool) (v : LetValue .pure) : M Bool 
     -- The old compiler's implementation used the runtime's `is_scalar` function, which
     -- introduces a dependency on the architecture used by the compiler.
     return !isRoot || v >= Nat.pow 2 63
-  | .lit _ | .erased => return !isRoot
+  | .lit _ | .erased =>
+    return !isRoot
   | .const name _ args =>
     if (← read).sccDecls.any (·.name == name) then
       return false
@@ -79,10 +78,11 @@ partial def shouldExtractLetValue (isRoot : Bool) (v : LetValue .pure) : M Bool 
       return false
     if isRoot then
       if let some constInfo := (← getEnv).find? name then
-        let shouldExtract := match constInfo with
-        | .defnInfo val => val.type.isForall
-        | .ctorInfo _ => !(args.all isIrrelevantArg)
-        | _ => true
+        let shouldExtract :=
+          match constInfo with
+          | .defnInfo val => val.type.isForall
+          | .ctorInfo _ => !(args.all isIrrelevantArg)
+          | _ => true
         if !shouldExtract then
           return false
       if let some decl ← LCNF.getMonoDecl? name then
@@ -124,28 +124,35 @@ the sequence is used in the final continuation. If that is the case, we can pull
 literal as one closed declaration. This avoids the quadratic overhead of repeated `Array.push` calls
 on persistent `Array` objects during initialization.
 -/
-def searchArrayLiteral (decl : LetDecl .pure) (k : Code .pure) :
-    M (Option (LetDecl .pure × Code .pure)) := do
-  let .const ``Array.push  _ #[_, .fvar parentId, _] := decl.value | return none
-  let some parentDecl ← findLetDecl? (pu := .pure) parentId | return none
+def searchArrayLiteral (decl : LetDecl .pure) (k : Code .pure)
+    : M (Option (LetDecl .pure × Code .pure)) := do
+  let .const ``Array.push _ #[_, .fvar parentId, _] := decl.value
+    | return none
+  let some parentDecl ← findLetDecl? (pu := .pure) parentId
+    | return none
   match parentDecl.value with
   | .const ``Array.mkEmpty _ #[_, .fvar sizeFVar]
   | .const ``Array.emptyWithCapacity _ #[_, .fvar sizeFVar] =>
-    let some (.lit (.nat size)) ← findLetValue? (pu := .pure) sizeFVar | return none
+    let some (.lit (.nat size)) ← findLetValue? (pu := .pure) sizeFVar
+      | return none
     identifyChain parentDecl.fvarId decl k {} size
   | _ => return none
 where
-  identifyChain (prevArrayId : FVarId) (decl : LetDecl .pure) (k : Code .pure)
-      (illegalSet : FVarIdSet) (size : Nat) : M (Option (LetDecl .pure × Code .pure)) := do
+  identifyChain
+      (prevArrayId : FVarId) (decl : LetDecl .pure) (k : Code .pure) (illegalSet : FVarIdSet)
+      (size : Nat)
+      : M (Option (LetDecl .pure × Code .pure)) := do
     match size with
     | 0 => return none
     | nextSize + 1 =>
-      let .const ``Array.push _ #[_, .fvar arrId, elemArg] := decl.value | return none
+      let .const ``Array.push _ #[_, .fvar arrId, elemArg] := decl.value
+        | return none
       if arrId != prevArrayId then return none
       if !(← shouldExtractArg elemArg) then return none
       if nextSize != 0 then
         let illegalSet := illegalSet.insert decl.fvarId
-        let .let nextDecl nextK := k | return none
+        let .let nextDecl nextK := k
+          | return none
         identifyChain decl.fvarId nextDecl nextK illegalSet nextSize
       else
         let occursCheck (decl : LetDecl .pure) (k : Code .pure) (illegalSet : FVarIdSet) := do
@@ -226,12 +233,17 @@ where
     else
       let name := (← read).baseName ++ (`_closed).appendIndexAfter (← get).decls.size
       cacheClosedTermName env closedExpr name |> setEnv
-      let decl := { name, levelParams := [], type := decl.type, params := #[],
-                    value := .code closedCode, inlineAttr? := some .noinline }
+      let decl := {
+        name
+        levelParams := []
+        type := decl.type
+        params := #[]
+        value := .code closedCode
+        inlineAttr? := some .noinline
+      }
       decl.saveMono
       modify fun s => { s with decls := s.decls.push decl }
       return name
-
 
 end
 
@@ -241,9 +253,10 @@ def visitDecl (decl : Decl .pure) : M (Decl .pure) := do
 
 end ExtractClosed
 
-partial def Decl.extractClosed (decl : Decl .pure) (sccDecls : Array (Decl .pure)) :
-    CompilerM (Array (Decl .pure)) := do
-  let mut ⟨decl, s⟩ ← ExtractClosed.visitDecl decl |>.run { baseName := decl.name, sccDecls } |>.run {}
+partial def Decl.extractClosed (decl : Decl .pure) (sccDecls : Array (Decl .pure))
+    : CompilerM (Array (Decl .pure)) := do
+  let mut ⟨decl, s⟩ ←
+    ExtractClosed.visitDecl decl |>.run { baseName := decl.name, sccDecls } |>.run {}
   if !s.decls.isEmpty then
     -- Closed term extraction might have left behind dead values.
     decl ← decl.elimDeadVars

@@ -16,11 +16,11 @@ namespace Lean
 
 /-- Saved context for pretty printing. See `Lean.ppExt`. -/
 structure PPContext where
-  env           : Environment
-  mctx          : MetavarContext := {}
-  lctx          : LocalContext := {}
-  opts          : Options := {}
+  env : Environment
+  mctx : MetavarContext := {}
+  lctx : LocalContext := {}
+  opts : Options := {}
   currNamespace : Name := Name.anonymous
-  openDecls     : List OpenDecl := []
+  openDecls : List OpenDecl := []
 
 end Lean

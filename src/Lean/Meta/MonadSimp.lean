@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Expr
 public section
@@ -15,7 +16,7 @@ Abstract simplifier API
 inductive MonadSimp.Result where
   | rfl
   | step (e : Expr) (h : Expr)
-  deriving Inhabited
+deriving Inhabited
 
 class MonadSimp (m : Type → Type) where
   withNewLemmas (xs : Array Expr) (k : m α) : m α

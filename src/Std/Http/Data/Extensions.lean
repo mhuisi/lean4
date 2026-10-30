@@ -27,13 +27,9 @@ namespace Std.Http
 
 set_option linter.all true
 
-/-
-`quickCmp` is unavailable here, so this is a simpler implementation of the same comparison.
--/
+/- `quickCmp` is unavailable here, so this is a simpler implementation of the same comparison. -/
 
-/--
-An ordering for `Name` keys used by `Extensions`.
--/
+/-- An ordering for `Name` keys used by `Extensions`. -/
 protected def Extensions.compareName : Name → Name → Ordering
   | .anonymous, .anonymous => .eq
   | .anonymous, _ => .lt
@@ -42,8 +38,10 @@ protected def Extensions.compareName : Name → Name → Ordering
     match Extensions.compareName p₁ p₂ with
     | .eq => compare s₁ s₂
     | ord => ord
-  | .str _ _, .num _ _ => .lt
-  | .num _ _, .str _ _ => .gt
+  | .str _ _, .num _ _ =>
+    .lt
+  | .num _ _, .str _ _ =>
+    .gt
   | .num p₁ n₁, .num p₂ n₂ =>
     match Extensions.compareName p₁ p₂ with
     | .eq => compare n₁ n₂
@@ -56,24 +54,16 @@ information or custom processing data.
 -/
 structure Extensions where
   private mk ::
-
-  /--
-  The underlying tree map storing dynamic values keyed by their type name.
-  -/
+  /-- The underlying tree map storing dynamic values keyed by their type name. -/
   private data : TreeMap Name Dynamic Extensions.compareName := .empty
 deriving Inhabited
 
 namespace Extensions
 
-/--
-An empty extensions map with no data.
--/
-def empty : Extensions :=
-  ⟨.empty⟩
+/-- An empty extensions map with no data. -/
+def empty : Extensions := ⟨.empty⟩
 
-/--
-Retrieves a value of type `α` from the extensions, if present.
--/
+/-- Retrieves a value of type `α` from the extensions, if present. -/
 @[inline]
 def get (x : Extensions) (α : Type) [TypeName α] : Option α := do
   let dyn ← x.data.get? (TypeName.typeName α)
@@ -88,16 +78,12 @@ def insert (x : Extensions) [TypeName α] (data : α) : Extensions :=
   let dyn := Dynamic.mk data
   ⟨x.data.insert dyn.typeName dyn⟩
 
-/--
-Removes the value of type `α` from the extensions.
--/
+/-- Removes the value of type `α` from the extensions. -/
 @[inline]
 def remove (x : Extensions) (α : Type) [TypeName α] : Extensions :=
   ⟨x.data.erase (TypeName.typeName α)⟩
 
-/--
-Checks whether the extensions contain a value of type `α`.
--/
+/-- Checks whether the extensions contain a value of type `α`. -/
 @[inline]
 def contains (x : Extensions) (α : Type) [TypeName α] : Bool :=
   x.data.contains (TypeName.typeName α)

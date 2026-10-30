@@ -70,7 +70,8 @@ The following encoding strategy is employed by auto-generated instances:
     {lit}`{ "ctorName": argVal }`.
   - A constructor with more than one unnamed argument is encoded as the JSON object
     {lit}`{ "ctorName": [argVal1, ..., argValN] }`.
-- Certain other types have special handling: see the instances below. -/
+- Certain other types have special handling: see the instances below.
+-/
 class ToJson (α : Type u) where
   toJson : α → Json
 
@@ -82,15 +83,15 @@ instance : ToJson Json := ⟨id⟩
 instance : FromJson JsonNumber := ⟨Json.getNum?⟩
 instance : ToJson JsonNumber := ⟨Json.num⟩
 
-instance : FromJson Unit :=
-  ⟨fun
-    | .obj .empty => .ok ()
-    | json => .error s!"expected \{} to decode Unit, got {json}"⟩
+instance : FromJson Unit := ⟨fun
+  | .obj .empty => .ok ()
+  | json => .error s!"expected \{} to decode Unit, got {json}"⟩
 instance : ToJson Unit := ⟨fun _ => Json.obj {}⟩
 instance : FromJson Empty where
-  fromJson? j := throw (s!"type Empty has no constructor to match JSON value '{j}'. \
-                           This occurs when deserializing a value for type Empty, \
-                           e.g. at type Option Empty with code for the 'some' constructor.")
+  fromJson? j :=
+    throw (s!"type Empty has no constructor to match JSON value '{j}'. \
+      This occurs when deserializing a value for type Empty, \
+      e.g. at type Option Empty with code for the 'some' constructor.")
 
 instance : ToJson Empty := ⟨nofun⟩
 -- looks like id, but there are coercions happening
@@ -111,14 +112,13 @@ instance : ToJson System.FilePath := ⟨fun p => p.toString⟩
 -- This is intentionally in the `Lean` namespace to avoid polluting the global namespace.
 protected def Array.fromJson? [FromJson α] : Json → Except String (Array α)
   | Json.arr a => a.mapM fromJson?
-  | j          => throw s!"expected JSON array, got '{j}'"
+  | j => throw s!"expected JSON array, got '{j}'"
 
 instance [FromJson α] : FromJson (Array α) where
   fromJson? := Array.fromJson?
 
 -- This is intentionally in the `Lean` namespace to avoid polluting the global namespace.
-protected def Array.toJson [ToJson α] (a : Array α) : Json :=
-  Json.arr (a.map toJson)
+protected def Array.toJson [ToJson α] (a : Array α) : Json := Json.arr (a.map toJson)
 
 instance [ToJson α] : ToJson (Array α) where
   toJson := Array.toJson
@@ -131,8 +131,7 @@ instance [FromJson α] : FromJson (List α) where
   fromJson? := List.fromJson?
 
 -- This is intentionally in the `Lean` namespace to avoid polluting the global namespace.
-protected def List.toJson [ToJson α] (a : List α) : Json :=
-  toJson a.toArray
+protected def List.toJson [ToJson α] (a : List α) : Json := toJson a.toArray
 
 instance [ToJson α] : ToJson (List α) where
   toJson := List.toJson
@@ -140,21 +139,22 @@ instance [ToJson α] : ToJson (List α) where
 -- This is intentionally in the `Lean` namespace to avoid polluting the global namespace.
 protected def Option.fromJson? [FromJson α] : Json → Except String (Option α)
   | Json.null => Except.ok none
-  | j         => some <$> fromJson? j
+  | j => some <$> fromJson? j
 
 instance [FromJson α] : FromJson (Option α) where
   fromJson? := Option.fromJson?
 
 -- This is intentionally in the `Lean` namespace to avoid polluting the global namespace.
 protected def Option.toJson [ToJson α] : Option α → Json
-  | none   => Json.null
+  | none => Json.null
   | some a => toJson a
 
 instance [ToJson α] : ToJson (Option α) where
   toJson := Option.toJson
 
 -- This is intentionally in the `Lean` namespace to avoid polluting the global namespace.
-protected def Prod.fromJson? {α : Type u} {β : Type v} [FromJson α] [FromJson β] : Json → Except String (α × β)
+protected def Prod.fromJson? {α : Type u} {β : Type v} [FromJson α] [FromJson β]
+    : Json → Except String (α × β)
   | Json.arr #[ja, jb] => do
     let ⟨a⟩ : ULift.{v} α := ← (fromJson? ja).map ULift.up
     let ⟨b⟩ : ULift.{u} β := ← (fromJson? jb).map ULift.up
@@ -187,15 +187,16 @@ instance : ToJson Name where
   toJson n := toString n
 
 protected def NameMap.fromJson? [FromJson α] : Json → Except String (NameMap α)
-  | .obj obj => obj.foldlM (init := {}) fun m k v => do
-    if k == "[anonymous]" then
-      return m.insert .anonymous (← fromJson? v)
-    else
-      let n := k.toName
-      if n.isAnonymous then
-        throw s!"expected a `Name`, got '{k}'"
+  | .obj obj =>
+    obj.foldlM (init := {}) fun m k v => do
+      if k == "[anonymous]" then
+        return m.insert .anonymous (← fromJson? v)
       else
-        return m.insert n (← fromJson? v)
+        let n := k.toName
+        if n.isAnonymous then
+          throw s!"expected a `Name`, got '{k}'"
+        else
+          return m.insert n (← fromJson? v)
   | j => throw s!"expected a `NameMap`, got '{j}'"
 
 instance [FromJson α] : FromJson (NameMap α) where
@@ -207,16 +208,17 @@ protected def NameMap.toJson [ToJson α] (m : NameMap α) : Json :=
 instance [ToJson α] : ToJson (NameMap α) where
   toJson := NameMap.toJson
 
-/-- Note that {name}`USize`s and {name}`UInt64`s are stored as strings because JavaScript
-cannot represent 64-bit numbers. -/
+/--
+Note that {name}`USize`s and {name}`UInt64`s are stored as strings because JavaScript
+cannot represent 64-bit numbers.
+-/
 def bignumFromJson? (j : Json) : Except String Nat := do
   let s ← j.getStr?
   let some v := Syntax.decodeNatLitVal? s -- TODO maybe this should be in Std
     | throw s!"expected a string-encoded number, got '{j}'"
   return v
 
-def bignumToJson (n : Nat) : Json :=
-  toString n
+def bignumToJson (n : Nat) : Json := toString n
 
 -- This is intentionally in the `Lean` namespace to avoid polluting the global namespace.
 protected def USize.fromJson? (j : Json) : Except String USize := do
@@ -269,7 +271,7 @@ namespace Json
 protected def Structured.fromJson? : Json → Except String Structured
   | .arr a => return Structured.arr a
   | .obj o => return Structured.obj o
-  | j     => throw s!"expected structured object, got '{j}'"
+  | j => throw s!"expected structured object, got '{j}'"
 
 instance : FromJson Structured where
   fromJson? := Structured.fromJson?
@@ -281,8 +283,7 @@ protected def Structured.toJson : Structured → Json
 instance : ToJson Structured where
   toJson := Structured.toJson
 
-def toStructured? [ToJson α] (v : α) : Except String Structured :=
-  fromJson? (toJson v)
+def toStructured? [ToJson α] (v : α) : Except String Structured := fromJson? (toJson v)
 
 def getObjValAs? (j : Json) (α : Type u) [FromJson α] (k : String) : Except String α :=
   fromJson? <| j.getObjValD k
@@ -291,21 +292,18 @@ def setObjValAs! (j : Json) {α : Type u} [ToJson α] (k : String) (v : α) : Js
   j.setObjVal! k <| toJson v
 
 def opt [ToJson α] (k : String) : Option α → List (String × Json)
-  | none   => []
+  | none => []
   | some o => [⟨k, toJson o⟩]
 
 /-- Returns the string value or single key name, if any. -/
 def getTag? : Json → Option String
   | .str tag => some tag
   | .obj kvs => guard (kvs.size == 1) *> kvs.minKey?
-  | _        => none
+  | _ => none
 
 -- TODO: delete after rebootstrap
-def parseTagged
-    (json : Json)
-    (tag : String)
-    (nFields : Nat)
-    (fieldNames? : Option (Array Name)) : Except String (Array Json) :=
+def parseTagged (json : Json) (tag : String) (nFields : Nat) (fieldNames? : Option (Array Name))
+    : Except String (Array Json) :=
   if nFields == 0 then
     match getStr? json with
     | Except.ok s => if s == tag then Except.ok #[] else throw s!"incorrect tag: {s} ≟ {tag}"
@@ -314,12 +312,11 @@ def parseTagged
     match getObjVal? json tag with
     | Except.ok payload =>
       match fieldNames? with
-      | some fieldNames =>
-        do
-          let mut fields := #[]
-          for fieldName in fieldNames do
-            fields := fields.push (←getObjVal? payload fieldName.getString!)
-          Except.ok fields
+      | some fieldNames => do
+        let mut fields := #[]
+        for fieldName in fieldNames do
+          fields := fields.push (← getObjVal? payload fieldName.getString!)
+        Except.ok fields
       | none =>
         if nFields == 1 then
           Except.ok #[payload]
@@ -337,15 +334,11 @@ def parseTagged
 Parses a JSON-encoded `structure` or `inductive` constructor, assuming the tag has already been
 checked and {name}`nFields` is nonzero. Used mostly by `deriving FromJson`.
 -/
-def parseCtorFields
-    (json : Json)
-    (tag : String)
-    (nFields : Nat)
-    (fieldNames? : Option (Array Name)) : Except String (Array Json) := do
-  let payload  ← getObjVal? json tag
+def parseCtorFields (json : Json) (tag : String) (nFields : Nat) (fieldNames? : Option (Array Name))
+    : Except String (Array Json) := do
+  let payload ← getObjVal? json tag
   match fieldNames? with
-  | some fieldNames =>
-    fieldNames.mapM (getObjVal? payload ·.getString!)
+  | some fieldNames => fieldNames.mapM (getObjVal? payload ·.getString!)
   | none =>
     if nFields == 1 then
       Except.ok #[payload]

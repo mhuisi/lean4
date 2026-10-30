@@ -19,24 +19,22 @@ public section
 namespace Lean.Elab.Structural
 open Meta
 
-private def throwToBelowFailed : MetaM α :=
-  throwError "toBelow failed"
+private def throwToBelowFailed : MetaM α := throwError "toBelow failed"
 
 partial def searchPProd (e : Expr) (F : Expr) (k : Expr → Expr → MetaM α) : MetaM α := do
   match (← whnf e) with
   | .app (.app (.const `PProd _) d1) d2 =>
-        (do searchPProd d1 (.proj ``PProd 0 F) k)
-    <|> (do searchPProd d2 (.proj ``PProd 1 F) k)
+    (do searchPProd d1 (.proj ``PProd 0 F) k) <|> (do searchPProd d2 (.proj ``PProd 1 F) k)
   | .app (.app (.const `And _) d1) d2 =>
-        (do searchPProd d1 (.proj `And 0 F) k)
-    <|> (do searchPProd d2 (.proj `And 1 F) k)
-  | .const `PUnit _
-  | .const `True _ => throwToBelowFailed
+    (do searchPProd d1 (.proj `And 0 F) k) <|> (do searchPProd d2 (.proj `And 1 F) k)
+  | .const `PUnit _ | .const `True _ => throwToBelowFailed
   | _ => k e F
 
 /-- See `toBelow` -/
-private partial def toBelowAux (C : Expr) (belowDict : Expr) (arg : Expr) (F : Expr) : MetaM Expr := do
-  trace[Elab.definition.structural] "belowDict start:{indentExpr belowDict}\narg:{indentExpr arg}"
+private partial def toBelowAux (C : Expr) (belowDict : Expr) (arg : Expr) (F : Expr)
+    : MetaM Expr := do
+  trace[Elab.definition.structural] "belowDict start:{indentExpr belowDict}\
+    \narg:{indentExpr arg}"
   -- First search through the PProd packing of the different `brecOn` motives
   searchPProd belowDict F fun belowDict F => do
     trace[Elab.definition.structural] "belowDict step 1:{indentExpr belowDict}"
@@ -44,7 +42,8 @@ private partial def toBelowAux (C : Expr) (belowDict : Expr) (arg : Expr) (F : E
     forallTelescopeReducing belowDict fun xs belowDict => do
       let arg ← zetaReduce arg
       let argArgs := arg.getAppArgs
-      unless argArgs.size >= xs.size do throwToBelowFailed
+      unless argArgs.size >= xs.size do
+        throwToBelowFailed
       let n := argArgs.size
       let argTailArgs := argArgs.extract (n - xs.size) n
       let belowDict := belowDict.replaceFVars xs argTailArgs
@@ -56,16 +55,20 @@ private partial def toBelowAux (C : Expr) (belowDict : Expr) (arg : Expr) (F : E
         trace[Elab.definition.structural] "belowDict step 2:{indentExpr belowDict}"
         match belowDict with
         | .app belowDictFun belowDictArg =>
-          unless belowDictFun.getAppFn == C do throwToBelowFailed
-          unless ← isDefEq belowDictArg arg do throwToBelowFailed
+          unless belowDictFun.getAppFn == C do
+            throwToBelowFailed
+          unless ← isDefEq belowDictArg arg do
+            throwToBelowFailed
           pure F
         | _ =>
           trace[Elab.definition.structural] "belowDict not an app:{indentExpr belowDict}"
           throwToBelowFailed
 
 /-- See `toBelow` -/
-private def withBelowDict [Inhabited α] (below : Expr) (numIndParams : Nat)
-    (positions : Positions) (k : Array Expr → Expr → MetaM α) : MetaM α := do
+private def withBelowDict
+    [Inhabited α]
+    (below : Expr) (numIndParams : Nat) (positions : Positions) (k : Array Expr → Expr → MetaM α)
+    : MetaM α := do
   let numTypeFormers := positions.size
   let belowType ← inferType below
   trace[Elab.definition.structural] "belowType: {belowType}"
@@ -77,7 +80,7 @@ private def withBelowDict [Inhabited α] (below : Expr) (numIndParams : Nat)
       trace[Elab.definition.structural] "unexpected 'below' type{indentExpr belowType}"
       throwToBelowFailed
     let params := args[*...numIndParams]
-    let finalArgs := args[(numIndParams+numTypeFormers)...*]
+    let finalArgs := args[(numIndParams + numTypeFormers)...*]
     let pre := mkAppN f params
     let motiveTypes ← inferArgumentTypesN numTypeFormers pre
     let numMotives : Nat := positions.numIndices
@@ -86,8 +89,8 @@ private def withBelowDict [Inhabited α] (below : Expr) (numIndParams : Nat)
     for poss in positions, motiveType in motiveTypes do
       for pos in poss do
         CTypes := CTypes.set! pos motiveType
-    let CDecls : Array (Name × (Array Expr → MetaM Expr)) ← CTypes.mapM fun t => do
-        return ((← mkFreshUserName `C), fun _ => pure t)
+    let CDecls : Array (Name × (Array Expr → MetaM Expr)) ←
+      CTypes.mapM fun t => do return ((← mkFreshUserName `C), fun _ => pure t)
     withLocalDeclsD CDecls fun Cs => do
       -- We have to pack these canary motives like we packed the real motives
       let packedCs ← positions.mapMwith PProdN.packLambdas motiveTypes Cs
@@ -100,32 +103,38 @@ private def withBelowDict [Inhabited α] (below : Expr) (numIndParams : Nat)
       k Cs belowDict
 
 /--
-  `below` is a free variable with type of the form `I.below indParams motive indices major`,
-  where `I` is the name of an inductive datatype.
+`below` is a free variable with type of the form `I.below indParams motive indices major`,
+where `I` is the name of an inductive datatype.
 
-  For example, when trying to show that the following function terminates using structural recursion
-  ```lean
-  def addAdjacent : List Nat → List Nat
-  | []       => []
-  | [a]      => [a]
-  | a::b::as => (a+b) :: addAdjacent as
-  ```
-  when we are visiting `addAdjacent as` at `replaceRecApps`, `below` has type
-  `@List.below Nat (fun (x : List Nat) => List Nat) (a::b::as)`
-  The motive `fun (x : List Nat) => List Nat` depends on the actual function we are trying to compute.
-  So, we first replace it with a fresh variable `C` at `withBelowDict`.
-  Recall that `brecOn` implements course-of-values recursion, and `below` can be viewed as a dictionary
-  of the "previous values".
-  We search this dictionary using the auxiliary function `toBelowAux`.
-  The dictionary is built using the `PProd` (`And` for inductive predicates).
-  We keep searching it until we find `C recArg`, where `C` is the auxiliary fresh variable created at `withBelowDict`.  -/
-partial def toBelow (below : Expr) (numIndParams : Nat) (positions : Positions) (fnIndex : Nat) (recArg : Expr) : MetaM Expr := do
-  withTraceNode `Elab.definition.structural (fun _ => return m!"searching IH for {recArg} in {←inferType below}") do
-    withBelowDict below numIndParams positions fun Cs belowDict =>
-      toBelowAux Cs[fnIndex]! belowDict recArg below
+For example, when trying to show that the following function terminates using structural recursion
+```lean
+def addAdjacent : List Nat → List Nat
+| []       => []
+| [a]      => [a]
+| a::b::as => (a+b) :: addAdjacent as
+```
+when we are visiting `addAdjacent as` at `replaceRecApps`, `below` has type
+`@List.below Nat (fun (x : List Nat) => List Nat) (a::b::as)`
+The motive `fun (x : List Nat) => List Nat` depends on the actual function we are trying to compute.
+So, we first replace it with a fresh variable `C` at `withBelowDict`.
+Recall that `brecOn` implements course-of-values recursion, and `below` can be viewed as a dictionary
+of the "previous values".
+We search this dictionary using the auxiliary function `toBelowAux`.
+The dictionary is built using the `PProd` (`And` for inductive predicates).
+We keep searching it until we find `C recArg`, where `C` is the auxiliary fresh variable created at `withBelowDict`.
+-/
+partial def toBelow
+    (below : Expr) (numIndParams : Nat) (positions : Positions) (fnIndex : Nat) (recArg : Expr)
+    : MetaM Expr := do
+  withTraceNode `Elab.definition.structural
+    (fun _ => return m!"searching IH for {recArg} in {← inferType below}")
+    do
+      withBelowDict below numIndParams positions fun Cs belowDict =>
+        toBelowAux Cs[fnIndex]! belowDict recArg below
 
-private partial def replaceRecApps (recArgInfos : Array RecArgInfo) (positions : Positions)
-    (below : Expr) (e : Expr) : MetaM Expr :=
+private partial def replaceRecApps
+    (recArgInfos : Array RecArgInfo) (positions : Positions) (below : Expr) (e : Expr)
+    : MetaM Expr :=
   let recFnNames := recArgInfos.map (·.fnName)
   let containsRecFn (e : Expr) : StateRefT (HasConstCache recFnNames) MetaM Bool :=
     modifyGet (HasConstCache.contains e |>.run ·)
@@ -140,26 +149,30 @@ private partial def replaceRecApps (recArgInfos : Array RecArgInfo) (positions :
       withLocalDecl n c (← loop below d) fun x => do
         mkForallFVars #[x] (← loop below (b.instantiate1 x))
     | Expr.letE n type val body nondep =>
-      mapLetDecl n (← loop below type) (← loop below val) (nondep := nondep) (usedLetOnly := false) fun x => do
-        loop below (body.instantiate1 x)
+      mapLetDecl n (← loop below type) (← loop below val) (nondep := nondep) (usedLetOnly := false)
+        fun x => do loop below (body.instantiate1 x)
     | Expr.mdata d b =>
       if let some stx := getRecAppSyntax? e then
         withRef stx <| loop below b
       else
         return mkMData d (← loop below b)
-    | Expr.proj n i e => return mkProj n i (← loop below e)
+    | Expr.proj n i e =>
+      return mkProj n i (← loop below e)
     | Expr.app _ _ =>
       let processApp (e : Expr) : StateRefT (HasConstCache recFnNames) MetaM Expr :=
         e.withApp fun f args => do
           if let .some fnIdx := recArgInfos.findFinIdx? (f.isConstOf ·.fnName) then
             let recArgInfo := recArgInfos[fnIdx]
             let some recArg := args[recArgInfo.recArgPos]?
-              | throwError "insufficient number of parameters at recursive application {indentExpr e}"
+              | throwError
+                  "insufficient number of parameters at recursive application {indentExpr e}"
             -- For reflexive type, we may have nested recursive applications in recArg
             let recArg ← loop below recArg
             let f ←
-              try toBelow below recArgInfo.indGroupInst.params.size positions fnIdx recArg
-              catch _ => throwError "failed to eliminate recursive application{indentExpr e}"
+              try
+                toBelow below recArgInfo.indGroupInst.params.size positions fnIdx recArg
+              catch _ =>
+                throwError "failed to eliminate recursive application{indentExpr e}"
             -- We don't pass the fixed parameters, the indices and the major arg to `f`, only the rest
             let ys := recArgInfo.fixedParamPerm.pickVarying args
             let (_, fArgs) := recArgInfo.pickIndicesMajor ys
@@ -169,35 +182,45 @@ private partial def replaceRecApps (recArgInfos : Array RecArgInfo) (positions :
             return mkAppN (← loop below f) (← args.mapM (loop below))
       match (← matchMatcherApp? (alsoCasesOn := true) e) with
       | some matcherApp =>
-        if recArgInfos.all (fun recArgInfo => !recArgHasLooseBVarsAt recArgInfo.fnName recArgInfo.recArgPos e) then
+        if recArgInfos.all (fun recArgInfo =>
+            ! recArgHasLooseBVarsAt recArgInfo.fnName recArgInfo.recArgPos e) then
           processApp e
         else
-          /- Here is an example we currently do not handle
-             ```
-             def g (xs : List Nat) : Nat :=
-             match xs with
-             | [] => 0
-             | y::ys =>
-               match ys with
-               | []       => 1
-               | _::_::zs => g zs + 1
-               | zs       => g ys + 2
-             ```
-             We are matching on `ys`, but still using `ys` in the third alternative.
-             If we push the `below` argument over the dependent match it will be able to eliminate recursive call using `zs`.
-             To make it work, users have to write the third alternative as `| zs => g zs + 2`
-             If this is too annoying in practice, we may replace `ys` with the matching term, but
-             this may generate weird error messages, when it doesn't work. -/
-          trace[Elab.definition.structural] "below before matcherApp.addArg: {below} : {← inferType below}"
+          /-
+          Here is an example we currently do not handle
+          ```
+          def g (xs : List Nat) : Nat :=
+          match xs with
+          | [] => 0
+          | y::ys =>
+            match ys with
+            | []       => 1
+            | _::_::zs => g zs + 1
+            | zs       => g ys + 2
+          ```
+          We are matching on `ys`, but still using `ys` in the third alternative.
+          If we push the `below` argument over the dependent match it will be able to eliminate recursive call using `zs`.
+          To make it work, users have to write the third alternative as `| zs => g zs + 2`
+          If this is too annoying in practice, we may replace `ys` with the matching term, but
+          this may generate weird error messages, when it doesn't work.
+          -/
+          trace[Elab.definition.structural]
+            "below before matcherApp.addArg: {below} : {← inferType below}"
           if let some matcherApp ← matcherApp.addArg? below then
-            let altsNew ← matcherApp.alts.zipWithM (bs := matcherApp.altNumParams) fun alt numParams =>
-              lambdaBoundedTelescope alt (numParams + 1) fun xs altBody => do
-                trace[Elab.definition.structural] "altNumParams: {numParams}, xs: {xs}"
-                unless xs.size = numParams + 1 do
-                  throwError "unexpected matcher application alternative{indentExpr alt}\nat application{indentExpr e}"
-                let belowForAlt := xs[numParams]!
-                mkLambdaFVars xs (← loop belowForAlt altBody)
-            pure { matcherApp with alts := altsNew, discrs := (← matcherApp.discrs.mapM (loop below)) }.toExpr
+            let altsNew ←
+              matcherApp.alts.zipWithM (bs := matcherApp.altNumParams) fun alt numParams =>
+                lambdaBoundedTelescope alt (numParams + 1) fun xs altBody => do
+                  trace[Elab.definition.structural] "altNumParams: {numParams}, xs: {xs}"
+                  unless xs.size = numParams + 1 do
+                    throwError "unexpected matcher application alternative{indentExpr alt}\
+                      \nat application{indentExpr e}"
+                  let belowForAlt := xs[numParams]!
+                  mkLambdaFVars xs (← loop belowForAlt altBody)
+            pure {
+              matcherApp with
+              alts := altsNew
+              discrs := (← matcherApp.discrs.mapM (loop below))
+            }.toExpr
           else
             trace[Elab.definition.structural] "`matcherApp.addArg?` failed"
             processApp e
@@ -226,8 +249,10 @@ The `FType` is the expected type of the argument.
 The `recArgInfos` is used to transform the body of the function to replace recursive calls with
 uses of the `below` induction hypothesis.
 -/
-def mkBRecOnF (recArgInfos : Array RecArgInfo) (positions : Positions)
-    (recArgInfo : RecArgInfo) (value : Expr) (FType : Expr) : MetaM Expr := do
+def mkBRecOnF
+    (recArgInfos : Array RecArgInfo) (positions : Positions) (recArgInfo : RecArgInfo)
+    (value : Expr) (FType : Expr)
+    : MetaM Expr := do
   lambdaTelescope value fun xs value => do
     let (indicesMajorArgs, otherArgs) := recArgInfo.pickIndicesMajor xs
     let FType ← instantiateForall FType indicesMajorArgs
@@ -244,8 +269,10 @@ def mkBRecOnF (recArgInfos : Array RecArgInfo) (positions : Positions)
 Given the `motives`, pass the right universe levels, the parameters, and the motives.
 It was already checked earlier in `checkCodomainsLevel` that the functions live in the same universe.
 -/
-def mkBRecOnConst (recArgInfos : Array RecArgInfo) (positions : Positions)
-    (motives : Array Expr) (isIndPred : Bool) : MetaM (Nat → Expr) := do
+def mkBRecOnConst
+    (recArgInfos : Array RecArgInfo) (positions : Positions) (motives : Array Expr)
+    (isIndPred : Bool)
+    : MetaM (Nat → Expr) := do
   let indGroup := recArgInfos[0]!.indGroupInst
   let motive := motives[0]!
   let brecOnUniv ← if isIndPred then pure 0 else lambdaTelescope motive fun _ type => getLevel type
@@ -267,18 +294,19 @@ combinators. This assumes that all `.brecOn` functions of a mutual inductive hav
 
 It also undoes the permutation and packing done by `packMotives`
 -/
-def inferBRecOnFTypes (recArgInfos : Array RecArgInfo) (positions : Positions)
-    (brecOnConst : Nat → Expr) : MetaM (Array Expr) := do
+def inferBRecOnFTypes
+    (recArgInfos : Array RecArgInfo) (positions : Positions) (brecOnConst : Nat → Expr)
+    : MetaM (Array Expr) := do
   let numTypeFormers := positions.size
   let recArgInfo := recArgInfos[0]! -- pick an arbitrary one
   let brecOn := brecOnConst recArgInfo.indIdx
-  prependError m!"brecOn is type incorrect" do
-    check brecOn
+  prependError m!"brecOn is type incorrect" do check brecOn
   let brecOnType ← inferType brecOn
   -- Skip the indices and major argument
-  let packedFTypes ← forallBoundedTelescope brecOnType (some (recArgInfo.indicesPos.size + 1)) fun _ brecOnType =>
-    -- And return the types of the next arguments
-    arrowDomainsN numTypeFormers brecOnType
+  let packedFTypes ←
+    forallBoundedTelescope brecOnType (some (recArgInfo.indicesPos.size + 1)) fun _ brecOnType =>
+      -- And return the types of the next arguments
+      arrowDomainsN numTypeFormers brecOnType
 
   let mut FTypes := Array.replicate positions.numIndices (Expr.sort 0)
   for packedFType in packedFTypes, poss in positions do
@@ -290,9 +318,10 @@ def inferBRecOnFTypes (recArgInfos : Array RecArgInfo) (positions : Positions)
 Completes the `.brecOn` for the given function.
 The `value` is the function with (only) the fixed parameters moved into the context.
 -/
-def mkBRecOnApp (positions : Positions) (fnIdx : Nat) (brecOnConst : Nat → Expr)
-    (packedFArgs : Array Expr) (funTypes : Array Expr) (recArgInfo : RecArgInfo)
-    (value : Expr) : MetaM Expr := do
+def mkBRecOnApp
+    (positions : Positions) (fnIdx : Nat) (brecOnConst : Nat → Expr) (packedFArgs : Array Expr)
+    (funTypes : Array Expr) (recArgInfo : RecArgInfo) (value : Expr)
+    : MetaM Expr := do
   lambdaTelescope value fun ys _value => do
     let (indexMajorArgs, otherArgs) := recArgInfo.pickIndicesMajor ys
     let brecOn := brecOnConst recArgInfo.indIdx

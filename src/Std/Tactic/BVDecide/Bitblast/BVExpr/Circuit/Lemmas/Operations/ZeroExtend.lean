@@ -28,12 +28,12 @@ variable [Hashable α] [DecidableEq α]
 
 namespace blastZeroExtend
 
-theorem go_get_aux (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w) (newWidth curr : Nat)
-    (hcurr : curr ≤ newWidth) (s : AIG.RefVec aig curr) :
-    ∀ (idx : Nat) (hidx : idx < curr) (hfoo),
-        (go aig w input newWidth curr hcurr s).vec.get idx (by omega)
-          =
-        (s.get idx hidx).cast hfoo := by
+theorem go_get_aux
+    (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w)
+    (newWidth curr : Nat) (hcurr : curr ≤ newWidth) (s : AIG.RefVec aig curr)
+    : ∀ (idx : Nat) (hidx : idx < curr) (hfoo),
+      (go aig w input newWidth curr hcurr s).vec.get idx (by omega)
+        = (s.get idx hidx).cast hfoo := by
   intro idx hidx
   generalize hgo : go aig w input newWidth curr hcurr s = res
   unfold go at hgo
@@ -42,11 +42,13 @@ theorem go_get_aux (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w) (newWidth
     split at hgo
     · rw [← hgo]
       intro hfoo
-      rw [go_get_aux (hfoo := hfoo)]; case hidx => omega
+      rw [go_get_aux (hfoo := hfoo)]
+      case hidx => omega
       rw [AIG.RefVec.get_push_ref_lt]
     · rw [← hgo]
       intro hfoo
-      rw [go_get_aux (hfoo := hfoo)]; case hidx => omega
+      rw [go_get_aux (hfoo := hfoo)]
+      case hidx => omega
       rw [AIG.RefVec.get_push_ref_lt]
   · dsimp only at hgo
     rw [← hgo]
@@ -56,24 +58,25 @@ theorem go_get_aux (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w) (newWidth
     simp
 termination_by newWidth - curr
 
-theorem go_get (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w) (newWidth curr : Nat)
-    (hcurr : curr ≤ newWidth) (s : AIG.RefVec aig curr) :
-    ∀ (idx : Nat) (hidx : idx < curr),
-        (go aig w input newWidth curr hcurr s).vec.get idx (by omega)
-          =
-        (s.get idx hidx).cast (by apply go_le_size) := by
+theorem go_get
+    (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w)
+    (newWidth curr : Nat) (hcurr : curr ≤ newWidth) (s : AIG.RefVec aig curr)
+    : ∀ (idx : Nat) (hidx : idx < curr),
+      (go aig w input newWidth curr hcurr s).vec.get idx (by omega)
+        = (s.get idx hidx).cast (by apply go_le_size) := by
   intros
   apply go_get_aux
 
-theorem go_denote_mem_prefix (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w) (newWidth curr : Nat)
-    (hcurr : curr ≤ newWidth) (s : AIG.RefVec aig curr) (start : Nat) (hstart) :
-    ⟦
-      (go aig w input newWidth curr hcurr s).aig,
-      ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
-      assign
-    ⟧
-      =
-    ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
+theorem go_denote_mem_prefix
+    (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w)
+    (newWidth curr : Nat) (hcurr : curr ≤ newWidth) (s : AIG.RefVec aig curr)
+    (start : Nat) (hstart)
+    : ⟦
+        (go aig w input newWidth curr hcurr s).aig,
+        ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
+        assign
+      ⟧
+      = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply IsPrefix.of
   · intros
@@ -81,22 +84,21 @@ theorem go_denote_mem_prefix (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w)
   · intros
     apply go_le_size
 
-theorem go_denote_eq (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w) (newWidth curr : Nat)
-    (hcurr : curr ≤ newWidth) (s : AIG.RefVec aig curr) (assign : α → Bool) :
-    ∀ (idx : Nat) (hidx1 : idx < newWidth),
-        curr ≤ idx
-          →
-        ⟦
-          (go aig w input newWidth curr hcurr s).aig,
-          (go aig w input newWidth curr hcurr s).vec.get idx hidx1,
-          assign
-        ⟧
-          =
-        if hidx : idx < w then
-           ⟦aig, input.get idx hidx, assign⟧
-        else
-           false
-    := by
+theorem go_denote_eq
+    (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w)
+    (newWidth curr : Nat) (hcurr : curr ≤ newWidth) (s : AIG.RefVec aig curr)
+    (assign : α → Bool)
+    : ∀ (idx : Nat) (hidx1 : idx < newWidth),
+      curr ≤ idx
+        → ⟦
+            (go aig w input newWidth curr hcurr s).aig,
+            (go aig w input newWidth curr hcurr s).vec.get idx hidx1,
+            assign
+          ⟧
+          = if hidx : idx < w then
+              ⟦aig, input.get idx hidx, assign⟧
+            else
+              false := by
   intro idx hidx1 hidx2
   generalize hgo : go aig w input newWidth curr hcurr s = res
   unfold go at hgo
@@ -107,9 +109,10 @@ theorem go_denote_eq (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w) (newWid
       split at hgo
       next hsplit =>
         rw [heq] at hsplit
-        simp only [hsplit, ↓reduceDIte]
+        simp only [hsplit, ↓ reduceDIte]
         rw [← hgo]
-        rw [go_get]; case hidx => omega
+        rw [go_get]
+        case hidx => omega
         rw [AIG.RefVec.get_push_ref_eq']
         · rw [go_denote_mem_prefix]
           · simp [heq]
@@ -117,9 +120,10 @@ theorem go_denote_eq (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w) (newWid
         · omega
       next hsplit =>
         rw [heq] at hsplit
-        simp only [hsplit, ↓reduceDIte]
+        simp only [hsplit, ↓ reduceDIte]
         rw [← hgo]
-        rw [go_get]; case hidx => omega
+        rw [go_get]
+        case hidx => omega
         rw [AIG.RefVec.get_push_ref_eq']
         · rw [go_denote_mem_prefix]
           · simp only [Ref.cast_eq]
@@ -140,16 +144,14 @@ termination_by newWidth - curr
 end blastZeroExtend
 
 @[simp]
-theorem denote_blastZeroExtend (aig : AIG α) (target : ExtendTarget aig newWidth)
-    (assign : α → Bool) :
-    ∀ (idx : Nat) (hidx : idx < newWidth),
-        ⟦(blastZeroExtend aig target).aig, (blastZeroExtend aig target).vec.get idx hidx, assign⟧
-          =
-        if hidx : idx < target.w then
-           ⟦aig, target.vec.get idx hidx, assign⟧
-        else
-           false
-    := by
+theorem denote_blastZeroExtend
+    (aig : AIG α) (target : ExtendTarget aig newWidth) (assign : α → Bool)
+    : ∀ (idx : Nat) (hidx : idx < newWidth),
+      ⟦(blastZeroExtend aig target).aig, (blastZeroExtend aig target).vec.get idx hidx, assign⟧
+        = if hidx : idx < target.w then
+            ⟦aig, target.vec.get idx hidx, assign⟧
+          else
+            false := by
   intro idx hidx
   unfold blastZeroExtend
   apply blastZeroExtend.go_denote_eq

@@ -33,5 +33,4 @@ public def fmtRegisterParserAlias : Fmt := fun
     let info? ← fmt? info?
     let registration := Layouts.pseudoApplication #[registerTk, namedKind?]
     return Layouts.pseudoApplication #[registration, aliasName?, declName, info?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

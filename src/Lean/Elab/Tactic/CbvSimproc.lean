@@ -35,7 +35,6 @@ def mkSimprocPatternFromExpr (e : Expr) : MetaM Pattern := do
   let term ← mkFreshExprMVar forallExpr
   mkPatternFromExpr term result.paramNames.toList
 
-
 def elabCbvSimprocKeys (stx : Syntax) : MetaM (Array DiscrTree.Key) := do
   let pattern ← elabCbvSimprocPattern stx
   let symPattern ← mkSimprocPatternFromExpr pattern
@@ -45,28 +44,33 @@ def checkCbvSimprocType (declName : Name) : CoreM Unit := do
   let decl ← getConstInfo declName
   match decl.type with
   | .const ``Sym.Simp.Simproc _ => pure ()
-  | _ => throwError "Unexpected type for cbv simproc pattern: Expected \
+  | _ =>
+    throwError "Unexpected type for cbv simproc pattern: Expected \
       `{.ofConstName ``Sym.Simp.Simproc}`, but `{declName}` has type{indentExpr decl.type}"
 
 namespace Command
 open Lean.Meta.Tactic.Cbv
 
-@[builtin_command_elab Lean.Parser.cbvSimprocPattern] def elabCbvSimprocPattern : CommandElab := fun stx => do
-  let `(cbv_simproc_pattern% $pattern => $declName) := stx | throwUnsupportedSyntax
+@[builtin_command_elab Lean.Parser.cbvSimprocPattern]
+def elabCbvSimprocPattern : CommandElab := fun stx => do
+  let `(cbv_simproc_pattern% $pattern => $declName) := stx
+    | throwUnsupportedSyntax
   liftTermElabM do
     let declName ← realizeGlobalConstNoOverload declName
     checkCbvSimprocType declName
     let keys ← elabCbvSimprocKeys pattern
     registerCbvSimproc declName keys
 
-@[builtin_command_elab Lean.Parser.cbvSimprocPatternBuiltin] def elabCbvSimprocPatternBuiltin : CommandElab := fun stx => do
-  let `(builtin_cbv_simproc_pattern% $pattern => $declName) := stx | throwUnsupportedSyntax
+@[builtin_command_elab Lean.Parser.cbvSimprocPatternBuiltin]
+def elabCbvSimprocPatternBuiltin : CommandElab := fun stx => do
+  let `(builtin_cbv_simproc_pattern% $pattern => $declName) := stx
+    | throwUnsupportedSyntax
   liftTermElabM do
     let declName ← realizeGlobalConstNoOverload declName
     checkCbvSimprocType declName
     let keys ← elabCbvSimprocKeys pattern
-    let val := mkAppN (mkConst ``registerBuiltinCbvSimproc)
-      #[toExpr declName, toExpr keys, mkConst declName]
+    let val :=
+      mkAppN (mkConst ``registerBuiltinCbvSimproc) #[toExpr declName, toExpr keys, mkConst declName]
     let initDeclName ← mkFreshUserName (declName ++ `declare)
     declareBuiltin initDeclName val
 

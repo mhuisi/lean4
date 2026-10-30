@@ -28,7 +28,8 @@ theorem mod_add_mod_lt (a b : Nat) {c : Nat} (h : 0 < c) : a % c + b % c < 2 * c
   have := mod_lt b h
   omega
 
-theorem mod_add_mod_eq {a b c : Nat} : a % c + b % c = (a + b) % c + if a % c + b % c < c then 0 else c := by
+theorem mod_add_mod_eq {a b c : Nat}
+    : a % c + b % c = (a + b) % c + if a % c + b % c < c then 0 else c := by
   if h : 0 < c then
     rw [add_mod]
     split <;> rename_i h'
@@ -60,13 +61,11 @@ theorem div_le_iff_le_mul (h : 0 < k) : x / k ≤ y ↔ x ≤ y * k + k - 1 := b
   rw [le_iff_lt_add_one, Nat.div_lt_iff_lt_mul h, Nat.add_one_mul]
   omega
 
-theorem le_mul_iff_le_left (hz : 0 < z) :
-    x ≤ y * z ↔ (x + z - 1) / z ≤ y := by
+theorem le_mul_iff_le_left (hz : 0 < z) : x ≤ y * z ↔ (x + z - 1) / z ≤ y := by
   rw [Nat.div_le_iff_le_mul hz]
   omega
 
-theorem le_mul_iff_le_right (hy : 0 < y) :
-    x ≤ y * z ↔ (x + y - 1) / y ≤ z := by
+theorem le_mul_iff_le_right (hy : 0 < y) : x ≤ y * z ↔ (x + y - 1) / y ≤ z := by
   rw [← le_mul_iff_le_left hy, Nat.mul_comm]
 
 -- TODO: reprove `div_eq_of_lt_le` in terms of this:
@@ -99,15 +98,16 @@ theorem div_pos (hba : b ≤ a) (hb : 0 < b) : 0 < a / b := by
   · simp [Nat.pos_iff_ne_zero, hba]
 
 theorem div_le_div_left (hcb : c ≤ b) (hc : 0 < c) : a / b ≤ a / c :=
-  (Nat.le_div_iff_mul_le hc).2 <|
-    Nat.le_trans (Nat.mul_le_mul_left _ hcb) (Nat.div_mul_le_self a b)
+  (Nat.le_div_iff_mul_le hc).2 <| Nat.le_trans (Nat.mul_le_mul_left _ hcb) (Nat.div_mul_le_self a b)
 
-protected theorem div_le_div {a b c d : Nat} (h1 : a ≤ b) (h2 : d ≤ c) (h3 : d ≠ 0) : a / c ≤ b / d :=
-  calc a / c ≤ b / c := Nat.div_le_div_right h1
+protected theorem div_le_div {a b c d : Nat} (h1 : a ≤ b) (h2 : d ≤ c) (h3 : d ≠ 0)
+    : a / c ≤ b / d :=
+  calc
+    a / c
+      ≤ b / c := Nat.div_le_div_right h1
     _ ≤ b / d := Nat.div_le_div_left h2 (Nat.pos_of_ne_zero h3)
 
-theorem div_add_le_right {z : Nat} (h : 0 < z) (x y : Nat) :
-    x / (y + z) ≤ x / z :=
+theorem div_add_le_right {z : Nat} (h : 0 < z) (x y : Nat) : x / (y + z) ≤ x / z :=
   div_le_div_left (Nat.le_add_left z y) h
 
 theorem div_add_div_le_add_div {x y z : Nat} : x / z + y / z ≤ (x + y) / z := by
@@ -116,20 +116,20 @@ theorem div_add_div_le_add_div {x y z : Nat} : x / z + y / z ≤ (x + y) / z := 
     apply Nat.add_le_add <;> apply Nat.div_mul_le_self
   · simp_all
 
-theorem succ_div_of_dvd {a b : Nat} (h : b ∣ a + 1) :
-    (a + 1) / b = a / b + 1 := by
+theorem succ_div_of_dvd {a b : Nat} (h : b ∣ a + 1) : (a + 1) / b = a / b + 1 := by
   replace h := mod_eq_zero_of_dvd h
   cases b with
   | zero => simp at h
   | succ b =>
     by_cases h' : b ≤ a
     · rw [Nat.div_eq_ite]
-      simp only [zero_lt_succ, Nat.add_le_add_iff_right, h', and_self, ↓reduceIte,
+      simp only [zero_lt_succ, Nat.add_le_add_iff_right, h', and_self, ↓ reduceIte,
         Nat.reduceSubDiff, Nat.add_right_cancel_iff]
-      obtain ⟨_|k, h⟩ := Nat.dvd_of_mod_eq_zero h
+      obtain ⟨_ | k, h⟩ := Nat.dvd_of_mod_eq_zero h
       · simp at h
       · simp only [Nat.mul_add, Nat.add_mul, Nat.one_mul, Nat.mul_one, ← Nat.add_assoc,
-          Nat.add_right_cancel_iff] at h
+            Nat.add_right_cancel_iff]
+          at h
         subst h
         rw [Nat.add_sub_cancel, ← Nat.add_one_mul, mul_div_right _ (zero_lt_succ _), Nat.add_comm,
           Nat.add_mul_div_left _ _ (zero_lt_succ _), Nat.right_eq_add, div_eq_of_lt le.refl]
@@ -138,12 +138,10 @@ theorem succ_div_of_dvd {a b : Nat} (h : b ∣ a + 1) :
       rw [Nat.mod_eq_of_lt h'] at h
       simp at h
 
-theorem succ_div_of_mod_eq_zero {a b : Nat} (h : (a + 1) % b = 0) :
-    (a + 1) / b = a / b + 1 := by
+theorem succ_div_of_mod_eq_zero {a b : Nat} (h : (a + 1) % b = 0) : (a + 1) / b = a / b + 1 := by
   rw [succ_div_of_dvd (by rwa [dvd_iff_mod_eq_zero])]
 
-theorem succ_div_of_not_dvd {a b : Nat} (h : ¬ b ∣ a + 1) :
-    (a + 1) / b = a / b := by
+theorem succ_div_of_not_dvd {a b : Nat} (h : ¬ b ∣ a + 1) : (a + 1) / b = a / b := by
   replace h := mt dvd_of_mod_eq_zero h
   cases b with
   | zero => simp
@@ -156,8 +154,7 @@ theorem succ_div_of_not_dvd {a b : Nat} (h : ¬ b ∣ a + 1) :
       have : (a + 1) % (b + 1) < b + 1 := Nat.mod_lt _ (by simp)
       omega
 
-theorem succ_div_of_mod_ne_zero {a b : Nat} (h : (a + 1) % b ≠ 0) :
-    (a + 1) / b = a / b := by
+theorem succ_div_of_mod_ne_zero {a b : Nat} (h : (a + 1) % b ≠ 0) : (a + 1) / b = a / b := by
   rw [succ_div_of_not_dvd (by rwa [dvd_iff_mod_eq_zero])]
 
 protected theorem succ_div {a b : Nat} : (a + 1) / b = a / b + if b ∣ a + 1 then 1 else 0 := by
@@ -165,8 +162,8 @@ protected theorem succ_div {a b : Nat} : (a + 1) / b = a / b + if b ∣ a + 1 th
   · simp [succ_div_of_dvd h]
   · simp [succ_div_of_not_dvd h]
 
-protected theorem add_div {a b c : Nat} (h : 0 < c) :
-    (a + b) / c = a / c + b / c + if c ≤ a % c + b % c then 1 else 0 := by
+protected theorem add_div {a b c : Nat} (h : 0 < c)
+    : (a + b) / c = a / c + b / c + if c ≤ a % c + b % c then 1 else 0 := by
   conv => lhs; rw [← Nat.div_add_mod a c]
   rw [Nat.add_assoc, mul_add_div h]
   conv => lhs; rw [← Nat.div_add_mod b c]
@@ -181,8 +178,11 @@ protected theorem add_div {a b c : Nat} (h : 0 < c) :
     have := mod_lt b h
     split <;> · simp; omega
 
-/-- If `(a + b) % c = c - 1`, then `a % c + b % c < c`, because `a % c + b % c` can not reach `2*c - 1`. -/
-theorem mod_add_mod_lt_of_add_mod_eq_sub_one (w : 0 < c) (h : (a + b) % c = c - 1) : a % c + b % c < c := by
+/--
+If `(a + b) % c = c - 1`, then `a % c + b % c < c`, because `a % c + b % c` can not reach `2*c - 1`.
+-/
+theorem mod_add_mod_lt_of_add_mod_eq_sub_one (w : 0 < c) (h : (a + b) % c = c - 1)
+    : a % c + b % c < c := by
   have := mod_add_mod_lt a b w
   rw [mod_add_mod_eq, h] at this
   split at this
@@ -197,7 +197,7 @@ theorem add_div_of_dvd_add_add_one (h : c ∣ a + b + 1) : (a + b) / c = a / c +
   omega
 
 theorem div_lt_of_lt {a b c : Nat} (ha : a < c) : a / b < c := by
-  obtain (rfl|hb) := Nat.eq_zero_or_pos b
+  obtain (rfl | hb) := Nat.eq_zero_or_pos b
   · simp
     omega
   · rw [Nat.div_lt_iff_lt_mul hb, ← Nat.mul_one a]
@@ -206,37 +206,38 @@ theorem div_lt_of_lt {a b c : Nat} (ha : a < c) : a / b < c := by
 theorem div_mod_eq_div {a b c : Nat} (ha : a < c) : (a / b) % c = a / b :=
   Nat.mod_eq_of_lt (Nat.div_lt_of_lt ha)
 
-theorem div_mod_eq_mod_div_mod {a b c : Nat} (ha : a < c) (hb : b < c) :
-    (a / b) % c = a % c / (b % c) := by
+theorem div_mod_eq_mod_div_mod {a b c : Nat} (ha : a < c) (hb : b < c)
+    : (a / b) % c = a % c / (b % c) := by
   rw [Nat.mod_eq_of_lt (Nat.div_lt_of_lt ha), Nat.mod_eq_of_lt ha, Nat.mod_eq_of_lt hb]
 
 theorem mod_mod_eq_mod_of_lt_right {a b c : Nat} (ha : a < c) : (a % b) % c = a % b :=
   Nat.mod_eq_of_lt (Nat.lt_of_le_of_lt (Nat.mod_le _ _) ha)
 
-theorem mod_mod_eq_mod_mod_mod {a b c : Nat} (ha : a < c) (hb : b < c) :
-    (a % b) % c = (a % c) % (b % c) := by
+theorem mod_mod_eq_mod_mod_mod {a b c : Nat} (ha : a < c) (hb : b < c)
+    : (a % b) % c = (a % c) % (b % c) := by
   rw [Nat.mod_mod_eq_mod_of_lt_right ha, Nat.mod_eq_of_lt ha, Nat.mod_eq_of_lt hb]
 
 theorem mod_mod_eq_mod_mod_of_dvd {a b c : Nat} (h : b ∣ c) : a % b % c = a % c % b := by
   refine Or.elim (Nat.eq_zero_or_pos b) (by rintro rfl; simp) (fun hb => ?_)
   refine Or.elim (Nat.eq_zero_or_pos c) (by rintro rfl; simp) (fun hc => ?_)
-  rw [Nat.mod_mod_of_dvd _ h, Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le (Nat.mod_lt a hb) (Nat.le_of_dvd hc h))]
+  rw [Nat.mod_mod_of_dvd _ h,
+    Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le (Nat.mod_lt a hb) (Nat.le_of_dvd hc h))]
 
 theorem mod_mod_of_dvd' {a b c : Nat} (h : b ∣ c) : a % b % c = a % b := by
   rw [Nat.mod_mod_eq_mod_mod_of_dvd h, Nat.mod_mod_of_dvd _ h]
 
-theorem mod_mod_eq_mod_mod_mod_of_dvd {a b c : Nat} (hb : b ∣ c) :
-    (a % b) % c = (a % c) % (b % c) := by
+theorem mod_mod_eq_mod_mod_mod_of_dvd {a b c : Nat} (hb : b ∣ c)
+    : (a % b) % c = (a % c) % (b % c) := by
   refine (Decidable.em (b = c)).elim (by rintro rfl; simp) (fun hb' => ?_)
   refine Or.elim (Nat.eq_zero_or_pos c) (by rintro rfl; simp) (fun hc => ?_)
   have : b < c := Nat.lt_of_le_of_ne (Nat.le_of_dvd hc hb) hb'
   rw [Nat.mod_mod_of_dvd' hb, Nat.mod_eq_of_lt this, Nat.mod_mod_of_dvd _ hb]
 
-theorem mod_eq_mod_iff {x y z : Nat} :
-    x % z = y % z ↔ ∃ k₁ k₂, x + k₁ * z = y + k₂ * z := by
+theorem mod_eq_mod_iff {x y z : Nat} : x % z = y % z ↔ ∃ k₁ k₂, x + k₁ * z = y + k₂ * z := by
   constructor
   · rw [Nat.mod_def, Nat.mod_def]
-    rw [Nat.sub_eq_iff_eq_add, Nat.add_comm, ← Nat.add_sub_assoc, eq_comm, Nat.sub_eq_iff_eq_add, eq_comm]
+    rw [Nat.sub_eq_iff_eq_add, Nat.add_comm, ← Nat.add_sub_assoc, eq_comm, Nat.sub_eq_iff_eq_add,
+      eq_comm]
     · intro h
       refine ⟨(y / z), (x / z), ?_⟩
       rwa [Nat.mul_comm z, Nat.add_comm _ y, Nat.mul_comm z] at h
@@ -254,9 +255,13 @@ theorem ext_div_mod_iff (n a b : Nat) : a = b ↔ a / n = b / n ∧ a % n = b % 
   ⟨fun h => ⟨h ▸ rfl, h ▸ rfl⟩, fun ⟨h0, h1⟩ => ext_div_mod h0 h1⟩
 
 /-- An induction principle mirroring the base-`b` representation of the number. -/
-theorem base_induction {P : Nat → Prop} {n : Nat} (b : Nat) (hb : 1 < b) (single : ∀ m, m < b → P m)
-    (digit : ∀ m k, k < b → 0 < m → P m → P (b * m + k)) : P n := by
-  induction n using Nat.strongRecOn with | ind n ih
+theorem base_induction
+    {P : Nat → Prop} {n : Nat}
+    (b : Nat)
+    (hb : 1 < b) (single : ∀ m, m < b → P m) (digit : ∀ m k, k < b → 0 < m → P m → P (b * m + k))
+    : P n := by
+  induction n using Nat.strongRecOn with
+  | ind n ih
   rcases Nat.lt_or_ge n b with hn | hn
   · exact single _ hn
   · have := div_add_mod n b

@@ -31,18 +31,24 @@ open Lean Elab Term Server RequestM
 A code action which calls all `@[hole_code_action]` code actions on each hole
 (`?_`, `_`, or `sorry`).
 -/
-@[builtin_code_action_provider] def holeCodeActionProvider : CodeActionProvider := fun params snap => do
+@[builtin_code_action_provider]
+def holeCodeActionProvider : CodeActionProvider := fun params snap => do
   let doc ← readDoc
   let startPos := doc.meta.text.lspPosToUtf8Pos params.range.start
   let endPos := doc.meta.text.lspPosToUtf8Pos params.range.end
-  have holes := snap.infoTree.foldInfo (init := #[]) fun ctx info result => Id.run do
-    let .ofTermInfo info := info | result
-    unless [``elabHole, ``elabSyntheticHole, ``elabSorry].contains info.elaborator do
-      return result
-    let (some head, some tail) := (info.stx.getPos? true, info.stx.getTailPos? true) | result
-    unless head ≤ endPos && startPos ≤ tail do return result
-    result.push (ctx, info)
-  let #[(ctx, info)] := holes | return #[]
+  have holes :=
+    snap.infoTree.foldInfo (init := #[]) fun ctx info result => Id.run do
+      let .ofTermInfo info := info
+        | result
+      unless [``elabHole, ``elabSyntheticHole, ``elabSorry].contains info.elaborator do
+        return result
+      let (some head, some tail) := (info.stx.getPos? true, info.stx.getTailPos? true)
+        | result
+      unless head ≤ endPos && startPos ≤ tail do
+        return result
+      result.push (ctx, info)
+  let #[(ctx, info)] := holes
+    | return #[]
   (holeCodeActionExt.getState snap.env).2.flatMapM (· params snap ctx info)
 
 /--
@@ -52,9 +58,11 @@ This is the syntax for which code actions will be triggered.
 inductive FindTacticResult
   /-- The nearest enclosing tactic is a tactic, with the given syntax stack. -/
   | tactic : Syntax.Stack → FindTacticResult
-  /-- The cursor is between tactics, and the nearest enclosing range is a tactic sequence.
+  /--
+  The cursor is between tactics, and the nearest enclosing range is a tactic sequence.
   Code actions will insert tactics at index `insertIdx` into the syntax
-  (which is a nullNode of `tactic;*` inside a `tacticSeqBracketed` or `tacticSeq1Indented`). -/
+  (which is a nullNode of `tactic;*` inside a `tacticSeqBracketed` or `tacticSeq1Indented`).
+  -/
   | tacticSeq : (preferred : Bool) → (insertIdx : Nat) → Syntax.Stack → FindTacticResult
 
 /--
@@ -79,30 +87,39 @@ This is a pure syntax pass, without regard to elaboration information.
 
 The return value is either a selected tactic, or a selected point in a tactic sequence.
 -/
-partial def findTactic? (preferred : String.Pos.Raw → Bool) (range : Lean.Syntax.Range)
-    (root : Syntax) : Option FindTacticResult := do _ ← visit root; ← go [] root
+partial def findTactic?
+    (preferred : String.Pos.Raw → Bool) (range : Lean.Syntax.Range) (root : Syntax)
+    : Option FindTacticResult := do
+  _ ← visit root; ← go [] root
 where
-  /-- Returns `none` if we should not visit this syntax at all, and `some false` if we only
-  want to visit it in "extended" mode (where we include trailing characters). -/
+  /--
+  Returns `none` if we should not visit this syntax at all, and `some false` if we only
+  want to visit it in "extended" mode (where we include trailing characters).
+  -/
   visit (stx : Syntax) (prev? : Option String.Pos.Raw := none) : Option Bool := do
     let left ← stx.getPos? true
     guard <| prev?.getD left ≤ range.start
-    let .original (endPos := right) (trailing := trailing) .. := stx.getTailInfo | none
+    let .original (endPos := right) (trailing := trailing) .. := stx.getTailInfo
+      | none
     guard <| right.byteIdx + trailing.bsize ≥ range.stop.byteIdx
     return left ≤ range.start && right ≥ range.stop
 
-  /-- Merges the results of two `FindTacticResult`s. This just prefers the second (inner) one,
+  /--
+  Merges the results of two `FindTacticResult`s. This just prefers the second (inner) one,
   unless the inner tactic is a dispreferred tactic sequence and the outer one is preferred.
-  This is used to implement whitespace-sensitive selection of tactic sequences. -/
+  This is used to implement whitespace-sensitive selection of tactic sequences.
+  -/
   merge : (r₁ : Option FindTacticResult) → (r₂ : FindTacticResult) → FindTacticResult
-  | some r₁@(.tacticSeq (preferred := true) ..), .tacticSeq (preferred := false) .. => r₁
-  | _, r₂ => r₂
+    | some r₁@(.tacticSeq (preferred := true) ..), .tacticSeq (preferred := false) .. => r₁
+    | _, r₂ => r₂
 
-  /-- Main recursion for `findTactic?`. This takes a `stack` context and a root syntax `stx`,
+  /--
+  Main recursion for `findTactic?`. This takes a `stack` context and a root syntax `stx`,
   and returns the best `FindTacticResult` it can find. It returns `none` (abort) if two or more
-  results are found, and `some none` (none yet) if no results are found. -/
-  go (stack : Syntax.Stack) (stx : Syntax) (prev? : Option String.Pos.Raw := none) :
-      Option (Option FindTacticResult) := do
+  results are found, and `some none` (none yet) if no results are found.
+  -/
+  go (stack : Syntax.Stack) (stx : Syntax) (prev? : Option String.Pos.Raw := none)
+      : Option (Option FindTacticResult) := do
     if stx.getKind == ``Parser.Tactic.tacticSeq then
       -- TODO: this implementation is a bit too strict about the beginning of tacticSeqs.
       -- We would like to be able to parse
@@ -114,21 +131,22 @@ where
       let bracket := stx[0].getKind == ``Parser.Tactic.tacticSeqBracketed
       let argIdx := if bracket then 1 else 0
       let (stack, stx) := ((stx[0], argIdx) :: (stx, 0) :: stack, stx[0][argIdx])
-      let mainRes := stx[0].getPos?.map fun pos =>
-        let i := Id.run do
-          for i in *...stx.getNumArgs do
-            if let some pos' := stx[2*i].getPos? then
-              if range.stop < pos' then
-                return i
-          (stx.getNumArgs + 1) / 2
-        .tacticSeq (bracket || preferred pos) i ((stx, 0) :: stack)
+      let mainRes :=
+        stx[0].getPos?.map fun pos =>
+          let i := Id.run do
+            for i in *...stx.getNumArgs do
+              if let some pos' := stx[2 * i].getPos? then
+                if range.stop < pos' then
+                  return i
+            (stx.getNumArgs + 1) / 2
+          .tacticSeq (bracket || preferred pos) i ((stx, 0) :: stack)
       let mut childRes := none
       for i in (*...stx.getNumArgs).iter.stepSize 2 do
         if let some inner := visit stx[i] then
           let stack := (stx, i) :: stack
-          if let some child := (← go stack stx[i]) <|>
-            (if inner then some (.tactic ((stx[i], 0) :: stack)) else none)
-          then
+          if let some child :=
+              (← go stack stx[i])
+                <|> (if inner then some (.tactic ((stx[i], 0) :: stack)) else none) then
             if childRes.isSome then failure
             childRes := merge mainRes child
       return childRes <|> mainRes
@@ -148,10 +166,11 @@ Returns the info tree corresponding to a syntax, using `kind` and `range` for id
 (This is not foolproof, but it is a fairly accurate proxy for `Syntax` equality and a lot cheaper
 than deep comparison.)
 -/
-partial def findInfoTree? (kind : SyntaxNodeKind) (tgtRange : Lean.Syntax.Range)
-  (ctx? : Option ContextInfo) (t : InfoTree)
-  (f : ContextInfo → Info → Bool) (canonicalOnly := false) :
-    Option (ContextInfo × InfoTree) :=
+partial def findInfoTree?
+    (kind : SyntaxNodeKind) (tgtRange : Lean.Syntax.Range) (ctx? : Option ContextInfo)
+    (t : InfoTree) (f : ContextInfo → Info → Bool)
+    (canonicalOnly := false)
+    : Option (ContextInfo × InfoTree) :=
   match t with
   | .context ctx t => findInfoTree? kind tgtRange (ctx.mergeIntoOuter? ctx?) t f canonicalOnly
   | node@(.node i ts) => do
@@ -167,22 +186,26 @@ partial def findInfoTree? (kind : SyntaxNodeKind) (tgtRange : Lean.Syntax.Range)
     none
   | _ => none
 
-/--
-A code action which calls all `@[command_code_action]` code actions on each command.
--/
-@[builtin_code_action_provider] def cmdCodeActionProvider : CodeActionProvider := fun params snap => do
+/-- A code action which calls all `@[command_code_action]` code actions on each command. -/
+@[builtin_code_action_provider]
+def cmdCodeActionProvider : CodeActionProvider := fun params snap => do
   let doc ← readDoc
   let startPos := doc.meta.text.lspPosToUtf8Pos params.range.start
   let endPos := doc.meta.text.lspPosToUtf8Pos params.range.end
-  have cmds := snap.infoTree.foldInfoTree (init := #[]) fun ctx node result => Id.run do
-    let .node (.ofCommandInfo info) _ := node | result
-    let (some head, some tail) := (info.stx.getPos? true, info.stx.getTailPos? true) | result
-    unless head ≤ endPos && startPos ≤ tail do return result
-    result.push (ctx, node)
+  have cmds :=
+    snap.infoTree.foldInfoTree (init := #[]) fun ctx node result => Id.run do
+      let .node (.ofCommandInfo info) _ := node
+        | result
+      let (some head, some tail) := (info.stx.getPos? true, info.stx.getTailPos? true)
+        | result
+      unless head ≤ endPos && startPos ≤ tail do
+        return result
+      result.push (ctx, node)
   let actions := (cmdCodeActionExt.getState snap.env).2
   let mut out := #[]
   for (ctx, node) in cmds do
-    let .node (.ofCommandInfo info) _ := node | unreachable!
+    let .node (.ofCommandInfo info) _ := node
+      | unreachable!
     if let some arr := actions.onCmd.find? info.stx.getKind then
       for act in arr do
         try out := out ++ (← act params snap ctx node) catch _ => pure ()

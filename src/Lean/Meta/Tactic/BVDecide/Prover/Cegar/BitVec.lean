@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Henrik Böving
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.BVDecide.Prover.Cegar.Basic
 import Lean.Meta.Sym.InferType
@@ -62,30 +63,29 @@ def runSatSolver (solver : Cadical.Solver) : CegarM Cadical.Status := do
     sleepMs := if sleepMs ≥ maxSleepMs then sleepMs else sleepMs * 2
   return solveTask.get
 
-public def Cegar.checkBitVec :
-    CegarM (Except (Array (Expr × Bool × BVExpr.PackedBitVec)) LratCert) := do
+public def Cegar.checkBitVec
+    : CegarM (Except (Array (Expr × Bool × BVExpr.PackedBitVec)) LratCert) := do
   withTraceNode `Meta.Tactic.bv (fun _ => return m!"Checking BitVec abstraction") do
     let ctx ← CegarM.getTacticContext
     let bvExpr := (← get).satExpr.bvExpr
     let ⟨aig, bbCache, cnfCache⟩ ← takeBVState
     let prevAigSize := aig.decls.size
-    let blastResult : { ret : Return aig // AIG.IsPrefix aig.decls ret.result.1.aig.decls } ←
+    let blastResult : {ret : Return aig // AIG.IsPrefix aig.decls ret.result.1.aig.decls} ←
       withTraceNode `Meta.Tactic.bv (fun _ => return "Bitblasting BVLogicalExpr to AIG") do
         -- lazyPure to prevent compiler lifting
         IO.lazyPure (fun _ =>
           let res := bvExpr.bitblastWithCache aig bbCache
-          ⟨res, BVLogicalExpr.bitblastWithCache_isPrefix_aig⟩
-        )
+          ⟨res, BVLogicalExpr.bitblastWithCache_isPrefix_aig⟩)
     let ret := blastResult.1
     let bbCache := ret.cache
     let entry := ret.result.1
     let aig := entry.aig
     let aigSize := aig.decls.size
-    trace[Meta.Tactic.bv] s!"AIG has {aigSize} nodes, added {aigSize - prevAigSize} nodes this round"
+    trace[Meta.Tactic.bv]
+      s!"AIG has {aigSize} nodes, added {aigSize - prevAigSize} nodes this round"
 
     if ctx.config.graphviz then
       IO.FS.writeFile ("." / "aig.gv") <| AIG.toGraphviz entry
-
 
     let prevCnfSize := cnfCache.cnf.clauses.size
     let cnfCache := cnfCache.cast blastResult.2
@@ -94,15 +94,17 @@ public def Cegar.checkBitVec :
         -- lazyPure to prevent compiler lifting
         IO.lazyPure (fun _ => AIG.toCNF' entry cnfCache)
     let cnfSize := cnfCache.cnf.clauses.size
-    trace[Meta.Tactic.bv] s!"CNF has {cnfSize} clauses, added {cnfSize - prevCnfSize} clauses this round"
+    trace[Meta.Tactic.bv]
+      s!"CNF has {cnfSize} clauses, added {cnfSize - prevCnfSize} clauses this round"
 
     setBVState ⟨entry.aig, bbCache, cnfCache⟩
 
     pushNewCnf prevCnfSize cnfCache.cnf
     let satSolver ← CegarM.getSatSolver
     satSolver.assume entry.ref.gate !entry.ref.invert
-    let status ← withTraceNode `Meta.Tactic.sat (fun _ => return m!"Running incremental SAT solver") do
-      runSatSolver satSolver
+    let status ←
+      withTraceNode `Meta.Tactic.sat (fun _ => return m!"Running incremental SAT solver") do
+        runSatSolver satSolver
 
     match status with
     | .satisfiable =>

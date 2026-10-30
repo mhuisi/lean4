@@ -34,8 +34,8 @@ structure SyntaxDeprecationEntry where
   /-- Optional version or date at which the syntax was deprecated. -/
   since? : Option String := none
 
-builtin_initialize deprecatedSyntaxExt :
-    SimplePersistentEnvExtension SyntaxDeprecationEntry (NameMap SyntaxDeprecationEntry) ←
+builtin_initialize deprecatedSyntaxExt
+    : SimplePersistentEnvExtension SyntaxDeprecationEntry (NameMap SyntaxDeprecationEntry) ←
   registerSimplePersistentEnvExtension {
     addImportedFn := mkStateFromImportedEntries (fun m e => m.insert e.kind e) {}
     addEntryFn := fun m e => m.insert e.kind e
@@ -49,8 +49,8 @@ private def insertReplacement (m : NameMap Name) : SyntaxNodeKind × Option Name
 Maps each deprecated syntax kind to the `Macro` declaration generated from the alternatives of the
 latest `deprecated_syntax` command for that kind, if any.
 -/
-builtin_initialize deprecatedSyntaxReplacementExt :
-    SimplePersistentEnvExtension (SyntaxNodeKind × Option Name) (NameMap Name) ←
+builtin_initialize deprecatedSyntaxReplacementExt
+    : SimplePersistentEnvExtension (SyntaxNodeKind × Option Name) (NameMap Name) ←
   registerSimplePersistentEnvExtension {
     addImportedFn := mkStateFromImportedEntries insertReplacement {}
     addEntryFn := insertReplacement
@@ -75,10 +75,13 @@ private def mkReplacementHint (stx : Syntax) : CoreM MessageData := do
   let some declName := (deprecatedSyntaxReplacementExt.getState env).find? stx.getKind
     | return .nil
   -- Printing the replacement requires its category, so it must be unambiguous
-  let #[cat] := Parser.getSyntaxNodeKindCategories env stx.getKind | return .nil
-  let some range := stx.getRange? (canonicalOnly := true) | return .nil
+  let #[cat] := Parser.getSyntaxNodeKindCategories env stx.getKind
+    | return .nil
+  let some range := stx.getRange? (canonicalOnly := true)
+    | return .nil
   -- Syntax that a metaprogram parsed from a string has positions in that string, not in the file
-  unless stx.getSubstring?.map (·.str) |>.isEqSome (← getFileMap).source do return .nil
+  unless stx.getSubstring?.map (·.str) |>.isEqSome (← getFileMap).source do
+    return .nil
   -- Elaborators may rewrite syntax before elaborating it, e.g. by lifting nested actions out of a
   -- `do` element, and the replacement of such syntax does not reflect the source
   let isRewritten (s : Syntax) := (s.isAtom || s.isIdent) && !(s.getHeadInfo matches .original ..)
@@ -91,8 +94,7 @@ private def mkReplacementHint (stx : Syntax) : CoreM MessageData := do
       let newStx :=
         (← withRef stx <| liftMacroM <| replacement stx.unsetTrailing).eraseQuoteMacroScopes
       let text ← DeprecatedSyntax.formatReplacement cat stx newStx range
-      MessageData.hint "Replace the deprecated syntax:"
-        #[{ suggestion := text }] (ref? := stx))
+      MessageData.hint "Replace the deprecated syntax:" #[{ suggestion := text }] (ref? := stx))
     fun _ => return .nil
 
 private def SyntaxDeprecationEntry.textSuffix (entry : SyntaxDeprecationEntry) : MessageData :=
@@ -128,7 +130,8 @@ def checkDeprecatedSyntax (stx : Syntax) (macroStack : MacroStack) : CoreM Unit 
       let expandedFrom :=
         if callerStx.getKind != macroStx.getKind then
           m!" (expanded from '{callerStx.getKind}')"
-        else m!""
+        else
+          m!""
       Linter.logLint Linter.linter.deprecated.syntax macroStx
         m!"macro '{macroStx.getKind}'{expandedFrom} produces deprecated syntax '{kind}'{extraMsg}"
     | { before := macroStx, .. } :: [] =>
@@ -147,14 +150,15 @@ not part of the quotation, and elaborating the result of the quotation reports i
 these macros.
 -/
 def checkDeprecatedQuotedSyntax (stx : Syntax) : CoreM Unit := do
-  let some entry := (deprecatedSyntaxExt.getState (← getEnv)).find? stx.getKind | return
+  let some entry := (deprecatedSyntaxExt.getState (← getEnv)).find? stx.getKind
+    | return
   if stx.getHeadInfo matches .synthetic .. then return
   unless Linter.getLinterValue Linter.linter.deprecated.syntax (← Linter.getLinterOptions) do
     return
   unless (← Core.shouldCheckDeprecated stx) do
     return
   Linter.logLint Linter.linter.deprecated.syntax stx
-    (m!"quotation uses deprecated syntax '{stx.getKind}'{entry.textSuffix}" ++
-      (← mkReplacementHint stx))
+    (m!"quotation uses deprecated syntax '{stx.getKind}'{entry.textSuffix}"
+      ++ (← mkReplacementHint stx))
 
 end Lean.Elab

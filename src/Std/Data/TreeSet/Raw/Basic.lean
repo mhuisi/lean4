@@ -83,8 +83,7 @@ instance {t : Raw α cmp} : Coe t.WF t.inner.WF where
   coe t := t.out
 
 @[inline, inherit_doc TreeSet.empty]
-def empty : Raw α cmp :=
-  ⟨TreeMap.Raw.empty⟩
+def empty : Raw α cmp := ⟨TreeMap.Raw.empty⟩
 
 instance : EmptyCollection (Raw α cmp) where
   emptyCollection := empty
@@ -100,12 +99,10 @@ structure Equiv (m₁ m₂ : Raw α cmp) where
 @[inherit_doc] scoped infix:50 " ~m " => Equiv
 
 @[simp, grind =]
-theorem empty_eq_emptyc : (empty : Raw α cmp) = ∅ :=
-  rfl
+theorem empty_eq_emptyc : (empty : Raw α cmp) = ∅ := rfl
 
 @[inline, inherit_doc TreeSet.empty]
-def insert (l : Raw α cmp) (a : α) : Raw α cmp :=
-  ⟨l.inner.insertIfNew a ()⟩
+def insert (l : Raw α cmp) (a : α) : Raw α cmp := ⟨l.inner.insertIfNew a ()⟩
 
 instance : Singleton α (Raw α cmp) where
   singleton e := (∅ : Raw α cmp).insert e
@@ -123,148 +120,117 @@ def containsThenInsert (t : Raw α cmp) (a : α) : Bool × Raw α cmp :=
   (p.1, ⟨p.2⟩)
 
 @[inline, inherit_doc TreeSet.empty]
-def contains (l : Raw α cmp) (a : α) : Bool :=
-  l.inner.contains a
+def contains (l : Raw α cmp) (a : α) : Bool := l.inner.contains a
 
 instance : Membership α (Raw α cmp) where
   mem t a := t.contains a
 
-instance {t : Raw α cmp} {a : α} : Decidable (a ∈ t) :=
-  inferInstanceAs <| Decidable (t.contains a)
+instance {t : Raw α cmp} {a : α} : Decidable (a ∈ t) := inferInstanceAs <| Decidable (t.contains a)
 
 @[inline, inherit_doc TreeSet.empty]
-def size (t : Raw α cmp) : Nat :=
-  t.inner.size
+def size (t : Raw α cmp) : Nat := t.inner.size
 
 @[inline, inherit_doc TreeSet.empty]
-def isEmpty (t : Raw α cmp) : Bool :=
-  t.inner.isEmpty
+def isEmpty (t : Raw α cmp) : Bool := t.inner.isEmpty
 
 @[inline, inherit_doc TreeSet.empty]
-def erase (t : Raw α cmp) (a : α) : Raw α cmp :=
-  ⟨t.inner.erase a⟩
+def erase (t : Raw α cmp) (a : α) : Raw α cmp := ⟨t.inner.erase a⟩
 
 @[inline, inherit_doc TreeSet.get?]
-def get? (t : Raw α cmp) (a : α) : Option α :=
-  t.inner.getKey? a
+def get? (t : Raw α cmp) (a : α) : Option α := t.inner.getKey? a
 
 @[inline, inherit_doc TreeSet.get]
-def get (t : Raw α cmp) (a : α) (h : a ∈ t) : α :=
-  t.inner.getKey a h
+def get (t : Raw α cmp) (a : α) (h : a ∈ t) : α := t.inner.getKey a h
 
 @[inline, inherit_doc TreeSet.get!]
-def get! [Inhabited α] (t : Raw α cmp) (a : α) : α :=
-  t.inner.getKey! a
+def get! [Inhabited α] (t : Raw α cmp) (a : α) : α := t.inner.getKey! a
 
 @[inline, inherit_doc TreeSet.getD]
-def getD (t : Raw α cmp) (a : α) (fallback : α) : α :=
-  t.inner.getKeyD a fallback
+def getD (t : Raw α cmp) (a : α) (fallback : α) : α := t.inner.getKeyD a fallback
 
 @[inline, inherit_doc TreeSet.min?]
-def min? (t : Raw α cmp) : Option α :=
-  TreeMap.Raw.minKey? t.inner
+def min? (t : Raw α cmp) : Option α := TreeMap.Raw.minKey? t.inner
 
 /-!
 We do not provide `min` for the raw trees.
 -/
 
 @[inline, inherit_doc TreeSet.min!]
-def min! [Inhabited α] (t : Raw α cmp) : α :=
-  TreeMap.Raw.minKey! t.inner
+def min! [Inhabited α] (t : Raw α cmp) : α := TreeMap.Raw.minKey! t.inner
 
 @[inline, inherit_doc TreeSet.minD]
-def minD (t : Raw α cmp) (fallback : α) : α :=
-  TreeMap.Raw.minKeyD t.inner fallback
+def minD (t : Raw α cmp) (fallback : α) : α := TreeMap.Raw.minKeyD t.inner fallback
 
 @[inline, inherit_doc TreeSet.max?]
-def max? (t : Raw α cmp) : Option α :=
-  TreeMap.Raw.maxKey? t.inner
+def max? (t : Raw α cmp) : Option α := TreeMap.Raw.maxKey? t.inner
 
 /-!
 We do not provide `max` for the raw trees.
 -/
 
 @[inline, inherit_doc TreeSet.max!]
-def max! [Inhabited α] (t : Raw α cmp) : α :=
-  TreeMap.Raw.maxKey! t.inner
+def max! [Inhabited α] (t : Raw α cmp) : α := TreeMap.Raw.maxKey! t.inner
 
 @[inline, inherit_doc TreeSet.maxD]
-def maxD (t : Raw α cmp) (fallback : α) : α :=
-  TreeMap.Raw.maxKeyD t.inner fallback
+def maxD (t : Raw α cmp) (fallback : α) : α := TreeMap.Raw.maxKeyD t.inner fallback
 
 @[inline, inherit_doc TreeSet.atIdx?]
-def atIdx? (t : Raw α cmp) (n : Nat) : Option α :=
-  TreeMap.Raw.keyAtIdx? t.inner n
+def atIdx? (t : Raw α cmp) (n : Nat) : Option α := TreeMap.Raw.keyAtIdx? t.inner n
 
 /-!
 We do not provide `entryAtIdx` for the raw trees.
 -/
 
 @[inline, inherit_doc TreeSet.atIdx!]
-def atIdx! [Inhabited α] (t : Raw α cmp) (n : Nat) : α :=
-  TreeMap.Raw.keyAtIdx! t.inner n
+def atIdx! [Inhabited α] (t : Raw α cmp) (n : Nat) : α := TreeMap.Raw.keyAtIdx! t.inner n
 
 @[inline, inherit_doc TreeSet.atIdxD]
-def atIdxD (t : Raw α cmp) (n : Nat) (fallback : α) : α :=
-  TreeMap.Raw.keyAtIdxD t.inner n fallback
+def atIdxD (t : Raw α cmp) (n : Nat) (fallback : α) : α := TreeMap.Raw.keyAtIdxD t.inner n fallback
 
 @[inline, inherit_doc TreeSet.getGE?]
-def getGE? (t : Raw α cmp) (k : α) : Option α :=
-  TreeMap.Raw.getKeyGE? t.inner k
+def getGE? (t : Raw α cmp) (k : α) : Option α := TreeMap.Raw.getKeyGE? t.inner k
 
 @[inline, inherit_doc TreeSet.getGT?]
-def getGT? (t : Raw α cmp) (k : α) : Option α :=
-  TreeMap.Raw.getKeyGT? t.inner k
+def getGT? (t : Raw α cmp) (k : α) : Option α := TreeMap.Raw.getKeyGT? t.inner k
 
 @[inline, inherit_doc TreeSet.getLE?]
-def getLE? (t : Raw α cmp) (k : α) : Option α :=
-  TreeMap.Raw.getKeyLE? t.inner k
+def getLE? (t : Raw α cmp) (k : α) : Option α := TreeMap.Raw.getKeyLE? t.inner k
 
 @[inline, inherit_doc TreeSet.getLT?]
-def getLT? (t : Raw α cmp) (k : α) : Option α :=
-  TreeMap.Raw.getKeyLT? t.inner k
+def getLT? (t : Raw α cmp) (k : α) : Option α := TreeMap.Raw.getKeyLT? t.inner k
 
 /-!
 We do not provide `getGE`, `getGT`, `getLE`, `getLT` for the raw trees.
 -/
 
 @[inline, inherit_doc TreeSet.getGE!]
-def getGE! [Inhabited α] (t : Raw α cmp) (k : α) : α :=
-  TreeMap.Raw.getKeyGE! t.inner k
+def getGE! [Inhabited α] (t : Raw α cmp) (k : α) : α := TreeMap.Raw.getKeyGE! t.inner k
 
 @[inline, inherit_doc TreeSet.getGT!]
-def getGT! [Inhabited α] (t : Raw α cmp) (k : α) : α :=
-  TreeMap.Raw.getKeyGT! t.inner k
+def getGT! [Inhabited α] (t : Raw α cmp) (k : α) : α := TreeMap.Raw.getKeyGT! t.inner k
 
 @[inline, inherit_doc TreeSet.getLE!]
-def getLE! [Inhabited α] (t : Raw α cmp) (k : α) : α :=
-  TreeMap.Raw.getKeyLE! t.inner k
+def getLE! [Inhabited α] (t : Raw α cmp) (k : α) : α := TreeMap.Raw.getKeyLE! t.inner k
 
 @[inline, inherit_doc TreeSet.getLT!]
-def getLT! [Inhabited α] (t : Raw α cmp) (k : α) : α :=
-  TreeMap.Raw.getKeyLT! t.inner k
+def getLT! [Inhabited α] (t : Raw α cmp) (k : α) : α := TreeMap.Raw.getKeyLT! t.inner k
 
 @[inline, inherit_doc TreeSet.getGED]
-def getGED (t : Raw α cmp) (k : α) (fallback : α) : α :=
-  TreeMap.Raw.getKeyGED t.inner k fallback
+def getGED (t : Raw α cmp) (k : α) (fallback : α) : α := TreeMap.Raw.getKeyGED t.inner k fallback
 
 @[inline, inherit_doc TreeSet.getGTD]
-def getGTD (t : Raw α cmp) (k : α) (fallback : α) : α :=
-  TreeMap.Raw.getKeyGTD t.inner k fallback
+def getGTD (t : Raw α cmp) (k : α) (fallback : α) : α := TreeMap.Raw.getKeyGTD t.inner k fallback
 
 @[inline, inherit_doc TreeSet.getLED]
-def getLED (t : Raw α cmp) (k : α) (fallback : α) : α :=
-  TreeMap.Raw.getKeyLED t.inner k fallback
+def getLED (t : Raw α cmp) (k : α) (fallback : α) : α := TreeMap.Raw.getKeyLED t.inner k fallback
 
 @[inline, inherit_doc TreeSet.getLTD]
-def getLTD (t : Raw α cmp) (k : α) (fallback : α) : α :=
-  TreeMap.Raw.getKeyLTD t.inner k fallback
+def getLTD (t : Raw α cmp) (k : α) (fallback : α) : α := TreeMap.Raw.getKeyLTD t.inner k fallback
 
 variable {δ : Type w} {m : Type w → Type w₂} [Monad m]
 
 @[inline, inherit_doc TreeSet.empty]
-def filter (f : α → Bool) (t : Raw α cmp) : Raw α cmp :=
-  ⟨t.inner.filter fun a _ => f a⟩
+def filter (f : α → Bool) (t : Raw α cmp) : Raw α cmp := ⟨t.inner.filter fun a _ => f a⟩
 
 @[inline, inherit_doc TreeSet.empty]
 def foldlM (f : δ → (a : α) → m δ) (init : δ) (t : Raw α cmp) : m δ :=
@@ -287,8 +253,7 @@ def partition (f : (a : α) → Bool) (t : Raw α cmp) : Raw α cmp × Raw α cm
   let p := t.inner.partition fun a _ => f a; (⟨p.1⟩, ⟨p.2⟩)
 
 @[inline, inherit_doc TreeSet.empty]
-def forM (f : α → m PUnit) (t : Raw α cmp) : m PUnit :=
-  t.inner.forM (fun a _ => f a)
+def forM (f : α → m PUnit) (t : Raw α cmp) : m PUnit := t.inner.forM (fun a _ => f a)
 
 @[inline, inherit_doc TreeSet.empty]
 def forIn (f : α → δ → m (ForInStep δ)) (init : δ) (t : Raw α cmp) : m δ :=
@@ -301,24 +266,20 @@ instance [Monad m] : ForIn m (Raw α cmp) α where
   forIn t init f := t.forIn (fun a acc => f a acc) init
 
 @[inline, inherit_doc TreeSet.empty]
-def any (t : Raw α cmp) (p : α → Bool) : Bool :=
-  t.inner.any (fun a _ => p a)
+def any (t : Raw α cmp) (p : α → Bool) : Bool := t.inner.any (fun a _ => p a)
 
 @[inline, inherit_doc TreeSet.empty]
-def all (t : Raw α cmp) (p : α → Bool) : Bool :=
-  t.inner.all (fun a _ => p a)
+def all (t : Raw α cmp) (p : α → Bool) : Bool := t.inner.all (fun a _ => p a)
 
 @[inline, inherit_doc TreeSet.empty]
-def toList (t : Raw α cmp) : List α :=
-  t.inner.inner.inner.foldr (fun a _ l => a :: l) ∅
+def toList (t : Raw α cmp) : List α := t.inner.inner.inner.foldr (fun a _ l => a :: l) ∅
 
 @[inline, inherit_doc TreeSet.ofList]
 def ofList (l : List α) (cmp : α → α → Ordering := by exact compare) : Raw α cmp :=
   ⟨TreeMap.Raw.unitOfList l cmp⟩
 
 @[inline, inherit_doc TreeSet.empty]
-def toArray (t : Raw α cmp) : Array α :=
-  t.foldl (init := #[]) fun acc k => acc.push k
+def toArray (t : Raw α cmp) : Array α := t.foldl (init := #[]) fun acc k => acc.push k
 
 @[inline, inherit_doc TreeSet.ofArray]
 def ofArray (a : Array α) (cmp : α → α → Ordering := by exact compare) : Raw α cmp :=
@@ -353,8 +314,8 @@ def inter (t₁ t₂ : Raw α cmp) : Raw α cmp :=
 
 instance : Inter (Raw α cmp) := ⟨inter⟩
 
-@[inherit_doc TreeSet.beq] def beq (t₁ t₂ : Raw α cmp) : Bool :=
-  letI : Ord α := ⟨cmp⟩; TreeMap.Raw.beq t₁.inner t₂.inner
+@[inherit_doc TreeSet.beq]
+def beq (t₁ t₂ : Raw α cmp) : Bool := letI : Ord α := ⟨cmp⟩; TreeMap.Raw.beq t₁.inner t₂.inner
 
 instance : BEq (Raw α cmp) := ⟨beq⟩
 
@@ -368,10 +329,8 @@ def diff (t₁ t₂ : Raw α cmp) : Raw α cmp :=
 
 instance : SDiff (Raw α cmp) := ⟨diff⟩
 
-
 @[inline, inherit_doc TreeSet.empty]
-def eraseMany {ρ} [ForIn Id ρ α] (t : Raw α cmp) (l : ρ) : Raw α cmp :=
-  ⟨t.inner.eraseMany l⟩
+def eraseMany {ρ} [ForIn Id ρ α] (t : Raw α cmp) (l : ρ) : Raw α cmp := ⟨t.inner.eraseMany l⟩
 
 instance [Repr α] : Repr (Raw α cmp) where
   reprPrec m prec := Repr.addAppParen ("Std.TreeSet.Raw.ofList " ++ repr m.toList) prec

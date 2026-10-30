@@ -16,11 +16,11 @@ open Lean
 
 structure InlayHintLinkLocation where
   module : Name
-  range  : Lean.Syntax.Range
+  range : Lean.Syntax.Range
 
 structure InlayHintLabelPart where
-  value     : String
-  tooltip?  : Option String := none
+  value : String
+  tooltip? : Option String := none
   location? : Option InlayHintLinkLocation := none
 
 inductive InlayHintLabel
@@ -32,33 +32,29 @@ inductive InlayHintKind where
   | parameter
 
 structure InlayHintTextEdit where
-  range   : Lean.Syntax.Range
+  range : Lean.Syntax.Range
   newText : String
-  deriving BEq
+deriving BEq
 
 structure InlayHintInfo where
-  position     : String.Pos.Raw
-  label        : InlayHintLabel
-  kind?        : Option InlayHintKind := none
-  textEdits    : Array InlayHintTextEdit := #[]
-  tooltip?     : Option String := none
-  paddingLeft  : Bool := false
+  position : String.Pos.Raw
+  label : InlayHintLabel
+  kind? : Option InlayHintKind := none
+  textEdits : Array InlayHintTextEdit := #[]
+  tooltip? : Option String := none
+  paddingLeft : Bool := false
   paddingRight : Bool := false
 
 structure InlayHint extends InlayHintInfo where
-  lctx               : LocalContext
+  lctx : LocalContext
   deferredResolution : InlayHintInfo → MetaM InlayHintInfo := fun i => .pure i
-  deriving TypeName
+deriving TypeName
 
 namespace InlayHint
 
-def toCustomInfo (i : InlayHint) : CustomInfo := {
-  stx := .missing
-  value := .mk i
-}
+def toCustomInfo (i : InlayHint) : CustomInfo := { stx := .missing, value := .mk i }
 
-def ofCustomInfo? (c : CustomInfo) : Option InlayHint :=
-  c.value.get? InlayHint
+def ofCustomInfo? (c : CustomInfo) : Option InlayHint := c.value.get? InlayHint
 
 def resolveDeferred (i : InlayHint) : MetaM InlayHint := do
   let info := i.toInlayHintInfo

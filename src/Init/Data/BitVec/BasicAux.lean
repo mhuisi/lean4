@@ -22,10 +22,11 @@ namespace BitVec
 
 section Nat
 
-instance instOfNat : OfNat (BitVec n) i where ofNat := .ofNat n i
+instance instOfNat : OfNat (BitVec n) i where
+  ofNat := .ofNat n i
 
 /-- Return the bound in terms of toNat. -/
-theorem isLt (x : BitVec w) : x.toNat < 2^w := x.toFin.isLt
+theorem isLt (x : BitVec w) : x.toNat < 2 ^ w := x.toFin.isLt
 
 /--
 Converts a natural number to a bitvector of width `w`, returning the largest representable value
@@ -56,10 +57,9 @@ instance : Add (BitVec n) := ⟨BitVec.add⟩
 /--
 Subtracts one bitvector from another. This can be interpreted as either signed or unsigned subtraction
 modulo `2^n`. Usually accessed via the `-` operator.
-
 -/
 @[expose, implicit_reducible]
-protected def sub (x y : BitVec n) : BitVec n := .ofNat n ((2^n - y.toNat) + x.toNat)
+protected def sub (x y : BitVec n) : BitVec n := .ofNat n ((2 ^ n - y.toNat) + x.toNat)
 instance : Sub (BitVec n) := ⟨BitVec.sub⟩
 
 end arithmetic

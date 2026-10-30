@@ -43,7 +43,9 @@ def _root_.Lean.MVarId.contradictionQuick (mvarId : MVarId) : MetaM Bool := do
 inductive InjectionAnyResult where
   | solved
   | failed
-  /-- `fvarId` refers to the local declaration selected for the application of the `injection` tactic. -/
+  /--
+  `fvarId` refers to the local declaration selected for the application of the `injection` tactic.
+  -/
   | subgoal (fvarId : FVarId) (mvarId : MVarId)
 
 def injectionAnyCandidate? (type : Expr) : MetaM (Option (Expr × Expr)) := do
@@ -71,21 +73,21 @@ def injectionAny (mvarId : MVarId) (forbidden : FVarIdSet := {}) : MetaM Injecti
             unless lhs.isRawNatLit && rhs.isRawNatLit do
               try
                 match (← injection mvarId localDecl.fvarId) with
-                | InjectionResult.solved  => return InjectionAnyResult.solved
-                | InjectionResult.subgoal mvarId .. => return InjectionAnyResult.subgoal localDecl.fvarId mvarId
+                | InjectionResult.solved => return InjectionAnyResult.solved
+                | InjectionResult.subgoal mvarId .. =>
+                  return InjectionAnyResult.subgoal localDecl.fvarId mvarId
               catch ex =>
-                trace[Meta.Match.matchEqs] "injectionAnyFailed at {localDecl.userName}, error\n{ex.toMessageData}"
+                trace[Meta.Match.matchEqs] "injectionAnyFailed at {localDecl.userName}, error\
+                  \n{ex.toMessageData}"
                 pure ()
     return InjectionAnyResult.failed
 
-
-/--
-Solves the overlap assumptions expected by the alternative of a splitter
--/
+/-- Solves the overlap assumptions expected by the alternative of a splitter -/
 public partial def solveOverlap (mvarId : MVarId) : MetaM Unit := do
-    trace[Meta.Match.matchEqs] "solveOverlap {mkMVar mvarId}, {repr (← mvarId.getDecl).kind}\n{indentD mvarId}"
-    let (_, mvarId) ← mvarId.intros
-    loop mvarId {}
+  trace[Meta.Match.matchEqs] "solveOverlap {mkMVar mvarId}, {repr (← mvarId.getDecl).kind}\
+    \n{indentD mvarId}"
+  let (_, mvarId) ← mvarId.intros
+  loop mvarId {}
 where
   /-
   `forbidden` tracks variables that we have already applied `injection`.
@@ -93,7 +95,8 @@ where
   they have forward dependencies.
   -/
   loop (mvarId : MVarId) (forbidden : FVarIdSet) : MetaM Unit := do
-    trace[Meta.Match.matchEqs] "proveSubgoalLoop\n{mvarId}"
+    trace[Meta.Match.matchEqs] "proveSubgoalLoop\
+      \n{mvarId}"
     if (← mvarId.contradictionQuick) then
       return ()
     match (← injectionAny mvarId forbidden) with

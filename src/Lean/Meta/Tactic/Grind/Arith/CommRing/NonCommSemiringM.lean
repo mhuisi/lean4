@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.CommRing.SemiringM
 public section
@@ -31,7 +32,8 @@ protected def NonCommSemiringM.getSemiring : NonCommSemiringM Sym.Arith.Semiring
   else
     throwError "`grind` internal error, invalid semiringId"
 
-protected def NonCommSemiringM.modifySemiring (f : Sym.Arith.Semiring → Sym.Arith.Semiring) : NonCommSemiringM Unit := do
+protected def NonCommSemiringM.modifySemiring (f : Sym.Arith.Semiring → Sym.Arith.Semiring)
+    : NonCommSemiringM Unit := do
   let semiringId := (← read).semiringId
   modifyArithState fun s => { s with ncSemirings := s.ncSemirings.modify semiringId f }
 
@@ -43,7 +45,8 @@ instance : MonadSemiring NonCommSemiringM where
 protected def NonCommSemiringM.getSemiringState : NonCommSemiringM SemiringState := do
   return (← get').getNCSemiring (← read).semiringId
 
-protected def NonCommSemiringM.modifySemiringState (f : SemiringState → SemiringState) : NonCommSemiringM Unit := do
+protected def NonCommSemiringM.modifySemiringState (f : SemiringState → SemiringState)
+    : NonCommSemiringM Unit := do
   let semiringId := (← read).semiringId
   modify' fun s => s.modifyNCSemiring semiringId f
 
@@ -52,7 +55,7 @@ instance : MonadSemiringState NonCommSemiringM where
   modifySemiringState := NonCommSemiringM.modifySemiringState
 
 def getTermNonCommSemiringId? (e : Expr) : GoalM (Option Nat) := do
-    return (← get').exprToNCSemiringId.find? { expr := e }
+  return (← get').exprToNCSemiringId.find? { expr := e }
 
 def setTermNonCommSemiringId (e : Expr) : NonCommSemiringM Unit := do
   let semiringId := (← read).semiringId
@@ -60,7 +63,10 @@ def setTermNonCommSemiringId (e : Expr) : NonCommSemiringM Unit := do
     unless semiringId' == semiringId do
       reportIssue! "expression in two different semirings{indentExpr e}"
     return ()
-  modify' fun s => { s with exprToNCSemiringId := s.exprToNCSemiringId.insert { expr := e } semiringId }
+  modify' fun s => {
+    s with
+    exprToNCSemiringId := s.exprToNCSemiringId.insert { expr := e } semiringId
+  }
 
 instance : MonadSetTermId NonCommSemiringM where
   setTermId e := setTermNonCommSemiringId e

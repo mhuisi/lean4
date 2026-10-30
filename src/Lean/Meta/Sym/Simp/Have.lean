@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Simp.Lambda
 import Lean.Meta.Sym.InstantiateS
@@ -91,7 +92,9 @@ public structure ToBetaAppResult where
   u : Level
   /-- The beta-application form: `(fun x₁ ... xₙ' => b') v₁ ... (fun deps => vₙ)`. -/
   e : Expr
-  /-- Proof that the original expression equals `e` (by reflexivity + hints, since definitionally equal). -/
+  /--
+  Proof that the original expression equals `e` (by reflexivity + hints, since definitionally equal).
+  -/
   h : Expr
   /--
   Dependency information for each `have`.
@@ -104,7 +107,7 @@ public structure ToBetaAppResult where
   Used to compute universe levels for congruence lemmas.
   -/
   fType : Expr
-  deriving Inhabited
+deriving Inhabited
 
 /--
 Collect free variable Ids that appear in `e` and are tracked in `fvarIdToPos`,
@@ -123,13 +126,12 @@ open Lean.Meta.Sym.Internal in
 Build a chain of arrows `α₁ → α₂ → ... → αₙ → β` using the `mkForallS` wrapper
 (not `.forallE`) to preserve sharing.
 -/
-def mkArrows (αs : Array Expr) (β : Expr) : SymM Expr := do
-  go αs.size β (Nat.le_refl _)
+def mkArrows (αs : Array Expr) (β : Expr) : SymM Expr := do go αs.size β (Nat.le_refl _)
 where
   go (i : Nat) (β : Expr) (h : i ≤ αs.size) : SymM Expr := do
     match i, h with
     | 0, _ => return β
-    | i+1, h => go i (← mkForallS `a .default αs[i] β) (by omega)
+    | i + 1, h => go i (← mkForallS `a .default αs[i] β) (by omega)
 
 /--
 Transform a `have`-telescope into a parallel beta-application.
@@ -162,24 +164,28 @@ where
   - `varDeps`: Dependency positions for each `have`
   - `fvarIdToPos`: Map from fvar ID to telescope position
   -/
-  go (e : Expr) (xs xs' args subst types : Array Expr) (varDeps : Array (Array Nat)) (fvarIdToPos : FVarIdMap Nat)
+  go
+      (e : Expr) (xs xs' args subst types : Array Expr) (varDeps : Array (Array Nat))
+      (fvarIdToPos : FVarIdMap Nat)
       : SymM ToBetaAppResult := do
     if let .letE n t v b (nondep := true) := e then
       let t := t.instantiateRev xs
       let v := v.instantiateRev xs
       withLocalDeclD n t fun x => do
-      let fvarIds := collectFVarIdsAt v fvarIdToPos
-      let varPos := fvarIds.map (fvarIdToPos.getD · 0)
-      let ys := fvarIds.map mkFVar
-      let arg ← mkLambdaFVars ys v
-      let t' ← share (← mkForallFVars ys t)
-      withLocalDeclD n t' fun x' => do
-      let args' := fvarIds.map fun fvarId =>
-        let pos := fvarIdToPos.get! fvarId
-        subst[pos]!
-      let v' ← share <| mkAppN x' args'
-      let fvarIdToPos := fvarIdToPos.insert x.fvarId! xs.size
-      go b (xs.push x) (xs'.push x') (args.push arg) (subst.push v') (types.push t') (varDeps.push varPos) fvarIdToPos
+        let fvarIds := collectFVarIdsAt v fvarIdToPos
+        let varPos := fvarIds.map (fvarIdToPos.getD · 0)
+        let ys := fvarIds.map mkFVar
+        let arg ← mkLambdaFVars ys v
+        let t' ← share (← mkForallFVars ys t)
+        withLocalDeclD n t' fun x' => do
+          let args' :=
+            fvarIds.map fun fvarId =>
+              let pos := fvarIdToPos.get! fvarId
+              subst[pos]!
+          let v' ← share <| mkAppN x' args'
+          let fvarIdToPos := fvarIdToPos.insert x.fvarId! xs.size
+          go b (xs.push x) (xs'.push x') (args.push arg) (subst.push v') (types.push t')
+            (varDeps.push varPos) fvarIdToPos
     else
       let e ← instantiateRevS e subst
       let α ← inferType e
@@ -199,7 +205,7 @@ Used to extract the actual type from a function type when we know the number of 
 def consumeForallN (type : Expr) (n : Nat) : Expr :=
   match n with
   | 0 => type
-  | n+1 => consumeForallN type.bindingBody! n
+  | n + 1 => consumeForallN type.bindingBody! n
 
 open Lean.Meta.Sym.Internal in
 /--
@@ -248,21 +254,23 @@ Convert a simplified beta-application back to `have` form.
 -/
 def toHave (e : Expr) (varDeps : Array (Array Nat)) : SymM Expr :=
   e.withApp fun f args => do
-  if _h : args.size ≠ varDeps.size then unreachable! else
-  let rec go (f : Expr) (xs : Array Expr) (i : Nat) : SymM Expr := do
-    if _h : i < args.size then
-      let .lam n t b _ := f | unreachable!
-      let varPos := varDeps[i]
-      let ys := varPos.map fun i => xs[i]!
-      let type := consumeForallN t varPos.size
-      let val ← share <| args[i].beta ys
-      withLetDecl (nondep := true) n type val fun x => do
-      go b (xs.push (← share x)) (i+1)
+    if _h : args.size ≠ varDeps.size then
+      unreachable!
     else
-      let f ← elimAuxApps f xs varDeps
-      let result ← mkLetFVars (generalizeNondepLet := false) (usedLetOnly := false) xs f
-      share result
-  go f #[] 0
+      let rec go (f : Expr) (xs : Array Expr) (i : Nat) : SymM Expr := do
+        if _h : i < args.size then
+          let .lam n t b _ := f
+            | unreachable!
+          let varPos := varDeps[i]
+          let ys := varPos.map fun i => xs[i]!
+          let type := consumeForallN t varPos.size
+          let val ← share <| args[i].beta ys
+          withLetDecl (nondep := true) n type val fun x => do go b (xs.push (← share x)) (i + 1)
+        else
+          let f ← elimAuxApps f xs varDeps
+          let result ← mkLetFVars (generalizeNondepLet := false) (usedLetOnly := false) xs f
+          share result
+      go f #[] 0
 
 /-- Result of extracting universe levels from a non-dependent function type. -/
 structure GetUnivsResult where
@@ -281,13 +289,11 @@ For `α₁ → α₂ → ... → αₙ → β`:
 These are needed because `congr`, `congrArg`, and `congrFun'` are universe-polymorphic,
 and we want to avoid a quadratic overhead.
 -/
-def getUnivs (fType : Expr) : SymM GetUnivsResult := do
-  go fType #[]
+def getUnivs (fType : Expr) : SymM GetUnivsResult := do go fType #[]
 where
   go (type : Expr) (argUnivs : Array Level) : SymM GetUnivsResult := do
     match type with
-    | .forallE _ d b _ =>
-      go b (argUnivs.push (← getLevel d))
+    | .forallE _ d b _ => go b (argUnivs.push (← getLevel d))
     | _ =>
       let mut v ← getLevel type
       let mut i := argUnivs.size
@@ -316,19 +322,19 @@ For each application `f a`:
 - If only `a` changed: use `congrArg : a = a' → f a = f a'`
 - If neither changed: return `.rfl`
 -/
-def simpBetaApp (e : Expr) (fType : Expr) (fnUnivs argUnivs : Array Level)
-    (simpBody : Simproc) : SimpM Result := do
+def simpBetaApp (e : Expr) (fType : Expr) (fnUnivs argUnivs : Array Level) (simpBody : Simproc)
+    : SimpM Result := do
   let numArgs := argUnivs.size
   return (← go e (numArgs - 1)).1
 where
   go (e : Expr) (i : Nat) : SimpM (Result × Expr) := do
     match e with
     | .app f a =>
-      let (rf, fType) ← go f (i-1)
+      let (rf, fType) ← go f (i - 1)
       -- Propagate `cd` from both function and argument sub-results.
-      let r ← match rf, (← simp a) with
-        | .rfl _ cd₁, .rfl _ cd₂ =>
-          pure (mkRflResultCD (cd₁ || cd₂))
+      let r ←
+        match rf, (← simp a) with
+        | .rfl _ cd₁, .rfl _ cd₂ => pure (mkRflResultCD (cd₁ || cd₂))
         | .step f' hf _ cd₁, .rfl _ cd₂ =>
           let e' ← mkAppS f' a
           let h := mkApp4 (← mkCongrPrefix ``congrFun' fType i) f f' hf a
@@ -391,7 +397,7 @@ def simpHaveCore (e : Expr) (simpBody : Simproc) : SimpM SimpHaveResult := do
     let eq := mkApp3 (mkConst ``Eq [r.u]) r.α e₃ e₄
     let h₂ := mkApp2 (mkConst ``Eq.refl [r.u]) r.α e₃
     let h₂ := mkExpectedPropHint h₂ eq
-    let h  := mkApp6 (mkConst ``Eq.trans [r.u]) r.α e₁ e₃ e₄ h₁ h₂
+    let h := mkApp6 (mkConst ``Eq.trans [r.u]) r.α e₁ e₃ e₄ h₁ h₂
     return { result := .step e₄ h (contextDependent := cd), α := r.α, u := r.u }
 
 /--
@@ -424,8 +430,8 @@ public def simpHaveAndZetaUnused (e₁ : Expr) (simpBody : Simproc) : SimpM Resu
     if isSameExpr e₂ e₃ then
       return r.result
     else
-      let h := mkApp6 (mkConst ``Eq.trans [r.u]) r.α e₁ e₂ e₃ h
-        (mkApp2 (mkConst ``Eq.refl [r.u]) r.α e₃)
+      let h :=
+        mkApp6 (mkConst ``Eq.trans [r.u]) r.α e₁ e₂ e₃ h (mkApp2 (mkConst ``Eq.refl [r.u]) r.α e₃)
       return .step e₃ h (contextDependent := cd)
 
 public def simpLet' (simpBody : Simproc) (e : Expr) : SimpM Result := do
@@ -438,7 +444,6 @@ public def simpLet' (simpBody : Simproc) (e : Expr) : SimpM Result := do
   else
     simpHaveAndZetaUnused e simpBody
 
-public def simpLet : Simproc :=
-  simpLet' simpLambda
+public def simpLet : Simproc := simpLet' simpLambda
 
 end Lean.Meta.Sym.Simp

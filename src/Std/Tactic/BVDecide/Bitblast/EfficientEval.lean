@@ -4,12 +4,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Henrik Böving
 -/
 module
+
 prelude
 public import Std.Tactic.BVDecide.Bitblast.BVExpr.Basic
 import Init.System.IO
 import Std.Tactic.BVDecide.Bitblast.BVExpr.Circuit.Impl.Expr
 import Std.Data.HashMap.Basic
-
 
 /-!
 This module contains efficient evaluation for the reification data types of `bv_decide`, used for
@@ -51,15 +51,24 @@ where
         return h ▸ packedBv.bv
       else
         return packedBv.bv.truncate w
-    | .const val => return val
-    | .extract start len expr => return BitVec.extractLsb' start len (← evalEfficientM expr)
-    | .bin lhs op rhs => return op.eval (← evalEfficientM lhs) (← evalEfficientM rhs)
-    | .un op operand => return op.eval (← evalEfficientM operand)
-    | .append lhs rhs h => return h ▸ ((← evalEfficientM lhs) ++ (← evalEfficientM rhs))
-    | .replicate n expr h => return h ▸ (BitVec.replicate n (← evalEfficientM expr))
-    | .shiftLeft lhs rhs => return (← evalEfficientM lhs) <<< (← evalEfficientM rhs)
-    | .shiftRight lhs rhs => return (← evalEfficientM lhs) >>> (← evalEfficientM rhs)
-    | .arithShiftRight lhs rhs => return BitVec.sshiftRight' (← evalEfficientM lhs) (← evalEfficientM rhs)
+    | .const val =>
+      return val
+    | .extract start len expr =>
+      return BitVec.extractLsb' start len (← evalEfficientM expr)
+    | .bin lhs op rhs =>
+      return op.eval (← evalEfficientM lhs) (← evalEfficientM rhs)
+    | .un op operand =>
+      return op.eval (← evalEfficientM operand)
+    | .append lhs rhs h =>
+      return h ▸ ((← evalEfficientM lhs) ++ (← evalEfficientM rhs))
+    | .replicate n expr h =>
+      return h ▸ (BitVec.replicate n (← evalEfficientM expr))
+    | .shiftLeft lhs rhs =>
+      return (← evalEfficientM lhs) <<< (← evalEfficientM rhs)
+    | .shiftRight lhs rhs =>
+      return (← evalEfficientM lhs) >>> (← evalEfficientM rhs)
+    | .arithShiftRight lhs rhs =>
+      return BitVec.sshiftRight' (← evalEfficientM lhs) (← evalEfficientM rhs)
 
 partial def BVPred.evalEfficientM (expr : BVPred) : EvalM σ Bool := do
   match expr with
@@ -74,15 +83,14 @@ partial def BVLogicalExpr.evalEfficientM (expr : BVLogicalExpr) : EvalM σ Bool 
   | .gate g x y => return g.eval (← evalEfficientM x) (← evalEfficientM y)
   | .ite d l r => bif (← evalEfficientM d) then evalEfficientM l else evalEfficientM r
 
-public def BVExpr.evalEfficient (assign : Nat → BVExpr.PackedBitVec) (expr : BVExpr w) :
-    BitVec w :=
+public def BVExpr.evalEfficient (assign : Nat → BVExpr.PackedBitVec) (expr : BVExpr w) : BitVec w :=
   EvalM.run assign (fun σ => BVExpr.evalEfficientM (σ := σ) expr)
 
 public def BVPred.evalEfficient (assign : Nat → BVExpr.PackedBitVec) (expr : BVPred) : Bool :=
   EvalM.run assign (fun σ => BVPred.evalEfficientM (σ := σ) expr)
 
-public def BVLogicalExpr.evalEfficient (assign : Nat → BVExpr.PackedBitVec)
-    (expr : BVLogicalExpr) : Bool :=
+public def BVLogicalExpr.evalEfficient (assign : Nat → BVExpr.PackedBitVec) (expr : BVLogicalExpr)
+    : Bool :=
   EvalM.run assign (fun σ => BVLogicalExpr.evalEfficientM (σ := σ) expr)
 
 end EfficientEval

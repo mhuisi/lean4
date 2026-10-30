@@ -29,10 +29,14 @@ instances are provided for the same type.
 instance (priority := 500) instForInOfForIn' [ForIn' m ρ α d] : ForIn m ρ α where
   forIn x b f := forIn' x b fun a _ => f a
 
-@[simp] theorem forIn'_eq_forIn [d : Membership α ρ] [ForIn' m ρ α d] {β} (x : ρ) (b : β)
-    (f : (a : α) → a ∈ x → β → m (ForInStep β)) (g : (a : α) → β → m (ForInStep β))
-    (h : ∀ a m b, f a m b = g a b) :
-    forIn' x b f = forIn x b g := by
+@[simp]
+theorem forIn'_eq_forIn
+    [d : Membership α ρ] [ForIn' m ρ α d]
+    {β}
+    (x : ρ)
+    (b : β) (f : (a : α) → a ∈ x → β → m (ForInStep β)) (g : (a : α) → β → m (ForInStep β))
+    (h : ∀ a m b, f a m b = g a b)
+    : forIn' x b f = forIn x b g := by
   simp [forIn]
   congr
   apply funext
@@ -44,9 +48,10 @@ instance (priority := 500) instForInOfForIn' [ForIn' m ρ α d] : ForIn m ρ α 
   simp [h]
   rfl
 
-@[wf_preprocess] theorem forIn_eq_forIn' [d : Membership α ρ] [ForIn' m ρ α d] {β}
-    (x : ρ) (b : β) (f : (a : α) → β → m (ForInStep β)) :
-    forIn x b f = forIn' x b (fun x h => binderNameHint x f <| binderNameHint h () <| f x) := by
+@[wf_preprocess]
+theorem forIn_eq_forIn'
+    [d : Membership α ρ] [ForIn' m ρ α d] {β} (x : ρ) (b : β) (f : (a : α) → β → m (ForInStep β))
+    : forIn x b f = forIn' x b (fun x h => binderNameHint x f <| binderNameHint h () <| f x) := by
   rfl
 
 /--
@@ -119,17 +124,13 @@ variable {f : Type u → Type v} [Alternative f] {α : Type u}
 
 export Alternative (failure)
 
-/--
-If the proposition `p` is true, does nothing, else fails (using `failure`).
--/
-@[always_inline, inline] def guard {f : Type → Type v} [Alternative f] (p : Prop) [Decidable p] : f Unit :=
+/-- If the proposition `p` is true, does nothing, else fails (using `failure`). -/
+@[always_inline, inline]
+def guard {f : Type → Type v} [Alternative f] (p : Prop) [Decidable p] : f Unit :=
   if p then pure () else failure
 
-/--
-Returns `some x` if `f` succeeds with value `x`, else returns `none`.
--/
-@[always_inline, inline] def optional (x : f α) : f (Option α) :=
-  some <$> x <|> pure none
+/-- Returns `some x` if `f` succeeds with value `x`, else returns `none`. -/
+@[always_inline, inline] def optional (x : f α) : f (Option α) := some <$> x <|> pure none
 
 class ToBool (α : Type u) where
   toBool : α → Bool
@@ -139,9 +140,10 @@ export ToBool (toBool)
 instance : ToBool Bool where
   toBool b := b
 
-@[macro_inline] def bool {β : Type u} {α : Type v} [ToBool β] (f t : α) (b : β) : α :=
+@[macro_inline]
+def bool {β : Type u} {α : Type v} [ToBool β] (f t : α) (b : β) : α :=
   match toBool b with
-  | true  => t
+  | true => t
   | false => f
 
 /--
@@ -151,10 +153,11 @@ Converts the result of the monadic action `x` to a `Bool`. If it is `true`, retu
 This is a monadic counterpart to the short-circuiting `||` operator, usually accessed via the `<||>`
 operator.
 -/
-@[macro_inline] def orM {m : Type u → Type v} {β : Type u} [Monad m] [ToBool β] (x y : m β) : m β := do
+@[macro_inline]
+def orM {m : Type u → Type v} {β : Type u} [Monad m] [ToBool β] (x y : m β) : m β := do
   let b ← x
   match toBool b with
-  | true  => pure b
+  | true => pure b
   | false => y
 
 infixr:30 " <||> " => orM
@@ -168,21 +171,19 @@ returns the original result of `x`.
 This is a monadic counterpart to the short-circuiting `&&` operator, usually accessed via the `<&&>`
 operator.
 -/
-@[macro_inline] def andM {m : Type u → Type v} {β : Type u} [Monad m] [ToBool β] (x y : m β) : m β := do
+@[macro_inline]
+def andM {m : Type u → Type v} {β : Type u} [Monad m] [ToBool β] (x y : m β) : m β := do
   let b ← x
   match toBool b with
-  | true  => y
+  | true => y
   | false => pure b
 
 infixr:35 " <&&> " => andM
 
 recommended_spelling "andM" for "<&&>" in [andM, «term_<&&>_»]
 
-/--
-Runs a monadic action and returns the negation of its result.
--/
-@[macro_inline] def notM {m : Type → Type v} [Functor m] (x : m Bool) : m Bool :=
-  not <$> x
+/-- Runs a monadic action and returns the negation of its result. -/
+@[macro_inline] def notM {m : Type → Type v} [Functor m] (x : m Bool) : m Bool := not <$> x
 
 /-!
 # How `MonadControl` works
@@ -295,7 +296,6 @@ Using `control` means that `runInBase` can be used multiple times.
 
 -/
 
-
 /--
 A way to lift a computation from one monad to another while providing the lifted computation with a
 means of interpreting computations from the outer monad. This provides a means of lifting
@@ -313,7 +313,7 @@ class MonadControl (m : semiOutParam (Type u → Type v)) (n : Type u → Type w
   A type that can be used to reconstruct both a returned value and any state used by the outer
   monad.
   -/
-  stM      : Type u → Type u
+  stM : Type u → Type u
   /--
   Lifts an action from the inner monad `m` to the outer monad `n`. The inner monad has access to a
   reverse lifting operator that can run an `n` action, returning a value and state together.
@@ -342,7 +342,7 @@ class MonadControlT (m : Type u → Type v) (n : Type u → Type w) where
   A type that can be used to reconstruct both a returned value and any state used by the outer
   monad.
   -/
-  stM      : Type u → Type u
+  stM : Type u → Type u
   /--
   Lifts an action from the inner monad `m` to the outer monad `n`. The inner monad has access to a
   reverse lifting operator that can run an `n` action, returning a value and state together.
@@ -379,8 +379,11 @@ effects in the outer monad; this extra information is determined by `stM`.
 This function takes the inner monad as an explicit parameter. Use `control` to infer the monad.
 -/
 @[always_inline, inline]
-def controlAt (m : Type u → Type v) {n : Type u → Type w} [MonadControlT m n] [Bind n] {α : Type u}
-    (f : ({β : Type u} → n β → m (stM m n β)) → m (stM m n α)) : n α :=
+def controlAt
+    (m : Type u → Type v)
+    {n : Type u → Type w} [MonadControlT m n] [Bind n]
+    {α : Type u} (f : ({β : Type u} → n β → m (stM m n β)) → m (stM m n α))
+    : n α :=
   liftWith f >>= restoreM
 
 /--
@@ -393,8 +396,10 @@ This function takes the inner monad as an implicit parameter. Use `controlAt` to
 explicitly.
 -/
 @[always_inline, inline]
-def control {m : Type u → Type v} {n : Type u → Type w} [MonadControlT m n] [Bind n] {α : Type u}
-    (f : ({β : Type u} → n β → m (stM m n β)) → m (stM m n α)) : n α :=
+def control
+    {m : Type u → Type v} {n : Type u → Type w} [MonadControlT m n] [Bind n]
+    {α : Type u} (f : ({β : Type u} → n β → m (stM m n β)) → m (stM m n α))
+    : n α :=
   controlAt m f
 
 /--
@@ -408,27 +413,21 @@ Use `ForM.forIn` to construct a `ForIn` instance from a `ForM` instance, thus en
 the `for` operator in `do`-notation.
 -/
 class ForM (m : Type u → Type v) (γ : Type w₁) (α : outParam (Type w₂)) where
-  /--
-  Runs the monadic action `f` on each element of the collection `coll`.
-  -/
+  /-- Runs the monadic action `f` on each element of the collection `coll`. -/
   forM (coll : γ) (f : α → m PUnit) : m PUnit
 
 export ForM (forM)
 
 /-- Left-to-right composition of Kleisli arrows. -/
 @[always_inline]
-def Bind.kleisliRight [Bind m] (f₁ : α → m β) (f₂ : β → m γ) (a : α) : m γ :=
-  f₁ a >>= f₂
+def Bind.kleisliRight [Bind m] (f₁ : α → m β) (f₂ : β → m γ) (a : α) : m γ := f₁ a >>= f₂
 
 /-- Right-to-left composition of Kleisli arrows. -/
 @[always_inline]
-def Bind.kleisliLeft [Bind m] (f₂ : β → m γ) (f₁ : α → m β) (a : α) : m γ :=
-  f₁ a >>= f₂
+def Bind.kleisliLeft [Bind m] (f₂ : β → m γ) (f₁ : α → m β) (a : α) : m γ := f₁ a >>= f₂
 
 /-- Same as `Bind.bind` but with arguments swapped. -/
-@[always_inline]
-def Bind.bindLeft [Bind m] (f : α → m β) (ma : m α) : m β :=
-  ma >>= f
+@[always_inline] def Bind.bindLeft [Bind m] (f : α → m β) (ma : m α) : m β := ma >>= f
 
 -- Precedence choice taken to be the same as in haskell:
 -- https://hackage.haskell.org/package/base-4.17.0.0/docs/Control-Monad.html#v:-61--60--60-

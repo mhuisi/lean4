@@ -11,7 +11,8 @@ public import Init.Prelude
 namespace Lake
 
 /-- A monad equipped with a dependently typed key-value store for a particular key. -/
-public class MonadStore1Of {κ : Type u} (k : κ) (α : semiOutParam (Type v)) (m : Type v → Type w) where
+public class MonadStore1Of
+    {κ : Type u} (k : κ) (α : semiOutParam (Type v)) (m : Type v → Type w) where
   fetch? : m (Option α)
   store : α → m PUnit
 
@@ -44,9 +45,8 @@ public instance [MonadLift m n] [MonadDStore κ β m] : MonadDStore κ β n wher
   fetch? k := liftM (m := m) (fetch? k)
   store k a := liftM (m := m) (store k a)
 
-@[inline] public def fetchOrCreate
-  [Monad m] (key : κ) [MonadStore1Of key α m] (create : m α)
-: m α := do
+@[inline]
+public def fetchOrCreate [Monad m] (key : κ) [MonadStore1Of key α m] (create : m α) : m α := do
   if let some val ← fetch? key then
     return val
   else

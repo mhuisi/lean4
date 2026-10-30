@@ -12,7 +12,8 @@ import Lean.Meta.Tactic.Util
 
 namespace Lean.Meta
 
-partial def cleanupCore (mvarId : MVarId) (toPreserve : Array FVarId) (indirectProps : Bool) : MetaM MVarId := do
+partial def cleanupCore (mvarId : MVarId) (toPreserve : Array FVarId) (indirectProps : Bool)
+    : MetaM MVarId := do
   mvarId.withContext do
     mvarId.checkNotAssigned `cleanup
     let used ← collectUsed |>.run' (false, {})
@@ -21,7 +22,9 @@ partial def cleanupCore (mvarId : MVarId) (toPreserve : Array FVarId) (indirectP
       unless used.contains localDecl.fvarId do
         lctx := lctx.erase localDecl.fvarId
     let localInsts := (← getLocalInstances).filter fun inst => used.contains inst.fvar.fvarId!
-    let mvarNew ← mkFreshExprMVarAt lctx localInsts (← instantiateMVars (← mvarId.getType)) .syntheticOpaque (← mvarId.getTag)
+    let mvarNew ←
+      mkFreshExprMVarAt lctx localInsts (← instantiateMVars (← mvarId.getType)) .syntheticOpaque
+        (← mvarId.getTag)
     mvarId.assign mvarNew
     return mvarNew.mvarId!
 where
@@ -41,7 +44,9 @@ where
       modify fun (_, s) => (true, s.insert fvarId)
       addDeps fvarId
 
-  /-- We include `p` in the used-set, if `p` is a proposition that contains a `x` that is in the used-set. -/
+  /--
+  We include `p` in the used-set, if `p` is a proposition that contains a `x` that is in the used-set.
+  -/
   collectPropsStep : StateRefT (Bool × FVarIdSet) MetaM Unit := do
     for localDecl in (← getLCtx) do
       let usedSet := (← get).2
@@ -66,18 +71,21 @@ where
     return (← get).2
 
 /--
-  Auxiliary tactic for cleaning the local context. It removes local declarations (aka hypotheses) that are *not* relevant.
-  We say a variable `x` is "relevant" if
-  - It occurs in the `toPreserve` array, or
-  - It occurs in the target type, or
-  - There is a relevant variable `y` that depends on `x`, or
-  - If `indirectProps` is true, the type of `x` is a proposition and it depends on a relevant variable `y`.
-  - If `indirectProps` is true, `x` is a local declaration and its value mentions a relevant variable `y`.
+Auxiliary tactic for cleaning the local context. It removes local declarations (aka hypotheses) that are *not* relevant.
+We say a variable `x` is "relevant" if
+- It occurs in the `toPreserve` array, or
+- It occurs in the target type, or
+- There is a relevant variable `y` that depends on `x`, or
+- If `indirectProps` is true, the type of `x` is a proposition and it depends on a relevant variable `y`.
+- If `indirectProps` is true, `x` is a local declaration and its value mentions a relevant variable `y`.
 
-  By default, `toPreserve := #[]` and `indirectProps := true`. These settings are used in the mathlib tactic `extract_goal`
-  to give the user more control over which variables to include.
+By default, `toPreserve := #[]` and `indirectProps := true`. These settings are used in the mathlib tactic `extract_goal`
+to give the user more control over which variables to include.
 -/
-@[inline] public def _root_.Lean.MVarId.cleanup (mvarId : MVarId) (toPreserve : Array FVarId := #[]) (indirectProps : Bool := true) : MetaM MVarId := do
+@[inline]
+public def _root_.Lean.MVarId.cleanup
+    (mvarId : MVarId) (toPreserve : Array FVarId := #[]) (indirectProps : Bool := true)
+    : MetaM MVarId := do
   cleanupCore mvarId toPreserve indirectProps
 
 end Lean.Meta

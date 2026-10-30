@@ -68,36 +68,54 @@ namespace Parenthesizer
 set_option compiler.ignoreBorrowAnnotation true in
 -- Close the mutual recursion loop; see corresponding `[extern]` in the parenthesizer.
 @[export lean_mk_antiquot_parenthesizer]
-def mkAntiquot.parenthesizer (name : String) (kind : SyntaxNodeKind) (anonymous := true) (isPseudoKind := true) : Parenthesizer :=
+def mkAntiquot.parenthesizer
+    (name : String) (kind : SyntaxNodeKind) (anonymous := true) (isPseudoKind := true)
+    : Parenthesizer :=
   Parser.mkAntiquot.parenthesizer name kind anonymous isPseudoKind
 
 -- The parenthesizer auto-generated these instances correctly, but tagged them with the wrong kind, since the actual kind
 -- (e.g. `ident`) is not equal to the parser name `Lean.Parser.Term.ident`.
-@[builtin_parenthesizer ident] def ident.parenthesizer : Parenthesizer := Parser.Term.ident.parenthesizer
-@[builtin_parenthesizer num] def numLit.parenthesizer : Parenthesizer := Parser.Term.num.parenthesizer
-@[builtin_parenthesizer scientific] def scientificLit.parenthesizer : Parenthesizer := Parser.Term.scientific.parenthesizer
-@[builtin_parenthesizer char] def charLit.parenthesizer : Parenthesizer := Parser.Term.char.parenthesizer
-@[builtin_parenthesizer str] def strLit.parenthesizer : Parenthesizer := Parser.Term.str.parenthesizer
+@[builtin_parenthesizer ident]
+def ident.parenthesizer : Parenthesizer := Parser.Term.ident.parenthesizer
+@[builtin_parenthesizer num]
+def numLit.parenthesizer : Parenthesizer := Parser.Term.num.parenthesizer
+@[builtin_parenthesizer scientific]
+def scientificLit.parenthesizer : Parenthesizer := Parser.Term.scientific.parenthesizer
+@[builtin_parenthesizer char]
+def charLit.parenthesizer : Parenthesizer := Parser.Term.char.parenthesizer
+@[builtin_parenthesizer str]
+def strLit.parenthesizer : Parenthesizer := Parser.Term.str.parenthesizer
 
 open Lean.Parser
 
 set_option compiler.ignoreBorrowAnnotation true in
 @[export lean_pretty_printer_parenthesizer_interpret_parser_descr]
 unsafe def interpretParserDescr : ParserDescr → CoreM Parenthesizer
-  | ParserDescr.const n                             => getConstAlias parenthesizerAliasesRef n
-  | ParserDescr.unary n d                           => return (← getUnaryAlias parenthesizerAliasesRef n) (← interpretParserDescr d)
-  | ParserDescr.binary n d₁ d₂                      => return (← getBinaryAlias parenthesizerAliasesRef n) (← interpretParserDescr d₁) (← interpretParserDescr d₂)
-  | ParserDescr.node k prec d                       => return leadingNode.parenthesizer k prec (← interpretParserDescr d)
-  | ParserDescr.nodeWithAntiquot n k d              => return withAntiquot.parenthesizer (mkAntiquot.parenthesizer' n k (anonymous := true)) <|
-                                                                node.parenthesizer k (← interpretParserDescr d)
-  | ParserDescr.sepBy p sep psep trail              => return sepBy.parenthesizer (← interpretParserDescr p) sep (← interpretParserDescr psep) trail
-  | ParserDescr.sepBy1 p sep psep trail             => return sepBy1.parenthesizer (← interpretParserDescr p) sep (← interpretParserDescr psep) trail
-  | ParserDescr.trailingNode k prec lhsPrec d       => return trailingNode.parenthesizer k prec lhsPrec (← interpretParserDescr d)
-  | ParserDescr.symbol tk                           => return symbol.parenthesizer tk
-  | ParserDescr.nonReservedSymbol tk includeIdent   => return nonReservedSymbol.parenthesizer tk includeIdent
-  | ParserDescr.unicodeSymbol tk asciiTk preserve   => return unicodeSymbol.parenthesizer tk asciiTk preserve
-  | ParserDescr.parser constName                    => combinatorParenthesizerAttribute.runDeclFor constName
-  | ParserDescr.cat catName prec                    => return categoryParser.parenthesizer catName prec
+  | ParserDescr.const n => getConstAlias parenthesizerAliasesRef n
+  | ParserDescr.unary n d =>
+    return (← getUnaryAlias parenthesizerAliasesRef n) (← interpretParserDescr d)
+  | ParserDescr.binary n d₁ d₂ =>
+    return (← getBinaryAlias parenthesizerAliasesRef n) (← interpretParserDescr d₁)
+      (← interpretParserDescr d₂)
+  | ParserDescr.node k prec d =>
+    return leadingNode.parenthesizer k prec (← interpretParserDescr d)
+  | ParserDescr.nodeWithAntiquot n k d =>
+    return withAntiquot.parenthesizer (mkAntiquot.parenthesizer' n k (anonymous := true)) <|
+      node.parenthesizer k (← interpretParserDescr d)
+  | ParserDescr.sepBy p sep psep trail =>
+    return sepBy.parenthesizer (← interpretParserDescr p) sep (← interpretParserDescr psep) trail
+  | ParserDescr.sepBy1 p sep psep trail =>
+    return sepBy1.parenthesizer (← interpretParserDescr p) sep (← interpretParserDescr psep) trail
+  | ParserDescr.trailingNode k prec lhsPrec d =>
+    return trailingNode.parenthesizer k prec lhsPrec (← interpretParserDescr d)
+  | ParserDescr.symbol tk =>
+    return symbol.parenthesizer tk
+  | ParserDescr.nonReservedSymbol tk includeIdent =>
+    return nonReservedSymbol.parenthesizer tk includeIdent
+  | ParserDescr.unicodeSymbol tk asciiTk preserve =>
+    return unicodeSymbol.parenthesizer tk asciiTk preserve
+  | ParserDescr.parser constName => combinatorParenthesizerAttribute.runDeclFor constName
+  | ParserDescr.cat catName prec => return categoryParser.parenthesizer catName prec
 
 end Parenthesizer
 
@@ -105,34 +123,52 @@ namespace Formatter
 
 set_option compiler.ignoreBorrowAnnotation true in
 @[export lean_mk_antiquot_formatter]
-def mkAntiquot.formatter (name : String) (kind : SyntaxNodeKind) (anonymous := true) (isPseudoKind := true) : Formatter :=
+def mkAntiquot.formatter
+    (name : String) (kind : SyntaxNodeKind) (anonymous := true) (isPseudoKind := true)
+    : Formatter :=
   Parser.mkAntiquot.formatter name kind anonymous isPseudoKind
 
-@[builtin_formatter ident] def ident.formatter : Formatter := Parser.Term.ident.formatter
-@[builtin_formatter num] def numLit.formatter : Formatter := Parser.Term.num.formatter
-@[builtin_formatter scientific] def scientificLit.formatter : Formatter := Parser.Term.scientific.formatter
-@[builtin_formatter char] def charLit.formatter : Formatter := Parser.Term.char.formatter
-@[builtin_formatter str] def strLit.formatter : Formatter := Parser.Term.str.formatter
+@[builtin_formatter ident]
+def ident.formatter : Formatter := Parser.Term.ident.formatter
+@[builtin_formatter num]
+def numLit.formatter : Formatter := Parser.Term.num.formatter
+@[builtin_formatter scientific]
+def scientificLit.formatter : Formatter := Parser.Term.scientific.formatter
+@[builtin_formatter char]
+def charLit.formatter : Formatter := Parser.Term.char.formatter
+@[builtin_formatter str]
+def strLit.formatter : Formatter := Parser.Term.str.formatter
 
 open Lean.Parser
 
 set_option compiler.ignoreBorrowAnnotation true in
 @[export lean_pretty_printer_formatter_interpret_parser_descr]
 unsafe def interpretParserDescr : ParserDescr → CoreM Formatter
-  | ParserDescr.const n                             => getConstAlias formatterAliasesRef n
-  | ParserDescr.unary n d                           => return (← getUnaryAlias formatterAliasesRef n) (← interpretParserDescr d)
-  | ParserDescr.binary n d₁ d₂                      => return (← getBinaryAlias formatterAliasesRef n) (← interpretParserDescr d₁) (← interpretParserDescr d₂)
-  | ParserDescr.node k _ d                          => return node.formatter k (← interpretParserDescr d)
-  | ParserDescr.nodeWithAntiquot n k d              => return withAntiquot.formatter (mkAntiquot.formatter' n k (anonymous := true)) <|
-                                                                node.formatter k (← interpretParserDescr d)
-  | ParserDescr.sepBy p sep psep trail              => return sepBy.formatter (← interpretParserDescr p) sep (← interpretParserDescr psep) trail
-  | ParserDescr.sepBy1 p sep psep trail             => return sepBy1.formatter (← interpretParserDescr p) sep (← interpretParserDescr psep) trail
-  | ParserDescr.trailingNode k prec lhsPrec d       => return trailingNode.formatter k prec lhsPrec (← interpretParserDescr d)
-  | ParserDescr.symbol tk                           => return symbol.formatter tk
-  | ParserDescr.nonReservedSymbol tk _              => return nonReservedSymbol.formatter tk
-  | ParserDescr.unicodeSymbol tk asciiTk preserve   => return unicodeSymbol.formatter tk asciiTk preserve
-  | ParserDescr.parser constName                    => combinatorFormatterAttribute.runDeclFor constName
-  | ParserDescr.cat catName _                       => return categoryParser.formatter catName
+  | ParserDescr.const n => getConstAlias formatterAliasesRef n
+  | ParserDescr.unary n d =>
+    return (← getUnaryAlias formatterAliasesRef n) (← interpretParserDescr d)
+  | ParserDescr.binary n d₁ d₂ =>
+    return (← getBinaryAlias formatterAliasesRef n) (← interpretParserDescr d₁)
+      (← interpretParserDescr d₂)
+  | ParserDescr.node k _ d =>
+    return node.formatter k (← interpretParserDescr d)
+  | ParserDescr.nodeWithAntiquot n k d =>
+    return withAntiquot.formatter (mkAntiquot.formatter' n k (anonymous := true)) <|
+      node.formatter k (← interpretParserDescr d)
+  | ParserDescr.sepBy p sep psep trail =>
+    return sepBy.formatter (← interpretParserDescr p) sep (← interpretParserDescr psep) trail
+  | ParserDescr.sepBy1 p sep psep trail =>
+    return sepBy1.formatter (← interpretParserDescr p) sep (← interpretParserDescr psep) trail
+  | ParserDescr.trailingNode k prec lhsPrec d =>
+    return trailingNode.formatter k prec lhsPrec (← interpretParserDescr d)
+  | ParserDescr.symbol tk =>
+    return symbol.formatter tk
+  | ParserDescr.nonReservedSymbol tk _ =>
+    return nonReservedSymbol.formatter tk
+  | ParserDescr.unicodeSymbol tk asciiTk preserve =>
+    return unicodeSymbol.formatter tk asciiTk preserve
+  | ParserDescr.parser constName => combinatorFormatterAttribute.runDeclFor constName
+  | ParserDescr.cat catName _ => return categoryParser.formatter catName
 
 end Formatter
 end PrettyPrinter

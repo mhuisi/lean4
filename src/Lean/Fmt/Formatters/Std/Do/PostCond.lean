@@ -21,8 +21,7 @@ public def fmtPostCond : Fmt := fun
     let handlers ← fmtTSepArray handlers
     let rbTk ← fmt rbTk
     return Layouts.metaApplication lbTk (Layouts.metaApplication.Term.ofSepArray handlers) rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 open Std.Do in
 @[builtin_fmt Std.Do.«term_⇓_=>_»]
@@ -34,8 +33,7 @@ public def fmtNoThrowPostCond : Fmt := fun
     let p ← fmt p
     let signature := Layouts.prefixOperator noThrowTk (Layouts.fill xs) .withSpacing
     return Layouts.assignmentDeclaration (sticky := true) signature arrowTk p
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 open Std.Do in
 @[builtin_fmt Std.Do.«term_⇓?_=>_»]
@@ -47,5 +45,4 @@ public def fmtMayThrowPostCond : Fmt := fun
     let p ← fmt p
     let signature := Layouts.prefixOperator mayThrowTk (Layouts.fill xs) .withSpacing
     return Layouts.assignmentDeclaration (sticky := true) signature arrowTk p
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

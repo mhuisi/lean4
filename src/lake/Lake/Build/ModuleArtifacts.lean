@@ -26,7 +26,8 @@ public structure ModuleOutputDescrs where
   bc? : Option ArtifactDescr := none
   ltar? : Option ArtifactDescr := none
 
-public def ModuleOutputDescrs.oleanParts (self : ModuleOutputDescrs) : Array ArtifactDescr := Id.run do
+public def ModuleOutputDescrs.oleanParts (self : ModuleOutputDescrs)
+    : Array ArtifactDescr := Id.run do
   let mut descrs := #[self.olean]
   if let some hash := self.oleanServer? then
     descrs := descrs.push hash
@@ -53,7 +54,8 @@ public protected def ModuleOutputDescrs.toJson (self : ModuleOutputDescrs) : Jso
 
 public instance : ToJson ModuleOutputDescrs := ⟨ModuleOutputDescrs.toJson⟩
 
-public protected def ModuleOutputDescrs.fromJson? (val : Json) : Except String ModuleOutputDescrs := do
+public protected def ModuleOutputDescrs.fromJson? (val : Json)
+    : Except String ModuleOutputDescrs := do
   let obj ← JsonObject.fromJson? val
   let oleanHashes : Array ArtifactDescr ← obj.get "o"
   let some olean := oleanHashes[0]?

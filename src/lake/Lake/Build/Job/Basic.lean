@@ -27,21 +27,21 @@ namespace Lake
 
 /-- Information on what this job did. -/
 public inductive JobAction
-/-- No information about this job's action is available. -/
-| unknown
-/-- Tried to reuse a cached build (e.g., can be set by `replayCachedIfUpToDate`). -/
-| reuse
-/-- Tried to replay a completed build action (e.g., can be set by `replayIfUpToDate`). -/
-| replay
-/-- Tried to unpack a build from an archive (e.g., unpacking a module `ltar`). -/
-| unpack
-/--
-Tried to fetch a build from a remote store (e.g., set when downloading an artifact
-on-demand from a cache service in `buildArtifactUnlessUpToDate`).
--/
-| fetch
-/-- Tried to perform a build action (e.g., set by `buildAction`). -/
-| build
+  /-- No information about this job's action is available. -/
+  | unknown
+  /-- Tried to reuse a cached build (e.g., can be set by `replayCachedIfUpToDate`). -/
+  | reuse
+  /-- Tried to replay a completed build action (e.g., can be set by `replayIfUpToDate`). -/
+  | replay
+  /-- Tried to unpack a build from an archive (e.g., unpacking a module `ltar`). -/
+  | unpack
+  /--
+  Tried to fetch a build from a remote store (e.g., set when downloading an artifact
+  on-demand from a cache service in `buildArtifactUnlessUpToDate`).
+  -/
+  | fetch
+  /-- Tried to perform a build action (e.g., set by `buildAction`). -/
+  | build
 deriving Inhabited, Repr, DecidableEq, Ord
 
 namespace JobAction
@@ -51,16 +51,15 @@ public instance : LE JobAction := leOfOrd
 public instance : Min JobAction := minOfLe
 public instance : Max JobAction := maxOfLe
 
-public def merge (a b : JobAction) : JobAction :=
-  max a b -- inlines `max`
+public def merge (a b : JobAction) : JobAction := max a b -- inlines `max`
 
 public def verb (failed : Bool) : (self : JobAction) → String
-| .unknown => if failed then "Running" else "Ran"
-| .reuse => if failed then "Reusing" else "Reused"
-| .replay => if failed then "Replaying" else "Replayed"
-| .unpack => if failed then "Unpacking" else "Unpacked"
-| .fetch => if failed then "Fetching" else "Fetched"
-| .build => if failed then "Building" else "Built"
+  | .unknown => if failed then "Running" else "Ran"
+  | .reuse => if failed then "Reusing" else "Reused"
+  | .replay => if failed then "Replaying" else "Replayed"
+  | .unpack => if failed then "Unpacking" else "Unpacked"
+  | .fetch => if failed then "Fetching" else "Fetched"
+  | .build => if failed then "Building" else "Built"
 
 end JobAction
 
@@ -74,13 +73,15 @@ public structure JobState where
   action : JobAction := .unknown
   /-- Whether this job failed due to a request to rebuild for `--no-build`. -/
   wantsRebuild : Bool := false
-  /-- Whether this job was cut short by the build's cancellation token (see `BuildConfig.failFast`). -/
+  /--
+  Whether this job was cut short by the build's cancellation token (see `BuildConfig.failFast`).
+  -/
   canceled : Bool := false
   /-- Current trace of a build job. -/
   trace : BuildTrace := .nil
   /-- How long the job spent building (in milliseconds). -/
   buildTime : Nat := 0
-  deriving Inhabited
+deriving Inhabited
 
 public def JobState.merge (a b : JobState) : JobState where
   log := a.log ++ b.log
@@ -90,11 +91,10 @@ public def JobState.merge (a b : JobState) : JobState where
   trace := mixTrace a.trace b.trace
   buildTime := a.buildTime + b.buildTime
 
-@[inline] public def JobState.modifyLog (f : Log → Log) (s : JobState) : JobState :=
-  {s with log := f s.log}
+@[inline]
+public def JobState.modifyLog (f : Log → Log) (s : JobState) : JobState := { s with log := f s.log }
 
-@[inline] public def JobState.logEntry (e : LogEntry) (s : JobState) :=
-  s.modifyLog (·.push e)
+@[inline] public def JobState.logEntry (e : LogEntry) (s : JobState) := s.modifyLog (·.push e)
 
 /-! ## JobTask -/
 
@@ -113,7 +113,8 @@ of its own. A result that carries a genuine failure in its log is a failure,
 even if it was also canceled; use `JobResult.isCanceled` only after checking
 for failure (as the monitor does).
 -/
-@[inline] public def JobResult.isCanceled : JobResult α → Bool
+@[inline]
+public def JobResult.isCanceled : JobResult α → Bool
   | .error _ s => s.canceled
   | .ok .. => false
 
@@ -126,7 +127,7 @@ public abbrev JobTask α := BaseIOTask (JobResult α)
 public structure Job (α : Type u) where
   /-- The Lean `Task` object for the job. -/
   task : JobTask α
-   /-- The kind of data this job produces. -/
+  /-- The kind of data this job produces. -/
   [kind : OptDataKind α]
   /--
   A caption for the job in Lake's build monitor.
@@ -136,75 +137,86 @@ public structure Job (α : Type u) where
   /-- Whether this job failing should cause the build to fail. -/
   optional : Bool := false
 
-public instance : Inhabited (Job α) := ⟨{task := default, caption := default, kind := .anonymous}⟩
+public instance : Inhabited (Job α) := ⟨{ task := default, caption := default, kind := .anonymous }⟩
 
 namespace Job
 
 set_option backward.whnf.reducibleClassField false in
-public protected def cast (self : Job α) (h : ¬ self.kind.isAnonymous) : Job (DataType self.kind) :=
+public protected def cast (self : Job α) (h : ¬self.kind.isAnonymous) : Job (DataType self.kind) :=
   let h := by
-    match kind_eq:self.kind with
+    match kind_eq : self.kind with
     | ⟨_, wf⟩ =>
       simp only
       simp only [OptDataKind.isAnonymous_iff_name_isAnonymous, kind_eq] at h
       rw [wf h]
   cast h self
 
-@[inline] public def ofTask [OptDataKind α] (task : JobTask α) (caption := "") : Job α :=
-  {task, caption}
+@[inline]
+public def ofTask [OptDataKind α] (task : JobTask α) (caption := "") : Job α := { task, caption }
 
-@[inline] public protected def error [OptDataKind α] (log : Log := {}) (caption := "") : Job α :=
-  .ofTask (Task.pure (.error 0 {log})) caption
+@[inline]
+public protected def error [OptDataKind α] (log : Log := {}) (caption := "") : Job α :=
+  .ofTask (Task.pure (.error 0 { log })) caption
 
-@[inline] public protected def pure [kind : OptDataKind α] (a : α) (log : Log := {}) (caption := "") : Job α :=
-  .ofTask (Task.pure (.ok a {log})) caption
+@[inline]
+public protected def pure [kind : OptDataKind α] (a : α) (log : Log := {}) (caption := "")
+    : Job α :=
+  .ofTask (Task.pure (.ok a { log })) caption
 
 public instance : Pure Job := ⟨Job.pure⟩
 
 /-- **For internal use.** -/
-@[inline] public def traceRoot (a : α) (caption := "<root>")  : Job α :=
-  .ofTask <| .pure <| .ok a {trace := .nil caption}
+@[inline]
+public def traceRoot (a : α) (caption := "<root>") : Job α :=
+  .ofTask <| .pure <| .ok a { trace := .nil caption }
 
-@[inline] public def nop (log : Log := {}) (caption := "") : Job Unit :=
-  .pure () log caption
+@[inline] public def nop (log : Log := {}) (caption := "") : Job Unit := .pure () log caption
 
-@[inline] public def nil (traceCaption := "<nil>") : Job Unit :=
-  .traceRoot () traceCaption
+@[inline] public def nil (traceCaption := "<nil>") : Job Unit := .traceRoot () traceCaption
 
 /--
 Waits for the job and returns it trace.
 Useful if the job is already known to be completed.
 -/
-@[inline] public def getTrace (job : Job α) : BuildTrace :=
-  job.task.get.state.trace
+@[inline] public def getTrace (job : Job α) : BuildTrace := job.task.get.state.trace
 
 /-- Sets the job's caption. -/
-@[inline] public def setCaption (caption : String) (job : Job α) : Job α :=
-  {job with caption}
+@[inline] public def setCaption (caption : String) (job : Job α) : Job α := { job with caption }
 
 /-- Sets the job's caption if the job's current caption is empty. -/
-@[inline] public def setCaption? (caption : String) (job : Job α) : Job α :=
-  if job.caption.isEmpty then {job with caption} else job
+@[inline]
+public def setCaption? (caption : String) (job : Job α) : Job α :=
+  if job.caption.isEmpty then { job with caption } else job
 
-@[inline] public def mapResult
-  [OptDataKind β] (f : JobResult α → JobResult β) (self : Job α)
-  (prio := Task.Priority.default) (sync := false)
-: Job β := {self with task := self.task.map f prio sync, kind := inferInstance}
+@[inline]
+public def mapResult
+    [OptDataKind β]
+    (f : JobResult α → JobResult β) (self : Job α)
+    (prio := Task.Priority.default) (sync := false)
+    : Job β := {
+  self with
+  task := self.task.map f prio sync
+  kind := inferInstance
+}
 
-@[inline] public def mapOk
-  [OptDataKind β] (f : α → JobState → JobResult β) (self : Job α)
-  (prio := Task.Priority.default) (sync := false)
-: Job β :=
+@[inline]
+public def mapOk
+    [OptDataKind β]
+    (f : α → JobState → JobResult β) (self : Job α)
+    (prio := Task.Priority.default) (sync := false)
+    : Job β :=
   self.mapResult (prio := prio) (sync := sync) fun
     | .ok a s => f a s
     | .error e s => .error e s
 
-@[inline] public protected def map
-  [OptDataKind β] (f : α → β) (self : Job α)
-  (prio := Task.Priority.default) (sync := false)
-: Job β := self.mapResult (·.map f) prio sync
+@[inline]
+public protected def map
+    [OptDataKind β] (f : α → β) (self : Job α) (prio := Task.Priority.default) (sync := false)
+    : Job β :=
+  self.mapResult (·.map f) prio sync
 
-public instance : Functor Job where map := Job.map
+public instance : Functor Job where
+  map := Job.map
 
 end Job
 
@@ -213,13 +225,11 @@ end Job
 /-- A Lake job task with an opaque value in `Type`. -/
 public abbrev OpaqueJobTask := JobTask Opaque
 
-@[inline] unsafe def JobTask.toOpaqueImpl (self : JobTask α) : OpaqueJobTask :=
-  unsafeCast self
+@[inline] unsafe def JobTask.toOpaqueImpl (self : JobTask α) : OpaqueJobTask := unsafeCast self
 
 /-- Forget the value of a job task. Implemented as a no-op cast. -/
 @[implemented_by toOpaqueImpl]
-public def JobTask.toOpaque (self : JobTask α) : OpaqueJobTask :=
-  self.map (·.map Opaque.mk)
+public def JobTask.toOpaque (self : JobTask α) : OpaqueJobTask := self.map (·.map Opaque.mk)
 
 public instance : CoeOut (JobTask α) OpaqueJobTask := ⟨.toOpaque⟩
 
@@ -227,7 +237,10 @@ public instance : CoeOut (JobTask α) OpaqueJobTask := ⟨.toOpaque⟩
 public abbrev OpaqueJob := Job Opaque
 
 /-- Forget the value of a job. Implemented as a no-op cast on the task. -/
-public def Job.toOpaque (job : Job α) : OpaqueJob :=
-  {job with task := job.task.toOpaque, kind := .anonymous}
+public def Job.toOpaque (job : Job α) : OpaqueJob := {
+  job with
+  task := job.task.toOpaque
+  kind := .anonymous
+}
 
 public instance : CoeOut (Job α) OpaqueJob := ⟨.toOpaque⟩

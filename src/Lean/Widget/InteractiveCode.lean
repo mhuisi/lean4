@@ -26,7 +26,7 @@ inductive DiffTag where
   | willDelete
   | wasInserted
   | willInsert
-  deriving ToJson, FromJson
+deriving ToJson, FromJson
 
 /-- Information about a subexpression within delaborated code. -/
 structure SubexprInfo where
@@ -36,38 +36,46 @@ structure SubexprInfo where
   subexprPos : Lean.SubExpr.Pos
   -- TODO(WN): add fields for semantic highlighting
   -- kind : Lsp.SymbolKind
-  /-- In certain situations such as when goal states change between positions in a tactic-mode proof,
+  /--
+  In certain situations such as when goal states change between positions in a tactic-mode proof,
   we can show subexpression-level diffs between two expressions. This field asks the renderer to
-  display the subexpression as in a diff view (e.g. red/green like `git diff`). -/
+  display the subexpression as in a diff view (e.g. red/green like `git diff`).
+  -/
   diffStatus? : Option DiffTag := none
-  deriving RpcEncodable
+deriving RpcEncodable
 
 /-- Pretty-printed syntax (usually but not necessarily an `Expr`) with embedded `Info`s. -/
 abbrev CodeWithInfos := TaggedText SubexprInfo
 
-def CodeWithInfos.mergePosMap [Monad m] (merger : SubexprInfo → α → m SubexprInfo) (pm : Lean.SubExpr.PosMap α) (tt : CodeWithInfos) : m CodeWithInfos :=
-  if pm.isEmpty then return tt else
-  tt.mapM (fun (info : SubexprInfo) =>
-    match pm.get? info.subexprPos with
-    | some a => merger info a
-    | none => pure info
-  )
+def CodeWithInfos.mergePosMap
+    [Monad m]
+    (merger : SubexprInfo → α → m SubexprInfo) (pm : Lean.SubExpr.PosMap α) (tt : CodeWithInfos)
+    : m CodeWithInfos :=
+  if pm.isEmpty then
+    return tt
+  else
+    tt.mapM (fun (info : SubexprInfo) =>
+      match pm.get? info.subexprPos with
+      | some a => merger info a
+      | none => pure info)
 
-def CodeWithInfos.pretty (tt : CodeWithInfos) :=
-  tt.stripTags
+def CodeWithInfos.pretty (tt : CodeWithInfos) := tt.stripTags
 
-def SubexprInfo.withDiffTag (tag : DiffTag) (c : SubexprInfo) : SubexprInfo :=
-  { c with diffStatus? := some tag }
+def SubexprInfo.withDiffTag (tag : DiffTag) (c : SubexprInfo) : SubexprInfo := {
+  c with
+  diffStatus? := some tag
+}
 
 /-- Tags pretty-printed code with infos from the delaborator. -/
-partial def tagCodeInfos (ctx : Elab.ContextInfo) (infos : SubExpr.PosMap Elab.Info) (tt : TaggedText (Nat × Nat))
+partial def tagCodeInfos
+    (ctx : Elab.ContextInfo) (infos : SubExpr.PosMap Elab.Info) (tt : TaggedText (Nat × Nat))
     : BaseIO CodeWithInfos :=
   go tt
 where
   go (tt : TaggedText (Nat × Nat)) : BaseIO (TaggedText SubexprInfo) :=
     tt.rewriteM fun (n, _) subTt => do
       match infos.get? n with
-      | none   => go subTt
+      | none => go subTt
       | some i =>
         let t : SubexprInfo := {
           info := ← WithRpcRef.mk { ctx, info := i, children := .empty }
@@ -87,13 +95,13 @@ def ppExprTagged (e : Expr) (delab : Delab := Delaborator.delab) : MetaM CodeWit
   let ⟨fmt, infos⟩ ← PrettyPrinter.ppExprWithInfos e (delab := delab)
   let tt := TaggedText.prettyTagged fmt
   let ctx := {
-    env           := (← getEnv)
-    mctx          := (← getMCtx)
-    options       := (← getOptions)
+    env := (← getEnv)
+    mctx := (← getMCtx)
+    options := (← getOptions)
     currNamespace := (← getCurrNamespace)
-    openDecls     := (← getOpenDecls)
-    fileMap       := default
-    ngen          := (← getNGen)
+    openDecls := (← getOpenDecls)
+    fileMap := default
+    ngen := (← getNGen)
   }
   tagCodeInfos ctx infos tt
 

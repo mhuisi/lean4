@@ -14,12 +14,11 @@ public section
 namespace Lean.Compiler
 
 inductive SpecializeAttributeKind where
-  | specialize | nospecialize
-  deriving Inhabited, BEq
+  | specialize
+  | nospecialize
+deriving Inhabited, BEq
 
-/--
-Marks a definition to never be specialized during code generation.
--/
+/-- Marks a definition to never be specialized during code generation. -/
 @[builtin_doc]
 builtin_initialize nospecializeAttr : TagAttribute ←
   registerTagAttribute `nospecialize "mark definition to never be specialized"
@@ -33,7 +32,8 @@ rather than being ignored.
 @[builtin_doc]
 builtin_initialize weakSpecializeAttr : TagAttribute ←
   registerTagAttribute `weak_specialize
-    "mark type for weak specialization: instances are only specialized when another argument already triggers specialization"
+    "mark type for weak specialization: instances are only specialized when another argument \
+      already triggers specialization"
 
 private def elabSpecArgs (declName : Name) (args : Array Syntax) : MetaM (Array Nat) := do
   if args.isEmpty then return #[]
@@ -43,23 +43,33 @@ private def elabSpecArgs (declName : Name) (args : Array Syntax) : MetaM (Array 
     let mut result := #[]
     for arg in args do
       if let some idx := arg.isNatLit? then
-        if idx == 0 then throwErrorAt arg "Invalid specialization argument index `0`: Index must be greater than 0"
+        if idx == 0 then
+          throwErrorAt arg "Invalid specialization argument index `0`: Index must be greater than 0"
         let idx := idx - 1
         if h : idx >= argNames.size then
-          throwErrorAt arg "Invalid argument index `{idx}`: `{.ofConstName declName}` has only {argNames.size} arguments"
+          throwErrorAt arg
+            "Invalid argument index `{idx}`: `{.ofConstName declName}` has only {argNames.size} \
+              arguments"
         else
-          if result.contains idx then throwErrorAt arg "Invalid specialization argument index `{idx + 1}`: \
-            The argument at this index (`{argNames[idx]}`) has already been specified as a specialization candidate"
+          if result.contains idx then
+            throwErrorAt arg
+              "Invalid specialization argument index `{idx + 1}`: \
+                The argument at this index (`{argNames[idx]}`) has already been specified as a \
+                specialization candidate"
           result := result.push idx
       else
         let argName := arg.getId
         if let some idx := argNames.idxOf? argName then
-          if result.contains idx then throwErrorAt arg "Invalid specialization argument name `{argName}`: \
-            It has already been specified as a specialization candidate"
+          if result.contains idx then
+            throwErrorAt arg
+              "Invalid specialization argument name `{argName}`: \
+                It has already been specified as a specialization candidate"
           result := result.push idx
         else
-          throwErrorAt arg "Invalid specialization argument name `{argName}`: `{.ofConstName declName}` does not have an argument with this name"
-    return result.qsort (·<·)
+          throwErrorAt arg
+            "Invalid specialization argument name `{argName}`: `{.ofConstName declName}` does not \
+              have an argument with this name"
+    return result.qsort (· < ·)
 
 /--
 Marks a definition to always be specialized during code generation.

@@ -27,8 +27,9 @@ open Nat
 
 /-! ### Results about `List.sum` specialized to `Nat` -/
 
-theorem find?_eq_some_iff_getElem {xs : List α} {p : α → Bool} {b : α} :
-    xs.find? p = some b ↔ p b ∧ ∃ (i : Nat) (h : i < xs.length), xs[i] = b ∧ ∀ j : Nat, (hj : j < i) → !p xs[j] := by
+theorem find?_eq_some_iff_getElem {xs : List α} {p : α → Bool} {b : α}
+    : xs.find? p = some b
+      ↔ p b ∧ ∃ (i : Nat) (h : i < xs.length), xs[i] = b ∧ ∀ j : Nat, (hj : j < i) → ! p xs[j] := by
   rw [find?_eq_some_iff_append]
   simp only [Bool.not_eq_eq_eq_not, Bool.not_true, exists_and_right, and_congr_right_iff]
   intro w
@@ -43,7 +44,7 @@ theorem find?_eq_some_iff_getElem {xs : List α} {p : α → Bool} {b : α} :
       rw [getElem_append_left h']
       exact h _ (getElem_mem h')
   · rintro ⟨i, h, rfl, h'⟩
-    refine ⟨xs.take i, ⟨xs.drop (i+1), ?_⟩, ?_⟩
+    refine ⟨xs.take i, ⟨xs.drop (i + 1), ?_⟩, ?_⟩
     · rw [getElem_cons_drop, take_append_drop]
     · intro a m
       rw [mem_take_iff_getElem] at m
@@ -51,12 +52,14 @@ theorem find?_eq_some_iff_getElem {xs : List α} {p : α → Bool} {b : α} :
       apply h'
       omega
 
-theorem findIdx?_eq_some_le_of_findIdx?_eq_some {xs : List α} {p q : α → Bool} (w : ∀ x ∈ xs, p x → q x) {i : Nat}
-    (h : xs.findIdx? p = some i) : ∃ j, j ≤ i ∧ xs.findIdx? q = some j := by
+theorem findIdx?_eq_some_le_of_findIdx?_eq_some
+    {xs : List α} {p q : α → Bool} (w : ∀ x ∈ xs, p x → q x) {i : Nat} (h : xs.findIdx? p = some i)
+    : ∃ j, j ≤ i ∧ xs.findIdx? q = some j := by
   simp only [findIdx?_eq_findSome?_zipIdx] at h
   rw [findSome?_eq_some_iff] at h
   simp only [Option.ite_none_right_eq_some, Option.some.injEq, ite_eq_right_iff, reduceCtorEq,
-    imp_false, Bool.not_eq_true, Prod.forall, exists_and_right, Prod.exists] at h
+      imp_false, Bool.not_eq_true, Prod.forall, exists_and_right, Prod.exists]
+    at h
   obtain ⟨xs, h₁, b, ⟨ys, h₂⟩, ⟨hb, rfl⟩, h₃⟩ := h
   rw [zipIdx_eq_append_iff] at h₂
   obtain ⟨l₁', l₂', rfl, rfl, h₂⟩ := h₂
@@ -70,5 +73,4 @@ theorem findIdx?_eq_some_le_of_findIdx?_eq_some {xs : List α} {p q : α → Boo
     refine ⟨j, ?_, by simp⟩
     rw [findIdx?_eq_some_iff_findIdx_eq] at h
     omega
-  | none =>
-    refine ⟨l₁'.length, by simp, by simp_all [findIdx?_cons]⟩
+  | none => refine ⟨l₁'.length, by simp, by simp_all [findIdx?_cons]⟩

@@ -22,10 +22,10 @@ def «match» := leading_parser:leadPrec "match " >> sepBy1 matchDiscr ", " >> o
 -/
 
 structure MatchAltView (k : SyntaxNodeKinds) where
-  ref      : Syntax
+  ref : Syntax
   patterns : Array Syntax
-  lhs      : Syntax
-  rhs      : TSyntax k
-  deriving Inhabited
+  lhs : Syntax
+  rhs : TSyntax k
+deriving Inhabited
 
 end Lean.Elab.Term

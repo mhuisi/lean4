@@ -37,13 +37,14 @@ def kabstract (e : Expr) (p : Expr) (occs : Occurrences := .all) : MetaM Expr :=
     let rec visit (e : Expr) (offset : Nat) : StateRefT Nat MetaM Expr := do
       let visitChildren : Unit → StateRefT Nat MetaM Expr := fun _ => do
         match e with
-        | .app f a         => return e.updateApp! (← visit f offset) (← visit a offset)
-        | .mdata _ b       => return e.updateMData! (← visit b offset)
-        | .proj _ _ b      => return e.updateProj! (← visit b offset)
-        | .letE _ t v b _  => return e.updateLetE! (← visit t offset) (← visit v offset) (← visit b (offset+1))
-        | .lam _ d b _     => return e.updateLambdaE! (← visit d offset) (← visit b (offset+1))
-        | .forallE _ d b _ => return e.updateForallE! (← visit d offset) (← visit b (offset+1))
-        | e                => return e
+        | .app f a => return e.updateApp! (← visit f offset) (← visit a offset)
+        | .mdata _ b => return e.updateMData! (← visit b offset)
+        | .proj _ _ b => return e.updateProj! (← visit b offset)
+        | .letE _ t v b _ =>
+          return e.updateLetE! (← visit t offset) (← visit v offset) (← visit b (offset + 1))
+        | .lam _ d b _ => return e.updateLambdaE! (← visit d offset) (← visit b (offset + 1))
+        | .forallE _ d b _ => return e.updateForallE! (← visit d offset) (← visit b (offset + 1))
+        | e => return e
       if e.hasLooseBVars then
         visitChildren ()
       else if e.toHeadIndex != pHeadIdx || e.headNumArgs != pNumArgs then
@@ -54,7 +55,7 @@ def kabstract (e : Expr) (p : Expr) (occs : Occurrences := .all) : MetaM Expr :=
         let mctx ← getMCtx
         if (← isDefEq e p) then
           let i ← get
-          set (i+1)
+          set (i + 1)
           if occs.contains i then
             return mkBVar offset
           else

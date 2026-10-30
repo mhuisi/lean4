@@ -48,10 +48,10 @@ public class WeaklyLawfulMonadAttach (m : Type u → Type v) [Monad m] [MonadAtt
 This type class ensures that {name}`MonadAttach.CanReturn` is the unique strongest possible
 postcondition.
 -/
-public class LawfulMonadAttach (m : Type u → Type v) [Monad m] [MonadAttach m] extends
-    WeaklyLawfulMonadAttach m where
-  canReturn_map_imp {α : Type u} {P : α → Prop} {x : m (Subtype P)} {a : α} :
-      MonadAttach.CanReturn (Subtype.val <$> x) a → P a
+public class LawfulMonadAttach (m : Type u → Type v) [Monad m] [MonadAttach m]
+    extends WeaklyLawfulMonadAttach m where
+  canReturn_map_imp {α : Type u} {P : α → Prop} {x : m (Subtype P)} {a : α}
+    : MonadAttach.CanReturn (Subtype.val <$> x) a → P a
 
 /--
 Like {name}`Bind.bind`, {name}`pbind` sequences two computations {lean}`x : m α` and {lean}`f`,
@@ -59,8 +59,9 @@ allowing the second to depend on the value computed by the first.
 But other than with {name}`Bind.bind`, the second computation can also depend on a proof that
 the return value {given}`a` of {name}`x` satisfies {lean}`MonadAttach.CanReturn x a`.
 -/
-public def MonadAttach.pbind [Monad m] [MonadAttach m]
-    (x : m α) (f : (a : α) → MonadAttach.CanReturn x a → m β) : m β :=
+public def MonadAttach.pbind
+    [Monad m] [MonadAttach m] (x : m α) (f : (a : α) → MonadAttach.CanReturn x a → m β)
+    : m β :=
   MonadAttach.attach x >>= (fun ⟨a, ha⟩ => f a ha)
 
 /--

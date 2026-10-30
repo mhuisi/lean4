@@ -15,44 +15,43 @@ namespace Lean.Meta
 namespace TransparencyMode
 
 def hash : TransparencyMode → UInt64
-  | all       => 7
-  | default   => 11
+  | all => 7
+  | default => 11
   | reducible => 13
   | instances => 17
-  | implicit  => 23
-  | none      => 19
+  | implicit => 23
+  | none => 19
 
 instance : Hashable TransparencyMode := ⟨hash⟩
 
 protected def toString : TransparencyMode → String
-  | all       => "all"
-  | default   => "default"
+  | all => "all"
+  | default => "default"
   | reducible => "reducible"
   | instances => "instances"
-  | implicit  => "implicit"
-  | none      => "none"
+  | implicit => "implicit"
+  | none => "none"
 
 instance : ToString TransparencyMode := ⟨TransparencyMode.toString⟩
 
 def lt : TransparencyMode → TransparencyMode → Bool
-  | _,         none      => false
-  | none,      _         => true
-  | _,         reducible => false
-  | reducible, _         => true
-  | _,         instances => false
-  | instances, _         => true
-  | _,         implicit  => false
-  | implicit,  _         => true
-  | default,   all       => true
-  | _,         _         => false
+  | _, none => false
+  | none, _ => true
+  | _, reducible => false
+  | reducible, _ => true
+  | _, instances => false
+  | instances, _ => true
+  | _, implicit => false
+  | implicit, _ => true
+  | default, all => true
+  | _, _ => false
 
 end TransparencyMode
 
 example (a b c : TransparencyMode) : a.lt b → b.lt c → a.lt c := by
   cases a <;> cases b <;> cases c <;> simp [TransparencyMode.lt]
 
-example (a : TransparencyMode) : ¬ a.lt a := by
-  cases a <;> simp [TransparencyMode.lt]
+example (a : TransparencyMode) : ¬ a.lt a := by cases a <;> simp [TransparencyMode.lt]
 
 example (a b : TransparencyMode) : a.lt b → ¬ b.lt a := by
   cases a <;> cases b <;> simp [TransparencyMode.lt]

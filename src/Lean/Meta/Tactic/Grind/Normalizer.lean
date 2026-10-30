@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.SimpUtil
 public import Lean.Meta.Tactic.Grind.NormSym
@@ -26,12 +27,13 @@ def normalizeImp (e : Expr) (config : Grind.Config) : MetaM Expr := do
   if backward.grind.normalizer.get (← getOptions) then
     let (r, _) ← Meta.simp e (← Grind.getSimpContext config) (← Grind.getSimprocs)
     return r.expr
-  else Sym.SymM.run do
-    let e ← Sym.preprocessExpr e
-    let methods := mkNormSymMethods config (← getNormSymTheorems)
-    let (r, _) ← Sym.Simp.SimpM.run (Sym.Simp.simp e) methods
-    match r with
-    | .rfl .. => return e
-    | .step e' .. => return e'
+  else
+    Sym.SymM.run do
+      let e ← Sym.preprocessExpr e
+      let methods := mkNormSymMethods config (← getNormSymTheorems)
+      let (r, _) ← Sym.Simp.SimpM.run (Sym.Simp.simp e) methods
+      match r with
+      | .rfl .. => return e
+      | .step e' .. => return e'
 
 end Lean.Meta.Grind

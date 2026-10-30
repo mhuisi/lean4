@@ -33,7 +33,8 @@ universe u v w w'
 variable {α : Type u} {β : α → Type v} {γ : α → Type w} {δ : Type w} {m : Type w → Type w'}
 
 namespace Std.DTreeMap.Internal.Impl
-local instance : Coe (Type v) (α → Type v) where coe γ := fun _ => γ
+local instance : Coe (Type v) (α → Type v) where
+  coe γ := fun _ => γ
 
 /-- Two tree maps are equivalent in the sense of Equiv iff all the keys and values are equal. -/
 structure Equiv (t t' : Impl α β) where
@@ -55,24 +56,22 @@ def contains [Ord α] (k : α) (t : Impl α β) : Bool :=
 instance [Ord α] : Membership α (Impl α β) where
   mem t a := t.contains a
 
-theorem mem_iff_contains {_ : Ord α} {t : Impl α β} {k : α} : k ∈ t ↔ t.contains k :=
-  Iff.rfl
+theorem mem_iff_contains {_ : Ord α} {t : Impl α β} {k : α} : k ∈ t ↔ t.contains k := Iff.rfl
 
-theorem contains_iff_mem {_ : Ord α} {t : Impl α β} {k : α} : t.contains k ↔ k ∈ t :=
-  Iff.rfl
+theorem contains_iff_mem {_ : Ord α} {t : Impl α β} {k : α} : t.contains k ↔ k ∈ t := Iff.rfl
 
 instance [Ord α] {m : Impl α β} {a : α} : Decidable (a ∈ m) :=
   inferInstanceAs <| Decidable (m.contains a)
 
-theorem Ordered.mem_inner_iff_mem_right [Ord α] (sz a v) (l r : Impl α β)
-    (k : α) (h : compare k a = .gt) :
-    k ∈ inner sz a v l r ↔ k ∈ r := by
+theorem Ordered.mem_inner_iff_mem_right
+    [Ord α] (sz a v) (l r : Impl α β) (k : α) (h : compare k a = .gt)
+    : k ∈ inner sz a v l r ↔ k ∈ r := by
   simp only [Membership.mem, contains]
   split <;> simp_all
 
-theorem Ordered.mem_inner_iff_mem_left [Ord α] (sz a v) (l r : Impl α β)
-    (k : α) (h : compare k a = .lt) :
-    k ∈ inner sz a v l r ↔ k ∈ l := by
+theorem Ordered.mem_inner_iff_mem_left
+    [Ord α] (sz a v) (l r : Impl α β) (k : α) (h : compare k a = .lt)
+    : k ∈ inner sz a v l r ↔ k ∈ l := by
   simp only [Membership.mem, contains]
   split <;> simp_all
 
@@ -151,7 +150,9 @@ def getEntry! [Ord α] [Inhabited ((a : α) × β a)] (t : Impl α β) (k : α) 
     | .gt => getEntry! r k
     | .eq => ⟨k', v'⟩
 
-/-- Returns the entry (key-value pair) for the key `k`, or `fallback` if such a key does not exist. -/
+/--
+Returns the entry (key-value pair) for the key `k`, or `fallback` if such a key does not exist.
+-/
 def getEntryD [Ord α] (t : Impl α β) (k : α) (fallback : (a : α) × β a) : (a : α) × β a :=
   match t with
   | .leaf => fallback
@@ -278,8 +279,8 @@ def forM {m} [Monad m] (f : (a : α) → β a → m PUnit) (t : Impl α β) : m 
 
 /-- Implementation detail. -/
 @[specialize]
-def forInStep {m} [Monad m] (f : (a : α) → β a → δ → m (ForInStep δ)) (init : δ) :
-    Impl α β → m (ForInStep δ)
+def forInStep {m} [Monad m] (f : (a : α) → β a → δ → m (ForInStep δ)) (init : δ)
+    : Impl α β → m (ForInStep δ)
   | .leaf => pure (.yield init)
   | .inner _ k v l r => do
     match ← forInStep f init l with
@@ -291,7 +292,8 @@ def forInStep {m} [Monad m] (f : (a : α) → β a → δ → m (ForInStep δ)) 
 
 /-- Support for the `for` construct in `do` blocks. -/
 @[inline]
-def forIn {m} [Monad m] (f : (a : α) → β a → δ → m (ForInStep δ)) (init : δ) (t : Impl α β) : m δ := do
+def forIn {m} [Monad m] (f : (a : α) → β a → δ → m (ForInStep δ)) (init : δ) (t : Impl α β)
+    : m δ := do
   match ← forInStep f init t with
   | ForInStep.done d => return d
   | ForInStep.yield d => return d
@@ -301,40 +303,44 @@ instance [Monad m] : ForIn m (Impl α β) ((a : α) × β a) where
 
 /-- Implementation detail. -/
 @[inline]
-def any (t : Impl α β) (p : (a : α) → β a → Bool) : Bool := Id.run $ do
-  for ⟨a, b⟩ in t do
-    if p a b then return true
-  return false
+def any (t : Impl α β) (p : (a : α) → β a → Bool) : Bool :=
+  Id.run $ do
+    for ⟨a, b⟩ in t do
+      if p a b then return true
+    return false
 
 /-- Implementation detail. -/
 @[inline]
-def all (t : Impl α β) (p : (a : α) → β a → Bool) : Bool := Id.run $ do
-  for ⟨a, b⟩ in t do
-    if p a b = false then return false
-  return true
+def all (t : Impl α β) (p : (a : α) → β a → Bool) : Bool :=
+  Id.run $ do
+    for ⟨a, b⟩ in t do
+      if p a b = false then return false
+    return true
 
 /-- Returns a `List` of the keys in order. -/
-@[inline] def keys (t : Impl α β) : List α :=
-  t.foldr (init := []) fun k _ l => k :: l
+@[inline] def keys (t : Impl α β) : List α := t.foldr (init := []) fun k _ l => k :: l
 
 /-- Returns an `Array` of the keys in order. -/
-@[inline] def keysArray (t : Impl α β) : Array α :=
+@[inline]
+def keysArray (t : Impl α β) : Array α :=
   t.foldl (init := .emptyWithCapacity t.size) fun l k _ => l.push k
 
 /-- Returns a `List` of the values in order. -/
-@[inline] def values {β : Type v} (t : Impl α β) : List β :=
-  t.foldr (init := []) fun _ v l => v :: l
+@[inline]
+def values {β : Type v} (t : Impl α β) : List β := t.foldr (init := []) fun _ v l => v :: l
 
 /-- Returns an `Array` of the values in order. -/
-@[inline] def valuesArray {β : Type v} (t : Impl α β) : Array β :=
+@[inline]
+def valuesArray {β : Type v} (t : Impl α β) : Array β :=
   t.foldl (init := .emptyWithCapacity t.size) fun l _ v => l.push v
 
 /-- Returns a `List` of the key/value pairs in order. -/
-@[inline] def toList (t : Impl α β) : List ((a : α) × β a) :=
-  t.foldr (init := []) fun k v l => ⟨k, v⟩ :: l
+@[inline]
+def toList (t : Impl α β) : List ((a : α) × β a) := t.foldr (init := []) fun k v l => ⟨k, v⟩ :: l
 
 /-- Returns an `Array` of the key/value pairs in order. -/
-@[inline] def toArray (t : Impl α β) : Array ((a : α) × β a) :=
+@[inline]
+def toArray (t : Impl α β) : Array ((a : α) × β a) :=
   t.foldl (init := .emptyWithCapacity t.size) fun l k v => l.push ⟨k, v⟩
 
 namespace Const
@@ -342,11 +348,11 @@ namespace Const
 variable {β : Type v}
 
 /-- Returns a `List` of the key/value pairs in order. -/
-@[inline] def toList (t : Impl α β) : List (α × β) :=
-  t.foldr (init := []) fun k v l => (k, v) :: l
+@[inline] def toList (t : Impl α β) : List (α × β) := t.foldr (init := []) fun k v l => (k, v) :: l
 
 /-- Returns a `List` of the key/value pairs in order. -/
-@[inline] def toArray (t : Impl α β) : Array (α × β) :=
+@[inline]
+def toArray (t : Impl α β) : Array (α × β) :=
   t.foldl (init := .emptyWithCapacity t.size) fun l k v => l.push (k, v)
 
 end Const
@@ -451,7 +457,8 @@ def entryAtIdx : (t : Impl α β) → (hl : t.Balanced) → (n : Nat) → (h : n
     match h : compare n l'.size with
     | .lt => l'.entryAtIdx hl.left n (by simpa only [Std.Internal.tree_tac] using h)
     | .eq => ⟨k, v⟩
-    | .gt => r'.entryAtIdx hl.right (n - l'.size - 1) (by simp_all only [Std.Internal.tree_tac]; omega)
+    | .gt =>
+      r'.entryAtIdx hl.right (n - l'.size - 1) (by simp_all only [Std.Internal.tree_tac]; omega)
 
 /-- Implementation detail of the tree map -/
 def entryAtIdx? : Impl α β → Nat → Option ((a : α) × β a)
@@ -518,47 +525,47 @@ def keyAtIdxD : Impl α β → Nat → α → α
 
 /-- Implementation detail of the tree map -/
 @[inline]
-def getEntryGE? [Ord α] (k : α) : Impl α β → Option ((a : α) × β a) :=
-  go none
+def getEntryGE? [Ord α] (k : α) : Impl α β → Option ((a : α) × β a) := go none
 where
   go (best : Option ((a : α) × β a)) : Impl α β → Option ((a : α) × β a)
     | .leaf => best
-    | .inner _ ky y l r => match compare k ky with
+    | .inner _ ky y l r =>
+      match compare k ky with
       | .lt => go (some ⟨ky, y⟩) l
       | .eq => some ⟨ky, y⟩
       | .gt => go best r
 
 /-- Implementation detail of the tree map -/
 @[inline]
-def getEntryGT? [Ord α] (k : α) : Impl α β → Option ((a : α) × β a) :=
-  go none
+def getEntryGT? [Ord α] (k : α) : Impl α β → Option ((a : α) × β a) := go none
 where
   go (best : Option ((a : α) × β a)) : Impl α β → Option ((a : α) × β a)
     | .leaf => best
-    | .inner _ ky y l r => match compare k ky with
+    | .inner _ ky y l r =>
+      match compare k ky with
       | .lt => go (some ⟨ky, y⟩) l
       | _ => go best r
 
 /-- Implementation detail of the tree map -/
 @[inline]
-def getEntryLE? [Ord α] (k : α) : Impl α β → Option ((a : α) × β a) :=
-  go none
+def getEntryLE? [Ord α] (k : α) : Impl α β → Option ((a : α) × β a) := go none
 where
   go (best : Option ((a : α) × β a)) : Impl α β → Option ((a : α) × β a)
     | .leaf => best
-    | .inner _ ky y l r => match compare k ky with
+    | .inner _ ky y l r =>
+      match compare k ky with
       | .lt => go best l
       | .eq => some ⟨ky, y⟩
       | .gt => go (some ⟨ky, y⟩) r
 
 /-- Implementation detail of the tree map -/
 @[inline]
-def getEntryLT? [Ord α] (k : α) : Impl α β → Option ((a : α) × β a) :=
-  go none
+def getEntryLT? [Ord α] (k : α) : Impl α β → Option ((a : α) × β a) := go none
 where
   go (best : Option ((a : α) × β a)) : Impl α β → Option ((a : α) × β a)
     | .leaf => best
-    | .inner _ ky y l r => match compare k ky with
+    | .inner _ ky y l r =>
+      match compare k ky with
       | .gt => go (some ⟨ky, y⟩) r
       | _ => go best l
 
@@ -603,198 +610,198 @@ def getEntryLTD [Ord α] (k : α) (t : Impl α β) (fallback : (a : α) × β a)
   t.getEntryLT? k |>.getD fallback
 
 /-- Implementation detail of the tree map -/
-def getEntryGE [Ord α] [TransOrd α] (k : α) :
-    (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, (compare a k).isGE) → (a : α) × β a
+def getEntryGE [Ord α] [TransOrd α] (k : α)
+    : (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, (compare a k).isGE) → (a : α) × β a
   | .leaf, _, he => False.elim <| by obtain ⟨_, ha, _⟩ := he; cases ha
-  | .inner _ ky y l r, ho, he => match hkky : compare k ky with
+  | .inner _ ky y l r, ho, he =>
+    match hkky : compare k ky with
     | .lt => getEntryGED k l ⟨ky, y⟩
     | .eq => ⟨ky, y⟩
-    | .gt => getEntryGE k r ho.right <| by
-      obtain ⟨a, hm, hc⟩ := he
-      refine ⟨a, ?_, hc⟩
-      apply Ordered.mem_inner_iff_mem_right .. |>.mp hm
-      exact TransCmp.gt_of_isGE_of_gt hc hkky
+    | .gt =>
+      getEntryGE k r ho.right <| by
+        obtain ⟨a, hm, hc⟩ := he
+        refine ⟨a, ?_, hc⟩
+        apply Ordered.mem_inner_iff_mem_right .. |>.mp hm
+        exact TransCmp.gt_of_isGE_of_gt hc hkky
 
 /-- Implementation detail of the tree map -/
-def getEntryGT [Ord α] [TransOrd α] (k : α) :
-    (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, compare a k = .gt) → (a : α) × β a
+def getEntryGT [Ord α] [TransOrd α] (k : α)
+    : (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, compare a k = .gt) → (a : α) × β a
   | .leaf, _, he => False.elim <| by obtain ⟨_, ha, _⟩ := he; cases ha
-  | .inner _ ky y l r, ho, he => if hkky : compare k ky = .lt then
-        getEntryGTD k l ⟨ky, y⟩
-      else
-        getEntryGT k r ho.right <| by
-          obtain ⟨a, hm, hc⟩ := he
-          refine ⟨a, ?_, hc⟩
-          apply Ordered.mem_inner_iff_mem_right .. |>.mp hm
-          apply TransCmp.gt_of_gt_of_isGE hc
-          simpa [← Ordering.isGE_eq_false, Bool.not_eq_false] using hkky
+  | .inner _ ky y l r, ho, he =>
+    if hkky : compare k ky = .lt then
+      getEntryGTD k l ⟨ky, y⟩
+    else
+      getEntryGT k r ho.right <| by
+        obtain ⟨a, hm, hc⟩ := he
+        refine ⟨a, ?_, hc⟩
+        apply Ordered.mem_inner_iff_mem_right .. |>.mp hm
+        apply TransCmp.gt_of_gt_of_isGE hc
+        simpa [← Ordering.isGE_eq_false, Bool.not_eq_false] using hkky
 
 /-- Implementation detail of the tree map -/
-def getEntryLE [Ord α] [TransOrd α] (k : α) :
-    (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, (compare a k).isLE) → (a : α) × β a
+def getEntryLE [Ord α] [TransOrd α] (k : α)
+    : (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, (compare a k).isLE) → (a : α) × β a
   | .leaf, _, he => False.elim <| by obtain ⟨_, ha, _⟩ := he; cases ha
-  | .inner _ ky y l r, ho, he => match hkky : compare k ky with
+  | .inner _ ky y l r, ho, he =>
+    match hkky : compare k ky with
     | .gt => getEntryLED k r ⟨ky, y⟩
     | .eq => ⟨ky, y⟩
-    | .lt => getEntryLE k l ho.left <| by
-      obtain ⟨a, hm, hc⟩ := he
-      refine ⟨a, ?_, hc⟩
-      apply Ordered.mem_inner_iff_mem_left .. |>.mp hm
-      exact TransCmp.lt_of_isLE_of_lt hc hkky
+    | .lt =>
+      getEntryLE k l ho.left <| by
+        obtain ⟨a, hm, hc⟩ := he
+        refine ⟨a, ?_, hc⟩
+        apply Ordered.mem_inner_iff_mem_left .. |>.mp hm
+        exact TransCmp.lt_of_isLE_of_lt hc hkky
 
 /-- Implementation detail of the tree map -/
-def getEntryLT [Ord α] [TransOrd α] (k : α) :
-    (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, compare a k = .lt) → (a : α) × β a
+def getEntryLT [Ord α] [TransOrd α] (k : α)
+    : (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, compare a k = .lt) → (a : α) × β a
   | .leaf, _, he => False.elim <| by obtain ⟨_, ha, _⟩ := he; cases ha
-  | .inner _ ky y l r, ho, he => if hkky : compare k ky = .gt then
-        getEntryLTD k r ⟨ky, y⟩
-      else
-        getEntryLT k l ho.left <| by
-          obtain ⟨a, hm, hc⟩ := he
-          refine ⟨a, ?_, hc⟩
-          apply Ordered.mem_inner_iff_mem_left .. |>.mp hm
-          apply TransCmp.lt_of_lt_of_isLE hc
-          simpa [← Ordering.isLE_eq_false, Bool.not_eq_false] using hkky
+  | .inner _ ky y l r, ho, he =>
+    if hkky : compare k ky = .gt then
+      getEntryLTD k r ⟨ky, y⟩
+    else
+      getEntryLT k l ho.left <| by
+        obtain ⟨a, hm, hc⟩ := he
+        refine ⟨a, ?_, hc⟩
+        apply Ordered.mem_inner_iff_mem_left .. |>.mp hm
+        apply TransCmp.lt_of_lt_of_isLE hc
+        simpa [← Ordering.isLE_eq_false, Bool.not_eq_false] using hkky
 
 /-- Implementation detail of the tree map -/
 @[inline]
-def getKeyGE? [Ord α] (k : α) : Impl α β → Option α :=
-  go none
+def getKeyGE? [Ord α] (k : α) : Impl α β → Option α := go none
 where
   go (best : Option α) : Impl α β → Option α
     | .leaf => best
-    | .inner _ ky _ l r => match compare k ky with
+    | .inner _ ky _ l r =>
+      match compare k ky with
       | .lt => go (some ky) l
       | .eq => some ky
       | .gt => go best r
 
 /-- Implementation detail of the tree map -/
 @[inline]
-def getKeyGT? [Ord α] (k : α) : Impl α β → Option α :=
-  go none
+def getKeyGT? [Ord α] (k : α) : Impl α β → Option α := go none
 where
   go (best : Option α) : Impl α β → Option α
     | .leaf => best
-    | .inner _ ky _ l r => match compare k ky with
+    | .inner _ ky _ l r =>
+      match compare k ky with
       | .lt => go (some ky) l
       | _ => go best r
 
 /-- Implementation detail of the tree map -/
 @[inline]
-def getKeyLE? [Ord α] (k : α) : Impl α β → Option α :=
-  go none
+def getKeyLE? [Ord α] (k : α) : Impl α β → Option α := go none
 where
   go (best : Option α) : Impl α β → Option α
     | .leaf => best
-    | .inner _ ky _ l r => match compare k ky with
+    | .inner _ ky _ l r =>
+      match compare k ky with
       | .lt => go best l
       | .eq => some ky
       | .gt => go (some ky) r
 
 /-- Implementation detail of the tree map -/
 @[inline]
-def getKeyLT? [Ord α] (k : α) : Impl α β → Option α :=
-  go none
+def getKeyLT? [Ord α] (k : α) : Impl α β → Option α := go none
 where
   go (best : Option α) : Impl α β → Option α
     | .leaf => best
-    | .inner _ ky _ l r => match compare k ky with
+    | .inner _ ky _ l r =>
+      match compare k ky with
       | .gt => go (some ky) r
       | _ => go best l
 
 /-- Implementation detail of the tree map -/
-@[inline]
-def getKeyGE! [Ord α] [Inhabited α] (k : α) (t : Impl α β) : α :=
-  t.getKeyGE? k |>.get!
+@[inline] def getKeyGE! [Ord α] [Inhabited α] (k : α) (t : Impl α β) : α := t.getKeyGE? k |>.get!
+
+/-- Implementation detail of the tree map -/
+@[inline] def getKeyGT! [Ord α] [Inhabited α] (k : α) (t : Impl α β) : α := t.getKeyGT? k |>.get!
+
+/-- Implementation detail of the tree map -/
+@[inline] def getKeyLE! [Ord α] [Inhabited α] (k : α) (t : Impl α β) : α := t.getKeyLE? k |>.get!
+
+/-- Implementation detail of the tree map -/
+@[inline] def getKeyLT! [Ord α] [Inhabited α] (k : α) (t : Impl α β) : α := t.getKeyLT? k |>.get!
 
 /-- Implementation detail of the tree map -/
 @[inline]
-def getKeyGT! [Ord α] [Inhabited α] (k : α) (t : Impl α β) : α :=
-  t.getKeyGT? k |>.get!
+def getKeyGED [Ord α] (k : α) (t : Impl α β) (fallback : α) : α := t.getKeyGE? k |>.getD fallback
 
 /-- Implementation detail of the tree map -/
 @[inline]
-def getKeyLE! [Ord α] [Inhabited α] (k : α) (t : Impl α β) : α :=
-  t.getKeyLE? k |>.get!
+def getKeyGTD [Ord α] (k : α) (t : Impl α β) (fallback : α) : α := t.getKeyGT? k |>.getD fallback
 
 /-- Implementation detail of the tree map -/
 @[inline]
-def getKeyLT! [Ord α] [Inhabited α] (k : α) (t : Impl α β) : α :=
-  t.getKeyLT? k |>.get!
+def getKeyLED [Ord α] (k : α) (t : Impl α β) (fallback : α) : α := t.getKeyLE? k |>.getD fallback
 
 /-- Implementation detail of the tree map -/
 @[inline]
-def getKeyGED [Ord α] (k : α) (t : Impl α β) (fallback : α) : α :=
-  t.getKeyGE? k |>.getD fallback
+def getKeyLTD [Ord α] (k : α) (t : Impl α β) (fallback : α) : α := t.getKeyLT? k |>.getD fallback
 
 /-- Implementation detail of the tree map -/
-@[inline]
-def getKeyGTD [Ord α] (k : α) (t : Impl α β) (fallback : α) : α :=
-  t.getKeyGT? k |>.getD fallback
-
-/-- Implementation detail of the tree map -/
-@[inline]
-def getKeyLED [Ord α] (k : α) (t : Impl α β) (fallback : α) : α :=
-  t.getKeyLE? k |>.getD fallback
-
-/-- Implementation detail of the tree map -/
-@[inline]
-def getKeyLTD [Ord α] (k : α) (t : Impl α β) (fallback : α) : α :=
-  t.getKeyLT? k |>.getD fallback
-
-/-- Implementation detail of the tree map -/
-def getKeyGE [Ord α] [TransOrd α] (k : α) :
-    (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, (compare a k).isGE) → α
+def getKeyGE [Ord α] [TransOrd α] (k : α)
+    : (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, (compare a k).isGE) → α
   | .leaf, _, he => False.elim <| by obtain ⟨_, ha, _⟩ := he; cases ha
-  | .inner _ ky y l r, ho, he => match hkky : compare k ky with
+  | .inner _ ky y l r, ho, he =>
+    match hkky : compare k ky with
     | .lt => getKeyGED k l ky
     | .eq => ky
-    | .gt => getKeyGE k r ho.right <| by
-      obtain ⟨a, hm, hc⟩ := he
-      refine ⟨a, ?_, hc⟩
-      apply Ordered.mem_inner_iff_mem_right .. |>.mp hm
-      exact TransCmp.gt_of_isGE_of_gt hc hkky
+    | .gt =>
+      getKeyGE k r ho.right <| by
+        obtain ⟨a, hm, hc⟩ := he
+        refine ⟨a, ?_, hc⟩
+        apply Ordered.mem_inner_iff_mem_right .. |>.mp hm
+        exact TransCmp.gt_of_isGE_of_gt hc hkky
 
 /-- Implementation detail of the tree map -/
-def getKeyGT [Ord α] [TransOrd α] (k : α) :
-    (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, compare a k = .gt) → α
+def getKeyGT [Ord α] [TransOrd α] (k : α)
+    : (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, compare a k = .gt) → α
   | .leaf, _, he => False.elim <| by obtain ⟨_, ha, _⟩ := he; cases ha
-  | .inner _ ky y l r, ho, he => if hkky : compare k ky = .lt then
-        getKeyGTD k l ky
-      else
-        getKeyGT k r ho.right <| by
-          obtain ⟨a, hm, hc⟩ := he
-          refine ⟨a, ?_, hc⟩
-          apply Ordered.mem_inner_iff_mem_right .. |>.mp hm
-          apply TransCmp.gt_of_gt_of_isGE hc
-          simpa [← Ordering.isGE_eq_false, Bool.not_eq_false] using hkky
+  | .inner _ ky y l r, ho, he =>
+    if hkky : compare k ky = .lt then
+      getKeyGTD k l ky
+    else
+      getKeyGT k r ho.right <| by
+        obtain ⟨a, hm, hc⟩ := he
+        refine ⟨a, ?_, hc⟩
+        apply Ordered.mem_inner_iff_mem_right .. |>.mp hm
+        apply TransCmp.gt_of_gt_of_isGE hc
+        simpa [← Ordering.isGE_eq_false, Bool.not_eq_false] using hkky
 
 /-- Implementation detail of the tree map -/
-def getKeyLE [Ord α] [TransOrd α] (k : α) :
-    (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, (compare a k).isLE) → α
+def getKeyLE [Ord α] [TransOrd α] (k : α)
+    : (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, (compare a k).isLE) → α
   | .leaf, _, he => False.elim <| by obtain ⟨_, ha, _⟩ := he; cases ha
-  | .inner _ ky y l r, ho, he => match hkky : compare k ky with
+  | .inner _ ky y l r, ho, he =>
+    match hkky : compare k ky with
     | .gt => getKeyLED k r ky
     | .eq => ky
-    | .lt => getKeyLE k l ho.left <| by
-      obtain ⟨a, hm, hc⟩ := he
-      refine ⟨a, ?_, hc⟩
-      apply Ordered.mem_inner_iff_mem_left .. |>.mp hm
-      exact TransCmp.lt_of_isLE_of_lt hc hkky
+    | .lt =>
+      getKeyLE k l ho.left <| by
+        obtain ⟨a, hm, hc⟩ := he
+        refine ⟨a, ?_, hc⟩
+        apply Ordered.mem_inner_iff_mem_left .. |>.mp hm
+        exact TransCmp.lt_of_isLE_of_lt hc hkky
 
 /-- Implementation detail of the tree map -/
-def getKeyLT [Ord α] [TransOrd α] (k : α) :
-    (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, compare a k = .lt) → α
+def getKeyLT [Ord α] [TransOrd α] (k : α)
+    : (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, compare a k = .lt) → α
   | .leaf, _, he => False.elim <| by obtain ⟨_, ha, _⟩ := he; cases ha
-  | .inner _ ky y l r, ho, he => if hkky : compare k ky = .gt then
-        getKeyLTD k r ky
-      else
-        getKeyLT k l ho.left <| by
-          obtain ⟨a, hm, hc⟩ := he
-          refine ⟨a, ?_, hc⟩
-          apply Ordered.mem_inner_iff_mem_left .. |>.mp hm
-          apply TransCmp.lt_of_lt_of_isLE hc
-          simpa [← Ordering.isLE_eq_false, Bool.not_eq_false] using hkky
+  | .inner _ ky y l r, ho, he =>
+    if hkky : compare k ky = .gt then
+      getKeyLTD k r ky
+    else
+      getKeyLT k l ho.left <| by
+        obtain ⟨a, hm, hc⟩ := he
+        refine ⟨a, ?_, hc⟩
+        apply Ordered.mem_inner_iff_mem_left .. |>.mp hm
+        apply TransCmp.lt_of_lt_of_isLE hc
+        simpa [← Ordering.isLE_eq_false, Bool.not_eq_false] using hkky
 
 namespace Const
 
@@ -885,47 +892,47 @@ def entryAtIdxD : Impl α β → Nat → α × β → α × β
 
 /-- Implementation detail of the tree map -/
 @[inline]
-def getEntryGE? [Ord α] (k : α) : Impl α β → Option (α × β) :=
-  go none
+def getEntryGE? [Ord α] (k : α) : Impl α β → Option (α × β) := go none
 where
   go (best : Option (α × β)) : Impl α β → Option (α × β)
     | .leaf => best
-    | .inner _ ky y l r => match compare k ky with
+    | .inner _ ky y l r =>
+      match compare k ky with
       | .lt => go (some ⟨ky, y⟩) l
       | .eq => some ⟨ky, y⟩
       | .gt => go best r
 
 /-- Implementation detail of the tree map -/
 @[inline]
-def getEntryGT? [Ord α] (k : α) : Impl α β → Option (α × β) :=
-  go none
+def getEntryGT? [Ord α] (k : α) : Impl α β → Option (α × β) := go none
 where
   go (best : Option (α × β)) : Impl α β → Option (α × β)
     | .leaf => best
-    | .inner _ ky y l r => match compare k ky with
+    | .inner _ ky y l r =>
+      match compare k ky with
       | .lt => go (some ⟨ky, y⟩) l
       | _ => go best r
 
 /-- Implementation detail of the tree map -/
 @[inline]
-def getEntryLE? [Ord α] (k : α) : Impl α β → Option (α × β) :=
-  go none
+def getEntryLE? [Ord α] (k : α) : Impl α β → Option (α × β) := go none
 where
   go (best : Option (α × β)) : Impl α β → Option (α × β)
     | .leaf => best
-    | .inner _ ky y l r => match compare k ky with
+    | .inner _ ky y l r =>
+      match compare k ky with
       | .lt => go best l
       | .eq => some ⟨ky, y⟩
       | .gt => go (some ⟨ky, y⟩) r
 
 /-- Implementation detail of the tree map -/
 @[inline]
-def getEntryLT? [Ord α] (k : α) : Impl α β → Option (α × β) :=
-  go none
+def getEntryLT? [Ord α] (k : α) : Impl α β → Option (α × β) := go none
 where
   go (best : Option (α × β)) : Impl α β → Option (α × β)
     | .leaf => best
-    | .inner _ ky y l r => match compare k ky with
+    | .inner _ ky y l r =>
+      match compare k ky with
       | .gt => go (some ⟨ky, y⟩) r
       | _ => go best l
 
@@ -970,58 +977,64 @@ def getEntryLTD [Ord α] (k : α) (t : Impl α β) (fallback : α × β) : α ×
   getEntryLT? k t |>.getD fallback
 
 /-- Implementation detail of the tree map -/
-def getEntryGE [Ord α] [TransOrd α] (k : α) :
-    (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, (compare a k).isGE) → α × β
+def getEntryGE [Ord α] [TransOrd α] (k : α)
+    : (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, (compare a k).isGE) → α × β
   | .leaf, _, he => False.elim <| by obtain ⟨_, ha, _⟩ := he; cases ha
-  | .inner _ ky y l r, ho, he => match hkky : compare k ky with
+  | .inner _ ky y l r, ho, he =>
+    match hkky : compare k ky with
     | .lt => getEntryGED k l ⟨ky, y⟩
     | .eq => ⟨ky, y⟩
-    | .gt => getEntryGE k r ho.right <| by
-      obtain ⟨a, hm, hc⟩ := he
-      refine ⟨a, ?_, hc⟩
-      apply Ordered.mem_inner_iff_mem_right .. |>.mp hm
-      exact TransCmp.gt_of_isGE_of_gt hc hkky
+    | .gt =>
+      getEntryGE k r ho.right <| by
+        obtain ⟨a, hm, hc⟩ := he
+        refine ⟨a, ?_, hc⟩
+        apply Ordered.mem_inner_iff_mem_right .. |>.mp hm
+        exact TransCmp.gt_of_isGE_of_gt hc hkky
 
 /-- Implementation detail of the tree map -/
-def getEntryGT [Ord α] [TransOrd α] (k : α) :
-    (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, compare a k = .gt) → α × β
+def getEntryGT [Ord α] [TransOrd α] (k : α)
+    : (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, compare a k = .gt) → α × β
   | .leaf, _, he => False.elim <| by obtain ⟨_, ha, _⟩ := he; cases ha
-  | .inner _ ky y l r, ho, he => if hkky : compare k ky = .lt then
-        getEntryGTD k l ⟨ky, y⟩
-      else
-        getEntryGT k r ho.right <| by
-          obtain ⟨a, hm, hc⟩ := he
-          refine ⟨a, ?_, hc⟩
-          apply Ordered.mem_inner_iff_mem_right .. |>.mp hm
-          apply TransCmp.gt_of_gt_of_isGE hc
-          simpa [← Ordering.isGE_eq_false, Bool.not_eq_false] using hkky
+  | .inner _ ky y l r, ho, he =>
+    if hkky : compare k ky = .lt then
+      getEntryGTD k l ⟨ky, y⟩
+    else
+      getEntryGT k r ho.right <| by
+        obtain ⟨a, hm, hc⟩ := he
+        refine ⟨a, ?_, hc⟩
+        apply Ordered.mem_inner_iff_mem_right .. |>.mp hm
+        apply TransCmp.gt_of_gt_of_isGE hc
+        simpa [← Ordering.isGE_eq_false, Bool.not_eq_false] using hkky
 
 /-- Implementation detail of the tree map -/
-def getEntryLE [Ord α] [TransOrd α] (k : α) :
-    (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, (compare a k).isLE) → α × β
+def getEntryLE [Ord α] [TransOrd α] (k : α)
+    : (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, (compare a k).isLE) → α × β
   | .leaf, _, he => False.elim <| by obtain ⟨_, ha, _⟩ := he; cases ha
-  | .inner _ ky y l r, ho, he => match hkky : compare k ky with
+  | .inner _ ky y l r, ho, he =>
+    match hkky : compare k ky with
     | .gt => getEntryLED k r ⟨ky, y⟩
     | .eq => ⟨ky, y⟩
-    | .lt => getEntryLE k l ho.left <| by
-      obtain ⟨a, hm, hc⟩ := he
-      refine ⟨a, ?_, hc⟩
-      apply Ordered.mem_inner_iff_mem_left .. |>.mp hm
-      exact TransCmp.lt_of_isLE_of_lt hc hkky
+    | .lt =>
+      getEntryLE k l ho.left <| by
+        obtain ⟨a, hm, hc⟩ := he
+        refine ⟨a, ?_, hc⟩
+        apply Ordered.mem_inner_iff_mem_left .. |>.mp hm
+        exact TransCmp.lt_of_isLE_of_lt hc hkky
 
 /-- Implementation detail of the tree map -/
-def getEntryLT [Ord α] [TransOrd α] (k : α) :
-    (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, compare a k = .lt) → α × β
+def getEntryLT [Ord α] [TransOrd α] (k : α)
+    : (t : Impl α β) → (ho : t.Ordered) → (he : ∃ a ∈ t, compare a k = .lt) → α × β
   | .leaf, _, he => False.elim <| by obtain ⟨_, ha, _⟩ := he; cases ha
-  | .inner _ ky y l r, ho, he => if hkky : compare k ky = .gt then
-        getEntryLTD k r ⟨ky, y⟩
-      else
-        getEntryLT k l ho.left <| by
-          obtain ⟨a, hm, hc⟩ := he
-          refine ⟨a, ?_, hc⟩
-          apply Ordered.mem_inner_iff_mem_left .. |>.mp hm
-          apply TransCmp.lt_of_lt_of_isLE hc
-          simpa [← Ordering.isLE_eq_false, Bool.not_eq_false] using hkky
+  | .inner _ ky y l r, ho, he =>
+    if hkky : compare k ky = .gt then
+      getEntryLTD k r ⟨ky, y⟩
+    else
+      getEntryLT k l ho.left <| by
+        obtain ⟨a, hm, hc⟩ := he
+        refine ⟨a, ?_, hc⟩
+        apply Ordered.mem_inner_iff_mem_left .. |>.mp hm
+        apply TransCmp.lt_of_lt_of_isLE hc
+        simpa [← Ordering.isLE_eq_false, Bool.not_eq_false] using hkky
 
 end Const
 

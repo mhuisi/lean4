@@ -22,8 +22,11 @@ def fvarsSubset (a b : Expr) : Bool :=
   else
     let s := collectFVars {} b
     Option.isNone <| a.findExt? fun e =>
-      if !e.hasFVar then .done
-      else if e.isFVar && !s.fvarSet.contains e.fvarId! then .found
-      else .visit
+      if !e.hasFVar then
+        .done
+      else if e.isFVar && ! s.fvarSet.contains e.fvarId! then
+        .found
+      else
+        .visit
 
 end Lean.Expr

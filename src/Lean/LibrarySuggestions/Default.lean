@@ -23,6 +23,7 @@ namespace Lean.LibrarySuggestions
 -- a combination of "Sine Qua Non" and the theorems from the current file.
 -- For now we just intersperse the results, but in future we should re-rank them.
 -- Note: We filter out grind-annotated modules from sineQuaNonSelector when caller is "grind".
-set_library_suggestions open Lean.LibrarySuggestions in sineQuaNonSelector.filterGrindAnnotated.intersperse currentFile
+set_library_suggestions open Lean.LibrarySuggestions in
+  sineQuaNonSelector.filterGrindAnnotated.intersperse currentFile
 
 end Lean.LibrarySuggestions

@@ -22,8 +22,7 @@ public def fmtNestedAction : Fmt := fun
     let leftArrowTk ← fmt leftArrowTk
     let elem ← fmt elem
     return Layouts.prefixOperator leftArrowTk elem .withSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doExpr]
 public def fmtDoExpr : Fmt := fun
@@ -36,8 +35,7 @@ public def fmtDoSeqItems (items : TSyntaxArray ``Parser.Term.doSeqItem) : FmtM T
       | `(Parser.Term.doSeqItem| $elem:doElem $[;%$semicolonTk?]?) => do
         let semicolonTk := semicolonTk?.getD (mkNullNode #[])
         return #[elem.raw, semicolonTk]
-      | _ =>
-        throw .partialFormatter⟩
+      | _ => throw .partialFormatter⟩
   fmtSeq seq ``Parser.Term.doNested
 
 @[builtin_fmt Lean.Parser.Term.doSeqIndent]
@@ -55,8 +53,7 @@ public def fmtDoSeqBracketed : Fmt := fun
     let items ← fmtDoSeqItems items
     let rbTk ← fmt rbTk
     return Layouts.bracketed lbTk items rbTk <| .sparse hardNl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.do]
 public def fmtDo : Fmt := fun
@@ -64,8 +61,7 @@ public def fmtDo : Fmt := fun
     let doTk ← fmt doTk
     let doSeq ← fmt doSeq
     return Layouts.keywordPrefixedSeq doTk doSeq .sticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.termReturn]
 public def fmtTermReturn : Fmt := fun
@@ -73,8 +69,7 @@ public def fmtTermReturn : Fmt := fun
     let returnTk ← fmt returnTk
     let t? ← fmt? t?
     return withPosition <| Layouts.pseudoApplication #[returnTk, t?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doBreak]
 public def fmtDoBreak : Fmt := fmtAtomic
@@ -88,8 +83,7 @@ public def fmtDoReturn : Fmt := fun
     let returnTk ← fmt returnTk
     let e? ← fmt? e?
     return withPosition <| Layouts.pseudoApplication #[returnTk, e?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doDbgTrace]
 public def fmtDoDbgTrace : Fmt := fun
@@ -97,8 +91,7 @@ public def fmtDoDbgTrace : Fmt := fun
     let dbgTraceTk ← fmt dbgTraceTk
     let e ← fmt e
     return Layouts.pseudoApplication #[dbgTraceTk, e]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doIdbg]
 public def fmtDoIdbg : Fmt := fun
@@ -106,8 +99,7 @@ public def fmtDoIdbg : Fmt := fun
     let idbgTk ← fmt idbgTk
     let e ← fmt e
     return Layouts.pseudoApplication #[idbgTk, e]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doAssert]
 public def fmtDoAssert : Fmt := fun
@@ -115,8 +107,7 @@ public def fmtDoAssert : Fmt := fun
     let assertTk ← fmt assertTk
     let e ← fmt e
     return Layouts.pseudoApplication #[assertTk, e]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doDebugAssert]
 public def fmtDoDebugAssert : Fmt := fun
@@ -124,8 +115,7 @@ public def fmtDoDebugAssert : Fmt := fun
     let debugAssertTk ← fmt debugAssertTk
     let e ← fmt e
     return Layouts.pseudoApplication #[debugAssertTk, e]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doRepeat]
 public def fmtDoRepeat : Fmt := fun
@@ -133,8 +123,7 @@ public def fmtDoRepeat : Fmt := fun
     let repeatTk ← fmt repeatTk
     let seq ← fmt seq
     return Layouts.keywordPrefixedSeq repeatTk seq .nonSticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doLet]
 public def fmtDoLet : Fmt := fun
@@ -145,8 +134,7 @@ public def fmtDoLet : Fmt := fun
     let decl ← fmt decl
     let kw := Layouts.spacedAtomic #[letTk, mutTk?]
     return Layouts.letDecl kw cfg decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doHave]
 public def fmtDoHave : Fmt := fun
@@ -155,8 +143,7 @@ public def fmtDoHave : Fmt := fun
     let cfg ← fmt cfg
     let decl ← fmt decl
     return Layouts.letDecl haveTk cfg decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtDoLetElseLike
     (decl : TaggedDoc) (declComponents : Array Syntax) (pipeTk? : Option Syntax)
@@ -222,8 +209,7 @@ public def fmtDoLetArrow : Fmt := fun
     fmtWithDoIdDecl (#[letTk] ++ mutTk?.toArray) cfg decl
   | `(Parser.Term.doLetArrow| let%$letTk $[mut%$mutTk?]? $cfg:letConfig $decl:doPatDecl) => do
     fmtWithDoPatDecl (#[letTk] ++ mutTk?.toArray) cfg decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doLetElse]
 public def fmtDoLetElse : Fmt := fun
@@ -241,8 +227,7 @@ public def fmtDoLetElse : Fmt := fun
     let assignment := Layouts.assignmentDeclaration pat colonEqTk value
     let decl := Layouts.letDecl kw cfg assignment
     fmtDoLetElseLike decl declComponents pipeTk elseSeq.raw (body?.map (·.raw))
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doLetExpr]
 public def fmtDoLetExpr : Fmt := fun
@@ -257,8 +242,7 @@ public def fmtDoLetExpr : Fmt := fun
     let assignment := Layouts.assignmentDeclaration pat colonEqTk value
     let decl := Layouts.letDecl letExprTk empty assignment
     fmtDoLetElseLike decl declComponents pipeTk elseSeq.raw (body?.map (·.raw))
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doLetMetaExpr]
 public def fmtDoLetMetaExpr : Fmt := fun
@@ -273,15 +257,13 @@ public def fmtDoLetMetaExpr : Fmt := fun
     let assignment := Layouts.assignmentDeclaration pat leftArrowTk value
     let decl := Layouts.letDecl letExprTk empty assignment
     fmtDoLetElseLike decl declComponents pipeTk elseSeq.raw (body?.map (·.raw))
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doLetRec]
 public def fmtDoLetRec : Fmt := fun
   | `(Parser.Term.doLetRec| let%$letTk rec%$recTk $decls:letRecDecls) =>
     fmtFullLetRecDecl #[letTk, recTk] decls
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.letIdDeclNoBinders]
 public def fmtLetIdDeclNoBinders : Fmt := fun
@@ -294,8 +276,7 @@ public def fmtLetIdDeclNoBinders : Fmt := fun
       let body ← fmt body
       let signature := Layouts.localSignature #[letId] #[] typeAscriptionTk? type?
       return Layouts.assignmentDeclaration signature colonEqTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doReassign]
 public def fmtDoReassign : Fmt := fun
@@ -316,8 +297,7 @@ public def fmtDoIfProp : Fmt := fun
     let colonTk? ← fmt? colonTk?
     let c ← fmt c
     return Layouts.typeAscription h? colonTk? c
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtDoIfLetLike (letTk pat sepTk value : Syntax) : FmtM TaggedDoc := do
   let letTk ← fmt letTk
@@ -333,8 +313,7 @@ public def fmtDoIfLet : Fmt := fun
     fmtDoIfLetLike letTk pat colonEqTk value
   | `(Parser.Term.doIfLet| let%$letTk $pat:term ←%$leftArrowTk $value:term) =>
     fmtDoIfLetLike letTk pat leftArrowTk value
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_conditional_fmt Lean.Parser.Term.doIf]
 public def fmtDoIf : ConditionalFmt := fun
@@ -350,8 +329,7 @@ public def fmtDoIf : ConditionalFmt := fun
       let cond ← fmt cond
       elseIfs := elseIfs.push { elseTk, ifTk, cond, thenTk, body := thenBlock }
     return some { ifTk, cond, thenTk, thenBody := thenBlock, elseIfs, elseTk?, elseBody? }
-  | _ =>
-    pure none
+  | _ => pure none
 
 public def fmtUnlessLike (unlessTk cond doTk seq : Syntax) : FmtM TaggedDoc := do
   let unlessTk ← fmt unlessTk
@@ -365,15 +343,13 @@ public def fmtUnlessLike (unlessTk cond doTk seq : Syntax) : FmtM TaggedDoc := d
 public def fmtDoUnless : Fmt := fun
   | `(Parser.Term.doUnless| unless%$unlessTk $cond:term do%$doTk $seq:doSeq) =>
     fmtUnlessLike unlessTk cond doTk seq
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.termUnless]
 public def fmtTermUnless : Fmt := fun
   | `(Parser.Term.termUnless| unless%$unlessTk $cond:term do%$doTk $seq:doSeq) =>
     fmtUnlessLike unlessTk cond doTk seq
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doForDecl]
 public def fmtDoForDecl : Fmt := fun
@@ -385,8 +361,7 @@ public def fmtDoForDecl : Fmt := fun
     let collection ← fmt collection
     let lhs := Layouts.typeAscription id? colonTk? pat
     return Layouts.infixOperator #[lhs, inTk, collection]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doFor]
 public def fmtDoFor : Fmt := fun
@@ -397,8 +372,7 @@ public def fmtDoFor : Fmt := fun
     let seq ← fmt seq
     let lhs := Layouts.keywordPrefixedSepFill forTk decls .nonSticky
     return Layouts.keywordSeparated lhs doTk seq { allowFlattening := false }
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.termFor]
 public def fmtTermFor : Fmt := fun
@@ -409,15 +383,13 @@ public def fmtTermFor : Fmt := fun
     let seq ← fmt seq
     let lhs := Layouts.keywordPrefixedSepFill forTk decls .nonSticky
     return Layouts.keywordSeparated lhs doTk seq { allowFlattening := false }
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.dependentParam]
 public def fmtDependentParam : Fmt := fun
   | `(Parser.Term.dependentParam| (%$lbTk dependent%$dependentTk :=%$colonEqTk $val )%$rbTk) =>
     fmtNamedArgumentTerm lbTk dependentTk colonEqTk val rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doMatch]
 public def fmtDoMatch : Fmt := fun
@@ -434,12 +406,9 @@ public def fmtDoMatch : Fmt := fun
     let withTk ← fmt withTk
     let alts ← fmt alts
     let «match» := Layouts.keywordPrefixedSepFill matchLhs discrs .nonSticky
-    return Layouts.keywordSeparated «match» withTk alts {
-      allowFlattening := false
-      nestedRhs := false
-    }
-  | _ =>
-    throw .partialFormatter
+    return
+      Layouts.keywordSeparated «match» withTk alts { allowFlattening := false, nestedRhs := false }
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doMatchExpr]
 public def fmtDoMatchExpr : Fmt := fun
@@ -453,12 +422,9 @@ public def fmtDoMatchExpr : Fmt := fun
     let «match» := Layouts.pseudoApplication #[matchLhs, discr]
     let withTk ← fmt withTk
     let alts ← fmt alts
-    return Layouts.keywordSeparated «match» withTk alts {
-      allowFlattening := false
-      nestedRhs := false
-    }
-  | _ =>
-    throw .partialFormatter
+    return
+      Layouts.keywordSeparated «match» withTk alts { allowFlattening := false, nestedRhs := false }
+  | _ => throw .partialFormatter
 
 inductive fmtTryCatchFinally.Handler where
   | doCatch (lhsWithArrow seq : TaggedDoc)
@@ -491,8 +457,7 @@ public def fmtTryCatchFinally
         let catchTk ← fmt catchTk
         let alts ← fmt alts
         return .doCatchMatch <| Layouts.matchDeclaration catchTk alts
-      | _ =>
-        throw .partialFormatter
+      | _ => throw .partialFormatter
   let (finallyTk, finallySeq) ← do
     let some «finally» := finally?
       | pure (empty, empty)
@@ -501,8 +466,7 @@ public def fmtTryCatchFinally
       let finallyTk ← fmt finallyTk
       let finallySeq ← fmt finallySeq
       pure (finallyTk, finallySeq)
-    | _ =>
-      throw .partialFormatter
+    | _ => throw .partialFormatter
   if allowFlattening then
     return oneOf #[
       flattened <| mk tryTk trySeq handlers finallyTk finallySeq (allowFlattening := true),
@@ -541,15 +505,13 @@ where
 public def fmtDoTry : Fmt := fun
   | stx@`(Parser.Term.doTry| try%$tryTk $seq:doSeq $[$handlers]* $[$finally?:doFinally]?) => do
     fmtTryCatchFinally stx tryTk seq handlers finally?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.termTry]
 public def fmtTermTry : Fmt := fun
   | stx@`(Parser.Term.termTry| try%$tryTk $seq:doSeq $[$handlers]* $[$finally?:doFinally]?) => do
     fmtTryCatchFinally stx tryTk seq handlers finally?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doForward]
 public def fmtDoForward : Fmt := fun
@@ -559,8 +521,7 @@ public def fmtDoForward : Fmt := fun
     let seq ← fmt seq
     let kw := Layouts.atomic #[doTk, leftArrowTk]
     return Layouts.keywordPrefixedSeq kw seq .sticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doWhile]
 public def fmtDoWhile : Fmt := fun
@@ -571,8 +532,7 @@ public def fmtDoWhile : Fmt := fun
     let doTk ← fmt doTk
     let seq ← fmt seq
     return Layouts.keywordSeparated lhs doTk seq { allowFlattening := false }
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doRepeatUntil]
 public def fmtDoRepeatUntil : Fmt := fun
@@ -584,8 +544,7 @@ public def fmtDoRepeatUntil : Fmt := fun
     let untilBlock := Layouts.pseudoApplication #[untilTk, cond]
     let repeatBlock := nested <| Layouts.lines #[repeatTk, seq]
     return Layouts.lines #[repeatBlock, untilBlock]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.doNested]
 public def fmtDoNested : Fmt := fun
@@ -593,5 +552,4 @@ public def fmtDoNested : Fmt := fun
     let doTk ← fmt doTk
     let seq ← fmt seq
     return Layouts.keywordPrefixedSeq doTk seq .sticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

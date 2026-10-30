@@ -35,43 +35,42 @@ variable [Hashable α] [DecidableEq α]
 
 namespace blastUdiv
 
-theorem denote_blastShiftConcat (aig : AIG α) (target : ShiftConcatInput aig w)
-  (assign : α → Bool) :
-  ∀ (idx : Nat) (hidx : idx < w),
+theorem denote_blastShiftConcat (aig : AIG α) (target : ShiftConcatInput aig w) (assign : α → Bool)
+    : ∀ (idx : Nat) (hidx : idx < w),
       ⟦(blastShiftConcat aig target).aig, (blastShiftConcat aig target).vec.get idx hidx, assign⟧
-        =
-      if idx = 0 then
-        ⟦aig, target.bit, assign⟧
-      else
-        ⟦aig, target.lhs.get (idx - 1) (by omega), assign⟧
-      := by
+        = if idx = 0 then
+            ⟦aig, target.bit, assign⟧
+          else
+            ⟦aig, target.lhs.get (idx - 1) (by omega), assign⟧ := by
   intro idx hidx
   unfold blastShiftConcat
   have hidx_lt : idx < 1 + w := by omega
   by_cases hidx_eq : idx = 0 <;> simp +arith [hidx_lt, hidx_eq, RefVec.get_append]
 
-theorem denote_blastShiftConcat_eq_shiftConcat (aig : AIG α) (target : ShiftConcatInput aig w)
-  (x : BitVec w) (b : Bool) (assign : α → Bool)
-  (hx : ∀ idx hidx, ⟦aig, target.lhs.get idx hidx, assign⟧ = x.getLsbD idx)
-  (hb : ⟦aig, target.bit, assign⟧ = b) :
-  ∀ (idx : Nat) (hidx : idx < w),
+theorem denote_blastShiftConcat_eq_shiftConcat
+    (aig : AIG α) (target : ShiftConcatInput aig w)
+    (x : BitVec w) (b : Bool) (assign : α → Bool)
+    (hx : ∀ idx hidx, ⟦aig, target.lhs.get idx hidx, assign⟧ = x.getLsbD idx)
+    (hb : ⟦aig, target.bit, assign⟧ = b)
+    : ∀ (idx : Nat) (hidx : idx < w),
       ⟦(blastShiftConcat aig target).aig, (blastShiftConcat aig target).vec.get idx hidx, assign⟧
-        =
-      (BitVec.shiftConcat x b).getLsbD idx := by
+        = (BitVec.shiftConcat x b).getLsbD idx := by
   intro idx hidx
   simp only [denote_blastShiftConcat, hb, hx, BitVec.getLsbD_shiftConcat, hidx, decide_true,
     Bool.true_and]
 
-
-theorem blastDivSubtractShift_denote_mem_prefix (aig : AIG α)
-    (n d q r : AIG.RefVec aig w) (wn wr : Nat) (start : Nat) (hstart) :
-    ⟦
-      (blastDivSubtractShift aig n d wn wr q r).aig,
-      ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply blastDivSubtractShift_le_size⟩,
-      assign
-    ⟧
-      =
-    ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
+theorem blastDivSubtractShift_denote_mem_prefix
+    (aig : AIG α) (n d q r : AIG.RefVec aig w) (wn wr : Nat) (start : Nat) (hstart)
+    : ⟦
+        (blastDivSubtractShift aig n d wn wr q r).aig,
+        ⟨
+          start,
+          inv,
+          by apply Nat.lt_of_lt_of_le; exact hstart; apply blastDivSubtractShift_le_size
+        ⟩,
+        assign
+      ⟧
+      = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply IsPrefix.of
   · intros
@@ -79,21 +78,27 @@ theorem blastDivSubtractShift_denote_mem_prefix (aig : AIG α)
   · intros
     apply blastDivSubtractShift_le_size
 
-theorem denote_blastDivSubtractShift_q (aig : AIG α) (assign : α → Bool) (lhs rhs : BitVec w)
-    (n d : AIG.RefVec aig w) (wn wr : Nat)
+theorem denote_blastDivSubtractShift_q
+    (aig : AIG α)
+    (assign : α → Bool) (lhs rhs : BitVec w) (n d : AIG.RefVec aig w)
+    (wn wr : Nat)
     (q r : AIG.RefVec aig w) (qbv rbv : BitVec w)
     (hleft : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, n.get idx hidx, assign⟧ = lhs.getLsbD idx)
     (hright : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, d.get idx hidx, assign⟧ = rhs.getLsbD idx)
     (hq : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, q.get idx hidx, assign⟧ = qbv.getLsbD idx)
-    (hr : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, r.get idx hidx, assign⟧ = rbv.getLsbD idx) :
-    ∀ (idx : Nat) (hidx : idx < w),
+    (hr : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, r.get idx hidx, assign⟧ = rbv.getLsbD idx)
+    : ∀ (idx : Nat) (hidx : idx < w),
       ⟦
         (blastDivSubtractShift aig n d wn wr q r).aig,
         (blastDivSubtractShift aig n d wn wr q r).q.get idx hidx,
         assign
-      ⟧
-        =
-      (BitVec.divSubtractShift { n := lhs, d := rhs } { wn := wn, wr := wr, q := qbv, r := rbv }).q.getLsbD idx := by
+      ⟧ = (BitVec.divSubtractShift { n := lhs, d := rhs } {
+          wn := wn
+          wr := wr
+          q := qbv
+          r := rbv
+        }).q.getLsbD
+        idx := by
   intro idx hidx
   unfold blastDivSubtractShift BitVec.divSubtractShift
   dsimp only
@@ -105,7 +110,8 @@ theorem denote_blastDivSubtractShift_q (aig : AIG α) (assign : α → Bool) (lh
       rw [apply_ite (f := BitVec.DivModState.q)]
       rw [apply_ite (f := (BitVec.getLsbD · idx))]
     apply ite_congr
-    · rw [BVPred.mkUlt_denote_eq (assign := assign) (lhs := rbv.shiftConcat (lhs.getLsbD (wn - 1))) (rhs := rhs)]
+    · rw [BVPred.mkUlt_denote_eq (assign := assign) (lhs := rbv.shiftConcat (lhs.getLsbD (wn - 1)))
+        (rhs := rhs)]
       · simp [Std.Tactic.BVDecide.Normalize.BitVec.lt_ult]
       · intro idx hidx
         simp only [RefVec.get_cast, Ref.cast_eq]
@@ -173,21 +179,27 @@ theorem denote_blastDivSubtractShift_q (aig : AIG α) (assign : α → Bool) (lh
       · rw [denote_mkConstCached]
   . simp [Ref.hgate]
 
-theorem denote_blastDivSubtractShift_r (aig : AIG α) (assign : α → Bool) (lhs rhs : BitVec w)
-    (n d : AIG.RefVec aig w) (wn wr : Nat)
-    (q r : AIG.RefVec aig w) (qbv rbv : BitVec w)
+theorem denote_blastDivSubtractShift_r
+    (aig : AIG α)
+    (assign : α → Bool) (lhs rhs : BitVec w) (n d : AIG.RefVec aig w)
+    (wn wr : Nat)
+    (q r : AIG.RefVec aig w)
+    (qbv rbv : BitVec w)
     (hleft : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, n.get idx hidx, assign⟧ = lhs.getLsbD idx)
     (hright : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, d.get idx hidx, assign⟧ = rhs.getLsbD idx)
     (hr : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, r.get idx hidx, assign⟧ = rbv.getLsbD idx)
-      :
-    ∀ (idx : Nat) (hidx : idx < w),
+    : ∀ (idx : Nat) (hidx : idx < w),
       ⟦
         (blastDivSubtractShift aig n d wn wr q r).aig,
         (blastDivSubtractShift aig n d wn wr q r).r.get idx hidx,
         assign
-      ⟧
-        =
-      (BitVec.divSubtractShift { n := lhs, d := rhs } { wn := wn, wr := wr, q := qbv, r := rbv }).r.getLsbD idx := by
+      ⟧ = (BitVec.divSubtractShift { n := lhs, d := rhs } {
+          wn := wn
+          wr := wr
+          q := qbv
+          r := rbv
+        }).r.getLsbD
+        idx := by
   intro idx hidx
   unfold blastDivSubtractShift BitVec.divSubtractShift
   simp only [RefVec.denote_ite, LawfulVecOperator.denote_cast_entry, RefVec.get_cast]
@@ -195,7 +207,7 @@ theorem denote_blastDivSubtractShift_r (aig : AIG α) (assign : α → Bool) (lh
   · split
     next hdiscr =>
       rw [← Normalize.BitVec.lt_ult] at hdiscr
-      simp only [Ref.cast_eq, hdiscr, ↓reduceIte]
+      simp only [Ref.cast_eq, hdiscr, ↓ reduceIte]
       rw [AIG.LawfulVecOperator.denote_mem_prefix (f := AIG.RefVec.ite) (h := ?h)]
       case h =>
         apply AIG.LawfulOperator.lt_size_of_lt_aig_size (f := BVPred.mkUlt)
@@ -227,7 +239,7 @@ theorem denote_blastDivSubtractShift_r (aig : AIG α) (assign : α → Bool) (lh
         · simp
     next hdiscr =>
       rw [← Normalize.BitVec.lt_ult] at hdiscr
-      simp only [Ref.cast_eq, hdiscr, ↓reduceIte]
+      simp only [Ref.cast_eq, hdiscr, ↓ reduceIte]
       rw [AIG.LawfulVecOperator.denote_mem_prefix (f := AIG.RefVec.ite) (h := ?h2)]
       case h2 =>
         apply AIG.LawfulOperator.lt_size_of_lt_aig_size (f := BVPred.mkUlt)
@@ -299,44 +311,51 @@ theorem denote_blastDivSubtractShift_r (aig : AIG α) (assign : α → Bool) (lh
     . simp [Ref.hgate]
 
 @[simp]
-theorem denote_blastDivSubtractShift_wn (aig : AIG α) (lhs rhs : BitVec w)
-    (n d : AIG.RefVec aig w) (wn wr : Nat)
-    (q r : AIG.RefVec aig w) (qbv rbv : BitVec w)
-      :
-    (blastDivSubtractShift aig n d wn wr q r).wn
-      =
-    (BitVec.divSubtractShift { n := lhs, d := rhs } { wn := wn, wr := wr, q := qbv, r := rbv }).wn := by
+theorem denote_blastDivSubtractShift_wn
+    (aig : AIG α)
+    (lhs rhs : BitVec w) (n d : AIG.RefVec aig w) (wn wr : Nat) (q r : AIG.RefVec aig w)
+    (qbv rbv : BitVec w)
+    : (blastDivSubtractShift aig n d wn wr q r).wn
+      = (BitVec.divSubtractShift { n := lhs, d := rhs } {
+        wn := wn
+        wr := wr
+        q := qbv
+        r := rbv
+      }).wn := by
   unfold blastDivSubtractShift BitVec.divSubtractShift
   dsimp only
   split <;> simp
 
 @[simp]
-theorem denote_blastDivSubtractShift_wr (aig : AIG α) (lhs rhs : BitVec w)
-    (n d : AIG.RefVec aig w) (wn wr : Nat)
-    (q r : AIG.RefVec aig w) (qbv rbv : BitVec w)
-      :
-    (blastDivSubtractShift aig n d wn wr q r).wr
-      =
-    (BitVec.divSubtractShift { n := lhs, d := rhs } { wn := wn, wr := wr, q := qbv, r := rbv }).wr := by
+theorem denote_blastDivSubtractShift_wr
+    (aig : AIG α)
+    (lhs rhs : BitVec w) (n d : AIG.RefVec aig w) (wn wr : Nat) (q r : AIG.RefVec aig w)
+    (qbv rbv : BitVec w)
+    : (blastDivSubtractShift aig n d wn wr q r).wr
+      = (BitVec.divSubtractShift { n := lhs, d := rhs } {
+        wn := wn
+        wr := wr
+        q := qbv
+        r := rbv
+      }).wr := by
   unfold blastDivSubtractShift BitVec.divSubtractShift
   dsimp only
   split <;> simp
 
-theorem denote_go_eq_divRec_q (aig : AIG α) (assign : α → Bool) (curr : Nat) (lhs rhs rbv qbv : BitVec w)
-    (n d q r : AIG.RefVec aig w) (wn wr : Nat)
+theorem denote_go_eq_divRec_q
+    (aig : AIG α)
+    (assign : α → Bool)
+    (curr : Nat)
+    (lhs rhs rbv qbv : BitVec w) (n d q r : AIG.RefVec aig w)
+    (wn wr : Nat)
     (hleft : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, n.get idx hidx, assign⟧ = lhs.getLsbD idx)
     (hright : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, d.get idx hidx, assign⟧ = rhs.getLsbD idx)
     (hq : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, q.get idx hidx, assign⟧ = qbv.getLsbD idx)
     (hr : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, r.get idx hidx, assign⟧ = rbv.getLsbD idx)
-      :
-    ∀ (idx : Nat) (hidx : idx < w),
-      ⟦
-        (go aig curr n d wn wr q r).aig,
-        (go aig curr n d wn wr q r).q.get idx hidx,
-        assign
-      ⟧
-        =
-      (BitVec.divRec curr { n := lhs, d := rhs} { wn, wr, q := qbv, r := rbv }).q.getLsbD idx := by
+    : ∀ (idx : Nat) (hidx : idx < w),
+      ⟦(go aig curr n d wn wr q r).aig, (go aig curr n d wn wr q r).q.get idx hidx, assign⟧
+        = (BitVec.divRec curr { n := lhs, d := rhs } { wn, wr, q := qbv, r := rbv }).q.getLsbD
+          idx := by
   induction curr generalizing aig wn wr q r qbv rbv with
   | zero =>
     intro idx hidx
@@ -398,22 +417,16 @@ theorem denote_go_eq_divRec_q (aig : AIG α) (assign : α → Bool) (curr : Nat)
         · exact hright
         · exact hr
 
-theorem denote_go (aig : AIG α) (assign : α → Bool) (lhs rhs : BitVec w)
-    (n d q r : AIG.RefVec aig w)
+theorem denote_go
+    (aig : AIG α) (assign : α → Bool) (lhs rhs : BitVec w) (n d q r : AIG.RefVec aig w)
     (hleft : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, n.get idx hidx, assign⟧ = lhs.getLsbD idx)
     (hright : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, d.get idx hidx, assign⟧ = rhs.getLsbD idx)
     (hq : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, q.get idx hidx, assign⟧ = false)
     (hr : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, r.get idx hidx, assign⟧ = false)
     (hzero : 0#w < rhs)
-      :
-    ∀ (idx : Nat) (hidx : idx < w),
-      ⟦
-        (go aig w n d w 0 q r).aig,
-        (go aig w n d w 0 q r).q.get idx hidx,
-        assign
-      ⟧
-        =
-      (lhs / rhs).getLsbD idx := by
+    : ∀ (idx : Nat) (hidx : idx < w),
+      ⟦(go aig w n d w 0 q r).aig, (go aig w n d w 0 q r).q.get idx hidx, assign⟧
+        = (lhs / rhs).getLsbD idx := by
   intro idx hidx
   rw [BitVec.udiv_eq_divRec hzero]
   rw [BitVec.DivModState.init]
@@ -423,15 +436,14 @@ theorem denote_go (aig : AIG α) (assign : α → Bool) (lhs rhs : BitVec w)
   · simp [hq]
   · simp [hr]
 
-theorem go_denote_mem_prefix (aig : AIG α) (curr : Nat)
-    (n d q r : AIG.RefVec aig w) (wn wr : Nat) (start : Nat) (hstart) :
-    ⟦
-      (go aig curr n d wn wr q r).aig,
-      ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
-      assign
-    ⟧
-      =
-    ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
+theorem go_denote_mem_prefix
+    (aig : AIG α) (curr : Nat) (n d q r : AIG.RefVec aig w) (wn wr : Nat) (start : Nat) (hstart)
+    : ⟦
+        (go aig curr n d wn wr q r).aig,
+        ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
+        assign
+      ⟧
+      = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply IsPrefix.of
   · intros
@@ -441,18 +453,18 @@ theorem go_denote_mem_prefix (aig : AIG α) (curr : Nat)
 
 end blastUdiv
 
-theorem denote_blastUdiv (aig : AIG α) (lhs rhs : BitVec w) (assign : α → Bool)
-      (input : BinaryRefVec aig w)
-      (hleft : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, input.lhs.get idx hidx, assign⟧ = lhs.getLsbD idx)
-      (hright : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, input.rhs.get idx hidx, assign⟧ = rhs.getLsbD idx) :
-      ∀ (idx : Nat) (hidx : idx < w),
-        ⟦(blastUdiv aig input).aig, (blastUdiv aig input).vec.get idx hidx, assign⟧
-          =
-        (lhs / rhs).getLsbD idx := by
+theorem denote_blastUdiv
+    (aig : AIG α) (lhs rhs : BitVec w) (assign : α → Bool) (input : BinaryRefVec aig w)
+    (hleft
+      : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, input.lhs.get idx hidx, assign⟧ = lhs.getLsbD idx)
+    (hright
+      : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, input.rhs.get idx hidx, assign⟧ = rhs.getLsbD idx)
+    : ∀ (idx : Nat) (hidx : idx < w),
+      ⟦(blastUdiv aig input).aig, (blastUdiv aig input).vec.get idx hidx, assign⟧
+        = (lhs / rhs).getLsbD idx := by
   intro idx hidx
   unfold blastUdiv
-  simp only [Ref.cast_eq, RefVec.denote_ite,
-    RefVec.get_cast]
+  simp only [Ref.cast_eq, RefVec.denote_ite, RefVec.get_cast]
   split
   next hdiscr =>
     rw [blastUdiv.go_denote_mem_prefix (hstart := Ref.hgate _)] at hdiscr

@@ -4,8 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
 module
-prelude
 
+prelude
 public import Lean.Elab.Term.TermElabM
 public import Lean.DocString.DeferredCheck
 
@@ -15,8 +15,10 @@ public section
 
 namespace Lean
 
-/-- Enables the deferred checks recorded while elaborating Verso docstrings, such as forward
-references. -/
+/--
+Enables the deferred checks recorded while elaborating Verso docstrings, such as forward
+references.
+-/
 register_builtin_option linter.doc.deferred : Bool := {
   defValue := true
   descr := "if true, run the deferred checks recorded while elaborating Verso docstrings"
@@ -27,23 +29,15 @@ end Lean
 namespace Lean.Doc
 open Lean Elab Term
 
-/--
-A name that a deferred check will confirm exists.
--/
+/-- A name that a deferred check will confirm exists. -/
 structure PostponedName where
-  /--
-  The name to check for.
-  -/
+  /-- The name to check for. -/
   name : Name
 deriving TypeName
 
-/--
-A syntax kind name that a deferred check will confirm exists.
--/
+/-- A syntax kind name that a deferred check will confirm exists. -/
 structure PostponedKind where
-  /--
-  The kind's name.
-  -/
+  /-- The kind's name. -/
   name : Name
 deriving TypeName
 
@@ -65,8 +59,7 @@ builtin_initialize handlerExt : SimplePersistentEnvExtension (Name × Name) (Nam
     addEntryFn := fun m (key, declName) => m.insert key declName
     addImportedFn := fun nss =>
       nss.foldl (init := {}) fun m ns =>
-        ns.foldl (init := m) fun m (key, declName) =>
-          m.insert key declName
+        ns.foldl (init := m) fun m (key, declName) => m.insert key declName
   }
 
 /--
@@ -88,42 +81,50 @@ private unsafe def getHandlerUnsafe (declName : Name) : CoreM DeferredCheckHandl
 @[implemented_by getHandlerUnsafe]
 private opaque getHandler (declName : Name) : CoreM DeferredCheckHandler
 
-builtin_initialize registerBuiltinAttribute {
-  name := `deferred_doc_check
-  descr := "Registers a `DeferredCheckHandler` for deferred docstring checks whose data has the named type."
-  applicationTime := .afterCompilation
-  add := fun decl stx kind => do
-    unless kind == .global do
-      throwError "invalid attribute `deferred_doc_check`, must be global"
-    let key ←
-      if let `(attr|deferred_doc_check $x) := stx then
-        realizeGlobalConstNoOverload x
-      else
-        throwError "invalid `deferred_doc_check` syntax"
-    modifyEnv (handlerExt.addEntry · (key, decl))
-}
+builtin_initialize
+  registerBuiltinAttribute {
+    name := `deferred_doc_check
+    descr :=
+      "Registers a `DeferredCheckHandler` for deferred docstring checks whose data has the named \
+        type."
+    applicationTime := .afterCompilation
+    add := fun decl stx kind => do
+      unless kind == .global do
+        throwError "invalid attribute `deferred_doc_check`, must be global"
+      let key ←
+        if let `(attr|deferred_doc_check $x) := stx then
+          realizeGlobalConstNoOverload x
+        else
+          throwError "invalid `deferred_doc_check` syntax"
+      modifyEnv (handlerExt.addEntry · (key, decl))
+  }
 
-builtin_initialize registerBuiltinAttribute {
-  name := `builtin_deferred_doc_check
-  descr := "Registers a builtin `DeferredCheckHandler` for deferred docstring checks whose data has the named type."
-  applicationTime := .afterCompilation
-  add := fun decl stx kind => do
-    unless kind == .global do
-      throwError "invalid attribute `builtin_deferred_doc_check`, must be global"
-    let key ←
-      if let `(attr|builtin_deferred_doc_check $x) := stx then
-        realizeGlobalConstNoOverload x
-      else
-        throwError "invalid `builtin_deferred_doc_check` syntax"
-    declareBuiltin decl <|
-      mkApp2 (.const ``addBuiltinHandler []) (toExpr key) (.const decl [])
-}
+builtin_initialize
+  registerBuiltinAttribute {
+    name := `builtin_deferred_doc_check
+    descr :=
+      "Registers a builtin `DeferredCheckHandler` for deferred docstring checks whose data has the \
+        named type."
+    applicationTime := .afterCompilation
+    add := fun decl stx kind => do
+      unless kind == .global do
+        throwError "invalid attribute `builtin_deferred_doc_check`, must be global"
+      let key ←
+        if let `(attr|builtin_deferred_doc_check $x) := stx then
+          realizeGlobalConstNoOverload x
+        else
+          throwError "invalid `builtin_deferred_doc_check` syntax"
+      declareBuiltin decl <| mkApp2 (.const ``addBuiltinHandler []) (toExpr key) (.const decl [])
+  }
 
 /-- Re-enters the elaboration scope captured at a reference site. -/
 private def withScope (c : DeferredCheck) (act : CoreM α) : CoreM α :=
   withTheReader Core.Context
-    (fun ctx => { ctx.setOptions c.options with
-      currNamespace := c.currNamespace, openDecls := c.openDecls })
+    (fun ctx => {
+      ctx.setOptions c.options with
+      currNamespace := c.currNamespace
+      openDecls := c.openDecls
+    })
     act
 
 /--
@@ -131,8 +132,8 @@ The deferred checks owned by modules satisfying `inPackage`.
 
 Each deferred check is paired with the module it was recorded in.
 -/
-private def collect (env : Environment) (inPackage : Name → Bool) :
-    Array (Name × DeferredCheck) := Id.run do
+private def collect (env : Environment) (inPackage : Name → Bool)
+    : Array (Name × DeferredCheck) := Id.run do
   let mut out := #[]
   for i in [0:env.header.moduleNames.size] do
     let mod := env.header.moduleNames[i]!
@@ -151,19 +152,21 @@ produced. `#[]` indicates success.
 
 Only checks that satisfy `shouldCheck` are run.
 -/
-def run (inPackage : Name → Bool) (shouldCheck : DeferredCheck → CoreM Bool := fun _ => pure true) :
-    CoreM (Array (Name × DeferredCheck × MessageData)) := do
+def run (inPackage : Name → Bool) (shouldCheck : DeferredCheck → CoreM Bool := fun _ => pure true)
+    : CoreM (Array (Name × DeferredCheck × MessageData)) := do
   let env ← getEnv
   let handlers := handlerExt.getState env
   let builtins ← builtinHandlers.get
   let moduleNames : NameSet := env.header.moduleNames.foldl (·.insert ·) {}
   let mut failures := #[]
   for (mod, c) in collect env inPackage do
-    unless (← shouldCheck c) do continue
-    let missing := c.imports.filter (!moduleNames.contains ·)
+    unless (← shouldCheck c) do
+      continue
+    let missing := c.imports.filter (! moduleNames.contains ·)
     if !missing.isEmpty then
-      failures := failures.push (mod, c,
-        m!"the check requires {missing.toList} to be imported, but they are not")
+      failures :=
+        failures.push
+          (mod, c, m!"the check requires {missing.toList} to be imported, but they are not")
     else
       let handler? : Option DeferredCheckHandler ←
         if let some impl := builtins.find? c.check.typeName then
@@ -174,8 +177,8 @@ def run (inPackage : Name → Bool) (shouldCheck : DeferredCheck → CoreM Bool 
           pure none
       match handler? with
       | none =>
-        failures := failures.push (mod, c,
-          m!"no handler registered for deferred check `{c.check.typeName}`")
+        failures :=
+          failures.push (mod, c, m!"no handler registered for deferred check `{c.check.typeName}`")
       | some handler =>
         try
           withScope c (handler c.check)

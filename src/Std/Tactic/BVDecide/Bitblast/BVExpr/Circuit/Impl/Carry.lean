@@ -36,9 +36,8 @@ def mkOverflowBit (aig : AIG α) (input : OverflowInput aig) : AIG.Entrypoint α
   let ⟨_, ⟨lhs, rhs⟩, cin⟩ := input
   go aig lhs rhs 0 cin
 where
-  go {w : Nat} (aig : AIG α) (lhs rhs : AIG.RefVec aig w) (curr : Nat)
-      (cin : AIG.Ref aig) :
-      AIG.Entrypoint α :=
+  go {w : Nat} (aig : AIG α) (lhs rhs : AIG.RefVec aig w) (curr : Nat) (cin : AIG.Ref aig)
+      : AIG.Entrypoint α :=
     if hidx : curr < w then
       let lin := lhs.get curr hidx
       let rin := rhs.get curr hidx
@@ -55,8 +54,8 @@ where
 
 namespace mkOverflowBit
 
-theorem go_le_size {aig : AIG α} {cin} {lhs rhs : AIG.RefVec aig w} :
-    aig.decls.size ≤ (go aig lhs rhs curr cin).aig.decls.size := by
+theorem go_le_size {aig : AIG α} {cin} {lhs rhs : AIG.RefVec aig w}
+    : aig.decls.size ≤ (go aig lhs rhs curr cin).aig.decls.size := by
   unfold go
   dsimp only
   split
@@ -66,9 +65,8 @@ theorem go_le_size {aig : AIG α} {cin} {lhs rhs : AIG.RefVec aig w} :
     omega
 termination_by w - curr
 
-theorem go_decl_eq {aig : AIG α} {cin} {lhs rhs : AIG.RefVec aig w} :
-    ∀ (idx : Nat) (h1) (h2),
-        (go aig lhs rhs curr cin).aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
+theorem go_decl_eq {aig : AIG α} {cin} {lhs rhs : AIG.RefVec aig w}
+    : ∀ (idx : Nat) (h1) (h2), (go aig lhs rhs curr cin).aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
   generalize hgo : go aig lhs rhs curr cin = res
   unfold go at hgo
   dsimp only at hgo

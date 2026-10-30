@@ -30,45 +30,32 @@ A structure that accumulates multiple `ByteArray`s efficiently by tracking them 
 maintaining the total size. This allows building large buffers without repeated allocations and copies.
 -/
 structure ChunkedBuffer where
-  /--
-  The accumulated byte arrays.
-  -/
+  /-- The accumulated byte arrays. -/
   data : Array ByteArray
-
-  /--
-  The total size in bytes of all accumulated arrays
-  -/
+  /-- The total size in bytes of all accumulated arrays -/
   size : Nat
 
 namespace ChunkedBuffer
 
-/--
-An empty `ChunkedBuffer`.
--/
-@[inline]
-def empty : ChunkedBuffer :=
-  { data := #[], size := 0 }
+/-- An empty `ChunkedBuffer`. -/
+@[inline] def empty : ChunkedBuffer := { data := #[], size := 0 }
 
-/--
-Append a single `ByteArray` to the `ChunkedBuffer`.
--/
+/-- Append a single `ByteArray` to the `ChunkedBuffer`. -/
 @[inline]
-def push (c : ChunkedBuffer) (b : ByteArray) : ChunkedBuffer :=
-  { data := c.data.push b, size := c.size + b.size }
+def push (c : ChunkedBuffer) (b : ByteArray) : ChunkedBuffer := {
+  data := c.data.push b
+  size := c.size + b.size
+}
 
-/--
-Writes a `ByteArray` to the `ChunkedBuffer`.
--/
-@[inline]
-def write (buffer : ChunkedBuffer) (data : ByteArray) : ChunkedBuffer :=
-  buffer.push data
+/-- Writes a `ByteArray` to the `ChunkedBuffer`. -/
+@[inline] def write (buffer : ChunkedBuffer) (data : ByteArray) : ChunkedBuffer := buffer.push data
 
-/--
-Writes a `ChunkedBuffer` to the `ChunkedBuffer`.
--/
+/-- Writes a `ChunkedBuffer` to the `ChunkedBuffer`. -/
 @[inline]
-def append (buffer : ChunkedBuffer) (data : ChunkedBuffer) : ChunkedBuffer :=
-  { data := buffer.data ++ data.data, size := buffer.size + data.size }
+def append (buffer : ChunkedBuffer) (data : ChunkedBuffer) : ChunkedBuffer := {
+  data := buffer.data ++ data.data
+  size := buffer.size + data.size
+}
 
 /--
 Writes a `Char` to the `ChunkedBuffer`. Only the low byte is written (`Char.toUInt8`),
@@ -78,16 +65,11 @@ so this is only correct for ASCII characters.
 def writeChar (buffer : ChunkedBuffer) (data : Char) : ChunkedBuffer :=
   buffer.push (ByteArray.mk #[data.toUInt8])
 
-/--
-Writes a `String` to the `ChunkedBuffer`.
--/
+/-- Writes a `String` to the `ChunkedBuffer`. -/
 @[inline]
-def writeString (buffer : ChunkedBuffer) (data : String) : ChunkedBuffer :=
-  buffer.push data.toUTF8
+def writeString (buffer : ChunkedBuffer) (data : String) : ChunkedBuffer := buffer.push data.toUTF8
 
-/--
-Turn the combined structure into a single contiguous ByteArray.
--/
+/-- Turn the combined structure into a single contiguous ByteArray. -/
 @[inline]
 def toByteArray (cb : ChunkedBuffer) : ByteArray :=
   if h : 1 = cb.data.size then
@@ -95,26 +77,18 @@ def toByteArray (cb : ChunkedBuffer) : ByteArray :=
   else
     cb.data.foldl (· ++ ·) (.emptyWithCapacity cb.size)
 
-/--
-Build from a ByteArray directly.
--/
-@[inline]
-def ofByteArray (bs : ByteArray) : ChunkedBuffer :=
-  { data := #[bs], size := bs.size }
+/-- Build from a ByteArray directly. -/
+@[inline] def ofByteArray (bs : ByteArray) : ChunkedBuffer := { data := #[bs], size := bs.size }
 
-/--
-Build from an array of ByteArrays directly.
--/
+/-- Build from an array of ByteArrays directly. -/
 @[inline]
-def ofArray (bs : Array ByteArray) : ChunkedBuffer :=
-  { data := bs, size := bs.foldl (· + ·.size) 0 }
+def ofArray (bs : Array ByteArray) : ChunkedBuffer := {
+  data := bs
+  size := bs.foldl (· + ·.size) 0
+}
 
-/--
-Checks whether the buffer is empty.
--/
-@[inline]
-def isEmpty (bb : ChunkedBuffer) : Bool :=
-  bb.size = 0
+/-- Checks whether the buffer is empty. -/
+@[inline] def isEmpty (bb : ChunkedBuffer) : Bool := bb.size = 0
 
 instance : Inhabited ChunkedBuffer := ⟨empty⟩
 

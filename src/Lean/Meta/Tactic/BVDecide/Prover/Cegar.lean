@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Henrik Böving
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.BVDecide.Prover.Cegar.Basic
 public import Lean.Meta.Tactic.BVDecide.Prover.Cegar.BitVec
@@ -28,38 +29,39 @@ where
   checkTermination : CegarM Unit := do
     checkSystem "bv_decide"
     if (← CegarM.getRounds) == 0 then
-      throwError m!"bv_decide reached its round limit, consider increasing it via the `cegarRounds` config option"
+      throwError m!"bv_decide reached its round limit, consider increasing it via the \
+        `cegarRounds` config option"
     CegarM.consumeRound
 
-  cegarLoop : UnsatProver CegarCert := CegarM.run ctx do
-    let mut lastCex := #[]
-    CegarM.setDidChange true
-    configureSolver
-    while ← CegarM.getDidChange do
-      checkTermination
-      match ← checkBitVec with
-      | .ok cert =>
-        return .ok (← CegarM.createCert cert)
-      | .error cex =>
-        lastCex := cex
-        let cex ← CegarM.CounterExample.ofArray cex
-        discard <| checkUf cex
+  cegarLoop : UnsatProver CegarCert :=
+    CegarM.run ctx do
+      let mut lastCex := #[]
+      CegarM.setDidChange true
+      configureSolver
+      while ← CegarM.getDidChange do
+        checkTermination
+        match ← checkBitVec with
+        | .ok cert => return .ok (← CegarM.createCert cert)
+        | .error cex =>
+          lastCex := cex
+          let cex ← CegarM.CounterExample.ofArray cex
+          discard <| checkUf cex
 
-      match ← processNewHyps with
-      | .solved => return .ok (← CegarM.createCert none)
-      | .newHyps => CegarM.setDidChange true
-      | .none => CegarM.setDidChange false
+        match ← processNewHyps with
+        | .solved => return .ok (← CegarM.createCert none)
+        | .newHyps => CegarM.setDidChange true
+        | .none => CegarM.setDidChange false
 
-    let equations := lastCex.filterMap fun (lhs, synth, rhs) =>
-      if synth then none else some (lhs, rhs)
+      let equations :=
+        lastCex.filterMap fun (lhs, synth, rhs) => if synth then none else some (lhs, rhs)
 
-    let funState := (← getThe BVDecide.State).theoryState.funState
-    return .error {
-      goal := (← read).goal,
-      unusedHypotheses := (← read).unusedHypotheses,
-      equations := equations
-      functionAtoms := funState.atoms.map (·.funExpr)
-    }
+      let funState := (← getThe BVDecide.State).theoryState.funState
+      return .error {
+        goal := (← read).goal
+        unusedHypotheses := (← read).unusedHypotheses
+        equations := equations
+        functionAtoms := funState.atoms.map (·.funExpr)
+      }
 
   configureSolver : CegarM Unit := do
     let solver ← CegarM.getSatSolver

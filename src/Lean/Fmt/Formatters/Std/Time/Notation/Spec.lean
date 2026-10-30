@@ -20,8 +20,7 @@ public def fmtDatespec : Fmt := fun
     let spec ← fmt spec
     let rbTk ← fmt rbTk
     return Layouts.metaApplication lbTk #[.elems #[spec]] rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Std.Time.«termDatespec(_,_)»]
 public def fmtDatespecWithConfig : Fmt := fun
@@ -32,5 +31,4 @@ public def fmtDatespecWithConfig : Fmt := fun
     let config ← fmt config
     let rbTk ← fmt rbTk
     return Layouts.metaApplication lbTk #[.elems #[spec], .sep commaTk, .elems #[config]] rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

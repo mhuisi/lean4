@@ -20,5 +20,4 @@ public def fmtIntNegSucc : Fmt := fun
     let n ← fmt n
     let rbTk ← fmt rbTk
     return Layouts.atomicInfixOperator #[lbTk, n, rbTk]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

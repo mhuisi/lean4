@@ -13,10 +13,10 @@ public section
 
 namespace Lean.Compiler.LCNF
 
-structure  AuxDeclCacheKey where
+structure AuxDeclCacheKey where
   pu : Purity
   decl : Decl pu
-  deriving BEq, Hashable
+deriving BEq, Hashable
 
 builtin_initialize auxDeclCacheExt : CacheExtension AuxDeclCacheKey Name ← CacheExtension.register
 
@@ -29,8 +29,7 @@ def cacheAuxDecl (decl : Decl pu) : CompilerM CacheAuxDeclResult := do
   let key ← normalizeFVarIds key
   let key := ⟨pu, key⟩
   match (← auxDeclCacheExt.find? key) with
-  | some declName =>
-    return .alreadyCached declName
+  | some declName => return .alreadyCached declName
   | none =>
     auxDeclCacheExt.insert key decl.name
     return .new

@@ -31,10 +31,10 @@ See `Promise.result!/resultD` for other ways to handle this case.
 -/
 structure Promise (α : Type) : Type where
   private prom : PromisePointed.type
-  private h    : Nonempty α
+  private h : Nonempty α
 
-instance [s : Nonempty α] : Nonempty (Promise α) :=
-  by exact Nonempty.intro { prom := Classical.choice PromisePointed.property, h := s }
+instance [s : Nonempty α] : Nonempty (Promise α) := by
+  exact Nonempty.intro { prom := Classical.choice PromisePointed.property, h := s }
 
 /-- Creates a new `Promise`. -/
 @[extern "lean_io_promise_new"]
@@ -74,12 +74,12 @@ def Promise.result! (promise : @& Promise α) : Task α :=
 /--
 Like `Promise.result`, but resolves to `dflt` if the promise is dropped without ever being resolved.
 -/
-@[macro_inline, expose] def Promise.resultD (promise : Promise α) (dflt : α) : Task α :=
+@[macro_inline, expose]
+def Promise.resultD (promise : Promise α) (dflt : α) : Task α :=
   promise.result?.map (sync := true) (·.getD dflt)
 
 /--
 Checks whether the promise has already been resolved, i.e. whether access to `result*` will return
 immediately.
 -/
-def Promise.isResolved (promise : Promise α) : BaseIO Bool :=
-  IO.hasFinished promise.result?
+def Promise.isResolved (promise : Promise α) : BaseIO Bool := IO.hasFinished promise.result?

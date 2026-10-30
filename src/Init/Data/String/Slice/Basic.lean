@@ -43,21 +43,17 @@ instance : BEq Slice where
   beq := beq
 
 @[inherit_doc Slice.copy]
-def toString (s : Slice) : String :=
-  s.copy
+def toString (s : Slice) : String := s.copy
 
-@[simp]
-theorem toString_eq : toString = copy := (rfl)
+@[simp] theorem toString_eq : toString = copy := (rfl)
 
 instance : ToString String.Slice where
   toString := toString
 
-@[simp]
-theorem toStringToString_eq : ToString.toString = String.Slice.copy := (rfl)
+@[simp] theorem toStringToString_eq : ToString.toString = String.Slice.copy := (rfl)
 
 @[extern "lean_slice_hash"]
-protected def hash (s : @& Slice) : UInt64 :=
-  String.hash s.copy
+protected def hash (s : @& Slice) : UInt64 := String.hash s.copy
 
 instance : Hashable Slice where
   hash := Slice.hash
@@ -72,7 +68,7 @@ def blt (s t : Slice) : Bool :=
     -- `s` is shorter, so it is smaller unless the first `s.utf8ByteSize` bytes of `t` are smaller.
     have h1 := by simp [Pos.Raw.le_iff]; omega
     have h2 := by simp [Pos.Raw.le_iff]
-    !Pattern.Internal.memcmpSliceLt t s t.startPos.offset s.startPos.offset s.utf8ByteSize h1 h2
+    ! Pattern.Internal.memcmpSliceLt t s t.startPos.offset s.startPos.offset s.utf8ByteSize h1 h2
   else
     have h1 := by simp [Pos.Raw.le_iff]; omega
     have h2 := by simp [Pos.Raw.le_iff]
@@ -81,8 +77,7 @@ def blt (s t : Slice) : Bool :=
 instance : LT Slice where
   lt x y := x.blt y = true
 
-instance : DecidableLT Slice :=
-  fun x y => inferInstanceAs (Decidable (x.blt y = true))
+instance : DecidableLT Slice := fun x y => inferInstanceAs (Decidable (x.blt y = true))
 
 /--
 Compares {name}`s` and {name}`t` lexicographically.
@@ -93,16 +88,16 @@ protected def compare (s t : Slice) : Ordering :=
   have h1 := by simp [Pos.Raw.le_iff]; omega
   have h2 := by simp [Pos.Raw.le_iff]; omega
   (Pattern.Internal.memcmpSliceCompare s t s.startPos.offset t.startPos.offset
-    (min s.utf8ByteSize t.utf8ByteSize) h1 h2).then (Ord.compare s.utf8ByteSize t.utf8ByteSize)
+      (min s.utf8ByteSize t.utf8ByteSize) h1 h2).then
+    (Ord.compare s.utf8ByteSize t.utf8ByteSize)
 
 instance : Ord Slice where
   compare := Slice.compare
 
 instance : LE Slice where
-  le x y := ¬y < x
+  le x y := ¬ y < x
 
-instance : DecidableLE Slice :=
-  fun x y => inferInstanceAs (Decidable (¬y < x))
+instance : DecidableLE Slice := fun x y => inferInstanceAs (Decidable (¬ y < x))
 
 instance : Min Slice := .leftLeaningOfLE _
 instance : Max Slice := .leftLeaningOfLE _
@@ -117,9 +112,7 @@ Examples:
  * {lean}`"red green blue".toSlice.drop 10 == "blue".toSlice`
  * {lean}`"red green blue".toSlice.drop 50 == "".toSlice`
 -/
-@[inline]
-def drop (s : Slice) (n : Nat) : Slice :=
-  s.sliceFrom (s.startPos.nextn n)
+@[inline] def drop (s : Slice) (n : Nat) : Slice := s.sliceFrom (s.startPos.nextn n)
 
 /--
 Creates a new slice that contains the first {name}`n` characters (Unicode code points) of {name}`s`.
@@ -132,9 +125,7 @@ Examples:
  * {lean}`"red green blue".toSlice.take 0 == "".toSlice`
  * {lean}`"red green blue".toSlice.take 100 == "red green blue".toSlice`
 -/
-@[inline]
-def take (s : Slice) (n : Nat) : Slice :=
-  s.sliceTo (s.startPos.nextn n)
+@[inline] def take (s : Slice) (n : Nat) : Slice := s.sliceTo (s.startPos.nextn n)
 
 /--
 Removes the specified number of characters (Unicode code points) from the end of the slice.
@@ -146,9 +137,7 @@ Examples:
  * {lean}`"red green blue".toSlice.dropEnd 11 == "red".toSlice`
  * {lean}`"red green blue".toSlice.dropEnd 50 == "".toSlice`
 -/
-@[inline]
-def dropEnd (s : Slice) (n : Nat) : Slice :=
-  s.sliceTo (s.endPos.prevn n)
+@[inline] def dropEnd (s : Slice) (n : Nat) : Slice := s.sliceTo (s.endPos.prevn n)
 
 /--
 Creates a new slice that contains the last {name}`n` characters (Unicode code points) of {name}`s`.
@@ -161,13 +150,9 @@ Examples:
  * {lean}`"red green blue".toSlice.takeEnd 0 == "".toSlice`
  * {lean}`"red green blue".toSlice.takeEnd 100 == "red green blue".toSlice`
 -/
-@[inline]
-def takeEnd (s : Slice) (n : Nat) : Slice :=
-  s.sliceFrom (s.endPos.prevn n)
+@[inline] def takeEnd (s : Slice) (n : Nat) : Slice := s.sliceFrom (s.endPos.prevn n)
 
-/--
-Checks whether {lean}`s1 == s2` if ASCII upper/lowercase are ignored.
--/
+/-- Checks whether {lean}`s1 == s2` if ASCII upper/lowercase are ignored. -/
 def eqIgnoreAsciiCase (s1 s2 : Slice) : Bool :=
   s1.utf8ByteSize == s2.utf8ByteSize && go s1 s1.startPos.offset s2 s2.startPos.offset
 where
@@ -193,9 +178,7 @@ Examples:
 * {lean}`"abc".toSlice.front? = some 'a'`
 * {lean}`"".toSlice.front? = none`
 -/
-@[inline, expose]
-def front? (s : Slice) : Option Char :=
-  s.startPos.get?
+@[inline, expose] def front? (s : Slice) : Option Char := s.startPos.get?
 
 /--
 Returns the first character in {name}`s`. If {name}`s` is empty, returns {lean}`(default : Char)`.
@@ -204,9 +187,7 @@ Examples:
 * {lean}`"abc".toSlice.front = 'a'`
 * {lean}`"".toSlice.front = (default : Char)`
 -/
-@[inline, expose]
-def front (s : Slice) : Char :=
-  s.front?.getD default
+@[inline, expose] def front (s : Slice) : Char := s.front?.getD default
 
 /--
 Returns the last character in {name}`s`. If {name}`s` is empty, returns {name}`none`.
@@ -215,9 +196,7 @@ Examples:
 * {lean}`"abc".toSlice.back? = some 'c'`
 * {lean}`"".toSlice.back? = none`
 -/
-@[inline, expose]
-def back? (s : Slice) : Option Char :=
-  s.endPos.prev? |>.bind (·.get?)
+@[inline, expose] def back? (s : Slice) : Option Char := s.endPos.prev? |>.bind (·.get?)
 
 /--
 Returns the last character in {name}`s`. If {name}`s` is empty, returns {lean}`(default : Char)`.
@@ -226,9 +205,7 @@ Examples:
 * {lean}`"abc".toSlice.back = 'c'`
 * {lean}`"".toSlice.back = (default : Char)`
 -/
-@[inline, expose]
-def back (s : Slice) : Char :=
-  s.back?.getD default
+@[inline, expose] def back (s : Slice) : Char := s.back?.getD default
 
 /--
 Appends the slices in a list of slices, placing the separator {name}`s` between each pair.
@@ -239,11 +216,12 @@ Examples:
  * {lean}`" | ".toSlice.intercalate ["M".toSlice, "".toSlice, "N".toSlice] = "M |  | N"`
 -/
 def intercalate (s : Slice) : List Slice → String
-  | []      => ""
+  | [] => ""
   | a :: as => go a.copy s as
-where go (acc : String) (s : Slice) : List Slice → String
-  | a :: as => go (acc ++ s ++ a) s as
-  | []      => acc
+where
+  go (acc : String) (s : Slice) : List Slice → String
+    | a :: as => go (acc ++ s ++ a) s as
+    | [] => acc
 
 /--
 Appends all the slices in a list of slices, in order.
@@ -265,8 +243,7 @@ hierarchical, and the string is split at the dots ({lean}`'.'`).
 {lean}`"a.b".toSlice.toName` is the name {lit}`a.b`, not {lit}`«a.b»`. For the latter, use
 `Name.mkSimple`.
 -/
-def toName (s : Slice) : Lean.Name :=
-  s.toString.toName
+def toName (s : Slice) : Lean.Name := s.toString.toName
 
 instance : Std.ToFormat String.Slice where
   format s := Std.ToFormat.format s.copy

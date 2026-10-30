@@ -19,7 +19,9 @@ Declares an auxiliary definition with an automatically generated name.
 For example, `aux_def foo : Nat := 42` creates a definition
 with an internal, unused name based on the suggestion `foo`.
 -/
-scoped syntax (name := aux_def) docComment ? attributes ? visibility "aux_def" ident+ ":" term ":=" term : command
+scoped syntax (name := aux_def)
+  docComment ? attributes ? visibility "aux_def" ident+ ":" term ":=" term
+  : command
 
 /--
 Creates the name of an auxiliary definition based on `suggestion`, as used by `aux_def`. The name is
@@ -38,10 +40,11 @@ def mkAuxDefName (suggestion : Name) : CommandElabM Name := do
 
 @[builtin_command_elab «aux_def»]
 def elabAuxDef : CommandElab
-  | `($[$doc?:docComment]? $[$attrs?:attributes]? $vis:visibility aux_def $suggestion* : $ty := $body) => do
-    let id ← mkAuxDefName <|
-      suggestion.map (·.getId.eraseMacroScopes) |>.foldl (· ++ ·) Name.anonymous
-    elabCommand <|
-      ← `($[$doc?:docComment]? $[$attrs?:attributes]? $vis:visibility
-          meta def $(mkIdentFrom (mkNullNode suggestion) id (canonical := true)):ident : $ty := $body)
+  | `($[$doc?:docComment]? $[$attrs?:attributes]? $vis:visibility aux_def $suggestion* : $ty := $body) =>
+    do
+      let id ←
+        mkAuxDefName <| suggestion.map (·.getId.eraseMacroScopes) |>.foldl (· ++ ·) Name.anonymous
+      elabCommand <|
+        ← `($[$doc?:docComment]? $[$attrs?:attributes]? $vis:visibility
+            meta def $(mkIdentFrom (mkNullNode suggestion) id (canonical := true)):ident : $ty := $body)
   | _ => throwUnsupportedSyntax

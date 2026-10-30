@@ -18,7 +18,7 @@ public section
 namespace Nat
 
 @[simp]
-theorem not_isPowerOfTwo_zero : ¬isPowerOfTwo 0 := by
+theorem not_isPowerOfTwo_zero : ¬ isPowerOfTwo 0 := by
   rw [isPowerOfTwo, not_exists]
   intro x
   have := one_le_pow x 2 (by decide)
@@ -28,22 +28,24 @@ private theorem ne_zero_of_isPowerOfTwo {n : Nat} (h : n.isPowerOfTwo) : n ≠ 0
   rintro rfl
   simp at h
 
-private theorem le_of_isPowerOfTwo_of_lt_two_mul {k n m : Nat} (hn : n.isPowerOfTwo)
-    (hm : m.isPowerOfTwo) (hn₂ : n < 2 * k) (hm₁ : k ≤ m) : n ≤ m := by
+private theorem le_of_isPowerOfTwo_of_lt_two_mul
+    {k n m : Nat} (hn : n.isPowerOfTwo) (hm : m.isPowerOfTwo) (hn₂ : n < 2 * k) (hm₁ : k ≤ m)
+    : n ≤ m := by
   obtain ⟨n, rfl⟩ := hn
   obtain ⟨m, rfl⟩ := hm
   rw [Nat.pow_le_pow_iff_right (by omega), Nat.le_iff_lt_add_one,
     ← Nat.pow_lt_pow_iff_right (by decide : 1 < 2), Nat.pow_add_one']
   exact Nat.lt_of_lt_of_le hn₂ (Nat.mul_le_mul_left _ hm₁)
 
-theorem nextPowerOfTwo_eq_iff {n m : Nat} :
-    n.nextPowerOfTwo = m ↔ n ≤ m ∧ m.isPowerOfTwo ∧ ∀ k, n ≤ k → k.isPowerOfTwo → m ≤ k := by
+theorem nextPowerOfTwo_eq_iff {n m : Nat}
+    : n.nextPowerOfTwo = m ↔ n ≤ m ∧ m.isPowerOfTwo ∧ ∀ k, n ≤ k → k.isPowerOfTwo → m ≤ k := by
   rw [nextPowerOfTwo]
-  suffices ∀ l h, l.isPowerOfTwo → l < 2 * n →
-      (nextPowerOfTwo.go n l h = m ↔
-        n ≤ m ∧ m.isPowerOfTwo ∧ ∀ k, n ≤ k → k.isPowerOfTwo → m ≤ k) by
-    obtain (rfl|hn) := Nat.eq_zero_or_pos n
-    · simp only [nextPowerOfTwo.go, not_lt_zero, ↓reduceIte, zero_le, forall_const, true_and]
+  suffices ∀ l h,
+      l.isPowerOfTwo → l < 2 * n
+        → (nextPowerOfTwo.go n l h = m
+          ↔ n ≤ m ∧ m.isPowerOfTwo ∧ ∀ k, n ≤ k → k.isPowerOfTwo → m ≤ k) by
+    obtain (rfl | hn) := Nat.eq_zero_or_pos n
+    · simp only [nextPowerOfTwo.go, not_lt_zero, ↓ reduceIte, zero_le, forall_const, true_and]
       refine ⟨fun h => ?_, fun ⟨h₁, h₂⟩ => ?_⟩
       · simp +contextual [← h, ← Nat.not_lt, ne_zero_of_isPowerOfTwo]
       · exact Nat.le_antisymm (by simp [← Nat.not_lt, ne_zero_of_isPowerOfTwo, h₁]) (h₂ _ (by simp))
@@ -62,14 +64,13 @@ theorem nextPowerOfTwo_eq_iff {n m : Nat} :
     · exact Nat.le_antisymm (le_of_isPowerOfTwo_of_lt_two_mul hl₂ h₂ hln h₁) (h₃ _ (by omega) hl₂)
 
 @[simp]
-theorem le_nextPowerOfTwo (n : Nat) : n ≤ n.nextPowerOfTwo :=
-  (nextPowerOfTwo_eq_iff.1 rfl).1
+theorem le_nextPowerOfTwo (n : Nat) : n ≤ n.nextPowerOfTwo := (nextPowerOfTwo_eq_iff.1 rfl).1
 
 theorem nextPowerOfTwo_le {n m : Nat} (hn : n ≤ m) (hm : m.isPowerOfTwo) : n.nextPowerOfTwo ≤ m :=
   (nextPowerOfTwo_eq_iff.1 rfl).2.2 _ hn hm
 
 theorem nextPowerOfTwo_eq_self {n : Nat} (h : n.isPowerOfTwo) : n.nextPowerOfTwo = n :=
- nextPowerOfTwo_eq_iff.2 (by simp +contextual [h])
+  nextPowerOfTwo_eq_iff.2 (by simp +contextual [h])
 
 @[simp]
 theorem isPowerOfTwo_nextPowerOfTwo (n : Nat) : n.nextPowerOfTwo.isPowerOfTwo :=

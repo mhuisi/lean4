@@ -384,7 +384,8 @@ deriving Inhabited, TypeName
 public def pseudoAligned (doc : TaggedDoc) (mustBeRespected := false) : TaggedDoc :=
   doc.addMetaData (PseudoAligned.mk mustBeRespected) fun v _ => v
 
-public def getPseudoAligned? (doc : TaggedDoc) : Option PseudoAligned := doc.getMetaData? PseudoAligned
+public def getPseudoAligned? (doc : TaggedDoc) : Option PseudoAligned :=
+  doc.getMetaData? PseudoAligned
 
 public def needsAppBrackets (doc : TaggedDoc) : Bool :=
   doc.isRawFallback || !doc.isCompoundAtomic && !doc.isSelfDelimited

@@ -43,40 +43,34 @@ public structure Time where
   second : Nat
   fracExponent : Nat := 0
   fracMantissa : Nat := 0
-  deriving Inhabited, DecidableEq
+deriving Inhabited, DecidableEq
 
 namespace Time
 
-public abbrev IsValidHour (h : Nat) : Prop :=
-  h ≤ 23
+public abbrev IsValidHour (h : Nat) : Prop := h ≤ 23
 
-public abbrev IsValidMinute (m : Nat) : Prop :=
-  m ≤ 59
+public abbrev IsValidMinute (m : Nat) : Prop := m ≤ 59
 
-public abbrev IsValidSecond (s : Nat) : Prop :=
-  s ≤ 60
+public abbrev IsValidSecond (s : Nat) : Prop := s ≤ 60
 
-public def zero : Time :=
-  {hour := 0, minute := 0, second := 0}
+public def zero : Time := { hour := 0, minute := 0, second := 0 }
 
 public instance : OfNat Time (nat_lit 0) := ⟨Time.zero⟩
 
 public def ofValid? (hour minute second : Nat) : Option Time := do
   guard (IsValidHour hour ∧ IsValidMinute minute ∧ IsValidSecond second)
-  return {hour, minute, second}
+  return { hour, minute, second }
 
 public def ofString? (t : String) : Option Time := do
   match t.split ':' |>.toList with
-  | [h,m,s] =>
+  | [h, m, s] =>
     match s.split '.' |>.toList with
-    | [s,f] =>
+    | [s, f] =>
       let time ← ofValid? (← h.toNat?) (← m.toNat?) (← s.toNat?)
-      return {time with fracExponent := f.positions.length-1, fracMantissa := ← f.toNat?}
-    | [s] =>
-      ofValid? (← h.toNat?) (← m.toNat?) (← s.toNat?)
+      return { time with fracExponent := f.positions.length - 1, fracMantissa := ← f.toNat? }
+    | [s] => ofValid? (← h.toNat?) (← m.toNat?) (← s.toNat?)
     | _ => none
-  | [h,m] =>
-    ofValid? (← h.toNat?) (← m.toNat?) 0
+  | [h, m] => ofValid? (← h.toNat?) (← m.toNat?) 0
   | _ => none
 
 public protected def toString (t : Time) : String :=
@@ -92,10 +86,10 @@ end Time
 
 /-- A TOML date-time. -/
 public inductive DateTime
-| offsetDateTime (date : Date) (time : Time) (offset? : Option (Bool × Time) := none)
-| localDateTime (date : Date) (time : Time)
-| localDate (date : Date)
-| localTime (time : Time)
+  | offsetDateTime (date : Date) (time : Time) (offset? : Option (Bool × Time) := none)
+  | localDateTime (date : Date) (time : Time)
+  | localDate (date : Date)
+  | localTime (time : Time)
 deriving Inhabited, DecidableEq
 
 public instance : Coe Date DateTime := ⟨DateTime.localDate⟩
@@ -105,13 +99,13 @@ namespace DateTime
 
 public def ofString? (dt : String) : Option DateTime := do
   match dt.split (fun c => c == 'T' || c == 't' || c == ' ') |>.toList with
-  | [d,t] =>
+  | [d, t] =>
     let d ← Date.ofString? d.copy
     if t.back == 'Z' || t.back == 'z' then
       return offsetDateTime d (← Time.ofString? <| t.dropEnd 1 |>.copy)
-    else if let [t,o] := t.split '+' |>.toStringList then
+    else if let [t, o] := t.split '+' |>.toStringList then
       return offsetDateTime d (← Time.ofString? t) <| some (false, ← Time.ofString? o)
-    else if let [t,o] := t.split '-' |>.toStringList then
+    else if let [t, o] := t.split '-' |>.toStringList then
       return offsetDateTime d (← Time.ofString? t) <| some (true, ← Time.ofString? o)
     else
       return localDateTime d (← Time.ofString? t.copy)
@@ -125,7 +119,7 @@ public def ofString? (dt : String) : Option DateTime := do
 public protected def toString (dt : DateTime) : String :=
   match dt with
   | .offsetDateTime d t o? =>
-    if let some (s,o) := o? then
+    if let some (s, o) := o? then
       if s then
         s!"{d}T{t}-{zpad o.hour 2}:{zpad o.minute 2}"
       else

@@ -55,8 +55,8 @@ where
       let rhs := rhs.cast this
       go aig lhs rhs 1 acc
 
-  go (aig : AIG α) (lhs rhs : AIG.RefVec aig w) (curr : Nat) (acc : AIG.RefVec aig w) :
-      AIG.RefVecEntry α w :=
+  go (aig : AIG α) (lhs rhs : AIG.RefVec aig w) (curr : Nat) (acc : AIG.RefVec aig w)
+      : AIG.RefVecEntry α w :=
     if h : curr < w then
       -- If the rhs is false we can skip this iteration as we would add zero
       if aig.isConstant (rhs.get curr h) false then
@@ -88,9 +88,9 @@ where
 
 namespace blastMul
 
-theorem go_le_size {w : Nat} (aig : AIG α) (curr : Nat) (acc : AIG.RefVec aig w)
-    (lhs rhs : AIG.RefVec aig w) :
-    aig.decls.size ≤ (go aig lhs rhs curr acc).aig.decls.size := by
+theorem go_le_size
+    {w : Nat} (aig : AIG α) (curr : Nat) (acc : AIG.RefVec aig w) (lhs rhs : AIG.RefVec aig w)
+    : aig.decls.size ≤ (go aig lhs rhs curr acc).aig.decls.size := by
   unfold go
   split
   · split
@@ -102,10 +102,9 @@ theorem go_le_size {w : Nat} (aig : AIG α) (curr : Nat) (acc : AIG.RefVec aig w
       apply AIG.LawfulVecOperator.le_size (f := blastShiftLeftConst)
   · simp
 
-theorem go_decl_eq {w : Nat} (aig : AIG α) (curr : Nat) (acc : AIG.RefVec aig w)
-    (lhs rhs : AIG.RefVec aig w) :
-    ∀ (idx : Nat) (h1) (h2),
-       (go aig lhs rhs curr acc).aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
+theorem go_decl_eq
+    {w : Nat} (aig : AIG α) (curr : Nat) (acc : AIG.RefVec aig w) (lhs rhs : AIG.RefVec aig w)
+    : ∀ (idx : Nat) (h1) (h2), (go aig lhs rhs curr acc).aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
   generalize hgo : go aig lhs rhs curr acc = res
   unfold go at hgo
   split at hgo

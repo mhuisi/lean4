@@ -36,12 +36,12 @@ We use this function to decide whether to create a `.default` case or not.
 -/
 def getMaxOccs (alts : Array (Alt .impure)) : Alt .impure × Nat := Id.run do
   let mut maxAlt := alts[0]!
-  let mut max    := getNumOccsOf alts 0
+  let mut max := getNumOccsOf alts 0
   for h : i in 1...alts.size do
     let curr := getNumOccsOf alts i
     if curr > max then
-       maxAlt := alts[i]
-       max    := curr
+      maxAlt := alts[i]
+      max := curr
   return (maxAlt, max)
 where
   /--
@@ -53,7 +53,7 @@ where
   getNumOccsOf (alts : Array (Alt .impure)) (i : Nat) : Nat := Id.run do
     let code := alts[i]!.getCode
     let mut n := 1
-    for h : j in (i+1)...alts.size do
+    for h : j in (i + 1)...alts.size do
       if Code.alphaEqv alts[j].getCode code then
         n := n + 1
     return n
@@ -74,7 +74,8 @@ def addDefaultAlt (alts : Array (Alt .impure)) : CompilerM (Array (Alt .impure))
       let mut first := true
       for alt in alts do
         if Code.alphaEqv alt.getCode max.getCode then
-          let .ctorAlt _ k := alt | unreachable!
+          let .ctorAlt _ k := alt
+            | unreachable!
           unless first do
             eraseCode k
           first := false
@@ -82,11 +83,9 @@ def addDefaultAlt (alts : Array (Alt .impure)) : CompilerM (Array (Alt .impure))
           altsNew := altsNew.push alt
       return altsNew.push (.default max.getCode)
 
-/--
-Remove all unreachable cases.
--/
+/-- Remove all unreachable cases. -/
 def filterUnreachable (alts : Array (Alt .impure)) : Array (Alt .impure) :=
-  alts.filter (!·.getCode matches .unreach ..)
+  alts.filter (! ·.getCode matches .unreach ..)
 
 def simplifyCases (c : Cases .impure) : CompilerM (Code .impure) := do
   let alts := filterUnreachable c.alts
@@ -101,14 +100,21 @@ def simplifyCases (c : Cases .impure) : CompilerM (Code .impure) := do
 partial def Code.simpCase (code : Code .impure) : CompilerM (Code .impure) := do
   match code with
   | .cases c =>
-    let alts ← c.alts.mapMonoM (·.mapCodeM  (·.simpCase))
+    let alts ← c.alts.mapMonoM (·.mapCodeM (·.simpCase))
     simplifyCases (c.updateAlts alts)
   | .jp decl k =>
     let decl ← decl.updateValue (← decl.value.simpCase)
     return code.updateFun! decl (← k.simpCase)
-  | .return .. | .jmp .. | .unreach .. => return code
-  | .let _ k | .uset (k := k) .. | .sset (k := k) .. | .inc (k := k) .. | .dec (k := k) ..
-  | .setTag (k := k) .. | .del (k := k) .. | .oset (k := k) .. =>
+  | .return .. | .jmp .. | .unreach .. =>
+    return code
+  | .let _ k
+  | .uset (k := k) ..
+  | .sset (k := k) ..
+  | .inc (k := k) ..
+  | .dec (k := k) ..
+  | .setTag (k := k) ..
+  | .del (k := k) ..
+  | .oset (k := k) .. =>
     return code.updateCont! (← k.simpCase)
 
 def Decl.simpCase (decl : Decl .impure) : CompilerM (Decl .impure) := do
@@ -125,10 +131,8 @@ public def ensureHasDefault (alts : Array (Alt .impure)) : Array (Alt .impure) :
     let alts := alts.pop
     alts.push (.default last.getCode)
 
-public def simpCase : Pass :=
-  Pass.mkPerDeclaration `simpCase .impure Decl.simpCase 0
+public def simpCase : Pass := Pass.mkPerDeclaration `simpCase .impure Decl.simpCase 0
 
-builtin_initialize
-  registerTraceClass `Compiler.simpCase (inherited := true)
+builtin_initialize registerTraceClass `Compiler.simpCase (inherited := true)
 
 end Lean.Compiler.LCNF

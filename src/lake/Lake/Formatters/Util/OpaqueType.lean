@@ -24,8 +24,7 @@ public def fmtNonemptyTypeCmd : Fmt := fun
     let binders := binders.map fun binder => ⟨binder.raw⟩
     let signature ← fmtDeclarationSignature #[nonemptyTypeTk] none id binders none none
     fmtDeclWithModifiers docComment? none #[visibility?] signature
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.hydrateOpaqueTypeCmd]
 public def fmtHydrateOpaqueTypeCmd : Fmt := fun
@@ -38,5 +37,4 @@ public def fmtHydrateOpaqueTypeCmd : Fmt := fun
     let args ← fmtArray args
     let decl := Layouts.pseudoApplication <| #[hydrateOpaqueTypeTk, opaqueTy, ty] ++ args
     fmtDeclWithModifiers none none #[visibility?] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

@@ -35,8 +35,7 @@ public def fmtTacticMatch : Fmt := fun
       allowFlattening := false
       nestedRhs := false
     }
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.introMatch]
 public def fmtIntroMatch : Fmt := fun
@@ -44,5 +43,4 @@ public def fmtIntroMatch : Fmt := fun
     let introTk ← fmt introTk
     let matchAlts ← fmt matchAlts
     return Layouts.lines #[introTk, matchAlts]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

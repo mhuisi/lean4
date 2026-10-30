@@ -26,17 +26,20 @@ open Order
 Given `inst : CCPO (t[x])` for some FVar `x`, constructs an instance
 of the type `CCPO (∀ x, t[x])`.
 Can handle `CompleteLattice` as well.
---/
+-
+-/
 def mkInstPiOfInstForall (x : Expr) (inst : Expr) : MetaM Expr := do
-  if (←inferType inst).isAppOf ``CCPO then
+  if (← inferType inst).isAppOf ``CCPO then
     mkAppOptM ``instCCPOPi #[(← inferType x), none, (← mkLambdaFVars #[x] inst)]
-  else if (←inferType inst).isAppOf ``CompleteLattice then
+  else if (← inferType inst).isAppOf ``CompleteLattice then
     mkAppOptM ``instCompleteLatticePi #[(← inferType x), none, (← mkLambdaFVars #[x] inst)]
   else
     throwError "mkInstPiOfInstForall: unexpected type of {inst}"
 
-/-- An n-ary version of `mkInstPiOfInstForall`. Takes an array of arguments instead.
---/
+/--
+An n-ary version of `mkInstPiOfInstForall`. Takes an array of arguments instead.
+-
+-/
 def mkInstPiOfInstsForall (xs : Array Expr) (inst : Expr) : MetaM Expr := do
   let mut inst := inst
   for x in xs.reverse do
@@ -50,9 +53,9 @@ with respect to the instance `inst`. The `packedType` is assumed to contain the 
 Can handle `CompleteLattice` as well.
 -/
 def mkFixOfMonFun (packedType : Expr) (packedInst : Expr) (hmono : Expr) : MetaM Expr := do
-  if (←inferType packedInst).isAppOf ``CCPO then
+  if (← inferType packedInst).isAppOf ``CCPO then
     mkAppOptM ``fix #[packedType, packedInst, none, hmono]
-  else if (←inferType packedInst).isAppOf ``CompleteLattice then
+  else if (← inferType packedInst).isAppOf ``CompleteLattice then
     mkAppOptM ``lfp_monotone #[packedType, packedInst, none, hmono]
   else
     throwError "mkFixOfMonFun: unexpected type of {packedInst}"
@@ -64,9 +67,9 @@ Takes an optional argument with the type `α`. If the optional argument is `none
 it is treated implicitly.
 -/
 def toPartialOrder (packedInst : Expr) (type : Option Expr := .none) := do
-  if (←inferType packedInst).isAppOf ``CCPO then
+  if (← inferType packedInst).isAppOf ``CCPO then
     mkAppOptM ``CCPO.toPartialOrder #[type, packedInst]
-  else if (←inferType packedInst).isAppOf ``CompleteLattice then
+  else if (← inferType packedInst).isAppOf ``CompleteLattice then
     mkAppOptM ``CompleteLattice.toPartialOrder #[type, packedInst]
   else
     throwError "getUnderlyingOrder: unexpected type of {packedInst}"

@@ -23,10 +23,14 @@ def getArrayLitElems? (e : Expr) : Option <| Array Expr :=
   | _ => none
 
 /-- Reduce `#[...][n]` for literal arrays and literal `Nat` indices. -/
-builtin_cbv_simproc cbv_eval simpArrayGetElem (@GetElem.getElem (Array _) Nat _ _ _ _ _ _) := fun e => do
-  let_expr GetElem.getElem _ _ _ _ _ xs n _ := e | return .rfl
-  let some elems := getArrayLitElems? xs | return .rfl
-  let some idx := Sym.getNatValue? n | return .rfl
+builtin_cbv_simproc cbv_eval
+    simpArrayGetElem (@GetElem.getElem (Array _) Nat _ _ _ _ _ _) := fun e => do
+  let_expr GetElem.getElem _ _ _ _ _ xs n _ := e
+    | return .rfl
+  let some elems := getArrayLitElems? xs
+    | return .rfl
+  let some idx := Sym.getNatValue? n
+    | return .rfl
   if h : idx < elems.size then
     let result := elems[idx]
     return .step result (← Sym.mkEqRefl result)
@@ -34,12 +38,17 @@ builtin_cbv_simproc cbv_eval simpArrayGetElem (@GetElem.getElem (Array _) Nat _ 
     return .rfl
 
 /-- Reduce `#[...][n]?` for literal arrays and literal `Nat` indices. -/
-builtin_cbv_simproc cbv_eval simpArrayGetElem? (@GetElem?.getElem? (Array _) Nat _ _ _ _ _) := fun e => do
-  let_expr GetElem?.getElem? _ _ α _ _ xs n := e | return .rfl
-  let some elems := getArrayLitElems? xs | return .rfl
-  let some idx := Sym.getNatValue? n | return .rfl
+builtin_cbv_simproc cbv_eval
+    simpArrayGetElem? (@GetElem?.getElem? (Array _) Nat _ _ _ _ _) := fun e => do
+  let_expr GetElem?.getElem? _ _ α _ _ xs n := e
+    | return .rfl
+  let some elems := getArrayLitElems? xs
+    | return .rfl
+  let some idx := Sym.getNatValue? n
+    | return .rfl
   let sortLevel ← Sym.getLevel α
-  let .succ u := sortLevel | return .rfl
+  let .succ u := sortLevel
+    | return .rfl
   let result ←
     if h : idx < elems.size then
       Sym.share <| mkApp2 (mkConst ``Option.some [u]) α elems[idx]

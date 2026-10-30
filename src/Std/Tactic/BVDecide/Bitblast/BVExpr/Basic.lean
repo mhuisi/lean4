@@ -24,23 +24,15 @@ operations to the ones provided in this file. For verification purposes `BVLogic
 
 namespace Std.Tactic.BVDecide
 
-/--
-The variable definition used by the bitblaster.
--/
+/-- The variable definition used by the bitblaster. -/
 structure BVBit where
-  /--
-  A numeric identifier for the BitVec variable.
-  -/
+  /-- A numeric identifier for the BitVec variable. -/
   var : Nat
-  /--
-  The width of the BitVec variable.
-  -/
+  /-- The width of the BitVec variable. -/
   {w : Nat}
-  /--
-  The bit that we take out of the BitVec variable by getLsb.
-  -/
+  /-- The bit that we take out of the BitVec variable by getLsb. -/
   idx : Fin w
-  deriving Hashable, DecidableEq, Repr
+deriving Hashable, DecidableEq, Repr
 
 instance : ToString BVBit where
   toString b := s!"x{b.var}[{b.idx.val}]"
@@ -48,39 +40,23 @@ instance : ToString BVBit where
 instance : Inhabited BVBit where
   default := { w := 1, var := 0, idx := 0 }
 
-/--
-All supported binary operations on `BVExpr`.
--/
+/-- All supported binary operations on `BVExpr`. -/
 inductive BVBinOp where
-  /--
-  Bitwise and.
-  -/
+  /-- Bitwise and. -/
   | and
-  /--
-  Bitwise or.
-  -/
+  /-- Bitwise or. -/
   | or
-  /--
-  Bitwise xor.
-  -/
+  /-- Bitwise xor. -/
   | xor
-  /--
-  Addition.
-  -/
+  /-- Addition. -/
   | add
-  /--
-  Multiplication.
-  -/
+  /-- Multiplication. -/
   | mul
-  /--
-  Unsigned division.
-  -/
+  /-- Unsigned division. -/
   | udiv
-  /--
-  Unsigned modulo.
-  -/
+  /-- Unsigned modulo. -/
   | umod
-  deriving Hashable, DecidableEq
+deriving Hashable, DecidableEq
 
 namespace BVBinOp
 
@@ -95,9 +71,7 @@ def toString : BVBinOp → String
 
 instance : ToString BVBinOp := ⟨toString⟩
 
-/--
-The semantics for `BVBinOp`.
--/
+/-- The semantics for `BVBinOp`. -/
 def eval : BVBinOp → (BitVec w → BitVec w → BitVec w)
   | and => (· &&& ·)
   | or => (· ||| ·)
@@ -105,7 +79,7 @@ def eval : BVBinOp → (BitVec w → BitVec w → BitVec w)
   | add => (· + ·)
   | mul => (· * ·)
   | udiv => (· / ·)
-  | umod => (· % · )
+  | umod => (· % ·)
 
 @[simp] theorem eval_and : eval .and = ((· &&& ·) : BitVec w → BitVec w → BitVec w) := by rfl
 @[simp] theorem eval_or : eval .or = ((· ||| ·) : BitVec w → BitVec w → BitVec w) := by rfl
@@ -117,21 +91,13 @@ def eval : BVBinOp → (BitVec w → BitVec w → BitVec w)
 
 end BVBinOp
 
-/--
-All supported unary operators on `BVExpr`.
--/
+/-- All supported unary operators on `BVExpr`. -/
 inductive BVUnOp where
-  /--
-  Bitwise not.
-  -/
+  /-- Bitwise not. -/
   | not
-  /--
-  Rotating left by a constant value.
-  -/
+  /-- Rotating left by a constant value. -/
   | rotateLeft (n : Nat)
-  /--
-  Rotating right by a constant value.
-  -/
+  /-- Rotating right by a constant value. -/
   | rotateRight (n : Nat)
   /--
   Arithmetic shift right by a constant value.
@@ -141,19 +107,13 @@ inductive BVUnOp where
   constant `Nat` value.
   -/
   | arithShiftRightConst (n : Nat)
-  /--
-  Reverse the bits in a bitvector.
-  -/
+  /-- Reverse the bits in a bitvector. -/
   | reverse
-  /--
-  Count leading zeros.
-  -/
+  /-- Count leading zeros. -/
   | clz
-  /--
-  Population count.
-  -/
+  /-- Population count. -/
   | cpop
-  deriving Hashable, DecidableEq
+deriving Hashable, DecidableEq
 
 namespace BVUnOp
 
@@ -168,30 +128,31 @@ def toString : BVUnOp → String
 
 instance : ToString BVUnOp := ⟨toString⟩
 
-/--
-The semantics for `BVUnOp`.
--/
+/-- The semantics for `BVUnOp`. -/
 def eval : BVUnOp → (BitVec w → BitVec w)
-  | not => (~~~ ·)
+  | not => (~~~·)
   | rotateLeft n => (BitVec.rotateLeft · n)
   | rotateRight n => (BitVec.rotateRight · n)
   | arithShiftRightConst n => (BitVec.sshiftRight · n)
-  | reverse =>  BitVec.reverse
+  | reverse => BitVec.reverse
   | clz => BitVec.clz
   | cpop => BitVec.cpop
 
-@[simp] theorem eval_not : eval .not = ((~~~ ·) : BitVec w → BitVec w) := by rfl
+@[simp] theorem eval_not : eval .not = ((~~~·) : BitVec w → BitVec w) := by rfl
 
 @[simp]
-theorem eval_rotateLeft : eval (rotateLeft n) = ((BitVec.rotateLeft · n) : BitVec w → BitVec w) := by
+theorem eval_rotateLeft
+    : eval (rotateLeft n) = ((BitVec.rotateLeft · n) : BitVec w → BitVec w) := by
   rfl
 
 @[simp]
-theorem eval_rotateRight : eval (rotateRight n) = ((BitVec.rotateRight · n) : BitVec w → BitVec w) := by
+theorem eval_rotateRight
+    : eval (rotateRight n) = ((BitVec.rotateRight · n) : BitVec w → BitVec w) := by
   rfl
 
 @[simp]
-theorem eval_arithShiftRightConst : eval (arithShiftRightConst n) = (BitVec.sshiftRight · n : BitVec w → BitVec w) := by
+theorem eval_arithShiftRightConst
+    : eval (arithShiftRightConst n) = (BitVec.sshiftRight · n : BitVec w → BitVec w) := by
   rfl
 
 @[simp] theorem eval_reverse : eval .reverse = (BitVec.reverse : BitVec w → BitVec w) := by rfl
@@ -202,45 +163,25 @@ theorem eval_arithShiftRightConst : eval (arithShiftRightConst n) = (BitVec.sshi
 
 end BVUnOp
 
-/--
-All supported expressions involving `BitVec` and operations on them.
--/
+/-- All supported expressions involving `BitVec` and operations on them. -/
 inductive BVExpr : Nat → Type where
-  /--
-  A `BitVec` variable, referred to through an index.
-  -/
+  /-- A `BitVec` variable, referred to through an index. -/
   | var (idx : Nat) : BVExpr w
-  /--
-  A constant `BitVec` value.
-  -/
+  /-- A constant `BitVec` value. -/
   | const (val : BitVec w) : BVExpr w
-  /--
-  Extract a slice from a `BitVec`.
-  -/
+  /-- Extract a slice from a `BitVec`. -/
   | extract (start len : Nat) (expr : BVExpr w) : BVExpr len
-  /--
-  A binary operation on two `BVExpr`.
-  -/
+  /-- A binary operation on two `BVExpr`. -/
   | bin (lhs : BVExpr w) (op : BVBinOp) (rhs : BVExpr w) : BVExpr w
-  /--
-  A unary operation on two `BVExpr`.
-  -/
+  /-- A unary operation on two `BVExpr`. -/
   | un (op : BVUnOp) (operand : BVExpr w) : BVExpr w
-  /--
-  Concatenate two bitvectors.
-  -/
+  /-- Concatenate two bitvectors. -/
   | append (lhs : BVExpr l) (rhs : BVExpr r) (h : w = l + r) : BVExpr w
-  /--
-  Concatenate a bitvector with itself `n` times.
-  -/
+  /-- Concatenate a bitvector with itself `n` times. -/
   | replicate (n : Nat) (expr : BVExpr w) (h : w' = w * n) : BVExpr w'
-  /--
-  shift left by another BitVec expression. For constant shifts there exists a `BVUnop`.
-  -/
+  /-- shift left by another BitVec expression. For constant shifts there exists a `BVUnop`. -/
   | shiftLeft (lhs : BVExpr m) (rhs : BVExpr n) : BVExpr m
-  /--
-  shift right by another BitVec expression. For constant shifts there exists a `BVUnop`.
-  -/
+  /-- shift right by another BitVec expression. For constant shifts there exists a `BVUnop`. -/
   | shiftRight (lhs : BVExpr m) (rhs : BVExpr n) : BVExpr m
   /--
   shift right arithmetically by another BitVec expression. For constant shifts there exists a `BVUnop`.
@@ -254,7 +195,8 @@ with
     | w, .extract start _ expr =>
       mixHash 11 <| mixHash (hash start) <| mixHash (hash w) (hashCode _ expr)
     | w, .bin lhs op rhs =>
-      mixHash 13 <| mixHash (hash w) <| mixHash (hashCode _ lhs) <| mixHash (hash op) (hashCode _ rhs)
+      mixHash 13 <| mixHash (hash w) <| mixHash (hashCode _ lhs) <|
+        mixHash (hash op) (hashCode _ rhs)
     | w, .un op operand =>
       mixHash 17 <| mixHash (hash w) <| mixHash (hash op) (hashCode _ operand)
     | w, .append lhs rhs _ =>
@@ -268,135 +210,213 @@ with
     | w, .arithShiftRight lhs rhs =>
       mixHash 37 <| mixHash (hash w) <| mixHash (hashCode _ lhs) (hashCode _ rhs)
 
-
 namespace BVExpr
 
 instance : Hashable (BVExpr w) where
   hash expr := expr.hashCode _
 
 @[inline]
-private unsafe def withPtrEqUnsafe (a b : BVExpr w) (k : Unit → Bool)
-    (h : a = b → k () = true) : Bool :=
+private unsafe def withPtrEqUnsafe (a b : BVExpr w) (k : Unit → Bool) (h : a = b → k () = true)
+    : Bool :=
   _root_.withPtrEqUnsafe a b k h
 
 -- Safety: `BVExpr` contains no non-subsingleton erased data
 @[implemented_by withPtrEqUnsafe]
-private def withPtrEq (a b : BVExpr w) (k : Unit → Bool) (_h : a = b → k () = true) : Bool :=
-  k ()
+private def withPtrEq (a b : BVExpr w) (k : Unit → Bool) (_h : a = b → k () = true) : Bool := k ()
 
 @[no_expose]
 instance decEq : DecidableEq (BVExpr w) := fun l r =>
-  withPtrEqDecEq withPtrEq (fun _ _ _ _ => rfl) l r fun _ =>
-    if h : hash l ≠ hash r then
-      .isFalse (ne_of_apply_ne hash h)
-    else
-      match l with
-      | .var lidx =>
-        match r with
-        | .var ridx =>
-          if h : lidx = ridx then .isTrue (by simp [h]) else .isFalse (by simp [h])
-        | .const .. | .extract .. | .bin .. | .un .. | .append .. | .replicate .. | .shiftLeft ..
-        | .shiftRight .. | .arithShiftRight .. => .isFalse (by simp)
-      | .const lval =>
-        match r with
-        | .const rval =>
-          if h : lval = rval then .isTrue (by simp [h]) else .isFalse (by simp [h])
-        | .var .. | .extract .. | .bin .. | .un .. | .append .. | .replicate .. | .shiftLeft ..
-        | .shiftRight .. | .arithShiftRight .. => .isFalse (by simp)
-      | .extract (w := lw) lstart _ lexpr =>
-        match r with
-        | .extract (w := rw) rstart _ rexpr  =>
-          if h1 : lw = rw ∧ lstart = rstart then
-            match decEq (h1.left ▸ lexpr) rexpr with
-            | .isTrue h2 => .isTrue (by cases h1.left; simp_all)
-            | .isFalse h2 => .isFalse (by cases h1.left; simp_all)
-          else
-            .isFalse (by simp_all)
-        | .var .. | .const .. | .bin .. | .un .. | .append .. | .replicate .. | .shiftLeft ..
-        | .shiftRight .. | .arithShiftRight .. => .isFalse (by simp)
-      | .bin llhs lop lrhs =>
-        match r with
-        | .bin rlhs rop rrhs =>
-          if h1 : lop = rop then
-            match decEq llhs rlhs, decEq lrhs rrhs with
-            | .isTrue h2, .isTrue h3 => .isTrue (by simp [h1, h2, h3])
-            | .isFalse h2, _ => .isFalse (by simp [h2])
-            | _, .isFalse h3 => .isFalse (by simp [h3])
-          else
-            .isFalse (by simp [h1])
-        | .const .. | .var .. | .extract .. | .un .. | .append .. | .replicate .. | .shiftLeft ..
-        | .shiftRight .. | .arithShiftRight .. => .isFalse (by simp)
-      | .un lop lexpr =>
-        match r with
-        | .un rop rexpr =>
-          if h1 : lop = rop then
-            match decEq lexpr rexpr with
-            | .isTrue h2 => .isTrue (by simp [h1, h2])
-            | .isFalse h2 => .isFalse (by simp [h2])
-          else
-            .isFalse (by simp [h1])
-        | .const .. | .var .. | .extract .. | .bin .. | .append .. | .replicate .. | .shiftLeft ..
-        | .shiftRight .. | .arithShiftRight .. => .isFalse (by simp)
-      | .append (l := ll) (r := lr) llhs lrhs lh =>
-        match r with
-        | .append (l := rl) (r := rr) rlhs rrhs rh =>
-          if h1 : ll = rl ∧ lr = rr then
-            match decEq (h1.left ▸ llhs) rlhs, decEq (h1.right ▸ lrhs) rrhs with
-            | .isTrue h2, .isTrue h3 => .isTrue (by cases h1.left; cases h1.right; simp [h2, h3])
-            | .isFalse h2, _ => .isFalse (by cases h1.left; cases h1.right; simp [h2])
-            | _, .isFalse h3 => .isFalse (by cases h1.left; cases h1.right; simp [h3])
-          else
-            .isFalse (by simp; omega)
-        | .const .. | .var .. | .extract .. | .bin .. | .un .. | .replicate .. | .shiftLeft ..
-        | .shiftRight .. | .arithShiftRight .. => .isFalse (by simp)
-      | .replicate (w := lw) ln lexpr lh =>
-        match r with
-        | .replicate (w := rw) rn rexpr rh =>
-          if h1 : ln = rn ∧ lw = rw then
-            match decEq (h1.right ▸ lexpr) rexpr with
-            | .isTrue h2 => .isTrue (by cases h1.left; cases h1.right; simp [h2])
-            | .isFalse h2 => .isFalse (by cases h1.left; cases h1.right; simp [h2])
-          else
-            .isFalse (by simp; omega)
-        | .const .. | .var .. | .extract .. | .bin .. | .un .. | .append .. | .shiftLeft ..
-        | .shiftRight .. | .arithShiftRight .. => .isFalse (by simp)
-
-      | .shiftLeft (n := lw) llhs lrhs =>
-        match r with
-        | .shiftLeft (n := rw) rlhs rrhs =>
-          if h1 : lw = rw then
-            match decEq llhs rlhs, decEq (h1 ▸ lrhs) rrhs with
-            | .isTrue h2, .isTrue h3 => .isTrue (by cases h1; simp [h2, h3])
-            | .isFalse h2, _ => .isFalse (by cases h1; simp [h2])
-            | _, .isFalse h3 => .isFalse (by cases h1; simp [h3])
-          else
-            .isFalse (by simp [h1])
-        | .const .. | .var .. | .extract .. | .bin .. | .un .. | .append .. | .replicate ..
-        | .shiftRight .. | .arithShiftRight .. => .isFalse (by simp)
-      | .shiftRight (n := lw) llhs lrhs =>
-        match r with
-        | .shiftRight (n := rw) rlhs rrhs =>
-          if h1 : lw = rw then
-            match decEq llhs rlhs, decEq (h1 ▸ lrhs) rrhs with
-            | .isTrue h2, .isTrue h3 => .isTrue (by cases h1; simp [h2, h3])
-            | .isFalse h2, _ => .isFalse (by cases h1; simp [h2])
-            | _, .isFalse h3 => .isFalse (by cases h1; simp [h3])
-          else
-            .isFalse (by simp [h1])
-        | .const .. | .var .. | .extract .. | .bin .. | .un .. | .append .. | .replicate ..
-        |.shiftLeft .. | .arithShiftRight .. => .isFalse (by simp)
-      | .arithShiftRight (n := lw) llhs lrhs =>
-        match r with
-        | .arithShiftRight (n := rw) rlhs rrhs =>
-          if h1 : lw = rw then
-            match decEq llhs rlhs, decEq (h1 ▸ lrhs) rrhs with
-            | .isTrue h2, .isTrue h3 => .isTrue (by cases h1; simp [h2, h3])
-            | .isFalse h2, _ => .isFalse (by cases h1; simp [h2])
-            | _, .isFalse h3 => .isFalse (by cases h1; simp [h3])
-          else
-            .isFalse (by simp [h1])
-        | .const .. | .var .. | .extract .. | .bin .. | .un .. | .append .. | .replicate ..
-        | .shiftRight .. | .shiftLeft .. => .isFalse (by simp)
+  withPtrEqDecEq withPtrEq
+    (fun _ _ _ _ => rfl)
+    l r
+    fun _ =>
+      if h : hash l ≠ hash r then
+        .isFalse (ne_of_apply_ne hash h)
+      else
+        match l with
+        | .var lidx =>
+          match r with
+          | .var ridx => if h : lidx = ridx then .isTrue (by simp [h]) else .isFalse (by simp [h])
+          | .const ..
+          | .extract ..
+          | .bin ..
+          | .un ..
+          | .append ..
+          | .replicate ..
+          | .shiftLeft ..
+          | .shiftRight ..
+          | .arithShiftRight .. =>
+            .isFalse (by simp)
+        | .const lval =>
+          match r with
+          | .const rval => if h : lval = rval then .isTrue (by simp [h]) else .isFalse (by simp [h])
+          | .var ..
+          | .extract ..
+          | .bin ..
+          | .un ..
+          | .append ..
+          | .replicate ..
+          | .shiftLeft ..
+          | .shiftRight ..
+          | .arithShiftRight .. =>
+            .isFalse (by simp)
+        | .extract (w := lw) lstart _ lexpr =>
+          match r with
+          | .extract (w := rw) rstart _ rexpr =>
+            if h1 : lw = rw ∧ lstart = rstart then
+              match decEq (h1.left ▸ lexpr) rexpr with
+              | .isTrue h2 => .isTrue (by cases h1.left; simp_all)
+              | .isFalse h2 => .isFalse (by cases h1.left; simp_all)
+            else
+              .isFalse (by simp_all)
+          | .var ..
+          | .const ..
+          | .bin ..
+          | .un ..
+          | .append ..
+          | .replicate ..
+          | .shiftLeft ..
+          | .shiftRight ..
+          | .arithShiftRight .. =>
+            .isFalse (by simp)
+        | .bin llhs lop lrhs =>
+          match r with
+          | .bin rlhs rop rrhs =>
+            if h1 : lop = rop then
+              match decEq llhs rlhs, decEq lrhs rrhs with
+              | .isTrue h2, .isTrue h3 => .isTrue (by simp [h1, h2, h3])
+              | .isFalse h2, _ => .isFalse (by simp [h2])
+              | _, .isFalse h3 => .isFalse (by simp [h3])
+            else
+              .isFalse (by simp [h1])
+          | .const ..
+          | .var ..
+          | .extract ..
+          | .un ..
+          | .append ..
+          | .replicate ..
+          | .shiftLeft ..
+          | .shiftRight ..
+          | .arithShiftRight .. =>
+            .isFalse (by simp)
+        | .un lop lexpr =>
+          match r with
+          | .un rop rexpr =>
+            if h1 : lop = rop then
+              match decEq lexpr rexpr with
+              | .isTrue h2 => .isTrue (by simp [h1, h2])
+              | .isFalse h2 => .isFalse (by simp [h2])
+            else
+              .isFalse (by simp [h1])
+          | .const ..
+          | .var ..
+          | .extract ..
+          | .bin ..
+          | .append ..
+          | .replicate ..
+          | .shiftLeft ..
+          | .shiftRight ..
+          | .arithShiftRight .. =>
+            .isFalse (by simp)
+        | .append (l := ll) (r := lr) llhs lrhs lh =>
+          match r with
+          | .append (l := rl) (r := rr) rlhs rrhs rh =>
+            if h1 : ll = rl ∧ lr = rr then
+              match decEq (h1.left ▸ llhs) rlhs, decEq (h1.right ▸ lrhs) rrhs with
+              | .isTrue h2, .isTrue h3 => .isTrue (by cases h1.left; cases h1.right; simp [h2, h3])
+              | .isFalse h2, _ => .isFalse (by cases h1.left; cases h1.right; simp [h2])
+              | _, .isFalse h3 => .isFalse (by cases h1.left; cases h1.right; simp [h3])
+            else
+              .isFalse (by simp; omega)
+          | .const ..
+          | .var ..
+          | .extract ..
+          | .bin ..
+          | .un ..
+          | .replicate ..
+          | .shiftLeft ..
+          | .shiftRight ..
+          | .arithShiftRight .. =>
+            .isFalse (by simp)
+        | .replicate (w := lw) ln lexpr lh =>
+          match r with
+          | .replicate (w := rw) rn rexpr rh =>
+            if h1 : ln = rn ∧ lw = rw then
+              match decEq (h1.right ▸ lexpr) rexpr with
+              | .isTrue h2 => .isTrue (by cases h1.left; cases h1.right; simp [h2])
+              | .isFalse h2 => .isFalse (by cases h1.left; cases h1.right; simp [h2])
+            else
+              .isFalse (by simp; omega)
+          | .const ..
+          | .var ..
+          | .extract ..
+          | .bin ..
+          | .un ..
+          | .append ..
+          | .shiftLeft ..
+          | .shiftRight ..
+          | .arithShiftRight .. =>
+            .isFalse (by simp)
+        | .shiftLeft (n := lw) llhs lrhs =>
+          match r with
+          | .shiftLeft (n := rw) rlhs rrhs =>
+            if h1 : lw = rw then
+              match decEq llhs rlhs, decEq (h1 ▸ lrhs) rrhs with
+              | .isTrue h2, .isTrue h3 => .isTrue (by cases h1; simp [h2, h3])
+              | .isFalse h2, _ => .isFalse (by cases h1; simp [h2])
+              | _, .isFalse h3 => .isFalse (by cases h1; simp [h3])
+            else
+              .isFalse (by simp [h1])
+          | .const ..
+          | .var ..
+          | .extract ..
+          | .bin ..
+          | .un ..
+          | .append ..
+          | .replicate ..
+          | .shiftRight ..
+          | .arithShiftRight .. =>
+            .isFalse (by simp)
+        | .shiftRight (n := lw) llhs lrhs =>
+          match r with
+          | .shiftRight (n := rw) rlhs rrhs =>
+            if h1 : lw = rw then
+              match decEq llhs rlhs, decEq (h1 ▸ lrhs) rrhs with
+              | .isTrue h2, .isTrue h3 => .isTrue (by cases h1; simp [h2, h3])
+              | .isFalse h2, _ => .isFalse (by cases h1; simp [h2])
+              | _, .isFalse h3 => .isFalse (by cases h1; simp [h3])
+            else
+              .isFalse (by simp [h1])
+          | .const ..
+          | .var ..
+          | .extract ..
+          | .bin ..
+          | .un ..
+          | .append ..
+          | .replicate ..
+          | .shiftLeft ..
+          | .arithShiftRight .. =>
+            .isFalse (by simp)
+        | .arithShiftRight (n := lw) llhs lrhs =>
+          match r with
+          | .arithShiftRight (n := rw) rlhs rrhs =>
+            if h1 : lw = rw then
+              match decEq llhs rlhs, decEq (h1 ▸ lrhs) rrhs with
+              | .isTrue h2, .isTrue h3 => .isTrue (by cases h1; simp [h2, h3])
+              | .isFalse h2, _ => .isFalse (by cases h1; simp [h2])
+              | _, .isFalse h3 => .isFalse (by cases h1; simp [h3])
+            else
+              .isFalse (by simp [h1])
+          | .const ..
+          | .var ..
+          | .extract ..
+          | .bin ..
+          | .un ..
+          | .append ..
+          | .replicate ..
+          | .shiftRight ..
+          | .shiftLeft .. =>
+            .isFalse (by simp)
 
 def toString : BVExpr w → String
   | .var idx => s!"var{idx}"
@@ -410,31 +430,21 @@ def toString : BVExpr w → String
   | .shiftRight lhs rhs => s!"({lhs.toString} >> {rhs.toString})"
   | .arithShiftRight lhs rhs => s!"({lhs.toString} >>a {rhs.toString})"
 
-
 instance : ToString (BVExpr w) := ⟨toString⟩
 
-/--
-Pack a `BitVec` with its width into a single parameter-less structure.
--/
+/-- Pack a `BitVec` with its width into a single parameter-less structure. -/
 structure PackedBitVec where
   {w : Nat}
-  bv: BitVec w
-  deriving Inhabited, Hashable, DecidableEq
+  bv : BitVec w
+deriving Inhabited, Hashable, DecidableEq
 
-/--
-The notion of variable assignments for `BVExpr`.
--/
+/-- The notion of variable assignments for `BVExpr`. -/
 abbrev Assignment := Lean.RArray PackedBitVec
 
-/--
-Get the value of a `BVExpr.var` from an `Assignment`.
--/
-def Assignment.get (assign : Assignment) (idx : Nat) : PackedBitVec :=
-  Lean.RArray.get assign idx
+/-- Get the value of a `BVExpr.var` from an `Assignment`. -/
+def Assignment.get (assign : Assignment) (idx : Nat) : PackedBitVec := Lean.RArray.get assign idx
 
-/--
-The semantics for `BVExpr`.
--/
+/-- The semantics for `BVExpr`. -/
 def eval (assign : Assignment) : BVExpr w → BitVec w
   | .var idx =>
     let packedBv := assign.get idx
@@ -465,57 +475,53 @@ theorem eval_var : eval assign ((.var idx) : BVExpr w) = (assign.get idx).bv.tru
     simp
   · rfl
 
-@[simp]
-theorem eval_const : eval assign (.const val) = val := by rfl
+@[simp] theorem eval_const : eval assign (.const val) = val := by rfl
 
 @[simp]
-theorem eval_extract : eval assign (.extract start len expr) = BitVec.extractLsb' start len (eval assign expr) := by
+theorem eval_extract
+    : eval assign (.extract start len expr) = BitVec.extractLsb' start len (eval assign expr) := by
   rfl
 
 @[simp]
 theorem eval_bin : eval assign (.bin lhs op rhs) = op.eval (lhs.eval assign) (rhs.eval assign) := by
   rfl
 
-@[simp]
-theorem eval_un : eval assign (.un op operand) = op.eval (operand.eval assign) := by
-  rfl
+@[simp] theorem eval_un : eval assign (.un op operand) = op.eval (operand.eval assign) := by rfl
 
 @[simp]
 theorem eval_append : eval assign (.append lhs rhs h) = (lhs.eval assign) ++ (rhs.eval assign) := by
   rfl
 
 @[simp]
-theorem eval_replicate : eval assign (.replicate n expr h) = BitVec.replicate n (expr.eval assign) := by
+theorem eval_replicate
+    : eval assign (.replicate n expr h) = BitVec.replicate n (expr.eval assign) := by
   rfl
 
 @[simp]
-theorem eval_shiftLeft : eval assign (.shiftLeft lhs rhs) = (eval assign lhs) <<< (eval assign rhs) := by
+theorem eval_shiftLeft
+    : eval assign (.shiftLeft lhs rhs) = (eval assign lhs) <<< (eval assign rhs) := by
   rfl
 
 @[simp]
-theorem eval_shiftRight : eval assign (.shiftRight lhs rhs) = (eval assign lhs) >>> (eval assign rhs) := by
+theorem eval_shiftRight
+    : eval assign (.shiftRight lhs rhs) = (eval assign lhs) >>> (eval assign rhs) := by
   rfl
 
 @[simp]
-theorem eval_arithShiftRight :
-    eval assign (.arithShiftRight lhs rhs) = BitVec.sshiftRight' (eval assign lhs) (eval assign rhs) := by
+theorem eval_arithShiftRight
+    : eval assign (.arithShiftRight lhs rhs)
+      = BitVec.sshiftRight' (eval assign lhs) (eval assign rhs) := by
   rfl
 
 end BVExpr
 
-/--
-Supported binary predicates on `BVExpr`.
--/
+/-- Supported binary predicates on `BVExpr`. -/
 inductive BVBinPred where
-  /--
-  Equality.
-  -/
+  /-- Equality. -/
   | eq
-  /--
-  Unsigned Less Than
-  -/
+  /-- Unsigned Less Than -/
   | ult
-  deriving DecidableEq, Hashable
+deriving DecidableEq, Hashable
 
 namespace BVBinPred
 
@@ -525,9 +531,7 @@ def toString : BVBinPred → String
 
 instance : ToString BVBinPred := ⟨toString⟩
 
-/--
-The semantics for `BVBinPred`.
--/
+/-- The semantics for `BVBinPred`. -/
 def eval : BVBinPred → (BitVec w → BitVec w → Bool)
   | .eq => (· == ·)
   | .ult => BitVec.ult
@@ -537,25 +541,17 @@ def eval : BVBinPred → (BitVec w → BitVec w → Bool)
 
 end BVBinPred
 
-/--
-Supported predicates on `BVExpr`.
--/
+/-- Supported predicates on `BVExpr`. -/
 inductive BVPred where
-  /--
-  A binary predicate on `BVExpr`.
-  -/
+  /-- A binary predicate on `BVExpr`. -/
   | bin (lhs : BVExpr w) (op : BVBinPred) (rhs : BVExpr w)
-  /--
-  Getting a constant LSB from a `BitVec`.
-  -/
+  /-- Getting a constant LSB from a `BitVec`. -/
   | getLsbD (expr : BVExpr w) (idx : Nat)
-  deriving DecidableEq, Hashable
+deriving DecidableEq, Hashable
 
 namespace BVPred
 
-/--
-Pack two `BVExpr` of equivalent width into one parameter-less structure.
--/
+/-- Pack two `BVExpr` of equivalent width into one parameter-less structure. -/
 structure ExprPair where
   {w : Nat}
   lhs : BVExpr w
@@ -567,9 +563,7 @@ def toString : BVPred → String
 
 instance : ToString BVPred := ⟨toString⟩
 
-/--
-The semantics for `BVPred`.
--/
+/-- The semantics for `BVPred`. -/
 def eval (assign : BVExpr.Assignment) : BVPred → Bool
   | bin lhs op rhs => op.eval (lhs.eval assign) (rhs.eval assign)
   | getLsbD expr idx => (expr.eval assign).getLsbD idx
@@ -579,37 +573,35 @@ theorem eval_bin : eval assign (.bin lhs op rhs) = op.eval (lhs.eval assign) (rh
   rfl
 
 @[simp]
-theorem eval_getLsbD : eval assign (.getLsbD expr idx) = (expr.eval assign).getLsbD idx := by
-  rfl
+theorem eval_getLsbD : eval assign (.getLsbD expr idx) = (expr.eval assign).getLsbD idx := by rfl
 
 end BVPred
 
-/--
-Boolean substructure of problems involving predicates on BitVec as atoms.
--/
+/-- Boolean substructure of problems involving predicates on BitVec as atoms. -/
 abbrev BVLogicalExpr := BoolExpr BVPred
 
 namespace BVLogicalExpr
 
-/--
-The semantics of boolean problems involving BitVec predicates as atoms.
--/
+/-- The semantics of boolean problems involving BitVec predicates as atoms. -/
 def eval (assign : BVExpr.Assignment) (expr : BVLogicalExpr) : Bool :=
   BoolExpr.eval (·.eval assign) expr
 
 @[simp] theorem eval_literal : eval assign (.literal pred) = pred.eval assign := rfl
 @[simp] theorem eval_const : eval assign (.const b) = b := rfl
-@[simp] theorem eval_not : eval assign (.not x) = !eval assign x := rfl
-@[simp] theorem eval_gate : eval assign (.gate g x y) = g.eval (eval assign x) (eval assign y) := rfl
-@[simp] theorem eval_ite :
-  eval assign (.ite d l r) = bif (eval assign d) then (eval assign l) else (eval assign r) := rfl
+@[simp] theorem eval_not : eval assign (.not x) = ! eval assign x := rfl
+@[simp]
+theorem eval_gate : eval assign (.gate g x y) = g.eval (eval assign x) (eval assign y) := rfl
+@[simp]
+theorem eval_ite
+    : eval assign (.ite d l r) = bif (eval assign d) then (eval assign l) else (eval assign r) :=
+  rfl
 
 def Sat (x : BVLogicalExpr) (assign : BVExpr.Assignment) : Prop := eval assign x = true
 
 def Unsat (x : BVLogicalExpr) : Prop := ∀ f, eval f x = false
 
-theorem sat_and {x y : BVLogicalExpr} {assign} (hx : Sat x assign) (hy : Sat y assign) :
-    Sat (.gate .and x y) assign := by
+theorem sat_and {x y : BVLogicalExpr} {assign} (hx : Sat x assign) (hy : Sat y assign)
+    : Sat (.gate .and x y) assign := by
   simp only [Sat] at *
   simp [hx, hy, Gate.eval]
 

@@ -23,5 +23,4 @@ public def fmtThrowError : Fmt := fun
 public def fmtThrowErrorAt : Fmt := fun
   | `(termThrowErrorAt____| throwErrorAt%$throwErrorAtTk $ref:term $msg:term) => do
     fmtAppLike #[throwErrorAtTk, ref, msg]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

@@ -14,7 +14,8 @@ public section
 
 namespace Lean.Compiler.LCNF
 
-@[expose] def Phase.toNat : Phase → Nat
+@[expose]
+def Phase.toNat : Phase → Nat
   | .base => 0
   | .mono => 1
   | .impure => 2
@@ -25,8 +26,7 @@ instance : ToString Phase where
     | .mono => "mono"
     | .impure => "impure"
 
-def Phase.withPurityCheck [Inhabited α] (pp : Phase) (ip : Purity)
-    (x : pp.toPurity = ip → α) : α :=
+def Phase.withPurityCheck [Inhabited α] (pp : Phase) (ip : Purity) (x : pp.toPurity = ip → α) : α :=
   if h : pp.toPurity = ip then
     x h
   else
@@ -41,8 +41,7 @@ instance : LE Phase where
 instance {p1 p2 : Phase} : Decidable (p1 < p2) := Nat.decLt p1.toNat p2.toNat
 instance {p1 p2 : Phase} : Decidable (p1 ≤ p2) := Nat.decLe p1.toNat p2.toNat
 
-@[simp] theorem Phase.le_refl (p : Phase) : p ≤ p := by
-  cases p <;> decide
+@[simp] theorem Phase.le_refl (p : Phase) : p ≤ p := by cases p <;> decide
 
 /--
 A single compiler `Pass`, consisting of the actual pass function operating
@@ -55,13 +54,9 @@ structure Pass where
   For most passes this value does not matter.
   -/
   occurrence : Nat := 0
-  /--
-  Which phase this `Pass` is supposed to run in
-  -/
+  /-- Which phase this `Pass` is supposed to run in -/
   phase : Phase
-  /--
-  Resulting phase.
-  -/
+  /-- Resulting phase. -/
   phaseOut : Phase := phase
   phaseInv : phaseOut ≥ phase := by simp +arith +decide
   /--
@@ -69,13 +64,9 @@ structure Pass where
   of configuration options.
   -/
   shouldAlwaysRunCheck : Bool := false
-  /--
-  The name of the `Pass`
-  -/
+  /-- The name of the `Pass` -/
   name : Name
-  /--
-  The actual pass function, operating on the `Decl`s.
-  -/
+  /-- The actual pass function, operating on the `Decl`s. -/
   run : Array (Decl phase.toPurity) → CompilerM (Array (Decl phaseOut.toPurity))
 
 instance : Inhabited Pass where
@@ -94,7 +85,7 @@ structure PassInstaller where
   the `Pass`es contained within) in any way it wants.
   -/
   install : Array Pass → CoreM (Array Pass)
-  deriving Inhabited
+deriving Inhabited
 
 /--
 The `PassManager` used to store all `Pass`es that will be run within
@@ -112,12 +103,15 @@ structure PassManager where
   monoPassesNoLambda : Array Pass
   /-- Passes that happen during the LCNF impure phase. -/
   impurePasses : Array Pass
-  deriving Inhabited
+deriving Inhabited
 
 namespace Pass
 
-def mkPerDeclaration (name : Name) (phase : Phase)
-    (run : Decl phase.toPurity → CompilerM (Decl phase.toPurity)) (occurrence : Nat := 0) : Pass where
+def mkPerDeclaration
+    (name : Name)
+    (phase : Phase) (run : Decl phase.toPurity → CompilerM (Decl phase.toPurity))
+    (occurrence : Nat := 0)
+    : Pass where
   occurrence := occurrence
   phase := phase
   name := name
@@ -141,10 +135,11 @@ def findOccurrenceBounds (targetName : Name) (passes : Array Pass) : CoreM (Nat 
   let mut lowest := none
   let mut highest := none
   for pass in passes do
-      if pass.name == targetName then
-        lowest := if lowest.isNone then some pass.occurrence else lowest
-        highest := some pass.occurrence
-  let ⟨some lowestVal, some highestVal⟩ := Prod.mk lowest highest | throwError s!"Could not find any occurrence of {targetName}"
+    if pass.name == targetName then
+      lowest := if lowest.isNone then some pass.occurrence else lowest
+      highest := some pass.occurrence
+  let ⟨some lowestVal, some highestVal⟩ := Prod.mk lowest highest
+    | throwError s!"Could not find any occurrence of {targetName}"
   return ⟨lowestVal, highestVal⟩
 
 end PassManager
@@ -159,7 +154,8 @@ def append (phase : Phase) (passesNew : Array Pass) : PassInstaller where
   phase
   install passes := return passes ++ passesNew
 
-def withEachOccurrence (phase : Phase) (targetName : Name) (f : Nat → PassInstaller) : PassInstaller where
+def withEachOccurrence (phase : Phase) (targetName : Name) (f : Nat → PassInstaller)
+    : PassInstaller where
   phase
   install passes := do
     let ⟨lowestOccurrence, highestOccurrence⟩ ← PassManager.findOccurrenceBounds targetName passes
@@ -171,47 +167,54 @@ def withEachOccurrence (phase : Phase) (targetName : Name) (f : Nat → PassInst
       passes ← installer.install passes
     return passes
 
-def installAfter (phase : Phase) (targetName : Name) (p : Pass → Pass) (occurrence : Nat := 0) : PassInstaller where
+def installAfter (phase : Phase) (targetName : Name) (p : Pass → Pass) (occurrence : Nat := 0)
+    : PassInstaller where
   phase
   install passes :=
-    if let some idx := passes.findFinIdx? (fun p => p.name == targetName && p.occurrence == occurrence) then
+    if let some idx :=
+        passes.findFinIdx? (fun p => p.name == targetName && p.occurrence == occurrence) then
       let passUnderTest := passes[idx]
       return passes.insertIdx (idx + 1) (p passUnderTest)
     else
-      throwError s!"Tried to insert pass after {targetName}, occurrence {occurrence} but {targetName} is not in the pass list"
+      throwError s!"Tried to insert pass after {targetName}, occurrence {occurrence} but \
+        {targetName} is not in the pass list"
 
 def installAfterEach (phase : Phase) (targetName : Name) (p : Pass → Pass) : PassInstaller :=
-    withEachOccurrence phase targetName (installAfter phase targetName p ·)
+  withEachOccurrence phase targetName (installAfter phase targetName p ·)
 
-def installBefore (phase : Phase) (targetName : Name) (p : Pass → Pass) (occurrence : Nat := 0): PassInstaller where
+def installBefore (phase : Phase) (targetName : Name) (p : Pass → Pass) (occurrence : Nat := 0)
+    : PassInstaller where
   phase
   install passes :=
-    if let some idx := passes.findFinIdx? (fun p => p.name == targetName && p.occurrence == occurrence) then
+    if let some idx :=
+        passes.findFinIdx? (fun p => p.name == targetName && p.occurrence == occurrence) then
       let passUnderTest := passes[idx]
       return passes.insertIdx idx (p passUnderTest)
     else
-      throwError s!"Tried to insert pass after {targetName}, occurrence {occurrence} but {targetName} is not in the pass list"
+      throwError s!"Tried to insert pass after {targetName}, occurrence {occurrence} but \
+        {targetName} is not in the pass list"
 
-def installBeforeEachOccurrence (phase : Phase) (targetName : Name) (p : Pass → Pass) : PassInstaller :=
-    withEachOccurrence phase targetName (installBefore phase targetName p ·)
+def installBeforeEachOccurrence (phase : Phase) (targetName : Name) (p : Pass → Pass)
+    : PassInstaller :=
+  withEachOccurrence phase targetName (installBefore phase targetName p ·)
 
-def replacePass (phase : Phase) (targetName : Name) (p : Pass → Pass) (occurrence : Nat := 0) : PassInstaller where
+def replacePass (phase : Phase) (targetName : Name) (p : Pass → Pass) (occurrence : Nat := 0)
+    : PassInstaller where
   phase
   install passes := do
-    let some idx := passes.findIdx? (fun p => p.name == targetName && p.occurrence == occurrence) | throwError s!"Tried to replace {targetName}, occurrence {occurrence} but {targetName} is not in the pass list"
+    let some idx := passes.findIdx? (fun p => p.name == targetName && p.occurrence == occurrence)
+      | throwError s!"Tried to replace {targetName}, occurrence {occurrence} but {targetName} is \
+          not in the pass list"
     return passes.modify idx p
 
 def replaceEachOccurrence (phase : Phase) (targetName : Name) (p : Pass → Pass) : PassInstaller :=
-    withEachOccurrence phase targetName (replacePass phase targetName p ·)
+  withEachOccurrence phase targetName (replacePass phase targetName p ·)
 
 def run (manager : PassManager) (installer : PassInstaller) : CoreM PassManager := do
   match installer.phase with
-  | .base =>
-    return { manager with basePasses := (← installer.install manager.basePasses) }
-  | .mono =>
-    return { manager with monoPasses := (← installer.install manager.monoPasses) }
-  | .impure =>
-    return { manager with impurePasses := (← installer.install manager.impurePasses) }
+  | .base => return { manager with basePasses := (← installer.install manager.basePasses) }
+  | .mono => return { manager with monoPasses := (← installer.install manager.monoPasses) }
+  | .impure => return { manager with impurePasses := (← installer.install manager.impurePasses) }
 
 private unsafe def getPassInstallerUnsafe (declName : Name) : CoreM PassInstaller := do
   ofExcept <| (← getEnv).evalConstCheck PassInstaller (← getOptions) ``PassInstaller declName

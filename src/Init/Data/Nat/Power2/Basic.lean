@@ -15,7 +15,8 @@ public section
 
 namespace Nat
 
-theorem nextPowerOfTwo_dec {n power : Nat} (h₁ : power > 0) (h₂ : power < n) : n - power * 2 < n - power := by
+theorem nextPowerOfTwo_dec {n power : Nat} (h₁ : power > 0) (h₂ : power < n)
+    : n - power * 2 < n - power := by
   have : power * 2 = power + power := by simp +arith
   rw [this, Nat.sub_add_eq]
   exact Nat.sub_lt (Nat.zero_lt_sub_of_lt h₂) h₁
@@ -30,8 +31,7 @@ Examples:
  * `Nat.nextPowerOfTwo 3 = 4`
  * `Nat.nextPowerOfTwo 5 = 8`
 -/
-def nextPowerOfTwo (n : Nat) : Nat :=
-  go 1 (by decide)
+def nextPowerOfTwo (n : Nat) : Nat := go 1 (by decide)
 where
   go (power : Nat) (h : power > 0) : Nat :=
     if power < n then
@@ -41,18 +41,14 @@ where
   termination_by n - power
   decreasing_by simp_wf; apply nextPowerOfTwo_dec <;> assumption
 
-/--
-A natural number `n` is a power of two if there exists some `k : Nat` such that `n = 2 ^ k`.
--/
+/-- A natural number `n` is a power of two if there exists some `k : Nat` such that `n = 2 ^ k`. -/
 def isPowerOfTwo (n : Nat) := ∃ k, n = 2 ^ k
 
-@[simp]
-theorem isPowerOfTwo_one : isPowerOfTwo 1 :=
-  ⟨0, by decide⟩
+@[simp] theorem isPowerOfTwo_one : isPowerOfTwo 1 := ⟨0, by decide⟩
 
 theorem isPowerOfTwo_mul_two_of_isPowerOfTwo (h : isPowerOfTwo n) : isPowerOfTwo (n * 2) :=
   have ⟨k, h⟩ := h
-  ⟨k+1, by simp [h, Nat.pow_succ]⟩
+  ⟨k + 1, by simp [h, Nat.pow_succ]⟩
 
 theorem pos_of_isPowerOfTwo (h : isPowerOfTwo n) : n > 0 := by
   have ⟨k, h⟩ := h

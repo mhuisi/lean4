@@ -42,7 +42,8 @@ theorem tail_dropLast {l : List α} : tail (dropLast l) = dropLast (tail l) := b
   · omega
   · rfl
 
-@[simp, grind _=_] theorem dropLast_reverse {l : List α} : l.reverse.dropLast = l.tail.reverse := by
+@[simp, grind _=_]
+theorem dropLast_reverse {l : List α} : l.reverse.dropLast = l.tail.reverse := by
   apply ext_getElem
   · simp
   · intro i h₁ h₂
@@ -54,21 +55,20 @@ theorem tail_dropLast {l : List α} : tail (dropLast l) = dropLast (tail l) := b
 /-! ### filter -/
 
 @[simp]
-theorem length_filter_pos_iff {l : List α} {p : α → Bool} :
-    0 < (filter p l).length ↔ ∃ x ∈ l, p x := by
-  simpa [length_eq_countP_add_countP, countP_eq_length_filter] using
-    countP_pos_iff (p := p)
+theorem length_filter_pos_iff {l : List α} {p : α → Bool}
+    : 0 < (filter p l).length ↔ ∃ x ∈ l, p x := by
+  simpa [length_eq_countP_add_countP, countP_eq_length_filter] using countP_pos_iff (p := p)
 
 @[simp]
-theorem length_filter_lt_length_iff_exists {l} :
-    (filter p l).length < l.length ↔ ∃ x ∈ l, ¬p x := by
+theorem length_filter_lt_length_iff_exists {l}
+    : (filter p l).length < l.length ↔ ∃ x ∈ l, ¬ p x := by
   simp [length_eq_countP_add_countP p (l := l), countP_eq_length_filter]
 
 /-! ### filterMap -/
 
 @[simp]
-theorem length_filterMap_pos_iff {xs : List α} {f : α → Option β} :
-    0 < (filterMap f xs).length ↔ ∃ (x : α) (_ : x ∈ xs) (b : β), f x = some b := by
+theorem length_filterMap_pos_iff {xs : List α} {f : α → Option β}
+    : 0 < (filterMap f xs).length ↔ ∃ (x : α) (_ : x ∈ xs) (b : β), f x = some b := by
   induction xs with
   | nil => simp
   | cons x xs ih =>
@@ -78,8 +78,8 @@ theorem length_filterMap_pos_iff {xs : List α} {f : α → Option β} :
     · simp_all
 
 @[simp]
-theorem length_filterMap_lt_length_iff_exists {xs : List α} {f : α → Option β} :
-    (filterMap f xs).length < xs.length ↔ ∃ (x : α) (_ : x ∈ xs), f x = none := by
+theorem length_filterMap_lt_length_iff_exists {xs : List α} {f : α → Option β}
+    : (filterMap f xs).length < xs.length ↔ ∃ (x : α) (_ : x ∈ xs), f x = none := by
   induction xs with
   | nil => simp
   | cons x xs ih =>
@@ -92,24 +92,26 @@ theorem length_filterMap_lt_length_iff_exists {xs : List α} {f : α → Option 
 
 /-! ### reverse -/
 
-theorem getElem_eq_getElem_reverse {l : List α} {i} (h : i < l.length) :
-    l[i] = l.reverse[l.length - 1 - i]'(by simpa using Nat.sub_one_sub_lt_of_lt h) := by
+theorem getElem_eq_getElem_reverse {l : List α} {i} (h : i < l.length)
+    : l[i] = l.reverse[l.length - 1 - i]'(by simpa using Nat.sub_one_sub_lt_of_lt h) := by
   rw [getElem_reverse]
   congr
   omega
 
 /-! ### leftpad -/
 
-/-- The length of the List returned by `List.leftpad n a l` is equal
-  to the larger of `n` and `l.length` -/
+/--
+The length of the List returned by `List.leftpad n a l` is equal
+to the larger of `n` and `l.length`
+-/
 -- We don't mark this as a `@[simp]` lemma since we allow `simp` to unfold `leftpad`,
 -- so the left hand side simplifies directly to `n - l.length + l.length`.
-theorem length_leftpad {n : Nat} {a : α} {l : List α} :
-    (leftpad n a l).length = max n l.length := by
+theorem length_leftpad {n : Nat} {a : α} {l : List α}
+    : (leftpad n a l).length = max n l.length := by
   simp only [leftpad, length_append, length_replicate, Nat.sub_add_eq_max]
 
-theorem length_rightpad {n : Nat} {a : α} {l : List α} :
-    (rightpad n a l).length = max n l.length := by
+theorem length_rightpad {n : Nat} {a : α} {l : List α}
+    : (rightpad n a l).length = max n l.length := by
   simp [rightpad]
   omega
 
@@ -118,18 +120,20 @@ section intersperse
 
 variable {l : List α} {sep : α} {i : Nat}
 
-@[simp, grind =] theorem length_intersperse : (l.intersperse sep).length = 2 * l.length - 1 := by
+@[simp, grind =]
+theorem length_intersperse : (l.intersperse sep).length = 2 * l.length - 1 := by
   fun_induction intersperse <;> simp only [length_cons, length_nil] at *
   rename_i h _
   have := length_pos_iff.mpr h
   omega
 
-@[simp] theorem getElem?_intersperse_two_mul : (l.intersperse sep)[2 * i]? = l[i]? := by
+@[simp]
+theorem getElem?_intersperse_two_mul : (l.intersperse sep)[2 * i]? = l[i]? := by
   induction l using intersperse.induct_unfolding sep generalizing i <;> cases i
   all_goals simp [mul_succ, *]
 
-theorem getElem?_intersperse_two_mul_add_one (h : i + 1 < l.length) :
-    (l.intersperse sep)[2 * i + 1]? = some sep := by
+theorem getElem?_intersperse_two_mul_add_one (h : i + 1 < l.length)
+    : (l.intersperse sep)[2 * i + 1]? = some sep := by
   fun_induction intersperse generalizing i
   · contradiction
   · contradiction
@@ -138,12 +142,14 @@ theorem getElem?_intersperse_two_mul_add_one (h : i + 1 < l.length) :
     cases tl <;> cases i <;> simp_all +arith
 
 @[grind =]
-theorem getElem?_intersperse :
-    (l.intersperse sep)[i]? =
-      if i % 2 = 0 then
-        l[i / 2]?
-      else
-        if i < 2 * l.length - 1 then some sep else none := by
+theorem getElem?_intersperse
+    : (l.intersperse sep)[i]?
+      = if i % 2 = 0 then
+          l[i / 2]?
+        else if i < 2 * l.length - 1 then
+          some sep
+        else
+          none := by
   split
   · have p : i = 2 * (i / 2) := by omega
     conv => lhs; rw [p]
@@ -157,21 +163,22 @@ theorem getElem?_intersperse :
       simp
       omega
 
-@[simp] theorem getElem_intersperse_two_mul (h : 2 * i < (l.intersperse sep).length) :
-    (l.intersperse sep)[2 * i] = l[i]'(by rw [length_intersperse] at h; omega) := by
+@[simp]
+theorem getElem_intersperse_two_mul (h : 2 * i < (l.intersperse sep).length)
+    : (l.intersperse sep)[2 * i] = l[i]'(by rw [length_intersperse] at h; omega) := by
   rw [← Option.some_inj, ← getElem?_eq_getElem h]
   simp
 
-@[simp] theorem getElem_intersperse_two_mul_add_one (h : 2 * i + 1 < (l.intersperse sep).length) :
-    (l.intersperse sep)[2 * i + 1] = sep := by
+@[simp]
+theorem getElem_intersperse_two_mul_add_one (h : 2 * i + 1 < (l.intersperse sep).length)
+    : (l.intersperse sep)[2 * i + 1] = sep := by
   rw [← Option.some_inj, ← getElem?_eq_getElem h, getElem?_intersperse_two_mul_add_one]
   rw [length_intersperse] at h
   omega
 
 @[grind =]
-theorem getElem_intersperse (h) :
-    (l.intersperse sep)[i] =
-      if i % 2 = 0 then l[i / 2]'(by simp at h; omega) else sep := by
+theorem getElem_intersperse (h)
+    : (l.intersperse sep)[i] = if i % 2 = 0 then l[i / 2]'(by simp at h; omega) else sep := by
   split
   · have p : i = 2 * (i / 2) := by omega
     conv => lhs; simp +singlePass only [p]
@@ -180,22 +187,22 @@ theorem getElem_intersperse (h) :
     conv => lhs; simp +singlePass only [p]
     rw [getElem_intersperse_two_mul_add_one]
 
-theorem getElem_eq_getElem_intersperse_two_mul (h : i < l.length) :
-    l[i] = (l.intersperse sep)[2 * i]'(by rw [length_intersperse]; omega) := by
+theorem getElem_eq_getElem_intersperse_two_mul (h : i < l.length)
+    : l[i] = (l.intersperse sep)[2 * i]'(by rw [length_intersperse]; omega) := by
   simp
 
 end intersperse
 
 /-! ### eraseIdx -/
 
-theorem mem_eraseIdx_iff_getElem {x : α} :
-    ∀ {l} {k}, x ∈ eraseIdx l k ↔ ∃ i h, i ≠ k ∧ l[i]'h = x
+theorem mem_eraseIdx_iff_getElem {x : α} : ∀ {l} {k}, x ∈ eraseIdx l k ↔ ∃ i h, i ≠ k ∧ l[i]'h = x
   | [], _ => by
     simp only [eraseIdx, not_mem_nil, false_iff]
     rintro ⟨i, h, -⟩
     exact Nat.not_lt_zero _ h
-  | a::l, 0 => by simp [mem_iff_getElem, Nat.succ_lt_succ_iff]
-  | a::l, k+1 => by
+  | a :: l, 0 => by
+    simp [mem_iff_getElem, Nat.succ_lt_succ_iff]
+  | a :: l, k + 1 => by
     rw [← Nat.or_exists_add_one]
     simp [mem_eraseIdx_iff_getElem, @eq_comm _ a, Nat.succ_lt_succ_iff]
 
@@ -204,7 +211,7 @@ theorem mem_eraseIdx_iff_getElem? {x : α} {l} {k} : x ∈ eraseIdx l k ↔ ∃ 
   refine exists_congr fun i => and_congr_right' ?_
   constructor
   · rintro ⟨_, h⟩; exact h
-  · rintro h;
+  · rintro h
     obtain ⟨h', -⟩ := getElem?_eq_some_iff.1 h
     exact ⟨h', h⟩
 
@@ -212,17 +219,16 @@ theorem mem_eraseIdx_iff_getElem? {x : α} {l} {k} : x ∈ eraseIdx l k ↔ ∃ 
 
 -- A specialization of `min?_eq_some_iff` to Nat.
 @[deprecated min?_eq_some_iff +typeChanged (since := "2025-08-08")]
-theorem min?_eq_some_iff' {xs : List Nat} :
-    xs.min? = some a ↔ (a ∈ xs ∧ ∀ b ∈ xs, a ≤ b) := by
+theorem min?_eq_some_iff' {xs : List Nat} : xs.min? = some a ↔ (a ∈ xs ∧ ∀ b ∈ xs, a ≤ b) := by
   exact min?_eq_some_iff
 
-theorem min?_get_le_of_mem {l : List Nat} {a : Nat} (h : a ∈ l) :
-    l.min?.get (isSome_min?_of_mem h) ≤ a := by
+theorem min?_get_le_of_mem {l : List Nat} {a : Nat} (h : a ∈ l)
+    : l.min?.get (isSome_min?_of_mem h) ≤ a := by
   induction l with
   | nil => simp at h
   | cons b t ih =>
     simp only [min?_cons, Option.get_some] at ih ⊢
-    rcases mem_cons.1 h with (rfl|h)
+    rcases mem_cons.1 h with (rfl | h)
     · cases t.min? with
       | none => simp
       | some b => simpa using Nat.min_le_left _ _
@@ -237,17 +243,16 @@ theorem min?_getD_le_of_mem {l : List Nat} {a k : Nat} (h : a ∈ l) : l.min?.ge
 
 -- A specialization of `max?_eq_some_iff` to Nat.
 @[deprecated max?_eq_some_iff +typeChanged (since := "2025-08-08")]
-theorem max?_eq_some_iff' {xs : List Nat} :
-    xs.max? = some a ↔ (a ∈ xs ∧ ∀ b ∈ xs, b ≤ a) :=
+theorem max?_eq_some_iff' {xs : List Nat} : xs.max? = some a ↔ (a ∈ xs ∧ ∀ b ∈ xs, b ≤ a) :=
   max?_eq_some_iff
 
-theorem le_max?_get_of_mem {l : List Nat} {a : Nat} (h : a ∈ l) :
-    a ≤ l.max?.get (isSome_max?_of_mem h) := by
+theorem le_max?_get_of_mem {l : List Nat} {a : Nat} (h : a ∈ l)
+    : a ≤ l.max?.get (isSome_max?_of_mem h) := by
   induction l with
   | nil => simp at h
   | cons b t ih =>
     simp only [max?_cons, Option.get_some] at ih ⊢
-    rcases mem_cons.1 h with (rfl|h)
+    rcases mem_cons.1 h with (rfl | h)
     · cases t.max? with
       | none => simp
       | some b => simpa using Nat.le_max_left _ _
@@ -255,28 +260,28 @@ theorem le_max?_get_of_mem {l : List Nat} {a : Nat} (h : a ∈ l) :
       simp only [hq, Option.elim_some] at ih ⊢
       exact Nat.le_trans (ih h) (Nat.le_max_right _ _)
 
-theorem le_max?_getD_of_mem {l : List Nat} {a k : Nat} (h : a ∈ l) :
-    a ≤ l.max?.getD k :=
+theorem le_max?_getD_of_mem {l : List Nat} {a k : Nat} (h : a ∈ l) : a ≤ l.max?.getD k :=
   Option.get_eq_getD _ ▸ le_max?_get_of_mem h
 
 /-! #### append -/
 
-theorem append_eq_append_iff_of_size_eq_left {ws xs ys zs : List α}
-    (h : ws.length = xs.length) : ws ++ ys = xs ++ zs ↔ ws = xs ∧ ys = zs := by
+theorem append_eq_append_iff_of_size_eq_left {ws xs ys zs : List α} (h : ws.length = xs.length)
+    : ws ++ ys = xs ++ zs ↔ ws = xs ∧ ys = zs := by
   rw [append_eq_append_iff]
   refine ⟨?_, ?_⟩
-  · rintro (⟨as, rfl, rfl⟩|⟨as, rfl, rfl⟩) <;> simp_all
+  · rintro (⟨as, rfl, rfl⟩ | ⟨as, rfl, rfl⟩) <;> simp_all
   · rintro ⟨rfl, rfl⟩ <;> simp_all
 
-theorem append_eq_append_iff_of_size_eq_right {ws xs ys zs : List α}
-    (h : ys.length = zs.length) : ws ++ ys = xs ++ zs ↔ ws = xs ∧ ys = zs := by
+theorem append_eq_append_iff_of_size_eq_right {ws xs ys zs : List α} (h : ys.length = zs.length)
+    : ws ++ ys = xs ++ zs ↔ ws = xs ∧ ys = zs := by
   rw [← reverse_inj, reverse_append, reverse_append,
     append_eq_append_iff_of_size_eq_left (by simpa), reverse_inj, reverse_inj, and_comm]
 
 /-! #### isEqv -/
 
-theorem isEqv_eq_true_iff_getElem (eqv : α → α → Bool) {l₁ l₂ : List α} :
-    l₁.isEqv l₂ eqv ↔ ∃ (h : l₁.length = l₂.length), ∀ (i : Nat) (hi : i < l₁.length), eqv l₁[i] l₂[i] := by
+theorem isEqv_eq_true_iff_getElem (eqv : α → α → Bool) {l₁ l₂ : List α}
+    : l₁.isEqv l₂ eqv
+      ↔ ∃ (h : l₁.length = l₂.length), ∀ (i : Nat) (hi : i < l₁.length), eqv l₁[i] l₂[i] := by
   induction l₁ generalizing l₂ with
   | nil => cases l₂ <;> simp
   | cons a as ih =>
