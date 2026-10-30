@@ -169,10 +169,8 @@ where
     .elaboration <| .malformedInputSyntax stx reason
   go (parent stx : Syntax) : validateSyntax.M Unit := do
     match stx with
-    | .missing =>
-      throw <| malformed parent "the syntax contains `Syntax.missing`"
-    | .atom info val =>
-      goToken stx info val.toSlice
+    | .missing => throw <| malformed parent "the syntax contains `Syntax.missing`"
+    | .atom info val => goToken stx info val.toSlice
     | .ident info rawVal .. =>
       let some rawValSlice := rawVal.toSlice?
         | throw <| malformed stx "the raw text of an identifier is not a valid substring"

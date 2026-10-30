@@ -22,8 +22,7 @@ public def fmtAIGDenote : Fmt := fun
     let fields ← fmtTSepArray fields
     let rbTk ← fmt rbTk
     return Layouts.tuple lbTk fields rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 open Std.Sat.AIG in
 @[builtin_fmt Std.Sat.AIG.«term⟦_,_,_⟧»]
@@ -34,5 +33,4 @@ public def fmtAIGDenoteEntrypoint : Fmt := fun
     let fields ← fmtTSepArray fields
     let rbTk ← fmt rbTk
     return Layouts.tuple lbTk fields rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

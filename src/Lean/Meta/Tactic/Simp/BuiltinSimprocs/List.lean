@@ -18,8 +18,10 @@ set_option linter.coreInternal.internalModule false in -- User-facing builtin si
 -- We don't always want `List.replicate_succ` as a `simp` lemma,
 -- so we use this `dsimproc` to unfold `List.replicate` applied to literals.
 builtin_dsimproc [simp, seval] reduceReplicate (replicate _ _) := fun e => do
-  let_expr replicate α n x ← e | return .continue
-  let some n ← Nat.fromExpr? n | return .continue
+  let_expr replicate α n x ← e
+    | return .continue
+  let some n ← Nat.fromExpr? n
+    | return .continue
   return .done <| (← mkListLit α (List.replicate n x))
 
 end List

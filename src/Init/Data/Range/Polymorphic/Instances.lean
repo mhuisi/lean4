@@ -25,8 +25,10 @@ public section
 namespace Std
 open PRange
 
-instance [LE α] [LT α] [UpwardEnumerable α] [LawfulUpwardEnumerable α]
-    [LawfulUpwardEnumerableLE α] [LawfulOrderLT α] : LawfulUpwardEnumerableLT α where
+instance
+    [LE α] [LT α] [UpwardEnumerable α] [LawfulUpwardEnumerable α] [LawfulUpwardEnumerableLE α]
+    [LawfulOrderLT α]
+    : LawfulUpwardEnumerableLT α where
   lt_iff a b := by
     simp only [LawfulOrderLT.lt_iff, UpwardEnumerable.le_iff]
     constructor
@@ -39,35 +41,39 @@ instance [LE α] [LT α] [UpwardEnumerable α] [LawfulUpwardEnumerable α]
       exact ⟨_, hn⟩
     · intro h
       constructor
-      · match h with | ⟨_, hn⟩ => exact ⟨_, hn⟩
+      · match h with
+        | ⟨_, hn⟩ => exact ⟨_, hn⟩
       · exact UpwardEnumerable.not_ge_of_lt h
 
-instance [LE α] [Total (α := α) (· ≤ ·)] [UpwardEnumerable α] [LawfulUpwardEnumerable α]
-    [LawfulUpwardEnumerableLE α] :
-    LinearlyUpwardEnumerable α where
+instance
+    [LE α] [Total (α := α) (· ≤ ·)] [UpwardEnumerable α] [LawfulUpwardEnumerable α]
+    [LawfulUpwardEnumerableLE α]
+    : LinearlyUpwardEnumerable α where
   eq_of_succ?_eq a b hab := by
-    cases Total.total (α := α) (r := (· ≤ ·)) a b <;> rename_i h <;>
-      simp only [UpwardEnumerable.le_iff] at h
+    cases Total.total (α := α) (r := (· ≤ ·)) a b <;> rename_i h
+      <;> simp only [UpwardEnumerable.le_iff] at h
     · obtain ⟨n, hn⟩ := h
       cases n
       · simpa [succMany?_zero] using hn
       · exfalso
         rw [succMany?_add_one_eq_succ?_bind_succMany?, hab,
-          ← succMany?_add_one_eq_succ?_bind_succMany?] at hn
+            ← succMany?_add_one_eq_succ?_bind_succMany?]
+          at hn
         exact UpwardEnumerable.lt_irrefl ⟨_, hn⟩
     · obtain ⟨n, hn⟩ := h
       cases n
       · simpa [succMany?_zero] using hn.symm
       · exfalso
         rw [succMany?_add_one_eq_succ?_bind_succMany?, hab.symm,
-          ← succMany?_add_one_eq_succ?_bind_succMany?] at hn
+            ← succMany?_add_one_eq_succ?_bind_succMany?]
+          at hn
         exact UpwardEnumerable.lt_irrefl ⟨_, hn⟩
 
 namespace Rxc
 
-instance instIsAlwaysFiniteOfLawfulHasSize [LE α] [UpwardEnumerable α]
-    [LawfulUpwardEnumerable α] [HasSize α] [LawfulHasSize α] :
-    IsAlwaysFinite α where
+instance instIsAlwaysFiniteOfLawfulHasSize
+    [LE α] [UpwardEnumerable α] [LawfulUpwardEnumerable α] [HasSize α] [LawfulHasSize α]
+    : IsAlwaysFinite α where
   finite lo hi := by
     refine ⟨HasSize.size lo hi, ?_⟩
     generalize hn : HasSize.size lo hi = n
@@ -96,11 +102,11 @@ abbrev HasSize.ofClosed [Rxc.HasSize α] : HasSize α where
   size lo hi := Rxc.HasSize.size lo hi - 1
 
 attribute [local instance] HasSize.ofClosed in
-instance LawfulHasSize.of_closed [UpwardEnumerable α] [LE α] [DecidableLE α]
-    [LT α] [DecidableLT α] [LawfulOrderLT α] [IsPartialOrder α]
-    [LawfulUpwardEnumerable α] [LawfulUpwardEnumerableLE α]
-    [Rxc.HasSize α] [Rxc.LawfulHasSize α] :
-    LawfulHasSize α where
+instance LawfulHasSize.of_closed
+    [UpwardEnumerable α] [LE α] [DecidableLE α] [LT α] [DecidableLT α] [LawfulOrderLT α]
+    [IsPartialOrder α] [LawfulUpwardEnumerable α] [LawfulUpwardEnumerableLE α] [Rxc.HasSize α]
+    [Rxc.LawfulHasSize α]
+    : LawfulHasSize α where
   size_eq_zero_of_not_le lo hi h := by
     simp only [HasSize.size]
     by_cases h' : lo ≤ hi
@@ -140,9 +146,9 @@ and certain other conditions hold, then the former is also lawful by
 -/
 add_decl_doc HasSize.ofClosed
 
-instance instIsAlwaysFiniteOfLawfulHasSize [LT α] [UpwardEnumerable α]
-    [LawfulUpwardEnumerable α] [HasSize α] [LawfulHasSize α] :
-    IsAlwaysFinite α where
+instance instIsAlwaysFiniteOfLawfulHasSize
+    [LT α] [UpwardEnumerable α] [LawfulUpwardEnumerable α] [HasSize α] [LawfulHasSize α]
+    : IsAlwaysFinite α where
   finite lo hi := by
     refine ⟨HasSize.size lo hi, ?_⟩
     generalize hn : HasSize.size lo hi = n
@@ -166,15 +172,14 @@ end Rxo
 
 namespace Rxi
 
-instance instIsAlwaysFiniteOfLawfulHasSize [LT α] [UpwardEnumerable α]
-    [LawfulUpwardEnumerable α] [HasSize α] [LawfulHasSize α] :
-    IsAlwaysFinite α where
+instance instIsAlwaysFiniteOfLawfulHasSize
+    [LT α] [UpwardEnumerable α] [LawfulUpwardEnumerable α] [HasSize α] [LawfulHasSize α]
+    : IsAlwaysFinite α where
   finite lo := by
     refine ⟨HasSize.size lo, ?_⟩
     generalize hn : HasSize.size lo = n
     induction n generalizing lo with
-    | zero =>
-      simp [Nat.ne_of_gt size_pos] at hn
+    | zero => simp [Nat.ne_of_gt size_pos] at hn
     | succ =>
       rename_i n ih
       rw [succMany?_add_one_eq_succ?_bind_succMany?]

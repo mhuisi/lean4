@@ -21,24 +21,21 @@ Recovers from errors. The same local value is provided to both branches. Typical
 `<|>` operator.
 -/
 @[always_inline, inline]
-protected def orElse [Alternative m] (x₁ : ReaderT ρ m α) (x₂ : Unit → ReaderT ρ m α) : ReaderT ρ m α :=
-  fun s => x₁ s <|> x₂ () s
+protected def orElse [Alternative m] (x₁ : ReaderT ρ m α) (x₂ : Unit → ReaderT ρ m α)
+    : ReaderT ρ m α := fun s =>
+  x₁ s <|> x₂ () s
 
-/--
-Fails with a recoverable error.
--/
-@[always_inline, inline]
-protected def failure [Alternative m] : ReaderT ρ m α :=
-  fun _ => failure
+/-- Fails with a recoverable error. -/
+@[always_inline, inline] protected def failure [Alternative m] : ReaderT ρ m α := fun _ => failure
 
 instance [Alternative m] [Monad m] : Alternative (ReaderT ρ m) where
   failure := ReaderT.failure
-  orElse  := ReaderT.orElse
+  orElse := ReaderT.orElse
 
 end ReaderT
 
 instance : MonadControl m (ReaderT ρ m) where
-  stM      := id
+  stM := id
   liftWith f ctx := f fun x => x ctx
   restoreM x _ := x
 

@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 namespace Lean.Meta.Grind
@@ -21,12 +22,12 @@ public inductive Filter where
 def getGen (e : Expr) : GoalM Nat := do
   if (← alreadyInternalized e) then
     getGeneration e
-  else match_expr e with
-   | Eq _ lhs rhs => return max (← getGeneration lhs) (← getGeneration rhs)
-   | _ => return 0
+  else
+    match_expr e with
+    | Eq _ lhs rhs => return max (← getGeneration lhs) (← getGeneration rhs)
+    | _ => return 0
 
-public def Filter.eval (filter : Filter) (e : Expr) : GoalM Bool := do
-  go filter
+public def Filter.eval (filter : Filter) (e : Expr) : GoalM Bool := do go filter
 where
   go (filter : Filter) : GoalM Bool := do
     match filter with

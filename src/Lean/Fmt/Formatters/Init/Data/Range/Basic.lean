@@ -22,8 +22,7 @@ public def fmtLegacyRangeUpperBound : Fmt := fun
     let rbTk ← fmt rbTk
     let bounds := Layouts.atomic #[colonTk, stop]
     return Layouts.bracketed lbTk bounds rbTk .dense
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Std.Legacy.Range.«term[_:_]»]
 public def fmtLegacyRangeBounds : Fmt := fun
@@ -35,8 +34,7 @@ public def fmtLegacyRangeBounds : Fmt := fun
     let rbTk ← fmt rbTk
     let bounds := Layouts.infixOperator #[start, colonTk, stop] <| .sparse (spacing := false)
     return Layouts.bracketed lbTk bounds rbTk .dense
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Std.Legacy.Range.«term[:_:_]»]
 public def fmtLegacyRangeUpperBoundWithStep : Fmt := fun
@@ -50,8 +48,7 @@ public def fmtLegacyRangeUpperBoundWithStep : Fmt := fun
     let bounds := Layouts.infixOperator #[stop, upperColonTk, step] <| .sparse (spacing := false)
     let bounds := Layouts.atomic #[lowerColonTk, bounds]
     return Layouts.bracketed lbTk bounds rbTk .dense
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Std.Legacy.Range.«term[_:_:_]»]
 public def fmtLegacyRangeBoundsWithStep : Fmt := fun
@@ -67,5 +64,4 @@ public def fmtLegacyRangeBoundsWithStep : Fmt := fun
       Layouts.infixOperator #[start, lowerColonTk, stop, upperColonTk, step] <|
         .sparse (spacing := false)
     return Layouts.bracketed lbTk bounds rbTk .dense
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

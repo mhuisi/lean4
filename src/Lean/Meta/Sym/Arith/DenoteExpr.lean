@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Arith.Functions
 public import Lean.Meta.Sym.Arith.MonadVar
@@ -24,10 +25,12 @@ variable [Monad m] [MonadError m] [MonadLiftT MetaM m] [MonadCanon m] [MonadRing
 def denoteNum (k : Int) : m Expr := do
   let ring ← getRing
   let n := mkRawNatLit k.natAbs
-  let ofNatInst ← if let some inst ← MonadCanon.synthInstance? (mkApp2 (mkConst ``OfNat [ring.u]) ring.type n) then
-    pure inst
-  else
-    pure <| mkApp3 (mkConst ``Grind.Semiring.ofNat [ring.u]) ring.type ring.semiringInst n
+  let ofNatInst ←
+    if let some inst ←
+        MonadCanon.synthInstance? (mkApp2 (mkConst ``OfNat [ring.u]) ring.type n) then
+      pure inst
+    else
+      pure <| mkApp3 (mkConst ``Grind.Semiring.ofNat [ring.u]) ring.type ring.semiringInst n
   let e := mkApp3 (mkConst ``OfNat.ofNat [ring.u]) ring.type n ofNatInst
   if k < 0 then
     return mkApp (← getNegFn) e
@@ -72,23 +75,21 @@ where
     | .add k mn p => go p (mkApp2 (← getAddFn) acc (← denoteTerm k mn))
 
 @[specialize]
-private def denoteRingExprCore (getVarExpr : Nat → m Expr) (e : RingExpr) : m Expr := do
-  go e
+private def denoteRingExprCore (getVarExpr : Nat → m Expr) (e : RingExpr) : m Expr := do go e
 where
   go : RingExpr → m Expr
-  | .num k => denoteNum k
-  | .natCast k => return mkApp (← getNatCastFn) (mkNatLit k)
-  | .intCast k => return mkApp (← getIntCastFn) (mkIntLit k)
-  | .var x => getVarExpr x
-  | .add a b => return mkApp2 (← getAddFn) (← go a) (← go b)
-  | .sub a b => return mkApp2 (← getSubFn) (← go a) (← go b)
-  | .mul a b => return mkApp2 (← getMulFn) (← go a) (← go b)
-  | .pow a k => return mkApp2 (← getPowFn) (← go a) (toExpr k)
-  | .neg a => return mkApp (← getNegFn) (← go a)
+    | .num k => denoteNum k
+    | .natCast k => return mkApp (← getNatCastFn) (mkNatLit k)
+    | .intCast k => return mkApp (← getIntCastFn) (mkIntLit k)
+    | .var x => getVarExpr x
+    | .add a b => return mkApp2 (← getAddFn) (← go a) (← go b)
+    | .sub a b => return mkApp2 (← getSubFn) (← go a) (← go b)
+    | .mul a b => return mkApp2 (← getMulFn) (← go a) (← go b)
+    | .pow a k => return mkApp2 (← getPowFn) (← go a) (toExpr k)
+    | .neg a => return mkApp (← getNegFn) (← go a)
 
 /-- Denote a `RingExpr` whose variables are the current ring's, looked up with `getVar`. -/
-def denoteRingExpr [MonadGetVar m] (e : RingExpr) : m Expr :=
-  denoteRingExprCore getVar e
+def denoteRingExpr [MonadGetVar m] (e : RingExpr) : m Expr := denoteRingExprCore getVar e
 
 /--
 Denote a `RingExpr` whose variables index `vars` instead of the current ring's variables.
@@ -108,28 +109,37 @@ variable [Monad m] [MonadError m] [MonadLiftT MetaM m] [MonadCanon m] [MonadSemi
 def denoteNatNum (k : Nat) : m Expr := do
   let sr ← getSemiring
   let n := mkRawNatLit k
-  let ofNatInst ← if let some inst ← MonadCanon.synthInstance? (mkApp2 (mkConst ``OfNat [sr.u]) sr.type n) then
-    pure inst
-  else
-    pure <| mkApp3 (mkConst ``Grind.Semiring.ofNat [sr.u]) sr.type sr.semiringInst n
+  let ofNatInst ←
+    if let some inst ← MonadCanon.synthInstance? (mkApp2 (mkConst ``OfNat [sr.u]) sr.type n) then
+      pure inst
+    else
+      pure <| mkApp3 (mkConst ``Grind.Semiring.ofNat [sr.u]) sr.type sr.semiringInst n
   return mkApp3 (mkConst ``OfNat.ofNat [sr.u]) sr.type n ofNatInst
 
 /--
 Denote a `SemiringExpr` whose variables index `vars`, using the semiring's operators.
 Fails on the constructors that have no semiring denotation (`sub`, `neg`, `intCast`, negative numerals).
 -/
-def denoteSemiringExpr' (vars : Array Expr) (e : SemiringExpr) : m Expr :=
-  go e
+def denoteSemiringExpr' (vars : Array Expr) (e : SemiringExpr) : m Expr := go e
 where
   go : SemiringExpr → m Expr
-  | .num k =>
-    if k < 0 then throwError "internal error: negative numeral in semiring expression" else denoteNatNum k.natAbs
-  | .natCast k => return mkApp (← getNatCastFn') (mkNatLit k)
-  | .var x => pure vars[x]!
-  | .add a b => return mkApp2 (← getAddFn') (← go a) (← go b)
-  | .mul a b => return mkApp2 (← getMulFn') (← go a) (← go b)
-  | .pow a k => return mkApp2 (← getPowFn') (← go a) (toExpr k)
-  | .sub .. | .neg .. | .intCast .. => throwError "internal error: ring operation in semiring expression"
+    | .num k =>
+      if k < 0 then
+        throwError "internal error: negative numeral in semiring expression"
+      else
+        denoteNatNum k.natAbs
+    | .natCast k =>
+      return mkApp (← getNatCastFn') (mkNatLit k)
+    | .var x =>
+      pure vars[x]!
+    | .add a b =>
+      return mkApp2 (← getAddFn') (← go a) (← go b)
+    | .mul a b =>
+      return mkApp2 (← getMulFn') (← go a) (← go b)
+    | .pow a k =>
+      return mkApp2 (← getPowFn') (← go a) (toExpr k)
+    | .sub .. | .neg .. | .intCast .. =>
+      throwError "internal error: ring operation in semiring expression"
 
 end Semiring
 

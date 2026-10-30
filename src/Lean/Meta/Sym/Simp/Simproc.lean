@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Simp.Result
 namespace Lean.Meta.Sym.Simp
@@ -11,7 +12,7 @@ namespace Lean.Meta.Sym.Simp
 public abbrev Simproc.andThen (f g : Simproc) : Simproc := fun e₁ => do
   let r ← f e₁
   match r with
-  | .step _ _ true _ | .rfl true _  => return r
+  | .step _ _ true _ | .rfl true _ => return r
   -- Propagate cd₁: if `f` was context-dependent but returned `.rfl`, in another
   -- context `f` might succeed and the whole `andThen` would take a different path.
   | .rfl false cd₁ =>
@@ -27,7 +28,7 @@ public instance : AndThen Simproc where
 public abbrev Simproc.orElse (f g : Simproc) : Simproc := fun e₁ => do
   let r ← f e₁
   match r with
-  | .step _ _ _ _ | .rfl true _  => return r
+  | .step _ _ _ _ | .rfl true _ => return r
   -- Propagate cd₁: if `f` was context-dependent but returned `.rfl`, in another
   -- context `f` might succeed and the `orElse` would return `f`'s result instead.
   | .rfl false cd₁ =>
@@ -38,7 +39,6 @@ public instance : OrElse Simproc where
   orElse f g := Simproc.orElse f (g ())
 
 /-- Wraps a simproc so that any exception is caught and treated as `.rfl` (no rewrite). -/
-public abbrev Simproc.tryCatch (f : Simproc) : Simproc := fun e => do
-  try f e catch _ => return .rfl
+public abbrev Simproc.tryCatch (f : Simproc) : Simproc := fun e => do try f e catch _ => return .rfl
 
 end Lean.Meta.Sym.Simp

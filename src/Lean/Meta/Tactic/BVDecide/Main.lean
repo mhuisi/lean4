@@ -4,27 +4,24 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Henrik Böving
 -/
 module
-prelude
 
+prelude
 public import Lean.Meta.Tactic.BVDecide.Prover.Bitblast
 public import Lean.Meta.Tactic.BVDecide.Prover.Cegar
 public import Lean.Meta.Tactic.BVDecide.Normalize
 import Lean.Meta.Sym.Util
-
 
 /-!
 This module provides the implementation of the `bv_decide` frontend itself.
 -/
 namespace Lean.Meta.Tactic.BVDecide
 
-def bvUnsat (g : MVarId) (hypotheses : Array Normalize.Hyp) (ctx : TacticContext) :
-    Grind.GrindM (Except CounterExample CegarCert) :=
+def bvUnsat (g : MVarId) (hypotheses : Array Normalize.Hyp) (ctx : TacticContext)
+    : Grind.GrindM (Except CounterExample CegarCert) :=
   ReifyM.run (hypotheses := hypotheses) (cfg := ctx.config) do
     closeWithBVReflection g (cegarBlaster ctx)
 
-/--
-The result of calling `bv_decide`.
--/
+/-- The result of calling `bv_decide`. -/
 public structure Result where
   cegarCert : CegarCert
 
@@ -32,19 +29,18 @@ public structure Result where
 Try to close `g` using a bitblaster. Return either a `CounterExample` if one is found or a `Result`
 if `g` is proven.
 -/
-public def bvDecide' (target : Normalize.Target) (ctx : TacticContext) :
-    Grind.GrindM (Except CounterExample Result) := do
+public def bvDecide' (target : Normalize.Target) (ctx : TacticContext)
+    : Grind.GrindM (Except CounterExample Result) := do
   Normalize.PreProcessM.run' ctx.preProcessContext target do
     let solved ← Normalize.bvNormalize
     if solved then return .ok ⟨.solvedWithPreProcessing⟩
 
-    match ← bvUnsat (← Normalize.PreProcessM.getTargetMVarId) (← Normalize.PreProcessM.getHyps) ctx with
+    match ← bvUnsat (← Normalize.PreProcessM.getTargetMVarId) (← Normalize.PreProcessM.getHyps)
+      ctx with
     | .ok cegarCert => return .ok ⟨cegarCert⟩
     | .error counterExample => return .error counterExample
 
-/--
-Call `bvDecide'` and throw a pretty error if a counter example ends up being produced.
--/
+/-- Call `bvDecide'` and throw a pretty error if a counter example ends up being produced. -/
 public def bvDecide (target : Normalize.Target) (ctx : TacticContext) : Grind.GrindM Result := do
   match ← bvDecide' target ctx with
   | .ok result => return result
@@ -52,6 +48,5 @@ public def bvDecide (target : Normalize.Target) (ctx : TacticContext) : Grind.Gr
     counterExample.goal.withContext do
       let error ← explainCounterExampleQuality counterExample
       throwError (← addMessageContextFull error)
-
 
 end Lean.Meta.Tactic.BVDecide

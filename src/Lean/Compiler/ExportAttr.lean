@@ -13,13 +13,13 @@ public section
 namespace Lean
 
 private def isValidCppId (id : String) : Bool :=
-  let first := id.front;
-  first.isAlpha  && (id.toRawSubstring.drop 1).all (fun c => c.isAlpha || c.isDigit || c == '_')
+  let first := id.front
+  first.isAlpha && (id.toRawSubstring.drop 1).all (fun c => c.isAlpha || c.isDigit || c == '_')
 
 private def isValidCppName : Name → Bool
   | .str .anonymous s => isValidCppId s
-  | .str p s          => isValidCppId s && isValidCppName p
-  | _                 => false
+  | .str p s => isValidCppId s && isValidCppName p
+  | _ => false
 
 /--
 Exports a function under the provided unmangled symbol name. This can be used to refer to Lean
@@ -53,8 +53,8 @@ programming languages.
 @[builtin_doc]
 builtin_initialize exportAttr : ParametricAttribute Name ←
   registerParametricAttribute {
-    name := `export,
-    descr := "name to be used by code generators",
+    name := `export
+    descr := "name to be used by code generators"
     getParam := fun _ stx => do
       let exportName ← Attribute.Builtin.getId stx
       unless isValidCppName exportName do
@@ -63,8 +63,7 @@ builtin_initialize exportAttr : ParametricAttribute Name ←
   }
 
 @[export lean_get_export_name_for]
-def getExportNameFor? (env : Environment) (n : Name) : Option Name :=
-  exportAttr.getParam? env n
+def getExportNameFor? (env : Environment) (n : Name) : Option Name := exportAttr.getParam? env n
 
 def isExport (env : Environment) (n : Name) : Bool :=
   -- The main function morally is an exported function as well. In particular,

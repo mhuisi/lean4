@@ -25,8 +25,7 @@ public def fmtGrindAnchor : Fmt := fun
     -- (identical output) and the linter reports `hexnum` as missing.
     let n ← fmt n
     return Layouts.atomic #[hashTk, n]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.grindLemma]
 public def fmtGrindLemma : Fmt := fun
@@ -34,8 +33,7 @@ public def fmtGrindLemma : Fmt := fun
     let mod? ← fmt? mod?
     let t ← fmt t
     return Layouts.pseudoApplication #[mod?, t]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.grindLemmaMin]
 public def fmtGrindLemmaMin : Fmt := fun
@@ -45,8 +43,7 @@ public def fmtGrindLemmaMin : Fmt := fun
     let t ← fmt t
     let termWithMod := Layouts.pseudoApplication #[mod?, t]
     return Layouts.prefixOperator bangTk termWithMod .withoutSpacingIfAtomic
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.grindErase]
 public def fmtGrindErase : Fmt := fun
@@ -54,8 +51,7 @@ public def fmtGrindErase : Fmt := fun
     let minusTk ← fmt minusTk
     let id ← fmt id
     return Layouts.atomic #[minusTk, id]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.grindParam]
 public def fmtGrindParam : Fmt := fun stx => do fmt (← getStxArg! stx 0)
@@ -66,8 +62,7 @@ public def fmtGrindThmNs : Fmt := fun
     let nsTk ← fmt nsTk
     let id ← fmt id
     return Layouts.pseudoApplication #[nsTk, id]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.thm]
 public def fmtGrindThm : Fmt := fun stx => do fmt (← getStxArg! stx 0)
@@ -130,8 +125,7 @@ public def fmtGrindFilterParen : Fmt := fun
     let f ← fmt f
     let rbTk ← fmt rbTk
     return Layouts.parens lbTk f rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.«grind_filter_&&_»]
 public def fmtGrindFilterAnd : Fmt := fun
@@ -140,8 +134,7 @@ public def fmtGrindFilterAnd : Fmt := fun
     let opTk ← fmt opTk
     let b ← fmt b
     return Layouts.infixOperator (format := .dense) #[a, opTk, b]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.«grind_filter_||_»]
 public def fmtGrindFilterOr : Fmt := fun
@@ -150,8 +143,7 @@ public def fmtGrindFilterOr : Fmt := fun
     let opTk ← fmt opTk
     let b ← fmt b
     return Layouts.infixOperator (format := .dense) #[a, opTk, b]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.grind_filter!_]
 public def fmtGrindFilterNot : Fmt := fun
@@ -159,8 +151,7 @@ public def fmtGrindFilterNot : Fmt := fun
     let bangTk ← fmt bangTk
     let f ← fmt f
     return Layouts.prefixOperator bangTk f .withoutSpacingIfAtomic
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.grindFilter]
 public def fmtGrindFilter : Fmt := fun
@@ -179,8 +170,7 @@ public def fmtGrindRefAnchordOrd : Fmt := fun
     let slashTk ← fmt slashTk
     let n ← fmt n
     return Layouts.atomicInfixOperator #[a, slashTk, n]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.grind_ref__1]
 public def fmtGrindRefTerm : Fmt := fun
@@ -198,8 +188,7 @@ public def fmtGrindStep : Fmt := fun
       .withSepAfter g ⟨nl, nested⟩,
       filter?
     ]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.grindSeq1Indented]
 public def fmtGrindSeq1Indented : Fmt := fun
@@ -216,8 +205,7 @@ public def fmtGrindSeqBracketed : Fmt := fun
     let steps ← fmtSeq steps none
     let rbTk ← fmt rbTk
     return Layouts.bracketed lbTk steps rbTk <| .sparse hardNl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.grindSeq]
 public def fmtGrindSeq : Fmt := fun
@@ -272,8 +260,7 @@ public def fmtGrindShowTerm : Fmt := fun
     let tk ← fmt tk
     let s ← fmt s
     return Layouts.keywordPrefixedSeq tk s .nonSticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.cases]
 public def fmtGrindTacticCases : Fmt := fun
@@ -281,8 +268,7 @@ public def fmtGrindTacticCases : Fmt := fun
     let tk ← fmt tk
     let r ← fmt r
     return Layouts.pseudoApplication #[tk, r]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.withAnnotateState]
 public def fmtGrindWithAnnotateState : Fmt := fun stx => do
@@ -300,8 +286,7 @@ public def fmtGrindFail : Fmt := fun
     let tk ← fmt tk
     let msg? ← fmt? msg?
     return Layouts.pseudoApplication #[tk, msg?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.renameI]
 public def fmtGrindRenameI : Fmt := fun
@@ -309,8 +294,7 @@ public def fmtGrindRenameI : Fmt := fun
     let tk ← fmt tk
     let args ← fmtArray args
     return Layouts.pseudoApplication <| #[tk] ++ args
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.symApply]
 public def fmtGrindApply : Fmt := fun
@@ -318,8 +302,7 @@ public def fmtGrindApply : Fmt := fun
     let tk ← fmt tk
     let e ← fmt e
     return Layouts.pseudoApplication #[tk, e]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.symInternalize]
 public def fmtGrindInternalize : Fmt := fun
@@ -327,8 +310,7 @@ public def fmtGrindInternalize : Fmt := fun
     let tk ← fmt tk
     let n? ← fmt? n?
     return Layouts.pseudoApplication #[tk, n?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.grindExact_]
 public def fmtGrindExact : Fmt := fun
@@ -336,8 +318,7 @@ public def fmtGrindExact : Fmt := fun
     let tk ← fmt tk
     let e ← fmt e
     return Layouts.pseudoApplication #[tk, e]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.instantiate]
 public def fmtGrindInstantiate : Fmt := fun
@@ -352,8 +333,7 @@ public def fmtGrindInstantiate : Fmt := fun
       let keywords := Layouts.spacedAtomic #[tk, only?, approx?]
       let thms := Layouts.collection lbTk? thms rbTk?
       return Layouts.pseudoApplication #[keywords, thms]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.use]
 public def fmtGrindUse : Fmt := fun
@@ -364,22 +344,19 @@ public def fmtGrindUse : Fmt := fun
     let rbTk ← fmt rbTk
     let thms := Layouts.collection lbTk thms rbTk
     return Layouts.pseudoApplication #[tk, thms]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.finish]
 public def fmtGrindFinish : Fmt := fun
   | `(grind| finish%$tk $cfgItems:configItem* $[only%$only?]? $[[%$lbTk? $args?:grindParam,* ]%$rbTk?]?) =>
     fmtSimpLikeWithGenericConfig #[tk] cfgItems none only? lbTk? args? rbTk? none
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.finishTrace]
 public def fmtGrindFinishTrace : Fmt := fun
   | `(grind| finish?%$tk $cfgItems:configItem* $[only%$only?]? $[[%$lbTk? $args?:grindParam,* ]%$rbTk?]?) =>
     fmtSimpLikeWithGenericConfig #[tk] cfgItems none only? lbTk? args? rbTk? none
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.«have»]
 public def fmtGrindHave : Fmt := fun
@@ -387,8 +364,7 @@ public def fmtGrindHave : Fmt := fun
     let haveTk ← fmt haveTk
     let decl ← fmt decl
     return Layouts.letDecl haveTk empty decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.haveSilent]
 public def fmtGrindHaveSilent : Fmt := fun
@@ -398,8 +374,7 @@ public def fmtGrindHaveSilent : Fmt := fun
     let colonTk ← fmt colonTk
     let t ← fmt t
     return Layouts.localSignature #[haveTk, id?] #[] colonTk t
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.nestedTacticCore]
 public def fmtGrindNestedTacticCore : Fmt := fun
@@ -408,8 +383,7 @@ public def fmtGrindNestedTacticCore : Fmt := fun
     let arrowTk ← fmt arrowTk
     let tac ← fmt tac
     return Layouts.assignmentDeclaration tacticTk arrowTk tac
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.allGoals]
 public def fmtGrindAllGoals : Fmt := fun
@@ -417,15 +391,13 @@ public def fmtGrindAllGoals : Fmt := fun
     let tk ← fmt tk
     let seq ← fmt seq
     return Layouts.keywordPrefixedSeq tk seq .nonSticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.case]
 public def fmtGrindCase : Fmt := fun
   | `(grind| case%$caseTk $args:caseArg|* =>%$arrowTk $seq:grindSeq) =>
     fmtCaseDeclaration caseTk args arrowTk seq
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.anyGoals]
 public def fmtGrindAnyGoals : Fmt := fun
@@ -433,8 +405,7 @@ public def fmtGrindAnyGoals : Fmt := fun
     let tk ← fmt tk
     let seq ← fmt seq
     return Layouts.keywordPrefixedSeq tk seq .nonSticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.focus]
 public def fmtGrindFocus : Fmt := fun
@@ -442,8 +413,7 @@ public def fmtGrindFocus : Fmt := fun
     let tk ← fmt tk
     let seq ← fmt seq
     return Layouts.keywordPrefixedSeq tk seq .nonSticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.failIfSuccess]
 public def fmtGrindFailIfSuccess : Fmt := fun
@@ -451,8 +421,7 @@ public def fmtGrindFailIfSuccess : Fmt := fun
     let tk ← fmt tk
     let seq ← fmt seq
     return Layouts.keywordPrefixedSeq tk seq .nonSticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.grindTry_]
 public def fmtGrindTry : Fmt := fun
@@ -460,8 +429,7 @@ public def fmtGrindTry : Fmt := fun
     let tk ← fmt tk
     let seq ← fmt seq
     return Layouts.keywordPrefixedSeq tk seq .nonSticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.grindRepeat_]
 public def fmtGrindRepeat : Fmt := fun
@@ -469,15 +437,13 @@ public def fmtGrindRepeat : Fmt := fun
     let tk ← fmt tk
     let seq ← fmt seq
     return Layouts.keywordPrefixedSeq tk seq .nonSticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.next]
 public def fmtGrindNext : Fmt := fun
   | `(grind| next%$nextTk $args:binderIdent* =>%$arrowTk $seq:grindSeq) =>
     fmtNextLike nextTk args arrowTk seq
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.«grind·_»]
 public def fmtGrindDot : Fmt := fun
@@ -485,8 +451,7 @@ public def fmtGrindDot : Fmt := fun
     let dotTk ← fmt dotTk
     let s ← fmt s
     return nested <| Layouts.softSpacedAtomic #[dotTk, s]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_infix_fmt Lean.Parser.Tactic.Grind.«grind_<;>_»]
 public def fmtGrindSeqFocus : Fmt.InfixOperation := {
@@ -505,8 +470,7 @@ public def fmtGrindFirst : Fmt := fun
         let rbTk ← fmt rbTk
         return Layouts.parens lbTk seq rbTk
     return nested <| Layouts.horizontalOrVertical (#[firstTk] ++ alts)
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.paren]
 public def fmtGrindParen : Fmt := fun
@@ -515,8 +479,7 @@ public def fmtGrindParen : Fmt := fun
     let seq ← fmt seq
     let rbTk ← fmt rbTk
     return Layouts.parenthesizedSeq lbTk seq rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.setOption]
 public def fmtGrindSetOption : Fmt := fun
@@ -536,8 +499,7 @@ public def fmtGrindSetOption : Fmt := fun
       let dedentedVariant :=
         Layouts.keywordSeparated setOption inTk seq { allowFlattening := false, nestedRhs := false }
       return pseudoDedented indentedVariant dedentedVariant
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.setConfig]
 public def fmtGrindSetConfig : Fmt := fun
@@ -552,8 +514,7 @@ public def fmtGrindSetConfig : Fmt := fun
     let dedentedVariant :=
       Layouts.keywordSeparated setConfig inTk seq { allowFlattening := false, nestedRhs := false }
     return pseudoDedented indentedVariant dedentedVariant
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.symIntro]
 public def fmtGrindSymIntro : Fmt := fun
@@ -566,8 +527,7 @@ public def fmtGrindSymIntro : Fmt := fun
       let «intro» := Layouts.pseudoApplication <| #[introTk, namedArg]
       let ids ← fmtArray ids
       return Layouts.pseudoApplication <| #[«intro»] ++ ids
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.symIntroLight]
 public def fmtGrindSymIntroLight : Fmt := fun
@@ -577,8 +537,7 @@ public def fmtGrindSymIntroLight : Fmt := fun
     let head := Layouts.atomic #[introTk, tildeTk]
     let ids ← fmtArray ids
     return Layouts.pseudoApplication <| #[head] ++ ids
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.symIntros]
 public def fmtGrindSymIntros : Fmt := fun
@@ -588,8 +547,7 @@ public def fmtGrindSymIntros : Fmt := fun
     -- don't recurse into a node without a formatter.
     let namedArg ← fmtNamedArgumentTerm? lbTk? intTk? ceqTk? (bVal?.map (·.raw.getArg 0)) rbTk?
     return Layouts.pseudoApplication #[introsTk, namedArg]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.symIntrosLight]
 public def fmtGrindSymIntrosLight : Fmt := fun
@@ -597,8 +555,7 @@ public def fmtGrindSymIntrosLight : Fmt := fun
     let introsTk ← fmt introsTk
     let tildeTk ← fmt tildeTk
     return Layouts.atomic #[introsTk, tildeTk]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.symSimp]
 public def fmtGrindSimp : Fmt := fun
@@ -610,8 +567,7 @@ public def fmtGrindSimp : Fmt := fun
     let rbTk? ← fmt? rbTk?
     let thms := Layouts.collection lbTk? thms rbTk?
     return Layouts.pseudoApplication #[simpTk, variant?, thms]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.symDSimp]
 public def fmtGrindDSimp : Fmt := fun
@@ -624,8 +580,7 @@ public def fmtGrindDSimp : Fmt := fun
     let rbTk? ← fmt? rbTk?
     let thms := Layouts.collection lbTk? thms rbTk?
     return Layouts.pseudoApplication #[dsimpTk, variant?, thms]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.symRw]
 public def fmtGrindRw : Fmt := fun
@@ -640,8 +595,7 @@ public def fmtGrindBvNormalize : Fmt := fun
     let types? ← fmt? types?
     let lhs := Layouts.pseudoApplication <| #[bvNormalizeTk] ++ cfg
     return Layouts.blocks #[lhs, types?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.bvDecide]
 public def fmtGrindBvDecide : Fmt := fun
@@ -651,8 +605,7 @@ public def fmtGrindBvDecide : Fmt := fun
     let types? ← fmt? types?
     let lhs := Layouts.pseudoApplication <| #[bvDecideTk] ++ cfg
     return Layouts.blocks #[lhs, types?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.bvTrace]
 public def fmtGrindBvTrace : Fmt := fun
@@ -662,8 +615,7 @@ public def fmtGrindBvTrace : Fmt := fun
     let types? ← fmt? types?
     let lhs := Layouts.pseudoApplication <| #[bvTraceTk] ++ cfg
     return Layouts.blocks #[lhs, types?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.bvCheck]
 public def fmtGrindBvCheck : Fmt := fun
@@ -674,8 +626,7 @@ public def fmtGrindBvCheck : Fmt := fun
     let lratFile ← fmt lratFile
     let lhs := Layouts.pseudoApplication <| #[bvCheckTk] ++ cfg
     return Layouts.blocks #[lhs, types?, lratFile]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.bvDecidePush]
 public def fmtGrindBvDecidePush : Fmt := fun
@@ -683,5 +634,4 @@ public def fmtGrindBvDecidePush : Fmt := fun
     let bvDecidePushTk ← fmt bvDecidePushTk
     let cfg ← (← tacticOptConfigItems cfg).mapM fmt
     return Layouts.pseudoApplication <| #[bvDecidePushTk] ++ cfg
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

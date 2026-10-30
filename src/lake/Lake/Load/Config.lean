@@ -29,7 +29,9 @@ public structure LoadConfig where
   lakeArgs? : Option (Array String) := none
   /-- The absolute path to the root directory of the Lake workspace. -/
   wsDir : FilePath
-  /-- The index of the package in the workspace. Used to disambiguate packages with the same name. -/
+  /--
+  The index of the package in the workspace. Used to disambiguate packages with the same name.
+  -/
   pkgIdx : Nat := 0
   /--
   The assigned name of the package.
@@ -76,9 +78,9 @@ public structure LoadConfig where
 namespace LoadConfig
 
 /-- The package's Lake directory (for Lake temporary files). -/
-@[inline] public def lakeDir (cfg : LoadConfig) : FilePath :=
-  cfg.pkgDir / defaultLakeDir
+@[inline] public def lakeDir (cfg : LoadConfig) : FilePath := cfg.pkgDir / defaultLakeDir
 
 /-- The absolute path where compiled configurations are stored. -/
-@[inline] public def configDir (cfg : LoadConfig) : FilePath :=
+@[inline]
+public def configDir (cfg : LoadConfig) : FilePath :=
   cfg.wsDir / defaultLakeDir / "config" / toString cfg.pkgIdx

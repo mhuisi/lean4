@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 import Init.Grind.Propagator
 import Lean.Meta.Tactic.Grind.Arith.Cutsat.LeCnstr
@@ -12,7 +13,7 @@ public import Lean.Meta.Tactic.Grind.PropagatorAttr
 public section
 namespace Lean.Meta.Grind.Arith
 
-builtin_grind_propagator propagateLE ↓LE.le := fun e => do
+builtin_grind_propagator propagateLE ↓ LE.le := fun e => do
   if (← isEqTrue e) then
     Cutsat.propagateLe e (eqTrue := true)
     Linear.propagateIneq e (eqTrue := true)
@@ -20,7 +21,7 @@ builtin_grind_propagator propagateLE ↓LE.le := fun e => do
     Cutsat.propagateLe e (eqTrue := false)
     Linear.propagateIneq e (eqTrue := false)
 
-builtin_grind_propagator propagateLT ↓LT.lt := fun e => do
+builtin_grind_propagator propagateLT ↓ LT.lt := fun e => do
   if (← isEqTrue e) then
     Linear.propagateIneq e (eqTrue := true)
   else if (← isEqFalse e) then

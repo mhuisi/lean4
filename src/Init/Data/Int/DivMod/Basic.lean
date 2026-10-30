@@ -72,10 +72,10 @@ Examples:
 @[extern "lean_int_ediv", implicit_reducible]
 def ediv : (@& Int) → (@& Int) → Int
   | ofNat m, ofNat n => ofNat (m / n)
-  | ofNat m, -[n+1]  => -ofNat (m / succ n)
-  | -[_+1],  0       => 0
-  | -[m+1],  ofNat (succ n) => -[m / succ n +1]
-  | -[m+1],  -[n+1]  => ofNat (succ (m / succ n))
+  | ofNat m, -[n+1] => - ofNat (m / succ n)
+  | -[_+1], 0 => 0
+  | -[m+1], ofNat (succ n) => -[m / succ n+1]
+  | -[m+1], -[n+1] => ofNat (succ (m / succ n))
 
 /--
 Integer modulus that uses the E-rounding convention. Usually accessed via the `%` operator.
@@ -102,7 +102,7 @@ Examples:
 @[extern "lean_int_emod", implicit_reducible]
 def emod : (@& Int) → (@& Int) → Int
   | ofNat m, n => ofNat (m % natAbs n)
-  | -[m+1],  n => subNatNat (natAbs n) (succ (m % natAbs n))
+  | -[m+1], n => subNatNat (natAbs n) (succ (m % natAbs n))
 
 /--
 The `Div Int` and `Mod Int` instances use `Int.ediv` and `Int.emod` for compatibility with SMT-LIB and
@@ -121,11 +121,15 @@ instance : Mod Int where
 
 theorem ofNat_ediv_ofNat {a b : Nat} : (↑a / ↑b : Int) = (a / b : Nat) := rfl
 @[norm_cast]
-theorem negSucc_ediv_ofNat_succ {a b : Nat} : ((-[a+1]) / ↑(b+1) : Int) = -[a / succ b +1] := rfl
-theorem negSucc_ediv_negSucc {a b : Nat} : ((-[a+1]) / (-[b+1]) : Int) = ((a / (b + 1)) + 1 : Nat) := rfl
+theorem negSucc_ediv_ofNat_succ {a b : Nat} : ((-[a+1]) / ↑(b + 1) : Int) = -[a / succ b+1] := rfl
+theorem negSucc_ediv_negSucc {a b : Nat}
+    : ((-[a+1]) / (-[b+1]) : Int) = ((a / (b + 1)) + 1 : Nat) :=
+  rfl
 theorem ofNat_ediv_negSucc {a b : Nat} : (ofNat a / (-[b+1])) = -(a / (b + 1) : Nat) := rfl
 theorem negSucc_emod_ofNat {a b : Nat} : -[a+1] % (b : Int) = subNatNat b (succ (a % b)) := rfl
-theorem negSucc_emod_negSucc {a b : Nat} : -[a+1] % -[b+1] = subNatNat (b + 1) (succ (a % (b + 1))) := rfl
+theorem negSucc_emod_negSucc {a b : Nat}
+    : -[a+1] % -[b+1] = subNatNat (b + 1) (succ (a % (b + 1))) :=
+  rfl
 
 /--
 Division of two divisible integers. Division by `0` returns `0`.
@@ -143,11 +147,9 @@ Examples:
  * `Int.divExact 0 0 (by decide) = 0`
 -/
 @[extern "lean_int_div_exact"]
-protected def divExact (x y : @& Int) (h : y ∣ x) : Int :=
-  x / y
+protected def divExact (x y : @& Int) (h : y ∣ x) : Int := x / y
 
-@[simp]
-theorem divExact_eq_ediv {x y : Int} (h : y ∣ x) : x.divExact y h = x / y := rfl
+@[simp] theorem divExact_eq_ediv {x y : Int} (h : y ∣ x) : x.divExact y h = x / y := rfl
 
 /-! ### T-rounding division -/
 
@@ -176,12 +178,13 @@ Examples:
 -/
 @[extern "lean_int_div", implicit_reducible]
 def tdiv : (@& Int) → (@& Int) → Int
-  | ofNat m, ofNat n =>  ofNat (m / n)
-  | ofNat m, -[n +1] => -ofNat (m / succ n)
-  | -[m +1], ofNat n => -ofNat (succ m / n)
-  | -[m +1], -[n +1] =>  ofNat (succ m / succ n)
+  | ofNat m, ofNat n => ofNat (m / n)
+  | ofNat m, -[n+1] => - ofNat (m / succ n)
+  | -[m+1], ofNat n => - ofNat (succ m / n)
+  | -[m+1], -[n+1] => ofNat (succ m / succ n)
 
-/-- Integer modulo using the T-rounding convention.
+/--
+Integer modulo using the T-rounding convention.
 
 In [the T-rounding convention][t-rounding] (division with truncation), all rounding is towards zero.
 Division by 0 is defined to be 0 and `Int.tmod a 0 = a`.
@@ -209,10 +212,10 @@ Examples:
 -/
 @[extern "lean_int_mod", implicit_reducible]
 def tmod : (@& Int) → (@& Int) → Int
-  | ofNat m, ofNat n =>  ofNat (m % n)
-  | ofNat m, -[n +1] =>  ofNat (m % succ n)
-  | -[m +1], ofNat n => -ofNat (succ m % n)
-  | -[m +1], -[n +1] => -ofNat (succ m % succ n)
+  | ofNat m, ofNat n => ofNat (m % n)
+  | ofNat m, -[n+1] => ofNat (m % succ n)
+  | -[m+1], ofNat n => - ofNat (succ m % n)
+  | -[m+1], -[n+1] => - ofNat (succ m % succ n)
 
 theorem ofNat_tdiv (m n : Nat) : ↑(m / n) = tdiv ↑m ↑n := rfl
 
@@ -240,12 +243,12 @@ Examples:
 -/
 @[implicit_reducible]
 def fdiv : Int → Int → Int
-  | 0,       _       => 0
+  | 0, _ => 0
   | ofNat m, ofNat n => ofNat (m / n)
-  | ofNat (succ m), -[n+1] => -[m / succ n +1]
-  | -[_+1],  0       => 0
-  | -[m+1],  ofNat (succ n) => -[m / succ n +1]
-  | -[m+1],  -[n+1]  => ofNat (succ m / succ n)
+  | ofNat (succ m), -[n+1] => -[m / succ n+1]
+  | -[_+1], 0 => 0
+  | -[m+1], ofNat (succ n) => -[m / succ n+1]
+  | -[m+1], -[n+1] => ofNat (succ m / succ n)
 
 /--
 Integer modulus using the F-rounding convention.
@@ -267,15 +270,14 @@ Examples:
 * `(12 : Int).fmod (-7 : Int) = -2`
 * `(-12 : Int).fmod (7 : Int) = 2`
 * `(-12 : Int).fmod (-7 : Int) = -5`
-
 -/
 @[implicit_reducible]
 def fmod : Int → Int → Int
-  | 0,       _       => 0
+  | 0, _ => 0
   | ofNat m, ofNat n => ofNat (m % n)
-  | ofNat (succ m),  -[n+1]  => subNatNat (m % succ n) n
-  | -[m+1],  ofNat n => subNatNat n (succ (m % n))
-  | -[m+1],  -[n+1]  => -ofNat (succ m % succ n)
+  | ofNat (succ m), -[n+1] => subNatNat (m % succ n) n
+  | -[m+1], ofNat n => subNatNat n (succ (m % n))
+  | -[m+1], -[n+1] => - ofNat (succ m % succ n)
 
 theorem ofNat_fdiv : ∀ m n : Nat, ↑(m / n) = fdiv ↑m ↑n
   | 0, _ => by simp [fdiv]

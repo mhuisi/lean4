@@ -18,8 +18,11 @@ well-founded recursion and partial fixed-points, but independent of the details 
 namespace Lean.Elab.Mutual
 open Meta
 
-def addPreDefsFromUnary (docCtx : LocalContext × LocalInstances) (preDefs : Array PreDefinition) (preDefsNonrec : Array PreDefinition)
-    (unaryPreDefNonRec : PreDefinition) (cacheProofs := true) : TermElabM Unit := do
+def addPreDefsFromUnary
+    (docCtx : LocalContext × LocalInstances) (preDefs : Array PreDefinition)
+    (preDefsNonrec : Array PreDefinition) (unaryPreDefNonRec : PreDefinition)
+    (cacheProofs := true)
+    : TermElabM Unit := do
   /-
   We must remove `implemented_by` attributes from the auxiliary application because
   this attribute is only relevant for code that is compiled. Moreover, the `[implemented_by <decl>]`
@@ -33,12 +36,12 @@ def addPreDefsFromUnary (docCtx : LocalContext × LocalInstances) (preDefs : Arr
   -- we recognize that below and then do not set @[irreducible]
   withOptions (allowUnsafeReducibility.set · true) do
     if unaryPreDefNonRec.declName = preDefs[0]!.declName then
-      addNonRec docCtx preDefNonRec (applyAttrAfterCompilation := false) (cacheProofs := cacheProofs)
-        (isRecursive := true)
+      addNonRec docCtx preDefNonRec (applyAttrAfterCompilation := false)
+        (cacheProofs := cacheProofs) (isRecursive := true)
     else
       withEnableInfoTree false do
-        addNonRec docCtx preDefNonRec (applyAttrAfterCompilation := false) (cacheProofs := cacheProofs)
-          (isRecursive := true)
+        addNonRec docCtx preDefNonRec (applyAttrAfterCompilation := false)
+          (cacheProofs := cacheProofs) (isRecursive := true)
       preDefsNonrec.forM fun preDefNonRec =>
         addNonRec docCtx preDefNonRec (applyAttrAfterCompilation := false) (all := declNames)
           (cacheProofs := cacheProofs) (isRecursive := true)
@@ -53,9 +56,7 @@ def cleanPreDef (preDef : PreDefinition) (cacheProofs := true) : MetaM PreDefini
   let preDef ← abstractNestedProofs (cache := cacheProofs) preDef
   return preDef
 
-/--
-Assign final attributes to the definitions. Assumes the EqnInfos to be already present.
--/
+/-- Assign final attributes to the definitions. Assumes the EqnInfos to be already present. -/
 def addPreDefAttributes (preDefs : Array PreDefinition) : TermElabM Unit := do
   /-
   Set irreducibility attribute, unless the user has requested a different setting.
@@ -65,8 +66,8 @@ def addPreDefAttributes (preDefs : Array PreDefinition) : TermElabM Unit := do
   for preDef in preDefs do
     unless preDef.kind.isTheorem do
       unless preDef.modifiers.attrs.any fun a =>
-          a.name = `reducible || a.name = `semireducible ||
-          a.name = `instance_reducible || a.name = `implicit_reducible do
+          a.name = `reducible || a.name = `semireducible || a.name = `instance_reducible
+            || a.name = `implicit_reducible do
         setIrreducibleAttribute preDef.declName
 
   for preDef in preDefs do

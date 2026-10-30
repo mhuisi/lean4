@@ -18,8 +18,8 @@ open Meta Term Command
 Creates a decision tree to implement `match discr with $cases* | _ => onFail`,
 where `discr : String`.
 -/
-partial def makeStringMatcher (discr : Ident) (cases : Array (String × Term)) (onFail : Term) :
-    TermElabM Term := do
+partial def makeStringMatcher (discr : Ident) (cases : Array (String × Term)) (onFail : Term)
+    : TermElabM Term := do
   let cases := Array.qsort cases (fun c c' => c.1 < c'.1)
   build 0 cases.size cases
 where
@@ -51,32 +51,36 @@ It should return an array of types that need an instance to be implemented for t
 of the instance to succeed. For example, a `structure` might report the list of the types of all
 its fields.
 -/
-private partial def planDerivation (className : Name) (type : Expr)
-    (extraDeps : Expr → TermElabM (Array Expr)) :
-    TermElabM (Array Expr) := do
+private partial def planDerivation
+    (className : Name) (type : Expr) (extraDeps : Expr → TermElabM (Array Expr))
+    : TermElabM (Array Expr) := do
   withTraceNode `Elab.ConfigEval
-      (fun r => return m!"derivation plan `{.ofConstName className}` for `{type}`: "
-        ++ match r with | .ok types => m!"{types}" | .error ex => ex.toMessageData) do
-    go #[] {type} type
+    (fun r =>
+      return m!"derivation plan `{.ofConstName className}` for `{type}`: " ++ match r with
+        | .ok types => m!"{types}"
+        | .error ex => ex.toMessageData)
+    do go #[] {type} type
 where
-  go (plan : Array Expr) (processing : ExprSet) (type : Expr) : TermElabM (Array Expr) := withIncRecDepth do
-    trace[Elab.ConfigEval] "plan: {plan}, processing: {processing.toList}, type: {type}"
-    if plan.contains type then
-      return plan
-    else
-      let cls ← mkAppM className #[type]
-      let insts ← SynthInstance.getInstances cls
-      trace[Elab.ConfigEval] "num insts for `{cls}`: {insts.size}"
-      for inst in insts do
-        try
-          return ← tryInst plan processing cls inst
-        catch _ => pure ()
-      let depTypes ← extraDeps type
-      trace[Elab.ConfigEval] "extra deps for `{type}`: {depTypes}"
-      let plan ← useDepTypes plan processing depTypes
-      return plan.push type
-  tryInst (plan : Array Expr) (processing : ExprSet) (cls : Expr) (inst : SynthInstance.Instance) :
-      TermElabM (Array Expr) := do
+  go (plan : Array Expr) (processing : ExprSet) (type : Expr) : TermElabM (Array Expr) :=
+    withIncRecDepth do
+      trace[Elab.ConfigEval] "plan: {plan}, processing: {processing.toList}, type: {type}"
+      if plan.contains type then
+        return plan
+      else
+        let cls ← mkAppM className #[type]
+        let insts ← SynthInstance.getInstances cls
+        trace[Elab.ConfigEval] "num insts for `{cls}`: {insts.size}"
+        for inst in insts do
+          try
+            return ← tryInst plan processing cls inst
+          catch _ =>
+            pure ()
+        let depTypes ← extraDeps type
+        trace[Elab.ConfigEval] "extra deps for `{type}`: {depTypes}"
+        let plan ← useDepTypes plan processing depTypes
+        return plan.push type
+  tryInst (plan : Array Expr) (processing : ExprSet) (cls : Expr) (inst : SynthInstance.Instance)
+      : TermElabM (Array Expr) := do
     trace[Elab.ConfigEval] "tryInst {cls}"
     let (xs, bis, cls') ← forallMetaTelescopeReducing (← inferType inst.val)
     trace[Elab.ConfigEval] "inst: {xs}, {cls'}"
@@ -98,12 +102,13 @@ where
         guard <| !x.hasMVar
     trace[Elab.ConfigEval] "inst for `{cls}` deps: {depTypes}"
     useDepTypes plan processing depTypes
-  useDepTypes (plan : Array Expr) (processing : ExprSet) (depTypes : Array Expr) : TermElabM (Array Expr) := do
+  useDepTypes (plan : Array Expr) (processing : ExprSet) (depTypes : Array Expr)
+      : TermElabM (Array Expr) := do
     let depTypes ← depTypes.mapM instantiateMVars
     if let some depType := depTypes.find? (·.hasMVar) then
       throwError "dependency has metavariables: {depType}"
     -- Filter out those instances that are part of the derivation plan
-    let depTypes := depTypes.filter (!plan.contains ·)
+    let depTypes := depTypes.filter (! plan.contains ·)
     -- If any are currently being processed, then we have a cyclic dependency.
     if let some depType := depTypes.find? processing.contains then
       throwError "cyclic dependency on {depType}"
@@ -120,24 +125,24 @@ suffice to be implemented, then runs `mkCmd` on each type with fresh macro scope
 
 The commands are generated and elaborated one at a time.
 -/
-def withClassInstDeps (className : Name) (type : Expr)
-    (extraDeps : Expr → TermElabM (Array Expr))
-    (mkCmd : Expr → TermElabM Command) :
-    CommandElabM Unit := do
+def withClassInstDeps
+    (className : Name) (type : Expr) (extraDeps : Expr → TermElabM (Array Expr))
+    (mkCmd : Expr → TermElabM Command)
+    : CommandElabM Unit := do
   let types ← liftTermElabM <| planDerivation className type extraDeps
   let env ← getEnv
   for type' in types do
-    let cmd ← liftTermElabM do
-      try
-        withFreshMacroScope (mkCmd type')
-      catch ex =>
-        trace[Elab.ConfigEval] m!"failure deriving instance for `{type'}`: {ex.toMessageData}"
-        setEnv env
-        throw ex
+    let cmd ←
+      liftTermElabM do
+        try
+          withFreshMacroScope (mkCmd type')
+        catch ex =>
+          trace[Elab.ConfigEval] m!"failure deriving instance for `{type'}`: {ex.toMessageData}"
+          setEnv env
+          throw ex
     elabCommand cmd
     trace[Elab.ConfigEval] m!"added instance of {.ofConstName className} for  `{type'}`"
 
-builtin_initialize
-  registerTraceClass `Elab.ConfigEval
+builtin_initialize registerTraceClass `Elab.ConfigEval
 
 end Lean.Elab.ConfigEval

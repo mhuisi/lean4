@@ -16,7 +16,6 @@ public import Lean.Compiler.IR.Sorry
 public import Lean.Compiler.IR.ToIR
 public import Lean.Compiler.IR.ToIRType
 public import Lean.Compiler.IR.Meta
-
 -- The following imports are not required by the compiler. They are here to ensure that there
 -- are no orphaned modules.
 public import Lean.Compiler.IR.LLVMBindings

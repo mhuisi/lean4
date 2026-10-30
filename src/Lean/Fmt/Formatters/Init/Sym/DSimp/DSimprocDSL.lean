@@ -35,8 +35,7 @@ public def fmtSymDSimpRewriteInline : Fmt := fun
     let rbTk ← fmt rbTk
     let thms := Layouts.collection lbTk thms rbTk
     return Layouts.blocks #[rewriteTk, thms]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Sym.DSimp.dsimprocParen]
 public def fmtSymDSimprocParen : Fmt := fun
@@ -45,8 +44,7 @@ public def fmtSymDSimprocParen : Fmt := fun
     let dsimproc ← fmt dsimproc
     let rbTk ← fmt rbTk
     return Layouts.parens lbTk dsimproc rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.symDSimpFieldPre]
 public def fmtSymDSimpFieldPre : Fmt := fun
@@ -55,8 +53,7 @@ public def fmtSymDSimpFieldPre : Fmt := fun
     let colonEqTk ← fmt colonEqTk
     let dsimproc ← fmt dsimproc
     return Layouts.assignmentDeclaration preTk colonEqTk dsimproc
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.symDSimpFieldPost]
 public def fmtSymDSimpFieldPost : Fmt := fun
@@ -65,8 +62,7 @@ public def fmtSymDSimpFieldPost : Fmt := fun
     let colonEqTk ← fmt colonEqTk
     let dsimproc ← fmt dsimproc
     return Layouts.assignmentDeclaration postTk colonEqTk dsimproc
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.symDSimpFieldMaxSteps]
 public def fmtSymDSimpFieldMaxSteps : Fmt := fun
@@ -75,8 +71,7 @@ public def fmtSymDSimpFieldMaxSteps : Fmt := fun
     let colonEqTk ← fmt colonEqTk
     let maxSteps ← fmt maxSteps
     return Layouts.assignmentDeclaration maxStepsTk colonEqTk maxSteps
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.registerSymDSimp]
 public def fmtRegisterSymDSimp : Fmt := fun
@@ -90,5 +85,4 @@ public def fmtRegisterSymDSimp : Fmt := fun
     let signature := Layouts.pseudoApplication #[registerSymDSimpTk, declId]
     let fields := Layouts.lines fields
     return Layouts.keywordSeparated signature whereTk fields { allowFlattening := false }
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

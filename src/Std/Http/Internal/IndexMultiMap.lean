@@ -26,28 +26,20 @@ open Std
 
 set_option linter.all true
 
-/--
-A structure for managing ordered key-value pairs where each key can have multiple values.
--/
+/-- A structure for managing ordered key-value pairs where each key can have multiple values. -/
 structure IndexMultiMap (α : Type u) (β : Type v) [BEq α] [Hashable α] where
-
-  /--
-  Flat array of all key-value entries in insertion order.
-  -/
+  /-- Flat array of all key-value entries in insertion order. -/
   entries : Array (α × β)
-
-  /--
-  Maps each key to its indices in `entries`. Each array is non-empty.
-  -/
+  /-- Maps each key to its indices in `entries`. Each array is non-empty. -/
   indexes : HashMap α (Array Nat)
-
   /--
   Invariant: every key in `indexes` maps to a non-empty array of valid indices into `entries`.
   -/
-  validity : ∀ k : α, (p : k ∈ indexes) →
-            let idx := (indexes.get k p);
-            idx.size > 0 ∧ (∀ i ∈ idx, i < entries.size)
-
+  validity
+    : ∀ k : α,
+      (p : k ∈ indexes)
+        → let idx := (indexes.get k p)
+          idx.size > 0 ∧ (∀ i ∈ idx, i < entries.size)
 deriving Repr
 
 instance [BEq α] [Hashable α] [Inhabited α] [Inhabited β] : Inhabited (IndexMultiMap α β) where
@@ -63,34 +55,30 @@ instance : Membership α (IndexMultiMap α β) where
 instance (key : α) (map : IndexMultiMap α β) : Decidable (key ∈ map) :=
   inferInstanceAs (Decidable (key ∈ map.indexes))
 
-/--
-Retrieves all values for the given key.
--/
+/-- Retrieves all values for the given key. -/
 @[inline]
 def getAll (map : IndexMultiMap α β) (key : α) (h : key ∈ map) : Array β :=
-  let entries := map.indexes.get key h |>.mapFinIdx fun idx _ h₁ =>
-    let proof := map.validity key h |>.right _ (Array.getElem_mem h₁)
-    map.entries[(map.indexes.get key h)[idx]]'proof |>.snd
+  let entries :=
+    map.indexes.get key h
+      |>.mapFinIdx fun idx _ h₁ =>
+        let proof := map.validity key h |>.right _ (Array.getElem_mem h₁)
+        map.entries[(map.indexes.get key h)[idx]]'proof |>.snd
 
   entries
 
-/--
-Retrieves the first value for the given key.
--/
+/-- Retrieves the first value for the given key. -/
 @[inline]
 def get (map : IndexMultiMap α β) (key : α) (h : key ∈ map) : β :=
   let ⟨nonEmpty, isIn⟩ := map.validity key h
   let entry := ((map.indexes.get key h)[0]'nonEmpty)
 
-  let proof := map.validity key h |>.right
-    entry
-    (by simp only [entry, HashMap.get_eq_getElem, Array.getElem_mem])
+  let proof :=
+    map.validity key h
+      |>.right entry (by simp only [entry, HashMap.get_eq_getElem, Array.getElem_mem])
 
   map.entries[entry]'proof |>.snd
 
-/--
-Retrieves all values for the given key, or `none` if the key is absent.
--/
+/-- Retrieves all values for the given key, or `none` if the key is absent. -/
 @[inline]
 def getAll? (map : IndexMultiMap α β) (key : α) : Option (Array β) :=
   if h : key ∈ map then
@@ -98,9 +86,7 @@ def getAll? (map : IndexMultiMap α β) (key : α) : Option (Array β) :=
   else
     none
 
-/--
-Retrieves the first value for the given key, or `none` if the key is absent.
--/
+/-- Retrieves the first value for the given key, or `none` if the key is absent. -/
 @[inline]
 def get? (map : IndexMultiMap α β) (key : α) : Option β :=
   if h : key ∈ map then
@@ -108,14 +94,10 @@ def get? (map : IndexMultiMap α β) (key : α) : Option β :=
   else
     none
 
-/--
-Checks if the key-value pair is present in the map.
--/
+/-- Checks if the key-value pair is present in the map. -/
 @[inline]
 def hasEntry (map : IndexMultiMap α β) [BEq β] (key : α) (value : β) : Bool :=
-  map.getAll? key
-  |>.bind (fun arr => arr.find? (· == value))
-  |>.isSome
+  map.getAll? key |>.bind (fun arr => arr.find? (· == value)) |>.isSome
 
 /--
 Retrieves the last value for the given key.
@@ -127,26 +109,19 @@ def getLast? (map : IndexMultiMap α β) (key : α) : Option β :=
   | none => none
   | some idxs => idxs.back?
 
-/--
-Like `get?`, but returns a default value if absent.
--/
-@[inline]
-def getD (map : IndexMultiMap α β) (key : α) (d : β) : β :=
-  map.get? key |>.getD d
+/-- Like `get?`, but returns a default value if absent. -/
+@[inline] def getD (map : IndexMultiMap α β) (key : α) (d : β) : β := map.get? key |>.getD d
 
-/--
-Like `get?`, but panics if absent.
--/
-@[inline]
-def get! [Inhabited β] (map : IndexMultiMap α β) (key : α) : β :=
-  map.get? key |>.get!
+/-- Like `get?`, but panics if absent. -/
+@[inline] def get! [Inhabited β] (map : IndexMultiMap α β) (key : α) : β := map.get? key |>.get!
 
 /--
 Inserts a new key-value pair into the map.
 If the key already exists, appends the value to existing values.
 -/
 @[inline]
-def insert [EquivBEq α] [LawfulHashable α] (map : IndexMultiMap α β) (key : α) (value : β) : IndexMultiMap α β :=
+def insert [EquivBEq α] [LawfulHashable α] (map : IndexMultiMap α β) (key : α) (value : β)
+    : IndexMultiMap α β :=
   let i := map.entries.size
   let entries := map.entries.push (key, value)
 
@@ -161,38 +136,30 @@ where finally
   have _ := map.validity
   grind
 
-/--
-Inserts multiple values for a given key, appending to any existing values.
--/
+/-- Inserts multiple values for a given key, appending to any existing values. -/
 @[inline]
-def insertMany [EquivBEq α] [LawfulHashable α] (map : IndexMultiMap α β) (key : α) (values : Array β) : IndexMultiMap α β :=
+def insertMany
+    [EquivBEq α] [LawfulHashable α] (map : IndexMultiMap α β) (key : α) (values : Array β)
+    : IndexMultiMap α β :=
   values.foldl (insert · key) map
 
-/--
-Creates an empty multimap.
--/
-def empty : IndexMultiMap α β :=
-  ⟨#[], .emptyWithCapacity, by intro h p; simp at p⟩
+/-- Creates an empty multimap. -/
+def empty : IndexMultiMap α β := ⟨#[], .emptyWithCapacity, by intro h p; simp at p⟩
 
-/--
-Creates a multimap from a list of key-value pairs.
--/
+/-- Creates a multimap from a list of key-value pairs. -/
 def ofList [EquivBEq α] [LawfulHashable α] (pairs : List (α × β)) : IndexMultiMap α β :=
   pairs.foldl (fun acc (k, v) => acc.insert k v) empty
 
-/--
-Checks if a key exists in the map.
--/
-@[inline]
-def contains (map : IndexMultiMap α β) (key : α) : Bool :=
-  map.indexes.contains key
+/-- Checks if a key exists in the map. -/
+@[inline] def contains (map : IndexMultiMap α β) (key : α) : Bool := map.indexes.contains key
 
 /--
 Updates all values associated with `key` by applying `f` to each one.
 If the key is absent, returns the map unchanged.
 -/
 @[inline]
-def update [EquivBEq α] [LawfulHashable α] (map : IndexMultiMap α β) (key : α) (f : β → β) : IndexMultiMap α β :=
+def update [EquivBEq α] [LawfulHashable α] (map : IndexMultiMap α β) (key : α) (f : β → β)
+    : IndexMultiMap α β :=
   if key ∉ map then
     map
   else
@@ -228,50 +195,34 @@ def erase [EquivBEq α] [LawfulHashable α] (map : IndexMultiMap α β) (key : �
   if key ∉ map then
     map
   else
-    map.entries.foldl (fun acc (k,v) => if ¬(key == k) then acc.insert k v else acc) empty
+    map.entries.foldl (fun acc (k, v) => if ¬(key == k) then acc.insert k v else acc) empty
 
 /--
 Removes multiple keys and all their associated values from the map.
 Keys not present in the map are ignored.
 -/
 @[inline]
-def eraseMany [EquivBEq α] [LawfulHashable α] (map : IndexMultiMap α β) (keys : Array α) : IndexMultiMap α β :=
-  map.entries.foldl (fun acc (k,v) => if ¬(keys.contains k) then acc.insert k v else acc) empty
+def eraseMany [EquivBEq α] [LawfulHashable α] (map : IndexMultiMap α β) (keys : Array α)
+    : IndexMultiMap α β :=
+  map.entries.foldl (fun acc (k, v) => if ¬(keys.contains k) then acc.insert k v else acc) empty
 
-/--
-Gets the number of entries in the map.
--/
-@[inline]
-def size (map : IndexMultiMap α β) : Nat :=
-  map.entries.size
+/-- Gets the number of entries in the map. -/
+@[inline] def size (map : IndexMultiMap α β) : Nat := map.entries.size
 
-/--
-Checks if the map is empty.
--/
-@[inline]
-def isEmpty (map : IndexMultiMap α β) : Bool :=
-  map.entries.isEmpty
+/-- Checks if the map is empty. -/
+@[inline] def isEmpty (map : IndexMultiMap α β) : Bool := map.entries.isEmpty
 
-/--
-Converts the multimap to an array of key-value pairs (flattened).
--/
-def toArray (map : IndexMultiMap α β) : Array (α × β) :=
-  map.entries
+/-- Converts the multimap to an array of key-value pairs (flattened). -/
+def toArray (map : IndexMultiMap α β) : Array (α × β) := map.entries
 
-/--
-Converts the multimap to a list of key-value pairs (flattened).
--/
-def toList (map : IndexMultiMap α β) : List (α × β) :=
-  map.entries.toList
+/-- Converts the multimap to a list of key-value pairs (flattened). -/
+def toList (map : IndexMultiMap α β) : List (α × β) := map.entries.toList
 
-/--
-Merges two multimaps, combining values for shared keys.
--/
+/-- Merges two multimaps, combining values for shared keys. -/
 def merge [EquivBEq α] [LawfulHashable α] (m1 m2 : IndexMultiMap α β) : IndexMultiMap α β :=
   m2.entries.foldl (fun acc (k, v) => acc.insert k v) m1
 
-instance : EmptyCollection (IndexMultiMap α β) :=
-  ⟨IndexMultiMap.empty⟩
+instance : EmptyCollection (IndexMultiMap α β) := ⟨IndexMultiMap.empty⟩
 
 instance [EquivBEq α] [LawfulHashable α] : Singleton (α × β) (IndexMultiMap α β) :=
   ⟨fun ⟨a, b⟩ => (∅ : IndexMultiMap α β).insert a b⟩
@@ -279,8 +230,7 @@ instance [EquivBEq α] [LawfulHashable α] : Singleton (α × β) (IndexMultiMap
 instance [EquivBEq α] [LawfulHashable α] : Insert (α × β) (IndexMultiMap α β) :=
   ⟨fun ⟨a, b⟩ m => m.insert a b⟩
 
-instance [EquivBEq α] [LawfulHashable α] : Union (IndexMultiMap α β) :=
-  ⟨merge⟩
+instance [EquivBEq α] [LawfulHashable α] : Union (IndexMultiMap α β) := ⟨merge⟩
 
 instance [Monad m] : ForIn m (IndexMultiMap α β) (α × β) where
   forIn map b f := forIn map.entries b f

@@ -20,11 +20,11 @@ structure Registration where
   id : String
   method : String
   registerOptions : Option Json
-  deriving ToJson, FromJson
+deriving ToJson, FromJson
 
 structure RegistrationParams where
   registrations : Array Registration
-  deriving ToJson, FromJson
+deriving ToJson, FromJson
 
 end Lsp
 end Lean

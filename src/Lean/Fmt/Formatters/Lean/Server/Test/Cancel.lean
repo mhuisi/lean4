@@ -20,8 +20,7 @@ public def fmtWaitForCancelOnceCommand : Fmt := fun
     let waitTk ← fmt waitTk
     let n ← fmt n
     return Layouts.pseudoApplication #[waitTk, n]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Server.Test.Cancel.tacticWait_for_test_task_]
 public def fmtWaitForTestTask : Fmt := fun
@@ -30,8 +29,7 @@ public def fmtWaitForTestTask : Fmt := fun
     let waitTk ← fmt waitTk
     let label ← fmt label
     return Layouts.pseudoApplication #[waitTk, label]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Server.Test.Cancel.tacticWait_for_sync_]
 public def fmtWaitForSync : Fmt := fun
@@ -39,8 +37,7 @@ public def fmtWaitForSync : Fmt := fun
     let waitTk ← fmt waitTk
     let label ← fmt label
     return Layouts.pseudoApplication #[waitTk, label]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Server.Test.Cancel.tacticBlock_until_cancelled_]
 public def fmtBlockUntilCancelled : Fmt := fun
@@ -49,5 +46,4 @@ public def fmtBlockUntilCancelled : Fmt := fun
     let blockTk ← fmt blockTk
     let label ← fmt label
     return Layouts.pseudoApplication #[blockTk, label]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

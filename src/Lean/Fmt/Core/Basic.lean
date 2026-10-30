@@ -106,8 +106,7 @@ def FullnessStateSet.contains (set : FullnessStateSet) (s : FullnessState) : Boo
 @[specialize]
 def FullnessStateSet.ofPredBelow (p : FullnessState → Bool)
     : Nat → FullnessStateSet → FullnessStateSet
-  | 0, acc =>
-    acc
+  | 0, acc => acc
   | i + 1, acc =>
     let s : FullnessState := i.toUInt8
     ofPredBelow p i (if p s then acc ||| ((1 : UInt16) <<< i.toUInt16) else acc)
@@ -185,17 +184,13 @@ def textFails (isEmpty : Bool) (state : FullnessState) : Bool :=
   let isFailureFor (before after : Bool) :=
     match before, after with
     -- `text` nodes can be placed on non-full lines.
-    | false, false =>
-      false
+    | false, false => false
     -- `text` nodes cannot turn a line from being full to non-full.
-    | true, false =>
-      true
+    | true, false => true
     -- `text` nodes cannot turn a line from being non-full to full.
-    | false, true =>
-      true
+    | false, true => true
     -- Empty text nodes can be inserted on a full line, while non-empty text nodes cannot.
-    | true, true =>
-      !isEmpty
+    | true, true => !isEmpty
   isFailureFor state.isFullBefore state.isFullAfter
     || isFailureFor state.isInitialBefore state.isInitialAfter
 
@@ -761,12 +756,9 @@ with
   -/
   @[computed_field]
   failureSet : (τ : Type) → Doc τ → FullnessStateSet
-    | _, .failure =>
-      0xFFFF
-    | _, .newline .. =>
-      newlineFailureSet
-    | _, .text s =>
-      textFailureSet s.isEmpty
+    | _, .failure => 0xFFFF
+    | _, .newline .. => newlineFailureSet
+    | _, .text s => textFailureSet s.isEmpty
     -- Eliminated during preprocessing.
     | _, .flattened _
     | _, .unflattenable _ =>
@@ -808,14 +800,10 @@ with
   -/
   @[computed_field]
   maxNewlineCount? : (τ : Type) → Doc τ → Option Nat
-    | _, .failure =>
-      none
-    | _, .newline .. =>
-      some 1
-    | _, .text s =>
-      some (s.foldl (fun n c => if c == '\n' then n + 1 else n) 0)
-    | _, .flattened _ =>
-      some 0
+    | _, .failure => none
+    | _, .newline .. => some 1
+    | _, .text s => some (s.foldl (fun n c => if c == '\n' then n + 1 else n) 0)
+    | _, .flattened _ => some 0
     | _, .unflattenable d =>
       -- Flattening an `unflattenable` node fails, so it is counted like a newline.
       (maxNewlineCount? _ d).map (max 1)
@@ -829,15 +817,12 @@ with
     | _, .guarded _ d
     | _, .costing _ d =>
       maxNewlineCount? _ d
-    | _, .either a b =>
-      .merge (max · ·) (maxNewlineCount? _ a) (maxNewlineCount? _ b)
-    | _, .append a b =>
-      .merge (· + ·) (maxNewlineCount? _ a) (maxNewlineCount? _ b)
+    | _, .either a b => .merge (max · ·) (maxNewlineCount? _ a) (maxNewlineCount? _ b)
+    | _, .append a b => .merge (· + ·) (maxNewlineCount? _ a) (maxNewlineCount? _ b)
   /-- Designates an approximation for whether a document is always empty. -/
   @[computed_field]
   alwaysEmptiness : (τ : Type) → Doc τ → Doc.AlwaysEmptiness
-    | _, .failure =>
-      .sometimesNonEmpty
+    | _, .failure => .sometimesNonEmpty
     | _, .newline f =>
       if f.isEmpty then
         .alwaysEmptyIfFlattened
@@ -872,13 +857,11 @@ with
       -- A fully accurate implementation would have to account for `failure`,
       -- which is complicated by `final`.
       (alwaysEmptiness _ a).max (alwaysEmptiness _ b)
-    | _, .append a b =>
-      (alwaysEmptiness _ a).max (alwaysEmptiness _ b)
+    | _, .append a b => (alwaysEmptiness _ a).max (alwaysEmptiness _ b)
   /-- Designates an approximation for whether a document is always non-empty. -/
   @[computed_field]
   alwaysNonEmptiness : (τ : Type) → Doc τ → Doc.AlwaysNonEmptiness
-    | _, .failure =>
-      .sometimesEmpty
+    | _, .failure => .sometimesEmpty
     | _, .newline f =>
       if f.isEmpty then
         .sometimesEmpty
@@ -901,10 +884,8 @@ with
     | _, .guarded _ d
     | _, .costing _ d =>
       alwaysNonEmptiness _ d
-    | _, .either a b =>
-      (alwaysNonEmptiness _ a).max (alwaysNonEmptiness _ b)
-    | _, .append a b =>
-      (alwaysNonEmptiness _ a).max (alwaysNonEmptiness _ b)
+    | _, .either a b => (alwaysNonEmptiness _ a).max (alwaysNonEmptiness _ b)
+    | _, .append a b => (alwaysNonEmptiness _ a).max (alwaysNonEmptiness _ b)
   @[computed_field]
   atomicness : (τ : Type) → Doc τ → Doc.Atomicness
     | _, .failure
@@ -952,12 +933,9 @@ with
   -/
   @[computed_field]
   neverFailsSet : (τ : Type) → Doc τ → FullnessStateSet
-    | _, .failure =>
-      0
-    | _, .newline .. =>
-      ~~~newlineFailureSet
-    | _, .text s =>
-      ~~~(textFailureSet s.isEmpty)
+    | _, .failure => 0
+    | _, .newline .. => ~~~newlineFailureSet
+    | _, .text s => ~~~(textFailureSet s.isEmpty)
     -- Preprocessing can turn documents below `flattened` and `unflattenable` into `failure`.
     | _, .flattened _
     | _, .unflattenable _
@@ -987,8 +965,7 @@ with
   /-- Whether the document contains a `guarded` node, whose assertion depends on the context. -/
   @[computed_field]
   containsGuarded : (τ : Type) → Doc τ → Bool
-    | _, .guarded .. =>
-      true
+    | _, .guarded .. => true
     | _, .failure
     | _, .newline ..
     | _, .text .. =>
@@ -1428,12 +1405,9 @@ where
     return isBEq
   go (a b : Doc τ) : StateM (BEqState τ) Bool := do
     match a, b with
-    | .failure, .failure =>
-      return true
-    | .text sa, .text sb =>
-      return sa == sb
-    | .newline fa, .newline fb =>
-      return fa == fb
+    | .failure, .failure => return true
+    | .text sa, .text sb => return sa == sb
+    | .newline fa, .newline fb => return fa == fb
     | .flattened da, .flattened db
     | .unflattenable da, .unflattenable db
     | .aligned da, .aligned db
@@ -1466,8 +1440,7 @@ where
       if !(← goMemoized da1 db1) then
         return false
       goMemoized da2 db2
-    | _, _ =>
-      return false
+    | _, _ => return false
 
 instance [BEq τ] [Hashable τ] : BEq (Doc τ) where
   beq a b := a.beq b

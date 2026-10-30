@@ -20,8 +20,7 @@ public def fmtSimpleAttr : Fmt := fun
     let id ← fmt id
     let arg? ← fmt? arg?
     return Layouts.pseudoApplication #[id, arg?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.macro]
 public def fmtMacroAttr : Fmt := fun
@@ -29,8 +28,7 @@ public def fmtMacroAttr : Fmt := fun
     let macroTk ← fmt macroTk
     let id ← fmt id
     return Layouts.pseudoApplication #[macroTk, id]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.export]
 public def fmtExportAttr : Fmt := fun
@@ -38,8 +36,7 @@ public def fmtExportAttr : Fmt := fun
     let exportTk ← fmt exportTk
     let id ← fmt id
     return Layouts.pseudoApplication #[exportTk, id]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.recursor]
 public def fmtRecursorAttr : Fmt := fun
@@ -47,8 +44,7 @@ public def fmtRecursorAttr : Fmt := fun
     let recursorTk ← fmt recursorTk
     let val ← fmt val
     return Layouts.pseudoApplication #[recursorTk, val]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.class]
 public def fmtClassAttr : Fmt := fmtAtomic
@@ -59,8 +55,7 @@ public def fmtInstanceAttr : Fmt := fun
     let instanceTk ← fmt instanceTk
     let prio? ← fmt? prio?
     return Layouts.pseudoApplication #[instanceTk, prio?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.default_instance]
 public def fmtDefaultInstanceAttr : Fmt := fun
@@ -68,8 +63,7 @@ public def fmtDefaultInstanceAttr : Fmt := fun
     let instanceTk ← fmt instanceTk
     let prio? ← fmt? prio?
     return Layouts.pseudoApplication #[instanceTk, prio?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.specialize]
 public def fmtSpecializeAttr : Fmt := fun
@@ -77,8 +71,7 @@ public def fmtSpecializeAttr : Fmt := fun
     let specializeTk ← fmt specializeTk
     let args ← fmtArray args
     return Layouts.pseudoApplication <| #[specializeTk] ++ args
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.externEntry]
 public def fmtExternEntry : Fmt := fun
@@ -87,8 +80,7 @@ public def fmtExternEntry : Fmt := fun
     let inlineTk? ← fmt? inlineTk?
     let val ← fmt val
     return Layouts.pseudoApplication #[id?, inlineTk?, val]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.extern]
 public def fmtExternAttr : Fmt := fun
@@ -96,8 +88,7 @@ public def fmtExternAttr : Fmt := fun
     let externTk ← fmt externTk
     let entries ← fmtArray entries
     return Layouts.pseudoApplication <| #[externTk] ++ entries
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.tactic_alt]
 public def fmtTacticAltAttr : Fmt := fun
@@ -105,8 +96,7 @@ public def fmtTacticAltAttr : Fmt := fun
     let tacticAltTk ← fmt tacticAltTk
     let id ← fmt id
     return Layouts.pseudoApplication #[tacticAltTk, id]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.tactic_tag]
 public def fmtTacticTagAttr : Fmt := fun
@@ -114,8 +104,7 @@ public def fmtTacticTagAttr : Fmt := fun
     let tacticTagTk ← fmt tacticTagTk
     let ids ← fmtArray ids
     return Layouts.pseudoApplication <| #[tacticTagTk] ++ ids
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.tactic_name]
 public def fmtTacticNameAttr : Fmt := fun
@@ -123,5 +112,4 @@ public def fmtTacticNameAttr : Fmt := fun
     let tacticNameTk ← fmt tacticNameTk
     let name ← fmt name
     return Layouts.pseudoApplication #[tacticNameTk, name]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

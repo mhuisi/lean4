@@ -62,8 +62,9 @@ def bitblast (aig : AIG BVBit) (input : BVExpr.WithCache BVPred aig) : Return ai
     let res := blastGetLsbD aig ⟨refs, idx⟩
     ⟨⟨⟨aig, res⟩, hrefs⟩, cache⟩
 
-theorem bitblast_decl_eq (aig : AIG BVBit) (input : BVExpr.WithCache BVPred aig) :
-    ∀ (idx : Nat) (h1) (h2), (bitblast aig input).result.val.aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
+theorem bitblast_decl_eq (aig : AIG BVBit) (input : BVExpr.WithCache BVPred aig)
+    : ∀ (idx : Nat) (h1) (h2),
+      (bitblast aig input).result.val.aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
   intro idx h1 h2
   rcases input with ⟨pred, cache⟩
   simp only [BVPred.bitblast]
@@ -94,8 +95,8 @@ theorem bitblast_decl_eq (aig : AIG BVBit) (input : BVExpr.WithCache BVPred aig)
     simp only
     rw [BVExpr.bitblast_decl_eq]
 
-theorem bitblast_le_size (aig : AIG BVBit) (input : BVExpr.WithCache BVPred aig) :
-    aig.decls.size ≤ (bitblast aig input).result.val.aig.decls.size := by
+theorem bitblast_le_size (aig : AIG BVBit) (input : BVExpr.WithCache BVPred aig)
+    : aig.decls.size ≤ (bitblast aig input).result.val.aig.decls.size := by
   exact (bitblast aig input).result.property
 
 end BVPred

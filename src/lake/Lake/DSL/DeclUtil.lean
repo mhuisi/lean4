@@ -34,8 +34,7 @@ public def expandAttrs (attrs? : Option Attributes) : Array AttrInstance :=
   else
     #[]
 
-public syntax identOrStr :=
-  ident <|> str
+public syntax identOrStr := ident <|> str
 
 public abbrev IdentOrStr := TSyntax ``identOrStr
 
@@ -46,37 +45,29 @@ public def expandIdentOrStrAsIdent (stx : IdentOrStr) : Ident :=
   | _ => ⟨.missing⟩
 
 /-- A field assignment in a declarative configuration. -/
-public syntax declField :=
-  ident " := " term
+public syntax declField := ident " := " term
 
 @[inherit_doc declField]
 public abbrev DeclField := TSyntax ``declField
 
-public syntax structVal :=
-  "{" structInstFields(sepByIndentSemicolon(declField)) "}"
+public syntax structVal := "{" structInstFields(sepByIndentSemicolon(declField)) "}"
 
-public syntax declValDo :=
-  ppSpace Term.do (Term.whereDecls)?
+public syntax declValDo := ppSpace Term.do (Term.whereDecls)?
 
-public syntax declValStruct :=
-  ppSpace structVal (Term.whereDecls)?
+public syntax declValStruct := ppSpace structVal (Term.whereDecls)?
 
 public syntax declValWhere :=
   " where " structInstFields(sepByIndentSemicolon(declField)) (Term.whereDecls)?
 
-public syntax simpleDeclSig :=
-  ident Term.typeSpec declValSimple
+public syntax simpleDeclSig := ident Term.typeSpec declValSimple
 
-public syntax optConfig :=
-  (declValWhere <|> declValStruct)?
+public syntax optConfig := (declValWhere <|> declValStruct)?
 
 public abbrev OptConfig := TSyntax ``optConfig
 
-public syntax bracketedSimpleBinder :=
-  "(" ident (" : " term)? ")"
+public syntax bracketedSimpleBinder := "(" ident (" : " term)? ")"
 
-public syntax simpleBinder :=
-  ident <|> bracketedSimpleBinder
+public syntax simpleBinder := ident <|> bracketedSimpleBinder
 
 public abbrev SimpleBinder := TSyntax ``simpleBinder
 
@@ -85,8 +76,7 @@ public def expandOptSimpleBinder (stx? : Option SimpleBinder) : MacroM FunBinder
   match stx? with
   | some stx =>
     match stx with
-    | `(simpleBinder| $id:ident) =>
-      `(funBinder| $id)
+    | `(simpleBinder| $id:ident) => `(funBinder| $id)
     | `(simpleBinder| ($id $[: $ty?]?)) =>
       let ty := ty?.getD (← `(_))
       `(funBinder| ($id : $ty))
@@ -99,9 +89,8 @@ structure Field where
 
 open Syntax Elab Command
 
-def mkConfigFields
-  (tyName : Name) (infos : NameMap ConfigFieldInfo) (fs : Array DeclField)
-: CommandElabM (TSyntax ``Term.structInstFields) := do
+def mkConfigFields (tyName : Name) (infos : NameMap ConfigFieldInfo) (fs : Array DeclField)
+    : CommandElabM (TSyntax ``Term.structInstFields) := do
   let mut m := mkNameMap Field
   for x in fs do
     let `(declField| $id := $val) := x
@@ -112,15 +101,16 @@ def mkConfigFields
       let c := info.realName
       if !info.canonical && m.contains c then
         logWarningAt id m!"redefined field '{c}' ('{fieldName}' is an alias of '{c}')"
-      m := m.insert c {ref := id, val}
+      m := m.insert c { ref := id, val }
     else
       logWarningAt id m!"unknown '{.ofConstName tyName}' field '{fieldName}'"
-  let fs ← m.foldlM (init := #[]) fun a k {ref, val} => do
-    let id := mkIdentFrom ref k true
-    -- An unhygienic quotation is used to avoid introducing source info
-    -- which will break field auto-completion.
-    let fieldStx := Unhygienic.run `(Term.structInstField| $id:ident := $val)
-    return a.push fieldStx
+  let fs ←
+    m.foldlM (init := #[]) fun a k { ref, val } => do
+      let id := mkIdentFrom ref k true
+      -- An unhygienic quotation is used to avoid introducing source info
+      -- which will break field auto-completion.
+      let fieldStx := Unhygienic.run `(Term.structInstField| $id:ident := $val)
+      return a.push fieldStx
   return mkNode ``Term.structInstFields #[mkSep fs mkNullNode]
 
 public def mkConfigDeclIdent (stx? : Option IdentOrStr) : CommandElabM Ident := do
@@ -129,9 +119,8 @@ public def mkConfigDeclIdent (stx? : Option IdentOrStr) : CommandElabM Ident := 
   | none => Elab.Term.mkFreshIdent (← getRef)
 
 public def elabConfig
-  (tyName : Name) [info : ConfigInfo tyName]
-  (id : Ident) (ty : Term) (config : OptConfig)
-: CommandElabM PUnit := do
+    (tyName : Name) [info : ConfigInfo tyName] (id : Ident) (ty : Term) (config : OptConfig)
+    : CommandElabM PUnit := do
   let mkCmd (whereInfo : SourceInfo) (fs : TSyntaxArray ``declField) wds? := do
     /-
     Quotation syntax produces synthetic source information.
@@ -145,10 +134,7 @@ public def elabConfig
     let cmd ← `(def $id : $ty $whereStx:whereStructInst)
     withMacroExpansion config cmd <| elabCommand cmd
   match config with
-  | `(optConfig| ) =>
-    mkCmd .none #[] none
-  | `(optConfig| where%$tk $fs;* $[$wds?:whereDecls]?) =>
-    mkCmd tk.getHeadInfo fs.getElems wds?
-  | `(optConfig| {%$tk $fs;* } $[$wds?:whereDecls]?) =>
-    mkCmd tk.getHeadInfo fs wds?
+  | `(optConfig| ) => mkCmd .none #[] none
+  | `(optConfig| where%$tk $fs;* $[$wds?:whereDecls]?) => mkCmd tk.getHeadInfo fs.getElems wds?
+  | `(optConfig| {%$tk $fs;* } $[$wds?:whereDecls]?) => mkCmd tk.getHeadInfo fs wds?
   | stx => throwErrorAt stx "ill-formed configuration syntax"

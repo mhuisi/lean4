@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.CommRing.RingId
 import Lean.Meta.Tactic.Grind.Simp
@@ -28,7 +29,8 @@ private def getType? (e : Expr) : Option Expr :=
     | Int => homoType? β β γ
     | _ => none
   | HPow.hPow α β γ _ _ _ =>
-    let_expr Nat := β | none
+    let_expr Nat := β
+      | none
     homoType? α α γ
   | Neg.neg α _ _ => some α
   | OfNat.ofNat α _ _ => some α
@@ -74,13 +76,17 @@ as `denoteInt k`, which is definitionally equal to these spellings only; `↑(0 
 private def toInt? (e : Expr) : RingM (Option Int) := do
   match_expr e with
   | Neg.neg _ i a =>
-    unless (← isNegInst i) do return none
-    let_expr OfNat.ofNat _ n _ := a | return none
-    let some v ← getNatValue? n | return none
+    unless (← isNegInst i) do
+      return none
+    let_expr OfNat.ofNat _ n _ := a
+      | return none
+    let some v ← getNatValue? n
+      | return none
     if v == 0 then return none
     return some (-v)
   | OfNat.ofNat _ n _ =>
-    let some v ← getNatValue? n | return none
+    let some v ← getNatValue? n
+      | return none
     return some (Int.ofNat v)
   | _ => return none
 
@@ -104,9 +110,11 @@ asserts `a * a⁻¹ = 1` if `a` is a numeral.
 Otherwise, asserts `if a = 0 then a⁻¹ = 0 else a * a⁻¹ = 1`
 -/
 private def processInv (e inst a : Expr) : RingM Unit := do
-  unless (← isInvInst inst) do return ()
+  unless (← isInvInst inst) do
+    return ()
   let ring ← getCommRing
-  let some fieldInst := ring.fieldInst? | return ()
+  let some fieldInst := ring.fieldInst?
+    | return ()
   if (← getCommRingState).invSet.contains a then return ()
   modifyCommRingState fun s => { s with invSet := s.invSet.insert a }
   if let some k ← toInt? a then
@@ -124,16 +132,16 @@ private def processInv (e inst a : Expr) : RingM Unit := do
       let (charInst, c) ← getCharInst
       if c == 0 then
         let expected ← mkEq (mkApp2 (← getMulFn) a e) (← denoteNum 1)
-        pushInvFact expected <|
-          mkApp5 (mkConst ``Grind.CommRing.inv_int_eq [ring.u]) ring.type fieldInst charInst (mkIntLit k) eagerReflBoolTrue
+        pushInvFact expected <| mkApp5 (mkConst ``Grind.CommRing.inv_int_eq [ring.u]) ring.type
+          fieldInst charInst (mkIntLit k) eagerReflBoolTrue
       else if k % c == 0 then
         let expected ← mkEq e (← denoteNum 0)
-        pushInvFact expected <|
-          mkApp6 (mkConst ``Grind.CommRing.inv_zero_eqC [ring.u]) ring.type (mkNatLit c) fieldInst charInst (mkIntLit k) eagerReflBoolTrue
+        pushInvFact expected <| mkApp6 (mkConst ``Grind.CommRing.inv_zero_eqC [ring.u]) ring.type
+          (mkNatLit c) fieldInst charInst (mkIntLit k) eagerReflBoolTrue
       else
         let expected ← mkEq (mkApp2 (← getMulFn) a e) (← denoteNum 1)
-        pushInvFact expected <|
-          mkApp6 (mkConst ``Grind.CommRing.inv_int_eqC [ring.u]) ring.type (mkNatLit c) fieldInst charInst (mkIntLit k) eagerReflBoolTrue
+        pushInvFact expected <| mkApp6 (mkConst ``Grind.CommRing.inv_int_eqC [ring.u]) ring.type
+          (mkNatLit c) fieldInst charInst (mkIntLit k) eagerReflBoolTrue
       return ()
   pushNewFact <| mkApp3 (mkConst ``Grind.CommRing.inv_split [ring.u]) ring.type fieldInst a
 
@@ -143,7 +151,8 @@ push the equation `x ^ p = x` as a new fact into grind.
 -/
 private def processPowIdentityVars : RingM Unit := do
   let ring ← getCommRing
-  let some (powIdentityInst, csInst, p) := ring.powIdentityInst? | return ()
+  let some (powIdentityInst, csInst, p) := ring.powIdentityInst?
+    | return ()
   let startIdx := (← getCommRingState).powIdentityVarCount
   let vars := (← getRingState).vars
   if startIdx >= vars.size then return ()
@@ -151,8 +160,9 @@ private def processPowIdentityVars : RingM Unit := do
     let x := vars[i]!
     trace_goal[grind.ring] "PowIdentity: pushing x^{p} = x for {x}"
     -- Construct proof: @PowIdentity.pow_eq α csInst p powIdentityInst x
-    let proof := mkApp5 (mkConst ``Grind.PowIdentity.pow_eq [ring.u])
-      ring.type csInst (mkNatLit p) powIdentityInst x
+    let proof :=
+      mkApp5 (mkConst ``Grind.PowIdentity.pow_eq [ring.u]) ring.type csInst (mkNatLit p)
+        powIdentityInst x
     pushNewFact proof
   modifyCommRingState fun s => { s with powIdentityVarCount := vars.size }
 
@@ -160,7 +170,8 @@ private def processPowIdentityVars : RingM Unit := do
 private def internalizeInv (e : Expr) : GoalM Bool := do
   match_expr e with
   | Inv.inv α inst a =>
-    let some ringId ← getCommRingId? α | return true
+    let some ringId ← getCommRingId? α
+      | return true
     RingM.run ringId do processInv e inst a
     return true
   | _ => return false
@@ -171,36 +182,46 @@ def internalize (e : Expr) (parent? : Option Expr) : GoalM Unit := do
     -- `e` is an auxiliary term used to convert `CommRing` to `IntModule`
     return ()
   if (← internalizeInv e) then return ()
-  let some type := getType? e | return ()
+  let some type := getType? e
+    | return ()
   if isForbiddenParent parent? then return ()
   if (← pure (isIneqParent parent?) <&&> Cutsat.isCutsatType type) then return ()
-  if let some ringId ← getCommRingId? type then RingM.run ringId do
-    let some re ← reify? e | return ()
-    trace_goal[grind.ring.internalize] "[{ringId}]: {e}"
-    setTermRingId e
-    ringExt.markTerm e
-    modifyCommRingState fun s => { s with
-      denote := s.denote.insert { expr := e } re
-      denoteEntries := s.denoteEntries.push (e, re)
-    }
-    processPowIdentityVars
-  else if let some semiringId ← getCommSemiringId? type then SemiringM.run semiringId do
-    let some re ← sreify? e | return ()
-    trace_goal[grind.ring.internalize] "semiring [{semiringId}]: {e}"
-    setTermSemiringId e
-    ringExt.markTerm e
-    modifySemiringState fun s => { s with denote := s.denote.insert { expr := e } re }
-  else if let some ncRingId ← getNonCommRingId? type then NonCommRingM.run ncRingId do
-    let some re ← ncreify? e | return ()
-    trace_goal[grind.ring.internalize] "(non-comm) ring [{ncRingId}]: {e}"
-    setTermNonCommRingId e
-    ringExt.markTerm e
-    modifyRingState fun s => { s with denote := s.denote.insert { expr := e } re }
-  else if let some ncSemiringId ← getNonCommSemiringId? type then NonCommSemiringM.run ncSemiringId do
-    let some re ← ncsreify? e | return ()
-    trace_goal[grind.ring.internalize] "(non-comm) semiring [{ncSemiringId}]: {e}"
-    setTermNonCommSemiringId e
-    ringExt.markTerm e
-    modifySemiringState fun s => { s with denote := s.denote.insert { expr := e } re }
+  if let some ringId ← getCommRingId? type then
+    RingM.run ringId do
+      let some re ← reify? e
+        | return ()
+      trace_goal[grind.ring.internalize] "[{ringId}]: {e}"
+      setTermRingId e
+      ringExt.markTerm e
+      modifyCommRingState fun s => {
+        s with
+        denote := s.denote.insert { expr := e } re
+        denoteEntries := s.denoteEntries.push (e, re)
+      }
+      processPowIdentityVars
+  else if let some semiringId ← getCommSemiringId? type then
+    SemiringM.run semiringId do
+      let some re ← sreify? e
+        | return ()
+      trace_goal[grind.ring.internalize] "semiring [{semiringId}]: {e}"
+      setTermSemiringId e
+      ringExt.markTerm e
+      modifySemiringState fun s => { s with denote := s.denote.insert { expr := e } re }
+  else if let some ncRingId ← getNonCommRingId? type then
+    NonCommRingM.run ncRingId do
+      let some re ← ncreify? e
+        | return ()
+      trace_goal[grind.ring.internalize] "(non-comm) ring [{ncRingId}]: {e}"
+      setTermNonCommRingId e
+      ringExt.markTerm e
+      modifyRingState fun s => { s with denote := s.denote.insert { expr := e } re }
+  else if let some ncSemiringId ← getNonCommSemiringId? type then
+    NonCommSemiringM.run ncSemiringId do
+      let some re ← ncsreify? e
+        | return ()
+      trace_goal[grind.ring.internalize] "(non-comm) semiring [{ncSemiringId}]: {e}"
+      setTermNonCommSemiringId e
+      ringExt.markTerm e
+      modifySemiringState fun s => { s with denote := s.denote.insert { expr := e } re }
 
 end Lean.Meta.Grind.Arith.CommRing

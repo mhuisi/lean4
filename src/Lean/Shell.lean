@@ -16,7 +16,7 @@ import Init.Data.String.Lossy
 import Lean.Compiler.Options
 import Std.Async.Process
 
-/-  Lean companion to  `shell.cpp` -/
+/- Lean companion to  `shell.cpp` -/
 
 open System
 
@@ -124,71 +124,84 @@ This is printed by `lean --features`.
 def featuresString :=
   if Internal.hasLLVMBackend () then
     "[LLVM]"
-  else "[]"
+  else
+    "[]"
 
 /-- Print the Lean CLI help message. -/
 def displayHelp (useStderr : Bool) : IO Unit := do
   let out ← if useStderr then IO.getStderr else IO.getStdout
-  out.putStrLn    versionHeader
-  out.putStrLn    "Miscellaneous"
-  out.putStrLn    "  -h, --help             display this message"
-  out.putStrLn    "      --features         display features compiler provides (eg. LLVM support)"
-  out.putStrLn    "  -v, --version          display version information"
-  out.putStrLn    "  -V, --short-version    display short version number"
-  out.putStrLn    "  -g, --githash          display the git commit hash number used to build this binary"
-  out.putStrLn    "      --run <file>       call the 'main' definition in the given file with the remaining arguments"
-  out.putStrLn    "  -o, --o=oname          create olean file"
-  out.putStrLn    "  -i, --i=iname          create ilean file"
-  out.putStrLn    "  -c, --c=fname          name of the C output file"
-  out.putStrLn    "  -b, --bc=fname         name of the LLVM bitcode file"
-  out.putStrLn    "      --stdin            take input from stdin"
-  out.putStrLn    "  -R, --root=dir         set package root directory from which the module name\n"
-  out.putStrLn    "                         of the input file is calculated\n"
-  out.putStrLn    "                         (default: current working directory)\n";
-  out.putStrLn    "  -t, --trust=num        trust level (default: max) 0 means do not trust any macro,\n"
-  out.putStrLn    "                         and type check all imported modules\n";
-  out.putStrLn    "  -q, --quiet            do not print verbose messages"
-  out.putStrLn    "  -M, --memory=num       maximum amount of memory that should be used by Lean"
-  out.putStrLn    "                         (in megabytes)"
-  out.putStrLn    "  -T, --timeout=num      maximum number of memory allocations per task"
-  out.putStrLn    "                         this is a deterministic way of interrupting long running tasks"
+  out.putStrLn versionHeader
+  out.putStrLn "Miscellaneous"
+  out.putStrLn "  -h, --help             display this message"
+  out.putStrLn "      --features         display features compiler provides (eg. LLVM support)"
+  out.putStrLn "  -v, --version          display version information"
+  out.putStrLn "  -V, --short-version    display short version number"
+  out.putStrLn
+    "  -g, --githash          display the git commit hash number used to build this binary"
+  out.putStrLn "      --run <file>       call the 'main' definition in the given file with the \
+    remaining arguments"
+  out.putStrLn "  -o, --o=oname          create olean file"
+  out.putStrLn "  -i, --i=iname          create ilean file"
+  out.putStrLn "  -c, --c=fname          name of the C output file"
+  out.putStrLn "  -b, --bc=fname         name of the LLVM bitcode file"
+  out.putStrLn "      --stdin            take input from stdin"
+  out.putStrLn "  -R, --root=dir         set package root directory from which the module name\n"
+  out.putStrLn "                         of the input file is calculated\n"
+  out.putStrLn "                         (default: current working directory)\n"
+  out.putStrLn
+    "  -t, --trust=num        trust level (default: max) 0 means do not trust any macro,\n"
+  out.putStrLn "                         and type check all imported modules\n"
+  out.putStrLn "  -q, --quiet            do not print verbose messages"
+  out.putStrLn "  -M, --memory=num       maximum amount of memory that should be used by Lean"
+  out.putStrLn "                         (in megabytes)"
+  out.putStrLn "  -T, --timeout=num      maximum number of memory allocations per task"
+  out.putStrLn
+    "                         this is a deterministic way of interrupting long running tasks"
   if Internal.isMultiThread () then
-    out.putStrLn  "  -j, --threads=num      number of threads used to process lean files"
-    out.putStrLn  "  -s, --tstack=num       thread stack size in Kb"
-    out.putStrLn  "      --server           start lean in server mode"
-    out.putStrLn  "      --worker           start lean in server-worker mode"
-  out.putStrLn    "      --plugin=file[=fn] load and initialize Lean shared library for registering linters etc."
-  out.putStrLn    "      --load-dynlib=file load shared library to make its symbols available to the interpreter"
-  out.putStrLn    "      --setup=file       JSON file with module setup data (supersedes the file's header)"
-  out.putStrLn    "      --json             report Lean output (e.g., messages) as JSON (one per line)"
-  out.putStrLn    "  -E, --error=kind       report Lean messages of kind as errors"
-  out.putStrLn    "      --deps             just print dependencies of a Lean input"
-  out.putStrLn    "      --src-deps         just print dependency sources of a Lean input"
-  out.putStrLn    "      --print-prefix     print the installation prefix for Lean and exit"
-  out.putStrLn    "      --print-libdir     print the installation directory for Lean's built-in libraries and exit"
-  out.putStrLn    "      --profile          display elaboration/type checking time for each definition/theorem"
-  out.putStrLn    "      --stats            display environment statistics"
-  out.putStrLn    "      --incr-save=file   EXPERIMENTAL: save a full incremental snapshot of post-elaboration state at end of run"
-  out.putStrLn    "      --incr-load=file   EXPERIMENTAL: reuse a snapshot saved by `--incr-(header-)save` at start of run"
-  out.putStrLn    "      --incr-header-save=file"
-  out.putStrLn    "                         EXPERIMENTAL: like `--incr-save`, but save only the header (state after importing)"
+    out.putStrLn "  -j, --threads=num      number of threads used to process lean files"
+    out.putStrLn "  -s, --tstack=num       thread stack size in Kb"
+    out.putStrLn "      --server           start lean in server mode"
+    out.putStrLn "      --worker           start lean in server-worker mode"
+  out.putStrLn
+    "      --plugin=file[=fn] load and initialize Lean shared library for registering linters etc."
+  out.putStrLn
+    "      --load-dynlib=file load shared library to make its symbols available to the interpreter"
+  out.putStrLn
+    "      --setup=file       JSON file with module setup data (supersedes the file's header)"
+  out.putStrLn "      --json             report Lean output (e.g., messages) as JSON (one per line)"
+  out.putStrLn "  -E, --error=kind       report Lean messages of kind as errors"
+  out.putStrLn "      --deps             just print dependencies of a Lean input"
+  out.putStrLn "      --src-deps         just print dependency sources of a Lean input"
+  out.putStrLn "      --print-prefix     print the installation prefix for Lean and exit"
+  out.putStrLn "      --print-libdir     print the installation directory for Lean's built-in \
+    libraries and exit"
+  out.putStrLn
+    "      --profile          display elaboration/type checking time for each definition/theorem"
+  out.putStrLn "      --stats            display environment statistics"
+  out.putStrLn "      --incr-save=file   EXPERIMENTAL: save a full incremental snapshot of \
+    post-elaboration state at end of run"
+  out.putStrLn "      --incr-load=file   EXPERIMENTAL: reuse a snapshot saved by \
+    `--incr-(header-)save` at start of run"
+  out.putStrLn "      --incr-header-save=file"
+  out.putStrLn "                         EXPERIMENTAL: like `--incr-save`, but save only the \
+    header (state after importing)"
   if Internal.isDebug () then
-    out.putStrLn  "      --debug=tag        enable assertions with the given tag"
-  out.putStrLn    "      -D name=value      set a configuration option (see set_option command)"
+    out.putStrLn "      --debug=tag        enable assertions with the given tag"
+  out.putStrLn "      -D name=value      set a configuration option (see set_option command)"
 
 inductive ShellComponent
-| frontend
-| watchdog
-| worker
+  | frontend
+  | watchdog
+  | worker
 
 builtin_initialize maxMemory : Lean.Option Nat ←
-  Lean.Option.register `max_memory {defValue := Internal.getDefaultMaxMemory ()}
+  Lean.Option.register `max_memory { defValue := Internal.getDefaultMaxMemory () }
 
 builtin_initialize timeout : Lean.Option Nat ←
-  Lean.Option.register `timeout {defValue := Internal.getDefaultMaxHeartbeat ()}
+  Lean.Option.register `timeout { defValue := Internal.getDefaultMaxHeartbeat () }
 
 builtin_initialize verbose : Lean.Option Bool ←
-  Lean.Option.register `verbose {defValue := Internal.getDefaultVerbose ()}
+  Lean.Option.register `verbose { defValue := Internal.getDefaultVerbose () }
 
 /-- Returns any option overrides Lean was built with (i.e., those set in `stdlib_flags.h`). -/
 @[extern "lean_internal_get_option_overrides"]
@@ -204,14 +217,14 @@ to it without type checking them.
 opaque Internal.getBelieverTrustLevel (_ : Unit) : UInt32
 
 /-- Returns the shell's default trust level. -/
-def defaultTrustLevel : UInt32 :=
-  Internal.getBelieverTrustLevel () + 1
+def defaultTrustLevel : UInt32 := Internal.getBelieverTrustLevel () + 1
 
 /-- Returns the default number of threads for the shell's task manager. -/
 def defaultNumThreads : UInt32 :=
   if Internal.isMultiThread () then
     Platform.Internal.getHardwareConcurrency ()
-  else 0
+  else
+    0
 
 structure ShellOptions where
   leanOpts : Options := {}
@@ -244,16 +257,13 @@ structure ShellOptions where
 def mkShellOptions (_ : Unit) : ShellOptions := {}
 
 @[export lean_shell_options_get_run]
-def ShellOptions.getRun (opts : ShellOptions) : Bool :=
-  opts.run
+def ShellOptions.getRun (opts : ShellOptions) : Bool := opts.run
 
 @[export lean_shell_options_get_profiler]
-def ShellOptions.getProfiler (opts : ShellOptions) : Bool :=
-  profiler.get opts.leanOpts
+def ShellOptions.getProfiler (opts : ShellOptions) : Bool := profiler.get opts.leanOpts
 
 @[export lean_shell_options_get_num_threads]
-def ShellOptions.getNumThreads (opts : ShellOptions) : UInt32 :=
-  opts.numThreads
+def ShellOptions.getNumThreads (opts : ShellOptions) : UInt32 := opts.numThreads
 
 def checkOptArg (optName : String) (optArg? : Option String) : IO String := do
   if let some arg := optArg? then
@@ -281,8 +291,8 @@ Process a command-line option parsed by the C++ shell.
 Runs under `IO.initializing` and without a task manager.
 -/
 @[export lean_shell_options_process]
-def ShellOptions.process (opts : ShellOptions)
-    (opt : Char) (optArg? : Option String) : EIO UInt32 ShellOptions := do
+def ShellOptions.process (opts : ShellOptions) (opt : Char) (optArg? : Option String)
+    : EIO UInt32 ShellOptions := do
   have : MonadLift IO (EIO UInt32) := ⟨liftIO⟩
   match opt with
   | 'e' => -- undocumented
@@ -294,14 +304,14 @@ def ShellOptions.process (opts : ShellOptions)
       | throwExpectedNumeric "j"
     if h : numThreads < UInt32.size then
       let numThreads := UInt32.ofNatLT numThreads h
-      let forwardedArgs := opts.forwardedArgs.push s!"-j{arg}";
-      return {opts with forwardedArgs, numThreads}
+      let forwardedArgs := opts.forwardedArgs.push s!"-j{arg}"
+      return { opts with forwardedArgs, numThreads }
     else
       throwTooLarge "j"
-  | 'v' => --- `-v, --version`
+  | 'v' => -- - `-v, --version`
     IO.println Lean.versionHeader
     throw 0
-  | 'V' => --- `-V, --short-version`
+  | 'V' => -- - `-V, --short-version`
     IO.println Lean.shortVersionString
     throw 0
   | 'g' => -- `-g, --githash`
@@ -314,9 +324,9 @@ def ShellOptions.process (opts : ShellOptions)
     IO.println Lean.featuresString
     throw 0
   | 'c' => -- `-c, --c=fname`
-    return {opts with cFileName? := ← checkOptArg "c" optArg?}
+    return { opts with cFileName? := ← checkOptArg "c" optArg? }
   | 'b' => -- `-b, --bc=fname`
-    return {opts with bcFileName? := ← checkOptArg "b" optArg?}
+    return { opts with bcFileName? := ← checkOptArg "b" optArg? }
   | 's' => -- `-s, --tstack=num`
     let arg ← checkOptArg "s" optArg?
     let some stackSize := arg.toNat?
@@ -326,81 +336,83 @@ def ShellOptions.process (opts : ShellOptions)
       let stackSize := USize.ofNatLT stackSize h
       Internal.setThreadStackSize stackSize
       let forwardedArgs := opts.forwardedArgs.push s!"-s{arg}"
-      return {opts with forwardedArgs}
+      return { opts with forwardedArgs }
     else
       throwTooLarge "s"
   | 'I' => -- `-I, --stdin`
-    return {opts with useStdin := true}
+    return { opts with useStdin := true }
   | 'r' => -- `--run`
-    return {opts with
+    return {
+      opts with
       run := true
       -- can't get IR if it's postponed
-      leanOpts := Compiler.compiler.postponeCompile.set opts.leanOpts false }
+      leanOpts := Compiler.compiler.postponeCompile.set opts.leanOpts false
+    }
   | 'o' => -- `--o, olean=fname`
-    return {opts with oleanFileName? := ← checkOptArg "o" optArg?}
+    return { opts with oleanFileName? := ← checkOptArg "o" optArg? }
   | 'i' => -- `--i, ilean=fname`
-    return {opts with ileanFileName? := ← checkOptArg "i" optArg?}
+    return { opts with ileanFileName? := ← checkOptArg "i" optArg? }
   | 'R' => -- `-R, --root=dir`
     let arg ← checkOptArg "R" optArg?
     let forwardedArgs := opts.forwardedArgs.push s!"-R{arg}"
-    return {opts with forwardedArgs, rootDir? := arg}
+    return { opts with forwardedArgs, rootDir? := arg }
   | 'M' => -- `-M, --memory=num`
     let arg ← checkOptArg "M" optArg?
     let some val := arg.toNat?
       | throwExpectedNumeric "M"
     let leanOpts := maxMemory.set opts.leanOpts val
     let forwardedArgs := opts.forwardedArgs.push s!"-M{arg}"
-    return {opts with forwardedArgs, leanOpts}
+    return { opts with forwardedArgs, leanOpts }
   | 'T' => -- `-T, --timeout=num`
     let arg ← checkOptArg "T" optArg?
     let some val := arg.toNat?
       | throwExpectedNumeric "T"
     let leanOpts := timeout.set opts.leanOpts val
     let forwardedArgs := opts.forwardedArgs.push s!"-T{arg}"
-    return {opts with forwardedArgs, leanOpts}
+    return { opts with forwardedArgs, leanOpts }
   | 't' => -- `--trust=num`
     let arg ← checkOptArg "t" optArg?
     let some trustLevel := arg.toNat?
       | throwExpectedNumeric "t"
     if h : trustLevel < UInt32.size then
       let trustLevel := UInt32.ofNatLT trustLevel h
-      let forwardedArgs := opts.forwardedArgs.push s!"-t{arg}";
-      return {opts with forwardedArgs, trustLevel}
+      let forwardedArgs := opts.forwardedArgs.push s!"-t{arg}"
+      return { opts with forwardedArgs, trustLevel }
     else
       throwTooLarge "t"
   | 'q' =>
-    return {opts with leanOpts := verbose.set opts.leanOpts false}
+    return { opts with leanOpts := verbose.set opts.leanOpts false }
   | 'd' => -- `--deps`
-    return {opts with onlyDeps := true}
+    return { opts with onlyDeps := true }
   | 'O' => -- `--src-deps`
-    return {opts with onlySrcDeps := true}
+    return { opts with onlySrcDeps := true }
   | 'N' => -- `--deps-json`
-    return {opts with onlyDeps := true, depsJson := true}
+    return { opts with onlyDeps := true, depsJson := true }
   | 'J' => -- `--json`
-    return {opts with jsonOutput := true}
+    return { opts with jsonOutput := true }
   | 'a' => -- `--stats`
-    return {opts with printStats := true}
-  | 'x' =>  -- `--print-prefix`
-    return {opts with printPrefix := true}
-  | 'L' =>  -- `--print-libdir`
-    return {opts with printLibDir := true}
+    return { opts with printStats := true }
+  | 'x' => -- `--print-prefix`
+    return { opts with printPrefix := true }
+  | 'L' => -- `--print-libdir`
+    return { opts with printLibDir := true }
   | 'D' => -- `-D name=value`
     let arg ← checkOptArg "D" optArg?
     let leanOpts ← setConfigOption opts.leanOpts arg
     let forwardedArgs := opts.forwardedArgs.push s!"-D{arg}"
-    return {opts with forwardedArgs, leanOpts}
+    return { opts with forwardedArgs, leanOpts }
   | 'S' => -- `--server`
-    return {opts with component := .watchdog}
+    return { opts with component := .watchdog }
   | 'W' => -- `--worker`
-    return {opts with component := .worker}
+    return { opts with component := .worker }
   | 'P' => -- `--profile`
-    return {opts with leanOpts := profiler.set opts.leanOpts true}
+    return { opts with leanOpts := profiler.set opts.leanOpts true }
   | 'B' => -- `--debug=tag`
     if Internal.isDebug () then
       let arg ← checkOptArg "B" optArg?
       Internal.enableDebug arg
       return opts
-    -- if not `LEAN_DEBUG`, fall through to unknown option
+  -- if not `LEAN_DEBUG`, fall through to unknown option
   | 'p' => -- `--plugin=file[=fn]`
     let arg ← checkOptArg "p" optArg?
     let (path, fn?) :=
@@ -413,51 +425,54 @@ def ShellOptions.process (opts : ShellOptions)
         (FilePath.mk path.copy, some initFn.copy)
     Lean.loadPlugin path fn?
     let forwardedArgs := opts.forwardedArgs.push s!"-p{arg}"
-    return {opts with forwardedArgs}
+    return { opts with forwardedArgs }
   | 'l' => -- `--load-dynlib=file`
     let arg ← checkOptArg "l" optArg?
     Lean.loadDynlib arg
     let forwardedArgs := opts.forwardedArgs.push s!"-l{arg}"
-    return {opts with forwardedArgs}
+    return { opts with forwardedArgs }
   | 'u' => -- `--setup=file`
-    return {opts with setupFileName? := ← checkOptArg "u" optArg?}
+    return { opts with setupFileName? := ← checkOptArg "u" optArg? }
   | 'E' => -- `-E, --error=kind`
     let arg ← checkOptArg "E" optArg?
     let errorOnKinds := opts.errorOnKinds.push arg.toName
-    return {opts with errorOnKinds}
+    return { opts with errorOnKinds }
   | 'Y' => -- `--incr-save=file`
-    return {opts with incrSaveFileName? := ← checkOptArg "Y" optArg?}
+    return { opts with incrSaveFileName? := ← checkOptArg "Y" optArg? }
   | 'Z' => -- `--incr-load=file`
-    return {opts with incrLoadFileName? := ← checkOptArg "Z" optArg?}
+    return { opts with incrLoadFileName? := ← checkOptArg "Z" optArg? }
   | 'H' => -- `--incr-header-save=file`
-    return {opts with incrHeaderSaveFileName? := ← checkOptArg "H" optArg?}
-  | _ =>
-    pure ()
+    return { opts with incrHeaderSaveFileName? := ← checkOptArg "H" optArg? }
+  | _ => pure ()
   eprint "Unknown command line option\n"
   displayHelp (useStderr := true)
   throw 1
 where
-  @[inline] eprint msg := do
-    IO.eprint msg |>.catchExceptions fun _ => pure ()
-  @[inline] liftIO {α} (x : IO α) := do
+  @[inline] eprint msg := do IO.eprint msg |>.catchExceptions fun _ => pure ()
+  @[inline]
+  liftIO {α} (x : IO α) := do
     match (← x.toBaseIO) with
-    | .ok a =>
-      return a
+    | .ok a => return a
     | .error e =>
       eprint s!"error: "
       eprint (toString e)
       eprint "\n"
       throw 1
-  @[inline] throwExpectedNumeric opt := do
+  @[inline]
+  throwExpectedNumeric opt := do
     eprint s!"error: expected numeric argument for option '-{opt}'\n"
     throw 1
-  @[inline] throwTooLarge opt := do
+  @[inline]
+  throwTooLarge opt := do
     eprint s!"error: argument value for '-{opt}' is too large\n"
     throw 1
 
 @[export lean_shell_main]
 def shellMain (args : List String) (opts : ShellOptions) : IO UInt32 := do
-  let opts := { opts with leanOpts := opts.leanOpts.mergeBy (fun _ _ v => v) (Internal.getOptionOverrides ()) }
+  let opts := {
+    opts with
+    leanOpts := opts.leanOpts.mergeBy (fun _ _ v => v) (Internal.getOptionOverrides ())
+  }
   if opts.printPrefix then
     IO.println (← getBuildDir)
     return 0
@@ -471,12 +486,9 @@ def shellMain (args : List String) (opts : ShellOptions) : IO UInt32 := do
   if timeout != 0 then
     Internal.setMaxHeartbeat (timeout.toUSize * 1000)
   match opts.component with
-  | .frontend =>
-    pure ()
-  | .watchdog =>
-    return ← Server.Watchdog.watchdogMain opts.forwardedArgs.toList
-  | .worker =>
-    return ← Server.FileWorker.workerMain opts.leanOpts
+  | .frontend => pure ()
+  | .watchdog => return ← Server.Watchdog.watchdogMain opts.forwardedArgs.toList
+  | .worker => return ← Server.FileWorker.workerMain opts.leanOpts
   if opts.onlyDeps && opts.depsJson then
     let fns ←
       if opts.useStdin then
@@ -502,11 +514,12 @@ def shellMain (args : List String) (opts : ShellOptions) : IO UInt32 := do
       IO.eprintln "Expected exactly one file name"
       displayHelp (useStderr := true)
       return 1
-  let contents ← String.fromUTF8Lossy <$> do
-    if opts.useStdin then
-      (← IO.getStdin).readBinToEnd
-    else
-      IO.FS.readBinFile fileName
+  let contents ←
+    String.fromUTF8Lossy <$> do
+      if opts.useStdin then
+        (← IO.getStdin).readBinToEnd
+      else
+        IO.FS.readBinFile fileName
   if opts.onlyDeps then
     Elab.printImports contents fileName
     return 0
@@ -514,7 +527,7 @@ def shellMain (args : List String) (opts : ShellOptions) : IO UInt32 := do
     Elab.printImportSrcs contents fileName
     return 0
   -- Quick and dirty `#lang` support
-  ---TODO: make it extensible, and add `lean4md`
+  -- -TODO: make it extensible, and add `lean4md`
   let contents ←
     if let some contents := contents.dropPrefix? "#lang" then
       let endLinePos := contents.find '\n'
@@ -522,7 +535,7 @@ def shellMain (args : List String) (opts : ShellOptions) : IO UInt32 := do
       if langId == "lean4" then
         pure () -- do nothing for now
       else
-        IO.eprintln s!"unknown language '{langId}'\n";
+        IO.eprintln s!"unknown language '{langId}'\n"
         return 1
       -- Remove up to `\n`
       pure (contents.sliceFrom endLinePos).copy
@@ -533,32 +546,33 @@ def shellMain (args : List String) (opts : ShellOptions) : IO UInt32 := do
     if let some setup := setup? then
       pure setup.name
     else if let some fileName := fileName? then
-      try moduleNameOfFileName fileName opts.rootDir? catch e =>
+      try
+        moduleNameOfFileName fileName opts.rootDir?
+      catch e =>
         if opts.oleanFileName?.isNone && opts.cFileName?.isNone then
           pure `_stdin
         else
           throw e
     else
       pure `_stdin
-  let env? ← Elab.runFrontend contents opts.leanOpts fileName mainModuleName
-    opts.trustLevel opts.oleanFileName? opts.ileanFileName? opts.jsonOutput opts.errorOnKinds
-    #[] opts.printStats setup?
-    (incrSaveFileName? := opts.incrSaveFileName?)
-    (incrLoadFileName? := opts.incrLoadFileName?)
-    (incrHeaderSaveFileName? := opts.incrHeaderSaveFileName?)
+  let env? ←
+    Elab.runFrontend contents opts.leanOpts fileName mainModuleName opts.trustLevel
+      opts.oleanFileName? opts.ileanFileName? opts.jsonOutput opts.errorOnKinds #[] opts.printStats
+      setup? (incrSaveFileName? := opts.incrSaveFileName?)
+      (incrLoadFileName? := opts.incrLoadFileName?)
+      (incrHeaderSaveFileName? := opts.incrHeaderSaveFileName?)
   if let some env := env? then
     if opts.run then
       return ← runMain env opts.leanOpts args
     if let some c := opts.cFileName? then
       writeFileAtomically c fun out => do
         profileitIO "C code generation" opts.leanOpts do
-          let data ← Compiler.LCNF.emitC mainModuleName
-            |>.toIO' { fileName, fileMap := default } { env }
+          let data ←
+            Compiler.LCNF.emitC mainModuleName |>.toIO' { fileName, fileMap := default } { env }
           out.write data.toUTF8
     if let some bc := opts.bcFileName? then
       initLLVM
-      profileitIO "LLVM code generation" opts.leanOpts do
-        emitLLVM env mainModuleName bc
+      profileitIO "LLVM code generation" opts.leanOpts do emitLLVM env mainModuleName bc
   displayCumulativeProfilingTimes
   if Internal.hasAddressSanitizer () then
     return if env?.isSome then 0 else 1

@@ -22,8 +22,7 @@ public def fmtLevelParen : Fmt := fun
     let level ← fmt level
     let rbTk ← fmt rbTk
     return Layouts.parens lbTk level rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Level.max]
 public def fmtLevelMax : Fmt := fun

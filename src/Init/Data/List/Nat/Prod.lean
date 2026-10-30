@@ -18,11 +18,11 @@ set_option linter.indexVariables true -- Enforce naming conventions for index va
 
 namespace List
 
-protected theorem prod_eq_zero_iff_exists_zero_nat {l : List Nat} : l.prod = 0 ↔ ∃ x ∈ l, x = 0 := by
+protected theorem prod_eq_zero_iff_exists_zero_nat {l : List Nat}
+    : l.prod = 0 ↔ ∃ x ∈ l, x = 0 := by
   induction l with
   | nil => simp
-  | cons x xs ih =>
-    simp [Nat.mul_eq_zero, ih, eq_comm (a := (0 : Nat))]
+  | cons x xs ih => simp [Nat.mul_eq_zero, ih, eq_comm (a := (0 : Nat))]
 
 protected theorem prod_pos_iff_forall_pos_nat {l : List Nat} : 0 < l.prod ↔ ∀ x ∈ l, 0 < x := by
   induction l with
@@ -41,8 +41,7 @@ theorem prod_replicate_nat {n : Nat} {a : Nat} : (replicate n a).prod = a ^ n :=
 theorem prod_append_nat {l₁ l₂ : List Nat} : (l₁ ++ l₂).prod = l₁.prod * l₂.prod := by
   simp [prod_append]
 
-theorem prod_reverse_nat (xs : List Nat) : xs.reverse.prod = xs.prod := by
-  simp [prod_reverse]
+theorem prod_reverse_nat (xs : List Nat) : xs.reverse.prod = xs.prod := by simp [prod_reverse]
 
 theorem prod_eq_foldl_nat {xs : List Nat} : xs.prod = xs.foldl (init := 1) (· * ·) := by
   simp only [foldl_eq_foldr_reverse, Nat.mul_comm, ← prod_eq_foldr, prod_reverse_nat]

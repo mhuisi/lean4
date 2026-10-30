@@ -33,19 +33,20 @@ def mStart (goal : Expr) : MetaM MStartResult := do
   let goal : MGoal := { u, σs, hyps := emptyHyp u σs, target := ← instantiateMVars P }
   return { goal, proof? := some prf }
 
-def mStartMVar (mvar : MVarId) : MetaM (MVarId × MGoal) := mvar.withContext do
-  let goal ← instantiateMVars <| ← mvar.getType
-  unless ← isProp goal do
-    throwError "The goal type of `{mkMVar mvar}` is not a proposition. It has type `{← inferType goal}`."
+def mStartMVar (mvar : MVarId) : MetaM (MVarId × MGoal) :=
+  mvar.withContext do
+    let goal ← instantiateMVars <| ← mvar.getType
+    unless ← isProp goal do
+      throwError
+        "The goal type of `{mkMVar mvar}` is not a proposition. It has type `{← inferType goal}`."
 
-  let result ← mStart goal
-  if let some proof := result.proof? then
-    let subgoal ←
-      mkFreshExprSyntheticOpaqueMVar result.goal.toExpr (← mvar.getTag)
-    mvar.assign (mkApp proof subgoal)
-    return (subgoal.mvarId!, result.goal)
-  else
-    return (mvar, result.goal)
+    let result ← mStart goal
+    if let some proof := result.proof? then
+      let subgoal ← mkFreshExprSyntheticOpaqueMVar result.goal.toExpr (← mvar.getTag)
+      mvar.assign (mkApp proof subgoal)
+      return (subgoal.mvarId!, result.goal)
+    else
+      return (mvar, result.goal)
 
 def mStartMainGoal : TacticM (MVarId × MGoal) := do
   let (mvar, goal) ← mStartMVar (← getMainGoal)
@@ -53,15 +54,18 @@ def mStartMainGoal : TacticM (MVarId × MGoal) := do
   return (mvar, goal)
 
 @[builtin_tactic Lean.Parser.Tactic.mstart]
-def elabMStart : Tactic | _ => discard mStartMainGoal
+def elabMStart : Tactic
+  | _ => discard mStartMainGoal
 
 @[builtin_tactic Lean.Parser.Tactic.mstop]
-def elabMStop : Tactic | _ => do
-  -- parse goal
-  let mvar ← getMainGoal
-  mvar.withContext do
-  let goal ← instantiateMVars <| ← mvar.getType
+def elabMStop : Tactic
+  | _ => do
+    -- parse goal
+    let mvar ← getMainGoal
+    mvar.withContext do
+      let goal ← instantiateMVars <| ← mvar.getType
 
-  -- check if already in proof mode
-  let some mgoal := parseMGoal? goal | throwError "not in proof mode"
-  mvar.setType mgoal.strip
+      -- check if already in proof mode
+      let some mgoal := parseMGoal? goal
+        | throwError "not in proof mode"
+      mvar.setType mgoal.strip

@@ -28,9 +28,11 @@ namespace bitblastWithCache
 
 mutual
 
-theorem go_Inv_of_Inv (expr : BVLogicalExpr) (aig : AIG BVBit) (assign : BVExpr.Assignment)
-    (cache : BVExpr.Cache aig) (hinv : BVExpr.Cache.Inv assign aig cache) :
-    BVExpr.Cache.Inv assign (go aig expr cache).result.val.aig (go aig expr cache).cache := by
+theorem go_Inv_of_Inv
+    (expr : BVLogicalExpr)
+    (aig : AIG BVBit) (assign : BVExpr.Assignment)
+    (cache : BVExpr.Cache aig) (hinv : BVExpr.Cache.Inv assign aig cache)
+    : BVExpr.Cache.Inv assign (go aig expr cache).result.val.aig (go aig expr cache).cache := by
   induction expr generalizing aig with
   | const =>
     simp only [go]
@@ -65,9 +67,11 @@ theorem go_Inv_of_Inv (expr : BVLogicalExpr) (aig : AIG BVBit) (assign : BVExpr.
       apply dih
       exact hinv
 
-theorem go_eval_eq_eval (expr : BVLogicalExpr) (aig : AIG BVBit) (assign : BVExpr.Assignment)
-    (cache : BVExpr.Cache aig) (hinv : BVExpr.Cache.Inv assign aig cache) :
-    ⟦(go aig expr cache).result, assign.toAIGAssignment⟧ = expr.eval assign := by
+theorem go_eval_eq_eval
+    (expr : BVLogicalExpr)
+    (aig : AIG BVBit) (assign : BVExpr.Assignment)
+    (cache : BVExpr.Cache aig) (hinv : BVExpr.Cache.Inv assign aig cache)
+    : ⟦(go aig expr cache).result, assign.toAIGAssignment⟧ = expr.eval assign := by
   induction expr generalizing aig with
   | const => simp [go]
   | literal =>
@@ -89,8 +93,8 @@ theorem go_eval_eq_eval (expr : BVLogicalExpr) (aig : AIG BVBit) (assign : BVExp
         apply go_Inv_of_Inv
         exact hinv
   | ite discr lhs rhs dih lih rih =>
-    simp only [go, Ref.cast_eq, denote_mkIfCached, denote_projected_entry,
-      eval_ite, Bool.ite_eq_cond_iff]
+    simp only [go, Ref.cast_eq, denote_mkIfCached, denote_projected_entry, eval_ite,
+      Bool.ite_eq_cond_iff]
     apply ite_congr
     · rw [go_denote_mem_prefix (hstart := ?h)]
       case h =>
@@ -114,13 +118,13 @@ end
 
 end bitblastWithCache
 
-theorem denote_bitblast (expr : BVLogicalExpr) (assign : BVExpr.Assignment) :
-    ⟦bitblast expr, assign.toAIGAssignment⟧ = expr.eval assign := by
+theorem denote_bitblast (expr : BVLogicalExpr) (assign : BVExpr.Assignment)
+    : ⟦bitblast expr, assign.toAIGAssignment⟧ = expr.eval assign := by
   unfold bitblast bitblastWithCache
   rw [bitblastWithCache.go_eval_eq_eval]
   apply BVExpr.Cache.Inv_empty
 
-theorem unsat_of_bitblast (expr : BVLogicalExpr) : expr.bitblast.Unsat → expr.Unsat :=  by
+theorem unsat_of_bitblast (expr : BVLogicalExpr) : expr.bitblast.Unsat → expr.Unsat := by
   intro h assign
   rw [← denote_bitblast]
   apply h

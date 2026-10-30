@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.Linear.LinearM
 import Lean.Meta.Tactic.Grind.Arith.Linear.Util
@@ -12,13 +13,12 @@ namespace Lean.Meta.Grind.Arith.Linear
 Returns `true` if the variables in the given polynomial are sorted
 in decreasing order.
 -/
-def _root_.Lean.Grind.Linarith.Poly.isSorted (p : Poly) : Bool :=
-  go none p
+def _root_.Lean.Grind.Linarith.Poly.isSorted (p : Poly) : Bool := go none p
 where
   go : Option Var → Poly → Bool
-  | _,      .nil       => true
-  | none,   .add _ y p => go (some y) p
-  | some x, .add _ y p => x > y && go (some y) p
+    | _, .nil => true
+    | none, .add _ y p => go (some y) p
+    | some x, .add _ y p => x > y && go (some y) p
 
 /-- Returns `true` if all coefficients are not `0`. -/
 def _root_.Lean.Grind.Linarith.Poly.checkCoeffs : Poly → Bool
@@ -26,15 +26,18 @@ def _root_.Lean.Grind.Linarith.Poly.checkCoeffs : Poly → Bool
   | .add k _ p => k != 0 && checkCoeffs p
 
 def _root_.Lean.Grind.Linarith.Poly.checkOccs (p : Poly) : LinearM Unit := do
-  let .add _ y p := p | return ()
+  let .add _ y p := p
+    | return ()
   let rec go (p : Poly) : LinearM Unit := do
-    let .add _ x p := p | return ()
+    let .add _ x p := p
+      | return ()
     assert! (← getOccursOf x).contains y
     go p
   go p
 
 def _root_.Lean.Grind.Linarith.Poly.checkNoElimVars (p : Poly) : LinearM Unit := do
-  let .add _ x p := p | return ()
+  let .add _ x p := p
+    | return ()
   assert! !(← eliminated x)
   checkNoElimVars p
 
@@ -45,7 +48,8 @@ def _root_.Lean.Grind.Linarith.Poly.checkCnstrOf (p : Poly) (x : Var) : LinearM 
     p.checkNoElimVars
     p.checkOccs
     pure ()
-  let .add _ y _ := p | unreachable!
+  let .add _ y _ := p
+    | unreachable!
   assert! x == y
 
 def checkLeCnstrs (css : PArray (PArray IneqCnstr)) (isLower : Bool) : LinearM Unit := do
@@ -53,7 +57,8 @@ def checkLeCnstrs (css : PArray (PArray IneqCnstr)) (isLower : Bool) : LinearM U
   for cs in css do
     for c in cs do
       c.p.checkCnstrOf x
-      let .add a _ _ := c.p | unreachable!
+      let .add a _ _ := c.p
+        | unreachable!
       assert! isLower == (a < 0)
     x := x + 1
   return ()
@@ -98,9 +103,9 @@ def checkStructInvs : LinearM Unit := do
 
 public def checkInvariants : GoalM Unit := do
   if (← isDebugEnabled) then
-  for structId in *...(← get').structs.size do
-    LinearM.run structId do
-      assert! (← getStructId) == structId
-      checkStructInvs
+    for structId in *...(← get').structs.size do
+      LinearM.run structId do
+        assert! (← getStructId) == structId
+        checkStructInvs
 
 end Lean.Meta.Grind.Arith.Linear

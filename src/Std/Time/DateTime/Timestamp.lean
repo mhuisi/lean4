@@ -18,30 +18,23 @@ open Time.Internal
 
 set_option linter.all true
 
-/--
-Represents an exact point in time as a UNIX Epoch timestamp.
--/
+/-- Represents an exact point in time as a UNIX Epoch timestamp. -/
 @[ext]
 structure Timestamp where
   private mk ::
-
-  /--
-  Duration since the unix epoch.
-  -/
+  /-- Duration since the unix epoch. -/
   val : Duration
 deriving Repr, DecidableEq, Inhabited
 
 instance : LE Timestamp where
   le x y := x.val ≤ y.val
 
-instance { x y : Timestamp } : Decidable (x ≤ y) :=
-  inferInstanceAs (Decidable (x.val ≤ y.val))
+instance {x y : Timestamp} : Decidable (x ≤ y) := inferInstanceAs (Decidable (x.val ≤ y.val))
 
 instance : LT Timestamp where
   lt x y := x.val < y.val
 
-instance { x y : Timestamp } : Decidable (x < y) :=
-  inferInstanceAs (Decidable (x.val < y.val))
+instance {x y : Timestamp} : Decidable (x < y) := inferInstanceAs (Decidable (x.val < y.val))
 
 instance : ToString Timestamp where
   toString s := toString s.val.toSeconds
@@ -52,8 +45,7 @@ instance : Repr Timestamp where
 instance : Ord Timestamp where
   compare := compareOn (·.val)
 
-theorem Timestamp.compare_def :
-    compare (α := Timestamp) = compareOn (·.val) := rfl
+theorem Timestamp.compare_def : compare (α := Timestamp) = compareOn (·.val) := rfl
 
 instance : TransOrd Timestamp := inferInstanceAs <| TransCmp (compareOn _)
 
@@ -65,203 +57,104 @@ instance : LawfulEqOrd Timestamp where
 
 namespace Timestamp
 
-/--
-Fetches the current duration from the system.
--/
+/-- Fetches the current duration from the system. -/
 @[extern "lean_get_current_time"]
 opaque now : IO Timestamp
 
-/--
-Converts a `Timestamp` to a `Minute.Offset`.
--/
-@[inline]
-def toMinutesSinceUnixEpoch (tm : Timestamp) : Minute.Offset :=
-  tm.val.second.toMinutes
+/-- Converts a `Timestamp` to a `Minute.Offset`. -/
+@[inline] def toMinutesSinceUnixEpoch (tm : Timestamp) : Minute.Offset := tm.val.second.toMinutes
 
-/--
-Converts a `Timestamp` to a `Day.Offset`.
--/
-@[inline]
-def toDaysSinceUnixEpoch (tm : Timestamp) : Day.Offset :=
-  tm.val.second.toDays
+/-- Converts a `Timestamp` to a `Day.Offset`. -/
+@[inline] def toDaysSinceUnixEpoch (tm : Timestamp) : Day.Offset := tm.val.second.toDays
 
-/--
-Creates a `Timestamp` from a `Second.Offset`.
--/
+/-- Creates a `Timestamp` from a `Second.Offset`. -/
 @[inline]
-def ofSecondsSinceUnixEpoch (secs : Second.Offset) : Timestamp :=
-  ⟨Duration.ofSeconds secs⟩
+def ofSecondsSinceUnixEpoch (secs : Second.Offset) : Timestamp := ⟨Duration.ofSeconds secs⟩
 
-/--
-Creates a `Timestamp` from a `Nanosecond.Offset`.
--/
+/-- Creates a `Timestamp` from a `Nanosecond.Offset`. -/
 @[inline]
 def ofNanosecondsSinceUnixEpoch (nanos : Nanosecond.Offset) : Timestamp :=
   ⟨Duration.ofNanoseconds nanos⟩
 
-/--
-Creates a `Timestamp` from a `Duration`.
--/
-@[inline]
-def ofDurationSinceUnixEpoch (duration : Duration) : Timestamp :=
-  ⟨duration⟩
+/-- Creates a `Timestamp` from a `Duration`. -/
+@[inline] def ofDurationSinceUnixEpoch (duration : Duration) : Timestamp := ⟨duration⟩
 
-/--
-Creates a `Timestamp` from a `Millisecond.Offset`.
--/
+/-- Creates a `Timestamp` from a `Millisecond.Offset`. -/
 @[inline]
 def ofMillisecondsSinceUnixEpoch (milli : Millisecond.Offset) : Timestamp :=
   ⟨Duration.ofNanoseconds milli.toNanoseconds⟩
 
-/--
-Converts a `Timestamp` to a `Second.Offset`.
--/
-@[inline]
-def toSecondsSinceUnixEpoch (t : Timestamp) : Second.Offset :=
-  t.val.second
+/-- Converts a `Timestamp` to a `Second.Offset`. -/
+@[inline] def toSecondsSinceUnixEpoch (t : Timestamp) : Second.Offset := t.val.second
 
-/--
-Converts a `Timestamp` to nanoseconds as `Nanosecond.Offset`.
--/
+/-- Converts a `Timestamp` to nanoseconds as `Nanosecond.Offset`. -/
 @[inline]
 def toNanosecondsSinceUnixEpoch (tm : Timestamp) : Nanosecond.Offset :=
   let nanos := tm.toSecondsSinceUnixEpoch.mul 1000000000
   let nanos := nanos + (.ofInt tm.val.nano.val)
   nanos
 
-/--
-Converts a `Timestamp` to nanoseconds as `Millisecond.Offset`.
--/
+/-- Converts a `Timestamp` to nanoseconds as `Millisecond.Offset`. -/
 @[inline]
 def toMillisecondsSinceUnixEpoch (tm : Timestamp) : Millisecond.Offset :=
   tm.toNanosecondsSinceUnixEpoch.toMilliseconds
 
-/--
-Calculates the duration from the given `Timestamp` to the current time.
--/
+/-- Calculates the duration from the given `Timestamp` to the current time. -/
 @[inline]
 def since (f : Timestamp) : IO Duration := do
   let cur ← Timestamp.now
   return Std.Time.Duration.sub cur.val f.val
 
-/--
-Returns the `Duration` represented by the `Timestamp` since the Unix epoch.
--/
-@[inline]
-def toDurationSinceUnixEpoch (tm : Timestamp) : Duration :=
-  tm.val
+/-- Returns the `Duration` represented by the `Timestamp` since the Unix epoch. -/
+@[inline] def toDurationSinceUnixEpoch (tm : Timestamp) : Duration := tm.val
 
-/--
-Adds a `Millisecond.Offset` to the given `Timestamp`.
--/
-@[inline]
-def addMilliseconds (t : Timestamp) (s : Millisecond.Offset) : Timestamp :=
-  ⟨t.val + s⟩
+/-- Adds a `Millisecond.Offset` to the given `Timestamp`. -/
+@[inline] def addMilliseconds (t : Timestamp) (s : Millisecond.Offset) : Timestamp := ⟨t.val + s⟩
 
-/--
-Subtracts a `Millisecond.Offset` from the given `Timestamp`.
--/
-@[inline]
-def subMilliseconds (t : Timestamp) (s : Millisecond.Offset) : Timestamp :=
-  ⟨t.val - s⟩
+/-- Subtracts a `Millisecond.Offset` from the given `Timestamp`. -/
+@[inline] def subMilliseconds (t : Timestamp) (s : Millisecond.Offset) : Timestamp := ⟨t.val - s⟩
 
-/--
-Adds a `Nanosecond.Offset` to the given `Timestamp`.
--/
-@[inline]
-def addNanoseconds (t : Timestamp) (s : Nanosecond.Offset) : Timestamp :=
-  ⟨t.val + s⟩
+/-- Adds a `Nanosecond.Offset` to the given `Timestamp`. -/
+@[inline] def addNanoseconds (t : Timestamp) (s : Nanosecond.Offset) : Timestamp := ⟨t.val + s⟩
 
-/--
-Subtracts a `Nanosecond.Offset` from the given `Timestamp`.
--/
-@[inline]
-def subNanoseconds (t : Timestamp) (s : Nanosecond.Offset) : Timestamp :=
-  ⟨t.val - s⟩
+/-- Subtracts a `Nanosecond.Offset` from the given `Timestamp`. -/
+@[inline] def subNanoseconds (t : Timestamp) (s : Nanosecond.Offset) : Timestamp := ⟨t.val - s⟩
 
-/--
-Adds a `Second.Offset` to the given `Timestamp`.
--/
-@[inline]
-def addSeconds (t : Timestamp) (s : Second.Offset) : Timestamp :=
-  ⟨t.val + s⟩
+/-- Adds a `Second.Offset` to the given `Timestamp`. -/
+@[inline] def addSeconds (t : Timestamp) (s : Second.Offset) : Timestamp := ⟨t.val + s⟩
 
-/--
-Subtracts a `Second.Offset` from the given `Timestamp`.
--/
-@[inline]
-def subSeconds (t : Timestamp) (s : Second.Offset) : Timestamp :=
-  ⟨t.val - s⟩
+/-- Subtracts a `Second.Offset` from the given `Timestamp`. -/
+@[inline] def subSeconds (t : Timestamp) (s : Second.Offset) : Timestamp := ⟨t.val - s⟩
 
-/--
-Adds a `Minute.Offset` to the given `Timestamp`.
--/
-@[inline]
-def addMinutes (t : Timestamp) (m : Minute.Offset) : Timestamp :=
-  ⟨t.val + m⟩
+/-- Adds a `Minute.Offset` to the given `Timestamp`. -/
+@[inline] def addMinutes (t : Timestamp) (m : Minute.Offset) : Timestamp := ⟨t.val + m⟩
 
-/--
-Subtracts a `Minute.Offset` from the given `Timestamp`.
--/
-@[inline]
-def subMinutes (t : Timestamp) (m : Minute.Offset) : Timestamp :=
-  ⟨t.val - m⟩
+/-- Subtracts a `Minute.Offset` from the given `Timestamp`. -/
+@[inline] def subMinutes (t : Timestamp) (m : Minute.Offset) : Timestamp := ⟨t.val - m⟩
 
-/--
-Adds an `Hour.Offset` to the given `Timestamp`.
--/
-@[inline]
-def addHours (t : Timestamp) (h : Hour.Offset) : Timestamp :=
-  ⟨t.val + h⟩
+/-- Adds an `Hour.Offset` to the given `Timestamp`. -/
+@[inline] def addHours (t : Timestamp) (h : Hour.Offset) : Timestamp := ⟨t.val + h⟩
 
-/--
-Subtracts an `Hour.Offset` from the given `Timestamp`.
--/
-@[inline]
-def subHours (t : Timestamp) (h : Hour.Offset) : Timestamp :=
-  ⟨t.val - h⟩
+/-- Subtracts an `Hour.Offset` from the given `Timestamp`. -/
+@[inline] def subHours (t : Timestamp) (h : Hour.Offset) : Timestamp := ⟨t.val - h⟩
 
-/--
-Adds a `Day.Offset` to the given `Timestamp`.
--/
-@[inline]
-def addDays (t : Timestamp) (d : Day.Offset) : Timestamp :=
-  ⟨t.val + d⟩
+/-- Adds a `Day.Offset` to the given `Timestamp`. -/
+@[inline] def addDays (t : Timestamp) (d : Day.Offset) : Timestamp := ⟨t.val + d⟩
 
-/--
-Subtracts a `Day.Offset` from the given `Timestamp`.
--/
-@[inline]
-def subDays (t : Timestamp) (d : Day.Offset) : Timestamp :=
-  ⟨t.val - d⟩
+/-- Subtracts a `Day.Offset` from the given `Timestamp`. -/
+@[inline] def subDays (t : Timestamp) (d : Day.Offset) : Timestamp := ⟨t.val - d⟩
 
-/--
-Adds a `Week.Offset` to the given `Timestamp`.
--/
-@[inline]
-def addWeeks (t : Timestamp) (d : Week.Offset) : Timestamp :=
-  ⟨t.val + d⟩
+/-- Adds a `Week.Offset` to the given `Timestamp`. -/
+@[inline] def addWeeks (t : Timestamp) (d : Week.Offset) : Timestamp := ⟨t.val + d⟩
 
-/--
-Subtracts a `Week.Offset` from the given `Timestamp`.
--/
-@[inline]
-def subWeeks (t : Timestamp) (d : Week.Offset) : Timestamp :=
-  ⟨t.val - d⟩
+/-- Subtracts a `Week.Offset` from the given `Timestamp`. -/
+@[inline] def subWeeks (t : Timestamp) (d : Week.Offset) : Timestamp := ⟨t.val - d⟩
 
-/--
-Adds a `Duration` to the given `Timestamp`.
--/
-@[inline]
-def addDuration (t : Timestamp) (d : Duration) : Timestamp :=
-  ⟨t.val + d⟩
+/-- Adds a `Duration` to the given `Timestamp`. -/
+@[inline] def addDuration (t : Timestamp) (d : Duration) : Timestamp := ⟨t.val + d⟩
 
-/--
-Subtracts a `Duration` from the given `Timestamp`.
--/
-@[inline]
-def subDuration (t : Timestamp) (d : Duration) : Timestamp :=
-  ⟨t.val - d⟩
+/-- Subtracts a `Duration` from the given `Timestamp`. -/
+@[inline] def subDuration (t : Timestamp) (d : Duration) : Timestamp := ⟨t.val - d⟩
 
 instance : HAdd Timestamp Duration Timestamp where
   hAdd := addDuration

@@ -39,36 +39,31 @@ def toInt (negativeInfinity positiveInfinity : Int) : UnpackedFloat → Int
 Converts an `UnpackedFloat` to a `UInt8`, truncating after the decimal point, sending `NaN` to
 `0` and clamping out-of-range values and infinities.
 -/
-def toUInt8 (f : UnpackedFloat) : UInt8 :=
-  UInt8.ofNatClamp (f.toInt 0 (UInt8.size - 1)).toNat
+def toUInt8 (f : UnpackedFloat) : UInt8 := UInt8.ofNatClamp (f.toInt 0 (UInt8.size - 1)).toNat
 
 /--
 Converts an `UnpackedFloat` to a `UInt16`, truncating after the decimal point, sending `NaN` to
 `0` and clamping out-of-range values and infinities.
 -/
-def toUInt16 (f : UnpackedFloat) : UInt16 :=
-  UInt16.ofNatClamp (f.toInt 0 (UInt16.size - 1)).toNat
+def toUInt16 (f : UnpackedFloat) : UInt16 := UInt16.ofNatClamp (f.toInt 0 (UInt16.size - 1)).toNat
 
 /--
 Converts an `UnpackedFloat` to a `UInt32`, truncating after the decimal point, sending `NaN` to
 `0` and clamping out-of-range values and infinities.
 -/
-def toUInt32 (f : UnpackedFloat) : UInt32 :=
-  UInt32.ofNatClamp (f.toInt 0 (UInt32.size - 1)).toNat
+def toUInt32 (f : UnpackedFloat) : UInt32 := UInt32.ofNatClamp (f.toInt 0 (UInt32.size - 1)).toNat
 
 /--
 Converts an `UnpackedFloat` to a `UInt64`, truncating after the decimal point, sending `NaN` to
 `0` and clamping out-of-range values and infinities.
 -/
-def toUInt64 (f : UnpackedFloat) : UInt64 :=
-  UInt64.ofNatClamp (f.toInt 0 (UInt64.size - 1)).toNat
+def toUInt64 (f : UnpackedFloat) : UInt64 := UInt64.ofNatClamp (f.toInt 0 (UInt64.size - 1)).toNat
 
 /--
 Converts an `UnpackedFloat` to a `USize`, truncating after the decimal point, sending `NaN` to
 `0` and clamping out-of-range values and infinities.
 -/
-def toUSize (f : UnpackedFloat) : USize :=
-  USize.ofNatClamp (f.toInt 0 (USize.size - 1)).toNat
+def toUSize (f : UnpackedFloat) : USize := USize.ofNatClamp (f.toInt 0 (USize.size - 1)).toNat
 
 /--
 Converts an `UnpackedFloat` to an `Int8`, truncating after the decimal point, sending `NaN` to

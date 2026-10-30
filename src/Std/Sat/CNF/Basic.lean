@@ -7,7 +7,7 @@ module
 
 prelude
 public import Std.Sat.CNF.Literal
-public import Init.Data.Prod  -- shake: keep (proof instance elab'd in public scope, fix?)
+public import Init.Data.Prod -- shake: keep (proof instance elab'd in public scope, fix?)
 public import Init.Data.Array.Lemmas
 import Init.Data.Array.Bootstrap
 import Init.Data.List.Range
@@ -63,11 +63,9 @@ def empty : Clause α where
 
 instance : Inhabited (Clause α) := ⟨empty⟩
 
-@[inline]
-def size (c : Clause α) : Nat := c.atoms.size
+@[inline] def size (c : Clause α) : Nat := c.atoms.size
 
-theorem Internal.size_eq_size_atoms {c : Clause α} : c.size = c.atoms.size := by
-  simp [size]
+theorem Internal.size_eq_size_atoms {c : Clause α} : c.size = c.atoms.size := by simp [size]
 
 theorem Internal.size_eq_size_polarities {c : Clause α} : c.size = c.polarities.size := by
   simp [size, c.size_polarities]
@@ -86,8 +84,8 @@ def add (c : Clause α) (atom : α) (pol : Bool) : Clause α where
     simp only [ByteArray.getElem_eq_getElem_data, ByteArray.data_push, Array.getElem_push]
     split
     · next h' =>
-      have := c.isBool_polarities i (by simpa using h')
-      simpa [ByteArray.getElem_eq_getElem_data] using this
+        have := c.isBool_polarities i (by simpa using h')
+        simpa [ByteArray.getElem_eq_getElem_data] using this
     · cases pol <;> simp
 
 @[simp]
@@ -95,42 +93,38 @@ theorem add_ne_empty (c : Clause α) (atom : α) (pol : Bool) : c.add atom pol �
   simp [empty, add]
 
 @[simp]
-theorem Internal.atoms_add {c : Clause α} : (c.add atom pol).atoms = c.atoms.push atom := by
-  rfl
+theorem Internal.atoms_add {c : Clause α} : (c.add atom pol).atoms = c.atoms.push atom := by rfl
 
 @[simp]
-theorem size_add (c : Clause α) (atom : α) (pol : Bool) :
-    (c.add atom pol).size = c.size + 1 := by
+theorem size_add (c : Clause α) (atom : α) (pol : Bool) : (c.add atom pol).size = c.size + 1 := by
   simp [Internal.size_eq_size_atoms]
 
-/--
-The polarity of the literal at index `i` of `c`; `false` if `i` is out of bounds.
--/
+/-- The polarity of the literal at index `i` of `c`; `false` if `i` is out of bounds. -/
 @[expose]
 def polarity (c : Clause α) (i : Nat) : Bool :=
   if h : i < c.polarities.size then c.polarities[i] == 1 else false
 
-theorem Internal.polarity_eq_data {c : Clause α} {i : Nat} :
-    c.polarity i = (c.polarities.data[i]?.getD 0 == 1) := by
+theorem Internal.polarity_eq_data {c : Clause α} {i : Nat}
+    : c.polarity i = (c.polarities.data[i]?.getD 0 == 1) := by
   rw [polarity]
   split
   · next h =>
-    rw [Array.getElem?_eq_getElem (by simp only [ByteArray.size_data]; exact h),
-      Option.getD_some, ByteArray.getElem_eq_getElem_data]
+      rw [Array.getElem?_eq_getElem (by simp only [ByteArray.size_data]; exact h), Option.getD_some,
+        ByteArray.getElem_eq_getElem_data]
   · next h =>
-    rw [Array.getElem?_eq_none (by simp only [ByteArray.size_data]; omega), Option.getD_none]
-    rfl
+      rw [Array.getElem?_eq_none (by simp only [ByteArray.size_data]; omega), Option.getD_none]
+      rfl
 
-theorem Internal.polarity_eq_getElem {c : Clause α} {i : Nat} (h : i < c.polarities.size) :
-    c.polarity i = (c.polarities[i] == 1) := by
+theorem Internal.polarity_eq_getElem {c : Clause α} {i : Nat} (h : i < c.polarities.size)
+    : c.polarity i = (c.polarities[i] == 1) := by
   rw [polarity, dite_eq_left h]
 
 @[simp]
 theorem polarity_empty : (Clause.empty : Clause α).polarity i = false := by
   simp [Internal.polarity_eq_data, Clause.empty]
 
-theorem polarity_add {c : Clause α} {i : Nat} :
-    (c.add atom pol).polarity i = if i = c.size then pol else c.polarity i := by
+theorem polarity_add {c : Clause α} {i : Nat}
+    : (c.add atom pol).polarity i = if i = c.size then pol else c.polarity i := by
   simp only [add, Internal.polarity_eq_data, ByteArray.data_push, Array.getElem?_push,
     ByteArray.size_data, Internal.size_eq_size_polarities]
   by_cases h : i = c.polarities.size
@@ -147,13 +141,10 @@ For this reason it is not useful for performance sensitive contexts.
 def literals (c : Clause α) : List (Literal α) :=
   c.atoms.toList.zipIdx.map fun (x, i) => (x, c.polarity i)
 
-@[simp]
-theorem literals_empty : (empty : Clause α).literals = [] := by
-  rfl
+@[simp] theorem literals_empty : (empty : Clause α).literals = [] := by rfl
 
 @[simp]
-theorem literals_add {c : Clause α} :
-    (c.add atom pol).literals = c.literals ++ [(atom, pol)] := by
+theorem literals_add {c : Clause α} : (c.add atom pol).literals = c.literals ++ [(atom, pol)] := by
   simp only [literals, Internal.atoms_add, Array.toList_push, List.zipIdx_append, List.map_append]
   congr 1
   · apply List.map_congr_left
@@ -170,8 +161,12 @@ theorem Internal.map_fst_literals {c : Clause α} : c.literals.map Prod.fst = c.
   simp only [literals, List.map_map]
   exact List.zipIdx_map_fst 0 c.atoms.toList
 
-theorem Internal.getElem_literals {c : Clause α} {i : Nat} (h : i < c.literals.length) :
-    c.literals[i] = (c.atoms[i]'(by simpa [length_literals, Internal.size_eq_size_atoms] using h), c.polarity i) := by
+theorem Internal.getElem_literals {c : Clause α} {i : Nat} (h : i < c.literals.length)
+    : c.literals[i]
+      = (
+        c.atoms[i]'(by simpa [length_literals, Internal.size_eq_size_atoms] using h),
+        c.polarity i
+      ) := by
   simp [literals, List.getElem_zipIdx]
 
 protected theorem ext {c1 c2 : Clause α} (h : c1.literals = c2.literals) : c1 = c2 := by
@@ -192,7 +187,8 @@ protected theorem ext {c1 c2 : Clause α} (h : c1.literals = c2.literals) : c1 =
   have hpol := congrArg Prod.snd hget
   simp only [Internal.polarity_eq_data] at hpol
   rw [Array.getElem?_eq_getElem (by simpa using hi), Array.getElem?_eq_getElem (by simpa using hi'),
-    Option.getD_some, Option.getD_some] at hpol
+      Option.getD_some, Option.getD_some]
+    at hpol
   have h1 := hb1 i hi
   have h2 := hb2 i hi'
   simp only [ByteArray.getElem_eq_getElem_data] at h1 h2 ⊢
@@ -208,8 +204,8 @@ streaming scenarios only.
 def ofLiterals (l : List (Literal α)) : Clause α :=
   l.foldl (fun c (atom, pol) => c.add atom pol) empty
 
-theorem literals_foldl_add {l : List (Literal α)} {init : Clause α} :
-    (l.foldl (fun c (atom, pol) => c.add atom pol) init).literals = init.literals ++ l := by
+theorem literals_foldl_add {l : List (Literal α)} {init : Clause α}
+    : (l.foldl (fun c (atom, pol) => c.add atom pol) init).literals = init.literals ++ l := by
   induction l generalizing init with
   | nil => simp
   | cons x xs ih =>
@@ -232,11 +228,11 @@ theorem literals_eq_nil_iff {c : Clause α} : c.literals = [] ↔ c = empty := b
   · rintro rfl
     rfl
 
-theorem exists_eq_add_of_ne_empty {c : Clause α} (h : c ≠ empty) :
-    ∃ (c' : Clause α) (atom : α) (pol : Bool), c = c'.add atom pol := by
+theorem exists_eq_add_of_ne_empty {c : Clause α} (h : c ≠ empty)
+    : ∃ (c' : Clause α) (atom : α) (pol : Bool), c = c'.add atom pol := by
   have hne : c.literals ≠ [] := by simp [h]
-  refine ⟨ofLiterals c.literals.dropLast, (c.literals.getLast hne).1,
-    (c.literals.getLast hne).2, ?_⟩
+  refine
+    ⟨ofLiterals c.literals.dropLast, (c.literals.getLast hne).1, (c.literals.getLast hne).2, ?_⟩
   apply Clause.ext
   simp [List.dropLast_concat_getLast hne]
 
@@ -245,37 +241,45 @@ instance : Membership (Literal α) (Clause α) where
 
 theorem mem_literals_iff {c : Clause α} {l : Literal α} : l ∈ c.literals ↔ l ∈ c := Iff.rfl
 
-theorem Internal.getElem_mem {c : Clause α} {i : Nat} (h : i < c.atoms.size) :
-    (c.atoms[i], c.polarity i) ∈ c := by
+theorem Internal.getElem_mem {c : Clause α} {i : Nat} (h : i < c.atoms.size)
+    : (c.atoms[i], c.polarity i) ∈ c := by
   rw [← mem_literals_iff]
   have hl : i < c.literals.length := by simpa [length_literals, Internal.size_eq_size_atoms] using h
   rw [← Internal.getElem_literals hl]
   exact List.getElem_mem hl
 
-theorem Internal.mem_iff_exists_getElem {c : Clause α} {l : Literal α} :
-    l ∈ c ↔ ∃ (i : Nat) (h : i < c.atoms.size), (c.atoms[i], c.polarity i) = l := by
+theorem Internal.mem_iff_exists_getElem {c : Clause α} {l : Literal α}
+    : l ∈ c ↔ ∃ (i : Nat) (h : i < c.atoms.size), (c.atoms[i], c.polarity i) = l := by
   rw [← mem_literals_iff, List.mem_iff_getElem]
   constructor
   · rintro ⟨i, h, rfl⟩
-    exact ⟨i, by simpa [length_literals, Internal.size_eq_size_atoms] using h, by rw [Internal.getElem_literals]⟩
+    exact ⟨
+      i,
+      by simpa [length_literals, Internal.size_eq_size_atoms] using h,
+      by rw [Internal.getElem_literals]
+    ⟩
   · rintro ⟨i, h, rfl⟩
-    exact ⟨i, by simpa [length_literals, Internal.size_eq_size_atoms] using h, by rw [Internal.getElem_literals]⟩
+    exact ⟨
+      i,
+      by simpa [length_literals, Internal.size_eq_size_atoms] using h,
+      by rw [Internal.getElem_literals]
+    ⟩
 
-theorem ne_of_mem_of_negate_mem {c : Clause α} (h1 : l ∈ c) (h2 : l' ∉ c)
-    (h3 : l'.negate ∉ c) : l.1 ≠ l'.1 := by
+theorem ne_of_mem_of_negate_mem {c : Clause α} (h1 : l ∈ c) (h2 : l' ∉ c) (h3 : l'.negate ∉ c)
+    : l.1 ≠ l'.1 := by
   intro h4
   rcases l with ⟨latom, lpol⟩
   rcases l' with ⟨latom', lpol'⟩
   simp only [Internal.mem_iff_exists_getElem, Prod.mk.injEq, exists_and_right, not_exists, not_and,
-    forall_exists_index, Literal.negate, Bool.not_eq_not] at h1 h2 h3
+      forall_exists_index, Literal.negate, Bool.not_eq_not]
+    at h1 h2 h3
   rcases h1 with ⟨i, ⟨hi, heq1⟩, heq2⟩
   specialize h2 i hi
   specialize h3 i hi
   simp_all
 
 @[inline]
-def contains [BEq α] (c : Clause α) (lit : Literal α) : Bool :=
-  go 0
+def contains [BEq α] (c : Clause α) (lit : Literal α) : Bool := go 0
 where
   go (i : Nat) : Bool :=
     if h : i < c.size then
@@ -288,8 +292,8 @@ where
     else
       false
 
-private theorem contains_go_iff [BEq α] [LawfulBEq α] {c : Clause α} {lit : Literal α} {i : Nat} :
-    contains.go c lit i = true
+private theorem contains_go_iff [BEq α] [LawfulBEq α] {c : Clause α} {lit : Literal α} {i : Nat}
+    : contains.go c lit i = true
       ↔ ∃ (j : Nat) (hj : j < c.atoms.size), i ≤ j ∧ (c.atoms[j], c.polarity j) = lit := by
   fun_induction contains.go c lit i with
   | case1 i h1 h2 h3 h =>
@@ -297,7 +301,7 @@ private theorem contains_go_iff [BEq α] [LawfulBEq α] {c : Clause α} {lit : L
     cases lit
     exists i
     simp_all [Internal.polarity_eq_getElem]
-  | case2 i h1 h2 h3 h4 ih  =>
+  | case2 i h1 h2 h3 h4 ih =>
     rw [ih]
     constructor
     · rintro ⟨j, hj1, hj2⟩
@@ -308,8 +312,7 @@ private theorem contains_go_iff [BEq α] [LawfulBEq α] {c : Clause α} {lit : L
     · rintro ⟨j, hj1, hj2⟩
       exists j, hj1
       constructor
-      · have : j < c.polarities.size := by
-          simpa [← c.size_polarities] using hj1
+      · have : j < c.polarities.size := by simpa [← c.size_polarities] using hj1
         have : i ≠ j := by
           intro h5
           cases lit
@@ -322,8 +325,8 @@ private theorem contains_go_iff [BEq α] [LawfulBEq α] {c : Clause α} {lit : L
     simp only [Internal.size_eq_size_atoms] at hnlt
     omega
 
-theorem contains_iff_mem [BEq α] [LawfulBEq α] {c : Clause α} {lit : Literal α} :
-    c.contains lit = true ↔ lit ∈ c := by
+theorem contains_iff_mem [BEq α] [LawfulBEq α] {c : Clause α} {lit : Literal α}
+    : c.contains lit = true ↔ lit ∈ c := by
   rw [contains, contains_go_iff, Internal.mem_iff_exists_getElem]
   exact ⟨fun ⟨j, hj, _, hlit⟩ => ⟨j, hj, hlit⟩, fun ⟨j, hj, hlit⟩ => ⟨j, hj, by omega, hlit⟩⟩
 
@@ -332,8 +335,9 @@ instance [DecidableEq α] {lit : Literal α} {c : Clause α} : Decidable (lit �
 
 /-- See comment at `Array.forIn'Unsafe`. -/
 @[inline]
-unsafe def forIn'ImplUnsafe [Monad m] (c : Clause α) (b : β)
-    (f : (l : Literal α) → l ∈ c → β → m (ForInStep β)) : m β :=
+unsafe def forIn'ImplUnsafe
+    [Monad m] (c : Clause α) (b : β) (f : (l : Literal α) → l ∈ c → β → m (ForInStep β))
+    : m β :=
   let sz := c.atoms.usize
   let rec @[specialize] loop (i : USize) (b : β) : m β := do
     if i < sz then
@@ -344,11 +348,13 @@ unsafe def forIn'ImplUnsafe [Monad m] (c : Clause α) (b : β)
       pure b
   loop 0 b
 
-/-- Reference implementation for `forIn'` on `Clause`, iterating directly over the packed
-representation without materializing `literals`. -/
+/--
+Reference implementation for `forIn'` on `Clause`, iterating directly over the packed
+representation without materializing `literals`.
+-/
 @[implemented_by forIn'ImplUnsafe]
-def forIn'Impl [Monad m] (c : Clause α) (b : β)
-    (f : (l : Literal α) → l ∈ c → β → m (ForInStep β)) : m β :=
+def forIn'Impl [Monad m] (c : Clause α) (b : β) (f : (l : Literal α) → l ∈ c → β → m (ForInStep β))
+    : m β :=
   go 0 b
 where
   go (i : Nat) (b : β) : m β := do
@@ -363,18 +369,17 @@ instance [Monad m] : ForIn' m (Clause α) (Literal α) inferInstance where
   forIn' := forIn'Impl
 
 @[simp]
-theorem not_mem_empty {l : Literal α} : l ∉ (empty : Clause α) := by
-  simp [← mem_literals_iff]
+theorem not_mem_empty {l : Literal α} : l ∉ (empty : Clause α) := by simp [← mem_literals_iff]
 
 @[simp]
-theorem mem_add {c : Clause α} {l1 : Literal α} :
-    l1 ∈ c.add atom pol ↔ l1 = (atom, pol) ∨ l1 ∈ c := by
+theorem mem_add {c : Clause α} {l1 : Literal α}
+    : l1 ∈ c.add atom pol ↔ l1 = (atom, pol) ∨ l1 ∈ c := by
   simp [← mem_literals_iff, or_comm]
 
-private theorem forIn'Impl_go_eq_forIn'_drop [Monad m] {c : Clause α}
-    {f : (l : Literal α) → l ∈ c → β → m (ForInStep β)} (i : Nat) (b : β) :
-    forIn'Impl.go c f i b =
-      forIn' (c.literals.drop i) b
+private theorem forIn'Impl_go_eq_forIn'_drop
+    [Monad m] {c : Clause α} {f : (l : Literal α) → l ∈ c → β → m (ForInStep β)} (i : Nat) (b : β)
+    : forIn'Impl.go c f i b
+      = forIn' (c.literals.drop i) b
         (fun l hl b => f l (mem_literals_iff.mp (List.mem_of_mem_drop hl)) b) := by
   fun_induction forIn'Impl.go c f i b with
   | case1 i b h ih =>
@@ -391,19 +396,16 @@ private theorem forIn'Impl_go_eq_forIn'_drop [Monad m] {c : Clause α}
       List.drop_of_length_le (by simp only [length_literals, Internal.size_eq_size_atoms]; omega)
     simp only [hd, List.forIn'_nil]
 
-theorem forIn'_eq_forIn'_literals [Monad m] {c : Clause α} {init : β}
-    {f : (l : Literal α) → l ∈ c → β → m (ForInStep β)} :
-    forIn' c init f = forIn' c.literals init (fun l h b => f l (mem_literals_iff.mp h) b) := by
+theorem forIn'_eq_forIn'_literals
+    [Monad m] {c : Clause α} {init : β} {f : (l : Literal α) → l ∈ c → β → m (ForInStep β)}
+    : forIn' c init f = forIn' c.literals init (fun l h b => f l (mem_literals_iff.mp h) b) := by
   show forIn'Impl c init f = _
   rw [forIn'Impl, forIn'Impl_go_eq_forIn'_drop]
   simp
 
-/--
-Erase all occurrences of `lit` from `c`.
--/
+/-- Erase all occurrences of `lit` from `c`. -/
 @[inline]
-def erase [BEq α] (c : Clause α) (lit : Literal α) : Clause α :=
-  go 0 empty
+def erase [BEq α] (c : Clause α) (lit : Literal α) : Clause α := go 0 empty
 where
   go (i : Nat) (acc : Clause α) : Clause α :=
     if h : i < c.size then
@@ -416,15 +418,16 @@ where
     else
       acc
 
-private theorem literals_erase_go [BEq α] [LawfulBEq α] {c : Clause α} {lit : Literal α} {i : Nat}
-    {acc : Clause α} :
-    (erase.go c lit i acc).literals
+private theorem literals_erase_go
+    [BEq α] [LawfulBEq α] {c : Clause α} {lit : Literal α} {i : Nat} {acc : Clause α}
+    : (erase.go c lit i acc).literals
       = acc.literals ++ (c.literals.drop i).filter (fun l => l != lit) := by
   fun_induction erase.go c lit i acc with
   | case1 i acc h atom pol heq ih =>
     have hlt : i < c.literals.length := by rw [length_literals]; exact h
     have hlit : c.literals[i] = lit := by
-      rw [Internal.getElem_literals hlt, Internal.polarity_eq_getElem (by rw [c.size_polarities]; exact h)]
+      rw [Internal.getElem_literals hlt,
+        Internal.polarity_eq_getElem (by rw [c.size_polarities]; exact h)]
       simp only [atom, pol, Bool.and_eq_true, beq_iff_eq] at heq
       simp [heq.1, heq.2]
     rw [List.drop_eq_getElem_cons hlt, List.filter_cons, hlit]
@@ -432,7 +435,8 @@ private theorem literals_erase_go [BEq α] [LawfulBEq α] {c : Clause α} {lit :
   | case2 i acc h atom pol heq ih =>
     have hlt : i < c.literals.length := by rw [length_literals]; exact h
     have hlit : c.literals[i] = (atom, pol) := by
-      rw [Internal.getElem_literals hlt, Internal.polarity_eq_getElem (by rw [c.size_polarities]; exact h)]
+      rw [Internal.getElem_literals hlt,
+        Internal.polarity_eq_getElem (by rw [c.size_polarities]; exact h)]
     have hne : ((atom, pol) : Literal α) != lit := by
       simp only [atom, pol, Bool.and_eq_true, beq_iff_eq, not_and] at heq
       simp only [bne_iff_ne, ne_eq, Prod.ext_iff, not_and]
@@ -444,20 +448,18 @@ private theorem literals_erase_go [BEq α] [LawfulBEq α] {c : Clause α} {lit :
     simp
 
 @[simp]
-theorem literals_erase [BEq α] [LawfulBEq α] {c : Clause α} {lit : Literal α} :
-    (c.erase lit).literals = c.literals.filter (fun l => l != lit) := by
+theorem literals_erase [BEq α] [LawfulBEq α] {c : Clause α} {lit : Literal α}
+    : (c.erase lit).literals = c.literals.filter (fun l => l != lit) := by
   rw [erase, literals_erase_go]
   simp
 
 @[simp]
-theorem mem_erase_iff [BEq α] [LawfulBEq α] {c : Clause α} :
-    lit' ∈ c.erase lit ↔ (lit ≠ lit' ∧ lit' ∈ c) := by
+theorem mem_erase_iff [BEq α] [LawfulBEq α] {c : Clause α}
+    : lit' ∈ c.erase lit ↔ (lit ≠ lit' ∧ lit' ∈ c) := by
   rw [← mem_literals_iff, literals_erase, List.mem_filter, ← mem_literals_iff]
   simp [and_comm, ne_comm]
 
-/--
-The disjunction of two clauses, obtained by concatenating their literals.
--/
+/-- The disjunction of two clauses, obtained by concatenating their literals. -/
 def append (c1 c2 : Clause α) : Clause α where
   atoms := c1.atoms ++ c2.atoms
   polarities := c1.polarities ++ c2.polarities
@@ -477,17 +479,15 @@ instance : Append (Clause α) where
   append := append
 
 @[simp]
-theorem Internal.atoms_append {c1 c2 : Clause α} : (c1 ++ c2).atoms = c1.atoms ++ c2.atoms := by
-  rfl
+theorem Internal.atoms_append {c1 c2 : Clause α} : (c1 ++ c2).atoms = c1.atoms ++ c2.atoms := by rfl
 
 @[simp]
-theorem Internal.polarities_append {c1 c2 : Clause α} :
-    (c1 ++ c2).polarities = c1.polarities ++ c2.polarities := by
+theorem Internal.polarities_append {c1 c2 : Clause α}
+    : (c1 ++ c2).polarities = c1.polarities ++ c2.polarities := by
   rfl
 
-theorem polarity_append {c1 c2 : Clause α} {i : Nat} :
-    (c1 ++ c2).polarity i =
-      if i < c1.size then c1.polarity i else c2.polarity (i - c1.size) := by
+theorem polarity_append {c1 c2 : Clause α} {i : Nat}
+    : (c1 ++ c2).polarity i = if i < c1.size then c1.polarity i else c2.polarity (i - c1.size) := by
   have h1 : c1.polarities.data.size = c1.size := by
     rw [ByteArray.size_data, ← Internal.size_eq_size_polarities]
   simp only [Internal.polarity_eq_data, Internal.polarities_append, ByteArray.data_append,
@@ -495,13 +495,11 @@ theorem polarity_append {c1 c2 : Clause α} {i : Nat} :
   split <;> rfl
 
 @[simp]
-theorem size_append {c1 c2 : Clause α} :
-    (c1 ++ c2).size = c1.size + c2.size := by
+theorem size_append {c1 c2 : Clause α} : (c1 ++ c2).size = c1.size + c2.size := by
   simp [Internal.size_eq_size_atoms]
 
 @[simp]
-theorem literals_append {c1 c2 : Clause α} :
-    (c1 ++ c2).literals = c1.literals ++ c2.literals := by
+theorem literals_append {c1 c2 : Clause α} : (c1 ++ c2).literals = c1.literals ++ c2.literals := by
   apply List.ext_getElem
   · simp [length_literals]
   · intro i h1 h2
@@ -510,18 +508,16 @@ theorem literals_append {c1 c2 : Clause α} :
     by_cases hi : i < c1.size
     · have hi' : i < c1.atoms.size := by simpa [Internal.size_eq_size_atoms] using hi
       rw [ite_eq_left hi, Array.getElem_append_left hi',
-        List.getElem_append_left (by simpa [length_literals] using hi),
-        Internal.getElem_literals]
+        List.getElem_append_left (by simpa [length_literals] using hi), Internal.getElem_literals]
     · have hi' : ¬ i < c1.atoms.size := by simpa [Internal.size_eq_size_atoms] using hi
       rw [ite_eq_right hi, Array.getElem_append_right (by omega),
-        List.getElem_append_right (by simp only [length_literals]; omega), Internal.getElem_literals]
+        List.getElem_append_right (by simp only [length_literals]; omega),
+        Internal.getElem_literals]
       simp [length_literals, Internal.size_eq_size_atoms]
 
-@[simp]
-theorem empty_append {c : Clause α} : (empty : Clause α) ++ c = c := Clause.ext (by simp)
+@[simp] theorem empty_append {c : Clause α} : (empty : Clause α) ++ c = c := Clause.ext (by simp)
 
-@[simp]
-theorem append_empty {c : Clause α} : c ++ (empty : Clause α) = c := Clause.ext (by simp)
+@[simp] theorem append_empty {c : Clause α} : c ++ (empty : Clause α) = c := Clause.ext (by simp)
 
 @[simp]
 theorem append_assoc {c1 c2 c3 : Clause α} : (c1 ++ c2) ++ c3 = c1 ++ (c2 ++ c3) :=
@@ -531,8 +527,9 @@ theorem append_assoc {c1 c2 c3 : Clause α} : (c1 ++ c2) ++ c3 = c1 ++ (c2 ++ c3
 theorem append_add {c1 c2 : Clause α} : c1 ++ c2.add atom pol = (c1 ++ c2).add atom pol :=
   Clause.ext (by simp)
 
-theorem ofLiterals_append {l1 l2 : List (Literal α)} :
-    ofLiterals (l1 ++ l2) = ofLiterals l1 ++ ofLiterals l2 := Clause.ext (by simp)
+theorem ofLiterals_append {l1 l2 : List (Literal α)}
+    : ofLiterals (l1 ++ l2) = ofLiterals l1 ++ ofLiterals l2 :=
+  Clause.ext (by simp)
 
 @[simp]
 theorem append_eq_empty_iff {c1 c2 : Clause α} : c1 ++ c2 = empty ↔ c1 = empty ∧ c2 = empty := by
@@ -545,34 +542,28 @@ theorem mem_append {c1 c2 : Clause α} {l : Literal α} : l ∈ c1 ++ c2 ↔ l �
 
 end Clause
 
-@[expose, inline]
-def empty : CNF α := { clauses := #[] }
+@[expose, inline] def empty : CNF α := { clauses := #[] }
 
-@[expose, inline]
-def emptyWithCapacity (n : Nat) : CNF α := { clauses := .emptyWithCapacity n }
+@[expose, inline] def emptyWithCapacity (n : Nat) : CNF α := { clauses := .emptyWithCapacity n }
 
 @[expose, inline]
 def add (f : CNF α) (c : CNF.Clause α) : CNF α := { f with clauses := f.clauses.push c }
 
-@[inline]
-def append (f1 f2 : CNF α) : CNF α :=
-  { clauses := f1.clauses ++ f2.clauses }
+@[inline] def append (f1 f2 : CNF α) : CNF α := { clauses := f1.clauses ++ f2.clauses }
 
 instance : Append (CNF α) where
   append := append
 
 namespace Clause
 
-/--
-Variable `v` occurs in `Clause` `c`.
--/
+/-- Variable `v` occurs in `Clause` `c`. -/
 def VarMem (v : α) (c : Clause α) : Prop := v ∈ c.atoms
 
 instance {v : α} {c : Clause α} [DecidableEq α] : Decidable (VarMem v c) :=
   inferInstanceAs <| Decidable (v ∈ c.atoms)
 
-theorem VarMem_iff_exists_mem_literals {v : α} {c : Clause α} :
-    VarMem v c ↔ ∃ pol, (v, pol) ∈ c.literals := by
+theorem VarMem_iff_exists_mem_literals {v : α} {c : Clause α}
+    : VarMem v c ↔ ∃ pol, (v, pol) ∈ c.literals := by
   simp only [VarMem, ← Array.mem_toList_iff, ← Internal.map_fst_literals, List.mem_map]
   constructor
   · rintro ⟨⟨_, pol⟩, hmem, rfl⟩
@@ -580,30 +571,35 @@ theorem VarMem_iff_exists_mem_literals {v : α} {c : Clause α} :
   · rintro ⟨pol, hmem⟩
     exact ⟨(v, pol), hmem, rfl⟩
 
-@[simp] theorem not_VarMem_empty {v : α} : ¬VarMem v .empty := by simp [VarMem, empty]
+@[simp] theorem not_VarMem_empty {v : α} : ¬ VarMem v .empty := by simp [VarMem, empty]
 
 theorem VarMem_add_self {c : Clause α} : VarMem atom (c.add atom pol) := by
   cases pol <;> simp [VarMem]
 
-theorem VarMem_add_ne_self {c : Clause α} {atom1 atom2 : α} (h : atom1 ≠ atom2) :
-    VarMem atom1 (c.add atom2 pol) ↔ VarMem atom1 c := by
+theorem VarMem_add_ne_self {c : Clause α} {atom1 atom2 : α} (h : atom1 ≠ atom2)
+    : VarMem atom1 (c.add atom2 pol) ↔ VarMem atom1 c := by
   simp [VarMem, h]
 
-@[simp] theorem VarMem_add {v : α} : VarMem v (c.add atom pol) ↔ (v = atom ∨ VarMem v c) := by
+@[simp]
+theorem VarMem_add {v : α} : VarMem v (c.add atom pol) ↔ (v = atom ∨ VarMem v c) := by
   by_cases h : v = atom
   · simp [VarMem_add_self, h]
   · simp [VarMem_add_ne_self, h]
 
-@[simp] theorem VarMem_append {v : α} {c1 c2 : Clause α} :
-    VarMem v (c1 ++ c2) ↔ (VarMem v c1 ∨ VarMem v c2) := by
+@[simp]
+theorem VarMem_append {v : α} {c1 c2 : Clause α}
+    : VarMem v (c1 ++ c2) ↔ (VarMem v c1 ∨ VarMem v c2) := by
   simp [VarMem]
 
 @[elab_as_elim]
-theorem inductionOn {motive : Clause α → Prop} (empty : motive .empty)
+theorem inductionOn
+    {motive : Clause α → Prop} (empty : motive .empty)
     (add : (c : Clause α) → (atom : α) → (pol : Bool) → motive c → motive (c.add atom pol))
-    (c : Clause α) : motive c := by
-  have key : ∀ (l : List (Literal α)) (init : Clause α), motive init →
-      motive (l.foldl (fun c (atom, pol) => c.add atom pol) init) := by
+    (c : Clause α)
+    : motive c := by
+  have key
+      : ∀ (l : List (Literal α)) (init : Clause α),
+        motive init → motive (l.foldl (fun c (atom, pol) => c.add atom pol) init) := by
     intro l
     induction l with
     | nil => intro init h; simpa using h
@@ -613,26 +609,23 @@ theorem inductionOn {motive : Clause α → Prop} (empty : motive .empty)
 
 end Clause
 
-/--
-`Clause` `c` occurs in `CNF` formula `f`.
--/
+/-- `Clause` `c` occurs in `CNF` formula `f`. -/
 def Mem (f : CNF α) (c : Clause α) : Prop := c ∈ f.clauses
 
 instance : Membership (Clause α) (CNF α) where
   mem := Mem
 
 instance {c : Clause α} {f : CNF α} [DecidableEq α] : Decidable (c ∈ f) :=
-    inferInstanceAs <| Decidable (c ∈ f.clauses)
+  inferInstanceAs <| Decidable (c ∈ f.clauses)
 
-theorem Internal.mem_iff {f : CNF α} : c ∈ f ↔ c ∈ f.clauses := by
-  rfl
+theorem Internal.mem_iff {f : CNF α} : c ∈ f ↔ c ∈ f.clauses := by rfl
 
-theorem Internal.clauses_append {f1 f2 : CNF α} : (f1 ++ f2).clauses = f1.clauses ++ f2.clauses := by
+theorem Internal.clauses_append {f1 f2 : CNF α}
+    : (f1 ++ f2).clauses = f1.clauses ++ f2.clauses := by
   rfl
 
 @[simp]
-theorem not_mem_empty {c : Clause α} : c ∉ (empty : CNF α) := by
-  simp [Internal.mem_iff, empty]
+theorem not_mem_empty {c : Clause α} : c ∉ (empty : CNF α) := by simp [Internal.mem_iff, empty]
 
 @[simp]
 theorem mem_add {f : CNF α} {c1 c2 : Clause α} : c1 ∈ f.add c2 ↔ c1 = c2 ∨ c1 ∈ f := by
@@ -642,17 +635,14 @@ theorem mem_add {f : CNF α} {c1 c2 : Clause α} : c1 ∈ f.add c2 ↔ c1 = c2 �
 theorem mem_append {f1 f2 : CNF α} {c : Clause α} : c ∈ (f1 ++ f2) ↔ c ∈ f1 ∨ c ∈ f2 := by
   simp [Internal.mem_iff, Internal.clauses_append]
 
-/--
-Variable `v` occurs in `CNF` formula `f`.
--/
-@[expose]
-def VarMem (v : α) (f : CNF α) : Prop := ∃ c, c ∈ f.clauses ∧ c.VarMem v
+/-- Variable `v` occurs in `CNF` formula `f`. -/
+@[expose] def VarMem (v : α) (f : CNF α) : Prop := ∃ c, c ∈ f.clauses ∧ c.VarMem v
 
 instance {v : α} {f : CNF α} [DecidableEq α] : Decidable (VarMem v f) :=
   inferInstanceAs <| Decidable (∃ c, c ∈ f.clauses ∧ c.VarMem v)
 
-theorem Internal.any_not_isEmpty_iff_exists_mem {f : CNF α} :
-    (f.clauses.any fun c => !List.isEmpty c.literals) = true ↔ ∃ v, VarMem v f := by
+theorem Internal.any_not_isEmpty_iff_exists_mem {f : CNF α}
+    : (f.clauses.any fun c => ! List.isEmpty c.literals) = true ↔ ∃ v, VarMem v f := by
   simp only [Array.any_eq_true, Bool.not_eq_true', List.isEmpty_eq_false_iff_exists_mem, VarMem,
     Clause.VarMem_iff_exists_mem_literals]
   constructor
@@ -663,8 +653,8 @@ theorem Internal.any_not_isEmpty_iff_exists_mem {f : CNF α} :
     rcases hclause with ⟨idx, hidx, rfl⟩
     exact ⟨idx, hidx, (v, pol), hlit⟩
 
-theorem Internal.any_atoms_size_ne_zero_iff_exists_mem {f : CNF α} :
-    (f.clauses.any fun c => c.atoms.size != 0) = true ↔ ∃ v, VarMem v f := by
+theorem Internal.any_atoms_size_ne_zero_iff_exists_mem {f : CNF α}
+    : (f.clauses.any fun c => c.atoms.size != 0) = true ↔ ∃ v, VarMem v f := by
   have h : ∀ c : Clause α, (c.atoms.size != 0) = !c.literals.isEmpty := by
     intro c
     rw [← Clause.Internal.size_eq_size_atoms, ← Clause.length_literals]
@@ -677,10 +667,11 @@ instance {f : CNF α} [DecidableEq α] : Decidable (∃ v, VarMem v f) :=
   decidable_of_iff (f.clauses.any fun c => c.atoms.size != 0)
     Internal.any_atoms_size_ne_zero_iff_exists_mem
 
-theorem not_VarMem_empty {v : α} : ¬VarMem v (.empty : CNF α) := by simp [VarMem, empty]
+theorem not_VarMem_empty {v : α} : ¬ VarMem v (.empty : CNF α) := by simp [VarMem, empty]
 
-@[local simp] theorem VarMem_add {v : α} {c} {f : CNF α} :
-    VarMem v (f.add c : CNF α) ↔ (Clause.VarMem v c ∨ VarMem v f) := by
+@[local simp]
+theorem VarMem_add {v : α} {c} {f : CNF α}
+    : VarMem v (f.add c : CNF α) ↔ (Clause.VarMem v c ∨ VarMem v f) := by
   simp only [VarMem, add, Array.mem_push]
   constructor
   · intro h
@@ -717,12 +708,12 @@ theorem append_assoc {f1 f2 f3 : CNF α} : (f1 ++ f2) ++ f3 = f1 ++ (f2 ++ f3) :
   simp [Internal.ext_iff, Internal.clauses_append, Array.append_assoc]
 
 @[simp]
-theorem emptyWithCapacity_eq_empty (n : Nat) :
-    CNF.emptyWithCapacity n = (CNF.empty : CNF α) := by
+theorem emptyWithCapacity_eq_empty (n : Nat) : CNF.emptyWithCapacity n = (CNF.empty : CNF α) := by
   simp [empty, emptyWithCapacity]
 
-@[simp] theorem VarMem_append {v : α} {f1 f2 : CNF α} :
-    VarMem v (f1 ++ f2) ↔ VarMem v f1 ∨ VarMem v f2 := by
+@[simp]
+theorem VarMem_append {v : α} {f1 f2 : CNF α}
+    : VarMem v (f1 ++ f2) ↔ VarMem v f1 ∨ VarMem v f2 := by
   simp [VarMem, Array.mem_append, Internal.clauses_append]
   constructor
   · rintro ⟨c, (mf1 | mf2), mc⟩

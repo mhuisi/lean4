@@ -11,13 +11,13 @@ Authors: Sebastian Ullrich, Marc Huisinga
 module
 
 prelude
-
 public import Lean.Language.Lean.Types
 import Lean.Elab.InfoTree.Util
 
 /-- Checks whether `r` contains `hoverPos`, taking into account EOF according to `text`. -/
-public def Lean.FileMap.rangeContainsHoverPos (text : Lean.FileMap) (r : Lean.Syntax.Range)
-    (hoverPos : String.Pos.Raw) (includeStop := false) : Bool :=
+public def Lean.FileMap.rangeContainsHoverPos
+    (text : Lean.FileMap) (r : Lean.Syntax.Range) (hoverPos : String.Pos.Raw) (includeStop := false)
+    : Bool :=
   -- When `hoverPos` is at the very end of the file, it is *after* the last position in `text`.
   -- However, for `includeStop = false`, all ranges stop at the last position in `text`,
   -- which always excludes a `hoverPos` at the very end of the file.
@@ -27,11 +27,8 @@ public def Lean.FileMap.rangeContainsHoverPos (text : Lean.FileMap) (r : Lean.Sy
   r.contains hoverPos (includeStop := includeStop || isRangeAtEOF)
 
 public def Lean.FileMap.rangeOverlapsRequestedRange
-    (text : Lean.FileMap)
-    (documentRange : Lean.Syntax.Range)
-    (requestedRange : Lean.Syntax.Range)
-    (includeDocumentRangeStop := false)
-    (includeRequestedRangeStop := false)
+    (text : Lean.FileMap) (documentRange : Lean.Syntax.Range) (requestedRange : Lean.Syntax.Range)
+    (includeDocumentRangeStop := false) (includeRequestedRangeStop := false)
     : Bool :=
   let isDocumentRangeAtEOF := documentRange.stop == text.source.rawEndPos
   documentRange.overlaps requestedRange
@@ -39,11 +36,8 @@ public def Lean.FileMap.rangeOverlapsRequestedRange
     (includeSecondStop := includeRequestedRangeStop)
 
 public def Lean.FileMap.rangeIncludesRequestedRange
-    (text : Lean.FileMap)
-    (documentRange : Lean.Syntax.Range)
-    (requestedRange : Lean.Syntax.Range)
-    (includeDocumentRangeStop := false)
-    (includeRequestedRangeStop := false)
+    (text : Lean.FileMap) (documentRange : Lean.Syntax.Range) (requestedRange : Lean.Syntax.Range)
+    (includeDocumentRangeStop := false) (includeRequestedRangeStop := false)
     : Bool :=
   let isDocumentRangeAtEOF := documentRange.stop == text.source.rawEndPos
   documentRange.includes requestedRange
@@ -56,8 +50,10 @@ public inductive SnapshotTree.foldSnaps.Control where
   | done
   | proceed (foldChildren : Bool)
 
-public partial def SnapshotTree.foldSnaps (tree : SnapshotTree) (init : α)
-    (f : SnapshotTask SnapshotTree → α → Task (α × foldSnaps.Control)) : Task α :=
+public partial def SnapshotTree.foldSnaps
+    (tree : SnapshotTree) (init : α)
+    (f : SnapshotTask SnapshotTree → α → Task (α × foldSnaps.Control))
+    : Task α :=
   let t := traverseTree init tree
   t.map (sync := true) (·.1)
 where
@@ -66,18 +62,18 @@ where
 
   traverseChildren (acc : α) : List (SnapshotTask SnapshotTree) → Task (α × Bool)
     | [] => .pure (acc, false)
-    | child::otherChildren =>
-      f child acc |>.bind (sync := true) fun (acc, control) => Id.run do
-        let .proceed foldChildrenOfChild := control
-          | return .pure (acc, true)
-        if ! foldChildrenOfChild then
-          return traverseChildren acc otherChildren
-        let subtreeTask := child.task.bind (sync := true) fun tree =>
-          traverseTree acc tree
-        return subtreeTask.bind (sync := true) fun (acc, done) => Id.run do
-          if done then
-            return .pure (acc, done)
-          return traverseChildren acc otherChildren
+    | child :: otherChildren =>
+      f child acc
+        |>.bind (sync := true) fun (acc, control) => Id.run do
+          let .proceed foldChildrenOfChild := control
+            | return .pure (acc, true)
+          if !foldChildrenOfChild then
+            return traverseChildren acc otherChildren
+          let subtreeTask := child.task.bind (sync := true) fun tree => traverseTree acc tree
+          return subtreeTask.bind (sync := true) fun (acc, done) => Id.run do
+            if done then
+              return .pure (acc, done)
+            return traverseChildren acc otherChildren
 
 /--
 Finds the first (in pre-order) snapshot task in `tree` that contains `hoverPos`
@@ -89,8 +85,9 @@ then this function is likely the wrong one to call, as it simply yields the firs
 that contains `hoverPos` in its whitespace, which is not necessarily the correct one
 (e.g. it may be indentation-sensitive).
 -/
-public partial def SnapshotTree.findInfoTreeAtPos (text : FileMap) (tree : SnapshotTree)
-    (hoverPos : String.Pos.Raw) (includeStop : Bool) : Task (Option Elab.InfoTree) :=
+public partial def SnapshotTree.findInfoTreeAtPos
+    (text : FileMap) (tree : SnapshotTree) (hoverPos : String.Pos.Raw) (includeStop : Bool)
+    : Task (Option Elab.InfoTree) :=
   tree.foldSnaps (init := none) fun snap _ => Id.run do
     let some stx := snap.stx?
       -- One of the invariants of the snapshot tree is that `stx? = none` implies that
@@ -111,8 +108,10 @@ public partial def SnapshotTree.findInfoTreeAtPos (text : FileMap) (tree : Snaps
         | return (none, .proceed (foldChildren := true))
       return (infoTree, .done)
 
-public partial def SnapshotTree.foldInfosInRange (tree : SnapshotTree) (requestedRange : Lean.Syntax.Range)
-    (init : α) (f : Elab.ContextInfo → Elab.Info → α → α) : Task α :=
+public partial def SnapshotTree.foldInfosInRange
+    (tree : SnapshotTree) (requestedRange : Lean.Syntax.Range) (init : α)
+    (f : Elab.ContextInfo → Elab.Info → α → α)
+    : Task α :=
   tree.foldSnaps (init := init) fun snap acc => Id.run do
     let some stx := snap.stx?
       | return .pure (acc, .proceed (foldChildren := false))
@@ -123,16 +122,18 @@ public partial def SnapshotTree.foldInfosInRange (tree : SnapshotTree) (requeste
     return snap.task.map (sync := true) fun tree => Id.run do
       let some infoTree := tree.element.infoTree?
         | return (acc, .proceed (foldChildren := true))
-      let acc := infoTree.foldInfo (init := acc) fun ctx i acc => Id.run do
-        let some r := i.range?
-          | return acc
-        if ! r.overlaps requestedRange (includeFirstStop := true) (includeSecondStop := true) then
-          return acc
-        return f ctx i acc
+      let acc :=
+        infoTree.foldInfo (init := acc) fun ctx i acc => Id.run do
+          let some r := i.range?
+            | return acc
+          if ! r.overlaps requestedRange (includeFirstStop := true) (includeSecondStop := true) then
+            return acc
+          return f ctx i acc
       return (acc, .proceed (foldChildren := true))
 
-public partial def SnapshotTree.collectMessagesInRange (tree : SnapshotTree)
-    (requestedRange : Lean.Syntax.Range) : Task MessageLog :=
+public partial def SnapshotTree.collectMessagesInRange
+    (tree : SnapshotTree) (requestedRange : Lean.Syntax.Range)
+    : Task MessageLog :=
   tree.foldSnaps (init := .empty) fun snap log => Id.run do
     let some stx := snap.stx?
       | return .pure (log, .proceed (foldChildren := true))
@@ -148,7 +149,8 @@ end Lean.Language
 namespace Lean.Language.Lean
 
 /-- Finds the first `CommandParsedSnapshot` containing `hoverPos`, asynchronously. -/
-public partial def findCmdParsedSnap (initSnap : InitialSnapshot) (text : FileMap) (hoverPos : String.Pos.Raw)
+public partial def findCmdParsedSnap
+    (initSnap : InitialSnapshot) (text : FileMap) (hoverPos : String.Pos.Raw)
     : Task (Option CommandParsedSnapshot) := Id.run do
   let some headerParsed := initSnap.result?
     | .pure none
@@ -167,8 +169,7 @@ where
       -- but it's always good to eliminate one additional assumption.
       return .pure none
     match cmdParsed.nextCmdSnap? with
-    | some next =>
-      next.task.bind (sync := true) go
+    | some next => next.task.bind (sync := true) go
     | none => .pure none
 
   containsHoverPos (cmdParsed : CommandParsedSnapshot) : Bool := Id.run do
@@ -188,17 +189,20 @@ The info tree may be from a nested snapshot, such as a single tactic.
 See `SnapshotTree.findInfoTreeAtPos` for details on how the search is done.
 -/
 public def findCmdDataAtPos
-    (initSnap : InitialSnapshot) (text : FileMap)
-    (hoverPos : String.Pos.Raw)
-    (includeStop : Bool)
+    (initSnap : InitialSnapshot) (text : FileMap) (hoverPos : String.Pos.Raw) (includeStop : Bool)
     : Task (Option (Syntax × Elab.InfoTree)) :=
-  findCmdParsedSnap initSnap text hoverPos |>.bind (sync := true) fun
-    | some cmdParsed => toSnapshotTree cmdParsed.elabSnap |>.findInfoTreeAtPos text hoverPos includeStop |>.bind (sync := true) fun
-      | some infoTree => .pure <| some (cmdParsed.stx, infoTree)
-      | none          => cmdParsed.elabSnap.infoTreeSnap.task.map (sync := true) fun s =>
-        assert! s.infoTree?.isSome
-        some (cmdParsed.stx, s.infoTree?.get!)
-    | none => .pure none
+  findCmdParsedSnap initSnap text hoverPos
+    |>.bind (sync := true) fun
+      | some cmdParsed =>
+        toSnapshotTree cmdParsed.elabSnap
+          |>.findInfoTreeAtPos text hoverPos includeStop
+          |>.bind (sync := true) fun
+            | some infoTree => .pure <| some (cmdParsed.stx, infoTree)
+            | none =>
+              cmdParsed.elabSnap.infoTreeSnap.task.map (sync := true) fun s =>
+                assert! s.infoTree?.isSome
+                some (cmdParsed.stx, s.infoTree?.get!)
+      | none => .pure none
 /--
 Finds the info tree of the first snapshot task containing `pos`, asynchronously.
 The info tree may be from a nested snapshot, such as a single tactic.
@@ -206,9 +210,7 @@ The info tree may be from a nested snapshot, such as a single tactic.
 See `SnapshotTree.findInfoTreeAtPos` for details on how the search is done.
 -/
 public partial def findInfoTreeAtPos
-    (initSnap : InitialSnapshot) (text : FileMap)
-    (hoverPos : String.Pos.Raw)
-    (includeStop : Bool)
+    (initSnap : InitialSnapshot) (text : FileMap) (hoverPos : String.Pos.Raw) (includeStop : Bool)
     : Task (Option Elab.InfoTree) :=
   findCmdDataAtPos initSnap text hoverPos includeStop |>.map (sync := true) (·.map (·.2))
 
@@ -244,50 +246,39 @@ public partial def moduleData (initSnap : Language.Lean.InitialSnapshot)
     : Task ModuleData := Id.run do
   let headerStx := initSnap.stx
   let acc : ModuleData := {
-    headerData := {
-      stx := headerStx
-      parserState? := none
-      cmdState? := none
-    }
+    headerData := { stx := headerStx, parserState? := none, cmdState? := none }
     cmdData := #[]
   }
   let some headerParsedState := initSnap.result?
     | return .pure { acc with hasParseErrors := true }
   let acc := {
     acc with
-    headerData := {
-      acc.headerData with
-      parserState? := some headerParsedState.parserState
-    }
+    headerData := { acc.headerData with parserState? := some headerParsedState.parserState }
   }
   headerParsedState.processedSnap.task.bind (sync := true) fun headerProcessedSnap => Id.run do
     let some headerProcessedState := headerProcessedSnap.result?
       | return .pure acc
     let acc := {
       acc with
-      headerData := {
-        acc.headerData with
-        cmdState? := some headerProcessedState.cmdState
-      }
+      headerData := { acc.headerData with cmdState? := some headerProcessedState.cmdState }
     }
     go headerProcessedState.firstCmdSnap acc
 where
   go
       (cmdParsedSnapTask : Language.SnapshotTask Language.Lean.CommandParsedSnapshot)
-      (acc : ModuleData) :
-      Task ModuleData :=
+      (acc : ModuleData)
+      : Task ModuleData :=
     cmdParsedSnapTask.task.bind (sync := true) fun cmdParsedSnap =>
       cmdParsedSnap.elabSnap.resultSnap.task.bind (sync := true) fun cmdResultSnap => Id.run do
-
         let acc := {
           acc with
-          cmdData := acc.cmdData.push {
-            stx := cmdParsedSnap.stx
-            parserState := cmdParsedSnap.parserState
-            cmdState := cmdResultSnap.cmdState
-          }
-          hasParseErrors :=
-            acc.hasParseErrors || cmdParsedSnap.diagnostics.msgLog.hasErrors
+          cmdData :=
+            acc.cmdData.push {
+              stx := cmdParsedSnap.stx
+              parserState := cmdParsedSnap.parserState
+              cmdState := cmdResultSnap.cmdState
+            }
+          hasParseErrors := acc.hasParseErrors || cmdParsedSnap.diagnostics.msgLog.hasErrors
         }
         let some nextCmdParsedSnapTask := cmdParsedSnap.nextCmdSnap?
           | return .pure acc

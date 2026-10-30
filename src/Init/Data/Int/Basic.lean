@@ -49,7 +49,7 @@ inductive Int : Type where
 
   This constructor covers the non-negative integers (from `0` to `∞`).
   -/
-  | ofNat   : Nat → Int
+  | ofNat : Nat → Int
   /--
   The negation of the successor of a natural number is an integer.
 
@@ -60,7 +60,8 @@ inductive Int : Type where
 attribute [extern "lean_nat_to_int"] Int.ofNat
 attribute [extern "lean_int_neg_succ_of_nat"] Int.negSucc
 
-instance : NatCast Int where natCast n := Int.ofNat n
+instance : NatCast Int where
+  natCast n := Int.ofNat n
 
 instance instOfNat : OfNat Int n where
   ofNat := Int.ofNat n
@@ -88,7 +89,7 @@ theorem ofNat_eq_coe : Int.ofNat n = Nat.cast n := rfl
 
 @[simp] theorem ofNat_zero : ((0 : Nat) : Int) = 0 := rfl
 
-@[simp] theorem ofNat_one  : ((1 : Nat) : Int) = 1 := rfl
+@[simp] theorem ofNat_one : ((1 : Nat) : Int) = 1 := rfl
 
 theorem ofNat_two : ((2 : Nat) : Int) = 2 := rfl
 
@@ -101,7 +102,7 @@ Examples:
 -/
 @[implicit_reducible]
 def negOfNat : Nat → Int
-  | 0      => 0
+  | 0 => 0
   | succ m => negSucc m
 
 set_option bootstrap.genMatcherCode false in
@@ -119,16 +120,16 @@ Examples:
 @[extern "lean_int_neg", implicit_reducible]
 protected def neg (n : @& Int) : Int :=
   match n with
-  | ofNat n   => negOfNat n
+  | ofNat n => negOfNat n
   | negSucc n => succ n
 
 /-
-  The `Neg Int` default instance must have priority higher than `low`
-  since the default instance `OfNat Nat n` has `low` priority.
+The `Neg Int` default instance must have priority higher than `low`
+since the default instance `OfNat Nat n` has `low` priority.
 
-  ```
-  #check -42
-  ```
+```
+#check -42
+```
 -/
 @[default_instance mid]
 instance instNegInt : Neg Int where
@@ -145,7 +146,7 @@ Examples:
 @[implicit_reducible]
 def subNatNat (m n : Nat) : Int :=
   match (n - m : Nat) with
-  | 0        => ofNat (m - n)  -- m ≥ n
+  | 0 => ofNat (m - n) -- m ≥ n
   | (succ k) => negSucc k
 
 set_option bootstrap.genMatcherCode false in
@@ -163,9 +164,9 @@ Examples:
 protected def add (m n : @& Int) : Int :=
   match m, n with
   | ofNat m, ofNat n => ofNat (m + n)
-  | ofNat m, -[n +1] => subNatNat m (succ n)
-  | -[m +1], ofNat n => subNatNat n (succ m)
-  | -[m +1], -[n +1] => negSucc (succ (m + n))
+  | ofNat m, -[n+1] => subNatNat m (succ n)
+  | -[m+1], ofNat n => subNatNat n (succ m)
+  | -[m+1], -[n+1] => negSucc (succ (m + n))
 
 instance : Add Int where
   add := Int.add
@@ -186,13 +187,12 @@ Examples:
 protected def mul (m n : @& Int) : Int :=
   match m, n with
   | ofNat m, ofNat n => ofNat (m * n)
-  | ofNat m, -[n +1] => negOfNat (m * succ n)
-  | -[m +1], ofNat n => negOfNat (succ m * n)
-  | -[m +1], -[n +1] => ofNat (succ m * succ n)
+  | ofNat m, -[n+1] => negOfNat (m * succ n)
+  | -[m+1], ofNat n => negOfNat (succ m * n)
+  | -[m+1], -[n+1] => ofNat (succ m * succ n)
 
 instance : Mul Int where
   mul := Int.mul
-
 
 /--
 Subtraction of integers, usually accessed via the `-` operator.
@@ -206,18 +206,14 @@ Examples:
 * `(0 : Int) - (7 : Int) = -7`
 -/
 @[extern "lean_int_sub", implicit_reducible]
-protected def sub (m n : @& Int) : Int := m + (- n)
+protected def sub (m n : @& Int) : Int := m + (-n)
 
 instance : Sub Int where
   sub := Int.sub
 
-/--
-An integer is non-negative if it is equal to a natural number.
--/
+/-- An integer is non-negative if it is equal to a natural number. -/
 inductive NonNeg : Int → Prop where
-  /--
-  For all natural numbers `n`, `Int.ofNat n` is non-negative.
-  -/
+  /-- For all natural numbers `n`, `Int.ofNat n` is non-negative. -/
   | mk (n : Nat) : NonNeg (ofNat n)
 
 /--
@@ -255,63 +251,75 @@ Examples:
 @[extern "lean_int_dec_eq", implicit_reducible]
 protected def decEq (a b : @& Int) : Decidable (a = b) :=
   match a, b with
-  | ofNat a, ofNat b => match decEq a b with
-    | isTrue h  => isTrue  <| h ▸ rfl
+  | ofNat a, ofNat b =>
+    match decEq a b with
+    | isTrue h => isTrue <| h ▸ rfl
     | isFalse h => isFalse <| fun h' => Int.noConfusion h' (fun h' => absurd h' h)
-  | ofNat _, -[_ +1] => isFalse <| fun h => Int.noConfusion h
-  | -[_ +1], ofNat _ => isFalse <| fun h => Int.noConfusion h
-  | -[a +1], -[b +1] => match decEq a b with
-    | isTrue h  => isTrue  <| h ▸ rfl
+  | ofNat _, -[_+1] =>
+    isFalse <| fun h => Int.noConfusion h
+  | -[_+1], ofNat _ =>
+    isFalse <| fun h => Int.noConfusion h
+  | -[a+1], -[b+1] =>
+    match decEq a b with
+    | isTrue h => isTrue <| h ▸ rfl
     | isFalse h => isFalse <| fun h' => Int.noConfusion h' (fun h' => absurd h' h)
 
 @[inherit_doc Int.decEq]
 instance : DecidableEq Int := Int.decEq
 
 set_option bootstrap.genMatcherCode false in
-/-- Decides whether an integer is negative.
+/--
+Decides whether an integer is negative.
 
-  ```
-  #eval (7 : Int).decNonneg.decide -- true
-  #eval (0 : Int).decNonneg.decide -- true
-  #eval ¬ (-7 : Int).decNonneg.decide -- true
-  ```
+```
+#eval (7 : Int).decNonneg.decide -- true
+#eval (0 : Int).decNonneg.decide -- true
+#eval ¬ (-7 : Int).decNonneg.decide -- true
+```
 
-  Implemented by efficient native code. -/
+Implemented by efficient native code.
+-/
 @[extern "lean_int_dec_nonneg", implicit_reducible]
 def decNonneg (m : @& Int) : Decidable (NonNeg m) :=
   match m with
   | ofNat m => isTrue <| NonNeg.mk m
-  | -[i +1] => isFalse <| fun h =>
-    have : ∀ j, (j = -[i +1]) → NonNeg j → False := fun _ hj hnn =>
-      Int.NonNeg.casesOn (motive := fun j _ => j = -[i +1] → False) hnn
-        (fun _ h => Int.noConfusion h) hj
-    this -[i +1] rfl h
+  | -[i+1] =>
+    isFalse <| fun h =>
+      have : ∀ j, (j = -[i+1]) → NonNeg j → False := fun _ hj hnn =>
+        Int.NonNeg.casesOn
+          (motive := fun j _ => j = -[i+1] → False)
+          hnn
+          (fun _ h => Int.noConfusion h)
+          hj
+      this -[i+1] rfl h
 
-/-- Decides whether `a ≤ b`.
+/--
+Decides whether `a ≤ b`.
 
-  ```
-  #eval ¬ ( (7 : Int) ≤ (0 : Int) ) -- true
-  #eval (0 : Int) ≤ (0 : Int) -- true
-  #eval (7 : Int) ≤ (10 : Int) -- true
-  ```
+```
+#eval ¬ ( (7 : Int) ≤ (0 : Int) ) -- true
+#eval (0 : Int) ≤ (0 : Int) -- true
+#eval (7 : Int) ≤ (10 : Int) -- true
+```
 
-  Implemented by efficient native code. -/
+Implemented by efficient native code.
+-/
 @[extern "lean_int_dec_le"]
-instance decLe (a b : @& Int) : Decidable (a ≤ b) :=
-  decNonneg _
+instance decLe (a b : @& Int) : Decidable (a ≤ b) := decNonneg _
 
-/-- Decides whether `a < b`.
+/--
+Decides whether `a < b`.
 
-  ```
-  #eval `¬ ( (7 : Int) < 0 )` -- true
-  #eval `¬ ( (0 : Int) < 0 )` -- true
-  #eval `(7 : Int) < 10` -- true
-  ```
+```
+#eval `¬ ( (7 : Int) < 0 )` -- true
+#eval `¬ ( (0 : Int) < 0 )` -- true
+#eval `(7 : Int) < 10` -- true
+```
 
-  Implemented by efficient native code. -/
+Implemented by efficient native code.
+-/
 @[extern "lean_int_dec_lt"]
-instance decLt (a b : @& Int) : Decidable (a < b) :=
-  decNonneg _
+instance decLt (a b : @& Int) : Decidable (a < b) := decNonneg _
 
 set_option bootstrap.genMatcherCode false in
 /--
@@ -329,7 +337,7 @@ Examples:
 def natAbs (m : @& Int) : Nat :=
   match m with
   | ofNat m => m
-  | -[m +1] => m.succ
+  | -[m+1] => m.succ
 
 attribute [gen_constructor_elims] Int
 
@@ -351,7 +359,7 @@ Examples:
 def sign : Int → Int
   | Int.ofNat (succ _) => 1
   | Int.ofNat 0 => 0
-  | -[_+1]      => -1
+  | -[_+1] => -1
 
 /-! ## Conversion -/
 
@@ -365,7 +373,7 @@ Examples:
 -/
 @[implicit_reducible]
 def toNat : Int → Nat
-  | ofNat n   => n
+  | ofNat n => n
   | negSucc _ => 0
 
 /--
@@ -416,7 +424,8 @@ instance : Max Int := maxOfLe
 protected noncomputable def beq' (a b : Int) : Bool :=
   Int.rec
     (fun a => Int.rec (fun b => Nat.beq a b) (fun _ => false) b)
-    (fun a => Int.rec (fun _ => false) (fun b => Nat.beq a b) b) a
+    (fun a => Int.rec (fun _ => false) (fun b => Nat.beq a b) b)
+    a
 
 /-- `x ≤ y` for kernel reduction. -/
 protected noncomputable def ble' (a b : Int) : Bool :=
@@ -448,16 +457,18 @@ class IntCast (R : Type u) where
   /-- The canonical map `Int → R`. -/
   protected intCast : Int → R
 
-instance : IntCast Int where intCast n := n
+instance : IntCast Int where
+  intCast n := n
 
 @[coe, reducible, match_pattern, inherit_doc IntCast]
-protected def Int.cast {R : Type u} [IntCast R] : Int → R :=
-  IntCast.intCast
+protected def Int.cast {R : Type u} [IntCast R] : Int → R := IntCast.intCast
 
 @[simp] theorem Int.cast_eq (x : Int) : Int.cast x = x := rfl
 
 -- see the notes about coercions into arbitrary types in the module doc-string
-instance [IntCast R] : CoeTail Int R where coe := Int.cast
+instance [IntCast R] : CoeTail Int R where
+  coe := Int.cast
 
 -- see the notes about coercions into arbitrary types in the module doc-string
-instance [IntCast R] : CoeHTCT Int R where coe := Int.cast
+instance [IntCast R] : CoeHTCT Int R where
+  coe := Int.cast

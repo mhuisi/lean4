@@ -38,8 +38,8 @@ inductive Zipper (α : Type u) (β : Type v) where
   /-- A frame of entries from a trie node. -/
   | consEntries : Subarray (Entry α β (Node α β)) → Zipper α β → Zipper α β
   /-- A frame of key-value pairs from a collision node. -/
-  | consCollision : (keys : Subarray α) → (vals : Subarray β) → keys.size = vals.size →
-      Zipper α β → Zipper α β
+  | consCollision
+    : (keys : Subarray α) → (vals : Subarray β) → keys.size = vals.size → Zipper α β → Zipper α β
 
 def Zipper.prependNode (node : Node α β) (z : Zipper α β) : Zipper α β :=
   match node with
@@ -47,7 +47,8 @@ def Zipper.prependNode (node : Node α β) (z : Zipper α β) : Zipper α β :=
   | .collision keys vals hsz => .consCollision keys[*...*] vals[*...*] (by simpa) z
 
 @[inline]
-def Zipper.step (it : IterM (α := Zipper α β) Id (α × β)) : IterStep (IterM (α := Zipper α β) Id (α × β)) (α × β) :=
+def Zipper.step (it : IterM (α := Zipper α β) Id (α × β))
+    : IterStep (IterM (α := Zipper α β) Id (α × β)) (α × β) :=
   match it.internalState with
   | .done => .done
   | .consEntries es z' =>
@@ -80,16 +81,18 @@ where
   measureEntries (es : Array (Entry α β (Node α β))) (i : Nat) : Nat :=
     if h : i < es.size then
       (match h_eq : es[i] with
-       | .null => 1
-       | .entry _ _ => 1
-       | .ref node =>
-         have : sizeOf node < sizeOf es := by
-           have h1 := Array.sizeOf_get es i h
-           rw [h_eq] at h1
-           simp +arith at h1
-           omega
-         2 + Node.measure node) + measureEntries es (i + 1)
-    else 0
+          | .null => 1
+          | .entry _ _ => 1
+          | .ref node =>
+            have : sizeOf node < sizeOf es := by
+              have h1 := Array.sizeOf_get es i h
+              rw [h_eq] at h1
+              simp +arith at h1
+              omega
+            2 + Node.measure node)
+        + measureEntries es (i + 1)
+    else
+      0
   termination_by (sizeOf es, es.size - i)
   decreasing_by all_goals simp_wf <;> omega
 
@@ -100,8 +103,7 @@ def Entry.measure (entry : Entry α β (Node α β)) : Nat :=
   | .ref node => 2 + node.measure
 
 /-- Counts entries remaining in a subarray, including nested children. -/
-def subarrayMeasure (es : Subarray (Entry α β (Node α β))) : Nat :=
-  es.toList.map (·.measure) |>.sum
+def subarrayMeasure (es : Subarray (Entry α β (Node α β))) : Nat := es.toList.map (·.measure) |>.sum
 
 /-- Counts the total remaining work in a zipper, including entries nested in child nodes. -/
 def Zipper.measure : Zipper α β → Nat
@@ -109,18 +111,16 @@ def Zipper.measure : Zipper α β → Nat
   | .consEntries es z' => subarrayMeasure es + z'.measure + 1
   | .consCollision _ vals _ z' => vals.size + z'.measure + 1
 
-private theorem subarrayMeasure_cons (es : Subarray (Entry α β (Node α β)))
-    (h : 0 < es.size) :
-    subarrayMeasure es = es[0].measure + subarrayMeasure (es.drop 1) := by
+private theorem subarrayMeasure_cons (es : Subarray (Entry α β (Node α β))) (h : 0 < es.size)
+    : subarrayMeasure es = es[0].measure + subarrayMeasure (es.drop 1) := by
   simp only [subarrayMeasure, Subarray.toList_drop]
   have hlen : 0 < es.toList.length := by simpa [Subarray.length_toList] using h
   conv => lhs; rw [show es.toList = List.drop 0 es.toList from List.drop_zero.symm]
   rw [List.drop_eq_getElem_cons (by omega)]
   simp [List.map_cons, List.sum_cons, Subarray.getElem_eq_getElem_toList]
 
-private theorem measureEntries_eq_list_sum (es : Array (Entry α β (Node α β))) (i : Nat) :
-    Node.measure.measureEntries es i =
-      ((es.toList.drop i).map Entry.measure).sum := by
+private theorem measureEntries_eq_list_sum (es : Array (Entry α β (Node α β))) (i : Nat)
+    : Node.measure.measureEntries es i = ((es.toList.drop i).map Entry.measure).sum := by
   unfold Node.measure.measureEntries
   split
   · rename_i h
@@ -133,10 +133,10 @@ private theorem measureEntries_eq_list_sum (es : Array (Entry α β (Node α β)
   · rename_i h
     rw [List.drop_eq_nil_of_le (by simpa using! h)]
     simp
-  termination_by es.size - i
+termination_by es.size - i
 
-private theorem subarrayMeasure_toSubarray_eq (nes : Array (Entry α β (Node α β))) :
-    subarrayMeasure nes.toSubarray = Node.measure (.entries nes) := by
+private theorem subarrayMeasure_toSubarray_eq (nes : Array (Entry α β (Node α β)))
+    : subarrayMeasure nes.toSubarray = Node.measure (.entries nes) := by
   simp only [subarrayMeasure, Node.measure]
   have h1 : nes.toSubarray.toList = nes.toList := by
     rw [Subarray.toList_eq_drop_take]
@@ -147,8 +147,7 @@ private theorem subarrayMeasure_toSubarray_eq (nes : Array (Entry α β (Node α
   rw [h1]
   exact h2.symm
 
-private def instFinitenessRelation :
-    FinitenessRelation (Zipper α β) Id where
+private def instFinitenessRelation : FinitenessRelation (Zipper α β) Id where
   Rel t' t := t'.internalState.measure < t.internalState.measure
   wf := InvImage.wf _ Nat.lt_wfRel.wf
   subrelation {it it'} h := by
@@ -168,13 +167,18 @@ private def instFinitenessRelation :
         have h1 := subarrayMeasure_cons es hsz
         match heq_es0 : es[0] with
         | .null =>
-          simp only [heq_es0, IterStep.successor_skip, Option.some.injEq] at h; subst h
-          simp only [heq, Zipper.measure, heq_es0, Entry.measure] at h1 ⊢; omega
+          simp only [heq_es0, IterStep.successor_skip, Option.some.injEq] at h
+          subst h
+          simp only [heq, Zipper.measure, heq_es0, Entry.measure] at h1 ⊢
+          omega
         | .entry k v =>
-          simp only [heq_es0, IterStep.successor_yield, Option.some.injEq] at h; subst h
-          simp only [heq, Zipper.measure, heq_es0, Entry.measure] at h1 ⊢; omega
+          simp only [heq_es0, IterStep.successor_yield, Option.some.injEq] at h
+          subst h
+          simp only [heq, Zipper.measure, heq_es0, Entry.measure] at h1 ⊢
+          omega
         | .ref node =>
-          simp only [heq_es0, IterStep.successor_skip, Option.some.injEq] at h; subst h
+          simp only [heq_es0, IterStep.successor_skip, Option.some.injEq] at h
+          subst h
           simp only [heq_es0, Entry.measure] at h1
           match heq_node : node with
           | .entries nes =>
@@ -186,24 +190,28 @@ private def instFinitenessRelation :
             simp only [Node.measure] at h1
             omega
       · -- ¬(0 < es.size) → skip to z'
-        simp only [IterStep.successor_skip, Option.some.injEq] at h; subst h
-        simp only [heq, Zipper.measure]; omega
+        simp only [IterStep.successor_skip, Option.some.injEq] at h
+        subst h
+        simp only [heq, Zipper.measure]
+        omega
     · -- .consCollision keys vals hsz z'
       rename_i keys vals hsz_eq z' heq
       split at h
       · -- 0 < vals.size → yield
-        simp only [IterStep.successor_yield, Option.some.injEq] at h; subst h
-        simp only [heq, Zipper.measure, Subarray.size_drop]; omega
+        simp only [IterStep.successor_yield, Option.some.injEq] at h
+        subst h
+        simp only [heq, Zipper.measure, Subarray.size_drop]
+        omega
       · -- ¬(0 < vals.size) → skip
-        simp only [IterStep.successor_skip, Option.some.injEq] at h; subst h
-        simp only [heq, Zipper.measure]; omega
+        simp only [IterStep.successor_skip, Option.some.injEq] at h
+        subst h
+        simp only [heq, Zipper.measure]
+        omega
 
-instance instFinite : Finite (Zipper α β) Id :=
-  .of_finitenessRelation instFinitenessRelation
+instance instFinite : Finite (Zipper α β) Id := .of_finitenessRelation instFinitenessRelation
 
 @[always_inline, inline]
-instance instIteratorLoop {n : Type _ → Type _} [Monad n] :
-    IteratorLoop (Zipper α β) Id n :=
+instance instIteratorLoop {n : Type _ → Type _} [Monad n] : IteratorLoop (Zipper α β) Id n :=
   .defaultImplementation
 
 /--
@@ -216,8 +224,7 @@ The iteration order is unspecified.
 * `Productive` instance: always
 -/
 @[inline]
-def iter [BEq α] [Hashable α] (map : PersistentHashMap α β) :
-    Iter (α := Zipper α β) (α × β) :=
+def iter [BEq α] [Hashable α] (map : PersistentHashMap α β) : Iter (α := Zipper α β) (α × β) :=
   ⟨Zipper.prependNode map.root .done⟩
 
 end Lean.PersistentHashMap

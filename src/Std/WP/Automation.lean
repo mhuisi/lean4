@@ -27,8 +27,9 @@ open Assertion
 
 attribute [simp, grind norm] NondetFun.evalsTo_pure NondetFun.evalsTo_apply
 
-attribute [simp, grind norm] Variant.evalsTo_ofMeasure Variant.evalsBelow_ofMeasure_apply
-  Variant.evalsBelow_ofMeasure_nat Variant.evalsBelow_ofMeasure_lex
+attribute [simp, grind norm]
+  Variant.evalsTo_ofMeasure Variant.evalsBelow_ofMeasure_apply Variant.evalsBelow_ofMeasure_nat
+  Variant.evalsBelow_ofMeasure_lex
 
 end Std.WP
 

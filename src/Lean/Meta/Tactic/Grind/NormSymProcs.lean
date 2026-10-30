@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Simp.SimpM
 import Lean.Meta.Sym.Simp.Result
@@ -40,21 +41,19 @@ The definitional reductions (beta, zeta, projections, matchers) are the shared o
 `Lean.Meta.Sym.Simp.Reduce`.
 -/
 
-private def mkNotS (p : Expr) : SimpM Expr := do
-  mkAppS (← mkConstS ``Not) p
+private def mkNotS (p : Expr) : SimpM Expr := do mkAppS (← mkConstS ``Not) p
 
-private def mkAndS (p q : Expr) : SimpM Expr := do
-  mkAppS₂ (← mkConstS ``And) p q
+private def mkAndS (p q : Expr) : SimpM Expr := do mkAppS₂ (← mkConstS ``And) p q
 
-private def mkOrS (p q : Expr) : SimpM Expr := do
-  mkAppS₂ (← mkConstS ``Or) p q
+private def mkOrS (p q : Expr) : SimpM Expr := do mkAppS₂ (← mkConstS ``Or) p q
 
 private def mkExistsS (u : Level) (α p : Expr) : SimpM Expr := do
   mkAppS₂ (← mkConstS ``Exists [u]) α p
 
 /-- Erases metadata. `grind` never internalizes `Expr.mdata`. -/
 def eraseMData : Simproc := fun e => do
-  let .mdata _ b := e | return .rfl
+  let .mdata _ b := e
+    | return .rfl
   return .step b (← Sym.mkEqRefl b)
 
 /--
@@ -64,10 +63,12 @@ the `Nat.succ` found elsewhere in the goal. `grind` eta-reduces the terms it int
 (`Sym.Canon`). The body of a binder notation (`∃ y, q y`, `{x // p x}`) keeps its binder.
 -/
 def etaReduce : Simproc := fun e => do
-  unless e.isApp do return .rfl
+  unless e.isApp do
+    return .rfl
   if let .const n _ := e.getAppFn then
     if n == ``Exists || n == ``Subtype then return .rfl
-  unless hasEtaReducibleArg e do return .rfl
+  unless hasEtaReducibleArg e do
+    return .rfl
   let e' ← go e
   return .step e' (← Sym.mkEqRefl e')
 where
@@ -84,7 +85,8 @@ the shape produced by `annotateMatchEqnType`; `replacePreMatchCond` turns it int
 `Grind.MatchCond` after normalization.
 -/
 def preMatchCond : Simproc := fun e => do
-  let_expr Grind.PreMatchCond _ := e | return .rfl
+  let_expr Grind.PreMatchCond _ := e
+    | return .rfl
   return mkRflResult (done := true)
 
 /--
@@ -95,9 +97,12 @@ are simplified, the alternatives are not visited. The annotation stays and is er
 def simpMatchDiscrsOnly : Simproc := fun e => do
   match h : e with
   | .app f m =>
-    let_expr Grind.simpMatchDiscrsOnly _ _ := e | return .rfl
-    let .const declName _ := m.getAppFn | return mkRflResult (done := true)
-    let some info ← getMatcherInfo? declName | return mkRflResult (done := true)
+    let_expr Grind.simpMatchDiscrsOnly _ _ := e
+      | return .rfl
+    let .const declName _ := m.getAppFn
+      | return mkRflResult (done := true)
+    let some info ← getMatcherInfo? declName
+      | return mkRflResult (done := true)
     let start := info.numParams + 1
     let r ← Sym.Simp.simpAppArgRange m start (start + info.numDiscrs)
     match (← Sym.Simp.mkCongrArg e f m r h) with
@@ -106,11 +111,8 @@ def simpMatchDiscrsOnly : Simproc := fun e => do
   | _ => return .rfl
 
 private def isBoolEqTarget (declName : Name) : Bool :=
-  declName == ``Bool.and ||
-  declName == ``Bool.or  ||
-  declName == ``Bool.not ||
-  declName == ``BEq.beq  ||
-  declName == ``decide
+  declName == ``Bool.and || declName == ``Bool.or || declName == ``Bool.not || declName == ``BEq.beq
+    || declName == ``decide
 
 /--
 Normalizes equalities:
@@ -118,12 +120,15 @@ Normalizes equalities:
 - `a = a` becomes `True`, `p = True` becomes `p`, `p = False` becomes `¬p`.
 -/
 def simpEq : Simproc := fun e => do
-  let_expr f@Eq α lhs rhs := e | return .rfl
+  let_expr f@Eq α lhs rhs := e
+    | return .rfl
   match_expr α with
   | Bool =>
-    let .const rhsName _ := rhs.getAppFn | return .rfl
+    let .const rhsName _ := rhs.getAppFn
+      | return .rfl
     if rhsName == ``true || rhsName == ``false then return .rfl
-    let .const lhsName _ := lhs.getAppFn | return .rfl
+    let .const lhsName _ := lhs.getAppFn
+      | return .rfl
     if lhsName == ``true || lhsName == ``false then
       return .step (← mkAppS₃ f α rhs lhs) (mkApp2 (mkConst ``Grind.flip_bool_eq) lhs rhs)
     if isBoolEqTarget lhsName || isBoolEqTarget rhsName then
@@ -143,10 +148,13 @@ def simpEq : Simproc := fun e => do
 
 /-- Converts `dite` with non-dependent branches into `ite`. -/
 def simpDIte : Simproc := fun e => do
-  let_expr f@dite α c inst a b := e | return .rfl
-  let .lam _ _ aBody _ := a | return .rfl
+  let_expr f@dite α c inst a b := e
+    | return .rfl
+  let .lam _ _ aBody _ := a
+    | return .rfl
   if aBody.hasLooseBVars then return .rfl
-  let .lam _ _ bBody _ := b | return .rfl
+  let .lam _ _ bBody _ := b
+    | return .rfl
   if bBody.hasLooseBVars then return .rfl
   let us := f.constLevels!
   let e' ← mkAppS₅ (← mkConstS ``ite us) α c inst aBody bBody
@@ -158,32 +166,41 @@ Negated arithmetic comparisons are handled by the rewrite rules `Nat.not_le_eq` 
 `Int.not_le_eq`.
 -/
 def pushNot : Simproc := fun e => do
-  let_expr Not p := e | return .rfl
+  let_expr Not p := e
+    | return .rfl
   match_expr p with
   | True => return .step (← getFalseExpr) (mkConst ``Grind.not_true)
   | False => return .step (← getTrueExpr) (mkConst ``Grind.not_false)
-  | And q r => return .step (← mkOrS (← mkNotS q) (← mkNotS r)) (mkApp2 (mkConst ``Grind.not_and) q r)
-  | Or q r => return .step (← mkAndS (← mkNotS q) (← mkNotS r)) (mkApp2 (mkConst ``Grind.not_or) q r)
-  | Not q => return .step q (mkApp (mkConst ``Grind.not_not) q)
+  | And q r =>
+    return .step (← mkOrS (← mkNotS q) (← mkNotS r)) (mkApp2 (mkConst ``Grind.not_and) q r)
+  | Or q r =>
+    return .step (← mkAndS (← mkNotS q) (← mkNotS r)) (mkApp2 (mkConst ``Grind.not_or) q r)
+  | Not q =>
+    return .step q (mkApp (mkConst ``Grind.not_not) q)
   | f@Eq α a b =>
     if α.isProp then
       return .step (← mkAppS₃ f α a (← mkNotS b)) (mkApp2 (mkConst ``Grind.not_eq_prop) a b)
-    else match_expr b with
-      | Bool.true => return .step (← mkAppS₃ f α a (← getBoolFalseExpr)) (mkApp (mkConst ``Bool.not_eq_true) a)
-      | Bool.false => return .step (← mkAppS₃ f α a (← getBoolTrueExpr)) (mkApp (mkConst ``Bool.not_eq_false) a)
+    else
+      match_expr b with
+      | Bool.true =>
+        return .step (← mkAppS₃ f α a (← getBoolFalseExpr)) (mkApp (mkConst ``Bool.not_eq_true) a)
+      | Bool.false =>
+        return .step (← mkAppS₃ f α a (← getBoolTrueExpr)) (mkApp (mkConst ``Bool.not_eq_false) a)
       | _ => return .rfl
   | f@ite α c inst a b =>
-    return .step (← mkAppS₅ f α c inst (← mkNotS a) (← mkNotS b)) (mkApp4 (mkConst ``Grind.not_ite) c inst a b)
+    return .step (← mkAppS₅ f α c inst (← mkNotS a) (← mkNotS b))
+      (mkApp4 (mkConst ``Grind.not_ite) c inst a b)
   | Exists α q =>
     let e' ← mkForallS `a .default α (← mkNotS (← Sym.betaS q #[← mkBVarS 0]))
     let u ← Sym.getLevel α
     return .step e' (mkApp2 (mkConst ``Grind.not_exists [u]) α q)
   | _ =>
-    let .forallE n α b info := p | return .rfl
+    let .forallE n α b info := p
+      | return .rfl
     if !b.hasLooseBVars && (← isProp α) then
       return .step (← mkAndS α (← mkNotS b)) (mkApp2 (mkConst ``Grind.not_implies) α b)
     else
-      let q    := mkLambda n info α b
+      let q := mkLambda n info α b
       let notQ ← mkLambdaS n info α (← mkNotS b)
       let u ← Sym.getLevel α
       return .step (← mkExistsS u α notQ) (mkApp2 (mkConst ``Grind.not_forall [u]) α q)
@@ -193,30 +210,37 @@ Normalizes disjunctions: units, right-associativity, and universally quantified 
 moved to the front.
 -/
 def simpOr : Simproc := fun e => do
-  let_expr Or p q := e | return .rfl
+  let_expr Or p q := e
+    | return .rfl
   match_expr p with
   | True => return .step p (mkApp (mkConst ``true_or) q)
   | False => return .step q (mkApp (mkConst ``false_or) q)
   | Or p₁ p₂ => return .step (← mkOrS p₁ (← mkOrS p₂ q)) (mkApp3 (mkConst ``Grind.or_assoc) p₁ p₂ q)
   | _ =>
-  match_expr q with
-  | Or q r =>
-    if p.isForall then return .rfl
-    if q.isForall then return .step (← mkOrS q (← mkOrS p r)) (mkApp3 (mkConst ``Grind.or_swap12) p q r)
-    if r.isForall then return .step (← mkOrS r (← mkOrS q p)) (mkApp3 (mkConst ``Grind.or_swap13) p q r)
-    return .rfl
-  | True => return .step q (mkApp (mkConst ``or_true) p)
-  | False => return .step p (mkApp (mkConst ``or_false) p)
-  | _ => return .rfl
+    match_expr q with
+    | Or q r =>
+      if p.isForall then return .rfl
+      if q.isForall then
+        return .step (← mkOrS q (← mkOrS p r)) (mkApp3 (mkConst ``Grind.or_swap12) p q r)
+      if r.isForall then
+        return .step (← mkOrS r (← mkOrS q p)) (mkApp3 (mkConst ``Grind.or_swap13) p q r)
+      return .rfl
+    | True => return .step q (mkApp (mkConst ``or_true) p)
+    | False => return .step p (mkApp (mkConst ``or_false) p)
+    | _ => return .rfl
 
 /-- Reduces `c₁ ... = c₂ ...` to `False` for distinct constructors `c₁` and `c₂`. -/
 def reduceCtorEq : Simproc := fun e => do
-  let_expr Eq _ lhs rhs := e | return .rfl
-  let some c₁ ← isConstructorApp? lhs | return .rfl
-  let some c₂ ← isConstructorApp? rhs | return .rfl
+  let_expr Eq _ lhs rhs := e
+    | return .rfl
+  let some c₁ ← isConstructorApp? lhs
+    | return .rfl
+  let some c₂ ← isConstructorApp? rhs
+    | return .rfl
   if c₁.name == c₂.name then return .rfl
-  let h ← withLocalDeclD `h e fun h => do
-    withDefault <| mkEqFalse' (← mkLambdaFVars #[h] (← mkNoConfusion (mkConst ``False) h))
+  let h ←
+    withLocalDeclD `h e fun h => do
+      withDefault <| mkEqFalse' (← mkLambdaFVars #[h] (← mkNoConfusion (mkConst ``False) h))
   return .step (← getFalseExpr) h (done := true)
 
 private def isForallOrNot? (e : Expr) : Option (Name × Expr × Expr) :=
@@ -233,8 +257,10 @@ private def isForallOrNot? (e : Expr) : Option (Name × Expr × Expr) :=
 `h : e = ∀ x b, p ∨ q`.
 -/
 private def forallOrCore? (e : Expr) : SimpM (Option (Expr × Expr)) := do
-  let .forallE varName d b info := e | return none
-  let_expr Or left right := b | return none
+  let .forallE varName d b info := e
+    | return none
+  let_expr Or left right := b
+    | return none
   let α := d
   if let some (bName, βRaw, qRaw) := isForallOrNot? left then
     let pRaw := right
@@ -265,12 +291,15 @@ its own. The applicability test is syntactic; the binders are instantiated only 
 applies, and the outer ones with a single congruence step.
 -/
 private partial def forallOr? (e : Expr) : SimpM (Option (Expr × Expr)) := do
-  let_expr Or left right := e.getForallBody | return none
-  unless (isForallOrNot? left).isSome || (isForallOrNot? right).isSome do return none
+  let_expr Or left right := e.getForallBody
+    | return none
+  unless (isForallOrNot? left).isSome || (isForallOrNot? right).isSome do
+    return none
   go #[] e
 where
   go (xs : Array Expr) (e : Expr) : SimpM (Option (Expr × Expr)) := do
-    let .forallE n d b bi := e | return none
+    let .forallE n d b bi := e
+      | return none
     if b.isForall then
       let d ← Sym.instantiateRevS d xs
       Sym.withLocalDeclS n bi d fun x => go (xs.push x) b
@@ -278,7 +307,8 @@ where
       forallOrCore? e
     else
       let e ← Sym.instantiateRevS e xs
-      let some (e', h) ← forallOrCore? e | return none
+      let some (e', h) ← forallOrCore? e
+        | return none
       let hcongr ← Sym.Simp.mkForallCongrFor xs
       let h := mkApp3 hcongr (← mkLambdaFVars xs e) (← mkLambdaFVars xs e') (← mkLambdaFVars xs h)
       return some (← Sym.mkForallFVarsS xs e', h)
@@ -290,21 +320,27 @@ Normalizes universally quantified propositions and implications:
 `Grind.forall_or_forall`, `Grind.forall_forall_or`, `Grind.forall_and` (see `forallImpAnd?`).
 -/
 def simpForall : Simproc := fun e => do
-  let .forallE varName d b info := e | return .rfl
+  let .forallE varName d b info := e
+    | return .rfl
   if !b.hasLooseBVars then
     match_expr d with
-    | True => if (← isProp b) then return .step b (mkApp (mkConst ``Grind.true_imp_eq) b) (done := true)
-    | False => if (← isProp b) then return .step (← getTrueExpr) (mkApp (mkConst ``Grind.false_imp_eq) b) (done := true)
-    | _ =>
-    match_expr b with
     | True =>
-      -- `d` may be a type, e.g. after the body of `∀ t : α, p t` has been simplified to `True`.
-      return .step (← getTrueExpr) (mkApp (mkConst ``implies_true [← getLevel d]) d) (done := true)
-    | False => if (← isProp d) then return .step (← mkNotS d) (mkApp (mkConst ``Grind.imp_false_eq) d)
+      if (← isProp b) then return .step b (mkApp (mkConst ``Grind.true_imp_eq) b) (done := true)
+    | False =>
+      if (← isProp b) then
+        return .step (← getTrueExpr) (mkApp (mkConst ``Grind.false_imp_eq) b) (done := true)
     | _ =>
-      -- Maximally shared terms: structural equality is pointer equality.
-      if isSameExpr d b && (← isProp d) then
-        return .step (← getTrueExpr) (mkApp (mkConst ``Grind.imp_self_eq) d) (done := true)
+      match_expr b with
+      | True =>
+        -- `d` may be a type, e.g. after the body of `∀ t : α, p t` has been simplified to `True`.
+        return .step (← getTrueExpr) (mkApp (mkConst ``implies_true [← getLevel d]) d)
+          (done := true)
+      | False =>
+        if (← isProp d) then return .step (← mkNotS d) (mkApp (mkConst ``Grind.imp_false_eq) d)
+      | _ =>
+        -- Maximally shared terms: structural equality is pointer equality.
+        if isSameExpr d b && (← isProp d) then
+          return .step (← getTrueExpr) (mkApp (mkConst ``Grind.imp_self_eq) d) (done := true)
   else
     match_expr d with
     | True =>
@@ -328,11 +364,14 @@ Normalizes existentially quantified propositions:
 `Grind.exists_const`.
 -/
 def simpExists : Simproc := fun e => do
-  let_expr ex@Exists α fn := e | return .rfl
-  let .lam x _ b _ := fn | return .rfl
+  let_expr ex@Exists α fn := e
+    | return .rfl
+  let .lam x _ b _ := fn
+    | return .rfl
   let u := ex.constLevels!
   if b.isApp && b.getAppNumArgs == 2 then
-    let .const bDeclName _ := b.appFn!.appFn! | return .rfl
+    let .const bDeclName _ := b.appFn!.appFn!
+      | return .rfl
     if bDeclName == ``Or then
       let pRaw := b.appFn!.appArg!
       let qRaw := b.appArg!

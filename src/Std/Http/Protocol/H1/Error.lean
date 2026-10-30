@@ -26,85 +26,51 @@ namespace Std.Http.Protocol.H1
 
 set_option linter.all true
 
-/--
-Specific HTTP processing errors with detailed information.
--/
+/-- Specific HTTP processing errors with detailed information. -/
 inductive Error
-  /--
-  Malformed start line (request-line or status-line).
-  -/
+  /-- Malformed start line (request-line or status-line). -/
   | invalidStatusLine
-
-  /--
-  Invalid or malformed header.
-  -/
+  /-- Invalid or malformed header. -/
   | invalidHeader
-
-  /--
-  Request timeout occurred.
-  -/
+  /-- Request timeout occurred. -/
   | timeout
-
-  /--
-  Request entity too large.
-  -/
+  /-- Request entity too large. -/
   | entityTooLarge
-
-  /--
-  Request URI is too long.
-  -/
+  /-- Request URI is too long. -/
   | uriTooLong
-
-  /--
-  Unsupported HTTP version.
-  -/
+  /-- Unsupported HTTP version. -/
   | unsupportedVersion
-
-  /--
-  Invalid chunk encoding.
-  -/
+  /-- Invalid chunk encoding. -/
   | invalidChunk
-
-  /--
-  Connection closed.
-  -/
+  /-- Connection closed. -/
   | connectionClosed
-
-  /--
-  Bad request or response message.
-  -/
+  /-- Bad request or response message. -/
   | badMessage
-
   /--
   The number of header fields in the message exceeds the configured limit.
   Maps to HTTP 431 Request Header Fields Too Large.
   -/
   | tooManyHeaders
-
   /--
   The aggregate byte size of all header fields exceeds the configured limit.
   Maps to HTTP 431 Request Header Fields Too Large.
   -/
   | headersTooLarge
-
-  /--
-  Generic error with message.
-  -/
+  /-- Generic error with message. -/
   | other (message : String)
 deriving Repr, BEq
 
 instance : ToString Error where
   toString
-  | .invalidStatusLine => "Invalid status line"
-  | .invalidHeader => "Invalid header"
-  | .timeout => "Timeout"
-  | .entityTooLarge => "Entity too large"
-  | .uriTooLong => "URI too long"
-  | .unsupportedVersion => "Unsupported version"
-  | .invalidChunk => "Invalid chunk"
-  | .connectionClosed => "Connection closed"
-  | .badMessage => "Bad message"
-  | .tooManyHeaders => "Too many headers"
-  | .headersTooLarge => "Headers too large"
-  | .other msg => s!"Other error: {msg}"
-
+    | .invalidStatusLine => "Invalid status line"
+    | .invalidHeader => "Invalid header"
+    | .timeout => "Timeout"
+    | .entityTooLarge => "Entity too large"
+    | .uriTooLong => "URI too long"
+    | .unsupportedVersion => "Unsupported version"
+    | .invalidChunk => "Invalid chunk"
+    | .connectionClosed => "Connection closed"
+    | .badMessage => "Bad message"
+    | .tooManyHeaders => "Too many headers"
+    | .headersTooLarge => "Headers too large"
+    | .other msg => s!"Other error: {msg}"

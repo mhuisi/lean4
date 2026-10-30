@@ -23,12 +23,11 @@ Remark: usually when one install a reserved name predicate, an associated action
 
 private builtin_initialize reservedNameActionsRef : IO.Ref (Array ReservedNameAction) ← IO.mkRef #[]
 
-/--
-Register a new function that is invoked when trying to resolve a reserved name.
--/
+/-- Register a new function that is invoked when trying to resolve a reserved name. -/
 def registerReservedNameAction (act : ReservedNameAction) : IO Unit := do
   unless (← initializing) do
-    throw (IO.userError "failed to register reserved name action, this kind of extension can only be registered during initialization")
+    throw (IO.userError "failed to register reserved name action, this kind of extension can only \
+      be registered during initialization")
   reservedNameActionsRef.modify (·.push act)
 
 /--
@@ -40,9 +39,7 @@ def executeReservedNameAction (name : Name) : CoreM Unit := do
     withTraceNode `ReservedNameAction (fun _ => pure m!"executeReservedNameAction for {name}") do
       (← reservedNameActionsRef.get).anyM (· name)
 
-/--
-Similar to `resolveGlobalName`, but also executes reserved name actions.
--/
+/-- Similar to `resolveGlobalName`, but also executes reserved name actions. -/
 def realizeGlobalName (id : Name) : CoreM (List (Name × List String)) := do
   let cs ← resolveGlobalName id
   cs.filterM fun (c, _) => do
@@ -59,16 +56,12 @@ def realizeGlobalName (id : Name) : CoreM (List (Name × List String)) := do
         logError m!"Failed to realize constant {id}:{indentD ex.toMessageData}"
         return false
 
-/--
-Similar to `resolveGlobalConstCore`, but also executes reserved name actions.
--/
+/-- Similar to `resolveGlobalConstCore`, but also executes reserved name actions. -/
 def realizeGlobalConstCore (n : Name) : CoreM (List Name) := do
   let cs ← realizeGlobalName n
   filterFieldList n cs
 
-/--
-Similar to `realizeGlobalConstNoOverloadCore`, but also executes reserved name actions.
--/
+/-- Similar to `realizeGlobalConstNoOverloadCore`, but also executes reserved name actions. -/
 def realizeGlobalConstNoOverloadCore (n : Name) : CoreM Name := do
   ensureNoOverload n (← realizeGlobalConstCore n)
 
@@ -90,8 +83,6 @@ name's info on hover.
 def realizeGlobalConstNoOverload (id : Syntax) : CoreM Name := do
   ensureNonAmbiguous id (← realizeGlobalConst id)
 
-
-builtin_initialize
-  registerTraceClass `ReservedNameAction
+builtin_initialize registerTraceClass `ReservedNameAction
 
 end Lean

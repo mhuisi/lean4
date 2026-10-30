@@ -79,8 +79,7 @@ public def BuildConfig.showProgress (cfg : BuildConfig) : Bool :=
 public def JobQueue := IO.Ref (Array OpaqueJob)
 
 /-- Returns a new empty job queue. -/
-@[inline] public def mkJobQueue : BaseIO JobQueue :=
-  IO.mkRef #[]
+@[inline] public def mkJobQueue : BaseIO JobQueue := IO.mkRef #[]
 
 /-- A Lake context with a build configuration and additional build data. -/
 public structure BuildContext extends BuildConfig, Context where
@@ -104,46 +103,41 @@ public structure BuildContext extends BuildConfig, Context where
 public abbrev BuildT := ReaderT BuildContext
 
 /-- A monad equipped with a Lake build context. -/
-public abbrev MonadBuild (m : Type → Type u) :=
-  MonadReaderOf BuildContext m
+public abbrev MonadBuild (m : Type → Type u) := MonadReaderOf BuildContext m
 
 public instance [Pure m] : MonadLift LakeM (BuildT m) where
   monadLift x := fun ctx => pure <| x.run ctx.toContext
 
-@[inline] public def getBuildContext [MonadBuild m] : m BuildContext :=
-  readThe BuildContext
+@[inline] public def getBuildContext [MonadBuild m] : m BuildContext := readThe BuildContext
 
-@[inline] public def getLeanTrace [Functor m] [MonadBuild m] : m BuildTrace :=
+@[inline]
+public def getLeanTrace [Functor m] [MonadBuild m] : m BuildTrace :=
   (·.leanTrace) <$> getBuildContext
 
-@[inline] public def getBuildConfig [Functor m] [MonadBuild m] : m BuildConfig :=
+@[inline]
+public def getBuildConfig [Functor m] [MonadBuild m] : m BuildConfig :=
   (·.toBuildConfig) <$> getBuildContext
 
 @[inline, inherit_doc BuildConfig.oldMode]
-public def getIsOldMode [Functor m] [MonadBuild m] : m Bool :=
-  (·.oldMode) <$> getBuildConfig
+public def getIsOldMode [Functor m] [MonadBuild m] : m Bool := (·.oldMode) <$> getBuildConfig
 
 @[inline, inherit_doc BuildConfig.trustHash]
-public def getTrustHash [Functor m] [MonadBuild m] : m Bool :=
-  (·.trustHash) <$> getBuildConfig
+public def getTrustHash [Functor m] [MonadBuild m] : m Bool := (·.trustHash) <$> getBuildConfig
 
 @[inline, inherit_doc BuildConfig.noBuild]
-public def getNoBuild [Functor m] [MonadBuild m] : m Bool :=
-  (·.noBuild) <$> getBuildConfig
+public def getNoBuild [Functor m] [MonadBuild m] : m Bool := (·.noBuild) <$> getBuildConfig
 
 @[inline, inherit_doc BuildConfig.verbosity]
-public def getVerbosity [Functor m] [MonadBuild m] : m Verbosity :=
-  (·.verbosity) <$> getBuildConfig
+public def getVerbosity [Functor m] [MonadBuild m] : m Verbosity := (·.verbosity) <$> getBuildConfig
 
-@[inline] public def getIsVerbose [Functor m] [MonadBuild m] : m Bool :=
-  (· == .verbose) <$> getVerbosity
+@[inline]
+public def getIsVerbose [Functor m] [MonadBuild m] : m Bool := (· == .verbose) <$> getVerbosity
 
-@[inline] public def getIsQuiet [Functor m] [MonadBuild m] : m Bool :=
-  (· == .quiet) <$> getVerbosity
+@[inline]
+public def getIsQuiet [Functor m] [MonadBuild m] : m Bool := (· == .quiet) <$> getVerbosity
 
 @[inline, inherit_doc BuildConfig.leanOptOverrides]
-public def getLeanOptOverrides [Functor m] [MonadBuild m]
-    : m (Lean.NameMap Lean.LeanOptions) :=
+public def getLeanOptOverrides [Functor m] [MonadBuild m] : m (Lean.NameMap Lean.LeanOptions) :=
   (·.leanOptOverrides) <$> getBuildConfig
 
 @[inline, inherit_doc BuildConfig.macosxDeploymentTarget?]

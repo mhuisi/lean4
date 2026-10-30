@@ -30,14 +30,16 @@ inductive Acc {α : Sort u} (r : α → α → Prop) : α → Prop where
   -/
   | intro (x : α) (h : (y : α) → r y x → Acc r y) : Acc r x
 
-noncomputable abbrev Acc.ndrec.{u1, u2} {α : Sort u2} {r : α → α → Prop} {C : α → Sort u1}
+noncomputable abbrev Acc.ndrec.{u1, u2}
+    {α : Sort u2} {r : α → α → Prop} {C : α → Sort u1}
     (m : (x : α) → ((y : α) → r y x → Acc r y) → ((y : α) → (a : r y x) → C y) → C x)
-    {a : α} (n : Acc r a) : C a :=
+    {a : α} (n : Acc r a)
+    : C a :=
   n.rec m
 
-noncomputable abbrev Acc.ndrecOn.{u1, u2} {α : Sort u2} {r : α → α → Prop} {C : α → Sort u1}
-    {a : α} (n : Acc r a)
-    (m : (x : α) → ((y : α) → r y x → Acc r y) → ((y : α) → (a : r y x) → C y) → C x)
+noncomputable abbrev Acc.ndrecOn.{u1, u2}
+    {α : Sort u2} {r : α → α → Prop} {C : α → Sort u1} {a : α}
+    (n : Acc r a) (m : (x : α) → ((y : α) → r y x → Acc r y) → ((y : α) → (a : r y x) → C y) → C x)
     : C a :=
   n.rec m
 
@@ -58,9 +60,7 @@ a well founded relation, then the function terminates.
 Well-founded relations are sometimes called _Artinian_ or said to satisfy the “descending chain condition”.
 -/
 inductive WellFounded {α : Sort u} (r : α → α → Prop) : Prop where
-  /--
-  If all elements are accessible via `r`, then `r` is well-founded.
-  -/
+  /-- If all elements are accessible via `r`, then `r` is well-founded. -/
   | intro (h : ∀ a, Acc r a) : WellFounded r
 
 /--
@@ -74,7 +74,7 @@ class WellFoundedRelation (α : Sort u) where
   /-- A well-founded relation on `α`. -/
   rel : α → α → Prop
   /-- A proof that `rel` is, in fact, well-founded. -/
-  wf  : WellFounded rel
+  wf : WellFounded rel
 
 namespace WellFounded
 
@@ -86,27 +86,26 @@ Graph of a well-founded fixpoint: `FixGraph F x c` holds when `c : C x` is the v
 obtained by unfolding `F` along the accessibility tree. This recursive `Prop` inductive
 is used to define `WellFounded.fix` without large elimination of `Acc`.
 -/
-inductive FixGraph {α : Sort u} {r : α → α → Prop} {C : α → Sort v}
-    (F : (x : α) → ((y : α) → r y x → C y) → C x) : (x : α) → C x → Prop where
-  | mk (x : α) (g : (y : α) → r y x → C y)
-       (ih : ∀ (y : α) (h : r y x), FixGraph F y (g y h))
-       : FixGraph F x (F x g)
+inductive FixGraph
+    {α : Sort u} {r : α → α → Prop} {C : α → Sort v} (F : (x : α) → ((y : α) → r y x → C y) → C x)
+    : (x : α) → C x → Prop where
+  | mk (x : α) (g : (y : α) → r y x → C y) (ih : ∀ (y : α) (h : r y x), FixGraph F y (g y h))
+    : FixGraph F x (F x g)
 
 theorem FixGraph.nonempty
-    {α : Sort u} {r : α → α → Prop} {C : α → Sort v}
-    (F : (x : α) → ((y : α) → r y x → C y) → C x) {x : α} (acx : Acc r x) :
-    Nonempty {c : C x // FixGraph F x c} := by
+    {α : Sort u} {r : α → α → Prop} {C : α → Sort v} (F : (x : α) → ((y : α) → r y x → C y) → C x)
+    {x : α} (acx : Acc r x)
+    : Nonempty {c : C x // FixGraph F x c} := by
   induction acx with
   | intro x' _ ih =>
     refine ⟨?_⟩
-    refine ⟨F x' (fun y h => (Classical.choice (ih y h)).val),
-            FixGraph.mk x' _ (fun y h => ?_)⟩
+    refine ⟨F x' (fun y h => (Classical.choice (ih y h)).val), FixGraph.mk x' _ (fun y h => ?_)⟩
     exact (Classical.choice (ih y h)).property
 
 theorem FixGraph.unique
-    {α : Sort u} {r : α → α → Prop} {C : α → Sort v}
-    (F : (x : α) → ((y : α) → r y x → C y) → C x) {x : α} (acx : Acc r x) :
-    ∀ (c₁ c₂ : C x), FixGraph F x c₁ → FixGraph F x c₂ → c₁ = c₂ := by
+    {α : Sort u} {r : α → α → Prop} {C : α → Sort v} (F : (x : α) → ((y : α) → r y x → C y) → C x)
+    {x : α} (acx : Acc r x)
+    : ∀ (c₁ c₂ : C x), FixGraph F x c₁ → FixGraph F x c₂ → c₁ = c₂ := by
   induction acx with
   | intro x _ ih =>
     intro c₁ c₂ h₁ h₂
@@ -114,19 +113,19 @@ theorem FixGraph.unique
     | mk _ g₁ ih₁ =>
       cases h₂ with
       | mk _ g₂ ih₂ =>
-        have hg : g₁ = g₂ :=
-          funext fun y => funext fun h => ih y h _ _ (ih₁ y h) (ih₂ y h)
+        have hg : g₁ = g₂ := funext fun y => funext fun h => ih y h _ _ (ih₁ y h) (ih₂ y h)
         exact hg ▸ rfl
 
 noncomputable def fixF
     {α : Sort u} {r : α → α → Prop} {C : α → Sort v}
-    (F : (x : α) → ((y : α) → r y x → C y) → C x) (x : α) (a : Acc r x) : C x :=
+    (F : (x : α) → ((y : α) → r y x → C y) → C x) (x : α) (a : Acc r x)
+    : C x :=
   (Classical.choice (FixGraph.nonempty F a)).val
 
 theorem fixGraph_fixF
     {α : Sort u} {r : α → α → Prop} {C : α → Sort v}
-    (F : (x : α) → ((y : α) → r y x → C y) → C x) (x : α) (acx : Acc r x) :
-    FixGraph F x (fixF F x acx) :=
+    (F : (x : α) → ((y : α) → r y x → C y) → C x) (x : α) (acx : Acc r x)
+    : FixGraph F x (fixF F x acx) :=
   (Classical.choice (FixGraph.nonempty F acx)).property
 
 section
@@ -142,14 +141,15 @@ theorem induction {C : α → Prop} (a : α) (h : ∀ x, (∀ y, r y x → C y) 
 variable {C : α → Sort v}
 variable (F : ∀ x, (∀ y, r y x → C y) → C x)
 
-theorem fixF_eq (x : α) (acx : Acc r x) :
-    fixF F x acx = F x (fun (y : α) (p : r y x) => fixF F y (Acc.inv acx p)) := by
+theorem fixF_eq (x : α) (acx : Acc r x)
+    : fixF F x acx = F x (fun (y : α) (p : r y x) => fixF F y (Acc.inv acx p)) := by
   have h1 : FixGraph F x (fixF F x acx) := fixGraph_fixF F x acx
   have h2 : FixGraph F x (F x (fun y p => fixF F y (Acc.inv acx p))) :=
     FixGraph.mk x _ (fun y h => fixGraph_fixF F y (Acc.inv acx h))
   exact FixGraph.unique F acx _ _ h1 h2
 
-/-- Attaches to `x` the proof that `x` is accessible in the given well-founded relation.
+/--
+Attaches to `x` the proof that `x` is accessible in the given well-founded relation.
 This can be used in recursive function definitions to explicitly use a different relation
 than the one inferred by default:
 
@@ -163,8 +163,8 @@ def wrap {α : Sort u} {r : α → α → Prop} (h : WellFounded r) (x : α) : {
   ⟨_, h.apply x⟩
 
 @[simp]
-theorem val_wrap {α : Sort u} {r : α → α → Prop} (h : WellFounded r) (x : α) :
-    (h.wrap x).val = x := (rfl)
+theorem val_wrap {α : Sort u} {r : α → α → Prop} (h : WellFounded r) (x : α) : (h.wrap x).val = x :=
+  (rfl)
 
 end
 
@@ -182,8 +182,8 @@ noncomputable def fix (hwf : WellFounded r) (F : ∀ x, (∀ y, r y x → C y) �
   fixF F x (apply hwf x)
 
 -- Well-founded fixpoint satisfies fixpoint equation
-theorem fix_eq (hwf : WellFounded r) (F : ∀ x, (∀ y, r y x → C y) → C x) (x : α) :
-    fix hwf F x = F x (fun y _ => fix hwf F y) :=
+theorem fix_eq (hwf : WellFounded r) (F : ∀ x, (∀ y, r y x → C y) → C x) (x : α)
+    : fix hwf F x = F x (fun y _ => fix hwf F y) :=
   fixF_eq F x (apply hwf x)
 end WellFounded
 
@@ -213,31 +213,37 @@ motive:
   the head symbol, `Acc.recOn'` and friends have to be unfolded first, as in
   `rw [myDef, Acc.recOn', Acc.rec'_eq]`.
 -/
-@[irreducible, elab_as_elim] noncomputable def rec'.{v', u'} {α : Sort u'} {r : α → α → Prop}
-    {motive : (a : α) → Acc r a → Sort v'}
-    (intro : (x : α) → (h : (y : α) → r y x → Acc r y) →
-      ((y : α) → (hy : r y x) → motive y (h y hy)) → motive x (Acc.intro x h))
-    {a : α} (t : Acc r a) : motive a t :=
+@[irreducible, elab_as_elim]
+noncomputable def rec'.{v', u'}
+    {α : Sort u'} {r : α → α → Prop} {motive : (a : α) → Acc r a → Sort v'}
+    (intro
+      : (x : α) → (h : (y : α) → r y x → Acc r y) → ((y : α) → (hy : r y x) → motive y (h y hy))
+        → motive x (Acc.intro x h))
+    {a : α} (t : Acc r a)
+    : motive a t :=
   -- The motive is closed over the accessibility proof so that it fits `fixF`'s
   -- proof-independent `C`; this stays in `Sort v` because `Acc r x` is a proposition.
-  WellFounded.fixF (C := fun x => (h : Acc r x) → motive x h)
+  WellFounded.fixF
+    (C := fun x => (h : Acc r x) → motive x h)
     (fun x ih h => intro x (fun _ hy => h.inv hy) (fun y hy => ih y hy (h.inv hy)))
     a t t
 
 unseal rec' in
 /-- The propositional replacement for the iota rule of `Acc.rec`. -/
-theorem rec'_intro {motive : (a : α) → Acc r a → Sort v}
-    (intro : (x : α) → (h : (y : α) → r y x → Acc r y) →
-      ((y : α) → (hy : r y x) → motive y (h y hy)) → motive x (Acc.intro x h))
-    (x : α) (h : (y : α) → r y x → Acc r y) :
+theorem rec'_intro
+    {motive : (a : α) → Acc r a → Sort v}
+    (intro
+      : (x : α) → (h : (y : α) → r y x → Acc r y) → ((y : α) → (hy : r y x) → motive y (h y hy))
+        → motive x (Acc.intro x h))
+    (x : α) (h : (y : α) → r y x → Acc r y)
     -- `motive` is passed explicitly: `rec'` is `@[elab_as_elim]`, and letting the eliminator
     -- elaborator infer it here yields a motive that ignores its `Acc` argument, which no
     -- longer matches actual `Acc.rec'` applications.
-    rec' (motive := motive) intro (Acc.intro x h)
+    : rec' (motive := motive) intro (Acc.intro x h)
       = intro x h (fun y hy => rec' (motive := motive) intro (h y hy)) := by
   let C : α → Sort v := fun x => (h : Acc r x) → motive x h
-  let F : (x : α) → ((y : α) → r y x → C y) → C x :=
-    fun x ih h => intro x (fun _ hy => h.inv hy) (fun y hy => ih y hy (h.inv hy))
+  let F : (x : α) → ((y : α) → r y x → C y) → C x := fun x ih h =>
+    intro x (fun _ hy => h.inv hy) (fun y hy => ih y hy (h.inv hy))
   have h1 : WellFounded.FixGraph F x (WellFounded.fixF F x (Acc.intro x h)) :=
     WellFounded.fixGraph_fixF F x _
   have h2 : WellFounded.FixGraph F x (F x (fun y hy => WellFounded.fixF F y (h y hy))) :=
@@ -249,31 +255,41 @@ Unfolds `Acc.rec'` at an arbitrary accessibility proof, which is what proofs tha
 an unfolding equation by `rfl` need. Unlike `Acc.rec'_intro` this matches any `Acc.rec' intro t`,
 since `t` need not be in `Acc.intro _ _` form.
 -/
-theorem rec'_eq {motive : (a : α) → Acc r a → Sort v}
-    (intro : (x : α) → (h : (y : α) → r y x → Acc r y) →
-      ((y : α) → (hy : r y x) → motive y (h y hy)) → motive x (Acc.intro x h))
-    {a : α} (t : Acc r a) :
-    rec' (motive := motive) intro t
+theorem rec'_eq
+    {motive : (a : α) → Acc r a → Sort v}
+    (intro
+      : (x : α) → (h : (y : α) → r y x → Acc r y) → ((y : α) → (hy : r y x) → motive y (h y hy))
+        → motive x (Acc.intro x h))
+    {a : α} (t : Acc r a)
+    : rec' (motive := motive) intro t
       = intro a (fun _ hy => t.inv hy) (fun _ hy => rec' (motive := motive) intro (t.inv hy)) :=
   rec'_intro intro a fun _ hy => t.inv hy
 
 /-- `Acc.recOn` at motives that are not propositions. See `Acc.rec'`. -/
-@[elab_as_elim, reducible] noncomputable def recOn'.{v', u'} {α : Sort u'}
-    {r : α → α → Prop} {motive : (a : α) → Acc r a → Sort v'} {a : α} (t : Acc r a)
-    (intro : (x : α) → (h : (y : α) → r y x → Acc r y) →
-      ((y : α) → (hy : r y x) → motive y (h y hy)) → motive x (Acc.intro x h)) : motive a t :=
+@[elab_as_elim, reducible]
+noncomputable def recOn'.{v', u'}
+    {α : Sort u'} {r : α → α → Prop} {motive : (a : α) → Acc r a → Sort v'} {a : α} (t : Acc r a)
+    (intro
+      : (x : α) → (h : (y : α) → r y x → Acc r y) → ((y : α) → (hy : r y x) → motive y (h y hy))
+        → motive x (Acc.intro x h))
+    : motive a t :=
   rec' intro t
 
 /-- `Acc.ndrec` at motives that are not propositions. See `Acc.rec'`. -/
-@[reducible] noncomputable def ndrec'.{v', u'} {α : Sort u'} {r : α → α → Prop} {C : α → Sort v'}
+@[reducible]
+noncomputable def ndrec'.{v', u'}
+    {α : Sort u'} {r : α → α → Prop} {C : α → Sort v'}
     (m : (x : α) → ((y : α) → r y x → Acc r y) → ((y : α) → r y x → C y) → C x)
-    {a : α} (n : Acc r a) : C a :=
+    {a : α} (n : Acc r a)
+    : C a :=
   rec' m n
 
 /-- `Acc.ndrecOn` at motives that are not propositions. See `Acc.rec'`. -/
-@[reducible] noncomputable def ndrecOn'.{v', u'} {α : Sort u'} {r : α → α → Prop}
-    {C : α → Sort v'} {a : α} (n : Acc r a)
-    (m : (x : α) → ((y : α) → r y x → Acc r y) → ((y : α) → r y x → C y) → C x) : C a :=
+@[reducible]
+noncomputable def ndrecOn'.{v', u'}
+    {α : Sort u'} {r : α → α → Prop} {C : α → Sort v'} {a : α}
+    (n : Acc r a) (m : (x : α) → ((y : α) → r y x → Acc r y) → ((y : α) → r y x → C y) → C x)
+    : C a :=
   rec' m n
 
 end Acc
@@ -284,7 +300,7 @@ open WellFounded
 @[instance_reducible]
 def emptyWf {α : Sort u} : WellFoundedRelation α where
   rel := emptyRelation
-  wf  := by
+  wf := by
     apply WellFounded.intro
     intro a
     apply Acc.intro a
@@ -320,12 +336,11 @@ theorem wf (f : α → β) (h : WellFounded r) : WellFounded (InvImage r f) :=
   ⟨fun a => accessible f (apply h (f a))⟩
 end InvImage
 
-/--
-The inverse image of a well-founded relation is well-founded.
--/
-@[reducible] def invImage (f : α → β) (h : WellFoundedRelation β) : WellFoundedRelation α where
+/-- The inverse image of a well-founded relation is well-founded. -/
+@[reducible]
+def invImage (f : α → β) (h : WellFoundedRelation β) : WellFoundedRelation α where
   rel := InvImage h.rel f
-  wf  := InvImage.wf f h.wf
+  wf := InvImage.wf f h.wf
 
 -- The transitive closure of a well-founded relation is well-founded
 open Relation
@@ -335,17 +350,13 @@ theorem Acc.transGen (h : Acc r a) : Acc (TransGen r) a := by
   | intro x _ H =>
     refine Acc.intro x fun y hy ↦ ?_
     cases hy with
-    | single hyx =>
-      exact H y hyx
-    | tail hyz hzx =>
-      exact (H _ hzx).inv hyz
+    | single hyx => exact H y hyx
+    | tail hyz hzx => exact (H _ hzx).inv hyz
 
 theorem acc_transGen_iff : Acc (TransGen r) a ↔ Acc r a :=
   ⟨Subrelation.accessible TransGen.single, Acc.transGen⟩
 
-/--
-If `Acc r x` holds and `y` is transitively related to `x`, then `Acc r y` holds, too.
--/
+/-- If `Acc r x` holds and `y` is transitively related to `x`, then `Acc r y` holds, too. -/
 theorem Acc.inv_of_transGen {x y : α} (h₁ : Acc r x) (h₂ : Relation.TransGen r y x) : Acc r y := by
   simpa [acc_transGen_iff] using h₁.transGen.inv h₂
 
@@ -358,11 +369,11 @@ namespace Nat
 @[instance_reducible]
 def lt_wfRel : WellFoundedRelation Nat where
   rel := (· < ·)
-  wf  := by
+  wf := by
     apply WellFounded.intro
     intro n
     induction n with
-    | zero      =>
+    | zero =>
       apply Acc.intro 0
       intro _ h
       apply absurd h (Nat.not_lt_zero _)
@@ -380,32 +391,28 @@ Strong induction on the natural numbers.
 The induction hypothesis is that all numbers less than a given number satisfy the motive, which
 should be demonstrated for the given number.
 -/
-@[elab_as_elim] protected noncomputable def strongRecOn
-    {motive : Nat → Sort u}
-    (n : Nat)
-    (ind : ∀ n, (∀ m, m < n → motive m) → motive n) : motive n :=
+@[elab_as_elim]
+protected noncomputable def strongRecOn
+    {motive : Nat → Sort u} (n : Nat) (ind : ∀ n, (∀ m, m < n → motive m) → motive n)
+    : motive n :=
   Nat.lt_wfRel.wf.fix ind n
 
-/--
-Case analysis based on strong induction for the natural numbers.
--/
-@[elab_as_elim] protected noncomputable def caseStrongRecOn
+/-- Case analysis based on strong induction for the natural numbers. -/
+@[elab_as_elim]
+protected noncomputable def caseStrongRecOn
     {motive : Nat → Sort u}
-    (a : Nat)
-    (zero : motive 0)
-    (ind : ∀ n, (∀ m, m ≤ n → motive m) → motive (succ n)) : motive a :=
+    (a : Nat) (zero : motive 0) (ind : ∀ n, (∀ m, m ≤ n → motive m) → motive (succ n))
+    : motive a :=
   Nat.strongRecOn a fun n =>
     match n with
-    | 0   => fun _  => zero
-    | n+1 => fun h₁ => ind n (λ _ h₂ => h₁ _ (lt_succ_of_le h₂))
+    | 0 => fun _ => zero
+    | n + 1 => fun h₁ => ind n (λ _ h₂ => h₁ _ (lt_succ_of_le h₂))
 
 end Nat
 
-abbrev measure {α : Sort u} (f : α → Nat) : WellFoundedRelation α :=
-  invImage f Nat.lt_wfRel
+abbrev measure {α : Sort u} (f : α → Nat) : WellFoundedRelation α := invImage f Nat.lt_wfRel
 
-abbrev sizeOfWFRel {α : Sort u} [SizeOf α] : WellFoundedRelation α :=
-  measure sizeOf
+abbrev sizeOfWFRel {α : Sort u} [SizeOf α] : WellFoundedRelation α := measure sizeOf
 
 attribute [instance low] sizeOfWFRel
 
@@ -414,35 +421,36 @@ open WellFounded
 
 section
 variable {α : Type u} {β : Type v}
-variable  (ra  : α → α → Prop)
-variable  (rb  : β → β → Prop)
+variable (ra : α → α → Prop)
+variable (rb : β → β → Prop)
 
-/--
-A lexicographical order based on the orders `ra` and `rb` for the elements of pairs.
--/
+/-- A lexicographical order based on the orders `ra` and `rb` for the elements of pairs. -/
 protected inductive Lex : α × β → α × β → Prop where
-  /--
-  If the first projections of two pairs are ordered, then they are lexicographically ordered.
-  -/
-  | left  {a₁} (b₁) {a₂} (b₂) (h : ra a₁ a₂) : Prod.Lex (a₁, b₁) (a₂, b₂)
+  /-- If the first projections of two pairs are ordered, then they are lexicographically ordered. -/
+  | left {a₁} (b₁) {a₂} (b₂) (h : ra a₁ a₂) : Prod.Lex (a₁, b₁) (a₂, b₂)
   /--
   If the first projections of two pairs are equal, then they are lexicographically ordered if the
   second projections are ordered.
   -/
-  | right (a) {b₁ b₂} (h : rb b₁ b₂)         : Prod.Lex (a, b₁)  (a, b₂)
+  | right (a) {b₁ b₂} (h : rb b₁ b₂) : Prod.Lex (a, b₁) (a, b₂)
 
 @[grind =]
-theorem lex_def {r : α → α → Prop} {s : β → β → Prop} {p q : α × β} :
-    Prod.Lex r s p q ↔ r p.1 q.1 ∨ p.1 = q.1 ∧ s p.2 q.2 :=
-  ⟨fun h => by cases h <;> simp [*], fun h =>
+theorem lex_def {r : α → α → Prop} {s : β → β → Prop} {p q : α × β}
+    : Prod.Lex r s p q ↔ r p.1 q.1 ∨ p.1 = q.1 ∧ s p.2 q.2 := ⟨
+  fun h => by cases h <;> simp [*],
+  fun h =>
     match p, q, h with
     | _, _, Or.inl h => Lex.left _ _ h
-    | (_, _), (_, _), Or.inr ⟨e, h⟩ => by subst e; exact Lex.right _ h⟩
+    | (_, _), (_, _), Or.inr ⟨e, h⟩ => by subst e; exact Lex.right _ h
+⟩
 
 namespace Lex
 
-instance [αeqDec : DecidableEq α] {r : α → α → Prop} [rDec : DecidableRel r]
-    {s : β → β → Prop} [sDec : DecidableRel s] : DecidableRel (Prod.Lex r s)
+instance
+    [αeqDec : DecidableEq α]
+    {r : α → α → Prop} [rDec : DecidableRel r]
+    {s : β → β → Prop} [sDec : DecidableRel s]
+    : DecidableRel (Prod.Lex r s)
   | (a, b), (a', b') =>
     match rDec a a' with
     | isTrue raa' => isTrue $ left b b' raa'
@@ -452,13 +460,12 @@ instance [αeqDec : DecidableEq α] {r : α → α → Prop} [rDec : DecidableRe
         subst eq
         cases sDec b b' with
         | isTrue sbb' => exact isTrue $ right a sbb'
-        | isFalse nsbb' =>
-          apply isFalse; intro contra; cases contra <;> contradiction
-      | isFalse neqaa' => by
-        apply isFalse; intro contra; cases contra <;> contradiction
+        | isFalse nsbb' => apply isFalse; intro contra; cases contra <;> contradiction
+      | isFalse neqaa' => by apply isFalse; intro contra; cases contra <;> contradiction
 
 -- TODO: generalize
-theorem right' {a₁ : Nat} {b₁ : β} (h₁ : a₁ ≤ a₂) (h₂ : rb b₁ b₂) : Prod.Lex Nat.lt rb (a₁, b₁) (a₂, b₂) :=
+theorem right' {a₁ : Nat} {b₁ : β} (h₁ : a₁ ≤ a₂) (h₂ : rb b₁ b₂)
+    : Prod.Lex Nat.lt rb (a₁, b₁) (a₂, b₂) :=
   match Nat.eq_or_lt_of_le h₁ with
   | Or.inl h => h ▸ Prod.Lex.right a₁ h₂
   | Or.inr h => Prod.Lex.left b₁ _ h
@@ -473,9 +480,10 @@ end
 section
 
 variable {α : Type u} {β : Type v}
-variable {ra  : α → α → Prop} {rb  : β → β → Prop}
+variable {ra : α → α → Prop} {rb : β → β → Prop}
 
-theorem lexAccessible {a : α} (aca : Acc ra a) (acb : (b : β) → Acc rb b) (b : β) : Acc (Prod.Lex ra rb) (a, b) := by
+theorem lexAccessible {a : α} (aca : Acc ra a) (acb : (b : β) → Acc rb b) (b : β)
+    : Acc (Prod.Lex ra rb) (a, b) := by
   induction aca generalizing b with
   | intro xa _ iha =>
     induction (acb b) with
@@ -483,13 +491,15 @@ theorem lexAccessible {a : α} (aca : Acc ra a) (acb : (b : β) → Acc rb b) (b
       apply Acc.intro (xa, xb)
       intro p lt
       cases lt with
-      | left  _ _ h => apply iha _ h
-      | right _ h   => apply ihb _ h
+      | left _ _ h => apply iha _ h
+      | right _ h => apply ihb _ h
 
 -- The lexicographical order of well founded relations is well-founded
-@[reducible] def lex (ha : WellFoundedRelation α) (hb : WellFoundedRelation β) : WellFoundedRelation (α × β) where
+@[reducible]
+def lex (ha : WellFoundedRelation α) (hb : WellFoundedRelation β)
+    : WellFoundedRelation (α × β) where
   rel := Prod.Lex ha.rel hb.rel
-  wf  := ⟨fun (a, b) => lexAccessible (WellFounded.apply ha.wf a) (WellFounded.apply hb.wf) b⟩
+  wf := ⟨fun (a, b) => lexAccessible (WellFounded.apply ha.wf a) (WellFounded.apply hb.wf) b⟩
 
 instance [ha : WellFoundedRelation α] [hb : WellFoundedRelation β] : WellFoundedRelation (α × β) :=
   lex ha hb
@@ -501,9 +511,10 @@ theorem RProdSubLex (a : α × β) (b : α × β) (h : RProd ra rb a b) : Prod.L
 
 -- The relational product of well founded relations is well-founded
 @[instance_reducible]
-def rprod (ha : WellFoundedRelation α) (hb : WellFoundedRelation β) : WellFoundedRelation (α × β) where
+def rprod (ha : WellFoundedRelation α) (hb : WellFoundedRelation β)
+    : WellFoundedRelation (α × β) where
   rel := RProd ha.rel hb.rel
-  wf  := by
+  wf := by
     apply Subrelation.wf (r := Prod.Lex ha.rel hb.rel) (h₂ := (lex ha hb).wf)
     intro a b h
     exact RProdSubLex a b h
@@ -515,20 +526,21 @@ end Prod
 namespace PSigma
 section
 variable {α : Sort u} {β : α → Sort v}
-variable  (r  : α → α → Prop)
-variable  (s  : ∀ a, β a → β a → Prop)
+variable (r : α → α → Prop)
+variable (s : ∀ a, β a → β a → Prop)
 
 -- Lexicographical order based on r and s
 inductive Lex : PSigma β → PSigma β → Prop where
-  | left  : ∀ {a₁ : α} (b₁ : β a₁) {a₂ : α} (b₂ : β a₂), r a₁ a₂ → Lex ⟨a₁, b₁⟩ ⟨a₂, b₂⟩
-  | right : ∀ (a : α)  {b₁ b₂ : β a}, s a b₁ b₂ → Lex ⟨a, b₁⟩ ⟨a, b₂⟩
+  | left : ∀ {a₁ : α} (b₁ : β a₁) {a₂ : α} (b₂ : β a₂), r a₁ a₂ → Lex ⟨a₁, b₁⟩ ⟨a₂, b₂⟩
+  | right : ∀ (a : α) {b₁ b₂ : β a}, s a b₁ b₂ → Lex ⟨a, b₁⟩ ⟨a, b₂⟩
 end
 
 section
 variable {α : Sort u} {β : α → Sort v}
-variable {r  : α → α → Prop} {s : ∀ (a : α), β a → β a → Prop}
+variable {r : α → α → Prop} {s : ∀ (a : α), β a → β a → Prop}
 
-theorem lexAccessible {a} (aca : Acc r a) (acb : (a : α) → WellFounded (s a)) (b : β a) : Acc (Lex r s) ⟨a, b⟩ := by
+theorem lexAccessible {a} (aca : Acc r a) (acb : (a : α) → WellFounded (s a)) (b : β a)
+    : Acc (Lex r s) ⟨a, b⟩ := by
   induction aca with
   | intro xa _ iha =>
     induction (WellFounded.apply (acb xa) b) with
@@ -536,15 +548,20 @@ theorem lexAccessible {a} (aca : Acc r a) (acb : (a : α) → WellFounded (s a))
       apply Acc.intro
       intro p lt
       cases lt with
-      | left  => apply iha; assumption
+      | left => apply iha; assumption
       | right => apply ihb; assumption
 
 -- The lexicographical order of well founded relations is well-founded
-@[reducible] def lex (ha : WellFoundedRelation α) (hb : (a : α) → WellFoundedRelation (β a)) : WellFoundedRelation (PSigma β) where
+@[reducible]
+def lex (ha : WellFoundedRelation α) (hb : (a : α) → WellFoundedRelation (β a))
+    : WellFoundedRelation (PSigma β) where
   rel := Lex ha.rel (fun a => hb a |>.rel)
-  wf  := WellFounded.intro fun ⟨a, b⟩ => lexAccessible (WellFounded.apply ha.wf a) (fun a => hb a |>.wf) b
+  wf :=
+    WellFounded.intro fun ⟨a, b⟩ =>
+      lexAccessible (WellFounded.apply ha.wf a) (fun a => hb a |>.wf) b
 
-instance [ha : WellFoundedRelation α] [hb : (a : α) → WellFoundedRelation (β a)] : WellFoundedRelation (PSigma β) :=
+instance [ha : WellFoundedRelation α] [hb : (a : α) → WellFoundedRelation (β a)]
+    : WellFoundedRelation (PSigma β) :=
   lex ha hb
 
 end
@@ -552,10 +569,10 @@ end
 section
 variable {α : Sort u} {β : Sort v}
 
-def lexNdep (r : α → α → Prop) (s : β → β → Prop) :=
-  Lex r (fun _ => s)
+def lexNdep (r : α → α → Prop) (s : β → β → Prop) := Lex r (fun _ => s)
 
-theorem lexNdepWf {r  : α → α → Prop} {s : β → β → Prop} (ha : WellFounded r) (hb : WellFounded s) : WellFounded (lexNdep r s) :=
+theorem lexNdepWf {r : α → α → Prop} {s : β → β → Prop} (ha : WellFounded r) (hb : WellFounded s)
+    : WellFounded (lexNdep r s) :=
   WellFounded.intro fun ⟨a, b⟩ => lexAccessible (WellFounded.apply ha a) (fun _ => hb) b
 end
 
@@ -563,17 +580,19 @@ section
 variable {α : Sort u} {β : Sort v}
 
 -- Reverse lexicographical order based on r and s
-inductive RevLex (r  : α → α → Prop) (s  : β → β → Prop) : @PSigma α (fun _ => β) → @PSigma α (fun _ => β) → Prop where
-  | left  : {a₁ a₂ : α} → (b : β) → r a₁ a₂ → RevLex r s ⟨a₁, b⟩ ⟨a₂, b⟩
+inductive RevLex (r : α → α → Prop) (s : β → β → Prop)
+    : @PSigma α (fun _ => β) → @PSigma α (fun _ => β) → Prop where
+  | left : {a₁ a₂ : α} → (b : β) → r a₁ a₂ → RevLex r s ⟨a₁, b⟩ ⟨a₂, b⟩
   | right : (a₁ : α) → {b₁ : β} → (a₂ : α) → {b₂ : β} → s b₁ b₂ → RevLex r s ⟨a₁, b₁⟩ ⟨a₂, b₂⟩
 end
 
 section
 open WellFounded
 variable {α : Sort u} {β : Sort v}
-variable {r  : α → α → Prop} {s : β → β → Prop}
+variable {r : α → α → Prop} {s : β → β → Prop}
 
-theorem revLexAccessible {b} (acb : Acc s b) (aca : (a : α) → Acc r a): (a : α) → Acc (RevLex r s) ⟨a, b⟩ := by
+theorem revLexAccessible {b} (acb : Acc s b) (aca : (a : α) → Acc r a)
+    : (a : α) → Acc (RevLex r s) ⟨a, b⟩ := by
   induction acb with
   | intro xb _ ihb =>
     intro a
@@ -582,7 +601,7 @@ theorem revLexAccessible {b} (acb : Acc s b) (aca : (a : α) → Acc r a): (a : 
       apply Acc.intro
       intro p lt
       cases lt with
-      | left  => apply iha; assumption
+      | left => apply iha; assumption
       | right => apply ihb; assumption
 
 theorem revLex (ha : WellFounded r) (hb : WellFounded s) : WellFounded (RevLex r s) :=
@@ -590,15 +609,19 @@ theorem revLex (ha : WellFounded r) (hb : WellFounded s) : WellFounded (RevLex r
 end
 
 section
-def SkipLeft (α : Type u) {β : Type v} (s : β → β → Prop) : @PSigma α (fun _ => β) → @PSigma α (fun _ => β) → Prop :=
+def SkipLeft (α : Type u) {β : Type v} (s : β → β → Prop)
+    : @PSigma α (fun _ => β) → @PSigma α (fun _ => β) → Prop :=
   RevLex emptyRelation s
 
 @[instance_reducible]
-def skipLeft (α : Type u) {β : Type v} (hb : WellFoundedRelation β) : WellFoundedRelation (PSigma fun _ : α => β) where
+def skipLeft (α : Type u) {β : Type v} (hb : WellFoundedRelation β)
+    : WellFoundedRelation (PSigma fun _ : α => β) where
   rel := SkipLeft α hb.rel
-  wf  := revLex emptyWf.wf hb.wf
+  wf := revLex emptyWf.wf hb.wf
 
-theorem mkSkipLeft {α : Type u} {β : Type v} {b₁ b₂ : β} {s : β → β → Prop} (a₁ a₂ : α) (h : s b₁ b₂) : SkipLeft α s ⟨a₁, b₁⟩ ⟨a₂, b₂⟩ :=
+theorem mkSkipLeft
+    {α : Type u} {β : Type v} {b₁ b₂ : β} {s : β → β → Prop} (a₁ a₂ : α) (h : s b₁ b₂)
+    : SkipLeft α s ⟨a₁, b₁⟩ ⟨a₂, b₂⟩ :=
   RevLex.right _ _ h
 end
 
@@ -612,9 +635,7 @@ variable (h : α → Nat)
 variable (F : (x : α) → ((y : α) → InvImage (· < ·) h y x → motive y) → motive x)
 
 /-- Helper gadget that prevents reduction of `Nat.eager n` unless `n` evaluates to a ground term. -/
-@[implicit_reducible]
-def Nat.eager (n : Nat) : Nat :=
-  if Nat.beq n n = true then n else n
+@[implicit_reducible] def Nat.eager (n : Nat) : Nat := if Nat.beq n n = true then n else n
 
 theorem Nat.eager_eq (n : Nat) : Nat.eager n = n := ite_self n
 
@@ -625,30 +646,28 @@ than `x` with regard to `h`.
 
 In contrast to `WellFounded.fix`, this fixpoint operator reduces on closed terms. (More precisely:
 when `h x` evaluates to a ground value)
-
 -/
 @[implicit_reducible]
 def Nat.fix : (x : α) → motive x :=
   let rec go : ∀ (fuel : Nat) (x : α), (h x < fuel) → motive x :=
     Nat.rec
       (fun _ hfuel => (Nat.not_succ_le_zero _ hfuel).elim)
-      (fun _ ih x hfuel => F x (fun y hy => ih y (by exact Nat.lt_of_lt_of_le hy (Nat.le_of_lt_add_one hfuel))))
+      (fun _ ih x hfuel =>
+        F x (fun y hy => ih y (by exact Nat.lt_of_lt_of_le hy (Nat.le_of_lt_add_one hfuel))))
   fun x => go (Nat.eager (h x + 1)) x (Nat.eager_eq _ ▸ Nat.lt_add_one _)
 
 attribute [implicit_reducible] Nat.fix.go
 
-protected theorem Nat.fix.go_congr (x : α) (fuel₁ fuel₂ : Nat) (h₁ : h x < fuel₁) (h₂ : h x < fuel₂) :
-    Nat.fix.go h F fuel₁ x h₁ = Nat.fix.go h F fuel₂ x h₂ := by
+protected theorem Nat.fix.go_congr (x : α) (fuel₁ fuel₂ : Nat) (h₁ : h x < fuel₁) (h₂ : h x < fuel₂)
+    : Nat.fix.go h F fuel₁ x h₁ = Nat.fix.go h F fuel₂ x h₂ := by
   induction fuel₁ generalizing x fuel₂ with
   | zero => contradiction
   | succ fuel₁ ih =>
     cases fuel₂ with
     | zero => contradiction
-    | succ fuel₂ =>
-      exact congrArg (F x) (funext fun y => funext fun hy => ih y fuel₂ _ _ )
+    | succ fuel₂ => exact congrArg (F x) (funext fun y => funext fun hy => ih y fuel₂ _ _)
 
-theorem Nat.fix_eq (x : α) :
-    Nat.fix h F x = F x (fun y _ => Nat.fix h F y) := by
+theorem Nat.fix_eq (x : α) : Nat.fix h F x = F x (fun y _ => Nat.fix h F y) := by
   unfold Nat.fix
   simp [Nat.eager_eq]
   exact congrArg (F x) (funext fun _ => funext fun _ => Nat.fix.go_congr ..)
@@ -666,5 +685,7 @@ of `List.attach` (or similar) is plausible.
 Reverse direction of `dite_eq_ite`. Used by the well-founded definition preprocessor to extend the
 context of a termination proof inside `if-then-else` with the condition.
 -/
-@[wf_preprocess] theorem ite_eq_dite [Decidable P] :
-    ite P a b = (dite P (fun h => binderNameHint h () a) (fun h => binderNameHint h () b)) := rfl
+@[wf_preprocess]
+theorem ite_eq_dite [Decidable P]
+    : ite P a b = (dite P (fun h => binderNameHint h () a) (fun h => binderNameHint h () b)) :=
+  rfl

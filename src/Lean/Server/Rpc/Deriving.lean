@@ -9,7 +9,6 @@ module
 prelude
 public import Lean.Elab.Deriving.Basic
 
-
 public section
 
 namespace Lean.Server.RpcEncodable
@@ -20,8 +19,10 @@ def isOptField (n : Name) : Bool := n.toString.endsWith "?"
 
 open Parser.Term
 
-private def deriveStructureInstance (indVal : InductiveVal) (params : Array Expr)
-    (encInstBinders : Array (TSyntax ``bracketedBinder)) : TermElabM Command := do
+private def deriveStructureInstance
+    (indVal : InductiveVal) (params : Array Expr)
+    (encInstBinders : Array (TSyntax ``bracketedBinder))
+    : TermElabM Command := do
   let fields := getStructureFieldsFlattened (← getEnv) indVal.name (includeSubobjectFields := false)
   trace[Elab.Deriving.RpcEncodable] "for structure {indVal.name} with params {params}"
 
@@ -31,8 +32,8 @@ private def deriveStructureInstance (indVal : InductiveVal) (params : Array Expr
   let mut decInits := #[]
   for fieldName in fields do
     if fieldName == `__rpcref then
-        throwError "'__rpcref' is reserved and cannot be used as a field name. \
-          See the `RpcEncodable` docstring."
+      throwError "'__rpcref' is reserved and cannot be used as a field name. \
+        See the `RpcEncodable` docstring."
     let fid := mkIdent fieldName
     fieldIds := fieldIds.push fid
     if isOptField fieldName then
@@ -61,35 +62,43 @@ private def deriveStructureInstance (indVal : InductiveVal) (params : Array Expr
   )
 
 private meta def matchAltTerm := Lean.Parser.Term.matchAlt (rhsParser := Lean.Parser.termParser)
-private instance : Coe (TSyntax ``matchAltTerm) (TSyntax ``Parser.Term.matchAlt) where coe s := ⟨s⟩
+private instance : Coe (TSyntax ``matchAltTerm) (TSyntax ``Parser.Term.matchAlt) where
+  coe s := ⟨s⟩
 
-private def deriveInductiveInstance (indVal : InductiveVal) (params : Array Expr)
-    (encInstBinders : Array (TSyntax ``bracketedBinder)) : TermElabM Command := do
+private def deriveInductiveInstance
+    (indVal : InductiveVal) (params : Array Expr)
+    (encInstBinders : Array (TSyntax ``bracketedBinder))
+    : TermElabM Command := do
   trace[Elab.Deriving.RpcEncodable] "for inductive {indVal.name} with params {params}"
-  let st ← indVal.ctors.toArray.mapM fun ctorName => do
-    let ctorTy ← instantiateForall (← getConstInfoCtor ctorName).type params
-    forallTelescopeReducing ctorTy fun argVars _ => do
-    let .str _ ctor := ctorName | throwError m!"constructor name not a string: {ctorName}"
-    let ctorId := mkIdent (.mkSimple ctor)
+  let st ←
+    indVal.ctors.toArray.mapM fun ctorName => do
+      let ctorTy ← instantiateForall (← getConstInfoCtor ctorName).type params
+      forallTelescopeReducing ctorTy fun argVars _ => do
+        let .str _ ctor := ctorName
+          | throwError m!"constructor name not a string: {ctorName}"
+        let ctorId := mkIdent (.mkSimple ctor)
 
-    -- create the constructor
-    let fieldStxs ← argVars.mapM fun arg => do
-      let name := (← getFVarLocalDecl arg).userName
-      if name == `__rpcref then
-        throwError "'__rpcref' is reserved and cannot be used as an argument name. \
-          See the `RpcEncodable` docstring."
-      `(bracketedBinderF| ($(mkIdent name) : Json))
-    let pktCtor ← `(Parser.Command.ctor|
-      | $ctorId:ident $[$fieldStxs]* : RpcEncodablePacket)
+        -- create the constructor
+        let fieldStxs ←
+          argVars.mapM fun arg => do
+            let name := (← getFVarLocalDecl arg).userName
+            if name == `__rpcref then
+              throwError "'__rpcref' is reserved and cannot be used as an argument name. \
+                See the `RpcEncodable` docstring."
+            `(bracketedBinderF| ($(mkIdent name) : Json))
+        let pktCtor ←
+          `(Parser.Command.ctor|
+            | $ctorId:ident $[$fieldStxs]* : RpcEncodablePacket)
 
-    -- create encoder and decoder match arms
-    let nms ← argVars.mapM fun _ => mkIdent <$> mkFreshBinderName
-    let encArgs ← nms.mapM fun nm => `(← rpcEncode $nm)
-    let encArm ← `(matchAltTerm| | .$ctorId $nms* => return toJson (.$ctorId $encArgs* : RpcEncodablePacket))
-    let decArgs ← nms.mapM fun nm => `(← rpcDecode $nm)
-    let decArm ← `(matchAltTerm| | .$ctorId $nms* => return (.$ctorId $decArgs*))
+        -- create encoder and decoder match arms
+        let nms ← argVars.mapM fun _ => mkIdent <$> mkFreshBinderName
+        let encArgs ← nms.mapM fun nm => `(← rpcEncode $nm)
+        let encArm ←
+          `(matchAltTerm| | .$ctorId $nms* => return toJson (.$ctorId $encArgs* : RpcEncodablePacket))
+        let decArgs ← nms.mapM fun nm => `(← rpcDecode $nm)
+        let decArm ← `(matchAltTerm| | .$ctorId $nms* => return (.$ctorId $decArgs*))
 
-    return (pktCtor, encArm, decArm)
+        return (pktCtor, encArm, decArm)
 
   let (ctors, st) := st.unzip
   let (encodes, decodes) := st.unzip
@@ -115,12 +124,15 @@ private def deriveInductiveInstance (indVal : InductiveVal) (params : Array Expr
         id <| match pkt with $[$decodes:matchAlt]*
   )
 
-/-- Creates an `RpcEncodablePacket` for `typeName`. For structures, the packet is a structure
+/--
+Creates an `RpcEncodablePacket` for `typeName`. For structures, the packet is a structure
 with the same field names. For inductives, it mirrors the inductive structure with every field
 of every ctor replaced by `Json`. Then `RpcEncodable typeName` is instantiated
-using the `RpcEncodablePacket`. -/
+using the `RpcEncodablePacket`.
+-/
 private def deriveInstance (declNames : Array Name) : CommandElabM Bool := do
-  let #[typeName] := declNames | return false
+  let #[typeName] := declNames
+    | return false
   let indVal ← getConstInfoInduct typeName
   if indVal.all.length ≠ 1 then
     throwError "mutually inductive types are not supported"
@@ -129,12 +141,13 @@ private def deriveInstance (declNames : Array Name) : CommandElabM Bool := do
 
   elabCommand <| ← liftTermElabM do
     forallTelescopeReducing indVal.type fun params _ => do
-      let encInstBinders ← (← params.filterM (isType ·)).mapM fun p => do
-        `(bracketedBinderF| [RpcEncodable $(mkIdent (← getFVarLocalDecl p).userName):ident])
+      let encInstBinders ←
+        (← params.filterM (isType ·)).mapM fun p => do
+          `(bracketedBinderF| [RpcEncodable $(mkIdent (← getFVarLocalDecl p).userName):ident])
       if isStructure (← getEnv) typeName then
-          deriveStructureInstance indVal params encInstBinders
+        deriveStructureInstance indVal params encInstBinders
       else
-          deriveInductiveInstance indVal params encInstBinders
+        deriveInductiveInstance indVal params encInstBinders
 
   return true
 

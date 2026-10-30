@@ -48,8 +48,7 @@ def version.specialDesc : String := version.getSpecialDesc ()
 def versionStringCore :=
   String.Internal.append
     (String.Internal.append
-      (String.Internal.append
-        (String.Internal.append (toString version.major) ".")
+      (String.Internal.append (String.Internal.append (toString version.major) ".")
         (toString version.minor))
       ".")
     (toString version.patch)
@@ -62,18 +61,14 @@ def versionString :=
   else
     (String.Internal.append (String.Internal.append versionStringCore ", commit ") githash)
 
-def origin :=
-  "leanprover/lean4"
+def origin := "leanprover/lean4"
 
 def toolchain :=
-  if version.specialDesc ≠ ""  then
+  if version.specialDesc ≠ "" then
     if version.isRelease then
       String.Internal.append
         (String.Internal.append
-          (String.Internal.append
-            (String.Internal.append origin ":v")
-            versionStringCore)
-          "-")
+          (String.Internal.append (String.Internal.append origin ":v") versionStringCore) "-")
         version.specialDesc
     else
       String.Internal.append (String.Internal.append origin ":") version.specialDesc
@@ -95,64 +90,62 @@ See #2572.
 opaque Internal.hasLLVMBackend (u : Unit) : Bool
 
 /-- Valid identifier names -/
-@[inline] def isGreek (c : Char) : Bool :=
-  0x391 ≤ c.val && c.val ≤ 0x3dd
+@[inline] def isGreek (c : Char) : Bool := 0x391 ≤ c.val && c.val ≤ 0x3dd
 
 def isLetterLike (c : Char) : Bool :=
-  (0x3b1  ≤ c.val && c.val ≤ 0x3c9 && c.val ≠ 0x3bb) ||                     -- Lower greek, but lambda
-  (0x391  ≤ c.val && c.val ≤ 0x3A9 && c.val ≠ 0x3A0 && c.val ≠ 0x3A3) ||    -- Upper greek, but Pi and Sigma
-  (0x3ca  ≤ c.val && c.val ≤ 0x3fb) ||                                      -- Coptic letters
-  (0x1f00 ≤ c.val && c.val ≤ 0x1ffe) ||                                     -- Polytonic Greek Extended Character Set
-  (0x2100 ≤ c.val && c.val ≤ 0x214f) ||                                     -- Letter like block
-  (0x1d49c ≤ c.val && c.val ≤ 0x1d59f) ||                                   -- Latin letters, Script, Double-struck, Fractur
-  (0x00c0 ≤ c.val && c.val ≤ 0x00ff && c.val ≠ 0x00d7 && c.val ≠ 0x00f7) || -- Latin-1 supplement letters but × and ÷
-  (0x0100 ≤ c.val && c.val ≤ 0x017f)                                        -- Latin Extended-A
+  (0x3b1 ≤ c.val && c.val ≤ 0x3c9 && c.val ≠ 0x3bb) -- Lower greek, but lambda
+    || (0x391 ≤ c.val && c.val ≤ 0x3A9 && c.val ≠ 0x3A0 && c.val ≠ 0x3A3) -- Upper greek, but Pi and Sigma
+    || (0x3ca ≤ c.val && c.val ≤ 0x3fb) -- Coptic letters
+    || (0x1f00 ≤ c.val && c.val ≤ 0x1ffe) -- Polytonic Greek Extended Character Set
+    || (0x2100 ≤ c.val && c.val ≤ 0x214f) -- Letter like block
+    || (0x1d49c ≤ c.val && c.val ≤ 0x1d59f) -- Latin letters, Script, Double-struck, Fractur
+    || (0x00c0 ≤ c.val && c.val ≤ 0x00ff && c.val ≠ 0x00d7 && c.val ≠ 0x00f7) -- Latin-1 supplement letters but × and ÷
+    || (0x0100 ≤ c.val && c.val ≤ 0x017f) -- Latin Extended-A
 
-@[inline] def isNumericSubscript (c : Char) : Bool :=
-  0x2080 ≤ c.val && c.val ≤ 0x2089
+@[inline] def isNumericSubscript (c : Char) : Bool := 0x2080 ≤ c.val && c.val ≤ 0x2089
 
 def isSubScriptAlnum (c : Char) : Bool :=
-  isNumericSubscript c ||
-  (0x2090 ≤ c.val && c.val ≤ 0x209c) ||
-  (0x1d62 ≤ c.val && c.val ≤ 0x1d6a) ||
-  c.val == 0x2c7c
+  isNumericSubscript c || (0x2090 ≤ c.val && c.val ≤ 0x209c) || (0x1d62 ≤ c.val && c.val ≤ 0x1d6a)
+    || c.val == 0x2c7c
 
-@[inline] def isIdFirst (c : Char) : Bool :=
-  c.isAlpha || c = '_' || isLetterLike c
+@[inline] def isIdFirst (c : Char) : Bool := c.isAlpha || c = '_' || isLetterLike c
 
-@[inline] private def isAlphaAscii (c : UInt8) : Bool :=
-  'a'.toUInt8 ≤ c && c ≤ 'z'.toUInt8
-    || 'A'.toUInt8 ≤ c && c ≤ 'Z'.toUInt8
+@[inline]
+private def isAlphaAscii (c : UInt8) : Bool :=
+  'a'.toUInt8 ≤ c && c ≤ 'z'.toUInt8 || 'A'.toUInt8 ≤ c && c ≤ 'Z'.toUInt8
 
-@[inline] def isIdFirstAscii (c : UInt8) : Bool :=
-  isAlphaAscii c || c = '_'.toUInt8
+@[inline] def isIdFirstAscii (c : UInt8) : Bool := isAlphaAscii c || c = '_'.toUInt8
 
-@[inline] private def isAlphanumAscii (c : UInt8) : Bool :=
+@[inline]
+private def isAlphanumAscii (c : UInt8) : Bool :=
   isAlphaAscii c || '0'.toUInt8 ≤ c && c ≤ '9'.toUInt8
 
-@[inline] def isIdRest (c : Char) : Bool :=
-  c.isAlphanum || c = '_' || c = '\'' || c == '!' || c == '?' || isLetterLike c || isSubScriptAlnum c
+@[inline]
+def isIdRest (c : Char) : Bool :=
+  c.isAlphanum || c = '_' || c = '\'' || c == '!' || c == '?' || isLetterLike c
+    || isSubScriptAlnum c
 
-@[inline] def isIdRestAscii (c : UInt8) : Bool :=
+@[inline]
+def isIdRestAscii (c : UInt8) : Bool :=
   isAlphanumAscii c || c = '_'.toUInt8 || c = '\''.toUInt8 || c == '!'.toUInt8 || c == '?'.toUInt8
 
 def idBeginEscape := '«'
-def idEndEscape   := '»'
+def idEndEscape := '»'
 @[inline] def isIdBeginEscape (c : Char) : Bool := c = idBeginEscape
 @[inline] def isIdEndEscape (c : Char) : Bool := c = idEndEscape
 namespace Name
 
 def getRoot : Name → Name
-  | anonymous             => anonymous
+  | anonymous => anonymous
   | n@(str anonymous _) => n
   | n@(num anonymous _) => n
-  | str n _             => getRoot n
-  | num n _             => getRoot n
+  | str n _ => getRoot n
+  | num n _ => getRoot n
 
 def isInaccessibleUserName : Name → Bool
-  | Name.str _ s   => (String.Internal.contains s '✝') || s == "_inaccessible"
-  | Name.num p _   => isInaccessibleUserName p
-  | _              => false
+  | Name.str _ s => (String.Internal.contains s '✝') || s == "_inaccessible"
+  | Name.num p _ => isInaccessibleUserName p
+  | _ => false
 
 section ToString
 
@@ -175,16 +168,21 @@ private partial def needsNoEscapeAsciiRest (s : String) (i : Nat) : Bool :=
     true
 
 -- If you change this, also change the corresponding function in `Init.Data.ToString.Name`.
-@[inline] private def needsNoEscapeAscii (s : String) (h : s.utf8ByteSize > 0) : Bool :=
+@[inline]
+private def needsNoEscapeAscii (s : String) (h : s.utf8ByteSize > 0) : Bool :=
   let c := String.Internal.getUTF8Byte s 0 h
   isIdFirstAscii c && needsNoEscapeAsciiRest s 1
 
 -- If you change this, also change the corresponding function in `Init.Data.ToString.Name`.
-@[inline] private def needsNoEscape (s : String) (h : s.utf8ByteSize > 0) : Bool :=
-  needsNoEscapeAscii s h || isIdFirst (String.Internal.get s 0) && Substring.Raw.Internal.all (Substring.Raw.Internal.drop s.toRawSubstring 1) isIdRest
+@[inline]
+private def needsNoEscape (s : String) (h : s.utf8ByteSize > 0) : Bool :=
+  needsNoEscapeAscii s h
+    || isIdFirst (String.Internal.get s 0)
+      && Substring.Raw.Internal.all (Substring.Raw.Internal.drop s.toRawSubstring 1) isIdRest
 
 -- If you change this, also change the corresponding function in `Init.Data.ToString.Name`.
-@[inline] private def escape (s : String) : String :=
+@[inline]
+private def escape (s : String) : String :=
   String.Internal.append (String.Internal.append idBeginEscape.toString s) idEndEscape.toString
 
 /--
@@ -212,17 +210,23 @@ See the documentation for `Name.toStringWithToken` for an explanation of `escape
 -/
 -- If you change this, also change the corresponding function in `Init.Data.ToString.Name`.
 @[specialize isToken] -- explicit annotation because isToken is overridden in recursive call
-private def Internal.Meta.toStringWithSep (n : Name) (isToken : String → Bool := fun _ => false) : String :=
+private def Internal.Meta.toStringWithSep (n : Name) (isToken : String → Bool := fun _ => false)
+    : String :=
   match n with
-  | anonymous       => "[anonymous]"
+  | anonymous => "[anonymous]"
   | str anonymous s => maybeEscape s (isToken s)
   | num anonymous v => toString v
-  | str n s         =>
+  | str n s =>
     -- Escape the last component if the identifier would otherwise be a token
     let r := toStringWithSep n isToken
     let r' := String.Internal.append (String.Internal.append r sep) (maybeEscape s false)
-    if escape && isToken r' then String.Internal.append (String.Internal.append r sep) (maybeEscape s true) else r'
-  | num n v         => String.Internal.append (String.Internal.append (toStringWithSep n (isToken := fun _ => false)) sep) (Nat.repr v)
+    if escape && isToken r' then
+      String.Internal.append (String.Internal.append r sep) (maybeEscape s true)
+    else
+      r'
+  | num n v =>
+    String.Internal.append
+      (String.Internal.append (toStringWithSep n (isToken := fun _ => false)) sep) (Nat.repr v)
 where
   maybeEscape s force := if escape then escapePart s force |>.getD s else s
 
@@ -239,9 +243,11 @@ Converts a name to a string.
 -/
 @[specialize]
 -- If you change this, also change the corresponding function in `Init.Data.ToString.Name`.
-private def Internal.Meta.toStringWithToken (n : Name) (escape := true) (isToken : String → Bool) : String :=
+private def Internal.Meta.toStringWithToken (n : Name) (escape := true) (isToken : String → Bool)
+    : String :=
   -- never escape "prettified" inaccessible names or macro scopes or pseudo-syntax introduced by the delaborator
-  toStringWithSep "." (escape && !n.isInaccessibleUserName && !n.hasMacroScopes && !maybePseudoSyntax) n isToken
+  toStringWithSep "."
+    (escape && !n.isInaccessibleUserName && !n.hasMacroScopes && !maybePseudoSyntax) n isToken
 where
   maybePseudoSyntax :=
     if n == `_ then
@@ -270,13 +276,14 @@ end ToString
 /-- Returns true if the name has any numeric components. -/
 def hasNum : Name → Bool
   | anonymous => false
-  | num ..    => true
-  | str p ..  => hasNum p
+  | num .. => true
+  | str p .. => hasNum p
 
 protected def reprPrec (n : Name) (prec : Nat) : Std.Format :=
   match n with
   | anonymous => Std.Format.text "Lean.Name.anonymous"
-  | num p i => Repr.addAppParen ("Lean.Name.mkNum " ++ Name.reprPrec p max_prec ++ " " ++ repr i) prec
+  | num p i =>
+    Repr.addAppParen ("Lean.Name.mkNum " ++ Name.reprPrec p max_prec ++ " " ++ repr i) prec
   | str p s =>
     if p.hasNum then
       Repr.addAppParen ("Lean.Name.mkStr " ++ Name.reprPrec p max_prec ++ " " ++ repr s) prec
@@ -288,25 +295,26 @@ instance : Repr Name where
 
 def capitalize : Name → Name
   | .str p s => .str p (String.Internal.capitalize s)
-  | n        => n
+  | n => n
 
 def replacePrefix : Name → Name → Name → Name
-  | anonymous,   anonymous, newP => newP
-  | anonymous,   _,         _    => anonymous
-  | n@(str p s), queryP,    newP => if n == queryP then newP else Name.mkStr (p.replacePrefix queryP newP) s
-  | n@(num p s), queryP,    newP => if n == queryP then newP else Name.mkNum (p.replacePrefix queryP newP) s
+  | anonymous, anonymous, newP => newP
+  | anonymous, _, _ => anonymous
+  | n@(str p s), queryP, newP =>
+    if n == queryP then newP else Name.mkStr (p.replacePrefix queryP newP) s
+  | n@(num p s), queryP, newP =>
+    if n == queryP then newP else Name.mkNum (p.replacePrefix queryP newP) s
 
-/--
-  `eraseSuffix? n s` return `n'` if `n` is of the form `n == n' ++ s`.
--/
+/-- `eraseSuffix? n s` return `n'` if `n` is of the form `n == n' ++ s`. -/
 def eraseSuffix? : Name → Name → Option Name
-  | n,       anonymous => some n
+  | n, anonymous => some n
   | str p s, str p' s' => if s == s' then eraseSuffix? p p' else none
   | num p s, num p' s' => if s == s' then eraseSuffix? p p' else none
-  | _,       _         => none
+  | _, _ => none
 
 /-- Remove macros scopes, apply `f`, and put them back -/
-@[inline] def modifyBase (n : Name) (f : Name → Name) : Name :=
+@[inline]
+def modifyBase (n : Name) (f : Name → Name) : Name :=
   if n.hasMacroScopes then
     let view := extractMacroScopes n
     { view with name := f view.name }.review
@@ -317,13 +325,13 @@ def eraseSuffix? : Name → Name → Option Name
 def appendAfter (n : Name) (suffix : String) : Name :=
   n.modifyBase fun
     | str p s => Name.mkStr p (String.Internal.append s suffix)
-    | n       => Name.mkStr n suffix
+    | n => Name.mkStr n suffix
 
 @[export lean_name_append_index_after]
 def appendIndexAfter (n : Name) (idx : Nat) : Name :=
   n.modifyBase fun
     | str p s => Name.mkStr p (String.Internal.append (String.Internal.append s "_") (toString idx))
-    | n       => Name.mkStr n (String.Internal.append "_" (toString idx))
+    | n => Name.mkStr n (String.Internal.append "_" (toString idx))
 
 def appendBefore (n : Name) (pre : String) : Name :=
   n.modifyBase fun
@@ -339,22 +347,20 @@ instance : LawfulBEq Name where
   eq_of_beq := Name.beq_iff_eq.1
   rfl := Name.beq_iff_eq.2 rfl
 
-instance : DecidableEq Name :=
-  fun a b => if h : a == b then .isTrue (by simp_all) else .isFalse (by simp_all)
+instance : DecidableEq Name := fun a b =>
+  if h : a == b then .isTrue (by simp_all) else .isFalse (by simp_all)
 
 end Name
 
 namespace NameGenerator
 
-@[inline] def curr (g : NameGenerator) : Name :=
-  Name.mkNum g.namePrefix g.idx
+@[inline] def curr (g : NameGenerator) : Name := Name.mkNum g.namePrefix g.idx
 
-@[inline] def next (g : NameGenerator) : NameGenerator :=
-  { g with idx := g.idx + 1 }
+@[inline] def next (g : NameGenerator) : NameGenerator := { g with idx := g.idx + 1 }
 
-@[inline] def mkChild (g : NameGenerator) : NameGenerator × NameGenerator :=
-  ({ namePrefix := Name.mkNum g.namePrefix g.idx, idx := 1 },
-   { g with idx := g.idx + 1 })
+@[inline]
+def mkChild (g : NameGenerator) : NameGenerator × NameGenerator :=
+  ({ namePrefix := Name.mkNum g.namePrefix g.idx, idx := 1 }, { g with idx := g.idx + 1 })
 
 end NameGenerator
 
@@ -378,8 +384,9 @@ def mkFreshId {m : Type → Type} [Monad m] [MonadNameGenerator m] : m Name := d
   setNGen ngen.next
   pure r
 
-instance monadNameGeneratorLift (m n : Type → Type) [MonadLift m n] [MonadNameGenerator m] : MonadNameGenerator n := {
-  getNGen := liftM (getNGen : m _),
+instance monadNameGeneratorLift (m n : Type → Type) [MonadLift m n] [MonadNameGenerator m]
+    : MonadNameGenerator n := {
+  getNGen := liftM (getNGen : m _)
   setNGen := fun ngen => liftM (setNGen ngen : m _)
 }
 
@@ -389,74 +396,46 @@ deriving instance Repr for Syntax.Preresolved
 deriving instance Repr for Syntax
 deriving instance Repr for TSyntax
 
-/--
-Syntax that represents a Lean term.
--/
+/-- Syntax that represents a Lean term. -/
 abbrev Term := TSyntax `term
-/--
-Syntax that represents a command.
--/
+/-- Syntax that represents a command. -/
 abbrev Command := TSyntax `command
-/--
-Syntax that represents a universe level.
--/
+/-- Syntax that represents a universe level. -/
 protected abbrev Level := TSyntax `level
-/--
-Syntax that represents a tactic.
--/
+/-- Syntax that represents a tactic. -/
 protected abbrev Tactic := TSyntax `tactic
-/--
-Syntax that represents an element of a `do` sequence.
--/
+/-- Syntax that represents an element of a `do` sequence. -/
 abbrev DoElem := TSyntax `doElem
-/--
-Syntax that represents a sequence of `do` elements.
--/
+/-- Syntax that represents a sequence of `do` elements. -/
 abbrev DoSeq := TSyntax `Lean.Parser.Term.doSeq
-/--
-Syntax that represents a precedence (e.g. for an operator).
--/
+/-- Syntax that represents a precedence (e.g. for an operator). -/
 abbrev Prec := TSyntax `prec
-/--
-Syntax that represents a priority (e.g. for an instance declaration).
--/
+/-- Syntax that represents a priority (e.g. for an instance declaration). -/
 abbrev Prio := TSyntax `prio
-/--
-Syntax that represents an identifier.
--/
+/-- Syntax that represents an identifier. -/
 abbrev Ident := TSyntax identKind
-/--
-Syntax that represents a string literal.
--/
+/-- Syntax that represents a string literal. -/
 abbrev StrLit := TSyntax strLitKind
-/--
-Syntax that represents a character literal.
--/
+/-- Syntax that represents a character literal. -/
 abbrev CharLit := TSyntax charLitKind
-/--
-Syntax that represents a quoted name literal that begins with a back-tick.
--/
+/-- Syntax that represents a quoted name literal that begins with a back-tick. -/
 abbrev NameLit := TSyntax nameLitKind
 /--
 Syntax that represents a scientific numeric literal that may have decimal and exponential parts.
 -/
 abbrev ScientificLit := TSyntax scientificLitKind
-/--
-Syntax that represents a numeric literal.
--/
+/-- Syntax that represents a numeric literal. -/
 abbrev NumLit := TSyntax numLitKind
-/--
-Syntax that represents macro hygiene info.
--/
+/-- Syntax that represents macro hygiene info. -/
 abbrev HygieneInfo := TSyntax hygieneInfoKind
-/--
-Syntax that represent a hexadecimal number without the `0x` prefix.
--/
+/-- Syntax that represent a hexadecimal number without the `0x` prefix. -/
 abbrev HexNum := TSyntax hexnumKind
 
 end Syntax
 
-export Syntax (Term Command DoElem DoSeq Prec Prio Ident StrLit CharLit NameLit ScientificLit NumLit HygieneInfo)
+export Syntax
+  (Term Command DoElem DoSeq Prec Prio Ident StrLit CharLit NameLit ScientificLit NumLit
+    HygieneInfo)
 
 namespace TSyntax
 
@@ -517,11 +496,12 @@ The annotations are necessary because this calls the bootstrapping helper for Su
 not have borrowing annotations.
 -/
 /-- Compare syntax structures modulo source info. -/
-partial def structEq : @&Syntax → @&Syntax → Bool
+partial def structEq : @& Syntax → @& Syntax → Bool
   | Syntax.missing, Syntax.missing => true
   | Syntax.node _ k args, Syntax.node _ k' args' => k == k' && args.isEqv args' structEq
   | Syntax.atom _ val, Syntax.atom _ val' => val == val'
-  | Syntax.ident _ rawVal val preresolved, Syntax.ident _ rawVal' val' preresolved' => Substring.Raw.Internal.beq rawVal rawVal' && val == val' && preresolved == preresolved'
+  | Syntax.ident _ rawVal val preresolved, Syntax.ident _ rawVal' val' preresolved' =>
+    Substring.Raw.Internal.beq rawVal rawVal' && val == val' && preresolved == preresolved'
   | _, _ => false
 
 instance : BEq Lean.Syntax := ⟨structEq⟩
@@ -531,19 +511,17 @@ instance : BEq (Lean.TSyntax k) := ⟨(·.raw == ·.raw)⟩
 Finds the first `SourceInfo` from the back of `stx` or `none` if no `SourceInfo` can be found.
 -/
 partial def getTailInfo? : Syntax → Option SourceInfo
-  | atom info _   => some info
+  | atom info _ => some info
   | ident info .. => some info
-  | node SourceInfo.none _ args =>
-      args.findSomeRev? getTailInfo?
-  | node info _ _    => some info
-  | _             => none
+  | node SourceInfo.none _ args => args.findSomeRev? getTailInfo?
+  | node info _ _ => some info
+  | _ => none
 
 /--
 Finds the first `SourceInfo` from the back of `stx` or `SourceInfo.none`
 if no `SourceInfo` can be found.
 -/
-def getTailInfo (stx : Syntax) : SourceInfo :=
-  stx.getTailInfo?.getD SourceInfo.none
+def getTailInfo (stx : Syntax) : SourceInfo := stx.getTailInfo?.getD SourceInfo.none
 
 /--
 Finds the trailing size of the first `SourceInfo` from the back of `stx`.
@@ -560,8 +538,7 @@ Finds the trailing whitespace substring of the first `SourceInfo` from the back 
 If no `SourceInfo` can be found or the first `SourceInfo` from the back of `stx` contains
 no trailing whitespace, the result is `none`.
 -/
-def getTrailing? (stx : Syntax) : Option Substring.Raw :=
-  stx.getTailInfo.getTrailing?
+def getTrailing? (stx : Syntax) : Option Substring.Raw := stx.getTailInfo.getTrailing?
 
 /--
 Finds the tail position of the trailing whitespace of the first `SourceInfo` from the back of `stx`.
@@ -572,40 +549,44 @@ def getTrailingTailPos? (stx : Syntax) (canonicalOnly := false) : Option String.
   stx.getTailInfo.getTrailingTailPos? canonicalOnly
 
 /--
-  Return substring of original input covering `stx`.
-  Result is meaningful only if all involved `SourceInfo.original`s refer to the same string (as is the case after parsing). -/
-def getSubstring? (stx : Syntax) (withLeading := true) (withTrailing := true) : Option Substring.Raw :=
+Return substring of original input covering `stx`.
+Result is meaningful only if all involved `SourceInfo.original`s refer to the same string (as is the case after parsing).
+-/
+def getSubstring? (stx : Syntax) (withLeading := true) (withTrailing := true)
+    : Option Substring.Raw :=
   match stx.getHeadInfo, stx.getTailInfo with
   | SourceInfo.original lead startPos _ _, SourceInfo.original _ _ trail stopPos =>
     some {
-      str      := lead.str
+      str := lead.str
       startPos := if withLeading then lead.startPos else startPos
-      stopPos  := if withTrailing then trail.stopPos else stopPos
+      stopPos := if withTrailing then trail.stopPos else stopPos
     }
   | _, _ => none
 
-@[specialize] private partial def updateLast {α} (a : Array α) (f : α → Option α) (i : Fin (a.size + 1)) : Option (Array α) :=
+@[specialize]
+private partial def updateLast {α} (a : Array α) (f : α → Option α) (i : Fin (a.size + 1))
+    : Option (Array α) :=
   match i with
   | 0 => none
   | ⟨i + 1, h⟩ =>
     let v := a[i]'(Nat.succ_lt_succ_iff.mp h)
     match f v with
     | some v => some <| a.set i v (Nat.succ_lt_succ_iff.mp h)
-    | none   => updateLast a f ⟨i, Nat.lt_of_succ_lt h⟩
+    | none => updateLast a f ⟨i, Nat.lt_of_succ_lt h⟩
 
 partial def setTailInfoAux (info : SourceInfo) : Syntax → Option Syntax
-  | atom _ val             => some <| atom info val
+  | atom _ val => some <| atom info val
   | ident _ rawVal val pre => some <| ident info rawVal val pre
-  | node info' k args      =>
+  | node info' k args =>
     match updateLast args (setTailInfoAux info) ⟨args.size, by simp⟩ with
     | some args => some <| node info' k args
-    | none      => none
-  | _                      => none
+    | none => none
+  | _ => none
 
 def setTailInfo (stx : Syntax) (info : SourceInfo) : Syntax :=
   match setTailInfoAux info stx with
   | some stx => stx
-  | none     => stx
+  | none => stx
 
 /--
 Replaces the trailing whitespace in `stx`, if any, with an empty substring.
@@ -617,40 +598,42 @@ def unsetTrailing (stx : Syntax) : Syntax :=
   match stx.getTailInfo with
   | SourceInfo.original lead pos trail endPos =>
     stx.setTailInfo (SourceInfo.original lead pos { trail with stopPos := trail.startPos } endPos)
-  | _                                     => stx
+  | _ => stx
 
-@[specialize] private partial def updateFirst {α} [Inhabited α] (a : Array α) (f : α → Option α) (i : Nat) : Option (Array α) :=
+@[specialize]
+private partial def updateFirst {α} [Inhabited α] (a : Array α) (f : α → Option α) (i : Nat)
+    : Option (Array α) :=
   if h : i < a.size then
     let v := a[i]
     match f v with
     | some v => some <| a.set i v h
-    | none   => updateFirst a f (i+1)
+    | none => updateFirst a f (i + 1)
   else
     none
 
 partial def setHeadInfoAux (info : SourceInfo) : Syntax → Option Syntax
-  | atom _ val             => some <| atom info val
+  | atom _ val => some <| atom info val
   | ident _ rawVal val pre => some <| ident info rawVal val pre
-  | node i k args          =>
+  | node i k args =>
     match updateFirst args (setHeadInfoAux info) 0 with
     | some args => some <| node i k args
-    | _         => none
-  | _                      => none
+    | _ => none
+  | _ => none
 
 def setHeadInfo (stx : Syntax) (info : SourceInfo) : Syntax :=
   match setHeadInfoAux info stx with
   | some stx => stx
-  | none     => stx
+  | none => stx
 
 def setInfo (info : SourceInfo) : Syntax → Syntax
-  | atom _ val             => atom info val
+  | atom _ val => atom info val
   | ident _ rawVal val pre => ident info rawVal val pre
-  | node _ kind args       => node info kind args
-  | missing                => missing
+  | node _ kind args => node info kind args
+  | missing => missing
 
 /-- Return the first atom/identifier that has position information -/
 partial def getHead? : Syntax → Option Syntax
-  | stx@(atom info ..)  => info.getPos?.map fun _ => stx
+  | stx@(atom info ..) => info.getPos?.map fun _ => stx
   | stx@(ident info ..) => info.getPos?.map fun _ => stx
   | node SourceInfo.none _ args => args.findSome? getHead?
   | stx@(node ..) => some stx
@@ -659,54 +642,58 @@ partial def getHead? : Syntax → Option Syntax
 def copyHeadTailInfoFrom (target source : Syntax) : Syntax :=
   target.setHeadInfo source.getHeadInfo |>.setTailInfo source.getTailInfo
 
-/-- Ensure head position is synthetic. The server regards syntax as "original" only if both head and tail info are `original`. -/
-def mkSynthetic (stx : Syntax) : Syntax :=
-  stx.setHeadInfo (SourceInfo.fromRef stx)
+/--
+Ensure head position is synthetic. The server regards syntax as "original" only if both head and tail info are `original`.
+-/
+def mkSynthetic (stx : Syntax) : Syntax := stx.setHeadInfo (SourceInfo.fromRef stx)
 
 end Syntax
 
 /-- Use the head atom/identifier of the current `ref` as the `ref` -/
-@[inline] def withHeadRefOnly {m : Type → Type} [Monad m] [MonadRef m] {α} (x : m α) : m α := do
+@[inline]
+def withHeadRefOnly {m : Type → Type} [Monad m] [MonadRef m] {α} (x : m α) : m α := do
   match (← getRef).getHead? with
   | none => x
   | some ref => withRef ref x
 
 /--
-  Expand macros in the given syntax.
-  A node with kind `k` is visited only if `p k` is true.
+Expand macros in the given syntax.
+A node with kind `k` is visited only if `p k` is true.
 
-  To elaborate the expansion in `TermElabM`, use `Lean.Elab.Term.expandMacrosReportingDeprecated`
-  instead, which also reports deprecated syntax.
+To elaborate the expansion in `TermElabM`, use `Lean.Elab.Term.expandMacrosReportingDeprecated`
+instead, which also reports deprecated syntax.
 
-  Note that the default value for `p` returns false for `by ...` nodes.
-  This is a "hack". The tactic framework abuses the macro system to implement extensible tactics.
-  For example, one can define
-  ```lean
-  syntax "my_trivial" : tactic -- extensible tactic
+Note that the default value for `p` returns false for `by ...` nodes.
+This is a "hack". The tactic framework abuses the macro system to implement extensible tactics.
+For example, one can define
+```lean
+syntax "my_trivial" : tactic -- extensible tactic
 
-  macro_rules | `(tactic| my_trivial) => `(tactic| decide)
-  macro_rules | `(tactic| my_trivial) => `(tactic| assumption)
-  ```
-  When the tactic evaluator finds the tactic `my_trivial`, it tries to evaluate the `macro_rule` expansions
-  until one "works", i.e., the macro expansion is evaluated without producing an exception.
-  We say this solution is a bit hackish because the term elaborator may invoke `expandMacros` with `(p := fun _ => true)`,
-  and expand the tactic macros as just macros. In the example above, `my_trivial` would be replaced with `assumption`,
-  `decide` would not be tried if `assumption` fails at tactic evaluation time.
+macro_rules | `(tactic| my_trivial) => `(tactic| decide)
+macro_rules | `(tactic| my_trivial) => `(tactic| assumption)
+```
+When the tactic evaluator finds the tactic `my_trivial`, it tries to evaluate the `macro_rule` expansions
+until one "works", i.e., the macro expansion is evaluated without producing an exception.
+We say this solution is a bit hackish because the term elaborator may invoke `expandMacros` with `(p := fun _ => true)`,
+and expand the tactic macros as just macros. In the example above, `my_trivial` would be replaced with `assumption`,
+`decide` would not be tried if `assumption` fails at tactic evaluation time.
 
-  We are considering two possible solutions for this issue:
-  1- A proper extensible tactic feature that does not rely on the macro system.
+We are considering two possible solutions for this issue:
+1- A proper extensible tactic feature that does not rely on the macro system.
 
-  2- Typed macros that know the syntax categories they're working in. Then, we would be able to select which
-     syntactic categories are expanded by `expandMacros`.
+2- Typed macros that know the syntax categories they're working in. Then, we would be able to select which
+   syntactic categories are expanded by `expandMacros`.
 -/
-partial def expandMacros (stx : Syntax) (p : SyntaxNodeKind → Bool := fun k => k != `Lean.Parser.Term.byTactic) : MacroM Syntax :=
+partial def expandMacros
+    (stx : Syntax) (p : SyntaxNodeKind → Bool := fun k => k != `Lean.Parser.Term.byTactic)
+    : MacroM Syntax :=
   withRef stx do
     match stx with
     | .node info k args => do
       if p k then
         match (← expandMacro? stx) with
         | some stxNew => expandMacros stxNew
-        | none        => do
+        | none => do
           let args ← Macro.withIncRecDepth stx <| args.mapM expandMacros
           return .node info k args
       else
@@ -721,16 +708,18 @@ Creates an identifier with its position copied from `src`.
 To refer to a specific constant without a risk of variable capture, use `mkCIdentFrom` instead.
 -/
 def mkIdentFrom (src : Syntax) (val : Name) (canonical := false) : Ident :=
-  ⟨Syntax.ident (SourceInfo.fromRef src canonical) (Name.Internal.Meta.toString val).toRawSubstring val []⟩
+  ⟨Syntax.ident (SourceInfo.fromRef src canonical) (Name.Internal.Meta.toString val).toRawSubstring
+    val []⟩
 
 /--
 Creates a documentation comment whose text is read as Markdown, with its position copied from `src`.
 -/
-def mkMarkdownDocCommentFrom (src : Syntax) (text : String) (canonical := false) :
-    TSyntax `Lean.Parser.Command.docComment :=
+def mkMarkdownDocCommentFrom (src : Syntax) (text : String) (canonical := false)
+    : TSyntax `Lean.Parser.Command.docComment :=
   let info := SourceInfo.fromRef src canonical
-  let body := Syntax.node .none `Lean.Parser.Command.commentBody
-    #[Syntax.atom info text, Syntax.atom info "-/"]
+  let body :=
+    Syntax.node .none `Lean.Parser.Command.commentBody
+      #[Syntax.atom info text, Syntax.atom info "-/"]
   ⟨Syntax.node .none `Lean.Parser.Command.docComment #[Syntax.atom info "/--", body]⟩
 
 /--
@@ -755,8 +744,9 @@ This variant of `mkIdentFrom` makes sure that the identifier cannot accidentally
 -/
 def mkCIdentFrom (src : Syntax) (c : Name) (canonical := false) : Ident :=
   -- Remark: We use the reserved macro scope to make sure there are no accidental collision with our frontend
-  let id   := addMacroScope `_internal c reservedMacroScope
-  ⟨Syntax.ident (SourceInfo.fromRef src canonical) (Name.Internal.Meta.toString id).toRawSubstring id [.decl c []]⟩
+  let id := addMacroScope `_internal c reservedMacroScope
+  ⟨Syntax.ident (SourceInfo.fromRef src canonical) (Name.Internal.Meta.toString id).toRawSubstring
+    id [.decl c []]⟩
 
 /--
 Creates an identifier referring to a constant `c`. The identifier's position is copied from the
@@ -772,24 +762,16 @@ Creates an identifier that refers to a constant `c`. The identifier has no sourc
 
 This variant of `mkIdent` makes sure that the identifier cannot accidentally be captured.
 -/
-def mkCIdent (c : Name) : Ident :=
-  mkCIdentFrom Syntax.missing c
+def mkCIdent (c : Name) : Ident := mkCIdentFrom Syntax.missing c
 
-/--
-Creates an identifier from a name. The resulting identifier has no source position.
--/
+/-- Creates an identifier from a name. The resulting identifier has no source position. -/
 def mkIdent (val : Name) : Ident :=
   ⟨Syntax.ident SourceInfo.none (Name.Internal.Meta.toString val).toRawSubstring val []⟩
 
-/--
-Creates a group node, as if it were parsed by `Lean.Parser.group`.
--/
-@[inline] def mkGroupNode (args : Array Syntax := #[]) : Syntax :=
-  mkNode groupKind args
+/-- Creates a group node, as if it were parsed by `Lean.Parser.group`. -/
+@[inline] def mkGroupNode (args : Array Syntax := #[]) : Syntax := mkNode groupKind args
 
-/--
-Creates an array of syntax, separated by `sep`.
--/
+/-- Creates an array of syntax, separated by `sep`. -/
 def mkSepArray (as : Array Syntax) (sep : Syntax) : Array Syntax := Id.run do
   let mut i := 0
   let mut r := #[]
@@ -809,11 +791,9 @@ Optional nodes consist of null nodes that contain either zero or one element.
 def mkOptionalNode (arg : Option Syntax) : Syntax :=
   match arg with
   | some arg => mkNullNode #[arg]
-  | none     => mkNullNode #[]
+  | none => mkNullNode #[]
 
-/--
-Creates a hole (`_`). The hole's position is copied from `ref`.
--/
+/-- Creates a hole (`_`). The hole's position is copied from `ref`. -/
 def mkHole (ref : Syntax) (canonical := false) : Term :=
   ⟨mkNode `Lean.Parser.Term.hole #[mkAtomFrom ref "_" canonical]⟩
 
@@ -823,8 +803,7 @@ namespace Syntax
 Creates the syntax of a separated array of items. `sep` is inserted between each item from `a`, and
 the result is wrapped in a null node.
 -/
-def mkSep (a : Array Syntax) (sep : Syntax) : Syntax :=
-  mkNullNode <| mkSepArray a sep
+def mkSep (a : Array Syntax) (sep : Syntax) : Syntax := mkNullNode <| mkSepArray a sep
 
 /--
 Constructs a typed separated array from elements by adding suitable separators.
@@ -833,15 +812,16 @@ The provided array should not include the separators.
 Like `Syntax.TSepArray.ofElems` but for untyped syntax.
 -/
 def SepArray.ofElems {sep} (elems : Array Syntax) : SepArray sep :=
-⟨mkSepArray elems (if String.Internal.isEmpty sep then mkNullNode else mkAtom sep)⟩
+  ⟨mkSepArray elems (if String.Internal.isEmpty sep then mkNullNode else mkAtom sep)⟩
 
 /--
 Constructs a typed separated array from elements by adding suitable separators.
 The provided array should not include the separators.
 The generated separators' source location is that of the syntax returned by `getRef`.
 -/
-def SepArray.ofElemsUsingRef [Monad m] [MonadRef m] {sep} (elems : Array Syntax) : m (SepArray sep) := do
-  let ref ← getRef;
+def SepArray.ofElemsUsingRef [Monad m] [MonadRef m] {sep} (elems : Array Syntax)
+    : m (SepArray sep) := do
+  let ref ← getRef
   return ⟨mkSepArray elems (if String.Internal.isEmpty sep then mkNullNode else mkAtomFrom ref sep)⟩
 
 /--
@@ -860,14 +840,13 @@ instance : Coe (TSyntaxArray k) (TSepArray k sep) where
 Creates syntax representing a Lean term application, but avoids degenerate empty applications.
 -/
 def mkApp (fn : Term) : (args : TSyntaxArray `term) → Term
-  | #[]  => fn
+  | #[] => fn
   | args => ⟨mkNode `Lean.Parser.Term.app #[fn, mkNullNode args.raw]⟩
 
 /--
 Creates syntax representing a Lean constant application, but avoids degenerate empty applications.
 -/
-def mkCApp (fn : Name) (args : TSyntaxArray `term) : Term :=
-  mkApp (mkCIdent fn) args
+def mkCApp (fn : Name) (args : TSyntaxArray `term) : Term := mkApp (mkCIdent fn) args
 
 /--
 Creates a literal of the given kind. It is the caller's responsibility to ensure that the provided
@@ -901,16 +880,14 @@ string is a valid token for the `num` token parser.
 
 If `info` is provided, then the literal's source information is copied from it.
 -/
-def mkNumLit (val : String) (info := SourceInfo.none) : NumLit :=
-  mkLit numLitKind val info
+def mkNumLit (val : String) (info := SourceInfo.none) : NumLit := mkLit numLitKind val info
 
 /--
 Creates literal syntax for a natural number.
 
 If `info` is provided, then the literal's source information is copied from it.
 -/
-def mkNatLit (val : Nat) (info := SourceInfo.none) : NumLit :=
-  mkLit numLitKind (toString val) info
+def mkNatLit (val : Nat) (info := SourceInfo.none) : NumLit := mkLit numLitKind (toString val) info
 
 /--
 Creates literal syntax for a number in scientific notation. The caller must ensure that the provided
@@ -927,8 +904,7 @@ literal.
 
 If `info` is provided, then the literal's source information is copied from it.
 -/
-def mkNameLit (val : String) (info := SourceInfo.none) : NameLit :=
-  mkLit nameLitKind val info
+def mkNameLit (val : String) (info := SourceInfo.none) : NameLit := mkLit nameLitKind val info
 
 /-! Recall that we don't have special Syntax constructors for storing numeric and string atoms.
    The idea is to have an extensible approach where embedded DSLs may have new kind of atoms and/or
@@ -938,62 +914,93 @@ def mkNameLit (val : String) (info := SourceInfo.none) : NameLit :=
    for Syntax objects representing these numerals. -/
 
 private partial def decodeBinLitAux (s : String) (i : String.Pos.Raw) (val : Nat) : Option Nat :=
-  if String.Internal.atEnd s i then some val
+  if String.Internal.atEnd s i then
+    some val
   else
     let c := String.Internal.get s i
-    if c == '0' then decodeBinLitAux s (String.Internal.next s i) (2*val)
-    else if c == '1' then decodeBinLitAux s (String.Internal.next s i) (2*val + 1)
-    else if c == '_' then decodeBinLitAux s (String.Internal.next s i) val
-    else none
+    if c == '0' then
+      decodeBinLitAux s (String.Internal.next s i) (2 * val)
+    else if c == '1' then
+      decodeBinLitAux s (String.Internal.next s i) (2 * val + 1)
+    else if c == '_' then
+      decodeBinLitAux s (String.Internal.next s i) val
+    else
+      none
 
 private partial def decodeOctalLitAux (s : String) (i : String.Pos.Raw) (val : Nat) : Option Nat :=
-  if String.Internal.atEnd s i then some val
+  if String.Internal.atEnd s i then
+    some val
   else
     let c := String.Internal.get s i
-    if '0' ≤ c && c ≤ '7' then decodeOctalLitAux s (String.Internal.next s i) (8*val + c.toNat - '0'.toNat)
-    else if c == '_' then decodeOctalLitAux s (String.Internal.next s i) val
-    else none
+    if '0' ≤ c && c ≤ '7' then
+      decodeOctalLitAux s (String.Internal.next s i) (8 * val + c.toNat - '0'.toNat)
+    else if c == '_' then
+      decodeOctalLitAux s (String.Internal.next s i) val
+    else
+      none
 
 private def decodeHexDigit (s : String) (i : String.Pos.Raw) : Option (Nat × String.Pos.Raw) :=
   let c := String.Internal.get s i
   let i := String.Internal.next s i
-  if '0' ≤ c && c ≤ '9' then some (c.toNat - '0'.toNat, i)
-  else if 'a' ≤ c && c ≤ 'f' then some (10 + c.toNat - 'a'.toNat, i)
-  else if 'A' ≤ c && c ≤ 'F' then some (10 + c.toNat - 'A'.toNat, i)
-  else none
+  if '0' ≤ c && c ≤ '9' then
+    some (c.toNat - '0'.toNat, i)
+  else if 'a' ≤ c && c ≤ 'f' then
+    some (10 + c.toNat - 'a'.toNat, i)
+  else if 'A' ≤ c && c ≤ 'F' then
+    some (10 + c.toNat - 'A'.toNat, i)
+  else
+    none
 
 private partial def decodeHexLitAux (s : String) (i : String.Pos.Raw) (val : Nat) : Option Nat :=
-  if String.Internal.atEnd s i then some val
-  else match decodeHexDigit s i with
-    | some (d, i) => decodeHexLitAux s i (16*val + d)
-    | none        =>
-      if String.Internal.get s i == '_' then decodeHexLitAux s (String.Internal.next s i) val
-      else none
+  if String.Internal.atEnd s i then
+    some val
+  else
+    match decodeHexDigit s i with
+    | some (d, i) => decodeHexLitAux s i (16 * val + d)
+    | none =>
+      if String.Internal.get s i == '_' then
+        decodeHexLitAux s (String.Internal.next s i) val
+      else
+        none
 
-private partial def decodeDecimalLitAux (s : String) (i : String.Pos.Raw) (val : Nat) : Option Nat :=
-  if String.Internal.atEnd s i then some val
+private partial def decodeDecimalLitAux (s : String) (i : String.Pos.Raw) (val : Nat)
+    : Option Nat :=
+  if String.Internal.atEnd s i then
+    some val
   else
     let c := String.Internal.get s i
-    if '0' ≤ c && c ≤ '9' then decodeDecimalLitAux s (String.Internal.next s i) (10*val + c.toNat - '0'.toNat)
-    else if c == '_' then decodeDecimalLitAux s (String.Internal.next s i) val
-    else none
+    if '0' ≤ c && c ≤ '9' then
+      decodeDecimalLitAux s (String.Internal.next s i) (10 * val + c.toNat - '0'.toNat)
+    else if c == '_' then
+      decodeDecimalLitAux s (String.Internal.next s i) val
+    else
+      none
 
 def decodeNatLitVal? (s : String) : Option Nat :=
   let len := String.Internal.length s
-  if len == 0 then none
+  if len == 0 then
+    none
   else
     let c := String.Internal.get s 0
     if c == '0' then
-      if len == 1 then some 0
+      if len == 1 then
+        some 0
       else
         let c := String.Internal.get s ⟨1⟩
-        if c == 'x' || c == 'X' then decodeHexLitAux s ⟨2⟩ 0
-        else if c == 'b' || c == 'B' then decodeBinLitAux s ⟨2⟩ 0
-        else if c == 'o' || c == 'O' then decodeOctalLitAux s ⟨2⟩ 0
-        else if c.isDigit then decodeDecimalLitAux s 0 0
-        else none
-    else if c.isDigit then decodeDecimalLitAux s 0 0
-    else none
+        if c == 'x' || c == 'X' then
+          decodeHexLitAux s ⟨2⟩ 0
+        else if c == 'b' || c == 'B' then
+          decodeBinLitAux s ⟨2⟩ 0
+        else if c == 'o' || c == 'O' then
+          decodeOctalLitAux s ⟨2⟩ 0
+        else if c.isDigit then
+          decodeDecimalLitAux s 0 0
+        else
+          none
+    else if c.isDigit then
+      decodeDecimalLitAux s 0 0
+    else
+      none
 
 def isLit? (litKind : SyntaxNodeKind) (stx : Syntax) : Option String :=
   match stx with
@@ -1009,13 +1016,11 @@ def isLit? (litKind : SyntaxNodeKind) (stx : Syntax) : Option String :=
 private def isNatLitAux (litKind : SyntaxNodeKind) (stx : Syntax) : Option Nat :=
   match isLit? litKind stx with
   | some val => decodeNatLitVal? val
-  | _        => none
+  | _ => none
 
-def isNatLit? (s : Syntax) : Option Nat :=
-  isNatLitAux numLitKind s
+def isNatLit? (s : Syntax) : Option Nat := isNatLitAux numLitKind s
 
-def isFieldIdx? (s : Syntax) : Option Nat :=
-  isNatLitAux fieldIdxKind s
+def isFieldIdx? (s : Syntax) : Option Nat := isNatLitAux fieldIdxKind s
 
 /--
 Decodes a 'scientific number' string which is consumed by the `OfScientific` class. Takes as input a
@@ -1024,14 +1029,17 @@ string such as `123`, `123.456e7` and returns a triple `(n, sign, e)` with value
 -/
 partial def decodeScientificLitVal? (s : String) : Option (Nat × Bool × Nat) :=
   let len := String.Internal.length s
-  if len == 0 then none
+  if len == 0 then
+    none
   else
     let c := String.Internal.get s 0
     if c.isDigit then
       decode 0 0
-    else none
+    else
+      none
 where
-  decodeAfterExp (i : String.Pos.Raw) (val : Nat) (e : Nat) (sign : Bool) (exp : Nat) : Option (Nat × Bool × Nat) :=
+  decodeAfterExp (i : String.Pos.Raw) (val : Nat) (e : Nat) (sign : Bool) (exp : Nat)
+      : Option (Nat × Bool × Nat) :=
     if String.Internal.atEnd s i then
       if sign then
         some (val, sign, exp + e)
@@ -1042,21 +1050,23 @@ where
     else
       let c := String.Internal.get s i
       if '0' ≤ c && c ≤ '9' then
-        decodeAfterExp (String.Internal.next s i) val e sign (10*exp + c.toNat - '0'.toNat)
+        decodeAfterExp (String.Internal.next s i) val e sign (10 * exp + c.toNat - '0'.toNat)
       else if c == '_' then
         decodeAfterExp (String.Internal.next s i) val e sign exp
       else
         none
 
   decodeExp (i : String.Pos.Raw) (val : Nat) (e : Nat) : Option (Nat × Bool × Nat) :=
-    if String.Internal.atEnd s i then none else
-    let c := String.Internal.get s i
-    if c == '-' then
-       decodeAfterExp (String.Internal.next s i) val e true 0
-    else if c == '+' then
-       decodeAfterExp (String.Internal.next s i) val e false 0
+    if String.Internal.atEnd s i then
+      none
     else
-       decodeAfterExp i val e false 0
+      let c := String.Internal.get s i
+      if c == '-' then
+        decodeAfterExp (String.Internal.next s i) val e true 0
+      else if c == '+' then
+        decodeAfterExp (String.Internal.next s i) val e false 0
+      else
+        decodeAfterExp i val e false 0
 
   decodeAfterDot (i : String.Pos.Raw) (val : Nat) (e : Nat) : Option (Nat × Bool × Nat) :=
     if String.Internal.atEnd s i then
@@ -1064,7 +1074,7 @@ where
     else
       let c := String.Internal.get s i
       if '0' ≤ c && c ≤ '9' then
-        decodeAfterDot (String.Internal.next s i) (10*val + c.toNat - '0'.toNat) (e+1)
+        decodeAfterDot (String.Internal.next s i) (10 * val + c.toNat - '0'.toNat) (e + 1)
       else if c == '_' then
         decodeAfterDot (String.Internal.next s i) val e
       else if c == 'e' || c == 'E' then
@@ -1078,7 +1088,7 @@ where
     else
       let c := String.Internal.get s i
       if '0' ≤ c && c ≤ '9' then
-        decode (String.Internal.next s i) (10*val + c.toNat - '0'.toNat)
+        decode (String.Internal.next s i) (10 * val + c.toNat - '0'.toNat)
       else if c == '_' then
         decode (String.Internal.next s i) val
       else if c == '.' then
@@ -1091,37 +1101,43 @@ where
 def isScientificLit? (stx : Syntax) : Option (Nat × Bool × Nat) :=
   match isLit? scientificLitKind stx with
   | some val => decodeScientificLitVal? val
-  | _        => none
+  | _ => none
 
 def isIdOrAtom? : Syntax → Option String
-  | Syntax.atom _ val           => some val
-  | Syntax.ident _ rawVal _ _   => some (Substring.Raw.Internal.toString rawVal)
+  | Syntax.atom _ val => some val
+  | Syntax.ident _ rawVal _ _ => some (Substring.Raw.Internal.toString rawVal)
   | _ => none
 
 def toNat (stx : Syntax) : Nat :=
   match stx.isNatLit? with
   | some val => val
-  | none     => 0
+  | none => 0
 
 def decodeQuotedChar (s : String) (i : String.Pos.Raw) : Option (Char × String.Pos.Raw) := do
   let c := String.Internal.get s i
   let i := String.Internal.next s i
-  if c == '\\' then pure ('\\', i)
-  else if c = '\"' then pure ('\"', i)
-  else if c = '\'' then pure ('\'', i)
-  else if c = 'r'  then pure ('\r', i)
-  else if c = 'n'  then pure ('\n', i)
-  else if c = 't'  then pure ('\t', i)
-  else if c = 'x'  then
+  if c == '\\' then
+    pure ('\\', i)
+  else if c = '\"' then
+    pure ('\"', i)
+  else if c = '\'' then
+    pure ('\'', i)
+  else if c = 'r' then
+    pure ('\r', i)
+  else if c = 'n' then
+    pure ('\n', i)
+  else if c = 't' then
+    pure ('\t', i)
+  else if c = 'x' then
     let (d₁, i) ← decodeHexDigit s i
     let (d₂, i) ← decodeHexDigit s i
-    pure (Char.ofNat (16*d₁ + d₂), i)
-  else if c = 'u'  then do
+    pure (Char.ofNat (16 * d₁ + d₂), i)
+  else if c = 'u' then do
     let (d₁, i) ← decodeHexDigit s i
     let (d₂, i) ← decodeHexDigit s i
     let (d₃, i) ← decodeHexDigit s i
     let (d₄, i) ← decodeHexDigit s i
-    pure (Char.ofNat (16*(16*(16*d₁ + d₂) + d₃) + d₄), i)
+    pure (Char.ofNat (16 * (16 * (16 * d₁ + d₂) + d₃) + d₄), i)
   else
     none
 
@@ -1189,7 +1205,7 @@ The parser should always create well-formed `str` nodes.
 def isStrLit? (stx : Syntax) : Option String :=
   match isLit? strLitKind stx with
   | some val => decodeStrLit val
-  | _        => none
+  | _ => none
 
 def decodeCharLit (s : String) : Option Char := do
   let c := String.Internal.get s ⟨1⟩
@@ -1202,9 +1218,10 @@ def decodeCharLit (s : String) : Option Char := do
 def isCharLit? (stx : Syntax) : Option Char :=
   match isLit? charLitKind stx with
   | some val => decodeCharLit val
-  | _        => none
+  | _ => none
 
-private partial def splitNameLitAux (ss : Substring.Raw) (acc : List Substring.Raw) : List Substring.Raw :=
+private partial def splitNameLitAux (ss : Substring.Raw) (acc : List Substring.Raw)
+    : List Substring.Raw :=
   let splitRest (ss : Substring.Raw) (acc : List Substring.Raw) : List Substring.Raw :=
     if Substring.Raw.Internal.front ss == '.' then
       splitNameLitAux (Substring.Raw.Internal.drop ss 1) acc
@@ -1212,14 +1229,24 @@ private partial def splitNameLitAux (ss : Substring.Raw) (acc : List Substring.R
       acc
     else
       []
-  if Substring.Raw.Internal.isEmpty ss then []
+  if Substring.Raw.Internal.isEmpty ss then
+    []
   else
     let curr := Substring.Raw.Internal.front ss
     if isIdBeginEscape curr then
-      let escapedPart := Substring.Raw.Internal.takeWhile ss (!isIdEndEscape ·)
-      let escapedPart := { escapedPart with stopPos := String.Pos.Raw.Internal.min ss.stopPos (String.Internal.next escapedPart.str escapedPart.stopPos) }
-      if !isIdEndEscape (Substring.Raw.Internal.get escapedPart <| Substring.Raw.Internal.prev escapedPart ⟨escapedPart.bsize⟩) then []
-      else splitRest (Substring.Raw.Internal.extract ss ⟨escapedPart.bsize⟩ ⟨ss.bsize⟩) (escapedPart :: acc)
+      let escapedPart := Substring.Raw.Internal.takeWhile ss (! isIdEndEscape ·)
+      let escapedPart := {
+        escapedPart with
+        stopPos :=
+          String.Pos.Raw.Internal.min ss.stopPos
+            (String.Internal.next escapedPart.str escapedPart.stopPos)
+      }
+      if ! isIdEndEscape (Substring.Raw.Internal.get escapedPart <|
+          Substring.Raw.Internal.prev escapedPart ⟨escapedPart.bsize⟩) then
+        []
+      else
+        splitRest (Substring.Raw.Internal.extract ss ⟨escapedPart.bsize⟩ ⟨ss.bsize⟩)
+          (escapedPart :: acc)
     else if isIdFirst curr then
       let idPart := Substring.Raw.Internal.takeWhile ss isIdRest
       splitRest (Substring.Raw.Internal.extract ss ⟨idPart.bsize⟩ ⟨ss.bsize⟩) (idPart :: acc)
@@ -1229,10 +1256,11 @@ private partial def splitNameLitAux (ss : Substring.Raw) (acc : List Substring.R
     else
       []
 
-/-- Split a name literal (without the backtick) into its dot-separated components. For example,
-`foo.bla.«bo.o»` ↦ `["foo", "bla", "«bo.o»"]`. If the literal cannot be parsed, return `[]`. -/
-def splitNameLit (ss : Substring.Raw) : List Substring.Raw :=
-  splitNameLitAux ss [] |>.reverse
+/--
+Split a name literal (without the backtick) into its dot-separated components. For example,
+`foo.bla.«bo.o»` ↦ `["foo", "bla", "«bo.o»"]`. If the literal cannot be parsed, return `[]`.
+-/
+def splitNameLit (ss : Substring.Raw) : List Substring.Raw := splitNameLitAux ss [] |>.reverse
 
 /--
 Converts a substring to the Lean compiler's representation of names. The resulting name is
@@ -1245,8 +1273,8 @@ hierarchical, and the string is split at the dots (`'.'`).
 def _root_.Substring.Raw.toName (s : Substring.Raw) : Name :=
   match splitNameLitAux s [] with
   | [] => .anonymous
-  | comps => comps.foldr (init := Name.anonymous)
-    fun comp n =>
+  | comps =>
+    comps.foldr (init := Name.anonymous) fun comp n =>
       let comp := Substring.Raw.Internal.toString comp
       if isIdBeginEscape (String.Internal.front comp) then
         Name.mkStr n (String.Internal.dropRight (String.Internal.drop comp 1) 1)
@@ -1264,8 +1292,7 @@ hierarchical, and the string is split at the dots (`'.'`).
 
 `"a.b".toName` is the name `a.b`, not `«a.b»`. For the latter, use `Name.mkSimple`.
 -/
-def _root_.String.toName (s : String) : Name :=
-  s.toRawSubstring.toName
+def _root_.String.toName (s : String) : Name := s.toRawSubstring.toName
 
 def decodeNameLit (s : String) : Option Name :=
   if String.Internal.get s 0 == '`' then
@@ -1278,38 +1305,37 @@ def decodeNameLit (s : String) : Option Name :=
 def isNameLit? (stx : Syntax) : Option Name :=
   match isLit? nameLitKind stx with
   | some val => decodeNameLit val
-  | _        => none
+  | _ => none
 
 def hasArgs : Syntax → Bool
   | Syntax.node _ _ args => args.size > 0
-  | _                    => false
+  | _ => false
 
 def isAtom : Syntax → Bool
   | atom _ _ => true
-  | _        => false
+  | _ => false
 
 def isToken (token : String) : Syntax → Bool
   | atom _ val => String.Internal.trim val == String.Internal.trim token
-  | _          => false
+  | _ => false
 
 def isNone (stx : Syntax) : Bool :=
   match stx with
   | Syntax.node _ k args => k == nullKind && args.size == 0
   -- when elaborating partial syntax trees, it's reasonable to interpret missing parts as `none`
-  | Syntax.missing     => true
-  | _                  => false
+  | Syntax.missing => true
+  | _ => false
 
 def getOptionalIdent? (stx : Syntax) : Option Name :=
   match stx.getOptional? with
   | some stx => some stx.getId
-  | none     => none
+  | none => none
 
 partial def findAux (p : Syntax → Bool) : Syntax → Option Syntax
   | stx@(Syntax.node _ _ args) => if p stx then some stx else args.findSome? (findAux p)
-  | stx                        => if p stx then some stx else none
+  | stx => if p stx then some stx else none
 
-def find? (stx : Syntax) (p : Syntax → Bool) : Option Syntax :=
-  findAux p stx
+def find? (stx : Syntax) (p : Syntax → Bool) : Option Syntax := findAux p stx
 
 end Syntax
 
@@ -1320,23 +1346,21 @@ Interprets a numeric literal as a natural number.
 
 Returns `0` if the syntax is malformed.
 -/
-def getNat (s : NumLit) : Nat :=
-  s.raw.isNatLit?.getD 0
+def getNat (s : NumLit) : Nat := s.raw.isNatLit?.getD 0
 
 private def isHexNum? (stx : Syntax) : Option Nat :=
   match Syntax.isLit? hexnumKind stx with
   | some val => Syntax.decodeHexLitAux val 0 0
-  | _        => none
+  | _ => none
 
 /-- Returns the value of the hexadecimal numeral as a natural number. -/
-def getHexNumVal (s : Syntax.HexNum) : Nat :=
-  isHexNum? s.raw |>.getD 0
+def getHexNumVal (s : Syntax.HexNum) : Nat := isHexNum? s.raw |>.getD 0
 
 /-- Returns the number of hexadecimal digits. -/
 partial def getHexNumSize (s : Syntax.HexNum) : Nat :=
   match Syntax.isLit? hexnumKind s.raw with
   | some val => go val 0 0
-  | _        => 0
+  | _ => 0
 where
   go (s : String) (p : String.Pos.Raw) (n : Nat) : Nat :=
     if String.Internal.atEnd s p then
@@ -1349,8 +1373,7 @@ Extracts the parsed name from the syntax of an identifier.
 
 Returns `Name.anonymous` if the syntax is malformed.
 -/
-def getId (s : Ident) : Name :=
-  s.raw.getId
+def getId (s : Ident) : Name := s.raw.getId
 
 /--
 Extracts the components of a scientific numeric literal.
@@ -1371,30 +1394,24 @@ Decodes a string literal, removing quotation marks and unescaping escaped charac
 
 Returns `""` if the syntax is malformed.
 -/
-def getString (s : StrLit) : String :=
-  s.raw.isStrLit?.getD ""
+def getString (s : StrLit) : String := s.raw.isStrLit?.getD ""
 
 /--
 Decodes a character literal.
 
 Returns `(default : Char)` if the syntax is malformed.
 -/
-def getChar (s : CharLit) : Char :=
-  s.raw.isCharLit?.getD default
+def getChar (s : CharLit) : Char := s.raw.isCharLit?.getD default
 
 /--
 Decodes a quoted name literal, returning the name.
 
 Returns `Lean.Name.anonymous` if the syntax is malformed.
 -/
-def getName (s : NameLit) : Name :=
-  s.raw.isNameLit?.getD .anonymous
+def getName (s : NameLit) : Name := s.raw.isNameLit?.getD .anonymous
 
-/--
-Decodes macro hygiene information.
--/
-def getHygieneInfo (s : HygieneInfo) : Name :=
-  s.raw[0].getId
+/-- Decodes macro hygiene information. -/
+def getHygieneInfo (s : HygieneInfo) : Name := s.raw[0].getId
 
 namespace Compat
 
@@ -1408,7 +1425,8 @@ end TSyntax
 def HygieneInfo.mkIdent (s : HygieneInfo) (val : Name) (canonical := false) : Ident :=
   let src := s.raw[0]
   let id := { extractMacroScopes src.getId with name := val.eraseMacroScopes }.review
-  ⟨Syntax.ident (SourceInfo.fromRef src canonical) (Name.Internal.Meta.toString val).toRawSubstring id []⟩
+  ⟨Syntax.ident (SourceInfo.fromRef src canonical) (Name.Internal.Meta.toString val).toRawSubstring
+    id []⟩
 
 /--
 Converts a runtime value into surface syntax that denotes it.
@@ -1418,29 +1436,31 @@ equivalent value. For example, the syntax may omit implicit arguments that can u
 automatically.
 -/
 class Quote (α : Type) (k : SyntaxNodeKind := `term) where
-  /--
-  Returns syntax for the given value.
-  -/
+  /-- Returns syntax for the given value. -/
   quote : α → TSyntax k
 
 export Quote (quote)
 
 set_option synthInstance.checkSynthOrder false in
-instance [Quote α k] [CoeHTCT (TSyntax k) (TSyntax [k'])] : Quote α k' := ⟨fun a => quote (k := k) a⟩
+instance [Quote α k] [CoeHTCT (TSyntax k) (TSyntax [k'])] : Quote α k' :=
+  ⟨fun a => quote (k := k) a⟩
 
 instance : Quote Term := ⟨id⟩
-instance : Quote Bool := ⟨fun | true => mkCIdent ``Bool.true | false => mkCIdent ``Bool.false⟩
+instance : Quote Bool := ⟨fun
+  | true => mkCIdent ``Bool.true
+  | false => mkCIdent ``Bool.false⟩
 instance : Quote Char charLitKind := ⟨Syntax.mkCharLit⟩
 instance : Quote String strLitKind := ⟨Syntax.mkStrLit⟩
 instance : Quote Nat numLitKind := ⟨fun n => Syntax.mkNumLit <| toString n⟩
-instance : Quote Substring.Raw := ⟨fun s => Syntax.mkCApp ``String.toRawSubstring' #[quote (Substring.Raw.Internal.toString s)]⟩
+instance : Quote Substring.Raw :=
+  ⟨fun s => Syntax.mkCApp ``String.toRawSubstring' #[quote (Substring.Raw.Internal.toString s)]⟩
 
 -- in contrast to `Name.toString`, we can, and want to be, precise here
 private def getEscapedNameParts? (acc : List String) : Name → Option (List String)
   | Name.anonymous => if acc.isEmpty then none else some acc
   | Name.str n s => do
     let s ← Name.Internal.Meta.escapePart s false
-    getEscapedNameParts? (s::acc) n
+    getEscapedNameParts? (s :: acc) n
   | Name.num _ _ => none
 
 def quoteNameMk : Name → Term
@@ -1451,16 +1471,18 @@ def quoteNameMk : Name → Term
 instance : Quote Name `term where
   quote n := private
     match getEscapedNameParts? [] n with
-    | some ss => ⟨mkNode `Lean.Parser.Term.quotedName #[Syntax.mkNameLit (String.Internal.append "`" (String.Internal.intercalate "." ss))]⟩
-    | none    => ⟨quoteNameMk n⟩
+    | some ss =>
+      ⟨mkNode `Lean.Parser.Term.quotedName
+        #[Syntax.mkNameLit (String.Internal.append "`" (String.Internal.intercalate "." ss))]⟩
+    | none => ⟨quoteNameMk n⟩
 
 instance [Quote α `term] [Quote β `term] : Quote (α × β) `term where
   quote
     | ⟨a, b⟩ => Syntax.mkCApp ``Prod.mk #[quote a, quote b]
 
 private def quoteList [Quote α `term] : List α → Term
-  | []      => mkCIdent ``List.nil
-  | (x::xs) => Syntax.mkCApp ``List.cons #[quote x, quoteList xs]
+  | [] => mkCIdent ``List.nil
+  | (x :: xs) => Syntax.mkCApp ``List.cons #[quote x, quoteList xs]
 
 instance [Quote α `term] : Quote (List α) `term where
   quote := private quoteList
@@ -1473,7 +1495,7 @@ private def quoteArray [Quote α `term] (xs : Array α) : Term :=
 where
   go (i : Nat) (args : Array Term) : Term :=
     if h : i < xs.size then
-      go (i+1) (args.push (quote xs[i]))
+      go (i + 1) (args.push (quote xs[i]))
     else
       Syntax.mkCApp (Name.mkStr2 "Array" (String.Internal.append "mkArray" (toString xs.size))) args
   termination_by xs.size - i
@@ -1484,9 +1506,8 @@ instance [Quote α `term] : Quote (Array α) `term where
 
 instance Option.hasQuote {α : Type} [Quote α `term] : Quote (Option α) `term where
   quote
-    | none     => mkIdent ``none
+    | none => mkIdent ``none
     | (some x) => Syntax.mkCApp ``some #[quote x]
-
 
 /-- Evaluator for `prec` DSL -/
 def evalPrec (stx : Syntax) : MacroM Nat :=
@@ -1506,7 +1527,7 @@ def evalPrio (stx : Syntax) : MacroM Nat :=
 
 def evalOptPrio : Option (TSyntax `prio) → MacroM Nat
   | some prio => evalPrio prio
-  | none      => return 1000 -- TODO: FIX back eval_prio default
+  | none => return 1000 -- TODO: FIX back eval_prio default
 
 end Lean
 
@@ -1516,21 +1537,24 @@ abbrev getSepElems := @getEvenElems
 
 open Lean
 
-private partial def filterSepElemsMAux {m : Type → Type} [Monad m] (a : Array Syntax) (p : Syntax → m Bool) (i : Nat) (acc : Array Syntax) : m (Array Syntax) := do
+private partial def filterSepElemsMAux
+    {m : Type → Type} [Monad m]
+    (a : Array Syntax) (p : Syntax → m Bool) (i : Nat) (acc : Array Syntax)
+    : m (Array Syntax) := do
   if h : i < a.size then
     let stx := a[i]
     if (← p stx) then
       if acc.isEmpty then
-        filterSepElemsMAux a p (i+2) (acc.push stx)
+        filterSepElemsMAux a p (i + 2) (acc.push stx)
       else if hz : i ≠ 0 then
         have : i.pred < i := Nat.pred_lt hz
         have : i.pred < a.size := Nat.lt_trans this h
         let sepStx := a[i.pred]
-        filterSepElemsMAux a p (i+2) ((acc.push sepStx).push stx)
+        filterSepElemsMAux a p (i + 2) ((acc.push sepStx).push stx)
       else
-        filterSepElemsMAux a p (i+2) (acc.push stx)
+        filterSepElemsMAux a p (i + 2) (acc.push stx)
     else
-      filterSepElemsMAux a p (i+2) acc
+      filterSepElemsMAux a p (i + 2) acc
   else
     pure acc
 
@@ -1539,7 +1563,8 @@ Filters an array of syntax, treating every other element as a separator rather t
 test with the monadic predicate `p`. The resulting array contains the tested elements for which `p`
 returns `true`, separated by the corresponding separator elements.
 -/
-def filterSepElemsM {m : Type → Type} [Monad m] (a : Array Syntax) (p : Syntax → m Bool) : m (Array Syntax) :=
+def filterSepElemsM {m : Type → Type} [Monad m] (a : Array Syntax) (p : Syntax → m Bool)
+    : m (Array Syntax) :=
   filterSepElemsMAux a p 0 #[]
 
 /--
@@ -1550,18 +1575,22 @@ test with the predicate `p`. The resulting array contains the tested elements fo
 def filterSepElems (a : Array Syntax) (p : Syntax → Bool) : Array Syntax :=
   Id.run <| a.filterSepElemsM (pure <| p ·)
 
-private partial def mapSepElemsMAux {m : Type → Type} [Monad m] (a : Array Syntax) (f : Syntax → m Syntax) (i : Nat) (acc : Array Syntax) : m (Array Syntax) := do
+private partial def mapSepElemsMAux
+    {m : Type → Type} [Monad m]
+    (a : Array Syntax) (f : Syntax → m Syntax) (i : Nat) (acc : Array Syntax)
+    : m (Array Syntax) := do
   if h : i < a.size then
     let stx := a[i]
     if i % 2 == 0 then do
       let stx ← f stx
-      mapSepElemsMAux a f (i+1) (acc.push stx)
+      mapSepElemsMAux a f (i + 1) (acc.push stx)
     else
-      mapSepElemsMAux a f (i+1) (acc.push stx)
+      mapSepElemsMAux a f (i + 1) (acc.push stx)
   else
     pure acc
 
-def mapSepElemsM {m : Type → Type} [Monad m] (a : Array Syntax) (f : Syntax → m Syntax) : m (Array Syntax) :=
+def mapSepElemsM {m : Type → Type} [Monad m] (a : Array Syntax) (f : Syntax → m Syntax)
+    : m (Array Syntax) :=
   mapSepElemsMAux a f 0 #[]
 
 def mapSepElems (a : Array Syntax) (f : Syntax → Syntax) : Array Syntax :=
@@ -1571,24 +1600,20 @@ end Array
 
 namespace Lean.Syntax
 
-/--
-Extracts the non-separator elements of a separated array.
--/
-def SepArray.getElems (sa : SepArray sep) : Array Syntax :=
-  sa.elemsAndSeps.getSepElems
+/-- Extracts the non-separator elements of a separated array. -/
+def SepArray.getElems (sa : SepArray sep) : Array Syntax := sa.elemsAndSeps.getSepElems
 
 @[inherit_doc SepArray.getElems]
-def TSepArray.getElems (sa : TSepArray k sep) : TSyntaxArray k :=
-  .mk sa.elemsAndSeps.getSepElems
+def TSepArray.getElems (sa : TSepArray k sep) : TSyntaxArray k := .mk sa.elemsAndSeps.getSepElems
 
-/--
-Adds an element to the end of a separated array, adding a separator as needed.
--/
+/-- Adds an element to the end of a separated array, adding a separator as needed. -/
 def TSepArray.push (sa : TSepArray k sep) (e : TSyntax k) : TSepArray k sep :=
-  if sa.elemsAndSeps.isEmpty then
-    { elemsAndSeps := #[e] }
-  else
-    { elemsAndSeps := sa.elemsAndSeps.push (mkAtom sep) |>.push e }
+  if sa.elemsAndSeps.isEmpty then {
+    elemsAndSeps := #[e]
+  }
+  else {
+    elemsAndSeps := sa.elemsAndSeps.push (mkAtom sep) |>.push e
+  }
 
 instance : EmptyCollection (SepArray sep) where
   emptyCollection := ⟨∅⟩
@@ -1620,14 +1645,17 @@ end Lean.Syntax
 
 namespace Lean.Syntax
 
-private def decodeInterpStrQuotedChar (s : String) (i : String.Pos.Raw) : Option (Char × String.Pos.Raw) := do
+private def decodeInterpStrQuotedChar (s : String) (i : String.Pos.Raw)
+    : Option (Char × String.Pos.Raw) := do
   match decodeQuotedChar s i with
   | some r => some r
-  | none   =>
+  | none =>
     let c := String.Internal.get s i
     let i := String.Internal.next s i
-    if c == '{' then pure ('{', i)
-    else none
+    if c == '{' then
+      pure ('{', i)
+    else
+      none
 
 private partial def decodeInterpStrLit (s : String) : Option String :=
   let rec loop (i : String.Pos.Raw) (acc : String) : Option String :=
@@ -1650,25 +1678,29 @@ private partial def decodeInterpStrLit (s : String) : Option String :=
 
 partial def isInterpolatedStrLit? (stx : Syntax) : Option String :=
   match isLit? interpolatedStrLitKind stx with
-  | none     => none
+  | none => none
   | some val => decodeInterpStrLit val
 
-def getSepArgs (stx : Syntax) : Array Syntax :=
-  stx.getArgs.getSepElems
+def getSepArgs (stx : Syntax) : Array Syntax := stx.getArgs.getSepElems
 
 end Syntax
 
 namespace TSyntax
 
-def expandInterpolatedStrChunks (chunks : Array Syntax) (mkAppend : Syntax → Syntax → MacroM Syntax)
-  (mkElem : Syntax → MacroM Syntax) (mkLit : String → MacroM Syntax) : MacroM Syntax := do
+def expandInterpolatedStrChunks
+    (chunks : Array Syntax) (mkAppend : Syntax → Syntax → MacroM Syntax)
+    (mkElem : Syntax → MacroM Syntax) (mkLit : String → MacroM Syntax)
+    : MacroM Syntax := do
   let mut result := Syntax.missing
   for elem in chunks do
-    let elem ← match elem.isInterpolatedStrLit? with
-      | none     => withRef elem <| mkElem elem
+    let elem ←
+      match elem.isInterpolatedStrLit? with
+      | none => withRef elem <| mkElem elem
       | some str =>
-        if String.Internal.isEmpty str then continue
-        else withRef elem <| mkLit str
+        if String.Internal.isEmpty str then
+          continue
+        else
+          withRef elem <| mkLit str
     if result.isMissing then
       result := elem
     else
@@ -1679,14 +1711,20 @@ def expandInterpolatedStrChunks (chunks : Array Syntax) (mkAppend : Syntax → S
     return result
 
 open TSyntax.Compat in
-/-- Expand `interpStr` into a term of type `type` (which supports ` ++ `),
+/--
+Expand `interpStr` into a term of type `type` (which supports ` ++ `),
 calling `ofInterpFn` on terms within `{}`,
-and `ofLitFn` on the literals between the interpolations. -/
-def expandInterpolatedStr (interpStr : TSyntax interpolatedStrKind) (type : Term) (ofInterpFn : Term) (ofLitFn : Term := ofInterpFn) : MacroM Term := do
-  let r ← expandInterpolatedStrChunks interpStr.raw.getArgs
-    (fun a b => `($a ++ $b))
-    (fun a => `($ofInterpFn $a))
-    (fun s => `($ofLitFn $(Syntax.mkStrLit s)))
+and `ofLitFn` on the literals between the interpolations.
+-/
+def expandInterpolatedStr
+    (interpStr : TSyntax interpolatedStrKind) (type : Term) (ofInterpFn : Term)
+    (ofLitFn : Term := ofInterpFn)
+    : MacroM Term := do
+  let r ←
+    expandInterpolatedStrChunks interpStr.raw.getArgs
+      (fun a b => `($a ++ $b))
+      (fun a => `($ofInterpFn $a))
+      (fun s => `($ofLitFn $(Syntax.mkStrLit s)))
   `(($r : $type))
 
 def getDocString (stx : TSyntax `Lean.Parser.Command.docComment) : String :=
@@ -1701,13 +1739,13 @@ namespace Meta
 deriving instance Repr for TransparencyMode, EtaStructMode, DSimp.Config, Simp.Config
 
 def Occurrences.contains : Occurrences → Nat → Bool
-  | all,      _   => true
+  | all, _ => true
   | pos idxs, idx => idxs.contains idx
-  | neg idxs, idx => !idxs.contains idx
+  | neg idxs, idx => ! idxs.contains idx
 
 def Occurrences.isAll : Occurrences → Bool
   | all => true
-  | _   => false
+  | _ => false
 
 /--
 Controls which new mvars are turned in to goals by the `apply` tactic.
@@ -1717,7 +1755,9 @@ Controls which new mvars are turned in to goals by the `apply` tactic.
 -/
 -- TODO: Consider renaming to `Apply.NewGoals`
 inductive ApplyNewGoals where
-  | nonDependentFirst | nonDependentOnly | all
+  | nonDependentFirst
+  | nonDependentOnly
+  | all
 
 /-- Configures the behaviour of the `apply` tactic. -/
 -- TODO: Consider renaming to `Apply.Config`
@@ -1751,7 +1791,7 @@ structure Config where
   transparency : TransparencyMode := .reducible
   /-- Whether to support offset constraints such as `?x + 1 =?= e` -/
   offsetCnstrs : Bool := true
-  /-- Which occurrences to rewrite-/
+  /-- Which occurrences to rewrite -/
   occs : Occurrences := .all
   /-- How to convert the resulting metavariables into  new goals -/
   newGoals : NewGoals := .nonDependentFirst
@@ -1802,7 +1842,7 @@ appear in a proof goal.
 It is used by the #check_tactic command.
 -/
 inductive CheckGoalType {α : Sort u} : (val : α) → Prop where
-| intro : (val : α) → CheckGoalType val
+  | intro : (val : α) → CheckGoalType val
 
 end CheckTactic
 

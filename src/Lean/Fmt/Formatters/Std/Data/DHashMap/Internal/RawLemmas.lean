@@ -34,5 +34,4 @@ public def fmtHashMapSimpToModel : Fmt := fun
   | `(tactic| simp_to_model%$simpToModelTk $[[%$lbTk? $names?:ident,* ]%$rbTk?]?
       $[using%$usingTk? $usingArg?:term]?) =>
     fmtSimpToModelLike simpToModelTk lbTk? names? rbTk? usingTk? usingArg?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

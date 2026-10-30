@@ -32,47 +32,51 @@ where
     | .app f a => .app (go o f) (go o a)
     | .mdata k b => .mdata k (go o b)
     | .proj s i b => .proj s i (go o b)
-    | .forallE n d b bi => .forallE n (go o d) (go (o+1) b) bi
-    | .lam n d b bi => .lam n (go o d) (go (o+1) b) bi
-    | .letE n t v b nd => .letE n (go o t) (go o v) (go (o+1) b) nd
+    | .forallE n d b bi => .forallE n (go o d) (go (o + 1) b) bi
+    | .lam n d b bi => .lam n (go o d) (go (o + 1) b) bi
+    | .letE n t v b nd => .letE n (go o t) (go o v) (go (o + 1) b) nd
 
 abbrev ToExprM := ReaderT Nat $ StateM LevelMap
 
-@[inline] def mkLambdaM (params : Array (Param pu)) (e : Expr) : ToExprM Expr :=
+@[inline]
+def mkLambdaM (params : Array (Param pu)) (e : Expr) : ToExprM Expr :=
   return go (← read) (← get) params.size e
 where
   go (offset : Nat) (m : LevelMap) (i : Nat) (e : Expr) : Expr :=
-   if i > 0 then
-     let param  := params[i-1]!
-     let domain := param.type.abstract' (offset - 1) m
-     go (offset - 1) m (i - 1) (.lam param.binderName domain e .default)
-   else
-     e
+    if i > 0 then
+      let param := params[i - 1]!
+      let domain := param.type.abstract' (offset - 1) m
+      go (offset - 1) m (i - 1) (.lam param.binderName domain e .default)
+    else
+      e
 
 private abbrev _root_.Lean.FVarId.toExprM (fvarId : FVarId) : ToExprM Expr :=
   return fvarId.toExpr (← read) (← get)
 
-@[inline] def abstractM (e : Expr) : ToExprM Expr :=
-  return e.abstract' (← read) (← get)
+@[inline] def abstractM (e : Expr) : ToExprM Expr := return e.abstract' (← read) (← get)
 
-@[inline] def withFVar (fvarId : FVarId) (k : ToExprM α) : ToExprM α := do
+@[inline]
+def withFVar (fvarId : FVarId) (k : ToExprM α) : ToExprM α := do
   let offset ← read
   modify fun s => s.insert fvarId offset
-  withReader (·+1) k
+  withReader (· + 1) k
 
-@[inline] partial def withParams (params : Array (Param pu)) (k : ToExprM α) : ToExprM α :=
-  go 0
+@[inline]
+partial def withParams (params : Array (Param pu)) (k : ToExprM α) : ToExprM α := go 0
 where
-  @[specialize] go (i : Nat) : ToExprM α := do
+  @[specialize]
+  go (i : Nat) : ToExprM α := do
     if h : i < params.size then
-      withFVar params[i].fvarId (go (i+1))
+      withFVar params[i].fvarId (go (i + 1))
     else
       k
 
-@[inline] def run (x : ToExprM α) (offset : Nat := 0) (levelMap : LevelMap := {}) : α :=
+@[inline]
+def run (x : ToExprM α) (offset : Nat := 0) (levelMap : LevelMap := {}) : α :=
   x |>.run offset |>.run' levelMap
 
-@[inline] def run' (x : ToExprM α) (xs : Array FVarId) : α :=
+@[inline]
+def run' (x : ToExprM α) (xs : Array FVarId) : α :=
   let map := xs.foldl (init := {}) fun map x => map.insert x map.size
   run x xs.size map
 
@@ -99,18 +103,23 @@ partial def Code.toExprM (code : Code pu) : ToExprM Expr := do
     let value ← decl.toExprM
     let body ← withFVar decl.fvarId k.toExprM
     return .letE decl.binderName type value body true
-  | .return fvarId => fvarId.toExprM
-  | .jmp fvarId args => return mkAppN (← fvarId.toExprM) (← args.mapM Arg.toExprM)
-  | .unreach type => return mkApp (mkConst ``lcUnreachable) (← abstractM type)
+  | .return fvarId =>
+    fvarId.toExprM
+  | .jmp fvarId args =>
+    return mkAppN (← fvarId.toExprM) (← args.mapM Arg.toExprM)
+  | .unreach type =>
+    return mkApp (mkConst ``lcUnreachable) (← abstractM type)
   | .cases c =>
-    let alts ← c.alts.mapM fun
-      | .alt ctorName params k _ => do
-        let body ← withParams params do mkLambdaM params (← k.toExprM)
-        return mkApp (mkConst ctorName) body
-      | .default k => k.toExprM
-      | .ctorAlt i k _ => do
-        let body ← k.toExprM
-        return mkApp (mkConst i.name) body
+    let alts ←
+      c.alts.mapM fun
+        | .alt ctorName params k _ => do
+          let body ← withParams params do mkLambdaM params (← k.toExprM)
+          return mkApp (mkConst ctorName) body
+        | .default k =>
+          k.toExprM
+        | .ctorAlt i k _ => do
+          let body ← k.toExprM
+          return mkApp (mkConst i.name) body
     return mkAppN (mkConst `cases) (#[← c.discr.toExprM] ++ alts)
   | .sset fvarId i offset y ty k _ =>
     let value := mkApp5 (mkConst `sset) (.fvar fvarId) (toExpr i) (toExpr offset) (.fvar y) ty
@@ -143,10 +152,8 @@ partial def Code.toExprM (code : Code pu) : ToExprM Expr := do
     return .letE `dummy (mkConst ``Unit) value body true
 end
 
-def Code.toExpr (code : Code pu) (xs : Array FVarId := #[]) : Expr :=
-  run' code.toExprM xs
+def Code.toExpr (code : Code pu) (xs : Array FVarId := #[]) : Expr := run' code.toExprM xs
 
-def FunDecl.toExpr (decl : FunDecl pu) (xs : Array FVarId := #[]) : Expr :=
-  run' decl.toExprM xs
+def FunDecl.toExpr (decl : FunDecl pu) (xs : Array FVarId := #[]) : Expr := run' decl.toExprM xs
 
 end Lean.Compiler.LCNF

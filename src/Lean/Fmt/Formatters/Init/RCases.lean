@@ -19,8 +19,7 @@ public def fmtRCasesPatMed : Fmt := fun
   | `(Parser.Tactic.rcasesPatMed| $pats:rcasesPat|*) => do
     let pats ← fmtTSepArray pats
     return nested <| Layouts.horizontalOrVertical <| joinAltPats empty pats
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.rcasesPatLo]
 public def fmtRCasesPatLo : Fmt := fun
@@ -29,8 +28,7 @@ public def fmtRCasesPatLo : Fmt := fun
     let colonTk? ← fmt? colonTk?
     let type? ← fmt? type?
     return Layouts.typeAscription pat colonTk? type?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.rcasesPat.one]
 public def fmtRCasesPatOne : Fmt := fun
@@ -43,8 +41,7 @@ public def fmtRCasesPatExplicit : Fmt := fun
     let atTk ← fmt atTk
     let pat ← fmt pat
     return Layouts.prefixOperator atTk pat .withoutSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.rcasesPat.tuple]
 public def fmtRCasesPatTuple : Fmt := fun
@@ -53,8 +50,7 @@ public def fmtRCasesPatTuple : Fmt := fun
     let pats ← fmtTSepArray pats
     let rbTk ← fmt rbTk
     return Layouts.tuple lbTk pats rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.rcasesPat.paren]
 public def fmtRCasesPatParen : Fmt := fun
@@ -63,8 +59,7 @@ public def fmtRCasesPatParen : Fmt := fun
     let pat ← fmt pat
     let rbTk ← fmt rbTk
     return Layouts.parens lbTk pat rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.rintroPat.one]
 public def fmtRIntroPatOne : Fmt := fun
@@ -76,8 +71,7 @@ public def fmtRIntroPatBinder : Fmt := fun
   | `(rintroPat| (%$lbTk $pats:rintroPat* $[:%$typeAscriptionTk? $type?:term]? )%$rbTk) =>
     fmtBinder #[lbTk] pats #[] typeAscriptionTk? type? none #[rbTk]
       (kind := .local (respectPseudoAlignment := true))
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.rcases]
 public def fmtTacticRCases : Fmt := fun
@@ -89,8 +83,7 @@ public def fmtTacticRCases : Fmt := fun
     let lhs := Layouts.keywordPrefixedSepFill rcasesTk targets .nonSticky
     let «with» := Layouts.keywordPrefixedTerm withTk? pat?
     return Layouts.pseudoApplication #[lhs, «with»]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.obtain]
 public def fmtTacticObtain : Fmt := fun
@@ -106,8 +99,7 @@ public def fmtTacticObtain : Fmt := fun
       let vals ← fmtTSepArray <| vals?.getD ⟨#[]⟩
       let vals := Layouts.sepHorizontalOrVertical vals (includeSeps := true)
       return Layouts.assignmentDeclaration signature assignTk? vals
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.rintro]
 public def fmtTacticRIntro : Fmt := fun
@@ -119,5 +111,4 @@ public def fmtTacticRIntro : Fmt := fun
     let pats := Layouts.fill pats
     let annotatedPats := Layouts.typeAscription pats colonTk? type?
     return Layouts.pseudoApplication #[rintroTk, annotatedPats]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

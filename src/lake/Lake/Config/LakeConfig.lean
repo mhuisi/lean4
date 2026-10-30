@@ -15,9 +15,9 @@ open System Lean
 namespace Lake
 
 public inductive CacheServiceKind
-| undef
-| reservoir
-| s3
+  | undef
+  | reservoir
+  | s3
 deriving Inhabited
 
 @[inline]
@@ -33,17 +33,17 @@ public configuration CacheServiceConfig where
   apiEndpoint : String := ""
   artifactEndpoint : String := ""
   revisionEndpoint : String := ""
-  deriving Inhabited
+deriving Inhabited
 
 public configuration CacheConfig where
   defaultService : String := ""
   defaultUploadService : String := ""
   services @ service : Array CacheServiceConfig := #[]
-  deriving Inhabited
+deriving Inhabited
 
 public configuration LakeConfig where
   cache : CacheConfig := ∅
-  deriving Inhabited
+deriving Inhabited
 
 public abbrev CacheServiceMap := NameMap CacheService
 
@@ -52,4 +52,4 @@ public structure LoadedLakeConfig where
   defaultCacheService : CacheService
   defaultCacheUploadService? : Option CacheService
   cacheServices : CacheServiceMap
-  deriving Nonempty
+deriving Nonempty

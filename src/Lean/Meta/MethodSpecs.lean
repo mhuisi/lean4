@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Joachim Breitner
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Simp.SimpTheorems
 import Lean.Meta.Tactic.Simp.Main
@@ -26,7 +27,7 @@ structure MethodSpecsInfo where
   /-- Array mapping field names to implementation functions. -/
   fieldImpls : Array (Name × Name)
   /-- rewrite rules to apply -/
-  thms  : Array MethodSpecTheorem
+  thms : Array MethodSpecTheorem
 
 /--
 This function checks the `instName` for eligibility and collects the information to rewrite.
@@ -37,7 +38,7 @@ def getMethodSpecsInfo (instName : Name) : MetaM MethodSpecsInfo := do
   let instInfo ← getConstInfoDefn instName
   let some clsName ← isClass? instInfo.type
     | throwError "expected `{.ofConstName instName}` to be a type class instance, but its \
-         type{inlineExpr instInfo.type}does not look like a class."
+        type{inlineExpr instInfo.type}does not look like a class."
   let instArity ← forallTelescopeReducing instInfo.type fun xs _ => pure xs.size
   let some structInfo := getStructureInfo? (← getEnv) clsName
     | throwError "`{.ofConstName clsName}` is not a structure"
@@ -60,8 +61,11 @@ def getMethodSpecsInfo (instName : Name) : MetaM MethodSpecsInfo := do
       unless f.isConst do
         throwError "field `{field}` of the instance is not an application of a constant"
       unless f.constLevels! == instInfo.levelParams.map mkLevelParam do
-        throwError "function `{f}` is called with universe parameters\n  {f.constLevels!}\nwhich differs from \
-          the instances' universe parameters\n  {instInfo.levelParams.map mkLevelParam}"
+        throwError "function `{f}` is called with universe parameters\
+          \n  {f.constLevels!}\
+          \nwhich differs from \
+          the instances' universe parameters\
+          \n  {instInfo.levelParams.map mkLevelParam}"
       unless xs == ys do
         throwError "function `{f}` does not take its arguments in the same order as the instance"
       let implName := f.constName!
@@ -81,10 +85,12 @@ def getMethodSpecsInfo (instName : Name) : MetaM MethodSpecsInfo := do
         throwError "internal error: equation `{eq}` does not hold definitionally"
       fieldImpls := fieldImpls.push (field, implName)
       thms := thms.push { name := implName, levelParams := instInfo.levelParams, type := thm }
-    trace[Meta.MethodSpecs] "MethodSpecs for {instName}:\n{fieldImpls}\n\
-      thms: {thms.map (·.type)}\nprivateSpecs: {privateSpecs}"
+    trace[Meta.MethodSpecs] "MethodSpecs for {instName}:\
+      \n{fieldImpls}\n\
+      thms: {thms.map (·.type)}\
+      \nprivateSpecs: {privateSpecs}"
 
-    return {clsName, fieldImpls, thms, privateSpecs}
+    return { clsName, fieldImpls, thms, privateSpecs }
 
 public structure MethodSpecsAttrData where
   clsName : Name
@@ -118,21 +124,21 @@ builtin_initialize methodSpecsAttr : ParametricAttribute MethodSpecsAttrData ←
     descr := "generate method specification theorems"
     getParam
   }
-  let ext ← registerParametricAttributeExt (α := MethodSpecsAttrData) impl.ref impl.preserveOrder
-    (logWrites := true)
-    impl.filterExport
+  let ext ←
+    registerParametricAttributeExt (α := MethodSpecsAttrData) impl.ref impl.preserveOrder
+      (logWrites := true) impl.filterExport
   registerParametricAttributeForExt impl ext
 
 builtin_initialize methodSpecsSimpExtension : SimpExtension ←
   registerSimpAttr `method_specs_simp
     "simp lemma used to post-process the theorem created by `@[method_specs]`."
 
-def mkSpecTheoremName (env : Environment) (instName : Name) (privateSpecs : Bool) (suffix : String) : Name :=
+def mkSpecTheoremName (env : Environment) (instName : Name) (privateSpecs : Bool) (suffix : String)
+    : Name :=
   let thmName := instName.str suffix
   if privateSpecs then mkPrivateName env thmName else thmName
 
-def startsWithFollowedByNumber (s p : String) : Bool :=
-  (s.dropPrefix? p).any (·.isNat)
+def startsWithFollowedByNumber (s p : String) : Bool := (s.dropPrefix? p).any (·.isNat)
 
 def isSpecThmLikeSuffix (fieldName : Name) (s : String) : Bool :=
   s == s!"{fieldName}_spec" || startsWithFollowedByNumber s s!"{fieldName}_spec_"
@@ -143,34 +149,38 @@ So un-private the name here when looking for a declaration, and finally check if
 Cf. `Lean.Meta.declFromEqLikeName`. Maybe worth collecting this logic in a central place.
 -/
 def isSpecThmNameFor (env : Environment) (name : Name) : Option Name := do
-  let .str p s := name | none
+  let .str p s := name
+    | none
   [p, privateToUserName p].firstM fun p => do
-      let attrData ← methodSpecsAttr.getParam? env p
-      -- the class may not be visible, e.g. when checking a private name in the exported environment
-      let clsInfo ← getStructureInfo? env attrData.clsName
-      for fieldName in clsInfo.fieldNames do
-        if isSpecThmLikeSuffix fieldName s then
-          if name == mkSpecTheoremName env p attrData.privateSpecs s then
-            return p
-      none
+    let attrData ← methodSpecsAttr.getParam? env p
+    -- the class may not be visible, e.g. when checking a private name in the exported environment
+    let clsInfo ← getStructureInfo? env attrData.clsName
+    for fieldName in clsInfo.fieldNames do
+      if isSpecThmLikeSuffix fieldName s then
+        if name == mkSpecTheoremName env p attrData.privateSpecs s then
+          return p
+    none
 
-def rewriteThm (ctx : Simp.Context) (simprocs : Simprocs)
-    (eqThmName destThmName : Name) : MetaM Unit := do
+def rewriteThm (ctx : Simp.Context) (simprocs : Simprocs) (eqThmName destThmName : Name)
+    : MetaM Unit := do
   let thmInfo ← getConstVal eqThmName
   let (result, _) ← simp thmInfo.type ctx (simprocs := #[simprocs])
   trace[Meta.MethodSpecs] "type for {destThmName}:{indentExpr result.expr}"
   let eqThmApp := mkConst eqThmName (thmInfo.levelParams.map mkLevelParam)
-  let value := mkAppN (mkConst ``Eq.mp [0]) #[thmInfo.type, result.expr, ← result.getProof, eqThmApp]
+  let value :=
+    mkAppN (mkConst ``Eq.mp [0]) #[thmInfo.type, result.expr, ← result.getProof, eqThmApp]
   addDecl <| Declaration.thmDecl {
-    name          := destThmName
-    levelParams   := thmInfo.levelParams
-    type          := result.expr
-    value         := value
+    name := destThmName
+    levelParams := thmInfo.levelParams
+    type := result.expr
+    value := value
   }
 
 def genSpecs (instName : Name) : MetaM Unit := do
   let methodSpecsInfo ← getMethodSpecsInfo instName
-  let key := mkSpecTheoremName (← getEnv) instName methodSpecsInfo.privateSpecs s!"{methodSpecsInfo.fieldImpls[0]!.1}_spec"
+  let key :=
+    mkSpecTheoremName (← getEnv) instName methodSpecsInfo.privateSpecs
+      s!"{methodSpecsInfo.fieldImpls[0]!.1}_spec"
   realizeConst instName key doRealize
 where
   doRealize := do
@@ -180,33 +190,37 @@ where
       for thm in methodSpecsInfo.thms do
         trace[Meta.MethodSpecs] "adding simp theorem for {thm.name} : {thm.type}"
         s := s.addSimpTheorem <| ← mkDSimpTheorem (.other thm.name) thm.levelParams.toArray thm.type
-      let ctx ← Simp.mkContext
-        (simpTheorems  := #[s])
-        (congrTheorems := (← getSimpCongrTheorems))
-        (config        := { } )
+      let ctx ←
+        Simp.mkContext (simpTheorems := #[s]) (congrTheorems := (← getSimpCongrTheorems))
+          (config := {})
       let simprocs ← Simp.getSimprocs
 
       let env ← getEnv
       for (fieldName, implName) in methodSpecsInfo.fieldImpls do
         let some unfoldThm ← getUnfoldEqnFor? implName (nonRec := true)
           | throwError "failed to generate unfolding theorem for {.ofConstName implName}"
-        let thmName := mkSpecTheoremName env instName methodSpecsInfo.privateSpecs s!"{fieldName}_spec"
+        let thmName :=
+          mkSpecTheoremName env instName methodSpecsInfo.privateSpecs s!"{fieldName}_spec"
         rewriteThm ctx simprocs unfoldThm thmName
 
         if let some eqnThms ← getEqnsFor? implName then
           for eqnThm in eqnThms, i in [:eqnThms.size] do
-            let thmName := mkSpecTheoremName env instName methodSpecsInfo.privateSpecs s!"{fieldName}_spec_{i+1}"
+            let thmName :=
+              mkSpecTheoremName env instName methodSpecsInfo.privateSpecs
+                s!"{fieldName}_spec_{i + 1}"
             rewriteThm ctx simprocs eqnThm thmName
-
 
 public partial def getMethodSpecTheorem (instName : Name) (op : String) : MetaM (Option Name) := do
   let env ← getEnv
-  let some methodSpecInfos := methodSpecsAttr.getParam? env instName | return none
+  let some methodSpecInfos := methodSpecsAttr.getParam? env instName
+    | return none
   let thmName := mkSpecTheoremName env instName methodSpecInfos.privateSpecs s!"{op}_spec"
   realizeGlobalConstNoOverloadCore thmName
 
-public partial def getMethodSpecTheorems (instName : Name) (op : String) : MetaM (Option (Array Name)) := do
-  let some methodSpecInfos := methodSpecsAttr.getParam? (← getEnv) instName | return none
+public partial def getMethodSpecTheorems (instName : Name) (op : String)
+    : MetaM (Option (Array Name)) := do
+  let some methodSpecInfos := methodSpecsAttr.getParam? (← getEnv) instName
+    | return none
   -- Realize spec theorems
   let thmName := mkSpecTheoremName (← getEnv) instName methodSpecInfos.privateSpecs s!"{op}_spec"
   let _ ← realizeGlobalConstNoOverloadCore thmName
@@ -215,7 +229,8 @@ public partial def getMethodSpecTheorems (instName : Name) (op : String) : MetaM
   let mut thms := #[]
   let env ← getEnv
   while true do
-    let thmName := mkSpecTheoremName (← getEnv) instName methodSpecInfos.privateSpecs s!"{op}_spec_{i+1}"
+    let thmName :=
+      mkSpecTheoremName (← getEnv) instName methodSpecInfos.privateSpecs s!"{op}_spec_{i + 1}"
     if env.containsOnBranch thmName then
       thms := thms.push thmName
       i := i + 1
@@ -232,6 +247,4 @@ builtin_initialize
       return true
     return false
 
-
-builtin_initialize
-   Lean.registerTraceClass `Meta.MethodSpecs
+builtin_initialize Lean.registerTraceClass `Meta.MethodSpecs

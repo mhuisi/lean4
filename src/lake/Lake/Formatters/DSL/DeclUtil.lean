@@ -28,15 +28,13 @@ public def fmtDeclField : Fmt := fun
     let colonEqTk ← fmt colonEqTk
     let val ← fmt val
     return Layouts.assignmentDeclaration id colonEqTk val
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.bracketedSimpleBinder]
 public def fmtBracketedSimpleBinder : Fmt := fun
   | `(bracketedSimpleBinder| (%$lbTk $id:ident $[:%$typeAscriptionTk? $type?:term]? )%$rbTk) =>
     fmtBinder #[lbTk] #[id] #[] typeAscriptionTk? type? none #[rbTk] (kind := .global)
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.simpleBinder]
 public def fmtSimpleBinder : Fmt := fun
@@ -50,8 +48,7 @@ i.e. either nothing, a `{ ... }` configuration or a `where ...` configuration.
 -/
 public def fmtWithOptConfig (signature : TaggedDoc) (config : OptConfig) : FmtM TaggedDoc := do
   match config with
-  | `(optConfig| ) =>
-    return signature
+  | `(optConfig| ) => return signature
   | `(optConfig| $structVal:structVal $[$whereDecls?:whereDecls]?) =>
     let `(structVal| {%$lbTk $fields:declField;* }%$rbTk) := structVal
       | throw .partialFormatter
@@ -81,5 +78,4 @@ public def fmtWithOptConfig (signature : TaggedDoc) (config : OptConfig) : FmtM 
       mainDeclTrailingDoc,
       whereDecls?
     ]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Data.Function
 public import Init.NotationExtra
@@ -12,10 +13,12 @@ public section
 namespace Lean.Grind
 open Function
 
-noncomputable def leftInv {α : Sort u} {β : Sort v} (f : α → β) (hf : Injective f) [Nonempty α] : β → α :=
+noncomputable def leftInv {α : Sort u} {β : Sort v} (f : α → β) (hf : Injective f) [Nonempty α]
+    : β → α :=
   Classical.choose hf.exists_leftInverse
 
-theorem leftInv_eq {α : Sort u} {β : Sort v} (f : α → β) (hf : Injective f) [Nonempty α] (a : α) : leftInv f hf (f a) = a :=
+theorem leftInv_eq {α : Sort u} {β : Sort v} (f : α → β) (hf : Injective f) [Nonempty α] (a : α)
+    : leftInv f hf (f a) = a :=
   Classical.choose_spec hf.exists_leftInverse a
 
 @[app_unexpander leftInv]

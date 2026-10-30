@@ -26,14 +26,17 @@ open Std.Sat
 inductive Action (β : Type u) (α : Type v)
   | addEmpty (id : Nat) (rupHints : Array Nat)
   | addRup (id : Nat) (c : β) (rupHints : Array Nat)
-  | addRat (id : Nat) (c : β) (pivot : Literal α) (rupHints : Array Nat) (ratHints : Array (Nat × Array (Nat)))
+  | addRat
+    (id : Nat) (c : β) (pivot : Literal α) (rupHints : Array Nat)
+    (ratHints : Array (Nat × Array (Nat)))
   | del (ids : Array Nat)
 deriving Inhabited, BEq, Repr
 
 def Action.toString [ToString β] [ToString α] : Action β α → String
   | .addEmpty id rup => s!"addEmpty (id: {id}) (hints: {rup})"
   | .addRup id c rup => s!"addRup {c} (id : {id}) (hints: {rup})"
-  | .addRat id c l rup rat => s!"addRat {c} (id: {id}) (pivot: {l}) (rup hints: {rup}) (rat hints: {rat})"
+  | .addRat id c l rup rat =>
+    s!"addRat {c} (id: {id}) (pivot: {l}) (rup hints: {rup}) (rat hints: {rat})"
   | .del ids => s!"del {ids}"
 
 instance [ToString β] [ToString α] : ToString (Action β α) := ⟨Action.toString⟩
@@ -43,7 +46,6 @@ instance [ToString β] [ToString α] : ToString (Action β α) := ⟨Action.toSt
 This Action type is meant to be a convenient target for parsing LRAT proofs.
 -/
 abbrev IntAction : Type := Action (Array Int) Nat
-
 
 end LRAT
 end Std.Tactic.BVDecide

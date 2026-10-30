@@ -41,24 +41,28 @@ open Lean.Meta Lean.SubExpr SubExpr
 open Lean.Elab (Info TermInfo Info.ofTermInfo)
 
 structure Context where
-  optionsPerPos  : OptionsPerPos
-  currNamespace  : Name
-  openDecls      : List OpenDecl
-  inPattern      : Bool := false -- true when delaborating `match` patterns
-  subExpr        : SubExpr
+  optionsPerPos : OptionsPerPos
+  currNamespace : Name
+  openDecls : List OpenDecl
+  inPattern : Bool := false -- true when delaborating `match` patterns
+  subExpr : SubExpr
   /-- Current recursion depth during delaboration. Used by the `pp.deepTerms false` option. -/
-  depth          : Nat := 0
-  /-- Initial state of `LocalContext.numIndices`, to keep track of which variables were introduced
-  during delaboration. -/
+  depth : Nat := 0
+  /--
+  Initial state of `LocalContext.numIndices`, to keep track of which variables were introduced
+  during delaboration.
+  -/
   lctxInitIndices : Nat
 
 structure State where
   /-- The number of `delab` steps so far. Used by `pp.maxSteps` to stop delaboration. -/
   steps : Nat := 0
-  /-- We attach `Elab.Info` at various locations in the `Syntax` output in order to convey
+  /--
+  We attach `Elab.Info` at various locations in the `Syntax` output in order to convey
   its semantics. While the elaborator emits `InfoTree`s, here we have no real text location tree
-  to traverse, so we use a flattened map. -/
-  infos    : PosMap Info := {}
+  to traverse, so we use a flattened map.
+  -/
+  infos : PosMap Info := {}
   /-- See `SubExpr.nextExtraPos`. -/
   holeIter : SubExpr.HoleIterator := {}
 
@@ -72,14 +76,14 @@ abbrev Delab := DelabM Term
 instance : Inhabited (DelabM α) where
   default := throw default
 
-@[inline] protected def orElse (d₁ : DelabM α) (d₂ : Unit → DelabM α) : DelabM α := do
+@[inline]
+protected def orElse (d₁ : DelabM α) (d₂ : Unit → DelabM α) : DelabM α := do
   catchInternalId delabFailureId d₁ fun _ => d₂ ()
 
-protected def failure : DelabM α :=
-  throw $ Exception.internal delabFailureId
+protected def failure : DelabM α := throw $ Exception.internal delabFailureId
 
 instance : Alternative DelabM where
-  orElse  := Delaborator.orElse
+  orElse := Delaborator.orElse
   failure := Delaborator.failure
 
 -- HACK: necessary since it would otherwise prefer the instance from MonadExcept
@@ -93,11 +97,12 @@ instance (priority := low) : MonadWithReaderOf SubExpr DelabM where
   withReader f x := fun ctx => x { ctx with subExpr := f ctx.subExpr }
 
 instance (priority := low) : MonadStateOf SubExpr.HoleIterator DelabM where
-  get         := State.holeIter <$> get
-  set iter    := modify fun s => { s with holeIter := iter }
-  modifyGet f := modifyGet fun s =>
-    let (ret, holeIter') := f s.holeIter
-    (ret, { s with holeIter := holeIter' })
+  get := State.holeIter <$> get
+  set iter := modify fun s => { s with holeIter := iter }
+  modifyGet f :=
+    modifyGet fun s =>
+      let (ret, holeIter') := f s.holeIter
+      (ret, { s with holeIter := holeIter' })
 
 /--
 Registers a delaborator.
@@ -111,9 +116,9 @@ special casing. If the term is an `Expr.mdata` with a single key `k`, `mdata.k` 
 @[builtin_doc]
 unsafe builtin_initialize delabAttribute : KeyedDeclsAttribute Delab ←
   KeyedDeclsAttribute.init {
-    builtinName := `builtin_delab,
-    name := `delab,
-    descr    := "Register a delaborator",
+    builtinName := `builtin_delab
+    name := `delab
+    descr := "Register a delaborator"
     valueTypeName := `Lean.PrettyPrinter.Delaborator.Delab
     evalKey := fun _ stx => do
       let stx ← Attribute.Builtin.getIdent stx
@@ -121,8 +126,10 @@ unsafe builtin_initialize delabAttribute : KeyedDeclsAttribute Delab ←
       if (← Elab.getInfoState).enabled && !kind.isAtomic && kind.getRoot == `app then
         let c := kind.replacePrefix `app .anonymous
         -- Create identifier dropping `app` prefix, for completions and term info
-        let stx' := mkIdentFrom (mkNullNode (Syntax.identComponents stx).tail.toArray) c (canonical := true)
-        Elab.addCompletionInfo <| .id stx' c (danglingDot := false) (lctx := {}) (expectedType? := none)
+        let stx' :=
+          mkIdentFrom (mkNullNode (Syntax.identComponents stx).tail.toArray) c (canonical := true)
+        Elab.addCompletionInfo <|
+          .id stx' c (danglingDot := false) (lctx := {}) (expectedType? := none)
         if (← getEnv).contains c then
           recordExtraModUseFromDecl (isMeta := false) c
           Elab.addConstInfo stx' c none
@@ -138,33 +145,40 @@ This attribute should be applied to definitions of type `Lean.PrettyPrinter.Dela
 When defining delaborators for constant applications, one should prefer this attribute over `@[delab app.c]`,
 as `@[app_delab c]` first performs name resolution on `c` in the current scope.
 -/
-macro "app_delab" id:ident : attr => do
-  match ← Macro.resolveGlobalName id.getId with
-  | [] => Macro.throwErrorAt id s!"unknown declaration `{id.getId}`"
-  | [(c, [])] => `(attr| delab $(mkIdentFrom (canonical := true) id (`app ++ c)))
-  | _ => Macro.throwErrorAt id s!"ambiguous declaration `{id.getId}`"
+macro "app_delab" id:ident : attr =>
+  do
+    match ← Macro.resolveGlobalName id.getId with
+    | [] => Macro.throwErrorAt id s!"unknown declaration `{id.getId}`"
+    | [(c, [])] => `(attr| delab $(mkIdentFrom (canonical := true) id (`app ++ c)))
+    | _ => Macro.throwErrorAt id s!"ambiguous declaration `{id.getId}`"
 
 def getExprKind : DelabM Name := do
   let e ← getExpr
   pure $ match e with
-  | Expr.bvar _          => `bvar
-  | Expr.fvar _          => `fvar
-  | Expr.mvar _          => `mvar
-  | Expr.sort _          => `sort
-  | Expr.const c _       =>
-    -- we identify constants as "nullary applications" to reduce special casing
-    `app ++ c
-  | Expr.app fn _        => match fn.getAppFn with
-    | Expr.const c _   => `app ++ c
-    | _                => `app
-  | Expr.lam _ _ _ _     => `lam
-  | Expr.forallE _ _ _ _ => `forallE
-  | Expr.letE _ _ _ _ _  => `letE
-  | Expr.lit _           => `lit
-  | Expr.mdata m _       => match m.entries with
-    | [(key, _)] => `mdata ++ key
-    | _   => `mdata
-  | Expr.proj _ _ _      => `proj
+    | Expr.bvar _ => `bvar
+    | Expr.fvar _ => `fvar
+    | Expr.mvar _ => `mvar
+    | Expr.sort _ => `sort
+    | Expr.const c _ =>
+      -- we identify constants as "nullary applications" to reduce special casing
+      `app ++ c
+    | Expr.app fn _ =>
+      match fn.getAppFn with
+      | Expr.const c _ => `app ++ c
+      | _ => `app
+    | Expr.lam _ _ _ _ =>
+      `lam
+    | Expr.forallE _ _ _ _ =>
+      `forallE
+    | Expr.letE _ _ _ _ _ =>
+      `letE
+    | Expr.lit _ =>
+      `lit
+    | Expr.mdata m _ =>
+      match m.entries with
+      | [(key, _)] => `mdata ++ key
+      | _ => `mdata
+    | Expr.proj _ _ _ => `proj
 
 def getOptionsAtCurrPos : DelabM Options := do
   let ctx ← read
@@ -175,8 +189,7 @@ def getOptionsAtCurrPos : DelabM Options := do
   return opts
 
 /-- Evaluate option accessor, using subterm-specific options if set. -/
-def getPPOption (opt : Options → α) : DelabM α := do
-  return opt (← getOptionsAtCurrPos)
+def getPPOption (opt : Options → α) : DelabM α := do return opt (← getOptionsAtCurrPos)
 
 def whenPPOption (opt : Options → Bool) (d : Delab) : Delab := do
   let b ← getPPOption opt
@@ -198,33 +211,35 @@ def withOptionAtCurrPos (k : Name) (v : DataValue) (x : DelabM α) : DelabM α :
 def annotatePos (pos : Pos) (stx : Term) : Term :=
   ⟨stx.raw.setInfo (SourceInfo.synthetic ⟨pos⟩ ⟨pos⟩)⟩
 
-def annotateCurPos (stx : Term) : Delab :=
-  return annotatePos (← getPos) stx
+def annotateCurPos (stx : Term) : Delab := return annotatePos (← getPos) stx
 
 def addTermInfo (pos : Pos) (stx : Syntax) (e : Expr) (isBinder : Bool := false) : DelabM Unit := do
   let info := Info.ofTermInfo <| ← mkTermInfo stx e isBinder
   modify fun s => { s with infos := s.infos.insert pos info }
 where
-  mkTermInfo stx e isBinder := return {
-    elaborator := `Delab,
-    stx := stx,
-    lctx := (← getLCtx),
-    expectedType? := none,
-    expr := e,
-    isBinder := isBinder
- }
+  mkTermInfo stx e isBinder :=
+    return {
+      elaborator := `Delab
+      stx := stx
+      lctx := (← getLCtx)
+      expectedType? := none
+      expr := e
+      isBinder := isBinder
+    }
 
-def addFieldInfo (pos : Pos) (projName fieldName : Name) (stx : Syntax) (val : Expr) : DelabM Unit := do
+def addFieldInfo (pos : Pos) (projName fieldName : Name) (stx : Syntax) (val : Expr)
+    : DelabM Unit := do
   let info := Info.ofFieldInfo <| ← mkFieldInfo projName fieldName stx val
   modify fun s => { s with infos := s.infos.insert pos info }
 where
-  mkFieldInfo projName fieldName stx val := return {
-    projName := projName,
-    fieldName := fieldName,
-    lctx := (← getLCtx),
-    val := val,
-    stx := stx
-  }
+  mkFieldInfo projName fieldName stx val :=
+    return {
+      projName := projName
+      fieldName := fieldName
+      lctx := (← getLCtx)
+      val := val
+      stx := stx
+    }
 
 /--
 Adds `DelabTermInfo` at the given position.
@@ -232,17 +247,19 @@ Adds `DelabTermInfo` at the given position.
 Either `docString?` or `mkDocString?` can be provided. The `docString?` field is a convenient
 interface for `mkDocString?`.
 -/
-def addDelabTermInfo (pos : Pos) (stx : Syntax) (e : Expr) (isBinder : Bool := false)
-    (location? : Option DeclarationLocation := none)
-    (docString? : Option String := none)
-    (mkDocString? : Option (PPContext → IO String) := none)
-    (explicit : Bool := true) : DelabM Unit := do
-  let info := Info.ofDelabTermInfo {
-    toTermInfo := ← addTermInfo.mkTermInfo stx e (isBinder := isBinder)
-    location?  := location?
-    mkDocString? := mkDocString? <|> docString?.map (fun _ => pure ·)
-    explicit   := explicit
-  }
+def addDelabTermInfo
+    (pos : Pos) (stx : Syntax) (e : Expr)
+    (isBinder : Bool := false) (location? : Option DeclarationLocation := none)
+    (docString? : Option String := none) (mkDocString? : Option (PPContext → IO String) := none)
+    (explicit : Bool := true)
+    : DelabM Unit := do
+  let info :=
+    Info.ofDelabTermInfo {
+      toTermInfo := ← addTermInfo.mkTermInfo stx e (isBinder := isBinder)
+      location? := location?
+      mkDocString? := mkDocString? <|> docString?.map (fun _ => pure ·)
+      explicit := explicit
+    }
   modify fun s => { s with infos := s.infos.insert pos info }
 
 /--
@@ -265,9 +282,7 @@ def annotateTermInfoUnlessAnnotated (stx : Term) : Delab := do
       return stx
   annotateTermInfo stx
 
-/--
-Modifies the delaborator so that it annotates the resulting term using `annotateTermInfo`.
--/
+/-- Modifies the delaborator so that it annotates the resulting term using `annotateTermInfo`. -/
 def withAnnotateTermInfo (d : Delab) : Delab := do
   let stx ← d
   annotateTermInfo stx
@@ -289,7 +304,9 @@ if the name does not appear in `body` or in the `avoid` set.
 If `preserveName` is false, then returns the name, possibly with fresh macro scopes added.
 If `suggestion` has macro scopes then the result does as well.
 -/
-def getUnusedName (suggestion : Name) (body : Expr) (preserveName : Bool := false) (avoid : NameSet := {}) : DelabM Name := do
+def getUnusedName
+    (suggestion : Name) (body : Expr) (preserveName : Bool := false) (avoid : NameSet := {})
+    : DelabM Name := do
   let (hasScopes, suggestion) :=
     if suggestion.isAnonymous then
       -- Use a nicer binder name than `[anonymous]`. We probably shouldn't do this in all LocalContext use cases, so do it here.
@@ -297,11 +314,12 @@ def getUnusedName (suggestion : Name) (body : Expr) (preserveName : Bool := fals
     else
       (suggestion.hasMacroScopes, suggestion.eraseMacroScopes)
   let lctx ← getLCtx
-  if !lctx.usesUserName suggestion || (preserveName && !hasScopes) then
+  if ! lctx.usesUserName suggestion || (preserveName && !hasScopes) then
     return suggestion
   else if preserveName then
     withFreshMacroScope <| MonadQuotation.addMacroScope suggestion
-  else if (← getPPOption getPPSafeShadowing) && !avoid.contains suggestion && !bodyUsesSuggestion lctx suggestion then
+  else if (← getPPOption getPPSafeShadowing) && ! avoid.contains suggestion
+      && ! bodyUsesSuggestion lctx suggestion then
     return suggestion
   else
     return lctx.getUnusedName suggestion
@@ -310,7 +328,7 @@ where
     Option.isSome <| body.find? fun
       | Expr.fvar fvarId =>
         match lctx.find? fvarId with
-        | none      => false
+        | none => false
         | some decl => decl.userName == suggestion'
       | _ => false
 
@@ -335,8 +353,12 @@ if the name does not appear in the body or in the `avoid` set.
 If `preserveName` is `false` (the default), gives the binder an unused name.
 Otherwise, it tries to preserve the textual form of the name, preserving whether it is hygienic.
 -/
-def withBindingBodyUnusedName {α} (d : Syntax → DelabM α) (preserveName := false) (avoid : NameSet := {}) : DelabM α := do
-  let n ← getUnusedName (← getExpr).bindingName! (← getExpr).bindingBody! (preserveName := preserveName) (avoid := avoid)
+def withBindingBodyUnusedName
+    {α} (d : Syntax → DelabM α) (preserveName := false) (avoid : NameSet := {})
+    : DelabM α := do
+  let n ←
+    getUnusedName (← getExpr).bindingName! (← getExpr).bindingBody! (preserveName := preserveName)
+      (avoid := avoid)
   withBindingBody' n (mkAnnotatedIdent n) (d ·)
 
 inductive OmissionReason
@@ -348,10 +370,13 @@ inductive OmissionReason
 def OmissionReason.toString : OmissionReason → String
   | deep => "Term omitted due to its depth (see option `pp.deepTerms`)."
   | proof => "Proof omitted (see option `pp.proofs`)."
-  | maxSteps => "Term omitted due to reaching the maximum number of steps allowed for pretty printing this expression (see option `pp.maxSteps`)."
+  | maxSteps =>
+    "Term omitted due to reaching the maximum number of steps allowed for pretty printing this \
+      expression (see option `pp.maxSteps`)."
   | string s => s
 
-def addOmissionInfo (pos : Pos) (stx : Syntax) (e : Expr) (reason : OmissionReason) : DelabM Unit := do
+def addOmissionInfo (pos : Pos) (stx : Syntax) (e : Expr) (reason : OmissionReason)
+    : DelabM Unit := do
   addDelabTermInfo pos stx e (docString? := reason.toString) (explicit := false)
 
 /--
@@ -359,8 +384,7 @@ Runs the delaborator `act` with increased depth.
 The depth is used when `pp.deepTerms` is `false` to determine what is a deep term.
 See also `Lean.PrettyPrinter.Delaborator.Context.depth`.
 -/
-def withIncDepth (act : DelabM α) : DelabM α := fun ctx =>
-  act { ctx with depth := ctx.depth + 1 }
+def withIncDepth (act : DelabM α) : DelabM α := fun ctx => act { ctx with depth := ctx.depth + 1 }
 
 /--
 Returns true if `e` is a "shallow" expression.
@@ -395,9 +419,9 @@ def shouldOmitExpr (e : Expr) : DelabM Bool := do
   let depthExcess := depth - depthThreshold
   -- This threshold for shallow expressions effectively allows full terms to be pretty printed 25% deeper,
   -- so long as the subterm actually can be fully pretty printed within this extra 25% depth.
-  let threshold := depthThreshold/4 - depthExcess
+  let threshold := depthThreshold / 4 - depthExcess
 
-  return depthExcess > 0 && !isShallowExpression threshold e
+  return depthExcess > 0 && ! isShallowExpression threshold e
 
 /--
 Returns `true` if the given expression is a proof and should be omitted.
@@ -418,7 +442,7 @@ def shouldOmitProof (e : Expr) : DelabM Bool := do
   unless (← try Meta.isProof e catch _ => pure false) do
     return false
 
-  return !isShallowExpression (← getPPOption getPPProofsThreshold) e
+  return ! isShallowExpression (← getPPOption getPPProofsThreshold) e
 
 /--
 Delaborates the current expression as `⋯` and attaches `Elab.OmissionInfo`, which influences how the
@@ -432,17 +456,17 @@ def omission (reason : OmissionReason) : Delab := do
 
 partial def delabFor : Name → Delab
   | Name.anonymous => failure
-  | k              =>
+  | k =>
     (do annotateTermInfoUnlessAnnotated (← (delabAttribute.getValues (← getEnv) k).firstM id))
-    -- have `app.Option.some` fall back to `app` etc.
-    <|> if k.isAtomic then failure else delabFor k.getRoot
+      -- have `app.Option.some` fall back to `app` etc.
+      <|> if k.isAtomic then failure else delabFor k.getRoot
 
 partial def delab : Delab := do
   checkSystem "delab"
 
   if (← get).steps ≥ (← getPPOption getPPMaxSteps) then
     return ← omission .maxSteps
-  modify fun s => {s with steps := s.steps + 1}
+  modify fun s => { s with steps := s.steps + 1 }
 
   let e ← getExpr
 
@@ -458,8 +482,11 @@ partial def delab : Delab := do
       return pf
 
   let k ← getExprKind
-  let stx ← withIncDepth <| delabFor k <|> (liftM $ show MetaM _ from throwError "don't know how to delaborate `{k}`")
-  if ← getPPOption getPPAnalyzeTypeAscriptions <&&> getPPOption getPPAnalysisNeedsType <&&> pure !e.isMData then
+  let stx ←
+    withIncDepth <|
+      delabFor k <|> (liftM $ show MetaM _ from throwError "don't know how to delaborate `{k}`")
+  if ← getPPOption getPPAnalyzeTypeAscriptions <&&> getPPOption getPPAnalysisNeedsType
+      <&&> pure !e.isMData then
     let typeStx ← withType delab
     `(($stx : $typeStx)) >>= annotateCurPos
   else
@@ -484,8 +511,8 @@ syntax and don't have access to the expression tree.
 @[builtin_doc]
 unsafe builtin_initialize appUnexpanderAttribute : KeyedDeclsAttribute Unexpander ←
   KeyedDeclsAttribute.init {
-    name  := `app_unexpander,
-    descr := "Register an unexpander for applications of a given constant.",
+    name := `app_unexpander
+    descr := "Register an unexpander for applications of a given constant."
     valueTypeName := `Lean.PrettyPrinter.Unexpander
     evalKey := fun _ stx => do
       let id ← Elab.realizeGlobalConstNoOverloadWithInfo (← Attribute.Builtin.getIdent stx)
@@ -503,40 +530,49 @@ def delabLevel (l : Level) (prec : Nat) : MetaM Syntax.Level := do
   let mvars := getPPMVarsLevels (← getOptions)
   return Level.quote l prec (mvars := mvars) (lIndex? := (← getMCtx).findLevelIndex?)
 
-def delabCore (e : Expr) (optionsPerPos : OptionsPerPos := {}) (delab : DelabM α) :
-    MetaM (α × PosMap Elab.Info) := do
-  /- Using `erasePatternAnnotations` here is a bit hackish, but we do it
-     `Expr.mdata` affects the delaborator. TODO: should we fix that? -/
+def delabCore (e : Expr) (optionsPerPos : OptionsPerPos := {}) (delab : DelabM α)
+    : MetaM (α × PosMap Elab.Info) := do
+  /-
+  Using `erasePatternAnnotations` here is a bit hackish, but we do it
+  `Expr.mdata` affects the delaborator. TODO: should we fix that?
+  -/
   let e ← Meta.erasePatternRefAnnotations e
   trace[PrettyPrinter.delab.input] "{Std.format e}"
   let mut opts ← getOptions
   -- default `pp.proofs` to `true` if `e` is a proof
-  if pp.proofs.get? opts == none &&
+  if pp.proofs.get? opts == none
       -- necessary for `delabConstWithSignature`, and harmless otherwise
-      !e.isConst then
-    try if ← Meta.isProof e then opts := pp.proofs.set opts true
-    catch _ => pure ()
+      && !e.isConst then
+    try
+      if ← Meta.isProof e then opts := pp.proofs.set opts true
+    catch _ =>
+      pure ()
   withOptions (fun _ => opts) do
     let e ← if getPPInstantiateMVars opts then instantiateMVars e else pure e
     let e ← if getPPBeta opts then Core.betaReduce e else pure e
     let optionsPerPos ←
-      if !getPPAll opts && getPPAnalyze opts && optionsPerPos.isEmpty then
+      if ! getPPAll opts && getPPAnalyze opts && optionsPerPos.isEmpty then
         topDownAnalyze e
-      else pure optionsPerPos
-    let (stx, {infos := infos, ..}) ← catchInternalId Delaborator.delabFailureId
+      else
+        pure optionsPerPos
+    let (stx, { infos := infos, .. }) ←
+      catchInternalId Delaborator.delabFailureId
         -- Clear the ref to ensure that quotations in delaborators start with blank source info.
-        (MonadRef.withRef .missing delab
-          { optionsPerPos := optionsPerPos
+        (MonadRef.withRef .missing delab {
+            optionsPerPos := optionsPerPos
             currNamespace := (← getCurrNamespace)
             openDecls := (← getOpenDecls)
             subExpr := SubExpr.mkRoot e
             inPattern := opts.getInPattern
-            lctxInitIndices := (← getLCtx).numIndices }
+            lctxInitIndices := (← getLCtx).numIndices
+          }
           |>.run { : Delaborator.State })
         (fun _ => unreachable!)
     return (stx, infos)
 
-/-- "Delaborate" the given term into surface-level syntax using the default and given subterm-specific options. -/
+/--
+"Delaborate" the given term into surface-level syntax using the default and given subterm-specific options.
+-/
 def delab (e : Expr) (optionsPerPos : OptionsPerPos := {}) : MetaM Term := do
   let (stx, _) ← delabCore e optionsPerPos Delaborator.delab
   return stx

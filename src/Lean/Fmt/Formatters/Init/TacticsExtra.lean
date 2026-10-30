@@ -22,15 +22,13 @@ public def fmtIterate : Fmt := fun
     let lhs := Layouts.pseudoApplication #[iterateTk, n?]
     let seq ← fmt seq
     return Layouts.keywordPrefixedSeq lhs seq .nonSticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.tacticRw_mod_cast___]
 public def fmtRwModCast : Fmt := fun
   | `(tactic| rw_mod_cast%$rwTk $cfg:optConfig $rules:rwRuleSeq $[$loc?:location]?) => do
     fmtRwLike rwTk cfg rules loc?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.tacticExact_mod_cast_]
 public def fmtExactModCast : Fmt := fun
@@ -38,8 +36,7 @@ public def fmtExactModCast : Fmt := fun
     let exactTk ← fmt exactTk
     let e ← fmt e
     return Layouts.pseudoApplication #[exactTk, e]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.tacticApply_mod_cast_]
 public def fmtApplyModCast : Fmt := fun
@@ -47,5 +44,4 @@ public def fmtApplyModCast : Fmt := fun
     let applyTk ← fmt applyTk
     let e ← fmt e
     return Layouts.pseudoApplication #[applyTk, e]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

@@ -20,8 +20,7 @@ public def fmtGlobAndSubmodules : Fmt := fun
     let name ← fmt name
     let globTk ← fmt globTk
     return Layouts.atomic #[name, globTk]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.«term__.+»]
 public def fmtGlobSubmodules : Fmt := fun
@@ -29,5 +28,4 @@ public def fmtGlobSubmodules : Fmt := fun
     let name ← fmt name
     let globTk ← fmt globTk
     return Layouts.atomic #[name, globTk]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

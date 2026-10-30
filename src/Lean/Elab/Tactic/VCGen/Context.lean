@@ -25,10 +25,12 @@ The `VCGenM` monad: its read-only `Context` (a fixed bundle of pre-built
 (rule caches, accumulated invariants/VCs, simp cache).
 -/
 
-/-- A single elaborated `frames` alternative: its program pattern, the binder name of each pattern
+/--
+A single elaborated `frames` alternative: its program pattern, the binder name of each pattern
 variable (`none` for `_`, index-aligned with `pat.varTypes`), the raw frame term (elaborated in the
 matched goal's context), the source position (a precedence tiebreak among matches, and its index
-into `FrameDB.entries`), and whether it has already been applied. -/
+into `FrameDB.entries`), and whether it has already been applied.
+-/
 public structure FrameEntry where
   pat : Sym.Pattern
   varNames : Array (Option Name)
@@ -36,11 +38,13 @@ public structure FrameEntry where
   srcIdx : Nat
   /-- Set once this alternative has been applied, so it frames at most one occurrence. -/
   retired : Bool := false
-  deriving Inhabited
+deriving Inhabited
 
-/-- The frame database: program patterns keyed in a discrimination tree to the `srcIdx` of the
+/--
+The frame database: program patterns keyed in a discrimination tree to the `srcIdx` of the
 matching alternative, alongside the alternatives themselves in source order. Held in `State.frameDB`;
-the discrimination tree is fixed, and only the `retired` flags of `entries` change. -/
+the discrimination tree is fixed, and only the `retired` flags of `entries` change.
+-/
 public structure FrameDB where
   tree : DiscrTree Nat := .empty
   entries : Array FrameEntry := #[]
@@ -51,34 +55,52 @@ public instance : Inhabited FrameDB := ⟨{}⟩
 public structure BackwardRules where
   /-- The backward rule for `Triple.intro`. Unfolds `⦃P⦄ x ⦃Q; E⦄` into `P ⊑ wp x Q E`. -/
   tripleIntro : BackwardRule
-  /-- The backward rule for `Lean.Order.le_of_forall_le`. Peels one excess state argument
-  from a function-lattice entailment. -/
+  /--
+  The backward rule for `Lean.Order.le_of_forall_le`. Peels one excess state argument
+  from a function-lattice entailment.
+  -/
   stateArgIntro : BackwardRule
-  /-- The backward rule for `Lean.Order.le_of_imp_top_le`. Introduces a bare pure
-  precondition on the `Prop` lattice. -/
+  /--
+  The backward rule for `Lean.Order.le_of_imp_top_le`. Introduces a bare pure
+  precondition on the `Prop` lattice.
+  -/
   propPreIntro : BackwardRule
-  /-- The backward rule for `Lean.Order.CompleteLattice.ofProp_le`. Introduces an embedded pure
-  precondition `⌜p⌝` on any complete lattice. -/
+  /--
+  The backward rule for `Lean.Order.CompleteLattice.ofProp_le`. Introduces an embedded pure
+  precondition `⌜p⌝` on any complete lattice.
+  -/
   ofPropPreIntro : BackwardRule
-  /-- The backward rule for `Lean.Order.CompleteLattice.ofProp_meet_le`. Introduces the guard of a
-  `⌜p⌝ ⊓ P` precondition on any complete lattice, leaving `P`. -/
+  /--
+  The backward rule for `Lean.Order.CompleteLattice.ofProp_meet_le`. Introduces the guard of a
+  `⌜p⌝ ⊓ P` precondition on any complete lattice, leaving `P`.
+  -/
   ofPropMeetPreIntro : BackwardRule
-  /-- The backward rule for `Lean.Order.iSup_le`. Eliminates an `iSup` precondition,
-  leaving the pointwise entailment for `∀`-introduction. -/
+  /--
+  The backward rule for `Lean.Order.iSup_le`. Eliminates an `iSup` precondition,
+  leaving the pointwise entailment for `∀`-introduction.
+  -/
   iSupPreIntro : BackwardRule
-  /-- The backward rule for `Lean.Order.true_le_of_top_le`. Replaces a `True` precondition
-  with `⊤` on the `Prop` lattice. -/
+  /--
+  The backward rule for `Lean.Order.true_le_of_top_le`. Replaces a `True` precondition
+  with `⊤` on the `Prop` lattice.
+  -/
   truePreIntro : BackwardRule
-  /-- The backward rule for `Lean.Order.top_le_prop`. Strips a `(⊤ : Prop) ⊑ ·` wrapper
-  from a VC before it is emitted. -/
+  /--
+  The backward rule for `Lean.Order.top_le_prop`. Strips a `(⊤ : Prop) ⊑ ·` wrapper
+  from a VC before it is emitted.
+  -/
   elimPre : BackwardRule
   /-- The backward rule for `And.intro`. -/
   andIntro : BackwardRule
-  /-- The backward rule for `Lean.Order.PartialOrder.rel_refl`. Closes a reflexive
-  entailment `pre ⊑ pre`. -/
+  /--
+  The backward rule for `Lean.Order.PartialOrder.rel_refl`. Closes a reflexive
+  entailment `pre ⊑ pre`.
+  -/
   refl : BackwardRule
-  /-- The backward rule for `meet_top_le_of_le`. Cancels a redundant `⊓ ⊤` on the left of an
-  entailment, turning `P ⊓ ⊤ ⊑ Q` into `P ⊑ Q`. -/
+  /--
+  The backward rule for `meet_top_le_of_le`. Cancels a redundant `⊓ ⊤` on the left of an
+  entailment, turning `P ⊓ ⊤ ⊑ Q` into `P ⊑ Q`.
+  -/
   meetTop : BackwardRule
   /-- The backward rule for `le_forall`. Splits a `∀`/`→` on the RHS of a `Prop` entailment. -/
   forallIntro : BackwardRule
@@ -103,38 +125,54 @@ public def mkBackwardRules : MetaM BackwardRules := do
 public structure Context where
   /-- Pre-built backward rules used by `solve`. -/
   backwardRules : BackwardRules
-  /-- The `@[frameproc]` registry snapshot taken at frontend init. `solve` selects a procedure per
-  program node by the node's monad. -/
+  /--
+  The `@[frameproc]` registry snapshot taken at frontend init. `solve` selects a procedure per
+  program node by the node's monad.
+  -/
   frameProcs : FrameProcs := {}
-  /-- The `Sym.simp` methods that rewrite hypotheses, state arguments and verification conditions
+  /--
+  The `Sym.simp` methods that rewrite hypotheses, state arguments and verification conditions
   with the `@[vcgen_simp]` theorems and those of the `simp [...]` clause. `none` when the `simp`
-  config option is `false`. -/
+  config option is `false`.
+  -/
   simpMethods : Option Sym.Simp.Methods := none
-  /-- The `jp` config option: when `true`, `tryLetIntro` recognises `__do_jp` lets
+  /--
+  The `jp` config option: when `true`, `tryLetIntro` recognises `__do_jp` lets
   whose body is a splitter and sets up shared-continuation handling instead of
   zeta-unfolding. When `false` (default, matching original `mvcgen`), every call
-  site of the JP zeta-unfolds, leading to exponential blow-up on nested splits. -/
+  site of the JP zeta-unfolds, leading to exponential blow-up on nested splits.
+  -/
   useJP : Bool := false
-  /-- The `errorOnMissingSpec` config option: when `true` (default), a program with no matching
+  /--
+  The `errorOnMissingSpec` config option: when `true` (default), a program with no matching
   spec raises a hard error. When `false`, the goal is emitted as an unsolved VC for the user to
   discharge — useful with `vcgen [-some_spec]` patterns where the user knows the spec is
-  intentionally removed and wants to handle the residual goal by hand. -/
+  intentionally removed and wants to handle the residual goal by hand.
+  -/
   errorOnMissingSpec : Bool := true
-  /-- The `debug` config option: when `true`, `tryApplyRule` retries failed
+  /--
+  The `debug` config option: when `true`, `tryApplyRule` retries failed
   `BackwardRule.apply` calls after `unfoldReducible` and reports an error when the
-  retry succeeds, pinpointing missing normalization steps in `vcgen`. -/
+  retry succeeds, pinpointing missing normalization steps in `vcgen`.
+  -/
   debug : Bool := false
-  /-- The `internalize` config option: when `true` (default), `emitVC` and the
+  /--
+  The `internalize` config option: when `true` (default), `emitVC` and the
   multi-subgoal fork in `Driver.work` call `Grind.processHypotheses`. The tactic-mode
-  entry point disables this when there is no `with` clause. -/
+  entry point disables this when there is no `with` clause.
+  -/
   internalize : Bool := true
-  /-- Pre-parsed `invariants`/`invariants?` alternatives, indexed by 1-based invariant
+  /--
+  Pre-parsed `invariants`/`invariants?` alternatives, indexed by 1-based invariant
   number. Bullet form maps positions to entries (`bullet n+1 → alt`); labelled form maps
   the parsed `inv<n>` numbers (out-of-order labels are supported). Empty when no
-  `invariants` clause is provided or in `invariants?` (suggest) mode (handled separately). -/
+  `invariants` clause is provided or in `invariants?` (suggest) mode (handled separately).
+  -/
   invariantAlts : Std.HashMap Nat Syntax := {}
-  /-- The `until` pattern: when `some pat`, VC generation stops and emits the current goal as a VC
-  once the program in `wp⟦e⟧` matches `pat`, before applying a spec. -/
+  /--
+  The `until` pattern: when `some pat`, VC generation stops and emits the current goal as a VC
+  once the program in `wp⟦e⟧` matches `pat`, before applying a spec.
+  -/
   untilPat? : Option Sym.Pattern := none
 
 /-- A join point `__do_jp` that `vcgen +jp` proves once. See `Lean.Elab.Tactic.VCGen.JoinPoint`. -/
@@ -149,26 +187,30 @@ public structure JoinPoint where
   rhsGoal : MVarId
   /-- The number of states that `?H` takes after the join parameters. -/
   numStates : Nat
-  deriving Inhabited
+deriving Inhabited
 
-/-- A jump to a join point with the arguments `args`, which include the states, and the proof
-`?pf : ?H args` that `finalizeJoinPoint` assigns in the local context of the jump. -/
+/--
+A jump to a join point with the arguments `args`, which include the states, and the proof
+`?pf : ?H args` that `finalizeJoinPoint` assigns in the local context of the jump.
+-/
 public structure Jump where
   proof : MVarId
   args : Array Expr
-  deriving Inhabited
+deriving Inhabited
 
 public structure Scope where
   /-- Spec database in scope: globals plus locals from in-scope hypotheses. -/
   specs : SpecTheorems
-  /-- The most recently lifted pure precondition. `tryLiftedHyp` closes handoff VCs against
-  it without walking the local context. -/
+  /--
+  The most recently lifted pure precondition. `tryLiftedHyp` closes handoff VCs against
+  it without walking the local context.
+  -/
   lastLiftedPre? : Option FVarId := none
   /-- Index of the next local declaration to consider for local specs. -/
   nextDeclIdx : Nat := 0
   /-- The join points of `vcgen +jp` in scope, keyed by their `let` variable. -/
   joinPoints : FVarIdMap JoinPoint := {}
-  deriving Inhabited
+deriving Inhabited
 
 public structure State where
   /--
@@ -198,14 +240,14 @@ public structure State where
   sound because it is a subterm of the hash-consed goal target.
   -/
   latticeBackwardRuleCache : Std.HashMap (ExprPtr × Nat) BackwardRule := {}
-  /-- Caches the frame rule (`meet_op_wp_upperAdjoint_le_wp`), keyed by the `WPMonad` instance
-  and the number of excess state arguments. -/
+  /--
+  Caches the frame rule (`meet_op_wp_upperAdjoint_le_wp`), keyed by the `WPMonad` instance
+  and the number of excess state arguments.
+  -/
   frameBackwardRuleCache : Std.HashMap (ExprPtr × Nat) FrameBackwardRule := {}
   /-- The frame database from the `frames` clause. -/
   frameDB : FrameDB := {}
-  /--
-  Holes of type `Invariant` that have been generated so far.
-  -/
+  /-- Holes of type `Invariant` that have been generated so far. -/
   invariants : Array MVarId := #[]
   /--
   The verification conditions that have been generated so far. Each entry
@@ -228,43 +270,56 @@ public structure State where
   Set of invariant numbers that have been inline-elaborated by `Driver.emitVC` via
   `tryInlineInvariant`. The post-hoc invariant elaboration in `Frontend` consults
   this to know which user-provided alts have already been consumed (so it doesn't
-  warn about them). -/
+  warn about them).
+  -/
   inlineHandledInvariants : Std.HashSet Nat := {}
-  /-- The join points whose RHS goal `vcgen` has yet to process, keyed by that goal, with their
-  jumps so far. -/
+  /--
+  The join points whose RHS goal `vcgen` has yet to process, keyed by that goal, with their
+  jumps so far.
+  -/
   pendingJoinPoints : Std.HashMap MVarId (JoinPoint × Array Jump) := {}
 
 public abbrev VCGenM := ReaderT Context (StateRefT State Grind.GrindM)
 
+public def Scope.insertSpec (s : Scope) (thm : SpecTheorem) : Scope := {
+  s with
+  specs := s.specs.insert thm
+}
 
-public def Scope.insertSpec (s : Scope) (thm : SpecTheorem) : Scope :=
-  { s with specs := s.specs.insert thm }
-
-/-- Walk `goal`'s local context from `scope.nextDeclIdx` onward, registering any
+/--
+Walk `goal`'s local context from `scope.nextDeclIdx` onward, registering any
 spec-shaped hypotheses as local specs. Advances `nextDeclIdx` to the current
-context size so siblings share work. -/
+context size so siblings share work.
+-/
 public def Scope.collectLocalSpecs (scope : Scope) (goal : MVarId) : VCGenM Scope :=
   goal.withContext do
     let lctx ← getLCtx
     if scope.nextDeclIdx == lctx.decls.size then return scope
-    let scope ← lctx.foldlM (init := scope) (start := scope.nextDeclIdx) fun scope decl => do
-      if decl.isImplementationDetail then return scope
-      try
-        if let some thm ← mkSpecTheoremFromLocal decl.fvarId (eval_prio low) then
-          return scope.insertSpec thm
-      catch _ => pure ()
-      return scope
+    let scope ←
+      lctx.foldlM (init := scope) (start := scope.nextDeclIdx) fun scope decl => do
+        if decl.isImplementationDetail then return scope
+        try
+          if let some thm ← mkSpecTheoremFromLocal decl.fvarId (eval_prio low) then
+            return scope.insertSpec thm
+        catch _ =>
+          pure ()
+        return scope
     return { scope with nextDeclIdx := lctx.decls.size }
 
 /-- True iff fuel has been exhausted (`Fuel.limited 0`). -/
 public def outOfFuel : VCGenM Bool :=
-  return match (← get).fuel with | .limited 0 => true | _ => false
+  return match (← get).fuel with
+    | .limited 0 => true
+    | _ => false
 
 /-- Decrement remaining fuel by one. No-op when fuel is `.unlimited` or already at zero. -/
 public def burnOne : VCGenM Unit :=
-  modify fun s => { s with fuel := match s.fuel with
-    | .limited (n+1) => .limited n
-    | other => other }
-
+  modify fun s => {
+    s with
+    fuel :=
+      match s.fuel with
+      | .limited (n + 1) => .limited n
+      | other => other
+  }
 
 end Lean.Elab.Tactic.VCGen

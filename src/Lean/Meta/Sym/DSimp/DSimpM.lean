@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.SymM
 import Lean.Meta.Sym.ExprPtr
@@ -29,7 +30,7 @@ structure Config where
   instances can aid with making more terms syntactically equal.
   -/
   instances : Bool := false
-  deriving Inhabited
+deriving Inhabited
 
 /--
 The result of definitionally simplifying an expression `e`.
@@ -43,10 +44,10 @@ Unlike `Sym.Simp.Result`, this carries no proof term and no `contextDependent` f
 -/
 inductive Result where
   /-- No change. If `done = true`, skip remaining simplification steps for this term. -/
-  | rfl  (done : Bool := false)
+  | rfl (done : Bool := false)
   /-- Simplified to `e'`. If `done = true`, skip recursive simplification of `e'`. -/
   | step (e' : Expr) (done : Bool := false)
-  deriving Inhabited
+deriving Inhabited
 
 private opaque MethodsRefPointed : NonemptyType.{0}
 def MethodsRef : Type := MethodsRefPointed.type
@@ -76,30 +77,29 @@ instance : Inhabited (DSimpM α) where
 abbrev DSimproc := Expr → DSimpM Result
 
 structure Methods where
-  pre  : DSimproc := fun _ => return .rfl
+  pre : DSimproc := fun _ => return .rfl
   post : DSimproc := fun _ => return .rfl
-  deriving Inhabited
+deriving Inhabited
 
-unsafe def Methods.toMethodsRefImpl (m : Methods) : MethodsRef :=
-  unsafeCast m
+unsafe def Methods.toMethodsRefImpl (m : Methods) : MethodsRef := unsafeCast m
 
 @[implemented_by Methods.toMethodsRefImpl]
 opaque Methods.toMethodsRef (m : Methods) : MethodsRef
 
-unsafe abbrev MethodsRef.toMethodsImpl (m : MethodsRef) : Methods :=
-  unsafeCast m
+unsafe abbrev MethodsRef.toMethodsImpl (m : MethodsRef) : Methods := unsafeCast m
 
 @[implemented_by MethodsRef.toMethodsImpl]
 opaque MethodsRef.toMethods (m : MethodsRef) : Methods
 
-def getMethods : DSimpM Methods :=
-  return MethodsRef.toMethods (← read)
+def getMethods : DSimpM Methods := return MethodsRef.toMethods (← read)
 
-/-- Runs a `DSimpM` computation with the given methods, configuration, and state.
+/--
+Runs a `DSimpM` computation with the given methods, configuration, and state.
 The `cache` and `numSteps` from `s` are preserved (cache entries persist across
-invocations because results are not context-dependent). -/
-def DSimpM.run (x : DSimpM α) (methods : Methods := {}) (config : Config := {})
-    (s : State := {}) : SymM (α × State) := do
+invocations because results are not context-dependent).
+-/
+def DSimpM.run (x : DSimpM α) (methods : Methods := {}) (config : Config := {}) (s : State := {})
+    : SymM (α × State) := do
   x methods.toMethodsRef { config } |>.run { s with numSteps := 0 }
 
 /-- Runs a `DSimpM` computation with the given methods and configuration. -/
@@ -110,21 +110,18 @@ set_option compiler.ignoreBorrowAnnotation true in
 @[extern "lean_sym_dsimp"] -- Forward declaration
 opaque dsimp : DSimproc
 
-def getConfig : DSimpM Config :=
-  return (← readThe Context).config
+def getConfig : DSimpM Config := return (← readThe Context).config
 
-abbrev pre : DSimproc := fun e => do
-  (← getMethods).pre e
+abbrev pre : DSimproc := fun e => do (← getMethods).pre e
 
-abbrev post : DSimproc := fun e => do
-  (← getMethods).post e
+abbrev post : DSimproc := fun e => do (← getMethods).post e
 
 end DSimp
 
 abbrev dsimp (e : Expr) (methods : DSimp.Methods := {}) (config : DSimp.Config := {})
     : SymM Expr := do
   match (← DSimp.DSimpM.run' (DSimp.dsimp e) methods config) with
-  | .rfl _     => return e
+  | .rfl _ => return e
   | .step e' _ => return e'
 
 end Lean.Meta.Sym

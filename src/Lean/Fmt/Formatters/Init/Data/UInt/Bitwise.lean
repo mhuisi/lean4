@@ -21,5 +21,4 @@ public def fmtDeclareBitwiseUIntTheorems : Fmt := fun
     let typeName ← fmt typeName
     let bits ← fmt bits
     return Layouts.pseudoApplication #[tk, typeName, bits]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

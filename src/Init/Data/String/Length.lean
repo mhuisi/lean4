@@ -22,12 +22,10 @@ Examples:
 * `"L∃∀N".length = 4`
 -/
 @[extern "lean_string_length", expose, tagged_return]
-def length (b : @& String) : Nat :=
-  b.toList.length
+def length (b : @& String) : Nat := b.toList.length
 
 @[simp]
-theorem Internal.size_toArray {b : String} : (String.Internal.toArray b).size = b.length :=
-  (rfl)
+theorem Internal.size_toArray {b : String} : (String.Internal.toArray b).size = b.length := (rfl)
 
 theorem length_toList {s : String} : s.toList.length = s.length := (rfl)
 
@@ -42,16 +40,18 @@ theorem _root_.List.length_asString {l : List Char} : (String.ofList l).length =
 @[simp] theorem length_empty : "".length = 0 := by simp [← length_toList, toList_empty]
 
 @[simp]
-theorem length_singleton {c : Char} : (String.singleton c).length = 1 := by
+theorem length_singleton {c : Char} : (String.singleton c).length = 1 := by simp [← length_toList]
+
+@[simp]
+theorem length_push (c : Char) : (String.push s c).length = s.length + 1 := by
   simp [← length_toList]
 
-@[simp] theorem length_push (c : Char) : (String.push s c).length = s.length + 1 := by
-  simp [← length_toList]
-
-@[simp] theorem length_pushn (c : Char) (n : Nat) : (pushn s c n).length = s.length + n := by
+@[simp]
+theorem length_pushn (c : Char) (n : Nat) : (pushn s c n).length = s.length + n := by
   rw [pushn_eq_repeat_push]; induction n <;> simp [Nat.repeat, Nat.add_assoc, *]
 
-@[simp] theorem length_append (s t : String) : (s ++ t).length = s.length + t.length := by
+@[simp]
+theorem length_append (s t : String) : (s ++ t).length = s.length + t.length := by
   simp [← length_toList]
 
 end String
@@ -59,7 +59,6 @@ end String
 namespace Char
 
 @[deprecated String.length_singleton +typeChanged (since := "2026-02-12")]
-theorem length_toString (c : Char) : c.toString.length = 1 := by
-  simp
+theorem length_toString (c : Char) : c.toString.length = 1 := by simp
 
 end Char

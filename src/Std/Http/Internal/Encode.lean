@@ -27,9 +27,7 @@ Serializes a type `t` to a `ChunkedBuffer` containing its canonical HTTP represe
 version `v`.
 -/
 class Encode (v : Version) (t : Type) where
-  /--
-  Encodes a type `t` to a `ChunkedBuffer`.
-  -/
+  /-- Encodes a type `t` to a `ChunkedBuffer`. -/
   encode : ChunkedBuffer → t → ChunkedBuffer
 
 instance : Encode .v11 Version where

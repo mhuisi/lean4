@@ -46,7 +46,8 @@ def validateForwarder (headApp : Term) (forwarded probeExpr : Expr) : MetaM Unit
     let ty ← inferType arg
     if (← instantiateMVars ty).findMVar? (· == alphaRet.mvarId!) |>.isSome then
       return some ty
-    else return none
+    else
+      return none
   forallTelescopeReducing (← inferType forwarded) fun args body => do
     unless ← isDefEq probeType (← whnfD (← instantiateMVars body)) do
       reject m!"the forwarded body's `α` differs from the wrapper's return `α`"
@@ -55,7 +56,8 @@ def validateForwarder (headApp : Term) (forwarded probeExpr : Expr) : MetaM Unit
         reject m!"`α` appears in the forwarded body's input type `{ty}`"
   forallTelescopeReducing (← inferType probeExpr.getAppFn) fun fvars _ => do
     for (fvar, appArg) in fvars.zip probeExpr.getAppArgs do
-      unless (← fvar.fvarId!.getDecl).binderInfo matches .default do continue
+      unless (← fvar.fvarId!.getDecl).binderInfo matches .default do
+        continue
       let appArgInst ← instantiateMVars appArg
       if appArgInst == forwarded then continue
       if let some ty ← argMentionsAlpha appArgInst then
@@ -71,25 +73,29 @@ wrapper's shape against the probe; on success, the lifted body is assigned into 
 and the probe expression itself is the result.
 -/
 public def tryElabForwardApp? (e : Term) (dec : DoElemCont) : DoElabM (Option Expr) := do
-  let some (headApp, arg) := Forward.matchApp? e | return none
-  let (forwarded, probeExpr) ← controlAtTermElabM fun _ => withFreshMacroScope do
-    let forwardedStx ← `(?forwarded)
-    let forwarded ← Term.elabTerm forwardedStx none
-    let probeExpr ← Term.elabTerm (← `($headApp $forwardedStx)) none
-    pure (forwarded, probeExpr)
+  let some (headApp, arg) := Forward.matchApp? e
+    | return none
+  let (forwarded, probeExpr) ←
+    controlAtTermElabM fun _ =>
+      withFreshMacroScope do
+        let forwardedStx ← `(?forwarded)
+        let forwarded ← Term.elabTerm forwardedStx none
+        let probeExpr ← Term.elabTerm (← `($headApp $forwardedStx)) none
+        pure (forwarded, probeExpr)
   validateForwarder headApp forwarded probeExpr
   let bodyInfo ← InferControlInfo.ofSeq arg.body
   let forwarder ← EffectForwarder.ofCont bodyInfo dec
-  let liftedBody ← controlAtTermElabM fun runInBase => do
-    -- The binders take their types from the wrapper's body slot.
-    let slotType ← instantiateMVars (← inferType forwarded)
-    let (binders, _, isPattern) ←
-      liftMacroM <| Term.expandFunBinders (arg.binders.map (·.raw)) (← `(_))
-    if isPattern then
-      throwError "\
-        A `do←` binder must be a variable. Bind a variable and `match` on it in the body."
-    Term.elabFunBinders binders (some slotType) fun bsExpr _ => runInBase do
-      mkLambdaFVars bsExpr (← forwarder.lift (elabDoSeq arg.body))
+  let liftedBody ←
+    controlAtTermElabM fun runInBase => do
+      -- The binders take their types from the wrapper's body slot.
+      let slotType ← instantiateMVars (← inferType forwarded)
+      let (binders, _, isPattern) ←
+        liftMacroM <| Term.expandFunBinders (arg.binders.map (·.raw)) (← `(_))
+      if isPattern then
+        throwError "\
+          A `do←` binder must be a variable. Bind a variable and `match` on it in the body."
+      Term.elabFunBinders binders (some slotType) fun bsExpr _ =>
+        runInBase do mkLambdaFVars bsExpr (← forwarder.lift (elabDoSeq arg.body))
   unless ← forwarded.mvarId!.checkedAssign liftedBody do
     throwError "the lifted body's type does not match the wrapper's body slot type"
   -- NB: No `withDeadCode` wrap on `restoreCont`'s result, because it is unclear whether `body` is

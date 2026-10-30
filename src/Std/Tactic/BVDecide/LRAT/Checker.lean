@@ -20,17 +20,12 @@ open Std.Sat
 namespace Std.Tactic.BVDecide
 namespace LRAT
 
-/--
-Check whether `lratProof` is a valid LRAT certificate for the unsatisfiability of `cnf`.
--/
-def check (lratProof : Array IntAction) (cnf : CNF Nat) : Bool :=
-  Internal.check lratProof cnf
+/-- Check whether `lratProof` is a valid LRAT certificate for the unsatisfiability of `cnf`. -/
+def check (lratProof : Array IntAction) (cnf : CNF Nat) : Bool := Internal.check lratProof cnf
 
-/--
-If the `check` functions succeeds on `lratProof` and `cnf` then the `cnf` is unsatisfiable.
--/
-theorem check_sound (lratProof : Array IntAction) (cnf : CNF Nat) :
-    check lratProof cnf → cnf.Unsat := by
+/-- If the `check` functions succeeds on `lratProof` and `cnf` then the `cnf` is unsatisfiable. -/
+theorem check_sound (lratProof : Array IntAction) (cnf : CNF Nat)
+    : check lratProof cnf → cnf.Unsat := by
   unfold check
   exact Internal.unsat_of_check
 

@@ -23,23 +23,24 @@ export MonadScope (getScope withScope)
 abbrev ScopeT (m : Type → Type) := ReaderT Scope m
 
 instance [Monad m] : MonadScope (ScopeT m) where
-  getScope  := read
+  getScope := read
   withScope := withReader
 
 instance (m n) [MonadLift m n] [MonadFunctor m n] [MonadScope m] : MonadScope n where
-  getScope    := liftM (getScope : m _)
+  getScope := liftM (getScope : m _)
   withScope f := monadMap (m := m) (withScope f)
 
 def inScope [MonadScope m] [Monad m] (fvarId : FVarId) : m Bool :=
   return (← getScope).contains fvarId
 
-@[inline] def withParams [MonadScope m] [Monad m] (ps : Array (Param pu)) (x : m α) : m α :=
+@[inline]
+def withParams [MonadScope m] [Monad m] (ps : Array (Param pu)) (x : m α) : m α :=
   withScope (fun s => ps.foldl (init := s) fun s p => s.insert p.fvarId) x
 
-@[inline] def withFVar [MonadScope m] [Monad m] (fvarId : FVarId) (x : m α) : m α :=
+@[inline]
+def withFVar [MonadScope m] [Monad m] (fvarId : FVarId) (x : m α) : m α :=
   withScope (fun s => s.insert fvarId) x
 
-@[inline] def withNewScope [MonadScope m] [Monad m] (x : m α) : m α := do
-  withScope (fun _ => {}) x
+@[inline] def withNewScope [MonadScope m] [Monad m] (x : m α) : m α := do withScope (fun _ => {}) x
 
 end Lean.Compiler.LCNF

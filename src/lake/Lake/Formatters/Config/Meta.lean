@@ -34,8 +34,7 @@ public def fmtConfigField : Fmt := fun
       Layouts.binder #[] #[lhs] binders typeAscriptionTk type colonEqTk? defVal? #[]
         (kind := .global)
     fmtDeclWithDeclModifiers declModifiers field
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.configDecl]
 public def fmtConfigDecl : Fmt := fun
@@ -57,5 +56,4 @@ public def fmtConfigDecl : Fmt := fun
       fmtStructureLike configurationTk declId binders typeAscriptionTk? type? extends? sepTk?
         structCtor?.join configFields? optDeriving
     fmtDeclWithDeclModifiers declModifiers decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

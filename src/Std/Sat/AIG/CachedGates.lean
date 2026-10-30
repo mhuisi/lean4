@@ -25,17 +25,14 @@ variable {α : Type} [Hashable α] [DecidableEq α]
 /--
 Create a not gate in the input AIG. This uses the builtin cache to enable automated subterm sharing.
 -/
-@[inline]
-def mkNotCached (aig : AIG α) (gate : Ref aig) : Entrypoint α :=
-  ⟨aig, gate.not⟩
+@[inline] def mkNotCached (aig : AIG α) (gate : Ref aig) : Entrypoint α := ⟨aig, gate.not⟩
 
 /--
 Create an and gate in the input AIG. This uses the builtin cache to enable automated subterm
 sharing.
 -/
 @[inline]
-def mkAndCached (aig : AIG α) (input : BinaryInput aig) : Entrypoint α :=
-  aig.mkGateCached input
+def mkAndCached (aig : AIG α) (input : BinaryInput aig) : Entrypoint α := aig.mkGateCached input
 
 /--
 Create an or gate in the input AIG. This uses the builtin cache to enable automated subterm sharing.

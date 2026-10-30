@@ -19,8 +19,7 @@ public def fmtStoreTracesAsCmd : Fmt := fun
   | `(Lean.PostprocessTraces.storeTracesAsCmd|
       store_traces_as%$storeTk $traceId:ident in%$inTk $cmd:command) =>
     fmtTracedCommand storeTk traceId inTk cmd
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.PostprocessTraces.postprocessStoredTracesCmd]
 public def fmtPostprocessStoredTracesCmd : Fmt := fun
@@ -30,5 +29,4 @@ public def fmtPostprocessStoredTracesCmd : Fmt := fun
     let traceId ← fmt traceId
     let post ← fmt post
     return Layouts.pseudoApplication #[postprocessTk, traceId, post]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

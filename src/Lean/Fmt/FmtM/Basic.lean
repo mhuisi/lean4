@@ -193,18 +193,13 @@ Checks whether `descr` exclusively parses atoms, so that the syntax it produces 
 determined by its syntax node kind.
 -/
 def isAtomicParserDescr : ParserDescr → Bool
-  | .symbol .. | .nonReservedSymbol .. | .unicodeSymbol .. =>
-    true
-  | .const alias =>
-    emptyParserAliases.contains alias
-  | .unary alias p =>
-    transparentParserAliases.contains alias && isAtomicParserDescr p
+  | .symbol .. | .nonReservedSymbol .. | .unicodeSymbol .. => true
+  | .const alias => emptyParserAliases.contains alias
+  | .unary alias p => transparentParserAliases.contains alias && isAtomicParserDescr p
   | .binary alias p₁ p₂ =>
     (alias == `andthen || alias == `orelse) && isAtomicParserDescr p₁ && isAtomicParserDescr p₂
-  | .node _ _ p | .nodeWithAntiquot _ _ p =>
-    isAtomicParserDescr p
-  | _ =>
-    false
+  | .node _ _ p | .nodeWithAntiquot _ _ p => isAtomicParserDescr p
+  | _ => false
 
 def hasAtomicFormatter (env : Environment) (opts : Options) (kind : SyntaxNodeKind) : Bool :=
   Option.isSome <| do
@@ -478,7 +473,8 @@ public partial def fmtRaw (isFallback : Bool := false) : Fmt := fun stx => do
     go stx |>.run { anchorColumnPos, firstTokenPos := pos, lastTokenTailPos := tailPos }
   let isRawBlockSeparated := startColumnPos <= lineInfos[0]!.indentation
   let rawColumnPositions := anchorLineInfos.map (·.indentation)
-  let areLinesAligned := lineInfos.size > 1 && (isRawBlockSeparated || rawColumnPositions.all (· >= startColumnPos))
+  let areLinesAligned :=
+    lineInfos.size > 1 && (isRawBlockSeparated || rawColumnPositions.all (· >= startColumnPos))
   if areLinesAligned then
     rawDoc := TaggedDoc.untagged <| .aligned rawDoc.doc
   else
@@ -490,12 +486,9 @@ public partial def fmtRaw (isFallback : Bool := false) : Fmt := fun stx => do
 where
   go (stx : Syntax) : ReaderT fmtRaw.Context FmtM TaggedDoc := do
     match stx with
-    | .missing =>
-      return failure
-    | .atom _ val =>
-      fmtToken stx val
-    | .ident _ rawVal _ _ =>
-      fmtToken stx rawVal.toString
+    | .missing => return failure
+    | .atom _ val => fmtToken stx val
+    | .ident _ rawVal _ _ => fmtToken stx rawVal.toString
     | .node _ kind args =>
       if kind == choiceKind then
         if let some firstAlternative := args[0]? then
@@ -554,8 +547,7 @@ public partial def fmtWith (f : Fmt) (formatterName : Name) : Fmt := fun stx => 
 
 public partial def fmt : Fmt := fun stx =>
   match stx with
-  | .missing =>
-    pure <| failure
+  | .missing => pure <| failure
   | .atom _ val =>
     let valDocs := val.split "\n" |>.map (Doc.text ·.toString) |>.toArray
     let valDoc := .joinUsing .hardNl valDocs
@@ -595,8 +587,7 @@ def isAntiquotKind : SyntaxNodeKind → Bool
   | .str _ "antiquot_suffix_splice"
   | .str .anonymous "token_antiquot" =>
     true
-  | _ =>
-    false
+  | _ => false
 
 /--
 Formats antiquotations verbatim. Antiquotations occur outside of quotations in syntax that admits

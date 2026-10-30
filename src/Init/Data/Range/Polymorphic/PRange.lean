@@ -24,13 +24,9 @@ A range of elements of {given}`α` with closed lower and upper bounds.
 equal to {given}`b : α`. This is notation for {lean}`Rcc.mk a b`.
 -/
 structure Rcc (α : Type u) where
-  /--
-  The lower bound of the range. {name (full := Rcc.lower)}`lower` is included in the range.
-  -/
+  /-- The lower bound of the range. {name (full := Rcc.lower)}`lower` is included in the range. -/
   lower : α
-  /--
-  The upper bound of the range. {name (full := Rcc.upper)}`upper` is included in the range.
-  -/
+  /-- The upper bound of the range. {name (full := Rcc.upper)}`upper` is included in the range. -/
   upper : α
 deriving DecidableEq
 
@@ -41,9 +37,7 @@ A range of elements of {given}`α` with a closed lower bound and an open upper b
 less than {given}`b : α`. This is notation for {lean}`Rco.mk a b`.
 -/
 structure Rco (α : Type u) where
-  /--
-  The lower bound of the range. {name (full := Rco.lower)}`lower` is included in the range.
-  -/
+  /-- The lower bound of the range. {name (full := Rco.lower)}`lower` is included in the range. -/
   lower : α
   /--
   The upper bound of the range. {name (full := Rco.upper)}`upper` is not included in the range.
@@ -58,9 +52,7 @@ An upward-unbounded range of elements of {given}`α` with a closed lower bound.
 This is notation for {lean}`Rci.mk a`.
 -/
 structure Rci (α : Type u) where
-  /--
-  The lower bound of the range. {name (full := Rci.lower)}`lower` is included in the range.
-  -/
+  /-- The lower bound of the range. {name (full := Rci.lower)}`lower` is included in the range. -/
   lower : α
 deriving DecidableEq
 
@@ -75,9 +67,7 @@ structure Roc (α : Type u) where
   The lower bound of the range. {name (full := Roc.lower)}`lower` is not included in the range.
   -/
   lower : α
-  /--
-  The upper bound of the range. {name (full := Roc.upper)}`upper` is included in the range.
-  -/
+  /-- The upper bound of the range. {name (full := Roc.upper)}`upper` is included in the range. -/
   upper : α
 deriving DecidableEq
 
@@ -118,9 +108,7 @@ A downward-unbounded range of elements of {given}`α` with a closed upper bound.
 This is notation for {lean}`Ric.mk b`.
 -/
 structure Ric (α : Type u) where
-  /--
-  The upper bound of the range. {name (full := Ric.upper)}`upper` is included in the range.
-  -/
+  /-- The upper bound of the range. {name (full := Ric.upper)}`upper` is included in the range. -/
   upper : α
 deriving DecidableEq
 
@@ -216,8 +204,7 @@ class Rxc.IsAlwaysFinite (α : Type u) [UpwardEnumerable α] [LE α] : Prop wher
   For every pair of elements {name}`init` and {name}`hi`, there exists a chain of successors that
   results in an element that either has no successors or is greater than {name}`hi`.
   -/
-  finite (init : α) (hi : α) :
-    ∃ n, (UpwardEnumerable.succMany? n init).elim True (¬ · ≤ hi)
+  finite (init : α) (hi : α) : ∃ n, (UpwardEnumerable.succMany? n init).elim True (¬ · ≤ hi)
 
 /--
 This type class ensures that right-open ranges (i.e., for bounds {given (type := "α")}`a` and {given (type := "α")}`b`,
@@ -230,8 +217,7 @@ class Rxo.IsAlwaysFinite (α : Type u) [UpwardEnumerable α] [LT α] : Prop wher
   For every pair of elements {name}`init` and {name}`hi`, there exists a chain of successors that
   results in an element that either has no successors or is greater than {name}`hi`.
   -/
-  finite (init : α) (hi : α) :
-    ∃ n, (UpwardEnumerable.succMany? n init).elim True (¬ · < hi)
+  finite (init : α) (hi : α) : ∃ n, (UpwardEnumerable.succMany? n init).elim True (¬ · < hi)
 
 /--
 This type class ensures that right-unbounded ranges (i.e., for a bound {given (type := "α")}`a`,
@@ -264,8 +250,8 @@ variable {α : Type u} {r : Rco α} {a : α}
 instance [LE α] [LT α] : Membership α (Rco α) where
   mem r a := r.lower ≤ a ∧ a < r.upper
 
-instance [LE α] [DecidableLE α] [LT α] [DecidableLT α] :
-    Decidable (a ∈ r) := inferInstanceAs (Decidable (_ ∧ _))
+instance [LE α] [DecidableLE α] [LT α] [DecidableLT α] : Decidable (a ∈ r) :=
+  inferInstanceAs (Decidable (_ ∧ _))
 
 end Rco
 
@@ -276,8 +262,7 @@ variable {α : Type u} {r : Rci α} {a : α}
 instance [LE α] : Membership α (Rci α) where
   mem r a := r.lower ≤ a
 
-instance [LE α] [DecidableLE α] :
-    Decidable (a ∈ r) := inferInstanceAs (Decidable (_ ≤ _))
+instance [LE α] [DecidableLE α] : Decidable (a ∈ r) := inferInstanceAs (Decidable (_ ≤ _))
 
 end Rci
 
@@ -360,13 +345,10 @@ class Rcc.HasRcoIntersection (α : Type w) where
 This type class ensures that the intersection according to {name}`Rcc.HasRcoIntersection`
 of two ranges contains exactly those elements that are contained in both ranges.
 -/
-class Rcc.LawfulRcoIntersection (α : Type w) [LT α] [LE α]
-    [HasRcoIntersection α] where
-  /--
-  Every element of the intersection is an element of both original ranges.
-  -/
-  mem_intersection_iff {a : α} {r : Rcc α} {s : Rco α} :
-    a ∈ HasRcoIntersection.intersection r s ↔ a ∈ r ∧ a ∈ s
+class Rcc.LawfulRcoIntersection (α : Type w) [LT α] [LE α] [HasRcoIntersection α] where
+  /-- Every element of the intersection is an element of both original ranges. -/
+  mem_intersection_iff {a : α} {r : Rcc α} {s : Rco α}
+    : a ∈ HasRcoIntersection.intersection r s ↔ a ∈ r ∧ a ∈ s
 
 /--
 This type class allows taking the intersection of two left-closed right-open ranges, resulting in
@@ -380,13 +362,10 @@ class Rco.HasRcoIntersection (α : Type w) where
 This type class ensures that the intersection according to {name}`Rco.HasRcoIntersection`
 of two ranges contains exactly those elements that are contained in both ranges.
 -/
-class Rco.LawfulRcoIntersection (α : Type w) [LT α] [LE α]
-    [HasRcoIntersection α] where
-  /--
-  Every element of the intersection is an element of both original ranges.
-  -/
-  mem_intersection_iff {a : α} {r : Rco α} {s : Rco α} :
-    a ∈ HasRcoIntersection.intersection r s ↔ a ∈ r ∧ a ∈ s
+class Rco.LawfulRcoIntersection (α : Type w) [LT α] [LE α] [HasRcoIntersection α] where
+  /-- Every element of the intersection is an element of both original ranges. -/
+  mem_intersection_iff {a : α} {r : Rco α} {s : Rco α}
+    : a ∈ HasRcoIntersection.intersection r s ↔ a ∈ r ∧ a ∈ s
 
 /--
 This type class allows taking the intersection of a left-closed right-unbounded range with a
@@ -400,13 +379,10 @@ class Rci.HasRcoIntersection (α : Type w) where
 This type class ensures that the intersection according to {name}`Rci.HasRcoIntersection`
 of two ranges contains exactly those elements that are contained in both ranges.
 -/
-class Rci.LawfulRcoIntersection (α : Type w) [LT α] [LE α]
-    [HasRcoIntersection α] where
-  /--
-  Every element of the intersection is an element of both original ranges.
-  -/
-  mem_intersection_iff {a : α} {r : Rci α} {s : Rco α} :
-    a ∈ HasRcoIntersection.intersection r s ↔ a ∈ r ∧ a ∈ s
+class Rci.LawfulRcoIntersection (α : Type w) [LT α] [LE α] [HasRcoIntersection α] where
+  /-- Every element of the intersection is an element of both original ranges. -/
+  mem_intersection_iff {a : α} {r : Rci α} {s : Rco α}
+    : a ∈ HasRcoIntersection.intersection r s ↔ a ∈ r ∧ a ∈ s
 
 /--
 This type class allows taking the intersection of a left-open right-closed range with a
@@ -420,13 +396,10 @@ class Roc.HasRcoIntersection (α : Type w) where
 This type class ensures that the intersection according to {name}`Roc.HasRcoIntersection`
 of two ranges contains exactly those elements that are contained in both ranges.
 -/
-class Roc.LawfulRcoIntersection (α : Type w) [LT α] [LE α]
-    [HasRcoIntersection α] where
-  /--
-  Every element of the intersection is an element of both original ranges.
-  -/
-  mem_intersection_iff {a : α} {r : Roc α} {s : Rco α} :
-    a ∈ HasRcoIntersection.intersection r s ↔ a ∈ r ∧ a ∈ s
+class Roc.LawfulRcoIntersection (α : Type w) [LT α] [LE α] [HasRcoIntersection α] where
+  /-- Every element of the intersection is an element of both original ranges. -/
+  mem_intersection_iff {a : α} {r : Roc α} {s : Rco α}
+    : a ∈ HasRcoIntersection.intersection r s ↔ a ∈ r ∧ a ∈ s
 
 /--
 This type class allows taking the intersection of an open range with a
@@ -440,13 +413,10 @@ class Roo.HasRcoIntersection (α : Type w) where
 This type class ensures that the intersection according to {name}`Roo.HasRcoIntersection`
 of two ranges contains exactly those elements that are contained in both ranges.
 -/
-class Roo.LawfulRcoIntersection (α : Type w) [LT α] [LE α]
-    [HasRcoIntersection α] where
-  /--
-  Every element of the intersection is an element of both original ranges.
-  -/
-  mem_intersection_iff {a : α} {r : Roo α} {s : Rco α} :
-    a ∈ HasRcoIntersection.intersection r s ↔ a ∈ r ∧ a ∈ s
+class Roo.LawfulRcoIntersection (α : Type w) [LT α] [LE α] [HasRcoIntersection α] where
+  /-- Every element of the intersection is an element of both original ranges. -/
+  mem_intersection_iff {a : α} {r : Roo α} {s : Rco α}
+    : a ∈ HasRcoIntersection.intersection r s ↔ a ∈ r ∧ a ∈ s
 
 /--
 This type class allows taking the intersection of a left-open right-unbounded range with a
@@ -460,13 +430,10 @@ class Roi.HasRcoIntersection (α : Type w) where
 This type class ensures that the intersection according to {name}`Roi.HasRcoIntersection`
 of two ranges contains exactly those elements that are contained in both ranges.
 -/
-class Roi.LawfulRcoIntersection (α : Type w) [LT α] [LE α]
-    [HasRcoIntersection α] where
-  /--
-  Every element of the intersection is an element of both original ranges.
-  -/
-  mem_intersection_iff {a : α} {r : Roi α} {s : Rco α} :
-    a ∈ HasRcoIntersection.intersection r s ↔ a ∈ r ∧ a ∈ s
+class Roi.LawfulRcoIntersection (α : Type w) [LT α] [LE α] [HasRcoIntersection α] where
+  /-- Every element of the intersection is an element of both original ranges. -/
+  mem_intersection_iff {a : α} {r : Roi α} {s : Rco α}
+    : a ∈ HasRcoIntersection.intersection r s ↔ a ∈ r ∧ a ∈ s
 
 /--
 This type class allows taking the intersection of a left-unbounded right-closed range with a
@@ -480,13 +447,10 @@ class Ric.HasRcoIntersection (α : Type w) where
 This type class ensures that the intersection according to {name}`Ric.HasRcoIntersection`
 of two ranges contains exactly those elements that are contained in both ranges.
 -/
-class Ric.LawfulRcoIntersection (α : Type w) [LT α] [LE α]
-    [HasRcoIntersection α] where
-  /--
-  Every element of the intersection is an element of both original ranges.
-  -/
-  mem_intersection_iff {a : α} {r : Ric α} {s : Rco α} :
-    a ∈ HasRcoIntersection.intersection r s ↔ a ∈ r ∧ a ∈ s
+class Ric.LawfulRcoIntersection (α : Type w) [LT α] [LE α] [HasRcoIntersection α] where
+  /-- Every element of the intersection is an element of both original ranges. -/
+  mem_intersection_iff {a : α} {r : Ric α} {s : Rco α}
+    : a ∈ HasRcoIntersection.intersection r s ↔ a ∈ r ∧ a ∈ s
 
 /--
 This type class allows taking the intersection of a left-unbounded right-open range with a
@@ -500,12 +464,9 @@ class Rio.HasRcoIntersection (α : Type w) where
 This type class ensures that the intersection according to {name}`Rio.HasRcoIntersection`
 of two ranges contains exactly those elements that are contained in both ranges.
 -/
-class Rio.LawfulRcoIntersection (α : Type w) [LT α] [LE α]
-    [HasRcoIntersection α] where
-  /--
-  Every element of the intersection is an element of both original ranges.
-  -/
-  mem_intersection_iff {a : α} {r : Rio α} {s : Rco α} :
-    a ∈ HasRcoIntersection.intersection r s ↔ a ∈ r ∧ a ∈ s
+class Rio.LawfulRcoIntersection (α : Type w) [LT α] [LE α] [HasRcoIntersection α] where
+  /-- Every element of the intersection is an element of both original ranges. -/
+  mem_intersection_iff {a : α} {r : Rio α} {s : Rco α}
+    : a ∈ HasRcoIntersection.intersection r s ↔ a ∈ r ∧ a ∈ s
 
 end Std

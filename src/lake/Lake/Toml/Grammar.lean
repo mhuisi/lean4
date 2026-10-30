@@ -27,16 +27,14 @@ namespace Lake.Toml
 open Lean Parser
 
 /-- Is it a TOML control character? (excludes tabs and spaces) -/
-public def isControlChar (c : Char) : Bool :=
-  c = '\x7F' || (c < '\x20' && c != '\t')
+public def isControlChar (c : Char) : Bool := c = '\x7F' || (c < '\x20' && c != '\t')
 
 --------------------------------------------------------------------------------
 /-! ## Trailing Functions -/
 --------------------------------------------------------------------------------
 
 /-- Consume optional horizontal whitespace (i.e., tab or space). -/
-public def wsFn : ParserFn :=
-  takeWhileFn fun c => c = ' ' || c = '\t'
+public def wsFn : ParserFn := takeWhileFn fun c => c = ' ' || c = '\t'
 
 /-- Consumes the LF following a CR in a CRLF newline. -/
 def crlfAuxFn : ParserFn := fun c s =>
@@ -70,8 +68,7 @@ def commentBodyFn : ParserFn :=
   takeUntilFn isControlChar
 
 /-- Consumes a line comment. -/
-public def commentFn : ParserFn :=
-  chFn '#' ["comment"] >> commentBodyFn
+public def commentFn : ParserFn := chFn '#' ["comment"] >> commentBodyFn
 
 /-- Consume optional whitespace (space, tab, or newline). -/
 public partial def wsNewlineFn : ParserFn := fun c s =>
@@ -80,9 +77,9 @@ public partial def wsNewlineFn : ParserFn := fun c s =>
   else
     let curr := c.get' s.pos h
     if curr = ' ' || curr = '\t' || curr == '\n' then
-      wsNewlineFn c (s.next' c s.pos  h)
+      wsNewlineFn c (s.next' c s.pos h)
     else if curr == '\r' then
-      (crlfAuxFn >> wsNewlineFn) c (s.next' c s.pos  h)
+      (crlfAuxFn >> wsNewlineFn) c (s.next' c s.pos h)
     else
       s
 
@@ -150,8 +147,8 @@ partial def basicStringAuxFn (startPos : String.Pos.Raw) : ParserFn := fun c s =
     else
       basicStringAuxFn startPos c (s.next' c s.pos h)
 
-public def basicStringFn : ParserFn := usePosFn fun startPos =>
-  chFn '\"' ["basic string"] >> basicStringAuxFn startPos
+public def basicStringFn : ParserFn :=
+  usePosFn fun startPos => chFn '\"' ["basic string"] >> basicStringAuxFn startPos
 
 partial def literalStringAuxFn (startPos : String.Pos.Raw) : ParserFn := fun c s =>
   if h : c.atEnd s.pos then
@@ -165,10 +162,11 @@ partial def literalStringAuxFn (startPos : String.Pos.Raw) : ParserFn := fun c s
     else
       literalStringAuxFn startPos c (s.next' c s.pos h)
 
-public def literalStringFn : ParserFn := usePosFn fun startPos =>
-  chFn '\'' ["literal string"] >> literalStringAuxFn startPos
+public def literalStringFn : ParserFn :=
+  usePosFn fun startPos => chFn '\'' ["literal string"] >> literalStringAuxFn startPos
 
-partial def mlLiteralStringAuxFn (startPos : String.Pos.Raw) (quoteDepth : Nat)  : ParserFn := fun c s =>
+partial def mlLiteralStringAuxFn (startPos : String.Pos.Raw) (quoteDepth : Nat)
+    : ParserFn := fun c s =>
   if h : c.atEnd s.pos then
     if quoteDepth ≥ 3 then
       s
@@ -181,7 +179,7 @@ partial def mlLiteralStringAuxFn (startPos : String.Pos.Raw) (quoteDepth : Nat) 
       if quoteDepth ≥ 5 then
         s.mkUnexpectedError "too many quotes"
       else
-        mlLiteralStringAuxFn startPos (quoteDepth+1) c s
+        mlLiteralStringAuxFn startPos (quoteDepth + 1) c s
     else if quoteDepth ≥ 3 then
       s
     else if curr == '\n' then
@@ -193,11 +191,13 @@ partial def mlLiteralStringAuxFn (startPos : String.Pos.Raw) (quoteDepth : Nat) 
     else
       mlLiteralStringAuxFn startPos 0 c (s.next' c s.pos h)
 
-public def mlLiteralStringFn : ParserFn := usePosFn fun startPos =>
-  atomicFn (repeatFn 3 (chFn '\'' ["multi-line literal string"])) >>
-  mlLiteralStringAuxFn startPos 0
+public def mlLiteralStringFn : ParserFn :=
+  usePosFn fun startPos =>
+    atomicFn (repeatFn 3 (chFn '\'' ["multi-line literal string"]))
+      >> mlLiteralStringAuxFn startPos 0
 
-partial def mlBasicStringAuxFn (startPos : String.Pos.Raw) (quoteDepth : Nat) : ParserFn := fun c s =>
+partial def mlBasicStringAuxFn (startPos : String.Pos.Raw) (quoteDepth : Nat)
+    : ParserFn := fun c s =>
   if h : c.atEnd s.pos then
     if quoteDepth ≥ 3 then
       s
@@ -210,7 +210,7 @@ partial def mlBasicStringAuxFn (startPos : String.Pos.Raw) (quoteDepth : Nat) : 
       if quoteDepth ≥ 5 then
         s.mkUnexpectedError "too many quotes"
       else
-        mlBasicStringAuxFn startPos (quoteDepth+1) c s
+        mlBasicStringAuxFn startPos (quoteDepth + 1) c s
     else if quoteDepth ≥ 3 then
       s
     else if curr == '\n' then
@@ -224,16 +224,15 @@ partial def mlBasicStringAuxFn (startPos : String.Pos.Raw) (quoteDepth : Nat) : 
     else
       mlBasicStringAuxFn startPos 0 c (s.next' c s.pos h)
 
-public def mlBasicStringFn : ParserFn := usePosFn fun startPos =>
-  atomicFn (repeatFn 3 (chFn '\"' ["multi-line basic string"])) >>
-  mlBasicStringAuxFn startPos 0
+public def mlBasicStringFn : ParserFn :=
+  usePosFn fun startPos =>
+    atomicFn (repeatFn 3 (chFn '\"' ["multi-line basic string"])) >> mlBasicStringAuxFn startPos 0
 
 --------------------------------------------------------------------------------
 /-! ## Numerals (Date-Times, Floats, and Integers) -/
 --------------------------------------------------------------------------------
 
-def hourMinFn : ParserFn :=
-  digitPairFn ["hour digit"] >> chFn ':' >> digitPairFn ["minute digit"]
+def hourMinFn : ParserFn := digitPairFn ["hour digit"] >> chFn ':' >> digitPairFn ["minute digit"]
 
 def timeTailFn (allowOffset : Bool) : ParserFn := fun c s =>
   if h : c.atEnd s.pos then
@@ -243,25 +242,32 @@ def timeTailFn (allowOffset : Bool) : ParserFn := fun c s =>
     if curr = '.' then
       let s := s.next' c s.pos h
       let s := takeWhile1Fn (·.isDigit) ["millisecond"] c s
-      if s.hasError then s else
-      if h : c.atEnd s.pos then s else
-      timeOffsetFn (c.get' s.pos h) (c.next' s.pos h) c s
+      if s.hasError then
+        s
+      else if h : c.atEnd s.pos then
+        s
+      else
+        timeOffsetFn (c.get' s.pos h) (c.next' s.pos h) c s
     else
       timeOffsetFn curr (c.next' s.pos h) c s
 where
-  @[inline] timeOffsetFn curr nextPos c s :=
+  @[inline]
+  timeOffsetFn curr nextPos c s :=
     if curr == 'Z' || curr == 'z' then
-      if allowOffset then s.setPos nextPos else
-      s.mkUnexpectedError "time offset is forbidden here"
+      if allowOffset then
+        s.setPos nextPos
+      else
+        s.mkUnexpectedError "time offset is forbidden here"
     else if curr = '+' || curr = '-' then
-      if allowOffset then hourMinFn c (s.setPos nextPos) else
-      s.mkUnexpectedError "time offset is forbidden here"
+      if allowOffset then
+        hourMinFn c (s.setPos nextPos)
+      else
+        s.mkUnexpectedError "time offset is forbidden here"
     else
       s
 
 def timeAuxFn (allowOffset : Bool) : ParserFn :=
-  digitPairFn ["minute digit"] >> chFn ':' >>
-  digitPairFn ["second digit"] >> timeTailFn allowOffset
+  digitPairFn ["minute digit"] >> chFn ':' >> digitPairFn ["second digit"] >> timeTailFn allowOffset
 
 public def timeFn (allowOffset := false) : ParserFn :=
   digitPairFn ["hour"] >> chFn ':' >> timeAuxFn allowOffset
@@ -277,16 +283,14 @@ def optTimeFn : ParserFn := fun c s =>
     else if curr = ' ' then
       let tPos := c.next' i h
       let s := timeFn true c (s.setPos tPos)
-      if s.hasError && s.pos == tPos then s.restore (s.stackSize-1) i else s
+      if s.hasError && s.pos == tPos then s.restore (s.stackSize - 1) i else s
     else
       s
 
 def dateTimeAuxFn : ParserFn :=
-  digitPairFn ["month digit"] >> chFn '-' >>
-  digitPairFn ["day digit"] >> optTimeFn
+  digitPairFn ["month digit"] >> chFn '-' >> digitPairFn ["day digit"] >> optTimeFn
 
-public def dateTimeFn : ParserFn :=
-  repeatFn 4 (digitFn ["year digit"]) >> chFn '-' >> dateTimeAuxFn
+public def dateTimeFn : ParserFn := repeatFn 4 (digitFn ["year digit"]) >> chFn '-' >> dateTimeAuxFn
 
 def decExpFn : ParserFn := fun c s =>
   let expected := ["decimal exponent"]
@@ -303,7 +307,7 @@ def decExpFn : ParserFn := fun c s =>
     else
       mkUnexpectedCharError s curr expected
 
-def optDecExpFn : ParserFn :=  fun c s =>
+def optDecExpFn : ParserFn := fun c s =>
   if h : c.atEnd s.pos then
     s
   else
@@ -313,23 +317,30 @@ def optDecExpFn : ParserFn :=  fun c s =>
     else
       s
 
-def decNumberTailAuxFn (startPos : String.Pos.Raw) (curr : Char) (nextPos : String.Pos.Raw) : ParserFn := fun c s =>
+def decNumberTailAuxFn (startPos : String.Pos.Raw) (curr : Char) (nextPos : String.Pos.Raw)
+    : ParserFn := fun c s =>
   if curr == '.' then
     let s := s.setPos nextPos
     let s := sepByChar1Fn (·.isDigit) '_' ["decimal fraction"] c s
-    if s.hasError then s else
-    let s := optDecExpFn c s
-    if s.hasError then s else
-    pushLit `Lake.Toml.float startPos skipFn c s
+    if s.hasError then
+      s
+    else
+      let s := optDecExpFn c s
+      if s.hasError then
+        s
+      else
+        pushLit `Lake.Toml.float startPos skipFn c s
   else if curr == 'e' || curr == 'E' then
     let s := s.setPos nextPos
     let s := decExpFn c s
-    if s.hasError then s else
-    pushLit `Lake.Toml.float startPos skipFn c s
+    if s.hasError then
+      s
+    else
+      pushLit `Lake.Toml.float startPos skipFn c s
   else
     pushLit `Lake.Toml.decInt startPos skipFn c s
 
-def decNumberTailFn (startPos : String.Pos.Raw)  : ParserFn := fun c s =>
+def decNumberTailFn (startPos : String.Pos.Raw) : ParserFn := fun c s =>
   if h : c.atEnd s.pos then
     pushLit `Lake.Toml.decInt startPos skipFn c s
   else
@@ -337,7 +348,8 @@ def decNumberTailFn (startPos : String.Pos.Raw)  : ParserFn := fun c s =>
 
 mutual
 
-partial def decNumberSepFn (startPos : String.Pos.Raw) (curr : Char) (nextPos : String.Pos.Raw) : ParserFn := fun c s =>
+partial def decNumberSepFn (startPos : String.Pos.Raw) (curr : Char) (nextPos : String.Pos.Raw)
+    : ParserFn := fun c s =>
   if curr == '_' then
     let s := s.setPos nextPos
     decNumberFn startPos c s
@@ -409,8 +421,10 @@ def decNumeralAuxFn (startPos : String.Pos.Raw) : ParserFn := fun c s =>
         if curr == ':' then -- `HH:`
           let s := s.setPos nextPos
           let s := timeAuxFn false c s
-          if s.hasError then s else
-          pushLit `Lake.Toml.dateTime startPos skipFn c s
+          if s.hasError then
+            s
+          else
+            pushLit `Lake.Toml.dateTime startPos skipFn c s
         else if curr.isDigit then -- `NNN`
           let s := s.setPos nextPos
           if h : c.atEnd s.pos then
@@ -428,8 +442,10 @@ def decNumeralAuxFn (startPos : String.Pos.Raw) : ParserFn := fun c s =>
                 if curr == '-' then -- `YYYY-`
                   let s := s.setPos nextPos
                   let s := dateTimeAuxFn c s
-                  if s.hasError then s else
-                  pushLit `Lake.Toml.dateTime startPos skipFn c s
+                  if s.hasError then
+                    s
+                  else
+                    pushLit `Lake.Toml.dateTime startPos skipFn c s
                 else if curr.isDigit then
                   let s := s.setPos nextPos
                   decNumberAuxFn startPos c s
@@ -442,61 +458,68 @@ def decNumeralAuxFn (startPos : String.Pos.Raw) : ParserFn := fun c s =>
     else
       decNumberSepFn startPos curr nextPos c s
 
-public def numeralFn : ParserFn := atomicFn fun c s =>
-  let startPos := s.pos
-  let expected := ["integer", "float", "date-time"]
-  if h : c.atEnd s.pos then
-    s.mkEOIError expected
-  else
-    let curr := c.get' s.pos h
-    if curr == '0' then
-      let s := s.next' c startPos h
-      if h : c.atEnd s.pos then
-        pushLit `Lake.Toml.decInt startPos skipFn c s
-      else
-        let curr := c.get' s.pos h
-        if curr == 'b' then
-          let s := s.next' c s.pos h
-          let s := sepByChar1Fn isBinDigit '_' ["binary integer"] c s
-          if s.hasError then s else
-          pushLit `Lake.Toml.binNum startPos skipFn c s
-        else if curr == 'o' then
-          let s := s.next' c s.pos h
-          let s := sepByChar1Fn isOctDigit '_' ["octal integer"] c s
-          if s.hasError then s else
-          pushLit `Lake.Toml.octNum startPos skipFn c s
-        else if curr == 'x' then
-          let s := s.next' c s.pos h
-          let s := sepByChar1Fn isHexDigit '_' ["hexadecimal integer"] c s
-          if s.hasError then s else
-          pushLit `Lake.Toml.hexNum startPos skipFn c s
-        else if curr.isDigit then
-          let s := s.next' c s.pos h
-          let s := (chFn ':' >> timeAuxFn false) c s
-          if s.hasError then s else
-          pushLit `Lake.Toml.dateTime startPos skipFn c s
-        else
-          decNumberTailAuxFn startPos curr (c.next' s.pos h) c s
-    else if curr.isDigit then
-      decNumeralAuxFn startPos c (s.next' c s.pos h)
-    else if curr == '+' || curr == '-' then
-      decimalFn startPos c (s.next' c s.pos h)
-    else if curr == 'i' then
-      infAuxFn startPos c (s.next' c s.pos h)
-    else if curr == 'n' then
-      nanAuxFn startPos c (s.next' c s.pos h)
+public def numeralFn : ParserFn :=
+  atomicFn fun c s =>
+    let startPos := s.pos
+    let expected := ["integer", "float", "date-time"]
+    if h : c.atEnd s.pos then
+      s.mkEOIError expected
     else
-      s.mkUnexpectedError s!"unexpected '{curr}'" expected
+      let curr := c.get' s.pos h
+      if curr == '0' then
+        let s := s.next' c startPos h
+        if h : c.atEnd s.pos then
+          pushLit `Lake.Toml.decInt startPos skipFn c s
+        else
+          let curr := c.get' s.pos h
+          if curr == 'b' then
+            let s := s.next' c s.pos h
+            let s := sepByChar1Fn isBinDigit '_' ["binary integer"] c s
+            if s.hasError then
+              s
+            else
+              pushLit `Lake.Toml.binNum startPos skipFn c s
+          else if curr == 'o' then
+            let s := s.next' c s.pos h
+            let s := sepByChar1Fn isOctDigit '_' ["octal integer"] c s
+            if s.hasError then
+              s
+            else
+              pushLit `Lake.Toml.octNum startPos skipFn c s
+          else if curr == 'x' then
+            let s := s.next' c s.pos h
+            let s := sepByChar1Fn isHexDigit '_' ["hexadecimal integer"] c s
+            if s.hasError then
+              s
+            else
+              pushLit `Lake.Toml.hexNum startPos skipFn c s
+          else if curr.isDigit then
+            let s := s.next' c s.pos h
+            let s := (chFn ':' >> timeAuxFn false) c s
+            if s.hasError then
+              s
+            else
+              pushLit `Lake.Toml.dateTime startPos skipFn c s
+          else
+            decNumberTailAuxFn startPos curr (c.next' s.pos h) c s
+      else if curr.isDigit then
+        decNumeralAuxFn startPos c (s.next' c s.pos h)
+      else if curr == '+' || curr == '-' then
+        decimalFn startPos c (s.next' c s.pos h)
+      else if curr == 'i' then
+        infAuxFn startPos c (s.next' c s.pos h)
+      else if curr == 'n' then
+        nanAuxFn startPos c (s.next' c s.pos h)
+      else
+        s.mkUnexpectedError s!"unexpected '{curr}'" expected
 
 --------------------------------------------------------------------------------
 /-! ## Parsers -/
 --------------------------------------------------------------------------------
 
-public def trailingWs : Parser :=
-  trailing wsFn
+public def trailingWs : Parser := trailing wsFn
 
-public def trailingSep : Parser :=
-  trailing trailingFn
+public def trailingSep : Parser := trailing trailingFn
 
 public def unquotedKeyFn : ParserFn :=
   takeWhile1Fn (fun c => c.isAlphanum || c == '_' || c == '-') ["unquoted key"]
@@ -516,123 +539,101 @@ public def mlBasicString : Parser :=
 public def mlLiteralString : Parser :=
   litWithAntiquot "mlLiteralString" `Lake.Toml.mlLiteralString mlLiteralStringFn
 
-public def quotedKey : Parser :=
-  basicString <|> literalString
+public def quotedKey : Parser := basicString <|> literalString
 
 public def simpleKey : Parser :=
-  nodeWithAntiquot "simpleKey" `Lake.Toml.simpleKey (anonymous := true) $
-  unquotedKey <|> quotedKey
+  nodeWithAntiquot "simpleKey" `Lake.Toml.simpleKey (anonymous := true) $ unquotedKey <|> quotedKey
 
 public def key : Parser :=
-  nodeWithAntiquot "key" `Lake.Toml.key (anonymous := true)  $ setExpected ["key"]  $
-  sepBy1 simpleKey "." (trailingWs >> chAtom '.' >> trailingWs)
+  nodeWithAntiquot "key" `Lake.Toml.key (anonymous := true) $ setExpected ["key"] $
+    sepBy1 simpleKey "." (trailingWs >> chAtom '.' >> trailingWs)
 
 public def stdTable : Parser :=
   nodeWithAntiquot "stdTable" `Lake.Toml.stdTable $
-  atomic (chAtom '[' ["table"] >> notFollowedBy (chAtom '[') "'['") >>
-  trailingWs >> key >> trailingWs >> chAtom ']'
+    atomic (chAtom '[' ["table"] >> notFollowedBy (chAtom '[') "'['") >> trailingWs >> key
+      >> trailingWs >> chAtom ']'
 
 public def arrayTable : Parser :=
   nodeWithAntiquot "arrayTable" `Lake.Toml.arrayTable $
-  atomic (chAtom '[' ["table"] >> chAtom '[' ) >>
-  trailingWs >> key >> trailingWs >> chAtom ']' >> chAtom ']'
+    atomic (chAtom '[' ["table"] >> chAtom '[') >> trailingWs >> key >> trailingWs >> chAtom ']'
+      >> chAtom ']'
 
-public def table :=
-  stdTable <|> arrayTable
+public def table := stdTable <|> arrayTable
 
 def keyvalCore (val : Parser) : Parser :=
   nodeWithAntiquot "keyval" `Lake.Toml.keyval (anonymous := true) $
-  key >> trailingWs >> chAtom '=' >> trailingWs >> val
+    key >> trailingWs >> chAtom '=' >> trailingWs >> val
 
 def expressionCore (val : Parser) : Parser :=
   withAntiquot (mkAntiquot "expression" `Lake.Toml.expression (isPseudoKind := true)) $
-  keyvalCore val <|> table
+    keyvalCore val <|> table
 
-public def header : Parser :=
-  litWithAntiquot "header" `Lake.Toml.header skipFn trailingFn
+public def header : Parser := litWithAntiquot "header" `Lake.Toml.header skipFn trailingFn
 
 def tomlCore (val : Parser) : Parser :=
   nodeWithAntiquot "toml" `Lake.Toml.toml (anonymous := true) $
-  header >> sepByLinebreak (expressionCore val >> trailingSep)
+    header >> sepByLinebreak (expressionCore val >> trailingSep)
 
 def inlineTableCore (val : Parser) : Parser :=
   nodeWithAntiquot "inlineTable" `Lake.Toml.inlineTable $
-  chAtom '{' ["inline-table"] (trailingFn := trailingFn) >>
-  sepBy (keyvalCore val >> trailingWs) "," (chAtom ',' (trailingFn := wsFn)) false >>
-  chAtom '}'
+    chAtom '{' ["inline-table"] (trailingFn := trailingFn)
+      >> sepBy (keyvalCore val >> trailingWs) "," (chAtom ',' (trailingFn := wsFn)) false
+      >> chAtom '}'
 
 def arrayCore (val : Parser) : Parser :=
   nodeWithAntiquot "array" `Lake.Toml.array $
-  chAtom '[' ["array"] (trailingFn := trailingFn) >>
-  sepBy (val >> trailingSep) "," (chAtom ',' (trailingFn := trailingFn)) true >>
-  chAtom ']'
+    chAtom '[' ["array"] (trailingFn := trailingFn)
+      >> sepBy (val >> trailingSep) "," (chAtom ',' (trailingFn := trailingFn)) true >> chAtom ']'
 
 public def string : Parser :=
   nodeWithAntiquot "string" `Lake.Toml.string $ setExpected ["string"] $
-  mlBasicString <|> basicString <|> mlLiteralString <|> literalString
+    mlBasicString <|> basicString <|> mlLiteralString <|> literalString
 
-public protected def true : Parser :=
-  lit `Lake.Toml.true $ strFn "true"
+public protected def true : Parser := lit `Lake.Toml.true $ strFn "true"
 
-public protected def false : Parser :=
-  lit `Lake.Toml.false $ strFn "false"
+public protected def false : Parser := lit `Lake.Toml.false $ strFn "false"
 
 public def boolean : Parser :=
-  nodeWithAntiquot "boolean" `Lake.Toml.boolean $
-  Toml.true <|> Toml.false
+  nodeWithAntiquot "boolean" `Lake.Toml.boolean $ Toml.true <|> Toml.false
 
 public def numeralAntiquot :=
-  mkAntiquot "float" `Lake.Toml.float (anonymous := false) <|>
-  mkAntiquot "decInt" `Lake.Toml.decInt (anonymous := false) <|>
-  mkAntiquot "binNum" `Lake.Toml.binNum (anonymous := false) <|>
-  mkAntiquot "octNum" `Lake.Toml.octNum (anonymous := false) <|>
-  mkAntiquot "hexNum" `Lake.Toml.hexNum (anonymous := false) <|>
-  mkAntiquot "dateTime" `Lake.Toml.dateTime (anonymous := false) <|>
-  mkAntiquot "numeral" `Lake.Toml.numeral (isPseudoKind := true)
+  mkAntiquot "float" `Lake.Toml.float (anonymous := false)
+    <|> mkAntiquot "decInt" `Lake.Toml.decInt (anonymous := false)
+    <|> mkAntiquot "binNum" `Lake.Toml.binNum (anonymous := false)
+    <|> mkAntiquot "octNum" `Lake.Toml.octNum (anonymous := false)
+    <|> mkAntiquot "hexNum" `Lake.Toml.hexNum (anonymous := false)
+    <|> mkAntiquot "dateTime" `Lake.Toml.dateTime (anonymous := false)
+    <|> mkAntiquot "numeral" `Lake.Toml.numeral (isPseudoKind := true)
 
 /-- A value starting with a numeral. Either a TOML date-time, float, or integer. -/
-public def numeral : Parser :=
-  withAntiquot numeralAntiquot $ dynamicNode numeralFn
+public def numeral : Parser := withAntiquot numeralAntiquot $ dynamicNode numeralFn
 
 public def numeralOfKind (name : String) (kind : SyntaxNodeKind) : Parser :=
   numeral >> setExpected [name] (checkStackTop (·.isOfKind kind) "illegal numeral kind")
 
-public def float : Parser :=
-  numeralOfKind "float" `Lake.Toml.float
+public def float : Parser := numeralOfKind "float" `Lake.Toml.float
 
-public def decInt : Parser :=
-  numeralOfKind "decimal integer" `Lake.Toml.decInt
+public def decInt : Parser := numeralOfKind "decimal integer" `Lake.Toml.decInt
 
-public def binNum : Parser :=
-  numeralOfKind "binary number" `Lake.Toml.binNum
+public def binNum : Parser := numeralOfKind "binary number" `Lake.Toml.binNum
 
-public def octNum : Parser :=
-  numeralOfKind "octal number" `Lake.Toml.octNum
+public def octNum : Parser := numeralOfKind "octal number" `Lake.Toml.octNum
 
-public def hexNum : Parser :=
-  numeralOfKind "hexadecimal number" `Lake.Toml.hexNum
+public def hexNum : Parser := numeralOfKind "hexadecimal number" `Lake.Toml.hexNum
 
-public def dateTime : Parser :=
-  numeralOfKind "date-time" `Lake.Toml.dateTime
+public def dateTime : Parser := numeralOfKind "date-time" `Lake.Toml.dateTime
 
 def valCore (val : Parser) : Parser :=
-  string <|> boolean <|> numeral <|>
-  arrayCore val <|> inlineTableCore val
+  string <|> boolean <|> numeral <|> arrayCore val <|> inlineTableCore val
 
-public def val : Parser :=
-  recNodeWithAntiquot "val" `Lake.Toml.val valCore (anonymous := true)
+public def val : Parser := recNodeWithAntiquot "val" `Lake.Toml.val valCore (anonymous := true)
 
-public def array : Parser :=
-  arrayCore val
+public def array : Parser := arrayCore val
 
-public def inlineTable : Parser :=
-  inlineTableCore val
+public def inlineTable : Parser := inlineTableCore val
 
-public def keyval : Parser :=
-  keyvalCore val
+public def keyval : Parser := keyvalCore val
 
-public def expression : Parser :=
-  expressionCore val
+public def expression : Parser := expressionCore val
 
-@[run_parser_attribute_hooks] public def toml : Parser :=
-  withCache `Lake.Toml.toml $ tomlCore val
+@[run_parser_attribute_hooks] public def toml : Parser := withCache `Lake.Toml.toml $ tomlCore val

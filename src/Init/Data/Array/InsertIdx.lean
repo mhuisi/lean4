@@ -37,8 +37,9 @@ section InsertIdx
 
 variable {a : α}
 
-@[simp] theorem toList_insertIdx {xs : Array α} {i : Nat} {x : α} (h : i ≤ xs.size) :
-    (xs.insertIdx i x h).toList = xs.toList.insertIdx i x := by
+@[simp]
+theorem toList_insertIdx {xs : Array α} {i : Nat} {x : α} (h : i ≤ xs.size)
+    : (xs.insertIdx i x h).toList = xs.toList.insertIdx i x := by
   rcases xs with ⟨xs⟩
   simp
 
@@ -47,49 +48,52 @@ theorem insertIdx_zero {xs : Array α} {x : α} : xs.insertIdx 0 x = #[x] ++ xs 
   rcases xs with ⟨xs⟩
   simp
 
-@[simp] theorem size_insertIdx {xs : Array α} (h : i ≤ xs.size) : (xs.insertIdx i a).size = xs.size + 1 := by
+@[simp]
+theorem size_insertIdx {xs : Array α} (h : i ≤ xs.size)
+    : (xs.insertIdx i a).size = xs.size + 1 := by
   rcases xs with ⟨xs⟩
   simp at h
   simp [List.length_insertIdx, h]
 
-theorem eraseIdx_insertIdx_self {i : Nat} {xs : Array α} (h : i ≤ xs.size) :
-    (xs.insertIdx i a).eraseIdx i (by simp; omega) = xs := by
+theorem eraseIdx_insertIdx_self {i : Nat} {xs : Array α} (h : i ≤ xs.size)
+    : (xs.insertIdx i a).eraseIdx i (by simp; omega) = xs := by
   rcases xs with ⟨xs⟩
   simp_all
 
-theorem insertIdx_eraseIdx_of_ge {as : Array α}
-    (w₁ : i < as.size) (w₂ : j ≤ (as.eraseIdx i).size) (h : i ≤ j) :
-    (as.eraseIdx i).insertIdx j a =
-      (as.insertIdx (j + 1) a (by simp at w₂; omega)).eraseIdx i (by simp_all; omega) := by
+theorem insertIdx_eraseIdx_of_ge
+    {as : Array α} (w₁ : i < as.size) (w₂ : j ≤ (as.eraseIdx i).size) (h : i ≤ j)
+    : (as.eraseIdx i).insertIdx j a
+      = (as.insertIdx (j + 1) a (by simp at w₂; omega)).eraseIdx i (by simp_all; omega) := by
   cases as
   simpa using List.insertIdx_eraseIdx_of_ge (by simpa) (by simpa)
 
-theorem insertIdx_eraseIdx_of_le {as : Array α}
-    (w₁ : i < as.size) (w₂ : j ≤ (as.eraseIdx i).size) (h : j ≤ i) :
-    (as.eraseIdx i).insertIdx j a =
-      (as.insertIdx j a (by simp at w₂; omega)).eraseIdx (i + 1) (by simp_all) := by
+theorem insertIdx_eraseIdx_of_le
+    {as : Array α} (w₁ : i < as.size) (w₂ : j ≤ (as.eraseIdx i).size) (h : j ≤ i)
+    : (as.eraseIdx i).insertIdx j a
+      = (as.insertIdx j a (by simp at w₂; omega)).eraseIdx (i + 1) (by simp_all) := by
   cases as
   simpa using List.insertIdx_eraseIdx_of_le (by simpa) (by simpa)
 
 @[grind =]
-theorem insertIdx_eraseIdx {as : Array α} (h₁ : i < as.size) (h₂ : j ≤ (as.eraseIdx i).size) :
-    (as.eraseIdx i).insertIdx j a =
-      if h : i ≤ j then
-        (as.insertIdx (j + 1) a (by simp_all; omega)).eraseIdx i (by simp_all; omega)
-      else
-        (as.insertIdx j a).eraseIdx (i + 1) (by simp_all) := by
+theorem insertIdx_eraseIdx {as : Array α} (h₁ : i < as.size) (h₂ : j ≤ (as.eraseIdx i).size)
+    : (as.eraseIdx i).insertIdx j a
+      = if h : i ≤ j then
+          (as.insertIdx (j + 1) a (by simp_all; omega)).eraseIdx i (by simp_all; omega)
+        else
+          (as.insertIdx j a).eraseIdx (i + 1) (by simp_all) := by
   split <;> rename_i h'
   · rw [insertIdx_eraseIdx_of_ge] <;> omega
   · rw [insertIdx_eraseIdx_of_le] <;> omega
 
 @[grind =]
-theorem insertIdx_comm (a b : α) {i j : Nat} {xs : Array α} (_ : i ≤ j) (_ : j ≤ xs.size) :
-    (xs.insertIdx i a).insertIdx (j + 1) b (by simpa) =
-      (xs.insertIdx j b).insertIdx i a (by simp; omega) := by
+theorem insertIdx_comm (a b : α) {i j : Nat} {xs : Array α} (_ : i ≤ j) (_ : j ≤ xs.size)
+    : (xs.insertIdx i a).insertIdx (j + 1) b (by simpa)
+      = (xs.insertIdx j b).insertIdx i a (by simp; omega) := by
   rcases xs with ⟨xs⟩
   simpa using List.insertIdx_comm a b (by simpa) (by simpa)
 
-theorem mem_insertIdx {xs : Array α} {h : i ≤ xs.size} : a ∈ xs.insertIdx i b h ↔ a = b ∨ a ∈ xs := by
+theorem mem_insertIdx {xs : Array α} {h : i ≤ xs.size}
+    : a ∈ xs.insertIdx i b h ↔ a = b ∨ a ∈ xs := by
   rcases xs with ⟨xs⟩
   simpa using List.mem_insertIdx (by simpa)
 
@@ -99,54 +103,53 @@ theorem insertIdx_size_self {xs : Array α} {x : α} : xs.insertIdx xs.size x = 
   simp
 
 @[grind =]
-theorem getElem_insertIdx {xs : Array α} {x : α} {i k : Nat} (w : i ≤ xs.size) (h : k < (xs.insertIdx i x).size) :
-    (xs.insertIdx i x)[k] =
-      if h₁ : k < i then
-        xs[k]'(by simp [size_insertIdx] at h; omega)
-      else
-        if h₂ : k = i then
+theorem getElem_insertIdx
+    {xs : Array α} {x : α} {i k : Nat} (w : i ≤ xs.size) (h : k < (xs.insertIdx i x).size)
+    : (xs.insertIdx i x)[k]
+      = if h₁ : k < i then
+          xs[k]'(by simp [size_insertIdx] at h; omega)
+        else if h₂ : k = i then
           x
         else
-          xs[k-1]'(by simp [size_insertIdx] at h; omega) := by
+          xs[k - 1]'(by simp [size_insertIdx] at h; omega) := by
   cases xs
   simp [List.getElem_insertIdx]
 
-theorem getElem_insertIdx_of_lt {xs : Array α} {x : α} {i k : Nat} (w : i ≤ xs.size) (h : k < i) :
-    (xs.insertIdx i x)[k]'(by simp; omega) = xs[k] := by
+theorem getElem_insertIdx_of_lt {xs : Array α} {x : α} {i k : Nat} (w : i ≤ xs.size) (h : k < i)
+    : (xs.insertIdx i x)[k]'(by simp; omega) = xs[k] := by
   simp [getElem_insertIdx, h]
 
-theorem getElem_insertIdx_self {xs : Array α} {x : α} {i : Nat} (w : i ≤ xs.size) :
-    (xs.insertIdx i x)[i]'(by simp; omega) = x := by
+theorem getElem_insertIdx_self {xs : Array α} {x : α} {i : Nat} (w : i ≤ xs.size)
+    : (xs.insertIdx i x)[i]'(by simp; omega) = x := by
   simp [getElem_insertIdx]
 
-theorem getElem_insertIdx_of_gt {xs : Array α} {x : α} {i k : Nat} (w : k ≤ xs.size) (h : k > i) :
-    (xs.insertIdx i x)[k]'(by simp; omega) = xs[k - 1]'(by omega) := by
+theorem getElem_insertIdx_of_gt {xs : Array α} {x : α} {i k : Nat} (w : k ≤ xs.size) (h : k > i)
+    : (xs.insertIdx i x)[k]'(by simp; omega) = xs[k - 1]'(by omega) := by
   simp [getElem_insertIdx]
   rw [dite_eq_right (by omega), dite_eq_right (by omega)]
 
 @[grind =]
-theorem getElem?_insertIdx {xs : Array α} {x : α} {i k : Nat} (h : i ≤ xs.size) :
-    (xs.insertIdx i x)[k]? =
-      if k < i then
-        xs[k]?
-      else
-        if k = i then
+theorem getElem?_insertIdx {xs : Array α} {x : α} {i k : Nat} (h : i ≤ xs.size)
+    : (xs.insertIdx i x)[k]?
+      = if k < i then
+          xs[k]?
+        else if k = i then
           if k ≤ xs.size then some x else none
         else
-          xs[k-1]? := by
+          xs[k - 1]? := by
   cases xs
   simp [List.getElem?_insertIdx]
 
-theorem getElem?_insertIdx_of_lt {xs : Array α} {x : α} {i k : Nat} (w : i ≤ xs.size) (h : k < i) :
-    (xs.insertIdx i x)[k]? = xs[k]? := by
+theorem getElem?_insertIdx_of_lt {xs : Array α} {x : α} {i k : Nat} (w : i ≤ xs.size) (h : k < i)
+    : (xs.insertIdx i x)[k]? = xs[k]? := by
   rw [getElem?_insertIdx, ite_eq_left h]
 
-theorem getElem?_insertIdx_self {xs : Array α} {x : α} {i : Nat} (w : i ≤ xs.size) :
-    (xs.insertIdx i x)[i]? = some x := by
+theorem getElem?_insertIdx_self {xs : Array α} {x : α} {i : Nat} (w : i ≤ xs.size)
+    : (xs.insertIdx i x)[i]? = some x := by
   rw [getElem?_insertIdx, ite_eq_right (by omega), ite_eq_left rfl, ite_eq_left w]
 
-theorem getElem?_insertIdx_of_ge {xs : Array α} {x : α} {i k : Nat} (w : i < k) (h : k ≤ xs.size) :
-    (xs.insertIdx i x)[k]? = xs[k - 1]? := by
+theorem getElem?_insertIdx_of_ge {xs : Array α} {x : α} {i k : Nat} (w : i < k) (h : k ≤ xs.size)
+    : (xs.insertIdx i x)[k]? = xs[k - 1]? := by
   rw [getElem?_insertIdx, ite_eq_right (by omega), ite_eq_right (by omega)]
 
 end InsertIdx

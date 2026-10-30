@@ -54,31 +54,35 @@ def mkStringLitNeProof (s₁ s₂ : String) : MetaM Expr := do
       let natConst := mkConst ``Nat
       let iExpr := toExpr diffIdx
       -- f = fun l => (List.get!Internal l i).toNat
-      let projFn := mkLambda `l .default listCharTy
-        (mkApp (mkConst ``Char.toNat)
-          (mkApp4 (mkConst ``List.get!Internal [.zero]) charConst inhabCharExpr (mkBVar 0) iExpr))
+      let projFn :=
+        mkLambda `l .default listCharTy
+          (mkApp (mkConst ``Char.toNat)
+            (mkApp4 (mkConst ``List.get!Internal [.zero]) charConst inhabCharExpr (mkBVar 0) iExpr))
       let mkGetToNat (lExpr : Expr) : Expr :=
         mkApp (mkConst ``Char.toNat)
           (mkApp4 (mkConst ``List.get!Internal [.zero]) charConst inhabCharExpr lExpr iExpr)
       let projL1 := mkGetToNat l₁Expr
       let projL2 := mkGetToNat l₂Expr
       let projEq := mkApp3 (mkConst ``Eq [.succ .zero]) natConst projL1 projL2
-      let congrArgFn := mkApp5 (mkConst ``congrArg [.succ .zero, .succ .zero])
-        listCharTy natConst l₁Expr l₂Expr projFn
+      let congrArgFn :=
+        mkApp5 (mkConst ``congrArg [.succ .zero, .succ .zero]) listCharTy natConst l₁Expr l₂Expr
+          projFn
       -- Nat.ne_of_beq_eq_false rfl : n₁ ≠ n₂  (kernel evaluates Nat.beq on two literals)
-      let projNeProof := mkApp3 (mkConst ``Nat.ne_of_beq_eq_false)
-        projL1 projL2 (← mkEqRefl (mkConst ``false))
+      let projNeProof :=
+        mkApp3 (mkConst ``Nat.ne_of_beq_eq_false) projL1 projL2 (← mkEqRefl (mkConst ``false))
       pure <| mkApp4 (mkConst ``mt) listEq projEq congrArgFn projNeProof
     else
       -- One list is a prefix of the other: use drop + cons_ne_nil
       let nExpr := toExpr minLen
-      let dropFn := mkLambda `l .default listCharTy
-        (mkApp3 (mkConst ``List.drop [.zero]) charConst nExpr (mkBVar 0))
+      let dropFn :=
+        mkLambda `l .default listCharTy
+          (mkApp3 (mkConst ``List.drop [.zero]) charConst nExpr (mkBVar 0))
       let dropL1 := mkApp3 (mkConst ``List.drop [.zero]) charConst nExpr l₁Expr
       let dropL2 := mkApp3 (mkConst ``List.drop [.zero]) charConst nExpr l₂Expr
       let dropEq := mkApp3 (mkConst ``Eq [.succ .zero]) listCharTy dropL1 dropL2
-      let congrArgFn := mkApp5 (mkConst ``congrArg [.succ .zero, .succ .zero])
-        listCharTy listCharTy l₁Expr l₂Expr dropFn
+      let congrArgFn :=
+        mkApp5 (mkConst ``congrArg [.succ .zero, .succ .zero]) listCharTy listCharTy l₁Expr l₂Expr
+          dropFn
       -- The longer list's drop has a head element; the shorter list's drop is []
       let (hdChar, tlList) :=
         if l₁.length ≤ l₂.length then
@@ -96,16 +100,16 @@ def mkStringLitNeProof (s₁ s₂ : String) : MetaM Expr := do
           -- l₁ is shorter: drop l₁ = [], drop l₂ = hd :: tl, need [] ≠ hd :: tl
           mkApp4 (mkConst ``Ne.symm [.succ .zero]) listCharTy
             (mkApp3 (mkConst ``List.cons [.zero]) charConst hdExpr tlExpr)
-            (mkApp (mkConst ``List.nil [.zero]) charConst)
-            consNeNil
+            (mkApp (mkConst ``List.nil [.zero]) charConst) consNeNil
         else
           -- l₂ is shorter: drop l₁ = hd :: tl, drop l₂ = [], need hd :: tl ≠ []
           consNeNil
       pure <| mkApp4 (mkConst ``mt) listEq dropEq congrArgFn dropNeProof
   -- strNeProof : String.ofList l₁ ≠ String.ofList l₂   via   mt ofList_injective listNeProof
   let strType := mkConst ``String
-  let strEq := mkApp3 (mkConst ``Eq [.succ .zero]) strType
-    (mkApp (mkConst ``String.ofList) l₁Expr) (mkApp (mkConst ``String.ofList) l₂Expr)
+  let strEq :=
+    mkApp3 (mkConst ``Eq [.succ .zero]) strType (mkApp (mkConst ``String.ofList) l₁Expr)
+      (mkApp (mkConst ``String.ofList) l₂Expr)
   return mkApp4 (mkConst ``mt) strEq listEq
     (mkApp2 (mkConst ``String.ofList_injective) l₁Expr l₂Expr) listNeProof
 

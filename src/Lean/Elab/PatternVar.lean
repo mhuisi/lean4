@@ -18,7 +18,7 @@ namespace Lean.Elab.Term
 
 open Meta
 
-abbrev PatternVar := Syntax  -- TODO: should be `Ident`
+abbrev PatternVar := Syntax -- TODO: should be `Ident`
 
 /-!
   Patterns define new local variables.
@@ -46,22 +46,23 @@ namespace CollectPatternVars
 /-- State for the pattern variable collector monad. -/
 structure State where
   /-- Pattern variables found so far. -/
-  found     : NameSet := {}
+  found : NameSet := {}
   /-- Pattern variables found so far as an array. It contains the order they were found. -/
-  vars      : Array PatternVar := #[]
+  vars : Array PatternVar := #[]
   /--
   `choice` nodes that the collector resolved on its own. Only `collectPatternVars` pushes these
   into the `InfoTree`; the entry points that merely extract pattern variables discard them.
   -/
   choiceResolutions : Array ChoiceResolutionInfo := #[]
-  deriving Inhabited
+deriving Inhabited
 
 abbrev M := StateRefT State TermElabM
 
 private def throwCtorExpected {α} (ident : Option Syntax) : M α := do
   let message : MessageData :=
     "Invalid pattern: Expected a constructor or constant marked with `[match_pattern]`"
-  let some idStx := ident | throwError message
+  let some idStx := ident
+    | throwError message
   let name := idStx.getId
   if let .anonymous := name then throwError message
   let env ← getEnv
@@ -77,15 +78,16 @@ private def throwCtorExpected {α} (ident : Option Syntax) : M α := do
   -- Sort for deterministic output (iteration order of `env.constants` is not stable)
   candidates := candidates.qsort Name.lt
   let oneOfThese := if h : candidates.size = 1 then m!"`{candidates[0]}`" else m!"one of these"
-  let hint ← m!"Using {oneOfThese} would be valid:".hint (ref? := idStx) (candidates.map fun candidate => {
-    suggestion := mkIdent candidate
-    toCodeActionTitle? := .some (s!"Change to {·}")
-    messageData? := .some m!"`{.ofConstName candidate}`",
-  })
+  let hint ←
+    m!"Using {oneOfThese} would be valid:".hint (ref? := idStx)
+      (candidates.map fun candidate => {
+        suggestion := mkIdent candidate
+        toCodeActionTitle? := .some (s!"Change to {·}")
+        messageData? := .some m!"`{.ofConstName candidate}`"
+      })
   throwError message ++ hint
 
-private def throwInvalidPattern {α} : M α :=
-  throwError "Invalid pattern"
+private def throwInvalidPattern {α} : M α := throwError "Invalid pattern"
 
 /-!
 An application in a pattern can be
@@ -98,44 +100,47 @@ An application in a pattern can be
 -/
 
 structure Context where
-  funId         : Ident
-  ctorVal?      : Option ConstructorVal -- It is `some`, if constructor application
-  explicit      : Bool
-  ellipsis      : Bool
-  paramDecls    : Array (Name × BinderInfo) -- parameters' names and binder information
-  paramDeclIdx  : Nat := 0
-  namedArgs     : Array NamedArg
-  usedNames     : Std.HashSet Name := {}
-  args          : List Arg
-  newArgs       : Array Term := #[]
-  deriving Inhabited
+  funId : Ident
+  ctorVal? : Option ConstructorVal -- It is `some`, if constructor application
+  explicit : Bool
+  ellipsis : Bool
+  paramDecls : Array (Name × BinderInfo) -- parameters' names and binder information
+  paramDeclIdx : Nat := 0
+  namedArgs : Array NamedArg
+  usedNames : Std.HashSet Name := {}
+  args : List Arg
+  newArgs : Array Term := #[]
+deriving Inhabited
 
 private def throwInvalidNamedArgs (ctx : Context) (h : !ctx.namedArgs.isEmpty) : MetaM α := do
   let names := (ctx.namedArgs.map fun narg => m!"`{narg.name}`").toList
   let nameStr := if names.length == 1 then "name" else "names"
-  let validNames := ctx.paramDecls.filterMap fun (name, _) =>
-    if name.hasMacroScopes then none else some name
+  let validNames :=
+    ctx.paramDecls.filterMap fun (name, _) => if name.hasMacroScopes then none else some name
   have h := Nat.zero_lt_of_ne_zero (mt Array.isEmpty_iff_size_eq_zero.mpr (Bool.not_eq.mp h))
   -- We offer hints only for the first argument
   let firstNamedArg := ctx.namedArgs[0]'h
   let replacementSpan := firstNamedArg.ref[1]
-  let unused := validNames.filter (!ctx.usedNames.contains ·)
+  let unused := validNames.filter (! ctx.usedNames.contains ·)
   let hint ← do
     if replacementSpan.getHeadInfo matches .original .. then
-      let suggestions := unused.map fun validName =>
-        { suggestion := validName.toString
+      let suggestions :=
+        unused.map fun validName => {
+          suggestion := validName.toString
           span? := replacementSpan
           preInfo? := some s!"`{validName}`: "
-          toCodeActionTitle? := some fun s => s!"Change argument name `{firstNamedArg.name}` to `{s}`" }
+          toCodeActionTitle? :=
+            some fun s => s!"Change argument name `{firstNamedArg.name}` to `{s}`"
+        }
       let hintMsg := m!"Replace `{firstNamedArg.name}` with one of the following parameter names:"
       MessageData.hint (forceList := true) hintMsg suggestions
     else
       let validNamesMsg := MessageData.orList <| unused.map (m!"`{·}`") |>.toList
-      pure <| MessageData.hint' m!"Perhaps you meant one of the following parameter names: {validNamesMsg}"
+      pure <| MessageData.hint'
+        m!"Perhaps you meant one of the following parameter names: {validNamesMsg}"
   throwError m!"Invalid argument {nameStr} {.andList names} for function `{ctx.funId}`" ++ hint
 
-private def isDone (ctx : Context) : Bool :=
-  ctx.paramDeclIdx ≥ ctx.paramDecls.size
+private def isDone (ctx : Context) : Bool := ctx.paramDeclIdx ≥ ctx.paramDecls.size
 
 private def getNextParam (ctx : Context) : (Name × BinderInfo) × Context :=
   let i := ctx.paramDeclIdx
@@ -150,8 +155,9 @@ private def throwWrongArgCount (ctx : Context) (tooMany : Bool) : M α := do
   let argKind := if ctx.explicit then "" else "explicit "
   let argWord := if numExpectedArgs == 1 then "argument" else "arguments"
   let discrepancyKind := if tooMany then "Too many" else "Not enough"
-  let mut msg := m!"Invalid pattern: {discrepancyKind} arguments to `{ctx.funId}`; \
-    expected {numExpectedArgs} {argKind}{argWord}"
+  let mut msg :=
+    m!"Invalid pattern: {discrepancyKind} arguments to `{ctx.funId}`; \
+      expected {numExpectedArgs} {argKind}{argWord}"
   if !tooMany then
     msg := msg ++ .hint' "To ignore all remaining arguments, use the ellipsis notation `..`"
   throwError msg
@@ -161,12 +167,15 @@ where
     let mut remainingNames : Std.HashSet Name := {}
     -- If there were too few (unnamed) arguments, we may not have processed the parameters that
     -- match the outstanding named arguments, so some names in `namedArgs` may be valid
-    while !isDone ctx do
+    while ! isDone ctx do
       let ((name, _), ctx') := getNextParam ctx
       ctx := ctx'
       if let some idx := ctx'.namedArgs.findFinIdx? fun namedArg => namedArg.name == name then
-        ctx := { ctx with namedArgs := ctx.namedArgs.eraseIdx idx
-                          usedNames := ctx.usedNames.insert name }
+        ctx := {
+          ctx with
+          namedArgs := ctx.namedArgs.eraseIdx idx
+          usedNames := ctx.usedNames.insert name
+        }
     if h : !ctx.namedArgs.isEmpty then
       throwInvalidNamedArgs ctx h
 
@@ -197,7 +206,8 @@ private def processVar (idStx : Syntax) : M Syntax := do
     throwErrorAt idStx "Invalid pattern variable: Identifier expected, but found{indentD idStx}"
   let id := idStx.getId
   unless id.eraseMacroScopes.isAtomic do
-    throwError "Invalid pattern variable: Variable name must be atomic, but `{id}` has multiple components"
+    throwError
+      "Invalid pattern variable: Variable name must be atomic, but `{id}` has multiple components"
   if (← get).found.contains id then
     throwError "Invalid pattern variable: Variable name `{id}` was already used"
   modify fun s => { s with vars := s.vars.push idStx, found := s.found.insert id }
@@ -213,138 +223,157 @@ private def samePatternsVariables (startingAt : Nat) (s₁ s₂ : State) : Bool 
     false
 
 open TSyntax.Compat in
-partial def collect (stx : Syntax) : M Syntax := withRef stx <| withFreshMacroScope do
-  let k := stx.getKind
-  if k == identKind then
-    processId stx
-  else if k == ``Lean.Parser.Term.app then
-    processCtorApp stx
-  else if k == ``Lean.Parser.Term.anonymousCtor then
-    let elems ← stx[1].getArgs.mapSepElemsM collect
-    return stx.setArg 1 <| mkNullNode elems
-  else if k == ``Lean.Parser.Term.dotIdent then
-    -- TODO: validate that `stx` corresponds to a valid constructor or match pattern
-    return stx
-  else if k == ``Lean.Parser.Term.hole then
-    `(.( $stx ))
-  else if k == ``Lean.Parser.Term.syntheticHole then
-    `(.( $stx ))
-  else if k == ``Lean.Parser.Term.typeAscription then
-    -- Ignore type term
-    let t := stx[1]
-    let t ← collect t
-    return stx.setArg 1 t
-  else if k == ``Lean.Parser.Term.explicitUniv then
-    processCtor stx[0]
-  else if k == ``Lean.Parser.Term.explicit then
-    processCtor stx
-  else if k == ``Lean.Parser.Term.namedPattern then
-    /- Recall that
+partial def collect (stx : Syntax) : M Syntax :=
+  withRef stx <| withFreshMacroScope do
+    let k := stx.getKind
+    if k == identKind then
+      processId stx
+    else if k == ``Lean.Parser.Term.app then
+      processCtorApp stx
+    else if k == ``Lean.Parser.Term.anonymousCtor then
+      let elems ← stx[1].getArgs.mapSepElemsM collect
+      return stx.setArg 1 <| mkNullNode elems
+    else if k == ``Lean.Parser.Term.dotIdent then
+      -- TODO: validate that `stx` corresponds to a valid constructor or match pattern
+      return stx
+    else if k == ``Lean.Parser.Term.hole then
+      `(.( $stx ))
+    else if k == ``Lean.Parser.Term.syntheticHole then
+      `(.( $stx ))
+    else if k == ``Lean.Parser.Term.typeAscription then
+      -- Ignore type term
+      let t := stx[1]
+      let t ← collect t
+      return stx.setArg 1 t
+    else if k == ``Lean.Parser.Term.explicitUniv then
+      processCtor stx[0]
+    else if k == ``Lean.Parser.Term.explicit then
+      processCtor stx
+    else if k == ``Lean.Parser.Term.namedPattern then
+      /-
+      Recall that
       ```
       def namedPattern := check... >> trailing_parser "@" >> optional (atomic (ident >> ":")) >> termParser
       ```
-     -/
-    let id := stx[0]
-    discard <| processVar id
-    let h ← if stx[2].isNone then
-      `(h)
+      -/
+      let id := stx[0]
+      discard <| processVar id
+      let h ←
+        if stx[2].isNone then
+          `(h)
+        else
+          pure stx[2][0]
+      let pat := stx[3]
+      let pat ← collect pat
+      discard <| processVar h
+      ``(_root_.namedPattern $id $pat $h)
+    else if k == ``Lean.Parser.Term.binop then
+      /-
+      We support `binop%` syntax in patterns because we
+      wanted to support `x+1` in patterns.
+      Recall that the `binop%` syntax was added to improve elaboration of some binary operators: `+` is one of them.
+      Recall that `HAdd.hAdd` is marked as `[match_pattern]`
+      TODO for a distant future: make this whole procedure extensible.
+      -/
+      -- Check whether the `binop%` operator is marked with `[match_pattern]`,
+      -- We must check that otherwise Lean will accept operators that are not tagged with this annotation.
+      let some (.const fName _) ← resolveId? stx[1] "pattern"
+        | throwCtorExpected none
+      unless hasMatchPatternAttribute (← getEnv) fName do
+        throwCtorExpected none
+      let lhs ← collect stx[2]
+      let rhs ← collect stx[3]
+      return stx.setArg 2 lhs |>.setArg 3 rhs
+    else if k == ``Lean.Parser.Term.unop then
+      let arg ← collect stx[2]
+      return stx.setArg 2 arg
+    else if k == ``Lean.Parser.Term.inaccessible then
+      return stx
+    else if k == strLitKind then
+      return stx
+    else if k == numLitKind then
+      return stx
+    else if k == scientificLitKind then
+      return stx
+    else if k == charLitKind then
+      return stx
+    else if k == ``Lean.Parser.Term.quotedName || k == ``Lean.Parser.Term.doubleQuotedName then
+      return stx
+    else if k == choiceKind then
+      let args := stx.getArgs
+      /-
+      Remark: If there is a `Term.structInst` alternative, we resolve the `choice` node to it. This is a hack to get rid of
+      Set-like notation in patterns. Recall that in Mathlib `{a, b}` can be a set with two elements or the
+      structure instance `{ a := a, b := b }`. Possible alternative solution: add a `pattern` category, or at least register
+      the `Syntax` node kinds that are allowed in patterns.
+      Only one parser produces `Term.structInst`, so a `choice` node has at most one such alternative.
+      -/
+      if let some idx := args.findIdx? (·.isOfKind ``Parser.Term.structInst) then
+        modify fun s => {
+          s with
+          choiceResolutions := s.choiceResolutions.push { stx, chosenAltIdx := idx }
+        }
+        return ← collect args[idx]!
+      let stateSaved ← get
+      let arg0 ← collect args[0]!
+      let stateNew ← get
+      let mut argsNew := #[arg0]
+      for arg in args[1...*] do
+        set stateSaved
+        argsNew := argsNew.push (← collect arg)
+        unless samePatternsVariables stateSaved.vars.size stateNew (← get) do
+          throwError "Invalid pattern: Overloaded notation is only allowed when all alternatives \
+            have the same set of pattern variables"
+      set stateNew
+      -- The alternatives are rewritten one-to-one, so `chosenAltIdx` of a `ChoiceResolutionInfo`
+      -- for this node is also a valid index into the alternatives of the original node.
+      return mkNode choiceKind argsNew
     else
-      pure stx[2][0]
-    let pat := stx[3]
-    let pat ← collect pat
-    discard <| processVar h
-    ``(_root_.namedPattern $id $pat $h)
-  else if k == ``Lean.Parser.Term.binop then
-    /-
-    We support `binop%` syntax in patterns because we
-    wanted to support `x+1` in patterns.
-    Recall that the `binop%` syntax was added to improve elaboration of some binary operators: `+` is one of them.
-    Recall that `HAdd.hAdd` is marked as `[match_pattern]`
-    TODO for a distant future: make this whole procedure extensible.
-    -/
-    -- Check whether the `binop%` operator is marked with `[match_pattern]`,
-    -- We must check that otherwise Lean will accept operators that are not tagged with this annotation.
-    let some (.const fName _) ← resolveId? stx[1] "pattern"
-      | throwCtorExpected none
-    unless hasMatchPatternAttribute (← getEnv) fName do
-      throwCtorExpected none
-    let lhs ← collect stx[2]
-    let rhs ← collect stx[3]
-    return stx.setArg 2 lhs |>.setArg 3 rhs
-  else if k == ``Lean.Parser.Term.unop then
-    let arg ← collect stx[2]
-    return stx.setArg 2 arg
-  else if k == ``Lean.Parser.Term.inaccessible then
-    return stx
-  else if k == strLitKind then
-    return stx
-  else if k == numLitKind then
-    return stx
-  else if k == scientificLitKind then
-    return stx
-  else if k == charLitKind then
-    return stx
-  else if k == ``Lean.Parser.Term.quotedName || k == ``Lean.Parser.Term.doubleQuotedName then
-    return stx
-  else if k == choiceKind then
-    let args := stx.getArgs
-    /- Remark: If there is a `Term.structInst` alternative, we resolve the `choice` node to it. This is a hack to get rid of
-       Set-like notation in patterns. Recall that in Mathlib `{a, b}` can be a set with two elements or the
-       structure instance `{ a := a, b := b }`. Possible alternative solution: add a `pattern` category, or at least register
-       the `Syntax` node kinds that are allowed in patterns.
-       Only one parser produces `Term.structInst`, so a `choice` node has at most one such alternative. -/
-    if let some idx := args.findIdx? (·.isOfKind ``Parser.Term.structInst) then
-      modify fun s => { s with choiceResolutions := s.choiceResolutions.push { stx, chosenAltIdx := idx } }
-      return ← collect args[idx]!
-    let stateSaved ← get
-    let arg0 ← collect args[0]!
-    let stateNew ← get
-    let mut argsNew := #[arg0]
-    for arg in args[1...*] do
-      set stateSaved
-      argsNew := argsNew.push (← collect arg)
-      unless samePatternsVariables stateSaved.vars.size stateNew (← get) do
-        throwError "Invalid pattern: Overloaded notation is only allowed when all alternatives have the same set of pattern variables"
-    set stateNew
-    -- The alternatives are rewritten one-to-one, so `chosenAltIdx` of a `ChoiceResolutionInfo`
-    -- for this node is also a valid index into the alternatives of the original node.
-    return mkNode choiceKind argsNew
-  else match stx with
-  | `({ $[$srcs?,* with]? $fields,* $[..%$ell?]? $[: $ty?]? }) =>
-    if let some srcs := srcs? then
-      throwErrorAt (mkNullNode srcs) "Invalid struct instance pattern: `with` is not allowed in patterns"
-    let fields ← fields.getElems.mapM fun
-      | `(Parser.Term.structInstField| $lval:structInstLVal := $val) => do
-        let newVal ← collect val
-        `(Parser.Term.structInstField| $lval:structInstLVal := $newVal)
-      | _ => throwInvalidPattern  -- `structInstField` should be expanded at this point
-    `({ $[$srcs?,* with]? $fields,* $[..%$ell?]? $[: $ty?]? })
-  | _ => throwInvalidPattern
+      match stx with
+      | `({ $[$srcs?,* with]? $fields,* $[..%$ell?]? $[: $ty?]? }) =>
+        if let some srcs := srcs? then
+          throwErrorAt (mkNullNode srcs)
+            "Invalid struct instance pattern: `with` is not allowed in patterns"
+        let fields ←
+          fields.getElems.mapM fun
+            | `(Parser.Term.structInstField| $lval:structInstLVal := $val) => do
+              let newVal ← collect val
+              `(Parser.Term.structInstField| $lval:structInstLVal := $newVal)
+            | _ => throwInvalidPattern -- `structInstField` should be expanded at this point
+        `({ $[$srcs?,* with]? $fields,* $[..%$ell?]? $[: $ty?]? })
+      | _ => throwInvalidPattern
 
 where
 
   processCtorApp (stx : Syntax) : M Syntax := do
     let (f, namedArgs, args, ellipsis) ← expandApp stx
     if f.getKind == ``Parser.Term.dotIdent then
-      let namedArgsNew ← namedArgs.mapM fun
-        -- We must ensure that `ref[1]` remains original to allow named-argument hints
-        | { ref, name, val := Arg.stx arg, .. } => withRef ref do `(Lean.Parser.Term.namedArgument| ($(ref[1]) := $(← collect arg)))
-        | _ => unreachable!
-      let mut argsNew ← args.mapM fun | Arg.stx arg => collect arg | _ => unreachable!
+      let namedArgsNew ←
+        namedArgs.mapM fun
+          -- We must ensure that `ref[1]` remains original to allow named-argument hints
+          | { ref, name, val := Arg.stx arg, .. } =>
+            withRef ref do `(Lean.Parser.Term.namedArgument| ($(ref[1]) := $(← collect arg)))
+          | _ => unreachable!
+      let mut argsNew ←
+        args.mapM fun
+          | Arg.stx arg => collect arg
+          | _ => unreachable!
       if ellipsis then
         argsNew := argsNew.push (mkNode ``Parser.Term.ellipsis #[mkAtomFrom stx ".."])
       return Syntax.mkApp f (namedArgsNew ++ argsNew)
     else
       processCtorAppCore f namedArgs args ellipsis
 
-  processCtor (stx : Syntax) : M Syntax := do
-    processCtorAppCore stx #[] #[] false
+  processCtor (stx : Syntax) : M Syntax := do processCtorAppCore stx #[] #[] false
 
-  /-- Check whether `stx` is a pattern variable or constructor-like (i.e., constructor or constant tagged with `[match_pattern]` attribute) -/
+  /--
+  Check whether `stx` is a pattern variable or constructor-like (i.e., constructor or constant tagged with `[match_pattern]` attribute)
+  -/
   processId (stx : Syntax) : M Syntax := do
     match (← resolveId? stx "pattern") with
-    | none   => processVar stx
-    | some f => match f with
+    | none => processVar stx
+    | some f =>
+      match f with
       | Expr.const fName _ =>
         match (← getEnv).find? fName with
         | some (ConstantInfo.ctorInfo _) => processCtor stx
@@ -370,8 +399,7 @@ where
         pushNewArg accessible ctx (Arg.stx (← `(_)))
       else
         throwWrongArgCount ctx false
-    | arg::args =>
-      pushNewArg accessible { ctx with args := args } arg
+    | arg :: args => pushNewArg accessible { ctx with args := args } arg
 
   processImplicitArg (accessible : Bool) (ctx : Context) : M Context := do
     if ctx.explicit then
@@ -384,49 +412,74 @@ where
       finalize ctx
     else
       let accessible := isNextArgAccessible ctx
-      let (d, ctx)   := getNextParam ctx
+      let (d, ctx) := getNextParam ctx
       match ctx.namedArgs.findFinIdx? fun namedArg => namedArg.name == d.1 with
       | some idx =>
         let arg := ctx.namedArgs[idx]
-        let ctx := { ctx with namedArgs := ctx.namedArgs.eraseIdx idx
-                              usedNames := ctx.usedNames.insert arg.name }
+        let ctx := {
+          ctx with
+          namedArgs := ctx.namedArgs.eraseIdx idx
+          usedNames := ctx.usedNames.insert arg.name
+        }
         let ctx ← pushNewArg accessible ctx arg.val
         processCtorAppContext ctx
       | none =>
-        let ctx ← match d.2 with
-          | BinderInfo.implicit       => processImplicitArg accessible ctx
+        let ctx ←
+          match d.2 with
+          | BinderInfo.implicit => processImplicitArg accessible ctx
           | BinderInfo.strictImplicit => processImplicitArg accessible ctx
-          | BinderInfo.instImplicit   => processImplicitArg accessible ctx
-          | _                         => processExplicitArg accessible ctx
+          | BinderInfo.instImplicit => processImplicitArg accessible ctx
+          | _ => processExplicitArg accessible ctx
         processCtorAppContext ctx
 
-  processCtorAppCore (f : Syntax) (namedArgs : Array NamedArg) (args : Array Arg) (ellipsis : Bool) : M Syntax := do
+  processCtorAppCore (f : Syntax) (namedArgs : Array NamedArg) (args : Array Arg) (ellipsis : Bool)
+      : M Syntax := do
     let args := args.toList
-    let (fId, explicit) ← match f with
-      | `($fId:ident)  => pure (fId, false)
+    let (fId, explicit) ←
+      match f with
+      | `($fId:ident) => pure (fId, false)
       | `(@$fId:ident) => pure (fId, true)
-      | _              =>
-        throwError "Invalid pattern: Expected an identifier in function position, but found{indentD f}"
-    let some (Expr.const fName _) ← resolveId? fId "pattern" (withInfo := true) | throwCtorExpected (some fId)
+      | _ =>
+        throwError
+          "Invalid pattern: Expected an identifier in function position, but found{indentD f}"
+    let some (Expr.const fName _) ← resolveId? fId "pattern" (withInfo := true)
+      | throwCtorExpected (some fId)
     let fInfo ← getConstInfo fName
-    let paramDecls ← forallTelescopeReducing fInfo.type fun xs _ => xs.mapM fun x => do
-      let d ← getFVarLocalDecl x
-      return (d.userName, d.binderInfo)
+    let paramDecls ←
+      forallTelescopeReducing fInfo.type fun xs _ =>
+        xs.mapM fun x => do
+          let d ← getFVarLocalDecl x
+          return (d.userName, d.binderInfo)
     match fInfo with
     | ConstantInfo.ctorInfo val =>
-      processCtorAppContext
-        { funId := fId, explicit := explicit, ctorVal? := val, paramDecls := paramDecls, namedArgs := namedArgs, args := args, ellipsis := ellipsis }
+      processCtorAppContext {
+        funId := fId
+        explicit := explicit
+        ctorVal? := val
+        paramDecls := paramDecls
+        namedArgs := namedArgs
+        args := args
+        ellipsis := ellipsis
+      }
     | _ =>
       if hasMatchPatternAttribute (← getEnv) fName then
-        processCtorAppContext
-          { funId := fId, explicit := explicit, ctorVal? := none, paramDecls := paramDecls, namedArgs := namedArgs, args := args, ellipsis := ellipsis }
+        processCtorAppContext {
+          funId := fId
+          explicit := explicit
+          ctorVal? := none
+          paramDecls := paramDecls
+          namedArgs := namedArgs
+          args := args
+          ellipsis := ellipsis
+        }
       else
         throwCtorExpected (some fId)
 
 def main (alt : MatchAltView k) : M (MatchAltView k) := do
-  let patterns ← alt.patterns.mapM fun p => do
-    trace[Elab.match] "collecting variables at pattern: {p}"
-    collect p
+  let patterns ←
+    alt.patterns.mapM fun p => do
+      trace[Elab.match] "collecting variables at pattern: {p}"
+      collect p
   return { alt with patterns := patterns }
 
 end CollectPatternVars
@@ -461,7 +514,6 @@ def getPatternsVars (patterns : Array Syntax) : TermElabM (Array PatternVar) := 
   let (_, s) ← collect.run {}
   return s.vars
 
-def getPatternVarNames (pvars : Array PatternVar) : Array Name :=
-  pvars.map fun x => x.getId
+def getPatternVarNames (pvars : Array PatternVar) : Array Name := pvars.map fun x => x.getId
 
 end Lean.Elab.Term

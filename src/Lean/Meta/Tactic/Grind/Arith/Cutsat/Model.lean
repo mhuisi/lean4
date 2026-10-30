@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.Cutsat.Types
 import Lean.Meta.Tactic.Grind.Arith.ModelUtil
@@ -13,15 +14,15 @@ namespace Lean.Meta.Grind.Arith.Cutsat
 private def isIntNatENode (n : ENode) : MetaM Bool :=
   withDefault do
     let type ← inferType n.self
-    isDefEq type Int.mkType
-    <||>
-    isDefEq type Nat.mkType
+    isDefEq type Int.mkType <||> isDefEq type Nat.mkType
 
 private def getCutsatAssignment? (goal : Goal) (node : ENode) : IO (Option Rat) := do
   assert! isSameExpr node.self node.root
-  let some e := cutsatExt.getTerm node | return none
+  let some e := cutsatExt.getTerm node
+    | return none
   let s ← cutsatExt.getStateCore goal
-  let some x := s.varMap.find? { expr := e } | return none
+  let some x := s.varMap.find? { expr := e }
+    | return none
   if h : x < s.assignment.size then
     return s.assignment[x]
   else
@@ -53,7 +54,8 @@ def embeddingArg? (e : Expr) : Option Expr :=
 private def natCastToInt? (e : Expr) : Option Expr :=
   match_expr e with
   | NatCast.natCast _ inst a =>
-    let_expr instNatCastInt := inst | none
+    let_expr instNatCastInt := inst
+      | none
     some a
   | _ => embeddingArg? e
 
@@ -82,9 +84,9 @@ def mkModel (goal : Goal) : MetaM (Array (Expr × Rat)) := do
   for e in goal.exprs do
     let node ← goal.getENode e
     if node.isRoot then
-    if (← isIntNatENode node) then
-      if let some v ← getAssignment? goal node.self then
-        model := assignEqc goal node.self v model
+      if (← isIntNatENode node) then
+        if let some v ← getAssignment? goal node.self then
+          model := assignEqc goal node.self v model
   /-
   Assign `natCast` and embedding chains. Values flow from a term to its argument
   (`↑(a.toBitVec.toNat)` to `a.toBitVec.toNat` to `a.toBitVec` to `a`), and `goal.exprs` is in internalization order
@@ -93,9 +95,11 @@ def mkModel (goal : Goal) : MetaM (Array (Expr × Rat)) := do
   for e in goal.exprs.toArray.reverse do
     let node ← goal.getENode e
     let i := node.self
-    let some n := natCastToInt? i | pure ()
+    let some n := natCastToInt? i
+      | pure ()
     if model[n]?.isNone then
-      let some v := model[i]? | pure ()
+      let some v := model[i]?
+        | pure ()
       model := assignEqc goal n v model
   let r ← finalizeModel goal isIntNatENode model
   traceModel `grind.lia.model r

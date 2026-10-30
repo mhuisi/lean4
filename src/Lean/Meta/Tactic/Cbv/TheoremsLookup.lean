@@ -11,7 +11,6 @@ public import Lean.Meta.Sym.Simp.Theorems
 import Lean.Meta.Match.MatchEqsExt
 import Lean.Meta.Eqns
 
-
 /-!
 # Cached Theorem Lookup
 
@@ -34,7 +33,7 @@ public structure CbvTheoremsLookupState where
   eqnTheorems : PHashMap Name Theorems := {}
   unfoldTheorems : PHashMap Name Theorem := {}
   matchTheorems : PHashMap Name Theorems := {}
-  deriving Inhabited
+deriving Inhabited
 
 builtin_initialize cbvTheoremsLookup : EnvExtension CbvTheoremsLookupState ←
   registerEnvExtension (pure {}) (asyncMode := .local)
@@ -46,12 +45,15 @@ public def getEqnTheorems (fnName : Name) : MetaM Theorems := do
     return thms
   else
     -- Compute theorems from equation names
-    let some eqnNames ← getEqnsFor? fnName | return {}
+    let some eqnNames ← getEqnsFor? fnName
+      | return {}
     let thms := Theorems.insertMany {} <| ← eqnNames.mapM mkTheoremFromDecl
     -- Store in cache
     modifyEnv fun env =>
-      cbvTheoremsLookup.modifyState env fun cache =>
-        { cache with eqnTheorems := cache.eqnTheorems.insert fnName thms }
+      cbvTheoremsLookup.modifyState env fun cache => {
+        cache with
+        eqnTheorems := cache.eqnTheorems.insert fnName thms
+      }
     return thms
 
 public def getUnfoldTheorem (fnName : Name) : MetaM (Option Theorem) := do
@@ -60,12 +62,15 @@ public def getUnfoldTheorem (fnName : Name) : MetaM (Option Theorem) := do
   if let some thm := cache.unfoldTheorems.find? fnName then
     return some thm
   else
-    let some unfoldEqn ← getUnfoldEqnFor? fnName (nonRec := true) | return none
+    let some unfoldEqn ← getUnfoldEqnFor? fnName (nonRec := true)
+      | return none
     let thm ← mkTheoremFromDecl unfoldEqn
 
     modifyEnv fun env =>
-      cbvTheoremsLookup.modifyState env fun cache =>
-        { cache with unfoldTheorems := cache.unfoldTheorems.insert fnName thm }
+      cbvTheoremsLookup.modifyState env fun cache => {
+        cache with
+        unfoldTheorems := cache.unfoldTheorems.insert fnName thm
+      }
     return some thm
 
 public def getMatchTheorems (matcherName : Name) : MetaM Theorems := do
@@ -78,8 +83,10 @@ public def getMatchTheorems (matcherName : Name) : MetaM Theorems := do
     let thms := Theorems.insertMany {} <| ← eqns.eqnNames.mapM mkTheoremFromDecl
 
     modifyEnv fun env =>
-      cbvTheoremsLookup.modifyState env fun cache =>
-        { cache with matchTheorems := cache.matchTheorems.insert matcherName thms }
+      cbvTheoremsLookup.modifyState env fun cache => {
+        cache with
+        matchTheorems := cache.matchTheorems.insert matcherName thms
+      }
     return thms
 
 end Lean.Meta.Tactic.Cbv

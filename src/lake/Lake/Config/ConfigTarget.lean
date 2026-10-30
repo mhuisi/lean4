@@ -29,23 +29,29 @@ public instance : BEq (ConfigTarget k) := ⟨(·.name == ·.name)⟩
 
 @[simp] public axiom OpaqueConfigTarget.def {k : Name} : OpaqueConfigTarget k = ConfigTarget k
 
-@[inline] public def PConfigDecl.mkConfigTarget (pkg : Package) (self : PConfigDecl pkg.keyName) : ConfigTarget self.kind :=
+@[inline]
+public def PConfigDecl.mkConfigTarget (pkg : Package) (self : PConfigDecl pkg.keyName)
+    : ConfigTarget self.kind :=
   ConfigTarget.mk pkg self.name self.config'
 
 /-- Returns the package targets of the specified kind (as an `Array`). -/
-@[inline] public def Package.configTargets (kind : Name) (self : Package) : Array (ConfigTarget kind) :=
+@[inline]
+public def Package.configTargets (kind : Name) (self : Package) : Array (ConfigTarget kind) :=
   self.targetDecls.foldl (init := #[]) fun a t =>
-    let {name := n, kind := k, config, pkg_eq, ..} := t
+    let { name := n, kind := k, config, pkg_eq, .. } := t
     if kind_eq : k = kind then
       a.push ⟨self, n, kind_eq ▸ pkg_eq ▸ config⟩
     else
       a
 
 /-- Try to find a package target of the given name and kind. -/
-@[inline] public def Package.findConfigTarget? (kind : Name) (name : Name) (self : Package) : Option (ConfigTarget kind) :=
-  self.findTargetDecl? name |>.bind fun t =>
-    let {name, kind := k, config, pkg_eq, ..} := t
-    if kind_eq : k = kind then
-      some ⟨self, name, kind_eq ▸ pkg_eq ▸ config⟩
-    else
-      none
+@[inline]
+public def Package.findConfigTarget? (kind : Name) (name : Name) (self : Package)
+    : Option (ConfigTarget kind) :=
+  self.findTargetDecl? name
+    |>.bind fun t =>
+      let { name, kind := k, config, pkg_eq, .. } := t
+      if kind_eq : k = kind then
+        some ⟨self, name, kind_eq ▸ pkg_eq ▸ config⟩
+      else
+        none

@@ -34,8 +34,7 @@ characters and the string is non-empty.
 
 Reference: https://www.rfc-editor.org/rfc/rfc9110.html#name-field-names
 -/
-abbrev IsValidHeaderName (s : String) : Prop :=
-  isToken s
+abbrev IsValidHeaderName (s : String) : Prop := isToken s
 
 /--
 A validated HTTP header name that ensures all characters conform to HTTP standards. Header names are
@@ -45,19 +44,11 @@ Reference: https://www.rfc-editor.org/rfc/rfc9110.html#name-field-names
 -/
 @[ext]
 structure Name where
-  /--
-  The lowercased normalized header name string.
-  -/
+  /-- The lowercased normalized header name string. -/
   value : String
-
-  /--
-  The proof that it's a valid header name.
-  -/
+  /-- The proof that it's a valid header name. -/
   isValidHeaderValue : IsValidHeaderName value := by decide
-
-  /--
-  The proof that we stored the header name in stored as a lower case string.
-  -/
+  /-- The proof that we stored the header name in stored as a lower case string. -/
   isLowerCase : IsLowerCase value := by decide
 deriving Repr, DecidableEq
 
@@ -69,13 +60,11 @@ instance : BEq Name where
 instance : Hashable Name where
   hash x := Hashable.hash x.value
 
-theorem beq_eq {x y : Name} : (x == y) = (x.value == y.value) :=
-  rfl
+theorem beq_eq {x y : Name} : (x == y) = (x.value == y.value) := rfl
 
 set_option linter.extra.dupNamespace false in
 @[deprecated Header.Name.beq_eq (since := "2026-06-04")]
-theorem Name.beq_eq {x y : Name} : (x == y) = (x.value == y.value) :=
-  Header.Name.beq_eq
+theorem Name.beq_eq {x y : Name} : (x == y) = (x.value == y.value) := Header.Name.beq_eq
 
 instance : LawfulBEq Name where
   rfl {x} := by simp [beq_eq]
@@ -114,139 +103,88 @@ but since HTTP header names are case-insensitive, this always uses simple capita
 -/
 @[inline]
 def toCanonical (name : Name) : String :=
-  let it := name.value.split '-'
-    |>.map (·.copy.capitalize)
+  let it := name.value.split '-' |>.map (·.copy.capitalize)
 
   it.intercalateString "-"
 
 /--
 Performs a case-insensitive comparison between a `Name` and a `String`. Returns `true` if they match.
 -/
-@[expose]
-def is (name : Name) (s : String) : Bool :=
-  name.value == s.toLower
+@[expose] def is (name : Name) (s : String) : Bool := name.value == s.toLower
 
 instance : ToString Name where
   toString name := name.toCanonical
 
-/--
-Standard Content-Type header name
--/
+/-- Standard Content-Type header name -/
 def contentType : Header.Name := .mk "content-type"
 
-/--
-Standard Content-Length header name
--/
+/-- Standard Content-Length header name -/
 def contentLength : Header.Name := .mk "content-length"
 
-/--
-Standard Host header name
--/
+/-- Standard Host header name -/
 def host : Header.Name := .mk "host"
 
-/--
-Standard Authorization header name
--/
+/-- Standard Authorization header name -/
 def authorization : Header.Name := .mk "authorization"
 
-/--
-Standard User-Agent header name
--/
+/-- Standard User-Agent header name -/
 def userAgent : Header.Name := .mk "user-agent"
 
-/--
-Standard Accept header name
--/
+/-- Standard Accept header name -/
 def accept : Header.Name := .mk "accept"
 
-/--
-Standard Connection header name
--/
+/-- Standard Connection header name -/
 def connection : Header.Name := .mk "connection"
 
-/--
-Standard Transfer-Encoding header name
--/
+/-- Standard Transfer-Encoding header name -/
 def transferEncoding : Header.Name := .mk "transfer-encoding"
 
-/--
-Standard Server header name
--/
+/-- Standard Server header name -/
 def server : Header.Name := .mk "server"
 
-/--
-Standard Date header name
--/
+/-- Standard Date header name -/
 def date : Header.Name := .mk "date"
 
-/--
-Standard Expect header name
--/
+/-- Standard Expect header name -/
 def expect : Header.Name := .mk "expect"
 
-/--
-Standard Cookie header name (client → server)
--/
+/-- Standard Cookie header name (client → server) -/
 def cookie : Header.Name := .mk "cookie"
 
-/--
-Standard Set-Cookie header name (server → client)
--/
+/-- Standard Set-Cookie header name (server → client) -/
 def setCookie : Header.Name := .mk "set-cookie"
 
-/--
-Standard Location header name
--/
+/-- Standard Location header name -/
 def location : Header.Name := .mk "location"
 
-/--
-Standard Proxy-Authorization header name
--/
+/-- Standard Proxy-Authorization header name -/
 def proxyAuthorization : Header.Name := .mk "proxy-authorization"
 
-/--
-Standard Content-Encoding header name
--/
+/-- Standard Content-Encoding header name -/
 def contentEncoding : Header.Name := .mk "content-encoding"
 
-/--
-Standard Content-Language header name
--/
+/-- Standard Content-Language header name -/
 def contentLanguage : Header.Name := .mk "content-language"
 
-/--
-Standard Content-Location header name
--/
+/-- Standard Content-Location header name -/
 def contentLocation : Header.Name := .mk "content-location"
 
-/--
-Standard Last-Modified header name
--/
+/-- Standard Last-Modified header name -/
 def lastModified : Header.Name := .mk "last-modified"
 
-/--
-Standard Referer header name
--/
+/-- Standard Referer header name -/
 def referer : Header.Name := .mk "referer"
 
-/--
-Standard Origin header name
--/
+/-- Standard Origin header name -/
 def origin : Header.Name := .mk "origin"
 
-/--
-Standard Keep-Alive header name
--/
+/-- Standard Keep-Alive header name -/
 def keepAlive : Header.Name := .mk "keep-alive"
 
-/--
-Standard If-None-Match header name
--/
+/-- Standard If-None-Match header name -/
 def ifNoneMatch : Header.Name := .mk "if-none-match"
 
-/--
-Standard If-Modified-Since header name
--/
+/-- Standard If-Modified-Since header name -/
 def ifModifiedSince : Header.Name := .mk "if-modified-since"
 
 end Std.Http.Header.Name

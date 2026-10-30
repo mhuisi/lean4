@@ -41,11 +41,9 @@ instance : OfNat (Ordinal leap) n := by
   · exact inst
   · exact ⟨inst.ofNat.expandTop (by decide)⟩
 
-instance {x y : Ordinal leap} : Decidable (x ≤ y) :=
-  inferInstanceAs (Decidable (x.val ≤ y.val))
+instance {x y : Ordinal leap} : Decidable (x ≤ y) := inferInstanceAs (Decidable (x.val ≤ y.val))
 
-instance {x y : Ordinal leap} : Decidable (x < y) :=
-  inferInstanceAs (Decidable (x.val < y.val))
+instance {x y : Ordinal leap} : Decidable (x < y) := inferInstanceAs (Decidable (x.val < y.val))
 
 instance : DecidableEq (Ordinal leap) := inferInstanceAs <| DecidableEq (Bounded.LE 0 _)
 
@@ -55,20 +53,15 @@ instance : TransOrd (Ordinal leap) := inferInstanceAs <| TransOrd (Bounded.LE 0 
 
 instance : LawfulEqOrd (Ordinal leap) := inferInstanceAs <| LawfulEqOrd (Bounded.LE 0 _)
 
-/--
-`Offset` represents an offset in seconds. It is defined as an `Int`.
--/
+/-- `Offset` represents an offset in seconds. It is defined as an `Int`. -/
 def Offset : Type := UnitVal 1
 deriving Repr, DecidableEq, Inhabited, Add, Sub, Neg, LE, LT, ToString
 
-instance {x y : Offset} : Decidable (x ≤ y) :=
-  inferInstanceAs (Decidable (x.val ≤ y.val))
+instance {x y : Offset} : Decidable (x ≤ y) := inferInstanceAs (Decidable (x.val ≤ y.val))
 
-instance {x y : Offset} : Decidable (x < y) :=
-  inferInstanceAs (Decidable (x.val < y.val))
+instance {x y : Offset} : Decidable (x < y) := inferInstanceAs (Decidable (x.val < y.val))
 
-instance : OfNat Offset n :=
-  ⟨UnitVal.ofNat n⟩
+instance : OfNat Offset n := ⟨UnitVal.ofNat n⟩
 
 instance : Ord Offset := inferInstanceAs <| Ord (UnitVal _)
 
@@ -78,53 +71,35 @@ instance : LawfulEqOrd Offset := inferInstanceAs <| LawfulEqOrd (UnitVal _)
 
 namespace Offset
 
-/--
-Creates an `Second.Offset` from a natural number.
--/
-@[inline]
-def ofNat (data : Nat) : Second.Offset :=
-  UnitVal.ofInt data
+/-- Creates an `Second.Offset` from a natural number. -/
+@[inline] def ofNat (data : Nat) : Second.Offset := UnitVal.ofInt data
 
-/--
-Creates an `Second.Offset` from an integer.
--/
-@[inline]
-def ofInt (data : Int) : Second.Offset :=
-  UnitVal.ofInt data
+/-- Creates an `Second.Offset` from an integer. -/
+@[inline] def ofInt (data : Int) : Second.Offset := UnitVal.ofInt data
 
 end Offset
 
 namespace Ordinal
 
-/--
-Creates an `Ordinal` from an integer, ensuring the value is within bounds.
--/
+/-- Creates an `Ordinal` from an integer, ensuring the value is within bounds. -/
 @[inline]
 def ofInt (data : Int) (h : 0 ≤ data ∧ data ≤ Int.ofNat (if leap then 60 else 59)) : Ordinal leap :=
   Bounded.LE.mk data h
 
-/--
-Creates an `Ordinal` from a natural number, ensuring the value is within bounds.
--/
+/-- Creates an `Ordinal` from a natural number, ensuring the value is within bounds. -/
 @[inline]
 def ofNat (data : Nat) (h : data ≤ (if leap then 60 else 59)) : Ordinal leap :=
   Bounded.LE.ofNat data h
 
-/--
-Creates an `Ordinal` from a `Fin`, ensuring the value is within bounds.
--/
+/-- Creates an `Ordinal` from a `Fin`, ensuring the value is within bounds. -/
 @[inline]
 def ofFin (data : Fin (if leap then 61 else 60)) : Ordinal leap :=
   match leap with
   | true => Bounded.LE.ofFin data
   | false => Bounded.LE.ofFin data
 
-/--
-Converts an `Ordinal` to an `Second.Offset`.
--/
-@[inline]
-def toOffset (ordinal : Ordinal leap) : Second.Offset :=
-  UnitVal.ofInt ordinal.val
+/-- Converts an `Ordinal` to an `Second.Offset`. -/
+@[inline] def toOffset (ordinal : Ordinal leap) : Second.Offset := UnitVal.ofInt ordinal.val
 
 end Ordinal
 end Second

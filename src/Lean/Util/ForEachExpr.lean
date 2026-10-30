@@ -24,21 +24,22 @@ def visit (g : Expr → m Bool) (e : Expr) : MonadCacheT Expr Unit m Unit :=
   checkCache e fun _ => do
     if (← g e) then
       match e with
-      | .forallE _ d b _   => do visit g d; visit g b
-      | .lam _ d b _       => do visit g d; visit g b
-      | .letE _ t v b _    => do visit g t; visit g v; visit g b
-      | .app f a           => do visit g f; visit g a
-      | .mdata _ b         => visit g b
-      | .proj _ _ b        => visit g b
-      | _                  => pure ()
+      | .forallE _ d b _ => do visit g d; visit g b
+      | .lam _ d b _ => do visit g d; visit g b
+      | .letE _ t v b _ => do visit g t; visit g v; visit g b
+      | .app f a => do visit g f; visit g a
+      | .mdata _ b => visit g b
+      | .proj _ _ b => visit g b
+      | _ => pure ()
 
 end ForEachExpr
 
-/-- Apply `f` to each sub-expression of `e`. If `f t` returns false, then t's children are not visited. -/
-@[inline] def Expr.forEach' (e : Expr) (f : Expr → m Bool) : m Unit :=
-  (ForEachExpr.visit f e).run
+/--
+Apply `f` to each sub-expression of `e`. If `f t` returns false, then t's children are not visited.
+-/
+@[inline] def Expr.forEach' (e : Expr) (f : Expr → m Bool) : m Unit := (ForEachExpr.visit f e).run
 
-@[inline] def Expr.forEach (e : Expr) (f : Expr → m Unit) : m Unit :=
-  e.forEach' fun e => do f e; pure true
+@[inline]
+def Expr.forEach (e : Expr) (f : Expr → m Unit) : m Unit := e.forEach' fun e => do f e; pure true
 
 end Lean

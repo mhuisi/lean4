@@ -18,49 +18,55 @@ namespace Lean
 /-- Simple `PersistentEnvExtension` that implements `exportEntriesFn` using a list of entries. -/
 @[expose] def SimplePersistentEnvExtension (α σ : Type) := PersistentEnvExtension α α (List α × σ)
 
-@[specialize] def mkStateFromImportedEntries {α σ : Type} (addEntryFn : σ → α → σ) (initState : σ) (as : Array (Array α)) : σ :=
+@[specialize]
+def mkStateFromImportedEntries
+    {α σ : Type} (addEntryFn : σ → α → σ) (initState : σ) (as : Array (Array α))
+    : σ :=
   as.foldl (fun r es => es.foldl (fun r e => addEntryFn r e) r) initState
 
 structure SimplePersistentEnvExtensionDescr (α σ : Type) where
-  name          : Name := by exact decl_name%
-  addEntryFn    : σ → α → σ
+  name : Name := by exact decl_name%
+  addEntryFn : σ → α → σ
   addImportedFn : Array (Array α) → σ
-  toArrayFn     : List α → Array α := fun es => es.toArray
-  exportEntriesFnEx? :
-    Option (Environment → σ → List α → OLeanEntries (Array α)) := none
-  asyncMode     : EnvExtension.AsyncMode := .mainOnly
-  replay?       : Option ((newEntries : List α) → (newState : σ) → σ → List α × σ) := none
+  toArrayFn : List α → Array α := fun es => es.toArray
+  exportEntriesFnEx? : Option (Environment → σ → List α → OLeanEntries (Array α)) := none
+  asyncMode : EnvExtension.AsyncMode := .mainOnly
+  replay? : Option ((newEntries : List α) → (newState : σ) → σ → List α × σ) := none
   /-- See `EnvExtension.logWrites`. -/
-  logWrites     : Bool := false
+  logWrites : Bool := false
 
 /--
 Returns a function suitable for `SimplePersistentEnvExtensionDescr.replay?` that replays all new
 entries onto the state using `addEntryFn`. `p` should filter out entries that have already been
 added to the state by a prior replay of the same realizable constant.
 -/
-def SimplePersistentEnvExtension.replayOfFilter (p : σ → α → Bool)
-    (addEntryFn : σ → α → σ) : List α → σ → σ → List α × σ :=
-  fun newEntries _ s =>
-    let newEntries := newEntries.filter (p s)
-    (newEntries, newEntries.foldl (init := s) addEntryFn)
+def SimplePersistentEnvExtension.replayOfFilter (p : σ → α → Bool) (addEntryFn : σ → α → σ)
+    : List α → σ → σ → List α × σ := fun newEntries _ s =>
+  let newEntries := newEntries.filter (p s)
+  (newEntries, newEntries.foldl (init := s) addEntryFn)
 
-def registerSimplePersistentEnvExtension {α σ : Type} [Inhabited σ] (descr : SimplePersistentEnvExtensionDescr α σ) : IO (SimplePersistentEnvExtension α σ) :=
+def registerSimplePersistentEnvExtension
+    {α σ : Type} [Inhabited σ] (descr : SimplePersistentEnvExtensionDescr α σ)
+    : IO (SimplePersistentEnvExtension α σ) :=
   registerPersistentEnvExtension {
-    name            := descr.name,
-    mkInitial       := pure ([], descr.addImportedFn #[]),
-    addImportedFn   := fun as => pure ([], descr.addImportedFn as),
-    addEntryFn      := fun s e => match s with
-      | (entries, s) => (e::entries, descr.addEntryFn s e),
-    exportEntriesFnEx env s := match descr.exportEntriesFnEx? with
+    name := descr.name
+    mkInitial := pure ([], descr.addImportedFn #[])
+    addImportedFn := fun as => pure ([], descr.addImportedFn as)
+    addEntryFn := fun s e =>
+      match s with
+      | (entries, s) => (e :: entries, descr.addEntryFn s e)
+    exportEntriesFnEx env s :=
+      match descr.exportEntriesFnEx? with
       | some fn => fn env s.2 s.1.reverse
-      | none    => .uniform (descr.toArrayFn s.1.reverse)
+      | none => .uniform (descr.toArrayFn s.1.reverse)
     statsFn := fun s => format "number of local entries: " ++ format s.1.length
     asyncMode := descr.asyncMode
     logWrites := descr.logWrites
-    replay? := descr.replay?.map fun replay oldState newState _ (entries, s) =>
-      let newEntries := takeNewEntries newState.1 oldState.1
-      let (newEntries, s) := replay newEntries newState.2 s
-      (newEntries ++ entries, s)
+    replay? :=
+      descr.replay?.map fun replay oldState newState _ (entries, s) =>
+        let newEntries := takeNewEntries newState.1 oldState.1
+        let (newEntries, s) := replay newEntries newState.2 s
+        (newEntries ++ entries, s)
   }
 
 namespace SimplePersistentEnvExtension
@@ -68,23 +74,38 @@ namespace SimplePersistentEnvExtension
 instance {α σ : Type} [Inhabited σ] : Inhabited (SimplePersistentEnvExtension α σ) :=
   inferInstanceAs (Inhabited (PersistentEnvExtension α α (List α × σ)))
 
-/-- Get the list of values used to update the state of the given
-`SimplePersistentEnvExtension` in the current file. -/
-def getEntries {α σ : Type} [Inhabited σ] (ext : SimplePersistentEnvExtension α σ)
-    (env : Environment) (asyncMode := ext.toEnvExtension.asyncMode) : List α :=
+/--
+Get the list of values used to update the state of the given
+`SimplePersistentEnvExtension` in the current file.
+-/
+def getEntries
+    {α σ : Type} [Inhabited σ]
+    (ext : SimplePersistentEnvExtension α σ) (env : Environment)
+    (asyncMode := ext.toEnvExtension.asyncMode)
+    : List α :=
   (PersistentEnvExtension.getState (asyncMode := asyncMode) ext env).1
 
 /-- Get the current state of the given `SimplePersistentEnvExtension`. -/
-def getState {α σ : Type} [Inhabited σ] (ext : SimplePersistentEnvExtension α σ) (env : Environment)
-    (asyncMode := ext.toEnvExtension.asyncMode) (asyncDecl : Name := .anonymous) : σ :=
+def getState
+    {α σ : Type} [Inhabited σ]
+    (ext : SimplePersistentEnvExtension α σ) (env : Environment)
+    (asyncMode := ext.toEnvExtension.asyncMode) (asyncDecl : Name := .anonymous)
+    : σ :=
   (PersistentEnvExtension.getState (asyncMode := asyncMode) (asyncDecl := asyncDecl) ext env).2
 
-/-- Set the current state of the given `SimplePersistentEnvExtension`. This change is *not* persisted across files. -/
-def setState {α σ : Type} (ext : SimplePersistentEnvExtension α σ) (env : Environment) (s : σ) : Environment :=
+/--
+Set the current state of the given `SimplePersistentEnvExtension`. This change is *not* persisted across files.
+-/
+def setState {α σ : Type} (ext : SimplePersistentEnvExtension α σ) (env : Environment) (s : σ)
+    : Environment :=
   PersistentEnvExtension.modifyState ext env (fun ⟨entries, _⟩ => (entries, s))
 
-/-- Modify the state of the given extension in the given environment by applying the given function. This change is *not* persisted across files. -/
-def modifyState {α σ : Type} (ext : SimplePersistentEnvExtension α σ) (env : Environment) (f : σ → σ) : Environment :=
+/--
+Modify the state of the given extension in the given environment by applying the given function. This change is *not* persisted across files.
+-/
+def modifyState
+    {α σ : Type} (ext : SimplePersistentEnvExtension α σ) (env : Environment) (f : σ → σ)
+    : Environment :=
   PersistentEnvExtension.modifyState ext env (fun ⟨entries, s⟩ => (entries, f s))
 
 end SimplePersistentEnvExtension
@@ -100,10 +121,13 @@ def findSortedByName? (entries : Array (Name × α)) (declName : Name) : Option 
       goUSize hs 0 (USize.ofNat32 (entries.size - 1) (by omega)) (by simp) (by simp; omega)
     else
       go 0 (entries.size - 1) (by omega) (by omega)
-  else none
+  else
+    none
 where
-  goUSize (hsize : entries.size < 2147483647) (lo hi : USize)
-      (hlo : lo.toNat ≤ hi.toNat) (hhi : hi.toNat < entries.size) : Option (Name × α) :=
+  goUSize
+      (hsize : entries.size < 2147483647)
+      (lo hi : USize) (hlo : lo.toNat ≤ hi.toNat) (hhi : hi.toNat < entries.size)
+      : Option (Name × α) :=
     let m := (lo + hi) / 2
     have hs : 4294967296 ≤ 2 ^ System.Platform.numBits := USize.le_size
     have htwo : (2 : USize).toNat = 2 := by simp
@@ -120,10 +144,12 @@ where
         have hlt : lo.toNat < m.toNat := h
         have hp : (m - 1).toNat = m.toNat - 1 := by
           rw [USize.toNat_sub_of_le _ _ (by
-            simp only [USize.le_iff_toNat_le, USize.toNat_one]
-            omega), USize.toNat_one]
+              simp only [USize.le_iff_toNat_le, USize.toNat_one]
+              omega),
+            USize.toNat_one]
         goUSize hsize lo (m - 1) (by omega) (by omega)
-      else none
+      else
+        none
     | .eq => some e
   termination_by hi.toNat + 1 - lo.toNat
   decreasing_by
@@ -143,8 +169,7 @@ where
   termination_by hi + 1 - lo
 
 /-- `entries.find? (·.1 == declName)`, without calling a closure on each entry. -/
-def findByName? (entries : Array (Name × α)) (declName : Name) : Option (Name × α) :=
-  go 0
+def findByName? (entries : Array (Name × α)) (declName : Name) : Option (Name × α) := go 0
 where
   go (i : Nat) : Option (Name × α) :=
     if h : i < entries.size then
@@ -161,10 +186,13 @@ def containsSortedName (names : Array Name) (declName : Name) : Bool :=
       goUSize hs 0 (USize.ofNat32 (names.size - 1) (by omega)) (by simp) (by simp; omega)
     else
       go 0 (names.size - 1) (by omega) (by omega)
-  else false
+  else
+    false
 where
-  goUSize (hsize : names.size < 2147483647) (lo hi : USize)
-      (hlo : lo.toNat ≤ hi.toNat) (hhi : hi.toNat < names.size) : Bool :=
+  goUSize
+      (hsize : names.size < 2147483647)
+      (lo hi : USize) (hlo : lo.toNat ≤ hi.toNat) (hhi : hi.toNat < names.size)
+      : Bool :=
     let m := (lo + hi) / 2
     have hs : 4294967296 ≤ 2 ^ System.Platform.numBits := USize.le_size
     have htwo : (2 : USize).toNat = 2 := by simp
@@ -180,10 +208,12 @@ where
         have hlt : lo.toNat < m.toNat := h
         have hp : (m - 1).toNat = m.toNat - 1 := by
           rw [USize.toNat_sub_of_le _ _ (by
-            simp only [USize.le_iff_toNat_le, USize.toNat_one]
-            omega), USize.toNat_one]
+              simp only [USize.le_iff_toNat_le, USize.toNat_one]
+              omega),
+            USize.toNat_one]
         goUSize hsize lo (m - 1) (by omega) (by omega)
-      else false
+      else
+        false
     | .eq => true
   termination_by hi.toNat + 1 - lo.toNat
   decreasing_by
@@ -201,22 +231,24 @@ where
     | .eq => true
   termination_by hi + 1 - lo
 
-/-- Environment extension for tagging declarations.
-    Declarations must only be tagged in the module where they were declared. -/
+/--
+Environment extension for tagging declarations.
+Declarations must only be tagged in the module where they were declared.
+-/
 @[expose] def TagDeclarationExtension := SimplePersistentEnvExtension Name NameSet
 
-def mkTagDeclarationExtension (name : Name := by exact decl_name%)
-  (asyncMode : EnvExtension.AsyncMode := .mainOnly)
-  (logWrites : Bool := false) : IO TagDeclarationExtension :=
+def mkTagDeclarationExtension
+    (name : Name := by exact decl_name%) (asyncMode : EnvExtension.AsyncMode := .mainOnly)
+    (logWrites : Bool := false)
+    : IO TagDeclarationExtension :=
   registerSimplePersistentEnvExtension {
-    name          := name,
-    logWrites     := logWrites,
-    addImportedFn := fun _ => {},
-    addEntryFn    := fun s n => s.insert n,
-    toArrayFn     := fun es => es.toArray.qsort Name.quickLt
+    name := name
+    logWrites := logWrites
+    addImportedFn := fun _ => {}
+    addEntryFn := fun s n => s.insert n
+    toArrayFn := fun es => es.toArray.qsort Name.quickLt
     asyncMode
-    replay?       := some <|
-      SimplePersistentEnvExtension.replayOfFilter (!·.contains ·) (·.insert ·)
+    replay? := some <| SimplePersistentEnvExtension.replayOfFilter (! ·.contains ·) (·.insert ·)
   }
 
 namespace TagDeclarationExtension
@@ -238,44 +270,49 @@ def tag (ext : TagDeclarationExtension) (env : Environment) (declName : Name) : 
     else
       ext.addEntry (asyncDecl := declName) (log := .decl declName) env declName
 
-def isTagged (ext : TagDeclarationExtension) (env : Environment) (declName : Name)
-    (asyncMode := ext.toEnvExtension.asyncMode) : Bool :=
+def isTagged
+    (ext : TagDeclarationExtension) (env : Environment) (declName : Name)
+    (asyncMode := ext.toEnvExtension.asyncMode)
+    : Bool :=
   match env.getModuleIdxFor? declName with
   | some modIdx => containsSortedName (ext.getModuleEntries env modIdx) declName
-  | none        => (ext.getState (asyncMode := asyncMode) (asyncDecl := declName) env).contains declName
+  | none => (ext.getState (asyncMode := asyncMode) (asyncDecl := declName) env).contains declName
 
 end TagDeclarationExtension
 
-/-- Environment extension for mapping declarations to values.
-    Declarations must only be inserted into the mapping in the module where they were declared. -/
-
-structure MapDeclarationExtension (α : Type) extends PersistentEnvExtension (Name × α) (Name × α) (NameMap α)
+/--
+Environment extension for mapping declarations to values.
+Declarations must only be inserted into the mapping in the module where they were declared.
+-/
+structure MapDeclarationExtension (α : Type)
+  extends PersistentEnvExtension (Name × α) (Name × α) (NameMap α)
 deriving Inhabited
 
-def mkMapDeclarationExtension (name : Name := by exact decl_name%)
-    (asyncMode : EnvExtension.AsyncMode := .async .mainEnv)
+def mkMapDeclarationExtension
+    (name : Name := by exact decl_name%) (asyncMode : EnvExtension.AsyncMode := .async .mainEnv)
     (logWrites : Bool := false)
-    (exportEntriesFn : Environment → NameMap α → OLeanEntries (Array (Name × α)) :=
-      fun env s =>
-        let all := s.toArray.filter (fun (n, _) => env.contains (skipRealize := false) n)
-        -- Do not export info for private defs by default
-        let exported := all.filter fun (n, _) =>
-          (env.setExporting true).contains (skipRealize := false) n
-        { exported, server := exported, «private» := all }) :
-    IO (MapDeclarationExtension α) :=
+    (exportEntriesFn : Environment → NameMap α → OLeanEntries (Array (Name × α)) := fun env s =>
+      let all := s.toArray.filter (fun (n, _) => env.contains (skipRealize := false) n)
+      -- Do not export info for private defs by default
+      let exported :=
+        all.filter fun (n, _) => (env.setExporting true).contains (skipRealize := false) n
+      { exported, server := exported, «private» := all })
+    : IO (MapDeclarationExtension α) :=
   .mk <$> registerPersistentEnvExtension {
-    name            := name,
-    logWrites       := logWrites,
-    mkInitial       := pure {}
-    addImportedFn   := fun _ => pure {}
-    addEntryFn      := fun s (n, v) => s.insert n v
+    name := name
+    logWrites := logWrites
+    mkInitial := pure {}
+    addImportedFn := fun _ => pure {}
+    addEntryFn := fun s (n, v) => s.insert n v
     exportEntriesFnEx env s := exportEntriesFn env s
     asyncMode
-    replay?         := some fun _ newState newConsts s =>
-      newConsts.foldl (init := s) fun s c =>
-        if let some a := newState.find? c then
-          s.insert c a
-        else s
+    replay? :=
+      some fun _ newState newConsts s =>
+        newConsts.foldl (init := s) fun s c =>
+          if let some a := newState.find? c then
+            s.insert c a
+          else
+            s
   }
 
 namespace MapDeclarationExtension
@@ -285,36 +322,45 @@ Adds the entry for `declName`. Entries are write-once: facts derived from an ent
 type class resolution results, assume it never changes. `allowOverwrite` permits replacing an
 existing entry, which invalidates such facts; use it only where that is justified, and say why.
 -/
-def insert (ext : MapDeclarationExtension α) (env : Environment) (declName : Name) (val : α)
-    (allowOverwrite := false) : Environment :=
+def insert
+    (ext : MapDeclarationExtension α) (env : Environment) (declName : Name) (val : α)
+    (allowOverwrite := false)
+    : Environment :=
   have : Inhabited Environment := ⟨env⟩
   if let some modIdx := env.getModuleIdxFor? declName then -- See comment at `MapDeclarationExtension`
-    panic! s!"cannot insert `{declName}` into `{ext.name}`, it is not defined in the current module but in `{env.allImportedModuleNames[modIdx]!}`"
+    panic! s!"cannot insert `{declName}` into `{ext.name}`, it is not defined in the current \
+      module but in `{env.allImportedModuleNames[modIdx]!}`"
   -- Check only the state visible on this branch: writes often happen here while the branch
   -- elaborating `declName` (e.g. a theorem's proof) still runs, and waiting for it would stall the
   -- write. This still catches every double write whose first write is visible here, in particular
   -- all sequential ones; it misses only a first write made on that still-running branch.
-  else if !allowOverwrite &&
-      (ext.toPersistentEnvExtension.getState (asyncMode := .local) env).contains declName then
+  else if !allowOverwrite
+      && (ext.toPersistentEnvExtension.getState (asyncMode := .local) env).contains declName then
     panic! s!"cannot insert `{declName}` into `{ext.name}`, it is already present; \
       declaration-keyed extension entries are write-once (pass `allowOverwrite := true` if this \
       update is intended)"
   else
     ext.addEntry (asyncDecl := declName) (log := .decl declName) env (declName, val)
 
-def find? [Inhabited α] (ext : MapDeclarationExtension α) (env : Environment) (declName : Name)
-    (asyncMode := ext.toEnvExtension.asyncMode) (level := OLeanLevel.exported) : Option α :=
+def find?
+    [Inhabited α]
+    (ext : MapDeclarationExtension α) (env : Environment) (declName : Name)
+    (asyncMode := ext.toEnvExtension.asyncMode) (level := OLeanLevel.exported)
+    : Option α :=
   match env.getModuleIdxFor? declName with
   | some modIdx =>
     match findSortedByName? (ext.getModuleEntries (level := level) env modIdx) declName with
     | some e => some e.2
-    | none   => none
+    | none => none
   | none => (ext.getState (asyncMode := asyncMode) (asyncDecl := declName) env).find? declName
 
-def contains [Inhabited α] (ext : MapDeclarationExtension α) (env : Environment) (declName : Name)
-    (asyncMode := ext.toEnvExtension.asyncMode) : Bool :=
+def contains
+    [Inhabited α]
+    (ext : MapDeclarationExtension α) (env : Environment) (declName : Name)
+    (asyncMode := ext.toEnvExtension.asyncMode)
+    : Bool :=
   match env.getModuleIdxFor? declName with
   | some modIdx => (findSortedByName? (ext.getModuleEntries env modIdx) declName).isSome
-  | none        => (ext.getState (asyncMode := asyncMode) (asyncDecl := declName) env).contains declName
+  | none => (ext.getState (asyncMode := asyncMode) (asyncDecl := declName) env).contains declName
 
 end MapDeclarationExtension

@@ -19,23 +19,23 @@ namespace RefVec
 
 variable {α : Type} [Hashable α] [DecidableEq α] {aig : AIG α}
 
-class LawfulZipOperator (α : Type) [Hashable α] [DecidableEq α]
-    (f : (aig : AIG α) → BinaryInput aig → Entrypoint α) [LawfulOperator α BinaryInput f] : Prop
-  where
-  chainable : ∀ (aig : AIG α) (input1 input2 : BinaryInput aig) (h) (assign),
-                ⟦f (f aig input1).aig (input2.cast h), assign⟧
-                  =
-                ⟦f aig input2, assign⟧
+class LawfulZipOperator
+    (α : Type) [Hashable α] [DecidableEq α]
+    (f : (aig : AIG α) → BinaryInput aig → Entrypoint α) [LawfulOperator α BinaryInput f]
+    : Prop where
+  chainable
+    : ∀ (aig : AIG α) (input1 input2 : BinaryInput aig) (h) (assign),
+      ⟦f (f aig input1).aig (input2.cast h), assign⟧ = ⟦f aig input2, assign⟧
 
 namespace LawfulZipOperator
 
 @[deprecated chainable +typeChanged (since := "2025-10-29")]
-theorem denote_prefix_cast_ref {aig : AIG α} {input1 input2 : BinaryInput aig}
-    {f : (aig : AIG α) → BinaryInput aig → Entrypoint α} [LawfulOperator α BinaryInput f]
-    [LawfulZipOperator α f] {h} :
-    ⟦f (f aig input1).aig (input2.cast h), assign⟧
-      =
-    ⟦f aig input2, assign⟧ := by
+theorem denote_prefix_cast_ref
+    {aig : AIG α} {input1 input2 : BinaryInput aig}
+    {f : (aig : AIG α) → BinaryInput aig → Entrypoint α}
+    [LawfulOperator α BinaryInput f] [LawfulZipOperator α f]
+    {h}
+    : ⟦f (f aig input1).aig (input2.cast h), assign⟧ = ⟦f aig input2, assign⟧ := by
   rw [LawfulZipOperator.chainable]
 
 instance : LawfulZipOperator α mkAndCached where
@@ -76,17 +76,20 @@ instance : LawfulZipOperator α mkImpCached where
 end LawfulZipOperator
 
 @[specialize]
-def zip (aig : AIG α) (input : BinaryRefVec aig len)
+def zip
+    (aig : AIG α) (input : BinaryRefVec aig len)
     (func : (aig : AIG α) → BinaryInput aig → Entrypoint α)
-    [LawfulOperator α BinaryInput func] [LawfulZipOperator α func] :
-    RefVecEntry α len :=
+    [LawfulOperator α BinaryInput func] [LawfulZipOperator α func]
+    : RefVecEntry α len :=
   go aig 0 (.emptyWithCapacity len) (by omega) input.lhs input.rhs func
 where
   @[specialize]
-  go (aig : AIG α) (idx : Nat) (s : RefVec aig idx) (hidx : idx ≤ len)
-      (lhs rhs : RefVec aig len) (f : (aig : AIG α) → BinaryInput aig → Entrypoint α)
-      [LawfulOperator α BinaryInput f] [LawfulZipOperator α f] :
-      RefVecEntry α len :=
+  go
+      (aig : AIG α) (idx : Nat) (s : RefVec aig idx) (hidx : idx ≤ len)
+      (lhs rhs : RefVec aig len)
+      (f : (aig : AIG α) → BinaryInput aig → Entrypoint α)
+      [LawfulOperator α BinaryInput f] [LawfulZipOperator α f]
+      : RefVecEntry α len :=
     if hidx : idx < len then
       let res := f aig ⟨lhs.get idx hidx, rhs.get idx hidx⟩
       let aig := res.aig
@@ -103,30 +106,36 @@ where
       ⟨aig, this ▸ s⟩
   termination_by len - idx
 
-theorem zip.go_le_size {aig : AIG α} (idx : Nat) (hidx) (s : RefVec aig idx)
-    (lhs rhs : RefVec aig len)
-    (f : (aig : AIG α) → BinaryInput aig → Entrypoint α) [LawfulOperator α BinaryInput f]
-    [LawfulZipOperator α f] :
-    aig.decls.size ≤ (go aig idx s hidx lhs rhs f).1.decls.size := by
+theorem zip.go_le_size
+    {aig : AIG α}
+    (idx : Nat)
+    (hidx) (s : RefVec aig idx) (lhs rhs : RefVec aig len)
+    (f : (aig : AIG α) → BinaryInput aig → Entrypoint α)
+    [LawfulOperator α BinaryInput f] [LawfulZipOperator α f]
+    : aig.decls.size ≤ (go aig idx s hidx lhs rhs f).1.decls.size := by
   unfold go
   split
   · dsimp only
     refine Nat.le_trans ?_ (by apply zip.go_le_size)
     apply LawfulOperator.le_size
   · simp
-  termination_by len - idx
+termination_by len - idx
 
-theorem zip_le_size (aig : AIG α) (input : BinaryRefVec aig len)
+theorem zip_le_size
+    (aig : AIG α) (input : BinaryRefVec aig len)
     (func : (aig : AIG α) → BinaryInput aig → Entrypoint α)
-    [LawfulOperator α BinaryInput func] [LawfulZipOperator α func] :
-    aig.decls.size ≤ (zip aig input func).1.decls.size := by
+    [LawfulOperator α BinaryInput func] [LawfulZipOperator α func]
+    : aig.decls.size ≤ (zip aig input func).1.decls.size := by
   unfold zip
   apply zip.go_le_size
 
-theorem zip.go_decl_eq {aig : AIG α} (i) (hi) (lhs rhs : RefVec aig len)
-    (s : RefVec aig i) (f : (aig : AIG α) → BinaryInput aig → Entrypoint α)
-    [LawfulOperator α BinaryInput f] [LawfulZipOperator α f] :
-    ∀ (idx : Nat) (h1) (h2), (go aig i s hi lhs rhs f).1.decls[idx]'h2 = aig.decls[idx]'h1 := by
+theorem zip.go_decl_eq
+    {aig : AIG α}
+    (i) (hi)
+    (lhs rhs : RefVec aig len) (s : RefVec aig i)
+    (f : (aig : AIG α) → BinaryInput aig → Entrypoint α)
+    [LawfulOperator α BinaryInput f] [LawfulZipOperator α f]
+    : ∀ (idx : Nat) (h1) (h2), (go aig i s hi lhs rhs f).1.decls[idx]'h2 = aig.decls[idx]'h1 := by
   generalize hgo : go aig i s hi lhs rhs f = res
   unfold go at hgo
   split at hgo
@@ -144,35 +153,41 @@ theorem zip.go_decl_eq {aig : AIG α} (i) (hi) (lhs rhs : RefVec aig len)
     simp
 termination_by len - i
 
-theorem zip_decl_eq {aig : AIG α} (input : BinaryRefVec aig len)
-    (func : (aig : AIG α) → BinaryInput aig → Entrypoint α)
-    [LawfulOperator α BinaryInput func] [LawfulZipOperator α func] :
-    ∀ idx (h1 : idx < aig.decls.size) (h2),
+theorem zip_decl_eq
+    {aig : AIG α}
+    (input : BinaryRefVec aig len) (func : (aig : AIG α) → BinaryInput aig → Entrypoint α)
+    [LawfulOperator α BinaryInput func] [LawfulZipOperator α func]
+    : ∀ idx (h1 : idx < aig.decls.size) (h2),
       (zip aig input func).1.decls[idx]'h2 = aig.decls[idx]'h1 := by
   intros
   unfold zip
   apply zip.go_decl_eq
 
-theorem zip_lt_size_of_lt_aig_size (aig : AIG α) (input : BinaryRefVec aig len)
+theorem zip_lt_size_of_lt_aig_size
+    (aig : AIG α) (input : BinaryRefVec aig len)
     (func : (aig : AIG α) → BinaryInput aig → Entrypoint α)
-    [LawfulOperator α BinaryInput func] [LawfulZipOperator α func] (h : x < aig.decls.size) :
-    x < (zip aig input func).aig.decls.size := by
+    [LawfulOperator α BinaryInput func] [LawfulZipOperator α func]
+    (h : x < aig.decls.size)
+    : x < (zip aig input func).aig.decls.size := by
   apply Nat.lt_of_lt_of_le
   · exact h
   · apply zip_le_size
 
-theorem zip_le_size_of_le_aig_size (aig : AIG α) (input : BinaryRefVec aig len)
+theorem zip_le_size_of_le_aig_size
+    (aig : AIG α) (input : BinaryRefVec aig len)
     (func : (aig : AIG α) → BinaryInput aig → Entrypoint α)
-    [LawfulOperator α BinaryInput func] [LawfulZipOperator α func] (h : x ≤ aig.decls.size) :
-    x ≤ (zip aig input func).aig.decls.size := by
+    [LawfulOperator α BinaryInput func] [LawfulZipOperator α func]
+    (h : x ≤ aig.decls.size)
+    : x ≤ (zip aig input func).aig.decls.size := by
   apply Nat.le_trans
   · exact h
   · apply zip_le_size
 
-theorem IsPrefix_zip {aig : AIG α} (input : BinaryRefVec aig len)
-    (func : (aig : AIG α) → BinaryInput aig → Entrypoint α)
-    [LawfulOperator α BinaryInput func] [LawfulZipOperator α func] :
-    AIG.IsPrefix aig.decls (zip aig input func).aig.decls := by
+theorem IsPrefix_zip
+    {aig : AIG α}
+    (input : BinaryRefVec aig len) (func : (aig : AIG α) → BinaryInput aig → Entrypoint α)
+    [LawfulOperator α BinaryInput func] [LawfulZipOperator α func]
+    : AIG.IsPrefix aig.decls (zip aig input func).aig.decls := by
   intros
   unfold zip
   apply IsPrefix.of
@@ -183,14 +198,14 @@ theorem IsPrefix_zip {aig : AIG α} (input : BinaryRefVec aig len)
 
 namespace zip
 
-theorem go_get_aux {aig : AIG α} (curr : Nat) (hcurr : curr ≤ len) (s : RefVec aig curr)
-    (lhs rhs : RefVec aig len) (f : (aig : AIG α) → BinaryInput aig → Entrypoint α)
-    [LawfulOperator α BinaryInput f] [LawfulZipOperator α f] :
+theorem go_get_aux
+    {aig : AIG α} (curr : Nat) (hcurr : curr ≤ len) (s : RefVec aig curr)
+    (lhs rhs : RefVec aig len)
+    (f : (aig : AIG α) → BinaryInput aig → Entrypoint α)
+    [LawfulOperator α BinaryInput f] [LawfulZipOperator α f]
     -- The hfoo here is a trick to make the dependent type gods happy
-    ∀ (idx : Nat) (hidx : idx < curr) (hfoo),
-      (go aig curr s hcurr lhs rhs f).vec.get idx (by omega)
-        =
-      (s.get idx hidx).cast hfoo := by
+    : ∀ (idx : Nat) (hidx : idx < curr) (hfoo),
+      (go aig curr s hcurr lhs rhs f).vec.get idx (by omega) = (s.get idx hidx).cast hfoo := by
   intro idx hidx
   generalize hgo : go aig curr s hcurr lhs rhs f = res
   unfold go at hgo
@@ -198,7 +213,8 @@ theorem go_get_aux {aig : AIG α} (curr : Nat) (hcurr : curr ≤ len) (s : RefVe
   · dsimp only at hgo
     rw [← hgo]
     intro hfoo
-    rw [go_get_aux (hfoo := go_le_size ..)]; case hidx => omega
+    rw [go_get_aux (hfoo := go_le_size ..)]
+    case hidx => omega
     rw [AIG.RefVec.get_push_ref_lt (hidx := hidx)]
     simp only [Ref.cast, Ref.mk.injEq]
     rw [AIG.RefVec.get_cast]
@@ -211,27 +227,29 @@ theorem go_get_aux {aig : AIG α} (curr : Nat) (hcurr : curr ≤ len) (s : RefVe
     simp
 termination_by len - curr
 
-theorem go_get {aig : AIG α} (curr : Nat) (hcurr : curr ≤ len) (s : RefVec aig curr)
-    (lhs rhs : RefVec aig len) (f : (aig : AIG α) → BinaryInput aig → Entrypoint α)
-    [LawfulOperator α BinaryInput f] [LawfulZipOperator α f] :
-    ∀ (idx : Nat) (hidx : idx < curr),
+theorem go_get
+    {aig : AIG α} (curr : Nat) (hcurr : curr ≤ len) (s : RefVec aig curr)
+    (lhs rhs : RefVec aig len)
+    (f : (aig : AIG α) → BinaryInput aig → Entrypoint α)
+    [LawfulOperator α BinaryInput f] [LawfulZipOperator α f]
+    : ∀ (idx : Nat) (hidx : idx < curr),
       (go aig curr s hcurr lhs rhs f).vec.get idx (by omega)
-        =
-      (s.get idx hidx).cast (by apply go_le_size) := by
+        = (s.get idx hidx).cast (by apply go_le_size) := by
   intros
   apply go_get_aux
 
-theorem go_denote_mem_prefix {aig : AIG α} (curr : Nat) (hcurr : curr ≤ len)
-    (s : RefVec aig curr) (lhs rhs : RefVec aig len)
-    (f : (aig : AIG α) → BinaryInput aig → Entrypoint α) [LawfulOperator α BinaryInput f]
-    [LawfulZipOperator α f] (start : Nat) (hstart) :
-    ⟦
-      (go aig curr s hcurr lhs rhs f).aig,
-      ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
-      assign
-    ⟧
-      =
-    ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
+theorem go_denote_mem_prefix
+    {aig : AIG α} (curr : Nat) (hcurr : curr ≤ len) (s : RefVec aig curr)
+    (lhs rhs : RefVec aig len)
+    (f : (aig : AIG α) → BinaryInput aig → Entrypoint α)
+    [LawfulOperator α BinaryInput f] [LawfulZipOperator α f]
+    (start : Nat) (hstart)
+    : ⟦
+        (go aig curr s hcurr lhs rhs f).aig,
+        ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
+        assign
+      ⟧
+      = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply IsPrefix.of
   · intros
@@ -240,19 +258,19 @@ theorem go_denote_mem_prefix {aig : AIG α} (curr : Nat) (hcurr : curr ≤ len)
     apply go_le_size
 
 attribute [local simp] LawfulZipOperator.denote_prefix_cast_ref in
-theorem denote_go {aig : AIG α} (curr : Nat) (hcurr : curr ≤ len) (s : RefVec aig curr)
-    (lhs rhs : RefVec aig len) (f : (aig : AIG α) → BinaryInput aig → Entrypoint α)
-    [LawfulOperator α BinaryInput f] [LawfulZipOperator α f] :
-    ∀ (idx : Nat) (hidx1 : idx < len),
+theorem denote_go
+    {aig : AIG α} (curr : Nat) (hcurr : curr ≤ len) (s : RefVec aig curr)
+    (lhs rhs : RefVec aig len)
+    (f : (aig : AIG α) → BinaryInput aig → Entrypoint α)
+    [LawfulOperator α BinaryInput f] [LawfulZipOperator α f]
+    : ∀ (idx : Nat) (hidx1 : idx < len),
       curr ≤ idx
-        →
-      ⟦
-        (go aig curr s hcurr lhs rhs f).aig,
-        (go aig curr s hcurr lhs rhs f).vec.get idx hidx1,
-        assign
-      ⟧
-        =
-      ⟦f aig ⟨lhs.get idx hidx1, rhs.get idx hidx1⟩, assign⟧ := by
+        → ⟦
+            (go aig curr s hcurr lhs rhs f).aig,
+            (go aig curr s hcurr lhs rhs f).vec.get idx hidx1,
+            assign
+          ⟧
+          = ⟦f aig ⟨lhs.get idx hidx1, rhs.get idx hidx1⟩, assign⟧ := by
   intro idx hidx1 hidx2
   generalize hgo : go aig curr s hcurr lhs rhs f = res
   unfold go at hgo
@@ -261,7 +279,8 @@ theorem denote_go {aig : AIG α} (curr : Nat) (hcurr : curr ≤ len) (s : RefVec
     cases Nat.eq_or_lt_of_le hidx2 with
     | inl heq =>
       rw [← hgo]
-      rw [go_get]; case hidx => omega
+      rw [go_get]
+      case hidx => omega
       rw [AIG.RefVec.get_push_ref_eq']
       · simp only [← heq]
         rw [go_denote_mem_prefix]
@@ -279,13 +298,13 @@ termination_by len - curr
 end zip
 
 @[simp]
-theorem denote_zip {aig : AIG α} (input : BinaryRefVec aig len)
-    (func : (aig : AIG α) → BinaryInput aig → Entrypoint α)
-    [LawfulOperator α BinaryInput func] [LawfulZipOperator α func] :
-    ∀ (idx : Nat) (hidx : idx < len),
+theorem denote_zip
+    {aig : AIG α}
+    (input : BinaryRefVec aig len) (func : (aig : AIG α) → BinaryInput aig → Entrypoint α)
+    [LawfulOperator α BinaryInput func] [LawfulZipOperator α func]
+    : ∀ (idx : Nat) (hidx : idx < len),
       ⟦(zip aig input func).aig, (zip aig input func).vec.get idx hidx, assign⟧
-        =
-      ⟦func aig ⟨input.lhs.get idx hidx, input.rhs.get idx hidx⟩, assign⟧ := by
+        = ⟦func aig ⟨input.lhs.get idx hidx, input.rhs.get idx hidx⟩, assign⟧ := by
   intros
   apply zip.denote_go
   omega

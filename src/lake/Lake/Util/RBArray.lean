@@ -22,19 +22,15 @@ public structure RBArray (α : Type u) (β : Type v) (cmp : α → α → Orderi
 
 namespace RBArray
 
-public def empty : RBArray α β cmp :=
-  ⟨.empty, .empty⟩
+public def empty : RBArray α β cmp := ⟨.empty, .empty⟩
 
 instance : EmptyCollection (RBArray α β cmp) := ⟨empty⟩
 
-public def mkEmpty (size : Nat) : RBArray α β cmp :=
-  ⟨.empty, .mkEmpty size⟩
+public def mkEmpty (size : Nat) : RBArray α β cmp := ⟨.empty, .mkEmpty size⟩
 
-@[inline] public def find? (self : RBArray α β cmp) (a : α) : Option β :=
-  self.toTreeMap.get? a
+@[inline] public def find? (self : RBArray α β cmp) (a : α) : Option β := self.toTreeMap.get? a
 
-@[inline] public def contains (self : RBArray α β cmp) (a : α) : Bool :=
-  self.toTreeMap.contains a
+@[inline] public def contains (self : RBArray α β cmp) (a : α) : Bool := self.toTreeMap.contains a
 
 /-- Insert `b` with the key `a`. Does nothing if the key is already present. -/
 public def insert (self : RBArray α β cmp) (a : α) (b : β) : RBArray α β cmp :=
@@ -43,34 +39,40 @@ public def insert (self : RBArray α β cmp) (a : α) (b : β) : RBArray α β c
   else
     ⟨self.toTreeMap.insert a b, self.toArray.push b⟩
 
-@[inline] public def all (f : β → Bool) (self : RBArray α β cmp) : Bool  :=
-  self.toArray.all f
+@[inline] public def all (f : β → Bool) (self : RBArray α β cmp) : Bool := self.toArray.all f
 
-@[inline] public def any (f : β → Bool) (self : RBArray α β cmp) : Bool  :=
-  self.toArray.any f
+@[inline] public def any (f : β → Bool) (self : RBArray α β cmp) : Bool := self.toArray.any f
 
-@[inline] public def foldl (f : σ → β → σ) (init : σ) (self : RBArray α β cmp) : σ  :=
+@[inline]
+public def foldl (f : σ → β → σ) (init : σ) (self : RBArray α β cmp) : σ :=
   self.toArray.foldl f init
 
-@[inline] public def foldlM [Monad m] (f : σ → β → m σ) (init : σ) (self : RBArray α β cmp) : m σ :=
+@[inline]
+public def foldlM [Monad m] (f : σ → β → m σ) (init : σ) (self : RBArray α β cmp) : m σ :=
   self.toArray.foldlM f init
 
-@[inline] public def foldr (f : β → σ → σ) (init : σ) (self : RBArray α β cmp) : σ :=
+@[inline]
+public def foldr (f : β → σ → σ) (init : σ) (self : RBArray α β cmp) : σ :=
   self.toArray.foldr f init
 
-@[inline] public def foldrM [Monad m] (f : β → σ → m σ) (init : σ) (self : RBArray α β cmp) : m σ :=
+@[inline]
+public def foldrM [Monad m] (f : β → σ → m σ) (init : σ) (self : RBArray α β cmp) : m σ :=
   self.toArray.foldrM f init
 
-@[inline] public def forM [Monad m] (f : β → m PUnit) (self : RBArray α β cmp) : m PUnit :=
+@[inline]
+public def forM [Monad m] (f : β → m PUnit) (self : RBArray α β cmp) : m PUnit :=
   self.toArray.forM f
 
-@[inline] public protected def forIn
-  [Monad m] (self : RBArray α β cmp) (init : σ) (f : β → σ → m (ForInStep σ))
-: m σ := ForIn.forIn self.toArray init f
+@[inline]
+public protected def forIn
+    [Monad m] (self : RBArray α β cmp) (init : σ) (f : β → σ → m (ForInStep σ))
+    : m σ :=
+  ForIn.forIn self.toArray init f
 
 instance [Monad m] : ForIn m (RBArray α β cmp) β := ⟨RBArray.forIn⟩
 
 end RBArray
 
-@[inline] public def mkRBArray  (f : β → α) (vs : Array β) : RBArray α β cmp :=
+@[inline]
+public def mkRBArray (f : β → α) (vs : Array β) : RBArray α β cmp :=
   vs.foldl (init := RBArray.mkEmpty vs.size) fun m v => m.insert (f v) v

@@ -31,16 +31,12 @@ instance Id.instWPConjunctive {α : Type u} (x : Id α) : WPConjunctive x where
 /-- An `Option` program is conjunctive: its `wp` is evaluation at the result. -/
 instance Option.instWPConjunctive {α : Type u} (x : Option α) : WPConjunctive x where
   wp_meet_wp_le Q₁ Q₂ E₁ E₂ := by
-    cases x <;>
-      simp only [meet_apply, WP.trans, pushOption] <;>
-      exact PartialOrder.rel_refl
+    cases x <;> simp only [meet_apply, WP.trans, pushOption] <;> exact PartialOrder.rel_refl
 
 /-- An `Except ε` program is conjunctive: its `wp` is evaluation at the result. -/
 instance Except.instWPConjunctive {ε α : Type u} (x : Except ε α) : WPConjunctive x where
   wp_meet_wp_le Q₁ Q₂ E₁ E₂ := by
-    cases x <;>
-      simp only [meet_apply, WP.trans, pushExcept] <;>
-      exact PartialOrder.rel_refl
+    cases x <;> simp only [meet_apply, WP.trans, pushExcept] <;> exact PartialOrder.rel_refl
 
 /-- An `EStateM` program is conjunctive: its `wp` is evaluation at the result. -/
 instance EStateM.instWPConjunctive {ε σ α : Type} (x : EStateM ε σ α) : WPConjunctive x where
@@ -50,9 +46,11 @@ instance EStateM.instWPConjunctive {ε σ α : Type} (x : EStateM ε σ α) : WP
     cases x s <;> first | exact PartialOrder.rel_refl | exact meet_le_left _ _
 
 /-- A `StateT` program lifts conjunctivity from its base monad. -/
-instance StateT.instWPConjunctive {m : Type u → Type v} {σ : Type u} {Pred : Type w} {EPosts : Type z}
-    {α : Type u} [Monad m] [Assertion Pred] [Assertion EPosts] [WPMonad m Pred EPosts]
-    (x : StateT σ m α) [base : ∀ s, WPConjunctive (x.run s)] : WPConjunctive x where
+instance StateT.instWPConjunctive
+    {m : Type u → Type v} {σ : Type u} {Pred : Type w} {EPosts : Type z} {α : Type u}
+    [Monad m] [Assertion Pred] [Assertion EPosts] [WPMonad m Pred EPosts]
+    (x : StateT σ m α) [base : ∀ s, WPConjunctive (x.run s)]
+    : WPConjunctive x where
   wp_meet_wp_le Q₁ Q₂ E₁ E₂ := by
     intro s
     simp only [WP.trans_apply_eq, meet_apply, StateT.wp_apply_eq]
@@ -64,45 +62,46 @@ instance StateT.instWPConjunctive {m : Type u → Type v} {σ : Type u} {Pred : 
     exact PartialOrder.rel_refl
 
 /-- A `ReaderT` program lifts conjunctivity from its base monad. -/
-instance ReaderT.instWPConjunctive {m : Type u → Type v} {ρ : Type u} {Pred : Type w} {EPosts : Type z}
-    {α : Type u} [Monad m] [Assertion Pred] [Assertion EPosts] [WPMonad m Pred EPosts]
-    (x : ReaderT ρ m α) [base : ∀ r, WPConjunctive (x.run r)] : WPConjunctive x where
+instance ReaderT.instWPConjunctive
+    {m : Type u → Type v} {ρ : Type u} {Pred : Type w} {EPosts : Type z} {α : Type u}
+    [Monad m] [Assertion Pred] [Assertion EPosts] [WPMonad m Pred EPosts]
+    (x : ReaderT ρ m α) [base : ∀ r, WPConjunctive (x.run r)]
+    : WPConjunctive x where
   wp_meet_wp_le Q₁ Q₂ E₁ E₂ := by
     intro r
     simp only [WP.trans_apply_eq, meet_apply, ReaderT.wp_apply_eq]
-    refine PartialOrder.rel_trans
-      ((base r).wp_meet_wp_le (fun a => Q₁ a r) (fun a => Q₂ a r) E₁ E₂)
+    refine PartialOrder.rel_trans ((base r).wp_meet_wp_le (fun a => Q₁ a r) (fun a => Q₂ a r) E₁ E₂)
       (WP.wp_monotone_post ?_)
     intro a
     simp only [meet_apply]
     exact PartialOrder.rel_refl
 
 /-- An `OptionT` program lifts conjunctivity from its base monad. -/
-instance OptionT.instWPConjunctive {m : Type u → Type v} {Pred : Type u} {EPosts : Type z}
-    {α : Type u} [Monad m] [Assertion Pred] [Assertion EPosts] [WPMonad m Pred EPosts]
-    (x : OptionT m α) [base : WPConjunctive x.run] : WPConjunctive x where
+instance OptionT.instWPConjunctive
+    {m : Type u → Type v} {Pred : Type u} {EPosts : Type z} {α : Type u}
+    [Monad m] [Assertion Pred] [Assertion EPosts] [WPMonad m Pred EPosts]
+    (x : OptionT m α) [base : WPConjunctive x.run]
+    : WPConjunctive x where
   wp_meet_wp_le Q₁ Q₂ E₁ E₂ := by
     simp only [WP.trans_apply_eq, OptionT.wp_apply_eq, Prod.snd_meet]
     refine PartialOrder.rel_trans
       (base.wp_meet_wp_le (pushOption Q₁ E₁.fst) (pushOption Q₂ E₂.fst) E₁.snd E₂.snd)
       (WP.wp_monotone_post ?_)
     intro o
-    cases o <;>
-      simp only [meet_apply, pushOption, Prod.fst_meet] <;>
-      exact PartialOrder.rel_refl
+    cases o <;> simp only [meet_apply, pushOption, Prod.fst_meet] <;> exact PartialOrder.rel_refl
 
 /-- An `ExceptT` program lifts conjunctivity from its base monad. -/
-instance ExceptT.instWPConjunctive {m : Type u → Type v} {ε α : Type u} {Pred : Type w}
-    {EPosts : Type z} [Monad m] [Assertion Pred] [Assertion EPosts] [WPMonad m Pred EPosts]
-    (x : ExceptT ε m α) [base : WPConjunctive x.run] : WPConjunctive x where
+instance ExceptT.instWPConjunctive
+    {m : Type u → Type v} {ε α : Type u} {Pred : Type w} {EPosts : Type z}
+    [Monad m] [Assertion Pred] [Assertion EPosts] [WPMonad m Pred EPosts]
+    (x : ExceptT ε m α) [base : WPConjunctive x.run]
+    : WPConjunctive x where
   wp_meet_wp_le Q₁ Q₂ E₁ E₂ := by
     simp only [WP.trans_apply_eq, ExceptT.wp_apply_eq, Prod.snd_meet]
     refine PartialOrder.rel_trans
       (base.wp_meet_wp_le (pushExcept Q₁ E₁.fst) (pushExcept Q₂ E₂.fst) E₁.snd E₂.snd)
       (WP.wp_monotone_post ?_)
     intro e
-    cases e <;>
-      simp only [meet_apply, pushExcept, Prod.fst_meet] <;>
-      exact PartialOrder.rel_refl
+    cases e <;> simp only [meet_apply, pushExcept, Prod.fst_meet] <;> exact PartialOrder.rel_refl
 
 end Std.WP

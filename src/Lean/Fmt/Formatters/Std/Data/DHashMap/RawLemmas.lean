@@ -22,5 +22,4 @@ public def fmtSimpToRaw : Fmt := fun
     let usingArg? ← fmt? usingArg?
     let «using» := Layouts.keywordPrefixedTerm usingTk? usingArg? .sticky
     return Layouts.blocks #[simpToRawTk, «using»]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

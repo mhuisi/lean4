@@ -70,17 +70,26 @@ structure View (size : Nat) where
 attribute [Std.Internal.tree_tac] Tree.balanced_impl Tree.size_impl
 
 /-- Returns the tree `l ++ ⟨k, v⟩ ++ r`, with the smallest element chopped off. -/
-def minView (k : α) (v : β k) (l r : Impl α β) (hl : l.Balanced) (hr : r.Balanced)
-    (hlr : BalancedAtRoot l.size r.size) : View α β (l.size + r.size) :=
+def minView
+    (k : α) (v : β k)
+    (l r : Impl α β) (hl : l.Balanced) (hr : r.Balanced) (hlr : BalancedAtRoot l.size r.size)
+    : View α β (l.size + r.size) :=
   match l with
   | leaf => ⟨k, v, ⟨r, hr, ✓⟩⟩
   | inner _ k' v' l' r' =>
     let ⟨dk, dv, ⟨dt, hdt, hdt'⟩⟩ := minView k' v' l' r' ✓ ✓ ✓
-    ⟨dk, dv, ⟨balanceRErase k v dt r ✓ ✓ (by
-      as_aux_lemma =>
-        exact hlr.erase_left
-          (by simp only [hdt', hl.eq, size_inner]; omega)
-          (by simp only [hdt', hl.eq, size_inner]; omega)), ✓, ✓⟩⟩
+    ⟨
+      dk,
+      dv,
+      ⟨
+        balanceRErase k v dt r ✓ ✓ (by
+          as_aux_lemma =>
+            exact hlr.erase_left (by simp only [hdt', hl.eq, size_inner]; omega)
+              (by simp only [hdt', hl.eq, size_inner]; omega)),
+        ✓,
+        ✓
+      ⟩
+    ⟩
 
 /--
 Slower version of `minView` which can be used in the absence of balance information but still
@@ -94,16 +103,26 @@ def minView! (k : α) (v : β k) (l r : Impl α β) : RawView α β :=
     ⟨d.k, d.v, balanceR! k v d.tree r⟩
 
 /-- Returns the tree `l ++ ⟨k, v⟩ ++ r`, with the largest element chopped off. -/
-def maxView (k : α) (v : β k) (l r : Impl α β) (hl : l.Balanced) (hr : r.Balanced)
-    (hlr : BalancedAtRoot l.size r.size) : View α β (l.size + r.size) :=
+def maxView
+    (k : α) (v : β k)
+    (l r : Impl α β) (hl : l.Balanced) (hr : r.Balanced) (hlr : BalancedAtRoot l.size r.size)
+    : View α β (l.size + r.size) :=
   match r with
   | leaf => ⟨k, v, ⟨l, hl, ✓⟩⟩
   | inner _ k' v' l' r' =>
     let ⟨dk, dv, ⟨dt, hdt, hdt'⟩⟩ := maxView k' v' l' r' ✓ ✓ ✓
-    ⟨dk, dv, ⟨balanceLErase k v l dt ✓ ✓ (by
-      as_aux_lemma =>
-        simp only [hdt', size_inner, hr.eq] at *
-        apply hlr.erase_right <;> omega), ✓, ✓⟩⟩
+    ⟨
+      dk,
+      dv,
+      ⟨
+        balanceLErase k v l dt ✓ ✓ (by
+          as_aux_lemma =>
+            simp only [hdt', size_inner, hr.eq] at *
+            apply hlr.erase_right <;> omega),
+        ✓,
+        ✓
+      ⟩
+    ⟩
 
 /--
 Slower version of `maxView` which can be used in the absence of balance information but still
@@ -122,8 +141,8 @@ def maxView! (k : α) (v : β k) (l r : Impl α β) : RawView α β :=
 
 /-- Constructs the tree `l ++ r`. -/
 @[inline]
-def glue (l r : Impl α β) (hl : l.Balanced) (hr : r.Balanced) (hlr : BalancedAtRoot l.size r.size) :
-    Impl α β :=
+def glue (l r : Impl α β) (hl : l.Balanced) (hr : r.Balanced) (hlr : BalancedAtRoot l.size r.size)
+    : Impl α β :=
   match l with
   | .leaf => r
   | .inner sz k v l' r' =>
@@ -132,16 +151,16 @@ def glue (l r : Impl α β) (hl : l.Balanced) (hr : r.Balanced) (hlr : BalancedA
     | .inner sz' k' v' l'' r'' =>
       if sz < sz' then
         let ⟨dk, dv, ⟨dt, hdt, hdt'⟩⟩ := minView k' v' l'' r'' ✓ ✓ ✓
-        balanceLErase dk dv (.inner sz k v l' r') dt hl ✓
-          (by as_aux_lemma =>
-                simp only [hdt', size_inner, hr.eq] at *
-                apply hlr.erase_right <;> omega)
+        balanceLErase dk dv (.inner sz k v l' r') dt hl ✓ (by
+          as_aux_lemma =>
+            simp only [hdt', size_inner, hr.eq] at *
+            apply hlr.erase_right <;> omega)
       else
         let ⟨dk, dv, ⟨dt, hdt, hdt'⟩⟩ := maxView k v l' r' ✓ ✓ ✓
-        balanceRErase dk dv dt (.inner sz' k' v' l'' r'') ✓ hr
-          (by as_aux_lemma =>
-                simp only [hdt', size_inner, hl.eq] at *
-                apply hlr.erase_left <;> omega)
+        balanceRErase dk dv dt (.inner sz' k' v' l'' r'') ✓ hr (by
+          as_aux_lemma =>
+            simp only [hdt', size_inner, hl.eq] at *
+            apply hlr.erase_left <;> omega)
 
 @[Std.Internal.tree_tac]
 theorem size_glue {l r : Impl α β} {hl hr hlr} : (glue l r hl hr hlr).size = l.size + r.size := by
@@ -215,8 +234,8 @@ def insertMax! (k : α) (v : β k) (t : Impl α β) : Impl α β :=
 attribute [Std.Internal.tree_tac] and_true true_and
 
 /-- Builds the tree `l ++ ⟨k, v⟩ ++ r` without any balancing information at the root. -/
-def link (k : α) (v : β k) (l r : Impl α β) (hl : l.Balanced) (hr : r.Balanced) :
-    Tree α β (l.size + 1 + r.size) :=
+def link (k : α) (v : β k) (l r : Impl α β) (hl : l.Balanced) (hr : r.Balanced)
+    : Tree α β (l.size + 1 + r.size) :=
   match l with
   | leaf =>
     let d := insertMin k v r ✓
@@ -234,8 +253,7 @@ def link (k : α) (v : β k) (l r : Impl α β) (hl : l.Balanced) (hr : r.Balanc
         let ⟨ℓ, hℓ₁, hℓ₂⟩ := link k v r' (inner szr k'' v'' l'' r'') ✓ ✓
         ⟨balanceRErase k' v' l' ℓ ✓ ✓ ✓, ✓, ✓⟩
       else
-        ⟨.inner (szl + 1 + szr) k v (inner szl k' v' l' r') (inner szr k'' v'' l'' r''),
-          ✓, ✓⟩
+        ⟨.inner (szl + 1 + szr) k v (inner szl k' v' l' r') (inner szr k'' v'' l'' r''), ✓, ✓⟩
 termination_by sizeOf l + sizeOf r
 
 /--
@@ -258,8 +276,7 @@ def link! (k : α) (v : β k) (l r : Impl α β) : Impl α β :=
 termination_by sizeOf l + sizeOf r
 
 /-- Builds the tree `l ++ r` without any balancing information at the root. -/
-def link2 (l r : Impl α β) (hl : l.Balanced) (hr : r.Balanced) :
-    Tree α β (l.size + r.size) :=
+def link2 (l r : Impl α β) (hl : l.Balanced) (hr : r.Balanced) : Tree α β (l.size + r.size) :=
   match hl' : l with
   | leaf => ⟨r, ✓, ✓⟩
   | (inner szl k' v' l' r') =>
@@ -276,7 +293,8 @@ def link2 (l r : Impl α β) (hl : l.Balanced) (hr : r.Balanced) :
         ⟨glue l r ✓ ✓ ✓, ✓, ✓⟩
 termination_by sizeOf l + sizeOf r
 
-/-- Slower version of `link2` which can be used in the absence of balance information but
+/--
+Slower version of `link2` which can be used in the absence of balance information but
 still assumes the preconditions of `link2`, otherwise might panic.
 -/
 def link2! (l r : Impl α β) : Impl α β :=
@@ -289,7 +307,7 @@ def link2! (l r : Impl α β) : Impl α β :=
       if delta * szl < szr then
         balanceL! k'' v'' (link2! l l'') r''
       else if delta * szr < szl then
-        balanceR! k' v' l' (link2! r' r )
+        balanceR! k' v' l' (link2! r' r)
       else
         glue! l r
 termination_by sizeOf l + sizeOf r
@@ -313,29 +331,25 @@ structure SizedBalancedTree (lb ub : Nat) where
 attribute [Std.Internal.tree_tac] SizedBalancedTree.balanced_impl
 
 /-- An empty tree. -/
-@[inline]
-def empty : Impl α β :=
-  .leaf
+@[inline] def empty : Impl α β := .leaf
 
-@[Std.Internal.tree_tac]
-theorem balanced_empty : (empty : Impl α β).Balanced :=
-  .leaf
+@[Std.Internal.tree_tac] theorem balanced_empty : (empty : Impl α β).Balanced := .leaf
 
 attribute [Std.Internal.tree_tac] or_true true_or
 
 /-- Adds a new mapping to the key, overwriting an existing one with equal key if present. -/
-def insert [Ord α] (k : α) (v : β k) (t : Impl α β) (hl : t.Balanced) :
-    SizedBalancedTree α β t.size (t.size + 1) :=
+def insert [Ord α] (k : α) (v : β k) (t : Impl α β) (hl : t.Balanced)
+    : SizedBalancedTree α β t.size (t.size + 1) :=
   match t with
   | leaf => ⟨.inner 1 k v .leaf .leaf, ✓, ✓, ✓⟩
   | inner sz k' v' l' r' =>
     match compare k k' with
     | .lt =>
-        let ⟨d, hd, hd₁, hd₂⟩ := insert k v l' ✓
-        ⟨balanceL k' v' d r' ✓ ✓ ✓, ✓, ✓, ✓⟩
+      let ⟨d, hd, hd₁, hd₂⟩ := insert k v l' ✓
+      ⟨balanceL k' v' d r' ✓ ✓ ✓, ✓, ✓, ✓⟩
     | .gt =>
-        let ⟨d, hd, hd₁, hd₂⟩ := insert k v r' ✓
-        ⟨balanceR k' v' l' d ✓ ✓ ✓, ✓, ✓, ✓⟩
+      let ⟨d, hd, hd₁, hd₂⟩ := insert k v r' ✓
+      ⟨balanceR k' v' l' d ✓ ✓ ✓, ✓, ✓, ✓⟩
     | .eq => ⟨.inner sz k v l' r', ✓, ✓, ✓⟩
 
 /--
@@ -353,35 +367,34 @@ def insert! [Ord α] (k : α) (v : β k) (t : Impl α β) : Impl α β :=
 
 /-- Returns the pair `(t.contains k, t.insert k v)`. -/
 @[inline]
-def containsThenInsert [Ord α] (k : α) (v : β k) (t : Impl α β) (hl : t.Balanced) :
-    Bool × SizedBalancedTree α β t.size (t.size + 1) :=
+def containsThenInsert [Ord α] (k : α) (v : β k) (t : Impl α β) (hl : t.Balanced)
+    : Bool × SizedBalancedTree α β t.size (t.size + 1) :=
   let sz := size t
   let m := t.insert k v hl
   (sz == m.1.size, m)
 where -- workaround for https://github.com/leanprover/lean4/issues/6058
   size : Impl α β → Nat
-  | leaf => 0
-  | inner sz _ _ _ _ => sz
+    | leaf => 0
+    | inner sz _ _ _ _ => sz
 
 /--
 Slower version of `containsThenInsert` which can be used in the absence of balance
 information but still assumes the preconditions of `containsThenInsert`, otherwise might panic.
 -/
 @[inline]
-def containsThenInsert! [Ord α] (k : α) (v : β k) (t : Impl α β) :
-    Bool × Impl α β :=
+def containsThenInsert! [Ord α] (k : α) (v : β k) (t : Impl α β) : Bool × Impl α β :=
   let sz := size t
   let m := t.insert! k v
   (sz == m.size, m)
 where -- workaround for https://github.com/leanprover/lean4/issues/6058
   size : Impl α β → Nat
-  | leaf => 0
-  | inner sz _ _ _ _ => sz
+    | leaf => 0
+    | inner sz _ _ _ _ => sz
 
 /-- Adds a new mapping to the tree, leaving the tree unchanged if the key is already present. -/
 @[inline]
-def insertIfNew [Ord α] (k : α) (v : β k) (t : Impl α β) (hl : t.Balanced) :
-    SizedBalancedTree α β t.size (t.size + 1) :=
+def insertIfNew [Ord α] (k : α) (v : β k) (t : Impl α β) (hl : t.Balanced)
+    : SizedBalancedTree α β t.size (t.size + 1) :=
   if t.contains k then ⟨t, ✓, ✓, ✓⟩ else t.insert k v ✓
 
 /--
@@ -389,14 +402,13 @@ Slower version of `insertIfNew` which can be used in the absence of balance
 information but still assumes the preconditions of `insertIfNew`, otherwise might panic.
 -/
 @[inline]
-def insertIfNew! [Ord α] (k : α) (v : β k) (t : Impl α β) :
-    Impl α β :=
+def insertIfNew! [Ord α] (k : α) (v : β k) (t : Impl α β) : Impl α β :=
   if t.contains k then t else t.insert! k v
 
 /-- Returns the pair `(t.contains k, t.insertIfNew k v)`. -/
 @[inline]
-def containsThenInsertIfNew [Ord α] (k : α) (v : β k) (t : Impl α β) (hl : t.Balanced) :
-    Bool × SizedBalancedTree α β t.size (t.size + 1) :=
+def containsThenInsertIfNew [Ord α] (k : α) (v : β k) (t : Impl α β) (hl : t.Balanced)
+    : Bool × SizedBalancedTree α β t.size (t.size + 1) :=
   if t.contains k then (true, ⟨t, ✓, ✓, ✓⟩) else (false, t.insert k v ✓)
 
 /--
@@ -404,14 +416,13 @@ Slower version of `containsThenInsertIfNew` which can be used in the absence of 
 information but still assumes the preconditions of `containsThenInsertIfNew`, otherwise might panic.
 -/
 @[inline]
-def containsThenInsertIfNew! [Ord α] (k : α) (v : β k) (t : Impl α β) :
-    Bool × Impl α β :=
+def containsThenInsertIfNew! [Ord α] (k : α) (v : β k) (t : Impl α β) : Bool × Impl α β :=
   if t.contains k then (true, t) else (false, t.insert! k v)
 
 /-- Implementation detail of the tree map -/
 @[inline]
-def getThenInsertIfNew? [Ord α] [LawfulEqOrd α] (t : Impl α β) (k : α) (v : β k) (ht : t.Balanced) :
-    Option (β k) × Impl α β :=
+def getThenInsertIfNew? [Ord α] [LawfulEqOrd α] (t : Impl α β) (k : α) (v : β k) (ht : t.Balanced)
+    : Option (β k) × Impl α β :=
   match t.get? k with
   | none => (none, t.insertIfNew k v ht |>.impl)
   | some b => (some b, t)
@@ -421,15 +432,15 @@ Slower version of `getThenInsertIfNew?` which can be used in the absence of bala
 information but still assumes the preconditions of `getThenInsertIfNew?`, otherwise might panic.
 -/
 @[inline]
-def getThenInsertIfNew?! [Ord α] [LawfulEqOrd α] (t : Impl α β) (k : α) (v : β k) :
-    Option (β k) × Impl α β :=
+def getThenInsertIfNew?! [Ord α] [LawfulEqOrd α] (t : Impl α β) (k : α) (v : β k)
+    : Option (β k) × Impl α β :=
   match t.get? k with
   | none => (none, t.insertIfNew! k v)
   | some b => (some b, t)
 
 /-- Removes the mapping with key `k`, if it exists. -/
-def erase [Ord α] (k : α) (t : Impl α β) (h : t.Balanced) :
-    SizedBalancedTree α β (t.size - 1) t.size :=
+def erase [Ord α] (k : α) (t : Impl α β) (h : t.Balanced)
+    : SizedBalancedTree α β (t.size - 1) t.size :=
   match t with
   | leaf => ⟨.leaf, ✓, ✓, ✓⟩
   | inner sz k' v' l r =>
@@ -457,12 +468,12 @@ def erase! [Ord α] (k : α) (t : Impl α β) : Impl α β :=
 
 /-- A tree map obtained by erasing elements from `t`, bundled with an inductive principle. -/
 abbrev IteratedErasureFrom [Ord α] (t) :=
-  { t' // ∀ {P : Impl α β → Prop}, P t → (∀ t'' a h, P t'' → P (t''.erase a h).impl) → P t' }
+  {t' // ∀ {P : Impl α β → Prop}, P t → (∀ t'' a h, P t'' → P (t''.erase a h).impl) → P t'}
 
 /-- Iterate over `l` and erase all of its elements from `t`. -/
 @[inline]
-def eraseMany [Ord α] {ρ : Type w} [ForIn Id ρ α] (t : Impl α β) (l : ρ) (h : t.Balanced) :
-    IteratedErasureFrom t := Id.run do
+def eraseMany [Ord α] {ρ : Type w} [ForIn Id ρ α] (t : Impl α β) (l : ρ) (h : t.Balanced)
+    : IteratedErasureFrom t := Id.run do
   let mut r := ⟨t, fun h _ => h⟩
   for a in l do
     let hr := r.2 h (fun t'' a h _ => (t''.erase a h).balanced_impl)
@@ -471,15 +482,15 @@ def eraseMany [Ord α] {ρ : Type w} [ForIn Id ρ α] (t : Impl α β) (l : ρ) 
 
 /-- A tree map obtained by erasing elements from `t`, bundled with an inductive principle. -/
 abbrev IteratedSlowErasureFrom [Ord α] (t) :=
-  { t' // ∀ {P : Impl α β → Prop}, P t → (∀ t'' a, P t'' → P (t''.erase! a)) → P t' }
+  {t' // ∀ {P : Impl α β → Prop}, P t → (∀ t'' a, P t'' → P (t''.erase! a)) → P t'}
 
 /--
 Slower version of `eraseMany` which can be used in absence of balance information but still
 assumes the preconditions of `eraseMany`, otherwise might panic.
 -/
 @[inline]
-def eraseMany! [Ord α] {ρ : Type w} [ForIn Id ρ α] (t : Impl α β) (l : ρ) :
-    IteratedSlowErasureFrom t := Id.run do
+def eraseMany! [Ord α] {ρ : Type w} [ForIn Id ρ α] (t : Impl α β) (l : ρ)
+    : IteratedSlowErasureFrom t := Id.run do
   let mut r := ⟨t, fun h _ => h⟩
   for a in l do
     r := ⟨r.val.erase! a, fun h₀ h₁ => h₁ _ _ (r.2 h₀ h₁)⟩
@@ -487,12 +498,13 @@ def eraseMany! [Ord α] {ρ : Type w} [ForIn Id ρ α] (t : Impl α β) (l : ρ)
 
 /-- A tree map obtained by erasing elements from `t`, bundled with an inductive principle. -/
 abbrev IteratedEntryErasureFrom [Ord α] (t) :=
-  { t' // ∀ {P : Impl α β → Prop}, P t → (∀ t'' a h, P t'' → P (t''.erase a h).impl) → P t' }
+  {t' // ∀ {P : Impl α β → Prop}, P t → (∀ t'' a h, P t'' → P (t''.erase a h).impl) → P t'}
 
 /-- Iterate over `l` and erase all of its elements from `t`. -/
 @[inline]
-def eraseManyEntries [Ord α] {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] (t : Impl α β) (l : ρ) (h : t.Balanced) :
-    IteratedEntryErasureFrom t := Id.run do
+def eraseManyEntries
+    [Ord α] {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] (t : Impl α β) (l : ρ) (h : t.Balanced)
+    : IteratedEntryErasureFrom t := Id.run do
   let mut r := ⟨t, fun h _ => h⟩
   for ⟨a, _⟩ in l do
     let hr := r.2 h (fun t'' a h _ => (t''.erase a h).balanced_impl)
@@ -501,15 +513,15 @@ def eraseManyEntries [Ord α] {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] (t 
 
 /-- A tree map obtained by erasing elements from `t`, bundled with an inductive principle. -/
 abbrev IteratedSlowEntryErasureFrom [Ord α] (t) :=
-  { t' // ∀ {P : Impl α β → Prop}, P t → (∀ t'' a, P t'' → P (t''.erase! a)) → P t' }
+  {t' // ∀ {P : Impl α β → Prop}, P t → (∀ t'' a, P t'' → P (t''.erase! a)) → P t'}
 
 /--
 Slower version of `eraseManyEntries` which can be used in absence of balance information but still
 assumes the preconditions of `eraseManyEntries`, otherwise might panic.
 -/
 @[inline]
-def eraseManyEntries! [Ord α] {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] (t : Impl α β) (l : ρ) :
-    IteratedSlowErasureFrom t := Id.run do
+def eraseManyEntries! [Ord α] {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] (t : Impl α β) (l : ρ)
+    : IteratedSlowErasureFrom t := Id.run do
   let mut r := ⟨t, fun h _ => h⟩
   for ⟨a, _⟩ in l do
     r := ⟨r.val.erase! a, fun h₀ h₁ => h₁ _ _ (r.2 h₀ h₁)⟩
@@ -517,16 +529,20 @@ def eraseManyEntries! [Ord α] {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] (t
 
 /-- A tree map obtained by inserting elements into `t`, bundled with an inductive principle. -/
 abbrev IteratedInsertionInto [Ord α] (t) :=
-  { t' // ∀ {P : Impl α β → Prop}, P t → (∀ t'' a b h, P t'' → P (t''.insert a b h).impl) → P t' }
+  {t' // ∀ {P : Impl α β → Prop}, P t → (∀ t'' a b h, P t'' → P (t''.insert a b h).impl) → P t'}
 
-/-- A tree map obtained by inserting elements into `t` if they are new, bundled with an inductive principle. -/
+/--
+A tree map obtained by inserting elements into `t` if they are new, bundled with an inductive principle.
+-/
 abbrev IteratedNewInsertionInto [Ord α] (t) :=
-  { t' // ∀ {P : Impl α β → Prop}, P t → (∀ t'' a b h, P t'' → P (t''.insertIfNew a b h).impl) → P t' }
+  {t'
+    // ∀ {P : Impl α β → Prop}, P t → (∀ t'' a b h, P t'' → P (t''.insertIfNew a b h).impl) → P t'}
 
 /-- Iterate over `l` and insert all of its elements into `t`. -/
 @[inline]
-def insertMany [Ord α] {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] (t : Impl α β) (l : ρ) (h : t.Balanced) :
-    IteratedInsertionInto t := Id.run do
+def insertMany
+    [Ord α] {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] (t : Impl α β) (l : ρ) (h : t.Balanced)
+    : IteratedInsertionInto t := Id.run do
   let mut r := ⟨t, fun h _ => h⟩
   for ⟨a, b⟩ in l do
     let hr := r.2 h (fun t'' a b h _ => (t''.insert a b h).balanced_impl)
@@ -535,8 +551,9 @@ def insertMany [Ord α] {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] (t : Impl
 
 /-- Iterate over `l` and insert all of its elements into `t` if they are new. -/
 @[inline]
-def insertManyIfNew [Ord α] {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] (t : Impl α β) (l : ρ) (h : t.Balanced) :
-    IteratedNewInsertionInto t := Id.run do
+def insertManyIfNew
+    [Ord α] {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] (t : Impl α β) (l : ρ) (h : t.Balanced)
+    : IteratedNewInsertionInto t := Id.run do
   let mut r := ⟨t, fun h _ => h⟩
   for ⟨a, b⟩ in l do
     let hr := r.2 h (fun t'' a b h _ => (t''.insertIfNew a b h).balanced_impl)
@@ -545,11 +562,13 @@ def insertManyIfNew [Ord α] {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] (t :
 
 /-- A tree map obtained by inserting elements into `t`, bundled with an inductive principle. -/
 abbrev IteratedSlowInsertionInto [Ord α] (t) :=
-  { t' // ∀ {P : Impl α β → Prop}, P t → (∀ t'' a b, P t'' → P (t''.insert! a b)) → P t' }
+  {t' // ∀ {P : Impl α β → Prop}, P t → (∀ t'' a b, P t'' → P (t''.insert! a b)) → P t'}
 
-/-- A tree map obtained by inserting elements into `t` if they are new, bundled with an inductive principle. -/
+/--
+A tree map obtained by inserting elements into `t` if they are new, bundled with an inductive principle.
+-/
 abbrev IteratedSlowNewInsertionInto [Ord α] (t) :=
-  { t' // ∀ {P : Impl α β → Prop}, P t → (∀ t'' a b, P t'' → P (t''.insertIfNew! a b)) → P t' }
+  {t' // ∀ {P : Impl α β → Prop}, P t → (∀ t'' a b, P t'' → P (t''.insertIfNew! a b)) → P t'}
 
 /--
 Computes the union of the given tree maps. If a key appears in both maps, the entry contained in the second argument will appear in the result.
@@ -564,8 +583,8 @@ Slower version of `insertMany` which can be used in absence of balance informati
 assumes the preconditions of `insertMany`, otherwise might panic.
 -/
 @[inline]
-def insertMany! [Ord α] {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] (t : Impl α β) (l : ρ) :
-    IteratedSlowInsertionInto t := Id.run do
+def insertMany! [Ord α] {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] (t : Impl α β) (l : ρ)
+    : IteratedSlowInsertionInto t := Id.run do
   let mut r := ⟨t, fun h _ => h⟩
   for ⟨a, b⟩ in l do
     r := ⟨r.val.insert! a b, fun h₀ h₁ => h₁ _ _ _ (r.2 h₀ h₁)⟩
@@ -576,8 +595,8 @@ Slower version of `insertManyIfNew` which can be used in absence of balance info
 assumes the preconditions of `insertManyIfNew`, otherwise might panic.
 -/
 @[inline]
-def insertManyIfNew! [Ord α] {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] (t : Impl α β) (l : ρ) :
-    IteratedSlowNewInsertionInto t := Id.run do
+def insertManyIfNew! [Ord α] {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] (t : Impl α β) (l : ρ)
+    : IteratedSlowNewInsertionInto t := Id.run do
   let mut r := ⟨t, fun h _ => h⟩
   for ⟨a, b⟩ in l do
     r := ⟨r.val.insertIfNew! a b, fun h₀ h₁ => h₁ _ _ _ (r.2 h₀ h₁)⟩
@@ -595,12 +614,14 @@ variable {β : Type v}
 
 /-- A tree map obtained by inserting elements into `t`, bundled with an inductive principle. -/
 abbrev IteratedInsertionInto [Ord α] (t) :=
-  { t' // ∀ {P : Impl α (fun _ => β) → Prop}, P t → (∀ t'' a b h, P t'' → P (t''.insert a b h).impl) → P t' }
+  {t' // ∀ {P : Impl α (fun _ => β) → Prop},
+    P t → (∀ t'' a b h, P t'' → P (t''.insert a b h).impl) → P t'}
 
 /-- Iterate over `l` and insert all of its elements into `t`. -/
 @[inline]
-def insertMany [Ord α] {ρ : Type w} [ForIn Id ρ (α × β)] (t : Impl α (fun _ => β)) (l : ρ) (h : t.Balanced) :
-    IteratedInsertionInto t := Id.run do
+def insertMany
+    [Ord α] {ρ : Type w} [ForIn Id ρ (α × β)] (t : Impl α (fun _ => β)) (l : ρ) (h : t.Balanced)
+    : IteratedInsertionInto t := Id.run do
   let mut r := ⟨t, fun h _ => h⟩
   for ⟨a, b⟩ in l do
     let hr := r.2 h (fun t'' a b h _ => (t''.insert a b h).balanced_impl)
@@ -609,15 +630,15 @@ def insertMany [Ord α] {ρ : Type w} [ForIn Id ρ (α × β)] (t : Impl α (fun
 
 /-- A tree map obtained by inserting elements into `t`, bundled with an inductive principle. -/
 abbrev IteratedSlowInsertionInto [Ord α] (t) :=
-  { t' // ∀ {P : Impl α (fun _ => β) → Prop}, P t → (∀ t'' a b, P t'' → P (t''.insert! a b)) → P t' }
+  {t' // ∀ {P : Impl α (fun _ => β) → Prop}, P t → (∀ t'' a b, P t'' → P (t''.insert! a b)) → P t'}
 
 /--
 Slower version of `insertMany` which can be used in absence of balance information but still
 assumes the preconditions of `insertMany`, otherwise might panic.
 -/
 @[inline]
-def insertMany! [Ord α] {ρ : Type w} [ForIn Id ρ (α × β)] (t : Impl α (fun _ => β)) (l : ρ) :
-    IteratedSlowInsertionInto t := Id.run do
+def insertMany! [Ord α] {ρ : Type w} [ForIn Id ρ (α × β)] (t : Impl α (fun _ => β)) (l : ρ)
+    : IteratedSlowInsertionInto t := Id.run do
   let mut r := ⟨t, fun h _ => h⟩
   for ⟨a, b⟩ in l do
     r := ⟨r.val.insert! a b, fun h₀ h₁ => h₁ _ _ _ (r.2 h₀ h₁)⟩
@@ -625,13 +646,14 @@ def insertMany! [Ord α] {ρ : Type w} [ForIn Id ρ (α × β)] (t : Impl α (fu
 
 /-- A tree map obtained by inserting elements into `t`, bundled with an inductive principle. -/
 abbrev IteratedUnitInsertionInto [Ord α] (t) :=
-  { t' // ∀ {P : Impl α (fun _ => Unit) → Prop}, P t →
-    (∀ t'' a h, P t'' → P (t''.insertIfNew a () h).impl) → P t' }
+  {t' // ∀ {P : Impl α (fun _ => Unit) → Prop},
+    P t → (∀ t'' a h, P t'' → P (t''.insertIfNew a () h).impl) → P t'}
 
 /-- Iterate over `l` and insert all of its elements into `t`. -/
 @[inline]
-def insertManyIfNewUnit [Ord α] {ρ : Type w} [ForIn Id ρ α] (t : Impl α (fun _ => Unit)) (l : ρ) (h : t.Balanced) :
-    IteratedUnitInsertionInto t := Id.run do
+def insertManyIfNewUnit
+    [Ord α] {ρ : Type w} [ForIn Id ρ α] (t : Impl α (fun _ => Unit)) (l : ρ) (h : t.Balanced)
+    : IteratedUnitInsertionInto t := Id.run do
   let mut r := ⟨t, fun h _ => h⟩
   for a in l do
     let hr := r.2 h (fun t'' a h _ => (t''.insertIfNew a () h).balanced_impl)
@@ -640,16 +662,16 @@ def insertManyIfNewUnit [Ord α] {ρ : Type w} [ForIn Id ρ α] (t : Impl α (fu
 
 /-- A tree map obtained by inserting elements into `t`, bundled with an inductive principle. -/
 abbrev IteratedSlowUnitInsertionInto [Ord α] (t) :=
-  { t' // ∀ {P : Impl α (fun _ => Unit) → Prop}, P t →
-    (∀ t'' a, P t'' → P (t''.insertIfNew! a ())) → P t' }
+  {t' // ∀ {P : Impl α (fun _ => Unit) → Prop},
+    P t → (∀ t'' a, P t'' → P (t''.insertIfNew! a ())) → P t'}
 
 /--
 Slower version of `insertManyIfNewUnit` which can be used in absence of balance information but still
 assumes the preconditions of `insertManyIfNewUnit`, otherwise might panic.
 -/
 @[inline]
-def insertManyIfNewUnit! [Ord α] {ρ : Type w} [ForIn Id ρ α] (t : Impl α (fun _ => Unit)) (l : ρ) :
-    IteratedSlowUnitInsertionInto t := Id.run do
+def insertManyIfNewUnit! [Ord α] {ρ : Type w} [ForIn Id ρ α] (t : Impl α (fun _ => Unit)) (l : ρ)
+    : IteratedSlowUnitInsertionInto t := Id.run do
   let mut r := ⟨t, fun h _ => h⟩
   for a in l do
     r := ⟨r.val.insertIfNew! a (), fun h₀ h₁ => h₁ _ _ (r.2 h₀ h₁)⟩
@@ -679,8 +701,7 @@ def ofArray [Ord α] (a : Array ((a : α) × β a)) : Impl α β :=
 
 /-- Transforms a list of mappings into a tree map. -/
 @[inline]
-def ofList [Ord α] (l : List ((a : α) × β a)) : Impl α β :=
-  empty.insertMany l balanced_empty |>.val
+def ofList [Ord α] (l : List ((a : α) × β a)) : Impl α β := empty.insertMany l balanced_empty |>.val
 
 namespace Const
 
@@ -688,8 +709,8 @@ variable {β : Type v}
 
 /-- Implementation detail of the tree map -/
 @[inline]
-def getThenInsertIfNew? [Ord α] (t : Impl α (fun _ => β)) (k : α) (v : β)
-    (ht : t.Balanced) : Option β × Impl α (fun _ => β) :=
+def getThenInsertIfNew? [Ord α] (t : Impl α (fun _ => β)) (k : α) (v : β) (ht : t.Balanced)
+    : Option β × Impl α (fun _ => β) :=
   match get? t k with
   | none => (none, t.insertIfNew k v ht |>.impl)
   | some b => (some b, t)
@@ -706,19 +727,23 @@ def getThenInsertIfNew?! [Ord α] (t : Impl α (fun _ => β)) (k : α) (v : β)
   | some b => (some b, t)
 
 /-- Transforms a list of mappings into a tree map. -/
-@[inline] def ofArray [Ord α] (a : Array (α × β)) :  Impl α (fun _ => β) :=
+@[inline]
+def ofArray [Ord α] (a : Array (α × β)) : Impl α (fun _ => β) :=
   insertMany empty a balanced_empty |>.val
 
 /-- Transforms an array of mappings into a tree map. -/
-@[inline] def ofList [Ord α] (l : List (α × β)) : Impl α (fun _ => β) :=
+@[inline]
+def ofList [Ord α] (l : List (α × β)) : Impl α (fun _ => β) :=
   insertMany empty l balanced_empty |>.val
 
 /-- Transforms a list of mappings into a tree map. -/
-@[inline] def unitOfArray [Ord α] (a : Array α) :  Impl α (fun _ => Unit) :=
+@[inline]
+def unitOfArray [Ord α] (a : Array α) : Impl α (fun _ => Unit) :=
   insertManyIfNewUnit empty a balanced_empty |>.val
 
 /-- Transforms an array of mappings into a tree map. -/
-@[inline] def unitOfList [Ord α] (l : List α) : Impl α (fun _ => Unit) :=
+@[inline]
+def unitOfList [Ord α] (l : List α) : Impl α (fun _ => Unit) :=
   insertManyIfNewUnit empty l balanced_empty |>.val
 
 end Const
@@ -728,8 +753,8 @@ Returns the tree consisting of the mappings `(k, (f k v).get)` where `(k, v)` wa
 the original tree and `(f k v).isSome`.
 -/
 @[specialize]
-def filterMap [Ord α] (f : (a : α) → β a → Option (γ a)) (t : Impl α β) (hl : t.Balanced) :
-    BalancedTree α γ :=
+def filterMap [Ord α] (f : (a : α) → β a → Option (γ a)) (t : Impl α β) (hl : t.Balanced)
+    : BalancedTree α γ :=
   match t with
   | .leaf => ⟨.leaf, ✓⟩
   | .inner sz k v l r =>
@@ -766,12 +791,12 @@ def map [Ord α] (f : (a : α) → β a → γ a) (t : Impl α β) : Impl α γ 
   | .leaf => .leaf
   | .inner sz k v l r => .inner sz k (f k v) (map f l) (map f r)
 
-/--
-Monadic version of `map`.
--/
+/-- Monadic version of `map`. -/
 @[specialize]
-def mapM {α : Type v} {β γ : α → Type v} {M : Type v → Type w} [Applicative M]
-    (f : (a : α) → β a → M (γ a)) : Impl α β → M (Impl α γ)
+def mapM
+    {α : Type v} {β γ : α → Type v} {M : Type v → Type w} [Applicative M]
+    (f : (a : α) → β a → M (γ a))
+    : Impl α β → M (Impl α γ)
   | leaf => pure leaf
   | inner sz k v l r => pure (.inner sz k) <*> f k v <*> l.mapM f <*> r.mapM f
 
@@ -788,7 +813,7 @@ def filter [Ord α] (f : (a : α) → β a → Bool) (t : Impl α β) (hl : Bala
     | false =>
       let ⟨l', hl'⟩ := filter f l ✓
       let ⟨r', hr'⟩ := filter f r ✓
-      ⟨(link2 l' r'  ✓ ✓).impl, ✓⟩
+      ⟨(link2 l' r' ✓ ✓).impl, ✓⟩
     | true =>
       let ⟨l', hl'⟩ := filter f l ✓
       let ⟨r', hr'⟩ := filter f r ✓
@@ -809,7 +834,8 @@ def filter! [Ord α] (f : (a : α) → β a → Bool) (t : Impl α β) : Impl α
 
 /-- Internal implementation detail of the tree map -/
 @[inline]
-def interSmallerFn [Ord α] (m : Impl α β) (sofar : { t : Impl α β // t.Balanced } ) (k : α) : { res : Impl α β // res.Balanced } :=
+def interSmallerFn [Ord α] (m : Impl α β) (sofar : {t : Impl α β // t.Balanced}) (k : α)
+    : {res : Impl α β // res.Balanced} :=
   match m.getEntry? k with
   | some kv' => let ⟨val, prop, _, _⟩ := (sofar.val.insert kv'.1 kv'.2 sofar.2); ⟨val, prop⟩
   | none => sofar
@@ -822,9 +848,11 @@ def interSmaller [Ord α] (m₁ : Impl α β) (m₂ : Impl α β) : Impl α β :
 def inter [Ord α] (m₁ m₂ : Impl α β) (h₁ : Balanced m₁) : Impl α β :=
   if m₁.size ≤ m₂.size then (m₁.filter (fun k _ => m₂.contains k) h₁).impl else interSmaller m₁ m₂
 
-/-- Slower version of `inter!` which can be used in the absence of balance
-information but still assumes the preconditions of `filter`, otherwise might panic. -/
-def inter! [Ord α] (m₁ m₂ : Impl α β): Impl α β :=
+/--
+Slower version of `inter!` which can be used in the absence of balance
+information but still assumes the preconditions of `filter`, otherwise might panic.
+-/
+def inter! [Ord α] (m₁ m₂ : Impl α β) : Impl α β :=
   if m₁.size ≤ m₂.size then m₁.filter! (fun k _ => m₂.contains k) else interSmaller m₁ m₂
 
 /-- Internal implementation detail of the tree map -/
@@ -836,14 +864,17 @@ Computes the difference of the given tree maps.
 This function always iterates through the smaller map.
 -/
 def diff [Ord α] (t₁ t₂ : Impl α β) (h₁ : t₁.Balanced) : Impl α β :=
-  if t₁.size ≤ t₂.size then (t₁.filter (fun p _ => !t₂.contains p) h₁).impl else (t₁.eraseManyEntries t₂ h₁)
+  if t₁.size ≤ t₂.size then
+    (t₁.filter (fun p _ => ! t₂.contains p) h₁).impl
+  else
+    (t₁.eraseManyEntries t₂ h₁)
 
 /--
 Slower version of `diff` which can be used in the absence of balance
 information but still assumes the preconditions of `diff`, otherwise might panic.
 -/
 def diff! [Ord α] (t₁ t₂ : Impl α β) : Impl α β :=
-  if t₁.size ≤ t₂.size then t₁.filter! (fun p _ => !t₂.contains p) else t₁.eraseManyEntries! t₂
+  if t₁.size ≤ t₂.size then t₁.filter! (fun p _ => ! t₂.contains p) else t₁.eraseManyEntries! t₂
 
 /--
 Changes the mapping of the key `k` by applying the function `f` to the current mapped value
@@ -852,8 +883,11 @@ This version of the function requires `LawfulEqOrd α`. There is an alternative 
 called `Const.alter`.
 -/
 @[specialize]
-def alter [Ord α] [LawfulEqOrd α] (k : α) (f : Option (β k) → Option (β k)) (t : Impl α β)
-    (hl : t.Balanced) : SizedBalancedTree α β (t.size - 1) (t.size + 1) :=
+def alter
+    [Ord α] [LawfulEqOrd α]
+    (k : α) (f : Option (β k) → Option (β k))
+    (t : Impl α β) (hl : t.Balanced)
+    : SizedBalancedTree α β (t.size - 1) (t.size + 1) :=
   match t with
   | .leaf =>
     match f none with
@@ -877,8 +911,8 @@ Slower version of `modify` which can be used in the absence of balance
 information but still assumes the preconditions of `modify`, otherwise might panic.
 -/
 @[specialize]
-def alter! [Ord α] [LawfulEqOrd α] (k : α) (f : Option (β k) → Option (β k)) (t : Impl α β) :
-    Impl α β :=
+def alter! [Ord α] [LawfulEqOrd α] (k : α) (f : Option (β k) → Option (β k)) (t : Impl α β)
+    : Impl α β :=
   match t with
   | .leaf =>
     match f none with
@@ -895,8 +929,7 @@ def alter! [Ord α] [LawfulEqOrd α] (k : α) (f : Option (β k) → Option (β 
 
 /-- Internal implementation detail of the tree map -/
 @[specialize]
-def modify [Ord α] [LawfulEqOrd α] (k : α) (f : β k → β k) (t : Impl α β) :
-    Impl α β :=
+def modify [Ord α] [LawfulEqOrd α] (k : α) (f : β k → β k) (t : Impl α β) : Impl α β :=
   match t with
   | .leaf => .leaf
   | .inner sz k' v' l r =>
@@ -906,22 +939,23 @@ def modify [Ord α] [LawfulEqOrd α] (k : α) (f : β k → β k) (t : Impl α �
     | .eq => .inner sz k (f <| cast (congrArg β <| compare_eq_iff_eq.mp h).symm v') l r
 
 @[Std.Internal.tree_tac]
-theorem aux_size_modify [Ord α] [LawfulEqOrd α] {k f} {t : Impl α β} :
-    (t.modify k f).size = t.size := by
+theorem aux_size_modify [Ord α] [LawfulEqOrd α] {k f} {t : Impl α β}
+    : (t.modify k f).size = t.size := by
   unfold modify
   split <;> (try split) <;> rfl
 
-theorem balanced_modify [Ord α] [LawfulEqOrd α] {k f} {t : Impl α β} (ht : t.Balanced) :
-    (t.modify k f).Balanced := by
+theorem balanced_modify [Ord α] [LawfulEqOrd α] {k f} {t : Impl α β} (ht : t.Balanced)
+    : (t.modify k f).Balanced := by
   induction t with
   | leaf => exact balanced_empty
   | inner sz k v l r ihl ihr =>
-    dsimp only  [modify]
+    dsimp only [modify]
     have ihl := ihl ht.left
     have ihr := ihr ht.right
     tree_tac
 
-theorem balanced_inter [Ord α] {t₁ t₂ : Impl α β} (ht : t₁.Balanced) : (t₁.inter t₂ ht).Balanced := by
+theorem balanced_inter [Ord α] {t₁ t₂ : Impl α β} (ht : t₁.Balanced)
+    : (t₁.inter t₂ ht).Balanced := by
   rw [inter]
   split
   · generalize (filter (fun k x => contains k t₂) t₁ ht) = m
@@ -936,12 +970,17 @@ same key `k` with respect to `cmp`, the provided function is used to determine t
 the respective values in `t₁` and `t₂`.
 -/
 @[inline]
-def mergeWith [Ord α] [LawfulEqOrd α] (mergeFn : (a : α) → β a → β a → β a) (t₁ t₂ : Impl α β)
-    (ht₁ : t₁.Balanced) : BalancedTree α β :=
+def mergeWith
+    [Ord α] [LawfulEqOrd α]
+    (mergeFn : (a : α) → β a → β a → β a)
+    (t₁ t₂ : Impl α β) (ht₁ : t₁.Balanced)
+    : BalancedTree α β :=
   t₂.foldl (δ := BalancedTree α β) (init := (⟨t₁, ht₁⟩ : BalancedTree α β)) fun t a b₂ =>
-    (t.impl.alter a (fun
-      | none => some b₂
-      | some b₁ => some <| mergeFn a b₁ b₂) t.balanced_impl).toBalancedTree
+    (t.impl.alter a
+      (fun
+        | none => some b₂
+        | some b₁ => some <| mergeFn a b₁ b₂)
+      t.balanced_impl).toBalancedTree
 
 /--
 Returns a map that contains all mappings of `t₁` and `t₂`. In case that both maps contain the
@@ -949,8 +988,8 @@ same key `k` with respect to `cmp`, the provided function is used to determine t
 the respective values in `t₁` and `t₂`.
 -/
 @[inline]
-def mergeWith! [Ord α] [LawfulEqOrd α] (mergeFn : (a : α) → β a → β a → β a) (t₁ t₂ : Impl α β) :
-    Impl α β :=
+def mergeWith! [Ord α] [LawfulEqOrd α] (mergeFn : (a : α) → β a → β a → β a) (t₁ t₂ : Impl α β)
+    : Impl α β :=
   t₂.foldl (init := t₁) fun t a b₂ =>
     t.alter! a fun
       | none => some b₂
@@ -964,7 +1003,8 @@ variable {β : Type v}
 def beq [Ord α] [BEq β] (t₁ t₂ : Impl α fun _ => β) : Bool :=
   if t₁.size ≠ t₂.size then false else t₁.all (fun k v => Const.get? t₂ k == some v)
 
-local instance : Coe (Type v) (α → Type v) where coe γ := fun _ => γ
+local instance : Coe (Type v) (α → Type v) where
+  coe γ := fun _ => γ
 
 /--
 Changes the mapping of the key `k` by applying the function `f` to the current mapped value
@@ -973,8 +1013,8 @@ This version of the function requires `LawfulEqOrd α`. There is an alternative 
 called `Const.alter`.
 -/
 @[specialize]
-def alter [Ord α] (k : α) (f : Option β → Option β) (t : Impl α β)
-    (hl : t.Balanced) : SizedBalancedTree α β (t.size - 1) (t.size + 1) :=
+def alter [Ord α] (k : α) (f : Option β → Option β) (t : Impl α β) (hl : t.Balanced)
+    : SizedBalancedTree α β (t.size - 1) (t.size + 1) :=
   match t with
   | .leaf =>
     match f none with
@@ -998,8 +1038,7 @@ Slower version of `modify` which can be used in the absence of balance
 information but still assumes the preconditions of `modify`, otherwise might panic.
 -/
 @[specialize]
-def alter! [Ord α] (k : α) (f : Option β → Option β) (t : Impl α β) :
-    Impl α β :=
+def alter! [Ord α] (k : α) (f : Option β → Option β) (t : Impl α β) : Impl α β :=
   match t with
   | .leaf =>
     match f none with
@@ -1016,8 +1055,7 @@ def alter! [Ord α] (k : α) (f : Option β → Option β) (t : Impl α β) :
 
 /-- Internal implementation detail of the tree map -/
 @[specialize]
-def modify [Ord α] (k : α) (f : β → β) (t : Impl α β) :
-    Impl α β :=
+def modify [Ord α] (k : α) (f : β → β) (t : Impl α β) : Impl α β :=
   match t with
   | .leaf => .leaf
   | .inner sz k' v' l r =>
@@ -1027,17 +1065,16 @@ def modify [Ord α] (k : α) (f : β → β) (t : Impl α β) :
     | .eq => .inner sz k (f v') l r
 
 @[Std.Internal.tree_tac]
-theorem aux_size_modify [Ord α] {k f} {t : Impl α β} :
-    (modify k f t).size = t.size := by
+theorem aux_size_modify [Ord α] {k f} {t : Impl α β} : (modify k f t).size = t.size := by
   unfold modify
   split <;> (try split) <;> rfl
 
-theorem balanced_modify [Ord α] {k f} {t : Impl α β} (ht : t.Balanced) :
-    (modify k f t).Balanced := by
+theorem balanced_modify [Ord α] {k f} {t : Impl α β} (ht : t.Balanced)
+    : (modify k f t).Balanced := by
   induction t with
   | leaf => exact balanced_empty
   | inner sz k v l r ihl ihr =>
-    dsimp only  [modify]
+    dsimp only [modify]
     have ihl := ihl ht.left
     have ihr := ihr ht.right
     exact ✓
@@ -1048,12 +1085,14 @@ same key `k` with respect to `cmp`, the provided function is used to determine t
 the respective values in `t₁` and `t₂`.
 -/
 @[inline]
-def mergeWith [Ord α] (mergeFn : (a : α) → β → β → β) (t₁ t₂ : Impl α β)
-    (ht₁   : t₁.Balanced) : BalancedTree α β :=
+def mergeWith [Ord α] (mergeFn : (a : α) → β → β → β) (t₁ t₂ : Impl α β) (ht₁ : t₁.Balanced)
+    : BalancedTree α β :=
   t₂.foldl (δ := BalancedTree α β) (init := (⟨t₁, ht₁⟩ : BalancedTree α β)) fun t a b₂ =>
-    (alter a (fun
-      | none => some b₂
-      | some b₁ => some <| mergeFn a b₁ b₂) t.impl t.balanced_impl).toBalancedTree
+    (alter a
+      (fun
+        | none => some b₂
+        | some b₁ => some <| mergeFn a b₁ b₂)
+      t.impl t.balanced_impl).toBalancedTree
 
 /--
 Returns a map that contains all mappings of `t₁` and `t₂`. In case that both maps contain the

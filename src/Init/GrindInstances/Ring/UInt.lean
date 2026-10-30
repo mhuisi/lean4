@@ -18,7 +18,7 @@ public section
 
 namespace UInt8
 
-/-- Variant of `UInt8.ofNat_mod_size` replacing `2 ^ 8` with `256`.-/
+/-- Variant of `UInt8.ofNat_mod_size` replacing `2 ^ 8` with `256`. -/
 theorem ofNat_mod_size' : ofNat (x % 256) = ofNat x := ofNat_mod_size
 
 @[expose, instance_reducible]
@@ -31,25 +31,25 @@ def intCast : IntCast UInt8 where
 
 attribute [local instance] natCast intCast
 
-theorem intCast_neg (x : Int) : ((-x : Int) : UInt8) = - (x : UInt8) := by
+theorem intCast_neg (x : Int) : ((-x : Int) : UInt8) = -(x : UInt8) := by
   simp only [Int.cast, IntCast.intCast, UInt8.ofInt_neg]
 
 theorem intCast_ofNat (x : Nat) : (OfNat.ofNat (α := Int) x : UInt8) = OfNat.ofNat x := by
-    -- A better proof would be welcome!
-    simp only [Int.cast, IntCast.intCast]
-    rw [UInt8.ofInt]
-    rw [Int.toNat_emod (Int.zero_le_ofNat x) (by decide)]
-    erw [Int.toNat_natCast]
-    rw [Int.toNat_pow_of_nonneg (by decide)]
-    simp +instances only [ofNat, BitVec.ofNat, Fin.Internal.ofNat_eq_ofNat, Fin.ofNat, Int.reduceToNat, Nat.dvd_refl,
-      Nat.mod_mod_of_dvd, instOfNat]
-    try rfl
+  -- A better proof would be welcome!
+  simp only [Int.cast, IntCast.intCast]
+  rw [UInt8.ofInt]
+  rw [Int.toNat_emod (Int.zero_le_ofNat x) (by decide)]
+  erw [Int.toNat_natCast]
+  rw [Int.toNat_pow_of_nonneg (by decide)]
+  simp +instances only [ofNat, BitVec.ofNat, Fin.Internal.ofNat_eq_ofNat, Fin.ofNat,
+    Int.reduceToNat, Nat.dvd_refl, Nat.mod_mod_of_dvd, instOfNat]
+  try rfl
 
 end UInt8
 
 namespace UInt16
 
-/-- Variant of `UInt16.ofNat_mod_size` replacing `2 ^ 16` with `65536`.-/
+/-- Variant of `UInt16.ofNat_mod_size` replacing `2 ^ 16` with `65536`. -/
 theorem ofNat_mod_size' : ofNat (x % 65536) = ofNat x := ofNat_mod_size
 
 @[expose, instance_reducible]
@@ -62,25 +62,25 @@ def intCast : IntCast UInt16 where
 
 attribute [local instance] natCast intCast
 
-theorem intCast_neg (x : Int) : ((-x : Int) : UInt16) = - (x : UInt16) := by
+theorem intCast_neg (x : Int) : ((-x : Int) : UInt16) = -(x : UInt16) := by
   simp only [Int.cast, IntCast.intCast, UInt16.ofInt_neg]
 
 theorem intCast_ofNat (x : Nat) : (OfNat.ofNat (α := Int) x : UInt16) = OfNat.ofNat x := by
-    -- A better proof would be welcome!
-    simp only [Int.cast, IntCast.intCast]
-    rw [UInt16.ofInt]
-    rw [Int.toNat_emod (Int.zero_le_ofNat x) (by decide)]
-    erw [Int.toNat_natCast]
-    rw [Int.toNat_pow_of_nonneg (by decide)]
-    simp +instances only [ofNat, BitVec.ofNat, Fin.Internal.ofNat_eq_ofNat, Fin.ofNat, Int.reduceToNat, Nat.dvd_refl,
-      Nat.mod_mod_of_dvd, instOfNat]
-    try rfl
+  -- A better proof would be welcome!
+  simp only [Int.cast, IntCast.intCast]
+  rw [UInt16.ofInt]
+  rw [Int.toNat_emod (Int.zero_le_ofNat x) (by decide)]
+  erw [Int.toNat_natCast]
+  rw [Int.toNat_pow_of_nonneg (by decide)]
+  simp +instances only [ofNat, BitVec.ofNat, Fin.Internal.ofNat_eq_ofNat, Fin.ofNat,
+    Int.reduceToNat, Nat.dvd_refl, Nat.mod_mod_of_dvd, instOfNat]
+  try rfl
 
 end UInt16
 
 namespace UInt32
 
-/-- Variant of `UInt32.ofNat_mod_size` replacing `2 ^ 32` with `4294967296`.-/
+/-- Variant of `UInt32.ofNat_mod_size` replacing `2 ^ 32` with `4294967296`. -/
 theorem ofNat_mod_size' : ofNat (x % 4294967296) = ofNat x := ofNat_mod_size
 
 @[expose, instance_reducible]
@@ -93,25 +93,25 @@ def intCast : IntCast UInt32 where
 
 attribute [local instance] natCast intCast
 
-theorem intCast_neg (x : Int) : ((-x : Int) : UInt32) = - (x : UInt32) := by
+theorem intCast_neg (x : Int) : ((-x : Int) : UInt32) = -(x : UInt32) := by
   simp only [Int.cast, IntCast.intCast, UInt32.ofInt_neg]
 
 theorem intCast_ofNat (x : Nat) : (OfNat.ofNat (α := Int) x : UInt32) = OfNat.ofNat x := by
-    -- A better proof would be welcome!
-    simp only [Int.cast, IntCast.intCast]
-    rw [UInt32.ofInt]
-    rw [Int.toNat_emod (Int.zero_le_ofNat x) (by decide)]
-    erw [Int.toNat_natCast]
-    rw [Int.toNat_pow_of_nonneg (by decide)]
-    simp +instances only [ofNat, BitVec.ofNat, Fin.Internal.ofNat_eq_ofNat, Fin.ofNat, Int.reduceToNat, Nat.dvd_refl,
-      Nat.mod_mod_of_dvd, instOfNat]
-    try rfl
+  -- A better proof would be welcome!
+  simp only [Int.cast, IntCast.intCast]
+  rw [UInt32.ofInt]
+  rw [Int.toNat_emod (Int.zero_le_ofNat x) (by decide)]
+  erw [Int.toNat_natCast]
+  rw [Int.toNat_pow_of_nonneg (by decide)]
+  simp +instances only [ofNat, BitVec.ofNat, Fin.Internal.ofNat_eq_ofNat, Fin.ofNat,
+    Int.reduceToNat, Nat.dvd_refl, Nat.mod_mod_of_dvd, instOfNat]
+  try rfl
 
 end UInt32
 
 namespace UInt64
 
-/-- Variant of `UInt64.ofNat_mod_size` replacing `2 ^ 64` with `18446744073709551616`.-/
+/-- Variant of `UInt64.ofNat_mod_size` replacing `2 ^ 64` with `18446744073709551616`. -/
 theorem ofNat_mod_size' : ofNat (x % 18446744073709551616) = ofNat x := ofNat_mod_size
 
 @[expose, instance_reducible]
@@ -124,19 +124,19 @@ def intCast : IntCast UInt64 where
 
 attribute [local instance] natCast intCast
 
-theorem intCast_neg (x : Int) : ((-x : Int) : UInt64) = - (x : UInt64) := by
+theorem intCast_neg (x : Int) : ((-x : Int) : UInt64) = -(x : UInt64) := by
   simp only [Int.cast, IntCast.intCast, UInt64.ofInt_neg]
 
 theorem intCast_ofNat (x : Nat) : (OfNat.ofNat (α := Int) x : UInt64) = OfNat.ofNat x := by
-    -- A better proof would be welcome!
-    simp only [Int.cast, IntCast.intCast]
-    rw [UInt64.ofInt]
-    rw [Int.toNat_emod (Int.zero_le_ofNat x) (by decide)]
-    erw [Int.toNat_natCast]
-    rw [Int.toNat_pow_of_nonneg (by decide)]
-    simp +instances only [ofNat, BitVec.ofNat, Fin.Internal.ofNat_eq_ofNat, Fin.ofNat, Int.reduceToNat, Nat.dvd_refl,
-      Nat.mod_mod_of_dvd, instOfNat]
-    try rfl
+  -- A better proof would be welcome!
+  simp only [Int.cast, IntCast.intCast]
+  rw [UInt64.ofInt]
+  rw [Int.toNat_emod (Int.zero_le_ofNat x) (by decide)]
+  erw [Int.toNat_natCast]
+  rw [Int.toNat_pow_of_nonneg (by decide)]
+  simp +instances only [ofNat, BitVec.ofNat, Fin.Internal.ofNat_eq_ofNat, Fin.ofNat,
+    Int.reduceToNat, Nat.dvd_refl, Nat.mod_mod_of_dvd, instOfNat]
+  try rfl
 
 end UInt64
 
@@ -152,20 +152,20 @@ def intCast : IntCast USize where
 
 attribute [local instance] natCast intCast
 
-theorem intCast_neg (x : Int) : ((-x : Int) : USize) = - (x : USize) := by
+theorem intCast_neg (x : Int) : ((-x : Int) : USize) = -(x : USize) := by
   simp only [Int.cast, IntCast.intCast, USize.ofInt_neg]
 
 theorem intCast_ofNat (x : Nat) : (OfNat.ofNat (α := Int) x : USize) = OfNat.ofNat x := by
-    -- A better proof would be welcome!
-    simp only [Int.cast, IntCast.intCast]
-    rw [USize.ofInt]
-    rw [Int.toNat_emod (Int.zero_le_ofNat x)]
-    · erw [Int.toNat_natCast]
-      rw [Int.toNat_pow_of_nonneg (by decide)]
-      simp +instances only [ofNat, BitVec.ofNat, Fin.Internal.ofNat_eq_ofNat, Fin.ofNat, Int.reduceToNat, Nat.dvd_refl,
-        Nat.mod_mod_of_dvd, instOfNat]
-      try rfl
-    · obtain _ | _ := System.Platform.numBits_eq <;> simp_all
+  -- A better proof would be welcome!
+  simp only [Int.cast, IntCast.intCast]
+  rw [USize.ofInt]
+  rw [Int.toNat_emod (Int.zero_le_ofNat x)]
+  · erw [Int.toNat_natCast]
+    rw [Int.toNat_pow_of_nonneg (by decide)]
+    simp +instances only [ofNat, BitVec.ofNat, Fin.Internal.ofNat_eq_ofNat, Fin.ofNat,
+      Int.reduceToNat, Nat.dvd_refl, Nat.mod_mod_of_dvd, instOfNat]
+    try rfl
+  · obtain _ | _ := System.Platform.numBits_eq <;> simp_all
 
 end USize
 namespace Lean.Grind
@@ -193,16 +193,15 @@ instance : CommRing UInt8 where
   intCast_neg := UInt8.ofInt_neg
   intCast_ofNat := UInt8.intCast_ofNat
   neg_zsmul i a := by
-    change (-i : Int) * a = - (i * a)
+    change (-i : Int) * a = -(i * a)
     simp [UInt8.intCast_neg, UInt8.neg_mul]
   zsmul_natCast_eq_nsmul n a := congrArg (· * a) (UInt8.intCast_ofNat _)
 
-instance : IsCharP UInt8 256 := IsCharP.mk' _ _
-  (ofNat_eq_zero_iff := fun x => by
-    have : OfNat.ofNat x = UInt8.ofNat x := rfl
-    simp [this, UInt8.ofNat_eq_iff_mod_eq_toNat])
-
-
+instance : IsCharP UInt8 256 :=
+  IsCharP.mk' _ _
+    (ofNat_eq_zero_iff := fun x => by
+      have : OfNat.ofNat x = UInt8.ofNat x := rfl
+      simp [this, UInt8.ofNat_eq_iff_mod_eq_toNat])
 
 attribute [local instance] UInt16.natCast UInt16.intCast in
 instance : CommRing UInt16 where
@@ -227,16 +226,15 @@ instance : CommRing UInt16 where
   intCast_neg := UInt16.ofInt_neg
   intCast_ofNat := UInt16.intCast_ofNat
   neg_zsmul i a := by
-    change (-i : Int) * a = - (i * a)
+    change (-i : Int) * a = -(i * a)
     simp [UInt16.intCast_neg, UInt16.neg_mul]
   zsmul_natCast_eq_nsmul n a := congrArg (· * a) (UInt16.intCast_ofNat _)
 
-instance : IsCharP UInt16 65536 := IsCharP.mk' _ _
-  (ofNat_eq_zero_iff := fun x => by
-    have : OfNat.ofNat x = UInt16.ofNat x := rfl
-    simp [this, UInt16.ofNat_eq_iff_mod_eq_toNat])
-
-
+instance : IsCharP UInt16 65536 :=
+  IsCharP.mk' _ _
+    (ofNat_eq_zero_iff := fun x => by
+      have : OfNat.ofNat x = UInt16.ofNat x := rfl
+      simp [this, UInt16.ofNat_eq_iff_mod_eq_toNat])
 
 attribute [local instance] UInt32.natCast UInt32.intCast in
 instance : CommRing UInt32 where
@@ -261,16 +259,15 @@ instance : CommRing UInt32 where
   intCast_neg := UInt32.ofInt_neg
   intCast_ofNat := UInt32.intCast_ofNat
   neg_zsmul i a := by
-    change (-i : Int) * a = - (i * a)
+    change (-i : Int) * a = -(i * a)
     simp [UInt32.intCast_neg, UInt32.neg_mul]
   zsmul_natCast_eq_nsmul n a := congrArg (· * a) (UInt32.intCast_ofNat _)
 
-instance : IsCharP UInt32 4294967296 := IsCharP.mk' _ _
-  (ofNat_eq_zero_iff := fun x => by
-    have : OfNat.ofNat x = UInt32.ofNat x := rfl
-    simp [this, UInt32.ofNat_eq_iff_mod_eq_toNat])
-
-
+instance : IsCharP UInt32 4294967296 :=
+  IsCharP.mk' _ _
+    (ofNat_eq_zero_iff := fun x => by
+      have : OfNat.ofNat x = UInt32.ofNat x := rfl
+      simp [this, UInt32.ofNat_eq_iff_mod_eq_toNat])
 
 attribute [local instance] UInt64.natCast UInt64.intCast in
 instance : CommRing UInt64 where
@@ -295,16 +292,15 @@ instance : CommRing UInt64 where
   intCast_neg := UInt64.ofInt_neg
   intCast_ofNat := UInt64.intCast_ofNat
   neg_zsmul i a := by
-    change (-i : Int) * a = - (i * a)
+    change (-i : Int) * a = -(i * a)
     simp [UInt64.intCast_neg, UInt64.neg_mul]
   zsmul_natCast_eq_nsmul n a := congrArg (· * a) (UInt64.intCast_ofNat _)
 
-instance : IsCharP UInt64 18446744073709551616 := IsCharP.mk' _ _
-  (ofNat_eq_zero_iff := fun x => by
-    have : OfNat.ofNat x = UInt64.ofNat x := rfl
-    simp [this, UInt64.ofNat_eq_iff_mod_eq_toNat])
-
-
+instance : IsCharP UInt64 18446744073709551616 :=
+  IsCharP.mk' _ _
+    (ofNat_eq_zero_iff := fun x => by
+      have : OfNat.ofNat x = UInt64.ofNat x := rfl
+      simp [this, UInt64.ofNat_eq_iff_mod_eq_toNat])
 
 attribute [local instance] USize.natCast USize.intCast in
 instance : CommRing USize where
@@ -329,17 +325,16 @@ instance : CommRing USize where
   intCast_neg := USize.ofInt_neg
   intCast_ofNat := USize.intCast_ofNat
   neg_zsmul i a := by
-    change (-i : Int) * a = - (i * a)
+    change (-i : Int) * a = -(i * a)
     simp [USize.intCast_neg, USize.neg_mul]
   zsmul_natCast_eq_nsmul n a := congrArg (· * a) (USize.intCast_ofNat _)
 
 open System.Platform
 
-instance : IsCharP USize (2 ^ numBits) := IsCharP.mk' _ _
-  (ofNat_eq_zero_iff := fun x => by
-    have : OfNat.ofNat x = USize.ofNat x := rfl
-    simp [this, USize.ofNat_eq_iff_mod_eq_toNat])
-
-
+instance : IsCharP USize (2 ^ numBits) :=
+  IsCharP.mk' _ _
+    (ofNat_eq_zero_iff := fun x => by
+      have : OfNat.ofNat x = USize.ofNat x := rfl
+      simp [this, USize.ofNat_eq_iff_mod_eq_toNat])
 
 end Lean.Grind

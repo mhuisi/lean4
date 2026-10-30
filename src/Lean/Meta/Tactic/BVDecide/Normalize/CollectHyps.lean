@@ -40,8 +40,7 @@ open Elab.Tactic.BVDecide in
 abbrev CollectM := ReaderT BVDecideConfig StateRefT State Grind.GoalM
 
 @[inline]
-def recordHyp (hyp : Hyp) : CollectM Unit := do
-  modify fun s => { s with hyps := s.hyps.push hyp }
+def recordHyp (hyp : Hyp) : CollectM Unit := do modify fun s => { s with hyps := s.hyps.push hyp }
 
 @[inline]
 def withFixedInt (x : CollectM (Option α)) : CollectM (Option α) := do
@@ -61,9 +60,7 @@ where
     collectRelevantEqualities
     collectNumBits
 
-  /--
-  Collect all true propositions. Notably equalities are not part of these.
-  -/
+  /-- Collect all true propositions. Notably equalities are not part of these. -/
   collectTrue : CollectM Unit := do
     let trueExpr ← Sym.getTrueExpr
     let trueEqc ← Grind.getEqc trueExpr
@@ -77,9 +74,7 @@ where
         source := .grind
       }
 
-  /--
-  Collect all false propositions.
-  -/
+  /-- Collect all false propositions. -/
   collectFalse : CollectM Unit := do
     let falseExpr ← Sym.getFalseExpr
     let falseEqc ← Grind.getEqc falseExpr
@@ -93,24 +88,24 @@ where
         source := .grind
       }
 
-  /--
-  Collect equalities for all types that we consider relevant.
-  -/
+  /-- Collect equalities for all types that we consider relevant. -/
   collectRelevantEqualities : CollectM Unit := do
     for root in ← Grind.getExprs do
       let node ← Grind.getENode root
-      unless node.isRoot do continue
+      unless node.isRoot do
+        continue
       if let some representative ← analyzeClass root then
         let homogeneous := !node.heqProofs
         let eqc ← Grind.getEqc root
         for e in eqc do
           if e == representative then continue
           unless homogeneous do
-            unless ← Grind.hasSameType e representative do continue
+            unless ← Grind.hasSameType e representative do
+              continue
           recordHyp {
             name := .anonymous
-            type := ← Sym.share (← mkEq e representative),
-            value := ← Grind.mkEqProof e representative,
+            type := ← Sym.share (← mkEq e representative)
+            value := ← Grind.mkEqProof e representative
             source := .grind
           }
 
@@ -125,23 +120,36 @@ where
       else
         return some root
     | BitVec w =>
-      unless (Sym.getNatValue? w).isSome do return none
+      unless (Sym.getNatValue? w).isSome do
+        return none
       handleEqcWithConstType root Sym.getBitVecValue?
-    | UInt8 => withFixedInt <| handleEqcWithConstType root Sym.getUInt8Value?
-    | UInt16 => withFixedInt <| handleEqcWithConstType root Sym.getUInt16Value?
-    | UInt32 => withFixedInt <| handleEqcWithConstType root Sym.getUInt32Value?
-    | UInt64 => withFixedInt <| handleEqcWithConstType root Sym.getUInt64Value?
-    | Int8 => withFixedInt <| handleEqcWithConstType root Sym.getInt8Value?
-    | Int16 => withFixedInt <| handleEqcWithConstType root Sym.getInt16Value?
-    | Int32 => withFixedInt <| handleEqcWithConstType root Sym.getInt32Value?
-    | Int64 => withFixedInt <| handleEqcWithConstType root Sym.getInt64Value?
+    | UInt8 =>
+      withFixedInt <| handleEqcWithConstType root Sym.getUInt8Value?
+    | UInt16 =>
+      withFixedInt <| handleEqcWithConstType root Sym.getUInt16Value?
+    | UInt32 =>
+      withFixedInt <| handleEqcWithConstType root Sym.getUInt32Value?
+    | UInt64 =>
+      withFixedInt <| handleEqcWithConstType root Sym.getUInt64Value?
+    | Int8 =>
+      withFixedInt <| handleEqcWithConstType root Sym.getInt8Value?
+    | Int16 =>
+      withFixedInt <| handleEqcWithConstType root Sym.getInt16Value?
+    | Int32 =>
+      withFixedInt <| handleEqcWithConstType root Sym.getInt32Value?
+    | Int64 =>
+      withFixedInt <| handleEqcWithConstType root Sym.getInt64Value?
     -- Hack: Use UInt64/Int64 as the format is the same as USize/ISize but at the same time we don't
     -- care about the precise value for our purposes.
-    | USize => withFixedInt <| handleEqcWithConstType root Sym.getUInt64Value?
-    | ISize => withFixedInt <| handleEqcWithConstType root Sym.getInt64Value?
+    | USize =>
+      withFixedInt <| handleEqcWithConstType root Sym.getUInt64Value?
+    | ISize =>
+      withFixedInt <| handleEqcWithConstType root Sym.getInt64Value?
     | _ =>
-      let some (const, _) := type.getAppFn'.const? | return none
-      unless ← isPotentialTypeAnalysisType (← read) const do return none
+      let some (const, _) := type.getAppFn'.const?
+        | return none
+      unless ← isPotentialTypeAnalysisType (← read) const do
+        return none
       let eqc ← Grind.getEqc root
       if let some ctorApp ← eqc.findM? (liftM ∘ Meta.isConstructorApp) then
         return some ctorApp
@@ -159,8 +167,8 @@ where
     if let some constant := eqc.find? (Sym.getNatValue? · |>.isSome) then
       recordHyp {
         name := .anonymous
-        type := ← Sym.share (← mkEq numBits constant),
-        value := ← Grind.mkEqProof numBits constant,
+        type := ← Sym.share (← mkEq numBits constant)
+        value := ← Grind.mkEqProof numBits constant
         source := .grind
       }
 
@@ -197,7 +205,8 @@ def symByContradiction (goal : MVarId) : Sym.SymM (Array FVarId × MVarId) := do
       return (fvarIds, goal)
     if goalType.isFalse then
       return (fvarIds, goal)
-    let some goal ← goal.byContra? | unreachable!
+    let some goal ← goal.byContra?
+      | unreachable!
     let goal ← Sym.preprocessMVar goal
     let .goal contraFVarIds goal ← Sym.introN goal 1
       | throwError "`bv_decide` failed to introduce the negated goal"
@@ -234,25 +243,27 @@ def setupTarget : PreProcessM (Option (Array Hyp)) := do
     let (introduced, g) ← if isPush then pure (#[], g) else setupGrindTarget g
     if g.inconsistent then return none
     let cfg ← PreProcessM.getConfig
-    let (hyps, g) ← Grind.GoalM.run g do
-      let hypotheses ← collectGoalHyps cfg
-      let introduced : Array Hyp ← introduced.filterMapM fun fvarId => do
-        unless ← isProp (← fvarId.getType) do return none
-        return some {
-          name := ← fvarId.getUserName
-          type := ← Grind.preprocessLight (← fvarId.getType)
-          value := mkFVar fvarId
-          source := .lctx fvarId
-        }
-      return hypotheses ++ introduced
+    let (hyps, g) ←
+      Grind.GoalM.run g do
+        let hypotheses ← collectGoalHyps cfg
+        let introduced : Array Hyp ←
+          introduced.filterMapM fun fvarId => do
+            unless ← isProp (← fvarId.getType) do
+              return none
+            return some {
+              name := ← fvarId.getUserName
+              type := ← Grind.preprocessLight (← fvarId.getType)
+              value := mkFVar fvarId
+              source := .lctx fvarId
+            }
+        return hypotheses ++ introduced
     PreProcessM.setTarget <| .grindTarget g
     return hyps
 
-/--
-Collects the hypotheses that `bv_decide` operates on.
--/
+/-- Collects the hypotheses that `bv_decide` operates on. -/
 public def PreProcessM.collectTargetHyps : PreProcessM Bool := do
-  let some hypotheses ← setupTarget | return true
+  let some hypotheses ← setupTarget
+    | return true
   withTraceNode `Meta.Tactic.bv (fun _ => return m!"Collected initial hypotheses") do
     hypotheses.forM fun hyp => do trace[Meta.Tactic.bv] m!"{hyp}"
   modify fun s => { s with hypotheses := hypotheses }

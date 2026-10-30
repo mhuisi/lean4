@@ -33,8 +33,7 @@ HTTP token character and `s` is non-empty.
 
 Reference: https://httpwg.org/specs/rfc9112.html#chunked.extension
 -/
-abbrev IsValidExtensionName (s : String) : Prop :=
-  isToken s
+abbrev IsValidExtensionName (s : String) : Prop := isToken s
 
 /--
 A validated chunk extension name that ensures all characters conform to HTTP standards
@@ -43,14 +42,9 @@ per RFC 9112 §7.1.1. Extension names appear in chunked transfer encoding as key
 Reference: https://httpwg.org/specs/rfc9112.html#chunked.extension
 -/
 structure ExtensionName where
-  /--
-  The extension name string.
-  -/
+  /-- The extension name string. -/
   value : String
-
-  /--
-  The proof that it's a valid extension name.
-  -/
+  /-- The proof that it's a valid extension name. -/
   isValidExtensionName : IsValidExtensionName value := by decide
 deriving Repr, DecidableEq, BEq
 
@@ -92,8 +86,7 @@ A proposition asserting that `s` is a valid extension value, meaning every chara
 
 Reference: https://httpwg.org/specs/rfc9112.html#chunked.extension
 -/
-abbrev IsValidExtensionValue (s : String) : Prop :=
-  s.toList.all Char.quotedStringChar
+abbrev IsValidExtensionValue (s : String) : Prop := s.toList.all Char.quotedStringChar
 
 /--
 A validated chunk extension value that ensures all characters conform to HTTP standards per RFC 9112 §7.1.1.
@@ -107,14 +100,9 @@ encoded.
 Reference: https://httpwg.org/specs/rfc9112.html#chunked.extension
 -/
 structure ExtensionValue where
-  /--
-  The extension value string.
-  -/
+  /-- The extension value string. -/
   value : String
-
-  /--
-  The proof that it's a valid extension value.
-  -/
+  /-- The proof that it's a valid extension value. -/
   isValidExtensionValue : IsValidExtensionValue value := by decide
 deriving Repr, DecidableEq, BEq
 
@@ -126,11 +114,8 @@ instance : Inhabited ExtensionValue where
 instance : ToString ExtensionValue where
   toString v := v.value
 
-/--
-Quotes an extension value if it contains non-token characters, otherwise returns it as-is.
--/
-def quote (s : ExtensionValue) : String :=
-  quoteHttpString s.value s.isValidExtensionValue
+/-- Quotes an extension value if it contains non-token characters, otherwise returns it as-is. -/
+def quote (s : ExtensionValue) : String := quoteHttpString s.value s.isValidExtensionValue
 
 /--
 Attempts to create an `ExtensionValue` from a `String`, returning `none` if the string contains
@@ -170,12 +155,8 @@ The interpretation of a chunk depends on the protocol layer consuming it:
 Reference: https://httpwg.org/specs/rfc9112.html#rfc.section.7.1
 -/
 structure Chunk where
-
-  /--
-  The byte data contained in this chunk.
-  -/
+  /-- The byte data contained in this chunk. -/
   data : ByteArray
-
   /--
   Optional metadata associated with this chunk as key-value pairs. Keys are validated
   `Chunk.ExtensionName` values, values are optional strings.
@@ -185,40 +166,34 @@ deriving Inhabited
 
 namespace Chunk
 
-/--
-An empty chunk with no data and no extensions.
--/
-def empty : Chunk :=
-  { data := .empty, extensions := #[] }
+/-- An empty chunk with no data and no extensions. -/
+def empty : Chunk := { data := .empty, extensions := #[] }
 
-/--
-Creates a simple chunk without extensions.
--/
-def ofByteArray (data : ByteArray) : Chunk :=
-  { data := data, extensions := #[] }
+/-- Creates a simple chunk without extensions. -/
+def ofByteArray (data : ByteArray) : Chunk := { data := data, extensions := #[] }
 
-/--
-Adds an extension to a chunk.
--/
-def insertExtension (chunk : Chunk) (key : Chunk.ExtensionName) (value : ExtensionValue) : Chunk :=
-  { chunk with extensions := chunk.extensions.push (key, some value) }
+/-- Adds an extension to a chunk. -/
+def insertExtension (chunk : Chunk) (key : Chunk.ExtensionName) (value : ExtensionValue)
+    : Chunk := {
+  chunk with
+  extensions := chunk.extensions.push (key, some value)
+}
 
-/--
-Interprets the chunk data as a UTF-8 encoded string.
--/
-def toString? (chunk : Chunk) : Option String :=
-  String.fromUTF8? chunk.data
+/-- Interprets the chunk data as a UTF-8 encoded string. -/
+def toString? (chunk : Chunk) : Option String := String.fromUTF8? chunk.data
 
 instance : Encode .v11 Chunk where
   encode buffer chunk :=
     let chunkLen := chunk.data.size
-    let exts := chunk.extensions.foldl (fun acc (name, value) =>
-      acc ++ ";" ++ name.value ++ (value.elim "" (fun x => "=" ++ x.quote))) ""
+    let exts :=
+      chunk.extensions.foldl
+        (fun acc (name, value) =>
+          acc ++ ";" ++ name.value ++ (value.elim "" (fun x => "=" ++ x.quote)))
+        ""
     let size := Nat.toDigits 16 chunkLen |>.toArray |>.map Char.toUInt8 |> ByteArray.mk
     buffer.append #[size, exts.toUTF8, "\r\n".toUTF8, chunk.data, "\r\n".toUTF8]
 
 end Chunk
-
 
 /--
 Trailer headers sent after the final chunk in HTTP/1.1 chunked transfer encoding.
@@ -226,41 +201,33 @@ Per RFC 9112 §7.1.2, trailers allow the sender to include additional metadata a
 the message body, such as message integrity checks or digital signatures.
 -/
 structure Trailer where
-  /--
-  The trailer header fields as key-value pairs.
-  -/
+  /-- The trailer header fields as key-value pairs. -/
   headers : Headers
 deriving Inhabited
 
 namespace Trailer
 
-/--
-Creates an empty trailer with no headers.
--/
-def empty : Trailer :=
-  { headers := .empty }
+/-- Creates an empty trailer with no headers. -/
+def empty : Trailer := { headers := .empty }
 
-/--
-Inserts a trailer header field.
--/
+/-- Inserts a trailer header field. -/
 @[inline]
-def insert (trailer : Trailer) (name : Header.Name) (value : Header.Value) : Trailer :=
-  { headers := trailer.headers.insert name value }
+def insert (trailer : Trailer) (name : Header.Name) (value : Header.Value) : Trailer := {
+  headers := trailer.headers.insert name value
+}
 
-/--
-Inserts a trailer header field from string name and value, panicking if either is invalid.
--/
+/-- Inserts a trailer header field from string name and value, panicking if either is invalid. -/
 @[inline]
-def insert! (trailer : Trailer) (name : String) (value : String) : Trailer :=
-  { headers := trailer.headers.insert! name value }
+def insert! (trailer : Trailer) (name : String) (value : String) : Trailer := {
+  headers := trailer.headers.insert! name value
+}
 
 /--
 Retrieves the first value for the given trailer header name.
 Returns `none` if absent.
 -/
 @[inline]
-def get? (trailer : Trailer) (name : Header.Name) : Option Header.Value :=
-  trailer.headers.get? name
+def get? (trailer : Trailer) (name : Header.Name) : Option Header.Value := trailer.headers.get? name
 
 /--
 Retrieves all values for the given trailer header name.
@@ -270,62 +237,37 @@ Returns `none` if absent.
 def getAll? (trailer : Trailer) (name : Header.Name) : Option (Array Header.Value) :=
   trailer.headers.getAll? name
 
-/--
-Checks if a trailer header with the given name exists.
--/
+/-- Checks if a trailer header with the given name exists. -/
 @[inline]
-def contains (trailer : Trailer) (name : Header.Name) : Bool :=
-  trailer.headers.contains name
+def contains (trailer : Trailer) (name : Header.Name) : Bool := trailer.headers.contains name
 
-/--
-Removes a trailer header with the given name.
--/
+/-- Removes a trailer header with the given name. -/
 @[inline]
-def erase (trailer : Trailer) (name : Header.Name) : Trailer :=
-  { headers := trailer.headers.erase name }
+def erase (trailer : Trailer) (name : Header.Name) : Trailer := {
+  headers := trailer.headers.erase name
+}
 
-/--
-Gets the number of trailer headers.
--/
-@[inline]
-def size (trailer : Trailer) : Nat :=
-  trailer.headers.size
+/-- Gets the number of trailer headers. -/
+@[inline] def size (trailer : Trailer) : Nat := trailer.headers.size
 
-/--
-Checks if the trailer has no headers.
--/
-@[inline]
-def isEmpty (trailer : Trailer) : Bool :=
-  trailer.headers.isEmpty
+/-- Checks if the trailer has no headers. -/
+@[inline] def isEmpty (trailer : Trailer) : Bool := trailer.headers.isEmpty
 
-/--
-Merges two trailers, accumulating values for duplicate keys from both.
--/
-def merge (t1 t2 : Trailer) : Trailer :=
-  { headers := t1.headers.merge t2.headers }
+/-- Merges two trailers, accumulating values for duplicate keys from both. -/
+def merge (t1 t2 : Trailer) : Trailer := { headers := t1.headers.merge t2.headers }
 
-/--
-Converts the trailer headers to a list of key-value pairs.
--/
-def toList (trailer : Trailer) : List (Header.Name × Header.Value) :=
-  trailer.headers.toList
+/-- Converts the trailer headers to a list of key-value pairs. -/
+def toList (trailer : Trailer) : List (Header.Name × Header.Value) := trailer.headers.toList
 
-/--
-Converts the trailer headers to an array of key-value pairs.
--/
-def toArray (trailer : Trailer) : Array (Header.Name × Header.Value) :=
-  trailer.headers.toArray
+/-- Converts the trailer headers to an array of key-value pairs. -/
+def toArray (trailer : Trailer) : Array (Header.Name × Header.Value) := trailer.headers.toArray
 
-/--
-Folds over all key-value pairs in the trailer headers.
--/
+/-- Folds over all key-value pairs in the trailer headers. -/
 def fold (trailer : Trailer) (init : α) (f : α → Header.Name → Header.Value → α) : α :=
   trailer.headers.fold init f
 
 instance : Encode .v11 Trailer where
   encode buffer trailer :=
-    buffer.write "0\r\n".toUTF8
-    |> (Encode.encode .v11 · trailer.headers)
-    |>.write  "\r\n".toUTF8
+    buffer.write "0\r\n".toUTF8 |> (Encode.encode .v11 · trailer.headers) |>.write "\r\n".toUTF8
 
 end Trailer

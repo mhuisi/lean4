@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.DSimp.DSimpM
 import Lean.Meta.Sym.DSimp.Result
@@ -49,7 +50,8 @@ public def dsimpAppArgs (e : Expr) : DSimpM Result := do
 where
   go (argsInfo? : Option (Array ProofInstArgInfo)) (i : Nat) (e : Expr) : DSimpM Result := do
     if i = 0 then return .rfl
-    let .app f a := e | unreachable!
+    let .app f a := e
+      | unreachable!
     let fr ← go argsInfo? (i - 1) f
     let simpInInstances := (← getConfig).instances
     let skip : Bool :=
@@ -59,13 +61,13 @@ where
           let { isProof, isInstance } := ai[i - 1]
           isProof || (isInstance && !simpInInstances)
         else
-          false  -- over-applied: no info, rewrite
+          false -- over-applied: no info, rewrite
       | none => false
     let ar ← if skip then pure .rfl else dsimp a
     match fr, ar with
-    | .rfl _,     .rfl _     => return .rfl
-    | .step f' _, .rfl _     => return .step (← e.updateAppS! f' a)
-    | .rfl _,     .step a' _ => return .step (← e.updateAppS! f a')
+    | .rfl _, .rfl _ => return .rfl
+    | .step f' _, .rfl _ => return .step (← e.updateAppS! f' a)
+    | .rfl _, .step a' _ => return .step (← e.updateAppS! f a')
     | .step f' _, .step a' _ => return .step (← e.updateAppS! f' a')
 
 end Lean.Meta.Sym.DSimp

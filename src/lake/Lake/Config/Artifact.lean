@@ -13,7 +13,8 @@ open System Lean
 namespace Lake
 
 /-- Returns the relative file path used for an artifact in the Lake cache (i.e., `{hash}.{ext}`). -/
-@[inline] public def artifactPath (contentHash : Hash) (ext := "art") : FilePath :=
+@[inline]
+public def artifactPath (contentHash : Hash) (ext := "art") : FilePath :=
   if ext.isEmpty then contentHash.toString else s!"{contentHash}.{ext}"
 
 /-- The information needed to identify a single artifact within the Lake cache. -/
@@ -22,7 +23,7 @@ public structure ArtifactDescr where
   hash : Hash
   /-- The artifact's file extension. -/
   ext : String := "art"
-  deriving Inhabited, Repr
+deriving Inhabited, Repr
 
 /--
 A content-hashed artifact that should have the file extension `ext`.
@@ -31,17 +32,21 @@ Many applications care about the extension of a file (e.g., use it determine
 what kind of operation to perform), so the content hash alone may not be sufficient to
 produce a useable artifact for consumers.
 -/
-@[inline] public def artifactWithExt (contentHash : Hash) (ext := "art") : ArtifactDescr :=
-  {hash := contentHash, ext}
+@[inline]
+public def artifactWithExt (contentHash : Hash) (ext := "art") : ArtifactDescr := {
+  hash := contentHash
+  ext
+}
 
 -- discourage direct use of the constructor
 attribute [deprecated artifactWithExt (since := "2025-08-30")] ArtifactDescr.mk
 
 namespace ArtifactDescr
 
-/-- Returns the relative file path used for the output's artifact in the Lake cache (c.f. `artifactPath`). -/
-@[inline] public def relPath (self : ArtifactDescr) : FilePath :=
-  artifactPath self.hash self.ext
+/--
+Returns the relative file path used for the output's artifact in the Lake cache (c.f. `artifactPath`).
+-/
+@[inline] public def relPath (self : ArtifactDescr) : FilePath := artifactPath self.hash self.ext
 
 public instance : ToString ArtifactDescr := ⟨(·.relPath.toString)⟩
 public instance : ToJson ArtifactDescr := ⟨(toJson ·.relPath)⟩
@@ -53,12 +58,12 @@ public def ofFilePath? (path : FilePath) : Except String ArtifactDescr := do
   if h : pos.IsAtEnd then
     let some hash := Hash.ofString? s
       | throw "expected artifact file name to be a content hash"
-    return {hash, ext := ""}
+    return { hash, ext := "" }
   else
     let some hash := Hash.ofString? <| s.extract s.startPos pos
       | throw "expected artifact file name to be a content hash"
     let ext := s.extract (pos.next h) s.endPos
-    return {hash, ext}
+    return { hash, ext }
 
 public protected def fromJson? (data : Json) : Except String ArtifactDescr := do
   match fromJson? data with
@@ -77,18 +82,25 @@ public structure Artifact extends descr : ArtifactDescr where
   name := path.toString
   /-- The artifact's modification time. -/
   mtime : MTime
-  deriving Inhabited, Repr
+deriving Inhabited, Repr
 
 namespace Artifact
 
 /-- Sets the `name` of the artifact. -/
-@[inline] public def withName (name : String) (self : Artifact) : Artifact :=
-  {self with name := name}
+@[inline]
+public def withName (name : String) (self : Artifact) : Artifact := { self with name := name }
 
 /-- Sets the `name` and `path` of the artifact using the file outside the Lake artifact cache. -/
-@[inline] public def useLocalFile (path : FilePath) (self : Artifact) : Artifact :=
-  {self with name := path.toString, path}
+@[inline]
+public def useLocalFile (path : FilePath) (self : Artifact) : Artifact := {
+  self with
+  name := path.toString
+  path
+}
 
-/--The build trace formed from this single artifact. -/
-public def trace (self : Artifact) : BuildTrace :=
-  {caption := self.name, mtime := self.mtime, hash := self.hash}
+/-- The build trace formed from this single artifact. -/
+public def trace (self : Artifact) : BuildTrace := {
+  caption := self.name
+  mtime := self.mtime
+  hash := self.hash
+}

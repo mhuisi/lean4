@@ -22,17 +22,13 @@ rules from the `bv_normalize` simp set.
 namespace Lean.Meta.Tactic.BVDecide
 namespace Normalize
 
-/--
-Responsible for applying the Bitwuzla style rewrite rules.
--/
+/-- Responsible for applying the Bitwuzla style rewrite rules. -/
 public def rewriteRulesPass : Pass where
   name := `rewriteRules
   run' := do
     let bvThms ← bvNormalizeExt.getTheorems
     let cfg ← PreProcessM.getConfig
-    let simpConfig := {
-      maxSteps := cfg.maxSteps
-    }
+    let simpConfig := { maxSteps := cfg.maxSteps }
     let discharger := Sym.Simp.mkDischargerFromSimproc Sym.Simp.evalGround
     let cache ← ST.mkRef {}
     let simpMethods := {
@@ -43,22 +39,22 @@ public def rewriteRulesPass : Pass where
         match res with
         | .rfl _ cd => return .rfl false cd
         | .step e' proof _ cd => return .step e' proof false cd
-      post := Sym.Simp.evalGround >> Normalize.rewriteSimproc cache >> bvThms.rewrite (d := discharger)
+      post :=
+        Sym.Simp.evalGround >> Normalize.rewriteSimproc cache >> bvThms.rewrite (d := discharger)
     }
     let dsimpConfig := { simpConfig with instances := true }
     let dsimpMethods := {
-      pre := Sym.DSimp.evalGround
-        >> Sym.DSimp.zeta
-        >> Sym.DSimp.zetaDeltaAll
-        >> Sym.DSimp.beta
-        >> rewriteDsimproc
+      pre :=
+        Sym.DSimp.evalGround >> Sym.DSimp.zeta >> Sym.DSimp.zetaDeltaAll >> Sym.DSimp.beta
+          >> rewriteDsimproc
     }
 
     let goal ← PreProcessM.getTargetMVarId
-    let changed ← goal.withContext do
-      PreProcessM.mapHyps fun hyp => do
-        let hyp ← PreProcessM.dsimpHyp .rewrite dsimpMethods dsimpConfig hyp
-        PreProcessM.simpHyp .rewrite simpMethods simpConfig hyp
+    let changed ←
+      goal.withContext do
+        PreProcessM.mapHyps fun hyp => do
+          let hyp ← PreProcessM.dsimpHyp .rewrite dsimpMethods dsimpConfig hyp
+          PreProcessM.simpHyp .rewrite simpMethods simpConfig hyp
     if (← isTracingEnabledFor `Meta.Tactic.bv) then
       let statistics := (← cache.get).statistics.toArray.qsort (fun a b => a.2 > b.2)
       withTraceNode `Meta.Tactic.bv (fun _ => return "rewriteRules simproc statistics:") do

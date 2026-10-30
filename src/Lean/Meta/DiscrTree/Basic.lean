@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.DiscrTree.Types
 public import Lean.CoreM
@@ -12,11 +13,9 @@ import Init.Omega
 public section
 namespace Lean.Meta.DiscrTree
 
-def mkNoindexAnnotation (e : Expr) : Expr :=
-  mkAnnotation `noindex e
+def mkNoindexAnnotation (e : Expr) : Expr := mkAnnotation `noindex e
 
-def hasNoindexAnnotation (e : Expr) : Bool :=
-  annotation? `noindex e |>.isSome
+def hasNoindexAnnotation (e : Expr) : Bool := annotation? `noindex e |>.isSome
 
 instance : Inhabited (Trie α) where
   default := .node #[] #[]
@@ -28,51 +27,58 @@ def empty : DiscrTree α := { root := {} }
 
 instance : ToExpr Key where
   toTypeExpr := mkConst ``Key
-  toExpr k   := match k with
-   | .const n a => mkApp2 (mkConst ``Key.const) (toExpr n) (toExpr a)
-   | .fvar id a => mkApp2 (mkConst ``Key.fvar) (toExpr id) (toExpr a)
-   | .lit l => mkApp (mkConst ``Key.lit) (toExpr l)
-   | .star => mkConst ``Key.star
-   | .other => mkConst ``Key.other
-   | .arrow => mkConst ``Key.arrow
-   | .proj n i a => mkApp3 (mkConst ``Key.proj) (toExpr n) (toExpr i) (toExpr a)
+  toExpr k :=
+    match k with
+    | .const n a => mkApp2 (mkConst ``Key.const) (toExpr n) (toExpr a)
+    | .fvar id a => mkApp2 (mkConst ``Key.fvar) (toExpr id) (toExpr a)
+    | .lit l => mkApp (mkConst ``Key.lit) (toExpr l)
+    | .star => mkConst ``Key.star
+    | .other => mkConst ``Key.other
+    | .arrow => mkConst ``Key.arrow
+    | .proj n i a => mkApp3 (mkConst ``Key.proj) (toExpr n) (toExpr i) (toExpr a)
 
 def Key.lt : Key → Key → Bool
-  | .lit v₁,        .lit v₂        => v₁ < v₂
-  | .fvar n₁ a₁,    .fvar n₂ a₂    => Name.quickLt n₁.name n₂.name || (n₁ == n₂ && a₁ < a₂)
-  | .const n₁ a₁,   .const n₂ a₂   => Name.quickLt n₁ n₂ || (n₁ == n₂ && a₁ < a₂)
-  | .proj s₁ i₁ a₁, .proj s₂ i₂ a₂ => Name.quickLt s₁ s₂ || (s₁ == s₂ && i₁ < i₂) || (s₁ == s₂ && i₁ == i₂ && a₁ < a₂)
-  | k₁,             k₂             => k₁.ctorIdx < k₂.ctorIdx
+  | .lit v₁, .lit v₂ => v₁ < v₂
+  | .fvar n₁ a₁, .fvar n₂ a₂ => Name.quickLt n₁.name n₂.name || (n₁ == n₂ && a₁ < a₂)
+  | .const n₁ a₁, .const n₂ a₂ => Name.quickLt n₁ n₂ || (n₁ == n₂ && a₁ < a₂)
+  | .proj s₁ i₁ a₁, .proj s₂ i₂ a₂ =>
+    Name.quickLt s₁ s₂ || (s₁ == s₂ && i₁ < i₂) || (s₁ == s₂ && i₁ == i₂ && a₁ < a₂)
+  | k₁, k₂ => k₁.ctorIdx < k₂.ctorIdx
 
 instance : LT Key := ⟨fun a b => Key.lt a b⟩
 instance (a b : Key) : Decidable (a < b) := inferInstanceAs (Decidable (Key.lt a b))
 
 def Key.format : Key → Format
-  | .star            => "*"
-  | .other           => "◾"
+  | .star => "*"
+  | .other => "◾"
   | .lit (.natVal v) => Std.format v
   | .lit (.strVal v) => repr v
-  | .const k _       => Std.format k
-  | .proj s i _      => Std.format s ++ "." ++ Std.format i
-  | .fvar k _        => Std.format k.name
-  | .arrow           => "∀"
+  | .const k _ => Std.format k
+  | .proj s i _ => Std.format s ++ "." ++ Std.format i
+  | .fvar k _ => Std.format k.name
+  | .arrow => "∀"
 
 instance : ToFormat Key := ⟨Key.format⟩
 
 partial def Trie.format [ToFormat α] : Trie α → Format
-  | .chain k c => Format.group $ Format.paren $
-    "chain " ++ Std.format k ++ " => " ++ format c
-  | .node vs cs => Format.group $ Format.paren $
-    "node" ++ (if vs.isEmpty then Format.nil else " " ++ Std.format vs)
-    ++ Format.join (cs.toList.map fun ⟨k, c⟩ => Format.line ++ Format.paren (Std.format k ++ " => " ++ format c))
+  | .chain k c => Format.group $ Format.paren $ "chain " ++ Std.format k ++ " => " ++ format c
+  | .node vs cs =>
+    Format.group $ Format.paren $
+      "node" ++ (if vs.isEmpty then Format.nil else " " ++ Std.format vs)
+        ++ Format.join (cs.toList.map fun ⟨k, c⟩ =>
+          Format.line ++ Format.paren (Std.format k ++ " => " ++ format c))
 
 instance [ToFormat α] : ToFormat (Trie α) := ⟨Trie.format⟩
 
 partial def format [ToFormat α] (d : DiscrTree α) : Format :=
-  let (_, r) := d.root.foldl
-    (fun (p : Bool × Format) k c =>
-      (false, p.2 ++ (if p.1 then Format.nil else Format.line) ++ Format.paren (Std.format k ++ " => " ++ Std.format c)))
-    (true, Format.nil)
+  let (_, r) :=
+    d.root.foldl
+      (fun (p : Bool × Format) k c => (
+        false,
+        p.2 ++ (if p.1 then Format.nil else Format.line)
+          ++ Format.paren (Std.format k ++ " => " ++ Std.format c)
+      ))
+      (true, Format.nil)
   Format.group r
 
 instance [ToFormat α] : ToFormat (DiscrTree α) := ⟨format⟩
@@ -85,11 +91,13 @@ partial def keysAsPattern (keys : Array Key) : CoreM MessageData := do
   go (parenIfNonAtomic := false) |>.run' keys.toList
 where
   next? : StateRefT (List Key) CoreM (Option Key) := do
-    let key :: keys ← get | return none
+    let key :: keys ← get
+      | return none
     set keys
     return some key
 
-  mkApp (f : MessageData) (args : Array MessageData) (parenIfNonAtomic : Bool) : CoreM MessageData := do
+  mkApp (f : MessageData) (args : Array MessageData) (parenIfNonAtomic : Bool)
+      : CoreM MessageData := do
     if args.isEmpty then
       return f
     else
@@ -103,16 +111,14 @@ where
         return .group r
 
   go (parenIfNonAtomic := true) : StateRefT (List Key) CoreM MessageData := do
-    let some key ← next? | return .nil
+    let some key ← next?
+      | return .nil
     match key with
     | .const declName nargs =>
       mkApp m!"{← mkConstWithLevelParams declName}" (← goN nargs) parenIfNonAtomic
-    | .fvar fvarId nargs =>
-      mkApp m!"{mkFVar fvarId}" (← goN nargs) parenIfNonAtomic
-    | .proj _ i nargs =>
-      mkApp m!"{← go}.{i+1}" (← goN nargs) parenIfNonAtomic
-    | .arrow =>
-      mkApp m!"∀ " (← goN 1) parenIfNonAtomic
+    | .fvar fvarId nargs => mkApp m!"{mkFVar fvarId}" (← goN nargs) parenIfNonAtomic
+    | .proj _ i nargs => mkApp m!"{← go}.{i + 1}" (← goN nargs) parenIfNonAtomic
+    | .arrow => mkApp m!"∀ " (← goN 1) parenIfNonAtomic
     | .star => return "_"
     | .other => return "<other>"
     | .lit (.natVal v) => return m!"{v}"
@@ -127,7 +133,7 @@ where
 private def createNodes (keys : Array Key) (v : α) (i : Nat) : Trie α :=
   if h : i < keys.size then
     let k := keys[i]
-    let c := createNodes keys v (i+1)
+    let c := createNodes keys v (i + 1)
     .chain k c
   else
     .node #[v] #[]
@@ -139,15 +145,14 @@ Otherwise, push `v`.
 See issue #2155
 Recall that `BEq α` may not be Lawful.
 -/
-private def insertVal [BEq α] (vs : Array α) (v : α) : Array α :=
-  loop 0
+private def insertVal [BEq α] (vs : Array α) (v : α) : Array α := loop 0
 where
   loop (i : Nat) : Array α :=
     if h : i < vs.size then
       if v == vs[i] then
         vs.set i v
       else
-        loop (i+1)
+        loop (i + 1)
     else
       vs.push v
   termination_by vs.size - i
@@ -156,19 +161,20 @@ private def insertAux [BEq α] (keys : Array Key) (v : α) : Nat → Trie α →
   | i, .chain k c =>
     if h : i < keys.size then
       if keys[i] == k then
-        .chain k (insertAux keys v (i+1) c)
+        .chain k (insertAux keys v (i + 1) c)
       else
         .node #[] <|
-          #[(k, c)].binInsert (fun a b => a.1 < b.1) (keys[i], createNodes keys v (i+1))
+          #[(k, c)].binInsert (fun a b => a.1 < b.1) (keys[i], createNodes keys v (i + 1))
     else
       .node #[v] #[(k, c)]
   | i, .node vs cs =>
     if h : i < keys.size then
       let k := keys[i]
-      let c := Id.run $ cs.binInsertM
+      let c :=
+        Id.run $ cs.binInsertM
           (fun a b => a.1 < b.1)
-          (fun ⟨_, s⟩ => let c := insertAux keys v (i+1) s; (k, c)) -- merge with existing
-          (fun _ => let c := createNodes keys v (i+1); (k, c))
+          (fun ⟨_, s⟩ => let c := insertAux keys v (i + 1) s; (k, c)) -- merge with existing
+          (fun _ => let c := createNodes keys v (i + 1); (k, c))
           (k, default)
       .node vs c
     else
@@ -176,10 +182,13 @@ private def insertAux [BEq α] (keys : Array Key) (v : α) : Nat → Trie α →
 termination_by i => keys.size - i
 
 def insertKeyValue [BEq α] (d : DiscrTree α) (keys : Array Key) (v : α) : DiscrTree α :=
-  if keys.isEmpty then panic! "invalid key sequence"
+  if keys.isEmpty then
+    panic! "invalid key sequence"
   else
     let k := keys[0]!
-    { d with root :=
+    {
+      d with
+      root :=
         d.root.alter k fun
           | none => some <| createNodes keys v 1
           | some c => insertAux keys v 1 c
@@ -208,11 +217,10 @@ private def getEntriesWithKeysAux (keys : Array Key) : Nat → Trie α → Array
       vs
 termination_by i => keys.size - i
 
-/--
-Returns all entries that have exactly the provided key sequence.
--/
+/-- Returns all entries that have exactly the provided key sequence. -/
 def getEntriesWithKeys (d : DiscrTree α) (keys : Array Key) : Array α :=
-  if keys.isEmpty then panic! "invalid key sequence"
+  if keys.isEmpty then
+    panic! "invalid key sequence"
   else
     let k := keys[0]!
     match d.root.find? k with

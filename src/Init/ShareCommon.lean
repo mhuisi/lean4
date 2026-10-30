@@ -13,19 +13,18 @@ public section
 
 namespace ShareCommon
 /-
-  The max sharing primitives are implemented internally.
-  They use maps and sets of Lean objects. We have two versions:
-  one using `HashMap` and `HashSet`, and another using
-  `PersistentHashMap` and `PersistentHashSet`.
-  These maps and sets are "instantiated here using the "unsafe"
-  primitives `Object.eq`, `Object.hash`, and `ptrAddrUnsafe`. -/
+The max sharing primitives are implemented internally.
+They use maps and sets of Lean objects. We have two versions:
+one using `HashMap` and `HashSet`, and another using
+`PersistentHashMap` and `PersistentHashSet`.
+These maps and sets are "instantiated here using the "unsafe"
+primitives `Object.eq`, `Object.hash`, and `ptrAddrUnsafe`.
+-/
 abbrev Object : Type := NonScalar
 
-unsafe def Object.ptrEq (a b : Object) : Bool :=
-  ptrAddrUnsafe a == ptrAddrUnsafe b
+unsafe def Object.ptrEq (a b : Object) : Bool := ptrAddrUnsafe a == ptrAddrUnsafe b
 
-unsafe abbrev Object.ptrHash (a : Object) : UInt64 :=
-  ptrAddrUnsafe a |>.toUInt64
+unsafe abbrev Object.ptrHash (a : Object) : UInt64 := ptrAddrUnsafe a |>.toUInt64
 
 structure StateFactoryImpl where
   (Map Set : Type)
@@ -62,12 +61,14 @@ unsafe def StateFactory.mkImpl : StateFactoryBuilder → StateFactory
       Set := @Set Object ⟨Object.eq⟩ ⟨Object.hash⟩
       mkState := fun _ => (
         @mkMap Object Object ⟨Object.ptrEq⟩ ⟨Object.ptrHash⟩ 1024,
-        @mkSet Object ⟨Object.eq⟩ ⟨Object.hash⟩ 1024)
+        @mkSet Object ⟨Object.eq⟩ ⟨Object.hash⟩ 1024
+      )
       mapFind? := @mapFind? Object Object ⟨Object.ptrEq⟩ ⟨Object.ptrHash⟩
       mapInsert := @mapInsert Object Object ⟨Object.ptrEq⟩ ⟨Object.ptrHash⟩
       setFind? := @setFind? Object ⟨Object.eq⟩ ⟨Object.hash⟩
       setInsert := @setInsert Object ⟨Object.eq⟩ ⟨Object.hash⟩
-    : StateFactoryImpl }
+      : StateFactoryImpl
+    }
 
 @[implemented_by StateFactory.mkImpl]
 opaque StateFactory.mk : StateFactoryBuilder → StateFactory
@@ -80,7 +81,8 @@ abbrev State (σ : StateFactory) : Type u := (StatePointed σ).type
 instance : Nonempty (State σ) := (StatePointed σ).property
 
 unsafe def mkStateImpl (σ : StateFactory) : State σ := unsafeCast (σ.get.mkState ())
-@[implemented_by mkStateImpl] opaque State.mk (σ : StateFactory) : State σ
+@[implemented_by mkStateImpl]
+opaque State.mk (σ : StateFactory) : State σ
 instance : Inhabited (State σ) := ⟨.mk σ⟩
 
 @[extern "lean_state_sharecommon"]
@@ -93,13 +95,13 @@ class MonadShareCommon (m : Type u → Type v) where
 
 abbrev withShareCommon := @MonadShareCommon.withShareCommon
 
-abbrev shareCommonM [MonadShareCommon m] (a : α) : m α :=
-  withShareCommon a
+abbrev shareCommonM [MonadShareCommon m] (a : α) : m α := withShareCommon a
 
 abbrev ShareCommonT (σ) (m : Type u → Type v) := StateT (ShareCommon.State σ) m
 abbrev ShareCommonM (σ) := ShareCommonT σ Id
 
-@[specialize] def ShareCommonT.withShareCommon [Monad m] (a : α) : ShareCommonT σ m α :=
+@[specialize]
+def ShareCommonT.withShareCommon [Monad m] (a : α) : ShareCommonT σ m α :=
   modifyGet fun s => s.shareCommon a
 
 instance ShareCommonT.monadShareCommon [Monad m] : MonadShareCommon (ShareCommonT σ m) where

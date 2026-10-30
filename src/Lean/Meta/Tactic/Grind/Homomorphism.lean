@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 public import Lean.Meta.Tactic.Grind.Homo
@@ -66,7 +67,8 @@ private def markSourceTerm (e : Expr) : GoalM Unit := do
   let tys ← getSourceTypes
   if tys.isEmpty then return ()
   let α ← Sym.inferType e
-  let .const F _ := α.getAppFn | return ()
+  let .const F _ := α.getAppFn
+    | return ()
   if tys.contains F then
     homExt.markTerm e
 
@@ -75,8 +77,10 @@ Instantiates the `[grind hom_pred]` predicates triggered by `e` and asserts the
 resulting facts. Each term is processed at most once per goal.
 -/
 private def firePreds (e : Expr) (generation : Nat) : GoalM Unit := do
-  let .const declName _ := e.getAppFn | return ()
-  unless (← getPreds).contains declName do return ()
+  let .const declName _ := e.getAppFn
+    | return ()
+  unless (← getPreds).contains declName do
+    return ()
   for (proof, prop) in ← mkHomoPredInstances e do
     trace_goal[grind.hom.pred] "{prop}"
     addNewRawFact proof prop generation .input .other
@@ -94,8 +98,7 @@ private def maskOnesZeros? (c : Nat) : Option (Nat × Nat) := do
   guard (c + 1 == 1 <<< n)
   return (n, k)
 
-private def mkNatEqRefl (a : Expr) : Expr :=
-  mkApp2 (mkConst ``Eq.refl [1]) Nat.mkType a
+private def mkNatEqRefl (a : Expr) : Expr := mkApp2 (mkConst ``Eq.refl [1]) Nat.mkType a
 
 /--
 Rewrites `x &&& c` and `c &&& x` over `Nat`, where `c` is a literal mask of the form
@@ -106,14 +109,21 @@ theorems in `Init.Grind.Homo.Extra` are ground equalities between literals and
 closed arithmetic terms, discharged by `rfl`.
 -/
 private def andMaskSimproc : Sym.Simp.Simproc := fun e => do
-  let_expr HAnd.hAnd α _ _ inst a b := e | return .rfl
-  unless α.isConstOf ``Nat do return .rfl
-  unless (← Structural.isInstHAndNat inst) do return .rfl
+  let_expr HAnd.hAnd α _ _ inst a b := e
+    | return .rfl
+  unless α.isConstOf ``Nat do
+    return .rfl
+  unless (← Structural.isInstHAndNat inst) do
+    return .rfl
   let (x, c, cVal, flipped) ←
-    if let some cVal := (Sym.getNatValue? b).run then pure (a, b, cVal, false)
-    else if let some cVal := (Sym.getNatValue? a).run then pure (b, a, cVal, true)
-    else return .rfl
-  let some (n, k) := maskOnesZeros? cVal | return .rfl
+    if let some cVal := (Sym.getNatValue? b).run then
+      pure (a, b, cVal, false)
+    else if let some cVal := (Sym.getNatValue? a).run then
+      pure (b, a, cVal, true)
+    else
+      return .rfl
+  let some (n, k) := maskOnesZeros? cVal
+    | return .rfl
   let nE := mkNatLit n
   let q := mkNatLit (1 <<< n)
   if k == 0 then
@@ -125,7 +135,11 @@ private def andMaskSimproc : Sym.Simp.Simproc := fun e => do
     let kE := mkNatLit k
     let p := mkNatLit (1 <<< k)
     let e' ← Sym.share <| mkNatMul (mkNatMod (mkNatDiv x p) q) p
-    let thm := if flipped then ``Lean.Grind.Nat.ones_zeros_and_eq_div_mod_mul else ``Lean.Grind.Nat.and_eq_div_mod_mul
+    let thm :=
+      if flipped then
+        ``Lean.Grind.Nat.ones_zeros_and_eq_div_mod_mul
+      else
+        ``Lean.Grind.Nat.and_eq_div_mod_mul
     let h := mkApp9 (mkConst thm) x c p q kE nE (mkNatEqRefl c) (mkNatEqRefl p) (mkNatEqRefl q)
     return .step e' h
 
@@ -140,20 +154,34 @@ them the same image. The hypothesis of `Nat.mul_mod_eq_sub_mul_mod` is a ground 
 between literals, discharged by `rfl`.
 -/
 private def mulLargeCoeffSimproc : Sym.Simp.Simproc := fun e => do
-  let_expr HMod.hMod α _ _ instMod p mE := e | return .rfl
-  unless α.isConstOf ``Nat do return .rfl
-  unless (← Structural.isInstHModNat instMod) do return .rfl
-  let some m := Sym.getNatValue? mE | return .rfl
-  let_expr HMul.hMul _ _ _ instMul a b := p | return .rfl
-  unless (← Structural.isInstHMulNat instMul) do return .rfl
+  let_expr HMod.hMod α _ _ instMod p mE := e
+    | return .rfl
+  unless α.isConstOf ``Nat do
+    return .rfl
+  unless (← Structural.isInstHModNat instMod) do
+    return .rfl
+  let some m := Sym.getNatValue? mE
+    | return .rfl
+  let_expr HMul.hMul _ _ _ instMul a b := p
+    | return .rfl
+  unless (← Structural.isInstHMulNat instMul) do
+    return .rfl
   let (x, cE, c, flipped) ←
-    if let some c := Sym.getNatValue? a then pure (b, a, c, false)
-    else if let some c := Sym.getNatValue? b then pure (a, b, c, true)
-    else return .rfl
-  unless c < m && m < 2 * c do return .rfl
+    if let some c := Sym.getNatValue? a then
+      pure (b, a, c, false)
+    else if let some c := Sym.getNatValue? b then
+      pure (a, b, c, true)
+    else
+      return .rfl
+  unless c < m && m < 2 * c do
+    return .rfl
   let c'E := mkNatLit (m - c)
   let e' ← Sym.share <| mkNatMod (mkNatSub mE (mkNatMod (mkNatMul c'E x) mE)) mE
-  let thm := if flipped then ``Lean.Grind.Nat.mul_mod_eq_sub_mul_mod' else ``Lean.Grind.Nat.mul_mod_eq_sub_mul_mod
+  let thm :=
+    if flipped then
+      ``Lean.Grind.Nat.mul_mod_eq_sub_mul_mod'
+    else
+      ``Lean.Grind.Nat.mul_mod_eq_sub_mul_mod
   let h := mkApp5 (mkConst thm) x cE c'E mE (mkNatEqRefl mE)
   return .step e' h
 
@@ -190,7 +218,9 @@ private def mkRewriter : GoalM Sym.Simp.Simproc := do
   -- `grind` keeps bit-vector literals in `OfNat.ofNat` form.
   -- TODO: the builtin simprocs are hardcoded here; add a mechanism for users to register
   -- their own `[grind hom]` simprocs.
-  let rw := Sym.Simp.evalGround { bitVecOfNat := false } <|> (← getThms).rewrite <|> andMaskSimproc <|> mulLargeCoeffSimproc
+  let rw :=
+    Sym.Simp.evalGround { bitVecOfNat := false } <|> (← getThms).rewrite <|> andMaskSimproc
+      <|> mulLargeCoeffSimproc
   return fun e => do
     let r ← rw e
     if !r.isRfl then return r
@@ -207,10 +237,11 @@ private def applyHomo? (e : Expr) : GoalM (Option (Expr × Expr)) := do
   let methods : Sym.Simp.Methods := { pre := rw, post := rw }
   let persistentCache := (← homExt.getState).cache
   homExt.modifyState fun s => { s with cache := {} }
-  let (r, simpState) ← Sym.Simp.SimpM.run (Sym.Simp.simp e) (methods := methods)
-    (s := { persistentCache })
+  let (r, simpState) ←
+    Sym.Simp.SimpM.run (Sym.Simp.simp e) (methods := methods) (s := { persistentCache })
   homExt.modifyState fun s => { s with cache := simpState.persistentCache }
-  let .step e' h _ _ := r | return none
+  let .step e' h _ _ := r
+    | return none
   return some (e', h)
 
 /--
@@ -228,7 +259,8 @@ private def isForbidden (e : Expr) : Bool :=
   | _ => false
 
 def internalize (e : Expr) (_parent? : Option Expr) : GoalM Unit := do
-  unless (← getConfig).hom do return ()
+  unless (← getConfig).hom do
+    return ()
   if isForbidden e then return ()
   -- Check whether term has already been internalized by this solver extension.
   if (← homExt.getState).internalized.contains { expr := e } then return ()
@@ -239,7 +271,9 @@ def internalize (e : Expr) (_parent? : Option Expr) : GoalM Unit := do
     let r ← preprocess e₁
     let h ← mkEqTrans h₁ (← r.getProof)
     Grind.internalize r.expr generation
-    trace_goal[grind.hom] "{e}\n===>\n{r.expr}"
+    trace_goal[grind.hom] "{e}\
+      \n===>\
+      \n{r.expr}"
     -- Ground evaluation steps are proved by `Eq.refl` (e.g., `Eq.refl 6 : 3 * 2 = 6` for `Rat`),
     -- which may only type check at default transparency. See #15867.
     pushEq e r.expr (mkExpectedPropHint h (← mkEq e r.expr))
@@ -255,14 +289,18 @@ target-domain E-graph, and asserting `a = c` after `a = b` and `b = c` is a no-o
 because no union takes place.
 -/
 def processNewEq (a b : Expr) : GoalM Unit := do
-  unless (← getConfig).hom do return ()
+  unless (← getConfig).hom do
+    return ()
   let eq ← shareCommon (← mkEq a b)
-  let some (t, hEqProp) ← applyHomo? eq | return ()
+  let some (t, hEqProp) ← applyHomo? eq
+    | return ()
   -- The stored type of a fact may differ from the inferred type of its proof by
   -- `zetaDelta` and ground evaluation, which `isDefEq` cannot always replay.
   let fact ← mkEqMPCore eq t hEqProp (← mkEqProof a b)
   let generation := max (← getGeneration a) (← getGeneration b)
-  trace_goal[grind.hom] "{eq}\n===>\n{t}"
+  trace_goal[grind.hom] "{eq}\
+    \n===>\
+    \n{t}"
   addNewRawFact fact t generation .input .other
 
 /--
@@ -274,20 +312,21 @@ the backward direction of the `=`-injection rule, i.e. the injectivity of the
 homomorphism.
 -/
 def processNewDiseq (a b : Expr) : GoalM Unit := do
-  unless (← getConfig).hom do return ()
+  unless (← getConfig).hom do
+    return ()
   let eq ← shareCommon (← mkEq a b)
-  let some (t, hEqProp) ← applyHomo? eq | return ()
+  let some (t, hEqProp) ← applyHomo? eq
+    | return ()
   let hne ← mkDiseqProof a b
   let fact ← mkEqMPCore (mkNot eq) (mkNot t) (← mkCongrArg (mkConst ``Not) hEqProp) hne
   let generation := max (← getGeneration a) (← getGeneration b)
-  trace_goal[grind.hom] "{mkNot eq}\n===>\n{mkNot t}"
+  trace_goal[grind.hom] "{mkNot eq}\
+    \n===>\
+    \n{mkNot t}"
   addNewRawFact fact (mkNot t) generation .input .other
 
 builtin_initialize
-  homExt.setMethods
-    (enabled     := (·.hom))
-    (internalize := Homo.internalize)
-    (newEq       := Homo.processNewEq)
-    (newDiseq    := Homo.processNewDiseq)
+  homExt.setMethods (enabled := (·.hom)) (internalize := Homo.internalize)
+    (newEq := Homo.processNewEq) (newDiseq := Homo.processNewDiseq)
 
 end Lean.Meta.Grind.Homo

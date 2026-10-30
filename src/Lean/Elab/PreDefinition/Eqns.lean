@@ -6,7 +6,6 @@ Authors: Leonardo de Moura, Joachim Breitner
 module
 
 prelude
-
 import Lean.Elab.PreDefinition.EqnsUtils
 import Lean.Meta.Match.NamedPatterns
 import Lean.Meta.Tactic.Simp.Main
@@ -38,38 +37,42 @@ def unfoldThmType (declName : Name) : MetaM Expr := do
       let type ← mkEq (mkAppN (Lean.mkConst declName us) xs) body
       mkForallFVars xs type
 
-def unfoldLHS (declName : Name) (mvarId : MVarId) : MetaM MVarId := mvarId.withContext do
-  if let some unfoldThm ← getUnfoldEqnFor? declName (nonRec := false) then
-    -- Recursive definition: Use unfolding lemma
-    let mut mvarId := mvarId
-    let target ← mvarId.getType'
-    let some (_, lhs, rhs) := target.eq? | throwError "unfoldLHS: Unexpected target {target}"
-    unless lhs.isAppOf declName do throwError "unfoldLHS: Unexpected LHS {lhs}"
-    let h := mkAppN (.const unfoldThm lhs.getAppFn.constLevels!) lhs.getAppArgs
-    let some (_, _, lhsNew) := (← inferType h).eq? | unreachable!
-    let targetNew ← mkEq lhsNew rhs
-    let mvarNew ← mkFreshExprSyntheticOpaqueMVar targetNew
-    mvarId.assign (← mkEqTrans h mvarNew)
-    return mvarNew.mvarId!
-  else
-    -- Else use delta reduction
-    deltaLHS mvarId
+def unfoldLHS (declName : Name) (mvarId : MVarId) : MetaM MVarId :=
+  mvarId.withContext do
+    if let some unfoldThm ← getUnfoldEqnFor? declName (nonRec := false) then
+      -- Recursive definition: Use unfolding lemma
+      let mut mvarId := mvarId
+      let target ← mvarId.getType'
+      let some (_, lhs, rhs) := target.eq?
+        | throwError "unfoldLHS: Unexpected target {target}"
+      unless lhs.isAppOf declName do
+        throwError "unfoldLHS: Unexpected LHS {lhs}"
+      let h := mkAppN (.const unfoldThm lhs.getAppFn.constLevels!) lhs.getAppArgs
+      let some (_, _, lhsNew) := (← inferType h).eq?
+        | unreachable!
+      let targetNew ← mkEq lhsNew rhs
+      let mvarNew ← mkFreshExprSyntheticOpaqueMVar targetNew
+      mvarId.assign (← mkEqTrans h mvarNew)
+      return mvarNew.mvarId!
+    else
+      -- Else use delta reduction
+      deltaLHS mvarId
 
 partial def mkEqnProof (declName : Name) (type : Expr) : MetaM Expr := do
   withTraceNode `Elab.definition.eqns (fun _ => return m!"proving:{indentExpr type}") do
-  withNewMCtxDepth do
-    let main ← mkFreshExprSyntheticOpaqueMVar type
-    let (_, mvarId) ← main.mvarId!.intros
+    withNewMCtxDepth do
+      let main ← mkFreshExprSyntheticOpaqueMVar type
+      let (_, mvarId) ← main.mvarId!.intros
 
-    -- Try rfl before deltaLHS to avoid `id` checkpoints in the proof, which would make
-    -- the lemma ineligible for dsimp
-    if (← tryURefl mvarId #[declName]) then
-      trace[Elab.definition.eqns] "proved directly by rfl"
-      return ← instantiateMVars main
+      -- Try rfl before deltaLHS to avoid `id` checkpoints in the proof, which would make
+      -- the lemma ineligible for dsimp
+      if (← tryURefl mvarId #[declName]) then
+        trace[Elab.definition.eqns] "proved directly by rfl"
+        return ← instantiateMVars main
 
-    go (← unfoldLHS declName mvarId)
-    instantiateMVars main
-  where
+      go (← unfoldLHS declName mvarId)
+      instantiateMVars main
+where
   /--
   The core loop of proving an equation. Assumes that the function call on the left-hand side has
   already been unfolded, using whatever method applies to the current function definition strategy.
@@ -78,29 +81,34 @@ partial def mkEqnProof (declName : Name) (type : Expr) : MetaM Expr := do
   recursion and structural recursion can and should use this too.
   -/
   go (mvarId : MVarId) : MetaM Unit := do
-    withTraceNode `Elab.definition.eqns (fun _ => return m!"step:\n{MessageData.ofGoal mvarId}") do
-    if (← tryURefl mvarId) then
-      return ()
-    else if (← tryContradiction mvarId) then
-      return ()
-    else if let some mvarId ← simpMatch? mvarId then
-      go mvarId
-    else if let some mvarId ← simpIf? mvarId (useNewSemantics := true) then
-      go mvarId
-    else if let some mvarId ← whnfReducibleLHS? mvarId then
-      go mvarId
-    else
-      let ctx ← Simp.mkContext (config := { dsimp := false })
-      match (← simpTargetStar mvarId ctx (simprocs := {})).1 with
-      | TacticResultCNM.closed => return ()
-      | TacticResultCNM.modified mvarId => go mvarId
-      | TacticResultCNM.noChange =>
-        if let some mvarIds ← casesOnStuckLHS? mvarId then
-          mvarIds.forM go
-        else if let some mvarIds ← splitTarget? mvarId (useNewSemantics := true) then
-          mvarIds.forM go
+    withTraceNode `Elab.definition.eqns
+      (fun _ =>
+        return m!"step:\
+          \n{MessageData.ofGoal mvarId}")
+      do
+        if (← tryURefl mvarId) then
+          return ()
+        else if (← tryContradiction mvarId) then
+          return ()
+        else if let some mvarId ← simpMatch? mvarId then
+          go mvarId
+        else if let some mvarId ← simpIf? mvarId (useNewSemantics := true) then
+          go mvarId
+        else if let some mvarId ← whnfReducibleLHS? mvarId then
+          go mvarId
         else
-          throwError "failed to generate equational theorem for `{.ofConstName declName}`\n{MessageData.ofGoal mvarId}"
+          let ctx ← Simp.mkContext (config := { dsimp := false })
+          match (← simpTargetStar mvarId ctx (simprocs := {})).1 with
+          | TacticResultCNM.closed => return ()
+          | TacticResultCNM.modified mvarId => go mvarId
+          | TacticResultCNM.noChange =>
+            if let some mvarIds ← casesOnStuckLHS? mvarId then
+              mvarIds.forM go
+            else if let some mvarIds ← splitTarget? mvarId (useNewSemantics := true) then
+              mvarIds.forM go
+            else
+              throwError "failed to generate equational theorem for `{.ofConstName declName}`\
+                \n{MessageData.ofGoal mvarId}"
 
 def lhsDependsOn (type : Expr) (fvarId : FVarId) : MetaM Bool :=
   forallTelescope type fun _ type => do
@@ -109,9 +117,7 @@ def lhsDependsOn (type : Expr) (fvarId : FVarId) : MetaM Bool :=
     else
       dependsOn type fvarId
 
-/--
-  Eliminate `namedPatterns` from equation, and trivial hypotheses.
--/
+/-- Eliminate `namedPatterns` from equation, and trivial hypotheses. -/
 def simpEqnType (eqnType : Expr) : MetaM Expr := do
   forallTelescopeReducing (← instantiateMVars eqnType) fun ys type => do
     let proofVars := collect type
@@ -121,7 +127,8 @@ def simpEqnType (eqnType : Expr) : MetaM Expr := do
     for y in ys.reverse do
       trace[Elab.definition] ">> simpEqnType: {← inferType y}, {type}"
       if proofVars.contains y.fvarId! then
-        let some (_, Expr.fvar fvarId, rhs) ← matchEq? (← inferType y) | throwError "unexpected hypothesis in alternative{indentExpr eqnType}"
+        let some (_, Expr.fvar fvarId, rhs) ← matchEq? (← inferType y)
+          | throwError "unexpected hypothesis in alternative{indentExpr eqnType}"
         eliminated := eliminated.insert fvarId
         type := type.replaceFVarId fvarId rhs
       else if eliminated.contains y.fvarId! then
@@ -144,59 +151,64 @@ where
     let go (e : Expr) (ω) : ST ω FVarIdSet := do
       let ref ← ST.mkRef {}
       e.forEachWhere Match.isNamedPattern fun e => do
-        let some e := Match.isNamedPattern? e | unreachable!
+        let some e := Match.isNamedPattern? e
+          | unreachable!
         let arg := e.appArg!.consumeMData
         if arg.isFVar then
           ST.Prim.Ref.modify ref (·.insert arg.fvarId!)
       ST.Prim.Ref.get ref
     runST (go e)
 
-
-partial def saveEqn (mvarId : MVarId) : StateRefT (Array Expr) MetaM Unit := mvarId.withContext do
-  let target ← mvarId.getType'
-  let fvarState := collectFVars {} target
-  let fvarState ← (← getLCtx).foldrM (init := fvarState) fun decl fvarState => do
-    if fvarState.fvarSet.contains decl.fvarId then
-      return collectFVars fvarState (← instantiateMVars decl.type)
-    else
-      return fvarState
-  let mut fvarIdSet := fvarState.fvarSet
-  let mut fvarIds ← sortFVarIds <| fvarState.fvarSet.toArray
-  -- Include (relevant) propositions that are not already in `fvarIdSet`
-  let mut modified := false
-  repeat
-    modified := false
-    for decl in (← getLCtx) do
-      unless fvarIdSet.contains decl.fvarId do
-        if (← isProp decl.type) then
-          let type ← instantiateMVars decl.type
-          unless (← isIrrelevant fvarIdSet type) do
-            modified := true
-            (fvarIdSet, fvarIds) ← pushDecl fvarIdSet fvarIds decl
-  until !modified
-  let type ← mkForallFVars (fvarIds.map mkFVar) target
-  let type ← simpEqnType type
-  modify (·.push type)
+partial def saveEqn (mvarId : MVarId) : StateRefT (Array Expr) MetaM Unit :=
+  mvarId.withContext do
+    let target ← mvarId.getType'
+    let fvarState := collectFVars {} target
+    let fvarState ←
+      (← getLCtx).foldrM (init := fvarState) fun decl fvarState => do
+        if fvarState.fvarSet.contains decl.fvarId then
+          return collectFVars fvarState (← instantiateMVars decl.type)
+        else
+          return fvarState
+    let mut fvarIdSet := fvarState.fvarSet
+    let mut fvarIds ← sortFVarIds <| fvarState.fvarSet.toArray
+    -- Include (relevant) propositions that are not already in `fvarIdSet`
+    let mut modified := false
+    repeat
+      modified := false
+      for decl in (← getLCtx) do
+        unless fvarIdSet.contains decl.fvarId do
+          if (← isProp decl.type) then
+            let type ← instantiateMVars decl.type
+            unless (← isIrrelevant fvarIdSet type) do
+              modified := true
+              (fvarIdSet, fvarIds) ← pushDecl fvarIdSet fvarIds decl
+    until !modified
+    let type ← mkForallFVars (fvarIds.map mkFVar) target
+    let type ← simpEqnType type
+    modify (·.push type)
 where
   /--
-    We say the type/proposition is "irrelevant" if
-    1- It does not contain any variable in `fvarIdSet` OR
-    2- It is of the form `x = t` or `t = x` where `x` is a free variable
-       that is not in `fvarIdSet`. This can of equality can be eliminated by substitution.  -/
+  We say the type/proposition is "irrelevant" if
+  1- It does not contain any variable in `fvarIdSet` OR
+  2- It is of the form `x = t` or `t = x` where `x` is a free variable
+     that is not in `fvarIdSet`. This can of equality can be eliminated by substitution.
+  -/
   isIrrelevant (fvarIdSet : FVarIdSet) (type : Expr) : MetaM Bool := do
     if Option.isNone <| type.find? fun e => e.isFVar && fvarIdSet.contains e.fvarId! then
       return true
     else if let some (_, lhs, rhs) := type.eq? then
-      return (lhs.isFVar && !fvarIdSet.contains lhs.fvarId!)
-             || (rhs.isFVar && !fvarIdSet.contains rhs.fvarId!)
+      return (lhs.isFVar && ! fvarIdSet.contains lhs.fvarId!)
+        || (rhs.isFVar && ! fvarIdSet.contains rhs.fvarId!)
     else
       return false
 
-  pushDecl (fvarIdSet : FVarIdSet) (fvarIds : Array FVarId) (localDecl : LocalDecl) : MetaM (FVarIdSet × Array FVarId) := do
+  pushDecl (fvarIdSet : FVarIdSet) (fvarIds : Array FVarId) (localDecl : LocalDecl)
+      : MetaM (FVarIdSet × Array FVarId) := do
     let (fvarIdSet, fvarIds) ← collectDeps fvarIdSet fvarIds (← instantiateMVars localDecl.type)
     return (fvarIdSet.insert localDecl.fvarId, fvarIds.push localDecl.fvarId)
 
-  collectDeps (fvarIdSet : FVarIdSet) (fvarIds : Array FVarId) (type : Expr) : MetaM (FVarIdSet × Array FVarId) := do
+  collectDeps (fvarIdSet : FVarIdSet) (fvarIds : Array FVarId) (type : Expr)
+      : MetaM (FVarIdSet × Array FVarId) := do
     let s := collectFVars {} type
     let usedFVarIds ← sortFVarIds <| s.fvarSet.toArray
     let mut fvarIdSet := fvarIdSet
@@ -213,19 +225,20 @@ Returns true if progress is made.
 partial def expand (progress : Bool) (e : Expr) : Bool × Expr :=
   match e with
   | Expr.letE _ _ v b _ => expand true (b.instantiate1 v)
-  | Expr.mdata _ b      => expand true b
-  | e                   => (progress, e)
+  | Expr.mdata _ b => expand true b
+  | e => (progress, e)
 
 def expandRHS? (mvarId : MVarId) : MetaM (Option MVarId) := do
   let target ← mvarId.getType'
-  let some (_, lhs, rhs) := target.eq? | return none
-  let (true, rhs') := expand false rhs | return none
+  let some (_, lhs, rhs) := target.eq?
+    | return none
+  let (true, rhs') := expand false rhs
+    | return none
   return some (← mvarId.replaceTargetDefEq (← mkEq lhs rhs'))
 
-
 /--
-  Quick filter for deciding whether to use `simpMatch?` at `mkEqnTypes`.
-  If the result is `false`, then it is not worth trying `simpMatch`.
+Quick filter for deciding whether to use `simpMatch?` at `mkEqnTypes`.
+If the result is `false`, then it is not worth trying `simpMatch`.
 -/
 def shouldUseSimpMatch (e : Expr) : MetaM Bool := do
   let env ← getEnv
@@ -238,8 +251,10 @@ def shouldUseSimpMatch (e : Expr) : MetaM Bool := do
             throwThe Unit ()
   return (← (find e).run) matches .error _
 
-def findMatchToSplit? (deepRecursiveSplit : Bool) (env : Environment) (e : Expr)
-    (declNames : Array Name) (exceptionSet : ExprSet) : Option Expr :=
+def findMatchToSplit?
+    (deepRecursiveSplit : Bool) (env : Environment) (e : Expr) (declNames : Array Name)
+    (exceptionSet : ExprSet)
+    : Option Expr :=
   e.findExt? fun e => Id.run do
     if e.hasLooseBVars || exceptionSet.contains e then
       return Expr.FindStep.visit
@@ -256,10 +271,10 @@ def findMatchToSplit? (deepRecursiveSplit : Bool) (env : Environment) (e : Expr)
         return Expr.FindStep.visit
       -- For non-recursive functions (`declNames` empty), we split here
       if declNames.isEmpty then
-          return Expr.FindStep.found
+        return Expr.FindStep.found
       -- For recursive functions, the “new” behavior is to likewise split
       if deepRecursiveSplit then
-          return Expr.FindStep.found
+        return Expr.FindStep.found
       -- Else, the “old” behavior is split only when at least one alternative contains a `declNames`
       -- application with loose bound variables.
       for i in info.getFirstAltPos...(info.getFirstAltPos + info.numAlts) do
@@ -268,34 +283,40 @@ def findMatchToSplit? (deepRecursiveSplit : Bool) (env : Environment) (e : Expr)
           return Expr.FindStep.found
       return Expr.FindStep.visit
     else
-      let Expr.const declName .. := e.getAppFn | return Expr.FindStep.visit
+      let Expr.const declName .. := e.getAppFn
+        | return Expr.FindStep.visit
       if declName == ``WellFounded.fix || isBRecOnRecursor env declName then
         -- We should not go inside unfolded nested recursive applications
         return Expr.FindStep.done
       else
         return Expr.FindStep.visit
 
-partial def splitMatch? (mvarId : MVarId) (declNames : Array Name) : MetaM (Option (List MVarId)) := commitWhenSome? do
-  let target ← mvarId.getType'
-  let rec go (badCases : ExprSet) : MetaM (Option (List MVarId)) := do
-    if let some e := findMatchToSplit? (backward.eqns.deepRecursiveSplit.get (← getOptions)) (← getEnv)
-                                       target declNames badCases then
-      try
-        Meta.Split.splitMatch mvarId e
-      catch ex =>
-        trace[Elab.definition.eqns] "cannot split {e}\n{ex.toMessageData}"
-        go (badCases.insert e)
-    else
-      trace[Elab.definition.eqns] "did not find term to split\n{MessageData.ofGoal mvarId}"
-      return none
-  go {}
+partial def splitMatch? (mvarId : MVarId) (declNames : Array Name) : MetaM (Option (List MVarId)) :=
+  commitWhenSome? do
+    let target ← mvarId.getType'
+    let rec go (badCases : ExprSet) : MetaM (Option (List MVarId)) := do
+      if let some e :=
+          findMatchToSplit? (backward.eqns.deepRecursiveSplit.get (← getOptions)) (← getEnv) target
+            declNames badCases then
+        try
+          Meta.Split.splitMatch mvarId e
+        catch ex =>
+          trace[Elab.definition.eqns] "cannot split {e}\
+            \n{ex.toMessageData}"
+          go (badCases.insert e)
+      else
+        trace[Elab.definition.eqns] "did not find term to split\
+          \n{MessageData.ofGoal mvarId}"
+        return none
+    go {}
 
 partial def mkEqnTypes (declNames : Array Name) (mvarId : MVarId) : MetaM (Array Expr) := do
   let (_, eqnTypes) ← go mvarId |>.run #[]
   return eqnTypes
 where
   go (mvarId : MVarId) : StateRefT (Array Expr) MetaM Unit := do
-    trace[Elab.definition.eqns] "mkEqnTypes step\n{MessageData.ofGoal mvarId}"
+    trace[Elab.definition.eqns] "mkEqnTypes step\
+      \n{MessageData.ofGoal mvarId}"
 
     if let some mvarId ← expandRHS? mvarId then
       return (← go mvarId)
@@ -310,11 +331,11 @@ where
     saveEqn mvarId
 
 /--
-  Some of the hypotheses added by `mkEqnTypes` may not be used by the actual proof (i.e., `value` argument).
-  This method eliminates them.
+Some of the hypotheses added by `mkEqnTypes` may not be used by the actual proof (i.e., `value` argument).
+This method eliminates them.
 
-  Alternative solution: improve `saveEqn` and make sure it never includes unnecessary hypotheses.
-  These hypotheses are leftovers from tactics such as `splitMatch?` used in `mkEqnTypes`.
+Alternative solution: improve `saveEqn` and make sure it never includes unnecessary hypotheses.
+These hypotheses are leftovers from tactics such as `splitMatch?` used in `mkEqnTypes`.
 -/
 def removeUnusedEqnHypotheses (declType declValue : Expr) : CoreM (Expr × Expr) := do
   go declType declValue #[] {}
@@ -326,7 +347,7 @@ where
       let fvarId ← mkFreshFVarId
       go (type.bindingBody!) b (xs.push (mkFVar fvarId)) (lctx.mkLocalDecl fvarId n d bi)
     | _ =>
-      let type  := type.instantiateRev xs
+      let type := type.instantiateRev xs
       let value := value.instantiateRev xs
       let mut s := collectFVars (collectFVars {} type) value
       let mut xsNew := #[]
@@ -340,7 +361,6 @@ where
         xsNew := xsNew.reverse
         return (lctx.mkForall xsNew type, lctx.mkLambda xsNew value)
 
-
 structure EqnTypesKey where
   declName : Name
   declNames : Array Name
@@ -353,11 +373,10 @@ deriving TypeName
 def realizeEqnTypes (key : EqnTypesKey) : MetaM EqnTypes :=
   withEqnOptions key.declName <| withOptions (tactic.hygienic.set · false) do
     let target ← unfoldThmType key.declName
-    let types ← withNewMCtxDepth <|
-      forallTelescope (cleanupAnnotations := true) target fun _ target => do
+    let types ←
+      withNewMCtxDepth <| forallTelescope (cleanupAnnotations := true) target fun _ target => do
         let goal ← mkFreshExprSyntheticOpaqueMVar target
-        withReducible do
-          mkEqnTypes key.declNames goal.mvarId!
+        withReducible do mkEqnTypes key.declNames goal.mvarId!
     return { types }
 
 def realizeEqn (declName name : Name) (type : Expr) : MetaM Unit :=
@@ -365,10 +384,7 @@ def realizeEqn (declName name : Name) (type : Expr) : MetaM Unit :=
     let info ← getConstInfoDefn declName
     let value ← mkEqnProof declName type
     let (type, value) ← removeUnusedEqnHypotheses type value
-    addDecl <| (←mkThmOrUnsafeDef {
-      name, type, value
-      levelParams := info.levelParams
-    })
+    addDecl <| (← mkThmOrUnsafeDef { name, type, value, levelParams := info.levelParams })
     inferDefEqAttr name
 
 /--
@@ -388,7 +404,7 @@ def mkEqns (declName : Name) (declNames : Array Name) : MetaM (Array Name) := do
   for h : i in *...eqnTypes.size do
     let type := eqnTypes[i]
     trace[Elab.definition.eqns] "eqnType[{i}]: {eqnTypes[i]}"
-    let name := mkEqLikeNameFor (← getEnv) declName s!"{eqnThmSuffixBasePrefix}{i+1}"
+    let name := mkEqLikeNameFor (← getEnv) declName s!"{eqnThmSuffixBasePrefix}{i + 1}"
     thmNames := thmNames.push name
     -- determinism: `type` comes from `realizeValue`, so it is independent of the environment
     -- changes since `declName` was added
@@ -397,8 +413,8 @@ def mkEqns (declName : Name) (declNames : Array Name) : MetaM (Array Name) := do
 
 def getEqnsFor? (declName : Name) : MetaM (Option (Array Name)) := do
   if (← isRecursiveDefinition declName) then
-    let some (.defnInfo info) := (← getEnv).find? declName |
-      throwError "internal error: recursive definition `{declName}` is not a definition"
+    let some (.defnInfo info) := (← getEnv).find? declName
+      | throwError "internal error: recursive definition `{declName}` is not a definition"
     let n ← mkEqns declName info.all.toArray
     return some n
   if (← getEnv).contains declName then
@@ -411,8 +427,6 @@ def getEqnsFor? (declName : Name) : MetaM (Option (Array Name)) := do
   else
     return none
 
-builtin_initialize
-  registerGetEqnsFn getEqnsFor?
-
+builtin_initialize registerGetEqnsFn getEqnsFor?
 
 end Lean.Elab.Eqns

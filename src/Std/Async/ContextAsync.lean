@@ -33,9 +33,7 @@ namespace ContextAsync
 Runs a `ContextAsync` computation with a given context. See also `ContextAsync.run` for running with a new
 context that automatically cancels after execution.
 -/
-@[inline]
-protected def runIn (ctx : CancellationContext) (x : ContextAsync α) : Async α :=
-  x ctx
+@[inline] protected def runIn (ctx : CancellationContext) (x : ContextAsync α) : Async α := x ctx
 
 /--
 Runs a `ContextAsync` computation with a new context that cancels after the execution of the computation.
@@ -46,12 +44,8 @@ protected def run (x : ContextAsync α) : Async α := do
   let ctx ← CancellationContext.new
   try x ctx finally ctx.cancel .cancel
 
-/--
-Returns the current context for inspection or to pass to other functions.
--/
-@[inline]
-def getContext : ContextAsync CancellationContext :=
-  fun ctx => pure ctx
+/-- Returns the current context for inspection or to pass to other functions. -/
+@[inline] def getContext : ContextAsync CancellationContext := fun ctx => pure ctx
 
 /--
 Checks if the current context is cancelled. Returns `true` if the context (or any ancestor) has been cancelled.
@@ -80,17 +74,13 @@ def cancel (reason : CancellationReason) : ContextAsync Unit := do
   let ctx ← getContext
   ctx.cancel reason
 
-/--
-Returns a selector that completes when the current context is cancelled.
--/
+/-- Returns a selector that completes when the current context is cancelled. -/
 @[inline]
 def doneSelector : ContextAsync (Selector Unit) := do
   let ctx ← getContext
   return ctx.doneSelector
 
-/--
-Waits for the current context to be cancelled.
--/
+/-- Waits for the current context to be cancelled. -/
 @[inline]
 def awaitCancellation : ContextAsync Unit := do
   let ctx ← getContext
@@ -102,19 +92,29 @@ Runs two computations concurrently and returns both results. Each computation ru
 if either fails or is cancelled, both are cancelled immediately and the exception is propagated.
 -/
 @[inline, specialize]
-def concurrently (x : ContextAsync α) (y : ContextAsync β)
-    (prio := Task.Priority.default) : ContextAsync (α × β) := do
-
+def concurrently (x : ContextAsync α) (y : ContextAsync β) (prio := Task.Priority.default)
+    : ContextAsync (α × β) := do
   let ctx ← getContext
   let concurrentCtx ← ctx.fork
 
   let childCtx1 ← concurrentCtx.fork
   let childCtx2 ← concurrentCtx.fork
 
-  let result ← Async.concurrently
-    (try x childCtx1 catch err => do concurrentCtx.cancel .cancel; throw err finally childCtx1.cancel .cancel)
-    (try y childCtx2 catch err => do concurrentCtx.cancel .cancel; throw err finally childCtx2.cancel .cancel)
-    prio
+  let result ←
+    Async.concurrently
+      (try
+         x childCtx1
+       catch err => do
+         concurrentCtx.cancel .cancel; throw err
+       finally
+         childCtx1.cancel .cancel)
+      (try
+         y childCtx2
+       catch err => do
+         concurrentCtx.cancel .cancel; throw err
+       finally
+         childCtx2.cancel .cancel)
+      prio
 
   concurrentCtx.cancel .cancel
   return result
@@ -124,21 +124,22 @@ Runs all computations concurrently and collects results in the same order. Each 
 if any computation fails, all others are cancelled and the exception is propagated.
 -/
 @[inline, specialize]
-def concurrentlyAll (xs : Array (ContextAsync α))
-    (prio := Task.Priority.default) : ContextAsync (Array α) := do
+def concurrentlyAll (xs : Array (ContextAsync α)) (prio := Task.Priority.default)
+    : ContextAsync (Array α) := do
   let ctx ← getContext
   let concurrentCtx ← ctx.fork
 
-  let tasks : Array (AsyncTask α) ← xs.mapM fun ctxAsync => do
-    let childCtx ← concurrentCtx.fork
-    async (prio := prio)
-      (try
-        ctxAsync childCtx
-      catch err => do
-        concurrentCtx.cancel .cancel
-        throw err
-      finally
-        childCtx.cancel .cancel)
+  let tasks : Array (AsyncTask α) ←
+    xs.mapM fun ctxAsync => do
+      let childCtx ← concurrentCtx.fork
+      async (prio := prio)
+        (try
+           ctxAsync childCtx
+         catch err => do
+           concurrentCtx.cancel .cancel
+           throw err
+         finally
+           childCtx.cancel .cancel)
 
   try
     tasks.mapM await
@@ -176,8 +177,8 @@ Runs all computations concurrently and returns the result of the first to comple
 exception if that computation failed. Each computation runs in its own child context; once the first
 completes, all of these contexts are cancelled.
 -/
-def raceAll [ForM ContextAsync c (ContextAsync α)] (xs : c)
-    (prio := Task.Priority.default) : ContextAsync α := do
+def raceAll [ForM ContextAsync c (ContextAsync α)] (xs : c) (prio := Task.Priority.default)
+    : ContextAsync α := do
   let raceCtx ← (← getContext).fork
   let promise ← IO.Promise.new
 
@@ -203,10 +204,10 @@ Launches a `ContextAsync` computation as an asynchronous task with a forked chil
 The child context is automatically cancelled when the task completes or fails.
 -/
 @[inline, specialize]
-def async (x : ContextAsync α) (prio := Task.Priority.default) : ContextAsync (AsyncTask α) :=
-  fun ctx => do
-    let childCtx ← ctx.fork
-    Async.async (try x childCtx finally childCtx.cancel .cancel) prio
+def async (x : ContextAsync α) (prio := Task.Priority.default)
+    : ContextAsync (AsyncTask α) := fun ctx => do
+  let childCtx ← ctx.fork
+  Async.async (try x childCtx finally childCtx.cancel .cancel) prio
 
 instance : MonadAsync AsyncTask ContextAsync where
   async x prio := ContextAsync.async x prio
@@ -229,8 +230,7 @@ instance : MonadExcept IO.Error ContextAsync where
   tryCatch x h := fun ctx => tryCatch (x ctx) (fun e => h e ctx)
 
 instance : MonadFinally ContextAsync where
-  tryFinally' x f := fun ctx =>
-    tryFinally' (x ctx) (fun opt => f opt ctx)
+  tryFinally' x f := fun ctx => tryFinally' (x ctx) (fun opt => f opt ctx)
 
 instance [Inhabited α] : Inhabited (ContextAsync α) where
   default := fun _ => default
@@ -242,9 +242,11 @@ instance : MonadAwait AsyncTask ContextAsync where
 Runs `f` as a loop in constant space. The generic `Loop.forIn` would nest one bind per iteration.
 -/
 @[inline]
-protected def forIn {β : Type} (init : β) (f : Unit → β → ContextAsync (ForInStep β))
-    (prio := Task.Priority.default) : ContextAsync β :=
-  fun ctx => EAsync.forIn init (fun u b => f u b ctx) prio
+protected def forIn
+    {β : Type} (init : β) (f : Unit → β → ContextAsync (ForInStep β))
+    (prio := Task.Priority.default)
+    : ContextAsync β := fun ctx =>
+  EAsync.forIn init (fun u b => f u b ctx) prio
 
 instance : ForIn ContextAsync Lean.Loop Unit where
   forIn _ := ContextAsync.forIn
@@ -254,8 +256,8 @@ Runs two computations concurrently and returns the result of the first to comple
 runs in its own child context; once the first completes, both of these contexts are cancelled.
 -/
 @[inline, specialize]
-def race [Inhabited α] (x : ContextAsync α) (y : ContextAsync α)
-    (prio := Task.Priority.default) : ContextAsync α := do
+def race [Inhabited α] (x : ContextAsync α) (y : ContextAsync α) (prio := Task.Priority.default)
+    : ContextAsync α := do
   let parent ← getContext
   let ctx1 ← CancellationContext.fork parent
   let ctx2 ← CancellationContext.fork parent
@@ -280,8 +282,7 @@ end ContextAsync
 Returns a selector that completes when the current context is cancelled.
 This is useful for selecting on cancellation alongside other asynchronous operations.
 -/
-def Selector.cancelled : ContextAsync (Selector Unit) := do
-  ContextAsync.doneSelector
+def Selector.cancelled : ContextAsync (Selector Unit) := do ContextAsync.doneSelector
 
 end Async
 end Std

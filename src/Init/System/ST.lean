@@ -16,8 +16,7 @@ opaque Void.nonemptyType (σ : Type) : NonemptyType.{0}
 
 @[expose] def Void (σ : Type) : Type := Void.nonemptyType σ |>.type
 
-instance Void.instNonempty : Nonempty (Void σ) :=
-  by exact (Void.nonemptyType σ).property
+instance Void.instNonempty : Nonempty (Void σ) := by exact (Void.nonemptyType σ).property
 
 @[extern "lean_void_mk", never_extract]
 opaque Void.mk (x : σ) : Void σ
@@ -35,14 +34,12 @@ It is possible to run `ST` computations in a non-monadic context using `runST`.
 
 namespace ST
 
-@[always_inline, inline]
-protected def pure (x : α) : ST σ α := fun s => .mk x s
+@[always_inline, inline] protected def pure (x : α) : ST σ α := fun s => .mk x s
 
 @[always_inline, inline]
-protected def bind (x : ST σ α) (f : α → ST σ β) : ST σ β :=
-  fun s =>
-    match x s with
-    | .mk x s => f x s
+protected def bind (x : ST σ α) (f : α → ST σ β) : ST σ β := fun s =>
+  match x s with
+  | .mk x s => f x s
 
 end ST
 
@@ -63,7 +60,9 @@ instance {σ : Type} {α : Type} [Inhabited α] : Inhabited (ST σ α) where
 
 instance {σ : Type} : MonadAttach (ST σ) where
   CanReturn x a := ∃ s s', x s = ⟨a, s'⟩
-  attach x s := match h : x s with | ⟨a, s'⟩ => ⟨⟨a, s, s', h⟩, s'⟩
+  attach x s :=
+    match h : x s with
+    | ⟨a, s'⟩ => ⟨⟨a, s, s', h⟩, s'⟩
 
 inductive EST.Out (ε : Type) (σ : Type) (α : Type) where
   | ok : α → Void σ → EST.Out ε σ α
@@ -78,21 +77,19 @@ It is possible to run `EST` computations in a non-monadic context using `runEST`
 
 namespace EST
 
-@[always_inline, inline]
-protected def pure (a : α) : EST ε σ α := fun s => .ok a s
+@[always_inline, inline] protected def pure (a : α) : EST ε σ α := fun s => .ok a s
 
 @[always_inline, inline]
-protected def bind (x : EST ε σ α) (f : α → EST ε σ β) : EST ε σ β :=
-  fun s => match x s with
-  | .ok a s    => f a s
+protected def bind (x : EST ε σ α) (f : α → EST ε σ β) : EST ε σ β := fun s =>
+  match x s with
+  | .ok a s => f a s
   | .error e s => .error e s
 
-@[always_inline, inline]
-protected def throw (e : ε) : EST ε σ α := fun s => .error e s
+@[always_inline, inline] protected def throw (e : ε) : EST ε σ α := fun s => .error e s
 
 @[always_inline, inline]
-protected def tryCatch (x : EST ε σ α) (handle : ε → EST ε σ α) : EST ε σ α :=
-  fun s => match x s with
+protected def tryCatch (x : EST ε σ α) (handle : ε → EST ε σ α) : EST ε σ α := fun s =>
+  match x s with
   | .ok a s => .ok a s
   | .error e s => handle e s
 
@@ -118,7 +115,8 @@ instance : MonadFinally (EST ε σ) where
 
 instance {ε σ : Type} : MonadAttach (EST ε σ) where
   CanReturn x a := ∃ s s', x s = .ok a s'
-  attach x s := match h : x s with
+  attach x s :=
+    match h : x s with
     | .ok a s' => .ok ⟨a, s, s', h⟩ s'
     | .error e s' => .error e s'
 
@@ -129,27 +127,21 @@ instance (ε σ : Type) : MonadExceptOf ε (EST ε σ) where
 instance {ε σ : Type} {α : Type} [Inhabited ε] : Inhabited (EST ε σ α) where
   default := fun s => .error default s
 
-/--
-An auxiliary class used to infer the “state” of `EST` and `ST` monads.
--/
+/-- An auxiliary class used to infer the “state” of `EST` and `ST` monads. -/
 class STWorld (σ : outParam Type) (m : Type → Type)
 
 instance {σ m n} [MonadLift m n] [STWorld σ m] : STWorld σ n := ⟨⟩
 instance {σ} : STWorld σ (ST σ) := ⟨⟩
 instance {ε σ} : STWorld σ (EST ε σ) := ⟨⟩
 
-/--
-Runs an `EST` computation, in which mutable state and exceptions are the only side effects.
--/
+/-- Runs an `EST` computation, in which mutable state and exceptions are the only side effects. -/
 @[noinline, nospecialize]
 def runEST {ε α : Type} (x : (σ : Type) → EST ε σ α) : Except ε α :=
   match x Unit (Void.mk ()) with
-  | .ok a _     => Except.ok a
+  | .ok a _ => Except.ok a
   | .error ex _ => Except.error ex
 
-/--
-Runs an `ST` computation, in which mutable state via `ST.Ref` is the only side effect.
--/
+/-- Runs an `ST` computation, in which mutable state via `ST.Ref` is the only side effect. -/
 @[noinline, nospecialize]
 def runST {α : Type} (x : (σ : Type) → ST σ α) : α :=
   match x Unit (Void.mk ()) with
@@ -171,7 +163,7 @@ the `ST σ` monad.
 -/
 structure Ref (σ : Type) (α : Type) : Type where
   ref : RefPointed.type
-  h   : Nonempty α
+  h : Nonempty α
 
 instance {σ α} [s : Nonempty α] : Nonempty (Ref σ α) :=
   Nonempty.intro { ref := Classical.choice RefPointed.property, h := s }
@@ -184,7 +176,8 @@ private noncomputable def inhabitedFromRef {σ α} (r : Ref σ α) : ST σ α :=
   pure default
 
 @[extern "lean_st_mk_ref"]
-opaque mkRef {σ α} (a : α) : ST σ (Ref σ α) := pure { ref := Classical.choice RefPointed.property, h := Nonempty.intro a }
+opaque mkRef {σ α} (a : α) : ST σ (Ref σ α) :=
+  pure { ref := Classical.choice RefPointed.property, h := Nonempty.intro a }
 @[extern "lean_st_ref_get"]
 opaque Ref.get {σ α} (r : @& Ref σ α) : ST σ α := inhabitedFromRef r
 @[extern "lean_st_ref_swap"]
@@ -196,14 +189,15 @@ unsafe opaque Ref.put {σ α} (r : @& Ref σ α) (a : α) : ST σ Unit
 @[extern "lean_st_ref_ptr_eq"]
 opaque Ref.ptrEq {σ α} (r1 r2 : @& Ref σ α) : ST σ Bool
 
-@[inline] def Ref.set {σ α : Type} (r : Ref σ α) (a : α) : ST σ Unit := do
-  discard <| Ref.swap r a
+@[inline] def Ref.set {σ α : Type} (r : Ref σ α) (a : α) : ST σ Unit := do discard <| Ref.swap r a
 
-@[inline] unsafe def Ref.modifyUnsafe {σ α : Type} (r : Ref σ α) (f : α → α) : ST σ Unit := do
+@[inline]
+unsafe def Ref.modifyUnsafe {σ α : Type} (r : Ref σ α) (f : α → α) : ST σ Unit := do
   let v ← Ref.take r
   Ref.put r (f v)
 
-@[inline] unsafe def Ref.modifyGetUnsafe {σ α β : Type} (r : Ref σ α) (f : α → β × α) : ST σ β := do
+@[inline]
+unsafe def Ref.modifyGetUnsafe {σ α β : Type} (r : Ref σ α) (f : α → β × α) : ST σ β := do
   let v ← Ref.take r
   let (b, a) := f v
   Ref.put r a
@@ -226,17 +220,11 @@ end Prim
 section
 variable {σ : Type} {m : Type → Type} [Monad m] [MonadLiftT (ST σ) m]
 
-/--
-Creates a new mutable reference that contains the provided value `a`.
--/
-@[inline] def mkRef {α : Type} (a : α) : m (Ref σ α) :=  liftM <| Prim.mkRef a
-/--
-Reads the value of a mutable reference.
--/
+/-- Creates a new mutable reference that contains the provided value `a`. -/
+@[inline] def mkRef {α : Type} (a : α) : m (Ref σ α) := liftM <| Prim.mkRef a
+/-- Reads the value of a mutable reference. -/
 @[inline] def Ref.get {α : Type} (r : Ref σ α) : m α := liftM <| Prim.Ref.get r
-/--
-Replaces the value of a mutable reference.
--/
+/-- Replaces the value of a mutable reference. -/
 @[inline] def Ref.set {α : Type} (r : Ref σ α) (a : α) : m Unit := liftM <| Prim.Ref.set r a
 /--
 Atomically swaps the value of a mutable reference cell with another value. The reference cell's
@@ -271,12 +259,15 @@ cell may be aliased, and modifications to one alias also modify the other.
 Atomically modifies a mutable reference cell by replacing its contents with the result of a function
 call.
 -/
-@[inline] def Ref.modify {α : Type} (r : Ref σ α) (f : α → α) : m Unit := liftM <| Prim.Ref.modify r f
+@[inline]
+def Ref.modify {α : Type} (r : Ref σ α) (f : α → α) : m Unit := liftM <| Prim.Ref.modify r f
 /--
 Atomically modifies a mutable reference cell by replacing its contents with the result of a function
 call that simultaneously computes a value to return.
 -/
-@[inline] def Ref.modifyGet {α : Type} {β : Type} (r : Ref σ α) (f : α → β × α) : m β := liftM <| Prim.Ref.modifyGet r f
+@[inline]
+def Ref.modifyGet {α : Type} {β : Type} (r : Ref σ α) (f : α → β × α) : m β :=
+  liftM <| Prim.Ref.modifyGet r f
 
 /--
 Creates a `MonadStateOf` instance from a reference cell.

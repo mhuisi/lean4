@@ -18,15 +18,13 @@ namespace Lean.Fmt
 public def fmtExtIff : Fmt := fun
   | `(Parser.Attr.extIff| (%$lbTk iff%$iffTk :=%$colonEqTk false%$falseTk )%$rbTk) =>
     fmtNamedArgumentTerm lbTk iffTk colonEqTk falseTk rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.extFlat]
 public def fmtExtFlat : Fmt := fun
   | `(Parser.Attr.extFlat| (%$lbTk flat%$flatTk :=%$colonEqTk false%$falseTk )%$rbTk) =>
     fmtNamedArgumentTerm lbTk flatTk colonEqTk falseTk rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.ext]
 public def fmtExtAttr : Fmt := fun
@@ -36,8 +34,7 @@ public def fmtExtAttr : Fmt := fun
     let extFlat? ← fmt? extFlat?
     let prio? ← fmt? prio?
     return Layouts.pseudoApplication #[extTk, extIff?, extFlat?, prio?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Elab.Tactic.Ext.ext]
 public def fmtTacticExt : Fmt := fun
@@ -49,8 +46,7 @@ public def fmtTacticExt : Fmt := fun
     let pats := Layouts.fill pats
     let annotatedPats := Layouts.typeAscription pats colonTk? depth?
     return Layouts.pseudoApplication #[extTk, annotatedPats]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Elab.Tactic.Ext.tacticExt1___]
 public def fmtTacticExt1 : Fmt := fun
@@ -58,5 +54,4 @@ public def fmtTacticExt1 : Fmt := fun
     let ext1Tk ← fmt ext1Tk
     let pats ← fmtArray pats
     return Layouts.pseudoApplication <| #[ext1Tk] ++ pats
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

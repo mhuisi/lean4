@@ -19,7 +19,7 @@ namespace Lean.Compiler.LCNF
 namespace CSE
 
 structure State where
-  map   : PHashMap Expr FVarId := {}
+  map : PHashMap Expr FVarId := {}
   subst : FVarSubst .pure := {}
 
 abbrev M := StateRefT State CompilerM
@@ -30,13 +30,14 @@ instance : MonadFVarSubst M .pure false where
 instance : MonadFVarSubstState M .pure where
   modifySubst f := modify fun s => { s with subst := f s.subst }
 
-@[inline] def getSubst : M (FVarSubst .pure) :=
-  return (← get).subst
+@[inline] def getSubst : M (FVarSubst .pure) := return (← get).subst
 
-@[inline] def addEntry (value : Expr) (fvarId : FVarId) : M Unit :=
+@[inline]
+def addEntry (value : Expr) (fvarId : FVarId) : M Unit :=
   modify fun s => { s with map := s.map.insert value fvarId }
 
-@[inline] def withNewScope (x : M α) : M α := do
+@[inline]
+def withNewScope (x : M α) : M α := do
   let map := (← get).map
   try x finally modify fun s => { s with map }
 
@@ -50,13 +51,11 @@ def replaceFun (decl : FunDecl .pure) (fvarId : FVarId) : M Unit := do
 
 def hasNeverExtract (v : LetValue .pure) : CompilerM Bool :=
   match v with
-  | .const declName .. =>
-    return hasNeverExtractAttribute (← getEnv) declName
-  | .lit _ | .erased | .proj .. | .fvar .. =>
-    return false
+  | .const declName .. => return hasNeverExtractAttribute (← getEnv) declName
+  | .lit _ | .erased | .proj .. | .fvar .. => return false
 
-partial def _root_.Lean.Compiler.LCNF.Code.cse (shouldElimFunDecls : Bool) (code : Code .pure) :
-    CompilerM (Code .pure) :=
+partial def _root_.Lean.Compiler.LCNF.Code.cse (shouldElimFunDecls : Bool) (code : Code .pure)
+    : CompilerM (Code .pure) :=
   go code |>.run' {}
 where
   goFunDecl (decl : FunDecl .pure) : M (FunDecl .pure) := do
@@ -97,28 +96,29 @@ where
     | .jp decl k =>
       let decl ← goFunDecl decl
       /-
-       We currently don't eliminate common join points because we want to prevent
-       jumps to out-of-scope join points.
+      We currently don't eliminate common join points because we want to prevent
+      jumps to out-of-scope join points.
       -/
       return code.updateFun! decl (← go k)
     | .cases c =>
       withNormFVarResult (← normFVar c.discr) fun discr => do
         let resultType ← normExpr c.resultType
-        let alts ← c.alts.mapMonoM fun alt => do
-          match alt with
-          | .alt _ ps k => withNewScope do
-            return alt.updateAlt! (← normParams ps) (← go k)
-          | .default k => withNewScope do return alt.updateCode (← go k)
+        let alts ←
+          c.alts.mapMonoM fun alt => do
+            match alt with
+            | .alt _ ps k => withNewScope do return alt.updateAlt! (← normParams ps) (← go k)
+            | .default k => withNewScope do return alt.updateCode (← go k)
         return code.updateCases! resultType discr alts
-    | .return fvarId => withNormFVarResult (← normFVar fvarId) fun fvarId => return code.updateReturn! fvarId
-    | .jmp fvarId args => withNormFVarResult (← normFVar fvarId) fun fvarId => return code.updateJmp! fvarId (← normArgs args)
+    | .return fvarId =>
+      withNormFVarResult (← normFVar fvarId) fun fvarId => return code.updateReturn! fvarId
+    | .jmp fvarId args =>
+      withNormFVarResult (← normFVar fvarId) fun fvarId =>
+        return code.updateJmp! fvarId (← normArgs args)
     | .unreach .. => return code
 
 end CSE
 
-/--
-Common sub-expression elimination
--/
+/-- Common sub-expression elimination -/
 def Decl.cse (shouldElimFunDecls : Bool) (decl : Decl .pure) : CompilerM (Decl .pure) := do
   let value ← decl.value.mapCodeM (·.cse shouldElimFunDecls)
   return { decl with value }
@@ -127,7 +127,6 @@ def cse (phase : Phase := .base) (shouldElimFunDecls := false) (occurrence := 0)
   phase.withPurityCheck .pure fun h =>
     .mkPerDeclaration `cse phase (h ▸ Decl.cse shouldElimFunDecls) occurrence
 
-builtin_initialize
-  registerTraceClass `Compiler.cse (inherited := true)
+builtin_initialize registerTraceClass `Compiler.cse (inherited := true)
 
 end Lean.Compiler.LCNF

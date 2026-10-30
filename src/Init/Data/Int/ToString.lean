@@ -13,14 +13,15 @@ import Init.Data.Int.LemmasAux
 
 namespace Int
 
-public theorem repr_eq_ite {a : Int} :
-    a.repr = if 0 ≤ a then a.toNat.repr else "-" ++ (-a).toNat.repr := by
+public theorem repr_eq_ite {a : Int}
+    : a.repr = if 0 ≤ a then a.toNat.repr else "-" ++ (-a).toNat.repr := by
   cases a <;> simp [Int.repr]
 
 @[deprecated Int.repr_eq_ite (since := "2026-07-21")]
-public theorem repr_eq_if {a : Int} : a.repr = if 0 ≤ a then a.toNat.repr else "-" ++ (-a).toNat.repr := Int.repr_eq_ite
+public theorem repr_eq_if {a : Int}
+    : a.repr = if 0 ≤ a then a.toNat.repr else "-" ++ (-a).toNat.repr :=
+  Int.repr_eq_ite
 
-@[simp]
-public theorem toString_eq_repr {a : Int} : toString a = a.repr := (rfl)
+@[simp] public theorem toString_eq_repr {a : Int} : toString a = a.repr := (rfl)
 
 end Int

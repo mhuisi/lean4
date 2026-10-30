@@ -27,13 +27,17 @@ namespace Lean.Elab.ConfigEval
 open Meta Term Command
 
 inductive EvalConfigItemHandlerKind
-  /-- Handler is called when its key matches the configuration key exactly.
-  The matched key is not allowed to be `Name.anonymous`. -/
+  /--
+  Handler is called when its key matches the configuration key exactly.
+  The matched key is not allowed to be `Name.anonymous`.
+  -/
   | exact
-  /-- Handler is called when its key is a strict prefix of the configuration key.
-  The matched key may be `Name.anonymous`. -/
+  /--
+  Handler is called when its key is a strict prefix of the configuration key.
+  The matched key may be `Name.anonymous`.
+  -/
   | wildcard
-  deriving BEq
+deriving BEq
 
 structure EvalConfigItemHandler where
   /-- Ref for the key. -/
@@ -50,8 +54,10 @@ structure EvalConfigItemHandler where
   struct? : Option Name := none
 
 structure EvalConfigItemView where
-  /-- Fields to not automatically synthesize handlers for, in addition to those keys
-  already appearing in `handlers`. -/
+  /--
+  Fields to not automatically synthesize handlers for, in addition to those keys
+  already appearing in `handlers`.
+  -/
   omitFields : Array (Ident × Name)
   /-- Explicitly provided handlers. -/
   handlers : Array EvalConfigItemHandler
@@ -79,13 +85,17 @@ private structure HandlerTrie where
   children : Array (String × HandlerTrie) := #[]
   /-- The `EvalConfigItemHandlerKind.wildcard` handler for this trie position's key. -/
   wildcard? : Option EvalConfigItemHandler := none
-  /-- Constant to use for terminfo. The root of the trie does not have this set.
-  Collected from `EvalConfigItemHandler.projFn?`. -/
+  /--
+  Constant to use for terminfo. The root of the trie does not have this set.
+  Collected from `EvalConfigItemHandler.projFn?`.
+  -/
   projFn? : Option Name := none
-  /-- Constant to use for field completion terminfo. The root of the trie has this set.
-  Collected from `EvalConfigItemHandler.struct?`. -/
+  /--
+  Constant to use for field completion terminfo. The root of the trie has this set.
+  Collected from `EvalConfigItemHandler.struct?`.
+  -/
   struct? : Option Name := none
-  deriving Inhabited
+deriving Inhabited
 
 /--
 Finds a handler that applies to this key.
@@ -95,8 +105,9 @@ If `kind` is `exact` then it returns the handler that would actually apply,
 and if it is `wildcard` then it returns the wildcard handler corresponding to that
 key if an `exact` handler would also apply.
 -/
-private partial def HandlerTrie.find? (trie : HandlerTrie) (key : Name) (kind : EvalConfigItemHandlerKind) :
-    Option (Name × EvalConfigItemHandler) := do
+private partial def HandlerTrie.find?
+    (trie : HandlerTrie) (key : Name) (kind : EvalConfigItemHandlerKind)
+    : Option (Name × EvalConfigItemHandler) := do
   let root := key.getRoot
   if root.isAnonymous then
     match kind with
@@ -119,14 +130,15 @@ but it is implemented to replace handlers.
 
 `EvalConfigItemHandler.key` is modified
 -/
-private partial def HandlerTrie.insert (trie : HandlerTrie) (h : EvalConfigItemHandler) (key : Name := h.key) :
-    HandlerTrie :=
+private partial def HandlerTrie.insert
+    (trie : HandlerTrie) (h : EvalConfigItemHandler) (key : Name := h.key)
+    : HandlerTrie :=
   let root := key.getRoot
   if root.isAnonymous then
     let projFn? := trie.projFn? <|> h.projFn?
     let struct? := trie.struct? <|> h.struct?
     match h.kind with
-    | .exact    => { trie with projFn?, struct?, exact? := some h }
+    | .exact => { trie with projFn?, struct?, exact? := some h }
     | .wildcard => { trie with projFn?, struct?, wildcard? := some h }
   else
     let s := root.getString!
@@ -136,10 +148,10 @@ private partial def HandlerTrie.insert (trie : HandlerTrie) (h : EvalConfigItemH
       { trie with children }
     else
       let child := HandlerTrie.insert {} h key'
-      { trie with children := trie.children.push (s, child)}
+      { trie with children := trie.children.push (s, child) }
 
-private partial def HandlerTrie.insertStruct (trie : HandlerTrie) (key : Name) (struct : Name) :
-    HandlerTrie :=
+private partial def HandlerTrie.insertStruct (trie : HandlerTrie) (key : Name) (struct : Name)
+    : HandlerTrie :=
   let root := key.getRoot
   if root.isAnonymous then
     let struct := trie.struct?.getD struct
@@ -152,7 +164,7 @@ private partial def HandlerTrie.insertStruct (trie : HandlerTrie) (key : Name) (
       { trie with children }
     else
       let child := HandlerTrie.insertStruct {} key' struct
-      { trie with children := trie.children.push (s, child)}
+      { trie with children := trie.children.push (s, child) }
 
 /--
 Precompiled version of `evalTermOrExprWithElab (α := Bool)` that
@@ -175,7 +187,9 @@ private structure State where
   toDerive : NameMap ExprSet := {}
   toOmit : Array (Ident × Name)
 
-/-- Monad for collecting types that we should try deriving `EvalTerm` or `EvalExpr` instances for. -/
+/--
+Monad for collecting types that we should try deriving `EvalTerm` or `EvalExpr` instances for.
+-/
 private abbrev M := StateRefT State TermElabM
 
 private def addToDerive (cls : Name) (ty : Expr) : M Unit :=
@@ -197,17 +211,14 @@ Supports structures with no parameters or universes.
 -/
 partial def defEvalConfigItem
     (doc? : Option (TSyntax ``Parser.Command.docComment))
-    (vis? : Option (TSyntax ``Parser.Command.visibility))
-    (kind : TSyntax ``Parser.Term.attrKind)
-    (tk : Syntax)
-    (struct : Ident)
-    (fnIdent : Ident)
-    (extraBinders : TSyntaxArray ``Parser.Term.bracketedBinder)
-    (view : EvalConfigItemView) :
-    CommandElabM Unit := do
+    (vis? : Option (TSyntax ``Parser.Command.visibility)) (kind : TSyntax ``Parser.Term.attrKind)
+    (tk : Syntax) (struct : Ident) (fnIdent : Ident)
+    (extraBinders : TSyntaxArray ``Parser.Term.bracketedBinder) (view : EvalConfigItemView)
+    : CommandElabM Unit := do
   let structName ← liftTermElabM <| realizeGlobalConstNoOverloadWithInfo struct
   -- Pass one: make the trie to collect the missing instances
-  let (_, { toOmit, toDerive }) ← liftTermElabM <| mkTrie structName true |>.run { toOmit := view.omitFields }
+  let (_, { toOmit, toDerive }) ←
+    liftTermElabM <| mkTrie structName true |>.run { toOmit := view.omitFields }
   for (ref, name) in toOmit do
     logErrorAt ref m!"No such field `{name}` of `{.ofConstName structName}`"
   -- Now that we're back in CommandElabM, derive instances
@@ -240,69 +251,85 @@ where
     let .inductInfo val ← getConstInfo structName
       | throwErrorAt struct "`{.ofConstName structName}` is not a structure"
     unless val.levelParams.isEmpty && val.numIndices == 0 && val.numParams == 0 do
-      throwErrorAt struct "`{.ofConstName structName}` must not have parameters, indices, or universe parameters"
-  visitStruct (trie : HandlerTrie) (keyPrefix : Name) (structName : Name) (allowFailure : Bool) : M HandlerTrie := do
-    withTraceNode `Elab.ConfigEval (fun _ => return m!"adding handlers for fields of `{.ofConstName structName}` with prefix `{keyPrefix}`, allowFailure: {allowFailure}") do
-    checkStruct structName
-    let fields := getStructureFieldsFlattened (← getEnv) structName (includeSubobjectFields := false)
-    withLocalDeclD `self (Expr.const structName []) fun self => do
-      let mut trie := trie
-      for field in fields do
-        let key := keyPrefix ++ field
-        let proj ← mkProjection self field
-        let some projFn := proj.getAppFn.constName? | panic! "(Internal error) Invalid projection {inlineExpr proj}"
-        if (← hasToOmit key projFn) then
-          trace[Elab.ConfigEval] "key `{key}` was excluded, skipping"
-          continue
-        let fieldTy ← inferType proj
-        let exactHandler? := trie.find? key .exact
-        let mut hasExact := exactHandler?.any fun (key', _) => key == key'
-        let hasWildcard := (trie.find? key .wildcard).isSome
-        trace[Elab.ConfigEval] m!"key `{key}` hasExact: {hasExact}, hasWildcard: {hasWildcard}"
-        let mut synthesizedHandler := false
-        -- If there's no exact key for this field yet, synthesize a handler
-        if !hasExact then
-          let mut body ← `(pure { config with $(mkIdent key):ident := value })
-          if ← withReducible <| isDefEq fieldTy (mkConst ``Bool) then
-            trace[Elab.ConfigEval] "field `{.ofConstName projFn}`, using {.ofConstName ``evalBoolItem}"
-            body ← `(fun config item => evalBoolItem item >>= fun value => $body:term)
-            trie := trie.insert { ref := struct, key, kind := .exact, body, projFn? := projFn }
-            hasExact := true
-            synthesizedHandler := true
-          else
-            let hasEvalTerm ← hasInstance ``EvalTerm fieldTy
-            let hasEvalExpr ← hasInstance ``EvalExpr fieldTy
-            trace[Elab.ConfigEval] "field `{.ofConstName projFn}`, hasEvalTerm: {hasEvalTerm}, hasEvalExpr: {hasEvalExpr}"
-            hasExact := hasEvalTerm || hasEvalExpr
-            synthesizedHandler := synthesizedHandler || hasEvalTerm || hasEvalExpr
-            let mkHandler (eval : Term) : M Term :=
-              `(item.checkNotBool >>= fun _ => $eval:term >>= fun value => $body)
-            body ←
-              match hasEvalTerm, hasEvalExpr with
-              | true,  true  => `(evalTermOrExprWithElab ⟨item.value⟩) >>= mkHandler
-              | false, true  => `(evalExprWithElab ⟨item.value⟩) >>= mkHandler
-              | true,  false => `(evalTermWithRef ⟨item.value⟩) >>= mkHandler
-              | false, false => `(item.throwCannotSetOption $(quote structName))
-            body ← `(fun _ item => $body)
-            trie := trie.insert { ref := struct, key, kind := .exact, body, projFn? := projFn }
-        if let some structName' := (← whnfR fieldTy).constName? then
-          if isStructure (← getEnv) structName' then
-            trie := trie.insertStruct key structName'
-            if ← try checkStruct structName'; pure true catch _ => pure false then
-              /-
-              Heuristic: if there is already a handler for an exact match, we shouldn't report errors
-              if sub-keys can't be used. In Mathlib for example, the `linarith` tactic has configuration
-              options that are `structure`s wrapping monadic and functional values. Users are only
-              meant to set the entire `structure`, not the fields within them. We are imagining here
-              that `structure` configuration values are not common, so we shouldn't rigidly expect
-              handlers for sub-keys (saving metaprogram authors the hassle of writing complete `except`
-              clauses). We may consider `(allowFailure := true)` in the future, and/or `except foo.*` clauses.
-              -/
-              trie ← visitStruct trie key structName' (allowFailure := allowFailure || hasExact || exactHandler?.isSome)
-        unless allowFailure || hasExact || hasWildcard || synthesizedHandler do
-          throwErrorAt struct (m!"Field `{key}` of type{inlineExpr fieldTy}is missing both `{.ofConstName ``EvalTerm}` and `{.ofConstName ``EvalExpr}` instances."
-              ++ .note m!"The scoped `ensure_eval_term_instance` and `ensure_eval_expr_instance` commands in `Lean.Elab.ConfigEval` were not able to derive instances.")
-      return trie
+      throwErrorAt struct
+        "`{.ofConstName structName}` must not have parameters, indices, or universe parameters"
+  visitStruct (trie : HandlerTrie) (keyPrefix : Name) (structName : Name) (allowFailure : Bool)
+      : M HandlerTrie := do
+    withTraceNode `Elab.ConfigEval
+      (fun _ =>
+        return m!"adding handlers for fields of `{.ofConstName structName}` with prefix \
+          `{keyPrefix}`, allowFailure: {allowFailure}")
+      do
+        checkStruct structName
+        let fields :=
+          getStructureFieldsFlattened (← getEnv) structName (includeSubobjectFields := false)
+        withLocalDeclD `self (Expr.const structName []) fun self => do
+          let mut trie := trie
+          for field in fields do
+            let key := keyPrefix ++ field
+            let proj ← mkProjection self field
+            let some projFn := proj.getAppFn.constName?
+              | panic! "(Internal error) Invalid projection {inlineExpr proj}"
+            if (← hasToOmit key projFn) then
+              trace[Elab.ConfigEval] "key `{key}` was excluded, skipping"
+              continue
+            let fieldTy ← inferType proj
+            let exactHandler? := trie.find? key .exact
+            let mut hasExact := exactHandler?.any fun (key', _) => key == key'
+            let hasWildcard := (trie.find? key .wildcard).isSome
+            trace[Elab.ConfigEval] m!"key `{key}` hasExact: {hasExact}, hasWildcard: {hasWildcard}"
+            let mut synthesizedHandler := false
+            -- If there's no exact key for this field yet, synthesize a handler
+            if !hasExact then
+              let mut body ← `(pure { config with $(mkIdent key):ident := value })
+              if ← withReducible <| isDefEq fieldTy (mkConst ``Bool) then
+                trace[Elab.ConfigEval]
+                  "field `{.ofConstName projFn}`, using {.ofConstName ``evalBoolItem}"
+                body ← `(fun config item => evalBoolItem item >>= fun value => $body:term)
+                trie := trie.insert { ref := struct, key, kind := .exact, body, projFn? := projFn }
+                hasExact := true
+                synthesizedHandler := true
+              else
+                let hasEvalTerm ← hasInstance ``EvalTerm fieldTy
+                let hasEvalExpr ← hasInstance ``EvalExpr fieldTy
+                trace[Elab.ConfigEval] "field `{.ofConstName projFn}`, hasEvalTerm: {hasEvalTerm}, \
+                  hasEvalExpr: {hasEvalExpr}"
+                hasExact := hasEvalTerm || hasEvalExpr
+                synthesizedHandler := synthesizedHandler || hasEvalTerm || hasEvalExpr
+                let mkHandler (eval : Term) : M Term :=
+                  `(item.checkNotBool >>= fun _ => $eval:term >>= fun value => $body)
+                body ←
+                  match hasEvalTerm, hasEvalExpr with
+                  | true, true => `(evalTermOrExprWithElab ⟨item.value⟩) >>= mkHandler
+                  | false, true => `(evalExprWithElab ⟨item.value⟩) >>= mkHandler
+                  | true, false => `(evalTermWithRef ⟨item.value⟩) >>= mkHandler
+                  | false, false => `(item.throwCannotSetOption $(quote structName))
+                body ← `(fun _ item => $body)
+                trie := trie.insert { ref := struct, key, kind := .exact, body, projFn? := projFn }
+            if let some structName' := (← whnfR fieldTy).constName? then
+              if isStructure (← getEnv) structName' then
+                trie := trie.insertStruct key structName'
+                if ← try checkStruct structName'; pure true catch _ => pure false then
+                  /-
+                  Heuristic: if there is already a handler for an exact match, we shouldn't report errors
+                  if sub-keys can't be used. In Mathlib for example, the `linarith` tactic has configuration
+                  options that are `structure`s wrapping monadic and functional values. Users are only
+                  meant to set the entire `structure`, not the fields within them. We are imagining here
+                  that `structure` configuration values are not common, so we shouldn't rigidly expect
+                  handlers for sub-keys (saving metaprogram authors the hassle of writing complete `except`
+                  clauses). We may consider `(allowFailure := true)` in the future, and/or `except foo.*` clauses.
+                  -/
+                  trie ←
+                    visitStruct trie key structName'
+                      (allowFailure := allowFailure || hasExact || exactHandler?.isSome)
+            unless allowFailure || hasExact || hasWildcard || synthesizedHandler do
+              throwErrorAt struct
+                (m!"Field `{key}` of type{inlineExpr fieldTy}is missing both \
+                    `{.ofConstName ``EvalTerm}` and `{.ofConstName ``EvalExpr}` instances."
+                  ++ .note
+                    m!"The scoped `ensure_eval_term_instance` and `ensure_eval_expr_instance` \
+                      commands in `Lean.Elab.ConfigEval` were not able to derive instances.")
+          return trie
   mkTrie (structName : Name) (allowFailure : Bool) : M HandlerTrie := do
     let mut trie : HandlerTrie := {}
     trie := trie.insertStruct Name.anonymous structName

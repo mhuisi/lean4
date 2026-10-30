@@ -30,10 +30,12 @@ that ordering interacts with the cheap `Bool` fast path read by the C++ runtime.
 -/
 structure CancelToken where
   private promise : IO.Promise Unit
-  /-- Plain `Bool` flag set after `promise.resolve` so that observing `isSet = true` implies the
-      promise has already fired (and thus any `onSet` callback has already run). Read by the cheap
-      `isSet` fast path (e.g. on the hot `Core.checkInterrupted` C++ path) without walking the
-      promise. -/
+  /--
+  Plain `Bool` flag set after `promise.resolve` so that observing `isSet = true` implies the
+  promise has already fired (and thus any `onSet` callback has already run). Read by the cheap
+  `isSet` fast path (e.g. on the hot `Core.checkInterrupted` C++ path) without walking the
+  promise.
+  -/
   private setRef : IO.Ref Bool
 deriving Nonempty
 
@@ -62,8 +64,7 @@ def set (tk : CancelToken) : BaseIO Unit := do
   tk.setRef.set true
 
 /-- Checks whether the cancellation token has been activated. -/
-def isSet (tk : CancelToken) : BaseIO Bool :=
-  tk.setRef.get
+def isSet (tk : CancelToken) : BaseIO Bool := tk.setRef.get
 
 /--
 Registers a callback to run when the cancellation token is set or dropped. The callback runs as a

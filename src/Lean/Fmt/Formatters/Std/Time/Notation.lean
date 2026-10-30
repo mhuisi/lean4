@@ -21,8 +21,7 @@ public def fmtZonedDateTime : Fmt := fun
     let spec ← fmt spec
     let rbTk ← fmt rbTk
     return Layouts.metaApplication lbTk #[.elems #[spec]] rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Std.Time.«termZoned(_,_)»]
 public def fmtZonedDateTimeWithTimeZone : Fmt := fun
@@ -33,8 +32,7 @@ public def fmtZonedDateTimeWithTimeZone : Fmt := fun
     let timeZone ← fmt timeZone
     let rbTk ← fmt rbTk
     return Layouts.metaApplication lbTk #[.elems #[spec], .sep commaTk, .elems #[timeZone]] rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Std.Time.«termDatetime(_)»]
 public def fmtPlainDateTime : Fmt := fun
@@ -43,8 +41,7 @@ public def fmtPlainDateTime : Fmt := fun
     let spec ← fmt spec
     let rbTk ← fmt rbTk
     return Layouts.metaApplication lbTk #[.elems #[spec]] rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Std.Time.«termDate(_)»]
 public def fmtPlainDate : Fmt := fun
@@ -53,8 +50,7 @@ public def fmtPlainDate : Fmt := fun
     let spec ← fmt spec
     let rbTk ← fmt rbTk
     return Layouts.metaApplication lbTk #[.elems #[spec]] rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Std.Time.«termTime(_)»]
 public def fmtPlainTime : Fmt := fun
@@ -63,8 +59,7 @@ public def fmtPlainTime : Fmt := fun
     let spec ← fmt spec
     let rbTk ← fmt rbTk
     return Layouts.metaApplication lbTk #[.elems #[spec]] rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Std.Time.«termOffset(_)»]
 public def fmtTimeZoneOffset : Fmt := fun
@@ -73,8 +68,7 @@ public def fmtTimeZoneOffset : Fmt := fun
     let spec ← fmt spec
     let rbTk ← fmt rbTk
     return Layouts.metaApplication lbTk #[.elems #[spec]] rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Std.Time.«termTimezone(_)»]
 public def fmtTimeZone : Fmt := fun
@@ -83,5 +77,4 @@ public def fmtTimeZone : Fmt := fun
     let spec ← fmt spec
     let rbTk ← fmt rbTk
     return Layouts.metaApplication lbTk #[.elems #[spec]] rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

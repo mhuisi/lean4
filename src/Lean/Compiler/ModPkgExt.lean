@@ -17,13 +17,13 @@ namespace Lean
 @[expose] public def ModuleEnvExtension (σ : Type) := PersistentEnvExtension σ σ σ
 
 public def registerModuleEnvExtension
-  [Inhabited σ] (mkInitial : IO σ) (name : Name := by exact decl_name%)
-: IO (ModuleEnvExtension σ) :=
+    [Inhabited σ] (mkInitial : IO σ) (name : Name := by exact decl_name%)
+    : IO (ModuleEnvExtension σ) :=
   registerPersistentEnvExtension {
-    name            := name
-    mkInitial       := mkInitial
-    addImportedFn   := fun _ _ => mkInitial
-    addEntryFn      := fun s _ => s
+    name := name
+    mkInitial := mkInitial
+    addImportedFn := fun _ _ => mkInitial
+    addEntryFn := fun s _ => s
     exportEntriesFn := fun s => #[s]
   }
 
@@ -32,24 +32,28 @@ namespace ModuleEnvExtension
 public instance [Inhabited σ] : Inhabited (ModuleEnvExtension σ) :=
   inferInstanceAs (Inhabited (PersistentEnvExtension ..))
 
-public def getStateByIdx? [Inhabited σ] (ext : ModuleEnvExtension σ) (env : Environment) (idx : ModuleIdx) : Option σ :=
+public def getStateByIdx?
+    [Inhabited σ] (ext : ModuleEnvExtension σ) (env : Environment) (idx : ModuleIdx)
+    : Option σ :=
   (ext.getModuleEntries env idx)[0]?
 
 end ModuleEnvExtension
 
-initialize modPkgExt : ModuleEnvExtension (Option PkgId) ←
-  registerModuleEnvExtension (pure none)
+initialize modPkgExt : ModuleEnvExtension (Option PkgId) ← registerModuleEnvExtension (pure none)
 
 /-- Returns the package (if any) of an imported module (by its index). -/
-public def Environment.getModulePackageByIdx? (env : Environment) (idx : ModuleIdx) : Option PkgId :=
+public def Environment.getModulePackageByIdx? (env : Environment) (idx : ModuleIdx)
+    : Option PkgId :=
   modPkgExt.getStateByIdx? env idx |>.join
 
 /-- Returns the package (if any) of the current module. -/
-@[inline] public def Environment.getModulePackage? (env : Environment) : Option PkgId :=
+@[inline]
+public def Environment.getModulePackage? (env : Environment) : Option PkgId :=
   modPkgExt.getState env
 
 /-- Sets the package of the current module. -/
-@[inline] public def Environment.setModulePackage (pkg? : Option PkgId) (env : Environment) : Environment :=
+@[inline]
+public def Environment.setModulePackage (pkg? : Option PkgId) (env : Environment) : Environment :=
   modPkgExt.setState env pkg?
 
 /--

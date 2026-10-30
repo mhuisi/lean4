@@ -87,9 +87,7 @@ structure ISize where
 /-- The number of distinct values representable by `Int8`, that is, `2^8 = 256`. -/
 abbrev Int8.size : Nat := 256
 
-/--
-Obtain the `BitVec` that contains the 2's complement representation of the `Int8`.
--/
+/-- Obtain the `BitVec` that contains the 2's complement representation of the `Int8`. -/
 @[inline, implicit_reducible] def Int8.toBitVec (x : Int8) : BitVec 8 := x.toUInt8.toBitVec --
 
 theorem Int8.toBitVec.inj : {x y : Int8} → x.toBitVec = y.toBitVec → x = y
@@ -158,7 +156,8 @@ Converts an 8-bit signed integer to a natural number, mapping all negative numbe
 
 Use `Int8.toBitVec` to obtain the two's complement representation.
 -/
-@[suggest_for Int8.toNat, inline, implicit_reducible] def Int8.toNatClampNeg (i : Int8) : Nat := i.toInt.toNat
+@[suggest_for Int8.toNat, inline, implicit_reducible]
+def Int8.toNatClampNeg (i : Int8) : Nat := i.toInt.toNat
 
 /-- Obtains the `Int8` whose 2's complement representation is the given `BitVec 8`. -/
 @[inline] def Int8.ofBitVec (b : BitVec 8) : Int8 := ⟨⟨b⟩⟩
@@ -202,8 +201,7 @@ def Int8.ofIntClamp (i : Int) : Int8 :=
     Int8.minValue
 
 @[inherit_doc Int8.ofIntClamp, deprecated Int8.ofIntClamp (since := "2026-05-04")]
-def Int8.ofIntTruncate (i : Int) : Int8 :=
-  Int8.ofIntClamp i
+def Int8.ofIntTruncate (i : Int) : Int8 := Int8.ofIntClamp i
 /--
 Adds two 8-bit signed integers, wrapping around on over- or underflow. Usually accessed via the `+`
 operator.
@@ -324,7 +322,8 @@ The high bits are filled with the value of the most significant bit.
 This function is overridden at runtime with an efficient implementation.
 -/
 @[extern "lean_int8_shift_right"]
-protected def Int8.shiftRight (a b : Int8) : Int8 := ⟨⟨BitVec.sshiftRight' a.toBitVec (b.toBitVec.smod 8)⟩⟩
+protected def Int8.shiftRight (a b : Int8) : Int8 :=
+  ⟨⟨BitVec.sshiftRight' a.toBitVec (b.toBitVec.smod 8)⟩⟩
 /--
 Bitwise complement, also known as bitwise negation, for 8-bit signed integers. Usually accessed via
 the `~~~` prefix operator.
@@ -381,25 +380,23 @@ protected def Int8.le (a b : Int8) : Prop := a.toBitVec.sle b.toBitVec
 instance : Inhabited Int8 where
   default := 0
 
-instance : Add Int8         := ⟨Int8.add⟩
-instance : Sub Int8         := ⟨Int8.sub⟩
-instance : Mul Int8         := ⟨Int8.mul⟩
-instance : Pow Int8 Nat     := ⟨Int8.pow⟩
-instance : Mod Int8         := ⟨Int8.mod⟩
-instance : Div Int8         := ⟨Int8.div⟩
-instance : LT Int8          := ⟨Int8.lt⟩
-instance : LE Int8          := ⟨Int8.le⟩
-instance : Complement Int8  := ⟨Int8.complement⟩
-instance : AndOp Int8       := ⟨Int8.land⟩
-instance : OrOp Int8        := ⟨Int8.lor⟩
-instance : XorOp Int8         := ⟨Int8.xor⟩
-instance : ShiftLeft Int8   := ⟨Int8.shiftLeft⟩
-instance : ShiftRight Int8  := ⟨Int8.shiftRight⟩
+instance : Add Int8 := ⟨Int8.add⟩
+instance : Sub Int8 := ⟨Int8.sub⟩
+instance : Mul Int8 := ⟨Int8.mul⟩
+instance : Pow Int8 Nat := ⟨Int8.pow⟩
+instance : Mod Int8 := ⟨Int8.mod⟩
+instance : Div Int8 := ⟨Int8.div⟩
+instance : LT Int8 := ⟨Int8.lt⟩
+instance : LE Int8 := ⟨Int8.le⟩
+instance : Complement Int8 := ⟨Int8.complement⟩
+instance : AndOp Int8 := ⟨Int8.land⟩
+instance : OrOp Int8 := ⟨Int8.lor⟩
+instance : XorOp Int8 := ⟨Int8.xor⟩
+instance : ShiftLeft Int8 := ⟨Int8.shiftLeft⟩
+instance : ShiftRight Int8 := ⟨Int8.shiftRight⟩
 instance : DecidableEq Int8 := Int8.decEq
 
-/--
-Converts `true` to `1` and `false` to `0`.
--/
+/-- Converts `true` to `1` and `false` to `0`. -/
 @[extern "lean_bool_to_int8"]
 def Bool.toInt8 (b : Bool) : Int8 := if b then 1 else 0
 
@@ -442,9 +439,7 @@ instance : Min Int8 := minOfLe
 /-- The number of distinct values representable by `Int16`, that is, `2^16 = 65536`. -/
 abbrev Int16.size : Nat := 65536
 
-/--
-Obtain the `BitVec` that contains the 2's complement representation of the `Int16`.
--/
+/-- Obtain the `BitVec` that contains the 2's complement representation of the `Int16`. -/
 @[inline, implicit_reducible] def Int16.toBitVec (x : Int16) : BitVec 16 := x.toUInt16.toBitVec
 
 theorem Int16.toBitVec.inj : {x y : Int16} → x.toBitVec = y.toBitVec → x = y
@@ -515,7 +510,8 @@ Converts a 16-bit signed integer to a natural number, mapping all negative numbe
 
 Use `Int16.toBitVec` to obtain the two's complement representation.
 -/
-@[suggest_for Int16.toNat, inline, implicit_reducible] def Int16.toNatClampNeg (i : Int16) : Nat := i.toInt.toNat
+@[suggest_for Int16.toNat, inline, implicit_reducible]
+def Int16.toNatClampNeg (i : Int16) : Nat := i.toInt.toNat
 
 /-- Obtains the `Int16` whose 2's complement representation is the given `BitVec 16`. -/
 @[inline] def Int16.ofBitVec (b : BitVec 16) : Int16 := ⟨⟨b⟩⟩
@@ -561,7 +557,8 @@ abbrev Int16.maxValue : Int16 := 32767
 abbrev Int16.minValue : Int16 := -32768
 /-- Constructs an `Int16` from an `Int` that is known to be in bounds. -/
 @[inline, implicit_reducible]
-def Int16.ofIntLE (i : Int) (_hl : Int16.minValue.toInt ≤ i) (_hr : i ≤ Int16.maxValue.toInt) : Int16 :=
+def Int16.ofIntLE (i : Int) (_hl : Int16.minValue.toInt ≤ i) (_hr : i ≤ Int16.maxValue.toInt)
+    : Int16 :=
   Int16.ofInt i
 /-- Constructs an `Int16` from an `Int`, clamping if the value is too small or too large. -/
 def Int16.ofIntClamp (i : Int) : Int16 :=
@@ -574,8 +571,7 @@ def Int16.ofIntClamp (i : Int) : Int16 :=
     Int16.minValue
 
 @[inherit_doc Int16.ofIntClamp, deprecated Int16.ofIntClamp (since := "2026-05-04")]
-def Int16.ofIntTruncate (i : Int) : Int16 :=
-  Int16.ofIntClamp i
+def Int16.ofIntTruncate (i : Int) : Int16 := Int16.ofIntClamp i
 
 /--
 Adds two 16-bit signed integers, wrapping around on over- or underflow.  Usually accessed via the `+`
@@ -697,7 +693,8 @@ The high bits are filled with the value of the most significant bit.
 This function is overridden at runtime with an efficient implementation.
 -/
 @[extern "lean_int16_shift_right"]
-protected def Int16.shiftRight (a b : Int16) : Int16 := ⟨⟨BitVec.sshiftRight' a.toBitVec (b.toBitVec.smod 16)⟩⟩
+protected def Int16.shiftRight (a b : Int16) : Int16 :=
+  ⟨⟨BitVec.sshiftRight' a.toBitVec (b.toBitVec.smod 16)⟩⟩
 /--
 Bitwise complement, also known as bitwise negation, for 16-bit signed integers. Usually accessed via
 the `~~~` prefix operator.
@@ -754,25 +751,23 @@ protected def Int16.le (a b : Int16) : Prop := a.toBitVec.sle b.toBitVec
 instance : Inhabited Int16 where
   default := 0
 
-instance : Add Int16         := ⟨Int16.add⟩
-instance : Sub Int16         := ⟨Int16.sub⟩
-instance : Mul Int16         := ⟨Int16.mul⟩
-instance : Pow Int16 Nat     := ⟨Int16.pow⟩
-instance : Mod Int16         := ⟨Int16.mod⟩
-instance : Div Int16         := ⟨Int16.div⟩
-instance : LT Int16          := ⟨Int16.lt⟩
-instance : LE Int16          := ⟨Int16.le⟩
-instance : Complement Int16  := ⟨Int16.complement⟩
-instance : AndOp Int16       := ⟨Int16.land⟩
-instance : OrOp Int16        := ⟨Int16.lor⟩
-instance : XorOp Int16       := ⟨Int16.xor⟩
-instance : ShiftLeft Int16   := ⟨Int16.shiftLeft⟩
-instance : ShiftRight Int16  := ⟨Int16.shiftRight⟩
+instance : Add Int16 := ⟨Int16.add⟩
+instance : Sub Int16 := ⟨Int16.sub⟩
+instance : Mul Int16 := ⟨Int16.mul⟩
+instance : Pow Int16 Nat := ⟨Int16.pow⟩
+instance : Mod Int16 := ⟨Int16.mod⟩
+instance : Div Int16 := ⟨Int16.div⟩
+instance : LT Int16 := ⟨Int16.lt⟩
+instance : LE Int16 := ⟨Int16.le⟩
+instance : Complement Int16 := ⟨Int16.complement⟩
+instance : AndOp Int16 := ⟨Int16.land⟩
+instance : OrOp Int16 := ⟨Int16.lor⟩
+instance : XorOp Int16 := ⟨Int16.xor⟩
+instance : ShiftLeft Int16 := ⟨Int16.shiftLeft⟩
+instance : ShiftRight Int16 := ⟨Int16.shiftRight⟩
 instance : DecidableEq Int16 := Int16.decEq
 
-/--
-Converts `true` to `1` and `false` to `0`.
--/
+/-- Converts `true` to `1` and `false` to `0`. -/
 @[extern "lean_bool_to_int16"]
 def Bool.toInt16 (b : Bool) : Int16 := if b then 1 else 0
 
@@ -815,9 +810,7 @@ instance : Min Int16 := minOfLe
 /-- The number of distinct values representable by `Int32`, that is, `2^32 = 4294967296`. -/
 abbrev Int32.size : Nat := 4294967296
 
-/--
-Obtain the `BitVec` that contains the 2's complement representation of the `Int32`.
--/
+/-- Obtain the `BitVec` that contains the 2's complement representation of the `Int32`. -/
 @[inline, implicit_reducible] def Int32.toBitVec (x : Int32) : BitVec 32 := x.toUInt32.toBitVec
 
 theorem Int32.toBitVec.inj : {x y : Int32} → x.toBitVec = y.toBitVec → x = y
@@ -889,7 +882,8 @@ Converts a 32-bit signed integer to a natural number, mapping all negative numbe
 
 Use `Int32.toBitVec` to obtain the two's complement representation.
 -/
-@[suggest_for Int32.toNat, inline, implicit_reducible] def Int32.toNatClampNeg (i : Int32) : Nat := i.toInt.toNat
+@[suggest_for Int32.toNat, inline, implicit_reducible]
+def Int32.toNatClampNeg (i : Int32) : Nat := i.toInt.toNat
 
 /-- Obtains the `Int32` whose 2's complement representation is the given `BitVec 32`. -/
 @[inline] def Int32.ofBitVec (b : BitVec 32) : Int32 := ⟨⟨b⟩⟩
@@ -950,7 +944,8 @@ abbrev Int32.maxValue : Int32 := 2147483647
 abbrev Int32.minValue : Int32 := -2147483648
 /-- Constructs an `Int32` from an `Int` that is known to be in bounds. -/
 @[inline, implicit_reducible]
-def Int32.ofIntLE (i : Int) (_hl : Int32.minValue.toInt ≤ i) (_hr : i ≤ Int32.maxValue.toInt) : Int32 :=
+def Int32.ofIntLE (i : Int) (_hl : Int32.minValue.toInt ≤ i) (_hr : i ≤ Int32.maxValue.toInt)
+    : Int32 :=
   Int32.ofInt i
 /-- Constructs an `Int32` from an `Int`, clamping if the value is too small or too large. -/
 def Int32.ofIntClamp (i : Int) : Int32 :=
@@ -963,8 +958,7 @@ def Int32.ofIntClamp (i : Int) : Int32 :=
     Int32.minValue
 
 @[inherit_doc Int32.ofIntClamp, deprecated Int32.ofIntClamp (since := "2026-05-04")]
-def Int32.ofIntTruncate (i : Int) : Int32 :=
-  Int32.ofIntClamp i
+def Int32.ofIntTruncate (i : Int) : Int32 := Int32.ofIntClamp i
 
 /--
 Adds two 32-bit signed integers, wrapping around on over- or underflow.  Usually accessed via the
@@ -1086,7 +1080,8 @@ The high bits are filled with the value of the most significant bit.
 This function is overridden at runtime with an efficient implementation.
 -/
 @[extern "lean_int32_shift_right"]
-protected def Int32.shiftRight (a b : Int32) : Int32 := ⟨⟨BitVec.sshiftRight' a.toBitVec (b.toBitVec.smod 32)⟩⟩
+protected def Int32.shiftRight (a b : Int32) : Int32 :=
+  ⟨⟨BitVec.sshiftRight' a.toBitVec (b.toBitVec.smod 32)⟩⟩
 /--
 Bitwise complement, also known as bitwise negation, for 32-bit signed integers. Usually accessed via
 the `~~~` prefix operator.
@@ -1143,25 +1138,23 @@ protected def Int32.le (a b : Int32) : Prop := a.toBitVec.sle b.toBitVec
 instance : Inhabited Int32 where
   default := 0
 
-instance : Add Int32         := ⟨Int32.add⟩
-instance : Sub Int32         := ⟨Int32.sub⟩
-instance : Mul Int32         := ⟨Int32.mul⟩
-instance : Pow Int32 Nat     := ⟨Int32.pow⟩
-instance : Mod Int32         := ⟨Int32.mod⟩
-instance : Div Int32         := ⟨Int32.div⟩
-instance : LT Int32          := ⟨Int32.lt⟩
-instance : LE Int32          := ⟨Int32.le⟩
-instance : Complement Int32  := ⟨Int32.complement⟩
-instance : AndOp Int32       := ⟨Int32.land⟩
-instance : OrOp Int32        := ⟨Int32.lor⟩
-instance : XorOp Int32         := ⟨Int32.xor⟩
-instance : ShiftLeft Int32   := ⟨Int32.shiftLeft⟩
-instance : ShiftRight Int32  := ⟨Int32.shiftRight⟩
+instance : Add Int32 := ⟨Int32.add⟩
+instance : Sub Int32 := ⟨Int32.sub⟩
+instance : Mul Int32 := ⟨Int32.mul⟩
+instance : Pow Int32 Nat := ⟨Int32.pow⟩
+instance : Mod Int32 := ⟨Int32.mod⟩
+instance : Div Int32 := ⟨Int32.div⟩
+instance : LT Int32 := ⟨Int32.lt⟩
+instance : LE Int32 := ⟨Int32.le⟩
+instance : Complement Int32 := ⟨Int32.complement⟩
+instance : AndOp Int32 := ⟨Int32.land⟩
+instance : OrOp Int32 := ⟨Int32.lor⟩
+instance : XorOp Int32 := ⟨Int32.xor⟩
+instance : ShiftLeft Int32 := ⟨Int32.shiftLeft⟩
+instance : ShiftRight Int32 := ⟨Int32.shiftRight⟩
 instance : DecidableEq Int32 := Int32.decEq
 
-/--
-Converts `true` to `1` and `false` to `0`.
--/
+/-- Converts `true` to `1` and `false` to `0`. -/
 @[extern "lean_bool_to_int32"]
 def Bool.toInt32 (b : Bool) : Int32 := if b then 1 else 0
 
@@ -1201,12 +1194,12 @@ attribute [instance] Int32.decLt Int32.decLe
 instance : Max Int32 := maxOfLe
 instance : Min Int32 := minOfLe
 
-/-- The number of distinct values representable by `Int64`, that is, `2^64 = 18446744073709551616`. -/
+/--
+The number of distinct values representable by `Int64`, that is, `2^64 = 18446744073709551616`.
+-/
 abbrev Int64.size : Nat := 18446744073709551616
 
-/--
-Obtain the `BitVec` that contains the 2's complement representation of the `Int64`.
--/
+/-- Obtain the `BitVec` that contains the 2's complement representation of the `Int64`. -/
 @[inline, implicit_reducible] def Int64.toBitVec (x : Int64) : BitVec 64 := x.toUInt64.toBitVec
 
 theorem Int64.toBitVec.inj : {x y : Int64} → x.toBitVec = y.toBitVec → x = y
@@ -1283,7 +1276,8 @@ Converts a 64-bit signed integer to a natural number, mapping all negative numbe
 
 Use `Int64.toBitVec` to obtain the two's complement representation.
 -/
-@[suggest_for Int64.toNat, inline, implicit_reducible] def Int64.toNatClampNeg (i : Int64) : Nat := i.toInt.toNat
+@[suggest_for Int64.toNat, inline, implicit_reducible]
+def Int64.toNatClampNeg (i : Int64) : Nat := i.toInt.toNat
 
 /-- Obtains the `Int64` whose 2's complement representation is the given `BitVec 64`. -/
 @[inline] def Int64.ofBitVec (b : BitVec 64) : Int64 := ⟨⟨b⟩⟩
@@ -1359,7 +1353,8 @@ abbrev Int64.maxValue : Int64 := 9223372036854775807
 abbrev Int64.minValue : Int64 := -9223372036854775808
 /-- Constructs an `Int64` from an `Int` that is known to be in bounds. -/
 @[inline, implicit_reducible]
-def Int64.ofIntLE (i : Int) (_hl : Int64.minValue.toInt ≤ i) (_hr : i ≤ Int64.maxValue.toInt) : Int64 :=
+def Int64.ofIntLE (i : Int) (_hl : Int64.minValue.toInt ≤ i) (_hr : i ≤ Int64.maxValue.toInt)
+    : Int64 :=
   Int64.ofInt i
 /-- Constructs an `Int64` from an `Int`, clamping if the value is too small or too large. -/
 def Int64.ofIntClamp (i : Int) : Int64 :=
@@ -1372,8 +1367,7 @@ def Int64.ofIntClamp (i : Int) : Int64 :=
     Int64.minValue
 
 @[inherit_doc Int64.ofIntClamp, deprecated Int64.ofIntClamp (since := "2026-05-04")]
-def Int64.ofIntTruncate (i : Int) : Int64 :=
-  Int64.ofIntClamp i
+def Int64.ofIntTruncate (i : Int) : Int64 := Int64.ofIntClamp i
 
 /--
 Adds two 64-bit signed integers, wrapping around on over- or underflow.  Usually accessed via the
@@ -1495,7 +1489,8 @@ The high bits are filled with the value of the most significant bit.
 This function is overridden at runtime with an efficient implementation.
 -/
 @[extern "lean_int64_shift_right"]
-protected def Int64.shiftRight (a b : Int64) : Int64 := ⟨⟨BitVec.sshiftRight' a.toBitVec (b.toBitVec.smod 64)⟩⟩
+protected def Int64.shiftRight (a b : Int64) : Int64 :=
+  ⟨⟨BitVec.sshiftRight' a.toBitVec (b.toBitVec.smod 64)⟩⟩
 /--
 Bitwise complement, also known as bitwise negation, for 64-bit signed integers. Usually accessed via
 the `~~~` prefix operator.
@@ -1552,25 +1547,23 @@ protected def Int64.le (a b : Int64) : Prop := a.toBitVec.sle b.toBitVec
 instance : Inhabited Int64 where
   default := 0
 
-instance : Add Int64         := ⟨Int64.add⟩
-instance : Sub Int64         := ⟨Int64.sub⟩
-instance : Mul Int64         := ⟨Int64.mul⟩
-instance : Pow Int64 Nat     := ⟨Int64.pow⟩
-instance : Mod Int64         := ⟨Int64.mod⟩
-instance : Div Int64         := ⟨Int64.div⟩
-instance : LT Int64          := ⟨Int64.lt⟩
-instance : LE Int64          := ⟨Int64.le⟩
-instance : Complement Int64  := ⟨Int64.complement⟩
-instance : AndOp Int64       := ⟨Int64.land⟩
-instance : OrOp Int64        := ⟨Int64.lor⟩
-instance : XorOp Int64         := ⟨Int64.xor⟩
-instance : ShiftLeft Int64   := ⟨Int64.shiftLeft⟩
-instance : ShiftRight Int64  := ⟨Int64.shiftRight⟩
+instance : Add Int64 := ⟨Int64.add⟩
+instance : Sub Int64 := ⟨Int64.sub⟩
+instance : Mul Int64 := ⟨Int64.mul⟩
+instance : Pow Int64 Nat := ⟨Int64.pow⟩
+instance : Mod Int64 := ⟨Int64.mod⟩
+instance : Div Int64 := ⟨Int64.div⟩
+instance : LT Int64 := ⟨Int64.lt⟩
+instance : LE Int64 := ⟨Int64.le⟩
+instance : Complement Int64 := ⟨Int64.complement⟩
+instance : AndOp Int64 := ⟨Int64.land⟩
+instance : OrOp Int64 := ⟨Int64.lor⟩
+instance : XorOp Int64 := ⟨Int64.xor⟩
+instance : ShiftLeft Int64 := ⟨Int64.shiftLeft⟩
+instance : ShiftRight Int64 := ⟨Int64.shiftRight⟩
 instance : DecidableEq Int64 := Int64.decEq
 
-/--
-Converts `true` to `1` and `false` to `0`.
--/
+/-- Converts `true` to `1` and `false` to `0`. -/
 @[extern "lean_bool_to_int64"]
 def Bool.toInt64 (b : Bool) : Int64 := if b then 1 else 0
 
@@ -1610,12 +1603,11 @@ instance : Max Int64 := maxOfLe
 instance : Min Int64 := minOfLe
 
 /-- The number of distinct values representable by `ISize`, that is, `2^System.Platform.numBits`. -/
-abbrev ISize.size : Nat := 2^System.Platform.numBits
+abbrev ISize.size : Nat := 2 ^ System.Platform.numBits
 
-/--
-Obtain the `BitVec` that contains the 2's complement representation of the `ISize`.
--/
-@[inline, implicit_reducible] def ISize.toBitVec (x : ISize) : BitVec System.Platform.numBits := x.toUSize.toBitVec
+/-- Obtain the `BitVec` that contains the 2's complement representation of the `ISize`. -/
+@[inline, implicit_reducible]
+def ISize.toBitVec (x : ISize) : BitVec System.Platform.numBits := x.toUSize.toBitVec
 
 theorem ISize.toBitVec.inj : {x y : ISize} → x.toBitVec = y.toBitVec → x = y
   | ⟨⟨_⟩⟩, ⟨⟨_⟩⟩, rfl => rfl
@@ -1625,16 +1617,14 @@ Convert an `ISize` to `BitVec 32`, assuming that the system bit-width is 32.
 
 This operation is intended for proof purposes.
 -/
-def ISize.toBitVec32 (a : ISize) (h : System.Platform.numBits = 32) : BitVec 32 :=
-  a.toBitVec.cast h
+def ISize.toBitVec32 (a : ISize) (h : System.Platform.numBits = 32) : BitVec 32 := a.toBitVec.cast h
 
 /--
 Convert an `ISize` to `BitVec 64`, assuming that the system bit-width is 64.
 
 This operation is intended for proof purposes.
 -/
-def ISize.toBitVec64 (a : ISize) (h : System.Platform.numBits = 64) : BitVec 64 :=
-  a.toBitVec.cast h
+def ISize.toBitVec64 (a : ISize) (h : System.Platform.numBits = 64) : BitVec 64 := a.toBitVec.cast h
 
 /-- Obtains the `ISize` that is 2's complement equivalent to the `USize`. -/
 @[inline] def USize.toISize (i : USize) : ISize := ISize.ofUSize i
@@ -1657,7 +1647,8 @@ This function is overridden at runtime with an efficient implementation.
 def ISize.ofNat (n : @& Nat) : ISize := ⟨⟨BitVec.ofNat System.Platform.numBits n⟩⟩
 @[inherit_doc ISize.ofInt]
 abbrev Int.toISize := ISize.ofInt
-@[inherit_doc ISize.ofNat] abbrev Nat.toISize := ISize.ofNat
+@[inherit_doc ISize.ofNat]
+abbrev Nat.toISize := ISize.ofNat
 /--
 Converts a word-sized signed integer to an arbitrary-precision integer that denotes the same number.
 
@@ -1670,7 +1661,8 @@ Converts a word-sized signed integer to a natural number, mapping all negative n
 
 Use `ISize.toBitVec` to obtain the two's complement representation.
 -/
-@[suggest_for ISize.toNat, inline, implicit_reducible] def ISize.toNatClampNeg (i : ISize) : Nat := i.toInt.toNat
+@[suggest_for ISize.toNat, inline, implicit_reducible]
+def ISize.toNatClampNeg (i : ISize) : Nat := i.toInt.toNat
 
 /-- Obtains the `ISize` whose 2's complement representation is the given `BitVec`. -/
 @[inline] def ISize.ofBitVec (b : BitVec System.Platform.numBits) : ISize := ⟨⟨b⟩⟩
@@ -1763,11 +1755,12 @@ instance ISize.instNeg : Neg ISize where
 /-- The largest number that `ISize` can represent: `2^(System.Platform.numBits - 1) - 1`. -/
 abbrev ISize.maxValue : ISize := .ofInt (2 ^ (System.Platform.numBits - 1) - 1)
 /-- The smallest number that `ISize` can represent: `-2^(System.Platform.numBits - 1)`. -/
-abbrev ISize.minValue : ISize := .ofInt (-2 ^ (System.Platform.numBits - 1))
+abbrev ISize.minValue : ISize := .ofInt (- 2 ^ (System.Platform.numBits - 1))
 
 /-- Constructs an `ISize` from an `Int` that is known to be in bounds. -/
 @[inline]
-def ISize.ofIntLE (i : Int) (_hl : ISize.minValue.toInt ≤ i) (_hr : i ≤ ISize.maxValue.toInt) : ISize :=
+def ISize.ofIntLE (i : Int) (_hl : ISize.minValue.toInt ≤ i) (_hr : i ≤ ISize.maxValue.toInt)
+    : ISize :=
   ISize.ofInt i
 /-- Constructs an `ISize` from an `Int`, clamping if the value is too small or too large. -/
 def ISize.ofIntClamp (i : Int) : ISize :=
@@ -1780,8 +1773,7 @@ def ISize.ofIntClamp (i : Int) : ISize :=
     ISize.minValue
 
 @[inherit_doc ISize.ofIntClamp, deprecated ISize.ofIntClamp (since := "2026-05-04")]
-def ISize.ofIntTruncate (i : Int) : ISize :=
-  ISize.ofIntClamp i
+def ISize.ofIntTruncate (i : Int) : ISize := ISize.ofIntClamp i
 
 /--
 Adds two word-sized signed integers, wrapping around on over- or underflow.  Usually accessed via
@@ -1894,7 +1886,8 @@ Signed integers are interpreted as bitvectors according to the two's complement 
 This function is overridden at runtime with an efficient implementation.
 -/
 @[extern "lean_isize_shift_left"]
-protected def ISize.shiftLeft (a b : ISize) : ISize := ⟨⟨a.toBitVec <<< (b.toBitVec.smod System.Platform.numBits)⟩⟩
+protected def ISize.shiftLeft (a b : ISize) : ISize :=
+  ⟨⟨a.toBitVec <<< (b.toBitVec.smod System.Platform.numBits)⟩⟩
 /--
 Arithmetic right shift for word-sized signed integers. Usually accessed via the `<<<` operator.
 
@@ -1904,7 +1897,8 @@ the most significant bit.
 This function is overridden at runtime with an efficient implementation.
 -/
 @[extern "lean_isize_shift_right"]
-protected def ISize.shiftRight (a b : ISize) : ISize := ⟨⟨BitVec.sshiftRight' a.toBitVec (b.toBitVec.smod System.Platform.numBits)⟩⟩
+protected def ISize.shiftRight (a b : ISize) : ISize :=
+  ⟨⟨BitVec.sshiftRight' a.toBitVec (b.toBitVec.smod System.Platform.numBits)⟩⟩
 /--
 Bitwise complement, also known as bitwise negation, for word-sized signed integers. Usually accessed
 via the `~~~` prefix operator.
@@ -1962,25 +1956,23 @@ protected def ISize.le (a b : ISize) : Prop := a.toBitVec.sle b.toBitVec
 instance : Inhabited ISize where
   default := 0
 
-instance : Add ISize         := ⟨ISize.add⟩
-instance : Sub ISize         := ⟨ISize.sub⟩
-instance : Mul ISize         := ⟨ISize.mul⟩
-instance : Pow ISize Nat     := ⟨ISize.pow⟩
-instance : Mod ISize         := ⟨ISize.mod⟩
-instance : Div ISize         := ⟨ISize.div⟩
-instance : LT ISize          := ⟨ISize.lt⟩
-instance : LE ISize          := ⟨ISize.le⟩
-instance : Complement ISize  := ⟨ISize.complement⟩
-instance : AndOp ISize       := ⟨ISize.land⟩
-instance : OrOp ISize        := ⟨ISize.lor⟩
-instance : XorOp ISize         := ⟨ISize.xor⟩
-instance : ShiftLeft ISize   := ⟨ISize.shiftLeft⟩
-instance : ShiftRight ISize  := ⟨ISize.shiftRight⟩
+instance : Add ISize := ⟨ISize.add⟩
+instance : Sub ISize := ⟨ISize.sub⟩
+instance : Mul ISize := ⟨ISize.mul⟩
+instance : Pow ISize Nat := ⟨ISize.pow⟩
+instance : Mod ISize := ⟨ISize.mod⟩
+instance : Div ISize := ⟨ISize.div⟩
+instance : LT ISize := ⟨ISize.lt⟩
+instance : LE ISize := ⟨ISize.le⟩
+instance : Complement ISize := ⟨ISize.complement⟩
+instance : AndOp ISize := ⟨ISize.land⟩
+instance : OrOp ISize := ⟨ISize.lor⟩
+instance : XorOp ISize := ⟨ISize.xor⟩
+instance : ShiftLeft ISize := ⟨ISize.shiftLeft⟩
+instance : ShiftRight ISize := ⟨ISize.shiftRight⟩
 instance : DecidableEq ISize := ISize.decEq
 
-/--
-Converts `true` to `1` and `false` to `0`.
--/
+/-- Converts `true` to `1` and `false` to `0`. -/
 @[extern "lean_bool_to_isize"]
 def Bool.toISize (b : Bool) : ISize := if b then 1 else 0
 

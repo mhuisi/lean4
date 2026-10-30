@@ -31,12 +31,12 @@ variable [Hashable α] [DecidableEq α]
 
 namespace blastShiftLeftConst
 
-theorem go_get_aux (aig : AIG α) (distance : Nat) (input : AIG.RefVec aig w)
-    (curr : Nat) (hcurr : curr ≤ w) (s : AIG.RefVec aig curr) :
-    ∀ (idx : Nat) (hidx : idx < curr) (hfoo),
-        (go aig input distance curr hcurr s).vec.get idx (by omega)
-          =
-        (s.get idx hidx).cast hfoo := by
+theorem go_get_aux
+    (aig : AIG α)
+    (distance : Nat) (input : AIG.RefVec aig w)
+    (curr : Nat) (hcurr : curr ≤ w) (s : AIG.RefVec aig curr)
+    : ∀ (idx : Nat) (hidx : idx < curr) (hfoo),
+      (go aig input distance curr hcurr s).vec.get idx (by omega) = (s.get idx hidx).cast hfoo := by
   intro idx hidx
   generalize hgo : go aig input distance curr hcurr s = res
   unfold go at hgo
@@ -58,24 +58,27 @@ theorem go_get_aux (aig : AIG α) (distance : Nat) (input : AIG.RefVec aig w)
     simp
 termination_by w - curr
 
-theorem go_get (aig : AIG α) (distance : Nat) (input : AIG.RefVec aig w) (curr : Nat)
-    (hcurr : curr ≤ w) (s : AIG.RefVec aig curr) :
-    ∀ (idx : Nat) (hidx : idx < curr),
-        (go aig input distance curr hcurr s).vec.get idx (by omega)
-          =
-        (s.get idx hidx).cast (by apply go_le_size) := by
+theorem go_get
+    (aig : AIG α)
+    (distance : Nat) (input : AIG.RefVec aig w)
+    (curr : Nat) (hcurr : curr ≤ w) (s : AIG.RefVec aig curr)
+    : ∀ (idx : Nat) (hidx : idx < curr),
+      (go aig input distance curr hcurr s).vec.get idx (by omega)
+        = (s.get idx hidx).cast (by apply go_le_size) := by
   intros
   apply go_get_aux
 
-theorem go_denote_mem_prefix (aig : AIG α) (distance : Nat) (input : AIG.RefVec aig w)
-    (curr : Nat) (hcurr : curr ≤ w) (s : AIG.RefVec aig curr) (start : Nat) (hstart) :
-    ⟦
-      (go aig input distance curr hcurr s).aig,
-      ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
-      assign
-    ⟧
-      =
-    ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
+theorem go_denote_mem_prefix
+    (aig : AIG α)
+    (distance : Nat) (input : AIG.RefVec aig w)
+    (curr : Nat) (hcurr : curr ≤ w) (s : AIG.RefVec aig curr)
+    (start : Nat) (hstart)
+    : ⟦
+        (go aig input distance curr hcurr s).aig,
+        ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
+        assign
+      ⟧
+      = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply IsPrefix.of
   · intros
@@ -83,22 +86,21 @@ theorem go_denote_mem_prefix (aig : AIG α) (distance : Nat) (input : AIG.RefVec
   · intros
     apply go_le_size
 
-theorem go_denote_eq (aig : AIG α) (distance : Nat) (input : AIG.RefVec aig w)
-    (assign : α → Bool) (curr : Nat) (hcurr : curr ≤ w) (s : AIG.RefVec aig curr) :
-    ∀ (idx : Nat) (hidx1 : idx < w),
-        curr ≤ idx
-          →
-        ⟦
-          (go aig input distance curr hcurr s).aig,
-          (go aig input distance curr hcurr s).vec.get idx hidx1,
-          assign
-        ⟧
-          =
-        if hidx : idx < distance then
-          false
-        else
-          ⟦aig, input.get (idx - distance) (by omega), assign⟧
-        := by
+theorem go_denote_eq
+    (aig : AIG α)
+    (distance : Nat) (input : AIG.RefVec aig w) (assign : α → Bool)
+    (curr : Nat) (hcurr : curr ≤ w) (s : AIG.RefVec aig curr)
+    : ∀ (idx : Nat) (hidx1 : idx < w),
+      curr ≤ idx
+        → ⟦
+            (go aig input distance curr hcurr s).aig,
+            (go aig input distance curr hcurr s).vec.get idx hidx1,
+            assign
+          ⟧
+          = if hidx : idx < distance then
+              false
+            else
+              ⟦aig, input.get (idx - distance) (by omega), assign⟧ := by
   intro idx hidx1 hidx2
   generalize hgo : go aig input distance curr hcurr s = res
   unfold go at hgo
@@ -109,7 +111,8 @@ theorem go_denote_eq (aig : AIG α) (distance : Nat) (input : AIG.RefVec aig w)
       split at hgo
       · split
         · rw [← hgo]
-          rw [go_get]; case hidx => omega
+          rw [go_get]
+          case hidx => omega
           rw [AIG.RefVec.get_push_ref_eq']
           · rw [go_denote_mem_prefix]
             · simp only [Ref.cast_eq]
@@ -120,7 +123,8 @@ theorem go_denote_eq (aig : AIG α) (distance : Nat) (input : AIG.RefVec aig w)
       · split
         · omega
         · rw [← hgo]
-          rw [go_get]; case hidx => omega
+          rw [go_get]
+          case hidx => omega
           rw [AIG.RefVec.get_push_ref_eq']
           · rw [go_denote_mem_prefix]
             · simp [heq]
@@ -152,20 +156,16 @@ termination_by w - curr
 end blastShiftLeftConst
 
 @[simp]
-theorem denote_blastShiftLeftConst (aig : AIG α) (target : ShiftTarget aig w)
-    (assign : α → Bool) :
-    ∀ (idx : Nat) (hidx : idx < w),
-        ⟦
-          (blastShiftLeftConst aig target).aig,
-          (blastShiftLeftConst aig target).vec.get idx hidx,
-          assign
-        ⟧
-          =
-        if hidx : idx < target.distance then
-          false
-        else
-          ⟦aig, target.vec.get (idx - target.distance) (by omega), assign⟧
-        := by
+theorem denote_blastShiftLeftConst (aig : AIG α) (target : ShiftTarget aig w) (assign : α → Bool)
+    : ∀ (idx : Nat) (hidx : idx < w),
+      ⟦
+        (blastShiftLeftConst aig target).aig,
+        (blastShiftLeftConst aig target).vec.get idx hidx,
+        assign
+      ⟧ = if hidx : idx < target.distance then
+            false
+          else
+            ⟦aig, target.vec.get (idx - target.distance) (by omega), assign⟧ := by
   intros
   unfold blastShiftLeftConst
   apply blastShiftLeftConst.go_denote_eq
@@ -173,18 +173,16 @@ theorem denote_blastShiftLeftConst (aig : AIG α) (target : ShiftTarget aig w)
 
 namespace blastShiftLeft
 
-theorem twoPowShift_eq (aig : AIG α) (target : TwoPowShiftTarget aig w) (lhs : BitVec w)
-    (rhs : BitVec target.n) (assign : α → Bool)
-    (hleft : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, target.lhs.get idx hidx, assign⟧ = lhs.getLsbD idx)
-    (hright : ∀ (idx : Nat) (hidx : idx < target.n), ⟦aig, target.rhs.get idx hidx, assign⟧ = rhs.getLsbD idx) :
-    ∀ (idx : Nat) (hidx : idx < w),
-        ⟦
-          (twoPowShift aig target).aig,
-          (twoPowShift aig target).vec.get idx hidx,
-          assign
-        ⟧
-          =
-        (lhs <<< (rhs &&& BitVec.twoPow target.n target.pow)).getLsbD idx := by
+theorem twoPowShift_eq
+    (aig : AIG α) (target : TwoPowShiftTarget aig w)
+    (lhs : BitVec w) (rhs : BitVec target.n) (assign : α → Bool)
+    (hleft
+      : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, target.lhs.get idx hidx, assign⟧ = lhs.getLsbD idx)
+    (hright : ∀ (idx : Nat) (hidx : idx < target.n),
+      ⟦aig, target.rhs.get idx hidx, assign⟧ = rhs.getLsbD idx)
+    : ∀ (idx : Nat) (hidx : idx < w),
+      ⟦(twoPowShift aig target).aig, (twoPowShift aig target).vec.get idx hidx, assign⟧
+        = (lhs <<< (rhs &&& BitVec.twoPow target.n target.pow)).getLsbD idx := by
   intro idx hidx
   generalize hg : twoPowShift aig target = res
   rcases target with ⟨n, lvec, rvec, pow⟩
@@ -195,18 +193,17 @@ theorem twoPowShift_eq (aig : AIG α) (target : TwoPowShiftTarget aig w) (lhs : 
   · split
     next hif1 =>
       rw [← hg]
-      simp only [RefVec.denote_ite, RefVec.get_cast, Ref.cast_eq,
-        denote_blastShiftLeftConst]
+      simp only [RefVec.denote_ite, RefVec.get_cast, Ref.cast_eq, denote_blastShiftLeftConst]
       rw [AIG.LawfulVecOperator.denote_mem_prefix (f := blastShiftLeftConst) (h := Ref.hgate _)]
       rw [hright]
-      simp only [hif1, ↓reduceIte]
+      simp only [hif1, ↓ reduceIte]
       have hmod : 2 ^ pow % 2 ^ n = 2 ^ pow := by
         apply Nat.mod_eq_of_lt
         apply Nat.pow_lt_pow_of_lt <;> omega
       split
       · simp only [BitVec.shiftLeft_eq', BitVec.toNat_twoPow, BitVec.getLsbD_shiftLeft,
-        Bool.false_eq, Bool.and_eq_false_imp, Bool.and_eq_true, decide_eq_true_eq,
-        Bool.not_eq_true', decide_eq_false_iff_not, Nat.not_lt, and_imp]
+          Bool.false_eq, Bool.and_eq_false_imp, Bool.and_eq_true, decide_eq_true_eq,
+          Bool.not_eq_true', decide_eq_false_iff_not, Nat.not_lt, and_imp]
         intros
         apply BitVec.getLsbD_of_ge
         omega
@@ -218,11 +215,10 @@ theorem twoPowShift_eq (aig : AIG α) (target : TwoPowShiftTarget aig w) (lhs : 
     next hif1 =>
       simp only [Bool.not_eq_true] at hif1
       rw [← hg]
-      simp only [RefVec.denote_ite, RefVec.get_cast, Ref.cast_eq,
-        denote_blastShiftLeftConst]
+      simp only [RefVec.denote_ite, RefVec.get_cast, Ref.cast_eq, denote_blastShiftLeftConst]
       rw [AIG.LawfulVecOperator.denote_mem_prefix (f := blastShiftLeftConst) (h := Ref.hgate _)]
       rw [hright]
-      simp only [hif1, Bool.false_eq_true, ↓reduceIte]
+      simp only [hif1, Bool.false_eq_true, ↓ reduceIte]
       rw [AIG.LawfulVecOperator.denote_mem_prefix (f := blastShiftLeftConst) (h := Ref.hgate _)]
       rw [hleft]
       simp
@@ -230,24 +226,22 @@ theorem twoPowShift_eq (aig : AIG α) (target : TwoPowShiftTarget aig w) (lhs : 
       apply BitVec.getLsbD_of_ge
       dsimp only
       omega
-    simp only [this, Bool.false_eq_true, ↓reduceIte]
+    simp only [this, Bool.false_eq_true, ↓ reduceIte]
     rw [← hg]
     rw [hleft]
     simp
 
-theorem go_denote_eq (aig : AIG α) (distance : AIG.RefVec aig n) (curr : Nat)
-      (hcurr : curr ≤ n - 1) (acc : AIG.RefVec aig w)
-    (lhs : BitVec w) (rhs : BitVec n) (assign : α → Bool)
-    (hacc : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, acc.get idx hidx, assign⟧ = (BitVec.shiftLeftRec lhs rhs curr).getLsbD idx)
-    (hright : ∀ (idx : Nat) (hidx : idx < n), ⟦aig, distance.get idx hidx, assign⟧ = rhs.getLsbD idx) :
-    ∀ (idx : Nat) (hidx : idx < w),
-        ⟦
-          (go aig distance curr acc).aig,
-          (go aig distance curr acc).vec.get idx hidx,
-          assign
-        ⟧
-          =
-        (BitVec.shiftLeftRec lhs rhs (n - 1)).getLsbD idx := by
+theorem go_denote_eq
+    (aig : AIG α) (distance : AIG.RefVec aig n)
+    (curr : Nat) (hcurr : curr ≤ n - 1)
+    (acc : AIG.RefVec aig w) (lhs : BitVec w) (rhs : BitVec n) (assign : α → Bool)
+    (hacc : ∀ (idx : Nat) (hidx : idx < w),
+      ⟦aig, acc.get idx hidx, assign⟧ = (BitVec.shiftLeftRec lhs rhs curr).getLsbD idx)
+    (hright
+      : ∀ (idx : Nat) (hidx : idx < n), ⟦aig, distance.get idx hidx, assign⟧ = rhs.getLsbD idx)
+    : ∀ (idx : Nat) (hidx : idx < w),
+      ⟦(go aig distance curr acc).aig, (go aig distance curr acc).vec.get idx hidx, assign⟧
+        = (BitVec.shiftLeftRec lhs rhs (n - 1)).getLsbD idx := by
   intro idx hidx
   generalize hgo : go aig distance curr acc = res
   unfold go at hgo
@@ -272,18 +266,16 @@ termination_by n - 1 - curr
 
 end blastShiftLeft
 
-theorem denote_blastShiftLeft (aig : AIG α) (target : ArbitraryShiftTarget aig w0)
+theorem denote_blastShiftLeft
+    (aig : AIG α) (target : ArbitraryShiftTarget aig w0)
     (lhs : BitVec w0) (rhs : BitVec target.n) (assign : α → Bool)
-    (hleft : ∀ (idx : Nat) (hidx : idx < w0), ⟦aig, target.target.get idx hidx, assign⟧ = lhs.getLsbD idx)
-    (hright : ∀ (idx : Nat) (hidx : idx < target.n), ⟦aig, target.distance.get idx hidx, assign⟧ = rhs.getLsbD idx) :
-    ∀ (idx : Nat) (hidx : idx < w0),
-        ⟦
-          (blastShiftLeft aig target).aig,
-          (blastShiftLeft aig target).vec.get idx hidx,
-          assign
-        ⟧
-          =
-        (lhs <<< rhs).getLsbD idx := by
+    (hleft : ∀ (idx : Nat) (hidx : idx < w0),
+      ⟦aig, target.target.get idx hidx, assign⟧ = lhs.getLsbD idx)
+    (hright : ∀ (idx : Nat) (hidx : idx < target.n),
+      ⟦aig, target.distance.get idx hidx, assign⟧ = rhs.getLsbD idx)
+    : ∀ (idx : Nat) (hidx : idx < w0),
+      ⟦(blastShiftLeft aig target).aig, (blastShiftLeft aig target).vec.get idx hidx, assign⟧
+        = (lhs <<< rhs).getLsbD idx := by
   intro idx hidx
   rw [BitVec.shiftLeft_eq_shiftLeftRec]
   generalize hg : blastShiftLeft aig target = res
@@ -296,7 +288,7 @@ theorem denote_blastShiftLeft (aig : AIG α) (target : ArbitraryShiftTarget aig 
     subst hzero
     rw [← hg]
     simp only [hleft, Nat.zero_sub, BitVec.shiftLeftRec_zero, BitVec.and_twoPow, Nat.le_refl,
-      BitVec.getLsbD_of_ge, Bool.false_eq_true, ↓reduceIte, BitVec.reduceHShiftLeft',
+      BitVec.getLsbD_of_ge, Bool.false_eq_true, ↓ reduceIte, BitVec.reduceHShiftLeft',
       BitVec.getLsbD_shiftLeft, Nat.sub_zero, Bool.eq_and_self, Bool.and_eq_true, decide_eq_true_eq,
       Bool.not_eq_true', decide_eq_false_iff_not, Nat.not_lt, Nat.zero_le, and_true]
     apply BitVec.lt_of_getLsbD

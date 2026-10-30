@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.CommRing.RingM
 import Lean.Meta.Tactic.Grind.Arith.CommRing.DenoteExpr
@@ -16,11 +17,9 @@ structure SemiringM.Context where
 
 abbrev SemiringM := ReaderT SemiringM.Context GoalM
 
-abbrev SemiringM.run (semiringId : Nat) (x : SemiringM α) : GoalM α :=
-  x { semiringId }
+abbrev SemiringM.run (semiringId : Nat) (x : SemiringM α) : GoalM α := x { semiringId }
 
-abbrev getSemiringId : SemiringM Nat :=
-  return (← read).semiringId
+abbrev getSemiringId : SemiringM Nat := return (← read).semiringId
 
 instance : MonadCanon SemiringM where
   canonExpr e := do shareCommon (← canon e)
@@ -35,7 +34,9 @@ protected def SemiringM.getCommSemiring : SemiringM Sym.Arith.CommSemiring := do
   else
     throwError "`grind` internal error, invalid semiringId"
 
-@[inline] protected def SemiringM.modifyCommSemiring (f : Sym.Arith.CommSemiring → Sym.Arith.CommSemiring) : SemiringM Unit := do
+@[inline]
+protected def SemiringM.modifyCommSemiring (f : Sym.Arith.CommSemiring → Sym.Arith.CommSemiring)
+    : SemiringM Unit := do
   let semiringId ← getSemiringId
   modifyArithState fun s => { s with semirings := s.semirings.modify semiringId f }
 
@@ -52,19 +53,21 @@ protected def SemiringM.getCommRing : SemiringM Sym.Arith.CommRing := do
   else
     throwError "`grind` internal error, invalid ringId"
 
-protected def SemiringM.modifyCommRing (f : Sym.Arith.CommRing → Sym.Arith.CommRing) : SemiringM Unit := do
+protected def SemiringM.modifyCommRing (f : Sym.Arith.CommRing → Sym.Arith.CommRing)
+    : SemiringM Unit := do
   let ringId := (← getCommSemiring).ringId
   modifyArithState fun s => { s with rings := s.rings.modify ringId f }
 
 instance : MonadCommRing SemiringM where
- getCommRing := SemiringM.getCommRing
- modifyCommRing := SemiringM.modifyCommRing
+  getCommRing := SemiringM.getCommRing
+  modifyCommRing := SemiringM.modifyCommRing
 
 /-- The per-goal solver state of the current semiring. -/
 protected def SemiringM.getSemiringState : SemiringM SemiringState := do
   return (← get').getSemiring (← getSemiringId)
 
-protected def SemiringM.modifySemiringState (f : SemiringState → SemiringState) : SemiringM Unit := do
+protected def SemiringM.modifySemiringState (f : SemiringState → SemiringState)
+    : SemiringM Unit := do
   let semiringId ← getSemiringId
   modify' fun s => s.modifySemiring semiringId f
 
@@ -87,14 +90,16 @@ instance : MonadSetTermId SemiringM where
   setTermId e := setTermSemiringId e
 
 /-- Similar to `mkVarCore` but for `Semiring`s -/
-def mkSVarCore [MonadLiftT GoalM m] [Monad m] [MonadSemiringState m] [MonadSetTermId m] (e : Expr) : m Var := do
+def mkSVarCore [MonadLiftT GoalM m] [Monad m] [MonadSemiringState m] [MonadSetTermId m] (e : Expr)
+    : m Var := do
   let s ← getSemiringState
   if let some var := s.varMap.find? { expr := e } then
     return var
   let var : Var := s.vars.size
-  modifySemiringState fun s => { s with
-    vars       := s.vars.push e
-    varMap     := s.varMap.insert { expr := e } var
+  modifySemiringState fun s => {
+    s with
+    vars := s.vars.push e
+    varMap := s.varMap.insert { expr := e } var
   }
   MonadSetTermId.setTermId e
   ringExt.markTerm e
@@ -115,19 +120,20 @@ instance : MonadMkVar SemiringM where
 Denotes `e` in the envelope ring `OfSemiring.Q`. The atoms `toQ x` are new terms, so they are
 internalized here with generation `gen`.
 -/
-def _root_.Lean.Grind.CommRing.Expr.denoteAsRingExpr (e : SemiringExpr) (gen : Nat) : SemiringM Expr := do
+def _root_.Lean.Grind.CommRing.Expr.denoteAsRingExpr (e : SemiringExpr) (gen : Nat)
+    : SemiringM Expr := do
   shareCommon (← go e)
 where
   go : SemiringExpr → SemiringM Expr
-  | .num k     => denoteNum k
-  | .natCast k => denoteNum k
-  | .var x   => do
-    let e ← shareCommon (mkApp (← getToQFn) (← getSemiringState).vars[x]!)
-    internalize e gen
-    return e
-  | .add a b => return mkApp2 (← getAddFn) (← go a) (← go b)
-  | .mul a b => return mkApp2 (← getMulFn) (← go a) (← go b)
-  | .pow a k => return mkApp2 (← getPowFn) (← go a) (toExpr k)
-  | .neg .. | .sub .. | .intCast .. => unreachable!
+    | .num k => denoteNum k
+    | .natCast k => denoteNum k
+    | .var x => do
+      let e ← shareCommon (mkApp (← getToQFn) (← getSemiringState).vars[x]!)
+      internalize e gen
+      return e
+    | .add a b => return mkApp2 (← getAddFn) (← go a) (← go b)
+    | .mul a b => return mkApp2 (← getMulFn) (← go a) (← go b)
+    | .pow a k => return mkApp2 (← getPowFn) (← go a) (toExpr k)
+    | .neg .. | .sub .. | .intCast .. => unreachable!
 
 end Lean.Meta.Grind.Arith.CommRing

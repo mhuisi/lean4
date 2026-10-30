@@ -21,9 +21,7 @@ public section
 
 namespace Substring.Raw
 
-/--
-Converts a `String.Slice` into a `Substring.Raw`.
--/
+/-- Converts a `String.Slice` into a `Substring.Raw`. -/
 @[inline]
 def ofSlice (s : String.Slice) : Substring.Raw where
   str := s.str
@@ -46,22 +44,21 @@ Checks whether a substring is empty.
 
 A substring is empty if its start and end positions are the same.
 -/
-@[inline] def isEmpty (ss : Substring.Raw) : Bool :=
-  ss.bsize == 0
+@[inline] def isEmpty (ss : Substring.Raw) : Bool := ss.bsize == 0
 
 @[export lean_substring_isempty]
-def Internal.isEmptyImpl (ss : Substring.Raw) : Bool :=
-  Substring.Raw.isEmpty ss
+def Internal.isEmptyImpl (ss : Substring.Raw) : Bool := Substring.Raw.isEmpty ss
 
-/--{}
+/--
+{}
 Copies the region of the underlying string pointed to by a substring into a fresh string.
 -/
-@[inline] def toString : Substring.Raw → String
+@[inline]
+def toString : Substring.Raw → String
   | ⟨s, b, e⟩ => b.extract s e
 
 @[export lean_substring_tostring]
-def Internal.toStringImpl : Substring.Raw → String :=
-  Substring.Raw.toString
+def Internal.toStringImpl : Substring.Raw → String := Substring.Raw.toString
 
 /--
 Returns the character at the given position in the substring.
@@ -71,12 +68,12 @@ is performed with respect to the substring's end position. If the relative posit
 position in the underlying string, the fallback value `(default : Char)`, which is `'A'`, is
 returned.  Does not panic.
 -/
-@[inline] def get : Substring.Raw → String.Pos.Raw → Char
+@[inline]
+def get : Substring.Raw → String.Pos.Raw → Char
   | ⟨s, b, _⟩, p => (p.offsetBy b).get s
 
 @[export lean_substring_get]
-def Internal.getImpl : Substring.Raw → String.Pos.Raw → Char :=
-  Substring.Raw.get
+def Internal.getImpl : Substring.Raw → String.Pos.Raw → Char := Substring.Raw.get
 
 /--
 Returns the next position in a substring after the given position. If the position is at the end of
@@ -85,19 +82,22 @@ the substring, it is returned unmodified.
 Both the input position and the returned position are interpreted relative to the substring's start
 position, not the underlying string.
 -/
-@[inline] def next : Substring.Raw → String.Pos.Raw → String.Pos.Raw
+@[inline]
+def next : Substring.Raw → String.Pos.Raw → String.Pos.Raw
   | ⟨s, b, e⟩, p =>
     let absP := p.offsetBy b
     if absP = e then p else { byteIdx := (absP.next s).byteIdx - b.byteIdx }
 
-theorem lt_next (s : Substring.Raw) (i : String.Pos.Raw) (h : i.1 < s.bsize) :
-    i.1 < (s.next i).1 := by
-  simp [next]; rw [ite_eq_right ?a]
+theorem lt_next (s : Substring.Raw) (i : String.Pos.Raw) (h : i.1 < s.bsize)
+    : i.1 < (s.next i).1 := by
+  simp [next]
+  rw [ite_eq_right ?a]
   case a =>
     refine mt (congrArg String.Pos.Raw.byteIdx) (Nat.ne_of_lt ?_)
     exact (Nat.add_comm .. ▸ Nat.add_lt_of_lt_sub h :)
   apply Nat.lt_sub_of_add_lt
-  rw [Nat.add_comm]; apply String.Pos.Raw.lt_next
+  rw [Nat.add_comm]
+  apply String.Pos.Raw.lt_next
 
 /--
 Returns the previous position in a substring, just prior to the given position. If the position is
@@ -106,14 +106,14 @@ at the beginning of the substring, it is returned unmodified.
 Both the input position and the returned position are interpreted relative to the substring's start
 position, not the underlying string.
 -/
-@[inline] def prev : Substring.Raw → String.Pos.Raw → String.Pos.Raw
+@[inline]
+def prev : Substring.Raw → String.Pos.Raw → String.Pos.Raw
   | ⟨s, b, _⟩, p =>
     let absP := p.offsetBy b
     if absP = b then p else { byteIdx := (absP.prev s).byteIdx - b.byteIdx }
 
 @[export lean_substring_prev]
-def Internal.prevImpl : Substring.Raw → String.Pos.Raw → String.Pos.Raw :=
-  Substring.Raw.prev
+def Internal.prevImpl : Substring.Raw → String.Pos.Raw → String.Pos.Raw := Substring.Raw.prev
 
 /--
 Returns the position that's the specified number of characters forward from the given position in a
@@ -123,8 +123,8 @@ Both the input position and the returned position are interpreted relative to th
 position, not the underlying string.
 -/
 def nextn : Substring.Raw → Nat → String.Pos.Raw → String.Pos.Raw
-  | _,  0,   p => p
-  | ss, i+1, p => ss.nextn i (ss.next p)
+  | _, 0, p => p
+  | ss, i + 1, p => ss.nextn i (ss.next p)
 
 /--
 Returns the position that's the specified number of characters prior to the given position in a
@@ -134,8 +134,8 @@ Both the input position and the returned position are interpreted relative to th
 position, not the underlying string.
 -/
 def prevn : Substring.Raw → Nat → String.Pos.Raw → String.Pos.Raw
-  | _,  0,   p => p
-  | ss, i+1, p => ss.prevn i (ss.prev p)
+  | _, 0, p => p
+  | ss, i + 1, p => ss.prevn i (ss.prev p)
 
 /--
 Returns the first character in the substring.
@@ -145,18 +145,17 @@ string, then the character at the start position is returned. If the substring's
 not a valid position in the string, the fallback value `(default : Char)`, which is `'A'`, is
 returned.  Does not panic.
 -/
-@[inline, expose] def front (s : Substring.Raw) : Char :=
-  s.get 0
+@[inline, expose] def front (s : Substring.Raw) : Char := s.get 0
 
 @[export lean_substring_front]
-def Internal.frontImpl : Substring.Raw → Char :=
-  Substring.Raw.front
+def Internal.frontImpl : Substring.Raw → Char := Substring.Raw.front
 
 /--
 Returns the substring-relative position of the first occurrence of `c` in `s`, or `s.bsize` if `c`
 doesn't occur.
 -/
-@[inline] def posOf (s : Substring.Raw) (c : Char) : String.Pos.Raw :=
+@[inline]
+def posOf (s : Substring.Raw) (c : Char) : String.Pos.Raw :=
   s.toSlice?.map (·.find c |>.offset) |>.getD ⟨s.bsize⟩
 
 /--
@@ -165,12 +164,12 @@ by advancing its start position.
 
 If the substring's end position is reached, the start position is not advanced past it.
 -/
-@[inline] def drop : Substring.Raw → Nat → Substring.Raw
+@[inline]
+def drop : Substring.Raw → Nat → Substring.Raw
   | ss@⟨s, b, e⟩, n => ⟨s, (ss.nextn n 0).offsetBy b, e⟩
 
 @[export lean_substring_drop]
-def Internal.dropImpl : Substring.Raw → Nat → Substring.Raw :=
-  Substring.Raw.drop
+def Internal.dropImpl : Substring.Raw → Nat → Substring.Raw := Substring.Raw.drop
 
 /--
 Removes the specified number of characters (Unicode code points) from the end of a substring
@@ -178,7 +177,8 @@ by moving its end position towards its start position.
 
 If the substring's start position is reached, the end position is not retracted past it.
 -/
-@[inline] def dropRight : Substring.Raw → Nat → Substring.Raw
+@[inline]
+def dropRight : Substring.Raw → Nat → Substring.Raw
   | ss@⟨s, b, _⟩, n => ⟨s, b, (ss.prevn n ⟨ss.bsize⟩).offsetBy b⟩
 
 /--
@@ -187,7 +187,8 @@ substring, by moving its end position towards its start position.
 
 If the substring's start position is reached, the end position is not retracted past it.
 -/
-@[inline] def take : Substring.Raw → Nat → Substring.Raw
+@[inline]
+def take : Substring.Raw → Nat → Substring.Raw
   | ss@⟨s, b, _⟩, n => ⟨s, b, (ss.nextn n 0).offsetBy b⟩
 
 /--
@@ -196,7 +197,8 @@ moving its start position towards its end position.
 
 If the substring's end position is reached, the start position is not advanced past it.
 -/
-@[inline] def takeRight : Substring.Raw → Nat → Substring.Raw
+@[inline]
+def takeRight : Substring.Raw → Nat → Substring.Raw
   | ss@⟨s, b, e⟩, n => ⟨s, (ss.prevn n ⟨ss.bsize⟩).offsetBy b, e⟩
 
 /--
@@ -205,7 +207,8 @@ Checks whether a position in a substring is precisely equal to its ending positi
 The position is understood relative to the substring's starting position, rather than the underlying
 string's starting position.
 -/
-@[inline] def atEnd : Substring.Raw → String.Pos.Raw → Bool
+@[inline]
+def atEnd : Substring.Raw → String.Pos.Raw → Bool
   | ⟨_, b, e⟩, p => p.offsetBy b == e
 
 /--
@@ -217,8 +220,10 @@ If the resulting substring is empty, then the resulting substring is a substring
 `""`. Otherwise, the underlying string is that of the input substring with the beginning and end
 positions adjusted.
 -/
-@[inline] def extract : Substring.Raw → String.Pos.Raw → String.Pos.Raw → Substring.Raw
-  | ⟨s, b, e⟩, b', e' => if b' ≥ e' then ⟨"", 0, 0⟩ else ⟨s, e.min (b'.offsetBy b), e.min (e'.offsetBy b)⟩
+@[inline]
+def extract : Substring.Raw → String.Pos.Raw → String.Pos.Raw → Substring.Raw
+  | ⟨s, b, e⟩, b', e' =>
+    if b' ≥ e' then ⟨"", 0, 0⟩ else ⟨s, e.min (b'.offsetBy b), e.min (e'.offsetBy b)⟩
 
 @[export lean_substring_extract]
 def Internal.extractImpl : Substring.Raw → String.Pos.Raw → String.Pos.Raw → Substring.Raw :=
@@ -249,10 +254,11 @@ def splitOn (s : Substring.Raw) (sep : String := " ") : List Substring.Raw :=
         else
           loop b (s.next i) 0 r
       else
-        let r := if j.atEnd sep then
-          "".toRawSubstring :: s.extract b (i.unoffsetBy j) :: r
-        else
-          s.extract b i :: r
+        let r :=
+          if j.atEnd sep then
+            "".toRawSubstring :: s.extract b (i.unoffsetBy j) :: r
+          else
+            s.extract b i :: r
         r.reverse
       termination_by s.bsize - i.1
     loop 0 0 0 []
@@ -261,14 +267,16 @@ def splitOn (s : Substring.Raw) (sep : String := " ") : List Substring.Raw :=
 Folds a function over a substring from the left, accumulating a value starting with `init`. The
 accumulated value is combined with each character in order, using `f`.
 -/
-@[inline] def foldl {α : Type u} (f : α → Char → α) (init : α) (s : Substring.Raw) : α :=
+@[inline]
+def foldl {α : Type u} (f : α → Char → α) (init : α) (s : Substring.Raw) : α :=
   s.toSlice?.get!.foldl f init
 
 /--
 Folds a function over a substring from the right, accumulating a value starting with `init`. The
 accumulated value is combined with each character in reverse order, using `f`.
 -/
-@[inline] def foldr {α : Type u} (f : Char → α → α) (init : α) (s : Substring.Raw) : α :=
+@[inline]
+def foldr {α : Type u} (f : Char → α → α) (init : α) (s : Substring.Raw) : α :=
   s.toSlice?.get!.foldr f init
 
 /--
@@ -276,43 +284,44 @@ Checks whether the Boolean predicate `p` returns `true` for any character in a s
 
 Short-circuits at the first character for which `p` returns `true`.
 -/
-@[inline, suggest_for Substring.Raw.some] def any (s : Substring.Raw) (p : Char → Bool) : Bool :=
-  s.toSlice?.get!.any p
+@[inline, suggest_for Substring.Raw.some]
+def any (s : Substring.Raw) (p : Char → Bool) : Bool := s.toSlice?.get!.any p
 
 /--
 Checks whether the Boolean predicate `p` returns `true` for every character in a substring.
 
 Short-circuits at the first character for which `p` returns `false`.
 -/
-@[inline, suggest_for Substring.Raw.every] def all (s : Substring.Raw) (p : Char → Bool) : Bool :=
-  s.toSlice?.get!.all p
+@[inline, suggest_for Substring.Raw.every]
+def all (s : Substring.Raw) (p : Char → Bool) : Bool := s.toSlice?.get!.all p
 
 @[export lean_substring_all]
-def Internal.allImpl (s : Substring.Raw) (p : Char → Bool) : Bool :=
-  Substring.Raw.all s p
+def Internal.allImpl (s : Substring.Raw) (p : Char → Bool) : Bool := Substring.Raw.all s p
 
-/--
-Checks whether a substring contains the specified character.
--/
-@[inline] def contains (s : Substring.Raw) (c : Char) : Bool :=
-  s.any (fun a => a == c)
+/-- Checks whether a substring contains the specified character. -/
+@[inline] def contains (s : Substring.Raw) (c : Char) : Bool := s.any (fun a => a == c)
 
-@[specialize] def takeWhileAux (s : String) (stopPos : String.Pos.Raw) (p : Char → Bool) (i : String.Pos.Raw) : String.Pos.Raw :=
+@[specialize]
+def takeWhileAux (s : String) (stopPos : String.Pos.Raw) (p : Char → Bool) (i : String.Pos.Raw)
+    : String.Pos.Raw :=
   if h : i < stopPos then
     if p (i.get s) then
       have := Nat.sub_lt_sub_left h (String.Pos.Raw.lt_next s i)
       takeWhileAux s stopPos p (i.next s)
-    else i
-  else i
+    else
+      i
+  else
+    i
 termination_by stopPos.1 - i.1
 
 /--
 Retains only the longest prefix of a substring in which a Boolean predicate returns `true` for all
 characters by moving the substring's end position towards its start position.
 -/
-@[inline] def takeWhile : Substring.Raw → (Char → Bool) → Substring.Raw
+@[inline]
+def takeWhile : Substring.Raw → (Char → Bool) → Substring.Raw
   | ⟨s, b, e⟩, p =>
-    let e := takeWhileAux s e p b;
+    let e := takeWhileAux s e p b
     ⟨s, b, e⟩
 
 @[export lean_substring_takewhile]
@@ -325,27 +334,35 @@ characters by moving the substring's start position. The start position is moved
 the first character for which the predicate returns `false`, or to the substring's end position if
 the predicate always returns `true`.
 -/
-@[inline] def dropWhile : Substring.Raw → (Char → Bool) → Substring.Raw
+@[inline]
+def dropWhile : Substring.Raw → (Char → Bool) → Substring.Raw
   | ⟨s, b, e⟩, p =>
-    let b := takeWhileAux s e p b;
+    let b := takeWhileAux s e p b
     ⟨s, b, e⟩
 
-@[specialize] def takeRightWhileAux (s : String) (begPos : String.Pos.Raw) (p : Char → Bool) (i : String.Pos.Raw) : String.Pos.Raw :=
+@[specialize]
+def takeRightWhileAux (s : String) (begPos : String.Pos.Raw) (p : Char → Bool) (i : String.Pos.Raw)
+    : String.Pos.Raw :=
   if h : begPos < i then
-    have := String.Pos.Raw.prev_lt_of_pos s i <| mt (congrArg String.Pos.Raw.byteIdx) <|
-      Ne.symm <| Nat.ne_of_lt <| Nat.lt_of_le_of_lt (Nat.zero_le _) h
+    have :=
+      String.Pos.Raw.prev_lt_of_pos s i <| mt (congrArg String.Pos.Raw.byteIdx) <| Ne.symm <|
+        Nat.ne_of_lt <| Nat.lt_of_le_of_lt (Nat.zero_le _) h
     let i' := i.prev s
-    let c  := i'.get s
-    if !p c then i
-    else takeRightWhileAux s begPos p i'
-  else i
+    let c := i'.get s
+    if ! p c then
+      i
+    else
+      takeRightWhileAux s begPos p i'
+  else
+    i
 termination_by i.1
 
 /--
 Retains only the longest suffix of a substring in which a Boolean predicate returns `true` for all
 characters by moving the substring's start position towards its end position.
 -/
-@[inline] def takeRightWhile : Substring.Raw → (Char → Bool) → Substring.Raw
+@[inline]
+def takeRightWhile : Substring.Raw → (Char → Bool) → Substring.Raw
   | ⟨s, b, e⟩, p =>
     let b := takeRightWhileAux s b p e
     ⟨s, b, e⟩
@@ -356,7 +373,8 @@ characters by moving the substring's end position. The end position is moved jus
 of the last character for which the predicate returns `false`, or to the substring's start position
 if the predicate always returns `true`.
 -/
-@[inline] def dropRightWhile : Substring.Raw → (Char → Bool) → Substring.Raw
+@[inline]
+def dropRightWhile : Substring.Raw → (Char → Bool) → Substring.Raw
   | ⟨s, b, e⟩, p =>
     let e := takeRightWhileAux s b p e
     ⟨s, b, e⟩
@@ -367,8 +385,7 @@ character, or to its end position if there is no non-whitespace character.
 
 “Whitespace” is defined as characters for which `Char.isWhitespace` returns `true`.
 -/
-@[inline] def trimLeft (s : Substring.Raw) : Substring.Raw :=
-  s.dropWhile Char.isWhitespace
+@[inline] def trimLeft (s : Substring.Raw) : Substring.Raw := s.dropWhile Char.isWhitespace
 
 /--
 Removes trailing whitespace from a substring by moving its end position to the last non-whitespace
@@ -376,8 +393,7 @@ character, or to its start position if there is no non-whitespace character.
 
 “Whitespace” is defined as characters for which `Char.isWhitespace` returns `true`.
 -/
-@[inline] def trimRight (s : Substring.Raw) : Substring.Raw :=
-  s.dropRightWhile Char.isWhitespace
+@[inline] def trimRight (s : Substring.Raw) : Substring.Raw := s.dropRightWhile Char.isWhitespace
 
 /--
 Removes leading and trailing whitespace from a substring by first moving its start position to the
@@ -395,7 +411,8 @@ Examples:
  * `" red green blue ".toRawSubstring.trim.stopPos = ⟨15⟩`
  * `"     ".toRawSubstring.trim.startPos = ⟨5⟩`
 -/
-@[inline] def trim : Substring.Raw → Substring.Raw
+@[inline]
+def trim : Substring.Raw → Substring.Raw
   | ⟨s, b, e⟩ =>
     let b := takeWhileAux s e Char.isWhitespace b
     let e := takeRightWhileAux s b Char.isWhitespace e
@@ -410,19 +427,22 @@ at the start, at the end, or consecutively.
 
 Use `Substring.toNat?` to convert such a substring to a natural number.
 -/
-@[inline] def isNat (s : Substring.Raw) : Bool :=
+@[inline]
+def isNat (s : Substring.Raw) : Bool :=
   if s.isEmpty then
     false
   else
     -- Track: isFirst, lastWasUnderscore, lastCharWasDigit, valid
-    let result := s.foldl (fun (isFirst, lastWasUnderscore, _lastCharWasDigit, valid) c =>
-      let isDigit := c.isDigit
-      let isUnderscore := c = '_'
-      let newValid := valid && (isDigit || isUnderscore) &&
-                      !(isFirst && isUnderscore) &&  -- Cannot start with underscore
-                      !(lastWasUnderscore && isUnderscore)  -- No consecutive underscores
-      (false, isUnderscore, isDigit, newValid))
-      (true, false, false, true)
+    let result :=
+      s.foldl
+        (fun (isFirst, lastWasUnderscore, _lastCharWasDigit, valid) c =>
+          let isDigit := c.isDigit
+          let isUnderscore := c = '_'
+          let newValid :=
+            valid && (isDigit || isUnderscore) && !(isFirst && isUnderscore) -- Cannot start with underscore
+              && !(lastWasUnderscore && isUnderscore) -- No consecutive underscores
+          (false, isUnderscore, isDigit, newValid))
+        (true, false, false, true)
     -- Must be valid and last character must have been a digit (not underscore)
     result.2.2.2 && result.2.2.1
 
@@ -437,7 +457,7 @@ Use `Substring.isNat` to check whether the substring is such a substring.
 -/
 def toNat? (s : Substring.Raw) : Option Nat :=
   if s.isNat then
-    some <| s.foldl (fun n c => if c = '_' then n else n*10 + (c.toNat - '0'.toNat)) 0
+    some <| s.foldl (fun n c => if c = '_' then n else n * 10 + (c.toNat - '0'.toNat)) 0
   else
     none
 
@@ -458,11 +478,11 @@ instead, they are equal if they contain the same sequence of characters.
 def beq (ss1 ss2 : Substring.Raw) : Bool :=
   let ss1 := ss1.repair
   let ss2 := ss2.repair
-  ss1.bsize == ss2.bsize && String.Pos.Raw.substrEq ss1.str ss1.startPos ss2.str ss2.startPos ss1.bsize
+  ss1.bsize == ss2.bsize
+    && String.Pos.Raw.substrEq ss1.str ss1.startPos ss2.str ss2.startPos ss1.bsize
 
 @[export lean_substring_beq]
-def Internal.beqImpl (ss1 ss2 : Substring.Raw) : Bool :=
-  Substring.Raw.beq ss1 ss2
+def Internal.beqImpl (ss1 ss2 : Substring.Raw) : Bool := Substring.Raw.beq ss1 ss2
 
 instance hasBeq : BEq Substring.Raw := ⟨beq⟩
 
@@ -471,16 +491,17 @@ Checks whether two substrings have the same position and content.
 
 The two substrings do not need to have the same underlying string for this check to succeed.
 -/
-def sameAs (ss1 ss2 : Substring.Raw) : Bool :=
-  ss1.startPos == ss2.startPos && ss1 == ss2
+def sameAs (ss1 ss2 : Substring.Raw) : Bool := ss1.startPos == ss2.startPos && ss1 == ss2
 
 /--
 Returns the longest common prefix of two substrings.
 
 The returned substring uses the same underlying string as `s`.
 -/
-def commonPrefix (s t : Substring.Raw) : Substring.Raw :=
-  { s with stopPos := loop s.startPos t.startPos }
+def commonPrefix (s t : Substring.Raw) : Substring.Raw := {
+  s with
+  stopPos := loop s.startPos t.startPos
+}
 where
   /-- Returns the ending position of the common prefix, working up from `spos, tpos`. -/
   loop spos tpos :=
@@ -499,8 +520,10 @@ Returns the longest common suffix of two substrings.
 
 The returned substring uses the same underlying string as `s`.
 -/
-def commonSuffix (s t : Substring.Raw) : Substring.Raw :=
-  { s with startPos := loop s.stopPos t.stopPos }
+def commonSuffix (s t : Substring.Raw) : Substring.Raw := {
+  s with
+  startPos := loop s.stopPos t.stopPos
+}
 where
   /-- Returns the starting position of the common prefix, working down from `spos, tpos`. -/
   loop spos tpos :=
@@ -508,7 +531,8 @@ where
       let spos' := spos.prev s.str
       let tpos' := tpos.prev t.str
       if spos'.get s.str == tpos'.get t.str then
-        have : spos' < spos := String.Pos.Raw.prev_lt_of_pos s.str spos (String.Pos.Raw.ne_zero_of_lt h.1)
+        have : spos' < spos :=
+          String.Pos.Raw.prev_lt_of_pos s.str spos (String.Pos.Raw.ne_zero_of_lt h.1)
         loop spos' tpos'
       else
         spos
@@ -546,9 +570,10 @@ def dropSuffix? (s : Substring.Raw) (suff : Substring.Raw) : Option Substring.Ra
 
 @[simp] theorem prev_zero (s : Substring.Raw) : s.prev 0 = 0 := by simp [prev]
 
-@[simp] theorem prevn_zero (s : Substring.Raw) : ∀ n, s.prevn n 0 = 0
+@[simp]
+theorem prevn_zero (s : Substring.Raw) : ∀ n, s.prevn n 0 = 0
   | 0 => rfl
-  | n+1 => by simp [prevn, prevn_zero s n]
+  | n + 1 => by simp [prevn, prevn_zero s n]
 
 end Substring.Raw
 

@@ -65,8 +65,7 @@ public def fmtSimproc : Fmt := fun
         $declId:ident (%$lparenTk $trigger:term )%$rparenTk :=%$colonEqTk $body:term) =>
     fmtSimprocLike docComment? #[attrKind] simprocTk phase? lbTk? ids? rbTk? declId lparenTk trigger
       rparenTk colonEqTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.«command__Dsimproc__[_]_(_):=_»]
 public def fmtDSimproc : Fmt := fun
@@ -76,8 +75,7 @@ public def fmtDSimproc : Fmt := fun
         $declId:ident (%$lparenTk $trigger:term )%$rparenTk :=%$colonEqTk $body:term) =>
     fmtSimprocLike docComment? #[attrKind] dsimprocTk phase? lbTk? ids? rbTk? declId lparenTk
       trigger rparenTk colonEqTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.«command_Simproc_decl_(_):=_»]
 public def fmtSimprocDecl : Fmt := fun
@@ -87,8 +85,7 @@ public def fmtSimprocDecl : Fmt := fun
         :=%$colonEqTk $body:term) =>
     fmtSimprocLike docComment? #[] simprocDeclTk none none none none declId lparenTk trigger
       rparenTk colonEqTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.«command_Dsimproc_decl_(_):=_»]
 public def fmtDSimprocDecl : Fmt := fun
@@ -98,8 +95,7 @@ public def fmtDSimprocDecl : Fmt := fun
         :=%$colonEqTk $body:term) =>
     fmtSimprocLike docComment? #[] dsimprocDeclTk none none none none declId lparenTk trigger
       rparenTk colonEqTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.«command__Builtin_simproc__[_]_(_):=_»]
 public def fmtBuiltinSimproc : Fmt := fun
@@ -110,8 +106,7 @@ public def fmtBuiltinSimproc : Fmt := fun
         $declId:ident (%$lparenTk $trigger:term )%$rparenTk :=%$colonEqTk $body:term) =>
     fmtSimprocLike docComment? #[attrKind] builtinSimprocTk phase? lbTk? ids? rbTk? declId lparenTk
       trigger rparenTk colonEqTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.«command__Builtin_dsimproc__[_]_(_):=_»]
 public def fmtBuiltinDSimproc : Fmt := fun
@@ -122,8 +117,7 @@ public def fmtBuiltinDSimproc : Fmt := fun
         $declId:ident (%$lparenTk $trigger:term )%$rparenTk :=%$colonEqTk $body:term) =>
     fmtSimprocLike docComment? #[attrKind] builtinDSimprocTk phase? lbTk? ids? rbTk? declId lparenTk
       trigger rparenTk colonEqTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.«command_Builtin_simproc_decl_(_):=_»]
 public def fmtBuiltinSimprocDecl : Fmt := fun
@@ -133,8 +127,7 @@ public def fmtBuiltinSimprocDecl : Fmt := fun
         (%$lparenTk $trigger:term )%$rparenTk :=%$colonEqTk $body:term) =>
     fmtSimprocLike docComment? #[] builtinSimprocDeclTk none none none none declId lparenTk trigger
       rparenTk colonEqTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.«command_Builtin_dsimproc_decl_(_):=_»]
 public def fmtBuiltinDSimprocDecl : Fmt := fun
@@ -144,49 +137,42 @@ public def fmtBuiltinDSimprocDecl : Fmt := fun
         (%$lparenTk $trigger:term )%$rparenTk :=%$colonEqTk $body:term) =>
     fmtSimprocLike docComment? #[] builtinDSimprocDeclTk none none none none declId lparenTk trigger
       rparenTk colonEqTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.simprocPattern]
 public def fmtSimprocPattern : Fmt := fun
   | `(Parser.simprocPattern|
       simproc_pattern%%$simprocPatternTk $pattern:term =>%$arrowTk $declId:ident) =>
     fmtSimprocPatternLike simprocPatternTk pattern arrowTk declId
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.simprocPatternBuiltin]
 public def fmtBuiltinSimprocPattern : Fmt := fun
   | `(Parser.simprocPatternBuiltin|
       builtin_simproc_pattern%%$simprocPatternTk $pattern:term =>%$arrowTk $declId:ident) =>
     fmtSimprocPatternLike simprocPatternTk pattern arrowTk declId
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.simprocAttr]
 public def fmtSimprocAttr : Fmt := fun
   | `(Parser.Attr.simprocAttr| simproc%$simprocTk $[$phase?]?) =>
     fmtSimprocAttrLike simprocTk phase?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.sevalprocAttr]
 public def fmtSevalprocAttr : Fmt := fun
   | `(Parser.Attr.sevalprocAttr| sevalproc%$sevalprocTk $[$phase?]?) =>
     fmtSimprocAttrLike sevalprocTk phase?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.simprocBuiltinAttr]
 public def fmtBuiltinSimprocAttr : Fmt := fun
   | `(Parser.Attr.simprocBuiltinAttr| builtin_simproc%$builtinSimprocTk $[$phase?]?) =>
     fmtSimprocAttrLike builtinSimprocTk phase?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.sevalprocBuiltinAttr]
 public def fmtBuiltinSevalprocAttr : Fmt := fun
   | `(Parser.Attr.sevalprocBuiltinAttr| builtin_sevalproc%$builtinSevalprocTk $[$phase?]?) =>
     fmtSimprocAttrLike builtinSevalprocTk phase?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

@@ -15,9 +15,7 @@ public section
 
 namespace String
 
-@[simp]
-theorem length_eq_zero_iff {s : String} : s.length = 0 ↔ s = "" := by
-  simp [← length_toList]
+@[simp] theorem length_eq_zero_iff {s : String} : s.length = 0 ↔ s = "" := by simp [← length_toList]
 
 @[simp]
 theorem length_map {f : Char → Char} {s : String} : (s.map f).length = s.length := by

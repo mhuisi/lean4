@@ -25,8 +25,7 @@ variable [Hashable α] [DecidableEq α]
 namespace BVExpr
 namespace bitblast
 
-def blastClz (aig : AIG α) (x : AIG.RefVec aig w) :
-    AIG.RefVecEntry α w :=
+def blastClz (aig : AIG α) (x : AIG.RefVec aig w) : AIG.RefVecEntry α w :=
   let wconst := blastConst aig w
   go aig x 0 wconst
 where
@@ -47,9 +46,9 @@ namespace blastClz
 
 end blastClz
 
-theorem blastClz.go_le_size (aig : AIG α) (curr : Nat) (acc : AIG.RefVec aig w)
-    (xc : AIG.RefVec aig w) :
-    aig.decls.size ≤ (go aig xc curr acc).aig.decls.size := by
+theorem blastClz.go_le_size
+    (aig : AIG α) (curr : Nat) (acc : AIG.RefVec aig w) (xc : AIG.RefVec aig w)
+    : aig.decls.size ≤ (go aig xc curr acc).aig.decls.size := by
   unfold go
   dsimp only
   split
@@ -58,10 +57,9 @@ theorem blastClz.go_le_size (aig : AIG α) (curr : Nat) (acc : AIG.RefVec aig w)
   · simp
 termination_by w - curr
 
-theorem blastClz.go_decl_eq (aig : AIG α) (curr : Nat) (acc : AIG.RefVec aig w)
-    (xc : AIG.RefVec aig w) :
-    ∀ (idx : Nat) h1 h2,
-        (go aig xc curr acc).aig.decls[idx]'h1 = aig.decls[idx]'h2 := by
+theorem blastClz.go_decl_eq
+    (aig : AIG α) (curr : Nat) (acc : AIG.RefVec aig w) (xc : AIG.RefVec aig w)
+    : ∀ (idx : Nat) h1 h2, (go aig xc curr acc).aig.decls[idx]'h1 = aig.decls[idx]'h2 := by
   generalize hgo : go aig xc curr acc = res
   unfold go at hgo
   dsimp only at hgo

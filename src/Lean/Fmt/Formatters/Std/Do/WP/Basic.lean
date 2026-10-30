@@ -24,5 +24,4 @@ public def fmtWP : Fmt := fun
     let rbTk ← fmt rbTk
     let body := Layouts.typeAscription x typeAscriptionTk? type?
     return Layouts.parens lbTk body rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

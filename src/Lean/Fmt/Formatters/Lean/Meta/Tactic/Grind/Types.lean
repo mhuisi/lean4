@@ -22,5 +22,4 @@ public def fmtDoElemTraceGoal : Fmt := fun
     let rbTk ← fmt rbTk
     let traceClass := Layouts.bracketed traceGoalTk traceCls rbTk .dense
     fmtTraceTerm traceClass msg
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

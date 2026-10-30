@@ -15,9 +15,10 @@ namespace Lean.Linter
 
 register_builtin_option linter.ambiguousOpen : Bool := {
   defValue := true
-  descr := "if true, warn when the namespace of an `open` declaration could also refer to a \
-    namespace that is silently not opened, e.g. `open B` inside `namespace A` only opens `A.B` \
-    even if the namespace `B` exists as well"
+  descr :=
+    "if true, warn when the namespace of an `open` declaration could also refer to a \
+      namespace that is silently not opened, e.g. `open B` inside `namespace A` only opens `A.B` \
+      even if the namespace `B` exists as well"
 }
 
 /--
@@ -40,15 +41,23 @@ interpretations the `open` declaration actually uses, as returned by `resolveNam
 Shadowed interpretations whose declarations are accessible anyway — because the namespace is
 already opened without exceptions or encloses the current scope — are not reported.
 -/
-def checkAmbiguousOpen [Monad m] [MonadEnv m] [MonadOptions m] [MonadLog m]
-    [AddMessageContext m] [MonadResolveName m] (nsStx : Ident) (resolved : List Name) : m Unit := do
-  unless getLinterValue linter.ambiguousOpen (← getLinterOptions) do return
-  let .ident info _ id preresolved := nsStx.raw | return
+def checkAmbiguousOpen
+    [Monad m] [MonadEnv m] [MonadOptions m] [MonadLog m] [AddMessageContext m] [MonadResolveName m]
+    (nsStx : Ident) (resolved : List Name)
+    : m Unit := do
+  unless getLinterValue linter.ambiguousOpen (← getLinterOptions) do
+    return
+  let .ident info _ id preresolved := nsStx.raw
+    | return
   -- Macro-generated `open` declarations cannot be fixed at the use site, so only lint
   -- identifiers written in the original source.
-  let .original .. := info | return
+  let .original .. := info
+    | return
   -- Identifiers with preresolved namespaces are not resolved against the environment.
-  if preresolved.any fun | .namespace _ => true | _ => false then return
+  if preresolved.any fun
+      | .namespace _ => true
+      | _ => false then
+    return
   -- `resolveNamespace` can return duplicates, e.g. when several `open` declarations make the
   -- same namespace visible.
   let resolved := resolved.eraseDups
@@ -63,14 +72,16 @@ def checkAmbiguousOpen [Monad m] [MonadEnv m] [MonadOptions m] [MonadLog m]
     n.isPrefixOf currNamespace || openDecls.any fun
       | .simple ns [] => ns == n
       | _ => false
-  let shadowed := candidates.filter fun n => !resolved.contains n && !isAccessible n
+  let shadowed := candidates.filter fun n => ! resolved.contains n && ! isAccessible n
   if shadowed.isEmpty then return
   let display (n : Name) : MessageData := m!"`{rootNamespace ++ n}`"
   let displayAll (ns : List Name) : MessageData := MessageData.joinSep (ns.map display) ", "
   -- A shadowed interpretation is a non-innermost scope match, so `currNamespace` is nonempty.
   let shadowedNote :=
-    if shadowed.length == 1 then m!"{displayAll shadowed} is silently not opened"
-    else m!"{displayAll shadowed} are silently not opened"
+    if shadowed.length == 1 then
+      m!"{displayAll shadowed} is silently not opened"
+    else
+      m!"{displayAll shadowed} are silently not opened"
   let hint :=
     m!" Specify the namespace unambiguously, e.g. `{rootNamespace ++ resolved.head!}`. The \
       warning can sometimes also be addressed by moving the `open` outside of the surrounding \
@@ -79,10 +90,12 @@ def checkAmbiguousOpen [Monad m] [MonadEnv m] [MonadOptions m] [MonadLog m]
     match resolved with
     | [r] =>
       m!"Ambiguous namespace `{id}`: it is interpreted as {display r} because this `open` occurs \
-        inside `namespace {currNamespace}`, while {shadowedNote}." ++ hint
+          inside `namespace {currNamespace}`, while {shadowedNote}."
+        ++ hint
     | _ =>
       m!"Ambiguous namespace `{id}`: this `open` refers to all of {displayAll resolved}, while \
-        {shadowedNote} because the `open` occurs inside `namespace {currNamespace}`." ++ hint
+          {shadowedNote} because the `open` occurs inside `namespace {currNamespace}`."
+        ++ hint
   logLint linter.ambiguousOpen nsStx.raw msg
 
 end Lean.Linter

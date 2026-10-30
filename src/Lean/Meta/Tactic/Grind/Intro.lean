@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Grind.Lemmas
 public import Lean.Meta.Tactic.Grind.Action
@@ -25,14 +26,15 @@ private inductive IntroResult where
   | newHyp (fvarId : FVarId) (goal : Goal)
   | newDepHyp (goal : Goal)
   | newLocal (fvarId : FVarId) (goal : Goal)
-  deriving Inhabited
+deriving Inhabited
 
 /--
 Returns `true` if `e` is marked with the `alreadyNorm` gadget.
 See `alreadyNorm` documentation for additional details
 -/
 private def isAlreadyNorm? (e : Expr) : Option Expr :=
-  let_expr Lean.Grind.alreadyNorm c := e | none
+  let_expr Lean.Grind.alreadyNorm c := e
+    | none
   some c
 
 private def isSIntPatternLitValue (e : Expr) : Bool :=
@@ -47,7 +49,8 @@ private def isSIntPatternLitValue (e : Expr) : Bool :=
 where
   isSIntType (type : Expr) : Bool :=
     let type := type.consumeMData
-    type.isConstOf ``Int8 || type.isConstOf ``Int16 || type.isConstOf ``Int32 || type.isConstOf ``Int64
+    type.isConstOf ``Int8 || type.isConstOf ``Int16 || type.isConstOf ``Int32
+      || type.isConstOf ``Int64
 
 /-- Match conditions can also compare noncanonical signed literals using `normLitValue`. -/
 private def isPatternLitValue (e : Expr) : MetaM Bool := do
@@ -68,12 +71,16 @@ private partial def isPattern (e : Expr) : MetaM Bool := do
     if isSIntPatternLitValue k then return false
     return (← isPatternLitValue k <&&> isPattern p)
   | _ => pure ()
-  let .const declName _ := e.getAppFn | return false
-  let some (.ctorInfo ctor) := (← getEnv).find? declName | return false
-  unless e.getAppNumArgs == ctor.numParams + ctor.numFields do return false
+  let .const declName _ := e.getAppFn
+    | return false
+  let some (.ctorInfo ctor) := (← getEnv).find? declName
+    | return false
+  unless e.getAppNumArgs == ctor.numParams + ctor.numFields do
+    return false
   let args := e.getAppArgs
   for i in ctor.numParams...args.size do
-    unless (← isPattern args[i]!) do return false
+    unless (← isPattern args[i]!) do
+      return false
   return true
 
 /--
@@ -82,11 +89,13 @@ The `Grind.MatchCond` propagators cannot use a condition whose right-hand sides 
 e.g., `∀ n, a = f n → False` (see `tryToProveFalse`).
 -/
 private partial def isMatchCondHyp (e : Expr) : MetaM Bool := do
-  unless isMatchCondCandidate e do return false
+  unless isMatchCondCandidate e do
+    return false
   go e
 where
   go (e : Expr) : MetaM Bool := do
-    let .forallE _ d b _ := e | return true
+    let .forallE _ d b _ := e
+      | return true
     match_expr d with
     | Eq _ _ rhs => isPattern rhs <&&> go b
     | HEq _ _ _ rhs => isPattern rhs <&&> go b
@@ -158,7 +167,8 @@ private def mkCleanName (name : Name) (type : Expr) : GoalM Name := do
 
 private def intro1 : GoalM FVarId := do
   let target ← (← get).mvarId.getType
-  let (name, type) ← match target with
+  let (name, type) ←
+    match target with
     | .forallE n d .. => pure (n, d)
     | .letE n d .. => pure (n, d)
     | _ => throwError "`grind` internal error, binder expected"
@@ -184,7 +194,9 @@ private partial def introNext (goal : Goal) (generation : Nat) : GrindM IntroRes
         registerFVarAnchor fvarId
         let fvar := mkFVar fvarId
         let r ← preprocessHypothesis p
-        let lctx := (← getLCtx).mkLocalDecl fvarId (← mkCleanName target.bindingName! r.expr) r.expr target.bindingInfo!
+        let lctx :=
+          (← getLCtx).mkLocalDecl fvarId (← mkCleanName target.bindingName! r.expr) r.expr
+            target.bindingInfo!
         let mut localInsts ← getLocalInstances
         if let some className ← isClass? r.expr then
           localInsts := localInsts.push { className, fvar }
@@ -234,7 +246,8 @@ private partial def introNext (goal : Goal) (generation : Nat) : GrindM IntroRes
           let localDecl ← fvarId.getDecl
           if (← isProp localDecl.type) then
             -- Add a non-dependent copy
-            let mvarId ← (← get).mvarId.assert (← mkCleanName `h localDecl.type) localDecl.type (mkFVar fvarId)
+            let mvarId ←
+              (← get).mvarId.assert (← mkCleanName `h localDecl.type) localDecl.type (mkFVar fvarId)
             return .newDepHyp { (← get) with mvarId }
           else
             let v := (← fvarId.getDecl).value
@@ -246,13 +259,16 @@ private partial def introNext (goal : Goal) (generation : Nat) : GrindM IntroRes
       return .done goal
 
 private def isEagerCasesCandidate (type : Expr) : GrindM Bool := do
-  let .const declName _ := type.getAppFn | return false
+  let .const declName _ := type.getAppFn
+    | return false
   isEagerSplit declName
 
 /-- Returns `true` if `type` is an inductive type with at most one constructor. -/
 private def isCheapInductive (type : Expr) : CoreM Bool := do
-  let .const declName _ := type.getAppFn | return false
-  let .inductInfo info ← getConstInfo declName | return false
+  let .const declName _ := type.getAppFn
+    | return false
+  let .inductInfo info ← getConstInfo declName
+    | return false
   return info.numCtors <= 1
 
 private def applyInjection? (goal : Goal) (fvarId : FVarId) : MetaM (Option Goal) := do
@@ -261,76 +277,87 @@ private def applyInjection? (goal : Goal) (fvarId : FVarId) : MetaM (Option Goal
   else
     return none
 
-private def exfalsoIfNotProp (goal : Goal) : MetaM Goal := goal.mvarId.withContext do
-  if (← isProp (← goal.mvarId.getType)) then
-    return goal
-  else
-    return { goal with mvarId := (← goal.mvarId.exfalso) }
+private def exfalsoIfNotProp (goal : Goal) : MetaM Goal :=
+  goal.mvarId.withContext do
+    if (← isProp (← goal.mvarId.getType)) then
+      return goal
+    else
+      return { goal with mvarId := (← goal.mvarId.exfalso) }
 
 /--
 Normalizes the target. A `[grind norm]` rule or a reducible definition may expose an implication
 or a universal quantifier that `introNext` then introduces like a syntactic one.
 -/
-private def simpTarget (goal : Goal) : GrindM Goal := goal.mvarId.withContext do
-  let target ← goal.mvarId.getType
-  let r ← simpCore target
-  if r.expr == target then return goal
-  let mvarId ← match r.proof? with
-    | some h => goal.mvarId.replaceTargetEq r.expr h
-    | none => goal.mvarId.replaceTargetDefEq r.expr
-  return { goal with mvarId }
+private def simpTarget (goal : Goal) : GrindM Goal :=
+  goal.mvarId.withContext do
+    let target ← goal.mvarId.getType
+    let r ← simpCore target
+    if r.expr == target then return goal
+    let mvarId ←
+      match r.proof? with
+      | some h => goal.mvarId.replaceTargetEq r.expr h
+      | none => goal.mvarId.replaceTargetDefEq r.expr
+    return { goal with mvarId }
 
 def Goal.lastDecl? (goal : Goal) : MetaM (Option LocalDecl) := do
   return (← goal.mvarId.getDecl).lctx.lastDecl
 
 namespace Action
 
-private def applyCases? (goal : Goal) (fvarId : FVarId) (generation : Nat) (kp : ActionCont) : GrindM (Option ActionResult) := goal.withContext do
-  /-
-  Remark: we used to use `whnfD`. This was a mistake, we don't want to unfold user-defined abstractions.
-  Example: `a ∣ b` is defined as `∃ x, b = a * x`
-  -/
-  let type ← whnf (← fvarId.getType)
-  unless (← isEagerCasesCandidate type) do return none
-  if (← cheapCasesOnly) then
-    unless (← isCheapInductive type) do return none
-  let .const declName _ := type.getAppFn | return none
-  saveCases declName
-  let goal ← if !isBuiltinEagerCases declName && (← isProp type) then
+private def applyCases? (goal : Goal) (fvarId : FVarId) (generation : Nat) (kp : ActionCont)
+    : GrindM (Option ActionResult) :=
+  goal.withContext do
     /-
-    `cases` only exposes the constructor fields. For a user-defined inductive predicate there is
-    no propagator that recovers the proposition from its fields, so it must be asserted as well,
-    e.g., `h : P` and `¬P` where `P` has field-less constructors. The split is performed right
-    below, so it must not be selected again during the search.
+    Remark: we used to use `whnfD`. This was a mistake, we don't want to unfold user-defined abstractions.
+    Example: `a ∣ b` is defined as `∃ x, b = a * x`
     -/
-    GoalM.run' goal do
-      addHypothesis fvarId generation
-      markCaseSplitAsResolved (← fvarId.getType)
-  else
-    pure goal
-  if goal.inconsistent then return some (← kp goal)
-  let mvarIds ← cases goal.mvarId (mkFVar fvarId)
-  let anchor ← getAnchor (mkFVar fvarId)
-  -- This is a case split, so the E-matching round counter is reset as in `selectNextSplit?`.
-  let subgoals := mvarIds.mapIdx fun i mvarId =>
-    { goal with mvarId, ematch.num := 0 }.setIntroBase (mixHash anchor (hash i))
-  let mut seqNew : Array (TSyntax `grind) := #[]
-  let mut stuckNew : Array Goal := #[]
-  for subgoal in subgoals do
-    match (← kp subgoal) with
-    | .stuck gs => stuckNew := stuckNew ++ gs
-    | .closed seq => seqNew := seqNew ++ seq
-  if stuckNew.isEmpty then
-    return some (.closed seqNew.toList)
-  else
-    return some (.stuck stuckNew.toList)
+    let type ← whnf (← fvarId.getType)
+    unless (← isEagerCasesCandidate type) do
+      return none
+    if (← cheapCasesOnly) then
+      unless (← isCheapInductive type) do
+        return none
+    let .const declName _ := type.getAppFn
+      | return none
+    saveCases declName
+    let goal ←
+      if ! isBuiltinEagerCases declName && (← isProp type) then
+        /-
+        `cases` only exposes the constructor fields. For a user-defined inductive predicate there is
+        no propagator that recovers the proposition from its fields, so it must be asserted as well,
+        e.g., `h : P` and `¬P` where `P` has field-less constructors. The split is performed right
+        below, so it must not be selected again during the search.
+        -/
+        GoalM.run' goal do
+          addHypothesis fvarId generation
+          markCaseSplitAsResolved (← fvarId.getType)
+      else
+        pure goal
+    if goal.inconsistent then return some (← kp goal)
+    let mvarIds ← cases goal.mvarId (mkFVar fvarId)
+    let anchor ← getAnchor (mkFVar fvarId)
+    -- This is a case split, so the E-matching round counter is reset as in `selectNextSplit?`.
+    let subgoals :=
+      mvarIds.mapIdx fun i mvarId =>
+        { goal with mvarId, ematch.num := 0 }.setIntroBase (mixHash anchor (hash i))
+    let mut seqNew : Array (TSyntax `grind) := #[]
+    let mut stuckNew : Array Goal := #[]
+    for subgoal in subgoals do
+      match (← kp subgoal) with
+      | .stuck gs => stuckNew := stuckNew ++ gs
+      | .closed seq => seqNew := seqNew ++ seq
+    if stuckNew.isEmpty then
+      return some (.closed seqNew.toList)
+    else
+      return some (.stuck stuckNew.toList)
 
 def intro (generation : Nat) : Action := fun goal kna kp => do
   if goal.inconsistent then return .closed []
   let target ← goal.mvarId.getType
   if target.isFalse then
     kna goal
-  else match (← introNext goal generation) with
+  else
+    match (← introNext goal generation) with
     | .done goal =>
       let goal ← exfalsoIfNotProp goal
       let goal ← simpTarget goal
@@ -359,22 +386,24 @@ def intro (generation : Nat) : Action := fun goal kna kp => do
 
 private def hugeNumber := 1000000
 
-def intros (generation : Nat) : Action :=
-  ungroup >> (intro generation).loop hugeNumber >> group
+def intros (generation : Nat) : Action := ungroup >> (intro generation).loop hugeNumber >> group
 
 /-- Asserts a new fact `prop` with proof `proof` to the given `goal`. -/
-private def assertAt (proof : Expr) (prop : Expr) (generation : Nat) : Action := fun goal kna kp => do
+private def assertAt (proof : Expr) (prop : Expr) (generation : Nat)
+    : Action := fun goal kna kp => do
   if (← isEagerCasesCandidate prop) then
     let mvarId ← goal.mvarId.assert (← mkFreshUserName `h) prop proof
     let goal := { goal with mvarId }.setIntroBase (← goal.withContext <| getAnchor prop)
     intros generation goal kna kp
-  else goal.withContext do
-    let goal ← GoalM.run' goal do
-      let r ← preprocess prop
-      let prop' := r.expr
-      let proof' := mkApp4 (mkConst ``Eq.mp [Level.zero]) prop r.expr (← r.getProof) proof
-      add prop' proof' generation
-    kp goal
+  else
+    goal.withContext do
+      let goal ←
+        GoalM.run' goal do
+          let r ← preprocess prop
+          let prop' := r.expr
+          let proof' := mkApp4 (mkConst ``Eq.mp [Level.zero]) prop r.expr (← r.getProof) proof
+          add prop' proof' generation
+      kp goal
 
 /--
 Asserts next fact in the `goal` fact queue.
@@ -386,15 +415,14 @@ def assertNext : Action := fun goal kna kp => do
     | kna goal
   let goal := { goal with newRawFacts }
   withSplitSource fact.splitSource do
-  withEmatchDiagSource fact.ematchDiagSource do
-    assertAt fact.proof fact.prop fact.generation goal kna kp
+    withEmatchDiagSource fact.ematchDiagSource do
+      assertAt fact.proof fact.prop fact.generation goal kna kp
 
 /--
 Asserts all facts in the `goal` fact queue.
 Returns `true` if the queue was not empty and `false` otherwise.
 -/
-def assertAll : Action :=
-  assertNext.loop hugeNumber
+def assertAll : Action := assertNext.loop hugeNumber
 
 end Action
 
@@ -407,7 +435,6 @@ but the resulting propagation cascade (e.g., congruence closure, or-propagation,
 `propagateForallPropDown`) can call `addNewRawFact`, which enqueues to the separate
 `newRawFacts` queue. Without this step, these raw facts are never asserted. See issue #12581.
 -/
-def Solvers.mkAction : IO Action := do
-  return (← Solvers.mkActionCore) >> Action.assertAll
+def Solvers.mkAction : IO Action := do return (← Solvers.mkActionCore) >> Action.assertAll
 
 end Lean.Meta.Grind

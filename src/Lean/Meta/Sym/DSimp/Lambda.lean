@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.DSimp.DSimpM
 import Lean.Meta.Sym.AbstractS
@@ -17,8 +18,7 @@ Definitionally simplifies a lambda expression.
 Unlike `Sym.Simp.simpLambda`, it descends into the binder type as well as the
 body.
 -/
-public partial def dsimpLambda : DSimproc := fun e =>
-  go e #[] false
+public partial def dsimpLambda : DSimproc := fun e => go e #[] false
 where
   go (e : Expr) (fvars : Array Expr) (modified : Bool) : DSimpM Result := do
     match e with
@@ -38,7 +38,6 @@ where
           return .step (← mkLambdaFVarsS fvars e)
         else
           return .rfl
-      | .step e' _ =>
-        return .step (← mkLambdaFVarsS fvars e')
+      | .step e' _ => return .step (← mkLambdaFVarsS fvars e')
 
 end Lean.Meta.Sym.DSimp

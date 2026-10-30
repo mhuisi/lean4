@@ -42,7 +42,7 @@ inductive AbsValue where
   | top
   | erased
   | val (i : Nat)
-  deriving Inhabited, BEq, Hashable
+deriving Inhabited, BEq, Hashable
 
 structure Context where
   /-- Declaration in the same mutual block. -/
@@ -72,7 +72,9 @@ structure State where
   -/
   fixed : Array Bool
 
-/-- Monad for the fixed parameter static analyzer. We use the unit-exception to interrupt the analysis. -/
+/--
+Monad for the fixed parameter static analyzer. We use the unit-exception to interrupt the analysis.
+-/
 abbrev FixParamM := ReaderT Context <| EStateM Unit State
 
 /-- Stop the analysis and mark all parameters as non-fixed. -/
@@ -81,7 +83,8 @@ abbrev abort : FixParamM α := do
   throw ()
 
 def evalFVar (fvarId : FVarId) : FixParamM AbsValue := do
-  let some val := (← read).assignment.get? fvarId | return .top
+  let some val := (← read).assignment.get? fvarId
+    | return .top
   return val
 
 def evalArg (arg : Arg .pure) : FixParamM AbsValue := do
@@ -108,11 +111,14 @@ partial def evalLetValue (e : LetValue .pure) : FixParamM Unit := do
   | _ => return ()
 
 partial def isEquivalentFunDecl? (decl : FunDecl .pure) : FixParamM (Option Nat) := do
-  let .let { fvarId, value := (.fvar funFvarId args), .. } k := decl.value | return none
+  let .let { fvarId, value := (.fvar funFvarId args), .. } k := decl.value
+    | return none
   if args.size != decl.params.size then return none
-  let .return retFVarId := k | return none
+  let .return retFVarId := k
+    | return none
   if retFVarId != fvarId then return none
-  let some (.val funIdx) := (← read).assignment.get? funFvarId | return none
+  let some (.val funIdx) := (← read).assignment.get? funFvarId
+    | return none
   for h : i in [:decl.params.size] do
     let param := decl.params[i]
     -- TODO: Eliminate this dynamic bounds check.
@@ -125,8 +131,8 @@ partial def evalCode (code : Code .pure) : FixParamM Unit := do
   | .let decl k => evalLetValue decl.value; evalCode k
   | .fun decl k _ =>
     if let some paramIdx ← isEquivalentFunDecl? decl then
-      withReader (fun ctx =>
-                    { ctx with assignment := ctx.assignment.insert decl.fvarId (.val paramIdx) })
+      withReader
+        (fun ctx => { ctx with assignment := ctx.assignment.insert decl.fvarId (.val paramIdx) })
         do evalCode k
     else
       evalCode decl.value
@@ -201,8 +207,7 @@ def mkFixedParamsMap (decls : Array (Decl .pure)) : NameMap (Array Bool) := Id.r
     | .code c =>
       match evalCode c |>.run { main := decl, decls, assignment } |>.run { fixed } with
       | .ok _ s | .error _ s => result := result.insert decl.name s.fixed
-    | .extern .. =>
-      result := result.insert decl.name fixed
+    | .extern .. => result := result.insert decl.name fixed
   return result
 
 end Lean.Compiler.LCNF

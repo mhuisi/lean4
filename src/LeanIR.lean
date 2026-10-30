@@ -12,7 +12,6 @@ import all Lean.Environment
 import Lean.Compiler.Options
 import Lean.Compiler.IR.CompilerM
 import Lean.Compiler.ModPkgExt
-
 import all Lean.Compiler.CSimpAttr
 import Lean.Compiler.LCNF.EmitC
 import Lean.Language.Lean
@@ -34,9 +33,7 @@ open Lean Compiler LCNF
 /-- Leaner alternative to `.ir` for non-`import all` compilation. -/
 def mkIRSigData (env : Environment) : IO ModuleData := do
   let data ← mkModuleData env .exported
-  return { data with
-    extraConstNames := getIRExtraConstNames env .exported
-  }
+  return { data with extraConstNames := getIRExtraConstNames env .exported }
 
 def mkIRData (env : Environment) : IO ModuleData := do
   -- TODO: should we use a more specific/efficient data format for IR?
@@ -46,8 +43,9 @@ def mkIRData (env : Environment) : IO ModuleData := do
   -- in `setImportedEntries`
   let irEntries := exportIREntries env
   let irExtNames := irEntries.map (·.1)
-  let modEntries := (← mkModuleData env .private).entries.filter (!irExtNames.contains ·.1)
-  return { env.header with
+  let modEntries := (← mkModuleData env .private).entries.filter (! irExtNames.contains ·.1)
+  return {
+    env.header with
     entries := irEntries ++ modEntries
     constants := default
     constNames := default
@@ -57,8 +55,9 @@ def mkIRData (env : Environment) : IO ModuleData := do
   }
 
 def setConfigOption (opts : Options) (arg : String) : IO Options := do
-  let some arg := arg.dropPrefix? "-D" |
-    throw <| .userError s!"invalid trailing argument `{arg}`, expected argument of the form `-Dopt=val`"
+  let some arg := arg.dropPrefix? "-D"
+    | throw <|
+        .userError s!"invalid trailing argument `{arg}`, expected argument of the form `-Dopt=val`"
   let pos := arg.find '='
   if h : pos.IsAtEnd then
     throw <| .userError "invalid -D parameter, argument must contain '='"
@@ -71,9 +70,10 @@ def setConfigOption (opts : Options) (arg : String) : IO Options := do
       throw <| .userError s!"unknown option '{name}'"
 
 public def main (args : List String) : IO UInt32 := do
-  let setupFile::irFile::c::optArgs := args | do
-    IO.println s!"usage: leanir <setup.json> <output.ir> <output.c> [--stat] <-Dopt=val>..."
-    return 1
+  let setupFile :: irFile :: c :: optArgs := args
+    | do
+      IO.println s!"usage: leanir <setup.json> <output.ir> <output.c> [--stat] <-Dopt=val>..."
+      return 1
 
   let setup ← ModuleSetup.load setupFile
   let modName := setup.name
@@ -90,22 +90,33 @@ public def main (args : List String) : IO UInt32 := do
 
   initSearchPathInternal
   -- Provide access to private scope of target module but no others; provide all IR
-  let env ← profileitIO "import" opts <| withImporting do
-    -- `importAll` so we have access to all private data
-    let imports := #[{ module := modName, importAll := true : Import }]
-    let (_, s) ← importModulesCore (globalLevel := .exported) (loadIRSig := true)
-      (arts := setup.importArts) imports |>.run
-    let s := { s with moduleNameMap := s.moduleNameMap.modify modName fun m => { m with irPhases := .runtime } }
-    -- level exported because otherwise we would try to load the current module's `.ir`
-    finalizeImport (leakEnv := true) (loadExts := false) (level := .exported) (loadIRSig := true) s imports opts
+  let env ←
+    profileitIO "import" opts <| withImporting do
+      -- `importAll` so we have access to all private data
+      let imports := #[{ module := modName, importAll := true : Import }]
+      let (_, s) ←
+        importModulesCore (globalLevel := .exported) (loadIRSig := true) (arts := setup.importArts)
+            imports
+          |>.run
+      let s := {
+        s with
+        moduleNameMap := s.moduleNameMap.modify modName fun m => { m with irPhases := .runtime }
+      }
+      -- level exported because otherwise we would try to load the current module's `.ir`
+      finalizeImport (leakEnv := true) (loadExts := false) (level := .exported) (loadIRSig := true)
+        s imports opts
   let env := env.setMainModule modName
   let env := env.setModulePackage setup.package?
 
-  let initExt {α β σ} [Inhabited σ] (ext : PersistentEnvExtension α β σ) (env : Environment) : IO Environment := do
+  let initExt {α β σ} [Inhabited σ] (ext : PersistentEnvExtension α β σ) (env : Environment)
+      : IO Environment := do
     let s := ext.toEnvExtension.getState env
     let newState ← ext.addImportedFn s.importedEntries { env := env, opts := {} }
     -- unlogged: nothing has been recorded against this environment yet
-    return ext.toEnvExtension.setState (asyncMode := .sync) (log := .unlogged) env { s with state := newState }
+    return ext.toEnvExtension.setState (asyncMode := .sync) (log := .unlogged) env {
+      s with
+      state := newState
+    }
 
   let env ← initExt Lean.Compiler.CSimp.ext.ext env
   let env ← initExt Meta.instanceExtension.ext env
@@ -127,57 +138,71 @@ public def main (args : List String) : IO UInt32 := do
   let unbox : Name → Name
     | .str f "_boxed" => f
     | f => f
-  let newState :=  is.importedEntries[modIdx]!.foldl (fun (decls, m) d => if isExtern env (unbox d.name) then (d::decls, m.insert d.name d) else (decls, m)) is.state
-  let env := Lean.IR.declMapExt.toEnvExtension.setState (asyncMode := .sync) env { is with state := newState }
+  let newState :=
+    is.importedEntries[modIdx]!.foldl
+      (fun (decls, m) d =>
+        if isExtern env (unbox d.name) then (d :: decls, m.insert d.name d) else (decls, m))
+      is.state
+  let env :=
+    Lean.IR.declMapExt.toEnvExtension.setState (asyncMode := .sync) env {
+      is with
+      state := newState
+    }
 
-  let some mod := env.header.moduleData[modIdx]? | unreachable!
+  let some mod := env.header.moduleData[modIdx]?
+    | unreachable!
   -- Make sure we record the actual IR dependencies, not ourselves
   let env := { env with base.private.header.imports := mod.imports }
   let _ : MonadExceptOf _ CoreM := MonadAlwaysExcept.except
-  let res? ← EIO.toBaseIO <| Core.CoreM.run (ctx := { fileName := irFile, fileMap := default, options := opts })
-      (s := { env }) try
-    let decls := postponedCompileDeclsExt.getModuleEntries env modIdx
-    -- Load postponed decls and iterate over them, removing each entry to avoid infinite recursion.
-    -- NOTE: `decls` is in the original order of declarations so initializing and managing the
-    -- extension would not be necessary for that, we could just leave it empty. However, there are
-    -- cases like a `[csimp]` replacement being defined below the original function in the same file
-    -- where allowing `LCNF.main` to reorder compilation based on dependencies seems to be the
-    -- simpler solution (as we may make the csimp replacement before the replacement has been
-    -- compiled).
-    modifyEnv (postponedCompileDeclsExt.setState · (decls.foldl (fun s e => e.declNames.foldl (·.insert · e) s) {}))
-    for decl in decls do
-      for decl in decl.declNames do
-        try
-          resumeCompilation decl (← getOptions)
-        finally
-          addTraceAsMessages
-      for msg in (← Core.getAndEmptyMessageLog).unreported do
-        IO.eprintln (← msg.toString)
-  catch e =>
-    unless e.isInterrupt do
-      logError e.toMessageData
+  let res? ←
+    EIO.toBaseIO <| Core.CoreM.run
+      (ctx := { fileName := irFile, fileMap := default, options := opts }) (s := { env })
+      try
+        let decls := postponedCompileDeclsExt.getModuleEntries env modIdx
+        -- Load postponed decls and iterate over them, removing each entry to avoid infinite recursion.
+        -- NOTE: `decls` is in the original order of declarations so initializing and managing the
+        -- extension would not be necessary for that, we could just leave it empty. However, there are
+        -- cases like a `[csimp]` replacement being defined below the original function in the same file
+        -- where allowing `LCNF.main` to reorder compilation based on dependencies seems to be the
+        -- simpler solution (as we may make the csimp replacement before the replacement has been
+        -- compiled).
+        modifyEnv (postponedCompileDeclsExt.setState ·
+          (decls.foldl (fun s e => e.declNames.foldl (·.insert · e) s) {}))
+        for decl in decls do
+          for decl in decl.declNames do
+            try
+              resumeCompilation decl (← getOptions)
+            finally
+              addTraceAsMessages
+          for msg in (← Core.getAndEmptyMessageLog).unreported do
+            IO.eprintln (← msg.toString)
+      catch e =>
+        unless e.isInterrupt do
+          logError e.toMessageData
 
-  let .ok (_, s) := res? | unreachable!
+  let .ok (_, s) := res?
+    | unreachable!
   let mut env := s.env
 
   for msg in s.messages.unreported do
     IO.eprintln (← msg.toString)
 
   if s.messages.hasErrors then
-   return 1
+    return 1
 
   -- Save, basing `.ir` on top of `.ir.sig`
   let irSigFile := (irFile : System.FilePath).addExtension "sig"
   saveModuleDataParts (env.mainModule ++ `ir) #[
     (irSigFile, ← mkIRSigData env),
-    (irFile, ← mkIRData env)]
+    (irFile, ← mkIRData env)
+  ]
 
   let .ok out ← IO.FS.Handle.mk c .write |>.toBaseIO
     | IO.eprintln s!"failed to create '{c}'"
       return 1
   profileitIO "C code generation" opts do
-    let data ← Compiler.LCNF.emitC modName
-      |>.toIO' { fileName := irFile, fileMap := default } { env }
+    let data ←
+      Compiler.LCNF.emitC modName |>.toIO' { fileName := irFile, fileMap := default } { env }
     out.write data.toUTF8
 
   displayCumulativeProfilingTimes

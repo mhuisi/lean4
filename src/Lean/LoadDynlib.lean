@@ -33,7 +33,7 @@ To avoid this, use an absolute path (e.g., from `IO.FS.realPath`).
 @[extern "lean_dynlib_load"]
 opaque Dynlib.load (path : @& System.FilePath) : IO Dynlib
 
-/-- Returns the symbol of the dynamic library with the specified name (if any).  -/
+/-- Returns the symbol of the dynamic library with the specified name (if any). -/
 @[extern "lean_dynlib_get"]
 opaque Dynlib.get? (dynlib : @& Dynlib) (sym : @& String) : Option dynlib.Symbol
 
@@ -95,13 +95,14 @@ should be linked and loaded separately.
 def loadPlugin (path : System.FilePath) (initFn? : Option String := none) : IO Unit := do
   -- We never want to look up plugins using the system library search
   let path ← IO.FS.realPath path
-  let name ← initFn?.getDM do
-    let some name := path.fileStem
-    | throw <| IO.userError s!"error, plugin has invalid file name '{path}'"
-    -- Lean libraries can be prefixed with `lib` or suffixed with `_shared`
-    -- under some configurations. We strip these from the default initializer symbol.
-    let name := name.dropPrefix "lib" |>.dropSuffix "_shared"
-    return s!"initialize_{name}"
+  let name ←
+    initFn?.getDM do
+      let some name := path.fileStem
+        | throw <| IO.userError s!"error, plugin has invalid file name '{path}'"
+      -- Lean libraries can be prefixed with `lib` or suffixed with `_shared`
+      -- under some configurations. We strip these from the default initializer symbol.
+      let name := name.dropPrefix "lib" |>.dropSuffix "_shared"
+      return s!"initialize_{name}"
   let dynlib ← Dynlib.load path
   let some sym := dynlib.get? name
     | throw <| IO.userError s!"error loading plugin, initializer not found '{name}'"

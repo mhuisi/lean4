@@ -25,23 +25,18 @@ namespace Lake
 
 /-! ### Build Key Helper Constructors -/
 
-public abbrev Module.key (self : Module) : BuildKey :=
-  .packageModule self.pkg.keyName self.name
+public abbrev Module.key (self : Module) : BuildKey := .packageModule self.pkg.keyName self.name
 
 public abbrev ConfigTarget.key (self : ConfigTarget kind) : BuildKey :=
   .packageTarget self.pkg.keyName self.name
 
-public abbrev LeanExe.exeBuildKey (self : LeanExe) : BuildKey :=
-  self.key.facet exeFacet
+public abbrev LeanExe.exeBuildKey (self : LeanExe) : BuildKey := self.key.facet exeFacet
 
-public abbrev ExternLib.staticBuildKey (self : ExternLib) : BuildKey :=
-  self.key.facet staticFacet
+public abbrev ExternLib.staticBuildKey (self : ExternLib) : BuildKey := self.key.facet staticFacet
 
-public abbrev ExternLib.sharedBuildKey (self : ExternLib) : BuildKey :=
-  self.key.facet sharedFacet
+public abbrev ExternLib.sharedBuildKey (self : ExternLib) : BuildKey := self.key.facet sharedFacet
 
-public abbrev ExternLib.dynlibBuildKey (self : ExternLib) : BuildKey :=
-  self.key.facet dynlibFacet
+public abbrev ExternLib.dynlibBuildKey (self : ExternLib) : BuildKey := self.key.facet dynlibFacet
 
 /-!
 ### Complex Builtin Facet Declarations
@@ -146,128 +141,127 @@ public abbrev Module.facet (facet : Name) (self : Module) : BuildInfo :=
 
 namespace Module
 
-@[inherit_doc inputFacet] public abbrev input (self : Module) :=
-  self.facetCore inputFacet
+@[inherit_doc inputFacet]
+public abbrev input (self : Module) := self.facetCore inputFacet
 
-@[inherit_doc leanFacet] public abbrev lean (self : Module) :=
-  self.facetCore leanFacet
+@[inherit_doc leanFacet]
+public abbrev lean (self : Module) := self.facetCore leanFacet
 
-@[inherit_doc headerFacet] public abbrev header (self : Module) :=
-  self.facetCore headerFacet
+@[inherit_doc headerFacet]
+public abbrev header (self : Module) := self.facetCore headerFacet
 
-@[inherit_doc importsFacet] public abbrev imports (self : Module) :=
-  self.facetCore importsFacet
+@[inherit_doc importsFacet]
+public abbrev imports (self : Module) := self.facetCore importsFacet
 
-@[inherit_doc transImportsFacet] public abbrev transImports (self : Module) :=
-  self.facetCore transImportsFacet
+@[inherit_doc transImportsFacet]
+public abbrev transImports (self : Module) := self.facetCore transImportsFacet
 
-@[inherit_doc precompileImportsFacet] public abbrev precompileImports (self : Module) :=
-  self.facetCore precompileImportsFacet
+@[inherit_doc precompileImportsFacet]
+public abbrev precompileImports (self : Module) := self.facetCore precompileImportsFacet
 
-@[inherit_doc presetupFacet] public abbrev presetup  (self : Module) :=
-  self.facetCore presetupFacet
+@[inherit_doc presetupFacet]
+public abbrev presetup (self : Module) := self.facetCore presetupFacet
 
-@[inherit_doc setupFacet] public abbrev setup  (self : Module) :=
-  self.facetCore setupFacet
+@[inherit_doc setupFacet]
+public abbrev setup (self : Module) := self.facetCore setupFacet
 
-@[inherit_doc depTraceFacet] public abbrev depTrace (self : Module) :=
-  self.facetCore depTraceFacet
+@[inherit_doc depTraceFacet]
+public abbrev depTrace (self : Module) := self.facetCore depTraceFacet
 
-@[inherit_doc depHashFacet] public abbrev depHash (self : Module) :=
-  self.facetCore depHashFacet
+@[inherit_doc depHashFacet]
+public abbrev depHash (self : Module) := self.facetCore depHashFacet
 
-@[inherit_doc depsFacet] public abbrev deps  (self : Module) :=
-  self.facetCore depsFacet
+@[inherit_doc depsFacet]
+public abbrev deps (self : Module) := self.facetCore depsFacet
 
-@[inherit_doc importInfoFacet] public abbrev importInfo (self : Module) :=
-  self.facetCore importInfoFacet
+@[inherit_doc importInfoFacet]
+public abbrev importInfo (self : Module) := self.facetCore importInfoFacet
 
-@[inherit_doc exportInfoFacet] public abbrev exportInfo (self : Module) :=
-  self.facetCore exportInfoFacet
+@[inherit_doc exportInfoFacet]
+public abbrev exportInfo (self : Module) := self.facetCore exportInfoFacet
 
-@[inherit_doc metaExportInfoFacet] public abbrev metaExportInfo (self : Module) :=
-  self.facetCore metaExportInfoFacet
+@[inherit_doc metaExportInfoFacet]
+public abbrev metaExportInfo (self : Module) := self.facetCore metaExportInfoFacet
 
-@[inherit_doc importArtsFacet] public abbrev importArts (self : Module) :=
-  self.facetCore importArtsFacet
+@[inherit_doc importArtsFacet]
+public abbrev importArts (self : Module) := self.facetCore importArtsFacet
 
-@[inherit_doc importAllArtsFacet] public abbrev importAllArts (self : Module) :=
-  self.facetCore importAllArtsFacet
+@[inherit_doc importAllArtsFacet]
+public abbrev importAllArts (self : Module) := self.facetCore importAllArtsFacet
 
-@[inherit_doc elabArtsFacet] public abbrev elabArts (self : Module) :=
-  self.facetCore elabArtsFacet
+@[inherit_doc elabArtsFacet]
+public abbrev elabArts (self : Module) := self.facetCore elabArtsFacet
 
-@[inherit_doc irArtsFacet] public abbrev irArts (self : Module) :=
-  self.facetCore irArtsFacet
+@[inherit_doc irArtsFacet]
+public abbrev irArts (self : Module) := self.facetCore irArtsFacet
 
-@[inherit_doc leanArtsFacet, deprecated "Use `elabArts` or `irArts` instead." (since := "2026-09-05")]
-public abbrev leanArts (self : Module) :=
-  self.facetCore leanArtsFacet
+@[inherit_doc leanArtsFacet,
+  deprecated "Use `elabArts` or `irArts` instead." (since := "2026-09-05")]
+public abbrev leanArts (self : Module) := self.facetCore leanArtsFacet
 
-@[inherit_doc oleanFacet] public abbrev olean (self : Module) :=
-  self.facetCore oleanFacet
+@[inherit_doc oleanFacet]
+public abbrev olean (self : Module) := self.facetCore oleanFacet
 
-@[inherit_doc oleanServerFacet] public abbrev oleanServer (self : Module) :=
-  self.facetCore oleanServerFacet
+@[inherit_doc oleanServerFacet]
+public abbrev oleanServer (self : Module) := self.facetCore oleanServerFacet
 
-@[inherit_doc oleanPrivateFacet] public abbrev oleanPrivate (self : Module) :=
-  self.facetCore oleanPrivateFacet
+@[inherit_doc oleanPrivateFacet]
+public abbrev oleanPrivate (self : Module) := self.facetCore oleanPrivateFacet
 
-@[inherit_doc ileanFacet] public abbrev ilean (self : Module)  :=
-  self.facetCore ileanFacet
+@[inherit_doc ileanFacet]
+public abbrev ilean (self : Module) := self.facetCore ileanFacet
 
-@[inherit_doc irSigFacet] public abbrev irSig (self : Module) :=
-  self.facetCore irSigFacet
+@[inherit_doc irSigFacet]
+public abbrev irSig (self : Module) := self.facetCore irSigFacet
 
-@[inherit_doc irFacet] public abbrev ir (self : Module) :=
-  self.facetCore irFacet
+@[inherit_doc irFacet]
+public abbrev ir (self : Module) := self.facetCore irFacet
 
-@[inherit_doc cFacet] public abbrev c (self : Module) :=
-  self.facetCore cFacet
+@[inherit_doc cFacet]
+public abbrev c (self : Module) := self.facetCore cFacet
 
-@[inherit_doc cFacet] public abbrev bc (self : Module) :=
-  self.facetCore bcFacet
+@[inherit_doc cFacet]
+public abbrev bc (self : Module) := self.facetCore bcFacet
 
-@[inherit_doc ltarFacet] public abbrev ltar (self : Module) :=
-  self.facetCore ltarFacet
+@[inherit_doc ltarFacet]
+public abbrev ltar (self : Module) := self.facetCore ltarFacet
 
-@[inherit_doc oFacet] public abbrev o (self : Module) :=
-  self.facetCore oFacet
+@[inherit_doc oFacet]
+public abbrev o (self : Module) := self.facetCore oFacet
 
-@[inherit_doc oExportFacet] public abbrev oExport (self : Module) :=
-  self.facetCore oExportFacet
+@[inherit_doc oExportFacet]
+public abbrev oExport (self : Module) := self.facetCore oExportFacet
 
-@[inherit_doc oNoExportFacet] public abbrev oNoExport (self : Module) :=
-  self.facetCore oNoExportFacet
+@[inherit_doc oNoExportFacet]
+public abbrev oNoExport (self : Module) := self.facetCore oNoExportFacet
 
-@[inherit_doc coFacet] public abbrev co (self : Module) :=
-  self.facetCore coFacet
+@[inherit_doc coFacet]
+public abbrev co (self : Module) := self.facetCore coFacet
 
-@[inherit_doc coExportFacet] public abbrev coExport (self : Module) :=
-  self.facetCore coExportFacet
+@[inherit_doc coExportFacet]
+public abbrev coExport (self : Module) := self.facetCore coExportFacet
 
-@[inherit_doc coNoExportFacet] public abbrev coNoExport (self : Module) :=
-  self.facetCore coNoExportFacet
+@[inherit_doc coNoExportFacet]
+public abbrev coNoExport (self : Module) := self.facetCore coNoExportFacet
 
-@[inherit_doc bcoFacet] public abbrev bco (self : Module) :=
-  self.facetCore bcoFacet
+@[inherit_doc bcoFacet]
+public abbrev bco (self : Module) := self.facetCore bcoFacet
 
-@[inherit_doc linkInfoExportFacet] public abbrev linkInfoExport (self : Module) :=
-  self.facetCore linkInfoExportFacet
+@[inherit_doc linkInfoExportFacet]
+public abbrev linkInfoExport (self : Module) := self.facetCore linkInfoExportFacet
 
-@[inherit_doc linkInfoNoExportFacet] public abbrev linkInfoNoExport (self : Module) :=
-  self.facetCore linkInfoNoExportFacet
+@[inherit_doc linkInfoNoExportFacet]
+public abbrev linkInfoNoExport (self : Module) := self.facetCore linkInfoNoExportFacet
 
-@[inherit_doc dynlibFacet] public abbrev dynlib (self : Module) :=
-  self.facetCore dynlibFacet
+@[inherit_doc dynlibFacet]
+public abbrev dynlib (self : Module) := self.facetCore dynlibFacet
 
 end Module
 
 /-! #### Package Infos -/
 
 /-- Build info for a package target (e.g., a library, executable, or custom target). -/
-public abbrev Package.target (target : Name) (self : Package) : BuildInfo :=
-  .target self target
+public abbrev Package.target (target : Name) (self : Package) : BuildInfo := .target self target
 
 /--
 Build info for applying the specified facet to the package.
@@ -283,44 +277,35 @@ public abbrev Package.facet (facet : Name) (self : Package) : BuildInfo :=
 namespace Package
 
 @[inherit_doc buildCacheFacet]
-public abbrev buildCache (self : Package) : BuildInfo :=
-  self.facetCore buildCacheFacet
+public abbrev buildCache (self : Package) : BuildInfo := self.facetCore buildCacheFacet
 
 @[inherit_doc optBuildCacheFacet]
-public abbrev optBuildCache (self : Package) : BuildInfo :=
-  self.facetCore optBuildCacheFacet
+public abbrev optBuildCache (self : Package) : BuildInfo := self.facetCore optBuildCacheFacet
 
 @[inherit_doc reservoirBarrelFacet]
-public abbrev reservoirBarrel (self : Package) : BuildInfo :=
-  self.facetCore reservoirBarrelFacet
+public abbrev reservoirBarrel (self : Package) : BuildInfo := self.facetCore reservoirBarrelFacet
 
 @[inherit_doc optReservoirBarrelFacet]
 public abbrev optReservoirBarrel (self : Package) : BuildInfo :=
   self.facetCore optReservoirBarrelFacet
 
 @[inherit_doc gitHubReleaseFacet]
-public abbrev gitHubRelease (self : Package) : BuildInfo :=
-  self.facetCore gitHubReleaseFacet
+public abbrev gitHubRelease (self : Package) : BuildInfo := self.facetCore gitHubReleaseFacet
 
 @[inherit_doc optGitHubReleaseFacet]
-public abbrev optGitHubRelease (self : Package) : BuildInfo :=
-  self.facetCore optGitHubReleaseFacet
+public abbrev optGitHubRelease (self : Package) : BuildInfo := self.facetCore optGitHubReleaseFacet
 
 @[inherit_doc extraDepFacet]
-public abbrev extraDep (self : Package) : BuildInfo :=
-  self.facetCore extraDepFacet
+public abbrev extraDep (self : Package) : BuildInfo := self.facetCore extraDepFacet
 
 @[inherit_doc depsFacet]
-public abbrev deps (self : Package) : BuildInfo :=
-  self.facetCore depsFacet
+public abbrev deps (self : Package) : BuildInfo := self.facetCore depsFacet
 
 @[inherit_doc defaultModulesFacet]
-public abbrev defaultModules (self : Package) : BuildInfo :=
-  self.facetCore defaultModulesFacet
+public abbrev defaultModules (self : Package) : BuildInfo := self.facetCore defaultModulesFacet
 
 @[inherit_doc transDepsFacet]
-public abbrev transDeps (self : Package) : BuildInfo :=
-  self.facetCore transDepsFacet
+public abbrev transDeps (self : Package) : BuildInfo := self.facetCore transDepsFacet
 
 end Package
 
@@ -340,40 +325,32 @@ public abbrev LeanLib.facet (facet : Name) (self : LeanLib) : BuildInfo :=
 namespace LeanLib
 
 @[inherit_doc defaultFacet]
-public abbrev default (self : LeanLib) : BuildInfo :=
-  self.facetCore defaultFacet
+public abbrev default (self : LeanLib) : BuildInfo := self.facetCore defaultFacet
 
 @[inherit_doc modulesFacet]
-public abbrev modules (self : LeanLib) : BuildInfo :=
-  self.facetCore modulesFacet
+public abbrev modules (self : LeanLib) : BuildInfo := self.facetCore modulesFacet
 
 @[inherit_doc elabArtsFacet]
-public abbrev elabArts (self : LeanLib) : BuildInfo :=
-  self.facetCore elabArtsFacet
+public abbrev elabArts (self : LeanLib) : BuildInfo := self.facetCore elabArtsFacet
 
 @[inherit_doc irArtsFacet]
-public abbrev irArts (self : LeanLib) : BuildInfo :=
-  self.facetCore irArtsFacet
+public abbrev irArts (self : LeanLib) : BuildInfo := self.facetCore irArtsFacet
 
-@[inherit_doc leanArtsFacet, deprecated "Use `elabArts` or `irArts` instead." (since := "2026-09-05")]
-public abbrev leanArts (self : LeanLib) : BuildInfo :=
-  self.facetCore leanArtsFacet
+@[inherit_doc leanArtsFacet,
+  deprecated "Use `elabArts` or `irArts` instead." (since := "2026-09-05")]
+public abbrev leanArts (self : LeanLib) : BuildInfo := self.facetCore leanArtsFacet
 
 @[inherit_doc staticFacet]
-public abbrev static (self : LeanLib) : BuildInfo :=
-  self.facetCore staticFacet
+public abbrev static (self : LeanLib) : BuildInfo := self.facetCore staticFacet
 
 @[inherit_doc staticExportFacet]
-public abbrev staticExport (self : LeanLib) : BuildInfo :=
-  self.facetCore staticExportFacet
+public abbrev staticExport (self : LeanLib) : BuildInfo := self.facetCore staticExportFacet
 
 @[inherit_doc sharedFacet]
-public abbrev shared (self : LeanLib) : BuildInfo :=
-  self.facetCore sharedFacet
+public abbrev shared (self : LeanLib) : BuildInfo := self.facetCore sharedFacet
 
 @[inherit_doc extraDepFacet]
-public abbrev extraDep (self : LeanLib) : BuildInfo :=
-  self.facetCore extraDepFacet
+public abbrev extraDep (self : LeanLib) : BuildInfo := self.facetCore extraDepFacet
 
 end LeanLib
 
@@ -387,8 +364,7 @@ public abbrev LeanExe.facetCore (facet : Name) (self : LeanExe) : BuildInfo :=
   .facet self.key facetKind (toFamily self) facet
 
 @[inherit_doc exeFacet]
-public abbrev LeanExe.exe (self : LeanExe) : BuildInfo :=
-  self.facetCore LeanExe.exeFacet
+public abbrev LeanExe.exe (self : LeanExe) : BuildInfo := self.facetCore LeanExe.exeFacet
 
 /-! #### External Library Infos -/
 
@@ -432,5 +408,4 @@ public abbrev InputDir.facetCore (facet : Name) (self : InputDir) : BuildInfo :=
   .facet self.key facetKind (toFamily self) facet
 
 @[inherit_doc defaultFacet]
-public abbrev InputDir.default (self : InputDir) : BuildInfo :=
-  self.facetCore InputDir.defaultFacet
+public abbrev InputDir.default (self : InputDir) : BuildInfo := self.facetCore InputDir.defaultFacet

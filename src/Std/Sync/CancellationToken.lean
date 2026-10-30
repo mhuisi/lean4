@@ -24,30 +24,17 @@ that a cancellation has occurred.
 namespace Std
 open Std.Async
 
-/--
-Reasons for cancellation.
--/
+/-- Reasons for cancellation. -/
 inductive CancellationReason where
-  /--
-  Cancelled due to a deadline or timeout
-  -/
+  /-- Cancelled due to a deadline or timeout -/
   | deadline
-
-  /--
-  Cancelled due to shutdown
-  -/
+  /-- Cancelled due to shutdown -/
   | shutdown
-
-  /--
-  Explicitly cancelled
-  -/
+  /-- Explicitly cancelled -/
   | cancel
-
-  /--
-  Custom cancellation reason
-  -/
+  /-- Custom cancellation reason -/
   | custom (msg : String)
-  deriving Repr, BEq
+deriving Repr, BEq
 
 instance : ToString CancellationReason where
   toString
@@ -72,18 +59,14 @@ def CancellationToken.Consumer.resolve (c : Consumer) : BaseIO Bool := do
       return true
     waiter.race lose win
 
-/--
-The central state structure for a `CancellationToken`.
--/
+/-- The central state structure for a `CancellationToken`. -/
 structure CancellationToken.State where
-  /--
-  The cancellation reason if cancelled, none otherwise.
-  -/
+  /-- The cancellation reason if cancelled, none otherwise. -/
   reason : Option CancellationReason
-
   /--
   Consumers that are blocked waiting for cancellation.
-  --/
+  -
+  -/
   consumers : Std.Queue (CancellationToken.Consumer)
 
 /--
@@ -95,9 +78,7 @@ structure CancellationToken where
 
 namespace CancellationToken
 
-/--
-Creates a new cancellation token.
--/
+/-- Creates a new cancellation token. -/
 def new : BaseIO CancellationToken := do
   return { state := ← Std.Mutex.new { reason := none, consumers := ∅ } }
 
@@ -124,25 +105,19 @@ def cancel (x : CancellationToken) (reason : CancellationReason := .cancel) : Ba
 
     set st
 
-/--
-Checks if the token is cancelled.
--/
+/-- Checks if the token is cancelled. -/
 def isCancelled (x : CancellationToken) : BaseIO Bool := do
   x.state.atomically do
     let st ← get
     return st.reason.isSome
 
-/--
-Gets the cancellation reason if the token is cancelled.
--/
+/-- Gets the cancellation reason if the token is cancelled. -/
 def getCancellationReason (x : CancellationToken) : BaseIO (Option CancellationReason) := do
   x.state.atomically do
     let st ← get
     return st.reason
 
-/--
-Waits for cancellation. Returns a task that completes when cancelled.
--/
+/-- Waits for cancellation. Returns a task that completes when cancelled. -/
 def wait (x : CancellationToken) : IO (AsyncTask Unit) :=
   x.state.atomically do
     let st ← get
@@ -158,16 +133,13 @@ def wait (x : CancellationToken) : IO (AsyncTask Unit) :=
       | some _ => pure <| Task.pure (.ok ())
       | none => throw (IO.userError "cancellation token dropped")
 
-/--
-Creates a selector that waits for cancellation.
--/
+/-- Creates a selector that waits for cancellation. -/
 def selector (token : CancellationToken) : Selector Unit := {
   tryFn := do
     if ← token.isCancelled then
       return some ()
     else
       return none
-
   registerFn := fun waiter => do
     token.state.atomically do
       let st ← get
@@ -178,14 +150,14 @@ def selector (token : CancellationToken) : Selector Unit := {
           return true)
       else
         modify fun st => { st with consumers := st.consumers.enqueue (.select waiter) }
-
   unregisterFn := do
     token.state.atomically do
       let st ← get
 
-      let consumers ← st.consumers.filterM fun
-        | .normal _ => return true
-        | .select waiter => return !(← waiter.checkFinished)
+      let consumers ←
+        st.consumers.filterM fun
+          | .normal _ => return true
+          | .select waiter => return !(← waiter.checkFinished)
 
       set { st with consumers }
 }

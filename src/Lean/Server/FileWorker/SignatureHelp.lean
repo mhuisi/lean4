@@ -19,23 +19,26 @@ open Lean
 
 def determineSignatureHelp (tree : Elab.InfoTree) (appStx : Syntax)
     : IO (Option Lsp.SignatureHelp) := do
-  let some (appCtx, .ofTermInfo appInfo) := tree.smallestInfo? fun
-      | .ofTermInfo ti =>
-        -- HACK: Use range of syntax to figure out corresponding `TermInfo`.
-        -- This is necessary because in order to accurately determine which `Syntax` to use,
-        -- we have to use the original command syntax before macro expansions,
-        -- whereas the `Syntax` in the `InfoTree` is always from some stage of elaboration.
-        ti.stx.getRangeWithTrailing? == appStx.getRangeWithTrailing?
-      | _ => false
+  let some (appCtx, .ofTermInfo appInfo) :=
+      tree.smallestInfo? fun
+        | .ofTermInfo ti =>
+          -- HACK: Use range of syntax to figure out corresponding `TermInfo`.
+          -- This is necessary because in order to accurately determine which `Syntax` to use,
+          -- we have to use the original command syntax before macro expansions,
+          -- whereas the `Syntax` in the `InfoTree` is always from some stage of elaboration.
+          ti.stx.getRangeWithTrailing? == appStx.getRangeWithTrailing?
+        | _ => false
     | return none
   let app := appInfo.expr
-  let some fmt ← appCtx.runMetaM appInfo.lctx do
-      let appType ← instantiateMVars <| ← Meta.inferType app
-      if ! appType.isForall then
-        return none
-      let (stx, _) ← PrettyPrinter.delabCore appType
-        (delab := PrettyPrinter.Delaborator.delabForallWithSignature)
-      return some <| ← PrettyPrinter.ppTerm ⟨stx⟩
+  let some fmt ←
+      appCtx.runMetaM appInfo.lctx do
+        let appType ← instantiateMVars <| ← Meta.inferType app
+        if !appType.isForall then
+          return none
+        let (stx, _) ←
+          PrettyPrinter.delabCore appType
+            (delab := PrettyPrinter.Delaborator.delabForallWithSignature)
+        return some <| ← PrettyPrinter.ppTerm ⟨stx⟩
     | return none
   return some {
     signatures := #[{ label := toString fmt : Lsp.SignatureInformation }]
@@ -71,10 +74,10 @@ inductive CandidateKind where
 def CandidateKind.prio : CandidateKind → Nat
   | .pipeArg => 0
   | .termArg => 1
-  | .appArg  => 2
+  | .appArg => 2
 
 structure Candidate where
-  kind   : CandidateKind
+  kind : CandidateKind
   appStx : Syntax
 
 inductive SearchControl where
@@ -83,8 +86,7 @@ inductive SearchControl where
   /-- Stop the search through a syntax stack. -/
   | stop
 
-private def lineCommentPosition? (s : String) : Option s.Pos :=
-  s.find? "--"
+private def lineCommentPosition? (s : String) : Option s.Pos := s.find? "--"
 
 private def isPositionInLineComment (text : FileMap) (pos : String.Pos.Raw) : Bool := Id.run do
   let requestedLineNumber := text.toPosition pos |>.line
@@ -96,8 +98,10 @@ private def isPositionInLineComment (text : FileMap) (pos : String.Pos.Raw) : Bo
   return pos >= lineCommentPos.offset.offsetBy lineStartPos
 
 open CandidateKind in
-def findSignatureHelp? (text : FileMap) (ctx? : Option Lsp.SignatureHelpContext) (cmdStx : Syntax)
-    (tree : Elab.InfoTree) (requestedPos : String.Pos.Raw) : IO (Option Lsp.SignatureHelp) := do
+def findSignatureHelp?
+    (text : FileMap) (ctx? : Option Lsp.SignatureHelpContext) (cmdStx : Syntax)
+    (tree : Elab.InfoTree) (requestedPos : String.Pos.Raw)
+    : IO (Option Lsp.SignatureHelp) := do
   -- HACK: Since comments are whitespace, the signature help can trigger on comments.
   -- This is especially annoying on end-of-line comments, as the signature help will trigger on
   -- every space in the comment.
@@ -105,17 +109,18 @@ def findSignatureHelp? (text : FileMap) (ctx? : Option Lsp.SignatureHelpContext)
   -- triggering on other comment kinds.
   if isPositionInLineComment text requestedPos then
     return none
-  let stack? := cmdStx.findStack? fun stx => Id.run do
-    let some range := stx.getRangeWithTrailing? (canonicalOnly := true)
-      | return false
-    return range.contains requestedPos (includeStop := true)
+  let stack? :=
+    cmdStx.findStack? fun stx => Id.run do
+      let some range := stx.getRangeWithTrailing? (canonicalOnly := true)
+        | return false
+      return range.contains requestedPos (includeStop := true)
   let some stack := stack?
     | return none
   let stack := stack.toArray.map (·.1)
   let mut candidates : Array Candidate := #[]
-  for h:i in *...stack.size do
+  for h : i in *...stack.size do
     let stx := stack[i]
-    let parent := stack[i+1]?.getD .missing
+    let parent := stack[i + 1]?.getD .missing
     let (kind?, control) := determineCandidateKind stx parent
     if let some kind := kind? then
       candidates := candidates.push ⟨kind, stx⟩
@@ -175,7 +180,7 @@ where
     -- the signature help (`Ctrl+Shift+Space` in VS Code). We also display it in successive lines
     -- if the user never closed it in the meantime, i.e. when the signature help was simply
     -- retriggered.
-    if ! isManualTrigger && ! isRetrigger && isCursorAfterTailPosLine then
+    if !isManualTrigger && !isRetrigger && isCursorAfterTailPosLine then
       return (none, .continue)
     if stx matches .ident .. then
       match parent with

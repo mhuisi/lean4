@@ -41,5 +41,4 @@ structure Config where
   annotated with inlining attributes.
   -/
   inlineDefs := true
-  deriving Inhabited
-
+deriving Inhabited

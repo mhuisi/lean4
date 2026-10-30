@@ -39,33 +39,19 @@ The `Server` structure holds all state required to manage the lifecycle of an HT
 connection tracking and shutdown coordination.
 -/
 structure Server where
-
-  /--
-  The context used for shutting down all connections and the server.
-  -/
+  /-- The context used for shutting down all connections and the server. -/
   context : Std.CancellationContext
-
-  /--
-  Active HTTP connections
-  -/
+  /-- Active HTTP connections -/
   activeConnections : Std.Mutex Nat
-
   /--
   Semaphore used to enforce the maximum number of simultaneous active connections.
   `none` means no connection limit.
   -/
   connectionLimit : Option Std.Semaphore
-
-  /--
-  Indicates when the server has successfully shut down.
-  -/
+  /-- Indicates when the server has successfully shut down. -/
   shutdownPromise : Std.Channel Unit
-
-  /--
-  Configuration of the server
-  -/
+  /-- Configuration of the server -/
   config : Std.Http.Config
-
   /--
   The local socket address the server is bound to. When `serve` is called with a port of `0`, this
   reflects the ephemeral port assigned by the OS rather than the requested address.
@@ -75,11 +61,9 @@ structure Server where
 
 namespace Server
 
-/--
-Create a new `Server` structure with an optional configuration.
--/
-def new (config : Std.Http.Config := {}) (localAddr : Option Net.SocketAddress := none) :
-    IO Server := do
+/-- Create a new `Server` structure with an optional configuration. -/
+def new (config : Std.Http.Config := {}) (localAddr : Option Net.SocketAddress := none)
+    : IO Server := do
   let context ← Std.CancellationContext.new
   let activeConnections ← Std.Mutex.new 0
   let connectionLimit ←
@@ -95,9 +79,7 @@ def new (config : Std.Http.Config := {}) (localAddr : Option Net.SocketAddress :
 Triggers cancellation of all requests and the accept loop in the server. This function should be used
 in conjunction with `waitShutdown` to properly coordinate the shutdown sequence.
 -/
-@[inline]
-def shutdown (s : Server) : Async Unit :=
-  s.context.cancel .shutdown
+@[inline] def shutdown (s : Server) : Async Unit := s.context.cancel .shutdown
 
 /--
 Waits for the server to shut down. Blocks until another task or async operation calls the `shutdown` function.
@@ -106,12 +88,8 @@ Waits for the server to shut down. Blocks until another task or async operation 
 def waitShutdown (s : Server) : Async Unit := do
   Async.ofAsyncTask ((← s.shutdownPromise.recv).map Except.ok)
 
-/--
-Returns a `Selector` that waits for the server to shut down.
--/
-@[inline]
-def waitShutdownSelector (s : Server) : Selector Unit :=
-  s.shutdownPromise.recvSelector
+/-- Returns a `Selector` that waits for the server to shut down. -/
+@[inline] def waitShutdownSelector (s : Server) : Selector Unit := s.shutdownPromise.recvSelector
 
 /--
 Triggers cancellation of all requests and the accept loop, then waits for the server to fully shut down.
@@ -123,8 +101,9 @@ def shutdownAndWait (s : Server) : Async Unit := do
   s.waitShutdown
 
 @[inline]
-private def frameCancellation (s : Server) (releaseConnectionPermit : Bool := false)
-    (action : ContextAsync α) : ContextAsync α := do
+private def frameCancellation
+    (s : Server) (releaseConnectionPermit : Bool := false) (action : ContextAsync α)
+    : ContextAsync α := do
   s.activeConnections.atomically (modify (· + 1))
   try
     action
@@ -143,11 +122,11 @@ private def frameCancellation (s : Server) (releaseConnectionPermit : Bool := fa
 Start a new HTTP/1.1 server on the given socket address. This function uses `Async` to handle tasks
 and TCP connections, and returns a `Server` structure that can be used to cancel the server.
 -/
-def serve {σ : Type} [Handler σ]
-    (addr : Net.SocketAddress)
-    (handler : σ)
-    (config : Config := {}) (backlog : UInt32 := 1024) : Async Server := do
-
+def serve
+    {σ : Type} [Handler σ]
+    (addr : Net.SocketAddress) (handler : σ)
+    (config : Config := {}) (backlog : UInt32 := 1024)
+    : Async Server := do
   let server ← Socket.Server.mk
   server.bind addr
   server.listen backlog
@@ -157,38 +136,38 @@ def serve {σ : Type} [Handler σ]
   let httpServer ← Server.new config (some localAddr)
 
   let runServer := do
-    frameCancellation httpServer (action := do
-      while true do
-        let permitAcquired ←
-          if let some limit := httpServer.connectionLimit then
-            let permit ← limit.acquire
-            await permit
-            pure true
-          else
-            pure false
-
-        let result ← Selectable.one #[
-          .case (server.acceptSelector) (fun x => pure <| some x),
-          .case (← ContextAsync.doneSelector) (fun _ => pure none)
-        ]
-
-        match result with
-        | some client =>
-          let extensions ← do
-            match (← EIO.toBaseIO client.getPeerName) with
-            | .ok addr => pure <| Extensions.empty.insert (Server.RemoteAddr.mk addr)
-            | .error _ => pure Extensions.empty
-
-          ContextAsync.background
-            (frameCancellation httpServer (releaseConnectionPermit := permitAcquired)
-              (action := do
-                serveConnection client handler config extensions))
-        | none =>
-          if permitAcquired then
+    frameCancellation httpServer
+      (action := do
+        while true do
+          let permitAcquired ←
             if let some limit := httpServer.connectionLimit then
-              limit.release
-          break
-    )
+              let permit ← limit.acquire
+              await permit
+              pure true
+            else
+              pure false
+
+          let result ←
+            Selectable.one #[
+              .case (server.acceptSelector) (fun x => pure <| some x),
+              .case (← ContextAsync.doneSelector) (fun _ => pure none)
+            ]
+
+          match result with
+          | some client =>
+            let extensions ← do
+              match (← EIO.toBaseIO client.getPeerName) with
+              | .ok addr => pure <| Extensions.empty.insert (Server.RemoteAddr.mk addr)
+              | .error _ => pure Extensions.empty
+
+            ContextAsync.background (frameCancellation httpServer
+              (releaseConnectionPermit := permitAcquired)
+              (action := do serveConnection client handler config extensions))
+          | none =>
+            if permitAcquired then
+              if let some limit := httpServer.connectionLimit then
+                limit.release
+            break)
 
   background (runServer httpServer.context)
 

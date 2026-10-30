@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Elab.Tactic.Grind.Basic
 import Lean.Elab.ConfigEval
@@ -22,20 +23,21 @@ private declare_term_config_elab elabGrindConfigCore Grind.Config
     (evalConfig : Term → TermElabM Grind.Config) where
   option config := fun _ item => evalConfig ⟨item.value⟩
 
-local macro "make_elab_grind_config" fn:ident struct:ident : command => do
-  let cfg := mkIdent `cfg
-  let init := mkIdent `init
-  let logExceptions := mkIdent `logExceptions
-  `(private local ensure_eval_expr_instance $struct
-    def $fn ($cfg : Syntax)
-        ($init : $struct := {})
-        ($logExceptions : Bool := true) :
-        TacticM Grind.Config := do
-      elabGrindConfigCore $cfg { $init with }
-        (evalConfig := fun c => do
-          let cfg : $struct ← evalExprWithElab c
-          return { cfg with })
-        (logExceptions := $logExceptions && (← read).recover))
+local macro "make_elab_grind_config" fn:ident struct:ident : command =>
+  do
+    let cfg := mkIdent `cfg
+    let init := mkIdent `init
+    let logExceptions := mkIdent `logExceptions
+    `(private local ensure_eval_expr_instance $struct
+      def $fn ($cfg : Syntax)
+          ($init : $struct := {})
+          ($logExceptions : Bool := true) :
+          TacticM Grind.Config := do
+        elabGrindConfigCore $cfg { $init with }
+          (evalConfig := fun c => do
+            let cfg : $struct ← evalExprWithElab c
+            return { cfg with })
+          (logExceptions := $logExceptions && (← read).recover))
 
 make_elab_grind_config elabGrindConfig Grind.Config
 make_elab_grind_config elabGrindConfigInteractive Grind.ConfigInteractive
@@ -46,14 +48,12 @@ make_elab_grind_config elabGrobnerConfig Grind.GrobnerConfig
 
 namespace Grind
 
-def elabConfigItems (init : Grind.Config) (items : Array Syntax) :
-    TermElabM Grind.Config := do
+def elabConfigItems (init : Grind.Config) (items : Array Syntax) : TermElabM Grind.Config := do
   elabGrindConfigCore (mkNullNode items) init
     (evalConfig := fun c => evalExprWithElab c)
     (logExceptions := false)
 
-def withConfigItems (items : Array Syntax)
-    (k : GrindTacticM α) : GrindTacticM α := do
+def withConfigItems (items : Array Syntax) (k : GrindTacticM α) : GrindTacticM α := do
   if items.isEmpty then
     k
   else

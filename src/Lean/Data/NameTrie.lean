@@ -16,7 +16,7 @@ namespace Lean
 inductive NamePart
   | str (s : String)
   | num (n : Nat)
-  deriving BEq, Inhabited
+deriving BEq, Inhabited
 
 instance : ToString NamePart where
   toString
@@ -37,19 +37,17 @@ def NamePart.lt : NamePart → NamePart → Bool
 
 @[expose] def NameTrie (β : Type u) := PrefixTree NamePart β NamePart.cmp
 
-private def toKey (n : Name) : List NamePart :=
-  loop n []
+private def toKey (n : Name) : List NamePart := loop n []
 where
   loop
-    | Name.str p s,   parts => loop p (NamePart.str s :: parts)
-    | Name.num p n,   parts => loop p (NamePart.num n :: parts)
+    | Name.str p s, parts => loop p (NamePart.str s :: parts)
+    | Name.num p n, parts => loop p (NamePart.num n :: parts)
     | Name.anonymous, parts => parts
 
 def NameTrie.insert (t : NameTrie β) (n : Name) (b : β) : NameTrie β :=
   PrefixTree.insert t (toKey n) b
 
-def NameTrie.empty : NameTrie β :=
-  PrefixTree.empty
+def NameTrie.empty : NameTrie β := PrefixTree.empty
 
 instance : Inhabited (NameTrie β) where
   default := NameTrie.empty
@@ -57,15 +55,15 @@ instance : Inhabited (NameTrie β) where
 instance : EmptyCollection (NameTrie β) where
   emptyCollection := NameTrie.empty
 
-def NameTrie.find? (t : NameTrie β) (k : Name) : Option β :=
-  PrefixTree.find? t (toKey k)
+def NameTrie.find? (t : NameTrie β) (k : Name) : Option β := PrefixTree.find? t (toKey k)
 
 @[inline, inherit_doc PrefixTree.findLongestPrefix?]
 def NameTrie.findLongestPrefix? (t : NameTrie β) (k : Name) : Option β :=
   PrefixTree.findLongestPrefix? t (toKey k)
 
 @[inline]
-def NameTrie.foldMatchingM [Monad m] (t : NameTrie β) (k : Name) (init : σ) (f : β → σ → m σ) : m σ :=
+def NameTrie.foldMatchingM [Monad m] (t : NameTrie β) (k : Name) (init : σ) (f : β → σ → m σ)
+    : m σ :=
   PrefixTree.foldMatchingM t (toKey k) init f
 
 @[inline]

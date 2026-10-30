@@ -23,7 +23,7 @@ open Json
 structure ClientInfo where
   name : String
   version? : Option String := none
-  deriving ToJson, FromJson
+deriving ToJson, FromJson
 
 /--
 A TraceValue represents the level of verbosity with which the server systematically reports its execution trace using `$/logTrace` notifications.
@@ -36,13 +36,12 @@ inductive Trace where
 
 instance : FromJson Trace := ⟨fun j =>
   match j.getStr? with
-  | Except.ok "off"      => return Trace.off
+  | Except.ok "off" => return Trace.off
   | Except.ok "messages" => return Trace.messages
-  | Except.ok "verbose"  => return Trace.verbose
-  | _               => throw "unknown trace"⟩
+  | Except.ok "verbose" => return Trace.verbose
+  | _ => throw "unknown trace"⟩
 
-instance Trace.hasToJson : ToJson Trace :=
-⟨fun
+instance Trace.hasToJson : ToJson Trace := ⟨fun
   | Trace.off => "off"
   | Trace.messages => "messages"
   | Trace.verbose => "verbose"⟩
@@ -59,16 +58,18 @@ structure LogConfig where
   logDir? : Option System.FilePath
   allowedMethods? : Option (Std.HashSet String)
   disallowedMethods? : Option (Std.HashSet String)
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 /-- Lean-specific initialization options. -/
 structure InitializationOptions where
-  /-- Whether the client supports interactive widgets. When true, in order to improve performance
+  /--
+  Whether the client supports interactive widgets. When true, in order to improve performance
   the server may cease including information which can be retrieved interactively in some standard
-  LSP messages. Defaults to false. -/
+  LSP messages. Defaults to false.
+  -/
   hasWidgets? : Option Bool
   logCfg? : Option LogConfig
-  deriving ToJson, FromJson
+deriving ToJson, FromJson
 
 structure InitializeParams where
   processId? : Option Int := none
@@ -80,17 +81,19 @@ structure InitializeParams where
   /-- If omitted, we default to off. -/
   trace : Trace := Trace.off
   workspaceFolders? : Option (Array WorkspaceFolder) := none
-  deriving ToJson
+deriving ToJson
 
 instance : FromJson InitializeParams where
   fromJson? j := do
-    /- Many of these params can be null instead of not present.
+    /-
+    Many of these params can be null instead of not present.
     For ease of implementation, we're liberal:
     missing params, wrong json types and null all map to none,
     even if LSP sometimes only allows some subset of these.
     In cases where LSP makes a meaningful distinction
     between different kinds of missing values, we'll
-    follow accordingly. -/
+    follow accordingly.
+    -/
     let processId? := j.getObjValAs? Int "processId"
     let clientInfo? := j.getObjValAs? ClientInfo "clientInfo"
     let rootUri? := j.getObjValAs? String "rootUri"
@@ -105,26 +108,25 @@ instance : FromJson InitializeParams where
       initializationOptions?.toOption,
       capabilities,
       trace,
-      workspaceFolders?.toOption⟩
+      workspaceFolders?.toOption
+    ⟩
 
 inductive InitializedParams where
   | mk
 
-instance : FromJson InitializedParams :=
-  ⟨fun _ => pure InitializedParams.mk⟩
+instance : FromJson InitializedParams := ⟨fun _ => pure InitializedParams.mk⟩
 
-instance : ToJson InitializedParams :=
-  ⟨fun _ => Json.null⟩
+instance : ToJson InitializedParams := ⟨fun _ => Json.null⟩
 
 structure ServerInfo where
   name : String
   version? : Option String := none
-  deriving ToJson, FromJson
+deriving ToJson, FromJson
 
 structure InitializeResult where
   capabilities : ServerCapabilities
   serverInfo? : Option ServerInfo := none
-  deriving ToJson, FromJson
+deriving ToJson, FromJson
 
 end Lsp
 end Lean

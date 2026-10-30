@@ -36,46 +36,29 @@ on the input.
 -/
 structure Fanin where
   ofRaw ::
-    val : Nat
-  deriving Hashable, Repr, DecidableEq, Inhabited
+  val : Nat
+deriving Hashable, Repr, DecidableEq, Inhabited
 
 namespace Fanin
 
-/--
-The public constructor of `Fanin`.
--/
-@[inline]
-def mk (gate : Nat) (invert : Bool) : Fanin :=
-  ⟨gate * 2 ||| invert.toNat⟩
+/-- The public constructor of `Fanin`. -/
+@[inline] def mk (gate : Nat) (invert : Bool) : Fanin := ⟨gate * 2 ||| invert.toNat⟩
 
-/--
-Get the gate.
--/
-@[inline]
-def gate (f : Fanin) : Nat := f.val / 2
+/-- Get the gate. -/
+@[inline] def gate (f : Fanin) : Nat := f.val / 2
 
-/--
-Get the inverter bit.
--/
-@[inline]
-def invert (f : Fanin) : Bool :=
-  1 &&& f.val != 0
+/-- Get the inverter bit. -/
+@[inline] def invert (f : Fanin) : Bool := 1 &&& f.val != 0
 
-/--
-Flip the inverter bit according to `val`.
--/
-@[inline]
-def flip (f : Fanin) (val : Bool) : Fanin := ⟨f.val ^^^ val.toNat⟩
+/-- Flip the inverter bit according to `val`. -/
+@[inline] def flip (f : Fanin) (val : Bool) : Fanin := ⟨f.val ^^^ val.toNat⟩
 
 @[simp]
 theorem gate_mk : (Fanin.mk g i).gate = g := by
-  cases i <;>
-    simp [mk, gate, ← Nat.shiftLeft_eq _ 1, ← Nat.shiftRight_eq_div_pow _ 1,
-      Nat.shiftRight_or_distrib]
+  cases i <;> simp [mk, gate, ← Nat.shiftLeft_eq _ 1, ← Nat.shiftRight_eq_div_pow _ 1,
+    Nat.shiftRight_or_distrib]
 
-@[simp]
-theorem invert_mk : (Fanin.mk g i).invert = i := by
-  cases i <;> simp [mk, invert]
+@[simp] theorem invert_mk : (Fanin.mk g i).invert = i := by cases i <;> simp [mk, invert]
 
 @[simp]
 theorem gate_flip (f : Fanin) : (f.flip v).gate = f.gate := by
@@ -99,17 +82,14 @@ inductive Decl (α : Type) where
   with a `Ref` to `false` with `invert` set true
   -/
   | false
-  /--
-  An input node to the circuit.
-  -/
+  /-- An input node to the circuit. -/
   | atom (idx : α)
   /--
   An AIG gate with configurable input nodes and polarity. `l` and `r` are the
   input nodes together with their inverter bit.
   -/
   | gate (l r : Fanin)
-  deriving Hashable, Repr, DecidableEq, Inhabited
-
+deriving Hashable, Repr, DecidableEq, Inhabited
 
 structure Cache.WF (decls : Array (Decl α)) (cache : HashMap (Decl α) Nat) : Prop where
   /--
@@ -117,19 +97,20 @@ structure Cache.WF (decls : Array (Decl α)) (cache : HashMap (Decl α) Nat) : P
   does not force the cache to be complete for gates, if there is no entry in the cache for some
   gate, it can still exist in `decls`.
   -/
-  sound : ∀ (decl : Decl α) (idx : Nat), cache[decl]? = some idx →
-    ∃ h : idx < decls.size, decls[idx] = decl
+  sound
+    : ∀ (decl : Decl α) (idx : Nat),
+      cache[decl]? = some idx → ∃ h : idx < decls.size, decls[idx] = decl
   /--
   The cache knows about every `atom` in `decls`. This is crucial to enforce that all atoms occur
   at most once in the AIG.
   -/
-  atoms : ∀ (i : Nat) (h : i < decls.size) (a : α), decls[i] = .atom a → cache[Decl.atom a]? = some i
+  atoms
+    : ∀ (i : Nat) (h : i < decls.size) (a : α), decls[i] = .atom a → cache[Decl.atom a]? = some i
 
-/--
-An empty `Cache` is valid for any `Array Decl` without atoms as it never has a hit.
--/
-theorem Cache.WF.empty {decls : Array (Decl α)}
-    (hatoms : ∀ (i : Nat) (h : i < decls.size) (a : α), decls[i] ≠ .atom a) : WF decls {} where
+/-- An empty `Cache` is valid for any `Array Decl` without atoms as it never has a hit. -/
+theorem Cache.WF.empty
+    {decls : Array (Decl α)} (hatoms : ∀ (i : Nat) (h : i < decls.size) (a : α), decls[i] ≠ .atom a)
+    : WF decls {} where
   sound := by
     intro decl idx h
     simp at h
@@ -141,18 +122,19 @@ theorem Cache.WF.empty {decls : Array (Decl α)}
 Given a `cache`, valid with respect to some `decls`, we can extend the `decls` and the `cache` at
 the same time with a `decl` that is not yet in the cache and remain valid.
 -/
-theorem Cache.WF.push_cache {decls : Array (Decl α)} {cache : HashMap (Decl α) Nat} {decl : Decl α}
-    (h : WF decls cache) (hmiss : cache[decl]? = none) :
-    WF (decls.push decl) (cache.insert decl decls.size) where
+theorem Cache.WF.push_cache
+    {decls : Array (Decl α)} {cache : HashMap (Decl α) Nat} {decl : Decl α}
+    (h : WF decls cache) (hmiss : cache[decl]? = none)
+    : WF (decls.push decl) (cache.insert decl decls.size) where
   sound := by
     intro decl' idx hfound
     rw [HashMap.getElem?_insert] at hfound
     split at hfound
     · next heq =>
-      simp only [beq_iff_eq] at heq
-      simp only [Option.some.injEq] at hfound
-      subst heq hfound
-      constructor <;> simp
+        simp only [beq_iff_eq] at heq
+        simp only [Option.some.injEq] at hfound
+        subst heq hfound
+        constructor <;> simp
     · rcases h.sound decl' idx hfound with ⟨hlt, heq⟩
       exact ⟨by simp; omega, by simp [Array.getElem_push, hlt, heq]⟩
   atoms := by
@@ -161,29 +143,26 @@ theorem Cache.WF.push_cache {decls : Array (Decl α)} {cache : HashMap (Decl α)
     rw [Array.getElem_push] at hatom
     split at hatom
     · next hlt =>
-      have := h.atoms i hlt a hatom
-      split
-      · simp_all
-      · assumption
+        have := h.atoms i hlt a hatom
+        split
+        · simp_all
+        · assumption
     · next hge =>
-      have : i = decls.size := by
-        simp only [Array.size_push] at hi
-        omega
-      simp [this, hatom]
+        have : i = decls.size := by
+          simp only [Array.size_push] at hi
+          omega
+        simp [this, hatom]
 
-/--
-A cache for reusing elements from `decls` if they are available.
--/
+/-- A cache for reusing elements from `decls` if they are available. -/
 def Cache (α : Type) [DecidableEq α] [Hashable α] (decls : Array (Decl α)) :=
-  { map : HashMap (Decl α) Nat // Cache.WF decls map }
+  {map : HashMap (Decl α) Nat // Cache.WF decls map}
 
-/--
-Create an empty `Cache`, valid with respect to any `Array Decl` without atoms.
--/
+/-- Create an empty `Cache`, valid with respect to any `Array Decl` without atoms. -/
 @[irreducible, inline]
-def Cache.empty {decls : Array (Decl α)}
-    (hatoms : ∀ (i : Nat) (h : i < decls.size) (a : α), decls[i] ≠ .atom a := by simp) :
-    Cache α decls :=
+def Cache.empty
+    {decls : Array (Decl α)}
+    (hatoms : ∀ (i : Nat) (h : i < decls.size) (a : α), decls[i] ≠ .atom a := by simp)
+    : Cache α decls :=
   ⟨{}, WF.empty hatoms⟩
 
 /-
@@ -191,13 +170,13 @@ We require the `decls` as an explicit argument because we use `decls.size` so ac
 `decls` before calling `Cache.insert` will destroy `decl` linearity.
 -/
 @[inherit_doc Cache.WF.push_cache, irreducible, inline]
-def Cache.insert (decls : Array (Decl α)) (cache : Cache α decls) (decl : Decl α)
-    (hmiss : cache.val[decl]? = none) : Cache α (decls.push decl) :=
+def Cache.insert
+    (decls : Array (Decl α)) (cache : Cache α decls)
+    (decl : Decl α) (hmiss : cache.val[decl]? = none)
+    : Cache α (decls.push decl) :=
   ⟨cache.val.insert decl decls.size, Cache.WF.push_cache cache.property hmiss⟩
 
-/--
-Contains the index of `decl` in `decls` along with a proof that the index is indeed correct.
--/
+/-- Contains the index of `decl` in `decls` along with a proof that the index is indeed correct. -/
 structure CacheHit (decls : Array (Decl α)) (decl : Decl α) where
   idx : Nat
   hbound : idx < decls.size
@@ -206,37 +185,34 @@ structure CacheHit (decls : Array (Decl α)) (decl : Decl α) where
 /--
 For a `c : Cache α decls`, any index `idx` that is a cache hit for some `decl` is within bounds of `decls` (i.e. `idx < decls.size`).
 -/
-theorem Cache.get?_bounds {decls : Array (Decl α)} {idx : Nat} (c : Cache α decls) (decl : Decl α)
-    (hfound : c.val[decl]? = some idx) :
-    idx < decls.size :=
+theorem Cache.get?_bounds
+    {decls : Array (Decl α)} {idx : Nat} (c : Cache α decls)
+    (decl : Decl α) (hfound : c.val[decl]? = some idx)
+    : idx < decls.size :=
   (c.property.sound decl idx hfound).1
 
-/--
-If `Cache.get? decl` returns `some i` then `decls[i] = decl` holds.
--/
-theorem Cache.get?_property {decls : Array (Decl α)} {idx : Nat} (c : Cache α decls) (decl : Decl α)
-    (hfound : c.val[decl]? = some idx) :
-    decls[idx]'(Cache.get?_bounds c decl hfound) = decl :=
+/-- If `Cache.get? decl` returns `some i` then `decls[i] = decl` holds. -/
+theorem Cache.get?_property
+    {decls : Array (Decl α)} {idx : Nat} (c : Cache α decls)
+    (decl : Decl α) (hfound : c.val[decl]? = some idx)
+    : decls[idx]'(Cache.get?_bounds c decl hfound) = decl :=
   (c.property.sound decl idx hfound).2
 
-/--
-Lookup a `Decl` in a `Cache`.
--/
+/-- Lookup a `Decl` in a `Cache`. -/
 @[inline]
 def Cache.get? (cache : Cache α decls) (decl : Decl α) : Option (CacheHit decls decl) :=
   match hfound : cache.val[decl]? with
-  | some hit =>
-    some ⟨hit, Cache.get?_bounds _ _ hfound, Cache.get?_property _ _ hfound⟩
+  | some hit => some ⟨hit, Cache.get?_bounds _ _ hfound, Cache.get?_property _ _ hfound⟩
   | none => none
 
-theorem Cache.get?_eq_none_iff {decls : Array (Decl α)} {cache : Cache α decls} {decl : Decl α} :
-    cache.get? decl = none ↔ cache.val[decl]? = none := by
+theorem Cache.get?_eq_none_iff {decls : Array (Decl α)} {cache : Cache α decls} {decl : Decl α}
+    : cache.get? decl = none ↔ cache.val[decl]? = none := by
   simp only [Cache.get?]
   split <;> simp_all
 
-theorem Cache.get?_eq_some_iff {decls : Array (Decl α)} {cache : Cache α decls} {decl : Decl α}
-    {hit : CacheHit decls decl} :
-    cache.get? decl = some hit ↔ cache.val[decl]? = some hit.idx := by
+theorem Cache.get?_eq_some_iff
+    {decls : Array (Decl α)} {cache : Cache α decls} {decl : Decl α} {hit : CacheHit decls decl}
+    : cache.get? decl = some hit ↔ cache.val[decl]? = some hit.idx := by
   simp only [Cache.get?]
   split
   next idx hfound =>
@@ -250,17 +226,19 @@ theorem Cache.get?_eq_some_iff {decls : Array (Decl α)} {cache : Cache α decls
       simp_all
   next hfound => simp [hfound]
 
-theorem Cache.get?_atom {decls : Array (Decl α)} (cache : Cache α decls) {i : Nat}
-    {hi : i < decls.size} {a : α} (h : decls[i] = .atom a) :
-    cache.get? (.atom a) = some ⟨i, hi, h⟩ :=
+theorem Cache.get?_atom
+    {decls : Array (Decl α)} (cache : Cache α decls)
+    {i : Nat} {hi : i < decls.size} {a : α} (h : decls[i] = .atom a)
+    : cache.get? (.atom a) = some ⟨i, hi, h⟩ :=
   Cache.get?_eq_some_iff.mpr (cache.property.atoms i hi a h)
 
-theorem Cache.ofAtoms.complete_succ {decls : Array (Decl α)} {map : HashMap (Decl α) Nat} {idx : Nat}
-    (hcomp : ∀ (i : Nat) (h : i < decls.size), i < idx → ∀ (a : α),
-      decls[i] = .atom a → map[Decl.atom a]? = some i)
-    (hnot : ∀ (h : idx < decls.size) (a : α), decls[idx] ≠ .atom a) :
-    ∀ (i : Nat) (h : i < decls.size), i < idx + 1 → ∀ (a : α),
-      decls[i] = .atom a → map[Decl.atom a]? = some i := by
+theorem Cache.ofAtoms.complete_succ
+    {decls : Array (Decl α)} {map : HashMap (Decl α) Nat} {idx : Nat}
+    (hcomp : ∀ (i : Nat) (h : i < decls.size),
+      i < idx → ∀ (a : α), decls[i] = .atom a → map[Decl.atom a]? = some i)
+    (hnot : ∀ (h : idx < decls.size) (a : α), decls[idx] ≠ .atom a)
+    : ∀ (i : Nat) (h : i < decls.size),
+      i < idx + 1 → ∀ (a : α), decls[i] = .atom a → map[Decl.atom a]? = some i := by
   intro i h hlt a hatom
   cases Nat.lt_or_ge i idx with
   | inl hlt' => exact hcomp i h hlt' a hatom
@@ -273,23 +251,27 @@ theorem Cache.ofAtoms.complete_succ {decls : Array (Decl α)} {map : HashMap (De
 Build a cache for `decls` that contains exactly the atoms of `decls`. This requires that every
 atom occurs at most once in `decls`.
 -/
-def Cache.ofAtoms (decls : Array (Decl α))
+def Cache.ofAtoms
+    (decls : Array (Decl α))
     (huniq : ∀ (i j : Nat) (hi : i < decls.size) (hj : j < decls.size) (a : α),
-      decls[i] = .atom a → decls[j] = .atom a → i = j) :
-    Cache α decls :=
+      decls[i] = .atom a → decls[j] = .atom a → i = j)
+    : Cache α decls :=
   go 0 {} (by simp) (by omega)
 where
-  go (idx : Nat) (map : HashMap (Decl α) Nat)
-      (hsound : ∀ (decl : Decl α) (i : Nat), map[decl]? = some i →
-        ∃ h : i < decls.size, decls[i] = decl)
-      (hcomp : ∀ (i : Nat) (h : i < decls.size), i < idx → ∀ (a : α),
-        decls[i] = .atom a → map[Decl.atom a]? = some i) :
-      Cache α decls :=
+  go
+      (idx : Nat) (map : HashMap (Decl α) Nat)
+      (hsound
+        : ∀ (decl : Decl α) (i : Nat), map[decl]? = some i → ∃ h : i < decls.size, decls[i] = decl)
+      (hcomp : ∀ (i : Nat) (h : i < decls.size),
+        i < idx → ∀ (a : α), decls[i] = .atom a → map[Decl.atom a]? = some i)
+      : Cache α decls :=
     if hidx : idx < decls.size then
       match hdecl : decls[idx] with
       | .atom a =>
-        have hsound' : ∀ (decl : Decl α) (i : Nat), (map.insert (.atom a) idx)[decl]? = some i →
-            ∃ h : i < decls.size, decls[i] = decl := by
+        have hsound'
+            : ∀ (decl : Decl α) (i : Nat),
+              (map.insert (.atom a) idx)[decl]? = some i
+                → ∃ h : i < decls.size, decls[i] = decl := by
           intro decl i hfound
           rw [HashMap.getElem?_insert] at hfound
           split at hfound
@@ -299,8 +281,11 @@ where
             subst heq hfound
             exact ⟨hidx, hdecl⟩
           next => exact hsound decl i hfound
-        have hcomp' : ∀ (i : Nat) (h : i < decls.size), i < idx + 1 → ∀ (b : α),
-            decls[i] = .atom b → (map.insert (.atom a) idx)[Decl.atom b]? = some i := by
+        have hcomp'
+            : ∀ (i : Nat) (h : i < decls.size),
+              i < idx + 1
+                → ∀ (b : α),
+                  decls[i] = .atom b → (map.insert (.atom a) idx)[Decl.atom b]? = some i := by
           intro i h hlt b hatom
           rw [HashMap.getElem?_insert]
           split
@@ -325,131 +310,107 @@ where
 An `Array Decl` is a Direct Acyclic Graph (DAG) if a gate at index `i` only points to nodes with index lower than `i`.
 -/
 def IsDAG (α : Type) (decls : Array (Decl α)) : Prop :=
-  ∀ ⦃i lhs rhs⦄ (h : i < decls.size),
-      decls[i] = .gate lhs rhs → lhs.gate < i ∧ rhs.gate < i
+  ∀ ⦃i lhs rhs⦄ (h : i < decls.size), decls[i] = .gate lhs rhs → lhs.gate < i ∧ rhs.gate < i
 
-/--
-The empty AIG is a DAG.
--/
+/-- The empty AIG is a DAG. -/
 theorem IsDAG.empty {α : Type} : IsDAG α #[.false] := by
   intro i lhs rhs h
-  simp only [List.size_toArray, List.length_cons, List.length_nil, Nat.zero_add,
-    Nat.lt_one_iff] at h
+  simp only [List.size_toArray, List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_one_iff]
+    at h
   simp [h]
 
 end AIG
 
-/--
-An And Inverter Graph together with a cache for subterm sharing.
--/
+/-- An And Inverter Graph together with a cache for subterm sharing. -/
 structure AIG (α : Type) [DecidableEq α] [Hashable α] where
-  /--
-  The circuit itself as an `Array Decl` whose members have indices into said array.
-  -/
+  /-- The circuit itself as an `Array Decl` whose members have indices into said array. -/
   decls : Array (AIG.Decl α)
-  /--
-  The `Decl` cache, valid with respect to `decls`.
-  -/
+  /-- The `Decl` cache, valid with respect to `decls`. -/
   cache : AIG.Cache α decls
-  /--
-  In order to be a valid AIG, `decls` must form a DAG.
-  -/
+  /-- In order to be a valid AIG, `decls` must form a DAG. -/
   hdag : AIG.IsDAG α decls
-  /--
-  The `decls` `Array` can never be empty, see `hconst`.
-  -/
+  /-- The `decls` `Array` can never be empty, see `hconst`. -/
   hzero : 0 < decls.size
-  /--
-  We always store `.false` at the first position. This allows us to avoid cache lookups
-  -/
+  /-- We always store `.false` at the first position. This allows us to avoid cache lookups -/
   hconst : decls[0]'hzero = .false
 
 namespace AIG
 
-/--
-An `AIG` with an empty AIG and cache.
--/
-def empty : AIG α :=
-  {
-    decls := #[.false],
-    cache := Cache.empty,
-    hdag := IsDAG.empty,
-    hzero := by simp
-    hconst := by simp
-  }
+/-- An `AIG` with an empty AIG and cache. -/
+def empty : AIG α := {
+  decls := #[.false]
+  cache := Cache.empty
+  hdag := IsDAG.empty
+  hzero := by simp
+  hconst := by simp
+}
 
-/--
-Every atom occurs at most once in an `AIG`.
--/
-theorem atom_unique (aig : AIG α) {i j : Nat} {hi : i < aig.decls.size} {hj : j < aig.decls.size}
-    {a : α} (h1 : aig.decls[i] = .atom a) (h2 : aig.decls[j] = .atom a) : i = j := by
+/-- Every atom occurs at most once in an `AIG`. -/
+theorem atom_unique
+    (aig : AIG α)
+    {i j : Nat} {hi : i < aig.decls.size} {hj : j < aig.decls.size} {a : α}
+    (h1 : aig.decls[i] = .atom a) (h2 : aig.decls[j] = .atom a)
+    : i = j := by
   have h := aig.cache.get?_atom h1
   rw [aig.cache.get?_atom h2] at h
   cases h
   rfl
 
-/--
-The atom `a` occurs in `aig`.
--/
+/-- The atom `a` occurs in `aig`. -/
 def Mem (aig : AIG α) (a : α) : Prop := (.atom a) ∈ aig.decls
 
 instance : Membership α (AIG α) where
   mem := Mem
 
-/--
-A reference to a node within an AIG.
--/
+/-- A reference to a node within an AIG. -/
 structure Ref (aig : AIG α) where
   gate : Nat
   invert : Bool
   hgate : gate < aig.decls.size
 
-/--
-A `Ref` into `aig1` is also valid for `aig2` if `aig1` is smaller than `aig2`.
--/
+/-- A `Ref` into `aig1` is also valid for `aig2` if `aig1` is smaller than `aig2`. -/
 @[inline, implicit_reducible]
-def Ref.cast {aig1 aig2 : AIG α} (ref : Ref aig1) (h : aig1.decls.size ≤ aig2.decls.size) :
-    Ref aig2 :=
-  { ref with hgate := by have := ref.hgate; omega }
+def Ref.cast {aig1 aig2 : AIG α} (ref : Ref aig1) (h : aig1.decls.size ≤ aig2.decls.size)
+    : Ref aig2 := {
+  ref with
+  hgate := by have := ref.hgate; omega
+}
 
-
-/--
-Flip the polarity of `Ref` if `inv` is set.
--/
+/-- Flip the polarity of `Ref` if `inv` is set. -/
 @[inline]
-def Ref.flip {aig : AIG α} (ref : Ref aig) (inv : Bool) : Ref aig :=
-  { ref with invert := inv ^^ ref.invert }
+def Ref.flip {aig : AIG α} (ref : Ref aig) (inv : Bool) : Ref aig := {
+  ref with
+  invert := inv ^^ ref.invert
+}
 
-/--
-Flip the polarity of `Ref`.
--/
-@[inline]
-def Ref.not {aig : AIG α} (ref : Ref aig) : Ref aig :=
-  ref.flip true
+/-- Flip the polarity of `Ref`. -/
+@[inline] def Ref.not {aig : AIG α} (ref : Ref aig) : Ref aig := ref.flip true
 
-/--
-A pair of `Ref`s, useful for `LawfulOperator`s that act on two `Ref`s at a time.
--/
+/-- A pair of `Ref`s, useful for `LawfulOperator`s that act on two `Ref`s at a time. -/
 structure BinaryInput (aig : AIG α) where
   lhs : Ref aig
   rhs : Ref aig
 
-/--
-The `Ref.cast` equivalent for `BinaryInput`.
--/
+/-- The `Ref.cast` equivalent for `BinaryInput`. -/
 @[inline]
-def BinaryInput.cast {aig1 aig2 : AIG α} (input : BinaryInput aig1)
-    (h : aig1.decls.size ≤ aig2.decls.size) :
-    BinaryInput aig2 :=
-  { input with lhs := input.lhs.cast h, rhs := input.rhs.cast h }
+def BinaryInput.cast
+    {aig1 aig2 : AIG α} (input : BinaryInput aig1) (h : aig1.decls.size ≤ aig2.decls.size)
+    : BinaryInput aig2 := {
+  input with
+  lhs := input.lhs.cast h
+  rhs := input.rhs.cast h
+}
 
 /--
 Flip the current inverter settings of the `BinaryInput` if `linv` or `rinv` is set respectively.
 -/
 @[inline]
-def BinaryInput.invert {aig : AIG α} (input : BinaryInput aig) (linv rinv : Bool) :
-    BinaryInput aig :=
-  { input with lhs := input.lhs.flip linv, rhs := input.rhs.flip rinv }
+def BinaryInput.invert {aig : AIG α} (input : BinaryInput aig) (linv rinv : Bool)
+    : BinaryInput aig := {
+  input with
+  lhs := input.lhs.flip linv
+  rhs := input.rhs.flip rinv
+}
 
 /--
 A collection of 3 of `Ref`s, useful for `LawfulOperator`s that act on three `Ref`s at a time,
@@ -460,42 +421,41 @@ structure TernaryInput (aig : AIG α) where
   lhs : Ref aig
   rhs : Ref aig
 
-/--
-The `Ref.cast` equivalent for `TernaryInput`.
--/
+/-- The `Ref.cast` equivalent for `TernaryInput`. -/
 @[inline]
-def TernaryInput.cast {aig1 aig2 : AIG α} (input : TernaryInput aig1)
-    (h : aig1.decls.size ≤ aig2.decls.size) :
-    TernaryInput aig2 :=
-  { input with discr := input.discr.cast h, lhs := input.lhs.cast h, rhs := input.rhs.cast h }
+def TernaryInput.cast
+    {aig1 aig2 : AIG α} (input : TernaryInput aig1) (h : aig1.decls.size ≤ aig2.decls.size)
+    : TernaryInput aig2 := {
+  input with
+  discr := input.discr.cast h
+  lhs := input.lhs.cast h
+  rhs := input.rhs.cast h
+}
 
 /--
 An entrypoint into an `AIG`. This can be used to evaluate a circuit, starting at a certain node,
 with `AIG.denote` or to construct bigger circuits on top of this specific node.
 -/
 structure Entrypoint (α : Type) [DecidableEq α] [Hashable α] where
-  /--
-  The AIG that we are in.
-  -/
+  /-- The AIG that we are in. -/
   aig : AIG α
-  /--
-  The reference to the node in `aig` that this `Entrypoint` targets.
-  -/
+  /-- The reference to the node in `aig` that this `Entrypoint` targets. -/
   ref : Ref aig
 
-/--
-Transform an `Entrypoint` into a graphviz string. Useful for debugging purposes.
--/
-def toGraphviz {α : Type} [DecidableEq α] [ToString α] [Hashable α] (entry : Entrypoint α) :
-    String :=
+/-- Transform an `Entrypoint` into a graphviz string. Useful for debugging purposes. -/
+def toGraphviz {α : Type} [DecidableEq α] [ToString α] [Hashable α] (entry : Entrypoint α)
+    : String :=
   let ⟨⟨decls, _, hinv, _, _⟩, ⟨idx, invert, h⟩⟩ := entry
   let (dag, s) := go "" decls hinv idx h |>.run ∅
   let nodes := s.fold (fun x y ↦ x ++ toGraphvizString decls y) ""
   "Digraph AIG {" ++ nodes ++ dag ++ "}"
 where
-  go {α : Type} [DecidableEq α] [ToString α] [Hashable α] (acc : String) (decls : Array (Decl α))
-      (hinv : IsDAG α decls) (idx : Nat) (hidx : idx < decls.size) :
-      StateM (HashSet (Fin decls.size)) String := do
+  go
+      {α : Type} [DecidableEq α] [ToString α] [Hashable α]
+      (acc : String)
+      (decls : Array (Decl α)) (hinv : IsDAG α decls)
+      (idx : Nat) (hidx : idx < decls.size)
+      : StateM (HashSet (Fin decls.size)) String := do
     let fidx : Fin decls.size := Fin.mk idx hidx
     if (← get).contains fidx then
       return acc
@@ -512,60 +472,50 @@ where
       let hlr := hinv hidx elem
       let laig ← go (acc ++ curr) decls hinv lidx (by omega)
       go laig decls hinv ridx (by omega)
-  invEdgeStyle (isInv : Bool) : String :=
-    if isInv then " [color=red]" else " [color=blue]"
-  toGraphvizString {α : Type} [DecidableEq α] [ToString α] [Hashable α] (decls : Array (Decl α))
-      (idx : Fin decls.size) : String :=
+  invEdgeStyle (isInv : Bool) : String := if isInv then " [color=red]" else " [color=blue]"
+  toGraphvizString
+      {α : Type} [DecidableEq α] [ToString α] [Hashable α]
+      (decls : Array (Decl α)) (idx : Fin decls.size)
+      : String :=
     match decls[idx] with
     | Decl.false => s!"{idx} [label=\"{false}\", shape=box];"
     | Decl.atom i => s!"{idx} [label=\"{i}\", shape=doublecircle];"
     | Decl.gate .. => s!"{idx} [label=\"{idx} ∧\",shape=trapezium];"
 
-/--
-A vector of references into `aig`. This is the `AIG` analog of `BitVec`.
--/
+/-- A vector of references into `aig`. This is the `AIG` analog of `BitVec`. -/
 structure RefVec (aig : AIG α) (w : Nat) where
   refs : Vector Fanin w
   hrefs : ∀ (h : i < w), refs[i].gate < aig.decls.size
 
-/--
-A sequence of references bundled with their AIG.
--/
+/-- A sequence of references bundled with their AIG. -/
 structure RefVecEntry (α : Type) [DecidableEq α] [Hashable α] [DecidableEq α] (w : Nat) where
   aig : AIG α
   vec : RefVec aig w
 
-/--
-A `RefVec` bundled with constant distance to be shifted by.
--/
+/-- A `RefVec` bundled with constant distance to be shifted by. -/
 structure ShiftTarget (aig : AIG α) (w : Nat) where
   vec : AIG.RefVec aig w
   distance : Nat
 
-/--
-A `RefVec` bundled with a `RefVec` as distance to be shifted by.
--/
+/-- A `RefVec` bundled with a `RefVec` as distance to be shifted by. -/
 structure ArbitraryShiftTarget (aig : AIG α) (m : Nat) where
   n : Nat
   target : AIG.RefVec aig m
   distance : AIG.RefVec aig n
 
-/--
-A `RefVec` to be extended to `newWidth`.
--/
+/-- A `RefVec` to be extended to `newWidth`. -/
 structure ExtendTarget (aig : AIG α) (newWidth : Nat) where
   w : Nat
   vec : AIG.RefVec aig w
 
-/--
-Evaluate an `AIG.Entrypoint` using some assignment for atoms.
--/
+/-- Evaluate an `AIG.Entrypoint` using some assignment for atoms. -/
 def denote (assign : α → Bool) (entry : Entrypoint α) : Bool :=
   go entry.ref.gate entry.aig.decls assign entry.ref.hgate entry.aig.hdag ^^ entry.ref.invert
 where
-  go (x : Nat) (decls : Array (Decl α)) (assign : α → Bool) (h1 : x < decls.size)
-      (h2 : IsDAG α decls) :
-      Bool :=
+  go
+      (x : Nat) (decls : Array (Decl α))
+      (assign : α → Bool) (h1 : x < decls.size) (h2 : IsDAG α decls)
+      : Bool :=
     match h3 : decls[x] with
     | .false => false
     | .atom v => assign v
@@ -576,9 +526,7 @@ where
       xor lval lhs.invert && xor rval rhs.invert
   termination_by (x, 0) -- Don't allow reduction, we have large concrete gate entries
 
-/--
-Denotation of an `AIG` at a specific `Entrypoint`.
--/
+/-- Denotation of an `AIG` at a specific `Entrypoint`. -/
 scoped syntax "⟦" term ", " term "⟧" : term
 
 /--
@@ -587,8 +535,8 @@ Denotation of an `AIG` at a specific `Entrypoint` with the `Entrypoint` being co
 scoped syntax "⟦" term ", " term ", " term "⟧" : term
 
 macro_rules
-| `(⟦$entry, $assign⟧) => `(denote $assign $entry)
-| `(⟦$aig, $ref, $assign⟧) => `(denote $assign (Entrypoint.mk $aig $ref))
+  | `(⟦$entry, $assign⟧) => `(denote $assign $entry)
+  | `(⟦$aig, $ref, $assign⟧) => `(denote $assign (Entrypoint.mk $aig $ref))
 
 @[app_unexpander AIG.denote]
 meta def unexpandDenote : Lean.PrettyPrinter.Unexpander
@@ -597,21 +545,15 @@ meta def unexpandDenote : Lean.PrettyPrinter.Unexpander
   | `($(_) $entry $assign) => `(⟦$entry, $assign⟧)
   | _ => throw ()
 
-/--
-The denotation of the sub-DAG in the `aig` at node `start` is false for all assignments.
--/
+/-- The denotation of the sub-DAG in the `aig` at node `start` is false for all assignments. -/
 def UnsatAt (aig : AIG α) (start : Nat) (invert : Bool) (h : start < aig.decls.size) : Prop :=
   ∀ assign, ⟦aig, ⟨start, invert, h⟩, assign⟧ = false
 
-/--
-The denotation of the `Entrypoint` is false for all assignments.
--/
+/-- The denotation of the `Entrypoint` is false for all assignments. -/
 def Entrypoint.Unsat (entry : Entrypoint α) : Prop :=
   entry.aig.UnsatAt entry.ref.gate entry.ref.invert entry.ref.hgate
 
-/--
-Determine whether `ref` is a `Decl.const` with value `b`.
--/
+/-- Determine whether `ref` is a `Decl.const` with value `b`. -/
 def isConstant (aig : AIG α) (ref : Ref aig) (b : Bool) : Bool :=
   let ⟨gate, invert, hgate⟩ := ref
   let decl := aig.decls[gate]'hgate
@@ -619,9 +561,7 @@ def isConstant (aig : AIG α) (ref : Ref aig) (b : Bool) : Bool :=
   | .false => invert = b
   | _ => false
 
-/--
-Get the value of `ref` if it is constant.
--/
+/-- Get the value of `ref` if it is constant. -/
 def getConstant (aig : AIG α) (ref : Ref aig) : Option Bool :=
   let ⟨gate, invert, hgate⟩ := ref
   let decl := aig.decls[gate]'hgate

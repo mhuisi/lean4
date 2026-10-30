@@ -27,10 +27,9 @@ open Lean hiding SearchPath
 namespace Lake
 
 public def compileLeanIR
-  (setupFile irFile cFile : FilePath)
-  (leanPath : SearchPath := [])
-  (leanir : FilePath := "leanir")
-: LogIO Unit := do
+    (setupFile irFile cFile : FilePath)
+    (leanPath : SearchPath := []) (leanir : FilePath := "leanir")
+    : LogIO Unit := do
   createParentDirs irFile
   createParentDirs cFile
   proc {
@@ -40,13 +39,10 @@ public def compileLeanIR
   }
 
 public def compileLeanModule
-  (leanFile relLeanFile : FilePath)
-  (setup : ModuleSetup) (setupFile : FilePath)
-  (arts : ModuleArtifacts)
-  (leanArgs : Array String := #[])
-  (leanPath : SearchPath := [])
-  (lean : FilePath := "lean")
-: LogIO Unit := do
+    (leanFile relLeanFile : FilePath) (setup : ModuleSetup) (setupFile : FilePath)
+    (arts : ModuleArtifacts)
+    (leanArgs : Array String := #[]) (leanPath : SearchPath := []) (lean : FilePath := "lean")
+    : LogIO Unit := do
   let mut args := leanArgs.push leanFile.toString
   if let some oleanFile := arts.olean? then
     createParentDirs oleanFile
@@ -68,46 +64,44 @@ public def compileLeanModule
   args := args ++ #["--setup", setupFile.toString]
   args := args.push "--json"
   withLogErrorPos do
-  let out ← rawProc {
-    args
-    cmd := lean.toString
-    env := #[
-      ("LEAN_PATH", leanPath.toString)
-    ]
-  }
-  let outLogPos ← getLogPos
-  unless out.stdout.isEmpty do
-    let txt ← out.stdout.split '\n' |>.foldM (init := "") fun (txt : String) ln => do
-      let ln := ln.copy
-      if let .ok (msg : SerialMessage) := Json.parse ln >>= fromJson? then
-        unless txt.isEmpty do
-          logInfo s!"stdout:\n{txt}"
-        let msg := {msg with fileName := mkRelPathString relLeanFile}
-        logSerialMessage msg
-        return txt
-      else if txt.isEmpty && ln.isEmpty then
-        return txt
-      else
-        return txt ++ ln ++ "\n"
-    unless txt.isEmpty do
-      logInfo s!"stdout:\n{txt}"
-  unless out.stderr.isEmpty do
-    logInfo s!"stderr:\n{out.stderr.trimAscii}"
-  -- Elide the generic "Lean exited with code 1" when Lean already
-  -- reported errors (the usual compiler-failure case). Keep it for other
-  -- nonzero codes, for code 1 without diagnostics, and for the anomalous
-  -- case where Lean logs errors but exits successfully.
-  -- See https://github.com/leanprover/lean4/issues/10825
-  let hasErrors := (← getLog).takeFrom outLogPos |>.any (·.level matches .error)
-  if out.exitCode = 1 && hasErrors then
-    failure
-  else if out.exitCode ≠ 0 || hasErrors then
-    error s!"Lean exited with code {out.exitCode}"
+    let out ← rawProc { args, cmd := lean.toString, env := #[("LEAN_PATH", leanPath.toString)] }
+    let outLogPos ← getLogPos
+    unless out.stdout.isEmpty do
+      let txt ←
+        out.stdout.split '\n'
+          |>.foldM (init := "") fun (txt : String) ln => do
+            let ln := ln.copy
+            if let .ok (msg : SerialMessage) := Json.parse ln >>= fromJson? then
+              unless txt.isEmpty do
+                logInfo s!"stdout:\
+                  \n{txt}"
+              let msg := { msg with fileName := mkRelPathString relLeanFile }
+              logSerialMessage msg
+              return txt
+            else if txt.isEmpty && ln.isEmpty then
+              return txt
+            else
+              return txt ++ ln ++ "\n"
+      unless txt.isEmpty do
+        logInfo s!"stdout:\
+          \n{txt}"
+    unless out.stderr.isEmpty do
+      logInfo s!"stderr:\
+        \n{out.stderr.trimAscii}"
+    -- Elide the generic "Lean exited with code 1" when Lean already
+    -- reported errors (the usual compiler-failure case). Keep it for other
+    -- nonzero codes, for code 1 without diagnostics, and for the anomalous
+    -- case where Lean logs errors but exits successfully.
+    -- See https://github.com/leanprover/lean4/issues/10825
+    let hasErrors := (← getLog).takeFrom outLogPos |>.any (·.level matches .error)
+    if out.exitCode = 1 && hasErrors then
+      failure
+    else if out.exitCode ≠ 0 || hasErrors then
+      error s!"Lean exited with code {out.exitCode}"
 
 public def compileO
-  (oFile srcFile : FilePath)
-  (moreArgs : Array String := #[]) (compiler : FilePath := "cc")
-: LogIO Unit := do
+    (oFile srcFile : FilePath) (moreArgs : Array String := #[]) (compiler : FilePath := "cc")
+    : LogIO Unit := do
   createParentDirs oFile
   proc {
     cmd := compiler.toString
@@ -122,30 +116,30 @@ public def mkArgs (basePath : FilePath) (args : Array String) : LogIO (Array Str
   let h ← IO.FS.Handle.mk rspFile .write
   args.forM fun arg =>
     -- Escape special characters
-    let arg := arg.foldl (init := "") fun s c =>
-      if c == '\\' || c == '"' then
-        s.push '\\' |>.push c
-      else
-        s.push c
+    let arg :=
+      arg.foldl (init := "") fun s c =>
+        if c == '\\' || c == '"' then
+          s.push '\\' |>.push c
+        else
+          s.push c
     h.putStr s!"\"{arg}\"\n"
   return #[s!"@{rspFile}"]
 
 public def compileStaticLib
-  (libFile : FilePath) (oFiles : Array FilePath)
-  (ar : FilePath := "ar") (thin := false)
-: LogIO Unit := do
+    (libFile : FilePath) (oFiles : Array FilePath) (ar : FilePath := "ar") (thin := false)
+    : LogIO Unit := do
   createParentDirs libFile
   -- `ar rcs` does not remove old files from the archive, so it must be deleted first
   removeFileIfExists libFile
   let args := #["rcs"]
   let args := if thin then args.push "--thin" else args
   let args := args.push libFile.toString ++ (← mkArgs libFile <| oFiles.map toString)
-  proc {cmd := ar.toString, args}
+  proc { cmd := ar.toString, args }
 
 public def compileSharedLib
-  (libFile : FilePath) (linkArgs : Array String)
-  (linker : FilePath := "cc") (macosxDeploymentTarget? : Option String := none)
-: LogIO Unit := do
+    (libFile : FilePath) (linkArgs : Array String)
+    (linker : FilePath := "cc") (macosxDeploymentTarget? : Option String := none)
+    : LogIO Unit := do
   createParentDirs libFile
   proc {
     cmd := linker.toString
@@ -155,28 +149,27 @@ public def compileSharedLib
   }
 
 public def compileExe
-  (binFile : FilePath) (linkArgs : Array String)
-  (linker : FilePath := "cc") (macosxDeploymentTarget? : Option String := none)
-: LogIO Unit := do
+    (binFile : FilePath) (linkArgs : Array String)
+    (linker : FilePath := "cc") (macosxDeploymentTarget? : Option String := none)
+    : LogIO Unit := do
   createParentDirs binFile
   proc {
     cmd := linker.toString
     args := #["-o", binFile.toString] ++ (← mkArgs binFile linkArgs)
     -- See `BuildConfig.macosxDeploymentTarget?` for details
-    env :=  macosxDeploymentTarget?.elim #[] fun ver => #[("MACOSX_DEPLOYMENT_TARGET", some ver)]
+    env := macosxDeploymentTarget?.elim #[] fun ver => #[("MACOSX_DEPLOYMENT_TARGET", some ver)]
   }
 
 /-- Download a file using `curl`, clobbering any existing file. -/
-public def download
-  (url : String) (file : FilePath) (headers : Array String := #[])
-: LogIO PUnit := do
+public def download (url : String) (file : FilePath) (headers : Array String := #[])
+    : LogIO PUnit := do
   if (← file.pathExists) then
     IO.FS.removeFile file
   else
     createParentDirs file
   let args := #["-s", "-S", "-f", "-o", file.toString, "-L", url]
   let args := headers.foldl (init := args) (· ++ #["-H", ·])
-  proc (quiet := true) {cmd := ← Internal.getCurl, args}
+  proc (quiet := true) { cmd := ← Internal.getCurl, args }
 
 /-- Unpack an archive `file` using `tar` into the directory `dir`. -/
 public def untar (file : FilePath) (dir : FilePath) (gzip := true) : LogIO PUnit := do
@@ -184,16 +177,12 @@ public def untar (file : FilePath) (dir : FilePath) (gzip := true) : LogIO PUnit
   let mut opts := "-xvv"
   if gzip then
     opts := opts.push 'z'
-  proc (quiet := true) {
-    cmd := "tar",
-    args := #[opts, "-f", file.toString, "-C", dir.toString]
-  }
+  proc (quiet := true) { cmd := "tar", args := #[opts, "-f", file.toString, "-C", dir.toString] }
 
 /-- Pack a directory `dir` using `tar` into the archive `file`. -/
 public def tar
-  (dir : FilePath) (file : FilePath)
-  (gzip := true) (excludePaths : Array FilePath := #[])
-: LogIO PUnit := do
+    (dir : FilePath) (file : FilePath) (gzip := true) (excludePaths : Array FilePath := #[])
+    : LogIO PUnit := do
   createParentDirs file
   let mut args := #["-cvv"]
   if gzip then

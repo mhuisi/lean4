@@ -16,22 +16,24 @@ instance : Hashable Nat where
   hash n := UInt64.ofNat n
 
 instance [Hashable α] [Hashable β] : Hashable (α × β) where
-  hash | (a, b) => mixHash (hash a) (hash b)
+  hash
+    | (a, b) => mixHash (hash a) (hash b)
 
 instance : Hashable Bool where
   hash
-    | true  => 11
+    | true => 11
     | false => 13
 
 instance : Hashable PEmpty.{u} where
   hash x := nomatch x
 
 instance : Hashable PUnit.{u} where
-  hash | .unit => 11
+  hash
+    | .unit => 11
 
 instance [Hashable α] : Hashable (Option α) where
   hash
-    | none   => 11
+    | none => 11
     | some a => mixHash (hash a) 13
 
 instance [Hashable α] : Hashable (List α) where
@@ -70,5 +72,4 @@ instance (P : Prop) : Hashable P where
   hash _ := 0
 
 /-- An opaque (low-level) hash operation used to implement hashing for pointers. -/
-@[always_inline, inline] def hash64 (u : UInt64) : UInt64 :=
-  mixHash u 11
+@[always_inline, inline] def hash64 (u : UInt64) : UInt64 := mixHash u 11

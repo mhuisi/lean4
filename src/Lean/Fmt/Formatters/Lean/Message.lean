@@ -19,5 +19,4 @@ public def fmtMessageDataInterpolation : Fmt := fun
     let mTk ← fmt mTk
     let s ← fmt s
     return Layouts.strLit mTk s
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

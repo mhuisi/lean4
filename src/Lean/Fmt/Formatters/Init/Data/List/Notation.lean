@@ -30,5 +30,4 @@ public def fmtListLitAux : Fmt := fun
     let elems := Layouts.sepFill elems
     return Layouts.subtype lbTk elems pipeTk tail rbTk <|
       .sparse «break» (stickynessKind := .coequal)
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

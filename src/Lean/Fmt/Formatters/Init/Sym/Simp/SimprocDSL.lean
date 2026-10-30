@@ -37,8 +37,7 @@ public def fmtSymSimpRewriteSet : Fmt := fun
     let lhs := Layouts.pseudoApplication #[rewriteTk, setId]
     let «with» := Layouts.keywordPrefixedTerm withTk? discharger?
     return Layouts.blocks #[lhs, «with»]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Sym.Simp.rewriteInline]
 public def fmtSymSimpRewriteInline : Fmt := fun
@@ -54,8 +53,7 @@ public def fmtSymSimpRewriteInline : Fmt := fun
     let thms := Layouts.collection lbTk thms rbTk
     let «with» := Layouts.keywordPrefixedTerm withTk? discharger?
     return Layouts.blocks #[rewriteTk, thms, «with»]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Sym.Simp.arith]
 public def fmtSymSimpArith : Fmt := fun
@@ -65,8 +63,7 @@ public def fmtSymSimpArith : Fmt := fun
     let discharger? ← fmt? discharger?
     let «with» := Layouts.keywordPrefixedTerm withTk? discharger?
     return Layouts.blocks #[arithTk, «with»]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Sym.Simp.simprocParen]
 public def fmtSymSimprocParen : Fmt := fun
@@ -75,8 +72,7 @@ public def fmtSymSimprocParen : Fmt := fun
     let simproc ← fmt simproc
     let rbTk ← fmt rbTk
     return Layouts.parens lbTk simproc rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Sym.Simp.dischParen]
 public def fmtSymDischargerParen : Fmt := fun
@@ -85,8 +81,7 @@ public def fmtSymDischargerParen : Fmt := fun
     let discharger ← fmt discharger
     let rbTk ← fmt rbTk
     return Layouts.parens lbTk discharger rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.symSimpFieldPre]
 public def fmtSymSimpFieldPre : Fmt := fun
@@ -95,8 +90,7 @@ public def fmtSymSimpFieldPre : Fmt := fun
     let colonEqTk ← fmt colonEqTk
     let simproc ← fmt simproc
     return Layouts.assignmentDeclaration preTk colonEqTk simproc
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.symSimpFieldPost]
 public def fmtSymSimpFieldPost : Fmt := fun
@@ -105,8 +99,7 @@ public def fmtSymSimpFieldPost : Fmt := fun
     let colonEqTk ← fmt colonEqTk
     let simproc ← fmt simproc
     return Layouts.assignmentDeclaration postTk colonEqTk simproc
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.symSimpFieldDischarger]
 public def fmtSymSimpFieldDischarger : Fmt := fun
@@ -116,8 +109,7 @@ public def fmtSymSimpFieldDischarger : Fmt := fun
     let colonEqTk ← fmt colonEqTk
     let discharger ← fmt discharger
     return Layouts.assignmentDeclaration dischargerTk colonEqTk discharger
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.symSimpFieldMaxSteps]
 public def fmtSymSimpFieldMaxSteps : Fmt := fun
@@ -126,8 +118,7 @@ public def fmtSymSimpFieldMaxSteps : Fmt := fun
     let colonEqTk ← fmt colonEqTk
     let maxSteps ← fmt maxSteps
     return Layouts.assignmentDeclaration maxStepsTk colonEqTk maxSteps
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.symSimpFieldMaxDischargeDepth]
 public def fmtSymSimpFieldMaxDischargeDepth : Fmt := fun
@@ -137,8 +128,7 @@ public def fmtSymSimpFieldMaxDischargeDepth : Fmt := fun
     let colonEqTk ← fmt colonEqTk
     let maxDischargeDepth ← fmt maxDischargeDepth
     return Layouts.assignmentDeclaration maxDischargeDepthTk colonEqTk maxDischargeDepth
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.registerSymSimp]
 public def fmtRegisterSymSimp : Fmt := fun
@@ -152,5 +142,4 @@ public def fmtRegisterSymSimp : Fmt := fun
     let signature := Layouts.pseudoApplication #[registerSymSimpTk, declId]
     let fields := Layouts.lines fields
     return Layouts.keywordSeparated signature whereTk fields { allowFlattening := false }
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

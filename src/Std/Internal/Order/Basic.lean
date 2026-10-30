@@ -57,16 +57,17 @@ scoped infixl:65 " ⊔ " => join
 noncomputable def iInf {ι : Sort v} (f : ι → α) : α := inf (fun x => ∃ i, f i = x)
 
 open Lean in
-@[inherit_doc iInf] scoped macro "⨅ " bs:Lean.explicitBinders ", " b:term : term => do
-  return ⟨← Lean.expandExplicitBinders ``iInf bs b⟩
+@[inherit_doc iInf]
+scoped macro "⨅ " bs:Lean.explicitBinders ", " b:term : term =>
+  do return ⟨← Lean.expandExplicitBinders ``iInf bs b⟩
 
 /-- Indexed supremum -/
-noncomputable def iSup {ι : Sort v} (f : ι → α) : α :=
-  CompleteLattice.sup (fun x => ∃ i, f i = x)
+noncomputable def iSup {ι : Sort v} (f : ι → α) : α := CompleteLattice.sup (fun x => ∃ i, f i = x)
 
 open Lean in
-@[inherit_doc iSup] scoped macro "⨆ " bs:Lean.explicitBinders ", " b:term : term => do
-  return ⟨← Lean.expandExplicitBinders ``iSup bs b⟩
+@[inherit_doc iSup]
+scoped macro "⨆ " bs:Lean.explicitBinders ", " b:term : term =>
+  do return ⟨← Lean.expandExplicitBinders ``iSup bs b⟩
 
 end Lean.Order
 
@@ -117,10 +118,11 @@ end Std.Internal.Order
 namespace Lean.Order
 
 open _root_.Classical in
-/-- Embedding of propositions into an CompleteLattice type. `⌜p⌝` embeds `p : Prop` as `⊤` if `p` holds
-and `⊥` otherwise. -/
-noncomputable def CompleteLattice.ofProp [CompleteLattice l] (p : Prop) : l :=
-  if p then ⊤ else ⊥
+/--
+Embedding of propositions into an CompleteLattice type. `⌜p⌝` embeds `p : Prop` as `⊤` if `p` holds
+and `⊥` otherwise.
+-/
+noncomputable def CompleteLattice.ofProp [CompleteLattice l] (p : Prop) : l := if p then ⊤ else ⊥
 
 @[inherit_doc CompleteLattice.ofProp]
 scoped notation "⌜" p "⌝" => CompleteLattice.ofProp p
@@ -149,32 +151,39 @@ implication: Heyting `⇨` for the meet, a magic wand for separating conjunction
 -/
 class PreservesSup {α : Type u} [CompleteLattice α] (f : α → α) : Prop where
   /-- `f` preserves joins. -/
-  map_sup (s : α → Prop) :
-    f (CompleteLattice.sup s) = CompleteLattice.sup (fun y => ∃ x, s x ∧ y = f x)
+  map_sup (s : α → Prop)
+    : f (CompleteLattice.sup s) = CompleteLattice.sup (fun y => ∃ x, s x ∧ y = f x)
 
 namespace PreservesSup
 
-/-- The upper adjoint of `f`: the join of all `x` with `f x ⊑ b`. For `f = (a ⊓ ·)` this is Heyting
-implication `a ⇨ ·`. -/
+/--
+The upper adjoint of `f`: the join of all `x` with `f x ⊑ b`. For `f = (a ⊓ ·)` this is Heyting
+implication `a ⇨ ·`.
+-/
 noncomputable def upperAdjoint (f : α → α) (b : α) : α := CompleteLattice.sup (fun x => f x ⊑ b)
 
-/-- Unit, free from the definition of `upperAdjoint`: `f x ⊑ b → x ⊑ upperAdjoint f b`. Needs only
-`CompleteLattice`. -/
+/--
+Unit, free from the definition of `upperAdjoint`: `f x ⊑ b → x ⊑ upperAdjoint f b`. Needs only
+`CompleteLattice`.
+-/
 theorem le_upperAdjoint (f : α → α) {b x : α} (h : f x ⊑ b) : x ⊑ upperAdjoint f b :=
   le_sup (c := fun x : α => f x ⊑ b) h
 
 end PreservesSup
 
-/-- A complete lattice whose meets preserve suprema. The Heyting implication `⇨` is then a right
+/--
+A complete lattice whose meets preserve suprema. The Heyting implication `⇨` is then a right
 adjoint, and `⊓` distributes over suprema of arbitrary families. The literature also calls such a
-lattice a frame. -/
+lattice a frame.
+-/
 abbrev Heyting (α : Type u) [CompleteLattice α] : Prop := ∀ a : α, PreservesSup (meet a)
 
 /-- Heyting implication: the upper adjoint of the lattice meet. For `Prop` it is `→`. -/
 noncomputable def himp {α : Type u} [CompleteLattice α] (a b : α) : α :=
   PreservesSup.upperAdjoint (meet a) b
 
-@[inherit_doc himp] scoped infixr:60 " ⇨ " => himp
+@[inherit_doc himp]
+scoped infixr:60 " ⇨ " => himp
 
 end
 

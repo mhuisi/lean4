@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.SynthInstance
 public import Lean.Meta.Tactic.Grind.Arith.CommRing.Types
@@ -14,20 +15,19 @@ public section
 namespace Lean.Meta.Grind.Arith.CommRing
 open Sym.Arith
 
-def checkMaxSteps : GoalM Bool := do
-  return (← get').steps >= (← getConfig).ringSteps
+def checkMaxSteps : GoalM Bool := do return (← get').steps >= (← getConfig).ringSteps
 
 def checkMaxDegree (p : Poly) : GoalM Bool := do
   if p.degree >= (← getConfig).ringMaxDegree then
     unless (← get').reportedMaxDegreeIssue do
       modify' fun s => { s with reportedMaxDegreeIssue := true }
-      reportIssue! "ring polynomial degree {p.degree} exceeds threshold `(ringMaxDegree := {p.degree})`"
+      reportIssue!
+        "ring polynomial degree {p.degree} exceeds threshold `(ringMaxDegree := {p.degree})`"
     return true
   else
     return false
 
-def incSteps (n : Nat := 1) : GoalM Unit := do
-  modify' fun s => { s with steps := s.steps + n }
+def incSteps (n : Nat := 1) : GoalM Unit := do modify' fun s => { s with steps := s.steps + n }
 
 structure RingM.Context where
   ringId : Nat
@@ -52,11 +52,9 @@ structure RingM.Context where
 /-- We don't want to keep carrying the `RingId` around. -/
 abbrev RingM := ReaderT RingM.Context GoalM
 
-abbrev RingM.run (ringId : Nat) (x : RingM α) : GoalM α :=
-  x { ringId }
+abbrev RingM.run (ringId : Nat) (x : RingM α) : GoalM α := x { ringId }
 
-abbrev getRingId : RingM Nat :=
-  return (← read).ringId
+abbrev getRingId : RingM Nat := return (← read).ringId
 
 instance : MonadCanon RingM where
   canonExpr e := do shareCommon (← canon e)
@@ -97,8 +95,7 @@ instance : MonadGetVar RingM where
 abbrev withCheckCoeffDvd (x : RingM α) : RingM α :=
   withReader (fun ctx => { ctx with checkCoeffDvd := true }) x
 
-def checkCoeffDvd : RingM Bool :=
-  return (← read).checkCoeffDvd
+def checkCoeffDvd : RingM Bool := return (← read).checkCoeffDvd
 
 def getTermRingId? (e : Expr) : GoalM (Option Nat) := do
   return (← get').exprToRingId.find? { expr := e }
@@ -127,8 +124,7 @@ def charOneInst? [Monad m] [MonadRing m] : m (Option Expr) := do
     return some inst
   return none
 
-def noZeroDivisorsInst? : RingM (Option Expr) := do
-  return (← getCommRing).noZeroDivInst?
+def noZeroDivisorsInst? : RingM (Option Expr) := do return (← getCommRing).noZeroDivInst?
 
 /--
 Returns `true` if the current ring satisfies the property
@@ -136,12 +132,10 @@ Returns `true` if the current ring satisfies the property
 ∀ (k : Nat) (a : α), k ≠ 0 → OfNat.ofNat (α := α) k * a = 0 → a = 0
 ```
 -/
-def noZeroDivisors : RingM Bool := do
-  return (← getCommRing).noZeroDivInst?.isSome
+def noZeroDivisors : RingM Bool := do return (← getCommRing).noZeroDivInst?.isSome
 
 /-- Returns `true` if the current ring has a `IsCharP` instance. -/
-def hasChar  : RingM Bool := do
-  return (← getRing).charInst?.isSome
+def hasChar : RingM Bool := do return (← getRing).charInst?.isSome
 
 /--
 Returns the pair `(charInst, c)`. If the ring does not have a `IsCharP` instance, then throws internal error.
@@ -151,14 +145,13 @@ def getCharInst : RingM (Expr × Nat) := do
     | throwError "`grind` internal error, ring does not have a characteristic"
   return c
 
-def isField : RingM Bool :=
-  return (← getCommRing).fieldInst?.isSome
+def isField : RingM Bool := return (← getCommRing).fieldInst?.isSome
 
-def isQueueEmpty : RingM Bool :=
-  return (← getCommRingState).queue.isEmpty
+def isQueueEmpty : RingM Bool := return (← getCommRingState).queue.isEmpty
 
 def getNext? : RingM (Option EqCnstr) := do
-  let some c := (← getCommRingState).queue.min? | return none
+  let some c := (← getCommRingState).queue.min?
+    | return none
   modifyCommRingState fun s => { s with queue := s.queue.erase c }
   incSteps
   return some c
@@ -174,14 +167,16 @@ def setTermRingId (e : Expr) : RingM Unit := do
     return ()
   modify' fun s => { s with exprToRingId := s.exprToRingId.insert { expr := e } ringId }
 
-def mkVarCore [MonadLiftT GoalM m] [Monad m] [MonadRingState m] [MonadSetTermId m] (e : Expr) : m Var := do
+def mkVarCore [MonadLiftT GoalM m] [Monad m] [MonadRingState m] [MonadSetTermId m] (e : Expr)
+    : m Var := do
   let s ← getRingState
   if let some var := s.varMap.find? { expr := e } then
     return var
   let var : Var := s.vars.size
-  modifyRingState fun s => { s with
-    vars       := s.vars.push e
-    varMap     := s.varMap.insert { expr := e } var
+  modifyRingState fun s => {
+    s with
+    vars := s.vars.push e
+    varMap := s.varMap.insert { expr := e } var
   }
   MonadSetTermId.setTermId e
   ringExt.markTerm e
@@ -214,12 +209,13 @@ having been registered by the ring solver, so the check is against the ring's ow
 -/
 def getOne : RingM Expr := do
   let ring ← getRing
-  let one ← if let some one := ring.one? then
-    pure one
-  else
-    let one ← mkOne ring.u ring.type ring.semiringInst
-    modifyRing fun s => { s with one? := some one }
-    pure one
+  let one ←
+    if let some one := ring.one? then
+      pure one
+    else
+      let one ← mkOne ring.u ring.type ring.semiringInst
+      modifyRing fun s => { s with one? := some one }
+      pure one
   unless (← getCommRingState).denote.contains { expr := one } do
     internalize one 0
   return one

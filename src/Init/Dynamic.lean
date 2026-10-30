@@ -16,8 +16,7 @@ open Lean
 
 -- Implementation detail of TypeName, since classes cannot be opaque
 -- TODO: should be private; #10098
-opaque TypeNameData (α : Type u) : NonemptyType.{0} :=
-  ⟨Name, inferInstance⟩
+opaque TypeNameData (α : Type u) : NonemptyType.{0} := ⟨Name, inferInstance⟩
 
 /--
 Dynamic type name information.
@@ -36,7 +35,8 @@ class TypeName (α : Type) where unsafe mk ::
 ```
 -/
 @[nospecialize]
-class TypeName (α : Type u) where private mk' ::
+class TypeName (α : Type u) where
+  private mk' ::
   private data : (TypeNameData α).type
 
 instance : Nonempty (TypeName α) := by exact (TypeNameData α).property.elim (⟨⟨·⟩⟩)
@@ -48,20 +48,15 @@ For safety, it is required that the constant `typeName` is definitionally equal
 to `α`.
 -/
 @[instance_reducible]
-unsafe def TypeName.mk (α : Type u) (typeName : Name) : TypeName α :=
-  ⟨unsafeCast typeName⟩
+unsafe def TypeName.mk (α : Type u) (typeName : Name) : TypeName α := ⟨unsafeCast typeName⟩
 
-private unsafe def TypeName.typeNameImpl (α) [TypeName α] : Name :=
-  unsafeCast (@TypeName.data α _)
+private unsafe def TypeName.typeNameImpl (α) [TypeName α] : Name := unsafeCast (@TypeName.data α _)
 
-/--
-Returns a declaration name of the type.
--/
+/-- Returns a declaration name of the type. -/
 @[implemented_by TypeName.typeNameImpl]
 opaque TypeName.typeName (α) [TypeName α] : Name
 
-private opaque DynamicPointed : NonemptyType.{0} :=
-  ⟨Name × NonScalar, inferInstance⟩
+private opaque DynamicPointed : NonemptyType.{0} := ⟨Name × NonScalar, inferInstance⟩
 
 /--
 A type-tagged union that can store any type with a `TypeName` instance.
@@ -77,9 +72,7 @@ instance : Nonempty Dynamic := by exact DynamicPointed.property
 private unsafe def Dynamic.typeNameImpl (any : Dynamic) : Name :=
   (unsafeCast any : Name × NonScalar).1
 
-/--
-The name of the type of the value stored in the `Dynamic`.
--/
+/-- The name of the type of the value stored in the `Dynamic`. -/
 @[implemented_by Dynamic.typeNameImpl]
 opaque Dynamic.typeName (any : Dynamic) : Name
 

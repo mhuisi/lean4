@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 public import Lean.Meta.Sym.Simp.SimpM
@@ -41,25 +42,33 @@ They will be deleted once `grind` runs on `Sym.simp`.
 -/
 
 /-- The `grind` normalization theorems as `Sym.simp` theorem sets (`normSymExt`). -/
-def getNormSymTheorems : CoreM NormSymTheorems :=
-  return normSymExt.getState (← getEnv)
+def getNormSymTheorems : CoreM NormSymTheorems := return normSymExt.getState (← getEnv)
 
 /-- `Sym.simp` methods approximating the legacy `grind` normalizer. -/
-def mkNormSymMethods (config : Grind.Config) (thms : NormSymTheorems) : Sym.Simp.Methods := Id.run do
+def mkNormSymMethods (config : Grind.Config) (thms : NormSymTheorems)
+    : Sym.Simp.Methods := Id.run do
   let d : Discharger := Sym.Simp.dischargeSimpSelf
-  let mut pre : Simproc := NormSym.eraseMData >> NormSym.preMatchCond >> NormSym.simpMatchDiscrsOnly
-    >> Sym.Simp.beta >> NormSym.etaReduce >> Sym.Simp.reduceProj >> Sym.Simp.reduceControl >> Sym.Simp.simpExistsPropDomain
+  let mut pre : Simproc :=
+    NormSym.eraseMData >> NormSym.preMatchCond >> NormSym.simpMatchDiscrsOnly >> Sym.Simp.beta
+      >> NormSym.etaReduce >> Sym.Simp.reduceProj >> Sym.Simp.reduceControl
+      >> Sym.Simp.simpExistsPropDomain
   if config.zeta then pre := pre >> Sym.Simp.zeta
   if config.zetaDelta then pre := pre >> Sym.Simp.zetaDeltaAll
-  pre := pre >> NormSym.pushNot >> Sym.Simp.simpArith d (lhsOnly := true) (distrib := config.distrib) (maxChar? := some config.maxChar) >> thms.pre.rewrite d
+  pre :=
+    pre >> NormSym.pushNot
+      >> Sym.Simp.simpArith d (lhsOnly := true) (distrib := config.distrib)
+        (maxChar? := some config.maxChar)
+      >> thms.pre.rewrite d
   -- `grind` keeps bit-vector literals in `OfNat.ofNat` form.
-  let post : Simproc := thms.post.rewrite d >> Sym.Simp.evalGround { bitVecOfNat := false } >> Sym.Simp.simpNatRel
-    >> Sym.Simp.simpNatSub (distrib := config.distrib) >> NormSym.simpEq >> NormSym.simpOr
-    >> NormSym.simpDIte >> NormSym.reduceCtorEq >> NormSym.simpForall >> NormSym.simpExists
+  let post : Simproc :=
+    thms.post.rewrite d >> Sym.Simp.evalGround { bitVecOfNat := false } >> Sym.Simp.simpNatRel
+      >> Sym.Simp.simpNatSub (distrib := config.distrib) >> NormSym.simpEq >> NormSym.simpOr
+      >> NormSym.simpDIte >> NormSym.reduceCtorEq >> NormSym.simpForall >> NormSym.simpExists
   return { pre, post }
 
 /-- `Sym.dsimp` methods approximating the legacy `grind` `dsimp` step (`dsimpCore`). -/
-def mkNormSymDSimpMethods (config : Grind.Config) (thms : NormSymTheorems) : Sym.DSimp.Methods := Id.run do
+def mkNormSymDSimpMethods (config : Grind.Config) (thms : NormSymTheorems)
+    : Sym.DSimp.Methods := Id.run do
   let mut pre : Sym.DSimp.DSimproc := Sym.DSimp.beta >> Sym.DSimp.dsimpProj >> Sym.DSimp.dsimpMatch
   if config.zeta then pre := pre >> Sym.DSimp.zeta
   if config.zetaDelta then pre := pre >> Sym.DSimp.zetaDeltaAll

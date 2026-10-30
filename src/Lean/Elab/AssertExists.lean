@@ -23,17 +23,19 @@ public section
 
 namespace Lean
 
-/-- Find the dependency chain, starting at a module that imports `imported`, and ends with the
+/--
+Find the dependency chain, starting at a module that imports `imported`, and ends with the
 current module.
 
-The path only contains the intermediate steps: it excludes `imported` and the current module. -/
+The path only contains the intermediate steps: it excludes `imported` and the current module.
+-/
 def Environment.importPath (env : Environment) (imported : Name) : Array Name := Id.run do
   let mut result := #[]
   let modData := env.header.moduleData
   let modNames := env.header.moduleNames
   if let some idx := env.getModuleIdx? imported then
     let mut target := imported
-    for i in [idx.toNat + 1 : modData.size] do
+    for i in [idx.toNat + 1:modData.size] do
       if modData[i]!.imports.any (·.module == target) then
         target := modNames[i]!
         result := result.push modNames[i]!
@@ -41,8 +43,10 @@ def Environment.importPath (env : Environment) (imported : Name) : Array Name :=
 
 namespace Elab.Command
 
-/-- `AssertExists` is the structure that carries the data to check whether a declaration or an
-import is meant to exist somewhere in a library. -/
+/--
+`AssertExists` is the structure that carries the data to check whether a declaration or an
+import is meant to exist somewhere in a library.
+-/
 structure AssertExists where
   /-- The type of the assertion: `true` means declaration, `false` means import. -/
   isDecl : Bool
@@ -50,11 +54,14 @@ structure AssertExists where
   givenName : Name
   /-- The name of the module where the assertion was made. -/
   modName : Name
-  deriving BEq, Hashable
+deriving BEq, Hashable
 
-/-- Defines the `assertExistsExt` extension for adding a `HashSet` of `AssertExists` entries
-to the environment. -/
-builtin_initialize assertExistsExt : SimplePersistentEnvExtension AssertExists (Std.HashSet AssertExists) ←
+/--
+Defines the `assertExistsExt` extension for adding a `HashSet` of `AssertExists` entries
+to the environment.
+-/
+builtin_initialize assertExistsExt
+    : SimplePersistentEnvExtension AssertExists (Std.HashSet AssertExists) ←
   registerSimplePersistentEnvExtension {
     addImportedFn := fun as => as.foldl Std.HashSet.insertMany {}
     addEntryFn := .insert
@@ -69,13 +76,18 @@ existing/being imported at some point, but should eventually exist/be imported.
 def addAssertExistsEntry (isDecl : Bool) (declName mod : Name) : CommandElabM Unit :=
   modifyEnv (assertExistsExt.addEntry · { isDecl := isDecl, givenName := declName, modName := mod })
 
-/-- `getSortedAssertExists env` returns the array of `AssertExists`, placing first all declarations,
-in alphabetical order, and then all modules, also in alphabetical order. -/
+/--
+`getSortedAssertExists env` returns the array of `AssertExists`, placing first all declarations,
+in alphabetical order, and then all modules, also in alphabetical order.
+-/
 def getSortedAssertExists (env : Environment) : Array AssertExists :=
-  assertExistsExt.getState env |>.toArray.qsort fun d e => (e.isDecl < d.isDecl) ||
-    (e.isDecl == d.isDecl && (d.givenName.toString < e.givenName.toString))
+  assertExistsExt.getState env
+    |>.toArray.qsort fun d e =>
+      (e.isDecl < d.isDecl)
+        || (e.isDecl == d.isDecl && (d.givenName.toString < e.givenName.toString))
 
-/-- `importPathMessage env idx` produces a message laying out an import chain from `idx` to the
+/--
+`importPathMessage env idx` produces a message laying out an import chain from `idx` to the
 current module. The output is of the form
 ```
 Lean.Init,
@@ -83,11 +95,13 @@ Lean.Init,
   which is imported by Lean.Elab.AssertExists,
   which is imported by this file.
 ```
-if `env` is an `Environment` and `idx` is the module index of `Lean.Init`. -/
+if `env` is an `Environment` and `idx` is the module index of `Lean.Init`.
+-/
 def importPathMessage (env : Environment) (idx : ModuleIdx) : MessageData :=
   let modNames := env.header.moduleNames
-  let msg := (env.importPath modNames[idx]!).foldl (init := m!"{modNames[idx]!},")
-    (· ++ m!"\n  which is imported by {·},")
+  let msg :=
+    (env.importPath modNames[idx]!).foldl (init := m!"{modNames[idx]!},")
+      (· ++ m!"\n  which is imported by {·},")
   msg ++ m!"\n  which is imported by this file."
 
 /--
@@ -102,7 +116,8 @@ def elabImportPath : CommandElab := fun stx => do
   let n := stx[1]
   let env ← getEnv
   let decl ←
-    try liftCoreM <| realizeGlobalConstNoOverloadWithInfo n
+    try
+      liftCoreM <| realizeGlobalConstNoOverloadWithInfo n
     catch _ =>
       logInfoAt n m!"Declaration '{n.getId}' is not in scope."
       return
@@ -110,7 +125,8 @@ def elabImportPath : CommandElab := fun stx => do
   let msg ← (do
     let mut some idx := env.getModuleIdxFor? decl
       | pure m!"Declaration {c} is defined in this file."
-    pure m!"Declaration {c} is imported via\n{importPathMessage env idx}")
+    pure m!"Declaration {c} is imported via\
+      \n{importPathMessage env idx}")
   logInfoAt n msg
 
 /--
@@ -134,7 +150,8 @@ def elabAssertNotExists : CommandElab := fun stx => do
   let env ← getEnv
   for n in stx[1].getArgs do
     let decl ←
-      try liftCoreM <| realizeGlobalConstNoOverloadWithInfo n
+      try
+        liftCoreM <| realizeGlobalConstNoOverloadWithInfo n
       catch _ =>
         addAssertExistsEntry true n.getId (← getMainModule)
         continue
@@ -144,12 +161,15 @@ def elabAssertNotExists : CommandElab := fun stx => do
         | pure m!"Declaration {c} is defined in this file."
       pure m!"Declaration {c} is not allowed to be imported by this file.\n\
         It is defined in {importPathMessage env idx}")
-    logErrorAt n m!"{msg}\n\n\
-      These invariants are maintained by `assert_not_exists` statements, \
-      and exist in order to ensure that \"complicated\" parts of the library \
-      are not accidentally introduced as dependencies of \"simple\" parts of the library."
+    logErrorAt n
+      m!"{msg}\
+        \n\n\
+        These invariants are maintained by `assert_not_exists` statements, \
+        and exist in order to ensure that \"complicated\" parts of the library \
+        are not accidentally introduced as dependencies of \"simple\" parts of the library."
 
-/-- `assert_not_imported m₁ m₂ ... mₙ` checks that each one of the modules `m₁ m₂ ... mₙ` is not
+/--
+`assert_not_imported m₁ m₂ ... mₙ` checks that each one of the modules `m₁ m₂ ... mₙ` is not
 among the transitive imports of the current file.
 
 The command does not currently check whether the modules `m₁ m₂ ... mₙ` actually exist.
@@ -160,11 +180,13 @@ def elabAssertNotImported : CommandElab := fun stx => do
   for id in stx[1].getArgs do
     if let some idx := env.getModuleIdx? id.getId then
       logWarningAt id
-        m!"the module '{id}' is (transitively) imported via\n{importPathMessage env idx}"
+        m!"the module '{id}' is (transitively) imported via\
+          \n{importPathMessage env idx}"
     else
       addAssertExistsEntry false id.getId (← getMainModule)
 
-/-- `#check_assertions` retrieves all declarations and all imports that were declared
+/--
+`#check_assertions` retrieves all declarations and all imports that were declared
 not to exist so far (including in transitively imported files) and reports their current
 status:
 * ✓ means the declaration or import exists,
@@ -184,26 +206,29 @@ def elabCheckAssertions : CommandElab := fun stx => do
   let tk := stx[1]
   let env ← getEnv
   let entries := getSortedAssertExists env
-  if entries.isEmpty && tk.isNone then logInfo "No assertions made." else
-  let allMods := env.allImportedModuleNames
-  let mut msgs : Array MessageData := #[m!""]
-  let mut outcome := m!""
-  let mut allExist? := true
-  for d in entries do
-    let type := if d.isDecl then "declaration" else "module"
-    let cond := if d.isDecl then env.contains d.givenName else allMods.contains d.givenName
-    outcome := if cond then m!"{checkEmoji}" else m!"{crossEmoji}"
-    allExist? := allExist? && cond
-    if tk.isNone || !cond then
-      msgs := msgs.push m!"{outcome} '{d.givenName}' ({type}) asserted in '{d.modName}'."
-  msgs := msgs.push m!"---"
-    |>.push m!"{checkEmoji} means the declaration or import exists."
-    |>.push m!"{crossEmoji} means the declaration or import does not exist."
-  let msg := MessageData.joinSep msgs.toList "\n"
-  if allExist? && tk.isNone then
-    logInfo msg
-  if !allExist? then
-    logWarning msg
+  if entries.isEmpty && tk.isNone then
+    logInfo "No assertions made."
+  else
+    let allMods := env.allImportedModuleNames
+    let mut msgs : Array MessageData := #[m!""]
+    let mut outcome := m!""
+    let mut allExist? := true
+    for d in entries do
+      let type := if d.isDecl then "declaration" else "module"
+      let cond := if d.isDecl then env.contains d.givenName else allMods.contains d.givenName
+      outcome := if cond then m!"{checkEmoji}" else m!"{crossEmoji}"
+      allExist? := allExist? && cond
+      if tk.isNone || !cond then
+        msgs := msgs.push m!"{outcome} '{d.givenName}' ({type}) asserted in '{d.modName}'."
+    msgs :=
+      msgs.push m!"---"
+        |>.push m!"{checkEmoji} means the declaration or import exists."
+        |>.push m!"{crossEmoji} means the declaration or import does not exist."
+    let msg := MessageData.joinSep msgs.toList "\n"
+    if allExist? && tk.isNone then
+      logInfo msg
+    if !allExist? then
+      logWarning msg
 
 end Lean.Elab.Command
 

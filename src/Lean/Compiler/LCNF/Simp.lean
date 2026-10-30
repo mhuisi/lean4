@@ -25,15 +25,20 @@ namespace Lean.Compiler.LCNF
 open Simp
 
 def Decl.simp? (decl : Decl .pure) : SimpM (Option (Decl .pure)) := do
-  let .code code := decl.value | return none
+  let .code code := decl.value
+    | return none
   updateFunDeclInfo code
-  traceM `Compiler.simp.inline.info do return m!"{decl.name}:{Format.nest 2 (← (← get).funDeclInfoMap.format)}"
+  traceM `Compiler.simp.inline.info do
+    return m!"{decl.name}:{Format.nest 2 (← (← get).funDeclInfoMap.format)}"
   traceM `Compiler.simp.step do ppDecl decl
   let code ← simp code
   let s ← get
   let code ← code.applyRenaming s.binderRenaming
-  traceM `Compiler.simp.step.new do return m!"{decl.name} :=\n{← ppCode code}"
-  trace[Compiler.simp.stat] "{decl.name}, size: {code.size}, # visited: {s.visited}, # inline: {s.inline}, # inline local: {s.inlineLocal}"
+  traceM `Compiler.simp.step.new do
+    return m!"{decl.name} :=\
+      \n{← ppCode code}"
+  trace[Compiler.simp.stat] "{decl.name}, size: {code.size}, # visited: {s.visited}, # inline: \
+    {s.inline}, # inline local: {s.inlineLocal}"
   if let some code ← simpJpCases? code then
     let decl := { decl with value := .code code }
     decl.reduceJpArity

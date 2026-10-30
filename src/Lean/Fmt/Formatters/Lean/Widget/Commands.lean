@@ -30,15 +30,13 @@ public def fmtWidgetInstanceSpec
 public def fmtWidgetCmd : Fmt := fun
   | `(Lean.Widget.widgetCmd| #widget%$widgetTk $mod:ident $[with%$withTk? $props?:term]?) => do
     fmtWidgetInstanceSpec (← fmt widgetTk) mod withTk? props?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Widget.addWidgetSpec]
 public def fmtAddWidgetSpec : Fmt := fun
   | `(Lean.Widget.addWidgetSpec| $attrKind:attrKind $mod:ident $[with%$withTk? $props?:term]?) => do
     fmtWidgetInstanceSpec (← fmt attrKind) mod withTk? props?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Widget.eraseWidgetSpec]
 public def fmtEraseWidgetSpec : Fmt := fun
@@ -46,8 +44,7 @@ public def fmtEraseWidgetSpec : Fmt := fun
     let minusTk ← fmt minusTk
     let mod ← fmt mod
     return Layouts.prefixOperator minusTk mod .withoutSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Widget.showWidgetSpec]
 public def fmtShowWidgetSpec : Fmt := fun
@@ -65,5 +62,4 @@ public def fmtShowPanelWidgetsCmd : Fmt := fun
     let rbTk ← fmt rbTk
     let specs := Layouts.collection lbTk specs rbTk
     return Layouts.pseudoApplication #[showTk, specs]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

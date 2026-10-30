@@ -51,14 +51,10 @@ def Doc.appendMergingTexts (maxTextLength : Nat) (d1 d2 : Doc τ) : Doc τ :=
   let merge? (s1 s2 : String) : Option (Doc τ) :=
     if s1.chars.length + s2.chars.length ≤ maxTextLength then some (.text (s1 ++ s2)) else none
   match d1, d2 with
-  | .text s1, .text s2 =>
-    merge? s1 s2 |>.getD (.append d1 d2)
-  | .append d (.text s1), .text s2 =>
-    merge? s1 s2 |>.map (.append d) |>.getD (.append d1 d2)
-  | .text s1, .append (.text s2) d =>
-    merge? s1 s2 |>.map (.append · d) |>.getD (.append d1 d2)
-  | _, _ =>
-    .append d1 d2
+  | .text s1, .text s2 => merge? s1 s2 |>.getD (.append d1 d2)
+  | .append d (.text s1), .text s2 => merge? s1 s2 |>.map (.append d) |>.getD (.append d1 d2)
+  | .text s1, .append (.text s2) d => merge? s1 s2 |>.map (.append · d) |>.getD (.append d1 d2)
+  | _, _ => .append d1 d2
 
 /--
 Erases all `flattened` and `unflattenable` nodes from a document by flattening all newlines within
@@ -531,8 +527,7 @@ where
   -- the text rather than earlier.
   push (acc : List (Measure τ)) (m : Measure τ) : List (Measure τ) :=
     match acc with
-    | [] =>
-      [m]
+    | [] => [m]
     | top :: rest =>
       if top.dominates m then
         acc
@@ -541,10 +536,8 @@ where
       else
         m :: acc
   go : List (Measure τ) → List (Measure τ) → List (Measure τ) → List (Measure τ)
-    | [], ms, acc =>
-      ms.foldl push acc
-    | ms, [], acc =>
-      ms.foldl push acc
+    | [], ms, acc => ms.foldl push acc
+    | ms, [], acc => ms.foldl push acc
     | m1 :: ms1', m2 :: ms2', acc =>
       if m1.lastLineLength >= m2.lastLineLength then
         go ms1' (m2 :: ms2') (push acc m1)
@@ -565,10 +558,8 @@ merge step at no extra cost.
 -/
 partial def MeasureSet.Set.combineAndPrune (ts fs : List (Measure τ)) : List (Measure τ) :=
   match ts, fs with
-  | [], _ =>
-    fs
-  | _, [] =>
-    ts
+  | [], _ => fs
+  | _, [] => ts
   | t :: ts', f :: fs' =>
     if t.dominates f then
       if t.lastLineLength = f.lastLineLength then
@@ -634,18 +625,12 @@ guaranteed that both tainted measures will always fail at the same time
 -/
 def MeasureSet.merge (ms1 ms2 : MeasureSet τ) (prunable : Bool) : MeasureSet τ :=
   match ms1, ms2 with
-  | _, .set [] =>
-    ms1
-  | .set [], _ =>
-    ms2
-  | .tainted tm1, .tainted tm2 =>
-    .tainted (tm1.merge tm2 prunable)
-  | _, .tainted _ =>
-    ms1
-  | .tainted _, _ =>
-    ms2
-  | .set ms1, .set ms2 =>
-    .set (ms1.merge ms2)
+  | _, .set [] => ms1
+  | .set [], _ => ms2
+  | .tainted tm1, .tainted tm2 => .tainted (tm1.merge tm2 prunable)
+  | _, .tainted _ => ms1
+  | .tainted _, _ => ms2
+  | .set ms1, .set ms2 => .set (ms1.merge ms2)
 
 /--
 Adjusts all non-cumulative indentations in a set of measures according to
@@ -840,8 +825,7 @@ tainted measures.
 partial def MeasureSet.resolveCore
     : Resolver σ τ := fun d columnPos indentation nonCumulativeIndentation fullness => do
   match d with
-  | .failure =>
-    return .set []
+  | .failure => return .set []
   | .newline .. =>
     let lineIndentation := indentation + nonCumulativeIndentation
     return .set [{
@@ -979,10 +963,8 @@ where
           MeasureSet.resolve d2 m1.lastLineLength indentation2 nonCumulativeIndentation2 fullness2
         let m1Result : MeasureSet τ :=
           match set2 with
-          | .tainted tm2 =>
-            .tainted (.appendTainted m1 tm2 d.maxNewlineCount?)
-          | .set [] =>
-            .set []
+          | .tainted tm2 => .tainted (.appendTainted m1 tm2 d.maxNewlineCount?)
+          | .set [] => .set []
           | .set ms2 =>
             .set <|
               -- `ms2` fulfills the measure set invariants. Since `Measure.append` shifts costs
@@ -1109,8 +1091,7 @@ partial def MeasureSet.extractAtMostOne? (ms : MeasureSet τ) (taintedResolution
     -- breaking cost ties by smallest `lastLineLength`.
     let some m :=
         ms.foldl (init := none) fun
-          | none, m =>
-            some m
+          | none, m => some m
           | some best, m =>
             if !(best.cost ≤ m.cost) then
               some m

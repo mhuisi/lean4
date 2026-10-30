@@ -31,8 +31,9 @@ Executes `f` with the corresponding module name for each `.lean` file contained 
 
 For example, if `dir` contains `A/B/C.lean`, `f` is called with `A.B.C`.
 -/
-partial def forEachModuleInDir [Monad m] [MonadLiftT IO m]
-    (dir : FilePath) (f : Lean.Name → m PUnit) : m PUnit := do
+partial def forEachModuleInDir
+    [Monad m] [MonadLiftT IO m] (dir : FilePath) (f : Lean.Name → m PUnit)
+    : m PUnit := do
   for entry in (← dir.readDir) do
     if (← liftM (m := IO) <| entry.path.isDir) then
       let n := Lean.Name.mkSimple entry.fileName
@@ -40,32 +41,34 @@ partial def forEachModuleInDir [Monad m] [MonadLiftT IO m]
     else if entry.path.extension == some "lean" then
       f <| Lean.Name.mkSimple <| FilePath.withExtension entry.fileName "" |>.toString
 
-def realPathNormalized (p : FilePath) : IO FilePath :=
-  return (← IO.FS.realPath p).normalize
+def realPathNormalized (p : FilePath) : IO FilePath := return (← IO.FS.realPath p).normalize
 
 def modToFilePath (base : FilePath) (mod : Name) (ext : String) : FilePath :=
   go mod |>.addExtension ext
 where
   go : Name → FilePath
-  | Name.str p h => go p / h
-  | Name.anonymous => base
-  | Name.num _ _ => panic! "ill-formed import"
+    | Name.str p h => go p / h
+    | Name.anonymous => base
+    | Name.num _ _ => panic! "ill-formed import"
 
 /-- A `.olean' search path. -/
 abbrev SearchPath := System.SearchPath
 
 namespace SearchPath
 
-/-- If the package of `mod` can be found in `sp`, return the search path entry containing
-it. Otherwise, return `none`. The result depends only on `mod.getRoot`. -/
+/--
+If the package of `mod` can be found in `sp`, return the search path entry containing
+it. Otherwise, return `none`. The result depends only on `mod.getRoot`.
+-/
 def findRootWithExt (sp : SearchPath) (ext : String) (mod : Name) : IO (Option FilePath) := do
   let pkg := mod.getRoot.toString (escape := false)
-  sp.findM? fun p =>
-    (p / pkg).isDir <||> ((p / pkg).addExtension ext).pathExists
+  sp.findM? fun p => (p / pkg).isDir <||> ((p / pkg).addExtension ext).pathExists
 
-/-- If the package of `mod` can be found in `sp`, return the path with extension
+/--
+If the package of `mod` can be found in `sp`, return the path with extension
 `ext` (`lean` or `olean`) corresponding to `mod`. Otherwise, return `none`. Does
-not check whether the returned path exists. -/
+not check whether the returned path exists.
+-/
 def findWithExt (sp : SearchPath) (ext : String) (mod : Name) : IO (Option FilePath) := do
   return (← sp.findRootWithExt ext mod).map (modToFilePath · mod ext)
 
@@ -87,8 +90,7 @@ end SearchPath
 
 builtin_initialize searchPathRef : IO.Ref SearchPath ← IO.mkRef {}
 
-def getBuildDir : IO FilePath := do
-  return (← IO.appDir).parent |>.get!
+def getBuildDir : IO FilePath := do return (← IO.appDir).parent |>.get!
 
 def getLibDir (leanSysroot : FilePath) : IO FilePath := do
   let mut buildDir := leanSysroot
@@ -103,20 +105,20 @@ def getBuiltinSearchPath (leanSysroot : FilePath) : IO SearchPath :=
 def addSearchPathFromEnv (sp : SearchPath) : IO SearchPath := do
   let val ← IO.getEnv "LEAN_PATH"
   match val with
-  | none     => pure sp
+  | none => pure sp
   | some val => pure <| SearchPath.parse val ++ sp
 
 /--
 Initialize Lean's search path given Lean's system root and an initial search path.
 The system root can be obtained via `getBuildDir` (for internal use) or
-`findSysroot` (for external users). -/
+`findSysroot` (for external users).
+-/
 def initSearchPath (leanSysroot : FilePath) (sp : SearchPath := ∅) : IO Unit := do
   let sp := sp ++ (← addSearchPathFromEnv (← getBuiltinSearchPath leanSysroot))
   searchPathRef.set sp
 
 @[export lean_init_search_path]
-private def initSearchPathInternal : IO Unit := do
-  initSearchPath (← getBuildDir)
+private def initSearchPathInternal : IO Unit := do initSearchPath (← getBuildDir)
 
 /--
 Cache for `findOLean`, mapping the root package of a module to the search path entry that
@@ -147,7 +149,8 @@ partial def findOLean (mod : Name) : IO FilePath := do
     return modToFilePath root mod "olean"
   else
     let pkg := FilePath.mk <| mod.getRoot.toString (escape := false)
-    throw <| IO.userError s!"unknown module prefix '{pkg}'\n\n\
+    throw <| IO.userError s!"unknown module prefix '{pkg}'\
+      \n\n\
       No directory '{pkg}' or file '{pkg}.olean' in the search path entries:\n\
       {"\n".intercalate <| sp.map (·.toString)}"
 
@@ -157,14 +160,13 @@ partial def findLean (sp : SearchPath) (mod : Name) : IO FilePath := do
     return fname
   else
     let pkg := FilePath.mk <| mod.getRoot.toString (escape := false)
-    throw <| IO.userError s!"unknown module prefix '{pkg}'\n\n\
+    throw <| IO.userError s!"unknown module prefix '{pkg}'\
+      \n\n\
       No directory '{pkg}' or file '{pkg}.lean' in the search path entries:\n\
       {"\n".intercalate <| sp.map (·.toString)}"
 
 def getSrcSearchPath : IO SearchPath := do
-  let srcSearchPath := (← IO.getEnv "LEAN_SRC_PATH")
-    |>.map System.SearchPath.parse
-    |>.getD []
+  let srcSearchPath := (← IO.getEnv "LEAN_SRC_PATH") |>.map System.SearchPath.parse |>.getD []
   let srcPath := (← IO.appDir) / ".." / "src" / "lean"
   -- `lake/` should come first since on case-insensitive file systems, Lean thinks that `src/` also contains `Lake/`
   return srcSearchPath ++ [srcPath / "lake", srcPath]
@@ -172,18 +174,19 @@ def getSrcSearchPath : IO SearchPath := do
 /-- Infer module name of source file name. -/
 def moduleNameOfFileName (fname : FilePath) (rootDir : Option FilePath) : IO Name := do
   let fname ← IO.FS.realPath fname
-  let rootDir ← match rootDir with
+  let rootDir ←
+    match rootDir with
     | some rootDir => pure rootDir
-    | none         => IO.currentDir
+    | none => IO.currentDir
   let mut rootDir ← realPathNormalized rootDir
-  if !rootDir.toString.endsWith System.FilePath.pathSeparator.toString then
+  if ! rootDir.toString.endsWith System.FilePath.pathSeparator.toString then
     rootDir := ⟨rootDir.toString ++ System.FilePath.pathSeparator.toString⟩
-  if !rootDir.toString.isPrefixOf fname.normalize.toString then
+  if ! rootDir.toString.isPrefixOf fname.normalize.toString then
     throw $ IO.userError s!"input file '{fname}' must be contained in root directory ({rootDir})"
   -- NOTE: use `fname` instead of `fname.normalize` to preserve casing on all platforms
   let fnameSuffix := fname.toString.drop rootDir.toString.length
   let modNameStr := FilePath.mk fnameSuffix.copy |>.withExtension ""
-  let modName    := modNameStr.components.foldl Name.mkStr Name.anonymous
+  let modName := modNameStr.components.foldl Name.mkStr Name.anonymous
   pure modName
 
 def searchModuleNameOfFileName (fname : FilePath) (rootDirs : SearchPath) : IO (Option Name) := do
@@ -196,21 +199,18 @@ def searchModuleNameOfFileName (fname : FilePath) (rootDirs : SearchPath) : IO (
   return none
 
 /--
-  Find the system root of the given `lean` command
-  by calling `lean --print-prefix` and returning the path it prints.
-  Defaults to trying the `lean` in `PATH`.
-  If set, the `LEAN_SYSROOT` environment variable takes precedence.
-  Note that the called `lean` binary might not be part of the system root,
-  e.g. in the case of `elan`'s proxy binary.
-  Users internal to Lean should use `Lean.getBuildDir` instead.
+Find the system root of the given `lean` command
+by calling `lean --print-prefix` and returning the path it prints.
+Defaults to trying the `lean` in `PATH`.
+If set, the `LEAN_SYSROOT` environment variable takes precedence.
+Note that the called `lean` binary might not be part of the system root,
+e.g. in the case of `elan`'s proxy binary.
+Users internal to Lean should use `Lean.getBuildDir` instead.
 -/
 def findSysroot (lean := "lean") : IO FilePath := do
   if let some root ← IO.getEnv "LEAN_SYSROOT" then
     return root
-  let out ← IO.Process.run {
-    cmd := lean
-    args := #["--print-prefix"]
-  }
+  let out ← IO.Process.run { cmd := lean, args := #["--print-prefix"] }
   return out.trimAscii.copy
 
 end Lean

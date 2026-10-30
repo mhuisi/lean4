@@ -90,8 +90,10 @@ namespace Lean.Elab.Tactic.VCGen
 public structure FrameInferenceInfo where
   /-- The goal's precondition `P`. -/
   pre : Expr
-  /-- The goal's entailment relation, with carrier and order instance applied. Apply it to two
-  operands to state an entailment. -/
+  /--
+  The goal's entailment relation, with carrier and order instance applied. Apply it to two
+  operands to state an entailment.
+  -/
   le : Expr
   /-- The goal's `wp` application. Its `excessArgs` are the state arguments `s⃗`. -/
   unframedApp : WPApp
@@ -102,51 +104,68 @@ public structure FrameInferenceInfo where
   /-- Builds the frame operator `op : R → Pred → Pred`, hash-consed. -/
   mkOpApp : SymM Expr
 
-/-- What the solver hands to phase two: the goal after framing, with the spec applied at the
-footprint target `?footprint ⊑ W t⃗`. -/
+/--
+What the solver hands to phase two: the goal after framing, with the spec applied at the
+footprint target `?footprint ⊑ W t⃗`.
+-/
 public structure FrameGoal where
   /-- The schematic frame `?frame`. Assign it, or leave it open and it becomes a goal. -/
   frame : MVarId
   /-- The open footprint `?footprint`. Assign it to the part of `pre` that pays the spec. -/
   footprint : MVarId
-  /-- The framed application `W t⃗`, where `W = wp prog (fun a => adj (op ?frame) (Q a)) (adj (opE ?frame) E)` and `t⃗`
-  is the state named in phase one. `specProof` proves the entailment into it. -/
+  /--
+  The framed application `W t⃗`, where `W = wp prog (fun a => adj (op ?frame) (Q a)) (adj (opE ?frame) E)` and `t⃗`
+  is the state named in phase one. `specProof` proves the entailment into it.
+  -/
   framedApp : WPApp
-  /-- The spec's precondition, with the spec's logical variables live: assignments made while
-  matching against it persist. -/
+  /--
+  The spec's precondition, with the spec's logical variables live: assignments made while
+  matching against it persist.
+  -/
   specPre : Expr
-  /-- The VC `?footprint ⊑ specPre`. Discharge it when your own work proves it. Otherwise it
-  becomes a goal. -/
+  /--
+  The VC `?footprint ⊑ specPre`. Discharge it when your own work proves it. Otherwise it
+  becomes a goal.
+  -/
   preVC : MVarId
   /-- The proof of the footprint target `?footprint ⊑ W t⃗`. -/
   specProof : Expr
-  /-- Decompose an entailment goal `x ⊑ (op …) s⃗` through the lattice split registered for the
-  operator head. `none` when no split is registered or the rule does not apply. -/
+  /--
+  Decompose an entailment goal `x ⊑ (op …) s⃗` through the lattice split registered for the
+  operator head. `none` when no split is registered or the rule does not apply.
+  -/
   splitLatticeOp? : MVarId → Grind.GrindM (Option (List MVarId))
 
-/-- What phase two returns: a proof of the split VC `pre ⊑ (op ?frame W) s⃗`, and the goals the
-frameproc itself created. Goals of the frame rule and of the spec need no forwarding. -/
+/--
+What phase two returns: a proof of the split VC `pre ⊑ (op ?frame W) s⃗`, and the goals the
+frameproc itself created. Goals of the frame rule and of the spec need no forwarding.
+-/
 public structure FrameSplit where
   /-- The split VC proof. Compose `FrameGoal.specProof` under the frame operator. -/
   splitVCProof : Expr
   /-- The goals the frameproc created, for example a guard it could not discharge. -/
   subgoals : List MVarId
 
-/-- Phase one's answer. `decline` leaves the spec to apply without any frame. `commit` names `t⃗`,
+/--
+Phase one's answer. `decline` leaves the spec to apply without any frame. `commit` names `t⃗`,
 the state the spec runs at, and continues in phase two once the solver applied the frame rule and
 the spec; see `FrameGoal`. There is no way back after `commit`: when nothing needs framing, frame
-the unit of the operator instead. -/
+the unit of the operator instead.
+-/
 public inductive FrameDecision where
   | decline
   | commit (excessStates : Array Expr) (k : FrameGoal → Grind.GrindM FrameSplit)
 
-/-- A frame inference procedure. Phase one sees the goal through `FrameInferenceInfo` and answers
-a `FrameDecision`. The spec's precondition is only visible in phase two, after `commit`. -/
-public abbrev FrameInferenceProc :=
-  FrameInferenceInfo → Grind.GrindM FrameDecision
+/--
+A frame inference procedure. Phase one sees the goal through `FrameInferenceInfo` and answers
+a `FrameDecision`. The spec's precondition is only visible in phase two, after `commit`.
+-/
+public abbrev FrameInferenceProc := FrameInferenceInfo → Grind.GrindM FrameDecision
 
-/-- A frame backward rule together with the positions of the schematic frame and the split VC in
-the applied rule's goal list, fixed at rule construction. -/
+/--
+A frame backward rule together with the positions of the schematic frame and the split VC in
+the applied rule's goal list, fixed at rule construction.
+-/
 public structure FrameBackwardRule where
   /-- The backward rule concluding `pre ⊑ wp prog Q E s⃗`. -/
   rule : Lean.Meta.Sym.BackwardRule
@@ -155,8 +174,10 @@ public structure FrameBackwardRule where
   /-- Position of the schematic frame (of type `R`). -/
   frameIdx : Nat
 
-/-- A frame inference procedure registered with `@[frameproc]`, together with its frame operator.
-`vcgen` selects the one whose `prog` matches the goal program's monad. -/
+/--
+A frame inference procedure registered with `@[frameproc]`, together with its frame operator.
+`vcgen` selects the one whose `prog` matches the goal program's monad.
+-/
 public structure FrameProc where
   /-- Head constant of the program type (the monad) this procedure frames. -/
   prog : Name
@@ -175,12 +196,15 @@ public structure FrameProcs where
 
 public instance : Inhabited FrameProcs := ⟨{}⟩
 
-public def FrameProcs.insert (s : FrameProcs) (fp : FrameProc) : FrameProcs :=
-  { byProg := s.byProg.insert fp.prog fp }
+public def FrameProcs.insert (s : FrameProcs) (fp : FrameProc) : FrameProcs := {
+  byProg := s.byProg.insert fp.prog fp
+}
 
-/-- Commit to `frame`, take the whole precondition as the footprint, and discharge the split VC
+/--
+Commit to `frame`, take the whole precondition as the footprint, and discharge the split VC
 with `FrameGoal.splitLatticeOp?`. Fits any frameproc whose operator has a registered lattice split,
-for example the default meet frame. -/
+for example the default meet frame.
+-/
 public def FrameDecision.ofFrame (i : FrameInferenceInfo) (frame : Expr) : FrameDecision :=
   .commit i.unframedApp.excessArgs fun goal => do
     let frame ← shareCommon frame
@@ -191,23 +215,30 @@ public def FrameDecision.ofFrame (i : FrameInferenceInfo) (frame : Expr) : Frame
     let some gs ← goal.splitLatticeOp? m.mvarId!
       | throwError "frameproc: no lattice split applies to{indentExpr (← m.mvarId!.getType)}"
     -- The split leaves `pre ⊑ frame s⃗` and `pre ⊑ W s⃗`; `specProof` proves the second.
-    let subgoals ← gs.filterM fun g => do
-      if (isWPApp? (← g.getType).appArg!).isSome then g.assign goal.specProof; return false
-      else return true
+    let subgoals ←
+      gs.filterM fun g => do
+        if (isWPApp? (← g.getType).appArg!).isSome then
+          g.assign goal.specProof; return false
+        else
+          return true
     return { splitVCProof := m, subgoals }
 
-/-- Default frame inference procedure: frame the resource a `frames` clause pinned, and decline
-otherwise. -/
+/--
+Default frame inference procedure: frame the resource a `frames` clause pinned, and decline
+otherwise.
+-/
 public def defaultFrameInferenceProc : FrameInferenceProc := fun i => do
-  let some frame := i.providedFrame? | return .decline
+  let some frame := i.providedFrame?
+    | return .decline
   return .ofFrame i frame
 
 /-- The lattice meet operator over the goal's assertion type. -/
-def meetOp (info : WPApp) : MetaM Expr :=
-  Meta.mkAppOptM ``Lean.Order.meet #[info.Pred, none]
+def meetOp (info : WPApp) : MetaM Expr := Meta.mkAppOptM ``Lean.Order.meet #[info.Pred, none]
 
-/-- The default frame operator: lattice meet `pre ⊓ frame`, the Hoare frame every complete lattice
-carries. Used for a monad with no registered `@[frameproc]`. -/
+/--
+The default frame operator: lattice meet `pre ⊓ frame`, the Hoare frame every complete lattice
+carries. Used for a monad with no registered `@[frameproc]`.
+-/
 public def meetFrameProc : FrameProc where
   prog := ``Lean.Order.meet
   mkOpAppM := meetOp

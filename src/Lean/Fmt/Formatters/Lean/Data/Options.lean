@@ -37,8 +37,7 @@ public def fmtRegisterBuiltinOption : Fmt := fun
         $decl:term) => do
     let option ← fmtOptionRegistration registerTk name colonTk type colonEqTk decl
     fmtDeclWithModifiers docComment? none #[visibility?] option
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Option.registerOption]
 public def fmtRegisterOption : Fmt := fun
@@ -48,5 +47,4 @@ public def fmtRegisterOption : Fmt := fun
         $decl:term) => do
     let option ← fmtOptionRegistration registerTk name colonTk type colonEqTk decl
     fmtDeclWithDeclModifiers declModifiers option
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

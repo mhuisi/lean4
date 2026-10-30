@@ -32,17 +32,13 @@ namespace Std.Http.Protocol.H1
 
 set_option linter.all true
 
-/--
-What the caller must do with the body of the original request when following a redirect.
--/
+/-- What the caller must do with the body of the original request when following a redirect. -/
 inductive RedirectBodyAction where
-
   /--
   Send an empty body on the redirected request. Chosen when the method changes (303 See Other, or
   301/302 on `POST`) or when the original body cannot be replayed.
   -/
   | empty
-
   /--
   Reset the original body and resend it on the redirected request. Chosen for method-preserving
   redirects (307/308) when the body is marked replayable.
@@ -50,38 +46,24 @@ inductive RedirectBodyAction where
   | replay
 deriving DecidableEq, Repr, Inhabited
 
-/--
-The concrete work the caller must perform to follow a redirect.
--/
+/-- The concrete work the caller must perform to follow a redirect. -/
 structure RedirectPlan where
-
-  /--
-  Target origin (scheme, host, port) for the redirected request.
-  -/
+  /-- Target origin (scheme, host, port) for the redirected request. -/
   origin : URI.Origin
-
   /--
   Rewritten request target put on the wire: origin-form for same-origin redirects, absolute-form
   for cross-origin redirects, with any `userinfo` stripped per RFC 9110 §4.2.4.
   -/
   target : RequestTarget
-
   /--
   Method to use for the redirected request (possibly downgraded to `GET` for 301/302 on `POST` or
   for 303).
   -/
   method : Method
-
-  /--
-  Headers for the redirected request after cross-origin and method-change scrubbing.
-  -/
+  /-- Headers for the redirected request after cross-origin and method-change scrubbing. -/
   headers : Headers
-
-  /--
-  What to do with the original request body.
-  -/
+  /-- What to do with the original request body. -/
   bodyAction : RedirectBodyAction
-
   /--
   Whether the redirect crosses origin boundaries (different host, port, or scheme). Useful for
   credential-handling decisions at the call site.
@@ -89,19 +71,11 @@ structure RedirectPlan where
   isCrossOrigin : Bool
 deriving Repr
 
-/--
-Result of evaluating whether to follow a redirect.
--/
+/-- Result of evaluating whether to follow a redirect. -/
 inductive RedirectOutcome where
-
-  /--
-  Response is final. Stop redirecting and return it.
-  -/
+  /-- Response is final. Stop redirecting and return it. -/
   | done
-
-  /--
-  Follow the redirect described by `plan`.
-  -/
+  /-- Follow the redirect described by `plan`. -/
   | follow (plan : RedirectPlan)
 deriving Inhabited
 
@@ -129,7 +103,6 @@ private def resolveOrigin (current : URI.Origin) : URIReference → Option URI.O
         | .value v => v
         | _ => URI.Scheme.defaultPort af.scheme
       { scheme := af.scheme, host := auth.host, port }
-
   | .relative { authority := some auth, .. } =>
     let port : UInt16 :=
       match auth.port with
@@ -137,9 +110,7 @@ private def resolveOrigin (current : URI.Origin) : URIReference → Option URI.O
       | _ => URI.Scheme.defaultPort current.scheme
 
     some { scheme := current.scheme, host := auth.host, port }
-
-  | .relative _ =>
-    some current
+  | .relative _ => some current
 
 /--
 Computes the method for the redirected request.
@@ -154,12 +125,10 @@ HTTP/1.1 adjustment that does not apply to HTTP/1.0 responses.
 -/
 private def chooseMethod (originalMethod : Method) (responseVersion : Version) : Status → Method
   | .seeOther =>
-
     -- https://httpwg.org/specs/rfc9110.html#status.303
     -- 303 may be retrieved with GET or HEAD, so a HEAD request keeps HEAD; everything else uses GET.
     if originalMethod == .head then .head else .get
   | .movedPermanently | .found =>
-
     -- https://httpwg.org/specs/rfc9110.html#status.301
     -- https://httpwg.org/specs/rfc9110.html#status.302
 
@@ -167,16 +136,14 @@ private def chooseMethod (originalMethod : Method) (responseVersion : Version) :
     -- defined as method-preserving ([HTTP/1.0], Section 9.3).
 
     -- Only downgrade POST→GET for HTTP/1.1+; HTTP/1.0 preserves the method.
-    if originalMethod == .post && responseVersion != .v10 then .get
-    else originalMethod
-
+    if originalMethod == .post && responseVersion != .v10 then
+      .get
+    else
+      originalMethod
   | _ => originalMethod
 
-/--
-Connection-specific fields that must not be forwarded across hops regardless of origin.
--/
-private def connectionHeaders : Array Header.Name :=
-  #[.connection, .keepAlive, .transferEncoding]
+/-- Connection-specific fields that must not be forwarded across hops regardless of origin. -/
+private def connectionHeaders : Array Header.Name := #[.connection, .keepAlive, .transferEncoding]
 
 /--
 Additional hop-by-hop fields nominated by the request's `Connection` header.
@@ -198,11 +165,8 @@ private def nominatedConnectionHeaders (headers : Headers) : Array Header.Name :
           | none => names
           | some name => names.push name
 
-/--
-Proxy-configuration headers that must not cross origins.
--/
-private def clientProxyHeaders : Array Header.Name :=
-  #[.proxyAuthorization]
+/-- Proxy-configuration headers that must not cross origins. -/
+private def clientProxyHeaders : Array Header.Name := #[.proxyAuthorization]
 
 /--
 Origin-specific credential headers stripped on cross-origin hops.
@@ -210,22 +174,21 @@ Note: `.origin` is intentionally excluded — it is set by the caller (e.g. for 
 auto-generated by the implementation. Stripping a user-set Origin would break intentional
 cross-origin requests.
 -/
-private def originHeaders : Array Header.Name :=
-  #[.authorization, .cookie, .referer]
+private def originHeaders : Array Header.Name := #[.authorization, .cookie, .referer]
 
 /--
 Cache-validating headers added by the implementation that must not be replayed on the redirected
 request.
 -/
-private def validatingHeaders : Array Header.Name :=
-  #[.ifNoneMatch, .ifModifiedSince]
+private def validatingHeaders : Array Header.Name := #[.ifNoneMatch, .ifModifiedSince]
 
 /--
 Resource-specific headers that become meaningless when the method changes to GET/HEAD and no body
 is sent.
 -/
-private def resourceSpecificHeaders : Array Header.Name :=
-  #[.contentType, .contentLength, .contentEncoding, .contentLanguage, .contentLocation, .lastModified]
+private def resourceSpecificHeaders : Array Header.Name := #[
+  .contentType, .contentLength, .contentEncoding, .contentLanguage, .contentLocation, .lastModified
+]
 
 /--
 Strips headers that must not survive a cross-origin hop or a method-changing
@@ -243,7 +206,6 @@ private def scrubHeaders (headers : Headers) (isCrossOrigin methodChanged : Bool
   let afterConnection := connectionHeaders ++ nominatedConnectionHeaders headers
 
   let afterOrigin :=
-
     -- https://httpwg.org/specs/rfc9110.html#status.3xx
     -- Remove header fields that were automatically generated by the implementation,
     -- replacing them with updated values as appropriate to the new request.
@@ -273,37 +235,36 @@ fresh connection to `(scheme, host, port)`; the original `Host` would route the 
 virtual host.
 -/
 private def rewriteHostHeader (headers : Headers) (origin : URI.Origin) : Headers :=
-  if headers.contains .host then headers.replaceLast .host (.ofString! origin.hostHeader)
-  else headers
+  if headers.contains .host then
+    headers.replaceLast .host (.ofString! origin.hostHeader)
+  else
+    headers
 
-/--
-Extracts the base query, preserving absence as `none`.
--/
+/-- Extracts the base query, preserving absence as `none`. -/
 private def requestTargetQuery? : RequestTarget → Option URI.Query
   | .originForm _ q => q
   | .absoluteForm uri => uri.query
   | _ => none
 
-/--
-Rewrites the target actually placed on the wire.
--/
-private def rewriteTarget (ref : URIReference) (isCrossOrigin : Bool)
-    (basePath : URI.Path) (baseQuery : Option URI.Query)
-    (currentScheme : URI.Scheme) : RequestTarget :=
+/-- Rewrites the target actually placed on the wire. -/
+private def rewriteTarget
+    (ref : URIReference) (isCrossOrigin : Bool) (basePath : URI.Path) (baseQuery : Option URI.Query)
+    (currentScheme : URI.Scheme)
+    : RequestTarget :=
   match ref with
   | .absolute af =>
     -- The fragment is never placed on the wire (RFC 9112 §3.2 / RFC 9110 §7.1), so drop it here
     -- alongside any `userinfo` in the authority.
-    let stripped :=
-      { af with
-        authority := af.authority.map (fun auth => { auth with userInfo := none }),
-        fragment := none }
+    let stripped := {
+      af with
+      authority := af.authority.map (fun auth => { auth with userInfo := none })
+      fragment := none
+    }
     if isCrossOrigin then
       .absoluteForm stripped
     else
       .originForm stripped.path stripped.query
   | .relative { authority := some auth, path, query, .. } =>
-
     -- Protocol-relative: authority present, scheme inherited from current.
     let stripped := { auth with userInfo := none }
     let af := { scheme := currentScheme, authority := some stripped, path, query, fragment := none }
@@ -312,7 +273,6 @@ private def rewriteTarget (ref : URIReference) (isCrossOrigin : Bool)
     else
       .originForm path.normalize query
   | .relative { authority := none, path := refPath, query, .. } =>
-
     -- RFC 3986 §5.2.2: merge base path with reference path, then normalize.
     let merged :=
       if refPath.isEmpty then
@@ -358,12 +318,8 @@ Notes on specific status codes that always return `.done`:
 * 306 — reserved/unused.
 -/
 def decideRedirect
-    (current : URI.Origin)
-    (request : Request.Head)
-    (bodyReplayable : Bool)
-    (onlySafeRedirects : Bool)
-    (responseVersion : Version)
-    (status : Status)
+    (current : URI.Origin) (request : Request.Head) (bodyReplayable : Bool)
+    (onlySafeRedirects : Bool) (responseVersion : Version) (status : Status)
     (responseHeaders : Headers)
     : RedirectOutcome := Id.run do
   if !status.isRedirection then
@@ -384,7 +340,8 @@ def decideRedirect
   -- 304 Not Modified is a cache-revalidation result, not a navigation redirect.
   -- 300 Multiple Choices may name a preferred `Location`, but RFC 9110 §15.4.1 leaves
   -- the choice to the user agent, so we deliberately decline to auto-select one.
-  if status == .useProxy || status == .unused || status == .notModified || status == .multipleChoices then
+  if status == .useProxy || status == .unused || status == .notModified
+      || status == .multipleChoices then
     return .done
 
   -- RFC 2616 §10.3: automatic redirection needs to be done with care for methods not known to be
@@ -429,7 +386,8 @@ def decideRedirect
   let newHeaders :=
     if isCrossOrigin then
       RedirectPlan.rewriteHostHeader scrubbed newOrigin
-    else scrubbed
+    else
+      scrubbed
 
   -- RFC 9110 §15.4.8: for any method-preserving redirect, if the body cannot be replayed the user
   -- agent MUST NOT automatically redirect. This covers 307/308 (always method-preserving) *and* the
@@ -444,10 +402,9 @@ def decideRedirect
     else
       .replay
 
-  let rewrittenTarget := RedirectPlan.rewriteTarget location isCrossOrigin
-    request.uri.pathOrRoot
-    (RedirectPlan.requestTargetQuery? request.uri)
-    current.scheme
+  let rewrittenTarget :=
+    RedirectPlan.rewriteTarget location isCrossOrigin request.uri.pathOrRoot
+      (RedirectPlan.requestTargetQuery? request.uri) current.scheme
 
   return .follow {
     origin := newOrigin

@@ -26,18 +26,10 @@ open Internal
 
 namespace Day.Offset
 
-/--
-Convert `Week.Offset` into `Day.Offset`.
--/
-@[inline]
-def ofWeeks (week : Week.Offset) : Day.Offset :=
-  week.mul 7 |>.cast (by decide +kernel)
+/-- Convert `Week.Offset` into `Day.Offset`. -/
+@[inline] def ofWeeks (week : Week.Offset) : Day.Offset := week.mul 7 |>.cast (by decide +kernel)
 
-/--
-Convert `Day.Offset` into `Week.Offset`.
--/
-@[inline]
-def toWeeks (day : Day.Offset) : Week.Offset :=
-  day.ediv 7
+/-- Convert `Day.Offset` into `Week.Offset`. -/
+@[inline] def toWeeks (day : Day.Offset) : Week.Offset := day.ediv 7
 
 end Day.Offset

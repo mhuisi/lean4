@@ -46,25 +46,29 @@ theorem Perm.of_toList_perm {as bs : Vector α n} : as.toList ~ bs.toList → as
 theorem Perm.toList {as bs : Vector α n} : as ~ bs → as.toList ~ bs.toList :=
   perm_iff_toList_perm.mp
 
-@[simp] theorem perm_mk (as bs : Array α) (ha : as.size = n) (hb : bs.size = n) :
-    mk as ha ~ mk bs hb ↔ as ~ bs := by
+@[simp]
+theorem perm_mk (as bs : Array α) (ha : as.size = n) (hb : bs.size = n)
+    : mk as ha ~ mk bs hb ↔ as ~ bs := by
   simp [perm_iff_toArray_perm]
 
-theorem toArray_perm_iff (xs : Vector α n) (ys : Array α) : xs.toArray ~ ys ↔ ∃ h, xs ~ Vector.mk ys h := by
+theorem toArray_perm_iff (xs : Vector α n) (ys : Array α)
+    : xs.toArray ~ ys ↔ ∃ h, xs ~ Vector.mk ys h := by
   constructor
   · intro h
     refine ⟨by simp [← h.size_eq], .of_toArray_perm h⟩
   · intro ⟨h, p⟩
     exact p.toArray
 
-theorem perm_toArray_iff (xs : Array α) (ys : Vector α n) : xs ~ ys.toArray ↔ ∃ h, Vector.mk xs h ~ ys := by
+theorem perm_toArray_iff (xs : Array α) (ys : Vector α n)
+    : xs ~ ys.toArray ↔ ∃ h, Vector.mk xs h ~ ys := by
   constructor
   · intro h
     refine ⟨by simp [h.size_eq], .of_toArray_perm h⟩
   · intro ⟨h, p⟩
     exact p.toArray
 
-@[simp, refl] protected theorem Perm.refl (xs : Vector α n) : xs ~ xs := by
+@[simp, refl]
+protected theorem Perm.refl (xs : Vector α n) : xs ~ xs := by
   cases xs
   simp
 
@@ -74,12 +78,15 @@ theorem Perm.of_eq {xs ys : Vector α n} (h : xs = ys) : xs ~ ys := h ▸ .rfl
 
 @[symm]
 protected theorem Perm.symm {xs ys : Vector α n} (h : xs ~ ys) : ys ~ xs := by
-  cases xs; cases ys
+  cases xs
+  cases ys
   simp only [perm_mk] at h
   simpa using h.symm
 
 protected theorem Perm.trans {xs ys zs : Vector α n} (h₁ : xs ~ ys) (h₂ : ys ~ zs) : xs ~ zs := by
-  cases xs; cases ys; cases zs
+  cases xs
+  cases ys
+  cases zs
   simp only [perm_mk] at h₁ h₂
   simpa using h₁.trans h₂
 
@@ -94,27 +101,29 @@ theorem Perm.mem_iff {a : α} {xs ys : Vector α n} (p : xs ~ ys) : a ∈ xs ↔
   simp at p
   simpa using p.mem_iff
 
-theorem Perm.append {xs ys : Vector α m} {as bs : Vector α n}
-    (p₁ : xs ~ ys) (p₂ : as ~ bs) : xs ++ as ~ ys ++ bs := by
-  cases xs; cases ys; cases as; cases bs
+theorem Perm.append {xs ys : Vector α m} {as bs : Vector α n} (p₁ : xs ~ ys) (p₂ : as ~ bs)
+    : xs ++ as ~ ys ++ bs := by
+  cases xs
+  cases ys
+  cases as
+  cases bs
   simp only [perm_mk, mk_append_mk] at p₁ p₂ ⊢
   exact p₁.append p₂
 
-theorem Perm.push (x : α) {xs ys : Vector α n} (p : xs ~ ys) :
-    xs.push x ~ ys.push x := by
-  cases xs; cases ys
+theorem Perm.push (x : α) {xs ys : Vector α n} (p : xs ~ ys) : xs.push x ~ ys.push x := by
+  cases xs
+  cases ys
   simp only [perm_mk, push_mk] at p ⊢
   exact p.push x
 
-theorem Perm.push_comm (x y : α) {xs ys : Vector α n} (p : xs ~ ys) :
-    (xs.push x).push y ~ (ys.push y).push x := by
+theorem Perm.push_comm (x y : α) {xs ys : Vector α n} (p : xs ~ ys)
+    : (xs.push x).push y ~ (ys.push y).push x := by
   rcases xs with ⟨xs, rfl⟩
   rcases ys with ⟨ys, h⟩
   simp only [perm_mk, push_mk] at p ⊢
   simpa using p.push_comm x y
 
-theorem swap_perm {xs : Vector α n} {i j : Nat} (h₁ : i < n) (h₂ : j < n) :
-    xs.swap i j ~ xs := by
+theorem swap_perm {xs : Vector α n} {i j : Nat} (h₁ : i < n) (h₂ : j < n) : xs.swap i j ~ xs := by
   rcases xs with ⟨xs, rfl⟩
   simp only [swap, perm_iff_toList_perm]
   apply set_set_perm
@@ -122,9 +131,10 @@ theorem swap_perm {xs : Vector α n} {i j : Nat} (h₁ : i < n) (h₂ : j < n) :
 namespace Perm
 
 set_option linter.indexVariables false in
-theorem extract {xs ys : Vector α n} (h : xs ~ ys) {lo hi : Nat}
-    (wlo : ∀ i, i < lo → xs[i]? = ys[i]?) (whi : ∀ i, hi ≤ i → xs[i]? = ys[i]?) :
-    xs.extract lo hi ~ ys.extract lo hi := by
+theorem extract
+    {xs ys : Vector α n} (h : xs ~ ys)
+    {lo hi : Nat} (wlo : ∀ i, i < lo → xs[i]? = ys[i]?) (whi : ∀ i, hi ≤ i → xs[i]? = ys[i]?)
+    : xs.extract lo hi ~ ys.extract lo hi := by
   rcases xs with ⟨xs, rfl⟩
   rcases ys with ⟨ys, h⟩
   exact ⟨Array.Perm.extract h.toArray (by simpa using wlo) (by simpa using whi)⟩

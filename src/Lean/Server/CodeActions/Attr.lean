@@ -26,8 +26,8 @@ open Lean Elab Server Lsp RequestM Snapshots
 
 /-- A hole code action extension. -/
 abbrev HoleCodeAction :=
-  CodeActionParams → Snapshot →
-  (ctx : ContextInfo) → (hole : TermInfo) → RequestM (Array LazyCodeAction)
+  CodeActionParams → Snapshot → (ctx : ContextInfo) → (hole : TermInfo)
+    → RequestM (Array LazyCodeAction)
 
 /-- Read a hole code action from a declaration of the right type. -/
 def mkHoleCodeAction (n : Name) : ImportM HoleCodeAction := do
@@ -35,12 +35,16 @@ def mkHoleCodeAction (n : Name) : ImportM HoleCodeAction := do
   IO.ofExcept <| unsafe env.evalConstCheck HoleCodeAction opts ``HoleCodeAction n
 
 /-- An extension which collects all the hole code actions. -/
-builtin_initialize holeCodeActionExt :
-    PersistentEnvExtension Name (Name × HoleCodeAction) (Array Name × Array HoleCodeAction) ←
+builtin_initialize holeCodeActionExt
+    : PersistentEnvExtension Name (Name × HoleCodeAction) (Array Name × Array HoleCodeAction) ←
   registerPersistentEnvExtension {
     mkInitial := pure (#[], #[])
-    addImportedFn := fun as => return (#[], ← as.foldlM (init := #[]) fun m as =>
-      as.foldlM (init := m) fun m a => return m.push (← mkHoleCodeAction a))
+    addImportedFn := fun as =>
+      return (
+        #[],
+        ← as.foldlM (init := #[]) fun m as =>
+          as.foldlM (init := m) fun m a => return m.push (← mkHoleCodeAction a)
+      )
     addEntryFn := fun (s₁, s₂) (n₁, n₂) => (s₁.push n₁, s₂.push n₂)
     exportEntriesFn := (·.1)
   }
@@ -61,8 +65,8 @@ builtin_initialize
 
 /-- A command code action extension. -/
 abbrev CommandCodeAction :=
-  CodeActionParams → Snapshot → (ctx : ContextInfo) → (node : InfoTree) →
-  RequestM (Array LazyCodeAction)
+  CodeActionParams → Snapshot → (ctx : ContextInfo) → (node : InfoTree)
+    → RequestM (Array LazyCodeAction)
 
 /-- Read a command code action from a declaration of the right type. -/
 def mkCommandCodeAction (n : Name) : ImportM CommandCodeAction := do
@@ -73,10 +77,12 @@ def mkCommandCodeAction (n : Name) : ImportM CommandCodeAction := do
 structure CommandCodeActionEntry where
   /-- The declaration to tag -/
   declName : Name
-  /-- The command kinds that this extension supports.
-  If empty it is called on all command kinds. -/
+  /--
+  The command kinds that this extension supports.
+  If empty it is called on all command kinds.
+  -/
   cmdKinds : Array Name
-  deriving Inhabited
+deriving Inhabited
 
 /-- The state of the command code actions extension. -/
 structure CommandCodeActions where
@@ -84,16 +90,21 @@ structure CommandCodeActions where
   onAnyCmd : Array CommandCodeAction := {}
   /-- The list of command code actions to apply when a particular command kind is highlighted. -/
   onCmd : NameMap (Array CommandCodeAction) := {}
-  deriving Inhabited
+deriving Inhabited
 
 /-- Insert a command code action entry into the `CommandCodeActions` structure. -/
-def CommandCodeActions.insert (self : CommandCodeActions)
-    (tacticKinds : Array Name) (action : CommandCodeAction) : CommandCodeActions :=
-  if tacticKinds.isEmpty then
-    { self with onAnyCmd := self.onAnyCmd.push action }
-  else
-    { self with onCmd := tacticKinds.foldl (init := self.onCmd) fun m a =>
-        m.insert a ((m.getD a #[]).push action) }
+def CommandCodeActions.insert
+    (self : CommandCodeActions) (tacticKinds : Array Name) (action : CommandCodeAction)
+    : CommandCodeActions :=
+  if tacticKinds.isEmpty then {
+    self with
+    onAnyCmd := self.onAnyCmd.push action
+  }
+  else {
+    self with
+    onCmd :=
+      tacticKinds.foldl (init := self.onCmd) fun m a => m.insert a ((m.getD a #[]).push action)
+  }
 
 builtin_initialize builtinCmdCodeActions : IO.Ref CommandCodeActions ← IO.mkRef {}
 
@@ -101,16 +112,19 @@ def insertBuiltin (args : Array Name) (proc : CommandCodeAction) : IO Unit := do
   builtinCmdCodeActions.modify fun self => self.insert args proc
 
 /-- An extension which collects all the command code actions. -/
-builtin_initialize cmdCodeActionExt :
-    PersistentEnvExtension CommandCodeActionEntry (CommandCodeActionEntry × CommandCodeAction)
+builtin_initialize cmdCodeActionExt
+    : PersistentEnvExtension CommandCodeActionEntry (CommandCodeActionEntry × CommandCodeAction)
       (Array CommandCodeActionEntry × CommandCodeActions) ←
   registerPersistentEnvExtension {
     mkInitial := return (#[], ← builtinCmdCodeActions.get)
     addImportedFn := fun as => do
       let init ← builtinCmdCodeActions.get
-      return (#[], ← as.foldlM (init := init) fun m as =>
-      as.foldlM (init := m) fun m ⟨name, kinds⟩ =>
-        return m.insert kinds (← mkCommandCodeAction name))
+      return (
+        #[],
+        ← as.foldlM (init := init) fun m as =>
+          as.foldlM (init := m) fun m ⟨name, kinds⟩ =>
+            return m.insert kinds (← mkCommandCodeAction name)
+      )
     addEntryFn := fun (s₁, s₂) (e, n₂) => (s₁.push e, s₂.insert e.cmdKinds n₂)
     exportEntriesFn := (·.1)
   }
@@ -124,7 +138,8 @@ builtin_initialize
       unless kind == AttributeKind.global do
         throwAttrMustBeGlobal `command_code_action kind
       ensureAttrDeclIsMeta `command_code_action decl kind
-      let `(attr| command_code_action $args*) := stx | return
+      let `(attr| command_code_action $args*) := stx
+        | return
       let args ← args.mapM realizeGlobalConstNoOverloadWithInfo
       if (IR.getSorryDep (← getEnv) decl).isSome then return -- ignore in progress definitions
       args.forM (recordExtraModUseFromDecl (isMeta := false))
@@ -140,15 +155,15 @@ private def addBuiltin (declName : Name) (args : Array Name) : AttrM Unit := do
 
 builtin_initialize
   registerBuiltinAttribute {
-    ref             := by exact decl_name%
-    name            := `builtin_command_code_action
-    descr           := "Declare a new builtin command code action, to appear in the code actions on commands"
+    ref := by exact decl_name%
+    name := `builtin_command_code_action
+    descr := "Declare a new builtin command code action, to appear in the code actions on commands"
     applicationTime := .afterCompilation
-    add             := fun decl stx kind => do
+    add := fun decl stx kind => do
       unless kind == AttributeKind.global do
         throwAttrMustBeGlobal `command_code_action kind
-      let `(attr| builtin_command_code_action $args*) := stx |
-        throwError "Unexpected `command_code_action` attribute syntax"
+      let `(attr| builtin_command_code_action $args*) := stx
+        | throwError "Unexpected `command_code_action` attribute syntax"
       let args ← args.mapM realizeGlobalConstNoOverloadWithInfo
       if (IR.getSorryDep (← getEnv) decl).isSome then return -- ignore in progress definitions
       addBuiltin decl args

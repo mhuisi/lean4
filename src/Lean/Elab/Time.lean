@@ -20,7 +20,8 @@ namespace Lean.Elab.Time
 
 open Command
 
-@[builtin_command_elab Lean.Parser.timeCmd] def elabTimeCmd : CommandElab
+@[builtin_command_elab Lean.Parser.timeCmd]
+def elabTimeCmd : CommandElab
   | `(#time%$tk $stx:command) => do
     let start ← IO.monoMsNow
     elabCommand stx

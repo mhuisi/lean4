@@ -23,52 +23,31 @@ open Std Async
 
 set_option linter.all true
 
-/--
-An empty body handle.
--/
+/-- An empty body handle. -/
 structure Empty where
 deriving Inhabited, BEq
 
 namespace Empty
 
-/--
-Receives from an empty body, always returning end-of-stream.
--/
-@[inline]
-def recv (_ : Empty) : Async (Option Chunk) :=
-  pure none
+/-- Receives from an empty body, always returning end-of-stream. -/
+@[inline] def recv (_ : Empty) : Async (Option Chunk) := pure none
 
-/--
-Closes an empty body (no-op).
--/
-@[inline]
-def close (_ : Empty) : Async Unit :=
-  pure ()
+/-- Closes an empty body (no-op). -/
+@[inline] def close (_ : Empty) : Async Unit := pure ()
 
-/--
-Empty bodies are always closed for reading.
--/
-@[inline]
-def isClosed (_ : Empty) : Async Bool :=
-  pure true
+/-- Empty bodies are always closed for reading. -/
+@[inline] def isClosed (_ : Empty) : Async Bool := pure true
 
-/--
-Non-blocking receive. Empty bodies are always at EOF.
--/
-@[inline]
-def tryRecv (_ : Empty) : Async (Option (Option Chunk)) :=
-  pure (some none)
+/-- Non-blocking receive. Empty bodies are always at EOF. -/
+@[inline] def tryRecv (_ : Empty) : Async (Option (Option Chunk)) := pure (some none)
 
-/--
-Selector that immediately resolves with end-of-stream for an empty body.
--/
+/-- Selector that immediately resolves with end-of-stream for an empty body. -/
 @[inline]
 def recvSelector (_ : Empty) : Selector (Option Chunk) where
   tryFn := pure (some none)
   registerFn waiter := do
     let lose := pure ()
-    let win promise := do
-      promise.resolve (.ok none)
+    let win promise := do promise.resolve (.ok none)
     waiter.race lose win
   unregisterFn := pure ()
 
@@ -106,21 +85,15 @@ end Body
 namespace Request.Builder
 open Async
 
-/--
-Builds a request with no body.
--/
-def empty (builder : Builder) : Async (Request Body.Empty) :=
-  pure <| builder.body {}
+/-- Builds a request with no body. -/
+def empty (builder : Builder) : Async (Request Body.Empty) := pure <| builder.body {}
 
 end Request.Builder
 
 namespace Response.Builder
 open Async
 
-/--
-Builds a response with no body.
--/
-def empty (builder : Builder) : Async (Response Body.Empty) :=
-  pure <| builder.body {}
+/-- Builds a response with no body. -/
+def empty (builder : Builder) : Async (Response Body.Empty) := pure <| builder.body {}
 
 end Response.Builder

@@ -21,13 +21,13 @@ namespace Lake
 /-- The initial set of Lake facets. -/
 public def initFacetConfigs : FacetConfigMap :=
   DNameMap.empty
-  |> insert Module.initFacetConfigs
-  |> insert Package.initFacetConfigs
-  |> insert LeanLib.initFacetConfigs
-  |> insert LeanExe.initFacetConfigs
-  |> insert ExternLib.initFacetConfigs
-  |> insert InputFile.initFacetConfigs
-  |> insert InputDir.initFacetConfigs
+    |> insert Module.initFacetConfigs
+    |> insert Package.initFacetConfigs
+    |> insert LeanLib.initFacetConfigs
+    |> insert LeanExe.initFacetConfigs
+    |> insert ExternLib.initFacetConfigs
+    |> insert InputFile.initFacetConfigs
+    |> insert InputDir.initFacetConfigs
 where
   insert {k} (group : DNameMap (KFacetConfig k)) map :=
     group.foldl (init := map) fun m _ v => m.insert v.toFacetConfig

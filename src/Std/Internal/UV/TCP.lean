@@ -21,26 +21,21 @@ open Std.Net
 
 private opaque SocketImpl : NonemptyType.{0}
 
-/--
-Represents a TCP socket.
--/
+/-- Represents a TCP socket. -/
 def Socket : Type := SocketImpl.type
 
 instance : Nonempty Socket := by exact SocketImpl.property
 
 namespace Socket
 
-/--
-Creates a new TCP socket.
--/
+/-- Creates a new TCP socket. -/
 @[extern "lean_uv_tcp_new"]
 opaque new : IO Socket
 
-/--
-Connects a TCP socket to the specified address.
--/
+/-- Connects a TCP socket to the specified address. -/
 @[extern "lean_uv_tcp_connect"]
-opaque connect (socket : @& Socket) (addr : @& SocketAddress) : IO (IO.Promise (Except IO.Error Unit))
+opaque connect (socket : @& Socket) (addr : @& SocketAddress)
+  : IO (IO.Promise (Except IO.Error Unit))
 
 /--
 Sends data through a TCP socket. Throws an `IO.Error.invalidArgument` if a buffer is 4 GiB or
@@ -59,7 +54,8 @@ Furthermore calling this function in parallel with `waitReadable` is not support
 Throws an `IO.Error.invalidArgument` if `size` is 0 or at least 4 GiB.
 -/
 @[extern "lean_uv_tcp_recv"]
-opaque recv? (socket : @& Socket) (size : UInt64) : IO (IO.Promise (Except IO.Error (Option ByteArray)))
+opaque recv? (socket : @& Socket) (size : UInt64)
+  : IO (IO.Promise (Except IO.Error (Option ByteArray)))
 
 /--
 Returns an `IO.Promise` that resolves to `true` once `socket` has data available for reading,
@@ -80,27 +76,19 @@ without causing errors, in particular also without a receive running in the firs
 @[extern "lean_uv_tcp_cancel_recv"]
 opaque cancelRecv (socket : @& Socket) : IO Unit
 
-/--
-Binds a TCP socket to a specific address.
--/
+/-- Binds a TCP socket to a specific address. -/
 @[extern "lean_uv_tcp_bind"]
 opaque bind (socket : @& Socket) (addr : @& SocketAddress) : IO Unit
 
-/--
-Starts listening for incoming connections on a TCP socket.
--/
+/-- Starts listening for incoming connections on a TCP socket. -/
 @[extern "lean_uv_tcp_listen"]
 opaque listen (socket : @& Socket) (backlog : UInt32) : IO Unit
 
-/--
-Accepts an incoming connection on a listening TCP socket.
--/
+/-- Accepts an incoming connection on a listening TCP socket. -/
 @[extern "lean_uv_tcp_accept"]
 opaque accept (socket : @& Socket) : IO (IO.Promise (Except IO.Error Socket))
 
-/--
-Tries to accept an incoming connection on a listening TCP socket.
--/
+/-- Tries to accept an incoming connection on a listening TCP socket. -/
 @[extern "lean_uv_tcp_try_accept"]
 opaque tryAccept (socket : @& Socket) : IO (Except IO.Error (Option Socket))
 
@@ -112,9 +100,7 @@ parallel with `accept` is not supported; `cancelAccept` cancels the wait.
 @[extern "lean_uv_tcp_wait_acceptable"]
 opaque waitAcceptable (socket : @& Socket) : IO (IO.Promise (Except IO.Error Unit))
 
-/--
-Cancels the accept request of a socket.
--/
+/-- Cancels the accept request of a socket. -/
 @[extern "lean_uv_tcp_cancel_accept"]
 opaque cancelAccept (socket : @& Socket) : IO Unit
 
@@ -126,21 +112,15 @@ Throws if a shutdown was already requested for this socket, whether or not it ha
 @[extern "lean_uv_tcp_shutdown"]
 opaque shutdown (socket : @& Socket) : IO (IO.Promise (Except IO.Error Unit))
 
-/--
-Gets the remote address of a connected TCP socket.
--/
+/-- Gets the remote address of a connected TCP socket. -/
 @[extern "lean_uv_tcp_getpeername"]
 opaque getPeerName (socket : @& Socket) : IO SocketAddress
 
-/--
-Gets the local address of a bound TCP socket.
--/
+/-- Gets the local address of a bound TCP socket. -/
 @[extern "lean_uv_tcp_getsockname"]
 opaque getSockName (socket : @& Socket) : IO SocketAddress
 
-/--
-Enables the Nagle algorithm for a TCP socket.
--/
+/-- Enables the Nagle algorithm for a TCP socket. -/
 @[extern "lean_uv_tcp_nodelay"]
 opaque noDelay (socket : @& Socket) : IO Unit
 

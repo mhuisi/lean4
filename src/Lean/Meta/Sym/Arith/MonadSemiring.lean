@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Arith.MonadCanon
 public section
@@ -17,7 +18,7 @@ export MonadSemiring (getSemiring modifySemiring)
 
 @[always_inline]
 instance (m n) [MonadLift m n] [MonadSemiring m] : MonadSemiring n where
-  getSemiring    := liftM (getSemiring : m Semiring)
+  getSemiring := liftM (getSemiring : m Semiring)
   modifySemiring f := liftM (modifySemiring f : m Unit)
 
 class MonadCommSemiring (m : Type → Type) where
@@ -28,7 +29,7 @@ export MonadCommSemiring (getCommSemiring modifyCommSemiring)
 
 @[always_inline]
 instance (m n) [MonadLift m n] [MonadCommSemiring m] : MonadCommSemiring n where
-  getCommSemiring      := liftM (getCommSemiring : m CommSemiring)
+  getCommSemiring := liftM (getCommSemiring : m CommSemiring)
   modifyCommSemiring f := liftM (modifyCommSemiring f : m Unit)
 
 @[always_inline]

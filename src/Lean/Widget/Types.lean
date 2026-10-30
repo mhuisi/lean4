@@ -13,18 +13,21 @@ public section
 
 namespace Lean.Widget
 
-/-- An instance of a widget component:
+/--
+An instance of a widget component:
 the identifier of a widget module and the hash of its JS source code
 together with props.
 
 See the [manual entry](https://lean-lang.org/documentation/widgets/)
-for more information about widgets. -/
+for more information about widgets.
+-/
 structure WidgetInstance where
   /-- Name of the `@[widget_module]`. -/
   id : Name
   /-- Hash of the JS source of the widget module. -/
   javascriptHash : UInt64
-  /-- Arguments to be passed to the component's default exported function.
+  /--
+  Arguments to be passed to the component's default exported function.
   Must be a JSON object.
 
   In certain contexts
@@ -33,11 +36,13 @@ structure WidgetInstance where
 
   Props may contain RPC references,
   so must be stored as a `StateM` computation
-  with access to the RPC object store. -/
+  with access to the RPC object store.
+  -/
   props : StateM Server.RpcObjectStore Json
-  deriving Server.RpcEncodable
+deriving Server.RpcEncodable
 
-/-- A widget module is a unit of source code that can execute in the infoview.
+/--
+A widget module is a unit of source code that can execute in the infoview.
 
 Every module definition must either be annotated with `@[widget_module]`,
 or use a value of `javascript` identical to that of another definition
@@ -45,9 +50,11 @@ annotated with `@[widget_module]`.
 This makes it possible for the infoview to load the module.
 
 See the [manual entry](https://lean-lang.org/examples/1900-1-1-widgets/)
-for more information on how to use the widgets system. -/
+for more information on how to use the widgets system.
+-/
 structure Module where
-  /-- A JS [module](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules)
+  /--
+  A JS [module](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules)
   intended for use in user widgets.
 
   The JS environment in which modules execute
@@ -59,9 +66,10 @@ structure Module where
   you may use `include_str "path"/"to"/"file.js"`.
   However **beware** that this does not register a dependency with Lake,
   so your Lean module will not automatically be rebuilt
-  when the `.js` file changes. -/
+  when the `.js` file changes.
+  -/
   javascript : String
   /-- The hash is cached to avoid recomputing it whenever the `Module` is used. -/
-  javascriptHash : { x : UInt64 // x = hash javascript } := ⟨hash javascript, rfl⟩
+  javascriptHash : {x : UInt64 // x = hash javascript} := ⟨hash javascript, rfl⟩
 
 end Lean.Widget

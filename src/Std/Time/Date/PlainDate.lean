@@ -26,16 +26,12 @@ and day components, with validation to ensure the date is valid.
 -/
 @[ext]
 structure PlainDate where
-
   /-- The year component of the date. It is represented as an `Offset` type from `Year`. -/
   year : Year.Offset
-
   /-- The month component of the date. It is represented as an `Ordinal` type from `Month`. -/
   month : Month.Ordinal
-
   /-- The day component of the date. It is represented as an `Ordinal` type from `Day`. -/
   day : Day.Ordinal
-
   /-- Validates the date by ensuring that the year, month, and day form a correct and valid date. -/
   valid : year.Valid month day
 deriving Repr, DecidableEq
@@ -46,9 +42,10 @@ instance : Inhabited PlainDate where
 instance : Ord PlainDate where
   compare := compareLex (compareOn (·.year)) <| compareLex (compareOn (·.month)) (compareOn (·.day))
 
-theorem PlainDate.compare_def :
-    compare (α := PlainDate) =
-      compareLex (compareOn (·.year)) (compareLex (compareOn (·.month)) (compareOn (·.day))) := rfl
+theorem PlainDate.compare_def
+    : compare (α := PlainDate)
+      = compareLex (compareOn (·.year)) (compareLex (compareOn (·.month)) (compareOn (·.day))) :=
+  rfl
 
 instance : TransOrd PlainDate := inferInstanceAs <| TransCmp (compareLex _ _)
 
@@ -67,33 +64,30 @@ Creates a `PlainDate` by clipping the day to ensure validity. This function forc
 valid by adjusting the day to fit within the valid range to fit the given month and year.
 -/
 @[inline]
-def ofYearMonthDayClip (year : Year.Offset) (month : Month.Ordinal) (day : Day.Ordinal) : PlainDate :=
+def ofYearMonthDayClip (year : Year.Offset) (month : Month.Ordinal) (day : Day.Ordinal)
+    : PlainDate :=
   let day := month.clipDay year.isLeap day
   PlainDate.mk year month day Month.Ordinal.valid_clipDay
 
 instance : Inhabited PlainDate where
   default := mk 0 1 1 (by decide)
 
-/--
-Creates a new `PlainDate` from year, month, and day components.
--/
+/-- Creates a new `PlainDate` from year, month, and day components. -/
 @[inline]
-def ofYearMonthDay? (year : Year.Offset) (month : Month.Ordinal) (day : Day.Ordinal) : Option PlainDate :=
-  if valid : year.Valid month day
-    then some (PlainDate.mk year month day valid)
-    else none
+def ofYearMonthDay? (year : Year.Offset) (month : Month.Ordinal) (day : Day.Ordinal)
+    : Option PlainDate :=
+  if valid : year.Valid month day then
+    some (PlainDate.mk year month day valid)
+  else
+    none
 
-/--
-Creates a `PlainDate` from a year and a day ordinal within that year.
--/
+/-- Creates a `PlainDate` from a year and a day ordinal within that year. -/
 @[inline]
 def ofYearOrdinal (year : Year.Offset) (ordinal : Day.Ordinal.OfYear year.isLeap) : PlainDate :=
   let ⟨⟨month, day⟩, proof⟩ := ValidDate.ofOrdinal ordinal
   ⟨year, month, day, proof⟩
 
-/--
-Creates a `PlainDate` from the number of days since January 1st, 1970.
--/
+/-- Creates a `PlainDate` from the number of days since January 1st, 1970. -/
 def ofEpochDay (day : Day.Offset) : PlainDate :=
   let z := day.toInt + 719468
   let era := (if z ≥ 0 then z else z - 146096).tdiv 146097
@@ -114,35 +108,20 @@ starting from day 1: days 1–7 are week 1, days 8–14 are week 2, etc.
 def alignedWeekOfMonth (date : PlainDate) : Week.Aligned.Ordinal :=
   date.day.sub 1 |>.ediv 7 (by decide) |>.add 1
 
-/--
-Determines the quarter of the year for the given `PlainDate`.
--/
-def quarter (date : PlainDate) : Bounded.LE 1 4 :=
-  date.month.sub 1 |>.ediv 3 (by decide) |>.add 1
+/-- Determines the quarter of the year for the given `PlainDate`. -/
+def quarter (date : PlainDate) : Bounded.LE 1 4 := date.month.sub 1 |>.ediv 3 (by decide) |>.add 1
 
-/--
-Transforms a `PlainDate` into a `Day.Ordinal.OfYear`.
--/
+/-- Transforms a `PlainDate` into a `Day.Ordinal.OfYear`. -/
 def dayOfYear (date : PlainDate) : Day.Ordinal.OfYear date.year.isLeap :=
   ValidDate.dayOfYear ⟨(date.month, date.day), date.valid⟩
 
-/--
-Determines the era of the given `PlainDate` based on its year.
--/
-@[inline]
-def era (date : PlainDate) : Year.Era :=
-  date.year.era
+/-- Determines the era of the given `PlainDate` based on its year. -/
+@[inline] def era (date : PlainDate) : Year.Era := date.year.era
 
-/--
-Checks if the `PlainDate` is in a leap year.
--/
-@[inline]
-def inLeapYear (date : PlainDate) : Bool :=
-  date.year.isLeap
+/-- Checks if the `PlainDate` is in a leap year. -/
+@[inline] def inLeapYear (date : PlainDate) : Bool := date.year.isLeap
 
-/--
-Converts a `PlainDate` to the number of days since 1970-01-01T00:00:00.
--/
+/-- Converts a `PlainDate` to the number of days since 1970-01-01T00:00:00. -/
 def toEpochDay (date : PlainDate) : Day.Offset :=
   let y : Int := if date.month.toInt > 2 then date.year else date.year.toInt - 1
   let era : Int := (if y ≥ 0 then y else y - 399).tdiv 400
@@ -154,36 +133,25 @@ def toEpochDay (date : PlainDate) : Day.Offset :=
 
   .ofInt (era * 146097 + doe - 719468)
 
-/--
-Adds a given number of days to a `PlainDate`.
--/
+/-- Adds a given number of days to a `PlainDate`. -/
 @[inline]
 def addDays (date : PlainDate) (days : Day.Offset) : PlainDate :=
   let dateDays := date.toEpochDay
   ofEpochDay (dateDays + days)
 
-/--
-Subtracts a given number of days from a `PlainDate`.
--/
-@[inline]
-def subDays (date : PlainDate) (days : Day.Offset) : PlainDate :=
-  addDays date (-days)
+/-- Subtracts a given number of days from a `PlainDate`. -/
+@[inline] def subDays (date : PlainDate) (days : Day.Offset) : PlainDate := addDays date (-days)
 
-/--
-Adds a given number of weeks to a `PlainDate`.
--/
+/-- Adds a given number of weeks to a `PlainDate`. -/
 @[inline]
 def addWeeks (date : PlainDate) (weeks : Week.Offset) : PlainDate :=
   let dateDays := date.toEpochDay
   let daysToAdd := weeks.toDays
   ofEpochDay (dateDays + daysToAdd)
 
-/--
-Subtracts a given number of weeks from a `PlainDate`.
--/
+/-- Subtracts a given number of weeks from a `PlainDate`. -/
 @[inline]
-def subWeeks (date : PlainDate) (weeks : Week.Offset) : PlainDate :=
-  addWeeks date (-weeks)
+def subWeeks (date : PlainDate) (weeks : Week.Offset) : PlainDate := addWeeks date (-weeks)
 
 /--
 Adds a given number of months to a `PlainDate`, clipping the day to the last valid day of the month.
@@ -202,9 +170,7 @@ Subtracts `Month.Offset` from a `PlainDate`, it clips the day to the last valid 
 def subMonthsClip (date : PlainDate) (months : Month.Offset) : PlainDate :=
   addMonthsClip date (-months)
 
-/--
-Creates a `PlainDate` by rolling over the extra days to the next month.
--/
+/-- Creates a `PlainDate` by rolling over the extra days to the next month. -/
 def rollOver (year : Year.Offset) (month : Month.Ordinal) (day : Day.Ordinal) : PlainDate :=
   ofYearMonthDayClip year month 1 |>.addDays (day.toOffset - 1)
 
@@ -229,11 +195,9 @@ Adds a given number of months to a `PlainDate`, rolling over any excess days int
 -/
 def addMonthsRollOver (date : PlainDate) (months : Month.Offset) : PlainDate :=
   addMonthsClip (ofYearMonthDayClip date.year date.month 1) months
-  |>.addDays (date.day.toOffset - 1)
+    |>.addDays (date.day.toOffset - 1)
 
-/--
-Subtracts `Month.Offset` from a `PlainDate`, rolling over excess days as needed.
--/
+/-- Subtracts `Month.Offset` from a `PlainDate`, rolling over excess days as needed. -/
 @[inline]
 def subMonthsRollOver (date : PlainDate) (months : Month.Offset) : PlainDate :=
   addMonthsRollOver date (-months)
@@ -245,16 +209,12 @@ Adds `Year.Offset` to a `PlainDate`, rolling over excess days to the next month,
 def addYearsRollOver (date : PlainDate) (years : Year.Offset) : PlainDate :=
   addMonthsRollOver date (years.mul 12)
 
-/--
-Subtracts `Year.Offset` from a `PlainDate`, rolling over excess days to the next month.
--/
+/-- Subtracts `Year.Offset` from a `PlainDate`, rolling over excess days to the next month. -/
 @[inline]
 def subYearsRollOver (date : PlainDate) (years : Year.Offset) : PlainDate :=
   addMonthsRollOver date (- years.mul 12)
 
-/--
-Adds `Year.Offset` to a `PlainDate`, clipping the day to the last valid day of the month.
--/
+/-- Adds `Year.Offset` to a `PlainDate`, clipping the day to the last valid day of the month. -/
 @[inline]
 def addYearsClip (date : PlainDate) (years : Year.Offset) : PlainDate :=
   addMonthsClip date (years.mul 12)
@@ -326,24 +286,23 @@ def withWeekday (date : PlainDate) (desiredWeekday : Weekday) : PlainDate :=
 
   let offset : Bounded.LE 0 6 :=
     if h : offset.val < 0 then
-      offset.truncateTop (Int.le_sub_one_of_lt h) |>.addBounds (.exact 7)
-      |>.expandBottom (by decide)
+      offset.truncateTop (Int.le_sub_one_of_lt h)
+        |>.addBounds (.exact 7)
+        |>.expandBottom (by decide)
     else
-      offset.truncateBottom (Int.not_lt.mp h)
-      |>.expandTop (by decide)
+      offset.truncateBottom (Int.not_lt.mp h) |>.expandTop (by decide)
 
   date.addDays (Day.Offset.ofInt offset.toInt)
 
 private def localizedDayOfWeek (weekday firstDay : Weekday) : Bounded.LE 0 6 :=
-  weekday.toOrdinal
-  |>.subBounds firstDay.toOrdinal
-  |>.emod 7 (by decide)
+  weekday.toOrdinal |>.subBounds firstDay.toOrdinal |>.emod 7 (by decide)
 
 /--
 Returns the first day of the week-based year for the given `year`, where weeks start on `firstDay`
 and the first week must contain at least `minimalDays` days of the new year.
 -/
-def startOfWeekBasedYear (year : Year.Offset) (firstDay : Weekday) (minimalDays : Bounded.LE 0 6) : PlainDate :=
+def startOfWeekBasedYear (year : Year.Offset) (firstDay : Weekday) (minimalDays : Bounded.LE 0 6)
+    : PlainDate :=
   let jan1 := PlainDate.ofYearMonthDayClip year 1 1
   let localDay := localizedDayOfWeek jan1.weekday firstDay
   let daysInNewYearWeek : Bounded.LE 1 7 := Bounded.LE.exact 7 |>.subBounds localDay
@@ -360,7 +319,10 @@ the start of the week and `minDays` as the minimum number of days required in th
 year (default 4 for ISO 8601). Dates before the first week of the calendar year are counted as part
 of the last week of the previous year.
 -/
-def weekOfYear (date : PlainDate) (firstDay : Weekday := .monday) (minDaysBounded : Bounded.LE 0 6 := .mk 4 (by decide)) : Week.OfYear.Ordinal :=
+def weekOfYear
+    (date : PlainDate)
+    (firstDay : Weekday := .monday) (minDaysBounded : Bounded.LE 0 6 := .mk 4 (by decide))
+    : Week.OfYear.Ordinal :=
   let year := date.year
   let thisYearStart := startOfWeekBasedYear year firstDay minDaysBounded
 
@@ -384,7 +346,10 @@ def weekOfYear (date : PlainDate) (firstDay : Weekday := .monday) (minDaysBounde
 Returns the week-based year for the given `PlainDate`, using `firstDay` as the start of the week
 and `minDays` as the minimum number of days in the first week of the year (default 4 for ISO 8601).
 -/
-def weekYear (date : PlainDate) (firstDay : Weekday := .monday) (minDays : Bounded.LE 0 6 := Bounded.LE.mk 4 (by decide)) : Year.Offset :=
+def weekYear
+    (date : PlainDate)
+    (firstDay : Weekday := .monday) (minDays : Bounded.LE 0 6 := Bounded.LE.mk 4 (by decide))
+    : Year.Offset :=
   let year := date.year
   let thisYearStart := startOfWeekBasedYear year firstDay minDays
   if date.toEpochDay < thisYearStart.toEpochDay then

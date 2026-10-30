@@ -11,18 +11,16 @@ import Init.Data.Nat.Div.Basic
 
 @[expose] public section
 
-/-- Determines if the given integer is a valid [Unicode scalar value](https://www.unicode.org/glossary/#unicode_scalar_value).
+/--
+Determines if the given integer is a valid [Unicode scalar value](https://www.unicode.org/glossary/#unicode_scalar_value).
 
 Note that values in `[0xd800, 0xdfff]` are reserved for [UTF-16 surrogate pairs](https://en.wikipedia.org/wiki/Universal_Character_Set_characters#Surrogates).
 -/
-@[inline, reducible] def isValidChar (n : UInt32) : Prop :=
-  n < 0xd800 ∨ (0xdfff < n ∧ n < 0x110000)
+@[inline, reducible] def isValidChar (n : UInt32) : Prop := n < 0xd800 ∨ (0xdfff < n ∧ n < 0x110000)
 
 namespace Char
 
-/--
-One character is less than another if its code point is strictly less than the other's.
--/
+/-- One character is less than another if its code point is strictly less than the other's. -/
 protected def lt (a b : Char) : Prop := a.val < b.val
 
 /--
@@ -34,51 +32,43 @@ protected def le (a b : Char) : Prop := a.val ≤ b.val
 instance : LT Char := ⟨Char.lt⟩
 instance : LE Char := ⟨Char.le⟩
 
-instance (a b : Char) :  Decidable (a < b) :=
-  UInt32.decLt _ _
+instance (a b : Char) : Decidable (a < b) := UInt32.decLt _ _
 
-instance (a b : Char) : Decidable (a ≤ b) :=
-  UInt32.decLe _ _
+instance (a b : Char) : Decidable (a ≤ b) := UInt32.decLe _ _
 
 /--
 True for natural numbers that are valid [Unicode scalar
 values](https://www.unicode.org/glossary/#unicode_scalar_value).
 -/
-abbrev isValidCharNat (n : Nat) : Prop :=
-  n < 0xd800 ∨ (0xdfff < n ∧ n < 0x110000)
+abbrev isValidCharNat (n : Nat) : Prop := n < 0xd800 ∨ (0xdfff < n ∧ n < 0x110000)
 
 theorem isValidUInt32 (n : Nat) (h : isValidCharNat n) : n < UInt32.size := by
   match h with
-  | Or.inl h        =>
+  | Or.inl h =>
     apply Nat.lt_trans h
     decide
-  | Or.inr ⟨_,  h₂⟩ =>
+  | Or.inr ⟨_, h₂⟩ =>
     apply Nat.lt_trans h₂
     decide
 
-theorem isValidChar_of_isValidCharNat (n : Nat) (h : isValidCharNat n) : isValidChar (UInt32.ofNatLT n (isValidUInt32 n h)) :=
+theorem isValidChar_of_isValidCharNat (n : Nat) (h : isValidCharNat n)
+    : isValidChar (UInt32.ofNatLT n (isValidUInt32 n h)) :=
   match h with
-  | Or.inl h =>
-    Or.inl (UInt32.ofNatLT_lt_of_lt _ (by decide) h)
+  | Or.inl h => Or.inl (UInt32.ofNatLT_lt_of_lt _ (by decide) h)
   | Or.inr ⟨h₁, h₂⟩ =>
     Or.inr ⟨UInt32.lt_ofNatLT_of_lt _ (by decide) h₁, UInt32.ofNatLT_lt_of_lt _ (by decide) h₂⟩
 
-theorem isValidChar_zero : isValidChar 0 :=
-  Or.inl (by decide)
+theorem isValidChar_zero : isValidChar 0 := Or.inl (by decide)
 
-/--
-The character's Unicode code point as a `Nat`.
--/
-@[inline, implicit_reducible] def toNat (c : Char) : Nat :=
-  c.val.toNat
+/-- The character's Unicode code point as a `Nat`. -/
+@[inline, implicit_reducible] def toNat (c : Char) : Nat := c.val.toNat
 
 /--
 Converts a character into a `UInt8` that contains its code point.
 
 If the code point is larger than 255, it is truncated (reduced modulo 256).
 -/
-@[inline] def toUInt8 (c : Char) : UInt8 :=
-  c.val.toUInt8
+@[inline] def toUInt8 (c : Char) : UInt8 := c.val.toUInt8
 
 /--
 Converts an 8-bit unsigned integer into a character.
@@ -94,47 +84,44 @@ instance : Inhabited Char where
 Returns `true` if the character is a space `(' ', U+0020)`, a tab `('\t', U+0009)`, a carriage
 return `('\r', U+000D)`, or a newline `('\n', U+000A)`.
 -/
-@[inline, implicit_reducible] def isWhitespace (c : Char) : Bool :=
-  c = ' ' || c = '\t' || c = '\r' || c = '\n'
+@[inline, implicit_reducible]
+def isWhitespace (c : Char) : Bool := c = ' ' || c = '\t' || c = '\r' || c = '\n'
 
 /--
 Returns `true` if the character is a uppercase ASCII letter.
 
 The uppercase ASCII letters are the following: `ABCDEFGHIJKLMNOPQRSTUVWXYZ`.
 -/
-@[inline, implicit_reducible] def isUpper (c : Char) : Bool :=
-  c.val ≥ 'A'.val ∧ c.val ≤ 'Z'.val
+@[inline, implicit_reducible] def isUpper (c : Char) : Bool := c.val ≥ 'A'.val ∧ c.val ≤ 'Z'.val
 
 /--
 Returns `true` if the character is a lowercase ASCII letter.
 
 The lowercase ASCII letters are the following: `abcdefghijklmnopqrstuvwxyz`.
 -/
-@[inline, implicit_reducible] def isLower (c : Char) : Bool :=
-  c.val ≥ 'a'.val && c.val ≤ 'z'.val
+@[inline, implicit_reducible] def isLower (c : Char) : Bool := c.val ≥ 'a'.val && c.val ≤ 'z'.val
 
 /--
 Returns `true` if the character is an ASCII letter.
 
 The ASCII letters are the following: `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz`.
 -/
-@[inline, implicit_reducible] def isAlpha (c : Char) : Bool :=
-  c.isUpper || c.isLower
+@[inline, implicit_reducible] def isAlpha (c : Char) : Bool := c.isUpper || c.isLower
 
 /--
 Returns `true` if the character is an ASCII digit.
 
 The ASCII digits are the following: `0123456789`.
 -/
-@[inline, implicit_reducible] def isDigit (c : Char) : Bool :=
-  c.val ≥ '0'.val && c.val ≤ '9'.val
+@[inline, implicit_reducible] def isDigit (c : Char) : Bool := c.val ≥ '0'.val && c.val ≤ '9'.val
 
 /--
 Returns `true` if the character is an ASCII hexadecimal digit.
 
 The ASCII hexadecimal digits are the following: `0123456789abcdefABCDEF`.
 -/
-@[inline] def isHexDigit (c : Char) : Bool :=
+@[inline]
+def isHexDigit (c : Char) : Bool :=
   c.isDigit || (c.val ≥ 'a'.val && c.val ≤ 'f'.val) || (c.val ≥ 'A'.val && c.val ≤ 'F'.val)
 
 /--
@@ -143,8 +130,7 @@ Returns `true` if the character is an ASCII letter or digit.
 The ASCII letters are the following: `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz`.
 The ASCII digits are the following: `0123456789`.
 -/
-@[inline, implicit_reducible] def isAlphanum (c : Char) : Bool :=
-  c.isAlpha || c.isDigit
+@[inline, implicit_reducible] def isAlphanum (c : Char) : Bool := c.isAlpha || c.isDigit
 
 /--
 Converts an uppercase ASCII letter to the corresponding lowercase letter. Letters outside the ASCII
@@ -179,13 +165,14 @@ where finally
   -- This expression is a ground non-value; generalize for better
   -- control on where it is evaluated.
   generalize hx : 'A'.val - 'a'.val = x
-  have h₁ : 2^32 ≤ c.val.toNat + x.toNat :=
-    @Nat.add_le_add 'a'.val.toNat _ (2^32 - 'a'.val.toNat) _ h.1 (by rw [← hx]; decide)
-  have h₂ : c.val.toBitVec.toNat + x.toNat < 2^32 + 0xd800 :=
+  have h₁ : 2 ^ 32 ≤ c.val.toNat + x.toNat :=
+    @Nat.add_le_add 'a'.val.toNat _ (2 ^ 32 - 'a'.val.toNat) _ h.1 (by rw [← hx]; decide)
+  have h₂ : c.val.toBitVec.toNat + x.toNat < 2 ^ 32 + 0xd800 :=
     Nat.add_lt_of_lt_sub (Nat.lt_of_le_of_lt h.2 (by rw [← hx]; decide))
-  have add_eq {x y : UInt32} : (x + y).toNat = (x.toNat + y.toNat) % 2^32 := id rfl
+  have add_eq {x y : UInt32} : (x + y).toNat = (x.toNat + y.toNat) % 2 ^ 32 := id rfl
   replace h₂ := Nat.sub_lt_left_of_lt_add h₁ h₂
-  exact .inl <| lt_of_eq_of_lt (add_eq.trans (Nat.mod_eq_sub_mod h₁) |>.trans
-    (Nat.mod_eq_of_lt (Nat.lt_trans h₂ (by decide)))) h₂
+  exact .inl <| lt_of_eq_of_lt
+    (add_eq.trans (Nat.mod_eq_sub_mod h₁) |>.trans (Nat.mod_eq_of_lt (Nat.lt_trans h₂ (by decide))))
+    h₂
 
 end Char

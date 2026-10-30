@@ -49,8 +49,7 @@ Examples:
  * `String.singleton '"' = "\""`
  * `String.singleton '𝒫' = "𝒫"`
 -/
-@[inline, expose, implicit_reducible] def singleton (c : Char) : String :=
-  "".push c
+@[inline, expose, implicit_reducible] def singleton (c : Char) : String := "".push c
 
 end String
 
@@ -147,8 +146,7 @@ opaque ugetUTF8Byte (s : @& String) (n : USize) (h : n.toNat < s.utf8ByteSize) :
 end String.Internal
 
 @[extern "lean_string_mk", expose, deprecated String.ofList (since := "2025-10-30")]
-def String.mk (data : List Char) : String :=
-  ⟨List.utf8Encode data,.intro data rfl⟩
+def String.mk (data : List Char) : String := ⟨List.utf8Encode data, .intro data rfl⟩
 
 /--
 Creates a string that contains the characters in a list, in order.
@@ -159,8 +157,7 @@ Examples:
  * `['a', 'a', 'a'].asString = "aaa"`
 -/
 @[expose, inline, deprecated String.ofList (since := "2025-10-30")]
-def List.asString (s : List Char) : String :=
-  String.ofList s
+def List.asString (s : List Char) : String := String.ofList s
 
 namespace Substring.Raw.Internal
 
@@ -227,7 +224,7 @@ Examples:
  * `'L'.toString = "L"`
  * `'"'.toString = "\""`
 -/
-@[inline, expose, implicit_reducible] protected def toString (c : Char) : String :=
-  String.singleton c
+@[inline, expose, implicit_reducible]
+protected def toString (c : Char) : String := String.singleton c
 
 end Char

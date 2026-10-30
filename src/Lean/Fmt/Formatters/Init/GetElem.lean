@@ -22,8 +22,7 @@ public def fmtGetElem : Fmt := fun
     let rbTk ← fmt rbTk
     let idx := Layouts.bracketed lbTk i rbTk .dense
     return mkSelfDelimited <| Layouts.atomic #[t, idx]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt «term__[_]_?»]
 public def fmtGetElemQuestion : Fmt := fun stx => do
@@ -38,8 +37,7 @@ public def fmtGetElemQuestion : Fmt := fun stx => do
     let questionTk ← fmt questionTk
     let idx := Layouts.bracketed lbTk i rbTk .dense
     return mkSelfDelimited <| Layouts.atomic #[t, idx, questionTk]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt «term__[_]_!»]
 public def fmtGetElemExclamation : Fmt := fun stx => do
@@ -54,8 +52,7 @@ public def fmtGetElemExclamation : Fmt := fun stx => do
     let exclamationTk ← fmt exclamationTk
     let idx := Layouts.bracketed lbTk i rbTk .dense
     return mkSelfDelimited <| Layouts.atomic #[t, idx, exclamationTk]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt «term__[_]'_»]
 public def fmtGetElemProof : Fmt := fun
@@ -68,5 +65,4 @@ public def fmtGetElemProof : Fmt := fun
     let idx := Layouts.bracketed lbTk i rbTk .dense
     let lhs := Layouts.atomic #[t, idx]
     return nested <| Layouts.atomic #[lhs, h]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

@@ -28,24 +28,24 @@ Examples:
 -/
 @[expose, instance_reducible] protected def finRange (n : Nat) : Array (Fin n) := ofFn fun i => i
 
-@[simp, grind =] theorem size_finRange {n} : (Array.finRange n).size = n := by
-  simp [Array.finRange]
+@[simp, grind =]
+theorem size_finRange {n} : (Array.finRange n).size = n := by simp [Array.finRange]
 
-@[simp, grind =] theorem getElem_finRange {i : Nat} (h : i < (Array.finRange n).size) :
-    (Array.finRange n)[i] = Fin.cast size_finRange ⟨i, h⟩ := by
+@[simp, grind =]
+theorem getElem_finRange {i : Nat} (h : i < (Array.finRange n).size)
+    : (Array.finRange n)[i] = Fin.cast size_finRange ⟨i, h⟩ := by
   simp [Array.finRange]
 
 @[simp] theorem finRange_zero : Array.finRange 0 = #[] := by simp [Array.finRange]
 
-theorem finRange_succ {n} : Array.finRange (n+1) = #[0] ++ (Array.finRange n).map Fin.succ := by
+theorem finRange_succ {n} : Array.finRange (n + 1) = #[0] ++ (Array.finRange n).map Fin.succ := by
   ext
   · simp [Nat.add_comm]
   · simp [getElem_append]
-    split <;>
-    · simp; omega
+    split <;> · simp; omega
 
-theorem finRange_succ_last {n} :
-    Array.finRange (n+1) = (Array.finRange n).map Fin.castSucc ++ #[Fin.last n] := by
+theorem finRange_succ_last {n}
+    : Array.finRange (n + 1) = (Array.finRange n).map Fin.castSucc ++ #[Fin.last n] := by
   ext
   · simp
   · simp [getElem_push]

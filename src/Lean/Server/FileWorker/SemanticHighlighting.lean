@@ -24,7 +24,8 @@ def noHighlightKinds : Array SyntaxNodeKind := #[
   ``Lean.Parser.Term.type,
   ``Lean.Parser.Term.prop,
   -- not really keywords
-  `antiquotName]
+  `antiquotName
+]
 
 def docKinds : Array SyntaxNodeKind := #[
   ``Lean.Parser.Command.plainDocComment,
@@ -44,7 +45,7 @@ def keywordSemanticTokenMap : Std.TreeMap String SemanticTokenType :=
 /-- Semantic token information for a given `Syntax`. -/
 structure LeanSemanticToken where
   /-- Syntax of the semantic token. -/
-  stx  : Syntax
+  stx : Syntax
   /-- Type of the semantic token. -/
   type : SemanticTokenType
   /-- In case of overlap, higher-priority tokens will take precedence -/
@@ -53,25 +54,23 @@ structure LeanSemanticToken where
 /-- Semantic token information with absolute LSP positions. -/
 structure AbsoluteLspSemanticToken where
   /-- Start position of the semantic token. -/
-  pos     : Lsp.Position
+  pos : Lsp.Position
   /-- End position of the semantic token. -/
   tailPos : Lsp.Position
   /-- Start position of the semantic token. -/
-  type    : SemanticTokenType
+  type : SemanticTokenType
   /-- In case of overlap, higher-priority tokens will take precedence -/
   priority : Nat := 5
-  deriving BEq, Hashable, FromJson, ToJson
+deriving BEq, Hashable, FromJson, ToJson
 
 /--
 Given a set of `LeanSemanticToken`, computes the `AbsoluteLspSemanticToken` with absolute
 LSP position information for each token.
 -/
 def computeAbsoluteLspSemanticTokens
-    (text     : FileMap)
-    (beginPos : String.Pos.Raw)
-    (endPos?  : Option String.Pos.Raw)
-    (tokens   : Array LeanSemanticToken) :
-    Array AbsoluteLspSemanticToken :=
+    (text : FileMap) (beginPos : String.Pos.Raw) (endPos? : Option String.Pos.Raw)
+    (tokens : Array LeanSemanticToken)
+    : Array AbsoluteLspSemanticToken :=
   tokens.filterMap fun tok => do
     let (pos, tailPos) := (← tok.stx.getPos?, ← tok.stx.getTailPos?)
     guard <| beginPos <= pos && endPos?.all (pos < ·)
@@ -121,20 +120,24 @@ Adds a surrounding token to the set. These are tokens whose interval includes th
 processed, but are superseded by the current token.
 -/
 private def HandleOverlapState.insertSurrounding
-    (st : HandleOverlapState) (s : AbsoluteLspSemanticToken) : HandleOverlapState :=
-  { st with surrounding := go st.surrounding }
+    (st : HandleOverlapState) (s : AbsoluteLspSemanticToken)
+    : HandleOverlapState := {
+  st with
+  surrounding := go st.surrounding
+}
 where
   go
     | [] => [s]
-    | x :: xs =>
-      if s.tailPos < x.tailPos then s :: x :: xs else x :: go xs
+    | x :: xs => if s.tailPos < x.tailPos then s :: x :: xs else x :: go xs
 
 /--
 Handles state transitions that are not due to a new token. If `nextToken?` is `none`, then there are
 no more tokens to process, so all remaining transitions occur. If it is `some t`, then state
 transitions only occur for token boundaries less than the `t`'s start.
 -/
-private def HandleOverlapState.untilToken (st : HandleOverlapState) (nextToken? : Option AbsoluteLspSemanticToken) : HandleOverlapState := Id.run do
+private def HandleOverlapState.untilToken
+    (st : HandleOverlapState) (nextToken? : Option AbsoluteLspSemanticToken)
+    : HandleOverlapState := Id.run do
   let mut st := st
   repeat
     if let some curr := st.current? then
@@ -144,11 +147,11 @@ private def HandleOverlapState.untilToken (st : HandleOverlapState) (nextToken? 
       st := { st with surrounding := st.surrounding.dropWhile (·.tailPos ≤ curr.tailPos) }
       -- If the current token ends before the next token starts, or if there are no new tokens, then
       -- we end it now
-      let endNow : Bool :=
-        if let some t := nextToken? then curr.tailPos ≤ t.pos else true
+      let endNow : Bool := if let some t := nextToken? then curr.tailPos ≤ t.pos else true
       if endNow then
-        st := { st with
-          nonOverlapping := st.nonOverlapping.push curr,
+        st := {
+          st with
+          nonOverlapping := st.nonOverlapping.push curr
           -- Because all surrounding tokens end later than the current token, the new current token
           -- is non-empty.
           current? := takeBest st.surrounding |>.map ({ · with pos := curr.tailPos })
@@ -177,8 +180,7 @@ where
   -/
   takeBest (toks : List AbsoluteLspSemanticToken) : Option AbsoluteLspSemanticToken :=
     toks.foldl (init := none) fun
-      | none, t =>
-        some t
+      | none, t => some t
       | some soFar, t =>
         if better t soFar then
           some t
@@ -195,7 +197,8 @@ token (if any), and then the highest-priority of the two is made current with th
 the surrounding tokens list. If `t` and the current token have the same priority, then the one that
 starts later or ends earlier is made into the new current token.
 -/
-private def HandleOverlapState.token (st : HandleOverlapState) (t : AbsoluteLspSemanticToken) : HandleOverlapState := Id.run do
+private def HandleOverlapState.token (st : HandleOverlapState) (t : AbsoluteLspSemanticToken)
+    : HandleOverlapState := Id.run do
   let st := st.untilToken (some t)
   -- Now we know that the current token, if present, overlaps with `t`
   let some curr := st.current?
@@ -211,8 +214,9 @@ private def HandleOverlapState.token (st : HandleOverlapState) (t : AbsoluteLspS
         return st.insertSurrounding t
 
   -- Transition to t, save current if it's longer than t
-  let st := { st with
-    current? := some t,
+  let st := {
+    st with
+    current? := some t
     nonOverlapping :=
       let curr := { curr with tailPos := t.pos }
       -- Only save the token if it actually takes up space. This step is what filters out
@@ -226,8 +230,6 @@ private def HandleOverlapState.token (st : HandleOverlapState) (t : AbsoluteLspS
     return st.insertSurrounding curr
   else
     return st
-
-
 
 /--
 Eliminates overlapping tokens by selecting a single “best” token for each interval between token
@@ -259,13 +261,14 @@ If two overlapping tokens have the same priority, then ties are broken as follow
 Callers should ensure that all tokens in `tokens` designate non-empty regions of the file. In other
 words, it should be true that `∀ t ∈ tokens, t.pos < t.tailPos`.
 -/
-def handleOverlappingSemanticTokens (tokens : Array AbsoluteLspSemanticToken) :
-    Array AbsoluteLspSemanticToken := Id.run do
+def handleOverlappingSemanticTokens (tokens : Array AbsoluteLspSemanticToken)
+    : Array AbsoluteLspSemanticToken := Id.run do
   -- `insertionSort` is used because a stable sort is needed here in order to allow the final
   -- tiebreaker to be position in the input array
   let count := tokens.size
-  let tokens := tokens.toList.mergeSort fun ⟨pos1, tailPos1, _, _⟩ ⟨pos2, tailPos2, _, _⟩ =>
-    pos1 < pos2 || pos1 == pos2 && tailPos1 ≤ tailPos2
+  let tokens :=
+    tokens.toList.mergeSort fun ⟨pos1, tailPos1, _, _⟩ ⟨pos2, tailPos2, _, _⟩ =>
+      pos1 < pos2 || pos1 == pos2 && tailPos1 ≤ tailPos2
   let mut st : HandleOverlapState := {
     current? := none
     -- Reserve 10% for overlaps
@@ -277,16 +280,17 @@ def handleOverlappingSemanticTokens (tokens : Array AbsoluteLspSemanticToken) :
   st := st.untilToken none
   return st.nonOverlapping
 
-
 /--
 Given a set of `AbsoluteLspSemanticToken`, computes the LSP `SemanticTokens` data with
 token-relative positioning.
 See https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_semanticTokens.
 -/
-def computeDeltaLspSemanticTokens (tokens : Array AbsoluteLspSemanticToken) : SemanticTokens := Id.run do
-  let tokens := tokens.qsort fun ⟨pos1, tailPos1, _, _⟩ ⟨pos2, tailPos2, _, _⟩ =>
-    pos1 < pos2 || pos1 == pos2 && tailPos1 <= tailPos2
-  let mut data : Array Nat := Array.mkEmpty (5*tokens.size)
+def computeDeltaLspSemanticTokens (tokens : Array AbsoluteLspSemanticToken)
+    : SemanticTokens := Id.run do
+  let tokens :=
+    tokens.qsort fun ⟨pos1, tailPos1, _, _⟩ ⟨pos2, tailPos2, _, _⟩ =>
+      pos1 < pos2 || pos1 == pos2 && tailPos1 <= tailPos2
+  let mut data : Array Nat := Array.mkEmpty (5 * tokens.size)
   let mut lastPos : Lsp.Position := ⟨0, 0⟩
   for ⟨pos, tailPos, tokenType, _⟩ in tokens do
     let deltaLine := pos.line - lastPos.line
@@ -300,8 +304,8 @@ def computeDeltaLspSemanticTokens (tokens : Array AbsoluteLspSemanticToken) : Se
 
 open Lean.Doc in
 private partial def collectVersoTokens
-    (stx : Syntax) (getTokens : (stx : Syntax) → Array LeanSemanticToken) :
-    Array LeanSemanticToken :=
+    (stx : Syntax) (getTokens : (stx : Syntax) → Array LeanSemanticToken)
+    : Array LeanSemanticToken :=
   go stx |>.run #[] |>.2
 where
   tok (tk : Syntax) (k : SemanticTokenType) : StateM (Array LeanSemanticToken) Unit :=
@@ -323,8 +327,7 @@ where
     let tailPos := if value.endsWith "\n" then tailPos - '\n' else tailPos
     return .ofRange ⟨pos, tailPos⟩
 
-  goArg (arg : TSyntax ``Parser.arg) :
-      StateM (Array LeanSemanticToken) Unit := do
+  goArg (arg : TSyntax ``Parser.arg) : StateM (Array LeanSemanticToken) Unit := do
     match ArgView.of arg with
     | some (.named _ parens x tk v) =>
       if let some (o, _) := parens then tok o .keyword
@@ -355,111 +358,129 @@ where
       if let some region := codeLine line.raw line.getVersoCodeLine then tok region .string
     tok code.closer .keyword
 
-  goItem (marker : Syntax) (contents : TSyntaxArray ``Parser.block) :
-      StateM (Array LeanSemanticToken) Unit := do
+  goItem (marker : Syntax) (contents : TSyntaxArray ``Parser.block)
+      : StateM (Array LeanSemanticToken) Unit := do
     tok marker .keyword
-    for b in contents do go b.raw
+    for b in contents do
+      go b.raw
 
-  goDelimited (opener closer : Syntax) (content : TSyntaxArray ``Parser.inline) :
-      StateM (Array LeanSemanticToken) Unit := do
+  goDelimited (opener closer : Syntax) (content : TSyntaxArray ``Parser.inline)
+      : StateM (Array LeanSemanticToken) Unit := do
     tok opener .keyword
-    for i in content do go i.raw
+    for i in content do
+      go i.raw
     tok closer .keyword
 
   goDesc (item : DescItemView) : StateM (Array LeanSemanticToken) Unit := do
     tok item.marker .keyword
-    for i in item.term do go i.raw
-    for b in item.desc do go b.raw
+    for i in item.term do
+      go i.raw
+    for b in item.desc do
+      go b.raw
 
   go (stx : Syntax) : StateM (Array LeanSemanticToken) Unit := do
-  if let some v := InlineView.of ⟨stx⟩ then
-    match v with
-    | .text .. | .linebreak .. => pure ()
-    | .bold v => goDelimited v.opener v.closer v.content
-    | .emph v => goDelimited v.opener v.closer v.content
-    | .link v =>
-      goDelimited v.opener v.closer v.content
-      goTarget v.target
-    | .image v =>
-      tok v.opener .keyword
-      tok v.alt.raw .string
-      tok v.closer .keyword
-      goTarget v.target
-    | .footnote v =>
-      tok v.opener .keyword
-      tok v.name.raw .property
-      tok v.closer .keyword
-    | .code v =>
-      goCode v
-    | .role v =>
-      tok v.braceOpen .keyword
-      tok v.name.raw .function
-      for a in v.args do goArg a
-      tok v.braceClose .keyword
-      if let some (o, _) := v.brackets then tok o .keyword
-      for i in v.content do go i.raw
-      if let some (_, c) := v.brackets then tok c .keyword
-    | .math v =>
-      tok v.marker .keyword
-      goCode v.code
-  else if let some v := BlockView.of ⟨stx⟩ then
-    match v with
-    | .para v =>
-      for i in v.content do go i.raw
-    | .codeblock v =>
-      tok v.openFence .keyword
-      if let some x := v.name? then
-        tok x.raw .function
-        for a in v.args do goArg a
-      for line in v.content.getVersoCodeBlockLines do
-        if let some region := codeLine line.raw line.getVersoCodeLine then tok region .string
-      tok v.closeFence .keyword
-    | .directive v =>
-      tok v.opener .keyword
-      tok v.name.raw .function
-      for a in v.args do goArg a
-      for b in v.content do go b.raw
-      tok v.closer .keyword
-    | .command v =>
-      tok v.braceOpen .keyword
-      tok v.name.raw .function
-      for a in v.args do goArg a
-      tok v.braceClose .keyword
-    | .metadata v =>
-      tok v.opener .keyword
-      modify (· ++ getTokens v.contents.raw)
-      tok v.closer .keyword
-    | .linkRef v =>
-      tok v.opener .keyword
-      tok v.name.raw .property
-      tok v.closer .keyword
-      tok v.url.raw .string
-    | .footnoteRef v =>
-      tok v.opener .keyword
-      tok v.name.raw .property
-      tok v.closer .keyword
-      for i in v.content do go i.raw
-    | .header v =>
-      tok v.marker .keyword
-      for i in v.content do go i.raw
-    | .ul v =>
-      for item in v.items do goItem item.marker item.contents
-    | .ol v =>
-      for item in v.items do goItem item.marker item.contents
-    | .dl v =>
-      for item in v.items do goDesc item
-    | .blockquote v =>
-      tok v.marker .keyword
-      for b in v.content do go b.raw
-  else
-    stx.getArgs.forM go
+    if let some v := InlineView.of ⟨stx⟩ then
+      match v with
+      | .text .. | .linebreak .. => pure ()
+      | .bold v => goDelimited v.opener v.closer v.content
+      | .emph v => goDelimited v.opener v.closer v.content
+      | .link v =>
+        goDelimited v.opener v.closer v.content
+        goTarget v.target
+      | .image v =>
+        tok v.opener .keyword
+        tok v.alt.raw .string
+        tok v.closer .keyword
+        goTarget v.target
+      | .footnote v =>
+        tok v.opener .keyword
+        tok v.name.raw .property
+        tok v.closer .keyword
+      | .code v =>
+        goCode v
+      | .role v =>
+        tok v.braceOpen .keyword
+        tok v.name.raw .function
+        for a in v.args do
+          goArg a
+        tok v.braceClose .keyword
+        if let some (o, _) := v.brackets then tok o .keyword
+        for i in v.content do
+          go i.raw
+        if let some (_, c) := v.brackets then tok c .keyword
+      | .math v =>
+        tok v.marker .keyword
+        goCode v.code
+    else if let some v := BlockView.of ⟨stx⟩ then
+      match v with
+      | .para v =>
+        for i in v.content do
+          go i.raw
+      | .codeblock v =>
+        tok v.openFence .keyword
+        if let some x := v.name? then
+          tok x.raw .function
+          for a in v.args do
+            goArg a
+        for line in v.content.getVersoCodeBlockLines do
+          if let some region := codeLine line.raw line.getVersoCodeLine then tok region .string
+        tok v.closeFence .keyword
+      | .directive v =>
+        tok v.opener .keyword
+        tok v.name.raw .function
+        for a in v.args do
+          goArg a
+        for b in v.content do
+          go b.raw
+        tok v.closer .keyword
+      | .command v =>
+        tok v.braceOpen .keyword
+        tok v.name.raw .function
+        for a in v.args do
+          goArg a
+        tok v.braceClose .keyword
+      | .metadata v =>
+        tok v.opener .keyword
+        modify (· ++ getTokens v.contents.raw)
+        tok v.closer .keyword
+      | .linkRef v =>
+        tok v.opener .keyword
+        tok v.name.raw .property
+        tok v.closer .keyword
+        tok v.url.raw .string
+      | .footnoteRef v =>
+        tok v.opener .keyword
+        tok v.name.raw .property
+        tok v.closer .keyword
+        for i in v.content do
+          go i.raw
+      | .header v =>
+        tok v.marker .keyword
+        for i in v.content do
+          go i.raw
+      | .ul v =>
+        for item in v.items do
+          goItem item.marker item.contents
+      | .ol v =>
+        for item in v.items do
+          goItem item.marker item.contents
+      | .dl v =>
+        for item in v.items do
+          goDesc item
+      | .blockquote v =>
+        tok v.marker .keyword
+        for b in v.content do
+          go b.raw
+    else
+      stx.getArgs.forM go
 
 /--
 Collects all semantic tokens that can be deduced purely from `Syntax`
 without elaboration information.
 -/
-partial def collectSyntaxBasedSemanticTokens (text : FileMap) : (stx : Syntax) → Array LeanSemanticToken
-  | `($e.$id:ident)    =>
+partial def collectSyntaxBasedSemanticTokens (text : FileMap)
+    : (stx : Syntax) → Array LeanSemanticToken
+  | `($e.$id:ident) =>
     let tokens := collectSyntaxBasedSemanticTokens text e
     tokens.push { stx := id, type := SemanticTokenType.property }
   | `($e |>.$field:ident) =>
@@ -483,7 +504,7 @@ partial def collectSyntaxBasedSemanticTokens (text : FileMap) : (stx : Syntax) �
       | return tokens
     let isRegularKeyword := val.front?.any isIdFirst
     let isHashKeyword := ((val.dropPrefix? '#').bind (·.front?)).any isIdFirst
-    if ! isRegularKeyword && ! isHashKeyword then
+    if !isRegularKeyword && !isHashKeyword then
       return tokens
     return tokens.push { stx, type := keywordSemanticTokenMap.getD val .keyword }
 
@@ -501,10 +522,10 @@ def collectInfoBasedSemanticTokens (i : Elab.InfoTree) : Array LeanSemanticToken
           if localDecl.isAuxDecl then
             if ti.isBinder then
               return { stx := ti.stx, type := SemanticTokenType.function }
-          else if ! localDecl.isImplementationDetail then
+          else if !localDecl.isImplementationDetail then
             return { stx := ti.stx, type := SemanticTokenType.variable }
     if ti.stx.getKind == Parser.Term.identProjKind then
-      return {stx := ti.stx, type := SemanticTokenType.property }
+      return { stx := ti.stx, type := SemanticTokenType.property }
     none
 
 /--
@@ -519,11 +540,16 @@ def dbgShowTokens (text : FileMap) (toks : Array LeanSemanticToken) : String := 
   let mut out := ""
   for (l, vals) in byLine.toList.mergeSort (fun x y => x.1 ≤ y.1) do
     let vals := vals.toList.mergeSort fun x y => x.1 ≤ y.1
-    out := out ++ s!"{l}:\t{vals.map (fun (c1, c2, ⟨stx, tok, prio⟩) => (c1, c2, stx, toJson tok, prio))}\n"
+    out :=
+      out
+        ++ s!"{l}:\t{vals.map (fun (c1, c2, ⟨stx, tok, prio⟩) => (c1, c2, stx, toJson tok, prio))}\
+          \n"
   out
 
-def computeSemanticTokens  (doc : EditableDocument) (beginPos : String.Pos.Raw)
-    (endPos? : Option String.Pos.Raw) (snaps : List Snapshots.Snapshot) : RequestM SemanticTokens := do
+def computeSemanticTokens
+    (doc : EditableDocument) (beginPos : String.Pos.Raw) (endPos? : Option String.Pos.Raw)
+    (snaps : List Snapshots.Snapshot)
+    : RequestM SemanticTokens := do
   let mut leanSemanticTokens := #[]
   for s in snaps do
     if s.endPos <= beginPos then
@@ -532,7 +558,8 @@ def computeSemanticTokens  (doc : EditableDocument) (beginPos : String.Pos.Raw)
     let infoBasedSemanticTokens := collectInfoBasedSemanticTokens s.infoTree
     leanSemanticTokens := leanSemanticTokens ++ syntaxBasedSemanticTokens ++ infoBasedSemanticTokens
     RequestM.checkCancelled
-  let absoluteLspSemanticTokens := computeAbsoluteLspSemanticTokens doc.meta.text beginPos endPos? leanSemanticTokens
+  let absoluteLspSemanticTokens :=
+    computeAbsoluteLspSemanticTokens doc.meta.text beginPos endPos? leanSemanticTokens
   RequestM.checkCancelled
   let absoluteLspSemanticTokens := handleOverlappingSemanticTokens absoluteLspSemanticTokens
   RequestM.checkCancelled
@@ -540,51 +567,41 @@ def computeSemanticTokens  (doc : EditableDocument) (beginPos : String.Pos.Raw)
   return semanticTokens
 
 structure SemanticTokensState where
-  deriving TypeName, Inhabited
+deriving TypeName, Inhabited
 
 /-- Computes all semantic tokens for the document. -/
-def handleSemanticTokensFull (_ : SemanticTokensParams) (_ : SemanticTokensState) :
-    RequestM (LspResponse SemanticTokens × SemanticTokensState) := do
+def handleSemanticTokensFull (_ : SemanticTokensParams) (_ : SemanticTokensState)
+    : RequestM (LspResponse SemanticTokens × SemanticTokensState) := do
   let ctx ← read
   let doc ← readDoc
   -- Only grabs the finished prefix so that we do not need to wait for elaboration to complete
   -- for the full file before sending a response. This means that the response will be incomplete,
   -- which we mitigate by regularly sending `workspace/semanticTokens/refresh` requests in the
   -- `FileWorker` to tell the client to re-compute the semantic tokens.
-  let (snaps, _, isComplete) ← doc.cmdSnaps.getFinishedPrefixWithTimeout 3000 (cancelTks := ctx.cancelTk.cancellationTasks)
+  let (snaps, _, isComplete) ←
+    doc.cmdSnaps.getFinishedPrefixWithTimeout 3000 (cancelTks := ctx.cancelTk.cancellationTasks)
   let response ← computeSemanticTokens doc 0 none snaps
   return ({ response, isComplete }, ⟨⟩)
 
-def handleSemanticTokensDidChange (_ : DidChangeTextDocumentParams) :
-    StateT SemanticTokensState RequestM Unit := do
+def handleSemanticTokensDidChange (_ : DidChangeTextDocumentParams)
+    : StateT SemanticTokensState RequestM Unit := do
   return
 
 /-- Computes the semantic tokens in the range provided by `p`. -/
-def handleSemanticTokensRange (p : SemanticTokensRangeParams) :
-    RequestM (RequestTask SemanticTokens) := do
+def handleSemanticTokensRange (p : SemanticTokensRangeParams)
+    : RequestM (RequestTask SemanticTokens) := do
   let doc ← readDoc
   let text := doc.meta.text
   let beginPos := text.lspPosToUtf8Pos p.range.start
   let endPos := text.lspPosToUtf8Pos p.range.end
   let t := doc.cmdSnaps.waitUntil (·.endPos >= endPos)
-  mapTaskCostly t fun (snaps, _) =>
-    computeSemanticTokens doc beginPos endPos snaps
+  mapTaskCostly t fun (snaps, _) => computeSemanticTokens doc beginPos endPos snaps
 
 builtin_initialize
-  registerLspRequestHandler
-    "textDocument/semanticTokens/range"
-    SemanticTokensRangeParams
-    SemanticTokens
-    handleSemanticTokensRange
-  registerPartialStatefulLspRequestHandler
-    "textDocument/semanticTokens/full"
-    "workspace/semanticTokens/refresh"
-    2000
-    SemanticTokensParams
-    SemanticTokens
-    SemanticTokensState
-    ⟨⟩
-    handleSemanticTokensFull
-    handleSemanticTokensDidChange
+  registerLspRequestHandler "textDocument/semanticTokens/range" SemanticTokensRangeParams
+    SemanticTokens handleSemanticTokensRange
+  registerPartialStatefulLspRequestHandler "textDocument/semanticTokens/full"
+    "workspace/semanticTokens/refresh" 2000 SemanticTokensParams SemanticTokens SemanticTokensState
+    ⟨⟩ handleSemanticTokensFull handleSemanticTokensDidChange
 
 end Lean.Server.FileWorker

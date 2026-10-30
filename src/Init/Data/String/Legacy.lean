@@ -19,9 +19,11 @@ public section
 
 namespace String
 
-@[specialize] def splitAux (s : String) (p : Char → Bool) (b : Pos.Raw) (i : Pos.Raw) (r : List String) : List String :=
+@[specialize]
+def splitAux (s : String) (p : Char → Bool) (b : Pos.Raw) (i : Pos.Raw) (r : List String)
+    : List String :=
   if h : i.atEnd s then
-    let r := (b.extract s i)::r
+    let r := (b.extract s i) :: r
     r.reverse
   else
     have := Nat.sub_lt_sub_left (Nat.gt_of_not_le (mt decide_eq_true h)) (Pos.Raw.lt_next s _)
@@ -45,8 +47,7 @@ Examples:
 * `"coffee  tea  water".split (·.isWhitespace) = ["coffee", "", "tea", "", "water"]`
 * `"fun x =>\n  x + 1\n".split (· == '\n') = ["fun x =>", "  x + 1", ""]`
 -/
-@[inline] def splitToList (s : String) (p : Char → Bool) : List String :=
-  splitAux s p 0 0 []
+@[inline] def splitToList (s : String) (p : Char → Bool) : List String := splitAux s p 0 0 []
 
 /--
 Auxiliary for `splitOn`. Preconditions:
@@ -58,38 +59,42 @@ It represents the state where we have currently parsed some split parts into `r`
 `b` is the beginning of the string / the end of the previous match of `sep`, and the first `j` bytes
 of `sep` match the bytes `i-j .. i` of `s`.
 -/
-def splitOnAux (s sep : String) (b : Pos.Raw) (i : Pos.Raw) (j : Pos.Raw) (r : List String) : List String :=
+def splitOnAux (s sep : String) (b : Pos.Raw) (i : Pos.Raw) (j : Pos.Raw) (r : List String)
+    : List String :=
   if i.atEnd s then
-    let r := (b.extract s i)::r
+    let r := (b.extract s i) :: r
     r.reverse
-  else
-    if i.get s == j.get sep then
-      let i := i.next s
-      let j := j.next sep
-      if j.atEnd sep then
-        splitOnAux s sep i i 0 (b.extract s (i.unoffsetBy j)::r)
-      else
-        splitOnAux s sep b i j r
+  else if i.get s == j.get sep then
+    let i := i.next s
+    let j := j.next sep
+    if j.atEnd sep then
+      splitOnAux s sep i i 0 (b.extract s (i.unoffsetBy j) :: r)
     else
-      splitOnAux s sep b ((i.unoffsetBy j).next s) 0 r
+      splitOnAux s sep b i j r
+  else
+    splitOnAux s sep b ((i.unoffsetBy j).next s) 0 r
 termination_by (s.rawEndPos.1 - (j.byteDistance i), sep.rawEndPos.1 - j.1)
 decreasing_by
   focus
     rename_i h _ _
-    left; exact Nat.sub_lt_sub_left
+    left
+    exact Nat.sub_lt_sub_left
       (Nat.lt_of_le_of_lt (Nat.sub_le ..) (Nat.gt_of_not_le (mt decide_eq_true h)))
       (Nat.lt_of_le_of_lt (Nat.sub_le ..) (Pos.Raw.lt_next s _))
   focus
     rename_i i₀ j₀ _ eq h'
     rw [show (j₀.next sep).byteDistance (i₀.next s) = j₀.byteDistance i₀ by
       change (_ + Char.utf8Size _) - (_ + Char.utf8Size _) = _
-      rw [(beq_iff_eq ..).1 eq, Nat.add_sub_add_right]; rfl]
-    right; exact Nat.sub_lt_sub_left
+      rw [(beq_iff_eq ..).1 eq, Nat.add_sub_add_right]
+      rfl]
+    right
+    exact Nat.sub_lt_sub_left
       (Nat.lt_of_le_of_lt (Nat.le_add_right ..) (Nat.gt_of_not_le (mt decide_eq_true h')))
       (Pos.Raw.lt_next sep _)
   focus
     rename_i h _
-    left; exact Nat.sub_lt_sub_left
+    left
+    exact Nat.sub_lt_sub_left
       (Nat.lt_of_le_of_lt (Nat.sub_le ..) (Nat.gt_of_not_le (mt decide_eq_true h)))
       (Pos.Raw.lt_next s _)
 
@@ -109,7 +114,8 @@ Examples:
 * `"here is some text ".splitOn "" = ["here is some text "]`
 * `"ababacabac".splitOn "aba" = ["", "bac", "c"]`
 -/
-@[inline] def splitOn (s : String) (sep : String := " ") : List String :=
+@[inline]
+def splitOn (s : String) (sep : String := " ") : List String :=
   if sep == "" then [s] else splitOnAux s sep 0 0 0 []
 
 end String

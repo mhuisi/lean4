@@ -19,5 +19,4 @@ public def fmtTestExtern : Fmt := fun
     let testExternTk ← fmt testExternTk
     let t ← fmt t
     return Layouts.pseudoApplication #[testExternTk, t]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

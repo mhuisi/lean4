@@ -21,18 +21,16 @@ variable [∀ s, Std.Iterator (σ s) Id (SearchStep s)]
 variable [∀ s, Std.IteratorLoop (σ s) Id Id]
 
 @[simp]
-theorem Slice.Pos.le_find {s : Slice} (pos : s.Pos) (pattern : ρ) [ToForwardSearcher pattern σ] :
-    pos ≤ pos.find pattern := by
+theorem Slice.Pos.le_find {s : Slice} (pos : s.Pos) (pattern : ρ) [ToForwardSearcher pattern σ]
+    : pos ≤ pos.find pattern := by
   simp [Slice.Pos.find]
 
 @[simp]
-theorem Pos.le_find {s : String} (pos : s.Pos) (pattern : ρ) [ToForwardSearcher pattern σ] :
-    pos ≤ pos.find pattern := by
+theorem Pos.le_find {s : String} (pos : s.Pos) (pattern : ρ) [ToForwardSearcher pattern σ]
+    : pos ≤ pos.find pattern := by
   simp [Pos.find, ← toSlice_le]
 
-@[simp]
-theorem front?_toSlice {s : String} : s.toSlice.front? = s.front? :=
-  (rfl)
+@[simp] theorem front?_toSlice {s : String} : s.toSlice.front? = s.front? := (rfl)
 
 theorem front?_eq_get? {s : String} : s.front? = s.startPos.get? := by
   simp [← front?_toSlice, ← Pos.get?_toSlice, Slice.front?_eq_get?]
@@ -40,17 +38,13 @@ theorem front?_eq_get? {s : String} : s.front? = s.startPos.get? := by
 theorem front?_eq {s : String} : s.front? = s.toList.head? := by
   simp [← front?_toSlice, Slice.front?_eq]
 
-@[simp]
-theorem front_toSlice {s : String} : s.toSlice.front = s.front :=
-  (rfl)
+@[simp] theorem front_toSlice {s : String} : s.toSlice.front = s.front := (rfl)
 
 @[simp]
 theorem front_eq {s : String} : s.front = s.front?.getD default := by
   simp [← front_toSlice, Slice.front_eq]
 
-@[simp]
-theorem back?_toSlice {s : String} : s.toSlice.back? = s.back? :=
-  (rfl)
+@[simp] theorem back?_toSlice {s : String} : s.toSlice.back? = s.back? := (rfl)
 
 theorem back?_eq_get? {s : String} : s.back? = s.endPos.prev?.bind Pos.get? := by
   simp only [← back?_toSlice, Slice.back?_eq_get?, endPos_toSlice, Slice.Pos.prev?_eq_dite,
@@ -60,9 +54,7 @@ theorem back?_eq_get? {s : String} : s.back? = s.endPos.prev?.bind Pos.get? := b
 theorem back?_eq {s : String} : s.back? = s.toList.getLast? := by
   simp [← back?_toSlice, Slice.back?_eq]
 
-@[simp]
-theorem back_toSlice {s : String} : s.toSlice.back = s.back :=
-  (rfl)
+@[simp] theorem back_toSlice {s : String} : s.toSlice.back = s.back := (rfl)
 
 @[simp]
 theorem back_eq {s : String} : s.back = s.back?.getD default := by

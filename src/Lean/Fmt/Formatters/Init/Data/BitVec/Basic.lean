@@ -22,8 +22,7 @@ public def fmtBitVecLit : Fmt := fun
     let hashTk ← fmt hashTk
     let n ← fmt n
     return mkSelfDelimited <| Layouts.atomicInfixOperator #[i, hashTk, n]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt BitVec.«term__#'__»]
 public def fmtBitVecLitLT : Fmt := fun
@@ -32,5 +31,4 @@ public def fmtBitVecLitLT : Fmt := fun
     let hashTk ← fmt hashTk
     let p ← fmt p
     return mkSelfDelimited <| Layouts.atomicInfixOperator #[i, hashTk, p]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

@@ -37,10 +37,13 @@ def weightFunction (n : Nat) := 1.0 + 2.0 / (n.log2.toFloat + 1.0)
 def frequencyScore (frequency : Name → Nat) (relevant candidate : NameSet) : Float :=
   weightedScore (fun n => weightFunction (frequency n)) relevant candidate
 
-def unweightedScore (relevant candidate : NameSet) : Float := weightedScore (fun _ => 1) relevant candidate
+def unweightedScore (relevant candidate : NameSet) : Float :=
+  weightedScore (fun _ => 1) relevant candidate
 
-def mepo (initialRelevant : NameSet) (score : NameSet → NameSet → Float) (accept : ConstantInfo → CoreM Bool)
-    (maxSuggestions : Nat) (p : Float) (c : Float) : CoreM (Array Suggestion) := do
+def mepo
+    (initialRelevant : NameSet) (score : NameSet → NameSet → Float)
+    (accept : ConstantInfo → CoreM Bool) (maxSuggestions : Nat) (p : Float) (c : Float)
+    : CoreM (Array Suggestion) := do
   let env ← getEnv
   let mut p := p
   let mut candidates := #[]
@@ -52,9 +55,8 @@ def mepo (initialRelevant : NameSet) (score : NameSet → NameSet → Float) (ac
   while candidates.size > 0 && accepted.size < maxSuggestions do
     trace[mepo] m!"Considering candidates with threshold {p}."
     trace[mepo] m!"Current relevant set: {relevant.toList}."
-    let (newAccepted, candidates') := candidates.map
-      (fun (n, c) => (n, c, score relevant c))
-      |>.partition fun (_, _, s) => p ≤ s
+    let (newAccepted, candidates') :=
+      candidates.map (fun (n, c) => (n, c, score relevant c)) |>.partition fun (_, _, s) => p ≤ s
     if newAccepted.isEmpty then return accepted
     trace[mepo] m!"Accepted {newAccepted.map fun (n, _, s) => (n, s)}."
     -- Scores from different iterations are not comparable: each iteration accepts
@@ -73,16 +75,17 @@ end MePo
 open MePo
 
 -- The values of p := 0.6 and c := 2.4 are taken from the MePo paper, and need to be tuned.
-public def mepoSelector (useRarity : Bool) (p : Float := 0.6) (c : Float := 2.4) : Selector := fun g config => do
+public def mepoSelector (useRarity : Bool) (p : Float := 0.6) (c : Float := 2.4)
+    : Selector := fun g config => do
   let constants ← g.getRelevantConstants
   let env ← getEnv
-  let score ← if useRarity then do
-    let frequency ← symbolFrequencyMap
-    pure <| frequencyScore (fun n => frequency.getD n 0)
-  else
-    pure <| unweightedScore
-  let accept := fun ci =>
-    return !isDeniedPremise env ci.name && wasOriginallyTheorem env ci.name
+  let score ←
+    if useRarity then do
+      let frequency ← symbolFrequencyMap
+      pure <| frequencyScore (fun n => frequency.getD n 0)
+    else
+      pure <| unweightedScore
+  let accept := fun ci => return ! isDeniedPremise env ci.name && wasOriginallyTheorem env ci.name
   let suggestions ← mepo constants score accept config.maxSuggestions p c
   -- `mepo` already returns suggestions ordered by `(iteration, score)`.
   return suggestions.take config.maxSuggestions

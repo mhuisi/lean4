@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Simp.SimpM
 import Lean.ScopedEnvExtension
@@ -16,9 +17,9 @@ theorems as syntax (elaborated at use time in `GrindTacticM`) and configuration 
 -/
 structure SymSimpVariant where
   /-- Pre-processing simproc chain (elaborated at use time). -/
-  pre?   : Option Syntax := none
+  pre? : Option Syntax := none
   /-- Post-processing simproc chain (elaborated at use time). -/
-  post?  : Option Syntax := none
+  post? : Option Syntax := none
   /--
   Discharger for the side conditions of the extra theorems provided at use time
   (`simp myVariant [thm₁, thm₂, ...]`), elaborated at use time. `none` means no discharge.
@@ -26,20 +27,20 @@ structure SymSimpVariant where
   discharger? : Option Syntax := none
   /-- Configuration overrides. -/
   config : Config := {}
-  deriving Inhabited
+deriving Inhabited
 
 /-- Entry for the scoped environment extension. -/
 structure SymSimpVariantEntry where
-  name    : Name
+  name : Name
   variant : SymSimpVariant
-  deriving Inhabited
+deriving Inhabited
 
 /-- Persistent environment extension mapping variant names to their definitions. -/
-builtin_initialize symSimpVariantExtension :
-    SimpleScopedEnvExtension SymSimpVariantEntry (Std.HashMap Name SymSimpVariant) ←
+builtin_initialize symSimpVariantExtension
+    : SimpleScopedEnvExtension SymSimpVariantEntry (Std.HashMap Name SymSimpVariant) ←
   registerSimpleScopedEnvExtension {
-    name     := `symSimpVariantExtension
-    initial  := {}
+    name := `symSimpVariantExtension
+    initial := {}
     addEntry := fun map entry => map.insert entry.name entry.variant
   }
 

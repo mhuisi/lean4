@@ -18,12 +18,10 @@ public abbrev InputFile := ConfigTarget InputFile.configKind
 The full path to the input file.
 That is, the package's `dir` joined with the file's `path`.
 -/
-@[inline] public def InputFile.path (self : InputFile) : FilePath :=
-  self.pkg.dir / self.config.path
+@[inline] public def InputFile.path (self : InputFile) : FilePath := self.pkg.dir / self.config.path
 
 /-- Whether this is a text file. -/
-@[inline] public def InputFile.text (self : InputFile) : Bool :=
-  self.config.text
+@[inline] public def InputFile.text (self : InputFile) : Bool := self.config.text
 
 /-- An input directory -- its package plus its configuration. -/
 public abbrev InputDir := ConfigTarget InputDir.configKind
@@ -32,13 +30,11 @@ public abbrev InputDir := ConfigTarget InputDir.configKind
 The full path to the input file.
 That is, the package's `dir` joined with the file's `path`.
 -/
-@[inline] public def InputDir.path (self : InputDir) : FilePath :=
-  self.pkg.dir / self.config.path
+@[inline] public def InputDir.path (self : InputDir) : FilePath := self.pkg.dir / self.config.path
 
 /-- Whether this directory contains text files. -/
-@[inline] public def InputDir.text (self : InputDir) : Bool :=
-  self.config.text
+@[inline] public def InputDir.text (self : InputDir) : Bool := self.config.text
 
 /-- The file inclusion filter function for the input directory. -/
-@[inline] public def InputDir.filter (self : InputDir) : FilePath → Bool :=
-  self.config.filter.matches
+@[inline]
+public def InputDir.filter (self : InputDir) : FilePath → Bool := self.config.filter.matches

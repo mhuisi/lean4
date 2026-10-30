@@ -20,8 +20,7 @@ public def fmtSpecAttr : Fmt := fun
     let specTk ← fmt specTk
     let prio? ← fmt? prio?
     return Layouts.pseudoApplication #[specTk, prio?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtInvariantAlt : Syntax → FmtM Layouts.Types.Alt := fun
   -- `·` also matches the ASCII `.` spelling.
@@ -36,8 +35,7 @@ public def fmtInvariantAlt : Syntax → FmtM Layouts.Types.Alt := fun
     let inv ← fmt inv
     let lhs := nested <| Layouts.spacedAtomic #[pipeTk, arg]
     return Layouts.alt #[lhs] arrowTk inv
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.invariantAlts]
 public def fmtInvariantAlts : Fmt := fun
@@ -45,8 +43,7 @@ public def fmtInvariantAlts : Fmt := fun
     let invariantsKW ← fmt invariantsKW
     let alts ← alts.mapM fmtInvariantAlt
     return Layouts.keywordPrefixedAlts invariantsKW alts
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtFrameAlt : Syntax → FmtM Layouts.Types.Alt := fun
   | `(Parser.Tactic.frameAlt| |%$pipeTk $f:ident $args:binderIdent* =>%$arrowTk $frame:term) => do
@@ -58,8 +55,7 @@ public def fmtFrameAlt : Syntax → FmtM Layouts.Types.Alt := fun
     let pat := Layouts.pseudoApplication <| #[f] ++ args
     let lhs := nested <| Layouts.spacedAtomic #[pipeTk, pat]
     return Layouts.alt #[lhs] arrowTk frame
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtVCGenHead (vcgenTk : Syntax) (cfg : TSyntax ``Parser.Tactic.optConfig)
     : FmtM TaggedDoc := do
@@ -90,8 +86,8 @@ public def fmtVCGenLike
     (args? : Option (Syntax.SepArray ",")) (rbTk? : Option Syntax) (untilTk? : Option Syntax)
     (untilProgram? : Option Syntax) (framesTk? : Option Syntax) (frameAlts : Array Syntax)
     (invariantAlts? : Option Syntax) (simpTk? : Option Syntax) (simpLbTk? : Option Syntax)
-    (simpArgs? : Option (Syntax.SepArray ",")) (simpRbTk? : Option Syntax)
-    (withTk? : Option Syntax) (discharge? : Option Syntax)
+    (simpArgs? : Option (Syntax.SepArray ",")) (simpRbTk? : Option Syntax) (withTk? : Option Syntax)
+    (discharge? : Option Syntax)
     : FmtM TaggedDoc := do
   let head ← fmtVCGenHead vcgenTk cfg
   let args ← fmtVCGenSimpArgs lbTk? args? rbTk?
@@ -124,8 +120,7 @@ public def fmtVCGen : Fmt := fun
       $[with%$withTk? $discharge?:vcgenDischarge]?) =>
     fmtVCGenLike vcgenTk cfg lbTk? args? rbTk? untilTk? untilProgram? framesTk?
       (frameAlts?.getD #[]) invariantAlts? simpTk? simpLbTk? simpArgs? simpRbTk? withTk? discharge?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.Grind.vcgen]
 public def fmtGrindVCGen : Fmt := fun
@@ -136,5 +131,4 @@ public def fmtGrindVCGen : Fmt := fun
       $[simp%$simpTk? [%$simpLbTk? $simpArgs?,* ]%$simpRbTk?]?) =>
     fmtVCGenLike vcgenTk cfg lbTk? args? rbTk? untilTk? untilProgram? framesTk?
       (frameAlts?.getD #[]) invariantAlts? simpTk? simpLbTk? simpArgs? simpRbTk? none none
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

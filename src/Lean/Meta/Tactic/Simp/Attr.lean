@@ -4,21 +4,25 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Simp.Simproc
 public section
 namespace Lean.Meta
 open Simp
 
-/--
-Marks `declName` to be unfolded in the given `SimpExtension`.
--/
-def addDeclToUnfold (ext : SimpExtension) (declName : Name) (post inv : Bool) (prio : Nat) (attrKind : AttributeKind) : MetaM Bool := do
+/-- Marks `declName` to be unfolded in the given `SimpExtension`. -/
+def addDeclToUnfold
+    (ext : SimpExtension) (declName : Name) (post inv : Bool) (prio : Nat)
+    (attrKind : AttributeKind)
+    : MetaM Bool := do
   if getOriginalConstKind? (← getEnv) declName == some .defn then
     if inv then
-      throwError m!"Invalid `←` modifier: `{.ofConstName declName}` is a declaration name to be unfolded"
-        ++ .note m!"The simplifier will automatically unfold definitions marked with the `[simp]` \
-                    attribute, but it will not \"refold\" them"
+      throwError
+        m!"Invalid `←` modifier: `{.ofConstName declName}` is a declaration name to be unfolded"
+          ++ .note
+            m!"The simplifier will automatically unfold definitions marked with the `[simp]` \
+              attribute, but it will not \"refold\" them"
     if (← Simp.ignoreEquations declName) then
       ext.add (SimpEntry.toUnfold declName) attrKind
     else if let some eqns ← getEqnsFor? declName then
@@ -33,29 +37,35 @@ def addDeclToUnfold (ext : SimpExtension) (declName : Name) (post inv : Bool) (p
   else
     return false
 
-def mkSimpAttr (attrName : Name) (attrDescr : String) (ext : SimpExtension)
-    (ref : Name := by exact decl_name%) : IO Unit :=
+def mkSimpAttr
+    (attrName : Name) (attrDescr : String) (ext : SimpExtension) (ref : Name := by exact decl_name%)
+    : IO Unit :=
   registerBuiltinAttribute {
-    ref   := ref
-    name  := attrName
+    ref := ref
+    name := attrName
     descr := attrDescr
     applicationTime := AttributeApplicationTime.afterCompilation
-    add   := fun declName stx attrKind => do
+    add := fun declName stx attrKind => do
       if (← isSimproc declName <||> isBuiltinSimproc declName) then
         let simprocAttrName := simpAttrNameToSimprocAttrName attrName
         Attribute.add declName simprocAttrName stx attrKind
       else
         let go : MetaM Unit := do
           let info ← getAsyncConstInfo declName
-          let post := if stx[1].isNone then true else stx[1][0].getKind == ``Lean.Parser.Tactic.simpPost
+          let post :=
+            if stx[1].isNone then true else stx[1][0].getKind == ``Lean.Parser.Tactic.simpPost
           let inv := !stx[2].isNone
           let prio ← getAttrParamOptPrio stx[3]
           if (← isProp info.sig.get.type) then
             addSimpTheorem ext declName post (inv := inv) attrKind prio
-          else unless (← addDeclToUnfold ext declName post inv prio attrKind) do
-            throwError m!"Cannot add `simp` attribute to `{.ofConstName declName}`: It is not a proposition nor a definition (to unfold)"
-              ++ .note m!"The `[simp]` attribute can be added to lemmas that should be automatically used by the simplifier \
-                          and to definitions that the simplifier should automatically unfold"
+          else
+            unless (← addDeclToUnfold ext declName post inv prio attrKind) do
+              throwError
+                m!"Cannot add `simp` attribute to `{.ofConstName declName}`: It is not a \
+                    proposition nor a definition (to unfold)"
+                  ++ .note m!"The `[simp]` attribute can be added to lemmas that should be \
+                    automatically used by the simplifier \
+                    and to definitions that the simplifier should automatically unfold"
         discard <| go.run {} {}
     erase := fun declName => do
       if (← isSimproc declName <||> isBuiltinSimproc declName) then
@@ -77,8 +87,8 @@ Custom simp sets must be registered during [initialization](lean-manual://sectio
 The description should be a short, singular noun phrase that describes the contents of the custom
 simp set.
 -/
-def registerSimpAttr (attrName : Name) (attrDescr : String)
-    (ref : Name := by exact decl_name%) : IO SimpExtension := do
+def registerSimpAttr (attrName : Name) (attrDescr : String) (ref : Name := by exact decl_name%)
+    : IO SimpExtension := do
   let ext ← mkSimpExt ref
   mkSimpAttr attrName attrDescr ext ref -- Remark: it will fail if it is not performed during initialization
   simpExtensionMapRef.modify fun map => map.insert attrName ext
@@ -86,18 +96,15 @@ def registerSimpAttr (attrName : Name) (attrDescr : String)
 
 builtin_initialize simpExtension : SimpExtension ← registerSimpAttr `simp "simplification theorem"
 
-builtin_initialize sevalSimpExtension : SimpExtension ← registerSimpAttr `seval "symbolic evaluator theorem"
+builtin_initialize sevalSimpExtension : SimpExtension ←
+  registerSimpAttr `seval "symbolic evaluator theorem"
 
-def getSimpTheorems : CoreM SimpTheorems :=
-  simpExtension.getTheorems
+def getSimpTheorems : CoreM SimpTheorems := simpExtension.getTheorems
 
-def getSEvalTheorems : CoreM SimpTheorems :=
-  sevalSimpExtension.getTheorems
+def getSEvalTheorems : CoreM SimpTheorems := sevalSimpExtension.getTheorems
 
 def Simp.Context.mkDefault : MetaM Context := do
-  mkContext
-    (config := {})
-    (simpTheorems := #[(← Meta.getSimpTheorems)])
+  mkContext (config := {}) (simpTheorems := #[(← Meta.getSimpTheorems)])
     (congrTheorems := (← Meta.getSimpCongrTheorems))
 
 end Lean.Meta

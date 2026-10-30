@@ -16,9 +16,11 @@ namespace Lean
 def declareBuiltinDocStringAndRanges (declName : Name) : AttrM Unit := do
   if let some doc ← findSimpleDocString? (← getEnv) declName (includeBuiltin := false) then
     let doc := doc.removeLeadingSpaces
-    declareBuiltin (declName ++ `docString) (mkAppN (mkConst ``addBuiltinDocString) #[toExpr declName, toExpr doc])
+    declareBuiltin (declName ++ `docString)
+      (mkAppN (mkConst ``addBuiltinDocString) #[toExpr declName, toExpr doc])
   if let some declRanges ← findDeclarationRanges? declName then
-    declareBuiltin (declName ++ `declRange) (mkAppN (mkConst ``addBuiltinDeclarationRanges) #[toExpr declName, toExpr declRanges])
+    declareBuiltin (declName ++ `declRange)
+      (mkAppN (mkConst ``addBuiltinDeclarationRanges) #[toExpr declName, toExpr declRanges])
 
 /--
 Makes the documentation and location of a declaration available as a builtin.
@@ -30,9 +32,9 @@ the Lean source code.
 @[builtin_doc]
 builtin_initialize
   registerBuiltinAttribute {
-    name  := `builtin_doc
+    name := `builtin_doc
     descr := "make the docs and location of this declaration available as a builtin"
-    add   := fun decl stx _ => do
+    add := fun decl stx _ => do
       Attribute.Builtin.ensureNoArgs stx
       declareBuiltinDocStringAndRanges decl
     applicationTime := AttributeApplicationTime.afterCompilation

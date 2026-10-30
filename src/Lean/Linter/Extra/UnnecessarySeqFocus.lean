@@ -59,8 +59,7 @@ Other modules can extend this set in their own `builtin_initialize` block by cal
 builtin_initialize multigoalKindsRef : IO.Ref Lean.NameSet ← IO.mkRef {}
 
 /-- Register `k` as a multigoal tactic syntax kind. -/
-def addBuiltinMultigoalKind (k : SyntaxNodeKind) : IO Unit :=
-  multigoalKindsRef.modify (·.insert k)
+def addBuiltinMultigoalKind (k : SyntaxNodeKind) : IO Unit := multigoalKindsRef.modify (·.insert k)
 
 /-- Register `ks` as multigoal tactic syntax kinds. -/
 def addBuiltinMultigoalKinds (ks : Array SyntaxNodeKind) : IO Unit :=
@@ -103,11 +102,13 @@ structure Entry where
 abbrev M (ω) := StateRefT (Std.HashMap Lean.Syntax.Range Entry) (ST ω)
 
 /-- True if this is a `<;>` node in either `tactic` or `conv` classes. -/
-@[inline] def isSeqFocus (k : SyntaxNodeKind) : Bool :=
+@[inline]
+def isSeqFocus (k : SyntaxNodeKind) : Bool :=
   k == ``Parser.Tactic.«tactic_<;>_» || k == ``Parser.Tactic.Conv.«conv_<;>_»
 
 /-- Accumulates the set of tactic syntaxes that should be evaluated at least once. -/
-@[specialize] partial def getTactics {ω} (stx : Syntax) : M ω Unit := do
+@[specialize]
+partial def getTactics {ω} (stx : Syntax) : M ω Unit := do
   if let .node _ k args := stx then
     if isSeqFocus k then
       if let some r := stx.getRange? true then
@@ -120,10 +121,11 @@ Each `(n, i)` means that the array must have length `n` and we will descend into
 -/
 def getPath : Info → PersistentArray InfoTree → List ((n : Nat) × Fin n) → Option Info
   | i, _, [] => some i
-  | _, c, ⟨n, i, h⟩::ns =>
+  | _, c, ⟨n, i, h⟩ :: ns =>
     if e : c.size = n then
       if let .node i c' := c[i]'(e ▸ h) then getPath i c' ns else none
-    else none
+    else
+      none
 
 mutual
 variable (multigoals : Lean.NameSet)
@@ -136,27 +138,31 @@ partial def markUsedTactics {ω} : InfoTree → M ω Unit
   | .node i c => do
     if let .ofTacticInfo i := i then
       if let some r := i.stx.getRange? true then
-      if let some entry := (← get)[r]? then
-      if i.stx.getKind == ``Parser.Tactic.«tactic_<;>_» then
-        let isBad := do
-          unless i.goalsBefore.length == 1 || !multigoals.contains i.stx[0].getKind do
-            none
-          -- Note: this uses the exact sequence of tactic applications
-          -- in the macro expansion of `<;> : tactic`
-          let .ofTacticInfo i ← getPath (.ofTacticInfo i) c
-            [⟨1, 0⟩, ⟨2, 1⟩, ⟨1, 0⟩, ⟨5, 0⟩] | none
-          guard <| i.goalsAfter.length == 1
-        modify fun s => if isBad.isSome then s.insert r { entry with used := true } else s.erase r
-      else if i.stx.getKind == ``Parser.Tactic.Conv.«conv_<;>_» then
-        let isBad := do
-          unless i.goalsBefore.length == 1 || !multigoals.contains i.stx[0].getKind do
-            none
-          -- Note: this uses the exact sequence of tactic applications
-          -- in the macro expansion of `<;> : conv`
-          let .ofTacticInfo i ← getPath (.ofTacticInfo i) c
-            [⟨1, 0⟩, ⟨1, 0⟩, ⟨1, 0⟩, ⟨1, 0⟩, ⟨1, 0⟩, ⟨2, 1⟩, ⟨1, 0⟩, ⟨5, 0⟩] | none
-          guard <| i.goalsAfter.length == 1
-        modify fun s => if isBad.isSome then s.insert r { entry with used := true } else s.erase r
+        if let some entry := (← get)[r]? then
+          if i.stx.getKind == ``Parser.Tactic.«tactic_<;>_» then
+            let isBad := do
+              unless i.goalsBefore.length == 1 || ! multigoals.contains i.stx[0].getKind do
+                none
+              -- Note: this uses the exact sequence of tactic applications
+              -- in the macro expansion of `<;> : tactic`
+              let .ofTacticInfo i ← getPath (.ofTacticInfo i) c [⟨1, 0⟩, ⟨2, 1⟩, ⟨1, 0⟩, ⟨5, 0⟩]
+                | none
+              guard <| i.goalsAfter.length == 1
+            modify fun s =>
+              if isBad.isSome then s.insert r { entry with used := true } else s.erase r
+          else if i.stx.getKind == ``Parser.Tactic.Conv.«conv_<;>_» then
+            let isBad := do
+              unless i.goalsBefore.length == 1 || ! multigoals.contains i.stx[0].getKind do
+                none
+              -- Note: this uses the exact sequence of tactic applications
+              -- in the macro expansion of `<;> : conv`
+              let .ofTacticInfo i ←
+                  getPath (.ofTacticInfo i) c
+                    [⟨1, 0⟩, ⟨1, 0⟩, ⟨1, 0⟩, ⟨1, 0⟩, ⟨1, 0⟩, ⟨2, 1⟩, ⟨1, 0⟩, ⟨5, 0⟩]
+                | none
+              guard <| i.goalsAfter.length == 1
+            modify fun s =>
+              if isBad.isSome then s.insert r { entry with used := true } else s.erase r
     markUsedTacticsList c
   | .context _ t => markUsedTactics t
   | .hole _ => pure ()
@@ -164,27 +170,30 @@ partial def markUsedTactics {ω} : InfoTree → M ω Unit
 end
 
 @[inherit_doc Lean.Linter.Extra.linter.extra.unnecessarySeqFocus]
-def unnecessarySeqFocusLinter : Linter where run := withSetOptionIn fun stx => do
-  unless getLinterValue linter.extra.unnecessarySeqFocus (← getLinterOptions)
-      && (← getInfoState).enabled do
-    return
-  if (← get).messages.hasErrors then
-    return
-  let trees ← getInfoTrees
-  let multigoals ← multigoalKindsRef.get
-  let go {ω} : M ω Unit := do
-    getTactics stx
-    markUsedTacticsList multigoals trees
-  let (_, map) := runST fun _ => go.run {}
-  let unused := map.fold (init := #[]) fun acc r { stx, used } =>
-    if used then acc.push (stx[1].getRange?.getD r, stx[1]) else acc
-  let key (r : Lean.Syntax.Range) := (r.start.byteIdx, (-r.stop.byteIdx : Int))
-  let mut last : Lean.Syntax.Range := ⟨0, 0⟩
-  for (r, stx) in let _ := @lexOrd; let _ := @ltOfOrd.{0}; unused.qsort (key ·.1 < key ·.1) do
-    if last.start ≤ r.start && r.stop ≤ last.stop then continue
-    logLintIf linter.extra.unnecessarySeqFocus stx
-      "Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice"
-    last := r
+def unnecessarySeqFocusLinter : Linter where
+  run :=
+    withSetOptionIn fun stx => do
+      unless getLinterValue linter.extra.unnecessarySeqFocus (← getLinterOptions)
+          && (← getInfoState).enabled do
+        return
+      if (← get).messages.hasErrors then
+        return
+      let trees ← getInfoTrees
+      let multigoals ← multigoalKindsRef.get
+      let go {ω} : M ω Unit := do
+        getTactics stx
+        markUsedTacticsList multigoals trees
+      let (_, map) := runST fun _ => go.run {}
+      let unused :=
+        map.fold (init := #[]) fun acc r { stx, used } =>
+          if used then acc.push (stx[1].getRange?.getD r, stx[1]) else acc
+      let key (r : Lean.Syntax.Range) := (r.start.byteIdx, (-r.stop.byteIdx : Int))
+      let mut last : Lean.Syntax.Range := ⟨0, 0⟩
+      for (r, stx) in let _ := @lexOrd; let _ := @ltOfOrd.{0}; unused.qsort (key ·.1 < key ·.1) do
+        if last.start ≤ r.start && r.stop ≤ last.stop then continue
+        logLintIf linter.extra.unnecessarySeqFocus stx
+          "Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice"
+        last := r
 
 end UnnecessarySeqFocus
 

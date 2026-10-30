@@ -56,11 +56,15 @@ The `WP` typeclass interprets a program type `Prog` whose results have type `Val
 predicate transformer `trans : Prog → PredTrans Pred EPosts Value`.
 -/
 
-/-- Weakest precondition interpretation of a program type `Prog` whose results have type `Value`,
+/--
+Weakest precondition interpretation of a program type `Prog` whose results have type `Value`,
 as a monotone predicate transformer over assertion language `Pred` with exception postconditions
-`EPosts`. -/
-class WP (Prog : Type u) (Value : outParam (Type v)) (Pred : outParam (Type w))
-    (EPosts : outParam (Type w')) [Assertion Pred] [Assertion EPosts] where
+`EPosts`.
+-/
+class WP
+    (Prog : Type u) (Value : outParam (Type v))
+    (Pred : outParam (Type w)) (EPosts : outParam (Type w'))
+    [Assertion Pred] [Assertion EPosts] where
   /-- The weakest precondition transformer for a program. -/
   trans : Prog → PredTrans Pred EPosts Value := wpTrans
   /-- Deprecated alias for `trans`; provide either field when defining an instance. -/
@@ -74,25 +78,34 @@ attribute [deprecated WP.trans (since := "2026-09-17")] WP.wpTrans
 attribute [deprecated WP.trans_monotone (since := "2026-09-17")] WP.wp_trans_monotone
 attribute [deprecated_arg EPred EPosts (since := "2026-09-18")] WP
 
-/-- Weakest precondition of `x` for normal postcondition `post` and exception postcondition `eposts`.
-The `WP` interpretation can be supplied explicitly via dot notation (`inst.wp x post eposts`). -/
-def WP.wp {Prog : Type u} {Value : Type v} {Pred : Type w} {EPosts : Type w'}
+/--
+Weakest precondition of `x` for normal postcondition `post` and exception postcondition `eposts`.
+The `WP` interpretation can be supplied explicitly via dot notation (`inst.wp x post eposts`).
+-/
+def WP.wp
+    {Prog : Type u} {Value : Type v} {Pred : Type w} {EPosts : Type w'}
     [Assertion Pred] [Assertion EPosts] [self : WP Prog Value Pred EPosts]
-    (x : Prog) (post : Value → Pred) (eposts : EPosts) : Pred :=
+    (x : Prog) (post : Value → Pred) (eposts : EPosts)
+    : Pred :=
   (self.trans x).apply post eposts
 
 -- `wp x post eposts` computes the weakest precondition; it is `WP.wp` with the interpretation
 -- synthesised as an instance.
 export Std.WP.WP (wp)
 
-@[simp, grind =] theorem WP.trans_apply_eq {Prog : Type u} {Value : Type v}
-    [Assertion Pred] [Assertion EPosts] [WP Prog Value Pred EPosts] (x : Prog) :
-  (WP.trans x).apply = wp x := rfl
+@[simp, grind =]
+theorem WP.trans_apply_eq
+    {Prog : Type u} {Value : Type v} [Assertion Pred] [Assertion EPosts] [WP Prog Value Pred EPosts]
+    (x : Prog)
+    : (WP.trans x).apply = wp x :=
+  rfl
 
 @[deprecated WP.trans_apply_eq (since := "2026-09-17")]
-theorem WP.wpTrans_apply_eq {Prog : Type u} {Value : Type v}
-    [Assertion Pred] [Assertion EPosts] [WP Prog Value Pred EPosts] (x : Prog) :
-    (WP.trans x).apply = wp x := rfl
+theorem WP.wpTrans_apply_eq
+    {Prog : Type u} {Value : Type v} [Assertion Pred] [Assertion EPosts] [WP Prog Value Pred EPosts]
+    (x : Prog)
+    : (WP.trans x).apply = wp x :=
+  rfl
 
 /-!
 ## Derived WP Lemmas
@@ -102,98 +115,108 @@ Monotonicity and weakening consequences of the `WP` monotonicity axiom.
 
 namespace WP
 
-variable {Prog : Type u} {Value : Type v} {Pred : Type w} {EPosts : Type z}
+variable
+  {Prog : Type u} {Value : Type v} {Pred : Type w} {EPosts : Type z}
   [Assertion Pred] [Assertion EPosts] [WP Prog Value Pred EPosts]
 
-theorem wp_monotone_post {x : Prog}
-  {post post' : Value → Pred} {eposts : EPosts} (h : post ⊑ post') :
-    wp x post eposts ⊑ wp x post' eposts :=
+theorem wp_monotone_post {x : Prog} {post post' : Value → Pred} {eposts : EPosts} (h : post ⊑ post')
+    : wp x post eposts ⊑ wp x post' eposts :=
   trans_monotone x post post' eposts eposts PartialOrder.rel_refl h
 
-theorem wp_monotone {x : Prog}
-  {post post' : Value → Pred} {eposts eposts' : EPosts} (h : post ⊑ post') (h' : eposts ⊑ eposts') :
-    wp x post eposts ⊑ wp x post' eposts' :=
+theorem wp_monotone
+    {x : Prog} {post post' : Value → Pred} {eposts eposts' : EPosts}
+    (h : post ⊑ post') (h' : eposts ⊑ eposts')
+    : wp x post eposts ⊑ wp x post' eposts' :=
   trans_monotone x post post' eposts eposts' h' h
 
-theorem wp_monotone_epost {x : Prog}
-  {post : Value → Pred} {eposts eposts' : EPosts} (h : eposts ⊑ eposts') :
-    wp x post eposts ⊑ wp x post eposts' :=
+theorem wp_monotone_epost
+    {x : Prog} {post : Value → Pred} {eposts eposts' : EPosts} (h : eposts ⊑ eposts')
+    : wp x post eposts ⊑ wp x post eposts' :=
   trans_monotone x post post eposts eposts' h PartialOrder.rel_refl
 
-theorem wp_monotone_bot {x : Prog}
-  {post : Value → Pred} {eposts : EPosts} :
-    wp x post ⊥ ⊑ wp x post eposts := by
+theorem wp_monotone_bot {x : Prog} {post : Value → Pred} {eposts : EPosts}
+    : wp x post ⊥ ⊑ wp x post eposts := by
   solve_by_elim [wp_monotone_epost, bot_le]
 
-theorem wp_monotone_post_le (x : Prog)
-  (post post' : Value → Pred) (eposts : EPosts) (h : post ⊑ post') {pre : Pred}
-    (h' : pre ⊑ wp x post eposts) :
-    pre ⊑ wp x post' eposts :=
+theorem wp_monotone_post_le
+    (x : Prog)
+    (post post' : Value → Pred)
+    (eposts : EPosts)
+    (h : post ⊑ post')
+    {pre : Pred} (h' : pre ⊑ wp x post eposts)
+    : pre ⊑ wp x post' eposts :=
   PartialOrder.rel_trans h' (wp_monotone_post h)
 
-theorem wp_monotone_epost_le (x : Prog)
-  (post : Value → Pred) (eposts eposts' : EPosts) (h : eposts ⊑ eposts') {pre : Pred}
-    (h' : pre ⊑ wp x post eposts) :
-    pre ⊑ wp x post eposts' :=
+theorem wp_monotone_epost_le
+    (x : Prog) (post : Value → Pred)
+    (eposts eposts' : EPosts) (h : eposts ⊑ eposts')
+    {pre : Pred} (h' : pre ⊑ wp x post eposts)
+    : pre ⊑ wp x post eposts' :=
   PartialOrder.rel_trans h' (wp_monotone_epost h)
 
-theorem wp_monotone_bot_le (x : Prog)
-  (post : Value → Pred) (eposts : EPosts) {pre : Pred} (h : pre ⊑ wp x post ⊥) :
-    pre ⊑ wp x post eposts :=
+theorem wp_monotone_bot_le
+    (x : Prog) (post : Value → Pred) (eposts : EPosts) {pre : Pred} (h : pre ⊑ wp x post ⊥)
+    : pre ⊑ wp x post eposts :=
   PartialOrder.rel_trans h wp_monotone_bot
 
 @[deprecated wp_monotone_post (since := "2026-09-17")]
-theorem wp_consequence (x : Prog)
-  (post post' : Value → Pred) (eposts : EPosts) (h : post ⊑ post') :
-    wp x post eposts ⊑ wp x post' eposts :=
+theorem wp_consequence (x : Prog) (post post' : Value → Pred) (eposts : EPosts) (h : post ⊑ post')
+    : wp x post eposts ⊑ wp x post' eposts :=
   wp_monotone_post h
 
 @[deprecated wp_monotone (since := "2026-09-17")]
-theorem wp_consequence_econs (x : Prog)
-  (post post' : Value → Pred) (eposts eposts' : EPosts) (h : post ⊑ post') (h' : eposts ⊑ eposts') :
-    wp x post eposts ⊑ wp x post' eposts' :=
+theorem wp_consequence_econs
+    (x : Prog)
+    (post post' : Value → Pred) (eposts eposts' : EPosts) (h : post ⊑ post') (h' : eposts ⊑ eposts')
+    : wp x post eposts ⊑ wp x post' eposts' :=
   wp_monotone h h'
 
 @[deprecated wp_monotone_epost (since := "2026-09-17")]
-theorem wp_econs (x : Prog)
-  (post : Value → Pred) (eposts eposts' : EPosts) (h' : eposts ⊑ eposts') :
-    wp x post eposts ⊑ wp x post eposts' :=
+theorem wp_econs (x : Prog) (post : Value → Pred) (eposts eposts' : EPosts) (h' : eposts ⊑ eposts')
+    : wp x post eposts ⊑ wp x post eposts' :=
   wp_monotone_epost h'
 
 @[deprecated wp_monotone_bot (since := "2026-09-17")]
-theorem wp_econs_bot (x : Prog)
-  (post : Value → Pred) (eposts : EPosts) :
-    wp x post ⊥ ⊑ wp x post eposts :=
+theorem wp_econs_bot (x : Prog) (post : Value → Pred) (eposts : EPosts)
+    : wp x post ⊥ ⊑ wp x post eposts :=
   wp_monotone_bot
 
 @[deprecated wp_monotone_post_le (since := "2026-09-17")]
-theorem wp_consequence_le (x : Prog)
-  (post post' : Value → Pred) (eposts : EPosts) (h : post ⊑ post') {pre : Pred}
-    (h' : pre ⊑ wp x post eposts) :
-    pre ⊑ wp x post' eposts :=
+theorem wp_consequence_le
+    (x : Prog)
+    (post post' : Value → Pred)
+    (eposts : EPosts)
+    (h : post ⊑ post')
+    {pre : Pred} (h' : pre ⊑ wp x post eposts)
+    : pre ⊑ wp x post' eposts :=
   wp_monotone_post_le x post post' eposts h h'
 
 @[deprecated wp_monotone_epost_le (since := "2026-09-17")]
-theorem wp_econs_le (x : Prog)
-  (post : Value → Pred) (eposts eposts' : EPosts) (h : eposts ⊑ eposts') {pre : Pred}
-    (h' : pre ⊑ wp x post eposts) :
-    pre ⊑ wp x post eposts' :=
+theorem wp_econs_le
+    (x : Prog) (post : Value → Pred)
+    (eposts eposts' : EPosts) (h : eposts ⊑ eposts')
+    {pre : Pred} (h' : pre ⊑ wp x post eposts)
+    : pre ⊑ wp x post eposts' :=
   wp_monotone_epost_le x post eposts eposts' h h'
 
 @[deprecated wp_monotone_bot_le (since := "2026-09-17")]
-theorem wp_econs_bot_le (x : Prog)
-  (post : Value → Pred) (eposts : EPosts) {pre : Pred} (h : pre ⊑ wp x post ⊥) :
-    pre ⊑ wp x post eposts :=
+theorem wp_econs_bot_le
+    (x : Prog) (post : Value → Pred) (eposts : EPosts) {pre : Pred} (h : pre ⊑ wp x post ⊥)
+    : pre ⊑ wp x post eposts :=
   wp_monotone_bot_le x post eposts h
 
 end WP
 
-/-- Rewriting the program of a weakest precondition along an equation `x = y` weakens it:
-the precondition of `y` entails the precondition of `x`. -/
-theorem wp_le_wp_of_eq {Prog : Type u} {Value : Type v} {Pred : Type w} {EPosts : Type z}
+/--
+Rewriting the program of a weakest precondition along an equation `x = y` weakens it:
+the precondition of `y` entails the precondition of `x`.
+-/
+theorem wp_le_wp_of_eq
+    {Prog : Type u} {Value : Type v} {Pred : Type w} {EPosts : Type z}
     [Assertion Pred] [Assertion EPosts] [WP Prog Value Pred EPosts]
-    {x y : Prog} (h : x = y) (post : Value → Pred) (eposts : EPosts) :
-    wp y post eposts ⊑ wp x post eposts := by
+    {x y : Prog} (h : x = y)
+    (post : Value → Pred) (eposts : EPosts)
+    : wp y post eposts ⊑ wp x post eposts := by
   subst h; exact PartialOrder.rel_refl
 
 end Std.WP

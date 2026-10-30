@@ -42,8 +42,7 @@ public def fmtTermMatches : Fmt := fun
         ]
       ]
     return Layouts.spacedAtomic #[hardNested lhs, matchesBlock]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 where
   fmtSecondaryPats (secondaryPats : Array TaggedDoc) : TaggedDoc := Id.run do
     let mut i := 0
@@ -62,15 +61,13 @@ where
 public def fmtUnbracketedExplicitBinders : Fmt := fun
   | `(Lean.unbracketedExplicitBinders| $ids* $[ :%$typeAscriptionTk? $type?:term]?) =>
     fmtBinder #[] ids #[] typeAscriptionTk? type? none #[]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.bracketedExplicitBinders]
 public def fmtBracketedExplicitBinders : Fmt := fun
   | `(Lean.bracketedExplicitBinders| (%$lbTk $ids* :%$typeAscriptionTk $type:term )%$rbTk) =>
     fmtBinder #[lbTk] ids #[] (some typeAscriptionTk) (some type) none #[rbTk]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def explicitBindersToGroup (bs : TSyntax ``Lean.explicitBinders) : Array Syntax :=
   match bs with
@@ -89,8 +86,7 @@ public def fmtExists : QuantifierFmt := fun
       commaTk
       body
     }
-  | _ =>
-    none
+  | _ => none
 
 @[builtin_quantifier_fmt «termExists_,_»]
 public def fmtExistsKeyword : QuantifierFmt := fun
@@ -103,8 +99,7 @@ public def fmtExistsKeyword : QuantifierFmt := fun
       commaTk
       body
     }
-  | _ =>
-    none
+  | _ => none
 
 @[builtin_quantifier_fmt «termΣ_,_»]
 public def fmtSigma : QuantifierFmt := fun
@@ -117,8 +112,7 @@ public def fmtSigma : QuantifierFmt := fun
       commaTk
       body
     }
-  | _ =>
-    none
+  | _ => none
 
 @[builtin_quantifier_fmt «termΣ'_,_»]
 public def fmtPSigma : QuantifierFmt := fun
@@ -131,8 +125,7 @@ public def fmtPSigma : QuantifierFmt := fun
       commaTk
       body
     }
-  | _ =>
-    none
+  | _ => none
 
 @[builtin_infix_fmt «term_×_»]
 public def fmtTimes : Fmt.InfixOperation := {
@@ -190,8 +183,7 @@ public def fmtUnifHint : Fmt := fun
     let body := Layouts.horizontalOrVertical #[constraints, vdash, rhs]
     let mainDecl := Layouts.whereDeclaration signature whereTk body
     return Layouts.lines #[docComment?, mainDecl]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 /-! ## `class abbrev` -/
 
@@ -209,8 +201,7 @@ public def fmtClassAbbrev : Fmt := fun
       let parents := Layouts.sepFill parents
       let decl := Layouts.assignmentDeclaration signature colonEqTk parents
       fmtDeclWithDeclModifiers mods decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt «tacticFunext___»]
 public def fmtFunext : Fmt := fun
@@ -218,8 +209,7 @@ public def fmtFunext : Fmt := fun
     let funextTk ← fmt funextTk
     let args ← fmtArray args
     return Layouts.pseudoApplication (format := { parenthesize := true }) <| #[funextTk] ++ args
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.cdot]
 public def fmtCdotTactic : Fmt := fun
@@ -230,15 +220,13 @@ public def fmtCdotTactic : Fmt := fun
     -- line and subsequent tactics align below it.
     let tacticSeq ← fmt tacticSeq
     return pseudoAligned <| nested <| Layouts.softSpacedAtomic #[cdotTk, tacticSeq]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.solveTactic]
 public def fmtSolve : Fmt := fun
   | `(tactic| solve%$solveTk $[|%$barTks $tacticSeqs:tacticSeq]*) => do
     fmtAltsTactic solveTk barTks tacticSeqs
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtCalcStepLike (pred : Syntax) (colonEqTk? proof? : Option Syntax)
     : FmtM TaggedDoc := do
@@ -271,15 +259,13 @@ public def fmtCalcStepLike (pred : Syntax) (colonEqTk? proof? : Option Syntax)
 public def fmtCalcFirstStep : Fmt := fun
   | `(Lean.calcFirstStep| $pred:term $[ :=%$colonEqTk? $proof?:term]?) => do
     fmtCalcStepLike pred colonEqTk? proof?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.calcStep]
 public def fmtCalcStep : Fmt := fun
   | `(Lean.calcStep| $pred:term :=%$colonEqTk $proof:term) => do
     fmtCalcStepLike pred colonEqTk proof
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtCalcSteps (calcSteps : Syntax) : FmtM (Array TaggedDoc) := do
   let firstStep ← fmt (← getStxArg! calcSteps 0)

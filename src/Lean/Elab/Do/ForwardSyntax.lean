@@ -21,7 +21,7 @@ form.
 -/
 public structure ForwardArg where
   binders : Array (TSyntax ``funBinder)
-  body    : DoSeq
+  body : DoSeq
 
 /--
 If `e` is a function application whose last argument effect-forwards into the enclosing `do`
@@ -29,7 +29,8 @@ block (its body bears a `do←` marker, possibly under `fun` binders), return th
 head sans the forwarding argument together with the `ForwardArg` description.
 -/
 public def Forward.matchApp? (e : Term) : Option (Term × ForwardArg) := do
-  let `($head $args*) := (⟨dropParens e.raw⟩ : Term) | none
+  let `($head $args*) := (⟨dropParens e.raw⟩ : Term)
+    | none
   let last : Term := ⟨dropParens (← args.back?).raw⟩
   let arg : ForwardArg ←
     if last.raw.isOfKind ``doForward then
@@ -37,11 +38,14 @@ public def Forward.matchApp? (e : Term) : Option (Term × ForwardArg) := do
     else if let `(fun $bs:funBinder* => $rest) := last then
       let rest := dropParens rest.raw
       if rest.isOfKind ``doForward then some ⟨bs, ⟨rest[2]⟩⟩ else none
-    else none
+    else
+      none
   let preArgs := args.pop
   let head' : Term :=
-    if preArgs.isEmpty then head
-    else ⟨mkNode ``Lean.Parser.Term.app #[head, mkNullNode preArgs]⟩
+    if preArgs.isEmpty then
+      head
+    else
+      ⟨mkNode ``Lean.Parser.Term.app #[head, mkNullNode preArgs]⟩
   some (head', arg)
 
 end Lean.Elab.Do

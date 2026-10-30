@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Order.Types
 public import Lean.Meta.Tactic.Grind.Order.Internalize
@@ -25,9 +26,7 @@ builtin_initialize registerTraceClass `grind.debug.order.check_eq_true (inherite
 builtin_initialize registerTraceClass `grind.debug.order.check_eq_false (inherited := true)
 
 builtin_initialize
-  orderExt.setMethods
-    (enabled     := (·.order))
-    (internalize := Order.internalize)
-    (newEq       := Order.processNewEq)
+  orderExt.setMethods (enabled := (·.order)) (internalize := Order.internalize)
+    (newEq := Order.processNewEq)
 
 end Lean.Meta.Grind.Order

@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Data.Cast
 public import Init.Grind.Tactics
@@ -67,11 +68,14 @@ will not eliminate it. After we apply `simp`, we replace it with `MatchCond`.
 -/
 @[expose] def PreMatchCond (p : Prop) : Prop := p
 
-theorem nestedProof_congr (p q : Prop) (h : p = q) (hp : p) (hq : q) : @nestedProof p hp ≍ @nestedProof q hq := by
+theorem nestedProof_congr (p q : Prop) (h : p = q) (hp : p) (hq : q)
+    : @nestedProof p hp ≍ @nestedProof q hq := by
   subst h; apply HEq.refl
 
-theorem nestedDecidable_congr (p q : Prop) (h : p = q) (hp : Decidable p) (hq : Decidable q) : @nestedDecidable p hp ≍ @nestedDecidable q hq := by
-  subst h; cases hp <;> cases hq <;> unfold nestedDecidable <;> try simp
+theorem nestedDecidable_congr (p q : Prop) (h : p = q) (hp : Decidable p) (hq : Decidable q)
+    : @nestedDecidable p hp ≍ @nestedDecidable q hq := by
+  subst h
+  cases hp <;> cases hq <;> unfold nestedDecidable <;> try simp
   next h1 h2 => exact False.elim (h1 h2)
   next h1 h2 => exact False.elim (h2 h1)
 
@@ -122,15 +126,13 @@ an alternative form `c'`, which `grind` may not recognize as equivalent to `¬c`
 As a result, `grind` could fail to propagate that `if c then a else b` simplifies to `b`
 in the `¬c` branch.
 -/
-@[expose]
-def alreadyNorm (p : Prop) : Prop := p
+@[expose] def alreadyNorm (p : Prop) : Prop := p
 
 /--
 `Classical.em` variant where disjuncts are marked with `alreadyNorm` gadget.
 See comment at `alreadyNorm`
 -/
-theorem em (p : Prop) : alreadyNorm p ∨ alreadyNorm (¬ p) :=
-  Classical.em p
+theorem em (p : Prop) : alreadyNorm p ∨ alreadyNorm (¬p) := Classical.em p
 
 /--
 Marker for grind-solved subproofs in `exact? +grind` suggestions.
@@ -140,7 +142,6 @@ so that the unexpander can replace it with `(by grind)` in the suggestion.
 @[inline] def Marker {α : Sort u} (a : α) : α := a
 
 @[app_unexpander Marker]
-meta def markerUnexpander : PrettyPrinter.Unexpander := fun _ => do
-  `(by grind)
+meta def markerUnexpander : PrettyPrinter.Unexpander := fun _ => do `(by grind)
 
 end Lean.Grind

@@ -46,12 +46,8 @@ instance : Monad Id where
   bind x f := f x
   map f x := f x
 
-/--
-The identity monad has a `bind` operator.
--/
-@[instance_reducible]
-def hasBind : Bind Id :=
-  inferInstance
+/-- The identity monad has a `bind` operator. -/
+@[instance_reducible] def hasBind : Bind Id := inferInstance
 
 /--
 Runs a computation in the identity monad.
@@ -59,11 +55,9 @@ Runs a computation in the identity monad.
 This function is the identity function. Because its parameter has type `Id α`, it causes
 `do`-notation in its arguments to use the `Monad Id` instance.
 -/
-@[always_inline, inline, expose, implicit_reducible]
-protected def run (x : Id α) : α := x
+@[always_inline, inline, expose, implicit_reducible] protected def run (x : Id α) : α := x
 
-instance [OfNat α n] : OfNat (Id α) n :=
-  inferInstanceAs (OfNat α n)
+instance [OfNat α n] : OfNat (Id α) n := inferInstanceAs (OfNat α n)
 
 instance {m : Type u → Type v} [Pure m] : MonadLiftT Id m where
   monadLift x := pure x.run
@@ -82,9 +76,10 @@ instance : LawfulMonadAttach Id where
 end Id
 
 /-- Turn a collection with a pure `ForIn` instance into an array. -/
-@[expose] def ForIn.toArray {α : Type u} [inst : ForIn Id ρ α] (xs : ρ) : Array α :=
+@[expose]
+def ForIn.toArray {α : Type u} [inst : ForIn Id ρ α] (xs : ρ) : Array α :=
   ForIn.forIn xs Array.empty (fun a acc => pure (.yield (acc.push a))) |> Id.run
 
 /-- Turn a collection with a pure `ForIn` instance into a list. -/
-@[expose] def ForIn.toList {α : Type u} [ForIn Id ρ α] (xs : ρ) : List α :=
-  ForIn.toArray xs |>.toList
+@[expose]
+def ForIn.toList {α : Type u} [ForIn Id ρ α] (xs : ρ) : List α := ForIn.toArray xs |>.toList

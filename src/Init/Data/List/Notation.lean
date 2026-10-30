@@ -32,7 +32,7 @@ which uses let bindings as intermediates as in
 Note that this changes the order of evaluation, although it should not be observable
 unless you use side effecting operations like `dbg_trace`.
 -/
-syntax "[" withoutPosition(term,*,?) "]"  : term
+syntax "[" withoutPosition(term,*,?) "]" : term
 
 recommended_spelling "nil" for "[]" in [List.nil, «term[_]»]
 recommended_spelling "singleton" for "[a]" in [List.cons, «term[_]»]
@@ -52,9 +52,10 @@ macro_rules
     -- NOTE: we do not have `TSepArray.getElems` yet at this point
     let rec expandListLit (i : Nat) (skip : Bool) (result : TSyntax `term) : MacroM Syntax := do
       match i, skip with
-      | 0,   _     => pure result
-      | i+1, true  => expandListLit i false result
-      | i+1, false => expandListLit i true  (← ``(List.cons $(⟨elems.elemsAndSeps.get!Internal i⟩) $result))
+      | 0, _ => pure result
+      | i + 1, true => expandListLit i false result
+      | i + 1, false =>
+        expandListLit i true (← ``(List.cons $(⟨elems.elemsAndSeps.get!Internal i⟩) $result))
     let size := elems.elemsAndSeps.size
     if size < 64 then
       expandListLit size (size % 2 == 0) (← ``(List.nil))

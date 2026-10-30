@@ -34,24 +34,32 @@ open Lean.Order Std.WP
 
 namespace Std.WP
 
-variable {Prog : Type u} {Value : Type v} {Pred : Type w} {EPosts : Type z}
+variable
+  {Prog : Type u} {Value : Type v} {Pred : Type w} {EPosts : Type z}
   [Assertion Pred] [Assertion EPosts] [WP Prog Value Pred EPosts]
 
-/-- The program `x` frames the resource `F` under the guard `P`: in a state that satisfies `P`,
+/--
+The program `x` frames the resource `F` under the guard `P`: in a state that satisfies `P`,
 `op F ·` commutes into the postcondition of `wp x` and the companion `opE F ·` into the exception
-postcondition. -/
-structure WP.Frames {R : Type t} (op : R → Pred → Pred) {opE : R → EPosts → EPosts}
-    [FrameOp op EPosts opE] (x : Prog) (F : R) (P : Pred) : Prop where
-  /-- Under `P`, `op F` and its companion commute into the postcondition pair of `wp x`. -/
-  op_wp_le_wp_op : ∀ (Q : Value → Pred) (E : EPosts),
-    P ⊓ op F (wp x Q E) ⊑ wp x (fun a => op F (Q a)) (opE F E)
-
-theorem meet_op_wp_upperAdjoint_le_wp {R : Type t} {op : R → Pred → Pred}
+postcondition.
+-/
+structure WP.Frames
+    {R : Type t} (op : R → Pred → Pred)
     {opE : R → EPosts → EPosts} [FrameOp op EPosts opE]
-    {x : Prog} {F : R} {P : Pred} {Q : Value → Pred} {E : EPosts}
-    (hframes : WP.Frames op x F P) :
-    P ⊓ op F (wp x (fun a => PreservesSup.upperAdjoint (op F) (Q a))
-        (PreservesSup.upperAdjoint (opE F) E)) ⊑ wp x Q E := by
+    (x : Prog) (F : R) (P : Pred)
+    : Prop where
+  /-- Under `P`, `op F` and its companion commute into the postcondition pair of `wp x`. -/
+  op_wp_le_wp_op
+    : ∀ (Q : Value → Pred) (E : EPosts), P ⊓ op F (wp x Q E) ⊑ wp x (fun a => op F (Q a)) (opE F E)
+
+theorem meet_op_wp_upperAdjoint_le_wp
+    {R : Type t} {op : R → Pred → Pred} {opE : R → EPosts → EPosts} [FrameOp op EPosts opE]
+    {x : Prog} {F : R} {P : Pred} {Q : Value → Pred} {E : EPosts} (hframes : WP.Frames op x F P)
+    : P ⊓ op F
+        (wp x
+          (fun a => PreservesSup.upperAdjoint (op F) (Q a))
+          (PreservesSup.upperAdjoint (opE F) E))
+      ⊑ wp x Q E := by
   haveI := FrameOp.preservesSup (op := op) (EPosts := EPosts) (opE := opE)
   haveI := FrameOp.preservesSupE (op := op) (EPosts := EPosts) (opE := opE)
   refine PartialOrder.rel_trans (hframes.op_wp_le_wp_op _ _) ?_
@@ -60,14 +68,14 @@ theorem meet_op_wp_upperAdjoint_le_wp {R : Type t} {op : R → Pred → Pred}
   · intro a
     exact PreservesSup.upperAdjoint_le (op F) (Q a)
 
-theorem WP.frames_of_frameClosure {R : Type t} (op : R → Pred → Pred)
+theorem WP.frames_of_frameClosure
+    {R : Type t} (op : R → Pred → Pred)
     {opE : R → EPosts → EPosts} [FrameOp op EPosts opE]
     (comp : R → R → R) (hact : ∀ r r' a, op (comp r r') a = op r (op r' a))
     (hactE : ∀ r r' E, opE (comp r r') E = opE r (opE r' E))
     {x : Prog} {F : R} {P : Pred}
-    (h : ∃ f : Prog → PredTrans Pred EPosts Value,
-      ∀ x : Prog, WP.trans x = (f x).frameClosure op) :
-    WP.Frames op x F P := by
+    (h : ∃ f : Prog → PredTrans Pred EPosts Value, ∀ x : Prog, WP.trans x = (f x).frameClosure op)
+    : WP.Frames op x F P := by
   obtain ⟨f, hf⟩ := h
   constructor
   intro Q E
@@ -76,11 +84,11 @@ theorem WP.frames_of_frameClosure {R : Type t} (op : R → Pred → Pred)
   rw [hf x]
   exact PredTrans.frameClosure_frames op comp hact hactE (f x) Q E F
 
-theorem WP.frames_of_conjunctive {x : Prog} [WPConjunctive x]
-    {opE : Pred → EPosts → EPosts} [FrameOp meet EPosts opE] {F P : Pred}
-    (hF : P ⊓ F ⊑ wp x (fun _ => F) (opE F ⊤))
-    (hE : ∀ E, opE F ⊤ ⊓ E ⊑ opE F E) :
-    WP.Frames meet x F P := by
+theorem WP.frames_of_conjunctive
+    {x : Prog} [WPConjunctive x]
+    {opE : Pred → EPosts → EPosts} [FrameOp meet EPosts opE]
+    {F P : Pred} (hF : P ⊓ F ⊑ wp x (fun _ => F) (opE F ⊤)) (hE : ∀ E, opE F ⊤ ⊓ E ⊑ opE F E)
+    : WP.Frames meet x F P := by
   constructor
   intro Q E
   refine PartialOrder.rel_trans (y := wp x (fun _ => F) (opE F ⊤) ⊓ wp x Q E) ?_ ?_
@@ -94,30 +102,36 @@ theorem WP.frames_of_conjunctive {x : Prog} [WPConjunctive x]
     simp only [meet_apply]
     exact PartialOrder.rel_refl
 
-/-- Reinterpret a `WP` so its weakest precondition is the `frameClosure` of the base
+/--
+Reinterpret a `WP` so its weakest precondition is the `frameClosure` of the base
 wp over a family of supremum-preserving resource operators `op r` and the `FrameOp`-derived
-exception-channel companion. -/
-@[instance_reducible] noncomputable def WP.withFrameClosure {R : Type t} (op : R → Pred → Pred)
+exception-channel companion.
+-/
+@[instance_reducible]
+noncomputable def WP.withFrameClosure
+    {R : Type t} (op : R → Pred → Pred)
     {opE : R → EPosts → EPosts} [FrameOp op EPosts opE]
-    (base : WP Prog Value Pred EPosts) : WP Prog Value Pred EPosts where
+    (base : WP Prog Value Pred EPosts)
+    : WP Prog Value Pred EPosts where
   trans x := (base.trans x).frameClosure op
   trans_monotone x := PredTrans.monotone_frameClosure op (base.trans_monotone x)
 
 omit [WP Prog Value Pred EPosts] in
-theorem WP.withFrameClosure_le_wp_iff {R : Type t} (op : R → Pred → Pred)
+theorem WP.withFrameClosure_le_wp_iff
+    {R : Type t} (op : R → Pred → Pred)
     {opE : R → EPosts → EPosts} [FrameOp op EPosts opE]
-    (base : WP Prog Value Pred EPosts) (x : Prog) (Q : Value → Pred) (E : EPosts) (pre : Pred) :
-    pre ⊑ (WP.withFrameClosure op base).wp x Q E ↔
-      ∀ r, op r pre ⊑ base.wp x (fun a => op r (Q a)) (opE r E) :=
+    (base : WP Prog Value Pred EPosts) (x : Prog) (Q : Value → Pred) (E : EPosts) (pre : Pred)
+    : pre ⊑ (WP.withFrameClosure op base).wp x Q E
+      ↔ ∀ r, op r pre ⊑ base.wp x (fun a => op r (Q a)) (opE r E) :=
   PredTrans.le_frameClosure_iff op (base.trans x)
 
 omit [WP Prog Value Pred EPosts] in
-theorem WP.le_wp_of_withFrameClosure_eq {R : Type t} {op : R → Pred → Pred}
-    {opE : R → EPosts → EPosts} [FrameOp op EPosts opE]
+theorem WP.le_wp_of_withFrameClosure_eq
+    {R : Type t} {op : R → Pred → Pred} {opE : R → EPosts → EPosts} [FrameOp op EPosts opE]
     {base I : WP Prog Value Pred EPosts} (heq : I = WP.withFrameClosure op base)
     {x : Prog} {Q : Value → Pred} {E : EPosts} {pre : Pred}
-    (h : ∀ r, op r pre ⊑ base.wp x (fun a => op r (Q a)) (opE r E)) :
-    pre ⊑ I.wp x Q E := by
+    (h : ∀ r, op r pre ⊑ base.wp x (fun a => op r (Q a)) (opE r E))
+    : pre ⊑ I.wp x Q E := by
   subst heq
   exact (WP.withFrameClosure_le_wp_iff op base x Q E pre).mpr h
 

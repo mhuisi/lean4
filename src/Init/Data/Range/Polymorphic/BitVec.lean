@@ -25,8 +25,7 @@ instance : UpwardEnumerable (BitVec n) where
   succ? i := if i + 1 = 0 then none else some (i + 1)
   succMany? m i := if h : i.toNat + m < 2 ^ n then some (.ofNatLT _ h) else none
 
-theorem succ?_eq_none {x : BitVec n} :
-    UpwardEnumerable.succ? x = none ↔ x.toNat = 2 ^ n - 1 := by
+theorem succ?_eq_none {x : BitVec n} : UpwardEnumerable.succ? x = none ↔ x.toNat = 2 ^ n - 1 := by
   simp [succ?, ← BitVec.toNat_inj]
   apply Iff.intro
   · refine fun h => Classical.not_not.mp fun _ => ?_
@@ -34,8 +33,8 @@ theorem succ?_eq_none {x : BitVec n} :
   · have := Nat.two_pow_pos n
     simp +contextual [show 2 ^ n - 1 + 1 = 2 ^ n by omega]
 
-theorem succ?_eq_some {x y : BitVec n} :
-    succ? x = some y ↔ x.toNat < 2 ^ n - 1 ∧ y.toNat = x.toNat + 1 := by
+theorem succ?_eq_some {x y : BitVec n}
+    : succ? x = some y ↔ x.toNat < 2 ^ n - 1 ∧ y.toNat = x.toNat + 1 := by
   match h : succ? x with
   | none => simp_all [succ?_eq_none]
   | some y' =>
@@ -51,7 +50,8 @@ theorem succ?_eq_some {x y : BitVec n} :
         rw [Nat.mod_eq_of_lt (by omega)] at h
         exact h.2.symm
     · simp only [succ?, ofNat_eq_ofNat, ← toNat_inj, toNat_add, toNat_ofNat, Nat.add_mod_mod,
-        Nat.zero_mod, Option.ite_none_left_eq_some, Option.some.injEq] at h
+          Nat.zero_mod, Option.ite_none_left_eq_some, Option.some.injEq]
+        at h
       intro h'
       rw [Nat.mod_eq_of_lt (by omega)] at h
       simp [← BitVec.toNat_inj, *]

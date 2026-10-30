@@ -25,13 +25,13 @@ namespace Lake.Toml
 
 /-- A TOML value with optional source info. -/
 public inductive Value
-| string (ref : Syntax) (s : String)
-| integer (ref : Syntax) (n : Int)
-| float (ref : Syntax) (n : Float)
-| boolean (ref : Syntax) (b : Bool)
-| dateTime (ref : Syntax) (dt : DateTime)
-| array (ref : Syntax) (xs : Array Value)
-| table' (ref : Syntax) (xs : RBDict Name Value Name.quickCmp)
+  | string (ref : Syntax) (s : String)
+  | integer (ref : Syntax) (n : Int)
+  | float (ref : Syntax) (n : Float)
+  | boolean (ref : Syntax) (b : Bool)
+  | dateTime (ref : Syntax) (dt : DateTime)
+  | array (ref : Syntax) (xs : Array Value)
+  | table' (ref : Syntax) (xs : RBDict Name Value Name.quickCmp)
 deriving Inhabited, BEq
 
 /-- A TOML table, an ordered key-value map of TOML values (`Lake.Toml.Value`). -/
@@ -40,37 +40,38 @@ public abbrev Table := NameDict Value
 @[inline] public def Table.empty : Table := RBDict.empty
 @[inline] public def Table.mkEmpty (capacity : Nat) : Table := RBDict.mkEmpty capacity
 
-@[match_pattern] public abbrev Value.table (ref : Syntax) (t : Table) :=
-  Value.table' ref t
+@[match_pattern] public abbrev Value.table (ref : Syntax) (t : Table) := Value.table' ref t
 
-@[inline] public def Value.ref : Value → Syntax
-| .string (ref := ref) .. => ref
-| .integer (ref := ref) .. => ref
-| .float (ref := ref) .. => ref
-| .boolean (ref := ref) .. => ref
-| .dateTime (ref := ref) .. => ref
-| .array (ref := ref) .. => ref
-| .table (ref := ref) .. => ref
+@[inline]
+public def Value.ref : Value → Syntax
+  | .string (ref := ref) .. => ref
+  | .integer (ref := ref) .. => ref
+  | .float (ref := ref) .. => ref
+  | .boolean (ref := ref) .. => ref
+  | .dateTime (ref := ref) .. => ref
+  | .array (ref := ref) .. => ref
+  | .table (ref := ref) .. => ref
 
 --------------------------------------------------------------------------------
 /-! ## Pretty Printing -/
 --------------------------------------------------------------------------------
 
 public def ppString (s : String) : String :=
-  let s := s.foldl (init := "\"") fun s c =>
-    match c with
-    | '\x08' => s ++ "\\b"
-    | '\t' => s ++ "\\t"
-    | '\n' => s ++ "\\n"
-    | '\x0C' => s ++ "\\f"
-    | '\r' => s ++ "\\r"
-    | '\"' => s ++ "\\\""
-    | '\\' => s ++ "\\\\"
-    | _ =>
-      if c.val < 0x20 || c.val == 0x7F then
-        s ++ "\\u" ++ lpadAscii (String.ofList <| Nat.toDigits 16 c.val.toNat) '0' 4
-      else
-        s.push c
+  let s :=
+    s.foldl (init := "\"") fun s c =>
+      match c with
+      | '\x08' => s ++ "\\b"
+      | '\t' => s ++ "\\t"
+      | '\n' => s ++ "\\n"
+      | '\x0C' => s ++ "\\f"
+      | '\r' => s ++ "\\r"
+      | '\"' => s ++ "\\\""
+      | '\\' => s ++ "\\\\"
+      | _ =>
+        if c.val < 0x20 || c.val == 0x7F then
+          s ++ "\\u" ++ lpadAscii (String.ofList <| Nat.toDigits 16 c.val.toNat) '0' 4
+        else
+          s.push c
   s.push '\"'
 
 public def ppSimpleKey (k : String) : String :=
@@ -91,7 +92,7 @@ public partial def ppKey (k : Name) : String :=
 mutual
 
 public partial def ppInlineTable (t : Table) : String :=
-  let xs := t.items.map fun (k,v) => s!"{ppKey k} = {Value.toString v}"
+  let xs := t.items.map fun (k, v) => s!"{ppKey k} = {Value.toString v}"
   "{" ++ ", ".intercalate xs.toList ++ "}"
 
 public partial def ppInlineArray (vs : Array Value) : String :=
@@ -113,30 +114,31 @@ end
 public instance : ToString Value := ⟨Value.toString⟩
 
 public def ppTable (t : Table) : String :=
-  let (ts, fs) := t.items.foldl (init := ("", "")) fun (ts, fs) (k,v) =>
-    match v with
-    | .array _ vs =>
-      if vs.isEmpty then
-        (ts.append s!"{ppKey k} = []\n", fs)
-      else if vs.all (· matches .table ..) then
-        let fs := vs.foldl (init := fs) fun s v =>
-          match v with
-          | .table _ t =>
-            let s := s ++ s!"[[{ppKey k}]]\n"
-            let s := t.items.foldl (fun s (k,v) => appendKeyval s k v) s
-            s.push '\n'
-          | _ => unreachable!
-        (ts, fs)
-      else
-        (ts.append s!"{ppKey k} = {ppInlineArray vs}\n", fs)
-    | .table _ t =>
-      let fs := fs ++ s!"[{ppKey k}]\n"
-      let fs := t.items.foldl (fun s (k,v) => appendKeyval s k v) fs
-      (ts, fs.push '\n')
-    | _ => (appendKeyval ts k v, fs)
+  let (ts, fs) :=
+    t.items.foldl (init := ("", "")) fun (ts, fs) (k, v) =>
+      match v with
+      | .array _ vs =>
+        if vs.isEmpty then
+          (ts.append s!"{ppKey k} = []\n", fs)
+        else if vs.all (· matches .table ..) then
+          let fs :=
+            vs.foldl (init := fs) fun s v =>
+              match v with
+              | .table _ t =>
+                let s := s ++ s!"[[{ppKey k}]]\n"
+                let s := t.items.foldl (fun s (k, v) => appendKeyval s k v) s
+                s.push '\n'
+              | _ => unreachable!
+          (ts, fs)
+        else
+          (ts.append s!"{ppKey k} = {ppInlineArray vs}\n", fs)
+      | .table _ t =>
+        let fs := fs ++ s!"[{ppKey k}]\n"
+        let fs := t.items.foldl (fun s (k, v) => appendKeyval s k v) fs
+        (ts, fs.push '\n')
+      | _ => (appendKeyval ts k v, fs)
   -- Ensures root table keys come before subtables
   -- See https://github.com/leanprover/lean4/issues/4099
   (ts.push '\n' ++ fs).trimAsciiEnd.copy.push '\n'
 where
-  appendKeyval s k v :=
-    s.append s!"{ppKey k} = {v}\n"
+  appendKeyval s k v := s.append s!"{ppKey k} = {v}\n"

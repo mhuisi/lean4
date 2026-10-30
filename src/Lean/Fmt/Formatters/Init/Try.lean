@@ -20,8 +20,7 @@ public def fmtTryTrace : Fmt := fun
     let tryTk ← fmt tryTk
     let cfg ← (← tacticOptConfigItems cfg).mapM fmt
     return Layouts.pseudoApplication <| #[tryTk] ++ cfg
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.tryTraceWith]
 public def fmtTryTraceWith : Fmt := fun
@@ -32,29 +31,25 @@ public def fmtTryTraceWith : Fmt := fun
     let seq ← fmt seq
     let signature := Layouts.pseudoApplication <| #[tryTk] ++ cfg
     return Layouts.assignmentDeclaration signature arrowTk seq
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.attemptAll]
 public def fmtAttemptAll : Fmt := fun
   | `(tactic| attempt_all%$attemptAllTk $[|%$barTks $tacticSeqs:tacticSeq]*) =>
     fmtAltsTactic attemptAllTk barTks tacticSeqs
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.attemptAllPar]
 public def fmtAttemptAllPar : Fmt := fun
   | `(tactic| attempt_all_par%$attemptAllParTk $[|%$barTks $tacticSeqs:tacticSeq]*) =>
     fmtAltsTactic attemptAllParTk barTks tacticSeqs
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.firstPar]
 public def fmtFirstPar : Fmt := fun
   | `(tactic| first_par%$firstParTk $[|%$barTks $tacticSeqs:tacticSeq]*) =>
     fmtAltsTactic firstParTk barTks tacticSeqs
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.tryResult]
 public def fmtTryResult : Fmt := fun
@@ -62,8 +57,7 @@ public def fmtTryResult : Fmt := fun
     let trySuggestionsTk ← fmt trySuggestionsTk
     let tactics ← fmtArray tactics
     return Layouts.pseudoApplication <| #[trySuggestionsTk] ++ tactics
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.registerTryTactic]
 public def fmtRegisterTryTactic : Fmt := fun
@@ -78,5 +72,4 @@ public def fmtRegisterTryTactic : Fmt := fun
     let keyword := Layouts.pseudoApplication #[registerTk, priorityParam?]
     let decl := Layouts.keywordPrefixedSeq keyword seq .nonSticky
     fmtDeclWithModifiers docComment? none #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

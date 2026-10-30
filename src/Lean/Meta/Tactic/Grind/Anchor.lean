@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 import Lean.Meta.Tactic.Grind.MarkNestedSubsingletons
@@ -15,9 +16,7 @@ Anchor (aka stable hash) support for `grind`. We use
 anchors to reference terms in the `grind` state.
 -/
 
-/--
-Hashes names for computing anchors (aka stable hash codes)
--/
+/-- Hashes names for computing anchors (aka stable hash codes) -/
 def hashName (n : Name) : UInt64 :=
   if n.hasMacroScopes || n.isInaccessibleUserName || n.isImplementationDetail then
     0
@@ -35,70 +34,84 @@ def hashName (n : Name) : UInt64 :=
 
 -- `mixHash` variant where `0` is treated as don't care
 def mix (a b : UInt64) : UInt64 :=
-  if a == 0 then b
-  else if b == 0 then a
-  else mixHash a b
+  if a == 0 then
+    b
+  else if b == 0 then
+    a
+  else
+    mixHash a b
 
 partial def getAnchorCore (e : Expr) : GrindM UInt64 := do
   if let some a := (← get).anchors.find? { expr := e } then
     return a
-  let a ← match e with
+  let a ←
+    match e with
     | .const declName _ =>
       /-
       **Note**: we skip matcher declaration names because they may introduce some
       "instability". Recall that `match` auxiliary declarations are reused.
       -/
-      if (← isMatcher declName) then pure 0
-      else pure <| hashName declName
+      if (← isMatcher declName) then
+        pure 0
+      else
+        pure <| hashName declName
     | .fvar fvarId =>
       if let some a := (← get).fvarAnchors.find? fvarId then
         pure a
       else
         -- A variable not introduced through `registerFVarAnchor`, e.g., by a `grind` tactic.
         pure <| hash (← fvarId.getDecl).userName.eraseMacroScopes
-    | .mdata _ b => getAnchorCore b
+    | .mdata _ b =>
+      getAnchorCore b
     | .letE n v t b _ =>
-      pure <| mix (hashName n) <| mix (← getAnchorCore t) <| mix (← getAnchorCore v) (← getAnchorCore b)
+      pure <| mix (hashName n) <| mix (← getAnchorCore t) <|
+        mix (← getAnchorCore v) (← getAnchorCore b)
     | .lam n d b _ | .forallE n d b _ =>
       pure <| mix (hashName n) <| mix (← getAnchorCore d) (← getAnchorCore b)
-    | .proj _ i s => pure <| mix (hash i) (← getAnchorCore s)
-    | .bvar idx => pure <| hash idx
-    | .lit v => pure <| hash v
-    | .app .. => e.withApp fun f args => do
-      if isMarkedSubsingletonConst f && args.size == 2 then
-        -- **Note**: we only visit the type of marked subsingleton terms.
-        getAnchorCore args[0]!
-      else
-        let pinfos ← if f.hasLooseBVars then
-          pure #[]
+    | .proj _ i s =>
+      pure <| mix (hash i) (← getAnchorCore s)
+    | .bvar idx =>
+      pure <| hash idx
+    | .lit v =>
+      pure <| hash v
+    | .app .. =>
+      e.withApp fun f args => do
+        if isMarkedSubsingletonConst f && args.size == 2 then
+          -- **Note**: we only visit the type of marked subsingleton terms.
+          getAnchorCore args[0]!
         else
-          pure <| (← getFunInfo f).paramInfo
-        let mut r ← getAnchorCore f
-        for h : i in *...args.size do
-          let arg := args[i]
-          if h : i < pinfos.size then
-            let info := pinfos[i]
-            -- **Note**: we ignore instances we computing stable hash codes
-            -- TODO: evaluate whether we should ignore regular implicit arguments too.
-            unless info.isImplicit do
+          let pinfos ←
+            if f.hasLooseBVars then
+              pure #[]
+            else
+              pure <| (← getFunInfo f).paramInfo
+          let mut r ← getAnchorCore f
+          for h : i in *...args.size do
+            let arg := args[i]
+            if h : i < pinfos.size then
+              let info := pinfos[i]
+              -- **Note**: we ignore instances we computing stable hash codes
+              -- TODO: evaluate whether we should ignore regular implicit arguments too.
+              unless info.isImplicit do
+                r := mix r (← getAnchorCore arg)
+            else
               r := mix r (← getAnchorCore arg)
-          else
-            r := mix r (← getAnchorCore arg)
-        pure r
+          pure r
     | .sort _ | .mvar _ => pure 0
   modify fun s => { s with anchors := s.anchors.insert { expr := e } a }
   return a
 
 /-- Returns the anchor of `e`, or `0` if anchors are disabled. See `Context.anchors`. -/
 public def getAnchor (e : Expr) : GrindM UInt64 := do
-  unless (← anchorsEnabled) do return 0
+  unless (← anchorsEnabled) do
+    return 0
   getAnchorCore e
 
 /--
 Example: `{ numDigits := 4, anchorPrefix := 0x0c88 }.matches 0x0c88ab10ef20206a` returns `true`
 -/
 public def AnchorRef.matches (anchorRef : AnchorRef) (anchor : UInt64) : Bool :=
-  let shift := 64 - anchorRef.numDigits.toUInt64*4
+  let shift := 64 - anchorRef.numDigits.toUInt64 * 4
   anchorRef.anchorPrefix == anchor >>> shift
 
 public class HasAnchor (α : Type u) where
@@ -111,12 +124,11 @@ Elements with identical (full) anchors cannot be distinguished by adding more di
 Thus, they are ignored by this function. Callers must handle these collisions separately
 (e.g., the `cases` tactic uses ordinal references such as `#a56e/2`).
 -/
-public def getNumDigitsForAnchors [HasAnchor α] (es : Array α) : Nat :=
-  go 4
+public def getNumDigitsForAnchors [HasAnchor α] (es : Array α) : Nat := go 4
 where
   go (numDigits : Nat) : Nat := Id.run do
-    if 4*numDigits  < 64 then
-      let shift := 64 - 4*numDigits
+    if 4 * numDigits < 64 then
+      let shift := 64 - 4 * numDigits
       let mut found : Std.HashMap UInt64 UInt64 := {}
       for e in es do
         let a := HasAnchor.getAnchor e
@@ -124,30 +136,31 @@ where
         if let some b := found[a']? then
           -- **Note**: if the full anchors are equal, expanding the number of digits does not help.
           if b != a then
-            return (← go (numDigits+1))
+            return (← go (numDigits + 1))
         else
-          found  := found.insert a' a
+          found := found.insert a' a
       return numDigits
     else
       return numDigits
-  termination_by 64 - 4*numDigits
+  termination_by 64 - 4 * numDigits
 
 public structure ExprWithAnchor where
-  e      : Expr
+  e : Expr
   anchor : UInt64
 
 public instance : HasAnchor ExprWithAnchor where
   getAnchor e := e.anchor
 
-public def mkAnchorSyntaxFromPrefix (numDigits : Nat) (anchorPrefix : UInt64) : CoreM (TSyntax ``Parser.Tactic.anchor) := do
+public def mkAnchorSyntaxFromPrefix (numDigits : Nat) (anchorPrefix : UInt64)
+    : CoreM (TSyntax ``Parser.Tactic.anchor) := do
   let hexnum := mkNode `hexnum #[mkAtom (anchorPrefixToString numDigits anchorPrefix)]
   `(Parser.Tactic.anchor| #$hexnum)
 
-public def mkAnchorSyntax (numDigits : Nat) (anchor : UInt64) : CoreM (TSyntax ``Parser.Tactic.anchor) := do
-  let anchorPrefix := anchor >>> (64 - 4*numDigits.toUInt64)
+public def mkAnchorSyntax (numDigits : Nat) (anchor : UInt64)
+    : CoreM (TSyntax ``Parser.Tactic.anchor) := do
+  let anchorPrefix := anchor >>> (64 - 4 * numDigits.toUInt64)
   mkAnchorSyntaxFromPrefix numDigits anchorPrefix
 
-public def SplitInfo.getAnchor (s : SplitInfo) : GrindM UInt64 := do
-  Grind.getAnchor s.getExpr
+public def SplitInfo.getAnchor (s : SplitInfo) : GrindM UInt64 := do Grind.getAnchor s.getExpr
 
 end Lean.Meta.Grind

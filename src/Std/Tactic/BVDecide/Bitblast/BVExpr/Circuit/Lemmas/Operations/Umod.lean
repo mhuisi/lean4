@@ -30,21 +30,20 @@ namespace blastUmod
 
 open blastUdiv
 
-theorem denote_go_eq_divRec_r (aig : AIG α) (assign : α → Bool) (curr : Nat) (lhs rhs rbv qbv : BitVec w)
-    (n d q r : AIG.RefVec aig w) (wn wr : Nat)
+theorem denote_go_eq_divRec_r
+    (aig : AIG α)
+    (assign : α → Bool)
+    (curr : Nat)
+    (lhs rhs rbv qbv : BitVec w) (n d q r : AIG.RefVec aig w)
+    (wn wr : Nat)
     (hleft : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, n.get idx hidx, assign⟧ = lhs.getLsbD idx)
     (hright : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, d.get idx hidx, assign⟧ = rhs.getLsbD idx)
     (hq : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, q.get idx hidx, assign⟧ = qbv.getLsbD idx)
     (hr : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, r.get idx hidx, assign⟧ = rbv.getLsbD idx)
-      :
-    ∀ (idx : Nat) (hidx : idx < w),
-      ⟦
-        (go aig curr n d wn wr q r).aig,
-        (go aig curr n d wn wr q r).r.get idx hidx,
-        assign
-      ⟧
-        =
-      (BitVec.divRec curr { n := lhs, d := rhs} { wn, wr, q := qbv, r := rbv }).r.getLsbD idx := by
+    : ∀ (idx : Nat) (hidx : idx < w),
+      ⟦(go aig curr n d wn wr q r).aig, (go aig curr n d wn wr q r).r.get idx hidx, assign⟧
+        = (BitVec.divRec curr { n := lhs, d := rhs } { wn, wr, q := qbv, r := rbv }).r.getLsbD
+          idx := by
   induction curr generalizing aig wn wr q r qbv rbv with
   | zero =>
     intro idx hidx
@@ -106,22 +105,16 @@ theorem denote_go_eq_divRec_r (aig : AIG α) (assign : α → Bool) (curr : Nat)
         · exact hright
         · exact hr
 
-theorem denote_go (aig : AIG α) (assign : α → Bool) (lhs rhs : BitVec w)
-    (n d q r : AIG.RefVec aig w)
+theorem denote_go
+    (aig : AIG α) (assign : α → Bool) (lhs rhs : BitVec w) (n d q r : AIG.RefVec aig w)
     (hleft : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, n.get idx hidx, assign⟧ = lhs.getLsbD idx)
     (hright : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, d.get idx hidx, assign⟧ = rhs.getLsbD idx)
     (hq : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, q.get idx hidx, assign⟧ = false)
     (hr : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, r.get idx hidx, assign⟧ = false)
     (hzero : 0#w < rhs)
-      :
-    ∀ (idx : Nat) (hidx : idx < w),
-      ⟦
-        (go aig w n d w 0 q r).aig,
-        (go aig w n d w 0 q r).r.get idx hidx,
-        assign
-      ⟧
-        =
-      (lhs % rhs).getLsbD idx := by
+    : ∀ (idx : Nat) (hidx : idx < w),
+      ⟦(go aig w n d w 0 q r).aig, (go aig w n d w 0 q r).r.get idx hidx, assign⟧
+        = (lhs % rhs).getLsbD idx := by
   intro idx hidx
   rw [BitVec.umod_eq_divRec hzero]
   rw [BitVec.DivModState.init]
@@ -133,18 +126,18 @@ theorem denote_go (aig : AIG α) (assign : α → Bool) (lhs rhs : BitVec w)
 
 end blastUmod
 
-theorem denote_blastUmod (aig : AIG α) (lhs rhs : BitVec w) (assign : α → Bool)
-      (input : BinaryRefVec aig w)
-      (hleft : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, input.lhs.get idx hidx, assign⟧ = lhs.getLsbD idx)
-      (hright : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, input.rhs.get idx hidx, assign⟧ = rhs.getLsbD idx) :
-      ∀ (idx : Nat) (hidx : idx < w),
-        ⟦(blastUmod aig input).aig, (blastUmod aig input).vec.get idx hidx, assign⟧
-          =
-        (lhs % rhs).getLsbD idx := by
+theorem denote_blastUmod
+    (aig : AIG α) (lhs rhs : BitVec w) (assign : α → Bool) (input : BinaryRefVec aig w)
+    (hleft
+      : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, input.lhs.get idx hidx, assign⟧ = lhs.getLsbD idx)
+    (hright
+      : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, input.rhs.get idx hidx, assign⟧ = rhs.getLsbD idx)
+    : ∀ (idx : Nat) (hidx : idx < w),
+      ⟦(blastUmod aig input).aig, (blastUmod aig input).vec.get idx hidx, assign⟧
+        = (lhs % rhs).getLsbD idx := by
   intro idx hidx
   unfold blastUmod
-  simp only [Ref.cast_eq, RefVec.denote_ite,
-    RefVec.get_cast]
+  simp only [Ref.cast_eq, RefVec.denote_ite, RefVec.get_cast]
   split
   next hdiscr =>
     rw [blastUdiv.go_denote_mem_prefix (hstart := Ref.hgate _)] at hdiscr

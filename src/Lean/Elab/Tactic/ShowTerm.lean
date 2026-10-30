@@ -14,18 +14,22 @@ public section
 namespace Lean.Elab.Tactic.ShowTerm
 open Lean Elab Term Tactic Meta.Tactic.TryThis Parser.Tactic
 
-@[builtin_tactic showTerm] def evalShowTerm : Tactic := fun stx =>
+@[builtin_tactic showTerm]
+def evalShowTerm : Tactic := fun stx =>
   match stx with
-  | `(tactic| show_term%$tk $t) => withMainContext do
-    let g ← getMainGoal
-    let initialState ← saveState
-    evalTactic t
-    let e := (← instantiateMVars (mkMVar g)).headBeta
-    addExactSuggestion tk e (origSpan? := ← getRef) (checkState? := initialState) (tacticErrorAsInfo := true)
+  | `(tactic| show_term%$tk $t) =>
+    withMainContext do
+      let g ← getMainGoal
+      let initialState ← saveState
+      evalTactic t
+      let e := (← instantiateMVars (mkMVar g)).headBeta
+      addExactSuggestion tk e (origSpan? := ← getRef) (checkState? := initialState)
+        (tacticErrorAsInfo := true)
   | _ => throwUnsupportedSyntax
 
 /-- Implementation of `show_term` term elaborator. -/
-@[builtin_term_elab showTermElabImpl] def elabShowTerm : TermElab
+@[builtin_term_elab showTermElabImpl]
+def elabShowTerm : TermElab
   | `(show_term_elab%$tk $t), ty => do
     let e ← Term.elabTermEnsuringType t ty
     Term.synthesizeSyntheticMVarsNoPostponing

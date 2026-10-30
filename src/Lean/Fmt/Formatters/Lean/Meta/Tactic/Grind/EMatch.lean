@@ -19,5 +19,4 @@ public def fmtDoElemReportEMatchIssue : Fmt := fun
   | `(doElem| reportEMatchIssue!%$reportTk $msg) => do
     let reportTk ← fmt reportTk
     fmtTraceTerm reportTk msg
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

@@ -26,16 +26,16 @@ mapped buffer on load.
 -/
 public structure CompactedRegion where
   /-- Path the region was loaded from. -/
-  filePath       : System.FilePath
+  filePath : System.FilePath
   /-- Size in bytes of the region's mapping (the backing `.olean` file). -/
-  size           : USize
+  size : USize
   /-- Whether the region's buffer is backed by a memory mapping of its file. -/
   isMemoryMapped : Bool
   /--
   Logical base address the region's mapping is relative to (`olean_header.base_addr`), used to
   translate cross-region pointers when this region is used as a dependency.
   -/
-  private baseAddr     : USize
+  private baseAddr : USize
   /--
   Byte offset of the region's root object from the start of the mapping; `root - bufferOffset`
   recovers the mapping base (the address to unmap/free and the start of the dependency range).
@@ -46,8 +46,8 @@ public structure CompactedRegion where
   so the object compactor relocates it as a cross-region pointer when the region is embedded in
   compacted data with itself supplied as a `depRegion`.
   -/
-  private root         : NonScalar
-  deriving Nonempty
+  private root : NonScalar
+deriving Nonempty
 
 opaque CompactorSpec : NonemptyType.{0}
 /--
@@ -91,9 +91,12 @@ returned `Compactor` carries thread-safety and `depRegions` lifetime contracts t
 cannot enforce; see `Compactor`.
 -/
 @[extern "lean_compacted_region_save"]
-public unsafe opaque CompactedRegion.save {α : Type} (fname : @& System.FilePath) (key : @& Name)
-    (data : @& α) (depRegions : @& Array CompactedRegion) (prev : Option Compactor)
-    (allowClosures := false) : IO Compactor
+public unsafe opaque CompactedRegion.save
+  {α : Type}
+  (fname : @& System.FilePath) (key : @& Name) (data : @& α) (depRegions : @& Array CompactedRegion)
+  (prev : Option Compactor)
+  (allowClosures := false)
+  : IO Compactor
 
 /--
 Reads a compacted region from disk.
@@ -105,7 +108,8 @@ responsibility to ensure `α` matches the type the data was saved at; mismatched
 undefined behavior on use.
 -/
 @[extern "lean_compacted_region_read"]
-public unsafe opaque CompactedRegion.read {α : Type} (fname : @& System.FilePath)
-    (depRegions : @& Array CompactedRegion) : IO (α × CompactedRegion)
+public unsafe opaque CompactedRegion.read
+  {α : Type} (fname : @& System.FilePath) (depRegions : @& Array CompactedRegion)
+  : IO (α × CompactedRegion)
 
 end Lean

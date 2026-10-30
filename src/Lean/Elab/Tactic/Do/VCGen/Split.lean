@@ -24,11 +24,12 @@ inductive SplitInfo where
   | dite (e : Expr)
   | cond (e : Expr)
   | matcher (matcherApp : MatcherApp)
-  deriving Inhabited
+deriving Inhabited
 
 namespace SplitInfo
 
-def resTy (info : SplitInfo) : Option Expr := match info with
+def resTy (info : SplitInfo) : Option Expr :=
+  match info with
   | ite e => e.getArg! 0
   | dite e => e.getArg! 0
   | cond e => e.getArg! 0
@@ -36,23 +37,26 @@ def resTy (info : SplitInfo) : Option Expr := match info with
   -- We want to return `Type` component and fail if it depends on any of the discriminant values.
   | matcher matcherApp => do
     let motive := matcherApp.motive
-    let e : Expr ← Nat.repeat (n := matcherApp.discrInfos.size) (a := some motive) fun e =>
-      match e with
+    let e : Expr ←
+      Nat.repeat (n := matcherApp.discrInfos.size) (a := some motive) fun e =>
+        match e with
         | some (.lam _ _ e _) => e
         | _ => none
-    unless e.looseBVarRange = motive.looseBVarRange do none
+    unless e.looseBVarRange = motive.looseBVarRange do
+      none
     return e
 
 /--
 A list of pairs `(numParams, alt)` per match alternative, where `numParams` is the
 number of parameters of the alternative and `alt` is the alternative.
 -/
-def altInfos (info : SplitInfo) : Array (Nat × Expr) := match info with
+def altInfos (info : SplitInfo) : Array (Nat × Expr) :=
+  match info with
   | ite e => #[(0, e.getArg! 3), (0, e.getArg! 4)]
   | dite e => #[(1, e.getArg! 3), (1, e.getArg! 4)]
   | cond e => #[(0, e.getArg! 2), (0, e.getArg! 3)]
-  | matcher matcherApp => matcherApp.altNumParams.mapIdx fun idx numParams =>
-      (numParams, matcherApp.alts[idx]!)
+  | matcher matcherApp =>
+    matcherApp.altNumParams.mapIdx fun idx numParams => (numParams, matcherApp.alts[idx]!)
 
 /-- The expression represented by a `SplitInfo`. -/
 def expr : SplitInfo → Expr
@@ -79,83 +83,100 @@ Since eta-expanded alts like `fun n => alt n` can cause expensive higher-order u
 backward rule patterns, callers building backward rules should eta-reduce them first (e.g.
 via `Expr.eta` on the alt arguments of `abstractInfo.expr`).
 -/
-def withAbstract {n} {α} [MonadLiftT MetaM n] [MonadControlT MetaM n] [Monad n] [Inhabited α]
+def withAbstract
+    {n} {α} [MonadLiftT MetaM n] [MonadControlT MetaM n] [Monad n] [Inhabited α]
     (info : SplitInfo) (resTy : Expr)
-    (k : (abstractInfo : SplitInfo) → (splitFVars : Array Expr) → n α) : n α :=
+    (k : (abstractInfo : SplitInfo) → (splitFVars : Array Expr) → n α)
+    : n α :=
   match info with
   | .ite _ =>
     withLocalDeclD `c (mkSort 0) fun c =>
-    withLocalDeclD `dec (mkApp (mkConst ``Decidable) c) fun dec =>
-    withLocalDeclD `t resTy fun t =>
-    withLocalDeclD `e resTy fun e => do
-    let u ← liftMetaM <| getLevel resTy
-    k (.ite <| mkApp5 (mkConst ``_root_.ite [u]) resTy c dec t e) #[c, dec, t, e]
+      withLocalDeclD `dec (mkApp (mkConst ``Decidable) c) fun dec =>
+        withLocalDeclD `t resTy fun t =>
+          withLocalDeclD `e resTy fun e => do
+            let u ← liftMetaM <| getLevel resTy
+            k (.ite <| mkApp5 (mkConst ``_root_.ite [u]) resTy c dec t e) #[c, dec, t, e]
   | .dite _ =>
     withLocalDeclD `c (mkSort 0) fun c =>
-    withLocalDeclD `dec (mkApp (mkConst ``Decidable) c) fun dec => do
-    let tTy ← liftMetaM <| mkArrow c resTy
-    let eTy ← liftMetaM <| mkArrow (mkNot c) resTy
-    withLocalDeclD `t tTy fun t =>
-    withLocalDeclD `e eTy fun e => do
-    let u ← liftMetaM <| getLevel resTy
-    k (.dite <| mkApp5 (mkConst ``_root_.dite [u]) resTy c dec t e) #[c, dec, t, e]
+      withLocalDeclD `dec (mkApp (mkConst ``Decidable) c) fun dec => do
+        let tTy ← liftMetaM <| mkArrow c resTy
+        let eTy ← liftMetaM <| mkArrow (mkNot c) resTy
+        withLocalDeclD `t tTy fun t =>
+          withLocalDeclD `e eTy fun e => do
+            let u ← liftMetaM <| getLevel resTy
+            k (.dite <| mkApp5 (mkConst ``_root_.dite [u]) resTy c dec t e) #[c, dec, t, e]
   | .cond _ =>
     withLocalDeclD `c (mkConst ``Bool) fun c =>
-    withLocalDeclD `t resTy fun t =>
-    withLocalDeclD `e resTy fun e => do
-    let u ← liftMetaM <| getLevel resTy
-    k (.cond <| mkApp4 (mkConst ``_root_.cond [u]) resTy c t e) #[c, t, e]
+      withLocalDeclD `t resTy fun t =>
+        withLocalDeclD `e resTy fun e => do
+          let u ← liftMetaM <| getLevel resTy
+          k (.cond <| mkApp4 (mkConst ``_root_.cond [u]) resTy c t e) #[c, t, e]
   | .matcher matcherApp => do
     -- Abstract the discriminants as a dependent telescope: a later discriminant's type may mention an earlier one.
-    let discrDecls := matcherApp.discrs.mapIdx fun i discr =>
-      ((`discr).appendIndexAfter (i+1), fun (prior : Array Expr) => liftMetaM do
-        let mut ty ← inferType discr
-        for j in *...i do
-          if matcherApp.discrs[j]!.isFVar then
-            ty := ty.replaceFVar matcherApp.discrs[j]! prior[j]!
-        return ty)
+    let discrDecls :=
+      matcherApp.discrs.mapIdx fun i discr => (
+        (`discr).appendIndexAfter (i + 1),
+        fun (prior : Array Expr) =>
+          liftMetaM do
+            let mut ty ← inferType discr
+            for j in *...i do
+              if matcherApp.discrs[j]!.isFVar then
+                ty := ty.replaceFVar matcherApp.discrs[j]! prior[j]!
+            return ty
+      )
     withLocalDeclsD discrDecls fun discrs => do
-    -- Non-dependent motive: fun _ ... _ => mα
-    let motive ← liftMetaM <| lambdaTelescope matcherApp.motive fun motiveArgs _ =>
-      mkLambdaFVars motiveArgs resTy
-    -- The matcher's universe levels include a `uElimPos` slot for the elimination target level.
-    -- Our abstract motive `fun _ ... _ => mα` may target a different level than the original
-    -- dependent motive, so we update `matcherLevels[uElimPos]` to `getLevel mα`.
-    let matcherLevels ← match matcherApp.uElimPos? with
-      | none => pure matcherApp.matcherLevels
-      | some pos => do
-        let uElim ← liftMetaM <| getLevel resTy
-        pure <| matcherApp.matcherLevels.set! pos uElim
-    -- Build partial application to infer alt types
-    let matcherPartial := mkAppN (mkConst matcherApp.matcherName matcherLevels.toList) matcherApp.params
-    let matcherPartial := mkApp matcherPartial motive
-    let matcherPartial := mkAppN matcherPartial discrs
-    let origAltTypes ← liftMetaM <| inferArgumentTypesN matcherApp.alts.size matcherPartial
-    let altNamesTypes := origAltTypes.mapIdx fun i ty => ((`alt).appendIndexAfter (i+1), ty)
-    withLocalDeclsDND altNamesTypes fun alts => do
-    -- Eta-expand fvar alts so `splitWith`/`matcherApp.transform` can `instantiateLambda` them.
-    let abstractMatcherApp : MatcherApp := {
-      matcherApp with
-      matcherLevels := matcherLevels
-      discrs        := discrs
-      motive        := motive
-      alts          := (← liftMetaM <| alts.mapM etaExpand)
-      remaining     := #[]
-    }
-    k (.matcher abstractMatcherApp) (discrs ++ alts)
+      -- Non-dependent motive: fun _ ... _ => mα
+      let motive ←
+        liftMetaM <|
+          lambdaTelescope matcherApp.motive fun motiveArgs _ => mkLambdaFVars motiveArgs resTy
+      -- The matcher's universe levels include a `uElimPos` slot for the elimination target level.
+      -- Our abstract motive `fun _ ... _ => mα` may target a different level than the original
+      -- dependent motive, so we update `matcherLevels[uElimPos]` to `getLevel mα`.
+      let matcherLevels ←
+        match matcherApp.uElimPos? with
+        | none => pure matcherApp.matcherLevels
+        | some pos => do
+          let uElim ← liftMetaM <| getLevel resTy
+          pure <| matcherApp.matcherLevels.set! pos uElim
+      -- Build partial application to infer alt types
+      let matcherPartial :=
+        mkAppN (mkConst matcherApp.matcherName matcherLevels.toList) matcherApp.params
+      let matcherPartial := mkApp matcherPartial motive
+      let matcherPartial := mkAppN matcherPartial discrs
+      let origAltTypes ← liftMetaM <| inferArgumentTypesN matcherApp.alts.size matcherPartial
+      let altNamesTypes := origAltTypes.mapIdx fun i ty => ((`alt).appendIndexAfter (i + 1), ty)
+      withLocalDeclsDND altNamesTypes fun alts => do
+        -- Eta-expand fvar alts so `splitWith`/`matcherApp.transform` can `instantiateLambda` them.
+        let abstractMatcherApp : MatcherApp := {
+          matcherApp with
+          matcherLevels := matcherLevels
+          discrs := discrs
+          motive := motive
+          alts := (← liftMetaM <| alts.mapM etaExpand)
+          remaining := #[]
+        }
+        k (.matcher abstractMatcherApp) (discrs ++ alts)
 
 def splitWith
-  {n} [MonadLiftT MetaM n] [MonadControlT MetaM n] [Monad n] [MonadError n] [MonadEnv n] [MonadLog n]
-  [AddMessageContext n] [MonadOptions n]
-  (info : SplitInfo) (resTy : Expr) (onAlt : Name → Expr → Nat → MatcherApp.TransformAltFVars → n Expr) (useSplitter := false) : n Expr := match info with
+    {n} [MonadLiftT MetaM n] [MonadControlT MetaM n] [Monad n] [MonadError n] [MonadEnv n]
+    [MonadLog n] [AddMessageContext n] [MonadOptions n]
+    (info : SplitInfo) (resTy : Expr)
+    (onAlt : Name → Expr → Nat → MatcherApp.TransformAltFVars → n Expr)
+    (useSplitter := false)
+    : n Expr :=
+  match info with
   | ite e => do
     let u ← getLevel resTy
     let c := e.getArg! 1
     let h := e.getArg! 2
     if useSplitter then -- dite is the "splitter" for ite
       let n ← liftMetaM <| mkFreshUserName `h
-      let t ← withLocalDecl n .default c fun h => do mkLambdaFVars #[h] (← onAlt `isTrue resTy 0 { fields := #[h] })
-      let e ← withLocalDecl n .default (mkNot c) fun h => do mkLambdaFVars #[h] (← onAlt `isFalse resTy 1 { fields := #[h] })
+      let t ←
+        withLocalDecl n .default c fun h => do
+          mkLambdaFVars #[h] (← onAlt `isTrue resTy 0 { fields := #[h] })
+      let e ←
+        withLocalDecl n .default (mkNot c) fun h => do
+          mkLambdaFVars #[h] (← onAlt `isFalse resTy 1 { fields := #[h] })
       return mkApp5 (mkConst ``_root_.dite [u]) resTy c h t e
     else
       let t ← onAlt `isTrue resTy 0 { fields := #[] }
@@ -166,8 +187,12 @@ def splitWith
     let c := e.getArg! 1
     let h := e.getArg! 2
     let n ← liftMetaM <| mkFreshUserName `h
-    let t ← withLocalDecl n .default c fun h => do mkLambdaFVars #[h] (← onAlt `isTrue resTy 0 { args := #[h], fields := #[h] })
-    let e ← withLocalDecl n .default (mkNot c) fun h => do mkLambdaFVars #[h] (← onAlt `isFalse resTy 1 { args := #[h], fields := #[h] })
+    let t ←
+      withLocalDecl n .default c fun h => do
+        mkLambdaFVars #[h] (← onAlt `isTrue resTy 0 { args := #[h], fields := #[h] })
+    let e ←
+      withLocalDecl n .default (mkNot c) fun h => do
+        mkLambdaFVars #[h] (← onAlt `isFalse resTy 1 { args := #[h], fields := #[h] })
     return mkApp5 (mkConst ``_root_.dite [u]) resTy c h t e
   | cond e => do
     let u ← getLevel resTy
@@ -176,8 +201,12 @@ def splitWith
       let n ← liftMetaM <| mkFreshUserName `h
       let hTrue ← liftMetaM <| mkEq c (mkConst ``Bool.true)
       let hFalse ← liftMetaM <| mkEq c (mkConst ``Bool.false)
-      let t ← withLocalDecl n .default hTrue fun h => do mkLambdaFVars #[h] (← onAlt `isTrue resTy 0 { fields := #[h] })
-      let e ← withLocalDecl n .default hFalse fun h => do mkLambdaFVars #[h] (← onAlt `isFalse resTy 1 { fields := #[h] })
+      let t ←
+        withLocalDecl n .default hTrue fun h => do
+          mkLambdaFVars #[h] (← onAlt `isTrue resTy 0 { fields := #[h] })
+      let e ←
+        withLocalDecl n .default hFalse fun h => do
+          mkLambdaFVars #[h] (← onAlt `isFalse resTy 1 { fields := #[h] })
       return mkApp4 (mkConst ``Bool.dcond [u]) resTy c t e
     else
       let t ← onAlt `isTrue resTy 0 { fields := #[] }
@@ -187,17 +216,18 @@ def splitWith
     -- Do not abstract `match h :` discriminants: the alternatives' equality binders
     -- `h : discr = pattern` mention the discriminant, so substituting it in the motive would be
     -- ill-typed. These equalities let `rwMatcher` discharge the congruence hypotheses instead.
-    let mask := matcherApp.discrs.mapIdx fun i d =>
-      d.isFVar && matcherApp.discrInfos[i]?.all (·.hName?.isNone)
+    let mask :=
+      matcherApp.discrs.mapIdx fun i d =>
+        d.isFVar && matcherApp.discrInfos[i]?.all (·.hName?.isNone)
     let maskedDiscrs := Array.mask mask matcherApp.discrs
     let absMotiveBody ← resTy.abstractM maskedDiscrs
-    (·.toExpr) <$> matcherApp.transform
-      (useSplitter := useSplitter) (addEqualities := useSplitter) -- (freshenNames := true)
+    (·.toExpr) <$> matcherApp.transform (useSplitter := useSplitter) (addEqualities := useSplitter) -- (freshenNames := true)
       (onMotive := fun xs _body => pure (absMotiveBody.instantiateRev (Array.mask mask xs)))
       (onAlt := fun idx expAltType altFVars _alt => do
-        onAlt ((`h).appendIndexAfter (idx+1)) expAltType idx altFVars)
+        onAlt ((`h).appendIndexAfter (idx + 1)) expAltType idx altFVars)
 
-def simpDiscrs? (info : SplitInfo) (e : Expr) : SimpM (Option Simp.Result) := match info with
+def simpDiscrs? (info : SplitInfo) (e : Expr) : SimpM (Option Simp.Result) :=
+  match info with
   | dite _ | ite _ => return none -- Tricky because we need to simultaneously rewrite  `[Decidable c]`
   | cond _ => return none
   | matcher matcherApp => Simp.simpMatchDiscrs? matcherApp.toMatcherInfo e

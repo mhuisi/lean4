@@ -28,5 +28,4 @@ public def fmtRegisterLinterSet : Fmt := fun
     let signature := Layouts.pseudoApplication #[registerTk, name]
     let decl := Layouts.assignmentDeclaration signature colonEqTk decls
     fmtDeclWithModifiers docComment? none #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

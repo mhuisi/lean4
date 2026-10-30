@@ -43,8 +43,10 @@ where
     match ctorType? defVal with
     | some defValType =>
       let foundType := ctorType? found |>.get!
-      throwError "set_option value type mismatch: The value{indentD (toMessageData found)}\nhas type\
-        {indentD (toMessageData foundType)}\nbut the option `{optionName}` expects a value of type\
+      throwError "set_option value type mismatch: The value{indentD (toMessageData found)}\
+        \nhas type\
+        {indentD (toMessageData foundType)}\
+        \nbut the option `{optionName}` expects a value of type\
         {indentExpr defValType}"
     | _ => throwUnconfigurable optionName
 
@@ -61,25 +63,26 @@ def elabSetOption (id : Syntax) (val : Syntax) : m (Options × OptionDecl) := do
   -- We include the first argument (the keyword) for position information in case `id` is `missing`.
   addCompletionInfo <| CompletionInfo.option (ref.setArgs (ref.getArgs[*...3]))
   let optionName := id.getId.eraseMacroScopes
-  let decl ← IO.toEIO (fun (ex : IO.Error) => Exception.error ref ex.toString) (getOptionDecl optionName)
+  let decl ←
+    IO.toEIO (fun (ex : IO.Error) => Exception.error ref ex.toString) (getOptionDecl optionName)
   pushInfoLeaf <| .ofOptionInfo { stx := id, optionName, declName := decl.declName }
   let rec setOption (val : DataValue) : m (Options × OptionDecl) := do
     validateOptionValue optionName decl val
     return ((← getOptions).set optionName val, decl)
   match val.isStrLit? with
   | some str => setOption (DataValue.ofString str)
-  | none     =>
-  match val.isNatLit? with
-  | some num => setOption (DataValue.ofNat num)
-  | none     =>
-  match val with
-  | Syntax.atom _ "true"  => setOption (DataValue.ofBool true)
-  | Syntax.atom _ "false" => setOption (DataValue.ofBool false)
-  | _ =>
-    if let some ctorType := ctorType? decl.defValue then
-      throwError "Unexpected set_option value `{val}`; expected a literal of type `{ctorType}`"
-    else
-      throwUnconfigurable optionName
+  | none =>
+    match val.isNatLit? with
+    | some num => setOption (DataValue.ofNat num)
+    | none =>
+      match val with
+      | Syntax.atom _ "true" => setOption (DataValue.ofBool true)
+      | Syntax.atom _ "false" => setOption (DataValue.ofBool false)
+      | _ =>
+        if let some ctorType := ctorType? decl.defValue then
+          throwError "Unexpected set_option value `{val}`; expected a literal of type `{ctorType}`"
+        else
+          throwUnconfigurable optionName
 
 end Lean.Elab
 
@@ -88,9 +91,12 @@ namespace Lean.Elab
 variable {m : Type → Type} [Monad m] [MonadOptions m] [MonadLog m] [AddMessageContext m]
 
 def checkDeprecatedOption (optionName : Name) (decl : OptionDecl) : m Unit := do
-  unless linter.deprecated.options.get (← getOptions) do return
-  let some dep := decl.deprecation? | return
-  let extraMsg := match dep.text?, dep.newName? with
+  unless linter.deprecated.options.get (← getOptions) do
+    return
+  let some dep := decl.deprecation?
+    | return
+  let extraMsg :=
+    match dep.text?, dep.newName? with
     | some text, _ => m!": {text}"
     | none, some newName => m!": Use `{newName}` instead"
     | none, none => m!""

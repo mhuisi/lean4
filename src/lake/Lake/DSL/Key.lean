@@ -6,7 +6,7 @@ Authors: Mac Malone
 module
 
 prelude
-import Lake.Build.Key  -- shake: keep (builtin macro output dependency)
+import Lake.Build.Key -- shake: keep (builtin macro output dependency)
 import Lake.DSL.Syntax
 import Lake.Util.Name
 
@@ -22,41 +22,40 @@ def expandFacets (tgt : Term) (facets : Array Ident) : MacroM Term := do
   let facetLits := facets.map fun facet => Name.quoteFrom facet facet.getId
   facetLits.foldlM (init := tgt) fun tgt lit => `(BuildKey.facet $tgt $lit)
 
-def expandPackageTargetLit
-  (pkg : Term) (stx : TSyntax ``packageTargetLit)
-: MacroM Term := withRef stx do
-  let `(packageTargetLit|$[+%$mod?]?$tgt) := stx
-    | Macro.throwError "ill-formed package target literal"
-  let tgtLit := Name.quoteFrom tgt tgt.getId
-  if mod?.isSome then
-    `(BuildKey.packageModule $pkg $tgtLit)
-  else
-    `(BuildKey.packageTarget $pkg $tgtLit)
+def expandPackageTargetLit (pkg : Term) (stx : TSyntax ``packageTargetLit) : MacroM Term :=
+  withRef stx do
+    let `(packageTargetLit|$[+%$mod?]?$tgt) := stx
+      | Macro.throwError "ill-formed package target literal"
+    let tgtLit := Name.quoteFrom tgt tgt.getId
+    if mod?.isSome then
+      `(BuildKey.packageModule $pkg $tgtLit)
+    else
+      `(BuildKey.packageTarget $pkg $tgtLit)
 
 @[builtin_macro moduleTargetKeyLit]
 def expandModuleTargetKeyLit : Macro := fun stx => do
   let `(`+%$tk$mod$[:$facets]*) := stx
     | Macro.throwUnsupported
   withRef tk do
-  let modLit := Name.quoteFrom mod mod.getId
-  let tgt ← `(BuildKey.module $modLit)
-  let key ← expandFacets tgt facets
-  `(PartialBuildKey.mk $key)
+    let modLit := Name.quoteFrom mod mod.getId
+    let tgt ← `(BuildKey.module $modLit)
+    let key ← expandFacets tgt facets
+    `(PartialBuildKey.mk $key)
 
 @[builtin_macro packageTargetKeyLit]
 def expandPackageTargetKeyLit : Macro := fun stx => do
   let `(`@%$tk$(pkg?)?$[/$tgt?]?$[:$facets]*) := stx
     | Macro.throwUnsupported
   withRef tk do
-  let pkgLit :=
-    if let some pkg := pkg? then
-      Name.quoteFrom pkg pkg.getId
-    else
-      Name.quoteFrom tk Name.anonymous
-  let tgt ←
-    if let some tgt := tgt? then
-      expandPackageTargetLit pkgLit tgt
-    else
-      `(BuildKey.package $pkgLit)
-  let key ← expandFacets tgt facets
-  `(PartialBuildKey.mk $key)
+    let pkgLit :=
+      if let some pkg := pkg? then
+        Name.quoteFrom pkg pkg.getId
+      else
+        Name.quoteFrom tk Name.anonymous
+    let tgt ←
+      if let some tgt := tgt? then
+        expandPackageTargetLit pkgLit tgt
+      else
+        `(BuildKey.package $pkgLit)
+    let key ← expandFacets tgt facets
+    `(PartialBuildKey.mk $key)

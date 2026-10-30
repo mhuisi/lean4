@@ -19,9 +19,7 @@ variable {ε : Type u}
 /--
 A successful computation in the `Except ε` monad: `a` is returned, and no exception is thrown.
 -/
-@[always_inline, inline]
-protected def pure (a : α) : Except ε α :=
-  Except.ok a
+@[always_inline, inline] protected def pure (a : α) : Except ε α := Except.ok a
 
 /--
 Transforms a successful result with a function, doing nothing when an exception is thrown.
@@ -35,10 +33,12 @@ protected def map (f : α → β) : Except ε α → Except ε β
   | Except.error err => Except.error err
   | Except.ok v => Except.ok <| f v
 
-@[simp] theorem map_id : Except.map (ε := ε) (α := α) (β := α) id = id := by
+@[simp]
+theorem map_id : Except.map (ε := ε) (α := α) (β := α) id = id := by
   apply funext
   intro e
-  simp [Except.map]; cases e <;> rfl
+  simp [Except.map]
+  cases e <;> rfl
 
 /--
 Transforms exceptions with a function, doing nothing on successful results.
@@ -50,7 +50,7 @@ Examples:
 @[always_inline, inline]
 protected def mapError (f : ε → ε') : Except ε α → Except ε' α
   | Except.error err => Except.error <| f err
-  | Except.ok v      => Except.ok v
+  | Except.ok v => Except.ok v
 
 /--
 Sequences two operations that may throw exceptions, allowing the second to depend on the value
@@ -66,12 +66,12 @@ This is the implementation of the `>>=` operator for `Except ε`.
 protected def bind (ma : Except ε α) (f : α → Except ε β) : Except ε β :=
   match ma with
   | Except.error err => Except.error err
-  | Except.ok v      => f v
+  | Except.ok v => f v
 
 /-- Returns `true` if the value is `Except.ok`, `false` otherwise. -/
 @[always_inline, inline]
 protected def toBool : Except ε α → Bool
-  | Except.ok _    => true
+  | Except.ok _ => true
   | Except.error _ => false
 
 @[inherit_doc Except.toBool]
@@ -86,7 +86,7 @@ Examples:
 -/
 @[always_inline, inline]
 protected def toOption : Except ε α → Option α
-  | Except.ok a    => some a
+  | Except.ok a => some a
   | Except.error _ => none
 
 /--
@@ -103,7 +103,7 @@ Examples:
 @[always_inline, inline]
 protected def tryCatch (ma : Except ε α) (handle : ε → Except ε α) : Except ε α :=
   match ma with
-  | Except.ok a    => Except.ok a
+  | Except.ok a => Except.ok a
   | Except.error e => handle e
 
 /--
@@ -114,22 +114,20 @@ exception was thrown.
 -/
 def orElseLazy (x : Except ε α) (y : Unit → Except ε α) : Except ε α :=
   match x with
-  | Except.ok a    => Except.ok a
+  | Except.ok a => Except.ok a
   | Except.error _ => y ()
 
 @[always_inline]
 instance : Monad (Except ε) where
   pure := Except.pure
   bind := Except.bind
-  map  := Except.map
+  map := Except.map
 
 end Except
 
-/--
-Adds exceptions of type `ε` to a monad `m`.
--/
-@[implicit_reducible] def ExceptT (ε : Type u) (m : Type u → Type v) (α : Type u) : Type v :=
-  m (Except ε α)
+/-- Adds exceptions of type `ε` to a monad `m`. -/
+@[implicit_reducible]
+def ExceptT (ε : Type u) (m : Type u → Type v) (α : Type u) : Type v := m (Except ε α)
 
 /--
 Use a monadic action that may return an exception's value as an action in the transformed monad that
@@ -138,7 +136,9 @@ may throw the corresponding exception.
 This is the inverse of `ExceptT.run`.
 -/
 @[always_inline, inline]
-def ExceptT.mk {ε : Type u} {m : Type u → Type v} {α : Type u} (x : m (Except ε α)) : ExceptT ε m α := x
+def ExceptT.mk {ε : Type u} {m : Type u → Type v} {α : Type u} (x : m (Except ε α))
+    : ExceptT ε m α :=
+  x
 
 /--
 Use a monadic action that may throw an exception as an action that may return an exception's value.
@@ -146,7 +146,9 @@ Use a monadic action that may throw an exception as an action that may return an
 This is the inverse of `ExceptT.mk`.
 -/
 @[always_inline, inline]
-def ExceptT.run {ε : Type u} {m : Type u → Type v} {α : Type u} (x : ExceptT ε m α) : m (Except ε α) := x
+def ExceptT.run {ε : Type u} {m : Type u → Type v} {α : Type u} (x : ExceptT ε m α)
+    : m (Except ε α) :=
+  x
 
 /--
 Use a monadic action that may throw an exception by providing explicit success and failure
@@ -162,26 +164,22 @@ Returns the value of a computation, forgetting whether it was an exception or a 
 This corresponds to early return.
 -/
 @[always_inline, inline]
-def ExceptT.runCatch [Monad m] (x : ExceptT α m α) : m α :=
-  x.runK pure pure
+def ExceptT.runCatch [Monad m] (x : ExceptT α m α) : m α := x.runK pure pure
 
 namespace ExceptT
 
 variable {ε : Type u} {m : Type u → Type v} [Monad m]
 
-/--
-Returns the value `a` without throwing exceptions or having any other effect.
--/
+/-- Returns the value `a` without throwing exceptions or having any other effect. -/
 @[always_inline, inline]
-protected def pure {α : Type u} (a : α) : ExceptT ε m α :=
-  ExceptT.mk <| pure (Except.ok a)
+protected def pure {α : Type u} (a : α) : ExceptT ε m α := ExceptT.mk <| pure (Except.ok a)
 
 /--
 Handles exceptions thrown by an action that can have no effects _other_ than throwing exceptions.
 -/
 @[always_inline, inline]
 protected def bindCont {α β : Type u} (f : α → ExceptT ε m β) : Except ε α → m (Except ε β)
-  | Except.ok a    => f a
+  | Except.ok a => f a
   | Except.error e => pure (Except.error e)
 
 /--
@@ -192,34 +190,31 @@ operator.
 protected def bind {α β : Type u} (ma : ExceptT ε m α) (f : α → ExceptT ε m β) : ExceptT ε m β :=
   ExceptT.mk <| ma >>= ExceptT.bindCont f
 
-/--
-Transforms a successful computation's value using `f`. Typically used via the `<$>` operator.
--/
+/-- Transforms a successful computation's value using `f`. Typically used via the `<$>` operator. -/
 @[always_inline, inline]
 protected def map {α β : Type u} (f : α → β) (x : ExceptT ε m α) : ExceptT ε m β :=
-  ExceptT.mk <| x >>= fun a => match a with
-    | (Except.ok a)    => pure <| Except.ok (f a)
-    | (Except.error e) => pure <| Except.error e
+  ExceptT.mk <|
+    x >>= fun a =>
+      match a with
+      | (Except.ok a) => pure <| Except.ok (f a)
+      | (Except.error e) => pure <| Except.error e
 
-/--
-Runs a computation from an underlying monad in the transformed monad with exceptions.
--/
+/-- Runs a computation from an underlying monad in the transformed monad with exceptions. -/
 @[always_inline, inline]
-protected def lift {α : Type u} (t : m α) : ExceptT ε m α :=
-  ExceptT.mk <| Except.ok <$> t
+protected def lift {α : Type u} (t : m α) : ExceptT ε m α := ExceptT.mk <| Except.ok <$> t
 
-@[always_inline]
-instance : MonadLift (Except ε) (ExceptT ε m) := ⟨fun e => ExceptT.mk <| pure e⟩
+@[always_inline] instance : MonadLift (Except ε) (ExceptT ε m) := ⟨fun e => ExceptT.mk <| pure e⟩
 instance : MonadLift m (ExceptT ε m) := ⟨ExceptT.lift⟩
 
-/--
-Handles exceptions produced in the `ExceptT ε` transformer.
--/
+/-- Handles exceptions produced in the `ExceptT ε` transformer. -/
 @[always_inline, inline]
-protected def tryCatch {α : Type u} (ma : ExceptT ε m α) (handle : ε → ExceptT ε m α) : ExceptT ε m α :=
-  ExceptT.mk <| ma >>= fun res => match res with
-   | Except.ok a    => pure (Except.ok a)
-   | Except.error e => (handle e)
+protected def tryCatch {α : Type u} (ma : ExceptT ε m α) (handle : ε → ExceptT ε m α)
+    : ExceptT ε m α :=
+  ExceptT.mk <|
+    ma >>= fun res =>
+      match res with
+      | Except.ok a => pure (Except.ok a)
+      | Except.error e => (handle e)
 
 instance : MonadFunctor m (ExceptT ε m) := ⟨fun f x => f x⟩
 
@@ -227,7 +222,7 @@ instance : MonadFunctor m (ExceptT ε m) := ⟨fun f x => f x⟩
 instance : Monad (ExceptT ε m) where
   pure := ExceptT.pure
   bind := ExceptT.bind
-  map  := ExceptT.map
+  map := ExceptT.map
 
 /--
 Transforms exceptions using the function `f`.
@@ -241,7 +236,8 @@ protected def adapt {ε' α : Type u} (f : ε → ε') : ExceptT ε m α → Exc
 end ExceptT
 
 @[always_inline]
-instance (m : Type u → Type v) (ε₁ : Type u) (ε₂ : Type u) [MonadExceptOf ε₁ m] : MonadExceptOf ε₁ (ExceptT ε₂ m) where
+instance (m : Type u → Type v) (ε₁ : Type u) (ε₂ : Type u) [MonadExceptOf ε₁ m]
+    : MonadExceptOf ε₁ (ExceptT ε₂ m) where
   throw e := ExceptT.mk <| throwThe ε₁ e
   tryCatch x handle := ExceptT.mk <| tryCatchThe ε₁ x handle
 
@@ -254,7 +250,7 @@ instance [Monad m] [Inhabited ε] : Inhabited (ExceptT ε m α) where
   default := throw default
 
 instance (ε) : MonadExceptOf ε (Except ε) where
-  throw    := Except.error
+  throw := Except.error
   tryCatch := Except.tryCatch
 
 namespace MonadExcept
@@ -273,15 +269,16 @@ def orelse' [MonadExcept ε m] {α : Type v} (t₁ t₂ : m α) (useFirstEx := t
 end MonadExcept
 
 @[always_inline, inline]
-def observing {ε α : Type u} {m : Type u → Type v} [Monad m] [MonadExcept ε m] (x : m α) : m (Except ε α) :=
+def observing {ε α : Type u} {m : Type u → Type v} [Monad m] [MonadExcept ε m] (x : m α)
+    : m (Except ε α) :=
   tryCatch (do let a ← x; pure (Except.ok a)) (fun ex => pure (Except.error ex))
 
 def liftExcept [MonadExceptOf ε m] [Pure m] : Except ε α → m α
-  | Except.ok a    => pure a
+  | Except.ok a => pure a
   | Except.error e => throw e
 
 instance (ε : Type u) (m : Type u → Type v) [Monad m] : MonadControl m (ExceptT ε m) where
-  stM        := Except ε
+  stM := Except ε
   liftWith f := liftM <| f fun x => x.run
   restoreM x := x
 
@@ -308,36 +305,48 @@ export MonadFinally (tryFinally')
 
 /-- Execute `x` and then execute `finalizer` even if `x` threw an exception -/
 @[always_inline, inline]
-def tryFinally {m : Type u → Type v} {α β : Type u} [MonadFinally m] [Functor m] (x : m α) (finalizer : m β) : m α :=
+def tryFinally
+    {m : Type u → Type v} {α β : Type u} [MonadFinally m] [Functor m] (x : m α) (finalizer : m β)
+    : m α :=
   let y := tryFinally' x (fun _ => finalizer)
   (·.1) <$> y
 
 @[always_inline]
 instance Id.finally : MonadFinally Id where
   tryFinally' := fun x h =>
-   let a := x
-   let b := h (some x)
-   pure (a, b)
+    let a := x
+    let b := h (some x)
+    pure (a, b)
 
 @[always_inline]
-instance ExceptT.finally {m : Type u → Type v} {ε : Type u} [MonadFinally m] [Monad m] : MonadFinally (ExceptT ε m) where
-  tryFinally' := fun x h => ExceptT.mk do
-    let r ← tryFinally' x fun e? => match e? with
-        | some (.ok a) => h (some a)
-        | _            => h none
-    match r with
-    | (.ok a,    .ok b)    => pure (.ok (a, b))
-    | (_,        .error e) => pure (.error e)  -- second error has precedence
-    | (.error e, _)        => pure (.error e)
+instance ExceptT.finally {m : Type u → Type v} {ε : Type u} [MonadFinally m] [Monad m]
+    : MonadFinally (ExceptT ε m) where
+  tryFinally' := fun x h =>
+    ExceptT.mk do
+      let r ←
+        tryFinally' x fun e? =>
+          match e? with
+          | some (.ok a) => h (some a)
+          | _ => h none
+      match r with
+      | (.ok a, .ok b) => pure (.ok (a, b))
+      | (_, .error e) => pure (.error e) -- second error has precedence
+      | (.error e, _) => pure (.error e)
 
 instance {ε : Type u} : MonadAttach (Except ε) where
   CanReturn x a := x = .ok a
-  attach x := match x with
+  attach x :=
+    match x with
     | .ok a => .ok ⟨a, rfl⟩
     | .error e => .error e
 
 set_option linter.checkUnivs false in
 instance [Monad m] [MonadAttach m] : MonadAttach (ExceptT ε m) where
   CanReturn x a := MonadAttach.CanReturn (m := m) x (.ok a)
-  attach x := show m (Except ε _) from
-      (fun ⟨a, h⟩ => match a with | .ok a => .ok ⟨a, h⟩ | .error e => .error e) <$> MonadAttach.attach (m := m) x
+  attach x :=
+    show m (Except ε _) from
+      (fun ⟨a, h⟩ =>
+          match a with
+          | .ok a => .ok ⟨a, h⟩
+          | .error e => .error e)
+        <$> MonadAttach.attach (m := m) x

@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 import Init.Grind.Util
@@ -15,7 +16,8 @@ namespace Lean.Meta.Grind
 private abbrev M := StateRefT (Std.HashMap ExprPtr Expr) GrindM
 
 def isMarkedSubsingletonConst (e : Expr) : Bool := Id.run do
-  let .const declName _ := e | false
+  let .const declName _ := e
+    | false
   return declName == ``Grind.nestedProof || declName == ``Grind.nestedDecidable
 
 def isMarkedSubsingletonApp (e : Expr) : Bool :=
@@ -36,7 +38,10 @@ private def isDecidable (e : Expr) : MetaM (Option Expr) := do
 
 /-- Result of `isProofOrDecidableQuick`. -/
 private inductive QuickResult where
-  | no | proof | decidable | undef
+  | no
+  | proof
+  | decidable
+  | undef
 
 /--
 Classifies a term from its (syntactically known) type `rt`:
@@ -53,13 +58,14 @@ private def classifyResultType (rt : Expr) : MetaM QuickResult := do
   if rt.isAppOf ``Decidable then
     return .decidable
   match (← isPropQuick rt) with
-  | .true  => return .proof
+  | .true => return .proof
   | .undef => return .undef
   | .false =>
     match rt with
     | .sort .. | .forallE .. => return .no
     | _ =>
-      let .const declName _ := rt.getAppFn | return .undef
+      let .const declName _ := rt.getAppFn
+        | return .undef
       if (← getConstInfo declName) matches .inductInfo .. then
         return .no
       else
@@ -72,8 +78,7 @@ When the resulting type is one of the peeled binder variables (e.g., the polymor
 result `γ` of `HAdd.hAdd`), it is resolved using the corresponding argument, which is
 the actual result type.
 -/
-private def classifyArrow (headType : Expr) (args : Array Expr) : MetaM QuickResult :=
-  go headType 0
+private def classifyArrow (headType : Expr) (args : Array Expr) : MetaM QuickResult := go headType 0
 where
   go (type : Expr) (i : Nat) : MetaM QuickResult := do
     if i == args.size then
@@ -87,7 +92,7 @@ where
       | _ => classifyResultType type
     else
       match type with
-      | .forallE _ _ b _ => go b (i+1)
+      | .forallE _ _ b _ => go b (i + 1)
       | .mdata _ b => go b i
       | _ => return .undef
 
@@ -111,11 +116,14 @@ private partial def isProofOrDecidableQuick (e : Expr) : MetaM QuickResult := do
     | .proof => return .proof
     | .undef => return .undef
     | _ => return .no
-  | .fvar fvarId => classifyResultType (← fvarId.getType)
-  | .const declName lvls => classifyResultType (← instantiateTypeLevelParams (← getConstVal declName) lvls)
+  | .fvar fvarId =>
+    classifyResultType (← fvarId.getType)
+  | .const declName lvls =>
+    classifyResultType (← instantiateTypeLevelParams (← getConstVal declName) lvls)
   | .app .. =>
     match e.getAppFn with
-    | .const declName lvls => classifyArrow (← instantiateTypeLevelParams (← getConstVal declName) lvls) e.getAppArgs
+    | .const declName lvls =>
+      classifyArrow (← instantiateTypeLevelParams (← getConstVal declName) lvls) e.getAppArgs
     | .fvar fvarId => classifyArrow (← fvarId.getType) e.getAppArgs
     | _ => return .undef
 
@@ -148,8 +156,8 @@ Recall that the congruence closure module has special support for them.
 -/
 -- TODO: consider other subsingletons in the future? We decided to not support them to avoid the overhead of
 -- synthesizing `Subsingleton` instances.
-partial def markNestedSubsingletons (e : Expr) : GrindM Expr := do profileitM Exception "grind mark subsingleton" (← getOptions) do
-  visit e |>.run' {}
+partial def markNestedSubsingletons (e : Expr) : GrindM Expr := do
+  profileitM Exception "grind mark subsingleton" (← getOptions) do visit e |>.run' {}
 where
   visit (e : Expr) : M Expr := do
     if isMarkedSubsingletonApp e then
@@ -178,24 +186,24 @@ where
     -/
     unless e.isApp || e.isForall || e.isLambda || e.isProj || e.isMData do
       return e
-    let e' ← match e with
-      | .app .. => e.withApp fun f args => do
-        let mut modified := false
-        let mut args := args.toVector
-        for h : i in *...args.size do
-          let arg := args[i]
-          let arg' ← visit arg
-          unless isSameExpr arg arg' do
-            args := args.set i arg'
-            modified := true
-        if modified then
-          pure <| mkAppN f args.toArray
-        else
-          pure e
-      | .proj _ _ b =>
-        pure <| e.updateProj! (← visit b)
-      | .mdata _ b =>
-        pure <| e.updateMData! (← visit b)
+    let e' ←
+      match e with
+      | .app .. =>
+        e.withApp fun f args => do
+          let mut modified := false
+          let mut args := args.toVector
+          for h : i in *...args.size do
+            let arg := args[i]
+            let arg' ← visit arg
+            unless isSameExpr arg arg' do
+              args := args.set i arg'
+              modified := true
+          if modified then
+            pure <| mkAppN f args.toArray
+          else
+            pure e
+      | .proj _ _ b => pure <| e.updateProj! (← visit b)
+      | .mdata _ b => pure <| e.updateMData! (← visit b)
       | .forallE .. => visitForall e
       | .lam .. => visitLambda e
       | _ => unreachable!
@@ -208,12 +216,11 @@ where
       | .lam n d b c =>
         let d := d.instantiateRev fvars
         let d' ← visit d
-        withLocalDecl n c d' fun x =>
-          loop b (fvars.push x) (modified || !isSameExpr d d')
+        withLocalDecl n c d' fun x => loop b (fvars.push x) (modified || ! isSameExpr d d')
       | e =>
         let e := e.instantiateRev fvars
         let e' ← visit e
-        if modified || !isSameExpr e e' then
+        if modified || ! isSameExpr e e' then
           mkLambdaFVars fvars e'
         else
           return root
@@ -225,12 +232,11 @@ where
       | .forallE n d b c =>
         let d := d.instantiateRev fvars
         let d' ← visit d
-        withLocalDecl n c d' fun x =>
-          loop b (fvars.push x) (modified || !isSameExpr d d')
+        withLocalDecl n c d' fun x => loop b (fvars.push x) (modified || ! isSameExpr d d')
       | e =>
         let e := e.instantiateRev fvars
         let e' ← visit e
-        if modified || !isSameExpr e e' then
+        if modified || ! isSameExpr e e' then
           mkForallFVars fvars e'
         else
           return root
@@ -247,7 +253,9 @@ where
     See `grind_mark_nested_proofs_bug.lean` for an example.
     TODO: We may have to normalize `prop` too.
     -/
-    /- We must also apply beta-reduction to improve the effectiveness of the congruence closure procedure. -/
+    /-
+    We must also apply beta-reduction to improve the effectiveness of the congruence closure procedure.
+    -/
     let e ← Core.betaReduce e
     let e ← Sym.unfoldReducible e
     /- We must mask proofs occurring in `prop` too. -/
@@ -262,9 +270,7 @@ private def markNestedProof (e : Expr) : M Expr := do
   let prop ← markNestedSubsingletons.preprocess prop
   return mkApp2 (mkConst ``Grind.nestedProof) prop e
 
-/--
-Given a proof `e`, mark it with `Lean.Grind.nestedProof`
--/
+/-- Given a proof `e`, mark it with `Lean.Grind.nestedProof` -/
 def markProof (e : Expr) : GrindM Expr := do
   if e.isAppOf ``Grind.nestedProof then
     return e -- `e` is already marked

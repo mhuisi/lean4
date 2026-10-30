@@ -29,8 +29,7 @@ public def fmtTripleNotation : Fmt := fun
     let post ← fmt post
     let postRbTk ← fmt postRbTk
     return hoareTriple preLbTk pre preRbTk namedArg prog postLbTk ⟨#[post]⟩ postRbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 open Std.WP in
 @[builtin_fmt Std.WP.tripleExceptPost]
@@ -49,5 +48,4 @@ public def fmtTripleExceptPost : Fmt := fun
     let postRbTk ← fmt postRbTk
     return hoareTriple preLbTk pre preRbTk namedArg prog postLbTk ⟨#[post, semicolonTk, epost]⟩
       postRbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

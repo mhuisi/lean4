@@ -20,7 +20,9 @@ namespace Lean.PrettyPrinter.Delaborator
 
 abbrev OptionsPerPos := Std.TreeMap SubExpr.Pos Options
 
-def OptionsPerPos.insertAt (optionsPerPos : OptionsPerPos) (pos : SubExpr.Pos) (name : Name) (value : DataValue) : OptionsPerPos :=
+def OptionsPerPos.insertAt
+    (optionsPerPos : OptionsPerPos) (pos : SubExpr.Pos) (name : Name) (value : DataValue)
+    : OptionsPerPos :=
   let opts := optionsPerPos.get? pos |>.getD {}
   optionsPerPos.insert pos <| opts.set name value
 
@@ -42,16 +44,15 @@ variable [MonadLiftT MetaM m] [MonadControlT MetaM m]
 variable [MonadLiftT IO m]
 
 def getExpr : m Expr := return (← readThe SubExpr).expr
-def getPos  : m Pos  := return (← readThe SubExpr).pos
+def getPos : m Pos := return (← readThe SubExpr).pos
 
 def descend (child : Expr) (childIdx : Nat) (x : m α) : m α :=
   withTheReader SubExpr (fun cfg => { cfg with expr := child, pos := cfg.pos.push childIdx }) x
 
-def withAppFn   (x : m α) : m α := do descend (← getExpr).appFn!  0 x
-def withAppArg  (x : m α) : m α := do descend (← getExpr).appArg! 1 x
+def withAppFn (x : m α) : m α := do descend (← getExpr).appFn! 0 x
+def withAppArg (x : m α) : m α := do descend (← getExpr).appArg! 1 x
 
-def withType (x : m α) : m α := do
-  descend (← Meta.inferType (← getExpr)) Pos.typeCoord x -- phantom positions for types
+def withType (x : m α) : m α := do descend (← Meta.inferType (← getExpr)) Pos.typeCoord x -- phantom positions for types
 
 /--
 Uses `xa` to compute the fold across the arguments of an application,
@@ -61,7 +62,8 @@ partial def withAppFnArgs (xf : m α) (xa : α → m α) : m α := do
   if (← getExpr).isApp then
     let acc ← withAppFn (withAppFnArgs xf xa)
     withAppArg (xa acc)
-  else xf
+  else
+    xf
 
 /--
 Uses `xa` to compute the fold across up to `maxArgs` outermost arguments of an application,
@@ -83,7 +85,9 @@ def withBoundedAppFn (maxArgs : Nat) (xf : m α) : m α := do
   let e ← getExpr
   let numArgs := min maxArgs e.getAppNumArgs
   let newPos := (← getPos).pushNaryFn numArgs
-  withTheReader SubExpr (fun cfg => { cfg with expr := e.getBoundedAppFn numArgs, pos := newPos }) xf
+  withTheReader SubExpr
+    (fun cfg => { cfg with expr := e.getBoundedAppFn numArgs, pos := newPos })
+    xf
 
 def withBindingDomain (x : m α) : m α := do descend (← getExpr).bindingDomain! 0 x
 
@@ -103,27 +107,31 @@ def withBindingBody' (n : Name) (v : Expr → m β) (x : β → m α) : m α := 
 Assumes the `SubExpr` is a lambda or forall.
 Creates a local declaration for this binder using the name `n`, enters the binding body, and evaluates `x`.
 -/
-def withBindingBody (n : Name) (x : m α) : m α :=
-  withBindingBody' n (fun _ => pure ()) (fun _ => x)
+def withBindingBody (n : Name) (x : m α) : m α := withBindingBody' n (fun _ => pure ()) (fun _ => x)
 
 def withProj (x : m α) : m α := do
-  let Expr.proj _ _ e ← getExpr | unreachable!
+  let Expr.proj _ _ e ← getExpr
+    | unreachable!
   descend e 0 x
 
 def withMDataExpr (x : m α) : m α := do
-  let Expr.mdata _ e ← getExpr | unreachable!
+  let Expr.mdata _ e ← getExpr
+    | unreachable!
   withTheReader SubExpr (fun ctx => { ctx with expr := e }) x
 
 def withLetVarType (x : m α) : m α := do
-  let Expr.letE _ t _ _ _ ← getExpr | unreachable!
+  let Expr.letE _ t _ _ _ ← getExpr
+    | unreachable!
   descend t 0 x
 
 def withLetValue (x : m α) : m α := do
-  let Expr.letE _ _ v _ _ ← getExpr | unreachable!
+  let Expr.letE _ _ v _ _ ← getExpr
+    | unreachable!
   descend v 1 x
 
 def withLetBody (x : m α) : m α := do
-  let Expr.letE n t v b nondep ← getExpr | unreachable!
+  let Expr.letE n t v b nondep ← getExpr
+    | unreachable!
   Meta.withLetDecl n t v (nondep := nondep) fun fvar =>
     let b := b.instantiate1 fvar
     descend b 2 x
@@ -143,8 +151,8 @@ end Descend
 
 structure HoleIterator where
   curr : Nat := 2
-  top  : Nat := Pos.maxChildren
-  deriving Inhabited
+  top : Nat := Pos.maxChildren
+deriving Inhabited
 
 section Hole
 
@@ -152,20 +160,22 @@ variable {α : Type} [Inhabited α]
 variable {m : Type → Type} [Monad m]
 variable [MonadStateOf HoleIterator m]
 
-def HoleIterator.toPos (iter : HoleIterator) : Pos :=
-  iter.curr
+def HoleIterator.toPos (iter : HoleIterator) : Pos := iter.curr
 
 def HoleIterator.next (iter : HoleIterator) : HoleIterator :=
-  if (iter.curr+1) == iter.top then
-    ⟨2*iter.top, Pos.maxChildren*iter.top⟩
-  else ⟨iter.curr+1, iter.top⟩
+  if (iter.curr + 1) == iter.top then
+    ⟨2 * iter.top, Pos.maxChildren * iter.top⟩
+  else
+    ⟨iter.curr + 1, iter.top⟩
 
-/-- The positioning scheme guarantees that there will be an infinite number of extra positions
+/--
+The positioning scheme guarantees that there will be an infinite number of extra positions
 which are never used by `Expr`s. The `HoleIterator` always points at the next such "hole".
 We use these to attach additional `Elab.Info`.
 
 Note: these positions are incompatible with `Lean.SubExpr.Pos.push` since the iterator
-will eventually yield every child of every returned position. -/
+will eventually yield every child of every returned position.
+-/
 def nextExtraPos : m Pos := do
   let iter ← getThe HoleIterator
   let pos := iter.toPos
