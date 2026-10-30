@@ -16,9 +16,9 @@ namespace Time
 open Lean Parser Command Std
 
 private meta def convertText : Text → MacroM (TSyntax `term)
-  | .short         => `(Std.Time.Text.short)
-  | .full          => `(Std.Time.Text.full)
-  | .narrow        => `(Std.Time.Text.narrow)
+  | .short => `(Std.Time.Text.short)
+  | .full => `(Std.Time.Text.full)
+  | .narrow => `(Std.Time.Text.narrow)
   | .twoLetterShort => `(Std.Time.Text.twoLetterShort)
 
 private meta def convertNumber : Number → MacroM (TSyntax `term)
@@ -29,34 +29,34 @@ private meta def convertFraction : Fraction → MacroM (TSyntax `term)
   | .truncated digits => `(Std.Time.Fraction.truncated $(quote digits))
 
 private meta def convertYear : Year → MacroM (TSyntax `term)
-  | .any      => `(Std.Time.Year.any)
+  | .any => `(Std.Time.Year.any)
   | .twoDigit => `(Std.Time.Year.twoDigit)
   | .fourDigit => `(Std.Time.Year.fourDigit)
   | .extended n => `(Std.Time.Year.extended $(quote n))
 
 private meta def convertZoneId : ZoneId → MacroM (TSyntax `term)
   | .unknown => `(Std.Time.ZoneId.unknown)
-  | .short   => `(Std.Time.ZoneId.short)
-  | .full    => `(Std.Time.ZoneId.full)
+  | .short => `(Std.Time.ZoneId.short)
+  | .full => `(Std.Time.ZoneId.full)
 
 private meta def convertZoneName : ZoneName → MacroM (TSyntax `term)
   | .short => `(Std.Time.ZoneName.short)
-  | .full  => `(Std.Time.ZoneName.full)
+  | .full => `(Std.Time.ZoneName.full)
 
 private meta def convertOffsetX : OffsetX → MacroM (TSyntax `term)
-  | .hour              => `(Std.Time.OffsetX.hour)
-  | .hourMinute        => `(Std.Time.OffsetX.hourMinute)
-  | .hourMinuteColon   => `(Std.Time.OffsetX.hourMinuteColon)
-  | .hourMinuteSecond  => `(Std.Time.OffsetX.hourMinuteSecond)
+  | .hour => `(Std.Time.OffsetX.hour)
+  | .hourMinute => `(Std.Time.OffsetX.hourMinute)
+  | .hourMinuteColon => `(Std.Time.OffsetX.hourMinuteColon)
+  | .hourMinuteSecond => `(Std.Time.OffsetX.hourMinuteSecond)
   | .hourMinuteSecondColon => `(Std.Time.OffsetX.hourMinuteSecondColon)
 
 private meta def convertOffsetO : OffsetO → MacroM (TSyntax `term)
   | .short => `(Std.Time.OffsetO.short)
-  | .full  => `(Std.Time.OffsetO.full)
+  | .full => `(Std.Time.OffsetO.full)
 
 private meta def convertOffsetZ : OffsetZ → MacroM (TSyntax `term)
-  | .hourMinute        => `(Std.Time.OffsetZ.hourMinute)
-  | .full              => `(Std.Time.OffsetZ.full)
+  | .hourMinute => `(Std.Time.OffsetZ.hourMinute)
+  | .full => `(Std.Time.OffsetZ.full)
   | .hourMinuteSecondColon => `(Std.Time.OffsetZ.hourMinuteSecondColon)
 
 private meta def convertModifier : Modifier → MacroM (TSyntax `term)
@@ -107,17 +107,14 @@ private meta def convertFormatPart : FormatPart → MacroM (TSyntax `term)
   | .string s => `(.string $(Syntax.mkStrLit s))
   | .modifier mod => do `(.modifier $(← convertModifier mod))
 
-/--
-Syntax for defining a date spec at compile time.
--/
+/-- Syntax for defining a date spec at compile time. -/
 syntax "datespec(" str ")" : term
 
-/--
-Syntax for defining a date spec and configuration of this date spec at compile time.
--/
+/-- Syntax for defining a date spec and configuration of this date spec at compile time. -/
 syntax "datespec(" str "," term ")" : term
 
-private meta def formatStringToFormat (fmt : TSyntax `str) (config : Option (TSyntax `term)) : MacroM (TSyntax `term) := do
+private meta def formatStringToFormat (fmt : TSyntax `str) (config : Option (TSyntax `term))
+    : MacroM (TSyntax `term) := do
   let input := fmt.getString
   let format : Except String (GenericFormat .any) := GenericFormat.spec input
   match format with
@@ -126,8 +123,7 @@ private meta def formatStringToFormat (fmt : TSyntax `str) (config : Option (TSy
     let alts := alts.foldl Syntax.TSepArray.push (Syntax.TSepArray.mk #[] (sep := ","))
     let config := config.getD (← `({}))
     `(⟨$config, [$alts,*]⟩)
-  | .error err =>
-    Macro.throwErrorAt fmt s!"cannot compile spec: {err}"
+  | .error err => Macro.throwErrorAt fmt s!"cannot compile spec: {err}"
 
 macro_rules
   | `(datespec( $fmt:str )) => formatStringToFormat fmt none

@@ -16,18 +16,18 @@ namespace Lean.Meta
 
 register_builtin_option debug.terminalTacticsAsSorry : Bool := {
   defValue := false
-  descr    := "when enabled, terminal tactics such as `grind` and `omega` are replaced with `sorry`. Useful for debugging and fixing bootstrapping issues"
+  descr :=
+    "when enabled, terminal tactics such as `grind` and `omega` are replaced with `sorry`. Useful \
+      for debugging and fixing bootstrapping issues"
 }
 
 /-- Get the user name of the given metavariable. -/
-def _root_.Lean.MVarId.getTag (mvarId : MVarId) : MetaM Name :=
-  return (← mvarId.getDecl).userName
+def _root_.Lean.MVarId.getTag (mvarId : MVarId) : MetaM Name := return (← mvarId.getDecl).userName
 
 def _root_.Lean.MVarId.setTag (mvarId : MVarId) (tag : Name) : MetaM Unit := do
   modify fun s => { s with mctx := s.mctx.setMVarUserName mvarId tag }
 
-def appendTag (tag : Name) (suffix : Name) : Name :=
-  tag.modifyBase (· ++ suffix.eraseMacroScopes)
+def appendTag (tag : Name) (suffix : Name) : Name := tag.modifyBase (· ++ suffix.eraseMacroScopes)
 
 def appendTagSuffix (mvarId : MVarId) (suffix : Name) : MetaM Unit := do
   let tag ← mvarId.getTag
@@ -41,11 +41,17 @@ Produces an error message indicating that tactic `tacticName` has failed with th
 and displays the state of `mvarId` below the message.
 -/
 def mkTacticExMsg (tacticName : Name) (mvarId : MVarId) (msg : MessageData) : MessageData :=
-  m!"Tactic `{tacticName}` failed: {msg}\n\n{mvarId}"
+  m!"Tactic `{tacticName}` failed: {msg}\
+    \n\
+    \n{mvarId}"
 
-def throwTacticEx (tacticName : Name) (mvarId : MVarId) (msg? : Option MessageData := none) : MetaM α :=
+def throwTacticEx (tacticName : Name) (mvarId : MVarId) (msg? : Option MessageData := none)
+    : MetaM α :=
   match msg? with
-  | none => throwError "Tactic `{tacticName}` failed\n\n{mvarId}"
+  | none =>
+    throwError "Tactic `{tacticName}` failed\
+      \n\
+      \n{mvarId}"
   | some msg => throwError (mkTacticExMsg tacticName mvarId msg)
 
 /--
@@ -54,26 +60,32 @@ If the error was tagged, prepends `nested` to the tag and preserves it.
 -/
 def throwNestedTacticEx {α} (tacticName : Name) (ex : Exception) : MetaM α := do
   let nestedMsg := ex.toMessageData
-  let msg := m!"Tactic `{tacticName}` failed with a nested error:\n{ex.toMessageData}"
+  let msg :=
+    m!"Tactic `{tacticName}` failed with a nested error:\
+      \n{ex.toMessageData}"
   let kind := nestedMsg.kind
-  let msg := if !kind.isAnonymous then
-    .tagged (`nested ++ kind) msg
-  else msg
+  let msg :=
+    if !kind.isAnonymous then
+      .tagged (`nested ++ kind) msg
+    else
+      msg
   throwError msg
 
 /-- Throw a tactic exception with given tactic name if the given metavariable is assigned. -/
 def _root_.Lean.MVarId.checkNotAssigned (mvarId : MVarId) (tacticName : Name) : MetaM Unit := do
   if (← mvarId.isAssigned) then
-    let msg := m!"The metavariable below has already been assigned"
-      ++ .note "This likely indicates an internal error in this tactic or a prior one"
+    let msg :=
+      m!"The metavariable below has already been assigned"
+        ++ .note "This likely indicates an internal error in this tactic or a prior one"
     throwTacticEx tacticName mvarId msg
 
 /-- Get the type of the given metavariable. -/
-def _root_.Lean.MVarId.getType (mvarId : MVarId) : MetaM Expr :=
-  return (← mvarId.getDecl).type
+def _root_.Lean.MVarId.getType (mvarId : MVarId) : MetaM Expr := return (← mvarId.getDecl).type
 
-/-- Get the type of the given metavariable after instantiating metavariables and reducing to
-weak head normal form. -/
+/--
+Get the type of the given metavariable after instantiating metavariables and reducing to
+weak head normal form.
+-/
 -- The `instantiateMVars` needs to be on the outside,
 -- since `whnf` can unfold local definitions which may introduce metavariables.
 -- We don't need an `instantiateMVars` before the `whnf`, since it instantiates as necessary.
@@ -123,7 +135,8 @@ def _root_.Lean.MVarId.getNondepPropHyps (mvarId : MVarId) : MetaM (Array FVarId
           result := result.push localDecl.fvarId
       return result
 
-partial def saturate (mvarId : MVarId) (x : MVarId → MetaM (Option (List MVarId))) : MetaM (List MVarId) := do
+partial def saturate (mvarId : MVarId) (x : MVarId → MetaM (Option (List MVarId)))
+    : MetaM (List MVarId) := do
   let (_, r) ← go mvarId |>.run #[]
   return r.toList
 where
@@ -133,16 +146,18 @@ where
       | none => modify fun s => s.push mvarId
       | some mvarIds => mvarIds.forM go
 
-def exactlyOne (mvarIds : List MVarId) (msg : MessageData := "unexpected number of goals") : MetaM MVarId :=
+def exactlyOne (mvarIds : List MVarId) (msg : MessageData := "unexpected number of goals")
+    : MetaM MVarId :=
   match mvarIds with
   | [mvarId] => return mvarId
-  | _        => throwError msg
+  | _ => throwError msg
 
-def ensureAtMostOne (mvarIds : List MVarId) (msg : MessageData := "unexpected number of goals") : MetaM (Option MVarId) :=
+def ensureAtMostOne (mvarIds : List MVarId) (msg : MessageData := "unexpected number of goals")
+    : MetaM (Option MVarId) :=
   match mvarIds with
-  | []       => return none
+  | [] => return none
   | [mvarId] => return some mvarId
-  | _        => throwError msg
+  | _ => throwError msg
 
 /-- Return all propositions in the local context. -/
 def getPropHyps : MetaM (Array FVarId) := do
@@ -153,17 +168,17 @@ def getPropHyps : MetaM (Array FVarId) := do
         result := result.push localDecl.fvarId
   return result
 
-def _root_.Lean.MVarId.inferInstance (mvarId : MVarId) : MetaM Unit := mvarId.withContext do
-  mvarId.checkNotAssigned `infer_instance
-  let synthVal ← synthInstance (← mvarId.getType)
-  unless (← isDefEq (mkMVar mvarId) synthVal) do
-    throwTacticEx `infer_instance mvarId "`infer_instance` tactic failed to assign instance"
+def _root_.Lean.MVarId.inferInstance (mvarId : MVarId) : MetaM Unit :=
+  mvarId.withContext do
+    mvarId.checkNotAssigned `infer_instance
+    let synthVal ← synthInstance (← mvarId.getType)
+    unless (← isDefEq (mkMVar mvarId) synthVal) do
+      throwTacticEx `infer_instance mvarId "`infer_instance` tactic failed to assign instance"
 
 inductive TacticResultCNM where
   | closed
   | noChange
   | modified (mvarId : MVarId)
-
 
 /-- Check if a goal is of a subsingleton type. -/
 def _root_.Lean.MVarId.isSubsingleton (g : MVarId) : MetaM Bool := do
@@ -175,7 +190,9 @@ def _root_.Lean.MVarId.isSubsingleton (g : MVarId) : MetaM Bool := do
 
 register_builtin_option tactic.skipAssignedInstances : Bool := {
   defValue := true
-  descr    := "in the `rw` and `simp` tactics, if an instance implicit argument is assigned, do not try to synthesize instance."
+  descr :=
+    "in the `rw` and `simp` tactics, if an instance implicit argument is assigned, do not try to \
+      synthesize instance."
 }
 
 end Lean.Meta

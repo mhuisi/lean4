@@ -14,14 +14,15 @@ public section
 namespace Lean.Meta
 
 /--
-  Collect unassigned metavariables occurring in the given expression.
+Collect unassigned metavariables occurring in the given expression.
 
-  Remark: if `e` contains `?m` and there is a `t` assigned to `?m`, we
-  collect unassigned metavariables occurring in `t`.
+Remark: if `e` contains `?m` and there is a `t` assigned to `?m`, we
+collect unassigned metavariables occurring in `t`.
 
-  Remark: if `e` contains `?m` and `?m` is delayed assigned to some term `t`,
-  we collect `?m` and unassigned metavariables occurring in `t`.
-  We collect `?m` because it has not been assigned yet. -/
+Remark: if `e` contains `?m` and `?m` is delayed assigned to some term `t`,
+we collect `?m` and unassigned metavariables occurring in `t`.
+We collect `?m` because it has not been assigned yet.
+-/
 partial def collectMVars (e : Expr) : StateRefT CollectMVars.State MetaM Unit := do
   let e ← instantiateMVars e
   let s ← get
@@ -30,7 +31,7 @@ partial def collectMVars (e : Expr) : StateRefT CollectMVars.State MetaM Unit :=
   set s
   for mvarId in s.result[resultSavedSize...*] do
     match (← getDelayedMVarAssignment? mvarId) with
-    | none   => pure ()
+    | none => pure ()
     | some d => collectMVars (mkMVar d.mvarIdPending)
 
 /-- Return metavariables occurring in the given expression. See `collectMVars` -/
@@ -57,7 +58,8 @@ open Lean Meta
 mutual
 
 /-- Auxiliary definition for `getMVarDependencies`. -/
-private partial def addMVars (e : Expr) (includeDelayed := false) : StateRefT (Std.HashSet MVarId) MetaM Unit := do
+private partial def addMVars (e : Expr) (includeDelayed := false)
+    : StateRefT (Std.HashSet MVarId) MetaM Unit := do
   let mvars ← getMVars e
   let mut s ← get
   set ({} : Std.HashSet MVarId) -- Ensure that `s` is not shared.
@@ -68,7 +70,8 @@ private partial def addMVars (e : Expr) (includeDelayed := false) : StateRefT (S
   mvars.forM go
 
 /-- Auxiliary definition for `getMVarDependencies`. -/
-private partial def go (mvarId : MVarId) (includeDelayed := false) : StateRefT (Std.HashSet MVarId) MetaM Unit :=
+private partial def go (mvarId : MVarId) (includeDelayed := false)
+    : StateRefT (Std.HashSet MVarId) MetaM Unit :=
   withIncRecDepth do
     let mdecl ← mvarId.getDecl
     addMVars mdecl.type includeDelayed
@@ -89,11 +92,14 @@ Collect the metavariables which `mvarId` depends on. These are the metavariables
 which appear in the type and local context of `mvarId`, as well as the
 metavariables which *those* metavariables depend on, etc.
 -/
-def Lean.MVarId.getMVarDependencies (mvarId : MVarId) (includeDelayed := false) :
-    MetaM (Std.HashSet MVarId) :=
+def Lean.MVarId.getMVarDependencies (mvarId : MVarId) (includeDelayed := false)
+    : MetaM (Std.HashSet MVarId) :=
   (·.snd) <$> (go mvarId includeDelayed).run {}
 
-/-- Collect the metavariables appearing in the expression `e`,
-including metavariables in the type or local context of any such metavariables, etc. -/
-def Lean.Expr.getMVarDependencies (e : Expr) (includeDelayed := false) : MetaM (Std.HashSet MVarId) := do
+/--
+Collect the metavariables appearing in the expression `e`,
+including metavariables in the type or local context of any such metavariables, etc.
+-/
+def Lean.Expr.getMVarDependencies (e : Expr) (includeDelayed := false)
+    : MetaM (Std.HashSet MVarId) := do
   (·.snd) <$> (addMVars e includeDelayed).run {}

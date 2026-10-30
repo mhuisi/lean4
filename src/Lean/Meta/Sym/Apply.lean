@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Pattern
 import Lean.Util.CollectFVars
@@ -19,14 +20,14 @@ and return new goals for the unassigned arguments in `xs`.
 -/
 public structure BackwardRule where
   /-- The theorem used to create the rule. It is often of the form `Expr.const declName`. -/
-  expr      : Expr
+  expr : Expr
   /-- Precomputed pattern for efficient unification. -/
-  pattern   : Pattern
+  pattern : Pattern
   /--
   Indices of arguments that become new subgoals, ordered with
-  non-dependent goals first. -/
+  non-dependent goals first.
+  -/
   resultPos : List Nat
-
 
 /--
 Computes which argument positions become new subgoals after applying a backward rule.
@@ -46,14 +47,16 @@ def mkResultPos (pattern : Pattern) : List Nat := Id.run do
   let auxPrefix := `_sym_pre
   -- Initialize "found" mask with arguments that can be synthesized by type class resolution.
   let numArgs := pattern.varTypes.size
-  let mut found := if let some varInfos := pattern.varInfos? then
-     varInfos.argsInfo.map fun info : ProofInstArgInfo => info.isInstance
-  else
-     Array.replicate numArgs false
+  let mut found :=
+    if let some varInfos := pattern.varInfos? then
+      varInfos.argsInfo.map fun info : ProofInstArgInfo => info.isInstance
+    else
+      Array.replicate numArgs false
   let auxVars := pattern.varTypes.mapIdx fun i _ => mkFVar ⟨.num auxPrefix i⟩
   -- Collect arguments that occur in the pattern
   for fvarId in collectFVars {} (pattern.pattern.instantiateRev auxVars) |>.fvarIds do
-    let .num pre idx := fvarId.name | pure ()
+    let .num pre idx := fvarId.name
+      | pure ()
     if pre == auxPrefix then
       found := found.set! idx true
   let argTypes := pattern.varTypes.mapIdx fun i type => type.instantiateRevRange 0 i auxVars
@@ -65,7 +68,7 @@ def mkResultPos (pattern : Pattern) : List Nat := Id.run do
     unless found[i]! do
       let auxVar := auxVars[i]!
       let mut isDep := false
-      for j in (i+1)...numArgs do
+      for j in (i + 1)...numArgs do
         unless found[j]! do
           let argType := argTypes[j]!
           if argType.containsFVar auxVar.fvarId! then
@@ -83,7 +86,8 @@ Creates a `BackwardRule` from a declaration name.
 The `num?` parameter optionally limits how many arguments are included in the pattern
 (useful for partially applying theorems).
 -/
-public def mkBackwardRuleFromDecl (declName : Name) (num? : Option Nat := none) : MetaM BackwardRule := do
+public def mkBackwardRuleFromDecl (declName : Name) (num? : Option Nat := none)
+    : MetaM BackwardRule := do
   let pattern ← mkPatternFromDecl declName num?
   let resultPos := mkResultPos pattern
   return { expr := mkConst declName, pattern, resultPos }
@@ -97,7 +101,9 @@ universe polymorphic.
 The `num?` parameter optionally limits how many arguments are included in the pattern
 (useful for partially applying theorems).
 -/
-public def mkBackwardRuleFromExpr (e : Expr) (levelParams : List Name := []) (num? : Option Nat := none) : MetaM BackwardRule := do
+public def mkBackwardRuleFromExpr
+    (e : Expr) (levelParams : List Name := []) (num? : Option Nat := none)
+    : MetaM BackwardRule := do
   let pattern ← mkPatternFromExpr e levelParams num?
   let resultPos := mkResultPos pattern
   let e := e.instantiateLevelParams levelParams (pattern.levelParams.map mkLevelParam)
@@ -128,23 +134,22 @@ Applies a backward rule to a goal, returning new subgoals.
 
 Returns `.failed` if unification fails, or if an instance argument could not be synthesized.
 -/
-public def BackwardRule.apply (mvarId : MVarId) (rule : BackwardRule) : SymM ApplyResult := mvarId.withContext do
-  let decl ← mvarId.getDecl
-  if let some result ← rule.pattern.unify? decl.type then
-    -- `mkResultPos` omits instance arguments from `resultPos`, assuming type class resolution
-    -- discharges them. An instance that could not be resolved is not a subgoal, so assigning the
-    -- goal anyway would leave a loose instance metavariable in the proof term (surfacing later as a
-    -- kernel unresolved-metavariable error). Report the rule as inapplicable instead.
-    unless result.unresolvedInsts.isEmpty do return .failed
-    mvarId.assign (mkValue rule.expr rule.pattern result)
-    return .goals <| rule.resultPos.map fun i =>
-      result.args[i]!.mvarId!
-  else
-    return .failed
+public def BackwardRule.apply (mvarId : MVarId) (rule : BackwardRule) : SymM ApplyResult :=
+  mvarId.withContext do
+    let decl ← mvarId.getDecl
+    if let some result ← rule.pattern.unify? decl.type then
+      -- `mkResultPos` omits instance arguments from `resultPos`, assuming type class resolution
+      -- discharges them. An instance that could not be resolved is not a subgoal, so assigning the
+      -- goal anyway would leave a loose instance metavariable in the proof term (surfacing later as a
+      -- kernel unresolved-metavariable error). Report the rule as inapplicable instead.
+      unless result.unresolvedInsts.isEmpty do
+        return .failed
+      mvarId.assign (mkValue rule.expr rule.pattern result)
+      return .goals <| rule.resultPos.map fun i => result.args[i]!.mvarId!
+    else
+      return .failed
 
-/--
-Similar to `BackwardRule.apply', but throws an error if unification fails.
--/
+/-- Similar to `BackwardRule.apply', but throws an error if unification fails. -/
 public def BackwardRule.apply' (mvarId : MVarId) (rule : BackwardRule) : SymM (List MVarId) := do
   let .goals mvarIds ← rule.apply mvarId
     | throwError "rule is not applicable to goal{mvarId}rule:{indentExpr rule.expr}"

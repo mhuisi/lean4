@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.Cutsat.Types
 import Lean.Meta.Tactic.Grind.Arith.Cutsat.Util
@@ -19,14 +20,17 @@ end Int.Internal.Linear
 namespace Lean.Meta.Grind.Arith.Cutsat
 
 def _root_.Int.Internal.Linear.Poly.checkNoElimVars (p : Poly) : GoalM Unit := do
-  let .add _ x p := p | return ()
+  let .add _ x p := p
+    | return ()
   assert! !(← eliminated x)
   checkNoElimVars p
 
 def _root_.Int.Internal.Linear.Poly.checkOccs (p : Poly) : GoalM Unit := do
-  let .add _ y p := p | return ()
+  let .add _ y p := p
+    | return ()
   let rec go (p : Poly) : GoalM Unit := do
-    let .add _ x p := p | return ()
+    let .add _ x p := p
+      | return ()
     assert! (← getOccursOf x).contains y
     go p
   go p
@@ -37,7 +41,8 @@ def _root_.Int.Internal.Linear.Poly.checkCnstrOf (p : Poly) (x : Var) : GoalM Un
   unless (← inconsistent) do
     p.checkNoElimVars
     p.checkOccs
-  let .add _ y _ := p | unreachable!
+  let .add _ y _ := p
+    | unreachable!
   assert! x == y
 
 def checkLeCnstrs (css : PArray (PArray LeCnstr)) (isLower : Bool) : GoalM Unit := do
@@ -45,7 +50,8 @@ def checkLeCnstrs (css : PArray (PArray LeCnstr)) (isLower : Bool) : GoalM Unit 
   for cs in css do
     for c in cs do
       c.p.checkCnstrOf x
-      let .add a _ _ := c.p | unreachable!
+      let .add a _ _ := c.p
+        | unreachable!
       assert! isLower == (a < 0)
     x := x + 1
   return ()

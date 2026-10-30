@@ -30,8 +30,7 @@ public def fmtGrindLintCheck : Fmt := fun
     let inKeyword := Layouts.spacedAtomic #[inTk?, moduleTk?]
     let «in» := Layouts.pseudoApplication (#[inKeyword] ++ ids)
     return Layouts.pseudoApplication #[check, «in»]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Grind.grindLintInspect]
 public def fmtGrindLintInspect : Fmt := fun
@@ -44,8 +43,7 @@ public def fmtGrindLintInspect : Fmt := fun
     let keyword := Layouts.spacedAtomic #[grindLintTk, inspectTk]
     let inspect := Layouts.pseudoApplication (#[keyword] ++ cfgItems)
     return Layouts.pseudoApplication (#[inspect] ++ ids)
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Grind.grindLintMute]
 public def fmtGrindLintMute : Fmt := fun
@@ -55,8 +53,7 @@ public def fmtGrindLintMute : Fmt := fun
     let ids ← fmtArray ids
     let keyword := Layouts.spacedAtomic #[grindLintTk, muteTk]
     return Layouts.pseudoApplication (#[keyword] ++ ids)
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Grind.grindLintSkip]
 public def fmtGrindLintSkip : Fmt := fun
@@ -68,5 +65,4 @@ public def fmtGrindLintSkip : Fmt := fun
     let ids ← fmtArray ids
     let keyword := Layouts.spacedAtomic #[grindLintTk, skipTk, suffixTk?]
     return Layouts.pseudoApplication (#[keyword] ++ ids)
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

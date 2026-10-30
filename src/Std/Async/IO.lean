@@ -20,32 +20,20 @@ open Std.Async
 This module provides buffered asynchronous I/O operations for efficient reading and writing.
 -/
 
-/--
-Interface for asynchronous reading operations.
--/
+/-- Interface for asynchronous reading operations. -/
 class AsyncRead (α : Type) (β : Type) where
   read : α → Async β
 
-/--
-Interface for asynchronous writing operations.
--/
+/-- Interface for asynchronous writing operations. -/
 class AsyncWrite (α : Type) (β : Type) where
   write : α → β → Async Unit
+  writeAll : α → Array β → Async Unit := fun socket data => data.forM (write socket)
+  flush : α → Async Unit := fun _ => pure ()
 
-  writeAll : α → Array β → Async Unit :=
-    fun socket data => data.forM (write socket)
-
-  flush : α → Async Unit :=
-    fun _ => pure ()
-
-/--
-Interface for asynchronous streaming with selector-based iteration.
--/
+/-- Interface for asynchronous streaming with selector-based iteration. -/
 class AsyncStream (α : Type) (β : outParam Type) where
   next : α → Selector β
-
-  stop : α → IO Unit :=
-    fun _ => pure ()
+  stop : α → IO Unit := fun _ => pure ()
 
 end IO
 end Async

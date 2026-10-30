@@ -115,17 +115,14 @@ def Comment.renderedPlacements (c : Comment) : Array RenderedPlacement :=
   c.render.flatMap fun rendering =>
     let kinds : Array RenderedPlacementKind :=
       match c.kind, c.placement with
-      | .lineComment, .afterToken =>
-        #[.beforeClosestNextNewline, .afterClosestPreviousNewline]
-      | .lineComment, .onLineBeforeToken =>
-        #[.afterClosestPreviousNewline]
+      | .lineComment, .afterToken => #[.beforeClosestNextNewline, .afterClosestPreviousNewline]
+      | .lineComment, .onLineBeforeToken => #[.afterClosestPreviousNewline]
       | .blockComment, .afterToken =>
         if rendering.isMultiLine then
           #[.afterClosestPreviousNewline]
         else
           #[.beforeClosestNextNewline, .afterClosestPreviousNewline]
-      | .blockComment, .onLineBeforeToken =>
-        #[.afterClosestPreviousNewline]
+      | .blockComment, .onLineBeforeToken => #[.afterClosestPreviousNewline]
     kinds.map (⟨·, rendering⟩)
 
 section Extraction
@@ -508,8 +505,7 @@ where
     for entry in collectors do
       for (comment, associatedRange) in entry.collector ctx stx do
         modify (·.alter comment.originalWhitespaceRange fun
-          | none =>
-            some { priority := entry.priority, associatedRange, comment }
+          | none => some { priority := entry.priority, associatedRange, comment }
           | some claim =>
             if claim.priority < entry.priority then
               some { priority := entry.priority, associatedRange, comment }
@@ -530,12 +526,9 @@ where
 
   go (stx : Syntax) : collectComments.M Unit := do
     match stx with
-    | .missing =>
-      return
-    | .atom info .. =>
-      collectTokenComments info
-    | .ident info .. =>
-      collectTokenComments info
+    | .missing => return
+    | .atom info .. => collectTokenComments info
+    | .ident info .. => collectTokenComments info
     | .node _ kind args =>
       if kind == choiceKind then
         if let some firstAlternative := args[0]? then
@@ -578,8 +571,7 @@ where
             commentStartLineInfo.tokenRanges[0]!
           else
             range
-        | _, _ =>
-          range
+        | _, _ => range
       modify fun s => {
         s with
         comments :=
@@ -620,10 +612,8 @@ and both are placed on lines of their own before the token after them. When `nex
 the line directly after `prev`, the two are then separated by one empty line.
 -/
 def isSeparatedByEmptyLine (prev next : Comment) : Bool :=
-  prev.placement matches .onLineBeforeToken
-    && next.placement matches .onLineBeforeToken
-    && next.emptyLineBefore
-    && prev.originalTokenRange == next.originalTokenRange
+  prev.placement matches .onLineBeforeToken && next.placement matches .onLineBeforeToken
+    && next.emptyLineBefore && prev.originalTokenRange == next.originalTokenRange
     && prev.originalWhitespaceKind == next.originalWhitespaceKind
     && prev.originalWhitespaceRange.stop ≤ next.originalWhitespaceRange.start
 
@@ -830,12 +820,9 @@ public partial def collectMultiLineTokenRanges (stx : Syntax) : Array Syntax.Ran
 where
   go (stx : Syntax) (ranges : Array Syntax.Range) : Array Syntax.Range :=
     match stx with
-    | .missing =>
-      ranges
-    | .atom info val =>
-      pushMultiLineToken info val ranges
-    | .ident info rawVal .. =>
-      pushMultiLineToken info rawVal.toString ranges
+    | .missing => ranges
+    | .atom info val => pushMultiLineToken info val ranges
+    | .ident info rawVal .. => pushMultiLineToken info rawVal.toString ranges
     | .node _ kind args =>
       if kind == choiceKind then
         match args[0]? with
@@ -1024,8 +1011,7 @@ def determineCommentInsertions
           let insertedComment :=
             " " ++ rp.rendering.rendered.indent (lineInfo.length + 1) (skipFirstLine := true)
           r := r.insert insertionPos insertedComment
-        | .afterToken =>
-          unreachable!
+        | .afterToken => unreachable!
         break
   return r.toArray.qsort (·.1 < ·.1)
 where

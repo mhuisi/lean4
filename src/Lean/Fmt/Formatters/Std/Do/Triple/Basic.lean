@@ -41,5 +41,4 @@ public def fmtTriple : Fmt := fun
     let post ← fmt post
     let postRbTk ← fmt postRbTk
     return hoareTriple preLbTk pre preRbTk empty prog postLbTk ⟨#[post]⟩ postRbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

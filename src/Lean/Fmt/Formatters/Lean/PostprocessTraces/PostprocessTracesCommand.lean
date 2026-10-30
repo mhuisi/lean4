@@ -22,15 +22,12 @@ public def fmtTracedCommand
   let inTk ← fmt inTk
   let cmd ← fmt cmd
   let signature := Layouts.pseudoApplication #[keywordTk, arg]
-  return Layouts.keywordSeparated signature inTk cmd {
-    allowFlattening := false
-    nestedRhs := false
-  }
+  return
+    Layouts.keywordSeparated signature inTk cmd { allowFlattening := false, nestedRhs := false }
 
 @[builtin_fmt Lean.PostprocessTraces.postprocessTracesCmd]
 public def fmtPostprocessTracesCmd : Fmt := fun
   | `(Lean.PostprocessTraces.postprocessTracesCmd|
       postprocess_traces%$postprocessTk $post:term in%$inTk $cmd:command) =>
     fmtTracedCommand postprocessTk post inTk cmd
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

@@ -16,27 +16,24 @@ open IO
 
 namespace Lean.Server.FileWorker
 
-
 structure LakeSetupFileOutput where
-    spawnArgs : Process.SpawnArgs
-    exitCode  : UInt32
-    stdout    : String
-    stderr    : String
+  spawnArgs : Process.SpawnArgs
+  exitCode : UInt32
+  stdout : String
+  stderr : String
 
 partial def runLakeSetupFile
-    (m                 : DocumentMeta)
-    (lakePath filePath : System.FilePath)
-    (header            : ModuleHeader)
-    (handleStderr      : String → IO Unit)
+    (m : DocumentMeta) (lakePath filePath : System.FilePath) (header : ModuleHeader)
+    (handleStderr : String → IO Unit)
     : IO LakeSetupFileOutput := do
   let mut args := #["setup-file", filePath.toString, "-"]
   if m.dependencyBuildMode matches .never then
     args := args.push "--no-build" |>.push "--no-cache"
   let spawnArgs : Process.SpawnArgs := {
-    stdin  := Process.Stdio.piped
+    stdin := Process.Stdio.piped
     stdout := Process.Stdio.piped
     stderr := Process.Stdio.piped
-    cmd    := lakePath.toString
+    cmd := lakePath.toString
     args
   }
   let lakeProc ← Process.spawn spawnArgs
@@ -68,10 +65,13 @@ inductive FileSetupResult where
   /-- Other error during Lake invocation. -/
   | error (msg : String)
 
-/-- Uses `lake setup-file` to compile dependencies on the fly and add them to `LEAN_PATH`.
+/--
+Uses `lake setup-file` to compile dependencies on the fly and add them to `LEAN_PATH`.
 Compilation progress is reported to `handleStderr`. Returns the search path for
-source files and the options for the file. -/
-partial def setupFile (m : DocumentMeta) (header : ModuleHeader) (handleStderr : String → IO Unit) : IO FileSetupResult := do
+source files and the options for the file.
+-/
+partial def setupFile (m : DocumentMeta) (header : ModuleHeader) (handleStderr : String → IO Unit)
+    : IO FileSetupResult := do
   let some filePath := System.Uri.fileUriToPath? m.uri
     | return FileSetupResult.noLakefile -- untitled files have no lakefile
 
@@ -86,7 +86,10 @@ partial def setupFile (m : DocumentMeta) (header : ModuleHeader) (handleStderr :
   match result.exitCode with
   | 0 =>
     let Except.ok (setup : ModuleSetup) := Json.parse result.stdout >>= fromJson?
-      | return FileSetupResult.error s!"Invalid output from `{cmdStr}`:\n{result.stdout}\nstderr:\n{result.stderr}"
+      | return FileSetupResult.error s!"Invalid output from `{cmdStr}`:\
+          \n{result.stdout}\
+          \nstderr:\
+          \n{result.stderr}"
     setup.dynlibs.forM loadDynlib
     return FileSetupResult.success setup
   | 2 => -- exit code for lake reporting that there is no lakefile
@@ -94,4 +97,7 @@ partial def setupFile (m : DocumentMeta) (header : ModuleHeader) (handleStderr :
   | 3 => -- exit code for `--no-build`
     return FileSetupResult.importsOutOfDate
   | _ =>
-    return FileSetupResult.error s!"`{cmdStr}` failed:\n{result.stdout}\nstderr:\n{result.stderr}"
+    return FileSetupResult.error s!"`{cmdStr}` failed:\
+      \n{result.stdout}\
+      \nstderr:\
+      \n{result.stderr}"

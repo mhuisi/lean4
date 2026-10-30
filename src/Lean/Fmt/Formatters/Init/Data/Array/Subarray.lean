@@ -28,8 +28,7 @@ public def fmtSubarrayBounds : Fmt := fun
     let rbTk ← fmt rbTk
     let bounds := Layouts.infixOperator #[start, colonTk, stop] <| .sparse (spacing := false)
     return fmtSubarraySlice a lbTk bounds rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Array.«term__[_:]»]
 public def fmtSubarrayLowerBound : Fmt := fun
@@ -41,8 +40,7 @@ public def fmtSubarrayLowerBound : Fmt := fun
     let rbTk ← fmt rbTk
     let bounds := Layouts.atomic #[start, colonTk]
     return fmtSubarraySlice a lbTk bounds rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Array.«term__[:_]»]
 public def fmtSubarrayUpperBound : Fmt := fun
@@ -54,5 +52,4 @@ public def fmtSubarrayUpperBound : Fmt := fun
     let rbTk ← fmt rbTk
     let bounds := Layouts.atomic #[colonTk, stop]
     return fmtSubarraySlice a lbTk bounds rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

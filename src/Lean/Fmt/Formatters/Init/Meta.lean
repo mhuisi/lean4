@@ -28,22 +28,19 @@ public def fmtEvalPrio : Fmt := fun
 public def fmtErw : Fmt := fun
   | `(tactic| erw%$erwTk $cfg:optConfig $rules:rwRuleSeq $[$loc?:location]?) => do
     fmtRwLike erwTk cfg rules loc?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.simpAllKind]
 public def fmtSimpAllKind : Fmt := fun
   | `(Parser.Tactic.simpAllKind| (%$lbTk all%$allTk :=%$colonEqTk true%$trueTk )%$rbTk) =>
     fmtNamedArgumentTerm lbTk allTk colonEqTk trueTk rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.dsimpKind]
 public def fmtDsimpKind : Fmt := fun
   | `(Parser.Tactic.dsimpKind| (%$lbTk dsimp%$dsimpTk :=%$colonEqTk true%$trueTk )%$rbTk) =>
     fmtNamedArgumentTerm lbTk dsimpTk colonEqTk trueTk rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.declareSimpLikeTactic]
 public def fmtDeclareSimpLikeTactic : Fmt := fun
@@ -59,61 +56,53 @@ public def fmtDeclareSimpLikeTactic : Fmt := fun
     let cfgItems ← (← tacticOptConfigItems cfg).mapM fmt
     let decl := Layouts.pseudoApplication <| #[declLhs, tacName, tacToken] ++ cfgItems
     return Layouts.lines #[doc?, decl]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.simpAutoUnfold]
 public def fmtSimpAutoUnfold : Fmt := fun
   | `(tactic| simp!%$tk $cfg:optConfig $[$disch:discharger]? $[only%$only?]?
       $[[%$lbTk? $args?,* ]%$rbTk?]? $[$loc?:location]?) => do
     fmtSimpLike #[tk] cfg disch only? lbTk? args? rbTk? loc?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.simpArith]
 public def fmtSimpArith : Fmt := fun
   | `(tactic| simp_arith%$tk $cfg:optConfig $[$disch:discharger]? $[only%$only?]?
       $[[%$lbTk? $args?,* ]%$rbTk?]? $[$loc?:location]?) => do
     fmtSimpLike #[tk] cfg disch only? lbTk? args? rbTk? loc?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.simpArithBang]
 public def fmtSimpArithBang : Fmt := fun
   | `(tactic| simp_arith!%$tk $cfg:optConfig $[$disch:discharger]? $[only%$only?]?
       $[[%$lbTk? $args?,* ]%$rbTk?]? $[$loc?:location]?) => do
     fmtSimpLike #[tk] cfg disch only? lbTk? args? rbTk? loc?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.simpAllAutoUnfold]
 public def fmtSimpAllAutoUnfold : Fmt := fun
   | `(tactic| simp_all!%$tk $cfg:optConfig $[$disch:discharger]? $[only%$only?]?
       $[[%$lbTk? $args?,* ]%$rbTk?]?) =>
     fmtSimpLike #[tk] cfg disch only? lbTk? args? rbTk? none
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.simpAllArith]
 public def fmtSimpAllArith : Fmt := fun
   | `(tactic| simp_all_arith%$tk $cfg:optConfig $[$disch:discharger]? $[only%$only?]?
       $[[%$lbTk? $args?,* ]%$rbTk?]?) =>
     fmtSimpLike #[tk] cfg disch only? lbTk? args? rbTk? none
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.simpAllArithBang]
 public def fmtSimpAllArithBang : Fmt := fun
   | `(tactic| simp_all_arith!%$tk $cfg:optConfig $[$disch:discharger]? $[only%$only?]?
       $[[%$lbTk? $args?,* ]%$rbTk?]?) =>
     fmtSimpLike #[tk] cfg disch only? lbTk? args? rbTk? none
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.dsimpAutoUnfold]
 public def fmtDSimpAutoUnfold : Fmt := fun
   | `(tactic| dsimp!%$tk $cfg:optConfig $[$disch:discharger]? $[only%$only?]?
       $[[%$lbTk? $args?,* ]%$rbTk?]? $[$loc?:location]?) => do
     fmtSimpLike #[tk] cfg disch only? lbTk? args? rbTk? loc?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

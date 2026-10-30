@@ -13,6 +13,6 @@ open Std
 
 namespace Char
 
-public instance : LinearOrderPackage Char := .ofLE _ { }
+public instance : LinearOrderPackage Char := .ofLE _ {}
 
 end Char

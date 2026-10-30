@@ -23,7 +23,7 @@ open Lean Meta
 namespace Lean.Elab.Tactic
 
 register_builtin_option linter.tactic.unusedName : Bool := {
-  defValue := true,
+  defValue := true
   descr := "enable the 'unused name' tactic linter"
 }
 
@@ -41,20 +41,23 @@ def extractLetsAddVarInfo (ids : Array Syntax) (fvars : Array FVarId) : TacticM 
 
 declare_config_elab elabExtractLetsConfig ExtractLetsConfig
 
-@[builtin_tactic extractLets] def evalExtractLets : Tactic
+@[builtin_tactic extractLets]
+def evalExtractLets : Tactic
   | `(tactic| extract_lets $cfg:optConfig $ids* $[$loc?:location]?) => do
     let mut config ← elabExtractLetsConfig cfg
     let givenNames := (ids.map getNameOfIdent').toList
     withLocation (expandOptLocation (Lean.mkOptionalNode loc?))
       (atLocal := fun h => do
-        let fvars ← liftMetaTacticAux fun mvarId => do
-          let ((fvars, _), mvarId) ← mvarId.extractLetsLocalDecl h givenNames config
-          return (fvars, [mvarId])
+        let fvars ←
+          liftMetaTacticAux fun mvarId => do
+            let ((fvars, _), mvarId) ← mvarId.extractLetsLocalDecl h givenNames config
+            return (fvars, [mvarId])
         extractLetsAddVarInfo ids fvars)
       (atTarget := do
-        let fvars ← liftMetaTacticAux fun mvarId => do
-          let ((fvars, _), mvarId) ← mvarId.extractLets givenNames config
-          return (fvars, [mvarId])
+        let fvars ←
+          liftMetaTacticAux fun mvarId => do
+            let ((fvars, _), mvarId) ← mvarId.extractLets givenNames config
+            return (fvars, [mvarId])
         extractLetsAddVarInfo ids fvars)
       (failed := fun _ => throwError "`extract_lets` tactic failed")
   | _ => throwUnsupportedSyntax
@@ -65,7 +68,8 @@ declare_config_elab elabExtractLetsConfig ExtractLetsConfig
 
 declare_config_elab elabLiftLetsConfig LiftLetsConfig
 
-@[builtin_tactic liftLets] def evalLiftLets : Tactic
+@[builtin_tactic liftLets]
+def evalLiftLets : Tactic
   | `(tactic| lift_lets $cfg:optConfig $[$loc?:location]?) => do
     let mut config ← elabLiftLetsConfig cfg
     withLocation (expandOptLocation (Lean.mkOptionalNode loc?))
@@ -78,7 +82,8 @@ declare_config_elab elabLiftLetsConfig LiftLetsConfig
 ### `let_to_have`
 -/
 
-@[builtin_tactic letToHave] def evalLetToHave : Tactic
+@[builtin_tactic letToHave]
+def evalLetToHave : Tactic
   | `(tactic| let_to_have $[$loc?:location]?) => do
     withLocation (expandOptLocation (Lean.mkOptionalNode loc?))
       (atLocal := fun h => liftMetaTactic1 fun mvarId => mvarId.letToHaveLocalDecl h)

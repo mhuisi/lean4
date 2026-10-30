@@ -52,7 +52,7 @@ def evalDiscrTreeKeyCmd : CommandElab := fun stx => do
     | `(command| #discr_tree_key $t:term) => do
       let type ← getType t
       logInfo (← keysAsPattern <| ← mkKey type false)
-    | _                        => Elab.throwUnsupportedSyntax
+    | _ => Elab.throwUnsupportedSyntax
 
 @[builtin_command_elab Lean.Parser.discrTreeSimpKeyCmd]
 def evalDiscrTreeSimpKeyCmd : CommandElab := fun stx => do
@@ -61,6 +61,6 @@ def evalDiscrTreeSimpKeyCmd : CommandElab := fun stx => do
     | `(command| #discr_tree_simp_key $t:term) => do
       let type ← getType t
       logInfo (← keysAsPattern <| ← mkKey type true)
-    | _                        => Elab.throwUnsupportedSyntax
+    | _ => Elab.throwUnsupportedSyntax
 
 end Lean.Elab.Tactic.DiscrTreeKey

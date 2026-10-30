@@ -16,15 +16,15 @@ open Lean
 namespace Lean
 
 inductive LOption (α : Type u) where
-  | none  : LOption α
-  | some  : α → LOption α
+  | none : LOption α
+  | some : α → LOption α
   | undef : LOption α
-  deriving Inhabited, BEq
+deriving Inhabited, BEq
 
 instance [ToString α] : ToString (LOption α) where
   toString
-    | .none   => "none"
-    | .undef  => "undef"
+    | .none => "none"
+    | .undef => "undef"
     | .some a => "(some " ++ toString a ++ ")"
 
 def LOption.toOption : LOption α → Option α
@@ -32,10 +32,11 @@ def LOption.toOption : LOption α → Option α
   | _ => .none
 
 def Option.toLOption {α : Type u} : Option α → LOption α
-  | none   => .none
+  | none => .none
   | some a => .some a
 
-@[inline] def toLOptionM {α} {m : Type → Type} [Monad m] (x : m (Option α)) : m (LOption α) := do
+@[inline]
+def toLOptionM {α} {m : Type → Type} [Monad m] (x : m (Option α)) : m (LOption α) := do
   let b ← x
   return b.toLOption
 

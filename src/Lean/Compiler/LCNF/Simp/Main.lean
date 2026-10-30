@@ -25,8 +25,7 @@ such as: a `cases` with many but only one alternative is not reachable.
 It is only used to avoid the creation of auxiliary join points, and does not need
 to be precise.
 -/
-private partial def oneExitPointQuick (c : Code .pure) : Bool :=
-  go c
+private partial def oneExitPointQuick (c : Code .pure) : Bool := go c
 where
   go (c : Code .pure) : Bool :=
     match c with
@@ -55,13 +54,14 @@ def specializePartialApp (info : InlineCandidateInfo) : SimpM (FunDecl .pure) :=
   updateFunDeclInfo code
   mkAuxFunDecl paramsNew code
 
-/--
-Try to inline a join point.
--/
-partial def inlineJp? (fvarId : FVarId) (args : Array (Arg .pure)) : SimpM (Option (Code .pure)) := do
+/-- Try to inline a join point. -/
+partial def inlineJp? (fvarId : FVarId) (args : Array (Arg .pure))
+    : SimpM (Option (Code .pure)) := do
   /- Remark: we don't need to use `findFunDecl'?` here. -/
-  let some decl ← findFunDecl? fvarId | return none
-  unless (← shouldInlineLocal decl) do return none
+  let some decl ← findFunDecl? fvarId
+    | return none
+  unless (← shouldInlineLocal decl) do
+    return none
   markSimplified
   betaReduce decl.params decl.value args
 
@@ -73,11 +73,14 @@ simplification opportunities by eta-expanding them.
 -/
 def etaPolyApp? (letDecl : LetDecl .pure) : OptionT SimpM (FunDecl .pure) := do
   guard <| (← read).config.etaPoly
-  let .const declName us args := letDecl.value | failure
-  let some info := (← getEnv).find? declName | failure
+  let .const declName us args := letDecl.value
+    | failure
+  let some info := (← getEnv).find? declName
+    | failure
   guard <| (← hasLocalInst info.type)
   guard <| !(← isInstanceReducible declName)
-  let some ⟨.pure, decl⟩ ← getDecl? declName | failure
+  let some ⟨.pure, decl⟩ ← getDecl? declName
+    | failure
   guard <| decl.getArity > args.size
   let params ← mkNewParams letDecl.type
   let auxDecl ← mkAuxLetDecl (.const declName us (args ++ params.map (.fvar ·.fvarId)))
@@ -86,18 +89,18 @@ def etaPolyApp? (letDecl : LetDecl .pure) : OptionT SimpM (FunDecl .pure) := do
   eraseLetDecl letDecl
   return funDecl
 
-/--
-Similar to `Code.isReturnOf`, but taking the current substitution into account.
--/
+/-- Similar to `Code.isReturnOf`, but taking the current substitution into account. -/
 def isReturnOf (c : Code .pure) (fvarId : FVarId) : SimpM Bool := do
   match c with
-  | .return fvarId' => match (← normFVar fvarId') with
+  | .return fvarId' =>
+    match (← normFVar fvarId') with
     | .fvar fvarId'' => return fvarId'' == fvarId
     | .erased => return false
   | _ => return false
 
 def elimVar? (value : LetValue .pure) : SimpM (Option FVarId) := do
-  let .fvar fvarId #[] := value | return none
+  let .fvar fvarId #[] := value
+    | return none
   return fvarId
 
 mutual
@@ -117,77 +120,77 @@ of exit points by simplified the inlined code, and then connecting the result to
 continuation `k`. However, this optimization is only possible if we simplify the
 inlined code **before** we attach it to the continuation.
 -/
-partial def inlineApp? (letDecl : LetDecl .pure) (k : Code .pure) : SimpM (Option (Code .pure)) := do
-  let some info ← inlineCandidate? letDecl.value | return none
+partial def inlineApp? (letDecl : LetDecl .pure) (k : Code .pure)
+    : SimpM (Option (Code .pure)) := do
+  let some info ← inlineCandidate? letDecl.value
+    | return none
   let numArgs := info.args.size
   withInlining letDecl.value info.recursive do
-  let fvarId := letDecl.fvarId
-  if numArgs < info.arity then
-    let funDecl ← specializePartialApp info
-    addFVarSubst fvarId funDecl.fvarId
-    markSimplified
-    simp (.fun funDecl k)
-  else
-    let code ← betaReduce info.params info.value info.args[*...info.arity]
-    if k.isReturnOf fvarId && numArgs == info.arity then
-      /- Easy case, the continuation `k` is just returning the result of the application. -/
+    let fvarId := letDecl.fvarId
+    if numArgs < info.arity then
+      let funDecl ← specializePartialApp info
+      addFVarSubst fvarId funDecl.fvarId
       markSimplified
-      simp code
+      simp (.fun funDecl k)
     else
-      let code ← simp code
-      let simpK (result : FVarId) : SimpM (Code .pure) := do
-        /- `result` contains the result of the inlined code -/
-        if numArgs > info.arity then
-          let decl ← mkAuxLetDecl (.fvar result info.args[info.arity...*])
-          addFVarSubst fvarId decl.fvarId
-          simp (.let decl k)
-        else
-          addFVarSubst fvarId result
-          simp k
-      markSimplified
-      if oneExitPointQuick code then
-        -- TODO: if `k` is small, we should also inline it here
-        code.bind fun fvarId' => do
-          markUsedFVar fvarId'
-          simpK fvarId'
+      let code ← betaReduce info.params info.value info.args[*...info.arity]
+      if k.isReturnOf fvarId && numArgs == info.arity then
+        /- Easy case, the continuation `k` is just returning the result of the application. -/
+        markSimplified
+        simp code
       else
-        let expectedType ← inferAppType info.fType (info.args[*...info.arity]).toArray
-        if expectedType.headBeta.isForall then
-          /-
-          If `code` returns a function, we create an auxiliary local function declaration (and eta-expand it)
-          instead of creating a join point that takes a closure as an argument.
-          -/
-          let auxFunDecl ← mkAuxFunDecl #[] code
-          let auxFunDecl ← auxFunDecl.etaExpand
-          let k ← simpK auxFunDecl.fvarId
-          attachCodeDecls #[.fun auxFunDecl] k
+        let code ← simp code
+        let simpK (result : FVarId) : SimpM (Code .pure) := do
+          /- `result` contains the result of the inlined code -/
+          if numArgs > info.arity then
+            let decl ← mkAuxLetDecl (.fvar result info.args[info.arity...*])
+            addFVarSubst fvarId decl.fvarId
+            simp (.let decl k)
+          else
+            addFVarSubst fvarId result
+            simp k
+        markSimplified
+        if oneExitPointQuick code then
+          -- TODO: if `k` is small, we should also inline it here
+          code.bind fun fvarId' => do
+            markUsedFVar fvarId'
+            simpK fvarId'
         else
-          let jpParam ← mkAuxParam expectedType
-          let jpValue ← simpK jpParam.fvarId
-          let jpDecl ← mkAuxJpDecl #[jpParam] jpValue
-          let code ← code.bind fun fvarId => return .jmp jpDecl.fvarId #[.fvar fvarId]
-          return Code.jp jpDecl code
+          let expectedType ← inferAppType info.fType (info.args[*...info.arity]).toArray
+          if expectedType.headBeta.isForall then
+            /-
+            If `code` returns a function, we create an auxiliary local function declaration (and eta-expand it)
+            instead of creating a join point that takes a closure as an argument.
+            -/
+            let auxFunDecl ← mkAuxFunDecl #[] code
+            let auxFunDecl ← auxFunDecl.etaExpand
+            let k ← simpK auxFunDecl.fvarId
+            attachCodeDecls #[.fun auxFunDecl] k
+          else
+            let jpParam ← mkAuxParam expectedType
+            let jpValue ← simpK jpParam.fvarId
+            let jpDecl ← mkAuxJpDecl #[jpParam] jpValue
+            let code ← code.bind fun fvarId => return .jmp jpDecl.fvarId #[.fvar fvarId]
+            return Code.jp jpDecl code
 
-/--
-Simplify the given local function declaration.
--/
+/-- Simplify the given local function declaration. -/
 partial def simpFunDecl (decl : FunDecl .pure) : SimpM (FunDecl .pure) := do
   let type ← normExpr decl.type
   let params ← normParams decl.params
   let value ← simp decl.value
   decl.update type params value
 
-/--
-Try to simplify `cases` of `constructor`
--/
+/-- Try to simplify `cases` of `constructor` -/
 partial def simpCasesOnCtor? (cases : Cases .pure) : SimpM (Option (Code .pure)) := do
   match (← normFVar cases.discr) with
   | .erased =>
     let ret ← mkReturnErased
     return some ret
   | .fvar discr =>
-    let some ctorInfo ← findCtor? discr | return none
-    let some (.ctorInfo ctorVal) := (← getEnv).find? ctorInfo.getName | return none
+    let some ctorInfo ← findCtor? discr
+      | return none
+    let some (.ctorInfo ctorVal) := (← getEnv).find? ctorInfo.getName
+      | return none
     unless cases.typeName == ctorVal.induct do
       return none
     let (alt, cases) := cases.extractAlt! ctorInfo.getName
@@ -204,157 +207,160 @@ partial def simpCasesOnCtor? (cases : Cases .pure) : SimpM (Option (Code .pure))
         let k ← simp k
         eraseParams params
         return k
-      | .natVal 0 => simp k
-      | .natVal (n+1) =>
+      | .natVal 0 =>
+        simp k
+      | .natVal (n + 1) =>
         let auxDecl ← mkAuxLetDecl (.lit (.nat n))
         addFVarSubst params[0]!.fvarId auxDecl.fvarId
         let k ← simp k
         eraseParams params
         return some <| .let auxDecl k
 
-/--
-Simplify `code`
--/
-partial def simp (code : Code .pure) : SimpM (Code .pure) := withIncRecDepth do
-  incVisited
-  if (← get).visited % 128 == 0 then
-    checkSystem "LCNF simp"
-  match code with
-  | .let decl k =>
-    let baseDecl := decl
-    let mut decl ← normLetDecl baseDecl
-    if baseDecl != decl then
-      markSimplified
-    if let some value ← simpValue? decl.value then
-      markSimplified
-      decl ← decl.updateValue value
-    -- This `decl.value != .erased` check is required because `.return` takes
-    -- and `FVarId` rather than `Arg`, and the substitution will end up
-    -- creating a new erased let decl in that case.
-    if decl.type.isErased && decl.value != .erased then
-      addSubst decl.fvarId (.erased : Arg .pure)
-      eraseLetDecl decl
-      simp k
-    else if let some decls ← ConstantFold.foldConstants decl then
-      markSimplified
-      let k ← simp k
-      attachCodeDecls decls k
-    else if let some funDecl ← etaPolyApp? decl then
-      simp (.fun funDecl k)
-    else if let some fvarId ← elimVar? decl.value then
-      /- Eliminate `let _x_i := _x_j;` -/
-      addFVarSubst decl.fvarId fvarId
-      eraseLetDecl decl
-      simp k
-    else if let some code ← inlineApp? decl k then
-      eraseLetDecl decl
-      return code
-    else if let some (decls, fvarId) ← inlineProjInst? decl.value then
-      addFVarSubst decl.fvarId fvarId
-      eraseLetDecl decl
-      let k ← simp k
-      attachCodeDecls decls k
-    else
-      let k ← simp k
-      if (← isUsed decl.fvarId) then
-        markUsedLetDecl decl
-        return code.updateLet! decl k
-      else
-        /- Dead variable elimination -/
+/-- Simplify `code` -/
+partial def simp (code : Code .pure) : SimpM (Code .pure) :=
+  withIncRecDepth do
+    incVisited
+    if (← get).visited % 128 == 0 then
+      checkSystem "LCNF simp"
+    match code with
+    | .let decl k =>
+      let baseDecl := decl
+      let mut decl ← normLetDecl baseDecl
+      if baseDecl != decl then
+        markSimplified
+      if let some value ← simpValue? decl.value then
+        markSimplified
+        decl ← decl.updateValue value
+      -- This `decl.value != .erased` check is required because `.return` takes
+      -- and `FVarId` rather than `Arg`, and the substitution will end up
+      -- creating a new erased let decl in that case.
+      if decl.type.isErased && decl.value != .erased then
+        addSubst decl.fvarId (.erased : Arg .pure)
         eraseLetDecl decl
-        return k
-  | .fun decl k | .jp decl k =>
-    let mut decl := decl
-    let toBeInlined ← isOnceOrMustInline decl.fvarId
-    if toBeInlined then
-      /-
-      If the declaration will be inlined, it is wasteful to eagerly simplify it.
-      So, we just normalize it (i.e., apply the substitution to it).
-      -/
-      decl ← normFunDecl decl
-    else
-      /-
-      Note that functions in `decl` will be marked as used even if `decl` is not actually used.
-      They will only be deleted in the next pass. TODO: investigate whether this is a problem.
-      -/
-      if code.isFun then
-        if decl.isEtaExpandCandidate then
-          /- We must apply substitution before trying to eta-expand, otherwise `inferType` may fail. -/
-          decl ← normFunDecl decl
-          /-
-          We want to eta-expand **before** trying to simplify local function declaration because
-          eta-expansion creates many optimization opportunities.
-          -/
-          decl ← decl.etaExpand
-          markSimplified
-      decl ← simpFunDecl decl
-    let k ← simp k
-    if (← isUsed decl.fvarId) then
+        simp k
+      else if let some decls ← ConstantFold.foldConstants decl then
+        markSimplified
+        let k ← simp k
+        attachCodeDecls decls k
+      else if let some funDecl ← etaPolyApp? decl then
+        simp (.fun funDecl k)
+      else if let some fvarId ← elimVar? decl.value then
+        /- Eliminate `let _x_i := _x_j;` -/
+        addFVarSubst decl.fvarId fvarId
+        eraseLetDecl decl
+        simp k
+      else if let some code ← inlineApp? decl k then
+        eraseLetDecl decl
+        return code
+      else if let some (decls, fvarId) ← inlineProjInst? decl.value then
+        addFVarSubst decl.fvarId fvarId
+        eraseLetDecl decl
+        let k ← simp k
+        attachCodeDecls decls k
+      else
+        let k ← simp k
+        if (← isUsed decl.fvarId) then
+          markUsedLetDecl decl
+          return code.updateLet! decl k
+        else
+          /- Dead variable elimination -/
+          eraseLetDecl decl
+          return k
+    | .fun decl k | .jp decl k =>
+      let mut decl := decl
+      let toBeInlined ← isOnceOrMustInline decl.fvarId
       if toBeInlined then
         /-
-        `decl` was supposed to be inlined, but there are still references to it.
-        Thus, we must all variables in `decl` as used. Recall it was not eagerly simplified.
+        If the declaration will be inlined, it is wasteful to eagerly simplify it.
+        So, we just normalize it (i.e., apply the substitution to it).
         -/
-        markUsedFunDecl decl
-      return code.updateFun! decl k
-    else
-      /- Dead function elimination -/
-      eraseFunDecl decl
-      return k
-  | .return fvarId =>
-    withNormFVarResult (← normFVar fvarId) fun fvarId => do
-      markUsedFVar fvarId
-      return code.updateReturn! fvarId
-  | .unreach type =>
-    return code.updateUnreach! (← normExpr type)
-  | .jmp fvarId args =>
-    withNormFVarResult (← normFVar fvarId) fun fvarId => do
-      let args ← normArgs args
-      if let some code ← inlineJp? fvarId args then
-        simp code
+        decl ← normFunDecl decl
       else
-        markUsedFVar fvarId
-        args.forM markUsedArg
-        return code.updateJmp! fvarId args
-  | .cases c =>
-    if let some k ← simpCasesOnCtor? c then
-      return k
-    else
-      withNormFVarResult (← normFVar c.discr) fun discr => do
-        let resultType ← normExpr c.resultType
-        let alts ← c.alts.mapMonoM fun alt => do
-          match alt with
-          | .alt ctorName ps k =>
-            if !(k matches .unreach ..) && (← ps.anyM fun p => isInductiveWithNoCtors p.type) then
-              let type ← k.inferType
-              eraseCode k
-              markSimplified
-              return alt.updateCode (.unreach type)
-            else
-              withDiscrCtor discr ctorName ps do
-                return alt.updateCode (← simp k)
-          | .default k => return alt.updateCode (← simp k)
-        let alts ← addDefaultAlt alts
-        if let #[alt] := alts then
-          match alt with
-          | .default k => return k
-          | .alt _ params k =>
-            if !(← params.anyM (isUsed ·.fvarId)) then
-              params.forM (eraseParam ·)
-              markSimplified
-              return k
-        if alts.all (·.getCode matches .unreach ..) then
-          alts.forM (liftM <| ·.getParams.forM eraseParam)
-          markSimplified
-          return .unreach resultType
         /-
-        We considered handling a case where we drop a cases if it only has one non-unreachable
-        branch and doesn't rely on the params of that branch here. However, this has the potential
-        to hinder reuse in later passes as we loose information about the shape of a variable. We
-        might be able to reintroduce this at a later point if we track this information different
-        from cases.
+        Note that functions in `decl` will be marked as used even if `decl` is not actually used.
+        They will only be deleted in the next pass. TODO: investigate whether this is a problem.
         -/
+        if code.isFun then
+          if decl.isEtaExpandCandidate then
+            /-
+            We must apply substitution before trying to eta-expand, otherwise `inferType` may fail.
+            -/
+            decl ← normFunDecl decl
+            /-
+            We want to eta-expand **before** trying to simplify local function declaration because
+            eta-expansion creates many optimization opportunities.
+            -/
+            decl ← decl.etaExpand
+            markSimplified
+        decl ← simpFunDecl decl
+      let k ← simp k
+      if (← isUsed decl.fvarId) then
+        if toBeInlined then
+          /-
+          `decl` was supposed to be inlined, but there are still references to it.
+          Thus, we must all variables in `decl` as used. Recall it was not eagerly simplified.
+          -/
+          markUsedFunDecl decl
+        return code.updateFun! decl k
+      else
+        /- Dead function elimination -/
+        eraseFunDecl decl
+        return k
+    | .return fvarId =>
+      withNormFVarResult (← normFVar fvarId) fun fvarId => do
+        markUsedFVar fvarId
+        return code.updateReturn! fvarId
+    | .unreach type =>
+      return code.updateUnreach! (← normExpr type)
+    | .jmp fvarId args =>
+      withNormFVarResult (← normFVar fvarId) fun fvarId => do
+        let args ← normArgs args
+        if let some code ← inlineJp? fvarId args then
+          simp code
+        else
+          markUsedFVar fvarId
+          args.forM markUsedArg
+          return code.updateJmp! fvarId args
+    | .cases c =>
+      if let some k ← simpCasesOnCtor? c then
+        return k
+      else
+        withNormFVarResult (← normFVar c.discr) fun discr => do
+          let resultType ← normExpr c.resultType
+          let alts ←
+            c.alts.mapMonoM fun alt => do
+              match alt with
+              | .alt ctorName ps k =>
+                if !(k matches .unreach ..)
+                    && (← ps.anyM fun p => isInductiveWithNoCtors p.type) then
+                  let type ← k.inferType
+                  eraseCode k
+                  markSimplified
+                  return alt.updateCode (.unreach type)
+                else
+                  withDiscrCtor discr ctorName ps do return alt.updateCode (← simp k)
+              | .default k => return alt.updateCode (← simp k)
+          let alts ← addDefaultAlt alts
+          if let #[alt] := alts then
+            match alt with
+            | .default k => return k
+            | .alt _ params k =>
+              if !(← params.anyM (isUsed ·.fvarId)) then
+                params.forM (eraseParam ·)
+                markSimplified
+                return k
+          if alts.all (·.getCode matches .unreach ..) then
+            alts.forM (liftM <| ·.getParams.forM eraseParam)
+            markSimplified
+            return .unreach resultType
+          /-
+          We considered handling a case where we drop a cases if it only has one non-unreachable
+          branch and doesn't rely on the params of that branch here. However, this has the potential
+          to hinder reuse in later passes as we loose information about the shape of a variable. We
+          might be able to reintroduce this at a later point if we track this information different
+          from cases.
+          -/
 
-        markUsedFVar discr
-        return code.updateCases! resultType discr alts
+          markUsedFVar discr
+          return code.updateCases! resultType discr alts
 end

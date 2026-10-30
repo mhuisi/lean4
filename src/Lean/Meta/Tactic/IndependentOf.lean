@@ -42,21 +42,22 @@ That is, it may return `false` when it should return `true`.
 (In particular it returns false whenever the type of `g` contains a metavariable,
 regardless of whether this is related to the metavariables in `L`.)
 -/
-def isIndependentOf (L : List MVarId) (g : MVarId) : MetaM Bool := g.withContext do
-  let t ← instantiateMVars (← g.getType)
-  if t.hasExprMVar then
-    -- If the goal's type contains other meta-variables,
-    -- we conservatively say that `g` is not independent.
-    -- It would be possible to check if `L` depends on these meta-variables.
-    return false
-  if (← inferType t).isProp then
-    -- If the goal is propositional,
-    -- proof-irrelevance ensures it is independent of any other goals.
-    return true
-  if ← g.isSubsingleton then
-    -- If the goal is a subsingleton, it is independent of any other goals.
-    return true
-  -- Finally, we check if the goal `g` appears in the type of any of the goals `L`.
-  L.allM fun g' => do pure !((← getMVarDependencies g').contains g)
+def isIndependentOf (L : List MVarId) (g : MVarId) : MetaM Bool :=
+  g.withContext do
+    let t ← instantiateMVars (← g.getType)
+    if t.hasExprMVar then
+      -- If the goal's type contains other meta-variables,
+      -- we conservatively say that `g` is not independent.
+      -- It would be possible to check if `L` depends on these meta-variables.
+      return false
+    if (← inferType t).isProp then
+      -- If the goal is propositional,
+      -- proof-irrelevance ensures it is independent of any other goals.
+      return true
+    if ← g.isSubsingleton then
+      -- If the goal is a subsingleton, it is independent of any other goals.
+      return true
+    -- Finally, we check if the goal `g` appears in the type of any of the goals `L`.
+    L.allM fun g' => do pure !((← getMVarDependencies g').contains g)
 
 end Lean.MVarId

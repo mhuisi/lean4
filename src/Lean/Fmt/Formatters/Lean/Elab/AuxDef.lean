@@ -29,5 +29,4 @@ public def fmtAuxDef : Fmt := fun
     let signature := Layouts.globalSignature (#[auxDefTk] ++ suggestions) #[] colonTk type
     let decl := Layouts.assignmentDeclaration signature colonEqTk body
     fmtDeclWithModifiers docComment? attributes? #[visibility] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

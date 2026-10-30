@@ -19,13 +19,11 @@ public def fmtDoElemReportIssue : Fmt := fun
   | `(doElem| reportIssue!%$reportTk $msg) => do
     let reportTk ← fmt reportTk
     fmtTraceTerm reportTk msg
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Meta.Sym.doElemReportDbgIssue!__]
 public def fmtDoElemReportDbgIssue : Fmt := fun
   | `(doElem| reportDbgIssue!%$reportTk $msg) => do
     let reportTk ← fmt reportTk
     fmtTraceTerm reportTk msg
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

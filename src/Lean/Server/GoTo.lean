@@ -21,23 +21,22 @@ open Lsp
 open Elab
 
 inductive GoToKind
-  | declaration | definition | type
-  deriving BEq, ToJson, FromJson
+  | declaration
+  | definition
+  | type
+deriving BEq, ToJson, FromJson
 
 def GoToKind.determineTargetExprs (kind : GoToKind) (ti : TermInfo) : MetaM (Array Expr) := do
   match kind with
   | .type =>
     let type ← instantiateMVars <| ← Meta.inferType ti.expr
-    let (_, targetExprs) ← StateT.run (s := #[]) <| type.forEach fun e =>
-      match e with
-      | .fvar ..
-      | .const .. =>
-        modify (·.push e)
-      | _ =>
-        pure ()
+    let (_, targetExprs) ←
+      StateT.run (s := #[]) <| type.forEach fun e =>
+        match e with
+        | .fvar .. | .const .. => modify (·.push e)
+        | _ => pure ()
     return targetExprs
-  | _ =>
-    return #[← instantiateMVars ti.expr]
+  | _ => return #[← instantiateMVars ti.expr]
 
 partial def getInstanceProjectionArg? (e : Expr) : MetaM (Option Expr) := do
   let some (e, projInfo) ← Meta.withReducible <| reduceToProjection? e
@@ -58,8 +57,7 @@ where
       | return none
     reduceToProjection? e
 
-def isInstanceProjection (e : Expr) : MetaM Bool := do
-  return (← getInstanceProjectionArg? e).isSome
+def isInstanceProjection (e : Expr) : MetaM Bool := do return (← getInstanceProjectionArg? e).isSome
 
 /-- Checks whether `ti1` is an instance projection info that subsumes `ti2`. -/
 def isInstanceProjectionInfoFor (kind : GoToKind) (ti1 ti2 : TermInfo) : MetaM Bool := do
@@ -73,7 +71,7 @@ def isInstanceProjectionInfoFor (kind : GoToKind) (ti1 ti2 : TermInfo) : MetaM B
     return false
   let e1 ← instantiateMVars ti1.expr
   let e2 ← instantiateMVars ti2.expr
-  if ! (← isInstanceProjection e1) || (← isInstanceProjection e2) then
+  if !(← isInstanceProjection e1) || (← isInstanceProjection e2) then
     return false
   return e1.getAppFn' == e2.getAppFn'
 
@@ -86,8 +84,7 @@ structure GoToContext where
 
 abbrev GoToM α := ReaderT GoToContext MetaM α
 
-def GoToM.run (ctx : GoToContext) (ci : ContextInfo) (lctx : LocalContext) (act : GoToM α) :
-    IO α :=
+def GoToM.run (ctx : GoToContext) (ci : ContextInfo) (lctx : LocalContext) (act : GoToM α) : IO α :=
   ci.runMetaM lctx <| ReaderT.run act ctx
 
 def locationLinksFromDecl (declName : Name) : GoToM (Array LeanLocationLink) := do
@@ -121,8 +118,7 @@ where
       let some declModUri ← documentUriFromModule? declModName
         | return none
       return some (declModName, declModUri)
-    | none =>
-      return some (ctx.doc.mod, ctx.doc.uri)
+    | none => return some (ctx.doc.mod, ctx.doc.uri)
 
 def locationLinksFromBinder (id : FVarId) : GoToM (Array LeanLocationLink) := do
   let ctx ← read
@@ -180,7 +176,7 @@ def locationLinksDefault : GoToM (Array LeanLocationLink) := do
   let mut ll := #[]
   for name in names do
     ll := ll ++ (← locationLinksFromDecl name)
-  return ll.map ({· with isDefault := true})
+  return ll.map ({ · with isDefault := true })
 where
   defaultDeclNames : GoToM (Array Name) := do
     let ctx ← read
@@ -239,17 +235,15 @@ where
   extractInstances (e : Expr) : GoToM (Array Name) := do
     match e with
     | .const declName _ =>
-      if ! (← Lean.Meta.isInstance declName) then
+      if !(← Lean.Meta.isInstance declName) then
         return #[]
       return #[declName]
     | .app fn arg =>
       let fnInstances ← extractInstances fn
       let argInstances ← extractInstances arg
       return argInstances ++ fnInstances
-    | .mdata _ e =>
-      extractInstances e
-    | _ =>
-      return #[]
+    | .mdata _ e => extractInstances e
+    | _ => return #[]
 
 def locationLinksFromTermInfo (ti : TermInfo) : GoToM (Array LeanLocationLink) := do
   let ctx ← read
@@ -258,12 +252,9 @@ def locationLinksFromTermInfo (ti : TermInfo) : GoToM (Array LeanLocationLink) :
   for expr in exprs do
     let newLL ←
       match expr.consumeMData with
-      | Expr.const n .. =>
-        locationLinksFromDecl n
-      | Expr.fvar id .. =>
-        locationLinksFromBinder id
-      | _ =>
-        locationLinksFromInstanceProjection expr
+      | Expr.const n .. => locationLinksFromDecl n
+      | Expr.fvar id .. => locationLinksFromBinder id
+      | _ => locationLinksFromInstanceProjection expr
     ll := ll ++ newLL
   return ll
 
@@ -303,12 +294,14 @@ def locationLinksFromOptionInfo (i : OptionInfo) : GoToM (Array LeanLocationLink
 
 def locationLinksFromCommandInfo (i : CommandInfo) : GoToM (Array LeanLocationLink) := do
   let ctx ← read
-  if ! (i matches ⟨`import, _⟩) || ctx.kind == .type then
+  if !(i matches ⟨`import, _⟩) || ctx.kind == .type then
     return #[]
   locationLinksFromImport i
 
-def locationLinksOfInfo (doc : DocumentMeta) (kind : GoToKind) (ictx : InfoWithCtx)
-    (infoTree? : Option InfoTree := none) : IO (Array LeanLocationLink) := do
+def locationLinksOfInfo
+    (doc : DocumentMeta) (kind : GoToKind) (ictx : InfoWithCtx)
+    (infoTree? : Option InfoTree := none)
+    : IO (Array LeanLocationLink) := do
   let ctx : GoToContext := {
     doc
     kind
@@ -319,22 +312,14 @@ def locationLinksOfInfo (doc : DocumentMeta) (kind : GoToKind) (ictx : InfoWithC
   GoToM.run ctx ictx.ctx ictx.info.lctx do
     let ll ←
       match ictx.info with
-      | .ofTermInfo ti =>
-        locationLinksFromTermInfo ti
-      | .ofDelabTermInfo dti =>
-        locationLinksFromDelabTermInfo dti
-      | .ofFieldInfo fi =>
-        locationLinksFromFieldInfo fi
-      | .ofOptionInfo oi =>
-        locationLinksFromOptionInfo oi
-      | .ofCommandInfo cci =>
-        locationLinksFromCommandInfo cci
-      | .ofErrorNameInfo eni =>
-        locationLinksFromErrorNameInfo eni
-      | .ofDocElabInfo dei =>
-        locationLinksFromDecl dei.name
-      | _ =>
-        pure #[]
+      | .ofTermInfo ti => locationLinksFromTermInfo ti
+      | .ofDelabTermInfo dti => locationLinksFromDelabTermInfo dti
+      | .ofFieldInfo fi => locationLinksFromFieldInfo fi
+      | .ofOptionInfo oi => locationLinksFromOptionInfo oi
+      | .ofCommandInfo cci => locationLinksFromCommandInfo cci
+      | .ofErrorNameInfo eni => locationLinksFromErrorNameInfo eni
+      | .ofDocElabInfo dei => locationLinksFromDecl dei.name
+      | _ => pure #[]
     if kind == .declaration || ll.isEmpty then
       return ll ++ (← locationLinksDefault)
     return ll

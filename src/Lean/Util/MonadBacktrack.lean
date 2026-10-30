@@ -16,20 +16,19 @@ namespace Lean
 
 /-- Similar to `MonadState`, but it retrieves/restores only the "backtrackable" part of the state -/
 class MonadBacktrack (s : outParam Type) (m : Type → Type) where
-  saveState    : m s
+  saveState : m s
   restoreState : s → m Unit
 
 export MonadBacktrack (saveState restoreState)
 
-/--
-Execute `x?`, but backtrack state if result is `none` or an exception was thrown.
--/
-def commitWhenSome? [Monad m] [MonadBacktrack s m] [MonadExcept ε m] (x? : m (Option α)) : m (Option α) := do
+/-- Execute `x?`, but backtrack state if result is `none` or an exception was thrown. -/
+def commitWhenSome? [Monad m] [MonadBacktrack s m] [MonadExcept ε m] (x? : m (Option α))
+    : m (Option α) := do
   let s ← saveState
   try
     match (← x?) with
     | some a => return some a
-    | none   =>
+    | none =>
       restoreState s
       return none
   catch ex =>
@@ -41,7 +40,8 @@ Execute `x?`, but backtrack state if result is `none` or an exception was thrown
 If an exception is thrown, `none` is returned.
 That is, this function is similar to `commitWhenSome?`, but swallows the exception and returns `none`.
 -/
-def commitWhenSomeNoEx? [Monad m] [MonadBacktrack s m] [MonadExcept ε m] (x? : m (Option α)) : m (Option α) :=
+def commitWhenSomeNoEx? [Monad m] [MonadBacktrack s m] [MonadExcept ε m] (x? : m (Option α))
+    : m (Option α) :=
   try
     commitWhenSome? x?
   catch _ =>
@@ -51,7 +51,7 @@ def commitWhen [Monad m] [MonadBacktrack s m] [MonadExcept ε m] (x : m Bool) : 
   let s ← saveState
   try
     match (← x) with
-    | true  => pure true
+    | true => pure true
     | false =>
       restoreState s
       pure false
@@ -83,7 +83,7 @@ def observing? [Monad m] [MonadBacktrack s m] [MonadExcept ε m] (x : m α) : m 
     return none
 
 instance [MonadBacktrack s m] [Monad m] : MonadBacktrack s (ExceptT ε m) where
-  saveState      := ExceptT.lift saveState
+  saveState := ExceptT.lift saveState
   restoreState s := ExceptT.lift <| restoreState s
 
 end Lean

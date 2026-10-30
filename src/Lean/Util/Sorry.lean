@@ -14,8 +14,7 @@ public section
 namespace Lean
 
 /-- Returns `true` if the expression is an application of `sorryAx`. -/
-def Expr.isSorry (e : Expr) : Bool :=
-  e.isAppOf ``sorryAx
+def Expr.isSorry (e : Expr) : Bool := e.isAppOf ``sorryAx
 
 /-- Returns `true` if the expression is of the form `sorryAx _ true ..`. -/
 def Expr.isSyntheticSorry (e : Expr) : Bool :=
@@ -25,14 +24,11 @@ def Expr.isSyntheticSorry (e : Expr) : Bool :=
 def Expr.isNonSyntheticSorry (e : Expr) : Bool :=
   e.isAppOf ``sorryAx && e.getAppNumArgs ≥ 2 && (e.getArg! 1).isConstOf ``Bool.false
 
-def Expr.hasSorry (e : Expr) : Bool :=
-  Option.isSome <| e.find? (·.isConstOf ``sorryAx)
+def Expr.hasSorry (e : Expr) : Bool := Option.isSome <| e.find? (·.isConstOf ``sorryAx)
 
-def Expr.hasSyntheticSorry (e : Expr) : Bool :=
-  Option.isSome <| e.find? (·.isSyntheticSorry)
+def Expr.hasSyntheticSorry (e : Expr) : Bool := Option.isSome <| e.find? (·.isSyntheticSorry)
 
-def Expr.hasNonSyntheticSorry (e : Expr) : Bool :=
-  Option.isSome <| e.find? (·.isNonSyntheticSorry)
+def Expr.hasNonSyntheticSorry (e : Expr) : Bool := Option.isSome <| e.find? (·.isNonSyntheticSorry)
 
 def Declaration.hasSorry (d : Declaration) : Bool := Id.run do
   d.foldExprM (fun r e => r || e.hasSorry) false

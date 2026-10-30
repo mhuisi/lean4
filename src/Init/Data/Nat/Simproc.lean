@@ -24,18 +24,16 @@ theorem sub_add_eq_comm (a b c : Nat) : a - (b + c) = a - c - b := by
   rw [Nat.add_comm b c]
   exact Nat.sub_add_eq a c b
 
-theorem add_sub_add_le (a c : Nat) {b d : Nat} (h : b ≤ d) : a + b - (c + d) = a - (c + (d-b)) := by
+theorem add_sub_add_le (a c : Nat) {b d : Nat} (h : b ≤ d)
+    : a + b - (c + d) = a - (c + (d - b)) := by
   induction b generalizing a c d with
-  | zero =>
-    simp
+  | zero => simp
   | succ b ind =>
     match d with
-    | 0 =>
-      contradiction
+    | 0 => contradiction
     | d + 1 =>
       have g := Nat.le_of_succ_le_succ h
-      rw [Nat.add_succ a, Nat.add_succ c, Nat.succ_sub_succ, Nat.succ_sub_succ,
-          ind _ _ g]
+      rw [Nat.add_succ a, Nat.add_succ c, Nat.succ_sub_succ, Nat.succ_sub_succ, ind _ _ g]
 
 theorem add_sub_add_ge (a c : Nat) {b d : Nat} (h : b ≥ d) : a + b - (c + d) = a + (b - d) - c := by
   rw [Nat.add_comm c d, Nat.sub_add_eq, Nat.add_sub_assoc h a]
@@ -54,11 +52,13 @@ theorem eq_add_gt (a : Nat) {b c : Nat} (h : c > a) : (a = b + c) = False := by
   rw [@Eq.comm Nat a (b + c)]
   exact add_eq_gt b h
 
-theorem add_eq_add_le (a c : Nat) {b d : Nat} (h : b ≤ d) : (a + b = c + d) = (a = c + (d - b)) := by
+theorem add_eq_add_le (a c : Nat) {b d : Nat} (h : b ≤ d)
+    : (a + b = c + d) = (a = c + (d - b)) := by
   have g : b ≤ c + d := Nat.le_trans h (le_add_left d c)
   rw [← Nat.add_sub_assoc h, @Eq.comm _ a, Nat.sub_eq_iff_eq_add g, @Eq.comm _ (a + b)]
 
-theorem add_eq_add_ge (a c : Nat) {b d : Nat} (h : b ≥ d) : (a + b = c + d) = (a + (b - d) = c) := by
+theorem add_eq_add_ge (a c : Nat) {b d : Nat} (h : b ≥ d)
+    : (a + b = c + d) = (a + (b - d) = c) := by
   rw [@Eq.comm _ (a + b) _, add_eq_add_le c a h, @Eq.comm _ _ c]
 
 theorem add_eq_le (a : Nat) {b c : Nat} (h : b ≤ c) : (a + b = c) = (a = c - b) := by
@@ -86,11 +86,13 @@ theorem bneTrueOfEqFalse {a b : Nat} (p : (a = b) = False) : (a != b) = true := 
 
 /- le proofs -/
 
-theorem add_le_add_le (a c : Nat) {b d : Nat} (h : b ≤ d) : (a + b ≤ c + d) = (a ≤ c + (d - b)) := by
+theorem add_le_add_le (a c : Nat) {b d : Nat} (h : b ≤ d)
+    : (a + b ≤ c + d) = (a ≤ c + (d - b)) := by
   rw [← Nat.add_sub_assoc h, Nat.le_sub_iff_add_le]
   exact Nat.le_trans h (le_add_left d c)
 
-theorem add_le_add_ge (a c : Nat) {b d : Nat} (h : b ≥ d) : (a + b ≤ c + d) = (a + (b - d) ≤ c) := by
+theorem add_le_add_ge (a c : Nat) {b d : Nat} (h : b ≥ d)
+    : (a + b ≤ c + d) = (a + (b - d) ≤ c) := by
   rw [← Nat.add_sub_assoc h, Nat.sub_le_iff_le_add]
 
 theorem add_le_le (a : Nat) {b c : Nat} (h : b ≤ c) : (a + b ≤ c) = (a ≤ c - b) := by

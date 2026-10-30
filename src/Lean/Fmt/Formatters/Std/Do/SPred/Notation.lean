@@ -22,8 +22,7 @@ public def fmtSPredPure : Fmt := fun
     let p ← fmt p
     let rbTk ← fmt rbTk
     return Layouts.parens lbTk p rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 open Std.Do in
 @[builtin_fmt Std.Do.«term⊢ₛ_»]
@@ -32,8 +31,7 @@ public def fmtSPredTautology : Fmt := fun
     let entailsTk ← fmt entailsTk
     let p ← fmt p
     return Layouts.prefixOperator entailsTk p .withSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_infix_fmt Std.Do.«term_⊣⊢ₛ_»]
 public def fmtSPredBientails : Fmt.InfixOperation := {

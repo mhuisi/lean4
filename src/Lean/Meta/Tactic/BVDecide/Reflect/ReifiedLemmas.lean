@@ -30,15 +30,21 @@ It assumes that `discrExpr`, `lhsExpr` and `rhsExpr` are the expressions corresp
 `lhs` and `rhs`. Furthermore it assumes that `atomExpr` is of the form
 `bif discrExpr then lhsExpr else rhsExpr`.
 -/
-public def addCondLemmas (discr : ReifiedBVLogical) (atom lhs rhs : ReifiedBVExpr)
-    (discrExpr atomExpr lhsExpr rhsExpr : Expr) : LemmaM Unit := do
-  let some trueLemma ← mkCondTrueLemma discr atom lhs discrExpr atomExpr lhsExpr rhsExpr | return ()
+public def addCondLemmas
+    (discr : ReifiedBVLogical) (atom lhs rhs : ReifiedBVExpr)
+    (discrExpr atomExpr lhsExpr rhsExpr : Expr)
+    : LemmaM Unit := do
+  let some trueLemma ← mkCondTrueLemma discr atom lhs discrExpr atomExpr lhsExpr rhsExpr
+    | return ()
   LemmaM.addLemma trueLemma
-  let some falseLemma ← mkCondFalseLemma discr atom rhs discrExpr atomExpr lhsExpr rhsExpr | return ()
+  let some falseLemma ← mkCondFalseLemma discr atom rhs discrExpr atomExpr lhsExpr rhsExpr
+    | return ()
   LemmaM.addLemma falseLemma
 where
-  mkCondTrueLemma (discr : ReifiedBVLogical) (atom lhs : ReifiedBVExpr)
-      (discrExpr atomExpr lhsExpr rhsExpr : Expr) : ReifyM (Option SatAtBVLogical) := do
+  mkCondTrueLemma
+      (discr : ReifiedBVLogical) (atom lhs : ReifiedBVExpr)
+      (discrExpr atomExpr lhsExpr rhsExpr : Expr)
+      : ReifyM (Option SatAtBVLogical) := do
     let resExpr := lhsExpr
     let resValExpr := lhs
     let lemmaName := ``Std.Tactic.BVDecide.Reflect.BitVec.cond_true
@@ -62,16 +68,14 @@ where
       -- !discr || (atom == rhs)
       let impExpr := mkApp2 (mkConst ``Bool.or) notDiscrExpr eqBVExpr
 
-      return mkApp4
-        (mkConst ``Std.Tactic.BVDecide.Reflect.Bool.lemma_congr)
-        impExpr
-        evalExpr
-        congrProof
-        lemmaProof
+      return mkApp4 (mkConst ``Std.Tactic.BVDecide.Reflect.Bool.lemma_congr) impExpr evalExpr
+        congrProof lemmaProof
     return some ⟨imp.bvExpr, proof, imp.expr⟩
 
-  mkCondFalseLemma (discr : ReifiedBVLogical) (atom rhs : ReifiedBVExpr)
-      (discrExpr atomExpr lhsExpr rhsExpr : Expr) : ReifyM (Option SatAtBVLogical) := do
+  mkCondFalseLemma
+      (discr : ReifiedBVLogical) (atom rhs : ReifiedBVExpr)
+      (discrExpr atomExpr lhsExpr rhsExpr : Expr)
+      : ReifyM (Option SatAtBVLogical) := do
     let resExpr := rhsExpr
     let resValExpr := rhs
     let lemmaName := ``Std.Tactic.BVDecide.Reflect.BitVec.cond_false
@@ -92,12 +96,8 @@ where
       -- discr || (atom == rhs)
       let impExpr := mkApp2 (mkConst ``Bool.or) discrExpr eqBVExpr
 
-      return mkApp4
-        (mkConst ``Std.Tactic.BVDecide.Reflect.Bool.lemma_congr)
-        impExpr
-        evalExpr
-        congrProof
-        lemmaProof
+      return mkApp4 (mkConst ``Std.Tactic.BVDecide.Reflect.Bool.lemma_congr) impExpr evalExpr
+        congrProof lemmaProof
     return some ⟨imp.bvExpr, proof, imp.expr⟩
 
 end Lean.Meta.Tactic.BVDecide

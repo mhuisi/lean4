@@ -29,31 +29,36 @@ public def ExcessArgsFrameInfo.new (pre : Expr) (ss : Array Expr) : MetaM Excess
   let mut frames := #[pre]
   for s in ss.reverse do
     let r := frames.back!
-    frames := frames.push <| ← withLocalDeclD `u (← Meta.inferType s) fun u => do
-      let ofp ← mkAppOptM ``Lean.Order.CompleteLattice.ofProp
-        #[← Meta.inferType r, none, ← mkEq u s]
-      mkLambdaFVars #[u] (← mkAppM ``Lean.Order.meet #[ofp, r])
+    frames :=
+      frames.push <| ← withLocalDeclD `u (← Meta.inferType s) fun u => do
+        let ofp ←
+          mkAppOptM ``Lean.Order.CompleteLattice.ofProp #[← Meta.inferType r, none, ← mkEq u s]
+        mkLambdaFVars #[u] (← mkAppM ``Lean.Order.meet #[ofp, r])
   return ⟨frames.reverse⟩
 
 /-- The frame of `pre` for all excess state arguments. -/
 public def ExcessArgsFrameInfo.frame (i : ExcessArgsFrameInfo) : Expr := i.frames[0]!
 
 /-- Turn `h : frame ⊑ X` into a proof of `pre ⊑ X s₁ … sₙ`. -/
-public def ExcessArgsFrameInfo.instantiate (i : ExcessArgsFrameInfo) (X : Expr) (ss : Array Expr)
-    (h : Expr) : MetaM Expr := do
+public def ExcessArgsFrameInfo.instantiate
+    (i : ExcessArgsFrameInfo) (X : Expr) (ss : Array Expr) (h : Expr)
+    : MetaM Expr := do
   let mut h := h
   for j in [0:ss.size] do
-    h ← mkAppM ``Lean.Order.le_apply_of_point_meet_le
-      #[ss[j]!, i.frames[j+1]!, mkAppN X (ss.take j), h]
+    h ←
+      mkAppM ``Lean.Order.le_apply_of_point_meet_le
+        #[ss[j]!, i.frames[j + 1]!, mkAppN X (ss.take j), h]
   return h
 
 /-- Turn `h : pre ⊑ X s₁ … sₙ` into a proof of `frame ⊑ X`. -/
-public def ExcessArgsFrameInfo.abstract (i : ExcessArgsFrameInfo) (X : Expr) (ss : Array Expr)
-    (h : Expr) : MetaM Expr := do
+public def ExcessArgsFrameInfo.abstract
+    (i : ExcessArgsFrameInfo) (X : Expr) (ss : Array Expr) (h : Expr)
+    : MetaM Expr := do
   let mut h := h
   for j in (List.range ss.size).reverse do
-    h ← mkAppM ``Lean.Order.point_meet_le_of_le_apply
-      #[ss[j]!, i.frames[j+1]!, mkAppN X (ss.take j), h]
+    h ←
+      mkAppM ``Lean.Order.point_meet_le_of_le_apply
+        #[ss[j]!, i.frames[j + 1]!, mkAppN X (ss.take j), h]
   return h
 
 end Lean.Elab.Tactic.VCGen

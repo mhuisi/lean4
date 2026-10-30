@@ -29,8 +29,7 @@ def mkInstHMul (w : Expr) : Expr :=
 end BitVec
 
 /-- Construct a literal of type `BitVec w`, with value `n`. -/
-def mkBitVecLit (w : Expr) (n : Nat) : Expr :=
-  mkApp2 (mkConst ``BitVec.ofNat []) w (toExpr n)
+def mkBitVecLit (w : Expr) (n : Nat) : Expr := mkApp2 (mkConst ``BitVec.ofNat []) w (toExpr n)
 
 end Expr
 
@@ -45,16 +44,20 @@ deriving BEq, Repr
 
 namespace Op
 
-/-- Given an expression of an (unapplied) operation, return the decoded `Op`.
-Return `none` if the expression is not a recognized operation. -/
+/--
+Given an expression of an (unapplied) operation, return the decoded `Op`.
+Return `none` if the expression is not a recognized operation.
+-/
 def ofExpr? (e : Expr) : Option Op :=
   match_expr e with
   | HMul.hMul bv _bv _bv _inst =>
-    let_expr BitVec w := bv | none
+    let_expr BitVec w := bv
+      | none
     some (.mul w)
   | _ => none
 
-/-- Given an *application* of a recognized binary operation (to two arguments),
+/--
+Given an *application* of a recognized binary operation (to two arguments),
 return the decoded `Op`.
 
 Return `none` if the expression is not an application of a recognized operation.
@@ -73,14 +76,16 @@ def toExpr : Op → Expr
 def neutralElement : Op → Expr
   | .mul w => mkBitVecLit w 1
 
-/-- Parse `op'` using `ofExpr?` and return true if the resulting operation is
+/--
+Parse `op'` using `ofExpr?` and return true if the resulting operation is
 of the same kind as `op` (i.e., both are multiplications).
 Returns false if `op'` fails to parse.
 
 Note that the width of the operation is *not* compared.
- -/
+-/
 def isSameKind (op : Op) (op' : Expr) : Bool := Id.run do
-  let some op' := ofExpr? op' | false
+  let some op' := ofExpr? op'
+    | false
   match op, op' with
   | .mul _, .mul _ => true
 
@@ -108,35 +113,42 @@ structure LegalVarState extends VarState where
 ```
 -/
 
-/-- A representation of an expression as a map from variable index to the number
+/--
+A representation of an expression as a map from variable index to the number
 of occurrences of the expression represented by that variable.
 
-See `CoefficientsMap.toExpr` for the explicit conversion. -/
+See `CoefficientsMap.toExpr` for the explicit conversion.
+-/
 abbrev CoefficientsMap := Std.HashMap VarIndex Nat
 
 /-! ### VarState monadic boilerplate  -/
 
-abbrev VarStateM  := StateT VarState Sym.SymM
+abbrev VarStateM := StateT VarState Sym.SymM
 
-def VarStateM.run' (x : VarStateM α) (s : VarState) : Sym.SymM α :=
-  StateT.run' x s
+def VarStateM.run' (x : VarStateM α) (s : VarState) : Sym.SymM α := StateT.run' x s
 
 /-! ### Implementation -/
 
-/-- Return the unique variable index for an expression, or `none` if the expression
+/--
+Return the unique variable index for an expression, or `none` if the expression
 is a neutral element (see `isNeutral`).
 
-Modifies the monadic state to add a new mapping, if needed. -/
+Modifies the monadic state to add a new mapping, if needed.
+-/
 def VarStateM.exprToVar (e : Expr) : VarStateM VarIndex := do
   match (← get).exprToVarIndex[e]? with
   | some idx => return idx
   | none =>
     modifyGet fun s =>
       let nextIndex := s.exprToVarIndex.size
-      (nextIndex, { s with
-        exprToVarIndex := s.exprToVarIndex.insert e nextIndex
-        varToExpr := s.varToExpr.push e
-      })
+      (
+        nextIndex,
+        {
+          s with
+          exprToVarIndex := s.exprToVarIndex.insert e nextIndex
+          varToExpr := s.varToExpr.push e
+        }
+      )
 
 /-- Return the expression that is represented by a specific variable index. -/
 def VarStateM.varToExpr (idx : VarIndex) : VarStateM Expr := do
@@ -145,10 +157,12 @@ def VarStateM.varToExpr (idx : VarIndex) : VarStateM Expr := do
     return varToExpr[idx]
   else
     throwError "internal error (this is a bug!): index {idx} out of range, \
-      the current state only has {varToExpr.size} variables:\n\n{varToExpr}"
+      the current state only has {varToExpr.size} variables:\
+      \n\
+      \n{varToExpr}"
 
-
-/-- Given a binary, associative and commutative operation `op`,
+/--
+Given a binary, associative and commutative operation `op`,
 decompose expression `e` into its variable coefficients.
 
 For example `a ⊕ b ⊕ (a ⊕ c)` will give the coefficients:
@@ -161,22 +175,21 @@ c => 1
 Any compound expression which is not an application of the given `op` will be
 abstracted away and treated as a variable (see `VarStateM.exprToVar`).
 -/
-def VarStateM.computeCoefficients (op : Op) (e : Expr) : VarStateM CoefficientsMap :=
-  go {} e
+def VarStateM.computeCoefficients (op : Op) (e : Expr) : VarStateM CoefficientsMap := go {} e
 where
   incrVar (coeff : CoefficientsMap) (e : Expr) : VarStateM CoefficientsMap := do
     let idx ← exprToVar e
     return coeff.alter idx (fun c => some <| (c.getD 0) + 1)
   go (coeff : CoefficientsMap) : Expr → VarStateM CoefficientsMap
     | e@(AC.bin op' x y) => do
-        if op.isSameKind op' then
-          let coeff ← go coeff x
-          let coeff ← go coeff y
-          return coeff
-        else
-          trace[Meta.Tactic.bv] "Found binary operation '{op'} {x} {y}', expected '{op}'.\
-            Treating as atom."
-          incrVar coeff e
+      if op.isSameKind op' then
+        let coeff ← go coeff x
+        let coeff ← go coeff y
+        return coeff
+      else
+        trace[Meta.Tactic.bv] "Found binary operation '{op'} {x} {y}', expected '{op}'.\
+          Treating as atom."
+        incrVar coeff e
     | e => incrVar coeff e
 
 structure SharedCoefficients where
@@ -184,7 +197,8 @@ structure SharedCoefficients where
   x : CoefficientsMap
   y : CoefficientsMap
 
-/-- Given two sets of coefficients `x` and `y` (computed with the same variable
+/--
+Given two sets of coefficients `x` and `y` (computed with the same variable
 mapping), extract the shared coefficients, such that `x` (resp. `y`) is the sum of
 coefficients in `common` and `x` (resp `y`) of the result.
 
@@ -197,21 +211,23 @@ def SharedCoefficients.compute (x y : CoefficientsMap) : VarStateM SharedCoeffic
   let swappedXy := x.size > y.size
   let (x, y) := if swappedXy then (y, x) else (x, y)
   -- This is O(|x|) = O(min(|x|, |y|)) as we sort by size above.
-  let common : CoefficientsMap := x.fold (init := {}) fun common idx xCnt =>
-    match y[idx]? with
-    | some yCnt => common.insert idx <| min xCnt yCnt
-    | _ => common
+  let common : CoefficientsMap :=
+    x.fold (init := {}) fun common idx xCnt =>
+      match y[idx]? with
+      | some yCnt => common.insert idx <| min xCnt yCnt
+      | _ => common
 
-  let x : CoefficientsMap := common.fold (init := x) fun x idx commonCnt =>
-    x.modify idx (fun cnt => cnt - commonCnt)
+  let x : CoefficientsMap :=
+    common.fold (init := x) fun x idx commonCnt => x.modify idx (fun cnt => cnt - commonCnt)
 
-  let y : CoefficientsMap := common.fold (init := y) fun y idx commonCnt =>
-    y.modify idx (fun cnt => cnt - commonCnt)
+  let y : CoefficientsMap :=
+    common.fold (init := y) fun y idx commonCnt => y.modify idx (fun cnt => cnt - commonCnt)
 
   let (x, y) := if swappedXy then (y, x) else (x, y)
   return { x, y, common }
 
-/-- Compute the canonical expression for a given set of coefficients.
+/--
+Compute the canonical expression for a given set of coefficients.
 Returns `none` if all coefficients are zero.
 -/
 def CoefficientsMap.toExpr (coeff : CoefficientsMap) (op : Op) : VarStateM (Option Expr) := do
@@ -223,25 +239,25 @@ def CoefficientsMap.toExpr (coeff : CoefficientsMap) (op : Op) : VarStateM (Opti
   for (var, coeff) in coeffArr do
     let expr := (← get).varToExpr[var]!
     for _ in *...coeff do
-      acc := match acc with
-      | none => expr
-      | some acc => some <| mkApp2 op.toExpr acc expr
+      acc :=
+        match acc with
+        | none => expr
+        | some acc => some <| mkApp2 op.toExpr acc expr
   return acc
 
 open VarStateM Lean.Meta Lean.Elab Term
-
 
 /--
 Given two expressions `x, y` which are equal up to associativity and commutativity,
 construct and return a proof of `x = y`.
 
-Uses `ac_rfl` internally to construct said proof. -/
+Uses `ac_rfl` internally to construct said proof.
+-/
 def proveEqualityByAC (x y : Expr) : MetaM Expr := do
   let expectedType ← mkEq x y
   let proof ← mkFreshExprMVar expectedType
   AC.rewriteUnnormalizedRefl proof.mvarId! -- invoke `ac_rfl`
   instantiateMVars proof
-
 
 /--
 Given an expression `P lhs rhs`, where `lhs, rhs : ty` and `P : $ty → $ty → _`,
@@ -258,66 +274,67 @@ See `Op.fromExpr?` to see which operations are recognized.
 Other operations are ignored, even if they are associative and commutative.
 -/
 def canonicalizeWithSharing (P : Expr) (lhs rhs : Expr) : Sym.Simp.SimpM Sym.Simp.Result := do
-  withTraceNode (collapsed := false) `Meta.Tactic.bv (fun _ => pure m!"canonicalizeWithSharing") <| do
-  trace[Meta.Tactic.bv] "Canonicalizing: {indentExpr <| mkApp2 P lhs rhs}"
+  withTraceNode (collapsed := false) `Meta.Tactic.bv (fun _ => pure m!"canonicalizeWithSharing") <|
+    do
+      trace[Meta.Tactic.bv] "Canonicalizing: {indentExpr <| mkApp2 P lhs rhs}"
 
-  let some op := Op.ofApp2? lhs |
-    trace[Meta.Tactic.bv] "Failed to recognize operation: {indentExpr lhs}"
-    return .rfl
-  let some op' := Op.ofApp2? rhs |
-    trace[Meta.Tactic.bv] "Failed to recognize operation: {indentExpr rhs}"
-    return .rfl
+      let some op := Op.ofApp2? lhs
+        | trace[Meta.Tactic.bv] "Failed to recognize operation: {indentExpr lhs}"
+          return .rfl
+      let some op' := Op.ofApp2? rhs
+        | trace[Meta.Tactic.bv] "Failed to recognize operation: {indentExpr rhs}"
+          return .rfl
 
-  -- Ignore cases where LHS and RHS ops are different.
-  if op != op' then
-    trace[Meta.Tactic.bv] "Operations mismatch:
-      the left-hand-side has operation {op}
-        {indentExpr lhs}
-      but the right-hand-side has operation {op'}
-        {indentExpr rhs}"
-    return .rfl
+      -- Ignore cases where LHS and RHS ops are different.
+      if op != op' then
+        trace[Meta.Tactic.bv] "Operations mismatch:\
+          \n      the left-hand-side has operation {op}\
+          \n        {indentExpr lhs}\
+          \n      but the right-hand-side has operation {op'}\
+          \n        {indentExpr rhs}"
+        return .rfl
 
-  trace[Meta.Tactic.bv] "Canonicalizing with respect to operation: '{op}'."
+      trace[Meta.Tactic.bv] "Canonicalizing with respect to operation: '{op}'."
 
-  VarStateM.run' (s := { op }) do
-    let lCoeff ← computeCoefficients op lhs
-    let rCoeff ← computeCoefficients op rhs
+      VarStateM.run' (s := { op }) do
+        let lCoeff ← computeCoefficients op lhs
+        let rCoeff ← computeCoefficients op rhs
 
-    let ⟨commonCoeff, lCoeff, rCoeff⟩ ← SharedCoefficients.compute lCoeff rCoeff
-    let commonExpr? : Option Expr ← commonCoeff.toExpr op
-    let lNew? : Option Expr ← lCoeff.toExpr op
-    let rNew? : Option Expr ← rCoeff.toExpr op
+        let ⟨commonCoeff, lCoeff, rCoeff⟩ ← SharedCoefficients.compute lCoeff rCoeff
+        let commonExpr? : Option Expr ← commonCoeff.toExpr op
+        let lNew? : Option Expr ← lCoeff.toExpr op
+        let rNew? : Option Expr ← rCoeff.toExpr op
 
-    -- Since `lCoeff_{old} = commonCoeff + lCoeff_{new}`, and all coefficients
-    -- of `lCoeff_{old}` are zero iff `lExpr` contains only neutral elements,
-    -- we default to `lNew` being some canonical neutral element if both
-    -- `commonExpr?` and `lNew?` are `none`.
-    let lNew := Option.merge (mkApp2 op.toExpr) commonExpr? lNew? |>.getD op.neutralElement
-    let rNew := Option.merge (mkApp2 op.toExpr) commonExpr? rNew? |>.getD op.neutralElement
+        -- Since `lCoeff_{old} = commonCoeff + lCoeff_{new}`, and all coefficients
+        -- of `lCoeff_{old}` are zero iff `lExpr` contains only neutral elements,
+        -- we default to `lNew` being some canonical neutral element if both
+        -- `commonExpr?` and `lNew?` are `none`.
+        let lNew := Option.merge (mkApp2 op.toExpr) commonExpr? lNew? |>.getD op.neutralElement
+        let rNew := Option.merge (mkApp2 op.toExpr) commonExpr? rNew? |>.getD op.neutralElement
 
-    let oldExpr := mkApp2 P lhs rhs
-    let newExpr := mkApp2 P lNew rNew
-    if oldExpr == newExpr then return .rfl
-    let proof ← proveEqualityByAC oldExpr newExpr
+        let oldExpr := mkApp2 P lhs rhs
+        let newExpr := mkApp2 P lNew rNew
+        if oldExpr == newExpr then return .rfl
+        let proof ← proveEqualityByAC oldExpr newExpr
 
-    return .step (← Sym.share newExpr) proof
+        return .step (← Sym.share newExpr) proof
 
-def bvAcNfpost : Sym.Simp.Simproc := fun e => withDoneResult do
-  match_expr e with
-  | BEq.beq ty inst lhs rhs =>
+def bvAcNfpost : Sym.Simp.Simproc := fun e =>
+  withDoneResult do
+    match_expr e with
+    | BEq.beq ty inst lhs rhs =>
       trace[Meta.Tactic.bv] "bv_ac_nf {checkEmoji} found `BEq.beq`."
       let uLvl ← getDecLevel ty
       let P := mkApp2 (.const ``BEq.beq [uLvl]) ty inst
       let out ← canonicalizeWithSharing P lhs rhs
       return out
-  | Eq ty lhs rhs =>
+    | Eq ty lhs rhs =>
       trace[Meta.Tactic.bv] "bv_ac_nf {checkEmoji} found `Eq`."
       let uLvl ← getLevel ty
       let P := mkApp (.const ``Eq [uLvl]) ty
       let out ← canonicalizeWithSharing P lhs rhs
       return out
-  | _ =>
-    return .rfl
+    | _ => return .rfl
 
 /-! ## Tactic Boilerplate -/
 
@@ -327,16 +344,11 @@ def bvAcNormalizePass : Pass where
   name := `bv_ac_nf
   run' := do
     let cfg ← PreProcessM.getConfig
-    let config := {
-      maxSteps := cfg.maxSteps
-    }
-    let methods := {
-      post := bvAcNfpost
-    }
+    let config := { maxSteps := cfg.maxSteps }
+    let methods := { post := bvAcNfpost }
 
     let goal ← PreProcessM.getTargetMVarId
-    goal.withContext do
-      PreProcessM.simpHyps .ac methods config
+    goal.withContext do PreProcessM.simpHyps .ac methods config
 
 end Normalize
 end Lean.Meta.Tactic.BVDecide

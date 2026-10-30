@@ -57,24 +57,24 @@ syntax "{" jsonField,* "}" : json
 /-- Allows to use Json syntax in a Lean file. -/
 syntax "json% " json : term
 
-
 macro_rules
-  | `(json% null)           => `(Lean.Json.null)
-  | `(json% true)           => `(Lean.Json.bool Bool.true)
-  | `(json% false)          => `(Lean.Json.bool Bool.false)
-  | `(json% $n:str)         => `(Lean.Json.str $n)
-  | `(json% $n:num)         => `(Lean.Json.num $n)
-  | `(json% $n:scientific)  => `(Lean.Json.num $n)
-  | `(json% -$n:num)        => `(Lean.Json.num (-$n))
+  | `(json% null) => `(Lean.Json.null)
+  | `(json% true) => `(Lean.Json.bool Bool.true)
+  | `(json% false) => `(Lean.Json.bool Bool.false)
+  | `(json% $n:str) => `(Lean.Json.str $n)
+  | `(json% $n:num) => `(Lean.Json.num $n)
+  | `(json% $n:scientific) => `(Lean.Json.num $n)
+  | `(json% -$n:num) => `(Lean.Json.num (-$n))
   | `(json% -$n:scientific) => `(Lean.Json.num (-$n))
-  | `(json% [$[$xs],*])     => `(Lean.Json.arr #[$[json% $xs],*])
+  | `(json% [$[$xs],*]) => `(Lean.Json.arr #[$[json% $xs],*])
   | `(json% {$[$ks:jsonIdent : $vs:json],*}) => do
-    let ks : Array (TSyntax `term) ← ks.mapM fun
-      | `(jsonIdent| $k:ident) => pure (k.getId |> toString |> quote)
-      | `(jsonIdent| $k:str)   => pure k
-      | _                     => Macro.throwUnsupported
+    let ks : Array (TSyntax `term) ←
+      ks.mapM fun
+        | `(jsonIdent| $k:ident) => pure (k.getId |> toString |> quote)
+        | `(jsonIdent| $k:str) => pure k
+        | _ => Macro.throwUnsupported
     `(Lean.Json.mkObj [$[($ks, json% $vs)],*])
-  | `(json% $stx)           =>
+  | `(json% $stx) =>
     if stx.raw.isAntiquot then
       let stx := ⟨stx.raw.getAntiquotTerm⟩
       `(Lean.toJson $stx)

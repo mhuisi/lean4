@@ -22,8 +22,7 @@ public def fmtDataTypeDecl : Fmt := fun
         $ty:term) => do
     let signature ← fmtDeclarationSignature #[dataTypeTk] none kind #[] typeAscriptionTk ty
     fmtDeclWithModifiers docComment? none #[] signature
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.builtinFacetCommand]
 public def fmtBuiltinFacetCommand : Fmt := fun
@@ -42,8 +41,7 @@ public def fmtBuiltinFacetCommand : Fmt := fun
     let signature := Layouts.globalSignature #[builtinFacetTk, facet] #[] typeAscriptionTk ns
     let decl := Layouts.assignmentDeclaration signature arrowTk ty
     fmtDeclWithModifiers docComment? none #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.facetDataDecl]
 public def fmtFacetDataDecl : Fmt := fun
@@ -52,8 +50,7 @@ public def fmtFacetDataDecl : Fmt := fun
         :%$typeAscriptionTk $ty:term) => do
     let signature ← fmtDeclarationSignature #[facetDataTk] none kind #[name] typeAscriptionTk ty
     fmtDeclWithModifiers docComment? none #[] signature
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.customDataDecl]
 public def fmtCustomDataDecl : Fmt := fun
@@ -62,8 +59,7 @@ public def fmtCustomDataDecl : Fmt := fun
         :%$typeAscriptionTk $ty:term) => do
     let signature ← fmtDeclarationSignature #[customDataTk] none pkg #[tgt] typeAscriptionTk ty
     fmtDeclWithModifiers docComment? none #[] signature
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.packageDataDecl]
 public def fmtPackageDataDecl : Fmt := fun
@@ -72,8 +68,7 @@ public def fmtPackageDataDecl : Fmt := fun
         $ty:term) => do
     let signature ← fmtDeclarationSignature #[packageDataTk] none facet #[] typeAscriptionTk ty
     fmtDeclWithModifiers docComment? none #[] signature
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.moduleDataDecl]
 public def fmtModuleDataDecl : Fmt := fun
@@ -82,8 +77,7 @@ public def fmtModuleDataDecl : Fmt := fun
         $ty:term) => do
     let signature ← fmtDeclarationSignature #[moduleDataTk] none facet #[] typeAscriptionTk ty
     fmtDeclWithModifiers docComment? none #[] signature
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.libraryDataDecl]
 public def fmtLibraryDataDecl : Fmt := fun
@@ -92,5 +86,4 @@ public def fmtLibraryDataDecl : Fmt := fun
         $ty:term) => do
     let signature ← fmtDeclarationSignature #[libraryDataTk] none facet #[] typeAscriptionTk ty
     fmtDeclWithModifiers docComment? none #[] signature
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

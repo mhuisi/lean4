@@ -19,5 +19,4 @@ public def fmtAppDelab : Fmt := fun
     let appDelabTk ← fmt appDelabTk
     let id ← fmt id
     return Layouts.pseudoApplication #[appDelabTk, id]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

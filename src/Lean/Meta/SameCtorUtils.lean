@@ -5,6 +5,7 @@ Authors: Joachim Breitner
 -/
 
 module
+
 prelude
 public import Lean.Meta.Basic
 import Lean.Meta.Transform
@@ -41,12 +42,13 @@ Tmₛ.app a arg = Tmₛ.app a_1 arg →
 Instead of checking the type of every subterm, we only need to check the type of free variables, since free variables introduced in
 the constructor may only appear in the type of other free variables introduced after them.
 -/
-public def occursOrInType (lctx : LocalContext) (e : Expr) (t : Expr) : Bool :=
-  t.find? go |>.isSome
+public def occursOrInType (lctx : LocalContext) (e : Expr) (t : Expr) : Bool := t.find? go |>.isSome
 where
   go s := Id.run do
-    let .fvar fvarId := s | s == e
-    let some decl := lctx.find? fvarId | s == e
+    let .fvar fvarId := s
+      | s == e
+    let some decl := lctx.find? fvarId
+      | s == e
     return s == e || e.occurs decl.type
 
 /--
@@ -73,8 +75,9 @@ Passes to `k`
 * the fields of the first constructor application
 * the fields of the second constructor application
 -/
-public def withSharedCtorIndices (ctor : Expr)
-    (k : Array Expr → Array Expr → Array Expr → Array Expr → MetaM α) : MetaM α := do
+public def withSharedCtorIndices
+    (ctor : Expr) (k : Array Expr → Array Expr → Array Expr → Array Expr → MetaM α)
+    : MetaM α := do
   let ctorType ← inferType ctor
   forallTelescopeReducing ctorType fun zs ctorRet => do
     let ctorRet ← whnf ctorRet
@@ -84,15 +87,13 @@ public def withSharedCtorIndices (ctor : Expr)
 
     let rec go zs2 mask todo acc := do
       match mask, todo with
-      | true::mask', z::todo' =>
-        go (zs2.push z) mask' todo' acc
-      | false::mask', _::todo' =>
+      | true :: mask', z :: todo' => go (zs2.push z) mask' todo' acc
+      | false :: mask', _ :: todo' =>
         let t ← whnfForall (← inferType (mkAppN ctor zs2))
         assert! t.isForall
         withLocalDeclD (t.bindingName!.appendAfter "'") t.bindingDomain! fun z' => do
           go (zs2.push z') mask' todo' (acc.push z')
-      | _, _ =>
-        k acc indices zs zs2
+      | _, _ => k acc indices zs zs2
 
     let mask ← occursInCtorTypeMask ctor.getAppFn.constName!
     go #[] mask.toList zs.toList zs

@@ -28,8 +28,7 @@ abbrev EligibleHeaderDecls := Std.HashMap Name EligibleDecl
 builtin_initialize eligibleHeaderDeclsMutex : Std.Mutex (Option EligibleHeaderDecls) ←
   Std.Mutex.new none
 
-def getCompletionKindForDecl (constInfo : ConstantInfo)
-    : MetaM Lsp.CompletionItemKind := do
+def getCompletionKindForDecl (constInfo : ConstantInfo) : MetaM Lsp.CompletionItemKind := do
   let env ← getEnv
   if constInfo.isCtor then
     return .constructor
@@ -45,8 +44,9 @@ def getCompletionKindForDecl (constInfo : ConstantInfo)
   else if (← isProjectionFn constInfo.name) then
     return .field
   else
-    let isFunction : Bool ← withTheReader Core.Context ({ · with maxHeartbeats := 0 }) do
-      return (← whnf constInfo.type).isForall
+    let isFunction : Bool ←
+      withTheReader Core.Context ({ · with maxHeartbeats := 0 }) do
+        return (← whnf constInfo.type).isForall
     if isFunction then
       return .function
     else
@@ -65,8 +65,7 @@ if not already cached.
 def getEligibleHeaderDecls (env : Environment) : MetaM EligibleHeaderDecls := do
   eligibleHeaderDeclsMutex.atomically do
     match ← get with
-    | some eligibleHeaderDecls =>
-      return eligibleHeaderDecls
+    | some eligibleHeaderDecls => return eligibleHeaderDecls
     | none =>
       let mut eligibleHeaderDecls : EligibleHeaderDecls := {}
       -- map₁ are the header decls
@@ -74,17 +73,15 @@ def getEligibleHeaderDecls (env : Environment) : MetaM EligibleHeaderDecls := do
         if allowCompletion env declName then
           let kind ← getCompletionKindForDecl c
           let tags ← getCompletionTagsForDecl declName
-          eligibleHeaderDecls := eligibleHeaderDecls.insert declName {
-            info := c
-            kind := pure kind
-            tags := pure tags
-          }
+          eligibleHeaderDecls :=
+            eligibleHeaderDecls.insert declName { info := c, kind := pure kind, tags := pure tags }
       set <| some eligibleHeaderDecls
       return eligibleHeaderDecls
 
 /-- Iterate over all declarations that are allowed in completion results. -/
-def forEligibleDeclsM [Monad m] [MonadEnv m] [MonadLiftT MetaM m]
-    (f : Name → EligibleDecl → m PUnit) : m PUnit := do
+def forEligibleDeclsM
+    [Monad m] [MonadEnv m] [MonadLiftT MetaM m] (f : Name → EligibleDecl → m PUnit)
+    : m PUnit := do
   let env ← getEnv
   (← getEligibleHeaderDecls env).forM f
   -- map₂ are exactly the local decls
@@ -98,9 +95,10 @@ def forEligibleDeclsM [Monad m] [MonadEnv m] [MonadLiftT MetaM m]
       }
 
 /-- Checks whether this declaration can appear in completion results. -/
-def allowCompletion (eligibleHeaderDecls : EligibleHeaderDecls) (env : Environment)
-    (declName : Name) : Bool :=
-  eligibleHeaderDecls.contains declName ||
-    env.constants.map₂.contains declName && Lean.Meta.allowCompletion env declName
+def allowCompletion
+    (eligibleHeaderDecls : EligibleHeaderDecls) (env : Environment) (declName : Name)
+    : Bool :=
+  eligibleHeaderDecls.contains declName
+    || env.constants.map₂.contains declName && Lean.Meta.allowCompletion env declName
 
 end Lean.Server.Completion

@@ -31,16 +31,14 @@ public def fmtEnsureEvalTermInstance : Fmt := fun
   | `(Lean.Elab.ConfigEval.ensureEvalTermInstance|
       $[$visibility?:visibility]? $attrKind:attrKind ensure_eval_term_instance%$keywordTk $type:term) =>
     fmtEnsureEvalInstance visibility? attrKind keywordTk type
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Elab.ConfigEval.ensureEvalExprInstance]
 public def fmtEnsureEvalExprInstance : Fmt := fun
   | `(Lean.Elab.ConfigEval.ensureEvalExprInstance|
       $[$visibility?:visibility]? $attrKind:attrKind ensure_eval_expr_instance%$keywordTk $type:term) =>
     fmtEnsureEvalInstance visibility? attrKind keywordTk type
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Elab.ConfigEval.ensureEvalTermExprInstances]
 public def fmtEnsureEvalTermExprInstances : Fmt := fun
@@ -48,8 +46,7 @@ public def fmtEnsureEvalTermExprInstances : Fmt := fun
       $[$visibility?:visibility]? $attrKind:attrKind
       ensure_eval_term_expr_instances%$keywordTk $type:term) =>
     fmtEnsureEvalInstance visibility? attrKind keywordTk type
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Elab.ConfigEval.deriveEvalExprUsingMeta]
 public def fmtDeriveEvalExprUsingMeta : Fmt := fun
@@ -57,8 +54,7 @@ public def fmtDeriveEvalExprUsingMeta : Fmt := fun
       $[$visibility?:visibility]? $attrKind:attrKind
       derive_eval_expr_instance_using_meta_eval%$keywordTk $type:term) =>
     fmtEnsureEvalInstance visibility? attrKind keywordTk type
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Elab.ConfigEval.configEntryOmit]
 public def fmtConfigEntryOmit : Fmt := fun
@@ -66,8 +62,7 @@ public def fmtConfigEntryOmit : Fmt := fun
     let omitTk ← fmt omitTk
     let fields ← fmtTSepArray fields
     return Layouts.keywordPrefixedSepFill omitTk fields .nonSticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Elab.ConfigEval.configEntryHandlerKeyPrefix]
 public def fmtConfigEntryHandlerKeyPrefix : Fmt := fun
@@ -76,8 +71,7 @@ public def fmtConfigEntryHandlerKeyPrefix : Fmt := fun
     let dotTk? ← fmt? dotTk?
     let starTk? ← fmt? starTk?
     return Layouts.atomic #[key, dotTk?, starTk?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Elab.ConfigEval.configEntryHandlerKey]
 public def fmtConfigEntryHandlerKey : Fmt := fun
@@ -95,8 +89,7 @@ public def fmtConfigEntryHandler : Fmt := fun
     let handler ← fmt handler
     let signature := Layouts.pseudoApplication #[optionTk, key]
     return Layouts.assignmentDeclaration signature colonEqTk handler
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Elab.ConfigEval.configEntry]
 public def fmtConfigEntry : Fmt := fun
@@ -136,8 +129,7 @@ public def fmtDefEvalConfigItemCmd : Fmt := fun
       ]
     let decl ← fmtWithConfigEntries signature configEntries?
     fmtDeclWithModifiers docComment? none #[visibility?, attrKind] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 /-- Formats the `declare_*_config_elab` commands, which only differ in their keyword. -/
 public def fmtDeclareConfig
@@ -161,8 +153,7 @@ public def fmtDeclareCoreConfigElab : Fmt := fun
       declare_core_config_elab%$declTk $elabId:ident $structId:ident
       $[$binders:bracketedBinder]* $[$configEntries?:configEntries]?) =>
     fmtDeclareConfig docComment? visibility? declTk elabId structId binders configEntries?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Elab.ConfigEval.declareTermConfigElab]
 public def fmtDeclareTermConfigElab : Fmt := fun
@@ -171,8 +162,7 @@ public def fmtDeclareTermConfigElab : Fmt := fun
       declare_term_config_elab%$declTk $elabId:ident $structId:ident
       $[$binders:bracketedBinder]* $[$configEntries?:configEntries]?) =>
     fmtDeclareConfig docComment? visibility? declTk elabId structId binders configEntries?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Elab.ConfigEval.declareTacticConfig]
 public def fmtDeclareTacticConfig : Fmt := fun
@@ -181,8 +171,7 @@ public def fmtDeclareTacticConfig : Fmt := fun
       declare_config_elab%$declTk $elabId:ident $structId:ident
       $[$binders:bracketedBinder]* $[$configEntries?:configEntries]?) =>
     fmtDeclareConfig docComment? visibility? declTk elabId structId binders configEntries?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Elab.ConfigEval.declareCommandConfig]
 public def fmtDeclareCommandConfig : Fmt := fun
@@ -191,5 +180,4 @@ public def fmtDeclareCommandConfig : Fmt := fun
       declare_command_config_elab%$declTk $elabId:ident $structId:ident
       $[$binders:bracketedBinder]* $[$configEntries?:configEntries]?) =>
     fmtDeclareConfig docComment? visibility? declTk elabId structId binders configEntries?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

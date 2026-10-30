@@ -30,9 +30,11 @@ namespace UriEscape
 @[inline] def letterA : UInt8 := 'A'.toNat.toUInt8
 @[inline] def letterF : UInt8 := 'F'.toNat.toUInt8
 
-/-- Decode %HH escapings in the given string. Note that sometimes a consecutive
+/--
+Decode %HH escapings in the given string. Note that sometimes a consecutive
 sequence of multiple escapings can represent a utf-8 encoded sequence for
-a single unicode code point and these will also be decoded correctly. -/
+a single unicode code point and these will also be decoded correctly.
+-/
 def decodeUri (uri : String) : String := Id.run do
   let mut decoded : ByteArray := ByteArray.empty
   let rawBytes := uri.toUTF8
@@ -41,33 +43,40 @@ def decodeUri (uri : String) : String := Id.run do
   let percent := '%'.toNat.toUInt8
   while h : i < len do
     let c := rawBytes[i]
-    (decoded, i) := if h₁ : c == percent ∧ i + 1 < len then
-      let h1 := rawBytes[i + 1]
-      if let some hd1 := hexDigitToUInt8? h1 then
-        if h₂ : i + 2 < len then
-          let h2 := rawBytes[i + 2]
-          if let some hd2 := hexDigitToUInt8? h2 then
-            -- decode the hex digits into a byte.
-            (decoded.push (hd1 * 16 + hd2), i + 3)
+    (decoded, i) :=
+      if h₁ : c == percent ∧ i + 1 < len then
+        let h1 := rawBytes[i + 1]
+        if let some hd1 := hexDigitToUInt8? h1 then
+          if h₂ : i + 2 < len then
+            let h2 := rawBytes[i + 2]
+            if let some hd2 := hexDigitToUInt8? h2 then
+              -- decode the hex digits into a byte.
+              (decoded.push (hd1 * 16 + hd2), i + 3)
+            else
+              -- not a valid second hex digit so keep the original bytes
+              (((decoded.push c).push h1).push h2, i + 3)
           else
-            -- not a valid second hex digit so keep the original bytes
-            (((decoded.push c).push h1).push h2, i + 3)
+            -- hit end of string, there is no h2.
+            ((decoded.push c).push h1, i + 2)
         else
-          -- hit end of string, there is no h2.
+          -- not a valid hex digit so keep the original bytes
           ((decoded.push c).push h1, i + 2)
       else
-        -- not a valid hex digit so keep the original bytes
-        ((decoded.push c).push h1, i + 2)
-    else
-      (decoded.push c, i + 1)
+        (decoded.push c, i + 1)
   return String.fromUTF8! decoded
-where hexDigitToUInt8? (c : UInt8) : Option UInt8 :=
-  if zero ≤ c ∧ c ≤ nine then some (c - zero)
-  else if lettera ≤ c ∧ c ≤ letterf then some (c - lettera + 10)
-  else if letterA ≤ c ∧ c ≤ letterF then some (c - letterA + 10)
-  else none
+where
+  hexDigitToUInt8? (c : UInt8) : Option UInt8 :=
+    if zero ≤ c ∧ c ≤ nine then
+      some (c - zero)
+    else if lettera ≤ c ∧ c ≤ letterf then
+      some (c - lettera + 10)
+    else if letterA ≤ c ∧ c ≤ letterF then
+      some (c - letterA + 10)
+    else
+      none
 
-def rfc3986ReservedChars : List Char := [ ';', ':', '?', '#', '[', ']', '@', '&', '=', '+', '$', ',', '!', '\'', '(', ')', '*', '%', ' ' ]
+def rfc3986ReservedChars : List Char :=
+  [';', ':', '?', '#', '[', ']', '@', '&', '=', '+', '$', ',', '!', '\'', '(', ')', '*', '%', ' ']
 
 def uriEscapeAsciiChar (c : Char) : String :=
   if rfc3986ReservedChars.contains c || c < ' ' then
@@ -78,21 +87,22 @@ def uriEscapeAsciiChar (c : Char) : String :=
     c.toString.toUTF8.foldl (fun s b => s ++ "%" ++ (uInt8ToHex b)) ""
 where
   uInt8ToHex (c : UInt8) : String :=
-    let d2 := c / 16;
-    let d1 := c % 16;
+    let d2 := c / 16
+    let d1 := c % 16
     (hexDigitRepr d2.toNat ++ hexDigitRepr d1.toNat).toUpper
 end UriEscape
 
 /-- Replaces special characters in the given Uri with %HH Uri escapings. -/
-def escapeUri (uri: String) : String :=
+def escapeUri (uri : String) : String :=
   uri.foldl (fun s c => s ++ UriEscape.uriEscapeAsciiChar c) ""
 
-/-- Replaces all %HH Uri escapings in the given string with their
+/--
+Replaces all %HH Uri escapings in the given string with their
 corresponding unicode code points.  Note that sometimes a consecutive
 sequence of multiple escapings can represent a utf-8 encoded sequence for
-a single unicode code point and these will also be decoded correctly. -/
-def unescapeUri (s: String) : String :=
-  UriEscape.decodeUri s
+a single unicode code point and these will also be decoded correctly.
+-/
+def unescapeUri (s : String) : String := UriEscape.decodeUri s
 
 private def normalizeDriveLetter (uri : String) : String :=
   -- lower-case drive letters seem to be preferred in URIs
@@ -116,11 +126,14 @@ private def normalizeDriveExpression (p : String.Slice) : String :=
   | ['/', driveLetter, ':'] =>
     if driveLetter.isAlpha then
       (p.drop 1).copy.capitalize
-    else p.copy
+    else
+      p.copy
   | _ => p.copy
 
-/-- Convert the given uri to a FilePath stripping the 'file://' prefix,
-ignoring the optional host name. -/
+/--
+Convert the given uri to a FilePath stripping the 'file://' prefix,
+ignoring the optional host name.
+-/
 def fileUriToPath? (uri : String) : Option System.FilePath :=
   match (unescapeUri uri).dropPrefix? "file://" with
   | none => none

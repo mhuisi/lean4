@@ -34,7 +34,8 @@ def divCore (spec : Format) (m₁ : Nat) (e₁ : Int) (m₂ : Nat) (e₂ : Int) 
   -- Strategy: decrease the exponent here far enough so that we definitely get enough bits in the
   -- quotient `m / m₂`. We take the `min` because we don't want to increase the exponent; this happens
   -- later in the rounding step.
-  let targetExponent := min (e₁ - e₂) (spec.targetExponent (totalExponent m₁ e₁ - totalExponent m₂ e₂))
+  let targetExponent :=
+    min (e₁ - e₂) (spec.targetExponent (totalExponent m₁ e₁ - totalExponent m₂ e₂))
   let shiftAmount := (e₁ - e₂ - targetExponent).toNat
   let m := m₁ <<< shiftAmount
   (m / m₂, targetExponent, accuracyOfFraction (m % m₂) m₂)

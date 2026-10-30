@@ -14,12 +14,12 @@ namespace Lean
 
 structure NameGenerator where
   namePrefix : Name := `_uniq
-  idx        : Nat  := 1
-  deriving Inhabited
+  idx : Nat := 1
+deriving Inhabited
 
 /-- Syntax objects for a Lean module. -/
 structure Module where
-  header   : Syntax
+  header : Syntax
   commands : Array Syntax
 
 namespace Meta
@@ -113,15 +113,21 @@ See also: `ReducibilityStatus`, `backward.isDefEq.respectTransparency`,
 inductive TransparencyMode where
   /-- Unfolds all constants, even those tagged as `@[irreducible]`. -/
   | all
-  /-- Unfolds all constants except those tagged as `@[irreducible]`. Used for type checking
-  user-written terms where we expect the input to be correct and want to try hard. -/
+  /--
+  Unfolds all constants except those tagged as `@[irreducible]`. Used for type checking
+  user-written terms where we expect the input to be correct and want to try hard.
+  -/
   | default
-  /-- Unfolds only constants tagged with the `@[reducible]` attribute. Used for speculative
+  /--
+  Unfolds only constants tagged with the `@[reducible]` attribute. Used for speculative
   `isDefEq` in proof automation (`simp`, `rw`, type class resolution) where most checks fail
-  and we must not try too hard. -/
+  and we must not try too hard.
+  -/
   | reducible
-  /-- Unfolds reducible constants and constants tagged with `@[instance_reducible]` (e.g. type
-  class instances). Does *not* unfold `[implicit_reducible]`. -/
+  /--
+  Unfolds reducible constants and constants tagged with `@[instance_reducible]` (e.g. type
+  class instances). Does *not* unfold `[implicit_reducible]`.
+  -/
   | instances
   /-- Do not unfold anything. -/
   | none
@@ -130,7 +136,7 @@ inductive TransparencyMode where
   Used for checking definitional equality of implicit and instance-implicit arguments.
   -/
   | implicit
-  deriving Inhabited, BEq
+deriving Inhabited, BEq
 
 /-- Which structure types should eta be used with? -/
 inductive EtaStructMode where
@@ -140,7 +146,7 @@ inductive EtaStructMode where
   | notClasses
   /-- Disable eta for structures and classes. -/
   | none
-  deriving Inhabited, BEq
+deriving Inhabited, BEq
 
 namespace DSimp
 
@@ -158,61 +164,57 @@ structure Config where
   If `zetaHave` is `false` then `have` expressions are not zeta reduced.
   See also `zetaDelta`.
   -/
-  zeta              : Bool := true
+  zeta : Bool := true
   /--
   When `true` (default: `true`), performs beta reduction of applications of `fun` expressions.
   That is, `(fun x => e[x]) v` reduces to `e[v]`.
   -/
-  beta              : Bool := true
+  beta : Bool := true
   /--
   TODO (currently unimplemented). When `true` (default: `true`), performs eta reduction for `fun` expressions.
   That is, `(fun x => f x)` reduces to `f`.
   -/
-  eta               : Bool := true
+  eta : Bool := true
   /--
   Configures how to determine definitional equality between two structure instances.
   See documentation for `Lean.Meta.EtaStructMode`.
   -/
-  etaStruct         : EtaStructMode := .all
-  /--
-  When `true` (default: `true`), reduces `match` expressions applied to constructors.
-  -/
-  iota              : Bool := true
-  /--
-  When `true` (default: `true`), reduces projections of structure constructors.
-  -/
-  proj              : Bool := true
+  etaStruct : EtaStructMode := .all
+  /-- When `true` (default: `true`), reduces `match` expressions applied to constructors. -/
+  iota : Bool := true
+  /-- When `true` (default: `true`), reduces projections of structure constructors. -/
+  proj : Bool := true
   /--
   When `true` (default: `false`), rewrites a proposition `p` to `True` or `False` by inferring
   a `Decidable p` instance and reducing it.
   -/
-  decide            : Bool := false
+  decide : Bool := false
   /--
   When `true` (default: `false`), unfolds applications of functions defined by pattern matching, when one of the patterns applies.
   This can be enabled using the `simp!` syntax.
   -/
-  autoUnfold        : Bool := false
+  autoUnfold : Bool := false
   /--
   If `failIfUnchanged` is `true` (default: `true`), then calls to `simp`, `dsimp`, or `simp_all`
   will fail if they do not make progress.
   -/
-  failIfUnchanged   : Bool := true
+  failIfUnchanged : Bool := true
   /--
   If `unfoldPartialApp` is `true` (default: `false`), then calls to `simp`, `dsimp`, or `simp_all`
   will unfold even partial applications of `f` when we request `f` to be unfolded.
   -/
-  unfoldPartialApp  : Bool := false
+  unfoldPartialApp : Bool := false
   /--
   When `true` (default: `false`), local definitions are unfolded.
   That is, given a local context containing `x : t := e`, then the free variable `x` reduces to `e`.
   Otherwise, `x` must be provided as a `simp` argument.
   -/
-  zetaDelta         : Bool := false
+  zetaDelta : Bool := false
   /--
   When `index` (default : `true`) is `false`, `simp` will only use the root symbol
   to find candidate `simp` theorems. It approximates Lean 3 `simp` behavior.
   -/
-  index             : Bool := true
+  index : Bool := true
   /--
   When `true` (default : `true`), then `simp` will remove unused `let` and `have` expressions:
   `let x := v; e` simplifies to `e` when `x` does not occur in `e`.
@@ -234,14 +236,13 @@ structure Config where
   If option `backward.dsimp.instances` is `true`, it overrides this field.
   -/
   instances : Bool := false
-  deriving Inhabited, BEq
+deriving Inhabited, BEq
 
 end DSimp
 
 namespace Simp
 
-@[inline, expose]
-def defaultMaxSteps := 100000
+@[inline, expose] def defaultMaxSteps := 100000
 
 /--
 The configuration for `simp`.
@@ -254,103 +255,99 @@ structure Config where
   The maximum number of subexpressions to visit when performing simplification.
   The default is 100000.
   -/
-  maxSteps          : Nat  := defaultMaxSteps
+  maxSteps : Nat := defaultMaxSteps
   /--
   When simp discharges side conditions for conditional lemmas, it can recursively apply simplification.
   The `maxDischargeDepth` (default: 2) is the maximum recursion depth when recursively applying simplification to side conditions.
   -/
-  maxDischargeDepth : Nat  := 2
+  maxDischargeDepth : Nat := 2
   /--
   When `contextual` is true (default: `false`) and simplification encounters an implication `p → q`
   it includes `p` as an additional simp lemma when simplifying `q`.
   -/
-  contextual        : Bool := false
+  contextual : Bool := false
   /--
   When true (default: `true`) then the simplifier caches the result of simplifying each sub-expression, if possible.
   -/
-  memoize           : Bool := true
+  memoize : Bool := true
   /--
   When `singlePass` is `true` (default: `false`), the simplifier runs through a single round of simplification,
   which consists of running pre-methods, recursing using congruence lemmas, and then running post-methods.
   Otherwise, when it is `false`, it iteratively applies this simplification procedure.
   -/
-  singlePass        : Bool := false
+  singlePass : Bool := false
   /--
   When `true` (default: `true`), performs zeta reduction of `let` and `have` expressions.
   That is, `let x := v; e[x]` reduces to `e[v]`.
   If `zetaHave` is `false` then `have` expressions are not zeta reduced.
   See also `zetaDelta`.
   -/
-  zeta              : Bool := true
+  zeta : Bool := true
   /--
   When `true` (default: `true`), performs beta reduction of applications of `fun` expressions.
   That is, `(fun x => e[x]) v` reduces to `e[v]`.
   -/
-  beta              : Bool := true
+  beta : Bool := true
   /--
   TODO (currently unimplemented). When `true` (default: `true`), performs eta reduction for `fun` expressions.
   That is, `(fun x => f x)` reduces to `f`.
   -/
-  eta               : Bool := true
+  eta : Bool := true
   /--
   Configures how to determine definitional equality between two structure instances.
   See documentation for `Lean.Meta.EtaStructMode`.
   -/
-  etaStruct         : EtaStructMode := .all
-  /--
-  When `true` (default: `true`), reduces `match` expressions applied to constructors.
-  -/
-  iota              : Bool := true
-  /--
-  When `true` (default: `true`), reduces projections of structure constructors.
-  -/
-  proj              : Bool := true
+  etaStruct : EtaStructMode := .all
+  /-- When `true` (default: `true`), reduces `match` expressions applied to constructors. -/
+  iota : Bool := true
+  /-- When `true` (default: `true`), reduces projections of structure constructors. -/
+  proj : Bool := true
   /--
   When `true` (default: `false`), rewrites a proposition `p` to `True` or `False` by inferring
   a `Decidable p` instance and reducing it.
   -/
-  decide            : Bool := false
-  /--  When `true` (default: `false`), simplifies simple arithmetic expressions. -/
-  arith             : Bool := false
+  decide : Bool := false
+  /-- When `true` (default: `false`), simplifies simple arithmetic expressions. -/
+  arith : Bool := false
   /--
   When `true` (default: `false`), unfolds applications of functions defined by pattern matching, when one of the patterns applies.
   This can be enabled using the `simp!` syntax.
   -/
-  autoUnfold        : Bool := false
+  autoUnfold : Bool := false
   /--
   When `true` (default: `true`) then switches to `dsimp` on dependent arguments
   if there is no congruence theorem that would allow `simp` to visit them.
   When `dsimp` is `false`, then the argument is not visited.
   -/
-  dsimp             : Bool := true
+  dsimp : Bool := true
   /--
   If `failIfUnchanged` is `true` (default: `true`), then calls to `simp`, `dsimp`, or `simp_all`
   will fail if they do not make progress.
   -/
-  failIfUnchanged   : Bool := true
+  failIfUnchanged : Bool := true
   /--
   If `ground` is `true` (default: `false`), then ground terms are reduced.
   A term is ground when it does not contain free or meta variables.
   Reduction is interrupted at a function application `f ...` if `f` is marked to not be unfolded.
   Ground term reduction applies `@[seval]` lemmas.
   -/
-  ground            : Bool := false
+  ground : Bool := false
   /--
   If `unfoldPartialApp` is `true` (default: `false`), then calls to `simp`, `dsimp`, or `simp_all`
   will unfold even partial applications of `f` when we request `f` to be unfolded.
   -/
-  unfoldPartialApp  : Bool := false
+  unfoldPartialApp : Bool := false
   /--
   When `true` (default: `false`), local definitions are unfolded.
   That is, given a local context containing `x : t := e`, then the free variable `x` reduces to `e`.
   Otherwise, `x` must be provided as a `simp` argument.
   -/
-  zetaDelta         : Bool := false
+  zetaDelta : Bool := false
   /--
   When `index` (default : `true`) is `false`, `simp` will only use the root symbol
   to find candidate `simp` theorems. It approximates Lean 3 `simp` behavior.
   -/
-  index             : Bool := true
+  index : Bool := true
   /--
   If `implicitDefEqProofs := true`, `simp` does not create proof terms when the
   input and output terms are definitionally equal.
@@ -415,7 +412,7 @@ structure Config where
   If option `backward.dsimp.instances` is `true`, it overrides this field.
   -/
   instances : Bool := false
-  deriving Inhabited, BEq
+deriving Inhabited, BEq
 
 -- Configuration object for `simp_all`
 structure ConfigCtx extends Config where
@@ -424,27 +421,28 @@ structure ConfigCtx extends Config where
 /--
 A neutral configuration for `simp`, turning off all reductions and other built-in simplifications.
 -/
-@[expose] def neutralConfig : Simp.Config := {
-  zeta              := false
-  beta              := false
-  eta               := false
-  iota              := false
-  proj              := false
-  decide            := false
-  arith             := false
-  autoUnfold        := false
-  ground            := false
-  zetaDelta         := false
-  zetaUnused        := false
-  letToHave         := false
+@[expose]
+def neutralConfig : Simp.Config := {
+  zeta := false
+  beta := false
+  eta := false
+  iota := false
+  proj := false
+  decide := false
+  arith := false
+  autoUnfold := false
+  ground := false
+  zetaDelta := false
+  zetaUnused := false
+  letToHave := false
 }
 
 structure NormCastConfig extends Simp.Config where
-    zeta := false
-    beta := false
-    eta  := false
-    proj := false
-    iota := false
+  zeta := false
+  beta := false
+  eta := false
+  proj := false
+  iota := false
 
 end Simp
 
@@ -456,46 +454,58 @@ inductive Occurrences where
   | pos (idxs : List Nat)
   /-- A list of indices for which occurrences should not be rewritten. -/
   | neg (idxs : List Nat)
-  deriving Inhabited, BEq
+deriving Inhabited, BEq
 
 instance : Coe (List Nat) Occurrences := ⟨.pos⟩
 
-/--
-Configuration for the `extract_lets` tactic.
--/
+/-- Configuration for the `extract_lets` tactic. -/
 structure ExtractLetsConfig where
-  /-- If true (default: false), extract lets from subterms that are proofs.
-  Top-level lets are always extracted. -/
+  /--
+  If true (default: false), extract lets from subterms that are proofs.
+  Top-level lets are always extracted.
+  -/
   proofs : Bool := false
-  /-- If true (default: true), extract lets from subterms that are types.
-  Top-level lets are always extracted. -/
+  /--
+  If true (default: true), extract lets from subterms that are types.
+  Top-level lets are always extracted.
+  -/
   types : Bool := true
   /-- If true (default: false), extract lets from subterms that are implicit arguments. -/
   implicits : Bool := false
-  /-- If false (default: true), extracts only top-level lets, otherwise allows descending into subterms.
+  /--
+  If false (default: true), extracts only top-level lets, otherwise allows descending into subterms.
   When false, `proofs` and `types` are ignored, and lets appearing in the types or values of the
-  top-level lets are not themselves extracted. -/
+  top-level lets are not themselves extracted.
+  -/
   descend : Bool := true
-  /-- If true (default: true), descend into forall/lambda/let bodies when extracting. Only relevant when `descend` is true. -/
+  /--
+  If true (default: true), descend into forall/lambda/let bodies when extracting. Only relevant when `descend` is true.
+  -/
   underBinder : Bool := true
   /-- If true (default: false), eliminate unused lets rather than extract them. -/
   usedOnly : Bool := false
-  /-- If true (default: true), reuse local declarations that have syntactically equal values.
-  Note that even when false, the caching strategy for `extract_lets` may result in fewer extracted let bindings than expected. -/
+  /--
+  If true (default: true), reuse local declarations that have syntactically equal values.
+  Note that even when false, the caching strategy for `extract_lets` may result in fewer extracted let bindings than expected.
+  -/
   merge : Bool := true
-  /-- When merging is enabled, if true (default: true), make use of pre-existing local definitions in the local context. -/
+  /--
+  When merging is enabled, if true (default: true), make use of pre-existing local definitions in the local context.
+  -/
   useContext : Bool := true
-  /-- If true (default: false), then once `givenNames` is exhausted, stop extracting lets. Otherwise continue extracting lets. -/
+  /--
+  If true (default: false), then once `givenNames` is exhausted, stop extracting lets. Otherwise continue extracting lets.
+  -/
   onlyGivenNames : Bool := false
-  /-- If true (default: false), then when no name is provided for a 'let' expression, the name is used as-is without making it be inaccessible.
-  The name still might be inaccessible if the binder name was. -/
+  /--
+  If true (default: false), then when no name is provided for a 'let' expression, the name is used as-is without making it be inaccessible.
+  The name still might be inaccessible if the binder name was.
+  -/
   preserveBinderNames : Bool := false
   /-- If true (default: false), lift non-extractable `let`s as far out as possible. -/
   lift : Bool := false
 
-/--
-Configuration for the `lift_lets` tactic.
--/
+/-- Configuration for the `lift_lets` tactic. -/
 structure LiftLetsConfig extends ExtractLetsConfig where
   lift := true
   preserveBinderNames := true
@@ -511,8 +521,10 @@ structure ReduceConfig where
   implicits : Bool := false
   /-- Transparency mode for reduction. Default: `all`. -/
   transparency : TransparencyMode := .all
-  /-- Use "smart unfolding" when reducing definitions, to ensure the primitive recursors
-  are not exposed. Default: `false`. -/
+  /--
+  Use "smart unfolding" when reducing definitions, to ensure the primitive recursors
+  are not exposed. Default: `false`.
+  -/
   smartUnfolding : Bool := false
   /-- Typecheck the elaborated term before reducing. Default: `true`. -/
   check : Bool := true

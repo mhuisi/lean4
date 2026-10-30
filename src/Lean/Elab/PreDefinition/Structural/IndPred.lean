@@ -25,16 +25,21 @@ def andProj (i n : Nat) (e : Expr) : Expr :=
   | i + 1, k + 1 => andProj i k (.proj ``And 1 e)
   | _, _ => e
 
-def replaceIndPredRecApp (recArgInfo : RecArgInfo) (ctx : RecursionContext) (fidx : Nat)
-    (positions : Positions) (e : Expr) (args : Array Expr) : MetaM Expr := do
-  let some recArg := args[recArgInfo.recArgPos]? |
-    throwError "insufficient number of parameters at recursive application {indentExpr e}"
+def replaceIndPredRecApp
+    (recArgInfo : RecArgInfo) (ctx : RecursionContext) (fidx : Nat) (positions : Positions)
+    (e : Expr) (args : Array Expr)
+    : MetaM Expr := do
+  let some recArg := args[recArgInfo.recArgPos]?
+    | throwError "insufficient number of parameters at recursive application {indentExpr e}"
   let recArg ← whnfCore recArg
   let fail {α} : MetaM α := do throwError "failed to eliminate recursive application{indentExpr e}"
-  let .fvar recVar := recArg.getAppFn | fail
-  let some (motiveIdx, e) := ctx.motives.get? recVar | fail
+  let .fvar recVar := recArg.getAppFn
+    | fail
+  let some (motiveIdx, e) := ctx.motives.get? recVar
+    | fail
   let recApp := mkAppN e recArg.getAppArgs
-  let some pos := positions[motiveIdx]!.idxOf? fidx | fail
+  let some pos := positions[motiveIdx]!.idxOf? fidx
+    | fail
   let mut ys := #[]
   for h : i in *...args.size do
     unless recArgInfo.indicesPos.contains i || i == recArgInfo.recArgPos do
@@ -46,12 +51,15 @@ def replaceIndPredRecApp (recArgInfo : RecArgInfo) (ctx : RecursionContext) (fid
 /-- Monad for inductive predicate recursion that accumulates matcher creation side-effects. -/
 abbrev IndPredM := StateRefT (Array (MetaM Unit)) MetaM
 
-partial def replaceIndPredRecApps (recArgInfos : Array RecArgInfo) (positions : Positions)
-    (params : Array Expr) (ctx : RecursionContext) (e : Expr) : IndPredM Expr := do
+partial def replaceIndPredRecApps
+    (recArgInfos : Array RecArgInfo) (positions : Positions) (params : Array Expr)
+    (ctx : RecursionContext) (e : Expr)
+    : IndPredM Expr := do
   let recFnNames := recArgInfos.map (·.fnName)
   let containsRecFn (e : Expr) : StateRefT (HasConstCache recFnNames) IndPredM Bool :=
     modifyGet (·.contains e)
-  let rec loop (ctx : RecursionContext) (e : Expr) : StateRefT (HasConstCache recFnNames) IndPredM Expr := do
+  let rec loop (ctx : RecursionContext) (e : Expr)
+      : StateRefT (HasConstCache recFnNames) IndPredM Expr := do
     unless ← containsRecFn e do
       return e
     match e with
@@ -69,7 +77,8 @@ partial def replaceIndPredRecApps (recArgInfos : Array RecArgInfo) (positions : 
         withRef stx <| loop ctx b
       else
         return e.updateMData! (← loop ctx b)
-    | .proj _ _ e' => return e.updateProj! (← loop ctx e')
+    | .proj _ _ e' =>
+      return e.updateProj! (← loop ctx e')
     | .app _ _ =>
       let processApp (e : Expr) : StateRefT (HasConstCache recFnNames) IndPredM Expr := do
         e.withApp fun f args => do
@@ -78,14 +87,16 @@ partial def replaceIndPredRecApps (recArgInfos : Array RecArgInfo) (positions : 
             if let some fidx := recFnNames.idxOf? c then
               return ← replaceIndPredRecApp recArgInfos[fidx]! ctx fidx positions e args
           return mkAppN (← loop ctx f) args
-      let some matcherApp ← matchMatcherApp? e | processApp e
-      if recArgInfos.all (fun i => !recArgHasLooseBVarsAt i.fnName i.recArgPos e) then
+      let some matcherApp ← matchMatcherApp? e
+        | processApp e
+      if recArgInfos.all (fun i => ! recArgHasLooseBVarsAt i.fnName i.recArgPos e) then
         return ← processApp e
-      trace[Elab.definition.structural] "matcherApp before adding below transformation:\n{matcherApp.toExpr}"
+      trace[Elab.definition.structural] "matcherApp before adding below transformation:\
+        \n{matcherApp.toExpr}"
       let nrealParams := recArgInfos[0]!.indGroupInst.params.size
-      let matcherResult ← controlAt MetaM fun g =>
-        IndPredBelow.mkBelowMatcher matcherApp params nrealParams ctx fun ctx e =>
-          g (loop ctx e)
+      let matcherResult ←
+        controlAt MetaM fun g =>
+          IndPredBelow.mkBelowMatcher matcherApp params nrealParams ctx fun ctx e => g (loop ctx e)
       if let some (newApp, addMatcher) := matcherResult then
         modifyThe (Array (MetaM Unit)) (·.push addMatcher)
         processApp newApp -- recursive applications may still be hidden in e.g. the discriminants
@@ -102,8 +113,7 @@ partial def replaceIndPredRecApps (recArgInfos : Array RecArgInfo) (positions : 
 Turns `fun a b => x` into `let funType := fun a b => α` (where `x : α`).
 The continuation is the called with all `funType`s corresponding to the values.
 -/
-public def withFunTypes (values : Array Expr) (k : Array Expr → MetaM α) : MetaM α := do
-  go 0 #[]
+public def withFunTypes (values : Array Expr) (k : Array Expr → MetaM α) : MetaM α := do go 0 #[]
 where
   go (i : Nat) (res : Array Expr) : MetaM α :=
     if h : i < values.size then
@@ -136,9 +146,10 @@ uses of the `below` induction hypothesis.
 Returns the functional argument and any matchers that were created as side effects.
 The matchers are created inside `withoutModifyingEnv` and need to be replayed afterwards.
 -/
-public def mkIndPredBRecOnF (recArgInfos : Array RecArgInfo) (positions : Positions)
-    (recArgInfo : RecArgInfo) (value : Expr) (FType : Expr) (params : Array Expr) :
-    MetaM (Expr × Array (MetaM Unit)) := do
+public def mkIndPredBRecOnF
+    (recArgInfos : Array RecArgInfo) (positions : Positions) (recArgInfo : RecArgInfo)
+    (value : Expr) (FType : Expr) (params : Array Expr)
+    : MetaM (Expr × Array (MetaM Unit)) := do
   lambdaTelescope value fun xs value => do
     let (indicesMajorArgs, otherArgs) := recArgInfo.pickIndicesMajor xs
     let FType ← instantiateForall FType indicesMajorArgs
@@ -149,8 +160,10 @@ public def mkIndPredBRecOnF (recArgInfos : Array RecArgInfo) (positions : Positi
         belows := .insert {} indicesMajorArgs.back!.fvarId! (belowName, below)
         motives := {}
       }
-      let (valueNew, matchers) ← (withDeclNameForAuxNaming recArgInfo.fnName <|
-        replaceIndPredRecApps recArgInfos positions params ctx value).run #[]
+      let (valueNew, matchers) ←
+        (withDeclNameForAuxNaming recArgInfo.fnName <|
+            replaceIndPredRecApps recArgInfos positions params ctx value).run
+          #[]
       let expr ← mkLambdaFVars (indicesMajorArgs ++ #[below] ++ otherArgs) valueNew
       return (expr, matchers)
 

@@ -14,13 +14,16 @@ public section
 
 namespace Lean.Linter
 
-/-- Linter sets are represented as a map from linter name to set name,
+/--
+Linter sets are represented as a map from linter name to set name,
 to make it easy to look up which sets to check for enabling a linter.
 -/
-@[expose] def LinterSets := NameMap (Array Name)
-  deriving EmptyCollection, Inhabited
+@[expose]
+def LinterSets := NameMap (Array Name)
+deriving EmptyCollection, Inhabited
 
-/-- Insert a set into a `LinterSets` map.
+/--
+Insert a set into a `LinterSets` map.
 
 `entry.1` is the name of the linter set,
 `entry.2` contains the names of the set's linter options.
@@ -29,7 +32,8 @@ def insertLinterSetEntry (map : LinterSets) (setName : Name) (options : NameSet)
   options.foldl (init := map) fun map linterName =>
     map.insert linterName ((map.getD linterName #[]).push setName)
 
-/-- State of `linterSetsExt`.
+/--
+State of `linterSetsExt`.
 
 `merged` is the queryable union of all sources (builtins folded in at env creation,
 imported entries from oleans, and locally added entries). `localEntries` tracks entries
@@ -38,9 +42,10 @@ added in the current module so they can be exported into the olean.
 structure LinterSetsState where
   merged : LinterSets := {}
   localEntries : Array (Name × NameSet) := #[]
-  deriving Inhabited
+deriving Inhabited
 
-/-- Builtin linter sets registered from `builtin_initialize` blocks in core code.
+/--
+Builtin linter sets registered from `builtin_initialize` blocks in core code.
 
 Entries here are folded into every `LinterSetsState` produced by `linterSetsExt`, so they
 participate in `getLinterValue` like any user-declared set.
@@ -48,31 +53,35 @@ participate in `getLinterValue` like any user-declared set.
 builtin_initialize builtinLinterSetsRef : IO.Ref (Array (Name × NameSet)) ← IO.mkRef #[]
 
 /--
-  Register a builtin linter set entry.
-  Only valid during initialization.
+Register a builtin linter set entry.
+Only valid during initialization.
 -/
 def addBuiltinLinterSet (setName : Name) (linterNames : NameSet) : IO Unit := do
   builtinLinterSetsRef.modify (·.push (setName, linterNames))
 
-builtin_initialize linterSetsExt :
-    PersistentEnvExtension (Name × NameSet) (Name × NameSet) LinterSetsState ←
+builtin_initialize linterSetsExt
+    : PersistentEnvExtension (Name × NameSet) (Name × NameSet) LinterSetsState ←
   registerPersistentEnvExtension {
     mkInitial := do
-      let merged := (← builtinLinterSetsRef.get).foldl (init := {}) fun s (n, ms) =>
-        insertLinterSetEntry s n ms
+      let merged :=
+        (← builtinLinterSetsRef.get).foldl (init := {}) fun s (n, ms) => insertLinterSetEntry s n ms
       return { merged, localEntries := #[] }
     addImportedFn := fun ess => do
-      let s := (← builtinLinterSetsRef.get).foldl (init := {}) fun s (n, ms) =>
-        insertLinterSetEntry s n ms
-      let merged := ess.foldl (init := s) fun s es =>
-        es.foldl (init := s) fun s (n, ms) => insertLinterSetEntry s n ms
+      let s :=
+        (← builtinLinterSetsRef.get).foldl (init := {}) fun s (n, ms) => insertLinterSetEntry s n ms
+      let merged :=
+        ess.foldl (init := s) fun s es =>
+          es.foldl (init := s) fun s (n, ms) => insertLinterSetEntry s n ms
       return { merged, localEntries := #[] }
-    addEntryFn := fun st (n, ms) =>
-      { merged := insertLinterSetEntry st.merged n ms, localEntries := st.localEntries.push (n, ms) }
+    addEntryFn := fun st (n, ms) => {
+      merged := insertLinterSetEntry st.merged n ms
+      localEntries := st.localEntries.push (n, ms)
+    }
     exportEntriesFn := fun st => st.localEntries
   }
 
-/-- The `LinterOptions` structure is used to determine whether given linters are enabled.
+/--
+The `LinterOptions` structure is used to determine whether given linters are enabled.
 
 This structure contains all the data required to do so, the `Options` set on the command line
 or by the `set_option` command, and the `LinterSets` that have been declared.
@@ -98,21 +107,20 @@ def LinterOptions.getSet (o : LinterOptions) (opt : Lean.Option α) : Array Name
 def getLinterOptions [Monad m] [MonadOptions m] [MonadEnv m] : m LinterOptions := do
   (← getOptions).toLinterOptions
 
-register_builtin_option linter.all : Bool := {
-  defValue := false
-  descr := "enable all linters"
-}
+register_builtin_option linter.all : Bool := { defValue := false, descr := "enable all linters" }
 
 register_builtin_option linter.extra : Bool := {
   defValue := false
-  descr := "enables the set of extra linters — linters that are turned off by default and \
-    only available via `lake lint`. An extra linter early-returns unless this option is true."
+  descr :=
+    "enables the set of extra linters — linters that are turned off by default and \
+      only available via `lake lint`. An extra linter early-returns unless this option is true."
 }
 
 register_builtin_option linter.coreInternal : Bool := {
   defValue := false
-  descr := "enables the set of core-internal linters — linters that enforce conventions of the \
-    Lean repository itself and are not intended for use by non-core projects."
+  descr :=
+    "enables the set of core-internal linters — linters that enforce conventions of the \
+      Lean repository itself and are not intended for use by non-core projects."
 }
 
 /--
@@ -121,11 +129,10 @@ These are precisely options, whose value will be snapshotted during `addDecl`.
 -/
 builtin_initialize envLinterOptionsRef : IO.Ref (Array (Lean.Option Bool)) ← IO.mkRef #[]
 
-def addEnvLinterOption (opt : Lean.Option Bool) : IO Unit :=
-  envLinterOptionsRef.modify (·.push opt)
+def addEnvLinterOption (opt : Lean.Option Bool) : IO Unit := envLinterOptionsRef.modify (·.push opt)
 
 def getLinterAll (o : LinterOptions) (defValue := linter.all.defValue) : Bool :=
-    o.get linter.all.name defValue
+  o.get linter.all.name defValue
 
 def getLinterValue (opt : Lean.Option Bool) (o : LinterOptions) : Bool :=
   o.get opt.name (getLinterAll o <| (o.getSet opt).any (o.get? · == some true) || opt.defValue)
@@ -140,12 +147,12 @@ from other tagged messages such as named errors or unknown-identifier messages.
 -/
 def linterMessageTag : Name := `Lean.Linter._linter
 
-def logLint [Monad m] [MonadLog m] [AddMessageContext m] [MonadOptions m]
-    (linterOption : Lean.Option Bool) (stx : Syntax) (msg : MessageData) : m Unit :=
+def logLint
+    [Monad m] [MonadLog m] [AddMessageContext m] [MonadOptions m]
+    (linterOption : Lean.Option Bool) (stx : Syntax) (msg : MessageData)
+    : m Unit :=
   let disable := .note m!"This linter can be disabled with `set_option {linterOption.name} false`"
-  logWarningAt stx <|
-    .ofOriginatingSyntax stx <|
-    .tagged linterOption.name <|
+  logWarningAt stx <| .ofOriginatingSyntax stx <| .tagged linterOption.name <|
     .tagged linterMessageTag m!"{msg}{disable}"
 
 /-- Returns true if `msg` was produced by `Lean.Linter.logLint` (and therefore by a linter). -/
@@ -163,8 +170,10 @@ Whether a linter option is enabled or not is determined by the following sequenc
   will revert the linters it contains to their default behavior.)
 4. Otherwise, the default value determines whether or not it is enabled.
 -/
-def logLintIf [Monad m] [MonadLog m] [AddMessageContext m] [MonadOptions m] [MonadEnv m]
-    (linterOption : Lean.Option Bool) (stx : Syntax) (msg : MessageData) : m Unit := do
+def logLintIf
+    [Monad m] [MonadLog m] [AddMessageContext m] [MonadOptions m] [MonadEnv m]
+    (linterOption : Lean.Option Bool) (stx : Syntax) (msg : MessageData)
+    : m Unit := do
   if getLinterValue linterOption (← getLinterOptions) then logLint linterOption stx msg
 
 abbrev EnvLinterSnapshot := NameMap Bool

@@ -15,7 +15,6 @@ import Init.Omega
 
 @[expose] public section
 
-
 /-!
 This module contains the verification of the bitblaster for `BitVec.mul` from `Impl.Operations.Mul`.
 -/
@@ -32,24 +31,24 @@ namespace BVExpr
 namespace bitblast
 namespace blastMul
 
-theorem go_denote_eq {w : Nat} (aig : AIG α) (curr : Nat) (hcurr : curr + 1 ≤ w)
-    (acc : AIG.RefVec aig w) (lhs rhs : AIG.RefVec aig w) (lexpr rexpr : BitVec w) (assign : α → Bool)
+theorem go_denote_eq
+    {w : Nat}
+    (aig : AIG α)
+    (curr : Nat) (hcurr : curr + 1 ≤ w)
+    (acc : AIG.RefVec aig w) (lhs rhs : AIG.RefVec aig w) (lexpr rexpr : BitVec w)
+    (assign : α → Bool)
     (hleft : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, lhs.get idx hidx, assign⟧ = lexpr.getLsbD idx)
     (hright : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, rhs.get idx hidx, assign⟧ = rexpr.getLsbD idx)
     (hacc : ∀ (idx : Nat) (hidx : idx < w),
-                ⟦aig, acc.get idx hidx, assign⟧
-                  =
-                (BitVec.mulRec lexpr rexpr curr).getLsbD idx) :
-    ∀ (idx : Nat) (hidx : idx < w),
-        ⟦
-          (go aig lhs rhs (curr + 1) acc).aig,
-          (go aig lhs rhs (curr + 1) acc).vec.get idx hidx,
-          assign
-        ⟧
-          =
-        (BitVec.mulRec lexpr rexpr w).getLsbD idx := by
+      ⟦aig, acc.get idx hidx, assign⟧ = (BitVec.mulRec lexpr rexpr curr).getLsbD idx)
+    : ∀ (idx : Nat) (hidx : idx < w),
+      ⟦
+        (go aig lhs rhs (curr + 1) acc).aig,
+        (go aig lhs rhs (curr + 1) acc).vec.get idx hidx,
+        assign
+      ⟧ = (BitVec.mulRec lexpr rexpr w).getLsbD idx := by
   intro idx hidx
-  generalize hgo: go aig lhs rhs (curr + 1) acc = res
+  generalize hgo : go aig lhs rhs (curr + 1) acc = res
   unfold go at hgo
   split at hgo
   · split at hgo
@@ -100,11 +99,12 @@ theorem go_denote_eq {w : Nat} (aig : AIG α) (curr : Nat) (hcurr : curr + 1 ≤
             all_goals
               repeat apply AIG.LawfulVecOperator.lt_size_of_lt_aig_size
               exact Ref.hgate _
-          simp only [this, ↓reduceIte]
+          simp only [this, ↓ reduceIte]
           rw [denote_blastAdd]
           · intros
             simp only [RefVec.get_cast, Ref.cast_eq]
-            rw [AIG.LawfulVecOperator.denote_mem_prefix (f := blastShiftLeftConst) (h := Ref.hgate _)]
+            rw [AIG.LawfulVecOperator.denote_mem_prefix (f := blastShiftLeftConst)
+              (h := Ref.hgate _)]
             rw [hacc]
           · intros
             simp only [denote_blastShiftLeftConst, BitVec.getLsbD_shiftLeft]
@@ -122,7 +122,7 @@ theorem go_denote_eq {w : Nat} (aig : AIG α) (curr : Nat) (hcurr : curr + 1 ≤
             all_goals
               repeat apply AIG.LawfulVecOperator.lt_size_of_lt_aig_size
               exact Ref.hgate _
-          simp only [this, Bool.false_eq_true, ↓reduceIte, BitVec.add_zero]
+          simp only [this, Bool.false_eq_true, ↓ reduceIte, BitVec.add_zero]
           rw [AIG.LawfulVecOperator.denote_mem_prefix (f := blastAdd)]
           rw [AIG.LawfulVecOperator.denote_mem_prefix (f := blastShiftLeftConst)]
           rw [hacc]
@@ -140,14 +140,15 @@ theorem go_denote_eq {w : Nat} (aig : AIG α) (curr : Nat) (hcurr : curr + 1 ≤
     simp
 termination_by w - curr
 
-theorem denote_blast (aig : AIG α) (lhs rhs : BitVec w) (assign : α → Bool)
-      (input : BinaryRefVec aig w)
-      (hleft : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, input.lhs.get idx hidx, assign⟧ = lhs.getLsbD idx)
-      (hright : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, input.rhs.get idx hidx, assign⟧ = rhs.getLsbD idx) :
-      ∀ (idx : Nat) (hidx : idx < w),
-        ⟦(blast aig input).aig, (blast aig input).vec.get idx hidx, assign⟧
-          =
-        (lhs * rhs).getLsbD idx := by
+theorem denote_blast
+    (aig : AIG α) (lhs rhs : BitVec w) (assign : α → Bool) (input : BinaryRefVec aig w)
+    (hleft
+      : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, input.lhs.get idx hidx, assign⟧ = lhs.getLsbD idx)
+    (hright
+      : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, input.rhs.get idx hidx, assign⟧ = rhs.getLsbD idx)
+    : ∀ (idx : Nat) (hidx : idx < w),
+      ⟦(blast aig input).aig, (blast aig input).vec.get idx hidx, assign⟧
+        = (lhs * rhs).getLsbD idx := by
   intro idx hidx
   rw [BitVec.getLsbD_mul]
   generalize hb : blast aig input = res
@@ -172,10 +173,8 @@ theorem denote_blast (aig : AIG α) (lhs rhs : BitVec w) (assign : α → Bool)
       · simp [Ref.hgate]
     · intro idx hidx
       rw [BitVec.mulRec_zero_eq]
-      simp only [Nat.succ_eq_add_one, RefVec.denote_ite,
-        denote_blastConst,
-        BitVec.ofNat_eq_ofNat, BitVec.getLsbD_zero, Bool.ite_false_right,
-        Bool.decide_eq_true]
+      simp only [Nat.succ_eq_add_one, RefVec.denote_ite, denote_blastConst, BitVec.ofNat_eq_ofNat,
+        BitVec.getLsbD_zero, Bool.ite_false_right, Bool.decide_eq_true]
       split
       next heq =>
         rw [← hright] at heq
@@ -187,17 +186,17 @@ theorem denote_blast (aig : AIG α) (lhs rhs : BitVec w) (assign : α → Bool)
         · simp [heq]
         · omega
 
-
 end blastMul
 
-theorem denote_blastMul (aig : AIG α) (lhs rhs : BitVec w) (assign : α → Bool)
-      (input : BinaryRefVec aig w)
-      (hleft : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, input.lhs.get idx hidx, assign⟧ = lhs.getLsbD idx)
-      (hright : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, input.rhs.get idx hidx, assign⟧ = rhs.getLsbD idx) :
-      ∀ (idx : Nat) (hidx : idx < w),
-        ⟦(blastMul aig input).aig, (blastMul aig input).vec.get idx hidx, assign⟧
-          =
-        (lhs * rhs).getLsbD idx := by
+theorem denote_blastMul
+    (aig : AIG α) (lhs rhs : BitVec w) (assign : α → Bool) (input : BinaryRefVec aig w)
+    (hleft
+      : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, input.lhs.get idx hidx, assign⟧ = lhs.getLsbD idx)
+    (hright
+      : ∀ (idx : Nat) (hidx : idx < w), ⟦aig, input.rhs.get idx hidx, assign⟧ = rhs.getLsbD idx)
+    : ∀ (idx : Nat) (hidx : idx < w),
+      ⟦(blastMul aig input).aig, (blastMul aig input).vec.get idx hidx, assign⟧
+        = (lhs * rhs).getLsbD idx := by
   intro idx hidx
   generalize hb : blastMul aig input = res
   unfold blastMul at hb

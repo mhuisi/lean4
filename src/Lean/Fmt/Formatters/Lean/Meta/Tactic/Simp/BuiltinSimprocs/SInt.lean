@@ -19,5 +19,4 @@ public def fmtDeclareSIntSimprocs : Fmt := fun
     let declareTk ← fmt declareTk
     let typeName ← fmt typeName
     return Layouts.pseudoApplication #[declareTk, typeName]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

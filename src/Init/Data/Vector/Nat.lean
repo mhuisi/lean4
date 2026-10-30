@@ -18,42 +18,44 @@ set_option linter.indexVariables true -- Enforce naming conventions for index va
 
 namespace Vector
 
-protected theorem sum_pos_iff_exists_pos_nat {xs : Vector Nat n} : 0 < xs.sum ↔ ∃ x ∈ xs, 0 < x := by
+protected theorem sum_pos_iff_exists_pos_nat {xs : Vector Nat n}
+    : 0 < xs.sum ↔ ∃ x ∈ xs, 0 < x := by
   simp [← sum_toArray, Array.sum_pos_iff_exists_pos_nat]
 
-protected theorem sum_eq_zero_iff_forall_eq_nat {xs : Vector Nat n} :
-    xs.sum = 0 ↔ ∀ x ∈ xs, x = 0 := by
+protected theorem sum_eq_zero_iff_forall_eq_nat {xs : Vector Nat n}
+    : xs.sum = 0 ↔ ∀ x ∈ xs, x = 0 := by
   simp [← sum_toArray, Array.sum_eq_zero_iff_forall_eq_nat]
 
-@[simp] theorem sum_replicate_nat {n : Nat} {a : Nat} : (replicate n a).sum = n * a := by
+@[simp]
+theorem sum_replicate_nat {n : Nat} {a : Nat} : (replicate n a).sum = n * a := by
   simp [← sum_toArray, Array.sum_replicate_nat]
 
-theorem sum_append_nat {as₁ : Vector Nat n} {as₂ : Vector Nat m} :
-    (as₁ ++ as₂).sum = as₁.sum + as₂.sum := by
+theorem sum_append_nat {as₁ : Vector Nat n} {as₂ : Vector Nat m}
+    : (as₁ ++ as₂).sum = as₁.sum + as₂.sum := by
   simp [← sum_toArray]
 
-theorem sum_reverse_nat (xs : Vector Nat n) : xs.reverse.sum = xs.sum := by
-  simp [sum_reverse]
+theorem sum_reverse_nat (xs : Vector Nat n) : xs.reverse.sum = xs.sum := by simp [sum_reverse]
 
 theorem sum_eq_foldl_nat {xs : Vector Nat n} : xs.sum = xs.foldl (b := 0) (· + ·) := by
   simp only [foldl_eq_foldr_reverse, Nat.add_comm, ← sum_eq_foldr, sum_reverse_nat]
 
-protected theorem prod_pos_iff_forall_pos_nat {xs : Vector Nat n} : 0 < xs.prod ↔ ∀ x ∈ xs, 0 < x := by
+protected theorem prod_pos_iff_forall_pos_nat {xs : Vector Nat n}
+    : 0 < xs.prod ↔ ∀ x ∈ xs, 0 < x := by
   simp [← prod_toArray, Array.prod_pos_iff_forall_pos_nat]
 
-protected theorem prod_eq_zero_iff_exists_zero_nat {xs : Vector Nat n} :
-    xs.prod = 0 ↔ ∃ x ∈ xs, x = 0 := by
+protected theorem prod_eq_zero_iff_exists_zero_nat {xs : Vector Nat n}
+    : xs.prod = 0 ↔ ∃ x ∈ xs, x = 0 := by
   simp [← prod_toArray, Array.prod_eq_zero_iff_exists_zero_nat]
 
-@[simp] theorem prod_replicate_nat {n : Nat} {a : Nat} : (replicate n a).prod = a ^ n := by
+@[simp]
+theorem prod_replicate_nat {n : Nat} {a : Nat} : (replicate n a).prod = a ^ n := by
   simp [← prod_toArray, Array.prod_replicate_nat]
 
-theorem prod_append_nat {as₁ : Vector Nat n} {as₂ : Vector Nat m} :
-    (as₁ ++ as₂).prod = as₁.prod * as₂.prod := by
+theorem prod_append_nat {as₁ : Vector Nat n} {as₂ : Vector Nat m}
+    : (as₁ ++ as₂).prod = as₁.prod * as₂.prod := by
   simp [← prod_toArray]
 
-theorem prod_reverse_nat (xs : Vector Nat n) : xs.reverse.prod = xs.prod := by
-  simp [prod_reverse]
+theorem prod_reverse_nat (xs : Vector Nat n) : xs.reverse.prod = xs.prod := by simp [prod_reverse]
 
 theorem prod_eq_foldl_nat {xs : Vector Nat n} : xs.prod = xs.foldl (b := 1) (· * ·) := by
   simp only [foldl_eq_foldr_reverse, Nat.mul_comm, ← prod_eq_foldr, prod_reverse_nat]

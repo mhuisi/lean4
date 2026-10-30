@@ -19,5 +19,4 @@ public def fmtDecreasingWith : Fmt := fun
     let decreasingWithTk ← fmt decreasingWithTk
     let ts ← fmt ts
     return Layouts.keywordPrefixedSeq decreasingWithTk ts .nonSticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

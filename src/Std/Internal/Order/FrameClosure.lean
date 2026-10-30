@@ -28,20 +28,25 @@ namespace Lean.Order
 
 open Std.Internal.Order
 
-/-- Relates a frame operator `op` on the value channel of a `PredTrans Pred EPosts` to a companion
+/--
+Relates a frame operator `op` on the value channel of a `PredTrans Pred EPosts` to a companion
 `opE` on the exception channel. Both preserve suprema. Instances derive `opE` from the structure
 of `EPosts`: `op` itself on the assertion type, a pointwise lift under a function layer, and a
 componentwise lift on a product layer. A low-priority default instance ignores the frame. An
-instance for a custom exception layer takes precedence. -/
-class FrameOp {Pred : Type u} [CompleteLattice Pred] {R : Type x} (op : R → Pred → Pred)
-    (EPosts : Type v) [CompleteLattice EPosts] (opE : outParam (R → EPosts → EPosts)) : Prop where
+instance for a custom exception layer takes precedence.
+-/
+class FrameOp
+    {Pred : Type u} [CompleteLattice Pred]
+    {R : Type x} (op : R → Pred → Pred)
+    (EPosts : Type v) [CompleteLattice EPosts]
+    (opE : outParam (R → EPosts → EPosts))
+    : Prop where
   /-- Each `op r` preserves suprema, so it has an upper adjoint. -/
   [preservesSup : ∀ r, PreservesSup (op r)]
   /-- Each `opE r` preserves suprema, so it has an upper adjoint. -/
   [preservesSupE : ∀ r, PreservesSup (opE r)]
 
 attribute [deprecated_arg EPred EPosts (since := "2026-09-18")] FrameOp
-
 
 namespace FrameOp
 
@@ -50,8 +55,8 @@ def pointwise {A : Type v} {R : Type x} {ε : Type w} (opE : R → A → A) (r :
   Function.comp (opE r)
 
 /-- The frame acts componentwise on a product layer. -/
-def prod {A : Type v} {B : Type v'} {R : Type x} (opA : R → A → A) (opB : R → B → B) (r : R) :
-    A × B → A × B :=
+def prod {A : Type v} {B : Type v'} {R : Type x} (opA : R → A → A) (opB : R → B → B) (r : R)
+    : A × B → A × B :=
   Prod.map (opA r) (opB r)
 
 /-- The frame cannot act on the channel, so its companion ignores it. -/
@@ -61,16 +66,20 @@ end FrameOp
 
 section
 
-variable {Pred : Type u} [CompleteLattice Pred] {R : Type x} {op : R → Pred → Pred}
-  {EPosts : Type v} [CompleteLattice EPosts]
+variable
+  {Pred : Type u} [CompleteLattice Pred]
+  {R : Type x} {op : R → Pred → Pred} {EPosts : Type v} [CompleteLattice EPosts]
 
-instance (opE : R → EPosts → EPosts) [∀ r, PreservesSup (opE r)] (r : R) {ε : Type w} :
-    PreservesSup (FrameOp.pointwise (ε := ε) opE r) :=
+instance (opE : R → EPosts → EPosts) [∀ r, PreservesSup (opE r)] (r : R) {ε : Type w}
+    : PreservesSup (FrameOp.pointwise (ε := ε) opE r) :=
   inferInstanceAs (PreservesSup (Function.comp (opE r)))
 
-instance {B : Type v'} [CompleteLattice B] (opA : R → EPosts → EPosts) (opB : R → B → B)
-    [∀ r, PreservesSup (opA r)] [∀ r, PreservesSup (opB r)] (r : R) :
-    PreservesSup (FrameOp.prod opA opB r) :=
+instance
+    {B : Type v'} [CompleteLattice B]
+    (opA : R → EPosts → EPosts) (opB : R → B → B)
+    [∀ r, PreservesSup (opA r)] [∀ r, PreservesSup (opB r)]
+    (r : R)
+    : PreservesSup (FrameOp.prod opA opB r) :=
   inferInstanceAs (PreservesSup (Prod.map (opA r) (opB r)))
 
 instance (r : R) : PreservesSup (FrameOp.ignore (A := EPosts) r) :=
@@ -78,16 +87,17 @@ instance (r : R) : PreservesSup (FrameOp.ignore (A := EPosts) r) :=
 
 instance (priority := high) [∀ r, PreservesSup (op r)] : FrameOp op Pred op where
 
-instance {ε : Type w} {opE : R → EPosts → EPosts} [FrameOp op EPosts opE] :
-    FrameOp op (ε → EPosts) (FrameOp.pointwise opE) where
+instance {ε : Type w} {opE : R → EPosts → EPosts} [FrameOp op EPosts opE]
+    : FrameOp op (ε → EPosts) (FrameOp.pointwise opE) where
   preservesSup := FrameOp.preservesSup (op := op) (EPosts := EPosts) (opE := opE)
   preservesSupE :=
     haveI := FrameOp.preservesSupE (op := op) (EPosts := EPosts) (opE := opE)
     inferInstance
 
-instance {B : Type v'} [CompleteLattice B]
-    {opA : R → EPosts → EPosts} {opB : R → B → B} [FrameOp op EPosts opA] [FrameOp op B opB] :
-    FrameOp op (EPosts × B) (FrameOp.prod opA opB) where
+instance
+    {B : Type v'} [CompleteLattice B]
+    {opA : R → EPosts → EPosts} {opB : R → B → B} [FrameOp op EPosts opA] [FrameOp op B opB]
+    : FrameOp op (EPosts × B) (FrameOp.prod opA opB) where
   preservesSup := FrameOp.preservesSup (op := op) (EPosts := EPosts) (opE := opA)
   preservesSupE :=
     haveI := FrameOp.preservesSupE (op := op) (EPosts := EPosts) (opE := opA)
@@ -95,8 +105,7 @@ instance {B : Type v'} [CompleteLattice B]
     inferInstance
 
 @[default_instance]
-instance (priority := low) [∀ r, PreservesSup (op r)] :
-    FrameOp op EPosts FrameOp.ignore where
+instance (priority := low) [∀ r, PreservesSup (op r)] : FrameOp op EPosts FrameOp.ignore where
 
 end
 
@@ -104,14 +113,17 @@ namespace FrameOp
 
 variable {A : Type u} {B : Type v} {R : Type x} {ε : Type w}
 
-theorem pointwise_apply (opE : R → A → A) (r : R) (E : ε → A) (e : ε) :
-    pointwise opE r E e = opE r (E e) := rfl
+theorem pointwise_apply (opE : R → A → A) (r : R) (E : ε → A) (e : ε)
+    : pointwise opE r E e = opE r (E e) :=
+  rfl
 
-theorem prod_fst (opA : R → A → A) (opB : R → B → B) (r : R) (p : A × B) :
-    (prod opA opB r p).fst = opA r p.fst := rfl
+theorem prod_fst (opA : R → A → A) (opB : R → B → B) (r : R) (p : A × B)
+    : (prod opA opB r p).fst = opA r p.fst :=
+  rfl
 
-theorem prod_snd (opA : R → A → A) (opB : R → B → B) (r : R) (p : A × B) :
-    (prod opA opB r p).snd = opB r p.snd := rfl
+theorem prod_snd (opA : R → A → A) (opB : R → B → B) (r : R) (p : A × B)
+    : (prod opA opB r p).snd = opB r p.snd :=
+  rfl
 
 theorem ignore_apply (r : R) (a : A) : ignore r a = a := rfl
 
@@ -119,25 +131,26 @@ section
 
 variable [CompleteLattice A] [CompleteLattice B]
 
-theorem upperAdjoint_pointwise_apply (opE : R → A → A) [∀ r, PreservesSup (opE r)] (r : R) (X : ε → A)
-    (e : ε) :
-    PreservesSup.upperAdjoint (pointwise opE r) X e = PreservesSup.upperAdjoint (opE r) (X e) :=
+theorem upperAdjoint_pointwise_apply
+    (opE : R → A → A) [∀ r, PreservesSup (opE r)] (r : R) (X : ε → A) (e : ε)
+    : PreservesSup.upperAdjoint (pointwise opE r) X e = PreservesSup.upperAdjoint (opE r) (X e) :=
   PreservesSup.upperAdjoint_comp_apply (opE r) X e
 
-theorem upperAdjoint_prod_fst (opA : R → A → A) (opB : R → B → B)
-    [∀ r, PreservesSup (opA r)] [∀ r, PreservesSup (opB r)] (r : R) (E : A × B) :
-    (PreservesSup.upperAdjoint (prod opA opB r) E).fst =
-      PreservesSup.upperAdjoint (opA r) E.fst :=
+theorem upperAdjoint_prod_fst
+    (opA : R → A → A) (opB : R → B → B) [∀ r, PreservesSup (opA r)] [∀ r, PreservesSup (opB r)]
+    (r : R) (E : A × B)
+    : (PreservesSup.upperAdjoint (prod opA opB r) E).fst
+      = PreservesSup.upperAdjoint (opA r) E.fst :=
   PreservesSup.upperAdjoint_prodMap_fst (opA r) (opB r) E
 
-theorem upperAdjoint_prod_snd (opA : R → A → A) (opB : R → B → B)
-    [∀ r, PreservesSup (opA r)] [∀ r, PreservesSup (opB r)] (r : R) (E : A × B) :
-    (PreservesSup.upperAdjoint (prod opA opB r) E).snd =
-      PreservesSup.upperAdjoint (opB r) E.snd :=
+theorem upperAdjoint_prod_snd
+    (opA : R → A → A) (opB : R → B → B) [∀ r, PreservesSup (opA r)] [∀ r, PreservesSup (opB r)]
+    (r : R) (E : A × B)
+    : (PreservesSup.upperAdjoint (prod opA opB r) E).snd
+      = PreservesSup.upperAdjoint (opB r) E.snd :=
   PreservesSup.upperAdjoint_prodMap_snd (opA r) (opB r) E
 
-theorem upperAdjoint_ignore (r : R) (X : A) :
-    PreservesSup.upperAdjoint (ignore (R := R) r) X = X :=
+theorem upperAdjoint_ignore (r : R) (X : A) : PreservesSup.upperAdjoint (ignore (R := R) r) X = X :=
   PreservesSup.upperAdjoint_id X
 
 end
@@ -146,52 +159,60 @@ end FrameOp
 
 section
 
-variable {Pred : Type u} [CompleteLattice Pred] {EPosts : Type v} [CompleteLattice EPosts]
+variable
+  {Pred : Type u} [CompleteLattice Pred]
+  {EPosts : Type v} [CompleteLattice EPosts]
   {β : Type w} {R : Type x} {opE : R → EPosts → EPosts}
 
-/-- The **frame closure** of a predicate transformer `t` with respect to a family of
+/--
+The **frame closure** of a predicate transformer `t` with respect to a family of
 supremum-preserving operators `op r` and its exception-channel companion `opE r`: the meet over all
 resources `r` of the `r`-upper-adjoint of `t` framed by `r` on both channels. It internalizes the
-frame rule into any `t` (see `PredTrans.frameClosure_frames`), with no assumption on `t`. -/
-noncomputable def PredTrans.frameClosure (op : R → Pred → Pred) [FrameOp op EPosts opE]
-    (t : PredTrans Pred EPosts β) : PredTrans Pred EPosts β :=
+frame rule into any `t` (see `PredTrans.frameClosure_frames`), with no assumption on `t`.
+-/
+noncomputable def PredTrans.frameClosure
+    (op : R → Pred → Pred) [FrameOp op EPosts opE] (t : PredTrans Pred EPosts β)
+    : PredTrans Pred EPosts β :=
   ⟨fun Q E => ⨅ r, PreservesSup.upperAdjoint (op r) (t.apply (fun a => op r (Q a)) (opE r E))⟩
 
 /-- Unfolding `frameClosure` through `apply`. -/
-theorem PredTrans.apply_frameClosure (op : R → Pred → Pred) [FrameOp op EPosts opE]
-    (t : PredTrans Pred EPosts β) (Q : β → Pred) (E : EPosts) :
-    (t.frameClosure op).apply Q E =
-      ⨅ r, PreservesSup.upperAdjoint (op r) (t.apply (fun a => op r (Q a)) (opE r E)) := rfl
+theorem PredTrans.apply_frameClosure
+    (op : R → Pred → Pred) [FrameOp op EPosts opE]
+    (t : PredTrans Pred EPosts β) (Q : β → Pred) (E : EPosts)
+    : (t.frameClosure op).apply Q E
+      = ⨅ r, PreservesSup.upperAdjoint (op r) (t.apply (fun a => op r (Q a)) (opE r E)) :=
+  rfl
 
 /-- The frame closure carries monotonicity: if `t` is monotone, so is `t.frameClosure op`. -/
-theorem PredTrans.monotone_frameClosure (op : R → Pred → Pred) [FrameOp op EPosts opE]
-    {t : PredTrans Pred EPosts β} (h : t.Monotone) :
-    (t.frameClosure op).Monotone := by
+theorem PredTrans.monotone_frameClosure
+    (op : R → Pred → Pred) [FrameOp op EPosts opE] {t : PredTrans Pred EPosts β} (h : t.Monotone)
+    : (t.frameClosure op).Monotone := by
   haveI := FrameOp.preservesSup (op := op) (EPosts := EPosts) (opE := opE)
   haveI := FrameOp.preservesSupE (op := op) (EPosts := EPosts) (opE := opE)
   intro post post' eposts eposts' hE hP
   simp only [PredTrans.apply_frameClosure]
   refine iInf_mono fun r => PreservesSup.upperAdjoint_mono _ ?_
-  exact h _ _ _ _ (PreservesSup.map_mono (opE r) hE)
-    (fun a => PreservesSup.map_mono (op r) (hP a))
+  exact h _ _ _ _ (PreservesSup.map_mono (opE r) hE) (fun a => PreservesSup.map_mono (op r) (hP a))
 
-/-- The frame rule, internalized: for supremum-preserving `op r` whose resources compose by `comp`
+/--
+The frame rule, internalized: for supremum-preserving `op r` whose resources compose by `comp`
 with the action law `op (comp r r') = op r ∘ op r'`, and the matching companion law `hactE`, `op F`
 commutes into the value postcondition of `t.frameClosure op` while `opE F` commutes into the
-exception postcondition. -/
-theorem PredTrans.frameClosure_frames (op : R → Pred → Pred) [FrameOp op EPosts opE]
+exception postcondition.
+-/
+theorem PredTrans.frameClosure_frames
+    (op : R → Pred → Pred) [FrameOp op EPosts opE]
     (comp : R → R → R) (hact : ∀ r r' a, op (comp r r') a = op r (op r' a))
     (hactE : ∀ r r' E, opE (comp r r') E = opE r (opE r' E))
-    (t : PredTrans Pred EPosts β) (Q : β → Pred) (E : EPosts) (F : R) :
-    op F ((t.frameClosure op).apply Q E) ⊑
-      (t.frameClosure op).apply (fun a => op F (Q a)) (opE F E) := by
+    (t : PredTrans Pred EPosts β) (Q : β → Pred) (E : EPosts) (F : R)
+    : op F ((t.frameClosure op).apply Q E)
+      ⊑ (t.frameClosure op).apply (fun a => op F (Q a)) (opE F E) := by
   haveI := FrameOp.preservesSup (op := op) (EPosts := EPosts) (opE := opE)
   apply le_iInf
   intro F'
   apply PreservesSup.le_upperAdjoint (op F')
   rw [← hact F' F ((t.frameClosure op).apply Q E)]
-  refine PartialOrder.rel_trans
-    (PreservesSup.map_mono (op (comp F' F)) (iInf_le _ (comp F' F))) ?_
+  refine PartialOrder.rel_trans (PreservesSup.map_mono (op (comp F' F)) (iInf_le _ (comp F' F))) ?_
   refine PartialOrder.rel_trans (PreservesSup.upperAdjoint_le (op (comp F' F)) _) ?_
   apply PartialOrder.rel_of_eq
   rw [hactE F' F E]
@@ -199,13 +220,17 @@ theorem PredTrans.frameClosure_frames (op : R → Pred → Pred) [FrameOp op EPo
   funext a
   rw [hact F' F (Q a)]
 
-/-- Landing below the frame closure, transposed across the Galois connection:
+/--
+Landing below the frame closure, transposed across the Galois connection:
 `pre ⊑ (t.frameClosure op).apply Q E` holds exactly when
-`op r pre ⊑ t.apply (fun a => op r (Q a)) (opE r E)` for every resource `r`. -/
-theorem PredTrans.le_frameClosure_iff (op : R → Pred → Pred) [FrameOp op EPosts opE]
-    (t : PredTrans Pred EPosts β) {Q : β → Pred} {E : EPosts} {pre : Pred} :
-    pre ⊑ (t.frameClosure op).apply Q E ↔
-      ∀ r, op r pre ⊑ t.apply (fun a => op r (Q a)) (opE r E) := by
+`op r pre ⊑ t.apply (fun a => op r (Q a)) (opE r E)` for every resource `r`.
+-/
+theorem PredTrans.le_frameClosure_iff
+    (op : R → Pred → Pred) [FrameOp op EPosts opE]
+    (t : PredTrans Pred EPosts β)
+    {Q : β → Pred} {E : EPosts} {pre : Pred}
+    : pre ⊑ (t.frameClosure op).apply Q E
+      ↔ ∀ r, op r pre ⊑ t.apply (fun a => op r (Q a)) (opE r E) := by
   haveI := FrameOp.preservesSup (op := op) (EPosts := EPosts) (opE := opE)
   constructor
   · intro h r
@@ -217,25 +242,32 @@ theorem PredTrans.le_frameClosure_iff (op : R → Pred → Pred) [FrameOp op EPo
     intro r
     exact PreservesSup.le_upperAdjoint (op r) (h r)
 
-/-- Landing below the frame closure reduces to landing below the base transformer together with
+/--
+Landing below the frame closure reduces to landing below the base transformer together with
 framing: if `pre ⊑ t.apply Q E` and `t` frames every `op r` on both channels, then
-`pre ⊑ (t.frameClosure op).apply Q E`. -/
-theorem PredTrans.le_frameClosure (op : R → Pred → Pred) [FrameOp op EPosts opE]
-    (t : PredTrans Pred EPosts β) {Q : β → Pred} {E : EPosts} {pre : Pred}
-    (hframe : ∀ (r : R) (Q' : β → Pred),
-      op r (t.apply Q' E) ⊑ t.apply (fun a => op r (Q' a)) (opE r E))
-    (hpre : pre ⊑ t.apply Q E) :
-    pre ⊑ (t.frameClosure op).apply Q E :=
+`pre ⊑ (t.frameClosure op).apply Q E`.
+-/
+theorem PredTrans.le_frameClosure
+    (op : R → Pred → Pred) [FrameOp op EPosts opE]
+    (t : PredTrans Pred EPosts β)
+    {Q : β → Pred} {E : EPosts} {pre : Pred}
+    (hframe
+      : ∀ (r : R) (Q' : β → Pred), op r (t.apply Q' E) ⊑ t.apply (fun a => op r (Q' a)) (opE r E))
+    (hpre : pre ⊑ t.apply Q E)
+    : pre ⊑ (t.frameClosure op).apply Q E :=
   haveI := FrameOp.preservesSup (op := op) (EPosts := EPosts) (opE := opE)
   (le_frameClosure_iff op t).mpr fun r =>
     PartialOrder.rel_trans (PreservesSup.map_mono (op r) hpre) (hframe r Q)
 
-/-- The frame closure lies below the base transformer, witnessed at a unit resource `e` with
-`op e = id` and `opE e = id`. -/
-theorem PredTrans.frameClosure_le (op : R → Pred → Pred) [FrameOp op EPosts opE]
+/--
+The frame closure lies below the base transformer, witnessed at a unit resource `e` with
+`op e = id` and `opE e = id`.
+-/
+theorem PredTrans.frameClosure_le
+    (op : R → Pred → Pred) [FrameOp op EPosts opE]
     (e : R) (hunit : ∀ a, op e a = a) (hunitE : ∀ E, opE e E = E)
-    (t : PredTrans Pred EPosts β) (Q : β → Pred) (E : EPosts) :
-    (t.frameClosure op).apply Q E ⊑ t.apply Q E := by
+    (t : PredTrans Pred EPosts β) (Q : β → Pred) (E : EPosts)
+    : (t.frameClosure op).apply Q E ⊑ t.apply Q E := by
   haveI := FrameOp.preservesSup (op := op) (EPosts := EPosts) (opE := opE)
   refine PartialOrder.rel_trans (iInf_le _ e) ?_
   rw [show (fun a => op e (Q a)) = Q from funext fun a => hunit (Q a), hunitE E]

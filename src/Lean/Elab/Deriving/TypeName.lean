@@ -19,13 +19,14 @@ private def deriveTypeNameInstance (declNames : Array Name) : CommandElabM Bool 
     let cinfo ← getConstInfo declName
     unless cinfo.levelParams.isEmpty do
       throwError m!"{.ofConstName declName} has universe level parameters"
-    withScope (fun scope => { scope with opts := scope.opts.setBool `warn.classDefReducibility false }) do
-      elabCommand <| ← withFreshMacroScope `(
-        unsafe def instImpl : TypeName @$(mkCIdent declName) := .mk _ $(quote declName)
-        @[implemented_by instImpl] opaque inst : TypeName @$(mkCIdent declName)
-        instance : TypeName @$(mkCIdent declName) := inst
-      )
+    withScope
+      (fun scope => { scope with opts := scope.opts.setBool `warn.classDefReducibility false })
+      do
+        elabCommand <| ← withFreshMacroScope `(
+            unsafe def instImpl : TypeName @$(mkCIdent declName) := .mk _ $(quote declName)
+            @[implemented_by instImpl] opaque inst : TypeName @$(mkCIdent declName)
+            instance : TypeName @$(mkCIdent declName) := inst
+          )
   return true
 
-initialize
-  registerDerivingHandler ``TypeName deriveTypeNameInstance
+initialize registerDerivingHandler ``TypeName deriveTypeNameInstance

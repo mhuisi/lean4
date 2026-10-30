@@ -12,7 +12,9 @@ public section
 
 namespace Lean.Meta
 
-/-- Return true is `e` is a term that should be processed by the `match`-compiler using `casesValues` -/
+/--
+Return true is `e` is a term that should be processed by the `match`-compiler using `casesValues`
+-/
 def isMatchValue (e : Expr) : MetaM Bool := do
   let e ← instantiateMVars e
   if (← getNatValue? e).isSome then return true

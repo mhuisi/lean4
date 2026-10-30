@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.AC.Types
 public import Lean.Meta.Tactic.Grind.ProveEq
@@ -13,17 +14,13 @@ public section
 namespace Lean.Meta.Grind.AC
 open Lean.Grind
 
-def get' : GoalM State := do
-  acExt.getState
+def get' : GoalM State := do acExt.getState
 
-@[inline] def modify' (f : State → State) : GoalM Unit := do
-  acExt.modifyState f
+@[inline] def modify' (f : State → State) : GoalM Unit := do acExt.modifyState f
 
-def checkMaxSteps : GoalM Bool := do
-  return (← get').steps >= (← getConfig).acSteps
+def checkMaxSteps : GoalM Bool := do return (← get').steps >= (← getConfig).acSteps
 
-def incSteps : GoalM Unit := do
-  modify' fun s => { s with steps := s.steps + 1 }
+def incSteps : GoalM Unit := do modify' fun s => { s with steps := s.steps + 1 }
 
 structure ACM.Context where
   opId : Nat
@@ -35,15 +32,13 @@ export MonadGetStruct (getStruct)
 
 @[always_inline]
 instance (m n) [MonadLift m n] [MonadGetStruct m] : MonadGetStruct n where
-  getStruct    := liftM (getStruct : m Struct)
+  getStruct := liftM (getStruct : m Struct)
 
 abbrev ACM := ReaderT ACM.Context GoalM
 
-abbrev ACM.run (opId : Nat) (x : ACM α) : GoalM α :=
-  x { opId }
+abbrev ACM.run (opId : Nat) (x : ACM α) : GoalM α := x { opId }
 
-abbrev getOpId : ACM Nat :=
-  return (← read).opId
+abbrev getOpId : ACM Nat := return (← read).opId
 
 protected def ACM.getStruct : ACM Struct := do
   let s ← get'
@@ -60,21 +55,24 @@ def modifyStruct (f : Struct → Struct) : ACM Unit := do
   let opId ← getOpId
   modify' fun s => { s with structs := s.structs.modify opId f }
 
-def getOp : ACM Expr :=
-  return (← getStruct).op
+def getOp : ACM Expr := return (← getStruct).op
 
 private def notAssoc : Std.HashSet Name :=
-  Std.HashSet.ofList [``Eq, ``And, ``Or, ``Iff, ``getElem, ``OfNat.ofNat, ``ite, ``dite, ``cond, ``LT.lt, ``LE.le]
+  Std.HashSet.ofList
+    [``Eq, ``And, ``Or, ``Iff, ``getElem, ``OfNat.ofNat, ``ite, ``dite, ``cond, ``LT.lt, ``LE.le]
 
 /--
 Returns `true` if `op` is an arithmetic operator supported in other modules.
 Remark: `f == op.getAppFn!`
 -/
 private def isArithOpInOtherModules (op : Expr) (f : Expr) : GoalM Bool := do
-  unless (← getConfig).ring do return false
+  unless (← getConfig).ring do
+    return false
   -- Remark: if `ring` is disabled we could check whether `cutsat` is enabled and discard `+` and `-`, but this is just a filter.
-  let .const declName _ := f | return false
-  if declName == ``HAdd.hAdd || declName == ``HMul.hMul || declName == ``HSub.hSub || declName == ``HDiv.hDiv || declName == ``HPow.hPow then
+  let .const declName _ := f
+    | return false
+  if declName == ``HAdd.hAdd || declName == ``HMul.hMul || declName == ``HSub.hSub
+      || declName == ``HDiv.hDiv || declName == ``HPow.hPow then
     if op.getAppNumArgs == 4 then
       let α := op.appFn!.appFn!.appArg!
       if (← Arith.CommRing.getCommRingId? α).isSome then return true
@@ -84,21 +82,24 @@ private def isArithOpInOtherModules (op : Expr) (f : Expr) : GoalM Bool := do
 def getTermOpIds (e : Expr) : GoalM (List Nat) := do
   return (← get').exprToOpIds.find? { expr := e } |>.getD []
 
-private def insertOpId (m : PHashMap ExprPtr (List Nat)) (e : Expr) (opId : Nat) : PHashMap ExprPtr (List Nat) :=
-  let ids := if let some ids := m.find? { expr := e } then
-    go ids
-  else
-    [opId]
+private def insertOpId (m : PHashMap ExprPtr (List Nat)) (e : Expr) (opId : Nat)
+    : PHashMap ExprPtr (List Nat) :=
+  let ids :=
+    if let some ids := m.find? { expr := e } then
+      go ids
+    else
+      [opId]
   m.insert { expr := e } ids
 where
   go : List Nat → List Nat
-  | [] => [opId]
-  | id::ids => if opId < id then
-    opId :: id :: ids
-  else if opId == id then
-    opId :: ids
-  else
-    id :: go ids
+    | [] => [opId]
+    | id :: ids =>
+      if opId < id then
+        opId :: id :: ids
+      else if opId == id then
+        opId :: ids
+      else
+        id :: go ids
 
 def addTermOpId (e : Expr) : ACM Unit := do
   let opId ← getOpId
@@ -109,9 +110,10 @@ def mkVar (e : Expr) : ACM AC.Var := do
   if let some var := s.varMap.find? { expr := e } then
     return var
   let var : AC.Var := s.vars.size
-  modifyStruct fun s => { s with
-    vars       := s.vars.push e
-    varMap     := s.varMap.insert { expr := e } var
+  modifyStruct fun s => {
+    s with
+    vars := s.vars.push e
+    varMap := s.varMap.insert { expr := e } var
   }
   addTermOpId e
   acExt.markTerm e
@@ -128,16 +130,21 @@ where
     let f := op.getAppFn
     if let .const declName _ := f then
       if notAssoc.contains declName then return none
-    let .forallE _ α b _ ← whnf (← inferType op) | return none
+    let .forallE _ α b _ ← whnf (← inferType op)
+      | return none
     if b.hasLooseBVars then return none
-    let .forallE _ α₂ α₃ _ ← whnf b | return none
+    let .forallE _ α₂ α₃ _ ← whnf b
+      | return none
     if α₃.hasLooseBVars then return none
-    unless (← isDefEq α α₂) do return none
-    unless (← isDefEq α α₃) do return none
+    unless (← isDefEq α α₂) do
+      return none
+    unless (← isDefEq α α₃) do
+      return none
     if (← isArithOpInOtherModules op f) then return none
     let u ← getLevel α
     let assocType := mkApp2 (mkConst ``Std.Associative [u]) α op
-    let some assocInst ← synthInstance? assocType | return none
+    let some assocInst ← synthInstance? assocType
+      | return none
     let commType := mkApp2 (mkConst ``Std.Commutative [u]) α op
     let commInst? ← synthInstance? commType
     let idempotentType := mkApp2 (mkConst ``Std.IdempotentOp [u]) α op
@@ -159,29 +166,40 @@ where
       else
         pure (none, none)
     let id := (← get').structs.size
-    modify' fun s => { s with
-      structs := s.structs.push {
-        id, type := α, u, op, neutral?, assocInst, commInst?,
-        idempotentInst?, neutralInst?
-    }}
-    trace[grind.debug.ac.op] "{op}, comm: {commInst?.isSome}, idempotent: {idempotentInst?.isSome}, neutral?: {neutral?}"
-    if let some neutral := neutral? then ACM.run id do
-      -- Create neutral variable to ensure it is variable 0
-      discard <| mkVar neutral
+    modify' fun s => {
+      s with
+      structs :=
+        s.structs.push {
+          id
+          type := α
+          u
+          op
+          neutral?
+          assocInst
+          commInst?
+          idempotentInst?
+          neutralInst?
+        }
+    }
+    trace[grind.debug.ac.op]
+      "{op}, comm: {commInst?.isSome}, idempotent: {idempotentInst?.isSome}, neutral?: {neutral?}"
+    if let some neutral := neutral? then
+      ACM.run id do
+        -- Create neutral variable to ensure it is variable 0
+        discard <| mkVar neutral
     return some id
 
 def isOp? (e : Expr) : ACM (Option (Expr × Expr)) := do
-  unless e.isApp && e.appFn!.isApp do return none
-  unless isSameExpr e.appFn!.appFn! (← getOp) do return none
+  unless e.isApp && e.appFn!.isApp do
+    return none
+  unless isSameExpr e.appFn!.appFn! (← getOp) do
+    return none
   return some (e.appFn!.appArg!, e.appArg!)
 
-def isCommutative : ACM Bool :=
-  return (← getStruct).commInst?.isSome
+def isCommutative : ACM Bool := return (← getStruct).commInst?.isSome
 
-def hasNeutral : ACM Bool :=
-  return (← getStruct).neutralInst?.isSome
+def hasNeutral : ACM Bool := return (← getStruct).neutralInst?.isSome
 
-def isIdempotent : ACM Bool :=
-  return (← getStruct).idempotentInst?.isSome
+def isIdempotent : ACM Bool := return (← getStruct).idempotentInst?.isSome
 
 end Lean.Meta.Grind.AC

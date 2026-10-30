@@ -159,7 +159,8 @@ namespace Std
 namespace DHashMap.Internal
 open Std.Internal
 
-@[inline] private def numBucketsForCapacity (capacity : Nat) : Nat :=
+@[inline]
+private def numBucketsForCapacity (capacity : Nat) : Nat :=
   -- a "load factor" of 0.75 is the usual standard for hash maps
   capacity * 4 / 3
 
@@ -168,55 +169,63 @@ def toListModel (buckets : Array (AssocList α β)) : List ((a : α) × β a) :=
   buckets.toList.flatMap AssocList.toList
 
 /-- Internal implementation detail of the hash map -/
-@[inline] def computeSize (buckets : Array (AssocList α β)) : Nat :=
-  buckets.foldl (fun d b => d + b.length) 0
+@[inline]
+def computeSize (buckets : Array (AssocList α β)) : Nat := buckets.foldl (fun d b => d + b.length) 0
 
 /-- Internal implementation detail of the hash map -/
-abbrev Raw₀ (α : Type u) (β : α → Type v) :=
-  { m : Raw α β // 0 < m.buckets.size }
+abbrev Raw₀ (α : Type u) (β : α → Type v) := {m : Raw α β // 0 < m.buckets.size}
 
 namespace Raw₀
 
 /-- Internal implementation detail of the hash map -/
-@[inline] def emptyWithCapacity (capacity := 8) : Raw₀ α β :=
-  ⟨⟨0, Array.replicate (numBucketsForCapacity capacity).nextPowerOfTwo AssocList.nil⟩,
-    by simpa using Nat.pos_of_isPowerOfTwo (Nat.isPowerOfTwo_nextPowerOfTwo _)⟩
+@[inline]
+def emptyWithCapacity (capacity := 8) : Raw₀ α β := ⟨
+  ⟨0, Array.replicate (numBucketsForCapacity capacity).nextPowerOfTwo AssocList.nil⟩,
+  by simpa using Nat.pos_of_isPowerOfTwo (Nat.isPowerOfTwo_nextPowerOfTwo _)
+⟩
 
 -- Take `hash` as a function instead of `Hashable α` as per
 -- https://github.com/leanprover/lean4/issues/4191
 /-- Internal implementation detail of the hash map -/
-@[inline] def reinsertAux (hash : α → UInt64) (data : { d : Array (AssocList α β) // 0 < d.size })
-    (a : α) (b : β a) : { d : Array (AssocList α β) // 0 < d.size } :=
+@[inline]
+def reinsertAux
+    (hash : α → UInt64) (data : {d : Array (AssocList α β) // 0 < d.size}) (a : α) (b : β a)
+    : {d : Array (AssocList α β) // 0 < d.size} :=
   let ⟨data, hd⟩ := data
   let ⟨i, h⟩ := mkIdx data.size hd (hash a)
   ⟨data.uset i (data[i].cons a b) h, by simpa⟩
 
 /-- Copies all the entries from `buckets` into a new hash map with a larger capacity. -/
-def expand [Hashable α] (data : { d : Array (AssocList α β) // 0 < d.size }) :
-    { d : Array (AssocList α β) // 0 < d.size } :=
+def expand [Hashable α] (data : {d : Array (AssocList α β) // 0 < d.size})
+    : {d : Array (AssocList α β) // 0 < d.size} :=
   let ⟨data, hd⟩ := data
   let nbuckets := data.size * 2
   -- `propagateMark` is necessary so the resized hashmap is also forcibly linear
-  go 0 data ⟨data.propagateMark (Array.replicate nbuckets AssocList.nil),
-    by simpa [nbuckets] using Nat.mul_pos hd Nat.two_pos⟩
+  go 0 data ⟨
+    data.propagateMark (Array.replicate nbuckets AssocList.nil),
+    by simpa [nbuckets] using Nat.mul_pos hd Nat.two_pos
+  ⟩
 where
-  /-- Inner loop of `expand`. Copies elements `source[i...*]` into `target`,
-  destroying `source` in the process. -/
-  go (i : Nat) (source : Array (AssocList α β))
-      (target : { d : Array (AssocList α β) // 0 < d.size }) :
-      { d : Array (AssocList α β) // 0 < d.size } :=
+  /--
+  Inner loop of `expand`. Copies elements `source[i...*]` into `target`,
+  destroying `source` in the process.
+  -/
+  go (i : Nat) (source : Array (AssocList α β)) (target : {d : Array (AssocList α β) // 0 < d.size})
+      : {d : Array (AssocList α β) // 0 < d.size} :=
     if h : i < source.size then
       let es := source[i]
       -- We erase `es` from `source` to make sure we can reuse its memory cells
       -- when performing es.foldl
       let source := source.set i .nil
       let target := es.foldl (reinsertAux hash) target
-      go (i+1) source target
-    else target
+      go (i + 1) source target
+    else
+      target
   termination_by source.size - i
 
 /-- Internal implementation detail of the hash map -/
-@[inline] def expandIfNecessary [BEq α] [Hashable α] (m : Raw₀ α β) : Raw₀ α β :=
+@[inline]
+def expandIfNecessary [BEq α] [Hashable α] (m : Raw₀ α β) : Raw₀ α β :=
   let ⟨⟨size, buckets⟩, hm⟩ := m
   if numBucketsForCapacity size ≤ buckets.size then
     ⟨⟨size, buckets⟩, hm⟩
@@ -233,13 +242,13 @@ def insert [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) (b : β a) : Raw�
     let buckets' := buckets.uset i .nil h
     ⟨⟨size, buckets'.uset i (bkt.replace a b) (by simpa [buckets'])⟩, by simpa [buckets']⟩
   else
-    let size'    := size + 1
+    let size' := size + 1
     let buckets' := buckets.uset i (AssocList.cons a b bkt) h
     expandIfNecessary ⟨⟨size', buckets'⟩, by simpa [buckets']⟩
 
 /-- Internal implementation detail of the hash map -/
-@[specialize] def modify [BEq α] [Hashable α] [LawfulBEq α] (m : Raw₀ α β) (a : α) (f : β a → β a) :
-    Raw₀ α β :=
+@[specialize]
+def modify [BEq α] [Hashable α] [LawfulBEq α] (m : Raw₀ α β) (a : α) (f : β a → β a) : Raw₀ α β :=
   let ⟨⟨size, buckets⟩, hm⟩ := m
   let size' := size
   let ⟨i, hi⟩ := mkIdx buckets.size hm (hash a)
@@ -252,8 +261,9 @@ def insert [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) (b : β a) : Raw�
     m
 
 /-- Internal implementation detail of the hash map -/
-@[specialize] def Const.modify [BEq α] {β : Type v} [Hashable α] (m : Raw₀ α (fun _ => β)) (a : α)
-    (f : β → β) : Raw₀ α (fun _ => β) :=
+@[specialize]
+def Const.modify [BEq α] {β : Type v} [Hashable α] (m : Raw₀ α (fun _ => β)) (a : α) (f : β → β)
+    : Raw₀ α (fun _ => β) :=
   let ⟨⟨size, buckets⟩, hm⟩ := m
   let size' := size
   let ⟨i, hi⟩ := mkIdx buckets.size hm (hash a)
@@ -266,8 +276,10 @@ def insert [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) (b : β a) : Raw�
     m
 
 /-- Internal implementation detail of the hash map -/
-@[specialize] def alter [BEq α] [Hashable α] [LawfulBEq α] (m : Raw₀ α β) (a : α)
-    (f : Option (β a) → Option (β a)) : Raw₀ α β :=
+@[specialize]
+def alter
+    [BEq α] [Hashable α] [LawfulBEq α] (m : Raw₀ α β) (a : α) (f : Option (β a) → Option (β a))
+    : Raw₀ α β :=
   let ⟨⟨size, buckets⟩, hm⟩ := m
   let ⟨i, h⟩ := mkIdx buckets.size hm (hash a)
   let bkt := buckets[i]
@@ -280,13 +292,15 @@ def insert [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) (b : β a) : Raw�
     match f none with
     | none => m
     | some b =>
-      let size'    := size + 1
+      let size' := size + 1
       let buckets' := buckets.uset i (.cons a b bkt) h
       expandIfNecessary ⟨⟨size', buckets'⟩, by simpa [buckets']⟩
 
 /-- Internal implementation detail of the hash map -/
-@[specialize] def Const.alter [BEq α] [Hashable α] {β : Type v} (m : Raw₀ α (fun _ => β)) (a : α)
-    (f : Option β → Option β) : Raw₀ α (fun _ => β) :=
+@[specialize]
+def Const.alter
+    [BEq α] [Hashable α] {β : Type v} (m : Raw₀ α (fun _ => β)) (a : α) (f : Option β → Option β)
+    : Raw₀ α (fun _ => β) :=
   let ⟨⟨size, buckets⟩, hm⟩ := m
   let ⟨i, h⟩ := mkIdx buckets.size hm (hash a)
   let bkt := buckets[i]
@@ -299,13 +313,13 @@ def insert [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) (b : β a) : Raw�
     match f none with
     | none => m
     | some b =>
-      let size'    := size + 1
+      let size' := size + 1
       let buckets' := buckets.uset i (.cons a b bkt) h
       expandIfNecessary ⟨⟨size', buckets'⟩, by simpa [buckets']⟩
 
 /-- Internal implementation detail of the hash map -/
-@[inline] def containsThenInsert [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) (b : β a) :
-    Bool × Raw₀ α β :=
+@[inline]
+def containsThenInsert [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) (b : β a) : Bool × Raw₀ α β :=
   let ⟨⟨size, buckets⟩, hm⟩ := m
   let ⟨i, h⟩ := mkIdx buckets.size hm (hash a)
   let bkt := buckets[i]
@@ -313,20 +327,21 @@ def insert [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) (b : β a) : Raw�
     let buckets' := buckets.uset i .nil h
     (true, ⟨⟨size, buckets'.uset i (bkt.replace a b) (by simpa [buckets'])⟩, by simpa [buckets']⟩)
   else
-    let size'    := size + 1
+    let size' := size + 1
     let buckets' := buckets.uset i (AssocList.cons a b bkt) h
     (false, expandIfNecessary ⟨⟨size', buckets'⟩, by simpa [buckets']⟩)
 
 /-- Internal implementation detail of the hash map -/
-@[inline] def containsThenInsertIfNew [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) (b : β a) :
-    Bool × Raw₀ α β :=
+@[inline]
+def containsThenInsertIfNew [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) (b : β a)
+    : Bool × Raw₀ α β :=
   let ⟨⟨size, buckets⟩, hm⟩ := m
   let ⟨i, h⟩ := mkIdx buckets.size hm (hash a)
   let bkt := buckets[i]
   if bkt.contains a then
     (true, ⟨⟨size, buckets⟩, hm⟩)
   else
-    let size'    := size + 1
+    let size' := size + 1
     let buckets' := buckets.uset i (AssocList.cons a b bkt) h
     (false, expandIfNecessary ⟨⟨size', buckets'⟩, by simpa [buckets']⟩)
 
@@ -338,19 +353,20 @@ def insertIfNew [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) (b : β a) : 
   if bkt.contains a then
     ⟨⟨size, buckets⟩, hm⟩
   else
-    let size'    := size + 1
+    let size' := size + 1
     let buckets' := buckets.uset i (AssocList.cons a b bkt) h
     expandIfNecessary ⟨⟨size', buckets'⟩, by simpa [buckets']⟩
 
 /-- Internal implementation detail of the hash map -/
-@[inline] def getThenInsertIfNew? [BEq α] [Hashable α] [LawfulBEq α] (m : Raw₀ α β) (a : α)
-    (b : β a) : Option (β a) × Raw₀ α β :=
+@[inline]
+def getThenInsertIfNew? [BEq α] [Hashable α] [LawfulBEq α] (m : Raw₀ α β) (a : α) (b : β a)
+    : Option (β a) × Raw₀ α β :=
   let ⟨⟨size, buckets⟩, hm⟩ := m
   let ⟨i, h⟩ := mkIdx buckets.size hm (hash a)
   let bkt := buckets[i]
   match bkt.getCast? a with
   | none =>
-    let size'    := size + 1
+    let size' := size + 1
     let buckets' := buckets.uset i (AssocList.cons a b bkt) h
     (none, expandIfNecessary ⟨⟨size', buckets'⟩, by simpa [buckets']⟩)
   | some v => (some v, ⟨⟨size, buckets⟩, hm⟩)
@@ -369,50 +385,45 @@ def contains [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) : Bool :=
   buckets[i].contains a
 
 /-- Internal implementation detail of the hash map -/
-def get [BEq α] [LawfulBEq α] [Hashable α] (m : Raw₀ α β) (a : α) (hma : m.contains a) :
-    β a :=
+def get [BEq α] [LawfulBEq α] [Hashable α] (m : Raw₀ α β) (a : α) (hma : m.contains a) : β a :=
   let ⟨⟨_, buckets⟩, h⟩ := m
   let idx := mkIdx buckets.size h (hash a)
   buckets[idx.1].getCast a hma
 
 /-- Internal implementation detail of the hash map -/
-def getEntry [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) (hma : m.contains a) :
-    (a : α) × β a :=
+def getEntry [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) (hma : m.contains a) : (a : α) × β a :=
   let ⟨⟨_, buckets⟩, h⟩ := m
   let idx := mkIdx buckets.size h (hash a)
   buckets[idx.1].getEntry a hma
 
 /-- Internal implementation detail of the hash map -/
-def getEntry? [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) :
-    Option ((a : α) × β a) :=
+def getEntry? [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) : Option ((a : α) × β a) :=
   let ⟨⟨_, buckets⟩, h⟩ := m
   let idx := mkIdx buckets.size h (hash a)
   buckets[idx.1].getEntry? a
 
 /-- Internal implementation detail of the hash map -/
-def getEntryD [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) (fallback : (a : α) × β a) :
-    (a : α) × β a :=
+def getEntryD [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) (fallback : (a : α) × β a)
+    : (a : α) × β a :=
   let ⟨⟨_, buckets⟩, h⟩ := m
   let idx := mkIdx buckets.size h (hash a)
   buckets[idx.1].getEntryD a fallback
 
 /-- Internal implementation detail of the hash map -/
-def getEntry! [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) [Inhabited ((a : α) × β a)] :
-    (a : α) × β a :=
+def getEntry! [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) [Inhabited ((a : α) × β a)]
+    : (a : α) × β a :=
   let ⟨⟨_, buckets⟩, h⟩ := m
   let idx := mkIdx buckets.size h (hash a)
   buckets[idx.1].getEntry! a
 
 /-- Internal implementation detail of the hash map -/
-def getD [BEq α] [LawfulBEq α] [Hashable α] (m : Raw₀ α β) (a : α) (fallback : β a) :
-    β a :=
+def getD [BEq α] [LawfulBEq α] [Hashable α] (m : Raw₀ α β) (a : α) (fallback : β a) : β a :=
   let ⟨⟨_, buckets⟩, h⟩ := m
   let idx := mkIdx buckets.size h (hash a)
   buckets[idx.1].getCastD a fallback
 
 /-- Internal implementation detail of the hash map -/
-def get! [BEq α] [LawfulBEq α] [Hashable α] (m : Raw₀ α β) (a : α) [Inhabited (β a)] :
-    β a :=
+def get! [BEq α] [LawfulBEq α] [Hashable α] (m : Raw₀ α β) (a : α) [Inhabited (β a)] : β a :=
   let ⟨⟨_, buckets⟩, h⟩ := m
   let idx := mkIdx buckets.size h (hash a)
   buckets[idx.1].getCast! a
@@ -430,50 +441,61 @@ def erase [BEq α] [Hashable α] (m : Raw₀ α β) (a : α) : Raw₀ α β :=
 
 -- Computing the size after the fact was determined to be faster than computing it inline
 /-- Internal implementation detail of the hash map -/
-@[specialize] def filterMap {γ : α → Type w} (f : (a : α) → β a → Option (γ a))
-    (m : Raw₀ α β) : Raw₀ α γ :=
+@[specialize]
+def filterMap {γ : α → Type w} (f : (a : α) → β a → Option (γ a)) (m : Raw₀ α β) : Raw₀ α γ :=
   let ⟨⟨_, buckets⟩, hb⟩ := m
   let newBuckets := buckets.map (AssocList.filterMap f)
   ⟨⟨computeSize newBuckets, newBuckets⟩, by simpa [newBuckets] using hb⟩
 
 /-- Internal implementation detail of the hash map -/
-@[specialize] def map {γ : α → Type w} (f : (a : α) → β a → γ a) (m : Raw₀ α β) : Raw₀ α γ :=
+@[specialize]
+def map {γ : α → Type w} (f : (a : α) → β a → γ a) (m : Raw₀ α β) : Raw₀ α γ :=
   let ⟨⟨size, buckets⟩, hb⟩ := m
   let newBuckets := buckets.map (AssocList.map f)
   ⟨⟨size, newBuckets⟩, by simpa [newBuckets] using hb⟩
 
 /-- Internal implementation detail of the hash map -/
-@[specialize] def filter (f : (a : α) → β a → Bool) (m : Raw₀ α β) : Raw₀ α β :=
+@[specialize]
+def filter (f : (a : α) → β a → Bool) (m : Raw₀ α β) : Raw₀ α β :=
   let ⟨⟨_, buckets⟩, hb⟩ := m
   let newBuckets := buckets.map (AssocList.filter f)
   ⟨⟨computeSize newBuckets, newBuckets⟩, by simpa [newBuckets] using hb⟩
 
 /-- Internal implementation detail of the hash map -/
-def insertMany {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] [BEq α] [Hashable α]
-    (m : Raw₀ α β) (l : ρ) : { m' : Raw₀ α β // ∀ (P : Raw₀ α β → Prop),
-      (∀ {m'' a b}, P m'' → P (m''.insert a b)) → P m → P m' } := Id.run do
-  let mut r : { m' : Raw₀ α β // ∀ (P : Raw₀ α β → Prop),
-    (∀ {m'' a b}, P m'' → P (m''.insert a b)) → P m → P m' } := ⟨m, fun _ _ => id⟩
+def insertMany {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] [BEq α] [Hashable α] (m : Raw₀ α β) (l : ρ)
+    : {m' : Raw₀ α β // ∀ (P : Raw₀ α β → Prop),
+      (∀ {m'' a b}, P m'' → P (m''.insert a b)) → P m → P m'} := Id.run do
+  let mut r
+      : {m' : Raw₀ α β
+        // ∀ (P : Raw₀ α β → Prop), (∀ {m'' a b}, P m'' → P (m''.insert a b)) → P m → P m'} :=
+    ⟨m, fun _ _ => id⟩
   for ⟨a, b⟩ in l do
     r := ⟨r.1.insert a b, fun _ h hm => h (r.2 _ h hm)⟩
   return r
 
 /-- Internal implementation detail of the hash map -/
-def eraseManyEntries {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] [BEq α] [Hashable α]
-    (m : Raw₀ α β) (l : ρ) : { m' : Raw₀ α β // ∀ (P : Raw₀ α β → Prop),
-      (∀ {m'' a}, P m'' → P (m''.erase a)) → P m → P m' } := Id.run do
-  let mut r : { m' : Raw₀ α β // ∀ (P : Raw₀ α β → Prop),
-      (∀ {m'' a}, P m'' → P (m''.erase a)) → P m → P m' } := ⟨m, fun _ _ => id⟩
+def eraseManyEntries
+    {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] [BEq α] [Hashable α] (m : Raw₀ α β) (l : ρ)
+    : {m' : Raw₀ α β
+      // ∀ (P : Raw₀ α β → Prop), (∀ {m'' a}, P m'' → P (m''.erase a)) → P m → P m'} := Id.run do
+  let mut r
+      : {m' : Raw₀ α β
+        // ∀ (P : Raw₀ α β → Prop), (∀ {m'' a}, P m'' → P (m''.erase a)) → P m → P m'} :=
+    ⟨m, fun _ _ => id⟩
   for ⟨a, _⟩ in l do
     r := ⟨r.1.erase a, fun _ h hm => h (r.2 _ h hm)⟩
   return r
 
 /-- Internal implementation detail of the hash map -/
-@[inline] def insertManyIfNew {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] [BEq α] [Hashable α]
-    (m : Raw₀ α β) (l : ρ) : { m' : Raw₀ α β // ∀ (P : Raw₀ α β → Prop),
-      (∀ {m'' a b}, P m'' → P (m''.insertIfNew a b)) → P m → P m' } := Id.run do
-  let mut r : { m' : Raw₀ α β // ∀ (P : Raw₀ α β → Prop),
-    (∀ {m'' a b}, P m'' → P (m''.insertIfNew a b)) → P m → P m' } := ⟨m, fun _ _ => id⟩
+@[inline]
+def insertManyIfNew
+    {ρ : Type w} [ForIn Id ρ ((a : α) × β a)] [BEq α] [Hashable α] (m : Raw₀ α β) (l : ρ)
+    : {m' : Raw₀ α β // ∀ (P : Raw₀ α β → Prop),
+      (∀ {m'' a b}, P m'' → P (m''.insertIfNew a b)) → P m → P m'} := Id.run do
+  let mut r
+      : {m' : Raw₀ α β
+        // ∀ (P : Raw₀ α β → Prop), (∀ {m'' a b}, P m'' → P (m''.insertIfNew a b)) → P m → P m'} :=
+    ⟨m, fun _ _ => id⟩
   for ⟨a, b⟩ in l do
     r := ⟨r.1.insertIfNew a b, fun _ h hm => h (r.2 _ h hm)⟩
   return r
@@ -490,7 +512,8 @@ def interSmaller [BEq α] [Hashable α] (m₁ : Raw₀ α β) (m₂ : Raw α β)
   (m₂.fold (fun sofar k _ => interSmallerFn m₁ sofar k) emptyWithCapacity)
 
 /-- Internal implementation detail of the hash map -/
-@[inline] def union [BEq α] [Hashable α] (m₁ m₂ : Raw₀ α β) : Raw₀ α β :=
+@[inline]
+def union [BEq α] [Hashable α] (m₁ m₂ : Raw₀ α β) : Raw₀ α β :=
   if m₁.1.size ≤ m₂.1.size then (m₂.insertManyIfNew m₁.1).1 else (m₁.insertMany m₂.1).1
 
 /-- Internal implementation detail of the hash map -/
@@ -502,9 +525,12 @@ def beq [BEq α] [LawfulBEq α] [Hashable α] [∀ k, BEq (β k)] (m₁ m₂ : R
   if m₁.1.size ≠ m₂.1.size then false else m₁.1.all (fun k v => m₂.get? k == some v)
 
 /-- Internal implementation detail of the hash map -/
-@[inline] def diff [BEq α] [Hashable α] (m₁ m₂ : Raw₀ α β) : Raw₀ α β :=
-  if m₁.1.size ≤ m₂.1.size then m₁.filter (fun k _ => !m₂.contains k) else (eraseManyEntries m₁ m₂.1).1
-
+@[inline]
+def diff [BEq α] [Hashable α] (m₁ m₂ : Raw₀ α β) : Raw₀ α β :=
+  if m₁.1.size ≤ m₂.1.size then
+    m₁.filter (fun k _ => ! m₂.contains k)
+  else
+    (eraseManyEntries m₁ m₂.1).1
 
 section
 
@@ -521,15 +547,13 @@ def Const.beq [BEq α] [Hashable α] [BEq β] (m₁ m₂ : Raw₀ α (fun _ => �
   if m₁.1.size ≠ m₂.1.size then false else m₁.1.all (fun k v => Const.get? m₂ k == some v)
 
 /-- Internal implementation detail of the hash map -/
-def Const.get [BEq α] [Hashable α] (m : Raw₀ α (fun _ => β)) (a : α)
-    (hma : m.contains a) : β :=
+def Const.get [BEq α] [Hashable α] (m : Raw₀ α (fun _ => β)) (a : α) (hma : m.contains a) : β :=
   let ⟨⟨_, buckets⟩, h⟩ := m
   let idx := mkIdx buckets.size h (hash a)
   buckets[idx.1].get a hma
 
 /-- Internal implementation detail of the hash map -/
-def Const.getD [BEq α] [Hashable α] (m : Raw₀ α (fun _ => β)) (a : α) (fallback : β) :
-    β :=
+def Const.getD [BEq α] [Hashable α] (m : Raw₀ α (fun _ => β)) (a : α) (fallback : β) : β :=
   let ⟨⟨_, buckets⟩, h⟩ := m
   let idx := mkIdx buckets.size h (hash a)
   buckets[idx.1].getD a fallback
@@ -541,36 +565,41 @@ def Const.get! [BEq α] [Hashable α] [Inhabited β] (m : Raw₀ α (fun _ => β
   buckets[idx.1].get! a
 
 /-- Internal implementation detail of the hash map -/
-@[inline] def Const.getThenInsertIfNew? [BEq α] [Hashable α] (m : Raw₀ α (fun _ => β)) (a : α)
-    (b : β) : Option β × Raw₀ α (fun _ => β) :=
+@[inline]
+def Const.getThenInsertIfNew? [BEq α] [Hashable α] (m : Raw₀ α (fun _ => β)) (a : α) (b : β)
+    : Option β × Raw₀ α (fun _ => β) :=
   let ⟨⟨size, buckets⟩, hm⟩ := m
   let ⟨i, h⟩ := mkIdx buckets.size hm (hash a)
   let bkt := buckets[i]
   match bkt.get? a with
   | none =>
-    let size'    := size + 1
+    let size' := size + 1
     let buckets' := buckets.uset i (AssocList.cons a b bkt) h
     (none, expandIfNecessary ⟨⟨size', buckets'⟩, by simpa [buckets']⟩)
   | some v => (some v, ⟨⟨size, buckets⟩, hm⟩)
 
 /-- Internal implementation detail of the hash map -/
-def Const.insertMany {ρ : Type w} [ForIn Id ρ (α × β)] [BEq α] [Hashable α]
-    (m : Raw₀ α (fun _ => β)) (l : ρ) :
-    { m' : Raw₀ α (fun _ => β) // ∀ (P : Raw₀ α (fun _ => β) → Prop),
-      (∀ {m'' a b}, P m'' → P (m''.insert a b)) → P m → P m' } := Id.run do
-  let mut r : { m' : Raw₀ α (fun _ => β) // ∀ (P : Raw₀ α (fun _ => β) → Prop),
-    (∀ {m'' a b}, P m'' → P (m''.insert a b)) → P m → P m' } := ⟨m, fun _ _ => id⟩
+def Const.insertMany
+    {ρ : Type w} [ForIn Id ρ (α × β)] [BEq α] [Hashable α] (m : Raw₀ α (fun _ => β)) (l : ρ)
+    : {m' : Raw₀ α (fun _ => β) // ∀ (P : Raw₀ α (fun _ => β) → Prop),
+      (∀ {m'' a b}, P m'' → P (m''.insert a b)) → P m → P m'} := Id.run do
+  let mut r
+      : {m' : Raw₀ α (fun _ => β) // ∀ (P : Raw₀ α (fun _ => β) → Prop),
+        (∀ {m'' a b}, P m'' → P (m''.insert a b)) → P m → P m'} :=
+    ⟨m, fun _ _ => id⟩
   for (a, b) in l do
     r := ⟨r.1.insert a b, fun _ h hm => h (r.2 _ h hm)⟩
   return r
 
 /-- Internal implementation detail of the hash map -/
-def Const.insertManyIfNewUnit {ρ : Type w} [ForIn Id ρ α] [BEq α] [Hashable α]
-    (m : Raw₀ α (fun _ => Unit)) (l : ρ) :
-    { m' : Raw₀ α (fun _ => Unit) // ∀ (P : Raw₀ α (fun _ => Unit) → Prop),
-      (∀ {m'' a b}, P m'' → P (m''.insertIfNew a b)) → P m → P m' } := Id.run do
-  let mut r : { m' : Raw₀ α (fun _ => Unit) // ∀ (P : Raw₀ α (fun _ => Unit) → Prop),
-    (∀ {m'' a b}, P m'' → P (m''.insertIfNew a b)) → P m → P m' } := ⟨m, fun _ _ => id⟩
+def Const.insertManyIfNewUnit
+    {ρ : Type w} [ForIn Id ρ α] [BEq α] [Hashable α] (m : Raw₀ α (fun _ => Unit)) (l : ρ)
+    : {m' : Raw₀ α (fun _ => Unit) // ∀ (P : Raw₀ α (fun _ => Unit) → Prop),
+      (∀ {m'' a b}, P m'' → P (m''.insertIfNew a b)) → P m → P m'} := Id.run do
+  let mut r
+      : {m' : Raw₀ α (fun _ => Unit) // ∀ (P : Raw₀ α (fun _ => Unit) → Prop),
+        (∀ {m'' a b}, P m'' → P (m''.insertIfNew a b)) → P m → P m'} :=
+    ⟨m, fun _ _ => id⟩
   for a in l do
     r := ⟨r.1.insertIfNew a (), fun _ h hm => h (r.2 _ h hm)⟩
   return r
@@ -604,8 +633,8 @@ def getKey! [BEq α] [Hashable α] [Inhabited α] (m : Raw₀ α β) (a : α) : 
 end Raw₀
 
 /-- Internal implementation detail of the hash map -/
-structure List.HashesTo [BEq α] [Hashable α] (l : List ((a : α) × β a)) (i : Nat)
-    (size : Nat) : Prop where
+structure List.HashesTo [BEq α] [Hashable α] (l : List ((a : α) × β a)) (i : Nat) (size : Nat)
+    : Prop where
   /-- Internal implementation detail of the hash map -/
   hash_self : (h : 0 < size) → ∀ p, p ∈ l → (mkIdx size h (hash p.1)).1.toNat = i
 
@@ -616,8 +645,10 @@ structure IsHashSelf [BEq α] [Hashable α] (m : Array (AssocList α β)) : Prop
 
 namespace Raw
 
-/-- This is the actual well-formedness predicate for hash maps. Users should never need to interact
-with this and should use `WF` instead. -/
+/--
+This is the actual well-formedness predicate for hash maps. Users should never need to interact
+with this and should use `WF` instead.
+-/
 structure WFImp [BEq α] [Hashable α] (m : Raw α β) : Prop where
   /-- Internal implementation detail of the hash map -/
   buckets_hash_self : IsHashSelf m.buckets

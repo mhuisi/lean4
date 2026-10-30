@@ -33,8 +33,7 @@ public def fmtConfigElabLegacy : Fmt := fun
   | `(Lean.Elab.Tactic.configElab|
       $[$docComment?:docComment]? declare_config_elab_legacy%$declTk $elabId:ident $typeId:ident) =>
     fmtDeclareConfigElabLegacy docComment? declTk elabId typeId
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Elab.Tactic.commandConfigElab]
 public def fmtCommandConfigElabLegacy : Fmt := fun
@@ -42,5 +41,4 @@ public def fmtCommandConfigElabLegacy : Fmt := fun
       $[$docComment?:docComment]?
       declare_command_config_elab_legacy%$declTk $elabId:ident $typeId:ident) =>
     fmtDeclareConfigElabLegacy docComment? declTk elabId typeId
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

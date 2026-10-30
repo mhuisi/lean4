@@ -31,18 +31,24 @@ def fma (spec : Format) : UnpackedFloat → UnpackedFloat → UnpackedFloat → 
     if sign₁ * sign₂ == sign₃ then .infinity sign₃ else .notANumber
   | .finite sign₁ .., .infinity sign₂, .infinity sign₃ =>
     if sign₁ * sign₂ == sign₃ then .infinity sign₃ else .notANumber
-  | .infinity sign₁, .infinity sign₂, _ => .infinity (sign₁ * sign₂)
-  | .infinity sign₁, .finite sign₂ .., _ => .infinity (sign₁ * sign₂)
-  | .finite sign₁ .., .infinity sign₂, _ => .infinity (sign₁ * sign₂)
-  | _, _, .infinity sign₃ => .infinity sign₃
+  | .infinity sign₁, .infinity sign₂, _ =>
+    .infinity (sign₁ * sign₂)
+  | .infinity sign₁, .finite sign₂ .., _ =>
+    .infinity (sign₁ * sign₂)
+  | .finite sign₁ .., .infinity sign₂, _ =>
+    .infinity (sign₁ * sign₂)
+  | _, _, .infinity sign₃ =>
+    .infinity sign₃
   | .zero sign₁, .zero sign₂, .zero sign₃ =>
     if sign₁ * sign₂ == sign₃ then .zero sign₃ else .zero .positive
   | .zero sign₁, .finite sign₂ .., .zero sign₃ =>
     if sign₁ * sign₂ == sign₃ then .zero sign₃ else .zero .positive
   | .finite sign₁ .., .zero sign₂, .zero sign₃ =>
     if sign₁ * sign₂ == sign₃ then .zero sign₃ else .zero .positive
-  | .zero _, _, z => z
-  | _, .zero _, z => z
+  | .zero _, _, z =>
+    z
+  | _, .zero _, z =>
+    z
   | .finite s₁ m₁ e₁ _, .finite s₂ m₂ e₂ _, .zero _ =>
     roundWithAccuracy spec (s₁ * s₂) (m₁ * m₂) (e₁ + e₂) .exact
   | .finite s₁ m₁ e₁ _, .finite s₂ m₂ e₂ _, .finite s₃ m₃ e₃ _ =>

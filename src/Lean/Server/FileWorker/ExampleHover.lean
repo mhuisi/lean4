@@ -48,9 +48,7 @@ private def addCommentAt (indent : Nat) (line : String) : String := Id.run do
   else
     return s ++ remaining
 
-/--
-Splits a string into lines, preserving newline characters.
--/
+/-- Splits a string into lines, preserving newline characters. -/
 private def lines (s : String) : Array String := Id.run do
   let mut result := #[]
   let mut lineStart := s.startPos

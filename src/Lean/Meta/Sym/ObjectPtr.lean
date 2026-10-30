@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Data.Hashable
 public section
@@ -21,8 +22,7 @@ structure ObjectPtr where
 Returns the key of `a`. The values of `α` must not be represented as scalars at runtime
 (e.g., `UInt64`, `Bool`, or enumeration types).
 -/
-@[inline] def ObjectPtr.of (a : α) : ObjectPtr :=
-  { value := unsafe unsafeCast a }
+@[inline] def ObjectPtr.of (a : α) : ObjectPtr := { value := unsafe unsafeCast a }
 
 instance : Hashable ObjectPtr where
   hash k := unsafe (ptrAddrUnsafe k.value >>> 3).toUInt64

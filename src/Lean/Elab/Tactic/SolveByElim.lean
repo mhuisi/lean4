@@ -44,35 +44,45 @@ The first component should be true if `*` appears at least once.
 The second component should contain each term `t`in the arguments.
 The third component should contain `t` for each `-t` in the arguments.
 -/
-def parseArgs (s : Option (TSyntax ``args)) :
-    Bool × List Term × List Term :=
-  let args : Array (TSyntax ``arg) := match s with
-  | some s => match s with
-    | `(args| [$args,*]) => args.getElems
-    | _ => #[]
-  | none => #[]
-  let args : Array (Option (Term ⊕ Term)) := args.map fun t => match t with
-    | `(arg| $_:star) => none
-    | `(arg| - $t:term) => some (Sum.inr t)
-    | `(arg| $t:term) => some (Sum.inl t)
-    | _ => panic! "Unreachable parse of solve_by_elim arguments."
+def parseArgs (s : Option (TSyntax ``args)) : Bool × List Term × List Term :=
+  let args : Array (TSyntax ``arg) :=
+    match s with
+    | some s =>
+      match s with
+      | `(args| [$args,*]) => args.getElems
+      | _ => #[]
+    | none => #[]
+  let args : Array (Option (Term ⊕ Term)) :=
+    args.map fun t =>
+      match t with
+      | `(arg| $_:star) => none
+      | `(arg| - $t:term) => some (Sum.inr t)
+      | `(arg| $t:term) => some (Sum.inl t)
+      | _ => panic! "Unreachable parse of solve_by_elim arguments."
   let args := args.toList
-  (args.contains none,
+  (
+    args.contains none,
     args.filterMap fun o => o.bind Sum.getLeft?,
-    args.filterMap fun o => o.bind Sum.getRight?)
+    args.filterMap fun o => o.bind Sum.getRight?
+  )
 
 /-- Parse the `using ...` argument for `solve_by_elim`. -/
 def parseUsing (s : Option (TSyntax ``using_)) : Array Ident :=
   match s with
-  | some s => match s with
+  | some s =>
+    match s with
     | `(using_ | using $ids,*) => ids.getElems
     | _ => #[]
   | none => #[]
 
-/-- Wrapper for `solveByElim` that processes a list of `Term`s
-that specify the lemmas to use. -/
-def processSyntax (cfg : SolveByElimConfig := {}) (only star : Bool) (add remove : List Term)
-    (use : Array Ident) (goals : List MVarId) : MetaM (List MVarId) := do
+/--
+Wrapper for `solveByElim` that processes a list of `Term`s
+that specify the lemmas to use.
+-/
+def processSyntax
+    (cfg : SolveByElimConfig := {})
+    (only star : Bool) (add remove : List Term) (use : Array Ident) (goals : List MVarId)
+    : MetaM (List MVarId) := do
   if !remove.isEmpty && goals.length > 1 then
     throwError "Removing local hypotheses is not supported when operating on multiple goals."
   let ⟨lemmas, ctx⟩ ← mkAssumptionSet only star add remove use
@@ -85,9 +95,7 @@ def evalApplyAssumption : Tactic := fun stx =>
     let (star, add, remove) := parseArgs t
     let use := parseUsing use
     let cfg ← elabConfig cfg
-    let cfg := { cfg with
-      backtracking := false
-      maxDepth := 1 }
+    let cfg := { cfg with backtracking := false, maxDepth := 1 }
     replaceMainGoal (← processSyntax cfg o.isSome star add remove use [← getMainGoal])
   | _ => throwUnsupportedSyntax
 
@@ -112,28 +120,31 @@ def evalSolveByElim : Tactic
   | `(tactic| solve_by_elim $[*%$s]? $cfg:optConfig $[only%$o]? $[$t:args]? $[$use:using_]?) => do
     let (star, add, remove) := parseArgs t
     let use := parseUsing use
-    let goals ← if s.isSome then
-      getGoals
-    else
-      pure [← getMainGoal]
+    let goals ←
+      if s.isSome then
+        getGoals
+      else
+        pure [← getMainGoal]
     let cfg ← elabConfig cfg
     -- Add library suggestions if +suggestions is enabled
-    let add ← if cfg.suggestions then
-      let mainGoal ← getMainGoal
-      let suggestions ← LibrarySuggestions.select mainGoal { caller := some "solve_by_elim" }
-      let suggestionTerms ← suggestions.toList.filterMapM fun s => do
-        -- Only include suggestions for constants that exist
-        let env ← getEnv
-        if env.contains s.name then
-          let ident := mkCIdentFrom (← getRef) s.name (canonical := true)
-          return some (⟨ident⟩ : Term)
-        else
-          return none
-      pure (add ++ suggestionTerms)
-    else
-      pure add
-    let [] ← processSyntax cfg o.isSome star add remove use goals |
-      throwError "Internal error: `solve_by_elim` unexpectedly returned subgoals"
+    let add ←
+      if cfg.suggestions then
+        let mainGoal ← getMainGoal
+        let suggestions ← LibrarySuggestions.select mainGoal { caller := some "solve_by_elim" }
+        let suggestionTerms ←
+          suggestions.toList.filterMapM fun s => do
+            -- Only include suggestions for constants that exist
+            let env ← getEnv
+            if env.contains s.name then
+              let ident := mkCIdentFrom (← getRef) s.name (canonical := true)
+              return some (⟨ident⟩ : Term)
+            else
+              return none
+        pure (add ++ suggestionTerms)
+      else
+        pure add
+    let [] ← processSyntax cfg o.isSome star add remove use goals
+      | throwError "Internal error: `solve_by_elim` unexpectedly returned subgoals"
     pure ()
   | _ => throwUnsupportedSyntax
 

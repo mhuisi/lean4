@@ -56,8 +56,7 @@ private def checkMissingFormatter (stx : Syntax) : CommandElabM Unit := do
   -- An aborting error hides all missing formatters of the command, so it is reported as well.
   let r ←
     match FmtM.run ctx (Fmt.fmt stx) with
-    | .ok r =>
-      pure r
+    | .ok r => pure r
     | .error e =>
       let ref := e.ref? |>.getD stx
       logLint linter.fmt.missing ref <|

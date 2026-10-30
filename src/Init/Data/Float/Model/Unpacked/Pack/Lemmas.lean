@@ -22,14 +22,14 @@ more details.
 namespace Float.Model.UnpackedFloat
 
 @[simp]
-theorem unpackMantissa_packComponents {spec : Format} {sign exponent mantissa} :
-    unpackMantissa (packComponents spec sign exponent mantissa) = mantissa := by
+theorem unpackMantissa_packComponents {spec : Format} {sign exponent mantissa}
+    : unpackMantissa (packComponents spec sign exponent mantissa) = mantissa := by
   ext i hi
   simp [unpackMantissa, packComponents, BitVec.getLsbD_eq_getElem, BitVec.getLsbD_append, hi]
 
 @[simp]
-theorem unpackExponent_packComponents {spec : Format} {sign exponent mantissa} :
-    unpackExponent (packComponents spec sign exponent mantissa) = exponent := by
+theorem unpackExponent_packComponents {spec : Format} {sign exponent mantissa}
+    : unpackExponent (packComponents spec sign exponent mantissa) = exponent := by
   ext i hi
   simp [unpackExponent, packComponents, BitVec.getLsbD_eq_getElem, BitVec.getLsbD_append, hi]
 
@@ -48,7 +48,6 @@ theorem valid_pack {spec : Format} {f : UnpackedFloat} : spec.Valid (pack spec f
       rw [Nat.mod_eq_of_lt (by omega)]
       omega
     omega
-  | case6 s m e hm actualMantissaBits biasedExponent h₁ h₂ =>
-    simp [Nat.ne_zero_of_lt spec.he]
+  | case6 s m e hm actualMantissaBits biasedExponent h₁ h₂ => simp [Nat.ne_zero_of_lt spec.he]
 
 end Float.Model.UnpackedFloat

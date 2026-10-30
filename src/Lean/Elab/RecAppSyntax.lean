@@ -37,7 +37,8 @@ to recover the text from.
 private partial def detachSyntax : Syntax → Syntax
   | .node info kind args => .node (detachSourceInfo info) kind (args.map detachSyntax)
   | .atom info val => .atom (detachSourceInfo info) val
-  | .ident info rawVal val pre => .ident (detachSourceInfo info) rawVal.toString.toRawSubstring val pre
+  | .ident info rawVal val pre =>
+    .ident (detachSourceInfo info) rawVal.toString.toRawSubstring val pre
   | .missing => .missing
 
 /--
@@ -53,31 +54,25 @@ attribute an error to the wrong call site (issue #13444).
 def mkRecAppWithSyntax (e : Expr) (stx : Syntax) : Expr :=
   let stx := detachSyntax stx
   let m := KVMap.empty.insert recAppKey (.ofSyntax stx)
-  let m := match stx.getPos? with
+  let m :=
+    match stx.getPos? with
     | some p => m.insert recAppPosKey (.ofNat p.byteIdx)
-    | none   => m
+    | none => m
   mkMData m e
 
-/--
-Retrieve (if available) the syntax object attached to a recursive application.
--/
+/-- Retrieve (if available) the syntax object attached to a recursive application. -/
 def getRecAppSyntax? (e : Expr) : Option Syntax :=
   match e with
   | .mdata d _ =>
     match d.find recAppKey with
     | some (DataValue.ofSyntax stx) => some stx
     | _ => none
-  | _                => none
+  | _ => none
 
-/--
-Checks if the `MData` is for a recursive application.
--/
-def MData.isRecApp (d : MData) : Bool :=
-  d.contains recAppKey
+/-- Checks if the `MData` is for a recursive application. -/
+def MData.isRecApp (d : MData) : Bool := d.contains recAppKey
 
-/--
-Return `true` if `getRecAppSyntax? e` is a `some`.
--/
+/-- Return `true` if `getRecAppSyntax? e` is a `some`. -/
 def hasRecAppSyntax (e : Expr) : Bool :=
   match e with
   | .mdata d _ => d.isRecApp

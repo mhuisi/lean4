@@ -21,8 +21,7 @@ public def fmtEStackType : Fmt := fun
     let exceptConds ← fmtTSepArray exceptConds
     let rbTk ← fmt rbTk
     return Layouts.metaApplication lbTk (Layouts.metaApplication.Term.ofSepArray exceptConds) rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 open Std.WP in
 @[builtin_fmt Std.WP.«termEstack⟨_⟩»]
@@ -32,5 +31,4 @@ public def fmtEStackValue : Fmt := fun
     let handlers ← fmtTSepArray handlers
     let rbTk ← fmt rbTk
     return Layouts.metaApplication lbTk (Layouts.metaApplication.Term.ofSepArray handlers) rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

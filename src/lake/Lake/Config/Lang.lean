@@ -12,7 +12,8 @@ namespace Lake
 
 /-- Lake configuration language identifier. -/
 public inductive ConfigLang
-| lean | toml
+  | lean
+  | toml
 deriving Repr, DecidableEq
 
 /-- Lake's default configuration language. -/
@@ -21,12 +22,12 @@ public abbrev ConfigLang.default : ConfigLang := .toml
 public instance : Inhabited ConfigLang := ⟨.default⟩
 
 public def ConfigLang.ofString? : String → Option ConfigLang
-| "lean" => some .lean
-| "toml" => some .toml
-| _ => none
+  | "lean" => some .lean
+  | "toml" => some .toml
+  | _ => none
 
 public def ConfigLang.fileExtension : ConfigLang → String
-| .lean => "lean"
-| .toml => "toml"
+  | .lean => "lean"
+  | .toml => "toml"
 
 public instance : ToString ConfigLang := ⟨ConfigLang.fileExtension⟩

@@ -93,8 +93,7 @@ Yields `none` if the content is not well-formed.
 -/
 public partial def lex (cs : List Char) (acc : Array Element) : Option (Array Element) :=
   match cs with
-  | [] =>
-    some acc
+  | [] => some acc
   | '"' :: _ =>
     -- An unescaped quote cannot occur within the content of a string literal.
     none
@@ -369,15 +368,13 @@ public def fmtParen : Fmt := fun
     let t ← fmt t
     let rbTk ← fmt rbTk
     return Layouts.parens lbTk t rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.namedArgument]
 public def fmtNamedArgument : Fmt := fun
   | `(Parser.Term.namedArgument| (%$lbTk $id:ident :=%$colonEqTk $body:term )%$rbTk) =>
     fmtNamedArgumentTerm lbTk id colonEqTk body rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.ellipsis]
 public def fmtEllipsis : Fmt := fmtAtomic
@@ -387,8 +384,7 @@ public def fmtProj : Fmt := fun
   | `($lhs:term.%$dotTk$field) => do
     let lhs ← fmt lhs
     fmtProjLike lhs dotTk field
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt_sticky_term]
 public def stickyIdRun : StickyTermFn := fun
@@ -431,8 +427,7 @@ public def fmtTypeAscription : Fmt := fun
     let rbTk ← fmt rbTk
     let ascription := Layouts.typeAscription (format := .dense) lhs typeAscriptionTk type?
     return Layouts.parens lbTk ascription rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_infix_fmt Lean.Parser.Term.arrow]
 public def fmtArrow : Fmt.InfixOperation :=
@@ -465,8 +460,7 @@ public def fmtForall : QuantifierFmt := fun
       commaTk
       body
     }
-  | _ =>
-    none
+  | _ => none
 
 @[builtin_fmt Lean.Parser.Term.explicit]
 public def fmtExplicit : Fmt := fun
@@ -474,8 +468,7 @@ public def fmtExplicit : Fmt := fun
     let atTk ← fmt atTk
     let t ← fmt t
     return Layouts.prefixOperator atTk t .withoutSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.cdot]
 public def fmtCdot : Fmt
@@ -489,8 +482,7 @@ public def fmtBorrowed : Fmt := fun
     let borrowTk ← fmt borrowTk
     let t ← fmt t
     return Layouts.prefixOperator borrowTk t .withSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 meta def matchAlts := Lean.Parser.Term.matchAlts
 
@@ -521,8 +513,7 @@ public def fmtFun : Fmt := fun
       ]
     let doc := Layouts.matchDeclaration funTk matchAlts
     return sticky doc doc .coequal
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 where
   isSingleMatchAlt : TSyntax ``Parser.Term.matchAlts → Bool
     | `(matchAlts| | $_ => $_) => true
@@ -534,8 +525,7 @@ public def fmtDotIdent : Fmt
     let dotTk ← fmt dotTk
     let id ← fmt id
     return Layouts.prefixOperator dotTk id .withoutSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtUniverseAnnotation?
     (lbTk? : Option Syntax) (levels? : Option (Syntax.SepArray ",")) (rbTk? : Option Syntax)
@@ -552,8 +542,7 @@ public def fmtExplicitUniv : Fmt := fun
     let lhs ← fmt lhs
     let annotation? ← fmtUniverseAnnotation? lbTk levels rbTk
     return mkSelfDelimited <| Layouts.atomic #[lhs, annotation?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtPipeProjLike
     (stx : Syntax) (deconstruct? : Syntax → FmtM (Option (Syntax × TaggedDoc)))
@@ -584,8 +573,7 @@ public def deconstructPipeProj : Syntax → FmtM (Option (Syntax × TaggedDoc))
       ]
     let pipe ← fmtFixedApp pipeHead args
     return some (stx', pipe)
-  | _ =>
-    return none
+  | _ => return none
 
 @[builtin_fmt Lean.Parser.Term.pipeProj]
 public def fmtPipeProj : Fmt := fun stx => fmtPipeProjLike stx deconstructPipeProj
@@ -603,8 +591,7 @@ public def fmtAnonymousCtor : Fmt := fun
     let fields ← fmtTSepArray fields
     let rbTk ← fmt rbTk
     return Layouts.tuple lbTk fields rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.tuple]
 public def fmtTuple : Fmt := fun
@@ -619,8 +606,7 @@ public def fmtTuple : Fmt := fun
     let fields ← fmtTSepArray fields
     let rbTk ← fmt rbTk
     return Layouts.tuple lbTk fields rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.namedPattern]
 public def fmtNamedPattern : Fmt := fun
@@ -632,8 +618,7 @@ public def fmtNamedPattern : Fmt := fun
     let t2 ← fmt t2
     let rhs := Layouts.typeAscription id? typeAscriptionTk? t2
     return mkSelfDelimited <| Layouts.atomic #[t1, atTk, rhs]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.letOptNondep]
 public def fmtLetOptNondep := fmtAtomic
@@ -663,8 +648,7 @@ public def fmtLetPosOpt : Fmt
     let plusTk ← fmt plusTk
     let opt ← fmt opt
     return Layouts.prefixOperator plusTk opt .withoutSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.letNegOpt]
 public def fmtLetNegOpt : Fmt := fun
@@ -672,15 +656,13 @@ public def fmtLetNegOpt : Fmt := fun
     let minusTk ← fmt minusTk
     let opt ← fmt opt
     return Layouts.prefixOperator minusTk opt .withoutSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.letOptEq]
 public def fmtLetOptEq : Fmt
   | `(Parser.Term.letOptEq| (%$lbTk eq%$eqTk :=%$colonEqTk $id )%$rbTk ) =>
     fmtNamedArgumentTerm lbTk eqTk colonEqTk id rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.letConfig]
 public def fmtLetConfig : Fmt := fun stx => do
@@ -706,16 +688,14 @@ public def fmtLet : Fmt := fun
   | `(Parser.Term.let|
       let%$letTk $config:letConfig $decl:letDecl ;%$semicolonTk $body:term) =>
     fmtLetTerm letTk config decl semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.have]
 public def fmtHave : Fmt := fun
   | `(Parser.Term.have|
       have%$haveTk $config:letConfig $decl:letDecl ;%$semicolonTk $body:term) =>
     fmtLetTerm haveTk config decl semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtLetRecDecl (compact : Bool) : Fmt := fun
   | `(Parser.Term.letRecDecl|
@@ -729,15 +709,13 @@ public def fmtLetRecDecl (compact : Bool) : Fmt := fun
     let terminationSuffix ← fmt terminationSuffix
     let declWithAttributes ← fmtDeclWithAttributes attributes? letDecl compact
     return Layouts.lines #[docComment?, declWithAttributes, terminationSuffix]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtLetRecDecls (compact : Bool) : Fmt := fun
   | `(Parser.Term.letRecDecls| $decls:letRecDecl,*) => do
     let decls ← fmtTSepArrayWith (fmtLetRecDecl compact) ``fmtLetRecDecl decls
     return Layouts.sepLines decls (includeSeps := true)
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtFullLetRecDecl (tks : Array Syntax) (decls : TSyntax ``Parser.Term.letRecDecls)
     : FmtM TaggedDoc := do
@@ -757,8 +735,7 @@ public def fmtLetrec : Fmt := fun
     let components := #[letTk, recTk, decls]
     let fullDecl ← fmtFullLetRecDecl #[letTk, recTk] decls
     fmtTermInstruction fullDecl components semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 where
   isSimpleDecl : TSyntax `Lean.Parser.Term.letRecDecls → FmtM Bool
     | `(Parser.Term.letRecDecls| $[$_:attributes]? $_:letDecl $[$_]?) => return true
@@ -770,8 +747,7 @@ public def fmtByTactic : Fmt := fun
     let byTk ← fmt byTk
     let tacticSeq ← fmt tacticSeq
     return Layouts.keywordPrefixedSeq byTk tacticSeq .sticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.show]
 public def fmtShow : Fmt := fun
@@ -789,8 +765,7 @@ public def fmtShow : Fmt := fun
     let byTk ← fmt byTk
     let tacticSeq ← fmt tacticSeq
     return Layouts.keywordSeparated lhs byTk tacticSeq
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.matchDiscr]
 public def fmtMatchDiscr : Fmt
@@ -799,8 +774,7 @@ public def fmtMatchDiscr : Fmt
     let colonTk? ← fmt? colonTk?
     let discr ← fmt discr
     return Layouts.typeAscription id? colonTk? discr
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.trueVal]
 public def fmtTrueVal : Fmt := fmtAtomic
@@ -812,15 +786,13 @@ public def fmtFalseVal : Fmt := fmtAtomic
 public def fmtGeneralizingParam : Fmt := fun
   | `(Parser.Term.generalizingParam| (%$lbTk generalizing%$generalizingTk :=%$colonEqTk $flag )%$rbTk) =>
     fmtNamedArgumentTerm lbTk generalizingTk colonEqTk flag rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.motive]
 public def fmtMotive : Fmt := fun
   | `(Parser.Term.motive| (%$lbTk motive%$motiveTk :=%$colonEqTk $rhs:term )%$rbTk) =>
     fmtNamedArgumentTerm lbTk motiveTk colonEqTk rhs rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.match]
 public def fmtMatch : Fmt := fun
@@ -839,8 +811,7 @@ public def fmtMatch : Fmt := fun
       allowFlattening := false
       nestedRhs := false
     }
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Command.docComment]
 public def fmtDocComment : Fmt := fun stx => do
@@ -876,8 +847,7 @@ public def fmtAttrInstance : Fmt := fun
     let kind ← fmt kind
     let attr ← fmt attr
     return nested <| combine #[.withSepAfter kind space, attr]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.attributes]
 public def fmtAttributes : Fmt := fun
@@ -886,8 +856,7 @@ public def fmtAttributes : Fmt := fun
     let attrInstances ← fmtTSepArray attrInstances
     let attrRbTk ← fmt attrRbTk
     return Layouts.collection attrLbTk attrInstances attrRbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Termination.terminationBy?]
 public def fmtTerminationBy? : Fmt := fmtAtomic
@@ -905,8 +874,7 @@ public def fmtTerminationBy : Fmt := fun
     let arrowTk? ← fmt? arrowTk?
     let measure ← fmt measure
     return Layouts.assignmentDeclaration signature arrowTk? measure
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Termination.partialFixpoint]
 public def fmtPartialFixpoint : Fmt := fun
@@ -917,8 +885,7 @@ public def fmtPartialFixpoint : Fmt := fun
     let kws := Layouts.spacedAtomic #[partialFixpoint, monotonicity?]
     let proof? ← fmt? proof?
     return Layouts.pseudoApplication #[kws, proof?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Termination.coinductiveFixpoint]
 public def fmtCoinductiveFixpoint : Fmt := fun
@@ -930,8 +897,7 @@ public def fmtCoinductiveFixpoint : Fmt := fun
       let kws := Layouts.spacedAtomic #[coinductiveFixpoint, monotonicity?]
       let proof? ← fmt? proof?
       return Layouts.pseudoApplication #[kws, proof?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Termination.inductiveFixpoint]
 public def fmtInductiveFixpoint : Fmt := fun
@@ -942,8 +908,7 @@ public def fmtInductiveFixpoint : Fmt := fun
     let kws := Layouts.spacedAtomic #[inductiveFixpoint, monotonicity?]
     let proof? ← fmt? proof?
     return Layouts.pseudoApplication #[kws, proof?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Termination.suffix]
 public def fmtTerminationSuffix : Fmt := fun
@@ -955,8 +920,7 @@ public def fmtTerminationSuffix : Fmt := fun
     let decreasingByTacticSeq? ← fmt? decreasingByTacticSeq?
     let decreasingBy := Layouts.keywordPrefixedSeq decreasingBy? decreasingByTacticSeq? .nonSticky
     return Layouts.lines #[terminationBy?, decreasingBy]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.letId]
 public def fmtLetId : Fmt
@@ -987,8 +951,7 @@ public def fmtLetIdDecl : Fmt := fun
     let colonEqTk ← fmt colonEqTk
     let body ← fmt body
     return Layouts.assignmentDeclaration signature colonEqTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.letEqnsDecl]
 public def fmtLetEqnsDecl : Fmt := fun
@@ -999,8 +962,7 @@ public def fmtLetEqnsDecl : Fmt := fun
     let signature ← fmtLocalSignature letId letIdBinders typeAscriptionTk? type?
     let matchAlts ← fmt matchAlts
     return Layouts.matchDeclaration signature matchAlts
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 meta def letPatDeclF := Parser.Term.letPatDecl
 
@@ -1019,8 +981,7 @@ public def fmtLetPatDecl : Fmt := fun
     let colonEqTk ← fmt colonEqTk
     let body ← fmt body
     return Layouts.assignmentDeclaration signature colonEqTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.letDecl]
 public def fmtLetDecl : Fmt := fun
@@ -1052,8 +1013,7 @@ public def fmtWhereFinally : Fmt := fun
       ]
     else
       return Layouts.keywordPrefixedSeq finallyTk tacticSeq .sticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.whereDecls]
 public def fmtWhereDecls : Fmt := fun
@@ -1071,8 +1031,7 @@ public def fmtWhereDecls : Fmt := fun
           (fmtWith (fmtLetRecDecl (compact := false)) ``fmtLetRecDecl) decls
       let whereDecls := nested <| Layouts.retainedWhitespace #[whereTk, whereTkTrailing, decls]
       return Layouts.retainedWhitespace #[whereDecls, declsTrailing, whereFinally?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def isComplexAlt (stx : Syntax) : FmtM Bool := do
   let `(Parser.Term.matchAltExpr| | $[$_:term,*]|* => $_:term) := stx
@@ -1108,8 +1067,7 @@ public def fmtMatchAlts : Fmt := fun
   | `(matchAlts| $matchAlts:matchAlt*) => do
     let matchAlts ← matchAlts.mapM fmtMatchAlt
     return Layouts.alts matchAlts
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.structInstFieldDef]
 public def fmtStructInstFieldDef : Fmt := fun
@@ -1120,8 +1078,7 @@ public def fmtStructInstFieldDef : Fmt := fun
     let body ← fmt body
     return mkStructInstFieldDecl fun signature =>
       Layouts.assignmentDeclaration signature separator body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.structInstFieldEqns]
 public def fmtStructInstFieldEqns : Fmt := fun
@@ -1131,8 +1088,7 @@ public def fmtStructInstFieldEqns : Fmt := fun
     return mkStructInstFieldDecl fun signature =>
       let signature := Layouts.spacedAtomic #[signature, privateTk?]
       Layouts.matchDeclaration signature matchAlts
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.optEllipsis]
 public def fmtOptEllipsis : Fmt := fmtAtomic
@@ -1200,8 +1156,7 @@ public def fmtStructInst : Fmt := fun
         typeSignature
       ]
     return Layouts.bracketed lbTk body rbTk <| .sparse nl (stickynessKind := .preferSticky)
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.inferInstanceAs]
 public def fmtInferInstanceAs : Fmt := fun stx => do
@@ -1222,8 +1177,7 @@ public def fmtInferInstanceAs : Fmt := fun stx => do
 public def fmtPrivateDecl : Fmt := fun
   | `(Parser.Term.privateDecl| private_decl%%$privateDeclTk $t:term) => do
     fmtAppLike #[privateDeclTk, t]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.sorry]
 public def fmtSorry : Fmt := fmtAtomic
@@ -1287,36 +1241,31 @@ public def fmtBinop : Fmt := fun
 public def fmtBinopLazy : Fmt := fun
   | `(Parser.Term.binop_lazy| binop_lazy%%$binopTk $f:ident $a:term $b:term) => do
     fmtAppLike #[binopTk, f, a, b]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.binrel]
 public def fmtBinrel : Fmt := fun
   | `(Parser.Term.binrel| binrel%%$binrelTk $f:ident $a:term $b:term) => do
     fmtAppLike #[binrelTk, f, a, b]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.binrel_no_prop]
 public def fmtBinrelNoProp : Fmt := fun
   | `(Parser.Term.binrel_no_prop| binrel_no_prop%%$binrelTk $f:ident $a:term $b:term) => do
     fmtAppLike #[binrelTk, f, a, b]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.leftact]
 public def fmtLeftact : Fmt := fun
   | `(Parser.Term.leftact| leftact%%$leftactTk $f:ident $a:term $b:term) => do
     fmtAppLike #[leftactTk, f, a, b]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.rightact]
 public def fmtRightact : Fmt := fun
   | `(Parser.Term.rightact| rightact%%$rightactTk $f:ident $a:term $b:term) => do
     fmtAppLike #[rightactTk, f, a, b]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.unop]
 public def fmtUnop : Fmt := fun
@@ -1327,15 +1276,13 @@ public def fmtUnop : Fmt := fun
 public def fmtForInMacro : Fmt := fun
   | `(Parser.Term.forInMacro| for_in%%$forInTk $a:term $b:term $c:term) => do
     fmtAppLike #[forInTk, a, b, c]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.forInMacro']
 public def fmtForInMacro' : Fmt := fun
   | `(Parser.Term.forInMacro'| for_in'%%$forInTk $a:term $b:term $c:term) => do
     fmtAppLike #[forInTk, a, b, c]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.typeOf]
 public def fmtTypeOf : Fmt := fun
@@ -1346,22 +1293,19 @@ public def fmtTypeOf : Fmt := fun
 public def fmtEnsureTypeOf : Fmt := fun
   | `(Parser.Term.ensureTypeOf| ensure_type_of%%$ensureTypeOfTk $t:term $s:str $body:term) => do
     fmtAppLike #[ensureTypeOfTk, t, s, body]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.ensureExpectedType]
 public def fmtEnsureExpectedType : Fmt := fun
   | `(Parser.Term.ensureExpectedType| ensure_expected_type%%$ensureExpectedTypeTk $s:str $t:term) =>
     do fmtAppLike #[ensureExpectedTypeTk, s, t]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.noImplicitLambda]
 public def fmtNoImplicitLambda : Fmt := fun
   | `(Parser.Term.noImplicitLambda| no_implicit_lambda%%$noImplicitLambdaTk $t:term) => do
     fmtAppLike #[noImplicitLambdaTk, t]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.valueOf]
 public def fmtValueOf : Fmt := fun
@@ -1372,8 +1316,7 @@ public def fmtValueOf : Fmt := fun
 public def fmtShowTermElabImpl : Fmt := fun
   | `(Parser.Term.showTermElabImpl| show_term_elab%$showTermElabTk $t:term) => do
     fmtAppLike #[showTermElabTk, t]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.defaultOrOfNonempty]
 public def fmtDefaultOrOfNonempty : Fmt := fun
@@ -1382,64 +1325,55 @@ public def fmtDefaultOrOfNonempty : Fmt := fun
       let defaultOrTk ← fmt defaultOrTk
       let unsafeTk? ← fmt? unsafeTk?
       return Layouts.spacedAtomic #[defaultOrTk, unsafeTk?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.noErrorIfUnused]
 public def fmtNoErrorIfUnused : Fmt := fun
   | `(Parser.Term.noErrorIfUnused| no_error_if_unused%%$noErrorTk $t:term) => do
     fmtAppLike #[noErrorTk, t]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.contractEPosts]
 public def fmtContractEPosts : Fmt := fun
   | `(Parser.Term.contractEPosts| contract_eposts%%$contractEPostsTk $t:term) =>
     fmtAppLike #[contractEPostsTk, t]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.throwNamedErrorMacro]
 public def fmtThrowNamedErrorMacro : Fmt := fun
   | `(Parser.Term.throwNamedErrorMacro| throwNamedError%$throwTk $name:ident $msg) => do
     fmtAppLike #[throwTk, name, msg]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.throwNamedErrorAtMacro]
 public def fmtThrowNamedErrorAtMacro : Fmt := fun
   | `(Parser.Term.throwNamedErrorAtMacro| throwNamedErrorAt%$throwTk $ref:term $name:ident $msg) =>
     do fmtAppLike #[throwTk, ref, name, msg]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.logNamedErrorMacro]
 public def fmtLogNamedErrorMacro : Fmt := fun
   | `(Parser.Term.logNamedErrorMacro| logNamedError%$logTk $name:ident $msg) => do
     fmtAppLike #[logTk, name, msg]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.logNamedErrorAtMacro]
 public def fmtLogNamedErrorAtMacro : Fmt := fun
   | `(Parser.Term.logNamedErrorAtMacro| logNamedErrorAt%$logTk $ref:term $name:ident $msg) => do
     fmtAppLike #[logTk, ref, name, msg]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.logNamedWarningMacro]
 public def fmtLogNamedWarningMacro : Fmt := fun
   | `(Parser.Term.logNamedWarningMacro| logNamedWarning%$logTk $name:ident $msg) => do
     fmtAppLike #[logTk, name, msg]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.logNamedWarningAtMacro]
 public def fmtLogNamedWarningAtMacro : Fmt := fun
   | `(Parser.Term.logNamedWarningAtMacro| logNamedWarningAt%$logTk $ref:term $name:ident $msg) => do
     fmtAppLike #[logTk, ref, name, msg]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.inaccessible]
 public def fmtInaccessible : Fmt := fun
@@ -1448,8 +1382,7 @@ public def fmtInaccessible : Fmt := fun
     let t ← fmt t
     let rbTk ← fmt rbTk
     return Layouts.bracketed lbTk t rbTk .dense
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.dbgTrace]
 public def fmtDbgTrace : Fmt := fun
@@ -1457,8 +1390,7 @@ public def fmtDbgTrace : Fmt := fun
     let components := #[dbgTraceTk, arg]
     let instruction := Layouts.pseudoApplication (← components.mapM fmt)
     fmtTermInstruction instruction components semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.idbg]
 public def fmtIdbg : Fmt := fun
@@ -1466,8 +1398,7 @@ public def fmtIdbg : Fmt := fun
     let components := #[idbgTk, t]
     let instruction := Layouts.pseudoApplication (← components.mapM fmt)
     fmtTermInstruction instruction components semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.assert]
 public def fmtAssert : Fmt := fun
@@ -1475,8 +1406,7 @@ public def fmtAssert : Fmt := fun
     let components := #[assertTk, cond]
     let instruction := Layouts.pseudoApplication (← components.mapM fmt)
     fmtTermInstruction instruction components semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.debugAssert]
 public def fmtDebugAssert : Fmt := fun
@@ -1485,8 +1415,7 @@ public def fmtDebugAssert : Fmt := fun
       let components := #[debugAssertTk, cond]
       let instruction := Layouts.pseudoApplication (← components.mapM fmt)
       fmtTermInstruction instruction components semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.clear]
 public def fmtClear : Fmt := fun
@@ -1494,8 +1423,7 @@ public def fmtClear : Fmt := fun
     let components := #[clearTk, id]
     let instruction := Layouts.pseudoApplication (← components.mapM fmt)
     fmtTermInstruction instruction components semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.nomatch]
 public def fmtNomatch : Fmt := fun
@@ -1503,8 +1431,7 @@ public def fmtNomatch : Fmt := fun
     let nomatchTk ← fmt nomatchTk
     let terms ← fmtTSepArray terms
     return Layouts.keywordPrefixedSepFill nomatchTk terms .nonSticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.stateRefT]
 public def fmtStateRefT : Fmt := fun
@@ -1516,8 +1443,7 @@ public def fmtStateRefT : Fmt := fun
       return Layouts.pipeOperator #[lhs, dollarTk, rhs]
     else
       fmtAppLike #[stateRefTTk, arg, last]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.letMVar]
 public def fmtLetMVar : Fmt := fun
@@ -1534,8 +1460,7 @@ public def fmtLetMVar : Fmt := fun
       let decl := Layouts.assignmentDeclaration lhs colonEqTk value
       let fullDecl := Layouts.letDecl letMVarTk empty decl
       fmtTermInstruction fullDecl components semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtWaitIfMVarLike (kwTk questionTk id semicolonTk body : Syntax) : FmtM TaggedDoc := do
   let components := #[kwTk, questionTk, id]
@@ -1551,32 +1476,28 @@ public def fmtWaitIfTypeMVar : Fmt := fun
   | `(Parser.Term.waitIfTypeMVar|
       wait_if_type_mvar%%$kwTk ?%$questionTk $id:ident ;%$semicolonTk $body:term) =>
     fmtWaitIfMVarLike kwTk questionTk id semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.waitIfTypeContainsMVar]
 public def fmtWaitIfTypeContainsMVar : Fmt := fun
   | `(Parser.Term.waitIfTypeContainsMVar|
       wait_if_type_contains_mvar%%$kwTk ?%$questionTk $id:ident ;%$semicolonTk $body:term) =>
     fmtWaitIfMVarLike kwTk questionTk id semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.waitIfContainsMVar]
 public def fmtWaitIfContainsMVar : Fmt := fun
   | `(Parser.Term.waitIfContainsMVar|
       wait_if_contains_mvar%%$kwTk ?%$questionTk $id:ident ;%$semicolonTk $body:term) =>
     fmtWaitIfMVarLike kwTk questionTk id semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.waitForExpectedType]
 public def fmtWaitForExpectedType : Fmt := fun
   | `(Parser.Term.waitForExpectedType|
       wait_for_expected_type%$kwTk $t:term) => do
     fmtAppLike #[kwTk, t]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.withDeclName]
 public def fmtWithDeclName : Fmt := fun
@@ -1588,8 +1509,7 @@ public def fmtWithDeclName : Fmt := fun
       let e ← fmt e
       let lhs := Layouts.atomic #[questionTk?, id]
       return Layouts.application #[withDeclNameTk, lhs, e]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.dynamicQuot]
 public def fmtDynamicQuot : Fmt := fmtAtomic
@@ -1613,8 +1533,7 @@ public def fmtLeadingParser : Fmt := fun
       let withPrec := nested <| Layouts.atomic #[leadingParserTk, colonTk?, prec?]
       let lhs := Layouts.pseudoApplication #[withPrec, anon?]
       return Layouts.application #[lhs, body]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.trailing_parser]
 public def fmtTrailingParser : Fmt := fun
@@ -1630,8 +1549,7 @@ public def fmtTrailingParser : Fmt := fun
       let withPrecs :=
         nested <| Layouts.atomic #[trailingParserTk, colon1Tk?, prec1?, colon2Tk?, prec2?]
       return Layouts.application #[withPrecs, body]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtOptConfig (stx : TSyntax ``Parser.Term.optConfig) : FmtM (Array TaggedDoc) := do
   match stx with
@@ -1651,8 +1569,7 @@ public def fmtPosConfigItem : Fmt := fun
     let plusTk ← fmt plusTk
     let id ← fmt id
     return Layouts.prefixOperator plusTk id .withoutSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.negConfigItem]
 public def fmtNegConfigItem : Fmt := fun
@@ -1660,22 +1577,19 @@ public def fmtNegConfigItem : Fmt := fun
     let minusTk ← fmt minusTk
     let id ← fmt id
     return Layouts.prefixOperator minusTk id .withoutSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.valConfigItem]
 public def fmtValConfigItem : Fmt := fun
   | `(Parser.Term.valConfigItem| (%$lbTk $id:ident :=%$colonEqTk $body:term )%$rbTk) =>
     fmtNamedArgumentTerm lbTk id colonEqTk body rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.withAnonymousAntiquot]
 public def fmtWithAnonymousAntiquot : Fmt := fun
   | `(Parser.Term.withAnonymousAntiquot| (%$lbTk withAnonymousAntiquot%$kwTk :=%$colonEqTk $flag )%$rbTk) =>
     fmtNamedArgumentTerm lbTk kwTk colonEqTk flag rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtSufficesDecl
     (sufficesTk : Syntax) (id? colonTk? : Option Syntax) (goal kwTk rhs : Syntax)
@@ -1725,43 +1639,37 @@ public def fmtSuffices : Fmt := fun
   | `(Parser.Term.suffices|
       suffices%$sufficesTk $_:hygieneInfo $goal:term by%$byTk $tac:tacticSeq ;%$semicolonTk $body:term) =>
     fmtSufficesBy sufficesTk none none goal byTk tac semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.haveI]
 public def fmtHaveI : Fmt := fun
   | `(Parser.Term.haveI| haveI%$haveITk $config:letConfig $decl:letDecl ;%$semicolonTk $body:term) =>
     fmtLetTerm haveITk config decl semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.letI]
 public def fmtLetI : Fmt := fun
   | `(Parser.Term.letI| letI%$letITk $config:letConfig $decl:letDecl ;%$semicolonTk $body:term) =>
     fmtLetTerm letITk config decl semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.let_fun]
 public def fmtLetFun : Fmt := fun
   | `(Parser.Term.let_fun| let_fun%$letFunTk $decl:letDecl ;%$semicolonTk $body:term) =>
     fmtLetTerm letFunTk none decl semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.let_delayed]
 public def fmtLetDelayed : Fmt := fun
   | `(Parser.Term.let_delayed| let_delayed%$letDelayedTk $decl:letDecl ;%$semicolonTk $body:term) =>
     fmtLetTerm letDelayedTk none decl semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.let_tmp]
 public def fmtLetTmp : Fmt := fun
   | `(Parser.Term.let_tmp| let_tmp%$letTmpTk $decl:letDecl ;%$semicolonTk $body:term) =>
     fmtLetTerm letTmpTk none decl semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.matchExprPat]
 public def fmtMatchExprPat : Fmt := fun
@@ -1772,8 +1680,7 @@ public def fmtMatchExprPat : Fmt := fun
     let id? ← fmt? id?
     let atTk? ← fmt? atTk?
     return Layouts.atomic #[id?, atTk?, rhs]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtMatchExprAlt : Syntax → FmtM Layouts.Types.Alt := fun
   | `(Parser.Term.matchExprAltExpr| |%$pipeTk $pat:matchExprPat =>%$arrowTk $rhs:term) => do
@@ -1783,8 +1690,7 @@ public def fmtMatchExprAlt : Syntax → FmtM Layouts.Types.Alt := fun
     let rhs ← fmt rhs
     let lhs := nested <| Layouts.spacedAtomic #[pipeTk, pat]
     return Layouts.alt #[lhs] arrowTk rhs
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 meta def matchExprElseAltF := Parser.Term.matchExprElseAlt Parser.termParser
 
@@ -1796,8 +1702,7 @@ public def fmtMatchExprElseAlt : Syntax → FmtM Layouts.Types.Alt := fun
     let rhs ← fmt rhs
     let lhs := nested <| Layouts.spacedAtomic #[pipeTk, h]
     return Layouts.alt #[lhs] arrowTk rhs
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.matchExprAlts]
 public def fmtMatchExprAlts : Fmt := fun stx => do
@@ -1817,12 +1722,9 @@ public def fmtMatchExpr : Fmt := fun
       let lhs := Layouts.pseudoApplication #[matchExprTk, discr]
       let withTk ← fmt withTk
       let alts ← fmt alts
-      return Layouts.keywordSeparated lhs withTk alts {
-        allowFlattening := false
-        nestedRhs := false
-      }
-  | _ =>
-    throw .partialFormatter
+      return
+        Layouts.keywordSeparated lhs withTk alts { allowFlattening := false, nestedRhs := false }
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.letExpr]
 public def fmtLetExpr : Fmt := fun
@@ -1841,5 +1743,4 @@ public def fmtLetExpr : Fmt := fun
       let decl := Layouts.matchDeclaration assignment pipeAlt
       let fullDecl := Layouts.letDecl letExprTk empty decl
       fmtTermInstruction fullDecl components semicolonTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

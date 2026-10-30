@@ -21,8 +21,7 @@ public def fmtSPred : Fmt := fun
     let p ← fmt p
     let rbTk ← fmt rbTk
     return Layouts.metaApplication lbTk #[.elems #[p]] rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 open Std.Do in
 @[builtin_fmt Std.Do.«termTerm(_)»]
@@ -32,5 +31,4 @@ public def fmtSPredTermEscape : Fmt := fun
     let t ← fmt t
     let rbTk ← fmt rbTk
     return Layouts.metaApplication lbTk #[.elems #[t]] rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

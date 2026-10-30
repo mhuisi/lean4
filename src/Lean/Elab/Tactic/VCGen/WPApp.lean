@@ -28,8 +28,10 @@ public structure WPApp where
   expr : Expr
   /-- The `wp` function head, separated from its explicit core arguments. -/
   head : Expr
-  /-- The ordered core arguments of the `wp` application:
-  `#[Prog, Value, Pred, EPosts, instAL, instEAL, instWP, prog, post, eposts]`. -/
+  /--
+  The ordered core arguments of the `wp` application:
+  `#[Prog, Value, Pred, EPosts, instAL, instEAL, instWP, prog, post, eposts]`.
+  -/
   args : Array Expr
   /-- Extra arguments applied after `wp … prog post eposts`, usually concrete state arguments. -/
   excessArgs : Array Expr
@@ -38,8 +40,10 @@ namespace WPApp
 
 /-- Program type argument of `wp` (e.g. `m α` or a non-monadic program type). -/
 public def Prog (info : WPApp) : Expr := info.args[0]!
-/-- The monad of an `m α`-shaped program type, obtained by dropping the value type `α`. For a
-non-monadic program type the type itself is returned. -/
+/--
+The monad of an `m α`-shaped program type, obtained by dropping the value type `α`. For a
+non-monadic program type the type itself is returned.
+-/
 public def M (info : WPApp) : Expr :=
   if info.args[0]!.isApp then info.args[0]!.appFn! else info.args[0]!
 /-- Result/value type argument of `wp`. -/

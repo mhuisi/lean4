@@ -12,8 +12,8 @@ import Init.Data.Ord.SInt
 
 open Std
 
-instance : Std.LinearOrderPackage Int8 := .ofLE _ { }
-instance : Std.LinearOrderPackage Int16 := .ofLE _ { }
-instance : Std.LinearOrderPackage Int32 := .ofLE _ { }
-instance : Std.LinearOrderPackage Int64 := .ofLE _ { }
-instance : Std.LinearOrderPackage ISize := .ofLE _ { }
+instance : Std.LinearOrderPackage Int8 := .ofLE _ {}
+instance : Std.LinearOrderPackage Int16 := .ofLE _ {}
+instance : Std.LinearOrderPackage Int32 := .ofLE _ {}
+instance : Std.LinearOrderPackage Int64 := .ofLE _ {}
+instance : Std.LinearOrderPackage ISize := .ofLE _ {}

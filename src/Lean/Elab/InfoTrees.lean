@@ -17,7 +17,7 @@ namespace Lean.Elab.Tactic.InfoTrees
 @[builtin_command_elab infoTreesCmd, inherit_doc guardMsgsCmd]
 def elabInfoTrees : CommandElab
   | `(command| #info_trees%$tk in $cmd) => do
-    if ! (← getInfoState).enabled then
+    if !(← getInfoState).enabled then
       logError "Info trees are disabled, can not use `#info_trees`."
     else
       elabCommand cmd

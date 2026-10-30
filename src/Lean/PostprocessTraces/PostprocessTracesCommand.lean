@@ -42,8 +42,8 @@ postprocess_traces filter (containsString "tryResolve") in
 example : Inhabited (List Nat) := inferInstance
 ```
 -/
-scoped syntax (name := postprocessTracesCmd)
-  "postprocess_traces " term " in" ppLine command : command
+scoped syntax (name := postprocessTracesCmd) "postprocess_traces " term " in" ppLine command
+  : command
 
 end Lean.PostprocessTraces
 
@@ -55,11 +55,12 @@ meta def elabPostprocessTraces : CommandElab
   | `(command| postprocess_traces $post in $cmd) => do
     -- on errors in `post`, log them and fall back to the identity postprocessor so that `cmd`
     -- still elaborates, e.g. while the postprocessor term is being edited
-    let post ← try
-      evalPostprocessorTopLevel post
-    catch ex =>
-      logException ex
-      pure fun roots => return roots
+    let post ←
+      try
+        evalPostprocessorTopLevel post
+      catch ex =>
+        logException ex
+        pure fun roots => return roots
     for msg in ← runAndCollectMessages cmd do
       try
         if let some msg ← liftCoreM <| postprocessMessage post msg then

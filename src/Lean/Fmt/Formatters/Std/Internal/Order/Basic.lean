@@ -26,8 +26,7 @@ public def fmtIInf : QuantifierFmt := fun
       commaTk
       body
     }
-  | _ =>
-    none
+  | _ => none
 
 open Lean.Order in
 @[builtin_quantifier_fmt Lean.Order.«term⨆_,_»]
@@ -41,8 +40,7 @@ public def fmtISup : QuantifierFmt := fun
       commaTk
       body
     }
-  | _ =>
-    none
+  | _ => none
 
 open Lean.Order in
 @[builtin_fmt Lean.Order.«term⌜_⌝»]
@@ -52,5 +50,4 @@ public def fmtLatticeOfProp : Fmt := fun
     let p ← fmt p
     let rbTk ← fmt rbTk
     return Layouts.parens lbTk p rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

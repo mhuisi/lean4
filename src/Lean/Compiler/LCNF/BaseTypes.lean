@@ -21,7 +21,8 @@ builtin_initialize baseTypeExt : CacheExtension Name Expr ← CacheExtension.reg
 
 def getOtherDeclBaseType (declName : Name) (us : List Level) : CoreM Expr := do
   let info ← getConstInfo declName
-  let type ← match (← baseTypeExt.find? declName) with
+  let type ←
+    match (← baseTypeExt.find? declName) with
     | some type => pure type
     | none =>
       let type ← Meta.MetaM.run' <| toLCNFType info.type

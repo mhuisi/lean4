@@ -25,14 +25,15 @@ namespace bitblast
 
 variable [Hashable α] [DecidableEq α]
 
-def blastZeroExtend (aig : AIG α) (target : AIG.ExtendTarget aig newWidth) :
-    AIG.RefVecEntry α newWidth :=
+def blastZeroExtend (aig : AIG α) (target : AIG.ExtendTarget aig newWidth)
+    : AIG.RefVecEntry α newWidth :=
   let ⟨width, input⟩ := target
   go aig width input newWidth 0 (by omega) (.emptyWithCapacity newWidth)
 where
-  go (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w) (newWidth : Nat) (curr : Nat)
-      (hcurr : curr ≤ newWidth) (s : AIG.RefVec aig curr) :
-      AIG.RefVecEntry α newWidth :=
+  go
+      (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w)
+      (newWidth : Nat) (curr : Nat) (hcurr : curr ≤ newWidth) (s : AIG.RefVec aig curr)
+      : AIG.RefVecEntry α newWidth :=
     if hcurr1 : curr < newWidth then
       if hcurr2 : curr < w then
         let s := s.push (input.get curr hcurr2)
@@ -44,13 +45,14 @@ where
     else
       have hcurr : curr = newWidth := by omega
       ⟨aig, hcurr ▸ s⟩
-termination_by newWidth - curr
+  termination_by newWidth - curr
 
 namespace blastZeroExtend
 
-theorem go_le_size (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w) (newWidth curr : Nat)
-    (hcurr : curr ≤ newWidth) (s : AIG.RefVec aig curr) :
-    aig.decls.size ≤ (go aig w input newWidth curr hcurr s).aig.decls.size := by
+theorem go_le_size
+    (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w)
+    (newWidth curr : Nat) (hcurr : curr ≤ newWidth) (s : AIG.RefVec aig curr)
+    : aig.decls.size ≤ (go aig w input newWidth curr hcurr s).aig.decls.size := by
   unfold go
   split
   · dsimp only
@@ -60,10 +62,11 @@ theorem go_le_size (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w) (newWidth
   · simp
 termination_by newWidth - curr
 
-theorem go_decl_eq (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w) (newWidth curr : Nat)
-    (hcurr : curr ≤ newWidth) (s : AIG.RefVec aig curr) :
-    ∀ (idx : Nat) (h1) (h2),
-       (go aig w input newWidth curr hcurr s).aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
+theorem go_decl_eq
+    (aig : AIG α) (w : Nat) (input : AIG.RefVec aig w)
+    (newWidth curr : Nat) (hcurr : curr ≤ newWidth) (s : AIG.RefVec aig curr)
+    : ∀ (idx : Nat) (h1) (h2),
+      (go aig w input newWidth curr hcurr s).aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
   generalize hgo : go aig w input newWidth curr hcurr s = res
   unfold go at hgo
   split at hgo

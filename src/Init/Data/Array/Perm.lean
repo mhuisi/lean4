@@ -59,7 +59,8 @@ namespace Array
 
 open List
 
-@[simp, refl] protected theorem Perm.refl (xs : Array α) : xs ~ xs := by
+@[simp, refl]
+protected theorem Perm.refl (xs : Array α) : xs ~ xs := by
   cases xs
   simp [perm_iff_toList_perm]
 
@@ -69,12 +70,15 @@ theorem Perm.of_eq {xs ys : Array α} (h : xs = ys) : xs ~ ys := h ▸ .rfl
 
 @[symm]
 protected theorem Perm.symm {xs ys : Array α} (h : xs ~ ys) : ys ~ xs := by
-  cases xs; cases ys
+  cases xs
+  cases ys
   simp only [perm_iff_toList_perm] at h
   simpa [perm_iff_toList_perm] using h.symm
 
 protected theorem Perm.trans {xs ys zs : Array α} (h₁ : xs ~ ys) (h₂ : ys ~ zs) : xs ~ zs := by
-  cases xs; cases ys; cases zs
+  cases xs
+  cases ys
+  cases zs
   simp only [perm_iff_toList_perm] at h₁ h₂
   simpa [perm_iff_toList_perm] using h₁.trans h₂
 
@@ -84,7 +88,8 @@ instance : Trans (Perm (α := α)) (Perm (α := α)) (Perm (α := α)) where
 theorem perm_comm {xs ys : Array α} : xs ~ ys ↔ ys ~ xs := ⟨Perm.symm, Perm.symm⟩
 
 theorem Perm.size_eq {xs ys : Array α} (p : xs ~ ys) : xs.size = ys.size := by
-  cases xs; cases ys
+  cases xs
+  cases ys
   simp only [perm_iff_toList_perm] at p
   simpa using p.length_eq
 
@@ -97,32 +102,35 @@ theorem Perm.mem_iff {a : α} {xs ys : Array α} (p : xs ~ ys) : a ∈ xs ↔ a 
 grind_pattern Perm.mem_iff => xs ~ ys, a ∈ xs
 grind_pattern Perm.mem_iff => xs ~ ys, a ∈ ys
 
-theorem Perm.append {xs ys as bs : Array α} (p₁ : xs ~ ys) (p₂ : as ~ bs) :
-    xs ++ as ~ ys ++ bs := by
-  cases xs; cases ys; cases as; cases bs
+theorem Perm.append {xs ys as bs : Array α} (p₁ : xs ~ ys) (p₂ : as ~ bs)
+    : xs ++ as ~ ys ++ bs := by
+  cases xs
+  cases ys
+  cases as
+  cases bs
   simp only [append_toArray, perm_iff_toList_perm] at p₁ p₂ ⊢
   exact p₁.append p₂
 
 grind_pattern Perm.append => xs ~ ys, as ~ bs, xs ++ as
 grind_pattern Perm.append => xs ~ ys, as ~ bs, ys ++ bs
 
-theorem Perm.push (x : α) {xs ys : Array α} (p : xs ~ ys) :
-    xs.push x ~ ys.push x := by
+theorem Perm.push (x : α) {xs ys : Array α} (p : xs ~ ys) : xs.push x ~ ys.push x := by
   rw [push_eq_append]
   exact p.append .rfl
 
 grind_pattern Perm.push => xs ~ ys, xs.push x
 grind_pattern Perm.push => xs ~ ys, ys.push x
 
-theorem Perm.push_comm (x y : α) {xs ys : Array α} (p : xs ~ ys) :
-    (xs.push x).push y ~ (ys.push y).push x := by
-  cases xs; cases ys
+theorem Perm.push_comm (x y : α) {xs ys : Array α} (p : xs ~ ys)
+    : (xs.push x).push y ~ (ys.push y).push x := by
+  cases xs
+  cases ys
   simp only [perm_iff_toList_perm] at p
   simp only [push_toArray, List.append_assoc, singleton_append, perm_iff_toList_perm]
   exact p.append (Perm.swap ..)
 
-theorem swap_perm {xs : Array α} {i j : Nat} (h₁ : i < xs.size) (h₂ : j < xs.size) :
-    xs.swap i j ~ xs := by
+theorem swap_perm {xs : Array α} {i j : Nat} (h₁ : i < xs.size) (h₂ : j < xs.size)
+    : xs.swap i j ~ xs := by
   simp only [swap, perm_iff_toList_perm, toList_set]
   apply set_set_perm
 
@@ -130,16 +138,19 @@ theorem Perm.pairwise_iff {R : α → α → Prop} (S : ∀ {x y}, R x y → R y
     : ∀ _p : xs.Perm ys, xs.toList.Pairwise R ↔ ys.toList.Pairwise R := by
   simpa only [perm_iff_toList_perm] using List.Perm.pairwise_iff S
 
-theorem Perm.pairwise {R : α → α → Prop} {xs ys : Array α} (hp : xs ~ ys)
-    (hR : xs.toList.Pairwise R) (hsymm : ∀ {x y}, R x y → R y x) :
-    ys.toList.Pairwise R := (hp.pairwise_iff hsymm).mp hR
+theorem Perm.pairwise
+    {R : α → α → Prop} {xs ys : Array α}
+    (hp : xs ~ ys) (hR : xs.toList.Pairwise R) (hsymm : ∀ {x y}, R x y → R y x)
+    : ys.toList.Pairwise R :=
+  (hp.pairwise_iff hsymm).mp hR
 
 namespace Perm
 
 set_option linter.indexVariables false in
-theorem extract {xs ys : Array α} (h : xs ~ ys) {lo hi : Nat}
-    (wlo : ∀ i, i < lo → xs[i]? = ys[i]?) (whi : ∀ i, hi ≤ i → xs[i]? = ys[i]?) :
-    xs.extract lo hi ~ ys.extract lo hi := by
+theorem extract
+    {xs ys : Array α} (h : xs ~ ys)
+    {lo hi : Nat} (wlo : ∀ i, i < lo → xs[i]? = ys[i]?) (whi : ∀ i, hi ≤ i → xs[i]? = ys[i]?)
+    : xs.extract lo hi ~ ys.extract lo hi := by
   rcases xs with ⟨xs⟩
   rcases ys with ⟨ys⟩
   simp_all only [perm_iff_toList_perm, List.getElem?_toArray, List.extract_toArray,

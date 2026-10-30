@@ -34,31 +34,46 @@ def collectLocalDeclsArgs (s : UsedLocalDecls) (args : Array (Arg pu)) : UsedLoc
 
 def collectLocalDeclsLetValue (s : UsedLocalDecls) (e : LetValue pu) : UsedLocalDecls :=
   match e with
-  | .erased  | .lit .. => s
-  | .proj _ _ fvarId _ | .reset _ fvarId _ | .sproj _ _ fvarId _ | .uproj _ fvarId _
-  | .oproj _ fvarId _ | .box _ fvarId _ | .unbox fvarId _ | .isShared fvarId _ => s.insert fvarId
+  | .erased | .lit .. => s
+  | .proj _ _ fvarId _
+  | .reset _ fvarId _
+  | .sproj _ _ fvarId _
+  | .uproj _ fvarId _
+  | .oproj _ fvarId _
+  | .box _ fvarId _
+  | .unbox fvarId _
+  | .isShared fvarId _ =>
+    s.insert fvarId
   | .const _ _ args _ => collectLocalDeclsArgs s args
-  | .fvar fvarId args | .reuse fvarId _ _ args _   => collectLocalDeclsArgs (s.insert fvarId) args
+  | .fvar fvarId args | .reuse fvarId _ _ args _ => collectLocalDeclsArgs (s.insert fvarId) args
   | .fap _ args _ | .pap _ args _ | .ctor _ args _ => collectLocalDeclsArgs s args
 
 abbrev M := StateRefT UsedLocalDecls CompilerM
 
-abbrev collectArgM (arg : Arg pu) : M Unit :=
-  modify (collectLocalDeclsArg · arg)
+abbrev collectArgM (arg : Arg pu) : M Unit := modify (collectLocalDeclsArg · arg)
 
-abbrev collectLetValueM (e : LetValue pu) : M Unit :=
-  modify (collectLocalDeclsLetValue · e)
+abbrev collectLetValueM (e : LetValue pu) : M Unit := modify (collectLocalDeclsLetValue · e)
 
-abbrev collectFVarM (fvarId : FVarId) : M Unit :=
-  modify (·.insert fvarId)
+abbrev collectFVarM (fvarId : FVarId) : M Unit := modify (·.insert fvarId)
 
 def LetValue.safeToElim (val : LetValue pu) : Bool :=
   match pu with
   | .pure => true
   | .impure =>
     match val with
-    | .ctor .. | .reset .. | .reuse .. | .oproj .. | .uproj .. | .sproj .. | .lit .. | .pap ..
-    | .box .. | .unbox .. | .erased .. | .isShared .. => true
+    | .ctor ..
+    | .reset ..
+    | .reuse ..
+    | .oproj ..
+    | .uproj ..
+    | .sproj ..
+    | .lit ..
+    | .pap ..
+    | .box ..
+    | .unbox ..
+    | .erased ..
+    | .isShared .. =>
+      true
     -- 0-ary full applications are considered constants
     | .fap _ args => args.isEmpty
     | .fvar .. => false
@@ -74,7 +89,9 @@ partial def Code.elimDead (code : Code pu) : M (Code pu) := do
   | .let decl k =>
     let k ← k.elimDead
     if (← get).contains decl.fvarId || !decl.value.safeToElim then
-      /- Remark: we don't need to collect `decl.type` because LCNF local declarations do not occur in types. -/
+      /-
+      Remark: we don't need to collect `decl.type` because LCNF local declarations do not occur in types.
+      -/
       collectLetValueM decl.value
       return code.updateCont! k
     else
@@ -92,9 +109,12 @@ partial def Code.elimDead (code : Code pu) : M (Code pu) := do
     let alts ← c.alts.mapMonoM fun alt => return alt.updateCode (← alt.getCode.elimDead)
     collectFVarM c.discr
     return code.updateAlts! alts
-  | .return fvarId => collectFVarM fvarId; return code
-  | .jmp fvarId args => collectFVarM fvarId; args.forM collectArgM; return code
-  | .unreach .. => return code
+  | .return fvarId =>
+    collectFVarM fvarId; return code
+  | .jmp fvarId args =>
+    collectFVarM fvarId; args.forM collectArgM; return code
+  | .unreach .. =>
+    return code
   | .oset fvarId _ y k _ =>
     let k ← k.elimDead
     if (← get).contains fvarId then
@@ -109,8 +129,10 @@ partial def Code.elimDead (code : Code pu) : M (Code pu) := do
       return code.updateCont! k
     else
       return k
-  | .inc (fvarId := fvarId) (k := k) .. | .dec (fvarId := fvarId) (k := k) ..
-  | .setTag (fvarId := fvarId) (k := k) .. | .del (fvarId := fvarId) (k := k) .. =>
+  | .inc (fvarId := fvarId) (k := k) ..
+  | .dec (fvarId := fvarId) (k := k) ..
+  | .setTag (fvarId := fvarId) (k := k) ..
+  | .del (fvarId := fvarId) (k := k) .. =>
     let k ← k.elimDead
     collectFVarM fvarId
     return code.updateCont! k
@@ -120,10 +142,9 @@ end
 public def Decl.elimDeadVars (decl : Decl pu) : CompilerM (Decl pu) := do
   return { decl with value := (← decl.value.mapCodeM fun code => code.elimDead.run' {}) }
 
-public def elimDeadVars (phase : Phase)  (occurrence : Nat) : Pass :=
+public def elimDeadVars (phase : Phase) (occurrence : Nat) : Pass :=
   Pass.mkPerDeclaration `elimDeadVars phase Decl.elimDeadVars occurrence
 
-builtin_initialize
-  registerTraceClass `Compiler.elimDeadVars (inherited := true)
+builtin_initialize registerTraceClass `Compiler.elimDeadVars (inherited := true)
 
 end Lean.Compiler.LCNF

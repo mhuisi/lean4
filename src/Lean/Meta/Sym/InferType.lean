@@ -4,17 +4,16 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.SymM
 namespace Lean.Meta.Sym
 
 def inferTypeWithoutCache (e : Expr) : MetaM Expr :=
-  withReader (fun c => { c with cacheInferType := false }) do
-    Meta.inferType e
+  withReader (fun c => { c with cacheInferType := false }) do Meta.inferType e
 
 def getLevelWithoutCache (type : Expr) : MetaM Level :=
-  withReader (fun c => { c with cacheInferType := false }) do
-    Meta.getLevel type
+  withReader (fun c => { c with cacheInferType := false }) do Meta.getLevel type
 
 /-- Returns the type of `e`. -/
 public def inferType (e : Expr) : SymM Expr := do

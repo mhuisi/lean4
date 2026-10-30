@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 import Init.Grind
 import Lean.Meta.Tactic.Grind.Arith.CommRing.RingId
@@ -39,36 +40,52 @@ The following propagator ensure that `3 &&& mask` is merged with the equivalence
 `mask = 15`.
 -/
 
-def propagateNatBinOp (declName : Name) (congrThmName : Name) (op : Nat → Nat → Nat) (e : Expr) : GoalM Unit := do
+def propagateNatBinOp (declName : Name) (congrThmName : Name) (op : Nat → Nat → Nat) (e : Expr)
+    : GoalM Unit := do
   let arity := 6
-  unless e.isAppOfArity declName arity do return ()
-  unless e.getArg! 0 |>.isConstOf ``Nat do return ()
-  unless e.getArg! 1 |>.isConstOf ``Nat do return ()
+  unless e.isAppOfArity declName arity do
+    return ()
+  unless e.getArg! 0 |>.isConstOf ``Nat do
+    return ()
+  unless e.getArg! 1 |>.isConstOf ``Nat do
+    return ()
   let a := e.getArg! (arity - 2) arity
   let aRoot ← getRoot a
-  let some k₁ ← getNatValue? aRoot | return ()
+  let some k₁ ← getNatValue? aRoot
+    | return ()
   let b := e.getArg! (arity - 1) arity
   let bRoot ← getRoot b
-  let some k₂ ← getNatValue? bRoot | return ()
+  let some k₂ ← getNatValue? bRoot
+    | return ()
   let k := op k₁ k₂
   let r ← shareCommon (mkNatLit k)
   internalize r 0
-  let h := mkApp8 (mkConst congrThmName) a b aRoot bRoot r (← mkEqProof a aRoot) (← mkEqProof b bRoot) eagerReflBoolTrue
+  let h :=
+    mkApp8 (mkConst congrThmName) a b aRoot bRoot r (← mkEqProof a aRoot) (← mkEqProof b bRoot)
+      eagerReflBoolTrue
   pushEq e r h
 
-builtin_grind_propagator propagateNatAnd ↑HAnd.hAnd := propagateNatBinOp ``HAnd.hAnd ``Grind.Nat.and_congr (· &&& ·)
-builtin_grind_propagator propagateNatOr ↑HOr.hOr := propagateNatBinOp ``HOr.hOr ``Grind.Nat.or_congr (· ||| ·)
-builtin_grind_propagator propagateNatXOr ↑HXor.hXor := propagateNatBinOp ``HXor.hXor ``Grind.Nat.xor_congr (· ^^^ ·)
-builtin_grind_propagator propagateNatShiftLeft ↑HShiftLeft.hShiftLeft :=
+builtin_grind_propagator propagateNatAnd ↑ HAnd.hAnd :=
+  propagateNatBinOp ``HAnd.hAnd ``Grind.Nat.and_congr (· &&& ·)
+builtin_grind_propagator propagateNatOr ↑ HOr.hOr :=
+  propagateNatBinOp ``HOr.hOr ``Grind.Nat.or_congr (· ||| ·)
+builtin_grind_propagator propagateNatXOr ↑ HXor.hXor :=
+  propagateNatBinOp ``HXor.hXor ``Grind.Nat.xor_congr (· ^^^ ·)
+builtin_grind_propagator propagateNatShiftLeft ↑ HShiftLeft.hShiftLeft :=
   propagateNatBinOp ``HShiftLeft.hShiftLeft ``Grind.Nat.shiftLeft_congr (· <<< ·)
-builtin_grind_propagator propagateNatShiftRight ↑HShiftRight.hShiftRight :=
+builtin_grind_propagator propagateNatShiftRight ↑ HShiftRight.hShiftRight :=
   propagateNatBinOp ``HShiftRight.hShiftRight ``Grind.Nat.shiftRight_congr (· >>> ·)
 
 private def supportedSemiring : Std.HashSet Name :=
-  [``Nat, ``Int, ``Rat, ``BitVec, ``UInt8, ``UInt16, ``UInt32, ``Int64, ``Int8, ``Int16, ``Int32, ``Int64].foldl (init := {}) (·.insert ·)
+  [
+    ``Nat, ``Int, ``Rat, ``BitVec, ``UInt8, ``UInt16, ``UInt32, ``Int64, ``Int8, ``Int16, ``Int32,
+    ``Int64
+  ].foldl
+    (init := {}) (·.insert ·)
 
 private def isSupportedSemiringQuick (type : Expr) : Bool := Id.run do
-  let .const declName _ := type.getAppFn | return false
+  let .const declName _ := type.getAppFn
+    | return false
   return supportedSemiring.contains declName
 
 open CommRing in
@@ -96,7 +113,8 @@ private def isUnsupportedSemiring? (type : Expr) : GoalM (Option Expr) := do
   return none
 
 private def isOfNat? (a : Expr) : MetaM (Option Nat) := do
-  let_expr OfNat.ofNat _ n _ := a | return none
+  let_expr OfNat.ofNat _ n _ := a
+    | return none
   getNatValue? n
 
 /--
@@ -110,22 +128,30 @@ Alternative approach: We improve the support for equality reasoning for non-comm
 and semirings in `grind ring`. For example, we could just replace equalities and keep renormalizing.
 If we implement this feature, this propagator can be deleted.
 -/
-builtin_grind_propagator propagateMul ↑HMul.hMul := fun e => do
-  let_expr f@HMul.hMul α₁ α₂ α₃ _ a b := e | return ()
-  let some semiringInst ← isUnsupportedSemiring? α₁ | return ()
-  unless isSameExpr α₁ α₂ && isSameExpr α₁ α₃ do return ()
-  let u :: _ := f.constLevels! | return ()
+builtin_grind_propagator propagateMul ↑ HMul.hMul := fun e => do
+  let_expr f@HMul.hMul α₁ α₂ α₃ _ a b := e
+    | return ()
+  let some semiringInst ← isUnsupportedSemiring? α₁
+    | return ()
+  unless isSameExpr α₁ α₂ && isSameExpr α₁ α₃ do
+    return ()
+  let u :: _ := f.constLevels!
+    | return ()
   let aRoot ← getRoot a
   let bRoot ← getRoot b
   if let some n ← isOfNat? aRoot then
     if n == 0 then
-      pushEq e aRoot <| mkApp5 (mkConst ``Grind.Semiring.zero_mul_congr [u]) α₁ semiringInst a b (← mkEqProof a aRoot)
+      pushEq e aRoot <| mkApp5 (mkConst ``Grind.Semiring.zero_mul_congr [u]) α₁ semiringInst a b
+        (← mkEqProof a aRoot)
     else if n == 1 then
-      pushEq e b <| mkApp5 (mkConst ``Grind.Semiring.one_mul_congr [u]) α₁ semiringInst a b (← mkEqProof a aRoot)
+      pushEq e b <| mkApp5 (mkConst ``Grind.Semiring.one_mul_congr [u]) α₁ semiringInst a b
+        (← mkEqProof a aRoot)
   else if let some n ← isOfNat? bRoot then
     if n == 0 then
-      pushEq e bRoot <| mkApp5 (mkConst ``Grind.Semiring.mul_zero_congr [u]) α₁ semiringInst a b (← mkEqProof b bRoot)
+      pushEq e bRoot <| mkApp5 (mkConst ``Grind.Semiring.mul_zero_congr [u]) α₁ semiringInst a b
+        (← mkEqProof b bRoot)
     else if n == 1 then
-      pushEq e a <| mkApp5 (mkConst ``Grind.Semiring.mul_one_congr [u]) α₁ semiringInst a b (← mkEqProof b bRoot)
+      pushEq e a <| mkApp5 (mkConst ``Grind.Semiring.mul_one_congr [u]) α₁ semiringInst a b
+        (← mkEqProof b bRoot)
 
 end Lean.Meta.Grind.Arith

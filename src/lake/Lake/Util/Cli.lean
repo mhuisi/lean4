@@ -20,15 +20,16 @@ Defines the abstract CLI interface for Lake.
 
 public abbrev ArgList := List String
 
-@[inline] public def ArgList.mk (args : List String) : ArgList :=
-  args
+@[inline] public def ArgList.mk (args : List String) : ArgList := args
 
 public abbrev ArgsT := StateT ArgList
 
-@[inline] public def ArgsT.run (args : List String) (self : ArgsT m α) : m (α × List String) :=
+@[inline]
+public def ArgsT.run (args : List String) (self : ArgsT m α) : m (α × List String) :=
   StateT.run self args
 
-@[inline] public def ArgsT.run' [Functor m] (args : List String) (self : ArgsT m α) : m α :=
+@[inline]
+public def ArgsT.run' [Functor m] (args : List String) (self : ArgsT m α) : m α :=
   StateT.run' self args
 
 public structure OptionHandlers (m : Type u → Type v) (α : Type u) where
@@ -44,58 +45,66 @@ public structure OptionHandlers (m : Type u → Type v) (α : Type u) where
 variable [Monad m] [MonadStateOf ArgList m]
 
 /-- Get the remaining argument list. -/
-@[inline] public def getArgs : m (List String) :=
-  get
+@[inline] public def getArgs : m (List String) := get
 
 /-- Replace the argument list. -/
-@[inline] public def setArgs (args : List String) : m PUnit :=
-  set (ArgList.mk args)
+@[inline] public def setArgs (args : List String) : m PUnit := set (ArgList.mk args)
 
 /-- Take the head of the remaining argument list (or none if empty). -/
-@[inline] public def takeArg? : m (Option String) :=
-  modifyGet fun | [] => (none, []) | arg :: args => (some arg, args)
+@[inline]
+public def takeArg? : m (Option String) :=
+  modifyGet fun
+    | [] => (none, [])
+    | arg :: args => (some arg, args)
 
 /-- Take the head of the remaining argument list (or `default` if none). -/
-@[inline] public def takeArgD (default : String) : m String :=
-  modifyGet fun | [] => (default, []) | arg :: args => (arg, args)
+@[inline]
+public def takeArgD (default : String) : m String :=
+  modifyGet fun
+    | [] => (default, [])
+    | arg :: args => (arg, args)
 
 /-- Take the remaining argument list, leaving only an empty list. -/
-@[inline] public def takeArgs : m (List String) :=
-  modifyGet fun args => (args, [])
+@[inline] public def takeArgs : m (List String) := modifyGet fun args => (args, [])
 
 /-- Add a string to the head of the remaining argument list. -/
-@[inline] public def consArg (arg : String) : m PUnit :=
-  modify fun args => arg :: args
+@[inline] public def consArg (arg : String) : m PUnit := modify fun args => arg :: args
 
 /-- Process a short option of the form `-x=arg`. -/
-@[inline] public def shortOptionWithEq (handle : Char → m α) (opt : String) : m α := do
+@[inline]
+public def shortOptionWithEq (handle : Char → m α) (opt : String) : m α := do
   consArg (opt.drop 3).copy; handle (String.Pos.Raw.get opt ⟨1⟩)
 
 /-- Process a short option of the form `"-x arg"`. -/
-@[inline] public def shortOptionWithSpace (handle : Char → m α) (opt : String) : m α := do
+@[inline]
+public def shortOptionWithSpace (handle : Char → m α) (opt : String) : m α := do
   consArg <| opt.drop 2 |>.trimAsciiStart |>.copy; handle (String.Pos.Raw.get opt ⟨1⟩)
 
 /-- Process a short option of the form `-xarg`. -/
-@[inline] public def shortOptionWithArg (handle : Char → m α) (opt : String) : m α := do
+@[inline]
+public def shortOptionWithArg (handle : Char → m α) (opt : String) : m α := do
   consArg (opt.drop 2).copy; handle (String.Pos.Raw.get opt ⟨1⟩)
 
 /-- Process a multiple short options grouped together (ex. `-xyz` as `x`, `y`, `z`). -/
-@[inline] public def multiShortOption (handle : Char → m PUnit) (opt : String) : m PUnit := do
-  let rec loop (p : String.Pos.Raw) := do
-    if h : p.atEnd opt then
-      return
-    else
-      handle (p.get' opt h)
-      loop (p.next' opt h)
-  termination_by opt.utf8ByteSize - p.byteIdx
-  decreasing_by
-    simp [String.Pos.Raw.atEnd] at h
-    apply Nat.sub_lt_sub_left h
-    exact String.Pos.Raw.byteIdx_lt_byteIdx_next opt p
+@[inline]
+public def multiShortOption (handle : Char → m PUnit) (opt : String) : m PUnit := do
+  let rec
+    loop (p : String.Pos.Raw) := do
+      if h : p.atEnd opt then
+        return
+      else
+        handle (p.get' opt h)
+        loop (p.next' opt h)
+    termination_by opt.utf8ByteSize - p.byteIdx
+    decreasing_by
+      simp [String.Pos.Raw.atEnd] at h
+      apply Nat.sub_lt_sub_left h
+      exact String.Pos.Raw.byteIdx_lt_byteIdx_next opt p
   loop ⟨1⟩
 
 /-- Splits a long option of the form `"--long foo bar"` into `--long` and `"foo bar"`. -/
-@[inline] public def longOptionOrSpace (handle : String → m α) (opt : String) : m α :=
+@[inline]
+public def longOptionOrSpace (handle : String → m α) (opt : String) : m α :=
   let pos := opt.find ' '
   if h : pos = opt.endPos then
     handle opt
@@ -104,7 +113,8 @@ variable [Monad m] [MonadStateOf ArgList m]
     handle <| opt.extract opt.startPos pos
 
 /-- Splits a long option of the form `--long=arg` into `--long` and `arg`. -/
-@[inline] public def longOptionOrEq (handle : String → m α) (opt : String) : m α :=
+@[inline]
+public def longOptionOrEq (handle : String → m α) (opt : String) : m α :=
   let pos := opt.find '='
   if h : pos = opt.endPos then
     handle opt
@@ -113,14 +123,14 @@ variable [Monad m] [MonadStateOf ArgList m]
     handle <| opt.extract opt.startPos pos
 
 /-- Process a long option  of the form `--long`, `--long=arg`, `"--long arg"`. -/
-@[inline] public def longOption (handle : String → m α) : String → m α :=
+@[inline]
+public def longOption (handle : String → m α) : String → m α :=
   longOptionOrEq <| longOptionOrSpace handle
 
 /-- Process a short option of the form `-x`, `-x=arg`, `-x arg`, or `-long`. -/
-@[inline] public def shortOption
-  (shortHandle : Char → m α) (longHandle : String → m α)
-  (opt : String)
-: m α :=
+@[inline]
+public def shortOption (shortHandle : Char → m α) (longHandle : String → m α) (opt : String)
+    : m α :=
   if opt.chars.length == 2 then -- `-x`
     shortHandle (String.Pos.Raw.get opt ⟨1⟩)
   else -- `-c(.+)`
@@ -129,7 +139,7 @@ variable [Monad m] [MonadStateOf ArgList m]
       shortOptionWithEq shortHandle opt
     | ' ' => -- `"-x arg"`
       shortOptionWithSpace shortHandle opt
-    | _   => -- `-long`
+    | _ => -- `-long`
       longHandle opt
 
 /--
@@ -137,7 +147,8 @@ Process an option, short or long, using the given handlers.
 An option is an argument of length > 1 starting with a dash (`-`).
 An option may consume additional elements of the argument list.
 -/
-@[inline] public def option (handlers : OptionHandlers m α) (opt : String) : m α :=
+@[inline]
+public def option (handlers : OptionHandlers m α) (opt : String) : m α :=
   if String.Pos.Raw.get opt ⟨1⟩ == '-' then -- `--(.*)`
     longOption handlers.long opt
   else
@@ -168,9 +179,8 @@ public partial def processLeadingOptions (handle : String → m PUnit) : m PUnit
       processLeadingOptions handle
 
 /-- Process every option and collect the remaining arguments into an `Array`. -/
-public partial def collectArgs
-  (option : String → m PUnit) (args : Array String := #[])
-: m (Array String) := do
+public partial def collectArgs (option : String → m PUnit) (args : Array String := #[])
+    : m (Array String) := do
   if let some arg ← takeArg? then
     let len := arg.chars.length
     if len > 1 && String.Pos.Raw.get arg 0 == '-' then -- `-(.+)`
@@ -184,5 +194,6 @@ public partial def collectArgs
     pure args
 
 /-- Process every option in the argument list. -/
-@[inline] public def processOptions (handle : String → m PUnit) : m PUnit := do
+@[inline]
+public def processOptions (handle : String → m PUnit) : m PUnit := do
   setArgs (← collectArgs handle).toList

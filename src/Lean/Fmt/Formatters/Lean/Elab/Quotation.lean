@@ -19,5 +19,4 @@ public def fmtElabStxQuot : Fmt := fun
     let elabStxQuotTk ← fmt elabStxQuotTk
     let kind ← fmt kind
     return Layouts.pseudoApplication #[elabStxQuotTk, kind]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

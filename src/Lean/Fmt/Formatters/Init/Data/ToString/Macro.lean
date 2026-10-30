@@ -19,5 +19,4 @@ public def fmtStringInterpolation : Fmt := fun
     let sTk ← fmt sTk
     let s ← fmt s
     return Layouts.strLit sTk s
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

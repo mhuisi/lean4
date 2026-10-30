@@ -19,17 +19,17 @@ def evalRepeat : Tactic := fun stx => do
   | `(tactic| repeat $tac:tacticSeq) =>
     withoutRecover do
       while true do
-          try
-            evalTactic tac
-          catch _ =>
-            break
+        try
+          evalTactic tac
+        catch _ =>
+          break
   | _ => throwUnsupportedSyntax
 
 @[builtin_tactic repeat']
 def evalRepeat' : Tactic := fun stx => do
   match stx with
   | `(tactic| repeat' $tac:tacticSeq) =>
-     setGoals (← Meta.repeat' (evalTacticAtRaw tac) (← getGoals))
+    setGoals (← Meta.repeat' (evalTacticAtRaw tac) (← getGoals))
   | _ => throwUnsupportedSyntax
 
 @[builtin_tactic repeat1']

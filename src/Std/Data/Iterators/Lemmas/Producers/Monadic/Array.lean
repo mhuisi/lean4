@@ -27,38 +27,36 @@ open Std Std.Iterators Std.Iterators.Types
 
 variable {m : Type w → Type w'} [Monad m] {β : Type w}
 
-theorem Array.iterM_eq_iterFromIdxM {array : Array β} :
-    array.iterM m = array.iterFromIdxM m 0 :=
+theorem Array.iterM_eq_iterFromIdxM {array : Array β} : array.iterM m = array.iterFromIdxM m 0 :=
   rfl
 
-theorem Array.step_iterFromIdxM {array : Array β} {pos : Nat} :
-    (array.iterFromIdxM m pos).step = (pure <| .deflate <| if h : pos < array.size then
-        .yield
-          (array.iterFromIdxM m (pos + 1))
-          array[pos]
-          ⟨rfl, rfl, h, rfl⟩
-      else
-        .done (Nat.not_lt.mp h)) := by
+theorem Array.step_iterFromIdxM {array : Array β} {pos : Nat}
+    : (array.iterFromIdxM m pos).step
+      = (pure <| .deflate <|
+        if h : pos < array.size then
+          .yield (array.iterFromIdxM m (pos + 1)) array[pos] ⟨rfl, rfl, h, rfl⟩
+        else
+          .done (Nat.not_lt.mp h)) := by
   rfl
 
-theorem Array.step_iterM {array : Array β} :
-    (array.iterM m).step = (pure <| .deflate <| if h : 0 < array.size then
-        .yield
-          (array.iterFromIdxM m 1)
-          array[0]
-          ⟨rfl, rfl, h, rfl⟩
-      else
-        .done (Nat.not_lt.mp h)) := by
+theorem Array.step_iterM {array : Array β}
+    : (array.iterM m).step
+      = (pure <| .deflate <|
+        if h : 0 < array.size then
+          .yield (array.iterFromIdxM m 1) array[0] ⟨rfl, rfl, h, rfl⟩
+        else
+          .done (Nat.not_lt.mp h)) := by
   rfl
 
 section Equivalence
 
-theorem Std.Iterators.Types.ArrayIterator.stepAsHetT_iterFromIdxM [LawfulMonad m] {array : Array β}
-    {pos : Nat} :
-    (array.iterFromIdxM m pos).stepAsHetT = (if _ : pos < array.size then
-      pure (.yield (array.iterFromIdxM m (pos + 1)) array[pos])
-    else
-      pure .done) := by
+theorem Std.Iterators.Types.ArrayIterator.stepAsHetT_iterFromIdxM
+    [LawfulMonad m] {array : Array β} {pos : Nat}
+    : (array.iterFromIdxM m pos).stepAsHetT
+      = (if _ : pos < array.size then
+           pure (.yield (array.iterFromIdxM m (pos + 1)) array[pos])
+         else
+           pure .done) := by
   simp only [Array.iterFromIdxM, pure, HetT.ext_iff, Equivalence.property_step,
     IterM.IsPlausibleStep, instIterator, -- TODO
     Iterator.IsPlausibleStep, Equivalence.prun_step, ge_iff_le]
@@ -78,16 +76,15 @@ theorem Std.Iterators.Types.ArrayIterator.stepAsHetT_iterFromIdxM [LawfulMonad m
     · dsimp only
       split <;> simp
     · dsimp only
-      split <;> simp only [HetT.property_pure, reduceCtorEq, iff_false, Nat.not_le, iff_true] <;>
-        omega
+      split <;> simp only [HetT.property_pure, reduceCtorEq, iff_false, Nat.not_le, iff_true]
+        <;> omega
   · intro β f
     simp [IterM.step, Iterator.step]
     split <;> simp
 
-theorem Array.iterFromIdxM_equiv_iterM_drop_toList {α : Type w} {array : Array α}
-    {m : Type w → Type w'}
-    [Monad m] [LawfulMonad m] {pos : Nat} :
-    (array.iterFromIdxM m pos).Equiv ((array.toList.drop pos).iterM m) := by
+theorem Array.iterFromIdxM_equiv_iterM_drop_toList
+    {α : Type w} {array : Array α} {m : Type w → Type w'} [Monad m] [LawfulMonad m] {pos : Nat}
+    : (array.iterFromIdxM m pos).Equiv ((array.toList.drop pos).iterM m) := by
   conv =>
     rhs
     rw [show pos = (array.iterFromIdxM m pos).internalState.pos from rfl]
@@ -115,57 +112,56 @@ theorem Array.iterFromIdxM_equiv_iterM_drop_toList {α : Type w} {array : Array 
       simp [Pure.pure]
       congr
       · rw [← List.drop_drop (i := 1) (j := pos), heq, List.drop_succ_cons, List.drop_zero]
-      · have:= List.getElem_drop' (xs := l) (i := pos) (j := 0)
+      · have := List.getElem_drop' (xs := l) (i := pos) (j := 0)
         simp only [Nat.add_zero, heq, List.getElem_cons_zero] at this
         exact (this hlt).symm
 
-theorem Array.iterM_equiv_iterM_toList {α : Type w} {array : Array α} {m : Type w → Type w'}
-    [Monad m] [LawfulMonad m] :
-    (array.iterM m).Equiv (array.toList.iterM m) := by
+theorem Array.iterM_equiv_iterM_toList
+    {α : Type w} {array : Array α} {m : Type w → Type w'} [Monad m] [LawfulMonad m]
+    : (array.iterM m).Equiv (array.toList.iterM m) := by
   rw [Array.iterM_eq_iterFromIdxM]
   simpa using! iterFromIdxM_equiv_iterM_drop_toList
 
 end Equivalence
 
 @[simp, grind =]
-theorem Array.toList_iterFromIdxM [LawfulMonad m] {array : Array β}
-    {pos : Nat} :
-    (array.iterFromIdxM m pos).toList = pure (array.toList.drop pos) := by
+theorem Array.toList_iterFromIdxM [LawfulMonad m] {array : Array β} {pos : Nat}
+    : (array.iterFromIdxM m pos).toList = pure (array.toList.drop pos) := by
   simp [Array.iterFromIdxM_equiv_iterM_drop_toList.toList_eq]
 
 @[simp, grind =]
-theorem Array.toList_iterM [LawfulMonad m] {array : Array β} :
-    (array.iterM m).toList = pure array.toList := by
+theorem Array.toList_iterM [LawfulMonad m] {array : Array β}
+    : (array.iterM m).toList = pure array.toList := by
   simp [Array.iterM_eq_iterFromIdxM, Array.toList_iterFromIdxM]
 
 @[simp, grind =]
-theorem Array.toArray_iterFromIdxM [LawfulMonad m] {array : Array β} {pos : Nat} :
-    (array.iterFromIdxM m pos).toArray = pure (array.extract pos) := by
+theorem Array.toArray_iterFromIdxM [LawfulMonad m] {array : Array β} {pos : Nat}
+    : (array.iterFromIdxM m pos).toArray = pure (array.extract pos) := by
   simp [← IterM.toArray_toList, Array.toList_iterFromIdxM]
   rw (occs := [2]) [← Array.toArray_toList (xs := array)]
   rw [← List.toArray_drop]
 
 @[simp, grind =]
-theorem Array.toArray_iterM [LawfulMonad m] {array : Array β} :
-    (array.iterM m).toArray = pure array := by
+theorem Array.toArray_iterM [LawfulMonad m] {array : Array β}
+    : (array.iterM m).toArray = pure array := by
   simp [Array.iterM_eq_iterFromIdxM, Array.toArray_iterFromIdxM]
 
 @[simp, grind =]
-theorem Array.toListRev_iterFromIdxM [LawfulMonad m] {array : Array β} {pos : Nat} :
-    (array.iterFromIdxM m pos).toListRev = pure (array.toList.drop pos).reverse := by
+theorem Array.toListRev_iterFromIdxM [LawfulMonad m] {array : Array β} {pos : Nat}
+    : (array.iterFromIdxM m pos).toListRev = pure (array.toList.drop pos).reverse := by
   simp [IterM.toListRev_eq, Array.toList_iterFromIdxM]
 
 @[simp, grind =]
-theorem Array.toListRev_iterM [LawfulMonad m] {array : Array β} :
-    (array.iterM m).toListRev = pure array.toListRev := by
+theorem Array.toListRev_iterM [LawfulMonad m] {array : Array β}
+    : (array.iterM m).toListRev = pure array.toListRev := by
   simp [Array.iterM_eq_iterFromIdxM, Array.toListRev_iterFromIdxM]
 
 @[simp, grind =]
-theorem Array.length_iterFromIdxM [LawfulMonad m] {array : Array β} {pos : Nat} :
-    (array.iterFromIdxM m pos).length = pure (.up (array.size - pos)) := by
+theorem Array.length_iterFromIdxM [LawfulMonad m] {array : Array β} {pos : Nat}
+    : (array.iterFromIdxM m pos).length = pure (.up (array.size - pos)) := by
   simp [← IterM.up_length_toList_eq_length]
 
 @[simp, grind =]
-theorem Array.length_iterM [LawfulMonad m] {array : Array β} :
-    (array.iterM m).length = pure (.up array.size) := by
+theorem Array.length_iterM [LawfulMonad m] {array : Array β}
+    : (array.iterM m).length = pure (.up array.size) := by
   simp [← IterM.up_length_toList_eq_length]

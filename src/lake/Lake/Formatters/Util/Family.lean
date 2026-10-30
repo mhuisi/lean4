@@ -29,5 +29,4 @@ public def fmtFamilyDef : Fmt := fun
     let signature := Layouts.globalSignature #[familyDefTk, id] #[] typeAscriptionTk family
     let decl := Layouts.assignmentDeclaration signature colonEqTk val
     fmtDeclWithModifiers docComment? none #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

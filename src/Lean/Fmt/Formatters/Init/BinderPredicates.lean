@@ -20,8 +20,7 @@ public def fmtSatisfiesBinderPred : Fmt := fun
     let satisfiesBinderPredTk ← fmt satisfiesBinderPredTk
     let pred ← fmtWithBinderPred lhs pred
     return Layouts.pseudoApplication #[satisfiesBinderPredTk, pred]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtBinderPredPrefix (opTk rhs : Syntax) : FmtM TaggedDoc := do
   let opTk ← fmt opTk
@@ -94,8 +93,7 @@ public def fmtForallBinderPred : QuantifierFmt := fun
       commaTk
       body
     }
-  | _ =>
-    none
+  | _ => none
 
 @[builtin_quantifier_fmt Lean.«term∃__,_»]
 public def fmtExistsBinderPred : QuantifierFmt := fun
@@ -108,5 +106,4 @@ public def fmtExistsBinderPred : QuantifierFmt := fun
       commaTk
       body
     }
-  | _ =>
-    none
+  | _ => none

@@ -14,11 +14,10 @@ universe u
 
 namespace Option
 
-/--
-Extracts the value from an `Option`, panicking on `none`.
--/
-@[inline, expose] def get! {α : Type u} [Inhabited α] : Option α → α
+/-- Extracts the value from an `Option`, panicking on `none`. -/
+@[inline, expose]
+def get! {α : Type u} [Inhabited α] : Option α → α
   | some x => x
-  | none   => panic! "value is none"
+  | none => panic! "value is none"
 
 end Option

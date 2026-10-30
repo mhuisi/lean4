@@ -13,14 +13,14 @@ public section
 
 namespace Lean
 
-def casesOnSuffix       := "casesOn"
-def recOnSuffix         := "recOn"
-def brecOnSuffix        := "brecOn"
-def belowSuffix         := "below"
+def casesOnSuffix := "casesOn"
+def recOnSuffix := "recOn"
+def brecOnSuffix := "brecOn"
+def belowSuffix := "below"
 
 def mkCasesOnName (indDeclName : Name) : Name := Name.mkStr indDeclName casesOnSuffix
-def mkRecOnName (indDeclName : Name) : Name   := Name.mkStr indDeclName recOnSuffix
-def mkBRecOnName (indDeclName : Name) : Name  := Name.mkStr indDeclName brecOnSuffix
+def mkRecOnName (indDeclName : Name) : Name := Name.mkStr indDeclName recOnSuffix
+def mkBRecOnName (indDeclName : Name) : Name := Name.mkStr indDeclName brecOnSuffix
 def mkBelowName (indDeclName : Name) : Name := Name.mkStr indDeclName belowSuffix
 
 builtin_initialize auxRecExt : TagDeclarationExtension ←
@@ -31,11 +31,9 @@ def markAuxRecursor (env : Environment) (declName : Name) : Environment :=
 
 def isAuxRecursor (env : Environment) (declName : Name) : Bool :=
   auxRecExt.isTagged env declName
-  -- TODO: use `markAuxRecursor` when they are defined
-  -- An attribute is not a good solution since we don't want users to control what is tagged as an auxiliary recursor.
-  || declName == ``Eq.ndrec
-  || declName == ``Eq.ndrec_symm
-  || declName == ``Eq.ndrecOn
+    -- TODO: use `markAuxRecursor` when they are defined
+    -- An attribute is not a good solution since we don't want users to control what is tagged as an auxiliary recursor.
+    || declName == ``Eq.ndrec || declName == ``Eq.ndrec_symm || declName == ``Eq.ndrecOn
 
 def isAuxRecursorWithSuffix (env : Environment) (declName : Name) (suffix : String) : Bool :=
   match declName with
@@ -79,7 +77,7 @@ deriving Inhabited
 
 def NoConfusionInfo.arity : NoConfusionInfo → Nat
   | .regular arity _ _ => arity
-  | .perCtor arity _   => arity
+  | .perCtor arity _ => arity
 
 builtin_initialize noConfusionExt : MapDeclarationExtension NoConfusionInfo ←
   mkMapDeclarationExtension (asyncMode := .mainOnly) (logWrites := true)
@@ -87,8 +85,7 @@ builtin_initialize noConfusionExt : MapDeclarationExtension NoConfusionInfo ←
 def markNoConfusion (env : Environment) (n : Name) (info : NoConfusionInfo) : Environment :=
   noConfusionExt.insert env n info
 
-def isNoConfusion (env : Environment) (n : Name) : Bool :=
-  noConfusionExt.contains env n
+def isNoConfusion (env : Environment) (n : Name) : Bool := noConfusionExt.contains env n
 
 def getNoConfusionInfo (env : Environment) (n : Name) : NoConfusionInfo :=
   (noConfusionExt.find? env n).get!

@@ -39,8 +39,7 @@ public def fmtPackageCommand : Fmt := fun
         $[$name?:identOrStr]? $config:optConfig) => do
     let decl ← fmtConfigCommand packageTk name? config
     fmtDeclWithModifiers docComment? attributes? #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.leanLibCommand]
 public def fmtLeanLibCommand : Fmt := fun
@@ -49,8 +48,7 @@ public def fmtLeanLibCommand : Fmt := fun
         $[$name?:identOrStr]? $config:optConfig) => do
     let decl ← fmtConfigCommand leanLibTk name? config
     fmtDeclWithModifiers docComment? attributes? #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.leanExeCommand]
 public def fmtLeanExeCommand : Fmt := fun
@@ -59,8 +57,7 @@ public def fmtLeanExeCommand : Fmt := fun
         $[$name?:identOrStr]? $config:optConfig) => do
     let decl ← fmtConfigCommand leanExeTk name? config
     fmtDeclWithModifiers docComment? attributes? #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.inputFileCommand]
 public def fmtInputFileCommand : Fmt := fun
@@ -69,8 +66,7 @@ public def fmtInputFileCommand : Fmt := fun
         $[$name?:identOrStr]? $config:optConfig) => do
     let decl ← fmtConfigCommand inputFileTk name? config
     fmtDeclWithModifiers docComment? attributes? #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.inputDirCommand]
 public def fmtInputDirCommand : Fmt := fun
@@ -79,8 +75,7 @@ public def fmtInputDirCommand : Fmt := fun
         $[$name?:identOrStr]? $config:optConfig) => do
     let decl ← fmtConfigCommand inputDirTk name? config
     fmtDeclWithModifiers docComment? attributes? #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 /-- The termination suffix of Lake declaration bodies, which never carry termination hints. -/
 def emptyTerminationSuffix : TSyntax ``Parser.Termination.suffix :=
@@ -103,8 +98,7 @@ public def fmtPostUpdateDecl : Fmt := fun
       fmtAssignmentDeclaration postUpdateTk none binder? #[] none none none declBody
         emptyTerminationSuffix whereDecls?
     fmtDeclWithModifiers docComment? attributes? #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.fromPath]
 public def fmtFromPath : Fmt := fun
@@ -123,8 +117,7 @@ public def fmtFromGit : Fmt := fun
     let repository := Layouts.infixOperator #[url, atTk?, rev?] .dense
     let source := Layouts.infixOperator #[repository, slashTk?, subDir?] .dense
     return Layouts.keywordPrefixedTerm gitTk source .sticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.fromSource]
 public def fmtFromSource : Fmt := fun
@@ -138,8 +131,7 @@ public def fmtFromClause : Fmt := fun
     let fromTk ← fmt fromTk
     let source ← fmt source
     return Layouts.keywordPrefixedTerm fromTk source .nonSticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.withClause]
 public def fmtWithClause : Fmt := fun
@@ -147,8 +139,7 @@ public def fmtWithClause : Fmt := fun
     let withTk ← fmt withTk
     let opts ← fmt opts
     return Layouts.keywordPrefixedTerm withTk opts .nonSticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.depName]
 public def fmtDepName : Fmt := fun
@@ -157,8 +148,7 @@ public def fmtDepName : Fmt := fun
     let slashTk? ← fmt? slashTk?
     let name ← fmt name
     return Layouts.infixOperator #[scope?, slashTk?, name] .dense
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.verSpec]
 public def fmtVerSpec : Fmt := fun
@@ -166,8 +156,7 @@ public def fmtVerSpec : Fmt := fun
     let gitTk? ← fmt? gitTk?
     let ver ← fmt ver
     return Layouts.keywordPrefixedTerm gitTk? ver .nonSticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.requireDecl]
 public def fmtRequireDecl : Fmt := fun
@@ -183,8 +172,7 @@ public def fmtRequireDecl : Fmt := fun
     let dep := Layouts.infixOperator #[name, atTk?, ver?] .dense
     let decl := Layouts.blocks #[requireTk, dep, fromClause?, withClause?]
     fmtDeclWithModifiers docComment? none #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 /--
 Converts the optional simple binder of a Lake declaration signature into the binders of a
@@ -194,19 +182,15 @@ def toDeclarationBinders (binder? : Option SimpleBinder) : FmtM (TSyntaxArray bi
   let some binder := binder?
     | return #[]
   match binder with
-  | `(simpleBinder| $id:ident) =>
-    return #[⟨id⟩]
+  | `(simpleBinder| $id:ident) => return #[⟨id⟩]
   | `(simpleBinder| (%$lbTk $id:ident $[:%$typeAscriptionTk? $type?:term]? )%$rbTk) =>
     let binderType :=
       match typeAscriptionTk?, type? with
-      | some typeAscriptionTk, some type =>
-        mkNullNode #[typeAscriptionTk, type.raw]
-      | _, _ =>
-        mkNullNode
+      | some typeAscriptionTk, some type => mkNullNode #[typeAscriptionTk, type.raw]
+      | _, _ => mkNullNode
     return #[⟨mkNode ``Parser.Term.explicitBinder
       #[lbTk, mkNullNode #[id], binderType, mkNullNode, rbTk]⟩]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 /-- Formats a Lake target or facet declaration with the keyword `kw` and the signature `sig`. -/
 public def fmtWithBuildDeclSig (kw : Syntax) (sig : TSyntax ``buildDeclSig) : FmtM TaggedDoc := do
@@ -217,8 +201,7 @@ public def fmtWithBuildDeclSig (kw : Syntax) (sig : TSyntax ``buildDeclSig) : Fm
       $[$whereDecls?:whereDecls]?) =>
     fmtAssignmentDeclaration kw none name (← toDeclarationBinders binder?) typeAscriptionTk type
       colonEqTk declBody terminationSuffix whereDecls?
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.moduleFacetDecl]
 public def fmtModuleFacetDecl : Fmt := fun
@@ -227,8 +210,7 @@ public def fmtModuleFacetDecl : Fmt := fun
         $sig:buildDeclSig) => do
     let decl ← fmtWithBuildDeclSig moduleFacetTk sig
     fmtDeclWithModifiers docComment? attributes? #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.packageFacetDecl]
 public def fmtPackageFacetDecl : Fmt := fun
@@ -237,8 +219,7 @@ public def fmtPackageFacetDecl : Fmt := fun
         $sig:buildDeclSig) => do
     let decl ← fmtWithBuildDeclSig packageFacetTk sig
     fmtDeclWithModifiers docComment? attributes? #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.libraryFacetDecl]
 public def fmtLibraryFacetDecl : Fmt := fun
@@ -247,8 +228,7 @@ public def fmtLibraryFacetDecl : Fmt := fun
         $sig:buildDeclSig) => do
     let decl ← fmtWithBuildDeclSig libraryFacetTk sig
     fmtDeclWithModifiers docComment? attributes? #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.targetCommand]
 public def fmtTargetCommand : Fmt := fun
@@ -257,8 +237,7 @@ public def fmtTargetCommand : Fmt := fun
         $sig:buildDeclSig) => do
     let decl ← fmtWithBuildDeclSig targetTk sig
     fmtDeclWithModifiers docComment? attributes? #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.externLibCommand]
 public def fmtExternLibCommand : Fmt := fun
@@ -271,8 +250,7 @@ public def fmtExternLibCommand : Fmt := fun
       fmtAssignmentDeclaration externLibTk none name (← toDeclarationBinders binder?) none none
         colonEqTk declBody terminationSuffix whereDecls?
     fmtDeclWithModifiers docComment? attributes? #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.scriptDecl]
 public def fmtScriptDecl : Fmt := fun
@@ -292,8 +270,7 @@ public def fmtScriptDecl : Fmt := fun
       fmtAssignmentDeclaration scriptTk none name (← toDeclarationBinders binder?) none none none
         declBody emptyTerminationSuffix whereDecls?
     fmtDeclWithModifiers docComment? attributes? #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.evalVer]
 public def fmtEvalVer : Fmt := fun
@@ -306,8 +283,7 @@ public def fmtVerLit : Fmt := fun
     let verTk ← fmt verTk
     let ver ← fmt ver
     return Layouts.strLit verTk ver
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.facetSuffix]
 public def fmtFacetSuffix : Fmt := fun
@@ -315,8 +291,7 @@ public def fmtFacetSuffix : Fmt := fun
     let colonTk ← fmt colonTk
     let facet ← fmt facet
     return Layouts.atomic #[colonTk, facet]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.packageTargetLit]
 public def fmtPackageTargetLit : Fmt := fun
@@ -324,8 +299,7 @@ public def fmtPackageTargetLit : Fmt := fun
     let plusTk? ← fmt? plusTk?
     let targetId ← fmt targetId
     return Layouts.atomic #[plusTk?, targetId]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.moduleTargetKeyLit]
 public def fmtModuleTargetKeyLit : Fmt := fun
@@ -334,8 +308,7 @@ public def fmtModuleTargetKeyLit : Fmt := fun
     let mod ← fmt mod
     let facets ← fmtArray facets
     return Layouts.atomic <| #[keyTk, mod] ++ facets
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lake.DSL.packageTargetKeyLit]
 public def fmtPackageTargetKeyLit : Fmt := fun
@@ -348,8 +321,7 @@ public def fmtPackageTargetKeyLit : Fmt := fun
       let targetLit? ← fmt? targetLit?
       let facets ← fmtArray facets
       return Layouts.atomic <| #[keyTk, pkg?, slashTk?, targetLit?] ++ facets
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 /-- The components of a `meta if` command, as deconstructed by `metaIf?`. -/
 structure MetaIf where
@@ -368,8 +340,7 @@ def deconstructMetaIf? (stx : Syntax) : Option MetaIf :=
       meta%$metaTk if%$ifTk $cond:term then%$thenTk $thenBranch:cmdDo
       $[else%$elseTk? $elseBranch?:cmdDo]?) =>
     some { metaTk, ifTk, cond, thenTk, thenBranch, elseTk?, elseBranch? }
-  | _ =>
-    none
+  | _ => none
 
 /--
 Formats the commands of the `then` or `else` branch introduced by `kwTk` below `head`, which is
@@ -399,8 +370,7 @@ def fmtMetaIfBranch (head : TaggedDoc) (kwTk : Syntax) (branch : TSyntax ``cmdDo
       kwTrailingDoc,
       cmd
     ]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 /--
 Formats the branches of the `meta if` chain that starts at `c` below `head`, which is the document
@@ -437,5 +407,4 @@ public def fmtRunIO : Fmt := fun
     let runIOTk ← fmt runIOTk
     let seq ← fmt seq
     return Layouts.keywordPrefixedSeq runIOTk seq .nonSticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

@@ -17,11 +17,12 @@ def skipContinuationBytes (b : ByteArray) (i : Nat) : Nat :=
   if h : i < b.size then
     if b[i].isUTF8ContinuationByte then
       skipContinuationBytes b (i + 1)
-    else i
-  else i
+    else
+      i
+  else
+    i
 
-theorem le_skipContinuationBytes (b : ByteArray) (i : Nat) :
-    i ≤ skipContinuationBytes b i := by
+theorem le_skipContinuationBytes (b : ByteArray) (i : Nat) : i ≤ skipContinuationBytes b i := by
   fun_induction skipContinuationBytes with omega
 
 /--
@@ -42,8 +43,7 @@ Examples:
  * `String.fromUTF8Lossy [0xFF, 0xFF].toByteArray = "��"`
 -/
 @[inline]
-public def fromUTF8Lossy (b : ByteArray) : String :=
-  go 0 ""
+public def fromUTF8Lossy (b : ByteArray) : String := go 0 ""
 where
   go (i : Nat) (acc : String) : String :=
     if i < b.size then
@@ -54,6 +54,7 @@ where
       | none =>
         have := le_skipContinuationBytes b (i + 1)
         go (skipContinuationBytes b (i + 1)) (acc.push '�')
-    else acc
+    else
+      acc
 
 end String

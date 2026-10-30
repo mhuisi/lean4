@@ -28,8 +28,8 @@ variable [Hashable α] [DecidableEq α]
 def blastConst (aig : AIG α) (val : BitVec w) : AIG.RefVec aig w :=
   go aig val 0 (.emptyWithCapacity w) (by omega)
 where
-  go (aig : AIG α) (val : BitVec w) (curr : Nat) (s : AIG.RefVec aig curr) (hcurr : curr ≤ w) :
-      AIG.RefVec aig w :=
+  go (aig : AIG α) (val : BitVec w) (curr : Nat) (s : AIG.RefVec aig curr) (hcurr : curr ≤ w)
+      : AIG.RefVec aig w :=
     if hcurr : curr < w then
       let bitRef := aig.mkConstCached (val.getLsbD curr)
       let s := s.push bitRef

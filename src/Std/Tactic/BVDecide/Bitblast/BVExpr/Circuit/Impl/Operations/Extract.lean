@@ -30,23 +30,24 @@ structure ExtractTarget (aig : AIG α) (len : Nat) where
   vec : AIG.RefVec aig w
   start : Nat
 
-def blastExtract (aig : AIG α) (target : ExtractTarget aig newWidth) :
-    AIG.RefVecEntry α newWidth :=
+def blastExtract (aig : AIG α) (target : ExtractTarget aig newWidth) : AIG.RefVecEntry α newWidth :=
   let ⟨input, start⟩ := target
   ⟨aig, go input start 0 (by omega) (.emptyWithCapacity newWidth)⟩
 where
-  go {aig : AIG α} {w : Nat} (input : AIG.RefVec aig w) (start : Nat) (curr : Nat)
-      (hcurr : curr ≤ newWidth) (s : AIG.RefVec aig curr) :
-      AIG.RefVec aig newWidth :=
-  if h : curr < newWidth then
-    let falseRef := aig.mkConstCached false
-    let nextRef := input.getD (start + curr) falseRef
-    let s := s.push nextRef
-    go input start (curr + 1) (by omega) s
-  else
-    have : curr = newWidth := by omega
-    this ▸ s
-termination_by newWidth - curr
+  go
+      {aig : AIG α} {w : Nat} (input : AIG.RefVec aig w)
+      (start : Nat)
+      (curr : Nat) (hcurr : curr ≤ newWidth) (s : AIG.RefVec aig curr)
+      : AIG.RefVec aig newWidth :=
+    if h : curr < newWidth then
+      let falseRef := aig.mkConstCached false
+      let nextRef := input.getD (start + curr) falseRef
+      let s := s.push nextRef
+      go input start (curr + 1) (by omega) s
+    else
+      have : curr = newWidth := by omega
+      this ▸ s
+  termination_by newWidth - curr
 
 instance : AIG.LawfulVecOperator α ExtractTarget blastExtract where
   le_size := by
@@ -56,7 +57,8 @@ instance : AIG.LawfulVecOperator α ExtractTarget blastExtract where
   decl_eq := by
     intros
     unfold blastExtract
-    simp; rfl
+    simp
+    rfl
 
 end bitblast
 end BVExpr

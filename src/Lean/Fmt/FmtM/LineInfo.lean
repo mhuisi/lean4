@@ -110,8 +110,7 @@ where
 
   go (stx : Syntax) : StateM collectSyntaxLineInfos.State Unit := do
     match stx with
-    | .missing =>
-      return
+    | .missing => return
     | .atom info val =>
       if let some leading := info.getLeading?.map (·.toString) then
         advanceBy leading (isToken := false)

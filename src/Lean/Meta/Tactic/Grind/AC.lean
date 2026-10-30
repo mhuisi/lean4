@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.AC.Types
 public import Lean.Meta.Tactic.Grind.AC.Util
@@ -33,13 +34,8 @@ builtin_initialize registerTraceClass `grind.debug.ac.superpose
 builtin_initialize registerTraceClass `grind.debug.ac.eq
 
 builtin_initialize
-  acExt.setMethods
-    (enabled     := (·.ac))
-    (internalize := AC.internalize)
-    (newEq       := AC.processNewEq)
-    (newDiseq    := AC.processNewDiseq)
-    (action      := Action.ac)
-    (check       := AC.check')
-    (checkInv    := AC.checkInvariants)
+  acExt.setMethods (enabled := (·.ac)) (internalize := AC.internalize) (newEq := AC.processNewEq)
+    (newDiseq := AC.processNewDiseq) (action := Action.ac) (check := AC.check')
+    (checkInv := AC.checkInvariants)
 
 end Lean.Meta.Grind.AC

@@ -18,9 +18,7 @@ namespace Std
 -- documented below by `add_decl_doc`, which can refer to `Iter.ensureTermination`
 set_option linter.missingDocs false in
 structure Iter.Total {α : Type w} (β : Type w) where
-  /--
-  The wrapped iterator, which was wrapped by `Iter.ensureTermination`.
-  -/
+  /-- The wrapped iterator, which was wrapped by `Iter.ensureTermination`. -/
   it : Iter (α := α) β
 
 /--
@@ -28,9 +26,8 @@ For an iterator {name}`it`, {lean}`it.ensureTermination` provides variants of co
 terminate.
 -/
 @[always_inline, inline]
-def Iter.ensureTermination {α : Type w} {β : Type w}
-    (it : Iter (α := α) β) :
-  Iter.Total (α := α) β :=
+def Iter.ensureTermination {α : Type w} {β : Type w} (it : Iter (α := α) β)
+    : Iter.Total (α := α) β :=
   ⟨it⟩
 
 /--

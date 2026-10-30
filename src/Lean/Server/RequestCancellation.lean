@@ -15,19 +15,19 @@ public section
 namespace Lean.Server
 
 structure RequestCancellationToken where
-  cancelledByCancelRequest   : IO.CancelToken
-  cancelledByEdit            : IO.CancelToken
+  cancelledByCancelRequest : IO.CancelToken
+  cancelledByEdit : IO.CancelToken
   requestCancellationPromise : IO.Promise Unit
-  editCancellationPromise    : IO.Promise Unit
+  editCancellationPromise : IO.Promise Unit
 
 namespace RequestCancellationToken
 
 def new : BaseIO RequestCancellationToken := do
   return {
-    cancelledByCancelRequest   := ← IO.CancelToken.new
-    cancelledByEdit            := ← IO.CancelToken.new
+    cancelledByCancelRequest := ← IO.CancelToken.new
+    cancelledByEdit := ← IO.CancelToken.new
     requestCancellationPromise := ← IO.Promise.new
-    editCancellationPromise    := ← IO.Promise.new
+    editCancellationPromise := ← IO.Promise.new
   }
 
 def cancelByCancelRequest (tk : RequestCancellationToken) : BaseIO Unit := do
@@ -38,7 +38,7 @@ def cancelByEdit (tk : RequestCancellationToken) : BaseIO Unit := do
   tk.cancelledByEdit.set
   tk.editCancellationPromise.resolve ()
 
-def requestCancellationTask (tk : RequestCancellationToken): ServerTask Unit :=
+def requestCancellationTask (tk : RequestCancellationToken) : ServerTask Unit :=
   tk.requestCancellationPromise.resultD ()
 
 def editCancellationTask (tk : RequestCancellationToken) : ServerTask Unit :=
@@ -50,8 +50,7 @@ def cancellationTasks (tk : RequestCancellationToken) : List (ServerTask Unit) :
 def wasCancelledByCancelRequest (tk : RequestCancellationToken) : BaseIO Bool :=
   tk.cancelledByCancelRequest.isSet
 
-def wasCancelledByEdit (tk : RequestCancellationToken) : BaseIO Bool :=
-  tk.cancelledByEdit.isSet
+def wasCancelledByEdit (tk : RequestCancellationToken) : BaseIO Bool := tk.cancelledByEdit.isSet
 
 def wasCancelled (tk : RequestCancellationToken) : BaseIO Bool := do
   return (← tk.wasCancelledByCancelRequest) || (← tk.wasCancelledByEdit)
@@ -65,12 +64,12 @@ def RequestCancellation.requestCancelled : RequestCancellation := {}
 abbrev CancellableT m := ReaderT RequestCancellationToken (ExceptT RequestCancellation m)
 abbrev CancellableM := CancellableT IO
 
-def CancellableT.run (tk : RequestCancellationToken) (x : CancellableT m α) :
-    m (Except RequestCancellation α) :=
+def CancellableT.run (tk : RequestCancellationToken) (x : CancellableT m α)
+    : m (Except RequestCancellation α) :=
   x tk
 
-def CancellableM.run (tk : RequestCancellationToken) (x : CancellableM α) :
-    IO (Except RequestCancellation α) :=
+def CancellableM.run (tk : RequestCancellationToken) (x : CancellableM α)
+    : IO (Except RequestCancellation α) :=
   CancellableT.run tk x
 
 def CancellableT.checkCancelled [Monad m] [MonadLiftT BaseIO m] : CancellableT m Unit := do
@@ -78,8 +77,7 @@ def CancellableT.checkCancelled [Monad m] [MonadLiftT BaseIO m] : CancellableT m
   if ← tk.wasCancelledByCancelRequest then
     throw .requestCancelled
 
-def CancellableM.checkCancelled : CancellableM Unit :=
-  CancellableT.checkCancelled
+def CancellableM.checkCancelled : CancellableM Unit := CancellableT.checkCancelled
 
 class MonadCancellable (m : Type → Type v) where
   checkCancelled : m PUnit
@@ -90,5 +88,4 @@ instance (m n) [MonadLift m n] [MonadCancellable m] : MonadCancellable n where
 instance [Monad m] [MonadLiftT BaseIO m] : MonadCancellable (CancellableT m) where
   checkCancelled := CancellableT.checkCancelled
 
-def RequestCancellation.check [MonadCancellable m] : m Unit :=
-  MonadCancellable.checkCancelled
+def RequestCancellation.check [MonadCancellable m] : m Unit := MonadCancellable.checkCancelled

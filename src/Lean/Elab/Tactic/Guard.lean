@@ -21,12 +21,12 @@ have to be to pass the tactic.
 This inductive gives the different specifiers that can be selected.
 -/
 inductive MatchKind
-/-- A syntactic match means that the `Expr`s are `==` after stripping `MData` -/
-| syntactic
-/-- A defeq match `isDefEqGuarded` returns true. (Note that unification is allowed here.) -/
-| defEq (red : TransparencyMode := .reducible)
-/-- An alpha-eq match means that `Expr.eqv` returns true. -/
-| alphaEq
+  /-- A syntactic match means that the `Expr`s are `==` after stripping `MData` -/
+  | syntactic
+  /-- A defeq match `isDefEqGuarded` returns true. (Note that unification is allowed here.) -/
+  | defEq (red : TransparencyMode := .reducible)
+  /-- An alpha-eq match means that `Expr.eqv` returns true. -/
+  | alphaEq
 
 open Lean.Parser Lean.Parser.Tactic Lean.Parser.Command
 
@@ -67,13 +67,16 @@ def MatchKind.toStringDescr : MatchKind → String
   | .defEq .all => s!"definitionally equal (unfolding all constants) to"
   | .defEq .reducible => s!"definitionally equal (unfolding reducible constants) to"
   | .defEq .instances => s!"definitionally equal (unfolding instance_reducible) to"
-  | .defEq .implicit => s!"definitionally equal (unfolding instance_reducible and implicit_reducible) to"
+  | .defEq .implicit =>
+    s!"definitionally equal (unfolding instance_reducible and implicit_reducible) to"
   | .defEq .none => s!"definitionally equal (not unfolding any constants) to"
   | .alphaEq => "alpha-equivalent to"
 
-/-- Elaborate `a` and `b` and then do the given equality test `mk`. We make sure to unify
+/--
+Elaborate `a` and `b` and then do the given equality test `mk`. We make sure to unify
 the types of `a` and `b` after elaboration so that when synthesizing pending metavariables
-we don't get the wrong instances due to default instances (for example, for nat literals). -/
+we don't get the wrong instances due to default instances (for example, for nat literals).
+-/
 def elabAndEvalMatchKind (mk : MatchKind) (a b : Term) : TermElabM Bool :=
   Term.withoutErrToSorry do
     let a ← Term.elabTerm a none
@@ -85,11 +88,13 @@ def elabAndEvalMatchKind (mk : MatchKind) (a b : Term) : TermElabM Bool :=
 
 @[builtin_tactic guardExpr]
 def evalGuardExpr : Tactic := fun
-  | `(tactic| guard_expr $r $eq:equal $p)
-  | `(conv| guard_expr $r $eq:equal $p) => withMainContext do
-    let some mk := equal.toMatchKind eq | throwUnsupportedSyntax
-    let res ← elabAndEvalMatchKind mk r p
-    unless res do throwError "Failed: `{r}` is not {mk.toStringDescr} `{p}`"
+  | `(tactic| guard_expr $r $eq:equal $p) | `(conv| guard_expr $r $eq:equal $p) =>
+    withMainContext do
+      let some mk := equal.toMatchKind eq
+        | throwUnsupportedSyntax
+      let res ← elabAndEvalMatchKind mk r p
+      unless res do
+        throwError "Failed: `{r}` is not {mk.toStringDescr} `{p}`"
   | _ => throwUnsupportedSyntax
 
 -- TODO: This is workaround. We currently allow two occurrences of `builtin_tactic`.
@@ -98,16 +103,19 @@ def evalGuardExprConv : Tactic := evalGuardExpr
 
 @[builtin_tactic guardTarget]
 def evalGuardTarget : Tactic :=
-  let go eq r getTgt := withMainContext do
-    let t ← getTgt >>= instantiateMVars
-    let r ← elabTerm r (← inferType t)
-    let some mk := equal.toMatchKind eq | throwUnsupportedSyntax
-    unless ← mk.isEq r t do
-      throwError "The main goal is{indentExpr t}\nbut was expected to be{indentExpr r}"
+  let go eq r getTgt :=
+    withMainContext do
+      let t ← getTgt >>= instantiateMVars
+      let r ← elabTerm r (← inferType t)
+      let some mk := equal.toMatchKind eq
+        | throwUnsupportedSyntax
+      unless ← mk.isEq r t do
+        throwError "The main goal is{indentExpr t}\
+          \nbut was expected to be{indentExpr r}"
   fun
-  | `(tactic| guard_target $eq $r) => go eq r getMainTarget
-  | `(conv| guard_target $eq $r) => go eq r Conv.getLhs
-  | _ => throwUnsupportedSyntax
+    | `(tactic| guard_target $eq $r) => go eq r getMainTarget
+    | `(conv| guard_target $eq $r) => go eq r Conv.getLhs
+    | _ => throwUnsupportedSyntax
 
 -- See comment above
 @[builtin_tactic guardTargetConv]
@@ -116,28 +124,33 @@ def evalGuardTargetConv : Tactic := evalGuardTarget
 @[builtin_tactic guardHyp]
 def evalGuardHyp : Tactic := fun
   | `(tactic| guard_hyp $h $[$c $ty]? $[$eq $val]?)
-  | `(conv| guard_hyp $h $[$c $ty]? $[$eq $val]?) => withMainContext do
-    let fvarid ← getFVarId h
-    let lDecl ←
-      match (← getLCtx).find? fvarid with
-      | none => throwError m!"Hypothesis `{h}` not found"
-      | some lDecl => pure lDecl
-    if let (some c, some p) := (c, ty) then
-      let some mk := colon.toMatchKind c | throwUnsupportedSyntax
-      let e ← elabTerm p none
-      let hty ← instantiateMVars lDecl.type
-      unless ← mk.isEq e hty do
-        throwError m!"Hypothesis `{h}` has type{indentExpr hty}\nbut was expected to have type{indentExpr e}"
-    match lDecl.value?, val with
-    | none, some _        => throwError m!"`{h}` is not a let binding"
-    | some _, none        => throwError m!"`{h}` is a let binding"
-    | some hval, some val =>
-      let some mk := eq.bind colonEq.toMatchKind | throwUnsupportedSyntax
-      let e ← elabTerm val lDecl.type
-      let hval ← instantiateMVars hval
-      unless ← mk.isEq e hval do
-        throwError m!"Hypothesis `{h}` has value{indentExpr hval}\nbut was expected to have value{indentExpr e}"
-    | none, none          => pure ()
+  | `(conv| guard_hyp $h $[$c $ty]? $[$eq $val]?) =>
+    withMainContext do
+      let fvarid ← getFVarId h
+      let lDecl ←
+        match (← getLCtx).find? fvarid with
+        | none => throwError m!"Hypothesis `{h}` not found"
+        | some lDecl => pure lDecl
+      if let (some c, some p) := (c, ty) then
+        let some mk := colon.toMatchKind c
+          | throwUnsupportedSyntax
+        let e ← elabTerm p none
+        let hty ← instantiateMVars lDecl.type
+        unless ← mk.isEq e hty do
+          throwError m!"Hypothesis `{h}` has type{indentExpr hty}\
+            \nbut was expected to have type{indentExpr e}"
+      match lDecl.value?, val with
+      | none, some _ => throwError m!"`{h}` is not a let binding"
+      | some _, none => throwError m!"`{h}` is a let binding"
+      | some hval, some val =>
+        let some mk := eq.bind colonEq.toMatchKind
+          | throwUnsupportedSyntax
+        let e ← elabTerm val lDecl.type
+        let hval ← instantiateMVars hval
+        unless ← mk.isEq e hval do
+          throwError m!"Hypothesis `{h}` has value{indentExpr hval}\
+            \nbut was expected to have value{indentExpr e}"
+      | none, none => pure ()
   | _ => throwUnsupportedSyntax
 
 @[builtin_tactic guardHypConv]
@@ -147,24 +160,28 @@ def evalGuardHypConv : Tactic := evalGuardHyp
 def evalGuardExprCmd : Lean.Elab.Command.CommandElab
   | `(command| #guard_expr $r $eq:equal $p) =>
     Lean.Elab.Command.runTermElabM fun _ => do
-      let some mk := equal.toMatchKind eq | throwUnsupportedSyntax
+      let some mk := equal.toMatchKind eq
+        | throwUnsupportedSyntax
       let res ← elabAndEvalMatchKind mk r p
-      unless res do throwError "Failed: `{r}` is not {mk.toStringDescr} `{p}`"
+      unless res do
+        throwError "Failed: `{r}` is not {mk.toStringDescr} `{p}`"
   | _ => throwUnsupportedSyntax
 
 @[builtin_command_elab guardCmd]
 def evalGuardCmd : Lean.Elab.Command.CommandElab
-  | `(command| #guard $e:term) => Lean.Elab.Command.liftTermElabM do
-    let e ← Term.elabTermEnsuringType e (mkConst ``Bool)
-    Term.synthesizeSyntheticMVarsNoPostponing
-    let e ← instantiateMVars e
-    let mvars ← getMVars e
-    if mvars.isEmpty then
-      let v ← unsafe evalExpr (checkMeta := false) Bool (mkConst ``Bool) e
-      unless v do
-        throwError "Expression{indentExpr e}\ndid not evaluate to `true`"
-    else
-      _ ← Term.logUnassignedUsingErrorInfos mvars
+  | `(command| #guard $e:term) =>
+    Lean.Elab.Command.liftTermElabM do
+      let e ← Term.elabTermEnsuringType e (mkConst ``Bool)
+      Term.synthesizeSyntheticMVarsNoPostponing
+      let e ← instantiateMVars e
+      let mvars ← getMVars e
+      if mvars.isEmpty then
+        let v ← unsafe evalExpr (checkMeta := false) Bool (mkConst ``Bool) e
+        unless v do
+          throwError "Expression{indentExpr e}\
+            \ndid not evaluate to `true`"
+      else
+        _ ← Term.logUnassignedUsingErrorInfos mvars
   | _ => throwUnsupportedSyntax
 
 end Lean.Elab.Tactic.GuardExpr

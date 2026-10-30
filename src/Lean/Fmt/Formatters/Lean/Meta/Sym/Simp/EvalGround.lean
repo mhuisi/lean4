@@ -21,8 +21,7 @@ public def fmtSimpDeclareEvalBin : Fmt := fun
     let id ← fmt id
     let op ← fmt op
     return Layouts.pseudoApplication #[declareTk, id, op]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Meta.Sym.Simp.commandDeclare_eval_bin_bitwise__]
 public def fmtSimpDeclareEvalBinBitwise : Fmt := fun
@@ -32,8 +31,7 @@ public def fmtSimpDeclareEvalBinBitwise : Fmt := fun
     let id ← fmt id
     let op ← fmt op
     return Layouts.pseudoApplication #[declareTk, id, op]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Meta.Sym.Simp.commandDeclare_eval_bin_bool_pred__]
 public def fmtSimpDeclareEvalBinBoolPred : Fmt := fun
@@ -43,5 +41,4 @@ public def fmtSimpDeclareEvalBinBoolPred : Fmt := fun
     let id ← fmt id
     let op ← fmt op
     return Layouts.pseudoApplication #[declareTk, id, op]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

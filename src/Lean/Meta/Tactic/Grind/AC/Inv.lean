@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.AC.Util
 import Lean.Meta.Tactic.Grind.AC.Seq
@@ -31,7 +32,7 @@ def checkSeq (s : AC.Seq) (simplified : Bool) : ACM Unit := do
     assert! s.isSorted
   if simplified then
     if (← hasNeutral) then
-      assert! !s.contains 0 || s == .var 0
+      assert! ! s.contains 0 || s == .var 0
     if (← isIdempotent) then
       assert! s.noAdjacentDuplicates
 
@@ -59,7 +60,7 @@ def checkStructInvs : ACM Unit := do
 
 public def checkInvariants : GoalM Unit := do
   if (← isDebugEnabled) then
-  for opId in *...(← get').structs.size do
-    ACM.run opId checkStructInvs
+    for opId in *...(← get').structs.size do
+      ACM.run opId checkStructInvs
 
 end Lean.Meta.Grind.AC

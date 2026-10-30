@@ -20,17 +20,18 @@ open Std.Format
 
 private def formatInfo (showInfo : Bool) (info : SourceInfo) (f : Format) : Format :=
   match showInfo, info with
-  | true, SourceInfo.original lead pos trail endPos => f!"{repr lead.toString}:{pos}:{f}:{endPos}:{repr trail.toString}"
-  | true, SourceInfo.synthetic pos endPos true      => f!"{pos}!:{f}:{endPos}"
-  | true, SourceInfo.synthetic pos endPos false     => f!"{pos}:{f}:{endPos}"
-  | _,    _                                         => f
+  | true, SourceInfo.original lead pos trail endPos =>
+    f!"{repr lead.toString}:{pos}:{f}:{endPos}:{repr trail.toString}"
+  | true, SourceInfo.synthetic pos endPos true => f!"{pos}!:{f}:{endPos}"
+  | true, SourceInfo.synthetic pos endPos false => f!"{pos}:{f}:{endPos}"
+  | _, _ => f
 
 partial def formatStxAux (maxDepth : Option Nat) (showInfo : Bool) (depth : Nat) : Syntax → Format
-  | atom info val        => formatInfo showInfo info <| format (repr val)
-  | ident info _ val _   => formatInfo showInfo info <| format "`" ++ format val
-  | missing              => "<missing>"
-  | node info kind args  =>
-    let depth := depth + 1;
+  | atom info val => formatInfo showInfo info <| format (repr val)
+  | ident info _ val _ => formatInfo showInfo info <| format "`" ++ format val
+  | missing => "<missing>"
+  | node info kind args =>
+    let depth := depth + 1
     if kind == nullKind then
       sbracket <|
         if args.size > 0 && depth > maxDepth.getD depth then
@@ -39,7 +40,7 @@ partial def formatStxAux (maxDepth : Option Nat) (showInfo : Bool) (depth : Nat)
           joinSep (args.toList.map (formatStxAux maxDepth showInfo depth)) line
     else
       let shorterName := kind.replacePrefix `Lean.Parser Name.anonymous
-      let header      := formatInfo showInfo info <| format shorterName
+      let header := formatInfo showInfo info <| format shorterName
       let body : List Format :=
         if args.size > 0 && depth > maxDepth.getD depth then
           [".."]
@@ -47,9 +48,11 @@ partial def formatStxAux (maxDepth : Option Nat) (showInfo : Bool) (depth : Nat)
           args.toList.map (formatStxAux maxDepth showInfo depth)
       paren <| joinSep (header :: body) line
 
-/-- Pretty print the given syntax `stx` as a `Format`.
+/--
+Pretty print the given syntax `stx` as a `Format`.
 Nodes deeper than `maxDepth` are omitted.
-Setting the `showInfo` flag will also print the `SourceInfo` for each node. -/
+Setting the `showInfo` flag will also print the `SourceInfo` for each node.
+-/
 def formatStx (stx : Syntax) (maxDepth : Option Nat := none) (showInfo := false) : Format :=
   formatStxAux maxDepth showInfo 0 stx
 

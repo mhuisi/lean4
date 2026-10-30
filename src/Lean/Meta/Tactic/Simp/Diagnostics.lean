@@ -23,7 +23,9 @@ private def originToKey (thmId : Origin) : MetaM MessageData := do
   | .fvar fvarId => pure m!"{mkFVar fvarId}"
   | _ => pure thmId.key
 
-def mkSimpDiagSummary (counters : PHashMap Origin Nat) (usedCounters? : Option (PHashMap Origin Nat) := none) : MetaM DiagSummary := do
+def mkSimpDiagSummary
+    (counters : PHashMap Origin Nat) (usedCounters? : Option (PHashMap Origin Nat) := none)
+    : MetaM DiagSummary := do
   let threshold := diagnostics.threshold.get (← getOptions)
   let entries := collectAboveThreshold counters threshold (fun _ => true) (lt := (· < ·))
   if entries.isEmpty then
@@ -32,10 +34,14 @@ def mkSimpDiagSummary (counters : PHashMap Origin Nat) (usedCounters? : Option (
     let mut data := #[]
     for (thmId, counter) in entries do
       let key ← originToKey thmId
-      let usedMsg ← if let some usedCounters := usedCounters? then
-        if let some c := usedCounters.find? thmId then pure s!", succeeded: {c}" else pure s!" {crossEmoji}" -- not used
-      else
-        pure ""
+      let usedMsg ←
+        if let some usedCounters := usedCounters? then
+          if let some c := usedCounters.find? thmId then
+            pure s!", succeeded: {c}"
+          else
+            pure s!" {crossEmoji}" -- not used
+        else
+          pure ""
       data := data.push <| .trace { cls := `simp } m!"{key} ↦ {counter}{usedMsg}" #[]
     return { data, max := entries[0]!.2 }
 
@@ -45,7 +51,9 @@ private def mkTheoremsWithBadKeySummary (thms : PArray SimpTheorem) : MetaM Diag
   else
     let mut data := #[]
     for thm in thms do
-      data := data.push <| .trace { cls := `simp } m!"{← originToKey thm.origin}, key: {← DiscrTree.keysAsPattern thm.keys}" #[]
+      data :=
+        data.push <| .trace { cls := `simp }
+          m!"{← originToKey thm.origin}, key: {← DiscrTree.keysAsPattern thm.keys}" #[]
       pure ()
     return { data }
 
@@ -62,7 +70,9 @@ def mkDiagMessages (diag : Simp.Diagnostics) : MetaM (Array MessageData) := do
     let m := appendSection m `simp "tried theorems" tried
     let m := appendSection m `simp "tried congruence theorems" congr
     let m := appendSection m `simp "theorems with bad keys" thmsWithBadKeys (resultSummary := false)
-    let m := m.push <| "use `set_option diagnostics.threshold <num>` to control threshold for reporting counters"
+    let m :=
+      m.push <|
+        "use `set_option diagnostics.threshold <num>` to control threshold for reporting counters"
     return m
 
 def reportDiag (diag : Simp.Diagnostics) : MetaM Unit := do
@@ -70,8 +80,8 @@ def reportDiag (diag : Simp.Diagnostics) : MetaM Unit := do
     -- Diagnostic output may reference private declarations that are not visible
     -- in exporting mode (issue #13581).
     withoutExporting do
-    let m ← mkDiagMessages diag
-    unless m.isEmpty do
-      logInfo <| .trace { cls := `simp, collapsed := false } "Diagnostics" m
+      let m ← mkDiagMessages diag
+      unless m.isEmpty do
+        logInfo <| .trace { cls := `simp, collapsed := false } "Diagnostics" m
 
 end Lean.Meta.Simp

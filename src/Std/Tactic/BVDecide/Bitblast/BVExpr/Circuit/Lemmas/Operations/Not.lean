@@ -26,12 +26,10 @@ namespace bitblast
 variable [Hashable α] [DecidableEq α]
 
 @[simp]
-theorem denote_blastNot (aig : AIG α) (target : RefVec aig w)
-    (assign : α → Bool) :
-    ∀ (idx : Nat) (hidx : idx < w),
-        ⟦(blastNot aig target).aig, (blastNot aig target).vec.get idx hidx, assign⟧
-          =
-        !⟦aig, target.get idx hidx, assign⟧ := by
+theorem denote_blastNot (aig : AIG α) (target : RefVec aig w) (assign : α → Bool)
+    : ∀ (idx : Nat) (hidx : idx < w),
+      ⟦(blastNot aig target).aig, (blastNot aig target).vec.get idx hidx, assign⟧
+        = !⟦aig, target.get idx hidx, assign⟧ := by
   intro idx hidx
   unfold blastNot
   simp

@@ -8,7 +8,7 @@ module
 prelude
 public import Init.Data.String.Slice.Pattern
 public import Init.Data.String.Slice.Numeric
-import Init.Data.Iterators.Consumers.Collect  -- shake: keep (used in verso)
+import Init.Data.Iterators.Consumers.Collect -- shake: keep (used in verso)
 
 set_option doc.verso true
 
@@ -31,7 +31,6 @@ variable [∀ s, Std.Iterator (σ s) Id (SearchStep s)]
 variable [∀ s, Std.Iterators.Finite (σ s) Id]
 variable [∀ s, Std.IteratorLoop (σ s) Id Id]
 
-
 /--
 Constructs a new string obtained by replacing all occurrences of {name}`pattern` with
 {name}`replacement` in {name}`s`.
@@ -49,8 +48,8 @@ Examples:
 * {lean}`"abc".replace "" "k" = "kakbkck"`
 -/
 @[inline]
-def replace [ToSlice α] (s : String) (pattern : ρ) [ToForwardSearcher pattern σ]
-    (replacement : α) : String :=
+def replace [ToSlice α] (s : String) (pattern : ρ) [ToForwardSearcher pattern σ] (replacement : α)
+    : String :=
   s.toSlice.replace pattern replacement
 
 /--
@@ -64,8 +63,8 @@ Examples:
  * {lean}`("tea".toSlice.pos ⟨1⟩ (by decide)).find? (fun (c : Char) => c == 't') == none`
 -/
 @[inline]
-def Slice.Pos.find? {s : Slice} (pos : s.Pos) (pattern : ρ) [ToForwardSearcher pattern σ]  :
-    Option s.Pos :=
+def Slice.Pos.find? {s : Slice} (pos : s.Pos) (pattern : ρ) [ToForwardSearcher pattern σ]
+    : Option s.Pos :=
   ((s.sliceFrom pos).find? pattern).map ofSliceFrom
 
 /--
@@ -79,8 +78,7 @@ Examples:
  * {lean}`("tea".toSlice.pos ⟨1⟩ (by decide)).find (fun (c : Char) => c == 't') == "tea".toSlice.endPos`
 -/
 @[inline]
-def Slice.Pos.find {s : Slice} (pos : s.Pos) (pattern : ρ) [ToForwardSearcher pattern σ] :
-    s.Pos :=
+def Slice.Pos.find {s : Slice} (pos : s.Pos) (pattern : ρ) [ToForwardSearcher pattern σ] : s.Pos :=
   ofSliceFrom ((s.sliceFrom pos).find pattern)
 
 /--
@@ -94,8 +92,8 @@ Examples:
  * {lean}`("tea".pos ⟨1⟩ (by decide)).find? (fun (c : Char) => c == 't') == none`
 -/
 @[inline]
-def Pos.find?  {s : String} (pos : s.Pos) (pattern : ρ)
-    [ToForwardSearcher pattern σ] : Option s.Pos :=
+def Pos.find? {s : String} (pos : s.Pos) (pattern : ρ) [ToForwardSearcher pattern σ]
+    : Option s.Pos :=
   (pos.toSlice.find? pattern).map Pos.ofToSlice
 
 /--
@@ -109,8 +107,7 @@ Examples:
  * {lean}`("tea".pos ⟨1⟩ (by decide)).find (fun (c : Char) => c == 't') == "tea".endPos`
 -/
 @[inline]
-def Pos.find {s : String} (pos : s.Pos) (pattern : ρ) [ToForwardSearcher pattern σ] :
-    s.Pos :=
+def Pos.find {s : String} (pos : s.Pos) (pattern : ρ) [ToForwardSearcher pattern σ] : s.Pos :=
   ofToSlice (pos.toSlice.find pattern)
 
 /--
@@ -153,11 +150,10 @@ This function is generic over all currently supported patterns except
 Examples:
 * {lean}`(("abc".toSlice.endPos.prev (by decide)).revFind? Char.isAlpha).map (·.get!) == some 'b'`
 * {lean}`"abc".toSlice.startPos.revFind? Char.isAlpha == none`
-
 -/
 @[inline]
-def Slice.Pos.revFind? {s : Slice} (pos : s.Pos) (pattern : ρ) [ToBackwardSearcher pattern σ] :
-    Option s.Pos :=
+def Slice.Pos.revFind? {s : Slice} (pos : s.Pos) (pattern : ρ) [ToBackwardSearcher pattern σ]
+    : Option s.Pos :=
   ((s.sliceTo pos).revFind? pattern).map ofSliceTo
 
 /--
@@ -172,8 +168,8 @@ Examples:
 * {lean}`"abc".startPos.revFind? Char.isAlpha == none`
 -/
 @[inline]
-def Pos.revFind? {s : String} (pos : s.Pos) (pattern : ρ) [ToBackwardSearcher pattern σ] :
-    Option s.Pos :=
+def Pos.revFind? {s : String} (pos : s.Pos) (pattern : ρ) [ToBackwardSearcher pattern σ]
+    : Option s.Pos :=
   (pos.toSlice.revFind? pattern).map Pos.ofToSlice
 
 /--
@@ -193,8 +189,7 @@ def revFind? (s : String) (pattern : ρ) [ToBackwardSearcher pattern σ] : Optio
   (s.toSlice.revFind? pattern).map Pos.ofToSlice
 
 @[export lean_string_posof]
-def Internal.posOfImpl (s : String) (c : Char) : Pos.Raw :=
-  (s.find c).offset
+def Internal.posOfImpl (s : String) (c : Char) : Pos.Raw := (s.find c).offset
 
 /--
 Splits a string at each subslice that matches the pattern {name}`pat`.
@@ -242,19 +237,16 @@ Examples:
  * {lean}`"coffee tea water".contains "tea" = true`
 -/
 @[inline, suggest_for String.some]
-def contains (s : String) (pat : ρ) [ToForwardSearcher pat σ] : Bool :=
-  s.toSlice.contains pat
+def contains (s : String) (pat : ρ) [ToForwardSearcher pat σ] : Bool := s.toSlice.contains pat
 
 @[export lean_string_contains]
-def Internal.containsImpl (s : String) (c : Char) : Bool :=
-  String.contains s c
+def Internal.containsImpl (s : String) (c : Char) : Bool := String.contains s c
 
-@[inline, inherit_doc contains] def any (s : String) (pat : ρ) [ToForwardSearcher pat σ] : Bool :=
-  s.contains pat
+@[inline, inherit_doc contains]
+def any (s : String) (pat : ρ) [ToForwardSearcher pat σ] : Bool := s.contains pat
 
 @[export lean_string_any]
-def Internal.anyImpl (s : String) (p : Char → Bool) :=
-  String.any s p
+def Internal.anyImpl (s : String) (p : Char → Bool) := String.any s p
 
 /--
 Checks whether the string can be interpreted as the decimal representation of a natural number.
@@ -276,8 +268,7 @@ Examples:
  * {lean}`"2+3".isNat = false`
  * {lean}`"0xff".isNat = false`
 -/
-@[inline] def isNat (s : String) : Bool :=
-  s.toSlice.isNat
+@[inline] def isNat (s : String) : Bool := s.toSlice.isNat
 
 /--
 Interprets a string as the decimal representation of a natural number, returning it. Returns
@@ -300,8 +291,7 @@ Examples:
  * {lean}`"2+3".toNat? = none`
  * {lean}`"0xff".toNat? = none`
 -/
-@[inline] def toNat? (s : String) : Option Nat :=
-  s.toSlice.toNat?
+@[inline] def toNat? (s : String) : Option Nat := s.toSlice.toNat?
 
 /--
 Interprets a string as the decimal representation of a natural number, returning it. Panics if the
@@ -318,8 +308,7 @@ Examples:
  * {lean}`"5".toNat! = 5`
  * {lean}`"587".toNat! = 587`
 -/
-@[inline] def toNat! (s : String) : Nat :=
-  s.toSlice.toNat!
+@[inline] def toNat! (s : String) : Nat := s.toSlice.toNat!
 
 /--
 Interprets a string as the decimal representation of an integer, returning it. Returns {lean}`none`
@@ -344,8 +333,7 @@ Examples:
  * {lean}`"2-3".toInt? = none`
  * {lean}`"0xff".toInt? = none`
 -/
-@[inline] def toInt? (s : String) : Option Int :=
-  s.toSlice.toInt?
+@[inline] def toInt? (s : String) : Option Int := s.toSlice.toInt?
 
 /--
 Checks whether the string can be interpreted as the decimal representation of an integer.
@@ -369,8 +357,7 @@ Examples:
  * {lean}`"2-3".isInt = false`
  * {lean}`"0xff".isInt = false`
 -/
-@[inline] def isInt (s : String) : Bool :=
-  s.toSlice.isInt
+@[inline] def isInt (s : String) : Bool := s.toSlice.isInt
 
 /--
 Interprets a string as the decimal representation of an integer, returning it. Panics if the string
@@ -389,9 +376,7 @@ Examples:
  * {lean}`"587".toInt! = 587`
  * {lean}`"-587".toInt! = -587`
 -/
-@[inline] def toInt! (s : String) : Int :=
-  s.toSlice.toInt!
-
+@[inline] def toInt! (s : String) : Int := s.toSlice.toInt!
 
 /--
 Returns the first character in {name}`s`. If {name}`s` is empty, returns {name}`none`.
@@ -400,9 +385,7 @@ Examples:
 * {lean}`"abc".front? = some 'a'`
 * {lean}`"".front? = none`
 -/
-@[inline]
-def front? (s : String) : Option Char :=
-  s.toSlice.front?
+@[inline] def front? (s : String) : Option Char := s.toSlice.front?
 
 /--
 Returns the first character in {name}`s`. If {lean}`s = ""`, returns {lean}`(default : Char)`.
@@ -411,12 +394,10 @@ Examples:
 * {lean}`"abc".front = 'a'`
 * {lean}`"".front = (default : Char)`
 -/
-@[inline, expose] def front (s : String) : Char :=
-  s.toSlice.front
+@[inline, expose] def front (s : String) : Char := s.toSlice.front
 
 @[export lean_string_front]
-def Internal.frontImpl (s : String) : Char :=
-  String.front s
+def Internal.frontImpl (s : String) : Char := String.front s
 
 /--
 Returns the last character in {name}`s`. If {name}`s` is empty, returns {name}`none`.
@@ -425,10 +406,7 @@ Examples:
 * {lean}`"abc".back? = some 'c'`
 * {lean}`"".back? = none`
 -/
-@[inline]
-def back? (s : String) : Option Char :=
-  s.toSlice.back?
-
+@[inline] def back? (s : String) : Option Char := s.toSlice.back?
 
 /--
 Returns the last character in {name}`s`. If {lean}`s = ""`, returns {lean}`(default : Char)`.
@@ -437,8 +415,7 @@ Examples:
 * {lean}`"abc".back = 'c'`
 * {lean}`"".back = (default : Char)`
 -/
-@[inline, expose] def back (s : String) : Char :=
-  s.toSlice.back
+@[inline, expose] def back (s : String) : Char := s.toSlice.back
 
 /--
 Creates an iterator over all lines in {name}`s` with the line ending characters `\r\n` or `\n` being
@@ -449,8 +426,7 @@ Examples:
  * {lean}`"foo\r\nbar\n\nbaz".lines.toList  == ["foo".toSlice, "bar".toSlice, "".toSlice, "baz".toSlice]`
  * {lean}`"foo\r\nbar\n\nbaz\r".lines.toList  == ["foo".toSlice, "bar".toSlice, "".toSlice, "baz\r".toSlice]`
 -/
-def lines (s : String) :=
-  s.toSlice.lines
+def lines (s : String) := s.toSlice.lines
 
 end
 

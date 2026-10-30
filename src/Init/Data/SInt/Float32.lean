@@ -22,8 +22,8 @@ returns the minimum value of `Int8` (i.e. `Int8.minValue`). If it is `NaN`, retu
 
 This function has a logical model in terms of `Float32.Model`.
 -/
-@[extern "lean_float32_to_int8"] def Float32.toInt8 : Float32 → Int8 :=
-  fun a => a.toModel.toInt8
+@[extern "lean_float32_to_int8"]
+def Float32.toInt8 : Float32 → Int8 := fun a => a.toModel.toInt8
 /--
 Truncates a floating-point number to the nearest 16-bit signed integer, rounding towards zero.
 
@@ -34,8 +34,8 @@ returns `0`.
 
 This function has a logical model in terms of `Float32.Model`.
 -/
-@[extern "lean_float32_to_int16"] def Float32.toInt16 : Float32 → Int16 :=
-  fun a => a.toModel.toInt16
+@[extern "lean_float32_to_int16"]
+def Float32.toInt16 : Float32 → Int16 := fun a => a.toModel.toInt16
 /--
 Truncates a floating-point number to the nearest 32-bit signed integer, rounding towards zero.
 
@@ -46,8 +46,8 @@ returns `0`.
 
 This function has a logical model in terms of `Float32.Model`.
 -/
-@[extern "lean_float32_to_int32"] def Float32.toInt32 : Float32 → Int32 :=
-  fun a => a.toModel.toInt32
+@[extern "lean_float32_to_int32"]
+def Float32.toInt32 : Float32 → Int32 := fun a => a.toModel.toInt32
 /--
 Truncates a floating-point number to the nearest 64-bit signed integer, rounding towards zero.
 
@@ -58,8 +58,8 @@ returns `0`.
 
 This function has a logical model in terms of `Float32.Model`.
 -/
-@[extern "lean_float32_to_int64"] def Float32.toInt64 : Float32 → Int64 :=
-  fun a => a.toModel.toInt64
+@[extern "lean_float32_to_int64"]
+def Float32.toInt64 : Float32 → Int64 := fun a => a.toModel.toInt64
 /--
 Truncates a floating-point number to the nearest word-sized signed integer, rounding towards zero.
 
@@ -70,15 +70,15 @@ returns `0`.
 
 This function has a logical model in terms of `Float32.Model`.
 -/
-@[extern "lean_float32_to_isize"] def Float32.toISize : Float32 → ISize :=
-  fun a => a.toModel.toISize
+@[extern "lean_float32_to_isize"]
+def Float32.toISize : Float32 → ISize := fun a => a.toModel.toISize
 
 /-- Obtains the `Float32` whose value is the same as the given `Int8`. -/
-@[extern "lean_int8_to_float32"] def Int8.toFloat32 (n : Int8) : Float32 :=
-  .ofModel (.ofInt8 n)
+@[extern "lean_int8_to_float32"]
+def Int8.toFloat32 (n : Int8) : Float32 := .ofModel (.ofInt8 n)
 /-- Obtains the `Float32` whose value is the same as the given `Int16`. -/
-@[extern "lean_int16_to_float32"] def Int16.toFloat32 (n : Int16) : Float32 :=
-  .ofModel (.ofInt16 n)
+@[extern "lean_int16_to_float32"]
+def Int16.toFloat32 (n : Int16) : Float32 := .ofModel (.ofInt16 n)
 /--
 Obtains a `Float32` whose value is near the given `Int32`.
 
@@ -89,8 +89,8 @@ value, or the largest `Float32` that is smaller than the given value.
 This function has a logical model in terms of `Float32.Model`, but is overridden at runtime with an
 efficient implementation.
 -/
-@[extern "lean_int32_to_float32"] def Int32.toFloat32 (n : Int32) : Float32 :=
-  .ofModel (.ofInt32 n)
+@[extern "lean_int32_to_float32"]
+def Int32.toFloat32 (n : Int32) : Float32 := .ofModel (.ofInt32 n)
 /--
 Obtains a `Float32` whose value is near the given `Int64`.
 
@@ -101,8 +101,8 @@ value, or the largest `Float32` that is smaller than the given value.
 This function has a logical model in terms of `Float32.Model`, but is overridden at runtime with an
 efficient implementation.
 -/
-@[extern "lean_int64_to_float32"] def Int64.toFloat32 (n : Int64) : Float32 :=
-  .ofModel (.ofInt64 n)
+@[extern "lean_int64_to_float32"]
+def Int64.toFloat32 (n : Int64) : Float32 := .ofModel (.ofInt64 n)
 /--
 Obtains a `Float32` whose value is near the given `ISize`.
 
@@ -113,5 +113,5 @@ value, or the largest `Float32` that is smaller than the given value.
 This function has a logical model in terms of `Float32.Model`, but is overridden at runtime with an
 efficient implementation.
 -/
-@[extern "lean_isize_to_float32"] def ISize.toFloat32 (n : ISize) : Float32 :=
-  .ofModel (.ofISize n)
+@[extern "lean_isize_to_float32"]
+def ISize.toFloat32 (n : ISize) : Float32 := .ofModel (.ofISize n)

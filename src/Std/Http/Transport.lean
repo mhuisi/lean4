@@ -22,26 +22,17 @@ open Std Async TCP
 
 set_option linter.all true
 
-/--
-Generic HTTP interface that abstracts over different transport mechanisms.
--/
+/-- Generic HTTP interface that abstracts over different transport mechanisms. -/
 class Transport (α : Type) where
   /--
   Receive data from the client connection, up to the expected size.
   Returns None if the connection is closed or no data is available.
   -/
   recv : α → UInt64 → Async (Option ByteArray)
-
-  /--
-  Send all data through the client connection.
-  -/
+  /-- Send all data through the client connection. -/
   sendAll : α → Array ByteArray → Async Unit
-
-  /--
-  Get a selector for receiving data asynchronously.
-  -/
+  /-- Get a selector for receiving data asynchronously. -/
   recvSelector : α → UInt64 → Selector (Option ByteArray)
-
   /--
   Close the transport connection.
   The default implementation is a no-op; override this for transports that require explicit teardown.
@@ -57,30 +48,18 @@ instance : Transport Socket.Client where
 namespace Internal
 
 open Async in
-
-/--
-Shared state for a bidirectional mock connection.
--/
+/-- Shared state for a bidirectional mock connection. -/
 private structure Mock.SharedState where
-  /--
-  Client to server direction.
-  -/
+  /-- Client to server direction. -/
   clientToServer : Std.CloseableChannel ByteArray
-
-  /--
-  Server to client direction.
-  -/
+  /-- Server to client direction. -/
   serverToClient : Std.CloseableChannel ByteArray
 
-/--
-Mock client endpoint for testing.
--/
+/-- Mock client endpoint for testing. -/
 structure Mock.Client where
   private shared : Mock.SharedState
 
-/--
-Mock server endpoint for testing.
--/
+/-- Mock server endpoint for testing. -/
 structure Mock.Server where
   private shared : Mock.SharedState
 
@@ -100,7 +79,8 @@ def new : BaseIO (Mock.Client × Mock.Server) := do
 Receives data from a channel, joining all available data up to the expected size. First does a
 blocking recv, then greedily consumes available data with tryRecv until `expect` bytes are reached.
 -/
-def recvJoined (recvChan : Std.CloseableChannel ByteArray) (expect : Option UInt64) : Async (Option ByteArray) := do
+def recvJoined (recvChan : Std.CloseableChannel ByteArray) (expect : Option UInt64)
+    : Async (Option ByteArray) := do
   match ← await (← recvChan.recv) with
   | none => return none
   | some first =>
@@ -114,22 +94,16 @@ def recvJoined (recvChan : Std.CloseableChannel ByteArray) (expect : Option UInt
       | some chunk => result := result ++ chunk
     return some result
 
-/--
-Sends a single ByteArray through a channel.
--/
+/-- Sends a single ByteArray through a channel. -/
 def send (sendChan : Std.CloseableChannel ByteArray) (data : ByteArray) : Async Unit := do
   Async.ofAsyncTask ((← sendChan.send data) |>.map (Except.mapError (IO.userError ∘ toString)))
 
-/--
-Sends ByteArrays through a channel.
--/
+/-- Sends ByteArrays through a channel. -/
 def sendAll (sendChan : Std.CloseableChannel ByteArray) (data : Array ByteArray) : Async Unit := do
   for chunk in data do
     send sendChan chunk
 
-/--
-Creates a selector for receiving from a channel.
--/
+/-- Creates a selector for receiving from a channel. -/
 def recvSelector (recvChan : Std.CloseableChannel ByteArray) : Selector (Option ByteArray) :=
   recvChan.recvSelector
 
@@ -137,27 +111,19 @@ end Mock
 
 namespace Mock.Client
 
-/--
-Gets the receive channel for a client (server to client direction).
--/
+/-- Gets the receive channel for a client (server to client direction). -/
 def getRecvChan (client : Mock.Client) : Std.CloseableChannel ByteArray :=
   client.shared.serverToClient
 
-/--
-Gets the send channel for a client (client to server direction).
--/
+/-- Gets the send channel for a client (client to server direction). -/
 def getSendChan (client : Mock.Client) : Std.CloseableChannel ByteArray :=
   client.shared.clientToServer
 
-/--
-Sends a single ByteArray.
--/
+/-- Sends a single ByteArray. -/
 def send (client : Mock.Client) (data : ByteArray) : Async Unit :=
   Mock.send (getSendChan client) data
 
-/--
-Receives data, joining all available chunks.
--/
+/-- Receives data, joining all available chunks. -/
 def recv? (client : Mock.Client) (expect : Option UInt64 := none) : Async (Option ByteArray) :=
   Mock.recvJoined (getRecvChan client) expect
 
@@ -176,9 +142,7 @@ def tryRecv? (client : Mock.Client) (_expect : UInt64 := 0) : BaseIO (Option Byt
       | some chunk => result := result ++ chunk
     return some result
 
-/--
-Closes the mock server and client.
--/
+/-- Closes the mock server and client. -/
 def close (client : Mock.Client) : IO Unit := do
   if !(← client.shared.clientToServer.isClosed) then client.shared.clientToServer.close
   if !(← client.shared.serverToClient.isClosed) then client.shared.serverToClient.close
@@ -187,27 +151,19 @@ end Mock.Client
 
 namespace Mock.Server
 
-/--
-Gets the receive channel for a server (client to server direction).
--/
+/-- Gets the receive channel for a server (client to server direction). -/
 def getRecvChan (server : Mock.Server) : Std.CloseableChannel ByteArray :=
   server.shared.clientToServer
 
-/--
-Gets the send channel for a server (server to client direction).
--/
+/-- Gets the send channel for a server (server to client direction). -/
 def getSendChan (server : Mock.Server) : Std.CloseableChannel ByteArray :=
   server.shared.serverToClient
 
-/--
-Sends a single ByteArray.
--/
+/-- Sends a single ByteArray. -/
 def send (server : Mock.Server) (data : ByteArray) : Async Unit :=
   Mock.send (getSendChan server) data
 
-/--
-Receives data, joining all available chunks.
--/
+/-- Receives data, joining all available chunks. -/
 def recv? (server : Mock.Server) (expect : Option UInt64 := none) : Async (Option ByteArray) :=
   Mock.recvJoined (getRecvChan server) expect
 
@@ -226,13 +182,10 @@ def tryRecv? (server : Mock.Server) (_expect : UInt64 := 0) : BaseIO (Option Byt
       | some chunk => result := result ++ chunk
     return some result
 
-/--
-Closes the mock server and client.
--/
+/-- Closes the mock server and client. -/
 def close (server : Mock.Server) : IO Unit := do
   if !(← server.shared.clientToServer.isClosed) then server.shared.clientToServer.close
   if !(← server.shared.serverToClient.isClosed) then server.shared.serverToClient.close
-
 
 end Mock.Server
 

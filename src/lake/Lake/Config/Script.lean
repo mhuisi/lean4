@@ -40,8 +40,7 @@ public structure Script where
   name : String
   fn : ScriptFn
   doc? : Option String
-  deriving Inhabited
+deriving Inhabited
 
 /-- Run the `script` with the specified CLI `args`. -/
-public def Script.run (args : List String) (self : Script) : ScriptM ExitCode :=
-  self.fn args
+public def Script.run (args : List String) (self : Script) : ScriptM ExitCode := self.fn args

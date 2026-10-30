@@ -20,5 +20,4 @@ public def fmtGrindAnnotated : Fmt := fun
     let tk ← fmt tk
     let s ← fmt s
     return Layouts.pseudoApplication #[tk, s]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

@@ -22,5 +22,4 @@ public def fmtByCases : Fmt := fun
     let e ← fmt e
     let hypothesis := Layouts.typeAscription h? colonTk? e
     return Layouts.pseudoApplication #[byCasesTk, hypothesis]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

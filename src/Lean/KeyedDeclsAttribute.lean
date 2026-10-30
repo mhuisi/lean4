@@ -40,40 +40,43 @@ def evalIdentKey (stx : Syntax) : AttrM Key := do
 /--
 `KeyedDeclsAttribute` definition.
 
- Important: `mkConst valueTypeName` and `γ` must be definitionally equal. -/
+ Important: `mkConst valueTypeName` and `γ` must be definitionally equal.
+-/
 structure Def (γ : Type) where
   /-- Builtin attribute name, if any (e.g., `builtin_term_elab) -/
-  builtinName   : Name := Name.anonymous
+  builtinName : Name := Name.anonymous
   /-- Attribute name (e.g., `term_elab) -/
-  name          : Name
+  name : Name
   /-- Attribute description -/
-  descr         : String
+  descr : String
   valueTypeName : Name
   /-- Convert `Syntax` into a `Key`, the default implementation expects an identifier. -/
   evalKey (builtin : Bool) (stx : Syntax) : AttrM Key := evalIdentKey stx
   onAdded (builtin : Bool) (declName : Name) (key : Key) : AttrM Unit := pure ()
-  deriving Inhabited
+deriving Inhabited
 
 structure OLeanEntry where
-  key      : Key
+  key : Key
   /-- Name of a declaration stored in the environment which has type `mkConst Def.valueTypeName`. -/
   declName : Name
-  deriving Inhabited
+deriving Inhabited
 
 structure AttributeEntry (γ : Type) extends OLeanEntry where
   isBuiltin : Bool
-  /-- Recall that we cannot store `γ` into .olean files because it is a closure.
-     Given `OLeanEntry.declName`, we convert it into a `γ` by using the unsafe function `evalConstCheck`. -/
+  /--
+  Recall that we cannot store `γ` into .olean files because it is a closure.
+  Given `OLeanEntry.declName`, we convert it into a `γ` by using the unsafe function `evalConstCheck`.
+  -/
   value : γ
 
 abbrev Table (γ : Type) := SMap Key (List (AttributeEntry γ))
 
 structure ExtensionState (γ : Type) where
   newEntries : List OLeanEntry := []
-  table      : Table γ := {}
-  declNames  : PHashSet Name := {}
-  erased     : PHashSet Name := {}
-  deriving Inhabited
+  table : Table γ := {}
+  declNames : PHashSet Name := {}
+  erased : PHashSet Name := {}
+deriving Inhabited
 
 abbrev Extension (γ : Type) := ScopedEnvExtension OLeanEntry (AttributeEntry γ) (ExtensionState γ)
 
@@ -85,20 +88,20 @@ structure KeyedDeclsAttribute (γ : Type) where
   tableRef : IO.Ref (KeyedDeclsAttribute.Table γ)
   -- instances from current module
   ext : KeyedDeclsAttribute.Extension γ
-  deriving Nonempty
+deriving Nonempty
 
 namespace KeyedDeclsAttribute
 
 private def Table.insert (table : Table γ) (v : AttributeEntry γ) : Table γ :=
   match table.find? v.key with
-  | some vs => SMap.insert table v.key (v::vs)
-  | none    => SMap.insert table v.key [v]
+  | some vs => SMap.insert table v.key (v :: vs)
+  | none => SMap.insert table v.key [v]
 
-def ExtensionState.insert (s : ExtensionState γ) (v : AttributeEntry γ) :  ExtensionState γ := {
-  table      := s.table.insert v
+def ExtensionState.insert (s : ExtensionState γ) (v : AttributeEntry γ) : ExtensionState γ := {
+  table := s.table.insert v
   newEntries := v.toOLeanEntry :: s.newEntries
-  declNames  := s.declNames.insert v.declName
-  erased     := s.erased.erase v.declName
+  declNames := s.declNames.insert v.declName
+  erased := s.erased.erase v.declName
 }
 
 def addBuiltin (attr : KeyedDeclsAttribute γ) (key : Key) (declName : Name) (value : γ) : IO Unit :=
@@ -106,59 +109,73 @@ def addBuiltin (attr : KeyedDeclsAttribute γ) (key : Key) (declName : Name) (va
 
 def mkStateOfTable (table : Table γ) : ExtensionState γ := {
   table
-  declNames := table.fold (init := {}) fun s _ es => es.foldl (init := s) fun s e => s.insert e.declName
+  declNames :=
+    table.fold (init := {}) fun s _ es => es.foldl (init := s) fun s e => s.insert e.declName
 }
 
-def ExtensionState.erase (s : ExtensionState γ) (attrName : Name) (declName : Name) : CoreM (ExtensionState γ) := do
+def ExtensionState.erase (s : ExtensionState γ) (attrName : Name) (declName : Name)
+    : CoreM (ExtensionState γ) := do
   unless s.declNames.contains declName do
-    throwError "Cannot erase attribute `{attrName}`: `{.ofConstName declName}` does not have this attribute"
+    throwError
+      "Cannot erase attribute `{attrName}`: `{.ofConstName declName}` does not have this attribute"
   return { s with erased := s.erased.insert declName, declNames := s.declNames.erase declName }
 
 /-- safety: requires that `mkConst df.valueTypeName _` and `γ` are definitionally equal. -/
-protected unsafe def init {γ} (df : Def γ) (attrDeclName : Name := by exact decl_name%) : IO (KeyedDeclsAttribute γ) := do
+protected unsafe def init {γ} (df : Def γ) (attrDeclName : Name := by exact decl_name%)
+    : IO (KeyedDeclsAttribute γ) := do
   let tableRef ← IO.mkRef ({} : Table γ)
-  let ext : Extension γ ← registerScopedEnvExtension {
-    name         := attrDeclName
-    mkInitial    := return mkStateOfTable (← tableRef.get)
-    ofOLeanEntry := fun _ entry => do
-      let ctx ← read
-      match ctx.env.evalConstCheck γ ctx.opts df.valueTypeName entry.declName with
-      | Except.ok f     => return { toOLeanEntry := entry, value := f, isBuiltin := false }
-      | Except.error ex => throw (IO.userError ex)
-    addEntry     := fun s e => s.insert e
-    toOLeanEntry := (·.toOLeanEntry)
-  }
+  let ext : Extension γ ←
+    registerScopedEnvExtension {
+      name := attrDeclName
+      mkInitial := return mkStateOfTable (← tableRef.get)
+      ofOLeanEntry := fun _ entry => do
+        let ctx ← read
+        match ctx.env.evalConstCheck γ ctx.opts df.valueTypeName entry.declName with
+        | Except.ok f => return { toOLeanEntry := entry, value := f, isBuiltin := false }
+        | Except.error ex => throw (IO.userError ex)
+      addEntry := fun s e => s.insert e
+      toOLeanEntry := (·.toOLeanEntry)
+    }
   unless df.builtinName.isAnonymous do
     registerBuiltinAttribute {
-      ref   := attrDeclName
-      name  := df.builtinName
+      ref := attrDeclName
+      name := df.builtinName
       descr := "(builtin) " ++ df.descr
-      add   := fun declName stx kind => do
-        unless kind == AttributeKind.global do throwAttrMustBeGlobal df.builtinName kind
+      add := fun declName stx kind => do
+        unless kind == AttributeKind.global do
+          throwAttrMustBeGlobal df.builtinName kind
         let key ← df.evalKey true stx
         let decl ← getConstInfo declName
         let throwUnexpectedType :=
-          throwAttrDeclNotOfExpectedType df.builtinName declName decl.type (mkConst df.valueTypeName)
+          throwAttrDeclNotOfExpectedType df.builtinName declName decl.type
+            (mkConst df.valueTypeName)
         match decl.type with
         | Expr.const c _ =>
-          if c != df.valueTypeName then throwUnexpectedType
+          if c != df.valueTypeName then
+            throwUnexpectedType
           else
-            /- builtin_initialize @addBuiltin $(mkConst valueTypeName) $(mkConst attrDeclName) $(key) $(declName) $(mkConst declName) -/
-            let val := mkAppN (mkConst ``addBuiltin) #[mkConst df.valueTypeName, mkConst attrDeclName, toExpr key, toExpr declName, mkConst declName]
+            /-
+            builtin_initialize @addBuiltin $(mkConst valueTypeName) $(mkConst attrDeclName) $(key) $(declName) $(mkConst declName)
+            -/
+            let val :=
+              mkAppN (mkConst ``addBuiltin) #[
+                mkConst df.valueTypeName, mkConst attrDeclName, toExpr key, toExpr declName,
+                mkConst declName
+              ]
             declareBuiltin declName val
             df.onAdded true declName key
         | _ => throwUnexpectedType
       applicationTime := AttributeApplicationTime.afterCompilation
     }
   registerBuiltinAttribute {
-    ref             := attrDeclName
-    name            := df.name
-    descr           := df.descr
-    erase           := fun declName => do
+    ref := attrDeclName
+    name := df.name
+    descr := df.descr
+    erase := fun declName => do
       let s := ext.getState (← getEnv)
       let s ← s.erase df.name declName
       modifyEnv fun env => ext.modifyState env fun _ => s
-    add             := fun declName stx attrKind => do
+    add := fun declName stx attrKind => do
       ensureAttrDeclIsMeta attrDeclName declName attrKind
       let key ← df.evalKey false stx
       match IR.getSorryDep (← getEnv) declName with
@@ -174,13 +191,14 @@ protected unsafe def init {γ} (df : Def γ) (attrDeclName : Name := by exact de
   pure { defn := df, tableRef := tableRef, ext := ext }
 
 /-- Retrieve entries tagged with `[attr key]` or `[builtinAttr key]`. -/
-def getEntries {γ} (attr : KeyedDeclsAttribute γ) (env : Environment) (key : Name) : List (AttributeEntry γ) :=
+def getEntries {γ} (attr : KeyedDeclsAttribute γ) (env : Environment) (key : Name)
+    : List (AttributeEntry γ) :=
   let s := attr.ext.getState env
   let attrs := s.table.findD key []
   if s.erased.isEmpty then
     attrs
   else
-    attrs.filter fun attr => !s.erased.contains attr.declName
+    attrs.filter fun attr => ! s.erased.contains attr.declName
 
 /-- Retrieve values tagged with `[attr key]` or `[builtinAttr key]`. -/
 def getValues {γ} (attr : KeyedDeclsAttribute γ) (env : Environment) (key : Name) : List γ :=

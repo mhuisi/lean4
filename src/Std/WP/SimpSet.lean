@@ -17,11 +17,9 @@ public section
 theorems. This module seeds the set with a few theorems about the logical connectives.
 -/
 
-attribute [vcgen_simp] eq_self iff_self
-  true_and and_true false_and and_false
-  true_or or_true false_or or_false
-  not_true_eq_false not_false_eq_true
-  true_implies implies_true false_implies
-  ite_true ite_false dite_true dite_false
+attribute [vcgen_simp]
+  eq_self iff_self true_and and_true false_and and_false true_or or_true false_or or_false
+  not_true_eq_false not_false_eq_true true_implies implies_true false_implies ite_true ite_false
+  dite_true dite_false
 
 end

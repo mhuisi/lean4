@@ -37,19 +37,23 @@ def ControlStack.base (mi : MonadInfo) : ControlStack where
   runInBase e := pure e
   restoreCont dec := pure dec
 
-def ControlStack.stateT (baseMonadInfo : MonadInfo) (muts : Array MutVar) (σ : Expr) (base : ControlStack) : ControlStack where
+def ControlStack.stateT
+    (baseMonadInfo : MonadInfo) (muts : Array MutVar) (σ : Expr) (base : ControlStack)
+    : ControlStack where
   description _ := m!"StateT {σ} over {base.description ()}"
   m := return mkApp2 (mkConst ``StateT [baseMonadInfo.u, baseMonadInfo.v]) (← getσ) (← base.m)
   stM α := stM α >>= base.stM
   runInBase e := do
     -- `e : StateT σ m α`. Fetch the state tuple `s : σ` and apply it to `e`, `e.run s`.
     -- See also `StateT.monadControl.liftWith`.
-    let mutExprs ← muts.mapM fun x => do
-      Term.addTermInfo' x.ident (← getFVarFromUserName x.getId)
-      x.stateValue
+    let mutExprs ←
+      muts.mapM fun x => do
+        Term.addTermInfo' x.ident (← getFVarFromUserName x.getId)
+        x.stateValue
     let (tuple, tupleTy) ← mkProdMkN mutExprs baseMonadInfo.u
     unless ← isDefEq tupleTy σ do -- just for sanity; maybe delete in the future
-      throwError "State tuple type mismatch: expected {σ}, got {tupleTy}. This is a bug in the `do` elaborator."
+      throwError "State tuple type mismatch: expected {σ}, got {tupleTy}. This is a bug in the \
+        `do` elaborator."
     base.runInBase <| mkApp e tuple
   restoreCont dec := do
     -- Wrap `dec` such that the result type is `(dec.resultType × σ)` by unpacking the state tuple
@@ -58,16 +62,17 @@ def ControlStack.stateT (baseMonadInfo : MonadInfo) (muts : Array MutVar) (σ : 
     let resultType ← stM dec.resultType
     let k : DoElabM Expr := do
       let p ← getFVarFromUserName resultName
-      bindMutVarsFromTuple (dec.resultName :: mutVarNames.toList) p.fvarId! do
-        dec.k
+      bindMutVarsFromTuple (dec.resultName :: mutVarNames.toList) p.fvarId! do dec.k
     base.restoreCont { resultName, resultType, k }
 where
   mutVarNames := muts.map (·.getId)
   getσ := do mkProdN (← muts.mapM (·.stateType)) baseMonadInfo.u
   stM α := return mkApp2 (mkConst ``Prod [baseMonadInfo.u, baseMonadInfo.u]) α (← getσ) -- NB: muts `σ` might have been refined by dependent pattern matches
 
-def ControlStack.optionT (baseMonadInfo : MonadInfo) (optionTWrapper casesOnWrapper : Name)
-    (getCont : DoElabM (DoElabM Expr)) (base : ControlStack) : ControlStack where
+def ControlStack.optionT
+    (baseMonadInfo : MonadInfo) (optionTWrapper casesOnWrapper : Name)
+    (getCont : DoElabM (DoElabM Expr)) (base : ControlStack)
+    : ControlStack where
   description _ := m!"OptionT over {base.description ()}"
   m := return mkApp (mkConst optionTWrapper [baseMonadInfo.u, baseMonadInfo.v]) (← base.m)
   stM := base.stM ∘ stM
@@ -84,18 +89,22 @@ def ControlStack.optionT (baseMonadInfo : MonadInfo) (optionTWrapper casesOnWrap
     let k : DoElabM Expr := do
       let e ← getFVarFromUserName resultName
       let outerCont ← getCont
-      let kexit ← withLocalDeclD (← mkFreshUserName `r) (mkConst ``Unit) fun r => do
-        mkLambdaFVars #[r] (← outerCont)
-      let ksuccess ← withLocalDeclD dec.resultName dec.resultType fun r => do
-        mkLambdaFVars #[r] (← dec.k)
+      let kexit ←
+        withLocalDeclD (← mkFreshUserName `r) (mkConst ``Unit) fun r => do
+          mkLambdaFVars #[r] (← outerCont)
+      let ksuccess ←
+        withLocalDeclD dec.resultName dec.resultType fun r => do mkLambdaFVars #[r] (← dec.k)
       let β ← mkMonadApp (← read).doBlockResultType
-      return mkApp5 (mkConst casesOnWrapper [baseMonadInfo.u, baseMonadInfo.v]) dec.resultType β e kexit ksuccess
+      return mkApp5 (mkConst casesOnWrapper [baseMonadInfo.u, baseMonadInfo.v]) dec.resultType β e
+        kexit ksuccess
     base.restoreCont { resultName, resultType, k }
 where
   stM α := mkApp (mkConst ``Option [baseMonadInfo.u]) α
 
-def ControlStack.exceptT (baseMonadInfo : MonadInfo) (exceptTWrapper casesOnWrapper : Name)
-    (getCont : DoElabM ReturnCont) (ε : Expr) (base : ControlStack) : ControlStack where
+def ControlStack.exceptT
+    (baseMonadInfo : MonadInfo) (exceptTWrapper casesOnWrapper : Name)
+    (getCont : DoElabM ReturnCont) (ε : Expr) (base : ControlStack)
+    : ControlStack where
   description _ := m!"ExceptT ({ε}) over {base.description ()}"
   m := return mkApp2 (mkConst exceptTWrapper [baseMonadInfo.u, baseMonadInfo.v]) ε (← base.m)
   stM α := stM α >>= base.stM
@@ -110,21 +119,26 @@ def ControlStack.exceptT (baseMonadInfo : MonadInfo) (exceptTWrapper casesOnWrap
     let k := do
       let e ← getFVarFromUserName resultName
       let outerCont ← getCont
-      let kexit ← withLocalDeclD (← mkFreshUserName `r) outerCont.resultType fun r => do
-        mkLambdaFVars #[r] (← outerCont.k r)
-      let (ksuccess, β) ← withLocalDeclD dec.resultName dec.resultType fun r => do
-        let body ← dec.k
-        let ksuccess ← mkLambdaFVars #[r] body
-        let β ← inferType body
-        return (ksuccess, β)
-      return mkApp6 (mkConst casesOnWrapper [baseMonadInfo.u, baseMonadInfo.v]) ε dec.resultType β e kexit ksuccess
+      let kexit ←
+        withLocalDeclD (← mkFreshUserName `r) outerCont.resultType fun r => do
+          mkLambdaFVars #[r] (← outerCont.k r)
+      let (ksuccess, β) ←
+        withLocalDeclD dec.resultName dec.resultType fun r => do
+          let body ← dec.k
+          let ksuccess ← mkLambdaFVars #[r] body
+          let β ← inferType body
+          return (ksuccess, β)
+      return mkApp6 (mkConst casesOnWrapper [baseMonadInfo.u, baseMonadInfo.v]) ε dec.resultType β e
+        kexit ksuccess
     let resultType ← stM dec.resultType
     base.restoreCont { resultName, resultType, k }
 where
   -- Like `σ`, we need to refine `ε` because it is the early return value.
-  stM α := return mkApp2 (mkConst ``Except [baseMonadInfo.u, baseMonadInfo.u]) (← getCont).resultType α
+  stM α :=
+    return mkApp2 (mkConst ``Except [baseMonadInfo.u, baseMonadInfo.u]) (← getCont).resultType α
 
-def ControlStack.earlyReturnT (baseMonadInfo : MonadInfo) (ρ : Expr) (m : ControlStack) : ControlStack :=
+def ControlStack.earlyReturnT (baseMonadInfo : MonadInfo) (ρ : Expr) (m : ControlStack)
+    : ControlStack :=
   exceptT baseMonadInfo ``EarlyReturnT ``EarlyReturn.runK getReturnCont ρ m
 
 def ControlStack.breakT (baseMonadInfo : MonadInfo) (m : ControlStack) : ControlStack :=
@@ -132,7 +146,8 @@ def ControlStack.breakT (baseMonadInfo : MonadInfo) (m : ControlStack) : Control
   optionT baseMonadInfo ``BreakT ``Break.runK getCont m
 
 def ControlStack.continueT (baseMonadInfo : MonadInfo) (m : ControlStack) : ControlStack :=
-  let getCont := getContinueCont >>= (·.getDM (throwError "`continue` must be nested inside a loop"))
+  let getCont :=
+    getContinueCont >>= (·.getDM (throwError "`continue` must be nested inside a loop"))
   optionT baseMonadInfo ``ContinueT ``Continue.runK getCont m
 
 private def mkInstMonad (mi : MonadInfo) : TermElabM Expr := do
@@ -180,12 +195,16 @@ def ControlStack.mkReturn (base : ControlStack) (r : Expr) : DoElabM Expr := do
 def ControlStack.mkPure (base : ControlStack) (resultName : Name) : DoElabM Expr := do
   let mi := { (← read).monadInfo with m := (← base.m) }
   let instMonad ← mkInstMonad mi
-  let instPure := instMonad |> mkApp2 (mkConst ``Monad.toApplicative [mi.u, mi.v]) mi.m
-                            |> mkApp2 (mkConst ``Applicative.toPure [mi.u, mi.v]) mi.m
+  let instPure :=
+    instMonad
+      |> mkApp2 (mkConst ``Monad.toApplicative [mi.u, mi.v]) mi.m
+      |> mkApp2 (mkConst ``Applicative.toPure [mi.u, mi.v]) mi.m
   let r ← getFVarFromUserName resultName
   base.runInBase <| mkApp4 (mkConst ``Pure.pure [mi.u, mi.v]) mi.m instPure (← inferType r) r
 
-/-- Plan for embedding a non-tail-resumptive body inside `origCont` via a monad-transformer stack. -/
+/--
+Plan for embedding a non-tail-resumptive body inside `origCont` via a monad-transformer stack.
+-/
 structure EffectForwarder where
   /-- Continuation of the surrounding `do` block; restored after the body. -/
   origCont : DoElemCont
@@ -232,12 +251,12 @@ def EffectForwarder.ofCont (info : ControlInfo) (dec : DoElemCont) : DoElabM Eff
     continueBase? := some controlStack
     controlStack := ControlStack.continueT mi controlStack
   return {
-    origCont := dec,
-    returnBase?,
-    breakBase?,
-    continueBase?,
-    liftedStack := controlStack,
-    liftedDoBlockResultType := (← controlStack.stM dec.resultType),
+    origCont := dec
+    returnBase?
+    breakBase?
+    continueBase?
+    liftedStack := controlStack
+    liftedDoBlockResultType := (← controlStack.stM dec.resultType)
   }
 
 /--
@@ -249,7 +268,8 @@ passed to `elabElem` are implicitly wrapped in `runInBase`, realised later by
 `ControlStack.mkBreak`/`mkContinue`/`mkReturn` once the transformer stack `t` is fixed by
 aggregating effects across *all* `lift` sites for this lifter.
 -/
-def EffectForwarder.lift (l : EffectForwarder) (elabElem : DoElemCont → DoElabM Expr) : DoElabM Expr := do
+def EffectForwarder.lift (l : EffectForwarder) (elabElem : DoElemCont → DoElabM Expr)
+    : DoElabM Expr := do
   let oldBreakCont ← getBreakCont
   let oldContinueCont ← getContinueCont
   let oldReturnCont ← getReturnCont
@@ -266,7 +286,11 @@ def EffectForwarder.lift (l : EffectForwarder) (elabElem : DoElemCont → DoElab
     | some returnBase => { oldReturnCont with k := returnBase.mkReturn }
     | _ => oldReturnCont
   let contInfo := ContInfo.toContInfoRef { breakCont, continueCont, returnCont }
-  let pureCont := { l.origCont with k := l.liftedStack.mkPure l.origCont.resultName, kind := .duplicable }
+  let pureCont := {
+    l.origCont with
+    k := l.liftedStack.mkPure l.origCont.resultName
+    kind := .duplicable
+  }
   withReader (fun ctx => { ctx with contInfo, doBlockResultType := l.liftedDoBlockResultType }) do
     elabElem pureCont
 

@@ -21,8 +21,7 @@ public def fmtMClear : Fmt := fun
     let mclearTk ← fmt mclearTk
     let h ← fmt h
     return Layouts.pseudoApplication #[mclearTk, h]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mexact]
 public def fmtMExact : Fmt := fun
@@ -30,8 +29,7 @@ public def fmtMExact : Fmt := fun
     let mexactTk ← fmt mexactTk
     let e ← fmt e
     return Layouts.pseudoApplication #[mexactTk, e]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mpure]
 public def fmtMPure : Fmt := fun
@@ -39,8 +37,7 @@ public def fmtMPure : Fmt := fun
     let mpureTk ← fmt mpureTk
     let h ← fmt h
     return Layouts.pseudoApplication #[mpureTk, h]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mrenameI]
 public def fmtMRenameI : Fmt := fun
@@ -48,8 +45,7 @@ public def fmtMRenameI : Fmt := fun
     let mrenameITk ← fmt mrenameITk
     let hs ← fmtArray hs
     return Layouts.pseudoApplication <| #[mrenameITk] ++ hs
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mspecialize]
 public def fmtMSpecialize : Fmt := fun
@@ -58,8 +54,7 @@ public def fmtMSpecialize : Fmt := fun
     let h ← fmt h
     let args ← fmtArray args
     return Layouts.pseudoApplication <| #[mspecializeTk, h] ++ args
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mspecializePure]
 public def fmtMSpecializePure : Fmt := fun
@@ -72,8 +67,7 @@ public def fmtMSpecializePure : Fmt := fun
     let lhs := Layouts.pseudoApplication <| #[h] ++ args
     let assignment := Layouts.assignmentDeclaration lhs arrowTk name
     return Layouts.pseudoApplication #[mspecializePureTk, assignment]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mrefine]
 public def fmtMRefine : Fmt := fun
@@ -81,8 +75,7 @@ public def fmtMRefine : Fmt := fun
     let mrefineTk ← fmt mrefineTk
     let pat ← fmt pat
     return Layouts.pseudoApplication #[mrefineTk, pat]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mintro]
 public def fmtMIntro : Fmt := fun
@@ -90,8 +83,7 @@ public def fmtMIntro : Fmt := fun
     let mintroTk ← fmt mintroTk
     let pats ← fmtArray pats
     return Layouts.pseudoApplication <| #[mintroTk] ++ pats
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mrevert]
 public def fmtMRevert : Fmt := fun
@@ -99,8 +91,7 @@ public def fmtMRevert : Fmt := fun
     let mrevertTk ← fmt mrevertTk
     let pats ← fmtArray pats
     return Layouts.pseudoApplication <| #[mrevertTk] ++ pats
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mspecNoBind]
 public def fmtMSpecNoBind : Fmt := fun
@@ -108,8 +99,7 @@ public def fmtMSpecNoBind : Fmt := fun
     let mspecNoBindTk ← fmt mspecNoBindTk
     let spec? ← fmt? spec?
     return Layouts.pseudoApplication #[mspecNoBindTk, spec?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mspecNoSimp]
 public def fmtMSpecNoSimp : Fmt := fun
@@ -117,8 +107,7 @@ public def fmtMSpecNoSimp : Fmt := fun
     let mspecNoSimpTk ← fmt mspecNoSimpTk
     let spec? ← fmt? spec?
     return Layouts.pseudoApplication #[mspecNoSimpTk, spec?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mspec]
 public def fmtMSpec : Fmt := fun
@@ -126,8 +115,7 @@ public def fmtMSpec : Fmt := fun
     let mspecTk ← fmt mspecTk
     let spec? ← fmt? spec?
     return Layouts.pseudoApplication #[mspecTk, spec?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mexists]
 public def fmtMExists : Fmt := fun
@@ -135,8 +123,7 @@ public def fmtMExists : Fmt := fun
     let mexistsTk ← fmt mexistsTk
     let witnesses ← fmtTSepArray witnesses
     return Layouts.pseudoApplication #[mexistsTk, Layouts.sepFill witnesses]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mdup]
 public def fmtMDup : Fmt := fun
@@ -147,8 +134,7 @@ public def fmtMDup : Fmt := fun
     let h' ← fmt h'
     let assignment := Layouts.assignmentDeclaration h arrowTk h'
     return Layouts.pseudoApplication #[mdupTk, assignment]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtMHaveLike
     (keywordTk h : Syntax) (typeAscriptionTk? type? : Option Syntax) (colonEqTk body : Syntax)
@@ -167,23 +153,20 @@ public def fmtMHaveLike
 public def fmtMHave : Fmt := fun
   | `(tactic| mhave%$mhaveTk $h:ident $[:%$typeAscriptionTk? $type?:term]? :=%$colonEqTk $body:term) =>
     fmtMHaveLike mhaveTk h typeAscriptionTk? type? colonEqTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mreplace]
 public def fmtMReplace : Fmt := fun
   | `(tactic| mreplace%$mreplaceTk $h:ident $[:%$typeAscriptionTk? $type?:term]? :=%$colonEqTk $body:term) =>
     fmtMHaveLike mreplaceTk h typeAscriptionTk? type? colonEqTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mcasesPatAlts]
 public def fmtMCasesPatAlts : Fmt := fun
   | `(Parser.Tactic.mcasesPatAlts| $pats:mcasesPat|*) => do
     let pats ← fmtTSepArray pats
     return nested <| Layouts.horizontalOrVertical <| joinAltPats empty pats
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mcasesPat_]
 public def fmtMCasesPatOne : Fmt := fun
@@ -200,8 +183,7 @@ public def fmtMCasesPatTuple : Fmt := fun
     let pats ← fmtTSepArray pats
     let rbTk ← fmt rbTk
     return Layouts.tuple lbTk pats rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.«mcasesPat(_)»]
 public def fmtMCasesPatParen : Fmt := fun
@@ -210,8 +192,7 @@ public def fmtMCasesPatParen : Fmt := fun
     let pat ← fmt pat
     let rbTk ← fmt rbTk
     return Layouts.parens lbTk pat rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.«mcasesPat⌜_⌝»]
 public def fmtMCasesPatPure : Fmt := fun
@@ -220,8 +201,7 @@ public def fmtMCasesPatPure : Fmt := fun
     let h ← fmt h
     let rbTk ← fmt rbTk
     return Layouts.parens lbTk h rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.«mcasesPat□_»]
 public def fmtMCasesPatStateful : Fmt := fun
@@ -229,8 +209,7 @@ public def fmtMCasesPatStateful : Fmt := fun
     let boxTk ← fmt boxTk
     let h ← fmt h
     return Layouts.prefixOperator boxTk h .withoutSpacingIfAtomic
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.«mcasesPat%_»]
 public def fmtMCasesPatPureAbbrev : Fmt := fun
@@ -238,8 +217,7 @@ public def fmtMCasesPatPureAbbrev : Fmt := fun
     let percentTk ← fmt percentTk
     let h ← fmt h
     return Layouts.prefixOperator percentTk h .withoutSpacingIfAtomic
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.«mcasesPat#_»]
 public def fmtMCasesPatStatefulAbbrev : Fmt := fun
@@ -247,8 +225,7 @@ public def fmtMCasesPatStatefulAbbrev : Fmt := fun
     let hashTk ← fmt hashTk
     let h ← fmt h
     return Layouts.prefixOperator hashTk h .withoutSpacingIfAtomic
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mcases]
 public def fmtMCases : Fmt := fun
@@ -260,8 +237,7 @@ public def fmtMCases : Fmt := fun
     let lhs := Layouts.pseudoApplication #[mcasesTk, h]
     let «with» := Layouts.keywordPrefixedTerm withTk pat
     return Layouts.pseudoApplication #[lhs, «with»]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mrefinePat_]
 public def fmtMRefinePatOne : Fmt := fun
@@ -275,8 +251,7 @@ public def fmtMRefinePatTuple : Fmt := fun
     let pats ← fmtTSepArray pats
     let rbTk ← fmt rbTk
     return Layouts.tuple lbTk pats rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.«mrefinePat(_)»]
 public def fmtMRefinePatParen : Fmt := fun
@@ -285,8 +260,7 @@ public def fmtMRefinePatParen : Fmt := fun
     let pat ← fmt pat
     let rbTk ← fmt rbTk
     return Layouts.parens lbTk pat rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.«mrefinePat⌜_⌝»]
 public def fmtMRefinePatPure : Fmt := fun
@@ -295,8 +269,7 @@ public def fmtMRefinePatPure : Fmt := fun
     let e ← fmt e
     let rbTk ← fmt rbTk
     return Layouts.parens lbTk e rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.«mrefinePat□_»]
 public def fmtMRefinePatStateful : Fmt := fun
@@ -304,8 +277,7 @@ public def fmtMRefinePatStateful : Fmt := fun
     let boxTk ← fmt boxTk
     let h ← fmt h
     return Layouts.prefixOperator boxTk h .withoutSpacingIfAtomic
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mrefinePat?_]
 public def fmtMRefinePatHole : Fmt := fun
@@ -313,8 +285,7 @@ public def fmtMRefinePatHole : Fmt := fun
     let questionTk ← fmt questionTk
     let h ← fmt h
     return Layouts.prefixOperator questionTk h .withoutSpacingIfAtomic
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.«mrefinePat%_»]
 public def fmtMRefinePatPureAbbrev : Fmt := fun
@@ -322,8 +293,7 @@ public def fmtMRefinePatPureAbbrev : Fmt := fun
     let percentTk ← fmt percentTk
     let e ← fmt e
     return Layouts.prefixOperator percentTk e .withoutSpacingIfAtomic
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.«mrefinePat#_»]
 public def fmtMRefinePatStatefulAbbrev : Fmt := fun
@@ -331,8 +301,7 @@ public def fmtMRefinePatStatefulAbbrev : Fmt := fun
     let hashTk ← fmt hashTk
     let h ← fmt h
     return Layouts.prefixOperator hashTk h .withoutSpacingIfAtomic
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mintroPat_]
 public def fmtMIntroPatCases : Fmt := fun
@@ -345,8 +314,7 @@ public def fmtMIntroPatForall : Fmt := fun
     let forallTk ← fmt forallTk
     let h ← fmt h
     return Layouts.prefixOperator forallTk h .withSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mrevertPat_]
 public def fmtMRevertPatOne : Fmt := fun
@@ -359,8 +327,7 @@ public def fmtMRevertPatForall : Fmt := fun
     let forallTk ← fmt forallTk
     let n? ← fmt? n?
     return Layouts.prefixOperator forallTk n? .withSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 public def fmtVCAlt : Syntax → FmtM Layouts.Types.Alt := fun
   | `(Parser.Tactic.vcAlt| |%$pipeTk $args:caseArg|* =>%$arrowTk $seq:tacticSeq) => do
@@ -370,8 +337,7 @@ public def fmtVCAlt : Syntax → FmtM Layouts.Types.Alt := fun
     let seq ← fmt seq
     let subAlts := joinAltPats pipeTk args
     return Layouts.alt subAlts arrowTk seq
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.vcAlts]
 public def fmtVCAlts : Fmt := fun
@@ -381,8 +347,7 @@ public def fmtVCAlts : Fmt := fun
     let alts ← alts.mapM fmtVCAlt
     let keyword := Layouts.pseudoApplication #[withTk, tac?]
     return Layouts.keywordPrefixedAlts keyword alts
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mvcgen]
 public def fmtMVCGen : Fmt := fun
@@ -395,8 +360,7 @@ public def fmtMVCGen : Fmt := fun
     let invariantsBlock := { block := invariantAlts?, hardNestedIfFirst := false }
     let vcAltsBlock := { block := vcAlts?, hardNestedIfFirst := false }
     return Layouts.blocks #[head, args, invariantsBlock, vcAltsBlock]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.mvcgenHint]
 public def fmtMVCGenHint : Fmt := fun
@@ -404,5 +368,4 @@ public def fmtMVCGenHint : Fmt := fun
     let head ← fmtVCGenHead mvcgenTk cfg
     let args ← fmtVCGenSimpArgs lbTk? args? rbTk?
     return Layouts.pseudoApplication #[head, args]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

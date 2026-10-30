@@ -20,8 +20,7 @@ public def fmtGrindEq : Fmt := fun
     let eqTk ← fmt eqTk
     let gen? ← fmt? gen?
     return Layouts.prefixOperator eqTk gen? .withSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.grindEqRhs]
 public def fmtGrindEqRhs : Fmt := fun
@@ -31,8 +30,7 @@ public def fmtGrindEqRhs : Fmt := fun
     let gen? ← fmt? gen?
     let op := Layouts.atomic #[eqTk, underTk]
     return Layouts.prefixOperator op gen? .withSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.grindEqBoth]
 public def fmtGrindEqBoth : Fmt := fun
@@ -43,8 +41,7 @@ public def fmtGrindEqBoth : Fmt := fun
     let gen? ← fmt? gen?
     let op := Layouts.atomic #[u1, eqTk, u2]
     return Layouts.prefixOperator op gen? .withSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.grindEqBwd]
 public def fmtGrindEqBwd : Fmt := fun stx => do
@@ -71,8 +68,7 @@ public def fmtGrindCasesEager : Fmt := fun
     let casesTk ← fmt casesTk
     let eagerTk ← fmt eagerTk
     return Layouts.spacedAtomic #[casesTk, eagerTk]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.grindHomFallback]
 public def fmtGrindHomFallback : Fmt := fun
@@ -80,8 +76,7 @@ public def fmtGrindHomFallback : Fmt := fun
     let homTk ← fmt homTk
     let fallbackTk ← fmt fallbackTk
     return Layouts.spacedAtomic #[homTk, fallbackTk]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.grindNorm]
 public def fmtGrindNorm : Fmt := fun stx => do
@@ -99,8 +94,7 @@ public def fmtGrindSym : Fmt := fun
     let symbolTk ← fmt symbolTk
     let p ← fmt p
     return Layouts.pseudoApplication #[symbolTk, p]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.grindMod]
 public def fmtGrindMod : Fmt := fun
@@ -113,8 +107,7 @@ public def fmtGrindAttr : Fmt := fun
     let grindTk ← fmt grindTk
     let mod? ← fmt? mod?
     return Layouts.pseudoApplication #[grindTk, mod?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.«grind!»]
 public def fmtGrindBangAttr : Fmt := fun
@@ -122,8 +115,7 @@ public def fmtGrindBangAttr : Fmt := fun
     let grindTk ← fmt grindTk
     let mod? ← fmt? mod?
     return Layouts.pseudoApplication #[grindTk, mod?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.«grind?»]
 public def fmtGrindQuestionAttr : Fmt := fun
@@ -131,8 +123,7 @@ public def fmtGrindQuestionAttr : Fmt := fun
     let grindTk ← fmt grindTk
     let mod? ← fmt? mod?
     return Layouts.pseudoApplication #[grindTk, mod?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.«grind!?»]
 public def fmtGrindBangQuestionAttr : Fmt := fun
@@ -140,8 +131,7 @@ public def fmtGrindBangQuestionAttr : Fmt := fun
     let grindTk ← fmt grindTk
     let mod? ← fmt? mod?
     return Layouts.pseudoApplication #[grindTk, mod?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.lia]
 public def fmtLiaAttr : Fmt := fun
@@ -149,8 +139,7 @@ public def fmtLiaAttr : Fmt := fun
     let liaTk ← fmt liaTk
     let mod? ← fmt? mod?
     return Layouts.pseudoApplication #[liaTk, mod?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.lia!]
 public def fmtLiaBangAttr : Fmt := fun
@@ -158,8 +147,7 @@ public def fmtLiaBangAttr : Fmt := fun
     let liaTk ← fmt liaTk
     let mod? ← fmt? mod?
     return Layouts.pseudoApplication #[liaTk, mod?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.lia?]
 public def fmtLiaQuestionAttr : Fmt := fun
@@ -167,8 +155,7 @@ public def fmtLiaQuestionAttr : Fmt := fun
     let liaTk ← fmt liaTk
     let mod? ← fmt? mod?
     return Layouts.pseudoApplication #[liaTk, mod?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Attr.lia!?]
 public def fmtLiaBangQuestionAttr : Fmt := fun
@@ -176,5 +163,4 @@ public def fmtLiaBangQuestionAttr : Fmt := fun
     let liaTk ← fmt liaTk
     let mod? ← fmt? mod?
     return Layouts.pseudoApplication #[liaTk, mod?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

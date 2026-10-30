@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 public section
@@ -11,7 +12,8 @@ namespace Lean.Meta.Grind
 
 /-- Returns all lambda expressions in the equivalence class with root `root`. -/
 def getEqcLambdas (root : ENode) : GoalM (Array Expr) := do
-  unless root.hasLambdas do return #[]
+  unless root.hasLambdas do
+    return #[]
   foldEqc root.self (init := #[]) fun n lams =>
     if n.self.isLambda then return lams.push n.self else return lams
 
@@ -52,14 +54,16 @@ def propagateBetaEqs (lams : Array Expr) (f : Expr) (args : Array Expr) : GoalM 
         addNewRawFact h eq gen (.beta lam) .other
 
 private def isPropagateBetaTarget (e : Expr) : GoalM Bool := do
-  let .app f _ := e | return false
+  let .app f _ := e
+    | return false
   go f
 where
   go (f : Expr) : GoalM Bool := do
     if let some root ← getRootENode? f then
       if root.hasLambdas then
         return true
-    let .app f _ := f | return false
+    let .app f _ := f
+      | return false
     go f
 
 /--
@@ -67,7 +71,8 @@ Applies beta-reduction for lambdas in `f`s equivalence class.
 We use this function while internalizing new applications.
 -/
 def propagateBetaForNewApp (e : Expr) : GoalM Unit := do
-  unless (← isPropagateBetaTarget e) do return ()
+  unless (← isPropagateBetaTarget e) do
+    return ()
   let mut e := e
   let mut args := #[]
   repeat
@@ -75,7 +80,8 @@ def propagateBetaForNewApp (e : Expr) : GoalM Unit := do
       if let some root ← getRootENode? e then
         if root.hasLambdas then
           propagateBetaEqs (← getEqcLambdas root) e args.reverse
-    let .app f arg := e | return ()
+    let .app f arg := e
+      | return ()
     e := f
     args := args.push arg
 

@@ -19,8 +19,7 @@ whether terms produced by tactics and `isDefEq` are type correct.
 
 namespace Lean.Meta
 
-private def ensureType (e : Expr) : MetaM Unit := do
-  discard <| getLevel e
+private def ensureType (e : Expr) : MetaM Unit := do discard <| getLevel e
 
 private def checkConstant (constName : Name) (us : List Level) : MetaM Unit := do
   let cinfo ← getConstVal constName
@@ -32,7 +31,7 @@ private def getFunctionDomain (f : Expr) : MetaM (Expr × BinderInfo) := do
   let fType ← whnfD fType
   match fType with
   | Expr.forallE _ d _ c => return (d, c)
-  | _                    => throwFunctionExpected f
+  | _ => throwFunctionExpected f
 
 /--
 Given two expressions `a` and `b`, this method tries to annotate terms with `pp.explicit := true`
@@ -125,11 +124,15 @@ where
           let mut firstExplicitDiff? := none
           let mut firstImplicitDiff? := none
           for i in *...as.size do
-            unless aFnType.isForall do aFnType ← withTransparency .all <| whnf aFnType
-            unless bFnType.isForall do bFnType ← withTransparency .all <| whnf bFnType
+            unless aFnType.isForall do
+              aFnType ← withTransparency .all <| whnf aFnType
+            unless bFnType.isForall do
+              bFnType ← withTransparency .all <| whnf bFnType
             -- These pattern matches are expected to succeed:
-            let .forallE _ _ abody abi := aFnType | return (a, b)
-            let .forallE _ _ bbody bbi := bFnType | return (a, b)
+            let .forallE _ _ abody abi := aFnType
+              | return (a, b)
+            let .forallE _ _ bbody bbi := bFnType
+              | return (a, b)
             aFnType := abody.instantiate1 as[i]!
             bFnType := bbody.instantiate1 bs[i]!
             unless (← isDefEq as[i]! bs[i]!) do
@@ -172,7 +175,10 @@ where
           -- Then bodies must not be defeq.
           withLocalDeclD na ta fun arg => do
             let (ba', bb') ← visit (ba.instantiate1 arg) (bb.instantiate1 arg)
-            return (Expr.forallE na ta (ba'.abstract #[arg]) bia, Expr.forallE nb tb (bb'.abstract #[arg]) bib)
+            return (
+              Expr.forallE na ta (ba'.abstract #[arg]) bia,
+              Expr.forallE nb tb (bb'.abstract #[arg]) bib
+            )
       | .lam na ta ba bia, .lam nb tb bb bib =>
         if !(← isDefEq ta tb) then
           let (ta, tb) ← visit ta tb
@@ -183,7 +189,8 @@ where
           -- Then bodies must not be defeq.
           withLocalDeclD na ta fun arg => do
             let (ba', bb') ← visit (ba.instantiate1 arg) (bb.instantiate1 arg)
-            return (Expr.lam na ta (ba'.abstract #[arg]) bia, Expr.lam nb tb (bb'.abstract #[arg]) bib)
+            return
+              (Expr.lam na ta (ba'.abstract #[arg]) bia, Expr.lam nb tb (bb'.abstract #[arg]) bib)
       | _, _ => return (a, b)
     catch _ =>
       return (a, b)
@@ -195,7 +202,9 @@ def throwLetTypeMismatchMessage {α} (fvarId : FVarId) : MetaM α := do
     let vType ← inferType v
     let (vType, t) ← addPPExplicitToExposeDiff vType t
     let declKind := if nondep then "have" else "let"
-    throwError "invalid {declKind} declaration, term{indentExpr v}\nhas type{indentExpr vType}\nbut is expected to have type{indentExpr t}"
+    throwError "invalid {declKind} declaration, term{indentExpr v}\
+      \nhas type{indentExpr vType}\
+      \nbut is expected to have type{indentExpr t}"
   | _ => unreachable!
 
 /-- Adds note about definitions not unfolded because of the module system, if any. -/
@@ -205,10 +214,11 @@ def mkUnfoldAxiomsNote (givenType expectedType : Expr) : MetaM MessageData := do
     let origDiag := (← get).diag
     try
       let _ ← observing <| withSetOption diagnostics true <| isDefEq givenType expectedType
-      let blocked := (← get).diag.unfoldAxiomCounter.toList.filterMap fun (n, count) => do
-        let count := count - origDiag.unfoldAxiomCounter.findD n 0
-        guard <| count > 0 && getOriginalConstKind? env n matches some .defn
-        return m!"{.ofConstName n} ↦ {count}"
+      let blocked :=
+        (← get).diag.unfoldAxiomCounter.toList.filterMap fun (n, count) => do
+          let count := count - origDiag.unfoldAxiomCounter.findD n 0
+          guard <| count > 0 && getOriginalConstKind? env n matches some .defn
+          return m!"{.ofConstName n} ↦ {count}"
       if !blocked.isEmpty then
         return MessageData.note m!"The following definitions were not unfolded because \
           their definition is not exposed:{indentD <| .joinSep blocked Format.line}"
@@ -224,54 +234,66 @@ If `trailing?` is non-`none`, it is appended to the end of the message. This req
 produced message, so prefer specifying `trailing?` over appending a message to the result of this
 function. Any expressions appearing in the trailing message should be included in `trailingExprs`.
 -/
-def mkHasTypeButIsExpectedMsg (givenType expectedType : Expr)
+def mkHasTypeButIsExpectedMsg
+    (givenType expectedType : Expr)
     (trailing? : Option MessageData := none) (trailingExprs : Array Expr := #[])
     : MetaM MessageData := do
   let config ← getConfig
   return MessageData.ofLazyM (es := #[givenType, expectedType] ++ trailingExprs) <|
-      withConfig (fun _ => config) do
-    let mut msg ← (try
-      let givenTypeType ← inferType givenType
-      let expectedTypeType ← inferType expectedType
-      if (← isDefEqGuarded givenTypeType expectedTypeType) then
-        let (givenType, expectedType) ← addPPExplicitToExposeDiff givenType expectedType
-        let trailing := trailing?.map (m!"\n" ++ ·) |>.getD .nil
-        pure m!"has type{indentExpr givenType}\n\
-          but is expected to have type{indentExpr expectedType}{trailing}"
-      else
-        let (givenType, expectedType) ← addPPExplicitToExposeDiff givenType expectedType
-        let (givenTypeType, expectedTypeType) ← addPPExplicitToExposeDiff givenTypeType expectedTypeType
-        let trailing := match trailing? with
-          | none => inlineExprTrailing expectedTypeType
-          | some trailing => inlineExpr expectedTypeType ++ trailing
-        pure m!"has type{indentExpr givenType}\nof sort{inlineExpr givenTypeType}\
-          but is expected to have type{indentExpr expectedType}\nof sort{trailing}"
-    catch _ =>
-      let (givenType, expectedType) ← addPPExplicitToExposeDiff givenType expectedType
-      let trailing := trailing?.map (m!"\n" ++ ·) |>.getD .nil
-      pure m!"has type{indentExpr givenType}\nbut is expected to have type{indentExpr expectedType}{trailing}")
-    return msg ++ (← mkUnfoldAxiomsNote givenType expectedType)
+    withConfig (fun _ => config) do
+      let mut msg ←
+        (try
+           let givenTypeType ← inferType givenType
+           let expectedTypeType ← inferType expectedType
+           if (← isDefEqGuarded givenTypeType expectedTypeType) then
+             let (givenType, expectedType) ← addPPExplicitToExposeDiff givenType expectedType
+             let trailing := trailing?.map (m!"\n" ++ ·) |>.getD .nil
+             pure m!"has type{indentExpr givenType}\n\
+               but is expected to have type{indentExpr expectedType}{trailing}"
+           else
+             let (givenType, expectedType) ← addPPExplicitToExposeDiff givenType expectedType
+             let (givenTypeType, expectedTypeType) ←
+               addPPExplicitToExposeDiff givenTypeType expectedTypeType
+             let trailing :=
+               match trailing? with
+               | none => inlineExprTrailing expectedTypeType
+               | some trailing => inlineExpr expectedTypeType ++ trailing
+             pure m!"has type{indentExpr givenType}\
+               \nof sort{inlineExpr givenTypeType}\
+               but is expected to have type{indentExpr expectedType}\
+               \nof sort{trailing}"
+         catch _ =>
+           let (givenType, expectedType) ← addPPExplicitToExposeDiff givenType expectedType
+           let trailing := trailing?.map (m!"\n" ++ ·) |>.getD .nil
+           pure m!"has type{indentExpr givenType}\
+             \nbut is expected to have type{indentExpr expectedType}{trailing}")
+      return msg ++ (← mkUnfoldAxiomsNote givenType expectedType)
 
 def throwAppTypeMismatch (f a : Expr) : MetaM α := do
   -- Clarify that `a` is "last" only if it may be confused with some preceding argument; otherwise,
   -- avoid this wording because it may be misleading if more arguments follow `a`, e.g., if `f a` is
   -- a subexpression of `f a b`
-  let argDescStr := if f.getAppArgs.any (· == a) then
-    m!"last{indentExpr a}\nargument "
-  else
-    m!"argument{indentExpr a}\n"
+  let argDescStr :=
+    if f.getAppArgs.any (· == a) then
+      m!"last{indentExpr a}\
+        \nargument "
+    else
+      m!"argument{indentExpr a}\n"
   let mut e := mkApp f a
-  let msg ← try
-    let (expectedType, binfo) ← getFunctionDomain f
-    unless binfo.isExplicit do
+  let msg ←
+    try
+      let (expectedType, binfo) ← getFunctionDomain f
+      unless binfo.isExplicit do
+        e := e.setAppPPExplicit
+      let aType ← inferType a
+      let hasTypeButIsExpected ←
+        mkHasTypeButIsExpectedMsg aType expectedType
+          (trailing? := m!"in the application{indentExpr e}") (trailingExprs := #[e])
+      pure m!"Application type mismatch: The {argDescStr}{hasTypeButIsExpected}"
+    catch _ =>
       e := e.setAppPPExplicit
-    let aType ← inferType a
-    let hasTypeButIsExpected ← mkHasTypeButIsExpectedMsg aType expectedType
-      (trailing? := m!"in the application{indentExpr e}") (trailingExprs := #[e])
-    pure m!"Application type mismatch: The {argDescStr}{hasTypeButIsExpected}"
-  catch _ =>
-    e := e.setAppPPExplicit
-    pure m!"Application type mismatch: The {argDescStr}is not of the expected type in the application{indentExpr e}"
+      pure m!"Application type mismatch: The {argDescStr}is not of the expected type in the \
+        application{indentExpr e}"
   throwError msg
 
 def checkApp (f a : Expr) : MetaM Unit := do
@@ -288,27 +310,27 @@ def checkProj (structName : Name) (idx : Nat) (e : Expr) : MetaM Unit := do
   let structType ← whnf (← inferType e)
   let projType ← inferType (mkProj structName idx e)
   if (← isProp structType) && !(← isProp projType) then
-    throwError "invalid projection{indentExpr (mkProj structName idx e)}\nfrom type{indentExpr structType}"
+    throwError "invalid projection{indentExpr (mkProj structName idx e)}\
+      \nfrom type{indentExpr structType}"
 
-private partial def checkAux (e : Expr) : MetaM Unit := do
-  check e |>.run
+private partial def checkAux (e : Expr) : MetaM Unit := do check e |>.run
 where
   check (e : Expr) : MonadCacheT ExprStructEq Unit MetaM Unit :=
     checkCache { val := e : ExprStructEq } fun _ => do
       match e with
-      | .forallE ..      => checkForall e
-      | .lam ..          => checkLambdaLet e
-      | .letE ..         => checkLambdaLet e
-      | .const c lvls    => checkConstant c lvls
-      | .app f a         => check f; check a; checkApp f a
-      | .mdata _ e       => check e
-      | .proj s i e      => check e; checkProj s i e
-      | _                => return ()
+      | .forallE .. => checkForall e
+      | .lam .. => checkLambdaLet e
+      | .letE .. => checkLambdaLet e
+      | .const c lvls => checkConstant c lvls
+      | .app f a => check f; check a; checkApp f a
+      | .mdata _ e => check e
+      | .proj s i e => check e; checkProj s i e
+      | _ => return ()
 
   checkLambdaLet (e : Expr) : MonadCacheT ExprStructEq Unit MetaM Unit :=
     lambdaLetTelescope e fun xs b => do
       xs.forM fun x => do
-        let xDecl ← getFVarLocalDecl x;
+        let xDecl ← getFVarLocalDecl x
         match xDecl with
         | .cdecl (type := t) .. =>
           ensureType t
@@ -317,7 +339,8 @@ where
           ensureType t
           check t
           let vType ← inferType v
-          unless (← isDefEq t vType) do throwLetTypeMismatchMessage x.fvarId!
+          unless (← isDefEq t vType) do
+            throwLetTypeMismatchMessage x.fvarId!
           check v
       check b
 
@@ -330,12 +353,9 @@ where
       ensureType b
       check b
 
-/--
-Throw an exception if `e` is not type correct at the given transparency.
--/
+/-- Throw an exception if `e` is not type correct at the given transparency. -/
 def check (e : Expr) (transparency : TransparencyMode := .all) : MetaM Unit :=
-  withTraceNode `Meta.check (fun _ =>
-      return m!"{e}") do
+  withTraceNode `Meta.check (fun _ => return m!"{e}") do
     try
       withTransparency transparency $ checkAux e
     catch ex =>
@@ -351,22 +371,22 @@ prior tactics (such as `unfold`) leaving the goal in a state that's type-correct
 `.default` transparency, preventing unification etc at `.instances`.
 -/
 def withInstancesTypeCheckNote [MonadControlT MetaM m] [Monad m] (e : Expr) (x : m α) : m α := do
-  let typeCheckNote := MessageData.ofLazyM (es := #[e]) do
-    try
-      check e .implicit
-      return .nil
-    catch e =>
-      return MessageData.note m!"The target expression is not type-correct \
-        under the `implicit` transparency level, which may have triggered the failure. \
-        This is usually caused by unfolding of semireducible definitions in prior tactic steps. \
-        Use `set_option linter.tacticCheckInstances true` to investigate the source of the issue.\n\
-        Full error:\
-        {indentD e.toMessageData}"
+  let typeCheckNote :=
+    MessageData.ofLazyM (es := #[e]) do
+      try
+        check e .implicit
+        return .nil
+      catch e =>
+        return MessageData.note m!"The target expression is not type-correct \
+          under the `implicit` transparency level, which may have triggered the failure. \
+          This is usually caused by unfolding of semireducible definitions in prior tactic steps. \
+          Use `set_option linter.tacticCheckInstances true` to investigate the source of the \
+          issue.\n\
+          Full error:\
+          {indentD e.toMessageData}"
   Meta.mapError x (· ++ typeCheckNote)
 
-/--
-Return true if `e` is type correct.
--/
+/-- Return true if `e` is type correct. -/
 def isTypeCorrect (e : Expr) : MetaM Bool := do
   try
     check e
@@ -383,9 +403,11 @@ def checkWithKernel (e : Expr) : MetaM Unit := do
   let e ← instantiateExprMVars e
   match Kernel.check (← getEnv) (← getLCtx) e with
   | .ok .. => return ()
-  | .error ex => throwError "kernel type checker failed at{indentExpr e}\nwith error message\n{ex.toMessageData (← getOptions)}"
+  | .error ex =>
+    throwError "kernel type checker failed at{indentExpr e}\
+      \nwith error message\
+      \n{ex.toMessageData (← getOptions)}"
 
-builtin_initialize
-  registerTraceClass `Meta.check
+builtin_initialize registerTraceClass `Meta.check
 
 end Lean.Meta

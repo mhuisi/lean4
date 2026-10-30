@@ -11,11 +11,9 @@ public import Init.Data.String.Defs
 
 namespace Int
 
-/--
-Returns the decimal string representation of an integer.
--/
+/-- Returns the decimal string representation of an integer. -/
 public protected def repr : Int → String
-  | ofNat m   => Nat.repr m
+  | ofNat m => Nat.repr m
   | negSucc m => "-" ++ Nat.repr (Nat.succ m)
 
 public instance : Repr Int where

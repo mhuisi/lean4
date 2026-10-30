@@ -56,11 +56,14 @@ public def isVal (e : Expr) : Bool :=
     isInt16Value,
     isInt32Value,
     isInt64Value
-  ].any (· e)
+  ].any
+    (· e)
 
-/-- Returns `.rfl (done := true)` for ground literal values of any recognized builtin type,
+/--
+Returns `.rfl (done := true)` for ground literal values of any recognized builtin type,
 preventing the simplifier from recursing into them. For example, this stops the evaluator
-from trying to unfold `OfNat.ofNat 2` further. -/
+from trying to unfold `OfNat.ofNat 2` further.
+-/
 public def isBuiltinValue : Simproc := fun e => return .rfl (isVal e)
 
 public def guardSimproc (p : Expr → Bool) (s : Simproc) : Simproc := fun e => do
@@ -68,35 +71,34 @@ public def guardSimproc (p : Expr → Bool) (s : Simproc) : Simproc := fun e => 
 
 /-- TODO: Handle code duplication -/
 def isAlwaysZero : Level → Bool
-  | .zero ..    => true
-  | .mvar ..    => false
-  | .param ..   => false
-  | .succ ..    => false
-  | .max u v    => isAlwaysZero u && isAlwaysZero v
-  | .imax _ u   => isAlwaysZero u
+  | .zero .. => true
+  | .mvar .. => false
+  | .param .. => false
+  | .succ .. => false
+  | .max u v => isAlwaysZero u && isAlwaysZero v
+  | .imax _ u => isAlwaysZero u
 
 /- Modified for the `SymM` usage -/
 def isProp (e : Expr) : Sym.SymM Bool := do
   match (← isPropQuick e) with
-  | .true  => return true
+  | .true => return true
   | .false => return false
   | .undef =>
     let type ← Sym.inferType e
     let type ← whnfD type
     match type with
     | Expr.sort u => return isAlwaysZero (← instantiateLevelMVars u)
-    | _           => return false
+    | _ => return false
 
 /- Modified for the `SymM` usage -/
 def isProof (e : Expr) : Sym.SymM Bool := do
   match (← isProofQuick e) with
-  | .true  => return true
+  | .true => return true
   | .false => return false
   | .undef => isProp (← Sym.inferType e)
 
 /-- Marks proof terms as done so the simplifier does not recurse into them. -/
-public def isProofTerm : Simproc := fun e => do
-  return .rfl (← isProof e)
+public def isProofTerm : Simproc := fun e => do return .rfl (← isProof e)
 
 /-- Extract elements from a `List.cons`/`List.nil` chain. -/
 public partial def getListLitElems (e : Expr) (acc : Array Expr := #[]) : Option <| Array Expr :=

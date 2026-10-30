@@ -28,8 +28,8 @@ by we decided to not do it to avoid code duplication.
 abbrev Code.bind [MonadCodeBind m] (c : Code pu) (f : FVarId → m (Code pu)) : m (Code pu) :=
   MonadCodeBind.codeBind c f
 
-partial def CompilerM.codeBind (c : Code pu) (f : FVarId → CompilerM (Code pu)) :
-    CompilerM (Code pu) := do
+partial def CompilerM.codeBind (c : Code pu) (f : FVarId → CompilerM (Code pu))
+    : CompilerM (Code pu) := do
   go c |>.run {}
 where
   go (c : Code pu) : ReaderT FVarIdSet CompilerM (Code pu) := do
@@ -40,18 +40,19 @@ where
       let value ← go decl.value
       let type ← value.inferParamType decl.params
       let decl ← decl.update' type value
-      withReader (fun s => s.insert decl.fvarId) do
-        return .jp decl (← go k)
+      withReader (fun s => s.insert decl.fvarId) do return .jp decl (← go k)
     | .cases c =>
-      let alts ← c.alts.mapM fun
-        | .alt ctorName params k _ => return .alt ctorName params (← go k)
-        | .default k => return .default (← go k)
-        | .ctorAlt info k _ => return .ctorAlt info (← go k)
+      let alts ←
+        c.alts.mapM fun
+          | .alt ctorName params k _ => return .alt ctorName params (← go k)
+          | .default k => return .default (← go k)
+          | .ctorAlt info k _ => return .ctorAlt info (← go k)
       if alts.isEmpty then
         throwError "`Code.bind` failed, empty `cases` found"
       let resultType ← mkCasesResultType alts
       return .cases ⟨c.typeName, resultType, c.discr, alts⟩
-    | .return fvarId => f fvarId
+    | .return fvarId =>
+      f fvarId
     | .jmp fvarId .. =>
       unless (← read).contains fvarId do
         throwError "`Code.bind` failed, it contains an out-of-scope join point"
@@ -68,8 +69,13 @@ where
       eraseCode k
       eraseParam auxParam
       return .unreach typeNew
-    | .oset (k := k) ..| .sset (k := k) .. | .uset (k := k) .. | .inc (k := k) .. | .dec (k := k) ..
-    | .del (k := k) .. | .setTag (k := k) .. =>
+    | .oset (k := k) ..
+    | .sset (k := k) ..
+    | .uset (k := k) ..
+    | .inc (k := k) ..
+    | .dec (k := k) ..
+    | .del (k := k) ..
+    | .setTag (k := k) .. =>
       return c.updateCont! (← go k)
 
 instance : MonadCodeBind CompilerM where
@@ -86,8 +92,7 @@ Create new parameters for the given arrow type.
 Example: if `type` is `Nat → Bool → Int`, the result is
 an array containing two new parameters with types `Nat` and `Bool`.
 -/
-partial def mkNewParams (type : Expr) : CompilerM (Array (Param pu)) :=
-  go type #[] #[]
+partial def mkNewParams (type : Expr) : CompilerM (Array (Param pu)) := go type #[] #[]
 where
   go (type : Expr) (xs : Array Expr) (ps : Array (Param pu)) : CompilerM (Array (Param pu)) := do
     match type with
@@ -111,32 +116,36 @@ def isEtaExpandCandidateCore (type : Expr) (params : Array (Param .pure)) : Bool
 abbrev FunDecl.isEtaExpandCandidate (decl : FunDecl .pure) : Bool :=
   isEtaExpandCandidateCore decl.type decl.params
 
-def etaExpandCore (type : Expr) (params : Array (Param .pure)) (value : Code .pure) :
-    CompilerM (Array (Param .pure) × Code .pure) := do
+def etaExpandCore (type : Expr) (params : Array (Param .pure)) (value : Code .pure)
+    : CompilerM (Array (Param .pure) × Code .pure) := do
   let valueType ← instantiateForall type (params.map (mkFVar ·.fvarId))
   let psNew ← mkNewParams valueType
   let params := params ++ psNew
   let xs := psNew.map fun p => .fvar p.fvarId
-  let value ← value.bind fun fvarId => do
-    let auxDecl ← mkAuxLetDecl (.fvar fvarId xs)
-    return .let auxDecl (.return auxDecl.fvarId)
+  let value ←
+    value.bind fun fvarId => do
+      let auxDecl ← mkAuxLetDecl (.fvar fvarId xs)
+      return .let auxDecl (.return auxDecl.fvarId)
   return (params, value)
 
-def etaExpandCore? (type : Expr) (params : Array (Param .pure)) (value : Code .pure) : CompilerM (Option (Array (Param .pure) × Code .pure)) := do
+def etaExpandCore? (type : Expr) (params : Array (Param .pure)) (value : Code .pure)
+    : CompilerM (Option (Array (Param .pure) × Code .pure)) := do
   if isEtaExpandCandidateCore type params then
     etaExpandCore type params value
   else
     return none
 
 def FunDecl.etaExpand (decl : FunDecl .pure) : CompilerM (FunDecl .pure) := do
-  let some (params, value) ← etaExpandCore? decl.type decl.params decl.value | return decl
+  let some (params, value) ← etaExpandCore? decl.type decl.params decl.value
+    | return decl
   decl.update decl.type params value
 
 def Decl.etaExpand (decl : Decl .pure) : CompilerM (Decl .pure) := do
   match decl.value with
   | .code code =>
-    let some (params, newCode) ← etaExpandCore? decl.type decl.params code | return decl
-    return { decl with params, value := .code newCode}
+    let some (params, newCode) ← etaExpandCore? decl.type decl.params code
+      | return decl
+    return { decl with params, value := .code newCode }
   | .extern .. => return decl
 
 end Lean.Compiler.LCNF

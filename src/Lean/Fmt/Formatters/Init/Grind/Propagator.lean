@@ -23,8 +23,7 @@ public def fmtGrindPropagator : Fmt := fun
         (%$lparenTk $op:ident )%$rparenTk :=%$colonEqTk $body:term) =>
     fmtSimprocLike docComment? #[] grindPropagatorTk direction none none none declId lparenTk op
       rparenTk colonEqTk body
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.«command_Builtin_grind_propagator____:=_»]
 public def fmtBuiltinGrindPropagator : Fmt := fun
@@ -42,8 +41,7 @@ public def fmtBuiltinGrindPropagator : Fmt := fun
     let signature := Layouts.pseudoApplication #[builtinGrindPropagatorTk, declId, trigger]
     let decl := Layouts.assignmentDeclaration signature colonEqTk body
     fmtDeclWithModifiers docComment? none #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.grindPropagatorBuiltinAttr]
 public def fmtGrindPropagatorBuiltinAttr : Fmt := fun
@@ -54,5 +52,4 @@ public def fmtGrindPropagatorBuiltinAttr : Fmt := fun
     let op ← fmt op
     let keyword := Layouts.spacedAtomic #[builtinGrindPropagatorTk, direction]
     return Layouts.pseudoApplication #[keyword, op]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

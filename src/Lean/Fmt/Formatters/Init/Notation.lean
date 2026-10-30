@@ -22,8 +22,7 @@ public def fmtPrecParen : Fmt := fun
     let prec ← fmt prec
     let rbTk ← fmt rbTk
     return Layouts.parens lbTk prec rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_infix_fmt Lean.Parser.Syntax.addPrec]
 public def fmtAddPrec : Fmt.InfixOperation := {
@@ -56,8 +55,7 @@ public def fmtPrioParen : Fmt := fun
     let prio ← fmt prio
     let rbTk ← fmt rbTk
     return Layouts.parens lbTk prio rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt «stx_+», builtin_fmt «stx_*», builtin_fmt «stx_,*», builtin_fmt «stx_,+»,
   builtin_fmt «stx_,*,?», builtin_fmt «stx_,+,?»]
@@ -94,12 +92,9 @@ public partial def fmtStxOptional : Fmt := fun stx => do
   return Layouts.postfixOperator operand questionTk format
 where
   endsInIdent : Syntax → EndsInIdent
-    | .missing =>
-      .empty
-    | .atom .. =>
-      .endsInNonIdent
-    | .ident .. =>
-      .endsInIdent
+    | .missing => .empty
+    | .atom .. => .endsInNonIdent
+    | .ident .. => .endsInIdent
     | .node _ kind args =>
       if args.isEmpty then
         .empty
@@ -114,8 +109,7 @@ public def fmtStxNotFollowedBy : Fmt := fun
     let notTk ← fmt notTk
     let s ← fmt s
     return Layouts.prefixOperator notTk s .withoutSpacingIfAtomic
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_infix_fmt «stx_<|>_»]
 public def fmtStxOrelse : Fmt.InfixOperation := {
@@ -136,8 +130,7 @@ public def fmtTermNeg : Fmt := fun
     let negTk ← fmt negTk
     let t ← fmt t
     return Layouts.prefixOperator negTk t .withoutSpacingIfAtomic
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt «term_⁻¹»]
 public def fmtTermInv : Fmt := fun
@@ -145,8 +138,7 @@ public def fmtTermInv : Fmt := fun
     let t ← fmt t
     let invTk ← fmt invTk
     return mkSelfDelimited <| Layouts.postfixOperator t invTk .withoutSpacing
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_infix_fmt «term_∈_»]
 public def fmtTermMem : Fmt.InfixOperation := {
@@ -217,8 +209,7 @@ public def fmtTermPipeRight : Fmt := fun stx =>
       let rhs ← fmt rhs
       let pipe := Layouts.prefixOperator pipeTk rhs .withSpacing
       return some (lhs, pipe)
-    | stx =>
-      deconstructPipeProj stx
+    | stx => deconstructPipeProj stx
 
 @[builtin_fmt «term_$__»]
 public def fmtTermDollar : Fmt :=
@@ -243,8 +234,7 @@ public def fmtCaseArg : Fmt := fun
     let tag ← fmt tag
     let ids ← fmtArray ids
     return Layouts.pseudoApplication <| #[tag] ++ ids
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_conditional_fmt termIfThenElse]
 public def fmtIfThenElse : ConditionalFmt := fun
@@ -252,8 +242,7 @@ public def fmtIfThenElse : ConditionalFmt := fun
     do
       let cond ← fmt cond
       return some { ifTk, cond, thenTk, thenBody, elseTk? := elseTk, elseBody? := elseBody }
-  | _ =>
-    pure none
+  | _ => pure none
 
 @[builtin_conditional_fmt termDepIfThenElse]
 public def fmtDepIfThenElse : ConditionalFmt := fun
@@ -265,8 +254,7 @@ public def fmtDepIfThenElse : ConditionalFmt := fun
       let c ← fmt c
       let cond := Layouts.typeAscription h colonTk c
       return some { ifTk, cond, thenTk, thenBody, elseTk? := elseTk, elseBody? := elseBody }
-  | _ =>
-    pure none
+  | _ => pure none
 
 @[builtin_conditional_fmt termIfLet]
 public def fmtIfLet : ConditionalFmt := fun
@@ -280,8 +268,7 @@ public def fmtIfLet : ConditionalFmt := fun
       let assignment := Layouts.assignmentDeclaration pat colonEqTk d
       let cond := combine #[.withSepAfter letTk space, assignment]
       return some { ifTk, cond, thenTk, thenBody, elseTk? := elseTk, elseBody? := elseBody }
-  | _ =>
-    pure none
+  | _ => pure none
 
 @[builtin_conditional_fmt boolIfThenElse]
 public def fmtBoolIfThenElse : ConditionalFmt := fun
@@ -289,8 +276,7 @@ public def fmtBoolIfThenElse : ConditionalFmt := fun
     do
       let cond ← fmt c
       return some { ifTk, cond, thenTk, thenBody, elseTk? := elseTk, elseBody? := elseBody }
-  | _ =>
-    pure none
+  | _ => pure none
 
 @[builtin_fmt «term{_:_//_}»]
 public def fmtSubtype : Fmt := fun
@@ -305,8 +291,7 @@ public def fmtSubtype : Fmt := fun
       let rbTk ← fmt rbTk
       let lhs := Layouts.typeAscription x colonTk? type?
       return Layouts.subtype lbTk lhs slashTk p rbTk .dense
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt termWithout_expected_type_]
 public def fmtWithoutExpectedType : Fmt := fun
@@ -327,8 +312,7 @@ public def fmtIncludeStr : Fmt := fun
 public def fmtWithAnnotateTerm : Fmt
   | `(withAnnotateTerm| with_annotate_term%$withAnnotateTermTk $stx:rawStx $t:term) => do
     fmtAppLike #[withAnnotateTermTk, stx, t]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.byElab]
 public def fmtByElab : Fmt := fun
@@ -336,8 +320,7 @@ public def fmtByElab : Fmt := fun
     let tk ← fmt tk
     let doSeq ← fmt doSeq
     return Layouts.keywordPrefixedSeq tk doSeq .nonSticky
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 /-! ## Attributes -/
 
@@ -352,8 +335,7 @@ public def fmtDeprecated : Fmt := fun
     let typeChanged? ← fmt? typeChanged?
     let sinceParam? ← fmtNamedArgumentTerm? lbTk? sinceTk? colonEqTk? since? rbTk?
     return Layouts.pseudoApplication #[tk, id?, msg?, typeChanged?, sinceParam?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.deprecated_arg]
 public def fmtDeprecatedArg : Fmt := fun
@@ -365,8 +347,7 @@ public def fmtDeprecatedArg : Fmt := fun
     let msg? ← fmt? msg?
     let sinceParam? ← fmtNamedArgumentTerm? lbTk? sinceTk? colonEqTk? since? rbTk?
     return Layouts.pseudoApplication #[tk, old, new?, msg?, sinceParam?]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.suggest_for]
 public def fmtSuggestFor : Fmt := fun
@@ -374,8 +355,7 @@ public def fmtSuggestFor : Fmt := fun
     let tk ← fmt tk
     let ids ← fmtArray ids
     return Layouts.pseudoApplication <| #[tk] ++ ids
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.univ_out_params]
 public def fmtUnivOutParams : Fmt := fun
@@ -383,8 +363,7 @@ public def fmtUnivOutParams : Fmt := fun
     let tk ← fmt tk
     let ids ← fmtArray ids
     return Layouts.pseudoApplication <| #[tk] ++ ids
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.command_code_action]
 public def fmtCommandCodeAction : Fmt := fun
@@ -392,8 +371,7 @@ public def fmtCommandCodeAction : Fmt := fun
     let tk ← fmt tk
     let ids ← fmtArray ids
     return Layouts.pseudoApplication <| #[tk] ++ ids
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.builtin_command_code_action]
 public def fmtBuiltinCommandCodeAction : Fmt := fun
@@ -401,8 +379,7 @@ public def fmtBuiltinCommandCodeAction : Fmt := fun
     let tk ← fmt tk
     let ids ← fmtArray ids
     return Layouts.pseudoApplication <| #[tk] ++ ids
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 /-! ## Commands -/
 
@@ -433,8 +410,7 @@ public def fmtReduceConfig (c : TSyntax ``reduceConfig) : FmtM (Array TaggedDoc)
     for lbTk in lbTks, id in ids, colonEqTk in colonEqTks, t in ts, rbTk in rbTks do
       args := args.push <| ← fmtNamedArgumentTerm lbTk id colonEqTk t rbTk
     return args
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.reduceCmd]
 public def fmtReduceCmd : Fmt := fun
@@ -444,8 +420,7 @@ public def fmtReduceCmd : Fmt := fun
     let «reduce» := Layouts.pseudoApplication <| #[tk] ++ config
     let e ← fmt e
     return Layouts.pseudoApplication #[«reduce», e]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.setLibrarySuggestionsCmd]
 public def fmtSetLibrarySuggestions : Fmt := fun
@@ -453,8 +428,7 @@ public def fmtSetLibrarySuggestions : Fmt := fun
     let tk ← fmt tk
     let t ← fmt t
     return Layouts.pseudoApplication #[tk, t]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.discrTreeKeyCmd]
 public def fmtDiscrTreeKeyCmd : Fmt := fun
@@ -462,8 +436,7 @@ public def fmtDiscrTreeKeyCmd : Fmt := fun
     let tk ← fmt tk
     let t ← fmt t
     return Layouts.pseudoApplication #[tk, t]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.discrTreeSimpKeyCmd]
 public def fmtDiscrTreeSimpKeyCmd : Fmt := fun
@@ -471,8 +444,7 @@ public def fmtDiscrTreeSimpKeyCmd : Fmt := fun
     let tk ← fmt tk
     let t ← fmt t
     return Layouts.pseudoApplication #[tk, t]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.commandSeal__]
 public def fmtSeal : Fmt := fun
@@ -480,8 +452,7 @@ public def fmtSeal : Fmt := fun
     let tk ← fmt tk
     let ids ← fmtArray ids
     return Layouts.pseudoApplication <| #[tk] ++ ids
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.commandUnseal__]
 public def fmtUnseal : Fmt := fun
@@ -489,8 +460,7 @@ public def fmtUnseal : Fmt := fun
     let tk ← fmt tk
     let ids ← fmtArray ids
     return Layouts.pseudoApplication <| #[tk] ++ ids
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.timeCmd]
 public def fmtTimeCmd : Fmt := fun
@@ -498,8 +468,7 @@ public def fmtTimeCmd : Fmt := fun
     let tk ← fmt tk
     let cmd ← fmt cmd
     return Layouts.spacedAtomic #[tk, cmd]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.checkTactic]
 public def fmtCheckTactic : Fmt := fun
@@ -514,8 +483,7 @@ public def fmtCheckTactic : Fmt := fun
     let rel := Layouts.infixOperator #[lhs, arrowTk, rhs]
     let head := Layouts.pseudoApplication #[tk, rel]
     return Layouts.keywordSeparated head byTk tac
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.checkTacticFailure]
 public def fmtCheckTacticFailure : Fmt := fun
@@ -526,8 +494,7 @@ public def fmtCheckTacticFailure : Fmt := fun
     let byTk ← fmt byTk
     let tac ← fmt tac
     return Layouts.keywordSeparated head byTk tac
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.checkSimp]
 public def fmtCheckSimp : Fmt := fun
@@ -538,8 +505,7 @@ public def fmtCheckSimp : Fmt := fun
     let rhs ← fmt rhs
     let rel := Layouts.infixOperator #[lhs, arrowTk, rhs]
     return Layouts.pseudoApplication #[tk, rel]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.checkSimpFailure]
 public def fmtCheckSimpFailure : Fmt := fun
@@ -549,8 +515,7 @@ public def fmtCheckSimpFailure : Fmt := fun
     let failTk ← fmt failTk
     let post := Layouts.postfixOperator t failTk .withSpacing
     return Layouts.pseudoApplication #[tk, post]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.guardMsgsFilter]
 public def fmtGuardMsgsFilter : Fmt := fun
@@ -559,8 +524,7 @@ public def fmtGuardMsgsFilter : Fmt := fun
       let action? ← fmt? action?
       let severity ← fmt severity
       return Layouts.pseudoApplication #[action?, severity]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.guardMsgsWhitespace]
 public def fmtGuardMsgsWhitespace : Fmt := fun
@@ -569,8 +533,7 @@ public def fmtGuardMsgsWhitespace : Fmt := fun
     let colonEqTk ← fmt colonEqTk
     let arg ← fmt arg
     return Layouts.assignmentDeclaration tk colonEqTk arg
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.guardMsgsOrdering]
 public def fmtGuardMsgsOrdering : Fmt := fun
@@ -579,8 +542,7 @@ public def fmtGuardMsgsOrdering : Fmt := fun
     let colonEqTk ← fmt colonEqTk
     let arg ← fmt arg
     return Layouts.assignmentDeclaration tk colonEqTk arg
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.guardMsgsPositions]
 public def fmtGuardMsgsPositions : Fmt := fun
@@ -589,8 +551,7 @@ public def fmtGuardMsgsPositions : Fmt := fun
     let colonEqTk ← fmt colonEqTk
     let arg ← fmt arg
     return Layouts.assignmentDeclaration tk colonEqTk arg
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.guardMsgsSubstring]
 public def fmtGuardMsgsSubstring : Fmt
@@ -599,8 +560,7 @@ public def fmtGuardMsgsSubstring : Fmt
     let colonEqTk ← fmt colonEqTk
     let arg ← fmt rhs
     return Layouts.assignmentDeclaration tk colonEqTk arg
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.guardMsgsSpecElt]
 public def fmtGuardMsgsSpecElt : Fmt := fun stx => do fmt (← getStxArg! stx 0)
@@ -612,8 +572,7 @@ public def fmtGuardMsgsSpec : Fmt := fun
     let elts ← fmtTSepArray elts
     let rbTk ← fmt rbTk
     return Layouts.collection lbTk elts rbTk
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.guardMsgsCmd]
 public def fmtGuardMsgsCmd : Fmt := fun
@@ -630,8 +589,7 @@ public def fmtGuardMsgsCmd : Fmt := fun
     let body :=
       Layouts.keywordSeparated head inTk cmd { allowFlattening := false, nestedRhs := false }
     return Layouts.lines #[doc?, body]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.guardPanicCmd]
 public def fmtGuardPanicCmd : Fmt := fun
@@ -640,8 +598,7 @@ public def fmtGuardPanicCmd : Fmt := fun
     let inTk ← fmt inTk
     let cmd ← fmt cmd
     return Layouts.lines #[Layouts.spacedAtomic #[tk, inTk], cmd]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.infoTreesCmd]
 public def fmtInfoTreesCmd : Fmt := fun
@@ -650,5 +607,4 @@ public def fmtInfoTreesCmd : Fmt := fun
     let inTk ← fmt inTk
     let cmd ← fmt cmd
     return Layouts.lines #[Layouts.spacedAtomic #[tk, inTk], cmd]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

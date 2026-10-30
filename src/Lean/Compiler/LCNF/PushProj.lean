@@ -73,8 +73,8 @@ LCNF.
 
 mutual
 
-partial def Cases.pushProjs (c : Cases .impure) (decls : Array (CodeDecl .impure)) :
-    CompilerM (Code .impure) := do
+partial def Cases.pushProjs (c : Cases .impure) (decls : Array (CodeDecl .impure))
+    : CompilerM (Code .impure) := do
   let altsUsed := c.alts.map (·.getCode.collectUsed)
   let ctxUsed := ({} : FVarIdHashSet) |>.insert c.discr
   let (bs, alts) ← go decls c.alts altsUsed #[] ctxUsed
@@ -91,9 +91,10 @@ where
   - `ctx` is the set of declarations that we decided not to push into any alt already
   - `ctxUsed` fulfills the same purpose as `altsUsed` for `ctx`
   -/
-  go (decls : Array (CodeDecl .impure)) (alts : Array (Alt .impure)) (altsUsed : Array FVarIdHashSet)
-      (ctx : Array (CodeDecl .impure)) (ctxUsed : FVarIdHashSet) :
-      CompilerM (Array (CodeDecl .impure) × Array (Alt .impure)) :=
+  go
+      (decls : Array (CodeDecl .impure)) (alts : Array (Alt .impure))
+      (altsUsed : Array FVarIdHashSet) (ctx : Array (CodeDecl .impure)) (ctxUsed : FVarIdHashSet)
+      : CompilerM (Array (CodeDecl .impure) × Array (Alt .impure)) :=
     if decls.isEmpty then
       return (ctx.reverse, alts)
     else
@@ -102,17 +103,20 @@ where
       let done := fun (_ : Unit) => return (bs.push b ++ ctx.reverse, alts)
       let skip := fun (_ : Unit) => go bs alts altsUsed (ctx.push b) (b.collectUsed ctxUsed)
       let push (fvar : FVarId) : CompilerM (Array (CodeDecl .impure) × Array (Alt .impure)) := do
-        if !ctxUsed.contains fvar then
-          let alts ← alts.mapIdxM fun i alt => alt.mapCodeM fun k => do
-            if altsUsed[i]!.contains fvar then
-              return attachCodeDecls #[b] k
-            else
-              return k
-          let altsUsed := altsUsed.map fun used =>
-            if used.contains fvar then
-              b.collectUsed used
-            else
-              used
+        if ! ctxUsed.contains fvar then
+          let alts ←
+            alts.mapIdxM fun i alt =>
+              alt.mapCodeM fun k => do
+                if altsUsed[i]!.contains fvar then
+                  return attachCodeDecls #[b] k
+                else
+                  return k
+          let altsUsed :=
+            altsUsed.map fun used =>
+              if used.contains fvar then
+                b.collectUsed used
+              else
+                used
           go bs alts altsUsed ctx ctxUsed
         else
           skip ()
@@ -124,8 +128,7 @@ where
         | _ => done ()
       | _ => done ()
 
-partial def Code.pushProj (code : Code .impure) : CompilerM (Code .impure) := do
-  go code #[]
+partial def Code.pushProj (code : Code .impure) : CompilerM (Code .impure) := do go code #[]
 where
   go (c : Code .impure) (decls : Array (CodeDecl .impure)) : CompilerM (Code .impure) := do
     match c with
@@ -143,13 +146,10 @@ where
       go k (decls.push (.inc fvarId n check persistent))
     | .dec fvarId n check persistent objs? k _ =>
       go k (decls.push (.dec fvarId n check persistent objs?))
-    | .del fvarId k _ =>
-      go k (decls.push (.del fvarId))
-    | .setTag fvarId cidx k _ =>
-      go k (decls.push (.setTag fvarId cidx))
+    | .del fvarId k _ => go k (decls.push (.del fvarId))
+    | .setTag fvarId cidx k _ => go k (decls.push (.setTag fvarId cidx))
     | .cases c => c.pushProjs decls
-    | .jmp .. | .return .. | .unreach .. =>
-      return attachCodeDecls decls c
+    | .jmp .. | .return .. | .unreach .. => return attachCodeDecls decls c
 
 end
 
@@ -161,7 +161,6 @@ def Decl.pushProj (decl : Decl .impure) : CompilerM (Decl .impure) := do
 public def pushProj (occurrence : Nat) : Pass :=
   Pass.mkPerDeclaration `pushProj .impure Decl.pushProj occurrence
 
-builtin_initialize
-  registerTraceClass `Compiler.pushProj (inherited := true)
+builtin_initialize registerTraceClass `Compiler.pushProj (inherited := true)
 
 end Lean.Compiler.LCNF

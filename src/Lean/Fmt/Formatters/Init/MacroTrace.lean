@@ -22,5 +22,4 @@ public def fmtMacroTrace : Fmt := fun
     let msg ← fmt msg
     let traceClass := Layouts.bracketed lbTk id rbTk .dense
     return Layouts.pseudoApplication #[traceClass, msg]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

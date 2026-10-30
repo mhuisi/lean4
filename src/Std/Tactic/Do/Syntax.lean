@@ -11,10 +11,9 @@ public import Std.WP.Tactic
 public import Std.Tactic.Do.ProofMode -- For (meta) importing `mgoalStx`; otherwise users might experience
 public import Init.Data.Array.GetLit
 public import Init.Grind.Interactive
-                                      -- a broken goal view due to the builtin delaborator for `MGoalEntails`
+-- a broken goal view due to the builtin delaborator for `MGoalEntails`
 
 @[expose] public section
-
 
 namespace Lean.Elab.Tactic.Do.VCGen
 
@@ -106,7 +105,8 @@ syntax (name := mexfalso) "mexfalso" : tactic
 syntax (name := mexists) "mexists" term,+ : tactic
 
 @[tactic_alt Lean.Parser.Tactic.mexistsMacro]
-macro (name := mexistsError) "mexists" : tactic => Macro.throwError "`mexists` expects at least one term"
+macro (name := mexistsError) "mexists" : tactic =>
+  Macro.throwError "`mexists` expects at least one term"
 
 @[tactic_alt Lean.Parser.Tactic.mframeMacro]
 syntax (name := mframe) "mframe" : tactic
@@ -124,7 +124,8 @@ macro (name := mhaveError) "mhave" : tactic => Macro.throwError "The syntax is `
 syntax (name := mreplace) "mreplace" ident optional(":" term) " := " term : tactic
 
 @[tactic_alt Lean.Parser.Tactic.mreplaceMacro]
-macro (name := mreplaceError) "mreplace" : tactic => Macro.throwError "The syntax is `mreplace h := term`"
+macro (name := mreplaceError) "mreplace" : tactic =>
+  Macro.throwError "The syntax is `mreplace h := term`"
 
 @[tactic_alt Lean.Parser.Tactic.mrightMacro]
 syntax (name := mright) "mright" : tactic
@@ -145,19 +146,22 @@ syntax (name := mpureIntro) "mpure_intro" : tactic
 syntax (name := mrenameI) "mrename_i" (ppSpace colGt binderIdent)+ : tactic
 
 @[tactic_alt Lean.Parser.Tactic.mrenameIMacro]
-macro (name := mrenameIError) "mrename_i" : tactic => Macro.throwError "`mrename_i` expects at least one identifier"
+macro (name := mrenameIError) "mrename_i" : tactic =>
+  Macro.throwError "`mrename_i` expects at least one identifier"
 
 @[tactic_alt Lean.Parser.Tactic.mspecializeMacro]
 syntax (name := mspecialize) "mspecialize" ident (colGt term:max)* : tactic
 
 @[tactic_alt Lean.Parser.Tactic.mspecializeMacro]
-macro (name := mspecializeError) "mspecialize" : tactic => Macro.throwError "The syntax is `mspecialize h term*`"
+macro (name := mspecializeError) "mspecialize" : tactic =>
+  Macro.throwError "The syntax is `mspecialize h term*`"
 
 @[tactic_alt Lean.Parser.Tactic.mspecializePureMacro]
 syntax (name := mspecializePure) "mspecialize_pure" term (colGt term:max)* " => " ident : tactic
 
 @[tactic_alt Lean.Parser.Tactic.mspecializeMacro]
-macro (name := mspecializePureError) "mspecialize_pure" : tactic => Macro.throwError "The syntax is `mspecialize_pure h term*`"
+macro (name := mspecializePureError) "mspecialize_pure" : tactic =>
+  Macro.throwError "The syntax is `mspecialize_pure h term*`"
 
 @[tactic_alt Lean.Parser.Tactic.mstartMacro]
 syntax (name := mstart) "mstart" : tactic
@@ -229,9 +233,9 @@ inductive MCasesPat
   | clear
   | tuple (args : List MCasesPat)
   | alts (args : List MCasesPat)
-  | pure       (h : TSyntax ``binderIdent)
+  | pure (h : TSyntax ``binderIdent)
   | stateful (h : TSyntax ``binderIdent)
-  deriving Repr, Inhabited
+deriving Repr, Inhabited
 
 partial def MCasesPat.parse (pat : TSyntax `mcasesPat) : MacroM MCasesPat := do
   match go ⟨← expandMacros pat⟩ with
@@ -239,25 +243,26 @@ partial def MCasesPat.parse (pat : TSyntax `mcasesPat) : MacroM MCasesPat := do
   | some pat => return pat
 where
   go : TSyntax `mcasesPat → Option MCasesPat
-  | `(mcasesPat| $name:binderIdent) => some <| .one name
-  | `(mcasesPat| -) => some <| .clear
-  | `(mcasesPat| ⟨$[$args],*⟩) => args.mapM goAlts |>.map (.tuple ·.toList)
-  | `(mcasesPat| ⌜$h⌝) => some (.pure h)
-  | `(mcasesPat| □$h) => some (.stateful h)
-  | `(mcasesPat| ($pat)) => goAlts pat
-  | _ => none
+    | `(mcasesPat| $name:binderIdent) => some <| .one name
+    | `(mcasesPat| -) => some <| .clear
+    | `(mcasesPat| ⟨$[$args],*⟩) => args.mapM goAlts |>.map (.tuple ·.toList)
+    | `(mcasesPat| ⌜$h⌝) => some (.pure h)
+    | `(mcasesPat| □$h) => some (.stateful h)
+    | `(mcasesPat| ($pat)) => goAlts pat
+    | _ => none
   goAlts : TSyntax ``mcasesPatAlts → Option MCasesPat
-  | `(mcasesPatAlts| $args|*) =>
-    match args.getElems with
-    | #[arg] => go arg
-    | args   => args.mapM go |>.map (.alts ·.toList)
-  | _ => none
+    | `(mcasesPatAlts| $args|*) =>
+      match args.getElems with
+      | #[arg] => go arg
+      | args => args.mapM go |>.map (.alts ·.toList)
+    | _ => none
 
 @[tactic_alt Lean.Parser.Tactic.mcasesMacro]
 syntax (name := mcases) "mcases" ident " with " mcasesPat : tactic
 
 @[tactic_alt Lean.Parser.Tactic.mcasesMacro]
-macro (name := mcasesError) "mcases" : tactic => Macro.throwError "The syntax is `mcases h with pat`"
+macro (name := mcasesError) "mcases" : tactic =>
+  Macro.throwError "The syntax is `mcases h with pat`"
 
 declare_syntax_cat mrefinePat
 syntax binderIdent : mrefinePat
@@ -274,10 +279,10 @@ macro "#" h:binderIdent : mrefinePat => `(mrefinePat| □ $h)
 inductive MRefinePat
   | one (name : TSyntax ``binderIdent)
   | tuple (args : List MRefinePat)
-  | pure       (h : TSyntax `term)
+  | pure (h : TSyntax `term)
   | stateful (h : TSyntax ``binderIdent)
   | hole (name : TSyntax ``binderIdent)
-  deriving Repr, Inhabited
+deriving Repr, Inhabited
 
 partial def MRefinePat.parse (pat : TSyntax `mrefinePat) : MacroM MRefinePat := do
   match go ⟨← expandMacros pat⟩ with
@@ -285,13 +290,13 @@ partial def MRefinePat.parse (pat : TSyntax `mrefinePat) : MacroM MRefinePat := 
   | some pat => return pat
 where
   go : TSyntax `mrefinePat → Option MRefinePat
-  | `(mrefinePat| $name:binderIdent) => some <| .one name
-  | `(mrefinePat| ?$name) => some (.hole name)
-  | `(mrefinePat| ⟨$[$args],*⟩) => args.mapM go |>.map (.tuple ·.toList)
-  | `(mrefinePat| ⌜$h⌝) => some (.pure h)
-  | `(mrefinePat| □$h) => some (.stateful h)
-  | `(mrefinePat| ($pat)) => go pat
-  | _ => none
+    | `(mrefinePat| $name:binderIdent) => some <| .one name
+    | `(mrefinePat| ?$name) => some (.hole name)
+    | `(mrefinePat| ⟨$[$args],*⟩) => args.mapM go |>.map (.tuple ·.toList)
+    | `(mrefinePat| ⌜$h⌝) => some (.pure h)
+    | `(mrefinePat| □$h) => some (.stateful h)
+    | `(mrefinePat| ($pat)) => go pat
+    | _ => none
 
 @[tactic_alt Lean.Parser.Tactic.mrefineMacro]
 syntax (name := mrefine) "mrefine" mrefinePat : tactic
@@ -307,7 +312,8 @@ syntax "∀" binderIdent : mintroPat
 syntax (name := mintro) "mintro" (ppSpace colGt mintroPat)+ : tactic
 
 @[tactic_alt Lean.Parser.Tactic.mintroMacro]
-macro (name := mintroError) "mintro" : tactic => Macro.throwError "`mintro` expects at least one pattern"
+macro (name := mintroError) "mintro" : tactic =>
+  Macro.throwError "`mintro` expects at least one pattern"
 
 macro_rules
   | `(tactic| mintro $pat₁ $pat₂ $pats:mintroPat*) => `(tactic| mintro $pat₁; mintro $pat₂ $pats*)
@@ -327,10 +333,12 @@ syntax "∀" optional(num) : mrevertPat
 syntax (name := mrevert) "mrevert" (ppSpace colGt mrevertPat)* : tactic
 
 @[tactic_alt Lean.Parser.Tactic.mrevertMacro]
-macro (name := mrevertError) "mrevert" : tactic => Macro.throwError "`mrevert` expects at least one pattern"
+macro (name := mrevertError) "mrevert" : tactic =>
+  Macro.throwError "`mrevert` expects at least one pattern"
 
 macro_rules
-  | `(tactic| mrevert $pat₁ $pat₂ $pats:mrevertPat*) => `(tactic| mrevert $pat₁; mrevert $pat₂ $pats*)
+  | `(tactic| mrevert $pat₁ $pat₂ $pats:mrevertPat*) =>
+    `(tactic| mrevert $pat₁; mrevert $pat₂ $pats*)
 
 /--
 `mspec_no_simp $spec` first tries to decompose `Bind.bind`s before applying `$spec`.
@@ -391,46 +399,75 @@ then a list of alternatives.
 syntax vcAlts := "with " (ppSpace colGt tactic)? withPosition((colGe vcAlt)*)
 
 @[tactic_alt Lean.Parser.Tactic.mvcgenMacro]
-syntax (name := mvcgen) "mvcgen" optConfig
-  (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*,?) "] ")?
-  (invariantAlts)? (vcAlts)? : tactic
+syntax (name := mvcgen)
+  "mvcgen" optConfig (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*,?) "] ")?
+  (invariantAlts)? (vcAlts)?
+  : tactic
 
 deprecated_syntax Lean.Parser.Tactic.mvcgen "use `vcgen` instead" (since := "2026-08-21")
 
-/--
-A hint tactic that expands to `mvcgen invariants?`.
--/
-syntax (name := mvcgenHint) "mvcgen?" optConfig
-  (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*,?) "] ")? : tactic
+/-- A hint tactic that expands to `mvcgen invariants?`. -/
+syntax (name := mvcgenHint)
+  "mvcgen?" optConfig (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*,?) "] ")?
+  : tactic
 
 deprecated_syntax Lean.Parser.Tactic.mvcgenHint "use `vcgen` instead" (since := "2026-08-21")
 
-deprecated_syntax massumption "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mclear "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mconstructor "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mexact "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mexfalso "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mexists "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mframe "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mdup "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mhave "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mreplace "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mright "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mleft "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mpure "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mpureIntro "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mrenameI "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mspecialize "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mspecializePure "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mstart "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mstop "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mleave "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mcases "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mrefine "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mintro "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mrevert "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mspecNoBind "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mspecNoSimp "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax mspec "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax tacticMvcgen_trivial_extensible "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
-deprecated_syntax tacticMvcgen_trivial "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
+deprecated_syntax massumption "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mclear "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mconstructor "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mexact "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mexfalso "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mexists "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mframe "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mdup "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mhave "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mreplace "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mright "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mleft "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mpure "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mpureIntro "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mrenameI "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mspecialize "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mspecializePure "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mstart "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mstop "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mleave "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mcases "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mrefine "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mintro "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mrevert "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mspecNoBind "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mspecNoSimp "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax mspec "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`"
+  (since := "2026-09-23")
+deprecated_syntax tacticMvcgen_trivial_extensible
+  "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")
+deprecated_syntax tacticMvcgen_trivial
+  "the `Std.Do` proof mode is deprecated; use `vcgen` from `Std.WP`" (since := "2026-09-23")

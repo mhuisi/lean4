@@ -32,14 +32,12 @@ public def fmtHeader : Fmt := fun
             let tks := Layouts.spacedAtomic #[publicTk?, metaTk?, importTk, allTk?]
             let mod ← fmt mod
             return Layouts.pseudoApplication #[tks, mod]
-        | _ =>
-          throw .partialFormatter
+        | _ => throw .partialFormatter
     return Layouts.spacedLines #[
       moduleTk?,
       Layouts.lines <| #[preludeTk?] ++ imports
     ]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Module.module]
 public def fmtModule : Fmt := fun stx => do

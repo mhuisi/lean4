@@ -51,8 +51,7 @@ public def array (array : Array TaggedDoc) (format : Types.ArrayFormat) : Tagged
   | .joinUsingBreak =>
     let terms := array.map (.withSepAfter · «break»)
     maybeFlattened <| combine terms
-  | .fill =>
-    fillUsingSpace array
+  | .fill => fillUsingSpace array
 
 public def lines (lines : Array TaggedDoc) : TaggedDoc :=
   array lines <| .joinUsingNl (allowFlattening := false)
@@ -116,8 +115,7 @@ public def sepArray (sepArray : SepArray sep) (format : Types.SepArrayFormat)
   if sepArray.elemsAndSeps.size = 1 then
     return sepArray.elemsAndSeps[0]!
   match format with
-  | .joinUsingSep afterElem? afterSep? _ =>
-    joinUsingSep sepArray afterElem? afterSep?
+  | .joinUsingSep afterElem? afterSep? _ => joinUsingSep sepArray afterElem? afterSep?
   | .joinUsingNl allowFlattening afterElem? _ =>
     let joinedUsingNl := joinUsingNl sepArray afterElem?
     if allowFlattening then
@@ -127,10 +125,8 @@ public def sepArray (sepArray : SepArray sep) (format : Types.SepArrayFormat)
       ]
     else
       joinedUsingNl
-  | .fillUsingSep afterElem? afterSep? _ =>
-    fillUsingSep sepArray afterElem? afterSep?
-  | .fillUsingSpacedSep afterElem? _ =>
-    fillUsingSpacedSep sepArray afterElem?
+  | .fillUsingSep afterElem? afterSep? _ => fillUsingSep sepArray afterElem? afterSep?
+  | .fillUsingSpacedSep afterElem? _ => fillUsingSpacedSep sepArray afterElem?
 
 where
 
@@ -275,8 +271,7 @@ where
     modify fun s => s.insert cacheKey isAligned
     return isAligned
   go : Doc τ → StateM (Std.HashMap (PtrKey (Doc τ)) Bool) Bool
-    | .aligned _ =>
-      return true
+    | .aligned _ => return true
     | .tagged _ d
     | .flattened d
     | .unflattenable d
@@ -288,10 +283,8 @@ where
     | .guarded _ d
     | .costing _ d =>
       goMemoized d
-    | .either a b =>
-      return (← goMemoized a) && (← goMemoized b)
-    | .failure | .text _ | .newline _ | .append _ _ =>
-      return false
+    | .either a b => return (← goMemoized a) && (← goMemoized b)
+    | .failure | .text _ | .newline _ | .append _ _ => return false
 
 public inductive Types.PrefixOperatorFormat where
   | withoutSpacing
@@ -365,7 +358,7 @@ public def permitDenseLayout (doc : TaggedDoc) (respectPseudoAlignment : Bool) :
   if respectPseudoAlignment then
     !pseudoAligned?.isSome && ! isAligned doc.doc
   else
-    ! (pseudoAligned?.any (·.mustBeRespected)) && ! isAligned doc.doc
+    !(pseudoAligned?.any (·.mustBeRespected)) && ! isAligned doc.doc
 
 public def infixOperator (chain : Array TaggedDoc) (format : Types.InfixOperatorFormat := .sparse)
     : TaggedDoc := Id.run do
@@ -605,10 +598,8 @@ public def alt (subAlts : Array TaggedDoc) (arrowTk rhs : TaggedDoc) (isComplex 
   let some stickyRhs := getSticky? rhs
     | return ⟨flat, nonStickyDoc⟩
   let stickyDoc := combine #[.withSepAfter lhs ⟨space, nested⟩, stickyRhs.stickyVariant]
-  return ⟨
-    flat,
-    withStickyAlt nonStickyDoc stickyDoc (.ofSticky stickyRhs (allowFlattening := false))
-  ⟩
+  return
+    ⟨flat, withStickyAlt nonStickyDoc stickyDoc (.ofSticky stickyRhs (allowFlattening := false))⟩
 where
   combineSubAlts (subAlts : Array TaggedDoc) : TaggedDoc :=
     if isComplex then
@@ -687,8 +678,7 @@ public def keywordPrefixedTerm
       else
         (stickyCombine (flattened keyword) ⟨nl, nested⟩ term, .coequal)
     return sticky nonStickyDoc stickyDoc kind
-  | .nonSticky =>
-    return nonStickyDoc
+  | .nonSticky => return nonStickyDoc
 
 public inductive Types.KeywordPrefixedAltsFormat where
   | sticky
@@ -704,8 +694,7 @@ public def keywordPrefixedAlts
   | .sticky =>
     let stickyDoc := Layouts.lines #[flattened keyword, alts]
     sticky nonStickyDoc stickyDoc .coequal
-  | .nonSticky =>
-    nonStickyDoc
+  | .nonSticky => nonStickyDoc
 
 public inductive Types.KeywordPrefixedSepArrayFormat where
   | sticky (sepArrayFormat : Types.SepArrayFormat)
@@ -1040,8 +1029,7 @@ def signature
     match kind with
     | .local respectPseudoAlignment =>
       .dense (hardNestedFirstOperand := false) (respectPseudoAlignment := respectPseudoAlignment)
-    | .global =>
-      .sparse (hardNestedFirstOperand := false)
+    | .global => .sparse (hardNestedFirstOperand := false)
   let binderGroups :=
     Layouts.horizontalOrVertical <| binderGroups.map (fillUsingSpaceWithSoftBoundaries ·)
   nested <| Layouts.typeAscription (format := format)

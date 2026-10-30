@@ -20,32 +20,39 @@ namespace RefVec
 variable {α : Type} [Hashable α] [DecidableEq α] {aig : AIG α}
 
 @[specialize]
-def fold (aig : AIG α) (vec : RefVec aig len)
-    (func : (aig : AIG α) → BinaryInput aig → Entrypoint α) [LawfulOperator α BinaryInput func] :
-    Entrypoint α :=
+def fold
+    (aig : AIG α) (vec : RefVec aig len) (func : (aig : AIG α) → BinaryInput aig → Entrypoint α)
+    [LawfulOperator α BinaryInput func]
+    : Entrypoint α :=
   let acc := aig.mkConstCached true
   go aig acc 0 len vec func
 where
   @[specialize]
-  go (aig : AIG α) (acc : Ref aig) (idx : Nat) (len : Nat) (input : RefVec aig len)
-     (f : (aig : AIG α) → BinaryInput aig → Entrypoint α) [LawfulOperator α BinaryInput f] :
-     Entrypoint α :=
+  go
+      (aig : AIG α) (acc : Ref aig)
+      (idx : Nat)
+      (len : Nat) (input : RefVec aig len)
+      (f : (aig : AIG α) → BinaryInput aig → Entrypoint α) [LawfulOperator α BinaryInput f]
+      : Entrypoint α :=
     if hidx : idx < len then
       let res := f aig ⟨acc, input.get idx hidx⟩
       let aig := res.aig
       let newAcc := res.ref
-      let input := input.cast <| by
-        intros
-        apply LawfulOperator.le_size_of_le_aig_size (f := f)
-        omega
+      let input :=
+        input.cast <| by
+          intros
+          apply LawfulOperator.le_size_of_le_aig_size (f := f)
+          omega
       go aig newAcc (idx + 1) len input f
     else
       ⟨aig, acc⟩
   termination_by len - idx
 
-theorem fold.go_le_size {aig : AIG α} (acc : Ref aig) (idx : Nat) (s : RefVec aig len)
-    (f : (aig : AIG α) → BinaryInput aig → Entrypoint α) [LawfulOperator α BinaryInput f] :
-    aig.decls.size ≤ (go aig acc idx len s f).1.decls.size := by
+theorem fold.go_le_size
+    {aig : AIG α} (acc : Ref aig)
+    (idx : Nat) (s : RefVec aig len)
+    (f : (aig : AIG α) → BinaryInput aig → Entrypoint α) [LawfulOperator α BinaryInput f]
+    : aig.decls.size ≤ (go aig acc idx len s f).1.decls.size := by
   unfold go
   split
   next h =>
@@ -53,20 +60,21 @@ theorem fold.go_le_size {aig : AIG α} (acc : Ref aig) (idx : Nat) (s : RefVec a
     refine Nat.le_trans ?_ (by apply fold.go_le_size)
     apply LawfulOperator.le_size
   · simp
-  termination_by len - idx
+termination_by len - idx
 
-theorem fold_le_size {aig : AIG α} (vec : RefVec aig len)
-    (func : (aig : AIG α) → BinaryInput aig → Entrypoint α)
-    [LawfulOperator α BinaryInput func] :
-    aig.decls.size ≤ (fold aig vec func).1.decls.size := by
+theorem fold_le_size
+    {aig : AIG α} (vec : RefVec aig len) (func : (aig : AIG α) → BinaryInput aig → Entrypoint α)
+    [LawfulOperator α BinaryInput func]
+    : aig.decls.size ≤ (fold aig vec func).1.decls.size := by
   unfold fold
   dsimp only
   apply fold.go_le_size
 
-theorem fold.go_decl_eq {aig : AIG α} (acc : Ref aig) (i : Nat) (s : RefVec aig len)
-    (f : (aig : AIG α) → BinaryInput aig → Entrypoint α) [LawfulOperator α BinaryInput f] :
-    ∀ (idx : Nat) (h1) (h2),
-      (go aig acc i len s f).1.decls[idx]'h2 = aig.decls[idx]'h1 := by
+theorem fold.go_decl_eq
+    {aig : AIG α} (acc : Ref aig)
+    (i : Nat) (s : RefVec aig len)
+    (f : (aig : AIG α) → BinaryInput aig → Entrypoint α) [LawfulOperator α BinaryInput f]
+    : ∀ (idx : Nat) (h1) (h2), (go aig acc i len s f).1.decls[idx]'h2 = aig.decls[idx]'h1 := by
   generalize hgo : go aig acc i len s f = res
   unfold go at hgo
   split at hgo
@@ -82,55 +90,52 @@ theorem fold.go_decl_eq {aig : AIG α} (acc : Ref aig) (i : Nat) (s : RefVec aig
     simp
 termination_by len - i
 
-theorem fold_decl_eq {aig : AIG α} (vec : RefVec aig len)
-    (func : (aig : AIG α) → BinaryInput aig → Entrypoint α) [LawfulOperator α BinaryInput func] :
-    ∀ idx (h1 : idx < aig.decls.size) (h2),
-      (fold aig vec func).1.decls[idx]'h2
-        =
-      aig.decls[idx]'h1 := by
+theorem fold_decl_eq
+    {aig : AIG α} (vec : RefVec aig len) (func : (aig : AIG α) → BinaryInput aig → Entrypoint α)
+    [LawfulOperator α BinaryInput func]
+    : ∀ idx (h1 : idx < aig.decls.size) (h2),
+      (fold aig vec func).1.decls[idx]'h2 = aig.decls[idx]'h1 := by
   intros
   simp only [fold]
   rw [fold.go_decl_eq]
 
-theorem fold_lt_size_of_lt_aig_size (aig : AIG α) (vec : RefVec aig len)
-    (func : (aig : AIG α) → BinaryInput aig → Entrypoint α) [LawfulOperator α BinaryInput func]
-    (h : x < aig.decls.size) :
-    x < (fold aig vec func).aig.decls.size := by
+theorem fold_lt_size_of_lt_aig_size
+    (aig : AIG α) (vec : RefVec aig len) (func : (aig : AIG α) → BinaryInput aig → Entrypoint α)
+    [LawfulOperator α BinaryInput func]
+    (h : x < aig.decls.size)
+    : x < (fold aig vec func).aig.decls.size := by
   apply Nat.lt_of_lt_of_le
   · exact h
   · apply fold_le_size
 
-theorem fold_le_size_of_le_aig_size (aig : AIG α) (vec : RefVec aig len)
-    (func : (aig : AIG α) → BinaryInput aig → Entrypoint α) [LawfulOperator α BinaryInput func]
-    (h : x ≤ aig.decls.size) :
-    x ≤ (fold aig vec func).aig.decls.size := by
+theorem fold_le_size_of_le_aig_size
+    (aig : AIG α) (vec : RefVec aig len) (func : (aig : AIG α) → BinaryInput aig → Entrypoint α)
+    [LawfulOperator α BinaryInput func]
+    (h : x ≤ aig.decls.size)
+    : x ≤ (fold aig vec func).aig.decls.size := by
   apply Nat.le_trans
   · exact h
   · apply fold_le_size
 
 namespace fold
 
-theorem denote_go_and {aig : AIG α} (acc : AIG.Ref aig) (curr : Nat)
-    (hcurr : curr ≤ len) (input : RefVec aig len) :
-    ⟦
-      (go aig acc curr len input mkAndCached).aig,
-      (go aig acc curr len input mkAndCached).ref,
-      assign
-    ⟧
-      =
-    (
-      ⟦aig, acc, assign⟧
-        ∧
-      (∀ (idx : Nat) (hidx1 : idx < len), curr ≤ idx → ⟦aig, input.get idx hidx1, assign⟧)
-    ) := by
+theorem denote_go_and
+    {aig : AIG α} (acc : AIG.Ref aig) (curr : Nat) (hcurr : curr ≤ len) (input : RefVec aig len)
+    : ⟦
+        (go aig acc curr len input mkAndCached).aig,
+        (go aig acc curr len input mkAndCached).ref,
+        assign
+      ⟧
+      = (⟦aig, acc, assign⟧
+        ∧ (∀ (idx : Nat) (hidx1 : idx < len),
+          curr ≤ idx → ⟦aig, input.get idx hidx1, assign⟧)) := by
   generalize hgo : go aig acc curr len input mkAndCached = res
   unfold go at hgo
   split at hgo
   · dsimp only at hgo
     rw [← hgo]
     rw [denote_go_and]
-    · simp only [denote_projected_entry, denote_mkAndCached, Bool.and_eq_true, get_cast,
-        eq_iff_iff]
+    · simp only [denote_projected_entry, denote_mkAndCached, Bool.and_eq_true, get_cast, eq_iff_iff]
       constructor
       · intro h
         rcases h with ⟨⟨h1, h2⟩, h3⟩
@@ -164,10 +169,9 @@ termination_by len - curr
 end fold
 
 @[simp]
-theorem denote_fold_and {aig : AIG α} (s : RefVec aig len) :
-    ⟦(fold aig s AIG.mkAndCached), assign⟧
-      ↔
-    (∀ (idx : Nat) (hidx : idx < len), ⟦aig, s.get idx hidx, assign⟧) := by
+theorem denote_fold_and {aig : AIG α} (s : RefVec aig len)
+    : ⟦(fold aig s AIG.mkAndCached), assign⟧
+      ↔ (∀ (idx : Nat) (hidx : idx < len), ⟦aig, s.get idx hidx, assign⟧) := by
   unfold fold
   rw [fold.denote_go_and]
   · simp

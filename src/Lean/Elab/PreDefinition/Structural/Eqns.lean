@@ -22,14 +22,14 @@ open Eqns
 namespace Structural
 
 public structure EqnInfo where
-  declName    : Name
+  declName : Name
   levelParams : List Name
-  type        : Expr
-  value       : Expr
+  type : Expr
+  value : Expr
   recArgPos : Nat
   declNames : Array Name
   fixedParamPerms : FixedParamPerms
-  deriving Inhabited
+deriving Inhabited
 
 /--
 Searches in the lhs of goal for a `.brecOn` application, possibly with extra arguments
@@ -37,28 +37,32 @@ and under `PProd` projections. Returns the `.brecOn` application and the context
 `(fun x => (x).1.2.3 extraArgs = rhs)`.
 -/
 partial def findBRecOnLHS (goal : Expr) : MetaM (Expr × Expr) := do
-  let some (_, lhs, rhs) := goal.eq? | throwError "goal not an equality{indentExpr goal}"
-  go lhs fun brecOnApp x c =>
-    return (brecOnApp, ← mkLambdaFVars #[x] (← mkEq c rhs))
+  let some (_, lhs, rhs) := goal.eq?
+    | throwError "goal not an equality{indentExpr goal}"
+  go lhs fun brecOnApp x c => return (brecOnApp, ← mkLambdaFVars #[x] (← mkEq c rhs))
 where
-  go {α} (e : Expr) (k : Expr → Expr → Expr → MetaM α) : MetaM α := e.withApp fun f xs => do
-    if let .proj t n e := f then
-      return ← go e fun brecOnApp x c => k brecOnApp x (mkAppN (mkProj t n c) xs)
-    if let .const name _ := f then
-      if isBRecOnRecursor (← getEnv) name then
-        let arity ← forallTelescope (← inferType f) fun xs _ => return xs.size
-        if arity ≤ xs.size then
-          let brecOnApp := mkAppN f xs[:arity]
-          let extraArgs := xs[arity:]
-          return ← withLocalDeclD `x (← inferType brecOnApp) fun x =>
-            k brecOnApp x (mkAppN x extraArgs)
-    throwError "could not find `.brecOn` application in{indentExpr e}"
+  go {α} (e : Expr) (k : Expr → Expr → Expr → MetaM α) : MetaM α :=
+    e.withApp fun f xs => do
+      if let .proj t n e := f then
+        return ← go e fun brecOnApp x c => k brecOnApp x (mkAppN (mkProj t n c) xs)
+      if let .const name _ := f then
+        if isBRecOnRecursor (← getEnv) name then
+          let arity ← forallTelescope (← inferType f) fun xs _ => return xs.size
+          if arity ≤ xs.size then
+            let brecOnApp := mkAppN f xs[:arity]
+            let extraArgs := xs[arity:]
+            return ← withLocalDeclD `x (← inferType brecOnApp) fun x =>
+              k brecOnApp x (mkAppN x extraArgs)
+      throwError "could not find `.brecOn` application in{indentExpr e}"
 
-def deltaRHS? (mvarId : MVarId) (declName : Name) : MetaM (Option MVarId) := mvarId.withContext do
-  let target ← mvarId.getType'
-  let some (_, lhs, rhs) := target.eq? | return none
-  let some rhs ← delta? rhs.consumeMData (· == declName) | return none
-  mvarId.replaceTargetDefEq (← mkEq lhs rhs)
+def deltaRHS? (mvarId : MVarId) (declName : Name) : MetaM (Option MVarId) :=
+  mvarId.withContext do
+    let target ← mvarId.getType'
+    let some (_, lhs, rhs) := target.eq?
+      | return none
+    let some rhs ← delta? rhs.consumeMData (· == declName)
+      | return none
+    mvarId.replaceTargetDefEq (← mkEq lhs rhs)
 
 /--
 Creates the proof of the unfolding theorem for `declName` with type `type`. It
@@ -75,90 +79,108 @@ Creates the proof of the unfolding theorem for `declName` with type `type`. It
 partial def mkProof (declName : Name) (type : Expr) : MetaM Expr := do
   withTraceNode `Elab.definition.structural.eqns (fun _ => return m!"proving:{indentExpr type}") do
     prependError m!"failed to generate equational theorem for `{.ofConstName declName}`" do
-    withNewMCtxDepth do
-      let main ← mkFreshExprSyntheticOpaqueMVar type
-      let (_, mvarId) ← main.mvarId!.intros
-      unless (← tryURefl mvarId) do -- catch easy cases
-        goUnfold (← deltaLHS mvarId)
-      instantiateMVars main
+      withNewMCtxDepth do
+        let main ← mkFreshExprSyntheticOpaqueMVar type
+        let (_, mvarId) ← main.mvarId!.intros
+        unless (← tryURefl mvarId) do -- catch easy cases
+          goUnfold (← deltaLHS mvarId)
+        instantiateMVars main
 where
   goUnfold (mvarId : MVarId) : MetaM Unit := do
-    withTraceNode `Elab.definition.structural.eqns (fun _ => return m!"goUnfold:\n{MessageData.ofGoal mvarId}") do
-    let mvarId' ← mvarId.withContext do
-      -- This should now be headed by `.brecOn`
-      let goal ← mvarId.getType
-      let (brecOnApp, context) ← findBRecOnLHS goal
-      let brecOnName := brecOnApp.getAppFn.constName!
-      let us := brecOnApp.getAppFn.constLevels!
-      let brecOnThmName := brecOnName.str "eq"
-      let brecOnAppArgs := brecOnApp.getAppArgs
-      unless (← hasConst brecOnThmName) do
-        throwError "no theorem `{brecOnThmName}`\n{MessageData.ofGoal mvarId}"
-      -- We don't just `← inferType eqThmApp` as that beta-reduces more than we want
-      let eqThmType ← inferType (mkConst brecOnThmName us)
-      let eqThmType ← instantiateForall eqThmType brecOnAppArgs
-      let some (_, _, rwRhs) := eqThmType.eq? | throwError "theorem `{brecOnThmName}` is not an equality\n{MessageData.ofGoal mvarId}"
-      let recArg := rwRhs.getAppArgs.back!
-      trace[Elab.definition.structural.eqns] "abstracting{inlineExpr recArg} from{indentExpr rwRhs}"
-      let mvarId2 ← mvarId.define `r (← inferType recArg) recArg
-      let (r, mvarId3) ← mvarId2.intro1P
-      let mvarId4 ← mvarId3.withContext do
-        let goal' := mkApp rwRhs.appFn! (mkFVar r)
-        let thm ← mkCongrArg context (mkAppN (mkConst brecOnThmName us) brecOnAppArgs)
-        mvarId3.replaceTargetEq (mkApp context goal') thm
-      pure mvarId4
-    go mvarId'
+    withTraceNode `Elab.definition.structural.eqns
+      (fun _ =>
+        return m!"goUnfold:\
+          \n{MessageData.ofGoal mvarId}")
+      do
+        let mvarId' ←
+          mvarId.withContext do
+            -- This should now be headed by `.brecOn`
+            let goal ← mvarId.getType
+            let (brecOnApp, context) ← findBRecOnLHS goal
+            let brecOnName := brecOnApp.getAppFn.constName!
+            let us := brecOnApp.getAppFn.constLevels!
+            let brecOnThmName := brecOnName.str "eq"
+            let brecOnAppArgs := brecOnApp.getAppArgs
+            unless (← hasConst brecOnThmName) do
+              throwError "no theorem `{brecOnThmName}`\
+                \n{MessageData.ofGoal mvarId}"
+            -- We don't just `← inferType eqThmApp` as that beta-reduces more than we want
+            let eqThmType ← inferType (mkConst brecOnThmName us)
+            let eqThmType ← instantiateForall eqThmType brecOnAppArgs
+            let some (_, _, rwRhs) := eqThmType.eq?
+              | throwError "theorem `{brecOnThmName}` is not an equality\
+                  \n{MessageData.ofGoal mvarId}"
+            let recArg := rwRhs.getAppArgs.back!
+            trace[Elab.definition.structural.eqns]
+              "abstracting{inlineExpr recArg} from{indentExpr rwRhs}"
+            let mvarId2 ← mvarId.define `r (← inferType recArg) recArg
+            let (r, mvarId3) ← mvarId2.intro1P
+            let mvarId4 ←
+              mvarId3.withContext do
+                let goal' := mkApp rwRhs.appFn! (mkFVar r)
+                let thm ← mkCongrArg context (mkAppN (mkConst brecOnThmName us) brecOnAppArgs)
+                mvarId3.replaceTargetEq (mkApp context goal') thm
+            pure mvarId4
+        go mvarId'
 
   go (mvarId : MVarId) : MetaM Unit := do
-    withTraceNode `Elab.definition.structural.eqns (fun _ => return m!"step:\n{MessageData.ofGoal mvarId}") do
-      if (← tryURefl mvarId) then
-        trace[Elab.definition.structural.eqns] "tryURefl succeeded"
-        return ()
-      else if (← tryContradiction mvarId) then
-        trace[Elab.definition.structural.eqns] "tryContadiction succeeded"
-        return ()
-      else if let some mvarId ← whnfReducibleLHS? mvarId then
-        trace[Elab.definition.structural.eqns] "whnfReducibleLHS succeeded"
-        go mvarId
-      else if let some mvarId ← simpMatch? mvarId then
-        trace[Elab.definition.structural.eqns] "simpMatch? succeeded"
-        go mvarId
-      else if let some mvarId ← simpIf? mvarId (useNewSemantics := true) then
-        trace[Elab.definition.structural.eqns] "simpIf? succeeded"
-        go mvarId
-      else
-        let ctx ← Simp.mkContext
-        match (← simpTargetStar mvarId ctx (simprocs := {})).1 with
-        | TacticResultCNM.closed =>
-          trace[Elab.definition.structural.eqns] "simpTargetStar closed the goal"
-        | TacticResultCNM.modified mvarId =>
-          trace[Elab.definition.structural.eqns] "simpTargetStar modified the goal"
+    withTraceNode `Elab.definition.structural.eqns
+      (fun _ =>
+        return m!"step:\
+          \n{MessageData.ofGoal mvarId}")
+      do
+        if (← tryURefl mvarId) then
+          trace[Elab.definition.structural.eqns] "tryURefl succeeded"
+          return ()
+        else if (← tryContradiction mvarId) then
+          trace[Elab.definition.structural.eqns] "tryContadiction succeeded"
+          return ()
+        else if let some mvarId ← whnfReducibleLHS? mvarId then
+          trace[Elab.definition.structural.eqns] "whnfReducibleLHS succeeded"
           go mvarId
-        | TacticResultCNM.noChange =>
-          if let some mvarId ← deltaRHS? mvarId declName then
-            trace[Elab.definition.structural.eqns] "deltaRHS? succeeded"
+        else if let some mvarId ← simpMatch? mvarId then
+          trace[Elab.definition.structural.eqns] "simpMatch? succeeded"
+          go mvarId
+        else if let some mvarId ← simpIf? mvarId (useNewSemantics := true) then
+          trace[Elab.definition.structural.eqns] "simpIf? succeeded"
+          go mvarId
+        else
+          let ctx ← Simp.mkContext
+          match (← simpTargetStar mvarId ctx (simprocs := {})).1 with
+          | TacticResultCNM.closed =>
+            trace[Elab.definition.structural.eqns] "simpTargetStar closed the goal"
+          | TacticResultCNM.modified mvarId =>
+            trace[Elab.definition.structural.eqns] "simpTargetStar modified the goal"
             go mvarId
-          else if let some mvarIds ← casesOnStuckLHS? mvarId then
-            trace[Elab.definition.structural.eqns] "casesOnStuckLHS? succeeded"
-            mvarIds.forM go
-          else if let some mvarIds ← splitTarget? mvarId (useNewSemantics := true) then
-            trace[Elab.definition.structural.eqns] "splitTarget? succeeded"
-            mvarIds.forM go
-          else
-            throwError "no progress at goal\n{MessageData.ofGoal mvarId}"
+          | TacticResultCNM.noChange =>
+            if let some mvarId ← deltaRHS? mvarId declName then
+              trace[Elab.definition.structural.eqns] "deltaRHS? succeeded"
+              go mvarId
+            else if let some mvarIds ← casesOnStuckLHS? mvarId then
+              trace[Elab.definition.structural.eqns] "casesOnStuckLHS? succeeded"
+              mvarIds.forM go
+            else if let some mvarIds ← splitTarget? mvarId (useNewSemantics := true) then
+              trace[Elab.definition.structural.eqns] "splitTarget? succeeded"
+              mvarIds.forM go
+            else
+              throwError "no progress at goal\
+                \n{MessageData.ofGoal mvarId}"
 
 public builtin_initialize eqnInfoExt : MapDeclarationExtension EqnInfo ←
-  mkMapDeclarationExtension (logWrites := true) (exportEntriesFn := fun env s =>
-    let all := s.toArray
-    -- Do not export for non-exposed defs at exported/server levels
-    let exported := s.filter (fun n _ => env.hasExposedBody n) |>.toArray
-    { exported, server := exported, «private» := all })
+  mkMapDeclarationExtension (logWrites := true)
+    (exportEntriesFn := fun env s =>
+      let all := s.toArray
+      -- Do not export for non-exposed defs at exported/server levels
+      let exported := s.filter (fun n _ => env.hasExposedBody n) |>.toArray
+      { exported, server := exported, «private» := all })
 
-public def registerEqnsInfo (preDef : PreDefinition) (declNames : Array Name) (recArgPos : Nat)
-    (fixedParamPerms : FixedParamPerms) : CoreM Unit := do
+public def registerEqnsInfo
+    (preDef : PreDefinition) (declNames : Array Name) (recArgPos : Nat)
+    (fixedParamPerms : FixedParamPerms)
+    : CoreM Unit := do
   ensureEqnReservedNamesAvailable preDef.declName
-  modifyEnv fun env => eqnInfoExt.insert env preDef.declName
-    { preDef with recArgPos, declNames, fixedParamPerms }
+  modifyEnv fun env =>
+    eqnInfoExt.insert env preDef.declName { preDef with recArgPos, declNames, fixedParamPerms }
 
 /-- Generate the "unfold" lemma for `declName`. -/
 def mkUnfoldEq (declName : Name) (info : EqnInfo) : MetaM Name := do
@@ -166,19 +188,17 @@ def mkUnfoldEq (declName : Name) (info : EqnInfo) : MetaM Name := do
   realizeConst info.declNames[0]! name (withEqnOptions declName (doRealize name))
   return name
 where
-  doRealize name := withOptions (tactic.hygienic.set · false) do
-    lambdaTelescope info.value fun xs body => do
-      let us := info.levelParams.map mkLevelParam
-      let type ← mkEq (mkAppN (Lean.mkConst declName us) xs) body
-      let value ← withoutExporting <| mkProof declName type
-      let type ← mkForallFVars xs type
-      let type ← letToHave type
-      let value ← mkLambdaFVars xs value
-      addDecl <| Declaration.thmDecl {
-        name, type, value
-        levelParams := info.levelParams
-      }
-      inferDefEqAttr name
+  doRealize name :=
+    withOptions (tactic.hygienic.set · false) do
+      lambdaTelescope info.value fun xs body => do
+        let us := info.levelParams.map mkLevelParam
+        let type ← mkEq (mkAppN (Lean.mkConst declName us) xs) body
+        let value ← withoutExporting <| mkProof declName type
+        let type ← mkForallFVars xs type
+        let type ← letToHave type
+        let value ← mkLambdaFVars xs value
+        addDecl <| Declaration.thmDecl { name, type, value, levelParams := info.levelParams }
+        inferDefEqAttr name
 
 def getUnfoldFor? (declName : Name) : MetaM (Option Name) := do
   if let some info := eqnInfoExt.find? (← getEnv) declName then
@@ -189,9 +209,9 @@ def getUnfoldFor? (declName : Name) : MetaM (Option Name) := do
 set_option compiler.ignoreBorrowAnnotation true in
 @[export lean_get_structural_rec_arg_pos]
 def getStructuralRecArgPosImp? (declName : Name) : CoreM (Option Nat) := do
-  let some info := eqnInfoExt.find? (← getEnv) declName | return none
+  let some info := eqnInfoExt.find? (← getEnv) declName
+    | return none
   return some info.recArgPos
-
 
 builtin_initialize
   registerGetUnfoldEqnFn getUnfoldFor?

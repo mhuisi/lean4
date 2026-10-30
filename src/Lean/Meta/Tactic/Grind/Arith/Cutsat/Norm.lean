@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.Cutsat.Util
 import Lean.Meta.IntInstTesters
@@ -31,25 +32,36 @@ partial def toLinearExpr (e : Expr) (generation : Nat := 0) : GoalM Int.Internal
   let mul (a b : Expr) := do
     match (← getIntValue? a) with
     | some k => return .mulL k (← toLinearExpr b)
-    | none => match (← getIntValue? b) with
+    | none =>
+      match (← getIntValue? b) with
       | some k => return .mulR (← toLinearExpr a) k
       | none => toVar e
   match_expr e with
   | OfNat.ofNat _ _ _ =>
-    if let some n ← getIntValue? e then return .num n
-    else toVar e
+    if let some n ← getIntValue? e then
+      return .num n
+    else
+      toVar e
   | Neg.neg _ i a =>
-    if (← isInstNegInt i) then return .neg (← toLinearExpr a)
-    else toVar e
+    if (← isInstNegInt i) then
+      return .neg (← toLinearExpr a)
+    else
+      toVar e
   | HAdd.hAdd _ _ _ i a b =>
-    if (← isInstHAddInt i) then return .add (← toLinearExpr a) (← toLinearExpr b)
-    else toVar e
+    if (← isInstHAddInt i) then
+      return .add (← toLinearExpr a) (← toLinearExpr b)
+    else
+      toVar e
   | HSub.hSub _ _ _ i a b =>
-    if (← isInstHSubInt i) then return .sub (← toLinearExpr a) (← toLinearExpr b)
-    else toVar e
+    if (← isInstHSubInt i) then
+      return .sub (← toLinearExpr a) (← toLinearExpr b)
+    else
+      toVar e
   | HMul.hMul _ _ _ i a b =>
-    if (← isInstHMulInt i) then mul a b
-    else toVar e
+    if (← isInstHMulInt i) then
+      mul a b
+    else
+      toVar e
   | _ => toVar e
 
 end Lean.Meta.Grind.Arith.Cutsat

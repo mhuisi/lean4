@@ -27,8 +27,7 @@ public def fmtSyntheticHole : Fmt := fun
     let questionTk ← fmt questionTk
     let holeTk ← fmt holeTk
     return Layouts.atomic #[questionTk, holeTk]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.omission]
 public def fmtOmission : Fmt := fmtAtomic
@@ -37,15 +36,13 @@ public def fmtOmission : Fmt := fmtAtomic
 public def fmtExplicitBinder : Fmt := fun
   | `(explicitBinderF| (%$lbTk $ids* $[:%$typeAscriptionTk? $type?:term]? $[$tacticOrDefault?]? )%$rbTk) =>
     fmtBinder #[lbTk] ids #[] typeAscriptionTk? type? tacticOrDefault? #[rbTk]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.implicitBinder]
 public def fmtImplicitBinder : Fmt := fun
   | `(implicitBinderF| {%$lbTk $ids* $[:%$typeAscriptionTk? $type?:term]? }%$rbTk) =>
     fmtBinder #[lbTk] ids #[] typeAscriptionTk? type? none #[rbTk]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.strictImplicitBinder]
 public def fmtStrictImplicitBinder : Fmt := fun
@@ -57,15 +54,13 @@ public def fmtStrictImplicitBinder : Fmt := fun
     fmtBinder #[lbTk] ids #[] typeAscriptionTk? type? none #[rbTk1, rbTk2] (kind := .global)
   | `(strictImplicitBinderF| ⦃%$lbTk $ids* $[:%$typeAscriptionTk? $type?:term]? ⦄%$rbTk) =>
     fmtBinder #[lbTk] ids #[] typeAscriptionTk? type? none #[rbTk] (kind := .global)
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.instBinder]
 public def fmtInstBinder : Fmt := fun
   | `(Parser.Term.instBinder| [%$lbTk $[$id?:ident :%$typeAscriptionTk?]? $classType:term ]%$rbTk) =>
     fmtBinder #[lbTk] id?.toArray #[] typeAscriptionTk? classType none #[rbTk]
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Term.structInstArrayRef]
 public def fmtStructInstArrayRef : Fmt := fun
@@ -74,8 +69,7 @@ public def fmtStructInstArrayRef : Fmt := fun
     let idx ← fmt idx
     let rbTk ← fmt rbTk
     return Layouts.bracketed lbTk idx rbTk .dense
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[expose] public def structInstLValKinds := [`ident, `fieldIdx, ``Parser.Term.structInstArrayRef]
 
@@ -179,8 +173,7 @@ public def fmtStructInstField : Fmt := fun
     let some structInstFieldDecl := getStructInstFieldDecl? structInstFieldDecl?
       | throw .partialFormatter
     return structInstFieldDecl.format signature
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.tacticSeq1Indented]
 public def fmtTacticSeq1Indented : Fmt := fun
@@ -197,8 +190,7 @@ public def fmtTacticSeqBracketed : Fmt := fun
     let tactics ← fmtSeq tactics none
     let rbTk ← fmt rbTk
     return Layouts.bracketed lbTk tactics rbTk <| .sparse hardNl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter
 
 @[builtin_fmt Lean.Parser.Tactic.tacticSeq]
 public def fmtTacticSeq : Fmt := fun

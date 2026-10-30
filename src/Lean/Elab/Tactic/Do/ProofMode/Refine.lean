@@ -20,30 +20,39 @@ def patAsTerm (pat : MRefinePat) (expected : Option Expr := none) : OptionT Tact
   | .one name =>
     if let `(binderIdent| $name:ident) := name then
       elabTerm (← `($name)) expected
-    else failure
+    else
+      failure
   | _ => failure
 
-partial def mRefineCore (goal : MGoal) (pat : MRefinePat) (k : MGoal → TSyntax ``binderIdent → TacticM Expr) : TacticM Expr := do
+partial def mRefineCore
+    (goal : MGoal) (pat : MRefinePat) (k : MGoal → TSyntax ``binderIdent → TacticM Expr)
+    : TacticM Expr := do
   match pat with
-  | .stateful name => liftMetaM do
-    match name with
-    | `(binderIdent| $name:ident) => do
-      let some prf ← goal.exact name | throwError "unknown hypothesis `{repr name}`"
-      return prf
-    | _ => do
-      let some prf ← goal.assumption | throwError "could not solve {goal.target} by assumption"
-      return prf
+  | .stateful name =>
+    liftMetaM do
+      match name with
+      | `(binderIdent| $name:ident) => do
+        let some prf ← goal.exact name
+          | throwError "unknown hypothesis `{repr name}`"
+        return prf
+      | _ => do
+        let some prf ← goal.assumption
+          | throwError "could not solve {goal.target} by assumption"
+        return prf
   | .pure t => do
     goal.exactPure t
   | .one name =>
-      if let `(binderIdent| $_:ident) := name then
-        mRefineCore goal (.pure ⟨name.raw⟩) k <|> mRefineCore goal (.stateful name) k
-      else
-        mRefineCore goal (.stateful name) k
-  | .hole name => k goal name
-  | .tuple [] => throwUnsupportedSyntax
-  | .tuple [p] => mRefineCore goal p k
-  | .tuple (p::ps) => do
+    if let `(binderIdent| $_:ident) := name then
+      mRefineCore goal (.pure ⟨name.raw⟩) k <|> mRefineCore goal (.stateful name) k
+    else
+      mRefineCore goal (.stateful name) k
+  | .hole name =>
+    k goal name
+  | .tuple [] =>
+    throwUnsupportedSyntax
+  | .tuple [p] =>
+    mRefineCore goal p k
+  | .tuple (p :: ps) => do
     let T ← whnfR goal.target
     let f := T.getAppFn'
     let args := T.getAppArgs
@@ -57,11 +66,13 @@ partial def mRefineCore (goal : MGoal) (pat : MRefinePat) (k : MGoal → TSyntax
     else if f.isConstOf ``SPred.exists && args.size >= 3 then
       let α := args[0]!
       let ψ := args[2]!
-      let some witness ← patAsTerm p (some α) | throwError "pattern does not elaborate to a term to instantiate ψ"
+      let some witness ← patAsTerm p (some α)
+        | throwError "pattern does not elaborate to a term to instantiate ψ"
       let prf ← mRefineCore { goal with target := ψ.beta (#[witness] ++ args[3...*]) } (.tuple ps) k
       let u ← getLevel α
       return mkApp6 (mkConst ``SPred.exists_intro' [u, goal.u]) α goal.σs goal.hyps ψ witness prf
-    else throwError "Neither a conjunction nor an existential quantifier {T}"
+    else
+      throwError "Neither a conjunction nor an existential quantifier {T}"
 
 @[builtin_tactic Lean.Parser.Tactic.mrefine]
 def elabMRefine : Tactic
@@ -69,14 +80,14 @@ def elabMRefine : Tactic
     let pat ← liftMacroM <| MRefinePat.parse pat
     let (mvar, goal) ← mStartMainGoal
     mvar.withContext do
-
-    let goals ← IO.mkRef #[]
-    let prf ← mRefineCore goal pat fun goal name => do
-      let m ← mkFreshExprSyntheticOpaqueMVar goal.toExpr name.raw.getId
-      goals.modify (·.push m.mvarId!)
-      return m
-    mvar.assign prf
-    replaceMainGoal (← goals.get).toList
+      let goals ← IO.mkRef #[]
+      let prf ←
+        mRefineCore goal pat fun goal name => do
+          let m ← mkFreshExprSyntheticOpaqueMVar goal.toExpr name.raw.getId
+          goals.modify (·.push m.mvarId!)
+          return m
+      mvar.assign prf
+      replaceMainGoal (← goals.get).toList
   | _ => throwUnsupportedSyntax
 
 @[builtin_tactic Lean.Parser.Tactic.mexists]

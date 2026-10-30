@@ -18,8 +18,7 @@ class ReduceEval (α : Type) where
   reduceEval : Expr → MetaM α
 
 def reduceEval [ReduceEval α] (e : Expr) : MetaM α :=
-  withAtLeastTransparency TransparencyMode.default $
-  ReduceEval.reduceEval e
+  withAtLeastTransparency TransparencyMode.default $ ReduceEval.reduceEval e
 
 private def throwFailedToEval (e : Expr) : MetaM α :=
   throwError "reduceEval: failed to evaluate argument{indentExpr e}"
@@ -27,28 +26,36 @@ private def throwFailedToEval (e : Expr) : MetaM α :=
 instance : ReduceEval Nat where
   reduceEval e := private do
     let e ← whnf e
-    let some n ← evalNat e | throwFailedToEval e
+    let some n ← evalNat e
+      | throwFailedToEval e
     pure n
 
 instance [ReduceEval α] : ReduceEval (Option α) where
   reduceEval e := private do
     let e ← whnf e
-    let Expr.const c .. ← pure e.getAppFn | throwFailedToEval e
+    let Expr.const c .. ← pure e.getAppFn
+      | throwFailedToEval e
     let nargs := e.getAppNumArgs
-    if      c == ``Option.none && nargs == 0 then pure none
-    else if c == ``Option.some && nargs == 1 then some <$> reduceEval e.appArg!
-    else throwFailedToEval e
+    if c == ``Option.none && nargs == 0 then
+      pure none
+    else if c == ``Option.some && nargs == 1 then
+      some <$> reduceEval e.appArg!
+    else
+      throwFailedToEval e
 
 instance : ReduceEval String where
   reduceEval e := private do
-    let Expr.lit (Literal.strVal s) ← whnf e | throwFailedToEval e
+    let Expr.lit (Literal.strVal s) ← whnf e
+      | throwFailedToEval e
     pure s
 
 private partial def evalName (e : Expr) : MetaM Name := do
   let e ← whnf e
-  let Expr.const c _ ← pure e.getAppFn | throwFailedToEval e
+  let Expr.const c _ ← pure e.getAppFn
+    | throwFailedToEval e
   let nargs := e.getAppNumArgs
-  if      c == ``Lean.Name.anonymous && nargs == 0 then pure Name.anonymous
+  if c == ``Lean.Name.anonymous && nargs == 0 then
+    pure Name.anonymous
   else if c == ``Lean.Name.str && nargs == 2 then do
     let n ← evalName $ e.getArg! 0
     let s ← reduceEval $ e.getArg! 1
@@ -65,12 +72,13 @@ instance : ReduceEval Name where
 
 private partial def evalList [ReduceEval α] (e : Expr) : MetaM (List α) := do
   let e ← whnf e
-  let .const c _ := e.getAppFn | throwFailedToEval e
+  let .const c _ := e.getAppFn
+    | throwFailedToEval e
   let nargs := e.getAppNumArgs
   match c, nargs with
-    | ``List.nil, 1 => pure []
-    | ``List.cons, 3 => return (← reduceEval (e.getArg! 1)) :: (← evalList (e.getArg! 2))
-    | _, _ => throwFailedToEval e
+  | ``List.nil, 1 => pure []
+  | ``List.cons, 3 => return (← reduceEval (e.getArg! 1)) :: (← evalList (e.getArg! 2))
+  | _, _ => throwFailedToEval e
 
 instance [ReduceEval α] : ReduceEval (List α) where
   reduceEval := private evalList
@@ -87,8 +95,9 @@ instance {n : Nat} : ReduceEval (BitVec n) where
   reduceEval := private fun e => do
     let e ← whnf e
     if e.isAppOfArity ``BitVec.ofFin 2 then
-      have : 2^n - 1 + 1 = 2^n := Nat.sub_one_add_one_eq_of_pos (Nat.two_pow_pos n)
-      let _ : ReduceEval (Fin (2^n)) := this ▸ (inferInstanceAs <| ReduceEval (Fin (2^n - 1 + 1)))
+      have : 2 ^ n - 1 + 1 = 2 ^ n := Nat.sub_one_add_one_eq_of_pos (Nat.two_pow_pos n)
+      let _ : ReduceEval (Fin (2 ^ n)) :=
+        this ▸ (inferInstanceAs <| ReduceEval (Fin (2 ^ n - 1 + 1)))
       pure ⟨(← reduceEval (e.getArg! 1))⟩
     else
       throwFailedToEval e
@@ -145,6 +154,5 @@ instance : ReduceEval FVarId where
       return ⟨← reduceEval (e.getArg! 0)⟩
     else
       throwFailedToEval e
-
 
 end Lean.Meta

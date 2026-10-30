@@ -15,30 +15,21 @@ namespace Internal
 namespace UV
 namespace Loop
 
-/--
-Options for configuring the event loop behavior.
--/
+/-- Options for configuring the event loop behavior. -/
 structure Options where
-  /--
-  Accumulate the amount of idle time the event loop spends in the event provider.
-  -/
+  /-- Accumulate the amount of idle time the event loop spends in the event provider. -/
   accumulateIdleTime : Bool := False
-
   /--
   Block a SIGPROF signal when polling for new events. It's commonly used for unnecessary wakeups
   when using a sampling profiler.
   -/
   blockSigProfSignal : Bool := False
 
-/--
-Configures the event loop with the specified options.
--/
+/-- Configures the event loop with the specified options. -/
 @[extern "lean_uv_event_loop_configure"]
 opaque configure (options : @& Options) : IO Unit
 
-/--
-Checks if the event loop has pending work, i.e. an active handle or an in-flight request.
--/
+/-- Checks if the event loop has pending work, i.e. an active handle or an in-flight request. -/
 @[extern "lean_uv_event_loop_alive"]
 opaque alive : BaseIO Bool
 

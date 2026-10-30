@@ -25,5 +25,4 @@ public def fmtRegisterSimpAttr : Fmt := fun
     let id ← fmt id
     let decl := Layouts.pseudoApplication #[registerTk, id]
     fmtDeclWithModifiers docComment? none #[] decl
-  | _ =>
-    throw .partialFormatter
+  | _ => throw .partialFormatter

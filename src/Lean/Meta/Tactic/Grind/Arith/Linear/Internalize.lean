@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.Linear.OfNatModule
 import Init.Grind.Module.Envelope
@@ -51,8 +52,7 @@ private def isForbiddenParent (parent? : Option Expr) : Bool :=
 
 partial def markVars (e : Expr) : LinearM Unit := do
   match_expr e with
-  | HAdd.hAdd _ _ _ i a b =>
-    if isAddInst (← getStruct) i then markVars a; markVars b else markVar e
+  | HAdd.hAdd _ _ _ i a b => if isAddInst (← getStruct) i then markVars a; markVars b else markVar e
   | HSub.hSub _ _ _ i a b => if isSubInst (← getStruct) i then markVars a; markVars b else markVar e
   | HMul.hMul _ _ _ i a b =>
     if isHomoMulInst (← getStruct) i then
@@ -61,7 +61,9 @@ partial def markVars (e : Expr) : LinearM Unit := do
       else if isNumeral b then
         return (← markVar a)
       else
-        markVar a; markVar b; markVar e
+        markVar a
+        markVar b
+        markVar e
         return
     markVar e
   | HSMul.hSMul _ _ _ i a b =>
@@ -77,8 +79,7 @@ partial def markVars (e : Expr) : LinearM Unit := do
   | OfNat.ofNat _ _ _ => return ()
   | _ => markVar e
 where
-  markVar (e : Expr) : LinearM Unit :=
-    discard <| mkVar e
+  markVar (e : Expr) : LinearM Unit := discard <| mkVar e
   isNumeral (e : Expr) : Bool :=
     match_expr e with
     | Neg.neg _ _ a => isNumeral a
@@ -86,20 +87,24 @@ where
     | _ => false
 
 def internalize (e : Expr) (parent? : Option Expr) : GoalM Unit := do
-  unless (← getConfig).linarith do return ()
+  unless (← getConfig).linarith do
+    return ()
   if isIntModuleVirtualParent parent? then
     -- `e` is an auxiliary term used to convert `CommRing` to `IntModule`
     return ()
-  let some type := getType? e | return ()
+  let some type := getType? e
+    | return ()
   if isForbiddenParent parent? then return ()
-  if let some structId ← getStructId? type then LinearM.run structId do
-    trace[grind.linarith.internalize] "{e}"
-    setTermStructId e
-    linearExt.markTerm e
-    markVars e
-  else if let some natStructId ← getNatStructId? type then OfNatModuleM.run natStructId do
-    let (e', _) ← ofNatModule e
-    trace[grind.linarith.internalize] "{e} ==> {e'}"
-    linearExt.markTerm e
+  if let some structId ← getStructId? type then
+    LinearM.run structId do
+      trace[grind.linarith.internalize] "{e}"
+      setTermStructId e
+      linearExt.markTerm e
+      markVars e
+  else if let some natStructId ← getNatStructId? type then
+    OfNatModuleM.run natStructId do
+      let (e', _) ← ofNatModule e
+      trace[grind.linarith.internalize] "{e} ==> {e'}"
+      linearExt.markTerm e
 
 end Lean.Meta.Grind.Arith.Linear

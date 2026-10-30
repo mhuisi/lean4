@@ -20,7 +20,8 @@ namespace Lean.Fmt
 public def fmtProjLike (lhs : TaggedDoc) (dotTk : Syntax) (field : Syntax) : FmtM TaggedDoc := do
   let dotTk ← fmt dotTk
   let field ← fmt field
-  let mut doc := propagateStickyness lhs fun lhs => mkSelfDelimited <| Layouts.atomic #[lhs, dotTk, field]
+  let mut doc :=
+    propagateStickyness lhs fun lhs => mkSelfDelimited <| Layouts.atomic #[lhs, dotTk, field]
   let isLhsAligned := Layouts.isAligned lhs.doc
   if isLhsAligned then
     doc := pseudoAligned doc (mustBeRespected := true)
@@ -81,7 +82,10 @@ public def fmtAppLike (terms : Array Syntax) : FmtM TaggedDoc := do
       }
       pure (← fmtProjLike lhs dotTk field, format)
     | _ =>
-      pure (← fmt fStx, { parenthesize := true, respectPseudoAlignment := true, sparse := isAppArgsSparse args })
+      pure (
+        ← fmt fStx,
+        { parenthesize := true, respectPseudoAlignment := true, sparse := isAppArgsSparse args }
+      )
   let (app, args') ← fmtFixedApp' f args format
   if args'.size = 1 then
     let arg := args'[0]!
@@ -164,8 +168,7 @@ deriving BEq, Inhabited, Repr, Hashable
 
 def BinderKind.classify (binder : TSyntax binderKinds) : BinderKind :=
   match binder.raw with
-  | `(explicitBinderF| ($ids* $[: $type?:term]? $[$default?]?)) =>
-    c ids .explicit
+  | `(explicitBinderF| ($ids* $[: $type?:term]? $[$default?]?)) => c ids .explicit
   | `(implicitBinderF| {$ids* $[: $type?:term]?})
   | `(strictImplicitBinderF| { {$ids* $[: $type?:term]?} })
   | `(strictImplicitBinderF| { {$ids* $[: $type?:term]?⦄)
@@ -208,8 +211,7 @@ def splitBinder (binder : TSyntax binderKinds) : Array Name × Option Syntax × 
       (binderIdentNames ids, type?.map (·.raw), none)
     | `(Parser.Term.instBinder| [$[$id?:ident :]? $classType:term]) =>
       (id?.toArray.map (·.getId), some classType.raw, none)
-    | _ =>
-      (#[], none, none)
+    | _ => (#[], none, none)
 where
   binderIdentNames (ids : Array Syntax) : Array Name :=
     ids.filterMap fun id => if id.isIdent then some id.getId else none
@@ -244,12 +246,9 @@ def hashPreresolved : Syntax.Preresolved → UInt64
 Hashes the same fields that `Syntax.structEq` compares, so it is consistent with `BEq Syntax`.
 -/
 partial def hashSyntax : Syntax → UInt64
-  | .missing =>
-    17
-  | .node _ k args =>
-    args.foldl (fun r a => mixHash r (hashSyntax a)) (mixHash 19 (hash k))
-  | .atom _ val =>
-    mixHash 23 (hash val)
+  | .missing => 17
+  | .node _ k args => args.foldl (fun r a => mixHash r (hashSyntax a)) (mixHash 19 (hash k))
+  | .atom _ val => mixHash 23 (hash val)
   | .ident _ rawVal val preresolved =>
     let h := mixHash 29 (hash rawVal.repair.toString)
     let h := mixHash h (hash val)
@@ -555,8 +554,7 @@ public def fmtBinder
         let colonEqTk ← fmt colonEqTk
         let term ← fmt term
         return (colonEqTk, term)
-      | _ =>
-        throw .partialFormatter
+      | _ => throw .partialFormatter
   let colonEqTk? := colonEqTk?.getD empty
   let default? := default?.getD empty
   let rbTks ← rbTks.mapM fmt
@@ -646,10 +644,8 @@ public def isAttributesSimple? : TSyntax ``Parser.Term.attributes → Option Boo
           if numLeafs > 1 then
             return false
         return true
-      | _ =>
-        none
-  | _ =>
-    none
+      | _ => none
+  | _ => none
 
 public def fmtDeclWithAttributes
     (attributes? : Option (TSyntax ``Parser.Term.attributes)) (decl : TaggedDoc)
@@ -796,8 +792,7 @@ public def fmtInductiveLike
   let optDerivingDoc ← fmt optDeriving
   let monotonicityByDoc? ← fmt? monotonicityBy?
   match computedFields? with
-  | none =>
-    return Layouts.lines #[mainDeclDoc, optDerivingDoc, monotonicityByDoc?]
+  | none => return Layouts.lines #[mainDeclDoc, optDerivingDoc, monotonicityByDoc?]
   | some computedFields =>
     let mainDeclTrailingDoc ←
       fmtTrailingWithRetainedNewlinesAndComments <| mkNullNode <|
@@ -831,8 +826,7 @@ public def fmtStructureLike
         let extendsTk ← fmt extendsTk
         let structParents ← fmtSepArray (sep := ",") structParents
         return (extendsTk, structParents)
-      | _ =>
-        throw .partialFormatter
+      | _ => throw .partialFormatter
   let extendsTk? := extendsTk?.getD empty
   let structParents? := structParents?.getD ⟨#[]⟩
   let sepTk? ← fmt? sepTk?

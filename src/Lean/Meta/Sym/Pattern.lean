@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.SymM
 public import Lean.Data.AssocList
@@ -50,9 +51,10 @@ framework (`Sym`). The design prioritizes performance by using a two-phase appro
 - `instantiateRevS` ensures maximal sharing of result expressions
 -/
 
-/-- Helper function for checking whether types `α` and `β` are definitionally equal during unification/matching. -/
-def isDefEqTypes (α β : Expr) : MetaM Bool := do
-  withReducible <| isDefEq α β
+/--
+Helper function for checking whether types `α` and `β` are definitionally equal during unification/matching.
+-/
+def isDefEqTypes (α β : Expr) : MetaM Bool := do withReducible <| isDefEq α β
 
 /--
 Collects `ProofInstInfo` for all function symbols occurring in `pattern`.
@@ -68,15 +70,15 @@ def mkProofInstInfoMapFor (pattern : Expr) : MetaM (AssocList Name ProofInstInfo
   return fnInfos
 
 public structure Pattern where
-  levelParams    : List Name
-  varTypes       : Array Expr
+  levelParams : List Name
+  varTypes : Array Expr
   /--
   If `some argsInfo`, `argsInfo` stores whether the pattern variables are instances/proofs.
   It is `none` if no pattern variables are instance/proof.
   -/
-  varInfos?      : Option ProofInstInfo
-  pattern        : Expr
-  fnInfos        : AssocList Name ProofInstInfo
+  varInfos? : Option ProofInstInfo
+  pattern : Expr
+  fnInfos : AssocList Name ProofInstInfo
   /--
   If `checkTypeMask? = some mask`, then we must check the type of pattern variable `i`
   if `mask[i]` is true.
@@ -84,31 +86,37 @@ public structure Pattern where
   See `mkCheckTypeMask`
   -/
   checkTypeMask? : Option (Array Bool)
-  deriving Inhabited
+deriving Inhabited
 
 def uvarPrefix : Name := `_uvar
 
 /-- Returns `true` if the `i`th argument / pattern variable is an instance. -/
 def Pattern.isInstance (p : Pattern) (i : Nat) : Bool := Id.run do
-  let some varInfos := p.varInfos? | return false
+  let some varInfos := p.varInfos?
+    | return false
   varInfos.argsInfo[i]!.isInstance
 
 /-- Returns `true` if the `i`th argument / pattern variable is a proof. -/
 def Pattern.isProof (p : Pattern) (i : Nat) : Bool := Id.run do
-  let some varInfos := p.varInfos? | return false
+  let some varInfos := p.varInfos?
+    | return false
   varInfos.argsInfo[i]!.isProof
 
 def isUVar (n : Name) : Bool := Id.run do
-  let .num p _ := n | return false
+  let .num p _ := n
+    | return false
   return p == uvarPrefix
 
 def isUVar? (n : Name) : Option Nat := Id.run do
-  let .num p idx := n | return none
-  unless p == uvarPrefix do return none
+  let .num p idx := n
+    | return none
+  unless p == uvarPrefix do
+    return none
   return some idx
 
 /-- Helper function for implementing `mkPatternFromDecl` and `mkEqPatternFromDecl` -/
-def preprocessDeclPattern (declName : Name) (zetaReduceLHSOnly := false) : MetaM (List Name × Expr) := do
+def preprocessDeclPattern (declName : Name) (zetaReduceLHSOnly := false)
+    : MetaM (List Name × Expr) := do
   let info ← getConstInfo declName
   let levelParams := info.levelParams.mapIdx fun i _ => Name.num uvarPrefix i
   let us := levelParams.map mkLevelParam
@@ -117,7 +125,8 @@ def preprocessDeclPattern (declName : Name) (zetaReduceLHSOnly := false) : MetaM
   let type ← normalizeLevels type
   return (levelParams, type)
 
-def preprocessExprPattern (e : Expr) (levelParams₀ : List Name) (zetaReduceLHSOnly := false) : MetaM (List Name × Expr) := do
+def preprocessExprPattern (e : Expr) (levelParams₀ : List Name) (zetaReduceLHSOnly := false)
+    : MetaM (List Name × Expr) := do
   let type ← inferType e
   let levelParams := levelParams₀.mapIdx fun i _ => Name.num uvarPrefix i
   let us := levelParams.map mkLevelParam
@@ -169,8 +178,7 @@ where
     | .const .. | .fvar _ | .sort _ | .mvar _ | .lit _ => id
     | .mdata _ b => go b offset isArg
     | .proj .. => id -- Should not occur in patterns
-    | .forallE _ d b _
-    | .lam _ d b _ => go d offset false ∘ go b (offset+1) false
+    | .forallE _ d b _ | .lam _ d b _ => go d offset false ∘ go b (offset + 1) false
     | .bvar idx => fun mask =>
       if idx >= offset && !isArg then
         let idx := idx - offset
@@ -178,21 +186,22 @@ where
       else
         mask
 
-def mkPatternCore (type : Expr) (levelParams : List Name) (varTypes : Array Expr) (pattern : Expr) : MetaM Pattern := do
+def mkPatternCore (type : Expr) (levelParams : List Name) (varTypes : Array Expr) (pattern : Expr)
+    : MetaM Pattern := do
   let fnInfos ← mkProofInstInfoMapFor pattern
   let checkTypeMask := mkCheckTypeMask pattern varTypes.size
   let checkTypeMask? := if checkTypeMask.all (· == false) then none else some checkTypeMask
-  let varInfos? ← forallBoundedTelescope type varTypes.size fun xs _ =>
-    mkProofInstArgInfo? xs
+  let varInfos? ← forallBoundedTelescope type varTypes.size fun xs _ => mkProofInstArgInfo? xs
   return { levelParams, varTypes, pattern, fnInfos, varInfos?, checkTypeMask? }
 
-def mkPatternFromType (levelParams : List Name) (type : Expr) (num? : Option Nat) : MetaM Pattern := do
+def mkPatternFromType (levelParams : List Name) (type : Expr) (num? : Option Nat)
+    : MetaM Pattern := do
   let hugeNumber := 10000000
   let num := num?.getD hugeNumber
   let rec go (i : Nat) (pattern : Expr) (varTypes : Array Expr) : MetaM Pattern := do
     if i < num then
       if let .forallE _ d b _ := pattern then
-        return (← go (i+1) b (varTypes.push d))
+        return (← go (i + 1) b (varTypes.push d))
     mkPatternCore type levelParams varTypes pattern
   go 0 type #[]
 
@@ -213,12 +222,15 @@ public def mkPatternFromDecl (declName : Name) (num? : Option Nat := none) : Met
   let (levelParams, type) ← preprocessDeclPattern declName
   mkPatternFromType levelParams type num?
 
-public def mkPatternFromExpr (e : Expr) (levelParams : List Name := []) (num? : Option Nat := none) : MetaM Pattern := do
+public def mkPatternFromExpr (e : Expr) (levelParams : List Name := []) (num? : Option Nat := none)
+    : MetaM Pattern := do
   let (levelParams, type) ← preprocessExprPattern e levelParams
   mkPatternFromType levelParams type num?
 
 @[inline]
-def mkPatternFromTypeWithKey (levelParams : List Name) (type : Expr) (selectKey : Expr → MetaM (Expr × α)) : MetaM (Pattern × α) := do
+def mkPatternFromTypeWithKey
+    (levelParams : List Name) (type : Expr) (selectKey : Expr → MetaM (Expr × α))
+    : MetaM (Pattern × α) := do
   let rec go (pattern : Expr) (varTypes : Array Expr) : MetaM (Pattern × α) := do
     if let .forallE _ d b _ := pattern then
       return (← go b (varTypes.push d))
@@ -241,7 +253,9 @@ For a theorem `∀ x₁ ... xₙ, type`, returns a pattern matching the first co
 with `n` pattern variables.
 -/
 @[inline]
-public def mkPatternFromDeclWithKey (declName : Name) (selectKey : Expr → MetaM (Expr × α)) (zetaReduceLHSOnly := false) : MetaM (Pattern × α) := do
+public def mkPatternFromDeclWithKey
+    (declName : Name) (selectKey : Expr → MetaM (Expr × α)) (zetaReduceLHSOnly := false)
+    : MetaM (Pattern × α) := do
   let (levelParams, type) ← preprocessDeclPattern declName zetaReduceLHSOnly
   mkPatternFromTypeWithKey levelParams type selectKey
 
@@ -250,7 +264,12 @@ Like `mkPatternFromDeclWithKey`, but for a complex proof expression instead of t
 theorem.
 -/
 @[inline]
-public def mkPatternFromExprWithKey (e : Expr) (levelParams : List Name := []) (selectKey : Expr → MetaM (Expr × α)) (zetaReduceLHSOnly := false) : MetaM (Pattern × α) := do
+public def mkPatternFromExprWithKey
+    (e : Expr)
+    (levelParams : List Name := [])
+    (selectKey : Expr → MetaM (Expr × α))
+    (zetaReduceLHSOnly := false)
+    : MetaM (Pattern × α) := do
   let (levelParams, type) ← preprocessExprPattern e levelParams zetaReduceLHSOnly
   mkPatternFromTypeWithKey levelParams type selectKey
 
@@ -267,12 +286,13 @@ Throws an error if the theorem's conclusion is not an equality.
 -/
 public def mkEqPatternFromDecl (declName : Name) : MetaM (Pattern × Expr) := do
   mkPatternFromDeclWithKey declName (zetaReduceLHSOnly := true) fun type => do
-    let_expr Eq _ lhs rhs := type | throwError "conclusion is not an equality{indentExpr type}"
+    let_expr Eq _ lhs rhs := type
+      | throwError "conclusion is not an equality{indentExpr type}"
     return (lhs, rhs)
 
 structure UnifyM.Context where
-  pattern   : Pattern
-  unify     : Bool := true
+  pattern : Pattern
+  unify : Bool := true
   zetaDelta : Bool := true
   /--
   `mvarCounter` at the start of the match/unify operation. Metavariables with
@@ -283,18 +303,18 @@ structure UnifyM.Context where
   mvarCounterSaved : Nat := 0
 
 structure UnifyM.State where
-  eAssignment  : Array (Option Expr)   := #[]
-  uAssignment  : Array (Option Level)  := #[]
-  ePending     : Array (Expr × Expr)   := #[]
-  uPending     : Array (Level × Level) := #[]
-  iPending     : Array (Expr × Expr)   := #[]
+  eAssignment : Array (Option Expr) := #[]
+  uAssignment : Array (Option Level) := #[]
+  ePending : Array (Expr × Expr) := #[]
+  uPending : Array (Level × Level) := #[]
+  iPending : Array (Expr × Expr) := #[]
   /--
   Contains the index of the pattern variables that we must check whether its type
   matches the type of the value assigned to it.
   -/
-  tPending     : Array Nat             := #[]
-  us           : List Level            := []
-  args         : Array Expr            := #[]
+  tPending : Array Nat := #[]
+  us : List Level := []
+  args : Array Expr := #[]
 
 abbrev UnifyM := ReaderT UnifyM.Context StateRefT UnifyM.State SymM
 
@@ -325,7 +345,8 @@ def assignExpr (bidx : Nat) (e : Expr) : UnifyM Bool := do
   let s ← get
   let i := s.eAssignment.size - bidx - 1
   if let some e' := s.eAssignment[i]! then
-    if isSameExpr e e' then return true
+    if isSameExpr e e' then
+      return true
     else
       pushPending e' e
       return true
@@ -343,33 +364,35 @@ def assignLevel (uidx : Nat) (u : Level) : UnifyM Bool := do
     return true
 
 /-- Returns `true` is `u` has assigned uvars. -/
-def hasAssignedUVars (assignment : Array (Option Level)) (u : Level) : Bool :=
-  go u
+def hasAssignedUVars (assignment : Array (Option Level)) (u : Level) : Bool := go u
 where
   go (u : Level) : Bool := Id.run do
-    unless u.hasParam do return false
+    unless u.hasParam do
+      return false
     match u with
     | .succ u₁ => go u₁
     | .max u₁ u₂ | .imax u₁ u₂ => go u₁ || go u₂
     | .param name =>
-      let some uidx := isUVar? name | return false
+      let some uidx := isUVar? name
+        | return false
       if h : uidx < assignment.size then return assignment[uidx].isSome
       return false
     | _ => false
 
 /-- Substitutes uvars in `u` with their assignments. -/
-def substAssignedUVars (assignment : Array (Option Level)) (u : Level) : Level :=
-  go u
+def substAssignedUVars (assignment : Array (Option Level)) (u : Level) : Level := go u
 where
   go (u : Level) : Level := Id.run do
     match u with
-    | .succ u₁    => return .succ (go u₁)
-    | .max u₁ u₂  => return .max (go u₁) (go u₂)
+    | .succ u₁ => return .succ (go u₁)
+    | .max u₁ u₂ => return .max (go u₁) (go u₂)
     | .imax u₁ u₂ => return .imax (go u₁) (go u₂)
     | .param name =>
-      let some uidx := isUVar? name | return u
+      let some uidx := isUVar? name
+        | return u
       if h : uidx < assignment.size then
-        let some v := assignment[uidx] | return u
+        let some v := assignment[uidx]
+          | return u
         return v
       else
         return u
@@ -378,7 +401,8 @@ where
 /-- Substitutes uvars in `u` with their assignments, and then normalize. -/
 def substAssignedUVarsAndNormalize (u : Level) : UnifyM Level := do
   let assignment := (← get).uAssignment
-  unless hasAssignedUVars assignment u do return u
+  unless hasAssignedUVars assignment u do
+    return u
   let v := substAssignedUVars assignment u
   return v.normalize
 
@@ -390,9 +414,9 @@ This is an approximation. For example, we ignore the solution `?m := 0`.
 -/
 def tryApproxSelfMax (u v : Level) : UnifyM Bool := do
   match u with
-  | .max (.param uName) v'
-  | .max v' (.param uName) =>
-    let some uidx := isUVar? uName | return false
+  | .max (.param uName) v' | .max v' (.param uName) =>
+    let some uidx := isUVar? uName
+      | return false
     solve v' uidx
   | _ => return false
 where
@@ -404,7 +428,7 @@ where
 
 /-- Similar to `Meta.decLevel?`, but never assigns metavariables. -/
 partial def decLevel? : Level → Option Level
-  | .zero | .mvar _ | .param _     => none
+  | .zero | .mvar _ | .param _ => none
   | .succ u => some u
   | .max u v => processMax u v
   /- Remark: If `decLevel? v` returns `some ...`, then `imax u v` is equivalent to `max u v`. -/
@@ -417,7 +441,7 @@ where
 
 def hasUVar (u : Level) : Bool :=
   match u with
-  | .succ u₁    => hasUVar u₁
+  | .succ u₁ => hasUVar u₁
   | .max u₁ u₂ | .imax u₁ u₂ => hasUVar u₁ || hasUVar u₂
   | .param name => isUVar name
   | _ => false
@@ -459,10 +483,14 @@ where
     | .imax _ u, .zero => go u .zero
     | .max u₁ u₂, .max v₁ v₂ =>
       -- tryApproxMaxMax: find a shared concrete arg between both sides
-      if u₂ == v₁ then go u₁ v₂
-      else if u₁ == v₂ then go u₂ v₁
-      else go u₁ v₁ <&&> go u₂ v₂
-    | .imax u₁ u₂, .imax v₁ v₂ => go u₁ v₁ <&&> go u₂ v₂
+      if u₂ == v₁ then
+        go u₁ v₂
+      else if u₁ == v₂ then
+        go u₂ v₁
+      else
+        go u₁ v₁ <&&> go u₂ v₂
+    | .imax u₁ u₂, .imax v₁ v₂ =>
+      go u₁ v₁ <&&> go u₂ v₂
     | .param uName, _ =>
       if let some uidx := isUVar? uName then
         assignLevel uidx v
@@ -473,7 +501,8 @@ where
         return true
       else
         return false
-    | .mvar _, _ | _, .mvar _ =>
+    | .mvar _, _
+    | _, .mvar _ =>
       if (← read).unify then
         pushLevelPending u v
         return true
@@ -494,18 +523,16 @@ where
 
 def processLevels (us : List Level) (vs : List Level) : UnifyM Bool := do
   match us, vs with
-  | [],    []    => return true
-  | [],    _::_  => return false
-  | _::_,  []    => return false
-  | u::us, v::vs => processLevel u v <&&> processLevels us vs
+  | [], [] => return true
+  | [], _ :: _ => return false
+  | _ :: _, [] => return false
+  | u :: us, v :: vs => processLevel u v <&&> processLevels us vs
 
-/--
-Returns `true` if `e` is an assigned metavariable.
--/
+/-- Returns `true` if `e` is an assigned metavariable. -/
 def isAssignedMVar (e : Expr) : MetaM Bool :=
   match e with
   | .mvar mvarId => mvarId.isAssigned
-  | _            => return false
+  | _ => return false
 
 /--
 Returns `true` if the mismatched constraint `p =?= e` should be postponed because it may
@@ -519,8 +546,7 @@ Examples:
 -/
 def isQuasiOffsetCnstr (p : Expr) (e : Expr) : Bool :=
   match_expr p with
-  | HAdd.hAdd _ _ _ _ _ k =>
-    k.hasLooseBVars && ((isNatValue? e).isSome || (isOffset? e).isSome)
+  | HAdd.hAdd _ _ _ _ _ k => k.hasLooseBVars && ((isNatValue? e).isSome || (isOffset? e).isSome)
   | _ => false
 
 partial def process (p : Expr) (e : Expr) : UnifyM Bool := do
@@ -528,34 +554,32 @@ partial def process (p : Expr) (e : Expr) : UnifyM Bool := do
   -- pointer match is a closed term equal to the target with no variables left to bind.
   if isSameExpr p e then return true
   let e' := etaReduce e |>.consumeMData
-  if !isSameExpr e e' then
+  if ! isSameExpr e e' then
     -- **Note**: We eagerly eta reduce patterns and consume mdata
     process p e'
-  else match p with
-  | .bvar bidx => assignExpr bidx e
-  | .mdata _ p => process p e
-  | .const declName us =>
-    processConst declName us e <||> checkLetVar p e <||> checkMVar p e
-  | .sort u =>
-    processSort u e <||> checkLetVar p e <||> checkMVar p e
-  | .app .. =>
-    processApp p e <||> checkMVar p e
-  | .forallE .. | .lam .. =>
-    pushPending p e
-    return true
-  | .proj .. =>
-    throwError "unexpected kernel projection term during unification/matching{indentExpr e}\npre-process and fold them as projection applications"
-  | .fvar _ =>
-    /-
-    **Note**: Most patterns do not have free variables since they are created from
-    top-level theorems. That said, some user may want to create patterns using local hypotheses, and they
-    may contain free variables. This is not the common case. So, we just push to pending an continue.
-    -/
-    pushPending p e
-    return true
-  | .mvar _ | .lit _ =>
-    pure (p == e) <||> checkLetVar p e <||> checkMVar p e
-  | .letE .. => unreachable!
+  else
+    match p with
+    | .bvar bidx => assignExpr bidx e
+    | .mdata _ p => process p e
+    | .const declName us => processConst declName us e <||> checkLetVar p e <||> checkMVar p e
+    | .sort u => processSort u e <||> checkLetVar p e <||> checkMVar p e
+    | .app .. => processApp p e <||> checkMVar p e
+    | .forallE .. | .lam .. =>
+      pushPending p e
+      return true
+    | .proj .. =>
+      throwError "unexpected kernel projection term during unification/matching{indentExpr e}\
+        \npre-process and fold them as projection applications"
+    | .fvar _ =>
+      /-
+      **Note**: Most patterns do not have free variables since they are created from
+      top-level theorems. That said, some user may want to create patterns using local hypotheses, and they
+      may contain free variables. This is not the common case. So, we just push to pending an continue.
+      -/
+      pushPending p e
+      return true
+    | .mvar _ | .lit _ => pure (p == e) <||> checkLetVar p e <||> checkMVar p e
+    | .letE .. => unreachable!
 where
   checkMVar (p : Expr) (e : Expr) : UnifyM Bool := do
     if (← isAssignedMVar e) then
@@ -567,13 +591,16 @@ where
       return false
 
   checkLetVar (p : Expr) (e : Expr) : UnifyM Bool := do
-    unless (← read).zetaDelta do return false
-    let .fvar fvarId := e | return false
-    let some value ← fvarId.getValue? | return false
+    unless (← read).zetaDelta do
+      return false
+    let .fvar fvarId := e
+      | return false
+    let some value ← fvarId.getValue?
+      | return false
     process p value
 
   processOffset (p : Offset) (e : Offset) : UnifyM Bool := do
-   -- **Note** Recall that we don't assume patterns are maximally shared terms.
+    -- **Note** Recall that we don't assume patterns are maximally shared terms.
     match p, e with
     | .num _, .num _ => unreachable!
     | .num k₁, .add e k₂ =>
@@ -593,30 +620,36 @@ where
         process (mkNatAdd p (mkNatLit (k₁ - k₂))) e
 
   processConstApp (declName : Name) (p : Expr) (e : Expr) : UnifyM Bool := do
-    let some info := (← read).pattern.fnInfos.find? declName | process.processAppDefault p e
+    let some info := (← read).pattern.fnInfos.find? declName
+      | process.processAppDefault p e
     let numArgs := p.getAppNumArgs
     processAppWithInfo p e (numArgs - 1) info
 
-  processApp (p : Expr) (e : Expr) : UnifyM Bool := withIncRecDepth do
-    let f := p.getAppFn
-    let .const declName _ := f | processAppDefault p e
-    if (← processConstApp declName p e) then
-      return true
-    else if let some p' := isOffset?' declName p then
-      processOffset p' (toOffset e)
-    else if isQuasiOffsetCnstr p e then
-      -- Postpone: constraint may become an offset one after pattern variables are assigned.
-      pushPending p e
-      return true
-    else if let some e' := isOffset? e then
-      processOffset (toOffset p) e'
-    else
-      return false
+  processApp (p : Expr) (e : Expr) : UnifyM Bool :=
+    withIncRecDepth do
+      let f := p.getAppFn
+      let .const declName _ := f
+        | processAppDefault p e
+      if (← processConstApp declName p e) then
+        return true
+      else if let some p' := isOffset?' declName p then
+        processOffset p' (toOffset e)
+      else if isQuasiOffsetCnstr p e then
+        -- Postpone: constraint may become an offset one after pattern variables are assigned.
+        pushPending p e
+        return true
+      else if let some e' := isOffset? e then
+        processOffset (toOffset p) e'
+      else
+        return false
 
   processAppWithInfo (p : Expr) (e : Expr) (i : Nat) (info : ProofInstInfo) : UnifyM Bool := do
-    let .app fp ap := p | if e.isApp then return false else process p e
-    let .app fe ae := e.consumeMData | checkLetVar p e
-    unless (← processAppWithInfo fp fe (i - 1) info) do return false
+    let .app fp ap := p
+      | if e.isApp then return false else process p e
+    let .app fe ae := e.consumeMData
+      | checkLetVar p e
+    unless (← processAppWithInfo fp fe (i - 1) info) do
+      return false
     if h : i < info.argsInfo.size then
       let argInfo := info.argsInfo[i]
       if argInfo.isInstance then
@@ -635,18 +668,24 @@ where
       process ap ae
 
   processAppDefault (p : Expr) (e : Expr) : UnifyM Bool := do
-    let .app fp ap := p | if e.isApp then return false else process p e
-    let .app fe ae := e.consumeMData | checkLetVar p e
-    unless (← processAppDefault fp fe) do return false
+    let .app fp ap := p
+      | if e.isApp then return false else process p e
+    let .app fe ae := e.consumeMData
+      | checkLetVar p e
+    unless (← processAppDefault fp fe) do
+      return false
     process ap ae
 
   processConst (declName : Name) (us : List Level) (e : Expr) : UnifyM Bool := do
-    let .const declName' us' := e | return false
-    unless declName == declName' do return false
+    let .const declName' us' := e
+      | return false
+    unless declName == declName' do
+      return false
     processLevels us us'
 
   processSort (u : Level) (e : Expr) : UnifyM Bool := do
-    let .sort v := e | return false
+    let .sort v := e
+      | return false
     processLevel u v
 
 /--
@@ -655,13 +694,16 @@ Returns `true` if `u` is an assignable level metavariable and the assignment suc
 Returns `false` if `u` is not a metavariable or is not assignable.
 -/
 def tryAssignLevelMVar (u : Level) (v : Level) : MetaM Bool := do
-  let .mvar mvarId := u | return false
-  unless (← isLevelMVarAssignable mvarId) do return false
+  let .mvar mvarId := u
+    | return false
+  unless (← isLevelMVarAssignable mvarId) do
+    return false
   assignLevelMVar mvarId v
   return true
 
 def substAssignedMVarsAndNormalize (u : Level) : MetaM Level := do
-  unless (← hasAssignedLevelMVar u) do return u.normalize
+  unless (← hasAssignedLevelMVar u) do
+    return u.normalize
   let u ← instantiateLevelMVars u
   return u.normalize
 
@@ -678,8 +720,10 @@ partial def isLevelDefEqS (u : Level) (v : Level) : MetaM Bool := do
     -/
     let u' ← substAssignedMVarsAndNormalize u
     let v' ← substAssignedMVarsAndNormalize v
-    if u' != u || v' != v then isLevelDefEqS u' v'
-    else k
+    if u' != u || v' != v then
+      isLevelDefEqS u' v'
+    else
+      k
   match u, v with
   | .param u, .param v => return u == v
   | .zero, .zero => return true
@@ -691,10 +735,14 @@ partial def isLevelDefEqS (u : Level) (v : Level) : MetaM Bool := do
   | .zero, .imax _ v => isLevelDefEqS .zero v
   | .imax _ u, .zero => isLevelDefEqS u .zero
   | .max u₁ u₂, .max v₁ v₂ =>
-    if u₂ == v₁ then isLevelDefEqS u₁ v₂
-    else if u₁ == v₂ then isLevelDefEqS u₂ v₁
-    else tryNormalizeFirst (isLevelDefEqS u₁ v₁ <&&> isLevelDefEqS u₂ v₂)
-  | .imax u₁ u₂, .imax v₁ v₂ => isLevelDefEqS u₁ v₁ <&&> isLevelDefEqS u₂ v₂
+    if u₂ == v₁ then
+      isLevelDefEqS u₁ v₂
+    else if u₁ == v₂ then
+      isLevelDefEqS u₂ v₁
+    else
+      tryNormalizeFirst (isLevelDefEqS u₁ v₁ <&&> isLevelDefEqS u₂ v₂)
+  | .imax u₁ u₂, .imax v₁ v₂ =>
+    isLevelDefEqS u₁ v₁ <&&> isLevelDefEqS u₂ v₂
   | _, _ =>
     if (← tryAssignLevelMVar u v <||> tryAssignLevelMVar v u) then
       return true
@@ -707,14 +755,12 @@ Returns `true` iff the lists have the same length and corresponding elements are
 -/
 def isLevelDefEqListS (us : List Level) (vs : List Level) : MetaM Bool := do
   match us, vs with
-  | [],    []    => return true
-  | [],    _::_  => return false
-  | _::_,  []    => return false
-  | u::us, v::vs => isLevelDefEqS u v <&&> isLevelDefEqListS us vs
+  | [], [] => return true
+  | [], _ :: _ => return false
+  | _ :: _, [] => return false
+  | u :: us, v :: vs => isLevelDefEqS u v <&&> isLevelDefEqListS us vs
 
-/--
-Context for structural definitional equality (`isDefEqS`).
--/
+/-- Context for structural definitional equality (`isDefEqS`). -/
 structure DefEqM.Context where
   unify : Bool := true
   /--
@@ -727,9 +773,7 @@ structure DefEqM.Context where
   This information is used to decide whether an application is a Miller pattern or not.
   -/
   lctxInitialNextIndex : Nat := 0
-  /--
-  If `unify` is `false`, it contains which variables can be assigned.
-  -/
+  /-- If `unify` is `false`, it contains which variables can be assigned. -/
   mvarsNew : Array MVarId := #[]
   /--
   If a metavariable is in this collection, when we perform the assignment `?m := v`,
@@ -761,26 +805,33 @@ where
   checkDomains (fvars : Array Expr) (ds₂ : Array Expr) : DefEqM Bool := do
     for fvar in fvars, d in ds₂ do
       let fvarType ← fvar.fvarId!.getType
-      unless (← isDefEqMain fvarType d) do return false
+      unless (← isDefEqMain fvarType d) do
+        return false
     return true
 
-  go (lctx : LocalContext) (localInsts : LocalInstances) (fvars : Array Expr) (e₁ e₂ : Expr) (ds₂ : Array Expr) : DefEqM Bool := do
+  go
+      (lctx : LocalContext) (localInsts : LocalInstances) (fvars : Array Expr) (e₁ e₂ : Expr)
+      (ds₂ : Array Expr)
+      : DefEqM Bool := do
     match e₁, e₂ with
     | .forallE n d₁ b₁ _, .forallE _ d₂ b₂ _
-    | .lam     n d₁ b₁ _, .lam     _ d₂ b₂ _ =>
-      let d₁     ← instantiateRevS d₁ fvars
-      let d₂     ← instantiateRevS d₂ fvars
+    | .lam n d₁ b₁ _, .lam _ d₂ b₂ _ =>
+      let d₁ ← instantiateRevS d₁ fvars
+      let d₂ ← instantiateRevS d₂ fvars
       let fvarId ← mkFreshFVarId
-      let fvar   ← mkFVarS fvarId
-      let lctx   := lctx.mkLocalDecl fvarId n d₁
-      let localInsts := if let some className := isClass? (← getEnv) d₁ then
-        localInsts.push { className, fvar }
-      else
-        localInsts
+      let fvar ← mkFVarS fvarId
+      let lctx := lctx.mkLocalDecl fvarId n d₁
+      let localInsts :=
+        if let some className := isClass? (← getEnv) d₁ then
+          localInsts.push { className, fvar }
+        else
+          localInsts
       go lctx localInsts (fvars.push fvar) b₁ b₂ (ds₂.push d₂)
-    | _, _ => withLCtx lctx localInsts do
-      unless (← checkDomains fvars ds₂) do return false
-      isDefEqMain (← instantiateRevS e₁ fvars) (← instantiateRevS e₂ fvars)
+    | _, _ =>
+      withLCtx lctx localInsts do
+        unless (← checkDomains fvars ds₂) do
+          return false
+        isDefEqMain (← instantiateRevS e₁ fvars) (← instantiateRevS e₂ fvars)
 
 /--
 Returns `true` if the metavariable `mvarId` can be assigned in the current context.
@@ -818,7 +869,8 @@ def isMillerPatternArgs (e : Expr) : DefEqM Bool := do
   let rec isUniqueArgUpTo (curr : Expr) (e' : Expr) (fvarId : FVarId) : Bool :=
     if isSameExpr curr e' then
       true
-    else match curr with
+    else
+      match curr with
       | .app f (.fvar fvarId') => fvarId != fvarId' && isUniqueArgUpTo f e' fvarId
       | _ => false
   let initialNextIndex := (← read).lctxInitialNextIndex
@@ -827,9 +879,7 @@ def isMillerPatternArgs (e : Expr) : DefEqM Bool := do
     match e' with
     | .app f (.fvar fvarId) =>
       if let some localDecl := lctx.find? fvarId then
-        localDecl.index ≥ initialNextIndex &&
-        isUniqueArgUpTo e e' fvarId &&
-        go f
+        localDecl.index ≥ initialNextIndex && isUniqueArgUpTo e e' fvarId && go f
       else
         false
     | .app _ _ => false
@@ -849,9 +899,10 @@ def mayAssign (t s : Expr) : SymM Bool := do
   let tMaxFVarDecl ← tMaxFVarId.getDecl
   return tMaxFVarDecl.index ≥ sMaxFVarDecl.index
 
-@[inline] def whenUndefDo (x : DefEqM LBool) (k : DefEqM Bool) : DefEqM Bool := do
+@[inline]
+def whenUndefDo (x : DefEqM LBool) (k : DefEqM Bool) : DefEqM Bool := do
   match (← x) with
-  | .true  => return true
+  | .true => return true
   | .false => return false
   | .undef => k
 
@@ -869,14 +920,17 @@ The `tFn` parameter must equal `t.getAppFn` (enforced by the proof argument).
 
 Remark: `t` may be of the form `?m`.
 -/
-def tryAssignMillerPattern (tFn : Expr) (t : Expr) (s : Expr) (_ : tFn = t.getAppFn) : DefEqM LBool := do
-  let .mvar mvarId := tFn | return .undef
+def tryAssignMillerPattern (tFn : Expr) (t : Expr) (s : Expr) (_ : tFn = t.getAppFn)
+    : DefEqM LBool := do
+  let .mvar mvarId := tFn
+    | return .undef
   if !(← isAssignableMVar mvarId) then return .undef
   if !(← isMillerPatternArgs t) then return .undef
-  let s ← if t.isApp then
-    mkLambdaFVarsS t.getAppArgs s
-  else
-    pure s
+  let s ←
+    if t.isApp then
+      mkLambdaFVarsS t.getAppArgs s
+    else
+      pure s
   if !(← mayAssign tFn s) then return .undef
   if (← read).mvarsToCheckType.contains mvarId then
     unless (← Sym.isDefEqTypes (← mvarId.getDecl).type (← inferType s)) do
@@ -889,9 +943,12 @@ Structural definitional equality for applications without `ProofInstInfo`.
 Recursively checks function and argument equality.
 -/
 def isDefEqAppDefault (t : Expr) (s : Expr) : DefEqM Bool := do
-  let .app f₁ a₁ := t | if s.isApp then return false else isDefEqMain t s
-  let .app f₂ a₂ := s | return false
-  unless (← isDefEqAppDefault f₁ f₂) do return false
+  let .app f₁ a₁ := t
+    | if s.isApp then return false else isDefEqMain t s
+  let .app f₂ a₂ := s
+    | return false
+  unless (← isDefEqAppDefault f₁ f₂) do
+    return false
   isDefEqMain a₁ a₂
 
 /--
@@ -900,11 +957,11 @@ Tries `t := s` first, then `s := t`. Returns `true` if either assignment succeed
 Used as a fast path before more expensive unification strategies. Example: using
 more expensive `isDefEqI` for instance arguments.
 -/
-def tryAssignUnassigned (t : Expr) (s : Expr) : DefEqM Bool := do
-  go t s <||> go s t
+def tryAssignUnassigned (t : Expr) (s : Expr) : DefEqM Bool := do go t s <||> go s t
 where
   go (t : Expr) (s : Expr) : DefEqM Bool := do
-    let .mvar mvarId := t | return false
+    let .mvar mvarId := t
+      | return false
     if (← mvarId.isAssigned) then return false
     if !(← isAssignableMVar mvarId) then return false
     if !(← mayAssign t s) then return false
@@ -921,9 +978,12 @@ Structural definitional equality for applications with `ProofInstInfo`.
 Skips proof arguments (proof irrelevance) and defers instance arguments to `isDefEqI`.
 -/
 def isDefEqAppWithInfo (t : Expr) (s : Expr) (i : Nat) (info : ProofInstInfo) : DefEqM Bool := do
-  let .app f₁ a₁ := t | if s.isApp then return false else isDefEqMain t s
-  let .app f₂ a₂ := s | return false
-  unless (← isDefEqAppWithInfo f₁ f₂ (i - 1) info) do return false
+  let .app f₁ a₁ := t
+    | if s.isApp then return false else isDefEqMain t s
+  let .app f₂ a₂ := s
+    | return false
+  unless (← isDefEqAppWithInfo f₁ f₂ (i - 1) info) do
+    return false
   if h : i < info.argsInfo.size then
     let argInfo := info.argsInfo[i]
     if argInfo.isInstance then
@@ -945,9 +1005,12 @@ Looks up `ProofInstInfo` for the head constant and delegates to `isDefEqAppWithI
 if available, otherwise uses `isDefEqAppDefault`.
 -/
 def isDefEqApp (tFn : Expr) (t : Expr) (s : Expr) (_ : tFn = t.getAppFn) : DefEqM Bool := do
-  unless t.isApp && s.isApp do return false
-  let .const declName _ := tFn | isDefEqAppDefault t s
-  let some info ← getProofInstInfo? declName | isDefEqAppDefault t s
+  unless t.isApp && s.isApp do
+    return false
+  let .const declName _ := tFn
+    | isDefEqAppDefault t s
+  let some info ← getProofInstInfo? declName
+    | isDefEqAppDefault t s
   let numArgs := t.getAppNumArgs
   isDefEqAppWithInfo t s (numArgs - 1) info
 
@@ -963,26 +1026,29 @@ definitive because `Sym` assumes canonical forms.
 -/
 def isDefEqOffset (t s : Expr) : DefEqM LBool := do
   match isNatValue? t, isNatValue? s with
-  | some v₁, some v₂ =>
-    return if v₁ == v₂ then .true else .false
+  | some v₁, some v₂ => return if v₁ == v₂ then .true else .false
   | some v₁, none =>
     -- `v₁ =?= s' + k₂`
-    let some (.add s' k₂) := isOffset? s | return .undef
+    let some (.add s' k₂) := isOffset? s
+      | return .undef
     if k₂ ≤ v₁ then
       toLBoolM <| isDefEqMain (← share (mkNatLit (v₁ - k₂))) s'
     else
       return .false
   | none, some v₂ =>
     -- `t' + k₁ =?= v₂`
-    let some (.add t' k₁) := isOffset? t | return .undef
+    let some (.add t' k₁) := isOffset? t
+      | return .undef
     if k₁ ≤ v₂ then
       toLBoolM <| isDefEqMain t' (← share (mkNatLit (v₂ - k₁)))
     else
       return .false
   | none, none =>
     -- `t' + k₁ =?= s' + k₂`
-    let some (.add t' k₁) := isOffset? t | return .undef
-    let some (.add s' k₂) := isOffset? s | return .undef
+    let some (.add t' k₁) := isOffset? t
+      | return .undef
+    let some (.add s' k₂) := isOffset? s
+      | return .undef
     if k₁ == k₂ then
       toLBoolM <| isDefEqMain t' s'
     else if k₁ < k₂ then
@@ -993,78 +1059,96 @@ def isDefEqOffset (t s : Expr) : DefEqM LBool := do
       toLBoolM <| isDefEqMain (← share (mkNatAdd t' (mkNatLit (k₁ - k₂)))) s'
 
 set_option compiler.ignoreBorrowAnnotation true in
-/--
-`isDefEqMain` implementation.
--/
+/-- `isDefEqMain` implementation. -/
 @[export lean_sym_def_eq]
 def isDefEqMainImpl (t : Expr) (s : Expr) : DefEqM Bool := do
   if isSameExpr t s then return true
   -- **Note**: `etaReduce` is supposed to be fast, and does not allocate memory
   let t' := etaReduce t
   let s' := etaReduce s
-  if !isSameExpr t t' || !isSameExpr s s' then
+  if ! isSameExpr t t' || ! isSameExpr s s' then
     isDefEqMain t' s'
-  else match t, s with
-  | .lit  l₁,      .lit l₂       => return l₁ == l₂
-  | .sort u,       .sort v       => isLevelDefEqS u v
-  | .lam ..,       .lam ..       => isDefEqBindingS t s
-  | .forallE ..,   .forallE ..   => isDefEqBindingS t s
-  | .mdata _ t,    _             => isDefEqMain t s
-  | _,             .mdata _ s    => isDefEqMain t s
-  | .fvar fvarId₁, .fvar fvarId₂ =>
-    if (← read).zetaDelta then
-      if fvarId₁ == fvarId₂ then return true
-      let decl₁ ← fvarId₁.getDecl
-      let decl₂ ← fvarId₂.getDecl
-      if !decl₁.isLet && !decl₂.isLet then
-        -- Both are not let-declarations
-        return false
-      else if decl₁.index < decl₂.index then
-        -- If `s` occurs after `t` and it is a let-decl, unfold and recurse
-        let some val₂ := decl₂.value? | return false
-        isDefEqMain t val₂
+  else
+    match t, s with
+    | .lit l₁, .lit l₂ => return l₁ == l₂
+    | .sort u, .sort v => isLevelDefEqS u v
+    | .lam .., .lam .. => isDefEqBindingS t s
+    | .forallE .., .forallE .. => isDefEqBindingS t s
+    | .mdata _ t, _ => isDefEqMain t s
+    | _, .mdata _ s => isDefEqMain t s
+    | .fvar fvarId₁, .fvar fvarId₂ =>
+      if (← read).zetaDelta then
+        if fvarId₁ == fvarId₂ then return true
+        let decl₁ ← fvarId₁.getDecl
+        let decl₂ ← fvarId₂.getDecl
+        if !decl₁.isLet && !decl₂.isLet then
+          -- Both are not let-declarations
+          return false
+        else if decl₁.index < decl₂.index then
+          -- If `s` occurs after `t` and it is a let-decl, unfold and recurse
+          let some val₂ := decl₂.value?
+            | return false
+          isDefEqMain t val₂
+        else
+          -- If `t` occurs after `s`, and it is a let-decl, unfold and recurse
+          let some val₁ := decl₁.value?
+            | return false
+          isDefEqMain val₁ s
       else
-        -- If `t` occurs after `s`, and it is a let-decl, unfold and recurse
-        let some val₁ := decl₁.value? | return false
-        isDefEqMain val₁ s
-    else
-      return fvarId₁ == fvarId₂
-  | .const declName₁ us₁, .const declName₂ us₂ =>
-    if declName₁ == declName₂ then
-      isLevelDefEqListS us₁ us₂
-    else
+        return fvarId₁ == fvarId₂
+    | .const declName₁ us₁, .const declName₂ us₂ =>
+      if declName₁ == declName₂ then
+        isLevelDefEqListS us₁ us₂
+      else
+        return false
+    | .bvar _, _
+    | _, .bvar _ =>
+      unreachable!
+    | .proj .., _
+    | _, .proj .. =>
+      throwError
+        "unexpected kernel projection term during structural definitional equality{indentExpr t}\
+          \nand{indentExpr s}\
+          \npre-process and fold them as projection applications"
       return false
-  | .bvar _, _ | _, .bvar _ => unreachable!
-  | .proj .., _ | _, .proj .. =>
-    throwError "unexpected kernel projection term during structural definitional equality{indentExpr t}\nand{indentExpr s}\npre-process and fold them as projection applications"
-    return false
-  | .letE .., _ | _, .letE .. =>
-    throwError "unexpected let-declaration term during structural definitional equality{indentExpr t}\nand{indentExpr s}\npre-process and zeta-reduce them"
-    return false
-  | _, _ =>
-    let tFn := t.getAppFn
-    let sFn := s.getAppFn
-    if (← isAssignedMVar tFn) then
-      isDefEqMain (← instantiateMVarsS t) s
-    else if (← isAssignedMVar sFn) then
-      isDefEqMain t (← instantiateMVarsS s)
-    else
-    whenUndefDo (tryAssignMillerPattern tFn t s rfl) do
-    whenUndefDo (tryAssignMillerPattern sFn s t rfl) do
-    whenUndefDo (isDefEqOffset t s) do
-    if let .fvar fvarId₁ := t then
-      unless (← read).zetaDelta do return false
-      let some val₁ ← fvarId₁.getValue? | return false
-      isDefEqMain val₁ s
-    else if let .fvar fvarId₂ := s then
-      unless (← read).zetaDelta do return false
-      let some val₂ ← fvarId₂.getValue? | return false
-      isDefEqMain t val₂
-    else
-      isDefEqApp tFn t s rfl
+    | .letE .., _
+    | _, .letE .. =>
+      throwError
+        "unexpected let-declaration term during structural definitional equality{indentExpr t}\
+          \nand{indentExpr s}\
+          \npre-process and zeta-reduce them"
+      return false
+    | _, _ =>
+      let tFn := t.getAppFn
+      let sFn := s.getAppFn
+      if (← isAssignedMVar tFn) then
+        isDefEqMain (← instantiateMVarsS t) s
+      else if (← isAssignedMVar sFn) then
+        isDefEqMain t (← instantiateMVarsS s)
+      else
+        whenUndefDo (tryAssignMillerPattern tFn t s rfl) do
+          whenUndefDo (tryAssignMillerPattern sFn s t rfl) do
+            whenUndefDo (isDefEqOffset t s) do
+              if let .fvar fvarId₁ := t then
+                unless (← read).zetaDelta do
+                  return false
+                let some val₁ ← fvarId₁.getValue?
+                  | return false
+                isDefEqMain val₁ s
+              else if let .fvar fvarId₂ := s then
+                unless (← read).zetaDelta do
+                  return false
+                let some val₂ ← fvarId₂.getValue?
+                  | return false
+                isDefEqMain t val₂
+              else
+                isDefEqApp tFn t s rfl
 
-abbrev DefEqM.run (unify := true) (zetaDelta := true) (mvarsNew : Array MVarId := #[])
-    (mvarsToCheckType : Array MVarId := #[]) (x : DefEqM α) : SymM α := do
+abbrev DefEqM.run
+    (unify := true) (zetaDelta := true) (mvarsNew : Array MVarId := #[])
+    (mvarsToCheckType : Array MVarId := #[])
+    (x : DefEqM α)
+    : SymM α := do
   let lctx ← getLCtx
   let lctxInitialNextIndex := lctx.decls.size
   x { zetaDelta, lctxInitialNextIndex, unify, mvarsNew, mvarsToCheckType }
@@ -1073,10 +1157,13 @@ abbrev DefEqM.run (unify := true) (zetaDelta := true) (mvarsNew : Array MVarId :
 A lightweight structural definitional equality for the symbolic simulation framework.
 Unlike the full `isDefEq`, it avoids expensive operations while still supporting Miller pattern unification.
 -/
-public def isDefEqS (t : Expr) (s : Expr) (unify := true) (zetaDelta := true)
-    (mvarsNew : Array MVarId := #[]) (mvarsToCheckType : Array MVarId := #[]): SymM Bool := do
-  DefEqM.run (unify := unify) (zetaDelta := zetaDelta) (mvarsNew := mvarsNew) (mvarsToCheckType := mvarsToCheckType) do
-    isDefEqMain t s
+public def isDefEqS
+    (t : Expr) (s : Expr)
+    (unify := true) (zetaDelta := true) (mvarsNew : Array MVarId := #[])
+    (mvarsToCheckType : Array MVarId := #[])
+    : SymM Bool := do
+  DefEqM.run (unify := unify) (zetaDelta := zetaDelta) (mvarsNew := mvarsNew)
+    (mvarsToCheckType := mvarsToCheckType) do isDefEqMain t s
 
 def noPending : UnifyM Bool := do
   let s ← get
@@ -1103,9 +1190,10 @@ inductive MkPreResultResult where
   | success (mvarsToCheckType : Array MVarId) (instMVars : Array MVarId)
 
 def mkPreResult : UnifyM MkPreResultResult := do
-  let us ← (← get).uAssignment.toList.mapM fun
-    | some val => pure val
-    | none => mkFreshLevelMVar
+  let us ←
+    (← get).uAssignment.toList.mapM fun
+      | some val => pure val
+      | none => mkFreshLevelMVar
   let pattern := (← read).pattern
   let varTypes := pattern.varTypes
   let eAssignment := (← get).eAssignment
@@ -1183,12 +1271,16 @@ def processPendingExpr (mvarsToCheckType : Array MVarId) : UnifyM Bool := do
   -- Only metavariables created by this match (index ≥ `mvarCounterSaved`) are assignable.
   let mvarCounterSaved := (← read).mvarCounterSaved
   let mctx ← getMCtx
-  let mvarsNew := if unify then #[] else args.filterMap fun
-    | .mvar mvarId =>
-      match mctx.findDecl? mvarId with
-      | some decl => if decl.index ≥ mvarCounterSaved then some mvarId else none
-      | none => none
-    | _ => none
+  let mvarsNew :=
+    if unify then
+      #[]
+    else
+      args.filterMap fun
+        | .mvar mvarId =>
+          match mctx.findDecl? mvarId with
+          | some decl => if decl.index ≥ mvarCounterSaved then some mvarId else none
+          | none => none
+        | _ => none
   DefEqM.run unify zetaDelta mvarsNew mvarsToCheckType do
     for (t, s) in ePending do
       let t ← instantiateLevelParamsS t pattern.levelParams us
@@ -1203,7 +1295,8 @@ def processPending (mvarsToCheckType : Array MVarId) : UnifyM Bool := do
   else
     processPendingLevel <&&> processPendingInst <&&> processPendingExpr mvarsToCheckType
 
-abbrev UnifyM.run (pattern : Pattern) (unify : Bool) (zetaDelta : Bool) (k : UnifyM α) : SymM α := do
+abbrev UnifyM.run (pattern : Pattern) (unify : Bool) (zetaDelta : Bool) (k : UnifyM α)
+    : SymM α := do
   let eAssignment := pattern.varTypes.map fun _ => none
   let uAssignment := pattern.levelParams.toArray.map fun _ => none
   let mvarCounterSaved := (← getMCtx).mvarCounter
@@ -1224,13 +1317,16 @@ def mkResult (unresolvedInsts : Array MVarId) : UnifyM MatchUnifyResult := do
   let s ← get
   return { s with unresolvedInsts }
 
-def main (p : Pattern) (e : Expr) (unify : Bool) (zetaDelta : Bool) : SymM (Option (MatchUnifyResult)) :=
+def main (p : Pattern) (e : Expr) (unify : Bool) (zetaDelta : Bool)
+    : SymM (Option (MatchUnifyResult)) :=
   UnifyM.run p unify zetaDelta do
-    unless (← process p.pattern e) do return none
+    unless (← process p.pattern e) do
+      return none
     match (← mkPreResult) with
     | .failed => return none
     | .success mvarsToCheckType instMVars =>
-      unless (← processPending mvarsToCheckType) do return none
+      unless (← processPending mvarsToCheckType) do
+        return none
       -- An instance may still be assigned while processing pending constraints; report only those
       -- that remain unresolved so the caller decides whether that is fatal.
       let unresolvedInsts ← instMVars.filterM fun m => return !(← m.isAssigned)
@@ -1253,7 +1349,8 @@ Instance arguments are synthesized (or assigned by unification). Any that cannot
 reported in `MatchUnifyResult.unresolvedInsts` rather than silently left as loose metavariables in
 `args`. Proof arguments are skipped via proof irrelevance.
 -/
-public def Pattern.match? (p : Pattern) (e : Expr) (zetaDelta := true) : SymM (Option (MatchUnifyResult)) :=
+public def Pattern.match? (p : Pattern) (e : Expr) (zetaDelta := true)
+    : SymM (Option (MatchUnifyResult)) :=
   main p e (unify := false) (zetaDelta := zetaDelta)
 
 /--
@@ -1271,7 +1368,8 @@ Instance arguments are synthesized (or assigned by unification). Any that cannot
 reported in `MatchUnifyResult.unresolvedInsts` rather than silently left as loose metavariables in
 `args`. Proof arguments are skipped via proof irrelevance.
 -/
-public def Pattern.unify? (p : Pattern) (e : Expr) (zetaDelta := true) : SymM (Option (MatchUnifyResult)) :=
+public def Pattern.unify? (p : Pattern) (e : Expr) (zetaDelta := true)
+    : SymM (Option (MatchUnifyResult)) :=
   main p e (unify := true) (zetaDelta := zetaDelta)
 
 end Lean.Meta.Sym

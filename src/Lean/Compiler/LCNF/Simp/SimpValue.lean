@@ -13,12 +13,12 @@ public section
 namespace Lean.Compiler.LCNF
 namespace Simp
 
-/--
-Try to simplify projections `.proj _ i s` where `s` is constructor.
--/
+/-- Try to simplify projections `.proj _ i s` where `s` is constructor. -/
 def simpProj? (e : LetValue .pure) : OptionT SimpM (LetValue .pure) := do
-  let .proj _ i s := e | failure
-  let some ctorInfo ← findCtor? s | failure
+  let .proj _ i s := e
+    | failure
+  let some ctorInfo ← findCtor? s
+    | failure
   match ctorInfo with
   | .ctor ctorVal args => return args[ctorVal.numParams + i]!.toLetValue
   | .natVal .. => failure
@@ -32,8 +32,10 @@ g b
 is simplified to `f a b`.
 -/
 def simpAppApp? (e : LetValue .pure) : OptionT SimpM (LetValue .pure) := do
-  let .fvar g args := e | failure
-  let some decl ← findLetDecl? g | failure
+  let .fvar g args := e
+    | failure
+  let some decl ← findLetDecl? g
+    | failure
   match decl.value with
   | .fvar f args' =>
     /- If `args` is empty then `g` is an alias that is going to be eliminated by `elimVar?` -/
@@ -47,15 +49,20 @@ def simpAppApp? (e : LetValue .pure) : OptionT SimpM (LetValue .pure) := do
   | .proj .. | .lit .. => failure
 
 def simpCtorDiscr? (e : LetValue .pure) : OptionT SimpM (LetValue .pure) := do
-  let .const declName _ _ := e | failure
-  let some (.ctorInfo _) := (← getEnv).find? declName | failure
-  let some fvarId ← simpCtorDiscrCore? e.toExpr | failure
+  let .const declName _ _ := e
+    | failure
+  let some (.ctorInfo _) := (← getEnv).find? declName
+    | failure
+  let some fvarId ← simpCtorDiscrCore? e.toExpr
+    | failure
   return .fvar fvarId #[]
 
 def applyImplementedBy? (e : LetValue .pure) : OptionT SimpM (LetValue .pure) := do
   guard <| (← read).config.implementedBy
-  let .const declName us args := e | failure
-  let some declNameNew := getImplementedBy? (← getEnv) declName | failure
+  let .const declName us args := e
+    | failure
+  let some declNameNew := getImplementedBy? (← getEnv) declName
+    | failure
   return .const declNameNew us args
 
 /-- Try to apply simple simplifications. -/

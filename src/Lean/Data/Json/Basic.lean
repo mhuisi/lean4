@@ -25,7 +25,7 @@ namespace Lean
 structure JsonNumber where
   mantissa : Int
   exponent : Nat
-  deriving DecidableEq, Hashable
+deriving DecidableEq, Hashable
 
 namespace JsonNumber
 
@@ -41,17 +41,20 @@ private partial def countDigits (n : Nat) : Nat :=
     if n ≤ 9 then
       digits
     else
-      loop (n/10) (digits+1)
+      loop (n / 10) (digits + 1)
   loop n 1
 
-/-- Represents `n = mantissa * 10^-exponent` as `(sign, mantissa', exponent')`,
+/--
+Represents `n = mantissa * 10^-exponent` as `(sign, mantissa', exponent')`,
 where `sign ∈ {-1,0,1}` and `n = sign * 0.mantissa' * 10^exponent'`.
 
 This is a normal form: if `m1 * 10^-e1 = m2 * 10^-e2`,
-then `normalize ⟨m1, e1⟩ == normalize ⟨m2, e2⟩`. -/
+then `normalize ⟨m1, e1⟩ == normalize ⟨m2, e2⟩`.
+-/
 protected def normalize : JsonNumber → Int × Nat × Int
   | ⟨m, e⟩ => Id.run do
-    if m = 0 then (0, 0, 0)
+    if m = 0 then
+      (0, 0, 0)
     else
       let sign : Int := if m > 0 then 1 else -1
       let mut mAbs := m.natAbs
@@ -68,38 +71,43 @@ protected def normalize : JsonNumber → Int × Nat × Int
 def lt (a b : JsonNumber) : Bool :=
   let (as, am, ae) := a.normalize
   let (bs, bm, be) := b.normalize
-  if as ≠ bs then as < bs
-  else if as = 0 then false -- 0 ≮ 0
+  if as ≠ bs then
+    as < bs
+  else if as = 0 then
+    false -- 0 ≮ 0
   else
     let ((am, ae), (bm, be)) :=
       if as = -1 then
         ((bm, be), (am, ae))
       else
         ((am, ae), (bm, be))
-    if ae < be then true
-    else if ae > be then false
+    if ae < be then
+      true
+    else if ae > be then
+      false
     else
       let amDigits := countDigits am
       let bmDigits := countDigits bm
       -- align the mantissas
       let (am, bm) :=
         if amDigits < bmDigits then
-          (am * 10^(bmDigits - amDigits), bm)
+          (am * 10 ^ (bmDigits - amDigits), bm)
         else
-          (am, bm * 10^(amDigits - bmDigits))
+          (am, bm * 10 ^ (amDigits - bmDigits))
       am < bm
 
-instance ltProp : LT JsonNumber :=
-  ⟨fun a b => lt a b = true⟩
+instance ltProp : LT JsonNumber := ⟨fun a b => lt a b = true⟩
 
-instance (a b : JsonNumber) : Decidable (a < b) :=
-  inferInstanceAs (Decidable (lt a b = true))
+instance (a b : JsonNumber) : Decidable (a < b) := inferInstanceAs (Decidable (lt a b = true))
 
 instance : Ord JsonNumber where
   compare x y :=
-    if x < y then Ordering.lt
-    else if x > y then Ordering.gt
-    else Ordering.eq
+    if x < y then
+      Ordering.lt
+    else if x > y then
+      Ordering.gt
+    else
+      Ordering.eq
 
 protected def toString : JsonNumber → String
   | ⟨m, 0⟩ => m.repr
@@ -118,10 +126,8 @@ protected def toString : JsonNumber → String
     if m % e' = 0 && exp = 0 then
       s!"{sign}{left}"
     else
-      let right := e' + m % e'
-        |>.repr.toRawSubstring.drop 1
-        |>.dropRightWhile (fun c => c = '0')
-        |>.toString
+      let right :=
+        e' + m % e' |>.repr.toRawSubstring.drop 1 |>.dropRightWhile (fun c => c = '0') |>.toString
       let exp := if exp = 0 then "" else "e" ++ exp.repr
       s!"{sign}{left}.{right}{exp}"
 
@@ -139,35 +145,45 @@ protected def shiftr : JsonNumber → Nat → JsonNumber
 instance : ToString JsonNumber := ⟨JsonNumber.toString⟩
 
 instance : Repr JsonNumber where
-  reprPrec | ⟨m, e⟩, _ => Std.Format.bracket "⟨" (repr m ++ "," ++ repr e) "⟩"
+  reprPrec
+    | ⟨m, e⟩, _ => Std.Format.bracket "⟨" (repr m ++ "," ++ repr e) "⟩"
 
 instance : OfScientific JsonNumber where
   ofScientific mantissa exponentSign decimalExponent :=
-    if exponentSign then
-      {mantissa := mantissa, exponent := decimalExponent}
-    else
-      {mantissa := (mantissa * 10 ^ decimalExponent : Nat), exponent := 0}
+    if exponentSign then {
+      mantissa := mantissa
+      exponent := decimalExponent
+    }
+    else {
+      mantissa := (mantissa * 10 ^ decimalExponent : Nat)
+      exponent := 0
+    }
 
 instance : Neg JsonNumber where
-  neg jn := ⟨- jn.mantissa, jn.exponent⟩
+  neg jn := ⟨-jn.mantissa, jn.exponent⟩
 
 instance : Inhabited JsonNumber := ⟨0⟩
 
 def toFloat : JsonNumber → Float
   | ⟨m, e⟩ => (if m >= 0 then 1.0 else -1.0) * OfScientific.ofScientific m.natAbs true e
 
-/-- Creates a json number from a positive float, panicking if it isn't.
+/--
+Creates a json number from a positive float, panicking if it isn't.
 [todo]EdAyers: Currently goes via a string representation, when more float primitives are available
-should switch to using those. -/
+should switch to using those.
+-/
 private def fromPositiveFloat! (x : Float) : JsonNumber :=
   match Lean.Syntax.decodeScientificLitVal? (toString x) with
   | none => panic! s!"Failed to parse {toString x}"
   | some (m, sign, e) => OfScientific.ofScientific m sign e
 
-/-- Attempts to convert a float to a JsonNumber, if the number isn't finite returns
-the appropriate string from "NaN", "Infinity", "-Infinity". -/
-def fromFloat? (x : Float): Sum String JsonNumber :=
-  if x.isNaN then Sum.inl "NaN"
+/--
+Attempts to convert a float to a JsonNumber, if the number isn't finite returns
+the appropriate string from "NaN", "Infinity", "-Infinity".
+-/
+def fromFloat? (x : Float) : Sum String JsonNumber :=
+  if x.isNaN then
+    Sum.inl "NaN"
   else if x.isInf then
     Sum.inl <| if x > 0 then "Infinity" else "-Infinity"
   else if x == 0.0 then
@@ -189,46 +205,44 @@ inductive Json where
   | str (s : String)
   | arr (elems : Array Json)
   | obj (kvPairs : Std.TreeMap.Raw String Json)
-  deriving Inhabited
+deriving Inhabited
 
 namespace Json
 
 private partial def beq' : Json → Json → Bool
-  | null,   null   => true
+  | null, null => true
   | bool a, bool b => a == b
-  | num a,  num b  => a == b
-  | str a,  str b  => a == b
-  | arr a,  arr b  =>
+  | num a, num b => a == b
+  | str a, str b => a == b
+  | arr a, arr b =>
     let _ : BEq Json := ⟨beq'⟩
     a == b
-  | obj a,  obj b =>
+  | obj a, obj b =>
     let _ : BEq Json := ⟨beq'⟩
     let szA := a.foldl (init := 0) (fun a _ _ => a + 1)
     let szB := b.foldl (init := 0) (fun a _ _ => a + 1)
     szA == szB && a.all fun field fa =>
       match b.get? field with
-      | none    => false
+      | none => false
       | some fb => fa == fb
-  | _,      _      => false
+  | _, _ => false
 
 instance : BEq Json where
   beq := private beq'
 
 private partial def hash' : Json → UInt64
-  | null   => 11
+  | null => 11
   | bool b => mixHash 13 <| hash b
-  | num n  => mixHash 17 <| hash n
-  | str s  => mixHash 19 <| hash s
-  | arr elems =>
-    mixHash 23 <| elems.foldl (init := 7) fun r a => mixHash r (hash' a)
+  | num n => mixHash 17 <| hash n
+  | str s => mixHash 19 <| hash s
+  | arr elems => mixHash 23 <| elems.foldl (init := 7) fun r a => mixHash r (hash' a)
   | obj kvPairs =>
     mixHash 29 <| kvPairs.foldl (init := 7) fun r k v => mixHash r <| mixHash (hash k) (hash' v)
 
 instance : Hashable Json where
   hash := private hash'
 
-def mkObj (o : List (String × Json)) : Json :=
-  obj <| Std.TreeMap.Raw.ofList o
+def mkObj (o : List (String × Json)) : Json := obj <| Std.TreeMap.Raw.ofList o
 
 instance : Coe Nat Json := ⟨fun n => Json.num n⟩
 instance : Coe Int Json := ⟨fun n => Json.num n⟩
@@ -238,63 +252,62 @@ instance : OfNat Json n := ⟨Json.num n⟩
 
 def isNull : Json -> Bool
   | null => true
-  | _    => false
+  | _ => false
 
 def getObj? : Json → Except String (Std.TreeMap.Raw String Json compare)
   | obj kvs => return kvs
-  | _       => throw "object expected"
+  | _ => throw "object expected"
 
 def getArr? : Json → Except String (Array Json)
   | arr a => return a
-  | _     => throw "array expected"
+  | _ => throw "array expected"
 
 def getStr? : Json → Except String String
   | str s => return s
-  | _     => throw "String expected"
+  | _ => throw "String expected"
 
 def getNat? : Json → Except String Nat
   | (n : Nat) => return n
-  | _         => throw "Natural number expected"
+  | _ => throw "Natural number expected"
 
 def getInt? : Json → Except String Int
   | (i : Int) => return i
-  | _         => throw "Integer expected"
+  | _ => throw "Integer expected"
 
 def getBool? : Json → Except String Bool
   | (b : Bool) => return b
-  | _          => throw "Bool expected"
+  | _ => throw "Bool expected"
 
 def getNum? : Json → Except String JsonNumber
   | num n => return n
-  | _     => throw "number expected"
+  | _ => throw "number expected"
 
 def getObjVal? : Json → String → Except String Json
   | obj kvs, k =>
     match kvs.get? k with
     | some v => return v
     | none => throw s!"property not found: {k}"
-  | _      , _ => throw "object expected"
+  | _, _ => throw "object expected"
 
 def getArrVal? : Json → Nat → Except String Json
   | arr a, i =>
     match a[i]? with
     | some v => return v
     | none => throw s!"index out of bounds: {i}"
-  | _    , _ => throw "array expected"
+  | _, _ => throw "array expected"
 
-def getObjValD (j : Json) (k : String) : Json :=
-  (j.getObjVal? k).toOption.getD null
+def getObjValD (j : Json) (k : String) : Json := (j.getObjVal? k).toOption.getD null
 
 def setObjVal! : Json → String → Json → Json
   | obj kvs, k, v => obj <| kvs.insert k v
-  | _      , _, _ => panic! "Json.setObjVal!: not an object: {j}"
+  | _, _, _ => panic! "Json.setObjVal!: not an object: {j}"
 
-/-- Assuming both inputs `o₁, o₂` are json objects, will compute `{...o₁, ...o₂}`.
+/--
+Assuming both inputs `o₁, o₂` are json objects, will compute `{...o₁, ...o₂}`.
 If `o₁` is not a json object, `o₂` will be returned.
 -/
 def mergeObj : Json → Json → Json
-  | obj kvs₁, obj kvs₂ =>
-    obj <| kvs₂.foldl Std.TreeMap.Raw.insert kvs₁
+  | obj kvs₁, obj kvs₂ => obj <| kvs₂.foldl Std.TreeMap.Raw.insert kvs₁
   | _, j₂ => j₂
 
 inductive Structured where

@@ -41,23 +41,28 @@ structure ProjInfo where
   arity : Nat
   /-- Given proj (ctor.mk x1 x2 ... xn)  which xi do we reduce to -/
   offset : Nat
-  /--
-  Name of the accompanying constructor
-  -/
+  /-- Name of the accompanying constructor -/
   ctorName : Name
 
-def projCtorProc (projFns : Std.HashMap Name ProjInfo) (ctors : Std.HashMap Name Nat) :
-    Sym.Simp.Simproc := fun e => do
+def projCtorProc (projFns : Std.HashMap Name ProjInfo) (ctors : Std.HashMap Name Nat)
+    : Sym.Simp.Simproc := fun e => do
   e.withApp fun fn args => do
-    let .const fn _ := fn | return .rfl
-    let some projInfo := projFns[fn]? | return .rfl
-    unless args.size == projInfo.arity do return .rfl
+    let .const fn _ := fn
+      | return .rfl
+    let some projInfo := projFns[fn]?
+      | return .rfl
+    unless args.size == projInfo.arity do
+      return .rfl
     let structArg := args.back!
     structArg.withApp fun structFn structArgs => do
-      let .const structFn _ := structFn | return .rfl
-      unless structFn == projInfo.ctorName do return .rfl
-      let some ctorArity := ctors[structFn]? | return .rfl
-      unless ctorArity == structArgs.size do return .rfl
+      let .const structFn _ := structFn
+        | return .rfl
+      unless structFn == projInfo.ctorName do
+        return .rfl
+      let some ctorArity := ctors[structFn]?
+        | return .rfl
+      unless ctorArity == structArgs.size do
+        return .rfl
       let result := structArgs[projInfo.offset]!
       return .step result (← mkEqRefl result)
 
@@ -65,8 +70,7 @@ def projCtorProc (projFns : Std.HashMap Name ProjInfo) (ctors : Std.HashMap Name
 Add simp lemmas that we want to apply to structures that we find interesting to `simprocs` and
 `theorems`.
 -/
-public def addStructureSimpLemmas (methods : Sym.Simp.Methods) :
-    PreProcessM Sym.Simp.Methods := do
+public def addStructureSimpLemmas (methods : Sym.Simp.Methods) : PreProcessM Sym.Simp.Methods := do
   let mut extTheorems : Sym.Simp.Theorems := {}
   let mut projFns := {}
   let mut projFnIndex := {}
@@ -84,20 +88,18 @@ public def addStructureSimpLemmas (methods : Sym.Simp.Methods) :
     let structInfo := getStructureInfo env const
     let fields := structInfo.fieldNames.size
     for proj in 0...fields do
-      let some projFn := structInfo.getProjFn? proj | continue
+      let some projFn := structInfo.getProjFn? proj
+        | continue
       let arity := (← getConstVal projFn).type.getForallArity
       projFns := projFns.insert projFn
-      projFnIndex := projFnIndex.insert projFn {
-        arity,
-        offset := proj + constInfo.numParams
-        ctorName := ctor
-      }
-  return { methods with
+      projFnIndex :=
+        projFnIndex.insert projFn { arity, offset := proj + constInfo.numParams, ctorName := ctor }
+  return {
+    methods with
     post := methods.post >> extTheorems.rewrite
-    pre := methods.pre
-      >> applyIteSimproc projFns
-      >> applyCondSimproc projFns
-      >> projCtorProc projFnIndex ctorIndex
+    pre :=
+      methods.pre >> applyIteSimproc projFns >> applyCondSimproc projFns
+        >> projCtorProc projFnIndex ctorIndex
   }
 where
   findExtIffThms (info : InductiveVal) : MetaM (Array Name) := do
@@ -105,9 +107,11 @@ where
     let thms ← Ext.getExtTheorems pat
     let env ← getEnv
     return thms.filterMap fun thm => Id.run do
-      let .str root s := thm.declName | return none
+      let .str root s := thm.declName
+        | return none
       let extIffThm := .str root (s ++ "_iff")
-      unless env.contains extIffThm do return none
+      unless env.contains extIffThm do
+        return none
       return some extIffThm
 
   /--
@@ -130,9 +134,11 @@ public partial def structuresPass : Pass where
       for decl in ← getLCtx do
         if decl.isLet || decl.isImplementationDetail then
           continue
-        let .const const us := decl.type.getAppFn | continue
+        let .const const us := decl.type.getAppFn
+          | continue
         if interesting.contains const then
-          worklist := worklist.push (← Sym.share (mkFVar decl.fvarId), const, us, decl.type.getAppArgs)
+          worklist :=
+            worklist.push (← Sym.share (mkFVar decl.fvarId), const, us, decl.type.getAppArgs)
 
       let mut newHyps : Array Hyp := #[]
       let env ← getEnv
@@ -146,14 +152,16 @@ public partial def structuresPass : Pass where
           let projValue ← Sym.share <| ← mkProjFn ctorInfo us params proj value
           let projType ← Sym.inferType projValue
           if ← Meta.isProp projType then
-            newHyps := newHyps.push {
-              name := `h
-              type := projType
-              value := projValue
-              source := .structureProjection projValue
-            }
+            newHyps :=
+              newHyps.push {
+                name := `h
+                type := projType
+                value := projValue
+                source := .structureProjection projValue
+              }
           else
-            let .const const us := projType.getAppFn | continue
+            let .const const us := projType.getAppFn
+              | continue
             if interesting.contains const then
               worklist := worklist.push (projValue, const, us, projType.getAppArgs)
 
@@ -166,9 +174,7 @@ where
       methods ← addStructureSimpLemmas methods
       methods ← addDefaultTypeAnalysisLemmas methods
       let cfg ← PreProcessM.getConfig
-      let config := {
-        maxSteps := cfg.maxSteps
-      }
+      let config := { maxSteps := cfg.maxSteps }
 
       PreProcessM.mapSimpHyps methods config
 
