@@ -205,7 +205,7 @@ RSS of the store process, measured in the C++ benchmark:
 | libmdbx | Like LMDB. Its writes were slower, and its first start took 500 s instead of 11 s with 128 MB. |
 | RocksDB | It keeps the index and filter blocks of all table files on the heap: 688 MB at 100×. Its updates failed with 128 MB. Only one process can write. |
 | LevelDB | Small and fast for writes. It failed with 64 MB. Only one process can write. |
-| DuckDB | 1 to 2 ms for a lookup and 10 to 60 ms for an update. It ran out of memory at 3.3 times the data with a 256 MB limit. |
+| DuckDB | With its default memory limit (80 percent of the memory that it detects), a lookup took 1 to 2 ms at every size. An update of one module took 11 ms at core and Mathlib size and 59 ms at 12 times the data. Scans of large results were as fast as in SQLite or faster. Its heap grew to 1.1 GB at 12 times the data, and its first start took 1.6 hours there. It failed in memory cgroups of 256 MB and below. With a limit of 256 MB, which the benchmark chose, it ran out of memory at 3.3 times the data. |
 | SQLite | Constant heap of a few MB at every size, and it worked down to 64 MB. The SQL code is short: about 500 lines in the benchmark, against about 740 lines for the LMDB layout. FTS5 is available for a symbol index. |
 
 ## Integration
