@@ -6,6 +6,7 @@ The benchmarks used the ilean data of core and Mathlib, and synthetic data up to
 The section [How the numbers were measured](#how-the-numbers-were-measured) describes the method.
 
 Status: design. Nothing of it is implemented.
+[ilean_index_lmdb.md](ilean_index_lmdb.md) describes the same design with LMDB as the store.
 
 ## The problem
 
