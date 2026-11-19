@@ -34,23 +34,27 @@ they must release the reference as many times as they have received it from the 
 -/
 structure RpcRef where
   p : USize
-  deriving Inhabited, BEq, Hashable
+deriving Inhabited, BEq, Hashable
 
 instance : ToString RpcRef where
   toString r := toString r.p
 
 /-- The *RPC wire format* specifies how user data is encoded in RPC requests. -/
 inductive RpcWireFormat where
-  /-- Version `0` uses JSON.
+  /--
+  Version `0` uses JSON.
   Serialized RPC data is stored directly in `RpcCallParams.params` and in `JsonRpc.Response.result`
   (as opposed to being wrapped in additional metadata).
   General types (except RPC references) are (de)serialized via `ToJson/FromJson`.
-  RPC references are serialized as `{"p": n}`. -/
+  RPC references are serialized as `{"p": n}`.
+  -/
   | v0
-  /-- Version `1` is like `0`,
-  except that RPC references are serialized as `{"__rpcref": n}`. -/
+  /--
+  Version `1` is like `0`,
+  except that RPC references are serialized as `{"__rpcref": n}`.
+  -/
   | v1
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 @[inline]
 def RpcWireFormat.refFieldName : RpcWireFormat → String
@@ -79,9 +83,9 @@ See also the docstring for `RpcEncodable`.
 -/
 structure WithRpcRef (α : Type u) where
   private mk' ::
-    val : α
-    private id : USize
-  deriving Inhabited
+  val : α
+  private id : USize
+deriving Inhabited
 
 builtin_initialize freshWithRpcRefId : IO.Ref USize ← IO.mkRef 1
 
@@ -98,8 +102,8 @@ def WithRpcRef.mk (val : α) : BaseIO (WithRpcRef α) := do
 
 structure ReferencedObject where
   obj : Dynamic
-  id  : USize
-  rc  : Nat
+  id : USize
+  rc : Nat
 
 structure RpcObjectStore : Type where
   /--
@@ -113,9 +117,7 @@ structure RpcObjectStore : Type where
   Reusing `RpcRef`s is helpful because it enables clients to reuse their UI state.
   -/
   refsById : PersistentHashMap USize Lsp.RpcRef := {}
-  /--
-  Value to use for the next fresh `RpcRef`, monotonically increasing.
-  -/
+  /-- Value to use for the next fresh `RpcRef`, monotonically increasing. -/
   nextRef : USize := 0
   /-- The RPC wire format to follow. -/
   wireFormat : Lsp.RpcWireFormat := .v1
@@ -135,7 +137,8 @@ def rpcStoreRef [TypeName α] (obj : WithRpcRef α) : StateM RpcObjectStore Lsp.
     return ref
   | none =>
     let ref : Lsp.RpcRef := ⟨st.nextRef⟩
-    set { st with
+    set {
+      st with
       aliveRefs := st.aliveRefs.insert ref ⟨.mk obj.val, obj.id, 1⟩
       refsById := st.refsById.insert obj.id ref
       nextRef := st.nextRef + 1
@@ -147,8 +150,10 @@ def rpcGetRef (α) [TypeName α] (r : Lsp.RpcRef)
   let some referencedObj := (← read).aliveRefs.find? r
     | throw s!"RPC reference '{r}' is not valid"
   let some val := referencedObj.obj.get? α
-    | throw <| s!"RPC call type mismatch in reference '{r}'\nexpected '{TypeName.typeName α}', " ++
-        s!"got '{referencedObj.obj.typeName}'"
+    | throw <|
+        s!"RPC call type mismatch in reference '{r}'\
+            \nexpected '{TypeName.typeName α}', "
+          ++ s!"got '{referencedObj.obj.typeName}'"
   return { val, id := referencedObj.id }
 
 def rpcReleaseRef (r : Lsp.RpcRef) : StateM RpcObjectStore Bool := do
@@ -157,7 +162,8 @@ def rpcReleaseRef (r : Lsp.RpcRef) : StateM RpcObjectStore Bool := do
     | return false
   let referencedObj := { referencedObj with rc := referencedObj.rc - 1 }
   if referencedObj.rc == 0 then
-    set { st with
+    set {
+      st with
       aliveRefs := st.aliveRefs.erase r
       refsById := st.refsById.erase referencedObj.id
     }
@@ -194,8 +200,7 @@ class RpcEncodable (α : Type) where
   rpcDecode : Json → ExceptT String (ReaderT RpcObjectStore Id) α
 export RpcEncodable (rpcEncode rpcDecode)
 
-instance : Nonempty (RpcEncodable α) :=
-  ⟨{ rpcEncode := default, rpcDecode := default }⟩
+instance : Nonempty (RpcEncodable α) := ⟨{ rpcEncode := default, rpcDecode := default }⟩
 
 instance [FromJson α] [ToJson α] : RpcEncodable α where
   rpcEncode a := return toJson a
@@ -223,8 +228,7 @@ instance [RpcEncodable α] : RpcEncodable (StateM RpcObjectStore α) where
     let a : α ← rpcDecode j
     return return a
 
-instance [TypeName α] : RpcEncodable (WithRpcRef α) :=
-  { rpcEncode, rpcDecode }
+instance [TypeName α] : RpcEncodable (WithRpcRef α) := { rpcEncode, rpcDecode }
 where
   -- separate definitions to prevent inlining
   rpcEncode r := do

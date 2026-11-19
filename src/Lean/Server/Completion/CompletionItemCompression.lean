@@ -12,8 +12,7 @@ import Init.Omega
 namespace Lean.Lsp.ResolvableCompletionList
 
 @[inline]
-def compressItemDataFast (acc : String) (data : ResolvableCompletionItemData) :
-    String := Id.run do
+def compressItemDataFast (acc : String) (data : ResolvableCompletionItemData) : String := Id.run do
   let mut acc := acc ++ "["
   acc := Json.renderString data.uri acc
   acc := acc ++ "," ++ data.pos.line.repr
@@ -33,7 +32,8 @@ def compressItemDataFast (acc : String) (data : ResolvableCompletionItemData) :
 
 @[inline]
 def compressMarkupContentFast (acc : String) (c : MarkupContent) : String :=
-  let kind := match c.kind with
+  let kind :=
+    match c.kind with
     | .plaintext => "plaintext"
     | .markdown => "markdown"
   let acc := acc ++ "{\"kind\":\"" ++ kind ++ "\",\"value\":"
@@ -61,8 +61,7 @@ def compressEditFast (acc : String) (edit : InsertReplaceEdit) : String :=
   let acc := compressRangeFast acc edit.replace
   acc ++ "}"
 
-def compressCompletionTagsFast (acc : String) (tags : Array CompletionItemTag) (i : Nat) :
-    String :=
+def compressCompletionTagsFast (acc : String) (tags : Array CompletionItemTag) (i : Nat) : String :=
   if h : i < tags.size then
     let acc := acc ++ (tags[i].ctorIdx + 1).repr
     let acc :=
@@ -105,9 +104,7 @@ def compressItemFast (acc : String) (item : ResolvableCompletionItem) : String :
       acc := acc ++ "]"
   return acc ++ "}"
 
-def compressItemsFast
-    (acc : String) (items : Array ResolvableCompletionItem) (i : Nat) :
-    String :=
+def compressItemsFast (acc : String) (items : Array ResolvableCompletionItem) (i : Nat) : String :=
   if h : i < items.size then
     let acc := compressItemFast acc items[i]
     let acc :=

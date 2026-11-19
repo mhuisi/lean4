@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.Cutsat.Types
 import Init.Data.Int.OfNat
@@ -27,10 +28,12 @@ The hull avoids case splits that only matter for these bounds. For example, afte
 of the `n` disjunctions, while splitting on them produces `2ⁿ` cases.
 -/
 
-/-- A constraint `lin + k ≤ 0` implied by a disjunct. The field `alt.k` is set when the hull is known. -/
+/--
+A constraint `lin + k ≤ 0` implied by a disjunct. The field `alt.k` is set when the hull is known.
+-/
 private structure HullEntry where
   lin : Poly
-  k   : Int
+  k : Int
   alt : OrHullAlt
 
 private partial def getDisjuncts (e : Expr) (acc : Array Expr := #[]) : Array Expr :=
@@ -38,8 +41,7 @@ private partial def getDisjuncts (e : Expr) (acc : Array Expr := #[]) : Array Ex
   | Or a b => getDisjuncts b (acc.push a)
   | _ => acc.push e
 
-private def isNatOrInt (α : Expr) : Bool :=
-  α.isConstOf ``Nat || α.isConstOf ``Int
+private def isNatOrInt (α : Expr) : Bool := α.isConstOf ``Nat || α.isConstOf ``Int
 
 private def isArithAtom (e : Expr) : Bool :=
   match_expr e with
@@ -48,7 +50,8 @@ private def isArithAtom (e : Expr) : Bool :=
   | _ => false
 
 /-- Returns the conjuncts of `d` that are linear constraints, and their paths. -/
-private partial def getArithConjuncts (d : Expr) (revPath : List Bool := []) (acc : Array (List Bool × Expr) := #[])
+private partial def getArithConjuncts
+    (d : Expr) (revPath : List Bool := []) (acc : Array (List Bool × Expr) := #[])
     : Array (List Bool × Expr) :=
   match_expr d with
   | And a b => getArithConjuncts b (true :: revPath) (getArithConjuncts a (false :: revPath) acc)
@@ -60,23 +63,28 @@ private def mkEntry (p : Poly) (alt : OrHullAlt) (entries : Array HullEntry) : A
   if lin matches .num _ then entries else entries.push { lin, k, alt }
 
 /-- Converts the conjunct `c` at `path` into hull entries. -/
-private def pushEntries (gen : Nat) (path : List Bool) (c : Expr) (entries : Array HullEntry) : GoalM (Array HullEntry) := do
-  let (a, b, isEq, isNat) ← match_expr c with
+private def pushEntries (gen : Nat) (path : List Bool) (c : Expr) (entries : Array HullEntry)
+    : GoalM (Array HullEntry) := do
+  let (a, b, isEq, isNat) ←
+    match_expr c with
     | Eq α a b => pure (a, b, true, α.isConstOf ``Nat)
     | LE.le α inst a b =>
       if α.isConstOf ``Nat then
-        unless (← Structural.isInstLENat inst) do return entries
+        unless (← Structural.isInstLENat inst) do
+          return entries
       else
-        unless (← Structural.isInstLEInt inst) do return entries
+        unless (← Structural.isInstLEInt inst) do
+          return entries
       pure (a, b, false, α.isConstOf ``Nat)
     | _ => return entries
-  let (a', b', toIntThm?) ← if isNat then
-    let (a', h₁) ← natToInt a
-    let (b', h₂) ← natToInt b
-    let thm := if isEq then ``Nat.ToInt.of_eq else ``Nat.ToInt.of_le
-    pure (a', b', some (mkApp6 (mkConst thm) a b a' b' h₁ h₂))
-  else
-    pure (a, b, none)
+  let (a', b', toIntThm?) ←
+    if isNat then
+      let (a', h₁) ← natToInt a
+      let (b', h₂) ← natToInt b
+      let thm := if isEq then ``Nat.ToInt.of_eq else ``Nat.ToInt.of_le
+      pure (a', b', some (mkApp6 (mkConst thm) a b a' b' h₁ h₂))
+    else
+      pure (a, b, none)
   let lhs ← toLinearExpr a' gen
   let rhs ← toLinearExpr b' gen
   let p := lhs.sub rhs |>.norm
@@ -89,14 +97,17 @@ private def pushEntries (gen : Nat) (path : List Bool) (c : Expr) (entries : Arr
 /-- Returns the entry for `lin` with the largest constant, i.e., the strongest one. -/
 private def findStrongest? (entries : Array HullEntry) (lin : Poly) : Option HullEntry :=
   entries.foldl (init := none) fun r entry =>
-    if entry.lin != lin then r
-    else match r with
+    if entry.lin != lin then
+      r
+    else
+      match r with
       | some best => if best.k < entry.k then some entry else r
       | none => some entry
 
 /-- Asserts the hull constraints of the disjunction `e`, which is `True`. -/
 def assertOrHull (e : Expr) : GoalM Unit := do
-  unless (← getConfig).lia do return ()
+  unless (← getConfig).lia do
+    return ()
   if (← inconsistent) then return ()
   let ds := getDisjuncts e
   let conjss := ds.map (getArithConjuncts ·)
@@ -109,12 +120,14 @@ def assertOrHull (e : Expr) : GoalM Unit := do
       entries ← pushEntries gen path c entries
     if entries.isEmpty then return ()
     entriess := entriess.push entries
-  let some entries₀ := entriess[0]? | return ()
+  let some entries₀ := entriess[0]?
+    | return ()
   let mut done : Array Poly := #[]
   for entry in entries₀ do
     if done.contains entry.lin then continue
     done := done.push entry.lin
-    let some bests := entriess.mapM (m := Option) (findStrongest? · entry.lin) | continue
+    let some bests := entriess.mapM (m := Option) (findStrongest? · entry.lin)
+      | continue
     let k := bests.foldl (init := (bests[0]?.map (·.k)).getD entry.k) fun k best => min k best.k
     let alts := bests.map fun best => { best.alt with k := best.k - k }
     let c : LeCnstr := { p := entry.lin.addConst k, h := .orHull e alts }

@@ -28,9 +28,7 @@ public structure ClosedItem (s : String.Slice) where
   /-- The item's blocks, in source order. -/
   children : Array (Block.Raw s)
 
-/--
-A list that may still receive items.
--/
+/-- A list that may still receive items. -/
 public structure OpenList (s : String.Slice) where
   /-- The kind of the list. -/
   kind : ListKind
@@ -84,15 +82,19 @@ public def push (c : Children s) (b : Block.Raw s) : Children s :=
 /--
 Makes `list` the pending list. A list that was pending before is finished first, as the last block.
 -/
-public def setPendingList (c : Children s) (list : OpenList s) : Children s :=
-  { c.flushLists with pendingList? := some list }
+public def setPendingList (c : Children s) (list : OpenList s) : Children s := {
+  c.flushLists with
+  pendingList? := some list
+}
 
 /-- Removes and returns the pending list when it is a list of `kind`. -/
 public def takePendingList (c : Children s) (kind : ListKind) : Children s × Option (OpenList s) :=
   match c with
   | { blocks, pendingList? := some list } =>
-    if list.kind.sameKind kind then ({ blocks, pendingList? := none }, some list)
-    else ({ blocks, pendingList? := some list }, none)
+    if list.kind.sameKind kind then
+      ({ blocks, pendingList? := none }, some list)
+    else
+      ({ blocks, pendingList? := some list }, none)
   | c => (c, none)
 
 /-- Whether there are no children. -/

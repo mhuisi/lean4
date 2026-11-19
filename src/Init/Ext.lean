@@ -13,9 +13,7 @@ public section
 namespace Lean
 namespace Parser.Attr
 
-/--
-The flag `(iff := false)` prevents `ext` from generating an `ext_iff` lemma.
--/
+/-- The flag `(iff := false)` prevents `ext` from generating an `ext_iff` lemma. -/
 syntax extIff := atomic("(" &"iff" " := " &"false" ")")
 
 /--
@@ -73,8 +71,10 @@ The `pat*` patterns are processed using the `rintro` tactic.
 If no patterns are supplied, then variables are introduced anonymously using the `intros` tactic.
 -/
 macro "ext1" xs:(colGt ppSpace rintroPat)* : tactic =>
-  if xs.isEmpty then `(tactic| apply_ext_theorem <;> intros)
-  else `(tactic| apply_ext_theorem <;> rintro $xs*)
+  if xs.isEmpty then
+    `(tactic| apply_ext_theorem <;> intros)
+  else
+    `(tactic| apply_ext_theorem <;> rintro $xs*)
 
 end Elab.Tactic.Ext
 end Lean
@@ -87,5 +87,6 @@ attribute [grind ext] funext Array.ext
 attribute [ext] PUnit.ext
 protected theorem Unit.ext (x y : Unit) : x = y := rfl
 
-@[ext] protected theorem Thunk.ext : {a b : Thunk α} → a.get = b.get → a = b
-  | {..}, {..}, heq => congrArg _ <| funext fun _ => heq
+@[ext]
+protected theorem Thunk.ext : {a b : Thunk α} → a.get = b.get → a = b
+  | { .. }, { .. }, heq => congrArg _ <| funext fun _ => heq

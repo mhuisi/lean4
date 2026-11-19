@@ -25,43 +25,45 @@ open Json
 
 structure CompletionItemCapabilities where
   insertReplaceSupport? : Option Bool := none
-  deriving ToJson, FromJson
+deriving ToJson, FromJson
 
 structure CompletionClientCapabilities where
   completionItem? : Option CompletionItemCapabilities := none
-  deriving ToJson, FromJson
+deriving ToJson, FromJson
 
 structure TextDocumentClientCapabilities where
   completion? : Option CompletionClientCapabilities := none
   codeAction? : Option CodeActionClientCapabilities := none
-  inlayHint?  : Option InlayHintClientCapabilities  := none
-  deriving ToJson, FromJson
+  inlayHint? : Option InlayHintClientCapabilities := none
+deriving ToJson, FromJson
 
 structure ShowDocumentClientCapabilities where
   support : Bool
-  deriving ToJson, FromJson
+deriving ToJson, FromJson
 
 structure WindowClientCapabilities where
   showDocument? : Option ShowDocumentClientCapabilities := none
-  deriving ToJson, FromJson
+deriving ToJson, FromJson
 
 structure ChangeAnnotationSupport where
   groupsOnLabel? : Option Bool := none
-  deriving ToJson, FromJson
+deriving ToJson, FromJson
 
 structure WorkspaceEditClientCapabilities where
   /-- The client supports versioned document changes in `WorkspaceEdit`s. -/
-  documentChanges?         : Option Bool := none
-  /--  Whether the client in general supports change annotations on text edits. -/
+  documentChanges? : Option Bool := none
+  /-- Whether the client in general supports change annotations on text edits. -/
   changeAnnotationSupport? : Option ChangeAnnotationSupport := none
-  /-- The resource operations the client supports. Clients should at least support 'create', 'rename' and 'delete' files and folders. -/
-  resourceOperations?      : Option (Array String) := none
-  deriving ToJson, FromJson
+  /--
+  The resource operations the client supports. Clients should at least support 'create', 'rename' and 'delete' files and folders.
+  -/
+  resourceOperations? : Option (Array String) := none
+deriving ToJson, FromJson
 
 structure WorkspaceClientCapabilities where
   applyEdit? : Option Bool := none
   workspaceEdit? : Option WorkspaceEditClientCapabilities := none
-  deriving ToJson, FromJson
+deriving ToJson, FromJson
 
 structure LeanClientCapabilities where
   /--
@@ -80,15 +82,15 @@ structure LeanClientCapabilities where
   Defaults to `v0` when `none`.
   -/
   rpcWireFormat? : Option RpcWireFormat := none
-  deriving ToJson, FromJson
+deriving ToJson, FromJson
 
 structure ClientCapabilities where
   textDocument? : Option TextDocumentClientCapabilities := none
-  window?       : Option WindowClientCapabilities       := none
-  workspace?    : Option WorkspaceClientCapabilities    := none
+  window? : Option WindowClientCapabilities := none
+  workspace? : Option WorkspaceClientCapabilities := none
   /-- Capabilities for Lean language server extensions. -/
-  lean?         : Option LeanClientCapabilities         := none
-  deriving ToJson, FromJson
+  lean? : Option LeanClientCapabilities := none
+deriving ToJson, FromJson
 
 def ClientCapabilities.incrementalDiagnosticSupport (c : ClientCapabilities) : Bool := Id.run do
   let some lean := c.lean?
@@ -114,31 +116,31 @@ def ClientCapabilities.rpcWireFormat (c : ClientCapabilities) : RpcWireFormat :=
 structure LeanServerCapabilities where
   moduleHierarchyProvider? : Option ModuleHierarchyOptions
   rpcProvider? : Option RpcOptions
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 -- TODO largely unimplemented
 structure ServerCapabilities where
-  textDocumentSync?           : Option TextDocumentSyncOptions := none
-  completionProvider?         : Option CompletionOptions         := none
-  hoverProvider               : Bool                             := false
-  documentHighlightProvider   : Bool                             := false
-  documentSymbolProvider      : Bool                             := false
-  definitionProvider          : Bool                             := false
-  declarationProvider         : Bool                             := false
-  typeDefinitionProvider      : Bool                             := false
-  referencesProvider          : Bool                             := false
-  callHierarchyProvider       : Bool                             := false
-  renameProvider?             : Option RenameOptions             := none
-  workspaceSymbolProvider     : Bool                             := false
-  foldingRangeProvider        : Bool                             := false
-  semanticTokensProvider?     : Option SemanticTokensOptions     := none
-  codeActionProvider?         : Option CodeActionOptions         := none
-  inlayHintProvider?          : Option InlayHintOptions          := none
-  signatureHelpProvider?      : Option SignatureHelpOptions      := none
-  colorProvider?              : Option DocumentColorOptions      := none
+  textDocumentSync? : Option TextDocumentSyncOptions := none
+  completionProvider? : Option CompletionOptions := none
+  hoverProvider : Bool := false
+  documentHighlightProvider : Bool := false
+  documentSymbolProvider : Bool := false
+  definitionProvider : Bool := false
+  declarationProvider : Bool := false
+  typeDefinitionProvider : Bool := false
+  referencesProvider : Bool := false
+  callHierarchyProvider : Bool := false
+  renameProvider? : Option RenameOptions := none
+  workspaceSymbolProvider : Bool := false
+  foldingRangeProvider : Bool := false
+  semanticTokensProvider? : Option SemanticTokensOptions := none
+  codeActionProvider? : Option CodeActionOptions := none
+  inlayHintProvider? : Option InlayHintOptions := none
+  signatureHelpProvider? : Option SignatureHelpOptions := none
+  colorProvider? : Option DocumentColorOptions := none
   documentFormattingProvider? : Option DocumentFormattingOptions := none
-  experimental?               : Option LeanServerCapabilities    := none
-  deriving ToJson, FromJson
+  experimental? : Option LeanServerCapabilities := none
+deriving ToJson, FromJson
 
 end Lsp
 end Lean

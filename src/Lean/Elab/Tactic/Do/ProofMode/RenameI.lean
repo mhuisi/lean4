@@ -12,8 +12,10 @@ namespace Lean.Elab.Tactic.Do.ProofMode
 open Std.Do SPred.Tactic
 open Lean Elab Tactic Meta
 
-partial def mRenameI [Monad m] [MonadControlT MetaM m] [MonadLiftT MetaM m] (goal : MGoal)
-    (idents : Array (TSyntax ``binderIdent)) (k : MGoal → m (α × Expr)) : m (α × Expr) := do
+partial def mRenameI
+    [Monad m] [MonadControlT MetaM m] [MonadLiftT MetaM m]
+    (goal : MGoal) (idents : Array (TSyntax ``binderIdent)) (k : MGoal → m (α × Expr))
+    : m (α × Expr) := do
   let goal ← goal.renameInaccessibleHyps idents
   k goal
 
@@ -22,10 +24,10 @@ def elabMRenameI : Tactic
   | `(tactic| mrename_i $idents:binderIdent*) => do
     let (mvar, goal) ← mStartMainGoal
     mvar.withContext do
-    let goals ← IO.mkRef []
-    mvar.assign (← Prod.snd <$> mRenameI goal idents fun newGoal => do
-      let m ← mkFreshExprSyntheticOpaqueMVar newGoal.toExpr
-      goals.modify (m.mvarId! :: ·)
-      return ((), m))
-    replaceMainGoal (← goals.get)
+      let goals ← IO.mkRef []
+      mvar.assign (← Prod.snd <$> mRenameI goal idents fun newGoal => do
+        let m ← mkFreshExprSyntheticOpaqueMVar newGoal.toExpr
+        goals.modify (m.mvarId! :: ·)
+        return ((), m))
+      replaceMainGoal (← goals.get)
   | _ => throwUnsupportedSyntax

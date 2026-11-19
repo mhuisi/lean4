@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Henrik Böving
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.BVDecide.Prover.Cegar.Basic
 public import Lean.Meta.Tactic.BVDecide.Prover.Cegar.BitVec
@@ -27,37 +28,32 @@ An incremental bitvector subsolver with a classic SMT push/pop/solve API. Suppor
 pre-processing and bitblasting but no theories beyond bitvectors.
 -/
 public structure Subsolver where
-  /--
-  Incremental reification state.
-  -/
+  /-- Incremental reification state. -/
   reifyState : BVDecide.State
-  /--
-  Incremental caches for the rewrites in the pre-processor.
-  -/
+  /-- Incremental caches for the rewrites in the pre-processor. -/
   preProcessState : Grind.BVDecide.Caches
-  /--
-  Incremental BitVEc solver state, this tracks the assumption levels.
-  -/
+  /-- Incremental BitVEc solver state, this tracks the assumption levels. -/
   bvSolver : BitVecSolverState
-  /--
-  The goal we are operating in.
-  -/
+  /-- The goal we are operating in. -/
   mvar : MVarId
-  /--
-  General bv_decide configuration.
-  -/
+  /-- General bv_decide configuration. -/
   ctx : TacticContext
 
-public abbrev SubsolverT {σ : Type} (m : Type → Type) [STWorld σ m] (α : Type) := StateRefT Subsolver m α
+public abbrev SubsolverT {σ : Type} (m : Type → Type) [STWorld σ m] (α : Type) :=
+  StateRefT Subsolver m α
 
 /--
 Create a new subsolver. If `trackFunAtoms` is set, reification registers UF atoms in the
 `funState` of the reification state as usual, but the subsolver still treats them as plain atoms.
 -/
-public def Subsolver.new (ctx : TacticContext) (mvar : MVarId) (reifyState : BVDecide.State := {})
-    (trackFunAtoms : Bool := false) : Sym.SymM Subsolver := do
-  let ctx := { ctx with
-    config := { ctx.config with
+public def Subsolver.new
+    (ctx : TacticContext) (mvar : MVarId)
+    (reifyState : BVDecide.State := {}) (trackFunAtoms : Bool := false)
+    : Sym.SymM Subsolver := do
+  let ctx := {
+    ctx with
+    config := {
+      ctx.config with
       enums := false
       structures := false
       fixedInt := false
@@ -85,7 +81,8 @@ public def Subsolver.new (ctx : TacticContext) (mvar : MVarId) (reifyState : BVD
 namespace SubsolverT
 
 variable {σ : Type} {m : Type → Type}
-variable [STWorld σ m] [Monad m] [MonadLiftT Sym.SymM m] [MonadLiftT Grind.GrindM m] [MonadLiftT (ST σ) m]
+variable
+  [STWorld σ m] [Monad m] [MonadLiftT Sym.SymM m] [MonadLiftT Grind.GrindM m] [MonadLiftT (ST σ) m]
 
 def liftBvSolverM (x : BvSolverM α) : SubsolverT m α := do
   let ctx := (← get).ctx
@@ -97,8 +94,9 @@ def liftBvSolverM (x : BvSolverM α) : SubsolverT m α := do
 public def liftReifyM (x : ReifyM α) : SubsolverT m α := do
   let config := (← get).ctx.config
   let reifyState ← modifyGet fun s => (s.reifyState, { s with reifyState := {} })
-  let (a, reifyState) ← liftM (m := Grind.GrindM) <|
-    StateRefT'.run (ReaderT.run x { hypotheses := #[], config }) reifyState
+  let (a, reifyState) ←
+    liftM (m := Grind.GrindM) <|
+      StateRefT'.run (ReaderT.run x { hypotheses := #[], config }) reifyState
   modify fun s => { s with reifyState }
   return a
 
@@ -107,27 +105,27 @@ public def liftPreProcessM (x : Normalize.PreProcessM α) : SubsolverT m α := d
   let ctx := .new ctx.mode ctx.config true
   let mvar := (← get).mvar
   let caches ← modifyGet fun s => (s.preProcessState, { s with preProcessState := {} })
-  let (a, state) ← liftM (m := Grind.GrindM) do
-    let target ← mvar.withContext <| mkFreshExprMVar (mkConst ``False)
-    Normalize.PreProcessM.run ctx (.mvarIdTarget target.mvarId!) do
-      Normalize.PreProcessM.setCaches caches
-      x
+  let (a, state) ←
+    liftM (m := Grind.GrindM) do
+      let target ← mvar.withContext <| mkFreshExprMVar (mkConst ``False)
+      Normalize.PreProcessM.run ctx (.mvarIdTarget target.mvarId!) do
+        Normalize.PreProcessM.setCaches caches
+        x
   modify fun s => { s with preProcessState := state.caches }
   return a
 
-/--
-Reify hypotheses `hyps` that are already in `bv_decide` normal form without asserting them.
--/
+/-- Reify hypotheses `hyps` that are already in `bv_decide` normal form without asserting them. -/
 public def reifyNormalized (hyps : Array Normalize.Hyp) : SubsolverT m (Array BVLogicalExpr) := do
   liftReifyM do
-    let (sats, lemmas) ← LemmaM.run do
-      -- TODO: share with lemma file?
-      hyps.filterMapM fun hyp => do
-        checkSystem "bv_decide"
-        if hyp.type.isConstOf ``True then return none
-        let some reflected ← SatAtBVLogical.of hyp
-          | throwError m!"Failed to reify subsolver hypothesis {hyp.type}"
-        return some reflected
+    let (sats, lemmas) ←
+      LemmaM.run do
+        -- TODO: share with lemma file?
+        hyps.filterMapM fun hyp => do
+          checkSystem "bv_decide"
+          if hyp.type.isConstOf ``True then return none
+          let some reflected ← SatAtBVLogical.of hyp
+            | throwError m!"Failed to reify subsolver hypothesis {hyp.type}"
+          return some reflected
     return (lemmas ++ sats).map (·.bvExpr)
 
 /--
@@ -148,7 +146,8 @@ public def pushNormalized (hyps : Array Normalize.Hyp) : SubsolverT m Unit := do
 Push a new assertion level of hypotheses onto the assertion stack, pre-processing them in the process.
 -/
 public def push (hyps : Array Normalize.Hyp) : SubsolverT m Unit := do
-  let preprocessResult ← liftPreProcessM do
+  let preprocessResult ←
+    liftPreProcessM do
       if ← Normalize.bvNormalize hyps then
         return none
       else
@@ -158,11 +157,8 @@ public def push (hyps : Array Normalize.Hyp) : SubsolverT m Unit := do
   | some hyps => pushNormalized hyps
   | none => liftBvSolverM <| BvSolverM.push #[.const false]
 
-/--
-Pop the most recent level of hypotheses from the solver stack.
--/
-public def pop : SubsolverT m Unit := do
-  liftBvSolverM BvSolverM.pop
+/-- Pop the most recent level of hypotheses from the solver stack. -/
+public def pop : SubsolverT m Unit := do liftBvSolverM BvSolverM.pop
 
 /--
 Check whether the currently pushed assumptions are UNSAT (`.ok ()`) or SAT (`.error model`)
@@ -184,8 +180,10 @@ public def getReifyState : SubsolverT m BVDecide.State := do
   discard <| liftReifyM ReifyM.atomsAssignmentMap
   return (← get).reifyState
 
-public def run (ctx : TacticContext) (mvar : MVarId) (x : SubsolverT m α)
-    (reifyState : BVDecide.State := {}) (trackFunAtoms : Bool := false) : m α := do
+public def run
+    (ctx : TacticContext) (mvar : MVarId) (x : SubsolverT m α)
+    (reifyState : BVDecide.State := {}) (trackFunAtoms : Bool := false)
+    : m α := do
   let solver ← Subsolver.new ctx mvar reifyState trackFunAtoms
   StateRefT'.run' x solver
 

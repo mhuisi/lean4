@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
 module
+
 prelude
 public import Lean.Parser.Extension
 public import Lean.DocString.Syntax
@@ -21,8 +22,8 @@ public section
 Requires that all non-whitespace arguments to a role are code elements, returning their content if
 so. Throws an error otherwise.
 -/
-def onlyCodes [Monad m] [MonadError m] (xs : TSyntaxArray ``Parser.inline) :
-    m (Array VersoCode) := do
+def onlyCodes [Monad m] [MonadError m] (xs : TSyntaxArray ``Parser.inline)
+    : m (Array VersoCode) := do
   let mut codes := #[]
   for stx in xs do
     match InlineView.of stx with
@@ -39,7 +40,8 @@ present). Arguments that cover no source text of their own are named by the role
 
 The arguments are the content of the role that is being elaborated, which is the current reference.
 -/
-private def argumentRange [Monad m] [MonadRef m] (xs : TSyntaxArray ``Parser.inline) : m Syntax := do
+private def argumentRange [Monad m] [MonadRef m] (xs : TSyntaxArray ``Parser.inline)
+    : m Syntax := do
   let ref ← getRef
   if let some { brackets := some (opener, closer), .. } := RoleView.of ⟨ref⟩ then
     return mkNullNode (#[opener] ++ xs.map (·.raw) ++ #[closer])
@@ -55,11 +57,12 @@ where
 Requires that the non-whitespace arguments to a role are a single code element, returning its
 content if so. Throws an error otherwise.
 -/
-def onlyCode [Monad m] [MonadError m] (xs : TSyntaxArray ``Parser.inline) :
-    m VersoCode := do
+def onlyCode [Monad m] [MonadError m] (xs : TSyntaxArray ``Parser.inline) : m VersoCode := do
   let codes ← onlyCodes xs
-  if h : codes.size = 1 then return codes[0]
-  else throwErrorAt (← argumentRange xs) "Expected precisely 1 code argument"
+  if h : codes.size = 1 then
+    return codes[0]
+  else
+    throwErrorAt (← argumentRange xs) "Expected precisely 1 code argument"
 
 private def strLitRange [Monad m] [MonadFileMap m] (s : StrLit) : m Lean.Syntax.Range := do
   let pos := (s.raw.getPos? (canonicalOnly := true)).get!
@@ -92,13 +95,13 @@ def parseContent (p : ParserFn) (tok : Syntax) (contents : String) : m Syntax :=
   let ⟨pos, endPos⟩ ← strLitRange ⟨tok⟩
   let endPos := if endPos ≤ text.source.rawEndPos then endPos else text.source.rawEndPos
   let ictx :=
-    mkInputContext text.source (← getFileName)
-      (endPos := endPos) (endPos_valid := by simp only [endPos]; split <;> simp [*])
+    mkInputContext text.source (← getFileName) (endPos := endPos)
+      (endPos_valid := by simp only [endPos]; split <;> simp [*])
   -- TODO fallback for non-original syntax
   let s := (mkParserState text.source).setPos pos
   let s := p.run ictx { env, options := ← getOptions } (getTokenTable env) s
 
-  if !s.allErrors.isEmpty  then
+  if !s.allErrors.isEmpty then
     throwError (s.toErrorMsg ictx)
   else if ictx.atEnd s.pos then
     pure s.stxStack.back
@@ -127,27 +130,35 @@ def parseQuotedStrLit (p : ParserFn) (strLit : StrLit) : m Syntax := do
   let s := p.run ictx { env, options := ← getOptions } (getTokenTable env) s
 
   if !s.allErrors.isEmpty then
-    let s := { s with
-        pos := reposition text pos str s.pos
-        recoveredErrors := s.recoveredErrors.map fun
-        | (ePos, stk, err) => (reposition text pos str ePos, stk, err)
-        errorMsg := s.errorMsg.map fun (e : Error) =>
-          { e with unexpectedTk := repositionSyntax text pos str e.unexpectedTk }
-      }
+    let s := {
+      s with
+      pos := reposition text pos str s.pos
+      recoveredErrors :=
+        s.recoveredErrors.map fun | (ePos, stk, err) => (reposition text pos str ePos, stk, err)
+      errorMsg :=
+        s.errorMsg.map fun (e : Error) => {
+          e with
+          unexpectedTk := repositionSyntax text pos str e.unexpectedTk
+        }
+    }
     throwError (s.toErrorMsg ictx)
   else if ictx.atEnd s.pos then
     pure <| repositionSyntax text pos str s.stxStack.back
   else
     throwError ((s.mkError "end of input").toErrorMsg ictx)
 where
-  reposition (text : FileMap) (posOfStr : String.Pos.Raw) (str : String) (posInStr : String.Pos.Raw) : String.Pos.Raw :=
+  reposition (text : FileMap) (posOfStr : String.Pos.Raw) (str : String) (posInStr : String.Pos.Raw)
+      : String.Pos.Raw :=
     nextn text.source (posIndex str posInStr) posOfStr
   repositionSyntax (text : FileMap) (posOfStr : String.Pos.Raw) (str : String) : Syntax → Syntax
-    | .node info k args => .node (repositionInfo text posOfStr str info) k (args.map (repositionSyntax text posOfStr str))
+    | .node info k args =>
+      .node (repositionInfo text posOfStr str info) k
+        (args.map (repositionSyntax text posOfStr str))
     | .ident info sub x pre => .ident (repositionInfo text posOfStr str info) sub x pre
     | .atom info s => .atom (repositionInfo text posOfStr str info) s
     | .missing => .missing
-  repositionInfo (text : FileMap) (posOfStr : String.Pos.Raw) (str : String) : SourceInfo → SourceInfo
+  repositionInfo (text : FileMap) (posOfStr : String.Pos.Raw) (str : String)
+      : SourceInfo → SourceInfo
     | .original _ pos _ endPos =>
       .synthetic (reposition text posOfStr str pos) (reposition text posOfStr str endPos) true
     | .synthetic pos endPos c =>
@@ -169,21 +180,23 @@ def parseContent' (p : ParserFn) (tok : Syntax) (contents : String) : m (Syntax 
   if (tok.getPos? (canonicalOnly := true)).isNone then
     let env ← getEnv
     let ictx := mkInputContext contents (← getFileName)
-    let st := p.run ictx { env, options := ← getOptions } (getTokenTable env) (mkParserState contents)
+    let st :=
+      p.run ictx { env, options := ← getOptions } (getTokenTable env) (mkParserState contents)
     let err ←
       if !st.allErrors.isEmpty then
         logError (st.toErrorMsg ictx); pure true
-      else if !ictx.atEnd st.pos then
+      else if ! ictx.atEnd st.pos then
         logError ((st.mkError "end of input").toErrorMsg ictx); pure true
-      else pure false
+      else
+        pure false
     return (st.stxStack.back, err)
   let text ← getFileMap
   let env ← getEnv
   let endPos := s.raw.getTailPos? true |>.get!
   let endPos := if endPos ≤ text.source.rawEndPos then endPos else text.source.rawEndPos
   let ictx :=
-    mkInputContext text.source (← getFileName)
-      (endPos := endPos) (endPos_valid := by simp only [endPos]; split <;> simp [*])
+    mkInputContext text.source (← getFileName) (endPos := endPos)
+      (endPos_valid := by simp only [endPos]; split <;> simp [*])
   -- TODO fallback for non-original syntax
   let s := (mkParserState text.source).setPos (s.raw.getPos? (canonicalOnly := true)).get!
   let s := p.run ictx { env, options := ← getOptions } (getTokenTable env) s
@@ -192,15 +205,15 @@ def parseContent' (p : ParserFn) (tok : Syntax) (contents : String) : m (Syntax 
     if !s.allErrors.isEmpty then
       logError (s.toErrorMsg ictx)
       pure true
-    else if !ictx.atEnd s.pos then
+    else if ! ictx.atEnd s.pos then
       logError ((s.mkError "end of input").toErrorMsg ictx)
       pure true
-    else pure false
+    else
+      pure false
   pure (s.stxStack.back, err)
 
 /-- Parses the contents of an inline code element. -/
-def parseVersoCode (p : ParserFn) (c : VersoCode) : m Syntax :=
-  parseContent p c c.getVersoCode
+def parseVersoCode (p : ParserFn) (c : VersoCode) : m Syntax := parseContent p c c.getVersoCode
 
 /-- Parses the contents of a code block. -/
 def parseVersoCodeBlock (p : ParserFn) (c : VersoCodeBlock) : m Syntax :=
@@ -211,9 +224,7 @@ def parseVersoCode' (p : ParserFn) (c : VersoCode) : m (Syntax × Bool) :=
   parseContent' p c c.getVersoCode
 
 /-- Parses the contents of a string literal argument. -/
-def parseStrLit (p : ParserFn) (s : StrLit) : m Syntax :=
-  parseContent p s s.getString
+def parseStrLit (p : ParserFn) (s : StrLit) : m Syntax := parseContent p s s.getString
 
 /-- Parses the contents of a string literal argument, reporting errors rather than throwing. -/
-def parseStrLit' (p : ParserFn) (s : StrLit) : m (Syntax × Bool) :=
-  parseContent' p s s.getString
+def parseStrLit' (p : ParserFn) (s : StrLit) : m (Syntax × Bool) := parseContent' p s s.getString

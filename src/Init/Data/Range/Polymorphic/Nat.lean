@@ -28,8 +28,7 @@ instance : Least? Nat where
   least? := some 0
 
 instance : LawfulUpwardEnumerableLeast? Nat where
-  least?_le a := by
-    simpa [Least?.least?] using ⟨a, by simp [UpwardEnumerable.succMany?]⟩
+  least?_le a := by simpa [Least?.least?] using ⟨a, by simp [UpwardEnumerable.succMany?]⟩
 
 instance : LawfulUpwardEnumerableLE Nat where
   le_iff a b := by
@@ -67,8 +66,7 @@ instance : Rxc.LawfulHasSize Nat where
     simp only [UpwardEnumerable.succ?] at h
     cases h
   size_eq_succ_of_succ?_eq_some upperBound init hu h := by
-    simp only [Rxc.HasSize.size, UpwardEnumerable.succ?,
-      Option.some.injEq] at hu h ⊢
+    simp only [Rxc.HasSize.size, UpwardEnumerable.succ?, Option.some.injEq] at hu h ⊢
     omega
 
 instance : Rxc.IsAlwaysFinite Nat := inferInstance

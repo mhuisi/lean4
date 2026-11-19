@@ -22,12 +22,10 @@ open Std Slice PRange
 variable {α : Type u}
 
 instance : Rcc.Sliceable (Array α) Nat (Subarray α) where
-  mkSlice xs range :=
-    xs.toSubarray range.lower (range.upper + 1)
+  mkSlice xs range := xs.toSubarray range.lower (range.upper + 1)
 
 instance : Rco.Sliceable (Array α) Nat (Subarray α) where
-  mkSlice xs range :=
-    xs.toSubarray range.lower range.upper
+  mkSlice xs range := xs.toSubarray range.lower range.upper
 
 instance : Rci.Sliceable (Array α) Nat (Subarray α) where
   mkSlice xs range :=
@@ -35,12 +33,10 @@ instance : Rci.Sliceable (Array α) Nat (Subarray α) where
     xs.toSubarray halfOpenRange.lower halfOpenRange.upper
 
 instance : Roc.Sliceable (Array α) Nat (Subarray α) where
-  mkSlice xs range :=
-    xs.toSubarray (range.lower + 1) (range.upper + 1)
+  mkSlice xs range := xs.toSubarray (range.lower + 1) (range.upper + 1)
 
 instance : Roo.Sliceable (Array α) Nat (Subarray α) where
-  mkSlice xs range :=
-    xs.toSubarray (range.lower + 1) range.upper
+  mkSlice xs range := xs.toSubarray (range.lower + 1) range.upper
 
 instance : Roi.Sliceable (Array α) Nat (Subarray α) where
   mkSlice xs range :=
@@ -48,16 +44,13 @@ instance : Roi.Sliceable (Array α) Nat (Subarray α) where
     xs.toSubarray halfOpenRange.lower halfOpenRange.upper
 
 instance : Ric.Sliceable (Array α) Nat (Subarray α) where
-  mkSlice xs range :=
-    xs.toSubarray 0 (range.upper + 1)
+  mkSlice xs range := xs.toSubarray 0 (range.upper + 1)
 
 instance : Rio.Sliceable (Array α) Nat (Subarray α) where
-  mkSlice xs range :=
-    xs.toSubarray 0 range.upper
+  mkSlice xs range := xs.toSubarray 0 range.upper
 
 instance : Rii.Sliceable (Array α) Nat (Subarray α) where
-  mkSlice xs _ :=
-    xs.toSubarray 0 xs.size
+  mkSlice xs _ := xs.toSubarray 0 xs.size
 
 instance : Rcc.Sliceable (Subarray α) Nat (Subarray α) where
   mkSlice xs range :=
@@ -100,5 +93,4 @@ instance : Rio.Sliceable (Subarray α) Nat (Subarray α) where
     xs.array[(halfOpenRange.lower + xs.start)...(halfOpenRange.upper + xs.start)]
 
 instance : Rii.Sliceable (Subarray α) Nat (Subarray α) where
-  mkSlice xs _ :=
-    xs
+  mkSlice xs _ := xs

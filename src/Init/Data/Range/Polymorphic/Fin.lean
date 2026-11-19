@@ -29,8 +29,7 @@ instance : UpwardEnumerable (Fin n) where
 theorem pRangeSucc?_eq : PRange.succ? (α := Fin n) = (·.addNat? 1) := rfl
 
 @[simp, grind =]
-theorem pRangeSuccMany?_eq : PRange.succMany? m (α := Fin n) = (·.addNat? m) :=
-  rfl
+theorem pRangeSuccMany?_eq : PRange.succMany? m (α := Fin n) = (·.addNat? m) := rfl
 
 instance : LawfulUpwardEnumerable (Fin n) where
   ne_of_lt a b := by grind [UpwardEnumerable.LT]
@@ -67,8 +66,9 @@ instance : Rxc.HasSize (Fin n) where
   size lo hi := hi + 1 - lo
 
 @[grind =]
-theorem rxcHasSize_eq :
-    Rxc.HasSize.size (α := Fin n) = fun (lo hi : Fin n) => (hi + 1 - lo : Nat) := rfl
+theorem rxcHasSize_eq
+    : Rxc.HasSize.size (α := Fin n) = fun (lo hi : Fin n) => (hi + 1 - lo : Nat) :=
+  rfl
 
 instance : Rxc.LawfulHasSize (Fin n) where
   size_eq_zero_of_not_le bound x h := by
@@ -100,8 +100,7 @@ instance : Rxi.HasSize (Fin n) where
   size lo := n - lo
 
 @[grind =]
-theorem rxiHasSize_eq :
-    Rxi.HasSize.size (α := Fin n) = fun (lo : Fin n) => (n - lo : Nat) := rfl
+theorem rxiHasSize_eq : Rxi.HasSize.size (α := Fin n) = fun (lo : Fin n) => (n - lo : Nat) := rfl
 
 instance : Rxi.LawfulHasSize (Fin n) where
   size_eq_one_of_succ?_eq_none x := by grind

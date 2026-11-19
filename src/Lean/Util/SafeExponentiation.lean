@@ -14,11 +14,12 @@ namespace Lean
 
 register_builtin_option exponentiation.threshold : Nat := {
   defValue := 256
-  descr    := "maximum value for \
-  which exponentiation operations are safe to evaluate. When an exponent \
-  is a value greater than this threshold, the exponentiation will not be evaluated, \
-  and a warning will be logged. This helps to prevent the system from becoming \
-  unresponsive due to excessively large computations."
+  descr :=
+    "maximum value for \
+      which exponentiation operations are safe to evaluate. When an exponent \
+      is a value greater than this threshold, the exponentiation will not be evaluated, \
+      and a warning will be logged. This helps to prevent the system from becoming \
+      unresponsive due to excessively large computations."
 }
 
 /--
@@ -33,22 +34,26 @@ def checkExponent (n : Nat) (warning := true) : CoreM Bool := do
   let threshold ← getRecordedOption exponentiation.threshold
   if n > threshold then
     if (← pure warning <&&> logMessageKind `unsafe.exponentiation) then
-      logWarning s!"exponent {n} exceeds the threshold {threshold}, exponentiation operation was not evaluated, use `set_option {exponentiation.threshold.name} <num>` to set a new threshold"
+      logWarning
+        s!"exponent {n} exceeds the threshold {threshold}, exponentiation operation was not \
+          evaluated, use `set_option {exponentiation.threshold.name} <num>` to set a new threshold"
     return false
   else if n ≥ UInt32.size then
     if (← pure warning <&&> logMessageKind `unsafe.exponentiation) then
-      logWarning s!"exponent {n} does not fit in 32 bits, exponentiation operation was not evaluated"
+      logWarning
+        s!"exponent {n} does not fit in 32 bits, exponentiation operation was not evaluated"
     return false
   else
     return true
 
 register_builtin_option shiftLeft.threshold : Nat := {
   defValue := 65536
-  descr    := "maximum shift amount for \
-  which left shift operations are safe to evaluate. When a shift amount \
-  is a value greater than this threshold, the left shift will not be evaluated, \
-  and a warning will be logged. This helps to prevent the system from becoming \
-  unresponsive due to excessively large computations."
+  descr :=
+    "maximum shift amount for \
+      which left shift operations are safe to evaluate. When a shift amount \
+      is a value greater than this threshold, the left shift will not be evaluated, \
+      and a warning will be logged. This helps to prevent the system from becoming \
+      unresponsive due to excessively large computations."
 }
 
 /--
@@ -60,8 +65,7 @@ and the shift amount does not fit in 32 bits. Thus, every procedure that evaluat
 literals whose shift amount is not bounded by a machine word size must use this function or
 `checkShiftLeft`.
 -/
-def isSafeShiftLeft (a n maxShift : Nat) : Bool :=
-  a == 0 || (n ≤ maxShift && n < UInt32.size)
+def isSafeShiftLeft (a n maxShift : Nat) : Bool := a == 0 || (n ≤ maxShift && n < UInt32.size)
 
 /--
 Returns `true` if `isSafeShiftLeft a n threshold`, where `threshold` is the value of the option
@@ -73,11 +77,13 @@ def checkShiftLeft (a n : Nat) (warning := true) : CoreM Bool := do
   let threshold ← getRecordedOption shiftLeft.threshold
   if n > threshold then
     if (← pure warning <&&> logMessageKind `unsafe.shiftLeft) then
-      logWarning s!"shift amount {n} exceeds the threshold {threshold}, left shift operation was not evaluated, use `set_option {shiftLeft.threshold.name} <num>` to set a new threshold"
+      logWarning s!"shift amount {n} exceeds the threshold {threshold}, left shift operation was \
+        not evaluated, use `set_option {shiftLeft.threshold.name} <num>` to set a new threshold"
     return false
   else if n ≥ UInt32.size then
     if (← pure warning <&&> logMessageKind `unsafe.shiftLeft) then
-      logWarning s!"shift amount {n} does not fit in 32 bits, left shift operation was not evaluated"
+      logWarning
+        s!"shift amount {n} does not fit in 32 bits, left shift operation was not evaluated"
     return false
   else
     return true
@@ -91,7 +97,6 @@ the exponent is greater than `UINT_MAX`, because `mpz::pow` takes the exponent a
 `unsigned int`. Thus, procedures that evaluate bit-vector operations on literals must not build a
 `BitVec w` value unless this function returns `true`.
 -/
-def isSafeBitVecWidth (w : Nat) : Bool :=
-  w < UInt32.size
+def isSafeBitVecWidth (w : Nat) : Bool := w < UInt32.size
 
 end Lean

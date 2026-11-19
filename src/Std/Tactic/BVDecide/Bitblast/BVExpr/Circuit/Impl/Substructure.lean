@@ -29,8 +29,7 @@ structure Cache (aig : AIG BVBit) where
   hbound : ∀ k (h : k ∈ map), (map[k]'h).gate < aig.decls.size
 
 @[inline]
-def Cache.empty : Cache aig :=
-  ⟨.empty, {}, by simp⟩
+def Cache.empty : Cache aig := ⟨.empty, {}, by simp⟩
 
 @[inline]
 def Cache.insert (cache : Cache aig) (expr : BVLogicalExpr) (ref : AIG.Ref aig) : Cache aig :=
@@ -76,14 +75,12 @@ structure Return (aig : AIG BVBit) where
   result : AIG.ExtendingEntrypoint aig
   cache : Cache result.val.aig
 
-def bitblastWithCache (expr : BVLogicalExpr) (aig : AIG BVBit) (cache : Cache aig) :
-    Return aig :=
+def bitblastWithCache (expr : BVLogicalExpr) (aig : AIG BVBit) (cache : Cache aig) : Return aig :=
   goCache aig expr cache
 where
   goCache (aig : AIG BVBit) (expr : BVLogicalExpr) (cache : Cache aig) : Return aig :=
     match cache.get? expr with
-    | some ref =>
-      ⟨⟨⟨aig, ref⟩, Nat.le_refl ..⟩, cache⟩
+    | some ref => ⟨⟨⟨aig, ref⟩, Nat.le_refl ..⟩, cache⟩
     | none =>
       let ⟨result, cache⟩ := go aig expr cache
       ⟨result, cache.insert expr result.val.ref⟩
@@ -109,12 +106,14 @@ where
       let ⟨⟨⟨aig, discrRef⟩, dextend⟩, cache⟩ := goCache aig discr cache
       let ⟨⟨⟨aig, lhsRef⟩, lextend⟩, cache⟩ := goCache aig lhs cache
       let ⟨⟨⟨aig, rhsRef⟩, rextend⟩, cache⟩ := goCache aig rhs cache
-      let discrRef := discrRef.cast <| by
-        dsimp only at lextend rextend ⊢
-        omega
-      let lhsRef := lhsRef.cast <| by
-        dsimp only at rextend ⊢
-        omega
+      let discrRef :=
+        discrRef.cast <| by
+          dsimp only at lextend rextend ⊢
+          omega
+      let lhsRef :=
+        lhsRef.cast <| by
+          dsimp only at rextend ⊢
+          omega
 
       let input := ⟨discrRef, lhsRef, rhsRef⟩
       let ret := aig.mkIfCached input
@@ -128,9 +127,10 @@ where
     | .gate g lhs rhs =>
       let ⟨⟨⟨aig, lhsRef⟩, lextend⟩, cache⟩ := goCache aig lhs cache
       let ⟨⟨⟨aig, rhsRef⟩, rextend⟩, cache⟩ := goCache aig rhs cache
-      let lhsRef := lhsRef.cast <| by
-        dsimp only at rextend ⊢
-        omega
+      let lhsRef :=
+        lhsRef.cast <| by
+          dsimp only at rextend ⊢
+          omega
       let input := ⟨lhsRef, rhsRef⟩
       match g with
       | .and =>
@@ -171,33 +171,32 @@ where
         ⟨⟨ret, this⟩, cache⟩
   termination_by (sizeOf expr, 0)
 
-/--
-Turn a `BVLogicalExpr` into an `Entrypoint`.
--/
+/-- Turn a `BVLogicalExpr` into an `Entrypoint`. -/
 def bitblast (expr : BVLogicalExpr) : Entrypoint BVBit :=
   bitblastWithCache expr AIG.empty .empty |>.result.val
 
 namespace bitblastWithCache
 
-theorem goCache_le_size (aig : AIG BVBit) (expr : BVLogicalExpr) (cache : Cache aig) :
-    aig.decls.size ≤ (goCache aig expr cache).result.val.aig.decls.size :=
+theorem goCache_le_size (aig : AIG BVBit) (expr : BVLogicalExpr) (cache : Cache aig)
+    : aig.decls.size ≤ (goCache aig expr cache).result.val.aig.decls.size :=
   (goCache aig expr cache).result.property
 
-theorem go_le_size (aig : AIG BVBit) (expr : BVLogicalExpr) (cache : Cache aig) :
-    aig.decls.size ≤ (go aig expr cache).result.val.aig.decls.size :=
+theorem go_le_size (aig : AIG BVBit) (expr : BVLogicalExpr) (cache : Cache aig)
+    : aig.decls.size ≤ (go aig expr cache).result.val.aig.decls.size :=
   (go aig expr cache).result.property
 
-theorem goCache_lt_size_of_lt_aig_size (aig : AIG BVBit) (expr : BVLogicalExpr)
-    (cache : Cache aig) (h : x < aig.decls.size) :
-    x < (goCache aig expr cache).result.val.aig.decls.size := by
+theorem goCache_lt_size_of_lt_aig_size
+    (aig : AIG BVBit) (expr : BVLogicalExpr) (cache : Cache aig) (h : x < aig.decls.size)
+    : x < (goCache aig expr cache).result.val.aig.decls.size := by
   apply Nat.lt_of_lt_of_le
   · exact h
   · apply goCache_le_size
 
 mutual
 
-theorem goCache_decl_eq (aig : AIG BVBit) (expr : BVLogicalExpr) (cache : Cache aig) :
-    ∀ (idx : Nat) (h1) (h2), (goCache aig expr cache).result.val.aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
+theorem goCache_decl_eq (aig : AIG BVBit) (expr : BVLogicalExpr) (cache : Cache aig)
+    : ∀ (idx : Nat) (h1) (h2),
+      (goCache aig expr cache).result.val.aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
   generalize hres : goCache aig expr cache = res
   intro idx h1 h2
   unfold goCache at hres
@@ -209,8 +208,9 @@ theorem goCache_decl_eq (aig : AIG BVBit) (expr : BVLogicalExpr) (cache : Cache 
     apply go_decl_eq
 termination_by (sizeOf expr, 1)
 
-theorem go_decl_eq (aig : AIG BVBit) (expr : BVLogicalExpr) (cache : Cache aig) :
-    ∀ (idx : Nat) (h1) (h2), (go aig expr cache).result.val.aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
+theorem go_decl_eq (aig : AIG BVBit) (expr : BVLogicalExpr) (cache : Cache aig)
+    : ∀ (idx : Nat) (h1) (h2),
+      (go aig expr cache).result.val.aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
   intro idx h1 h2
   unfold go
   split
@@ -219,7 +219,8 @@ theorem go_decl_eq (aig : AIG BVBit) (expr : BVLogicalExpr) (cache : Cache aig) 
   · rw [AIG.LawfulOperator.decl_eq (f := mkNotCached), goCache_decl_eq]
     apply goCache_lt_size_of_lt_aig_size
     assumption
-  · rw [AIG.LawfulOperator.decl_eq (f := mkIfCached), goCache_decl_eq, goCache_decl_eq, goCache_decl_eq]
+  · rw [AIG.LawfulOperator.decl_eq (f := mkIfCached), goCache_decl_eq, goCache_decl_eq,
+      goCache_decl_eq]
     · apply goCache_lt_size_of_lt_aig_size
       assumption
     · apply goCache_lt_size_of_lt_aig_size
@@ -244,29 +245,28 @@ decreasing_by all_goals (subst_vars; decreasing_tactic)
 
 end
 
-theorem goCache_isPrefix_aig {aig : AIG BVBit} (cache : Cache aig) :
-    IsPrefix aig.decls (goCache aig expr cache).result.val.aig.decls := by
+theorem goCache_isPrefix_aig {aig : AIG BVBit} (cache : Cache aig)
+    : IsPrefix aig.decls (goCache aig expr cache).result.val.aig.decls := by
   apply IsPrefix.of
   · intro idx h
     apply goCache_decl_eq
   · apply goCache_le_size
 
-theorem goCache_denote_mem_prefix (aig : AIG BVBit) (cache : Cache aig) (hstart) :
-    ⟦
-      (goCache aig expr cache).result.val.aig,
-      ⟨start, inv, goCache_lt_size_of_lt_aig_size (h := hstart) ..⟩,
-      assign
-    ⟧
-      =
-    ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
+theorem goCache_denote_mem_prefix (aig : AIG BVBit) (cache : Cache aig) (hstart)
+    : ⟦
+        (goCache aig expr cache).result.val.aig,
+        ⟨start, inv, goCache_lt_size_of_lt_aig_size (h := hstart) ..⟩,
+        assign
+      ⟧
+      = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply goCache_isPrefix_aig
 
 end bitblastWithCache
 
 open bitblastWithCache in
-theorem bitblastWithCache_isPrefix_aig {aig : AIG BVBit} {cache : Cache aig} :
-    IsPrefix aig.decls (bitblastWithCache expr aig cache).result.val.aig.decls := by
+theorem bitblastWithCache_isPrefix_aig {aig : AIG BVBit} {cache : Cache aig}
+    : IsPrefix aig.decls (bitblastWithCache expr aig cache).result.val.aig.decls := by
   unfold bitblastWithCache
   apply goCache_isPrefix_aig
 

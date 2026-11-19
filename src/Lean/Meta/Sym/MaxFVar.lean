@@ -4,14 +4,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.SymM
 public section
 namespace Lean.Meta.Sym
 
 private def max (fvarId1? : Option FVarId) (fvarId2? : Option FVarId) : MetaM (Option FVarId) := do
-  let some fvarId1 := fvarId1? | return fvarId2?
-  let some fvarId2 := fvarId2? | return fvarId1?
+  let some fvarId1 := fvarId1?
+    | return fvarId2?
+  let some fvarId2 := fvarId2?
+    | return fvarId1?
   if fvarId1 == fvarId2 then return fvarId1?
   let localDecl1 ← fvarId1.getDecl
   let localDecl2 ← fvarId2.getDecl
@@ -45,11 +48,13 @@ def getMaxFVar? (e : Expr) : SymM (Option FVarId) := do
   | .lam _ d b _ | .forallE _ d b _ => check e do max (← getMaxFVar? d) (← getMaxFVar? b)
   | .letE _ t v b _ => check e do max (← max (← getMaxFVar? t) (← getMaxFVar? v)) (← getMaxFVar? b)
   | .mdata _ e => check e do getMaxFVar? e
-  | .mvar mvarId => check e do
-    let mvarDecl ← mvarId.getDecl
-    let lctx := mvarDecl.lctx
-    if lctx.decls.isEmpty then return none
-    let some last := lctx.lastDecl | unreachable! -- SymM local contexts do not have holes
-    return some last.fvarId
+  | .mvar mvarId =>
+    check e do
+      let mvarDecl ← mvarId.getDecl
+      let lctx := mvarDecl.lctx
+      if lctx.decls.isEmpty then return none
+      let some last := lctx.lastDecl
+        | unreachable! -- SymM local contexts do not have holes
+      return some last.fvarId
 
 end Lean.Meta.Sym

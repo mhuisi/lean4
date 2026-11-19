@@ -10,12 +10,13 @@ public import Init.Prelude
 
 public section
 
-/-- For decimal and scientific numbers (e.g., `1.23`, `3.12e10`).
-   Examples:
-   - `1.23` is syntax for `OfScientific.ofScientific (nat_lit 123) true (nat_lit 2)`
-   - `121e100` is syntax for `OfScientific.ofScientific (nat_lit 121) false (nat_lit 100)`
+/--
+For decimal and scientific numbers (e.g., `1.23`, `3.12e10`).
+Examples:
+- `1.23` is syntax for `OfScientific.ofScientific (nat_lit 123) true (nat_lit 2)`
+- `121e100` is syntax for `OfScientific.ofScientific (nat_lit 121) false (nat_lit 100)`
 
-   Note the use of `nat_lit`; there is no wrapping `OfNat.ofNat` in the resulting term.
+Note the use of `nat_lit`; there is no wrapping `OfNat.ofNat` in the resulting term.
 -/
 class OfScientific (α : Type u) where
   /--

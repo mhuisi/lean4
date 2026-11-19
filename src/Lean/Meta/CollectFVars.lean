@@ -25,7 +25,8 @@ def LocalDecl.collectFVars (localDecl : LocalDecl) : StateRefT CollectFVars.Stat
   | .ldecl (type := type) (value := value) .. => type.collectFVars; value.collectFVars
 
 /-- For each variable in `s.fvarSet`, include its dependencies. -/
-partial def CollectFVars.State.addDependencies (s : CollectFVars.State) : MetaM CollectFVars.State := do
+partial def CollectFVars.State.addDependencies (s : CollectFVars.State)
+    : MetaM CollectFVars.State := do
   let (_, s) ← go |>.run 0 |>.run s
   return s
 where
@@ -40,28 +41,34 @@ where
       return none
 
   go : StateRefT Nat (StateRefT CollectFVars.State MetaM) Unit := do
-    let some fvarId ← getNext? | return ()
-    /- We don't use `getLocalDecl` because `CollectFVars.State` may contains local variables that are not in the
-       current local context. Recall that we use this method to process match-expressions, and each AltLHS has
-       each own its extra local declarations. -/
-    let some localDecl := (← getLCtx).find? fvarId | return ()
+    let some fvarId ← getNext?
+      | return ()
+    /-
+    We don't use `getLocalDecl` because `CollectFVars.State` may contains local variables that are not in the
+    current local context. Recall that we use this method to process match-expressions, and each AltLHS has
+    each own its extra local declarations.
+    -/
+    let some localDecl := (← getLCtx).find? fvarId
+      | return ()
     localDecl.collectFVars
     go
 
 namespace Meta
 
-def removeUnused (vars : Array Expr) (used : CollectFVars.State) : MetaM (LocalContext × LocalInstances × Array Expr) := do
+def removeUnused (vars : Array Expr) (used : CollectFVars.State)
+    : MetaM (LocalContext × LocalInstances × Array Expr) := do
   let localInsts ← getLocalInstances
   let lctx ← getLCtx
-  let (lctx, localInsts, newVars, _) ← vars.foldrM
-    (fun var (lctx, localInsts, newVars, used) => do
-      if used.fvarSet.contains var.fvarId! then
-        let varType ← inferType var
-        let (_, used) ← varType.collectFVars.run used
-        pure (lctx, localInsts, newVars.push var, used)
-      else
-        pure (lctx.erase var.fvarId!, localInsts.erase var.fvarId!, newVars, used))
-    (lctx, localInsts, #[], used)
+  let (lctx, localInsts, newVars, _) ←
+    vars.foldrM
+      (fun var (lctx, localInsts, newVars, used) => do
+        if used.fvarSet.contains var.fvarId! then
+          let varType ← inferType var
+          let (_, used) ← varType.collectFVars.run used
+          pure (lctx, localInsts, newVars.push var, used)
+        else
+          pure (lctx.erase var.fvarId!, localInsts.erase var.fvarId!, newVars, used))
+      (lctx, localInsts, #[], used)
   pure (lctx, localInsts, newVars.reverse)
 
 end Meta

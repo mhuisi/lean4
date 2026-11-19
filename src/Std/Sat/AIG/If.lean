@@ -56,9 +56,10 @@ def mkIfCached (aig : AIG α) (input : TernaryInput aig) : Entrypoint α :=
   let res := aig.mkAndCached ⟨notDiscr, input.rhs⟩
   let aig := res.aig
   let rhsRef := res.ref
-  let lhsRef := lhsRef.cast <| by
-    apply AIG.LawfulOperator.le_size_of_le_aig_size (f := mkAndCached)
-    apply AIG.LawfulOperator.le_size (f := mkNotCached)
+  let lhsRef :=
+    lhsRef.cast <| by
+      apply AIG.LawfulOperator.le_size_of_le_aig_size (f := mkAndCached)
+      apply AIG.LawfulOperator.le_size (f := mkNotCached)
   aig.mkOrCached ⟨lhsRef, rhsRef⟩
 
 instance : LawfulOperator α TernaryInput mkIfCached where
@@ -86,18 +87,22 @@ instance : LawfulOperator α TernaryInput mkIfCached where
       apply LawfulOperator.lt_size_of_lt_aig_size (f := mkAndCached)
       omega
 
-theorem ite_as_bool (d l r : Bool) : (if d then l else r) = ((d && l) || (!d && r))  := by
+theorem ite_as_bool (d l r : Bool) : (if d then l else r) = ((d && l) || (!d && r)) := by
   revert d l r
   decide
 
 @[deprecated Std.Sat.AIG.ite_as_bool (since := "2026-07-21")]
-theorem if_as_bool (d : Bool) (l : Bool) (r : Bool) : (if d = Bool.true then l else r) = (d && l || !d && r) := Std.Sat.AIG.ite_as_bool d l r
+theorem if_as_bool (d : Bool) (l : Bool) (r : Bool)
+    : (if d = Bool.true then l else r) = (d && l || !d && r) :=
+  Std.Sat.AIG.ite_as_bool d l r
 
 @[simp]
-theorem denote_mkIfCached {aig : AIG α} {input : TernaryInput aig} :
-    ⟦aig.mkIfCached input, assign⟧
-      =
-    if ⟦aig, input.discr, assign⟧ then ⟦aig, input.lhs, assign⟧ else ⟦aig, input.rhs, assign⟧ := by
+theorem denote_mkIfCached {aig : AIG α} {input : TernaryInput aig}
+    : ⟦aig.mkIfCached input, assign⟧
+      = if ⟦aig, input.discr, assign⟧ then
+          ⟦aig, input.lhs, assign⟧
+        else
+          ⟦aig, input.rhs, assign⟧ := by
   rw [ite_as_bool]
   simp only [mkIfCached]
   simp only [TernaryInput.cast, Ref.cast_eq, Ref.cast, denote_mkOrCached, denote_projected_entry,
@@ -126,8 +131,12 @@ def ite (aig : AIG α) (input : IfInput aig w) : RefVecEntry α w :=
   let ⟨discr, lhs, rhs⟩ := input
   go aig 0 (by omega) discr lhs rhs (.emptyWithCapacity w)
 where
-  go {w : Nat} (aig : AIG α) (curr : Nat) (hcurr : curr ≤ w) (discr : Ref aig)
-      (lhs rhs : RefVec aig w) (s : RefVec aig curr) : RefVecEntry α w :=
+  go
+      {w : Nat}
+      (aig : AIG α)
+      (curr : Nat) (hcurr : curr ≤ w)
+      (discr : Ref aig) (lhs rhs : RefVec aig w) (s : RefVec aig curr)
+      : RefVecEntry α w :=
     if hcurr : curr < w then
       let input := ⟨discr, lhs.get curr hcurr, rhs.get curr hcurr⟩
       let res := mkIfCached aig input
@@ -143,13 +152,15 @@ where
     else
       have : curr = w := by omega
       ⟨aig, this ▸ s⟩
-termination_by w - curr
+  termination_by w - curr
 
 namespace ite
 
-theorem go_le_size (aig : AIG α) (curr : Nat) (hcurr : curr ≤ w) (discr : Ref aig)
-    (lhs rhs : RefVec aig w) (s : RefVec aig curr) :
-    aig.decls.size ≤ (go aig curr hcurr discr lhs rhs s).aig.decls.size := by
+theorem go_le_size
+    (aig : AIG α)
+    (curr : Nat) (hcurr : curr ≤ w)
+    (discr : Ref aig) (lhs rhs : RefVec aig w) (s : RefVec aig curr)
+    : aig.decls.size ≤ (go aig curr hcurr discr lhs rhs s).aig.decls.size := by
   unfold go
   dsimp only
   split
@@ -158,9 +169,11 @@ theorem go_le_size (aig : AIG α) (curr : Nat) (hcurr : curr ≤ w) (discr : Ref
   · simp
 termination_by w - curr
 
-theorem go_decl_eq (aig : AIG α) (curr : Nat) (hcurr : curr ≤ w) (discr : Ref aig)
-    (lhs rhs : RefVec aig w) (s : RefVec aig curr) :
-    ∀ (idx : Nat) (h1) (h2),
+theorem go_decl_eq
+    (aig : AIG α)
+    (curr : Nat) (hcurr : curr ≤ w)
+    (discr : Ref aig) (lhs rhs : RefVec aig w) (s : RefVec aig curr)
+    : ∀ (idx : Nat) (h1) (h2),
       (go aig curr hcurr discr lhs rhs s).aig.decls[idx]'h2 = aig.decls[idx]'h1 := by
   generalize hgo : go aig curr hcurr discr lhs rhs s = res
   unfold go at hgo
@@ -189,12 +202,13 @@ instance : LawfulVecOperator α IfInput ite where
 
 namespace ite
 
-theorem go_get_aux {w : Nat} (aig : AIG α) (curr : Nat) (hcurr : curr ≤ w) (discr : Ref aig)
-    (lhs rhs : RefVec aig w) (s : RefVec aig curr) :
-    ∀ (idx : Nat) (hidx : idx < curr) (hfoo),
-      (go aig curr hcurr discr lhs rhs s).vec.get idx (by omega)
-        =
-      (s.get idx hidx).cast hfoo := by
+theorem go_get_aux
+    {w : Nat}
+    (aig : AIG α)
+    (curr : Nat) (hcurr : curr ≤ w)
+    (discr : Ref aig) (lhs rhs : RefVec aig w) (s : RefVec aig curr)
+    : ∀ (idx : Nat) (hidx : idx < curr) (hfoo),
+      (go aig curr hcurr discr lhs rhs s).vec.get idx (by omega) = (s.get idx hidx).cast hfoo := by
   intro idx hidx
   generalize hgo : go aig curr hcurr discr lhs rhs s = res
   unfold go at hgo
@@ -214,24 +228,28 @@ theorem go_get_aux {w : Nat} (aig : AIG α) (curr : Nat) (hcurr : curr ≤ w) (d
     simp
 termination_by w - curr
 
-theorem go_get {w : Nat} (aig : AIG α) (curr : Nat) (hcurr : curr ≤ w) (discr : Ref aig)
-    (lhs rhs : RefVec aig w) (s : RefVec aig curr) :
-    ∀ (idx : Nat) (hidx : idx < curr),
+theorem go_get
+    {w : Nat}
+    (aig : AIG α)
+    (curr : Nat) (hcurr : curr ≤ w)
+    (discr : Ref aig) (lhs rhs : RefVec aig w) (s : RefVec aig curr)
+    : ∀ (idx : Nat) (hidx : idx < curr),
       (go aig curr hcurr discr lhs rhs s).vec.get idx (by omega)
-        =
-      (s.get idx hidx).cast (by apply go_le_size) := by
+        = (s.get idx hidx).cast (by apply go_le_size) := by
   intro idx hidx
   apply go_get_aux
 
-theorem go_denote_mem_prefix {w : Nat} (aig : AIG α) (curr : Nat) (hcurr : curr ≤ w)
-    (discr : Ref aig) (lhs rhs : RefVec aig w) (s : RefVec aig curr) (start : Nat) (hstart) :
-    ⟦
-      (go aig curr hcurr discr lhs rhs s).aig,
-      ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
-      assign
-    ⟧
-      =
-    ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
+theorem go_denote_mem_prefix
+    {w : Nat}
+    (aig : AIG α)
+    (curr : Nat) (hcurr : curr ≤ w)
+    (discr : Ref aig) (lhs rhs : RefVec aig w) (s : RefVec aig curr) (start : Nat) (hstart)
+    : ⟦
+        (go aig curr hcurr discr lhs rhs s).aig,
+        ⟨start, inv, by apply Nat.lt_of_lt_of_le; exact hstart; apply go_le_size⟩,
+        assign
+      ⟧
+      = ⟦aig, ⟨start, inv, hstart⟩, assign⟧ := by
   apply denote.eq_of_isPrefix (entry := ⟨aig, start, inv, hstart⟩)
   apply IsPrefix.of
   · intros
@@ -239,21 +257,22 @@ theorem go_denote_mem_prefix {w : Nat} (aig : AIG α) (curr : Nat) (hcurr : curr
   · intros
     apply go_le_size
 
-theorem denote_go {w : Nat} (aig : AIG α) (curr : Nat) (hcurr : curr ≤ w) (discr : Ref aig)
-    (lhs rhs : RefVec aig w) (s : RefVec aig curr) :
-    ∀ (idx : Nat) (hidx1 : idx < w),
+theorem denote_go
+    {w : Nat}
+    (aig : AIG α)
+    (curr : Nat) (hcurr : curr ≤ w)
+    (discr : Ref aig) (lhs rhs : RefVec aig w) (s : RefVec aig curr)
+    : ∀ (idx : Nat) (hidx1 : idx < w),
       curr ≤ idx
-        →
-      ⟦
-        (go aig curr hcurr discr lhs rhs s).aig,
-        (go aig curr hcurr discr lhs rhs s).vec.get idx hidx1,
-        assign
-      ⟧
-        =
-      if ⟦aig, discr, assign⟧ then
-        ⟦aig, lhs.get idx hidx1, assign⟧
-      else
-        ⟦aig, rhs.get idx hidx1, assign⟧ := by
+        → ⟦
+            (go aig curr hcurr discr lhs rhs s).aig,
+            (go aig curr hcurr discr lhs rhs s).vec.get idx hidx1,
+            assign
+          ⟧
+          = if ⟦aig, discr, assign⟧ then
+              ⟦aig, lhs.get idx hidx1, assign⟧
+            else
+              ⟦aig, rhs.get idx hidx1, assign⟧ := by
   intro idx hidx1 hidx2
   generalize hgo : go aig curr hcurr discr lhs rhs s = res
   unfold go at hgo
@@ -263,7 +282,8 @@ theorem denote_go {w : Nat} (aig : AIG α) (curr : Nat) (hcurr : curr ≤ w) (di
     | inl heq =>
       subst heq
       rw [← hgo]
-      rw [go_get]; case hidx => omega
+      rw [go_get]
+      case hidx => omega
       rw [AIG.RefVec.get_push_ref_eq']
       · rw [go_denote_mem_prefix]
         · simp [Ref.cast]
@@ -286,14 +306,13 @@ termination_by w - curr
 end ite
 
 @[simp]
-theorem denote_ite {aig : AIG α} {input : IfInput aig w} :
-  ∀ (idx : Nat) (hidx : idx < w),
-    ⟦(ite aig input).aig, (ite aig input).vec.get idx hidx, assign⟧
-      =
-    if ⟦aig, input.discr, assign⟧ then
-      ⟦aig, input.lhs.get idx hidx, assign⟧
-    else
-      ⟦aig, input.rhs.get idx hidx, assign⟧ := by
+theorem denote_ite {aig : AIG α} {input : IfInput aig w}
+    : ∀ (idx : Nat) (hidx : idx < w),
+      ⟦(ite aig input).aig, (ite aig input).vec.get idx hidx, assign⟧
+        = if ⟦aig, input.discr, assign⟧ then
+            ⟦aig, input.lhs.get idx hidx, assign⟧
+          else
+            ⟦aig, input.rhs.get idx hidx, assign⟧ := by
   intro idx hidx
   unfold ite
   dsimp only

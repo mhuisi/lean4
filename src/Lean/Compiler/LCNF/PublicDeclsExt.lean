@@ -15,16 +15,15 @@ Creates a replayable local environment extension holding a name set and the list
 order they were added to the set.
 -/
 public def mkOrderedDeclSetExt : IO (EnvExtension (List Name × NameSet)) :=
-  registerEnvExtension
-    (mkInitial := pure ([], {}))
-    (asyncMode := .sync)
-    (replay? := some <| fun oldState newState _ s =>
-      let newEntries := takeNewEntriesRev newState.1 oldState.1
-      newEntries.foldl (init := s) fun s n =>
-        if s.2.contains n then
-          s
-        else
-          (n :: s.1, if newState.2.contains n then s.2.insert n else s.2))
+  registerEnvExtension (mkInitial := pure ([], {})) (asyncMode := .sync)
+    (replay? :=
+      some <| fun oldState newState _ s =>
+        let newEntries := takeNewEntriesRev newState.1 oldState.1
+        newEntries.foldl (init := s) fun s n =>
+          if s.2.contains n then
+            s
+          else
+            (n :: s.1, if newState.2.contains n then s.2.insert n else s.2))
 
 /--
 Set of declarations to be exported to other modules; visibility shared by base/mono/IR phases.
@@ -36,9 +35,10 @@ public def isDeclPublic (env : Environment) (declName : Name) : Bool := Id.run d
     return true
   -- The IR compiler may call the boxed variant it introduces after we do visibility inference, so
   -- use same visibility as base decl.
-  let inferFor := match declName with
+  let inferFor :=
+    match declName with
     | .str n "_boxed" => n
-    | n               => n
+    | n => n
   let (_, map) := publicDeclsExt.getState env
   map.contains inferFor
 
@@ -46,7 +46,6 @@ public def setDeclPublic (env : Environment) (declName : Name) : Environment :=
   if isDeclPublic env declName then
     env
   else
-    publicDeclsExt.modifyState env fun s =>
-      (declName :: s.1, s.2.insert declName)
+    publicDeclsExt.modifyState env fun s => (declName :: s.1, s.2.insert declName)
 
 end Lean.Compiler.LCNF

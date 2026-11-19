@@ -15,23 +15,22 @@ namespace Lean.Server.Completion
 open Elab
 
 private def findBest?
-    (infoTree : InfoTree)
-    (gt : α → α → Bool)
+    (infoTree : InfoTree) (gt : α → α → Bool)
     (f : ContextInfo → Info → PersistentArray InfoTree → Option α)
     : Option α :=
   (Id.run <| infoTree.visitM (postNode := choose)).join
 where
   choose
-      (ctx : ContextInfo)
-      (info : Info)
-      (cs : PersistentArray InfoTree)
+      (ctx : ContextInfo) (info : Info) (cs : PersistentArray InfoTree)
       (childValues : List (Option (Option α)))
       : Option α :=
-    let bestChildValue := childValues.map (·.join) |>.foldl (init := none) fun v best =>
-      if isBetter v best then
-        v
-      else
-        best
+    let bestChildValue :=
+      childValues.map (·.join)
+        |>.foldl (init := none) fun v best =>
+          if isBetter v best then
+            v
+          else
+            best
     if let some v := f ctx info cs then
       if isBetter v bestChildValue then
         v
@@ -41,9 +40,9 @@ where
       bestChildValue
   isBetter (a b : Option α) : Bool :=
     match a, b with
-    | none,   none   => false
-    | some _, none   => true
-    | none,   some _ => false
+    | none, none => false
+    | some _, none => true
+    | none, some _ => false
     | some a, some b => gt a b
 
 /--
@@ -51,9 +50,7 @@ If there are `Info`s that contain `hoverPos` and have a nonempty `LocalContext`,
 yields the closest one of those `Info`s.
 Otherwise, yields the closest `Info` that contains `hoverPos` and has an empty `LocalContext`.
 -/
-private def findClosestInfoWithLocalContextAt?
-    (hoverPos : String.Pos.Raw)
-    (infoTree : InfoTree)
+private def findClosestInfoWithLocalContextAt? (hoverPos : String.Pos.Raw) (infoTree : InfoTree)
     : Option (ContextInfo × Info) :=
   findBest? infoTree isBetter fun ctx info _ =>
     if info.occursInOrOnBoundary hoverPos then
@@ -75,15 +72,15 @@ where
     else
       false
 
-private def findSyntheticIdentifierCompletion?
-    (hoverPos : String.Pos.Raw)
-    (infoTree : InfoTree)
+private def findSyntheticIdentifierCompletion? (hoverPos : String.Pos.Raw) (infoTree : InfoTree)
     : Option ContextualizedCompletionInfo := do
   let some (ctx, info) := findClosestInfoWithLocalContextAt? hoverPos infoTree
     | none
-  let some stack := info.stx.findStack? (·.getRange?.any (·.contains hoverPos (includeStop := true)))
+  let some stack :=
+      info.stx.findStack? (·.getRange?.any (·.contains hoverPos (includeStop := true)))
     | none
-  let stack := stack.dropWhile fun (stx, _) => !(stx matches `($_:ident) || stx matches `($_:ident.))
+  let stack :=
+    stack.dropWhile fun (stx, _) => !(stx matches `($_:ident) || stx matches `($_:ident.))
   let some (stx, _) := stack.head?
     | none
   let isDotIdCompletion := stack.any fun (stx, _) => stx matches `(.$_:ident)
@@ -107,22 +104,19 @@ private def findSyntheticIdentifierCompletion?
 private partial def isCursorOnWhitespace (fileMap : FileMap) (hoverPos : String.Pos.Raw) : Bool :=
   hoverPos.atEnd fileMap.source || (hoverPos.get fileMap.source).isWhitespace
 
-private partial def isCursorInProperWhitespace (fileMap : FileMap) (hoverPos : String.Pos.Raw) : Bool :=
+private partial def isCursorInProperWhitespace (fileMap : FileMap) (hoverPos : String.Pos.Raw)
+    : Bool :=
   (hoverPos.atEnd fileMap.source || (hoverPos.get fileMap.source).isWhitespace)
     && ((hoverPos.unoffsetBy ⟨1⟩).get fileMap.source).isWhitespace
 
 private partial def isSyntheticTacticCompletion
-    (fileMap  : FileMap)
-    (hoverPos : String.Pos.Raw)
-    (cmdStx   : Syntax)
+    (fileMap : FileMap) (hoverPos : String.Pos.Raw) (cmdStx : Syntax)
     : Bool := Id.run do
   let hoverFilePos := fileMap.toPosition hoverPos
   go hoverFilePos cmdStx 0 none
 where
   go
-      (hoverFilePos         : Position)
-      (stx                  : Syntax)
-      (leadingWs            : Nat)
+      (hoverFilePos : Position) (stx : Syntax) (leadingWs : Nat)
       (leadingTokenTailPos? : Option String.Pos.Raw)
       : Bool := Id.run do
     match stx.getPos?, stx.getTailPos? with
@@ -130,7 +124,7 @@ where
       let isCursorInCompletionRange :=
         startPos.byteIdx - leadingWs <= hoverPos.byteIdx
           && hoverPos.byteIdx <= endPos.byteIdx + stx.getTrailingSize
-      if ! isCursorInCompletionRange then
+      if !isCursorInCompletionRange then
         return false
       let mut wsBeforeArg := leadingWs
       let mut lastArgTailPos? := leadingTokenTailPos?
@@ -148,8 +142,7 @@ where
         -- the `by` keyword) for indentation checking. The tail position lets us distinguish
         -- cursors before and after the opener on the opener's line.
         lastArgTailPos? := arg.getTailPos? <|> lastArgTailPos?
-      return isCompletionInEmptyTacticBlock stx lastArgTailPos?
-        || isCompletionAfterSemicolon stx
+      return isCompletionInEmptyTacticBlock stx lastArgTailPos? || isCompletionAfterSemicolon stx
         || isCompletionOnTacticBlockIndentation hoverFilePos stx
     | _, _ =>
       -- Empty tactic blocks typically lack ranges since they do not contain any tokens.
@@ -159,10 +152,7 @@ where
       -- block.
       return isCompletionInEmptyTacticBlock stx leadingTokenTailPos?
 
-  isCompletionOnTacticBlockIndentation
-      (hoverFilePos : Position)
-      (stx : Syntax)
-      : Bool := Id.run do
+  isCompletionOnTacticBlockIndentation (hoverFilePos : Position) (stx : Syntax) : Bool := Id.run do
     let some tacticsNode := getTacticsNode? stx
       | return false
     let some firstTacticPos := tacticsNode.getPos?
@@ -184,8 +174,7 @@ where
       let some tailPos := tactic.getTailPos?
         | return false
       let isCursorAfterSemicolon :=
-        tactic.isToken ";"
-          && tailPos.byteIdx <= hoverPos.byteIdx
+        tactic.isToken ";" && tailPos.byteIdx <= hoverPos.byteIdx
           && hoverPos.byteIdx <= tailPos.byteIdx + tactic.getTrailingSize
       return isCursorAfterSemicolon
 
@@ -197,7 +186,8 @@ where
     else
       none
 
-  isCompletionInEmptyTacticBlock (stx : Syntax) (leadingTokenTailPos? : Option String.Pos.Raw) : Bool := Id.run do
+  isCompletionInEmptyTacticBlock (stx : Syntax) (leadingTokenTailPos? : Option String.Pos.Raw)
+      : Bool := Id.run do
     if ! isCursorInProperWhitespace fileMap hoverPos then
       return false
     if ! isEmptyTacticBlock stx then
@@ -245,34 +235,27 @@ where
       || stx.getKind == ``Parser.Tactic.tacticSeqBracketed && isEmpty stx[1]
 
   isEmpty : Syntax → Bool
-    | .missing       => true
-    | .ident ..      => false
-    | .atom ..       => false
+    | .missing => true
+    | .ident .. => false
+    | .atom .. => false
     | .node _ _ args => args.all isEmpty
 
-private partial def findOutermostContextInfo? (i : InfoTree) : Option ContextInfo :=
-  go i
+private partial def findOutermostContextInfo? (i : InfoTree) : Option ContextInfo := go i
 where
   go (i : InfoTree) : Option ContextInfo := do
     match i with
-  | .context ctx i =>
-    match ctx with
-    | .commandCtx ctxInfo =>
-      some { ctxInfo with }
-    | _ =>
-      -- This shouldn't happen (see the `PartialContextInfo` docstring),
-      -- but let's continue searching regardless
-      go i
-  | .node _ cs =>
-    cs.findSome? go
-  | .hole .. =>
-    none
+    | .context ctx i =>
+      match ctx with
+      | .commandCtx ctxInfo => some { ctxInfo with }
+      | _ =>
+        -- This shouldn't happen (see the `PartialContextInfo` docstring),
+        -- but let's continue searching regardless
+        go i
+    | .node _ cs => cs.findSome? go
+    | .hole .. => none
 
 private def findSyntheticTacticCompletion?
-    (fileMap  : FileMap)
-    (hoverPos : String.Pos.Raw)
-    (cmdStx   : Syntax)
-    (infoTree : InfoTree)
+    (fileMap : FileMap) (hoverPos : String.Pos.Raw) (cmdStx : Syntax) (infoTree : InfoTree)
     : Option ContextualizedCompletionInfo := do
   let ctx ← findOutermostContextInfo? infoTree
   if ! isSyntheticTacticCompletion fileMap hoverPos cmdStx then
@@ -280,22 +263,22 @@ private def findSyntheticTacticCompletion?
   -- Neither `HoverInfo` nor the syntax in `.tactic` are important for tactic completion.
   return { hoverInfo := HoverInfo.after, ctx, info := .tactic .missing }
 
-private def findExpectedTypeAt (infoTree : InfoTree) (hoverPos : String.Pos.Raw) : Option (ContextInfo × Expr) := do
-  let (ctx, .ofTermInfo i) ← infoTree.smallestInfo? fun i => Id.run do
-      let some pos := i.pos?
-        | return false
-      let some tailPos := i.tailPos?
-        | return false
-      let .ofTermInfo ti := i
-        | return false
-      return ti.expectedType?.isSome && pos <= hoverPos && hoverPos <= tailPos
+private def findExpectedTypeAt (infoTree : InfoTree) (hoverPos : String.Pos.Raw)
+    : Option (ContextInfo × Expr) := do
+  let (ctx, .ofTermInfo i) ←
+      infoTree.smallestInfo? fun i => Id.run do
+        let some pos := i.pos?
+          | return false
+        let some tailPos := i.tailPos?
+          | return false
+        let .ofTermInfo ti := i
+          | return false
+        return ti.expectedType?.isSome && pos <= hoverPos && hoverPos <= tailPos
     | none
   (ctx, i.expectedType?.get!)
 
-private partial def foldWithLeadingToken [Inhabited α]
-    (f    : α → Option Syntax → Syntax → α)
-    (init : α)
-    (stx  : Syntax)
+private partial def foldWithLeadingToken
+    [Inhabited α] (f : α → Option Syntax → Syntax → α) (init : α) (stx : Syntax)
     : α :=
   let (_, r) := go none init stx
   r
@@ -303,8 +286,8 @@ where
   go [Inhabited α] (leadingToken? : Option Syntax) (acc : α) (stx : Syntax) : Option Syntax × α :=
     let acc := f acc leadingToken? stx
     match stx with
-    | .missing  => (none, acc)
-    | .atom ..  => (stx, acc)
+    | .missing => (none, acc)
+    | .atom .. => (stx, acc)
     | .ident .. => (stx, acc)
     | .node _ _ args => Id.run do
       let mut acc := acc
@@ -315,9 +298,7 @@ where
         acc := acc'
       return (lastToken?, acc)
 
-private def findWithLeadingToken?
-    (p : Option Syntax → Syntax → Bool)
-    (stx : Syntax)
+private def findWithLeadingToken? (p : Option Syntax → Syntax → Bool) (stx : Syntax)
     : Option Syntax :=
   foldWithLeadingToken (stx := stx) (init := none) fun foundStx? leadingToken? stx =>
     match foundStx? with
@@ -329,13 +310,11 @@ private def findWithLeadingToken?
         none
 
 private def isSyntheticStructFieldCompletion
-    (fileMap  : FileMap)
-    (hoverPos : String.Pos.Raw)
-    (cmdStx   : Syntax)
+    (fileMap : FileMap) (hoverPos : String.Pos.Raw) (cmdStx : Syntax)
     : Bool := Id.run do
   let isCursorOnWhitespace := isCursorOnWhitespace fileMap hoverPos
   let isCursorInProperWhitespace := isCursorInProperWhitespace fileMap hoverPos
-  if ! isCursorOnWhitespace then
+  if !isCursorOnWhitespace then
     return false
 
   let hoverFilePos := fileMap.toPosition hoverPos
@@ -361,19 +340,20 @@ private def isSyntheticStructFieldCompletion
     if isCompletionInEmptyBlock then
       return true
 
-    let isCompletionAfterSep := fieldsAndSeps.zipIdx.any fun (fieldOrSep, i) => Id.run do
-      if i % 2 == 0 || !fieldOrSep.isAtom then
-        return false
-      let sep := fieldOrSep
-      let some sepTailPos := sep.getTailPos?
-        | return false
-      return sepTailPos <= hoverPos
-        && hoverPos.byteIdx <= sepTailPos.byteIdx + sep.getTrailingSize
+    let isCompletionAfterSep :=
+      fieldsAndSeps.zipIdx.any fun (fieldOrSep, i) => Id.run do
+        if i % 2 == 0 || !fieldOrSep.isAtom then
+          return false
+        let sep := fieldOrSep
+        let some sepTailPos := sep.getTailPos?
+          | return false
+        return sepTailPos <= hoverPos
+          && hoverPos.byteIdx <= sepTailPos.byteIdx + sep.getTrailingSize
     if isCompletionAfterSep then
       return true
 
     let isCompletionOnIndentation := Id.run do
-      if ! isCursorInProperWhitespace then
+      if !isCursorInProperWhitespace then
         return false
       let some firstFieldPos := stx.getPos?
         | return false
@@ -383,11 +363,8 @@ private def isSyntheticStructFieldCompletion
     return isCompletionOnIndentation
 
 private def findSyntheticFieldCompletion?
-  (fileMap  : FileMap)
-  (hoverPos : String.Pos.Raw)
-  (cmdStx   : Syntax)
-  (infoTree : InfoTree)
-  : Option ContextualizedCompletionInfo := do
+    (fileMap : FileMap) (hoverPos : String.Pos.Raw) (cmdStx : Syntax) (infoTree : InfoTree)
+    : Option ContextualizedCompletionInfo := do
   if ! isSyntheticStructFieldCompletion fileMap hoverPos cmdStx then
     none
   let (ctx, expectedType) ← findExpectedTypeAt infoTree hoverPos
@@ -398,15 +375,12 @@ private def findSyntheticFieldCompletion?
   return { hoverInfo := HoverInfo.after, ctx, info := .fieldId .missing none .empty typeName }
 
 def findSyntheticCompletions
-    (fileMap  : FileMap)
-    (hoverPos : String.Pos.Raw)
-    (cmdStx   : Syntax)
-    (infoTree : InfoTree)
+    (fileMap : FileMap) (hoverPos : String.Pos.Raw) (cmdStx : Syntax) (infoTree : InfoTree)
     : Array ContextualizedCompletionInfo :=
   let syntheticCompletionData? : Option ContextualizedCompletionInfo :=
-    findSyntheticTacticCompletion? fileMap hoverPos cmdStx infoTree <|>
-      findSyntheticFieldCompletion? fileMap hoverPos cmdStx infoTree <|>
-        findSyntheticIdentifierCompletion? hoverPos infoTree
+    findSyntheticTacticCompletion? fileMap hoverPos cmdStx infoTree
+      <|> findSyntheticFieldCompletion? fileMap hoverPos cmdStx infoTree
+      <|> findSyntheticIdentifierCompletion? hoverPos infoTree
   syntheticCompletionData?.map (#[·]) |>.getD #[]
 
 end Lean.Server.Completion

@@ -26,15 +26,21 @@ postconditions. The instances for the base monads and the monad transformers are
 
 namespace Std.WP
 
-/-- `wp x` is sub-conjunctive: the meet of the weakest preconditions of two postconditions lies
+/--
+`wp x` is sub-conjunctive: the meet of the weakest preconditions of two postconditions lies
 below the weakest precondition of the componentwise meet of the postconditions. A healthiness
 condition of the `WP` interpretation for the individual program `x`; it holds for the base
-interpretations and lifts through the transformers. -/
-class WPConjunctive {Prog : Type u} {Value : outParam (Type v)} {Pred : outParam (Type w)}
+interpretations and lifts through the transformers.
+-/
+class WPConjunctive
+    {Prog : Type u} {Value : outParam (Type v)} {Pred : outParam (Type w)}
     {EPosts : outParam (Type z)} [Assertion Pred] [Assertion EPosts] [WP Prog Value Pred EPosts]
-    (x : Prog) : Prop where
-  /-- The meet of the weakest preconditions `wp x Q₁ E₁` and `wp x Q₂ E₂` lies below the weakest
-  precondition `wp x (Q₁ ⊓ Q₂) (E₁ ⊓ E₂)` of the componentwise meet of the postconditions. -/
+    (x : Prog)
+    : Prop where
+  /--
+  The meet of the weakest preconditions `wp x Q₁ E₁` and `wp x Q₂ E₂` lies below the weakest
+  precondition `wp x (Q₁ ⊓ Q₂) (E₁ ⊓ E₂)` of the componentwise meet of the postconditions.
+  -/
   wp_meet_wp_le : (WP.trans x).Conjunctive
 
 attribute [deprecated_arg EPred EPosts (since := "2026-09-18")] WPConjunctive

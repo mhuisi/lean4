@@ -20,19 +20,15 @@ open Lean Meta Omega
 
 open Lean in
 instance : ToExpr LinearCombo where
-  toExpr lc :=
-    (Expr.const ``LinearCombo.mk []).app (toExpr lc.const) |>.app (toExpr lc.coeffs)
+  toExpr lc := (Expr.const ``LinearCombo.mk []).app (toExpr lc.const) |>.app (toExpr lc.coeffs)
   toTypeExpr := .const ``LinearCombo []
 
 open Lean in
 instance : ToExpr Constraint where
-  toExpr s :=
-    (Expr.const ``Constraint.mk []).app (toExpr s.lowerBound) |>.app (toExpr s.upperBound)
+  toExpr s := (Expr.const ``Constraint.mk []).app (toExpr s.lowerBound) |>.app (toExpr s.upperBound)
   toTypeExpr := .const ``Constraint []
 
-/--
-A delayed proof that a constraint is satisfied at the atoms.
--/
+/-- A delayed proof that a constraint is satisfied at the atoms. -/
 abbrev Proof : Type := OmegaM Expr
 
 /--
@@ -40,23 +36,21 @@ Our internal representation of an argument "justifying" that a constraint holds 
 We'll use this to construct the proof term once a contradiction is found.
 -/
 inductive Justification : Constraint → Coeffs → Type
-  /--
-  `Problem.assumptions[i]` generates a proof that `s.sat' coeffs atoms`
-  -/
+  /-- `Problem.assumptions[i]` generates a proof that `s.sat' coeffs atoms` -/
   | assumption (s : Constraint) (x : Coeffs) (i : Nat) : Justification s x
   /-- The result of `tidy` on another `Justification`. -/
   | tidy (j : Justification s c) : Justification (tidyConstraint s c) (tidyCoeffs s c)
   /-- The result of `combine` on two `Justifications`. -/
   | combine {s t c} (j : Justification s c) (k : Justification t c) : Justification (s.combine t) c
   /-- A linear `combo` of two `Justifications`. -/
-  | combo {s t x y} (a : Int) (j : Justification s x) (b : Int) (k : Justification t y) :
-    Justification (Constraint.combo a s b t) (Coeffs.combo a x b y)
+  | combo {s t x y} (a : Int) (j : Justification s x) (b : Int) (k : Justification t y)
+    : Justification (Constraint.combo a s b t) (Coeffs.combo a x b y)
   /--
   The justification for the constraint constructed using "balanced mod" while
   eliminating an equality.
   -/
-  | bmod (m : Nat) (r : Int) (i : Nat) {x} (j : Justification (.exact r) x) :
-      Justification (.exact (Int.bmod r m)) (bmod_coeffs m i x)
+  | bmod (m : Nat) (r : Int) (i : Nat) {x} (j : Justification (.exact r) x)
+    : Justification (.exact (Int.bmod r m)) (bmod_coeffs m i x)
 
 /-- Wrapping for `Justification.tidy` when `tidy?` is nonempty. -/
 nonrec def Justification.tidy? (j : Justification s c) : Option (Σ s' c', Justification s' c') :=
@@ -77,10 +71,10 @@ def toString : Justification s x → String
     s!"{x} ∈ {s}: combination of:\n" ++ bullet j.toString ++ "\n" ++ bullet k.toString
   | combo a j b k =>
     s!"{x} ∈ {s}: {a} * x + {b} * y combo of:\n" ++ bullet j.toString ++ "\n" ++ bullet k.toString
-  | bmod m _ i j =>
-    s!"{x} ∈ {s}: bmod with m={m} and i={i} of:\n" ++ bullet j.toString
+  | bmod m _ i j => s!"{x} ∈ {s}: bmod with m={m} and i={i} of:\n" ++ bullet j.toString
 
-instance : ToString (Justification s x) where toString := toString
+instance : ToString (Justification s x) where
+  toString := toString
 
 open Lean
 
@@ -93,8 +87,9 @@ def combineProof (s t : Constraint) (x : Coeffs) (v : Expr) (ps pt : Expr) : Exp
   mkApp6 (.const ``Constraint.combine_sat' []) (toExpr s) (toExpr t) (toExpr x) v ps pt
 
 /-- Construct the proof term associated to a `combo` step. -/
-def comboProof (s t : Constraint) (a : Int) (x : Coeffs) (b : Int) (y : Coeffs)
-    (v : Expr) (px py : Expr) : Expr :=
+def comboProof
+    (s t : Constraint) (a : Int) (x : Coeffs) (b : Int) (y : Coeffs) (v : Expr) (px py : Expr)
+    : Expr :=
   mkApp9 (.const ``combo_sat' []) (toExpr s) (toExpr t) (toExpr a) (toExpr x) (toExpr b) (toExpr y)
     v px py
 
@@ -104,8 +99,9 @@ def bmodProof (m : Nat) (r : Int) (i : Nat) (x : Coeffs) (v : Expr) (w : Expr) :
   let r := toExpr r
   let i := toExpr i
   let x := toExpr x
-  let h ← mkDecideProof (mkApp4 (.const ``LE.le [.zero]) (.const ``Nat []) (.const ``instLENat [])
-    (.app (.const ``Coeffs.length []) x) i)
+  let h ←
+    mkDecideProof (mkApp4 (.const ``LE.le [.zero]) (.const ``Nat []) (.const ``instLENat [])
+      (.app (.const ``Coeffs.length []) x) i)
   let lhs := mkApp2 (.const ``Coeffs.get []) v i
   let rhs := mkApp3 (.const ``bmod_div_term []) m x v
   let p ← mkEqReflWithExpectedType lhs rhs
@@ -146,10 +142,11 @@ def tidy (f : Fact) : Fact :=
   | none => f
 
 /-- `combo`, implemented on `Fact`. -/
-def combo (a : Int) (f : Fact) (b : Int) (g : Fact) : Fact :=
-  { coeffs := .combo a f.coeffs b g.coeffs
-    constraint := .combo a f.constraint b g.constraint
-    justification := .combo a f.justification b g.justification }
+def combo (a : Int) (f : Fact) (b : Int) (g : Fact) : Fact := {
+  coeffs := .combo a f.coeffs b g.coeffs
+  constraint := .combo a f.constraint b g.constraint
+  justification := .combo a f.justification b g.justification
+}
 
 end Fact
 
@@ -171,9 +168,7 @@ structure Problem where
   numVars : Nat := 0
   /-- The current constraints, indexed by their coefficients. -/
   constraints : Std.HashMap Coeffs Fact := ∅
-  /--
-  The coefficients for which `constraints` contains an exact constraint (i.e. an equality).
-  -/
+  /-- The coefficients for which `constraints` contains an exact constraint (i.e. an equality). -/
   equalities : Std.HashSet Coeffs := ∅
   /--
   Equations that have already been used to eliminate variables,
@@ -230,22 +225,24 @@ without checking if there is already a constraint for these coefficients.
 -/
 def insertConstraint (p : Problem) : Fact → Problem
   | f@⟨x, s, j⟩ =>
-    if s.isImpossible then
-      { p with
-        possible := false
-        proveFalse? := some (proveFalse j p.assumptions)
-        explanation? := Thunk.mk fun _ => j.toString
-        proveFalse?_spec := rfl }
-    else
-      { p with
-        numVars := max p.numVars x.length
-        constraints := p.constraints.insert x f
-        proveFalse?_spec := p.proveFalse?_spec
-        equalities :=
+    if s.isImpossible then {
+      p with
+      possible := false
+      proveFalse? := some (proveFalse j p.assumptions)
+      explanation? := Thunk.mk fun _ => j.toString
+      proveFalse?_spec := rfl
+    }
+    else {
+      p with
+      numVars := max p.numVars x.length
+      constraints := p.constraints.insert x f
+      proveFalse?_spec := p.proveFalse?_spec
+      equalities :=
         if f.constraint.isExact then
           p.equalities.insert x
         else
-          p.equalities }
+          p.equalities
+    }
 
 /--
 Add a constraint into the problem,
@@ -266,12 +263,11 @@ def addConstraint (p : Problem) : Fact → Problem
             -- No need to overwrite the existing fact
             -- with the same fact with a more complicated justification
             p
+          else if r = s then
+            -- The new constraint is strictly stronger, no need to combine with the old one:
+            p.insertConstraint ⟨x, s, j⟩
           else
-            if r = s then
-              -- The new constraint is strictly stronger, no need to combine with the old one:
-              p.insertConstraint ⟨x, s, j⟩
-            else
-              p.insertConstraint ⟨x, s.combine t, j.combine (h ▸ k)⟩
+            p.insertConstraint ⟨x, s.combine t, j.combine (h ▸ k)⟩
         else
           p -- unreachable
     else
@@ -288,20 +284,18 @@ ordering so the algorithm terminates in practice!
 -/
 def selectEquality (p : Problem) : Option (Coeffs × Nat) :=
   p.equalities.fold (init := none) fun
-  | none, c => (c, c.minNatAbs)
-  | some (r, m), c =>
-    if 2 ≤ m then
-      let m' := c.minNatAbs
-      if (m' < m || m' = m && c.maxNatAbs < r.maxNatAbs) then
-        (c, m')
+    | none, c => (c, c.minNatAbs)
+    | some (r, m), c =>
+      if 2 ≤ m then
+        let m' := c.minNatAbs
+        if (m' < m || m' = m && c.maxNatAbs < r.maxNatAbs) then
+          (c, m')
+        else
+          (r, m)
       else
         (r, m)
-    else
-      (r, m)
 
-/--
-If we have already solved some equalities, apply those to some new `Fact`.
--/
+/-- If we have already solved some equalities, apply those to some new `Fact`. -/
 def replayEliminations (p : Problem) (f : Fact) : Fact :=
   p.eliminations.foldr (init := f) fun (f, i, s) g =>
     match Coeffs.get g.coeffs i with
@@ -318,13 +312,10 @@ def solveEasyEquality (p : Problem) (c : Coeffs) : Problem :=
   let sign := c.get i |> Int.sign
   match p.constraints[c]? with
   | some f =>
-    let init :=
-    { assumptions := p.assumptions
-      eliminations := (f, i, sign) :: p.eliminations }
+    let init := { assumptions := p.assumptions, eliminations := (f, i, sign) :: p.eliminations }
     p.constraints.fold (init := init) fun p' coeffs g =>
       match Coeffs.get coeffs i with
-      | 0 =>
-        p'.addConstraint g
+      | 0 => p'.addConstraint g
       | ci =>
         let k := -1 * sign * ci
         p'.addConstraint (Fact.combo k f 1 g).tidy
@@ -347,13 +338,13 @@ def dealWithHardEquality (p : Problem) (c : Coeffs) : OmegaM Problem :=
     if hr : r' = r then
       match facts? with
       | none => throwError "When solving hard equality, new atom had been seen before!"
-      | some facts => if ! facts.isEmpty then
-        throwError "When solving hard equality, there were unexpected new facts!"
+      | some facts =>
+        if !facts.isEmpty then
+          throwError "When solving hard equality, there were unexpected new facts!"
       return p.addConstraint { coeffs := _, constraint := _, justification := (hr ▸ j).bmod m r i }
     else
       throwError "Invalid constraint, expected an equation." -- unreachable
-  | _ =>
-    return p -- unreachable
+  | _ => return p -- unreachable
 
 /--
 Solve an equality, by deciding whether it is easy (has a `±1` coefficient) or hard,
@@ -371,7 +362,8 @@ partial def solveEqualities (p : Problem) : OmegaM Problem :=
     match p.selectEquality with
     | some (c, m) => do (← p.solveEquality c m).solveEqualities
     | none => return p
-  else return p
+  else
+    return p
 
 open Constraint
 
@@ -397,10 +389,11 @@ def addInequality (p : Problem) (const : Int) (coeffs : Coeffs) (prf? : Option P
   let prf := prf?.getD (do mkSorry (← mkFreshExprMVar none) false)
   let i := p.assumptions.size
   let p' := { p with assumptions := p.assumptions.push (addInequality_proof const coeffs prf) }
-  let f : Fact :=
-  { coeffs
+  let f : Fact := {
+    coeffs
     constraint := { lowerBound := some (-const), upperBound := none }
-    justification := .assumption _ _ i }
+    justification := .assumption _ _ i
+  }
   let f := p.replayEliminations f
   let f := f.tidy
   p'.addConstraint f
@@ -415,10 +408,11 @@ def addEquality (p : Problem) (const : Int) (coeffs : Coeffs) (prf? : Option Pro
   let prf := prf?.getD (do mkSorry (← mkFreshExprMVar none) false)
   let i := p.assumptions.size
   let p' := { p with assumptions := p.assumptions.push (addEquality_proof const coeffs prf) }
-  let f : Fact :=
-  { coeffs
+  let f : Fact := {
+    coeffs
     constraint := { lowerBound := some (-const), upperBound := some (-const) }
-    justification := .assumption _ _ i }
+    justification := .assumption _ _ i
+  }
   let f := p.replayEliminations f
   let f := f.tidy
   p'.addConstraint f
@@ -462,10 +456,8 @@ instance : ToString FourierMotzkinData where
     let irrelevant := d.irrelevant.map fun ⟨x, s, _⟩ => s!"{x} ∈ {s}"
     let lowerBounds := d.lowerBounds.map fun ⟨⟨x, s, _⟩, _⟩ => s!"{x} ∈ {s}"
     let upperBounds := d.upperBounds.map fun ⟨⟨x, s, _⟩, _⟩ => s!"{x} ∈ {s}"
-    s!"Fourier-Motzkin elimination data for variable {d.var}\n"
-      ++ s!"• irrelevant: {irrelevant}\n"
-      ++ s!"• lowerBounds: {lowerBounds}\n"
-      ++ s!"• upperBounds: {upperBounds}"
+    s!"Fourier-Motzkin elimination data for variable {d.var}\n" ++ s!"• irrelevant: {irrelevant}\n"
+      ++ s!"• lowerBounds: {lowerBounds}\n" ++ s!"• upperBounds: {upperBounds}"
 
 /-- Is a Fourier-Motzkin elimination empty (i.e. there are no relevant constraints). -/
 def FourierMotzkinData.isEmpty (d : FourierMotzkinData) : Bool :=
@@ -481,25 +473,32 @@ def FourierMotzkinData.exact (d : FourierMotzkinData) : Bool := d.lowerExact || 
 def fourierMotzkinData (p : Problem) : Array FourierMotzkinData := Id.run do
   let n := p.numVars
   let mut data : Array FourierMotzkinData :=
-    (List.range p.numVars).foldl (fun a i => a.push { var := i}) #[]
+    (List.range p.numVars).foldl (fun a i => a.push { var := i }) #[]
   for (_, f@⟨xs, s, _⟩) in p.constraints do
     for i in *...n do
       let x := Coeffs.get xs i
-      data := data.modify i fun d =>
-        if x = 0 then
-          { d with irrelevant := f :: d.irrelevant }
-        else Id.run do
-          let s' := s.scale x
-          let mut d' := d
-          if s'.lowerBound.isSome then
-            d' := { d' with
-              lowerBounds := (f, x) :: d'.lowerBounds
-              lowerExact := d'.lowerExact && x.natAbs = 1 }
-          if s'.upperBound.isSome then
-            d' := { d' with
-              upperBounds := (f, x) :: d'.upperBounds
-              upperExact := d'.upperExact && x.natAbs = 1 }
-          return d'
+      data :=
+        data.modify i fun d =>
+          if x = 0 then {
+            d with
+            irrelevant := f :: d.irrelevant
+          }
+          else Id.run do
+            let s' := s.scale x
+            let mut d' := d
+            if s'.lowerBound.isSome then
+              d' := {
+                d' with
+                lowerBounds := (f, x) :: d'.lowerBounds
+                lowerExact := d'.lowerExact && x.natAbs = 1
+              }
+            if s'.upperBound.isSome then
+              d' := {
+                d' with
+                upperBounds := (f, x) :: d'.upperBounds
+                upperExact := d'.upperExact && x.natAbs = 1
+              }
+            return d'
   return data
 
 /--
@@ -509,7 +508,7 @@ We prefer eliminations which introduce no new inequalities, or otherwise exact e
 and break ties by the number of new inequalities introduced.
 -/
 def fourierMotzkinSelect (data : Array FourierMotzkinData) : MetaM FourierMotzkinData := do
-  let data := data.filter fun d => ¬ d.isEmpty
+  let data := data.filter fun d => ¬d.isEmpty
   trace[omega] "Selecting variable to eliminate from (idx, size, exact) triples:\n\
     {data.map fun d => (d.var, d.size, d.exact)}"
   let mut bestIdx := 0
@@ -531,9 +530,7 @@ def fourierMotzkinSelect (data : Array FourierMotzkinData) : MetaM FourierMotzki
   trace[omega] "Selected variable {data[bestIdx]!.var}."
   return data[bestIdx]!
 
-/--
-Run Fourier-Motzkin elimination on one variable.
--/
+/-- Run Fourier-Motzkin elimination on one variable. -/
 -- This is only in MetaM to enable tracing.
 def fourierMotzkin (p : Problem) : MetaM Problem := do
   let data := p.fourierMotzkinData
@@ -549,11 +546,10 @@ def fourierMotzkin (p : Problem) : MetaM Problem := do
 
 mutual
 
-/--
-Run the `omega` algorithm (for now without dark and grey shadows!) on a problem.
--/
+/-- Run the `omega` algorithm (for now without dark and grey shadows!) on a problem. -/
 partial def runOmega (p : Problem) : OmegaM Problem := do
-  trace[omega] "Running omega on:\n{p}"
+  trace[omega] "Running omega on:\
+    \n{p}"
   if p.possible then
     let p' ← p.solveEqualities
     elimination p'
@@ -566,7 +562,8 @@ partial def elimination (p : Problem) : OmegaM Problem :=
     if p.isEmpty then
       return p
     else do
-      trace[omega] "Running Fourier-Motzkin elimination on:\n{p}"
+      trace[omega] "Running Fourier-Motzkin elimination on:\
+        \n{p}"
       runOmega (← p.fourierMotzkin)
   else
     return p

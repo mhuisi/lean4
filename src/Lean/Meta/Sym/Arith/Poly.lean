@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Grind.Ring.CommSolver
 import Init.Data.Nat.Gcd
@@ -39,7 +40,8 @@ def Mon.lcm : Mon → Mon → Mon
 `divides m₁ m₂` returns `true` if monomial `m₁` divides `m₂`
 Example: `x^2.z` divides `w.x^3.y^2.z`
 -/
-@[expose] def Mon.divides : Mon → Mon → Bool
+@[expose]
+def Mon.divides : Mon → Mon → Bool
   | .unit, _ => true
   | _, .unit => false
   | .mult pw₁ m₁, .mult pw₂ m₂ =>
@@ -53,9 +55,10 @@ Given `m₁` and `m₂` such that `m₂.divides m₁`, then
 `m₁.div m₂` returns the result.
 Example `w.x^3.y^2.z` div `x^2.z` returns `w.x.y^2`
 -/
-@[expose] def Mon.div : Mon → Mon → Mon
+@[expose]
+def Mon.div : Mon → Mon → Mon
   | m₁, .unit => m₁
-  | .unit, _  => .unit -- reachable only if pre-condition does not hold
+  | .unit, _ => .unit -- reachable only if pre-condition does not hold
   | .mult pw₁ m₁, .mult pw₂ m₂ =>
     match compare pw₁.x pw₂.x with
     | .eq =>
@@ -88,13 +91,13 @@ structure SPolResult where
   /-- The computed S-polynomial. -/
   spol : Poly := .num 0
   /-- Coefficient applied to polynomial `p₁`. -/
-  k₁   : Int  := 0
+  k₁ : Int := 0
   /-- Monomial factor applied to polynomial `p₁`. -/
-  m₁   : Mon  := .unit
+  m₁ : Mon := .unit
   /-- Coefficient applied to polynomial `p₂`. -/
-  k₂   : Int  := 0
+  k₂ : Int := 0
   /-- Monomial factor applied to polynomial `p₂`. -/
-  m₂   : Mon  := .unit
+  m₂ : Mon := .unit
 
 def Poly.mulConst' (p : Poly) (k : Int) (char? : Option Nat := none) : Poly :=
   if let some char := char? then p.mulConstC k char else p.mulConst k
@@ -113,17 +116,17 @@ S(p₁, p₂) = (k₂/gcd(k₁, k₂)) * (lcm(m₁, m₂)/m₁) * p₁ - (k₁/g
 ```
 Remark: if `char? = some c`, then `c` is the characteristic of the ring.
 -/
-def Poly.spol (p₁ p₂ : Poly) (char? : Option Nat := none) : SPolResult  :=
+def Poly.spol (p₁ p₂ : Poly) (char? : Option Nat := none) : SPolResult :=
   match p₁, p₂ with
   | .add k₁ m₁ p₁, .add k₂ m₂ p₂ =>
-    let m    := m₁.lcm m₂
-    let m₁   := m.div m₁
-    let m₂   := m.div m₂
-    let g    := Nat.gcd k₁.natAbs k₂.natAbs
-    let c₁   := k₂/g
-    let c₂   := -k₁/g
-    let p₁   := p₁.mulMon' c₁ m₁ char?
-    let p₂   := p₂.mulMon' c₂ m₂ char?
+    let m := m₁.lcm m₂
+    let m₁ := m.div m₁
+    let m₂ := m.div m₂
+    let g := Nat.gcd k₁.natAbs k₂.natAbs
+    let c₁ := k₂ / g
+    let c₂ := -k₁ / g
+    let p₁ := p₁.mulMon' c₁ m₁ char?
+    let p₂ := p₂.mulMon' c₂ m₂ char?
     let spol := p₁.combine' p₂ char?
     { spol, m₁, m₂, k₁ := c₁, k₂ := c₂ }
   | _, _ => {}
@@ -133,8 +136,7 @@ def Poly.degree : Poly → Nat
   | .add _ m _ => m.degree
 
 /-- Returns the number of monomials in the polynomial. -/
-def Poly.numTerms (p : Poly) : Nat :=
-  go p 0
+def Poly.numTerms (p : Poly) : Nat := go p 0
 where
   go (p : Poly) (acc : Nat) : Nat :=
     match p with
@@ -149,13 +151,13 @@ def Poly.divides (p : Poly) (m : Mon) : Bool :=
 
 /-- Returns the leading coefficient of the given polynomial -/
 def Poly.lc : Poly → Int
- | .num k => k
- | .add k _ _ => k
+  | .num k => k
+  | .add k _ _ => k
 
 /-- Returns the leading monomial of the given polynomial. -/
 def Poly.lm : Poly → Mon
- | .num _ => .unit
- | .add _ m _ => m
+  | .num _ => .unit
+  | .add _ m _ => m
 
 def Poly.isZero : Poly → Bool
   | .num 0 => true

@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Grind.Ring.CommSolver
 public import Init.GrindInstances.Ring.Int
@@ -29,22 +30,25 @@ namespace Lean.Grind.CommRing
 open Int.Internal.Linear (cdiv)
 
 /-- `p = k * q + c` with `k > 0`. -/
-@[expose] noncomputable def split_cert (p q : Poly) (k c : Int) : Bool :=
+@[expose]
+noncomputable def split_cert (p q : Poly) (k c : Int) : Bool :=
   Int.blt' 0 k |>.and (p.beq' ((q.mulConst_k k).addConst_k c))
 
-theorem denote_of_split_cert (ctx : Context Int) {p q : Poly} {k c : Int}
-    (h : split_cert p q k c) : 0 < k ∧ p.denote ctx = k * q.denote ctx + c := by
+theorem denote_of_split_cert (ctx : Context Int) {p q : Poly} {k c : Int} (h : split_cert p q k c)
+    : 0 < k ∧ p.denote ctx = k * q.denote ctx + c := by
   simp [split_cert] at h
   obtain ⟨h₁, h₂⟩ := h
   refine ⟨h₁, ?_⟩
   rw [h₂, Poly.denote_addConst, Poly.denote_mulConst]
   simp
 
-@[expose] noncomputable def eq_div_cert (lhs rhs lhs' rhs' : Expr) (k : Int) : Bool :=
-  !Int.beq' k 0 |>.and ((lhs.sub rhs).toPoly_k.beq' ((lhs'.sub rhs').toPoly_k.mulConst_k k))
+@[expose]
+noncomputable def eq_div_cert (lhs rhs lhs' rhs' : Expr) (k : Int) : Bool :=
+  ! Int.beq' k 0 |>.and ((lhs.sub rhs).toPoly_k.beq' ((lhs'.sub rhs').toPoly_k.mulConst_k k))
 
 theorem eq_norm_div_expr (ctx : Context Int) (lhs rhs lhs' rhs' : Expr) (k : Int)
-    : eq_div_cert lhs rhs lhs' rhs' k → (lhs.denote ctx = rhs.denote ctx) = (lhs'.denote ctx = rhs'.denote ctx) := by
+    : eq_div_cert lhs rhs lhs' rhs' k
+      → (lhs.denote ctx = rhs.denote ctx) = (lhs'.denote ctx = rhs'.denote ctx) := by
   simp [eq_div_cert]
   intro hk h
   replace h := congrArg (Poly.denote ctx) h
@@ -53,8 +57,9 @@ theorem eq_norm_div_expr (ctx : Context Int) (lhs rhs lhs' rhs' : Expr) (k : Int
   rw [← Int.sub_eq_zero, ← Int.sub_eq_zero (a := lhs'.denote ctx), h, Int.mul_eq_zero]
   simp [hk]
 
-@[expose] noncomputable def eq_unsat_cert (lhs rhs : Expr) (q : Poly) (k c : Int) : Bool :=
-  split_cert (lhs.sub rhs).toPoly_k q k c |>.and (!Int.beq' (c % k) 0)
+@[expose]
+noncomputable def eq_unsat_cert (lhs rhs : Expr) (q : Poly) (k c : Int) : Bool :=
+  split_cert (lhs.sub rhs).toPoly_k q k c |>.and (! Int.beq' (c % k) 0)
 
 theorem eq_norm_unsat_expr (ctx : Context Int) (lhs rhs : Expr) (q : Poly) (k c : Int)
     : eq_unsat_cert lhs rhs q k c → (lhs.denote ctx = rhs.denote ctx) = False := by
@@ -72,11 +77,14 @@ theorem eq_norm_unsat_expr (ctx : Context Int) (lhs rhs : Expr) (q : Poly) (k c 
     rw [this]; exact Int.emod_eq_zero_of_dvd (Int.dvd_neg.mpr (Int.dvd_mul_right k _))
   exact hc this
 
-@[expose] noncomputable def le_tight_cert (lhs rhs lhs' rhs' : Expr) (q : Poly) (k c : Int) : Bool :=
-  split_cert (lhs.sub rhs).toPoly_k q k c |>.and ((lhs'.sub rhs').toPoly_k.beq' (q.addConst_k (cdiv c k)))
+@[expose]
+noncomputable def le_tight_cert (lhs rhs lhs' rhs' : Expr) (q : Poly) (k c : Int) : Bool :=
+  split_cert (lhs.sub rhs).toPoly_k q k c
+    |>.and ((lhs'.sub rhs').toPoly_k.beq' (q.addConst_k (cdiv c k)))
 
 theorem le_norm_tight_expr (ctx : Context Int) (lhs rhs lhs' rhs' : Expr) (q : Poly) (k c : Int)
-    : le_tight_cert lhs rhs lhs' rhs' q k c → (lhs.denote ctx ≤ rhs.denote ctx) = (lhs'.denote ctx ≤ rhs'.denote ctx) := by
+    : le_tight_cert lhs rhs lhs' rhs' q k c
+      → (lhs.denote ctx ≤ rhs.denote ctx) = (lhs'.denote ctx ≤ rhs'.denote ctx) := by
   simp only [le_tight_cert, Bool.and_eq_true, Poly.beq'_eq]
   intro ⟨h, h'⟩
   have ⟨hk, h⟩ := denote_of_split_cert ctx h
@@ -101,8 +109,11 @@ theorem le_norm_tight_expr (ctx : Context Int) (lhs rhs lhs' rhs' : Expr) (q : P
     rw [Int.mul_comm] at h₂
     omega
 
-@[expose] noncomputable def dvd_cert (k : Int) (e e' : Expr) (k' : Int) (q : Poly) (g c : Int) : Bool :=
-  split_cert e.toPoly_k q g c |>.and (Int.beq' k (k' * g)) |>.and (Int.beq' (c % g) 0)
+@[expose]
+noncomputable def dvd_cert (k : Int) (e e' : Expr) (k' : Int) (q : Poly) (g c : Int) : Bool :=
+  split_cert e.toPoly_k q g c
+    |>.and (Int.beq' k (k' * g))
+    |>.and (Int.beq' (c % g) 0)
     |>.and (e'.toPoly_k.beq' (q.addConst_k (c / g)))
 
 theorem dvd_norm_expr (ctx : Context Int) (k : Int) (e e' : Expr) (k' : Int) (q : Poly) (g c : Int)
@@ -120,8 +131,9 @@ theorem dvd_norm_expr (ctx : Context Int) (k : Int) (e e' : Expr) (k' : Int) (q 
   rw [h, h', hk, this, Int.mul_comm k' g]
   exact Int.mul_dvd_mul_iff_left (Int.ne_of_gt hg)
 
-@[expose] noncomputable def dvd_unsat_cert (k : Int) (e : Expr) (q : Poly) (g c : Int) : Bool :=
-  split_cert e.toPoly_k q g c |>.and (Int.beq' (k % g) 0) |>.and (!Int.beq' (c % g) 0)
+@[expose]
+noncomputable def dvd_unsat_cert (k : Int) (e : Expr) (q : Poly) (g c : Int) : Bool :=
+  split_cert e.toPoly_k q g c |>.and (Int.beq' (k % g) 0) |>.and (! Int.beq' (c % g) 0)
 
 theorem dvd_norm_unsat_expr (ctx : Context Int) (k : Int) (e : Expr) (q : Poly) (g c : Int)
     : dvd_unsat_cert k e q g c → (k ∣ e.denote ctx) = False := by

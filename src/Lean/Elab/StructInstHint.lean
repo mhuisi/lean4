@@ -55,14 +55,19 @@ Creates a hint message for the "fields missing" error that fills in the missing 
 the structure instance notation style of the current syntax. Note that if the syntax is malformed or
 synthetic, this function returns an empty message instead.
 -/
-def mkMissingFieldsHint (fields : Array (Name × Option Expr)) (stx : Syntax) : MetaM MessageData := do
-  let some view := mkFieldsHintView? stx | return .nil
-  let newFields ← fields.mapM fun (fieldName, fieldVal?) => do
-    let value ← if let some fieldVal := fieldVal? then
-      let stx ← withOptions (pp.mvars.set · false) <| PrettyPrinter.delab fieldVal
-      pure (← PrettyPrinter.ppCategory `term stx).pretty
-    else pure "_"
-    pure s!"{fieldName} := {value}"
+def mkMissingFieldsHint (fields : Array (Name × Option Expr)) (stx : Syntax)
+    : MetaM MessageData := do
+  let some view := mkFieldsHintView? stx
+    | return .nil
+  let newFields ←
+    fields.mapM fun (fieldName, fieldVal?) => do
+      let value ←
+        if let some fieldVal := fieldVal? then
+          let stx ← withOptions (pp.mvars.set · false) <| PrettyPrinter.delab fieldVal
+          pure (← PrettyPrinter.ppCategory `term stx).pretty
+        else
+          pure "_"
+      pure s!"{fieldName} := {value}"
   let useSingleLine ← isSingleLineStyle view
   let suggestionText :=
     if useSingleLine then
@@ -86,9 +91,12 @@ def mkMissingFieldsHint (fields : Array (Name × Option Expr)) (stx : Syntax) : 
   -- If a line separates the leader and `}`, and there's no intervening text, `interveningLineEndPos?`
   -- gives the position on that line (the min of column `indent` and the line end) at which to insert
   let interveningLineEndPos? :=
-    if leaderLine + 1 ≥ (fileMap.utf8PosToLspPos view.closingPos).line then none else
+    if leaderLine + 1 ≥ (fileMap.utf8PosToLspPos view.closingPos).line then
+      none
+    else
       let leaderLineEnd := findLineEnd fileMap.source view.leaderTailPos
-      let indentPos := (indent + 1).fold (init := leaderLineEnd) (fun _ _ p => p.next fileMap.source)
+      let indentPos :=
+        (indent + 1).fold (init := leaderLineEnd) (fun _ _ p => p.next fileMap.source)
       let interveningLineEnd := findLineEnd fileMap.source (leaderLineEnd.next fileMap.source)
       let nextTwoLines := Substring.Raw.mk fileMap.source view.leaderTailPos interveningLineEnd
       if nextTwoLines.all (·.isWhitespace) then some (min indentPos nextTwoLines.stopPos) else none
@@ -115,8 +123,8 @@ def mkMissingFieldsHint (fields : Array (Name × Option Expr)) (stx : Syntax) : 
   let width := Tactic.TryThis.format.inputWidth.get (← getOptions)
   -- Limit only the span of the suggestion so the code action appears everywhere in the structure
   let suggestion := {
-    suggestion := suggestionText.pretty width indent (col insPos),
-    span? := Syntax.ofRange ⟨insPos, insPos⟩,
+    suggestion := suggestionText.pretty width indent (col insPos)
+    span? := Syntax.ofRange ⟨insPos, insPos⟩
     toCodeActionTitle? := some fun _ => "Add missing fields"
   }
   MessageData.hint m!"Add missing fields:" #[suggestion]
@@ -130,26 +138,28 @@ where
     -- TODO: selectively let through macro-expanded `where` notation
     guard <| stx.getHeadInfo matches .original ..
     guard <| stx.getKind == ``Parser.Term.structInst
-    let (leader, hasWith) := if stx[1][1] matches .missing then
-      (stx[0], false)
-    else
-      (stx[1][1], true)
+    let (leader, hasWith) :=
+      if stx[1][1] matches .missing then
+        (stx[0], false)
+      else
+        (stx[1][1], true)
     let fields := stx[2][0].getSepArgs
-    some { leaderPos := (← leader.getPos?)
-           leaderTailPos := (← leader.getTailPos?)
-           openingPos := (← stx[0].getPos?)
-           closingPos := (← stx[5].getPos?)
-           numFields := fields.size
-           initFieldPos? := fields[0]?.bind (·.getPos?)
-           lastFieldTailPos? := fields[fields.size - 1]?.bind (·.getTailPos?)
-           hasWith }
+    some {
+      leaderPos := (← leader.getPos?)
+      leaderTailPos := (← leader.getTailPos?)
+      openingPos := (← stx[0].getPos?)
+      closingPos := (← stx[5].getPos?)
+      numFields := fields.size
+      initFieldPos? := fields[0]?.bind (·.getPos?)
+      lastFieldTailPos? := fields[fields.size - 1]?.bind (·.getTailPos?)
+      hasWith
+    }
 
   /--
   Returns the position of the end of the line that contains the position `pos`.
   Counterpart of `String.findLineStart`.
   -/
-  findLineEnd (s : String) (p : String.Pos.Raw) : String.Pos.Raw :=
-    (s.pos! p).find '\n' |>.offset
+  findLineEnd (s : String) (p : String.Pos.Raw) : String.Pos.Raw := (s.pos! p).find '\n' |>.offset
 
   /--
   Is the structure instance notation `stx` described by `view` using single-line styling?
@@ -158,16 +168,20 @@ where
   or indented in a way not possible with one-field-per-line styling.
   -/
   isSingleLineStyle (view : FieldsHintView) : MetaM Bool := do
-    unless view.numFields ≥ 2 do return false
+    unless view.numFields ≥ 2 do
+      return false
     let rawFields := stx[2][0]
     -- Account for the fact that we may have a trailing separator:
     let lastInterveningSepIdx := rawFields.getNumArgs - 2 - ((rawFields.getNumArgs + 1) % 2)
     unless rawFields[lastInterveningSepIdx].getKind == `«,» do
       return false
 
-    let some penultimateFieldPos := rawFields[lastInterveningSepIdx - 1].getPos? | return false
-    let some lastFieldPos := rawFields[lastInterveningSepIdx + 1].getPos? | return false
-    let some lastFieldTailPos := rawFields[lastInterveningSepIdx + 1].getTailPos? | return false
+    let some penultimateFieldPos := rawFields[lastInterveningSepIdx - 1].getPos?
+      | return false
+    let some lastFieldPos := rawFields[lastInterveningSepIdx + 1].getPos?
+      | return false
+    let some lastFieldTailPos := rawFields[lastInterveningSepIdx + 1].getTailPos?
+      | return false
     let fileMap ← getFileMap
     let ⟨penultimateFieldLine, penultimateFieldCol⟩ := fileMap.utf8PosToLspPos penultimateFieldPos
     let ⟨lastFieldLine, lastFieldCol⟩ := fileMap.utf8PosToLspPos lastFieldPos

@@ -20,13 +20,17 @@ open Lean
 
 def readUTF8 (h : FS.Stream) (nBytes : Nat) : IO String := do
   let bytes ← h.read (USize.ofNat nBytes)
-  let some s := String.fromUTF8? bytes | throw (IO.userError "invalid UTF-8")
+  let some s := String.fromUTF8? bytes
+    | throw (IO.userError "invalid UTF-8")
   return s
 
-/-- Consumes `nBytes` bytes from the stream, interprets the bytes as a utf-8 string and the string as a valid JSON object. -/
+/--
+Consumes `nBytes` bytes from the stream, interprets the bytes as a utf-8 string and the string as a valid JSON object.
+-/
 def readJson (h : FS.Stream) (nBytes : Nat) : IO Json := do
   let bytes ← h.read (USize.ofNat nBytes)
-  let some s := String.fromUTF8? bytes | throw (IO.userError "invalid UTF-8")
+  let some s := String.fromUTF8? bytes
+    | throw (IO.userError "invalid UTF-8")
   ofExcept (Json.parse s)
 
 def writeJson (h : FS.Stream) (j : Json) : IO Unit := do

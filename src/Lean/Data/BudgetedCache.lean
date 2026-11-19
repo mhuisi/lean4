@@ -30,7 +30,7 @@ Hash retrieval must take constant time; structural key equality is never used by
 structure BudgetedCache (α : Type u) (β : Type v) [Hashable α] where
   private map : @PersistentHashMap α β ⟨fun a b => hash a == hash b⟩ _ :=
     @PersistentHashMap.empty α β ⟨fun a b => hash a == hash b⟩ _
-  deriving Inhabited
+deriving Inhabited
 
 namespace BudgetedCache
 
@@ -38,18 +38,25 @@ variable {α : Type u} {β : Type v} [Hashable α]
 
 instance : EmptyCollection (BudgetedCache α β) := ⟨default⟩
 
-@[inline] def insert (c : BudgetedCache α β) (key : α) (value : β) : BudgetedCache α β :=
-  { map := c.map.insert key value }
+@[inline]
+def insert (c : BudgetedCache α β) (key : α) (value : β) : BudgetedCache α β := {
+  map := c.map.insert key value
+}
 
 /--
 Finds a cached value with the given comparison budget, as interpreted by `BudgetedBEq`.
 On exhaustion, calls `onEvict` with the cache after erasing the candidate. The caller
 must retain this update. Hits, absent hashes, and definite inequality do not call `onEvict`.
 -/
-@[inline] def find? {β : Type} [BudgetedBEq α] {m : Type → Type w} [Monad m] [MonadLiftT BaseIO m]
+@[inline]
+def find?
+    {β : Type} [BudgetedBEq α]
+    {m : Type → Type w} [Monad m] [MonadLiftT BaseIO m]
     (c : BudgetedCache α β) (key : α) (onEvict : BudgetedCache α β → m Unit)
-    (budget : USize := 64) : m (Option β) := do
-  let some (stored, value) := c.map.findEntry? key | return none
+    (budget : USize := 64)
+    : m (Option β) := do
+  let some (stored, value) := c.map.findEntry? key
+    | return none
   match ← BudgetedBEq.beq key stored budget with
   | .true => return some value
   | .false => return none

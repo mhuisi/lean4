@@ -78,19 +78,21 @@ def eqvLetValue (e₁ e₂ : LetValue pu) : EqvM Bool := do
   | .isShared v₁ _, .isShared v₂ _ => eqvFVar v₁ v₂
   | _, _ => return false
 
-@[inline] def withFVar (fvarId₁ fvarId₂ : FVarId) (x : EqvM α) : EqvM α :=
+@[inline]
+def withFVar (fvarId₁ fvarId₂ : FVarId) (x : EqvM α) : EqvM α :=
   withReader (·.insert fvarId₂ fvarId₁) x
 
-@[inline] def withParams (params₁ params₂ : Array (Param pu)) (x : EqvM Bool) : EqvM Bool := do
+@[inline]
+def withParams (params₁ params₂ : Array (Param pu)) (x : EqvM Bool) : EqvM Bool := do
   if h : params₂.size = params₁.size then
     let rec @[specialize] go (i : Nat) : EqvM Bool := do
       if h : i < params₁.size then
         let p₁ := params₁[i]
         have : i < params₂.size := by simp_all +arith
         let p₂ := params₂[i]
-        unless (← eqvType p₁.type p₂.type) do return false
-        withFVar p₁.fvarId p₂.fvarId do
-          go (i+1)
+        unless (← eqvType p₁.type p₂.type) do
+          return false
+        withFVar p₁.fvarId p₂.fvarId do go (i + 1)
       else
         x
       termination_by params₁.size - i
@@ -104,7 +106,7 @@ def sortAlts (alts : Array (Alt pu)) : Array (Alt pu) :=
     | .ctorAlt .., .default .. => true
     | .alt ctorName₁ .., .alt ctorName₂ .. => Name.lt ctorName₁ ctorName₂
     | .ctorAlt i₁ .., .ctorAlt i₂ .. => Name.lt i₁.name i₂.name
-    | _, _  => false
+    | _, _ => false
 
 mutual
 
@@ -115,12 +117,18 @@ partial def eqvAlts (alts₁ alts₂ : Array (Alt pu)) : EqvM Bool := do
     for alt₁ in alts₁, alt₂ in alts₂ do
       match alt₁, alt₂ with
       | .alt ctorName₁ ps₁ k₁ _, .alt ctorName₂ ps₂ k₂ _ =>
-        unless ctorName₁ == ctorName₂ do return false
-        unless (← withParams ps₁ ps₂ (eqv k₁ k₂)) do return false
+        unless ctorName₁ == ctorName₂ do
+          return false
+        unless (← withParams ps₁ ps₂ (eqv k₁ k₂)) do
+          return false
       | .ctorAlt i₁ k₁ _, .ctorAlt i₂ k₂ _ =>
-        unless i₁ == i₂ do return false
-        unless ← eqv k₁ k₂ do return false
-      | .default k₁, .default k₂ => unless (← eqv k₁ k₂) do return false
+        unless i₁ == i₂ do
+          return false
+        unless ← eqv k₁ k₂ do
+          return false
+      | .default k₁, .default k₂ =>
+        unless (← eqv k₁ k₂) do
+          return false
       | _, _ => return false
     return true
   else
@@ -129,68 +137,44 @@ partial def eqvAlts (alts₁ alts₂ : Array (Alt pu)) : EqvM Bool := do
 partial def eqv (code₁ code₂ : Code pu) : EqvM Bool := do
   match code₁, code₂ with
   | .let decl₁ k₁, .let decl₂ k₂ =>
-    eqvType decl₁.type decl₂.type <&&>
-    eqvLetValue decl₁.value decl₂.value <&&>
-    withFVar decl₁.fvarId decl₂.fvarId (eqv k₁ k₂)
+    eqvType decl₁.type decl₂.type <&&> eqvLetValue decl₁.value decl₂.value
+      <&&> withFVar decl₁.fvarId decl₂.fvarId (eqv k₁ k₂)
   | .fun decl₁ k₁ _, .fun decl₂ k₂ _
   | .jp decl₁ k₁, .jp decl₂ k₂ =>
-    eqvType decl₁.type decl₂.type <&&>
-    withParams decl₁.params decl₂.params (eqv decl₁.value decl₂.value) <&&>
-    withFVar decl₁.fvarId decl₂.fvarId (eqv k₁ k₂)
-  | .return fvarId₁, .return fvarId₂ => eqvFVar fvarId₁ fvarId₂
-  | .unreach type₁, .unreach type₂ => eqvType type₁ type₂
-  | .jmp fvarId₁ args₁, .jmp fvarId₂ args₂ => eqvFVar fvarId₁ fvarId₂ <&&> eqvArgs args₁ args₂
+    eqvType decl₁.type decl₂.type
+      <&&> withParams decl₁.params decl₂.params (eqv decl₁.value decl₂.value)
+      <&&> withFVar decl₁.fvarId decl₂.fvarId (eqv k₁ k₂)
+  | .return fvarId₁, .return fvarId₂ =>
+    eqvFVar fvarId₁ fvarId₂
+  | .unreach type₁, .unreach type₂ =>
+    eqvType type₁ type₂
+  | .jmp fvarId₁ args₁, .jmp fvarId₂ args₂ =>
+    eqvFVar fvarId₁ fvarId₂ <&&> eqvArgs args₁ args₂
   | .cases c₁, .cases c₂ =>
-    eqvFVar c₁.discr c₂.discr <&&>
-    eqvType c₁.resultType c₂.resultType <&&>
-    eqvAlts c₁.alts c₂.alts
+    eqvFVar c₁.discr c₂.discr <&&> eqvType c₁.resultType c₂.resultType <&&> eqvAlts c₁.alts c₂.alts
   | .oset fvarId₁ i₁ y₁ k₁ _, .oset fvarId₂ i₂ y₂ k₂ _ =>
-    pure (i₁ == i₂) <&&>
-    eqvFVar fvarId₁ fvarId₂ <&&>
-    eqvArg y₁ y₂ <&&>
-    eqv k₁ k₂
+    pure (i₁ == i₂) <&&> eqvFVar fvarId₁ fvarId₂ <&&> eqvArg y₁ y₂ <&&> eqv k₁ k₂
   | .sset fvarId₁ i₁ offset₁ y₁ ty₁ k₁ _, .sset fvarId₂ i₂ offset₂ y₂ ty₂ k₂ _ =>
-    pure (i₁ == i₂) <&&>
-    pure (offset₁ == offset₂) <&&>
-    eqvFVar fvarId₁ fvarId₂ <&&>
-    eqvFVar y₁ y₂ <&&>
-    eqvType ty₁ ty₂ <&&>
-    eqv k₁ k₂
+    pure (i₁ == i₂) <&&> pure (offset₁ == offset₂) <&&> eqvFVar fvarId₁ fvarId₂ <&&> eqvFVar y₁ y₂
+      <&&> eqvType ty₁ ty₂ <&&> eqv k₁ k₂
   | .uset fvarId₁ i₁ y₁ k₁ _, .uset fvarId₂ i₂ y₂ k₂ _ =>
-    pure (i₁ == i₂) <&&>
-    eqvFVar fvarId₁ fvarId₂ <&&>
-    eqvFVar y₁ y₂ <&&>
-    eqv k₁ k₂
+    pure (i₁ == i₂) <&&> eqvFVar fvarId₁ fvarId₂ <&&> eqvFVar y₁ y₂ <&&> eqv k₁ k₂
   | .setTag fvarId₁ c₁ k₁ _, .setTag fvarId₂ c₂ k₂ _ =>
-    pure (c₁ == c₂) <&&>
-    eqvFVar fvarId₁ fvarId₂ <&&>
-    eqv k₁ k₂
+    pure (c₁ == c₂) <&&> eqvFVar fvarId₁ fvarId₂ <&&> eqv k₁ k₂
   | .inc fvarId₁ n₁ c₁ p₁ k₁ _, .inc fvarId₂ n₂ c₂ p₂ k₂ _ =>
-    pure (n₁ == n₂) <&&>
-    pure (c₁ == c₂) <&&>
-    pure (p₁ == p₂) <&&>
-    eqvFVar fvarId₁ fvarId₂ <&&>
-    eqv k₁ k₂
+    pure (n₁ == n₂) <&&> pure (c₁ == c₂) <&&> pure (p₁ == p₂) <&&> eqvFVar fvarId₁ fvarId₂
+      <&&> eqv k₁ k₂
   | .dec fvarId₁ n₁ c₁ p₁ o₁ k₁ _, .dec fvarId₂ n₂ c₂ p₂ o₂ k₂ _ =>
-    pure (n₁ == n₂) <&&>
-    pure (c₁ == c₂) <&&>
-    pure (p₁ == p₂) <&&>
-    pure (o₁ == o₂) <&&>
-    eqvFVar fvarId₁ fvarId₂ <&&>
-    eqv k₁ k₂
-  | .del fvarId₁ k₁ _, .del fvarId₂ k₂ _ =>
-    eqvFVar fvarId₁ fvarId₂ <&&>
-    eqv k₁ k₂
+    pure (n₁ == n₂) <&&> pure (c₁ == c₂) <&&> pure (p₁ == p₂) <&&> pure (o₁ == o₂)
+      <&&> eqvFVar fvarId₁ fvarId₂ <&&> eqv k₁ k₂
+  | .del fvarId₁ k₁ _, .del fvarId₂ k₂ _ => eqvFVar fvarId₁ fvarId₂ <&&> eqv k₁ k₂
   | _, _ => return false
 
 end
 
 end AlphaEqv
 
-/--
-Return `true` if `c₁` and `c₂` are alpha equivalent.
--/
-def Code.alphaEqv (c₁ c₂ : Code pu) : Bool :=
-  AlphaEqv.eqv c₁ c₂ |>.run {}
+/-- Return `true` if `c₁` and `c₂` are alpha equivalent. -/
+def Code.alphaEqv (c₁ c₂ : Code pu) : Bool := AlphaEqv.eqv c₁ c₂ |>.run {}
 
 end Lean.Compiler.LCNF

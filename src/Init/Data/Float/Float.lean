@@ -45,8 +45,7 @@ attribute [extern "lean_float_of_bits"] Float.ofModel
 
 deriving instance DecidableEq for Float
 
-instance : Nonempty Float :=
-  ⟨⟨default⟩⟩
+instance : Nonempty Float := ⟨⟨default⟩⟩
 
 /--
 The special floating-point value `NaN`, short for “not a number”. This value comes up as the result
@@ -73,23 +72,23 @@ Adds two 64-bit floating-point numbers according to IEEE 754. Typically used via
 
 This function has a logical model in terms of `Float.Model`. It is compiled to the C addition operator.
 -/
-@[extern "lean_float_add"] def Float.add : Float → Float → Float :=
-  fun a b => .ofModel (a.toModel + b.toModel)
+@[extern "lean_float_add"]
+def Float.add : Float → Float → Float := fun a b => .ofModel (a.toModel + b.toModel)
 
 /--
 Subtracts 64-bit floating-point numbers according to IEEE 754. Typically used via the `-` operator.
 
 This function has a logical model in terms of `Float.Model`. It is compiled to the C subtraction operator.
 -/
-@[extern "lean_float_sub"] def Float.sub : Float → Float → Float :=
-  fun a b => .ofModel (a.toModel - b.toModel)
+@[extern "lean_float_sub"]
+def Float.sub : Float → Float → Float := fun a b => .ofModel (a.toModel - b.toModel)
 /--
 Multiplies 64-bit floating-point numbers according to IEEE 754. Typically used via the `*` operator.
 
 This function has a logical model in terms of `Float.Model`. It is compiled to the C multiplication operator.
 -/
-@[extern "lean_float_mul"] def Float.mul : Float → Float → Float :=
-  fun a b => .ofModel (a.toModel * b.toModel)
+@[extern "lean_float_mul"]
+def Float.mul : Float → Float → Float := fun a b => .ofModel (a.toModel * b.toModel)
 /--
 Divides 64-bit floating-point numbers according to IEEE 754. Typically used via the `/` operator.
 
@@ -98,8 +97,8 @@ In Lean, division by zero typically yields zero. For `Float`, it instead yields 
 
 This function has a logical model in terms of `Float.Model`. It is compiled to the C division operator.
 -/
-@[extern "lean_float_div"] def Float.div : Float → Float → Float :=
-  fun a b => .ofModel (a.toModel / b.toModel)
+@[extern "lean_float_div"]
+def Float.div : Float → Float → Float := fun a b => .ofModel (a.toModel / b.toModel)
 
 /--
 Negates 64-bit floating-point numbers according to IEEE 754. Typically used via the `-` prefix
@@ -107,20 +106,16 @@ operator.
 
 This function has a logical model in terms of `Float.Model`. It is compiled to the C negation operator.
 -/
-@[extern "lean_float_negate"] def Float.neg : Float → Float :=
-  fun a => .ofModel (-a.toModel)
+@[extern "lean_float_negate"]
+def Float.neg : Float → Float := fun a => .ofModel (-a.toModel)
 
-/--
-Strict inequality of floating-point numbers. Typically used via the `<` operator.
--/
-@[extern "lean_float_decLt"] def Float.lt : Float → Float → Bool :=
-  fun a b => a.toModel < b.toModel
+/-- Strict inequality of floating-point numbers. Typically used via the `<` operator. -/
+@[extern "lean_float_decLt"]
+def Float.lt : Float → Float → Bool := fun a b => a.toModel < b.toModel
 
-/--
-Non-strict inequality of floating-point numbers. Typically used via the `≤` operator.
--/
-@[extern "lean_float_decLe"] def Float.le : Float → Float → Bool :=
-  fun a b => a.toModel ≤ b.toModel
+/-- Non-strict inequality of floating-point numbers. Typically used via the `≤` operator. -/
+@[extern "lean_float_decLe"]
+def Float.le : Float → Float → Bool := fun a b => a.toModel ≤ b.toModel
 
 /--
 Bit-for-bit conversion from `UInt64`. Interprets a `UInt64` as a `Float`, ignoring the numeric value
@@ -131,8 +126,8 @@ specifies the bit layout of floats.
 
 This function has a logical model in terms of `Float.Model`.
 -/
-@[extern "lean_float_of_bits"] def Float.ofBits : UInt64 → Float :=
-  fun a => .ofModel <| .ofBits a
+@[extern "lean_float_of_bits"]
+def Float.ofBits : UInt64 → Float := fun a => .ofModel <| .ofBits a
 
 /--
 Bit-for-bit conversion to `UInt64`. Interprets a `Float` as a `UInt64`, ignoring the numeric value
@@ -144,16 +139,16 @@ specifies the bit layout of floats.
 This function is distinct from `Float.toUInt64`, which attempts to preserve the numeric value rather
 than reinterpreting the bit pattern.
 -/
-@[extern "lean_float_to_bits"] def Float.toBits : Float → UInt64 :=
-  fun a => a.toModel.toBits
+@[extern "lean_float_to_bits"]
+def Float.toBits : Float → UInt64 := fun a => a.toModel.toBits
 
 instance : Add Float := ⟨Float.add⟩
 instance : Sub Float := ⟨Float.sub⟩
 instance : Mul Float := ⟨Float.mul⟩
 instance : Div Float := ⟨Float.div⟩
 instance : Neg Float := ⟨Float.neg⟩
-instance : LT Float  := ⟨fun a b => a.lt b⟩
-instance : LE Float  := ⟨fun a b => a.le b⟩
+instance : LT Float := ⟨fun a b => a.lt b⟩
+instance : LE Float := ⟨fun a b => a.le b⟩
 
 /--
 Checks whether two floating-point numbers are equal according to IEEE 754.
@@ -164,8 +159,8 @@ reflexive since `NaN != NaN`, and it is not a congruence because `0.0 == -0.0`, 
 
 This function does not reduce in the kernel. It is compiled to the C equality operator.
 -/
-@[extern "lean_float_beq"] def Float.beq (a b : Float) : Bool :=
-  a.toModel == b.toModel
+@[extern "lean_float_beq"]
+def Float.beq (a b : Float) : Bool := a.toModel == b.toModel
 
 instance : BEq Float := ⟨Float.beq⟩
 
@@ -174,23 +169,24 @@ Compares two floating point numbers for strict inequality.
 
 This function does not reduce in the kernel. It is compiled to the C inequality operator.
 -/
-@[extern "lean_float_decLt"] instance Float.decLt (a b : Float) : Decidable (a < b) :=
-  inferInstanceAs (Decidable (a.lt b))
+@[extern "lean_float_decLt"]
+instance Float.decLt (a b : Float) : Decidable (a < b) := inferInstanceAs (Decidable (a.lt b))
 
 /--
 Compares two floating point numbers for non-strict inequality.
 
 This function does not reduce in the kernel. It is compiled to the C inequality operator.
 -/
-@[extern "lean_float_decLe"] instance Float.decLe (a b : Float) : Decidable (a ≤ b) :=
-  inferInstanceAs (Decidable (a.le b))
+@[extern "lean_float_decLe"]
+instance Float.decLe (a b : Float) : Decidable (a ≤ b) := inferInstanceAs (Decidable (a.le b))
 
 /--
 Converts a floating-point number to a string.
 
 This function does not reduce in the kernel.
 -/
-@[extern "lean_float_to_string"] opaque Float.toString : Float → String
+@[extern "lean_float_to_string"]
+opaque Float.toString : Float → String
 
 /--
 Converts a floating-point number to an 8-bit unsigned integer.
@@ -201,8 +197,8 @@ largest `UInt8` value (i.e. `UInt8.size - 1`) if the float is larger than it.
 
 This function has a logical model in terms of `Float.Model`.
 -/
-@[extern "lean_float_to_uint8"] def Float.toUInt8 : Float → UInt8 :=
-  fun a => a.toModel.toUInt8
+@[extern "lean_float_to_uint8"]
+def Float.toUInt8 : Float → UInt8 := fun a => a.toModel.toUInt8
 /--
 Converts a floating-point number to a 16-bit unsigned integer.
 
@@ -212,8 +208,8 @@ largest `UInt16` value (i.e. `UInt16.size - 1`) if the float is larger than it.
 
 This function has a logical model in terms of `Float.Model`.
 -/
-@[extern "lean_float_to_uint16"] def Float.toUInt16 : Float → UInt16 :=
-  fun a => a.toModel.toUInt16
+@[extern "lean_float_to_uint16"]
+def Float.toUInt16 : Float → UInt16 := fun a => a.toModel.toUInt16
 /--
 Converts a floating-point number to a 32-bit unsigned integer.
 
@@ -223,8 +219,8 @@ largest `UInt32` value (i.e. `UInt32.size - 1`) if the float is larger than it.
 
 This function has a logical model in terms of `Float.Model`.
 -/
-@[extern "lean_float_to_uint32"] def Float.toUInt32 : Float → UInt32 :=
-  fun a => a.toModel.toUInt32
+@[extern "lean_float_to_uint32"]
+def Float.toUInt32 : Float → UInt32 := fun a => a.toModel.toUInt32
 /--
 Converts a floating-point number to a 64-bit unsigned integer.
 
@@ -234,8 +230,8 @@ largest `UInt64` value (i.e. `UInt64.size - 1`) if the float is larger than it.
 
 This function has a logical model in terms of `Float.Model`.
 -/
-@[extern "lean_float_to_uint64"] def Float.toUInt64 : Float → UInt64 :=
-  fun a => a.toModel.toUInt64
+@[extern "lean_float_to_uint64"]
+def Float.toUInt64 : Float → UInt64 := fun a => a.toModel.toUInt64
 /--
 Converts a floating-point number to a word-sized unsigned integer.
 
@@ -245,8 +241,8 @@ largest `USize` value (i.e. `USize.size - 1`) if the float is larger than it.
 
 This function has a logical model in terms of `Float.Model`.
 -/
-@[extern "lean_float_to_usize"] def Float.toUSize : Float → USize :=
-  fun a => a.toModel.toUSize
+@[extern "lean_float_to_usize"]
+def Float.toUSize : Float → USize := fun a => a.toModel.toUSize
 
 /--
 Checks whether a floating point number is a `NaN` (“not a number”) value.
@@ -257,8 +253,8 @@ This function returns `true` if and only if the input is propositionally equal t
 
 This function has a logical model in terms of `Float.Model`. It is compiled to the C operator `isnan`.
 -/
-@[extern "lean_float_isnan"] def Float.isNaN : Float → Bool :=
-  fun a => a.toModel.isNaN
+@[extern "lean_float_isnan"]
+def Float.isNaN : Float → Bool := fun a => a.toModel.isNaN
 
 /--
 Checks whether a floating-point number is finite, that is, whether it is normal, subnormal, or zero,
@@ -266,8 +262,8 @@ but not infinite or `NaN`.
 
 This function has a logical model in terms of `Float.Model`. It is compiled to the C operator `isfinite`.
 -/
-@[extern "lean_float_isfinite"] def Float.isFinite : Float → Bool :=
-  fun a => a.toModel.isFinite
+@[extern "lean_float_isfinite"]
+def Float.isFinite : Float → Bool := fun a => a.toModel.isFinite
 
 /--
 Checks whether a floating-point number is a positive or negative infinite number, but not a finite
@@ -275,8 +271,8 @@ number or `NaN`.
 
 This function has a logical model in terms of `Float.Model`. It is compiled to the C operator `isinf`.
 -/
-@[extern "lean_float_isinf"] def Float.isInf : Float → Bool :=
-  fun a => a.toModel.isInf
+@[extern "lean_float_isinf"]
+def Float.isInf : Float → Bool := fun a => a.toModel.isInf
 
 /--
 Splits the given float `x` into a significand/exponent pair `(s, i)` such that `x = s * 2^i` where
@@ -285,20 +281,21 @@ Splits the given float `x` into a significand/exponent pair `(s, i)` such that `
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `frexp`.
 -/
-@[extern "lean_float_frexp"] opaque Float.frExp : Float → Float × Int
+@[extern "lean_float_frexp"]
+opaque Float.frExp : Float → Float × Int
 
 instance : ToString Float where
   toString := Float.toString
 
 /-- Obtains the `Float` whose value is the same as the given `UInt8`. -/
-@[extern "lean_uint8_to_float"] def UInt8.toFloat (n : UInt8) : Float :=
-  .ofModel (.ofUInt8 n)
+@[extern "lean_uint8_to_float"]
+def UInt8.toFloat (n : UInt8) : Float := .ofModel (.ofUInt8 n)
 /-- Obtains the `Float` whose value is the same as the given `UInt16`. -/
-@[extern "lean_uint16_to_float"] def UInt16.toFloat (n : UInt16) : Float :=
-  .ofModel (.ofUInt16 n)
+@[extern "lean_uint16_to_float"]
+def UInt16.toFloat (n : UInt16) : Float := .ofModel (.ofUInt16 n)
 /-- Obtains the `Float` whose value is the same as the given `UInt32`. -/
-@[extern "lean_uint32_to_float"] def UInt32.toFloat (n : UInt32) : Float :=
-  .ofModel (.ofUInt32 n)
+@[extern "lean_uint32_to_float"]
+def UInt32.toFloat (n : UInt32) : Float := .ofModel (.ofUInt32 n)
 /--
 Obtains a `Float` whose value is near the given `UInt64`.
 
@@ -309,8 +306,8 @@ or the largest `Float` that is smaller than the given value.
 This function has a logical model in terms of `Float.Model`, but is overridden at runtime with an
 efficient implementation.
 -/
-@[extern "lean_uint64_to_float"] def UInt64.toFloat (n : UInt64) : Float :=
-  .ofModel (.ofUInt64 n)
+@[extern "lean_uint64_to_float"]
+def UInt64.toFloat (n : UInt64) : Float := .ofModel (.ofUInt64 n)
 /--
 Obtains a `Float` whose value is near the given `USize`.
 
@@ -321,8 +318,8 @@ or the largest `Float` that is smaller than the given value.
 This function has a logical model in terms of `Float.Model`, but is overridden at runtime with an
 efficient implementation.
 -/
-@[extern "lean_usize_to_float"] def USize.toFloat (n : USize) : Float :=
-  .ofModel (.ofUSize n)
+@[extern "lean_usize_to_float"]
+def USize.toFloat (n : USize) : Float := .ofModel (.ofUSize n)
 
 instance : Inhabited Float where
   default := UInt64.toFloat 0
@@ -333,7 +330,7 @@ protected def Float.repr (n : Float) (prec : Nat) : Std.Format :=
 instance : Repr Float where
   reprPrec := Float.repr
 
-instance : ReprAtom Float  := ⟨⟩
+instance : ReprAtom Float := ⟨⟩
 
 /--
 Computes the sine of a floating-point number in radians.
@@ -341,42 +338,48 @@ Computes the sine of a floating-point number in radians.
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `sin`.
 -/
-@[extern "sin"] opaque Float.sin : Float → Float
+@[extern "sin"]
+opaque Float.sin : Float → Float
 /--
 Computes the cosine of a floating-point number in radians.
 
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `cos`.
 -/
-@[extern "cos"] opaque Float.cos : Float → Float
+@[extern "cos"]
+opaque Float.cos : Float → Float
 /--
 Computes the tangent of a floating-point number in radians.
 
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `tan`.
 -/
-@[extern "tan"] opaque Float.tan : Float → Float
+@[extern "tan"]
+opaque Float.tan : Float → Float
 /--
 Computes the arc sine (inverse sine) of a floating-point number in radians.
 
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `asin`.
 -/
-@[extern "asin"] opaque Float.asin : Float → Float
+@[extern "asin"]
+opaque Float.asin : Float → Float
 /--
 Computes the arc cosine (inverse cosine) of a floating-point number in radians.
 
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `acos`.
 -/
-@[extern "acos"] opaque Float.acos : Float → Float
+@[extern "acos"]
+opaque Float.acos : Float → Float
 /--
 Computes the arc tangent (inverse tangent) of a floating-point number in radians.
 
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `atan`.
 -/
-@[extern "atan"] opaque Float.atan : Float → Float
+@[extern "atan"]
+opaque Float.atan : Float → Float
 /--
 Computes the arc tangent (inverse tangent) of `y / x` in radians, in the range `-π`–`π`. The signs
 of the arguments determine the quadrant of the result.
@@ -384,99 +387,112 @@ of the arguments determine the quadrant of the result.
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `atan2`.
 -/
-@[extern "atan2"] opaque Float.atan2 (y x : Float) : Float
+@[extern "atan2"]
+opaque Float.atan2 (y x : Float) : Float
 /--
 Computes the hyperbolic sine of a floating-point number.
 
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `sinh`.
 -/
-@[extern "sinh"] opaque Float.sinh : Float → Float
+@[extern "sinh"]
+opaque Float.sinh : Float → Float
 /--
 Computes the hyperbolic cosine of a floating-point number.
 
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `cosh`.
 -/
-@[extern "cosh"] opaque Float.cosh : Float → Float
+@[extern "cosh"]
+opaque Float.cosh : Float → Float
 /--
 Computes the hyperbolic tangent of a floating-point number.
 
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `tanh`.
 -/
-@[extern "tanh"] opaque Float.tanh : Float → Float
+@[extern "tanh"]
+opaque Float.tanh : Float → Float
 /--
 Computes the hyperbolic arc sine (inverse sine) of a floating-point number.
 
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `asinh`.
 -/
-@[extern "asinh"] opaque Float.asinh : Float → Float
+@[extern "asinh"]
+opaque Float.asinh : Float → Float
 /--
 Computes the hyperbolic arc cosine (inverse cosine) of a floating-point number.
 
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `acosh`.
 -/
-@[extern "acosh"] opaque Float.acosh : Float → Float
+@[extern "acosh"]
+opaque Float.acosh : Float → Float
 /--
 Computes the hyperbolic arc tangent (inverse tangent) of a floating-point number.
 
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `atanh`.
 -/
-@[extern "atanh"] opaque Float.atanh : Float → Float
+@[extern "atanh"]
+opaque Float.atanh : Float → Float
 /--
 Computes the exponential `e^x` of a floating-point number.
 
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `exp`.
 -/
-@[extern "exp"] opaque Float.exp (x : Float) : Float
+@[extern "exp"]
+opaque Float.exp (x : Float) : Float
 /--
 Computes the base-2 exponential `2^x` of a floating-point number.
 
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `exp2`.
 -/
-@[extern "exp2"] opaque Float.exp2 (x : Float) : Float
+@[extern "exp2"]
+opaque Float.exp2 (x : Float) : Float
 /--
 Computes the natural logarithm `ln x` of a floating-point number.
 
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `log`.
 -/
-@[extern "log"] opaque Float.log (x : Float) : Float
+@[extern "log"]
+opaque Float.log (x : Float) : Float
 /--
 Computes the base-2 logarithm of a floating-point number.
 
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `log2`.
 -/
-@[extern "log2"] opaque Float.log2 : Float → Float
+@[extern "log2"]
+opaque Float.log2 : Float → Float
 /--
 Computes the base-10 logarithm of a floating-point number.
 
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `log10`.
 -/
-@[extern "log10"] opaque Float.log10 : Float → Float
+@[extern "log10"]
+opaque Float.log10 : Float → Float
 /--
 Raises one floating-point number to the power of another. Typically used via the `^` operator.
 
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `pow`.
 -/
-@[extern "pow"] opaque Float.pow : Float → Float → Float
+@[extern "pow"]
+opaque Float.pow : Float → Float → Float
 /--
 Computes the square root of a floating-point number.
 
 This function has a logical model in terms of `Float.Model`. It is implemented in compiled code by the
 C function `sqrt`.
 -/
-@[extern "sqrt"] def Float.sqrt : Float → Float :=
-  fun a => .ofModel a.toModel.sqrt
+@[extern "sqrt"]
+def Float.sqrt : Float → Float := fun a => .ofModel a.toModel.sqrt
 /--
 Computes the fused multiply-add `x * y + z` of three floating-point numbers. This operation is performed with a single rounding, which can be more accurate than performing the multiplication and addition separately.
 
@@ -491,7 +507,8 @@ Computes the cube root of a floating-point number.
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `cbrt`.
 -/
-@[extern "cbrt"] opaque Float.cbrt : Float → Float
+@[extern "cbrt"]
+opaque Float.cbrt : Float → Float
 /--
 Computes the ceiling of a floating-point number, which is the smallest integer that's no smaller
 than the given number.
@@ -503,7 +520,8 @@ Examples:
  * `Float.ceil 1.5 = 2`
  * `Float.ceil (-1.5) = (-1)`
 -/
-@[extern "ceil"] opaque Float.ceil : Float → Float
+@[extern "ceil"]
+opaque Float.ceil : Float → Float
 /--
 Computes the floor of a floating-point number, which is the largest integer that's no larger
 than the given number.
@@ -515,22 +533,24 @@ Examples:
  * `Float.floor 1.5 = 1`
  * `Float.floor (-1.5) = (-2)`
 -/
-@[extern "floor"] opaque Float.floor : Float → Float
+@[extern "floor"]
+opaque Float.floor : Float → Float
 /--
 Rounds to the nearest integer, rounding away from zero at half-way points.
 
 This function does not reduce in the kernel. It is implemented in compiled code by the C function
 `round`.
 -/
-@[extern "round"] opaque Float.round : Float → Float
+@[extern "round"]
+opaque Float.round : Float → Float
 /--
 Computes the absolute value of a floating-point number.
 
 This function has a logical model in terms of `Float.Model`. It is implemented in compiled code by the
 C function `fabs`.
 -/
-@[extern "fabs"] def Float.abs : Float → Float :=
-  fun a => .ofModel a.toModel.abs
+@[extern "fabs"]
+def Float.abs : Float → Float := fun a => .ofModel a.toModel.abs
 
 instance : HomogeneousPow Float := ⟨Float.pow⟩
 
@@ -546,8 +566,8 @@ over `NaN`.
 This function has a logical model in terms of `Float.Model`. It is implemented in compiled code
 by a compiler intrinsic if available.
 -/
-@[extern "lean_float_minimum"] def Float.minimum : Float → Float → Float :=
-  fun a b => .ofModel (a.toModel.minimum b.toModel)
+@[extern "lean_float_minimum"]
+def Float.minimum : Float → Float → Float := fun a b => .ofModel (a.toModel.minimum b.toModel)
 
 /--
 Computes the IEEE-754-2019 `minimumNumber` operation of two floats.
@@ -560,8 +580,9 @@ See also `Float.minimum` for the variant that always propagates `NaN`.
 This function has a logical model in terms of `Float.Model`. It is implemented in compiled code
 by a compiler intrinsic if available.
 -/
-@[extern "lean_float_minimum_number"] def Float.minimumNumber : Float → Float → Float :=
-  fun a b => .ofModel (a.toModel.minimumNumber b.toModel)
+@[extern "lean_float_minimum_number"]
+def Float.minimumNumber : Float → Float → Float := fun a b =>
+  .ofModel (a.toModel.minimumNumber b.toModel)
 
 /--
 Computes the IEEE-754-2019 `maximum` operation of two floats.
@@ -575,8 +596,8 @@ over `NaN`.
 This function has a logical model in terms of `Float.Model`. It is implemented in compiled code
 by a compiler intrinsic if available.
 -/
-@[extern "lean_float_maximum"] def Float.maximum : Float → Float → Float :=
-  fun a b => .ofModel (a.toModel.maximum b.toModel)
+@[extern "lean_float_maximum"]
+def Float.maximum : Float → Float → Float := fun a b => .ofModel (a.toModel.maximum b.toModel)
 
 /--
 Computes the IEEE-754-2019 `maximumNumber` operation of two floats.
@@ -589,8 +610,9 @@ See also `Float.maximum` for the variant that always propagates `NaN`.
 This function has a logical model in terms of `Float.Model`. It is implemented in compiled code
 by a compiler intrinsic if available.
 -/
-@[extern "lean_float_maximum_number"] def Float.maximumNumber : Float → Float → Float :=
-  fun a b => .ofModel (a.toModel.maximumNumber b.toModel)
+@[extern "lean_float_maximum_number"]
+def Float.maximumNumber : Float → Float → Float := fun a b =>
+  .ofModel (a.toModel.maximumNumber b.toModel)
 
 instance : Min Float where
   min := Float.minimum

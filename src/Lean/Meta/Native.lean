@@ -5,6 +5,7 @@ Authors: Joachim Breitner
 -/
 
 module
+
 prelude
 public import Lean.Meta.Basic
 import Lean.Util.CollectLevelParams
@@ -34,51 +35,57 @@ return that axiom.
 
 It is the basis for `native_decide` and `bv_decide` tactics.
 -/
-public def nativeEqTrue (tacticName : Name) (e : Expr) (axiomDeclRange? : Option Syntax := none) : MetaM NativeEqTrueResult  := do
+public def nativeEqTrue (tacticName : Name) (e : Expr) (axiomDeclRange? : Option Syntax := none)
+    : MetaM NativeEqTrueResult := do
   let e ← instantiateMVars e
   if e.hasFVar then
-    throwError m!"Tactic `{tacticName}` failed: Cannot native decide proposition with free variables:{indentExpr e}"
+    throwError m!"Tactic `{tacticName}` failed: Cannot native decide proposition with free \
+      variables:{indentExpr e}"
   if e.hasMVar then
-    throwError m!"Tactic `{tacticName}` failed: Cannot native decide proposition with metavariables:{indentExpr e}"
+    throwError m!"Tactic `{tacticName}` failed: Cannot native decide proposition with \
+      metavariables:{indentExpr e}"
   let levels := (collectLevelParams {} e).params.toList
-  let isTrue ← withoutModifyingEnv do
-    let auxDeclName ← mkAuxDeclName <| `_native ++ tacticName ++ `decl
-    let decl := Declaration.defnDecl {
-      name := auxDeclName
-      levelParams := levels
-      type := mkConst ``Bool
-      value := e
-      hints := .abbrev
-      safety := .safe
-    }
-    modifyEnv (markMeta · auxDeclName)
-    try
-      -- disable async/separate codegen so we can catch its exceptions; we don't want to report
-      -- `evalConst` failures below when the actual reason was a codegen failure
-      withOptions (Elab.async.set · false) do
-      withOptions (Compiler.compiler.postponeCompile.set · false) do
-      withOptions (Compiler.compiler.relaxedMetaCheck.set · true) do
-        addAndCompile decl
-    catch ex =>
-      throwError m!"Tactic `{tacticName}` failed. Error: {ex.toMessageData}"
+  let isTrue ←
+    withoutModifyingEnv do
+      let auxDeclName ← mkAuxDeclName <| `_native ++ tacticName ++ `decl
+      let decl :=
+        Declaration.defnDecl {
+          name := auxDeclName
+          levelParams := levels
+          type := mkConst ``Bool
+          value := e
+          hints := .abbrev
+          safety := .safe
+        }
+      modifyEnv (markMeta · auxDeclName)
+      try
+        -- disable async/separate codegen so we can catch its exceptions; we don't want to report
+        -- `evalConst` failures below when the actual reason was a codegen failure
+        withOptions (Elab.async.set · false) do
+          withOptions (Compiler.compiler.postponeCompile.set · false) do
+            withOptions (Compiler.compiler.relaxedMetaCheck.set · true) do addAndCompile decl
+      catch ex =>
+        throwError m!"Tactic `{tacticName}` failed. Error: {ex.toMessageData}"
 
-    -- Now evaluate the constant, and check that it is true.
-    try
-      unsafe evalConst Bool auxDeclName
-    catch ex =>
-      throwError m!"\
-        Tactic `{tacticName}` failed: Could not evaluate decidable instance. \
-        Error: {ex.toMessageData}"
+      -- Now evaluate the constant, and check that it is true.
+      try
+        unsafe evalConst Bool auxDeclName
+      catch ex =>
+        throwError m!"\
+          Tactic `{tacticName}` failed: Could not evaluate decidable instance. \
+          Error: {ex.toMessageData}"
 
-  unless isTrue do return .notTrue
+  unless isTrue do
+    return .notTrue
 
   let auxAxiomName ← mkAuxDeclName <| `_native ++ tacticName ++ `ax
-  let axDecl := Declaration.axiomDecl {
-    name := auxAxiomName
-    levelParams := levels
-    type := mkApp3 (mkConst ``Eq [1]) (mkConst ``Bool) e (mkConst ``Bool.true)
-    isUnsafe := false
-  }
+  let axDecl :=
+    Declaration.axiomDecl {
+      name := auxAxiomName
+      levelParams := levels
+      type := mkApp3 (mkConst ``Eq [1]) (mkConst ``Bool) e (mkConst ``Bool.true)
+      isUnsafe := false
+    }
   addDecl axDecl
   if let some ref := axiomDeclRange? then
     Elab.addDeclarationRangesFromSyntax auxAxiomName ref

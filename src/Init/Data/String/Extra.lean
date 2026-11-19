@@ -18,15 +18,11 @@ public section
 namespace String
 
 @[deprecated ByteArray.utf8DecodeChar? (since := "2025-10-01")]
-abbrev utf8DecodeChar? (a : ByteArray) (i : Nat) : Option Char :=
-  a.utf8DecodeChar? i
+abbrev utf8DecodeChar? (a : ByteArray) (i : Nat) : Option Char := a.utf8DecodeChar? i
 
-/--
-Checks whether an array of bytes is a valid UTF-8 encoding of a string.
--/
+/-- Checks whether an array of bytes is a valid UTF-8 encoding of a string. -/
 @[deprecated ByteArray.validateUTF8 (since := "2025-10-01")]
-abbrev validateUTF8 (a : ByteArray) : Bool :=
-  a.validateUTF8
+abbrev validateUTF8 (a : ByteArray) : Bool := a.validateUTF8
 
 private def findLeadingSpacesSize (s : String) : Nat :=
   let it := s.startPos
@@ -36,32 +32,44 @@ private def findLeadingSpacesSize (s : String) : Nat :=
   | none => 0
 where
   consumeSpaces {s : String} (it : s.Pos) (curr min : Nat) : Nat :=
-    if h : it.IsAtEnd then min
-    else if it.get h == ' ' || it.get h == '\t' then consumeSpaces (it.next h) (curr + 1) min
-    else if it.get h == '\n' then findNextLine (it.next h) min
-    else findNextLine (it.next h) (Nat.min curr min)
+    if h : it.IsAtEnd then
+      min
+    else if it.get h == ' ' || it.get h == '\t' then
+      consumeSpaces (it.next h) (curr + 1) min
+    else if it.get h == '\n' then
+      findNextLine (it.next h) min
+    else
+      findNextLine (it.next h) (Nat.min curr min)
   termination_by it
   findNextLine {s : String} (it : s.Pos) (min : Nat) : Nat :=
-    if h : it.IsAtEnd then min
-    else if it.get h == '\n' then consumeSpaces (it.next h) 0 min
-    else findNextLine (it.next h) min
+    if h : it.IsAtEnd then
+      min
+    else if it.get h == '\n' then
+      consumeSpaces (it.next h) 0 min
+    else
+      findNextLine (it.next h) min
   termination_by it
 
-private def removeNumLeadingSpaces (n : Nat) (s : String) : String :=
-  consumeSpaces n s.startPos ""
+private def removeNumLeadingSpaces (n : Nat) (s : String) : String := consumeSpaces n s.startPos ""
 where
   consumeSpaces (n : Nat) {s : String} (it : s.Pos) (r : String) : String :=
-     match n with
-     | 0 => saveLine it r
-     | n+1 =>
-       if h : it.IsAtEnd then r
-       else if it.get h == ' ' || it.get h == '\t' then consumeSpaces n (it.next h) r
-       else saveLine it r
+    match n with
+    | 0 => saveLine it r
+    | n + 1 =>
+      if h : it.IsAtEnd then
+        r
+      else if it.get h == ' ' || it.get h == '\t' then
+        consumeSpaces n (it.next h) r
+      else
+        saveLine it r
   termination_by (it, 1)
   saveLine {s : String} (it : s.Pos) (r : String) : String :=
-    if h : it.IsAtEnd then r
-    else if it.get h  == '\n' then consumeSpaces n (it.next h) (r.push '\n')
-    else saveLine (it.next h) (r.push (it.get h))
+    if h : it.IsAtEnd then
+      r
+    else if it.get h == '\n' then
+      consumeSpaces n (it.next h) (r.push '\n')
+    else
+      saveLine (it.next h) (r.push (it.get h))
   termination_by (it, 0)
 
 /--
@@ -92,8 +100,7 @@ isolated `\r` characters.
 
 This is an optimized version of `String.replace text "\r\n" "\n"`.
 -/
-def crlfToLf (text : String) : String :=
-  go "" 0 0
+def crlfToLf (text : String) : String := go "" 0 0
 where
   go (acc : String) (accStop pos : String.Pos.Raw) : String :=
     if h : pos.atEnd text then
@@ -110,9 +117,11 @@ where
   termination_by text.utf8ByteSize - pos.byteIdx
   decreasing_by
     decreasing_with
-      change text.utf8ByteSize - ((pos.next text).next text).byteIdx < text.utf8ByteSize - pos.byteIdx
+      change text.utf8ByteSize - ((pos.next text).next text).byteIdx
+        < text.utf8ByteSize - pos.byteIdx
       have k := Nat.gt_of_not_le <| mt decide_eq_true h
-      exact Nat.sub_lt_sub_left k (Nat.lt_trans (String.Pos.Raw.lt_next text pos) (String.Pos.Raw.lt_next _ _))
+      exact Nat.sub_lt_sub_left k
+        (Nat.lt_trans (String.Pos.Raw.lt_next text pos) (String.Pos.Raw.lt_next _ _))
     decreasing_with
       change text.utf8ByteSize - (pos.next text).byteIdx < text.utf8ByteSize - pos.byteIdx
       have k := Nat.gt_of_not_le <| mt decide_eq_true h

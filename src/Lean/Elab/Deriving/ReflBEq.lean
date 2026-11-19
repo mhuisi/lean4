@@ -23,14 +23,15 @@ def mkReflBEqInstanceCmds (declName : Name) : TermElabM (Array Syntax) := do
   if indVal.isNested then
     throwError "Deriving `ReflBEq` for nested inductives is not supported"
 
-  let argNames     ← mkInductArgNames indVal
-  let binders      ← mkImplicitBinders argNames
-  let binders      := binders ++ (← mkInstImplicitBinders ``BEq indVal argNames)
-  let binders      := binders ++ (← mkInstImplicitBinders ``ReflBEq indVal argNames)
-  let indType      ← mkInductiveApp indVal argNames
-  let type         ← `($(mkCIdent ``ReflBEq) $indType)
-  let instCmd ← `( instance $binders:implicitBinder* : $type where
-    rfl := by deriving_ReflEq_tactic)
+  let argNames ← mkInductArgNames indVal
+  let binders ← mkImplicitBinders argNames
+  let binders := binders ++ (← mkInstImplicitBinders ``BEq indVal argNames)
+  let binders := binders ++ (← mkInstImplicitBinders ``ReflBEq indVal argNames)
+  let indType ← mkInductiveApp indVal argNames
+  let type ← `($(mkCIdent ``ReflBEq) $indType)
+  let instCmd ←
+    `( instance $binders:implicitBinder* : $type where
+      rfl := by deriving_ReflEq_tactic)
   let cmds := #[instCmd]
   trace[Elab.Deriving.reflBEq] "\n{cmds}"
   return cmds

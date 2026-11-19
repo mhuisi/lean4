@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Basic
 public section
@@ -21,13 +22,16 @@ private def isSupportedCommRingType (type : Expr) : Bool :=
   | _ => false
 
 private def isNumeral (e : Expr) : Bool :=
-  if e.isRawNatLit then true else
-  match_expr e with
-  | OfNat.ofNat _ n _ => n.isRawNatLit
-  | Neg.neg _ _ a =>
-    let_expr OfNat.ofNat _ n _ := a | false
-    n.isRawNatLit
-  | _ => false
+  if e.isRawNatLit then
+    true
+  else
+    match_expr e with
+    | OfNat.ofNat _ n _ => n.isRawNatLit
+    | Neg.neg _ _ a =>
+      let_expr OfNat.ofNat _ n _ := a
+        | false
+      n.isRawNatLit
+    | _ => false
 
 /-- Quick filter for linear terms. -/
 def isLinearTerm? (e : Expr) : Option Expr :=
@@ -39,8 +43,7 @@ def isLinearTerm? (e : Expr) : Option Expr :=
   | Nat.succ _ => some Nat.mkType
   | _ => none
 
-def isLinearTerm (e : Expr) : Bool :=
-  isLinearTerm? e |>.isSome
+def isLinearTerm (e : Expr) : Bool := isLinearTerm? e |>.isSome
 
 def isLinearPosCnstr (e : Expr) : Bool :=
   match_expr e with

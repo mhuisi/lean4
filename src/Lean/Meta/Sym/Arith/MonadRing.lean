@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Arith.MonadCanon
 public section
@@ -17,7 +18,7 @@ export MonadRing (getRing modifyRing)
 
 @[always_inline]
 instance (m n) [MonadLift m n] [MonadRing m] : MonadRing n where
-  getRing    := liftM (getRing : m Ring)
+  getRing := liftM (getRing : m Ring)
   modifyRing f := liftM (modifyRing f : m Unit)
 
 class MonadCommRing (m : Type → Type) where
@@ -28,7 +29,7 @@ export MonadCommRing (getCommRing modifyCommRing)
 
 @[always_inline]
 instance (m n) [MonadLift m n] [MonadCommRing m] : MonadCommRing n where
-  getCommRing      := liftM (getCommRing : m CommRing)
+  getCommRing := liftM (getCommRing : m CommRing)
   modifyCommRing f := liftM (modifyCommRing f : m Unit)
 
 @[always_inline]

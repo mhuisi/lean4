@@ -5,7 +5,6 @@ Authors: Leonardo de Moura
 -/
 module
 
-
 prelude
 public import Lean.Meta.Basic
 import Lean.Meta.Tactic.Split
@@ -58,23 +57,32 @@ public def tryURefl (mvarId : MVarId) (declNames : Array Name := #[]) : MetaM Bo
     try
       mvarId.withContext do
         let target ← mvarId.getType'
-        let_expr f@Eq α lhs rhs := target | mvarId.refl
+        let_expr f@Eq α lhs rhs := target
+          | mvarId.refl
         let lhs ← instantiateMVars lhs
         let rhs ← instantiateMVars rhs
-        let .const declName _ := lhs.getAppFn | mvarId.refl
-        unless declNames.contains declName && rhs.isAppOf declName do mvarId.refl; return
-        let some lhs' ← delta? lhs (· == declName) | mvarId.refl
-        unless (← isDefEq lhs rhs) do throwError "not definitionally equal"
+        let .const declName _ := lhs.getAppFn
+          | mvarId.refl
+        unless declNames.contains declName && rhs.isAppOf declName do
+          mvarId.refl; return
+        let some lhs' ← delta? lhs (· == declName)
+          | mvarId.refl
+        unless (← isDefEq lhs rhs) do
+          throwError "not definitionally equal"
         mvarId.assign (mkApp2 (mkConst ``Eq.refl f.constLevels!) α lhs')
       return true
-    catch _ => return false
+    catch _ =>
+      return false
 
 /-- Delta reduce the equation left-hand-side -/
-public def deltaLHS (mvarId : MVarId) : MetaM MVarId := mvarId.withContext do
-  let target ← mvarId.getType'
-  let some (_, lhs, rhs) := target.eq? | throwTacticEx `deltaLHS mvarId "equality expected"
-  let some lhs ← delta? lhs | throwTacticEx `deltaLHS mvarId "failed to delta reduce lhs"
-  mvarId.replaceTargetDefEq (← mkEq lhs rhs)
+public def deltaLHS (mvarId : MVarId) : MetaM MVarId :=
+  mvarId.withContext do
+    let target ← mvarId.getType'
+    let some (_, lhs, rhs) := target.eq?
+      | throwTacticEx `deltaLHS mvarId "equality expected"
+    let some lhs ← delta? lhs
+      | throwTacticEx `deltaLHS mvarId "failed to delta reduce lhs"
+    mvarId.replaceTargetDefEq (← mkEq lhs rhs)
 
 public def tryContradiction (mvarId : MVarId) : MetaM Bool := do
   mvarId.contradictionCore { genDiseq := true }
@@ -87,13 +95,15 @@ partial def whnfAux (e : Expr) : MetaM Expr := do
   | _ => return e
 
 /-- Apply `whnfR` to lhs, return `none` if `lhs` was not modified -/
-public def whnfReducibleLHS? (mvarId : MVarId) : MetaM (Option MVarId) := mvarId.withContext do
-  let target ← mvarId.getType'
-  let some (_, lhs, rhs) := target.eq? | return none
-  let lhs' ← whnfAux lhs
-  if lhs' != lhs then
-    return some (← mvarId.replaceTargetDefEq (← mkEq lhs' rhs))
-  else
-    return none
+public def whnfReducibleLHS? (mvarId : MVarId) : MetaM (Option MVarId) :=
+  mvarId.withContext do
+    let target ← mvarId.getType'
+    let some (_, lhs, rhs) := target.eq?
+      | return none
+    let lhs' ← whnfAux lhs
+    if lhs' != lhs then
+      return some (← mvarId.replaceTargetDefEq (← mkEq lhs' rhs))
+    else
+      return none
 
 end Lean.Elab.Eqns

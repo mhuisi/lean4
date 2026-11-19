@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Henrik Böving
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.BVDecide.EPR.Basic
 public import Lean.Meta.Tactic.BVDecide.EPR.PolarityVisitor
@@ -33,39 +34,25 @@ size of the non-monotone parent is >= the maximum required one of the monotone c
 -/
 
 structure InferContext where
-  /--
-  The EPR problem being processed.
-  -/
+  /-- The EPR problem being processed. -/
   eprProblem : EprProblem
-  /--
-  A map from sort elements to the equivalence class identifier associated with them.
-  -/
+  /-- A map from sort elements to the equivalence class identifier associated with them. -/
   elemMap : Std.HashMap Expr Nat := {}
-  /--
-  A map from predicates to the array of equivalence classes associated with their arguments.
-  -/
+  /-- A map from predicates to the array of equivalence classes associated with their arguments. -/
   predMap : Std.HashMap Expr (Array Nat) := {}
 
 structure InferState where
-  /--
-  The union find data structure used for sort inference.
-  -/
+  /-- The union find data structure used for sort inference. -/
   uf : UnionFind := {}
-  /--
-  For each equivalence class the sort originally associated with it.
-  -/
+  /-- For each equivalence class the sort originally associated with it. -/
   classSorts : Array SortId := #[]
-  /--
-  The set of original sorts that have been identified as non-monotone so far.
-  -/
+  /-- The set of original sorts that have been identified as non-monotone so far. -/
   nonMonotone : Std.HashSet SortId := {}
   /--
   A map from fvars of the quantifier we may currently be under to corresponding equivalence classses.
   -/
   quantMap : Std.HashMap Expr Nat := {}
-  /--
-  All recorded (quantIdx, quantVarIdx) pairs mapped to their equivalence classes so far.
-  -/
+  /-- All recorded (quantIdx, quantVarIdx) pairs mapped to their equivalence classes so far. -/
   boundClasses : Std.HashMap (Nat × Nat) Nat := {}
 
 abbrev InferM := ReaderT InferContext StateRefT InferState MetaM
@@ -98,8 +85,7 @@ def unifySortClass (lhs rhs : Nat) : InferM Unit :=
 def markNonMonotone (eqc : Nat) : InferM Unit :=
   modify fun s => { s with nonMonotone := s.nonMonotone.insert s.classSorts[eqc]! }
 
-def isQuantifiedVar (expr : Expr) : InferM Bool :=
-  return (← get).quantMap.contains expr
+def isQuantifiedVar (expr : Expr) : InferM Bool := return (← get).quantMap.contains expr
 
 def analyzeFact (e : Expr) : InferM Unit := do
   PolarityVisitor.visitProp e fun e pol => do
@@ -121,16 +107,15 @@ def analyzeQuantifiedFact (fact : QuantifiedFact) (quantIdx : Nat) : InferM Unit
   forallBoundedTelescope fact.hyp.type fact.boundSorts.size fun vars body => do
     for h : varIdx in 0...vars.size do
       let eqc ← freshClass fact.boundSorts[varIdx]!
-      modify fun s => { s with
+      modify fun s => {
+        s with
         quantMap := s.quantMap.insert vars[varIdx] eqc
         boundClasses := s.boundClasses.insert (quantIdx, varIdx) eqc
       }
     analyzeFact body
 
 structure SortPartition where
-  /--
-  Map from new sort identifiers to new sort information.
-  -/
+  /-- Map from new sort identifiers to new sort information. -/
   sortInfo : Std.HashMap SortId SortInfo := {}
   /--
   The relabeling from old to new sorts if the old sort did not end up getting partitioned.
@@ -151,10 +136,12 @@ def partitionSorts : InferM SortPartition := do
     else
       for elem in info.elements do
         let newSort : SortId := ⟨← getRoot elemMap[elem]!⟩
-        partition := { partition with
-          sortInfo := partition.sortInfo.alter newSort fun
-            | none => some { info with elements := #[elem] }
-            | some info => some { info with elements := info.elements.push elem }
+        partition := {
+          partition with
+          sortInfo :=
+            partition.sortInfo.alter newSort fun
+              | none => some { info with elements := #[elem] }
+              | some info => some { info with elements := info.elements.push elem }
         }
   return partition
 
@@ -182,10 +169,12 @@ def analyzeProblem : InferM EprProblem := do
     let argumentSorts ← predMap[pred]!.mapM partition.getSort
     predInfo := predInfo.insert pred { info with argumentSorts }
 
-  let quantifiedFacts ← problem.quantifiedFacts.mapIdxM fun quantIdx fact => do
-    let boundSorts ← fact.boundSorts.mapIdxM fun varIdx _ => do
-      partition.getSort (← get).boundClasses[(quantIdx, varIdx)]!
-    return { fact with boundSorts }
+  let quantifiedFacts ←
+    problem.quantifiedFacts.mapIdxM fun quantIdx fact => do
+      let boundSorts ←
+        fact.boundSorts.mapIdxM fun varIdx _ => do
+          partition.getSort (← get).boundClasses[(quantIdx, varIdx)]!
+      return { fact with boundSorts }
 
   return { problem with sortInfo := partition.sortInfo, sortMap, predInfo, quantifiedFacts }
 

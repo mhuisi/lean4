@@ -30,24 +30,16 @@ A structure that accumulates multiple `ByteArray`s efficiently by tracking them 
 maintaining the total size. This allows building large buffers without repeated allocations and copies.
 -/
 structure ChunkedBuffer where
-  /--
-  The accumulated byte arrays.
-  -/
+  /-- The accumulated byte arrays. -/
   data : Array ByteArray
-
-  /--
-  The total size in bytes of all accumulated arrays
-  -/
+  /-- The total size in bytes of all accumulated arrays -/
   size : Nat
 
 namespace ChunkedBuffer
 
-/--
-An empty `ChunkedBuffer`.
--/
+/-- An empty `ChunkedBuffer`. -/
 @[inline]
-def empty : ChunkedBuffer :=
-  { data := #[], size := 0 }
+def empty : ChunkedBuffer := { data := #[], size := 0 }
 
 /--
 Append a single `ByteArray` to the `ChunkedBuffer`. An empty `ByteArray` is not kept as a piece.
@@ -56,9 +48,7 @@ Append a single `ByteArray` to the `ChunkedBuffer`. An empty `ByteArray` is not 
 def push (c : ChunkedBuffer) (b : ByteArray) : ChunkedBuffer :=
   if b.isEmpty then c else { data := c.data.push b, size := c.size + b.size }
 
-/--
-Turn the combined structure into a single contiguous ByteArray.
--/
+/-- Turn the combined structure into a single contiguous ByteArray. -/
 @[inline]
 def toByteArray (cb : ChunkedBuffer) : ByteArray :=
   if h : 1 = cb.data.size then
@@ -66,12 +56,9 @@ def toByteArray (cb : ChunkedBuffer) : ByteArray :=
   else
     cb.data.foldl (· ++ ·) (.emptyWithCapacity cb.size)
 
-/--
-Checks whether the buffer is empty.
--/
+/-- Checks whether the buffer is empty. -/
 @[inline]
-def isEmpty (bb : ChunkedBuffer) : Bool :=
-  bb.size = 0
+def isEmpty (bb : ChunkedBuffer) : Bool := bb.size = 0
 
 instance : Inhabited ChunkedBuffer := ⟨empty⟩
 

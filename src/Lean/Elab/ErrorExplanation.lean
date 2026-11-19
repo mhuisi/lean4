@@ -51,80 +51,89 @@ Maps macro syntax categories to a pair of the module containing the declaration 
 depends and the name of that declaration.
 -/
 private def macroDeclMap :=
-  Std.HashMap.ofList
-    [(``throwNamedErrorMacro, (`Lean.Exception, ``Lean.throwNamedError)),
-     (``throwNamedErrorAtMacro, (`Lean.Exception, ``Lean.throwNamedErrorAt)),
-     (``logNamedErrorMacro, (`Lean.Log, ``Lean.logNamedError)),
-     (``logNamedErrorAtMacro, (`Lean.Log, ``Lean.logNamedErrorAt)),
-     (``logNamedWarningMacro, (`Lean.Log, ``Lean.logNamedWarning)),
-     (``logNamedWarningAtMacro, (`Lean.Log, ``Lean.logNamedWarningAt))]
+  Std.HashMap.ofList [
+    (``throwNamedErrorMacro, (`Lean.Exception, ``Lean.throwNamedError)),
+    (``throwNamedErrorAtMacro, (`Lean.Exception, ``Lean.throwNamedErrorAt)),
+    (``logNamedErrorMacro, (`Lean.Log, ``Lean.logNamedError)),
+    (``logNamedErrorAtMacro, (`Lean.Log, ``Lean.logNamedErrorAt)),
+    (``logNamedWarningMacro, (`Lean.Log, ``Lean.logNamedWarning)),
+    (``logNamedWarningAtMacro, (`Lean.Log, ``Lean.logNamedWarningAt))
+  ]
 
 @[builtin_term_elab throwNamedErrorMacro, builtin_term_elab throwNamedErrorAtMacro,
   builtin_term_elab logNamedErrorMacro, builtin_term_elab logNamedErrorAtMacro,
   builtin_term_elab logNamedWarningMacro, builtin_term_elab logNamedWarningAtMacro]
 def elabCheckedNamedError : TermElab := fun stx expType? => do
   if let some (module, decl) := macroDeclMap.get? stx.getKind then
-    if !(← getEnv).contains decl then
-      throwError m!"The constant `{decl}` has not been imported" ++
-        .hint' m!"Add `import {module}` to this file's header to use this macro"
+    if ! (← getEnv).contains decl then
+      throwError
+        m!"The constant `{decl}` has not been imported"
+          ++ .hint' m!"Add `import {module}` to this file's header to use this macro"
   let (id, numArgsExpected) :=
     if stx.isOfKind ``throwNamedErrorAtMacro || stx.isOfKind ``logNamedErrorAtMacro
         || stx.isOfKind ``logNamedWarningAtMacro then
-    (stx[2], 5)
-  else
-    (stx[1], 4)
+      (stx[2], 5)
+    else
+      (stx[1], 4)
   -- Remove the message term from the span. If we have a trailing `.`, we fail to parse the message
   -- term and so leave `stx` unchanged. The in-progress identifier will always be the penultimate
   -- argument of `span`.
-  let span := if stx.getNumArgs == numArgsExpected then
-    stx.setArgs (stx.getArgs[*...(stx.getNumArgs - 1)])
-  else
-    stx
+  let span :=
+    if stx.getNumArgs == numArgsExpected then
+      stx.setArgs (stx.getArgs[*...(stx.getNumArgs - 1)])
+    else
+      stx
   let partialId := span[span.getNumArgs - 2]
   addCompletionInfo <| CompletionInfo.errorName span partialId
   let name := id.getId.eraseMacroScopes
   pushInfoLeaf <| .ofErrorNameInfo { stx := id, errorName := name }
   if let some explan ← getErrorExplanation? name then
     if let some removedVersion := explan.metadata.removedVersion? then
-      logWarningAt id m!"The error name `{name}` was removed in Lean version {removedVersion} and \
-        should not be used."
+      logWarningAt id
+        m!"The error name `{name}` was removed in Lean version {removedVersion} and \
+          should not be used."
   else
-    logErrorAt id m!"There is no explanation registered with the name `{name}`. \
-      Register an explanation for this error in the `Lean.ErrorExplanation` module."
+    logErrorAt id
+      m!"There is no explanation registered with the name `{name}`. \
+        Register an explanation for this error in the `Lean.ErrorExplanation` module."
   let stx' ← liftMacroM <| expandNamedErrorMacro stx
   elabTerm stx' expType?
 
 open Command in
-@[builtin_command_elab registerErrorExplanationStx] def elabRegisterErrorExplanation : CommandElab
-| `(registerErrorExplanationStx| $_docStx register_error_explanation%$cmd $id:ident $t:term) => withRef cmd do
-  unless (← getEnv).contains ``ErrorExplanation.Metadata do
-    throwError "To use this command, add `import Lean.ErrorExplanation` to the header of this file"
-  recordExtraModUseFromDecl ``ErrorExplanation.Metadata (isMeta := true)
-  let tp := mkConst ``ErrorExplanation.Metadata
-  let metadata ← runTermElabM <| fun _ => unsafe do
-    let e ← elabTermEnsuringType t tp
-    if e.hasSyntheticSorry then throwAbortTerm
-    evalExpr ErrorExplanation.Metadata tp e
-  let name := id.getId
-  if name.isAnonymous then
-    throwErrorAt id "Invalid name for error explanation: `{id}`"
-  if name.hasMacroScopes then
-    -- Use `id` rather than `name` for nicer rendering
-    throwErrorAt id m!"Invalid name `{id}`: Error explanations cannot have inaccessible names. \
-      This error often occurs when an error explanation is generated using a macro."
-  if name.getNumParts != 2 then
-    throwErrorAt id m!"Invalid name `{name}`: Error explanation names must have two components"
-      ++ .note m!"The first component of an error explanation name identifies the package from \
-        which the error originates, and the second identifies the error itself."
-  if errorExplanationExt.getState (← getEnv) |>.contains name then
-    throwErrorAt id m!"Cannot add explanation: An error explanation already exists for `{name}`"
-  let (declLoc? : Option DeclarationLocation) ← do
-    let map ← getFileMap
-    let start := id.raw.getPos?.getD 0
-    let fin := id.raw.getTailPos?.getD start
-    pure <| some {
-      module := (← getMainModule)
-      range := .ofStringPositions map start fin
-    }
-  modifyEnv (errorExplanationExt.addEntry · (name, { doc := "", metadata, declLoc? }))
-| _ => throwUnsupportedSyntax
+@[builtin_command_elab registerErrorExplanationStx]
+def elabRegisterErrorExplanation : CommandElab
+  | `(registerErrorExplanationStx| $_docStx register_error_explanation%$cmd $id:ident $t:term) =>
+    withRef cmd do
+      unless (← getEnv).contains ``ErrorExplanation.Metadata do
+        throwError
+          "To use this command, add `import Lean.ErrorExplanation` to the header of this file"
+      recordExtraModUseFromDecl ``ErrorExplanation.Metadata (isMeta := true)
+      let tp := mkConst ``ErrorExplanation.Metadata
+      let metadata ←
+        runTermElabM <| fun _ =>
+          unsafe do
+            let e ← elabTermEnsuringType t tp
+            if e.hasSyntheticSorry then throwAbortTerm
+            evalExpr ErrorExplanation.Metadata tp e
+      let name := id.getId
+      if name.isAnonymous then
+        throwErrorAt id "Invalid name for error explanation: `{id}`"
+      if name.hasMacroScopes then
+        -- Use `id` rather than `name` for nicer rendering
+        throwErrorAt id
+          m!"Invalid name `{id}`: Error explanations cannot have inaccessible names. \
+            This error often occurs when an error explanation is generated using a macro."
+      if name.getNumParts != 2 then
+        throwErrorAt id
+          m!"Invalid name `{name}`: Error explanation names must have two components" ++ .note
+            m!"The first component of an error explanation name identifies the package from \
+              which the error originates, and the second identifies the error itself."
+      if errorExplanationExt.getState (← getEnv) |>.contains name then
+        throwErrorAt id m!"Cannot add explanation: An error explanation already exists for `{name}`"
+      let (declLoc? : Option DeclarationLocation) ← do
+        let map ← getFileMap
+        let start := id.raw.getPos?.getD 0
+        let fin := id.raw.getTailPos?.getD start
+        pure <| some { module := (← getMainModule), range := .ofStringPositions map start fin }
+      modifyEnv (errorExplanationExt.addEntry · (name, { doc := "", metadata, declLoc? }))
+  | _ => throwUnsupportedSyntax

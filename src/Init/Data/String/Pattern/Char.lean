@@ -47,7 +47,8 @@ instance {c : Char} : LawfulBackwardPattern c where
   skipSuffixOfNonempty?_eq h := LawfulBackwardPattern.skipSuffixOfNonempty?_eq (pat := (· == c)) h
   endsWith_eq s := LawfulBackwardPattern.endsWith_eq (pat := (· == c)) s
 
-instance {c : Char} : ToBackwardSearcher c (ToBackwardSearcher.DefaultBackwardSearcher (· == c)) where
+instance {c : Char}
+    : ToBackwardSearcher c (ToBackwardSearcher.DefaultBackwardSearcher (· == c)) where
   toSearcher s := ToBackwardSearcher.toSearcher (· == c) s
 
 end Char

@@ -31,16 +31,11 @@ The part of a formatting string. A string is just a text and a modifier is in th
 the `Modifier` type.
 -/
 inductive FormatPart
-  /--
-  A string literal.
-  -/
+  /-- A string literal. -/
   | string (val : String)
-
-  /--
-  A modifier that renders some data into text.
-  -/
+  /-- A modifier that renders some data into text. -/
   | modifier (modifier : Modifier)
-  deriving Repr
+deriving Repr
 
 instance : Coe String FormatPart where
   coe := .string
@@ -48,14 +43,10 @@ instance : Coe String FormatPart where
 instance : Coe Modifier FormatPart where
   coe := .modifier
 
-/--
-The format of date and time string.
--/
+/-- The format of date and time string. -/
 abbrev FormatString := List FormatPart
 
-/--
-If the format is aware of some timezone data it parses or if it parses any timezone.
--/
+/-- If the format is aware of some timezone data it parses or if it parses any timezone. -/
 inductive Awareness
   /-- The format only parses a single timezone. -/
   | only : TimeZone → Awareness
@@ -69,16 +60,13 @@ instance : Coe TimeZone Awareness where
 
 end Awareness
 
-/--
-Configuration options for formatting and parsing date/time strings.
--/
+/-- Configuration options for formatting and parsing date/time strings. -/
 structure FormatConfig where
   /--
   Whether to allow leap seconds, such as `2016-12-31T23:59:60Z`.
   Default is `false`.
   -/
   allowLeapSeconds : Bool := false
-
   /--
   Locale configuration for formatting and parsing, including locale-specific symbols and the first
   day of the week used for week-of-year and week-of-month calculations.
@@ -87,35 +75,26 @@ structure FormatConfig where
   dateformat : DateFormat := DateFormat.enUS
 deriving Inhabited
 
-/--
-A specification on how to format a data or parse some string.
--/
+/-- A specification on how to format a data or parse some string. -/
 structure GenericFormat (awareness : Awareness) where
-  /--
-  Configuration options for formatting behavior.
-  -/
+  /-- Configuration options for formatting behavior. -/
   config : FormatConfig
-
-  /--
-  The format string used for parsing and formatting.
-  -/
+  /-- The format string used for parsing and formatting. -/
   string : FormatString
 deriving Inhabited
 
-private def parseFormatPart : Parser FormatPart
-  := (.modifier <$> parseModifier)
-  <|> (pchar '\\') *> any <&> (.string ∘ toString)
-  <|> (pchar '\"' *>  many1Chars (satisfy (· ≠ '\"')) <* pchar '\"') <&> .string
-  <|> (pchar '\'' *>  many1Chars (satisfy (· ≠ '\'')) <* pchar '\'') <&> .string
-  <|> many1Chars (satisfy (fun x => ¬Char.isAlpha x ∧ x ≠ '\'' ∧ x ≠ '\"')) <&> .string
+private def parseFormatPart : Parser FormatPart :=
+  (.modifier <$> parseModifier) <|> (pchar '\\') *> any <&> (.string ∘ toString)
+    <|> (pchar '\"' *> many1Chars (satisfy (· ≠ '\"')) <* pchar '\"') <&> .string
+    <|> (pchar '\'' *> many1Chars (satisfy (· ≠ '\'')) <* pchar '\'') <&> .string
+    <|> many1Chars (satisfy (fun x => ¬ Char.isAlpha x ∧ x ≠ '\'' ∧ x ≠ '\"')) <&> .string
 
-private def specParser : Parser FormatString :=
-  (Array.toList <$> many parseFormatPart) <* eof
+private def specParser : Parser FormatString := (Array.toList <$> many parseFormatPart) <* eof
 
 -- Pretty printer
 
 private def leftPadAscii (n : Nat) (a : Char) (s : String) : String :=
-  "".pushn a (n -  s.positions.length) ++ s
+  "".pushn a (n - s.positions.length) ++ s
 
 private def rightPadAscii (n : Nat) (a : Char) (s : String) : String :=
   s ++ "".pushn a (n - s.positions.length)
@@ -130,8 +109,7 @@ private def pad (size : Nat) (n : Int) : String :=
 A four-letter year field. A year that needs more than four digits gets an explicit sign, which tells
 the parser to read past four digits.
 -/
-private def padFourDigitYear (n : Int) : String :=
-  if n > 9999 then "+" ++ toString n else pad 4 n
+private def padFourDigitYear (n : Int) : String := if n > 9999 then "+" ++ toString n else pad 4 n
 
 private def monthNames (symbols : DateFormatSymbols) : Text → Vector String 12
   | .short | .twoLetterShort => symbols.monthShort
@@ -162,7 +140,8 @@ private def markerNames (symbols : DateFormatSymbols) : Text → Vector String 2
 
 /-- Midnight, noon, AM and PM, in the order that parsing tries them. -/
 private def dayPeriodNames (symbols : DateFormatSymbols) (text : Text) : Vector String 4 :=
-  let names := match text with
+  let names :=
+    match text with
     | .short | .twoLetterShort => symbols.dayPeriodShort
     | .full => symbols.dayPeriodLong
     | .narrow => symbols.dayPeriodNarrow
@@ -173,37 +152,29 @@ private def extendedDayPeriodNames (symbols : DateFormatSymbols) : Text → Vect
   | .full => symbols.extendedDayPeriodLong
   | .narrow => symbols.extendedDayPeriodNarrow
 
-private def monthIndex (month : Month.Ordinal) : Fin 12 :=
-  month.sub 1 |>.toFin (by decide)
+private def monthIndex (month : Month.Ordinal) : Fin 12 := month.sub 1 |>.toFin (by decide)
 
-private def monthOfIndex (i : Fin 12) : Month.Ordinal :=
-  Bounded.LE.ofFin i |>.add 1
+private def monthOfIndex (i : Fin 12) : Month.Ordinal := Bounded.LE.ofFin i |>.add 1
 
-private def weekdayIndex (weekday : Weekday) : Fin 7 :=
-  weekday.toOrdinal.sub 1 |>.toFin (by decide)
+private def weekdayIndex (weekday : Weekday) : Fin 7 := weekday.toOrdinal.sub 1 |>.toFin (by decide)
 
-private def weekdayOfIndex (i : Fin 7) : Weekday :=
-  .ofOrdinal (Bounded.LE.ofFin i |>.add 1)
+private def weekdayOfIndex (i : Fin 7) : Weekday := .ofOrdinal (Bounded.LE.ofFin i |>.add 1)
 
 private def eraIndex : Year.Era → Fin 2
   | .bce => 0
   | .ce => 1
 
-private def eraOfIndex (i : Fin 2) : Year.Era :=
-  if i = 0 then .bce else .ce
+private def eraOfIndex (i : Fin 2) : Year.Era := if i = 0 then .bce else .ce
 
-private def quarterIndex (quarter : Month.Quarter) : Fin 4 :=
-  quarter.sub 1 |>.toFin (by decide)
+private def quarterIndex (quarter : Month.Quarter) : Fin 4 := quarter.sub 1 |>.toFin (by decide)
 
-private def quarterOfIndex (i : Fin 4) : Month.Quarter :=
-  Bounded.LE.ofFin i |>.add 1
+private def quarterOfIndex (i : Fin 4) : Month.Quarter := Bounded.LE.ofFin i |>.add 1
 
 private def markerIndex : HourMarker → Fin 2
   | .am => 0
   | .pm => 1
 
-private def markerOfIndex (i : Fin 2) : HourMarker :=
-  if i = 0 then .am else .pm
+private def markerOfIndex (i : Fin 2) : HourMarker := if i = 0 then .am else .pm
 
 private def dayPeriodIndex : DayPeriod → Fin 4
   | .midnight => 0
@@ -218,12 +189,12 @@ private def dayPeriodOfIndex : Fin 4 → DayPeriod
   | _ => .pm
 
 private def extendedDayPeriodIndex : ExtendedDayPeriod → Fin 6
-  | .midnight  => 0
-  | .night     => 1
-  | .morning   => 2
-  | .noon      => 3
+  | .midnight => 0
+  | .night => 1
+  | .morning => 2
+  | .noon => 3
   | .afternoon => 4
-  | .evening   => 5
+  | .evening => 5
 
 private def extendedDayPeriodOfIndex : Fin 6 → ExtendedDayPeriod
   | 0 => .midnight
@@ -251,81 +222,100 @@ private def formatOffsetX (offset : Offset) : OffsetX → String
 private def formatGmtOffset (offset : Offset) : String :=
   if offset.second.val = 0 then "GMT" else s!"GMT{offset.toIsoString true}"
 
-/-- A zone name or abbreviation. An offset-only zone, whose label is its offset, shows it after `GMT`. -/
+/--
+A zone name or abbreviation. An offset-only zone, whose label is its offset, shows it after `GMT`.
+-/
 private def zoneLabel (label : String) (offset : Offset) : String :=
   if label.startsWith "+" || label.startsWith "-" then s!"GMT{offset.toIsoString true}" else label
 
 /-- Classify a `PlainTime` into a `DayPeriod` for the `b` pattern. -/
-def classifyDayPeriod (hour : Hour.Ordinal) (minute : Minute.Ordinal) (second : Second.Ordinal true) : DayPeriod :=
-  if hour.val = 0 ∧ minute.val = 0 ∧ second.val = 0 then .midnight
-  else if hour.val = 12 ∧ minute.val = 0 ∧ second.val = 0 then .noon
-  else if hour.val < 12 then .am
-  else .pm
+def classifyDayPeriod (hour : Hour.Ordinal) (minute : Minute.Ordinal) (second : Second.Ordinal true)
+    : DayPeriod :=
+  if hour.val = 0 ∧ minute.val = 0 ∧ second.val = 0 then
+    .midnight
+  else if hour.val = 12 ∧ minute.val = 0 ∧ second.val = 0 then
+    .noon
+  else if hour.val < 12 then
+    .am
+  else
+    .pm
 
-/-- Classify a `PlainTime` into an `ExtendedDayPeriod` for the `B` pattern (CLDR flexible periods). -/
-def classifyExtendedDayPeriod (hour : Hour.Ordinal) (minute : Minute.Ordinal) (second : Second.Ordinal true) : ExtendedDayPeriod :=
-  if hour.val = 0 ∧ minute.val = 0 ∧ second.val = 0 then .midnight
-  else if hour.val = 12 ∧ minute.val = 0 ∧ second.val = 0 then .noon
-  else if hour.val < 6 then .night
-  else if hour.val < 12 then .morning
-  else if hour.val < 18 then .afternoon
-  else if hour.val < 21 then .evening
-  else .night
+/--
+Classify a `PlainTime` into an `ExtendedDayPeriod` for the `B` pattern (CLDR flexible periods).
+-/
+def classifyExtendedDayPeriod
+    (hour : Hour.Ordinal) (minute : Minute.Ordinal) (second : Second.Ordinal true)
+    : ExtendedDayPeriod :=
+  if hour.val = 0 ∧ minute.val = 0 ∧ second.val = 0 then
+    .midnight
+  else if hour.val = 12 ∧ minute.val = 0 ∧ second.val = 0 then
+    .noon
+  else if hour.val < 6 then
+    .night
+  else if hour.val < 12 then
+    .morning
+  else if hour.val < 18 then
+    .afternoon
+  else if hour.val < 21 then
+    .evening
+  else
+    .night
 
-set_option linter.missingDocs false in  -- TODO
+set_option linter.missingDocs false in -- TODO
 @[expose /- for codegen -/]
 def TypeFormat : Modifier → Type
-  | .G _  => Year.Era
-  | .y _  => Year.Offset
-  | .u _  => Year.Offset
-  | .Y _  => Year.Offset
-  | .D _  => Sigma Day.Ordinal.OfYear
-  | .M _  => Month.Ordinal
-  | .L _  => Month.Ordinal
-  | .d _  => Day.Ordinal
-  | .Q _  => Month.Quarter
-  | .q _  => Month.Quarter
-  | .w _  => Week.OfYear.Ordinal
-  | .W _  => Week.Ordinal
-  | .E _  => Weekday
-  | .e _  => Weekday
-  | .c _  => Weekday
-  | .F _  => Week.Aligned.Ordinal
-  | .a _  => HourMarker
-  | .b _  => DayPeriod
-  | .B _  => ExtendedDayPeriod
-  | .h _  => Bounded.LE 1 12
-  | .K _  => Bounded.LE 0 11
-  | .k _  => Bounded.LE 1 24
-  | .H _  => Hour.Ordinal
-  | .m _  => Minute.Ordinal
-  | .s _  => Second.Ordinal true
-  | .S _  => Nanosecond.Ordinal
-  | .A _  => Millisecond.Offset
-  | .n _  => Nanosecond.Ordinal
-  | .N _  => Nanosecond.Offset
-  | .V _  => String
-  | .z _  => String
-  | .v _  => String
-  | .O _  => Offset
-  | .X _  => Offset
-  | .x _  => Offset
-  | .Z _  => Offset
+  | .G _ => Year.Era
+  | .y _ => Year.Offset
+  | .u _ => Year.Offset
+  | .Y _ => Year.Offset
+  | .D _ => Sigma Day.Ordinal.OfYear
+  | .M _ => Month.Ordinal
+  | .L _ => Month.Ordinal
+  | .d _ => Day.Ordinal
+  | .Q _ => Month.Quarter
+  | .q _ => Month.Quarter
+  | .w _ => Week.OfYear.Ordinal
+  | .W _ => Week.Ordinal
+  | .E _ => Weekday
+  | .e _ => Weekday
+  | .c _ => Weekday
+  | .F _ => Week.Aligned.Ordinal
+  | .a _ => HourMarker
+  | .b _ => DayPeriod
+  | .B _ => ExtendedDayPeriod
+  | .h _ => Bounded.LE 1 12
+  | .K _ => Bounded.LE 0 11
+  | .k _ => Bounded.LE 1 24
+  | .H _ => Hour.Ordinal
+  | .m _ => Minute.Ordinal
+  | .s _ => Second.Ordinal true
+  | .S _ => Nanosecond.Ordinal
+  | .A _ => Millisecond.Offset
+  | .n _ => Nanosecond.Ordinal
+  | .N _ => Nanosecond.Offset
+  | .V _ => String
+  | .z _ => String
+  | .v _ => String
+  | .O _ => Offset
+  | .X _ => Offset
+  | .x _ => Offset
+  | .Z _ => Offset
 
-private def formatWith (dateformat : DateFormat) (modifier : Modifier) (data : TypeFormat modifier) : String :=
+private def formatWith (dateformat : DateFormat) (modifier : Modifier) (data : TypeFormat modifier)
+    : String :=
   match modifier with
   | .G text => (eraNames dateformat.symbols text).get (eraIndex data)
   | .y format =>
     let info := data.toInt
     let info := if info ≤ 0 then -info + 1 else info
     match format with
-    | .any      => pad 0 info
+    | .any => pad 0 info
     | .twoDigit => pad 2 (info % 100)
     | .fourDigit => padFourDigitYear info
     | .extended n => pad n info
   | .u format | .Y format =>
     match format with
-    | .any      => pad 0 (data.toInt)
+    | .any => pad 0 (data.toInt)
     | .twoDigit => pad 2 (data.toInt % 100)
     | .fourDigit => padFourDigitYear data.toInt
     | .extended n => pad n data.toInt
@@ -333,19 +323,20 @@ private def formatWith (dateformat : DateFormat) (modifier : Modifier) (data : T
     pad format.padding data.snd.val
   | .M format | .L format =>
     match format with
-    | .inl fmt  => pad fmt.padding data.val
+    | .inl fmt => pad fmt.padding data.val
     | .inr text => (monthNames dateformat.symbols text).get (monthIndex data)
   | .d format =>
     pad format.padding data.val
   | .Q format | .q format =>
     match format with
-    | .inl fmt  => pad fmt.padding data.val
+    | .inl fmt => pad fmt.padding data.val
     | .inr text => (quarterNames dateformat.symbols text).get (quarterIndex data)
   | .w format =>
     pad format.padding data.val
   | .W format =>
     pad format.padding data.val
-  | .E text => (weekdayNames dateformat.symbols text).get (weekdayIndex data)
+  | .E text =>
+    (weekdayNames dateformat.symbols text).get (weekdayIndex data)
   | .e format | .c format =>
     match format with
     | .inl fmt =>
@@ -355,18 +346,27 @@ private def formatWith (dateformat : DateFormat) (modifier : Modifier) (data : T
     | .inr text => (weekdayNames dateformat.symbols text).get (weekdayIndex data)
   | .F format =>
     pad format.padding data.val
-  | .a text => (markerNames dateformat.symbols text).get (markerIndex data)
-  | .b text => (dayPeriodNames dateformat.symbols text).get (dayPeriodIndex data)
-  | .B text => (extendedDayPeriodNames dateformat.symbols text).get (extendedDayPeriodIndex data)
-  | .h format => pad format.padding data.val
-  | .K format => pad format.padding data.val
-  | .k format => pad format.padding data.val
-  | .H format => pad format.padding data.val
-  | .m format => pad format.padding data.val
-  | .s format => pad format.padding data.val
+  | .a text =>
+    (markerNames dateformat.symbols text).get (markerIndex data)
+  | .b text =>
+    (dayPeriodNames dateformat.symbols text).get (dayPeriodIndex data)
+  | .B text =>
+    (extendedDayPeriodNames dateformat.symbols text).get (extendedDayPeriodIndex data)
+  | .h format =>
+    pad format.padding data.val
+  | .K format =>
+    pad format.padding data.val
+  | .k format =>
+    pad format.padding data.val
+  | .H format =>
+    pad format.padding data.val
+  | .m format =>
+    pad format.padding data.val
+  | .s format =>
+    pad format.padding data.val
   | .S format =>
     match format with
-    | .nano      => pad 9 data.val
+    | .nano => pad 9 data.val
     | .truncated n =>
       -- Pad to 9 digits first so truncation is from the left of the full nanosecond string
       let s := leftPadAscii 9 '0' (toString data.val)
@@ -377,17 +377,23 @@ private def formatWith (dateformat : DateFormat) (modifier : Modifier) (data : T
     pad format.padding data.val
   | .N format =>
     pad format.padding data.val
-  | .V .unknown => "unk"
-  | .V _ | .z _ | .v _ => data
+  | .V .unknown =>
+    "unk"
+  | .V _ | .z _ | .v _ =>
+    data
   | .O .short =>
-    if data.second == 0 then "GMT"
+    if data.second == 0 then
+      "GMT"
     else
       let (sign, time) := if data.second.val ≥ 0 then ("+", data.second) else ("-", -data.second)
       let t := PlainTime.ofSeconds time
       let pad := leftPadAscii 2 '0' ∘ toString
-      if t.second.val != 0 then s!"GMT{sign}{t.hour.val}:{pad t.minute.val}:{pad t.second.val}"
-      else if t.minute.val == 0 then s!"GMT{sign}{t.hour.val}"
-      else s!"GMT{sign}{t.hour.val}:{pad t.minute.val}"
+      if t.second.val != 0 then
+        s!"GMT{sign}{t.hour.val}:{pad t.minute.val}:{pad t.second.val}"
+      else if t.minute.val == 0 then
+        s!"GMT{sign}{t.hour.val}"
+      else
+        s!"GMT{sign}{t.hour.val}:{pad t.minute.val}"
   | .O .full | .Z .full => formatGmtOffset data
   | .X format => if data.second.val = 0 then "Z" else formatOffsetX data format
   | .x format => formatOffsetX data format
@@ -398,8 +404,10 @@ private def formatWith (dateformat : DateFormat) (modifier : Modifier) (data : T
 The value that `modifier` shows for a date, a time of day and a zone, or `none` when the modifier
 needs one of them and it is missing.
 -/
-private def fieldValue? (dateformat : DateFormat) (date? : Option PlainDate) (time? : Option PlainTime)
-    (zone? : Option TimeZone) (modifier : Modifier) : Option (TypeFormat modifier) :=
+private def fieldValue?
+    (dateformat : DateFormat) (date? : Option PlainDate) (time? : Option PlainTime)
+    (zone? : Option TimeZone) (modifier : Modifier)
+    : Option (TypeFormat modifier) :=
   let firstDay := dateformat.firstDayOfWeek
   let minDays := dateformat.minimalDaysInFirstWeek
   match modifier with
@@ -451,7 +459,7 @@ private def exactlyChars (parse : Parser Char) (size : Nat) : Parser String :=
     else do
       let res ← parse
       go (acc.push res) count.succ
-  termination_by size - count
+    termination_by size - count
 
   go "" 0
 
@@ -461,8 +469,7 @@ private def parseSigned (parser : Parser Nat) : Parser Int := do
   return if signed.isSome then -res else res
 
 /-- Exactly `size` digits, as a number. -/
-private def parseNum (size : Nat) : Parser Nat :=
-  go size 0
+private def parseNum (size : Nat) : Parser Nat := go size 0
 where
   go : Nat → Nat → Parser Nat
     | 0, acc => pure acc
@@ -507,13 +514,13 @@ private def parseFractionNum (size : Nat) (pad : Nat) : Parser Nat :=
   String.toNat! <$> rightPadAscii pad '0' <$> exactlyChars (satisfy Char.isDigit) size
 
 private def parseIdentifier : Parser String :=
-  many1Chars (satisfy (fun x => x.isAlpha ∨ x.isDigit ∨ x = '_' ∨ x = '-' ∨ x = '+' ∨ x = '/' ∨ x = ':'))
+  many1Chars (satisfy (fun x =>
+    x.isAlpha ∨ x.isDigit ∨ x = '_' ∨ x = '-' ∨ x = '+' ∨ x = '/' ∨ x = ':'))
 
 /-- A zone id or name. `TimeZone.GMT`'s name has spaces, so it is matched whole. -/
-private def parseZoneId : Parser String :=
-  pstring TimeZone.GMT.name <|> parseIdentifier
+private def parseZoneId : Parser String := pstring TimeZone.GMT.name <|> parseIdentifier
 
-private def parseNatToBounded { n m : Nat } (parser : Parser Nat) : Parser (Bounded.LE n m) := do
+private def parseNatToBounded {n m : Nat} (parser : Parser Nat) : Parser (Bounded.LE n m) := do
   let res ← parser
   if h : n ≤ res ∧ res ≤ m then
     return Bounded.LE.ofNat' res h
@@ -532,7 +539,8 @@ private inductive Reason
   | no
   | optional
 
-private def parseOffset (withMinutes : Reason) (withSeconds : Reason) (withColon : Bool) : Parser Offset := do
+private def parseOffset (withMinutes : Reason) (withSeconds : Reason) (withColon : Bool)
+    : Parser Offset := do
   let sign ← (pchar '+' *> pure 1) <|> (pchar '-' *> pure (-1))
   let hours : Hour.Offset ← UnitVal.ofInt <$> parseOneOrTwoNum
 
@@ -578,8 +586,25 @@ private def parseGmtOffset (minutes : Reason) : Parser Offset := do
 
 /-- Whether a field is written as digits, which a number right before it must leave to it. -/
 private def isNumericModifier : Modifier → Bool
-  | .y _ | .u _ | .Y _ | .D _ | .d _ | .w _ | .W _ | .F _ | .h _ | .K _ | .k _ | .H _ | .m _ | .s _
-  | .S _ | .A _ | .n _ | .N _ => true
+  | .y _
+  | .u _
+  | .Y _
+  | .D _
+  | .d _
+  | .w _
+  | .W _
+  | .F _
+  | .h _
+  | .K _
+  | .k _
+  | .H _
+  | .m _
+  | .s _
+  | .S _
+  | .A _
+  | .n _
+  | .N _ =>
+    true
   | .M (.inl _) | .L (.inl _) | .Q (.inl _) | .q (.inl _) | .e (.inl _) | .c (.inl _) => true
   | _ => false
 
@@ -593,7 +618,8 @@ private def fixedDigits : Modifier → Option Nat
   | .S .nano => some 9
   | .S (.truncated n) => some n
   | .Q (.inl p) | .q (.inl p) | .e (.inl p) | .c (.inl p) | .W p | .F p => covering 1 p
-  | .d p | .w p | .h p | .K p | .k p | .H p | .m p | .s p | .M (.inl p) | .L (.inl p) => covering 2 p
+  | .d p | .w p | .h p | .K p | .k p | .H p | .m p | .s p | .M (.inl p) | .L (.inl p) =>
+    covering 2 p
   | .D p => covering 3 p
   | .A p => covering 8 p
   | .n p => covering 9 p
@@ -603,7 +629,9 @@ where
   covering (digits : Nat) (p : Number) : Option Nat :=
     if p.padding ≥ digits then some p.padding else none
 
-/-- A numeric field: exactly its fixed width, or else at least `width` digits (see `parseVarWidthNum`). -/
+/--
+A numeric field: exactly its fixed width, or else at least `width` digits (see `parseVarWidthNum`).
+-/
 private def parseField (m : Modifier) (width : Nat) (reserve : Option Nat) : Parser Nat :=
   match fixedDigits m with
   | some fixed => parseNum fixed
@@ -619,7 +647,8 @@ private def reservedDigits : FormatString → Option Nat
   | _ => some 0
 
 /-- `reserve`: the `reservedDigits` of the rest of the format. -/
-private def parseWith (config : FormatConfig) (reserve : Option Nat) : (mod : Modifier) → Parser (TypeFormat mod)
+private def parseWith (config : FormatConfig) (reserve : Option Nat)
+    : (mod : Modifier) → Parser (TypeFormat mod)
   | .G text => eraOfIndex <$> parseName (eraNames config.dateformat.symbols text)
   | .y format =>
     match format with
@@ -633,37 +662,51 @@ private def parseWith (config : FormatConfig) (reserve : Option Nat) : (mod : Mo
     | .twoDigit => (2000 + ·) <$> Int.ofNat <$> parseNum 2
     | .fourDigit => parseFourDigitYear true reserve
     | .extended n => parseSigned <| parseVarWidthNum n reserve
-  | .D format => Sigma.mk true <$> parseNatToBounded (parseField (.D format) format.padding reserve)
+  | .D format =>
+    Sigma.mk true <$> parseNatToBounded (parseField (.D format) format.padding reserve)
   | .M format | .L format =>
     match format with
-    | .inl fmt  => parseNatToBounded (parseField (.M (.inl fmt)) fmt.padding reserve)
+    | .inl fmt => parseNatToBounded (parseField (.M (.inl fmt)) fmt.padding reserve)
     | .inr text => monthOfIndex <$> parseName (monthNames config.dateformat.symbols text)
-  | .d format => parseNatToBounded (parseField (.d format) format.padding reserve)
+  | .d format =>
+    parseNatToBounded (parseField (.d format) format.padding reserve)
   | .Q format | .q format =>
     match format with
-    | .inl fmt  => parseNatToBounded (parseField (.Q (.inl fmt)) fmt.padding reserve)
+    | .inl fmt => parseNatToBounded (parseField (.Q (.inl fmt)) fmt.padding reserve)
     | .inr text => quarterOfIndex <$> parseName (quarterNames config.dateformat.symbols text)
-  | .w format => parseNatToBounded (parseField (.w format) format.padding reserve)
-  | .W format => parseNatToBounded (parseField (.W format) format.padding reserve)
-  | .E text => weekdayOfIndex <$> parseName (weekdayNames config.dateformat.symbols text)
+  | .w format =>
+    parseNatToBounded (parseField (.w format) format.padding reserve)
+  | .W format =>
+    parseNatToBounded (parseField (.W format) format.padding reserve)
+  | .E text =>
+    weekdayOfIndex <$> parseName (weekdayNames config.dateformat.symbols text)
   | .e format | .c format =>
     match format with
     | .inl fmt => do
       let n ← parseField (.e (.inl fmt)) fmt.padding reserve
-      if ¬ (1 ≤ n ∧ n ≤ 7) then fail "need a natural number in the interval of 1 to 7"
+      if ¬(1 ≤ n ∧ n ≤ 7) then fail "need a natural number in the interval of 1 to 7"
       let firstOrd : Int := config.dateformat.firstDayOfWeek.toOrdinal.val
       let absOrd : Int := ((n : Int) - 1 + firstOrd - 1) % 7 + 1
       return Weekday.ofOrdinal (Bounded.LE.ofNatWrapping absOrd (by decide))
     | .inr text => weekdayOfIndex <$> parseName (weekdayNames config.dateformat.symbols text)
-  | .F format => parseNatToBounded (parseField (.F format) format.padding reserve)
-  | .a text => markerOfIndex <$> parseName (markerNames config.dateformat.symbols text)
-  | .b text => dayPeriodOfIndex <$> parseName (dayPeriodNames config.dateformat.symbols text)
-  | .B text => extendedDayPeriodOfIndex <$> parseName (extendedDayPeriodNames config.dateformat.symbols text)
-  | .h format => parseNatToBounded (parseField (.h format) format.padding reserve)
-  | .K format => parseNatToBounded (parseField (.K format) format.padding reserve)
-  | .k format => parseNatToBounded (parseField (.k format) format.padding reserve)
-  | .H format => parseNatToBounded (parseField (.H format) format.padding reserve)
-  | .m format => parseNatToBounded (parseField (.m format) format.padding reserve)
+  | .F format =>
+    parseNatToBounded (parseField (.F format) format.padding reserve)
+  | .a text =>
+    markerOfIndex <$> parseName (markerNames config.dateformat.symbols text)
+  | .b text =>
+    dayPeriodOfIndex <$> parseName (dayPeriodNames config.dateformat.symbols text)
+  | .B text =>
+    extendedDayPeriodOfIndex <$> parseName (extendedDayPeriodNames config.dateformat.symbols text)
+  | .h format =>
+    parseNatToBounded (parseField (.h format) format.padding reserve)
+  | .K format =>
+    parseNatToBounded (parseField (.K format) format.padding reserve)
+  | .k format =>
+    parseNatToBounded (parseField (.k format) format.padding reserve)
+  | .H format =>
+    parseNatToBounded (parseField (.H format) format.padding reserve)
+  | .m format =>
+    parseNatToBounded (parseField (.m format) format.padding reserve)
   | .s format =>
     if config.allowLeapSeconds then
       parseNatToBounded (parseField (.s format) format.padding reserve)
@@ -674,9 +717,12 @@ private def parseWith (config : FormatConfig) (reserve : Option Nat) : (mod : Mo
     match format with
     | .nano => parseNatToBounded (parseFlexibleNum 9)
     | .truncated n => parseNatToBounded (parseFractionNum n 9)
-  | .A format => Millisecond.Offset.ofNat <$> parseField (.A format) format.padding reserve
-  | .n format => parseNatToBounded (parseField (.n format) format.padding reserve)
-  | .N format => Nanosecond.Offset.ofNat <$> parseField (.N format) format.padding reserve
+  | .A format =>
+    Millisecond.Offset.ofNat <$> parseField (.A format) format.padding reserve
+  | .n format =>
+    parseNatToBounded (parseField (.n format) format.padding reserve)
+  | .N format =>
+    Nanosecond.Offset.ofNat <$> parseField (.N format) format.padding reserve
   | .V format =>
     match format with
     | .unknown => pstring "unk" *> pure "unk"
@@ -687,14 +733,20 @@ private def parseWith (config : FormatConfig) (reserve : Option Nat) : (mod : Mo
   | .v format =>
     match format with
     | .short | .full => parseZoneId
-  | .O .short => parseGmtOffset .optional
-  | .O .full | .Z .full => parseGmtOffset .yes
-  | .X format => parseOffsetX format <|> (pstring "Z" *> pure Offset.zero)
-  | .x format => parseOffsetX format
-  | .Z .hourMinute => parseOffset .yes .optional false
-  | .Z .hourMinuteSecondColon => (skipString "Z" *> pure Offset.zero) <|> parseOffset .yes .optional true
+  | .O .short =>
+    parseGmtOffset .optional
+  | .O .full | .Z .full =>
+    parseGmtOffset .yes
+  | .X format =>
+    parseOffsetX format <|> (pstring "Z" *> pure Offset.zero)
+  | .x format =>
+    parseOffsetX format
+  | .Z .hourMinute =>
+    parseOffset .yes .optional false
+  | .Z .hourMinuteSecondColon =>
+    (skipString "Z" *> pure Offset.zero) <|> parseOffset .yes .optional true
 
-set_option linter.missingDocs false in  -- TODO
+set_option linter.missingDocs false in -- TODO
 @[simp, expose /- for codegen -/]
 def FormatType (result : Type) : FormatString → Type
   | .modifier entry :: xs => (TypeFormat entry) → (FormatType result xs)
@@ -744,37 +796,38 @@ private structure DateBuilder where
 
 namespace DateBuilder
 
-private def insert (date : DateBuilder) (modifier : Modifier) (data : TypeFormat modifier) : DateBuilder :=
+private def insert (date : DateBuilder) (modifier : Modifier) (data : TypeFormat modifier)
+    : DateBuilder :=
   match modifier with
-  | .G _  => { date with G := some data }
-  | .y _  => { date with y := some data }
-  | .u _  => { date with u := some data }
-  | .Y _  => { date with Y := some data }
-  | .D _  => { date with D := some data }
-  | .M _  => { date with M := some data }
-  | .L _  => { date with L := some data }
-  | .d _  => { date with d := some data }
-  | .Q _  => { date with Q := some data }
-  | .q _  => { date with q := some data }
-  | .w _  => { date with w := some data }
-  | .W _  => { date with W := some data }
-  | .E _  => { date with E := some data }
-  | .e _  => { date with e := some data }
-  | .c _  => { date with c := some data }
-  | .F _  => { date with F := some data }
-  | .a _  => { date with a := some data }
-  | .b _  => { date with b := some data }
-  | .B _  => { date with B := some data }
-  | .h _  => { date with h := some data }
-  | .K _  => { date with K := some data }
-  | .k _  => { date with k := some data }
-  | .H _  => { date with H := some data }
-  | .m _  => { date with m := some data }
-  | .s _  => { date with s := some data }
-  | .S _  => { date with S := some data }
-  | .A _  => { date with A := some data }
-  | .n _  => { date with n := some data }
-  | .N _  => { date with N := some data }
+  | .G _ => { date with G := some data }
+  | .y _ => { date with y := some data }
+  | .u _ => { date with u := some data }
+  | .Y _ => { date with Y := some data }
+  | .D _ => { date with D := some data }
+  | .M _ => { date with M := some data }
+  | .L _ => { date with L := some data }
+  | .d _ => { date with d := some data }
+  | .Q _ => { date with Q := some data }
+  | .q _ => { date with q := some data }
+  | .w _ => { date with w := some data }
+  | .W _ => { date with W := some data }
+  | .E _ => { date with E := some data }
+  | .e _ => { date with e := some data }
+  | .c _ => { date with c := some data }
+  | .F _ => { date with F := some data }
+  | .a _ => { date with a := some data }
+  | .b _ => { date with b := some data }
+  | .B _ => { date with B := some data }
+  | .h _ => { date with h := some data }
+  | .K _ => { date with K := some data }
+  | .k _ => { date with k := some data }
+  | .H _ => { date with H := some data }
+  | .m _ => { date with m := some data }
+  | .s _ => { date with s := some data }
+  | .S _ => { date with S := some data }
+  | .A _ => { date with A := some data }
+  | .n _ => { date with n := some data }
+  | .N _ => { date with N := some data }
   | .V .full => { date with V := some data }
   | .V .short => { date with V := some data }
   | .V .unknown => { date with V := some data }
@@ -782,10 +835,10 @@ private def insert (date : DateBuilder) (modifier : Modifier) (data : TypeFormat
   | .z .short => { date with zabbrev := some data }
   | .v .full => { date with v := some data }
   | .v .short => { date with zabbrev := some data }
-  | .O _  => { date with O := some data }
-  | .X _  => { date with X := some data }
-  | .x _  => { date with x := some data }
-  | .Z _  => { date with Z := some data }
+  | .O _ => { date with O := some data }
+  | .X _ => { date with X := some data }
+  | .x _ => { date with x := some data }
+  | .Z _ => { date with Z := some data }
 
 private def convertYearAndEra (year : Year.Offset) : Year.Era → Year.Offset
   | .ce => year
@@ -794,7 +847,7 @@ private def convertYearAndEra (year : Year.Offset) : Year.Era → Year.Offset
 /-- Infer an `HourMarker` from a `DayPeriod` parsed by `b`. -/
 private def markerOfDayPeriod : DayPeriod → HourMarker
   | .am | .midnight => .am
-  | .pm | .noon     => .pm
+  | .pm | .noon => .pm
 
 /--
 Infer an `HourMarker` from an `ExtendedDayPeriod` parsed by `B` and the hour on the 0–11 clock.
@@ -816,7 +869,9 @@ private def offsetOfZoneId? (id : String) : Option Offset :=
 The date in week `week` of the week-based year `year`, on `weekday`. Fails when that week does not
 belong to `year`, such as week 53 of a year with 52 weeks.
 -/
-private def ofWeekDate (dateformat : DateFormat) (year : Year.Offset) (week : Week.OfYear.Ordinal) (weekday : Weekday) : Option PlainDate :=
+private def ofWeekDate
+    (dateformat : DateFormat) (year : Year.Offset) (week : Week.OfYear.Ordinal) (weekday : Weekday)
+    : Option PlainDate :=
   let firstDay := dateformat.firstDayOfWeek
   let minDays := dateformat.minimalDaysInFirstWeek
   let start := PlainDate.startOfWeekBasedYear year firstDay minDays
@@ -828,23 +883,26 @@ private def ofWeekDate (dateformat : DateFormat) (year : Year.Offset) (week : We
 The date with `month` and `day` whose week-based year is `year`. Near January 1st two dates can
 qualify, and the one in calendar year `year` wins.
 -/
-private def ofWeekYearMonthDay (dateformat : DateFormat) (year : Year.Offset) (month : Month.Ordinal) (day : Day.Ordinal) : Option PlainDate :=
+private def ofWeekYearMonthDay
+    (dateformat : DateFormat) (year : Year.Offset) (month : Month.Ordinal) (day : Day.Ordinal)
+    : Option PlainDate :=
   [year, year - 1, year + 1].findSome? fun calendarYear => do
     let date ← PlainDate.ofYearMonthDay? calendarYear month day
     guard (date.weekYear dateformat.firstDayOfWeek dateformat.minimalDaysInFirstWeek == year)
     return date
 
-private def build (builder : DateBuilder) (aw : Awareness) (dateformat : DateFormat) : Option DateTime :=
+private def build (builder : DateBuilder) (aw : Awareness) (dateformat : DateFormat)
+    : Option DateTime :=
   let offset :=
     builder.O <|> builder.X <|> builder.x <|> builder.Z
-    <|> ((builder.V <|> builder.v <|> builder.z <|> builder.zabbrev) >>= offsetOfZoneId?)
-    |>.getD Offset.zero
+        <|> ((builder.V <|> builder.v <|> builder.z <|> builder.zabbrev) >>= offsetOfZoneId?)
+      |>.getD Offset.zero
 
   let tz : TimeZone := {
-    offset,
-    name := builder.V <|> builder.v <|> builder.z |>.getD (offset.toIsoString true),
-    abbreviation := builder.zabbrev |>.getD (offset.toIsoString true),
-    isDST := false,
+    offset
+    name := builder.V <|> builder.v <|> builder.z |>.getD (offset.toIsoString true)
+    abbreviation := builder.zabbrev |>.getD (offset.toIsoString true)
+    isDST := false
   }
 
   let calendarYear := builder.u <|> ((convertYearAndEra · (builder.G.getD .ce)) <$> builder.y)
@@ -872,9 +930,8 @@ private def build (builder : DateBuilder) (aw : Awareness) (dateformat : DateFor
 
   -- Derive hour marker from `a`, then fall back to `b` and `B`.
   let markerOpt : Option HourMarker :=
-    builder.a
-    <|> (markerOfDayPeriod <$> builder.b)
-    <|> (markerOfExtendedDayPeriod (halfDayHour.getD 0) <$> builder.B)
+    builder.a <|> (markerOfDayPeriod <$> builder.b)
+      <|> (markerOfExtendedDayPeriod (halfDayHour.getD 0) <$> builder.B)
 
   let ofHalfDay (marker : HourMarker) : Option (Bounded.LE 0 23) :=
     let ofK (k : Bounded.LE 0 11) : Bounded.LE 0 23 :=
@@ -895,10 +952,9 @@ private def build (builder : DateBuilder) (aw : Awareness) (dateformat : DateFor
   let second := builder.s |>.getD 0
   let nano := (builder.n <|> builder.S) |>.getD 0
 
-  let time
-    :=  PlainTime.ofNanoseconds <$> builder.N
-    <|> PlainTime.ofMilliseconds <$> builder.A
-    |>.getD (PlainTime.mk hour minute second nano)
+  let time :=
+    PlainTime.ofNanoseconds <$> builder.N <|> PlainTime.ofMilliseconds <$> builder.A
+      |>.getD (PlainTime.mk hour minute second nano)
 
   let datetime : Option PlainDateTime := date.map ({ date := ·, time })
 
@@ -911,7 +967,9 @@ private def build (builder : DateBuilder) (aw : Awareness) (dateformat : DateFor
 
 end DateBuilder
 
-private def parseWithDate (date : DateBuilder) (config : FormatConfig) (mod : FormatPart) (rest : FormatString) : Parser DateBuilder := do
+private def parseWithDate
+    (date : DateBuilder) (config : FormatConfig) (mod : FormatPart) (rest : FormatString)
+    : Parser DateBuilder := do
   match mod with
   | .modifier s => do
     let res ← parseWith config (reservedDigits rest) s
@@ -926,15 +984,14 @@ def spec (input : String) (config : FormatConfig := {}) : Except String (Generic
   let string ← specParser.run input
   return ⟨config, string⟩
 
-/--
-Builds a `GenericFormat` from the input string. If parsing fails, it will panic
--/
+/-- Builds a `GenericFormat` from the input string. If parsing fails, it will panic -/
 def spec! (input : String) (config : FormatConfig := {}) : GenericFormat tz :=
   match specParser.run input with
   | .ok res => ⟨config, res⟩
   | .error res => panic! res
 
-private def parser (format : FormatString) (config : FormatConfig) (aw : Awareness) : Parser DateTime :=
+private def parser (format : FormatString) (config : FormatConfig) (aw : Awareness)
+    : Parser DateTime :=
   let rec go (builder : DateBuilder) (x : FormatString) : Parser DateTime :=
     match x with
     | x :: xs => parseWithDate builder config x xs >>= (go · xs)
@@ -944,46 +1001,45 @@ private def parser (format : FormatString) (config : FormatConfig) (aw : Awarene
       | none => fail "could not parse the date"
   go {} format
 
-/--
-Parser for a format with a builder.
--/
-def builderParser (format: FormatString) (config : FormatConfig) (func: FormatType (Option α) format) : Parser α :=
-  let rec go (format : FormatString) (func: FormatType (Option α) format) : Parser α :=
+/-- Parser for a format with a builder. -/
+def builderParser
+    (format : FormatString) (config : FormatConfig) (func : FormatType (Option α) format)
+    : Parser α :=
+  let rec go (format : FormatString) (func : FormatType (Option α) format) : Parser α :=
     match format with
     | .modifier x :: xs => do
       let res ← parseWith config (reservedDigits xs) x
       go xs (func res)
-    | .string s :: xs => skipString s *> (go xs func)
+    | .string s :: xs =>
+      skipString s *> (go xs func)
     | [] =>
-        match func with
-        | some res => eof *> pure res
-        | none => fail "invalid date."
+      match func with
+      | some res => eof *> pure res
+      | none => fail "invalid date."
   go format func
 
-/--
-Parses the input string into a `DateTime`.
--/
+/-- Parses the input string into a `DateTime`. -/
 def parse (format : GenericFormat aw) (input : String) : Except String DateTime :=
   (parser format.string format.config aw <* eof).run input
 
-/--
-Parses the input string into a `DateTime` and panics if its wrong.
--/
+/-- Parses the input string into a `DateTime` and panics if its wrong. -/
 def parse! (format : GenericFormat aw) (input : String) : DateTime :=
   match parse format input with
   | .ok res => res
   | .error err => panic! err
 
-/--
-Parses an input string using a builder function to produce a value.
--/
-def parseBuilder (format : GenericFormat aw)  (builder : FormatType (Option α) format.string) (input : String) : Except String α :=
+/-- Parses an input string using a builder function to produce a value. -/
+def parseBuilder
+    (format : GenericFormat aw) (builder : FormatType (Option α) format.string) (input : String)
+    : Except String α :=
   (builderParser format.string format.config builder).run input
 
-/--
-Parses an input string using a builder function, panicking on errors.
--/
-def parseBuilder! [Inhabited α] (format : GenericFormat aw)  (builder : FormatType (Option α) format.string) (input : String) : α :=
+/-- Parses an input string using a builder function, panicking on errors. -/
+def parseBuilder!
+    [Inhabited α]
+    (format : GenericFormat aw) (builder : FormatType (Option α) format.string)
+    (input : String)
+    : α :=
   match parseBuilder format builder input with
   | .ok res => res
   | .error err => panic! err
@@ -991,7 +1047,8 @@ def parseBuilder! [Inhabited α] (format : GenericFormat aw)  (builder : FormatT
 /--
 Formats the date using the format into a String, using a `getInfo` function to get the information needed to build the `String`.
 -/
-def formatGeneric (format : GenericFormat aw) (getInfo : (typ : Modifier) → Option (TypeFormat typ)) : Option String :=
+def formatGeneric (format : GenericFormat aw) (getInfo : (typ : Modifier) → Option (TypeFormat typ))
+    : Option String :=
   let dateformat := format.config.dateformat
   let rec go (data : String) : (format : FormatString) → Option String
     | .modifier x :: xs => do go (data ++ formatWith dateformat x (← getInfo x)) xs
@@ -1003,13 +1060,13 @@ def formatGeneric (format : GenericFormat aw) (getInfo : (typ : Modifier) → Op
 Formats the given parts of a date and time: a date, a time of day and a zone. Returns `none` when the
 format needs a part that is missing, such as an hour for a date alone.
 -/
-def formatParts (format : GenericFormat aw) (date : Option PlainDate) (time : Option PlainTime)
-    (zone : Option TimeZone) : Option String :=
+def formatParts
+    (format : GenericFormat aw) (date : Option PlainDate) (time : Option PlainTime)
+    (zone : Option TimeZone)
+    : Option String :=
   format.formatGeneric (fieldValue? format.config.dateformat date time zone)
 
-/--
-Formats a `DateTime` value into a string using the given `GenericFormat`.
--/
+/-- Formats a `DateTime` value into a string using the given `GenericFormat`. -/
 def format (format : GenericFormat aw) (date : DateTime) : String :=
   let date :=
     match aw with
@@ -1019,9 +1076,7 @@ def format (format : GenericFormat aw) (date : DateTime) : String :=
   -- A `DateTime` has every part, so no field is missing.
   format.formatParts (some pdt.date) (some pdt.time) (some date.timezone) |>.getD ""
 
-/--
-Constructs a `FormatType` function to format a date into a string using a `GenericFormat`.
--/
+/-- Constructs a `FormatType` function to format a date into a string using a `GenericFormat`. -/
 def formatBuilder (format : GenericFormat aw) : FormatType String format.string :=
   let dateformat := format.config.dateformat
   let rec go (data : String) : (format : FormatString) → FormatType String format

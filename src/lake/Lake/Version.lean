@@ -16,14 +16,12 @@ public def version.major : Nat := 5
 public def version.minor : Nat := 0
 public def version.patch : Nat := 0
 
-public def version.isRelease : Bool :=
-  Lean.version.isRelease
+public def version.isRelease : Bool := Lean.version.isRelease
 
 public def version.specialDesc : String :=
   if isRelease && !Lean.githash.isEmpty then s!"src+{Lean.githash.take 7}" else "src"
 
-public def versionStringCore : String :=
-  s!"{version.major}.{version.minor}.{version.patch}"
+public def versionStringCore : String := s!"{version.major}.{version.minor}.{version.patch}"
 
 public def versionString : String :=
   if version.specialDesc ≠ "" then

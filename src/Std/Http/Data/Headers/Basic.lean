@@ -28,25 +28,16 @@ set_option linter.all true
 
 open Std.Http.Internal
 
-/--
-Typeclass for typed HTTP headers that can be parsed from and serialized to header values.
--/
+/-- Typeclass for typed HTTP headers that can be parsed from and serialized to header values. -/
 class Header (α : Type) where
-
-  /--
-  Parses a header value into the typed representation.
-  -/
+  /-- Parses a header value into the typed representation. -/
   parse : Header.Value → Option α
-
-  /--
-  Serializes the typed representation back to a name-value pair.
-  -/
+  /-- Serializes the typed representation back to a name-value pair. -/
   serialize : α → Header.Name × Header.Value
 
-/--
-Appends the field line `Name: value\r\n`.
--/
-def Internal.appendFieldLine (out : ByteArray) (name : Header.Name) (value : Header.Value) : ByteArray :=
+/-- Appends the field line `Name: value\r\n`. -/
+def Internal.appendFieldLine (out : ByteArray) (name : Header.Name) (value : Header.Value)
+    : ByteArray :=
   out ++ name ++ ": " ++ value ++ "\r\n"
 
 instance [h : Header α] : Encode .v11 α where
@@ -72,26 +63,21 @@ Parses only valid natural number values.
 Reference: https://www.rfc-editor.org/rfc/rfc9110.html#section-8.6-2
 -/
 structure ContentLength where
-
-  /--
-  The content length in bytes.
-  -/
+  /-- The content length in bytes. -/
   length : Nat
 deriving BEq, Repr
 
 namespace ContentLength
 
-/--
-Parses a content length header value.
--/
+/-- Parses a content length header value. -/
 def parse (v : Value) : Option ContentLength :=
   let s := v.value
-  if s.isEmpty || !s.all Char.isDigit then none
-  else s.toNat?.map (.mk)
+  if s.isEmpty || ! s.all Char.isDigit then
+    none
+  else
+    s.toNat?.map (.mk)
 
-/--
-Serializes a content length header back to a name-value pair.
--/
+/-- Serializes a content length header back to a name-value pair. -/
 def serialize (h : ContentLength) : Name × Value :=
   (Header.Name.contentLength, Value.ofString! (toString h.length))
 
@@ -107,7 +93,7 @@ Reference: https://www.rfc-editor.org/rfc/rfc9112#section-6.1
 -/
 @[expose]
 def TransferEncoding.Validate (codings : Array String) : Bool :=
-  if codings.isEmpty || codings.any (fun coding => !isToken coding) then
+  if codings.isEmpty || codings.any (fun coding => ! isToken coding) then
     false
   else
     let chunkedCount := codings.filter (· == "chunked") |>.size
@@ -132,44 +118,37 @@ Validation rules (RFC 9112 Section 6.1):
 Reference: https://www.rfc-editor.org/rfc/rfc9112#section-6.1
 -/
 structure TransferEncoding where
-
-  /--
-  The ordered list of transfer coding names, lowercased and without their parameters.
-  -/
+  /-- The ordered list of transfer coding names, lowercased and without their parameters. -/
   codings : Array String
-
-  /--
-  Proof that the transfer codings satisfy the chunked placement rules.
-  -/
+  /-- Proof that the transfer codings satisfy the chunked placement rules. -/
   isValid : TransferEncoding.Validate codings = true
-
 deriving Repr
 
 namespace TransferEncoding
 
-/--
-Returns `true` if the transfer encoding ends with chunked.
--/
-def isChunked (te : TransferEncoding) : Bool :=
-  te.codings.back? == some "chunked"
+/-- Returns `true` if the transfer encoding ends with chunked. -/
+def isChunked (te : TransferEncoding) : Bool := te.codings.back? == some "chunked"
 
 /--
 Splits `s` at each `sep` outside a quoted-string (RFC 9110 §5.6.4), so a quoted parameter value may
 contain `sep`. An unterminated quoted-string runs to the end of `s`, and its part then fails to parse.
 -/
 private def splitOutsideQuotes (s : String) (sep : Char) : List String :=
-  let (parts, part, _, _) := s.foldl (init := (#[], "", false, false))
-    fun (parts, part, quoted, escaped) c =>
-      if escaped then (parts, part.push c, quoted, false)
-      else if quoted && c == '\\' then (parts, part.push c, quoted, true)
-      else if c == '"' then (parts, part.push c, !quoted, false)
-      else if c == sep && !quoted then (parts.push part, "", quoted, false)
-      else (parts, part.push c, quoted, false)
+  let (parts, part, _, _) :=
+    s.foldl (init := (#[], "", false, false)) fun (parts, part, quoted, escaped) c =>
+      if escaped then
+        (parts, part.push c, quoted, false)
+      else if quoted && c == '\\' then
+        (parts, part.push c, quoted, true)
+      else if c == '"' then
+        (parts, part.push c, !quoted, false)
+      else if c == sep && !quoted then
+        (parts.push part, "", quoted, false)
+      else
+        (parts, part.push c, quoted, false)
   (parts.push part).toList
 
-/--
-Checks a transfer parameter: `token BWS "=" BWS ( token / quoted-string )` (RFC 9112 §7).
--/
+/-- Checks a transfer parameter: `token BWS "=" BWS ( token / quoted-string )` (RFC 9112 §7). -/
 private def isTransferParameter (param : String) : Bool :=
   match param.split '=' |>.toStringList with
   | name :: value@(_ :: _) =>
@@ -189,7 +168,8 @@ def parseCodings? (v : Value) : Option (Array String) :=
   (splitOutsideQuotes v.value ',').toArray.filterMapM fun element => do
     if element.trimAscii.isEmpty then
       return none
-    let name :: params := splitOutsideQuotes element ';' | none
+    let name :: params := splitOutsideQuotes element ';'
+      | none
     let name := name.trimAscii.toString.toLower
     guard (isToken name && params.all isTransferParameter)
     guard (params.isEmpty || name != "chunked")
@@ -227,9 +207,7 @@ def finalCodingIsChunked? (values : Array Value) : Option Bool := do
   guard (codings.count "chunked" == 1)
   return true
 
-/--
-Serializes a transfer encoding back to a comma-separated header value.
--/
+/-- Serializes a transfer encoding back to a comma-separated header value. -/
 def serialize (te : TransferEncoding) : Header.Name × Header.Value :=
   let value := ",".intercalate (te.codings.toList)
   (Header.Name.transferEncoding, Value.ofString! value)
@@ -244,35 +222,23 @@ The `Connection` header, represented as a list of connection option tokens.
 Reference: https://www.rfc-editor.org/rfc/rfc9110.html#name-connection
 -/
 structure Connection where
-  /--
-  The normalized connection-option tokens.
-  -/
+  /-- The normalized connection-option tokens. -/
   tokens : Array String
-
-  /--
-  Proof that all tokens satisfy `isToken`.
-  -/
+  /-- Proof that all tokens satisfy `isToken`. -/
   valid : tokens.all isToken = true
 deriving Repr
 
 namespace Connection
 
-/--
-Checks whether a specific token is present in the `Connection` header value.
--/
+/-- Checks whether a specific token is present in the `Connection` header value. -/
 def containsToken (connection : Connection) (token : String) : Bool :=
   let token := token.trimAscii.toString.toLower
   connection.tokens.any (· == token)
 
-/--
-Checks whether the `Connection` header requests connection close semantics.
--/
-def shouldClose (connection : Connection) : Bool :=
-  connection.containsToken "close"
+/-- Checks whether the `Connection` header requests connection close semantics. -/
+def shouldClose (connection : Connection) : Bool := connection.containsToken "close"
 
-/--
-Parses a `Connection` header value into normalized tokens.
--/
+/-- Parses a `Connection` header value into normalized tokens. -/
 def parse (v : Value) : Option Connection := do
   let tokens ← parseTokenList v
   if h : tokens.all isToken = true then
@@ -280,9 +246,7 @@ def parse (v : Value) : Option Connection := do
   else
     none
 
-/--
-Serializes a `Connection` header back to a comma-separated value.
--/
+/-- Serializes a `Connection` header back to a comma-separated value. -/
 def serialize (connection : Connection) : Header.Name × Header.Value :=
   let value := ",".intercalate connection.tokens.toList
   (Header.Name.connection, Value.ofString! value)
@@ -304,33 +268,25 @@ Represents the authority component of a URI:
 Reference: https://www.rfc-editor.org/rfc/rfc9110.html#name-host-and-authority
 -/
 structure Host where
-  /--
-  Host name (reg-name, IPv4, or IPv6 literal).
-  -/
+  /-- Host name (reg-name, IPv4, or IPv6 literal). -/
   host : URI.Host
-
-  /--
-  Optional port.
-  -/
+  /-- Optional port. -/
   port : URI.Port
 deriving Repr, BEq
 
 namespace Host
 
-/--
-Parses a `Host` header value.
--/
+/-- Parses a `Host` header value. -/
 def parse (v : Value) : Option Host :=
   let parsed := (Std.Http.URI.Parser.parseHostHeader <* Std.Internal.Parsec.eof).run v.value.toUTF8
   match parsed with
   | .ok ⟨host, port⟩ => some ⟨host, port⟩
   | .error _ => none
 
-/--
-Serializes a `Host` header back to a name and a value.
--/
+/-- Serializes a `Host` header back to a name and a value. -/
 def serialize (host : Host) : Header.Name × Header.Value :=
-  let value := match host.port with
+  let value :=
+    match host.port with
     | .value port => Header.Value.ofString! s!"{host.host}:{port}"
     | .empty => Header.Value.ofString! s!"{host.host}:"
     | .omitted => Header.Value.ofString! <| toString host.host
@@ -368,9 +324,7 @@ def parse (v : Value) : Option Expect :=
   else
     none
 
-/--
-Serializes an `Expect` header.
--/
+/-- Serializes an `Expect` header. -/
 def serialize (_ : Expect) : Header.Name × Header.Value :=
   (Header.Name.expect, Value.ofString! "100-continue")
 

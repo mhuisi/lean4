@@ -11,7 +11,6 @@ public import Lean.Data.Markdown.Block
 
 namespace Lean.Markdown
 
-
 /-!
 ## Line Cursors
 
@@ -48,26 +47,35 @@ namespace Cursor
 variable {s : String.Slice}
 
 /-- Constructs a cursor at the start of `line` (column 0). -/
-@[inline] public def ofLine (line : s.Subslice) : Cursor s :=
-  { pos := line.startInclusive, stop := line.endExclusive, col := 0 }
+@[inline]
+public def ofLine (line : s.Subslice) : Cursor s := {
+  pos := line.startInclusive
+  stop := line.endExclusive
+  col := 0
+}
 
 /-- Whether the cursor is at the end of the line. -/
-@[inline] public def isEmpty (c : Cursor s) : Bool := c.stop ≤ c.pos
+@[inline]
+public def isEmpty (c : Cursor s) : Bool := c.stop ≤ c.pos
 
 /-- The remaining text of the line, from the cursor to its end. -/
-@[inline] public def toEol (c : Cursor s) : s.Subslice :=
-  subsliceClamped c.pos c.stop
+@[inline]
+public def toEol (c : Cursor s) : s.Subslice := subsliceClamped c.pos c.stop
 
 /--
 Consumes `cols` columns of the tab at the cursor, leaving the position at the tab (CommonMark §2.2's
 partial tab rule). The caller is responsible for ensuring that the tab has that many columns left.
 -/
-@[inline] public def intoTab (c : Cursor s) (cols : Columns) : Cursor s :=
-  { c with col := c.col + cols, partialTab := true }
+@[inline]
+public def intoTab (c : Cursor s) (cols : Columns) : Cursor s := {
+  c with
+  col := c.col + cols
+  partialTab := true
+}
 
 /-- The character at the cursor, if the cursor is not at the end of the line. -/
-@[inline] public def front? (c : Cursor s) : Option Char :=
-  if c.pos < c.stop then c.pos.get? else none
+@[inline]
+public def front? (c : Cursor s) : Option Char := if c.pos < c.stop then c.pos.get? else none
 
 /--
 The cursor advanced by one character, or is unchanged at the end of the line.
@@ -75,13 +83,16 @@ The cursor advanced by one character, or is unchanged at the end of the line.
 The column advances by one, which is correct for every character but a tab. For tabs use
 `countIndentCols` or `consumeIndentCapped`.
 -/
-@[inline] public def next (c : Cursor s) : Cursor s :=
-  if h : c.pos < c.stop then
-    { c with
-      pos := c.pos.next (String.Slice.Pos.ne_endPos_of_lt h)
-      col := c.col.space
-      partialTab := false }
-  else c
+@[inline]
+public def next (c : Cursor s) : Cursor s :=
+  if h : c.pos < c.stop then {
+    c with
+    pos := c.pos.next (String.Slice.Pos.ne_endPos_of_lt h)
+    col := c.col.space
+    partialTab := false
+  }
+  else
+    c
 
 /--
 Advances the cursor over the longest prefix of characters that satisfy `pred`, returning the
@@ -91,12 +102,13 @@ The column is incremented by the consumed count, which is correct only when `pre
 character (each matched char then advances the column by exactly one). For tab-aware whitespace
 skipping use `countIndentCols` or `consumeIndentCapped`.
 -/
-@[inline] public def advanceWhile (c : Cursor s) (pred : Char → Bool) : Cursor s × Nat := Id.run do
+@[inline]
+public def advanceWhile (c : Cursor s) (pred : Char → Bool) : Cursor s × Nat := Id.run do
   let mut c := c
   let mut count := 0
   while h : c.pos < c.stop do
     let h' := String.Slice.Pos.ne_endPos_of_lt h
-    if !pred (c.pos.get h') then break
+    if ! pred (c.pos.get h') then break
     count := count + 1
     c := { c with pos := c.pos.next h', col := c.col.space, partialTab := false }
   return (c, count)
@@ -113,7 +125,10 @@ A partly consumed tab at the cursor is excluded from the source, with its remain
 the line's leading spaces.
 -/
 public def verbatimLine (c : Cursor s) : VerbatimLine s :=
-  if c.partialTab then
-    { source := subsliceClamped c.next.pos c.stop, leadingSpaces := c.col.tabWidth.count }
-  else
-    { source := c.toEol }
+  if c.partialTab then {
+    source := subsliceClamped c.next.pos c.stop
+    leadingSpaces := c.col.tabWidth.count
+  }
+  else {
+    source := c.toEol
+  }

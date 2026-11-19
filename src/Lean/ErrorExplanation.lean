@@ -6,7 +6,6 @@ Authors: Joseph Rotella
 module
 
 prelude
-
 public import Lean.Message
 public import Lean.EnvExtension
 public import Lean.DocString.Links
@@ -27,9 +26,9 @@ Metadata for an error explanation.
 structure ErrorExplanation.Metadata where
   summary : String
   sinceVersion : String
-  severity : MessageSeverity     := .error
+  severity : MessageSeverity := .error
   removedVersion? : Option String := none
-  deriving FromJson, ToJson
+deriving FromJson, ToJson
 
 /--
 An explanation of a named error message.
@@ -50,14 +49,13 @@ hovers.
 def ErrorExplanation.summaryWithSeverity (explan : ErrorExplanation) : String :=
   s!"({explan.metadata.severity}) {explan.metadata.summary}"
 
-/-- An environment extension that stores error explanations.  -/
-builtin_initialize errorExplanationExt : SimplePersistentEnvExtension (Name × ErrorExplanation) (NameMap ErrorExplanation) ←
+/-- An environment extension that stores error explanations. -/
+builtin_initialize errorExplanationExt
+    : SimplePersistentEnvExtension (Name × ErrorExplanation) (NameMap ErrorExplanation) ←
   registerSimplePersistentEnvExtension {
     addEntryFn := fun s (n, v) => s.insert n v
     addImportedFn := fun ess =>
-      ess.foldl (init := ∅) fun acc es =>
-        es.foldl (init := acc) fun acc (n, v) =>
-          acc.insert n v
+      ess.foldl (init := ∅) fun acc es => es.foldl (init := acc) fun acc (n, v) => acc.insert n v
   }
 
 /-- Returns an error explanation for the given name if one exists. -/
@@ -80,9 +78,7 @@ def getErrorExplanations [Monad m] [MonadEnv m] : m (Array (Name × ErrorExplana
 
 @[deprecated getErrorExplanations +typeChanged (since := "2025-12-20")]
 def getErrorExplanationsRaw (env : Environment) : Array (Name × ErrorExplanation) :=
-  errorExplanationExt.getState env
-    |>.toArray
-    |>.qsort fun e e' => e.1.toString < e'.1.toString
+  errorExplanationExt.getState env |>.toArray |>.qsort fun e e' => e.1.toString < e'.1.toString
 
 @[deprecated getErrorExplanations (since := "2026-12-20")]
 def getErrorExplanationsSorted [Monad m] [MonadEnv m] : m (Array (Name × ErrorExplanation)) := do
@@ -126,7 +122,8 @@ register_error_explanation lean.inductiveParamMismatch {
 
 /-- -/
 register_error_explanation lean.inductiveParamMissing {
-  summary := "Parameter not present in an occurrence of an inductive type in one of its constructors."
+  summary :=
+    "Parameter not present in an occurrence of an inductive type in one of its constructors."
   sinceVersion := "4.22.0"
 }
 

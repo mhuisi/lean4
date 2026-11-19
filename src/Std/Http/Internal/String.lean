@@ -14,7 +14,6 @@ import Init.Data.String.Csimp
 
 public section
 
-
 /-!
 # Internal String Helpers
 
@@ -40,7 +39,9 @@ def quoteCore (c : Char) (h₀ : quotedStringChar c) : String :=
   else if h₁ : c = '\"' || c = '\\' then
     .append "\\" (.singleton c)
   else
-    absurd h₀ (not_quotedStringChar_of_not_qdtext_not_dquote_backslash _ (quotedStringChar_lt_0x80 h₀) ⟨h, h₁⟩)
+    absurd h₀
+      (not_quotedStringChar_of_not_qdtext_not_dquote_backslash _ (quotedStringChar_lt_0x80 h₀)
+        ⟨h, h₁⟩)
 
 /--
 Quotes `s` as an HTTP `quoted-string`: `DQUOTE *( qdtext / quoted-pair ) DQUOTE`.
@@ -59,8 +60,7 @@ def quoteHttpString (s : String) (h : s.toList.all quotedStringChar) : String :=
     s
   else
     (.append
-      (sl.foldl (fun acc x =>
-        .append acc (quoteCore x.val (List.all_eq_true.mp h x.val x.2))) "\"")
+      (sl.foldl (fun acc x => .append acc (quoteCore x.val (List.all_eq_true.mp h x.val x.2))) "\"")
       "\"")
 
 /--
@@ -90,24 +90,29 @@ private inductive UnquoteState where
   | done (result : String)
   | invalid
 
-/--
-Parses an HTTP `quoted-string`, returning the unescaped content when valid.
--/
+/-- Parses an HTTP `quoted-string`, returning the unescaped content when valid. -/
 def unquoteHttpString? (s : String) : Option String :=
   if s.startsWith '"' then
-    match s.foldl (fun (st : UnquoteState) c =>
-      match st with
-      | .start =>
-          if c == '"' then .valid false "" else .invalid
-      | .valid false acc =>
-          if c == '\\' then .valid true acc
-          else if c == '"' then .done acc
-          else if qdtext c then .valid false (acc.push c)
-          else .invalid
-      | .valid true acc =>
-          if quotedPairChar c then .valid false (acc.push c)
-          else .invalid
-      | .done _ | .invalid => .invalid) .start with
+    match s.foldl
+      (fun (st : UnquoteState) c =>
+        match st with
+        | .start => if c == '"' then .valid false "" else .invalid
+        | .valid false acc =>
+          if c == '\\' then
+            .valid true acc
+          else if c == '"' then
+            .done acc
+          else if qdtext c then
+            .valid false (acc.push c)
+          else
+            .invalid
+        | .valid true acc =>
+          if quotedPairChar c then
+            .valid false (acc.push c)
+          else
+            .invalid
+        | .done _ | .invalid => .invalid)
+      .start with
     | .done result => some result
     | _ => none
   else if s.all Char.tchar then
@@ -115,23 +120,16 @@ def unquoteHttpString? (s : String) : Option String :=
   else
     none
 
-/--
-Checks whether a string is a valid non-empty HTTP token.
--/
+/-- Checks whether a string is a valid non-empty HTTP token. -/
 @[expose]
 noncomputable def isToken (s : String) : Bool :=
   let s := s.toList
   ¬s.isEmpty ∧ s.all Char.tchar
 
-/--
-Runtime implementation of `isToken` that avoids materializing `toList`.
--/
-def isTokenImpl (s : String) : Bool :=
-  !s.isEmpty && s.all Char.tchar
+/-- Runtime implementation of `isToken` that avoids materializing `toList`. -/
+def isTokenImpl (s : String) : Bool := !s.isEmpty && s.all Char.tchar
 
-/--
-Use `isTokenImpl` at run time while leaving the list-based version for proofs.
--/
+/-- Use `isTokenImpl` at run time while leaving the list-based version for proofs. -/
 @[csimp]
 theorem isToken_eq_isTokenImpl : isToken = isTokenImpl := by
   funext s

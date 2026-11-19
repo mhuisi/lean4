@@ -19,7 +19,8 @@ public instance : Monad Task where
 public abbrev ETask ε := ExceptT ε Task
 public abbrev OptionTask := OptionT Task
 
-@[expose] public def BaseIOTask := Task
+@[expose]
+public def BaseIOTask := Task
 public instance : Monad BaseIOTask := inferInstanceAs (Monad Task)
 public instance [Inhabited α] : Inhabited (BaseIOTask α) := inferInstance
 

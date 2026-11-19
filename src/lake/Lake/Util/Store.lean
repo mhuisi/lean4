@@ -13,7 +13,8 @@ set_option doc.verso true
 namespace Lake
 
 /-- A monad equipped with a dependently typed key-value store for a particular key. -/
-public class MonadStore1Of {κ : Type u} (k : κ) (α : semiOutParam (Type v)) (m : Type v → Type w) where
+public class MonadStore1Of
+    {κ : Type u} (k : κ) (α : semiOutParam (Type v)) (m : Type v → Type w) where
   fetch? : m (Option α)
   store : α → m PUnit
 
@@ -52,9 +53,9 @@ Otherwise, runs {lean}`create` to generate it, adds it to the store, and returns
 
 **Note:** This implementation does not update the store atomically.
 -/
-@[inline] public def fetchOrCreateNonatomic
-  [Monad m] (key : κ) [MonadStore1Of key α m] (create : m α)
-: m α := do
+@[inline]
+public def fetchOrCreateNonatomic [Monad m] (key : κ) [MonadStore1Of key α m] (create : m α)
+    : m α := do
   if let some val ← fetch? key then
     return val
   else

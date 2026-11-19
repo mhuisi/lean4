@@ -22,57 +22,35 @@ namespace Lean.Meta.Tactic.BVDecide.EPR
 
 open Normalize
 
-/--
-Information about a candidate for an EPR sort.
--/
+/-- Information about a candidate for an EPR sort. -/
 structure SortCandidate where
-  /--
-  The Lean level type of the sort.
-  -/
+  /-- The Lean level type of the sort. -/
   type : Expr
-  /--
-  The universe level of `type`
-  -/
+  /-- The universe level of `type` -/
   level : Level
-  /--
-  The potential elements of the aspiring sort.
-  -/
+  /-- The potential elements of the aspiring sort. -/
   elements : Array Expr := #[]
-  deriving Inhabited
+deriving Inhabited
 
 public structure DetectResult where
   problem : EprProblem
-  /--
-  The hyps that are not part of `problem`.
-  -/
+  /-- The hyps that are not part of `problem`. -/
   remainingHyps : Array Hyp
 
 structure DetectState where
-  /--
-  Information about current sort candidates.
-  -/
+  /-- Information about current sort candidates. -/
   sorts : Std.HashMap SortId SortCandidate := {}
-  /--
-  Map from types to their respective sort.
-  -/
+  /-- Map from types to their respective sort. -/
   sortIds : Std.HashMap Sym.ExprPtr SortId := {}
-  /--
-  Name generator for sorts.
-  -/
+  /-- Name generator for sorts. -/
   nextSortId : Nat := 0
-  /--
-  Map from sort elements (fvars from the local context) to their respective sort.
-  -/
+  /-- Map from sort elements (fvars from the local context) to their respective sort. -/
   elements : Std.HashMap Sym.ExprPtr SortId := {}
-  /--
-  Information about current predicate candidates.
-  -/
+  /-- Information about current predicate candidates. -/
   preds : Std.HashMap Sym.ExprPtr PredInfo := {}
   groundFacts : Array Hyp := #[]
   quantifiedFacts : Array QuantifiedFact := #[]
-  /--
-  The hyps that are not part of the problem.
-  -/
+  /-- The hyps that are not part of the problem. -/
   remainingHyps : Array Hyp := #[]
 
 abbrev DetectM := StateRefT DetectState Sym.SymM
@@ -80,8 +58,7 @@ abbrev DetectM := StateRefT DetectState Sym.SymM
 namespace DetectM
 
 @[inline]
-def run (x : DetectM α) : Sym.SymM α :=
-  StateRefT'.run' x {}
+def run (x : DetectM α) : Sym.SymM α := StateRefT'.run' x {}
 
 @[inline]
 def getSort? (type : Expr) : DetectM (Option SortId) :=
@@ -92,21 +69,22 @@ def registerSort (type : Expr) (level : Level) : DetectM Unit := do
   let type ← Sym.share type
   modify fun s =>
     let id := ⟨s.nextSortId⟩
-    { s with
+    {
+      s with
       sorts := s.sorts.insert id { type, level }
       sortIds := s.sortIds.insert ⟨type⟩ id
       nextSortId := s.nextSortId + 1
     }
 
 def registerElement (elem : Expr) (sort : SortId) : DetectM Unit := do
-  modify fun s =>
-    { s with
-      sorts := s.sorts.modify sort fun info => { info with elements := info.elements.push elem }
-      elements := s.elements.insert ⟨elem⟩ sort
-    }
+  modify fun s => {
+    s with
+    sorts := s.sorts.modify sort fun info => { info with elements := info.elements.push elem }
+    elements := s.elements.insert ⟨elem⟩ sort
+  }
 
-def registerPred (pred : Expr) (argumentSorts : Array SortId) (encoding : PredEncoding) :
-    DetectM Unit := do
+def registerPred (pred : Expr) (argumentSorts : Array SortId) (encoding : PredEncoding)
+    : DetectM Unit := do
   let pred ← Sym.share pred
   modify fun s => { s with preds := s.preds.insert ⟨pred⟩ { argumentSorts, encoding } }
 
@@ -114,8 +92,7 @@ def registerPred (pred : Expr) (argumentSorts : Array SortId) (encoding : PredEn
 Check whether `type` is a non-dependent function of the shape `α₁ → ... → αₙ → Prop/Bool` where
 all `α` are EPR sorts.
 -/
-def predType? (type : Expr) : DetectM (Option (Array SortId × PredEncoding)) :=
-  go type #[]
+def predType? (type : Expr) : DetectM (Option (Array SortId × PredEncoding)) := go type #[]
 where
   go (type : Expr) (acc : Array SortId) : DetectM (Option (Array SortId × PredEncoding)) := do
     match type with
@@ -123,7 +100,8 @@ where
     | .const ``Bool [] => return if acc.isEmpty then none else some (acc, .bool)
     | .forallE _ dom body _ =>
       if body.hasLooseBVars then return none
-      let some sort ← getSort? dom | return none
+      let some sort ← getSort? dom
+        | return none
       go body (acc.push sort)
     | _ => return none
 
@@ -146,19 +124,13 @@ def processLocalDecl (decl : LocalDecl) : DetectM Unit := do
     registerPred (← Sym.share decl.toExpr) argumentSorts predEncoding
 
 structure ScanContext where
-  /--
-  If we have an hypothesis with leading quantifiers, these are the sorts of the quantifiers.
-  -/
+  /-- If we have an hypothesis with leading quantifiers, these are the sorts of the quantifiers. -/
   boundSorts : Array SortId
 
 structure ScanState where
-  /--
-  Whether the analyzed fact mentions an element or predicate of a sort.
-  -/
+  /-- Whether the analyzed fact mentions an element or predicate of a sort. -/
   mentionsSort : Bool := false
-  /--
-  Cache for `checkProp`.
-  -/
+  /-- Cache for `checkProp`. -/
   cache : Std.HashSet (Sym.ExprPtr × Nat) := {}
 
 abbrev ScanM := ReaderT ScanContext StateRefT ScanState DetectM
@@ -166,8 +138,7 @@ abbrev ScanM := ReaderT ScanContext StateRefT ScanState DetectM
 namespace ScanM
 
 @[inline]
-def markMentionsSort : ScanM Unit :=
-  modify fun s => { s with mentionsSort := true }
+def markMentionsSort : ScanM Unit := modify fun s => { s with mentionsSort := true }
 
 def checkTerm (e : Expr) (depth : Nat) : ScanM (Option SortId) := do
   match e with
@@ -178,23 +149,29 @@ def checkTerm (e : Expr) (depth : Nat) : ScanM (Option SortId) := do
     return boundSorts[boundSorts.size - 1 - idx]?
   | _ =>
     let ptr : Sym.ExprPtr := ⟨e⟩
-    let some sort := (← getThe DetectState).elements[ptr]? | return none
+    let some sort := (← getThe DetectState).elements[ptr]?
+      | return none
     markMentionsSort
     return some sort
 
 def checkEq (α lhs rhs : Expr) (depth : Nat) : ScanM Bool := do
-  let some sort ← getSort? α | return false
-  let some lhsSort ← checkTerm lhs depth | return false
-  let some rhsSort ← checkTerm rhs depth | return false
+  let some sort ← getSort? α
+    | return false
+  let some lhsSort ← checkTerm lhs depth
+    | return false
+  let some rhsSort ← checkTerm rhs depth
+    | return false
   return lhsSort == sort && rhsSort == sort
 
 def checkPredApp (e : Expr) (depth : Nat) : ScanM Bool := do
   e.withApp fun pred args => do
     let predPtr : Sym.ExprPtr := ⟨pred⟩
-    let some info := (← getThe DetectState).preds[predPtr]? | return false
+    let some info := (← getThe DetectState).preds[predPtr]?
+      | return false
     if args.size != info.argumentSorts.size then return false
     for arg in args, sort in info.argumentSorts do
-      let some argSort ← checkTerm arg depth | return false
+      let some argSort ← checkTerm arg depth
+        | return false
       if argSort != sort then return false
     markMentionsSort
     return true
@@ -213,8 +190,7 @@ def withCheckCache (e : Expr) (depth : Nat) (k : Expr → Nat → ScanM Bool) : 
 
 mutual
 
-partial def checkBool (e : Expr) (depth : Nat) : ScanM Bool := do
-  withCheckCache e depth go
+partial def checkBool (e : Expr) (depth : Nat) : ScanM Bool := do withCheckCache e depth go
 where
   go (e : Expr) (depth : Nat) : ScanM Bool := do
     match_expr e with
@@ -230,10 +206,8 @@ where
       else
         return false
     | decide p _ => checkProp p depth
-    | cond _ c p q =>
-      checkBool c depth <&&> checkBool p depth <&&> checkBool q depth
-    | ite _ c _ p q =>
-      checkProp c depth <&&> checkBool p depth <&&> checkBool q depth
+    | cond _ c p q => checkBool c depth <&&> checkBool p depth <&&> checkBool q depth
+    | ite _ c _ p q => checkProp c depth <&&> checkBool p depth <&&> checkBool q depth
     | _ => checkPredApp e depth <||> isBoolAtom e
 
   isBoolAtom (e : Expr) : ScanM Bool := do
@@ -245,8 +219,7 @@ where
 Check that `e` is approximately a quantifier free EPR expression. `depth` is the amount of `forallE`
 we are under.
 -/
-partial def checkProp (e : Expr) (depth : Nat) : ScanM Bool := do
-  withCheckCache e depth go
+partial def checkProp (e : Expr) (depth : Nat) : ScanM Bool := do withCheckCache e depth go
 where
   go (e : Expr) (depth : Nat) : ScanM Bool := do
     match e with
@@ -268,10 +241,8 @@ where
           checkBool lhs depth <&&> checkBool rhs depth
         else
           checkEq α lhs rhs depth
-      | cond _ c p q =>
-        checkBool c depth <&&> checkProp p depth <&&> checkProp q depth
-      | ite _ c _ p q =>
-        checkProp c depth <&&> checkProp p depth <&&> checkProp q depth
+      | cond _ c p q => checkBool c depth <&&> checkProp p depth <&&> checkProp q depth
+      | ite _ c _ p q => checkProp c depth <&&> checkProp p depth <&&> checkProp q depth
       | _ => checkPredApp e depth <||> isPropAtom e
 
   isPropAtom (e : Expr) : ScanM Bool := do
@@ -282,9 +253,7 @@ end
 
 end ScanM
 
-/--
-Check whether `hyp` is a, potentially universally quantified, EPR hypothesis.
--/
+/-- Check whether `hyp` is a, potentially universally quantified, EPR hypothesis. -/
 def checkFact? (hyp : Hyp) : DetectM (Option (Array SortId)) := do
   let (boundSorts, body) ← stripQuantifiers hyp.type #[]
   let sorts := (← get).sorts
@@ -298,8 +267,10 @@ def checkFact? (hyp : Hyp) : DetectM (Option (Array SortId)) := do
     return some boundSorts
 where
   stripQuantifiers (type : Expr) (acc : Array SortId) : DetectM (Array SortId × Expr) := do
-    let .forallE _ dom body _ := type | return (acc, type)
-    let some sort ← getSort? dom | return (acc, type)
+    let .forallE _ dom body _ := type
+      | return (acc, type)
+    let some sort ← getSort? dom
+      | return (acc, type)
     stripQuantifiers body (acc.push sort)
 
 def processHyp (hyp : Hyp) : DetectM Unit := do
@@ -314,7 +285,8 @@ Infers an element from a `Nonempty` instance for each sort that does not have an
 -/
 def ensureHasElement : DetectM Unit := do
   for (sort, info) in (← get).sorts do
-    unless info.elements.isEmpty do continue
+    unless info.elements.isEmpty do
+      continue
     let u := .succ info.level
     let query ← Sym.share (mkApp (mkConst ``Nonempty [u]) info.type)
     if let some inst ← Sym.synthInstance? query then
@@ -323,16 +295,22 @@ def ensureHasElement : DetectM Unit := do
 
 def assemble : DetectM DetectResult := do
   let s ← get
-  let mut problem : EprProblem := { groundFacts := s.groundFacts, quantifiedFacts := s.quantifiedFacts }
+  let mut problem : EprProblem := {
+    groundFacts := s.groundFacts
+    quantifiedFacts := s.quantifiedFacts
+  }
   for (sort, info) in s.sorts do
     if info.elements.isEmpty then continue
-    problem := { problem with
-      sortInfo := problem.sortInfo.insert sort {
-        type := info.type
-        level := info.level
-        elements := info.elements
-      }
-      sortMap := info.elements.foldl (init := problem.sortMap) (·.insert · sort) }
+    problem := {
+      problem with
+      sortInfo :=
+        problem.sortInfo.insert sort {
+          type := info.type
+          level := info.level
+          elements := info.elements
+        }
+      sortMap := info.elements.foldl (init := problem.sortMap) (·.insert · sort)
+    }
   for (pred, info) in s.preds do
     if info.argumentSorts.all problem.sortInfo.contains then
       problem := { problem with predInfo := problem.predInfo.insert pred.expr info }
@@ -361,14 +339,15 @@ def traceProblem (problem : EprProblem) : MetaM Unit := do
     for fact in problem.quantifiedFacts do
       trace[Meta.Tactic.bv.epr] m!"quantified fact {fact.boundSorts.map (·.idx)} : {fact.hyp.type}"
 
-def detectAndEncode (g : MVarId) (hyps : Array Hyp) (symBreak : Elab.Tactic.BVDecide.EprSymBreak) :
-    Sym.SymM (Option (Array Hyp × EprBvProblem)) := g.withContext do
-  let { problem, remainingHyps } ← detectEprProblem hyps
-  if problem.groundFacts.isEmpty && problem.quantifiedFacts.isEmpty then return none
-  let problem ← problem.inferSorts
-  traceProblem problem
-  let bvProblem ← epr2BitVec problem g symBreak
-  return some (remainingHyps, bvProblem)
+def detectAndEncode (g : MVarId) (hyps : Array Hyp) (symBreak : Elab.Tactic.BVDecide.EprSymBreak)
+    : Sym.SymM (Option (Array Hyp × EprBvProblem)) :=
+  g.withContext do
+    let { problem, remainingHyps } ← detectEprProblem hyps
+    if problem.groundFacts.isEmpty && problem.quantifiedFacts.isEmpty then return none
+    let problem ← problem.inferSorts
+    traceProblem problem
+    let bvProblem ← epr2BitVec problem g symBreak
+    return some (remainingHyps, bvProblem)
 
 public def eprDetectPass : Pass where
   name := `eprDetectPass

@@ -26,55 +26,38 @@ namespace Std.Http.Protocol.H1
 
 set_option linter.all true
 
-/--
-Direction of message flow from the server's perspective.
--/
+/-- Direction of message flow from the server's perspective. -/
 inductive Direction
-  /--
-  Receiving and parsing incoming requests from clients.
-  -/
+  /-- Receiving and parsing incoming requests from clients. -/
   | receiving
-
-  /--
-  Client perspective: writing outgoing requests and reading incoming responses.
-  -/
+  /-- Client perspective: writing outgoing requests and reading incoming responses. -/
   | sending
 deriving BEq
 
-/--
-Inverts the message direction.
--/
+/-- Inverts the message direction. -/
 abbrev Direction.swap : Direction → Direction
   | .receiving => .sending
   | .sending => .receiving
 
-/--
-Gets the message head type based on direction.
--/
+/-- Gets the message head type based on direction. -/
 @[expose]
 def Message.Head : Direction → Type
   | .receiving => Request.Head
   | .sending => Response.Head
 
-/--
-Gets the headers of a `Message`.
--/
+/-- Gets the headers of a `Message`. -/
 def Message.Head.headers (m : Message.Head dir) : Headers :=
   match dir with
   | .receiving => Request.Head.headers m
   | .sending => Response.Head.headers m
 
-/--
-Returns a copy of the message head with the headers replaced.
--/
+/-- Returns a copy of the message head with the headers replaced. -/
 def Message.Head.setHeaders (m : Message.Head dir) (headers : Headers) : Message.Head dir :=
   match dir with
-  | .receiving => { (m : Request.Head)  with headers }
-  | .sending   => { (m : Response.Head) with headers }
+  | .receiving => { (m : Request.Head) with headers }
+  | .sending => { (m : Response.Head) with headers }
 
-/--
-Gets the version of a `Message`.
--/
+/-- Gets the version of a `Message`. -/
 def Message.Head.version (m : Message.Head dir) : Version :=
   match dir with
   | .receiving => Request.Head.version m
@@ -88,18 +71,17 @@ def Message.Head.getSize (message : Message.Head dir) (allowEOFBody : Bool) : Op
 
   match message.headers.getAll? .transferEncoding with
   | none =>
-      match contentLength with
-      | some #[cl] => .fixed <$> (Header.ContentLength.parse cl |>.map (·.length))
-      | some _ => none -- To avoid request smuggling with malformed/multiple content-length headers.
-      | none => if allowEOFBody then some (.fixed 0) else none
-
+    match contentLength with
+    | some #[cl] => .fixed <$> (Header.ContentLength.parse cl |>.map (·.length))
+    | some _ => none -- To avoid request smuggling with malformed/multiple content-length headers.
+    | none => if allowEOFBody then some (.fixed 0) else none
   | some values =>
     match Header.TransferEncoding.finalCodingIsChunked? values, contentLength with
     | some true, none =>
-        -- HTTP/1.0 does not define chunked transfer encoding (RFC 2068 §19.4.6).
-        -- A server MUST NOT use chunked with an HTTP/1.0 peer; likewise, an
-        -- HTTP/1.0 request carrying Transfer-Encoding: chunked is malformed.
-        if message.version == .v10 then none else some .chunked
+      -- HTTP/1.0 does not define chunked transfer encoding (RFC 2068 §19.4.6).
+      -- A server MUST NOT use chunked with an HTTP/1.0 peer; likewise, an
+      -- HTTP/1.0 request carrying Transfer-Encoding: chunked is malformed.
+      if message.version == .v10 then none else some .chunked
     | _, _ => none -- To avoid request smuggling when TE and CL are mixed.
 /--
 Checks whether the message indicates that the connection should be kept alive. A `close` option
@@ -108,26 +90,27 @@ HTTP/1.1 persists by default and HTTP/1.0 only with `keep-alive`.
 -/
 def Message.Head.shouldKeepAlive (message : Message.Head dir) : Bool :=
   -- Most messages have no `Connection` field.
-  if !message.headers.map.entries.any (·.1 == Header.Name.connection) then
+  if ! message.headers.map.entries.any (·.1 == Header.Name.connection) then
     message.version == .v11
   else
     let tokens? : Option (Array String) :=
       match message.headers.getAll? .connection with
       | none => some #[]
       | some values =>
-          values.foldl (fun acc raw => do
+        values.foldl
+          (fun acc raw => do
             let acc ← acc
             let parsed ← Header.Connection.parse raw
-            pure (acc ++ parsed.tokens)
-          ) (some #[])
+            pure (acc ++ parsed.tokens))
+          (some #[])
 
     match tokens? with
     | none => false
     | some tokens =>
-        if tokens.any (· == "close") then
-          false
-        else
-          message.version == .v11 || tokens.any (· == "keep-alive")
+      if tokens.any (· == "close") then
+        false
+      else
+        message.version == .v11 || tokens.any (· == "keep-alive")
 
 instance : Repr (Message.Head dir) :=
   match dir with

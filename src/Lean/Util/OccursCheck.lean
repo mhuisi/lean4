@@ -13,14 +13,15 @@ public section
 namespace Lean
 
 /--
-  Return true if `e` does **not** contain `mvarId` directly or indirectly
-  This function considers assignments and delayed assignments. -/
+Return true if `e` does **not** contain `mvarId` directly or indirectly
+This function considers assignments and delayed assignments.
+-/
 partial def occursCheck [Monad m] [MonadMCtx m] (mvarId : MVarId) (e : Expr) : m Bool := do
   if !e.hasExprMVar then
     return true
   else
     match (← visit e |>.run |>.run {}) with
-    | (.ok .., _)    => return true
+    | (.ok .., _) => return true
     | (.error .., _) => return false
 where
   visitMVar (mvarId' : MVarId) : ExceptT Unit (StateT ExprSet m) Unit := do
@@ -29,10 +30,10 @@ where
     else
       match (← getExprMVarAssignment? mvarId') with
       | some v => visit v
-      | none   =>
+      | none =>
         match (← getDelayedMVarAssignment? mvarId') with
         | some d => visitMVar d.mvarIdPending
-        | none   => return ()
+        | none => return ()
 
   visit (e : Expr) : ExceptT Unit (StateT ExprSet m) Unit := do
     if !e.hasExprMVar then
@@ -42,13 +43,13 @@ where
     else
       modify fun s => s.insert e
       match e with
-      | Expr.proj _ _ s      => visit s
+      | Expr.proj _ _ s => visit s
       | Expr.forallE _ d b _ => visit d; visit b
-      | Expr.lam _ d b _     => visit d; visit b
-      | Expr.letE _ t v b _  => visit t; visit v; visit b
-      | Expr.mdata _ b       => visit b
-      | Expr.app f a         => visit f; visit a
-      | Expr.mvar mvarId     => visitMVar mvarId
-      | _                    => return ()
+      | Expr.lam _ d b _ => visit d; visit b
+      | Expr.letE _ t v b _ => visit t; visit v; visit b
+      | Expr.mdata _ b => visit b
+      | Expr.app f a => visit f; visit a
+      | Expr.mvar mvarId => visitMVar mvarId
+      | _ => return ()
 
 end Lean

@@ -43,17 +43,21 @@ private def elabTriple : TermElab
     -- then `Triple x P _` will not elaborate because `σ → Assertion ps =?= Assertion ?ps` fails.
     -- We must first instantiate `?ps` to `.arg σ ps` through the `outParam` of `WP`, hence this elaborator.
     -- This is tracked in #8766, and #8074 might be a fix.
-    let (u, v, m, α, ps, inst, x) ← withRef x do
-      let x ← elabTerm x none
-      let ty ← inferType x
-      tryPostponeIfMVar ty
-      let ty ← instantiateMVars ty
-      let .app m α := ty.consumeMData | throwError "Type of {x} is not a type application: {ty}"
-      let some u ← Level.dec <$> getLevel α | throwError "Wrong level 0 {ty}"
-      let some v ← Level.dec <$> getLevel ty | throwError "Wrong level 0 {ty}"
-      let ps ← mkFreshExprMVar (mkConst ``PostShape [u])
-      let inst ← synthInstance (mkApp2 (mkConst ``WP [u, v]) m ps)
-      return (u, v, m, α, ps, inst, x)
+    let (u, v, m, α, ps, inst, x) ←
+      withRef x do
+        let x ← elabTerm x none
+        let ty ← inferType x
+        tryPostponeIfMVar ty
+        let ty ← instantiateMVars ty
+        let .app m α := ty.consumeMData
+          | throwError "Type of {x} is not a type application: {ty}"
+        let some u ← Level.dec <$> getLevel α
+          | throwError "Wrong level 0 {ty}"
+        let some v ← Level.dec <$> getLevel ty
+          | throwError "Wrong level 0 {ty}"
+        let ps ← mkFreshExprMVar (mkConst ``PostShape [u])
+        let inst ← synthInstance (mkApp2 (mkConst ``WP [u, v]) m ps)
+        return (u, v, m, α, ps, inst, x)
     let P ← elabTerm (← `(spred($P))) (mkApp (mkConst ``Assertion [u]) ps)
     let Q ← elabTerm Q (mkApp2 (mkConst ``PostCond [u]) α ps)
     return mkApp7 (mkConst ``Triple [u, v]) m ps inst α x P Q

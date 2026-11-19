@@ -16,20 +16,19 @@ set_option doc.verso true
 
 namespace Std
 
-/--
-Appends all the elements in the iterator, in order.
--/
+/-- Appends all the elements in the iterator, in order. -/
 @[inline]
-public def Iter.joinString {α β : Type} [Iterator α Id β] [ToString β]
-    (it : Std.Iter (α := α) β) : String :=
+public def Iter.joinString {α β : Type} [Iterator α Id β] [ToString β] (it : Std.Iter (α := α) β)
+    : String :=
   (it.map toString).fold (init := "") (· ++ ·)
 
 /--
 Appends the elements of the iterator into a string, placing the separator {name}`s` between them.
 -/
 @[inline]
-public def Iter.intercalateString {α β : Type} [Iterator α Id β] [ToString β]
-    (s : String.Slice) (it : Std.Iter (α := α) β) : String :=
+public def Iter.intercalateString
+    {α β : Type} [Iterator α Id β] [ToString β] (s : String.Slice) (it : Std.Iter (α := α) β)
+    : String :=
   it.map toString
     |>.fold (init := none) (fun
       | none, sl => some sl

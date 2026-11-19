@@ -18,15 +18,15 @@ This module provides the implementation of the `bv_decide` family of tactics in 
 
 namespace Lean.Elab.Tactic.Grind
 
-def elabBVDecideConfig (cfg : TSyntax `Lean.Parser.Tactic.optConfig) (goal : MVarId)
-    (elaborator : Name) : TermElabM BVDecide.BVDecideConfig := do
-  Meta.Tactic.BVDecide.elabBVDecideConfig cfg
-    |>.run { elaborator }
-    |>.run' { goals := [goal] }
+def elabBVDecideConfig
+    (cfg : TSyntax `Lean.Parser.Tactic.optConfig) (goal : MVarId) (elaborator : Name)
+    : TermElabM BVDecide.BVDecideConfig := do
+  Meta.Tactic.BVDecide.elabBVDecideConfig cfg |>.run { elaborator } |>.run' { goals := [goal] }
 
 open Meta.Tactic.BVDecide
 
-@[builtin_grind_tactic Parser.Tactic.Grind.bvDecide] def evalBvDecide : GrindTactic
+@[builtin_grind_tactic Parser.Tactic.Grind.bvDecide]
+def evalBvDecide : GrindTactic
   | `(grind| bv_decide $cfg:optConfig $[$types:bvTypes]?) => do
     BVDecide.ensureBvDecide
     let g ← getMainGoal
@@ -38,7 +38,8 @@ open Meta.Tactic.BVDecide
       replaceMainGoal []
   | _ => throwUnsupportedSyntax
 
-@[builtin_grind_tactic Parser.Tactic.Grind.bvTrace] def evalBvTrace : GrindTactic
+@[builtin_grind_tactic Parser.Tactic.Grind.bvTrace]
+def evalBvTrace : GrindTactic
   | `(grind| bv_decide?%$tk $cfgStx:optConfig $[$typesStx:bvTypes]?) => do
     BVDecide.ensureBvDecide
     let g ← getMainGoal
@@ -46,14 +47,13 @@ open Meta.Tactic.BVDecide
     let types ← elabBVDecideTypes typesStx cfg
     let ctx ← BVDecide.BVTrace.mkContext cfg types
     let trace ← liftGrindM <| BVDecide.BVTrace.evalBvTrace (.grindTarget g) ctx
-    let haves ← g.mvarId.withContext <| trace.lemmas.mapM fun lemma => do
-      let lemmaStx ← PrettyPrinter.delab lemma.hyp.type
-      let proofStx? ← lemma.grindProof
-      match proofStx? with
-      | none =>
-        `(grind| have : $lemmaStx)
-      | some proofStx =>
-        `(grind| have : $lemmaStx := by $(proofStx))
+    let haves ←
+      g.mvarId.withContext <| trace.lemmas.mapM fun lemma => do
+        let lemmaStx ← PrettyPrinter.delab lemma.hyp.type
+        let proofStx? ← lemma.grindProof
+        match proofStx? with
+        | none => `(grind| have : $lemmaStx)
+        | some proofStx => `(grind| have : $lemmaStx := by $(proofStx))
     let withHaves (final : TSyntax `grind) : MetaM (TSyntax ``Parser.Tactic.Grind.grindSeq) := do
       let steps ← (haves.push final).mapM fun t => `(Parser.Tactic.Grind.grindStep| $t:grind)
       `(Parser.Tactic.Grind.grindSeq| $steps*)
@@ -71,7 +71,8 @@ open Meta.Tactic.BVDecide
     replaceMainGoal []
   | _ => throwUnsupportedSyntax
 
-@[builtin_grind_tactic Parser.Tactic.Grind.bvCheck] def evalBvCheck : GrindTactic
+@[builtin_grind_tactic Parser.Tactic.Grind.bvCheck]
+def evalBvCheck : GrindTactic
   | `(grind| bv_check%$tk $cfgStx:optConfig $[$typesStx:bvTypes]? $path:str) => do
     BVDecide.ensureBvDecide
     let g ← getMainGoal
@@ -80,7 +81,8 @@ open Meta.Tactic.BVDecide
     let ctx ← BVDecide.BVCheck.mkContext path.getString cfg types
     liftGrindM <| BVDecide.BVCheck.evalBvCheck (.grindTarget g) ctx do
       let bvNormalizeStx ← `(grind| bv_normalize $cfgStx $[$typesStx:bvTypes]?)
-      logWarning m!"This goal can be closed by only applying bv_normalize, no need to keep the LRAT proof around."
+      logWarning m!"This goal can be closed by only applying bv_normalize, no need to keep the \
+        LRAT proof around."
       Meta.Tactic.TryThis.addSuggestion tk bvNormalizeStx (origSpan? := ← getRef)
     replaceMainGoal []
   | _ => throwUnsupportedSyntax
@@ -92,8 +94,8 @@ def evalBVNormalize : GrindTactic := fun
     let g ← getMainGoal
     let cfg ← elabBVDecideConfig cfg g.mvarId `bv_normalize
     let types ← elabBVDecideTypes types cfg
-    let (_, state) ← liftGrindM <|
-      Normalize.bvNormalize.run (.new (.solve types) cfg) (.grindTarget g)
+    let (_, state) ←
+      liftGrindM <| Normalize.bvNormalize.run (.new (.solve types) cfg) (.grindTarget g)
     if ← state.target.mvarId.isAssigned then
       replaceMainGoal []
     else
@@ -110,7 +112,8 @@ def evalBVPush : GrindTactic := fun
       let g ← get
       let ctx := Normalize.PreProcessContext.new .push cfg
       let (_, state) ← Normalize.bvNormalize.run ctx (.grindTarget g)
-      let .grindTarget goal := state.target | unreachable!
+      let .grindTarget goal := state.target
+        | unreachable!
       set goal
   | _ => throwUnsupportedSyntax
 

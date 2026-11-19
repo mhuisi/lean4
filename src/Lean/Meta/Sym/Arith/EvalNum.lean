@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Arith.Types
 import Lean.Meta.Sym.LitValues
@@ -38,13 +39,19 @@ private partial def evalNatCore (e : Expr) : OptionT SymM Nat := do
   | Nat.succ a => return (← evalNatCore a) + 1
   | Int.toNat a => return (← evalIntCore a).toNat
   | Int.natAbs a => return (← evalIntCore a).natAbs
-  | HAdd.hAdd _ _ _ inst a b => guard (← isInstHAddNat inst); return (← evalNatCore a) + (← evalNatCore b)
-  | HMul.hMul _ _ _ inst a b => guard (← isInstHMulNat inst); return (← evalNatCore a) * (← evalNatCore b)
-  | HSub.hSub _ _ _ inst a b => guard (← isInstHSubNat inst); return (← evalNatCore a) - (← evalNatCore b)
-  | HDiv.hDiv _ _ _ inst a b => guard (← isInstHDivNat inst); return (← evalNatCore a) / (← evalNatCore b)
-  | HMod.hMod _ _ _ inst a b => guard (← isInstHModNat inst); return (← evalNatCore a) % (← evalNatCore b)
+  | HAdd.hAdd _ _ _ inst a b =>
+    guard (← isInstHAddNat inst); return (← evalNatCore a) + (← evalNatCore b)
+  | HMul.hMul _ _ _ inst a b =>
+    guard (← isInstHMulNat inst); return (← evalNatCore a) * (← evalNatCore b)
+  | HSub.hSub _ _ _ inst a b =>
+    guard (← isInstHSubNat inst); return (← evalNatCore a) - (← evalNatCore b)
+  | HDiv.hDiv _ _ _ inst a b =>
+    guard (← isInstHDivNat inst); return (← evalNatCore a) / (← evalNatCore b)
+  | HMod.hMod _ _ _ inst a b =>
+    guard (← isInstHModNat inst); return (← evalNatCore a) % (← evalNatCore b)
   | OfNat.ofNat _ _ _ =>
-    let some n := Sym.getNatValue? e |>.run | failure
+    let some n := Sym.getNatValue? e |>.run
+      | failure
     return n
   | HPow.hPow _ _ _ inst a k =>
     guard (← isInstHPowNat inst)
@@ -56,7 +63,7 @@ private partial def evalNatCore (e : Expr) : OptionT SymM Nat := do
 
 private partial def evalIntCore (e : Expr) : OptionT SymM Int := do
   match_expr e with
-  | Neg.neg _ i a => guard (← isInstNegInt i); return - (← evalIntCore a)
+  | Neg.neg _ i a => guard (← isInstNegInt i); return -(← evalIntCore a)
   | HAdd.hAdd _ _ _ i a b => guard (← isInstHAddInt i); return (← evalIntCore a) + (← evalIntCore b)
   | HSub.hSub _ _ _ i a b => guard (← isInstHSubInt i); return (← evalIntCore a) - (← evalIntCore b)
   | HMul.hMul _ _ _ i a b => guard (← isInstHMulInt i); return (← evalIntCore a) * (← evalIntCore b)
@@ -69,23 +76,24 @@ private partial def evalIntCore (e : Expr) : OptionT SymM Int := do
     checkExp k
     return a ^ k
   | OfNat.ofNat _ _ _ =>
-    let some n := Sym.getIntValue? e |>.run | failure
+    let some n := Sym.getIntValue? e |>.run
+      | failure
     return n
   | NatCast.natCast _ i a =>
-    let_expr instNatCastInt ← i | failure
+    let_expr instNatCastInt ← i
+      | failure
     return (← evalNatCore a)
   | Nat.cast _ i a =>
-    let_expr instNatCastInt ← i | failure
+    let_expr instNatCastInt ← i
+      | failure
     return (← evalNatCore a)
   | _ => failure
 
 end
 
-def evalNat? (e : Expr) : SymM (Option Nat) :=
-  evalNatCore e |>.run
+def evalNat? (e : Expr) : SymM (Option Nat) := evalNatCore e |>.run
 
-def evalInt? (e : Expr) : SymM (Option Int) :=
-  evalIntCore e |>.run
+def evalInt? (e : Expr) : SymM (Option Int) := evalIntCore e |>.run
 
 open Structural in
 mutual
@@ -94,21 +102,18 @@ Quick function for converting `e` into `s + k` s.t. `e` is definitionally equal 
 This function always succeeds in finding such `s` and `k`
 (as a last resort it returns `e` and `0`).
 -/
-private partial def getOffset (e : Expr) : SymM (Expr × Nat) :=
-  return (← isOffset? e).getD (e, 0)
+private partial def getOffset (e : Expr) : SymM (Expr × Nat) := return (← isOffset? e).getD (e, 0)
 
-/--
-Similar to `getOffset` but returns `none` if the expression is not an offset.
--/
+/-- Similar to `getOffset` but returns `none` if the expression is not an offset. -/
 partial def isOffset? (e : Expr) : OptionT SymM (Expr × Nat) := do
   let add (a b : Expr) := do
     let v ← evalNat? b
     let (s, k) ← getOffset a
-    return (s, k+v)
+    return (s, k + v)
   match_expr e with
   | Nat.succ a =>
     let (s, k) ← getOffset a
-    return (s, k+1)
+    return (s, k + 1)
   | HAdd.hAdd _ _ _ i a b => guard (← isInstHAddNat i); add a b
   | _ => failure
 end

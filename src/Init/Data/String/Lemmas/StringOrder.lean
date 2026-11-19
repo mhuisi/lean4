@@ -42,8 +42,7 @@ theorem toList_lt_toList_iff {s t : String} : s.toList < t.toList ↔ s < t := b
   simp [← toByteArray_lt_toByteArray_iff, toList_lt_toList_iff_toByteArray_lt_toByteArray]
 
 @[deprecated toList_lt_toList_iff +typeChanged (since := "2026-10-09")]
-theorem lt_iff {s t : String} : s < t ↔ s.toList < t.toList :=
-  toList_lt_toList_iff.symm
+theorem lt_iff {s t : String} : s < t ↔ s.toList < t.toList := toList_lt_toList_iff.symm
 
 @[simp]
 theorem toList_le_toList_iff {s t : String} : s.toList ≤ t.toList ↔ s ≤ t := by

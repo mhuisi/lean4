@@ -25,21 +25,27 @@ open Lean.Order Std.WP
 
 namespace Std.WP
 
-/-- Reinterpret a `WPMonad m` so its weakest precondition is the `frameClosure` of the
+/--
+Reinterpret a `WPMonad m` so its weakest precondition is the `frameClosure` of the
 base wp over a family of supremum-preserving resource operators `op r` that act by `comp` with
 unit `e`.
 Every program then frames every resource (`WP.frames_of_frameClosure`).
 
 A separation logic depends on this property: every frame `op r` passes through the `wp` of every
 program in every state. A caller of a spec picks a frame and applies the frame rule for that
-frame. -/
-@[instance_reducible] noncomputable def WPMonad.withFrameClosure {m : Type v → Type w} [Monad m]
+frame.
+-/
+@[instance_reducible]
+noncomputable def WPMonad.withFrameClosure
+    {m : Type v → Type w} [Monad m]
     {P : Type u} {E : Type z} [Assertion P] [Assertion E]
-    {R : Type t} (op : R → P → P) {opE : R → E → E} [FrameOp op E opE] {comp : R → R → R} {e : R}
-    (hact : ∀ r r' a, op (comp r r') a = op r (op r' a))
-    (hactE : ∀ r r' E', opE (comp r r') E' = opE r (opE r' E'))
-    (hunit : ∀ a, op e a = a) (hunitE : ∀ E', opE e E' = E')
-    (base : WPMonad m P E) : WPMonad m P E where
+    {R : Type t} (op : R → P → P)
+    {opE : R → E → E} [FrameOp op E opE]
+    {comp : R → R → R} {e : R} (hact : ∀ r r' a, op (comp r r') a = op r (op r' a))
+    (hactE : ∀ r r' E', opE (comp r r') E' = opE r (opE r' E')) (hunit : ∀ a, op e a = a)
+    (hunitE : ∀ E', opE e E' = E')
+    (base : WPMonad m P E)
+    : WPMonad m P E where
   toLawfulMonad := base.toLawfulMonad
   toWP α := WP.withFrameClosure op (base.toWP α)
   pure_le_wp_pure x post E' := by
@@ -48,13 +54,13 @@ frame. -/
     exact base.pure_le_wp_pure x (fun a => op r (post a)) (opE r E')
   bind_le_wp_bind x f post E' := by
     show (((base.toWP _).trans x).frameClosure op).apply
-          (fun a => (((base.toWP _).trans (f a)).frameClosure op).apply post E') E'
-        ⊑ (((base.toWP _).trans (x >>= f)).frameClosure op).apply post E'
+        (fun a => (((base.toWP _).trans (f a)).frameClosure op).apply post E')
+        E'
+      ⊑ (((base.toWP _).trans (x >>= f)).frameClosure op).apply post E'
     refine (PredTrans.le_frameClosure_iff op _).mpr fun r => ?_
     refine PartialOrder.rel_trans (PredTrans.frameClosure_frames op comp hact hactE _ _ _ r) ?_
     refine PartialOrder.rel_trans (PredTrans.frameClosure_le op e hunit hunitE _ _ _) ?_
-    refine PartialOrder.rel_trans ?_
-      (base.bind_le_wp_bind x f (fun a => op r (post a)) (opE r E'))
+    refine PartialOrder.rel_trans ?_ (base.bind_le_wp_bind x f (fun a => op r (post a)) (opE r E'))
     refine WP.wp_monotone_post fun a => ?_
     exact PartialOrder.rel_trans (PredTrans.frameClosure_frames op comp hact hactE _ _ _ r)
       (PredTrans.frameClosure_le op e hunit hunitE _ _ _)

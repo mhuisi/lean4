@@ -14,7 +14,6 @@ public import Lean.Data.Markdown.InlineCursor
 
 namespace Lean.Markdown
 
-
 /-!
 # Raw HTML
 
@@ -61,7 +60,8 @@ def skipTagWhitespace (cur : InlineCursor s) : InlineCursor s := Id.run do
     match cur.front? with
     | some ' ' | some '\t' => cur := cur.drop1
     | _ =>
-      let some (_, afterEnding) := cur.parseLineEnding? | break
+      let some (_, afterEnding) := cur.parseLineEnding?
+        | break
       if sawLineEnding then break
       sawLineEnding := true
       cur := afterEnding
@@ -79,7 +79,9 @@ def advancePast (cur : InlineCursor s) (pat : List Char) : Option (InlineCursor 
     cur := cur.drop1
   return none
 
-/-- The closing delimiter of a comment, a processing instruction, a CDATA section, or a declaration. -/
+/--
+The closing delimiter of a comment, a processing instruction, a CDATA section, or a declaration.
+-/
 public inductive HtmlCloser where
   /-- `-->` -/
   | comment
@@ -119,21 +121,20 @@ def HtmlScanMemo.failedFrom? (memo : HtmlScanMemo s) : HtmlCloser → Option s.P
   | .declaration => memo.declaration?
 
 /-- Records that the search for `closer` that started at `start` failed. -/
-def HtmlScanMemo.recordFailure (memo : HtmlScanMemo s) (closer : HtmlCloser) (start : s.Pos) :
-    HtmlScanMemo s :=
+def HtmlScanMemo.recordFailure (memo : HtmlScanMemo s) (closer : HtmlCloser) (start : s.Pos)
+    : HtmlScanMemo s :=
   match closer with
   | .comment => { memo with comment? := some start }
   | .processingInstruction => { memo with processingInstruction? := some start }
   | .cdata => { memo with cdata? := some start }
   | .declaration => { memo with declaration? := some start }
 
-/--
-The monad for parsing raw HTML whose closers are searched for.
--/
+/-- The monad for parsing raw HTML whose closers are searched for. -/
 public abbrev HtmlM (s : String.Slice) := OptionT (StateM (HtmlScanMemo s))
 
 /-- The value of `x?`, or failure when it is `none`. -/
-@[inline] public def HtmlM.ofOption (x? : Option α) : HtmlM s α := OptionT.mk (pure x?)
+@[inline]
+public def HtmlM.ofOption (x? : Option α) : HtmlM s α := OptionT.mk (pure x?)
 
 /--
 Advances past the first occurrence of `closer`, or fails when there is none. Failed searches are
@@ -212,8 +213,8 @@ public def parseMarkupDeclaration? (cur : InlineCursor s) : HtmlM s (InlineCurso
 Parses `needle` at `p` in `input`, returning the position after it. With `ignoreCase`, ASCII letters
 of the text match `needle`'s letters in either case, so `needle` should be lowercase.
 -/
-def matchAscii? (input : s.Subslice) (p : s.Pos) (needle : String) (ignoreCase := false) :
-    Option s.Pos := Id.run do
+def matchAscii? (input : s.Subslice) (p : s.Pos) (needle : String) (ignoreCase := false)
+    : Option s.Pos := Id.run do
   let mut p := p
   for c in needle.toSlice do
     if h : p < input.endExclusive then
@@ -261,13 +262,14 @@ public def isRawTextTagName (name : s.Subslice) : Bool :=
 The block-level HTML elements whose tags start an HTML block that ends before a blank line
 (CommonMark §4.6, start condition 6).
 -/
-def blockTagNames : List String :=
-  ["address", "article", "aside", "base", "basefont", "blockquote", "body", "caption", "center",
-   "col", "colgroup", "dd", "details", "dialog", "dir", "div", "dl", "dt", "fieldset", "figcaption",
-   "figure", "footer", "form", "frame", "frameset", "h1", "h2", "h3", "h4", "h5", "h6", "head",
-   "header", "hr", "html", "iframe", "legend", "li", "link", "main", "menu", "menuitem", "nav",
-   "noframes", "ol", "optgroup", "option", "p", "param", "search", "section", "summary", "table",
-   "tbody", "td", "tfoot", "th", "thead", "title", "tr", "track", "ul"]
+def blockTagNames : List String := [
+  "address", "article", "aside", "base", "basefont", "blockquote", "body", "caption", "center",
+  "col", "colgroup", "dd", "details", "dialog", "dir", "div", "dl", "dt", "fieldset", "figcaption",
+  "figure", "footer", "form", "frame", "frameset", "h1", "h2", "h3", "h4", "h5", "h6", "head",
+  "header", "hr", "html", "iframe", "legend", "li", "link", "main", "menu", "menuitem", "nav",
+  "noframes", "ol", "optgroup", "option", "p", "param", "search", "section", "summary", "table",
+  "tbody", "td", "tfoot", "th", "thead", "title", "tr", "track", "ul"
+]
 
 /-- Whether the tag name `name` is, case-insensitively, one of the `blockTagNames`. -/
 public def isBlockTagName (name : s.Subslice) : Bool :=

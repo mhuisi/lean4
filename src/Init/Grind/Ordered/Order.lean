@@ -22,15 +22,13 @@ variable {α : Type u} [LE α] [LT α] [LawfulOrderLT α]
 
 theorem le_of_lt {a b : α} (h : a < b) : a ≤ b := (lt_iff_le_and_not_ge.mp h).1
 
-theorem lt_irrefl (a : α) : ¬ (a < a) := by
+theorem lt_irrefl (a : α) : ¬(a < a) := by
   intro h
   simp [lt_iff_le_and_not_ge] at h
 
-theorem ne_of_lt {a b : α} (h : a < b) : a ≠ b :=
-  fun w => lt_irrefl a (w.symm ▸ h)
+theorem ne_of_lt {a b : α} (h : a < b) : a ≠ b := fun w => lt_irrefl a (w.symm ▸ h)
 
-theorem ne_of_gt {a b : α} (h : a > b) : a ≠ b :=
-  fun w => lt_irrefl b (w.symm ▸ h)
+theorem ne_of_gt {a b : α} (h : a > b) : a ≠ b := fun w => lt_irrefl b (w.symm ▸ h)
 
 variable [IsPreorder α]
 
@@ -42,14 +40,11 @@ theorem lt_of_le_of_lt {a b c : α} (h₁ : a ≤ b) (h₂ : b < c) : a < c := b
   simp [lt_iff_le_and_not_ge] at h₂ ⊢
   exact ⟨le_trans h₁ h₂.1, fun h => h₂.2 (le_trans h h₁)⟩
 
-theorem lt_trans {a b c : α} (h₁ : a < b) (h₂ : b < c) : a < c :=
-  lt_of_lt_of_le h₁ (le_of_lt h₂)
+theorem lt_trans {a b c : α} (h₁ : a < b) (h₂ : b < c) : a < c := lt_of_lt_of_le h₁ (le_of_lt h₂)
 
-theorem not_ge_of_lt {a b : α} (h : a < b) : ¬b ≤ a :=
-  fun w => lt_irrefl a (lt_of_lt_of_le h w)
+theorem not_ge_of_lt {a b : α} (h : a < b) : ¬ b ≤ a := fun w => lt_irrefl a (lt_of_lt_of_le h w)
 
-theorem not_gt_of_lt {a b : α} (h : a < b) : ¬a > b :=
-  fun w => lt_irrefl a (lt_trans h w)
+theorem not_gt_of_lt {a b : α} (h : a < b) : ¬ a > b := fun w => lt_irrefl a (lt_trans h w)
 
 end Preorder
 

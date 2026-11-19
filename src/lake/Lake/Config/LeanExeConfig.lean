@@ -23,7 +23,6 @@ public configuration LeanExeConfig (name : Name) extends LeanConfig where
   (This will be passed to `lean` as the `-R` option.)
   -/
   srcDir : FilePath := "."
-
   /--
   The root module of the binary executable.
   Should include a `main` definition that will serve
@@ -35,22 +34,18 @@ public configuration LeanExeConfig (name : Name) extends LeanConfig where
   Defaults to the name of the target.
   -/
   root : Name := name
-
   /--
   The name of the binary executable.
   Defaults to the target name with any `.` replaced with a `-`.
   -/
   exeName : String := name.toStringWithSep "-" (escape := false)
-
   /-- An `Array` of targets to build before the executable's modules. -/
   needs : Array PartialBuildKey := #[]
-
   /--
   **Deprecated. Use `needs` instead.**
   An `Array` of target names to build before the executable's modules.
   -/
   extraDepTargets : Array Name := #[]
-
   /--
   Enables the executable to interpret Lean files (e.g., via
   `Lean.Elab.runFrontend`) by exposing symbols within the  executable
@@ -66,7 +61,6 @@ public configuration LeanExeConfig (name : Name) extends LeanConfig where
   Defaults to `false`.
   -/
   supportInterpreter : Bool := false
-
   /--
   The module facets to build and combine into the executable.
   If `shouldExport` is true, the module facets should export any symbols
@@ -80,7 +74,6 @@ public configuration LeanExeConfig (name : Name) extends LeanConfig where
   -/
   nativeFacets (shouldExport : Bool) : Array (ModuleFacet FilePath) :=
     #[if shouldExport then Module.oExportFacet else Module.oFacet]
-
 deriving Inhabited
 
 namespace LeanExeConfig

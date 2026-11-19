@@ -46,28 +46,35 @@ structure State where
 
 abbrev M := StateRefT State CompilerM
 
-/--
-Coalesce inc/dec operations within individual basic blocks.
--/
+/-- Coalesce inc/dec operations within individual basic blocks. -/
 partial def Code.coalesceRC (code : Code .impure) : CompilerM (Code .impure) := do
   go code |>.run' {}
 where
   go (code : Code .impure) : M (Code .impure) := do
     match code with
     | .inc fvarId n check persistent k _ =>
-      modify fun s => { s with incTotal := s.incTotal.alter fvarId (fun v? => some ((v?.getD 0) + n)) }
+      modify fun s => {
+        s with
+        incTotal := s.incTotal.alter fvarId (fun v? => some ((v?.getD 0) + n))
+      }
       let k ← go k
-      modify fun s => { s with incAccum := s.incAccum.alter fvarId (fun v? => some ((v?.getD 0) + n)) }
+      modify fun s => {
+        s with
+        incAccum := s.incAccum.alter fvarId (fun v? => some ((v?.getD 0) + n))
+      }
       let s ← get
       if s.incAccum[fvarId]! == s.incTotal[fvarId]! then
         return .inc fvarId s.incTotal[fvarId]! check persistent k
       else
         return k
     | .dec fvarId n check persistent objs? k _ =>
-      modify fun s => { s with decTotal := s.decTotal.alter fvarId (fun v? => some ((v?.getD 0) + n)) }
+      modify fun s => {
+        s with
+        decTotal := s.decTotal.alter fvarId (fun v? => some ((v?.getD 0) + n))
+      }
       let k ← go k
       let s ← get
-      if !s.decPlaced.contains fvarId then
+      if ! s.decPlaced.contains fvarId then
         modify fun s => { s with decPlaced := s.decPlaced.insert fvarId }
         return .dec fvarId s.decTotal[fvarId]! check persistent objs? k
       else
@@ -95,10 +102,8 @@ def Decl.coalesceRC (decl : Decl .impure) : CompilerM (Decl .impure) := do
   let value ← decl.value.mapCodeM Code.coalesceRC
   return { decl with value }
 
-public def coalesceRC : Pass :=
-  .mkPerDeclaration `coalesceRc .impure Decl.coalesceRC
+public def coalesceRC : Pass := .mkPerDeclaration `coalesceRc .impure Decl.coalesceRC
 
-builtin_initialize
-  registerTraceClass `Compiler.coalesceRc (inherited := true)
+builtin_initialize registerTraceClass `Compiler.coalesceRc (inherited := true)
 
 end Lean.Compiler.LCNF

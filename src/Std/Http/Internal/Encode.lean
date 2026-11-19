@@ -23,13 +23,9 @@ namespace Std.Http.Internal
 
 set_option linter.all true
 
-/--
-Appends the wire form of a `t` for protocol version `v` to a `ByteArray`.
--/
+/-- Appends the wire form of a `t` for protocol version `v` to a `ByteArray`. -/
 class Encode (v : Version) (t : Type) where
-  /--
-  Appends the wire form of a `t` to the given bytes.
-  -/
+  /-- Appends the wire form of a `t` to the given bytes. -/
   encode : ByteArray → t → ByteArray
 
 /--
@@ -42,29 +38,28 @@ scoped instance [Encode .v11 t] : HAppend ByteArray t ByteArray where
 instance : Encode .v11 String where
   encode out s := out ++ s.toUTF8
 
-/--
-A character is written as UTF-8, so an ASCII character is a single byte.
--/
+/-- A character is written as UTF-8, so an ASCII character is a single byte. -/
 instance : Encode .v11 Char where
   encode out c := if c.val < 128 then out.push c.toUInt8 else out ++ c.toString.toUTF8
 
-/--
-Appends the decimal digits of `n`.
--/
+/-- Appends the decimal digits of `n`. -/
 def appendNat (out : ByteArray) (n : Nat) : ByteArray :=
-  if n < 10 then out.push ('0'.toUInt8 + n.toUInt8)
-  else (appendNat out (n / 10)).push ('0'.toUInt8 + (n % 10).toUInt8)
+  if n < 10 then
+    out.push ('0'.toUInt8 + n.toUInt8)
+  else
+    (appendNat out (n / 10)).push ('0'.toUInt8 + (n % 10).toUInt8)
 
 instance : Encode .v11 Nat where
   encode := appendNat
 
-/--
-Appends the lowercase hexadecimal digits of `n`.
--/
+/-- Appends the lowercase hexadecimal digits of `n`. -/
 def appendHex (out : ByteArray) (n : Nat) : ByteArray :=
-  let digit (d : Nat) : UInt8 := if d < 10 then '0'.toUInt8 + d.toUInt8 else 'a'.toUInt8 + (d - 10).toUInt8
-  if n < 16 then out.push (digit n)
-  else (appendHex out (n / 16)).push (digit (n % 16))
+  let digit (d : Nat) : UInt8 :=
+    if d < 10 then '0'.toUInt8 + d.toUInt8 else 'a'.toUInt8 + (d - 10).toUInt8
+  if n < 16 then
+    out.push (digit n)
+  else
+    (appendHex out (n / 16)).push (digit (n % 16))
 
 instance : Encode .v11 Version where
   encode out

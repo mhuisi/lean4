@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Data.Int.Linear
 public import Lean.Meta.Tactic.Grind.Arith.Util
@@ -69,8 +70,10 @@ fields until the compiler provides support for avoiding the performance overhead
 -/
 
 inductive OrHullKind where
-  | le | eq | eqNeg
-  deriving Inhabited
+  | le
+  | eq
+  | eqNeg
+deriving Inhabited
 
 /--
 How the disjunct of an `.orHull` constraint implies it. The disjunct is a conjunction, and its
@@ -80,19 +83,19 @@ or `a ≤ b` (`le`), where `lhs` and `rhs` represent `a` and `b` (after the cast
 `p ≤ 0` (`le`), `p = 0` (`eq`), or `-p = 0` (`eqNeg`), and is the constraint plus `k ≥ 0`.
 -/
 structure OrHullAlt where
-  path      : List Bool
+  path : List Bool
   toIntThm? : Option Expr
-  lhs       : Int.Internal.Linear.Expr
-  rhs       : Int.Internal.Linear.Expr
-  kind      : OrHullKind
-  k         : Int
-  deriving Inhabited
+  lhs : Int.Internal.Linear.Expr
+  rhs : Int.Internal.Linear.Expr
+  kind : OrHullKind
+  k : Int
+deriving Inhabited
 
 mutual
 /-- A equality constraint and its justification/proof. -/
 structure EqCnstr where
-  p  : Poly
-  h  : EqCnstrProof
+  p : Poly
+  h : EqCnstrProof
   /--
   Split depth of the goal where the constraint was stored, if any (see `markStored`).
   Its proof can be built in that goal, and is shared by all subgoals of the case splits below it.
@@ -113,7 +116,9 @@ inductive EqCnstrProof where
     `rhs` represent the two sides as they occur in the type of `h`.
     -/
     hyp (h : Expr) (lhs rhs : Int.Internal.Linear.Expr)
-  | /-- `x = e` where `x` is the variable for `e`, `e` is in normal form, and `p` is its polynomial. -/
+  | /--
+    `x = e` where `x` is the variable for `e`, `e` is in normal form, and `p` is its polynomial.
+    -/
     defn (e : Expr) (p : Poly)
   | /-- `x = e'` with proof `h : x.denote = e'.denote`. `e'` is normalized by `Expr.norm`. -/
     defnExpr (h : Expr) (x : Var) (e' : Int.Internal.Linear.Expr)
@@ -131,7 +136,9 @@ inductive EqCnstrProof where
   | reorder (c : EqCnstr)
   | commRingNorm (c : EqCnstr) (e : CommRing.RingExpr) (p : CommRing.Poly)
   | defnCommRing (e : Expr) (p : Poly) (re : CommRing.RingExpr) (rp : CommRing.Poly) (p' : Poly)
-  | defnExprCommRing (h : Expr) (x : Var) (e' : Int.Internal.Linear.Expr) (p : Poly) (re : CommRing.RingExpr) (rp : CommRing.Poly) (p' : Poly)
+  | defnExprCommRing
+    (h : Expr) (x : Var) (e' : Int.Internal.Linear.Expr) (p : Poly) (re : CommRing.RingExpr)
+    (rp : CommRing.Poly) (p' : Poly)
   | mul (a? : Option Expr) (cs : Array (Expr × Int × EqCnstr))
   | /--
     Linearization proof for `/`
@@ -149,9 +156,9 @@ inductive EqCnstrProof where
 
 /-- A divisibility constraint and its justification/proof. -/
 structure DvdCnstr where
-  d  : Int
-  p  : Poly
-  h  : DvdCnstrProof
+  d : Int
+  p : Poly
+  h : DvdCnstrProof
   /--
   Split depth of the goal where the constraint was stored, if any (see `markStored`).
   Its proof can be built in that goal, and is shared by all subgoals of the case splits below it.
@@ -171,18 +178,16 @@ The specific predicate used is determined as follows:
 See `CooperSplit`
 -/
 structure CooperSplitPred where
-  left     : Bool
-  c₁       : LeCnstr
-  c₂       : LeCnstr
-  c₃?      : Option DvdCnstr
+  left : Bool
+  c₁ : LeCnstr
+  c₂ : LeCnstr
+  c₃? : Option DvdCnstr
 
-/--
-An instance of the `CooperSplitPred` at `k`.
--/
+/-- An instance of the `CooperSplitPred` at `k`. -/
 structure CooperSplit where
-  pred  : CooperSplitPred
-  k     : Nat
-  h     : CooperSplitProof
+  pred : CooperSplitPred
+  k : Nat
+  h : CooperSplitProof
 
 /--
 The `cooper_left`, `cooper_right`, `cooper_dvd_left`, and `cooper_dvd_right` theorems have a resulting type
@@ -198,7 +203,7 @@ inductive CooperSplitProof where
     last (hs : Array (FVarId × UnsatProof)) (decVars : Array FVarId)
 
 inductive DvdCnstrProof where
-  | /-- Given `e` of the form `k ∣ p` s.t. `e = True` in the core.  -/
+  | /-- Given `e` of the form `k ∣ p` s.t. `e = True` in the core. -/
     core (e : Expr)
   | coreOfNat (e : Expr) (thm : Expr) (d : Nat) (a : Int.Internal.Linear.Expr)
   | norm (c : DvdCnstr)
@@ -222,8 +227,8 @@ inductive DvdCnstrProof where
 
 /-- An inequality constraint and its justification/proof. -/
 structure LeCnstr where
-  p  : Poly
-  h  : LeCnstrProof
+  p : Poly
+  h : LeCnstrProof
   /--
   Split depth of the goal where the constraint was stored, if any (see `markStored`).
   Its proof can be built in that goal, and is shared by all subgoals of the case splits below it.
@@ -270,8 +275,8 @@ inductive LeCnstrProof where
 
 /-- A disequality constraint and its justification/proof. -/
 structure DiseqCnstr where
-  p  : Poly
-  h  : DiseqCnstrProof
+  p : Poly
+  h : DiseqCnstrProof
   /--
   Split depth of the goal where the constraint was stored, if any (see `markStored`).
   Its proof can be built in that goal, and is shared by all subgoals of the case splits below it.
@@ -308,7 +313,7 @@ inductive UnsatProof where
 end
 
 instance : Inhabited LeCnstr where
-  default := { p := .num 0, h := .core default}
+  default := { p := .num 0, h := .core default }
 
 instance : Inhabited DvdCnstr where
   default := { d := 0, p := .num 0, h := .core default }
@@ -326,7 +331,7 @@ structure State where
   /-- Mapping from variables to their denotations. -/
   vars : PArray Expr := {}
   /-- Mapping from `Expr` to a variable representing it. -/
-  varMap  : PHashMap ExprPtr Var := {}
+  varMap : PHashMap ExprPtr Var := {}
   /--
   Variable orders superseded by `reorderVars`, oldest first: entry `i` is the pair
   `(vars, varMap)` of epoch `i`, and the current order is epoch `varsHistory.size`.
@@ -348,7 +353,8 @@ structure State where
   natDef : PHashMap ExprPtr Var := {}
   /--
   Mapping from variables to divisibility constraints. Recall that we keep the divisibility constraint in solved form.
-  Thus, we have at most one divisibility per variable. -/
+  Thus, we have at most one divisibility per variable.
+  -/
   dvds : PArray (Option DvdCnstr) := {}
   /--
   Mapping from variables to their "lower" bounds. We say a relational constraint `c` is a lower bound for a variable `x`
@@ -432,9 +438,7 @@ structure State where
   - `Int.Internal.Linear.emod_le`
   -/
   divMod : PHashSet (Expr × Int) := {}
-  /--
-  `usedCommRing` is `true` if the `CommRing` has been used to normalize expressions.
-  -/
+  /-- `usedCommRing` is `true` if the `CommRing` has been used to normalize expressions. -/
   usedCommRing : Bool := false
   /--
   Mapping from terms to variables representing nonlinear terms.
@@ -446,7 +450,7 @@ structure State where
   - `d ↦ [y]`
   -/
   nonlinearOccs : PHashMap Var (List Var) := {}
-  deriving Inhabited
+deriving Inhabited
 
 builtin_initialize cutsatExt : SolverExtension State ← registerSolverExtension (return {})
 

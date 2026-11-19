@@ -19,12 +19,15 @@ private structure FunInfoEnvCacheKey where
   maxArgs? : Option Nat
 deriving BEq, Hashable, TypeName
 
-@[inline] private def checkFunInfoCache (fn : Expr) (maxArgs? : Option Nat) (k : MetaM FunInfo) : MetaM FunInfo := do
+@[inline]
+private def checkFunInfoCache (fn : Expr) (maxArgs? : Option Nat) (k : MetaM FunInfo)
+    : MetaM FunInfo := do
   let key ← mkInfoCacheKey fn maxArgs?
   match (← get).cache.funInfo.find? key with
   | some finfo => return finfo
-  | none       => do
-    let finfo ← match fn with
+  | none => do
+    let finfo ←
+      match fn with
       | .const c ls =>
         -- If `fn` is only a single constant, we can share the result with any thread that can see `c`
         -- as well.
@@ -38,21 +41,22 @@ deriving BEq, Hashable, TypeName
     modify fun s => { s with cache := { s.cache with funInfo := s.cache.funInfo.insert key finfo } }
     return finfo
 
-@[inline] private def whenHasVar {α} (e : Expr) (deps : α) (k : α → α) : α :=
+@[inline]
+private def whenHasVar {α} (e : Expr) (deps : α) (k : α → α) : α :=
   if e.hasFVar then k deps else deps
 
 private def collectDeps (fvars : Array Expr) (e : Expr) : Array Nat :=
   let rec visit (e : Expr) (deps : Array Nat) : Array Nat :=
     match e with
-    | .app f a         => whenHasVar e deps (visit a ∘ visit f)
+    | .app f a => whenHasVar e deps (visit a ∘ visit f)
     | .forallE _ d b _ => whenHasVar e deps (visit b ∘ visit d)
-    | .lam _ d b _     => whenHasVar e deps (visit b ∘ visit d)
-    | .letE _ t v b _  => whenHasVar e deps (visit b ∘ visit v ∘ visit t)
-    | .proj _ _ e      => visit e deps
-    | .mdata _ e       => visit e deps
-    | .fvar ..         =>
+    | .lam _ d b _ => whenHasVar e deps (visit b ∘ visit d)
+    | .letE _ t v b _ => whenHasVar e deps (visit b ∘ visit v ∘ visit t)
+    | .proj _ _ e => visit e deps
+    | .mdata _ e => visit e deps
+    | .fvar .. =>
       match fvars.idxOf? e with
-      | none   => deps
+      | none => deps
       | some i => if deps.contains i then deps else deps.push i
     | _ => deps
   let deps := visit e #[]
@@ -67,8 +71,10 @@ private def updateHasFwdDeps (pinfo : Array ParamInfo) (backDeps : Array Nat) : 
     pinfo.mapIdx fun i info =>
       if info.hasFwdDeps then
         info
-      else if backDeps.contains i then
-        { info with hasFwdDeps := true }
+      else if backDeps.contains i then {
+        info with
+        hasFwdDeps := true
+      }
       else
         info
 
@@ -84,8 +90,8 @@ private def getFunInfoAux (fn : Expr) (maxArgs? : Option Nat) : MetaM FunInfo :=
           let decl ← getFVarLocalDecl fvar
           let backDeps := collectDeps fvars decl.type
           let dependsOnHigherOrderOutParam :=
-            !higherOrderOutParams.isEmpty
-            && Option.isSome (decl.type.find? fun e => e.isFVar && higherOrderOutParams.contains e.fvarId!)
+            !higherOrderOutParams.isEmpty && Option.isSome (decl.type.find? fun e =>
+              e.isFVar && higherOrderOutParams.contains e.fvarId!)
           let className? ← isClass? decl.type
           /-
           **Note**: We use `isClass? decl.type` instead of relying solely on binder annotations
@@ -106,19 +112,23 @@ private def getFunInfoAux (fn : Expr) (maxArgs? : Option Nat) : MetaM FunInfo :=
           -- MyGroupTopology.mk (toMyTopology : MyTopology α) (toIsContinuousMul : IsContinuousMul α) : ...
           ```
           These explicit parameters should not be treated as instances for automation purposes.
-
           -/
           let isInstance := className?.isSome && !decl.binderInfo.isExplicit
           paramInfo := updateHasFwdDeps paramInfo backDeps
-          paramInfo := paramInfo.push {
-            backDeps, dependsOnHigherOrderOutParam, isInstance
-            binderInfo := decl.binderInfo
-            isProp     := (← isProp decl.type)
-            isDecInst  := (← forallTelescopeReducing decl.type fun _ type => return type.isAppOf ``Decidable)
-          }
+          paramInfo :=
+            paramInfo.push {
+              backDeps
+              dependsOnHigherOrderOutParam
+              isInstance
+              binderInfo := decl.binderInfo
+              isProp := (← isProp decl.type)
+              isDecInst :=
+                (← forallTelescopeReducing decl.type fun _ type => return type.isAppOf ``Decidable)
+            }
           if isInstance then
             /- Collect higher order output parameters of this class IF `isInstance` is `true` -/
-            let some className := className? | unreachable!
+            let some className := className?
+              | unreachable!
             /- Collect higher order output parameters of this class IF `isInstance` is `true` -/
             if let some outParamPositions := getOutParamPositions? (← getEnv) className then
               unless outParamPositions.isEmpty do
@@ -128,7 +138,8 @@ private def getFunInfoAux (fn : Expr) (maxArgs? : Option Nat) : MetaM FunInfo :=
                     let arg := args[i]
                     if let some idx := fvars.idxOf? arg then
                       if (← whnf (← inferType arg)).isForall then
-                        paramInfo := paramInfo.modify idx fun info => { info with higherOrderOutParam := true }
+                        paramInfo :=
+                          paramInfo.modify idx fun info => { info with higherOrderOutParam := true }
                         higherOrderOutParams := higherOrderOutParams.insert arg.fvarId!
         let resultDeps := collectDeps fvars type
         paramInfo := updateHasFwdDeps paramInfo resultDeps
@@ -137,10 +148,8 @@ private def getFunInfoAux (fn : Expr) (maxArgs? : Option Nat) : MetaM FunInfo :=
 def getFunInfo (fn : Expr) (maxArgs? : Option Nat := none) : MetaM FunInfo :=
   getFunInfoAux fn maxArgs?
 
-def getFunInfoNArgs (fn : Expr) (nargs : Nat) : MetaM FunInfo :=
-  getFunInfoAux fn (some nargs)
+def getFunInfoNArgs (fn : Expr) (nargs : Nat) : MetaM FunInfo := getFunInfoAux fn (some nargs)
 
-def FunInfo.getArity (info : FunInfo) : Nat :=
-  info.paramInfo.size
+def FunInfo.getArity (info : FunInfo) : Nat := info.paramInfo.size
 
 end Lean.Meta

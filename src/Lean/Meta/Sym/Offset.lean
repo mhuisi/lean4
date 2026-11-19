@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.LitValues
 public section
@@ -26,22 +27,22 @@ Used for pattern matching and unification.
 inductive Offset where
   | num (k : Nat)
   | add (e : Expr) (k : Nat)
-  deriving Inhabited
+deriving Inhabited
 
 /-- Increments the constant part of the offset by `k'`. -/
 def Offset.inc : Offset → Nat → Offset
-  | .num k,   k' => .num (k+k')
-  | .add e k, k' => .add e (k+k')
+  | .num k, k' => .num (k + k')
+  | .add e k, k' => .add e (k + k')
 
 -- **Note**: This function assumes `e` is a `Nat`, and instances were not overloaded.
 private partial def evalNat? (e : Expr) : OptionT Id Nat :=
   match e with
-  | .lit (.natVal n)     => some n
-  | .mdata _ e           => evalNat? e
+  | .lit (.natVal n) => some n
+  | .mdata _ e => evalNat? e
   | .const ``Nat.zero .. => some 0
-  | .app ..              => visit e
-  | .mvar ..             => visit e
-  | _                    => failure
+  | .app .. => visit e
+  | .mvar .. => visit e
+  | _ => failure
 where
   visit (e : Expr) : Option Nat :=
     match_expr e with
@@ -64,26 +65,23 @@ Assumption: standard instances are used for `OfNat Nat n` and `HAdd Nat Nat Nat`
 -/
 partial def isOffset? (e : Expr) : OptionT Id Offset :=
   match_expr e with
-  | Nat.succ a => do
-    return get a |>.inc 1
+  | Nat.succ a => do return get a |>.inc 1
   | HAdd.hAdd α _ _ _ a b => do
     guard (α.isConstOf ``Nat)
     let n ← evalNat? b
     return get a |>.inc n
   | _ => failure
 where
-  get (e : Expr) : Offset :=
-    isOffset? e |>.getD (.add e 0)
+  get (e : Expr) : Offset := isOffset? e |>.getD (.add e 0)
 
 /-- Variant of `isOffset?` that first checks if `declName` is `Nat.succ` or `HAdd.hAdd`. -/
 def isOffset?' (declName : Name) (p : Expr) : OptionT Id Offset := do
   guard (declName == ``Nat.succ || declName == ``HAdd.hAdd)
   isOffset? p
 
-private def isNatType (e : Expr) : Bool :=
-  e.isConstOf ``Nat
+private def isNatType (e : Expr) : Bool := e.isConstOf ``Nat
 
-/--  Returns `true` if `e` is an offset term.-/
+/-- Returns `true` if `e` is an offset term. -/
 partial def isOffset (e : Expr) : Bool :=
   match_expr e with
   | Nat.succ _ => true
@@ -115,10 +113,12 @@ partial def toOffset (e : Expr) : Offset :=
   match_expr e with
   | Nat.succ a => toOffset a |>.inc 1
   | HAdd.hAdd _ _ _ _ a b => Id.run do
-    let some n := getNatValue? b | .add e 0
+    let some n := getNatValue? b
+      | .add e 0
     toOffset a |>.inc n
   | OfNat.ofNat _ n _ => Id.run do
-    let .lit (.natVal n) := n | .add e 0
+    let .lit (.natVal n) := n
+      | .add e 0
     .num n
   | _ => .add e 0
 

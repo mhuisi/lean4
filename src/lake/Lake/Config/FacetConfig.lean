@@ -25,7 +25,7 @@ public structure FacetConfig (name : Name) : Type where
   format : OutFormat → FacetOut name → String
   /-- Whether the fetch of this facet should be cached in the Lake build store. -/
   memoize : Bool := true
-  deriving Inhabited
+deriving Inhabited
 
 /-- A mapping of facet names to the configuration for that name. -/
 public abbrev FacetConfigMap := DNameMap FacetConfig
@@ -34,11 +34,15 @@ public abbrev FacetConfigMap := DNameMap FacetConfig
 Tries to retrieve the facet configuration for the given {lean}`name`,
 returning {lean}`none` if no such mapping is present.
 -/
-public nonrec def FacetConfigMap.get? (name : Name) (self : FacetConfigMap) : Option (FacetConfig name) :=
+public nonrec def FacetConfigMap.get? (name : Name) (self : FacetConfigMap)
+    : Option (FacetConfig name) :=
   self.get? name -- specializes `get?`
 
-/-- Inserts the facet configuration {lean}`cfg` into the map (overwriting any existing configuration). -/
-public nonrec def FacetConfigMap.insert {name} (cfg : FacetConfig name) (self : FacetConfigMap) : FacetConfigMap :=
+/--
+Inserts the facet configuration {lean}`cfg` into the map (overwriting any existing configuration).
+-/
+public nonrec def FacetConfigMap.insert {name} (cfg : FacetConfig name) (self : FacetConfigMap)
+    : FacetConfigMap :=
   self.insert name cfg -- specializes `insert`
 
 public protected abbrev FacetConfig.name (_ : FacetConfig name) := name
@@ -47,34 +51,35 @@ public structure KFacetConfig (k : Name) (name : Name) extends FacetConfig name 
   kind := k
   kind_eq : toFacetConfig.kind = k := by rfl
 
-public abbrev FacetConfig.toKind
-  {kind : Name} (self : FacetConfig name) (h : self.kind = kind)
-: KFacetConfig kind name := KFacetConfig.mk self h
+public abbrev FacetConfig.toKind {kind : Name} (self : FacetConfig name) (h : self.kind = kind)
+    : KFacetConfig kind name :=
+  KFacetConfig.mk self h
 
-public def FacetConfig.toKind? (kind : Name) (self : FacetConfig name) : Option (KFacetConfig kind name) :=
+public def FacetConfig.toKind? (kind : Name) (self : FacetConfig name)
+    : Option (KFacetConfig kind name) :=
   if h : self.kind = kind then
     some (self.toKind h)
   else
     none
 
 /-- Run the facet configuration's fetch function. -/
-@[inline] public def KFacetConfig.run
-  [FamilyOut DataType kind α]
-  [FamilyOut FacetOut facet β]
-  (self : KFacetConfig kind facet) (info : α)
-: FetchM (Job β) :=
+@[inline]
+public def KFacetConfig.run
+    [FamilyOut DataType kind α] [FamilyOut FacetOut facet β]
+    (self : KFacetConfig kind facet) (info : α)
+    : FetchM (Job β) :=
   cast (by simp) <| self.fetchFn <| cast (by simp [self.kind_eq]) info
 
 /-- A smart constructor for facet configurations that generate jobs for the CLI. -/
-@[inline] public def mkFacetJobConfig
-  [FormatQuery β]
-  [outKind : OptDataKind β]
-  [i : FamilyOut DataType kind α]
-  [o : FamilyOut FacetOut facet β]
-  (build : α → FetchM (Job β))
-  (buildable := true) (memoize := true)
-: KFacetConfig kind facet where
-  buildable; memoize
+@[inline]
+public def mkFacetJobConfig
+    [FormatQuery β] [outKind : OptDataKind β] [i : FamilyOut DataType kind α]
+    [o : FamilyOut FacetOut facet β]
+    (build : α → FetchM (Job β))
+    (buildable := true) (memoize := true)
+    : KFacetConfig kind facet where
+  buildable
+  memoize
   outKind := o.fam_eq ▸ outKind
   fetchFn := i.fam_eq ▸ o.fam_eq ▸ build
   format := o.fam_eq ▸ formatQuery

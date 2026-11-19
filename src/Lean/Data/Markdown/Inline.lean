@@ -28,13 +28,9 @@ The inline elements of a parsed Markdown document, the parts of a link, and the 
 definitions and external references that reference links resolve to.
 -/
 
-/--
-Non-standard extensions that can be optionally enabled.
--/
+/-- Non-standard extensions that can be optionally enabled. -/
 public structure Extensions where
-  /--
-  LaTeX math, which is `$…$` for inline math and `$$…$$` for display math.
-  -/
+  /-- LaTeX math, which is `$…$` for inline math and `$$…$$` for display math. -/
   latexMath : Bool := false
 deriving Inhabited
 
@@ -51,8 +47,7 @@ public structure LinkTitle (s : String.Slice) where
 deriving Inhabited
 
 /-- The title that `t` denotes, with backslash escapes and character references decoded. -/
-public def LinkTitle.text {s : String.Slice} (t : LinkTitle s) : String :=
-  decodeText t.content.text
+public def LinkTitle.text {s : String.Slice} (t : LinkTitle s) : String := decodeText t.content.text
 
 /--
 The destination of a link, image, or link reference definition, which is a URL, optionally in angle
@@ -105,9 +100,7 @@ public structure ExternalRef where
   overrideDocument : Bool := false
 deriving Inhabited
 
-/--
-What a reference link may resolve to.
--/
+/-- What a reference link may resolve to. -/
 public inductive RefTarget (s : String.Slice) where
   /-- A link reference definition in the document. -/
   | inDocument (definition : RefDef s)
@@ -130,9 +123,7 @@ public def RefTarget.title? {s : String.Slice} : RefTarget s → Option String
   | .inDocument definition => definition.title?.map (·.text)
   | .external ref => ref.title?
 
-/--
-The surface form of a reference-style link or image.
--/
+/-- The surface form of a reference-style link or image. -/
 public inductive ReferenceLinkForm (s : String.Slice) where
   /--
   Full form `[text][label]`, in which the second brackets contain an explicit label, distinct from
@@ -154,7 +145,8 @@ deriving Inhabited
 /-- The destination of a link or image. -/
 public inductive LinkTarget (s : String.Slice) where
   /-- An inline target `(url)` or `(url "title")`. -/
-  | inline (openParen : s.Subslice) (destination : LinkDestination s) (closeParen : s.Subslice)
+  | inline
+    (openParen : s.Subslice) (destination : LinkDestination s) (closeParen : s.Subslice)
     (title? : Option (LinkTitle s) := none)
   /--
   A reference target, in which `refTarget` is what the label resolved to, and `label` is the
@@ -197,7 +189,7 @@ public def MathContent.text {s : String.Slice} (content : MathContent s) : Strin
   let isBlank (c : Char) := c == ' ' || c == '\t'
   let mut out := content.lines.first.copy
   for line in content.lines.toArray[1:] do
-    if !out.endsWith " " then out := out.push ' '
+    if ! out.endsWith " " then out := out.push ' '
     out := out ++ (line.copy.dropWhile isBlank).toString
   return out
 
@@ -208,7 +200,7 @@ one space removed from each end when the result begins and ends with a space and
 public def InlineCodeContent.text {s : String.Slice} (content : InlineCodeContent s) : String :=
   let joined := content.lines.text " "
   let sl := joined.toSlice
-  if sl.startsWith ' ' && sl.endsWith ' ' && !sl.all (· == ' ') then
+  if sl.startsWith ' ' && sl.endsWith ' ' && ! sl.all (· == ' ') then
     (sl.drop 1 |>.dropEnd 1).toString
   else
     joined
@@ -224,13 +216,15 @@ public inductive Inline (s : String.Slice) where
   /-- Bold/strong emphasis. -/
   | bold (openDelim : s.Subslice) (content : Array (Inline s)) (closeDelim : s.Subslice)
   /-- Inline or reference link. The text is recursively parsed. -/
-  | link (openBracket : s.Subslice) (text : Array (Inline s)) (closeBracket : s.Subslice)
+  | link
+    (openBracket : s.Subslice) (text : Array (Inline s)) (closeBracket : s.Subslice)
     (target : LinkTarget s)
   /--
   An image. The alt content is recursively parsed as inline content (CommonMark §6.4); HTML
   rendering should flatten it to plain text for the `alt` attribute.
   -/
-  | image (bang : s.Subslice) (openBracket : s.Subslice) (alt : Array (Inline s))
+  | image
+    (bang : s.Subslice) (openBracket : s.Subslice) (alt : Array (Inline s))
     (closeBracket : s.Subslice) (target : LinkTarget s)
   /--
   A hard line break (CommonMark §6.7). `marker` is the backslash or the two or more trailing spaces
@@ -250,7 +244,8 @@ public inductive Inline (s : String.Slice) where
   This extension uses `$…$` for inline math and `$$…$$` for display math, with `display` set to
   `true` for the latter.
   -/
-  | math (openDollars : s.Subslice) (content : MathContent s) (closeDollars : s.Subslice)
+  | math
+    (openDollars : s.Subslice) (content : MathContent s) (closeDollars : s.Subslice)
     (display : Bool)
   /--
   Raw HTML (CommonMark §6.6), which is an open or closing tag, a comment, a processing instruction,
@@ -402,8 +397,8 @@ between two lines counts as whitespace. Then:
 -/
 public def normalizeLabel (lines : Lines s) : LinkLabel := Id.run do
   let mut out := ""
-  let mut sawWs := false  -- whether we've seen whitespace since the last non-ws
-  let mut sawNonWs := false  -- whether we've emitted any non-ws char yet
+  let mut sawWs := false -- whether we've seen whitespace since the last non-ws
+  let mut sawNonWs := false -- whether we've emitted any non-ws char yet
   for line in lines.toArray do
     for c in line.toSlice do
       -- CommonMark §6.3 normalizes "spaces, tabs, and line endings", which are exactly the
@@ -423,7 +418,5 @@ public def normalizeLabel (lines : Lines s) : LinkLabel := Id.run do
 public def LinkLabel.ofString (label : String) : LinkLabel :=
   normalizeLabel (Lines.singleton label.toSlice.toSubslice)
 
-/--
-A mapping from normalized link labels to a document's reference targets.
--/
+/-- A mapping from normalized link labels to a document's reference targets. -/
 public abbrev RefTable (s : String.Slice) := Std.HashMap LinkLabel (RefTarget s)

@@ -13,7 +13,6 @@ public section
 
 namespace Lean.Elab.Structural
 
-
 /--
 Information about the argument of interest of a structurally recursive function.
 
@@ -23,23 +22,23 @@ of a mutually recursive group.
 -/
 structure RecArgInfo where
   /-- the name of the recursive function -/
-  fnName       : Name
+  fnName : Name
   /-- Information which arguments are fixed -/
   fixedParamPerm : FixedParamPerm
   /-- position of the argument we are recursing on, among all parameters -/
-  recArgPos    : Nat
+  recArgPos : Nat
   /-- position of the indices of the inductive datatype we are recursing on, among all parameters -/
-  indicesPos   : Array Nat
+  indicesPos : Array Nat
   /-- The inductive group (with parameters) of the argument's type -/
   indGroupInst : IndGroupInst
   /--
   index of the inductive datatype of the argument we are recursing on.
   If `< indAll.all`, a normal data type, else an auxiliary data type due to nested recursion
   -/
-  indIdx       : Nat
+  indIdx : Nat
 deriving Inhabited, Repr
 
-  /-- position of the argument and its indices we are recursing on, among all parameters -/
+/-- position of the argument and its indices we are recursing on, among all parameters -/
 def RecArgInfo.indicesAndRecArgPos (info : RecArgInfo) : Array Nat :=
   info.indicesPos.push info.recArgPos
 
@@ -47,7 +46,8 @@ def RecArgInfo.indicesAndRecArgPos (info : RecArgInfo) : Array Nat :=
 If `xs` are the varying parameters of the functions, partitions them into indices and major
 arguments, and other parameters.
 -/
-def RecArgInfo.pickIndicesMajor (info : RecArgInfo) (xs : Array Expr) : (Array Expr × Array Expr) := Id.run do
+def RecArgInfo.pickIndicesMajor (info : RecArgInfo) (xs : Array Expr)
+    : (Array Expr × Array Expr) := Id.run do
   -- To simplify the index calculation, pad xs with dummy values where fixed parameters are
   let xs := info.fixedParamPerm.buildArgs (.replicate info.fixedParamPerm.numFixed (mkSort 0)) xs
   -- First indices and major arg, using the order they appear in `info.indicesPos`
@@ -63,10 +63,7 @@ def RecArgInfo.pickIndicesMajor (info : RecArgInfo) (xs : Array Expr) : (Array E
         otherVaryingArgs := otherVaryingArgs.push xs[i]
   return (indexMajorArgs, otherVaryingArgs)
 
-/--
-Name of the recursive data type. Assumes that it is not one of the auxiliary ones.
--/
-def RecArgInfo.indName! (info : RecArgInfo) : Name :=
-  info.indGroupInst.all[info.indIdx]!
+/-- Name of the recursive data type. Assumes that it is not one of the auxiliary ones. -/
+def RecArgInfo.indName! (info : RecArgInfo) : Name := info.indGroupInst.all[info.indIdx]!
 
 end Lean.Elab.Structural

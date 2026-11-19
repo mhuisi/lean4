@@ -35,12 +35,10 @@ open Std.Iterators
 
 variable {α : Type w} {m : Type w → Type w'} {β : Type w}
 
-/--
-Internal state of the `takeWhile` combinator. Do not depend on its internals.
--/
+/-- Internal state of the `takeWhile` combinator. Do not depend on its internals. -/
 @[unbox]
-structure Iterators.Types.TakeWhile (α : Type w) (m : Type w → Type w') (β : Type w)
-    (P : β → PostconditionT m (ULift Bool)) where
+structure Iterators.Types.TakeWhile
+    (α : Type w) (m : Type w → Type w') (β : Type w) (P : β → PostconditionT m (ULift Bool)) where
   /-- Internal implementation detail of the iterator library. -/
   inner : IterM (α := α) m β
 
@@ -84,7 +82,8 @@ This combinator calls `P` on each output of `it` until the predicate evaluates t
 it terminates.
 -/
 @[always_inline, inline]
-def IterM.takeWhileWithPostcondition (P : β → PostconditionT m (ULift Bool)) (it : IterM (α := α) m β) :=
+def IterM.takeWhileWithPostcondition
+    (P : β → PostconditionT m (ULift Bool)) (it : IterM (α := α) m β) :=
   (⟨Types.TakeWhile.mk (P := P) it⟩ : IterM m β)
 
 /--
@@ -166,32 +165,41 @@ namespace Iterators.Types
 `takeWhile` iterator `it`. This is mostly internally relevant, except if one needs to manually
 prove termination (`Finite` or `Productive` instances, for example) of a `takeWhile` iterator.
 -/
-inductive TakeWhile.PlausibleStep [Iterator α m β] {P} (it : IterM (α := TakeWhile α m β P) m β) :
-    (step : IterStep (IterM (α := TakeWhile α m β P) m β) β) → Prop where
-  | yield : ∀ {it' out}, it.internalState.inner.IsPlausibleStep (.yield it' out) →
-      (P out).Property (.up true) → PlausibleStep it (.yield (it'.takeWhileWithPostcondition P) out)
-  | skip : ∀ {it'}, it.internalState.inner.IsPlausibleStep (.skip it') →
-      PlausibleStep it (.skip (it'.takeWhileWithPostcondition P))
+inductive TakeWhile.PlausibleStep [Iterator α m β] {P} (it : IterM (α := TakeWhile α m β P) m β)
+    : (step : IterStep (IterM (α := TakeWhile α m β P) m β) β) → Prop where
+  | yield
+    : ∀ {it' out},
+      it.internalState.inner.IsPlausibleStep (.yield it' out) → (P out).Property (.up true)
+        → PlausibleStep it (.yield (it'.takeWhileWithPostcondition P) out)
+  | skip
+    : ∀ {it'},
+      it.internalState.inner.IsPlausibleStep (.skip it')
+        → PlausibleStep it (.skip (it'.takeWhileWithPostcondition P))
   | done : it.internalState.inner.IsPlausibleStep .done → PlausibleStep it .done
-  | rejected : ∀ {it' out}, it.internalState.inner.IsPlausibleStep (.yield it' out) →
-      (P out).Property (.up false) → PlausibleStep it .done
+  | rejected
+    : ∀ {it' out},
+      it.internalState.inner.IsPlausibleStep (.yield it' out) → (P out).Property (.up false)
+        → PlausibleStep it .done
 
 @[always_inline, inline]
-instance TakeWhile.instIterator [Monad m] [Iterator α m β] {P} :
-    Iterator (TakeWhile α m β P) m β where
+instance TakeWhile.instIterator [Monad m] [Iterator α m β] {P}
+    : Iterator (TakeWhile α m β P) m β where
   IsPlausibleStep := TakeWhile.PlausibleStep
   step it := do
     match (← it.internalState.inner.step).inflate with
-    | .yield it' out h => match ← (P out).operation with
-      | ⟨.up true, h'⟩ => pure <| .deflate <| .yield (it'.takeWhileWithPostcondition P) out (.yield h h')
+    | .yield it' out h =>
+      match ← (P out).operation with
+      | ⟨.up true, h'⟩ =>
+        pure <| .deflate <| .yield (it'.takeWhileWithPostcondition P) out (.yield h h')
       | ⟨.up false, h'⟩ => pure <| .deflate <| .done (.rejected h h')
     | .skip it' h => pure <| .deflate <| .skip (it'.takeWhileWithPostcondition P) (.skip h)
     | .done h => pure <| .deflate <| .done (.done h)
 
-private def TakeWhile.instFinitenessRelation [Monad m] [Iterator α m β]
-    [Finite α m] {P} :
-    FinitenessRelation (TakeWhile α m β P) m where
-  Rel := InvImage WellFoundedRelation.rel (IterM.finitelyManySteps ∘ TakeWhile.inner ∘ IterM.internalState)
+private def TakeWhile.instFinitenessRelation [Monad m] [Iterator α m β] [Finite α m] {P}
+    : FinitenessRelation (TakeWhile α m β P) m where
+  Rel :=
+    InvImage WellFoundedRelation.rel
+      (IterM.finitelyManySteps ∘ TakeWhile.inner ∘ IterM.internalState)
   wf := by
     apply InvImage.wf
     exact WellFoundedRelation.wf
@@ -204,19 +212,18 @@ private def TakeWhile.instFinitenessRelation [Monad m] [Iterator α m β]
     case skip it' out h' =>
       cases h
       exact IterM.TerminationMeasures.Finite.rel_of_skip h'
-    case done _ =>
-      cases h
-    case rejected _ =>
-      cases h
+    case done _ => cases h
+    case rejected _ => cases h
 
-instance TakeWhile.instFinite [Monad m] [Iterator α m β] [Finite α m] {P} :
-    Finite (TakeWhile α m β P) m :=
-  by exact Finite.of_finitenessRelation instFinitenessRelation
+instance TakeWhile.instFinite [Monad m] [Iterator α m β] [Finite α m] {P}
+    : Finite (TakeWhile α m β P) m := by
+  exact Finite.of_finitenessRelation instFinitenessRelation
 
-private def TakeWhile.instProductivenessRelation [Monad m] [Iterator α m β]
-    [Productive α m] {P} :
-    ProductivenessRelation (TakeWhile α m β P) m where
-  Rel := InvImage WellFoundedRelation.rel (IterM.finitelyManySkips ∘ TakeWhile.inner ∘ IterM.internalState)
+private def TakeWhile.instProductivenessRelation [Monad m] [Iterator α m β] [Productive α m] {P}
+    : ProductivenessRelation (TakeWhile α m β P) m where
+  Rel :=
+    InvImage WellFoundedRelation.rel
+      (IterM.finitelyManySkips ∘ TakeWhile.inner ∘ IterM.internalState)
   wf := by
     apply InvImage.wf
     exact WellFoundedRelation.wf
@@ -224,13 +231,12 @@ private def TakeWhile.instProductivenessRelation [Monad m] [Iterator α m β]
     cases h
     exact IterM.TerminationMeasures.Productive.rel_of_skip ‹_›
 
-instance TakeWhile.instProductive [Monad m] [Iterator α m β] [Productive α m] {P} :
-    Productive (TakeWhile α m β P) m :=
-  by exact Productive.of_productivenessRelation instProductivenessRelation
+instance TakeWhile.instProductive [Monad m] [Iterator α m β] [Productive α m] {P}
+    : Productive (TakeWhile α m β P) m := by
+  exact Productive.of_productivenessRelation instProductivenessRelation
 
-instance TakeWhile.instIteratorLoop [Monad m] [Monad n] [Iterator α m β]
-    [IteratorLoop α m n] :
-    IteratorLoop (TakeWhile α m β P) m n :=
+instance TakeWhile.instIteratorLoop [Monad m] [Monad n] [Iterator α m β] [IteratorLoop α m n]
+    : IteratorLoop (TakeWhile α m β P) m n :=
   .defaultImplementation
 
 end Std.Iterators.Types

@@ -13,7 +13,6 @@ public section
 set_option linter.listVariables true -- Enforce naming conventions for `List`/`Array`/`Vector` variables.
 set_option linter.indexVariables true -- Enforce naming conventions for index variables.
 
-
 /--
 Replaces the element at a given index in an array.
 
@@ -27,8 +26,8 @@ Examples:
 * `#["orange", "apple"].set 1 "grape" = #["orange", "grape"]`
 -/
 @[extern "lean_array_fset", expose]
-def Array.set (xs : Array α) (i : @& Nat) (v : α) (h : i < xs.size := by get_elem_tactic) :
-    Array α where
+def Array.set (xs : Array α) (i : @& Nat) (v : α) (h : i < xs.size := by get_elem_tactic)
+    : Array α where
   toList := xs.toList.set i v
 
 /--
@@ -42,7 +41,8 @@ Examples:
 * `#["orange", "apple"].setIfInBounds 1 "grape" = #["orange", "grape"]`
 * `#["orange", "apple"].setIfInBounds 5 "grape" = #["orange", "apple"]`
 -/
-@[inline, expose] def Array.setIfInBounds (xs : Array α) (i : Nat) (v : α) : Array α :=
+@[inline, expose]
+def Array.setIfInBounds (xs : Array α) (i : Nat) (v : α) : Array α :=
   dite (LT.lt i xs.size) (fun h => xs.set i v h) (fun _ => xs)
 
 /--
@@ -52,5 +52,4 @@ This will perform the update destructively provided that `a` has a reference
 count of 1 when called.
 -/
 @[extern "lean_array_set", expose]
-def Array.set! (xs : Array α) (i : @& Nat) (v : α) : Array α :=
-  Array.setIfInBounds xs i v
+def Array.set! (xs : Array α) (i : @& Nat) (v : α) : Array α := Array.setIfInBounds xs i v

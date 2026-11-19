@@ -15,23 +15,26 @@ public section
 namespace Lean.Elab.Tactic
 open Meta
 
-@[builtin_tactic Lean.Parser.Tactic.generalize] def evalGeneralize : Tactic := fun stx =>
+@[builtin_tactic Lean.Parser.Tactic.generalize]
+def evalGeneralize : Tactic := fun stx =>
   withMainContext do
     let mut xIdents := #[]
     let mut hIdents := #[]
     let mut args := #[]
     for arg in stx[1].getSepArgs do
-      let hName? ← if arg[0].isNone then
-        pure none
-      else
-        hIdents := hIdents.push arg[0][0]
-        pure (some arg[0][0].getId)
+      let hName? ←
+        if arg[0].isNone then
+          pure none
+        else
+          hIdents := hIdents.push arg[0][0]
+          pure (some arg[0][0].getId)
       let expr ← elabTerm arg[1] none
       xIdents := xIdents.push arg[3]
       args := args.push { hName?, expr, xName? := arg[3].getId : GeneralizeArg }
-    let hyps ← match expandOptLocation stx[2] with
-    | .targets hyps _ => getFVarIds hyps
-    | .wildcard => pure ((← getLocalHyps).map (·.fvarId!))
+    let hyps ←
+      match expandOptLocation stx[2] with
+      | .targets hyps _ => getFVarIds hyps
+      | .wildcard => pure ((← getLocalHyps).map (·.fvarId!))
     let mvarId ← getMainGoal
     mvarId.withContext do
       let (_, newVars, mvarId) ← mvarId.generalizeHyp args hyps

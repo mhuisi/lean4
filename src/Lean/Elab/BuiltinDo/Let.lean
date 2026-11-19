@@ -14,7 +14,6 @@ import Lean.Elab.Do.PatternVar
 
 public section
 
-
 namespace Lean.Elab.Do
 
 open Lean.Parser.Term
@@ -28,23 +27,26 @@ inductive LetOrReassign
 def LetOrReassign.getLetMutTk? (letOrReassign : LetOrReassign) : Option Syntax :=
   match letOrReassign with
   | .let mutTk? _ => mutTk?
-  | _             => none
+  | _ => none
 
 def LetOrReassign.isErasedDecl (letOrReassign : LetOrReassign) : Bool :=
   match letOrReassign with
   | .let _ erased => erased
-  | _            => false
+  | _ => false
 
 def isErased (letOrReassign : LetOrReassign) (vars : Array Ident) : DoElabM Bool := do
   match letOrReassign with
   | .let _ erased => return erased
-  | .reassign    =>
-    let some v := vars[0]? | return false
-    let some mv ← findMutVar? v.getId | return false
+  | .reassign =>
+    let some v := vars[0]?
+      | return false
+    let some mv ← findMutVar? v.getId
+      | return false
     return mv.erased
-  | _            => return false
+  | _ => return false
 
-def LetOrReassign.checkMutVars (letOrReassign : LetOrReassign) (vars : Array Ident) : DoElabM Unit :=
+def LetOrReassign.checkMutVars (letOrReassign : LetOrReassign) (vars : Array Ident)
+    : DoElabM Unit :=
   match letOrReassign with
   | .reassign => do
     throwUnlessMutVarsDeclared vars
@@ -53,14 +55,16 @@ def LetOrReassign.checkMutVars (letOrReassign : LetOrReassign) (vars : Array Ide
       for v in vars do
         if ((← findMutVar? v.getId).map (·.erased)).getD false then
           throwErrorAt v "an erased variable takes a plain reassignment, as in `{v.getId} := e`"
-  | _         => checkMutVarsForShadowing vars
+  | _ => checkMutVarsForShadowing vars
 
-def LetOrReassign.registerReassignAliasInfo (letOrReassign : LetOrReassign) (vars : Array Ident) : DoElabM Unit := do
+def LetOrReassign.registerReassignAliasInfo (letOrReassign : LetOrReassign) (vars : Array Ident)
+    : DoElabM Unit := do
   if letOrReassign matches .reassign then
     for var in vars do
       registerMutVarAlias var.getId
 
-def elabWithReassignments (letOrReassign : LetOrReassign) (vars : Array Ident) (k : DoElabM Expr) : DoElabM Expr := do
+def elabWithReassignments (letOrReassign : LetOrReassign) (vars : Array Ident) (k : DoElabM Expr)
+    : DoElabM Expr := do
   declareMutVars? letOrReassign.getLetMutTk? vars letOrReassign.isErasedDecl do
     letOrReassign.registerReassignAliasInfo vars
     if ← isErased letOrReassign vars then
@@ -68,7 +72,8 @@ def elabWithReassignments (letOrReassign : LetOrReassign) (vars : Array Ident) (
     else
       k
 
-private def pushTypeIntoReassignment (letOrReassign : LetOrReassign) (decl : TSyntax ``letDecl) : TermElabM (TSyntax ``letDecl) := do
+private def pushTypeIntoReassignment (letOrReassign : LetOrReassign) (decl : TSyntax ``letDecl)
+    : TermElabM (TSyntax ``letDecl) := do
   if letOrReassign matches .reassign then
     match decl with
     | `(letDecl| $x:ident $[: $xType?]? := $rhs) =>
@@ -78,9 +83,10 @@ private def pushTypeIntoReassignment (letOrReassign : LetOrReassign) (decl : TSy
       let xType ← Term.exprToSyntax (← getLocalDeclFromUserName x.getId).type
       `(letDecl| $x:ident : $xType := $rhs)
     | `(letDecl| $pattern:term $[: $xType?]? := $rhs) =>
-      let pattern ← match xType? with
+      let pattern ←
+        match xType? with
         | some xType => `(($pattern : $xType))
-        | none       => pure pattern
+        | none => pure pattern
       -- `Term.withoutErrToSorry` prevents a confusing secondary error message when elaborating
       -- the `match` pattern, where the mut vars potentially get a different type.
       -- Example: `let mut n : Nat := 0; ((n : Char), _) := (false, false)`. We don't want to see
@@ -88,7 +94,9 @@ private def pushTypeIntoReassignment (letOrReassign : LetOrReassign) (decl : TSy
       let e ← Term.withoutErrToSorry <| Term.elabTerm pattern none
       let patType ← Term.exprToSyntax (← inferType e)
       `(letDecl| $pattern:term := ($rhs : $patType))
-    | _ => throwError m!"Impossible case in elabDoLetOrReassign. This is an elaborator bug.\n{decl}"
+    | _ =>
+      throwError m!"Impossible case in elabDoLetOrReassign. This is an elaborator bug.\
+        \n{decl}"
   else
     pure decl
 
@@ -98,17 +106,21 @@ private def checkLetConfigInDo (config : Term.LetConfig) : DoElabM Unit := do
   if config.generalize then
     throwError "`+generalize` is not supported in `do` blocks"
 
-/-- Wrap an erased binding `x : t := e` as `x : Erased t := Erased.mk e`. For a reassignment,
-`pushTypeIntoReassignment` has already checked the ascription and pinned `t`. -/
+/--
+Wrap an erased binding `x : t := e` as `x : Erased t := Erased.mk e`. For a reassignment,
+`pushTypeIntoReassignment` has already checked the ascription and pinned `t`.
+-/
 private def wrapErasedDecl (decl : TSyntax ``letDecl) : DoElabM (TSyntax ``letDecl) := do
   let `(letDecl| $x:ident $[: $t?]? := $e) := decl
     | throwUnsupportedSyntax
   match t? with
   | some t => `(letDecl| $x:ident : Erased $t := Erased.mk ($e : $t))
-  | none   => `(letDecl| $x:ident := Erased.mk $e)
+  | none => `(letDecl| $x:ident := Erased.mk $e)
 
-partial def elabDoLetOrReassign (config : Term.LetConfig) (letOrReassign : LetOrReassign) (decl : TSyntax ``letDecl)
-    (tk : Syntax) (dec : DoElemCont) : DoElabM Expr := do
+partial def elabDoLetOrReassign
+    (config : Term.LetConfig) (letOrReassign : LetOrReassign) (decl : TSyntax ``letDecl)
+    (tk : Syntax) (dec : DoElemCont)
+    : DoElabM Expr := do
   checkLetConfigInDo config
   let vars ← getLetDeclVars decl
   letOrReassign.checkMutVars vars
@@ -121,44 +133,54 @@ partial def elabDoLetOrReassign (config : Term.LetConfig) (letOrReassign : LetOr
   match decl with
   | `(letDecl| $decl:letEqnsDecl) =>
     let declNew ← `(letDecl| $(⟨← liftMacroM <| Term.expandLetEqnsDecl decl⟩):letIdDecl)
-    return ← Term.withMacroExpansion decl declNew <| elabDoLetOrReassign config letOrReassign declNew tk dec
+    return ← Term.withMacroExpansion decl declNew <|
+      elabDoLetOrReassign config letOrReassign declNew tk dec
   | `(letDecl| $pattern:term $[: $xType?]? := $rhs) =>
-    let rhs ← match xType? with | some xType => `(($rhs : $xType)) | none => pure rhs
+    let rhs ←
+      match xType? with
+      | some xType => `(($rhs : $xType))
+      | none => pure rhs
     let contElab : DoElabM Expr := elabWithReassignments letOrReassign vars dec.continueWithUnit
     doElabToSyntax m!"let body of {pattern}" contElab fun body => do
-    -- The infamous MVar postponement trick below popularized by `if` is necessary in Lake.CLI.Main.
-    -- We need it because we specify a constant motive, otherwise the `match` elaborator would have postponed.
-    let mvar ← Lean.withRef rhs `(?m)
-    let term ← if let some h := config.eq? then
-      `(let_mvar% ?m := $rhs;
-        wait_if_type_mvar% ?m;
-        match $h:ident : $mvar:term with
-        | $pattern:term => $body)
-    else
-      `(let_mvar% ?m := $rhs;
-        wait_if_type_mvar% ?m;
-        match (motive := ∀_, $(← Term.exprToSyntax mγ)) $mvar:term with
-        | $pattern:term => $body)
-    Term.withMacroExpansion (← getRef) term do Term.elabTermEnsuringType term (some mγ)
+      -- The infamous MVar postponement trick below popularized by `if` is necessary in Lake.CLI.Main.
+      -- We need it because we specify a constant motive, otherwise the `match` elaborator would have postponed.
+      let mvar ← Lean.withRef rhs `(?m)
+      let term ←
+        if let some h := config.eq? then
+          `(let_mvar% ?m := $rhs;
+            wait_if_type_mvar% ?m;
+            match $h:ident : $mvar:term with
+            | $pattern:term => $body)
+        else
+          `(let_mvar% ?m := $rhs;
+            wait_if_type_mvar% ?m;
+            match (motive := ∀_, $(← Term.exprToSyntax mγ)) $mvar:term with
+            | $pattern:term => $body)
+      Term.withMacroExpansion (← getRef) term do Term.elabTermEnsuringType term (some mγ)
   | `(letDecl| $decl:letIdDecl) =>
     let { id, binders, type, value } := Term.mkLetIdDeclView decl
     let id ← if id.isIdent then pure id else Term.mkFreshIdent id (canonical := true)
     let nondep := config.nondep || letOrReassign matches .have
     -- Only non-`mut` lets will be elaborated as `let`s; `let mut` and reassigns behave as `have`s.
     -- See `elabLetDeclAux` for rationale.
-    let (type, val) ← Term.elabBindersEx binders fun xs => do
-      let fvars := xs.map (·.2) -- discard binders
-      let ty ← Term.withSynthesize (postpone := .partial) <| Term.elabType type
-      let letMsg := if nondep then "have" else "let"
-      Term.registerCustomErrorIfMVar ty type m!"failed to infer `{letMsg}` declaration type"
-      Term.registerLevelMVarErrorExprInfo ty type m!"failed to infer universe levels in `{letMsg}` declaration type"
-      let lctx' := fvars.foldl (init := ← getLCtx) fun lctx fvar =>
-        lctx.modifyLocalDecl fvar.fvarId! (fun decl => decl.setType decl.type.cleanupAnnotations)
-      let val ← withLCtx' lctx' do
-        let val ← Term.elabTermEnsuringType value ty
-        mkLambdaFVars fvars val (usedLetOnly := false)
-      let ty ← mkForallFVars fvars ty
-      pure (ty, val)
+    let (type, val) ←
+      Term.elabBindersEx binders fun xs => do
+        let fvars := xs.map (·.2) -- discard binders
+        let ty ← Term.withSynthesize (postpone := .partial) <| Term.elabType type
+        let letMsg := if nondep then "have" else "let"
+        Term.registerCustomErrorIfMVar ty type m!"failed to infer `{letMsg}` declaration type"
+        Term.registerLevelMVarErrorExprInfo ty type
+          m!"failed to infer universe levels in `{letMsg}` declaration type"
+        let lctx' :=
+          fvars.foldl (init := ← getLCtx) fun lctx fvar =>
+            lctx.modifyLocalDecl fvar.fvarId!
+              (fun decl => decl.setType decl.type.cleanupAnnotations)
+        let val ←
+          withLCtx' lctx' do
+            let val ← Term.elabTermEnsuringType value ty
+            mkLambdaFVars fvars val (usedLetOnly := false)
+        let ty ← mkForallFVars fvars ty
+        pure (ty, val)
     let kind := .ofBinderName id.getId
     trace[Elab.let.decl] "{id.getId} : {type} := {val}"
     withLetDecl id.getId (kind := kind) type val (nondep := nondep) fun x => do
@@ -184,22 +206,29 @@ partial def elabDoLetOrReassign (config : Term.LetConfig) (letOrReassign : LetOr
             mkLetFVars #[x, h'] body (usedLetOnly := config.usedOnly) (generalizeNondepLet := false)
   | _ => throwUnsupportedSyntax
 
-private def getLetConfigAndCheckMut (letConfigStx : TSyntax ``Parser.Term.letConfig)
-    (mutTk? : Option Syntax) (initConfig : Term.LetConfig := {}) : DoElabM Term.LetConfig := do
+private def getLetConfigAndCheckMut
+    (letConfigStx : TSyntax ``Parser.Term.letConfig) (mutTk? : Option Syntax)
+    (initConfig : Term.LetConfig := {})
+    : DoElabM Term.LetConfig := do
   if mutTk?.isSome && !letConfigStx.raw[0].getArgs.isEmpty then
     throwErrorAt letConfigStx "configuration options are not allowed with `let mut`"
   Term.mkLetConfig letConfigStx initConfig
 
-@[builtin_doElem_elab Lean.Parser.Term.doLet] def elabDoLet : DoElab := fun stx dec => do
-  let `(doLet| let%$tk $[mut%$mutTk?]? $config:letConfig $decl:letDecl) := stx | throwUnsupportedSyntax
+@[builtin_doElem_elab Lean.Parser.Term.doLet]
+def elabDoLet : DoElab := fun stx dec => do
+  let `(doLet| let%$tk $[mut%$mutTk?]? $config:letConfig $decl:letDecl) := stx
+    | throwUnsupportedSyntax
   let config ← getLetConfigAndCheckMut config mutTk?
   elabDoLetOrReassign config (.let mutTk? false) decl tk dec
 
-@[builtin_doElem_elab Lean.Parser.Term.doErased] def elabDoErased : DoElab := fun stx dec => do
-  let `(doElem| erased%$tk $[mut%$mutTk?]? $x:ident $[: $t?]? := $e) := stx | throwUnsupportedSyntax
+@[builtin_doElem_elab Lean.Parser.Term.doErased]
+def elabDoErased : DoElab := fun stx dec => do
+  let `(doElem| erased%$tk $[mut%$mutTk?]? $x:ident $[: $t?]? := $e) := stx
+    | throwUnsupportedSyntax
   elabDoLetOrReassign {} (.let mutTk? true) (← `(letDecl| $x:ident $[: $t?]? := $e)) tk dec
 
-@[builtin_macro Lean.Parser.Term.doErasedArrow] def expandDoErasedArrow : Macro := fun stx => do
+@[builtin_macro Lean.Parser.Term.doErasedArrow]
+def expandDoErasedArrow : Macro := fun stx => do
   match stx with
   | `(doElem| erased%$tk $[mut%$mutTk?]? $x:ident $[: $t?]? ← $rhs) =>
     let y := mkIdentFrom x (← MonadQuotation.addMacroScope `__x)
@@ -208,13 +237,17 @@ private def getLetConfigAndCheckMut (letConfigStx : TSyntax ``Parser.Term.letCon
     `(doElem| do $letElem:doElem; $erasedElem:doElem)
   | _ => Macro.throwUnsupported
 
-@[builtin_doElem_elab Lean.Parser.Term.doHave] def elabDoHave : DoElab := fun stx dec => do
-  let `(doHave| have%$tk $config:letConfig $decl:letDecl) := stx | throwUnsupportedSyntax
+@[builtin_doElem_elab Lean.Parser.Term.doHave]
+def elabDoHave : DoElab := fun stx dec => do
+  let `(doHave| have%$tk $config:letConfig $decl:letDecl) := stx
+    | throwUnsupportedSyntax
   let config ← Term.mkLetConfig config { nondep := true }
   elabDoLetOrReassign config .have decl tk dec
 
-@[builtin_doElem_elab Lean.Parser.Term.doLetRec] def elabDoLetRec : DoElab := fun stx dec => do
-  let `(doLetRec| let%$tk rec $decls:letRecDecls) := stx | throwUnsupportedSyntax
+@[builtin_doElem_elab Lean.Parser.Term.doLetRec]
+def elabDoLetRec : DoElab := fun stx dec => do
+  let `(doLetRec| let%$tk rec $decls:letRecDecls) := stx
+    | throwUnsupportedSyntax
   let dec ← dec.ensureUnitAt tk
   let vars ← getLetRecDeclsVars decls
   let mγ ← mkMonadApp (← read).doBlockResultType
@@ -224,7 +257,8 @@ private def getLetConfigAndCheckMut (letConfigStx : TSyntax ``Parser.Term.letCon
     -- the status quo of the legacy `do` elaborator.
     Term.elabTerm (← `(let rec $decls:letRecDecls; $body)) mγ
 
-@[builtin_doElem_elab Lean.Parser.Term.doReassign] def elabDoReassign : DoElab := fun stx dec => do
+@[builtin_doElem_elab Lean.Parser.Term.doReassign]
+def elabDoReassign : DoElab := fun stx dec => do
   -- def doReassign := letIdDeclNoBinders <|> letPatDecl
   match stx with
   | `(doReassign| $x:ident $[: $xType?]? :=%$tk $rhs) =>
@@ -236,8 +270,10 @@ private def getLetConfigAndCheckMut (letConfigStx : TSyntax ``Parser.Term.letCon
     elabDoLetOrReassign {} .reassign decl decl dec
   | _ => throwUnsupportedSyntax
 
-@[builtin_doElem_elab Lean.Parser.Term.doLetElse] def elabDoLetElse : DoElab := fun stx dec => do
-  let `(doLetElse| let $[mut%$mutTk?]? $cfg:letConfig $pattern := $rhs | $otherwise $(body?)?) := stx
+@[builtin_doElem_elab Lean.Parser.Term.doLetElse]
+def elabDoLetElse : DoElab := fun stx dec => do
+  let `(doLetElse| let $[mut%$mutTk?]? $cfg:letConfig $pattern := $rhs | $otherwise $(body?)?) :=
+      stx
     | throwUnsupportedSyntax
   let config ← getLetConfigAndCheckMut cfg mutTk?
   checkLetConfigInDo config
@@ -250,12 +286,18 @@ private def getLetConfigAndCheckMut (letConfigStx : TSyntax ``Parser.Term.letCon
     for var in vars do
       body ← `(doSeqIndent| let mut $var := $var; do $body:doSeqIndent)
   if let some h := config.eq? then
-    elabDoElem (← `(doElem| match $h:ident : $rhs:term with | $pattern => $body:doSeqIndent | _ => $otherwise:doSeqIndent)) dec
+    elabDoElem
+      (← `(doElem| match $h:ident : $rhs:term with | $pattern => $body:doSeqIndent | _ => $otherwise:doSeqIndent))
+      dec
   else
-    elabDoElem (← `(doElem| match $rhs:term with | $pattern => $body:doSeqIndent | _ => $otherwise:doSeqIndent)) dec
+    elabDoElem
+      (← `(doElem| match $rhs:term with | $pattern => $body:doSeqIndent | _ => $otherwise:doSeqIndent))
+      dec
 
-@[builtin_doElem_elab Lean.Parser.Term.doLetArrow] def elabDoLetArrow : DoElab := fun stx dec => do
-  let `(doLetArrow| let%$tk $[mut%$mutTk?]? $cfg:letConfig $decl) := stx | throwUnsupportedSyntax
+@[builtin_doElem_elab Lean.Parser.Term.doLetArrow]
+def elabDoLetArrow : DoElab := fun stx dec => do
+  let `(doLetArrow| let%$tk $[mut%$mutTk?]? $cfg:letConfig $decl) := stx
+    | throwUnsupportedSyntax
   let config ← getLetConfigAndCheckMut cfg mutTk?
   checkLetConfigInDo config
   if config.nondep || config.usedOnly || config.zeta || config.eq?.isSome then
@@ -279,18 +321,19 @@ private def getLetConfigAndCheckMut (letConfigStx : TSyntax ``Parser.Term.letCon
       match otherwise? with
       | some otherwise =>
         elabDoElem (← `(doElem| let $[mut%$mutTk?]? $pattern:term := $x | $otherwise $(rest?)?)) dec
-      | none =>
-        elabDoElem (← `(doElem| let $[mut%$mutTk?]? $pattern:term := $x)) dec
+      | none => elabDoElem (← `(doElem| let $[mut%$mutTk?]? $pattern:term := $x)) dec
   | _ => throwUnsupportedSyntax
 
-@[builtin_doElem_elab Lean.Parser.Term.doReassignArrow] def elabDoReassignArrow : DoElab := fun stx dec => do
+@[builtin_doElem_elab Lean.Parser.Term.doReassignArrow]
+def elabDoReassignArrow : DoElab := fun stx dec => do
   match stx with
   | `(doReassignArrow| $x:ident $[: $t?]? ← $rhs) =>
     throwUnlessMutVarDeclared x
     -- Pin the variable's declared type on the bind, so a type error blames the action.
-    let t ← match t? with
+    let t ←
+      match t? with
       | some t => pure t
-      | none   => Term.exprToSyntax (← getLocalDeclFromUserName x.getId).type
+      | none => Term.exprToSyntax (← getLocalDeclFromUserName x.getId).type
     let y := mkIdentFrom x (← mkFreshUserName `__x)
     elabDoIdDecl y (some t) rhs (elabDoElem (← `(doElem| $x:ident := $y)) dec) (kind := dec.kind)
   | `(doReassignArrow| $pat:term $[: $t?]? ← $rhs $[| $otherwise? $(rest?)?]?) =>
