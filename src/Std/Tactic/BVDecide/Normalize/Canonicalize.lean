@@ -23,30 +23,24 @@ namespace Std.Tactic.BVDecide
 namespace Normalize
 
 @[bv_normalize]
-theorem BitVec.eq_to_beq (a b : BitVec w) : (a = b) = ((a == b) = true) := by
-  simp
+theorem BitVec.eq_to_beq (a b : BitVec w) : (a = b) = ((a == b) = true) := by simp
 
 @[bv_normalize]
-theorem BitVec.ne_to_beq (a b : BitVec w) : (¬a = b) = ((!(a == b)) = true) := by
-  simp
+theorem BitVec.ne_to_beq (a b : BitVec w) : (¬ a = b) = ((!(a == b)) = true) := by simp
 
 theorem Bool.eq_to_beq (a b : Bool) : (a = b) = ((a == b) = true) := by simp
 
 @[bv_normalize]
-theorem BitVec.bne_to_beq (a b : BitVec w) : (a != b) = (!(a == b)) := by
-  simp [bne]
+theorem BitVec.bne_to_beq (a b : BitVec w) : (a != b) = (!(a == b)) := by simp [bne]
 
 @[bv_normalize]
-theorem Bool.bne_to_beq (a b : Bool) : (a != b) = (!(a == b)) := by
-  simp [bne]
+theorem Bool.bne_to_beq (a b : Bool) : (a != b) = (!(a == b)) := by simp [bne]
 
 @[bv_normalize]
-theorem Bool.neg_to_not (a : Bool) : (¬a) = ((!a) = true) := by
-  simp
+theorem Bool.neg_to_not (a : Bool) : (¬a) = ((!a) = true) := by simp
 
 @[bv_normalize]
-theorem Bool.ne_to_beq (a b : Bool) : (¬a = b) = ((!(a == b)) = true) := by
-  simp
+theorem Bool.ne_to_beq (a b : Bool) : (¬ a = b) = ((!(a == b)) = true) := by simp
 
 @[bv_normalize]
 theorem Bool.imp_to_or (a b : Bool) : ((a = true) → (b = true)) = (((!a) || b) = true) := by
@@ -54,30 +48,24 @@ theorem Bool.imp_to_or (a b : Bool) : ((a = true) → (b = true)) = (((!a) || b)
   decide
 
 @[bv_normalize]
-theorem Bool.or_to_or (a b : Bool) : ((a = true) ∨ (b = true)) = ((a || b) = true) := by
-  simp
+theorem Bool.or_to_or (a b : Bool) : ((a = true) ∨ (b = true)) = ((a || b) = true) := by simp
 
 @[bv_normalize]
-theorem Bool.and_to_and (a b : Bool) : ((a = true) ∧ (b = true)) = ((a && b) = true) := by
-  simp
+theorem Bool.and_to_and (a b : Bool) : ((a = true) ∧ (b = true)) = ((a && b) = true) := by simp
 
 @[bv_normalize]
-theorem Bool.iff_to_beq :
-    ∀ (a b : Bool), ((a = true) ↔ (b = true)) = ((a == b) = true) := by
+theorem Bool.iff_to_beq : ∀ (a b : Bool), ((a = true) ↔ (b = true)) = ((a == b) = true) := by decide
+
+@[bv_normalize]
+theorem Bool.cond_to_bool
+    : ∀ (c t e : Bool), (bif c then t = true else e = true) = ((bif c then t else e) = true) := by
   decide
 
 @[bv_normalize]
-theorem Bool.cond_to_bool :
-    ∀ (c t e : Bool), (bif c then t = true else e = true) = ((bif c then t else e) = true) := by
-  decide
+theorem Bool.eq_false (a : Bool) : ((a = true) = False) = ((!a) = true) := by simp
 
 @[bv_normalize]
-theorem Bool.eq_false (a : Bool) : ((a = true) = False) = ((!a) = true) := by
-  simp
-
-@[bv_normalize]
-theorem Bool.decide_eq_true (a : Bool) : (decide (a = true)) = a := by
-  simp
+theorem Bool.decide_eq_true (a : Bool) : (decide (a = true)) = a := by simp
 
 attribute [bv_normalize] BitVec.getLsbD_cast
 attribute [bv_normalize] BitVec.testBit_toNat
@@ -110,10 +98,10 @@ attribute [bv_normalize] BitVec.udiv_eq
 attribute [bv_normalize] BitVec.umod_eq
 
 @[bv_normalize]
-theorem BitVec.shiftLeft_eq' {x : BitVec w₁} {y : BitVec w₂} :  x <<< y.toNat = x <<< y := rfl
+theorem BitVec.shiftLeft_eq' {x : BitVec w₁} {y : BitVec w₂} : x <<< y.toNat = x <<< y := rfl
 
 @[bv_normalize]
-theorem BitVec.sshiftRight_eq' (x : BitVec w) : x.sshiftRight y.toNat = x.sshiftRight' y  := rfl
+theorem BitVec.sshiftRight_eq' (x : BitVec w) : x.sshiftRight y.toNat = x.sshiftRight' y := rfl
 
 @[bv_normalize]
 theorem BitVec.ushiftRight_eq' (x : BitVec w₁) (y : BitVec w₂) : x >>> y.toNat = x >>> y := rfl

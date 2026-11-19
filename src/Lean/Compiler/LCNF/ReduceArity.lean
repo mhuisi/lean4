@@ -127,8 +127,10 @@ abbrev ReduceM := ReaderT Context CompilerM
 partial def reduce (code : Code .pure) : ReduceM (Code .pure) := do
   match code with
   | .let decl k =>
-    let .const declName _ args := decl.value | do return code.updateLet! decl (← reduce k)
-    unless declName == (← read).declName do return code.updateLet! decl (← reduce k)
+    let .const declName _ args := decl.value
+      | do return code.updateLet! decl (← reduce k)
+    unless declName == (← read).declName do
+      return code.updateLet! decl (← reduce k)
     let mut argsNew := #[]
     let mask := (← read).paramMask
     if (← read).allUnused then
@@ -168,8 +170,8 @@ def Decl.reduceArity (decl : Decl .pure) : CompilerM (Array (Decl .pure)) := do
     -- declaration to a constant
     let allUnused := used.isEmpty
     trace[Compiler.reduceArity] "{decl.name}, used params: {used.toList.map mkFVar}"
-    let mask   := decl.params.map fun param => used.contains param.fvarId
-    let auxName   := decl.name ++ `_redArg
+    let mask := decl.params.map fun param => used.contains param.fvarId
+    let auxName := decl.name ++ `_redArg
     let mkAuxDecl : CompilerM (Decl .pure) := do
       let params ←
         if allUnused then
@@ -177,7 +179,7 @@ def Decl.reduceArity (decl : Decl .pure) : CompilerM (Array (Decl .pure)) := do
         else
           pure <| decl.params.filter fun param => used.contains param.fvarId
       let ctx := { declName := decl.name, auxDeclName := auxName, paramMask := mask, allUnused }
-      let value  ← decl.value.mapCodeM reduce |>.run ctx
+      let value ← decl.value.mapCodeM reduce |>.run ctx
       let type ← code.inferType
       let type ← mkForallParams params type
       let auxDecl := { decl with name := auxName, levelParams := [], type, params, value }
@@ -197,7 +199,7 @@ def Decl.reduceArity (decl : Decl .pure) : CompilerM (Array (Decl .pure)) := do
       let decl := { decl with params, value, inlineAttr? := some .inline, recursive := false }
       decl.saveMono
       return decl
-    let unusedParams := decl.params.filter fun param => !used.contains param.fvarId
+    let unusedParams := decl.params.filter fun param => ! used.contains param.fvarId
     let auxDecl ← mkAuxDecl
     let decl ← updateDecl |>.run' {}
     eraseParams unusedParams
@@ -207,11 +209,10 @@ def Decl.reduceArity (decl : Decl .pure) : CompilerM (Array (Decl .pure)) := do
 def reduceArity : Pass where
   phase := .mono
   phaseOut := .mono
-  name  := `reduceArity
-  run   := fun decls => do
+  name := `reduceArity
+  run := fun decls => do
     decls.foldlM (init := #[]) fun decls decl => return decls ++ (← decl.reduceArity)
 
-builtin_initialize
-  registerTraceClass `Compiler.reduceArity (inherited := true)
+builtin_initialize registerTraceClass `Compiler.reduceArity (inherited := true)
 
 end Lean.Compiler.LCNF

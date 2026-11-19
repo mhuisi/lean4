@@ -13,11 +13,16 @@ public section
 namespace Lean.Elab
 
 builtin_initialize postponeExceptionId : InternalExceptionId ← registerInternalExceptionId `postpone
-builtin_initialize unsupportedSyntaxExceptionId : InternalExceptionId ← registerInternalExceptionId `unsupportedSyntax
-builtin_initialize abortCommandExceptionId : InternalExceptionId ← registerInternalExceptionId `abortCommandElab
-builtin_initialize abortTermExceptionId : InternalExceptionId ← registerInternalExceptionId `abortTermElab
-builtin_initialize abortTacticExceptionId : InternalExceptionId ← registerInternalExceptionId `abortTactic
-builtin_initialize autoBoundImplicitExceptionId : InternalExceptionId ← registerInternalExceptionId `autoBoundImplicit
+builtin_initialize unsupportedSyntaxExceptionId : InternalExceptionId ←
+  registerInternalExceptionId `unsupportedSyntax
+builtin_initialize abortCommandExceptionId : InternalExceptionId ←
+  registerInternalExceptionId `abortCommandElab
+builtin_initialize abortTermExceptionId : InternalExceptionId ←
+  registerInternalExceptionId `abortTermElab
+builtin_initialize abortTacticExceptionId : InternalExceptionId ←
+  registerInternalExceptionId `abortTactic
+builtin_initialize autoBoundImplicitExceptionId : InternalExceptionId ←
+  registerInternalExceptionId `autoBoundImplicit
 
 def throwPostpone [MonadExceptOf Exception m] : m α :=
   throw $ Exception.internal postponeExceptionId
@@ -25,8 +30,7 @@ def throwPostpone [MonadExceptOf Exception m] : m α :=
 def throwUnsupportedSyntax [MonadExceptOf Exception m] : m α :=
   throw $ Exception.internal unsupportedSyntaxExceptionId
 
-def throwIllFormedSyntax [Monad m] [MonadError m] : m α :=
-  throwError "ill-formed syntax"
+def throwIllFormedSyntax [Monad m] [MonadError m] : m α := throwError "ill-formed syntax"
 
 def throwAutoBoundImplicitLocal [MonadExceptOf Exception m] (n : Name) : m α :=
   throw $ Exception.internal autoBoundImplicitExceptionId <| KVMap.empty.insert `localId n
@@ -68,7 +72,10 @@ def isAbortException (ex : Exception) : Bool :=
   | Exception.internal id .. => isAbortExceptionId id
   | _ => false
 
-def mkMessageCore (fileName : String) (fileMap : FileMap) (data : MessageData) (severity : MessageSeverity) (pos : String.Pos.Raw) (endPos : String.Pos.Raw) : Message :=
+def mkMessageCore
+    (fileName : String) (fileMap : FileMap) (data : MessageData) (severity : MessageSeverity)
+    (pos : String.Pos.Raw) (endPos : String.Pos.Raw)
+    : Message :=
   let pos := fileMap.toPosition pos
   let endPos := fileMap.toPosition endPos
   { fileName, pos, endPos, data, severity }

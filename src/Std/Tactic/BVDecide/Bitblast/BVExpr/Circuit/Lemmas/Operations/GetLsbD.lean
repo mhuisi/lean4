@@ -26,11 +26,12 @@ namespace BVPred
 
 variable [Hashable α] [DecidableEq α]
 
-theorem denote_getD_eq_getLsbD (aig : AIG α) (assign : α → Bool) (x : BitVec w)
-    (xv : AIG.RefVec aig w) (falseRef : AIG.Ref aig)
+theorem denote_getD_eq_getLsbD
+    (aig : AIG α)
+    (assign : α → Bool) (x : BitVec w) (xv : AIG.RefVec aig w) (falseRef : AIG.Ref aig)
     (hx : ∀ idx hidx, ⟦aig, xv.get idx hidx, assign⟧ = x.getLsbD idx)
-    (hfalse : ⟦aig, falseRef, assign⟧ = false) :
-    ∀ idx, ⟦aig, xv.getD idx falseRef, assign⟧ = x.getLsbD idx := by
+    (hfalse : ⟦aig, falseRef, assign⟧ = false)
+    : ∀ idx, ⟦aig, xv.getD idx falseRef, assign⟧ = x.getLsbD idx := by
   intro idx
   rw [AIG.RefVec.getD]
   split
@@ -41,13 +42,12 @@ theorem denote_getD_eq_getLsbD (aig : AIG α) (assign : α → Bool) (x : BitVec
     omega
 
 @[simp]
-theorem denote_blastGetLsbD (aig : AIG α) (target : GetLsbDTarget aig) (assign : α → Bool) :
-    ⟦aig, blastGetLsbD aig target, assign⟧
-      =
-    if h : target.idx < target.w then
-      ⟦aig, target.vec.get target.idx h, assign⟧
-    else
-      false := by
+theorem denote_blastGetLsbD (aig : AIG α) (target : GetLsbDTarget aig) (assign : α → Bool)
+    : ⟦aig, blastGetLsbD aig target, assign⟧
+      = if h : target.idx < target.w then
+          ⟦aig, target.vec.get target.idx h, assign⟧
+        else
+          false := by
   rcases target with ⟨expr, idx⟩
   unfold blastGetLsbD
   dsimp only

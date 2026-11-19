@@ -14,7 +14,6 @@ import Lean.Data.Markdown.InlineSource
 
 namespace Lean.Markdown
 
-
 /-!
 # The In-Progress Zipper
 
@@ -23,9 +22,7 @@ order. A zipper-like structure makes it easy to see the surrounding block contex
 at the right-hand edge.
 -/
 
-/--
-A container that is currently open and may still receive child blocks.
--/
+/-- A container that is currently open and may still receive child blocks. -/
 public inductive OpenContainer (s : String.Slice) where
   /--
   A blockquote. `markers` accumulates the `>` markers from
@@ -130,8 +127,7 @@ variable {s : String.Slice}
 public def empty : BlockZipper s := {}
 
 /-- The deepest currently-open container, or `none` if only the document is open. -/
-public def top? (z : BlockZipper s) : Option (OpenContainer s) :=
-  z.spine.back?.map (·.container)
+public def top? (z : BlockZipper s) : Option (OpenContainer s) := z.spine.back?.map (·.container)
 
 /--
 Converts an open leaf into its closed `Block.Raw` form. Fenced code blocks are not terminated with a
@@ -147,20 +143,24 @@ public def leafToBlock : OpenLeaf s → Block.Raw s
 Applies `f` to the children of the deepest open container, which are the document's children when
 there is no open container.
 -/
-@[inline] def modifyChildren (z : BlockZipper s) (f : Children s → Children s) : BlockZipper s :=
-  if z.spine.isEmpty then
-    { z with document := f z.document }
-  else
-    { z with
-      spine :=
-        z.spine.modify (z.spine.size - 1) fun frame => { frame with children := f frame.children } }
+@[inline]
+def modifyChildren (z : BlockZipper s) (f : Children s → Children s) : BlockZipper s :=
+  if z.spine.isEmpty then {
+    z with
+    document := f z.document
+  }
+  else {
+    z with
+    spine :=
+      z.spine.modify (z.spine.size - 1) fun frame => { frame with children := f frame.children }
+  }
 
 /--
 Applies `f` to the children of the deepest open container, which are the document's children when
 no container is open, and returns the value that `f` produces alongside the new children.
 -/
-@[inline] def modifyGetChildren (z : BlockZipper s) (f : Children s → Children s × α) :
-    BlockZipper s × α :=
+@[inline]
+def modifyGetChildren (z : BlockZipper s) (f : Children s → Children s × α) : BlockZipper s × α :=
   if h : 0 < z.spine.size then
     let frame := z.spine.back h
     let spine := z.spine.pop
@@ -172,8 +172,7 @@ no container is open, and returns the value that `f` produces alongside the new 
     ({ z with document }, a)
 
 /-- Adds a finished block as the last child of the deepest open container. -/
-def pushChild (z : BlockZipper s) (b : Block.Raw s) : BlockZipper s :=
-  z.modifyChildren (·.push b)
+def pushChild (z : BlockZipper s) (b : Block.Raw s) : BlockZipper s := z.modifyChildren (·.push b)
 
 /-- Closes any open leaf, attaching it to the deepest container. -/
 public def closeLeaf (z : BlockZipper s) : BlockZipper s :=
@@ -207,8 +206,10 @@ public def recordBlankLine (z : BlockZipper s) : BlockZipper s :=
   let topIsListLike :=
     match z.spine.back? with
     | some frame =>
-      (match frame.container with | .listItem .. => true | _ => false) ||
-        frame.children.pendingList?.isSome
+      (match frame.container with
+          | .listItem .. => true
+          | _ => false)
+        || frame.children.pendingList?.isSome
     | none => z.document.pendingList?.isSome
   { z with blankLineFloor? := if topIsListLike then some z.listLikeFloor else none }
 
@@ -216,8 +217,10 @@ public def recordBlankLine (z : BlockZipper s) : BlockZipper s :=
 Records a line that continues the open block. Any blank line before it was inside that block
 instead of between two blocks, so it doesn't make any list loose.
 -/
-public def recordContentLine (z : BlockZipper s) : BlockZipper s :=
-  { z with blankLineFloor? := none }
+public def recordContentLine (z : BlockZipper s) : BlockZipper s := {
+  z with
+  blankLineFloor? := none
+}
 
 /--
 Marks the list of the deepest open container as loose (CommonMark §5.3) when that container is a
@@ -225,13 +228,18 @@ list item at spine index `floor` or deeper.
 -/
 def markLooseAbove (z : BlockZipper s) (floor : Nat) : BlockZipper s :=
   let top := z.spine.size - 1
-  if z.spine.isEmpty || top < floor then z
-  else
-    { z with
-      spine := z.spine.modify top fun
-        | { container := .listItem list marker contentColumn, children } =>
-          { container := .listItem { list with loose := true } marker contentColumn, children }
-        | frame => frame }
+  if z.spine.isEmpty || top < floor then
+    z
+  else {
+    z with
+    spine :=
+      z.spine.modify top fun
+        | { container := .listItem list marker contentColumn, children } => {
+          container := .listItem { list with loose := true } marker contentColumn
+          children
+        }
+        | frame => frame
+  }
 
 /--
 Records that a block begins as a child of the deepest open container. A blank line since the
@@ -259,7 +267,8 @@ public def closeContainer (z : BlockZipper s) : BlockZipper s :=
     | .listItem list marker _ =>
       let list := { list with items := list.items.push { marker, children := children.blocks } }
       z.modifyChildren (·.setPendingList list)
-  else z
+  else
+    z
 
 /--
 Opens a blockquote as the last child of the deepest open container, closing any open leaf first.
@@ -273,8 +282,9 @@ Opens a list item as the last child of the deepest open container, closing any o
 item joins the container's pending list when that list is of the item's kind; otherwise the item
 begins a new list. A blank line before the item makes the list that it joins loose.
 -/
-public def openItem (z : BlockZipper s) (kind : ListKind) (marker : s.Subslice)
-    (contentColumn : Columns) : BlockZipper s :=
+public def openItem
+    (z : BlockZipper s) (kind : ListKind) (marker : s.Subslice) (contentColumn : Columns)
+    : BlockZipper s :=
   let z := z.closeLeaf
   let (z, list?) := z.modifyGetChildren (·.takePendingList kind)
   match list? with
@@ -301,7 +311,8 @@ public def addBlock (z : BlockZipper s) (b : Block.Raw s) : BlockZipper s :=
 Replaces the open leaf with the result of `f`, applied to the current leaf. The leaf is taken out of
 the zipper before `f` runs, so that `f` can extend the leaf's arrays without copying them.
 -/
-@[inline] def modifyLeaf (z : BlockZipper s) (f : OpenLeaf s → OpenLeaf s) : BlockZipper s :=
+@[inline]
+def modifyLeaf (z : BlockZipper s) (f : OpenLeaf s → OpenLeaf s) : BlockZipper s :=
   match z.openLeaf? with
   | none => z
   | some leaf =>
@@ -357,15 +368,20 @@ public def indentedCodeAddBlank (z : BlockZipper s) (line : VerbatimLine s) : Bl
 Appends `m` to the markers of the blockquote frame at spine index `i`. A frame of another kind is
 left as it is.
 -/
-public def pushBlockquoteMarker (z : BlockZipper s) (i : Nat) (m : s.Subslice) : BlockZipper s :=
-  { z with
-    spine := z.spine.modify i fun
-      | { container := .blockquote markers, children } =>
-        { container := .blockquote (markers.push m), children }
-      | frame => frame }
+public def pushBlockquoteMarker (z : BlockZipper s) (i : Nat) (m : s.Subslice) : BlockZipper s := {
+  z with
+  spine :=
+    z.spine.modify i fun
+      | { container := .blockquote markers, children } => {
+        container := .blockquote (markers.push m)
+        children
+      }
+      | frame => frame
+}
 
-@[simp] public theorem spine_size_pushBlockquoteMarker (z : BlockZipper s) (i : Nat)
-    (m : s.Subslice) : (z.pushBlockquoteMarker i m).spine.size = z.spine.size := by
+@[simp]
+public theorem spine_size_pushBlockquoteMarker (z : BlockZipper s) (i : Nat) (m : s.Subslice)
+    : (z.pushBlockquoteMarker i m).spine.size = z.spine.size := by
   simp [pushBlockquoteMarker]
 
 /-- Closes every container down to the document root and returns its children. -/

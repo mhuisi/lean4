@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Andres Erbsen, Leonardo de Moura
 -/
 module
+
 prelude
 -- The `[grind hom]` solver evaluates ground terms with `Sym.simp`, whose proofs use these lemmas.
 public import Init.Sym.Lemmas

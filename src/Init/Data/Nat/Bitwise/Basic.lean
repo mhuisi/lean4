@@ -34,11 +34,11 @@ def bitwise (f : Bool → Bool → Bool) (n m : Nat) : Nat :=
     let m' := m / 2
     let b₁ := n % 2 = 1
     let b₂ := m % 2 = 1
-    let r  := bitwise f n' m'
+    let r := bitwise f n' m'
     if f b₁ b₂ then
-      r+r+1
+      r + r + 1
     else
-      r+r
+      r + r
 decreasing_by apply bitwise_rec_lemma; assumption
 
 /--
@@ -55,7 +55,7 @@ Bitwise or. Usually accessed via the `|||` operator.
 Each bit of the resulting value is set if the corresponding bit is set in at least one of the inputs.
 -/
 @[extern "lean_nat_lor"]
-def lor  : @& Nat → @& Nat → Nat := bitwise or
+def lor : @& Nat → @& Nat → Nat := bitwise or
 
 /--
 Bitwise exclusive or. Usually accessed via the `^^^` operator.
@@ -63,7 +63,7 @@ Bitwise exclusive or. Usually accessed via the `^^^` operator.
 Each bit of the resulting value is set if the corresponding bit is set in exactly one of the inputs.
 -/
 @[extern "lean_nat_lxor"]
-def xor  : @& Nat → @& Nat → Nat := bitwise bne
+def xor : @& Nat → @& Nat → Nat := bitwise bne
 
 /--
 Shifts the binary representation of a value left by the specified number of bits. Usually accessed
@@ -78,7 +78,7 @@ Examples:
 @[extern "lean_nat_shiftl", expose, implicit_reducible]
 def shiftLeft : @& Nat → @& Nat → Nat
   | n, 0 => n
-  | n, succ m => shiftLeft (2*n) m
+  | n, succ m => shiftLeft (2 * n) m
 
 /--
 Shifts the binary representation of a value right by the specified number of bits. Usually accessed
@@ -102,19 +102,24 @@ instance : XorOp Nat := ⟨Nat.xor⟩
 instance : ShiftLeft Nat := ⟨Nat.shiftLeft⟩
 instance : ShiftRight Nat := ⟨Nat.shiftRight⟩
 
-@[simp] theorem land_eq {m n : Nat} : m.land n = m &&& n := rfl
-@[simp] theorem lor_eq {m n : Nat} : m.lor n = m ||| n := rfl
-@[simp] theorem xor_eq {m n : Nat} : m.xor n = m ^^^ n := rfl
-@[simp] theorem shiftLeft_eq' {m n : Nat} : m.shiftLeft n = m <<< n := rfl
-@[simp] theorem shiftRight_eq' {m n : Nat} : m.shiftRight n = m >>> n := rfl
+@[simp]
+theorem land_eq {m n : Nat} : m.land n = m &&& n := rfl
+@[simp]
+theorem lor_eq {m n : Nat} : m.lor n = m ||| n := rfl
+@[simp]
+theorem xor_eq {m n : Nat} : m.xor n = m ^^^ n := rfl
+@[simp]
+theorem shiftLeft_eq' {m n : Nat} : m.shiftLeft n = m <<< n := rfl
+@[simp]
+theorem shiftRight_eq' {m n : Nat} : m.shiftRight n = m >>> n := rfl
 
 theorem shiftLeft_eq (a b : Nat) : a <<< b = a * 2 ^ b :=
   match b with
   | 0 => (Nat.mul_one _).symm
-  | b+1 => (shiftLeft_eq _ b).trans <| by
-    simp [Nat.pow_succ, Nat.mul_assoc, Nat.mul_comm]
+  | b + 1 => (shiftLeft_eq _ b).trans <| by simp [Nat.pow_succ, Nat.mul_assoc, Nat.mul_comm]
 
-@[simp, grind =] theorem shiftRight_zero : n >>> 0 = n := rfl
+@[simp, grind =]
+theorem shiftRight_zero : n >>> 0 = n := rfl
 
 theorem shiftRight_succ (m n) : m >>> (n + 1) = (m >>> n) / 2 := rfl
 
@@ -128,7 +133,7 @@ theorem shiftRight_eq_div_pow (m : Nat) : ∀ n, m >>> n = m / 2 ^ n
     rw [shiftRight_add, shiftRight_eq_div_pow m k]
     simp [Nat.div_div_eq_div_mul, ← Nat.pow_succ, shiftRight_succ]
 
-theorem shiftRight_eq_zero (m n : Nat) (hn : m < 2^n) : m >>> n = 0 := by
+theorem shiftRight_eq_zero (m n : Nat) (hn : m < 2 ^ n) : m >>> n = 0 := by
   simp [Nat.shiftRight_eq_div_pow, Nat.div_eq_of_lt hn]
 
 theorem shiftRight_le (m n : Nat) : m >>> n ≤ m := by
@@ -141,10 +146,9 @@ We define an operation for testing individual bits in the binary representation
 of a number.
 -/
 
-/--
-Returns `true` if the `(n+1)`th least significant bit is `1`, or `false` if it is `0`.
--/
-@[expose, implicit_reducible] def testBit (m n : Nat) : Bool :=
+/-- Returns `true` if the `(n+1)`th least significant bit is `1`, or `false` if it is `0`. -/
+@[expose, implicit_reducible]
+def testBit (m n : Nat) : Bool :=
   -- `1 &&& n` is faster than `n &&& 1` for big `n`.
   1 &&& (m >>> n) != 0
 
@@ -153,8 +157,8 @@ Asserts that the `(n+1)`th least significant bit of `m` is not set.
 
 (This definition is used by Lean internally for compact bitmaps.)
 -/
-@[expose] protected def hasNotBit (m n : Nat) : Prop :=
-  Nat.land 1 (Nat.shiftRight m n) ≠ 1
+@[expose]
+protected def hasNotBit (m n : Nat) : Prop := Nat.land 1 (Nat.shiftRight m n) ≠ 1
 
 @[grind =]
 theorem hasNotBit_eq (m n : Nat) : Nat.hasNotBit m n = (1 &&& (m >>> n) ≠ 1) := rfl
@@ -171,15 +175,20 @@ At runtime this scans the low machine words without allocating or dividing the i
 def trailingZeros (n : @& Nat) : Nat :=
   -- Use recursors directly to keep kernel reduction depth low.
   let bits := fun (n : Nat) =>
-    n.rec (fun _ => nat_lit 0) (fun _ ih n =>
-      ((nat_lit 2).ble n).rec (nat_lit 0)
-        (((n.mod (nat_lit 2)).beq (nat_lit 0)).rec (nat_lit 0)
-          ((ih (n.div (nat_lit 2))).succ))) n
-  n.rec (fun _ => nat_lit 0) (fun _ ih n =>
-    (n.beq (nat_lit 0)).rec
-      ((((nat_lit 0xffffffffffffffff).land n).beq (nat_lit 0)).rec
-        (bits ((nat_lit 0xffffffffffffffff).land n))
-        ((ih (Nat.shiftRight n (nat_lit 64))).add (nat_lit 64)))
-      (nat_lit 0)) n
+    n.rec
+      (fun _ => nat_lit 0)
+      (fun _ ih n =>
+        ((nat_lit 2).ble n).rec (nat_lit 0)
+          (((n.mod (nat_lit 2)).beq (nat_lit 0)).rec (nat_lit 0) ((ih (n.div (nat_lit 2))).succ)))
+      n
+  n.rec
+    (fun _ => nat_lit 0)
+    (fun _ ih n =>
+      (n.beq (nat_lit 0)).rec
+        ((((nat_lit 0xffffffffffffffff).land n).beq (nat_lit 0)).rec
+          (bits ((nat_lit 0xffffffffffffffff).land n))
+          ((ih (Nat.shiftRight n (nat_lit 64))).add (nat_lit 64)))
+        (nat_lit 0))
+    n
 
 end Nat

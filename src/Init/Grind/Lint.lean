@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Tactics
 public section
@@ -40,7 +41,9 @@ By default, `#grind_lint` uses the following `grind` configuration:
 ```
 Consider using `#grind_lint inspect <thm>` to focus on specific theorems.
 -/
-syntax (name := grindLintCheck) "#grind_lint" ppSpace &"check" (ppSpace configItem)* (ppSpace "in" (ppSpace &"module")? ident+)? : command
+syntax (name := grindLintCheck)
+  "#grind_lint" ppSpace &"check" (ppSpace configItem)* (ppSpace "in" (ppSpace &"module")? ident+)?
+  : command
 
 /--
 `#grind_lint inspect thm₁ …` analyzes the specified theorem(s) individually.
@@ -55,7 +58,8 @@ Examples:
 You can use `set_option trace.grind.ematch.instance true` to instruct `grind` to display the
 actual instances it produces.
 -/
-syntax (name := grindLintInspect) "#grind_lint" ppSpace &"inspect" (ppSpace configItem)* ident+ : command
+syntax (name := grindLintInspect) "#grind_lint" ppSpace &"inspect" (ppSpace configItem)* ident+
+  : command
 
 /--
 `#grind_lint mute thm₁ …` marks the given theorem(s) as *muted* during linting.

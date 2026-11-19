@@ -14,7 +14,8 @@ public section
 namespace Lean.Elab.Tactic
 
 namespace Lean.Elab.Tactic
-@[builtin_tactic Parser.Tactic.congr] def evalCongr : Tactic := fun stx =>
+@[builtin_tactic Parser.Tactic.congr]
+def evalCongr : Tactic := fun stx =>
   match stx with
   | `(tactic| congr $[$n?]?) =>
     let hugeDepth := 1000000
@@ -23,5 +24,3 @@ namespace Lean.Elab.Tactic
   | _ => throwUnsupportedSyntax
 
 end Lean.Elab.Tactic
-
-

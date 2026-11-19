@@ -15,7 +15,6 @@ public import Std.Tactic.BVDecide.EPR
 public import Init.Sym.Lemmas
 public meta import Std.Tactic.BVDecide.Reflect
 
-
 @[expose] public section
 
 /-!

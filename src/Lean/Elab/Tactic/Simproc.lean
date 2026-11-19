@@ -32,21 +32,26 @@ def checkSimprocType (declName : Name) : CoreM Bool := do
   match decl.type with
   | .const ``Simproc _ => pure false
   | .const ``DSimproc _ => pure true
-  | _ => throwError "Unexpected type for simproc pattern: Expected `{.ofConstName ``Simproc}` or \
-          `{.ofConstName ``DSimproc}`, but `{declName}` has type{indentExpr decl.type}"
+  | _ =>
+    throwError "Unexpected type for simproc pattern: Expected `{.ofConstName ``Simproc}` or \
+      `{.ofConstName ``DSimproc}`, but `{declName}` has type{indentExpr decl.type}"
 
 namespace Command
 
-@[builtin_command_elab Lean.Parser.simprocPattern] def elabSimprocPattern : CommandElab := fun stx => do
-  let `(simproc_pattern% $pattern => $declName) := stx | throwUnsupportedSyntax
+@[builtin_command_elab Lean.Parser.simprocPattern]
+def elabSimprocPattern : CommandElab := fun stx => do
+  let `(simproc_pattern% $pattern => $declName) := stx
+    | throwUnsupportedSyntax
   liftTermElabM do
     let declName ← realizeGlobalConstNoOverload declName
     discard <| checkSimprocType declName
     let keys ← elabSimprocKeys pattern
     registerSimproc declName keys
 
-@[builtin_command_elab Lean.Parser.simprocPatternBuiltin] def elabSimprocPatternBuiltin : CommandElab := fun stx => do
-  let `(builtin_simproc_pattern% $pattern => $declName) := stx | throwUnsupportedSyntax
+@[builtin_command_elab Lean.Parser.simprocPatternBuiltin]
+def elabSimprocPatternBuiltin : CommandElab := fun stx => do
+  let `(builtin_simproc_pattern% $pattern => $declName) := stx
+    | throwUnsupportedSyntax
   liftTermElabM do
     let declName ← realizeGlobalConstNoOverload declName
     let dsimp ← checkSimprocType declName

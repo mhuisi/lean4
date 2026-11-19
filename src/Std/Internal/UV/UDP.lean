@@ -20,18 +20,14 @@ open Std.Net
 
 private opaque SocketImpl : NonemptyType.{0}
 
-/--
-Represents a UDP socket.
--/
+/-- Represents a UDP socket. -/
 def Socket : Type := SocketImpl.type
 
 instance : Nonempty Socket := by exact SocketImpl.property
 
 namespace Socket
 
-/--
-Creates a new UDP socket.
--/
+/-- Creates a new UDP socket. -/
 @[extern "lean_uv_udp_new"]
 opaque new : IO Socket
 
@@ -55,7 +51,8 @@ is `none`, the data is sent to the default peer address set by `connect`. Throws
 `IO.Error.invalidArgument` if a buffer is 4 GiB or larger.
 -/
 @[extern "lean_uv_udp_send"]
-opaque send (socket : @& Socket) (data : Array ByteArray) (addr : @& Option SocketAddress) : IO (IO.Promise (Except IO.Error Unit))
+opaque send (socket : @& Socket) (data : Array ByteArray) (addr : @& Option SocketAddress)
+  : IO (IO.Promise (Except IO.Error Unit))
 
 /--
 Receives data from an UDP socket. `size` is for the maximum bytes to receive. The promise
@@ -70,7 +67,8 @@ loop should handle the error per datagram.
 Throws an `IO.Error.invalidArgument` if `size` is 0 or at least 4 GiB.
 -/
 @[extern "lean_uv_udp_recv"]
-opaque recv (socket : @& Socket) (size : UInt64) : IO (IO.Promise (Except IO.Error (ByteArray × Option SocketAddress)))
+opaque recv (socket : @& Socket) (size : UInt64)
+  : IO (IO.Promise (Except IO.Error (ByteArray × Option SocketAddress)))
 
 /--
 Returns an `IO.Promise` that resolves once `socket` has data available for reading. Calling this
@@ -98,27 +96,19 @@ it is automatically bound to `0.0.0.0` (all interfaces) with a random port.
 @[extern "lean_uv_udp_getpeername"]
 opaque getPeerName (socket : @& Socket) : IO SocketAddress
 
-/--
-Gets the local address of a bound UDP socket.
--/
+/-- Gets the local address of a bound UDP socket. -/
 @[extern "lean_uv_udp_getsockname"]
 opaque getSockName (socket : @& Socket) : IO SocketAddress
 
-/--
-Enables or disables broadcasting on a UDP socket.
--/
+/-- Enables or disables broadcasting on a UDP socket. -/
 @[extern "lean_uv_udp_set_broadcast"]
 opaque setBroadcast (socket : @& Socket) (on : Bool) : IO Unit
 
-/--
-Enables or disables multicast loopback for a UDP socket.
--/
+/-- Enables or disables multicast loopback for a UDP socket. -/
 @[extern "lean_uv_udp_set_multicast_loop"]
 opaque setMulticastLoop (socket : @& Socket) (on : Bool) : IO Unit
 
-/--
-Sets the time-to-live (TTL) value for multicast packets.
--/
+/-- Sets the time-to-live (TTL) value for multicast packets. -/
 @[extern "lean_uv_udp_set_multicast_ttl"]
 opaque setMulticastTTL (socket : @& Socket) (ttl : UInt32) : IO Unit
 
@@ -127,17 +117,16 @@ Sets the membership for joining or leaving a multicast group. If `interfaceAddr`
 default network interface is used.
 -/
 @[extern "lean_uv_udp_set_membership"]
-opaque setMembership (socket : @& Socket) (multicastAddr : @& IPAddr) (interfaceAddr : @& Option IPAddr) (membership : UInt8) : IO Unit
+opaque setMembership
+  (socket : @& Socket) (multicastAddr : @& IPAddr) (interfaceAddr : @& Option IPAddr)
+  (membership : UInt8)
+  : IO Unit
 
-/--
-Sets the multicast interface for sending packets.
--/
+/-- Sets the multicast interface for sending packets. -/
 @[extern "lean_uv_udp_set_multicast_interface"]
 opaque setMulticastInterface (socket : @& Socket) (interfaceAddr : @& IPAddr) : IO Unit
 
-/--
-Sets the TTL value for outgoing packets.
--/
+/-- Sets the TTL value for outgoing packets. -/
 @[extern "lean_uv_udp_set_ttl"]
 opaque setTTL (socket : @& Socket) (ttl : UInt32) : IO Unit
 

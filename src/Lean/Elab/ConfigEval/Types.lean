@@ -19,9 +19,7 @@ namespace Lean.Elab.ConfigEval
 
 open Term
 
-/--
-Class for evaluation of `Term` syntax directly to a runtime value.
--/
+/-- Class for evaluation of `Term` syntax directly to a runtime value. -/
 class EvalTerm (α : Type) where
   /--
   Direct evaluation of `Term` syntax, avoiding term elaboration.
@@ -38,21 +36,18 @@ class EvalTerm (α : Type) where
   The `Expr` return value is to support constructing such expressions in combinators.
   -/
   evalTerm : Term → TermElabM (α × Expr)
-  /--
-  A type that can be used when constructing expression for the `TermInfo`.
-  -/
+  /-- A type that can be used when constructing expression for the `TermInfo`. -/
   typeExpr : Expr
 
 export EvalTerm (evalTerm)
 
-builtin_initialize unsupportedExprExceptionId : InternalExceptionId ← registerInternalExceptionId `ConfigEval.unsupportedExpr
+builtin_initialize unsupportedExprExceptionId : InternalExceptionId ←
+  registerInternalExceptionId `ConfigEval.unsupportedExpr
 
 def throwUnsupportedExpr {m α} [MonadExceptOf Exception m] : m α :=
   throw <| Exception.internal unsupportedExprExceptionId
 
-/--
-Class for evaluation of an expression to a runtime value.
--/
+/-- Class for evaluation of an expression to a runtime value. -/
 class EvalExpr (α : Type) where
   /--
   Evaluation of an elaborated expression.
@@ -72,26 +67,32 @@ class EvalExpr (α : Type) where
 
 export EvalExpr (evalExpr)
 
-/--
-A view of a `Lean.Parser.Term.configItem`.
--/
+/-- A view of a `Lean.Parser.Term.configItem`. -/
 structure ConfigItem where
   /-- Ref for the entire configuration item -/
   ref : Syntax
   /-- Ref for the option name itself. -/
   option : Ident
-  /-- The configuration value. Usually this is a `Term`, but user-defined configuration items
-  can use arbitrary syntax. For `+`/`-` booleans, this syntax is synthetic. -/
+  /--
+  The configuration value. Usually this is a `Term`, but user-defined configuration items
+  can use arbitrary syntax. For `+`/`-` booleans, this syntax is synthetic.
+  -/
   value : Syntax
-  /-- Whether this was using `+`/`-`, to be able to give a better error message on type mismatch.
-  It also caches the value so we can skip evaluation for `Bool`, which is a very common case. -/
+  /--
+  Whether this was using `+`/`-`, to be able to give a better error message on type mismatch.
+  It also caches the value so we can skip evaluation for `Bool`, which is a very common case.
+  -/
   bool? : Option Bool := none
   /-- The original option name (without macro scopes), even after shifting. -/
   origOptionName : Name := option.getId.eraseMacroScopes
-  /-- The `option` identifier split into components, without macro scopes.
-  This allows us to pull off components one at a time if we have hierarchical configuration options. -/
+  /--
+  The `option` identifier split into components, without macro scopes.
+  This allows us to pull off components one at a time if we have hierarchical configuration options.
+  -/
   optionComps : List Syntax := Lean.Syntax.identComponents option
-  /-- Previous root components of `option` in reverse order, collecting results from `ConfigItem.shift`. -/
+  /--
+  Previous root components of `option` in reverse order, collecting results from `ConfigItem.shift`.
+  -/
   prevOptionComps : List Syntax := []
 
 /--
@@ -100,16 +101,12 @@ An evaluator for updating a configuration object using configuration items.
 This is not a class. In practice, it might be composed out of evaluators or otherwise parameterized in a number of ways.
 -/
 structure EvalConfigItem (α : Type) where
-  /--
-  Evaluates setting the configuration item described by `item` in `config`.
-  -/
+  /-- Evaluates setting the configuration item described by `item` in `config`. -/
   set (config : α) (item : ConfigItem) : TermElabM α
 
 -- TODO
 private structure ReflectConfigItems (α : Type) where
-  /--
-  Given a configuration, produces an array of configuration items representing it.
-  -/
+  /-- Given a configuration, produces an array of configuration items representing it. -/
   reflect (config : α) : TermElabM (TSyntaxArray ``Parser.Term.configItem)
 
 end Lean.Elab.ConfigEval

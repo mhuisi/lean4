@@ -27,9 +27,7 @@ namespace Std.Http.RequestTarget
 
 set_option linter.all true
 
-/--
-Attempts to parse a `RequestTarget` from the given string.
--/
+/-- Attempts to parse a `RequestTarget` from the given string. -/
 @[inline]
 def parse? (string : String) : Option RequestTarget :=
   (URI.Parser.parseRequestTarget <* Std.Internal.Parsec.eof).run string.toUTF8 |>.toOption
@@ -91,9 +89,7 @@ path-noscheme (`../other`, `foo/bar`), query-only (`?q=1`), fragment-only (`#sec
 -/
 @[inline]
 def parse? (string : String) : Option URIReference :=
-  (URI.Parser.parseURIReference <* Std.Internal.Parsec.eof)
-  |>.run string.toUTF8
-  |>.toOption
+  (URI.Parser.parseURIReference <* Std.Internal.Parsec.eof) |>.run string.toUTF8 |>.toOption
 
 /--
 Parses a `URIReference` from the given string. Panics if parsing fails. Use `parse?` if you need
@@ -137,12 +133,9 @@ user-info, and fragment while preserving the query component.
 
 Reference: https://httpwg.org/specs/rfc9112.html#section-3.2.1
 -/
-def originTarget (uri : URI) : RequestTarget :=
-  .originForm uri.path uri.query
+def originTarget (uri : URI) : RequestTarget := .originForm uri.path uri.query
 
-/--
-Attempts to parse a `URI` from the given string.
--/
+/-- Attempts to parse a `URI` from the given string. -/
 @[inline]
 def parse? (string : String) : Option URI :=
   (Parser.parseURI <* Std.Internal.Parsec.eof).run string.toUTF8 |>.toOption
@@ -166,9 +159,7 @@ Attempts to parse a URI path from the given string. Returns `none` if the string
 def parse? (s : String) : Option Std.Http.URI.Path :=
   (Std.Http.URI.Parser.parsePath {} true true <* Std.Internal.Parsec.eof).run s.toUTF8 |>.toOption
 
-/--
-Parses a URI path from the given string. Returns the root path `"/"` if parsing fails.
--/
+/-- Parses a URI path from the given string. Returns the root path `"/"` if parsing fails. -/
 @[inline]
 def parseOrRoot (s : String) : Std.Http.URI.Path :=
   parse? s |>.getD { segments := #[], absolute := true }

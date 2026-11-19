@@ -27,14 +27,14 @@ A local copy of name resolution state that allows us to immediately use new open
 in further name resolution as in `open Lean Elab`.
 -/
 structure State where
-  openDecls     : List OpenDecl
+  openDecls : List OpenDecl
   currNamespace : Name
 
 abbrev M := StateRefT State m
 
 instance : MonadResolveName (M (m := m)) where
-  getCurrNamespace   := return (← get).currNamespace
-  getOpenDecls       := return (← get).openDecls
+  getCurrNamespace := return (← get).currNamespace
+  getOpenDecls := return (← get).openDecls
 
 def resolveId [MonadOptions m] [MonadResolveName m] (ns : Name) (idStx : Syntax) : m Name := do
   let declName := ns ++ idStx.getId
@@ -43,7 +43,7 @@ def resolveId [MonadOptions m] [MonadResolveName m] (ns : Name) (idStx : Syntax)
   else
     withRef idStx <| resolveGlobalConstNoOverloadCore declName
 
-private def addOpenDecl (decl : OpenDecl) : M (m:=m) Unit :=
+private def addOpenDecl (decl : OpenDecl) : M (m := m) Unit :=
   modify fun s => { s with openDecls := decl :: s.openDecls }
 
 /--
@@ -51,8 +51,9 @@ Uniquely resolves the identifier `idStx` in the provided namespaces `nss`.
 
 If the identifier does not indicate a name in exactly one of the namespaces, an exception is thrown.
 -/
-def resolveNameUsingNamespacesCore [MonadOptions m] [MonadResolveName m]
-    (nss : List Name) (idStx : Syntax) : m Name := do
+def resolveNameUsingNamespacesCore
+    [MonadOptions m] [MonadResolveName m] (nss : List Name) (idStx : Syntax)
+    : m Name := do
   let mut exs := #[]
   let mut result := #[]
   for ns in nss do
@@ -70,16 +71,20 @@ def resolveNameUsingNamespacesCore [MonadOptions m] [MonadResolveName m]
   if h : result.size = 1 then
     return result[0]
   else
-    withRef idStx do throwError "ambiguous identifier `{idStx.getId}`, possible interpretations: {result.map mkConst}"
+    withRef idStx do
+      throwError
+        "ambiguous identifier `{idStx.getId}`, possible interpretations: {result.map mkConst}"
 
 /--
 Elaborates `stx`, returning the resulting open declarations. `reportDeprecated` is called on each
 identifier that is resolved relative to an opened namespace and on the declaration it refers to,
 see `checkDeprecatedOpenedName`.
 -/
-def elabOpenDecl [MonadOptions m] [MonadResolveName m] [MonadInfoTree m]
+def elabOpenDecl
+    [MonadOptions m] [MonadResolveName m] [MonadInfoTree m]
     (stx : TSyntax ``Parser.Command.openDecl)
-    (reportDeprecated : Syntax → Name → m Unit := fun _ _ => pure ()) : m (List OpenDecl) := do
+    (reportDeprecated : Syntax → Name → m Unit := fun _ _ => pure ())
+    : m (List OpenDecl) := do
   StateRefT'.run' (s := { openDecls := (← getOpenDecls), currNamespace := (← getCurrNamespace) }) do
     match stx with
     | `(Parser.Command.openDecl| $nss*) =>
@@ -141,7 +146,9 @@ def checkDeprecatedOpenedName (idStx : Syntax) (declName : Name) : MetaM Unit :=
     else
       return .nil
 
-def resolveNameUsingNamespaces [MonadOptions m] [MonadResolveName m] (nss : List Name) (idStx : Ident) : m Name := do
+def resolveNameUsingNamespaces
+    [MonadOptions m] [MonadResolveName m] (nss : List Name) (idStx : Ident)
+    : m Name := do
   StateRefT'.run' (s := { openDecls := (← getOpenDecls), currNamespace := (← getCurrNamespace) }) do
     resolveNameUsingNamespacesCore (m := M) nss idStx
 

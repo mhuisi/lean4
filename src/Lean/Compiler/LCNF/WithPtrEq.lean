@@ -52,60 +52,67 @@ abbrev M := ReaderT Context <| StateRefT (Std.HashSet Expr) MetaM
 
 def throwUnsupported (type : Expr) (reason : MessageData) : M α := do
   let ctx ← read
-  let subject := if ctx.field?.isNone && type == ctx.rootType then
+  let subject :=
+    if ctx.field?.isNone && type == ctx.rootType then
       m!"values of this type"
     else
-      m!"it contains values of type{indentExpr type}\nwhich"
-  let loc := match ctx.field? with
+      m!"it contains values of type{indentExpr type}\
+        \nwhich"
+  let loc :=
+    match ctx.field? with
     | some (ctorName, fieldName) =>
       m!" (in field `{fieldName}` of constructor `{.ofConstName ctorName}`)"
     | none => m!""
   let withPtrEq := MessageData.ofConstName ``withPtrEq
-  throwError (m!"failed to compile definition, `{withPtrEq}` cannot be used at type\
-    {indentExpr ctx.rootType}\nbecause {subject} {reason}{loc}." ++
-    .note m!"`{withPtrEq}` is implemented by a pointer equality check, which is only correct if \
-      pointer-equal values are equal. This is not the case for values that contain types or type \
-      formers, since these are erased at runtime. Therefore, `{withPtrEq}` can only be used at \
-      types for which the compiler can check that their values do not contain types or type \
-      formers; in particular, it cannot be used polymorphically." ++
-    .hint' m!"In `unsafe` code, `{.ofConstName ``withPtrEqUnsafe}` can be used instead.")
+  throwError
+    (m!"failed to compile definition, `{withPtrEq}` cannot be used at type\
+        {indentExpr ctx.rootType}\
+        \nbecause {subject} {reason}{loc}."
+      ++ .note m!"`{withPtrEq}` is implemented by a pointer equality check, which is only correct \
+        if \
+        pointer-equal values are equal. This is not the case for values that contain types or type \
+        formers, since these are erased at runtime. Therefore, `{withPtrEq}` can only be used at \
+        types for which the compiler can check that their values do not contain types or type \
+        formers; in particular, it cannot be used polymorphically."
+      ++ .hint' m!"In `unsafe` code, `{.ofConstName ``withPtrEqUnsafe}` can be used instead.")
 
-partial def check (type : Expr) : M Unit := withIncRecDepth do
-  if ← Meta.isProp type then
-    return
-  -- Deliberately not `Meta.isTypeFormerType`, which reduces with default transparency: values of an
-  -- `@[irreducible]` alias of `Prop` are still erased wherever they are created at type `Prop`.
-  let typeWhnf ← Meta.whnf type
-  match typeWhnf with
-  | .sort .. => throwUnsupported type m!"are erased at runtime"
-  | .forallE .. =>
-    Meta.forallTelescopeReducing typeWhnf (whnfType := true) fun _ codomain => do
-      if codomain.isSort then
-        throwUnsupported type m!"are erased at runtime"
-      check codomain
-  | _ =>
-    let fn := typeWhnf.getAppFn
-    let args := typeWhnf.getAppArgs
-    match fn with
-    | .fvar .. =>
-      throwUnsupported type m!"cannot be checked since `{fn}` is a type variable"
-    | .const declName us =>
-      match (← getEnv).find? declName with
-      | some (.inductInfo val) => checkInductive type val us args
-      | some (.quotInfo _) =>
-        if declName == ``Quot && args.size == 2 then
-          check args[0]!
-        else
-          throwStuck type
+partial def check (type : Expr) : M Unit :=
+  withIncRecDepth do
+    if ← Meta.isProp type then
+      return
+    -- Deliberately not `Meta.isTypeFormerType`, which reduces with default transparency: values of an
+    -- `@[irreducible]` alias of `Prop` are still erased wherever they are created at type `Prop`.
+    let typeWhnf ← Meta.whnf type
+    match typeWhnf with
+    | .sort .. => throwUnsupported type m!"are erased at runtime"
+    | .forallE .. =>
+      Meta.forallTelescopeReducing typeWhnf (whnfType := true) fun _ codomain => do
+        if codomain.isSort then
+          throwUnsupported type m!"are erased at runtime"
+        check codomain
+    | _ =>
+      let fn := typeWhnf.getAppFn
+      let args := typeWhnf.getAppArgs
+      match fn with
+      | .fvar .. => throwUnsupported type m!"cannot be checked since `{fn}` is a type variable"
+      | .const declName us =>
+        match (← getEnv).find? declName with
+        | some (.inductInfo val) => checkInductive type val us args
+        | some (.quotInfo _) =>
+          if declName == ``Quot && args.size == 2 then
+            check args[0]!
+          else
+            throwStuck type
+        | _ => throwStuck type
       | _ => throwStuck type
-    | _ => throwStuck type
 where
   throwStuck (type : Expr) : M Unit :=
-    throwUnsupported type m!"cannot be checked since the type does not reduce to an inductive \
-      type, a function type or a quotient"
+    throwUnsupported type
+      m!"cannot be checked since the type does not reduce to an inductive \
+        type, a function type or a quotient"
 
-  checkInductive (type : Expr) (val : InductiveVal) (us : List Level) (args : Array Expr) :
-      M Unit := do
+  checkInductive (type : Expr) (val : InductiveVal) (us : List Level) (args : Array Expr)
+      : M Unit := do
     unless args.size == val.numParams + val.numIndices do
       throwStuck type
     let params := args[*...val.numParams].toArray
@@ -115,10 +122,11 @@ where
     modify (·.insert key)
     for ctorName in val.ctors do
       let some (.ctorInfo ctorVal) := (← getEnv).find? ctorName
-        | throwUnsupported type m!"cannot be checked since the constructor \
-            `{.ofConstName ctorName}` is not accessible"
-      let ctorType ← Meta.instantiateForall
-        (ctorVal.type.instantiateLevelParams ctorVal.levelParams us) params
+        | throwUnsupported type
+            m!"cannot be checked since the constructor \
+              `{.ofConstName ctorName}` is not accessible"
+      let ctorType ←
+        Meta.instantiateForall (ctorVal.type.instantiateLevelParams ctorVal.levelParams us) params
       Meta.forallBoundedTelescope ctorType ctorVal.numFields fun fields _ => do
         for field in fields do
           let fieldName ← field.fvarId!.getUserName
@@ -133,7 +141,6 @@ compiling `withPtrEq` at `type`, and throws an error otherwise. See the module d
 details.
 -/
 public def checkWithPtrEqType (type : Expr) : MetaM Unit :=
-  Meta.withTransparency .all do
-    WithPtrEq.check type |>.run { rootType := type } |>.run' {}
+  Meta.withTransparency .all do WithPtrEq.check type |>.run { rootType := type } |>.run' {}
 
 end Lean.Compiler.LCNF

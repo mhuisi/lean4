@@ -14,6 +14,6 @@ open Std
 
 namespace Int
 
-public instance : LinearOrderPackage Int := .ofLE _ { }
+public instance : LinearOrderPackage Int := .ofLE _ {}
 
 end Int

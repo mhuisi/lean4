@@ -4,12 +4,14 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Expr
 public section
 namespace Lean.Meta.Sym
 
-@[inline] def isSameExpr (a b : Expr) : Bool :=
+@[inline]
+def isSameExpr (a b : Expr) : Bool :=
   -- It is safe to use pointer equality because we hashcons all expressions
   -- inserted into the E-graph
   unsafe ptrEq a b
@@ -22,8 +24,7 @@ have been hash-consed, i.e., we have applied `shareCommon`.
 structure ExprPtr where
   expr : Expr
 
-abbrev hashPtrExpr (e : Expr) : UInt64 :=
-  unsafe (ptrAddrUnsafe e >>> 3).toUInt64
+abbrev hashPtrExpr (e : Expr) : UInt64 := unsafe (ptrAddrUnsafe e >>> 3).toUInt64
 
 instance : Hashable ExprPtr where
   hash k := hashPtrExpr k.expr

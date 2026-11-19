@@ -31,7 +31,7 @@ Does not resolve dependencies.
 public def loadWorkspaceRoot (config : LoadConfig) : LogIO Workspace := do
   Lean.searchPathRef.set config.lakeEnv.leanSearchPath
   let lakeConfig ← loadLakeConfig config.lakeEnv
-  let config := {config with pkgIdx := 0}
+  let config := { config with pkgIdx := 0 }
   let ⟨config, h⟩ ← resolveConfigFile "[root]" config
   let fileCfg ← loadConfigFile config h
   let root := mkPackage config fileCfg 0
@@ -59,7 +59,7 @@ elaborating its configuration file and resolving its dependencies.
 If `updateDeps` is true, updates the manifest before resolving dependencies.
 -/
 public def loadWorkspace (config : LoadConfig) : LoggerIO Workspace := do
-  let {reconfigure, leanOpts, updateDeps, updateToolchain, packageOverrides, ..} := config
+  let { reconfigure, leanOpts, updateDeps, updateToolchain, packageOverrides, .. } := config
   let ws ← loadWorkspaceRoot config
   if updateDeps then
     ws.updateAndMaterialize {} leanOpts updateToolchain
@@ -69,9 +69,7 @@ public def loadWorkspace (config : LoadConfig) : LoggerIO Workspace := do
     ws.updateAndMaterialize {} leanOpts updateToolchain
 
 /-- Updates the manifest for the loaded Lake workspace (see `updateAndMaterialize`). -/
-public def updateManifest
-  (config : LoadConfig) (toUpdate : NameSet := {})
-: LoggerIO Unit := do
-  let {leanOpts, updateToolchain, ..} := config
+public def updateManifest (config : LoadConfig) (toUpdate : NameSet := {}) : LoggerIO Unit := do
+  let { leanOpts, updateToolchain, .. } := config
   let ws ← loadWorkspaceRoot config
   discard <| ws.updateAndMaterialize toUpdate leanOpts updateToolchain

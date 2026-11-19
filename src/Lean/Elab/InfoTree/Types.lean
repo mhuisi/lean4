@@ -27,7 +27,7 @@ Note that the term information collected during elaboration may contain metavari
 assignments are stored at `mctx`.
 -/
 structure CommandContextInfo where
-  env           : Environment
+  env : Environment
   /--
   Final environment at the end of `elabCommand`; empty for nested contexts. This environment can be
   used to access information about the fully-elaborated current declaration such as declaration
@@ -35,13 +35,13 @@ structure CommandContextInfo where
   preferred to access information about the elaboration context at the time this context object was
   created.
   -/
-  cmdEnv?       : Option Environment := none
-  fileMap       : FileMap
-  mctx          : MetavarContext := {}
-  options       : Options        := {}
-  currNamespace : Name           := Name.anonymous
-  openDecls     : List OpenDecl  := []
-  ngen          : NameGenerator -- We must save the name generator to implement `ContextInfo.runMetaM` and making we not create `MVarId`s used in `mctx`.
+  cmdEnv? : Option Environment := none
+  fileMap : FileMap
+  mctx : MetavarContext := {}
+  options : Options := {}
+  currNamespace : Name := Name.anonymous
+  openDecls : List OpenDecl := []
+  ngen : NameGenerator -- We must save the name generator to implement `ContextInfo.runMetaM` and making we not create `MVarId`s used in `mctx`.
 
 /--
 Context from the root of the `InfoTree` up to this node.
@@ -67,17 +67,19 @@ inductive PartialContextInfo where
   -/
   | parentDeclCtx (parentDecl : Name)
   | autoImplicitCtx (autoImplicits : Array Expr)
-  -- TODO: More constructors for the different kinds of scopes `commandCtx` is currently
-  -- used for (e.g. eliminating `Info.updateContext?` would be nice!).
+-- TODO: More constructors for the different kinds of scopes `commandCtx` is currently
+-- used for (e.g. eliminating `Info.updateContext?` would be nice!).
 
 /-- Base structure for `TermInfo`, `CommandInfo` and `TacticInfo`. -/
 structure ElabInfo where
   /-- The name of the elaborator that created this info. -/
   elaborator : Name
-  /-- The piece of syntax that the elaborator created this info for.
-  Note that this also implicitly stores the code position in the syntax's SourceInfo. -/
+  /--
+  The piece of syntax that the elaborator created this info for.
+  Note that this also implicitly stores the code position in the syntax's SourceInfo.
+  -/
   stx : Syntax
-  deriving Inhabited
+deriving Inhabited
 
 structure TermInfo extends ElabInfo where
   lctx : LocalContext -- The local context when the term was elaborated.
@@ -86,7 +88,7 @@ structure TermInfo extends ElabInfo where
   isBinder : Bool := false
   /-- Whether `expr` should always be displayed in the language server, e.g. in hovers. -/
   isDisplayableTerm : Bool := false
-  deriving Inhabited
+deriving Inhabited
 
 /--
 Used instead of `TermInfo` when a term couldn't successfully be elaborated,
@@ -98,16 +100,20 @@ are retained so that they can still be used in the language server.
 structure PartialTermInfo extends ElabInfo where
   lctx : LocalContext -- The local context when the term was elaborated.
   expectedType? : Option Expr
-  deriving Inhabited
+deriving Inhabited
 
 structure CommandInfo extends ElabInfo where
-  deriving Inhabited
+deriving Inhabited
 
-/-- A completion is an item that appears in the [IntelliSense](https://code.visualstudio.com/docs/editor/intellisense)
-box that appears as you type. -/
+/--
+A completion is an item that appears in the [IntelliSense](https://code.visualstudio.com/docs/editor/intellisense)
+box that appears as you type.
+-/
 inductive CompletionInfo where
   | dot (termInfo : TermInfo) (expectedType? : Option Expr)
-  | id (stx : Syntax) (id : Name) (danglingDot : Bool) (lctx : LocalContext) (expectedType? : Option Expr)
+  | id
+    (stx : Syntax) (id : Name) (danglingDot : Bool) (lctx : LocalContext)
+    (expectedType? : Option Expr)
   | dotId (stx : Syntax) (id : Name) (lctx : LocalContext) (expectedType? : Option Expr)
   | fieldId (stx : Syntax) (id : Option Name) (lctx : LocalContext) (structName : Name)
   | namespaceId (stx : Syntax)
@@ -135,41 +141,45 @@ structure ErrorNameInfo where
 
 structure FieldInfo where
   /-- Name of the projection. -/
-  projName  : Name
+  projName : Name
   /-- Name of the field as written. -/
   fieldName : Name
-  lctx      : LocalContext
-  val       : Expr
-  stx       : Syntax
-  deriving Inhabited
+  lctx : LocalContext
+  val : Expr
+  stx : Syntax
+deriving Inhabited
 
-/-- The information needed to render the tactic state in the infoview.
+/--
+The information needed to render the tactic state in the infoview.
 
-    We store the list of goals before and after the execution of a tactic.
-    We also store the metavariable context at each time since we want metavariables
-    unassigned at tactic execution time to be displayed as `?m...`. -/
+We store the list of goals before and after the execution of a tactic.
+We also store the metavariable context at each time since we want metavariables
+unassigned at tactic execution time to be displayed as `?m...`.
+-/
 structure TacticInfo extends ElabInfo where
-  mctxBefore  : MetavarContext
+  mctxBefore : MetavarContext
   goalsBefore : List MVarId
-  mctxAfter   : MetavarContext
-  goalsAfter  : List MVarId
-  deriving Inhabited
+  mctxAfter : MetavarContext
+  goalsAfter : List MVarId
+deriving Inhabited
 
 structure MacroExpansionInfo where
-  lctx   : LocalContext -- The local context when the macro was expanded.
-  stx    : Syntax
+  lctx : LocalContext -- The local context when the macro was expanded.
+  stx : Syntax
   output : Syntax
-  deriving Inhabited
+deriving Inhabited
 
 /-- Dynamic info for custom use cases. -/
 structure CustomInfo where
   stx : Syntax
   value : Dynamic
 
-/-- Information about a user widget associated with a syntactic span.
+/--
+Information about a user widget associated with a syntactic span.
 This must be a panel widget.
 A panel widget is a widget that can be displayed
-in the infoview alongside the goal state. -/
+in the infoview alongside the goal state.
+-/
 structure UserWidgetInfo extends Widget.WidgetInstance where
   stx : Syntax
 
@@ -181,7 +191,7 @@ Used for e.g. connecting variables before and after `match` generalization.
 -/
 structure FVarAliasInfo where
   userName : Name
-  id     : FVarId
+  id : FVarId
   baseId : FVarId
 
 /--
@@ -209,9 +219,11 @@ regular delaboration settings. Additionally, omissions come with a reason for om
 structure DelabTermInfo extends TermInfo where
   /-- A source position to use for "go to definition", to override the default. -/
   location? : Option DeclarationLocation := none
-  /-- Text to use to override the docstring. The string may be dynamic text. It is an `IO` action
+  /--
+  Text to use to override the docstring. The string may be dynamic text. It is an `IO` action
   so that it can be computed only when it is used. The action receives a `PPContext` so that the
-  action does not need to create a closure with the meta state. -/
+  action does not need to create a closure with the meta state.
+  -/
   mkDocString? : Option (PPContext → IO String) := none
   /-- Whether to use explicit mode when pretty printing the term on hover. -/
   explicit : Bool := true
@@ -244,10 +256,13 @@ structure ChoiceResolutionInfo where
   stx : Syntax
   /-- The index of the alternative in `stx.getArgs` that was picked by the elaborator. -/
   chosenAltIdx : Nat
-  deriving Inhabited
+deriving Inhabited
 
 inductive DocElabKind where
-  | role | codeBlock | directive | command
+  | role
+  | codeBlock
+  | directive
+  | command
 deriving Repr
 
 /--
@@ -271,7 +286,6 @@ that a given piece of documentation syntax in fact has been elaborated.
 -/
 structure DocInfo extends ElabInfo where
 
-
 /-- Header information for a node in `InfoTree`. -/
 inductive Info where
   | ofTacticInfo (i : TacticInfo)
@@ -292,28 +306,29 @@ inductive Info where
   | ofChoiceResolutionInfo (i : ChoiceResolutionInfo)
   | ofDocInfo (i : DocInfo)
   | ofDocElabInfo (i : DocElabInfo)
-  deriving Inhabited
+deriving Inhabited
 
-/-- The InfoTree is a structure that is generated during elaboration and used
-    by the language server to look up information about objects at particular points
-    in the Lean document. For example, tactic information and expected type information in
-    the infoview and information about completions.
+/--
+The InfoTree is a structure that is generated during elaboration and used
+by the language server to look up information about objects at particular points
+in the Lean document. For example, tactic information and expected type information in
+the infoview and information about completions.
 
-    The infotree consists of nodes which may have child nodes. Each node
-    has an `Info` object that contains details about what kind of information
-    is present. Each `Info` object also contains a `Syntax` instance, this is used to
-    map positions in the Lean document to particular info objects.
+The infotree consists of nodes which may have child nodes. Each node
+has an `Info` object that contains details about what kind of information
+is present. Each `Info` object also contains a `Syntax` instance, this is used to
+map positions in the Lean document to particular info objects.
 
-    An example of a function that extracts information from an infotree for a given
-    position is `InfoTree.goalsAt?` which finds `TacticInfo`.
+An example of a function that extracts information from an infotree for a given
+position is `InfoTree.goalsAt?` which finds `TacticInfo`.
 
-    Information concerning expressions requires that a context also be saved.
-    `context` nodes store a local context that is used to process expressions
-    in nodes below.
+Information concerning expressions requires that a context also be saved.
+`context` nodes store a local context that is used to process expressions
+in nodes below.
 
-    Because the info tree is generated during elaboration, some parts of the infotree
-    for a particular piece of syntax may not be ready yet. Hence InfoTree supports metavariable-like
-    `hole`s which are filled in later in the same way that unassigned metavariables are.
+Because the info tree is generated during elaboration, some parts of the infotree
+for a particular piece of syntax may not be ready yet. Hence InfoTree supports metavariable-like
+`hole`s which are filled in later in the same way that unassigned metavariables are.
 -/
 inductive InfoTree where
   /-- The context object is created at appropriate points during elaboration -/
@@ -322,9 +337,10 @@ inductive InfoTree where
   | node (i : Info) (children : PersistentArray InfoTree)
   /-- The elaborator creates holes (aka metavariables) for tactics and postponed terms -/
   | hole (mvarId : MVarId)
-  deriving Inhabited
+deriving Inhabited
 
-/-- This structure is the state that is being used to build an InfoTree object.
+/--
+This structure is the state that is being used to build an InfoTree object.
 During elaboration, some parts of the info tree may be `holes` which need to be filled later.
 The `assignments` field is used to assign these holes.
 The `trees` field is a list of pending child trees for the infotree node currently being built.
@@ -336,7 +352,7 @@ To see how `trees` is used, look at the function body of `withInfoContext'`.
 -/
 structure InfoState where
   /-- Whether info trees should be recorded. -/
-  enabled    : Bool := true
+  enabled : Bool := true
   /-- Map from holes in the infotree to child infotrees. -/
   assignment : PersistentHashMap MVarId InfoTree := {}
   /--
@@ -345,21 +361,20 @@ structure InfoState where
   -/
   lazyAssignment : PersistentHashMap MVarId (Task InfoTree) := {}
   /-- Pending child trees of a node. -/
-  trees      : PersistentArray InfoTree := {}
-  deriving Inhabited
+  trees : PersistentArray InfoTree := {}
+deriving Inhabited
 
 class MonadInfoTree (m : Type → Type) where
-  getInfoState    : m InfoState
+  getInfoState : m InfoState
   modifyInfoState : (InfoState → InfoState) → m Unit
 
 export MonadInfoTree (getInfoState modifyInfoState)
 
 instance [MonadLift m n] [MonadInfoTree m] : MonadInfoTree n where
-  getInfoState      := liftM (getInfoState : m _)
+  getInfoState := liftM (getInfoState : m _)
   modifyInfoState f := liftM (modifyInfoState f : m _)
 
-def setInfoState [MonadInfoTree m] (s : InfoState) : m Unit :=
-  modifyInfoState fun _ => s
+def setInfoState [MonadInfoTree m] (s : InfoState) : m Unit := modifyInfoState fun _ => s
 
 class MonadParentDecl (m : Type → Type) where
   getParentDeclName? : m (Option Name)

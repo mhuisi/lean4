@@ -31,13 +31,12 @@ public structure Dynlib where
   to preload such dependencies for `lean` elaboration when precompiling.
   -/
   runtimeOnlyDeps : Array Dynlib := #[]
-  deriving Inhabited, Repr
+deriving Inhabited, Repr
 
 namespace Dynlib
 
 /-- Optional library directory (for `-L`). -/
-public def dir? (self : Dynlib) : Option FilePath :=
-  self.path.parent
+public def dir? (self : Dynlib) : Option FilePath := self.path.parent
 
 public instance : ToJson Dynlib := ⟨(·.path.toString)⟩
 public instance : ToString Dynlib := ⟨(·.path.toString)⟩

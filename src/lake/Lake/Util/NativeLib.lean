@@ -15,9 +15,12 @@ namespace Lake
 
 /-- The shared library file extension for the `Platform`. -/
 public def sharedLibExt : String :=
-  if Platform.isWindows then "dll"
-  else if Platform.isOSX  then "dylib"
-  else "so"
+  if Platform.isWindows then
+    "dll"
+  else if Platform.isOSX then
+    "dylib"
+  else
+    "so"
 
 /-- Convert a library name into its static library file name for the `Platform`. -/
 public def nameToStaticLib (name : String) (libPrefixOnWindows := false) : String :=

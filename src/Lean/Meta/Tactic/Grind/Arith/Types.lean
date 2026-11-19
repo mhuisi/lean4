@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Core
 public section
@@ -11,6 +12,6 @@ namespace Lean.Meta.Grind.Arith
 
 /-- State for the arithmetic procedures. -/
 structure State where
-  deriving Inhabited
+deriving Inhabited
 
 end Lean.Meta.Grind.Arith

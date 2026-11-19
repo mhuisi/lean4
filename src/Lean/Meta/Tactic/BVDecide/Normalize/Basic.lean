@@ -33,19 +33,18 @@ namespace Normalize
 
 open Elab.Tactic.BVDecide (BVDecideConfig)
 
-
 @[inline]
 def withDoneResult {m : Type → Type} [Monad m] (x : m Sym.Simp.Result) : m Sym.Simp.Result := do
   let x ← x
   match x with
   | .rfl _ dep => return .rfl true dep
-  | .step e' proof _ dep =>  return .step e' proof true dep
+  | .step e' proof _ dep => return .step e' proof true dep
 
 inductive Target where
   | hypTarget (mvar : MVarId) (hyps : Array Hyp)
   | mvarIdTarget (mvar : MVarId)
   | grindTarget (goal : Grind.Goal)
-  deriving Inhabited
+deriving Inhabited
 
 namespace Target
 
@@ -56,9 +55,7 @@ def mvarId : Target → MVarId
 
 end Target
 
-/--
-The various kinds of matches supported by the match to cond infrastructure.
--/
+/-- The various kinds of matches supported by the match to cond infrastructure. -/
 inductive MatchKind
   /--
   It is a full match statement on an enum inductive with one constructor handled per arm.
@@ -71,36 +68,22 @@ inductive MatchKind
   -/
   | enumWithDefault (info : InductiveVal) (ctors : Array ConstructorVal)
 
-/--
-The enum inductive that the match discriminates on.
--/
+/-- The enum inductive that the match discriminates on. -/
 def MatchKind.getEnumInfo : MatchKind → InductiveVal
   | .simpleEnum info .. | .enumWithDefault info .. => info
 
-/--
-Contains the result of the type analysis to be used in the structures and enums pass.
--/
+/-- Contains the result of the type analysis to be used in the structures and enums pass. -/
 structure TypeAnalysis where
-  /--
-  Structures that are interesting for the structures pass.
-  -/
+  /-- Structures that are interesting for the structures pass. -/
   interestingStructures : Std.HashSet Name := {}
-  /--
-  Inductives enums that are interesting for the enums pass.
-  -/
+  /-- Inductives enums that are interesting for the enums pass. -/
   interestingEnums : Std.HashSet Name := {}
-  /--
-  `func.match_x` auxiliary declarations that we consider interesting.
-  -/
+  /-- `func.match_x` auxiliary declarations that we consider interesting. -/
   interestingMatchers : Std.HashMap Name MatchKind := {}
-  /--
-  Other types that we've seen that are not interesting, currently only used as a cache.
-  -/
+  /-- Other types that we've seen that are not interesting, currently only used as a cache. -/
   uninteresting : Std.HashSet Name := {}
 
-/--
-The mode that the `bv_normalize` preprocessing pipeline runs in.
--/
+/-- The mode that the `bv_normalize` preprocessing pipeline runs in. -/
 inductive Mode where
   /--
   A regular run as part of `bv_decide` or a standalone `bv_normalize`. `restrictedTypes` are the
@@ -133,14 +116,15 @@ scheme (e.g. `embeddedConstraintSubst`, `andFlattening`, `epr`).
 def adjustConfig (mode : Mode) (config : BVDecideConfig) : BVDecideConfig :=
   match mode with
   | .solve .. => config
-  | .push =>
-    { config with
-      enums := false
-      fixedInt := false
-      structures := false
-      embeddedConstraintSubst := false
-      andFlattening := false
-      epr := false }
+  | .push => {
+    config with
+    enums := false
+    fixedInt := false
+    structures := false
+    embeddedConstraintSubst := false
+    andFlattening := false
+    epr := false
+  }
 
 end Mode
 
@@ -150,13 +134,9 @@ create one.
 -/
 structure PreProcessContext where
   private mk ::
-  /--
-  The configuration that the tactic was called with, already adjusted for `mode`.
-  -/
+  /-- The configuration that the tactic was called with, already adjusted for `mode`. -/
   config : BVDecideConfig
-  /--
-  The mode that the pipeline runs in.
-  -/
+  /-- The mode that the pipeline runs in. -/
   mode : Mode
   /--
   Whether the caches should be dropped as soon as possible or kept until the end of the pipeline.
@@ -167,28 +147,21 @@ structure PreProcessContext where
 Creates the context for a run of the pipeline in `mode`, disabling all configuration options that
 `mode` does not support.
 -/
-def PreProcessContext.new (mode : Mode) (config : BVDecideConfig) (keepCaches : Option Bool := none) :
-    PreProcessContext :=
+def PreProcessContext.new (mode : Mode) (config : BVDecideConfig) (keepCaches : Option Bool := none)
+    : PreProcessContext :=
   let keepCaches := keepCaches.getD <| config.needsIncremental || mode.isPush
-  {
-    config := mode.adjustConfig config
-    mode := mode
-    keepCaches := keepCaches
-  }
+  { config := mode.adjustConfig config, mode := mode, keepCaches := keepCaches }
 
-def _root_.Lean.Meta.Tactic.BVDecide.TacticContext.preProcessContext (ctx : TacticContext) : Normalize.PreProcessContext :=
+def _root_.Lean.Meta.Tactic.BVDecide.TacticContext.preProcessContext (ctx : TacticContext)
+    : Normalize.PreProcessContext :=
   .new (.solve ctx.restrictedTypes) ctx.config
 
-/--
-Identifies the `Sym.Simp` cache that a pass operates on.
--/
+/-- Identifies the `Sym.Simp` cache that a pass operates on. -/
 inductive SimpCacheId where
   | rewrite
   | ac
 
-/--
-Identifies the `Sym.DSimp` cache that a pass operates on.
--/
+/-- Identifies the `Sym.DSimp` cache that a pass operates on. -/
 inductive DSimpCacheId where
   | rewrite
   | reduction
@@ -218,30 +191,20 @@ def set : DSimpCacheId → Sym.DSimp.Cache → Grind.BVDecide.Caches → Grind.B
 end DSimpCacheId
 
 structure PreProcessState where
-  /--
-  The caches of the passes that maintain one.
-  -/
+  /-- The caches of the passes that maintain one. -/
   caches : Grind.BVDecide.Caches := {}
-  /--
-  Analysis results for the structure and enum pass if required.
-  -/
+  /-- Analysis results for the structure and enum pass if required. -/
   typeAnalysis : TypeAnalysis := {}
-  /--
-  The target we are operating on.
-  -/
+  /-- The target we are operating on. -/
   target : Target
   /--
   The set of hypotheses we are operating on. These should be interpreted from withing the lctx of
   the goal. But they may not necessarily be fvars registered in the goal.
   -/
   hypotheses : Array Hyp := #[]
-  /--
-  A didChange flag for our fixpoint simplification loop.
-  -/
+  /-- A didChange flag for our fixpoint simplification loop. -/
   didChange : Bool := false
-  /--
-  The BitVec encoded EPR problem extracted from the hypotheses, empty if none was detected.
-  -/
+  /-- The BitVec encoded EPR problem extracted from the hypotheses, empty if none was detected. -/
   eprBvProblem : EPR.EprBvProblem := {}
 
 abbrev PreProcessM : Type → Type := ReaderT PreProcessContext StateRefT PreProcessState Grind.GrindM
@@ -279,8 +242,7 @@ def getTarget : PreProcessM Target := return (← get).target
 def getTargetMVarId : PreProcessM MVarId := return (← get).target.mvarId
 
 @[inline]
-def setTarget (target : Target) : PreProcessM Unit :=
-  modify fun s => { s with target := target }
+def setTarget (target : Target) : PreProcessM Unit := modify fun s => { s with target := target }
 
 /--
 Runs `x` on the target if it is a grind goal and writes the updated goal back. Returns `none` if the
@@ -288,7 +250,8 @@ target is a plain `MVarId`.
 -/
 @[inline]
 def withGrindGoal (x : Grind.GoalM α) : PreProcessM (Option α) := do
-  let .grindTarget goal ← getTarget | return none
+  let .grindTarget goal ← getTarget
+    | return none
   let (res, goal) ← Grind.GoalM.run goal x
   setTarget <| .grindTarget goal
   return some res
@@ -327,8 +290,7 @@ def dropPassCaches : PreProcessM Unit := do
     setCaches {}
 
 @[inline]
-def getTypeAnalysis : PreProcessM TypeAnalysis := do
-  return (← get).typeAnalysis
+def getTypeAnalysis : PreProcessM TypeAnalysis := do return (← get).typeAnalysis
 
 @[inline]
 def lookupInterestingStructure (n : Name) : PreProcessM (Option Bool) := do
@@ -341,8 +303,7 @@ def lookupInterestingStructure (n : Name) : PreProcessM (Option Bool) := do
     return none
 
 @[inline]
-def modifyTypeAnalysis (f : TypeAnalysis → TypeAnalysis) :
-    PreProcessM Unit := do
+def modifyTypeAnalysis (f : TypeAnalysis → TypeAnalysis) : PreProcessM Unit := do
   modify fun s => { s with typeAnalysis := f s.typeAnalysis }
 
 @[inline]
@@ -362,8 +323,8 @@ def markUninterestingConst (n : Name) : PreProcessM Unit := do
   modifyTypeAnalysis (fun s => { s with uninteresting := s.uninteresting.insert n })
 
 @[inline]
-def run (ctx : PreProcessContext) (target : Target) (x : PreProcessM α) :
-    Grind.GrindM (α × PreProcessState) := do
+def run (ctx : PreProcessContext) (target : Target) (x : PreProcessM α)
+    : Grind.GrindM (α × PreProcessState) := do
   ReaderT.run x ctx |>.run { target }
 
 @[inline]
@@ -377,37 +338,41 @@ def pushHyp (hyp : Hyp) : PreProcessM Unit := do
 
 @[inline]
 def addHyps (hyps : Array Hyp) : PreProcessM Unit := do
-  hyps.forM fun hyp => do
-    trace[Meta.Tactic.bv] m!"Learned hypothesis: {hyp.type}"
+  hyps.forM fun hyp => do trace[Meta.Tactic.bv] m!"Learned hypothesis: {hyp.type}"
   modify fun s => { s with hypotheses := s.hypotheses ++ hyps }
 
 @[inline]
-def getHyps : PreProcessM (Array Hyp) := do
-  return (← get).hypotheses
+def getHyps : PreProcessM (Array Hyp) := do return (← get).hypotheses
 
 @[inline]
-def flatMapHyps [Monad m] [MonadTrace m] [MonadOptions m] [AddMessageContext m] [MonadRef m]
-    [MonadLiftT PreProcessM m] (f : Hyp → m (Array Hyp)) : m Unit := do
+def flatMapHyps
+    [Monad m] [MonadTrace m] [MonadOptions m] [AddMessageContext m] [MonadRef m]
+    [MonadLiftT PreProcessM m]
+    (f : Hyp → m (Array Hyp))
+    : m Unit := do
   let hyps ← getHyps
   modify (m := PreProcessM) fun s => { s with hypotheses := #[] }
-  let hyps ← hyps.flatMapM fun hyp => do
-    let res ← f hyp
-    match h : res.size with
-    | 1 =>
-      let newHyp := res[0]
-      if newHyp != hyp then
-        trace[Meta.Tactic.bv] m!"{hyp.type}  ==>  {newHyp.type}"
+  let hyps ←
+    hyps.flatMapM fun hyp => do
+      let res ← f hyp
+      match h : res.size with
+      | 1 =>
+        let newHyp := res[0]
+        if newHyp != hyp then
+          trace[Meta.Tactic.bv] m!"{hyp.type}  ==>  {newHyp.type}"
+          setDidChange
+      | 0 | n + 2 =>
+        res.forM fun newHyp => do trace[Meta.Tactic.bv] m!"{hyp.type}  ==>  {newHyp.type}"
         setDidChange
-    | 0 | n + 2 =>
-      res.forM fun newHyp => do trace[Meta.Tactic.bv] m!"{hyp.type}  ==>  {newHyp.type}"
-      setDidChange
-    return res
+      return res
   modify (m := PreProcessM) fun s => { s with hypotheses := hyps }
 
 @[inline]
-def mapIdxHyps [Monad m] [MonadLiftT PreProcessM m] [MonadError m] [MonadMCtx m] [MonadTrace m]
+def mapIdxHyps
+    [Monad m] [MonadLiftT PreProcessM m] [MonadError m] [MonadMCtx m] [MonadTrace m]
     [MonadOptions m] [AddMessageContext m] [Sym.Internal.MonadShareCommon m]
-    (f : Nat → Hyp → m Hyp) : m Bool := do
+    (f : Nat → Hyp → m Hyp)
+    : m Bool := do
   let hyps ← getHyps
   let mut newHyps := Array.emptyWithCapacity hyps.size
   for h : idx in 0...hyps.size do
@@ -425,58 +390,57 @@ def mapIdxHyps [Monad m] [MonadLiftT PreProcessM m] [MonadError m] [MonadMCtx m]
   return false
 
 @[inline]
-def mapHyps [Monad m] [MonadLiftT PreProcessM m] [MonadError m] [MonadMCtx m] [MonadTrace m]
-    [MonadOptions m] [AddMessageContext m] [Sym.Internal.MonadShareCommon m] (f : Hyp → m Hyp) :
-    m Bool := do
+def mapHyps
+    [Monad m] [MonadLiftT PreProcessM m] [MonadError m] [MonadMCtx m] [MonadTrace m]
+    [MonadOptions m] [AddMessageContext m] [Sym.Internal.MonadShareCommon m]
+    (f : Hyp → m Hyp)
+    : m Bool := do
   mapIdxHyps (fun _ hyp => f hyp)
 
 @[inline]
-def forHyps [Monad m] [MonadLiftT PreProcessM m] [MonadError m] (f : Hyp → m Unit) :
-    m Unit := do
+def forHyps [Monad m] [MonadLiftT PreProcessM m] [MonadError m] (f : Hyp → m Unit) : m Unit := do
   let hyps ← getHyps
   hyps.forM f
 
-/--
-Runs `Sym.Simp` on `e`, using the cache identified by `cacheId` and updating it in place.
--/
-def simpExpr (cacheId : SimpCacheId) (methods : Sym.Simp.Methods) (config : Sym.Simp.Config)
-    (e : Expr) : PreProcessM Sym.Simp.Result := do
+/-- Runs `Sym.Simp` on `e`, using the cache identified by `cacheId` and updating it in place. -/
+def simpExpr
+    (cacheId : SimpCacheId) (methods : Sym.Simp.Methods) (config : Sym.Simp.Config) (e : Expr)
+    : PreProcessM Sym.Simp.Result := do
   let caches ← getCaches
   let simpState := { persistentCache := cacheId.get caches }
   setCaches <| cacheId.set {} caches
-  let (res, s) ← Sym.Simp.SimpM.run (methods := methods) (config := config) (s := simpState) do
-    Sym.Simp.simp e
+  let (res, s) ←
+    Sym.Simp.SimpM.run (methods := methods) (config := config) (s := simpState) do Sym.Simp.simp e
   setCaches <| cacheId.set s.persistentCache (← getCaches)
   return res
 
-/--
-Runs `Sym.Simp` on `hyp`, using the cache identified by `cacheId` and updating it in place.
--/
-def simpHyp (cacheId : SimpCacheId) (methods : Sym.Simp.Methods) (config : Sym.Simp.Config)
-    (hyp : Hyp) : PreProcessM Hyp := do
+/-- Runs `Sym.Simp` on `hyp`, using the cache identified by `cacheId` and updating it in place. -/
+def simpHyp
+    (cacheId : SimpCacheId) (methods : Sym.Simp.Methods) (config : Sym.Simp.Config) (hyp : Hyp)
+    : PreProcessM Hyp := do
   hyp.applySimpResult (← simpExpr cacheId methods config hyp.type)
 
-/--
-Runs `Sym.DSimp` on `hyp`, using the cache identified by `cacheId` and updating it in place.
--/
-def dsimpHyp (cacheId : DSimpCacheId) (methods : Sym.DSimp.Methods) (config : Sym.DSimp.Config)
-    (hyp : Hyp) : PreProcessM Hyp := do
+/-- Runs `Sym.DSimp` on `hyp`, using the cache identified by `cacheId` and updating it in place. -/
+def dsimpHyp
+    (cacheId : DSimpCacheId) (methods : Sym.DSimp.Methods) (config : Sym.DSimp.Config) (hyp : Hyp)
+    : PreProcessM Hyp := do
   let caches ← getCaches
   let dsimpState := { cache := cacheId.get caches }
   setCaches <| cacheId.set {} caches
-  let (res, s) ← Sym.DSimp.DSimpM.run (methods := methods) (config := config) (s := dsimpState) do
-    Sym.DSimp.dsimp hyp.type
+  let (res, s) ←
+    Sym.DSimp.DSimpM.run (methods := methods) (config := config) (s := dsimpState) do
+      Sym.DSimp.dsimp hyp.type
   setCaches <| cacheId.set s.cache (← getCaches)
   hyp.applyDSimpResult res
 
 @[inline]
-def simpHyps (cacheId : SimpCacheId) (methods : Sym.Simp.Methods) (config : Sym.Simp.Config) :
-    PreProcessM Bool :=
+def simpHyps (cacheId : SimpCacheId) (methods : Sym.Simp.Methods) (config : Sym.Simp.Config)
+    : PreProcessM Bool :=
   mapHyps (simpHyp cacheId methods config)
 
 @[inline]
-def dsimpHyps (cacheId : DSimpCacheId) (methods : Sym.DSimp.Methods) (config : Sym.DSimp.Config) :
-    PreProcessM Bool :=
+def dsimpHyps (cacheId : DSimpCacheId) (methods : Sym.DSimp.Methods) (config : Sym.DSimp.Config)
+    : PreProcessM Bool :=
   mapHyps (dsimpHyp cacheId methods config)
 
 def mapSimpHyps (methods : Sym.Simp.Methods) (config : Sym.Simp.Config) : PreProcessM Bool :=
@@ -484,9 +448,10 @@ def mapSimpHyps (methods : Sym.Simp.Methods) (config : Sym.Simp.Config) : PrePro
 where
   go : StateRefT Sym.Simp.Cache PreProcessM Bool :=
     mapHyps fun hyp => do
-      let simpState := { persistentCache := ← modifyGet fun s => (s, {})}
-      let (res, s) ← Sym.Simp.SimpM.run (methods := methods) (config := config) (s := simpState) do
-        Sym.Simp.simp hyp.type
+      let simpState := { persistentCache := ← modifyGet fun s => (s, {}) }
+      let (res, s) ←
+        Sym.Simp.SimpM.run (methods := methods) (config := config) (s := simpState) do
+          Sym.Simp.simp hyp.type
       set s.persistentCache
       hyp.applySimpResult res
 
@@ -495,9 +460,10 @@ def mapDSimpHyps (methods : Sym.DSimp.Methods) (config : Sym.DSimp.Config) : Pre
 where
   go : StateRefT Sym.DSimp.Cache PreProcessM Bool :=
     mapHyps fun hyp => do
-      let dsimpState := { cache := ← modifyGet fun s => (s, {})}
-      let (res, s) ← Sym.DSimp.DSimpM.run (methods := methods) (config := config) (s := dsimpState) do
-        Sym.DSimp.dsimp hyp.type
+      let dsimpState := { cache := ← modifyGet fun s => (s, {}) }
+      let (res, s) ←
+        Sym.DSimp.DSimpM.run (methods := methods) (config := config) (s := dsimpState) do
+          Sym.DSimp.dsimp hyp.type
       set s.cache
       hyp.applyDSimpResult res
 
@@ -516,8 +482,7 @@ namespace Pass
 
 @[inline]
 def run (pass : Pass) : PreProcessM Bool := do
-  withTraceNode `Meta.Tactic.bv (fun _ => return m!"Running pass: {pass.name}") do
-    pass.run'
+  withTraceNode `Meta.Tactic.bv (fun _ => return m!"Running pass: {pass.name}") do pass.run'
 
 /--
 Repeatedly run a list of `Pass` until they either close the goal or an iteration doesn't change

@@ -15,7 +15,7 @@ namespace Lean
 structure DeprecatedModuleEntry where
   message? : Option String := none
   since? : Option String := none
-  deriving Inhabited
+deriving Inhabited
 
 register_builtin_option linter.deprecated.module : Bool := {
   defValue := true
@@ -27,7 +27,8 @@ builtin_initialize deprecatedModuleExt : ModuleEnvExtension <| Option Deprecated
 
 namespace Environment
 
-def getDeprecatedModuleByIdx? (env : Environment) (idx : ModuleIdx) : Option DeprecatedModuleEntry :=
+def getDeprecatedModuleByIdx? (env : Environment) (idx : ModuleIdx)
+    : Option DeprecatedModuleEntry :=
   deprecatedModuleExt.getStateByIdx? env idx |>.join
 
 def setDeprecatedModule (entry : Option DeprecatedModuleEntry) (env : Environment) : Environment :=
@@ -35,15 +36,16 @@ def setDeprecatedModule (entry : Option DeprecatedModuleEntry) (env : Environmen
 
 end Environment
 
-def formatDeprecatedModuleWarning (env : Environment) (idx : ModuleIdx) (modName : Name)
-    (entry : DeprecatedModuleEntry) : String :=
+def formatDeprecatedModuleWarning
+    (env : Environment) (idx : ModuleIdx) (modName : Name) (entry : DeprecatedModuleEntry)
+    : String :=
   let msg := entry.message?.getD ""
-  let replacements := env.header.moduleData[idx.toNat]!.imports.filter fun imp =>
-    imp.module != `Init
-  let lines := replacements.foldl (init := "") fun acc imp =>
-    acc ++ s!"import {imp.module}\n"
+  let replacements :=
+    env.header.moduleData[idx.toNat]!.imports.filter fun imp => imp.module != `Init
+  let lines := replacements.foldl (init := "") fun acc imp => acc ++ s!"import {imp.module}\n"
   s!"{msg}\n\
-    '{modName}' has been deprecated: please replace this import by\n\n\
+    '{modName}' has been deprecated: please replace this import by\
+    \n\n\
     {lines}"
 
 end Lean

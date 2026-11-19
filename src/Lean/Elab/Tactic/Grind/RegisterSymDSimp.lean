@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 import Init.Sym.DSimp.DSimprocDSL
 import Lean.Meta.Sym.DSimp.Variant
@@ -13,7 +14,8 @@ namespace Lean.Elab.Command
 open Meta Sym.DSimp
 
 def validateOptionDSimprocSyntax (proc? : Option Syntax) : CommandElabM Unit := do
-  let some proc := proc? | return ()
+  let some proc := proc?
+    | return ()
   discard <| withGrindTacticM <| Tactic.Grind.elabSymDSimproc proc
 
 @[builtin_command_elab Lean.Parser.Command.registerSymDSimp]
@@ -30,13 +32,16 @@ def elabRegisterSymDSimp : CommandElab := fun stx => do
   for field in fields do
     match field with
     | `(sym_dsimp_field| maxSteps := $val:num) =>
-      unless maxSteps?.isNone do throwErrorAt field "duplicate `maxSteps` field"
+      unless maxSteps?.isNone do
+        throwErrorAt field "duplicate `maxSteps` field"
       maxSteps? := some val.getNat
     | `(sym_dsimp_field| pre := $proc) =>
-      unless pre?.isNone do throwErrorAt field "duplicate `pre` field"
+      unless pre?.isNone do
+        throwErrorAt field "duplicate `pre` field"
       pre? := some proc
     | `(sym_dsimp_field| post := $proc) =>
-      unless post?.isNone do throwErrorAt field "duplicate `post` field"
+      unless post?.isNone do
+        throwErrorAt field "duplicate `post` field"
       post? := some proc
     | _ => throwErrorAt field "unexpected field"
   -- Validate pre/post by elaborating them

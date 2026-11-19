@@ -31,8 +31,8 @@ Parses a link destination at `cur`. Returns the destination and the cursor after
   characters in which parentheses balance and nest at most 32 deep, and it ends before a `)` that
   has no matching `(`. An unbracketed destination may be empty.
 -/
-public def parseLinkDestination? (cur : InlineCursor s) :
-    Option (LinkDestination s × InlineCursor s) := do
+public def parseLinkDestination? (cur : InlineCursor s)
+    : Option (LinkDestination s × InlineCursor s) := do
   if cur.front? == some '<' then
     let openAngle ← cur.charSubslice?
     let mut cur := cur.drop1
@@ -44,8 +44,10 @@ public def parseLinkDestination? (cur : InlineCursor s) :
         cur := curNext.drop1
       else if c == '>' then
         let closeAngle ← cur.charSubslice?
-        let destination : LinkDestination s :=
-          { angles? := some (openAngle, closeAngle), url := subsliceClamped urlStart cur.startPos }
+        let destination : LinkDestination s := {
+          angles? := some (openAngle, closeAngle)
+          url := subsliceClamped urlStart cur.startPos
+        }
         return (destination, curNext)
       else if c == '<' || c == '\n' || c == '\r' then
         failure
@@ -82,7 +84,8 @@ to the first unescaped closer that matches the opener: `"`, `'`, or `)`. An unes
 parenthesized title fails. Returns the title and the cursor after its closer.
 -/
 public def parseLinkTitle? (cur : InlineCursor s) : Option (LinkTitle s × InlineCursor s) := do
-  let closerChar ← match cur.front? with
+  let closerChar ←
+    match cur.front? with
     | some '"' => some '"'
     | some '\'' => some '\''
     | some '(' => some ')'

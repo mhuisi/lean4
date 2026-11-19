@@ -33,33 +33,35 @@ public def Package.depsFacetConfig : PackageFacetConfig depsFacet :=
   mkFacetJobConfig recFetchDeps (buildable := false)
 
 /-- Compute a topological ordering of the package's transitive dependencies. -/
-def Package.recComputeTransDeps (self : Package) : FetchM (Job (Array Package)) := ensureJob do
-  (pure ·.toArray) <$> self.depPkgs.foldlM (init := OrdPackageSet.empty) fun deps dep => do
-    let depDeps ← (← fetch <| dep.transDeps).await
-    return depDeps.foldl (·.insert ·) deps |>.insert dep
+def Package.recComputeTransDeps (self : Package) : FetchM (Job (Array Package)) :=
+  ensureJob do
+    (pure ·.toArray) <$> self.depPkgs.foldlM (init := OrdPackageSet.empty) fun deps dep => do
+      let depDeps ← (← fetch <| dep.transDeps).await
+      return depDeps.foldl (·.insert ·) deps |>.insert dep
 
 /--
 Collects the Lean modules of the package's default targets: the modules of each default library,
 and the root of each default executable together with its local transitive imports. A default
 target that builds no Lean modules, such as a custom target, contributes nothing.
 -/
-def Package.recCollectDefaultModules (self : Package) : FetchM (Job (Array Module)) := ensureJob do
-  let mut mods := #[]
-  let mut seen : ModuleSet := ∅
-  for target in self.defaultTargets do
-    let targetMods ←
-      if let some lib := self.findLeanLib? target then
-        (← lib.modules.fetch).await
-      else if let some exe := self.findLeanExe? target then
-        let imports ← (← exe.root.transImports.fetch).await
-        pure <| imports.push exe.root
-      else
-        pure #[]
-    for mod in targetMods do
-      unless seen.contains mod do
-        seen := seen.insert mod
-        mods := mods.push mod
-  return Job.pure mods
+def Package.recCollectDefaultModules (self : Package) : FetchM (Job (Array Module)) :=
+  ensureJob do
+    let mut mods := #[]
+    let mut seen : ModuleSet := ∅
+    for target in self.defaultTargets do
+      let targetMods ←
+        if let some lib := self.findLeanLib? target then
+          (← lib.modules.fetch).await
+        else if let some exe := self.findLeanExe? target then
+          let imports ← (← exe.root.transImports.fetch).await
+          pure <| imports.push exe.root
+        else
+          pure #[]
+      for mod in targetMods do
+        unless seen.contains mod do
+          seen := seen.insert mod
+          mods := mods.push mod
+    return Job.pure mods
 
 /-- The `PackageFacetConfig` for the builtin `defaultModulesFacet`. -/
 public def Package.defaultModulesFacetConfig : PackageFacetConfig defaultModulesFacet :=
@@ -88,17 +90,12 @@ public def Package.optBuildCacheFacetConfig : PackageFacetConfig optBuildCacheFa
 /-- Tries to download the package's build cache (if configured). -/
 def Package.maybeFetchBuildCache (self : Package) : FetchM (Job Bool) := do
   let shouldFetch :=
-    (← getTryCache)
-    && !(← self.buildDir.pathExists) -- do not automatically clobber prebuilt artifacts
-    && (
-      (self.downloadCacheService?.isSome -- artifact caches
-        && (← self.isArtifactCacheWritable))
-      || self.preferReleaseBuild -- GitHub release
-      || ( -- Reservoir
-        (self.scope == "leanprover" || self.scope == "leanprover-community")
-        && !(← getElanToolchain).isEmpty
-      )
-  )
+    (← getTryCache) && !(← self.buildDir.pathExists) -- do not automatically clobber prebuilt artifacts
+      && ((self.downloadCacheService?.isSome -- artifact caches
+          && (← self.isArtifactCacheWritable))
+        || self.preferReleaseBuild -- GitHub release
+        || ((self.scope == "leanprover" || self.scope == "leanprover-community") -- Reservoir
+          && !(← getElanToolchain).isEmpty))
   if shouldFetch then
     self.optBuildCache.fetch
   else
@@ -135,14 +132,14 @@ Also, if the package is a dependency, maybe fetch its build cache.
 -/
 def Package.recBuildExtraDepTargets (self : Package) : FetchM (Job Unit) :=
   withRegisterJob s!"{self.baseName}:extraDep" do
-  let mut job := Job.nil s!"@{self.baseName}:extraDep"
-  -- Fetch build cache if this package is a dependency
-  unless self.isRoot do
-    job := job.add (← self.maybeFetchBuildCacheWithWarning)
-  -- Build this package's extra dep targets
-  for target in self.extraDepTargets do
-    job := job.mix (← self.fetchTargetJob target)
-  return job
+    let mut job := Job.nil s!"@{self.baseName}:extraDep"
+    -- Fetch build cache if this package is a dependency
+    unless self.isRoot do
+      job := job.add (← self.maybeFetchBuildCacheWithWarning)
+    -- Build this package's extra dep targets
+    for target in self.extraDepTargets do
+      job := job.mix (← self.fetchTargetJob target)
+    return job
 
 /-- The `PackageFacetConfig` for the builtin `dynlibFacet`. -/
 public def Package.extraDepFacetConfig : PackageFacetConfig extraDepFacet :=
@@ -164,46 +161,49 @@ def Package.getBarrelUrl (self : Package) : JobM String := do
 
 @[inline]
 def mkOptBuildCacheFacetConfig
-  {facet : Name} (fetch : Package → JobM PUnit) [FamilyDef FacetOut facet Bool]
-: PackageFacetConfig facet := mkFacetJobConfig fun pkg =>
-  withRegisterJob s!"{pkg.baseName}:{Name.eraseHead facet}" (optional := true) <| Job.async do
-  try
-    fetch pkg
-    return true
-  catch _ =>
-    updateAction .fetch
-    return false
+    {facet : Name} (fetch : Package → JobM PUnit) [FamilyDef FacetOut facet Bool]
+    : PackageFacetConfig facet :=
+  mkFacetJobConfig fun pkg =>
+    withRegisterJob s!"{pkg.baseName}:{Name.eraseHead facet}" (optional := true) <| Job.async do
+      try
+        fetch pkg
+        return true
+      catch _ =>
+        updateAction .fetch
+        return false
 
 /-- Tries to download a package's output mappings from its `downloadCacheService`. -/
 def Package.fetchArtifactCache (pkg : Package) : JobM PUnit := do
   let some serviceName := pkg.downloadCacheService?
     | error "package has no associated cache service; \
-      if you are the maintainer, set `downloadCacheService` on the package"
+        if you are the maintainer, set `downloadCacheService` on the package"
   let some service := (← getWorkspace).findCacheService? serviceName.toString
     | error s!"package's cache service not found `{serviceName}`; \
-      check with the maintainer about how to configure the service"
+        check with the maintainer about how to configure the service"
   if service.hasPackageScopes && !service.isReservoir then
     error (Internal.packageServiceRequiresScope pkg.prettyName serviceName)
   let cache ← getLakeCache
   let platform := Internal.cachePlatform pkg .system
   let toolchain := Internal.cacheToolchain pkg (← getWorkspace).cacheToolchain
-  let remoteScope ← id do
-    if service.isReservoir then
-      pkg.reservoirScope?.getDM do
-        error (Internal.packageNotReservoir pkg.prettyName)
-    else
-      return .none
-  let map : CacheMap ← id do
-    let repo := GitRepo.mk pkg.dir
-    if (← repo.hasDiff) then
-      logWarning (Internal.packageHasChanges pkg.prettyName)
-    let maxRevs ← getMaxRevs
-    let revs ← repo.getHeadRevisions maxRevs
-    let map? ← LoggerIO.toLogIO <| revs.findSomeM? fun rev =>
-      service.downloadRevisionOutputs? rev cache pkg.cacheScope remoteScope platform toolchain
-    let some map := map?
-      | error (Internal.noOutputs service remoteScope maxRevs revs)
-    return map
+  let remoteScope ←
+    id do
+      if service.isReservoir then
+        pkg.reservoirScope?.getDM do error (Internal.packageNotReservoir pkg.prettyName)
+      else
+        return .none
+  let map : CacheMap ←
+    id do
+      let repo := GitRepo.mk pkg.dir
+      if (← repo.hasDiff) then
+        logWarning (Internal.packageHasChanges pkg.prettyName)
+      let maxRevs ← getMaxRevs
+      let revs ← repo.getHeadRevisions maxRevs
+      let map? ←
+        LoggerIO.toLogIO <| revs.findSomeM? fun rev =>
+          service.downloadRevisionOutputs? rev cache pkg.cacheScope remoteScope platform toolchain
+      let some map := map?
+        | error (Internal.noOutputs service remoteScope maxRevs revs)
+      return map
   cache.writeMap pkg.cacheScope map service.name? (some remoteScope) (overwrite := false)
 
 /-- The `PackageFacetConfig` for the builtin `optArtifactCacheFacet`. -/
@@ -224,31 +224,34 @@ def Package.getReleaseUrl (self : Package) : JobM String := do
 
 /-- Tries to download and unpack a build archive for the package from a URL. -/
 def Package.fetchBuildArchive
-  (self : Package) (url : String) (archiveFile : FilePath)
-  (headers : Array String := #[])
-: JobM PUnit := do
+    (self : Package) (url : String) (archiveFile : FilePath) (headers : Array String := #[])
+    : JobM PUnit := do
   let depTrace := Hash.ofString url
   let traceFile := archiveFile.addExtension "trace"
-  let upToDate ← buildUnlessUpToDate? (action := .fetch) archiveFile depTrace traceFile do
-    download url archiveFile headers
+  let upToDate ←
+    buildUnlessUpToDate? (action := .fetch) archiveFile depTrace traceFile do
+      download url archiveFile headers
   unless upToDate && (← self.buildDir.pathExists) do
     updateAction .unpack
     untar archiveFile self.buildDir
 
 @[inline]
 def mkOptBuildArchiveFacetConfig
-  {facet : Name} (archiveFile : Package → FilePath)
-  (getUrl : Package → JobM String) (headers : Array String := #[])
-  [FamilyDef FacetOut facet Bool]
-: PackageFacetConfig facet := mkOptBuildCacheFacetConfig fun pkg => do
+    {facet : Name}
+    (archiveFile : Package → FilePath) (getUrl : Package → JobM String)
+    (headers : Array String := #[])
+    [FamilyDef FacetOut facet Bool]
+    : PackageFacetConfig facet :=
+  mkOptBuildCacheFacetConfig fun pkg => do
     pkg.fetchBuildArchive (← getUrl pkg) (archiveFile pkg) headers
 
 @[inline]
 def mkBuildCacheFacetConfig
-  {facet : Name} (optFacet : Name) (what : String)
-  [FamilyDef FacetOut facet Unit]
-  [FamilyDef FacetOut optFacet Bool]
-: PackageFacetConfig facet :=
+    {facet : Name}
+    (optFacet : Name)
+    (what : String)
+    [FamilyDef FacetOut facet Unit] [FamilyDef FacetOut optFacet Bool]
+    : PackageFacetConfig facet :=
   mkFacetJobConfig fun pkg =>
     withRegisterJob s!"{pkg.baseName}:{Name.eraseHead facet}" do
       (← fetch <| pkg.facetCore optFacet).mapM fun success => do
@@ -283,7 +286,8 @@ public def Package.gitHubReleaseFacetConfig : PackageFacetConfig gitHubReleaseFa
 Perform a build job after first checking for an (optional) cached build
 for the package (e.g., from Reservoir or GitHub).
 -/
-public def Package.afterBuildCacheAsync (self : Package) (build : JobM (Job α)) : FetchM (Job α) := do
+public def Package.afterBuildCacheAsync (self : Package) (build : JobM (Job α))
+    : FetchM (Job α) := do
   if self.isRoot then
     build
   else
@@ -292,14 +296,14 @@ public def Package.afterBuildCacheAsync (self : Package) (build : JobM (Job α))
       build
 
 /--
- Perform a build after first checking for an (optional) cached build
- for the package (e.g., from Reservoir or GitHub).
+Perform a build after first checking for an (optional) cached build
+for the package (e.g., from Reservoir or GitHub).
 -/
 public def Package.afterBuildCacheSync (self : Package) (build : JobM α) : FetchM (Job α) := do
   if self.isRoot then
     Job.async build
   else
-    (← self.maybeFetchBuildCache).mapM fun _  => do
+    (← self.maybeFetchBuildCache).mapM fun _ => do
       setTrace nilTrace -- ensure both branches start with the same trace
       build
 
@@ -309,18 +313,18 @@ Lake package facets (e.g., `extraDep`).
 -/
 public def Package.initFacetConfigs : DNameMap PackageFacetConfig :=
   DNameMap.empty
-  |>.insert depsFacet depsFacetConfig
-  |>.insert transDepsFacet transDepsFacetConfig
-  |>.insert defaultModulesFacet defaultModulesFacetConfig
-  |>.insert extraDepFacet extraDepFacetConfig
-  |>.insert optBuildCacheFacet optBuildCacheFacetConfig
-  |>.insert buildCacheFacet buildCacheFacetConfig
-  |>.insert optArtifactCacheFacet optArtifactCacheFacetConfig
-  |>.insert artifactCacheFacet artifactCacheFacetConfig
-  |>.insert optReservoirBarrelFacet optBarrelFacetConfig
-  |>.insert reservoirBarrelFacet barrelFacetConfig
-  |>.insert optGitHubReleaseFacet optGitHubReleaseFacetConfig
-  |>.insert gitHubReleaseFacet gitHubReleaseFacetConfig
+    |>.insert depsFacet depsFacetConfig
+    |>.insert transDepsFacet transDepsFacetConfig
+    |>.insert defaultModulesFacet defaultModulesFacetConfig
+    |>.insert extraDepFacet extraDepFacetConfig
+    |>.insert optBuildCacheFacet optBuildCacheFacetConfig
+    |>.insert buildCacheFacet buildCacheFacetConfig
+    |>.insert optArtifactCacheFacet optArtifactCacheFacetConfig
+    |>.insert artifactCacheFacet artifactCacheFacetConfig
+    |>.insert optReservoirBarrelFacet optBarrelFacetConfig
+    |>.insert reservoirBarrelFacet barrelFacetConfig
+    |>.insert optGitHubReleaseFacet optGitHubReleaseFacetConfig
+    |>.insert gitHubReleaseFacet gitHubReleaseFacetConfig
 
 @[inherit_doc Package.initFacetConfigs]
 public abbrev initPackageFacetConfigs := Package.initFacetConfigs

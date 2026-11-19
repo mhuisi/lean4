@@ -14,25 +14,19 @@ public import Init.Data.Float.Model.Unpacked.Basic
 
 namespace Float.Model.UnpackedFloat
 
-/--
-Returns `true` if the float represents a real number, i.e., it is neither infinite nor `NaN`.
--/
+/-- Returns `true` if the float represents a real number, i.e., it is neither infinite nor `NaN`. -/
 def isFinite : UnpackedFloat → Bool
   | .notANumber => false
   | .infinity .. => false
   | .zero .. => true
   | .finite .. => true
 
-/--
-Returns `true` if the float is positive or negative infinity.
--/
+/-- Returns `true` if the float is positive or negative infinity. -/
 def isInf : UnpackedFloat → Bool
   | .infinity .. => true
   | _ => false
 
-/--
-Returns `true` if the float is `NaN`.
--/
+/-- Returns `true` if the float is `NaN`. -/
 def isNaN : UnpackedFloat → Bool
   | .notANumber => true
   | _ => false

@@ -20,7 +20,6 @@ import Lean.Data.Markdown.Parser.LinkSyntax
 
 namespace Lean.Markdown
 
-
 /-!
 # Pass 2: Inline Parser
 
@@ -31,8 +30,10 @@ or just plain text.
 
 variable {s : String.Slice}
 
-/-- Counts consecutive characters equal to `c` at the start of `cur`, returning the count and the
-position after them. -/
+/--
+Counts consecutive characters equal to `c` at the start of `cur`, returning the count and the
+position after them.
+-/
 def countSequence (cur : InlineCursor s) (c : Char) : Nat × s.Pos :=
   let (after, n) := cur.takeSequence c
   (n, after.startPos)
@@ -52,11 +53,9 @@ Whether `c` is in the email autolink local-part character set (CommonMark §6.5)
 alphanumerics plus ``.!#$%&'*+/=?^_`{|}~-``.
 -/
 def isEmailLocalChar (c : Char) : Bool :=
-  c.isAlpha || c.isDigit || c == '.' || c == '!' || c == '#'
-  || c == '$' || c == '%' || c == '&' || c == '\'' || c == '*'
-  || c == '+' || c == '/' || c == '=' || c == '?' || c == '^'
-  || c == '_' || c == '`' || c == '{' || c == '|' || c == '}'
-  || c == '~' || c == '-'
+  c.isAlpha || c.isDigit || c == '.' || c == '!' || c == '#' || c == '$' || c == '%' || c == '&'
+    || c == '\'' || c == '*' || c == '+' || c == '/' || c == '=' || c == '?' || c == '^' || c == '_'
+    || c == '`' || c == '{' || c == '|' || c == '}' || c == '~' || c == '-'
 
 /--
 Parses a URI autolink at `cur`, which should begin immediately after the opening `<`. Returns the
@@ -72,7 +71,8 @@ def parseAutolinkUri? (cur : InlineCursor s) : Option s.Pos := do
     if c.isAlpha || c.isDigit || c == '+' || c == '-' || c == '.' then
       schemeLen := schemeLen + 1
       rest := rest.drop1
-    else break
+    else
+      break
   guard <| schemeLen ≥ 2
   guard <| rest.front? == some ':'
   rest := rest.drop1
@@ -104,15 +104,18 @@ def parseAutolinkEmail? (cur : InlineCursor s) : Option s.Pos := do
     let mut labelLen := 1
     let mut lastC := firstC
     while labelLen < 63 do
-      let some c := rest.front? | break
+      let some c := rest.front?
+        | break
       if c.isAlpha || c.isDigit || c == '-' then
         labelLen := labelLen + 1
         lastC := c
         rest := rest.drop1
-      else break
+      else
+        break
     -- A label cannot end with a hyphen.
     guard <| lastC != '-'
-    let some c := rest.front? | failure
+    let some c := rest.front?
+      | failure
     if c == '>' then
       return rest.startPos
     if c == '.' then
@@ -169,8 +172,8 @@ its matching `)`. `cur` should begin just after the opening `(`.
 
 Returns `(destination, title?, closeParenPos)` on success.
 -/
-def parseInlineLinkTarget? (cur : InlineCursor s) :
-    Option (LinkDestination s × Option (LinkTitle s) × s.Pos) := do
+def parseInlineLinkTarget? (cur : InlineCursor s)
+    : Option (LinkDestination s × Option (LinkTitle s) × s.Pos) := do
   let src := cur.source
   let stop := cur.stopPos
   let (destination, afterUrl) ← parseLinkDestination? (src.cursor (skipInlineWs cur) stop)
@@ -201,19 +204,25 @@ def classifyDelim (ch prevChar nextChar : Char) : Bool × Bool :=
   let leftFlanking := !afterWs && (!afterPunct || beforeWs || beforePunct)
   let rightFlanking := !beforeWs && (!beforePunct || afterWs || afterPunct)
   let canOpen :=
-    if ch == '*' then leftFlanking
-    else leftFlanking && (!rightFlanking || beforePunct)
+    if ch == '*' then
+      leftFlanking
+    else
+      leftFlanking && (!rightFlanking || beforePunct)
   let canClose :=
-    if ch == '*' then rightFlanking
-    else rightFlanking && (!leftFlanking || afterPunct)
+    if ch == '*' then
+      rightFlanking
+    else
+      rightFlanking && (!leftFlanking || afterPunct)
   (canOpen, canClose)
 
 /-- The monad for parsing link targets. Failure is `none`. -/
 abbrev LinkTargetM (s : String.Slice) := ReaderT (InlineContext s) Option
 
 /-- The reference target that `label` refers to. Fails when there is none. -/
-@[inline] def linkRef (label : Lines s) : LinkTargetM s (RefTarget s) := do
-  let some target := (← refTable)[normalizeLabel label]? | failure
+@[inline]
+def linkRef (label : Lines s) : LinkTargetM s (RefTarget s) := do
+  let some target := (← refTable)[normalizeLabel label]?
+    | failure
   return target
 
 /--
@@ -222,8 +231,8 @@ Parses the target of a `[…]…` link or `![…]…` image, after the caller ha
 picks among the inline `(url)`, full reference `[label]`, collapsed `[]`, and shortcut forms, and
 returns the target together with the position after it.
 -/
-def parseLinkSuffix? (openBracket closeBracket : s.Subslice) (afterClose : s.Pos) :
-    LinkTargetM s (LinkTarget s × s.Pos) := do
+def parseLinkSuffix? (openBracket closeBracket : s.Subslice) (afterClose : s.Pos)
+    : LinkTargetM s (LinkTarget s × s.Pos) := do
   let src ← inlineSource
   let afterCloseRest : InlineCursor s := src.cursor afterClose src.stopPos
   -- Inline form `(url)` takes precedence; on failure, fall back to shortcut. A link label or `[]`
@@ -261,8 +270,7 @@ where
       let labelClose ← afterOpen.charSubslice?
       let label ← interiorLabel?
       let target ← linkRef label
-      return (.reference target label (.collapsed labelOpen labelClose),
-        labelClose.endExclusive)
+      return (.reference target label (.collapsed labelOpen labelClose), labelClose.endExclusive)
     else
       match parseLinkLabel? afterOpen with
       | none => shortcutForm
@@ -366,11 +374,8 @@ def InlineTokenizerState.init (src : InlineSource s) : InlineTokenizerState s wh
   textStart := src.startPos
   prevChar := ' '
 
-/--
-The monad for inline tokenization.
--/
-abbrev TokenizeM (s : String.Slice) :=
-  ReaderT (InlineContext s) (StateM (InlineTokenizerState s))
+/-- The monad for inline tokenization. -/
+abbrev TokenizeM (s : String.Slice) := ReaderT (InlineContext s) (StateM (InlineTokenizerState s))
 
 /--
 Emits the token `tok` for an inline construct that begins at `matchStart`, and resumes tokenizing
@@ -382,22 +387,23 @@ The pending plain text ends where the construct begins, so it becomes a `.text` 
 of them are the hard line break itself (CommonMark §6.7), and fewer are removed with the soft line
 break (CommonMark §6.8).
 -/
-def recognize (tok : InlineTok s) (matchStart : s.Pos) (resumeRest : InlineCursor s)
-    (newPrev : Char) : TokenizeM s Unit :=
-  modify fun st =>
-    { st with
-      out := (pushTokText st.out st.textStart matchStart).push tok,
-      rest := resumeRest,
-      textStart := resumeRest.startPos,
-      prevChar := newPrev
-    }
+def recognize
+    (tok : InlineTok s) (matchStart : s.Pos) (resumeRest : InlineCursor s) (newPrev : Char)
+    : TokenizeM s Unit :=
+  modify fun st => {
+    st with
+    out := (pushTokText st.out st.textStart matchStart).push tok
+    rest := resumeRest
+    textStart := resumeRest.startPos
+    prevChar := newPrev
+  }
 
 /--
 The current character did not start a recognized inline. Advances one character, accumulating it
 into the pending plain text.
 -/
-def skipChar : TokenizeM s Unit := modify fun st =>
-  { st with rest := st.rest.drop1, prevChar := st.rest.front }
+def skipChar : TokenizeM s Unit :=
+  modify fun st => { st with rest := st.rest.drop1, prevChar := st.rest.front }
 
 /--
 Whether `c` may begin an inline construct or a line ending. The inline constructs are a backslash
@@ -405,8 +411,8 @@ escape, inline code, an image or link bracket, an autolink or raw HTML, a charac
 emphasis delimiter, or, with the `latexMath` extension, LaTeX math.
 -/
 def mayBeginInline (extensions : Extensions) (c : Char) : Bool :=
-  c == '\\' || c == '`' || c == '!' || c == '[' || c == ']' || c == '<' || c == '&' || c == '*' ||
-  c == '_' || c == '\n' || c == '\r' || (extensions.latexMath && c == '$')
+  c == '\\' || c == '`' || c == '!' || c == '[' || c == ']' || c == '<' || c == '&' || c == '*'
+    || c == '_' || c == '\n' || c == '\r' || (extensions.latexMath && c == '$')
 
 /--
 Advances over plain text. The plain text is the current character, which did not begin an inline
@@ -418,7 +424,7 @@ character for the flanking rules.
 def skipText : TokenizeM s Unit := do
   let extensions ← extensions
   modify fun st =>
-    let rest := st.rest.drop1.skipWhile (!mayBeginInline extensions ·)
+    let rest := st.rest.drop1.skipWhile (! mayBeginInline extensions ·)
     -- The stretch stays within one line, since a line ending may begin an inline construct, so the
     -- character before the new position is the last one consumed.
     { st with rest, prevChar := (rest.startPos.prev? >>= (·.get?)).getD st.rest.front }
@@ -460,8 +466,12 @@ def parseCode? (cur : InlineCursor s) : TokenizeM s (Option (Inline s × s.Pos))
       -- A search that began later may have passed a later sequence already, so the entry only moves
       -- forward.
       modify fun st =>
-        if Option.any (q ≤ ·) st.lastBacktickSequence[seqLen]? then st
-        else { st with lastBacktickSequence := st.lastBacktickSequence.insert seqLen q }
+        if Option.any (q ≤ ·) st.lastBacktickSequence[seqLen]? then
+          st
+        else {
+          st with
+          lastBacktickSequence := st.lastBacktickSequence.insert seqLen q
+        }
       if seqLen == openLen then
         let content := src.linesBetween p q
         let closeTicks := subsliceClamped q qAfterSequence
@@ -481,8 +491,8 @@ def finalizeTokens : TokenizeM s (Array (InlineTok s)) := do
 Emits a `[` or `![` (with `bang?` the `!`) as a text token and pushes it on the bracket stack. The
 input resumes at `resumeRest`, just after the `[`.
 -/
-def openBracket (bang? : Option s.Subslice) (bracket : s.Subslice) (resumeRest : InlineCursor s) :
-    TokenizeM s Unit :=
+def openBracket (bang? : Option s.Subslice) (bracket : s.Subslice) (resumeRest : InlineCursor s)
+    : TokenizeM s Unit :=
   modify fun st =>
     -- The output is taken out of the state so that it stays unique and is extended in place.
     let out := st.out
@@ -490,12 +500,14 @@ def openBracket (bang? : Option s.Subslice) (bracket : s.Subslice) (resumeRest :
     let start := (bang?.getD bracket).startInclusive
     let out := pushTokText out st.textStart start
     let tokIdx := out.size
-    { st with
+    {
+      st with
       out := out.push (.inline (.text (subsliceClamped start bracket.endExclusive)))
       brackets := st.brackets.push { tokIdx, bang?, openBracket := bracket }
       rest := resumeRest
       textStart := bracket.endExclusive
-      prevChar := '[' }
+      prevChar := '['
+    }
 
 /--
 Handles a `]`, following the specification's *look for link or image* procedure. With an active
@@ -506,7 +518,8 @@ opener is popped in either case, and a completed link deactivates every earlier 
 def closeBracket (closeBracket : s.Subslice) : TokenizeM s Unit := do
   let ctx ← read
   let src ← inlineSource
-  let some opener := (← get).brackets.back? | skipChar
+  let some opener := (← get).brackets.back?
+    | skipChar
   let popOpener : TokenizeM s Unit := modify fun st => { st with brackets := st.brackets.pop }
   if !opener.active then
     popOpener
@@ -524,13 +537,14 @@ def closeBracket (closeBracket : s.Subslice) : TokenizeM s Unit := do
         match opener.bang? with
         | some bang => .image bang opener.openBracket interior closeBracket target
         | none => .link opener.openBracket interior closeBracket target
-      modify fun st =>
-        { st with
-          out := (out.shrink opener.tokIdx).push (.inline inl)
-          brackets := deactivateBelow st.brackets.pop opener.bang?.isNone
-          rest := src.cursor after stop
-          textStart := after
-          prevChar := (after.prev? >>= (·.get?)).getD ')' }
+      modify fun st => {
+        st with
+        out := (out.shrink opener.tokIdx).push (.inline inl)
+        brackets := deactivateBelow st.brackets.pop opener.bang?.isNone
+        rest := src.cursor after stop
+        textStart := after
+        prevChar := (after.prev? >>= (·.get?)).getD ')'
+      }
     | none =>
       popOpener
       skipChar
@@ -539,21 +553,22 @@ where
   After a link forms, every `[` opener still on the stack is deactivated, since a link may not
   contain a link. Openers below an inactive one are already inactive, so the walk stops there.
   -/
-  deactivateBelow (brackets : Array (BracketOpener s)) (isLink : Bool) :
-      Array (BracketOpener s) :=
+  deactivateBelow (brackets : Array (BracketOpener s)) (isLink : Bool) : Array (BracketOpener s) :=
     if isLink then deactivateFrom brackets brackets.size (Nat.le_refl _) else brackets
   /--
   Deactivates the `[` openers at the indices below `i`, from the highest down, stopping at the
   first that is already inactive.
   -/
-  deactivateFrom (brackets : Array (BracketOpener s)) (i : Nat) (h : i ≤ brackets.size) :
-      Array (BracketOpener s) :=
+  deactivateFrom (brackets : Array (BracketOpener s)) (i : Nat) (h : i ≤ brackets.size)
+      : Array (BracketOpener s) :=
     match i with
     | 0 => brackets
     | i + 1 =>
       let b := brackets[i]
-      if b.bang?.isSome then deactivateFrom brackets i (Nat.le_of_succ_le h)
-      else if !b.active then brackets
+      if b.bang?.isSome then
+        deactivateFrom brackets i (Nat.le_of_succ_le h)
+      else if !b.active then
+        brackets
       else
         deactivateFrom (brackets.set i { b with active := false }) i
           (by simpa using Nat.le_of_succ_le h)
@@ -570,7 +585,8 @@ def tokenizeInlines : TokenizeM s (Array (InlineTok s)) := do
   repeat
     let st ← get
     -- The subslice of the current character, which exists exactly when input remains.
-    let some charSubslice := st.rest.charSubslice? | break
+    let some charSubslice := st.rest.charSubslice?
+      | break
     let c := st.rest.front
     let cursor := st.rest.startPos
     let restNext := st.rest.drop1
@@ -603,20 +619,19 @@ def tokenizeInlines : TokenizeM s (Array (InlineTok s)) := do
     else if c == ']' then
       closeBracket charSubslice
     else if c == '<' then
-      let html? ← match parseAutolink? st.rest with
+      let html? ←
+        match parseAutolink? st.rest with
         | some autolink => pure (some autolink)
         | none =>
           let (html?, htmlScans) := (parseRawHtml? st.rest).run.run st.htmlScans
           modify fun st => { st with htmlScans }
           pure html?
       match html? with
-      | some (inl, after) =>
-        recognize (.inline inl) cursor (src.cursor after stop) '>'
+      | some (inl, after) => recognize (.inline inl) cursor (src.cursor after stop) '>'
       | none => skipChar
     else if c == '&' then
       match parseCharacterReference? st.rest with
-      | some (entity, after) =>
-        recognize (.inline entity) cursor (src.cursor after stop) ';'
+      | some (entity, after) => recognize (.inline entity) cursor (src.cursor after stop) ';'
       | none => skipChar
     else if let some (ending, afterEnding) := st.rest.parseLineEnding? then
       -- A line ending normalizes to a soft break (or, with two or more trailing spaces, a hard
@@ -630,7 +645,8 @@ def tokenizeInlines : TokenizeM s (Array (InlineTok s)) := do
           if p.get? == some ' ' then
             q := p
             spaces := spaces + 1
-          else break
+          else
+            break
         | none => break
       -- `afterEnding` begins at the next line's first non-whitespace character, which is where
       -- the tokenizer resumes; the break itself is the whole line ending.
@@ -647,12 +663,12 @@ def tokenizeInlines : TokenizeM s (Array (InlineTok s)) := do
       let seqEndRest : InlineCursor s := src.cursor seqEnd stop
       if n ≤ 2 then
         let canOpen := isUnicodeWhitespace st.prevChar || isUnicodePunctuation st.prevChar
-        let canClose := match seqEndRest.front? with
+        let canClose :=
+          match seqEndRest.front? with
           | none => true
           | some d => isUnicodeWhitespace d || isUnicodePunctuation d
-        recognize
-          (.delim { startPos := cursor, ch := c, origLen := n, canOpen, canClose })
-          cursor seqEndRest c
+        recognize (.delim { startPos := cursor, ch := c, origLen := n, canOpen, canClose }) cursor
+          seqEndRest c
       else
         skipPast seqEndRest c
     else if c == '*' || c == '_' then
@@ -660,9 +676,8 @@ def tokenizeInlines : TokenizeM s (Array (InlineTok s)) := do
       let seqEndRest : InlineCursor s := src.cursor seqEnd stop
       let nextC := seqEndRest.front?.getD ' '
       let (canOpen, canClose) := classifyDelim c st.prevChar nextC
-      recognize
-        (.delim { startPos := cursor, ch := c, origLen := n, canOpen, canClose })
-        cursor seqEndRest c
+      recognize (.delim { startPos := cursor, ch := c, origLen := n, canOpen, canClose }) cursor
+        seqEndRest c
     else
       skipText
   finalizeTokens
@@ -671,7 +686,7 @@ def tokenizeInlines : TokenizeM s (Array (InlineTok s)) := do
 Parses the inline content of `src`, typically a paragraph or a heading's content, into a flat array
 of inlines.
 -/
-public def parseInlines (refs : RefTable s) (src : InlineSource s)
-    (extensions : Extensions := {}) : Array (Inline s) :=
+public def parseInlines (refs : RefTable s) (src : InlineSource s) (extensions : Extensions := {})
+    : Array (Inline s) :=
   let ctx : InlineContext s := { refs, src, extensions }
   processEmphasis ctx ((tokenizeInlines.run ctx).run' (.init src))

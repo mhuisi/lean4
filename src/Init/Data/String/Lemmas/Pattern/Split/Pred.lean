@@ -30,13 +30,15 @@ section
 
 open Pattern.Model Pattern.Model.CharPred
 
-theorem toList_splitToSubslice_bool {s : Slice} {p : Char → Bool} :
-    (s.splitToSubslice p).toList.map (Slice.copy ∘ Subslice.toSlice) =
-      (s.copy.toList.splitOnP p).map String.ofList := by
+theorem toList_splitToSubslice_bool {s : Slice} {p : Char → Bool}
+    : (s.splitToSubslice p).toList.map (Slice.copy ∘ Subslice.toSlice)
+      = (s.copy.toList.splitOnP p).map String.ofList := by
   simp only [Pattern.toList_splitToSubslice_eq_modelSplit]
   suffices ∀ (f pos : s.Pos) (hle : f ≤ pos) (t₁ t₂ : String),
-      pos.Splits t₁ t₂ → (Pattern.Model.split p f pos hle).map (copy ∘ Subslice.toSlice) =
-        (t₂.toList.splitOnPPrepend p (s.subslice f pos hle).copy.toList.reverse).map String.ofList by
+      pos.Splits t₁ t₂
+        → (Pattern.Model.split p f pos hle).map (copy ∘ Subslice.toSlice)
+          = (t₂.toList.splitOnPPrepend p (s.subslice f pos hle).copy.toList.reverse).map
+            String.ofList by
     simpa using this s.startPos s.startPos (Std.le_refl _) "" s.copy
   intro f pos hle t₁ t₂ hp
   induction pos using Pos.next_induction generalizing f t₁ t₂ with
@@ -44,38 +46,41 @@ theorem toList_splitToSubslice_bool {s : Slice} {p : Char → Bool} :
     obtain ⟨t₂, rfl⟩ := hp.exists_eq_singleton_append h
     by_cases hpc : p (pos.get h)
     · simp [split_eq_of_isLongestMatchAt (isLongestMatchAt_of_get hpc),
-        ih _ (Std.le_refl _) _ _ hp.next,
-        List.splitOnPPrepend_cons_pos (p := p) hpc]
+        ih _ (Std.le_refl _) _ _ hp.next, List.splitOnPPrepend_cons_pos (p := p) hpc]
     · rw [Bool.not_eq_true] at hpc
       rw [split_eq_next_of_not_matchesAt h (not_matchesAt_of_get hpc)]
-      simp only [toList_append, toList_singleton, List.cons_append, List.nil_append, Subslice.copy_eq]
+      simp only [toList_append, toList_singleton, List.cons_append, List.nil_append,
+        Subslice.copy_eq]
       rw [ih _ _ _ _ hp.next, List.splitOnPPrepend_cons_neg (by simpa)]
-      have := (splits_slice (Std.le_trans hle (by simp)) (pos.slice f (pos.next h) hle (by simp))).eq_append
+      have :=
+        (splits_slice (Std.le_trans hle (by simp))
+          (pos.slice f (pos.next h) hle (by simp))).eq_append
       simp_all
   | endPos => simp_all
 
-theorem toList_split_bool {s : Slice} {p : Char → Bool} :
-    (s.split p).toList.map Slice.copy = (s.copy.toList.splitOnP p).map String.ofList := by
+theorem toList_split_bool {s : Slice} {p : Char → Bool}
+    : (s.split p).toList.map Slice.copy = (s.copy.toList.splitOnP p).map String.ofList := by
   simp [toList_split_eq_splitToSubslice, ← toList_splitToSubslice_bool]
 
-/-
-  Used internally by the `cbv` tactic.
--/
+/- Used internally by the `cbv` tactic. -/
 @[cbv_eval]
-theorem Pattern.Model.split_bool_eq_internal {p : Char → Bool} {s : Slice} (f curr : s.Pos) (hle : f ≤ curr) :
-    Model.split p f curr hle =
-      if h : curr = s.endPos then [s.subslice _ _ hle]
-      else if p (curr.get h) then
-        s.subslice _ _ hle :: Model.split p (curr.next h) (curr.next h) (by simp [Std.le_refl])
-      else Model.split p f (curr.next h) (by simp [Std.le_trans hle _]) := by
+theorem Pattern.Model.split_bool_eq_internal
+    {p : Char → Bool} {s : Slice} (f curr : s.Pos) (hle : f ≤ curr)
+    : Model.split p f curr hle
+      = if h : curr = s.endPos then
+          [s.subslice _ _ hle]
+        else if p (curr.get h) then
+          s.subslice _ _ hle :: Model.split p (curr.next h) (curr.next h) (by simp [Std.le_refl])
+        else
+          Model.split p f (curr.next h) (by simp [Std.le_trans hle _]) := by
   by_cases h : curr = s.endPos
-  · simp only [h, split_endPos, subslice_endPos, ↓reduceDIte]
-  · simp only [h, ↓reduceDIte]
+  · simp only [h, split_endPos, subslice_endPos, ↓ reduceDIte]
+  · simp only [h, ↓ reduceDIte]
     by_cases hp : p (curr.get h)
-    · simp only [hp, ↓reduceIte]
+    · simp only [hp, ↓ reduceIte]
       exact split_eq_of_isLongestMatchAt (isLongestMatchAt_of_get hp)
     · rw [Bool.not_eq_true] at hp
-      simp only [hp, Bool.false_eq_true, ↓reduceIte]
+      simp only [hp, Bool.false_eq_true, ↓ reduceIte]
       exact split_eq_next_of_not_matchesAt h (not_matchesAt_of_get hp)
 
 end
@@ -85,42 +90,42 @@ section
 open Pattern.Model Pattern.Model.CharPred.Decidable
 
 @[cbv_eval]
-theorem Pattern.Model.split_eq_split_decide {p : Char → Prop} [DecidablePred p] {s : Slice}
-    (f curr : s.Pos) (hle : f ≤ curr) :
-    Model.split p f curr hle = Model.split (decide <| p ·) f curr hle := by
+theorem Pattern.Model.split_eq_split_decide
+    {p : Char → Prop} [DecidablePred p] {s : Slice} (f curr : s.Pos) (hle : f ≤ curr)
+    : Model.split p f curr hle = Model.split (decide <| p ·) f curr hle := by
   fun_induction Model.split p f curr hle with
   | case1 fr h => simp
   | case2 fr curr hle h pos h₁ h₂ ih =>
     conv => rhs; rw [Model.split]
-    simp only [h, ↓reduceDIte]
+    simp only [h, ↓ reduceDIte]
     split <;> simp_all [matchAt?_eq_matchAt?_decide]
   | case3 fr curr hle h pos ih =>
     conv => rhs; rw [Model.split]
-    simp only [h, ↓reduceDIte]
+    simp only [h, ↓ reduceDIte]
     split <;> simp_all [matchAt?_eq_matchAt?_decide]
 
-theorem toList_splitToSubslice_prop {s : Slice} {p : Char → Prop} [DecidablePred p] :
-    (s.splitToSubslice p).toList.map (Slice.copy ∘ Subslice.toSlice) =
-      (s.copy.toList.splitOnP p).map String.ofList := by
+theorem toList_splitToSubslice_prop {s : Slice} {p : Char → Prop} [DecidablePred p]
+    : (s.splitToSubslice p).toList.map (Slice.copy ∘ Subslice.toSlice)
+      = (s.copy.toList.splitOnP p).map String.ofList := by
   have : (s.splitToSubslice p).toList = (s.splitToSubslice (decide <| p ·)).toList := by
     simp only [Pattern.toList_splitToSubslice_eq_modelSplit, split_eq_split_decide]
   rw [this]
   exact toList_splitToSubslice_bool
 
-theorem toList_split_prop {s : Slice} {p : Char → Prop} [DecidablePred p] :
-    (s.split p).toList.map Slice.copy = (s.copy.toList.splitOnP p).map String.ofList := by
+theorem toList_split_prop {s : Slice} {p : Char → Prop} [DecidablePred p]
+    : (s.split p).toList.map Slice.copy = (s.copy.toList.splitOnP p).map String.ofList := by
   simp [toList_split_eq_splitToSubslice, ← toList_splitToSubslice_prop]
 
 end
 
 end Slice
 
-theorem toList_split_bool {s : String} {p : Char → Bool} :
-    (s.split p).toList.map Slice.copy = (s.toList.splitOnP p).map String.ofList := by
+theorem toList_split_bool {s : String} {p : Char → Bool}
+    : (s.split p).toList.map Slice.copy = (s.toList.splitOnP p).map String.ofList := by
   simp [split_eq_split_toSlice, Slice.toList_split_bool]
 
-theorem toList_split_prop {s : String} {p : Char → Prop} [DecidablePred p] :
-    (s.split p).toList.map Slice.copy = (s.toList.splitOnP p).map String.ofList := by
+theorem toList_split_prop {s : String} {p : Char → Prop} [DecidablePred p]
+    : (s.split p).toList.map Slice.copy = (s.toList.splitOnP p).map String.ofList := by
   simp [split_eq_split_toSlice, Slice.toList_split_prop]
 
 end String

@@ -36,30 +36,29 @@ Example:
 #["a", "red", "x", "r"]
 ```
 -/
-public def filterPairsM {m} [Monad m] {α} (a : Array α) (f : α → α → m (Bool × Bool)) :
-    m (Array α) := do
+public def filterPairsM {m} [Monad m] {α} (a : Array α) (f : α → α → m (Bool × Bool))
+    : m (Array α) := do
   let mut removed := Array.replicate a.size false
   let mut numRemoved := 0
-  for h1 : i in *...a.size do for h2 : j in (i+1)...a.size do
-    unless removed[i]! || removed[j]! do
-      let xi := a[i]
-      let xj := a[j]
-      let (keepi, keepj) ← f xi xj
-      unless keepi do
-        numRemoved := numRemoved + 1
-        removed := removed.set! i true
-      unless keepj do
-        numRemoved := numRemoved + 1
-        removed := removed.set! j true
+  for h1 : i in *...a.size do
+    for h2 : j in (i + 1)...a.size do
+      unless removed[i]! || removed[j]! do
+        let xi := a[i]
+        let xj := a[j]
+        let (keepi, keepj) ← f xi xj
+        unless keepi do
+          numRemoved := numRemoved + 1
+          removed := removed.set! i true
+        unless keepj do
+          numRemoved := numRemoved + 1
+          removed := removed.set! j true
   let mut a' := Array.mkEmpty numRemoved
   for h : i in *...a.size do
     unless removed[i]! do
       a' := a'.push a[i]
   return a'
 
-/--
-`maskArray mask xs` keeps those `x` where the corresponding entry in `mask` is `true`
--/
+/-- `maskArray mask xs` keeps those `x` where the corresponding entry in `mask` is `true` -/
 public def mask {α} (mask : Array Bool) (xs : Array α) : Array α := Id.run do
   let mut ys := #[]
   for b in mask, x in xs do

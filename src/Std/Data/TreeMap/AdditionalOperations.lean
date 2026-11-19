@@ -33,27 +33,22 @@ def filterMap (f : (a : α) → β → Option γ) (m : TreeMap α β cmp) : Tree
   ⟨m.inner.filterMap f⟩
 
 @[inline, inherit_doc DTreeMap.map]
-def map (f : α → β → γ) (t : TreeMap α β cmp) : TreeMap α γ cmp :=
-  ⟨t.inner.map f⟩
+def map (f : α → β → γ) (t : TreeMap α β cmp) : TreeMap α γ cmp := ⟨t.inner.map f⟩
 
 @[inline, inherit_doc DTreeMap.Const.getEntryGE]
-def getEntryGE [TransCmp cmp] (t : TreeMap α β cmp) (k : α) (h : ∃ a ∈ t, (cmp a k).isGE) :
-    α × β :=
+def getEntryGE [TransCmp cmp] (t : TreeMap α β cmp) (k : α) (h : ∃ a ∈ t, (cmp a k).isGE) : α × β :=
   DTreeMap.Const.getEntryGE t.inner k h
 
 @[inline, inherit_doc DTreeMap.Const.getEntryGT]
-def getEntryGT [TransCmp cmp] (t : TreeMap α β cmp) (k : α) (h : ∃ a ∈ t, cmp a k = .gt) :
-    α × β :=
+def getEntryGT [TransCmp cmp] (t : TreeMap α β cmp) (k : α) (h : ∃ a ∈ t, cmp a k = .gt) : α × β :=
   DTreeMap.Const.getEntryGT t.inner k h
 
 @[inline, inherit_doc DTreeMap.Const.getEntryLE]
-def getEntryLE [TransCmp cmp] (t : TreeMap α β cmp) (k : α) (h : ∃ a ∈ t, (cmp a k).isLE) :
-    α × β :=
+def getEntryLE [TransCmp cmp] (t : TreeMap α β cmp) (k : α) (h : ∃ a ∈ t, (cmp a k).isLE) : α × β :=
   DTreeMap.Const.getEntryLE t.inner k h
 
 @[inline, inherit_doc DTreeMap.Const.getEntryLT]
-def getEntryLT [TransCmp cmp] (t : TreeMap α β cmp) (k : α) (h : ∃ a ∈ t, cmp a k = .lt) :
-    α × β :=
+def getEntryLT [TransCmp cmp] (t : TreeMap α β cmp) (k : α) (h : ∃ a ∈ t, cmp a k = .lt) : α × β :=
   DTreeMap.Const.getEntryLT t.inner k h
 
 @[inline, inherit_doc DTreeMap.getKeyGE]

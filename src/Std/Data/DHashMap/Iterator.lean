@@ -74,8 +74,8 @@ public def keysIter {α : Type u} {β : α → Type u} [BEq α] [Hashable α] (m
   (m.1.keysIter : Iter α)
 
 @[inline, inherit_doc Raw.valuesIter]
-public def valuesIter {α : Type u} {β : Type u} [BEq α] [Hashable α]
-    (m : DHashMap α (fun _ => β)) :=
+public def valuesIter
+    {α : Type u} {β : Type u} [BEq α] [Hashable α] (m : DHashMap α (fun _ => β)) :=
   (m.iter.map fun e => e.2 : Iter β)
 
 end Std.DHashMap

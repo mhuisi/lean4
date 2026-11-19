@@ -31,14 +31,18 @@ structure ReplicateTarget (aig : AIG α) (combined : Nat) where
   inner : AIG.RefVec aig w
   h : combined = w * n
 
-def blastReplicate (aig : AIG α) (target : ReplicateTarget aig newWidth) :
-    AIG.RefVecEntry α newWidth :=
+def blastReplicate (aig : AIG α) (target : ReplicateTarget aig newWidth)
+    : AIG.RefVecEntry α newWidth :=
   let ⟨n, inner, h⟩ := target
   let ref := go n inner 0 (by omega) (.emptyWithCapacity newWidth)
   ⟨aig, h ▸ ref⟩
 where
-  go {aig : AIG α} {w : Nat} (n : Nat) (input : AIG.RefVec aig w) (curr : Nat) (hcurr : curr ≤ n)
-      (s : AIG.RefVec aig (w * curr)) : AIG.RefVec aig (w * n) :=
+  go
+      {aig : AIG α} {w : Nat}
+      (n : Nat)
+      (input : AIG.RefVec aig w)
+      (curr : Nat) (hcurr : curr ≤ n) (s : AIG.RefVec aig (w * curr))
+      : AIG.RefVec aig (w * n) :=
     if h : curr < n then
       let s := s.append input
       go n input (curr + 1) (by omega) s

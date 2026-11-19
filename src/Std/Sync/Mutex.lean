@@ -105,8 +105,9 @@ opaque Condvar.notifyOne (condvar : @& Condvar) : BaseIO Unit
 opaque Condvar.notifyAll (condvar : @& Condvar) : BaseIO Unit
 
 /-- Waits on the condition variable until the predicate is true. -/
-def Condvar.waitUntil [Monad m] [MonadLiftT BaseIO m]
-    (condvar : Condvar) (mutex : BaseMutex) (pred : m Bool) : m Unit := do
+def Condvar.waitUntil
+    [Monad m] [MonadLiftT BaseIO m] (condvar : Condvar) (mutex : BaseMutex) (pred : m Bool)
+    : m Unit := do
   while !(← pred) do
     condvar.wait mutex
 
@@ -116,16 +117,17 @@ Mutual exclusion primitive (lock) guarding shared state of type `α`.
 The type `Mutex α` is similar to `IO.Ref α`, except that concurrent accesses are guarded by a mutex
 instead of atomic pointer operations and busy-waiting.
 -/
-structure Mutex (α : Type) where private mk ::
+structure Mutex (α : Type) where
+  private mk ::
   private ref : IO.Ref α
   mutex : BaseMutex
 deriving Nonempty
 
-instance : CoeOut (Mutex α) BaseMutex where coe := Mutex.mutex
+instance : CoeOut (Mutex α) BaseMutex where
+  coe := Mutex.mutex
 
 /-- Creates a new mutex. -/
-def Mutex.new (a : α) : BaseIO (Mutex α) :=
-  return { ref := ← IO.mkRef a, mutex := ← BaseMutex.new }
+def Mutex.new (a : α) : BaseIO (Mutex α) := return { ref := ← IO.mkRef a, mutex := ← BaseMutex.new }
 
 /--
 `mutex.atomically k` runs `k` with access to the mutex's state while locking the mutex.
@@ -133,8 +135,9 @@ def Mutex.new (a : α) : BaseIO (Mutex α) :=
 Calling `mutex.atomically` while already holding the underlying `BaseMutex` in the same thread
 is undefined behavior. If this is unavoidable in your code, consider using `RecursiveMutex`.
 -/
-def Mutex.atomically [Monad m] [MonadLiftT BaseIO m] [MonadFinally m]
-    (mutex : Mutex α) (k : AtomicT α m β) : m β := do
+def Mutex.atomically
+    [Monad m] [MonadLiftT BaseIO m] [MonadFinally m] (mutex : Mutex α) (k : AtomicT α m β)
+    : m β := do
   try
     mutex.mutex.lock
     k mutex.ref
@@ -149,8 +152,9 @@ This function does not block on the `mutex`. Additionally calling `mutex.tryAtom
 already holding the underlying `BaseMutex` in the same thread is undefined behavior. If this is
 unavoidable in your code, consider using `RecursiveMutex`.
 -/
-def Mutex.tryAtomically [Monad m] [MonadLiftT BaseIO m] [MonadFinally m]
-    (mutex : Mutex α) (k : AtomicT α m β) : m (Option β) := do
+def Mutex.tryAtomically
+    [Monad m] [MonadLiftT BaseIO m] [MonadFinally m] (mutex : Mutex α) (k : AtomicT α m β)
+    : m (Option β) := do
   if ← mutex.mutex.tryLock then
     try
       some <$> k mutex.ref
@@ -166,9 +170,10 @@ Both `k` and `pred` have access to the mutex's state.
 Calling `mutex.atomicallyOnce` while already holding the underlying `BaseMutex` in the same thread
 is undefined behavior. If this is unavoidable in your code, consider using `RecursiveMutex`.
 -/
-def Mutex.atomicallyOnce [Monad m] [MonadLiftT BaseIO m] [MonadFinally m]
-    (mutex : Mutex α) (condvar : Condvar)
-    (pred : AtomicT α m Bool) (k : AtomicT α m β) : m β :=
+def Mutex.atomicallyOnce
+    [Monad m] [MonadLiftT BaseIO m] [MonadFinally m]
+    (mutex : Mutex α) (condvar : Condvar) (pred : AtomicT α m Bool) (k : AtomicT α m β)
+    : m β :=
   let _ : MonadLift BaseIO (AtomicT α m) := ⟨liftM⟩
   mutex.atomically do
     condvar.waitUntil mutex pred

@@ -61,12 +61,14 @@ The type `RecursiveMutex α` is similar to `IO.Ref α`, except that concurrent a
 by a mutex instead of atomic pointer operations and busy-waiting. Additionally locking a
 `RecursiveMutex` multiple times from the same thread does not block, unlike `Mutex`.
 -/
-structure RecursiveMutex (α : Type) where private mk ::
+structure RecursiveMutex (α : Type) where
+  private mk ::
   private ref : IO.Ref α
   mutex : BaseRecursiveMutex
 deriving Nonempty
 
-instance : CoeOut (RecursiveMutex α) BaseRecursiveMutex where coe := RecursiveMutex.mutex
+instance : CoeOut (RecursiveMutex α) BaseRecursiveMutex where
+  coe := RecursiveMutex.mutex
 
 /-- Creates a new recursive mutex. -/
 def RecursiveMutex.new (a : α) : BaseIO (RecursiveMutex α) :=
@@ -78,8 +80,9 @@ def RecursiveMutex.new (a : α) : BaseIO (RecursiveMutex α) :=
 Calling `mutex.atomically` while already holding the underlying `BaseRecursiveMutex` in the same
 thread does not block.
 -/
-def RecursiveMutex.atomically [Monad m] [MonadLiftT BaseIO m] [MonadFinally m]
-    (mutex : RecursiveMutex α) (k : AtomicT α m β) : m β := do
+def RecursiveMutex.atomically
+    [Monad m] [MonadLiftT BaseIO m] [MonadFinally m] (mutex : RecursiveMutex α) (k : AtomicT α m β)
+    : m β := do
   try
     mutex.mutex.lock
     k mutex.ref
@@ -93,8 +96,9 @@ return value of `k` is returned as `some`, on failure `none` is returned.
 This function does not block on the `mutex`. Additionally `mutex.tryAtomically`, while already
 holding the underlying `BaseRecursiveMutex` in the same thread, does not block.
 -/
-def RecursiveMutex.tryAtomically [Monad m] [MonadLiftT BaseIO m] [MonadFinally m]
-    (mutex : RecursiveMutex α) (k : AtomicT α m β) : m (Option β) := do
+def RecursiveMutex.tryAtomically
+    [Monad m] [MonadLiftT BaseIO m] [MonadFinally m] (mutex : RecursiveMutex α) (k : AtomicT α m β)
+    : m (Option β) := do
   if ← mutex.mutex.tryLock then
     try
       some <$> k mutex.ref

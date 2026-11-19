@@ -29,17 +29,19 @@ namespace Std.WP
 namespace Triple
 
 universe u u' v v' w w'
-variable {Prog : Type u} {Value : Type v} {Pred : Type w} {EPosts : Type w'}
+variable
+  {Prog : Type u} {Value : Type v} {Pred : Type w} {EPosts : Type w'}
   [Assertion Pred] [Assertion EPosts] [WP Prog Value Pred EPosts]
 
 /--
 Conjunction of two Hoare triple specifications for a program `x`. This theorem decomposes proofs:
 prove unrelated facts about `x` separately, then combine them here.
 -/
-theorem and {x : Prog} [WPConjunctive x] {pre₁ pre₂ : Pred} {post₁ post₂ : Value → Pred}
-    {eposts₁ eposts₂ : EPosts}
-    (h₁ : Triple x pre₁ post₁ eposts₁) (h₂ : Triple x pre₂ post₂ eposts₂) :
-    Triple x (pre₁ ⊓ pre₂) (post₁ ⊓ post₂) (eposts₁ ⊓ eposts₂) :=
+theorem and
+    {x : Prog} [WPConjunctive x]
+    {pre₁ pre₂ : Pred} {post₁ post₂ : Value → Pred} {eposts₁ eposts₂ : EPosts}
+    (h₁ : Triple x pre₁ post₁ eposts₁) (h₂ : Triple x pre₂ post₂ eposts₂)
+    : Triple x (pre₁ ⊓ pre₂) (post₁ ⊓ post₂) (eposts₁ ⊓ eposts₂) :=
   ⟨PartialOrder.rel_trans (meet_mono h₁.le_wp h₂.le_wp)
     (WPConjunctive.wp_meet_wp_le post₁ post₂ eposts₁ eposts₂)⟩
 
@@ -48,14 +50,12 @@ Modus ponens for two Hoare triple specifications of a program `x`. This theorem 
 Let `h₁` establish a basic postcondition `post₁` for `x`, and let `h₂` establish the advanced
 postcondition `post₂` under the assumption `post₁`. Then `mp h₁ h₂` establishes `post₂` for `x`.
 -/
-theorem mp {x : Prog} [WPConjunctive x]
-    [Heyting Pred] [Heyting EPosts]
+theorem mp
+    {x : Prog} [WPConjunctive x] [Heyting Pred] [Heyting EPosts]
     {pre₁ pre₂ : Pred} {post₁ post₂ : Value → Pred} {eposts₁ eposts₂ : EPosts}
-    (h₁ : Triple x pre₁ post₁ eposts₁)
-    (h₂ : Triple x pre₂ (post₁ ⇨ post₂) (eposts₁ ⇨ eposts₂)) :
-    Triple x (pre₁ ⊓ pre₂) (post₁ ⊓ post₂) (eposts₁ ⊓ eposts₂) :=
-  ⟨PartialOrder.rel_trans (and h₁ h₂).le_wp
-    (WP.wp_monotone meet_himp_le_meet meet_himp_le_meet)⟩
+    (h₁ : Triple x pre₁ post₁ eposts₁) (h₂ : Triple x pre₂ (post₁ ⇨ post₂) (eposts₁ ⇨ eposts₂))
+    : Triple x (pre₁ ⊓ pre₂) (post₁ ⊓ post₂) (eposts₁ ⊓ eposts₂) :=
+  ⟨PartialOrder.rel_trans (and h₁ h₂).le_wp (WP.wp_monotone meet_himp_le_meet meet_himp_le_meet)⟩
 
 /--
 Observe a fact about the state by running the program `obs`, then carry the fact into the proof
@@ -64,19 +64,18 @@ with postcondition `post`, together with the specification `hgoal` deriving the 
 `wp prog post' eposts'` from `post`. The premise `hp` restricts `obs` to observation: an assertion
 that holds after a successful run of `obs` already holds before it.
 -/
-theorem observe {Prog' : Type u'} {Value' : Type v'} [WP Prog' Value' Pred EPosts]
-    [Heyting Pred] [Heyting EPosts]
-    {obs : Prog} [WPConjunctive obs] {prog : Prog'}
-    {pre : Pred} {post : Value → Pred} {eposts : EPosts}
-    {post' : Value' → Pred} {eposts' : EPosts}
-    (hp : ∀ C : Pred, wp obs (fun _ => C) ⊥ ⊑ C)
-    (h : Triple obs pre post eposts)
-    (hgoal : Triple obs pre (post ⇨ fun _ => wp prog post' eposts') (eposts ⇨ ⊥)) :
-    Triple prog pre post' eposts' :=
+theorem observe
+    {Prog' : Type u'} {Value' : Type v'}
+    [WP Prog' Value' Pred EPosts] [Heyting Pred] [Heyting EPosts]
+    {obs : Prog} [WPConjunctive obs]
+    {prog : Prog'} {pre : Pred} {post : Value → Pred} {eposts : EPosts} {post' : Value' → Pred}
+    {eposts' : EPosts}
+    (hp : ∀ C : Pred, wp obs (fun _ => C) ⊥ ⊑ C) (h : Triple obs pre post eposts)
+    (hgoal : Triple obs pre (post ⇨ fun _ => wp prog post' eposts') (eposts ⇨ ⊥))
+    : Triple prog pre post' eposts' :=
   ⟨PartialOrder.rel_trans (le_meet _ _ _ PartialOrder.rel_refl PartialOrder.rel_refl) <|
     PartialOrder.rel_trans (mp h hgoal).le_wp <|
-      PartialOrder.rel_trans
-        (WP.wp_monotone (meet_le_right _ _) (meet_le_right _ _))
+      PartialOrder.rel_trans (WP.wp_monotone (meet_le_right _ _) (meet_le_right _ _))
         (hp (wp prog post' eposts'))⟩
 
 end Triple

@@ -11,9 +11,7 @@ public import Lean.Compiler.LCNF.CompilerM
 public section
 
 namespace Lean.Compiler.LCNF
-/--
-A mapping from free variable id to binder name.
--/
+/-- A mapping from free variable id to binder name. -/
 abbrev Renaming := FVarIdMap Name
 
 def Param.applyRenaming (param : Param pu) (r : Renaming) : CompilerM (Param pu) := do
@@ -33,7 +31,8 @@ def LetDecl.applyRenaming (decl : LetDecl pu) (r : Renaming) : CompilerM (LetDec
     return decl
 
 mutual
-partial def FunDecl.applyRenaming (decl : (FunDecl pu)) (r : Renaming) : CompilerM (FunDecl pu) := do
+partial def FunDecl.applyRenaming (decl : (FunDecl pu)) (r : Renaming)
+    : CompilerM (FunDecl pu) := do
   if let some binderName := r.get? decl.fvarId then
     let decl := decl.updateBinderName binderName
     modifyLCtx fun lctx => lctx.addFunDecl decl
@@ -44,17 +43,26 @@ partial def FunDecl.applyRenaming (decl : (FunDecl pu)) (r : Renaming) : Compile
 partial def Code.applyRenaming (code : Code pu) (r : Renaming) : CompilerM (Code pu) := do
   match code with
   | .let decl k => return code.updateLet! (← decl.applyRenaming r) (← k.applyRenaming r)
-  | .fun decl k _ | .jp decl k => return code.updateFun! (← decl.applyRenaming r) (← k.applyRenaming r)
+  | .fun decl k _ | .jp decl k =>
+    return code.updateFun! (← decl.applyRenaming r) (← k.applyRenaming r)
   | .cases c =>
-    let alts ← c.alts.mapMonoM fun alt =>
-      match alt with
-      | .default k => return alt.updateCode (← k.applyRenaming r)
-      | .alt _ ps k _ => return alt.updateAlt! (← ps.mapMonoM (·.applyRenaming r)) (← k.applyRenaming r)
-      | .ctorAlt _ k _ => return alt.updateCode (← k.applyRenaming r)
+    let alts ←
+      c.alts.mapMonoM fun alt =>
+        match alt with
+        | .default k => return alt.updateCode (← k.applyRenaming r)
+        | .alt _ ps k _ =>
+          return alt.updateAlt! (← ps.mapMonoM (·.applyRenaming r)) (← k.applyRenaming r)
+        | .ctorAlt _ k _ => return alt.updateCode (← k.applyRenaming r)
     return code.updateAlts! alts
-  | .jmp .. | .unreach .. | .return .. => return code
-  | .oset (k := k) .. | .sset (k := k) .. | .uset (k := k) .. | .inc (k := k) .. | .dec (k := k) ..
-  | .del (k := k) .. | .setTag (k := k) .. =>
+  | .jmp .. | .unreach .. | .return .. =>
+    return code
+  | .oset (k := k) ..
+  | .sset (k := k) ..
+  | .uset (k := k) ..
+  | .inc (k := k) ..
+  | .dec (k := k) ..
+  | .del (k := k) ..
+  | .setTag (k := k) .. =>
     return code.updateCont! (← k.applyRenaming r)
 end
 

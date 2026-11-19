@@ -18,7 +18,8 @@ def addDefaultAlt (alts : Array (Alt .pure)) : SimpM (Array (Alt .pure)) := do
   if alts.size <= 1 then
     return alts
   else
-    let some (rootAlt, otherAlts) ← chooseRootAlt alts | return alts
+    let some (rootAlt, otherAlts) ← chooseRootAlt alts
+      | return alts
     let mut differentAlts := #[]
     let mut eqvAlts := #[]
     for alt in otherAlts do
@@ -35,7 +36,8 @@ def addDefaultAlt (alts : Array (Alt .pure)) : SimpM (Array (Alt .pure)) := do
     return differentAlts.push (.default rootAlt.getCode)
 where
   chooseRootAlt (alts : Array (Alt .pure)) : SimpM (Option (Alt .pure × Array (Alt .pure))) := do
-    let some rootIdx ← chooseRootIdx alts | return none
+    let some rootIdx ← chooseRootIdx alts
+      | return none
     let rootAlt := alts[rootIdx]!
     let mut otherAlts := Array.emptyWithCapacity (alts.size - 1)
     for idx in 0...alts.size do

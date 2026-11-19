@@ -32,10 +32,9 @@ public structure ModuleFacet (α) where
   name : Name
   /-- Proof that module's facet build result is of type α. -/
   data_eq : FacetOut name = α
-  deriving Repr
+deriving Repr
 
-public instance (facet : ModuleFacet α) : FamilyDef FacetOut facet.name α :=
-  ⟨facet.data_eq⟩
+public instance (facet : ModuleFacet α) : FamilyDef FacetOut facet.name α := ⟨facet.data_eq⟩
 
 public instance [FamilyOut FacetOut facet α] : CoeDep Name facet (ModuleFacet α) :=
   ⟨facet, FamilyOut.fam_eq⟩
@@ -80,11 +79,13 @@ public structure ModuleImportInfo where
   allTransTrace : BuildTrace
   /-- Transitive import trace for an `import` of the module without the module system enabled. -/
   legacyTransTrace : BuildTrace
-  /-- The trace produced by mixing the `leanir` traces of `directArts` with their transitive imports. -/
+  /--
+  The trace produced by mixing the `leanir` traces of `directArts` with their transitive imports.
+  -/
   irSigTrace : BuildTrace
   /-- Transitive import trace for a `leanir` run over an importer of the module. -/
   irSigTransTrace : BuildTrace
-  deriving Inhabited
+deriving Inhabited
 
 /-- **For internal use only.** Information about the imports of this module. -/
 builtin_facet importInfo : Module => ModuleImportInfo
@@ -99,7 +100,7 @@ public structure ModuleExportInfo where
   artsTrace : BuildTrace
   /-- Transitive import trace for an `import` of the module with the module system enabled. -/
   transTrace : BuildTrace
-  deriving Inhabited
+deriving Inhabited
 
 /-- Information useful to importers of a module. Includes IR. -/
 public structure ModuleMetaExportInfo extends ModuleExportInfo where
@@ -122,7 +123,7 @@ public structure ModuleMetaExportInfo extends ModuleExportInfo where
   legacyTransTrace : BuildTrace
   /-- Transitive import trace for a `leanir` run over an importer of the module. -/
   irSigTransTrace : BuildTrace
-  deriving Inhabited
+deriving Inhabited
 
 /-- **For internal use only.** Information useful to importers of this module. -/
 builtin_facet exportInfo : Module => ModuleExportInfo
@@ -213,7 +214,7 @@ public structure ModuleLinkInfo where
   args : Array String
   objs : Array FilePath
   libs : Array Dynlib
-  deriving Inhabited
+deriving Inhabited
 
 /-- Link information for the module with Lean symbols exported. -/
 builtin_facet linkInfoExport : Module => ModuleLinkInfo

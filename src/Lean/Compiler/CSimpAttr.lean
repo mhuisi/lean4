@@ -30,8 +30,9 @@ when building Lean itself.
 -/
 register_builtin_option linter.csimpNoncomputable : Bool := {
   defValue := false
-  descr := "enable the `csimpNoncomputable` linter, which warns when a `@[csimp]` theorem \
-    replaces a definition that is not marked `noncomputable`."
+  descr :=
+    "enable the `csimpNoncomputable` linter, which warns when a `@[csimp]` theorem \
+      replaces a definition that is not marked `noncomputable`."
 }
 
 namespace Compiler
@@ -39,23 +40,26 @@ namespace CSimp
 
 structure Entry where
   fromDeclName : Name
-  toDeclName   : Name
-  thmName      : Name
-  deriving Inhabited
+  toDeclName : Name
+  thmName : Name
+deriving Inhabited
 
 structure State where
   /-- Map from `e.fromDeclName` to `e` -/
   map : SMap Name Entry := {}
   thmNames : SSet Name := {}
-  deriving Inhabited
+deriving Inhabited
 
 def State.switch : State → State
   | { map, thmNames } => { map := map.switch, thmNames := thmNames.switch }
 
 builtin_initialize ext : SimpleScopedEnvExtension Entry State ←
   registerSimpleScopedEnvExtension {
-    initial        := {}
-    addEntry       := fun { map, thmNames } e => { map := map.insert e.fromDeclName e, thmNames := thmNames.insert e.thmName }
+    initial := {}
+    addEntry := fun { map, thmNames } e => {
+      map := map.insert e.fromDeclName e
+      thmNames := thmNames.insert e.thmName
+    }
     finalizeImport := fun s => s.switch
   }
 
@@ -86,7 +90,8 @@ def add (declName : Name) (kind : AttributeKind) : CoreM Unit := do
     lintComputable entry.fromDeclName
     ext.add entry kind
   else
-    throwError "invalid 'csimp' theorem, only constant replacement theorems (e.g., `@f = @g`) are currently supported."
+    throwError "invalid 'csimp' theorem, only constant replacement theorems (e.g., `@f = @g`) are \
+      currently supported."
 
 /--
 Tags compiler simplification theorems, which allow one value to be replaced by another equal value
@@ -105,9 +110,9 @@ axioms (like `sorryAx`).
 @[builtin_init, builtin_doc]
 private def initFn :=
   registerBuiltinAttribute {
-    name  := `csimp
+    name := `csimp
     descr := "simplification theorem for the compiler"
-    add   := fun declName stx attrKind => do
+    add := fun declName stx attrKind => do
       Attribute.Builtin.ensureNoArgs stx
       ensureAttrDeclIsPublic `csimp declName attrKind
       discard <| add declName attrKind
@@ -116,7 +121,8 @@ private def initFn :=
 /-- If `e` (as a whole) matches a `[csimp]` theorem, returns the replacement expression. -/
 def replaceConstant? (env : Environment) (e : Expr) : CoreM (Option Expr) := do
   let s := ext.getState env
-  let .const declName _ := e | return none
+  let .const declName _ := e
+    | return none
   if let some ent := s.map.find? declName then
     withoutExporting <| recordExtraModUseFromDecl (isMeta := false) ent.thmName
     return some (mkConst ent.toDeclName e.constLevels!)

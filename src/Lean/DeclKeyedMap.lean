@@ -31,7 +31,7 @@ public instance : ImportedDeclKeyedMap.Key Name where
 /-- The imported part of a `DeclKeyedMap`. -/
 public structure ImportedDeclKeyedMap (κ α : Type) [BEq κ] [Hashable κ] where
   /-- The imported constants, used to find the module declaring a constant. -/
-  consts  : ImportedConsts ConstantInfo := .empty
+  consts : ImportedConsts ConstantInfo := .empty
   /-- Per module index, the keys of the entries owned by the module (see `isOwned`), sorted. -/
   ownedKeys : Array (Array κ) := #[]
   /--
@@ -41,7 +41,7 @@ public structure ImportedDeclKeyedMap (κ α : Type) [BEq κ] [Hashable κ] wher
   ownedVals : Array (Array α) := #[]
   /-- The entries not owned by the module declaring their constant; they override owned entries. -/
   foreign : PHashMap κ α := {}
-  deriving Inhabited
+deriving Inhabited
 
 namespace ImportedDeclKeyedMap
 
@@ -54,7 +54,7 @@ several modules.
 -/
 public def isOwned (env : Environment) (n : Name) : Bool :=
   -- consult the private view, which `ImportedDeclKeyedMap.ofModules` looks names up in
-  ((env.setExporting false).getModuleIdxFor? n).isNone && !isReservedName env n
+  ((env.setExporting false).getModuleIdxFor? n).isNone && ! isReservedName env n
 
 /--
 Sorts the entries a module owns by key, keeping the last entry of each key, and returns their keys
@@ -67,17 +67,19 @@ public def sortOwned (es : Array (κ × α)) : Array κ × Array α :=
     if ks.back?.any (· == k) then (ks, vs) else (ks.push k, vs.push v)
 
 /-- The index of `k` in the sorted array `ks`. -/
-def findIdx? (ks : Array κ) (k : κ) : Option Nat :=
-  go 0 ks.size
+def findIdx? (ks : Array κ) (k : κ) : Option Nat := go 0 ks.size
 where
   go (lo hi : Nat) : Option Nat :=
     if _ : lo < hi then
       let mid := (lo + hi) / 2
       if h : mid < ks.size then
         let k' := ks[mid]
-        if Key.lt k' k then go (mid + 1) hi
-        else if Key.lt k k' then go lo mid
-        else some mid
+        if Key.lt k' k then
+          go (mid + 1) hi
+        else if Key.lt k k' then
+          go lo mid
+        else
+          some mid
       else
         none
     else
@@ -85,8 +87,8 @@ where
   termination_by hi - lo
 
 /-- The value at index `j` of values given for some keys, or `default` if `vs` is empty. -/
-@[inline] def valAt (vs : Array α) (j : Nat) : α :=
-  if vs.isEmpty then default else vs[j]!
+@[inline]
+def valAt (vs : Array α) (j : Nat) : α := if vs.isEmpty then default else vs[j]!
 
 def findOwned? (m : ImportedDeclKeyedMap κ α) (k : κ) : Option α := do
   if m.ownedKeys.isEmpty then none
@@ -99,10 +101,15 @@ Assembles the imported entries of all modules, given in module order as keys and
 values if they are all `default`): those owned by a module, as returned by `sortOwned`, at the
 module's index, and the remaining ones, of which later ones override earlier ones.
 -/
-public def ofModules (consts : ImportedConsts ConstantInfo) (owned : Array (Array κ × Array α))
-    (foreign : Array (Array κ × Array α)) : ImportedDeclKeyedMap κ α := Id.run do
+public def ofModules
+    (consts : ImportedConsts ConstantInfo) (owned : Array (Array κ × Array α))
+    (foreign : Array (Array κ × Array α))
+    : ImportedDeclKeyedMap κ α := Id.run do
   let mut m : ImportedDeclKeyedMap κ α := {
-    consts, ownedKeys := owned.map (·.1), ownedVals := owned.map (·.2) }
+    consts
+    ownedKeys := owned.map (·.1)
+    ownedVals := owned.map (·.2)
+  }
   for (ks, vs) in foreign do
     for h : j in [0:ks.size] do
       m := { m with foreign := m.foreign.insert ks[j] (valAt vs j) }
@@ -111,11 +118,11 @@ public def ofModules (consts : ImportedConsts ConstantInfo) (owned : Array (Arra
 public def find? (m : ImportedDeclKeyedMap κ α) (k : κ) : Option α :=
   m.foreign.find? k <|> findOwned? m k
 
-public def contains (m : ImportedDeclKeyedMap κ α) (k : κ) : Bool :=
-  (find? m k).isSome
+public def contains (m : ImportedDeclKeyedMap κ α) (k : κ) : Bool := (find? m k).isSome
 
-@[specialize] public def foldM [Monad m] (f : β → κ → α → m β) (init : β)
-    (d : ImportedDeclKeyedMap κ α) : m β := do
+@[specialize]
+public def foldM [Monad m] (f : β → κ → α → m β) (init : β) (d : ImportedDeclKeyedMap κ α)
+    : m β := do
   let mut b := init
   for h : i in [0:d.ownedKeys.size] do
     let vs := d.ownedVals[i]!
@@ -132,12 +139,12 @@ A map keyed by declarations, consisting of entries imported as an `ImportedDeclK
 changes made since.
 -/
 public structure DeclKeyedMap (κ α : Type) [BEq κ] [Hashable κ] where
-  imported   : ImportedDeclKeyedMap κ α := {}
+  imported : ImportedDeclKeyedMap κ α := {}
   /-- The erased imported keys not in `added`. -/
-  removed  : PHashSet κ := {}
+  removed : PHashSet κ := {}
   /-- The entries added since the import, overriding imported ones. -/
-  added    : PHashMap κ α := {}
-  deriving Inhabited
+  added : PHashMap κ α := {}
+deriving Inhabited
 
 namespace DeclKeyedMap
 
@@ -146,24 +153,29 @@ variable {κ α : Type} [BEq κ] [Hashable κ] [ImportedDeclKeyedMap.Key κ] [In
 public def find? (m : DeclKeyedMap κ α) (k : κ) : Option α :=
   m.added.find? k <|> if m.removed.contains k then none else m.imported.find? k
 
-public def contains (m : DeclKeyedMap κ α) (k : κ) : Bool :=
-  (m.find? k).isSome
+public def contains (m : DeclKeyedMap κ α) (k : κ) : Bool := (m.find? k).isSome
 
-public def insert (m : DeclKeyedMap κ α) (k : κ) (v : α) : DeclKeyedMap κ α :=
-  { m with added := m.added.insert k v, removed := m.removed.erase k }
+public def insert (m : DeclKeyedMap κ α) (k : κ) (v : α) : DeclKeyedMap κ α := {
+  m with
+  added := m.added.insert k v
+  removed := m.removed.erase k
+}
 
-public def erase (m : DeclKeyedMap κ α) (k : κ) : DeclKeyedMap κ α :=
-  { m with
-    added := m.added.erase k
-    removed := if m.imported.contains k then m.removed.insert k else m.removed }
+public def erase (m : DeclKeyedMap κ α) (k : κ) : DeclKeyedMap κ α := {
+  m with
+  added := m.added.erase k
+  removed := if m.imported.contains k then m.removed.insert k else m.removed
+}
 
-@[specialize] public def foldM [Monad m] (f : β → κ → α → m β) (init : β) (d : DeclKeyedMap κ α) :
-    m β := do
-  let b ← d.imported.foldM (init := init) fun b k v =>
-    if d.removed.contains k || d.added.contains k then pure b else f b k v
+@[specialize]
+public def foldM [Monad m] (f : β → κ → α → m β) (init : β) (d : DeclKeyedMap κ α) : m β := do
+  let b ←
+    d.imported.foldM (init := init) fun b k v =>
+      if d.removed.contains k || d.added.contains k then pure b else f b k v
   d.added.foldlM f b
 
-@[inline] public def fold (f : β → κ → α → β) (init : β) (d : DeclKeyedMap κ α) : β :=
+@[inline]
+public def fold (f : β → κ → α → β) (init : β) (d : DeclKeyedMap κ α) : β :=
   Id.run <| d.foldM (pure <| f · · ·) init
 
 public def toList (d : DeclKeyedMap κ α) : List (κ × α) :=

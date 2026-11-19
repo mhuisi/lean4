@@ -32,6 +32,6 @@ structure ArgsPacker where
   the length of each array the arity.
   -/
   varNamess : Array (Array Name)
-  deriving Inhabited
+deriving Inhabited
 
 end Lean.Meta

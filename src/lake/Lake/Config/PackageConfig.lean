@@ -20,7 +20,8 @@ open System Lean
 namespace Lake
 
 /-- The default `buildArchive` configuration for a package with `name`. -/
-@[inline] public def defaultBuildArchive (name : Name) : String :=
+@[inline]
+public def defaultBuildArchive (name : Name) : String :=
   s!"{name.toString false}-{System.Platform.target}.tar.gz"
 
 set_option linter.unusedVariables false in
@@ -28,10 +29,8 @@ set_option linter.unusedVariables false in
 public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig, LeanConfig where
   /-- **For internal use.** Whether this package is Lean itself. -/
   bootstrap : Bool := false
-
   /-- An `Array` of target names to build whenever the package is used. -/
   extraDepTargets : Array Name := #[]
-
   /--
   Whether to compile each of the package's module into a native shared library
   that is loaded whenever the module is imported. This speeds up evaluation of
@@ -40,14 +39,12 @@ public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig
   Defaults to `false`.
   -/
   precompileModules : Bool := false
-
   /--
   Additional arguments to pass to the Lean language server
   (i.e., `lean --server`) launched by `lake serve`, both for this package and
   also for any packages browsed from this one in the same session.
   -/
   moreGlobalServerArgs, moreServerArgs : Array String := #[]
-
   /--
   The directory containing the package's Lean source files.
   Defaults to the package's directory.
@@ -55,59 +52,50 @@ public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig
   (This will be passed to `lean` as the `-R` option.)
   -/
   srcDir : FilePath := "."
-
   /--
   The directory to which Lake should output the package's build results.
   Defaults to `defaultBuildDir` (i.e., `.lake/build`).
   -/
   buildDir : FilePath := defaultBuildDir
-
   /--
   The build subdirectory to which Lake should output the package's
   binary Lean libraries (e.g., `.olean`, `.ilean` files).
   Defaults to  `defaultLeanLibDir` (i.e., `lib`).
   -/
   leanLibDir : FilePath := defaultLeanLibDir
-
   /--
   The build subdirectory to which Lake should output the package's
   native libraries (e.g., `.a`, `.so`, `.dll` files).
   Defaults to `defaultNativeLibDir` (i.e., `lib`).
   -/
   nativeLibDir : FilePath := defaultNativeLibDir
-
   /--
   The build subdirectory to which Lake should output the package's binary executable.
   Defaults to `defaultBinDir` (i.e., `bin`).
   -/
   binDir : FilePath := defaultBinDir
-
   /--
   The build subdirectory to which Lake should output
   the package's intermediary results (e.g., `.c` and `.o` files).
   Defaults to `defaultIrDir` (i.e., `ir`).
   -/
   irDir : FilePath := defaultIrDir
-
   /--
   The URL of the GitHub repository to upload and download releases of this package.
   If `none` (the default), for downloads, Lake uses the URL the package was download
   from (if it is a dependency) and for uploads, uses `gh`'s default.
   -/
   releaseRepo, releaseRepo? : Option String := none
-
   /--
   A custom name for the build archive for the GitHub cloud release.
   If `none` (the default), Lake defaults to `{(pkg-)name}-{System.Platform.target}.tar.gz`.
   -/
   buildArchive, buildArchive? : Option String := none
-
   /--
   Whether to prefer downloading a prebuilt release (from GitHub) rather than
   building this package from the source when this package is used as a dependency.
   -/
   preferReleaseBuild : Bool := false
-
   /--
   A cache service hosting build caches for this package.
 
@@ -119,7 +107,6 @@ public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig
   **Note:** The specified service must be configured with `hasPackageScopes = false`.
   -/
   downloadCacheService? @ downloadCacheService, downloadCacheService? : Option String := none
-
   /--
   The name of the script, executable, or library by `lake test` when
   this package is the workspace root. To point to a definition in another
@@ -131,14 +118,12 @@ public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig
   and then run like a script. A library will just be built.
   -/
   testDriver, testRunner : String := ""
-
   /--
   Arguments to pass to the package's test driver.
   These arguments will come before those passed on the command line via
   `lake test -- <args>...`.
   -/
   testDriverArgs : Array String := #[]
-
   /--
   The name of the script or executable used by `lake lint` when this package
   is the workspace root. To point to a definition in another package, use the
@@ -150,14 +135,12 @@ public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig
   and then run like a script.
   -/
   lintDriver : String := ""
-
   /--
   Arguments to pass to the package's linter.
   These arguments will come before those passed on the command line via
   `lake lint -- <args>...`.
   -/
   lintDriverArgs : Array String := #[]
-
   /--
   The package version. Versions have the form:
 
@@ -200,7 +183,6 @@ public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig
   Packages without a defined version default to `0.0.0`.
   -/
   version : StdVer := {}
-
   /--
   Git tags of this package's repository that should be treated as versions.
   Package indices (e.g., Reservoir) can make use of this information to determine
@@ -210,10 +192,8 @@ public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig
   That is, start with a `v` followed by a digit.
   -/
   versionTags : StrPat := defaultVersionTags
-
   /-- A short description for the package (e.g., for Reservoir). -/
   description : String := ""
-
   /--
   Custom keywords associated with the package.
   Reservoir can make use of a package's keywords to group related packages
@@ -226,7 +206,6 @@ public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig
   `package-manager`, and `build-system`.
   -/
   keywords : Array String := #[]
-
   /--
   A URL to information about the package.
 
@@ -235,7 +214,6 @@ public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig
   something else for this (if anything).
   -/
   homepage : String := ""
-
   /--
   The package's license (if one).
   Should be a valid [SPDX License Expression][1].
@@ -249,7 +227,6 @@ public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig
   [2]: https://spdx.org/licenses/
   -/
   license : String := ""
-
   /--
   Files containing licensing information for the package.
 
@@ -261,7 +238,6 @@ public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig
   Defaults to `#["LICENSE"]`.
   -/
   licenseFiles : Array FilePath := #["LICENSE"]
-
   /--
   The path to the package's README.
 
@@ -273,14 +249,12 @@ public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig
   Defaults to `README.md`.
   -/
   readmeFile : FilePath := "README.md"
-
   /--
   Whether Reservoir should include the package in its index.
   When set to `false`, Reservoir will not add the package to its index
   and will remove it if it was already there (when Reservoir is next updated).
   -/
   reservoir : Bool := true
-
   /--
   Whether to enables Lake's local, offline artifact cache for the package.
 
@@ -299,7 +273,6 @@ public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig
   * **Lake's default**: The package can use artifacts from the cache, but cannot write to it.
   -/
   enableArtifactCache? @ enableArtifactCache, enableArtifactCache? : Option Bool := none
-
   /--
   Whether, when the local artifact cache is enabled, Lake should copy all cached
   artifacts into the build directory. This ensures the build results are available
@@ -311,7 +284,6 @@ public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig
   * **Lake's default**: `false`.
   -/
   restoreAllArtifacts? @ restoreAllArtifacts, restoreAllArtifacts? : Option Bool := none
-
   /--
   Whether native libraries (of this package) should be prefixed with `lib` on Windows.
 
@@ -322,7 +294,6 @@ public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig
   Defaults to `false`.
   -/
   libPrefixOnWindows : Bool := false
-
   /--
   Whether downstream packages can `import all` modules of this package.
 
@@ -334,7 +305,6 @@ public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig
   Defaults to `false`.
   -/
   allowImportAll : Bool := false
-
   /--
   Whether to run Lake's built-in linter on the package.
 
@@ -347,13 +317,11 @@ public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig
     as a fallback).
   -/
   builtinLint? @ builtinLint, builtinLint? : Option Bool := none
-
   /--
   Additional modules imported for each environment
   used in running code quality checks.
   -/
   checks : Array Name := #[]
-
   /--
   Whether this package is expected to function only on a single toolchain
   (the package's toolchain).
@@ -365,7 +333,6 @@ public configuration PackageConfig (p : Name) (n : Name) extends WorkspaceConfig
   Defaults to `false`.
   -/
   fixedToolchain : Bool := false
-
 deriving Inhabited
 
 /-- The package's name as specified by the author. -/
@@ -378,7 +345,7 @@ public structure PackageDecl where
   keyName : Name
   origName : Name
   config : PackageConfig keyName origName
-  deriving TypeName
+deriving TypeName
 
 @[deprecated PackageDecl.keyName (since := "2025-12-10")]
 public abbrev PackageDecl.name := @keyName

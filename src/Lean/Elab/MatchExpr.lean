@@ -28,15 +28,17 @@ structure Alt where
   `some c` if there is a variable binding to the function symbol being matched.
   `c` is the variable name.
   -/
-  var?    : Option Ident
+  var? : Option Ident
   /-- Function being matched. -/
   funName : Ident
-  /-- Pattern variables. The list uses `none` for representing `_`, and `some a` for pattern variable `a`. -/
-  pvars   : List (Option Ident)
+  /--
+  Pattern variables. The list uses `none` for representing `_`, and `some a` for pattern variable `a`.
+  -/
+  pvars : List (Option Ident)
   /-- right-hand-side for the alternative. -/
-  rhs     : Syntax
+  rhs : Syntax
   /-- Store the auxiliary continuation function for each right-hand-side. -/
-  k       : Ident := ⟨.missing⟩
+  k : Ident := ⟨.missing⟩
   /-- Actual value to be passed as an argument. -/
   actuals : List Term := []
 
@@ -51,31 +53,30 @@ structure ElseAlt where
 
 open Parser Term
 
-/--
-Converts syntax representing a `match_expr` else-alternative into an `ElseAlt`.
--/
+/-- Converts syntax representing a `match_expr` else-alternative into an `ElseAlt`. -/
 def toElseAlt? (stx : Syntax) : Option ElseAlt :=
-  if !stx.isOfKind ``matchExprElseAlt then none else
-  some { rhs := stx[3] }
+  if ! stx.isOfKind ``matchExprElseAlt then
+    none
+  else
+    some { rhs := stx[3] }
 
-/--
-Converts syntax representing a `match_expr` alternative into an `Alt`.
--/
+/-- Converts syntax representing a `match_expr` alternative into an `Alt`. -/
 def toAlt? (stx : Syntax) : Option Alt :=
-  if !stx.isOfKind ``matchExprAlt then none else
-  match stx[1] with
-  | `(matchExprPat| $[$var? @]? $funName:ident $pvars*) =>
-    let pvars := pvars.toList.reverse.map fun arg =>
-      match arg.raw with
-      | `(_) => none
-      | _ => some ⟨arg⟩
-    let rhs := stx[3]
-    some { var?, funName, pvars, rhs }
-  | _ => none
+  if ! stx.isOfKind ``matchExprAlt then
+    none
+  else
+    match stx[1] with
+    | `(matchExprPat| $[$var? @]? $funName:ident $pvars*) =>
+      let pvars :=
+        pvars.toList.reverse.map fun arg =>
+          match arg.raw with
+          | `(_) => none
+          | _ => some ⟨arg⟩
+      let rhs := stx[3]
+      some { var?, funName, pvars, rhs }
+    | _ => none
 
-/--
-Returns the function names of alternatives that do not have any pattern variable left.
--/
+/-- Returns the function names of alternatives that do not have any pattern variable left. -/
 def getFunNamesToMatch (alts : List Alt) : List Ident := Id.run do
   let mut funNames := #[]
   for alt in alts do
@@ -84,11 +85,8 @@ def getFunNamesToMatch (alts : List Alt) : List Ident := Id.run do
         funNames := funNames.push alt.funName
   return funNames.toList
 
-/--
-Returns `true` if there is at least one alternative whose next pattern variable is not a `_`.
--/
-def shouldSaveActual (alts : List Alt) : Bool :=
-  alts.any fun alt => alt.pvars matches some _ :: _
+/-- Returns `true` if there is at least one alternative whose next pattern variable is not a `_`. -/
+def shouldSaveActual (alts : List Alt) : Bool := alts.any fun alt => alt.pvars matches some _ :: _
 
 /--
 Returns the first alternative whose function name is `funName` **and**
@@ -115,12 +113,13 @@ def next (alts : List Alt) (actual : Term) : List Alt :=
 Creates a fresh identifier for representing the continuation function used to
 execute the RHS of the given alternative, and stores it in the field `k`.
 -/
-def initK (alt : Alt) : MacroM Alt := withFreshMacroScope do
-  -- Remark: the compiler frontend implemented in C++ currently detects join points created by
-  -- the "do" notation by testing the name. See hack at method `visit_let` at `lcnf.cpp`
-  -- We will remove this hack when we re-implement the compiler frontend in Lean.
-  let k : Ident ← `(__do_jp)
-  return { alt with k }
+def initK (alt : Alt) : MacroM Alt :=
+  withFreshMacroScope do
+    -- Remark: the compiler frontend implemented in C++ currently detects join points created by
+    -- the "do" notation by testing the name. See hack at method `visit_let` at `lcnf.cpp`
+    -- We will remove this hack when we re-implement the compiler frontend in Lean.
+    let k : Ident ← `(__do_jp)
+    return { alt with k }
 
 /--
 Generates parameters for the continuation function used to execute
@@ -130,9 +129,10 @@ def getParams (alt : Alt) : MacroM (Array (TSyntax ``bracketedBinder)) := do
   let mut params := #[]
   if let some var := alt.var? then
     params := params.push (← `(bracketedBinderF| ($var : Expr)))
-  params := params ++ (← alt.pvars.toArray.reverse.filterMapM fun
-    | none => return none
-    | some arg => return some (← `(bracketedBinderF| ($arg : Expr))))
+  params :=
+    params ++ (← alt.pvars.toArray.reverse.filterMapM fun
+      | none => return none
+      | some arg => return some (← `(bracketedBinderF| ($arg : Expr))))
   if params.isEmpty then
     return #[(← `(bracketedBinderF| (_ : Unit)))]
   return params
@@ -165,52 +165,58 @@ partial def generate (discr : Term) (alts : List Alt) (elseAlt : ElseAlt) : Macr
   -- the "do" notation by testing the name. See hack at method `visit_let` at `lcnf.cpp`
   -- We will remove this hack when we re-implement the compiler frontend in Lean.
   let kElse ← `(__do_jp)
-  let rec loop (discr : Term) (alts : List Alt) : MacroM Term := withFreshMacroScope do
-    let funNamesToMatch := getFunNamesToMatch alts
-    let saveActual := shouldSaveActual alts
-    let actual ← if saveActual then `(a) else `(_)
-    let altsNext := next alts actual
-    let body ← if altsNext.isEmpty then
-      `($kElse ())
-    else
-      let discr' ← `(__discr)
-      let body ← loop discr' altsNext
-      if saveActual then
-        `(if h : ($discr).isApp then let a := Expr.appArg $discr h; let __discr := Expr.appFnCleanup $discr h; $body else $kElse ())
-      else
-        `(if h : ($discr).isApp then let __discr := Expr.appFnCleanup $discr h; $body else $kElse ())
-    let mut result := body
-    for funName in funNamesToMatch do
-      if let some alt := getAltFor? alts funName then
-        let actuals ← getActuals discr alt
-        result ← `(if ($discr).isConstOf $(toDoubleQuotedName funName) then $alt.k $actuals* else $result)
-    return result
+  let rec loop (discr : Term) (alts : List Alt) : MacroM Term :=
+    withFreshMacroScope do
+      let funNamesToMatch := getFunNamesToMatch alts
+      let saveActual := shouldSaveActual alts
+      let actual ← if saveActual then `(a) else `(_)
+      let altsNext := next alts actual
+      let body ←
+        if altsNext.isEmpty then
+          `($kElse ())
+        else
+          let discr' ← `(__discr)
+          let body ← loop discr' altsNext
+          if saveActual then
+            `(if h : ($discr).isApp then let a := Expr.appArg $discr h; let __discr := Expr.appFnCleanup $discr h; $body else $kElse ())
+          else
+            `(if h : ($discr).isApp then let __discr := Expr.appFnCleanup $discr h; $body else $kElse ())
+      let mut result := body
+      for funName in funNamesToMatch do
+        if let some alt := getAltFor? alts funName then
+          let actuals ← getActuals discr alt
+          result ←
+            `(if ($discr).isConstOf $(toDoubleQuotedName funName) then $alt.k $actuals* else $result)
+      return result
   let body ← loop discr' alts
-  let mut result ← `(let_delayed __do_jp (_ : Unit) := $(⟨elseAlt.rhs⟩):term; let __discr := Expr.cleanupAnnotations $discr:term; $body:term)
+  let mut result ←
+    `(let_delayed __do_jp (_ : Unit) := $(⟨elseAlt.rhs⟩):term; let __discr := Expr.cleanupAnnotations $discr:term; $body:term)
   for alt in alts do
     let params ← getParams alt
     result ← `(let_delayed $alt.k:ident $params:bracketedBinder* := $(⟨alt.rhs⟩):term; $result:term)
   return result
 
 def main (discr : Term) (alts : Array Syntax) (elseAlt : Syntax) : MacroM Syntax := do
-  let alts ← alts.toList.mapM fun alt =>
-    if let some alt := toAlt? alt then
-      pure alt
-    else
-      Macro.throwErrorAt alt "unexpected `match_expr` alternative"
+  let alts ←
+    alts.toList.mapM fun alt =>
+      if let some alt := toAlt? alt then
+        pure alt
+      else
+        Macro.throwErrorAt alt "unexpected `match_expr` alternative"
   let some elseAlt := toElseAlt? elseAlt
     | Macro.throwErrorAt elseAlt "unexpected `match_expr` else-alternative"
   generate discr alts elseAlt
 
 end MatchExpr
 
-@[builtin_macro Lean.Parser.Term.matchExpr] def expandMatchExpr : Macro := fun stx =>
+@[builtin_macro Lean.Parser.Term.matchExpr]
+def expandMatchExpr : Macro := fun stx =>
   match stx with
-  | `(match_expr $discr:term with $alts) =>
-    MatchExpr.main discr alts.raw[0].getArgs alts.raw[1]
+  | `(match_expr $discr:term with $alts) => MatchExpr.main discr alts.raw[0].getArgs alts.raw[1]
   | _ => Macro.throwUnsupported
 
-@[builtin_macro Lean.Parser.Term.letExpr] def expandLetExpr : Macro := fun stx =>
+@[builtin_macro Lean.Parser.Term.letExpr]
+def expandLetExpr : Macro := fun stx =>
   match stx with
   | `(let_expr $pat:matchExprPat := $discr:term | $elseBranch:term; $body:term) =>
     `(match_expr $discr with

@@ -25,8 +25,7 @@ private def flagsStringToArray (s : String) : Array String :=
 Return C compiler flags for including Lean's headers.
 Unlike `getCFlags`, this does not contain the Lean include directory.
 -/
-def getCFlags' : Array String :=
-  flagsStringToArray (getLeancExtraFlags ())
+def getCFlags' : Array String := flagsStringToArray (getLeancExtraFlags ())
 
 /-- Return C compiler flags for including Lean's headers. -/
 def getCFlags (leanSysroot : FilePath) : Array String :=
@@ -58,6 +57,7 @@ private opaque getBuiltinInternalLinkerFlags : Unit → String
 
 /-- Return linker flags needed to use the linker bundled with the Lean toolchain. -/
 def getInternalLinkerFlags (leanSysroot : FilePath) : Array String :=
-  flagsStringToArray (getBuiltinInternalLinkerFlags ()) |>.map (·.replace "ROOT" leanSysroot.toString)
+  flagsStringToArray (getBuiltinInternalLinkerFlags ())
+    |>.map (·.replace "ROOT" leanSysroot.toString)
 
 end Lean.Compiler.FFI

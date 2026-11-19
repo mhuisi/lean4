@@ -49,8 +49,7 @@ The manual domain for error explanations.
 
 We expose this because it is used to populate the URL of the error message description widget.
 -/
-def errorExplanationManualDomain :=
-  "Manual.errorExplanation"
+def errorExplanationManualDomain := "Manual.errorExplanation"
 
 -- TODO: we may wish to make this more general for domains that require additional arguments
 /-- Maps `lean-manual` URL paths to their corresponding manual domains. -/
@@ -63,9 +62,7 @@ private def domainMap : Std.HashMap String String :=
 /-- The valid domain abbreviations in the manual. -/
 def manualDomains : List String := domainMap.keys
 
-/--
-Constructs a link to the manual.
--/
+/-- Constructs a link to the manual. -/
 def manualLink (kind name : String) : Except String String :=
   if let some domain := domainMap.get? kind then
     return manualRoot ++ s!"find/?domain={domain}&name={name}"
@@ -75,8 +72,7 @@ def manualLink (kind name : String) : Except String String :=
 
 private def rw (path : String) : Except String String := do
   match path.split '/' |>.toStringList with
-  | [] | [""] =>
-    throw "Missing documentation type"
+  | [] | [""] => throw "Missing documentation type"
   | kind :: args =>
     if let some domain := domainMap.get? kind then
       if let [s] := args then
@@ -87,10 +83,8 @@ private def rw (path : String) : Except String String := do
         throw s!"Expected one item after `{kind}`, but got {args}"
     else
       let acceptableKinds := ", ".intercalate <| domainMap.toList.map fun (k, _) => s!"`{k}`"
-      throw s!"Unknown documentation type `{kind}`. Expected one of the following: {acceptableKinds}"
-
-
-
+      throw
+        s!"Unknown documentation type `{kind}`. Expected one of the following: {acceptableKinds}"
 
 /--
 Rewrites links from the internal Lean manual syntax to the correct URL. This rewriting is an
@@ -147,13 +141,13 @@ where
   -/
   urlChar (c : Char) : Bool :=
     -- unreserved
-    c.isAlphanum || c == '-' || c == '.' || c == '_' || c == '~' ||
-    -- gen-delims
-    c == ':' || c == '/' || c == '?' || c == '#' || c == '[' || c == ']' || c == '@' ||
-    -- sub-delims
-    -- ( and ) are excluded due to Markdown's link syntax
-    c == '!' || c == '$' || c == '&' || c == '\'' || /- c == '(' || c == ')' || -/ c == '*' ||
-    c == '+' || c == ',' || c == ';' || c == '='
+    c.isAlphanum || c == '-' || c == '.' || c == '_' || c == '~'
+      -- gen-delims
+      || c == ':' || c == '/' || c == '?' || c == '#' || c == '[' || c == ']' || c == '@'
+      -- sub-delims
+      -- ( and ) are excluded due to Markdown's link syntax
+      || c == '!' || c == '$' || c == '&' || c == '\'' || /- c == '(' || c == ')' || -/ c == '*'
+      || c == '+' || c == ',' || c == ';' || c == '='
 
 /--
 Rewrites Lean reference manual links in `docstring` to point at the reference manual.
@@ -169,11 +163,10 @@ def rewriteManualLinks (docString : String) : BaseIO String := do
 The `lean-manual` URL scheme is used to link to the version of the Lean reference manual that
 corresponds to this version of Lean. Errors occurred while processing the links in this documentation
 comment:
-"# ++
-      String.join (errs.toList.map (fun (⟨s, e⟩, msg) => s!" * ```{String.Pos.Raw.extract docString s e}```: {msg}\n\n"))
+"# ++ String.join (errs.toList.map (fun (⟨s, e⟩, msg) =>
+        s!" * ```{String.Pos.Raw.extract docString s e}```: {msg}\n\n"))
     return str ++ "\n\n" ++ errReport
   return str
-
 
 /--
 Validates all links to the Lean reference manual in `docstring`, printing an error message if any
@@ -187,5 +180,7 @@ def validateBuiltinDocString (docString : String) : IO Unit := do
   let (errs, _) ← rewriteManualLinksCore docString
   if !errs.isEmpty then
     throw <| IO.userError <|
-      s!"Errors in builtin documentation comment:\n" ++
-      String.join (errs.toList.map fun (⟨s, e⟩, msg) => s!" * {repr <| String.Pos.Raw.extract docString s e}:\n    {msg}\n")
+      s!"Errors in builtin documentation comment:\n"
+        ++ String.join (errs.toList.map fun (⟨s, e⟩, msg) =>
+          s!" * {repr <| String.Pos.Raw.extract docString s e}:\
+            \n    {msg}\n")

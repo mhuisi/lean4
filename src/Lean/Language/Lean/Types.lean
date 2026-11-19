@@ -25,7 +25,7 @@ open Lean.Parser
 def pushOpt (a? : Option α) (as : Array α) : Array α :=
   match a? with
   | some a => as.push a
-  | none   => as
+  | none => as
 
 /-! The hierarchy of Lean snapshot types -/
 
@@ -50,7 +50,7 @@ structure CommandElaboratingSnapshot extends Snapshot where
   /--
   Snapshot for incremental reporting and reuse during elaboration, type dependent on specific
   elaborator.
-   -/
+  -/
   elabSnap : SnapshotTask DynamicSnapshot
   /-- State after command elaborator has returned. -/
   resultSnap : SnapshotTask CommandResultSnapshot
@@ -62,11 +62,16 @@ structure CommandElaboratingSnapshot extends Snapshot where
   reportSnap : SnapshotTask SnapshotTree
 deriving Nonempty
 instance : ToSnapshotTree CommandElaboratingSnapshot where
-  toSnapshotTreeM s := return ⟨← Snapshot.transform s.toSnapshot,
-    #[← s.elabSnap.transform,
-      ← s.resultSnap.transform,
-      ← s.infoTreeSnap.transform,
-      ← s.reportSnap.transform]⟩
+  toSnapshotTreeM s :=
+    return ⟨
+      ← Snapshot.transform s.toSnapshot,
+      #[
+        ← s.elabSnap.transform,
+        ← s.resultSnap.transform,
+        ← s.infoTreeSnap.transform,
+        ← s.reportSnap.transform
+      ]
+    ⟩
 
 /-- State after a command has been parsed. -/
 structure CommandParsedSnapshot extends Snapshot where
@@ -80,11 +85,14 @@ structure CommandParsedSnapshot extends Snapshot where
   nextCmdSnap? : Option (SnapshotTask CommandParsedSnapshot)
 deriving Nonempty
 partial instance : ToSnapshotTree CommandParsedSnapshot where
-  toSnapshotTreeM := go where
-    go s := do
-      return ⟨← Snapshot.transform s.toSnapshot,
-        #[.finished s.stx (← toSnapshotTreeM s.elabSnap)] |>
-          pushOpt (← s.nextCmdSnap?.mapM (·.transformWith go))⟩
+  toSnapshotTreeM := go
+where
+  go s := do
+    return ⟨
+      ← Snapshot.transform s.toSnapshot,
+      #[.finished s.stx (← toSnapshotTreeM s.elabSnap)]
+        |> pushOpt (← s.nextCmdSnap?.mapM (·.transformWith go))
+    ⟩
 
 /-- State after successful importing. -/
 structure HeaderProcessedState where
@@ -104,9 +112,11 @@ structure HeaderProcessedSnapshot extends Snapshot where
   result? : Option HeaderProcessedState
   isFatal := result?.isNone
 instance : ToSnapshotTree HeaderProcessedSnapshot where
-  toSnapshotTreeM s := return ⟨← Snapshot.transform s.toSnapshot,
-    #[← s.metaSnap.transform] |>
-      pushOpt (← s.result?.mapM (·.firstCmdSnap.transform))⟩
+  toSnapshotTreeM s :=
+    return ⟨
+      ← Snapshot.transform s.toSnapshot,
+      #[← s.metaSnap.transform] |> pushOpt (← s.result?.mapM (·.firstCmdSnap.transform))
+    ⟩
 
 /-- State after successfully parsing the module header. -/
 structure HeaderParsedState where
@@ -131,13 +141,15 @@ structure HeaderParsedSnapshot extends Snapshot where
   isFatal := result?.isNone
 
 instance : ToSnapshotTree HeaderParsedSnapshot where
-  toSnapshotTreeM s := return ⟨← Snapshot.transform s.toSnapshot,
-    #[← s.metaSnap.transform] |>
-      pushOpt (← s.result?.mapM (·.processedSnap.transform))⟩
+  toSnapshotTreeM s :=
+    return ⟨
+      ← Snapshot.transform s.toSnapshot,
+      #[← s.metaSnap.transform] |> pushOpt (← s.result?.mapM (·.processedSnap.transform))
+    ⟩
 
 /-- Shortcut accessor to the final header state, if successful. -/
-def HeaderParsedSnapshot.processedResult (snap : HeaderParsedSnapshot) :
-    SnapshotTask (Option HeaderProcessedState) :=
+def HeaderParsedSnapshot.processedResult (snap : HeaderParsedSnapshot)
+    : SnapshotTask (Option HeaderProcessedState) :=
   snap.result?.bind (·.processedSnap.map (sync := true) (·.result?)) |>.getD (.finished none none)
 
 /-- Initial snapshot of the Lean language processor: a "header parsed" snapshot. -/

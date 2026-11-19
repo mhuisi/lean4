@@ -37,14 +37,16 @@ public section
 
 namespace Lean.Elab.Tactic.VCGen
 
-/-- One `@[vcgen_rintro]` rule: the theorem `declName`, whose first `numPremises` binders are the
-premises, with the discrimination tree keys `keys` of its conclusion. -/
+/--
+One `@[vcgen_rintro]` rule: the theorem `declName`, whose first `numPremises` binders are the
+premises, with the discrimination tree keys `keys` of its conclusion.
+-/
 structure RIntroEntry where
   declName : Name
   numPremises : Nat
   keys : Array DiscrTree.Key
   prio : Nat
-  deriving Inhabited
+deriving Inhabited
 
 instance : BEq RIntroEntry where
   beq e₁ e₂ := e₁.declName == e₂.declName
@@ -54,23 +56,26 @@ def builtinRIntros : Array Name := #[`Prod.forall_intro]
 
 builtin_initialize rintroExt : SimpleScopedEnvExtension RIntroEntry (DiscrTree RIntroEntry) ←
   registerSimpleScopedEnvExtension {
-    initial  := .empty
+    initial := .empty
     addEntry := fun d e => d.insertKeyValue e.keys e
   }
 
-/-- Check that the conclusion of `declName` is a `∀` telescope ending in an application of a
-parameter, and compute its `RIntroEntry`. -/
+/--
+Check that the conclusion of `declName` is a `∀` telescope ending in an application of a
+parameter, and compute its `RIntroEntry`.
+-/
 def mkRIntroEntry (declName : Name) (prio : Nat) : MetaM RIntroEntry := do
   let info ← getConstInfo declName
-  let (numBinders, numPremises) ← forallTelescope info.type fun xs body => do
-    let some g := body.getAppFn.fvarId?
-      | throwError "`@[vcgen_rintro]`: the conclusion of `{declName}` does not end in an \
-          application of a parameter"
-    let mut numPremises := 0
-    for h : i in [:xs.size] do
-      if xs[i].fvarId! == g || (← inferType xs[i]).containsFVar g then
-        numPremises := i + 1
-    return (xs.size, numPremises)
+  let (numBinders, numPremises) ←
+    forallTelescope info.type fun xs body => do
+      let some g := body.getAppFn.fvarId?
+        | throwError "`@[vcgen_rintro]`: the conclusion of `{declName}` does not end in an \
+            application of a parameter"
+      let mut numPremises := 0
+      for h : i in [:xs.size] do
+        if xs[i].fvarId! == g || (← inferType xs[i]).containsFVar g then
+          numPremises := i + 1
+      return (xs.size, numPremises)
   if numPremises == numBinders then
     throwError "`@[vcgen_rintro]`: the conclusion of `{declName}` is not a `∀`"
   let rule ← mkBackwardRuleFromDecl declName (some numPremises)
@@ -79,13 +84,16 @@ def mkRIntroEntry (declName : Name) (prio : Nat) : MetaM RIntroEntry := do
 /-- The entries of the rules of `builtinRIntros`, computed once. -/
 builtin_initialize builtinRIntroEntries : IO.Ref (Std.HashMap Name RIntroEntry) ← IO.mkRef {}
 
-/-- The rules registered with `@[vcgen_rintro]`, and the rules of `builtinRIntros` that exist in
-the environment. -/
+/--
+The rules registered with `@[vcgen_rintro]`, and the rules of `builtinRIntros` that exist in
+the environment.
+-/
 def getRIntros : MetaM (DiscrTree RIntroEntry) := do
   let mut d := rintroExt.getState (← getEnv)
   for declName in builtinRIntros do
     if (← getEnv).contains declName then
-      let e ← match (← builtinRIntroEntries.get)[declName]? with
+      let e ←
+        match (← builtinRIntroEntries.get)[declName]? with
         | some e => pure e
         | none =>
           let e ← mkRIntroEntry declName (eval_prio default)
@@ -94,14 +102,15 @@ def getRIntros : MetaM (DiscrTree RIntroEntry) := do
       d := d.insertKeyValue e.keys e
   return d
 
-builtin_initialize registerBuiltinAttribute {
-  ref   := by exact decl_name%
-  name  := `vcgen_rintro
-  descr := "register a rule by which `vcgen` destructures a binder while introducing binders"
-  add   := fun declName stx kind => do
-    let prio ← getAttrParamOptPrio stx[1]
-    let e ← (mkRIntroEntry declName prio).run'
-    rintroExt.add e kind
-}
+builtin_initialize
+  registerBuiltinAttribute {
+    ref := by exact decl_name%
+    name := `vcgen_rintro
+    descr := "register a rule by which `vcgen` destructures a binder while introducing binders"
+    add := fun declName stx kind => do
+      let prio ← getAttrParamOptPrio stx[1]
+      let e ← (mkRIntroEntry declName prio).run'
+      rintroExt.add e kind
+  }
 
 end Lean.Elab.Tactic.VCGen

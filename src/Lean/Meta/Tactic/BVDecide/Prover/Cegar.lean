@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Henrik Böving
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.BVDecide.Prover.Cegar.Basic
 public import Lean.Meta.Tactic.BVDecide.Prover.Cegar.BitVec
@@ -30,16 +31,16 @@ where
   checkTermination : CegarM Unit := do
     checkSystem "bv_decide"
     if (← CegarM.getRounds) == 0 then
-      throwError m!"bv_decide reached its round limit, consider increasing it via the `cegarRounds` config option"
+      throwError m!"bv_decide reached its round limit, consider increasing it via the \
+        `cegarRounds` config option"
     CegarM.consumeRound
 
-  cegarStep (lastCex : Array (Expr × Bool × Std.Tactic.BVDecide.BVExpr.PackedBitVec)) :
-      CegarM (Except (Array (Expr × Bool × Std.Tactic.BVDecide.BVExpr.PackedBitVec)) CegarCert) :=
+  cegarStep (lastCex : Array (Expr × Bool × Std.Tactic.BVDecide.BVExpr.PackedBitVec))
+      : CegarM (Except (Array (Expr × Bool × Std.Tactic.BVDecide.BVExpr.PackedBitVec)) CegarCert) :=
     withTraceNode `Meta.Tactic.bv (fun _ => return "CEGAR step") do
       checkTermination
       match ← checkBitVec with
-      | .ok cert =>
-        return .ok (← CegarM.createCert cert)
+      | .ok cert => return .ok (← CegarM.createCert cert)
       | .error cex =>
         if lastCex == cex then
           throwError m!"The countermodel stayed the same for two iterations, this is a bug."
@@ -49,40 +50,40 @@ where
         checkTheories processedCex
         return .error nextCex
 
-  cegarLoop : UnsatProver CegarCert := CegarM.run ctx do
-    let mut lastCex := #[]
-    CegarM.setDidChange true
-    configureSolver
-    while ← CegarM.getDidChange do
-      match ← cegarStep lastCex with
-      | .ok cert => return .ok cert
-      | .error cex =>
-        lastCex := cex
+  cegarLoop : UnsatProver CegarCert :=
+    CegarM.run ctx do
+      let mut lastCex := #[]
+      CegarM.setDidChange true
+      configureSolver
+      while ← CegarM.getDidChange do
+        match ← cegarStep lastCex with
+        | .ok cert => return .ok cert
+        | .error cex => lastCex := cex
 
-      match ← processNewHyps with
-      | .solved => return .ok (← CegarM.createCert none)
-      | .newHyps => CegarM.setDidChange true
-      | .none => CegarM.setDidChange false
+        match ← processNewHyps with
+        | .solved => return .ok (← CegarM.createCert none)
+        | .newHyps => CegarM.setDidChange true
+        | .none => CegarM.setDidChange false
 
-    let equations ← mkEquations lastCex
+      let equations ← mkEquations lastCex
 
-    let funState := (← getThe BVDecide.State).theoryState.funState
-    return .error {
-      goal := (← read).goal,
-      unusedHypotheses := (← read).unusedHypotheses,
-      equations := equations
-      functionAtoms := funState.atoms.map (·.funExpr)
-    }
+      let funState := (← getThe BVDecide.State).theoryState.funState
+      return .error {
+        goal := (← read).goal
+        unusedHypotheses := (← read).unusedHypotheses
+        equations := equations
+        functionAtoms := funState.atoms.map (·.funExpr)
+      }
 
-  traceModel (cex : Array (Expr × Bool × Std.Tactic.BVDecide.BVExpr.PackedBitVec)) : CegarM Unit := do
+  traceModel (cex : Array (Expr × Bool × Std.Tactic.BVDecide.BVExpr.PackedBitVec))
+      : CegarM Unit := do
     withTraceNode `Meta.Tactic.bv (fun _ => return m!"Model found") do
       for (lhs, rhs) in ← mkEquations cex do
         trace[Meta.Tactic.bv] m!"{lhs} = {rhs.bv}"
 
-  mkEquations (cex : Array (Expr × Bool × Std.Tactic.BVDecide.BVExpr.PackedBitVec)) :
-      CegarM (Array (Expr × Std.Tactic.BVDecide.BVExpr.PackedBitVec)) := do
-    return cex.filterMap fun (lhs, synth, rhs) =>
-      if synth then none else some (lhs, rhs)
+  mkEquations (cex : Array (Expr × Bool × Std.Tactic.BVDecide.BVExpr.PackedBitVec))
+      : CegarM (Array (Expr × Std.Tactic.BVDecide.BVExpr.PackedBitVec)) := do
+    return cex.filterMap fun (lhs, synth, rhs) => if synth then none else some (lhs, rhs)
 
   checkTheories (cex : CegarM.CounterExample) : CegarM Unit := do
     if ← checkUf cex then return ()

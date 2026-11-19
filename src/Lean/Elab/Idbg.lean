@@ -25,11 +25,13 @@ open Lean.Idbg
 @[builtin_doElem_control_info Lean.Parser.Term.doIdbg]
 def controlInfoIdbg : ControlInfoHandler := fun _ => return default
 
-/-- Core elaboration logic shared by term and do-element forms.
+/--
+Core elaboration logic shared by term and do-element forms.
 Elaborates `e`, wraps the result in `toString ∘ repr`, abstracts over all local declarations,
-and generates both the server-side TCP exchange and the runtime client loop code. -/
-def elabIdbgCore (e : Syntax) (body : TSyntax `term) (ref : Syntax) (expectedType? : Option Expr) :
-    TermElabM Expr := do
+and generates both the server-side TCP exchange and the runtime client loop code.
+-/
+def elabIdbgCore (e : Syntax) (body : TSyntax `term) (ref : Syntax) (expectedType? : Option Expr)
+    : TermElabM Expr := do
   let fileName ← IO.FS.realPath (← getFileName)
   let siteId := toString (hash s!"{fileName}:{ref.getPos?.getD 0}")
 
@@ -59,12 +61,14 @@ def elabIdbgCore (e : Syntax) (body : TSyntax `term) (ref : Syntax) (expectedTyp
   -- Do-notation let-bindings have `nondep := false`, so `mkLambdaFVars` would
   -- create `letE` for them. We temporarily set `nondep := true` so that
   -- `generalizeNondepLet` (the default) turns them all into lambdas.
-  let lctx' := localDecls.foldl (init := ← getLCtx) fun lctx decl =>
-    lctx.modifyLocalDecl decl.fvarId (·.setNondep true)
-  let (abstractedValue, abstractedType) ← withLCtx' lctx' do
-    let abstractedValue ← Meta.mkLambdaFVars localFVars reprStrExpr
-    let abstractedType ← Meta.inferType abstractedValue
-    return (← instantiateMVars abstractedValue, ← instantiateMVars abstractedType)
+  let lctx' :=
+    localDecls.foldl (init := ← getLCtx) fun lctx decl =>
+      lctx.modifyLocalDecl decl.fvarId (·.setNondep true)
+  let (abstractedValue, abstractedType) ←
+    withLCtx' lctx' do
+      let abstractedValue ← Meta.mkLambdaFVars localFVars reprStrExpr
+      let abstractedType ← Meta.inferType abstractedValue
+      return (← instantiateMVars abstractedValue, ← instantiateMVars abstractedType)
 
   if abstractedValue.hasMVar then
     throwError "idbg: abstracted value still has metavariables"
@@ -74,14 +78,16 @@ def elabIdbgCore (e : Syntax) (body : TSyntax `term) (ref : Syntax) (expectedTyp
   -- Server mode: serialize and serve in a background snapshot task.
   -- Skip if expression contains sorry (partial input during editing).
   if Elab.inServer.get (← getOptions) && !abstractedValue.hasSorry then
-    let json := Json.mkObj [
-      ("type", exprToJson abstractedType),
-      ("value", exprToJson abstractedValue)
-    ]
+    let json :=
+      Json.mkObj [
+        ("type", exprToJson abstractedType),
+        ("value", exprToJson abstractedValue)
+      ]
     let cancelTk ← IO.CancelToken.new
-    let act ← Core.wrapAsyncAsSnapshot (cancelTk? := cancelTk) fun () => do
-      if let some result ← idbgServer siteId json then
-        logInfoAt ref m!"idbg: {result}"
+    let act ←
+      Core.wrapAsyncAsSnapshot (cancelTk? := cancelTk) fun () => do
+        if let some result ← idbgServer siteId json then
+          logInfoAt ref m!"idbg: {result}"
     Core.logSnapshotTask {
       stx? := some ref
       task := (← BaseIO.asTask (act ()))
@@ -90,36 +96,43 @@ def elabIdbgCore (e : Syntax) (body : TSyntax `term) (ref : Syntax) (expectedTyp
 
   -- Generate runtime code: `idbgClientLoop siteId imports apply >>= fun _ => body`
   let siteLit := Syntax.mkStrLit siteId
-  let applyClosure ← withLocalDecl `f .default abstractedType fun fVar => do
-    let appBody := mkAppN fVar localFVars
-    Meta.mkLambdaFVars #[fVar] appBody
+  let applyClosure ←
+    withLocalDecl `f .default abstractedType fun fVar => do
+      let appBody := mkAppN fVar localFVars
+      Meta.mkLambdaFVars #[fVar] appBody
   let closureStx ← Term.exprToSyntax applyClosure
   -- Include the current module so the client can access same-file declarations.
   -- The `.olean` should exist since the program was compiled from it.
   let imports := (← getEnv).header.imports.push { module := (← getEnv).mainModule }
-  let importExprs ← imports.mapM fun imp => do
-    let nameExpr := toExpr imp.module
-    let importAllExpr := toExpr imp.importAll
-    let isExportedExpr := toExpr imp.isExported
-    let isMetaExpr := toExpr imp.isMeta
-    return mkAppN (.const ``Import.mk []) #[nameExpr, importAllExpr, isExportedExpr, isMetaExpr]
-  let importsExpr := mkApp2 (.const ``List.toArray [.zero])
-    (.const ``Import [])
-    (importExprs.toList.foldr (fun e acc => mkApp3 (.const ``List.cons [.zero]) (.const ``Import []) e acc)
-      (mkApp (.const ``List.nil [.zero]) (.const ``Import [])))
+  let importExprs ←
+    imports.mapM fun imp => do
+      let nameExpr := toExpr imp.module
+      let importAllExpr := toExpr imp.importAll
+      let isExportedExpr := toExpr imp.isExported
+      let isMetaExpr := toExpr imp.isMeta
+      return mkAppN (.const ``Import.mk []) #[nameExpr, importAllExpr, isExportedExpr, isMetaExpr]
+  let importsExpr :=
+    mkApp2 (.const ``List.toArray [.zero]) (.const ``Import [])
+      (importExprs.toList.foldr
+        (fun e acc => mkApp3 (.const ``List.cons [.zero]) (.const ``Import []) e acc)
+        (mkApp (.const ``List.nil [.zero]) (.const ``Import [])))
   let importsStx ← Term.exprToSyntax importsExpr
-  Term.elabTerm (← `(
-    Lean.Idbg.idbgClientLoop $siteLit $importsStx $closureStx >>= fun _ => $body
-  )) expectedType?
+  Term.elabTerm
+    (← `(
+        Lean.Idbg.idbgClientLoop $siteLit $importsStx $closureStx >>= fun _ => $body
+      ))
+    expectedType?
 
 @[builtin_term_elab Lean.Parser.Term.idbg]
 def elabIdbgTerm : TermElab := fun stx expectedType? => do
-  let `(Lean.Parser.Term.idbg| idbg $e; $body) := stx | throwUnsupportedSyntax
+  let `(Lean.Parser.Term.idbg| idbg $e; $body) := stx
+    | throwUnsupportedSyntax
   elabIdbgCore (e := e) (body := body) (ref := stx) expectedType?
 
 @[builtin_doElem_elab Lean.Parser.Term.doIdbg]
 def elabDoIdbg : DoElab := fun stx dec => do
-  let `(Lean.Parser.Term.doIdbg| idbg%$tk $e) := stx | throwUnsupportedSyntax
+  let `(Lean.Parser.Term.doIdbg| idbg%$tk $e) := stx
+    | throwUnsupportedSyntax
   let mγ ← mkMonadApp (← read).doBlockResultType
   let dec ← dec.ensureUnitAt tk
   doElabToSyntax "idbg body" dec.continueWithUnit fun body => do

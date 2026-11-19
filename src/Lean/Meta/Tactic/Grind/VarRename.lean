@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Data.Array.QSort
 public import Std.Data.HashSet
@@ -22,14 +23,14 @@ def collectVar (x : Var) : VarCollector := (·.insert x)
 instance : AndThen VarCollector where
   andThen c₁ c₂ := fun s => c₂ () (c₁ s)
 
-def collectMapVars {_ : BEq α} {_ : Hashable α} (m : Std.HashMap α Expr) (k : α → VarCollector) : VarCollector := fun s => Id.run do
+def collectMapVars {_ : BEq α} {_ : Hashable α} (m : Std.HashMap α Expr) (k : α → VarCollector)
+    : VarCollector := fun s => Id.run do
   let mut s := s
   for (a, _) in m do
     s := k a s
   return s
 
-def FoundVars.toArray (s : FoundVars) : Array Var :=
-  Std.HashSet.toArray s |>.qsort
+def FoundVars.toArray (s : FoundVars) : Array Var := Std.HashSet.toArray s |>.qsort
 
 structure VarRename where
   map : Std.HashMap Var Var

@@ -25,9 +25,7 @@ variable {α : Type w} {m : Type w → Type w'} {f : α → α}
 
 namespace Iterators.Types
 
-/--
-Internal state of the `repeat` combinator. Do not depend on its internals.
--/
+/-- Internal state of the `repeat` combinator. Do not depend on its internals. -/
 @[unbox]
 structure RepeatIterator (α : Type u) (f : α → α) where
   /-- Internal implementation detail of the iterator library. -/
@@ -41,18 +39,17 @@ instance RepeatIterator.instIterator : Iterator (RepeatIterator α f) Id α wher
     | .done => False
   step it := pure <| .deflate <| .yield ⟨⟨f it.internalState.next⟩⟩ it.internalState.next (by simp)
 
-private def RepeatIterator.instProductivenessRelation :
-    ProductivenessRelation (RepeatIterator α f) Id where
+private def RepeatIterator.instProductivenessRelation
+    : ProductivenessRelation (RepeatIterator α f) Id where
   Rel := emptyWf.rel
   wf := emptyWf.wf
   subrelation {it it'} h := by cases h
 
-instance RepeatIterator.instProductive :
-    Productive (RepeatIterator α f) Id := by
+instance RepeatIterator.instProductive : Productive (RepeatIterator α f) Id := by
   exact Productive.of_productivenessRelation instProductivenessRelation
 
-instance RepeatIterator.instIteratorLoop {α : Type w} {f : α → α} {n : Type w → Type w'} [Monad n] :
-    IteratorLoop (RepeatIterator α f) Id n :=
+instance RepeatIterator.instIteratorLoop {α : Type w} {f : α → α} {n : Type w → Type w'} [Monad n]
+    : IteratorLoop (RepeatIterator α f) Id n :=
   .defaultImplementation
 
 end Iterators.Types

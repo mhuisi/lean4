@@ -18,12 +18,10 @@ This module provides a thin wrapper around CaDiCaL's C++ FFI, allowing it to int
 API from `Std.Sat.CNF`.
 -/
 
-/--
-The IPASIR state of the solver.
--/
+/-- The IPASIR state of the solver. -/
 public structure State where
   bits : UInt16
-  deriving Inhabited, DecidableEq, Hashable
+deriving Inhabited, DecidableEq, Hashable
 
 namespace State
 
@@ -56,21 +54,13 @@ public def inconclusive : State := ⟨256⟩
 
 @[inline]
 def ready : State :=
-  ⟨
-    configuring.bits
-      ||| steady.bits
-      ||| satisfied.bits
-      ||| unsatisfied.bits
-      ||| inconclusive.bits
-  ⟩
+  ⟨configuring.bits ||| steady.bits ||| satisfied.bits ||| unsatisfied.bits ||| inconclusive.bits⟩
 
 @[inline]
-def valid : State :=
-  ⟨ready.bits ||| adding.bits⟩
+def valid : State := ⟨ready.bits ||| adding.bits⟩
 
 @[inline]
-def invalid : State :=
-  ⟨initializing.bits ||| deleting.bits⟩
+def invalid : State := ⟨initializing.bits ||| deleting.bits⟩
 
 @[inline]
 public def isReady (s : State) : Bool := (s.bits &&& ready.bits) != ⟨0⟩
@@ -110,7 +100,7 @@ public inductive Status where
   | satisfiable
   | unsatisfiable
   | unknown
-  deriving Inhabited, DecidableEq, Hashable, Repr
+deriving Inhabited, DecidableEq, Hashable, Repr
 
 namespace Status
 
@@ -136,13 +126,11 @@ def ofInternal (s : Internal.Status) : Status :=
 
 end Status
 
-/--
-An incremental SAT solver.
--/
+/-- An incremental SAT solver. -/
 public structure Solver where
   private ofNative ::
-    private solver : Internal.Solver
-  deriving Nonempty
+  private solver : Internal.Solver
+deriving Nonempty
 
 namespace Solver
 
@@ -158,20 +146,13 @@ def toApiLit (lit : Nat) (pol : Bool) : IO Int32 := do
     let lit := if pol then lit else -lit
     return lit
 
-/--
-Allocate a new SAT solver.
--/
+/-- Allocate a new SAT solver. -/
 public def new : BaseIO Solver := return ⟨← Internal.Solver.new⟩
 
-
-/--
-Get the current IPASIR state of the solver.
--/
+/-- Get the current IPASIR state of the solver. -/
 public def state (s : Solver) : BaseIO State := return ⟨← s.solver.state⟩
 
-/--
-Add a clause to the solver.
--/
+/-- Add a clause to the solver. -/
 public def clause (s : Solver) (clause : CNF.Clause Nat) : IO Unit := do
   assert! (← s.state).isValid
   for (lit, pol) in clause do
@@ -179,21 +160,15 @@ public def clause (s : Solver) (clause : CNF.Clause Nat) : IO Unit := do
     s.solver.add lit
   s.solver.add 0
 
-/--
-Check whether the formula is currently inconsistent (potentially under assumptions).
--/
+/-- Check whether the formula is currently inconsistent (potentially under assumptions). -/
 public def inconsistent (s : Solver) : BaseIO Bool := s.solver.inconsistent
 
-/--
-Add a new assumption literal to the solver, reset upon the next call to `solve`.
--/
+/-- Add a new assumption literal to the solver, reset upon the next call to `solve`. -/
 public def assume (s : Solver) (lit : Nat) (pol : Bool) : IO Unit := do
   assert! (← s.state).isReady
   s.solver.assume (← toApiLit lit pol)
 
-/--
-Run the SAT solver on current formula and assumptions.
--/
+/-- Run the SAT solver on current formula and assumptions. -/
 public def solve (s : Solver) : BaseIO Status := do
   assert! (← s.state).isReady
   let status ← s.solver.solve
@@ -209,9 +184,7 @@ public def solveWithTerminator (s : Solver) (shouldTerminate : BaseIO Bool) : Ba
   let status ← s.solver.solveWithTerminator shouldTerminate
   return .ofInternal status
 
-/--
-Obtain the value of a literal in the current model if it exists.
--/
+/-- Obtain the value of a literal in the current model if it exists. -/
 public def val (s : Solver) (lit : Nat) : IO Bool := do
   let state ← s.state
   if state != .satisfied then
@@ -220,15 +193,10 @@ public def val (s : Solver) (lit : Nat) : IO Bool := do
   let val ← s.solver.val lit
   return lit == val
 
-/--
-Reset assumptions made via `assume` explicitily.
--/
-public def resetAssumptions (s : Solver) : BaseIO Unit :=
-  s.solver.resetAssumptions
+/-- Reset assumptions made via `assume` explicitily. -/
+public def resetAssumptions (s : Solver) : BaseIO Unit := s.solver.resetAssumptions
 
-/--
-Query the current status (not to be confused with the IPASIR state) of the oslver.
--/
+/-- Query the current status (not to be confused with the IPASIR state) of the oslver. -/
 public def status (s : Solver) : BaseIO Status := do
   let status ← s.solver.status
   return .ofInternal status

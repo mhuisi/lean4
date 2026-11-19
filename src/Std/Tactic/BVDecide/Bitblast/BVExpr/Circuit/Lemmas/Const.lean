@@ -28,13 +28,13 @@ variable [Hashable α] [DecidableEq α]
 
 namespace blastConst
 
-theorem go_get_aux (aig : AIG α) (c : BitVec w) (curr : Nat) (hcurr : curr ≤ w)
-    (s : AIG.RefVec aig curr) :
+theorem go_get_aux
+    (aig : AIG α) (c : BitVec w) (curr : Nat) (hcurr : curr ≤ w) (s : AIG.RefVec aig curr)
     -- `hfoo` makes it possible to `generalize` below. With a concrete proof term this
     -- `generalize` would produce a type incorrect term as the proof term would talk about
     -- a `go` application instead of the fresh variable.
-    ∀ (idx : Nat) (hidx : idx < curr) (hfoo),
-        (go aig c curr s hcurr).get idx (by omega) = (s.get idx hidx).cast hfoo := by
+    : ∀ (idx : Nat) (hidx : idx < curr) (hfoo),
+      (go aig c curr s hcurr).get idx (by omega) = (s.get idx hidx).cast hfoo := by
   intro idx hidx
   generalize hgo : go aig c curr s hcurr = res
   unfold go at hgo
@@ -51,22 +51,20 @@ theorem go_get_aux (aig : AIG α) (c : BitVec w) (curr : Nat) (hcurr : curr ≤ 
     simp
 termination_by w - curr
 
-theorem go_get (aig : AIG α) (c : BitVec w)
-    (curr : Nat) (hcurr : curr ≤ w) (s : AIG.RefVec aig curr) :
-    ∀ (idx : Nat) (hidx : idx < curr),
-        (go aig c curr s hcurr).get idx (by omega) = s.get idx hidx := by
+theorem go_get
+    (aig : AIG α) (c : BitVec w) (curr : Nat) (hcurr : curr ≤ w) (s : AIG.RefVec aig curr)
+    : ∀ (idx : Nat) (hidx : idx < curr),
+      (go aig c curr s hcurr).get idx (by omega) = s.get idx hidx := by
   intros
   apply go_get_aux
   simp
 
-theorem go_denote_eq (aig : AIG α) (c : BitVec w) (assign : α → Bool)
-    (curr : Nat) (hcurr : curr ≤ w) (s : AIG.RefVec aig curr) :
-    ∀ (idx : Nat) (hidx1 : idx < w),
-        curr ≤ idx
-          →
-        ⟦aig, (go aig c curr s hcurr).get idx hidx1, assign⟧
-          =
-        c.getLsbD idx := by
+theorem go_denote_eq
+    (aig : AIG α)
+    (c : BitVec w) (assign : α → Bool)
+    (curr : Nat) (hcurr : curr ≤ w) (s : AIG.RefVec aig curr)
+    : ∀ (idx : Nat) (hidx1 : idx < w),
+      curr ≤ idx → ⟦aig, (go aig c curr s hcurr).get idx hidx1, assign⟧ = c.getLsbD idx := by
   intro idx hidx1 hidx2
   generalize hgo : go aig c curr s hcurr = res
   unfold go at hgo
@@ -75,7 +73,8 @@ theorem go_denote_eq (aig : AIG α) (c : BitVec w) (assign : α → Bool)
     cases Nat.eq_or_lt_of_le hidx2 with
     | inl heq =>
       rw [← hgo]
-      rw [go_get]; case hidx => omega
+      rw [go_get]
+      case hidx => omega
       rw [AIG.RefVec.get_push_ref_eq']
       · rw [← heq]
         simp
@@ -90,9 +89,9 @@ termination_by w - curr
 end blastConst
 
 @[simp]
-theorem denote_blastConst (aig : AIG α) (c : BitVec w) (assign : α → Bool) :
-    ∀ (idx : Nat) (hidx : idx < w),
-        ⟦aig, (blastConst aig c).get idx hidx, assign⟧ = c.getLsbD idx := by
+theorem denote_blastConst (aig : AIG α) (c : BitVec w) (assign : α → Bool)
+    : ∀ (idx : Nat) (hidx : idx < w),
+      ⟦aig, (blastConst aig c).get idx hidx, assign⟧ = c.getLsbD idx := by
   intros
   apply blastConst.go_denote_eq
   omega

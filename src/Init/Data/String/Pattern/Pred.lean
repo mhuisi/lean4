@@ -78,10 +78,12 @@ instance {p : Char → Prop} [DecidablePred p] : StrictForwardPattern p where
   ne_startPos h q := StrictForwardPattern.ne_startPos (pat := (decide <| p ·)) h q
 
 instance {p : Char → Prop} [DecidablePred p] : LawfulForwardPattern p where
-  skipPrefixOfNonempty?_eq h := LawfulForwardPattern.skipPrefixOfNonempty?_eq (pat := (decide <| p ·)) h
+  skipPrefixOfNonempty?_eq h :=
+    LawfulForwardPattern.skipPrefixOfNonempty?_eq (pat := (decide <| p ·)) h
   startsWith_eq s := LawfulForwardPattern.startsWith_eq (pat := (decide <| p ·)) s
 
-instance {p : Char → Prop} [DecidablePred p] : ToForwardSearcher p (ToForwardSearcher.DefaultForwardSearcher (decide <| p ·)) where
+instance {p : Char → Prop} [DecidablePred p]
+    : ToForwardSearcher p (ToForwardSearcher.DefaultForwardSearcher (decide <| p ·)) where
   toSearcher s := ToForwardSearcher.toSearcher (decide <| p ·) s
 
 end Decidable
@@ -136,11 +138,12 @@ instance {p : Char → Prop} [DecidablePred p] : StrictBackwardPattern p where
   ne_endPos h q := StrictBackwardPattern.ne_endPos (pat := (decide <| p ·)) h q
 
 instance {p : Char → Prop} [DecidablePred p] : LawfulBackwardPattern p where
-  skipSuffixOfNonempty?_eq h := LawfulBackwardPattern.skipSuffixOfNonempty?_eq (pat := (decide <| p ·)) h
+  skipSuffixOfNonempty?_eq h :=
+    LawfulBackwardPattern.skipSuffixOfNonempty?_eq (pat := (decide <| p ·)) h
   endsWith_eq s := LawfulBackwardPattern.endsWith_eq (pat := (decide <| p ·)) s
 
-instance {p : Char → Prop} [DecidablePred p] :
-    ToBackwardSearcher p (ToBackwardSearcher.DefaultBackwardSearcher (decide <| p ·)) where
+instance {p : Char → Prop} [DecidablePred p]
+    : ToBackwardSearcher p (ToBackwardSearcher.DefaultBackwardSearcher (decide <| p ·)) where
   toSearcher s := ToBackwardSearcher.toSearcher (decide <| p ·) s
 
 end Decidable

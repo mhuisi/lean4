@@ -19,10 +19,11 @@ public def Reservoir.lakeHeaders : Array String := #[
 
 /-- A Reservoir API response object. -/
 public inductive ReservoirResp (α : Type u)
-| data (a : α)
-| error (status : Nat) (message : String)
+  | data (a : α)
+  | error (status : Nat) (message : String)
 
-public protected def ReservoirResp.fromJson? [FromJson α] (val : Json) : Except String (ReservoirResp α) := do
+public protected def ReservoirResp.fromJson? [FromJson α] (val : Json)
+    : Except String (ReservoirResp α) := do
   if let .ok obj := JsonObject.fromJson? val then
     if let some (err : JsonObject) ← obj.get? "error" then
       let status ← err.get "status"

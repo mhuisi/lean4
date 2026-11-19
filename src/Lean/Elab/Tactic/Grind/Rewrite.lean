@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 import Lean.Elab.Tactic.Grind.Basic
 import Lean.Meta.Tactic.Rewrite
@@ -22,22 +23,25 @@ def rwTarget (symm : Bool) (term : Syntax) : GrindTacticM Unit := do
   let goal ← getMainGoal
   goal.withContext do
     let mvarCounterSaved := (← getMCtx).mvarCounter
-    let r ← Term.withSynthesize do
-      let heq ← Term.elabTerm term none true
-      if heq.hasSyntheticSorry then
-        throwAbortTactic
-      unless (← occursCheck goal.mvarId heq) do
-        throwErrorAt term "Occurs check failed: Expression{indentExpr heq}\ncontains the goal {Expr.mvar goal.mvarId}"
-      /-
-      The target is in `sym` normal form (e.g., reducible constants have been unfolded), but the
-      given equation is not. We unfold reducible constants in its statement so that `kabstract`
-      key-matching can find occurrences of the lhs in the target, and the rhs requires less
-      normalization after the rewrite.
-      -/
-      let heqType ← instantiateMVars (← inferType heq)
-      let heqType' ← Sym.unfoldReducible heqType
-      let heq ← if isSameExpr heqType heqType' then pure heq else mkExpectedTypeHint heq heqType'
-      goal.mvarId.rewrite (← goal.mvarId.getType) heq symm
+    let r ←
+      Term.withSynthesize do
+        let heq ← Term.elabTerm term none true
+        if heq.hasSyntheticSorry then
+          throwAbortTactic
+        unless (← occursCheck goal.mvarId heq) do
+          throwErrorAt term
+            "Occurs check failed: Expression{indentExpr heq}\
+              \ncontains the goal {Expr.mvar goal.mvarId}"
+        /-
+        The target is in `sym` normal form (e.g., reducible constants have been unfolded), but the
+        given equation is not. We unfold reducible constants in its statement so that `kabstract`
+        key-matching can find occurrences of the lhs in the target, and the rhs requires less
+        normalization after the rewrite.
+        -/
+        let heqType ← instantiateMVars (← inferType heq)
+        let heqType' ← Sym.unfoldReducible heqType
+        let heq ← if isSameExpr heqType heqType' then pure heq else mkExpectedTypeHint heq heqType'
+        goal.mvarId.rewrite (← goal.mvarId.getType) heq symm
     let mctx ← getMCtx
     let mvarIds := r.mvarIds.filter fun mvarId => (mctx.getDecl mvarId |>.index) >= mvarCounterSaved
     let eNew ← liftSymM <| Sym.preprocessExpr r.eNew
@@ -45,17 +49,18 @@ def rwTarget (symm : Bool) (term : Syntax) : GrindTacticM Unit := do
       throwError "`rw` failed, resulting target contains metavariables{indentExpr eNew}"
     let mvarId ← goal.mvarId.replaceTargetEq eNew r.eqProof
     let mvarIds ← mvarIds.filterM fun mvarId => return !(← mvarId.isAssigned)
-    let sideGoals ← mvarIds.mapM fun mvarId => do
-      let target ← mvarId.getType
-      let target' ← liftSymM <| Sym.preprocessExpr target
-      if isSameExpr target target' then
-        -- The metavariable was created by `forallMetaTelescopeReducing` with kind `.natural`;
-        -- prevent it from being assigned by unification in later steps.
-        mvarId.setKind .syntheticOpaque
-        return { goal with mvarId }
-      else
-        let mvarId ← mvarId.replaceTargetDefEq target'
-        return { goal with mvarId }
+    let sideGoals ←
+      mvarIds.mapM fun mvarId => do
+        let target ← mvarId.getType
+        let target' ← liftSymM <| Sym.preprocessExpr target
+        if isSameExpr target target' then
+          -- The metavariable was created by `forallMetaTelescopeReducing` with kind `.natural`;
+          -- prevent it from being assigned by unification in later steps.
+          mvarId.setKind .syntheticOpaque
+          return { goal with mvarId }
+        else
+          let mvarId ← mvarId.replaceTargetDefEq target'
+          return { goal with mvarId }
     replaceMainGoal ({ goal with mvarId } :: sideGoals)
 
 /--
@@ -85,9 +90,11 @@ def tryTrivialClose : GrindTacticM Unit := do
         close <| mkApp2 (mkConst ``HEq.refl [← getLevel α]) α lhs
     | _ => return ()
 
-@[builtin_grind_tactic Parser.Tactic.Grind.symRw] def evalSymRw : GrindTactic := fun stx => do
+@[builtin_grind_tactic Parser.Tactic.Grind.symRw]
+def evalSymRw : GrindTactic := fun stx => do
   ensureSym
-  let `(grind| rw%$tk $s:rwRuleSeq) := stx | throwUnsupportedSyntax
+  let `(grind| rw%$tk $s:rwRuleSeq) := stx
+    | throwUnsupportedSyntax
   let lbrak := s.raw[0]
   let rules := s.raw[1]
   -- show initial state up to (incl.) `[`

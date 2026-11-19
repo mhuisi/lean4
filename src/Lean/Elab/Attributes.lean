@@ -15,25 +15,26 @@ public section
 namespace Lean.Elab
 
 structure Attribute where
-  kind  : AttributeKind := AttributeKind.global
-  name  : Name
-  stx   : Syntax := Syntax.missing
+  kind : AttributeKind := AttributeKind.global
+  name : Name
+  stx : Syntax := Syntax.missing
   /-- The `@[...]` syntax of the declaration modifiers that the attribute is part of, if any. -/
   declAttrsStx? : Option Syntax := none
-  deriving Inhabited
+deriving Inhabited
 
 instance : ToFormat Attribute where
   format attr :=
-   let kindStr := match attr.kind with
-     | AttributeKind.global => ""
-     | AttributeKind.local  => "local "
-     | AttributeKind.scoped => "scoped "
-   Format.bracket "@[" f!"{kindStr}{attr.name}{toString attr.stx}" "]"
+    let kindStr :=
+      match attr.kind with
+      | AttributeKind.global => ""
+      | AttributeKind.local => "local "
+      | AttributeKind.scoped => "scoped "
+    Format.bracket "@[" f!"{kindStr}{attr.name}{toString attr.stx}" "]"
 
 /--
-  ```
-  attrKind := leading_parser optional («scoped» <|> «local»)
-  ```
+```
+attrKind := leading_parser optional («scoped» <|> «local»)
+```
 -/
 def toAttributeKind (attrKindStx : Syntax) : MacroM AttributeKind := do
   if attrKindStx[0].isNone then
@@ -45,10 +46,14 @@ def toAttributeKind (attrKindStx : Syntax) : MacroM AttributeKind := do
   else
     return AttributeKind.local
 
-def mkAttrKindGlobal : Syntax :=
-  mkNode ``Lean.Parser.Term.attrKind #[mkNullNode]
+def mkAttrKindGlobal : Syntax := mkNode ``Lean.Parser.Term.attrKind #[mkNullNode]
 
-def elabAttr [Monad m] [MonadEnv m] [MonadResolveName m] [MonadError m] [MonadMacroAdapter m] [MonadRecDepth m] [MonadTrace m] [MonadOptions m] [AddMessageContext m] [MonadLiftT IO m] [MonadFinally m] (attrInstance : Syntax) : m Attribute := do
+def elabAttr
+    [Monad m] [MonadEnv m] [MonadResolveName m] [MonadError m] [MonadMacroAdapter m]
+    [MonadRecDepth m] [MonadTrace m] [MonadOptions m] [AddMessageContext m] [MonadLiftT IO m]
+    [MonadFinally m]
+    (attrInstance : Syntax)
+    : m Attribute := do
   -- Resolving the attribute itself can be done in the private scope; running the attribute handler
   -- will later be done in a scope determined by `applyAttributesCore`.
   withoutExporting do
@@ -56,15 +61,17 @@ def elabAttr [Monad m] [MonadEnv m] [MonadResolveName m] [MonadError m] [MonadMa
     let attrKind ← liftMacroM <| toAttributeKind attrInstance[0]
     let attr := attrInstance[1]
     let attr ← liftMacroM <| expandMacros attr
-    let attrName ← if attr.getKind == ``Parser.Attr.simple then
-      pure attr[0].getId.eraseMacroScopes
-    else match attr.getKind with
-      | .str _ s => pure <| Name.mkSimple s
-      | _ => throwErrorAt attr  "Unknown attribute"
+    let attrName ←
+      if attr.getKind == ``Parser.Attr.simple then
+        pure attr[0].getId.eraseMacroScopes
+      else
+        match attr.getKind with
+        | .str _ s => pure <| Name.mkSimple s
+        | _ => throwErrorAt attr "Unknown attribute"
     let .ok _impl := getAttributeImpl (← getEnv) attrName
       | throwError "Unknown attribute `[{attrName}]`"
     if let .ok impl := getAttributeImpl (← getEnv) attrName then
-      if regularInitAttr.getParam? (← getEnv) impl.ref |>.isSome then  -- skip `builtin_initialize` attributes
+      if regularInitAttr.getParam? (← getEnv) impl.ref |>.isSome then -- skip `builtin_initialize` attributes
         -- Reject attribute uses where the implementation's module has been loaded for IR only as
         -- this would make it `inServer`-dependent and confused shake as well (#13599).
         if let some idx := (← getEnv).getModuleIdxFor? impl.ref then
@@ -74,11 +81,18 @@ def elabAttr [Monad m] [MonadEnv m] [MonadResolveName m] [MonadError m] [MonadMa
             throwError m!"Cannot use attribute `[{attrName}]`: module `{modName}` is loaded for IR \
               only (reached as a private `meta` dependency). Add an import of `{modName}`."
         recordExtraModUseFromDecl (isMeta := true) impl.ref
-    /- The `AttrM` does not have sufficient information for expanding macros in `args`.
-      So, we expand them before here before we invoke the attributer handlers implemented using `AttrM`. -/
+    /-
+    The `AttrM` does not have sufficient information for expanding macros in `args`.
+    So, we expand them before here before we invoke the attributer handlers implemented using `AttrM`.
+    -/
     return { kind := attrKind, name := attrName, stx := attr }
 
-def elabAttrs [Monad m] [MonadEnv m] [MonadResolveName m] [MonadError m] [MonadMacroAdapter m] [MonadRecDepth m] [MonadTrace m] [MonadOptions m] [AddMessageContext m] [MonadLog m] [MonadLiftT IO m] [MonadFinally m] (attrInstances : Array Syntax) : m (Array Attribute) := do
+def elabAttrs
+    [Monad m] [MonadEnv m] [MonadResolveName m] [MonadError m] [MonadMacroAdapter m]
+    [MonadRecDepth m] [MonadTrace m] [MonadOptions m] [AddMessageContext m] [MonadLog m]
+    [MonadLiftT IO m] [MonadFinally m]
+    (attrInstances : Array Syntax)
+    : m (Array Attribute) := do
   let mut attrs := #[]
   for attr in attrInstances do
     try
@@ -88,7 +102,12 @@ def elabAttrs [Monad m] [MonadEnv m] [MonadResolveName m] [MonadError m] [MonadM
   return attrs
 
 -- leading_parser "@[" >> sepBy1 attrInstance ", " >> "]"
-def elabDeclAttrs [Monad m] [MonadEnv m] [MonadResolveName m] [MonadError m] [MonadMacroAdapter m] [MonadRecDepth m] [MonadTrace m] [MonadOptions m] [AddMessageContext m] [MonadLog m] [MonadLiftT IO m] [MonadFinally m] (stx : Syntax) : m (Array Attribute) :=
+def elabDeclAttrs
+    [Monad m] [MonadEnv m] [MonadResolveName m] [MonadError m] [MonadMacroAdapter m]
+    [MonadRecDepth m] [MonadTrace m] [MonadOptions m] [AddMessageContext m] [MonadLog m]
+    [MonadLiftT IO m] [MonadFinally m]
+    (stx : Syntax)
+    : m (Array Attribute) :=
   return (← elabAttrs stx[1].getSepArgs).map ({ · with declAttrsStx? := stx })
 
 end Lean.Elab

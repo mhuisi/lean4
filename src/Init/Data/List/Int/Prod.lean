@@ -25,7 +25,6 @@ theorem prod_replicate_int {n : Nat} {a : Int} : (replicate n a).prod = a ^ n :=
 theorem prod_append_int {l₁ l₂ : List Int} : (l₁ ++ l₂).prod = l₁.prod * l₂.prod := by
   simp [prod_append]
 
-theorem prod_reverse_int (xs : List Int) : xs.reverse.prod = xs.prod := by
-  simp [prod_reverse]
+theorem prod_reverse_int (xs : List Int) : xs.reverse.prod = xs.prod := by simp [prod_reverse]
 
 end List

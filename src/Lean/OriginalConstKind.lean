@@ -25,8 +25,8 @@ if the declaration was not found.
 public def getOriginalConstKind? (env : Environment) (declName : Name) : Option ConstantKind := do
   -- Use `local` as for asynchronous decls from the current module, `findAsync?` below will yield
   -- the same result but potentially earlier (after `addConstAsync` instead of `addDecl`)
-  privateConstKindsExt.find? (asyncMode := .local) env declName <|>
-    (env.setExporting false |>.findAsync? declName).map (·.kind)
+  privateConstKindsExt.find? (asyncMode := .local) env declName
+    <|> (env.setExporting false |>.findAsync? declName).map (·.kind)
 
 /--
 Checks whether the declaration was originally declared as a definition; see also

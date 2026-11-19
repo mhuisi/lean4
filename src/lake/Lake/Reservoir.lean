@@ -28,16 +28,17 @@ Package source information from a Lake registry (e.g., Reservoir).
 Only contains the subset of fields useful to Lake.
 -/
 public inductive RegistrySrc
-| git (data : JsonObject) (url : String)
-  (githubUrl? defaultBranch? : Option String) (subDir? : Option FilePath)
-| other (data : JsonObject)
+  | git
+    (data : JsonObject) (url : String) (githubUrl? defaultBranch? : Option String)
+    (subDir? : Option FilePath)
+  | other (data : JsonObject)
 deriving Inhabited
 
 namespace RegistrySrc
 
 public def isGit (src : RegistrySrc) : Bool :=
   match src with
-  | .git  .. => true
+  | .git .. => true
   | .other .. => false
 
 public def data (src : RegistrySrc) : JsonObject :=
@@ -45,8 +46,7 @@ public def data (src : RegistrySrc) : JsonObject :=
   | .git (data := data) .. => data
   | .other data => data
 
-public protected def toJson (src : RegistrySrc) : Json :=
-  src.data
+public protected def toJson (src : RegistrySrc) : Json := src.data
 
 public instance : ToJson RegistrySrc := ⟨RegistrySrc.toJson⟩
 
@@ -54,8 +54,9 @@ public protected def fromJson? (val : Json) : Except String RegistrySrc := do
   try
     let obj ← JsonObject.fromJson? val
     if let some url ← obj.get? "gitUrl" then
-      let githubUrl? ← (← obj.get? "host").bindM fun host =>
-        if host == "github" then obj.get? "repoUrl" else pure none
+      let githubUrl? ←
+        (← obj.get? "host").bindM fun host =>
+          if host == "github" then obj.get? "repoUrl" else pure none
       let defaultBranch? ← obj.get? "defaultBranch"
       let subDir? ← obj.get? "subDir"
       return .git obj url githubUrl? defaultBranch? subDir?
@@ -77,15 +78,13 @@ public structure RegistryPkg where
   fullName : String
   sources : Array RegistrySrc
   data : Json
-  deriving Inhabited
+deriving Inhabited
 
 namespace RegistryPkg
 
-public def gitSrc? (pkg : RegistryPkg) : Option RegistrySrc :=
-  pkg.sources.find? (·.isGit)
+public def gitSrc? (pkg : RegistryPkg) : Option RegistrySrc := pkg.sources.find? (·.isGit)
 
-public protected def toJson (src : RegistryPkg) : Json :=
-  src.data
+public protected def toJson (src : RegistryPkg) : Json := src.data
 
 instance : ToJson RegistryPkg := ⟨RegistryPkg.toJson⟩
 
@@ -95,7 +94,7 @@ public protected def fromJson? (val : Json) : Except String RegistryPkg := do
     let name ← obj.get "name"
     let fullName ← obj.get "fullName"
     let sources ← (← obj.getD "sources" #[]).mapM fromJson?
-    return {data := obj, name, fullName, sources}
+    return { data := obj, name, fullName, sources }
   catch e =>
     throw s!"invalid registry package: {e}"
 
@@ -104,9 +103,10 @@ public instance : FromJson RegistryPkg := ⟨RegistryPkg.fromJson?⟩
 end RegistryPkg
 
 public def Reservoir.pkgApiUrl (lakeEnv : Lake.Env) (owner pkg : String) :=
-   s!"{lakeEnv.reservoirApiUrl}/packages/{uriEncode owner}/{uriEncode pkg}"
+  s!"{lakeEnv.reservoirApiUrl}/packages/{uriEncode owner}/{uriEncode pkg}"
 
-public def Reservoir.fetchPkg? (lakeEnv : Lake.Env) (owner pkg : String) : LogIO (Option RegistryPkg) := do
+public def Reservoir.fetchPkg? (lakeEnv : Lake.Env) (owner pkg : String)
+    : LogIO (Option RegistryPkg) := do
   let url := Reservoir.pkgApiUrl lakeEnv owner pkg
   let out ←
     try
@@ -119,8 +119,7 @@ public def Reservoir.fetchPkg? (lakeEnv : Lake.Env) (owner pkg : String) : LogIO
     match fromJson? json with
     | .ok (resp : ReservoirResp RegistryPkg) =>
       match resp with
-      | .data pkg =>
-        return pkg
+      | .data pkg => return pkg
       | .error status msg =>
         if status == 404 then
           return none
@@ -128,14 +127,16 @@ public def Reservoir.fetchPkg? (lakeEnv : Lake.Env) (owner pkg : String) : LogIO
           error s!"{owner}/{pkg}: Reservoir lookup failed: {msg}"
     | .error e =>
       errorWithLog do
-      logError s!"{owner}/{pkg}: Reservoir lookup failed; server returned unsupported JSON: {e}"
-      logVerbose s!"{owner}/{pkg}: Reservoir responded with:\n{out.trimAscii}"
-      failure
+        logError s!"{owner}/{pkg}: Reservoir lookup failed; server returned unsupported JSON: {e}"
+        logVerbose s!"{owner}/{pkg}: Reservoir responded with:\
+          \n{out.trimAscii}"
+        failure
   | .error e =>
     errorWithLog do
-    logError s!"{owner}/{pkg}: Reservoir lookup failed; server returned invalid JSON: {e}"
-    logVerbose s!"{owner}/{pkg}: Reservoir responded with:\n{out.trimAscii}"
-    failure
+      logError s!"{owner}/{pkg}: Reservoir lookup failed; server returned invalid JSON: {e}"
+      logVerbose s!"{owner}/{pkg}: Reservoir responded with:\
+        \n{out.trimAscii}"
+      failure
 
 /--
 Version metadata from a Lake registry (e.g., Reservoir).
@@ -150,18 +151,17 @@ public protected def RegistryVer.fromJson? (val : Json) : Except String Registry
     let obj ← JsonObject.fromJson? val
     let version ← obj.get "version"
     let revision ← obj.get "revision"
-    return {version, revision}
+    return { version, revision }
   catch e =>
     throw s!"invalid registry version: {e}"
 
 public instance : FromJson RegistryVer := ⟨RegistryVer.fromJson?⟩
 
 public def Reservoir.pkgVersionsApiUrl (lakeEnv : Lake.Env) (owner pkg : String) :=
-   s!"{lakeEnv.reservoirApiUrl}/packages/{uriEncode owner}/{uriEncode pkg}/versions"
+  s!"{lakeEnv.reservoirApiUrl}/packages/{uriEncode owner}/{uriEncode pkg}/versions"
 
-public def Reservoir.fetchPkgVersions
-  (lakeEnv : Lake.Env) (owner pkg : String)
-: LogIO (Array RegistryVer) := do
+public def Reservoir.fetchPkgVersions (lakeEnv : Lake.Env) (owner pkg : String)
+    : LogIO (Array RegistryVer) := do
   let url := Reservoir.pkgVersionsApiUrl lakeEnv owner pkg
   let out ←
     try
@@ -174,17 +174,18 @@ public def Reservoir.fetchPkgVersions
     match fromJson? json with
     | .ok (resp : ReservoirResp (Array RegistryVer)) =>
       match resp with
-      | .data vers =>
-        return vers
+      | .data vers => return vers
       | .error status msg =>
         error s!"{owner}/{pkg}: Reservoir lookup failed (code: {status}): {msg}"
     | .error e =>
       errorWithLog do
-      logError s!"{owner}/{pkg}: Reservoir lookup failed; server returned unsupported JSON: {e}"
-      logVerbose s!"{owner}/{pkg}: Reservoir responded with:\n{out.trimAscii}"
-      failure
+        logError s!"{owner}/{pkg}: Reservoir lookup failed; server returned unsupported JSON: {e}"
+        logVerbose s!"{owner}/{pkg}: Reservoir responded with:\
+          \n{out.trimAscii}"
+        failure
   | .error e =>
     errorWithLog do
-    logError s!"{owner}/{pkg}: Reservoir lookup failed; server returned invalid JSON: {e}"
-    logVerbose s!"{owner}/{pkg}: Reservoir responded with:\n{out.trimAscii}"
-    failure
+      logError s!"{owner}/{pkg}: Reservoir lookup failed; server returned invalid JSON: {e}"
+      logVerbose s!"{owner}/{pkg}: Reservoir responded with:\
+        \n{out.trimAscii}"
+      failure

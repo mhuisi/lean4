@@ -34,12 +34,10 @@ the number is too large.
 
 Returns `2^8 - 1` for natural numbers greater than or equal to `2^8`.
 -/
-def UInt8.ofNatClamp (n : Nat) : UInt8 :=
-  ⟨BitVec.ofNatClamp 8 n⟩
+def UInt8.ofNatClamp (n : Nat) : UInt8 := ⟨BitVec.ofNatClamp 8 n⟩
 
 @[inherit_doc UInt8.ofNatClamp, deprecated UInt8.ofNatClamp (since := "2026-05-04")]
-def UInt8.ofNatTruncate (n : Nat) : UInt8 :=
-  UInt8.ofNatClamp n
+def UInt8.ofNatTruncate (n : Nat) : UInt8 := UInt8.ofNatClamp n
 
 /--
 Converts a natural number to an 8-bit unsigned integer, wrapping on overflow.
@@ -87,12 +85,10 @@ the number is too large.
 
 Returns `2^16 - 1` for natural numbers greater than or equal to `2^16`.
 -/
-def UInt16.ofNatClamp (n : Nat) : UInt16 :=
-  ⟨BitVec.ofNatClamp 16 n⟩
+def UInt16.ofNatClamp (n : Nat) : UInt16 := ⟨BitVec.ofNatClamp 16 n⟩
 
 @[inherit_doc UInt16.ofNatClamp, deprecated UInt16.ofNatClamp (since := "2026-05-04")]
-def UInt16.ofNatTruncate (n : Nat) : UInt16 :=
-  UInt16.ofNatClamp n
+def UInt16.ofNatTruncate (n : Nat) : UInt16 := UInt16.ofNatClamp n
 
 /--
 Converts a natural number to a 16-bit unsigned integer, wrapping on overflow.
@@ -153,12 +149,10 @@ the number is too large.
 
 Returns `2^32 - 1` for natural numbers greater than or equal to `2^32`.
 -/
-def UInt32.ofNatClamp (n : Nat) : UInt32 :=
-  ⟨BitVec.ofNatClamp 32 n⟩
+def UInt32.ofNatClamp (n : Nat) : UInt32 := ⟨BitVec.ofNatClamp 32 n⟩
 
 @[inherit_doc UInt32.ofNatClamp, deprecated UInt32.ofNatClamp (since := "2026-05-04")]
-def UInt32.ofNatTruncate (n : Nat) : UInt32 :=
-  UInt32.ofNatClamp n
+def UInt32.ofNatTruncate (n : Nat) : UInt32 := UInt32.ofNatClamp n
 /--
 Converts a natural number to a 32-bit unsigned integer, wrapping on overflow.
 
@@ -202,16 +196,15 @@ def UInt16.toUInt32 (a : UInt16) : UInt32 := ⟨⟨a.toNat, Nat.lt_trans a.toBit
 
 instance UInt32.instOfNat : OfNat UInt32 n := ⟨UInt32.ofNat n⟩
 
-theorem UInt32.ofNatLT_lt_of_lt {n m : Nat} (h1 : n < UInt32.size) (h2 : m < UInt32.size) :
-     n < m → UInt32.ofNatLT n h1 < UInt32.ofNat m := by
+theorem UInt32.ofNatLT_lt_of_lt {n m : Nat} (h1 : n < UInt32.size) (h2 : m < UInt32.size)
+    : n < m → UInt32.ofNatLT n h1 < UInt32.ofNat m := by
   simp only [(· < ·), BitVec.toNat, ofNatLT, BitVec.ofNatLT, ofNat, BitVec.ofNat,
     Fin.Internal.ofNat_eq_ofNat, Fin.ofNat, Nat.mod_eq_of_lt h2, imp_self]
 
-theorem UInt32.lt_ofNatLT_of_lt {n m : Nat} (h1 : n < UInt32.size) (h2 : m < UInt32.size) :
-     m < n → UInt32.ofNat m < UInt32.ofNatLT n h1 := by
-  simp only [(· < ·), BitVec.toNat, ofNatLT, BitVec.ofNatLT, ofNat, BitVec.ofNat, Fin.Internal.ofNat_eq_ofNat,
-    Fin.ofNat, Nat.mod_eq_of_lt h2, imp_self]
-
+theorem UInt32.lt_ofNatLT_of_lt {n m : Nat} (h1 : n < UInt32.size) (h2 : m < UInt32.size)
+    : m < n → UInt32.ofNat m < UInt32.ofNatLT n h1 := by
+  simp only [(· < ·), BitVec.toNat, ofNatLT, BitVec.ofNatLT, ofNat, BitVec.ofNat,
+    Fin.Internal.ofNat_eq_ofNat, Fin.ofNat, Nat.mod_eq_of_lt h2, imp_self]
 
 /--
 Adds two 32-bit unsigned integers, wrapping around on overflow. Usually accessed via the `+`
@@ -231,8 +224,8 @@ This function is overridden at runtime with an efficient implementation.
 @[extern "lean_uint32_sub", implicit_reducible]
 protected def UInt32.sub (a b : UInt32) : UInt32 := ⟨a.toBitVec - b.toBitVec⟩
 
-instance : Add UInt32       := ⟨UInt32.add⟩
-instance : Sub UInt32       := ⟨UInt32.sub⟩
+instance : Add UInt32 := ⟨UInt32.add⟩
+instance : Sub UInt32 := ⟨UInt32.sub⟩
 
 /-- Converts a `UInt64` into the corresponding `Fin UInt64.size`. -/
 def UInt64.toFin (x : UInt64) : Fin UInt64.size := x.toBitVec.toFin
@@ -256,12 +249,10 @@ the number is too large.
 
 Returns `2^64 - 1` for natural numbers greater than or equal to `2^64`.
 -/
-def UInt64.ofNatClamp (n : Nat) : UInt64 :=
-  ⟨BitVec.ofNatClamp 64 n⟩
+def UInt64.ofNatClamp (n : Nat) : UInt64 := ⟨BitVec.ofNatClamp 64 n⟩
 
 @[inherit_doc UInt64.ofNatClamp, deprecated UInt64.ofNatClamp (since := "2026-05-04")]
-def UInt64.ofNatTruncate (n : Nat) : UInt64 :=
-  UInt64.ofNatClamp n
+def UInt64.ofNatTruncate (n : Nat) : UInt64 := UInt64.ofNatClamp n
 /--
 Converts a natural number to a 64-bit unsigned integer, wrapping on overflow.
 
@@ -344,13 +335,12 @@ large.
 Returns `USize.size - 1`, which is  `2^64 - 1` or `2^32 - 1` depending on the platform, for natural
 numbers greater than or equal to `USize.size`.
 -/
-def USize.ofNatClamp (n : Nat) : USize :=
-  ⟨BitVec.ofNatClamp System.Platform.numBits n⟩
+def USize.ofNatClamp (n : Nat) : USize := ⟨BitVec.ofNatClamp System.Platform.numBits n⟩
 
 @[inherit_doc USize.ofNatClamp, deprecated USize.ofNatClamp (since := "2026-05-04")]
-def USize.ofNatTruncate (n : Nat) : USize :=
-  USize.ofNatClamp n
-@[inherit_doc USize.ofNat] abbrev Nat.toUSize := USize.ofNat
+def USize.ofNatTruncate (n : Nat) : USize := USize.ofNatClamp n
+@[inherit_doc USize.ofNat]
+abbrev Nat.toUSize := USize.ofNat
 /--
 Converts a word-sized unsigned integer to an arbitrary-precision natural number.
 
@@ -388,10 +378,10 @@ def USize.le (a b : USize) : Prop := a.toBitVec ≤ b.toBitVec
 
 instance USize.instOfNat : OfNat USize n := ⟨USize.ofNat n⟩
 
-instance : Add USize       := ⟨USize.add⟩
-instance : Sub USize       := ⟨USize.sub⟩
-instance : LT USize        := ⟨USize.lt⟩
-instance : LE USize        := ⟨USize.le⟩
+instance : Add USize := ⟨USize.add⟩
+instance : Sub USize := ⟨USize.sub⟩
+instance : LT USize := ⟨USize.lt⟩
+instance : LE USize := ⟨USize.le⟩
 
 /--
 Decides whether one word-sized unsigned integer is strictly less than another. Usually accessed via

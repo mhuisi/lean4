@@ -144,7 +144,8 @@ Defines a single mapping of the **open family** `f`, namely `f a = b`.
 See the module documentation of `Lake.Util.Family` for details on what an open
 family is in Lake.
 -/
-public class FamilyDef {α : Type u} {β : Type v} (f : α → β) (a : α) (b : semiOutParam β) : Prop where
+public class FamilyDef {α : Type u} {β : Type v} (f : α → β) (a : α) (b : semiOutParam β)
+    : Prop where
   fam_eq : f a = b
 
 /-- Like `FamilyDef`, but `b` is an `outParam`. -/
@@ -161,7 +162,8 @@ public instance [FamilyDef f a b] : FamilyOut f a b where
   fam_eq := FamilyDef.fam_eq
 
 /-- The identity relation. -/
-@[default_instance 0] public instance (priority := 0) : FamilyDef f a (f a) where
+@[default_instance 0]
+public instance (priority := 0) : FamilyDef f a (f a) where
   fam_eq := rfl
 
 /-- The constant type family. -/
@@ -169,12 +171,12 @@ public instance : FamilyDef (fun _ => b) a b where
   fam_eq := rfl
 
 /-- Cast a datum from its specific type to a general type family. -/
-@[macro_inline, expose] public def toFamily [FamilyOut F a β] (b : β) : F a :=
-  cast FamilyOut.fam_eq.symm b
+@[macro_inline, expose]
+public def toFamily [FamilyOut F a β] (b : β) : F a := cast FamilyOut.fam_eq.symm b
 
 /-- Cast a datum from a general type family to its specific type. -/
-@[macro_inline, expose] public def ofFamily [FamilyOut F a β] (b : F a) : β :=
-  cast FamilyOut.fam_eq b
+@[macro_inline, expose]
+public def ofFamily [FamilyOut F a β] (b : F a) : β := cast FamilyOut.fam_eq b
 
 open Lean in
 /--
@@ -189,14 +191,14 @@ of an axiom `Fam.foo : Fam 0 = Nat` and an instance of `FamilyDef`
 that uses this axiom for the index `0`.
 -/
 scoped macro (name := familyDef)
-  doc?:optional(docComment)
-  "family_def " id:ident " : " fam:ident idx:term " := " val:term
-: command => do
-  let tid := extractMacroScopes fam.getId |>.name
-  if let (tid, _) :: _ ← Macro.resolveGlobalName tid then
-    let app := Syntax.mkApp fam #[idx]
-    let axm := mkIdentFrom id (canonical := true) <| `_root_ ++ tid ++ id.getId
-    `($[$doc?]? @[simp] public axiom $axm : $app = $val
-    public instance : FamilyDef $fam $idx $val := ⟨$axm⟩)
-  else
-    Macro.throwErrorAt fam s!"unknown family `{tid}`"
+    doc?:optional(docComment) "family_def " id:ident " : " fam:ident idx:term " := " val:term
+    : command =>
+  do
+    let tid := extractMacroScopes fam.getId |>.name
+    if let (tid, _) :: _ ← Macro.resolveGlobalName tid then
+      let app := Syntax.mkApp fam #[idx]
+      let axm := mkIdentFrom id (canonical := true) <| `_root_ ++ tid ++ id.getId
+      `($[$doc?]? @[simp] public axiom $axm : $app = $val
+      public instance : FamilyDef $fam $idx $val := ⟨$axm⟩)
+    else
+      Macro.throwErrorAt fam s!"unknown family `{tid}`"

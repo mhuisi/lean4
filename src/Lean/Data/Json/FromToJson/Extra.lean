@@ -24,8 +24,8 @@ private def TreeMap.toJson [ToJson α] (map : Std.TreeMap String α compare) : J
   -- TODO(henrik): remove this after Q4
   Json.obj <| Std.TreeMap.Raw.mk <| Std.DTreeMap.Raw.mk json.inner.inner
 
-private def TreeMap.fromJson? {cmp} [FromJson α] (j : Json) :
-    Except String (Std.TreeMap String α cmp) := do
+private def TreeMap.fromJson? {cmp} [FromJson α] (j : Json)
+    : Except String (Std.TreeMap String α cmp) := do
   let o ← j.getObj?
   o.foldlM (fun x k v => x.insert k <$> Lean.fromJson? v) ∅
 
@@ -34,6 +34,5 @@ instance [ToJson α] : ToJson (Std.TreeMap String α compare) where
 
 instance {cmp} [FromJson α] : FromJson (Std.TreeMap String α cmp) where
   fromJson? := private TreeMap.fromJson?
-
 
 end Lean

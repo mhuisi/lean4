@@ -22,15 +22,16 @@ open Std.Iterators
 
 variable {α : Type u} {β : Type u}
 
-theorem Iter.uLift_eq_toIter_uLift_toIterM {it : Iter (α := α) β} :
-    it.uLift = (it.toIterM.uLift Id).toIter :=
+theorem Iter.uLift_eq_toIter_uLift_toIterM {it : Iter (α := α) β}
+    : it.uLift = (it.toIterM.uLift Id).toIter :=
   rfl
 
-theorem Iter.step_uLift [Iterator α Id β] {it : Iter (α := α) β} :
-    it.uLift.step = match it.step with
-      | .yield it' out h => .yield it'.uLift (.up out) ⟨_, h, rfl⟩
-      | .skip it' h => .skip it'.uLift ⟨_, h, rfl⟩
-      | .done h => .done ⟨_, h, rfl⟩ := by
+theorem Iter.step_uLift [Iterator α Id β] {it : Iter (α := α) β}
+    : it.uLift.step
+      = match it.step with
+        | .yield it' out h => .yield it'.uLift (.up out) ⟨_, h, rfl⟩
+        | .skip it' h => .skip it'.uLift ⟨_, h, rfl⟩
+        | .done h => .done ⟨_, h, rfl⟩ := by
   rw [Subtype.ext_iff]
   simp only [uLift_eq_toIter_uLift_toIterM, step, IterM.Step.toPure, toIterM_toIter,
     IterM.step_uLift, toIter_toIterM]
@@ -39,30 +40,28 @@ theorem Iter.step_uLift [Iterator α Id β] {it : Iter (α := α) β} :
   cases it.toIterM.step.run.inflate using PlausibleIterStep.casesOn <;> simp
 
 @[cbv_eval, simp]
-theorem Iter.toList_uLift [Iterator α Id β] {it : Iter (α := α) β}
-    [Finite α Id] :
-    it.uLift.toList = it.toList.map ULift.up := by
+theorem Iter.toList_uLift [Iterator α Id β] {it : Iter (α := α) β} [Finite α Id]
+    : it.uLift.toList = it.toList.map ULift.up := by
   simp only [uLift_eq_toIter_uLift_toIterM, IterM.toList_toIter]
   rw [IterM.toList_uLift]
   simp [monadLift, Iter.toList_eq_toList_toIterM]
 
 @[simp]
-theorem Iter.toListRev_uLift [Iterator α Id β] {it : Iter (α := α) β}
-    [Finite α Id] :
-    it.uLift.toListRev = it.toListRev.map ULift.up := by
+theorem Iter.toListRev_uLift [Iterator α Id β] {it : Iter (α := α) β} [Finite α Id]
+    : it.uLift.toListRev = it.toListRev.map ULift.up := by
   rw [toListRev_eq, toListRev_eq, toList_uLift, List.map_reverse]
 
 @[cbv_eval, simp]
-theorem Iter.toArray_uLift [Iterator α Id β] {it : Iter (α := α) β}
-    [Finite α Id] :
-    it.uLift.toArray = it.toArray.map ULift.up := by
+theorem Iter.toArray_uLift [Iterator α Id β] {it : Iter (α := α) β} [Finite α Id]
+    : it.uLift.toArray = it.toArray.map ULift.up := by
   rw [← toArray_toList, ← toArray_toList, toList_uLift]
   simp [-toArray_toList]
 
 @[simp]
-theorem Iter.length_uLift [Iterator α Id β] {it : Iter (α := α) β}
-    [Finite α Id] [IteratorLoop α Id Id] [LawfulIteratorLoop α Id Id] :
-    it.uLift.length = it.length := by
+theorem Iter.length_uLift
+    [Iterator α Id β]
+    {it : Iter (α := α) β} [Finite α Id] [IteratorLoop α Id Id] [LawfulIteratorLoop α Id Id]
+    : it.uLift.length = it.length := by
   simp only [uLift_eq_toIter_uLift_toIterM, length_eq_length_toIterM, toIterM_toIter]
   rw [IterM.length_uLift]
   simp [monadLift]

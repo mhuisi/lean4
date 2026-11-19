@@ -90,12 +90,14 @@ opaque BaseSharedMutex.unlockRead (mutex : @& BaseSharedMutex) : BaseIO Unit
 An exclusion primitive that allows a number of readers or at most one writer access to a shared
 state of type `α`.
 -/
-structure SharedMutex (α : Type) where private mk ::
+structure SharedMutex (α : Type) where
+  private mk ::
   private ref : IO.Ref α
   mutex : BaseSharedMutex
 deriving Nonempty
 
-instance : CoeOut (SharedMutex α) BaseSharedMutex where coe := SharedMutex.mutex
+instance : CoeOut (SharedMutex α) BaseSharedMutex where
+  coe := SharedMutex.mutex
 
 /-- Creates a new shared mutex. -/
 def SharedMutex.new (a : α) : BaseIO (SharedMutex α) :=
@@ -108,8 +110,9 @@ mutex for exclusive write access.
 Calling `mutex.atomically` while already holding the underlying `BaseSharedMutex` in the same thread
 is undefined behavior.
 -/
-def SharedMutex.atomically [Monad m] [MonadLiftT BaseIO m] [MonadFinally m]
-    (mutex : SharedMutex α) (k : AtomicT α m β) : m β := do
+def SharedMutex.atomically
+    [Monad m] [MonadLiftT BaseIO m] [MonadFinally m] (mutex : SharedMutex α) (k : AtomicT α m β)
+    : m β := do
   try
     mutex.mutex.write
     k mutex.ref
@@ -124,8 +127,9 @@ as `some`, otherwise `none`.
 Calling `mutex.tryAtomically` while already holding the underlying `BaseSharedMutex` in the same
 thread is undefined behavior.
 -/
-def SharedMutex.tryAtomically [Monad m] [MonadLiftT BaseIO m] [MonadFinally m]
-    (mutex : SharedMutex α) (k : AtomicT α m β) : m (Option β) := do
+def SharedMutex.tryAtomically
+    [Monad m] [MonadLiftT BaseIO m] [MonadFinally m] (mutex : SharedMutex α) (k : AtomicT α m β)
+    : m (Option β) := do
   if ← mutex.mutex.tryWrite then
     try
       some <$> k mutex.ref
@@ -141,8 +145,9 @@ for shared read access.
 Calling `mutex.atomicallyRead` while already holding the underlying `BaseSharedMutex` in the same
 thread is undefined behavior.
 -/
-def SharedMutex.atomicallyRead [Monad m] [MonadLiftT BaseIO m] [MonadFinally m]
-    (mutex : SharedMutex α) (k : ReaderT α m β) : m β := do
+def SharedMutex.atomicallyRead
+    [Monad m] [MonadLiftT BaseIO m] [MonadFinally m] (mutex : SharedMutex α) (k : ReaderT α m β)
+    : m β := do
   try
     mutex.mutex.read
     let state ← (mutex.ref.get : BaseIO α)
@@ -158,8 +163,9 @@ as `some`, otherwise `none`.
 Calling `mutex.tryAtomicallyRead` while already holding the underlying `BaseSharedMutex` in the
 same thread is undefined behavior.
 -/
-def SharedMutex.tryAtomicallyRead [Monad m] [MonadLiftT BaseIO m] [MonadFinally m]
-    (mutex : SharedMutex α) (k : ReaderT α m β) : m (Option β) := do
+def SharedMutex.tryAtomicallyRead
+    [Monad m] [MonadLiftT BaseIO m] [MonadFinally m] (mutex : SharedMutex α) (k : ReaderT α m β)
+    : m (Option β) := do
   if ← mutex.mutex.tryRead then
     try
       let state ← (mutex.ref.get : BaseIO α)

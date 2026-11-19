@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Henrik Böving
 -/
 module
+
 prelude
 public import Init.Data.Array.Basic
 import Init.Data.Bool
@@ -22,15 +23,14 @@ structure UnionFind.Node where
   parent : Nat
   rank : Nat
   next : Nat
-  deriving Inhabited
+deriving Inhabited
 
 public structure UnionFind where
   private arr : Array UnionFind.Node
 
 namespace UnionFind
 
-public def emptyWithCapacity (n : Nat) : UnionFind :=
-  ⟨Array.emptyWithCapacity n⟩
+public def emptyWithCapacity (n : Nat) : UnionFind := ⟨Array.emptyWithCapacity n⟩
 
 public instance : EmptyCollection UnionFind where
   emptyCollection := emptyWithCapacity 0
@@ -39,8 +39,7 @@ public instance : Inhabited UnionFind where
   default := {}
 
 @[inline]
-public def markLinear (uf : UnionFind) : UnionFind :=
-  ⟨uf.arr.markLinear⟩
+public def markLinear (uf : UnionFind) : UnionFind := ⟨uf.arr.markLinear⟩
 
 @[inline]
 public def size (uf : UnionFind) : Nat := uf.arr.size
@@ -51,20 +50,16 @@ public def push (uf : UnionFind) : UnionFind × Nat :=
   ⟨⟨uf.arr.push ⟨newNode, 0, newNode⟩⟩, newNode⟩
 
 @[inline]
-def node (uf : UnionFind) (node : Nat) : UnionFind.Node :=
-  uf.arr[node]!
+def node (uf : UnionFind) (node : Nat) : UnionFind.Node := uf.arr[node]!
 
 @[inline]
-def parent (uf : UnionFind) (node : Nat) : Nat :=
-  uf.node node |>.parent
+def parent (uf : UnionFind) (node : Nat) : Nat := uf.node node |>.parent
 
 @[inline]
-def rank (uf : UnionFind) (node : Nat) : Nat :=
-  uf.node node |>.rank
+def rank (uf : UnionFind) (node : Nat) : Nat := uf.node node |>.rank
 
 @[inline]
-public def next (uf : UnionFind) (node : Nat) : Nat :=
-  uf.node node |>.next
+public def next (uf : UnionFind) (node : Nat) : Nat := uf.node node |>.next
 
 public partial def find! (uf : UnionFind) (eqc : Nat) : UnionFind × Nat :=
   let parent := uf.parent eqc
@@ -116,21 +111,27 @@ public structure UnionFindIter where
 
 public instance [Pure m] : Std.Iterator UnionFindIter m Nat where
   IsPlausibleStep _ _ := True
-  step it := pure <| .deflate <|
-    let curr := it.internalState.current
-    if curr == it.internalState.start then
-      if it.internalState.first then
-        .yield { it with internalState.first := false, internalState.current := it.internalState.uf.next curr} curr trivial
+  step it :=
+    pure <| .deflate <|
+      let curr := it.internalState.current
+      if curr == it.internalState.start then
+        if it.internalState.first then
+          .yield
+            {
+              it with
+              internalState.first := false
+              internalState.current := it.internalState.uf.next curr
+            }
+            curr trivial
+        else
+          .done trivial
       else
-        .done trivial
-    else
-      .yield { it with internalState.current := it.internalState.uf.next curr } curr trivial
+        .yield { it with internalState.current := it.internalState.uf.next curr } curr trivial
 
-public instance [Pure m] [Monad n] : Std.IteratorLoop UnionFindIter m n :=
-  .defaultImplementation
+public instance [Pure m] [Monad n] : Std.IteratorLoop UnionFindIter m n := .defaultImplementation
 
-public def iterClassM (uf : UnionFind) (eqc : Nat) (m : Type → Type w') :
-    Std.IterM (α := UnionFindIter) m Nat :=
+public def iterClassM (uf : UnionFind) (eqc : Nat) (m : Type → Type w')
+    : Std.IterM (α := UnionFindIter) m Nat :=
   ⟨{ uf, start := eqc, current := eqc, first := true }⟩
 
 public def iterClass (uf : UnionFind) (eqc : Nat) : Std.Iter (α := UnionFindIter) Nat :=

@@ -28,29 +28,35 @@ and `xs` are the reverted local hypotheses. With `+levels`, the surrounding
 declaration's universe params become fresh level mvars instead of being
 substituted back. Returns the negated type and the mvar user names.
 -/
-private def mkImpossibleNegType (mainGoal : MVarId) (goalType : Expr)
-    (cfg : Parser.Tactic.ImpossibleConfig) :
-    MetaM (Expr × Array Name) := mainGoal.withContext do
-  let dummy ← mkFreshExprSyntheticOpaqueMVar goalType
-  let reverted ← dummy.mvarId!.revertAll
-  let revertedType ← reverted.getType
-  let r ← Closure.mkValueTypeClosure revertedType (mkConst ``True)
-    (zetaDelta := false)
-  let rTypeLevels ←
-    if cfg.levels then r.levelParams.mapM fun _ => mkFreshLevelMVar
-    else pure r.levelArgs
-  let rType := r.type.instantiateLevelParamsArray r.levelParams rTypeLevels
-  let negType ← forallBoundedTelescope rType (some r.exprArgs.size) fun ms revBody => do
-    let negBody ← if (← Meta.isProp revBody) then
-      pure (mkNot revBody)
-    else
-      mkArrow revBody (mkConst ``False)
-    mkForallFVars ms negBody
-  let mvarNames ← r.exprArgs.mapM fun mvarExpr => do
-    let .mvar mvarId := mvarExpr | return `x
-    let n := (← mvarId.getDecl).userName
-    return if n.isAnonymous then `x else n
-  return (negType, mvarNames)
+private def mkImpossibleNegType
+    (mainGoal : MVarId) (goalType : Expr) (cfg : Parser.Tactic.ImpossibleConfig)
+    : MetaM (Expr × Array Name) :=
+  mainGoal.withContext do
+    let dummy ← mkFreshExprSyntheticOpaqueMVar goalType
+    let reverted ← dummy.mvarId!.revertAll
+    let revertedType ← reverted.getType
+    let r ← Closure.mkValueTypeClosure revertedType (mkConst ``True) (zetaDelta := false)
+    let rTypeLevels ←
+      if cfg.levels then
+        r.levelParams.mapM fun _ => mkFreshLevelMVar
+      else
+        pure r.levelArgs
+    let rType := r.type.instantiateLevelParamsArray r.levelParams rTypeLevels
+    let negType ←
+      forallBoundedTelescope rType (some r.exprArgs.size) fun ms revBody => do
+        let negBody ←
+          if (← Meta.isProp revBody) then
+            pure (mkNot revBody)
+          else
+            mkArrow revBody (mkConst ``False)
+        mkForallFVars ms negBody
+    let mvarNames ←
+      r.exprArgs.mapM fun mvarExpr => do
+        let .mvar mvarId := mvarExpr
+          | return `x
+        let n := (← mvarId.getDecl).userName
+        return if n.isAnonymous then `x else n
+    return (negType, mvarNames)
 
 declare_config_elab elabImpossibleConfig Parser.Tactic.ImpossibleConfig
 
@@ -63,20 +69,19 @@ def evalImpossible : Tactic := fun stx => do
   let mainGoal ← getMainGoal
   let goalType ← mainGoal.withContext do instantiateMVars (← mainGoal.getType)
   if goalType.hasLevelMVar then
-    throwErrorAt kw "\
-      `impossible`: goal contains universe metavariables{indentExpr goalType}"
+    throwErrorAt kw
+      "\
+        `impossible`: goal contains universe metavariables{indentExpr goalType}"
   let (negType, mvarNames) ← mkImpossibleNegType mainGoal goalType cfg
   -- Admit before running the inner tactic so failures don't get an extra
   -- spurious "unsolved goals" from the outer `by`.
   admitGoal mainGoal
   let restGoals ← getUnsolvedGoals
-  let negMVarId :=
-    (← mkFreshExprMVarAt {} {} negType (kind := .syntheticOpaque)).mvarId!
+  let negMVarId := (← mkFreshExprMVarAt {} {} negType (kind := .syntheticOpaque)).mvarId!
   let (_, innerMVarId) ← negMVarId.introN mvarNames.size mvarNames.toList
   try
     setGoals [innerMVarId]
-    withTacticInfoContext byTk do
-      evalTactic tacs
+    withTacticInfoContext byTk do evalTactic tacs
     -- Report unsolved goals outside the `by` info node so that the goal view shows the goal of an
     -- empty block instead of "no goals" after admitting it.
     done
@@ -85,13 +90,15 @@ def evalImpossible : Tactic := fun stx => do
     -- over remaining (possibly level) mvars so a parametric counter-example
     -- is accepted.
     let proof ← instantiateMVars (mkMVar negMVarId)
-    let r ← Closure.mkValueTypeClosure (← instantiateMVars negType) proof
-      (zetaDelta := false)
+    let r ← Closure.mkValueTypeClosure (← instantiateMVars negType) proof (zetaDelta := false)
     let auxName ← mkAuxDeclName (kind := `_impossible)
     withOptions (Elab.async.set · false) do
-      addDecl <| .thmDecl
-        { name := auxName, levelParams := r.levelParams.toList,
-          type := r.type, value := r.value }
+      addDecl <| .thmDecl {
+        name := auxName
+        levelParams := r.levelParams.toList
+        type := r.type
+        value := r.value
+      }
   finally
     setGoals restGoals
 

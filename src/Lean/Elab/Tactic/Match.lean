@@ -16,9 +16,10 @@ open Meta
 
 open TSyntax.Compat in
 open Parser.Tactic in
-private def mkAuxiliaryMatchTerm (parentTag : Name) (matchTac : Syntax) : MacroM (Term × Array Syntax) := do
+private def mkAuxiliaryMatchTerm (parentTag : Name) (matchTac : Syntax)
+    : MacroM (Term × Array Syntax) := do
   let matchAlts := matchTac[5]
-  let alts      := matchAlts[0].getArgs
+  let alts := matchAlts[0].getArgs
   let mut newAlts := #[]
   let mut nextIdx := 1
   let mut newCases := #[]
@@ -31,7 +32,8 @@ private def mkAuxiliaryMatchTerm (parentTag : Name) (matchTac : Syntax) : MacroM
       if holeOrTacticSeq.isOfKind ``Parser.Term.syntheticHole then
         pure ()
       else if holeOrTacticSeq.isOfKind ``Parser.Term.hole then
-        let tag := if alts.size > 1 then parentTag ++ (`match).appendIndexAfter nextIdx else parentTag
+        let tag :=
+          if alts.size > 1 then parentTag ++ (`match).appendIndexAfter nextIdx else parentTag
         let holeName := mkIdentFrom holeOrTacticSeq tag
         let newHole ← `(?$holeName:ident)
         nextIdx := nextIdx + 1
@@ -39,16 +41,17 @@ private def mkAuxiliaryMatchTerm (parentTag : Name) (matchTac : Syntax) : MacroM
       else
         let newHole ← withFreshMacroScope `(?rhs)
         let newHoleId := newHole.raw[1]
-        let newCase ← `(tactic|
-          case $newHoleId:ident =>%$(alt[2])
-            -- annotate `| ... =>` with state after `case`
-            with_annotate_state $(mkNullNode #[alt[0], alt[2]]) skip
-            $holeOrTacticSeq)
+        let newCase ←
+          `(tactic|
+            case $newHoleId:ident =>%$(alt[2])
+              -- annotate `| ... =>` with state after `case`
+              with_annotate_state $(mkNullNode #[alt[0], alt[2]]) skip
+              $holeOrTacticSeq)
         newCases := newCases.push newCase
         alt := alt.setArg 3 newHole
       newAlts := newAlts.push alt
-  let result  := matchTac.setKind ``Parser.Term.«match»
-  let result  := result.setArg 5 (mkNode ``Parser.Term.matchAlts #[mkNullNode newAlts])
+  let result := matchTac.setKind ``Parser.Term.«match»
+  let result := result.setArg 5 (mkNode ``Parser.Term.matchAlts #[mkNullNode newAlts])
   return (result, newCases)
 
 @[builtin_tactic Lean.Parser.Tactic.match]
