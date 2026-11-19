@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Grind.Ring.Basic
 public import Lean.Meta.SynthInstance
@@ -12,44 +13,46 @@ namespace Lean.Meta.Grind.Arith
 
 /-- Returns `true` if `e` is a numeral and has type `Nat`. -/
 def isNatNum (e : Expr) : Bool := Id.run do
-  let_expr OfNat.ofNat _ _ inst := e | false
-  let_expr instOfNatNat _ := inst | false
+  let_expr OfNat.ofNat _ _ inst := e
+    | false
+  let_expr instOfNatNat _ := inst
+    | false
   true
 
 /-- Returns `true` if `e` is a nonnegative numeral and has type `Int`. -/
 def isNonnegIntNum (e : Expr) : Bool := Id.run do
-  let_expr OfNat.ofNat _ _ inst := e | false
-  let_expr instOfNat _ := inst | false
+  let_expr OfNat.ofNat _ _ inst := e
+    | false
+  let_expr instOfNat _ := inst
+    | false
   true
 
 /-- Returns `true` if `e` is a numeral and has type `Int`. -/
 def isIntNum (e : Expr) : Bool :=
   match_expr e with
   | Neg.neg _ inst e => Id.run do
-    let_expr Int.instNegInt := inst | false
+    let_expr Int.instNegInt := inst
+      | false
     isNonnegIntNum e
   | _ => isNonnegIntNum e
 
 /-- Returns `true` if `e` is a numeral supported by cutsat. -/
-def isNum (e : Expr) : Bool :=
-  isNatNum e || isIntNum e
+def isNum (e : Expr) : Bool := isNatNum e || isIntNum e
 
 /-- Returns `true` if `e` is of the form `Nat` -/
-def isNatType (e : Expr) : Bool :=
-  e.isConstOf ``Nat
+def isNatType (e : Expr) : Bool := e.isConstOf ``Nat
 
 /-- Returns `true` if `e` is of the form `Int` -/
-def isIntType (e : Expr) : Bool :=
-  e.isConstOf ``Int
+def isIntType (e : Expr) : Bool := e.isConstOf ``Int
 
 /-- Returns `true` if `e` is of the form `@instHAdd Nat instAddNat` -/
 def isInstAddNat (e : Expr) : Bool :=
-  let_expr instHAdd a b := e | false
+  let_expr instHAdd a b := e
+    | false
   isNatType a && b.isConstOf ``instAddNat
 
 /-- Returns `true` if `e` is `instLENat` -/
-def isInstLENat (e : Expr) : Bool :=
-  e.isConstOf ``instLENat
+def isInstLENat (e : Expr) : Bool := e.isConstOf ``instLENat
 
 /--
 Returns `some (a, b)` if `e` is of the form
@@ -58,7 +61,8 @@ Returns `some (a, b)` if `e` is of the form
 ```
 -/
 def isNatAdd? (e : Expr) : Option (Expr × Expr) :=
-  let_expr HAdd.hAdd _ _ _ i a b := e | none
+  let_expr HAdd.hAdd _ _ _ i a b := e
+    | none
   if isInstAddNat i then some (a, b) else none
 
 /--
@@ -68,14 +72,18 @@ Returns `true` if `e` is of the form
 ```
 -/
 def isNatAdd (e : Expr) : Bool :=
-  let_expr HAdd.hAdd _ _ _ i _ _ := e | false
+  let_expr HAdd.hAdd _ _ _ i _ _ := e
+    | false
   isInstAddNat i
 
 /-- Returns `some k` if `e` `@OfNat.ofNat Nat _ (instOfNatNat k)` -/
 def isNatNum? (e : Expr) : Option Nat := Id.run do
-  let_expr OfNat.ofNat _ _ inst := e | none
-  let_expr instOfNatNat k := inst | none
-  let .lit (.natVal k) := k | none
+  let_expr OfNat.ofNat _ _ inst := e
+    | none
+  let_expr instOfNatNat k := inst
+    | none
+  let .lit (.natVal k) := k
+    | none
   some k
 
 def isArithTerm (e : Expr) : Bool :=
@@ -118,8 +126,7 @@ partial def shrink (a : PArray Rat) (sz : Nat) : PArray Rat :=
 partial def resize (a : PArray Rat) (sz : Nat) : PArray Rat :=
   if a.size > sz then shrink a sz else go a
 where
-  go (a : PArray Rat) : PArray Rat :=
-    if a.size < sz then go (a.push 0) else a
+  go (a : PArray Rat) : PArray Rat := if a.size < sz then go (a.push 0) else a
 
 namespace CollectDecVars
 /-! Helper monad for collecting decision variables in `linarith` and `cutsat` -/
@@ -156,16 +163,16 @@ The function `toIntModuleExpr` converts a `CommRing` polynomial into
 a `IntModule` expression. We don't want this auxiliary expression to be
 internalized by the `CommRing` module since it uses a nonstandard encoding
 with `@HSMul.hSMul Int α α`, a virtual `One.one` constant, etc.
- -/
-def getIntModuleVirtualParent : Expr :=
-  mkConst ``____intModuleMarker____
+-/
+def getIntModuleVirtualParent : Expr := mkConst ``____intModuleMarker____
 
 def isIntModuleVirtualParent (parent? : Option Expr) : Bool :=
   match parent? with
   | none => false
   | some parent => parent == getIntModuleVirtualParent
 
-@[specialize] def split (cs : PArray α) (getCoeff : α → Int) : PArray α × Array (Int × α) := Id.run do
+@[specialize]
+def split (cs : PArray α) (getCoeff : α → Int) : PArray α × Array (Int × α) := Id.run do
   let mut cs' := {}
   let mut todo := #[]
   for c in cs do

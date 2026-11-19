@@ -26,7 +26,8 @@ universe u v w
 variable {α : Type u} {β : α → Type v} {γ : α → Type w} {cmp : α → α → Ordering}
 
 namespace Std.DTreeMap
-local instance : Coe (Type v) (α → Type v) where coe γ := fun _ => γ
+local instance : Coe (Type v) (α → Type v) where
+  coe γ := fun _ => γ
 open Std.DTreeMap.Internal (Impl)
 
 /--
@@ -47,8 +48,8 @@ Given a proof that such a mapping exists, retrieves the key-value pair with the 
 greater than or equal to the given key.
 -/
 @[inline]
-def getEntryGE [TransCmp cmp] (t : DTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, (cmp a k).isGE) :
-    (a : α) × β a :=
+def getEntryGE [TransCmp cmp] (t : DTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, (cmp a k).isGE)
+    : (a : α) × β a :=
   letI : Ord α := ⟨cmp⟩; Impl.getEntryGE k t.inner t.wf.ordered h
 
 /--
@@ -56,8 +57,8 @@ Given a proof that such a mapping exists, retrieves the key-value pair with the 
 greater than the given key.
 -/
 @[inline]
-def getEntryGT [TransCmp cmp] (t : DTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, cmp a k = .gt) :
-    (a : α) × β a :=
+def getEntryGT [TransCmp cmp] (t : DTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, cmp a k = .gt)
+    : (a : α) × β a :=
   letI : Ord α := ⟨cmp⟩; Impl.getEntryGT k t.inner t.wf.ordered h
 
 /--
@@ -65,8 +66,8 @@ Given a proof that such a mapping exists, retrieves the key-value pair with the 
 less than or equal to the given key.
 -/
 @[inline]
-def getEntryLE [TransCmp cmp] (t : DTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, (cmp a k).isLE) :
-    (a : α) × β a :=
+def getEntryLE [TransCmp cmp] (t : DTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, (cmp a k).isLE)
+    : (a : α) × β a :=
   letI : Ord α := ⟨cmp⟩; Impl.getEntryLE k t.inner t.wf.ordered h
 
 /--
@@ -74,8 +75,8 @@ Given a proof that such a mapping exists, retrieves the key-value pair with the 
 less than the given key.
 -/
 @[inline]
-def getEntryLT [TransCmp cmp] (t : DTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, cmp a k = .lt) :
-    (a : α) × β a :=
+def getEntryLT [TransCmp cmp] (t : DTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, cmp a k = .lt)
+    : (a : α) × β a :=
   letI : Ord α := ⟨cmp⟩; Impl.getEntryLT k t.inner t.wf.ordered h
 
 /--
@@ -119,8 +120,8 @@ Given a proof that such a mapping exists, retrieves the key-value pair with the 
 greater than or equal to the given key.
 -/
 @[inline]
-def getEntryGE [TransCmp cmp] (t : DTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, (cmp a k).isGE) :
-    α × β :=
+def getEntryGE [TransCmp cmp] (t : DTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, (cmp a k).isGE)
+    : α × β :=
   letI : Ord α := ⟨cmp⟩; Impl.Const.getEntryGE k t.inner t.wf.ordered h
 
 /--
@@ -128,8 +129,7 @@ Given a proof that such a mapping exists, retrieves the key-value pair with the 
 greater than the given key.
 -/
 @[inline]
-def getEntryGT [TransCmp cmp] (t : DTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, cmp a k = .gt) :
-    α × β :=
+def getEntryGT [TransCmp cmp] (t : DTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, cmp a k = .gt) : α × β :=
   letI : Ord α := ⟨cmp⟩; Impl.Const.getEntryGT k t.inner t.wf.ordered h
 
 /--
@@ -137,8 +137,8 @@ Given a proof that such a mapping exists, retrieves the key-value pair with the 
 less than or equal to the given key.
 -/
 @[inline]
-def getEntryLE [TransCmp cmp] (t : DTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, (cmp a k).isLE) :
-    α × β :=
+def getEntryLE [TransCmp cmp] (t : DTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, (cmp a k).isLE)
+    : α × β :=
   letI : Ord α := ⟨cmp⟩; Impl.Const.getEntryLE k t.inner t.wf.ordered h
 
 /--
@@ -146,8 +146,7 @@ Given a proof that such a mapping exists, retrieves the key-value pair with the 
 less than the given key.
 -/
 @[inline]
-def getEntryLT [TransCmp cmp] (t : DTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, cmp a k = .lt) :
-    α × β :=
+def getEntryLT [TransCmp cmp] (t : DTreeMap α β cmp) (k : α) (h : ∃ a ∈ t, cmp a k = .lt) : α × β :=
   letI : Ord α := ⟨cmp⟩; Impl.Const.getEntryLT k t.inner t.wf.ordered h
 
 end Const

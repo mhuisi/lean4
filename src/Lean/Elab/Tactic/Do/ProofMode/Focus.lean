@@ -14,15 +14,17 @@ namespace Lean.Elab.Tactic.Do.ProofMode
 open Std.Do SPred.Tactic ProofMode
 open Lean Elab.Tactic Meta
 
-/-- The result of focusing the context of a goal `goal : MGoal` on a particular hypothesis.
+/--
+The result of focusing the context of a goal `goal : MGoal` on a particular hypothesis.
 The focused hypothesis is returned as `focusHyp : Expr`, along with the
 residual `restHyps : Expr` and a `proof : Expr` for the property
-`goal.hyps ⊣⊢ₛ restHyps ∧ focusHyp`. -/
+`goal.hyps ⊣⊢ₛ restHyps ∧ focusHyp`.
+-/
 structure FocusResult where
   focusHyp : Expr
   restHyps : Expr
   proof : Expr
-  deriving Inhabited
+deriving Inhabited
 
 partial def focusHyp (u : Level) (σs : Expr) (e : Expr) (name : Name) : Option FocusResult := do
   if let some hyp := parseHyp? e then
@@ -52,18 +54,25 @@ def FocusResult.refl (u : Level) (σs : Expr) (restHyps : Expr) (focusHyp : Expr
   let proof := mkApp2 (mkConst ``SPred.bientails.refl [u]) σs (SPred.mkAnd! u σs restHyps focusHyp)
   { restHyps, focusHyp, proof }
 
-def FocusResult.restGoal (res : FocusResult) (goal : MGoal) : MGoal :=
-  { goal with hyps := res.restHyps }
+def FocusResult.restGoal (res : FocusResult) (goal : MGoal) : MGoal := {
+  goal with
+  hyps := res.restHyps
+}
 
-def FocusResult.recombineGoal (res : FocusResult) (goal : MGoal) : MGoal :=
-  { goal with hyps := SPred.mkAnd! goal.u goal.σs res.restHyps res.focusHyp }
+def FocusResult.recombineGoal (res : FocusResult) (goal : MGoal) : MGoal := {
+  goal with
+  hyps := SPred.mkAnd! goal.u goal.σs res.restHyps res.focusHyp
+}
 
 /-- Turn a proof for `(res.recombineGoal goal).toExpr` into one for `goal.toExpr`. -/
 def FocusResult.rewriteHyps (res : FocusResult) (goal : MGoal) : Expr → Expr :=
-  mkApp6 (mkConst ``Focus.rewrite_hyps [goal.u]) goal.σs goal.hyps (SPred.mkAnd! goal.u goal.σs res.restHyps res.focusHyp) goal.target res.proof
+  mkApp6 (mkConst ``Focus.rewrite_hyps [goal.u]) goal.σs goal.hyps
+    (SPred.mkAnd! goal.u goal.σs res.restHyps res.focusHyp) goal.target res.proof
 
 def MGoal.focusHypWithInfo (goal : MGoal) (name : Ident) : MetaM FocusResult := do
-  let some res := goal.focusHyp name.getId | throwError "unknown hypothesis `{name}`"
-  let some hyp := parseHyp? res.focusHyp | throwError "impossible; res.focusHyp not a hypothesis"
+  let some res := goal.focusHyp name.getId
+    | throwError "unknown hypothesis `{name}`"
+  let some hyp := parseHyp? res.focusHyp
+    | throwError "impossible; res.focusHyp not a hypothesis"
   addHypInfo name goal.σs hyp
   pure res

@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Henrik Böving
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 public import Lean.Meta.Sym.DSimp.DSimpM
@@ -36,11 +37,9 @@ public builtin_initialize bvExt : SolverExtension Caches ← registerSolverExten
 -- `bvExt` only stores caches, it has no solver methods.
 builtin_initialize bvExt.setMethods (enabled := fun _ => false)
 
-public def getCaches : GoalM Caches := do
-  bvExt.getState
+public def getCaches : GoalM Caches := do bvExt.getState
 
 @[inline]
-public def setCaches (caches : Caches) : GoalM Unit := do
-  bvExt.modifyState fun _ => caches
+public def setCaches (caches : Caches) : GoalM Unit := do bvExt.modifyState fun _ => caches
 
 end Lean.Meta.Grind.BVDecide

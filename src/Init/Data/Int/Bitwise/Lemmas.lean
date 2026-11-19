@@ -28,11 +28,9 @@ theorem shiftRight_eq (n : Int) (s : Nat) : n >>> s = Int.shiftRight n s := rfl
 theorem natCast_shiftRight (n s : Nat) : n >>> s = (n : Int) >>> s := rfl
 
 @[simp]
-theorem negSucc_shiftRight (m n : Nat) :
-    -[m+1] >>> n = -[m >>>n +1] := rfl
+theorem negSucc_shiftRight (m n : Nat) : -[m+1] >>> n = -[m >>> n+1] := rfl
 
-theorem shiftRight_add (i : Int) (m n : Nat) :
-    i >>> (m + n) = i >>> m >>> n := by
+theorem shiftRight_add (i : Int) (m n : Nat) : i >>> (m + n) = i >>> m >>> n := by
   simp only [shiftRight_eq, Int.shiftRight]
   cases i <;> simp [Nat.shiftRight_add]
 
@@ -42,8 +40,7 @@ grind_pattern shiftRight_add => i >>> (m + n) where
 grind_pattern shiftRight_add => i >>> m >>> n where
   i =/= 0
 
-theorem shiftRight_eq_div_pow (m : Int) (n : Nat) :
-    m >>> n = m / ((2 ^ n) : Nat) := by
+theorem shiftRight_eq_div_pow (m : Int) (n : Nat) : m >>> n = m / ((2 ^ n) : Nat) := by
   simp only [shiftRight_eq, Int.shiftRight, Nat.shiftRight_eq_div_pow]
   split
   · simp
@@ -51,12 +48,10 @@ theorem shiftRight_eq_div_pow (m : Int) (n : Nat) :
     rfl
 
 @[simp, grind =]
-theorem zero_shiftRight (n : Nat) : (0 : Int) >>> n = 0 := by
-  simp [Int.shiftRight_eq_div_pow]
+theorem zero_shiftRight (n : Nat) : (0 : Int) >>> n = 0 := by simp [Int.shiftRight_eq_div_pow]
 
 @[simp, grind =]
-theorem shiftRight_zero (n : Int) : n >>> 0 = n := by
-  simp [Int.shiftRight_eq_div_pow]
+theorem shiftRight_zero (n : Int) : n >>> 0 = n := by simp [Int.shiftRight_eq_div_pow]
 
 theorem le_shiftRight_of_nonpos {n : Int} {s : Nat} (h : n ≤ 0) : n ≤ n >>> s := by
   simp only [Int.shiftRight_eq, Int.shiftRight, Int.ofNat_eq_natCast]
@@ -82,15 +77,14 @@ theorem shiftRight_le_of_nonneg {n : Int} {s : Nat} (h : 0 ≤ n) : n >>> s ≤ 
     · have := Nat.shiftRight_le m s
       rw [ofNat_eq_natCast]
       omega
-  case _ _ _ m =>
-    omega
+  case _ _ _ m => omega
 
 theorem le_shiftRight_of_nonneg {n : Int} {s : Nat} (h : 0 ≤ n) : 0 ≤ (n >>> s) := by
   rw [Int.shiftRight_eq_div_pow]
   by_cases h' : s = 0
   · simp [h', h]
   · have := @Nat.pow_pos 2 s (by omega)
-    have := @Int.ediv_nonneg n (2^s) h (by norm_cast at *; omega)
+    have := @Int.ediv_nonneg n (2 ^ s) h (by norm_cast at *; omega)
     norm_cast at *
 
 theorem shiftRight_le_of_nonpos {n : Int} {s : Nat} (h : n ≤ 0) : (n >>> s) ≤ 0 := by
@@ -98,7 +92,8 @@ theorem shiftRight_le_of_nonpos {n : Int} {s : Nat} (h : n ≤ 0) : (n >>> s) �
   by_cases h' : s = 0
   · simp [h', h]
   · have : 1 < 2 ^ s := Nat.one_lt_two_pow (by omega)
-    have rl : n / 2 ^ s ≤ 0 := Int.ediv_nonpos_of_nonpos_of_neg (by omega) (by norm_cast at *; omega)
+    have rl : n / 2 ^ s ≤ 0 :=
+      Int.ediv_nonpos_of_nonpos_of_neg (by omega) (by norm_cast at *; omega)
     norm_cast at *
 
 @[simp, norm_cast]
@@ -113,8 +108,7 @@ theorem zero_shiftLeft (n : Nat) : (0 : Int) <<< n = 0 := by
 theorem shiftLeft_zero (n : Int) : n <<< 0 = n := by
   change Int.shiftLeft _ _ = _
   match n with
-  | Int.ofNat n
-  | Int.negSucc n => simp [Int.shiftLeft]
+  | Int.ofNat n | Int.negSucc n => simp [Int.shiftLeft]
 
 theorem shiftLeft_succ (m : Int) (n : Nat) : m <<< (n + 1) = (m <<< n) * 2 := by
   change Int.shiftLeft _ _ = Int.shiftLeft _ _ * 2
@@ -134,11 +128,9 @@ theorem shiftLeft_succ' (m : Int) (n : Nat) : m <<< (n + 1) = 2 * (m <<< n) := b
 theorem shiftLeft_eq (a : Int) (b : Nat) : a <<< b = a * 2 ^ b := by
   induction b with
   | zero => simp
-  | succ b ih =>
-    rw [shiftLeft_succ, ih, Int.pow_succ, Int.mul_assoc]
+  | succ b ih => rw [shiftLeft_succ, ih, Int.pow_succ, Int.mul_assoc]
 
-theorem shiftLeft_eq' (a : Int) (b : Nat) : a <<< b = a * (2 ^ b : Nat) := by
-  simp [shiftLeft_eq]
+theorem shiftLeft_eq' (a : Int) (b : Nat) : a <<< b = a * (2 ^ b : Nat) := by simp [shiftLeft_eq]
 
 theorem not_eq_neg_sub_one (a : Int) : ~~~a = -a - 1 := by
   cases a <;> simp [Complement.complement, Int.not, Int.negSucc_eq] <;> omega
@@ -150,19 +142,19 @@ theorem shiftLeft_add (a : Int) (b c : Nat) : a <<< (b + c) = a <<< b <<< c := b
 theorem shiftLeft_shiftRight_cancel (a : Int) (b : Nat) : a <<< b >>> b = a := by
   simp [shiftLeft_eq, shiftRight_eq_div_pow, mul_ediv_cancel _ (NeZero.ne _)]
 
-theorem shiftLeft_shiftRight_eq_shiftLeft_of_le {b c : Nat} (h : c ≤ b) (a : Int) :
-    a <<< b >>> c = a <<< (b - c) := by
+theorem shiftLeft_shiftRight_eq_shiftLeft_of_le {b c : Nat} (h : c ≤ b) (a : Int)
+    : a <<< b >>> c = a <<< (b - c) := by
   obtain ⟨b, rfl⟩ := h.dest
   simp [shiftLeft_eq, Int.pow_add, shiftRight_eq_div_pow, Int.mul_left_comm a,
     Int.mul_ediv_cancel_left _ (NeZero.ne _)]
 
-theorem shiftLeft_shiftRight_eq_shiftRight_of_le {b c : Nat} (h : b ≤ c) (a : Int) :
-    a <<< b >>> c = a >>> (c - b) := by
+theorem shiftLeft_shiftRight_eq_shiftRight_of_le {b c : Nat} (h : b ≤ c) (a : Int)
+    : a <<< b >>> c = a >>> (c - b) := by
   obtain ⟨c, rfl⟩ := h.dest
   simp [shiftRight_add]
 
-theorem shiftLeft_shiftRight_eq (a : Int) (b c : Nat) :
-    a <<< b >>> c = a <<< (b - c) >>> (c - b) := by
+theorem shiftLeft_shiftRight_eq (a : Int) (b c : Nat)
+    : a <<< b >>> c = a <<< (b - c) >>> (c - b) := by
   rcases Nat.le_total b c with h | h
   · simp [shiftLeft_shiftRight_eq_shiftRight_of_le h, Nat.sub_eq_zero_of_le h]
   · simp [shiftLeft_shiftRight_eq_shiftLeft_of_le h, Nat.sub_eq_zero_of_le h]
@@ -174,7 +166,7 @@ theorem shiftRight_shiftLeft_cancel {a : Int} {b : Nat} (h : 2 ^ b ∣ a) : a >>
 theorem add_shiftLeft (a b : Int) (n : Nat) : (a + b) <<< n = a <<< n + b <<< n := by
   simp [shiftLeft_eq, Int.add_mul]
 
-theorem neg_shiftLeft (a : Int) (n : Nat) : (-a) <<< n = -a <<< n := by
+theorem neg_shiftLeft (a : Int) (n : Nat) : (-a) <<< n = - a <<< n := by
   simp [Int.shiftLeft_eq, Int.neg_mul]
 
 theorem shiftLeft_mul (a b : Int) (n : Nat) : a <<< n * b = (a * b) <<< n := by
@@ -183,8 +175,8 @@ theorem shiftLeft_mul (a b : Int) (n : Nat) : a <<< n * b = (a * b) <<< n := by
 theorem mul_shiftLeft (a b : Int) (n : Nat) : a * b <<< n = (a * b) <<< n := by
   simp [shiftLeft_eq, Int.mul_assoc]
 
-theorem shiftLeft_mul_shiftLeft (a b : Int) (m n : Nat) :
-    a <<< m * b <<< n = (a * b) <<< (m + n) := by
+theorem shiftLeft_mul_shiftLeft (a b : Int) (m n : Nat)
+    : a <<< m * b <<< n = (a * b) <<< (m + n) := by
   simp [shiftLeft_mul, mul_shiftLeft, shiftLeft_add]
 
 @[simp]
@@ -198,25 +190,28 @@ theorem trailingZeros_eq_natAbs (i : Int) : i.trailingZeros = i.natAbs.trailingZ
 
 theorem trailingZeros_zero : trailingZeros 0 = 0 := rfl
 
-theorem trailingZeros_eq_zero_of_mod_eq {i : Int} (h : i % 2 = 1) :
-    Int.trailingZeros i = 0 := by
+theorem trailingZeros_eq_zero_of_mod_eq {i : Int} (h : i % 2 = 1) : Int.trailingZeros i = 0 := by
   apply Nat.trailingZeros_eq_zero_of_mod_eq
   have := Int.natAbs_emod i (by decide : (2 : Int) ≠ 0)
   simp only [h] at this
   split at this <;> omega
 
-theorem trailingZeros_two_mul_add_one (i : Int) :
-    Int.trailingZeros (2 * i + 1) = 0 := by
+theorem trailingZeros_two_mul_add_one (i : Int) : Int.trailingZeros (2 * i + 1) = 0 := by
   apply trailingZeros_eq_zero_of_mod_eq
   omega
 
-theorem trailingZeros_two_mul {i : Int} (h : i ≠ 0) :
-    Int.trailingZeros (2 * i) = Int.trailingZeros i + 1 := by
-  simpa [trailingZeros, Int.natAbs_mul] using
-    Nat.trailingZeros_two_mul (n := i.natAbs) (by omega)
+theorem trailingZeros_two_mul {i : Int} (h : i ≠ 0)
+    : Int.trailingZeros (2 * i) = Int.trailingZeros i + 1 := by
+  simpa [trailingZeros, Int.natAbs_mul] using Nat.trailingZeros_two_mul (n := i.natAbs) (by omega)
 
-theorem trailingZeros_def (i : Int) :
-    trailingZeros i = if i = 0 then 0 else if i % 2 = 0 then trailingZeros (i / 2) + 1 else 0 := by
+theorem trailingZeros_def (i : Int)
+    : trailingZeros i
+      = if i = 0 then
+          0
+        else if i % 2 = 0 then
+          trailingZeros (i / 2) + 1
+        else
+          0 := by
   by_cases hi : i = 0
   · simp [hi, trailingZeros_zero]
   rw [ite_eq_right hi]
@@ -227,8 +222,8 @@ theorem trailingZeros_def (i : Int) :
     simpa only [heq] using trailingZeros_two_mul hdiv
   · rw [ite_eq_right (by omega), trailingZeros_eq_zero_of_mod_eq h]
 
-theorem shiftRight_trailingZeros_mod_two {i : Int} (h : i ≠ 0) :
-    (i >>> i.trailingZeros) % 2 = 1 := by
+theorem shiftRight_trailingZeros_mod_two {i : Int} (h : i ≠ 0)
+    : (i >>> i.trailingZeros) % 2 = 1 := by
   rw (occs := .pos [2]) [← Int.emod_add_mul_ediv i 2]
   rcases i.emod_two_eq with h' | h' <;> rw [h']
   · rcases Int.dvd_of_emod_eq_zero h' with ⟨a, rfl⟩
@@ -239,19 +234,19 @@ theorem shiftRight_trailingZeros_mod_two {i : Int} (h : i ≠ 0) :
   · rwa [Int.add_comm, trailingZeros_two_mul_add_one, shiftRight_zero]
 termination_by i.natAbs
 
-theorem two_pow_trailingZeros_dvd {i : Int} (h : i ≠ 0) :
-    2 ^ i.trailingZeros ∣ i := by
+theorem two_pow_trailingZeros_dvd {i : Int} (h : i ≠ 0) : 2 ^ i.trailingZeros ∣ i := by
   rcases i.emod_two_eq with h' | h'
   · rcases Int.dvd_of_emod_eq_zero h' with ⟨a, rfl⟩
     simp only [ne_eq, Int.mul_eq_zero, Int.reduceEq, false_or] at h
     rw [trailingZeros_two_mul h, Int.pow_succ']
     exact Int.mul_dvd_mul_left _ (two_pow_trailingZeros_dvd h)
-  · rw (occs := .pos [1]) [← Int.emod_add_mul_ediv i 2, h', Int.add_comm, trailingZeros_two_mul_add_one]
+  · rw (occs := .pos [1]) [← Int.emod_add_mul_ediv i 2, h', Int.add_comm,
+      trailingZeros_two_mul_add_one]
     exact Int.one_dvd _
 termination_by i.natAbs
 
-theorem two_pow_trailingZeros_add_one_not_dvd {i : Int} (h : i ≠ 0) :
-    ¬ 2 ^ (i.trailingZeros + 1) ∣ i := by
+theorem two_pow_trailingZeros_add_one_not_dvd {i : Int} (h : i ≠ 0)
+    : ¬ 2 ^ (i.trailingZeros + 1) ∣ i := by
   intro hdvd
   have hodd := shiftRight_trailingZeros_mod_two h
   simp only [shiftRight_eq_div_pow, Int.natCast_pow, Int.cast_ofNat_Int] at hodd
@@ -259,8 +254,8 @@ theorem two_pow_trailingZeros_add_one_not_dvd {i : Int} (h : i ≠ 0) :
   have heven := Int.emod_eq_zero_of_dvd (Int.dvd_ediv_of_mul_dvd hdvd)
   omega
 
-theorem trailingZeros_shiftLeft {x : Int} (hx : x ≠ 0) (n : Nat) :
-    trailingZeros (x <<< n) = x.trailingZeros + n := by
+theorem trailingZeros_shiftLeft {x : Int} (hx : x ≠ 0) (n : Nat)
+    : trailingZeros (x <<< n) = x.trailingZeros + n := by
   have : NeZero x := ⟨hx⟩
   induction n <;> simp [Int.shiftLeft_succ', trailingZeros_two_mul (NeZero.ne _), *, Nat.add_assoc]
 

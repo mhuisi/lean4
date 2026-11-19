@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 import Init.Syntax
@@ -47,10 +48,10 @@ def pushRound : Collect Unit :=
   modify fun s => { s with rounds := s.rounds + 1, maxRounds := max s.maxRounds (s.rounds + 1) }
 
 /-- Records a case-split. Like `grind`, it resets the E-matching round counter. -/
-def resetRounds : Collect Unit :=
-  modify fun s => { s with rounds := 0 }
+def resetRounds : Collect Unit := modify fun s => { s with rounds := 0 }
 
-def collectInstantiateParams (params : Syntax.TSepArray `Lean.Parser.Tactic.Grind.thm ",") : Collect Unit := do
+def collectInstantiateParams (params : Syntax.TSepArray `Lean.Parser.Tactic.Grind.thm ",")
+    : Collect Unit := do
   for p in params.getElems do
     match p with
     | `(Lean.Parser.Tactic.Grind.thm| $lemma:grindLemma) =>
@@ -81,24 +82,36 @@ Tactics it does not know are conservatively counted as one E-matching round, see
 partial def collect (tac : TGrind) : Collect Unit := do
   match tac with
   | `(grind| sorry) => modify fun s => { s with hasSorry := true }
-  | `(grind| next => $$seq;*)
-  | `(grind| · $$seq;*) =>
-    collectSeq <| seq.getElems.toList.filterMap fun (step : TSyntax ``Parser.Tactic.Grind.grindStep) =>
-      match step with
-      | `(Parser.Tactic.Grind.grindStep| $tac:grind $[| $_:grind_filter]?) => some (tac : TGrind)
-      | _ => none
-  | `(grind| $tac₁:grind <;> $tac₂:grind) => collect tac₁; collect tac₂
-  | `(grind| cases $a:anchor) => pushAnchor a; resetRounds
-  | `(grind| cases $a:anchor/$_:num) => pushAnchor a; resetRounds
+  | `(grind| next => $$seq;*) | `(grind| · $$seq;*) =>
+    collectSeq <|
+      seq.getElems.toList.filterMap fun (step : TSyntax ``Parser.Tactic.Grind.grindStep) =>
+        match step with
+        | `(Parser.Tactic.Grind.grindStep| $tac:grind $[| $_:grind_filter]?) => some (tac : TGrind)
+        | _ => none
+  | `(grind| $tac₁:grind <;> $tac₂:grind) =>
+    collect tac₁; collect tac₂
+  | `(grind| cases $a:anchor) =>
+    pushAnchor a; resetRounds
+  | `(grind| cases $a:anchor/$_:num) =>
+    pushAnchor a; resetRounds
   | `(grind| use [$params,*]) =>
     pushRound
     collectInstantiateParams params
   | `(grind| instantiate $[only]? $[approx]? $[[$params?,*]]?) =>
     pushRound
-    let some params := params? | return ()
+    let some params := params?
+      | return ()
     collectInstantiateParams params
-  | `(grind| ring) | `(grind| lia) | `(grind| linarith) | `(grind| ac) | `(grind| mbtc)
-  | `(grind| done) | `(grind| skip) | `(grind| intros) | `(grind| by_contra) => return ()
+  | `(grind| ring)
+  | `(grind| lia)
+  | `(grind| linarith)
+  | `(grind| ac)
+  | `(grind| mbtc)
+  | `(grind| done)
+  | `(grind| skip)
+  | `(grind| intros)
+  | `(grind| by_contra) =>
+    return ()
   | _ => pushRound
 
 /--
@@ -123,22 +136,20 @@ partial def collectSeq : List TGrind → Collect Unit
       collectSeq rest
 end
 
-def main (seq : List TGrind) : Collect Unit :=
-  collectSeq seq
+def main (seq : List TGrind) : Collect Unit := collectSeq seq
 
 end Collector
 
 structure CollectResult where
-  hasSorry  : Bool
-  params    : Array TParam
-  anchors   : Array TParam
+  hasSorry : Bool
+  params : Array TParam
+  anchors : Array TParam
   /-- Maximum number of E-matching rounds between case-splits in a branch. -/
   maxRounds : Nat
 
 def collectParamsCore (seq : List TGrind) : CoreM CollectResult := do
   let (_, s) ← Collector.main seq |>.run {}
-  let anchors ← s.anchors.mapM fun anchor =>
-    `(Parser.Tactic.grindParam| $anchor:anchor)
+  let anchors ← s.anchors.mapM fun anchor => `(Parser.Tactic.grindParam| $anchor:anchor)
   return { s with anchors }
 
 def collectParams (seq : List TGrind) : CoreM (Array TParam) := do
@@ -150,7 +161,8 @@ Given a `grind` tactic sequence, extracts parameters and builds a terminal `fini
 The `extraParams` are additional parameters (e.g., from the original `finish?` call) that
 should always be included.
 -/
-public def mkFinishTactic (seq : List TGrind) (extraParams : Array TParam := #[]) : CoreM TGrind := do
+public def mkFinishTactic (seq : List TGrind) (extraParams : Array TParam := #[])
+    : CoreM TGrind := do
   let params := (← collectParams seq) ++ extraParams
   `(grind| finish only [$params,*])
 
@@ -167,16 +179,20 @@ If `seq` performs more than `ematchLimit` E-matching rounds between case-splits,
 set the `ematch` limit to that number. The search that produced `seq` may have performed more
 rounds because case-splits reset the round counter, even if they were pruned from `seq`.
 -/
-public def mkGrindOnlyTactics (cfg : TSyntax `Lean.Parser.Tactic.optConfig) (seq : List TGrind)
-    (extraParams : Array TParam := #[]) (ematchLimit : Nat) : CoreM (Array (TSyntax `tactic)) := do
+public def mkGrindOnlyTactics
+    (cfg : TSyntax `Lean.Parser.Tactic.optConfig) (seq : List TGrind)
+    (extraParams : Array TParam := #[])
+    (ematchLimit : Nat)
+    : CoreM (Array (TSyntax `tactic)) := do
   let { hasSorry, params, anchors, maxRounds } ← collectParamsCore seq
   if hasSorry then return #[]
   let params := if grind.debug.dropParams.get (← getOptions) then #[] else params
-  let cfg ← if maxRounds > ematchLimit then
-    let item ← `(Parser.Tactic.configItem| ($(mkIdent `ematch):ident := $(quote maxRounds)))
-    pure ⟨cfg.raw.setArg 0 (cfg.raw[0].setArgs (cfg.raw[0].getArgs.push item))⟩
-  else
-    pure cfg
+  let cfg ←
+    if maxRounds > ematchLimit then
+      let item ← `(Parser.Tactic.configItem| ($(mkIdent `ematch):ident := $(quote maxRounds)))
+      pure ⟨cfg.raw.setArg 0 (cfg.raw[0].setArgs (cfg.raw[0].getArgs.push item))⟩
+    else
+      pure cfg
   let allParams := params ++ anchors ++ extraParams
   let s₁ ← mkTac cfg allParams
   if anchors.isEmpty then
@@ -185,7 +201,8 @@ public def mkGrindOnlyTactics (cfg : TSyntax `Lean.Parser.Tactic.optConfig) (seq
     let s₂ ← mkTac cfg (params ++ extraParams)
     return #[s₁, s₂]
 where
-  mkTac (cfg : TSyntax `Lean.Parser.Tactic.optConfig) (params : Array TParam) : CoreM (TSyntax `tactic) :=
+  mkTac (cfg : TSyntax `Lean.Parser.Tactic.optConfig) (params : Array TParam)
+      : CoreM (TSyntax `tactic) :=
     if params.isEmpty then
       `(tactic| grind $cfg:optConfig only)
     else

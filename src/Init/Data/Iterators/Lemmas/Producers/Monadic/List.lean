@@ -24,24 +24,24 @@ open Std Std.Internal Std.Iterators Std.Iterators.Types
 variable {m : Type w → Type w'} {n : Type w → Type w''} [Monad m] {β : Type w}
 
 @[simp]
-theorem List.step_iterM_nil :
-    (([] : List β).iterM m).step = pure (.deflate ⟨.done, rfl⟩) := by
+theorem List.step_iterM_nil : (([] : List β).iterM m).step = pure (.deflate ⟨.done, rfl⟩) := by
   simp only [IterM.step, Iterator.step]; rfl
 
 @[simp]
-theorem List.step_iterM_cons {x : β} {xs : List β} :
-    ((x :: xs).iterM m).step = pure (.deflate ⟨.yield (xs.iterM m) x, rfl⟩) := by
+theorem List.step_iterM_cons {x : β} {xs : List β}
+    : ((x :: xs).iterM m).step = pure (.deflate ⟨.yield (xs.iterM m) x, rfl⟩) := by
   simp only [List.iterM, IterM.step, Iterator.step]
 
-theorem List.step_iterM {l : List β} :
-    (l.iterM m).step = match l with
-      | [] => pure (.deflate ⟨.done, rfl⟩)
-      | x :: xs => pure (.deflate ⟨.yield (xs.iterM m) x, rfl⟩) := by
+theorem List.step_iterM {l : List β}
+    : (l.iterM m).step
+      = match l with
+        | [] => pure (.deflate ⟨.done, rfl⟩)
+        | x :: xs => pure (.deflate ⟨.yield (xs.iterM m) x, rfl⟩) := by
   cases l <;> simp [List.step_iterM_cons, List.step_iterM_nil]
 
 @[simp, grind =]
-theorem List.toArray_iterM [LawfulMonad m] {β : Type w} {l : List β} :
-  (l.iterM m).toArray = pure l.toArray := by
+theorem List.toArray_iterM [LawfulMonad m] {β : Type w} {l : List β}
+    : (l.iterM m).toArray = pure l.toArray := by
   induction l with
   | nil =>
     rw [IterM.toArray_eq_match_step]
@@ -51,11 +51,10 @@ theorem List.toArray_iterM [LawfulMonad m] {β : Type w} {l : List β} :
     simp [List.step_iterM_cons, pure_bind, ih]
 
 @[simp, grind =]
-theorem List.toList_iterM [LawfulMonad m] {l : List β} :
-    (l.iterM m).toList = pure l := by
+theorem List.toList_iterM [LawfulMonad m] {l : List β} : (l.iterM m).toList = pure l := by
   rw [← IterM.toList_toArray, List.toArray_iterM, map_pure, List.toList_toArray]
 
 @[simp, grind =]
-theorem List.toListRev_iterM [LawfulMonad m] {l : List β} :
-    (l.iterM m).toListRev = pure l.reverse := by
+theorem List.toListRev_iterM [LawfulMonad m] {l : List β}
+    : (l.iterM m).toListRev = pure l.reverse := by
   simp [IterM.toListRev_eq, List.toList_iterM]

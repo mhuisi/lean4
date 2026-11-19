@@ -15,14 +15,14 @@ public section
 namespace Lean.Meta
 
 /--
-  A mapping that identifies definitionally equal expressions.
-  We implement it as a mapping from `HeadIndex` to `AssocList Expr α`.
+A mapping that identifies definitionally equal expressions.
+We implement it as a mapping from `HeadIndex` to `AssocList Expr α`.
 
-  Remark: this map may be quite inefficient if there are many `HeadIndex` collisions.
+Remark: this map may be quite inefficient if there are many `HeadIndex` collisions.
 -/
 structure KExprMap (α : Type) where
   map : PHashMap HeadIndex (AssocList Expr α) := {}
-  deriving Inhabited
+deriving Inhabited
 
 /-- Return `some v` if there is an entry `e ↦ v` in `m`. -/
 def KExprMap.find? (m : KExprMap α) (e : Expr) : MetaM (Option α) := do
@@ -47,7 +47,7 @@ private def updateList (ps : AssocList Expr α) (e : Expr) (v : α) : MetaM (Ass
 def KExprMap.insert (m : KExprMap α) (e : Expr) (v : α) : MetaM (KExprMap α) :=
   let k := e.toHeadIndex
   match m.map.find? k with
-  | none    => return { map := m.map.insert k (AssocList.cons e v AssocList.nil) }
+  | none => return { map := m.map.insert k (AssocList.cons e v AssocList.nil) }
   | some ps => return { map := m.map.insert k (← updateList ps e v) }
 
 end Lean.Meta

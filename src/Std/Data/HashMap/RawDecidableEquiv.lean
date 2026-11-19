@@ -19,8 +19,11 @@ open Std.DHashMap.Raw
 
 namespace Std.HashMap.Raw
 
-def instDecidableEquiv {α : Type u} {β : Type v} [BEq α] [LawfulBEq α] [Hashable α] [BEq β] [LawfulBEq β] {m₁ m₂ : Raw α β} (h₁ : m₁.WF) (h₂ : m₂.WF) : Decidable (m₁ ~m m₂) :=
-  let : Decidable (m₁.1 ~m m₂.1) := DHashMap.Raw.instDecidableEquiv h₁.out h₂.out;
+def instDecidableEquiv
+    {α : Type u} {β : Type v} [BEq α] [LawfulBEq α] [Hashable α] [BEq β] [LawfulBEq β]
+    {m₁ m₂ : Raw α β} (h₁ : m₁.WF) (h₂ : m₂.WF)
+    : Decidable (m₁ ~m m₂) :=
+  let : Decidable (m₁.1 ~m m₂.1) := DHashMap.Raw.instDecidableEquiv h₁.out h₂.out
   decidable_of_iff _ ⟨fun h => ⟨h⟩, fun h => h.1⟩
 
 end Std.HashMap.Raw

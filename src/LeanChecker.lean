@@ -27,25 +27,29 @@ unsafe def replayFromImports (module : Name) : IO Unit := do
     if (← pFile.pathExists) then
       fnames := fnames.push pFile
   let parts ← readModuleDataParts fnames
-  if h : parts.size = 0 then throw <| IO.userError "failed to read module data" else
-  let (mod, _) := parts[0]
-  let (_, s) ← importModulesCore mod.imports |>.run
-  let env ← finalizeImport s mod.imports {} 0 false false (isModule := true)
-  let mut newConstants := {}
-  -- Collect constants from last ("most private") part, which subsumes all prior ones
-  let lastPart := parts[parts.size-1].1
-  unless lastPart.constNames.size == lastPart.constants.size do
-    throw <| IO.userError s!"module {module} has {lastPart.constNames.size} constant names but {lastPart.constants.size} constants"
-  for name in lastPart.constNames, ci in lastPart.constants do
-    if newConstants.contains name then
-      throw <| IO.userError s!"module {module} declares '{name}' more than once"
-    newConstants := newConstants.insert name ci
-  discard <| env.toKernelEnv.replay newConstants
-  env.freeRegions
+  if h : parts.size = 0 then
+    throw <| IO.userError "failed to read module data"
+  else
+    let (mod, _) := parts[0]
+    let (_, s) ← importModulesCore mod.imports |>.run
+    let env ← finalizeImport s mod.imports {} 0 false false (isModule := true)
+    let mut newConstants := {}
+    -- Collect constants from last ("most private") part, which subsumes all prior ones
+    let lastPart := parts[parts.size - 1].1
+    unless lastPart.constNames.size == lastPart.constants.size do
+      throw <| IO.userError s!"module {module} has {lastPart.constNames.size} constant names but \
+        {lastPart.constants.size} constants"
+    for name in lastPart.constNames, ci in lastPart.constants do
+      if newConstants.contains name then
+        throw <| IO.userError s!"module {module} declares '{name}' more than once"
+      newConstants := newConstants.insert name ci
+    discard <| env.toKernelEnv.replay newConstants
+    env.freeRegions
 
 unsafe def replayFromFresh (module : Name) : IO Unit := do
-  Lean.withImportModules #[{module}] {} fun env => do
-    let imported := env.constants.map₁.foldl (fun m n c => m.insert n c) ({} : Std.HashMap Name ConstantInfo)
+  Lean.withImportModules #[{ module }] {} fun env => do
+    let imported :=
+      env.constants.map₁.foldl (fun m n c => m.insert n c) ({} : Std.HashMap Name ConstantInfo)
     discard <| (← mkEmptyEnvironment).toKernelEnv.replay imported
 
 /-- Read the name of the main module from the `lake-manifest`. -/
@@ -64,8 +68,8 @@ def getCurrentModule : IO Name := do
     return manifest.name.capitalize
 
 def checkExport (args : List String) (silent : Bool) : IO UInt32 := do
-  let [exportFile] := args |
-    throw <| IO.userError s!"Exactly one export file expected but got: {args}"
+  let [exportFile] := args
+    | throw <| IO.userError s!"Exactly one export file expected but got: {args}"
   IO.FS.withFile exportFile .read fun handle => do
     let exportEnv ← LeanExport.parseStream (.ofHandle handle)
     let env ← Lean.mkEmptyEnvironment
@@ -86,8 +90,9 @@ def checkExport (args : List String) (silent : Bool) : IO UInt32 := do
       let verifyTargets := `Quot :: quotTargets
       for quotTarget in verifyTargets do
         if let some info := origConstMap[quotTarget]? then
-          let some info' := kernelEnv.find? quotTarget |
-            throw <| .userError s!"Could not find quotient constant in final kernel env: {quotTarget}"
+          let some info' := kernelEnv.find? quotTarget
+            | throw <|
+                .userError s!"Could not find quotient constant in final kernel env: {quotTarget}"
           if info != info' then
             throw <| IO.userError s!"Quotient constant mismatch on: {quotTarget}"
       return 0
@@ -100,12 +105,13 @@ unsafe def checkOlean (args : List String) (fresh verbose silent : Bool) : IO UI
   let targets ← do
     match args with
     | [] => pure [← getCurrentModule]
-    | args => args.mapM fun arg => do
-      let mod := arg.toName
-      if mod.isAnonymous then
-        throw <| IO.userError s!"Could not resolve module: {arg}"
-      else
-        pure mod
+    | args =>
+      args.mapM fun arg => do
+        let mod := arg.toName
+        if mod.isAnonymous then
+          throw <| IO.userError s!"Could not resolve module: {arg}"
+        else
+          pure mod
   let mut targetModules := []
   let sp ← searchPathRef.get
   for target in targets do

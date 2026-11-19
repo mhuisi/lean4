@@ -49,18 +49,22 @@ private structure Admission where
   supported : Bool
   /-- The decision for uses as a conjunct. `.undef` means the callback has not run for this node. -/
   conjunct : LBool := .undef
-  deriving Inhabited
+deriving Inhabited
 
-/-- Determine viability bottom-up before evaluating atoms. Memoize the extra check on a
-conjunction's child separately so rejecting that use preserves its viability as a disjunct. -/
-private partial def inspect (canContribute : Expr → Bool)
-    (admitConjunct : Expr → (Expr → Bool) → m Bool) (e : Expr) : StateRefT (ExprStructMap Admission) m Admission := do
+/--
+Determine viability bottom-up before evaluating atoms. Memoize the extra check on a
+conjunction's child separately so rejecting that use preserves its viability as a disjunct.
+-/
+private partial def inspect
+    (canContribute : Expr → Bool) (admitConjunct : Expr → (Expr → Bool) → m Bool) (e : Expr)
+    : StateRefT (ExprStructMap Admission) m Admission := do
   let key : ExprStructEq := ⟨e⟩
   if let some result := (← get)[key]? then return result
   let recur := inspect canContribute admitConjunct
   let conjunct := fun c => do
     let info ← recur c
-    unless info.supported do return false
+    unless info.supported do
+      return false
     match info.conjunct with
     | .true => return true
     | .false => return false
@@ -69,7 +73,8 @@ private partial def inspect (canContribute : Expr → Bool)
       let result ← liftM (admitConjunct c fun sub => nodes[(sub : ExprStructEq)]?.any (·.supported))
       modify (·.insert c { info with conjunct := Bool.toLBool result })
       return result
-  let supported ← match_expr (meta := false) e with
+  let supported ←
+    match_expr (meta := false) e with
     | And a b => pure ((← conjunct a) || (← conjunct b))
     | Or a b =>
       -- One unsupported alternative rules out the disjunction. Try the shallower one first.
@@ -80,13 +85,16 @@ private partial def inspect (canContribute : Expr → Bool)
   modify (·.insert key info)
   return info
 
-/-- Evaluate the fold using three shortcuts. `skip?` supplies a cacheable result for a node.
+/--
+Evaluate the fold using three shortcuts. `skip?` supplies a cacheable result for a node.
 `skipConjunct?` supplies a result only to the enclosing conjunction, leaving other uses of the
-child free to visit it. `finishOr?` can finish a disjunction after its left child. -/
-private partial def visit {σ : Type} [Nonempty σ]
-    (atom : Expr → m σ) (and or : σ → σ → σ)
-    (skip? skipConjunct? : Expr → Option σ) (finishOr? : σ → Option σ) (e : Expr) :
-    MonadCacheT ExprStructEq σ m σ :=
+child free to visit it. `finishOr?` can finish a disjunction after its left child.
+-/
+private partial def visit
+    {σ : Type} [Nonempty σ]
+    (atom : Expr → m σ) (and or : σ → σ → σ) (skip? skipConjunct? : Expr → Option σ)
+    (finishOr? : σ → Option σ) (e : Expr)
+    : MonadCacheT ExprStructEq σ m σ :=
   checkCache (e : ExprStructEq) fun _ => do
     if let some result := skip? e then return result
     let recur := visit atom and or skip? skipConjunct? finishOr?
@@ -107,8 +115,7 @@ structure Summary (σ : Type) where
   private entries : ExprStructMap σ
 
 /-- Find a computed subformula summary. Subformulas skipped by the fold may be absent. -/
-def Summary.find? (s : Summary σ) (e : Expr) : Option σ :=
-  s.entries[(e : ExprStructEq)]?
+def Summary.find? (s : Summary σ) (e : Expr) : Option σ := s.entries[(e : ExprStructEq)]?
 
 /-- Run one fold with a fresh cache and retain the cache for `Summary.find?`. -/
 private def runFold (x : MonadCacheT ExprStructEq σ m σ) : m (Summary σ) := do
@@ -120,14 +127,19 @@ Fold in source order using the caller's cache. On a cache miss, `known? e = some
 the summary for `e` and skips its traversal. Reuse the cache across roots when the callbacks
 give each shared subformula the same meaning.
 -/
-def foldCachedM {σ : Type} [Nonempty σ] (atom : Expr → m σ) (and or : σ → σ → σ) (e : Expr)
-    (known? : Expr → Option σ := fun _ => none) : MonadCacheT ExprStructEq σ m σ :=
+def foldCachedM
+    {σ : Type} [Nonempty σ]
+    (atom : Expr → m σ) (and or : σ → σ → σ) (e : Expr)
+    (known? : Expr → Option σ := fun _ => none)
+    : MonadCacheT ExprStructEq σ m σ :=
   visit atom and or known? (fun _ => none) (fun _ => none) e
 
-/-- Fold left to right with a fresh cache. The grouping of `and` and `or` follows the source
-exactly, and `atom` runs once per structurally distinct atom. -/
-def foldM {σ : Type} [Nonempty σ] (atom : Expr → m σ) (and or : σ → σ → σ) (e : Expr) :
-    m (Summary σ) :=
+/--
+Fold left to right with a fresh cache. The grouping of `and` and `or` follows the source
+exactly, and `atom` runs once per structurally distinct atom.
+-/
+def foldM {σ : Type} [Nonempty σ] (atom : Expr → m σ) (and or : σ → σ → σ) (e : Expr)
+    : m (Summary σ) :=
   runFold (foldCachedM atom and or e)
 
 /--
@@ -145,14 +157,19 @@ it occurs as a conjunct. The same child may still contribute as a disjunct. The 
 `supported` returns true for subformulas found viable so far. A false result can also mean
 that inspection skipped the subformula.
 -/
-def foldRelevantM {σ : Type} (canContribute : Expr → Bool) (empty : σ) (isEmpty : σ → Bool)
-    (atom : Expr → m σ) (and or : σ → σ → σ) (e : Expr)
-    (admitConjunct : Expr → (Expr → Bool) → m Bool := fun _ _ => pure true) : m (Summary σ) := do
+def foldRelevantM
+    {σ : Type}
+    (canContribute : Expr → Bool) (empty : σ) (isEmpty : σ → Bool) (atom : Expr → m σ)
+    (and or : σ → σ → σ) (e : Expr)
+    (admitConjunct : Expr → (Expr → Bool) → m Bool := fun _ _ => pure true)
+    : m (Summary σ) := do
   have : Nonempty σ := ⟨empty⟩
   let (root, nodes) ← StateRefT'.run (ω := ω) (inspect canContribute admitConjunct e) {}
-  unless root.supported do return ⟨empty, ({} : ExprStructMap σ).insert e empty⟩
+  unless root.supported do
+    return ⟨empty, ({} : ExprStructMap σ).insert e empty⟩
   let skip? := fun (c : Expr) => if nodes[(c : ExprStructEq)]!.supported then none else some empty
-  let skipConjunct? := fun (c : Expr) => if nodes[(c : ExprStructEq)]!.conjunct == .false then some empty else none
+  let skipConjunct? := fun (c : Expr) =>
+    if nodes[(c : ExprStructEq)]!.conjunct == .false then some empty else none
   let finishOr? := fun x => if isEmpty x then some empty else none
   runFold (visit atom and or skip? skipConjunct? finishOr? e)
 
@@ -166,9 +183,10 @@ The cache stores implications `e → motive` so that occurrences of `e` under di
 hypotheses share a proof. The source and motive may use local variables and must have no
 loose bound variables.
 -/
-partial def prove {α : Type} [MonadError m] [MonadControlT MetaM m] [MonadLiftT MetaM m]
-    (source motive h : Expr) (support : Expr → Option α)
-    (proveAtom : α → Expr → Expr → m Expr) : m Expr := do
+partial def prove
+    {α : Type} [MonadError m] [MonadControlT MetaM m] [MonadLiftT MetaM m]
+    (source motive h : Expr) (support : Expr → Option α) (proveAtom : α → Expr → Expr → m Expr)
+    : m Expr := do
   return mkApp (← (go source).run) h
 where
   /-- Abstract over the hypothesis of `e` so the cached implication works in every branch. -/

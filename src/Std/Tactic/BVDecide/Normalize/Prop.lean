@@ -44,13 +44,9 @@ attribute [bv_normalize] eq_iff_iff
 end Frontend.Normalize
 
 open Classical in
-/--
-Encode `a` as a `Bool`. This is used by bv_decide to treat propositional variables.
--/
-noncomputable def Bool.ofProp (a : Prop) : Bool :=
-  decide a
+/-- Encode `a` as a `Bool`. This is used by bv_decide to treat propositional variables. -/
+noncomputable def Bool.ofProp (a : Prop) : Bool := decide a
 
-theorem Bool.eq_ofProp_eq_true (a : Prop) : a = (Bool.ofProp a = true) := by
-  simp [Bool.ofProp]
+theorem Bool.eq_ofProp_eq_true (a : Prop) : a = (Bool.ofProp a = true) := by simp [Bool.ofProp]
 
 end Std.Tactic.BVDecide

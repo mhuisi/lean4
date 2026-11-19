@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 import Lean.Meta.Tactic.Grind.Arith.IsRelevant
@@ -36,8 +37,10 @@ private def isCongruentCheck (e₁ e₂ : Expr) : GoalM Bool := do
     hasSameTypeI f g
 where
   go (e₁ e₂ : Expr) : GoalM Bool := do
-    let .app f _ := e₁ | return false
-    let .app g _ := e₂ | return false
+    let .app f _ := e₁
+      | return false
+    let .app g _ := e₂
+      | return false
     if isSameExpr f g then return true
     /-
     If the types are definitionally equal only with `default` transparency, we try shorter prefixes,
@@ -55,7 +58,9 @@ def addCongrTable (e : Expr) : GoalM Unit := do
     -/
     if e.isApp then
       unless (← isCongruentCheck e e') do
-        reportIssue! "found congruence between{indentExpr e}\nand{indentExpr e'}\nbut functions have different types"
+        reportIssue! "found congruence between{indentExpr e}\
+          \nand{indentExpr e'}\
+          \nbut functions have different types"
         return ()
     trace_goal[grind.debug.congr] "{e} = {e'}"
     if (← isEqCongrSymm e e') then
@@ -83,14 +88,18 @@ def addCongrTable (e : Expr) : GoalM Unit := do
     modify fun s => { s with congrTable := s.congrTable.insert { e } }
 where
   isEqCongrSymm (e e' : Expr) : GoalM Bool := do
-    let_expr Eq _ a₁ b₁ := e | return false
-    let_expr Eq _ a₂ b₂ := e' | return false
+    let_expr Eq _ a₁ b₁ := e
+      | return false
+    let_expr Eq _ a₂ b₂ := e'
+      | return false
     let goal ← get
     return goal.hasSameRoot a₁ b₂ && goal.hasSameRoot b₁ a₂
 
   swapCgrRepr (e e' : Expr) : GoalM Bool := do
-    let_expr Eq _ _ _ := e | return false
-    unless (← isEqFalse e) do return false
+    let_expr Eq _ _ _ := e
+      | return false
+    unless (← isEqFalse e) do
+      return false
     return !(← isEqFalse e')
 
 def updateIndicesFound (k : HeadIndex) : GoalM Unit := do
@@ -105,11 +114,13 @@ private def updateAppMap (e : Expr) : GoalM Unit := do
   let key := e.toHeadIndex
   updateIndicesFound key
   trace_goal[grind.debug.appMap] "{e} => {repr key}"
-  modify fun s => { s with
-    appMap := if let some es := s.appMap.find? key then
-      s.appMap.insert key (e :: es)
-    else
-      s.appMap.insert key [e]
+  modify fun s => {
+    s with
+    appMap :=
+      if let some es := s.appMap.find? key then
+        s.appMap.insert key (e :: es)
+      else
+        s.appMap.insert key [e]
   }
   saveAppOf key
 
@@ -117,7 +128,8 @@ private def forbiddenSplitTypes := [``Eq, ``HEq, ``True, ``False]
 
 /-- Returns `true` if `e` is of the form `@Eq Prop a b` -/
 def isMorallyIff (e : Expr) : Bool :=
-  let_expr Eq α _ _ := e | false
+  let_expr Eq α _ _ := e
+    | false
   α.isProp
 
 private def mkDefaultSplitInfo (e : Expr) : GrindM SplitInfo :=
@@ -145,17 +157,19 @@ private def checkAndAddSplitCandidate (e : Expr) : GoalM Unit := do
         else
           addDefaultSplitCandidate e
           return ()
-    let .const declName _  := e.getAppFn | return ()
-      if forbiddenSplitTypes.contains declName then
-        return ()
-      unless (← isInductivePredicate declName) do
-        return ()
-      if (← isSplit declName) then
-        addDefaultSplitCandidate e
-      else if (← getConfig).splitIndPred then
-        addDefaultSplitCandidate e
+    let .const declName _ := e.getAppFn
+      | return ()
+    if forbiddenSplitTypes.contains declName then
+      return ()
+    unless (← isInductivePredicate declName) do
+      return ()
+    if (← isSplit declName) then
+      addDefaultSplitCandidate e
+    else if (← getConfig).splitIndPred then
+      addDefaultSplitCandidate e
   | .fvar .. =>
-    let .const declName _ := (← whnf (← inferType e)).getAppFn | return ()
+    let .const declName _ := (← whnf (← inferType e)).getAppFn
+      | return ()
     if (← isSplit declName) then
       addDefaultSplitCandidate e
   | .forallE _ d _ _ =>
@@ -183,9 +197,12 @@ we want to rely on the fact that `cast h a` and `a` are in the same equivalence 
 private def pushCastHEqs (e : Expr) : GoalM Unit := do
   match_expr e with
   | f@cast α β h a => pushHEq e a (mkApp4 (mkConst ``cast_heq f.constLevels!) α β h a)
-  | f@Eq.rec α a motive v b h => pushHEq e v (mkApp6 (mkConst ``Grind.eqRec_heq f.constLevels!) α a motive v b h)
-  | f@Eq.ndrec α a motive v b h => pushHEq e v (mkApp6 (mkConst ``Grind.eqNDRec_heq f.constLevels!) α a motive v b h)
-  | f@Eq.recOn α a motive b h v => pushHEq e v (mkApp6 (mkConst ``Grind.eqRecOn_heq f.constLevels!) α a motive b h v)
+  | f@Eq.rec α a motive v b h =>
+    pushHEq e v (mkApp6 (mkConst ``Grind.eqRec_heq f.constLevels!) α a motive v b h)
+  | f@Eq.ndrec α a motive v b h =>
+    pushHEq e v (mkApp6 (mkConst ``Grind.eqNDRec_heq f.constLevels!) α a motive v b h)
+  | f@Eq.recOn α a motive b h v =>
+    pushHEq e v (mkApp6 (mkConst ``Grind.eqRecOn_heq f.constLevels!) α a motive b h v)
   | _ => return ()
 
 private def mkENode' (e : Expr) (generation : Nat) (funCC := false) : GoalM Unit :=
@@ -204,12 +221,14 @@ would be preprocessed and asserted again each time. We may want a general mechan
 propagators that run only once. A solver extension would also work, but it is too heavy for this.
 -/
 private def propagateSubtypeMk (e : Expr) : GoalM Unit := do
-  let_expr Subtype.mk _ p v h := e | return ()
+  let_expr Subtype.mk _ p v h := e
+    | return ()
   let prop := p.beta #[v]
   pushNewFact' prop (mkExpectedPropHint h prop) (← getGeneration e)
 
 /-- Internalizes the nested ground terms in the given pattern. -/
-private partial def internalizePattern (pattern : Expr) (generation : Nat) (origin : Origin) : GoalM Expr := do
+private partial def internalizePattern (pattern : Expr) (generation : Nat) (origin : Origin)
+    : GoalM Expr := do
   -- Recall that it is important to ensure patterns are maximally shared since
   -- we assume that in functions such as `getAppsOf` in `EMatch.lean`
   -- **Note**: We disable `shareCommonChecks` because patterns contain
@@ -221,24 +240,25 @@ where
       return pattern
     else if let some e := groundPattern? pattern then
       let e ← preprocessLight e
-      let e ← if e.hasLevelParam && origin matches .decl _ then
-        /-
-        If `e` has universe parameters and it is **not** local. That is,
-        it contains the universe parameters of some global theorem.
-        Then, we convert `e`'s universe parameters into universe meta-variables.
-        Remark: it is pointless to internalize the result because it contains these helper meta-variables.
-        Remark: universe polymorphic ground patterns are not common, but they do occur in the
-        core library.
-        -/
-        let ps := collectLevelParams {} e |>.params
-        let us ← ps.mapM fun _ => mkFreshLevelMVar
-        pure <| e.instantiateLevelParamsArray ps us
-      else
-        internalize e generation none
-        pure e
+      let e ←
+        if e.hasLevelParam && origin matches .decl _ then
+          /-
+          If `e` has universe parameters and it is **not** local. That is,
+          it contains the universe parameters of some global theorem.
+          Then, we convert `e`'s universe parameters into universe meta-variables.
+          Remark: it is pointless to internalize the result because it contains these helper meta-variables.
+          Remark: universe polymorphic ground patterns are not common, but they do occur in the
+          core library.
+          -/
+          let ps := collectLevelParams {} e |>.params
+          let us ← ps.mapM fun _ => mkFreshLevelMVar
+          pure <| e.instantiateLevelParamsArray ps us
+        else
+          internalize e generation none
+          pure e
       return mkGroundPattern e
-    else pattern.withApp fun f args => do
-      return mkAppN f (← args.mapM go)
+    else
+      pattern.withApp fun f args => do return mkAppN f (← args.mapM go)
 
 /-- Internalizes the `MatchCond` gadget. -/
 private def internalizeMatchCond (matchCond : Expr) (generation : Nat) : GoalM Unit := do
@@ -266,8 +286,10 @@ where
   We should try to find a better and more general approach for handling the example above.
   -/
   internalizeSimpleMatchCondImp : GoalM Unit := do
-    let_expr Grind.MatchCond e := matchCond | return ()
-    let .forallE _ d b _ := e | return ()
+    let_expr Grind.MatchCond e := matchCond
+      | return ()
+    let .forallE _ d b _ := e
+      | return ()
     if b.hasLooseBVars then return ()
     if (← isProp d) then
       internalize e generation
@@ -277,7 +299,11 @@ def preprocessTheorem (thm : EMatchTheorem) (generation : Nat) : GoalM EMatchThe
   -- Recall that we use the proof as part of the key for a set of instances found so far.
   -- We don't want to use structural equality when comparing keys.
   let proof ← shareCommon thm.proof
-  return { thm with proof, patterns := (← thm.patterns.mapM (internalizePattern · generation thm.origin)) }
+  return {
+    thm with
+    proof
+    patterns := (← thm.patterns.mapM (internalizePattern · generation thm.origin))
+  }
 
 def activateTheorem (thm : EMatchTheorem) (generation : Nat) : GoalM Unit := do
   let thm ← preprocessTheorem thm generation
@@ -290,7 +316,8 @@ adds its equations to `newThms`.
 -/
 private def addMatchEqns (f : Expr) (generation : Nat) : GoalM Unit := do
   if !(← getConfig).matchEqs then return ()
-  let .const declName _ := f | return ()
+  let .const declName _ := f
+    | return ()
   if !(← isMatcher declName) then return ()
   if (← get).ematch.matchEqNames.contains declName then return ()
   modify fun s => { s with ematch.matchEqNames := s.ematch.matchEqNames.insert declName }
@@ -300,11 +327,11 @@ private def addMatchEqns (f : Expr) (generation : Nat) : GoalM Unit := do
     activateTheorem (← mkEMatchEqTheorem eqn (normalizePattern := false)) generation
 
 @[specialize]
-private def activateTheoremsCore [TheoremLike α] (declName : Name)
-    (getThms : GoalM (TheoremsArray α))
-    (setThms : TheoremsArray α → GoalM Unit)
-    (reinsertThm : α → GoalM Unit)
-    (activateThm : α → GoalM Unit) : GoalM Unit := do
+private def activateTheoremsCore
+    [TheoremLike α]
+    (declName : Name) (getThms : GoalM (TheoremsArray α)) (setThms : TheoremsArray α → GoalM Unit)
+    (reinsertThm : α → GoalM Unit) (activateThm : α → GoalM Unit)
+    : GoalM Unit := do
   if let some (thms, s) := (← getThms).retrieve? declName then
     setThms s
     for thm in thms do
@@ -312,9 +339,9 @@ private def activateTheoremsCore [TheoremLike α] (declName : Name)
       trace_goal[grind.debug.theorem.activate] "`{declName}` => `{origin.key}`"
       unless s.isErased origin do
         let indicesFound := (← get).indicesFound
-        let symbols      := TheoremLike.getSymbols thm
-        let symbols      := symbols.filter fun sym => !indicesFound.contains sym
-        let thm          := TheoremLike.setSymbols thm symbols
+        let symbols := TheoremLike.getSymbols thm
+        let symbols := symbols.filter fun sym => ! indicesFound.contains sym
+        let thm := TheoremLike.setSymbols thm symbols
         match symbols with
         | [] =>
           trace_goal[grind.debug.theorem.activate] "`{origin.key}`"
@@ -329,8 +356,10 @@ private def activateTheoremPatterns (fName : Name) (generation : Nat) : GoalM Un
     (fun thm => modify fun s => { s with ematch.thmMap := s.ematch.thmMap.insert thm })
     (fun thm => activateTheorem thm generation)
 
-private def mkEMatchTheoremWithKind'? (origin : Origin) (levelParams : Array Name) (proof : Expr) (kind : EMatchTheoremKind)
-    (symPrios : SymbolPriorities) : MetaM (Option EMatchTheorem) := do
+private def mkEMatchTheoremWithKind'?
+    (origin : Origin) (levelParams : Array Name) (proof : Expr) (kind : EMatchTheoremKind)
+    (symPrios : SymbolPriorities)
+    : MetaM (Option EMatchTheorem) := do
   try
     mkEMatchTheoremWithKind? origin levelParams proof kind symPrios (minIndexable := true)
   catch _ =>
@@ -340,10 +369,12 @@ def activateInjectiveTheorem (injThm : InjectiveTheorem) (generation : Nat) : Go
   let type ← inferType injThm.proof
   if type.isForall then
     let symPrios ← getSymbolPriorities
-    let thm? ← mkEMatchTheoremWithKind'? injThm.origin injThm.levelParams injThm.proof .fwd symPrios
-      <||>
-      mkEMatchTheoremWithKind'? injThm.origin injThm.levelParams injThm.proof (.default false) symPrios
-    let some thm := thm? | reportIssue! "failed to assert injectivity theorem `{injThm.origin.pp}`"
+    let thm? ←
+      mkEMatchTheoremWithKind'? injThm.origin injThm.levelParams injThm.proof .fwd symPrios
+        <||> mkEMatchTheoremWithKind'? injThm.origin injThm.levelParams injThm.proof
+          (.default false) symPrios
+    let some thm := thm?
+      | reportIssue! "failed to assert injectivity theorem `{injThm.origin.pp}`"
     activateTheorem thm generation
   else
     addNewRawFact injThm.proof type generation (.inj injThm.origin) .other
@@ -375,8 +406,9 @@ private def activateTheoremsForConstsIn (e : Expr) (generation : Nat) : GoalM Un
       activateTheorems declName generation
       return false
     | .app .. =>
-      let .const declName _ := e.getAppFn | return true
-      return !isOpaqueForIndexing declName
+      let .const declName _ := e.getAppFn
+        | return true
+      return ! isOpaqueForIndexing declName
     | _ => return true
 
 /--
@@ -393,39 +425,44 @@ by `simp` (i.e., in the `grind` preprocessor), and `grind` would never see
 these facts.
 -/
 private def propagateEtaStruct (a : Expr) (generation : Nat) : GoalM Unit := do
-  unless (← getConfig).etaStruct do return ()
+  unless (← getConfig).etaStruct do
+    return ()
   let aType ← whnf (← inferType a)
-  matchConstNonRecStructure aType.getAppFn (fun _ => return ()) fun inductVal us ctorVal => do
-    unless a.isAppOf ctorVal.name do
-      -- TODO: remove ctorVal.numFields after update stage0
-      if (← isExtTheorem inductVal.name) || ctorVal.numFields == 0 then
-        let params := aType.getAppArgs[*...inductVal.numParams]
-        let mut ctorApp := mkAppN (mkConst ctorVal.name us) params
-        for j in *...ctorVal.numFields do
-          let mut proj ← mkProjFn ctorVal us params j a
-          if (← isProof proj) then
-            proj ← markProof proj
-          ctorApp := mkApp ctorApp proj
-        ctorApp ← preprocessLight ctorApp
-        let u ← getLevel aType
-        let expectedProp := mkApp3 (mkConst ``Eq [u]) aType a ctorApp
-        let proof := mkExpectedPropHint (mkApp2 (mkConst ``Eq.refl [u]) aType a) expectedProp
-        /-
-        **Note**: We must not internalize `ctorApp` here. Suppose `g : Nat → {x : Int // p x}`, and
-        we are internalizing `(g y).val`. Its `ENode` is created before its arguments are visited, so
-        `(g y).val` is in progress when we internalize its argument `g y` and reach this point with
-        `a := g y`. Then `ctorApp` is `⟨(g y).val, (g y).property⟩`, which contains the in-progress
-        application `(g y).val`. Internalizing it now would treat `(g y).val` as complete and hand it to
-        the solver hooks with missing arguments (e.g., `lia` fails with "term has not been internalized").
-        Thus, we queue `ctorApp` and the equality `a = ctorApp`; they are processed by `processToDo`
-        when no application is in progress. See the section on re-entrant internalization below and #16101.
-        -/
-        pushInternalizeRhsAddEq a ctorApp proof generation
+  matchConstNonRecStructure aType.getAppFn
+    (fun _ => return ())
+    fun inductVal us ctorVal => do
+      unless a.isAppOf ctorVal.name do
+        -- TODO: remove ctorVal.numFields after update stage0
+        if (← isExtTheorem inductVal.name) || ctorVal.numFields == 0 then
+          let params := aType.getAppArgs[*...inductVal.numParams]
+          let mut ctorApp := mkAppN (mkConst ctorVal.name us) params
+          for j in *...ctorVal.numFields do
+            let mut proj ← mkProjFn ctorVal us params j a
+            if (← isProof proj) then
+              proj ← markProof proj
+            ctorApp := mkApp ctorApp proj
+          ctorApp ← preprocessLight ctorApp
+          let u ← getLevel aType
+          let expectedProp := mkApp3 (mkConst ``Eq [u]) aType a ctorApp
+          let proof := mkExpectedPropHint (mkApp2 (mkConst ``Eq.refl [u]) aType a) expectedProp
+          /-
+          **Note**: We must not internalize `ctorApp` here. Suppose `g : Nat → {x : Int // p x}`, and
+          we are internalizing `(g y).val`. Its `ENode` is created before its arguments are visited, so
+          `(g y).val` is in progress when we internalize its argument `g y` and reach this point with
+          `a := g y`. Then `ctorApp` is `⟨(g y).val, (g y).property⟩`, which contains the in-progress
+          application `(g y).val`. Internalizing it now would treat `(g y).val` as complete and hand it to
+          the solver hooks with missing arguments (e.g., `lia` fails with "term has not been internalized").
+          Thus, we queue `ctorApp` and the equality `a = ctorApp`; they are processed by `processToDo`
+          when no application is in progress. See the section on re-entrant internalization below and #16101.
+          -/
+          pushInternalizeRhsAddEq a ctorApp proof generation
 
-/-- Returns `true` if we can ignore `ext` for functions occurring as arguments of a `declName`-application. -/
+/--
+Returns `true` if we can ignore `ext` for functions occurring as arguments of a `declName`-application.
+-/
 private def extParentsToIgnore (declName : Name) : Bool :=
   declName == ``Eq || declName == ``HEq || declName == ``dite || declName == ``ite
-  || declName == ``Exists || declName == ``Subtype
+    || declName == ``Exists || declName == ``Subtype
 
 /--
 Given a term `arg` that occurs as the argument at position `i` of an `f`-application `parent?`,
@@ -442,9 +479,12 @@ example (f : (Nat → Nat) → Nat) : a = b → f (fun x => a + x) = f (fun x =>
   grind
 ```
 -/
-private def addSplitCandidatesForExt (arg : Expr) (generation : Nat) (parent? : Option Expr := none) : GoalM Unit := do
-  let some parent := parent? | return ()
-  unless parent.isApp do return ()
+private def addSplitCandidatesForExt (arg : Expr) (generation : Nat) (parent? : Option Expr := none)
+    : GoalM Unit := do
+  let some parent := parent?
+    | return ()
+  unless parent.isApp do
+    return ()
   let f := parent.getAppFn
   if let .const declName _ := f then
     if extParentsToIgnore declName then return ()
@@ -453,7 +493,7 @@ private def addSplitCandidatesForExt (arg : Expr) (generation : Nat) (parent? : 
   -- We may add an option to enable that in the future.
   let u? ← typeFormerTypeLevel type
   if u? != .none && u? != some .zero then return ()
-  let mut i  := parent.getAppNumArgs
+  let mut i := parent.getAppNumArgs
   let mut it := parent
   repeat
     if !it.isApp then return ()
@@ -479,12 +519,18 @@ where
         -- else
         let currSplitSource := (← readThe Context).splitSource
         addSplitCandidate (.arg other.app parent i eq currSplitSource)
-    modify fun s => { s with split.argsAt := s.split.argsAt.insert (f, i) ({ arg, type, app := parent } :: others) }
+    modify fun s => {
+      s with
+      split.argsAt := s.split.argsAt.insert (f, i) ({ arg, type, app := parent } :: others)
+    }
     return ()
 
 /-- Applies `addSplitCandidatesForExt` if `funext` is enabled. -/
-private def addSplitCandidatesForFunext (arg : Expr) (generation : Nat) (parent? : Option Expr := none) : GoalM Unit := do
-  unless (← getConfig).funext do return ()
+private def addSplitCandidatesForFunext
+    (arg : Expr) (generation : Nat) (parent? : Option Expr := none)
+    : GoalM Unit := do
+  unless (← getConfig).funext do
+    return ()
   addSplitCandidatesForExt arg generation parent?
 
 /--
@@ -498,9 +544,7 @@ private def tryEta (e : Expr) (generation : Nat) : GoalM Unit := do
     internalize e' generation
     pushEq e e' (← mkEqRefl e)
 
-/--
-Returns `true` if we should use `funCC` for applications of the given constant symbol.
--/
+/-- Returns `true` if we should use `funCC` for applications of the given constant symbol. -/
 private def useFunCongrAtDecl (declName : Name) : GrindM Bool := do
   if (← hasFunCCModifier declName) then
     return true
@@ -513,18 +557,19 @@ private def useFunCongrAtDecl (declName : Name) : GrindM Bool := do
       return false
     /- **Note**: Check the type of the field. If it is a function type, use `funCC` -/
     let declInfo ← getConstInfo declName
-    let isFn ← forallBoundedTelescope declInfo.type (some (projInfo.numParams + 1)) fun _ type => do
-      let type ← whnf type
-      return type.isForall
+    let isFn ←
+      forallBoundedTelescope declInfo.type (some (projInfo.numParams + 1)) fun _ type => do
+        let type ← whnf type
+        return type.isForall
     return isFn
   return false
 
-/--
-Returns `true` if we should use `funCC` for `f`-applications.
--/
+/-- Returns `true` if we should use `funCC` for `f`-applications. -/
 private def useFunCongrAtFn (f : Expr) : GrindM Bool := do
-  unless (← getConfig).funCC do return false
-  let .const declName _ := f | return true
+  unless (← getConfig).funCC do
+    return false
+  let .const declName _ := f
+    | return true
   useFunCongrAtDecl declName
 
 /--
@@ -542,7 +587,8 @@ the form ``[P #0 (@OfNat.ofNat (Fin _) `[0] _)]``. See issue #11545.
 We still have support for parametric `OfNat.ofNat` literals since we don't
 want to internalize the raw natural value there. See `internalizeOfNatFinBitVecLiteral`.
 -/
-private def internalizeNonParametricLiteral (e : Expr) (generation : Nat) (parent? : Option Expr) : GoalM Unit := do
+private def internalizeNonParametricLiteral (e : Expr) (generation : Nat) (parent? : Option Expr)
+    : GoalM Unit := do
   mkENode e generation
   activateTheoremsForConstsIn e generation
   Solvers.internalize e parent?
@@ -557,10 +603,12 @@ For example, we can have patterns of the form ``[P #0 (@OfNat.ofNat (Fin _) `[0]
 but it created problems when indexing theorems because `BitVec.ofNat` was not activated.
 We now internalize this kind of application as a regular one.
 -/
-private def internalizeOfNatFinBitVecLiteral (e : Expr) (generation : Nat) (parent? : Option Expr) : GoalM Unit := do
+private def internalizeOfNatFinBitVecLiteral (e : Expr) (generation : Nat) (parent? : Option Expr)
+    : GoalM Unit := do
   mkENode e generation
   Solvers.internalize e parent?
-  let_expr OfNat.ofNat α _ inst := e | return ()
+  let_expr OfNat.ofNat α _ inst := e
+    | return ()
   internalize α generation e
   internalize inst generation e
   registerParent e α
@@ -612,32 +660,35 @@ them.
 
 set_option compiler.ignoreBorrowAnnotation true in
 @[export lean_grind_internalize]
-private partial def internalizeImpl (e : Expr) (generation : Nat) (parent? : Option Expr := none) : GoalM Unit := withIncRecDepth do
-  if (← alreadyInternalized e) then
-    trace_goal[grind.debug.internalize] "already internalized: {e}"
-    if (← isDebugEnabled) then
-      if (← get).internalizing.any (isSameExpr · e) then
-        throwError "`grind` internal error, `internalize` reached an application whose arguments are still being internalized{indentExpr e}"
-    /-
-    Even if `e` has already been internalized, we must check whether it has also been internalized in
-    the satellite solvers. For example, suppose we have already internalized the term `f (a + 1)`.
-    The `1` in this term is treated as an offset for the offset term `a + 1` by the arithmetic module, and
-    only nodes for `a` and `a+1` are created. However, an ENode for `1` is created here.
-    Later, if we try to internalize `f 1`, the arithmetic module must create a node for `1`.
-    Otherwise, it will not be able to propagate that `a + 1 = 1` when `a = 0`
-    -/
-    Solvers.internalize e parent?
-    /-
-    Function extensionality candidates are indexed by the parent function symbol and argument
-    position. A lambda that occurs as the argument of a second application must also be
-    recorded under that application. Otherwise, the candidate for the lambdas at that position
-    would never be created.
-    -/
-    if e.isLambda then
-      addSplitCandidatesForFunext e generation parent?
-  else
-    go
-    propagateEtaStruct e generation
+private partial def internalizeImpl (e : Expr) (generation : Nat) (parent? : Option Expr := none)
+    : GoalM Unit :=
+  withIncRecDepth do
+    if (← alreadyInternalized e) then
+      trace_goal[grind.debug.internalize] "already internalized: {e}"
+      if (← isDebugEnabled) then
+        if (← get).internalizing.any (isSameExpr · e) then
+          throwError "`grind` internal error, `internalize` reached an application whose arguments \
+            are still being internalized{indentExpr e}"
+      /-
+      Even if `e` has already been internalized, we must check whether it has also been internalized in
+      the satellite solvers. For example, suppose we have already internalized the term `f (a + 1)`.
+      The `1` in this term is treated as an offset for the offset term `a + 1` by the arithmetic module, and
+      only nodes for `a` and `a+1` are created. However, an ENode for `1` is created here.
+      Later, if we try to internalize `f 1`, the arithmetic module must create a node for `1`.
+      Otherwise, it will not be able to propagate that `a + 1 = 1` when `a = 0`
+      -/
+      Solvers.internalize e parent?
+      /-
+      Function extensionality candidates are indexed by the parent function symbol and argument
+      position. A lambda that occurs as the argument of a second application must also be
+      recorded under that application. Otherwise, the candidate for the lambdas at that position
+      would never be created.
+      -/
+      if e.isLambda then
+        addSplitCandidatesForFunext e generation parent?
+    else
+      go
+      propagateEtaStruct e generation
 where
   go : GoalM Unit := do
     trace_goal[grind.internalize] "[{generation}] {e}"
@@ -691,11 +742,14 @@ where
       mkENode' e generation
       Solvers.internalize e parent?
     | .mdata .. =>
-      reportIssue! "unexpected metadata found during internalization{indentExpr e}\n`grind` uses a pre-processing step that eliminates metadata"
+      reportIssue! "unexpected metadata found during internalization{indentExpr e}\
+        \n`grind` uses a pre-processing step that eliminates metadata"
       mkENode' e generation
       Solvers.internalize e parent?
     | .proj .. =>
-      reportIssue! "unexpected kernel projection term during internalization{indentExpr e}\n`grind` uses a pre-processing step that folds them as projection applications, the pre-processor failed to fold this term"
+      reportIssue! "unexpected kernel projection term during internalization{indentExpr e}\
+        \n`grind` uses a pre-processing step that folds them as projection applications, the \
+        pre-processor failed to fold this term"
       mkENode' e generation
       Solvers.internalize e parent?
     | .app .. =>
@@ -705,25 +759,28 @@ where
       | .notLit =>
         if e.isAppOfArity ``Grind.MatchCond 1 then
           internalizeMatchCond e generation
-        else e.withApp fun f args => do
-          let funCC ← useFunCongrAtFn f
-          mkENode e generation (funCC := funCC)
-          updateAppMap e
-          checkAndAddSplitCandidate e
-          addMatchEqns f generation
-          if (← isDebugEnabled) then
-            modify fun s => { s with internalizing := s.internalizing.push e }
-            try internalizeArgs f args funCC
-            finally modify fun s => { s with internalizing := s.internalizing.pop }
-          else
-            internalizeArgs f args funCC
-          pushCastHEqs e
-          addCongrTable e
-          Solvers.internalize e parent?
-          pushPropagateUp e
-          propagateBetaForNewApp e
-          mkInjEq e
-          propagateSubtypeMk e
+        else
+          e.withApp fun f args => do
+            let funCC ← useFunCongrAtFn f
+            mkENode e generation (funCC := funCC)
+            updateAppMap e
+            checkAndAddSplitCandidate e
+            addMatchEqns f generation
+            if (← isDebugEnabled) then
+              modify fun s => { s with internalizing := s.internalizing.push e }
+              try
+                internalizeArgs f args funCC
+              finally
+                modify fun s => { s with internalizing := s.internalizing.pop }
+            else
+              internalizeArgs f args funCC
+            pushCastHEqs e
+            addCongrTable e
+            Solvers.internalize e parent?
+            pushPropagateUp e
+            propagateBetaForNewApp e
+            mkInjEq e
+            propagateSubtypeMk e
 
   /-- Visits the arguments of `e` and registers `e` as their parent. -/
   internalizeArgs (f : Expr) (args : Array Expr) (funCC : Bool) : GoalM Unit := do
@@ -759,14 +816,16 @@ where
       registerParent e f
       if funCC then
         let rec traverse (curr : Expr) : GoalM Unit := do
-          let .app f a := curr | return ()
+          let .app f a := curr
+            | return ()
           mkENode curr generation (funCC := true)
           internalizeImpl a generation e
           traverse f
           registerParent curr a
           registerParent curr f
           addCongrTable curr
-        let .app curr a := e | unreachable!
+        let .app curr a := e
+          | unreachable!
         internalizeImpl a generation e
         traverse curr
         registerParent e a

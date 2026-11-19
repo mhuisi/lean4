@@ -15,19 +15,21 @@ namespace Lean.Compiler.LCNF
 namespace StructProjCases
 
 def findStructCtorInfo? (typeName : Name) : CoreM (Option ConstructorVal) := do
-  let .inductInfo info ← getConstInfo typeName | return none
-  let [ctorName] := info.ctors | return none
-  let some (.ctorInfo ctorInfo) := (← getEnv).find? ctorName | return none
+  let .inductInfo info ← getConstInfo typeName
+    | return none
+  let [ctorName] := info.ctors
+    | return none
+  let some (.ctorInfo ctorInfo) := (← getEnv).find? ctorName
+    | return none
   return ctorInfo
 
-def mkFieldParamsForCtorType (ctorType : Expr) (numParams : Nat) (numFields : Nat) :
-    CompilerM (Array (Param .pure)) := do
+def mkFieldParamsForCtorType (ctorType : Expr) (numParams : Nat) (numFields : Nat)
+    : CompilerM (Array (Param .pure)) := do
   let mut type ← Meta.MetaM.run' <| toLCNFType ctorType
   type ← toMonoType type
   for _ in *...numParams do
     match type with
-    | .forallE _ _ body _ =>
-      type := body
+    | .forallE _ _ body _ => type := body
     | _ => unreachable!
   let mut fields := Array.emptyWithCapacity numFields
   for _ in *...numFields do
@@ -45,11 +47,9 @@ structure State where
 
 abbrev M := StateRefT State CompilerM
 
-def M.run (x : M α) : CompilerM α := do
-  x.run' {}
+def M.run (x : M α) : CompilerM α := do x.run' {}
 
-def remapFVar (fvarId : FVarId) : M FVarId := do
-  return (← get).fvarMap[fvarId]?.getD fvarId
+def remapFVar (fvarId : FVarId) : M FVarId := do return (← get).fvarMap[fvarId]?.getD fvarId
 
 mutual
 
@@ -64,11 +64,15 @@ partial def visitCode (code : Code .pure) : M (Code .pure) := do
         modify fun s => { s with fvarMap := s.fvarMap.insert decl.fvarId projVars[i]! }
         visitCode k
       else
-        let some ctorInfo ← findStructCtorInfo? typeName | panic! "expected struct constructor"
+        let some ctorInfo ← findStructCtorInfo? typeName
+          | panic! "expected struct constructor"
         let params ← mkFieldParamsForCtorType ctorInfo.type ctorInfo.numParams ctorInfo.numFields
         let fvars := params.map (·.fvarId)
-        modify fun s => { s with projMap := s.projMap.insert base fvars,
-                                 fvarMap := s.fvarMap.insert decl.fvarId fvars[i]! }
+        modify fun s => {
+          s with
+          projMap := s.projMap.insert base fvars
+          fvarMap := s.fvarMap.insert decl.fvarId fvars[i]!
+        }
         let k ← visitCode k
         modify fun s => { s with projMap := s.projMap.erase base }
         let resultType ← toMonoType (← k.inferType)
@@ -108,10 +112,8 @@ partial def visitCode (code : Code .pure) : M (Code .pure) := do
 
 partial def visitLetValue (v : LetValue .pure) : M (LetValue .pure) := do
   match v with
-  | .const _ _ args =>
-    return v.updateArgs! (← args.mapM visitArg)
-  | .fvar fvarId args =>
-    return v.updateFVar! (← remapFVar fvarId) (← args.mapM visitArg)
+  | .const _ _ args => return v.updateArgs! (← args.mapM visitArg)
+  | .fvar fvarId args => return v.updateFVar! (← remapFVar fvarId) (← args.mapM visitArg)
   | .lit _ | .erased => return v
   -- Projections should be handled directly by `visitCode`.
   | .proj .. => unreachable!

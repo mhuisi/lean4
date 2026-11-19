@@ -19,8 +19,7 @@ private partial def consumeImplicitPrefix (e : Expr) (k : Expr → MetaM α) : M
   | Expr.forallE n d b c =>
     -- We do not consume instance implicit arguments because the user probably wants be aware of this dependency
     if c == .implicit then
-      Meta.withLocalDecl n c d fun arg =>
-        consumeImplicitPrefix (b.instantiate1 arg) k
+      Meta.withLocalDecl n c d fun arg => consumeImplicitPrefix (b.instantiate1 arg) k
     else
       k e
   | _ => k e
@@ -28,23 +27,21 @@ private partial def consumeImplicitPrefix (e : Expr) (k : Expr → MetaM α) : M
 /--
 Fills the `CompletionItem.detail?` field of `item` using the pretty-printed type identified by `id`.
 -/
-def CompletionItem.resolve
-    (item : CompletionItem)
-    (id   : CompletionIdentifier)
+def CompletionItem.resolve (item : CompletionItem) (id : CompletionIdentifier)
     : MetaM CompletionItem := do
   let env ← getEnv
   let lctx ← getLCtx
   let mut item := item
 
   if item.detail?.isNone then
-    let type? := match id with
-      | .const declName =>
-        env.find? declName |>.map ConstantInfo.type
-      | .fvar id =>
-        lctx.find? id |>.map LocalDecl.type
-    let detail? ← type?.mapM fun type =>
-      consumeImplicitPrefix type fun typeWithoutImplicits =>
-        return toString (← Meta.ppExpr typeWithoutImplicits)
+    let type? :=
+      match id with
+      | .const declName => env.find? declName |>.map ConstantInfo.type
+      | .fvar id => lctx.find? id |>.map LocalDecl.type
+    let detail? ←
+      type?.mapM fun type =>
+        consumeImplicitPrefix type fun typeWithoutImplicits =>
+          return toString (← Meta.ppExpr typeWithoutImplicits)
     item := { item with detail? := detail? }
 
   if item.documentation?.isNone then
@@ -68,11 +65,14 @@ def CompletionItem.resolve
     let doc? := do
       let docValue ←
         match docStringPrefix?, docString? with
-        | none,                 none           => none
-        | some docStringPrefix, none           => docStringPrefix
-        | none,                 docString      => docString
-        | some docStringPrefix, some docString => s!"{docStringPrefix}\n\n{docString}"
-      pure { value := docValue , kind := MarkupKind.markdown : MarkupContent }
+        | none, none => none
+        | some docStringPrefix, none => docStringPrefix
+        | none, docString => docString
+        | some docStringPrefix, some docString =>
+          s!"{docStringPrefix}\
+            \n\
+            \n{docString}"
+      pure { value := docValue, kind := MarkupKind.markdown : MarkupContent }
     item := { item with documentation? := doc? }
 
   return item
@@ -88,13 +88,8 @@ Fills the `CompletionItem.detail?` field of `item` using the pretty-printed type
 in the context found at `hoverPos` in `infoTree`.
 -/
 def resolveCompletionItem?
-    (fileMap           : FileMap)
-    (hoverPos          : String.Pos.Raw)
-    (cmdStx            : Syntax)
-    (infoTree          : InfoTree)
-    (item              : CompletionItem)
-    (id                : CompletionIdentifier)
-    (completionInfoPos : Nat)
+    (fileMap : FileMap) (hoverPos : String.Pos.Raw) (cmdStx : Syntax) (infoTree : InfoTree)
+    (item : CompletionItem) (id : CompletionIdentifier) (completionInfoPos : Nat)
     : IO CompletionItem := do
   let (completionInfos, _) := findCompletionInfosAt fileMap hoverPos cmdStx infoTree
   let some i := completionInfos[completionInfoPos]?

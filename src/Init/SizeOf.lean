@@ -28,8 +28,10 @@ If the default proof strategy fails, it is recommended to supply a custom
 size measure using the `termination_by` argument on the function definition.
 -/
 class SizeOf (α : Sort u) where
-  /-- The "size" of an element, a natural number which decreases on fields of
-  each inductive type. -/
+  /--
+  The "size" of an element, a natural number which decreases on fields of
+  each inductive type.
+  -/
   sizeOf : α → Nat
 
 export SizeOf (sizeOf)
@@ -43,7 +45,8 @@ From now on, the inductive compiler will automatically generate `SizeOf` instanc
 Every type `α` has a default `SizeOf` instance that just returns `0`
 for every element of `α`.
 -/
-@[expose] protected def default.sizeOf (α : Sort u) : α → Nat
+@[expose]
+protected def default.sizeOf (α : Sort u) : α → Nat
   | _ => 0
 
 /--
@@ -53,18 +56,20 @@ for every element of `α`.
 instance (priority := low) instSizeOfDefault (α : Sort u) : SizeOf α where
   sizeOf := default.sizeOf α
 
-@[simp] theorem sizeOf_default (n : α) : sizeOf n = 0 := rfl
+@[simp]
+theorem sizeOf_default (n : α) : sizeOf n = 0 := rfl
 
 instance : SizeOf Nat where
   sizeOf n := n
 
-@[simp] theorem sizeOf_nat (n : Nat) : sizeOf n = n := rfl
+@[simp]
+theorem sizeOf_nat (n : Nat) : sizeOf n = n := rfl
 
 instance [SizeOf α] : SizeOf (Unit → α) where
   sizeOf f := sizeOf (f ())
 
-@[simp] theorem sizeOf_thunk [SizeOf α] (f : Unit → α) : sizeOf f = sizeOf (f ()) :=
-  rfl
+@[simp]
+theorem sizeOf_thunk [SizeOf α] (f : Unit → α) : sizeOf f = sizeOf (f ()) := rfl
 
 deriving instance SizeOf for PUnit
 deriving instance SizeOf for Prod
@@ -93,8 +98,10 @@ deriving instance SizeOf for Substring.Raw
 deriving instance SizeOf for Except
 deriving instance SizeOf for EStateM.Result
 
-@[simp] theorem Unit.sizeOf (u : Unit) : sizeOf u = 1 := (rfl)
-@[simp] theorem Bool.sizeOf_eq_one (b : Bool) : sizeOf b = 1 := by cases b <;> rfl
+@[simp]
+theorem Unit.sizeOf (u : Unit) : sizeOf u = 1 := (rfl)
+@[simp]
+theorem Bool.sizeOf_eq_one (b : Bool) : sizeOf b = 1 := by cases b <;> rfl
 
 namespace Lean
 
@@ -102,19 +109,22 @@ namespace Lean
 We manually define the `Lean.Name` instance because we use
 an opaque function for computing the hashcode field.
 -/
-@[expose] protected noncomputable def Name.sizeOf : Name → Nat
+@[expose]
+protected noncomputable def Name.sizeOf : Name → Nat
   | anonymous => 1
-  | str p s   => 1 + Name.sizeOf p + sizeOf s
-  | num p n   => 1 + Name.sizeOf p + sizeOf n
+  | str p s => 1 + Name.sizeOf p + sizeOf s
+  | num p n => 1 + Name.sizeOf p + sizeOf n
 
 noncomputable instance : SizeOf Name where
   sizeOf n := n.sizeOf
 
-@[simp] theorem Name.anonymous.sizeOf_spec : sizeOf anonymous = 1 :=
+@[simp]
+theorem Name.anonymous.sizeOf_spec : sizeOf anonymous = 1 := rfl
+@[simp]
+theorem Name.str.sizeOf_spec (p : Name) (s : String) : sizeOf (str p s) = 1 + sizeOf p + sizeOf s :=
   rfl
-@[simp] theorem Name.str.sizeOf_spec (p : Name) (s : String) : sizeOf (str p s) = 1 + sizeOf p + sizeOf s :=
-  rfl
-@[simp] theorem Name.num.sizeOf_spec (p : Name) (n : Nat) : sizeOf (num p n) = 1 + sizeOf p + sizeOf n :=
+@[simp]
+theorem Name.num.sizeOf_spec (p : Name) (n : Nat) : sizeOf (num p n) = 1 + sizeOf p + sizeOf n :=
   rfl
 
 deriving instance SizeOf for SourceInfo

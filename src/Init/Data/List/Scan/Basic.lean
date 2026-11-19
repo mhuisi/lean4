@@ -19,7 +19,8 @@ private def scanAuxM [Monad m] (f : β → α → m β) (init : β) (l : List α
   go l init []
 where
   /-- Auxiliary for `scanAuxM` -/
-  @[specialize] go : List α → β → List β → m (List β)
+  @[specialize]
+  go : List α → β → List β → m (List β)
     | [], last, acc => pure <| last :: acc
     | x :: xs, last, acc => do go xs (← f last x) (last :: acc)
 

@@ -90,8 +90,7 @@ example : Assertion (.arg σ (.except ε .pure)) = (σ → ULift Prop) := rfl
 example : Assertion (.except ε (.arg σ .pure)) = (σ → ULift Prop) := rfl
 ```
 -/
-abbrev Assertion (ps : PostShape.{u}) : Type u :=
-  SPred (PostShape.args ps)
+abbrev Assertion (ps : PostShape.{u}) : Type u := SPred (PostShape.args ps)
 
 /--
 An assertion about each potential exception that's declared in a postcondition shape.
@@ -104,7 +103,8 @@ example : ExceptConds (.arg σ (.except ε .pure)) = ((ε → ULift Prop) × Uni
 example : ExceptConds (.except ε (.arg σ .pure)) = ((ε → σ → ULift Prop) × Unit) := rfl
 ```
 -/
-@[implicit_reducible] def ExceptConds : PostShape.{u} → Type u
+@[implicit_reducible]
+def ExceptConds : PostShape.{u} → Type u
   | .pure => PUnit
   | .arg _ ps => ExceptConds ps
   | .except ε ps => (ε → Assertion ps) × ExceptConds ps
@@ -113,44 +113,47 @@ example : ExceptConds (.except ε (.arg σ .pure)) = ((ε → σ → ULift Prop)
 Lifts a proposition `p` to a set of assertions about the possible exceptions in `ps`. Each
 exception's postcondition holds when `p` is true.
 -/
-def ExceptConds.const {ps : PostShape.{u}} (p : Prop) : ExceptConds ps := match ps with
+def ExceptConds.const {ps : PostShape.{u}} (p : Prop) : ExceptConds ps :=
+  match ps with
   | .pure => ⟨⟩
   | .arg _ ps => @ExceptConds.const ps p
   | .except _ ps => (fun _ε => spred(⌜p⌝), @ExceptConds.const ps p)
 
-/--
-An assertion about the possible exceptions in `ps` that always holds.
--/
+/-- An assertion about the possible exceptions in `ps` that always holds. -/
 def ExceptConds.true : ExceptConds ps := ExceptConds.const True
 
-/--
-An assertion about the possible exceptions in `ps` that never holds.
--/
+/-- An assertion about the possible exceptions in `ps` that never holds. -/
 def ExceptConds.false : ExceptConds ps := ExceptConds.const False
 
 @[simp, grind =]
-theorem ExceptConds.fst_const {ps : PostShape.{u}} (p : Prop) :
-    Prod.fst (ExceptConds.const p (ps := .except ε ps)) = fun _ε => ⌜p⌝ := rfl
+theorem ExceptConds.fst_const {ps : PostShape.{u}} (p : Prop)
+    : Prod.fst (ExceptConds.const p (ps := .except ε ps)) = fun _ε => ⌜p⌝ :=
+  rfl
 
 @[simp, grind =]
-theorem ExceptConds.snd_const {ps : PostShape.{u}} (p : Prop) :
-    Prod.snd (ExceptConds.const p (ps := .except ε ps)) = ExceptConds.const p := rfl
+theorem ExceptConds.snd_const {ps : PostShape.{u}} (p : Prop)
+    : Prod.snd (ExceptConds.const p (ps := .except ε ps)) = ExceptConds.const p :=
+  rfl
 
 @[simp, grind =]
-theorem ExceptConds.fst_true {ps : PostShape.{u}} :
-    Prod.fst (ExceptConds.true (ps := .except ε ps)) = fun _ε => ⌜True⌝ := rfl
+theorem ExceptConds.fst_true {ps : PostShape.{u}}
+    : Prod.fst (ExceptConds.true (ps := .except ε ps)) = fun _ε => ⌜True⌝ :=
+  rfl
 
 @[simp, grind =]
-theorem ExceptConds.snd_true {ps : PostShape.{u}} :
-    Prod.snd (ExceptConds.true (ps := .except ε ps)) = ExceptConds.true := rfl
+theorem ExceptConds.snd_true {ps : PostShape.{u}}
+    : Prod.snd (ExceptConds.true (ps := .except ε ps)) = ExceptConds.true :=
+  rfl
 
 @[simp, grind =]
-theorem ExceptConds.fst_false {ps : PostShape.{u}} :
-    Prod.fst (ExceptConds.false (ps := .except ε ps)) = fun _ε => ⌜False⌝ := rfl
+theorem ExceptConds.fst_false {ps : PostShape.{u}}
+    : Prod.fst (ExceptConds.false (ps := .except ε ps)) = fun _ε => ⌜False⌝ :=
+  rfl
 
 @[simp, grind =]
-theorem ExceptConds.snd_false {ps : PostShape.{u}} :
-    Prod.snd (ExceptConds.false (ps := .except ε ps)) = ExceptConds.false := rfl
+theorem ExceptConds.snd_false {ps : PostShape.{u}}
+    : Prod.snd (ExceptConds.false (ps := .except ε ps)) = ExceptConds.false :=
+  rfl
 
 instance : Inhabited (ExceptConds ps) where
   default := ExceptConds.true
@@ -179,7 +182,8 @@ theorem ExceptConds.entails.rfl {ps : PostShape} {x : ExceptConds ps} : x ⊢ₑ
 
 theorem ExceptConds.entails.pure {x y : ExceptConds PostShape.pure} : x ⊢ₑ y := True.intro
 
-theorem ExceptConds.entails.trans {ps : PostShape} {x y z : ExceptConds ps} : (x ⊢ₑ y) → (y ⊢ₑ z) → x ⊢ₑ z := by
+theorem ExceptConds.entails.trans {ps : PostShape} {x y z : ExceptConds ps}
+    : (x ⊢ₑ y) → (y ⊢ₑ z) → x ⊢ₑ z := by
   induction ps
   case pure => intro _ _; trivial
   case arg σ s ih => exact ih
@@ -197,7 +201,8 @@ theorem ExceptConds.entails_true {x : ExceptConds ps} : x ⊢ₑ ExceptConds.tru
 Conjunction of exception assertions is defined as pointwise conjunction of the assertions for each
 potential exception.
 -/
-def ExceptConds.and {ps : PostShape.{u}} (x : ExceptConds ps) (y : ExceptConds ps) : ExceptConds ps :=
+def ExceptConds.and {ps : PostShape.{u}} (x : ExceptConds ps) (y : ExceptConds ps)
+    : ExceptConds ps :=
   match ps with
   | .pure => ⟨⟩
   | .arg _ ps => @ExceptConds.and ps x y
@@ -207,36 +212,40 @@ def ExceptConds.and {ps : PostShape.{u}} (x : ExceptConds ps) (y : ExceptConds p
 infixr:35 " ∧ₑ " => ExceptConds.and
 
 @[simp]
-theorem ExceptConds.fst_and {x₁ x₂ : ExceptConds (.except ε ps)} : (x₁ ∧ₑ x₂).fst = fun e => spred(x₁.fst e ∧ x₂.fst e) := rfl
+theorem ExceptConds.fst_and {x₁ x₂ : ExceptConds (.except ε ps)}
+    : (x₁ ∧ₑ x₂).fst = fun e => spred(x₁.fst e ∧ x₂.fst e) :=
+  rfl
 
 @[simp]
-theorem ExceptConds.snd_and {x₁ x₂ : ExceptConds (.except ε ps)} : (x₁ ∧ₑ x₂).snd = (x₁.snd ∧ₑ x₂.snd) := rfl
+theorem ExceptConds.snd_and {x₁ x₂ : ExceptConds (.except ε ps)}
+    : (x₁ ∧ₑ x₂).snd = (x₁.snd ∧ₑ x₂.snd) :=
+  rfl
 
-theorem ExceptConds.and_elim_left {ps : PostShape} (x y : ExceptConds ps) :
-    (x ∧ₑ y) ⊢ₑ x := by
+theorem ExceptConds.and_elim_left {ps : PostShape} (x y : ExceptConds ps) : (x ∧ₑ y) ⊢ₑ x := by
   induction ps
   case pure => trivial
   case arg ih => exact ih _ _
   case except ε ps ih => exact ⟨fun _ => SPred.and_elim_l, ih _ _⟩
 
-theorem ExceptConds.and_elim_right {ps : PostShape} (x y : ExceptConds ps) :
-    (x ∧ₑ y) ⊢ₑ y := by
+theorem ExceptConds.and_elim_right {ps : PostShape} (x y : ExceptConds ps) : (x ∧ₑ y) ⊢ₑ y := by
   induction ps
   case pure => trivial
   case arg ih => exact ih _ _
   case except ε ps ih => exact ⟨fun _ => SPred.and_elim_r, ih _ _⟩
 
-@[simp] theorem ExceptConds.and_true {x : ExceptConds ps} : x ∧ₑ ExceptConds.true ⊢ₑ x :=
-  and_elim_left _ _
-@[simp] theorem ExceptConds.true_and {x : ExceptConds ps} : ExceptConds.true ∧ₑ x ⊢ₑ x :=
+@[simp]
+theorem ExceptConds.and_true {x : ExceptConds ps} : x ∧ₑ ExceptConds.true ⊢ₑ x := and_elim_left _ _
+@[simp]
+theorem ExceptConds.true_and {x : ExceptConds ps} : ExceptConds.true ∧ₑ x ⊢ₑ x := and_elim_right _ _
+@[simp]
+theorem ExceptConds.and_false {x : ExceptConds ps} : x ∧ₑ ExceptConds.false ⊢ₑ ExceptConds.false :=
   and_elim_right _ _
-@[simp] theorem ExceptConds.and_false {x : ExceptConds ps} : x ∧ₑ ExceptConds.false ⊢ₑ ExceptConds.false :=
-  and_elim_right _ _
-@[simp] theorem ExceptConds.false_and {x : ExceptConds ps} : ExceptConds.false ∧ₑ x ⊢ₑ ExceptConds.false :=
+@[simp]
+theorem ExceptConds.false_and {x : ExceptConds ps} : ExceptConds.false ∧ₑ x ⊢ₑ ExceptConds.false :=
   and_elim_left _ _
 
-theorem ExceptConds.and_eq_left {ps : PostShape} {p q : ExceptConds ps} (h : p ⊢ₑ q) :
-    p = (p ∧ₑ q) := by
+theorem ExceptConds.and_eq_left {ps : PostShape} {p q : ExceptConds ps} (h : p ⊢ₑ q)
+    : p = (p ∧ₑ q) := by
   induction ps
   case pure => trivial
   case arg ih => exact ih h
@@ -253,7 +262,8 @@ exception.
 Unlike entailment (`ExceptConds.entails`), which is an ordinary proposition of type `Prop`,
 implication of exception assertions is itself an exception assertion.
 -/
-def ExceptConds.imp {ps : PostShape.{u}} (x : ExceptConds ps) (y : ExceptConds ps) : ExceptConds ps :=
+def ExceptConds.imp {ps : PostShape.{u}} (x : ExceptConds ps) (y : ExceptConds ps)
+    : ExceptConds ps :=
   match ps with
   | .pure => ⟨⟩
   | .arg _ ps => @ExceptConds.imp ps x y
@@ -263,10 +273,14 @@ def ExceptConds.imp {ps : PostShape.{u}} (x : ExceptConds ps) (y : ExceptConds p
 infixr:25 " →ₑ " => ExceptConds.imp
 
 @[simp]
-theorem ExceptConds.fst_imp {x₁ x₂ : ExceptConds (.except ε ps)} : (x₁ →ₑ x₂).fst = fun e => spred(x₁.fst e → x₂.fst e) := rfl
+theorem ExceptConds.fst_imp {x₁ x₂ : ExceptConds (.except ε ps)}
+    : (x₁ →ₑ x₂).fst = fun e => spred(x₁.fst e → x₂.fst e) :=
+  rfl
 
 @[simp]
-theorem ExceptConds.snd_imp {x₁ x₂ : ExceptConds (.except ε ps)} : (x₁ →ₑ x₂).snd = (x₁.snd →ₑ x₂.snd) := rfl
+theorem ExceptConds.snd_imp {x₁ x₂ : ExceptConds (.except ε ps)}
+    : (x₁ →ₑ x₂).snd = (x₁.snd →ₑ x₂.snd) :=
+  rfl
 
 theorem ExceptConds.imp_intro {P Q R : ExceptConds ps} (h : P ∧ₑ Q ⊢ₑ R) : P ⊢ₑ Q →ₑ R := by
   induction ps
@@ -290,7 +304,8 @@ theorem ExceptConds.true_imp {x : ExceptConds ps} : (ExceptConds.true →ₑ x) 
     simp only [ih, imp, fst_true, snd_true, SPred.true_imp.to_eq]
 
 @[simp]
-theorem ExceptConds.false_imp {x : ExceptConds ps} : (ExceptConds.false →ₑ x) = ExceptConds.true := by
+theorem ExceptConds.false_imp {x : ExceptConds ps}
+    : (ExceptConds.false →ₑ x) = ExceptConds.true := by
   induction ps
   case pure => trivial
   case arg ih => exact ih
@@ -314,22 +329,19 @@ example : PostCond α (.arg σ (.except ε .pure)) = ((α → σ → ULift Prop)
 example : PostCond α (.except ε (.arg σ .pure)) = ((α → σ → ULift Prop) × (ε → σ → ULift Prop) × PUnit) := rfl
 ```
 -/
-abbrev PostCond (α : Type u) (ps : PostShape.{u}) : Type u :=
-  (α → Assertion ps) × ExceptConds ps
+abbrev PostCond (α : Type u) (ps : PostShape.{u}) : Type u := (α → Assertion ps) × ExceptConds ps
 
 @[inherit_doc PostCond]
-scoped macro:max "post⟨" handlers:term,+,? "⟩" : term =>
-  `(by exact ⟨$handlers,*, PUnit.unit⟩)
-  -- NB: Postponement through by exact is the entire point of this macro
-  -- until https://github.com/leanprover/lean4/pull/8074 lands
+scoped macro:max "post⟨" handlers:term,+,? "⟩" : term => `(by exact ⟨$handlers,*, PUnit.unit⟩)
+-- NB: Postponement through by exact is the entire point of this macro
+-- until https://github.com/leanprover/lean4/pull/8074 lands
 
 /--
 A postcondition expressing total correctness.
 That is, it expresses that the asserted computation finishes without throwing an exception
 *and* the result satisfies the given predicate `p`.
 -/
-abbrev PostCond.noThrow {α ps} (p : α → Assertion ps) : PostCond α ps :=
-  (p, ExceptConds.false)
+abbrev PostCond.noThrow {α ps} (p : α → Assertion ps) : PostCond α ps := (p, ExceptConds.false)
 
 @[inherit_doc PostCond.noThrow]
 scoped macro:max ppAllowUngrouped "⇓" xs:term:max+ " => " e:term : term =>
@@ -341,8 +353,7 @@ That is, it expresses that *if* the asserted computation finishes without throwi
 *then* the result satisfies the given predicate `p`.
 Nothing is asserted when the computation throws an exception.
 -/
-abbrev PostCond.mayThrow {α ps} (p : α → Assertion ps) : PostCond α ps :=
-  (p, ExceptConds.true)
+abbrev PostCond.mayThrow {α ps} (p : α → Assertion ps) : PostCond α ps := (p, ExceptConds.true)
 
 @[inherit_doc PostCond.mayThrow]
 scoped macro:max ppAllowUngrouped "⇓?" xs:term:max+ " => " e:term : term =>
@@ -368,22 +379,28 @@ def PostCond.entails {α ps} (p q : PostCond α ps) : Prop :=
 @[inherit_doc PostCond.entails]
 scoped infixr:25 " ⊢ₚ " => PostCond.entails
 
-theorem PostCond.entails.mk {α ps} {P Q : PostCond α ps} (h₁ : ∀ a, P.1 a ⊢ₛ Q.1 a) (h₂ : P.2 ⊢ₑ Q.2) : P ⊢ₚ Q :=
+theorem PostCond.entails.mk
+    {α ps} {P Q : PostCond α ps} (h₁ : ∀ a, P.1 a ⊢ₛ Q.1 a) (h₂ : P.2 ⊢ₑ Q.2)
+    : P ⊢ₚ Q :=
   ⟨h₁, h₂⟩
 
 @[refl, simp]
-theorem PostCond.entails.refl {α ps} (Q : PostCond α ps) : Q ⊢ₚ Q := ⟨fun a => SPred.entails.refl (Q.1 a), ExceptConds.entails.refl Q.2⟩
+theorem PostCond.entails.refl {α ps} (Q : PostCond α ps) : Q ⊢ₚ Q :=
+  ⟨fun a => SPred.entails.refl (Q.1 a), ExceptConds.entails.refl Q.2⟩
 theorem PostCond.entails.rfl {α ps} {Q : PostCond α ps} : Q ⊢ₚ Q := refl Q
 
-theorem PostCond.entails.trans {α ps} {P Q R : PostCond α ps} (h₁ : P ⊢ₚ Q) (h₂ : Q ⊢ₚ R) : P ⊢ₚ R :=
+theorem PostCond.entails.trans {α ps} {P Q R : PostCond α ps} (h₁ : P ⊢ₚ Q) (h₂ : Q ⊢ₚ R)
+    : P ⊢ₚ R :=
   ⟨fun a => (h₁.1 a).trans (h₂.1 a), h₁.2.trans h₂.2⟩
 
 @[simp]
-theorem PostCond.entails_noThrow {α ps} (p : α → Assertion ps) (q : PostCond α ps) : PostCond.noThrow p ⊢ₚ q ↔ ∀ a, p a ⊢ₛ q.1 a := by
+theorem PostCond.entails_noThrow {α ps} (p : α → Assertion ps) (q : PostCond α ps)
+    : PostCond.noThrow p ⊢ₚ q ↔ ∀ a, p a ⊢ₛ q.1 a := by
   simp only [entails, ExceptConds.entails_false, and_true]
 
 @[simp]
-theorem PostCond.entails_mayThrow {α ps} (p : PostCond α ps) (q : α → Assertion ps) : p ⊢ₚ PostCond.mayThrow q ↔ ∀ a, p.1 a ⊢ₛ q a := by
+theorem PostCond.entails_mayThrow {α ps} (p : PostCond α ps) (q : α → Assertion ps)
+    : p ⊢ₚ PostCond.mayThrow q ↔ ∀ a, p.1 a ⊢ₛ q a := by
   simp only [entails, ExceptConds.entails_true, and_true]
 
 /--
@@ -416,8 +433,7 @@ scoped infixr:25 " →ₚ " => PostCond.imp
 theorem PostCond.and_imp : P' ∧ₚ (P' →ₚ Q') ⊢ₚ P' ∧ₚ Q' := by
   simp [SPred.and_imp, ExceptConds.and_imp]
 
-theorem PostCond.and_left_of_entails {α ps} {p q : PostCond α ps} (h : p ⊢ₚ q) :
-    p = (p ∧ₚ q) := by
+theorem PostCond.and_left_of_entails {α ps} {p q : PostCond α ps} (h : p ⊢ₚ q) : p = (p ∧ₚ q) := by
   ext
   · exact (SPred.and_eq_left.mp (h.1 _)).to_eq
   · exact ExceptConds.and_eq_left h.2

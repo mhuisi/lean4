@@ -31,15 +31,13 @@ private def getPivot (clause : Array Int) : Literal Nat :=
   else
     (pivotInt.natAbs, false)
 
-
 open Std.Internal.Parsec
 open Std.Internal.Parsec.ByteArray
 
 namespace Text
 
 @[inline]
-def skipNewline : Parser Unit := do
-  skipByteChar '\n' <|> skipString "\r\n"
+def skipNewline : Parser Unit := do skipByteChar '\n' <|> skipString "\r\n"
 
 /-
 This implements a (corrected) version of the grammar presented in:
@@ -69,8 +67,7 @@ def parseId : Parser Nat := parsePos
 @[inline]
 def parseZero : Parser Unit := skipByteChar '0'
 
-def parseIdList : Parser (Array Nat) := do
-  many idWs
+def parseIdList : Parser (Array Nat) := do many idWs
 where
   @[inline]
   idWs : Parser Nat := do
@@ -135,8 +132,7 @@ def parseAction : Parser IntAction := do
   else
     parseRat ident
 
-partial def parseActions : Parser (Array IntAction) :=
-  go #[]
+partial def parseActions : Parser (Array IntAction) := go #[]
 where
   go (actions : Array IntAction) : Parser (Array IntAction) := do
     if (← peek!) == 'c'.toUInt8 then
@@ -164,8 +160,7 @@ def parseZero : Parser Unit := skipByte 0
 
 -- see: https://github.com/marijnheule/drat-trim?tab=readme-ov-file#binary-drat-format
 -- see: https://github.com/arminbiere/lrat-trim/blob/80f22c57fb2d74cb72210f5b334a1ffe2160a628/lrat-trim.c#L1579-L1595
-partial def parseLit : Parser Int := do
-  go 0 0
+partial def parseLit : Parser Int := do go 0 0
 where
   go (uidx : UInt64) (shift : UInt64) : Parser Int := do
     let uch ← any
@@ -204,8 +199,7 @@ def parsePos : Parser Nat := do
 def parseId : Parser Nat := parsePos
 
 @[specialize]
-partial def manyTillZero (parser : Parser α) : Parser (Array α) :=
-  go #[]
+partial def manyTillZero (parser : Parser α) : Parser (Array α) := go #[]
 where
   @[specialize]
   go (acc : Array α) : Parser (Array α) := do
@@ -216,8 +210,7 @@ where
       go <| acc.push elem
 
 @[specialize]
-partial def manyTillNegOrZero (parser : Parser α) : Parser (Array α) :=
-  go #[]
+partial def manyTillNegOrZero (parser : Parser α) : Parser (Array α) := go #[]
 where
   @[specialize]
   go (acc : Array α) : Parser (Array α) := do
@@ -229,12 +222,10 @@ where
       go <| acc.push elem
 
 @[inline]
-def parseIdList : Parser (Array Nat) :=
-  manyTillNegOrZero parseId
+def parseIdList : Parser (Array Nat) := manyTillNegOrZero parseId
 
 @[inline]
-def parseClause : Parser (Array Int) := do
-  manyTillZero parseLit
+def parseClause : Parser (Array Int) := do manyTillZero parseLit
 
 def parseRes : Parser (Nat × Array Nat) := do
   let lhs ← parseNeg
@@ -242,8 +233,7 @@ def parseRes : Parser (Nat × Array Nat) := do
   return (lhs, idents)
 
 @[inline]
-def parseRatHints : Parser (Array (Nat × Array Nat)) := do
-  manyTillZero parseRes
+def parseRatHints : Parser (Array (Nat × Array Nat)) := do manyTillZero parseRes
 
 def parseAction : Parser IntAction := do
   let discr ← any
@@ -285,9 +275,7 @@ def parseActions : Parser (Array IntAction) := do
 
 end Binary
 
-/--
-Based on the first byte parses the input either as a binary or non-binary LRAT.
--/
+/-- Based on the first byte parses the input either as a binary or non-binary LRAT. -/
 def parseActions : Parser (Array IntAction) := do
   let byte ← peek!
   if byte == 'a'.toUInt8 || byte == 'd'.toUInt8 then
@@ -313,39 +301,30 @@ Parse `proof` as an LRAT proof. `proof` may contain either the binary or the non
 def parseLRATProof (proof : ByteArray) : Except String (Array IntAction) :=
   Parser.parseActions.run proof
 
-/--
-Serialize `proof` into the non-binary LRAT format as a `String`.
--/
+/-- Serialize `proof` into the non-binary LRAT format as a `String`. -/
 def lratProofToString (proof : Array IntAction) : String :=
   proof.foldl (init := "") (· ++ serialize · ++ "\n")
 where
   serialize (a : IntAction) : String :=
     match a with
-    | .addEmpty id hints =>
-      s!"{id} 0 {serializeIdList hints}0"
-    | .addRup id c hints =>
-      s!"{id} {serializeClause c}0 {serializeIdList hints}0"
+    | .addEmpty id hints => s!"{id} 0 {serializeIdList hints}0"
+    | .addRup id c hints => s!"{id} {serializeClause c}0 {serializeIdList hints}0"
     | .addRat id c _ rupHints ratHints =>
       s!"{id} {serializeClause c}0 {serializeIdList rupHints}{serializeRatHints ratHints}0"
     | .del ids =>
       -- Note: 1 is not the actual step id but step ids don't matter for deletes
       s!"1 d {serializeIdList ids}0"
 
-  serializeIdList (ids : Array Nat) : String :=
-    ids.foldl (init := "") (· ++ s!"{·} ")
+  serializeIdList (ids : Array Nat) : String := ids.foldl (init := "") (· ++ s!"{·} ")
 
-  serializeClause (clause : Array Int) : String :=
-    clause.foldl (init := "") (· ++ s!"{·} ")
+  serializeClause (clause : Array Int) : String := clause.foldl (init := "") (· ++ s!"{·} ")
 
-  serializeRatHint (hint : Nat × Array Nat) : String :=
-    s!"-{hint.fst} {serializeIdList hint.snd}"
+  serializeRatHint (hint : Nat × Array Nat) : String := s!"-{hint.fst} {serializeIdList hint.snd}"
 
   serializeRatHints (hints : Array (Nat × Array Nat)) : String :=
     hints.foldl (init := "") (· ++ serializeRatHint ·)
 
-/--
-Serialize `proof` into the binary LRAT format as a `ByteArray`.
--/
+/-- Serialize `proof` into the binary LRAT format as a `ByteArray`. -/
 partial def lratProofToBinary (proof : Array IntAction) : ByteArray :=
   -- we will definitely need at least 4 bytes per add step and almost exclusively produce add.
   go 0 (ByteArray.emptyWithCapacity (4 * proof.size))
@@ -397,7 +376,7 @@ where
         2 * lit.natAbs
       else
         2 * lit.natAbs + 1
-    assert! mapped ≤ (2^64 - 1) -- our parser "only" supports 64 bit literals
+    assert! mapped ≤ (2 ^ 64 - 1) -- our parser "only" supports 64 bit literals
     let mapped := mapped.toUInt64
     variableLengthEncode acc mapped
 
@@ -429,8 +408,8 @@ where
 /--
 Dump `proof` into `path`, either in the binary or non-binary LRAT format, depending on `binaryProofs`.
 -/
-def dumpLRATProof (path : System.FilePath) (proof : Array IntAction) (binaryProofs : Bool) :
-    IO Unit := do
+def dumpLRATProof (path : System.FilePath) (proof : Array IntAction) (binaryProofs : Bool)
+    : IO Unit := do
   let out :=
     if binaryProofs then
       lratProofToBinary proof

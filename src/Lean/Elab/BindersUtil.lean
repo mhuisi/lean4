@@ -15,11 +15,11 @@ public section
 
 namespace Lean.Elab.Term
 /--
-  Recall that
-  ```
-  def typeSpec := leading_parser " : " >> termParser
-  def optType : Parser := optional typeSpec
-  ```
+Recall that
+```
+def typeSpec := leading_parser " : " >> termParser
+def optType : Parser := optional typeSpec
+```
 -/
 def expandOptType (ref : Syntax) (optType : Syntax) : Syntax :=
   if optType.isNone then
@@ -37,7 +37,7 @@ def getMatchAltsNumPatterns (matchAlts : Syntax) : Nat :=
 
 open TSyntax.Compat in
 /--
-  Expand a match alternative such as `| 0 | 1 => rhs` to an array containing `| 0 => rhs` and `| 1 => rhs`.
+Expand a match alternative such as `| 0 | 1 => rhs` to an array containing `| 0 => rhs` and `| 1 => rhs`.
 -/
 def expandMatchAlt (stx : TSyntax ``matchAlt) : Array (TSyntax ``matchAlt) :=
   -- Not using syntax quotations here to keep source location
@@ -55,27 +55,29 @@ def shouldExpandMatchAlt : TSyntax ``matchAlt → Bool
 def expandMatchAlts? (stx : Syntax) : MacroM (Option Syntax) := do
   match stx with
   | `(match $[$gen]? $[$motive]? $discrs,* with $alts:matchAlt*) =>
-     expand alts >>= fun alts? => alts?.mapM fun alts =>
-      `(match $[$gen]? $[$motive]? $discrs,* with $alts:matchAlt*)
+    expand alts >>= fun alts? =>
+      alts?.mapM fun alts => `(match $[$gen]? $[$motive]? $discrs,* with $alts:matchAlt*)
   | `(doElem| match $[$dep?]? $[$gen]? $[$motive]? $discrs,* with $alts:matchAlt*) =>
-     expand alts >>= fun alts? => alts?.mapM fun alts =>
-      `(doElem| match $[$dep?]? $[$gen]? $[$motive]? $discrs,* with $alts:matchAlt*)
+    expand alts >>= fun alts? =>
+      alts?.mapM fun alts =>
+        `(doElem| match $[$dep?]? $[$gen]? $[$motive]? $discrs,* with $alts:matchAlt*)
   | _ => return none
-  where
-    expand (alts : Array (TSyntax ``matchAlt)) : MacroM (Option (Array (TSyntax ``matchAlt))) := do
-      if alts.any shouldExpandMatchAlt then
-        let alts ← alts.foldlM (init := #[]) fun alts alt => return alts ++ expandMatchAlt alt
-        return some alts
-      else
-        return none
+where
+  expand (alts : Array (TSyntax ``matchAlt)) : MacroM (Option (Array (TSyntax ``matchAlt))) := do
+    if alts.any shouldExpandMatchAlt then
+      let alts ← alts.foldlM (init := #[]) fun alts alt => return alts ++ expandMatchAlt alt
+      return some alts
+    else
+      return none
 
 open TSyntax.Compat in
 def clearInMatchAlt (stx : TSyntax ``matchAlt) (vars : Array Ident) : TSyntax ``matchAlt :=
-  stx.1.modifyArg 3 fun rhs => Unhygienic.run do
-    let mut rhs := rhs
-    for v in vars do
-      rhs ← `(clear% $v; $rhs)
-    return rhs
+  stx.1.modifyArg 3 fun rhs =>
+    Unhygienic.run do
+      let mut rhs := rhs
+      for v in vars do
+        rhs ← `(clear% $v; $rhs)
+      return rhs
 
 def clearInMatch (stx : Syntax) (vars : Array Ident) : MacroM Syntax := do
   if vars.isEmpty then return stx

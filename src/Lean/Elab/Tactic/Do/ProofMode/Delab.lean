@@ -27,9 +27,8 @@ private partial def delabMGoal : Delab := do
   -- build syntax
   return ⟨← `(Std.Tactic.Do.mgoalStx| $hyps.reverse* ⊢ₛ $target:term)⟩
 where
-  delabHypotheses
-      (acc : NameMap Nat × NameMap Nat × Array (TSyntax ``mgoalHyp)) :
-      DelabM (NameMap Nat × NameMap Nat × Array (TSyntax ``mgoalHyp)) := do
+  delabHypotheses (acc : NameMap Nat × NameMap Nat × Array (TSyntax ``mgoalHyp))
+      : DelabM (NameMap Nat × NameMap Nat × Array (TSyntax ``mgoalHyp)) := do
     let hyps ← getExpr
     if let some _ := parseEmptyHyp? hyps then
       return acc
@@ -52,7 +51,8 @@ where
         else
           (0, name)
       let name' := mkIdent name'
-      let stx ← `(Std.Tactic.Do.mgoalHyp| $name' : $(← SPred.Notation.unpack (← withMDataExpr <| delab)))
+      let stx ←
+        `(Std.Tactic.Do.mgoalHyp| $name' : $(← SPred.Notation.unpack (← withMDataExpr <| delab)))
       if hyp.name.hasMacroScopes then
         inaccessibles := inaccessibles.insert name idx
       else

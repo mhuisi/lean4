@@ -36,10 +36,12 @@ If this relation is well-founded, then `IterM.toArray`, `IterM.toList` and `Iter
 guaranteed to finish after finitely many steps. If all of the iterator's steps terminate
 individually, `IterM.toArray` is guaranteed to terminate.
 -/
-def IterM.toArray.RecursionRel {α β : Type w} {m : Type w → Type w'}
-    [Iterator α m β] {γ : Type w} (x' x : (_ : IterM (α := α) m β) ×' Array γ) : Prop :=
-  (∃ out, x.1.IsPlausibleStep (.yield x'.1 out) ∧ ∃ a, x'.2 = x.2.push a) ∨
-    (x.1.IsPlausibleStep (.skip x'.1) ∧ x'.2 = x.2)
+def IterM.toArray.RecursionRel
+    {α β : Type w} {m : Type w → Type w'} [Iterator α m β]
+    {γ : Type w} (x' x : (_ : IterM (α := α) m β) ×' Array γ)
+    : Prop :=
+  (∃ out, x.1.IsPlausibleStep (.yield x'.1 out) ∧ ∃ a, x'.2 = x.2.push a)
+    ∨ (x.1.IsPlausibleStep (.skip x'.1) ∧ x'.2 = x.2)
 
 /--
 Traverses the given iterator and stores the emitted values in an array.
@@ -48,19 +50,23 @@ If the iterator is not finite, this function might run forever. The variant
 `it.ensureTermination.toArray` always terminates after finitely many steps.
 -/
 @[always_inline, inline]
-def IterM.toArray {α β : Type w} {m : Type w → Type w'} [Monad m] [Iterator α m β]
-    (it : IterM (α := α) m β) : m (Array β) :=
+def IterM.toArray
+    {α β : Type w} {m : Type w → Type w'} [Monad m] [Iterator α m β] (it : IterM (α := α) m β)
+    : m (Array β) :=
   go it #[]
 where
   @[always_inline]
   go it (acc : Array β) : m (Array β) :=
-    WellFounded.extrinsicFix₂ (C₂ := fun _ _ => m (Array β)) (InvImage TerminationMeasures.Finite.Rel (·.1.finitelyManySteps!))
-    (fun (it : IterM (α := α) m β) acc recur => do
-      match (← it.step).inflate with
-      | .yield it' out h =>
-        recur it' (acc.push out) (by exact TerminationMeasures.Finite.rel_of_yield ‹_›)
-      | .skip it' h => recur it' acc (by exact TerminationMeasures.Finite.rel_of_skip ‹_›)
-      | .done _ => return acc) it acc
+    WellFounded.extrinsicFix₂
+      (C₂ := fun _ _ => m (Array β))
+      (InvImage TerminationMeasures.Finite.Rel (·.1.finitelyManySteps!))
+      (fun (it : IterM (α := α) m β) acc recur => do
+        match (← it.step).inflate with
+        | .yield it' out h =>
+          recur it' (acc.push out) (by exact TerminationMeasures.Finite.rel_of_yield ‹_›)
+        | .skip it' h => recur it' acc (by exact TerminationMeasures.Finite.rel_of_skip ‹_›)
+        | .done _ => return acc)
+      it acc
 
 /--
 Traverses the given iterator and stores the emitted values in an array.
@@ -69,9 +75,10 @@ This variant terminates after finitely many steps and requires a proof that the 
 finite. If such a proof is not available, consider using `IterM.toArray`.
 -/
 @[always_inline, inline]
-def IterM.Total.toArray {α : Type w} {m : Type w → Type w'} {β : Type w} [Monad m]
-    [Iterator α m β] [Finite α m] (it : IterM.Total (α := α) m β) :
-    m (Array β) :=
+def IterM.Total.toArray
+    {α : Type w} {m : Type w → Type w'} {β : Type w} [Monad m] [Iterator α m β] [Finite α m]
+    (it : IterM.Total (α := α) m β)
+    : m (Array β) :=
   it.it.toArray
 
 end ToArray
@@ -84,8 +91,11 @@ If the iterator is not finite, this function might run forever. The variant
 `it.ensureTermination.toListRev` always terminates after finitely many steps.
 -/
 @[always_inline, inline]
-def IterM.toListRev {α : Type w} {m : Type w → Type w'} [Monad m] {β : Type w}
-    [Iterator α m β] (it : IterM (α := α) m β) : m (List β) :=
+def IterM.toListRev
+    {α : Type w} {m : Type w → Type w'} [Monad m]
+    {β : Type w} [Iterator α m β]
+    (it : IterM (α := α) m β)
+    : m (List β) :=
   go it []
 where
   @[always_inline, inline]
@@ -95,7 +105,8 @@ where
         match (← it.step).inflate with
         | .yield it' out h => recur it' (out :: acc) (TerminationMeasures.Finite.rel_of_yield h)
         | .skip it' h => recur it' acc (TerminationMeasures.Finite.rel_of_skip h)
-        | .done _ => return acc) it acc
+        | .done _ => return acc)
+      it acc
 
 /--
 Traverses the given iterator and stores the emitted values in reverse order in a list. Because
@@ -105,9 +116,10 @@ This variant terminates after finitely many steps and requires a proof that the 
 finite. If such a proof is not available, consider using `IterM.toListRev`.
 -/
 @[always_inline, inline]
-def IterM.Total.toListRev {α : Type w} {m : Type w → Type w'} {β : Type w} [Monad m]
-    [Iterator α m β] [Finite α m] (it : IterM.Total (α := α) m β) :
-    m (List β) :=
+def IterM.Total.toListRev
+    {α : Type w} {m : Type w → Type w'} {β : Type w} [Monad m] [Iterator α m β] [Finite α m]
+    (it : IterM.Total (α := α) m β)
+    : m (List β) :=
   it.it.toListRev
 
 /--
@@ -118,8 +130,11 @@ If the iterator is not finite, this function might run forever. The variant
 `it.ensureTermination.toList` always terminates after finitely many steps.
 -/
 @[always_inline, inline]
-def IterM.toList {α : Type w} {m : Type w → Type w'} [Monad m] {β : Type w}
-    [Iterator α m β] (it : IterM (α := α) m β) : m (List β) :=
+def IterM.toList
+    {α : Type w} {m : Type w → Type w'} [Monad m]
+    {β : Type w} [Iterator α m β]
+    (it : IterM (α := α) m β)
+    : m (List β) :=
   Array.toList <$> IterM.toArray it
 
 /--
@@ -130,9 +145,10 @@ This variant terminates after finitely many steps and requires a proof that the 
 finite. If such a proof is not available, consider using `IterM.toList`.
 -/
 @[always_inline, inline]
-def IterM.Total.toList {α : Type w} {m : Type w → Type w'} {β : Type w} [Monad m]
-    [Iterator α m β] [Finite α m] (it : IterM.Total (α := α) m β) :
-    m (List β) :=
+def IterM.Total.toList
+    {α : Type w} {m : Type w → Type w'} {β : Type w} [Monad m] [Iterator α m β] [Finite α m]
+    (it : IterM.Total (α := α) m β)
+    : m (List β) :=
   it.it.toList
 
 end Std

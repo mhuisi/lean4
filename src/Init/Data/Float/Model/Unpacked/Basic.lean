@@ -49,7 +49,8 @@ inductive UnpackedFloat where
   /-- Signed zero. -/
   | zero (sign : Sign) : UnpackedFloat
   /-- Finite floats consisting of a sign bit, a positive natural mantissa and an exponent. -/
-  | finite (sign : Sign) (mantissa : Nat) (exponent : Int) (mantissa_pos : 0 < mantissa) : UnpackedFloat
+  | finite (sign : Sign) (mantissa : Nat) (exponent : Int) (mantissa_pos : 0 < mantissa)
+    : UnpackedFloat
 deriving Repr, BEq
 
 end Float.Model

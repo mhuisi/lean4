@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Wojciech Różowski
 -/
 module
+
 prelude
 import Lean.Meta.Sym.Simp.SimpM
 import Init.Sym.Lemmas
@@ -12,10 +13,13 @@ import Lean.Meta.Tactic.Cbv.CbvSimproc
 
 namespace Lean.Meta.Sym.Simp
 
-/-- Short-circuit evaluation of `Or`. Simplifies only the left argument;
-if it reduces to `True`, returns `True` immediately without evaluating the right side. -/
+/--
+Short-circuit evaluation of `Or`. Simplifies only the left argument;
+if it reduces to `True`, returns `True` immediately without evaluating the right side.
+-/
 builtin_cbv_simproc ↓ simpOr (@Or _ _) := fun e => do
-  let_expr Or a b := e | return .rfl
+  let_expr Or a b := e
+    | return .rfl
   match (← simp a) with
   | .rfl _ _ =>
     if (← isTrueExpr a) then
@@ -32,10 +36,13 @@ builtin_cbv_simproc ↓ simpOr (@Or _ _) := fun e => do
     else
       return .rfl
 
-/-- Short-circuit evaluation of `And`. Simplifies only the left argument;
-if it reduces to `False`, returns `False` immediately without evaluating the right side. -/
+/--
+Short-circuit evaluation of `And`. Simplifies only the left argument;
+if it reduces to `False`, returns `False` immediately without evaluating the right side.
+-/
 builtin_cbv_simproc ↓ simpAnd (@And _ _) := fun e => do
-  let_expr And a b := e | return .rfl
+  let_expr And a b := e
+    | return .rfl
   match (← simp a) with
   | .rfl _ _ =>
     if (← isFalseExpr a) then

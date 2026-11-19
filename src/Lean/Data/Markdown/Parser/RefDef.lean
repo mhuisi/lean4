@@ -14,7 +14,6 @@ import Lean.Data.Markdown.Parser.LinkSyntax
 
 namespace Lean.Markdown
 
-
 /-!
 # Link Reference Definitions
 
@@ -37,7 +36,8 @@ public def parseLinkLabel? (cur : InlineCursor s) : Option (Lines s × InlineCur
   let mut sawNonWs := false
   let mut sawNewline := false
   while len < 1000 do
-    let some c := cur.front? | break
+    let some c := cur.front?
+      | break
     let curNext := cur.drop1
     if c == '\\' && Option.any isAsciiPunctuation curNext.front? then
       sawNonWs := true
@@ -50,7 +50,7 @@ public def parseLinkLabel? (cur : InlineCursor s) : Option (Lines s × InlineCur
     else if c == '[' then
       failure
     else if let some (_, afterEnding) := cur.parseLineEnding? then
-      guard !sawNewline  -- blank line in label
+      guard !sawNewline -- blank line in label
       sawNewline := true
       cur := afterEnding
       len := len + 1
@@ -70,13 +70,16 @@ def skipRefDefDestGap (cur : InlineCursor s) : Option (InlineCursor s) := do
   let mut cur := cur
   let mut endingsSeen := 0
   repeat
-    let some c := cur.front? | break
-    if c == ' ' || c == '\t' then cur := cur.drop1
+    let some c := cur.front?
+      | break
+    if c == ' ' || c == '\t' then
+      cur := cur.drop1
     else if let some (_, afterEnding) := cur.parseLineEnding? then
       endingsSeen := endingsSeen + 1
       if endingsSeen ≥ 2 then failure
       cur := afterEnding
-    else break
+    else
+      break
   return cur
 
 /--
@@ -129,8 +132,8 @@ lines are not permitted inside it.
 
 Returns the definition plus the position one past the last consumed character.
 -/
-public def parseLinkRefDef? (source : InlineSource s) (start : s.Pos) :
-    Option (RefDef s × s.Pos) := do
+public def parseLinkRefDef? (source : InlineSource s) (start : s.Pos)
+    : Option (RefDef s × s.Pos) := do
   -- `InlineSource.ofLines` has removed each line's leading spaces and tabs, so `start` is at `[`.
   let cur := source.cursor start source.stopPos
   -- `[label]`.
@@ -148,8 +151,8 @@ public def parseLinkRefDef? (source : InlineSource s) (start : s.Pos) :
   -- a no-title interpretation, in which case the URL itself must end the
   -- line.
   let (title?, finalRest) ←
-    (parseRefDefTitle? afterUrl |>.map fun (t, cur) => (some t, cur)) <|>
-    (consumeRefDefLineEnd afterUrl |>.map fun cur => (none, cur))
+    (parseRefDefTitle? afterUrl |>.map fun (t, cur) => (some t, cur))
+      <|> (consumeRefDefLineEnd afterUrl |>.map fun cur => (none, cur))
   return ({ openBracket, label, closeBracket, colon, destination, title? }, finalRest.startPos)
 
 /--
@@ -164,7 +167,8 @@ def sourceFrom? (source : InlineSource s) (p : s.Pos) : Option (InlineSource s) 
     if line.startInclusive < p then
       let rest := subsliceClamped p line.endExclusive
       -- A cut line that is only its line ending contributes nothing.
-      unless parseLineEnding? rest p == some line.endExclusive do kept := kept.push rest
+      unless parseLineEnding? rest p == some line.endExclusive do
+        kept := kept.push rest
     else
       kept := kept.push line
   if h : 0 < kept.size then some (.ofLines ⟨kept, h⟩) else none
@@ -175,8 +179,8 @@ Greedily consumes link ref definitions from the front of `source`.
 Returns the extracted `linkRefDef` blocks together with the residual `InlineSource`. The residual is
 `none` when the definitions consumed every line.
 -/
-public def extractRefDefs (source : InlineSource s) :
-    Array (Block.Raw s) × Option (InlineSource s) := Id.run do
+public def extractRefDefs (source : InlineSource s)
+    : Array (Block.Raw s) × Option (InlineSource s) := Id.run do
   let mut defs : Array (Block.Raw s) := #[]
   let mut p := source.startPos
   let mut keep := true

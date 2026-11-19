@@ -52,11 +52,12 @@ Examples:
 * `Nat.extendedGcd 19 0 = ⟨19, 1, 0⟩`
 -/
 @[extern "lean_nat_extended_gcd"]
-def extendedGcd (a b : @& Nat) : ExtendedGcdResult :=
-  go a 1 0 b 0 1
+def extendedGcd (a b : @& Nat) : ExtendedGcdResult := go a 1 0 b 0 1
 where
-  /-- Implementation detail of `Nat.extendedGcd`: the two rows represent the remainders as
-  linear combinations of the original inputs. -/
+  /--
+  Implementation detail of `Nat.extendedGcd`: the two rows represent the remainders as
+  linear combinations of the original inputs.
+  -/
   go (r : Nat) (s t : Int) (r' : Nat) (s' t' : Int) : ExtendedGcdResult :=
     if _h : r = 0 then
       ⟨r', s', t'⟩
@@ -67,28 +68,29 @@ where
   decreasing_by exact Nat.mod_lt _ (Nat.pos_of_ne_zero _h)
 
 @[export lean_nat_extended_gcd_fallback]
-private def extendedGcdFallback (a b : Nat) : ExtendedGcdResult :=
-  extendedGcd.go a 1 0 b 0 1
+private def extendedGcdFallback (a b : Nat) : ExtendedGcdResult := extendedGcd.go a 1 0 b 0 1
 
-@[simp] theorem extendedGcd_zero_left (b : Nat) : extendedGcd 0 b = ⟨b, 0, 1⟩ := by
+@[simp]
+theorem extendedGcd_zero_left (b : Nat) : extendedGcd 0 b = ⟨b, 0, 1⟩ := by
   rw [extendedGcd, extendedGcd.go]
   rfl
 
-@[simp] theorem extendedGcd_zero_right {a : Nat} (h : a ≠ 0) :
-    extendedGcd a 0 = ⟨a, 1, 0⟩ := by
+@[simp]
+theorem extendedGcd_zero_right {a : Nat} (h : a ≠ 0) : extendedGcd a 0 = ⟨a, 1, 0⟩ := by
   rw [extendedGcd, extendedGcd.go, dite_eq_right h]
   simp only [Nat.zero_div, Nat.zero_mod, Int.natCast_zero, Int.zero_mul, Int.sub_zero]
   rw [extendedGcd.go]
   rfl
 
-@[simp] theorem extendedGcd_self {a : Nat} (h : a ≠ 0) : extendedGcd a a = ⟨a, 1, 0⟩ := by
+@[simp]
+theorem extendedGcd_self {a : Nat} (h : a ≠ 0) : extendedGcd a a = ⟨a, 1, 0⟩ := by
   rw [extendedGcd, extendedGcd.go, dite_eq_right h]
   simp only [Nat.mod_self]
   rw [extendedGcd.go]
   rfl
 
-private theorem extendedGcd_go_gcd (r r' : Nat) : ∀ s t s' t',
-    (extendedGcd.go r s t r' s' t').gcd = Nat.gcd r r' := by
+private theorem extendedGcd_go_gcd (r r' : Nat)
+    : ∀ s t s' t', (extendedGcd.go r s t r' s' t').gcd = Nat.gcd r r' := by
   induction r, r' using Nat.gcd.induction with
   | H0 r' =>
     intro s t s' t'
@@ -98,10 +100,11 @@ private theorem extendedGcd_go_gcd (r r' : Nat) : ∀ s t s' t',
     intro s t s' t'
     rw [extendedGcd.go, dite_eq_right (Nat.ne_of_gt hr), ih, ← Nat.gcd_rec]
 
-private theorem extendedGcd_go_bezout (a b r r' : Nat) : ∀ s t s' t',
-    (r : Int) = a * s + b * t → (r' : Int) = a * s' + b * t' →
-    let out := extendedGcd.go r s t r' s' t'
-    (out.gcd : Int) = a * out.coeffA + b * out.coeffB := by
+private theorem extendedGcd_go_bezout (a b r r' : Nat)
+    : ∀ s t s' t',
+      (r : Int) = a * s + b * t → (r' : Int) = a * s' + b * t'
+        → let out := extendedGcd.go r s t r' s' t'
+          (out.gcd : Int) = a * out.coeffA + b * out.coeffB := by
   induction r, r' using Nat.gcd.induction with
   | H0 r' =>
     intro s t s' t' _ hr'
@@ -121,15 +124,16 @@ private theorem extendedGcd_go_bezout (a b r r' : Nat) : ∀ s t s' t',
         ac_rfl
 
 /-- The gcd component of `Nat.extendedGcd a b` is `Nat.gcd a b`. -/
-@[simp] theorem extendedGcd_gcd (a b : Nat) : (extendedGcd a b).gcd = Nat.gcd a b :=
+@[simp]
+theorem extendedGcd_gcd (a b : Nat) : (extendedGcd a b).gcd = Nat.gcd a b :=
   extendedGcd_go_gcd a b 1 0 0 1
 
 /-- The coefficients returned by `Nat.extendedGcd` satisfy Bézout's identity. -/
-theorem extendedGcd_bezout (a b : Nat) :
-    (Nat.gcd a b : Int) = a * (extendedGcd a b).coeffA + b * (extendedGcd a b).coeffB := by
+theorem extendedGcd_bezout (a b : Nat)
+    : (Nat.gcd a b : Int) = a * (extendedGcd a b).coeffA + b * (extendedGcd a b).coeffB := by
   have h := extendedGcd_go_bezout a b a b 1 0 0 1 (by simp) (by simp)
-  change ((extendedGcd a b).gcd : Int) =
-    a * (extendedGcd a b).coeffA + b * (extendedGcd a b).coeffB at h
+  change ((extendedGcd a b).gcd : Int) = a * (extendedGcd a b).coeffA + b * (extendedGcd a b).coeffB
+    at h
   simpa only [extendedGcd_gcd] using h
 
 /-- The gcd returned by `Nat.extendedGcd a b` divides `a`. -/

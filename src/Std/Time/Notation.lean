@@ -32,27 +32,28 @@ private meta def syntaxInt (n : Int) : MacroM (TSyntax `term) := do
   | .negSucc n => `(Int.negSucc $(Syntax.mkNumLit <| toString n))
 
 private meta def syntaxBounded (n : Int) : MacroM (TSyntax `term) := do
- `(Std.Time.Internal.Bounded.LE.ofNatWrapping $(← syntaxInt n) (by decide))
+  `(Std.Time.Internal.Bounded.LE.ofNatWrapping $(← syntaxInt n) (by decide))
 
 private meta def syntaxVal (n : Int) : MacroM (TSyntax `term) := do
- `(Std.Time.Internal.UnitVal.ofInt $(← syntaxInt n))
+  `(Std.Time.Internal.UnitVal.ofInt $(← syntaxInt n))
 
 private meta def convertOffset (offset : Std.Time.TimeZone.Offset) : MacroM (TSyntax `term) := do
- `(Std.Time.TimeZone.Offset.ofSeconds $(← syntaxVal offset.second.val))
+  `(Std.Time.TimeZone.Offset.ofSeconds $(← syntaxVal offset.second.val))
 
 private meta def convertTimezone (tz : Std.Time.TimeZone) : MacroM (TSyntax `term) := do
- `(Std.Time.TimeZone.mk $(← convertOffset tz.offset) $(Syntax.mkStrLit tz.name) $(Syntax.mkStrLit tz.abbreviation) false)
+  `(Std.Time.TimeZone.mk $(← convertOffset tz.offset) $(Syntax.mkStrLit tz.name) $(Syntax.mkStrLit tz.abbreviation) false)
 
 private meta def convertPlainDate (d : Std.Time.PlainDate) : MacroM (TSyntax `term) := do
- `(Std.Time.PlainDate.ofYearMonthDayClip $(← syntaxInt d.year) $(← syntaxBounded d.month.val) $(← syntaxBounded d.day.val))
+  `(Std.Time.PlainDate.ofYearMonthDayClip $(← syntaxInt d.year) $(← syntaxBounded d.month.val) $(← syntaxBounded d.day.val))
 
 private meta def convertPlainTime (d : Std.Time.PlainTime) : MacroM (TSyntax `term) := do
- `(Std.Time.PlainTime.mk $(← syntaxBounded d.hour.val) $(← syntaxBounded d.minute.val) $(← syntaxBounded d.second.val) $(← syntaxBounded d.nanosecond.val))
+  `(Std.Time.PlainTime.mk $(← syntaxBounded d.hour.val) $(← syntaxBounded d.minute.val) $(← syntaxBounded d.second.val) $(← syntaxBounded d.nanosecond.val))
 
 private meta def convertPlainDateTime (d : Std.Time.PlainDateTime) : MacroM (TSyntax `term) := do
- `(Std.Time.PlainDateTime.mk $(← convertPlainDate d.date) $(← convertPlainTime d.time))
+  `(Std.Time.PlainDateTime.mk $(← convertPlainDate d.date) $(← convertPlainTime d.time))
 
-private meta def convertDateTime (d : Std.Time.DateTime) (identifier := false) : MacroM (TSyntax `term) := do
+private meta def convertDateTime (d : Std.Time.DateTime) (identifier := false)
+    : MacroM (TSyntax `term) := do
   let plain ← convertPlainDateTime d.toPlainDateTime
 
   if identifier then
@@ -132,42 +133,35 @@ syntax "timezone(" str ")" : term
 
 macro_rules
   | `(zoned( $date:str )) => do
-      match DateTime.fromLeanDateTimeWithZoneString date.getString with
-      | .ok res => do return ← convertDateTime res
-      | .error _ =>
-        match DateTime.fromLeanDateTimeWithIdentifierString date.getString with
-        | .ok res => do return ← convertDateTime res (identifier := !isFixedZoneId res.timezone.name)
-        | .error res => Macro.throwErrorAt date s!"error: {res}"
-
+    match DateTime.fromLeanDateTimeWithZoneString date.getString with
+    | .ok res => do return ← convertDateTime res
+    | .error _ =>
+      match DateTime.fromLeanDateTimeWithIdentifierString date.getString with
+      | .ok res => do return ← convertDateTime res (identifier := ! isFixedZoneId res.timezone.name)
+      | .error res => Macro.throwErrorAt date s!"error: {res}"
   | `(zoned( $date:str, $timezone )) => do
-      match PlainDateTime.fromLeanDateTimeString date.getString with
-      | .ok res => do
-        let plain ← convertPlainDateTime res
-        `(Std.Time.DateTime.ofPlainDateTime $plain $timezone)
-      | .error res => Macro.throwErrorAt date s!"error: {res}"
-
+    match PlainDateTime.fromLeanDateTimeString date.getString with
+    | .ok res => do
+      let plain ← convertPlainDateTime res
+      `(Std.Time.DateTime.ofPlainDateTime $plain $timezone)
+    | .error res => Macro.throwErrorAt date s!"error: {res}"
   | `(datetime( $date:str )) => do
-      match PlainDateTime.fromLeanDateTimeString date.getString with
-      | .ok res => do
-        return ← convertPlainDateTime res
-      | .error res => Macro.throwErrorAt date s!"error: {res}"
-
+    match PlainDateTime.fromLeanDateTimeString date.getString with
+    | .ok res => do return ← convertPlainDateTime res
+    | .error res => Macro.throwErrorAt date s!"error: {res}"
   | `(date( $date:str )) => do
-      match PlainDate.fromSQLDateString date.getString with
-      | .ok res => return ← convertPlainDate res
-      | .error res => Macro.throwErrorAt date s!"error: {res}"
-
+    match PlainDate.fromSQLDateString date.getString with
+    | .ok res => return ← convertPlainDate res
+    | .error res => Macro.throwErrorAt date s!"error: {res}"
   | `(time( $time:str )) => do
-      match PlainTime.fromLeanTime24Hour time.getString with
-      | .ok res => return ← convertPlainTime res
-      | .error res => Macro.throwErrorAt time s!"error: {res}"
-
+    match PlainTime.fromLeanTime24Hour time.getString with
+    | .ok res => return ← convertPlainTime res
+    | .error res => Macro.throwErrorAt time s!"error: {res}"
   | `(offset( $offset:str )) => do
-      match TimeZone.Offset.fromOffset offset.getString with
-      | .ok res => return ← convertOffset res
-      | .error res => Macro.throwErrorAt offset s!"error: {res}"
-
+    match TimeZone.Offset.fromOffset offset.getString with
+    | .ok res => return ← convertOffset res
+    | .error res => Macro.throwErrorAt offset s!"error: {res}"
   | `(timezone( $tz:str )) => do
-      match TimeZone.fromTimeZone tz.getString with
-      | .ok res => return ← convertTimezone res
-      | .error res => Macro.throwErrorAt tz s!"error: {res}"
+    match TimeZone.fromTimeZone tz.getString with
+    | .ok res => return ← convertTimezone res
+    | .error res => Macro.throwErrorAt tz s!"error: {res}"

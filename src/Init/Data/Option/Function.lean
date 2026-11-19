@@ -13,8 +13,8 @@ public section
 
 namespace Option
 
-theorem map_injective {f : α → β} (hf : Function.Injective f) :
-    Function.Injective (Option.map f) := by
+theorem map_injective {f : α → β} (hf : Function.Injective f)
+    : Function.Injective (Option.map f) := by
   intros a b hab
   cases a <;> cases b
   · simp

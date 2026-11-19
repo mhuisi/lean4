@@ -51,7 +51,8 @@ public instance : ToExpr ComparatorOp where
   toTypeExpr := mkConst ``ComparatorOp
 
 public protected def VerComparator.toExpr (self : VerComparator) : Expr :=
-  mkApp3 (mkConst ``VerComparator.mk) (toExpr self.ver) (toExpr self.op) (toExpr self.includeSuffixes)
+  mkApp3 (mkConst ``VerComparator.mk) (toExpr self.ver) (toExpr self.op)
+    (toExpr self.includeSuffixes)
 
 public instance : ToExpr VerComparator where
   toExpr := VerComparator.toExpr

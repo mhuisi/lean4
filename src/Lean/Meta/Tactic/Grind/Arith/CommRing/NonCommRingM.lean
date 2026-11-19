@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.CommRing.RingM
 public section
@@ -16,8 +17,7 @@ structure NonCommRingM.Context where
 /-- We don't want to keep carrying the `RingId` around. -/
 abbrev NonCommRingM := ReaderT NonCommRingM.Context GoalM
 
-abbrev NonCommRingM.run (ringId : Nat) (x : NonCommRingM α) : GoalM α :=
-  x { ringId }
+abbrev NonCommRingM.run (ringId : Nat) (x : NonCommRingM α) : GoalM α := x { ringId }
 
 instance : MonadCanon NonCommRingM where
   canonExpr e := do shareCommon (← canon e)
@@ -32,7 +32,8 @@ protected def NonCommRingM.getRing : NonCommRingM Sym.Arith.Ring := do
   else
     throwError "`grind` internal error, invalid ringId"
 
-protected def NonCommRingM.modifyRing (f : Sym.Arith.Ring → Sym.Arith.Ring) : NonCommRingM Unit := do
+protected def NonCommRingM.modifyRing (f : Sym.Arith.Ring → Sym.Arith.Ring)
+    : NonCommRingM Unit := do
   let ringId := (← read).ringId
   modifyArithState fun s => { s with ncRings := s.ncRings.modify ringId f }
 
@@ -56,7 +57,7 @@ instance : MonadGetVar NonCommRingM where
   getVar x := return (← getRingState).vars[x]!
 
 def getTermNonCommRingId? (e : Expr) : GoalM (Option Nat) := do
-    return (← get').exprToNCRingId.find? { expr := e }
+  return (← get').exprToNCRingId.find? { expr := e }
 
 def setTermNonCommRingId (e : Expr) : NonCommRingM Unit := do
   let ringId := (← read).ringId

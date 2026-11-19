@@ -5,6 +5,7 @@ Authors: Leonardo de Moura, Joachim Breitner
 -/
 
 module
+
 prelude
 public import Lean.Meta.Basic
 import Init.Data.Range.Polymorphic.Iterators
@@ -43,34 +44,37 @@ Information about the shape of `casesOn`-like declarations.
 We treat them uniformly in the code generator.
 -/
 public structure CasesInfo where
-  declName     : Name
-  indName      : Name
-  arity        : Nat
-  discrPos     : Nat
-  motivePos    : Nat
-  altsRange    : Std.Rco Nat
+  declName : Name
+  indName : Name
+  arity : Nat
+  discrPos : Nat
+  motivePos : Nat
+  altsRange : Std.Rco Nat
   altNumParams : Array CasesAltInfo
 
-public def CasesInfo.numAlts (c : CasesInfo) : Nat :=
-  c.altNumParams.size
+public def CasesInfo.numAlts (c : CasesInfo) : Nat := c.altNumParams.size
 
 public def getCasesInfo? (declName : Name) : CoreM (Option CasesInfo) := do
-  unless isCasesOnLike (← getEnv) declName do return none
+  unless isCasesOnLike (← getEnv) declName do
+    return none
   let info ← getConstVal declName
-  MetaM.run' <|
-    forallTelescope info.type fun xs r => do
-      let arity := xs.size
-      assert! r.isApp
-      assert! r.appArg!.isFVar  -- major argument
-      assert! r.getAppFn.isFVar -- motive
-      let some discrPos := xs.idxOf? r.appArg! | unreachable!
-      let some motivePos := xs.idxOf? r.getAppFn | unreachable!
-      let some indName := (← inferType xs[discrPos]!).getAppFn.constName? | unreachable!
-      -- We recognize the per-ctor elims side condition here
-      let xsTys ← (xs.extract (discrPos+1)).mapM inferType
-      let hasSideCondition : Bool := !xsTys.isEmpty && xsTys[0]!.getForallBody.getAppFn != r.getAppFn
-      let altsRange := (discrPos + (if hasSideCondition then 2 else 1))...arity
-      let altNumParams ← altsRange.toArray.mapM fun idx => do
+  MetaM.run' <| forallTelescope info.type fun xs r => do
+    let arity := xs.size
+    assert! r.isApp
+    assert! r.appArg!.isFVar -- major argument
+    assert! r.getAppFn.isFVar -- motive
+    let some discrPos := xs.idxOf? r.appArg!
+      | unreachable!
+    let some motivePos := xs.idxOf? r.getAppFn
+      | unreachable!
+    let some indName := (← inferType xs[discrPos]!).getAppFn.constName?
+      | unreachable!
+    -- We recognize the per-ctor elims side condition here
+    let xsTys ← (xs.extract (discrPos + 1)).mapM inferType
+    let hasSideCondition : Bool := !xsTys.isEmpty && xsTys[0]!.getForallBody.getAppFn != r.getAppFn
+    let altsRange := (discrPos + (if hasSideCondition then 2 else 1))...arity
+    let altNumParams ←
+      altsRange.toArray.mapM fun idx => do
         forallTelescope (xsTys[idx - discrPos - 1]!) fun ys mr => do
           assert! mr.isApp
           let motiveArg := mr.appArg!
@@ -81,9 +85,10 @@ public def getCasesInfo? (declName : Name) : CoreM (Option CasesInfo) := do
             return .default ys.size
           else
             -- Else we have a normal case
-            let some ctorName := motiveArg.getAppFn.constName? | unreachable!
+            let some ctorName := motiveArg.getAppFn.constName?
+              | unreachable!
             let ctorVal ← getConstInfoCtor ctorName
             return .ctor ctorName ctorVal.numFields
-      return some { declName, indName, arity, discrPos, motivePos, altsRange, altNumParams }
+    return some { declName, indName, arity, discrPos, motivePos, altsRange, altNumParams }
 
 end Lean

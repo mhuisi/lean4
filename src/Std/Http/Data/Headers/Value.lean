@@ -42,22 +42,14 @@ Reference: https://www.rfc-editor.org/rfc/rfc9110.html#section-5.5
 abbrev IsValidHeaderValue (s : String) : Prop :=
   let s := s.toList
 
-  s.all Char.fieldContent ∧
-  (s.head?.map Char.fieldVchar |>.getD true) ∧
-  (s.getLast?.map Char.fieldVchar |>.getD true)
+  s.all Char.fieldContent ∧ (s.head?.map Char.fieldVchar |>.getD true)
+    ∧ (s.getLast?.map Char.fieldVchar |>.getD true)
 
-/--
-A validated HTTP header value that ensures all characters conform to HTTP standards.
--/
+/-- A validated HTTP header value that ensures all characters conform to HTTP standards. -/
 structure Value where
-  /--
-  The string data.
-  -/
+  /-- The string data. -/
   value : String
-
-  /--
-  The proof that it's a valid header value.
-  -/
+  /-- The proof that it's a valid header value. -/
   isValidHeaderValue : IsValidHeaderValue value := by decide
 deriving BEq, DecidableEq, Repr
 
@@ -78,9 +70,13 @@ def ofString? (s : String) : Option Value :=
   -- A field value does not include leading or trailing whitespace.
   let val := s.trimAscii.toString
 
-  if h : val.all Char.fieldContent ∧ (val.front?.map Char.fieldVchar |>.getD true) ∧
-      (val.back?.map Char.fieldVchar |>.getD true) then
-    some ⟨val, by simpa [IsValidHeaderValue, String.all_bool_eq, String.front?_eq, String.back?_eq] using h⟩
+  if h
+      : val.all Char.fieldContent ∧ (val.front?.map Char.fieldVchar |>.getD true)
+        ∧ (val.back?.map Char.fieldVchar |>.getD true) then
+    some ⟨
+      val,
+      by simpa [IsValidHeaderValue, String.all_bool_eq, String.front?_eq, String.back?_eq] using h
+    ⟩
   else
     none
 
@@ -98,8 +94,7 @@ def ofString! (s : String) : Value :=
 Performs a case-insensitive comparison between a `Value` and a `String`. Returns `true` if they match.
 -/
 @[expose]
-def is (s : Value) (h : String) : Bool :=
-  s.value.toLower == h.toLower
+def is (s : Value) (h : String) : Bool := s.value.toLower == h.toLower
 
 instance : ToString Value where
   toString v := v.value

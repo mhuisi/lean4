@@ -16,24 +16,26 @@ namespace ParserCompiler
 
 structure CombinatorAttribute where
   impl : AttributeImpl
-  ext  : SimplePersistentEnvExtension (Name × Name) (NameMap Name)
-  deriving Inhabited
+  ext : SimplePersistentEnvExtension (Name × Name) (NameMap Name)
+deriving Inhabited
 -- TODO(Sebastian): We'll probably want priority support here at some point
 
 def registerCombinatorAttribute (name : Name) (descr : String) (ref : Name := by exact decl_name%)
     : IO CombinatorAttribute := do
-  let ext : SimplePersistentEnvExtension (Name × Name) (NameMap Name) ← registerSimplePersistentEnvExtension {
-    name            := ref,
-    addImportedFn   := mkStateFromImportedEntries (fun s p => s.insert p.1 p.2) {},
-    addEntryFn      := fun (s : NameMap Name) (p : Name × Name) => s.insert p.1 p.2,
-  }
+  let ext : SimplePersistentEnvExtension (Name × Name) (NameMap Name) ←
+    registerSimplePersistentEnvExtension {
+      name := ref
+      addImportedFn := mkStateFromImportedEntries (fun s p => s.insert p.1 p.2) {}
+      addEntryFn := fun (s : NameMap Name) (p : Name × Name) => s.insert p.1 p.2
+    }
   let attrImpl : AttributeImpl := {
-    ref   := ref,
-    name  := name,
-    descr := descr,
-    add   := fun decl stx _ => do
+    ref := ref
+    name := name
+    descr := descr
+    add := fun decl stx _ => do
       let env ← getEnv
-      let parserDeclName ← Elab.realizeGlobalConstNoOverloadWithInfo (← Attribute.Builtin.getIdent stx)
+      let parserDeclName ←
+        Elab.realizeGlobalConstNoOverloadWithInfo (← Attribute.Builtin.getIdent stx)
       recordExtraModUseFromDecl (isMeta := false) parserDeclName
       setEnv <| ext.addEntry env (parserDeclName, decl)
   }
@@ -42,16 +44,18 @@ def registerCombinatorAttribute (name : Name) (descr : String) (ref : Name := by
 
 namespace CombinatorAttribute
 
-def getDeclFor? (attr : CombinatorAttribute) (env : Environment) (parserDecl : Name) : Option Name :=
+def getDeclFor? (attr : CombinatorAttribute) (env : Environment) (parserDecl : Name)
+    : Option Name :=
   (attr.ext.getState env).find? parserDecl
 
-def setDeclFor (attr : CombinatorAttribute) (env : Environment) (parserDecl : Name) (decl : Name) : Environment :=
+def setDeclFor (attr : CombinatorAttribute) (env : Environment) (parserDecl : Name) (decl : Name)
+    : Environment :=
   attr.ext.addEntry env (parserDecl, decl)
 
 unsafe def runDeclFor {α} (attr : CombinatorAttribute) (parserDecl : Name) : CoreM α := do
   match attr.getDeclFor? (← getEnv) parserDecl with
   | some d => evalConst α d
-  | _      => throwError "no declaration of attribute [{attr.impl.name}] found for `{parserDecl}`"
+  | _ => throwError "no declaration of attribute [{attr.impl.name}] found for `{parserDecl}`"
 
 end CombinatorAttribute
 

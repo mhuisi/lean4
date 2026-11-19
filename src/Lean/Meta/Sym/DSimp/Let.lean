@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.DSimp.DSimpM
 import Lean.Meta.Sym.AbstractS
@@ -11,11 +12,8 @@ import Lean.Meta.Sym.InstantiateS
 import Lean.Meta.Sym.Util
 namespace Lean.Meta.Sym.DSimp
 
-/--
-Definitionally simplifies a `let`/`have` expression.
--/
-public def dsimpLet : DSimproc := fun e =>
-  go e #[] false
+/-- Definitionally simplifies a `let`/`have` expression. -/
+public def dsimpLet : DSimproc := fun e => go e #[] false
 where
   go (e : Expr) (fvars : Array Expr) (modified : Bool) : DSimpM Result := do
     match e with
@@ -27,12 +25,9 @@ where
       let t ← instantiateRevBetaS t fvars
       let v ← instantiateRevBetaS v fvars
       match (← dsimp t), (← dsimp v) with
-      | .rfl _, .rfl _ =>
-        withLetDeclS n t v (nondep := nd) fun x => go b (fvars.push x) modified
-      | .step t' _, .rfl _ =>
-        withLetDeclS n t' v (nondep := nd) fun x => go b (fvars.push x) true
-      | .rfl _, .step v' _ =>
-        withLetDeclS n t v' (nondep := nd) fun x => go b (fvars.push x) true
+      | .rfl _, .rfl _ => withLetDeclS n t v (nondep := nd) fun x => go b (fvars.push x) modified
+      | .step t' _, .rfl _ => withLetDeclS n t' v (nondep := nd) fun x => go b (fvars.push x) true
+      | .rfl _, .step v' _ => withLetDeclS n t v' (nondep := nd) fun x => go b (fvars.push x) true
       | .step t' _, .step v' _ =>
         withLetDeclS n t' v' (nondep := nd) fun x => go b (fvars.push x) true
     | _ =>

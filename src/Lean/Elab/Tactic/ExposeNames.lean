@@ -13,7 +13,7 @@ public section
 
 namespace Lean.Elab.Tactic
 
-@[builtin_tactic Lean.Parser.Tactic.exposeNames] def evalExposeNames : Tactic := fun _ =>
-  liftMetaTactic1 fun mvarId => mvarId.exposeNames
+@[builtin_tactic Lean.Parser.Tactic.exposeNames]
+def evalExposeNames : Tactic := fun _ => liftMetaTactic1 fun mvarId => mvarId.exposeNames
 
 end Lean.Elab.Tactic

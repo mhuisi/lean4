@@ -23,17 +23,19 @@ open Json
 
 abbrev DocumentUri := String
 
-/-- We adopt the convention that zero-based UTF-16 positions as sent by LSP clients
+/--
+We adopt the convention that zero-based UTF-16 positions as sent by LSP clients
 are represented by `Lsp.Position` while internally we mostly use `String.Pos` UTF-8
 offsets. For diagnostics, one-based `Lean.Position`s are used internally.
-`character` is accepted liberally: actual character := min(line length, character) -/
+`character` is accepted liberally: actual character := min(line length, character)
+-/
 structure Position where
   line : Nat
   character : Nat
-  deriving Inhabited, BEq, Ord, Hashable, ToJson, FromJson, Repr
+deriving Inhabited, BEq, Ord, Hashable, ToJson, FromJson, Repr
 
-instance : ToString Position := ⟨fun p =>
-  "(" ++ toString p.line ++ ", " ++ toString p.character ++ ")"⟩
+instance : ToString Position :=
+  ⟨fun p => "(" ++ toString p.line ++ ", " ++ toString p.character ++ ")"⟩
 
 instance : LT Position := ltOfOrd
 instance : LE Position := leOfOrd
@@ -41,12 +43,10 @@ instance : LE Position := leOfOrd
 structure Range where
   start : Position
   «end» : Position
-  deriving Inhabited, BEq, Hashable, ToJson, FromJson, Ord, Repr
+deriving Inhabited, BEq, Hashable, ToJson, FromJson, Ord, Repr
 
 instance : LT Range := ltOfOrd
 instance : LE Range := leOfOrd
 
 end Lsp
 end Lean
-
-

@@ -41,11 +41,9 @@ inductive SpecParamInfo where
   based on the stack depth.
   -/
   | user
-  /--
-  Parameter is not going to be specialized.
-  -/
+  /-- Parameter is not going to be specialized. -/
   | other
-  deriving Inhabited, Repr
+deriving Inhabited, Repr
 
 namespace SpecParamInfo
 
@@ -66,20 +64,16 @@ instance : ToMessageData SpecParamInfo where
     | .other => "O"
 
 structure SpecEntry where
-  /--
-  The name of the declaration.
-  -/
-  declName   : Name
-  /--
-  Information about which parameters of the declaration qualify for specialization.
-  -/
+  /-- The name of the declaration. -/
+  declName : Name
+  /-- Information about which parameters of the declaration qualify for specialization. -/
   paramsInfo : Array SpecParamInfo
   /--
   True if `declName` was already specialized before. This is relevant because we specialize
   declarations that have already been specialized less aggressively than declarations that have not.
   -/
   alreadySpecialized : Bool
-  deriving Inhabited
+deriving Inhabited
 
 instance : ToMessageData SpecEntry where
   toMessageData := fun { declName, paramsInfo, alreadySpecialized } =>
@@ -87,7 +81,7 @@ instance : ToMessageData SpecEntry where
 
 structure SpecState where
   specInfo : PHashMap Name SpecEntry := {}
-  deriving Inhabited
+deriving Inhabited
 
 namespace SpecState
 
@@ -97,11 +91,9 @@ def addEntry (s : SpecState) (e : SpecEntry) : SpecState :=
 
 end SpecState
 
-private abbrev declLt (a b : SpecEntry) :=
-  Name.quickLt a.declName b.declName
+private abbrev declLt (a b : SpecEntry) := Name.quickLt a.declName b.declName
 
-private abbrev sortEntries (entries : Array SpecEntry) : Array SpecEntry :=
-  entries.qsort declLt
+private abbrev sortEntries (entries : Array SpecEntry) : Array SpecEntry := entries.qsort declLt
 
 private abbrev findAtSorted? (entries : Array SpecEntry) (declName : Name) : Option SpecEntry :=
   entries.binSearch { declName, paramsInfo := #[], alreadySpecialized := false } declLt
@@ -112,12 +104,13 @@ Remark: we only store information for declarations that will be specialized.
 -/
 builtin_initialize specExtension : SimplePersistentEnvExtension SpecEntry SpecState ←
   registerSimplePersistentEnvExtension {
-    addEntryFn    := SpecState.addEntry
+    addEntryFn := SpecState.addEntry
     addImportedFn := fun _ => {}
-    toArrayFn     := fun s => sortEntries s.toArray
-    asyncMode     := .sync
-    replay?       := some <| SimplePersistentEnvExtension.replayOfFilter
-      (!·.specInfo.contains ·.declName) SpecState.addEntry
+    toArrayFn := fun s => sortEntries s.toArray
+    asyncMode := .sync
+    replay? :=
+      some <| SimplePersistentEnvExtension.replayOfFilter (! ·.specInfo.contains ·.declName)
+        SpecState.addEntry
   }
 
 /--
@@ -172,9 +165,10 @@ and `k` is tagged as `.user`, `.fixedHO`, or `.fixedInst`.
 
 See comment at `.fixedNeutral`.
 -/
-private def hasFwdDeps (decl : Decl .pure) (paramsInfo : Array SpecParamInfo) (j : Nat) : Bool := Id.run do
+private def hasFwdDeps (decl : Decl .pure) (paramsInfo : Array SpecParamInfo) (j : Nat)
+    : Bool := Id.run do
   let param := decl.params[j]!
-  for h : k in (j+1)...decl.params.size do
+  for h : k in (j + 1)...decl.params.size do
     if paramsInfo[k]!.causesSpecialization || paramsInfo[k]! matches .fixedInst .. then
       let param' := decl.params[k]
       if param'.type.containsFVar param.fvarId then
@@ -190,8 +184,10 @@ computationally relevant declarations. Furthermore this function takes:
 - `alreadySpecialized` which is a mask that says whether a decl is already a specialized declaration
   itself.
 -/
-def computeSpecEntries (decls : Array (Decl .pure)) (autoSpecialize : Name → Option (Array Nat) → Bool)
-    (alreadySpecialized : Array Bool) : CompilerM (Array SpecEntry) := do
+def computeSpecEntries
+    (decls : Array (Decl .pure)) (autoSpecialize : Name → Option (Array Nat) → Bool)
+    (alreadySpecialized : Array Bool)
+    : CompilerM (Array SpecEntry) := do
   let mut declsInfo := #[]
   for decl in decls do
     if hasNospecializeAttribute (← getEnv) decl.name then
@@ -200,7 +196,7 @@ def computeSpecEntries (decls : Array (Decl .pure)) (autoSpecialize : Name → O
       let specArgs? := getSpecializationArgs? (← getEnv) decl.name
       let contains (i : Nat) : Bool := specArgs?.getD #[] |>.contains i
       let mut paramsInfo : Array SpecParamInfo := #[]
-      for h :i in *...decl.params.size do
+      for h : i in *...decl.params.size do
         let param := decl.params[i]
         let info ←
           if contains i then
@@ -233,25 +229,28 @@ def computeSpecEntries (decls : Array (Decl .pure)) (autoSpecialize : Name → O
     for hi : i in *...decls.size do
       let decl := decls[i]
       let mut paramsInfo := declsInfo[i]!
-      let some mask := m.find? decl.name | unreachable!
-      paramsInfo := Array.zipWith (as := paramsInfo) (bs := mask) fun info fixed =>
-        if fixed || info matches .user then
-          info
-        else
-          .other
+      let some mask := m.find? decl.name
+        | unreachable!
+      paramsInfo :=
+        Array.zipWith (as := paramsInfo) (bs := mask) fun info fixed =>
+          if fixed || info matches .user then
+            info
+          else
+            .other
       for j in *...paramsInfo.size do
         let mut info := paramsInfo[j]!
-        if info matches .fixedNeutral && !hasFwdDeps decl paramsInfo j then
+        if info matches .fixedNeutral && ! hasFwdDeps decl paramsInfo j then
           paramsInfo := paramsInfo.set! j .other
-      entries := entries.push {
-        declName := decl.name,
-        paramsInfo,
-        alreadySpecialized := alreadySpecialized[i]!
-      }
+      entries :=
+        entries.push {
+          declName := decl.name
+          paramsInfo
+          alreadySpecialized := alreadySpecialized[i]!
+        }
     return entries
   else
     return decls.mapIdx fun i decl => {
-      declName := decl.name,
+      declName := decl.name
       paramsInfo := Array.replicate decl.params.size .other
       alreadySpecialized := alreadySpecialized[i]!
     }
@@ -261,10 +260,10 @@ Compute and save specialization information for `decls`. Assumes that `decls` is
 defined declarations.
 -/
 def saveSpecEntries (decls : Array (Decl .pure)) : CompilerM Unit := do
-  let entries ← computeSpecEntries
-    decls
-    (fun _ specArgs? => specArgs? == some #[])
-    (Array.replicate decls.size false)
+  let entries ←
+    computeSpecEntries decls
+      (fun _ specArgs? => specArgs? == some #[])
+      (Array.replicate decls.size false)
   for entry in entries do
     if entry.paramsInfo.any SpecParamInfo.causesSpecialization then
       trace[Compiler.specialize.info] "{entry.declName} {entry.paramsInfo}"
@@ -279,7 +278,6 @@ def getSpecEntry? [Monad m] [MonadEnv m] (declName : Name) : m (Option SpecEntry
 def isSpecCandidate [Monad m] [MonadEnv m] (declName : Name) : m Bool := do
   return getSpecEntryCore? (← getEnv) declName |>.isSome
 
-builtin_initialize
-  registerTraceClass `Compiler.specialize.info
+builtin_initialize registerTraceClass `Compiler.specialize.info
 
 end Lean.Compiler.LCNF

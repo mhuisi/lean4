@@ -20,8 +20,8 @@ namespace Task
 Creates a task that, when all `tasks` have finished, computes the result of `f` applied to their
 results.
 -/
-def mapList (f : List α → β) (tasks : List (Task α)) (prio := Task.Priority.default)
-    (sync := false) : Task β :=
+def mapList (f : List α → β) (tasks : List (Task α)) (prio := Task.Priority.default) (sync := false)
+    : Task β :=
   go tasks []
 where
   go
@@ -31,4 +31,4 @@ where
       else
         Task.spawn (prio := prio) fun _ => f as.reverse
     | [t], as => t.map (fun a => f (a :: as).reverse) prio sync
-    | t::ts, as => t.bind (fun a => go ts (a :: as)) prio sync
+    | t :: ts, as => t.bind (fun a => go ts (a :: as)) prio sync

@@ -40,17 +40,18 @@ public def parseLineEnding? (input : s.Subslice) (p : s.Pos) : Option s.Pos :=
       if h2 : q < input.endExclusive then
         let h2' := String.Slice.Pos.ne_endPos_of_lt h2
         some (if q.get h2' == '\n' then q.next h2' else q)
-      else some q
+      else
+        some q
     | _ => none
-  else none
+  else
+    none
 
 /-- `text` without the trailing characters that satisfy `p`. -/
 public def trimTrailing (text : s.Subslice) (p : Char → Bool) : s.Subslice := Id.run do
   let mut stop := text.endExclusive
   while text.startInclusive < stop do
     match stop.prev? with
-    | some q =>
-      if text.startInclusive ≤ q && Option.any p q.get? then stop := q else break
+    | some q => if text.startInclusive ≤ q && Option.any p q.get? then stop := q else break
     | none => break
   return subsliceClamped text.startInclusive stop
 
@@ -99,5 +100,4 @@ public def span (first last : s.Subslice) : s.Subslice :=
   subsliceClamped first.startInclusive last.endExclusive
 
 /-- The subslice from the start of the first line to the end of the last. -/
-public def Lines.extent (lines : Lines s) : s.Subslice :=
-  span lines.first lines.last
+public def Lines.extent (lines : Lines s) : s.Subslice := span lines.first lines.last

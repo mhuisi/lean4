@@ -25,11 +25,15 @@ and multiplication are compatible with the preorder, and `0 < 1`.
 class OrderedRing (R : Type u) [Semiring R] [LE R] [LT R] [IsPreorder R] extends OrderedAdd R where
   /-- In a strict ordered semiring, we have `0 < 1`. -/
   zero_lt_one : (0 : R) < 1
-  /-- In a strict ordered semiring, we can multiply an inequality `a < b` on the left
-  by a positive element `0 < c` to obtain `c * a < c * b`. -/
+  /--
+  In a strict ordered semiring, we can multiply an inequality `a < b` on the left
+  by a positive element `0 < c` to obtain `c * a < c * b`.
+  -/
   mul_lt_mul_of_pos_left : ∀ {a b c : R}, a < b → 0 < c → c * a < c * b
-  /-- In a strict ordered semiring, we can multiply an inequality `a < b` on the right
-  by a positive element `0 < c` to obtain `a * c < b * c`. -/
+  /--
+  In a strict ordered semiring, we can multiply an inequality `a < b` on the right
+  by a positive element `0 < c` to obtain `a * c < b * c`.
+  -/
   mul_lt_mul_of_pos_right : ∀ {a b c : R}, a < b → 0 < c → a * c < b * c
 
 namespace OrderedRing
@@ -64,9 +68,9 @@ theorem le_of_natCast_le_natCast (a b : Nat) : (a : R) ≤ (b : R) → a ≤ b :
   next n ih =>
     simp [Semiring.natCast_succ, Semiring.natCast_zero]
     intro h
-    have : (n:R) ≤ 0 := by
+    have : (n : R) ≤ 0 := by
       have := OrderedRing.zero_lt_one (R := R)
-      replace this := OrderedAdd.add_le_right (M := R) (n:R) (Std.le_of_lt this)
+      replace this := OrderedAdd.add_le_right (M := R) (n : R) (Std.le_of_lt this)
       rw [Semiring.add_zero] at this
       exact Std.IsPreorder.le_trans _ _ _ this h
     replace ih := ih 0
@@ -77,7 +81,7 @@ theorem le_of_natCast_le_natCast (a b : Nat) : (a : R) ≤ (b : R) → a ≤ b :
     have := OrderedRing.zero_lt_one (R := R)
     rw [Semiring.natCast_zero, Semiring.add_comm, Semiring.add_zero] at h
     replace this := Std.lt_of_lt_of_le this h
-    have := Preorder.lt_irrefl (0:R)
+    have := Preorder.lt_irrefl (0 : R)
     contradiction
   next ih m =>
     simp [Semiring.natCast_succ]
@@ -95,7 +99,8 @@ theorem le_of_intCast_le_intCast (a b : Int) : (a : R) ≤ (b : R) → a ≤ b :
   cases x <;> simp [Ring.intCast_natCast, Int.negSucc_eq, Ring.intCast_neg, Ring.intCast_add]
   intro h
   replace h := OrderedAdd.neg_nonneg_iff.mp h
-  rw [Ring.intCast_one, ← Semiring.natCast_one, ← Semiring.natCast_add, ← Semiring.natCast_zero] at h
+  rw [Ring.intCast_one, ← Semiring.natCast_one, ← Semiring.natCast_add, ← Semiring.natCast_zero]
+    at h
   replace h := le_of_natCast_le_natCast _ _ h
   omega
 
@@ -103,13 +108,13 @@ theorem lt_of_natCast_lt_natCast (a b : Nat) : (a : R) < (b : R) → a < b := by
   induction a generalizing b <;> cases b <;> simp
   next =>
     simp [Semiring.natCast_zero]
-    exact Preorder.lt_irrefl (0:R)
+    exact Preorder.lt_irrefl (0 : R)
   next n ih =>
     simp [Semiring.natCast_succ, Semiring.natCast_zero]
     intro h
-    have : (n:R) < 0 := by
+    have : (n : R) < 0 := by
       have := OrderedRing.zero_lt_one (R := R)
-      replace this := OrderedAdd.add_le_right (M := R) (n:R) (Std.le_of_lt this)
+      replace this := OrderedAdd.add_le_right (M := R) (n : R) (Std.le_of_lt this)
       rw [Semiring.add_zero] at this
       exact Std.lt_of_le_of_lt this h
     replace ih := ih 0
@@ -133,12 +138,13 @@ theorem lt_of_intCast_lt_intCast (a b : Int) : (a : R) < (b : R) → a < b := by
   next =>
     intro h
     replace h := OrderedAdd.neg_pos_iff.mp h
-    rw [Ring.intCast_one, ← Semiring.natCast_one, ← Semiring.natCast_add, ← Semiring.natCast_zero] at h
+    rw [Ring.intCast_one, ← Semiring.natCast_one, ← Semiring.natCast_add, ← Semiring.natCast_zero]
+      at h
     replace h := lt_of_natCast_lt_natCast _ _ h
     omega
 
 theorem natCast_le_natCast_of_le (a b : Nat) : a ≤ b → (a : R) ≤ (b : R) := by
-  induction a generalizing b <;> cases b <;> simp [- Std.le_refl]
+  induction a generalizing b <;> cases b <;> simp [-Std.le_refl]
   next => simp [Semiring.natCast_zero]
   next n =>
     have := ofNat_nonneg (R := R) n
@@ -178,7 +184,8 @@ theorem pos_natCast_of_pos (a : Nat) : 0 < a → 0 < (a : R) := by
   induction a
   next => simp
   next n ih =>
-    simp; cases n
+    simp
+    cases n
     next => simp +arith; rw [Semiring.natCast_one]; apply zero_lt_one
     next =>
       simp at ih
@@ -206,7 +213,8 @@ theorem neg_intCast_of_neg (a : Int) : a < 0 → (a : R) < 0 := by
 theorem nonneg_intCast_of_nonneg (a : Int) : 0 ≤ a → 0 ≤ (a : R) := by
   cases a
   next n =>
-    intro; rw [Int.ofNat_eq_natCast, Ring.intCast_natCast]
+    intro
+    rw [Int.ofNat_eq_natCast, Ring.intCast_natCast]
     have := ofNat_nonneg (R := R) n
     rw [Semiring.ofNat_eq_natCast] at this
     assumption
@@ -219,38 +227,44 @@ theorem nonpos_intCast_of_nonpos (a : Int) : a ≤ 0 → (a : R) ≤ 0 := by
   simp [Ring.intCast_neg, OrderedAdd.neg_nonneg_iff] at h
   assumption
 
-instance [Ring R] [LE R] [LT R] [LawfulOrderLT R] [IsPreorder R] [OrderedRing R] :
-    IsCharP R 0 := IsCharP.mk' _ _ <| by
-  intro x
-  simp only [Nat.mod_zero]; constructor
-  next =>
-    intro h
-    cases x
-    next => rfl
-    next x =>
-      rw [Semiring.ofNat_succ] at h
-      replace h := congrArg (· - 1) h; try simp at h -- TODO(kmill): remove simp after stage0 update
-      rw [Ring.sub_eq_add_neg, Semiring.add_assoc, AddCommGroup.add_neg_cancel,
-          Ring.sub_eq_add_neg, AddCommMonoid.zero_add, Semiring.add_zero] at h
-      have h₁ : (OfNat.ofNat x : R) < 0 := by
-        have := OrderedRing.neg_one_lt_zero (R := R)
-        rw [h]; assumption
-      have h₂ := OrderedRing.ofNat_nonneg (R := R) x
-      have : (0 : R) < 0 := Preorder.lt_of_le_of_lt h₂ h₁
-      simp
-      exact (Preorder.lt_irrefl 0) this
-  next => intro h; rw [OfNat.ofNat, h]; rfl
+instance [Ring R] [LE R] [LT R] [LawfulOrderLT R] [IsPreorder R] [OrderedRing R] : IsCharP R 0 :=
+  IsCharP.mk' _ _ <| by
+    intro x
+    simp only [Nat.mod_zero]
+    constructor
+    next =>
+      intro h
+      cases x
+      next => rfl
+      next x =>
+        rw [Semiring.ofNat_succ] at h
+        replace h := congrArg (· - 1) h
+        try simp at h -- TODO(kmill): remove simp after stage0 update
+        rw [Ring.sub_eq_add_neg, Semiring.add_assoc, AddCommGroup.add_neg_cancel,
+            Ring.sub_eq_add_neg, AddCommMonoid.zero_add, Semiring.add_zero]
+          at h
+        have h₁ : (OfNat.ofNat x : R) < 0 := by
+          have := OrderedRing.neg_one_lt_zero (R := R)
+          rw [h]
+          assumption
+        have h₂ := OrderedRing.ofNat_nonneg (R := R) x
+        have : (0 : R) < 0 := Preorder.lt_of_le_of_lt h₂ h₁
+        simp
+        exact (Preorder.lt_irrefl 0) this
+    next => intro h; rw [OfNat.ofNat, h]; rfl
 
 end Preorder
 
-theorem mul_pos [LE R] [LT R] [IsPreorder R] [OrderedRing R] {a b : R} (h₁ : 0 < a) (h₂ : 0 < b) : 0 < a * b := by
+theorem mul_pos [LE R] [LT R] [IsPreorder R] [OrderedRing R] {a b : R} (h₁ : 0 < a) (h₂ : 0 < b)
+    : 0 < a * b := by
   simpa [Semiring.zero_mul] using mul_lt_mul_of_pos_right h₁ h₂
 
 theorem zero_le_one [LE R] [LT R] [LawfulOrderLT R] [IsPreorder R] [OrderedRing R] : (0 : R) ≤ 1 :=
   Preorder.le_of_lt zero_lt_one
 
-theorem not_one_lt_zero [LE R] [LT R] [LawfulOrderLT R] [IsPreorder R] [OrderedRing R] : ¬ ((1 : R) < 0) :=
-  fun h => Preorder.lt_irrefl (0 : R) (Preorder.lt_trans zero_lt_one h)
+theorem not_one_lt_zero [LE R] [LT R] [LawfulOrderLT R] [IsPreorder R] [OrderedRing R]
+    : ¬((1 : R) < 0) := fun h =>
+  Preorder.lt_irrefl (0 : R) (Preorder.lt_trans zero_lt_one h)
 
 section PartialOrder
 
@@ -353,23 +367,21 @@ theorem mul_pos_iff {a b : R} : 0 < a * b ↔ 0 < a ∧ 0 < b ∨ a < 0 ∧ b < 
     · simp [ha, hb, mul_pos]
     · simp [Preorder.lt_irrefl, Semiring.mul_zero]
     · have m : a * b < 0 := mul_neg_of_pos_of_neg ha hb
-      simp [ha, hb, Preorder.not_gt_of_lt m,
-        Preorder.not_gt_of_lt ha, Preorder.not_gt_of_lt hb]
+      simp [ha, hb, Preorder.not_gt_of_lt m, Preorder.not_gt_of_lt ha, Preorder.not_gt_of_lt hb]
   · simp [Preorder.lt_irrefl, Semiring.zero_mul]
   · rcases LinearOrder.trichotomy 0 b with (hb | rfl | hb)
     · have m : a * b < 0 := mul_neg_of_neg_of_pos ha hb
-      simp [ha, hb, Preorder.not_gt_of_lt m,
-        Preorder.not_gt_of_lt ha, Preorder.not_gt_of_lt hb]
+      simp [ha, hb, Preorder.not_gt_of_lt m, Preorder.not_gt_of_lt ha, Preorder.not_gt_of_lt hb]
     · simp [Preorder.lt_irrefl, Semiring.mul_zero]
     · simp [ha, hb, mul_pos_of_neg_of_neg]
 
-theorem sq_nonneg {a : R} : 0 ≤ a^2 := by
+theorem sq_nonneg {a : R} : 0 ≤ a ^ 2 := by
   rw [Semiring.pow_two, mul_nonneg_iff]
   rcases le_total (a := 0) (b := a) with (h | h)
   · exact .inl ⟨h, h⟩
   · exact .inr ⟨h, h⟩
 
-theorem sq_pos {a : R} (h : a ≠ 0) : 0 < a^2 := by
+theorem sq_pos {a : R} (h : a ≠ 0) : 0 < a ^ 2 := by
   rw [Semiring.pow_two, mul_pos_iff]
   rcases LinearOrder.trichotomy 0 a with (h' | rfl | h')
   · exact .inl ⟨h', h'⟩

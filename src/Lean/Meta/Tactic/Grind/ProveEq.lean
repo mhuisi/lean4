@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 import Init.Grind.Util
@@ -76,20 +77,19 @@ private structure AbstractM.State where
   variables are copied to the result unchanged, and the operations that depend on the
   local context (`isEqv`, `inferType`, ...) are only applied to ground terms.
   -/
-  cache       : Std.HashMap (Nat × Expr × Expr) Expr := {}
+  cache : Std.HashMap (Nat × Expr × Expr) Expr := {}
   /-- Types of the new variables created for the auxiliary `fun`. -/
-  varTypes    : Array Expr  := #[]
+  varTypes : Array Expr := #[]
   /-- Ground terms from the `lhs` that have been abstracted so far. -/
-  lhss        : Array Expr  := #[]
+  lhss : Array Expr := #[]
   /-- Ground terms from the `rhs` that have been abstracted so far. -/
-  rhss        : Array Expr  := #[]
+  rhss : Array Expr := #[]
 
 /-- Helper monad for implementing `abstractGroundMismatches?` -/
 private abbrev AbstractM := ReaderT AbstractM.Context $ StateT AbstractM.State $ OptionT GoalM
 
 /-- Returns `true` if current terms occur under binders. -/
-private def inBinder : AbstractM Bool :=
-  return (← read).offset > 0
+private def inBinder : AbstractM Bool := return (← read).offset > 0
 
 /-- Executes `x` in a context where the number of binders have been increased. -/
 private abbrev withIncOffset (x : AbstractM α) : AbstractM α :=
@@ -137,36 +137,42 @@ where
         let rhs ← ensureInternalized rhs
         processToDo
         if (← isEqv lhs rhs) then
-        if (← hasSameType lhs rhs) then
-        let varType ← inferType lhs
-        let varIdx := (← get).varTypes.size + (← read).offset
-        modify fun s => { s with
-          varTypes := s.varTypes.push varType
-          lhss := s.lhss.push lhs
-          rhss := s.rhss.push rhs
-        }
-        return mkBVar varIdx
+          if (← hasSameType lhs rhs) then
+            let varType ← inferType lhs
+            let varIdx := (← get).varTypes.size + (← read).offset
+            modify fun s => {
+              s with
+              varTypes := s.varTypes.push varType
+              lhss := s.lhss.push lhs
+              rhss := s.rhss.push rhs
+            }
+            return mkBVar varIdx
     match lhs with
-    | .lit _ | .sort _ | .mvar _ | .fvar _
-    | .bvar _ | .const .. => failure
+    | .lit _ | .sort _ | .mvar _ | .fvar _ | .bvar _ | .const .. => failure
     | .mdata d₁ b₁ =>
-      let .mdata _ b₂ := rhs | failure
+      let .mdata _ b₂ := rhs
+        | failure
       return .mdata d₁ (← go b₁ b₂)
     | .proj n₁ i₁ b₁ =>
-      let .proj n₂ i₂ b₂ := rhs | failure
+      let .proj n₂ i₂ b₂ := rhs
+        | failure
       guard (n₁ == n₂ && i₁ == i₂)
       return .proj n₁ i₁ (← go b₁ b₂)
     | .app f₁ a₁ =>
-      let .app f₂ a₂ := rhs | failure
+      let .app f₂ a₂ := rhs
+        | failure
       return mkApp (← go f₁ f₂) (← go a₁ a₂)
     | .forallE n₁ d₁ b₁ i₁ =>
-      let .forallE _ d₂ b₂ _ := rhs | failure
+      let .forallE _ d₂ b₂ _ := rhs
+        | failure
       return mkForall n₁ i₁ (← go d₁ d₂) (← withIncOffset <| go b₁ b₂)
-    | .lam n₁ d₁ b₁ i₁  =>
-      let .lam _ d₂ b₂ _ := rhs | failure
+    | .lam n₁ d₁ b₁ i₁ =>
+      let .lam _ d₂ b₂ _ := rhs
+        | failure
       return mkLambda n₁ i₁ (← go d₁ d₂) (← withIncOffset <| go b₁ b₂)
     | .letE n₁ t₁ v₁ b₁ nd₁ =>
-      let .letE _ t₂ v₂ b₂ _ := rhs | failure
+      let .letE _ t₂ v₂ b₂ _ := rhs
+        | failure
       return mkLet n₁ (← go t₁ t₂) (← go v₁ v₂) (← withIncOffset <| go b₁ b₂) nd₁
 
   go (lhs rhs : Expr) : AbstractM Expr := do
@@ -194,34 +200,37 @@ propagation. It will not perform case analysis.
 -/
 def proveEq? (lhs rhs : Expr) (abstract : Bool := false) : GoalM (Option Expr) := do
   trace[grind.debug.proveEq] "({lhs}) = ({rhs})"
-  unless (← hasSameType lhs rhs) do return none
+  unless (← hasSameType lhs rhs) do
+    return none
   if (← alreadyInternalized lhs <&&> alreadyInternalized rhs) then
     if (← isEqv lhs rhs) then
       return some (← mkEqProof lhs rhs)
-    else if abstract then withoutModifyingState do
-      tryAbstract lhs rhs
-    else
-      return none
-  else withoutModifyingState do
-    /-
-    We used to apply the `grind` normalizer, but it created unexpected failures.
-    Here is an example, suppose we are trying to prove `i < (a :: l).length` is equal to `0 < (a :: l).length`
-    when `i` and `0`  are in the same equivalence class. This should hold by applying congruence closure.
-    However, if we apply the normalizer, we obtain `i+1 ≤ (a :: l).length` and `1 ≤ (a :: l).length`, and
-    the equality cannot be detected by congruence closure anymore.
-    -/
-    let lhs ← ensureInternalized lhs
-    let rhs ← ensureInternalized rhs
-    processToDo
-    if (← isEqv lhs rhs) then
-      return some (← mkEqProof lhs rhs)
     else if abstract then
-      tryAbstract lhs rhs
+      withoutModifyingState do tryAbstract lhs rhs
     else
       return none
+  else
+    withoutModifyingState do
+      /-
+      We used to apply the `grind` normalizer, but it created unexpected failures.
+      Here is an example, suppose we are trying to prove `i < (a :: l).length` is equal to `0 < (a :: l).length`
+      when `i` and `0`  are in the same equivalence class. This should hold by applying congruence closure.
+      However, if we apply the normalizer, we obtain `i+1 ≤ (a :: l).length` and `1 ≤ (a :: l).length`, and
+      the equality cannot be detected by congruence closure anymore.
+      -/
+      let lhs ← ensureInternalized lhs
+      let rhs ← ensureInternalized rhs
+      processToDo
+      if (← isEqv lhs rhs) then
+        return some (← mkEqProof lhs rhs)
+      else if abstract then
+        tryAbstract lhs rhs
+      else
+        return none
 where
   tryAbstract (lhs₀ rhs₀ : Expr) : GoalM (Option Expr) := do
-    let some (lhs, rhs) ← abstractGroundMismatches? lhs₀ rhs₀ | return none
+    let some (lhs, rhs) ← abstractGroundMismatches? lhs₀ rhs₀
+      | return none
     trace[grind.debug.proveEq] "abstract: ({lhs}) = ({rhs})"
     let lhs ← ensureInternalized lhs
     let rhs ← ensureInternalized rhs
@@ -238,12 +247,14 @@ def proveHEq? (lhs rhs : Expr) : GoalM (Option Expr) := do
       return some (← mkHEqProof lhs rhs)
     else
       return none
-  else withoutModifyingState do
-    -- See comment at `proveEq?`
-    let lhs ← ensureInternalized lhs
-    let rhs ← ensureInternalized rhs
-    processToDo
-    unless (← isEqv lhs rhs) do return none
-    mkHEqProof lhs rhs
+  else
+    withoutModifyingState do
+      -- See comment at `proveEq?`
+      let lhs ← ensureInternalized lhs
+      let rhs ← ensureInternalized rhs
+      processToDo
+      unless (← isEqv lhs rhs) do
+        return none
+      mkHEqProof lhs rhs
 
 end Lean.Meta.Grind

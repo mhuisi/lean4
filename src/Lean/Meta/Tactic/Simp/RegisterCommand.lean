@@ -6,29 +6,33 @@ Authors: Leonardo de Moura
 module
 
 prelude
-public import Lean.Meta.Tactic.Simp.Attr  -- shake: keep (macro output dependency)
+public import Lean.Meta.Tactic.Simp.Attr -- shake: keep (macro output dependency)
 public meta import Lean.Meta.Tactic.Simp.Simproc
 
 public section
 
 namespace Lean.Meta.Simp
 
-macro (name := _root_.Lean.Parser.Command.registerSimpAttr) doc:(docComment)?
-  "register_simp_attr" id:ident : command => do
-  let str := id.getId.toString
-  let idParser := mkIdentFrom id (`Parser.Attr ++ id.getId)
-  let descr := quote ((doc.map (·.getDocString) |>.getD s!"simp set for {id.getId.toString}").removeLeadingSpaces)
-  let procId := mkIdentFrom id (simpAttrNameToSimprocAttrName id.getId)
-  let procStr := procId.getId.toString
-  let procIdParser := mkIdentFrom procId (`Parser.Attr ++ procId.getId)
-  let procDescr := quote s!"simproc set for {procId.getId.toString}"
-  -- TODO: better docComment for simprocs
-  let procDoc := mkMarkdownDocCommentFrom id "Simplification procedure"
-  `($[$doc:docComment]? public meta initialize ext : SimpExtension ← registerSimpAttr $(quote id.getId) $descr
-    $[$doc:docComment]? syntax (name := $idParser:ident) $(quote str):str (Parser.Tactic.simpPre <|> Parser.Tactic.simpPost)? unicode(" ←", " <-")? (prio)? : attr
-    $procDoc:docComment
-    public meta initialize extProc : SimprocExtension ← registerSimprocAttr $(quote procId.getId) $procDescr none
-    $procDoc:docComment
-    syntax (name := $procIdParser:ident) $(quote procStr):str (Parser.Tactic.simpPre <|> Parser.Tactic.simpPost)? : attr)
+macro (name := _root_.Lean.Parser.Command.registerSimpAttr)
+    doc:(docComment)? "register_simp_attr" id:ident
+    : command =>
+  do
+    let str := id.getId.toString
+    let idParser := mkIdentFrom id (`Parser.Attr ++ id.getId)
+    let descr :=
+      quote ((doc.map (·.getDocString)
+        |>.getD s!"simp set for {id.getId.toString}").removeLeadingSpaces)
+    let procId := mkIdentFrom id (simpAttrNameToSimprocAttrName id.getId)
+    let procStr := procId.getId.toString
+    let procIdParser := mkIdentFrom procId (`Parser.Attr ++ procId.getId)
+    let procDescr := quote s!"simproc set for {procId.getId.toString}"
+    -- TODO: better docComment for simprocs
+    let procDoc := mkMarkdownDocCommentFrom id "Simplification procedure"
+    `($[$doc:docComment]? public meta initialize ext : SimpExtension ← registerSimpAttr $(quote id.getId) $descr
+      $[$doc:docComment]? syntax (name := $idParser:ident) $(quote str):str (Parser.Tactic.simpPre <|> Parser.Tactic.simpPost)? unicode(" ←", " <-")? (prio)? : attr
+      $procDoc:docComment
+      public meta initialize extProc : SimprocExtension ← registerSimprocAttr $(quote procId.getId) $procDescr none
+      $procDoc:docComment
+      syntax (name := $procIdParser:ident) $(quote procStr):str (Parser.Tactic.simpPre <|> Parser.Tactic.simpPost)? : attr)
 
 end Lean.Meta.Simp

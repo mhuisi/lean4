@@ -21,25 +21,29 @@ namespace Lean.Html
 /-- Renders an HTML string. Expects props {lit}`{ html : string }`. -/
 @[builtin_widget_module]
 def htmlWidget : Widget.Module where
-  javascript := "
-import { createElement } from 'react'
+  javascript :=
+    "\nimport { createElement } from 'react'\
+      \n\
+      \nexport default function ({ html }) {\
+      \n  return createElement('span', {\
+      \n    style: { display: 'contents' },\
+      \n    dangerouslySetInnerHTML: { __html: html }\
+      \n  })\
+      \n}"
 
-export default function ({ html }) {
-  return createElement('span', {
-    style: { display: 'contents' },
-    dangerouslySetInnerHTML: { __html: html }
-  })
-}"
-
-/-- A message that displays the given HTML as a widget,
-falling back to the HTML source in plaintext contexts. -/
+/--
+A message that displays the given HTML as a widget,
+falling back to the HTML source in plaintext contexts.
+-/
 def toMessageData (h : Html) : MessageData :=
   let s := h.render
-  .ofWidget {
-    id := ``htmlWidget
-    javascriptHash := htmlWidget.javascriptHash
-    props := return json% { html: $(s) }
-  } s
+  .ofWidget
+    {
+      id := ``htmlWidget
+      javascriptHash := htmlWidget.javascriptHash
+      props := return json% { html: $(s) }
+    }
+    s
 
 instance : ToMessageData Html := ⟨toMessageData⟩
 

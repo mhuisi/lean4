@@ -20,41 +20,41 @@ namespace Lean
 
 register_builtin_option genCtorIdx : Bool := {
   defValue := true
-  descr    := "generate the `CtorIdx` functions for inductive datatypes"
+  descr := "generate the `CtorIdx` functions for inductive datatypes"
 }
 
-public def mkCtorIdxName (indName : Name) : Name :=
-  Name.mkStr indName "ctorIdx"
+public def mkCtorIdxName (indName : Name) : Name := Name.mkStr indName "ctorIdx"
 
-def mkCtorIdxImplName (indName : Name) : Name :=
-  Name.mkStr (mkCtorIdxName indName) "_impl"
+def mkCtorIdxImplName (indName : Name) : Name := Name.mkStr (mkCtorIdxName indName) "_impl"
 
 public def isCtorIdxCore? (env : Environment) (declName : Name) : Option InductiveVal := do
-  let .str indName "ctorIdx" := declName | none
+  let .str indName "ctorIdx" := declName
+    | none
   let indInfo ← isInductiveCore? env indName
   return indInfo
 
 public def isCtorIdx? (declName : Name) : MetaM (Option InductiveVal) := do
   return isCtorIdxCore? (← getEnv) declName
 
-def mkCtorIdxImpl (indName : Name) (levelParams : List Name) (declType : Expr) :
-    MetaM Name := do
+def mkCtorIdxImpl (indName : Name) (levelParams : List Name) (declType : Expr) : MetaM Name := do
   let implName := mkCtorIdxImplName indName
 
-  let value ← forallTelescope declType fun args _ => do
-    let discr := args[args.size - 1]!
-    let indType ← inferType discr
-    let body := mkApp2 (mkConst ``getObjTagNat [← getLevel indType]) indType discr
-    mkLambdaFVars args body
+  let value ←
+    forallTelescope declType fun args _ => do
+      let discr := args[args.size - 1]!
+      let indType ← inferType discr
+      let body := mkApp2 (mkConst ``getObjTagNat [← getLevel indType]) indType discr
+      mkLambdaFVars args body
 
-  let decl := .defnDecl {
-    name := implName
-    levelParams := levelParams
-    type := declType
-    value := value
-    hints := .opaque
-    safety := .unsafe
-  }
+  let decl :=
+    .defnDecl {
+      name := implName
+      levelParams := levelParams
+      type := declType
+      value := value
+      hints := .opaque
+      safety := .unsafe
+    }
 
   addDecl decl
 
@@ -76,68 +76,71 @@ Assumes `T.casesOn` to be defined already.
 -/
 public def mkCtorIdx (indName : Name) : MetaM Unit :=
   withExporting (isExporting := ! isPrivateName indName) do
-  prependError m!"failed to construct `T.ctorIdx` for `{.ofConstName indName}`:" do
-    unless genCtorIdx.get (← getOptions) do return
-    let declName := mkCtorIdxName indName
-    if (← hasConst declName) then return
-    let ConstantInfo.inductInfo info ← getConstInfo indName | unreachable!
-    if (← isPropFormerType info.type) then return
-    let casesOnName := mkCasesOnName indName
-    let casesOnInfo ← getConstInfo casesOnName
-    unless casesOnInfo.levelParams.length > info.levelParams.length do return
+    prependError m!"failed to construct `T.ctorIdx` for `{.ofConstName indName}`:" do
+      unless genCtorIdx.get (← getOptions) do
+        return
+      let declName := mkCtorIdxName indName
+      if (← hasConst declName) then return
+      let ConstantInfo.inductInfo info ← getConstInfo indName
+        | unreachable!
+      if (← isPropFormerType info.type) then return
+      let casesOnName := mkCasesOnName indName
+      let casesOnInfo ← getConstInfo casesOnName
+      unless casesOnInfo.levelParams.length > info.levelParams.length do
+        return
 
-    let us := info.levelParams.map mkLevelParam
-    forallBoundedTelescope info.type (info.numParams + info.numIndices) fun xs _ => do
-    withImplicitBinderInfos xs do
-      let params : Array Expr := xs[:info.numParams]
-      let indices : Array Expr := xs[info.numParams:]
-      let indType := mkAppN (mkConst indName us) xs
-      let natType  := mkConst ``Nat
-      let declType ← mkArrow indType natType
-      let declType ← mkForallFVars xs declType
-      let declValue ← withLocalDeclD `x indType fun x => do
-        let value ← if info.numCtors = 1 then
-          pure (mkRawNatLit 0)
-        else
-          let motive ← mkLambdaFVars (indices.push x) natType
-          let mut value := mkConst casesOnName (Level.one::us)
-          value := mkAppN value params
-          value := mkApp value motive
-          value := mkAppN value indices
-          value := mkApp value x
-          for c in info.ctors do
-            let cInfo ← getConstInfoCtor c
-            let cType ← instantiateForall cInfo.type params
-            let alt ← forallBoundedTelescope cType cInfo.numFields fun ys _ =>
-              mkLambdaFVars ys <| mkRawNatLit cInfo.cidx
-            value := mkApp value alt
-          pure value
-        mkLambdaFVars (xs.push x) value
-      let hints := ReducibilityHints.regular (getMaxHeight (← getEnv) declValue + 1)
-      let decl := .defnDecl (← mkDefinitionValInferringUnsafe
-        (name        := declName)
-        (levelParams := info.levelParams)
-        (type        := declType)
-        (value       := declValue)
-        (hints       := hints)
-      )
-      addDecl decl
-      modifyEnv fun env => addToCompletionBlackList env declName
-      modifyEnv fun env => addProtected env declName
-      if isMarkedMeta (← getEnv) indName then
-        modifyEnv (markMeta · declName)
-      if info.numCtors = 1 then
-        setInlineAttribute declName .macroInline
-      else if !Compiler.LCNF.isRuntimeBuiltinType indName then
-        /-
-        This branch is not just an optimization, calling getObjTagNat on:
-        - a single ctor inductive is wrong if it is an inductive with trivial structure that gets
-          uwnrapped later
-        - built-in types like `Nat` and `Int` is wrong as they don't have a normal tag
-        -/
-        let implName ← mkCtorIdxImpl indName info.levelParams declType
-        setImplementedBy declName implName
-      compileDecl decl
-      enableRealizationsForConst declName
+      let us := info.levelParams.map mkLevelParam
+      forallBoundedTelescope info.type (info.numParams + info.numIndices) fun xs _ => do
+        withImplicitBinderInfos xs do
+          let params : Array Expr := xs[:info.numParams]
+          let indices : Array Expr := xs[info.numParams:]
+          let indType := mkAppN (mkConst indName us) xs
+          let natType := mkConst ``Nat
+          let declType ← mkArrow indType natType
+          let declType ← mkForallFVars xs declType
+          let declValue ←
+            withLocalDeclD `x indType fun x => do
+              let value ←
+                if info.numCtors = 1 then
+                  pure (mkRawNatLit 0)
+                else
+                  let motive ← mkLambdaFVars (indices.push x) natType
+                  let mut value := mkConst casesOnName (Level.one :: us)
+                  value := mkAppN value params
+                  value := mkApp value motive
+                  value := mkAppN value indices
+                  value := mkApp value x
+                  for c in info.ctors do
+                    let cInfo ← getConstInfoCtor c
+                    let cType ← instantiateForall cInfo.type params
+                    let alt ←
+                      forallBoundedTelescope cType cInfo.numFields fun ys _ =>
+                        mkLambdaFVars ys <| mkRawNatLit cInfo.cidx
+                    value := mkApp value alt
+                  pure value
+              mkLambdaFVars (xs.push x) value
+          let hints := ReducibilityHints.regular (getMaxHeight (← getEnv) declValue + 1)
+          let decl :=
+            .defnDecl (← mkDefinitionValInferringUnsafe (name := declName)
+              (levelParams := info.levelParams) (type := declType) (value := declValue)
+              (hints := hints))
+          addDecl decl
+          modifyEnv fun env => addToCompletionBlackList env declName
+          modifyEnv fun env => addProtected env declName
+          if isMarkedMeta (← getEnv) indName then
+            modifyEnv (markMeta · declName)
+          if info.numCtors = 1 then
+            setInlineAttribute declName .macroInline
+          else if ! Compiler.LCNF.isRuntimeBuiltinType indName then
+            /-
+            This branch is not just an optimization, calling getObjTagNat on:
+            - a single ctor inductive is wrong if it is an inductive with trivial structure that gets
+              uwnrapped later
+            - built-in types like `Nat` and `Int` is wrong as they don't have a normal tag
+            -/
+            let implName ← mkCtorIdxImpl indName info.levelParams declType
+            setImplementedBy declName implName
+          compileDecl decl
+          enableRealizationsForConst declName
 
 end Lean

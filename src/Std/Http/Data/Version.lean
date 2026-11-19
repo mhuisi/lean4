@@ -29,32 +29,19 @@ HTTP protocol versions modeled by this library.
 Reference: https://httpwg.org/specs/rfc9110.html#protocol.version
 -/
 inductive Version
-  /--
-  `HTTP/1.0`
-  -/
+  /-- `HTTP/1.0` -/
   | v10
-
-  /--
-  `HTTP/1.1`
-  -/
+  /-- `HTTP/1.1` -/
   | v11
-
-  /--
-  `HTTP/2.0`
-  -/
+  /-- `HTTP/2.0` -/
   | v20
-
-  /--
-  `HTTP/3.0`
-  -/
+  /-- `HTTP/3.0` -/
   | v30
 deriving Repr, Inhabited, BEq, DecidableEq
 
 namespace Version
 
-/--
-Converts a pair of `Nat` to the corresponding `Version`.
--/
+/-- Converts a pair of `Nat` to the corresponding `Version`. -/
 def ofNumber? : Nat → Nat → Option Version
   | 1, 0 => some .v10
   | 1, 1 => some .v11
@@ -62,9 +49,7 @@ def ofNumber? : Nat → Nat → Option Version
   | 3, 0 => some .v30
   | _, _ => none
 
-/--
-Converts `String` to the corresponding `Version`.
--/
+/-- Converts `String` to the corresponding `Version`. -/
 def ofString? : String → Option Version
   | "HTTP/1.0" => some .v10
   | "HTTP/1.1" => some .v11
@@ -72,17 +57,13 @@ def ofString? : String → Option Version
   | "HTTP/3.0" => some .v30
   | _ => none
 
-/--
-Converts `String` to the corresponding `Version`, panics if invalid.
--/
+/-- Converts `String` to the corresponding `Version`, panics if invalid. -/
 def ofString! (s : String) : Version :=
   match ofString? s with
   | some v => v
   | none => panic! s!"invalid HTTP version: {s.quote}"
 
-/--
-Converts a `Version` to its corresponding major and minor numbers as a pair.
--/
+/-- Converts a `Version` to its corresponding major and minor numbers as a pair. -/
 def toNumber : Version → (Nat × Nat)
   | .v10 => (1, 0)
   | .v11 => (1, 1)

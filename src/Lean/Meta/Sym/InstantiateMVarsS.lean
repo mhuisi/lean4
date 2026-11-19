@@ -4,14 +4,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.SymM
 import Lean.Meta.Sym.InstantiateS
 namespace Lean.Meta.Sym
 
-/--
-Instantiates metavariables occurring in `e`, and returns a maximally shared term.
--/
+/-- Instantiates metavariables occurring in `e`, and returns a maximally shared term. -/
 public def instantiateMVarsS (e : Expr) : SymM Expr := do
   if e.hasMVar then
     -- **Note**: If this is a bottleneck, write a new function that combines both steps.
@@ -35,12 +34,14 @@ replaced by its value and beta-reduced, and `none` otherwise. The arguments of `
 traversed.
 -/
 public def instantiateAssignedMVarHeadS? (e : Expr) : SymM (Option Expr) := do
-  let .mvar mvarId := e.getAppFn | return none
+  let .mvar mvarId := e.getAppFn
+    | return none
   if let some val ← getExprMVarAssignment? mvarId then
     -- `val` may not be maximally shared, e.g., when assigned by `isDefEq`.
     let val ← instantiateMVarsS val
     return some (← betaS val e.getAppArgs)
-  let some { fvars, mvarIdPending } ← getDelayedMVarAssignment? mvarId | return none
+  let some { fvars, mvarIdPending } ← getDelayedMVarAssignment? mvarId
+    | return none
   let args := e.getAppArgs
   if args.size < fvars.size then return none
   let val ← instantiateMVars (mkMVar mvarIdPending)

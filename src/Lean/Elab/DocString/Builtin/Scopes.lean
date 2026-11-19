@@ -4,8 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
 module
-prelude
 
+prelude
 public import Lean.Elab.DocString
 public import Lean.Elab.DocString.Builtin.Parsing
 
@@ -33,6 +33,8 @@ instance : FromDocArg DocScope where
       return .import (modNames.map (·.getId))
     | .ident x =>
       let y := x.getId.eraseMacroScopes
-      if y == `local then pure .local
-      else throwErrorAt x "Unexpected identifier, expected `local` or a string of imports"
+      if y == `local then
+        pure .local
+      else
+        throwErrorAt x "Unexpected identifier, expected `local` or a string of imports"
     | .num n => throwErrorAt n "Unexpected number `{n}`"

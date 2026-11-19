@@ -42,7 +42,7 @@ public class ToToml? (α : Type u) where
 
 export ToToml? (toToml?)
 
-public instance(priority := high) [ToToml α] : ToToml? α where
+public instance (priority := high) [ToToml α] : ToToml? α where
   toToml? v := some (toToml v)
 
 public def Toml.encodeArray? [ToToml? α] (as : Array α) : Option (Array Value) :=
@@ -78,33 +78,33 @@ public instance : SmartInsert String where
 namespace Table
 
 /-- Inserts the encoded value into the table. -/
-@[inline] public nonrec def insert
-  [enc : ToToml α] (k : Name) (v : α) (t : Table) : Table
-:= t.insert k (enc.toToml v)
+@[inline]
+public nonrec def insert [enc : ToToml α] (k : Name) (v : α) (t : Table) : Table :=
+  t.insert k (enc.toToml v)
 
 /-- If the value is not `none`, inserts the encoded value into the table. -/
-@[macro_inline, expose] public nonrec def insertSome
-  [enc : ToToml α] (k : Name) (v? : Option α) (t : Table)
-: Table := t.insertSome k (v?.map enc.toToml)
+@[macro_inline, expose]
+public nonrec def insertSome [enc : ToToml α] (k : Name) (v? : Option α) (t : Table) : Table :=
+  t.insertSome k (v?.map enc.toToml)
 
 public instance [ToToml α] : SmartInsert (Option α) := ⟨Table.insertSome⟩
 
 /-- Insert a value into the table unless it represents a nullish value. -/
-@[inline] public nonrec def smartInsert
-  [SmartInsert α] (k : Name) (v : α) (t : Table)
-: Table := SmartInsert.smartInsert k v t
+@[inline]
+public nonrec def smartInsert [SmartInsert α] (k : Name) (v : α) (t : Table) : Table :=
+  SmartInsert.smartInsert k v t
 
 /-- Insert a value into the table if `p` is `true`. -/
-@[macro_inline, expose] public nonrec def insertIf
-  [enc : ToToml α] (p : Bool) (k : Name) (v : α) (t : Table)
-: Table := t.insertIf p k (enc.toToml v)
+@[macro_inline, expose]
+public nonrec def insertIf [enc : ToToml α] (p : Bool) (k : Name) (v : α) (t : Table) : Table :=
+  t.insertIf p k (enc.toToml v)
 
 /-- Insert a value into the table if `p` is `false`. -/
-@[macro_inline, expose] public nonrec def insertUnless
-  [enc : ToToml α] (p : Bool) (k : Name) (v : α) (t : Table)
-: Table := t.insertUnless p k (enc.toToml v)
+@[macro_inline, expose]
+public nonrec def insertUnless [enc : ToToml α] (p : Bool) (k : Name) (v : α) (t : Table) : Table :=
+  t.insertUnless p k (enc.toToml v)
 
 /-- Inserts the value into the table if it is not equal to `default`. -/
-@[inline] public def insertD
-  [enc : ToToml α] [BEq α] (k : Name) (v : α) (default : α) (t : Table)
-: Table := t.insertUnless (v == default) k (enc.toToml v)
+@[inline]
+public def insertD [enc : ToToml α] [BEq α] (k : Name) (v : α) (default : α) (t : Table) : Table :=
+  t.insertUnless (v == default) k (enc.toToml v)

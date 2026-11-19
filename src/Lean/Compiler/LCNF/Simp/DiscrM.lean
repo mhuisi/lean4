@@ -21,8 +21,8 @@ inductive CtorInfo where
 
 def CtorInfo.getName : CtorInfo → Name
   | .ctor val _ => val.name
-  | .natVal 0   => ``Nat.zero
-  | .natVal _   => ``Nat.succ
+  | .natVal 0 => ``Nat.zero
+  | .natVal _ => ``Nat.succ
 
 def CtorInfo.getNumParams : CtorInfo → Nat
   | .ctor val _ => val.numParams
@@ -30,8 +30,8 @@ def CtorInfo.getNumParams : CtorInfo → Nat
 
 def CtorInfo.getNumFields : CtorInfo → Nat
   | .ctor val _ => val.numFields
-  | .natVal 0   => 0
-  | .natVal _   => 1
+  | .natVal 0 => 0
+  | .natVal _ => 1
 
 structure DiscrM.Context where
   /--
@@ -58,15 +58,16 @@ def findCtor? (fvarId : FVarId) : DiscrM (Option CtorInfo) := do
   if let some ctorInfo := (← read).discrCtorMap.get? fvarId then
     return ctorInfo
   match (← findLetDecl? fvarId) with
-  | some { value := .lit (.nat n), .. } =>
-    return some <| .natVal n
+  | some { value := .lit (.nat n), .. } => return some <| .natVal n
   | some { value := .const declName _ args, .. } =>
-    let some (.ctorInfo val) := (← getEnv).find? declName | return none
+    let some (.ctorInfo val) := (← getEnv).find? declName
+      | return none
     return some <| .ctor val args
   | _ => return none
 
 def findCtorName? (fvarId : FVarId) : DiscrM (Option Name) := do
-  let some ctorInfo ← findCtor? fvarId | return none
+  let some ctorInfo ← findCtor? fvarId
+    | return none
   return ctorInfo.getName
 
 /--
@@ -74,21 +75,28 @@ If `type` is an application of the inductive type `ind`, return its universe lev
 -/
 def getIndInfo? (type : Expr) (ind : Name) : CoreM (Option (List Level × Array (Arg .pure))) := do
   let type := type.headBeta
-  let .const declName us := type.getAppFn | return none
-  unless declName == ind do return none
-  let .inductInfo info ← getConstInfo declName | return none
-  unless type.getAppNumArgs >= info.numParams do return none
-  let args := type.getAppArgs[*...info.numParams].toArray.map fun
-    | .fvar fvarId => .fvar fvarId
-    | e => if e.isErased then .erased else .type e
+  let .const declName us := type.getAppFn
+    | return none
+  unless declName == ind do
+    return none
+  let .inductInfo info ← getConstInfo declName
+    | return none
+  unless type.getAppNumArgs >= info.numParams do
+    return none
+  let args :=
+    type.getAppArgs[*...info.numParams].toArray.map fun
+      | .fvar fvarId => .fvar fvarId
+      | e => if e.isErased then .erased else .type e
   return some (us, args)
 
 /--
 Execute `x` with the information that `discr = ctorName ctorFields`.
 We use this information to simplify nested cases on the same discriminant.
 -/
-@[inline] def withDiscrCtorImp (discr : FVarId) (ctorName : Name)
-    (ctorFields : Array (Param .pure)) (x : DiscrM α) : DiscrM α := do
+@[inline]
+def withDiscrCtorImp
+    (discr : FVarId) (ctorName : Name) (ctorFields : Array (Param .pure)) (x : DiscrM α)
+    : DiscrM α := do
   let ctx ← updateCtx
   withReader (fun _ => ctx) x
 where
@@ -100,20 +108,27 @@ where
       let ctorArgs := params ++ fieldArgs
       let ctorInfo := .ctor ctorVal ctorArgs
       let ctor := LetValue.const ctorVal.name us ctorArgs
-      return { ctx with discrCtorMap := ctx.discrCtorMap.insert discr ctorInfo, ctorDiscrMap := ctx.ctorDiscrMap.insert ctor.toExpr discr }
+      return {
+        ctx with
+        discrCtorMap := ctx.discrCtorMap.insert discr ctorInfo
+        ctorDiscrMap := ctx.ctorDiscrMap.insert ctor.toExpr discr
+      }
     else
       -- For the discrCtor map, the constructor parameters are irrelevant for optimizations that use this information
       let ctorInfo := .ctor ctorVal (.replicate ctorVal.numParams Arg.erased ++ fieldArgs)
       return { ctx with discrCtorMap := ctx.discrCtorMap.insert discr ctorInfo }
 
 @[inline, inherit_doc withDiscrCtorImp]
-def withDiscrCtor [MonadFunctorT DiscrM m] (discr : FVarId) (ctorName : Name)
-    (ctorFields : Array (Param .pure)) : m α → m α :=
+def withDiscrCtor
+    [MonadFunctorT DiscrM m] (discr : FVarId) (ctorName : Name) (ctorFields : Array (Param .pure))
+    : m α → m α :=
   monadMap (m := DiscrM) <| withDiscrCtorImp discr ctorName ctorFields
 
 def simpCtorDiscrCore? (e : Expr) : DiscrM (Option FVarId) := do
-  let some discr := (← read).ctorDiscrMap.find? e | return none
-  unless eqvTypes (← getType discr) (← inferType e) do return none
+  let some discr := (← read).ctorDiscrMap.find? e
+    | return none
+  unless eqvTypes (← getType discr) (← inferType e) do
+    return none
   return some <| discr
 
 end Simp

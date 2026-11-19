@@ -20,8 +20,7 @@ public def lpadAscii (s : String) (c : Char) (len : Nat) : String :=
 public def rpadAscii (s : String) (c : Char) (len : Nat) : String :=
   s.pushn c (len - s.lengthAssumingAscii)
 
-public def zpad (n : Nat) (len : Nat) : String :=
-  lpadAscii (toString n) '0' len
+public def zpad (n : Nat) (len : Nat) : String := lpadAscii (toString n) '0' len
 
 /-- Returns whether a string is composed of only hexadecimal digits. -/
 public def isHex (s : String) : Bool :=
@@ -42,31 +41,31 @@ def lowerHexByte (n : UInt8) : UInt8 :=
   else
     n + 87 -- + ('a' - 10)
 
-theorem isValidChar_of_lt_256 (h : n < 256) : isValidChar n :=
-  Or.inl <| Nat.lt_trans h (by decide)
+theorem isValidChar_of_lt_256 (h : n < 256) : isValidChar n := Or.inl <| Nat.lt_trans h (by decide)
 
-def lowerHexChar (n : UInt8) : Char :=
-  ⟨lowerHexByte n |>.toUInt32, isValidChar_of_lt_256 <|
-     UInt32.lt_iff_toNat_lt.mpr <| (lowerHexByte n).toNat_lt⟩
+def lowerHexChar (n : UInt8) : Char := ⟨
+  lowerHexByte n |>.toUInt32,
+  isValidChar_of_lt_256 <| UInt32.lt_iff_toNat_lt.mpr <| (lowerHexByte n).toNat_lt
+⟩
 
 public def lowerHexUInt64 (n : UInt64) : String :=
   String.ofByteArray (ByteArray.emptyWithCapacity 16) ByteArray.isValidUTF8_empty
-  |>.push (lowerHexChar (n >>> 60 &&& 0xf).toUInt8)
-  |>.push (lowerHexChar (n >>> 56 &&& 0xf).toUInt8)
-  |>.push (lowerHexChar (n >>> 52 &&& 0xf).toUInt8)
-  |>.push (lowerHexChar (n >>> 48 &&& 0xf).toUInt8)
-  |>.push (lowerHexChar (n >>> 44 &&& 0xf).toUInt8)
-  |>.push (lowerHexChar (n >>> 40 &&& 0xf).toUInt8)
-  |>.push (lowerHexChar (n >>> 36 &&& 0xf).toUInt8)
-  |>.push (lowerHexChar (n >>> 32 &&& 0xf).toUInt8)
-  |>.push (lowerHexChar (n >>> 28 &&& 0xf).toUInt8)
-  |>.push (lowerHexChar (n >>> 24 &&& 0xf).toUInt8)
-  |>.push (lowerHexChar (n >>> 20 &&& 0xf).toUInt8)
-  |>.push (lowerHexChar (n >>> 16 &&& 0xf).toUInt8)
-  |>.push (lowerHexChar (n >>> 12 &&& 0xf).toUInt8)
-  |>.push (lowerHexChar (n >>> 8 &&& 0xf).toUInt8)
-  |>.push (lowerHexChar (n >>> 4 &&& 0xf).toUInt8)
-  |>.push (lowerHexChar (n &&& 0xf).toUInt8)
+    |>.push (lowerHexChar (n >>> 60 &&& 0xf).toUInt8)
+    |>.push (lowerHexChar (n >>> 56 &&& 0xf).toUInt8)
+    |>.push (lowerHexChar (n >>> 52 &&& 0xf).toUInt8)
+    |>.push (lowerHexChar (n >>> 48 &&& 0xf).toUInt8)
+    |>.push (lowerHexChar (n >>> 44 &&& 0xf).toUInt8)
+    |>.push (lowerHexChar (n >>> 40 &&& 0xf).toUInt8)
+    |>.push (lowerHexChar (n >>> 36 &&& 0xf).toUInt8)
+    |>.push (lowerHexChar (n >>> 32 &&& 0xf).toUInt8)
+    |>.push (lowerHexChar (n >>> 28 &&& 0xf).toUInt8)
+    |>.push (lowerHexChar (n >>> 24 &&& 0xf).toUInt8)
+    |>.push (lowerHexChar (n >>> 20 &&& 0xf).toUInt8)
+    |>.push (lowerHexChar (n >>> 16 &&& 0xf).toUInt8)
+    |>.push (lowerHexChar (n >>> 12 &&& 0xf).toUInt8)
+    |>.push (lowerHexChar (n >>> 8 &&& 0xf).toUInt8)
+    |>.push (lowerHexChar (n >>> 4 &&& 0xf).toUInt8)
+    |>.push (lowerHexChar (n &&& 0xf).toUInt8)
 
 -- sanity check
 example : "0123456789abcdef" = lowerHexUInt64 0x0123456789abcdef := by decide

@@ -18,25 +18,28 @@ public section
 namespace Lean.Meta
 
 structure Contradiction.Config where
-  useDecide  : Bool := true
+  useDecide : Bool := true
   /-- Check whether any of the hypotheses is an empty type. -/
-  emptyType  : Bool := true
+  emptyType : Bool := true
   /-- When checking for empty types, `searchFuel` specifies the number of goals visited. -/
-  searchFuel : Nat  := 16
-  /-- Support for hypotheses such as
-     ```
-     h : (x y : Nat) (ys : List Nat) → x = 0 → y::ys = [a, b, c] → False
-     ```
-     This kind of hypotheses appear when proving conditional equation theorems for match expressions. -/
+  searchFuel : Nat := 16
+  /--
+  Support for hypotheses such as
+  ```
+  h : (x y : Nat) (ys : List Nat) → x = 0 → y::ys = [a, b, c] → False
+  ```
+  This kind of hypotheses appear when proving conditional equation theorems for match expressions.
+  -/
   genDiseq : Bool := false
 
 /--
-  Try to close the current goal by looking for a proof of `False` nested in a `False.Elim` application in the target.
-  Return `true` iff the goal has been closed.
+Try to close the current goal by looking for a proof of `False` nested in a `False.Elim` application in the target.
+Return `true` iff the goal has been closed.
 -/
 private def nestedFalseElim (mvarId : MVarId) : MetaM Bool := do
   let target ← mvarId.getType
-  if let some falseElim := target.find? fun e => e.isAppOfArity ``False.elim 2 && !e.appArg!.hasLooseBVars then
+  if let some falseElim :=
+      target.find? fun e => e.isAppOfArity ``False.elim 2 && !e.appArg!.hasLooseBVars then
     let falseProof := falseElim.appArg!
     mvarId.assign (← mkFalseElim (← mvarId.getType) falseProof)
     return true
@@ -46,15 +49,16 @@ private def nestedFalseElim (mvarId : MVarId) : MetaM Bool := do
 -- We only consider inductives with no constructors and indexed families
 private def isElimEmptyInductiveCandidate (fvarId : FVarId) : MetaM Bool := do
   let type ← whnfD (← fvarId.getType)
-  matchConstInduct type.getAppFn (fun _ => pure false) fun info _ => do
-    return info.ctors.length == 0 || info.numIndices > 0
+  matchConstInduct type.getAppFn
+    (fun _ => pure false)
+    fun info _ => do return info.ctors.length == 0 || info.numIndices > 0
 
 namespace ElimEmptyInductive
 
 abbrev M := StateRefT Nat MetaM
 
 instance : MonadBacktrack SavedState M where
-  saveState      := Meta.saveState
+  saveState := Meta.saveState
   restoreState s := s.restore
 
 partial def elim (mvarId : MVarId) (fvarId : FVarId) : M Bool := do
@@ -64,18 +68,23 @@ partial def elim (mvarId : MVarId) (fvarId : FVarId) : M Bool := do
   modify (· - 1)
   -- We only consider inductives with no constructors and indexed families
   commitWhen do
-    let subgoals ← try mvarId.cases fvarId catch ex => trace[Meta.Tactic.contradiction] "{ex.toMessageData}"; return false
+    let subgoals ←
+      try
+        mvarId.cases fvarId
+      catch ex =>
+        trace[Meta.Tactic.contradiction] "{ex.toMessageData}"; return false
     trace[Meta.Tactic.contradiction] "elimEmptyInductive, number subgoals: {subgoals.size}"
     for subgoal in subgoals do
       -- If one of the fields is uninhabited, then we are done
-      let found ← subgoal.mvarId.withContext do
-        for field in subgoal.fields do
-          let field := subgoal.subst.apply field
-          if field.isFVar then
-            if (← isElimEmptyInductiveCandidate field.fvarId!) then
-              if (← elim subgoal.mvarId field.fvarId!) then
-                return true
-        return false
+      let found ←
+        subgoal.mvarId.withContext do
+          for field in subgoal.fields do
+            let field := subgoal.subst.apply field
+            if field.isFVar then
+              if (← isElimEmptyInductiveCandidate field.fvarId!) then
+                if (← elim subgoal.mvarId field.fvarId!) then
+                  return true
+          return false
       unless found do
         return false
     return true
@@ -89,29 +98,24 @@ visited by the search. Returns `true` iff the goal has been closed.
 def elimEmptyInductive (mvarId : MVarId) (fvarId : FVarId) (fuel : Nat) : MetaM Bool := do
   mvarId.withContext do
     if (← isElimEmptyInductiveCandidate fvarId) then
-      commitWhen do
-        ElimEmptyInductive.elim (← mvarId.exfalso) fvarId |>.run' fuel
+      commitWhen do ElimEmptyInductive.elim (← mvarId.exfalso) fvarId |>.run' fuel
     else
       return false
 
-/--
-  See `Simp.isEqnThmHypothesis`
--/
-private abbrev isGenDiseq (e : Expr) : Bool :=
-  Simp.isEqnThmHypothesis e
+/-- See `Simp.isEqnThmHypothesis` -/
+private abbrev isGenDiseq (e : Expr) : Bool := Simp.isEqnThmHypothesis e
 
 /--
-  Given `e` s.t. `isGenDiseq e`, generate a bit-mask `mask` s.t. `mask[i] = true` iff
-  the `i`-th binder is an equality without forward dependencies.
+Given `e` s.t. `isGenDiseq e`, generate a bit-mask `mask` s.t. `mask[i] = true` iff
+the `i`-th binder is an equality without forward dependencies.
 
-  See `processGenDiseq`
+See `processGenDiseq`
 -/
-def mkGenDiseqMask (e : Expr) : Array Bool :=
-  go e #[]
+def mkGenDiseqMask (e : Expr) : Array Bool := go e #[]
 where
   go (e : Expr) (acc : Array Bool) : Array Bool :=
     match e with
-    | .forallE _ d b _ => go b (acc.push (!b.hasLooseBVar 0 && (d.isEq || d.isHEq)))
+    | .forallE _ d b _ => go b (acc.push (! b.hasLooseBVar 0 && (d.isEq || d.isHEq)))
     | _ => acc
 
 /--
@@ -122,25 +126,26 @@ def mkGenDiseqFalseProof? (h type : Expr) : MetaM (Option Expr) := do
   assert! isGenDiseq type
   withNewMCtxDepth do
     let (args, _, _) ← forallMetaTelescope type
-    let mask  := mkGenDiseqMask type
+    let mask := mkGenDiseqMask type
     for arg in args, useRefl in mask do
       if useRefl then
-        /- Remark: we should not try to use `refl` for equalities that have forward dependencies because
-           they correspond to constructor fields. We did not use to have this extra test, and this method failed
-           to close the following goal.
-           ```
-            ...
-            ns' : NEList String
-            h' : NEList.notUno ns' = true
-            : ∀ (ns : NEList String) (h : NEList.notUno ns = true), Value.lam (Lambda.mk ns' h') = Value.lam (Lambda.mk ns h) → False
-            ⊢ h_1 l a = h_2 v
+        /-
+        Remark: we should not try to use `refl` for equalities that have forward dependencies because
+        they correspond to constructor fields. We did not use to have this extra test, and this method failed
+        to close the following goal.
+        ```
+         ...
+         ns' : NEList String
+         h' : NEList.notUno ns' = true
+         : ∀ (ns : NEList String) (h : NEList.notUno ns = true), Value.lam (Lambda.mk ns' h') = Value.lam (Lambda.mk ns h) → False
+         ⊢ h_1 l a = h_2 v
 
-           ```
-         -/
+        ```
+        -/
         if let some (_, lhs, _) ← matchEq? (← inferType arg) then
           unless (← isDefEq arg (← mkEqRefl lhs)) do
             return none
-        if let some (_, lhs, _,  _) ← matchHEq? (← inferType arg) then
+        if let some (_, lhs, _, _) ← matchHEq? (← inferType arg) then
           unless (← isDefEq arg (← mkHEqRefl lhs)) do
             return none
     let falseProof ← instantiateMVars (mkAppN h args)
@@ -149,14 +154,15 @@ def mkGenDiseqFalseProof? (h type : Expr) : MetaM (Option Expr) := do
     return some falseProof
 
 /--
-  Close goal if `localDecl` is a "generalized disequality". Example:
-  ```
-  h : (x y : Nat) (ys : List Nat) → x = 0 → y::ys = [a, b, c] → False
-  ```
-  This kind of hypotheses is created when we generate conditional equations for match expressions.
+Close goal if `localDecl` is a "generalized disequality". Example:
+```
+h : (x y : Nat) (ys : List Nat) → x = 0 → y::ys = [a, b, c] → False
+```
+This kind of hypotheses is created when we generate conditional equations for match expressions.
 -/
 def processGenDiseq (mvarId : MVarId) (localDecl : LocalDecl) : MetaM Bool := do
-  let some falseProof ← mkGenDiseqFalseProof? localDecl.toExpr localDecl.type | return false
+  let some falseProof ← mkGenDiseqFalseProof? localDecl.toExpr localDecl.type
+    | return false
   mvarId.assign (← mkFalseElim (← mvarId.getType) falseProof)
   return true
 
@@ -165,18 +171,20 @@ Closes `mvarId` if `h : lhs = rhs` equates two distinct `Float`/`Float32` litera
 `true` in that case. Tactics such as `injection` would instead unfold the float model on both sides,
 which is very slow.
 -/
-def _root_.Lean.MVarId.closeIfDistinctFloatLits (mvarId : MVarId) (h lhs rhs : Expr) :
-    MetaM Bool := mvarId.withContext do
-  unless (← floatLitValuesEq? lhs rhs) == some false do return false
-  let hne ← mkDecideProof (mkNot (← mkEq lhs rhs))
-  mvarId.assign (← mkAbsurd (← mvarId.getType) h hne)
-  return true
+def _root_.Lean.MVarId.closeIfDistinctFloatLits (mvarId : MVarId) (h lhs rhs : Expr) : MetaM Bool :=
+  mvarId.withContext do
+    unless (← floatLitValuesEq? lhs rhs) == some false do
+      return false
+    let hne ← mkDecideProof (mkNot (← mkEq lhs rhs))
+    mvarId.assign (← mkAbsurd (← mvarId.getType) h hne)
+    return true
 
 /--
 Return `true` if goal `mvarId` has contradictory hypotheses.
 See `MVarId.contradiction` for the list of tests performed by this method.
 -/
-def _root_.Lean.MVarId.contradictionCore (mvarId : MVarId) (config : Contradiction.Config) : MetaM Bool := do
+def _root_.Lean.MVarId.contradictionCore (mvarId : MVarId) (config : Contradiction.Config)
+    : MetaM Bool := do
   mvarId.withContext do
     mvarId.checkNotAssigned `contradiction
     if (← nestedFalseElim mvarId) then
@@ -187,7 +195,8 @@ def _root_.Lean.MVarId.contradictionCore (mvarId : MVarId) (config : Contradicti
         if let some p ← matchNot? localDecl.type then
           if let some pFVarId ← findLocalDeclWithType? p then
             -- We use `False.elim` because `p`'s type may be Type
-            mvarId.assign (← mkFalseElim (← mvarId.getType) (mkApp localDecl.toExpr (mkFVar pFVarId)))
+            mvarId.assign (← mkFalseElim (← mvarId.getType)
+              (mkApp localDecl.toExpr (mkFVar pFVarId)))
             return true
         -- (h : Nat.hasNotBit mask i) where that bit is set
         if let some prf ← refutableHasNotBit? localDecl.type then
@@ -196,27 +205,27 @@ def _root_.Lean.MVarId.contradictionCore (mvarId : MVarId) (config : Contradicti
         -- (h : x ≠ x)
         if let some (_, lhs, rhs) ← matchNe? localDecl.type then
           if (← isDefEq lhs rhs) then
-            mvarId.assign (← mkAbsurd (←  mvarId.getType) (← mkEqRefl lhs) localDecl.toExpr)
+            mvarId.assign (← mkAbsurd (← mvarId.getType) (← mkEqRefl lhs) localDecl.toExpr)
             return true
         let mut isEq := false
         -- (h : ctor₁ ... = ctor₂ ...)
         if let some (_, lhs, rhs) ← matchEq? localDecl.type then
           isEq := true
           if let some lhsCtor ← matchConstructorApp? lhs then
-          if let some rhsCtor ← matchConstructorApp? rhs then
-          if lhsCtor.name != rhsCtor.name then
-            mvarId.assign (← mkNoConfusion (← mvarId.getType) localDecl.toExpr)
-            return true
+            if let some rhsCtor ← matchConstructorApp? rhs then
+              if lhsCtor.name != rhsCtor.name then
+                mvarId.assign (← mkNoConfusion (← mvarId.getType) localDecl.toExpr)
+                return true
         let mut isHEq := false
         -- (h : ctor₁ ... ≍ ctor₂ ...)
         if let some (α, lhs, β, rhs) ← matchHEq? localDecl.type then
           isHEq := true
           if let some lhsCtor ← matchConstructorApp? lhs then
-          if let some rhsCtor ← matchConstructorApp? rhs then
-          if lhsCtor.name != rhsCtor.name then
-            if (← isDefEq α β) then
-              mvarId.assign (← mkNoConfusion (← mvarId.getType) (← mkEqOfHEq localDecl.toExpr))
-              return true
+            if let some rhsCtor ← matchConstructorApp? rhs then
+              if lhsCtor.name != rhsCtor.name then
+                if (← isDefEq α β) then
+                  mvarId.assign (← mkNoConfusion (← mvarId.getType) (← mkEqOfHEq localDecl.toExpr))
+                  return true
         -- (h : p) s.t. `decide p` evaluates to `false`
         if config.useDecide && !localDecl.type.hasFVar then
           let type ← instantiateMVars localDecl.type
@@ -254,7 +263,8 @@ Try to close the goal using "contradictions" such as
 
 Throw exception if goal failed to be closed.
 -/
-def _root_.Lean.MVarId.contradiction (mvarId : MVarId) (config : Contradiction.Config := {}) : MetaM Unit :=
+def _root_.Lean.MVarId.contradiction (mvarId : MVarId) (config : Contradiction.Config := {})
+    : MetaM Unit :=
   unless (← mvarId.contradictionCore config) do
     throwTacticEx `contradiction mvarId
 

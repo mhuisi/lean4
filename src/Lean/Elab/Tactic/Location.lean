@@ -12,12 +12,16 @@ public section
 
 namespace Lean.Elab.Tactic
 
-/-- Denotes a set of locations where a tactic should be applied for the main goal. See also `withLocation`. -/
+/--
+Denotes a set of locations where a tactic should be applied for the main goal. See also `withLocation`.
+-/
 inductive Location where
   /-- Apply the tactic everywhere. -/
   | wildcard
-  /-- `hypotheses` are hypothesis names in the main goal that the tactic should be applied to.
-  If `type` is true, then the tactic should also be applied to the target type. -/
+  /--
+  `hypotheses` are hypothesis names in the main goal that the tactic should be applied to.
+  If `type` is true, then the tactic should also be applied to the target type.
+  -/
   | targets (hypotheses : Array Syntax) (type : Bool)
 
 /-
@@ -55,12 +59,16 @@ Runs the given `atLocal` and `atTarget` methods on each of the locations selecte
   If `atTarget` closes the main goal, `withLocation` does not run `atLocal`.
   If all tactic applications fail, `withLocation` with call `failed` with the main goal mvar.
 -/
-def withLocation (loc : Location) (atLocal : FVarId → TacticM Unit) (atTarget : TacticM Unit) (failed : MVarId → TacticM Unit) : TacticM Unit := do
+def withLocation
+    (loc : Location) (atLocal : FVarId → TacticM Unit) (atTarget : TacticM Unit)
+    (failed : MVarId → TacticM Unit)
+    : TacticM Unit := do
   match loc with
   | Location.targets hyps type =>
-    hyps.forM fun hyp => withMainContext do
-      let fvarId ← getFVarId hyp
-      atLocal fvarId
+    hyps.forM fun hyp =>
+      withMainContext do
+        let fvarId ← getFVarId hyp
+        atLocal fvarId
     if type then
       withMainContext atTarget
   | Location.wildcard =>
@@ -72,7 +80,8 @@ def withLocation (loc : Location) (atLocal : FVarId → TacticM Unit) (atTarget 
       for fvarId in (← getLCtx).getFVarIds.reverse do
         if (← fvarId.getDecl).isImplementationDetail then
           continue
-        worked := worked || (← tryTactic <| withSaveInfoContext <| withMainContext <| atLocal fvarId)
+        worked :=
+          worked || (← tryTactic <| withSaveInfoContext <| withMainContext <| atLocal fvarId)
       unless worked do
         failed (← getMainGoal)
 

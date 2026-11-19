@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Henrik Böving
 -/
 module
+
 prelude
 public import Std.Tactic.BVDecide.Bitblast.BVExpr.Basic
 public import Init.System.ST
@@ -17,9 +18,7 @@ In addition, the substitution performs constant folding as it builds up the new 
 
 namespace Std.Tactic.BVDecide
 
-/--
-`α` is a substitution for BitVec atoms.
--/
+/-- `α` is a substitution for BitVec atoms. -/
 public class AtomSubstitution (α : Type) where
   /--
   `bvAtom subst w idx` returns the expression we want to substitute the atom `idx` with or `none`.
@@ -61,7 +60,8 @@ where
       match AtomSubstitution.bvAtom (← read) w idx with
       | some replacement => substM replacement
       | none => return .var idx
-    | .const val => return .const val
+    | .const val =>
+      return .const val
     | .extract start len expr => do
       match ← substM expr with
       | .const val => return .const (BitVec.extractLsb' start len val)
@@ -114,12 +114,24 @@ def mkNot : BVLogicalExpr → BVLogicalExpr
 def mkGate (g : Gate) (x y : BVLogicalExpr) : BVLogicalExpr :=
   match g, x, y with
   | g, .const x, .const y => .const (g.eval x y)
-  | .and, .const false, _ | .and, _, .const false => .const false
-  | .and, .const true, z | .and, z, .const true => z
-  | .or, .const true, _ | .or, _, .const true => .const true
-  | .or, .const false, z | .or, z, .const false => z
-  | .xor, .const b, z | .xor, z, .const b => if b then mkNot z else z
-  | .beq, .const b, z | .beq, z, .const b => if b then z else mkNot z
+  | .and, .const false, _
+  | .and, _, .const false =>
+    .const false
+  | .and, .const true, z
+  | .and, z, .const true =>
+    z
+  | .or, .const true, _
+  | .or, _, .const true =>
+    .const true
+  | .or, .const false, z
+  | .or, z, .const false =>
+    z
+  | .xor, .const b, z
+  | .xor, z, .const b =>
+    if b then mkNot z else z
+  | .beq, .const b, z
+  | .beq, z, .const b =>
+    if b then z else mkNot z
   | g, x, y => .gate g x y
 
 partial def BVLogicalExpr.substM (expr : BVLogicalExpr) : SubstM α σ BVLogicalExpr := do
@@ -136,10 +148,14 @@ where
       match AtomSubstitution.boolAtom (← read) idx with
       | some replacement => substM replacement
       | none => BVPred.substM pred
-    | .literal pred => BVPred.substM pred
-    | .const b => return .const b
-    | .not x => return mkNot (← substM x)
-    | .gate g x y => return mkGate g (← substM x) (← substM y)
+    | .literal pred =>
+      BVPred.substM pred
+    | .const b =>
+      return .const b
+    | .not x =>
+      return mkNot (← substM x)
+    | .gate g x y =>
+      return mkGate g (← substM x) (← substM y)
     | .ite d l r => do
       match ← substM d with
       | .const true => substM l
@@ -153,12 +169,13 @@ open Substitute
 public def BVExpr.substitute [AtomSubstitution α] (subst : α) (expr : BVExpr w) : BVExpr w :=
   SubstM.run subst fun σ => BVExpr.substM (σ := σ) expr
 
-public def BVLogicalExpr.substitute [AtomSubstitution α] (subst : α) (expr : BVLogicalExpr) :
-    BVLogicalExpr :=
+public def BVLogicalExpr.substitute [AtomSubstitution α] (subst : α) (expr : BVLogicalExpr)
+    : BVLogicalExpr :=
   SubstM.run subst fun σ => BVLogicalExpr.substM (σ := σ) expr
 
-public def BVLogicalExpr.substituteAll [AtomSubstitution α] (subst : α)
-    (exprs : Array BVLogicalExpr) : Array BVLogicalExpr :=
+public def BVLogicalExpr.substituteAll
+    [AtomSubstitution α] (subst : α) (exprs : Array BVLogicalExpr)
+    : Array BVLogicalExpr :=
   SubstM.run subst fun σ => exprs.mapM (BVLogicalExpr.substM (σ := σ))
 
 end Std.Tactic.BVDecide

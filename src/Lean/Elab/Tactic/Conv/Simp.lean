@@ -21,41 +21,51 @@ def applySimpResult (result : Simp.Result) : TacticM Unit := do
   else
     updateLhs result.expr (← result.getProof)
 
-@[builtin_tactic Lean.Parser.Tactic.Conv.simp] def evalSimp : Tactic := fun stx => withMainContext do
-  let { ctx, simprocs, dischargeWrapper, .. } ← mkSimpContext stx (eraseLocal := false)
-  let lhs ← getLhs
-  let (result, _) ← dischargeWrapper.with fun d? => simp lhs ctx (simprocs := simprocs) (discharge? := d?)
-  applySimpResult result
-
-@[builtin_tactic Lean.Parser.Tactic.Conv.simpTrace] def evalSimpTrace : Tactic := fun stx => withMainContext do
-  match stx with
-  | `(conv| simp?%$tk $cfg:optConfig $(discharger)? $[only%$o]? $[[$args,*]]?) => do
-    let stx ← `(tactic| simp%$tk $cfg:optConfig $[$discharger]? $[only%$o]? $[[$args,*]]?)
+@[builtin_tactic Lean.Parser.Tactic.Conv.simp]
+def evalSimp : Tactic := fun stx =>
+  withMainContext do
     let { ctx, simprocs, dischargeWrapper, .. } ← mkSimpContext stx (eraseLocal := false)
     let lhs ← getLhs
-    let (result, stats) ← dischargeWrapper.with fun d? =>
-      simp lhs ctx (simprocs := simprocs) (discharge? := d?)
+    let (result, _) ←
+      dischargeWrapper.with fun d? => simp lhs ctx (simprocs := simprocs) (discharge? := d?)
     applySimpResult result
-    let stx ← mkSimpCallStx stx stats.usedTheorems
-    addSuggestion tk stx (origSpan? := ← getRef)
-  | _ => throwUnsupportedSyntax
 
-@[builtin_tactic Lean.Parser.Tactic.Conv.simpMatch] def evalSimpMatch : Tactic := fun _ => withMainContext do
-  applySimpResult (← Split.simpMatch (← getLhs))
+@[builtin_tactic Lean.Parser.Tactic.Conv.simpTrace]
+def evalSimpTrace : Tactic := fun stx =>
+  withMainContext do
+    match stx with
+    | `(conv| simp?%$tk $cfg:optConfig $(discharger)? $[only%$o]? $[[$args,*]]?) => do
+      let stx ← `(tactic| simp%$tk $cfg:optConfig $[$discharger]? $[only%$o]? $[[$args,*]]?)
+      let { ctx, simprocs, dischargeWrapper, .. } ← mkSimpContext stx (eraseLocal := false)
+      let lhs ← getLhs
+      let (result, stats) ←
+        dischargeWrapper.with fun d? => simp lhs ctx (simprocs := simprocs) (discharge? := d?)
+      applySimpResult result
+      let stx ← mkSimpCallStx stx stats.usedTheorems
+      addSuggestion tk stx (origSpan? := ← getRef)
+    | _ => throwUnsupportedSyntax
 
-@[builtin_tactic Lean.Parser.Tactic.Conv.dsimp] def evalDSimp : Tactic := fun stx => withMainContext do
-  let { ctx, .. } ← mkSimpContext stx (eraseLocal := false) (kind := .dsimp)
-  changeLhs (← Lean.Meta.dsimp (← getLhs) ctx).1
+@[builtin_tactic Lean.Parser.Tactic.Conv.simpMatch]
+def evalSimpMatch : Tactic := fun _ =>
+  withMainContext do applySimpResult (← Split.simpMatch (← getLhs))
 
-@[builtin_tactic Lean.Parser.Tactic.Conv.dsimpTrace] def evalDSimpTrace : Tactic := fun stx => withMainContext do
-  match stx with
-  | `(conv| dsimp?%$tk $cfg:optConfig $[only%$o]? $[[$args,*]]?) =>
-    let stx ← `(tactic| dsimp%$tk $cfg:optConfig $[only%$o]? $[[$args,*]]?)
+@[builtin_tactic Lean.Parser.Tactic.Conv.dsimp]
+def evalDSimp : Tactic := fun stx =>
+  withMainContext do
     let { ctx, .. } ← mkSimpContext stx (eraseLocal := false) (kind := .dsimp)
-    let (result, stats) ← Lean.Meta.dsimp (← getLhs) ctx
-    changeLhs result
-    let stx ← mkSimpCallStx stx stats.usedTheorems
-    addSuggestion tk stx (origSpan? := ← getRef)
-  | _ => throwUnsupportedSyntax
+    changeLhs (← Lean.Meta.dsimp (← getLhs) ctx).1
+
+@[builtin_tactic Lean.Parser.Tactic.Conv.dsimpTrace]
+def evalDSimpTrace : Tactic := fun stx =>
+  withMainContext do
+    match stx with
+    | `(conv| dsimp?%$tk $cfg:optConfig $[only%$o]? $[[$args,*]]?) =>
+      let stx ← `(tactic| dsimp%$tk $cfg:optConfig $[only%$o]? $[[$args,*]]?)
+      let { ctx, .. } ← mkSimpContext stx (eraseLocal := false) (kind := .dsimp)
+      let (result, stats) ← Lean.Meta.dsimp (← getLhs) ctx
+      changeLhs result
+      let stx ← mkSimpCallStx stx stats.usedTheorems
+      addSuggestion tk stx (origSpan? := ← getRef)
+    | _ => throwUnsupportedSyntax
 
 end Lean.Elab.Tactic.Conv

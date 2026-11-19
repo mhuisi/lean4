@@ -29,7 +29,8 @@ def mkStringLitNeProof (s₁ s₂ : String) : MetaM Expr := do
   let l₂ := s₂.toList
   let i := firstDiff l₁ l₂ 0
   let h := mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Bool) (mkConst ``false)
-  return mkApp4 (mkConst ``String.Internal.ofList_ne_ofList) (toExpr l₁) (toExpr l₂) (mkRawNatLit i) h
+  return mkApp4 (mkConst ``String.Internal.ofList_ne_ofList) (toExpr l₁) (toExpr l₂) (mkRawNatLit i)
+    h
 where
   firstDiff : List Char → List Char → Nat → Nat
     | c₁ :: l₁, c₂ :: l₂, i => if c₁ == c₂ then firstDiff l₁ l₂ (i + 1) else i
@@ -39,8 +40,7 @@ where
 Returns the code of the string `s`: the value of `String.Internal.code s`.
 See `String.Internal.codeOfList`.
 -/
-def stringLitCode (s : String) : Nat :=
-  s.toList.foldr (fun c n => c.toNat + 1 + 2097152 * n) 0
+def stringLitCode (s : String) : Nat := s.toList.foldr (fun c n => c.toNat + 1 + 2097152 * n) 0
 
 /--
 Builds a proof of `String.Internal.code s = n` for the string literal `s`, where `n` is the

@@ -31,7 +31,8 @@ deriving DecidableEq, Repr, Inhabited
 
 namespace Columns
 
-@[inline] public instance : OfNat Columns n where
+@[inline]
+public instance : OfNat Columns n where
   ofNat := ⟨n⟩
 
 public instance : LE Columns where
@@ -40,26 +41,33 @@ public instance : LE Columns where
 public instance : LT Columns where
   lt a b := a.count < b.count
 
-@[inline] public instance (a b : Columns) : Decidable (a ≤ b) :=
+@[inline]
+public instance (a b : Columns) : Decidable (a ≤ b) :=
   inferInstanceAs (Decidable (a.count ≤ b.count))
 
-@[inline] public instance (a b : Columns) : Decidable (a < b) :=
+@[inline]
+public instance (a b : Columns) : Decidable (a < b) :=
   inferInstanceAs (Decidable (a.count < b.count))
 
-@[inline] public instance : Add Columns where
+@[inline]
+public instance : Add Columns where
   add a b := ⟨a.count + b.count⟩
 
-@[inline] public instance : Sub Columns where
+@[inline]
+public instance : Sub Columns where
   sub a b := ⟨a.count - b.count⟩
 
 /-- The columns after a space. -/
-@[inline] public def space (c : Columns) : Columns := ⟨ c.count + 1 ⟩
+@[inline]
+public def space (c : Columns) : Columns := ⟨c.count + 1⟩
 
 /-- The width of a tab at `c`, which is the number of columns up to the next tab stop. -/
-@[inline] public def tabWidth (c : Columns) : Columns := ⟨4 - c.count % 4⟩
+@[inline]
+public def tabWidth (c : Columns) : Columns := ⟨4 - c.count % 4⟩
 
 /-- The columns after a tab at `c`, which is the next tab stop. -/
-@[inline] public def tab (c : Columns) : Columns := c + c.tabWidth
+@[inline]
+public def tab (c : Columns) : Columns := c + c.tabWidth
 
 end Columns
 
@@ -169,8 +177,9 @@ public inductive Block.Raw (s : String.Slice) where
   An ATX heading (the usual kind). `level` is the number of opening `#` characters, `hashes` is that
   opening sequence, and `closeHashes?` an optional closing sequence.
   -/
-  | atxHeading (level : Nat) (hashes : s.Subslice) (content : InlineSource s)
-      (closeHashes? : Option s.Subslice)
+  | atxHeading
+    (level : Nat) (hashes : s.Subslice) (content : InlineSource s)
+    (closeHashes? : Option s.Subslice)
   /--
   A setext heading (CommonMark §4.3), which is one or more lines of paragraph text that are
   followed by an `underline` (`===` for level 1, `---` for level 2).
@@ -181,7 +190,8 @@ public inductive Block.Raw (s : String.Slice) where
   optional because an unterminated fenced code block spans the rest of the input. The content
   `lines` exclude up to `info.openIndent` columns of indentation.
   -/
-  | fencedCode (info : FenceInfo s) (openFence : s.Subslice) (closeFence? : Option s.Subslice)
+  | fencedCode
+    (info : FenceInfo s) (openFence : s.Subslice) (closeFence? : Option s.Subslice)
     (lines : Array (VerbatimLine s))
   /--
   An indented code block, which is a sequence of lines that are indented four or more columns. The
@@ -233,15 +243,15 @@ public def sameKind : ListKind → ListKind → Bool
 
 end ListKind
 
-/--
-A block of the source string `s`, with its inline content parsed.
--/
+/-- A block of the source string `s`, with its inline content parsed. -/
 public inductive Block (s : String.Slice) where
   | paragraph (content : Array (Inline s))
-  | atxHeading (level : Nat) (hashes : s.Subslice) (content : Array (Inline s))
+  | atxHeading
+    (level : Nat) (hashes : s.Subslice) (content : Array (Inline s))
     (closeHashes? : Option s.Subslice)
   | setextHeading (level : Nat) (content : Array (Inline s)) (underline : s.Subslice)
-  | fencedCode (info : FenceInfo s) (openFence : s.Subslice) (closeFence? : Option s.Subslice)
+  | fencedCode
+    (info : FenceInfo s) (openFence : s.Subslice) (closeFence? : Option s.Subslice)
     (lines : Array (VerbatimLine s))
   | indentedCode (lines : Array (VerbatimLine s))
   | html (lines : Array (VerbatimLine s))
@@ -284,9 +294,7 @@ def VerbatimLine.span? (lines : Array (VerbatimLine s)) : Option s.Subslice := d
   let last ← lines.back?
   return span first.source last.source
 
-/--
-The whole block, from its first delimiter to the end of its last line.
--/
+/-- The whole block, from its first delimiter to the end of its last line. -/
 public partial def Block.extent? : Block s → Option s.Subslice
   | .paragraph content => Inline.extentOf? content
   | .atxHeading _ hashes content closeHashes? =>
@@ -299,21 +307,25 @@ public partial def Block.extent? : Block s → Option s.Subslice
   | .fencedCode _ openFence closeFence? lines =>
     let stop := closeFence?.map (·.endExclusive) <|> lines.back?.map (·.source.endExclusive)
     some (subsliceClamped openFence.startInclusive (stop.getD openFence.endExclusive))
-  | .indentedCode lines | .html lines => VerbatimLine.span? lines
+  | .indentedCode lines | .html lines =>
+    VerbatimLine.span? lines
   | .blockquote markers children => do
     let first ← markers[0]?
     let last ← markers.back?
-    let stop := match span? (children.filterMap Block.extent?) with
+    let stop :=
+      match span? (children.filterMap Block.extent?) with
       | some r => max last.endExclusive r.endExclusive
       | none => last.endExclusive
     return subsliceClamped first.startInclusive stop
-  | .list _ _ items => span? (items.filterMap Block.extent?)
+  | .list _ _ items =>
+    span? (items.filterMap Block.extent?)
   | .listItem marker children =>
     let stop :=
       (span? (children.filterMap Block.extent?)).map (·.endExclusive) |>.getD marker.endExclusive
     some (subsliceClamped marker.startInclusive stop)
   | .linkRefDef m =>
-    let stop := match m.title? with
+    let stop :=
+      match m.title? with
       | some t => t.closer.endExclusive
       | none => m.destination.extent.endExclusive
     some (subsliceClamped m.openBracket.startInclusive stop)

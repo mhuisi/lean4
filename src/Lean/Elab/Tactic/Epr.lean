@@ -25,8 +25,7 @@ def evalEpr : Tactic := fun
     let cfg ← Meta.Tactic.BVDecide.elabEprConfig cfg
     IO.FS.withTempFile fun _ lratFile => do
       let cfg ← Meta.Tactic.BVDecide.TacticContext.new lratFile cfg.toBVDecideConfig (some #[])
-      liftMetaFinishingTactic fun g => do
-        Meta.Tactic.epr g cfg
+      liftMetaFinishingTactic fun g => do Meta.Tactic.epr g cfg
   | _ => throwUnsupportedSyntax
 
 end Lean.Elab.Tactic.Epr

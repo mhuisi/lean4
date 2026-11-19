@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.SymM
 import Lean.Meta.Sym.IsClass
@@ -17,7 +18,8 @@ Zeta-reduces `type`, except for the `have`s and nondependent `let`s in the domai
 `num?` binders (all if `none`), which become `have`s. A backward rule turns these domains into new
 goals.
 -/
-partial def zetaReduceExceptDomainHaves (type : Expr) (num? : Option Nat) (zetaDelta : Bool) : MetaM Expr :=
+partial def zetaReduceExceptDomainHaves (type : Expr) (num? : Option Nat) (zetaDelta : Bool)
+    : MetaM Expr :=
   go type num? #[] #[]
 where
   -- `subst` instantiates the loose bound variables of `type`; `xs` are the binders among them.
@@ -37,19 +39,23 @@ Preprocesses types used for pattern matching and unification. It instantiates as
 metavariables first, since a metavariable in a pattern is an opaque constant.
 `num?` is the number of binders that become pattern variables (all if `none`).
 -/
-public def preprocessType (type : Expr) (zetaReduceLHSOnly := false) (zetaDelta := false)
-    (num? : Option Nat := none) : MetaM Expr := do
+public def preprocessType
+    (type : Expr) (zetaReduceLHSOnly := false) (zetaDelta := false) (num? : Option Nat := none)
+    : MetaM Expr := do
   let type ← instantiateMVars type
   let type ← Sym.unfoldReducible type
   let type ← Core.betaReduce type
-  let type ← if zetaReduceLHSOnly then
-    forallTelescope type fun xs body => do
-      match_expr body with
-      | f@Eq α lhs rhs => mkForallFVars xs <| mkApp3 f α (← zetaReduce lhs (zetaDelta := zetaDelta)) rhs
-      | f@Iff lhs rhs => mkForallFVars xs <| mkApp2 f (← zetaReduce lhs (zetaDelta := zetaDelta)) rhs
-      | _ => zetaReduce type (zetaDelta := zetaDelta)
-  else
-    zetaReduceExceptDomainHaves type num? zetaDelta
+  let type ←
+    if zetaReduceLHSOnly then
+      forallTelescope type fun xs body => do
+        match_expr body with
+        | f@Eq α lhs rhs =>
+          mkForallFVars xs <| mkApp3 f α (← zetaReduce lhs (zetaDelta := zetaDelta)) rhs
+        | f@Iff lhs rhs =>
+          mkForallFVars xs <| mkApp2 f (← zetaReduce lhs (zetaDelta := zetaDelta)) rhs
+        | _ => zetaReduce type (zetaDelta := zetaDelta)
+    else
+      zetaReduceExceptDomainHaves type num? zetaDelta
   etaReduceAll type
 
 /--

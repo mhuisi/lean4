@@ -19,19 +19,19 @@ import Init.Omega
 namespace Std
 open Std.Iterators
 
-theorem Iter.takeWhile_eq {α β} [Iterator α Id β] {P}
-    {it : Iter (α := α) β} :
-    it.takeWhile P = (it.toIterM.takeWhile P).toIter :=
+theorem Iter.takeWhile_eq {α β} [Iterator α Id β] {P} {it : Iter (α := α) β}
+    : it.takeWhile P = (it.toIterM.takeWhile P).toIter :=
   rfl
 
-theorem Iter.step_takeWhile {α β} [Iterator α Id β] {P}
-    {it : Iter (α := α) β} :
-    (it.takeWhile P).step = (match it.step with
-      | .yield it' out h => match hP : P out with
-        | true => .yield (it'.takeWhile P) out (.yield h (by simpa))
-        | false => .done (.rejected h (by simpa))
-      | .skip it' h => .skip (it'.takeWhile P) (.skip h)
-      | .done h => .done (.done h)) := by
+theorem Iter.step_takeWhile {α β} [Iterator α Id β] {P} {it : Iter (α := α) β}
+    : (it.takeWhile P).step
+      = (match it.step with
+        | .yield it' out h =>
+          match hP : P out with
+          | true => .yield (it'.takeWhile P) out (.yield h (by simpa))
+          | false => .done (.rejected h (by simpa))
+        | .skip it' h => .skip (it'.takeWhile P) (.skip h)
+        | .done h => .done (.done h)) := by
   simp [Iter.takeWhile_eq, Iter.step, toIterM_toIter, IterM.step_takeWhile]
   generalize it.toIterM.step.run = step
   cases step.inflate using PlausibleIterStep.casesOn
@@ -40,14 +40,15 @@ theorem Iter.step_takeWhile {α β} [Iterator α Id β] {P}
   · simp
   · simp
 
-theorem Iter.val_step_takeWhile {α β} [Iterator α Id β] {P}
-    {it : Iter (α := α) β} :
-    (it.takeWhile P).step.val = (match it.step.val with
-      | .yield it' out => match P out with
-        | true => .yield (it'.takeWhile P) out
-        | false => .done
-      | .skip it' => .skip (it'.takeWhile P)
-      | .done => .done) := by
+theorem Iter.val_step_takeWhile {α β} [Iterator α Id β] {P} {it : Iter (α := α) β}
+    : (it.takeWhile P).step.val
+      = (match it.step.val with
+        | .yield it' out =>
+          match P out with
+          | true => .yield (it'.takeWhile P) out
+          | false => .done
+        | .skip it' => .skip (it'.takeWhile P)
+        | .done => .done) := by
   simp only [takeWhile_eq, step, toIterM_toIter, IterM.step_takeWhile, PlausibleIterStep.yield,
     PlausibleIterStep.done, PlausibleIterStep.skip, Id.run_bind, IterM.Step.val_toPure]
   generalize it.toIterM.step.run = step
@@ -57,10 +58,10 @@ theorem Iter.val_step_takeWhile {α β} [Iterator α Id β] {P}
   · simp
   · simp
 
-theorem Iter.atIdxSlow?_takeWhile {α β}
-    [Iterator α Id β] [Productive α Id] {l : Nat}
-    {it : Iter (α := α) β} {P} :
-    (it.takeWhile P).atIdxSlow? l = if ∀ k, k ≤ l → (it.atIdxSlow? k).any P then it.atIdxSlow? l else none := by
+theorem Iter.atIdxSlow?_takeWhile
+    {α β} [Iterator α Id β] [Productive α Id] {l : Nat} {it : Iter (α := α) β} {P}
+    : (it.takeWhile P).atIdxSlow? l
+      = if ∀ k, k ≤ l → (it.atIdxSlow? k).any P then it.atIdxSlow? l else none := by
   induction l, it using atIdxSlow?.induct_unfolding
   case yield_zero it it' out h h' =>
     rw [atIdxSlow?_eq_match]
@@ -84,7 +85,8 @@ theorem Iter.atIdxSlow?_takeWhile {α β}
       intro h
       specialize h 0 (Nat.zero_le _)
       simp at h
-      exfalso; simp_all
+      exfalso
+      simp_all
     · simp [ih]
       split
       · rename_i h
@@ -108,8 +110,8 @@ theorem Iter.atIdxSlow?_takeWhile {α β}
       step_takeWhile]
     split <;> rfl
 
-private theorem List.getElem?_takeWhile {l : List α} {P : α → Bool} {k} :
-    (l.takeWhile P)[k]? = if ∀ k' : Nat, k' ≤ k → l[k']?.any P then l[k]? else none := by
+private theorem List.getElem?_takeWhile {l : List α} {P : α → Bool} {k}
+    : (l.takeWhile P)[k]? = if ∀ k' : Nat, k' ≤ k → l[k']?.any P then l[k]? else none := by
   induction l generalizing k
   · simp
   · rename_i x xs ih
@@ -137,25 +139,22 @@ private theorem List.getElem?_takeWhile {l : List α} {P : α → Bool} {k} :
       simp_all
 
 @[cbv_eval, simp]
-theorem Iter.toList_takeWhile_of_finite {α β} [Iterator α Id β] {P}
-    [Finite α Id]
-    {it : Iter (α := α) β} :
-    (it.takeWhile P).toList = it.toList.takeWhile P := by
+theorem Iter.toList_takeWhile_of_finite
+    {α β} [Iterator α Id β] {P} [Finite α Id] {it : Iter (α := α) β}
+    : (it.takeWhile P).toList = it.toList.takeWhile P := by
   ext
   simp only [getElem?_toList_eq_atIdxSlow?, atIdxSlow?_takeWhile, List.getElem?_takeWhile]
 
 @[simp]
-theorem Iter.toListRev_takeWhile_of_finite {α β} [Iterator α Id β] {P}
-    [Finite α Id]
-    {it : Iter (α := α) β} :
-    (it.takeWhile P).toListRev = (it.toList.takeWhile P).reverse := by
+theorem Iter.toListRev_takeWhile_of_finite
+    {α β} [Iterator α Id β] {P} [Finite α Id] {it : Iter (α := α) β}
+    : (it.takeWhile P).toListRev = (it.toList.takeWhile P).reverse := by
   rw [toListRev_eq, toList_takeWhile_of_finite]
 
 @[cbv_eval, simp]
-theorem Iter.toArray_takeWhile_of_finite {α β} [Iterator α Id β] {P}
-    [Finite α Id]
-    {it : Iter (α := α) β} :
-    (it.takeWhile P).toArray = it.toArray.takeWhile P := by
+theorem Iter.toArray_takeWhile_of_finite
+    {α β} [Iterator α Id β] {P} [Finite α Id] {it : Iter (α := α) β}
+    : (it.takeWhile P).toArray = it.toArray.takeWhile P := by
   rw [← toArray_toList, ← toArray_toList, List.takeWhile_toArray, toList_takeWhile_of_finite]
 
 end Std

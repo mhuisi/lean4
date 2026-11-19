@@ -11,7 +11,6 @@ public import Lean.Parser.Term.Basic
 public import Lean.DocString.Types
 meta import Lean.Parser.Term.Basic
 
-
 /-!
 This module declares the syntax of Verso documents.
 
@@ -28,7 +27,6 @@ Elaboration turns a parsed document into Lean syntax for the Verso document AST 
 not extensible, but roles, directives, and code blocks are hooks for extension. That step is in
 `Lean.Elab.DocString`.
 -/
-
 
 namespace Lean.Doc.Parser
 
@@ -58,8 +56,8 @@ of the parsers in this module ahd look for `_closed_N` as the body of the last d
 check that compilation still produces the lazily-evaluated version, inspect the generated C code and
 look for `lean_obj_once`.
 -/
-@[inline] private def onFirstUse (p : Unit → Parser) : Parser :=
-  { fn := fun c s => (p ()).fn c s }
+@[inline]
+private def onFirstUse (p : Unit → Parser) : Parser := { fn := fun c s => (p ()).fn c s }
 
 open Lean.Parser in
 /-- Literal text content. -/
@@ -198,7 +196,8 @@ def longestBacktickRun (str : String) : Nat := Id.run do
     if c == '`' then
       run := run + 1
       if run > best then best := run
-    else run := 0
+    else
+      run := 0
   best
 
 /--
@@ -253,27 +252,17 @@ public section
 
 open Lean.Doc
 
-/--
-Decodes the text that a Verso text token denotes, interpreting escape sequences.
--/
+/-- Decodes the text that a Verso text token denotes, interpreting escape sequences. -/
 def getVersoText (s : VersoText) : String :=
   unescapeVerso <| (Syntax.isLit? versoTextKind s.raw).getD ""
 
-/--
-Returns the text of a Verso text token as it was written, with its escape sequences intact.
--/
-def getVersoTextSource (s : VersoText) : String :=
-  (Syntax.isLit? versoTextKind s.raw).getD ""
+/-- Returns the text of a Verso text token as it was written, with its escape sequences intact. -/
+def getVersoTextSource (s : VersoText) : String := (Syntax.isLit? versoTextKind s.raw).getD ""
 
-/--
-Decodes the name that a Verso footnote or link reference token contains.
--/
-def getVersoRefName (s : VersoRefName) : String :=
-  (Syntax.isLit? versoRefKind s.raw).getD ""
+/-- Decodes the name that a Verso footnote or link reference token contains. -/
+def getVersoRefName (s : VersoRefName) : String := (Syntax.isLit? versoRefKind s.raw).getD ""
 
-/--
-Decodes the URL that a Verso link or image token contains, interpreting escape sequences.
--/
+/-- Decodes the URL that a Verso link or image token contains, interpreting escape sequences. -/
 def getVersoLinkUrl (s : VersoLinkUrl) : String :=
   unescapeVerso <| (Syntax.isLit? versoLinkUrlKind s.raw).getD ""
 
@@ -284,21 +273,14 @@ support escape sequences.
 def getVersoLinkRefUrl (s : VersoLinkRefUrl) : String :=
   (Syntax.isLit? versoLinkRefUrlKind s.raw).getD ""
 
-/--
-Decodes the alternate text that a Verso image token contains, interpreting escape sequences.
--/
+/-- Decodes the alternate text that a Verso image token contains, interpreting escape sequences. -/
 def getVersoImageAlt (s : VersoImageAlt) : String :=
   unescapeVerso <| (Syntax.isLit? versoImageAltKind s.raw).getD ""
 
-/--
-Returns the text of one source line inside Verso inline code or a Verso code block.
--/
-def getVersoCodeLine (s : VersoCodeLine) : String :=
-  (Syntax.isLit? versoCodeLineKind s.raw).getD ""
+/-- Returns the text of one source line inside Verso inline code or a Verso code block. -/
+def getVersoCodeLine (s : VersoCodeLine) : String := (Syntax.isLit? versoCodeLineKind s.raw).getD ""
 
-/--
-Returns the source lines of Verso inline code, in order.
--/
+/-- Returns the source lines of Verso inline code, in order. -/
 def getVersoCodeLines (s : VersoCode) : TSyntaxArray ``Parser.versoCodeLine :=
   -- The repetition that reads the lines groups them in a null node.
   .mk s.raw[0].getArgs
@@ -312,16 +294,12 @@ def getVersoCode (s : VersoCode) : String := Id.run do
     str := str ++ line.getVersoCodeLine
   str
 
-/--
-Returns the source lines of a Verso code block, in order.
--/
+/-- Returns the source lines of a Verso code block, in order. -/
 def getVersoCodeBlockLines (s : VersoCodeBlock) : TSyntaxArray ``Parser.versoCodeLine :=
   -- The repetition that reads the lines groups them in a null node.
   .mk s.raw[0].getArgs
 
-/--
-Returns the contents of a Verso code block, which are the texts of its lines in order.
--/
+/-- Returns the contents of a Verso code block, which are the texts of its lines in order. -/
 def getVersoCodeBlock (s : VersoCodeBlock) : String := Id.run do
   let mut out := ""
   for line in s.getVersoCodeBlockLines do
@@ -377,24 +355,23 @@ public section
 namespace ArgVal
 
 open Lean.Parser in
-def str : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "ArgVal.str" decl_name% Lean.Parser.strLit
+def str : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "ArgVal.str" decl_name% Lean.Parser.strLit
 open Lean.Parser in
-def ident : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "ArgVal.ident" decl_name% Lean.Parser.ident
+def ident : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "ArgVal.ident" decl_name% Lean.Parser.ident
 open Lean.Parser in
-def num : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "ArgVal.num" decl_name% Lean.Parser.numLit
+def num : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "ArgVal.num" decl_name% Lean.Parser.numLit
 
 end ArgVal
 
 open Lean.Parser in
-/--
-Argument values. Quotations may use antiquotations for any of the forms.
--/
-def argVal : Lean.Parser.Parser := onFirstUse fun _ =>
-  withAntiquot (mkAntiquot "argVal" decl_name% (isPseudoKind := true)) <|
-    ArgVal.str <|> ArgVal.ident <|> ArgVal.num
+/-- Argument values. Quotations may use antiquotations for any of the forms. -/
+def argVal : Lean.Parser.Parser :=
+  onFirstUse fun _ =>
+    withAntiquot (mkAntiquot "argVal" decl_name% (isPseudoKind := true)) <|
+      ArgVal.str <|> ArgVal.ident <|> ArgVal.num
 
 namespace Arg
 
@@ -405,101 +382,112 @@ def anon : Lean.Parser.Parser := onFirstUse fun _ => nodeWithAntiquot "anon" dec
 open Lean.Parser in
 /-- Named argument -/
 @[builtin_doc]
-def named : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "named" decl_name% ("(" >> Lean.Parser.ident >> " := " >> argVal >> ")")
+def named : Lean.Parser.Parser :=
+  onFirstUse fun _ =>
+    nodeWithAntiquot "named" decl_name% ("(" >> Lean.Parser.ident >> " := " >> argVal >> ")")
 open Lean.Parser in
 @[inherit_doc named, builtin_doc]
-def named_no_paren : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "named_no_paren" decl_name% (Lean.Parser.ident >> " := " >> argVal)
+def named_no_paren : Lean.Parser.Parser :=
+  onFirstUse fun _ =>
+    nodeWithAntiquot "named_no_paren" decl_name% (Lean.Parser.ident >> " := " >> argVal)
 open Lean.Parser in
 /-- Boolean flag, turned on -/
 @[builtin_doc]
-def flag_on : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "flag_on" decl_name% ("+" >> Lean.Parser.ident)
+def flag_on : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "flag_on" decl_name% ("+" >> Lean.Parser.ident)
 open Lean.Parser in
 /-- Boolean flag, turned off -/
 @[builtin_doc]
-def flag_off : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "flag_off" decl_name% ("-" >> Lean.Parser.ident)
+def flag_off : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "flag_off" decl_name% ("-" >> Lean.Parser.ident)
 
 end Arg
 
 open Lean.Parser in
-/--
-Arguments to a role, directive, command, or code block.
--/
-def arg : Lean.Parser.Parser := onFirstUse fun _ =>
-  withAntiquot (mkAntiquot "arg" decl_name% (isPseudoKind := true)) <|
-    Arg.named <|> Arg.flag_on <|> Arg.flag_off <|>
-      atomic Arg.named_no_paren <|> Arg.anon
+/-- Arguments to a role, directive, command, or code block. -/
+def arg : Lean.Parser.Parser :=
+  onFirstUse fun _ =>
+    withAntiquot (mkAntiquot "arg" decl_name% (isPseudoKind := true)) <|
+      Arg.named <|> Arg.flag_on <|> Arg.flag_off <|> atomic Arg.named_no_paren <|> Arg.anon
 
 namespace LinkTarget
 
 open Lean.Parser in
 /-- A URL target, written explicitly. Use square brackets for a named target. -/
 @[builtin_doc]
-def url : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "url" decl_name% ("(" >> versoLinkUrl >> ")")
+def url : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "url" decl_name% ("(" >> versoLinkUrl >> ")")
 open Lean.Parser in
 /-- A named reference to a URL defined elsewhere. Use parentheses to write the URL here. -/
 @[builtin_doc]
-def ref : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "ref" decl_name% ("[" >> versoRef >> "]")
+def ref : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "ref" decl_name% ("[" >> versoRef >> "]")
 
 end LinkTarget
 
 open Lean.Parser in
-/--
-The target of a link or image.
--/
-def linkTarget : Lean.Parser.Parser := onFirstUse fun _ =>
-  withAntiquot (mkAntiquot "linkTarget" decl_name% (isPseudoKind := true)) <|
-    LinkTarget.url <|> LinkTarget.ref
+/-- The target of a link or image. -/
+def linkTarget : Lean.Parser.Parser :=
+  onFirstUse fun _ =>
+    withAntiquot (mkAntiquot "linkTarget" decl_name% (isPseudoKind := true)) <|
+      LinkTarget.url <|> LinkTarget.ref
 
 open Lean.Parser in
 /-- Matches the literal characters of `s`, producing a single atom that takes a position binder. -/
 private def atomOf (s : String) : Lean.Parser.Parser :=
   tokenWithAntiquot {
-    fn := rawFn (trailingWs := true) fun c st =>
-      let chars := s.foldl (init := (fun _ st => st : ParserFn))
-        fun p ch => p >> satisfyFn (· == ch) ch.toString
-      let st' := chars c st
-      -- The characters are read one at a time, so a failure names the one that did not match. The
-      -- atom is what was expected, and reporting it at the start says where it would have begun.
-      if st'.hasError then st'.mkErrorAt s!"'{s}'" st.pos else st'
+    fn :=
+      rawFn (trailingWs := true) fun c st =>
+        let chars :=
+          s.foldl (init := (fun _ st => st : ParserFn)) fun p ch =>
+            p >> satisfyFn (· == ch) ch.toString
+        let st' := chars c st
+        -- The characters are read one at a time, so a failure names the one that did not match. The
+        -- atom is what was expected, and reporting it at the start says where it would have begun.
+        if st'.hasError then st'.mkErrorAt s!"'{s}'" st.pos else st'
   }
 
 open Lean.Parser in
 /-- Matches a run of one or more `c`, producing a single atom. -/
 private def charRun (ch : Char) : Lean.Parser.Parser :=
   tokenWithAntiquot {
-    fn := rawFn (trailingWs := true) fun c st =>
-      let st' := takeWhile1Fn (· == ch) s!"'{ch}'" c st
-      if st'.hasError then st'.mkErrorAt s!"one or more '{ch}'" st.pos else st'
+    fn :=
+      rawFn (trailingWs := true) fun c st =>
+        let st' := takeWhile1Fn (· == ch) s!"'{ch}'" c st
+        if st'.hasError then st'.mkErrorAt s!"one or more '{ch}'" st.pos else st'
   }
 
 open Lean.Parser in
 /-- Matches an unordered list item's marker, producing a single atom. -/
-private def bulletAtom : Lean.Parser.Parser := onFirstUse fun _ =>
-  tokenWithAntiquot {
-    -- A single scan, so that nothing pushes a wrapper node beside the atom.
-    fn := rawFn (trailingWs := true) fun c s =>
-      if h : c.atEnd s.pos then s.mkEOIError
-      else
-        let ch := c.get' s.pos h
-        if ch == '*' || ch == '-' || ch == '+' then s.next' c s.pos h
-        else s.mkErrorAt "'*', '-', or '+'" s.pos
-  }
+private def bulletAtom : Lean.Parser.Parser :=
+  onFirstUse fun _ =>
+    tokenWithAntiquot {
+      -- A single scan, so that nothing pushes a wrapper node beside the atom.
+      fn :=
+        rawFn (trailingWs := true) fun c s =>
+          if h : c.atEnd s.pos then
+            s.mkEOIError
+          else
+            let ch := c.get' s.pos h
+            if ch == '*' || ch == '-' || ch == '+' then
+              s.next' c s.pos h
+            else
+              s.mkErrorAt "'*', '-', or '+'" s.pos
+    }
 
 open Lean.Parser in
 /-- Matches an ordered list item's marker, producing a single atom. -/
-private def numberAtom : Lean.Parser.Parser := onFirstUse fun _ =>
-  tokenWithAntiquot {
-    fn := rawFn (trailingWs := true) fun c s =>
-      let s' := (takeWhile1Fn (·.isDigit) "'0'-'9'" >>
-        satisfyFn (fun c => c == '.' || c == ')') "'.' or ')'") c s
-      if s'.hasError then s'.mkErrorAt "a number followed by '.' or ')'" s.pos else s'
-  }
+private def numberAtom : Lean.Parser.Parser :=
+  onFirstUse fun _ =>
+    tokenWithAntiquot {
+      fn :=
+        rawFn (trailingWs := true) fun c s =>
+          let s' :=
+            (takeWhile1Fn (·.isDigit) "'0'-'9'"
+                >> satisfyFn (fun c => c == '.' || c == ')') "'.' or ')'")
+              c s
+          if s'.hasError then s'.mkErrorAt "a number followed by '.' or ')'" s.pos else s'
+    }
 
 open Lean.Parser Lean.Parser.Term in
 /--
@@ -508,86 +496,86 @@ Metadata block contents, which are the fields of a structure instance.
 The fields occur between delimiters that are not otherwise tokens, so `%%%` is added to the
 token table while reading them.
 -/
-private def metadataContentsLit : Lean.Parser.Parser := onFirstUse fun _ => {
-  fn :=
-    adaptUncacheableContextFn (fun c => { c with tokens := c.tokens.insert "%%%" "%%%" })
-      (withAntiquot (mkAntiquot "metadataContents" ``Lean.Parser.Term.structInstFields)
-        (structInstFields (sepByIndent structInstField ", " (allowTrailingSep := true)))).fn }
+private def metadataContentsLit : Lean.Parser.Parser :=
+  onFirstUse fun _ => {
+    fn :=
+      adaptUncacheableContextFn
+        (fun c => { c with tokens := c.tokens.insert "%%%" "%%%" })
+        (withAntiquot (mkAntiquot "metadataContents" ``Lean.Parser.Term.structInstFields)
+          (structInstFields (sepByIndent structInstField ", " (allowTrailingSep := true)))).fn
+  }
 
 open Lean.Parser in
 /--
 The sequence of `#` characters that introduces a header. Its length determines the header's level.
 -/
-def headerMarker : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "headerMarker" decl_name% (charRun '#')
+def headerMarker : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "headerMarker" decl_name% (charRun '#')
 
 open Lean.Parser in
 /--
 The marker that introduces a list item. An unordered list uses `*`, `-`, or `+`. An ordered list
 uses a number followed by `.` or `)`.
 -/
-def listMarker : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "listMarker" decl_name% (atomic bulletAtom <|> numberAtom)
+def listMarker : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "listMarker" decl_name% (atomic bulletAtom <|> numberAtom)
 
 open Lean.Parser in
 /-- The marker of an item in an unordered list. -/
-private def unorderedListMarker : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "listMarker" ``listMarker bulletAtom
+private def unorderedListMarker : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "listMarker" ``listMarker bulletAtom
 
 open Lean.Parser in
 /-- The marker of an item in an ordered list. -/
-private def orderedListMarker : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "listMarker" ``listMarker numberAtom
+private def orderedListMarker : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "listMarker" ``listMarker numberAtom
 
 open Lean.Parser in
-/--
-The `:` that introduces an item in a description list.
--/
-private def descItemMarker : Lean.Parser.Parser := onFirstUse fun _ =>
-  atomic (atomOf ":" >> notFollowedBy { fn := satisfyFn (· == ':') "':'" } "':'")
+/-- The `:` that introduces an item in a description list. -/
+private def descItemMarker : Lean.Parser.Parser :=
+  onFirstUse fun _ =>
+    atomic (atomOf ":" >> notFollowedBy { fn := satisfyFn (· == ':') "':'" } "':'")
 
 open Lean.Parser in
 /-- The run of `_` characters that delimits emphasis. -/
-def emphDelimiter : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "emphDelimiter" decl_name% (charRun '_')
+def emphDelimiter : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "emphDelimiter" decl_name% (charRun '_')
 
 open Lean.Parser in
 /-- The sequence of `*` characters that delimits bold text. -/
-def boldDelimiter : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "boldDelimiter" decl_name% (charRun '*')
+def boldDelimiter : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "boldDelimiter" decl_name% (charRun '*')
 
 open Lean.Parser in
 /--
 The sequence of backticks that delimits inline code. Longer delimiters allow backticks in the
 content.
 -/
-def codeDelimiter : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "codeDelimiter" decl_name% (charRun '`')
+def codeDelimiter : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "codeDelimiter" decl_name% (charRun '`')
 
 open Lean.Parser in
-/--
-The fence that surrounds a code block. Longer fences allow more backticks in the content.
--/
-def codeBlockFence : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "codeBlockFence" decl_name% (charRun '`')
+/-- The fence that surrounds a code block. Longer fences allow more backticks in the content. -/
+def codeBlockFence : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "codeBlockFence" decl_name% (charRun '`')
 
 open Lean.Parser in
 /--
 The `$` that introduces inline mathematical notation. `$` begins an antiquotation, so a quotation
 splices this atom in as `$m:inlineMathMarker`.
 -/
-def inlineMathMarker : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "inlineMathMarker" decl_name% (atomOf "$")
+def inlineMathMarker : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "inlineMathMarker" decl_name% (atomOf "$")
 
 open Lean.Parser in
 @[inherit_doc inlineMathMarker]
-def displayMathMarker : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "displayMathMarker" decl_name% (atomOf "$$")
+def displayMathMarker : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "displayMathMarker" decl_name% (atomOf "$$")
 
 open Lean.Parser in
 /-- The sequence of `:` characters that delimits a directive. -/
-def directiveDelimiter : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "directiveDelimiter" decl_name% (charRun ':')
+def directiveDelimiter : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "directiveDelimiter" decl_name% (charRun ':')
 
 /--
 The number of characters in a delimiter atom. Returns `none` when the argument is not an atom.
@@ -601,95 +589,103 @@ open Lean.Parser in
 Matches `contents` between two delimiters that consist of `ch`, read by `delim`. The closing
 delimiter must have the same length as the opening delimiter.
 -/
-private def matchingDelimiterLengths (delim : Lean.Parser.Parser) (ch : Char) (contents : Lean.Parser.Parser) :
-    ParserFn := fun c s =>
+private def matchingDelimiterLengths
+    (delim : Lean.Parser.Parser) (ch : Char) (contents : Lean.Parser.Parser)
+    : ParserFn := fun c s =>
   let s := delim.fn c s
-  if s.hasError then s
+  if s.hasError then
+    s
   else
     let opener := s.stxStack.back
     let s := contents.fn c s
-    if s.hasError then s
+    if s.hasError then
+      s
     else
       let closerPos := s.pos
       let s := delim.fn c s
-      if s.hasError then s
+      if s.hasError then
+        s
       else
         match runLength opener, runLength s.stxStack.back with
         | some open', some close' =>
-          if open' == close' then s
-          else s.mkErrorAt s!"'{"".pushn ch open'}' to close what '{"".pushn ch open'}' opened"
-            closerPos
+          if open' == close' then
+            s
+          else
+            s.mkErrorAt s!"'{"".pushn ch open'}' to close what '{"".pushn ch open'}' opened"
+              closerPos
         | _, _ => s
 
 open Lean.Parser in
-/--
-Inline code, used on its own and as the content of mathematical notation.
--/
-private def inlineCode : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "code" `Lean.Doc.Parser.Inline.code
-    { fn := matchingDelimiterLengths codeDelimiter '`' versoCode }
+/-- Inline code, used on its own and as the content of mathematical notation. -/
+private def inlineCode : Lean.Parser.Parser :=
+  onFirstUse fun _ =>
+    nodeWithAntiquot "code" `Lean.Doc.Parser.Inline.code {
+      fn := matchingDelimiterLengths codeDelimiter '`' versoCode
+    }
 
 -- The inline productions are mutually recursive. Recursive `Parser` values cannot express that,
 -- so the `*Quot` definitions below break the recursion at the `ParserFn` level.
 open Lean.Parser in
 mutual
-  private partial def inlineQuot : ParserFn := fun c s =>
-    -- Once an antiquotation parses, `withAntiquotFn` skips the alternatives. `para` and friends
-    -- have no opening delimiter, so backtracking into them would let `$x` parse as an inline inside
-    -- one of them. The ambiguity would then resolve against the writer's intent.
-    -- A footnote's `[^` is longer than a link's `[`, so it comes first to allow fallback.
-    let alts : Parser :=
-      { fn := textQuot } <|> { fn := emphQuot } <|> { fn := boldQuot } <|> inlineCode <|>
-      { fn := mathQuot } <|> { fn := footnoteQuot } <|> { fn := linkQuot } <|>
-      { fn := imageQuot } <|> { fn := linebreakQuot } <|> { fn := roleQuot }
-    withAntiquotFn (mkAntiquot "inline" `Lean.Doc.Parser.inline (isPseudoKind := true)).fn
-      alts.fn (antiquotBehavior := .acceptLhs) c s
+private partial def inlineQuot : ParserFn := fun c s =>
+  -- Once an antiquotation parses, `withAntiquotFn` skips the alternatives. `para` and friends
+  -- have no opening delimiter, so backtracking into them would let `$x` parse as an inline inside
+  -- one of them. The ambiguity would then resolve against the writer's intent.
+  -- A footnote's `[^` is longer than a link's `[`, so it comes first to allow fallback.
+  let alts : Parser :=
+    { fn := textQuot } <|> { fn := emphQuot } <|> { fn := boldQuot } <|> inlineCode
+      <|> { fn := mathQuot } <|> { fn := footnoteQuot } <|> { fn := linkQuot }
+      <|> { fn := imageQuot } <|> { fn := linebreakQuot } <|> { fn := roleQuot }
+  withAntiquotFn (mkAntiquot "inline" `Lean.Doc.Parser.inline (isPseudoKind := true)).fn alts.fn
+    (antiquotBehavior := .acceptLhs) c s
 
-  private partial def textQuot : ParserFn :=
-    (nodeWithAntiquot "text" `Lean.Doc.Parser.Inline.text versoText).fn
+private partial def textQuot : ParserFn :=
+  (nodeWithAntiquot "text" `Lean.Doc.Parser.Inline.text versoText).fn
 
-  private partial def emphQuot : ParserFn :=
-    (nodeWithAntiquot "emph" `Lean.Doc.Parser.Inline.emph
-      { fn := matchingDelimiterLengths emphDelimiter '_' (many (atomic { fn := inlineQuot })) }).fn
+private partial def emphQuot : ParserFn :=
+  (nodeWithAntiquot "emph" `Lean.Doc.Parser.Inline.emph {
+    fn := matchingDelimiterLengths emphDelimiter '_' (many (atomic { fn := inlineQuot }))
+  }).fn
 
-  private partial def boldQuot : ParserFn :=
-    (nodeWithAntiquot "bold" `Lean.Doc.Parser.Inline.bold
-      { fn := matchingDelimiterLengths boldDelimiter '*' (many (atomic { fn := inlineQuot })) }).fn
+private partial def boldQuot : ParserFn :=
+  (nodeWithAntiquot "bold" `Lean.Doc.Parser.Inline.bold {
+    fn := matchingDelimiterLengths boldDelimiter '*' (many (atomic { fn := inlineQuot }))
+  }).fn
 
-  private partial def displayMathQuot : ParserFn :=
-    (nodeWithAntiquot "display_math" `Lean.Doc.Parser.Inline.display_math
-      (displayMathMarker >> inlineCode)).fn
+private partial def displayMathQuot : ParserFn :=
+  (nodeWithAntiquot "display_math" `Lean.Doc.Parser.Inline.display_math
+    (displayMathMarker >> inlineCode)).fn
 
-  private partial def inlineMathQuot : ParserFn :=
-    (nodeWithAntiquot "inline_math" `Lean.Doc.Parser.Inline.inline_math
-      (inlineMathMarker >> inlineCode)).fn
+private partial def inlineMathQuot : ParserFn :=
+  (nodeWithAntiquot "inline_math" `Lean.Doc.Parser.Inline.inline_math
+    (inlineMathMarker >> inlineCode)).fn
 
-  private partial def mathQuot : ParserFn :=
-    (atomic { fn := displayMathQuot } <|> ({ fn := inlineMathQuot } : Parser)).fn
+private partial def mathQuot : ParserFn :=
+  (atomic { fn := displayMathQuot } <|> ({ fn := inlineMathQuot } : Parser)).fn
 
-  private partial def linkQuot : ParserFn :=
-    (nodeWithAntiquot "link" `Lean.Doc.Parser.Inline.link
-      (atomOf "[" >> many (atomic { fn := inlineQuot }) >> atomOf "]" >> linkTarget)).fn
+private partial def linkQuot : ParserFn :=
+  (nodeWithAntiquot "link" `Lean.Doc.Parser.Inline.link
+    (atomOf "[" >> many (atomic { fn := inlineQuot }) >> atomOf "]" >> linkTarget)).fn
 
-  private partial def imageQuot : ParserFn :=
-    (nodeWithAntiquot "image" `Lean.Doc.Parser.Inline.image
-      (atomOf "![" >> versoImageAlt >> atomOf "]" >> linkTarget)).fn
+private partial def imageQuot : ParserFn :=
+  (nodeWithAntiquot "image" `Lean.Doc.Parser.Inline.image
+    (atomOf "![" >> versoImageAlt >> atomOf "]" >> linkTarget)).fn
 
-  private partial def footnoteQuot : ParserFn :=
-    (nodeWithAntiquot "footnote" `Lean.Doc.Parser.Inline.footnote
-      (atomOf "[^" >> versoRef >> atomOf "]")).fn
+private partial def footnoteQuot : ParserFn :=
+  (nodeWithAntiquot "footnote" `Lean.Doc.Parser.Inline.footnote
+    (atomOf "[^" >> versoRef >> atomOf "]")).fn
 
-  private partial def linebreakQuot : ParserFn :=
-    (nodeWithAntiquot "linebreak" `Lean.Doc.Parser.Inline.linebreak (charRun '\n')).fn
+private partial def linebreakQuot : ParserFn :=
+  (nodeWithAntiquot "linebreak" `Lean.Doc.Parser.Inline.linebreak (charRun '\n')).fn
 
-  private partial def roleQuot : ParserFn :=
-    (nodeWithAntiquot "role" `Lean.Doc.Parser.Inline.role
-      (atomOf "{" >> Lean.Parser.ident >> many arg >> atomOf "}" >>
-        -- Each bracket sits in a group, so that an omitted bracket is an empty group, which
-        -- matches what the Verso parser produces.
-        ((node nullKind (atomOf "[") >> many (atomic { fn := inlineQuot }) >>
-           node nullKind (atomOf "]")) <|>
-         (node nullKind skip >> many1 (atomic { fn := inlineQuot }) >> node nullKind skip)))).fn
+private partial def roleQuot : ParserFn :=
+  (nodeWithAntiquot "role" `Lean.Doc.Parser.Inline.role
+    (atomOf "{" >> Lean.Parser.ident >> many arg >> atomOf "}"
+      -- Each bracket sits in a group, so that an omitted bracket is an empty group, which
+      -- matches what the Verso parser produces.
+      >> ((node nullKind (atomOf "[") >> many (atomic { fn := inlineQuot })
+          >> node nullKind (atomOf "]"))
+        <|> (node nullKind skip >> many1 (atomic { fn := inlineQuot }) >> node nullKind skip)))).fn
 end
 
 namespace Inline
@@ -779,74 +775,73 @@ def inline : Lean.Parser.Parser := { fn := inlineQuot }
 
 open Lean.Parser in
 mutual
-  private partial def blockQuot : ParserFn := fun c s =>
-    -- A footnote definition's `[^` is checked before a link reference's `[` to allow backtracking.
-    -- A paragraph opens with the content of its first inline rather than a delimiter of its own,
-    -- so it comes last.
-    let alts : Parser :=
-      { fn := ulQuot } <|> { fn := olQuot } <|> { fn := dlQuot } <|>
-      { fn := blockquoteQuot } <|> { fn := codeblockQuot } <|> { fn := directiveQuot } <|>
-      { fn := headerQuot } <|> { fn := footnoteRefQuot } <|> { fn := linkRefQuot } <|>
-      { fn := metadataQuot } <|> { fn := commandQuot } <|> { fn := paraQuot }
-    withAntiquotFn (mkAntiquot "block" `Lean.Doc.Parser.block (isPseudoKind := true)).fn
-      alts.fn (antiquotBehavior := .acceptLhs) c s
+private partial def blockQuot : ParserFn := fun c s =>
+  -- A footnote definition's `[^` is checked before a link reference's `[` to allow backtracking.
+  -- A paragraph opens with the content of its first inline rather than a delimiter of its own,
+  -- so it comes last.
+  let alts : Parser :=
+    { fn := ulQuot } <|> { fn := olQuot } <|> { fn := dlQuot } <|> { fn := blockquoteQuot }
+      <|> { fn := codeblockQuot } <|> { fn := directiveQuot } <|> { fn := headerQuot }
+      <|> { fn := footnoteRefQuot } <|> { fn := linkRefQuot } <|> { fn := metadataQuot }
+      <|> { fn := commandQuot } <|> { fn := paraQuot }
+  withAntiquotFn (mkAntiquot "block" `Lean.Doc.Parser.block (isPseudoKind := true)).fn alts.fn
+    (antiquotBehavior := .acceptLhs) c s
 
-  private partial def paraQuot : ParserFn :=
-    (nodeWithAntiquot "para" `Lean.Doc.Parser.Block.para (many1 (atomic { fn := inlineQuot }))).fn
+private partial def paraQuot : ParserFn :=
+  (nodeWithAntiquot "para" `Lean.Doc.Parser.Block.para (many1 (atomic { fn := inlineQuot }))).fn
 
-  private partial def listItemQuot (marker : Lean.Parser.Parser) : ParserFn :=
-    (nodeWithAntiquot "ListItem.item" `Lean.Doc.Parser.ListItem.item
-      (marker >> many (atomic { fn := blockQuot }))).fn
+private partial def listItemQuot (marker : Lean.Parser.Parser) : ParserFn :=
+  (nodeWithAntiquot "ListItem.item" `Lean.Doc.Parser.ListItem.item
+    (marker >> many (atomic { fn := blockQuot }))).fn
 
-  private partial def descItemQuot : ParserFn :=
-    (nodeWithAntiquot "DescItem.item" `Lean.Doc.Parser.DescItem.item
-      (descItemMarker >> many (atomic { fn := inlineQuot }) >>
-        many (atomic { fn := blockQuot }))).fn
+private partial def descItemQuot : ParserFn :=
+  (nodeWithAntiquot "DescItem.item" `Lean.Doc.Parser.DescItem.item
+    (descItemMarker >> many (atomic { fn := inlineQuot }) >> many (atomic { fn := blockQuot }))).fn
 
-  private partial def ulQuot : ParserFn :=
-    (nodeWithAntiquot "ul" `Lean.Doc.Parser.Block.ul
-      (many1 (atomic { fn := listItemQuot unorderedListMarker }))).fn
+private partial def ulQuot : ParserFn :=
+  (nodeWithAntiquot "ul" `Lean.Doc.Parser.Block.ul
+    (many1 (atomic { fn := listItemQuot unorderedListMarker }))).fn
 
-  private partial def olQuot : ParserFn :=
-    (nodeWithAntiquot "ol" `Lean.Doc.Parser.Block.ol
-      (many1 (atomic { fn := listItemQuot orderedListMarker }))).fn
+private partial def olQuot : ParserFn :=
+  (nodeWithAntiquot "ol" `Lean.Doc.Parser.Block.ol
+    (many1 (atomic { fn := listItemQuot orderedListMarker }))).fn
 
-  private partial def dlQuot : ParserFn :=
-    (nodeWithAntiquot "dl" `Lean.Doc.Parser.Block.dl (many1 (atomic { fn := descItemQuot }))).fn
+private partial def dlQuot : ParserFn :=
+  (nodeWithAntiquot "dl" `Lean.Doc.Parser.Block.dl (many1 (atomic { fn := descItemQuot }))).fn
 
-  private partial def blockquoteQuot : ParserFn :=
-    (nodeWithAntiquot "blockquote" `Lean.Doc.Parser.Block.blockquote
-      (atomOf ">" >> many (atomic { fn := blockQuot }))).fn
+private partial def blockquoteQuot : ParserFn :=
+  (nodeWithAntiquot "blockquote" `Lean.Doc.Parser.Block.blockquote
+    (atomOf ">" >> many (atomic { fn := blockQuot }))).fn
 
-  private partial def codeblockQuot : ParserFn :=
-    (nodeWithAntiquot "codeblock" `Lean.Doc.Parser.Block.codeblock
-      (codeBlockFence >> optional (Lean.Parser.ident >> many arg) >>
-        versoCodeBlock >> codeBlockFence)).fn
+private partial def codeblockQuot : ParserFn :=
+  (nodeWithAntiquot "codeblock" `Lean.Doc.Parser.Block.codeblock
+    (codeBlockFence >> optional (Lean.Parser.ident >> many arg) >> versoCodeBlock
+      >> codeBlockFence)).fn
 
-  private partial def directiveQuot : ParserFn :=
-    (nodeWithAntiquot "directive" `Lean.Doc.Parser.Block.directive
-      (directiveDelimiter >> Lean.Parser.ident >> many arg >>
-        many (atomic { fn := blockQuot }) >> directiveDelimiter)).fn
+private partial def directiveQuot : ParserFn :=
+  (nodeWithAntiquot "directive" `Lean.Doc.Parser.Block.directive
+    (directiveDelimiter >> Lean.Parser.ident >> many arg >> many (atomic { fn := blockQuot })
+      >> directiveDelimiter)).fn
 
-  private partial def headerQuot : ParserFn :=
-    (nodeWithAntiquot "header" `Lean.Doc.Parser.Block.header
-      (headerMarker >> many1 (atomic { fn := inlineQuot }))).fn
+private partial def headerQuot : ParserFn :=
+  (nodeWithAntiquot "header" `Lean.Doc.Parser.Block.header
+    (headerMarker >> many1 (atomic { fn := inlineQuot }))).fn
 
-  private partial def linkRefQuot : ParserFn :=
-    (nodeWithAntiquot "link_ref" `Lean.Doc.Parser.Block.link_ref
-      (atomOf "[" >> versoRef >> atomOf "]:" >> versoLinkRefUrl)).fn
+private partial def linkRefQuot : ParserFn :=
+  (nodeWithAntiquot "link_ref" `Lean.Doc.Parser.Block.link_ref
+    (atomOf "[" >> versoRef >> atomOf "]:" >> versoLinkRefUrl)).fn
 
-  private partial def footnoteRefQuot : ParserFn :=
-    (nodeWithAntiquot "footnote_ref" `Lean.Doc.Parser.Block.footnote_ref
-      (atomOf "[^" >> versoRef >> atomOf "]:" >> many (atomic { fn := inlineQuot }))).fn
+private partial def footnoteRefQuot : ParserFn :=
+  (nodeWithAntiquot "footnote_ref" `Lean.Doc.Parser.Block.footnote_ref
+    (atomOf "[^" >> versoRef >> atomOf "]:" >> many (atomic { fn := inlineQuot }))).fn
 
-  private partial def metadataQuot : ParserFn :=
-    (nodeWithAntiquot "metadata_block" `Lean.Doc.Parser.Block.metadata_block
-      (atomOf "%%%" >> metadataContentsLit >> atomOf "%%%")).fn
+private partial def metadataQuot : ParserFn :=
+  (nodeWithAntiquot "metadata_block" `Lean.Doc.Parser.Block.metadata_block
+    (atomOf "%%%" >> metadataContentsLit >> atomOf "%%%")).fn
 
-  private partial def commandQuot : ParserFn :=
-    (nodeWithAntiquot "command" `Lean.Doc.Parser.Block.command
-      (atomOf "{" >> Lean.Parser.ident >> many arg >> atomOf "}")).fn
+private partial def commandQuot : ParserFn :=
+  (nodeWithAntiquot "command" `Lean.Doc.Parser.Block.command
+    (atomOf "{" >> Lean.Parser.ident >> many arg >> atomOf "}")).fn
 end
 
 namespace ListItem
@@ -879,9 +874,7 @@ def ol : Lean.Parser.Parser := { fn := olQuot }
 /-- Description list -/
 @[builtin_doc]
 def dl : Lean.Parser.Parser := { fn := dlQuot }
-/--
-A quotation, which contains a sequence of blocks that are at least as indented as the `>`.
--/
+/-- A quotation, which contains a sequence of blocks that are at least as indented as the `>`. -/
 @[builtin_doc]
 def blockquote : Lean.Parser.Parser := { fn := blockquoteQuot }
 /--
@@ -944,7 +937,6 @@ A paragraph.
 :::
 ::::
 ```
-
 -/
 @[builtin_doc]
 def directive : Lean.Parser.Parser := { fn := directiveQuot }
@@ -956,19 +948,13 @@ start with `#`, and subsequent headers must have at most one more `#` than the p
 -/
 @[builtin_doc]
 def header : Lean.Parser.Parser := { fn := headerQuot }
-/--
-A named URL that can be used in links and images.
--/
+/-- A named URL that can be used in links and images. -/
 @[builtin_doc]
 def link_ref : Lean.Parser.Parser := { fn := linkRefQuot }
-/--
-A footnote definition.
--/
+/-- A footnote definition. -/
 @[builtin_doc]
 def footnote_ref : Lean.Parser.Parser := { fn := footnoteRefQuot }
-/--
-Metadata for the preceding header.
--/
+/-- Metadata for the preceding header. -/
 @[builtin_doc]
 def metadata_block : Lean.Parser.Parser := { fn := metadataQuot }
 /--
@@ -990,13 +976,12 @@ def block : Lean.Parser.Parser := { fn := blockQuot }
 
 open Lean.Parser in
 /-- A Verso document, which is a sequence of blocks. -/
-def document : Lean.Parser.Parser := onFirstUse fun _ =>
-  nodeWithAntiquot "document" decl_name% (many (atomic block))
+def document : Lean.Parser.Parser :=
+  onFirstUse fun _ => nodeWithAntiquot "document" decl_name% (many (atomic block))
 
 end
 
 end Lean.Doc.Parser
-
 
 namespace Lean.Doc
 
@@ -1025,11 +1010,13 @@ Each sits in a node of its own, so that a quotation can splice one in place of w
 `VersoDelimiter.view` or `TSyntax.getVersoDelimiter` to read its characters.
 -/
 abbrev VersoDelimiter :=
-  TSyntax [``Parser.emphDelimiter, ``Parser.boldDelimiter,
+  TSyntax [
+    ``Parser.emphDelimiter, ``Parser.boldDelimiter,
     ``Parser.codeDelimiter, ``Parser.codeBlockFence,
     ``Parser.directiveDelimiter, ``Parser.headerMarker,
     ``Parser.listMarker, ``Parser.inlineMathMarker,
-    ``Parser.displayMathMarker]
+    ``Parser.displayMathMarker
+  ]
 
 end
 
@@ -1041,18 +1028,13 @@ public section
 
 open Lean.Doc
 
-/--
-Extracts the blocks of a Verso document.
--/
+/-- Extracts the blocks of a Verso document. -/
 def getVersoBlocks (doc : VersoDocument) : TSyntaxArray ``Parser.block :=
   -- The repetition that reads the blocks groups them in a null node.
   doc.raw[0].getArgs.map (⟨·⟩)
 
-/--
-Returns the characters that make up a Verso delimiter.
--/
-def getVersoDelimiter (delim : VersoDelimiter) : String :=
-  delim.raw[0].getAtomVal
+/-- Returns the characters that make up a Verso delimiter. -/
+def getVersoDelimiter (delim : VersoDelimiter) : String := delim.raw[0].getAtomVal
 
 end
 
@@ -1077,29 +1059,52 @@ Each inline and block element can be used where its category is expected, so an 
 known kind can be spliced into a quotation.
 -/
 
-instance : Coe (TSyntax ``Parser.Inline.text) (TSyntax ``Parser.inline) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Inline.emph) (TSyntax ``Parser.inline) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Inline.bold) (TSyntax ``Parser.inline) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Inline.code) (TSyntax ``Parser.inline) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Inline.inline_math) (TSyntax ``Parser.inline) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Inline.display_math) (TSyntax ``Parser.inline) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Inline.link) (TSyntax ``Parser.inline) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Inline.image) (TSyntax ``Parser.inline) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Inline.footnote) (TSyntax ``Parser.inline) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Inline.linebreak) (TSyntax ``Parser.inline) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Inline.role) (TSyntax ``Parser.inline) where coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Inline.text) (TSyntax ``Parser.inline) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Inline.emph) (TSyntax ``Parser.inline) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Inline.bold) (TSyntax ``Parser.inline) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Inline.code) (TSyntax ``Parser.inline) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Inline.inline_math) (TSyntax ``Parser.inline) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Inline.display_math) (TSyntax ``Parser.inline) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Inline.link) (TSyntax ``Parser.inline) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Inline.image) (TSyntax ``Parser.inline) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Inline.footnote) (TSyntax ``Parser.inline) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Inline.linebreak) (TSyntax ``Parser.inline) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Inline.role) (TSyntax ``Parser.inline) where
+  coe s := ⟨s⟩
 
-instance : Coe (TSyntax ``Parser.Block.para) (TSyntax ``Parser.block) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Block.ul) (TSyntax ``Parser.block) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Block.ol) (TSyntax ``Parser.block) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Block.dl) (TSyntax ``Parser.block) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Block.blockquote) (TSyntax ``Parser.block) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Block.codeblock) (TSyntax ``Parser.block) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Block.directive) (TSyntax ``Parser.block) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Block.header) (TSyntax ``Parser.block) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Block.link_ref) (TSyntax ``Parser.block) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Block.footnote_ref) (TSyntax ``Parser.block) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Block.metadata_block) (TSyntax ``Parser.block) where coe s := ⟨s⟩
-instance : Coe (TSyntax ``Parser.Block.command) (TSyntax ``Parser.block) where coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Block.para) (TSyntax ``Parser.block) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Block.ul) (TSyntax ``Parser.block) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Block.ol) (TSyntax ``Parser.block) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Block.dl) (TSyntax ``Parser.block) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Block.blockquote) (TSyntax ``Parser.block) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Block.codeblock) (TSyntax ``Parser.block) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Block.directive) (TSyntax ``Parser.block) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Block.header) (TSyntax ``Parser.block) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Block.link_ref) (TSyntax ``Parser.block) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Block.footnote_ref) (TSyntax ``Parser.block) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Block.metadata_block) (TSyntax ``Parser.block) where
+  coe s := ⟨s⟩
+instance : Coe (TSyntax ``Parser.Block.command) (TSyntax ``Parser.block) where
+  coe s := ⟨s⟩
 
 end

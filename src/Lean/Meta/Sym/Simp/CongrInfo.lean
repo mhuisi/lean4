@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.SymM
 import Lean.Meta.FunInfo
@@ -11,14 +12,13 @@ import Lean.Util.CollectLooseBVars
 import Init.Omega
 namespace Lean.Meta.Sym
 
-def isFixedPrefix? (argKinds : Array CongrArgKind) : Option Nat :=
-  go 0
+def isFixedPrefix? (argKinds : Array CongrArgKind) : Option Nat := go 0
 where
   goEq (pre : Nat) (i : Nat) : Option Nat :=
     if h : i < argKinds.size then
       match argKinds[i] with
       | .fixed => none
-      | .eq => goEq pre (i+1)
+      | .eq => goEq pre (i + 1)
       | _ => none
     else
       some pre
@@ -26,8 +26,8 @@ where
   go (i : Nat) : Option Nat :=
     if h : i < argKinds.size then
       match argKinds[i] with
-      | .fixed => go (i+1)
-      | .eq => goEq i (i+1)
+      | .fixed => go (i + 1)
+      | .eq => goEq i (i + 1)
       | _ => none
     else
       none
@@ -41,7 +41,10 @@ def mkCongrInfo (f : Expr) : SymM CongrInfo := do
     return .none
   let info ← getFunInfo f
   let argKinds ← getCongrSimpKinds f info
-  if argKinds.all fun k => match k with | .fixed | .eq => true | _ => false then
+  if argKinds.all fun k =>
+      match k with
+      | .fixed | .eq => true
+      | _ => false then
     if argKinds.all (· == .fixed) then
       return .none
     else if let some prefixSize := isFixedPrefix? argKinds then
@@ -52,7 +55,8 @@ def mkCongrInfo (f : Expr) : SymM CongrInfo := do
     if let some thm ← mkCongrSimpForConst? declName us then
       if thm.argKinds == argKinds then
         return mkCongrTheoremInfo thm
-  let some thm ← mkCongrSimpCore? f info argKinds | return .none
+  let some thm ← mkCongrSimpCore? f info argKinds
+    | return .none
   return mkCongrTheoremInfo thm
 
 public def getCongrInfo (f : Expr) : SymM CongrInfo := do

@@ -41,9 +41,9 @@ will exit silently with `noConfigFileCode` (i.e, 2).
 The `setup-file` command is used internally by the Lean server.
 -/
 public def setupFile
-  (loadConfig : LoadConfig) (leanFile : FilePath)
-  (header? : Option ModuleHeader := none) (buildConfig : BuildConfig := {})
-: BaseIO ExitCode := do
+    (loadConfig : LoadConfig) (leanFile : FilePath)
+    (header? : Option ModuleHeader := none) (buildConfig : BuildConfig := {})
+    : BaseIO ExitCode := do
   let path ← resolvePath leanFile
   let configFile ← realConfigFile loadConfig.configFile
   if configFile.toString.isEmpty then
@@ -51,7 +51,7 @@ public def setupFile
   else if configFile == path then do
     let setup : ModuleSetup := {
       name := configModuleName
-      plugins :=  #[loadConfig.lakeEnv.lake.sharedLib]
+      plugins := #[loadConfig.lakeEnv.lake.sharedLib]
     }
     print! (toJson setup).compress
   else if let some errLog := (← IO.getEnv invalidConfigEnvVar) then
@@ -63,25 +63,26 @@ public def setupFile
     let some ws ← loadWorkspace loadConfig |>.toBaseIO buildConfig.toLogConfig
       | eprint! "Failed to load the Lake workspace.\n"
         return 1
-    let setup := ws.runBuild (cfg := buildConfig) do
-      setupServerModule leanFile.toString path header?
+    let setup :=
+      ws.runBuild (cfg := buildConfig) do setupServerModule leanFile.toString path header?
     match (← setup.toBaseIO) with
-    | .ok setup =>
-      print! (toJson setup).compress
+    | .ok setup => print! (toJson setup).compress
     | .error _ =>
       eprint! "Failed to build module dependencies.\n"
       return 1
 where
   print! msg := do
     match (← IO.println msg |>.toBaseIO) with
-    | .ok _ =>
-      return 0
+    | .ok _ => return 0
     | .error e =>
       panic! s!"Failed to print `setup-file` result: {e}"
       return 1
   eprint! msg := do
-    IO.eprint msg |>.catchExceptions fun e =>
-      panic! s!"Failed to print `setup-file` error: {e}\nOriginal error:\n{msg}"
+    IO.eprint msg
+      |>.catchExceptions fun e =>
+        panic! s!"Failed to print `setup-file` error: {e}\
+          \nOriginal error:\
+          \n{msg}"
 
 /--
 Start the Lean LSP for the `Workspace` loaded from `config`

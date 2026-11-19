@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Elab.Tactic.Grind.Basic
 import Lean.Elab.ConfigEval
@@ -27,7 +28,8 @@ private declare_term_config_elab elabGrindConfigCore Grind.Config
 Reports that `splits` is deprecated if `config` changes it with respect to `init`, and interprets
 `splits := 0` as `branches := 0`.
 -/
-private def elabDeprecatedSplits (stx : Syntax) (init config : Grind.Config) : CoreM Grind.Config := do
+private def elabDeprecatedSplits (stx : Syntax) (init config : Grind.Config)
+    : CoreM Grind.Config := do
   if config.splits == init.splits then
     return config
   Linter.logLintIf Linter.linter.deprecated stx
@@ -36,22 +38,23 @@ private def elabDeprecatedSplits (stx : Syntax) (init config : Grind.Config) : C
     return { config with branches := 0 }
   return config
 
-local macro "make_elab_grind_config" fn:ident struct:ident : command => do
-  let cfg := mkIdent `cfg
-  let init := mkIdent `init
-  let logExceptions := mkIdent `logExceptions
-  `(private local ensure_eval_expr_instance $struct
-    def $fn ($cfg : Syntax)
-        ($init : $struct := {})
-        ($logExceptions : Bool := true) :
-        TacticM Grind.Config := do
-      let $init : Grind.Config := { $init with }
-      let config ← elabGrindConfigCore $cfg $init
-        (evalConfig := fun c => do
-          let cfg : $struct ← evalExprWithElab c
-          return { cfg with })
-        (logExceptions := $logExceptions && (← read).recover)
-      elabDeprecatedSplits $cfg $init config)
+local macro "make_elab_grind_config" fn:ident struct:ident : command =>
+  do
+    let cfg := mkIdent `cfg
+    let init := mkIdent `init
+    let logExceptions := mkIdent `logExceptions
+    `(private local ensure_eval_expr_instance $struct
+      def $fn ($cfg : Syntax)
+          ($init : $struct := {})
+          ($logExceptions : Bool := true) :
+          TacticM Grind.Config := do
+        let $init : Grind.Config := { $init with }
+        let config ← elabGrindConfigCore $cfg $init
+          (evalConfig := fun c => do
+            let cfg : $struct ← evalExprWithElab c
+            return { cfg with })
+          (logExceptions := $logExceptions && (← read).recover)
+        elabDeprecatedSplits $cfg $init config)
 
 make_elab_grind_config elabGrindConfig Grind.Config
 make_elab_grind_config elabGrindConfigInteractive Grind.ConfigInteractive
@@ -62,15 +65,14 @@ make_elab_grind_config elabGrobnerConfig Grind.GrobnerConfig
 
 namespace Grind
 
-def elabConfigItems (init : Grind.Config) (items : Array Syntax) :
-    TermElabM Grind.Config := do
-  let config ← elabGrindConfigCore (mkNullNode items) init
-    (evalConfig := fun c => evalExprWithElab c)
-    (logExceptions := false)
+def elabConfigItems (init : Grind.Config) (items : Array Syntax) : TermElabM Grind.Config := do
+  let config ←
+    elabGrindConfigCore (mkNullNode items) init
+      (evalConfig := fun c => evalExprWithElab c)
+      (logExceptions := false)
   elabDeprecatedSplits (mkNullNode items) init config
 
-def withConfigItems (items : Array Syntax)
-    (k : GrindTacticM α) : GrindTacticM α := do
+def withConfigItems (items : Array Syntax) (k : GrindTacticM α) : GrindTacticM α := do
   if items.isEmpty then
     k
   else

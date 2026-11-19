@@ -23,29 +23,28 @@ public inductive Ownedness where
   | borrow
   | own
   | top
-  deriving Inhabited, BEq
+deriving Inhabited, BEq
 
 def Ownedness.join : Ownedness → Ownedness → Ownedness
   | .bot, v => v
-  | .borrow, .borrow =>  .borrow
-  | .own, .own =>  .own
+  | .borrow, .borrow => .borrow
+  | .own, .own => .own
   | _, _ => .top
 
 structure State where
   values : Std.HashMap FVarId Ownedness
   modified : Bool
-  deriving Inhabited
+deriving Inhabited
 
 abbrev InferM := StateRefT State CompilerM
 
-public partial def Decl.analyzePropagatedBorrows (decl : Decl .impure) :
-    CompilerM (Std.HashMap FVarId Ownedness) := do
+public partial def Decl.analyzePropagatedBorrows (decl : Decl .impure)
+    : CompilerM (Std.HashMap FVarId Ownedness) := do
   let (_, { values, .. }) ← go |>.run { values := {}, modified := false }
   return values
 where
   @[inline]
-  getOwnedness (fvarId : FVarId) : InferM Ownedness := do
-    return (← get).values.getD fvarId .bot
+  getOwnedness (fvarId : FVarId) : InferM Ownedness := do return (← get).values.getD fvarId .bot
 
   @[inline]
   join (fvarId : FVarId) (v : Ownedness) : InferM Unit := do
@@ -54,11 +53,15 @@ where
       let new := old.join v
       if old == new then
         s
-      else
-        { s with values := s.values.insert fvarId new, modified := true }
+      else {
+        s with
+        values := s.values.insert fvarId new
+        modified := true
+      }
 
   getParams (f : Name) : InferM (Array (Param .impure)) := do
-    let some sig ← getImpureSignature? f | unreachable!
+    let some sig ← getImpureSignature? f
+      | unreachable!
     return sig.params
 
   go : InferM Unit := do
@@ -93,7 +96,8 @@ where
       collectLetValue decl.fvarId decl.value
       collectCode k
     | .jmp jpId args =>
-      let some decl ← findFunDecl? (pu := .impure) jpId | unreachable!
+      let some decl ← findFunDecl? (pu := .impure) jpId
+        | unreachable!
       for arg in args, p in decl.params do
         if let .fvar arg := arg then
           let argValue ← getOwnedness arg
@@ -130,18 +134,16 @@ where
     | .ctor i _ =>
       let value := if i.isScalar then .borrow else .own
       join z value
-    | .fvar .. | .pap .. | .sproj .. | .uproj .. | .erased .. | .lit .. =>
-      join z .own
+    | .fvar .. | .pap .. | .sproj .. | .uproj .. | .erased .. | .lit .. => join z .own
     | _ => unreachable!
-
 
 def Ownedness.toBorrow : Ownedness → Option Bool
   | .bot => none
   | .borrow => some true
   | .own | .top => some false
 
-public partial def Decl.applyOwnedness (decl : Decl .impure) (values : Std.HashMap FVarId Ownedness) :
-    CompilerM (Decl .impure) := do
+public partial def Decl.applyOwnedness (decl : Decl .impure) (values : Std.HashMap FVarId Ownedness)
+    : CompilerM (Decl .impure) := do
   match decl.value with
   | .code code =>
     let params ← updateParams decl.params

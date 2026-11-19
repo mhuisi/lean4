@@ -16,15 +16,16 @@ public section
 namespace Std
 open Std.Iterators
 
-instance {α β} [Iterator α Id β] [Productive α Id] [IteratorAccess α Id] :
-    Stream (Iter (α := α) β) β where
-  next? it := match (it.toIterM.nextAtIdx? 0).run with
+instance {α β} [Iterator α Id β] [Productive α Id] [IteratorAccess α Id]
+    : Stream (Iter (α := α) β) β where
+  next? it :=
+    match (it.toIterM.nextAtIdx? 0).run with
     | .yield it' out _ => some (out, it'.toIter)
     | .skip _ h => False.elim ?noskip
     | .done _ => none
-  where finally
-    case noskip =>
-      revert h
-      exact IterM.not_isPlausibleNthOutputStep_yield
+where finally
+  case noskip =>
+    revert h
+    exact IterM.not_isPlausibleNthOutputStep_yield
 
 end Std

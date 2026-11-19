@@ -26,6 +26,5 @@ def evalSymm : Tactic := fun stx =>
 @[builtin_tactic Lean.Parser.Tactic.symmSaturate]
 def evalSymmSaturate : Tactic := fun stx =>
   match stx with
-  | `(tactic| symm_saturate) => do
-    liftMetaTactic1 fun g => g.symmSaturate
+  | `(tactic| symm_saturate) => do liftMetaTactic1 fun g => g.symmSaturate
   | _ => throwUnsupportedSyntax
