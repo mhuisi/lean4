@@ -18,20 +18,17 @@ namespace Lean.Meta.Tactic.BVDecide
 namespace Normalize
 
 structure HypInfo where
-  /--
-  Proof of the original hypothesis, either `e = true` or `!e = true`, depending on `negated`.
-  -/
+  /-- Proof of the original hypothesis, either `e = true` or `!e = true`, depending on `negated`. -/
   proof : Expr
-  /--
-  Whether the original hypothesis is of the shape `e` or `!e`.
-  -/
+  /-- Whether the original hypothesis is of the shape `e` or `!e`. -/
   negated : Bool
 
-def embeddedConstraintProc (minDepth : UInt32) (hypMap : PersistentHashMap Sym.ExprPtr HypInfo) :
-    Sym.Simp.Simproc := fun e => do
+def embeddedConstraintProc (minDepth : UInt32) (hypMap : PersistentHashMap Sym.ExprPtr HypInfo)
+    : Sym.Simp.Simproc := fun e => do
   if e.approxDepth < minDepth then
     return .rfl (done := true)
-  let some { proof, negated } := hypMap.find? ⟨e⟩ | return .rfl
+  let some { proof, negated } := hypMap.find? ⟨e⟩
+    | return .rfl
   if negated then
     let proof :=
       mkApp2 (mkConst ``Std.Tactic.BVDecide.Normalize.Bool.eq_false_of_not_eq_true) e proof
@@ -57,13 +54,15 @@ public def embeddedConstraintPass : Pass where
       for h : idx in 0...hyps.size do
         let hyp := hyps[idx]
         let type := hyp.type
-        let_expr Eq _ lhs rhs := type | continue
-        let_expr Bool.true := rhs | continue
+        let_expr Eq _ lhs rhs := type
+          | continue
+        let_expr Bool.true := rhs
+          | continue
         let (lhs, negated) :=
           match_expr lhs with
           | Bool.not inner => (inner, true)
           | _ => (lhs, false)
-        if !seen.contains ⟨lhs⟩ then
+        if ! seen.contains ⟨lhs⟩ then
           seen := seen.insert ⟨lhs⟩
           relevantHypsIdxMap := relevantHypsIdxMap.insert idx ⟨lhs⟩
           minDepth := minDepth.min lhs.approxDepth.toNat
@@ -74,18 +73,14 @@ public def embeddedConstraintPass : Pass where
         return false
 
       let cfg ← PreProcessM.getConfig
-      let config := {
-        maxSteps := cfg.maxSteps
-      }
+      let config := { maxSteps := cfg.maxSteps }
       PreProcessM.mapIdxHyps fun idx hyp => do
         let relevantHypsMap :=
           if let some ptr := relevantHypsIdxMap[idx]? then
             relevantHypsMap.erase ptr
           else
             relevantHypsMap
-        let methods := {
-          pre := embeddedConstraintProc minDepth.toUInt32 relevantHypsMap
-        }
+        let methods := { pre := embeddedConstraintProc minDepth.toUInt32 relevantHypsMap }
         let res ← Sym.simp hyp.type methods config
         hyp.applySimpResult res
 

@@ -29,24 +29,19 @@ clock reading refers to).
 @[ext]
 structure WallTime where
   private mk ::
-
-  /--
-  Duration since `1970-01-01T00:00:00` in local (civil) time.
-  -/
+  /-- Duration since `1970-01-01T00:00:00` in local (civil) time. -/
   val : Duration
-  deriving Repr, DecidableEq, Inhabited
+deriving Repr, DecidableEq, Inhabited
 
 instance : LE WallTime where
   le x y := x.val ≤ y.val
 
-instance { x y : WallTime } : Decidable (x ≤ y) :=
-  inferInstanceAs (Decidable (x.val ≤ y.val))
+instance {x y : WallTime} : Decidable (x ≤ y) := inferInstanceAs (Decidable (x.val ≤ y.val))
 
 instance : LT WallTime where
   lt x y := x.val < y.val
 
-instance { x y : WallTime } : Decidable (x < y) :=
-  inferInstanceAs (Decidable (x.val < y.val))
+instance {x y : WallTime} : Decidable (x < y) := inferInstanceAs (Decidable (x.val < y.val))
 
 instance : Ord WallTime where
   compare := compareOn (·.val)
@@ -64,32 +59,28 @@ Creates a `WallTime` from a `Duration`. The epoch is 1970-01-01 00:00:00 in loca
 (civil) time, not UTC.
 -/
 @[inline]
-def ofDuration (duration : Duration) : WallTime :=
-  ⟨duration⟩
+def ofDuration (duration : Duration) : WallTime := ⟨duration⟩
 
 /--
 Creates a `WallTime` from a `Second.Offset`. The epoch is 1970-01-01 00:00:00 in local
 (civil) time, not UTC.
 -/
 @[inline]
-def ofSeconds (secs : Second.Offset) : WallTime :=
-  ⟨Duration.ofSeconds secs⟩
+def ofSeconds (secs : Second.Offset) : WallTime := ⟨Duration.ofSeconds secs⟩
 
 /--
 Creates a `WallTime` from a `Nanosecond.Offset`. The epoch is 1970-01-01 00:00:00 in local
 (civil) time, not UTC.
 -/
 @[inline]
-def ofNanoseconds (nanos : Nanosecond.Offset) : WallTime :=
-  ⟨Duration.ofNanoseconds nanos⟩
+def ofNanoseconds (nanos : Nanosecond.Offset) : WallTime := ⟨Duration.ofNanoseconds nanos⟩
 
 /--
 Converts a `WallTime` to a `Second.Offset`. The epoch is 1970-01-01 00:00:00 in local
 (civil) time, not UTC.
 -/
 @[inline]
-def toSeconds (wt : WallTime) : Second.Offset :=
-  wt.val.second
+def toSeconds (wt : WallTime) : Second.Offset := wt.val.second
 
 /--
 Converts a `WallTime` to a `Nanosecond.Offset`. The epoch is 1970-01-01 00:00:00 in local
@@ -106,16 +97,14 @@ Converts a `WallTime` to a `Minute.Offset`. The epoch is 1970-01-01 00:00:00 in 
 (civil) time, not UTC.
 -/
 @[inline]
-def toMinutes (tm : WallTime) : Minute.Offset :=
-  tm.val.second.toMinutes
+def toMinutes (tm : WallTime) : Minute.Offset := tm.val.second.toMinutes
 
 /--
 Converts a `WallTime` to a `Day.Offset`. The epoch is 1970-01-01 00:00:00 in local
 (civil) time, not UTC.
 -/
 @[inline]
-def toDays (tm : WallTime) : Day.Offset :=
-  tm.val.second.toDays
+def toDays (tm : WallTime) : Day.Offset := tm.val.second.toDays
 
 /--
 Creates a `WallTime` from a `Millisecond.Offset`. The epoch is 1970-01-01 00:00:00 in local
@@ -130,128 +119,78 @@ Converts a `WallTime` to a `Millisecond.Offset`. The epoch is 1970-01-01 00:00:0
 (civil) time, not UTC.
 -/
 @[inline]
-def toMilliseconds (tm : WallTime) : Millisecond.Offset :=
-  tm.toNanoseconds.toMilliseconds
+def toMilliseconds (tm : WallTime) : Millisecond.Offset := tm.toNanoseconds.toMilliseconds
 
-/--
-Adds a `Millisecond.Offset` to the given `WallTime`.
--/
+/-- Adds a `Millisecond.Offset` to the given `WallTime`. -/
 @[inline]
-def addMilliseconds (t : WallTime) (s : Millisecond.Offset) : WallTime :=
-  ⟨t.val + s⟩
+def addMilliseconds (t : WallTime) (s : Millisecond.Offset) : WallTime := ⟨t.val + s⟩
 
-/--
-Subtracts a `Millisecond.Offset` from the given `WallTime`.
--/
+/-- Subtracts a `Millisecond.Offset` from the given `WallTime`. -/
 @[inline]
-def subMilliseconds (t : WallTime) (s : Millisecond.Offset) : WallTime :=
-  ⟨t.val - s⟩
+def subMilliseconds (t : WallTime) (s : Millisecond.Offset) : WallTime := ⟨t.val - s⟩
 
-/--
-Adds a `Nanosecond.Offset` to the given `WallTime`.
--/
+/-- Adds a `Nanosecond.Offset` to the given `WallTime`. -/
 @[inline]
-def addNanoseconds (t : WallTime) (s : Nanosecond.Offset) : WallTime :=
-  ⟨t.val + s⟩
+def addNanoseconds (t : WallTime) (s : Nanosecond.Offset) : WallTime := ⟨t.val + s⟩
 
-/--
-Subtracts a `Nanosecond.Offset` from the given `WallTime`.
--/
+/-- Subtracts a `Nanosecond.Offset` from the given `WallTime`. -/
 @[inline]
-def subNanoseconds (t : WallTime) (s : Nanosecond.Offset) : WallTime :=
-  ⟨t.val - s⟩
+def subNanoseconds (t : WallTime) (s : Nanosecond.Offset) : WallTime := ⟨t.val - s⟩
 
-/--
-Adds a `Second.Offset` to the given `WallTime`.
--/
+/-- Adds a `Second.Offset` to the given `WallTime`. -/
 @[inline]
-def addSeconds (t : WallTime) (s : Second.Offset) : WallTime :=
-  ⟨t.val + s⟩
+def addSeconds (t : WallTime) (s : Second.Offset) : WallTime := ⟨t.val + s⟩
 
-/--
-Subtracts a `Second.Offset` from the given `WallTime`.
--/
+/-- Subtracts a `Second.Offset` from the given `WallTime`. -/
 @[inline]
-def subSeconds (t : WallTime) (s : Second.Offset) : WallTime :=
-  ⟨t.val - s⟩
+def subSeconds (t : WallTime) (s : Second.Offset) : WallTime := ⟨t.val - s⟩
 
-/--
-Adds a `Minute.Offset` to the given `WallTime`.
--/
+/-- Adds a `Minute.Offset` to the given `WallTime`. -/
 @[inline]
-def addMinutes (t : WallTime) (m : Minute.Offset) : WallTime :=
-  ⟨t.val + m⟩
+def addMinutes (t : WallTime) (m : Minute.Offset) : WallTime := ⟨t.val + m⟩
 
-/--
-Subtracts a `Minute.Offset` from the given `WallTime`.
--/
+/-- Subtracts a `Minute.Offset` from the given `WallTime`. -/
 @[inline]
-def subMinutes (t : WallTime) (m : Minute.Offset) : WallTime :=
-  ⟨t.val - m⟩
+def subMinutes (t : WallTime) (m : Minute.Offset) : WallTime := ⟨t.val - m⟩
 
-/--
-Adds an `Hour.Offset` to the given `WallTime`.
--/
+/-- Adds an `Hour.Offset` to the given `WallTime`. -/
 @[inline]
-def addHours (t : WallTime) (h : Hour.Offset) : WallTime :=
-  ⟨t.val + h⟩
+def addHours (t : WallTime) (h : Hour.Offset) : WallTime := ⟨t.val + h⟩
 
-/--
-Subtracts an `Hour.Offset` from the given `WallTime`.
--/
+/-- Subtracts an `Hour.Offset` from the given `WallTime`. -/
 @[inline]
-def subHours (t : WallTime) (h : Hour.Offset) : WallTime :=
-  ⟨t.val - h⟩
+def subHours (t : WallTime) (h : Hour.Offset) : WallTime := ⟨t.val - h⟩
 
-/--
-Adds a `Day.Offset` to the given `WallTime`.
--/
+/-- Adds a `Day.Offset` to the given `WallTime`. -/
 @[inline]
-def addDays (t : WallTime) (d : Day.Offset) : WallTime :=
-  ⟨t.val + d⟩
+def addDays (t : WallTime) (d : Day.Offset) : WallTime := ⟨t.val + d⟩
 
-/--
-Subtracts a `Day.Offset` from the given `WallTime`.
--/
+/-- Subtracts a `Day.Offset` from the given `WallTime`. -/
 @[inline]
-def subDays (t : WallTime) (d : Day.Offset) : WallTime :=
-  ⟨t.val - d⟩
+def subDays (t : WallTime) (d : Day.Offset) : WallTime := ⟨t.val - d⟩
 
-/--
-Adds a `Week.Offset` to the given `WallTime`.
--/
+/-- Adds a `Week.Offset` to the given `WallTime`. -/
 @[inline]
-def addWeeks (t : WallTime) (d : Week.Offset) : WallTime :=
-  ⟨t.val + d⟩
+def addWeeks (t : WallTime) (d : Week.Offset) : WallTime := ⟨t.val + d⟩
 
-/--
-Subtracts a `Week.Offset` from the given `WallTime`.
--/
+/-- Subtracts a `Week.Offset` from the given `WallTime`. -/
 @[inline]
-def subWeeks (t : WallTime) (d : Week.Offset) : WallTime :=
-  ⟨t.val - d⟩
+def subWeeks (t : WallTime) (d : Week.Offset) : WallTime := ⟨t.val - d⟩
 
-/--
-Adds a `Duration` to the given `WallTime`.
--/
+/-- Adds a `Duration` to the given `WallTime`. -/
 @[inline]
-def addDuration (t : WallTime) (d : Duration) : WallTime :=
-  ⟨t.val + d⟩
+def addDuration (t : WallTime) (d : Duration) : WallTime := ⟨t.val + d⟩
 
-/--
-Subtracts a `Duration` from the given `WallTime`.
--/
+/-- Subtracts a `Duration` from the given `WallTime`. -/
 @[inline]
-def subDuration (t : WallTime) (d : Duration) : WallTime :=
-  ⟨t.val - d⟩
+def subDuration (t : WallTime) (d : Duration) : WallTime := ⟨t.val - d⟩
 
 /--
 Converts a `WallTime` to a `Duration`. The epoch is 1970-01-01 00:00:00 in local
 (civil) time, not UTC.
 -/
 @[inline]
-def toDuration (wt : WallTime) : Duration :=
-  wt.val
+def toDuration (wt : WallTime) : Duration := wt.val
 
 instance : HAdd WallTime Duration WallTime where
   hAdd := addDuration

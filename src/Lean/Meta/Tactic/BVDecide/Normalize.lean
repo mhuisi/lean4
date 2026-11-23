@@ -86,18 +86,24 @@ public def normalizeEprQuantifiers : PreProcessM Unit := do
   let problem := (← get).eprBvProblem
   if problem.quantifiedFacts.isEmpty then return
   withTraceNode `Meta.Tactic.bv.epr (fun _ => return m!"Normalizing quantified facts") do
-    let facts ← withRewriteRules fun dsimpMethods dsimpConfig simpMethods simpConfig => do
-      let rewrite (type : Expr) : PreProcessM RewrittenProp := do
-        let hyp ← PreProcessM.dsimpHyp .rewrite dsimpMethods dsimpConfig
-          { name := .anonymous, type, value := type, source := .epr }
-        match ← PreProcessM.simpExpr .rewrite simpMethods simpConfig hyp.type with
-        | .rfl .. => return { type := hyp.type, type' := hyp.type, proof? := none }
-        | .step type' proof .. => return { type := hyp.type, type', proof? := some proof }
-      problem.quantifiedFacts.filterMapM (normalizeEprFact rewrite)
+    let facts ←
+      withRewriteRules fun dsimpMethods dsimpConfig simpMethods simpConfig => do
+        let rewrite (type : Expr) : PreProcessM RewrittenProp := do
+          let hyp ←
+            PreProcessM.dsimpHyp .rewrite dsimpMethods dsimpConfig {
+              name := .anonymous
+              type
+              value := type
+              source := .epr
+            }
+          match ← PreProcessM.simpExpr .rewrite simpMethods simpConfig hyp.type with
+          | .rfl .. => return { type := hyp.type, type' := hyp.type, proof? := none }
+          | .step type' proof .. => return { type := hyp.type, type', proof? := some proof }
+        problem.quantifiedFacts.filterMapM (normalizeEprFact rewrite)
     modify fun s => { s with eprBvProblem := { problem with quantifiedFacts := facts } }
 where
-  normalizeEprFact (rewrite : Expr → PreProcessM RewrittenProp) (fact : EPR.QuantifiedFact) :
-      PreProcessM (Option EPR.QuantifiedFact) := do
+  normalizeEprFact (rewrite : Expr → PreProcessM RewrittenProp) (fact : EPR.QuantifiedFact)
+      : PreProcessM (Option EPR.QuantifiedFact) := do
     let n := fact.boundSorts.size
     forallBoundedTelescope fact.hyp.type (some (2 * n)) fun xs body => do
       assert! xs.size == 2 * n
@@ -105,15 +111,15 @@ where
       let guards := xs[n...*].toArray
       let body ← rewrite (← Sym.shareCommon body)
       if body.type'.isTrue then return none
-      let guards ← guards.mapM fun guard => do
-        rewrite (← Sym.shareCommon (← guard.fvarId!.getType))
+      let guards ← guards.mapM fun guard => do rewrite (← Sym.shareCommon (← guard.fvarId!.getType))
       withLocalDeclsDND (guards.map fun guard => (.anonymous, guard.type')) fun newGuards => do
         let binders := args ++ newGuards
         let type ← Sym.mkForallFVarsS binders body.type'
-        let guardProofs := newGuards.zipWith (bs := guards) fun newGuard guard =>
-          match guard.proof? with
-          | some proof => mkApp4 (mkConst ``Eq.mpr [0]) guard.type guard.type' proof newGuard
-          | none => newGuard
+        let guardProofs :=
+          newGuards.zipWith (bs := guards) fun newGuard guard =>
+            match guard.proof? with
+            | some proof => mkApp4 (mkConst ``Eq.mpr [0]) guard.type guard.type' proof newGuard
+            | none => newGuard
         let proof := mkAppN fact.hyp.value (args ++ guardProofs)
         let proof :=
           match body.proof? with
@@ -122,7 +128,6 @@ where
         let proof ← mkLambdaFVars binders proof
         trace[Meta.Tactic.bv.epr] m!"normalized quantified fact: {type}"
         return some { fact with hyp := { fact.hyp with type, value := proof } }
-
 
 public def bvNormalize (hyps? : Option (Array Hyp) := none) : PreProcessM Bool := do
   withTraceNode `Meta.Tactic.bv (fun _ => return "Preprocessing goal") do

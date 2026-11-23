@@ -57,18 +57,35 @@ def SorryLabelView.encode (view : SorryLabelView) : CoreM Name :=
   let name :=
     if let some { module, range := { pos, endPos, charUtf16, endCharUtf16 } } := view.module? then
       module
-        |>.num pos.line |>.num pos.column
-        |>.num endPos.line |>.num endPos.column
-        |>.num charUtf16 |>.num endCharUtf16
+        |>.num pos.line
+        |>.num pos.column
+        |>.num endPos.line
+        |>.num endPos.column
+        |>.num charUtf16
+        |>.num endCharUtf16
     else
       .anonymous
   mkFreshUserName (name.str "_sorry")
 
 def SorryLabelView.decode? (name : Name) : Option SorryLabelView := do
   guard <| name.hasMacroScopes
-  let .str name "_sorry" := name.eraseMacroScopes | failure
-  if let .num (.num (.num (.num (.num (.num module posLine) posCol) endLine) endCol) charUtf16) endCharUtf16 := name then
-    return { module? := some { module, range := { pos := ⟨posLine, posCol⟩, endPos := ⟨endLine, endCol⟩, charUtf16, endCharUtf16 } } }
+  let .str name "_sorry" := name.eraseMacroScopes
+    | failure
+  if let .num (.num (.num (.num (.num (.num module posLine) posCol) endLine) endCol) charUtf16)
+        endCharUtf16 :=
+      name then
+    return {
+      module? :=
+        some {
+          module
+          range := {
+            pos := ⟨posLine, posCol⟩
+            endPos := ⟨endLine, endCol⟩
+            charUtf16
+            endCharUtf16
+          }
+        }
+    }
   else
     failure
 
@@ -88,15 +105,16 @@ def mkLabeledSorry (type : Expr) (synthetic : Bool) (unique : Bool) : MetaM Expr
     if let (some startSPos, some endSPos) := ((← getRef).getPos?, (← getRef).getTailPos?) then
       let fileMap ← getFileMap
       SorryLabelView.encode {
-        module? := some {
-          module := (← getMainModule)
-          range := {
-            pos := fileMap.toPosition startSPos
-            endPos := fileMap.toPosition endSPos
-            charUtf16 := (fileMap.utf8PosToLspPos startSPos).character
-            endCharUtf16 := (fileMap.utf8PosToLspPos endSPos).character
+        module? :=
+          some {
+            module := (← getMainModule)
+            range := {
+              pos := fileMap.toPosition startSPos
+              endPos := fileMap.toPosition endSPos
+              charUtf16 := (fileMap.utf8PosToLspPos startSPos).character
+              endCharUtf16 := (fileMap.utf8PosToLspPos endSPos).character
+            }
           }
-        }
       }
     else
       SorryLabelView.encode {}
@@ -105,7 +123,9 @@ def mkLabeledSorry (type : Expr) (synthetic : Bool) (unique : Bool) : MetaM Expr
     return .app e (toExpr tag)
   else
     let e ← mkSorry (mkForall `tag .default (mkConst ``Unit) type) synthetic
-    let tag' := mkApp4 (mkConst ``Function.const [Level.one, Level.one]) (mkConst ``Unit) (mkConst ``Lean.Name) (mkConst ``Unit.unit) (toExpr tag)
+    let tag' :=
+      mkApp4 (mkConst ``Function.const [Level.one, Level.one]) (mkConst ``Unit)
+        (mkConst ``Lean.Name) (mkConst ``Unit.unit) (toExpr tag)
     return .app e tag'
 
 /--
@@ -146,8 +166,10 @@ def Expr.getSorry? (e : Expr) : Option Expr :=
 Evaluates `fn` on each `sorry` in the expression.
 Instantiates bound variables with free variables.
 -/
-def Meta.forEachSorryM {m : Type → Type} [Monad m] [MonadLiftT MetaM m] [MonadControlT MetaM m] (input : Expr)
-    (fn : Expr → m Unit) : m Unit := do
+def Meta.forEachSorryM
+    {m : Type → Type} [Monad m] [MonadLiftT MetaM m] [MonadControlT MetaM m]
+    (input : Expr) (fn : Expr → m Unit)
+    : m Unit := do
   Meta.forEachExpr' input fun e => do
     if let some e' := e.getSorry? then
       fn e'
@@ -155,11 +177,11 @@ def Meta.forEachSorryM {m : Type → Type} [Monad m] [MonadLiftT MetaM m] [Monad
     else
       return true
 
-/--
-Evaluates `fn` on each `sorry` in the declaration.
--/
-def Declaration.forEachSorryM {m : Type → Type} [Monad m] [MonadLiftT MetaM m] [MonadControlT MetaM m] (decl : Declaration)
-    (fn : Expr → m Unit) : m Unit := do
+/-- Evaluates `fn` on each `sorry` in the declaration. -/
+def Declaration.forEachSorryM
+    {m : Type → Type} [Monad m] [MonadLiftT MetaM m] [MonadControlT MetaM m]
+    (decl : Declaration) (fn : Expr → m Unit)
+    : m Unit := do
   decl.forExprM (Meta.forEachSorryM · fn)
 
 end Lean

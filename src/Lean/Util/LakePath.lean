@@ -18,4 +18,4 @@ def Lean.determineLakePath : IO System.FilePath := do
   let sysroot? ← IO.getEnv "LEAN_SYSROOT"
   match sysroot? with
   | some sysroot => pure <| System.FilePath.mk sysroot / "bin" / "lake"
-  | none         => pure <| (← IO.appDir) / "lake"
+  | none => pure <| (← IO.appDir) / "lake"

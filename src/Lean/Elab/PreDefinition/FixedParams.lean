@@ -32,7 +32,6 @@ The main components of this module are
 
 namespace Lean.Elab.FixedParams
 
-
 /--
 To determine which parameters in mutually recursive predefinitions are fixed, and how they
 correspond to each other, we run an analysis that aggregates information in the `Info` data type.
@@ -60,7 +59,6 @@ We find the largest set and graph that satisfies these rules:
 Under the assumption that the predefinitions indeed are mutually recursive, then the resulting graph,
 restricted to the non-`varying` nodes, should partition into cliques that have one member from each
 function. Every such clique becomes a fixed parameter.
-
 -/
 structure Info where
   /-
@@ -83,27 +81,23 @@ structure Info where
   -/
   revDeps : Array (Array (Array Nat))
 
-
 def Info.init (revDeps : Array (Array (Array Nat))) : Info where
-  graph := revDeps.map fun deps =>
-    .replicate deps.size (some (.replicate revDeps.size none))
+  graph := revDeps.map fun deps => .replicate deps.size (some (.replicate revDeps.size none))
   revDeps
 
-def Info.addSelfCalls (info : Info) : Info :=
-  { info with graph := info.graph.mapIdx fun funIdx paramInfos =>
-    paramInfos.mapIdx fun paramIdx paramInfo? =>
-      paramInfo?.map fun callers =>
-        callers.set! funIdx (some paramIdx) }
+def Info.addSelfCalls (info : Info) : Info := {
+  info with
+  graph :=
+    info.graph.mapIdx fun funIdx paramInfos =>
+      paramInfos.mapIdx fun paramIdx paramInfo? =>
+        paramInfo?.map fun callers => callers.set! funIdx (some paramIdx)
+}
 
-/--
-Is this parameter still plausibly a fixed parameter?
--/
+/-- Is this parameter still plausibly a fixed parameter? -/
 def Info.mayBeFixed (callerIdx paramIdx : Nat) (info : Info) : Bool :=
   info.graph[callerIdx]![paramIdx]!.isSome
 
-/--
-This parameter is varying. Set and propagate that information.
--/
+/-- This parameter is varying. Set and propagate that information. -/
 partial def Info.setVarying (funIdx paramIdx : Nat) (info : Info) : Info := Id.run do
   let mut info : Info := info
   if info.mayBeFixed funIdx paramIdx then
@@ -123,53 +117,55 @@ partial def Info.setVarying (funIdx paramIdx : Nat) (info : Info) : Info := Id.r
 def Info.getCallerParam? (calleeIdx argIdx callerIdx : Nat) (info : Info) : Option Nat :=
   info.graph[calleeIdx]![argIdx]!.bind (·[callerIdx]!)
 
-/--
-We observe a possibly valid edge.
--/
+/-- We observe a possibly valid edge. -/
 partial def Info.setCallerParam (calleeIdx argIdx callerIdx paramIdx : Nat) (info : Info) : Info :=
   if info.mayBeFixed calleeIdx argIdx then
     if info.mayBeFixed callerIdx paramIdx then
       if let some paramIdx' := info.getCallerParam? calleeIdx argIdx callerIdx then
-      -- We already have an etry
-      if paramIdx = paramIdx' then
-        -- all good
-        info
+        -- We already have an etry
+        if paramIdx = paramIdx' then
+          -- all good
+          info
+        else
+          -- Inconsistent information
+          info.setVarying calleeIdx argIdx
       else
-        -- Inconsistent information
-        info.setVarying calleeIdx argIdx
-    else
-      -- Set the new entry
-      let info := { info with graph := info.graph.modify calleeIdx (·.modify argIdx (·.map (·.set! callerIdx (some paramIdx)))) }
-      Id.run do
-        -- Propagate information about the caller
-        let mut info : Info := info
-        if let some callerParamInfo := info.graph[callerIdx]![paramIdx]! then
-          for h : otherFunIdx in *...callerParamInfo.size do
-            if let some otherParamIdx := callerParamInfo[otherFunIdx] then
-              info := info.setCallerParam calleeIdx argIdx otherFunIdx otherParamIdx
-        -- Propagate information about the callee
-        for otherFunIdx in *...info.graph.size do
-          for otherArgIdx in *...info.graph[otherFunIdx]!.size do
-            if let some otherArgsInfo := info.graph[otherFunIdx]![otherArgIdx]! then
-              if let some paramIdx' := otherArgsInfo[calleeIdx]! then
-                if paramIdx' = argIdx then
-                  info := info.setCallerParam otherFunIdx otherArgIdx callerIdx paramIdx
+        -- Set the new entry
+        let info := {
+          info with
+          graph :=
+            info.graph.modify calleeIdx (·.modify argIdx (·.map (·.set! callerIdx (some paramIdx))))
+        }
+        Id.run do
+          -- Propagate information about the caller
+          let mut info : Info := info
+          if let some callerParamInfo := info.graph[callerIdx]![paramIdx]! then
+            for h : otherFunIdx in *...callerParamInfo.size do
+              if let some otherParamIdx := callerParamInfo[otherFunIdx] then
+                info := info.setCallerParam calleeIdx argIdx otherFunIdx otherParamIdx
+          -- Propagate information about the callee
+          for otherFunIdx in *...info.graph.size do
+            for otherArgIdx in *...info.graph[otherFunIdx]!.size do
+              if let some otherArgsInfo := info.graph[otherFunIdx]![otherArgIdx]! then
+                if let some paramIdx' := otherArgsInfo[calleeIdx]! then
+                  if paramIdx' = argIdx then
+                    info := info.setCallerParam otherFunIdx otherArgIdx callerIdx paramIdx
 
-        return info
+          return info
     else
       -- Param not fixed, so argument isn't either
       info.setVarying calleeIdx argIdx
   else
     info
 
-def Info.format (info : Info) : Format := Format.line.joinSep <|
-  info.graph.toList.map fun paramInfos =>
+def Info.format (info : Info) : Format :=
+  Format.line.joinSep <| info.graph.toList.map fun paramInfos =>
     (f!"• " ++ ·) <| f!" ".joinSep <| paramInfos.toList.map fun
       | .none => f!"❌"
-      | .some callerInfos => .sbracket <| f!" ".joinSep <| callerInfos.toList.map fun
-        | Option.none => f!"?"
-        | .some idx => f!"#{idx+1}"
-
+      | .some callerInfos =>
+        .sbracket <| f!" ".joinSep <| callerInfos.toList.map fun
+          | Option.none => f!"?"
+          | .some idx => f!"#{idx + 1}"
 
 instance : ToFormat Info := ⟨Info.format⟩
 
@@ -182,7 +178,7 @@ def getParamRevDeps (value : Expr) : MetaM (Array (Array Nat)) := do
     let mut revDeps := #[]
     for h : i in *...xs.size do
       let mut deps := #[]
-      for h : j in (i+1)...xs.size do
+      for h : j in (i + 1)...xs.size do
         if (← dependsOn (← inferType xs[j]) xs[i].fvarId!) then
           deps := deps.push j
       revDeps := revDeps.push deps
@@ -202,39 +198,49 @@ def getFixedParamsInfo (preDefs : Array PreDefinition) : MetaM FixedParams.Info 
 
       -- TODO: transform is overkill, a simple visit-all-subexpression that takes applications
       -- as whole suffices
-      discard <| Meta.transform (skipConstInApp := true) body fun e => e.withApp fun f args => do
-        unless f.isConst do
-          return .continue
-        let n := f.constName!
-        let some calleeIdx := preDefs.findIdx? (·.declName = n) | return .continue
-        for argIdx in *...arities[calleeIdx]! do
-          if (← ref.get).mayBeFixed calleeIdx argIdx then
-            if h : argIdx < args.size then
-              let arg := args[argIdx]
-              -- We have seen this before (or it is a self-call), so only check that one param
-              if let some paramIdx := (← ref.get).getCallerParam? calleeIdx argIdx callerIdx then
-                let param := params[paramIdx]!
-                unless (← withoutProofIrrelevance <| withReducible <| isDefEq param arg) do
-                  trace[Elab.definition.fixedParams] "getFixedParams: notFixed {calleeIdx} {argIdx}:\nIn {e}\n{param} =/= {arg}"
-                  ref.modify (Info.setVarying calleeIdx argIdx)
+      discard <| Meta.transform (skipConstInApp := true) body fun e =>
+        e.withApp fun f args => do
+          unless f.isConst do
+            return .continue
+          let n := f.constName!
+          let some calleeIdx := preDefs.findIdx? (·.declName = n)
+            | return .continue
+          for argIdx in *...arities[calleeIdx]! do
+            if (← ref.get).mayBeFixed calleeIdx argIdx then
+              if h : argIdx < args.size then
+                let arg := args[argIdx]
+                -- We have seen this before (or it is a self-call), so only check that one param
+                if let some paramIdx := (← ref.get).getCallerParam? calleeIdx argIdx callerIdx then
+                  let param := params[paramIdx]!
+                  unless (← withoutProofIrrelevance <| withReducible <| isDefEq param arg) do
+                    trace[Elab.definition.fixedParams]
+                      "getFixedParams: notFixed {calleeIdx} {argIdx}:\
+                        \nIn {e}\
+                        \n{param} =/= {arg}"
+                    ref.modify (Info.setVarying calleeIdx argIdx)
+                else
+                  -- Try all parameters
+                  let mut any := false
+                  for h : paramIdx in *...params.size do
+                    if (← ref.get).mayBeFixed callerIdx paramIdx then
+                      let param := params[paramIdx]
+                      if (← withoutProofIrrelevance <| withReducible <| isDefEq param arg) then
+                        ref.modify (Info.setCallerParam calleeIdx argIdx callerIdx paramIdx)
+                        any := true
+                  unless any do
+                    trace[Elab.definition.fixedParams]
+                      "getFixedParams: notFixed {calleeIdx} {argIdx}:\
+                        \nIn {e}\
+                        \n{arg} not matched"
+                    -- Argument is none of the plausible parameters, so it cannot be a fixed argument
+                    ref.modify (Info.setVarying calleeIdx argIdx)
               else
-              -- Try all parameters
-              let mut any := false
-              for h : paramIdx in *...params.size do
-                if (← ref.get).mayBeFixed callerIdx paramIdx then
-                  let param := params[paramIdx]
-                  if (← withoutProofIrrelevance <| withReducible <| isDefEq param arg) then
-                    ref.modify (Info.setCallerParam calleeIdx argIdx callerIdx paramIdx)
-                    any := true
-              unless any do
-                trace[Elab.definition.fixedParams] "getFixedParams: notFixed {calleeIdx} {argIdx}:\nIn {e}\n{arg} not matched"
-                -- Argument is none of the plausible parameters, so it cannot be a fixed argument
+                -- Underapplication
+                trace[Elab.definition.fixedParams] "getFixedParams: notFixed {calleeIdx} {argIdx}:\
+                  \nIn {e}\
+                  \ntoo few arguments for {argIdx}"
                 ref.modify (Info.setVarying calleeIdx argIdx)
-            else
-              -- Underapplication
-              trace[Elab.definition.fixedParams] "getFixedParams: notFixed {calleeIdx} {argIdx}:\nIn {e}\ntoo few arguments for {argIdx}"
-              ref.modify (Info.setVarying calleeIdx argIdx)
-        return .continue
+          return .continue
 
   let info ← ref.get
   trace[Elab.definition.fixedParams] "getFixedParams:{info.format.indentD}"
@@ -259,7 +265,7 @@ structure FixedParamPerms where
   /--
   For each function in the clique, a mapping from its parameters to the fixed parameters.
   For the first function, they appear in order; for other functions they may be reordered.
-   -/
+  -/
   perms : Array FixedParamPerm
   /--
   The dependencies among the parameters. See `FixedParams.Info.revDeps`.
@@ -301,18 +307,17 @@ def getFixedParamPerms (preDefs : Array PreDefinition) : MetaM FixedParamPerms :
 
     return { numFixed, perms, revDeps := info.revDeps }
 
-def FixedParamPerm.numFixed (perm : FixedParamPerm) : Nat :=
-  perm.countP Option.isSome
+def FixedParamPerm.numFixed (perm : FixedParamPerm) : Nat := perm.countP Option.isSome
 
-def FixedParamPerm.isFixed (perm : FixedParamPerm) (i : Nat) : Bool :=
-  perm[i]?.join.isSome
+def FixedParamPerm.isFixed (perm : FixedParamPerm) (i : Nat) : Bool := perm[i]?.join.isSome
 
 /--
 Brings the fixed parameters from `type`, which should be the type of the `funIdx`'s function, into
 scope.
 -/
-private partial def FixedParamPerm.forallTelescopeImpl (perm : FixedParamPerm)
-    (type : Expr) (k : Array Expr → MetaM α) : MetaM α := do
+private partial def FixedParamPerm.forallTelescopeImpl
+    (perm : FixedParamPerm) (type : Expr) (k : Array Expr → MetaM α)
+    : MetaM α := do
   go 0 type (.replicate perm.numFixed (mkSort 0))
 where
   go i type xs := do
@@ -328,53 +333,54 @@ where
       let type ← whnf type
       assert! type.isForall
       go (i + 1) type.bindingBody! xs
-    | .none =>
-      k xs
+    | .none => k xs
 
-def FixedParamPerm.forallTelescope [MonadControlT MetaM n] [Monad n]
-    (perm : FixedParamPerm) (type : Expr) (k : Array Expr → n α) : n α := do
+def FixedParamPerm.forallTelescope
+    [MonadControlT MetaM n] [Monad n] (perm : FixedParamPerm) (type : Expr) (k : Array Expr → n α)
+    : n α := do
   map1MetaM (fun k => perm.forallTelescopeImpl type k) k
 
-
-/--
-If `type` is the type of the `funIdx`'s function, instantiate the fixed parameters.
--/
-def FixedParamPerm.instantiateForall (perm: FixedParamPerm) (type₀ : Expr) (xs : Array Expr) : MetaM Expr := do
+/-- If `type` is the type of the `funIdx`'s function, instantiate the fixed parameters. -/
+def FixedParamPerm.instantiateForall (perm : FixedParamPerm) (type₀ : Expr) (xs : Array Expr)
+    : MetaM Expr := do
   assert! xs.size = perm.numFixed
   let mask := perm.toList
   go mask type₀
 where
-  go | [], type => pure type
-     | (.some fixedParamIdx)::mask, type => do
-        assert! fixedParamIdx < xs.size
-        go mask (← Meta.instantiateForall type #[xs[fixedParamIdx]!])
-     | .none::mask, type =>
-        forallBoundedTelescope type (some 1) fun ys type => do
-          assert! ys.size = 1
-          mkForallFVars ys (← go mask type)
+  go
+    | [], type => pure type
+    | (.some fixedParamIdx) :: mask, type => do
+      assert! fixedParamIdx < xs.size
+      go mask (← Meta.instantiateForall type #[xs[fixedParamIdx]!])
+    | .none :: mask, type =>
+      forallBoundedTelescope type (some 1) fun ys type => do
+        assert! ys.size = 1
+        mkForallFVars ys (← go mask type)
 
 /--
 If `value` is the body of the `funIdx`'s function, instantiate the fixed parameters.
 Expects enough manifest lambdas to instantiate all fixed parameters, but can handle
 eta-contracted definitions beyond that.
 -/
-def FixedParamPerm.instantiateLambda (perm : FixedParamPerm) (value₀ : Expr) (xs : Array Expr) : MetaM Expr := do
+def FixedParamPerm.instantiateLambda (perm : FixedParamPerm) (value₀ : Expr) (xs : Array Expr)
+    : MetaM Expr := do
   assert! xs.size = perm.numFixed
   let mask := perm.toList
   go mask value₀
 where
-  go | [], value => pure value
-     | (.some fixedParamIdx)::mask, value => do
-        assert! fixedParamIdx < xs.size
-        go mask (← Meta.instantiateLambda value #[xs[fixedParamIdx]!])
-     | .none::mask, value =>
-        if mask.all Option.isNone then
-          -- Nothing left to do. Also helpful if we may encounter an eta-contracted value
-          return value
-        else
-          lambdaBoundedTelescope value 1 fun ys value => do
-            assert! ys.size = 1
-            mkLambdaFVars ys (← go mask value)
+  go
+    | [], value => pure value
+    | (.some fixedParamIdx) :: mask, value => do
+      assert! fixedParamIdx < xs.size
+      go mask (← Meta.instantiateLambda value #[xs[fixedParamIdx]!])
+    | .none :: mask, value =>
+      if mask.all Option.isNone then
+        -- Nothing left to do. Also helpful if we may encounter an eta-contracted value
+        return value
+      else
+        lambdaBoundedTelescope value 1 fun ys value => do
+          assert! ys.size = 1
+          mkLambdaFVars ys (← go mask value)
 
 /--
 If `xs` are arguments to the `funIdx`'s function, pick only the fixed ones, and reorder appropriately.
@@ -389,12 +395,12 @@ def FixedParamPerm.pickFixed (perm : FixedParamPerm) (xs : Array α) : Array α 
     let ys := .replicate perm.numFixed dummy
     go (perm.zip xs).toList ys
 where
-  go | [], ys => return ys
-     | (.some fixedParamIdx, x)::xs, ys => do
-        assert! fixedParamIdx < ys.size
-        go xs (ys.set! fixedParamIdx x)
-     | (.none, _) :: perm, ys =>
-        go perm ys
+  go
+    | [], ys => return ys
+    | (.some fixedParamIdx, x) :: xs, ys => do
+      assert! fixedParamIdx < ys.size
+      go xs (ys.set! fixedParamIdx x)
+    | (.none, _) :: perm, ys => go perm ys
 
 /--
 If `xs` are arguments to the `funIdx`'s function, pick only the varying ones.
@@ -412,7 +418,8 @@ Can handle over- or under-application (extra or missing varying args), as long
 as there are all varying parameters that go before fixed parameters.
 (We expect to always find all fixed parameters, else they wouldn't be fixed parameters.)
 -/
-partial def FixedParamPerm.buildArgs (perm : FixedParamPerm) (fixedArgs varyingArgs : Array α) : Array α :=
+partial def FixedParamPerm.buildArgs (perm : FixedParamPerm) (fixedArgs varyingArgs : Array α)
+    : Array α :=
   assert! fixedArgs.size = perm.numFixed
   go 0 0 #[]
 where
@@ -423,25 +430,21 @@ where
           go (i + 1) j (xs.push fixedArgs[fixedParamIdx])
         else
           panic! "FixedParams.buildArgs: too few fixed args"
+      else if _ : j < varyingArgs.size then
+        go (i + 1) (j + 1) (xs.push varyingArgs[j])
+      else if perm[i...*].all Option.isNone then
+        xs -- Under-application
       else
-        if _ : j < varyingArgs.size then
-          go (i + 1) (j + 1) (xs.push varyingArgs[j])
-        else
-          if perm[i...*].all Option.isNone then
-            xs -- Under-application
-          else
-            panic! "FixedParams.buildArgs: too few varying args"
+        panic! "FixedParams.buildArgs: too few varying args"
     else
       xs ++ varyingArgs[j...*] -- (Possibly) over-application
 
-/--
-Are all fixed parameters a non-reordered prefix?
--/
+/-- Are all fixed parameters a non-reordered prefix? -/
 def FixedParamPerms.fixedArePrefix (fixedParamPerms : FixedParamPerms) : Bool :=
   fixedParamPerms.perms.all fun paramInfos =>
-    paramInfos ==
-      (Array.range fixedParamPerms.numFixed).map Option.some ++
-      .replicate (paramInfos.size - fixedParamPerms.numFixed) .none
+    paramInfos
+      == (Array.range fixedParamPerms.numFixed).map Option.some
+        ++ .replicate (paramInfos.size - fixedParamPerms.numFixed) .none
 
 /--
 If `xs` are the fixed parameters that are in scope, and `toErase` are, for each function, the
@@ -451,10 +454,11 @@ positions of arguments that must no longer be fixed parameters, then this functi
 This is used in structural recursion, where we may discover that some fixed parameters are actually
 indices and need to be treated as varying, including all parameters that depend on them.
 -/
-def FixedParamPerms.erase  (fixedParamPerms : FixedParamPerms) (xs : Array Expr)
-    (toErase : Array (Array Nat)) : (FixedParamPerms × Array Expr × Array FVarId) := Id.run do
+def FixedParamPerms.erase
+    (fixedParamPerms : FixedParamPerms) (xs : Array Expr) (toErase : Array (Array Nat))
+    : (FixedParamPerms × Array Expr × Array FVarId) := Id.run do
   assert! xs.all (·.isFVar)
-  assert! fixedParamPerms.numFixed  = xs.size
+  assert! fixedParamPerms.numFixed = xs.size
   assert! toErase.size = fixedParamPerms.perms.size
   -- Calculate a mask on the fixed parameters of variables to erase
   let mut mask := Array.replicate fixedParamPerms.numFixed false
@@ -478,8 +482,8 @@ def FixedParamPerms.erase  (fixedParamPerms : FixedParamPerms) (xs : Array Expr)
                   changed := true
   -- Calculate reindexing map, variables to keep, variables to erase
   let mut reindex := #[]
-  let mut fvarsToErase :=#[]
-  let mut toKeep :=#[]
+  let mut fvarsToErase := #[]
+  let mut toKeep := #[]
   for i in *...mask.size, erase in mask, x in xs do
     if erase then
       reindex := reindex.push none
@@ -496,5 +500,4 @@ def FixedParamPerms.erase  (fixedParamPerms : FixedParamPerms) (xs : Array Expr)
 
 end Lean.Elab
 
-builtin_initialize
-  Lean.registerTraceClass `Elab.definition.fixedParams
+builtin_initialize Lean.registerTraceClass `Elab.definition.fixedParams

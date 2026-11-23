@@ -50,9 +50,7 @@ def addNonempty (g : MVarId) : Sym.SymM Unit := do
           Sym.registerInstance instType inst
           todo := todo.erase typeId
 
-/--
-Convert all `hyps` to NNF.
--/
+/-- Convert all `hyps` to NNF. -/
 def nnf (hyps : Array Hyp) (cfg : BVDecide.TacticContext) : Sym.SymM (Array Hyp) :=
   let methods := { pre := Sym.Simp.nnf }
   Sym.Simp.SimpM.run' (methods := methods) (config := { maxSteps := cfg.config.maxSteps }) do
@@ -74,19 +72,18 @@ where
       | And lhs rhs =>
         let lhsHyp := {
           hyp with
-            type := lhs,
-            value := mkApp3 (mkConst ``And.left) lhs rhs hyp.value
-            source := .andFlattened hyp.source
+          type := lhs
+          value := mkApp3 (mkConst ``And.left) lhs rhs hyp.value
+          source := .andFlattened hyp.source
         }
         let rhsHyp := {
           hyp with
-            type := rhs,
-            value := mkApp3 (mkConst ``And.right) lhs rhs hyp.value
-            source := .andFlattened hyp.source
+          type := rhs
+          value := mkApp3 (mkConst ``And.right) lhs rhs hyp.value
+          source := .andFlattened hyp.source
         }
         flattenOne (lhsHyp :: rhsHyp :: worklist) acc
       | _ => flattenOne worklist (acc.push hyp)
-
 
 /--
 Prenexing procedure for a hyp that contains an existential. Here we minscope, then pull existentials,
@@ -94,9 +91,15 @@ then finally pull foralls.
 -/
 def prenexWithExists (hyp : Hyp) (cfg : BVDecide.TacticContext) : Sym.SymM Hyp := do
   let cfg := { maxSteps := cfg.config.maxSteps }
-  let hyp ← hyp.applySimpResult <| ← Sym.simp (methods := { pre := Sym.Simp.minscope }) (config := cfg) hyp.type
-  let hyp ← hyp.applySimpResult <| ← Sym.simp (methods := { pre := Sym.Simp.pullExists }) (config := cfg) hyp.type
-  let hyp ← hyp.applySimpResult <| ← Sym.simp (methods := { pre := Sym.Simp.pullForall }) (config := cfg) hyp.type
+  let hyp ←
+    hyp.applySimpResult <|
+      ← Sym.simp (methods := { pre := Sym.Simp.minscope }) (config := cfg) hyp.type
+  let hyp ←
+    hyp.applySimpResult <|
+      ← Sym.simp (methods := { pre := Sym.Simp.pullExists }) (config := cfg) hyp.type
+  let hyp ←
+    hyp.applySimpResult <|
+      ← Sym.simp (methods := { pre := Sym.Simp.pullForall }) (config := cfg) hyp.type
   return hyp
 
 /--
@@ -105,7 +108,9 @@ right away.
 -/
 def prenexWithoutExists (hyp : Hyp) (cfg : BVDecide.TacticContext) : Sym.SymM Hyp := do
   let cfg := { maxSteps := cfg.config.maxSteps }
-  let hyp ← hyp.applySimpResult <| ← Sym.simp (methods := { pre := Sym.Simp.pullForall }) (config := cfg) hyp.type
+  let hyp ←
+    hyp.applySimpResult <|
+      ← Sym.simp (methods := { pre := Sym.Simp.pullForall }) (config := cfg) hyp.type
   return hyp
 
 def skolemize (g : MVarId) (hyp : Hyp) : Sym.SymM (MVarId × Hyp) := do
@@ -119,47 +124,54 @@ def skolemize (g : MVarId) (hyp : Hyp) : Sym.SymM (MVarId × Hyp) := do
     | none => break
   return (g, hyp)
 where
-  skolemStep (g : MVarId) (hyp : Hyp) : Sym.SymM (Option (MVarId × Hyp)) := g.withContext do
-    let_expr Exists α q := hyp.type | return none
-    let lvl ← Sym.getLevel α
-    let rule ← Sym.mkBackwardRuleFromExpr (mkApp4 (mkConst ``Exists.elim [lvl]) α q (mkConst ``False) hyp.value)
-    let [g] ← rule.apply' g | unreachable!
-    let .goal #[_skolem, newHyp] g ← Sym.introN g 2 | unreachable!
+  skolemStep (g : MVarId) (hyp : Hyp) : Sym.SymM (Option (MVarId × Hyp)) :=
     g.withContext do
-      let type ← newHyp.getType
-      let newHyp := {
-        name := hyp.name
-        type := type
-        value := mkFVar newHyp
-        source := hyp.source
-      }
-      return some (g, newHyp)
+      let_expr Exists α q := hyp.type
+        | return none
+      let lvl ← Sym.getLevel α
+      let rule ←
+        Sym.mkBackwardRuleFromExpr (mkApp4 (mkConst ``Exists.elim [lvl]) α q (mkConst ``False)
+          hyp.value)
+      let [g] ← rule.apply' g
+        | unreachable!
+      let .goal #[_skolem, newHyp] g ← Sym.introN g 2
+        | unreachable!
+      g.withContext do
+        let type ← newHyp.getType
+        let newHyp := {
+          name := hyp.name
+          type := type
+          value := mkFVar newHyp
+          source := hyp.source
+        }
+        return some (g, newHyp)
 
 end Epr
 
-public def epr (g : MVarId) (cfg : BVDecide.TacticContext) : MetaM Unit := g.withContext do
-  let params ← Grind.mkDefaultParams {}
-  Grind.GrindM.run (params := params) do
-    let (hyps, g) ← BVDecide.Normalize.collectMVarHyps g
-    Epr.addNonempty g
-    g.withContext do
-      let hyps ← Epr.nnf hyps cfg
-      let hyps ← Epr.andFlatten hyps
-      let mut finalHyps := Array.emptyWithCapacity hyps.size
-      let mut g := g
-      for hyp in hyps do
-        if hyp.type.find? (fun e => e.isConstOf ``Exists) |>.isSome then
-          let (g', hyp) ← g.withContext do
-            let hyp ← Epr.prenexWithExists hyp cfg
-            let r ← Epr.skolemize g hyp
-            return r
-          g := g'
-          finalHyps := finalHyps.push hyp
-        else
-          let hyp ← g.withContext do
-            Epr.prenexWithoutExists hyp cfg
-          finalHyps := finalHyps.push hyp
-      let target := .hypTarget g finalHyps
-      discard <| BVDecide.bvDecide target cfg
+public def epr (g : MVarId) (cfg : BVDecide.TacticContext) : MetaM Unit :=
+  g.withContext do
+    let params ← Grind.mkDefaultParams {}
+    Grind.GrindM.run (params := params) do
+      let (hyps, g) ← BVDecide.Normalize.collectMVarHyps g
+      Epr.addNonempty g
+      g.withContext do
+        let hyps ← Epr.nnf hyps cfg
+        let hyps ← Epr.andFlatten hyps
+        let mut finalHyps := Array.emptyWithCapacity hyps.size
+        let mut g := g
+        for hyp in hyps do
+          if hyp.type.find? (fun e => e.isConstOf ``Exists) |>.isSome then
+            let (g', hyp) ←
+              g.withContext do
+                let hyp ← Epr.prenexWithExists hyp cfg
+                let r ← Epr.skolemize g hyp
+                return r
+            g := g'
+            finalHyps := finalHyps.push hyp
+          else
+            let hyp ← g.withContext do Epr.prenexWithoutExists hyp cfg
+            finalHyps := finalHyps.push hyp
+        let target := .hypTarget g finalHyps
+        discard <| BVDecide.bvDecide target cfg
 
 end Lean.Meta.Tactic

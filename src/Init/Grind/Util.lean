@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Data.Cast
 public import Init.Grind.Tactics
@@ -32,13 +33,15 @@ simpMatchDiscrsOnly (match 0 with | 0 => true | _ => false) = true
 ```
 using `eq_self`.
 -/
-@[expose] def simpMatchDiscrsOnly {α : Sort u} (a : α) : α := a
+@[expose]
+def simpMatchDiscrsOnly {α : Sort u} (a : α) : α := a
 
 /--
 Gadget for protecting lambda abstractions created by `abstractGroundMismatches?`
 from beta reduction during preprocessing. See `ProveEq.lean` for details.
 -/
-@[expose] def abstractFn {α : Sort u} (a : α) : α := a
+@[expose]
+def abstractFn {α : Sort u} (a : α) : α := a
 
 /-- Gadget for representing offsets `t+k` in patterns. -/
 def offset (a b : Nat) : Nat := a + b
@@ -65,13 +68,17 @@ abbrev MatchCond (p : Prop) : Prop := p
 Similar to `MatchCond`, but not reducible. We use it to ensure `simp`
 will not eliminate it. After we apply `simp`, we replace it with `MatchCond`.
 -/
-@[expose] def PreMatchCond (p : Prop) : Prop := p
+@[expose]
+def PreMatchCond (p : Prop) : Prop := p
 
-theorem nestedProof_congr (p q : Prop) (h : p = q) (hp : p) (hq : q) : @nestedProof p hp ≍ @nestedProof q hq := by
+theorem nestedProof_congr (p q : Prop) (h : p = q) (hp : p) (hq : q)
+    : @nestedProof p hp ≍ @nestedProof q hq := by
   subst h; apply HEq.refl
 
-theorem nestedDecidable_congr (p q : Prop) (h : p = q) (hp : Decidable p) (hq : Decidable q) : @nestedDecidable p hp ≍ @nestedDecidable q hq := by
-  subst h; cases hp <;> cases hq <;> unfold nestedDecidable <;> try simp
+theorem nestedDecidable_congr (p q : Prop) (h : p = q) (hp : Decidable p) (hq : Decidable q)
+    : @nestedDecidable p hp ≍ @nestedDecidable q hq := by
+  subst h
+  cases hp <;> cases hq <;> unfold nestedDecidable <;> try simp
   next h1 h2 => exact False.elim (h1 h2)
   next h1 h2 => exact False.elim (h2 h1)
 
@@ -129,18 +136,17 @@ def alreadyNorm (p : Prop) : Prop := p
 `Classical.em` variant where disjuncts are marked with `alreadyNorm` gadget.
 See comment at `alreadyNorm`
 -/
-theorem em (p : Prop) : alreadyNorm p ∨ alreadyNorm (¬ p) :=
-  Classical.em p
+theorem em (p : Prop) : alreadyNorm p ∨ alreadyNorm (¬p) := Classical.em p
 
 /--
 Marker for grind-solved subproofs in `exact? +grind` suggestions.
 When `exact?` uses grind as a discharger, it wraps the proof in this marker
 so that the unexpander can replace it with `(by grind)` in the suggestion.
 -/
-@[inline] def Marker {α : Sort u} (a : α) : α := a
+@[inline]
+def Marker {α : Sort u} (a : α) : α := a
 
 @[app_unexpander Marker]
-meta def markerUnexpander : PrettyPrinter.Unexpander := fun _ => do
-  `(by grind)
+meta def markerUnexpander : PrettyPrinter.Unexpander := fun _ => do `(by grind)
 
 end Lean.Grind

@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Basic
 import Lean.Meta.Tactic.Contradiction
@@ -44,9 +45,10 @@ test iff they are structurally equal. See `mkTest`.
 -/
 abbrev Test := FVarId × Expr
 
-/-- Returns `true` if `v` is a value that can be used in a test: it does not depend on the context. -/
-def isValue (v : Expr) : Bool :=
-  !v.hasFVar && !v.hasLooseBVars && !v.hasMVar
+/--
+Returns `true` if `v` is a value that can be used in a test: it does not depend on the context.
+-/
+def isValue (v : Expr) : Bool := !v.hasFVar && !v.hasLooseBVars && !v.hasMVar
 
 /--
 Creates the test `x = v`. The value `v` is normalized because the same value can be written in
@@ -63,9 +65,7 @@ def mkTest (x : FVarId) (v : Expr) : MetaM Test := do
   else
     return (x, ← normLitValue v)
 
-/--
-A node of the index. See `Index`.
--/
+/-- A node of the index. See `Index`. -/
 structure Node where
   /--
   The hypotheses whose tests are exactly the ones in the path from the root to this node.
@@ -77,7 +77,7 @@ structure Node where
   ```
   When this node is reached, `closeUsing` tries each of them.
   -/
-  hyps     : Array FVarId := #[]
+  hyps : Array FVarId := #[]
   /--
   The edges leaving this node. An edge is a test, and the target is a position in `Index.nodes`.
 
@@ -85,7 +85,7 @@ structure Node where
   `children : Std.HashMap Test Node`, and we would have to use `Std.HashMap.Raw` instead.
   -/
   children : Std.HashMap Test Nat := {}
-  deriving Inhabited
+deriving Inhabited
 
 /--
 Index for the hypotheses of the form `... → False`. Given the tests `x = v` that succeeded in the
@@ -128,7 +128,7 @@ structure Index where
   -/
   varPos : Std.HashMap FVarId Nat := {}
   /-- The nodes of the trie. The root is the node at position `0`. -/
-  nodes  : Array Node := #[{}]
+  nodes : Array Node := #[{}]
 
 /-- Collects the variables tested in `tree`, and assigns a position to each one of them. -/
 def collectVars (tree : Expr) : MetaM (Std.HashMap FVarId Nat) := do
@@ -136,11 +136,15 @@ def collectVars (tree : Expr) : MetaM (Std.HashMap FVarId Nat) := do
   return varPos
 where
   visit (e : Expr) : StateRefT (Std.HashMap FVarId Nat) MetaM Unit := do
-    let_expr dite _ c _ _ _ := e | return ()
-    let_expr Eq _ x v := c | return ()
-    let .fvar fvarId := x | return ()
+    let_expr dite _ c _ _ _ := e
+      | return ()
+    let_expr Eq _ x v := c
+      | return ()
+    let .fvar fvarId := x
+      | return ()
     if isValue v then
-      modify fun varPos => if varPos.contains fvarId then varPos else varPos.insert fvarId varPos.size
+      modify fun varPos =>
+        if varPos.contains fvarId then varPos else varPos.insert fvarId varPos.size
 
 /--
 Collects the tests `x = v` occurring in the hypothesis type `type`, where `x` is a variable in
@@ -151,8 +155,10 @@ partial def collectTests (varPos : Std.HashMap FVarId Nat) (type : Expr) : MetaM
   go type #[]
 where
   go (type : Expr) (tests : Array Test) : MetaM (Array Test) := do
-    let .forallE _ d b _ := type | return tests
-    let some (_, lhs, rhs) := d.eq? | go b tests
+    let .forallE _ d b _ := type
+      | return tests
+    let some (_, lhs, rhs) := d.eq?
+      | go b tests
     if b.hasLooseBVar 0 then go b tests else go b (← visit lhs rhs tests)
 
   visit (lhs rhs : Expr) (tests : Array Test) : MetaM (Array Test) := do
@@ -160,9 +166,12 @@ where
       if varPos.contains fvarId && isValue rhs then
         return tests.push (← mkTest fvarId rhs)
       return tests
-    let .const declName₁ _ := lhs.getAppFn | return tests
-    let .const declName₂ _ := rhs.getAppFn | return tests
-    unless declName₁ == declName₂ && lhs.getAppNumArgs == rhs.getAppNumArgs do return tests
+    let .const declName₁ _ := lhs.getAppFn
+      | return tests
+    let .const declName₂ _ := rhs.getAppFn
+      | return tests
+    unless declName₁ == declName₂ && lhs.getAppNumArgs == rhs.getAppNumArgs do
+      return tests
     let mut tests := tests
     for lhsArg in lhs.getAppArgs, rhsArg in rhs.getAppArgs do
       tests ← visit lhsArg rhsArg tests
@@ -192,7 +201,9 @@ def Index.insert (index : Index) (fvarId : FVarId) (tests : Array Test) : Index 
   nodes := nodes.modify i fun node => { node with hyps := node.hyps.push fvarId }
   return { index with nodes }
 
-/-- Creates the index for the hypotheses of the form `... → False` using the variables tested in `tree`. -/
+/--
+Creates the index for the hypotheses of the form `... → False` using the variables tested in `tree`.
+-/
 def mkIndex (tree : Expr) : MetaM Index := do
   let mut index : Index := { varPos := (← collectVars tree) }
   for localDecl in (← getLCtx) do
@@ -208,8 +219,8 @@ def mkIndex (tree : Expr) : MetaM Index := do
 structure KeptEq where
   test : Test
   /-- The value in the type of `h`. It is not necessarily in normal form. -/
-  v    : Expr
-  h    : FVarId
+  v : Expr
+  h : FVarId
 
 /--
 Returns the hypotheses whose tests are all in `kept` and include `test`, the last test that
@@ -219,7 +230,8 @@ It follows the tests in `kept`, sorted using `varPos`, from the root. `active` c
 reached by a subset of the tests visited so far, and whether `test` is in the path to the node.
 -/
 def Index.retrieve (index : Index) (kept : Array KeptEq) (test : Test) : Array FVarId := Id.run do
-  let tests := kept.filterMap fun { test, .. } => if index.varPos.contains test.1 then some test else none
+  let tests :=
+    kept.filterMap fun { test, .. } => if index.varPos.contains test.1 then some test else none
   let mut active : Array (Nat × Bool) := #[(0, false)]
   for test' in index.sort tests do
     let isTest := test' == test
@@ -236,27 +248,29 @@ def Index.retrieve (index : Index) (kept : Array KeptEq) (test : Test) : Array F
 Tries to close `mvarId` using the hypothesis `hyp` of the form `... → False`, after rewriting
 its type with the kept equalities.
 -/
-def closeUsing (mvarId : MVarId) (kept : Array KeptEq) (hyp : FVarId) : MetaM Bool := mvarId.withContext do
-  let mut proof := mkFVar hyp
-  let mut type ← instantiateMVars (← hyp.getType)
-  for { test := (x, _), v, h } in kept do
-    if type.containsFVar x then
-      let motive := mkLambda `x .default (← x.getType) (type.abstract #[mkFVar x])
-      proof ← mkEqNDRec motive proof (mkFVar h)
-      type := type.replaceFVar (mkFVar x) v
-  let some falseProof ← mkGenDiseqFalseProof? proof type | return false
-  mvarId.assign (← mkFalseElim (← mvarId.getType) falseProof)
-  return true
+def closeUsing (mvarId : MVarId) (kept : Array KeptEq) (hyp : FVarId) : MetaM Bool :=
+  mvarId.withContext do
+    let mut proof := mkFVar hyp
+    let mut type ← instantiateMVars (← hyp.getType)
+    for { test := (x, _), v, h } in kept do
+      if type.containsFVar x then
+        let motive := mkLambda `x .default (← x.getType) (type.abstract #[mkFVar x])
+        proof ← mkEqNDRec motive proof (mkFVar h)
+        type := type.replaceFVar (mkFVar x) v
+    let some falseProof ← mkGenDiseqFalseProof? proof type
+      | return false
+    mvarId.assign (← mkFalseElim (← mvarId.getType) falseProof)
+    return true
 
 /-- Result of splitting the goal `dite (x = v) (Eq.ndrec_symm m) e = rhs`. -/
 structure Split where
-  test        : Test
+  test : Test
   /-- The value `v`. -/
-  v           : Expr
+  v : Expr
   /-- Goal `m = rhs[x := v]`. -/
-  mvarIdTrue  : MVarId
+  mvarIdTrue : MVarId
   /-- Hypothesis `x = v` in `mvarIdTrue`. -/
-  h           : FVarId
+  h : FVarId
   /-- Goal `e h = rhs` where `h : ¬ x = v`. -/
   mvarIdFalse : MVarId
 
@@ -265,30 +279,42 @@ Splits the goal `dite (x = v) (Eq.ndrec_symm m) e = rhs` using `dite_ndrec_symm_
 Returns `none` if the goal is not of this form, or `x` cannot be replaced with `v` in `rhs`
 without rewriting the hypotheses, e.g., `rhs` contains a variable whose type depends on `x`.
 -/
-def split? (mvarId : MVarId) : MetaM (Option Split) := mvarId.withContext do
-  let some (_, lhs, rhs) := (← mvarId.getType).eq? | return none
-  let_expr dite@dite β c inst t e := lhs | return none
-  let_expr Eq@Eq α x v := c | return none
-  let .fvar fvarId := x | return none
-  unless isValue v do return none
-  let_expr Eq.ndrec_symm _ v' motive m x' := t | return none
-  unless v' == v && x' == x do return none
-  let r := mkLambda `x .default α (rhs.abstract #[x])
-  unless (← isTypeCorrect r) do return none
-  let rType := mkForall `x .default α (motive.beta #[mkBVar 0])
-  unless (← isDefEq (← inferType r) rType) do return none
-  let v₁ := dite.constLevels!
-  let mkGoal (lhs rhs : Expr) (type : Expr) : Expr := mkApp3 (mkConst ``Eq v₁) type lhs rhs
-  let tag ← mvarId.getTag
-  let mvarTrue ← mkFreshExprSyntheticOpaqueMVar (← mkArrow c (mkGoal m (rhs.replaceFVar x v) (motive.beta #[v]))) tag
-  -- We do not use `mkForallFVars` here because it would traverse the remaining tree.
-  let typeFalse := mkForall `h .default (mkNot c) (mkGoal (e.beta #[mkBVar 0]) rhs β)
-  let mvarFalse ← mkFreshExprSyntheticOpaqueMVar typeFalse tag
-  mvarId.assign <| mkAppN (mkConst ``dite_ndrec_symm_eq (Eq.constLevels! ++ v₁))
-    #[α, v, x, inst, motive, m, e, r, mvarTrue, mvarFalse]
-  let (h, mvarIdTrue) ← mvarTrue.mvarId!.intro1
-  let (_, mvarIdFalse) ← mvarFalse.mvarId!.intro1
-  return some { test := (← mkTest fvarId v), v, mvarIdTrue, h, mvarIdFalse }
+def split? (mvarId : MVarId) : MetaM (Option Split) :=
+  mvarId.withContext do
+    let some (_, lhs, rhs) := (← mvarId.getType).eq?
+      | return none
+    let_expr dite@dite β c inst t e := lhs
+      | return none
+    let_expr Eq@Eq α x v := c
+      | return none
+    let .fvar fvarId := x
+      | return none
+    unless isValue v do
+      return none
+    let_expr Eq.ndrec_symm _ v' motive m x' := t
+      | return none
+    unless v' == v && x' == x do
+      return none
+    let r := mkLambda `x .default α (rhs.abstract #[x])
+    unless (← isTypeCorrect r) do
+      return none
+    let rType := mkForall `x .default α (motive.beta #[mkBVar 0])
+    unless (← isDefEq (← inferType r) rType) do
+      return none
+    let v₁ := dite.constLevels!
+    let mkGoal (lhs rhs : Expr) (type : Expr) : Expr := mkApp3 (mkConst ``Eq v₁) type lhs rhs
+    let tag ← mvarId.getTag
+    let mvarTrue ←
+      mkFreshExprSyntheticOpaqueMVar
+        (← mkArrow c (mkGoal m (rhs.replaceFVar x v) (motive.beta #[v]))) tag
+    -- We do not use `mkForallFVars` here because it would traverse the remaining tree.
+    let typeFalse := mkForall `h .default (mkNot c) (mkGoal (e.beta #[mkBVar 0]) rhs β)
+    let mvarFalse ← mkFreshExprSyntheticOpaqueMVar typeFalse tag
+    mvarId.assign <| mkAppN (mkConst ``dite_ndrec_symm_eq (Eq.constLevels! ++ v₁))
+      #[α, v, x, inst, motive, m, e, r, mvarTrue, mvarFalse]
+    let (h, mvarIdTrue) ← mvarTrue.mvarId!.intro1
+    let (_, mvarIdFalse) ← mvarFalse.mvarId!.intro1
+    return some { test := (← mkTest fvarId v), v, mvarIdTrue, h, mvarIdFalse }
 
 /-- Substitutes the kept equalities in `mvarId`. -/
 def substKept (mvarId : MVarId) (kept : Array KeptEq) : MetaM MVarId := do
@@ -310,9 +336,10 @@ partial def visit (index : Index) (mvarId : MVarId) (kept : Array KeptEq) : M Un
   let mvarId ← mvarId.modifyTargetEqLHS whnfCore
   if let some s ← split? mvarId then
     visitSplit index s kept
-  else unless (← (do mvarId.refl; return true) <|> return false) do
-    let mvarId ← substKept mvarId kept
-    modify (·.push mvarId)
+  else
+    unless (← (do mvarId.refl; return true) <|> return false) do
+      let mvarId ← substKept mvarId kept
+      modify (·.push mvarId)
 
 partial def visitSplit (index : Index) (s : Split) (kept : Array KeptEq) : M Unit := do
   let keptTrue := kept.push { test := s.test, v := s.v, h := s.h }
@@ -330,11 +357,14 @@ traverses the tree and closes the branches that are refuted by a hypothesis of t
 `... → False`, or where both sides are definitionally equal. Returns the goals for the remaining
 branches. Throws an exception if the goal is not of this form.
 -/
-public def splitDiteTree (mvarId : MVarId) : MetaM (Array MVarId) := mvarId.withContext do
-  let some (_, tree, _) := (← mvarId.getType).eq? | throwError "equality expected"
-  let some s ← DiteTree.split? mvarId | throwError "`dite (x = v) (Eq.ndrec_symm m) e` expected"
-  let index ← DiteTree.mkIndex tree
-  let (_, mvarIds) ← DiteTree.visitSplit index s #[] |>.run #[]
-  return mvarIds
+public def splitDiteTree (mvarId : MVarId) : MetaM (Array MVarId) :=
+  mvarId.withContext do
+    let some (_, tree, _) := (← mvarId.getType).eq?
+      | throwError "equality expected"
+    let some s ← DiteTree.split? mvarId
+      | throwError "`dite (x = v) (Eq.ndrec_symm m) e` expected"
+    let index ← DiteTree.mkIndex tree
+    let (_, mvarIds) ← DiteTree.visitSplit index s #[] |>.run #[]
+    return mvarIds
 
 end Lean.Meta.Match

@@ -69,7 +69,6 @@ def packType (xs : Array Expr) : MetaM Expr := do
     d ← mkAppOptM ``PSigma #[some (← inferType x), some (← mkLambdaFVars #[x] d)]
   return d
 
-
 /--
 Create a unary application by packing the given arguments using `PSigma.mk`.
 The `type` should be the expected type of the packed argument, as created with `packType`.
@@ -89,7 +88,7 @@ where
       let β := type.appArg!
       assert! β.isLambda
       let type := β.bindingBody!.instantiate1 arg
-      let rest := go (i+1) type
+      let rest := go (i + 1) type
       mkApp4 (mkConst ``PSigma.mk us) α β arg rest
     else
       args[i]!
@@ -113,10 +112,10 @@ def unpack (arity : Nat) (e : Expr) : Option (Array Expr) := do
   return args
 
 /--
-  Given a (dependent) tuple `t` (using `PSigma`) of the given arity.
-  Return an array containing its "elements".
-  Example: `mkTupleElems a 4` returns `#[a.1, a.2.1, a.2.2.1, a.2.2.2]`.
-  -/
+Given a (dependent) tuple `t` (using `PSigma`) of the given arity.
+Return an array containing its "elements".
+Example: `mkTupleElems a 4` returns `#[a.1, a.2.1, a.2.2.1, a.2.2.2]`.
+-/
 private def mkTupleElems (t : Expr) (arity : Nat) : Array Expr := Id.run do
   if arity = 0 then return #[]
   let mut result := #[]
@@ -148,7 +147,8 @@ Iterated `PSigma.casesOn`:
 Given `e : a ⊗' b ⊗' …` (where `e` is `FVarId`), a type `codomain[e]` of level `u`, and
 `alt : (x : a) → (y : b) → … → codomain`, uses `PSigma.casesOn` to invoke `alt` on `e`.
 -/
-private def casesOn (varNames : List Name) (e : Expr) (u : Level) (codomain : Expr) (alt : Expr) : MetaM Expr := do
+private def casesOn (varNames : List Name) (e : Expr) (u : Level) (codomain : Expr) (alt : Expr)
+    : MetaM Expr := do
   match varNames with
   | [] => return alt
   | [_] => return alt.beta #[e]
@@ -162,7 +162,7 @@ private def casesOn (varNames : List Name) (e : Expr) (u : Level) (codomain : Ex
         withLocalDeclD n a fun x => do
           withLocalDeclD m (b.beta #[x]) fun y => do
             let codomain' := motive.beta #[mkApp4 (.const ``PSigma.mk us) a b x y]
-            mkLambdaFVars #[x,y] (← casesOn (m :: ns) y u codomain' (alt.beta #[x]))
+            mkLambdaFVars #[x, y] (← casesOn (m :: ns) y u codomain' (alt.beta #[x]))
       return mkApp5 (.const ``PSigma.casesOn (u :: us)) a b motive e alt
     | _ => throwError "ArgsPacker.Binary.casesOn: Expected PSigma type, got {t}"
 
@@ -177,7 +177,8 @@ def uncurry (varNames : Array Name) (e : Expr) : MetaM Expr := do
     let type ← inferType e
     let resultType ← uncurryType varNames type
     forallBoundedTelescope resultType (some 1) fun xs codomain => do
-      let #[x] := xs | unreachable!
+      let #[x] := xs
+        | unreachable!
       let u ← getLevel codomain
       let value ← casesOn varNames.toList x u codomain e
       mkLambdaFVars #[x] value
@@ -193,20 +194,19 @@ private def curryType (varNames : Array Name) (type : Expr) : MetaM Expr := do
   go packedDomain packedDomain #[] varNames.toList
 where
   go (packedDomain domain : Expr) args : List Name → MetaM Expr
-  | [] => do
+    | [] => do
       let packedArg := Unary.pack packedDomain args
       instantiateForall type #[packedArg]
-  | [n] => do
-    withLocalDeclD n domain fun x => do
-      let dummy := Expr.const ``Unit []
-      mkForallFVars #[x] (← go packedDomain dummy (args.push x) [])
-  | n :: ns =>
-    match_expr domain with
-    | PSigma a b =>
-      withLocalDeclD n a fun x => do
-        mkForallFVars #[x] (← go packedDomain (b.beta #[x]) (args.push x) ns)
-    | _ => throwError "curryType: Expected PSigma type, got {domain}"
-
+    | [n] => do
+      withLocalDeclD n domain fun x => do
+        let dummy := Expr.const ``Unit []
+        mkForallFVars #[x] (← go packedDomain dummy (args.push x) [])
+    | n :: ns =>
+      match_expr domain with
+      | PSigma a b =>
+        withLocalDeclD n a fun x => do
+          mkForallFVars #[x] (← go packedDomain (b.beta #[x]) (args.push x) ns)
+      | _ => throwError "curryType: Expected PSigma type, got {domain}"
 
 /--
 Given expression `e` of type `(x : A ⊗' B ⊗' … ⊗' D) → R[x]`
@@ -222,20 +222,19 @@ private partial def curry (varNames : Array Name) (e : Expr) : MetaM Expr := do
   go packedDomain packedDomain #[] varNames.toList
 where
   go (packedDomain domain : Expr) args : List Name → MetaM Expr
-  | [] => do
+    | [] => do
       let packedArg := Unary.pack packedDomain args
       return e.beta #[packedArg]
-  | [n] => do
-    withLocalDeclD n domain fun x => do
-      let dummy := Expr.const ``Unit []
-      mkLambdaFVars #[x] (← go packedDomain dummy (args.push x) [])
-  | n :: ns =>
-    match_expr domain with
-    | PSigma a b =>
-      withLocalDeclD n a fun x => do
-        mkLambdaFVars #[x] (← go packedDomain (b.beta #[x]) (args.push x) ns)
-    | _ => throwError "curryPSigma: Expected PSigma type, got {domain}"
-
+    | [n] => do
+      withLocalDeclD n domain fun x => do
+        let dummy := Expr.const ``Unit []
+        mkLambdaFVars #[x] (← go packedDomain dummy (args.push x) [])
+    | n :: ns =>
+      match_expr domain with
+      | PSigma a b =>
+        withLocalDeclD n a fun x => do
+          mkLambdaFVars #[x] (← go packedDomain (b.beta #[x]) (args.push x) ns)
+      | _ => throwError "curryPSigma: Expected PSigma type, got {domain}"
 
 end Unary
 
@@ -307,7 +306,6 @@ partial def unpack (numFuncs : Nat) (e : Expr) : Option (Nat × Expr) := do
   else
     none
 
-
 /--
 Given unary types `(x : Aᵢ) → Rᵢ[x]`, and `(x : A₁ ⊕ A₂ …)`, calculate the packed codomain
 ```
@@ -328,10 +326,12 @@ where
     let k := numLeft types.size
     let xType ← whnfD (← inferType x)
     assert! xType.isAppOfArity ``PSum 2
-    let minor1 ← withLocalDeclD (← mkFreshUserName `_x) xType.appFn!.appArg! fun x => do
-      mkLambdaFVars #[x] (← go u (types.extract 0 k) x)
-    let minor2 ← withLocalDeclD (← mkFreshUserName `_x) xType.appArg! fun x => do
-      mkLambdaFVars #[x] (← go u (types.extract k) x)
+    let minor1 ←
+      withLocalDeclD (← mkFreshUserName `_x) xType.appFn!.appArg! fun x => do
+        mkLambdaFVars #[x] (← go u (types.extract 0 k) x)
+    let minor2 ←
+      withLocalDeclD (← mkFreshUserName `_x) xType.appArg! fun x => do
+        mkLambdaFVars #[x] (← go u (types.extract k) x)
     return mkCasesOn u xType x minor1 minor2
   termination_by types.size
   decreasing_by all_goals simp only [Array.size_extract, numLeft]; omega
@@ -343,8 +343,10 @@ where
       r₁
     else
       let motive := .lam `_x xType (mkSort u) .default
-      mkApp4 (mkAppN (mkConst ``PSum.casesOn (mkLevelSucc u :: xType.getAppFn.constLevels!))
-        xType.getAppArgs) motive x minor1 minor2
+      mkApp4
+        (mkAppN (mkConst ``PSum.casesOn (mkLevelSucc u :: xType.getAppFn.constLevels!))
+          xType.getAppArgs)
+        motive x minor1 minor2
 
 /--
 Given types `(x : A) → R₁[x]` and `(z : B) → R₂[z]`, returns the type
@@ -356,7 +358,6 @@ if the codomains are dependent, or
 (x : A ⊕' B) → R
 ```
 if they are all the same.
-
 -/
 def uncurryType (types : Array Expr) : MetaM Expr := do
   if types.size = 1 then
@@ -417,7 +418,7 @@ private partial def casesOn (x : Expr) (codomain : Expr) (alts : Array Expr) : M
     let k := numLeft alts.size
     let alt₁ ← mkAlt ``PSum.inl a (alts.extract 0 k)
     let alt₂ ← mkAlt ``PSum.inr b (alts.extract k)
-    return mkApp6 (.const ``PSum.casesOn (u::us)) a b motive x alt₁ alt₂
+    return mkApp6 (.const ``PSum.casesOn (u :: us)) a b motive x alt₁ alt₂
   | _ => throwError "Mutual.casesOn: Expected PSum type, got {t}"
 
 /--
@@ -429,7 +430,8 @@ and `(z : C) → R₂[z]`, returns an expression of type
 -/
 def uncurryWithType (resultType : Expr) (es : Array Expr) : MetaM Expr := do
   forallBoundedTelescope resultType (some 1) fun xs codomain => do
-    let #[x] := xs | unreachable!
+    let #[x] := xs
+      | unreachable!
     let value ← casesOn x codomain es
     mkLambdaFVars #[x] value
 
@@ -449,7 +451,8 @@ def uncurryND (es : Array Expr) : MetaM Expr := do
   let types ← es.mapM inferType
   let resultType ← uncurryTypeND types
   forallBoundedTelescope resultType (some 1) fun xs codomain => do
-    let #[x] := xs | unreachable!
+    let #[x] := xs
+      | unreachable!
     let value ← casesOn x codomain es
     mkLambdaFVars #[x] value
 
@@ -479,8 +482,7 @@ def numFuncs (argsPacker : ArgsPacker) : Nat := argsPacker.varNamess.size
 def arities (argsPacker : ArgsPacker) : Array Nat := argsPacker.varNamess.map (·.size)
 
 def onlyOneUnary (argsPacker : ArgsPacker) :=
-  argsPacker.varNamess.size = 1 &&
-  argsPacker.varNamess[0]!.size = 1
+  argsPacker.varNamess.size = 1 && argsPacker.varNamess[0]!.size = 1
 
 def pack (argsPacker : ArgsPacker) (domain : Expr) (fidx : Nat) (args : Array Expr)
     : MetaM Expr := do
@@ -524,7 +526,8 @@ def uncurry (argsPacker : ArgsPacker) (es : Array Expr) : MetaM Expr := do
   let unary ← Array.zipWithM Unary.uncurry argsPacker.varNamess es
   Mutual.uncurry unary
 
-def uncurryWithType (argsPacker : ArgsPacker) (resultType : Expr) (es : Array Expr) : MetaM Expr := do
+def uncurryWithType (argsPacker : ArgsPacker) (resultType : Expr) (es : Array Expr)
+    : MetaM Expr := do
   let unary ← Array.zipWithM Unary.uncurry argsPacker.varNamess es
   Mutual.uncurryWithType resultType unary
 
@@ -557,12 +560,12 @@ def curryProj (argsPacker : ArgsPacker) (e : Expr) (i : Nat) : MetaM Expr := do
     throwError "curryProj: index out of range"
   let unaryType := unaryTypes[i]!
   -- unary : (x : a ⊗ b) → e[inl x]
-  let unary ← withLocalDeclD t.bindingName! unaryType fun x => do
+  let unary ←
+    withLocalDeclD t.bindingName! unaryType fun x => do
       let packedArg ← Mutual.pack unaryTypes.length packedDomain i x
       mkLambdaFVars #[x] (e.beta #[packedArg])
   -- nary : (x : a) → (y : b) → e[inl (x,y)]
   Unary.curry argsPacker.varNamess[i]! unary
-
 
 /--
 Given type `(x : a ⊗' b ⊕' c ⊗' d) → R` (dependent), return types
@@ -592,16 +595,16 @@ Given type `(a ⊗' b ⊕' c ⊗' d) → e`, brings `a → b → e` and `c → d
 into scope as fresh local declarations and passes their FVars to the continuation `k`.
 The `name` is used to form the variable names; uses `name1`, `name2`, … if there are multiple.
 -/
-private def withCurriedDecl {α} (argsPacker : ArgsPacker) (name : Name) (type : Expr)
-    (k : Array Expr → MetaM α) : MetaM α := do
+private def withCurriedDecl
+    {α} (argsPacker : ArgsPacker) (name : Name) (type : Expr) (k : Array Expr → MetaM α)
+    : MetaM α := do
   go (← argsPacker.curryType type).toList #[]
 where
   go : List Expr → Array Expr → MetaM α
-  | [], acc => k acc
-  | t::ts, acc => do
-    let name := if argsPacker.numFuncs = 1 then name else .mkSimple s!"{name}{acc.size + 1}"
-    withLocalDeclD name t fun x => do
-      go ts (acc.push x)
+    | [], acc => k acc
+    | t :: ts, acc => do
+      let name := if argsPacker.numFuncs = 1 then name else .mkSimple s!"{name}{acc.size + 1}"
+      withLocalDeclD name t fun x => do go ts (acc.push x)
 
 /--
 Given `value : type` where `type` is
@@ -619,8 +622,10 @@ where `m : a ⊗' b ⊕' c ⊗' d → s` is the uncurried form of `m1` and `m2`.
 The variable names `m1` and `m2` are taken from the parameter name in `t`, with numbers added
 unless `numFuns = 1`
 -/
-def curryParam {α} (argsPacker : ArgsPacker) (value : Expr) (type : Expr)
-    (k : Array Expr → Expr → Expr → MetaM α) : MetaM α := do
+def curryParam
+    {α}
+    (argsPacker : ArgsPacker) (value : Expr) (type : Expr) (k : Array Expr → Expr → Expr → MetaM α)
+    : MetaM α := do
   unless type.isForall do
     throwError "curryParam: expected forall, got {type}"
   let packedMotiveType := type.bindingDomain!
@@ -633,7 +638,5 @@ def curryParam {α} (argsPacker : ArgsPacker) (value : Expr) (type : Expr)
     let type ← instantiateForall type #[motive]
     let value := mkApp value motive
     k motives value type
-
-
 
 end Lean.Meta.ArgsPacker

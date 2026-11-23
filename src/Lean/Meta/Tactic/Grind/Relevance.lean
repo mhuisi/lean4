@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Types
 import Init.Grind.Util
@@ -25,7 +26,8 @@ Returns the type of the arguments of `e` if it is an equality or an arithmetic r
 Returns `none` if the type contains loose bound variables.
 -/
 def getRelationType? (e : Expr) : Option Expr :=
-  let α? := match_expr e with
+  let α? :=
+    match_expr e with
     | Eq α _ _ => some α
     | Ne α _ _ => some α
     | LE.le α _ _ _ => some α
@@ -39,8 +41,10 @@ def getRelationType? (e : Expr) : Option Expr :=
   α?.filter (!·.hasLooseBVars)
 
 /-- Returns `true` if `e` is an equality or an arithmetic relation over a type satisfying `p`. -/
-@[inline] def isRelationOver (e : Expr) (p : Expr → GoalM Bool) : GoalM Bool := do
-  let some α := getRelationType? e | return false
+@[inline]
+def isRelationOver (e : Expr) (p : Expr → GoalM Bool) : GoalM Bool := do
+  let some α := getRelationType? e
+    | return false
   p α
 
 namespace Relevance
@@ -60,8 +64,10 @@ partial def collectAtoms (e : Expr) (quant : Bool) (atoms : Array Expr := #[]) :
       collectAtoms b quant atoms
     else
       atoms.push e
-  | .letE _ _ v b _ => collectAtoms b quant (collectAtoms v quant atoms)
-  | .const ``True _ | .const ``False _ => atoms
+  | .letE _ _ v b _ =>
+    collectAtoms b quant (collectAtoms v quant atoms)
+  | .const ``True _ | .const ``False _ =>
+    atoms
   | _ =>
     match_expr e with
     | Lean.Grind.alreadyNorm p => collectAtoms p quant atoms
@@ -70,8 +76,7 @@ partial def collectAtoms (e : Expr) (quant : Bool) (atoms : Array Expr := #[]) :
     | And p q => collectAtoms q quant (collectAtoms p quant atoms)
     | Or p q => collectAtoms q quant (collectAtoms p quant atoms)
     | Iff p q => collectAtoms q quant (collectAtoms p quant atoms)
-    | Exists _ p =>
-      if let .lam _ _ b _ := p then collectAtoms b quant atoms else atoms.push e
+    | Exists _ p => if let .lam _ _ b _ := p then collectAtoms b quant atoms else atoms.push e
     | ite α c _ a b =>
       if α.isProp then
         collectAtoms b quant (collectAtoms a quant (collectAtoms c quant atoms))
@@ -100,7 +105,8 @@ def isRelevantAtom (e : Expr) : GoalM Bool := do
 
 /-- Returns the free variables that are sides of the equality `e`. -/
 private def getEqFVarSides (e : Expr) : Array Expr :=
-  let_expr Eq _ lhs rhs := e | #[]
+  let_expr Eq _ lhs rhs := e
+    | #[]
   (if lhs.isFVar then #[lhs] else #[]) ++ (if rhs.isFVar then #[rhs] else #[])
 
 /--
@@ -111,7 +117,9 @@ def getSkippedKeys (atoms : Array Expr) : Array Expr :=
   atoms.foldl (init := #[]) fun keys atom =>
     if atom.hasLooseBVars then keys else keys.push atom ++ getEqFVarSides atom
 
-/-- Keys of a relevant fact with the given atoms: the atoms and the free variables occurring in them. -/
+/--
+Keys of a relevant fact with the given atoms: the atoms and the free variables occurring in them.
+-/
 def getRelevantKeys (atoms : Array Expr) : Array Expr :=
   let fvars := atoms.foldl (init := {}) fun s atom => collectFVars s atom
   let keys := atoms.filter (!·.hasLooseBVars)
@@ -135,7 +143,7 @@ def checkFact (prop : Expr) : GoalM (Bool × Array Expr) := do
 /-- Adds `keys` to the keys of relevant facts, and asserts the skipped facts sharing a new key. -/
 partial def registerKeys (keys : Array Expr) (generation : Nat := 0) : GoalM Unit := do
   let s := (← get).relevance
-  let newKeys := keys.filter (!s.keys.contains ·)
+  let newKeys := keys.filter (! s.keys.contains ·)
   if newKeys.isEmpty then return ()
   let known := newKeys.foldl (init := s.keys) fun known key => known.insert key
   modify fun s => { s with relevance.keys := known }
@@ -156,7 +164,8 @@ Returns `none` if `prop` must be processed, and registers its keys. Otherwise, `
 irrelevant for the active solvers, and its atoms are returned. See `Grind.Config.filterFacts`.
 -/
 def checkIrrelevant? (prop : Expr) (generation : Nat := 0) : GoalM (Option (Array Expr)) := do
-  unless (← readThe Context).filterFacts do return none
+  unless (← readThe Context).filterFacts do
+    return none
   let (relevant, atoms) ← Relevance.checkFact (← instantiateMVars prop)
   if relevant then
     Relevance.registerKeys (Relevance.getRelevantKeys atoms) generation
@@ -171,20 +180,25 @@ becomes relevant.
 def skipFact (proof prop : Expr) (atoms : Array Expr) (generation : Nat := 0) : GoalM Unit := do
   trace[grind.relevance] "skipping{indentExpr prop}"
   let keys := Relevance.getSkippedKeys atoms
-  modify fun s => { s with relevance.skipped := { proof, prop, generation, atoms, keys } :: s.relevance.skipped }
+  modify fun s => {
+    s with
+    relevance.skipped := { proof, prop, generation, atoms, keys } :: s.relevance.skipped
+  }
 
 /--
 Returns `true` if the fact `prop` with proof `proof` must be processed. Otherwise, it is skipped.
 See `checkIrrelevant?`.
 -/
 def filterFact (prop proof : Expr) (generation : Nat := 0) : GoalM Bool := do
-  let some atoms ← checkIrrelevant? prop generation | return true
+  let some atoms ← checkIrrelevant? prop generation
+    | return true
   skipFact proof prop atoms generation
   return false
 
 /-- Registers the keys of a fact that is asserted without filtering. See `filterFact`. -/
 def registerRelevantFact (prop : Expr) (generation : Nat) : GoalM Unit := do
-  unless (← readThe Context).filterFacts do return ()
+  unless (← readThe Context).filterFacts do
+    return ()
   let prop ← instantiateMVars prop
   let config ← getConfig
   let atoms := Relevance.collectAtoms prop (quant := config.ematch > 0 && config.genLocal > 0)

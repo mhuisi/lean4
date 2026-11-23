@@ -47,8 +47,8 @@ The non-monadic version of this iterator is `List.iter`.
 * `Productive` instance: always
 -/
 @[cbv_opaque, always_inline, inline]
-def _root_.List.iterM {α : Type w} (l : List α) (m : Type w → Type w') [Pure m] :
-    IterM (α := ListIterator α) m α :=
+def _root_.List.iterM {α : Type w} (l : List α) (m : Type w → Type w') [Pure m]
+    : IterM (α := ListIterator α) m α :=
   ⟨{ list := l }⟩
 
 namespace Iterators.Types
@@ -59,25 +59,27 @@ instance ListIterator.instIterator {α : Type w} [Pure m] : Iterator (ListIterat
     | .yield it' out => it.internalState.list = out :: it'.internalState.list
     | .skip _ => False
     | .done => it.internalState.list = []
-  step it := pure (match it with
-        | ⟨⟨[]⟩⟩ => .deflate ⟨.done, rfl⟩
-        | ⟨⟨x :: xs⟩⟩ => .deflate ⟨.yield ⟨⟨xs⟩⟩ x, rfl⟩)
+  step it :=
+    pure (match it with
+      | ⟨⟨[]⟩⟩ => .deflate ⟨.done, rfl⟩
+      | ⟨⟨x :: xs⟩⟩ => .deflate ⟨.yield ⟨⟨xs⟩⟩ x, rfl⟩)
 
-private def ListIterator.instFinitenessRelation [Pure m] :
-    FinitenessRelation (ListIterator α) m where
+private def ListIterator.instFinitenessRelation [Pure m]
+    : FinitenessRelation (ListIterator α) m where
   Rel := InvImage WellFoundedRelation.rel (ListIterator.list ∘ IterM.internalState)
   wf := InvImage.wf _ WellFoundedRelation.wf
   subrelation {it it'} h := by
     simp_wf
     obtain ⟨step, h, h'⟩ := h
-    cases step <;> simp_all [IterStep.successor, IterM.IsPlausibleStep, Iterator.IsPlausibleStep, instIterator]
+    cases step <;> simp_all [IterStep.successor, IterM.IsPlausibleStep, Iterator.IsPlausibleStep,
+      instIterator]
 
-instance ListIterator.instFinite [Pure m] : Finite (ListIterator α) m :=
-  by exact Finite.of_finitenessRelation ListIterator.instFinitenessRelation
+instance ListIterator.instFinite [Pure m] : Finite (ListIterator α) m := by
+  exact Finite.of_finitenessRelation ListIterator.instFinitenessRelation
 
 @[always_inline, inline]
-instance ListIterator.instIteratorLoop {α : Type w} [Monad m] {n : Type x → Type x'} [Monad n] :
-    IteratorLoop (ListIterator α) m n :=
+instance ListIterator.instIteratorLoop {α : Type w} [Monad m] {n : Type x → Type x'} [Monad n]
+    : IteratorLoop (ListIterator α) m n :=
   .defaultImplementation
 
 end Std.Iterators.Types

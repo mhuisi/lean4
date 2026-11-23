@@ -11,7 +11,6 @@ public import Lean.Data.Markdown.Parser.Inline
 
 namespace Lean.Markdown
 
-
 variable {s : String.Slice}
 
 /--
@@ -22,11 +21,11 @@ specification.
 Two passes are necessary because the presence of a link definition later in the document affects the
 syntactic interpretation of reference-style links earlier in the document.
 -/
-public partial def parseInlinesInBlock (refs : RefTable s) (block : Block.Raw s)
-    (extensions : Extensions := {}) : Block s :=
+public partial def parseInlinesInBlock
+    (refs : RefTable s) (block : Block.Raw s) (extensions : Extensions := {})
+    : Block s :=
   match block with
-  | .paragraph content =>
-    .paragraph (parseInlines refs content extensions)
+  | .paragraph content => .paragraph (parseInlines refs content extensions)
   | .atxHeading level hashes content closeHashes? =>
     .atxHeading level hashes (parseInlines refs content extensions) closeHashes?
   | .setextHeading level content underline =>
@@ -43,10 +42,8 @@ public partial def parseInlinesInBlock (refs : RefTable s) (block : Block.Raw s)
     .list kind tight (items.map (parseInlinesInBlock refs · extensions))
   | .listItem marker children =>
     .listItem marker (children.map (parseInlinesInBlock refs · extensions))
-  | .linkRefDef m =>
-    .linkRefDef m
-  | .thematicBreak line =>
-    .thematicBreak line
+  | .linkRefDef m => .linkRefDef m
+  | .thematicBreak line => .thematicBreak line
 
 /--
 Parses `s` as a Markdown document.
@@ -65,8 +62,11 @@ label unless the external definition has `overrideDocument` set.
 
 This parser is based on the two-pass algorithm described in the CommonMark specification.
 -/
-public def parseDocument (s : String.Slice) (indent : Nat := 0) (extensions : Extensions := {})
-    (externalRefs : Std.HashMap String ExternalRef := {}) : Array (Block s) :=
+public def parseDocument
+    (s : String.Slice)
+    (indent : Nat := 0) (extensions : Extensions := {})
+    (externalRefs : Std.HashMap String ExternalRef := {})
+    : Array (Block s) :=
   let blocks := parseBlocks s indent
   let refs := buildRefTable blocks externalRefs
   blocks.map (parseInlinesInBlock refs · extensions)

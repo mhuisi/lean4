@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Henrik Böving
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.BVDecide.EPR.Basic
 import Lean.Data.UnionFind
@@ -49,9 +50,7 @@ namespace Lean.Meta.Tactic.BVDecide.EPR
 
 open Std.Tactic.BVDecide.EPR.BitVec
 
-/--
-If `e` is `toBvAux elems h x`, return `x`.
--/
+/-- If `e` is `toBvAux elems h x`, return `x`. -/
 public def toBvAuxArg? (e : Expr) : Option Expr :=
   if e.isAppOfArity ``toBvAux 5 then some e.appArg! else none
 
@@ -76,37 +75,30 @@ public def toBvPredApp? (e : Expr) : Option (Expr × Array Expr) := do
   let args := e.getAppArgs
   return (args[4 * arity]!, args[(4 * arity + 1)...*].toArray)
 
-/--
-The information associated with a frozen class of the instantiation set analysis.
--/
+/-- The information associated with a frozen class of the instantiation set analysis. -/
 public structure InstClass where
   sort : SortId
-  /--
-  Whether the instantiation set contains all elements of the sort.
-  -/
+  /-- Whether the instantiation set contains all elements of the sort. -/
   full : Bool := false
-  /--
-  The ground terms in the instantiation set, in the order they were discovered.
-  -/
+  /-- The ground terms in the instantiation set, in the order they were discovered. -/
   terms : Array Expr := #[]
   termSet : Std.HashSet Expr := {}
-  /--
-  Ground terms whose value the projection else value should avoid.
-  -/
+  /-- Ground terms whose value the projection else value should avoid. -/
   exceptions : Std.HashSet Expr := {}
-  /--
-  Classes whose projection else value the projection else value of this class should avoid.
-  -/
+  /-- Classes whose projection else value the projection else value of this class should avoid. -/
   avoid : Std.HashSet Nat := {}
-  deriving Inhabited
+deriving Inhabited
 
 namespace InstClass
 
 def insertTerm (cls : InstClass) (term : Expr) : InstClass :=
   if cls.termSet.contains term then
     cls
-  else
-    { cls with terms := cls.terms.push term, termSet := cls.termSet.insert term }
+  else {
+    cls with
+    terms := cls.terms.push term
+    termSet := cls.termSet.insert term
+  }
 
 end InstClass
 
@@ -115,51 +107,33 @@ The frozen result of the instantiation set analysis, enriched with ground terms 
 discovers them.
 -/
 public structure InstSets where
-  /--
-  Map from eqc roots to their information.
-  -/
+  /-- Map from eqc roots to their information. -/
   classes : Std.HashMap Nat InstClass := {}
-  /--
-  For each quantified fact and each of its variables the eqc root of `S_x`.
-  -/
+  /-- For each quantified fact and each of its variables the eqc root of `S_x`. -/
   varRoots : Array (Array Nat) := #[]
   /--
   For each `(p, i)` that has a quantified variable at argument `i` of `p` the eqc root of `A_p_i`.
   Exactly these positions require a projection.
   -/
   posRoot : Std.HashMap (Expr × Nat) Nat := {}
-  deriving Inhabited
+deriving Inhabited
 
 namespace InstSets
 
 structure Builder where
-  /--
-  The union find used to manage the whole quantifier analysis.
-  -/
+  /-- The union find used to manage the whole quantifier analysis. -/
   uf : UnionFind := {}
-  /--
-  For each class in `uf` the sort it is associated with.
-  -/
+  /-- For each class in `uf` the sort it is associated with. -/
   classSorts : Array SortId := #[]
-  /--
-  Instantiation sets of quantified variables `S_x`.
-  -/
+  /-- Instantiation sets of quantified variables `S_x`. -/
   varClasses : Array (Array Nat) := #[]
-  /--
-  Equivalence classes of application positions `A_p_i`.
-  -/
+  /-- Equivalence classes of application positions `A_p_i`. -/
   posClasses : Std.HashMap (Expr × Nat) Nat := {}
-  /--
-  Ground terms `t` inserted into `S_x`.
-  -/
+  /-- Ground terms `t` inserted into `S_x`. -/
   inserts : Array (Nat × Expr) := #[]
-  /--
-  The exception set as pairs of `S_x` eqc identifier and terms.
-  -/
+  /-- The exception set as pairs of `S_x` eqc identifier and terms. -/
   exceptions : Array (Nat × Expr) := #[]
-  /--
-  Avoid relationships between variables.
-  -/
+  /-- Avoid relationships between variables. -/
   avoids : Array (Nat × Nat) := #[]
   /--
   Used to mark equivalence classes that represent their full sort.
@@ -174,8 +148,7 @@ def freshClass (sort : SortId) : BuildM Nat :=
     let (uf, cls) := s.uf.push
     (cls, { s with uf, classSorts := s.classSorts.push sort })
 
-def union (lhs rhs : Nat) : BuildM Unit :=
-  modify fun s => { s with uf := s.uf.union! lhs rhs }
+def union (lhs rhs : Nat) : BuildM Unit := modify fun s => { s with uf := s.uf.union! lhs rhs }
 
 def posClass (pred : Expr) (idx : Nat) (sort : SortId) : BuildM Nat := do
   if let some cls := (← get).posClasses[(pred, idx)]? then
@@ -200,8 +173,8 @@ def classify (problem : EprBvProblem) (varMap : Std.HashMap Expr Nat) (e : Expr)
       .other
   | none => .other
 
-def analyzeAtom (problem : EprBvProblem) (varMap : Std.HashMap Expr Nat) (atom : Expr)
-    (pol : Bool) : BuildM Unit := do
+def analyzeAtom (problem : EprBvProblem) (varMap : Std.HashMap Expr Nat) (atom : Expr) (pol : Bool)
+    : BuildM Unit := do
   match_expr (meta := false) atom with
   | BEq.beq _ _ lhs rhs =>
     match classify problem varMap lhs, classify problem varMap rhs with
@@ -210,29 +183,34 @@ def analyzeAtom (problem : EprBvProblem) (varMap : Std.HashMap Expr Nat) (atom :
         modify fun s => { s with avoids := s.avoids.push (x, y) |>.push (y, x) }
       else
         union x y
-    | .var x, .ground t | .ground t, .var x =>
+    | .var x, .ground t
+    | .ground t, .var x =>
       if pol then
         modify fun s => { s with exceptions := s.exceptions.push (x, t), full := s.full.push x }
       else
         modify fun s => { s with inserts := s.inserts.push (x, t) }
     | _, _ => return ()
   | _ =>
-    let some (pred, args) := toBvPredApp? atom | return ()
-    let some info := problem.predInfo[pred]? | return ()
+    let some (pred, args) := toBvPredApp? atom
+      | return ()
+    let some info := problem.predInfo[pred]?
+      | return ()
     for h : idx in 0...args.size do
-      let .var x := classify problem varMap args[idx] | continue
+      let .var x := classify problem varMap args[idx]
+        | continue
       union x (← posClass pred idx info.argumentSorts[idx]!)
 
 def analyzeQuantifiedFact (problem : EprBvProblem) (fact : QuantifiedFact) : BuildM Unit := do
   let vars ← fact.boundSorts.mapM freshClass
   modify fun s => { s with varClasses := s.varClasses.push vars }
   forallBoundedTelescope fact.hyp.type fact.boundSorts.size fun xs body => do
-  forallBoundedTelescope body fact.boundSorts.size fun _guards body => do
-    let_expr Eq _ lhs _ := body | return ()
-    let mut varMap := {}
-    for x in xs, cls in vars do
-      varMap := varMap.insert x cls
-    PolarityVisitor.visitBool lhs (analyzeAtom problem varMap)
+    forallBoundedTelescope body fact.boundSorts.size fun _guards body => do
+      let_expr Eq _ lhs _ := body
+        | return ()
+      let mut varMap := {}
+      for x in xs, cls in vars do
+        varMap := varMap.insert x cls
+      PolarityVisitor.visitBool lhs (analyzeAtom problem varMap)
 
 def freeze : BuildM InstSets := do
   let mut uf := (← get).uf
@@ -249,7 +227,8 @@ def freeze : BuildM InstSets := do
   for (cls, term) in s.inserts do
     classes := classes.modify roots[cls]! (·.insertTerm term)
   for (cls, term) in s.exceptions do
-    classes := classes.modify roots[cls]! fun info => { info with exceptions := info.exceptions.insert term }
+    classes :=
+      classes.modify roots[cls]! fun info => { info with exceptions := info.exceptions.insert term }
   for (cls, other) in s.avoids do
     let (root, otherRoot) := (roots[cls]!, roots[other]!)
     if root == otherRoot then continue
@@ -266,31 +245,30 @@ def freeze : BuildM InstSets := do
 Analyze the quantified facts of `problem`. The ground terms of the problem are not taken into
 account yet, they have to be added through `addGround`.
 -/
-public def build (problem : EprBvProblem) : MetaM InstSets := do
-  go.run' {}
+public def build (problem : EprBvProblem) : MetaM InstSets := do go.run' {}
 where
   go : BuildM InstSets := do
     problem.quantifiedFacts.forM (analyzeQuantifiedFact problem)
     freeze
 
 def addGroundApp (sets : InstSets) (app : Expr) : InstSets := Id.run do
-  let some (pred, args) := toBvPredApp? app | return sets
+  let some (pred, args) := toBvPredApp? app
+    | return sets
   let mut sets := sets
   for h : idx in 0...args.size do
-    let some root := sets.posRoot[(pred, idx)]? | continue
-    let some elem := toBvAuxArg? args[idx] | continue
+    let some root := sets.posRoot[(pred, idx)]?
+      | continue
+    let some elem := toBvAuxArg? args[idx]
+      | continue
     sets := { sets with classes := sets.classes.modify root (·.insertTerm elem) }
   return sets
 
-/--
-Add the arguments of all ground predicate applications in `e` to the instantiation sets.
--/
+/-- Add the arguments of all ground predicate applications in `e` to the instantiation sets. -/
 public def addGround (sets : InstSets) (e : Expr) : MetaM InstSets := do
   -- Stopping at `toBvAux` skips the element lists of the sorts and the membership proofs.
   let stop (e : Expr) := e.isAppOf ``toBvAux || (toBvPredAppArity? e).isSome
   let go : StateRefT InstSets MetaM Unit :=
-    e.forEachWhere (stopWhenVisited := true) stop fun app =>
-      modify (·.addGroundApp app)
+    e.forEachWhere (stopWhenVisited := true) stop fun app => modify (·.addGroundApp app)
   let ((), sets) ← go.run sets
   return sets
 
@@ -298,16 +276,20 @@ def traceClass (root : Nat) (cls : InstClass) : MetaM Unit := do
   let full := if cls.full then ", full" else ""
   let exceptions := cls.exceptions.toArray.qsort Expr.lt
   let avoid := cls.avoid.toArray.qsort (· < ·)
-  trace[Meta.Tactic.bv.epr.instSets] m!"class {root}: terms {cls.terms}, exceptions {exceptions}, avoid {avoid}{full}"
+  trace[Meta.Tactic.bv.epr.instSets]
+    m!"class {root}: terms {cls.terms}, exceptions {exceptions}, avoid {avoid}{full}"
 
 public def traceAnalysis (sets : InstSets) : MetaM Unit := do
-  unless ← isTracingEnabledFor `Meta.Tactic.bv.epr.instSets do return
+  unless ← isTracingEnabledFor `Meta.Tactic.bv.epr.instSets do
+    return
   withTraceNode `Meta.Tactic.bv.epr.instSets (fun _ => return m!"Instantiation set analysis") do
     for h : quantIdx in 0...sets.varRoots.size do
       for h : varIdx in 0...sets.varRoots[quantIdx].size do
-        trace[Meta.Tactic.bv.epr.instSets] m!"quantifier {quantIdx} variable {varIdx}: class {sets.varRoots[quantIdx][varIdx]}"
-    let positions := sets.posRoot.toArray.qsort fun ((p₁, i₁), _) ((p₂, i₂), _) =>
-      p₁.lt p₂ || (p₁ == p₂ && i₁ < i₂)
+        trace[Meta.Tactic.bv.epr.instSets]
+          m!"quantifier {quantIdx} variable {varIdx}: class {sets.varRoots[quantIdx][varIdx]}"
+    let positions :=
+      sets.posRoot.toArray.qsort fun ((p₁, i₁), _) ((p₂, i₂), _) =>
+        p₁.lt p₂ || (p₁ == p₂ && i₁ < i₂)
     for ((pred, idx), root) in positions do
       trace[Meta.Tactic.bv.epr.instSets] m!"projection {pred} {idx}: class {root}"
     traceClasses sets
@@ -316,11 +298,10 @@ where
     for (root, cls) in sets.classes.toArray.qsort (·.1 < ·.1) do
       traceClass root cls
 
-/--
-Trace the instantiation sets of all classes that are not unrestricted.
--/
+/-- Trace the instantiation sets of all classes that are not unrestricted. -/
 public def traceSets (sets : InstSets) : MetaM Unit := do
-  unless ← isTracingEnabledFor `Meta.Tactic.bv.epr.instSets do return
+  unless ← isTracingEnabledFor `Meta.Tactic.bv.epr.instSets do
+    return
   withTraceNode `Meta.Tactic.bv.epr.instSets (fun _ => return m!"Instantiation sets") do
     for (root, cls) in sets.classes.toArray.qsort (·.1 < ·.1) do
       unless cls.full do

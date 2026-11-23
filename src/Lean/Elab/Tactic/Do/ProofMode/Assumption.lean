@@ -23,9 +23,10 @@ partial def MGoal.assumption (goal : MGoal) : OptionT MetaM Expr := do
     return mkApp2 (mkConst ``SPred.entails.refl [goal.u]) goal.σs hyp.p
   if let some (u, σs, lhs, rhs) := parseAnd? goal.hyps then
     -- NB: Need to prefer rhs over lhs, like the goal view (Lean.Elab.Tactic.Do.ProofMode.Display).
-    mkApp5 (mkConst ``Assumption.right [u]) σs lhs rhs goal.target <$> assumption { goal with hyps := rhs }
-    <|>
-    mkApp5 (mkConst ``Assumption.left [u]) σs lhs rhs goal.target <$> assumption { goal with hyps := lhs }
+    mkApp5 (mkConst ``Assumption.right [u]) σs lhs rhs goal.target
+        <$> assumption { goal with hyps := rhs }
+      <|> mkApp5 (mkConst ``Assumption.left [u]) σs lhs rhs goal.target
+        <$> assumption { goal with hyps := lhs }
   else
     panic! s!"assumption: hypothesis without proper metadata: {goal.hyps}"
 
@@ -33,17 +34,19 @@ def MGoal.assumptionPure (goal : MGoal) : OptionT MetaM Expr := do
   let φ := mkApp2 (mkConst ``tautological [goal.u]) goal.σs goal.target
   let fvarId ← OptionT.mk (findLocalDeclWithType? φ)
   let inst ← synthInstance? (mkApp3 (mkConst ``PropAsSPredTautology [goal.u]) φ goal.σs goal.target)
-  return mkApp6 (mkConst ``Exact.from_tautology [goal.u]) goal.σs φ goal.hyps goal.target inst (.fvar fvarId)
+  return mkApp6 (mkConst ``Exact.from_tautology [goal.u]) goal.σs φ goal.hyps goal.target inst
+    (.fvar fvarId)
 
 @[builtin_tactic Lean.Parser.Tactic.massumption]
-def elabMAssumption : Tactic | _ => do
-  let mvar ← getMainGoal
-  mvar.withContext do
-  let g ← instantiateMVars <| ← mvar.getType
-  let some goal := parseMGoal? g | throwError "not in proof mode"
+def elabMAssumption : Tactic
+  | _ => do
+    let mvar ← getMainGoal
+    mvar.withContext do
+      let g ← instantiateMVars <| ← mvar.getType
+      let some goal := parseMGoal? g
+        | throwError "not in proof mode"
 
-  let some proof ← liftMetaM <|
-    goal.assumption <|> goal.assumptionPure
-    | throwError "hypothesis not found"
-  mvar.assign proof
-  replaceMainGoal []
+      let some proof ← liftMetaM <| goal.assumption <|> goal.assumptionPure
+        | throwError "hypothesis not found"
+      mvar.assign proof
+      replaceMainGoal []

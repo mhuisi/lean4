@@ -40,9 +40,12 @@ Joins a two (potentially) relative paths.
 If either path is `.`, this returns the other.
 -/
 public def joinRelative (a b : FilePath) : System.FilePath :=
-  if b == "." then a
-  else if a == "." then b
-  else inline FilePath.join a b
+  if b == "." then
+    a
+  else if a == "." then
+    b
+  else
+    inline FilePath.join a b
 
 public scoped instance : Div FilePath where
   div := joinRelative
@@ -74,7 +77,7 @@ where
     else
       have := String.Pos.Raw.prev_lt_of_pos s i h
       let i' := i.prev s
-      let c  := i'.get s
+      let c := i'.get s
       if c == FilePath.pathSeparator then
         String.Pos.Raw.extract s 0 e
       else if c == '.' then

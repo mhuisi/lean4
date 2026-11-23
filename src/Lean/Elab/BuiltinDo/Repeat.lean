@@ -26,7 +26,8 @@ we append an `unreachable!` so the continuation has a polymorphic value of any t
 dead-code warning that fires on the surrounding continuation is actionable — the user can
 remove the following code without breaking the do block's type.
 -/
-@[builtin_doElem_elab Lean.Parser.Term.doRepeat] def elabDoRepeat : DoElab := fun stx dec => do
+@[builtin_doElem_elab Lean.Parser.Term.doRepeat]
+def elabDoRepeat : DoElab := fun stx dec => do
   let `(doElem| repeat%$tk $[$inv?:doLoopInvariant]? $[$var?:doLoopDecreasing]? $seq) := stx
     | throwUnsupportedSyntax
   let mut expanded ←
@@ -35,16 +36,17 @@ remove the following code without breaking the do block's type.
   if !info.breaks then
     if !(← Meta.isDefEqGuarded dec.resultType (← mkPUnit)) then
       expanded ← `(doElem| do $expanded:doElem; unreachable!)
-  Term.withMacroExpansion stx expanded <|
-    withRef expanded <| elabDoElem ⟨expanded⟩ dec
+  Term.withMacroExpansion stx expanded <| withRef expanded <| elabDoElem ⟨expanded⟩ dec
 
-@[builtin_macro Lean.Parser.Term.doWhile] def expandDoWhile : Macro
+@[builtin_macro Lean.Parser.Term.doWhile]
+def expandDoWhile : Macro
   | `(doElem| while%$tk $cond:doIfCond $[$inv?:doLoopInvariant]? $[$dec?:doLoopDecreasing]? do $seq) =>
     `(doElem| repeat%$tk $[$inv?:doLoopInvariant]? $[$dec?:doLoopDecreasing]?
         if $cond:doIfCond then $seq else break)
   | _ => Macro.throwUnsupported
 
-@[builtin_macro Lean.Parser.Term.doRepeatUntil] def expandDoRepeatUntil : Macro
+@[builtin_macro Lean.Parser.Term.doRepeatUntil]
+def expandDoRepeatUntil : Macro
   | `(doElem| repeat%$tk $[$inv?:doLoopInvariant]? $[$dec?:doLoopDecreasing]? $seq until $cond) =>
     `(doElem| repeat%$tk $[$inv?:doLoopInvariant]? $[$dec?:doLoopDecreasing]?
         do $seq:doSeq

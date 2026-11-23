@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.Simp.Theorems
 import Lean.Meta.Sym.Simp.Attr
@@ -15,8 +16,7 @@ namespace Lean.Meta.Grind
 builtin_initialize homoExt : Sym.Simp.SymSimpExtension ← Sym.Simp.mkSymSimpExt
 
 /-- Returns the homomorphism rules tagged with the `[grind hom]` attribute. -/
-def getHomoTheorems : CoreM Sym.Simp.Theorems :=
-  homoExt.getTheorems
+def getHomoTheorems : CoreM Sym.Simp.Theorems := homoExt.getTheorems
 
 /--
 Extension collecting the homomorphism *source types*: the head constants `F` of the
@@ -25,14 +25,10 @@ terms of these types as solver terms so that the E-graph reports their equalitie
 disequalities (see `SolverExtension.markTerm`).
 -/
 builtin_initialize homoSourceTypesExt : SimpleScopedEnvExtension Name NameSet ←
-  registerSimpleScopedEnvExtension {
-    initial  := {}
-    addEntry := fun s n => s.insert n
-  }
+  registerSimpleScopedEnvExtension { initial := {}, addEntry := fun s n => s.insert n }
 
 /-- Returns the head constants of the homomorphism source types. -/
-def getHomoSourceTypes : CoreM NameSet :=
-  return homoSourceTypesExt.getState (← getEnv)
+def getHomoSourceTypes : CoreM NameSet := return homoSourceTypesExt.getState (← getEnv)
 
 /--
 Ensures a `[grind hom]` theorem can be applied by `Sym.simp` without a discharger.
@@ -49,7 +45,8 @@ right-hand side).
 def validateHomoTheorem (declName : Name) : MetaM Unit := do
   let info ← getConstInfo declName
   forallTelescope info.type fun xs concl => do
-    let lhs := match_expr concl with
+    let lhs :=
+      match_expr concl with
       | Eq _ lhs _ => lhs
       | Iff lhs _ => lhs
       | Not p => p
@@ -76,7 +73,8 @@ def validateHomoTheorem (declName : Name) : MetaM Unit := do
         let xType ← inferType x
         if (← isProp xType) then
           throwError "invalid `[grind hom]` theorem, `{.ofConstName declName}` is conditional: \
-            hypothesis{indentExpr xType}\nis not determined by the left-hand side and would have \
+            hypothesis{indentExpr xType}\
+            \nis not determined by the left-hand side and would have \
             to be discharged when the rule is applied. Homomorphism rules must be unconditional; \
             use E-matching attributes such as `[grind =]` or `[grind →]` for conditional theorems"
         else
@@ -93,14 +91,17 @@ head constant, and would silently never fire on asserted equalities.
 private def checkEqInjection? (declName : Name) : MetaM (Option Name) := do
   let info ← getConstInfo declName
   forallTelescope info.type fun _ concl => do
-    let lhs := match_expr concl with
+    let lhs :=
+      match_expr concl with
       | Eq _ lhs _ => lhs
       | Iff lhs _ => lhs
       | _ => concl
-    let_expr Eq τ _ _ := lhs | return none
+    let_expr Eq τ _ _ := lhs
+      | return none
     let .const F _ := τ.getAppFn
       | throwError "invalid `[grind hom]` theorem, the source type of the `=`-injection rule \
-          `{.ofConstName declName}` is not headed by a constant{indentExpr τ}\nhomomorphism rules \
+          `{.ofConstName declName}` is not headed by a constant{indentExpr τ}\
+          \nhomomorphism rules \
           translate concrete types; generic injections cannot be tracked by the E-graph"
     return some F
 
@@ -124,24 +125,26 @@ def addHomoAttr (declName : Name) (attrKind : AttributeKind) (fallback := false)
 structure HomoPredTheorem where
   /-- Name of the theorem. -/
   declName : Name
-  /-- Number of explicit parameters. The theorem is instantiated with the trailing
-  `arity` arguments of the triggering application. -/
+  /--
+  Number of explicit parameters. The theorem is instantiated with the trailing
+  `arity` arguments of the triggering application.
+  -/
   arity : Nat
-  deriving Inhabited, BEq
+deriving Inhabited, BEq
 
 /-- Map from trigger head symbol to the `[grind hom_pred]` theorems it activates. -/
 abbrev HomoPredTheorems := NameMap (List HomoPredTheorem)
 
 /-- Extension backing the `@[grind hom_pred]` attribute. -/
-builtin_initialize homoPredExt : SimpleScopedEnvExtension (Name × HomoPredTheorem) HomoPredTheorems ←
+builtin_initialize homoPredExt
+    : SimpleScopedEnvExtension (Name × HomoPredTheorem) HomoPredTheorems ←
   registerSimpleScopedEnvExtension {
-    initial  := {}
+    initial := {}
     addEntry := fun s (key, thm) => s.insert key (thm :: (s.find? key).getD [])
   }
 
 /-- Returns the homomorphism predicates tagged with the `[grind hom_pred]` attribute. -/
-def getHomoPredTheorems : CoreM HomoPredTheorems :=
-  return homoPredExt.getState (← getEnv)
+def getHomoPredTheorems : CoreM HomoPredTheorems := return homoPredExt.getState (← getEnv)
 
 /--
 Validates and registers a `[grind hom_pred]` theorem.
@@ -159,14 +162,19 @@ def addHomoPredAttr (declName : Name) (attrKind : AttributeKind) : MetaM Unit :=
       throwError "invalid `[grind hom_pred]` theorem, `{.ofConstName declName}` must have \
         at least one explicit parameter; the trigger is inferred from an application whose \
         trailing arguments are the theorem's explicit parameters"
-    let found? := type.find? fun e => Id.run do
-      unless e.isApp && e.getAppFn.isConst do return false
-      let args := e.getAppArgs
-      if args.size < xsExplicit.size then return false
-      return args.extract (args.size - xsExplicit.size) args.size == xsExplicit
+    let found? :=
+      type.find? fun e => Id.run do
+        unless e.isApp && e.getAppFn.isConst do
+          return false
+        let args := e.getAppArgs
+        if args.size < xsExplicit.size then return false
+        return args.extract (args.size - xsExplicit.size) args.size == xsExplicit
     let some found := found?
-      | throwError "invalid `[grind hom_pred]` theorem, the conclusion of `{.ofConstName declName}` does not contain an application whose trailing arguments are the theorem's explicit parameters"
-    let .const key _ := found.getAppFn | unreachable!
+      | throwError "invalid `[grind hom_pred]` theorem, the conclusion of \
+          `{.ofConstName declName}` does not contain an application whose trailing arguments are \
+          the theorem's explicit parameters"
+    let .const key _ := found.getAppFn
+      | unreachable!
     homoPredExt.add (key, { declName, arity := xsExplicit.size }) attrKind
 
 /--
@@ -177,8 +185,10 @@ instantiations that fail to elaborate (e.g. because the argument types do not ma
 are discarded.
 -/
 def mkHomoPredInstances (e : Expr) : MetaM (Array (Expr × Expr)) := do
-  let .const declName _ := e.getAppFn | return #[]
-  let some thms := (← getHomoPredTheorems).find? declName | return #[]
+  let .const declName _ := e.getAppFn
+    | return #[]
+  let some thms := (← getHomoPredTheorems).find? declName
+    | return #[]
   let args := e.getAppArgs
   let mut result := #[]
   for thm in thms do

@@ -131,7 +131,8 @@ theorem mul_lt_mul_iff_of_pos_right {a b c : R} (h : 0 < c) : a * c < b * c ↔ 
   · intro h'
     have := mul_lt_mul_of_pos_right h' (inv_pos_iff.mpr h)
     rwa [Semiring.mul_assoc, Semiring.mul_assoc, mul_inv_cancel (Preorder.ne_of_gt h),
-      Semiring.mul_one, Semiring.mul_one] at this
+        Semiring.mul_one, Semiring.mul_one]
+      at this
   · exact (mul_lt_mul_of_pos_right · h)
 
 theorem mul_lt_mul_iff_of_pos_left {a b c : R} (h : 0 < c) : c * a < c * b ↔ a < b := by
@@ -139,7 +140,8 @@ theorem mul_lt_mul_iff_of_pos_left {a b c : R} (h : 0 < c) : c * a < c * b ↔ a
   · intro h'
     have := mul_lt_mul_of_pos_left h' (inv_pos_iff.mpr h)
     rwa [← Semiring.mul_assoc, ← Semiring.mul_assoc, inv_mul_cancel (Preorder.ne_of_gt h),
-      Semiring.one_mul, Semiring.one_mul] at this
+        Semiring.one_mul, Semiring.one_mul]
+      at this
   · exact (mul_lt_mul_of_pos_left · h)
 
 theorem mul_lt_mul_iff_of_neg_right {a b c : R} (h : c < 0) : a * c < b * c ↔ b < a := by
@@ -147,7 +149,8 @@ theorem mul_lt_mul_iff_of_neg_right {a b c : R} (h : c < 0) : a * c < b * c ↔ 
   · intro h'
     have := mul_lt_mul_of_neg_right h' (inv_neg_iff.mpr h)
     rwa [Semiring.mul_assoc, Semiring.mul_assoc, mul_inv_cancel (Preorder.ne_of_lt h),
-      Semiring.mul_one, Semiring.mul_one] at this
+        Semiring.mul_one, Semiring.mul_one]
+      at this
   · exact (mul_lt_mul_of_neg_right · h)
 
 theorem mul_lt_mul_iff_of_neg_left {a b c : R} (h : c < 0) : c * a < c * b ↔ b < a := by
@@ -155,7 +158,8 @@ theorem mul_lt_mul_iff_of_neg_left {a b c : R} (h : c < 0) : c * a < c * b ↔ b
   · intro h'
     have := mul_lt_mul_of_neg_left h' (inv_neg_iff.mpr h)
     rwa [← Semiring.mul_assoc, ← Semiring.mul_assoc, inv_mul_cancel (Preorder.ne_of_lt h),
-      Semiring.one_mul, Semiring.one_mul] at this
+        Semiring.one_mul, Semiring.one_mul]
+      at this
   · exact (mul_lt_mul_of_neg_left · h)
 
 theorem mul_le_mul_iff_of_pos_right {a b c : R} (h : 0 < c) : a * c ≤ b * c ↔ a ≤ b := by
@@ -163,7 +167,8 @@ theorem mul_le_mul_iff_of_pos_right {a b c : R} (h : 0 < c) : a * c ≤ b * c �
   · intro h'
     have := mul_le_mul_of_nonneg_right h' (Preorder.le_of_lt (inv_pos_iff.mpr h))
     rwa [Semiring.mul_assoc, Semiring.mul_assoc, mul_inv_cancel (Preorder.ne_of_gt h),
-      Semiring.mul_one, Semiring.mul_one] at this
+        Semiring.mul_one, Semiring.mul_one]
+      at this
   · exact (mul_le_mul_of_nonneg_right · (Preorder.le_of_lt h))
 
 theorem mul_le_mul_iff_of_pos_left {a b c : R} (h : 0 < c) : c * a ≤ c * b ↔ a ≤ b := by
@@ -171,7 +176,8 @@ theorem mul_le_mul_iff_of_pos_left {a b c : R} (h : 0 < c) : c * a ≤ c * b ↔
   · intro h'
     have := mul_le_mul_of_nonneg_left h' (Preorder.le_of_lt (inv_pos_iff.mpr h))
     rwa [← Semiring.mul_assoc, ← Semiring.mul_assoc, inv_mul_cancel (Preorder.ne_of_gt h),
-      Semiring.one_mul, Semiring.one_mul] at this
+        Semiring.one_mul, Semiring.one_mul]
+      at this
   · exact (mul_le_mul_of_nonneg_left · (Preorder.le_of_lt h))
 
 theorem mul_le_mul_iff_of_neg_right {a b c : R} (h : c < 0) : a * c ≤ b * c ↔ b ≤ a := by
@@ -179,7 +185,8 @@ theorem mul_le_mul_iff_of_neg_right {a b c : R} (h : c < 0) : a * c ≤ b * c �
   · intro h'
     have := mul_le_mul_of_nonpos_right h' (Preorder.le_of_lt (inv_neg_iff.mpr h))
     rwa [Semiring.mul_assoc, Semiring.mul_assoc, mul_inv_cancel (Preorder.ne_of_lt h),
-      Semiring.mul_one, Semiring.mul_one] at this
+        Semiring.mul_one, Semiring.mul_one]
+      at this
   · exact (mul_le_mul_of_nonpos_right · (Preorder.le_of_lt h))
 
 theorem mul_le_mul_iff_of_neg_left {a b c : R} (h : c < 0) : c * a ≤ c * b ↔ b ≤ a := by
@@ -187,7 +194,8 @@ theorem mul_le_mul_iff_of_neg_left {a b c : R} (h : c < 0) : c * a ≤ c * b ↔
   · intro h'
     have := mul_le_mul_of_nonpos_left h' (Preorder.le_of_lt (inv_neg_iff.mpr h))
     rwa [← Semiring.mul_assoc, ← Semiring.mul_assoc, inv_mul_cancel (Preorder.ne_of_lt h),
-      Semiring.one_mul, Semiring.one_mul] at this
+        Semiring.one_mul, Semiring.one_mul]
+      at this
   · exact (mul_le_mul_of_nonpos_left · (Preorder.le_of_lt h))
 
 end Field.IsOrdered

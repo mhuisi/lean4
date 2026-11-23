@@ -28,44 +28,46 @@ private def preprocessPropToDecide (expectedType : Expr) : TermElabM Expr := do
   if expectedType.hasMVar then
     throwError "Expected type must not contain metavariables{indentExpr expectedType}"
   if expectedType.hasFVar then
-    throwError m!"Expected type must not contain free variables{indentExpr expectedType}"
-      ++ .hint' m!"Use the `+revert` option to automatically clean up and revert free variables"
+    throwError
+      m!"Expected type must not contain free variables{indentExpr expectedType}"
+        ++ .hint' m!"Use the `+revert` option to automatically clean up and revert free variables"
   return expectedType
 
 /--
 Given the Bool / Decidable expression `expr`, reduces it and returns a Bool / Decidable expression
 in whnf that can be regarded as the reason for the failure of `expr` to fully reduce.
 -/
-private partial def blameDecideReductionFailure (expr : Expr) : MetaM Expr := withIncRecDepth do
-  let expr ← whnf expr
-  let numArgs := expr.getAppNumArgs
-  -- If it's the Bool recursor or the Decidable recursor, then blame the major premise.
-  if numArgs ≥ 4 ∧ (expr.isAppOf ``Bool.rec || expr.isAppOf ``Decidable.rec) then
-    return ← blameDecideReductionFailure (expr.getArg! 3 numArgs)
-  -- If it's the Decidable constructor, then blame the first parameter.
-  if expr.isAppOfArity `Decidable.intro 3 then
-    return ← blameDecideReductionFailure expr.appFn!.appArg!
-  -- If it's decide (the first projection of Decidable), then blame the parameter
-  if let .proj ``Decidable 0 e := expr then
-    return ← blameDecideReductionFailure e
-  -- If it is a matcher, look for a discriminant that's a Bool or a Decidable instance to blame.
-  if let .const c _ := expr.getAppFn then
-    if let some info ← getMatcherInfo? c then
-      if info.arity ≤ numArgs then
-        let args := expr.getAppArgs
-        for i in *...info.numDiscrs do
-          let expr' := args[info.numParams + 1 + i]!
-          let type ← inferType expr'
-          let type ← whnf type
-          if type.isConstOf ``Bool then
-            let expr'' ← whnf expr'
-            unless expr''.isConstOf ``Bool.true || expr''.isConstOf ``Bool.false do
-              return ← blameDecideReductionFailure expr''
-          else if type.isAppOf ``Decidable then
-            let expr'' ← whnf (.proj ``Decidable 0 expr')
-            unless expr''.isConstOf ``Bool.true || expr''.isConstOf ``Bool.false do
-              return ← blameDecideReductionFailure expr''
-  return expr
+private partial def blameDecideReductionFailure (expr : Expr) : MetaM Expr :=
+  withIncRecDepth do
+    let expr ← whnf expr
+    let numArgs := expr.getAppNumArgs
+    -- If it's the Bool recursor or the Decidable recursor, then blame the major premise.
+    if numArgs ≥ 4 ∧ (expr.isAppOf ``Bool.rec || expr.isAppOf ``Decidable.rec) then
+      return ← blameDecideReductionFailure (expr.getArg! 3 numArgs)
+    -- If it's the Decidable constructor, then blame the first parameter.
+    if expr.isAppOfArity `Decidable.intro 3 then
+      return ← blameDecideReductionFailure expr.appFn!.appArg!
+    -- If it's decide (the first projection of Decidable), then blame the parameter
+    if let .proj ``Decidable 0 e := expr then
+      return ← blameDecideReductionFailure e
+    -- If it is a matcher, look for a discriminant that's a Bool or a Decidable instance to blame.
+    if let .const c _ := expr.getAppFn then
+      if let some info ← getMatcherInfo? c then
+        if info.arity ≤ numArgs then
+          let args := expr.getAppArgs
+          for i in *...info.numDiscrs do
+            let expr' := args[info.numParams + 1 + i]!
+            let type ← inferType expr'
+            let type ← whnf type
+            if type.isConstOf ``Bool then
+              let expr'' ← whnf expr'
+              unless expr''.isConstOf ``Bool.true || expr''.isConstOf ``Bool.false do
+                return ← blameDecideReductionFailure expr''
+            else if type.isAppOf ``Decidable then
+              let expr'' ← whnf (.proj ``Decidable 0 expr')
+              unless expr''.isConstOf ``Bool.true || expr''.isConstOf ``Bool.false do
+                return ← blameDecideReductionFailure expr''
+    return expr
 
 def elabNativeDecideCore (tacticName : Name) (expectedType : Expr) : TacticM Expr := do
   let d ← mkDecide expectedType
@@ -89,7 +91,8 @@ def evalDecideCore (tacticName : Name) (cfg : Parser.Tactic.DecideConfig) : Tact
       return g
   closeMainGoalUsing tacticName fun expectedType _ => do
     if cfg.kernel && cfg.native then
-      throwError "Tactic `{tacticName}` failed: Cannot simultaneously set both `+kernel` and `+native`"
+      throwError
+        "Tactic `{tacticName}` failed: Cannot simultaneously set both `+kernel` and `+native`"
     let expectedType ← preprocessPropToDecide expectedType
     if cfg.native then
       elabNativeDecideCore tacticName expectedType
@@ -111,8 +114,7 @@ where
       return mkApp3 (mkConst ``of_decide_eq_true) expectedType inst refl
     else
       -- Diagnose the failure, lazily so that there is no performance impact if `decide` isn't being used interactively.
-      throwError MessageData.ofLazyM (es := #[expectedType]) do
-        diagnose expectedType dec r
+      throwError MessageData.ofLazyM (es := #[expectedType]) do diagnose expectedType dec r
 
   doKernel (expectedType : Expr) : TacticM Expr := do
     let pf ← mkDecideProof expectedType
@@ -126,8 +128,7 @@ where
     -- Level variables occurring in `expectedType`, in ambient order
     let lemmaLevels := (← Term.getLevelNames).reverse.filter levelsInType.contains
     try
-      let lemmaName ← withOptions (Elab.async.set · false) do
-        mkAuxLemma lemmaLevels expectedType pf
+      let lemmaName ← withOptions (Elab.async.set · false) do mkAuxLemma lemmaLevels expectedType pf
       return mkConst lemmaName (lemmaLevels.map .param)
     catch ex =>
       -- Diagnose the failure, lazily so that there is no performance impact if `decide` isn't being used interactively.
@@ -152,35 +153,41 @@ where
         {indentExpr expectedType}\n\
         is false"
     -- Re-reduce the instance and collect diagnostics, to get all unfolded Decidable instances
-    let (reason, unfoldedInsts) ← withoutModifyingState <| withOptions (fun opt => diagnostics.set opt true) do
-      modifyDiag (fun _ => {})
-      let reason ← withAtLeastTransparency .default <| blameDecideReductionFailure s
-      let unfolded := (← get).diag.unfoldCounter.foldl (init := #[]) fun cs n _ => cs.push n
-      let unfoldedInsts ← unfolded |>.qsort Name.lt |>.filterMapM fun n => do
-        let e ← mkConstWithLevelParams n
-        if (← Meta.isClass? (← inferType e)) == ``Decidable then
-          return m!"`{.ofConst e}`"
-        else
-          return none
-      return (reason, unfoldedInsts)
+    let (reason, unfoldedInsts) ←
+      withoutModifyingState <| withOptions (fun opt => diagnostics.set opt true) do
+        modifyDiag (fun _ => {})
+        let reason ← withAtLeastTransparency .default <| blameDecideReductionFailure s
+        let unfolded := (← get).diag.unfoldCounter.foldl (init := #[]) fun cs n _ => cs.push n
+        let unfoldedInsts ←
+          unfolded
+            |>.qsort Name.lt
+            |>.filterMapM fun n => do
+              let e ← mkConstWithLevelParams n
+              if (← Meta.isClass? (← inferType e)) == ``Decidable then
+                return m!"`{.ofConst e}`"
+              else
+                return none
+        return (reason, unfoldedInsts)
     let stuckMsg :=
       if unfoldedInsts.isEmpty then
         m!"Reduction got stuck at{indentExpr reason}"
       else
         let instances := if unfoldedInsts.size == 1 then "instance" else "instances"
         m!"After unfolding the {instances} {.andList unfoldedInsts.toList}, \
-        reduction got stuck at{indentExpr reason}"
+          reduction got stuck at{indentExpr reason}"
     let hint :=
       if reason.isAppOf ``Eq.rec then
         .hint' m!"Reduction got stuck on `▸` ({.ofConstName ``Eq.rec}), \
-          which suggests that one of the `{.ofConstName ``Decidable}` instances is defined using tactics such as `rw` or `simp`. \
+          which suggests that one of the `{.ofConstName ``Decidable}` instances is defined using \
+          tactics such as `rw` or `simp`. \
           To avoid tactics, make use of functions such as \
           `{.ofConstName `inferInstanceAs}` or `{.ofConstName ``decidable_of_decidable_of_iff}` \
           to alter a proposition."
       else if reason.isAppOf ``Classical.choice then
         .hint' m!"Reduction got stuck on `{.ofConstName ``Classical.choice}`, \
           which indicates that a `{.ofConstName ``Decidable}` instance \
-          is defined using classical reasoning, proving an instance exists rather than giving a concrete construction. \
+          is defined using classical reasoning, proving an instance exists rather than giving a \
+          concrete construction. \
           The `{tacticName}` tactic works by evaluating a decision procedure via reduction, \
           and it cannot make progress with such instances. \
           This can occur due to the `open scoped Classical` command, which enables the instance \
@@ -190,16 +197,19 @@ where
     return m!"\
       Tactic `{tacticName}` failed to reduce\
       {indentExpr (s.setPPExplicit true)}\n\
-      to `{.ofConstName ``true}` or `{.ofConstName ``false}`.\n\n\
+      to `{.ofConstName ``true}` or `{.ofConstName ``false}`.\
+      \n\n\
       {stuckMsg}{hint}"
 
 declare_config_elab elabDecideConfig Parser.Tactic.DecideConfig
 
-@[builtin_tactic Lean.Parser.Tactic.decide] def evalDecide : Tactic := fun stx => do
+@[builtin_tactic Lean.Parser.Tactic.decide]
+def evalDecide : Tactic := fun stx => do
   let cfg ← elabDecideConfig stx[1]
   evalDecideCore `decide cfg
 
-@[builtin_tactic Lean.Parser.Tactic.nativeDecide] def evalNativeDecide : Tactic := fun stx => do
+@[builtin_tactic Lean.Parser.Tactic.nativeDecide]
+def evalNativeDecide : Tactic := fun stx => do
   let cfg ← elabDecideConfig stx[1]
   let cfg := { cfg with native := true }
   evalDecideCore `native_decide cfg

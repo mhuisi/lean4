@@ -193,6 +193,6 @@ Examples:
 def toInt! (s : Slice) : Int :=
   match s.toInt? with
   | some v => v
-  | none   => panic "Int expected"
+  | none => panic "Int expected"
 
 end String.Slice

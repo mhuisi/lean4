@@ -4,14 +4,14 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.Grind.Ring.CommSemiringAdapter
 public import Lean.Meta.Tactic.Grind.VarRename
 namespace Lean.Grind.CommRing
 open Lean.Meta.Grind
 
-public def Power.renameVars (pw : Power) (f : VarRename) : Power :=
-  { pw with x := (f pw.x) }
+public def Power.renameVars (pw : Power) (f : VarRename) : Power := { pw with x := (f pw.x) }
 
 public def Mon.renameVars (m : Mon) (f : VarRename) : Mon :=
   match m with
@@ -33,8 +33,7 @@ public def Expr.renameVars (e : Expr) (f : VarRename) : Expr :=
   | .mul a b => .mul (renameVars a f) (renameVars b f)
   | .pow a k => .pow (renameVars a f) k
 
-public def Power.collectVars (pw : Power) : VarCollector :=
-  collectVar pw.x
+public def Power.collectVars (pw : Power) : VarCollector := collectVar pw.x
 
 public def Mon.collectVars (m : Mon) : VarCollector :=
   match m with

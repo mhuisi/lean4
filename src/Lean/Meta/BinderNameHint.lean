@@ -7,51 +7,47 @@ Authors: Joachim Breitner
 module
 
 prelude
-
 public import Lean.Meta.Basic
 
 public section
 
 namespace Lean
 
-
 /-- Does `e` have a binder name hint? (quick check) -/
 def Expr.hasBinderNameHint (e : Expr) : Bool :=
   Option.isSome <| e.find? fun e => e.isConstOf `binderNameHint
 
-private def  enterScope (name : Name) (xs : Array Name) : Array Name :=
-    xs.push name
+private def enterScope (name : Name) (xs : Array Name) : Array Name := xs.push name
 
 private def exitScope (xs : Array Name) : Name × Array Name :=
-    assert! xs.size > 0
-    (xs.back!, xs.pop)
+  assert! xs.size > 0
+  (xs.back!, xs.pop)
 
 private def rememberName (bidx : Nat) (name : Name) (xs : Array Name) : Array Name :=
-    assert! xs.size > bidx
-    xs.set! (xs.size - bidx - 1) name
+  assert! xs.size > bidx
+  xs.set! (xs.size - bidx - 1) name
 
 private def makeFresh (bidx : Nat) (xs : Array Name) : CoreM (Array Name) := do
-    assert! xs.size > bidx
-    let name := xs[xs.size - bidx - 1]!
-    let name' ← Core.mkFreshUserName name
-    return xs.set! (xs.size - bidx - 1) name'
+  assert! xs.size > bidx
+  let name := xs[xs.size - bidx - 1]!
+  let name' ← Core.mkFreshUserName name
+  return xs.set! (xs.size - bidx - 1) name'
 
 /--
 Resolves occurrences of `binderNameHint` in `e`. See docstring of `binderNameHint` for more
 information.
 -/
-partial def Expr.resolveBinderNameHint (e : Expr) : CoreM Expr :=
-  (go e).run.run' #[]
+partial def Expr.resolveBinderNameHint (e : Expr) : CoreM Expr := (go e).run.run' #[]
 where
-/-
-Implementation note:
+  /-
+  Implementation note:
 
-We traverse the expression as an open term; we do not need a local context here.
+  We traverse the expression as an open term; we do not need a local context here.
 
-The state is the array of binder names. The length of the array is always the binder nesting depth,
-and the innermost binder is at the end. We update the binder names therein when encountering a
-`binderNameHint`, and update the binder when exiting the scope.
--/
+  The state is the array of binder names. The length of the array is always the binder nesting depth,
+  and the innermost binder is at the end. We update the binder names therein when encountering a
+  `binderNameHint`, and update the binder when exiting the scope.
+  -/
   go (e : Expr) : MonadCacheT ExprStructEq Expr (StateT (Array Name) CoreM) Expr := do
     checkCache { val := e : ExprStructEq } fun _ => do
       if e.isAppOfArity ``binderNameHint 6 then
@@ -73,8 +69,7 @@ and the innermost binder is at the end. We update the binder names therein when 
           let n := xs[xs.size - bidx - 1]!
           let n' ← mkFreshUserName n
           modify (rememberName bidx n')
-        | _, _ =>
-          pure ()
+        | _, _ => pure ()
         pure e'
       else
         match e with
@@ -90,16 +85,16 @@ and the innermost binder is at the end. We update the binder names therein when 
           let b' ← go b
           let n' ← modifyGet exitScope
           return .lam n' d' b' bi
-        | .letE n t v b nd  =>
+        | .letE n t v b nd =>
           let t' ← go t
           let v' ← go v
           modify (enterScope n)
           let b' ← go b
           let n' ← modifyGet exitScope
           return .letE n' t' v' b' nd
-        | .app f a         => return e.updateApp! (← go f) (← go a)
-        | .mdata _ b       => return e.updateMData! (← go b)
-        | .proj _ _ b      => return e.updateProj! (← go b)
-        | _                => return e
+        | .app f a => return e.updateApp! (← go f) (← go a)
+        | .mdata _ b => return e.updateMData! (← go b)
+        | .proj _ _ b => return e.updateProj! (← go b)
+        | _ => return e
 
 end Lean

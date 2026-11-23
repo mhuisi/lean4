@@ -24,41 +24,44 @@ register_builtin_option linter.missingDocs : Bool := {
 
 def getLinterMissingDocs (o : LinterOptions) : Bool := getLinterValue linter.missingDocs o
 
-
 namespace MissingDocs
 
 abbrev SimpleHandler := Syntax → CommandElabM Unit
 abbrev Handler := Bool → SimpleHandler
 
-def SimpleHandler.toHandler (h : SimpleHandler) : Handler :=
-  fun enabled stx => if enabled then h stx else pure ()
+def SimpleHandler.toHandler (h : SimpleHandler) : Handler := fun enabled stx =>
+  if enabled then h stx else pure ()
 
 unsafe def mkHandlerUnsafe (constName : Name) : ImportM Handler := do
-  let env  := (← read).env
+  let env := (← read).env
   let opts := (← read).opts
   match env.find? constName with
-  | none      => throw ↑s!"Unknown constant `{constName}`"
-  | some info => match info.type with
+  | none => throw ↑s!"Unknown constant `{constName}`"
+  | some info =>
+    match info.type with
     | Expr.const ``SimpleHandler _ => do
       let h ← IO.ofExcept $ env.evalConst SimpleHandler opts constName
       pure h.toHandler
     | Expr.const ``Handler _ =>
       IO.ofExcept $ env.evalConst Handler opts constName
-    | _ => throw ↑s!"unexpected missing docs handler at '{constName}', `MissingDocs.Handler` or `MissingDocs.SimpleHandler` expected"
+    | _ =>
+      throw ↑s!"unexpected missing docs handler at '{constName}', `MissingDocs.Handler` or \
+        `MissingDocs.SimpleHandler` expected"
 
 @[implemented_by mkHandlerUnsafe]
 opaque mkHandler (constName : Name) : ImportM Handler
 
 builtin_initialize builtinHandlersRef : IO.Ref (NameMap Handler) ← IO.mkRef {}
 
-builtin_initialize missingDocsExt :
-  PersistentEnvExtension (Name × Name) (Name × Name × Handler) (List (Name × Name) × NameMap Handler) ←
+builtin_initialize missingDocsExt
+    : PersistentEnvExtension (Name × Name) (Name × Name × Handler)
+      (List (Name × Name) × NameMap Handler) ←
   registerPersistentEnvExtension {
-    mkInitial       := return ([], ← builtinHandlersRef.get)
-    addImportedFn   := fun as => do
+    mkInitial := return ([], ← builtinHandlersRef.get)
+    addImportedFn := fun as => do
       ([], ·) <$> as.foldlM (init := ← builtinHandlersRef.get) fun s as =>
         as.foldlM (init := s) fun s (n, k) => s.insert k <$> mkHandler n
-    addEntryFn      := fun (entries, s) (n, k, h) => ((n, k)::entries, s.insert k h)
+    addEntryFn := fun (entries, s) (n, k, h) => ((n, k) :: entries, s.insert k h)
     exportEntriesFn := fun s => s.1.reverse.toArray
     statsFn := fun s => format "number of local entries: " ++ format s.1.length
   }
@@ -79,33 +82,40 @@ def addBuiltinHandler (key : Name) (h : Handler) : IO Unit :=
   builtinHandlersRef.modify (·.insert key h)
 
 builtin_initialize
-  let mkAttr (builtin : Bool) (name : Name) := registerBuiltinAttribute {
-    name
-    descr           := (if builtin then "(builtin) " else "") ++
-      "adds a syntax traversal for the missing docs linter"
-    applicationTime := .afterCompilation
-    add             := fun declName stx kind => do
-      unless kind == AttributeKind.global do throwAttrMustBeGlobal name kind
-      if !builtin then
-        ensureAttrDeclIsMeta name declName kind
-      let env ← getEnv
-      unless builtin || (env.getModuleIdxFor? declName).isNone do
-        throwAttrDeclInImportedModule name declName
-      let decl ← getConstInfo declName
-      let fnNameStx ← Attribute.Builtin.getIdent stx
-      let key ← Elab.realizeGlobalConstNoOverloadWithInfo fnNameStx
-      recordExtraModUseFromDecl (isMeta := false) key
-      unless decl.levelParams.isEmpty && (decl.type == .const ``Handler [] || decl.type == .const ``SimpleHandler []) do
-        throwError m!"Unexpected type for missing docs handler: Expected `{.ofConstName ``Handler}` or \
-          `{.ofConstName ``SimpleHandler}`, but `{declName}` has type{indentExpr decl.type}"
-      if builtin then
-        let h := if decl.type == .const ``SimpleHandler [] then
-          mkApp (mkConst ``SimpleHandler.toHandler) (mkConst declName)
-        else mkConst declName
-        declareBuiltin declName <| mkApp2 (mkConst ``addBuiltinHandler) (toExpr key) h
-      else
-        setEnv <| missingDocsExt.addEntry env (declName, key, ← mkHandler declName)
-  }
+  let mkAttr (builtin : Bool) (name : Name) :=
+    registerBuiltinAttribute {
+      name
+      descr :=
+        (if builtin then "(builtin) " else "")
+          ++ "adds a syntax traversal for the missing docs linter"
+      applicationTime := .afterCompilation
+      add := fun declName stx kind => do
+        unless kind == AttributeKind.global do
+          throwAttrMustBeGlobal name kind
+        if !builtin then
+          ensureAttrDeclIsMeta name declName kind
+        let env ← getEnv
+        unless builtin || (env.getModuleIdxFor? declName).isNone do
+          throwAttrDeclInImportedModule name declName
+        let decl ← getConstInfo declName
+        let fnNameStx ← Attribute.Builtin.getIdent stx
+        let key ← Elab.realizeGlobalConstNoOverloadWithInfo fnNameStx
+        recordExtraModUseFromDecl (isMeta := false) key
+        unless decl.levelParams.isEmpty
+            && (decl.type == .const ``Handler [] || decl.type == .const ``SimpleHandler []) do
+          throwError
+            m!"Unexpected type for missing docs handler: Expected `{.ofConstName ``Handler}` or \
+              `{.ofConstName ``SimpleHandler}`, but `{declName}` has type{indentExpr decl.type}"
+        if builtin then
+          let h :=
+            if decl.type == .const ``SimpleHandler [] then
+              mkApp (mkConst ``SimpleHandler.toHandler) (mkConst declName)
+            else
+              mkConst declName
+          declareBuiltin declName <| mkApp2 (mkConst ``addBuiltinHandler) (toExpr key) h
+        else
+          setEnv <| missingDocsExt.addEntry env (declName, key, ← mkHandler declName)
+    }
   mkAttr true `builtin_missing_docs_handler
   mkAttr false `missing_docs_handler
 
@@ -115,8 +125,7 @@ def lint (stx : Syntax) (msg : String) : CommandElabM Unit :=
 def lintEmpty (stx : Syntax) (msg : String) : CommandElabM Unit :=
   logLint linter.missingDocs stx m!"empty doc string for {msg}"
 
-def lintNamed (stx : Syntax) (msg : String) : CommandElabM Unit :=
-  lint stx s!"{msg} {stx.getId}"
+def lintNamed (stx : Syntax) (msg : String) : CommandElabM Unit := lint stx s!"{msg} {stx.getId}"
 
 def lintEmptyNamed (stx : Syntax) (msg : String) : CommandElabM Unit :=
   lintEmpty stx s!"{msg} {stx.getId}"
@@ -145,17 +154,17 @@ def isMissingDoc (docOpt : Syntax) : CommandElabM Bool := do
 
 def hasInheritDoc (attrs : Syntax) : Bool :=
   attrs[0][1].getSepArgs.any fun attr =>
-    attr[1].isOfKind ``Parser.Attr.simple &&
-    attr[1][0].getId.eraseMacroScopes == `inherit_doc
+    attr[1].isOfKind ``Parser.Attr.simple && attr[1][0].getId.eraseMacroScopes == `inherit_doc
 
 def hasTacticAlt (attrs : Syntax) : Bool :=
-  attrs[0][1].getSepArgs.any fun attr =>
-    attr[1].isOfKind ``Parser.Attr.tactic_alt
+  attrs[0][1].getSepArgs.any fun attr => attr[1].isOfKind ``Parser.Attr.tactic_alt
 
 def declModifiersDocStatus (mods : Syntax) : CommandElabM (Option Bool) := do
-  let isPublic := if (← getEnv).header.isModule && !(← getScope).isPublic then
-    mods[2][0].getKind == ``Command.public else
-    mods[2][0].getKind != ``Command.private
+  let isPublic :=
+    if (← getEnv).header.isModule && !(← getScope).isPublic then
+      mods[2][0].getKind == ``Command.public
+    else
+      mods[2][0].getKind != ``Command.private
   if !isPublic || hasInheritDoc mods[1] then return none
   if mods[0].isNone then return some false
   if (← isEmptyDocString mods[0]) then return some true
@@ -170,22 +179,29 @@ private def lintDocStatus (isEmpty : Bool) (stx : Syntax) (msg : String) : Comma
 private def lintDocStatusNamed (isEmpty : Bool) (stx : Syntax) (msg : String) : CommandElabM Unit :=
   if isEmpty then lintEmptyNamed stx msg else lintNamed stx msg
 
-private def lintDocStatusField (isEmpty : Bool) (parent stx : Syntax) (msg : String) :
-    CommandElabM Unit :=
+private def lintDocStatusField (isEmpty : Bool) (parent stx : Syntax) (msg : String)
+    : CommandElabM Unit :=
   if isEmpty then lintEmptyField parent stx msg else lintField parent stx msg
 
-def lintDeclHead (k : SyntaxNodeKind) (id : Syntax) (isEmpty : Bool := false) :
-    CommandElabM Unit := do
-  if k == ``«abbrev» then lintDocStatusNamed isEmpty id "public abbrev"
-  else if k == ``definition then lintDocStatusNamed isEmpty id "public def"
-  else if k == ``«opaque» then lintDocStatusNamed isEmpty id "public opaque"
-  else if k == ``«axiom» then lintDocStatusNamed isEmpty id "public axiom"
-  else if k == ``«inductive» then lintDocStatusNamed isEmpty id "public inductive"
-  else if k == ``classInductive then lintDocStatusNamed isEmpty id "public inductive"
-  else if k == ``«structure» then lintDocStatusNamed isEmpty id "public structure"
+def lintDeclHead (k : SyntaxNodeKind) (id : Syntax) (isEmpty : Bool := false)
+    : CommandElabM Unit := do
+  if k == ``«abbrev» then
+    lintDocStatusNamed isEmpty id "public abbrev"
+  else if k == ``definition then
+    lintDocStatusNamed isEmpty id "public def"
+  else if k == ``«opaque» then
+    lintDocStatusNamed isEmpty id "public opaque"
+  else if k == ``«axiom» then
+    lintDocStatusNamed isEmpty id "public axiom"
+  else if k == ``«inductive» then
+    lintDocStatusNamed isEmpty id "public inductive"
+  else if k == ``classInductive then
+    lintDocStatusNamed isEmpty id "public inductive"
+  else if k == ``«structure» then
+    lintDocStatusNamed isEmpty id "public structure"
 
-private def docOptStatus (docOpt attrs : Syntax) (checkTacticAlt := false) :
-    CommandElabM (Option Bool) := do
+private def docOptStatus (docOpt attrs : Syntax) (checkTacticAlt := false)
+    : CommandElabM (Option Bool) := do
   if hasInheritDoc attrs then return none
   if checkTacticAlt && hasTacticAlt attrs then return none
   if docOpt.isNone then return some false
@@ -194,7 +210,8 @@ private def docOptStatus (docOpt attrs : Syntax) (checkTacticAlt := false) :
 
 @[builtin_missing_docs_handler declaration]
 def checkDecl : SimpleHandler := fun stx => do
-  let head := stx[0]; let rest := stx[1]
+  let head := stx[0]
+  let rest := stx[1]
   if head[2][0].getKind == ``Command.private then return -- not private
   let k := rest.getKind
   if let some isEmpty ← declModifiersDocStatus head then
@@ -222,8 +239,10 @@ def checkDecl : SimpleHandler := fun stx => do
             if let .ofFieldRedeclInfo info := info then
               if let some range := info.stx.getRange? then
                 s.insert range.start
-              else s
-            else s
+              else
+                s
+            else
+              s
       let parent := rest[1][0]
       let lint1 isEmpty stx := do
         if let some range := stx.getRange? then
@@ -248,22 +267,28 @@ def checkInit : SimpleHandler := fun stx => do
 def checkNotation : SimpleHandler := fun stx => do
   if stx[2][0][0].getKind != ``«local» then
     if let some isEmpty ← docOptStatus stx[0] stx[1] then
-      if stx[5].isNone then lintDocStatus isEmpty stx[3] "notation"
-      else lintDocStatusNamed isEmpty stx[5][0][3] "notation"
+      if stx[5].isNone then
+        lintDocStatus isEmpty stx[3] "notation"
+      else
+        lintDocStatusNamed isEmpty stx[5][0][3] "notation"
 
 @[builtin_missing_docs_handler «mixfix»]
 def checkMixfix : SimpleHandler := fun stx => do
   if stx[2][0][0].getKind != ``«local» then
     if let some isEmpty ← docOptStatus stx[0] stx[1] then
-      if stx[5].isNone then lintDocStatus isEmpty stx[3] stx[3][0].getAtomVal
-      else lintDocStatusNamed isEmpty stx[5][0][3] stx[3][0].getAtomVal
+      if stx[5].isNone then
+        lintDocStatus isEmpty stx[3] stx[3][0].getAtomVal
+      else
+        lintDocStatusNamed isEmpty stx[5][0][3] stx[3][0].getAtomVal
 
 @[builtin_missing_docs_handler «syntax»]
 def checkSyntax : SimpleHandler := fun stx => do
   if stx[2][0][0].getKind != ``«local» then
     if let some isEmpty ← docOptStatus stx[0] stx[1] (checkTacticAlt := true) then
-      if stx[5].isNone then lintDocStatus isEmpty stx[3] "syntax"
-      else lintDocStatusNamed isEmpty stx[5][0][3] "syntax"
+      if stx[5].isNone then
+        lintDocStatus isEmpty stx[3] "syntax"
+      else
+        lintDocStatusNamed isEmpty stx[5][0][3] "syntax"
 
 def mkSimpleHandler (name : String) (declNameStxIdx := 2) : SimpleHandler := fun stx => do
   if (← isMissingDoc stx[0]) then
@@ -282,15 +307,19 @@ def checkSyntaxCat : SimpleHandler := mkSimpleHandler "syntax category"
 def checkMacro : SimpleHandler := fun stx => do
   if stx[2][0][0].getKind != ``«local» then
     if let some isEmpty ← docOptStatus stx[0] stx[1] (checkTacticAlt := true) then
-      if stx[5].isNone then lintDocStatus isEmpty stx[3] "macro"
-      else lintDocStatusNamed isEmpty stx[5][0][3] "macro"
+      if stx[5].isNone then
+        lintDocStatus isEmpty stx[3] "macro"
+      else
+        lintDocStatusNamed isEmpty stx[5][0][3] "macro"
 
 @[builtin_missing_docs_handler «elab»]
 def checkElab : SimpleHandler := fun stx => do
   if stx[2][0][0].getKind != ``«local» then
     if let some isEmpty ← docOptStatus stx[0] stx[1] (checkTacticAlt := true) then
-      if stx[5].isNone then lintDocStatus isEmpty stx[3] "elab"
-      else lintDocStatusNamed isEmpty stx[5][0][3] "elab"
+      if stx[5].isNone then
+        lintDocStatus isEmpty stx[3] "elab"
+      else
+        lintDocStatusNamed isEmpty stx[5][0][3] "elab"
 
 @[builtin_missing_docs_handler classAbbrev]
 def checkClassAbbrev : SimpleHandler := fun stx => do
@@ -317,13 +346,15 @@ def handleIn : Handler := fun _ stx => do
   -- `set_option ... in`. This is unlike `withSetOptionIn`, which stops at the first `in` not of
   -- the form `set_option ... in`; as such, we must inline the functionality.
   if stx[0].getKind == ``«set_option» then
-    let opts ← Elab.withEnableInfoTree false try
-        (·.1) <$> Elab.elabSetOption stx[0][1] stx[0][3]
-      catch _ => getOptions
+    let opts ←
+      Elab.withEnableInfoTree false
+        try
+          (·.1) <$> Elab.elabSetOption stx[0][1] stx[0][3]
+        catch _ =>
+          getOptions
     withScope ({ · with opts }) do missingDocs.run stx[2]
   else
     missingDocs.run stx[2]
 
 @[builtin_missing_docs_handler «mutual»]
-def handleMutual : Handler := fun _ stx => do
-  stx[1].getArgs.forM missingDocs.run
+def handleMutual : Handler := fun _ stx => do stx[1].getArgs.forM missingDocs.run

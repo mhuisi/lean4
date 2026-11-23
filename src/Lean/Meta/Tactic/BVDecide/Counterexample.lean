@@ -4,8 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Henrik Böving
 -/
 module
-prelude
 
+prelude
 import Lean.Meta.Tactic.BVDecide.Reflect.SatAtBVLogical
 import Std.Tactic.BVDecide.EPR.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
@@ -30,12 +30,14 @@ Given:
 Reconstruct bit by bit which value expression must have had which `BitVec` value and return all
 expression - pair values.
 -/
-public def reconstructCounterExample (aig : Std.Sat.AIG BVBit) (assignment : Array (Bool × Nat))
-    (atomsAssignment : Std.HashMap Nat (Nat × Expr × Bool)) :
-    Array (Expr × Bool × BVExpr.PackedBitVec) := Id.run do
+public def reconstructCounterExample
+    (aig : Std.Sat.AIG BVBit) (assignment : Array (Bool × Nat))
+    (atomsAssignment : Std.HashMap Nat (Nat × Expr × Bool))
+    : Array (Expr × Bool × BVExpr.PackedBitVec) := Id.run do
   let mut sparseMap : Std.HashMap Nat (Std.TreeMap Nat Bool) := {}
   for (decl, idx) in aig.decls.zipIdx do
-    let .atom bitVar := decl | continue
+    let .atom bitVar := decl
+      | continue
     /-
     The CNF variable of an AIG node is the index of the node and the node of an atom doubles as
     the variable of the atom. We assume that a variable can be found at its index as CaDiCal prints
@@ -74,22 +76,16 @@ public def reconstructCounterExample (aig : Std.Sat.AIG BVBit) (assignment : Arr
 
   return finalMap
 
-/--
-A counter example generated from the bitblaster.
--/
+/-- A counter example generated from the bitblaster. -/
 public structure CounterExample where
-  /--
-  The goal in which to interpret this counter example.
-  -/
+  /-- The goal in which to interpret this counter example. -/
   goal : MVarId
   /--
   The set of unused but potentially relevant hypotheses. Useful for diagnosing spurious counter
   examples.
   -/
   unusedHypotheses : Std.HashSet Normalize.Hyp
-  /--
-  The actual counter example as a list of equations denoted as `expr = value` pairs.
-  -/
+  /-- The actual counter example as a list of equations denoted as `expr = value` pairs. -/
   equations : Array (Expr × BVExpr.PackedBitVec)
   /--
   Some of the expressions in the equations may be function atoms that were used by the UF theory
@@ -97,9 +93,7 @@ public structure CounterExample where
   -/
   functionAtoms : Array Expr
 
-/--
-The result of a spurious counter example diagnosis.
--/
+/-- The result of a spurious counter example diagnosis. -/
 structure Diagnosis where
   uninterpretedSymbols : Std.HashSet Expr := {}
   functionSymbols : Array Expr := {}
@@ -117,12 +111,10 @@ def run (x : DiagnosisM Unit) (counterExample : CounterExample) : MetaM Diagnosi
     return issues
 
 @[inline]
-def unusedHyps : DiagnosisM (Std.HashSet Normalize.Hyp) := do
-  return (← read).unusedHypotheses
+def unusedHyps : DiagnosisM (Std.HashSet Normalize.Hyp) := do return (← read).unusedHypotheses
 
 @[inline]
-def equations : DiagnosisM (Array (Expr × BVExpr.PackedBitVec)) := do
-  return (← read).equations
+def equations : DiagnosisM (Array (Expr × BVExpr.PackedBitVec)) := do return (← read).equations
 
 @[inline]
 def addUninterpretedSymbol (e : Expr) : DiagnosisM Unit :=
@@ -130,15 +122,14 @@ def addUninterpretedSymbol (e : Expr) : DiagnosisM Unit :=
 
 @[inline]
 def addFunctionSymbol (e : Expr) : DiagnosisM Unit :=
-  modify fun s =>
-    { s with
-        functionSymbolSet := s.functionSymbolSet.insert e,
-        functionSymbols := s.functionSymbols.push e
-    }
+  modify fun s => {
+    s with
+    functionSymbolSet := s.functionSymbolSet.insert e
+    functionSymbols := s.functionSymbols.push e
+  }
 
 @[inline]
-def isFunctionSymbol (e : Expr) : DiagnosisM Bool :=
-  return (← get).functionSymbolSet.contains e
+def isFunctionSymbol (e : Expr) : DiagnosisM Bool := return (← get).functionSymbolSet.contains e
 
 @[inline]
 def addUnusedRelevantHypothesis (hyp : Normalize.Hyp) : DiagnosisM Unit :=
@@ -172,15 +163,16 @@ def diagnose : DiagnosisM Unit := do
       if ← isFunctionSymbol var then continue
       addUninterpretedSymbol var
 where
-  transformEquation (var : Expr) (value : BVExpr.PackedBitVec) :
-      DiagnosisM (Expr × Expr × Option FVarId) := do
+  transformEquation (var : Expr) (value : BVExpr.PackedBitVec)
+      : DiagnosisM (Expr × Expr × Option FVarId) := do
     if let some (var, value) ← transformEprEquation? var value then
       return (var, value, var.getAppFn.fvarId?)
     else
       let (var, value) ← transformBitVecEquation var value
       return (var, value, var.fvarId?)
 
-  transformBitVecEquation (var : Expr) (value : BVExpr.PackedBitVec) : DiagnosisM (Expr × Expr) := do
+  transformBitVecEquation (var : Expr) (value : BVExpr.PackedBitVec)
+      : DiagnosisM (Expr × Expr) := do
     if var.isFVar then
       return (var, toExpr value.bv)
     else
@@ -254,7 +246,8 @@ where
         match var with
         | .app (.const fn levels) arg =>
           if let some p := Normalize.enumToBitVecType? (← getEnv) fn then
-            let .inductInfo inductiveInfo ← getConstInfo p | unreachable!
+            let .inductInfo inductiveInfo ← getConstInfo p
+              | unreachable!
             let ctors := inductiveInfo.ctors
             let enumVal := mkConst ctors[value.bv.toNat]! levels
             return (arg, enumVal)
@@ -262,29 +255,34 @@ where
             return (var, toExpr value.bv)
         | _ => return (var, toExpr value.bv)
 
-  transformEprEquation? (var : Expr) (value : BVExpr.PackedBitVec) :
-      DiagnosisM (Option (Expr × Expr)) := do
+  transformEprEquation? (var : Expr) (value : BVExpr.PackedBitVec)
+      : DiagnosisM (Option (Expr × Expr)) := do
     match_expr var with
     | BitVec.ofBool predAtom =>
-      let some (predApp, predEncoding) := isEprPredApp? predAtom | return none
+      let some (predApp, predEncoding) := isEprPredApp? predAtom
+        | return none
       let value :=
         match predEncoding with
         | .prop => if value.bv == 1 then ``True else ``False
         | .bool => if value.bv == 1 then ``Bool.true else ``Bool.false
       return some (predApp, mkConst value)
     | _ =>
-      let some (sort, elem) := isEprElement? var | return none
-      let some sortFVarId := sort.fvarId? | throwError m!"EPR sort is not an FVarId"
+      let some (sort, elem) := isEprElement? var
+        | return none
+      let some sortFVarId := sort.fvarId?
+        | throwError m!"EPR sort is not an FVarId"
       let sortName ← sortFVarId.getUserName
       return some (elem, mkConst (sortName.appendAfter value.bv.toNat.toSubscriptString))
 
   isEprElement? (e : Expr) : Option (Expr × Expr) := do
-    let_expr Std.Tactic.BVDecide.EPR.BitVec.toBvAux α  _ _ _ elem := e | none
+    let_expr Std.Tactic.BVDecide.EPR.BitVec.toBvAux α _ _ _ elem := e
+      | none
     return (α, elem)
 
   isEprPredApp? (e : Expr) : Option (Expr × EPR.PredEncoding) :=
     e.withApp fun fn args => do
-      let .const fn _ := fn | none
+      let .const fn _ := fn
+        | none
       let getPropArity (fn : Name) : Option (Nat × EPR.PredEncoding) := do
         return (← EPR.BitVec.toBvPredPropArity[fn]?, .prop)
       let getBoolArity (fn : Name) : Option (Nat × EPR.PredEncoding) := do
@@ -292,9 +290,10 @@ where
 
       let (arity, encoding) ← (Option.or (getPropArity fn) (getBoolArity fn))
       guard <| args.size == 5 * arity + 1
-      let elems ← args[(4 * arity + 1)...*].toArray.mapM fun arg => do
-        let (_, elem) ← isEprElement? arg
-        return elem
+      let elems ←
+        args[(4 * arity + 1)...*].toArray.mapM fun arg => do
+          let (_, elem) ← isEprElement? arg
+          return elem
       return (mkAppN args[4 * arity]! elems, encoding)
 
 end DiagnosisM
@@ -307,8 +306,7 @@ def functionExplainer (d : Diagnosis) : Option MessageData := do
     m := m ++ m!"\n  - {e}"
   return m
 
-def theoryExplainers : List (Diagnosis → Option MessageData) :=
-  [functionExplainer]
+def theoryExplainers : List (Diagnosis → Option MessageData) := [functionExplainer]
 
 def uninterpretedExplainer (d : Diagnosis) : Option MessageData := do
   guard !d.uninterpretedSymbols.isEmpty
@@ -331,25 +329,31 @@ def spuriousExplainers : List (Diagnosis → Option MessageData) :=
 
 public def explainCounterExampleQuality (counterExample : CounterExample) : MetaM MessageData := do
   let diagnosis ← DiagnosisM.run DiagnosisM.diagnose counterExample
-  let theoryExplanations := theoryExplainers.foldl (init := #[]) fun acc explainer =>
-    if let some m := explainer diagnosis then acc.push m else acc
-  let spuriorsExplanations := spuriousExplainers.foldl (init := #[]) fun acc explainer =>
-    if let some m := explainer diagnosis then acc.push m else acc
+  let theoryExplanations :=
+    theoryExplainers.foldl (init := #[]) fun acc explainer =>
+      if let some m := explainer diagnosis then acc.push m else acc
+  let spuriorsExplanations :=
+    spuriousExplainers.foldl (init := #[]) fun acc explainer =>
+      if let some m := explainer diagnosis then acc.push m else acc
 
   let mut err := m!""
 
   if !theoryExplanations.isEmpty then
-    err := err ++ theoryExplanations.foldl (init := m!"") (fun acc exp => acc ++ m!"- " ++ exp ++ m!"\n")
+    err :=
+      err ++ theoryExplanations.foldl (init := m!"") (fun acc exp => acc ++ m!"- " ++ exp ++ m!"\n")
 
   if spuriorsExplanations.isEmpty then
     err := err ++ m!"The prover found a counterexample, consider the following assignment:\n"
   else
     err := err ++ m!"The prover found a potentially spurious counterexample:\n"
-    err := err ++ spuriorsExplanations.foldl (init := m!"") (fun acc exp => acc ++ m!"- " ++ exp ++ m!"\n")
+    err :=
+      err
+        ++ spuriorsExplanations.foldl (init := m!"") (fun acc exp => acc ++ m!"- " ++ exp ++ m!"\n")
     err := err ++ m!"Consider the following assignment:\n"
 
-
-  err := diagnosis.derivedEquations.foldl (init := err) fun error (var, value) => error ++ m!"{var} = {value}\n"
+  err :=
+    diagnosis.derivedEquations.foldl (init := err) fun error (var, value) =>
+      error ++ m!"{var} = {value}\n"
   return err
 
 end Lean.Meta.Tactic.BVDecide

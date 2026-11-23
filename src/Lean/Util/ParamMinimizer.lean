@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Init.While
 public import Init.Data.Range.Polymorphic
@@ -20,18 +21,16 @@ public inductive Status where
     approx
   | /-- Found a precise solution. -/
     precise
-  deriving Inhabited, Repr
+deriving Inhabited, Repr
 
-/--
-Result type for the parameter minimizer.
--/
+/-- Result type for the parameter minimizer. -/
 public structure Result where
   /-- Search outcome (`missing`, `approx`, or `precise`) -/
-  status    : Status
+  status : Status
   /-- The final parameter bitmask. -/
   paramMask : Array Bool
   /-- Number of `test` invocations performed. -/
-  numCalls  : Nat
+  numCalls : Nat
 
 structure Context (m : Type → Type) where
   /-- Initial parameter selection -/
@@ -40,18 +39,18 @@ structure Context (m : Type → Type) where
   An expensive monotonic predicate for testing whether a given parameter
   configuration works or not.
   -/
-  test        : Array Bool → m Bool
+  test : Array Bool → m Bool
   /--
   Budget. That is, the maximum number of calls to `test` that we are willing to perform.
   `0` means unbounded.
   -/
-  maxCalls    : Nat
+  maxCalls : Nat
 
 structure State where
-  cur      : Array Bool
-  added    : Array Nat := #[]
+  cur : Array Bool
+  added : Array Nat := #[]
   numCalls : Nat := 0
-  found    : Bool := false
+  found : Bool := false
 
 /-!
 We use `throw ()` to interrupt the search.
@@ -63,39 +62,28 @@ abbrev M (m : Type → Type) := ReaderT (Context m) (ExceptT Unit (StateT State 
 Marks that a solution has been found. That is, we found a bitmask where
 `test` returned `true`
 -/
-def markFound [Monad m] : M m Unit :=
-  modify fun s => { s with found := true }
+def markFound [Monad m] : M m Unit := modify fun s => { s with found := true }
 
-def incNumCalls [Monad m] : M m Unit :=
-  modify fun s => { s with numCalls := s.numCalls + 1 }
+def incNumCalls [Monad m] : M m Unit := modify fun s => { s with numCalls := s.numCalls + 1 }
 
 /--
 Adds parameter `i` to current set.
 Sets bit `i` to `true` and records that it was added.
 -/
 def add (i : Nat) [Monad m] : M m Unit :=
-  modify fun s => { s with
-    added := s.added.push i
-    cur := s.cur.set! i true
-  }
+  modify fun s => { s with added := s.added.push i, cur := s.cur.set! i true }
 
 /--
 Removes parameter `i` from current set.
 Sets bit `i` to `false`.
 -/
-def erase (i : Nat) [Monad m] : M m Unit :=
-  modify fun s => { s with
-    cur := s.cur.set! i false
-  }
+def erase (i : Nat) [Monad m] : M m Unit := modify fun s => { s with cur := s.cur.set! i false }
 
 /--
 Restores parameter `i` after an unsuccessful removal
 Sets bit `i` back to `true`.
 -/
-def restore (i : Nat) [Monad m] : M m Unit :=
-  modify fun s => { s with
-    cur := s.cur.set! i true
-  }
+def restore (i : Nat) [Monad m] : M m Unit := modify fun s => { s with cur := s.cur.set! i true }
 
 def tryCur [Monad m] : M m Bool := do
   let maxCalls := (← read).maxCalls
@@ -185,20 +173,19 @@ the result is `.approx`.  If no configuration satisfies `test`, the result is
 `maxCalls = 0` disables the call budget limit.
 -/
 public def search
-    [Monad m]
-    (initialMask : Array Bool)
-    (test : Array Bool → m Bool)
-    (maxCalls : Nat := 0) -- 0 means unbounded
+    [Monad m] (initialMask : Array Bool) (test : Array Bool → m Bool) (maxCalls : Nat := 0) -- 0 means unbounded
     : m Result := do
   if (← test initialMask) then
     return { paramMask := initialMask, numCalls := 1, status := .precise }
-  let (r, s) ← main { initialMask, test, maxCalls} |>.run |>.run { cur := initialMask, numCalls := 1 }
-  let status := if s.found then
-    match r with
-    | .ok _ => .precise
-    | .error _ => .approx
-  else
-    .missing
+  let (r, s) ←
+    main { initialMask, test, maxCalls } |>.run |>.run { cur := initialMask, numCalls := 1 }
+  let status :=
+    if s.found then
+      match r with
+      | .ok _ => .precise
+      | .error _ => .approx
+    else
+      .missing
   return { paramMask := s.cur, numCalls := s.numCalls, status }
 
 end Lean.Util.ParamMinimizer

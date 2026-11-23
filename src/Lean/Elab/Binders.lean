@@ -17,21 +17,24 @@ open Lean.Parser.Term
 open TSyntax.Compat
 
 /--
-  Given syntax of the forms
-    a) (`:` term)?
-    b) `:` term
-  return `term` if it is present, or a hole if not. -/
+Given syntax of the forms
+  a) (`:` term)?
+  b) `:` term
+return `term` if it is present, or a hole if not.
+-/
 private def expandBinderType (ref : Syntax) (stx : Syntax) : Syntax :=
   if stx.getNumArgs == 0 then
     mkHole ref
   else
     stx[1]
 
-/-- Given syntax of the form `ident <|> hole`, return `ident`. If `hole`, then we create a new anonymous name. -/
+/--
+Given syntax of the form `ident <|> hole`, return `ident`. If `hole`, then we create a new anonymous name.
+-/
 private def expandBinderIdent (stx : Syntax) : TermElabM Syntax :=
   match stx with
   | `(_) => mkFreshIdent stx (canonical := true)
-  | _    => pure stx
+  | _ => pure stx
 
 /-- Given syntax of the form `(ident >> " : ")?`, return `ident`, or a new instance name. -/
 private def expandOptIdent (stx : Syntax) : TermElabM Syntax := do
@@ -56,17 +59,15 @@ structure BinderView where
   (like we have `elabTerm`), and perform all macro expansion steps at `elabBinder` and
   record them in the info tree.
   -/
-  ref  : Syntax
-  id   : Syntax
+  ref : Syntax
+  id : Syntax
   type : Syntax
-  bi   : BinderInfo
+  bi : BinderInfo
 
 partial def quoteAutoTactic : Syntax → CoreM Expr
   | .ident _ _ val preresolved =>
-    return mkApp4 (.const ``Syntax.ident [])
-      (.const ``SourceInfo.none [])
-      (.app (.const ``String.toRawSubstring []) (mkStrLit (toString val)))
-      (toExpr val)
+    return mkApp4 (.const ``Syntax.ident []) (.const ``SourceInfo.none [])
+      (.app (.const ``String.toRawSubstring []) (mkStrLit (toString val))) (toExpr val)
       (toExpr preresolved)
   | stx@(.node _ k args) => do
     if stx.isAntiquot then
@@ -82,7 +83,7 @@ partial def quoteAutoTactic : Syntax → CoreM Expr
           quotedArgs := mkApp3 (.const ``Array.push [.zero]) ty quotedArgs quotedArg
       return mkApp3 (.const ``Syntax.node []) (.const ``SourceInfo.none []) (toExpr k) quotedArgs
   | .atom _ val => return .app (.const ``mkAtom []) (toExpr val)
-  | .missing    => throwError "invalid auto tactic, tactic is missing"
+  | .missing => throwError "invalid auto tactic, tactic is missing"
 
 /--
 Adds a declaration whose value is a Syntax expression representing `tactic`.
@@ -95,8 +96,15 @@ def declareTacticSyntax (tactic : Syntax) (name? : Option Name := none) : TermEl
     let type := Lean.mkConst `Lean.Syntax
     let value ← quoteAutoTactic tactic
     trace[Elab.autoParam] value
-    let decl := Declaration.defnDecl { name, levelParams := [], type, value, hints := .opaque,
-                                       safety := DefinitionSafety.safe }
+    let decl :=
+      Declaration.defnDecl {
+        name
+        levelParams := []
+        type
+        value
+        hints := .opaque
+        safety := DefinitionSafety.safe
+      }
     addDecl decl
     modifyEnv (markMeta · name)
     compileDecl decl
@@ -109,12 +117,13 @@ def binderTactic  := leading_parser " := " >> " by " >> tacticParser
 def binderDefault := leading_parser " := " >> termParser
 ```
 -/
-private def expandBinderModifier (type : Syntax) (optBinderModifier : Syntax) : TermElabM Syntax := do
+private def expandBinderModifier (type : Syntax) (optBinderModifier : Syntax)
+    : TermElabM Syntax := do
   if optBinderModifier.isNone then
     return type
   else
     let modifier := optBinderModifier[0]
-    let kind     := modifier.getKind
+    let kind := modifier.getKind
     if kind == `Lean.Parser.Term.binderDefault then
       let defaultVal := modifier[1]
       `(optParam $type $defaultVal)
@@ -145,24 +154,42 @@ private def toBinderViews (stx : Syntax) : TermElabM (Array BinderView) := do
   else if k == ``Lean.Parser.Term.explicitBinder then
     -- `(` binderIdent+ binderType (binderDefault <|> binderTactic)? `)`
     let ids ← getBinderIds stx[1]
-    let type        := stx[2]
+    let type := stx[2]
     let optModifier := stx[3]
-    ids.mapM fun id => do pure { ref := id, id := (← expandBinderIdent id), type := (← expandBinderModifier (expandBinderType id type) optModifier), bi := .default }
+    ids.mapM fun id => do
+      pure {
+        ref := id
+        id := (← expandBinderIdent id)
+        type := (← expandBinderModifier (expandBinderType id type) optModifier)
+        bi := .default
+      }
   else if k == ``Lean.Parser.Term.implicitBinder then
     -- `{` binderIdent+ binderType `}`
     let ids ← getBinderIds stx[1]
     let type := stx[2]
-    ids.mapM fun id => do pure { ref := id, id := (← expandBinderIdent id), type := expandBinderType id type, bi := .implicit }
+    ids.mapM fun id => do
+      pure {
+        ref := id
+        id := (← expandBinderIdent id)
+        type := expandBinderType id type
+        bi := .implicit
+      }
   else if k == ``Lean.Parser.Term.strictImplicitBinder then
     -- `⦃` binderIdent+ binderType `⦄`
     let ids ← getBinderIds stx[1]
     let type := stx[2]
-    ids.mapM fun id => do pure { ref := id, id := (← expandBinderIdent id), type := expandBinderType id type, bi := .strictImplicit }
+    ids.mapM fun id => do
+      pure {
+        ref := id
+        id := (← expandBinderIdent id)
+        type := expandBinderType id type
+        bi := .strictImplicit
+      }
   else if k == ``Lean.Parser.Term.instBinder then
     -- `[` optIdent type `]`
     let id ← expandOptIdent stx[1]
     let type := stx[2]
-    return #[ { ref := id, id := id, type := type, bi := .instImplicit } ]
+    return #[{ ref := id, id := id, type := type, bi := .instImplicit }]
   else
     throwUnsupportedSyntax
 
@@ -174,12 +201,15 @@ metavariables, in `logUnassignedUsingErrorInfos`.
 -/
 def failedToInferBinderTypeErrorName := `lean.inferBinderTypeFailed
 
-private def registerFailedToInferBinderTypeInfo (type : Expr) (view : BinderView) : TermElabM Unit := do
-  let msg := if view.id.getId.hasMacroScopes then
-    m!"binder type"
-  else
-    m!"type of binder `{view.id.getId}`"
-  registerCustomErrorIfMVar type view.ref (m!"Failed to infer {msg}".tagWithErrorName failedToInferBinderTypeErrorName)
+private def registerFailedToInferBinderTypeInfo (type : Expr) (view : BinderView)
+    : TermElabM Unit := do
+  let msg :=
+    if view.id.getId.hasMacroScopes then
+      m!"binder type"
+    else
+      m!"type of binder `{view.id.getId}`"
+  registerCustomErrorIfMVar type view.ref
+    (m!"Failed to infer {msg}".tagWithErrorName failedToInferBinderTypeErrorName)
   registerLevelMVarErrorExprInfo type view.ref m!"Failed to infer universe levels in {msg}"
 
 def addLocalVarInfo (stx : Syntax) (fvar : Expr) : TermElabM Unit :=
@@ -192,20 +222,25 @@ private def ensureAtomicBinderName (binderView : BinderView) : TermElabM Unit :=
 
 register_builtin_option checkBinderAnnotations : Bool := {
   defValue := true
-  descr    := "check whether type is a class instance whenever the binder annotation `[...]` is used"
+  descr := "check whether type is a class instance whenever the binder annotation `[...]` is used"
 }
 
 /-- Throw an error if `type` is not a valid local instance. -/
 private partial def checkLocalInstanceParameters (type : Expr) : TermElabM Unit := do
-  let .forallE n d b bi ← whnf type | return ()
+  let .forallE n d b bi ← whnf type
+    | return ()
   -- We allow instance arguments so that local instances of the form
   -- `variable [∀ (a : α) [P a], Q a]`
   -- are accepted, per https://github.com/leanprover/lean4/issues/2311
-  if bi != .instImplicit && !b.hasLooseBVar 0 then
-    throwError "invalid parametric local instance, parameter with type{indentExpr d}\ndoes not have forward dependencies, type class resolution cannot use this kind of local instance because it will not be able to infer a value for this parameter."
+  if bi != .instImplicit && ! b.hasLooseBVar 0 then
+    throwError "invalid parametric local instance, parameter with type{indentExpr d}\
+      \ndoes not have forward dependencies, type class resolution cannot use this kind of local \
+      instance because it will not be able to infer a value for this parameter."
   withLocalDecl n bi d fun x => checkLocalInstanceParameters (b.instantiate1 x)
 
-private partial def elabBinderViews (binderViews : Array BinderView) (fvars : Array (Syntax × Expr)) (k : Array (Syntax × Expr) → TermElabM α)
+private partial def elabBinderViews
+    (binderViews : Array BinderView) (fvars : Array (Syntax × Expr))
+    (k : Array (Syntax × Expr) → TermElabM α)
     : TermElabM α :=
   let rec loop (i : Nat) (fvars : Array (Syntax × Expr)) : TermElabM α := do
     if h : i < binderViews.size then
@@ -215,31 +250,37 @@ private partial def elabBinderViews (binderViews : Array BinderView) (fvars : Ar
       registerFailedToInferBinderTypeInfo type binderView
       if binderView.bi.isInstImplicit && checkBinderAnnotations.get (← getOptions) then
         unless (← isClass? type).isSome do
-          throwErrorAt binderView.type (m!"invalid binder annotation, type is not a class instance{indentExpr type}" ++ .note "Use the command `set_option checkBinderAnnotations false` to disable the check")
+          throwErrorAt binderView.type
+            (m!"invalid binder annotation, type is not a class instance{indentExpr type}" ++ .note
+              "Use the command `set_option checkBinderAnnotations false` to disable the check")
         withRef binderView.type <| checkLocalInstanceParameters type
       let id := binderView.id.getId
       withLocalDecl id binderView.bi type (kind := .ofBinderName id) fun fvar => do
         addLocalVarInfo binderView.ref fvar
-        loop (i+1) (fvars.push (binderView.id, fvar))
+        loop (i + 1) (fvars.push (binderView.id, fvar))
     else
       k fvars
   loop 0 fvars
 
-private partial def elabBindersAux (binders : Array Syntax) (k : Array (Syntax × Expr) → TermElabM α) : TermElabM α :=
+private partial def elabBindersAux
+    (binders : Array Syntax) (k : Array (Syntax × Expr) → TermElabM α)
+    : TermElabM α :=
   let rec loop (i : Nat) (fvars : Array (Syntax × Expr)) : TermElabM α := do
     if h : i < binders.size then
       let binderViews ← toBinderViews binders[i]
-      elabBinderViews binderViews fvars <| loop (i+1)
+      elabBinderViews binderViews fvars <| loop (i + 1)
     else
       k fvars
   loop 0 #[]
 
 /--
-  Like `elabBinders`, but also pass syntax node per binder.
-  `elabBinders(Ex)` automatically adds binder info nodes for the produced fvars, but storing the syntax nodes
-  might be necessary when later adding the same binders back to the local context so that info nodes can
-  manually be added for the new fvars; see `MutualDef` for an example. -/
-def elabBindersEx (binders : Array Syntax) (k : Array (Syntax × Expr) → TermElabM α) : TermElabM α :=
+Like `elabBinders`, but also pass syntax node per binder.
+`elabBinders(Ex)` automatically adds binder info nodes for the produced fvars, but storing the syntax nodes
+might be necessary when later adding the same binders back to the local context so that info nodes can
+manually be added for the new fvars; see `MutualDef` for an example.
+-/
+def elabBindersEx (binders : Array Syntax) (k : Array (Syntax × Expr) → TermElabM α)
+    : TermElabM α :=
   universeConstraintsCheckpoint do
     if binders.isEmpty then
       k #[]
@@ -247,35 +288,39 @@ def elabBindersEx (binders : Array Syntax) (k : Array (Syntax × Expr) → TermE
       elabBindersAux binders k
 
 /--
-  Elaborate the given binders (i.e., `Syntax` objects for `bracketedBinder`),
-  update the local context, set of local instances, reset instance cache (if needed), and then
-  execute `k` with the updated context.
-  The local context will only be included inside `k`.
+Elaborate the given binders (i.e., `Syntax` objects for `bracketedBinder`),
+update the local context, set of local instances, reset instance cache (if needed), and then
+execute `k` with the updated context.
+The local context will only be included inside `k`.
 
-  For example, suppose you have binders `[(a : α), (b : β a)]`, then the elaborator will
-  create two new free variables `a` and `b`, push these to the context and pass to `k #[a,b]`.
-  -/
+For example, suppose you have binders `[(a : α), (b : β a)]`, then the elaborator will
+create two new free variables `a` and `b`, push these to the context and pass to `k #[a,b]`.
+-/
 def elabBinders (binders : Array Syntax) (k : Array Expr → TermElabM α) : TermElabM α :=
   elabBindersEx binders (fun fvars => k (fvars.map (·.2)))
 
-/-- Same as `elabBinder` with a single binder.-/
+/-- Same as `elabBinder` with a single binder. -/
 def elabBinder (binder : Syntax) (x : Expr → TermElabM α) : TermElabM α :=
   elabBinders #[binder] fun fvars => x fvars[0]!
 
-/-- If `binder` is a `_` or an identifier, return a `bracketedBinder` using `type` otherwise throw an exception. -/
+/--
+If `binder` is a `_` or an identifier, return a `bracketedBinder` using `type` otherwise throw an exception.
+-/
 def expandSimpleBinderWithType (type : Term) (binder : Syntax) : MacroM Syntax :=
   if binder.isOfKind ``hole || binder.isIdent then
     `(bracketedBinderF| ($binder : $type))
   else
     Macro.throwErrorAt type "unexpected type ascription"
 
-@[builtin_macro Lean.Parser.Term.forall] def expandForall : Macro
+@[builtin_macro Lean.Parser.Term.forall]
+def expandForall : Macro
   | `(forall $binders* : $ty, $term) => do
     let binders ← binders.mapM (expandSimpleBinderWithType ty)
     `(forall $binders*, $term)
   | _ => Macro.throwUnsupported
 
-@[builtin_term_elab «forall»] def elabForall : TermElab := fun stx _ =>
+@[builtin_term_elab «forall»]
+def elabForall : TermElab := fun stx _ =>
   match stx with
   | `(forall $binders*, $term) =>
     elabBinders binders fun xs => do
@@ -284,13 +329,15 @@ def expandSimpleBinderWithType (type : Term) (binder : Syntax) : MacroM Syntax :
   | _ => throwUnsupportedSyntax
 
 open Lean.Elab.Term.Quotation in
-@[builtin_quot_precheck Lean.Parser.Term.arrow] def precheckArrow : Precheck
+@[builtin_quot_precheck Lean.Parser.Term.arrow]
+def precheckArrow : Precheck
   | `($dom:term -> $rng) => do
     precheck dom
     precheck rng
   | _ => throwUnsupportedSyntax
 
-@[builtin_term_elab arrow] def elabArrow : TermElab := fun stx _ =>
+@[builtin_term_elab arrow]
+def elabArrow : TermElab := fun stx _ =>
   match stx with
   | `($dom:term -> $rng) => do
     -- elaborate independently from each other
@@ -301,22 +348,24 @@ open Lean.Elab.Term.Quotation in
     -- binding is shown at all.
     let n := addMacroScope `_internal `a reservedMacroScope
     return mkForall n BinderInfo.default dom rng
-  | _                    => throwUnsupportedSyntax
+  | _ => throwUnsupportedSyntax
 
 /--
 The dependent arrow. `(x : α) → β` is equivalent to `∀ x : α, β`, but we usually
 reserve the latter for propositions. Also written as `Π x : α, β` (the "Pi-type")
-in the literature. -/
-@[builtin_term_elab depArrow] def elabDepArrow : TermElab := fun stx _ =>
+in the literature.
+-/
+@[builtin_term_elab depArrow]
+def elabDepArrow : TermElab := fun stx _ =>
   -- bracketedBinder `->` term
   let binder := stx[0]
-  let term   := stx[2]
-  elabBinders #[binder] fun xs => do
-    mkForallFVars xs (← elabType term)
+  let term := stx[2]
+  elabBinders #[binder] fun xs => do mkForallFVars xs (← elabType term)
 
 /--
-  Auxiliary functions for converting `id_1 ... id_n` application into `#[id_1, ..., id_m]`
-  It is used at `expandFunBinders`. -/
+Auxiliary functions for converting `id_1 ... id_n` application into `#[id_1, ..., id_m]`
+It is used at `expandFunBinders`.
+-/
 private partial def getFunBinderIds? (stx : Syntax) : OptionT MacroM (Array Syntax) :=
   let convertElem (stx : Term) : OptionT MacroM Syntax :=
     match stx with
@@ -333,38 +382,40 @@ private partial def getFunBinderIds? (stx : Syntax) : OptionT MacroM (Array Synt
     | _ => failure
   match stx with
   | `($f $args*) => do
-     let mut acc := #[].push (← convertElem f)
-     for arg in args do
-       acc := acc.push (← convertElem arg)
-     return acc
-  | _ =>
-    return #[].push (← convertElem stx)
+    let mut acc := #[].push (← convertElem f)
+    for arg in args do
+      acc := acc.push (← convertElem arg)
+    return acc
+  | _ => return #[].push (← convertElem stx)
 
 /--
-  Auxiliary function for expanding `fun` notation binders. Recall that `fun` parser is defined as
-  ```
-  def funBinder : Parser := implicitBinder <|> instBinder <|> termParser maxPrec
-  leading_parser unicodeSymbol "λ" "fun" >> many1 funBinder >> "=>" >> termParser
-  ```
-  to allow notation such as `fun (a, b) => a + b`, where `(a, b)` should be treated as a pattern.
-  The result is a pair `(explicitBinders, newBody)`, where `explicitBinders` is syntax of the form
-  ```
-  `(` ident `:` term `)`
-  ```
-  which can be elaborated using `elabBinders`, and `newBody` is the updated `body` syntax.
-  We update the `body` syntax when expanding the pattern notation.
-  Example: `fun (a, b) => a + b` expands into `fun _a_1 => match _a_1 with | (a, b) => a + b`.
-  See local function `processAsPattern` at `expandFunBindersAux`.
+Auxiliary function for expanding `fun` notation binders. Recall that `fun` parser is defined as
+```
+def funBinder : Parser := implicitBinder <|> instBinder <|> termParser maxPrec
+leading_parser unicodeSymbol "λ" "fun" >> many1 funBinder >> "=>" >> termParser
+```
+to allow notation such as `fun (a, b) => a + b`, where `(a, b)` should be treated as a pattern.
+The result is a pair `(explicitBinders, newBody)`, where `explicitBinders` is syntax of the form
+```
+`(` ident `:` term `)`
+```
+which can be elaborated using `elabBinders`, and `newBody` is the updated `body` syntax.
+We update the `body` syntax when expanding the pattern notation.
+Example: `fun (a, b) => a + b` expands into `fun _a_1 => match _a_1 with | (a, b) => a + b`.
+See local function `processAsPattern` at `expandFunBindersAux`.
 
-  The resulting `Bool` is true if a pattern was found. We use it "mark" a macro expansion. -/
-partial def expandFunBinders (binders : Array Syntax) (body : Syntax) : MacroM (Array Syntax × Syntax × Bool) :=
+The resulting `Bool` is true if a pattern was found. We use it "mark" a macro expansion.
+-/
+partial def expandFunBinders (binders : Array Syntax) (body : Syntax)
+    : MacroM (Array Syntax × Syntax × Bool) :=
   let rec loop (body : Syntax) (i : Nat) (newBinders : Array Syntax) := do
     if h : i < binders.size then
       let binder := binders[i]
       let processAsPattern : Unit → MacroM (Array Syntax × Syntax × Bool) := fun _ => do
         let pattern := binder
         let major ← mkFreshIdent binder
-        let (binders, newBody, _) ← loop body (i+1) (newBinders.push $ mkExplicitBinder major (mkHole binder))
+        let (binders, newBody, _) ←
+          loop body (i + 1) (newBinders.push $ mkExplicitBinder major (mkHole binder))
         let newBody ← `(match $major:ident with | $pattern => $newBody)
         pure (binders, newBody, true)
       match binder.getKind with
@@ -372,7 +423,9 @@ partial def expandFunBinders (binders : Array Syntax) (body : Syntax) : MacroM (
       | ``Lean.Parser.Term.strictImplicitBinder
       | ``Lean.Parser.Term.instBinder
       | ``Lean.Parser.Term.explicitBinder
-      | ``Lean.Parser.Term.hole | `ident => loop body (i+1) (newBinders.push binder)
+      | ``Lean.Parser.Term.hole
+      | `ident =>
+        loop body (i + 1) (newBinders.push binder)
       | ``Lean.Parser.Term.paren =>
         let term := binder[1]
         match (← getFunBinderIds? term) with
@@ -383,8 +436,9 @@ partial def expandFunBinders (binders : Array Syntax) (body : Syntax) : MacroM (
           -- first ident to be sure that the syntax cannot possibly be a valid pattern. However, for
           -- consistency we apply the same check to all idents so that the possibility of shadowing
           -- a global decl is identical for all of them.
-          if (← idents.allM fun ident => return List.isEmpty (← Macro.resolveGlobalName ident.getId)) then
-            loop body (i+1) (newBinders ++ idents.map (mkExplicitBinder · (mkHole binder)))
+          if (← idents.allM fun ident =>
+              return List.isEmpty (← Macro.resolveGlobalName ident.getId)) then
+            loop body (i + 1) (newBinders ++ idents.map (mkExplicitBinder · (mkHole binder)))
           else
             processAsPattern ()
         | none => processAsPattern ()
@@ -392,8 +446,9 @@ partial def expandFunBinders (binders : Array Syntax) (body : Syntax) : MacroM (
         let term := binder[1]
         let type := binder[3].getOptional?.getD (mkHole binder)
         match (← getFunBinderIds? term) with
-        | some idents => loop body (i+1) (newBinders ++ idents.map (fun ident => mkExplicitBinder ident type))
-        | none        => processAsPattern ()
+        | some idents =>
+          loop body (i + 1) (newBinders ++ idents.map (fun ident => mkExplicitBinder ident type))
+        | none => processAsPattern ()
       | _ => processAsPattern ()
     else
       pure (newBinders, body, false)
@@ -402,14 +457,15 @@ partial def expandFunBinders (binders : Array Syntax) (body : Syntax) : MacroM (
 namespace FunBinders
 
 structure State where
-  fvars         : Array Expr := #[]
-  lctx          : LocalContext
-  localInsts    : LocalInstances
+  fvars : Array Expr := #[]
+  lctx : LocalContext
+  localInsts : LocalInstances
   expectedType? : Option Expr := none
 
-private def propagateExpectedType (fvar : Expr) (fvarType : Expr) (s : State) : TermElabM State := do
+private def propagateExpectedType (fvar : Expr) (fvarType : Expr) (s : State)
+    : TermElabM State := do
   match s.expectedType? with
-  | none              => pure s
+  | none => pure s
   | some expectedType =>
     let expectedType ← whnfForall expectedType
     match expectedType with
@@ -417,10 +473,10 @@ private def propagateExpectedType (fvar : Expr) (fvarType : Expr) (s : State) : 
       discard <| isDefEq fvarType d.cleanupAnnotations
       let b := b.instantiate1 fvar
       return { s with expectedType? := some b }
-    | _ =>
-      return { s with expectedType? := none }
+    | _ => return { s with expectedType? := none }
 
-private partial def elabFunBinderViews (binderViews : Array BinderView) (i : Nat) (s : State) : TermElabM State := do
+private partial def elabFunBinderViews (binderViews : Array BinderView) (i : Nat) (s : State)
+    : TermElabM State := do
   if h : i < binderViews.size then
     let binderView := binderViews[i]
     ensureAtomicBinderName binderView
@@ -428,24 +484,24 @@ private partial def elabFunBinderViews (binderViews : Array BinderView) (i : Nat
       let type ← elabType binderView.type
       registerFailedToInferBinderTypeInfo type binderView
       let fvarId ← mkFreshFVarId
-      let fvar  := mkFVar fvarId
-      let s     := { s with fvars := s.fvars.push fvar }
-      let id    := binderView.id.getId
-      let kind  := .ofBinderName id
+      let fvar := mkFVar fvarId
+      let s := { s with fvars := s.fvars.push fvar }
+      let id := binderView.id.getId
+      let kind := .ofBinderName id
       /-
-        We do **not** want to support default and auto arguments in lambda abstractions.
-        Example: `fun (x : Nat := 10) => x+1`.
-        We do not believe this is an useful feature, and it would complicate the logic here.
+      We do **not** want to support default and auto arguments in lambda abstractions.
+      Example: `fun (x : Nat := 10) => x+1`.
+      We do not believe this is an useful feature, and it would complicate the logic here.
       -/
-      let lctx  := s.lctx.mkLocalDecl fvarId id type binderView.bi kind
+      let lctx := s.lctx.mkLocalDecl fvarId id type binderView.bi kind
       addTermInfo' (lctx? := some lctx) (isBinder := true) binderView.ref fvar
       let s ← withRef binderView.id <| propagateExpectedType fvar type s
       let s := { s with lctx }
       match ← isClass? type, kind with
       | some className, .default =>
         let localInsts := s.localInsts.push { className, fvar := mkFVar fvarId }
-        elabFunBinderViews binderViews (i+1) { s with localInsts }
-      | _, _ => elabFunBinderViews binderViews (i+1) s
+        elabFunBinderViews binderViews (i + 1) { s with localInsts }
+      | _, _ => elabFunBinderViews binderViews (i + 1) s
   else
     pure s
 
@@ -453,26 +509,29 @@ partial def elabFunBindersAux (binders : Array Syntax) (i : Nat) (s : State) : T
   if h : i < binders.size then
     let binderViews ← toBinderViews binders[i]
     let s ← elabFunBinderViews binderViews 0 s
-    elabFunBindersAux binders (i+1) s
+    elabFunBindersAux binders (i + 1) s
   else
     pure s
 
 end FunBinders
 
-def elabFunBinders (binders : Array Syntax) (expectedType? : Option Expr) (x : Array Expr → Option Expr → TermElabM α) : TermElabM α :=
+def elabFunBinders
+    (binders : Array Syntax) (expectedType? : Option Expr)
+    (x : Array Expr → Option Expr → TermElabM α)
+    : TermElabM α :=
   if binders.isEmpty then
     x #[] expectedType?
   else do
     let lctx ← getLCtx
     let localInsts ← getLocalInstances
     let s ← FunBinders.elabFunBindersAux binders 0 { lctx, localInsts, expectedType? }
-    withLCtx s.lctx s.localInsts do
-      x s.fvars s.expectedType?
+    withLCtx s.lctx s.localInsts do x s.fvars s.expectedType?
 
 def expandWhereDecls (whereDecls : Syntax) (body : Syntax) : MacroM Syntax :=
   match whereDecls with
   | `(whereDecls|where $[$_:whereFinally]?) => `($body)
-  | `(whereDecls|where $[$decls:letRecDecl];* $[$_:whereFinally]?) => `(let rec $decls:letRecDecl,*; $body)
+  | `(whereDecls|where $[$decls:letRecDecl];* $[$_:whereFinally]?) =>
+    `(let rec $decls:letRecDecl,*; $body)
   | _ => Macro.throwUnsupported
 
 def expandWhereDeclsOpt (whereDeclsOpt : Syntax) (body : Syntax) : MacroM Syntax :=
@@ -481,84 +540,88 @@ def expandWhereDeclsOpt (whereDeclsOpt : Syntax) (body : Syntax) : MacroM Syntax
   else
     expandWhereDecls whereDeclsOpt[0] body
 
-/--
- Helper function for `expandMatchAltsIntoMatch`.
--/
-private def expandMatchAltsIntoMatchAux (matchAlts : Syntax) (isTactic : Bool) (useExplicit : Bool) : Nat → Array Syntax → Array Ident → MacroM Syntax
-  | 0,   discrs, xs => do
+/-- Helper function for `expandMatchAltsIntoMatch`. -/
+private def expandMatchAltsIntoMatchAux (matchAlts : Syntax) (isTactic : Bool) (useExplicit : Bool)
+    : Nat → Array Syntax → Array Ident → MacroM Syntax
+  | 0, discrs, xs => do
     if isTactic then
       `(tactic|match $[$discrs:term],* with $matchAlts:matchAlts)
     else
       let stx ← `(match $[$discrs:term],* with $matchAlts:matchAlts)
       clearInMatch stx xs
-  | n+1, discrs, xs => withFreshMacroScope do
-    let x ← `(x) -- If this were implementation-detail, the `contradiction` tactic used by match would not find it.
-    let d ← `(@$x:ident)
-    let body ← expandMatchAltsIntoMatchAux matchAlts isTactic useExplicit n (discrs.push d) (xs.push x)
-    if isTactic then
-      `(tactic| intro $x:term; $body:tactic)
-    else if useExplicit then
-      `(@fun $x => $body)
-    else
-      `(fun $x => $body)
+  | n + 1, discrs, xs =>
+    withFreshMacroScope do
+      let x ← `(x) -- If this were implementation-detail, the `contradiction` tactic used by match would not find it.
+      let d ← `(@$x:ident)
+      let body ←
+        expandMatchAltsIntoMatchAux matchAlts isTactic useExplicit n (discrs.push d) (xs.push x)
+      if isTactic then
+        `(tactic| intro $x:term; $body:tactic)
+      else if useExplicit then
+        `(@fun $x => $body)
+      else
+        `(fun $x => $body)
 
 /--
-  Expand `matchAlts` syntax into a full `match`-expression.
-  Example:
-  ```
-  | 0, true => alt_1
-  | i, _    => alt_2
-  ```
-  expands into (for tactic == false)
-  ```
-  fun x_1 x_2 =>
-  match @x_1, @x_2 with
-  | 0, true => alt_1
-  | i, _    => alt_2
-  ```
-  and (for tactic == true)
-  ```
-  intro x_1; intro x_2;
-  match @x_1, @x_2 with
-  | 0, true => alt_1
-  | i, _    => alt_2
-  ```
+Expand `matchAlts` syntax into a full `match`-expression.
+Example:
+```
+| 0, true => alt_1
+| i, _    => alt_2
+```
+expands into (for tactic == false)
+```
+fun x_1 x_2 =>
+match @x_1, @x_2 with
+| 0, true => alt_1
+| i, _    => alt_2
+```
+and (for tactic == true)
+```
+intro x_1; intro x_2;
+match @x_1, @x_2 with
+| 0, true => alt_1
+| i, _    => alt_2
+```
 
-  If `useExplicit = true`, we add a `@` before `fun` to disable implicit lambdas. We disable them when processing `let` and `let rec` declarations
-  to make sure the behavior is consistent with top-level declarations where we can write
-  ```
-  def f : {α : Type} → α → α
-    | _, a => a
-  ```
-  We use `useExplicit = false` when we are elaborating the `fun | ... => ... | ...` notation. See issue #1132.
-  If `@fun` is used with this notation, the we set `useExplicit = true`.
-  We also use `useExplicit = false` when processing `instance ... where` notation declarations. The motivation is to have compact declarations such as
-  ```
-  instance [Alternative m] : MonadLiftT Option m where
-  monadLift -- We don't want to provide the implicit arguments of `monadLift` here. One should use `monadLift := @fun ...` if they want to provide them.
-    | some a => pure a
-    | none => failure
-  ```
+If `useExplicit = true`, we add a `@` before `fun` to disable implicit lambdas. We disable them when processing `let` and `let rec` declarations
+to make sure the behavior is consistent with top-level declarations where we can write
+```
+def f : {α : Type} → α → α
+  | _, a => a
+```
+We use `useExplicit = false` when we are elaborating the `fun | ... => ... | ...` notation. See issue #1132.
+If `@fun` is used with this notation, the we set `useExplicit = true`.
+We also use `useExplicit = false` when processing `instance ... where` notation declarations. The motivation is to have compact declarations such as
+```
+instance [Alternative m] : MonadLiftT Option m where
+monadLift -- We don't want to provide the implicit arguments of `monadLift` here. One should use `monadLift := @fun ...` if they want to provide them.
+  | some a => pure a
+  | none => failure
+```
 
-  Remark: we add `@` at discriminants to make sure we don't consume implicit arguments, and to make the behavior consistent with `fun`.
-  Example:
-  ```
-  inductive T : Type 1 :=
-  | mkT : (forall {a : Type}, a -> a) -> T
+Remark: we add `@` at discriminants to make sure we don't consume implicit arguments, and to make the behavior consistent with `fun`.
+Example:
+```
+inductive T : Type 1 :=
+| mkT : (forall {a : Type}, a -> a) -> T
 
-  def makeT (f : forall {a : Type}, a -> a) : T :=
-    mkT f
+def makeT (f : forall {a : Type}, a -> a) : T :=
+  mkT f
 
-  def makeT' : (forall {a : Type}, a -> a) -> T
-  | f => mkT f
-  ```
-  The two definitions should be elaborated without errors and be equivalent.
- -/
-def expandMatchAltsIntoMatch (ref : Syntax) (matchAlts : Syntax) (useExplicit := true) : MacroM Syntax :=
-  withRef ref <| expandMatchAltsIntoMatchAux matchAlts (isTactic := false) (useExplicit := useExplicit) (getMatchAltsNumPatterns matchAlts) #[] #[]
+def makeT' : (forall {a : Type}, a -> a) -> T
+| f => mkT f
+```
+The two definitions should be elaborated without errors and be equivalent.
+-/
+def expandMatchAltsIntoMatch (ref : Syntax) (matchAlts : Syntax) (useExplicit := true)
+    : MacroM Syntax :=
+  withRef ref <| expandMatchAltsIntoMatchAux matchAlts (isTactic := false)
+    (useExplicit := useExplicit) (getMatchAltsNumPatterns matchAlts) #[] #[]
 
 def expandMatchAltsIntoMatchTactic (ref : Syntax) (matchAlts : Syntax) : MacroM Syntax :=
-  withRef ref <| expandMatchAltsIntoMatchAux matchAlts (isTactic := true) (useExplicit := false) (getMatchAltsNumPatterns matchAlts) #[] #[]
+  withRef ref <| expandMatchAltsIntoMatchAux matchAlts (isTactic := true) (useExplicit := false)
+    (getMatchAltsNumPatterns matchAlts) #[] #[]
 
 /--
 Sanity-checks the number of patterns in each alternative of a definition by pattern matching.
@@ -572,20 +635,24 @@ Note: This function assumes that the number of patterns in the first alternative
 private def checkMatchAltPatternCounts (matchAlts : Syntax) (numDiscrs : Nat) (expectedType : Expr)
     : MetaM Unit := do
   let sepPats (pats : List Syntax) := MessageData.joinSep (pats.map toMessageData) ", "
-  let maxDiscrs? ← forallTelescopeReducing expectedType fun xs e =>
-    if e.getAppFn.isMVar then pure none else pure (some xs.size)
+  let maxDiscrs? ←
+    forallTelescopeReducing expectedType fun xs e =>
+      if e.getAppFn.isMVar then pure none else pure (some xs.size)
   let matchAltViews := matchAlts[0].getArgs.filterMap (getMatchAlt `term)
   let numPatternsStr (n : Nat) := s!"{n} {if n == 1 then "pattern" else "patterns"}"
   if h : matchAltViews.size > 0 then
     if let some maxDiscrs := maxDiscrs? then
       if numDiscrs > maxDiscrs then
         if maxDiscrs == 0 then
-          throwErrorAt matchAltViews[0].lhs m!"Cannot define a value of type{indentExpr expectedType}\n\
-            by pattern matching because it is not a function type"
+          throwErrorAt matchAltViews[0].lhs
+            m!"Cannot define a value of type{indentExpr expectedType}\n\
+              by pattern matching because it is not a function type"
         else
-          throwErrorAt matchAltViews[0].lhs m!"Too many patterns in match alternative: \
-            At most {numPatternsStr maxDiscrs} expected in a definition of type {indentExpr expectedType}\n\
-            but found {numDiscrs}:{indentD <| sepPats matchAltViews[0].patterns.toList}"
+          throwErrorAt matchAltViews[0].lhs
+            m!"Too many patterns in match alternative: \
+              At most {numPatternsStr maxDiscrs} expected in a definition of type \
+              {indentExpr expectedType}\n\
+              but found {numDiscrs}:{indentD <| sepPats matchAltViews[0].patterns.toList}"
     -- Catch inconsistencies between pattern counts here so that we can report them as "inconsistent"
     -- rather than as "too many" or "too few" (as the `match` elaborator does)
     for view in matchAltViews do
@@ -593,45 +660,47 @@ private def checkMatchAltPatternCounts (matchAlts : Syntax) (numDiscrs : Nat) (e
       if numPats != numDiscrs then
         let origPats := sepPats matchAltViews[0].patterns.toList
         let pats := sepPats view.patterns.toList
-        throwErrorAt view.lhs m!"Inconsistent number of patterns in match alternatives: This \
-          alternative contains {numPatternsStr numPats}:{indentD pats}\n\
-          but a preceding alternative contains {numDiscrs}:{indentD origPats}"
+        throwErrorAt view.lhs
+          m!"Inconsistent number of patterns in match alternatives: This \
+            alternative contains {numPatternsStr numPats}:{indentD pats}\n\
+            but a preceding alternative contains {numDiscrs}:{indentD origPats}"
 
 /--
-  Similar to `expandMatchAltsIntoMatch`, but supports an optional `where` clause.
+Similar to `expandMatchAltsIntoMatch`, but supports an optional `where` clause.
 
-  Expand `matchAltsWhereDecls` into `let rec` + `match`-expression.
-  Example
-  ```
-  | 0, true => ... f 0 ...
-  | i, _    => ... f i + g i ...
-  where
-    f x := g x + 1
+Expand `matchAltsWhereDecls` into `let rec` + `match`-expression.
+Example
+```
+| 0, true => ... f 0 ...
+| i, _    => ... f i + g i ...
+where
+  f x := g x + 1
 
+  g : Nat → Nat
+    | 0   => 1
+    | x+1 => f x
+```
+expands into
+```
+fun x_1 x_2 =>
+  let rec
+    f x := g x + 1,
     g : Nat → Nat
       | 0   => 1
       | x+1 => f x
-  ```
-  expands into
-  ```
-  fun x_1 x_2 =>
-    let rec
-      f x := g x + 1,
-      g : Nat → Nat
-        | 0   => 1
-        | x+1 => f x
-    match x_1, x_2 with
-    | 0, true => ... f 0 ...
-    | i, _    => ... f i + g i ...
-  ```
+  match x_1, x_2 with
+  | 0, true => ... f 0 ...
+  | i, _    => ... f i + g i ...
+```
 -/
-def expandMatchAltsWhereDecls (matchAltsWhereDecls : Syntax) (expectedType : Expr) : TermElabM Syntax :=
-  let matchAlts     := matchAltsWhereDecls[0]
+def expandMatchAltsWhereDecls (matchAltsWhereDecls : Syntax) (expectedType : Expr)
+    : TermElabM Syntax :=
+  let matchAlts := matchAltsWhereDecls[0]
   -- matchAltsWhereDecls[1] is the termination hints, collected elsewhere
   let whereDeclsOpt := matchAltsWhereDecls[2]
   let rec loop (i : Nat) (discrs : Array Syntax) : TermElabM Syntax :=
     match i with
-    | 0   => do
+    | 0 => do
       checkMatchAltPatternCounts matchAlts discrs.size expectedType
       let matchStx ← `(match $[@$discrs:term],* with $matchAlts:matchAlts)
       liftMacroM do
@@ -640,16 +709,18 @@ def expandMatchAltsWhereDecls (matchAltsWhereDecls : Syntax) (expectedType : Exp
           return matchStx
         else
           expandWhereDeclsOpt whereDeclsOpt matchStx
-    | n+1 => withFreshMacroScope do
-      let body ← loop n (discrs.push (← `(x)))
-      `(@fun x => $body)
+    | n + 1 =>
+      withFreshMacroScope do
+        let body ← loop n (discrs.push (← `(x)))
+        `(@fun x => $body)
   loop (getMatchAltsNumPatterns matchAlts) #[]
 
-@[builtin_macro Parser.Term.fun] partial def expandFun : Macro
+@[builtin_macro Parser.Term.fun]
+partial def expandFun : Macro
   | `(fun $binders* : $ty => $body) => do
     let binders ← binders.mapM (expandSimpleBinderWithType ty)
     `(fun $binders* => $body)
-  | `(fun $binders* => $body) => do  -- if there is a type ascription, we assume all binders are already simple
+  | `(fun $binders* => $body) => do -- if there is a type ascription, we assume all binders are already simple
     let (binders, body, expandedPattern) ← expandFunBinders binders body
     if expandedPattern then
       `(fun $binders* => $body)
@@ -658,13 +729,15 @@ def expandMatchAltsWhereDecls (matchAltsWhereDecls : Syntax) (expectedType : Exp
   | stx@`(fun $m:matchAlts) => expandMatchAltsIntoMatch stx m (useExplicit := false)
   | _ => Macro.throwUnsupported
 
-@[builtin_macro Parser.Term.explicit] partial def expandExplicitFun : Macro := fun stx =>
+@[builtin_macro Parser.Term.explicit]
+partial def expandExplicitFun : Macro := fun stx =>
   match stx with
   | `(@fun $m:matchAlts) => expandMatchAltsIntoMatch stx[1] m (useExplicit := true)
   | _ => Macro.throwUnsupported
 
 open Lean.Elab.Term.Quotation in
-@[builtin_quot_precheck Lean.Parser.Term.fun] def precheckFun : Precheck
+@[builtin_quot_precheck Lean.Parser.Term.fun]
+def precheckFun : Precheck
   | `(fun $binders* $[: $ty?]? => $body) => do
     let (binders, body, _) ← liftMacroM <| expandFunBinders binders body
     let mut ids := #[]
@@ -675,7 +748,8 @@ open Lean.Elab.Term.Quotation in
     Quotation.withNewLocals ids <| precheck body
   | _ => throwUnsupportedSyntax
 
-@[builtin_term_elab «fun»] partial def elabFun : TermElab := fun stx expectedType? =>
+@[builtin_term_elab «fun»]
+partial def elabFun : TermElab := fun stx expectedType? =>
   match stx with
   | `(fun $binders* => $body) => do
     -- We can assume all `match` binders have been iteratively expanded by the above macro here, though
@@ -683,16 +757,16 @@ open Lean.Elab.Term.Quotation in
     -- expected by `elabFunBinder`.
     let (binders, body, _) ← liftMacroM <| expandFunBinders binders body
     elabFunBinders binders expectedType? fun xs expectedType? => do
-      /- We ensure the expectedType here since it will force coercions to be applied if needed.
-          If we just use `elabTerm`, then we will need to a coercion `Coe (α → β) (α → δ)` whenever there is a coercion `Coe β δ`,
-          and another instance for the dependent version. -/
+      /-
+      We ensure the expectedType here since it will force coercions to be applied if needed.
+       If we just use `elabTerm`, then we will need to a coercion `Coe (α → β) (α → δ)` whenever there is a coercion `Coe β δ`,
+       and another instance for the dependent version.
+      -/
       let e ← elabTermEnsuringType body expectedType?
       mkLambdaFVars xs e
   | _ => throwUnsupportedSyntax
 
-/--
-Configuration for `let` elaboration.
--/
+/-- Configuration for `let` elaboration. -/
 structure LetConfig where
   /-- Elaborate as a nondependent `let` (a `have`). -/
   nondep : Bool := false
@@ -708,22 +782,30 @@ structure LetConfig where
   eq? : Option Ident := none
 
 def LetConfig.setFrom (config : LetConfig) (key : Syntax) (val : Bool) : LetConfig :=
-  if key.isOfKind ``Parser.Term.letOptNondep then
-    { config with nondep := val }
-  else if key.isOfKind ``Parser.Term.letOptUsedOnly then
-    { config with usedOnly := val }
-  else if key.isOfKind ``Parser.Term.letOptZeta then
-    { config with zeta := val }
-  else if key.isOfKind ``Parser.Term.letOptPostponeValue then
-    { config with postponeValue := val }
-  else if key.isOfKind ``Parser.Term.letOptGeneralize then
-    { config with generalize := val }
+  if key.isOfKind ``Parser.Term.letOptNondep then {
+    config with
+    nondep := val
+  }
+  else if key.isOfKind ``Parser.Term.letOptUsedOnly then {
+    config with
+    usedOnly := val
+  }
+  else if key.isOfKind ``Parser.Term.letOptZeta then {
+    config with
+    zeta := val
+  }
+  else if key.isOfKind ``Parser.Term.letOptPostponeValue then {
+    config with
+    postponeValue := val
+  }
+  else if key.isOfKind ``Parser.Term.letOptGeneralize then {
+    config with
+    generalize := val
+  }
   else
     config
 
-/--
-Interprets a `Parser.Term.letConfig`.
--/
+/-- Interprets a `Parser.Term.letConfig`. -/
 def mkLetConfig (letConfig : Syntax) (initConfig : LetConfig) : TermElabM LetConfig := do
   let mut config := initConfig
   unless letConfig.isOfKind ``Parser.Term.letConfig do
@@ -733,7 +815,11 @@ def mkLetConfig (letConfig : Syntax) (initConfig : LetConfig) : TermElabM LetCon
     | `(letPosOpt| +$opt:letOpts) => config := config.setFrom opt.raw[0] true
     | `(letNegOpt| -$opt:letOpts) => config := config.setFrom opt.raw[0] false
     | `(letOptEq| (eq := $n:ident)) => config := { config with eq? := n }
-    | `(letOptEq| (eq := $b)) => config := { config with eq? := mkIdentFrom b (canonical := true) (← mkFreshBinderNameForTactic `h) }
+    | `(letOptEq| (eq := $b)) =>
+      config := {
+        config with
+        eq? := mkIdentFrom b (canonical := true) (← mkFreshBinderNameForTactic `h)
+      }
     | _ => pure ()
   return config
 
@@ -742,66 +828,73 @@ The default elaboration order is `binders`, `typeStx`, `valStx`, and `body`.
 If `config.postponeValue == true`, then we use the order `binders`, `typeStx`, `body`, and `valStx`.
 If `config.generalize == true`, then the value is abstracted from the expected type when elaborating the body.
 -/
-def elabLetDeclAux (id : Syntax) (binders : Array Syntax) (typeStx : Syntax) (valStx : Syntax) (body : Syntax)
-    (expectedType? : Option Expr) (config : LetConfig) : TermElabM Expr := do
+def elabLetDeclAux
+    (id : Syntax) (binders : Array Syntax) (typeStx : Syntax) (valStx : Syntax) (body : Syntax)
+    (expectedType? : Option Expr) (config : LetConfig)
+    : TermElabM Expr := do
   if config.generalize then
     if config.postponeValue then
       throwError "`+postponeValue` and `+generalize` are incompatible"
     tryPostponeIfNoneOrMVar expectedType?
-  let (type, val, binders) ← elabBindersEx binders fun xs => do
-    let (binders, fvars) := xs.unzip
-    /-
-    We use `withSynthesize` to ensure that any postponed elaboration problem
-    and nested tactics in `type` are resolved before elaborating `val`.
-    Resolved: we want to avoid synthetic opaque metavariables in `type`.
-    Recall that this kind of metavariable is non-assignable, and `isDefEq`
-    may waste a lot of time unfolding declarations before failing.
-    See issue #4051 for an example.
-
-    Here is the analysis for issue #4051.
-    - Given `have x : type := value; body`, we were previously elaborating `value` even
-      if `type` contained postponed elaboration problems.
-    - Moreover, the metavariables in `type` corresponding to postponed elaboration
-      problems cannot be assigned by `isDefEq` since the elaborator is supposed to assign them.
-    - Then, when checking whether type of `value` is definitionally equal to `type`,
-      a very long-time was spent unfolding a bunch of declarations before it failed.
-      In #4051, it was unfolding `Array.swaps` which is defined by well-founded recursion.
-      After the failure, the elaborator inserted a postponed coercion
-      that would be resolved later as soon as the types don't have unassigned metavariables.
-
-    We use `postpone := .partial` to allow type class (TC) resolution problems to be postponed
-    Recall that TC resolution does **not** produce synthetic opaque metavariables.
-    -/
-    let type ← withSynthesize (postpone := .partial) <| elabType typeStx
-    let letMsg := if config.nondep then "have" else "let"
-    registerCustomErrorIfMVar type typeStx m!"failed to infer `{letMsg}` declaration type"
-    registerLevelMVarErrorExprInfo type typeStx m!"failed to infer universe levels in `{letMsg}` declaration type"
-    if config.postponeValue then
-      let type ← mkForallFVars fvars type
-      let val  ← mkFreshExprMVar type
-      pure (type, val, binders)
-    else
+  let (type, val, binders) ←
+    elabBindersEx binders fun xs => do
+      let (binders, fvars) := xs.unzip
       /-
-      Elaborate the value in a context where the binders have cleaned-up annotations
-      Note: we may want `withFreshCache` in case spurious type annotations appear in terms.
+      We use `withSynthesize` to ensure that any postponed elaboration problem
+      and nested tactics in `type` are resolved before elaborating `val`.
+      Resolved: we want to avoid synthetic opaque metavariables in `type`.
+      Recall that this kind of metavariable is non-assignable, and `isDefEq`
+      may waste a lot of time unfolding declarations before failing.
+      See issue #4051 for an example.
+
+      Here is the analysis for issue #4051.
+      - Given `have x : type := value; body`, we were previously elaborating `value` even
+        if `type` contained postponed elaboration problems.
+      - Moreover, the metavariables in `type` corresponding to postponed elaboration
+        problems cannot be assigned by `isDefEq` since the elaborator is supposed to assign them.
+      - Then, when checking whether type of `value` is definitionally equal to `type`,
+        a very long-time was spent unfolding a bunch of declarations before it failed.
+        In #4051, it was unfolding `Array.swaps` which is defined by well-founded recursion.
+        After the failure, the elaborator inserted a postponed coercion
+        that would be resolved later as soon as the types don't have unassigned metavariables.
+
+      We use `postpone := .partial` to allow type class (TC) resolution problems to be postponed
+      Recall that TC resolution does **not** produce synthetic opaque metavariables.
       -/
-      let lctx' := fvars.foldl (init := ← getLCtx) fun lctx fvar =>
-        lctx.modifyLocalDecl fvar.fvarId! (fun decl => decl.setType decl.type.cleanupAnnotations)
-      let val ← withLCtx' lctx' do
-        let val ← elabTermEnsuringType valStx type
+      let type ← withSynthesize (postpone := .partial) <| elabType typeStx
+      let letMsg := if config.nondep then "have" else "let"
+      registerCustomErrorIfMVar type typeStx m!"failed to infer `{letMsg}` declaration type"
+      registerLevelMVarErrorExprInfo type typeStx
+        m!"failed to infer universe levels in `{letMsg}` declaration type"
+      if config.postponeValue then
+        let type ← mkForallFVars fvars type
+        let val ← mkFreshExprMVar type
+        pure (type, val, binders)
+      else
         /-
-        By default `mkLambdaFVars` and `mkLetFVars` create binders only for let-declarations that are actually used
-        in the body. This generates counterintuitive behavior in the elaborator since users will not be notified
-        about holes such as
-        ```
-        def ex : Nat :=
-          let x := _
-          42
-        ```
+        Elaborate the value in a context where the binders have cleaned-up annotations
+        Note: we may want `withFreshCache` in case spurious type annotations appear in terms.
         -/
-        mkLambdaFVars fvars val (usedLetOnly := false)
-      let type ← mkForallFVars fvars type
-      pure (type, val, binders)
+        let lctx' :=
+          fvars.foldl (init := ← getLCtx) fun lctx fvar =>
+            lctx.modifyLocalDecl fvar.fvarId!
+              (fun decl => decl.setType decl.type.cleanupAnnotations)
+        let val ←
+          withLCtx' lctx' do
+            let val ← elabTermEnsuringType valStx type
+            /-
+            By default `mkLambdaFVars` and `mkLetFVars` create binders only for let-declarations that are actually used
+            in the body. This generates counterintuitive behavior in the elaborator since users will not be notified
+            about holes such as
+            ```
+            def ex : Nat :=
+              let x := _
+              42
+            ```
+            -/
+            mkLambdaFVars fvars val (usedLetOnly := false)
+        let type ← mkForallFVars fvars type
+        pure (type, val, binders)
   let kind := .ofBinderName id.getId
   trace[Elab.let.decl] "{id.getId} : {type} := {val}"
   let result ←
@@ -809,8 +902,10 @@ def elabLetDeclAux (id : Syntax) (binders : Array Syntax) (typeStx : Syntax) (va
       let elabBody : TermElabM Expr := do
         let mut expectedType? := expectedType?
         if config.generalize then
-          let throwNoType := throwError "failed to elaborate with `+generalize`, expected type is not available"
-          let some expectedType := expectedType? | throwNoType
+          let throwNoType :=
+            throwError "failed to elaborate with `+generalize`, expected type is not available"
+          let some expectedType := expectedType?
+            | throwNoType
           let expectedType ← instantiateMVars expectedType
           if expectedType.getAppFn.isMVar then throwNoType
           let motiveBody ← kabstract expectedType (← instantiateMVars val)
@@ -819,7 +914,8 @@ def elabLetDeclAux (id : Syntax) (binders : Array Syntax) (typeStx : Syntax) (va
           -- Type correctness only needs to be checked in the `nondep` case:
           if config.nondep then
             unless (← isTypeCorrect motive) do
-              throwError "failed to elaborate with `+generalize`, generalized expected type is not type correct:{indentD motive}"
+              throwError "failed to elaborate with `+generalize`, generalized expected type is not \
+                type correct:{indentD motive}"
           expectedType? := motive
         elabTermEnsuringType body expectedType? >>= instantiateMVars
       addLocalVarInfo id x
@@ -857,10 +953,10 @@ def elabLetDeclAux (id : Syntax) (binders : Array Syntax) (typeStx : Syntax) (va
   pure result
 
 structure LetIdDeclView where
-  id      : Syntax
+  id : Syntax
   binders : Array Syntax
-  type    : Syntax
-  value   : Syntax
+  type : Syntax
+  value : Syntax
 
 def mkLetIdDeclView (letIdDecl : Syntax) : LetIdDeclView :=
   /-
@@ -878,35 +974,38 @@ def mkLetIdDeclView (letIdDecl : Syntax) : LetIdDeclView :=
       letId[0]
   let binders := letIdDecl[1].getArgs
   let optType := letIdDecl[2]
-  let type    := expandOptType id optType
-  let value   := letIdDecl[4]
+  let type := expandOptType id optType
+  let value := letIdDecl[4]
   { id, binders, type, value }
 
 def expandLetEqnsDecl (letDecl : Syntax) (useExplicit := true) : MacroM Syntax := do
-  let ref       := letDecl
+  let ref := letDecl
   let matchAlts := letDecl[3]
   let val ← expandMatchAltsIntoMatch ref matchAlts (useExplicit := useExplicit)
-  return mkNode `Lean.Parser.Term.letIdDecl #[letDecl[0], letDecl[1], letDecl[2], mkAtomFrom ref " := ", val]
+  return mkNode `Lean.Parser.Term.letIdDecl
+    #[letDecl[0], letDecl[1], letDecl[2], mkAtomFrom ref " := ", val]
 
-def elabLetDeclCore (stx : Syntax) (expectedType? : Option Expr) (initConfig : LetConfig) : TermElabM Expr := do
-  let (config, declIdx) ← if stx[1].isOfKind ``Parser.Term.letConfig then
-    pure (← mkLetConfig stx[1] initConfig, 2)
-  else
-    pure (initConfig, 1)
-  let letDecl   := stx[declIdx][0]
-  let body      := stx[declIdx + 2]
+def elabLetDeclCore (stx : Syntax) (expectedType? : Option Expr) (initConfig : LetConfig)
+    : TermElabM Expr := do
+  let (config, declIdx) ←
+    if stx[1].isOfKind ``Parser.Term.letConfig then
+      pure (← mkLetConfig stx[1] initConfig, 2)
+    else
+      pure (initConfig, 1)
+  let letDecl := stx[declIdx][0]
+  let body := stx[declIdx + 2]
   if letDecl.getKind == ``Lean.Parser.Term.letIdDecl then
     let { id, binders, type, value } := mkLetIdDeclView letDecl
     let id ← if id.isIdent then pure id else mkFreshIdent id (canonical := true)
     elabLetDeclAux id binders type value body expectedType? config
   else if letDecl.getKind == ``Lean.Parser.Term.letPatDecl then
     -- node `Lean.Parser.Term.letPatDecl  $ try (termParser >> pushNone >> optType >> " := ") >> termParser
-    let pat     := letDecl[0]
+    let pat := letDecl[0]
     let optType := letDecl[2]
-    let val     := letDecl[4]
+    let val := letDecl[4]
     if pat.getKind == ``Parser.Term.hole then
       -- `let _ := ...` should be treated as a `letIdDecl`
-      let id   ← mkFreshIdent pat (canonical := true)
+      let id ← mkFreshIdent pat (canonical := true)
       let type := expandOptType id optType
       elabLetDeclAux id #[] type val body expectedType? config
     else
@@ -918,47 +1017,54 @@ def elabLetDeclCore (stx : Syntax) (expectedType? : Option Expr) (initConfig : L
         throwError "`+zeta` with patterns is not allowed"
       -- We are currently ignore `config.nondep` when patterns are used.
       -- We are also currently ignoring `config.generalize`.
-      let val ← if optType.isNone then
-        `($val:term)
-      else
-        let type := optType[0][1]
-        `(($val:term : $type))
-      let stxNew ← if let some h := config.eq? then
-        `(match $h:ident : $val:term with | $pat => $body)
-      else
-        `(match $val:term with | $pat => $body)
+      let val ←
+        if optType.isNone then
+          `($val:term)
+        else
+          let type := optType[0][1]
+          `(($val:term : $type))
+      let stxNew ←
+        if let some h := config.eq? then
+          `(match $h:ident : $val:term with | $pat => $body)
+        else
+          `(match $val:term with | $pat => $body)
       withMacroExpansion stx stxNew <| elabTerm stxNew expectedType?
   else if letDecl.getKind == ``Lean.Parser.Term.letEqnsDecl then
     let letDeclIdNew ← liftMacroM <| expandLetEqnsDecl letDecl
     let declNew := stx[declIdx].setArg 0 letDeclIdNew
-    let stxNew  := stx.setArg declIdx declNew
+    let stxNew := stx.setArg declIdx declNew
     withMacroExpansion stx stxNew <| elabTerm stxNew expectedType?
   else
     throwUnsupportedSyntax
 
-@[builtin_term_elab «let»] def elabLetDecl : TermElab :=
-  fun stx expectedType? => elabLetDeclCore stx expectedType? {}
+@[builtin_term_elab «let»]
+def elabLetDecl : TermElab := fun stx expectedType? => elabLetDeclCore stx expectedType? {}
 
-@[builtin_term_elab «have»] def elabHaveDecl : TermElab :=
-  fun stx expectedType? => elabLetDeclCore stx expectedType? { nondep := true }
+@[builtin_term_elab «have»]
+def elabHaveDecl : TermElab := fun stx expectedType? =>
+  elabLetDeclCore stx expectedType? { nondep := true }
 
-@[builtin_term_elab «let_fun»] def elabLetFunDecl : TermElab :=
-  fun stx expectedType? => do
-    withRef stx <| Linter.logLintIf Linter.linter.deprecated stx[0]
-      "`let_fun` has been deprecated in favor of `have`"
-    elabLetDeclCore stx expectedType? { nondep := true }
+@[builtin_term_elab «let_fun»]
+def elabLetFunDecl : TermElab := fun stx expectedType? => do
+  withRef stx <| Linter.logLintIf Linter.linter.deprecated stx[0]
+    "`let_fun` has been deprecated in favor of `have`"
+  elabLetDeclCore stx expectedType? { nondep := true }
 
-@[builtin_term_elab «let_delayed»] def elabLetDelayedDecl : TermElab :=
-  fun stx expectedType? => elabLetDeclCore stx expectedType? { postponeValue := true }
+@[builtin_term_elab «let_delayed»]
+def elabLetDelayedDecl : TermElab := fun stx expectedType? =>
+  elabLetDeclCore stx expectedType? { postponeValue := true }
 
-@[builtin_term_elab «let_tmp»] def elabLetTmpDecl : TermElab :=
-  fun stx expectedType? => elabLetDeclCore stx expectedType? { usedOnly := true }
+@[builtin_term_elab «let_tmp»]
+def elabLetTmpDecl : TermElab := fun stx expectedType? =>
+  elabLetDeclCore stx expectedType? { usedOnly := true }
 
-@[builtin_term_elab «letI»] def elabLetIDecl : TermElab :=
-  fun stx expectedType? => elabLetDeclCore stx expectedType? { zeta := true }
+@[builtin_term_elab «letI»]
+def elabLetIDecl : TermElab := fun stx expectedType? =>
+  elabLetDeclCore stx expectedType? { zeta := true }
 
-@[builtin_term_elab «haveI»] def elabHaveIDecl : TermElab :=
-  fun stx expectedType? => elabLetDeclCore stx expectedType? { zeta := true, nondep := true }
+@[builtin_term_elab «haveI»]
+def elabHaveIDecl : TermElab := fun stx expectedType? =>
+  elabLetDeclCore stx expectedType? { zeta := true, nondep := true }
 
 builtin_initialize
   registerTraceClass `Elab.let

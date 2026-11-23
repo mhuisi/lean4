@@ -16,8 +16,10 @@ open Std.Sat
 namespace State
 
 @[inline]
-def deleteOne (s : State) (idx : Nat) : State :=
-  { s with formula := s.formula.setIfInBounds (idx - 1) none }
+def deleteOne (s : State) (idx : Nat) : State := {
+  s with
+  formula := s.formula.setIfInBounds (idx - 1) none
+}
 
 theorem entails_deleteOne {s : State} : CNF.Entails s.toCNF (s.deleteOne idx).toCNF := by
   apply CNF.entails_of_all_mem
@@ -32,8 +34,7 @@ theorem entails_deleteOne {s : State} : CNF.Entails s.toCNF (s.deleteOne idx).to
 public def deleteMany (s : State) (idxs : Array Nat) : State :=
   idxs.foldl (init := s) State.deleteOne
 
-public theorem entails_deleteMany {s : State} :
-    CNF.Entails s.toCNF (s.deleteMany idxs).toCNF := by
+public theorem entails_deleteMany {s : State} : CNF.Entails s.toCNF (s.deleteMany idxs).toCNF := by
   unfold deleteMany
   apply Array.foldl_induction (motive := fun _ (s' : State) => CNF.Entails s.toCNF s'.toCNF)
   · rfl

@@ -23,7 +23,7 @@ open Json
 
 structure CancelParams where
   id : JsonRpc.RequestID
-  deriving Inhabited, BEq, ToJson, FromJson
+deriving Inhabited, BEq, ToJson, FromJson
 
 end Lsp
 end Lean

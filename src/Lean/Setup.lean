@@ -23,21 +23,21 @@ namespace Lean
 
 /-- Abstract structure of an {lit}`import` statement. -/
 structure Import where
-  module     : Name
+  module : Name
   /-- `import all`; whether to import and expose all data saved by the module. -/
-  importAll  : Bool := false
+  importAll : Bool := false
   /-- Whether to activate this import when the current module itself is imported. -/
   isExported : Bool := true
   /-- Whether to import IR for all definitions (transitively) reachable. -/
-  isMeta     : Bool := false
-  deriving Repr, Inhabited, ToJson, FromJson,
-    BEq, Hashable -- needed by Lake (in `Lake.Load.Elab.Lean`)
+  isMeta : Bool := false
+deriving Repr, Inhabited, ToJson, FromJson, BEq, Hashable -- needed by Lake (in `Lake.Load.Elab.Lean`)
 
-instance : Coe Name Import := ⟨({module := ·})⟩
+instance : Coe Name Import := ⟨({ module := · })⟩
 
-instance : ToString Import := ⟨fun imp =>
-  s!"{if imp.isExported then "public " else ""}{if imp.isMeta then "meta " else ""}import \
-    {if imp.importAll then "all " else ""}{imp.module}"⟩
+instance : ToString Import :=
+  ⟨fun imp =>
+    s!"{if imp.isExported then "public " else ""}{if imp.isMeta then "meta " else ""}import \
+      {if imp.importAll then "all " else ""}{imp.module}"⟩
 
 /-- Phases for which some IR is available for execution. -/
 inductive IRPhases where
@@ -52,10 +52,10 @@ deriving Inhabited, BEq, Repr
 /-- Abstract structure of a module's header. -/
 structure ModuleHeader where
   /-- The module's direct imports (i.e., those listed in the header). -/
-  imports  : Array Import
+  imports : Array Import
   /-- Whether the module is participating in the module system. -/
   isModule : Bool
-  deriving Repr, Inhabited, ToJson, FromJson
+deriving Repr, Inhabited, ToJson, FromJson
 
 /--
 Module data files used for an {lit}`import` statement.
@@ -63,11 +63,11 @@ This structure is designed for efficient JSON serialization.
 -/
 structure ImportArtifacts where
   ofArrays ::
-    /--
-    Two nested arrays of variable size: {lit}`#[#[olean, oleanServer?, oleanPrivate?], #[irSig, ir?]]`
-    -/
-    toArrays : Array (Array System.FilePath)
-  deriving Repr, Inhabited
+  /--
+  Two nested arrays of variable size: {lit}`#[#[olean, oleanServer?, oleanPrivate?], #[irSig, ir?]]`
+  -/
+  toArrays : Array (Array System.FilePath)
+deriving Repr, Inhabited
 
 instance : ToJson ImportArtifacts := ⟨(toJson ·.toArrays)⟩
 instance : FromJson ImportArtifacts := ⟨(.ofArrays <$> fromJson? ·)⟩
@@ -87,7 +87,8 @@ def ImportArtifacts.irSig? (arts : ImportArtifacts) : Option System.FilePath :=
 def ImportArtifacts.ir? (arts : ImportArtifacts) : Option System.FilePath :=
   arts.toArrays[1]?.bind (·[1]?)
 
-def ImportArtifacts.oleanParts (inServer : Bool) (arts : ImportArtifacts) : Array System.FilePath := Id.run do
+def ImportArtifacts.oleanParts (inServer : Bool) (arts : ImportArtifacts)
+    : Array System.FilePath := Id.run do
   let mut fnames := #[]
   if let some mFile := arts.olean? then
     fnames := fnames.push mFile
@@ -114,7 +115,7 @@ structure ModuleArtifacts where
   ir? : Option System.FilePath := none
   c? : Option System.FilePath := none
   bc? : Option System.FilePath := none
-  deriving Repr, Inhabited, ToJson, FromJson
+deriving Repr, Inhabited, ToJson, FromJson
 
 def ModuleArtifacts.oleanParts (arts : ModuleArtifacts) : Array System.FilePath := Id.run do
   let mut fnames := #[]
@@ -143,7 +144,7 @@ structure Plugin where
   If {lean}`none`, the symbol is derived from the file name of the shared library.
   -/
   initFn? : Option String
-  deriving Repr, ToJson
+deriving Repr, ToJson
 
 namespace Plugin
 
@@ -151,21 +152,18 @@ namespace Plugin
 Constructs a plugin from just a shared library's {lean}`path`,
 inferring the name of the initialization function from the library's name.
 -/
-def ofFilePath (path : System.FilePath) : Plugin :=
-  {path, initFn? := none}
+def ofFilePath (path : System.FilePath) : Plugin := { path, initFn? := none }
 
 instance : Coe System.FilePath Plugin := ⟨ofFilePath⟩
 
 protected def fromJson? (data : Json) : Except String Plugin := do
   match data with
-  | .str path =>
-    return .ofFilePath path
+  | .str path => return .ofFilePath path
   | data@(.obj _) =>
     let path ← data.getObjValAs? _ "path"
     let initFn? ← data.getObjValAs? _ "initFn"
-    return {path, initFn?}
-  | _ =>
-    throw "expected string or object"
+    return { path, initFn? }
+  | _ => throw "expected string or object"
 
 instance : FromJson Plugin := ⟨Plugin.fromJson?⟩
 
@@ -204,7 +202,7 @@ structure ModuleSetup where
   plugins : Array Plugin := #[]
   /-- Additional options for the module. -/
   options : LeanOptions := {}
-  deriving Repr, Inhabited, ToJson, FromJson
+deriving Repr, Inhabited, ToJson, FromJson
 
 /-- Load a {lean}`ModuleSetup` from a JSON file. -/
 def ModuleSetup.load (path : System.FilePath) : IO ModuleSetup := do

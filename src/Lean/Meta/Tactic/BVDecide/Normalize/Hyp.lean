@@ -25,11 +25,10 @@ inductive HypSource where
   | grind
   | cegar
   | epr
-  deriving Inhabited, Hashable, BEq
+deriving Inhabited, Hashable, BEq
 
 partial instance : ToMessageData HypSource where
-  toMessageData s :=
-    go s
+  toMessageData s := go s
 where
   go (s : HypSource) : MessageData :=
     match s with
@@ -51,7 +50,7 @@ structure Hyp where
   type : Expr
   value : Expr
   source : HypSource
-  deriving Inhabited
+deriving Inhabited
 
 instance : BEq Hyp where
   beq lhs rhs := lhs.type == rhs.type

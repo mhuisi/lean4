@@ -23,15 +23,16 @@ def mkLawfulBEqInstanceCmds (declName : Name) : TermElabM (Array Syntax) := do
   if indVal.isNested then
     throwError "Deriving `LawfulBEq` for nested inductives is not supported"
 
-  let argNames     ← mkInductArgNames indVal
-  let binders      ← mkImplicitBinders argNames
-  let binders      := binders ++ (← mkInstImplicitBinders ``BEq indVal argNames)
-  let binders      := binders ++ (← mkInstImplicitBinders ``LawfulBEq indVal argNames)
-  let indType      ← mkInductiveApp indVal argNames
-  let type         ← `($(mkCIdent ``LawfulBEq) $indType)
-  let instCmd ← `(
-    instance $binders:implicitBinder* : $type := LawfulBEq.mk (by deriving_LawfulEq_tactic)
-  )
+  let argNames ← mkInductArgNames indVal
+  let binders ← mkImplicitBinders argNames
+  let binders := binders ++ (← mkInstImplicitBinders ``BEq indVal argNames)
+  let binders := binders ++ (← mkInstImplicitBinders ``LawfulBEq indVal argNames)
+  let indType ← mkInductiveApp indVal argNames
+  let type ← `($(mkCIdent ``LawfulBEq) $indType)
+  let instCmd ←
+    `(
+        instance $binders:implicitBinder* : $type := LawfulBEq.mk (by deriving_LawfulEq_tactic)
+      )
   let cmds := #[instCmd]
   trace[Elab.Deriving.lawfulBEq] "\n{cmds}"
   return cmds

@@ -26,11 +26,11 @@ namespace Lake
 /-! ## Pure State -/
 
 /-- The type of the Lake build store. -/
-public  abbrev BuildStore :=
-  Std.DTreeMap BuildKey (Job <| BuildData ·) BuildKey.quickCmp
+public abbrev BuildStore := Std.DTreeMap BuildKey (Job <| BuildData ·) BuildKey.quickCmp
 
 /-- Returns a new empty build store. -/
-@[inline] public def BuildStore.empty : BuildStore := Std.DTreeMap.empty
+@[inline]
+public def BuildStore.empty : BuildStore := Std.DTreeMap.empty
 
 /-! ## Atomic Mutable Reference -/
 
@@ -40,47 +40,50 @@ public abbrev BuildStoreRef := Std.Mutex BuildStore
 namespace BuildStoreRef
 
 /-- Creates a new mutable build store. -/
-@[inline] public def new (s : BuildStore := {}) : BaseIO BuildStoreRef :=
-  Std.Mutex.new s
+@[inline]
+public def new (s : BuildStore := {}) : BaseIO BuildStoreRef := Std.Mutex.new s
 
 /-- Atomically applies a pure modification to the build store. -/
-@[inline] public def modify (f : BuildStore → BuildStore) (r : BuildStoreRef) : BaseIO Unit :=
+@[inline]
+public def modify (f : BuildStore → BuildStore) (r : BuildStoreRef) : BaseIO Unit :=
   r.atomically (·.modify f)
 
 /-- Atomically applies a pure modification to the build store and returns the paired value. -/
-@[inline] public def modifyGet (f : BuildStore → (α × BuildStore)) (r : BuildStoreRef) : BaseIO α :=
+@[inline]
+public def modifyGet (f : BuildStore → (α × BuildStore)) (r : BuildStoreRef) : BaseIO α :=
   r.atomically (·.modifyGet f)
 
 /-- Reads the current value of the build store, returning a snapshot of its state. -/
-@[inline] public def get (r : BuildStoreRef) : BaseIO BuildStore :=
-  r.atomically (·.get)
+@[inline]
+public def get (r : BuildStoreRef) : BaseIO BuildStore := r.atomically (·.get)
 
 /-- Atomically returns a projection of current value of the build store. -/
-@[inline] public def getMap (f : BuildStore → α) (r : BuildStoreRef) : BaseIO α :=
+@[inline]
+public def getMap (f : BuildStore → α) (r : BuildStoreRef) : BaseIO α :=
   r.atomically fun ref => return f (← ref.get)
 
 /--
 Atomically returns the build store's saved job for the build key {lean}`k`, if any.
 Otherwise, returns {lean}`none`.
 -/
-@[inline] public def fetch?
-  (k : BuildKey) [FamilyOut BuildData k α] (r : BuildStoreRef)
-: BaseIO (Option (Job α)) :=
+@[inline]
+public def fetch? (k : BuildKey) [FamilyOut BuildData k α] (r : BuildStoreRef)
+    : BaseIO (Option (Job α)) :=
   r.getMap fun s => cast (by simp) <| s.get? k
 
 /-- Atomically inserts a new build job into the build store. Does nothing if one already exists. -/
-@[inline] public def store
-  (k : BuildKey) [FamilyDef BuildData k α] (v : Job α) (r : BuildStoreRef)
-: BaseIO Unit :=
+@[inline]
+public def store (k : BuildKey) [FamilyDef BuildData k α] (v : Job α) (r : BuildStoreRef)
+    : BaseIO Unit :=
   r.modify (·.insertIfNew k (cast (by simp) v))
 
 /--
 Atomically inserts a new build job into the build store and returns it.
 If one already exists, returns that instead.
 -/
-@[inline] def storeAndReturn
-  (k : BuildKey) [FamilyDef BuildData k α] (v : Job α) (r : BuildStoreRef)
-: BaseIO (Job α) :=
+@[inline]
+def storeAndReturn (k : BuildKey) [FamilyDef BuildData k α] (v : Job α) (r : BuildStoreRef)
+    : BaseIO (Job α) :=
   r.modifyGet fun s =>
     let v := cast (by simp) v
     let (v?, s) := s.getThenInsertIfNew? k v
@@ -90,11 +93,12 @@ If one already exists, returns that instead.
 Returns the value of {lean}`k` in the store if it exists.
 Otherwise, runs {lean}`create` to generate it, stores it, and returns the result.
 -/
-@[inline] public def fetchOrCreate
-  [Monad m] [MonadLiftT BaseIO m]
-  (k : BuildKey) [FamilyDef BuildData k α] (create : m (Job α))
-  (r : BuildStoreRef)
-: m (Job α) := do
+@[inline]
+public def fetchOrCreate
+    [Monad m] [MonadLiftT BaseIO m]
+    (k : BuildKey) [FamilyDef BuildData k α]
+    (create : m (Job α)) (r : BuildStoreRef)
+    : m (Job α) := do
   if let some val ← r.fetch? k then
     return val
   else
@@ -113,14 +117,15 @@ An internal monad. **Not intended for user use.**
 -/
 public abbrev BuildStoreT := ReaderT BuildStoreRef
 
-/---
+/--
+-
 Runs the monadic action {lean}`x` over the build store {lean}`s`,
 returning the monadic result paired with the final state of the build store.
 -/
-@[inline] public nonrec def BuildStoreT.run
-  [Monad m] [MonadLiftT BaseIO m]
-  (s : BuildStore := {}) (x : BuildStoreT m α)
-: m (α × BuildStore) := do
+@[inline]
+public nonrec def BuildStoreT.run
+    [Monad m] [MonadLiftT BaseIO m] (s : BuildStore := {}) (x : BuildStoreT m α)
+    : m (α × BuildStore) := do
   let ref ← BuildStoreRef.new s
   let a ← x.run ref
   let s ← ref.get

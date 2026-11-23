@@ -20,13 +20,13 @@ namespace Module
 
 def updateTokens (tokens : TokenTable) : TokenTable :=
   match addParserTokens tokens header.info with
-    | Except.ok tables => tables
-    | Except.error _   => unreachable!
+  | Except.ok tables => tables
+  | Except.error _ => unreachable!
 
 end Module
 
 structure ModuleParserState where
-  pos        : String.Pos.Raw := 0
+  pos : String.Pos.Raw := 0
   recovering : Bool := false
   /--
   Start of the initial whitespace to associate with the first token, or `none` if it has already
@@ -34,9 +34,11 @@ structure ModuleParserState where
   use `some` of the region's start position to retain its initial whitespace.
   -/
   leadingStartPos? : Option String.Pos.Raw := some 0
-  deriving Inhabited
+deriving Inhabited
 
-private partial def mkErrorMessage (c : InputContext) (pos : String.Pos.Raw) (stk : SyntaxStack) (e : Parser.Error) : Message := Id.run do
+private partial def mkErrorMessage
+    (c : InputContext) (pos : String.Pos.Raw) (stk : SyntaxStack) (e : Parser.Error)
+    : Message := Id.run do
   let mut pos := pos
   let mut endPos? := none
   let mut e := e
@@ -45,27 +47,32 @@ private partial def mkErrorMessage (c : InputContext) (pos : String.Pos.Raw) (st
     if let some r := e.unexpectedTk.getRange? then
       pos := r.start
       endPos? := some r.stop
-    let unexpected := match e.unexpectedTk with
+    let unexpected :=
+      match e.unexpectedTk with
       | .ident .. => "unexpected identifier"
       | .atom _ v => s!"unexpected token '{v}'"
-      | _         => "unexpected token"  -- TODO: categorize (custom?) literals as well?
+      | _ => "unexpected token" -- TODO: categorize (custom?) literals as well?
     e := { e with unexpected }
     -- if there is an unexpected token, include preceding whitespace as well as the expected token could
     -- be inserted at any of these places to fix the error; see tests/lean/1971.lean
     if let some trailing := lastTrailing stk then
       if trailing.stopPos == pos then
         pos := trailing.startPos
-  { fileName := c.fileName
+  {
+    fileName := c.fileName
     pos := c.fileMap.toPosition pos
     endPos := c.fileMap.toPosition <$> endPos?
     keepFullRange := true
-    data := toString e }
+    data := toString e
+  }
 where
   -- Error recovery might lead to there being some "junk" on the stack
   lastTrailing (s : SyntaxStack) : Option Substring.Raw :=
     Id.run <| s.toSubarray.findSomeRevM? fun stx =>
-      if let .original (trailing := trailing) .. := stx.getTailInfo then pure (some trailing)
-        else none
+      if let .original (trailing := trailing) .. := stx.getTailInfo then
+        pure (some trailing)
+      else
+        none
 
 private def setLeadingStart (stx : Syntax) (startPos : String.Pos.Raw) : Syntax × Bool := Id.run do
   let some (.original leading pos trailing endPos) ← stx.getHeadInfo?
@@ -82,13 +89,16 @@ Syntax offsets refer to this string; diagnostic positions use `inputCtx.fileMap`
 
 Pass the returned parser state to `parseCommand` to continue parsing the same region.
 -/
-def parseHeader (inputCtx : InputContext) (startPos : String.Pos.Raw := 0) :
-    IO (TSyntax ``Module.header × ModuleParserState × MessageLog) := do
+def parseHeader (inputCtx : InputContext) (startPos : String.Pos.Raw := 0)
+    : IO (TSyntax ``Module.header × ModuleParserState × MessageLog) := do
   let dummyEnv ← mkEmptyEnvironment
-  let p   := andthenFn whitespace Module.header.fn
+  let p := andthenFn whitespace Module.header.fn
   let tokens := Module.updateTokens (getTokenTable dummyEnv)
-  let s   := p.run inputCtx { env := dummyEnv, options := {} } tokens
-    { mkParserState inputCtx.inputString with pos := startPos }
+  let s :=
+    p.run inputCtx { env := dummyEnv, options := {} } tokens {
+      mkParserState inputCtx.inputString with
+      pos := startPos
+    }
   let stx := if s.stxStack.isEmpty then .missing else s.stxStack.back
   let mut messages : MessageLog := {}
   for (pos, stk, err) in s.allErrors do
@@ -104,7 +114,8 @@ def parseHeader (inputCtx : InputContext) (startPos : String.Pos.Raw := 0) :
         data := msg
       }
     for stx in importsStx do
-      if let `(Module.import| $[public%$pubTk?]? $[meta%$metaTk?]? import $[all%$allTk?]? $mod) := stx then
+      if let `(Module.import| $[public%$pubTk?]? $[meta%$metaTk?]? import $[all%$allTk?]? $mod) :=
+          stx then
         let mod := mod.getId
         if moduleTk?.isNone then
           if let some tk := pubTk? then
@@ -116,16 +127,23 @@ def parseHeader (inputCtx : InputContext) (startPos : String.Pos.Raw := 0) :
         else
           if let some tk := allTk? then
             if pubTk?.isSome then
-              messages := messages.add <| mkError tk s!"cannot use `all` with `public import`; \
-                consider using separate `public import {mod}` and `import all {mod}` directives \
-                in order to import public data into the public scope and private data into the \
-                private scope."
+              messages :=
+                messages.add <| mkError tk
+                  s!"cannot use `all` with `public import`; \
+                    consider using separate `public import {mod}` and `import all {mod}` \
+                    directives \
+                    in order to import public data into the public scope and private data into the \
+                    private scope."
   let (stx, isLeadingSet) := setLeadingStart stx startPos
-  pure (⟨stx⟩, {
-    pos := s.pos
-    recovering := s.hasError
-    leadingStartPos? := if isLeadingSet then none else some startPos
-  }, messages)
+  pure (
+    ⟨stx⟩,
+    {
+      pos := s.pos
+      recovering := s.hasError
+      leadingStartPos? := if isLeadingSet then none else some startPos
+    },
+    messages
+  )
 
 private def mkEOI (inputCtx : InputContext) (pos : String.Pos.Raw) : Syntax :=
   let emptyAt := inputCtx.substring pos pos
@@ -135,12 +153,14 @@ private def mkEOI (inputCtx : InputContext) (pos : String.Pos.Raw) : Syntax :=
 def isTerminalCommand (s : Syntax) : Bool :=
   s.isOfKind ``Command.exit || s.isOfKind ``Command.import || s.isOfKind ``Command.eoi
 
-private def consumeInput (inputCtx : InputContext) (pmctx : ParserModuleContext) (pos : String.Pos.Raw) : String.Pos.Raw :=
+private def consumeInput
+    (inputCtx : InputContext) (pmctx : ParserModuleContext) (pos : String.Pos.Raw)
+    : String.Pos.Raw :=
   let s : ParserState := { cache := initCacheForInput inputCtx.inputString, pos := pos }
   let s := tokenFn [] |>.run inputCtx pmctx (getTokenTable pmctx.env) s
   match s.errorMsg with
   | some _ => pos + ' '
-  | none   => s.pos
+  | none => s.pos
 
 def topLevelCommandParserFn : ParserFn :=
   -- set position to enforce appropriate indentation of applications etc.
@@ -148,18 +168,25 @@ def topLevelCommandParserFn : ParserFn :=
   -- formatting might be less rigid.
   (withPosition commandParser).fn
 
-partial def parseCommand (inputCtx : InputContext) (pmctx : ParserModuleContext) (mps : ModuleParserState) (messages : MessageLog) : Syntax × ModuleParserState × MessageLog := Id.run do
+partial def parseCommand
+    (inputCtx : InputContext) (pmctx : ParserModuleContext) (mps : ModuleParserState)
+    (messages : MessageLog)
+    : Syntax × ModuleParserState × MessageLog := Id.run do
   let mut pos := mps.pos
   let mut recovering := mps.recovering
   let mut messages := messages
-  let mut stx := Syntax.missing  -- will always be assigned below
+  let mut stx := Syntax.missing -- will always be assigned below
   repeat
     if inputCtx.atEnd pos then
       stx := mkEOI inputCtx pos
       break
     let pos' := pos
     let p := andthenFn whitespace topLevelCommandParserFn
-    let s := p.run inputCtx pmctx (getTokenTable pmctx.env) { cache := initCacheForInput inputCtx.inputString, pos }
+    let s :=
+      p.run inputCtx pmctx (getTokenTable pmctx.env) {
+        cache := initCacheForInput inputCtx.inputString
+        pos
+      }
     -- save errors from sub-recoveries
     for (rpos, rstk, recovered) in s.recoveredErrors do
       messages := messages.add <| mkErrorMessage inputCtx rpos rstk recovered
@@ -176,9 +203,11 @@ partial def parseCommand (inputCtx : InputContext) (pmctx : ParserModuleContext)
       -- advance at least one token to prevent infinite loops
       if pos == pos' then
         pos := consumeInput inputCtx pmctx pos
-      /- We ignore commands where `getPos?` is none. This happens only on commands that have a prefix comprised of optional elements.
-          For example, unification hints start with `optional («scoped» <|> «local»)`.
-          We claim a syntactically incorrect command containing no token or identifier is irrelevant for intellisense and should be ignored. -/
+      /-
+      We ignore commands where `getPos?` is none. This happens only on commands that have a prefix comprised of optional elements.
+       For example, unification hints start with `optional («scoped» <|> «local»)`.
+       We claim a syntactically incorrect command containing no token or identifier is irrelevant for intellisense and should be ignored.
+      -/
       let ignore := s.stxStack.isEmpty || s.stxStack.back.getPos?.isNone
       unless recovering && ignore do
         messages := messages.add <| mkErrorMessage inputCtx s.pos s.stxStack errorMsg
@@ -195,7 +224,10 @@ partial def parseCommand (inputCtx : InputContext) (pmctx : ParserModuleContext)
 
 -- only useful for testing since most Lean files cannot be parsed without elaboration
 
-partial def testParseModuleAux (env : Environment) (inputCtx : InputContext) (s : ModuleParserState) (msgs : MessageLog) (stxs  : Array Syntax) : IO (Array Syntax) :=
+partial def testParseModuleAux
+    (env : Environment) (inputCtx : InputContext) (s : ModuleParserState) (msgs : MessageLog)
+    (stxs : Array Syntax)
+    : IO (Array Syntax) :=
   let rec parse (state : ModuleParserState) (msgs : MessageLog) (stxs : Array Syntax) :=
     match parseCommand inputCtx { env := env, options := {} } state msgs with
     | (stx, state, msgs) =>

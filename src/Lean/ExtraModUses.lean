@@ -7,7 +7,7 @@ module
 
 prelude
 public import Lean.CoreM
-public import Lean.Compiler.MetaAttr  -- TODO: public because of specializations
+public import Lean.Compiler.MetaAttr -- TODO: public because of specializations
 import Init.Data.Range.Polymorphic.Stream
 
 /-!
@@ -22,7 +22,8 @@ public structure IndirectModUse where
   declName : Name
 deriving BEq
 
-public builtin_initialize indirectModUseExt : SimplePersistentEnvExtension IndirectModUse (Std.HashMap Name (Array ModuleIdx)) ←
+public builtin_initialize indirectModUseExt
+    : SimplePersistentEnvExtension IndirectModUse (Std.HashMap Name (Array ModuleIdx)) ←
   registerSimplePersistentEnvExtension {
     addEntryFn s _ := s
     addImportedFn es := Id.run do
@@ -48,7 +49,8 @@ current module but may in the future.
 -/
 public def recordIndirectModUse (kind : String) (declName : Name) : m Unit := do
   -- We can assume this is called from the main thread only and that the list of entries is short
-  if !(indirectModUseExt.getEntries (asyncMode := .mainOnly) (← getEnv) |>.contains { kind, declName }) then
+  if !(indirectModUseExt.getEntries (asyncMode := .mainOnly) (← getEnv)
+      |>.contains { kind, declName }) then
     trace[extraModUses] "recording indirect mod use of `{declName}` ({kind})"
     modifyEnv (indirectModUseExt.addEntry · { kind, declName })
 
@@ -66,8 +68,8 @@ builtin_initialize extraModUses : SimplePersistentEnvExtension ExtraModUse (PHas
   registerSimplePersistentEnvExtension {
     addEntryFn m k := m.insert k
     addImportedFn _ := {}
-    exportEntriesFnEx? := some fun _ _ entries =>
-      { exported := #[], server := #[], «private» := entries.toArray }
+    exportEntriesFnEx? :=
+      some fun _ _ entries => { exported := #[], server := #[], «private» := entries.toArray }
     asyncMode := .sync
     replay? := some <| SimplePersistentEnvExtension.replayOfFilter (·.contains ·) (·.insert ·)
   }
@@ -80,13 +82,13 @@ public def getExtraModUses (env : Environment) (modIdx : ModuleIdx) : Array Extr
 public def copyExtraModUses (src dest : Environment) : Environment := Id.run do
   let mut env := dest
   for entry in extraModUses.getEntries (asyncMode := .local) src do
-    if !(extraModUses.getState (asyncMode := .local) env).contains entry then
+    if ! (extraModUses.getState (asyncMode := .local) env).contains entry then
       env := extraModUses.addEntry env entry
   env
 
 def recordExtraModUseCore (mod : Name) (isMeta : Bool) (hint : Name := .anonymous) : m Unit := do
   let entry := { module := mod, isExported := (← getEnv).isExporting, isMeta }
-  if !(extraModUses.getState (asyncMode := .local) (← getEnv)).contains entry then
+  if ! (extraModUses.getState (asyncMode := .local) (← getEnv)).contains entry then
     trace[extraModUses] "recording {if entry.isExported then "public" else "private"} \
       {if isMeta then "meta" else "regular"} extra mod use {mod}\
       {if hint.isAnonymous then m!"" else m!" of {hint}"}"
@@ -112,7 +114,7 @@ public def recordExtraModUseFromDecl (declName : Name) (isMeta : Bool) : m Unit 
   let env ← getEnv
   if let some mod := env.getModuleIdxFor? declName |>.bind (env.header.modules[·]?) then
     -- If the declaration itself is already `meta`, no need to mark the import.
-    let isMeta := isMeta && !isMarkedMeta (← getEnv) declName
+    let isMeta := isMeta && ! isMarkedMeta (← getEnv) declName
     recordExtraModUseCore mod.module isMeta (hint := declName)
     for modIdx in (indirectModUseExt.getState (asyncMode := .local) env)[declName]?.getD #[] do
       recordExtraModUseCore env.header.modules[modIdx]!.module (isMeta := false) (hint := declName)
@@ -134,5 +136,4 @@ public def recordExtraRevUseOfCurrentModule : m Unit := do
     trace[extraModUses] "recording extra reverse use of current module"
     modifyEnv (isExtraRevModUseExt.addEntry · ())
 
-builtin_initialize
-  registerTraceClass `extraModUses
+builtin_initialize registerTraceClass `extraModUses

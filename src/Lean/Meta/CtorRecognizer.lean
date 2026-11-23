@@ -16,15 +16,17 @@ namespace Lean.Meta
 private def getConstructorVal? (env : Environment) (ctorName : Name) : Option ConstructorVal :=
   match env.find? ctorName with
   | some (.ctorInfo v) => v
-  | _                  => none
+  | _ => none
 
 /--
 If `e` is a constructor application,
 then return the corresponding `ConstructorVal`.
 -/
 def isConstructorAppCore? (e : Expr) : MetaM (Option ConstructorVal) := do
-  let .const n _ := e.getAppFn | return none
-  let some v := getConstructorVal? (← getEnv) n | return none
+  let .const n _ := e.getAppFn
+    | return none
+  let some v := getConstructorVal? (← getEnv) n
+    | return none
   if v.numParams + v.numFields == e.getAppNumArgs then
     return some v
   else
@@ -47,7 +49,8 @@ def isConstructorApp'? (e : Expr) : MetaM (Option ConstructorVal) := do
   if let some (_, k) ← isOffset? e then
     -- `k = 0` (e.g., `0 + 0`): `e` may still reduce to a constructor, so fall through.
     if k ≠ 0 then
-      let .ctorInfo val ← getConstInfo ``Nat.succ | return none
+      let .ctorInfo val ← getConstInfo ``Nat.succ
+        | return none
       return some val
   if let some r ← isConstructorApp? e then
     return r
@@ -64,12 +67,9 @@ def isConstructorApp'? (e : Expr) : MetaM (Option ConstructorVal) := do
 Returns `true`, if `e` is constructor application of builtin literal defeq to
 a constructor application.
 -/
-def isConstructorApp (e : Expr) : MetaM Bool :=
-  return (← isConstructorApp? e).isSome
+def isConstructorApp (e : Expr) : MetaM Bool := return (← isConstructorApp? e).isSome
 
-/--
-Returns `true` if `isConstructorApp e` or `isConstructorApp (← whnf e)`
--/
+/-- Returns `true` if `isConstructorApp e` or `isConstructorApp (← whnf e)` -/
 def isConstructorApp' (e : Expr) : MetaM Bool := do
   if (← isConstructorApp e) then return true
   return (← isConstructorApp (← whnf e))
@@ -80,8 +80,10 @@ application arguments.
 -/
 def constructorApp? (e : Expr) : MetaM (Option (ConstructorVal × Array Expr)) := do
   let e ← litToCtor e
-  let .const declName _ := e.getAppFn | return none
-  let some v := getConstructorVal? (← getEnv) declName | return none
+  let .const declName _ := e.getAppFn
+    | return none
+  let some v := getConstructorVal? (← getEnv) declName
+    | return none
   if v.numParams + v.numFields == e.getAppNumArgs then
     return some (v, e.getAppArgs)
   else
@@ -97,9 +99,12 @@ def constructorApp'? (e : Expr) : MetaM (Option (ConstructorVal × Array Expr)) 
   if let some (s, k) ← isOffset? e then
     -- `k = 0` (e.g., `0 + 0`): `e` may still reduce to a constructor, so fall through.
     if k ≠ 0 then
-      let .ctorInfo val ← getConstInfo ``Nat.succ | return none
-      if k = 1 then return some (val, #[s])
-      else return some (val, #[mkNatAdd s (toExpr (k-1))])
+      let .ctorInfo val ← getConstInfo ``Nat.succ
+        | return none
+      if k = 1 then
+        return some (val, #[s])
+      else
+        return some (val, #[mkNatAdd s (toExpr (k - 1))])
   if let some r ← constructorApp? e then
     return some r
   try

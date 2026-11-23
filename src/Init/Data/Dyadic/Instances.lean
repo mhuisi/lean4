@@ -42,10 +42,11 @@ instance : CommRing Dyadic where
   intCast_neg _ := by simp [← toRat_inj]
   ofNat_succ n := by
     change ((n + 1 : Int) : Dyadic) = ((n : Int) : Dyadic) + 1
-    simp [← toRat_inj, Rat.intCast_add]; rfl
+    simp [← toRat_inj, Rat.intCast_add]
+    rfl
 
-instance : IsCharP Dyadic 0 := IsCharP.mk' _ _
-  (ofNat_eq_zero_iff := fun x => by change (x : Dyadic) = 0 ↔ _; simp [← toRat_inj])
+instance : IsCharP Dyadic 0 :=
+  IsCharP.mk' _ _ (ofNat_eq_zero_iff := fun x => by change (x : Dyadic) = 0 ↔ _; simp [← toRat_inj])
 
 instance : NoNatZeroDivisors Dyadic where
   no_nat_zero_divisors k a b h₁ h₂ := by
@@ -57,6 +58,7 @@ instance : OrderedRing Dyadic where
   zero_lt_one := by decide
   add_le_left_iff _ := by simp [← toRat_le_toRat_iff, Rat.add_le_add_right]
   mul_lt_mul_of_pos_left {_ _ _} := by simpa [← toRat_lt_toRat_iff] using Rat.mul_lt_mul_of_pos_left
-  mul_lt_mul_of_pos_right {_ _ _} := by simpa [← toRat_lt_toRat_iff] using Rat.mul_lt_mul_of_pos_right
+  mul_lt_mul_of_pos_right {_ _ _} := by
+    simpa [← toRat_lt_toRat_iff] using Rat.mul_lt_mul_of_pos_right
 
 end Dyadic

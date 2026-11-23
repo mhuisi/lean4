@@ -21,7 +21,6 @@ Returns an iterator that terminates immediately.
 * `Productive` instance: always
 -/
 @[always_inline, inline]
-def Iter.empty (β : Type w) :=
-  ((IterM.empty Id β).toIter : Iter β)
+def Iter.empty (β : Type w) := ((IterM.empty Id β).toIter : Iter β)
 
 end Std

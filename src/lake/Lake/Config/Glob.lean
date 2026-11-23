@@ -39,21 +39,20 @@ scoped macro:max n:name noWs ".+" : term =>
 namespace Glob
 
 public protected def toString : Glob → String
-| .one n => n.toString
-| .submodules n => n.toString ++ ".+"
-| .andSubmodules n => n.toString ++ ".*"
+  | .one n => n.toString
+  | .submodules n => n.toString ++ ".+"
+  | .andSubmodules n => n.toString ++ ".*"
 
 public instance : ToString Glob := ⟨Glob.toString⟩
 
 public def «matches» (m : Name) : (self : Glob) → Bool
-| one n => n == m
-| submodules n => n.isPrefixOf m && n != m
-| andSubmodules n => n.isPrefixOf m
+  | one n => n == m
+  | submodules n => n.isPrefixOf m && n != m
+  | andSubmodules n => n.isPrefixOf m
 
-@[inline] public nonrec def forEachModuleIn [Monad m] [MonadLiftT IO m]
-(dir : FilePath) (f : Name → m PUnit) : (self : Glob) → m PUnit
-| one n => f n
-| submodules n =>
-  Lean.forEachModuleInDir (Lean.modToFilePath dir n "") (f <| n ++ ·)
-| andSubmodules n =>
-  f n *> Lean.forEachModuleInDir (Lean.modToFilePath dir n "") (f <| n ++ ·)
+@[inline]
+public nonrec def forEachModuleIn [Monad m] [MonadLiftT IO m] (dir : FilePath) (f : Name → m PUnit)
+    : (self : Glob) → m PUnit
+  | one n => f n
+  | submodules n => Lean.forEachModuleInDir (Lean.modToFilePath dir n "") (f <| n ++ ·)
+  | andSubmodules n => f n *> Lean.forEachModuleInDir (Lean.modToFilePath dir n "") (f <| n ++ ·)

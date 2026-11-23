@@ -7,7 +7,6 @@ Authors: David Thrane Christiansen
 module
 
 prelude
-
 public import Lean.DocString.Types
 public import Lean.DocString.Extension
 public import Lean.CoreM
@@ -21,9 +20,7 @@ set_option linter.missingDocs true
 
 namespace Lean.Doc
 
-/--
-The internal rendering state for `MarkdownM`.
--/
+/-- The internal rendering state for `MarkdownM`. -/
 public structure MarkdownM.State where
   private footnotes : Array (String × String) := #[]
 
@@ -73,8 +70,7 @@ Drops trailing ASCII spaces (`' '`) from a string. Used to compute the "empty li
 per-line prefix (`"> "` becomes `">"`) so that prefixed empty lines don't carry trailing whitespace
 into the rendered output.
 -/
-def trimEndSpaces (s : String) : String :=
-  s.dropEndWhile ' ' |>.copy
+def trimEndSpaces (s : String) : String := s.dropEndWhile ' ' |>.copy
 
 /--
 Applies a uniform prefix to every line. Empty lines receive the trimmed prefix to avoid trailing
@@ -101,9 +97,12 @@ between adjacent non-empty blocks. Empty input blocks are skipped.
 -/
 public def joinBlocks (blocks : Array (Array String)) : Array String :=
   blocks.foldl (init := #[]) fun acc b =>
-    if b.isEmpty then acc
-    else if acc.isEmpty then b
-    else acc.push "" ++ b
+    if b.isEmpty then
+      acc
+    else if acc.isEmpty then
+      b
+    else
+      acc.push "" ++ b
 
 /--
 Concatenates two strings that are the result of rendering consecutive inliens, inserting a U+200B
@@ -112,8 +111,10 @@ two code spans consecutively, so the zero-width space disambiguates them without
 whitespace.
 -/
 def glueInlineBoundary (l r : String) : String :=
-  if l.endsWith "`" ∧ r.startsWith "`" then l ++ "​" ++ r
-  else l ++ r
+  if l.endsWith "`" ∧ r.startsWith "`" then
+    l ++ "​" ++ r
+  else
+    l ++ r
 
 /--
 Concatenates a array of lines, where each line is an array of rendered inlines. The last line of one
@@ -122,8 +123,10 @@ piece is glued onto the first line of the next via `glueInlineBoundary` (so `.te
 -/
 public def joinInlines (parts : Array (Array String)) : Array String :=
   parts.foldl (init := #[]) fun acc next =>
-    if h : next.size = 0 then acc
-    else if h' : acc.size = 0 then next
+    if h : next.size = 0 then
+      acc
+    else if h' : acc.size = 0 then
+      next
     else
       let lastIdx := acc.size - 1
       have : 0 < acc.size := Nat.ne_zero_iff_zero_lt.mp h'
@@ -132,9 +135,7 @@ public def joinInlines (parts : Array (Array String)) : Array String :=
       let glued := glueInlineBoundary (acc[lastIdx]) next[0]
       acc.set lastIdx glued ++ next.drop 1
 
-/--
-A means of transforming values into Markdown lines.
--/
+/-- A means of transforming values into Markdown lines. -/
 public class ToMarkdown (α : Type u) where
   /--
   Render an `α` to its Markdown lines. The lines should not contain literal `\n`
@@ -142,17 +143,14 @@ public class ToMarkdown (α : Type u) where
   -/
   toMarkdown : α → MarkdownM (Array String)
 
-/--
-A way to transform inline elements extended with `i` into Markdown lines.
--/
+/-- A way to transform inline elements extended with `i` into Markdown lines. -/
 public class MarkdownInline (i : Type u) where
   /--
   Render the `i` and its contents to Markdown lines, given a recursive renderer
   for ordinary inline content.
   -/
-  toMarkdown :
-    (Inline i → MarkdownM (Array String)) → i → Array (Inline i) →
-    MarkdownM (Array String)
+  toMarkdown
+    : (Inline i → MarkdownM (Array String)) → i → Array (Inline i) → MarkdownM (Array String)
 
 public instance : MarkdownInline Empty where
   toMarkdown := nofun
@@ -166,9 +164,10 @@ public class MarkdownBlock (i : Type u) (b : Type v) where
   Render the `b` and its contents to Markdown lines, given recursive renderers
   for inline and block content.
   -/
-  toMarkdown :
-    (Inline i → MarkdownM (Array String)) → (Block i b → MarkdownM (Array String)) →
-    b → Array (Block i b) → MarkdownM (Array String)
+  toMarkdown
+    : (Inline i → MarkdownM (Array String)) → (Block i b → MarkdownM (Array String)) → b
+      → Array (Block i b)
+      → MarkdownM (Array String)
 
 public instance : MarkdownBlock i Empty where
   toMarkdown := nofun
@@ -180,7 +179,7 @@ following character, used for the `![…]` image-syntax check.
 def midLineSpecial (c : Char) (next? : Option Char) : Bool :=
   match c with
   | '!' => next? == some '['
-  | _   => "*_`<[]{}()#".any c
+  | _ => "*_`<[]{}()#".any c
 
 /--
 Checks whether `c` needs escaping in a context that could potentially start a block. In these
@@ -206,8 +205,7 @@ def escape (s : String) : String := Id.run do
   while h : ¬iter.IsAtEnd do
     let c := iter.get h
     let nextIter := iter.next h
-    let next? : Option Char :=
-      if h' : ¬nextIter.IsAtEnd then some (nextIter.get h') else none
+    let next? : Option Char := if h' : ¬nextIter.IsAtEnd then some (nextIter.get h') else none
     if markerPrefixSpecial prev? c next? then
       s' := s'.push '\\'
     s' := s'.push c
@@ -219,17 +217,14 @@ def escape (s : String) : String := Id.run do
   while h : ¬iter.IsAtEnd do
     let c := iter.get h
     let nextIter := iter.next h
-    let next? : Option Char :=
-      if h' : ¬nextIter.IsAtEnd then some (nextIter.get h') else none
+    let next? : Option Char := if h' : ¬nextIter.IsAtEnd then some (nextIter.get h') else none
     if midLineSpecial c next? then
       s' := s'.push '\\'
     s' := s'.push c
     iter := nextIter
   return s'
 
-/--
-Length of the longest unbroken run of `` ` `` characters in `str`.
--/
+/-- Length of the longest unbroken run of `` ` `` characters in `str`. -/
 def longestBacktickRun (str : String) : Nat := Id.run do
   let mut longest := 0
   let mut current := 0
@@ -261,8 +256,7 @@ Splits a string into an array of lines on `'\n'`, retaining empty trailing/leadi
 `"a\nb\n"` yields `#["a", "b", ""]`). Used to convert code blocks into the line-array representation
 used by the rest of the renderer.
 -/
-def splitNewlines (str : String) : Array String :=
-  str.split '\n' |>.map (·.copy) |>.toArray
+def splitNewlines (str : String) : Array String := str.split '\n' |>.map (·.copy) |>.toArray
 
 /--
 Produces a fenced code block as a line array (with no surrounding blank lines), with a sufficiently
@@ -304,7 +298,8 @@ start or end with whitespace, taking the flanking rules of Markdown into account
 partial def trimRight (inline : Inline i) : (Inline i × String) := go #[inline]
 where
   go (xs : Array (Inline i)) : Inline i × String :=
-    if h : xs.size = 0 then (.empty, "")
+    if h : xs.size = 0 then
+      (.empty, "")
     else
       match xs.back (Nat.ne_zero_iff_zero_lt.mp h) with
       | .text s =>
@@ -318,7 +313,6 @@ where
           (.concat (xs.pop.push (.text nonWs.copy)), ws.copy)
       | .concat ys => go (xs.pop ++ ys)
       | _ => (.concat xs, "")
-
 
 /--
 Strips leading and trailing whitespace from `inline`, returning the leading whitespace, the stripped
@@ -336,8 +330,7 @@ Renders an `Inline i` to its Markdown lines. The `InlineCtx` argument tracks whi
 are already open so that nested `*` / `**` / `[…](…)` don't emit redundant openers and closers. The
 top level is represented by `{}`.
 -/
-partial def inlineMarkdown [MarkdownInline i] :
-    InlineCtx → Inline i → MarkdownM (Array String)
+partial def inlineMarkdown [MarkdownInline i] : InlineCtx → Inline i → MarkdownM (Array String)
   | _, .text s => return #[escape s]
   | _, .linebreak _ => return #["", ""]
   | ctx, .emph xs => do
@@ -370,23 +363,27 @@ partial def inlineMarkdown [MarkdownInline i] :
     else
       let inner ← inlineMarkdown { ctx with inLink := true } (.concat content)
       return joinInlines #[#["["], inner, #["](" ++ url ++ ")"]]
-  | _, .image alt url => return #[s!"![{escape alt}]({url})"]
+  | _, .image alt url =>
+    return #[s!"![{escape alt}]({url})"]
   | ctx, .footnote name content => do
     let parts ← content.mapM (inlineMarkdown ctx)
     let footnoteContent := "\n".intercalate (joinInlines parts).toList
     MarkdownM.addFootnote name footnoteContent
     return #[s!"[^{name}]"]
-  | _, .code str => return #[quoteCode str]
-  | _, .math .display m => return #[s!"$${m}$$"]
-  | _, .math .inline m => return #[s!"${m}$"]
+  | _, .code str =>
+    return #[quoteCode str]
+  | _, .math .display m =>
+    return #[s!"$${m}$$"]
+  | _, .math .inline m =>
+    return #[s!"${m}$"]
   | ctx, .other container content =>
     MarkdownInline.toMarkdown (inlineMarkdown ctx) container content
 
 public instance [MarkdownInline i] : ToMarkdown (Inline i) where
   toMarkdown := private inlineMarkdown {}
 
-partial def blockMarkdown [MarkdownInline i] [MarkdownBlock i b] :
-    Block i b → MarkdownM (Array String)
+partial def blockMarkdown [MarkdownInline i] [MarkdownBlock i b]
+    : Block i b → MarkdownM (Array String)
   | .para xs => inlineMarkdown {} (.concat xs)
   | .concat bs => do
     let parts ← bs.mapM blockMarkdown
@@ -395,9 +392,10 @@ partial def blockMarkdown [MarkdownInline i] [MarkdownBlock i b] :
     let parts ← bs.mapM blockMarkdown
     return prefixLines "> " (joinBlocks parts)
   | .ul items => do
-    let rendered ← items.mapM fun item => do
-      let inner ← item.contents.mapM blockMarkdown
-      return prefixListLines "* " "  " (joinBlocks inner)
+    let rendered ←
+      items.mapM fun item => do
+        let inner ← item.contents.mapM blockMarkdown
+        return prefixListLines "* " "  " (joinBlocks inner)
     return joinBlocks rendered
   | .ol start items => do
     let mut out : Array (Array String) := #[]
@@ -410,19 +408,23 @@ partial def blockMarkdown [MarkdownInline i] [MarkdownBlock i b] :
       n := n + 1
     return joinBlocks out
   | .dl items => do
-    let rendered ← items.mapM fun item => do
-      let term ← inlineMarkdown {} (.bold item.term)
-      let desc ← item.desc.mapM blockMarkdown
-      let termWithColon := joinInlines #[term, #[":"]]
-      -- Single-block descriptions are attached directly to the term. Multi-block descriptions are
-      -- separated from the term with a blank line so the term doesn't fuse into the
-      -- first description paragraph.
-      let body :=
-        if item.desc.size ≤ 1 then termWithColon ++ joinBlocks desc
-        else joinBlocks (#[termWithColon] ++ desc)
-      return prefixListLines "* " "  " body
+    let rendered ←
+      items.mapM fun item => do
+        let term ← inlineMarkdown {} (.bold item.term)
+        let desc ← item.desc.mapM blockMarkdown
+        let termWithColon := joinInlines #[term, #[":"]]
+        -- Single-block descriptions are attached directly to the term. Multi-block descriptions are
+        -- separated from the term with a blank line so the term doesn't fuse into the
+        -- first description paragraph.
+        let body :=
+          if item.desc.size ≤ 1 then
+            termWithColon ++ joinBlocks desc
+          else
+            joinBlocks (#[termWithColon] ++ desc)
+        return prefixListLines "* " "  " body
     return joinBlocks rendered
-  | .code str => return codeBlockLines str
+  | .code str =>
+    return codeBlockLines str
   | .other container content =>
     MarkdownBlock.toMarkdown (i := i) (b := b) (inlineMarkdown {}) blockMarkdown container content
 
@@ -433,8 +435,9 @@ public instance [MarkdownInline i] [MarkdownBlock i b] : ToMarkdown (Block i b) 
 Renders a `Part` (a logical document section) at the given heading level. Headings use ATX-style
 (`#`, `##`, …) with level `0` rendering as `#`.
 -/
-public partial def partMarkdown [MarkdownInline i] [MarkdownBlock i b] (level : Nat)
-    (part : Part i b p) : MarkdownM (Array String) := do
+public partial def partMarkdown
+    [MarkdownInline i] [MarkdownBlock i b] (level : Nat) (part : Part i b p)
+    : MarkdownM (Array String) := do
   let titleParts ← part.title.mapM ToMarkdown.toMarkdown
   let header := "".pushn '#' (level + 1) ++ " "
   let titleLine := joinInlines (#[#[header]] ++ titleParts)
@@ -450,17 +453,18 @@ A renderer for custom inline elements of type `α`. It receives a renderer for i
 custom element, and the element's fallback content.
 -/
 public abbrev InlineMdRendererOf (α : Type) :=
-  (Inline ElabInline → MarkdownM (Array String)) → α → Array (Inline ElabInline) →
-    MarkdownM (Array String)
+  (Inline ElabInline → MarkdownM (Array String)) → α → Array (Inline ElabInline)
+    → MarkdownM (Array String)
 
 /--
 A renderer for custom block elements of type `α`. It receives renderers for inline and block
 content, the custom element, and the element's fallback content.
 -/
 public abbrev BlockMdRendererOf (α : Type) :=
-  (Inline ElabInline → MarkdownM (Array String)) →
-    (Block ElabInline ElabBlock → MarkdownM (Array String)) →
-    α → Array (Block ElabInline ElabBlock) → MarkdownM (Array String)
+  (Inline ElabInline → MarkdownM (Array String))
+    → (Block ElabInline ElabBlock → MarkdownM (Array String)) → α
+    → Array (Block ElabInline ElabBlock)
+    → MarkdownM (Array String)
 
 /--
 Renders a custom inline element to Markdown. It receives a renderer for inline content, the saved
@@ -478,39 +482,35 @@ public abbrev BlockMdRenderer := BlockMdRendererOf Dynamic
 Wraps a typed inline renderer as an `InlineMdRenderer` by decoding the `Dynamic` custom element as
 `α`.
 -/
-public def mkInlineMdRenderer (α : Type) [TypeName α] (f : InlineMdRendererOf α) : InlineMdRenderer :=
-  fun go val content =>
-    match val.get? α with
-    | some x => f go x content
-    | none => return joinInlines (← content.mapM go)
+public def mkInlineMdRenderer (α : Type) [TypeName α] (f : InlineMdRendererOf α)
+    : InlineMdRenderer := fun go val content =>
+  match val.get? α with
+  | some x => f go x content
+  | none => return joinInlines (← content.mapM go)
 
 /--
 Wraps a typed block renderer as a `BlockMdRenderer` by decoding the `Dynamic` custom element as `α`.
 -/
-public def mkBlockMdRenderer (α : Type) [TypeName α] (f : BlockMdRendererOf α) : BlockMdRenderer :=
-  fun goI goB val content =>
-    match val.get? α with
-    | some x => f goI goB x content
-    | none => return joinBlocks (← content.mapM goB)
+public def mkBlockMdRenderer (α : Type) [TypeName α] (f : BlockMdRendererOf α)
+    : BlockMdRenderer := fun goI goB val content =>
+  match val.get? α with
+  | some x => f goI goB x content
+  | none => return joinBlocks (← content.mapM goB)
 
-/--
-A set of registered Markdown renderers, keyed by custom element type names.
--/
+/-- A set of registered Markdown renderers, keyed by custom element type names. -/
 public structure MdRendererState where
   /-- Renderers registered in imported modules. -/
   imported : NameMap Name := {}
   /-- Renderers registered in the current module. -/
   current : NameMap Name := {}
-  deriving Inhabited
+deriving Inhabited
 
 def foldEntries (init : NameMap Name) (es : Array (Array (Name × Name))) : NameMap Name :=
-  es.foldl (init := init) fun m arr =>
-    arr.foldl (init := m) fun m (tag, w) =>
-      m.insert tag w
+  es.foldl (init := init) fun m arr => arr.foldl (init := m) fun m (tag, w) => m.insert tag w
 
 /-- Registry for custom inline element renderers that maps element type names to renderer names. -/
-public builtin_initialize docInlineMdExt :
-    PersistentEnvExtension (Name × Name) (Name × Name) MdRendererState ←
+public builtin_initialize docInlineMdExt
+    : PersistentEnvExtension (Name × Name) (Name × Name) MdRendererState ←
   registerPersistentEnvExtension {
     mkInitial := pure {}
     addImportedFn := fun es => return { imported := foldEntries {} es }
@@ -519,8 +519,8 @@ public builtin_initialize docInlineMdExt :
   }
 
 /-- Registry for custom block element renderers that maps element type names to renderer names. -/
-public builtin_initialize docBlockMdExt :
-    PersistentEnvExtension (Name × Name) (Name × Name) MdRendererState ←
+public builtin_initialize docBlockMdExt
+    : PersistentEnvExtension (Name × Name) (Name × Name) MdRendererState ←
   registerPersistentEnvExtension {
     mkInitial := pure {}
     addImportedFn := fun es => return { imported := foldEntries {} es }
@@ -586,8 +586,9 @@ Runs a renderer with a fallback.
 If the renderer fails or exceeds its heartbeat budget, then the fallback content is rendered
 instead.
 -/
-public def withRendererFallback (fallback : MarkdownM (Array String)) (act : MarkdownM (Array String)) :
-    MarkdownM (Array String) := do
+public def withRendererFallback
+    (fallback : MarkdownM (Array String)) (act : MarkdownM (Array String))
+    : MarkdownM (Array String) := do
   -- `tryCatchRuntimeEx` catches ordinary errors and runtime timeouts (the heartbeat budget) while
   -- letting interrupts (cancellation) propagate so the enclosing request still aborts. On failure
   -- the state is restored so any partial output the renderer accumulated (e.g. footnotes) is
@@ -628,17 +629,17 @@ public instance : ToMarkdown Lean.VersoDocString where
 open Lean Doc ToMarkdown in
 public instance : ToMarkdown Lean.VersoModuleDocs.Snippet where
   toMarkdown
-    | {text, sections, ..} => do
+    | { text, sections, .. } => do
       let textBlocks ← text.mapM toMarkdown
       let sectionBlocks ← sections.mapM fun (level, _, part) => partMarkdown level part
       return joinBlocks (textBlocks ++ sectionBlocks)
 
-/--
-Runs a Markdown-rendering action against an environment, building a minimal `CoreM` context.
--/
-public def runMarkdown (env : Environment) (act : CoreM α)
-    (options : Options := {}) (currNamespace : Name := .anonymous)
-    (openDecls : List OpenDecl := []) (cancelTk? : Option IO.CancelToken := none) : IO α :=
+/-- Runs a Markdown-rendering action against an environment, building a minimal `CoreM` context. -/
+public def runMarkdown
+    (env : Environment) (act : CoreM α)
+    (options : Options := {}) (currNamespace : Name := .anonymous) (openDecls : List OpenDecl := [])
+    (cancelTk? : Option IO.CancelToken := none)
+    : IO α :=
   Lean.Core.CoreM.toIO' act
     { fileName := "<docstring>", fileMap := default, options, currNamespace, openDecls, cancelTk? }
     { env }
@@ -651,15 +652,17 @@ result is rendered as Markdown.
 
 Docstrings to be shown to a user should be looked up with `Lean.findDocString?` instead.
 -/
-public def findSimpleDocString? (env : Environment) (declName : Name) (includeBuiltin := true)
-    (options : Options := {}) (currNamespace : Name := .anonymous)
-    (openDecls : List OpenDecl := []) (cancelTk? : Option IO.CancelToken := none) :
-    IO (Option String) := do
+public def findSimpleDocString?
+    (env : Environment) (declName : Name)
+    (includeBuiltin := true) (options : Options := {}) (currNamespace : Name := .anonymous)
+    (openDecls : List OpenDecl := []) (cancelTk? : Option IO.CancelToken := none)
+    : IO (Option String) := do
   match (← findInternalDocString? env declName (includeBuiltin := includeBuiltin)) with
   | some (.inl str) => return some str
   | some (.inr verso) =>
     let act := Doc.ToMarkdown.toMarkdown verso
-    return some (← Doc.runMarkdown env (Doc.MarkdownM.run' act) options currNamespace openDecls cancelTk?)
+    return some (← Doc.runMarkdown env (Doc.MarkdownM.run' act) options currNamespace openDecls
+      cancelTk?)
   | none => return none
 
 end Lean

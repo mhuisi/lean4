@@ -39,23 +39,15 @@ Correctly deals with names like `_private.<SomeNamespace>.0.<SomeType>._sizeOf_1
 private def isInternalNameModuloPrivate : Name → Bool
   | n@(.str p s) => s.front == '_' && n != privateHeader || isInternalNameModuloPrivate p
   | .num p _ => isInternalNameModuloPrivate p
-  | _       => false
+  | _ => false
 
-/--
-Return true if name is blacklisted for completion purposes.
--/
+/-- Return true if name is blacklisted for completion purposes. -/
 private def isBlacklisted (env : Environment) (declName : Name) : Bool :=
-  isInternalNameModuloPrivate declName
-  || isAuxRecursor env declName
-  || isNoConfusion env declName
-  || isRecCore env declName
-  || completionBlackListExt.isTagged env declName
-  || isMatcherCore env declName
+  isInternalNameModuloPrivate declName || isAuxRecursor env declName || isNoConfusion env declName
+    || isRecCore env declName || completionBlackListExt.isTagged env declName
+    || isMatcherCore env declName
 
-/--
-Return true if completion is allowed for name.
--/
-def allowCompletion (env : Environment) (declName : Name) : Bool :=
-  !(isBlacklisted env declName)
+/-- Return true if completion is allowed for name. -/
+def allowCompletion (env : Environment) (declName : Name) : Bool := !(isBlacklisted env declName)
 
 end Lean.Meta

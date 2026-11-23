@@ -18,21 +18,24 @@ public section
 Precomputed values of `10 ^ e` for `0 ≤ e ≤ 22`. In this range, the values can be represented
 exactly.
 -/
-@[expose] def Float.exactlyRepresentablePowersOfTen : Array Float :=
- #[Float.ofBits 0x3FF0000000000000, Float.ofBits 0x4024000000000000,
-   Float.ofBits 0x4059000000000000, Float.ofBits 0x408F400000000000,
-   Float.ofBits 0x40C3880000000000, Float.ofBits 0x40F86A0000000000,
-   Float.ofBits 0x412E848000000000, Float.ofBits 0x416312D000000000,
-   Float.ofBits 0x4197D78400000000, Float.ofBits 0x41CDCD6500000000,
-   Float.ofBits 0x4202A05F20000000, Float.ofBits 0x42374876E8000000,
-   Float.ofBits 0x426D1A94A2000000, Float.ofBits 0x42A2309CE5400000,
-   Float.ofBits 0x42D6BCC41E900000, Float.ofBits 0x430C6BF526340000,
-   Float.ofBits 0x4341C37937E08000, Float.ofBits 0x4376345785D8A000,
-   Float.ofBits 0x43ABC16D674EC800, Float.ofBits 0x43E158E460913D00,
-   Float.ofBits 0x4415AF1D78B58C40, Float.ofBits 0x444B1AE4D6E2EF50,
-   Float.ofBits 0x4480F0CF064DD592]
+@[expose]
+def Float.exactlyRepresentablePowersOfTen : Array Float := #[
+  Float.ofBits 0x3FF0000000000000, Float.ofBits 0x4024000000000000,
+  Float.ofBits 0x4059000000000000, Float.ofBits 0x408F400000000000,
+  Float.ofBits 0x40C3880000000000, Float.ofBits 0x40F86A0000000000,
+  Float.ofBits 0x412E848000000000, Float.ofBits 0x416312D000000000,
+  Float.ofBits 0x4197D78400000000, Float.ofBits 0x41CDCD6500000000,
+  Float.ofBits 0x4202A05F20000000, Float.ofBits 0x42374876E8000000,
+  Float.ofBits 0x426D1A94A2000000, Float.ofBits 0x42A2309CE5400000,
+  Float.ofBits 0x42D6BCC41E900000, Float.ofBits 0x430C6BF526340000,
+  Float.ofBits 0x4341C37937E08000, Float.ofBits 0x4376345785D8A000,
+  Float.ofBits 0x43ABC16D674EC800, Float.ofBits 0x43E158E460913D00,
+  Float.ofBits 0x4415AF1D78B58C40, Float.ofBits 0x444B1AE4D6E2EF50,
+  Float.ofBits 0x4480F0CF064DD592
+]
 
-@[expose] protected def Float.ofScientific (m : Nat) (s : Bool) (e : Nat) : Float :=
+@[expose]
+protected def Float.ofScientific (m : Nat) (s : Bool) (e : Nat) : Float :=
   if h : m < 2 ^ 53 ∧ e ≤ 22 then
     -- Fast case: both `m` and `10 ^ e` are representable as floats.
     let powerOfTen : Float :=
@@ -50,13 +53,13 @@ exactly.
     Float.ofModel (Float.Model.ofScientific m e)
 
 /--
-  The `OfScientific Float` must have priority higher than `mid` since
-  the default instance `Neg Int` has `mid` priority.
-  ```
-  #check -42.0 -- must be Float
-  ```
+The `OfScientific Float` must have priority higher than `mid` since
+the default instance `Neg Int` has `mid` priority.
+```
+#check -42.0 -- must be Float
+```
 -/
-@[default_instance mid+1]
+@[default_instance mid + 1]
 instance : OfScientific Float where
   ofScientific := Float.ofScientific
 
@@ -65,36 +68,39 @@ Converts a natural number into the closest-possible 64-bit floating-point number
 floating-point value if the range of `Float` is exceeded.
 -/
 @[export lean_float_of_nat, expose]
-protected def Float.ofNat (n : Nat) : Float :=
-  OfScientific.ofScientific n false 0
+protected def Float.ofNat (n : Nat) : Float := OfScientific.ofScientific n false 0
 
 /--
 Converts an integer into the closest-possible 64-bit floating-point number, or positive or negative
 infinite floating-point value if the range of `Float` is exceeded.
 -/
-@[expose] protected def Float.ofInt : Int → Float
+@[expose]
+protected def Float.ofInt : Int → Float
   | Int.ofNat n => Float.ofNat n
   | Int.negSucc n => Float.neg (Float.ofNat (Nat.succ n))
 
 instance : OfNat Float n := ⟨Float.ofNat n⟩
 
-@[inherit_doc Float.ofNat] abbrev Nat.toFloat (n : Nat) : Float :=
-  Float.ofNat n
+@[inherit_doc Float.ofNat]
+abbrev Nat.toFloat (n : Nat) : Float := Float.ofNat n
 
-@[inherit_doc Float.ofInt] abbrev Int.toFloat (n : Int) : Float :=
-  Float.ofInt n
+@[inherit_doc Float.ofInt]
+abbrev Int.toFloat (n : Int) : Float := Float.ofInt n
 
 /--
 Precomputed values of `10 ^ e` for `0 ≤ e ≤ 10 `. In this range, the values can be represented
 exactly.
 -/
-@[expose] def Float32.exactlyRepresentablePowersOfTen : Array Float32 :=
- #[Float32.ofBits 0x3F800000, Float32.ofBits 0x41200000, Float32.ofBits 0x42C80000,
-   Float32.ofBits 0x447A0000, Float32.ofBits 0x461C4000, Float32.ofBits 0x47C35000,
-   Float32.ofBits 0x49742400, Float32.ofBits 0x4B189680, Float32.ofBits 0x4CBEBC20,
-   Float32.ofBits 0x4E6E6B28, Float32.ofBits 0x501502F9]
+@[expose]
+def Float32.exactlyRepresentablePowersOfTen : Array Float32 := #[
+  Float32.ofBits 0x3F800000, Float32.ofBits 0x41200000, Float32.ofBits 0x42C80000,
+  Float32.ofBits 0x447A0000, Float32.ofBits 0x461C4000, Float32.ofBits 0x47C35000,
+  Float32.ofBits 0x49742400, Float32.ofBits 0x4B189680, Float32.ofBits 0x4CBEBC20,
+  Float32.ofBits 0x4E6E6B28, Float32.ofBits 0x501502F9
+]
 
-@[expose] protected def Float32.ofScientific (m : Nat) (s : Bool) (e : Nat) : Float32 :=
+@[expose]
+protected def Float32.ofScientific (m : Nat) (s : Bool) (e : Nat) : Float32 :=
   -- See comments on `Float.ofScientific`.
   if h : m < 2 ^ 23 ∧ e ≤ 10 then
     let powerOfTen : Float32 :=
@@ -115,21 +121,21 @@ Converts a natural number into the closest-possible 32-bit floating-point number
 floating-point value if the range of `Float32` is exceeded.
 -/
 @[export lean_float32_of_nat, expose]
-protected def Float32.ofNat (n : Nat) : Float32 :=
-  OfScientific.ofScientific n false 0
+protected def Float32.ofNat (n : Nat) : Float32 := OfScientific.ofScientific n false 0
 
 /--
 Converts an integer into the closest-possible 32-bit floating-point number, or positive or negative
 infinite floating-point value if the range of `Float32` is exceeded.
 -/
-@[expose] protected def Float32.ofInt : Int → Float32
+@[expose]
+protected def Float32.ofInt : Int → Float32
   | Int.ofNat n => Float32.ofNat n
   | Int.negSucc n => Float32.neg (Float32.ofNat (Nat.succ n))
 
 instance : OfNat Float32 n := ⟨Float32.ofNat n⟩
 
-@[inherit_doc Float32.ofNat] abbrev Nat.toFloat32 (n : Nat) : Float32 :=
-  Float32.ofNat n
+@[inherit_doc Float32.ofNat]
+abbrev Nat.toFloat32 (n : Nat) : Float32 := Float32.ofNat n
 
-@[inherit_doc Float32.ofInt] abbrev Int.toFloat32 (n : Int) : Float32 :=
-  Float32.ofInt n
+@[inherit_doc Float32.ofInt]
+abbrev Int.toFloat32 (n : Int) : Float32 := Float32.ofInt n

@@ -12,50 +12,54 @@ import Init.Data.String.TakeDrop
 namespace Lake
 
 public def mkCmdLog (args : IO.Process.SpawnArgs) : String :=
-  let envStr := String.join <| args.env.toList.map fun (k, v) =>
-    if k == "PATH" then "PATH " else s!"{k}={v.getD ""} " -- PATH too big
+  let envStr :=
+    String.join <|
+      args.env.toList.map fun (k, v) => if k == "PATH" then "PATH " else s!"{k}={v.getD ""} " -- PATH too big
   let cmdStr := " ".intercalate (args.cmd :: args.args.toList)
   let cwd := args.cwd.getD "."
   s!"{cwd}> {envStr}{cmdStr}"
 
-@[inline] public def logOutput
-  [Monad m] (out : IO.Process.Output) (log : String → m PUnit)
-: m Unit := do
+@[inline]
+public def logOutput [Monad m] (out : IO.Process.Output) (log : String → m PUnit) : m Unit := do
   unless out.stdout.isEmpty do
-    log s!"stdout:\n{out.stdout.trimAscii}"
+    log s!"stdout:\
+      \n{out.stdout.trimAscii}"
   unless out.stderr.isEmpty do
-    log s!"stderr:\n{out.stderr.trimAscii}"
+    log s!"stderr:\
+      \n{out.stderr.trimAscii}"
 
-@[inline] public def rawProc
-  (args : IO.Process.SpawnArgs) (quiet := false) (input? : Option String := none)
-: LogIO IO.Process.Output := do
+@[inline]
+public def rawProc (args : IO.Process.SpawnArgs) (quiet := false) (input? : Option String := none)
+    : LogIO IO.Process.Output := do
   withLogErrorPos do
-  unless quiet do logVerbose (mkCmdLog args)
-  match (← IO.Process.output args input? |>.toBaseIO) with
-  | .ok out => return out
-  | .error err => error s!"failed to execute '{args.cmd}': {err}"
+    unless quiet do
+      logVerbose (mkCmdLog args)
+    match (← IO.Process.output args input? |>.toBaseIO) with
+    | .ok out => return out
+    | .error err => error s!"failed to execute '{args.cmd}': {err}"
 
-public def proc
-  (args : IO.Process.SpawnArgs) (quiet := false) (input? : Option String := none)
-: LogIO Unit := do
+public def proc (args : IO.Process.SpawnArgs) (quiet := false) (input? : Option String := none)
+    : LogIO Unit := do
   withLogErrorPos do
-  let out ← rawProc args (input? := input?)
-  if out.exitCode = 0 then
-    logOutput out (if quiet then logVerbose else logInfo)
-  else
-    logOutput out logInfo
-    error s!"external command '{args.cmd}' exited with code {out.exitCode}"
+    let out ← rawProc args (input? := input?)
+    if out.exitCode = 0 then
+      logOutput out (if quiet then logVerbose else logInfo)
+    else
+      logOutput out logInfo
+      error s!"external command '{args.cmd}' exited with code {out.exitCode}"
 
 public def captureProc' (args : IO.Process.SpawnArgs) : LogIO (IO.Process.Output) := do
   let out ← rawProc args (quiet := true)
   if out.exitCode = 0 then
     return out
-  else errorWithLog do
-    logVerbose (mkCmdLog args)
-    logOutput out logInfo
-    logError s!"external command '{args.cmd}' exited with code {out.exitCode}"
+  else
+    errorWithLog do
+      logVerbose (mkCmdLog args)
+      logOutput out logInfo
+      logError s!"external command '{args.cmd}' exited with code {out.exitCode}"
 
-@[inline] public def captureProc (args : IO.Process.SpawnArgs) : LogIO String := do
+@[inline]
+public def captureProc (args : IO.Process.SpawnArgs) : LogIO String := do
   return (← captureProc' args).stdout.trimAscii.copy -- remove, e.g., newline at end
 
 public def captureProc? (args : IO.Process.SpawnArgs) : BaseIO (Option String) := do
@@ -68,10 +72,11 @@ public def captureProc? (args : IO.Process.SpawnArgs) : BaseIO (Option String) :
 
 public def testProc (args : IO.Process.SpawnArgs) : BaseIO Bool :=
   EIO.catchExceptions (h := fun _ => pure false) do
-    let child ← IO.Process.spawn {
-      args with
-      stdin := IO.Process.Stdio.null
-      stdout := IO.Process.Stdio.null
-      stderr := IO.Process.Stdio.null
-    }
+    let child ←
+      IO.Process.spawn {
+        args with
+        stdin := IO.Process.Stdio.null
+        stdout := IO.Process.Stdio.null
+        stderr := IO.Process.Stdio.null
+      }
     return (← child.wait) == 0

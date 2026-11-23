@@ -16,7 +16,6 @@ set_option linter.missingDocs true
 
 namespace Lean.Doc
 
-
 public section
 
 /-!
@@ -33,9 +32,7 @@ quotations produce only well-formed trees, so a `none` result indicates a bug. C
 an error at the syntax in question.
 -/
 
-/--
-A view of the value of an argument to a role, directive, command, or code block.
--/
+/-- A view of the value of an argument to a role, directive, command, or code block. -/
 inductive ArgValView where
   /-- A string literal. `value` is its decoded contents. -/
   | str (lit : StrLit) (value : String)
@@ -44,9 +41,7 @@ inductive ArgValView where
   /-- A numeric literal. `value` is its decoded value. -/
   | num (lit : NumLit) (value : Nat)
 
-/--
-A view of `stx`, if it is an argument value.
--/
+/-- A view of `stx`, if it is an argument value. -/
 def ArgValView.of (stx : TSyntax ``Parser.argVal) : Option ArgValView :=
   match stx with
   | `(Parser.ArgVal.ident| $x:ident) => some (.name x)
@@ -54,33 +49,25 @@ def ArgValView.of (stx : TSyntax ``Parser.argVal) : Option ArgValView :=
   | `(Parser.ArgVal.str| $s:str) => some (.str s s.getString)
   | _ => none
 
-/--
-A view of an argument to a role, directive, command, or code block.
--/
+/-- A view of an argument to a role, directive, command, or code block. -/
 inductive ArgView where
   /-- An anonymous positional argument. -/
-  | anon (stx : TSyntax ``Parser.arg)
-      (val : TSyntax ``Parser.argVal)
+  | anon (stx : TSyntax ``Parser.arg) (val : TSyntax ``Parser.argVal)
   /--
   A named argument. `parens` is the pair of parenthesis atoms when the argument is written in
   parentheses, and `assign` is the `:=` atom.
   -/
-  | named (stx : TSyntax ``Parser.arg)
-      (parens : Option (Syntax × Syntax)) (name : Ident) (assign : Syntax)
-      (val : TSyntax ``Parser.argVal)
+  | named
+    (stx : TSyntax ``Parser.arg) (parens : Option (Syntax × Syntax)) (name : Ident)
+    (assign : Syntax) (val : TSyntax ``Parser.argVal)
   /-- A flag. `sign` is the `+` or `-` atom, and `isOn` indicates which one it is. -/
-  | flag (stx : TSyntax ``Parser.arg) (sign : Syntax) (name : Ident)
-      (isOn : Bool)
+  | flag (stx : TSyntax ``Parser.arg) (sign : Syntax) (name : Ident) (isOn : Bool)
 
-/--
-Returns the syntax underlying an argument view.
--/
+/-- Returns the syntax underlying an argument view. -/
 def ArgView.stx : ArgView → TSyntax ``Parser.arg
   | .anon stx .. | .named stx .. | .flag stx .. => stx
 
-/--
-A view of `stx`, if it is an argument.
--/
+/-- A view of `stx`, if it is an argument. -/
 def ArgView.of (stx : TSyntax ``Parser.arg) : Option ArgView :=
   match stx with
   | `(Parser.Arg.anon| $v:argVal) => some (.anon stx v)
@@ -91,19 +78,16 @@ def ArgView.of (stx : TSyntax ``Parser.arg) : Option ArgView :=
   | `(Parser.Arg.flag_off| -%$tk $x:ident) => some (.flag stx tk x false)
   | _ => none
 
-/--
-A view of a link target, which is either a URL or a reference to a URL defined elsewhere.
--/
+/-- A view of a link target, which is either a URL or a reference to a URL defined elsewhere. -/
 inductive LinkTargetView where
   /-- A URL written directly, in parentheses. Use `TSyntax.getVersoLinkUrl` to read it. -/
-  | url (stx : TSyntax ``Parser.linkTarget) (opener : Syntax)
-      (url : VersoLinkUrl) (closer : Syntax)
+  | url (stx : TSyntax ``Parser.linkTarget) (opener : Syntax) (url : VersoLinkUrl) (closer : Syntax)
   /--
   A reference to a URL defined elsewhere, in square brackets. Use `TSyntax.getVersoRefName` to read
   the name.
   -/
-  | ref (stx : TSyntax ``Parser.linkTarget) (opener : Syntax)
-      (name : VersoRefName) (closer : Syntax)
+  | ref
+    (stx : TSyntax ``Parser.linkTarget) (opener : Syntax) (name : VersoRefName) (closer : Syntax)
 
 /--
 Creates source info for the content of empty code blocks.
@@ -126,10 +110,7 @@ itself needs escaping, since decoding drops the backslash from any pair.
 private def escapeVersoText (value : String) : String :=
   value.foldl (init := "") fun out c => if c == '\\' then out ++ "\\\\" else out.push c
 
-
-/--
-Builds a text content token containing `value`, with its position taken from `src`.
--/
+/-- Builds a text content token containing `value`, with its position taken from `src`. -/
 def mkVersoTextFrom (src : Syntax) (value : String) (canonical := false) : VersoText :=
   ⟨Syntax.mkLit versoTextKind (escapeVersoText value) (info := SourceInfo.fromRef src canonical)⟩
 
@@ -189,69 +170,62 @@ def mkVersoCodeBlockFrom (src : Syntax) (value : String) (canonical := false) : 
   let info := SourceInfo.fromRef src canonical
   ⟨Syntax.node info versoCodeBlockKind #[mkNullNode (codeLinesFrom info value)]⟩
 
-/--
-Builds a line break, with its position taken from `src`.
--/
-def mkVersoLinebreakFrom (src : Syntax) (canonical := false) :
-    TSyntax ``Parser.Inline.linebreak :=
+/-- Builds a line break, with its position taken from `src`. -/
+def mkVersoLinebreakFrom (src : Syntax) (canonical := false) : TSyntax ``Parser.Inline.linebreak :=
   let info := SourceInfo.fromRef src canonical
   ⟨Syntax.node info ``Parser.Inline.linebreak #[.atom info "\n"]⟩
 
 /-- Builds a line break, positioned at the current reference. -/
-def mkVersoLinebreakFromRef [Monad m] [MonadRef m] (canonical := false) :
-    m (TSyntax ``Parser.Inline.linebreak) := do
+def mkVersoLinebreakFromRef [Monad m] [MonadRef m] (canonical := false)
+    : m (TSyntax ``Parser.Inline.linebreak) := do
   return mkVersoLinebreakFrom (← getRef) canonical
 
 /-- Builds a text content token containing `value`, positioned at the current reference. -/
-def mkVersoTextFromRef [Monad m] [MonadRef m] (value : String) (canonical := false) :
-    m VersoText := do
+def mkVersoTextFromRef [Monad m] [MonadRef m] (value : String) (canonical := false)
+    : m VersoText := do
   return mkVersoTextFrom (← getRef) value canonical
 
 /-- Builds a reference name containing `value`, positioned at the current reference. -/
-def mkVersoRefNameFromRef [Monad m] [MonadRef m] (value : String) (canonical := false) :
-    m VersoRefName := do
+def mkVersoRefNameFromRef [Monad m] [MonadRef m] (value : String) (canonical := false)
+    : m VersoRefName := do
   return mkVersoRefNameFrom (← getRef) value canonical
 
 /-- Builds a link URL containing `value`, positioned at the current reference. -/
-def mkVersoLinkUrlFromRef [Monad m] [MonadRef m] (value : String) (canonical := false) :
-    m VersoLinkUrl := do
+def mkVersoLinkUrlFromRef [Monad m] [MonadRef m] (value : String) (canonical := false)
+    : m VersoLinkUrl := do
   return mkVersoLinkUrlFrom (← getRef) value canonical
 
 /-- Builds an image's alternate text containing `value`, positioned at the current reference. -/
-def mkVersoImageAltFromRef [Monad m] [MonadRef m] (value : String) (canonical := false) :
-    m VersoImageAlt := do
+def mkVersoImageAltFromRef [Monad m] [MonadRef m] (value : String) (canonical := false)
+    : m VersoImageAlt := do
   return mkVersoImageAltFrom (← getRef) value canonical
 
 /--
 Builds the URL of a link reference definition containing `value`, positioned at the syntax `getRef`
 returns.
 -/
-def mkVersoLinkRefUrlFromRef [Monad m] [MonadRef m] (value : String) (canonical := false) :
-    m VersoLinkRefUrl := do
+def mkVersoLinkRefUrlFromRef [Monad m] [MonadRef m] (value : String) (canonical := false)
+    : m VersoLinkRefUrl := do
   return mkVersoLinkRefUrlFrom (← getRef) value canonical
 
 /-- Builds inline code content containing `value`, positioned at the current reference. -/
-def mkVersoCodeFromRef [Monad m] [MonadRef m] (value : String) (canonical := false) :
-    m VersoCode := do
+def mkVersoCodeFromRef [Monad m] [MonadRef m] (value : String) (canonical := false)
+    : m VersoCode := do
   return mkVersoCodeFrom (← getRef) value canonical
 
 /-- Builds a code block's content containing `value`, positioned at the current reference. -/
-def mkVersoCodeBlockFromRef [Monad m] [MonadRef m] (value : String) (canonical := false) :
-    m VersoCodeBlock := do
+def mkVersoCodeBlockFromRef [Monad m] [MonadRef m] (value : String) (canonical := false)
+    : m VersoCodeBlock := do
   return mkVersoCodeBlockFrom (← getRef) value canonical
 
-/--
-A view of `stx`, if it is a link target.
--/
+/-- A view of `stx`, if it is a link target. -/
 def LinkTargetView.of (stx : TSyntax ``Parser.linkTarget) : Option LinkTargetView :=
   match stx with
   | `(Parser.LinkTarget.url| (%$o $url:versoLinkUrl )%$c) => some (.url stx o url c)
   | `(Parser.LinkTarget.ref| [%$o $name:versoRef ]%$c) => some (.ref stx o name c)
   | _ => none
 
-/--
-A view of ordinary text.
--/
+/-- A view of ordinary text. -/
 structure TextView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.inline
@@ -273,9 +247,7 @@ def TextView.of (stx : TSyntax ``Parser.inline) : Option TextView :=
   | `(Parser.Inline.text| $s:versoText) => some { stx, content := s }
   | _ => none
 
-/--
-A view of emphasized content.
--/
+/-- A view of emphasized content. -/
 structure EmphView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.inline
@@ -293,9 +265,7 @@ def EmphView.of (stx : TSyntax ``Parser.inline) : Option EmphView :=
     some { stx, opener := o, content := inl, closer := c }
   | _ => none
 
-/--
-A view of bold content.
--/
+/-- A view of bold content. -/
 structure BoldView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.inline
@@ -338,9 +308,7 @@ def CodeView.of (stx : TSyntax ``Parser.inline) : Option CodeView :=
     some { stx, opener := o, content := s, closer := c }
   | _ => none
 
-/--
-A view of math content.
--/
+/-- A view of math content. -/
 structure MathView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.inline
@@ -367,9 +335,7 @@ def MathView.of (stx : TSyntax ``Parser.inline) : Option MathView := do
     return { stx, mode := .display, marker := m, code := ← CodeView.of ⟨c.raw⟩ }
   | _ => none
 
-/--
-A view of a link.
--/
+/-- A view of a link. -/
 structure LinkView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.inline
@@ -389,9 +355,7 @@ def LinkView.of (stx : TSyntax ``Parser.inline) : Option LinkView := do
     return { stx, opener := o, content := inl, closer := c, target := ← LinkTargetView.of tgt }
   | _ => none
 
-/--
-A view of an image.
--/
+/-- A view of an image. -/
 structure ImageView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.inline
@@ -414,9 +378,7 @@ def ImageView.of (stx : TSyntax ``Parser.inline) : Option ImageView := do
     return { stx, opener := o, alt, closer := c, target := ← LinkTargetView.of tgt }
   | _ => none
 
-/--
-A view of a footnote use site.
--/
+/-- A view of a footnote use site. -/
 structure FootnoteView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.inline
@@ -437,9 +399,7 @@ def FootnoteView.of (stx : TSyntax ``Parser.inline) : Option FootnoteView :=
     some { stx, opener := o, name, closer := c }
   | _ => none
 
-/--
-A view of a line break.
--/
+/-- A view of a line break. -/
 structure LinebreakView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.inline
@@ -452,9 +412,7 @@ def LinebreakView.of (stx : TSyntax ``Parser.inline) : Option LinebreakView :=
   | `(Parser.Inline.linebreak| $nl:linebreak) => some { stx, newline := nl.raw[0] }
   | _ => none
 
-/--
-A view of content with a role.
--/
+/-- A view of content with a role. -/
 structure RoleView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.inline
@@ -466,9 +424,7 @@ structure RoleView where
   args : TSyntaxArray ``Parser.arg
   /-- The `}` that closes the name and arguments. -/
   braceClose : Syntax
-  /--
-  The brackets around the content, if they are present.
-  -/
+  /-- The brackets around the content, if they are present. -/
   brackets : Option (Syntax × Syntax)
   /-- The content that the role applies to. -/
   content : TSyntaxArray ``Parser.inline
@@ -483,19 +439,19 @@ def RoleView.of (stx : TSyntax ``Parser.inline) : Option RoleView :=
   match stx with
   | `(Parser.Inline.role| {%$bo $name:ident $args* }%$bc [%$so $inl* ]%$sc) =>
     some {
-      stx, braceOpen := bo, name, args, braceClose := bc,
-      brackets := some (so, sc), content := inl
+      stx
+      braceOpen := bo
+      name
+      args
+      braceClose := bc
+      brackets := some (so, sc)
+      content := inl
     }
   | `(Parser.Inline.role| {%$bo $name:ident $args* }%$bc $inl:inline*) =>
-    some {
-      stx, braceOpen := bo, name, args, braceClose := bc,
-      brackets := none, content := inl
-    }
+    some { stx, braceOpen := bo, name, args, braceClose := bc, brackets := none, content := inl }
   | _ => none
 
-/--
-A view of an inline document element.
--/
+/-- A view of an inline document element. -/
 inductive InlineView where
   /-- Ordinary text. -/
   | text (view : TextView)
@@ -530,9 +486,7 @@ instance : Coe FootnoteView InlineView := ⟨.footnote⟩
 instance : Coe LinebreakView InlineView := ⟨.linebreak⟩
 instance : Coe RoleView InlineView := ⟨.role⟩
 
-/--
-Returns the original syntax that an inline view was constructed from.
--/
+/-- Returns the original syntax that an inline view was constructed from. -/
 def InlineView.stx : InlineView → TSyntax ``Parser.inline
   | .text v => v.stx
   | .emph v => v.stx
@@ -552,20 +506,12 @@ Each production has a view of its own, and this tries them in turn. The producti
 syntax kinds, so at most one applies and the order does not matter.
 -/
 def InlineView.of (stx : TSyntax ``Parser.inline) : Option InlineView :=
-  .text <$> TextView.of stx <|>
-  .emph <$> EmphView.of stx <|>
-  .bold <$> BoldView.of stx <|>
-  .code <$> CodeView.of stx <|>
-  .math <$> MathView.of stx <|>
-  .link <$> LinkView.of stx <|>
-  .image <$> ImageView.of stx <|>
-  .footnote <$> FootnoteView.of stx <|>
-  .linebreak <$> LinebreakView.of stx <|>
-  .role <$> RoleView.of stx
+  .text <$> TextView.of stx <|> .emph <$> EmphView.of stx <|> .bold <$> BoldView.of stx
+    <|> .code <$> CodeView.of stx <|> .math <$> MathView.of stx <|> .link <$> LinkView.of stx
+    <|> .image <$> ImageView.of stx <|> .footnote <$> FootnoteView.of stx
+    <|> .linebreak <$> LinebreakView.of stx <|> .role <$> RoleView.of stx
 
-/--
-A view of an item of an unordered list.
--/
+/-- A view of an item of an unordered list. -/
 structure UnorderedListItemView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.ListItem.item
@@ -574,19 +520,15 @@ structure UnorderedListItemView where
   /-- The item's contents. -/
   contents : TSyntaxArray ``Parser.block
 
-/--
-A view of `stx`, if it is an unordered list's item. Its marker must be a bullet.
--/
-def UnorderedListItemView.of (stx : TSyntax ``Parser.ListItem.item) :
-    Option UnorderedListItemView :=
+/-- A view of `stx`, if it is an unordered list's item. Its marker must be a bullet. -/
+def UnorderedListItemView.of (stx : TSyntax ``Parser.ListItem.item)
+    : Option UnorderedListItemView :=
   match stx with
   | `(Parser.ListItem.item| $m:listMarker $bs*) =>
     if m.getVersoDelimiter.front? |>.any (· ∈ ['*', '-', '+']) then some ⟨stx, m, bs⟩ else none
   | _ => none
 
-/--
-A view of an item of an ordered list.
--/
+/-- A view of an item of an ordered list. -/
 structure OrderedListItemView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.ListItem.item
@@ -599,18 +541,14 @@ structure OrderedListItemView where
 def OrderedListItemView.number (v : OrderedListItemView) : Option Nat :=
   v.marker.getVersoDelimiter.takeWhile (·.isDigit) |>.copy.toNat?
 
-/--
-A view of `stx`, if it is an ordered list's item. Its marker must be a number.
--/
+/-- A view of `stx`, if it is an ordered list's item. Its marker must be a number. -/
 def OrderedListItemView.of (stx : TSyntax ``Parser.ListItem.item) : Option OrderedListItemView :=
   match stx with
   | `(Parser.ListItem.item| $m:listMarker $bs*) =>
     if m.getVersoDelimiter.front? |>.any (·.isDigit) then some ⟨stx, m, bs⟩ else none
   | _ => none
 
-/--
-A view of an item description from a description list.
--/
+/-- A view of an item description from a description list. -/
 structure DescItemView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.DescItem.item
@@ -621,18 +559,13 @@ structure DescItemView where
   /-- The description. -/
   desc : TSyntaxArray ``Parser.block
 
-/--
-A view of `stx`, if it is a description list item.
--/
+/-- A view of `stx`, if it is a description list item. -/
 def DescItemView.of (stx : TSyntax ``Parser.DescItem.item) : Option DescItemView :=
   match stx with
-  | `(Parser.DescItem.item| :%$marker $term:inline* $desc:block*) =>
-    some ⟨stx, marker, term, desc⟩
+  | `(Parser.DescItem.item| :%$marker $term:inline* $desc:block*) => some ⟨stx, marker, term, desc⟩
   | _ => none
 
-/--
-A view of a paragraph.
--/
+/-- A view of a paragraph. -/
 structure ParaView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.block
@@ -646,9 +579,7 @@ def ParaView.of (stx : TSyntax ``Parser.block) : Option ParaView :=
   | `(Parser.Block.para| $inl*) => some { stx, content := inl }
   | _ => none
 
-/--
-A view of an unordered list.
--/
+/-- A view of an unordered list. -/
 structure UnorderedListView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.block
@@ -662,9 +593,7 @@ def UnorderedListView.of (stx : TSyntax ``Parser.block) : Option UnorderedListVi
     return { stx, items := ← items.mapM UnorderedListItemView.of }
   | _ => none
 
-/--
-A view of an ordered list.
--/
+/-- A view of an ordered list. -/
 structure OrderedListView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.block
@@ -681,9 +610,7 @@ def OrderedListView.of (stx : TSyntax ``Parser.block) : Option OrderedListView :
     return { stx, start := items[0]?.bind (·.number) |>.getD 1, items }
   | _ => none
 
-/--
-A view of a description list.
--/
+/-- A view of a description list. -/
 structure DescListView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.block
@@ -697,9 +624,7 @@ def DescListView.of (stx : TSyntax ``Parser.block) : Option DescListView := do
     return { stx, items := ← items.mapM DescItemView.of }
   | _ => none
 
-/--
-A view of a block quotation.
--/
+/-- A view of a block quotation. -/
 structure BlockquoteView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.block
@@ -714,9 +639,7 @@ def BlockquoteView.of (stx : TSyntax ``Parser.block) : Option BlockquoteView :=
   | `(Parser.Block.blockquote| >%$gt $bs*) => some { stx, marker := gt, content := bs }
   | _ => none
 
-/--
-A view of a code block.
--/
+/-- A view of a code block. -/
 structure CodeBlockView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.block
@@ -742,14 +665,10 @@ def CodeBlockView.of (stx : TSyntax ``Parser.block) : Option CodeBlockView :=
     -- Empty content parses with no tokens of its own, so its location is the closing fence.
     let content : VersoCodeBlock :=
       if s.raw.getPos?.isSome then s else ⟨s.raw.setInfo (emptyContentInfo closeFence)⟩
-    some {
-      stx, openFence, name? := name, args := args.getD #[], content, closeFence
-    }
+    some { stx, openFence, name? := name, args := args.getD #[], content, closeFence }
   | _ => none
 
-/--
-A view of a directive.
--/
+/-- A view of a directive. -/
 structure DirectiveView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.block
@@ -772,9 +691,7 @@ def DirectiveView.of (stx : TSyntax ``Parser.block) : Option DirectiveView :=
     some { stx, opener, name, args, content := bs, closer }
   | _ => none
 
-/--
-A view of a block-level command.
--/
+/-- A view of a block-level command. -/
 structure CommandView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.block
@@ -794,9 +711,7 @@ def CommandView.of (stx : TSyntax ``Parser.block) : Option CommandView :=
     some { stx, braceOpen, name, args, braceClose }
   | _ => none
 
-/--
-A view of a section header.
--/
+/-- A view of a section header. -/
 structure HeaderView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.block
@@ -815,9 +730,7 @@ def HeaderView.of (stx : TSyntax ``Parser.block) : Option HeaderView :=
     some { stx, marker, level := marker.getVersoDelimiter.length - 1, content }
   | _ => none
 
-/--
-A view of a named URL that links and images can use.
--/
+/-- A view of a named URL that links and images can use. -/
 structure LinkRefView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.block
@@ -843,9 +756,7 @@ def LinkRefView.of (stx : TSyntax ``Parser.block) : Option LinkRefView :=
     some { stx, opener, name, closer, url }
   | _ => none
 
-/--
-A view of a footnote definition.
--/
+/-- A view of a footnote definition. -/
 structure FootnoteRefView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.block
@@ -868,9 +779,7 @@ def FootnoteRefView.of (stx : TSyntax ``Parser.block) : Option FootnoteRefView :
     some { stx, opener, name, closer, content }
   | _ => none
 
-/--
-A view of a metadata block for the preceding header.
--/
+/-- A view of a metadata block for the preceding header. -/
 structure MetadataView where
   /-- The original syntax. -/
   stx : TSyntax ``Parser.block
@@ -882,8 +791,7 @@ structure MetadataView where
   closer : Syntax
 
 /-- The individual metadata fields, without their separators. -/
-def MetadataView.fields (v : MetadataView) :
-    TSyntaxArray ``Lean.Parser.Term.structInstField :=
+def MetadataView.fields (v : MetadataView) : TSyntaxArray ``Lean.Parser.Term.structInstField :=
   v.contents.raw[0].getSepArgs.map (⟨·⟩)
 
 /-- A view of `stx`, if it is a metadata block. -/
@@ -939,9 +847,7 @@ instance : Coe LinkRefView BlockView := ⟨.linkRef⟩
 instance : Coe FootnoteRefView BlockView := ⟨.footnoteRef⟩
 instance : Coe MetadataView BlockView := ⟨.metadata⟩
 
-/--
-Returns the syntax underlying a block view.
--/
+/-- Returns the syntax underlying a block view. -/
 def BlockView.stx : BlockView → TSyntax ``Parser.block
   | .para v => v.stx
   | .ul v => v.stx
@@ -963,18 +869,12 @@ Each production has a view of its own, and this tries them in turn. The producti
 syntax kinds, so at most one applies and the order does not matter.
 -/
 def BlockView.of (stx : TSyntax ``Parser.block) : Option BlockView :=
-  .para <$> ParaView.of stx <|>
-  .ul <$> UnorderedListView.of stx <|>
-  .ol <$> OrderedListView.of stx <|>
-  .dl <$> DescListView.of stx <|>
-  .blockquote <$> BlockquoteView.of stx <|>
-  .codeblock <$> CodeBlockView.of stx <|>
-  .directive <$> DirectiveView.of stx <|>
-  .command <$> CommandView.of stx <|>
-  .header <$> HeaderView.of stx <|>
-  .linkRef <$> LinkRefView.of stx <|>
-  .footnoteRef <$> FootnoteRefView.of stx <|>
-  .metadata <$> MetadataView.of stx
+  .para <$> ParaView.of stx <|> .ul <$> UnorderedListView.of stx <|> .ol <$> OrderedListView.of stx
+    <|> .dl <$> DescListView.of stx <|> .blockquote <$> BlockquoteView.of stx
+    <|> .codeblock <$> CodeBlockView.of stx <|> .directive <$> DirectiveView.of stx
+    <|> .command <$> CommandView.of stx <|> .header <$> HeaderView.of stx
+    <|> .linkRef <$> LinkRefView.of stx <|> .footnoteRef <$> FootnoteRefView.of stx
+    <|> .metadata <$> MetadataView.of stx
 
 /--
 Returns a view of an inline element of a Verso document.

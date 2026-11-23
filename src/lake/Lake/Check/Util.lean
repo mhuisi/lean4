@@ -11,7 +11,8 @@ public import Lean.Util.FoldConsts
 
 namespace Lake.Check
 
-public def runForUsedConsts [Monad m] (info : Lean.ConstantInfo) (f : Lean.Name → m Unit) : m Unit := do
+public def runForUsedConsts [Monad m] (info : Lean.ConstantInfo) (f : Lean.Name → m Unit)
+    : m Unit := do
   info.type.getUsedConstants.forM f
   f info.name
   if let some val := info.value? (allowOpaque := true) then

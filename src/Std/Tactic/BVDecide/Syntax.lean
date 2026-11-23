@@ -17,55 +17,35 @@ set_option linter.missingDocs true -- keep it documented
 
 namespace Lean.Elab.Tactic.BVDecide
 
-/--
-The various kinds of configurations offered for the SAT solver.
--/
+/-- The various kinds of configurations offered for the SAT solver. -/
 inductive SolverMode where
-  /--
-  Set SAT solver options to improve proof search.
-  -/
+  /-- Set SAT solver options to improve proof search. -/
   | proof
-  /--
-  Set SAT solver options to improve counterexample search.
-  -/
+  /-- Set SAT solver options to improve counterexample search. -/
   | counterexample
-  /--
-  Don't set additional SAT solver flags.
-  -/
+  /-- Don't set additional SAT solver flags. -/
   | default
 
-/--
-How much symmetry breaking for EPR problems `bv_decide` should attempt.
--/
+/-- How much symmetry breaking for EPR problems `bv_decide` should attempt. -/
 inductive EprSymBreak where
-  /--
-  Perform no additional symmetry breaking beyond the sound problem encoding.
-  -/
+  /-- Perform no additional symmetry breaking beyond the sound problem encoding. -/
   | off
   /--
   Slightly improve the problem encoding to break the search space in half at little additional cost.
   -/
   | simple
-  /--
-  Introduce as much symmetry breaking as possible.
-  -/
+  /-- Introduce as much symmetry breaking as possible. -/
   | full
 
-/--
-The configuration options for `bv_decide`.
--/
+/-- The configuration options for `bv_decide`. -/
 structure BVDecideConfig where
   /-- The number of seconds that the SAT solver is run before aborting. -/
   timeout : Nat := 10
   /-- Whether to run the trimming algorithm on LRAT proofs. -/
   trimProofs : Bool := true
-  /--
-  Whether to use the binary LRAT proof format.
-  -/
+  /-- Whether to use the binary LRAT proof format. -/
   binaryProofs : Bool := true
-  /--
-  Canonicalize with respect to associativity and commutativity.
-  -/
+  /-- Canonicalize with respect to associativity and commutativity. -/
   acNf : Bool := false
   /--
   Split hypotheses of the form `h : (x && y) = true` into `h1 : x = true` and `h2 : y = true`.
@@ -89,18 +69,14 @@ structure BVDecideConfig where
   thus make them accessible for `bv_decide`.
   -/
   fixedInt : Bool := true
-  /--
-  Handle equality on enum inductives by turning them into `BitVec`.
-  -/
+  /-- Handle equality on enum inductives by turning them into `BitVec`. -/
   enums : Bool := true
   /--
   Output the AIG of bv_decide as graphviz into a file called aig.gv in the working directory of the
   Lean process.
   -/
   graphviz : Bool := false
-  /--
-  The maximum number of subexpressions to visit when performing simplification.
-  -/
+  /-- The maximum number of subexpressions to visit when performing simplification. -/
   maxSteps : Nat := Lean.Meta.Simp.defaultMaxSteps
   /--
   Short-circuit multiplication as an abstraction-style optimization that triggers
@@ -117,27 +93,19 @@ structure BVDecideConfig where
   abstraction refinement.
   -/
   uf : Bool := false
-  /--
-  The number of iterations that the CEGAR refinement loop may run up to.
-  -/
+  /-- The number of iterations that the CEGAR refinement loop may run up to. -/
   cegarRounds : Nat := 1000
   /--
   Encode many-sorted EPR (effectively propositional) problems in the hypotheses into `BitVec`.
   Note that this has to be always used together with `uf` if predicates occur in the problem.
   -/
   epr : Bool := false
-  /--
-  How much effort bv_decide should put into breaking symmetries of EPR problems.
-  -/
+  /-- How much effort bv_decide should put into breaking symmetries of EPR problems. -/
   eprSymBreak : EprSymBreak := .simple
-  /--
-  Guide the MBQI procedure for EPR problems with Z3 style instantiation sets and projections.
-  -/
+  /-- Guide the MBQI procedure for EPR problems with Z3 style instantiation sets and projections. -/
   eprProjections : Bool := true
 
-/--
-Configuration for the `epr` tactic.
--/
+/-- Configuration for the `epr` tactic. -/
 structure EprConfig extends BVDecideConfig where
   structures := false
   fixedInt := false
@@ -145,10 +113,7 @@ structure EprConfig extends BVDecideConfig where
   uf := true
   epr := true
 
-/--
-Whether this configuration requires the solver to use incremental solving.
--/
-def BVDecideConfig.needsIncremental (cfg : BVDecideConfig) : Bool :=
-  cfg.uf || cfg.epr
+/-- Whether this configuration requires the solver to use incremental solving. -/
+def BVDecideConfig.needsIncremental (cfg : BVDecideConfig) : Bool := cfg.uf || cfg.epr
 
 end Lean.Elab.Tactic.BVDecide

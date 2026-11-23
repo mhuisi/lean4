@@ -29,20 +29,22 @@ namespace BVLogicalExpr
 namespace Cache
 
 abbrev Inv (assign : BVExpr.Assignment) (aig : AIG BVBit) (cache : Cache aig) : Prop :=
-  BVExpr.Cache.Inv assign aig cache.exprs ∧
-  ∀ k (h : k ∈ cache.map),
-    ⟦aig, ⟨(cache.map[k]'h).gate, (cache.map[k]'h).invert, cache.hbound k h⟩, assign.toAIGAssignment⟧
-      =
-    k.eval assign
+  BVExpr.Cache.Inv assign aig cache.exprs
+    ∧ ∀ k (h : k ∈ cache.map),
+      ⟦
+        aig,
+        ⟨(cache.map[k]'h).gate, (cache.map[k]'h).invert, cache.hbound k h⟩,
+        assign.toAIGAssignment
+      ⟧ = k.eval assign
 
 theorem Inv_empty (aig : AIG BVBit) : Inv assign aig Cache.empty := by
   refine ⟨BVExpr.Cache.Inv_empty aig, ?_⟩
   intro k hk
   simp [Cache.empty] at hk
 
-theorem Inv_cast (cache : Cache aig1) (hpref : IsPrefix aig1.decls aig2.decls)
-    (hinv : Inv assign aig1 cache) :
-    Inv assign aig2 (cache.cast hpref.size_le) := by
+theorem Inv_cast
+    (cache : Cache aig1) (hpref : IsPrefix aig1.decls aig2.decls) (hinv : Inv assign aig1 cache)
+    : Inv assign aig2 (cache.cast hpref.size_le) := by
   refine ⟨BVExpr.Cache.Inv_cast _ hpref hinv.1, ?_⟩
   unfold Cache.cast
   intro k hk
@@ -50,10 +52,10 @@ theorem Inv_cast (cache : Cache aig1) (hpref : IsPrefix aig1.decls aig2.decls)
   apply denote.eq_of_isPrefix (entry := ⟨aig1, _, _, _⟩)
   exact hpref
 
-theorem Inv_insert (cache : Cache aig) (expr : BVLogicalExpr) (ref : AIG.Ref aig)
-    (hinv : Inv assign aig cache)
-    (href : ⟦aig, ref, assign.toAIGAssignment⟧ = expr.eval assign) :
-    Inv assign aig (cache.insert expr ref) := by
+theorem Inv_insert
+    (cache : Cache aig) (expr : BVLogicalExpr) (ref : AIG.Ref aig)
+    (hinv : Inv assign aig cache) (href : ⟦aig, ref, assign.toAIGAssignment⟧ = expr.eval assign)
+    : Inv assign aig (cache.insert expr ref) := by
   refine ⟨hinv.1, ?_⟩
   intro k hk
   by_cases heq : expr = k
@@ -75,8 +77,8 @@ theorem Inv_insert (cache : Cache aig) (expr : BVLogicalExpr) (ref : AIG.Ref aig
     rw [← hinv.2 k hmem]
     congr 3 <;> simp [this]
 
-theorem get?_eq_some_iff (cache : Cache aig) (expr : BVLogicalExpr) (ref : AIG.Ref aig) :
-    cache.get? expr = some ref ↔ cache.map[expr]? = some (.mk ref.gate ref.invert) := by
+theorem get?_eq_some_iff (cache : Cache aig) (expr : BVLogicalExpr) (ref : AIG.Ref aig)
+    : cache.get? expr = some ref ↔ cache.map[expr]? = some (.mk ref.gate ref.invert) := by
   rcases ref with ⟨gate, invert, hgate⟩
   unfold Cache.get?
   split
@@ -89,9 +91,11 @@ theorem get?_eq_some_iff (cache : Cache aig) (expr : BVLogicalExpr) (ref : AIG.R
       simp
   · simp_all
 
-theorem denote_eq_eval_of_get?_eq_some_of_Inv (cache : Cache aig) (expr : BVLogicalExpr)
-    (ref : AIG.Ref aig) (hsome : cache.get? expr = some ref) (hinv : Inv assign aig cache) :
-    ⟦aig, ref, assign.toAIGAssignment⟧ = expr.eval assign := by
+theorem denote_eq_eval_of_get?_eq_some_of_Inv
+    (cache : Cache aig) (expr : BVLogicalExpr) (ref : AIG.Ref aig)
+    (hsome : cache.get? expr = some ref)
+    (hinv : Inv assign aig cache)
+    : ⟦aig, ref, assign.toAIGAssignment⟧ = expr.eval assign := by
   rw [get?_eq_some_iff] at hsome
   have hmem : expr ∈ cache.map := by
     rw [Std.HashMap.mem_iff_contains, Std.HashMap.contains_eq_isSome_getElem?]
@@ -108,9 +112,11 @@ namespace bitblastWithCache
 
 mutual
 
-theorem goCache_Inv_of_Inv (expr : BVLogicalExpr) (aig : AIG BVBit) (assign : BVExpr.Assignment)
-    (cache : Cache aig) (hinv : Cache.Inv assign aig cache) :
-    Cache.Inv assign (goCache aig expr cache).result.val.aig (goCache aig expr cache).cache := by
+theorem goCache_Inv_of_Inv
+    (expr : BVLogicalExpr)
+    (aig : AIG BVBit) (assign : BVExpr.Assignment)
+    (cache : Cache aig) (hinv : Cache.Inv assign aig cache)
+    : Cache.Inv assign (goCache aig expr cache).result.val.aig (goCache aig expr cache).cache := by
   generalize hres : goCache aig expr cache = res
   unfold goCache at hres
   split at hres
@@ -125,9 +131,11 @@ theorem goCache_Inv_of_Inv (expr : BVLogicalExpr) (aig : AIG BVBit) (assign : BV
       exact hinv
 termination_by (sizeOf expr, 1)
 
-theorem go_Inv_of_Inv (expr : BVLogicalExpr) (aig : AIG BVBit) (assign : BVExpr.Assignment)
-    (cache : Cache aig) (hinv : Cache.Inv assign aig cache) :
-    Cache.Inv assign (go aig expr cache).result.val.aig (go aig expr cache).cache := by
+theorem go_Inv_of_Inv
+    (expr : BVLogicalExpr)
+    (aig : AIG BVBit) (assign : BVExpr.Assignment)
+    (cache : Cache aig) (hinv : Cache.Inv assign aig cache)
+    : Cache.Inv assign (go aig expr cache).result.val.aig (go aig expr cache).cache := by
   generalize hres : go aig expr cache = res
   unfold go at hres
   split at hres
@@ -168,9 +176,11 @@ theorem go_Inv_of_Inv (expr : BVLogicalExpr) (aig : AIG BVBit) (assign : BVExpr.
 termination_by (sizeOf expr, 0)
 decreasing_by all_goals (subst_vars; decreasing_tactic)
 
-theorem goCache_eval_eq_eval (expr : BVLogicalExpr) (aig : AIG BVBit) (assign : BVExpr.Assignment)
-    (cache : Cache aig) (hinv : Cache.Inv assign aig cache) :
-    ⟦(goCache aig expr cache).result, assign.toAIGAssignment⟧ = expr.eval assign := by
+theorem goCache_eval_eq_eval
+    (expr : BVLogicalExpr)
+    (aig : AIG BVBit) (assign : BVExpr.Assignment)
+    (cache : Cache aig) (hinv : Cache.Inv assign aig cache)
+    : ⟦(goCache aig expr cache).result, assign.toAIGAssignment⟧ = expr.eval assign := by
   generalize hres : goCache aig expr cache = res
   unfold goCache at hres
   split at hres
@@ -184,9 +194,11 @@ theorem goCache_eval_eq_eval (expr : BVLogicalExpr) (aig : AIG BVBit) (assign : 
     exact hinv
 termination_by (sizeOf expr, 1)
 
-theorem go_eval_eq_eval (expr : BVLogicalExpr) (aig : AIG BVBit) (assign : BVExpr.Assignment)
-    (cache : Cache aig) (hinv : Cache.Inv assign aig cache) :
-    ⟦(go aig expr cache).result, assign.toAIGAssignment⟧ = expr.eval assign := by
+theorem go_eval_eq_eval
+    (expr : BVLogicalExpr)
+    (aig : AIG BVBit) (assign : BVExpr.Assignment)
+    (cache : Cache aig) (hinv : Cache.Inv assign aig cache)
+    : ⟦(go aig expr cache).result, assign.toAIGAssignment⟧ = expr.eval assign := by
   generalize hres : go aig expr cache = res
   unfold go at hres
   split at hres
@@ -239,13 +251,13 @@ end
 
 end bitblastWithCache
 
-theorem denote_bitblast (expr : BVLogicalExpr) (assign : BVExpr.Assignment) :
-    ⟦bitblast expr, assign.toAIGAssignment⟧ = expr.eval assign := by
+theorem denote_bitblast (expr : BVLogicalExpr) (assign : BVExpr.Assignment)
+    : ⟦bitblast expr, assign.toAIGAssignment⟧ = expr.eval assign := by
   unfold bitblast bitblastWithCache
   rw [bitblastWithCache.goCache_eval_eq_eval]
   apply Cache.Inv_empty
 
-theorem unsat_of_bitblast (expr : BVLogicalExpr) : expr.bitblast.Unsat → expr.Unsat :=  by
+theorem unsat_of_bitblast (expr : BVLogicalExpr) : expr.bitblast.Unsat → expr.Unsat := by
   intro h assign
   rw [← denote_bitblast]
   apply h

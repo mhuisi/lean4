@@ -74,7 +74,9 @@ public register_builtin_option backward.inferInstanceAs.wrap : Bool := {
 
 public register_builtin_option backward.inferInstanceAs.wrap.reuseSubInstances : Bool := {
   defValue := true
-  descr := "when recursing into sub-instances, reuse existing instances for the target type instead of re-wrapping them, which can be important to avoid non-defeq instance diamonds"
+  descr :=
+    "when recursing into sub-instances, reuse existing instances for the target type instead of \
+      re-wrapping them, which can be important to avoid non-defeq instance diamonds"
 }
 
 public register_builtin_option backward.inferInstanceAs.wrap.instances : Bool := {
@@ -101,196 +103,214 @@ partial def getFieldOrigin (structName field : Name) : MetaM (Name × StructureF
   return (structName, fi)
 
 /-- Projects application of a structure type to corresponding application of a parent structure. -/
-def getParentStructType? (structName parentStructName : Name) (structType : Expr) : MetaM (Option Expr) := OptionT.run do
-  let env ← getEnv
-  let some path := getPathToBaseStructure? env parentStructName structName | failure
-  withLocalDeclD `self structType fun self => do
-    let proj ← path.foldlM (init := self) fun e projFn => do
-      let ty ← whnf (← inferType e)
-      let .const _ us := ty.getAppFn
-        | trace[Meta.wrapInstance] "could not reduce type `{ty}`"
-          failure
-      let params := ty.getAppArgs
-      pure <| mkApp (mkAppN (.const projFn us) params) e
-    let projTy ← whnf <| ← inferType proj
-    if projTy.containsFVar self.fvarId! then
-      trace[Meta.wrapInstance] "parent type depends on instance fields{indentExpr projTy}"
-      failure
-    return projTy
+def getParentStructType? (structName parentStructName : Name) (structType : Expr)
+    : MetaM (Option Expr) :=
+  OptionT.run do
+    let env ← getEnv
+    let some path := getPathToBaseStructure? env parentStructName structName
+      | failure
+    withLocalDeclD `self structType fun self => do
+      let proj ←
+        path.foldlM (init := self) fun e projFn => do
+          let ty ← whnf (← inferType e)
+          let .const _ us := ty.getAppFn
+            | trace[Meta.wrapInstance] "could not reduce type `{ty}`"
+              failure
+          let params := ty.getAppArgs
+          pure <| mkApp (mkAppN (.const projFn us) params) e
+      let projTy ← whnf <| ← inferType proj
+      if projTy.containsFVar self.fvarId! then
+        trace[Meta.wrapInstance] "parent type depends on instance fields{indentExpr projTy}"
+        failure
+      return projTy
 
-def etaStructExpand? (e : Expr) : MetaM (Option Expr) := OptionT.run do
-  guard <| (← liftM <| isConstructorApp? e).isNone
-  let eType ← instantiateMVars (← whnf (← inferType e))
-  let .const inductName us := eType.getAppFn | failure
-  let env ← getEnv
-  guard <| isStructure env inductName
-  guard <| isNonRecStructure env inductName
-  guard <| !(← isProp eType)
-  let iv ← getConstInfoInduct inductName
-  let some ctorName := iv.ctors.head? | failure
-  let ctorInfo ← getConstInfoCtor ctorName
-  let params := eType.getAppArgs.shrink ctorInfo.numParams
-  let structInfo? := getStructureInfo? env inductName
-  let mut result := mkAppN (mkConst ctorName us) params
-  for i in *...ctorInfo.numFields do
-    let proj := match structInfo?.bind (·.getProjFn? i) with
-      | some projFn => mkApp (mkAppN (mkConst projFn us) params) e
-      | none => mkProj inductName i e
-    result := mkApp result proj
-  return result
+def etaStructExpand? (e : Expr) : MetaM (Option Expr) :=
+  OptionT.run do
+    guard <| (← liftM <| isConstructorApp? e).isNone
+    let eType ← instantiateMVars (← whnf (← inferType e))
+    let .const inductName us := eType.getAppFn
+      | failure
+    let env ← getEnv
+    guard <| isStructure env inductName
+    guard <| isNonRecStructure env inductName
+    guard <| !(← isProp eType)
+    let iv ← getConstInfoInduct inductName
+    let some ctorName := iv.ctors.head?
+      | failure
+    let ctorInfo ← getConstInfoCtor ctorName
+    let params := eType.getAppArgs.shrink ctorInfo.numParams
+    let structInfo? := getStructureInfo? env inductName
+    let mut result := mkAppN (mkConst ctorName us) params
+    for i in *...ctorInfo.numFields do
+      let proj :=
+        match structInfo?.bind (·.getProjFn? i) with
+        | some projFn => mkApp (mkAppN (mkConst projFn us) params) e
+        | none => mkProj inductName i e
+      result := mkApp result proj
+    return result
 
 /--
 Wrap an instance value so its type matches the expected type exactly.
 See the module docstring for the full algorithm specification.
 -/
-public partial def wrapInstance (inst expectedType : Expr) (compile : Bool := true)
-    (logCompileErrors : Bool := true) (isMeta : Bool := false) (exposeAux : Bool := true) :
-    MetaM Expr :=
-  withTransparency .instances do
-    return (← go (isEta := false) inst expectedType).get!
+public partial def wrapInstance
+    (inst expectedType : Expr)
+    (compile : Bool := true) (logCompileErrors : Bool := true) (isMeta : Bool := false)
+    (exposeAux : Bool := true)
+    : MetaM Expr :=
+  withTransparency .instances do return (← go (isEta := false) inst expectedType).get!
 -- If `isEta` is true, will return `none` if no sub-instance was found, i.e. eta-expansion had no
 -- effect.
-where go (inst expectedType : Expr) (isEta : Bool) : MetaM (Option Expr) := do
-  withTraceNode `Meta.wrapInstance
-      (fun _ => return m!"type: {expectedType}") do
-  let some className ← isClass? expectedType
-    | return inst
-  trace[Meta.wrapInstance] "class is {className}"
+where
+  go (inst expectedType : Expr) (isEta : Bool) : MetaM (Option Expr) := do
+    withTraceNode `Meta.wrapInstance (fun _ => return m!"type: {expectedType}") do
+      let some className ← isClass? expectedType
+        | return inst
+      trace[Meta.wrapInstance] "class is {className}"
 
-  if ← isProp expectedType then
-    if backward.inferInstanceAs.wrap.instances.get (← getOptions) then
-      return (← mkAuxTheorem expectedType inst (zetaDelta := true))
-    else
-      return inst
-
-  -- record inferred instance as elab dependency before `whnf` may remove it
-  if let .const n .. := inst.getAppFn then
-    recordExtraModUseFromDecl n isMeta
-
-  -- Try to reduce it to a constructor.
-  (← whnf inst).withApp fun f args => do
-    let some (.ctorInfo ci) ← f.constName?.mapM getConstInfo
-      | do
-        trace[Meta.wrapInstance] "did not reduce to constructor application: {inst}"
-        let instType ← inferType inst
-        if ← isDefEq expectedType instType then
+      if ← isProp expectedType then
+        if backward.inferInstanceAs.wrap.instances.get (← getOptions) then
+          return (← mkAuxTheorem expectedType inst (zetaDelta := true))
+        else
           return inst
 
-        if backward.inferInstanceAs.wrap.reuseSubInstances.get (← getOptions) then
-          if let some inst ← etaStructExpand? inst then
-            if let some inst ← go (isEta := true) inst expectedType then
+      -- record inferred instance as elab dependency before `whnf` may remove it
+      if let .const n .. := inst.getAppFn then
+        recordExtraModUseFromDecl n isMeta
+
+      -- Try to reduce it to a constructor.
+      (← whnf inst).withApp fun f args => do
+        let some (.ctorInfo ci) ← f.constName?.mapM getConstInfo
+          | do
+            trace[Meta.wrapInstance] "did not reduce to constructor application: {inst}"
+            let instType ← inferType inst
+            if ← isDefEq expectedType instType then
               return inst
 
-        if backward.inferInstanceAs.wrap.instances.get (← getOptions) then
-          let name ← mkAuxDeclName
-          let wrapped ← withoutExporting (when := !exposeAux) <|
-            mkAuxDefinition name expectedType inst (compile := false)
-          setReducibilityStatus name <|
-            if (← withImplicit <| isDefEq expectedType instType) then
-              .implicitReducible
-            else
-              .semireducible
-          if isMeta then modifyEnv (markMeta · name)
-          if compile then
-            compileDecls (logErrors := logCompileErrors) #[name]
-          enableRealizationsForConst name
-          return wrapped
+            if backward.inferInstanceAs.wrap.reuseSubInstances.get (← getOptions) then
+              if let some inst ← etaStructExpand? inst then
+                if let some inst ← go (isEta := true) inst expectedType then
+                  return inst
 
-        return inst
-    let (mvars, _, cls) ← forallMetaTelescope (← inferType f)
-    if h₁ : args.size ≠ mvars.size then
-      throwError "wrapInstance: incorrect number of arguments for \
-        constructor application `{f}`: {args}"
-    else
-      unless ← isDefEq expectedType cls do
-        throwError "wrapInstance: `{expectedType}` does not unify with the conclusion of \
-          `{.ofConstName ci.name}`"
-      let mut isEta := isEta
-      for h₂ : i in ci.numParams...args.size do
-        have : i < mvars.size := by
-          simp only [ne_eq, Decidable.not_not] at h₁
-          rw [← h₁]
-          get_elem_tactic
-        let mvarId := mvars[i].mvarId!
-        let mvarDecl ← mvarId.getDecl
-        let argExpectedType ← instantiateMVars mvarDecl.type
-        let arg := args[i]
-        if ← isProp argExpectedType then
-          let argType ← inferType arg
-          if ← isDefEq argExpectedType argType then
-            mvarId.assign arg
-          else
-            trace[Meta.wrapInstance] "proof field {i} does not have expected type {argExpectedType} but {argType}, wrapping in auxiliary theorem: {arg}"
-            mvarId.assign (← mkAuxTheorem argExpectedType arg (zetaDelta := true))
-          continue
+            if backward.inferInstanceAs.wrap.instances.get (← getOptions) then
+              let name ← mkAuxDeclName
+              let wrapped ←
+                withoutExporting (when := !exposeAux) <|
+                  mkAuxDefinition name expectedType inst (compile := false)
+              setReducibilityStatus name <|
+                if (← withImplicit <| isDefEq expectedType instType) then
+                  .implicitReducible
+                else
+                  .semireducible
+              if isMeta then modifyEnv (markMeta · name)
+              if compile then
+                compileDecls (logErrors := logCompileErrors) #[name]
+              enableRealizationsForConst name
+              return wrapped
 
-        -- Recurse into instance arguments of the constructor
-        if (← isClass? argExpectedType).isSome then
-          if backward.inferInstanceAs.wrap.reuseSubInstances.get (← getOptions) then
-            -- Reuse existing instance for the target type if any. This is especially important when recursing
-            -- as it guarantees subinstances of overlapping instances are defeq under more than just
-            -- semireducible transparency.
-            try
-              if let .some new ← trySynthInstance argExpectedType then
-                -- ignore instances from non-defeq diamonds
-                if (← withoutExporting (when := !exposeAux) <| withDefault <| isDefEq new arg) then
-                  trace[Meta.wrapInstance] "using existing instance {new}"
-                  mvarId.assign new
-                  isEta := false
-                  continue
-            catch _ => pure ()
-
-          -- continue eta-expansion recursively so we know whether any sub-instance was found
-          if isEta then
-            if let some arg ← etaStructExpand? arg then
-              if let some inst ← go (isEta := true) arg argExpectedType then
-                mvarId.assign inst
-                isEta := false
-                continue
-
-          mvarId.assign (← go (isEta := false) arg argExpectedType).get!
-          continue
-
-        -- If we hit a data field without having found any sub-instances, we can stop early
-        if isEta then
-          return none
-
-        if backward.inferInstanceAs.wrap.reuseSubInstances.get (← getOptions) then
-          let (baseClassName, fieldInfo) ← getFieldOrigin className mvarDecl.userName
-          if baseClassName != className then
-            trace[Meta.wrapInstance] "found inherited field `{mvarDecl.userName}` from parent `{baseClassName}`"
-            if let some baseClassType ← getParentStructType? className baseClassName expectedType then
-              try
-                if let .some existingBaseClassInst ← trySynthInstance baseClassType then
-                  let proj ← mkProjection existingBaseClassInst fieldInfo.fieldName
-                  -- ignore instances from non-defeq diamonds
-                  if (← withoutExporting (when := !exposeAux) <| withDefault <| isDefEq proj arg) then
-                    trace[Meta.wrapInstance] "using projection of existing instance `{existingBaseClassInst}`"
-                    mvarId.assign proj
-                    continue
-                trace[Meta.wrapInstance] "did not find existing instance for `{baseClassName}`"
-              catch e =>
-                trace[Meta.wrapInstance] "error when attempting to reuse existing instance for `{baseClassName}`: {e.toMessageData}"
-
-        -- For data fields, assign directly or wrap in aux def to fix types.
-        if backward.inferInstanceAs.wrap.data.get (← getOptions) then
-          let argType ← inferType arg
-          if ← isDefEq argExpectedType argType then
-            mvarId.assign arg
-          else
-            let name ← mkAuxDeclName
-            mvarId.assign (← withoutExporting (when := !exposeAux) <|
-              mkAuxDefinition name argExpectedType arg (compile := false))
-            setReducibilityStatus name <|
-              if (← withImplicit <| isDefEq argExpectedType argType) then
-                .implicitReducible
-              else
-                .semireducible
-            setInlineAttribute name
-            if isMeta then modifyEnv (markMeta · name)
-            if compile then
-              compileDecls (logErrors := logCompileErrors) #[name]
-            enableRealizationsForConst name
+            return inst
+        let (mvars, _, cls) ← forallMetaTelescope (← inferType f)
+        if h₁ : args.size ≠ mvars.size then
+          throwError "wrapInstance: incorrect number of arguments for \
+            constructor application `{f}`: {args}"
         else
-          mvarId.assign arg
-      return mkAppN f (← mvars.mapM instantiateMVars)
+          unless ← isDefEq expectedType cls do
+            throwError "wrapInstance: `{expectedType}` does not unify with the conclusion of \
+              `{.ofConstName ci.name}`"
+          let mut isEta := isEta
+          for h₂ : i in ci.numParams...args.size do
+            have : i < mvars.size := by
+              simp only [ne_eq, Decidable.not_not] at h₁
+              rw [← h₁]
+              get_elem_tactic
+            let mvarId := mvars[i].mvarId!
+            let mvarDecl ← mvarId.getDecl
+            let argExpectedType ← instantiateMVars mvarDecl.type
+            let arg := args[i]
+            if ← isProp argExpectedType then
+              let argType ← inferType arg
+              if ← isDefEq argExpectedType argType then
+                mvarId.assign arg
+              else
+                trace[Meta.wrapInstance] "proof field {i} does not have expected type \
+                  {argExpectedType} but {argType}, wrapping in auxiliary theorem: {arg}"
+                mvarId.assign (← mkAuxTheorem argExpectedType arg (zetaDelta := true))
+              continue
+
+            -- Recurse into instance arguments of the constructor
+            if (← isClass? argExpectedType).isSome then
+              if backward.inferInstanceAs.wrap.reuseSubInstances.get (← getOptions) then
+                -- Reuse existing instance for the target type if any. This is especially important when recursing
+                -- as it guarantees subinstances of overlapping instances are defeq under more than just
+                -- semireducible transparency.
+                try
+                  if let .some new ← trySynthInstance argExpectedType then
+                    -- ignore instances from non-defeq diamonds
+                    if (← withoutExporting (when := !exposeAux) <| withDefault <|
+                        isDefEq new arg) then
+                      trace[Meta.wrapInstance] "using existing instance {new}"
+                      mvarId.assign new
+                      isEta := false
+                      continue
+                catch _ =>
+                  pure ()
+
+              -- continue eta-expansion recursively so we know whether any sub-instance was found
+              if isEta then
+                if let some arg ← etaStructExpand? arg then
+                  if let some inst ← go (isEta := true) arg argExpectedType then
+                    mvarId.assign inst
+                    isEta := false
+                    continue
+
+              mvarId.assign (← go (isEta := false) arg argExpectedType).get!
+              continue
+
+            -- If we hit a data field without having found any sub-instances, we can stop early
+            if isEta then
+              return none
+
+            if backward.inferInstanceAs.wrap.reuseSubInstances.get (← getOptions) then
+              let (baseClassName, fieldInfo) ← getFieldOrigin className mvarDecl.userName
+              if baseClassName != className then
+                trace[Meta.wrapInstance]
+                  "found inherited field `{mvarDecl.userName}` from parent `{baseClassName}`"
+                if let some baseClassType ←
+                    getParentStructType? className baseClassName expectedType then
+                  try
+                    if let .some existingBaseClassInst ← trySynthInstance baseClassType then
+                      let proj ← mkProjection existingBaseClassInst fieldInfo.fieldName
+                      -- ignore instances from non-defeq diamonds
+                      if (← withoutExporting (when := !exposeAux) <| withDefault <|
+                          isDefEq proj arg) then
+                        trace[Meta.wrapInstance]
+                          "using projection of existing instance `{existingBaseClassInst}`"
+                        mvarId.assign proj
+                        continue
+                    trace[Meta.wrapInstance] "did not find existing instance for `{baseClassName}`"
+                  catch e =>
+                    trace[Meta.wrapInstance] "error when attempting to reuse existing instance for \
+                      `{baseClassName}`: {e.toMessageData}"
+
+            -- For data fields, assign directly or wrap in aux def to fix types.
+            if backward.inferInstanceAs.wrap.data.get (← getOptions) then
+              let argType ← inferType arg
+              if ← isDefEq argExpectedType argType then
+                mvarId.assign arg
+              else
+                let name ← mkAuxDeclName
+                mvarId.assign (← withoutExporting (when := !exposeAux) <|
+                  mkAuxDefinition name argExpectedType arg (compile := false))
+                setReducibilityStatus name <|
+                  if (← withImplicit <| isDefEq argExpectedType argType) then
+                    .implicitReducible
+                  else
+                    .semireducible
+                setInlineAttribute name
+                if isMeta then modifyEnv (markMeta · name)
+                if compile then
+                  compileDecls (logErrors := logCompileErrors) #[name]
+                enableRealizationsForConst name
+            else
+              mvarId.assign arg
+          return mkAppN f (← mvars.mapM instantiateMVars)

@@ -28,10 +28,9 @@ Examples:
 protected def List.toString [ToString α] : List α → String
   | [] => "[]"
   | [x] => "[" ++ toString x ++ "]"
-  | x::xs => String.push (xs.foldl (fun l r => l ++ ", " ++ toString r) ("[" ++ (toString x))) ']'
+  | x :: xs => String.push (xs.foldl (fun l r => l ++ ", " ++ toString r) ("[" ++ (toString x))) ']'
 
-instance {α : Type u} [ToString α] : ToString (List α) :=
-  ⟨List.toString⟩
+instance {α : Type u} [ToString α] : ToString (List α) := ⟨List.toString⟩
 
 instance [ToString α] : ToString (Array α) where
   toString xs := "#" ++ (toString xs.toList)

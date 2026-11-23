@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.Cutsat.Types
 import Init.Data.Int.OfNat
@@ -36,17 +37,18 @@ private structure HullEntry where
 private structure Bounds where
   ordered : Std.TreeMap Int HullEntry := {}
   index : PHashMap Poly Int := {}
-  deriving Inhabited
+deriving Inhabited
 
-private def Bounds.insertAt (s : Bounds) (i : Int) (b : HullEntry) : Bounds :=
-  { ordered := s.ordered.insert i b, index := s.index.insert b.lin i }
+private def Bounds.insertAt (s : Bounds) (i : Int) (b : HullEntry) : Bounds := {
+  ordered := s.ordered.insert i b
+  index := s.index.insert b.lin i
+}
 
 private def Bounds.find? (s : Bounds) (lin : Poly) : Option (Int × HullEntry) := do
   let i ← s.index.find? lin
   return (i, ← s.ordered[i]?)
 
-private def isNatOrInt (α : Expr) : Bool :=
-  α.isConstOf ``Nat || α.isConstOf ``Int
+private def isNatOrInt (α : Expr) : Bool := α.isConstOf ``Nat || α.isConstOf ``Int
 
 private def isArithAtom (e : Expr) : Bool :=
   match_expr e with
@@ -63,12 +65,15 @@ private structure Atom where
 private def getAtom? (e : Expr) : MetaM (Option Atom) := do
   match_expr e with
   | Eq α a b =>
-    unless isNatOrInt α do return none
+    unless isNatOrInt α do
+      return none
     return some ⟨a, b, true, α.isConstOf ``Nat⟩
   | LE.le α inst a b =>
-    unless isNatOrInt α do return none
+    unless isNatOrInt α do
+      return none
     let isNat := α.isConstOf ``Nat
-    unless (← if isNat then Structural.isInstLENat inst else Structural.isInstLEInt inst) do return none
+    unless (← if isNat then Structural.isInstLENat inst else Structural.isInstLEInt inst) do
+      return none
     return some ⟨a, b, false, isNat⟩
   | _ => return none
 
@@ -78,14 +83,16 @@ private def mkEntry (p : Poly) (atom : OrHullAtom) (entries : Bounds) : Bounds :
   if lin matches .num _ then entries else entries.insertAt entries.ordered.size { lin, k, atom }
 
 private def atomEntries (gen : Nat) (c : Expr) : GoalM Bounds := do
-  let some ⟨a, b, isEq, isNat⟩ ← getAtom? c | return {}
-  let (a', b', toIntThm?) ← if isNat then
-    let (a', h₁) ← natToInt a
-    let (b', h₂) ← natToInt b
-    let thm := if isEq then ``Nat.ToInt.of_eq else ``Nat.ToInt.of_le
-    pure (a', b', some (mkApp6 (mkConst thm) a b a' b' h₁ h₂))
-  else
-    pure (a, b, none)
+  let some ⟨a, b, isEq, isNat⟩ ← getAtom? c
+    | return {}
+  let (a', b', toIntThm?) ←
+    if isNat then
+      let (a', h₁) ← natToInt a
+      let (b', h₂) ← natToInt b
+      let thm := if isEq then ``Nat.ToInt.of_eq else ``Nat.ToInt.of_le
+      pure (a', b', some (mkApp6 (mkConst thm) a b a' b' h₁ h₂))
+    else
+      pure (a, b, none)
   let lhs ← toLinearExpr a' gen
   let rhs ← toLinearExpr b' gen
   let p := lhs.sub rhs |>.norm
@@ -100,14 +107,17 @@ private def andBounds (as bs : Bounds) : Bounds := Id.run do
   if bs.ordered.isEmpty then return as
   if bs.ordered.size ≤ as.ordered.size then
     return bs.ordered.foldl (init := as) fun s _ b =>
-      if let some i := s.index.find? b.lin then
-        { s with ordered := s.ordered.modify i fun a => if a.k < b.k then b else a }
+      if let some i := s.index.find? b.lin then {
+        s with
+        ordered := s.ordered.modify i fun a => if a.k < b.k then b else a
+      }
       else
         s.insertAt (s.ordered.maxKeyD 0 + 1) b
   -- Prepend the left directions in reverse order, retaining their positions on ties.
   return as.ordered.foldr (init := bs) fun _ a s => Id.run do
     let i := s.ordered.minKeyD 0 - 1
-    let some (j, b) := s.find? a.lin | return s.insertAt i a
+    let some (j, b) := s.find? a.lin
+      | return s.insertAt i a
     return { s with ordered := s.ordered.erase j }.insertAt i (if a.k < b.k then b else a)
 
 private def orBounds (as bs : Bounds) : Bounds := Id.run do
@@ -115,7 +125,8 @@ private def orBounds (as bs : Bounds) : Bounds := Id.run do
   let (xs, ys) := if leftSmaller then (as, bs) else (bs, as)
   let mut result : Bounds := {}
   for (i, x) in xs.ordered do
-    let some (j, y) := ys.find? x.lin | continue
+    let some (j, y) := ys.find? x.lin
+      | continue
     result := result.insertAt (if leftSmaller then i else j) (if x.k ≤ y.k then x else y)
   return result
 
@@ -141,10 +152,13 @@ private def previewDirection (lin : Poly) : PreviewM Nat :=
 private abbrev Directions := Std.TreeSet Nat
 
 private def previewAtom (e : Expr) : PreviewM Directions := do
-  let some ⟨a, b, isEq, isNat⟩ ← getAtom? e | return {}
-  let (a, b) ← if isNat then
-    pure (← shareCommon (← natToIntExpr a), ← shareCommon (← natToIntExpr b))
-  else pure (a, b)
+  let some ⟨a, b, isEq, isNat⟩ ← getAtom? e
+    | return {}
+  let (a, b) ←
+    if isNat then
+      pure (← shareCommon (← natToIntExpr a), ← shareCommon (← natToIntExpr b))
+    else
+      pure (a, b)
   let lhs ← toLinearExprWith previewVar a
   let rhs ← toLinearExprWith previewVar b
   let p := (lhs.sub rhs).norm
@@ -154,21 +168,29 @@ private def previewAtom (e : Expr) : PreviewM Directions := do
   if isEq then return dirs.insert (← previewDirection (lin.mul (-1)))
   return dirs
 
-/-- A disjunction inside a conjunction contributes only if its alternatives share a direction.
-Inspect it before registering any solver terms. All such queries share one direction cache. -/
-private def admitConjunct (e : Expr) (supported : Expr → Bool) : MonadCacheT ExprStructEq Directions PreviewM Bool := do
-  let_expr Or _ _ := e | return true
-  let dirs ← Formula.foldCachedM previewAtom (·.union ·) (·.inter ·) e
-    (known? := fun sub => if supported sub then none else some {})
+/--
+A disjunction inside a conjunction contributes only if its alternatives share a direction.
+Inspect it before registering any solver terms. All such queries share one direction cache.
+-/
+private def admitConjunct (e : Expr) (supported : Expr → Bool)
+    : MonadCacheT ExprStructEq Directions PreviewM Bool := do
+  let_expr Or _ _ := e
+    | return true
+  let dirs ←
+    Formula.foldCachedM previewAtom (·.union ·) (·.inter ·) e
+      (known? := fun sub => if supported sub then none else some {})
   return !dirs.isEmpty
 
 /-- Asserts the common linear bounds of a disjunction known to be true. -/
 def assertOrHull (e : Expr) : GoalM Unit := do
-  unless (← getConfig).lia do return ()
+  unless (← getConfig).lia do
+    return ()
   if (← inconsistent) then return ()
   let gen ← getGeneration e
-  let fold := Formula.foldRelevantM isArithAtom ({} : Bounds) (·.ordered.isEmpty)
-    (fun e => liftM (atomEntries gen e)) andBounds orBounds e (admitConjunct := admitConjunct)
+  let fold :=
+    Formula.foldRelevantM isArithAtom ({} : Bounds) (·.ordered.isEmpty)
+      (fun e => liftM (atomEntries gen e))
+      andBounds orBounds e (admitConjunct := admitConjunct)
   let summary ← fold.run.run' {}
   if (← inconsistent) then return ()
   for (_, b) in summary.root.ordered do

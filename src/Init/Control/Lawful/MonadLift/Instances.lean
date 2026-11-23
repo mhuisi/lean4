@@ -28,12 +28,12 @@ universe u v w x
 variable {m : Type u → Type v} {n : Type u → Type w} {o : Type u → Type x}
 
 variable (m n o) in
-instance [Monad m] [Monad n] [Monad o] [MonadLift n o] [MonadLiftT m n]
-    [LawfulMonadLift n o] [LawfulMonadLiftT m n] : LawfulMonadLiftT m o where
-  monadLift_pure := fun a => by
-    simp only [monadLift, LawfulMonadLift.monadLift_pure, liftM_pure]
-  monadLift_bind := fun ma f => by
-    simp only [monadLift, LawfulMonadLift.monadLift_bind, liftM_bind]
+instance
+    [Monad m] [Monad n] [Monad o] [MonadLift n o] [MonadLiftT m n] [LawfulMonadLift n o]
+    [LawfulMonadLiftT m n]
+    : LawfulMonadLiftT m o where
+  monadLift_pure := fun a => by simp only [monadLift, LawfulMonadLift.monadLift_pure, liftM_pure]
+  monadLift_bind := fun ma f => by simp only [monadLift, LawfulMonadLift.monadLift_bind, liftM_bind]
 
 variable (m) in
 instance [Monad m] : LawfulMonadLiftT m m where
@@ -65,10 +65,9 @@ namespace OptionT
 variable [Monad m] [LawfulMonad m]
 
 @[simp]
-theorem lift_bind {α β : Type u} (ma : m α) (f : α → m β) :
-    OptionT.lift (ma >>= f) = OptionT.lift ma >>= (fun a => OptionT.lift (f a)) := by
-  simp only [bind, OptionT.bind, OptionT.mk, OptionT.lift, bind_pure_comp, bind_map_left,
-    map_bind]
+theorem lift_bind {α β : Type u} (ma : m α) (f : α → m β)
+    : OptionT.lift (ma >>= f) = OptionT.lift ma >>= (fun a => OptionT.lift (f a)) := by
+  simp only [bind, OptionT.bind, OptionT.mk, OptionT.lift, bind_pure_comp, bind_map_left, map_bind]
 
 instance : LawfulMonadLift m (OptionT m) where
   monadLift_pure := lift_pure
@@ -81,8 +80,8 @@ namespace ExceptT
 variable [Monad m] [LawfulMonad m]
 
 @[simp]
-theorem lift_bind {α β ε : Type u} (ma : m α) (f : α → m β) :
-    ExceptT.lift (ε := ε) (ma >>= f) = ExceptT.lift ma >>= (fun a => ExceptT.lift (f a)) := by
+theorem lift_bind {α β ε : Type u} (ma : m α) (f : α → m β)
+    : ExceptT.lift (ε := ε) (ma >>= f) = ExceptT.lift ma >>= (fun a => ExceptT.lift (f a)) := by
   simp only [bind, ExceptT.bind, mk, ExceptT.lift, bind_map_left, ExceptT.bindCont, map_bind]
 
 instance : LawfulMonadLift m (ExceptT ε m) where
@@ -90,10 +89,10 @@ instance : LawfulMonadLift m (ExceptT ε m) where
   monadLift_bind := lift_bind
 
 instance : LawfulMonadLift (Except ε) (ExceptT ε m) where
-  monadLift_pure _ := by
-    simp only [MonadLift.monadLift, mk, pure, Except.pure, ExceptT.pure]
+  monadLift_pure _ := by simp only [MonadLift.monadLift, mk, pure, Except.pure, ExceptT.pure]
   monadLift_bind ma _ := by
-    simp only [bind, ExceptT.bind, mk, MonadLift.monadLift, pure_bind, ExceptT.bindCont, Except.bind]
+    simp only [bind, ExceptT.bind, mk, MonadLift.monadLift, pure_bind, ExceptT.bindCont,
+      Except.bind]
     rcases ma with _ | _ <;> simp
 
 end ExceptT

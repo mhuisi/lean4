@@ -28,14 +28,20 @@ base monads and the monad transformers are in `Std.WP.Monad.Conjunctive`.
 namespace Std.WP
 
 /-- The transformer of the program `x` is conjunctive. -/
-abbrev WP.IsConjunctive {Prog : Type u} {Value : Type v} {Pred : Type w} {EPosts : Type z}
-    [CompleteLattice Pred] [CompleteLattice EPosts] [WP Prog Value Pred EPosts] (x : Prog) : Prop :=
+abbrev WP.IsConjunctive
+    {Prog : Type u} {Value : Type v} {Pred : Type w} {EPosts : Type z}
+    [CompleteLattice Pred] [CompleteLattice EPosts] [WP Prog Value Pred EPosts]
+    (x : Prog)
+    : Prop :=
   (WP.trans x).IsConjunctive
 
 /-- The transformer of the program `x` is conjunctive. -/
 @[deprecated WP.IsConjunctive (since := "2026-11-13")]
-abbrev WPConjunctive {Prog : Type u} {Value : Type v} {Pred : Type w} {EPosts : Type z}
-    [CompleteLattice Pred] [CompleteLattice EPosts] [WP Prog Value Pred EPosts] (x : Prog) : Prop :=
+abbrev WPConjunctive
+    {Prog : Type u} {Value : Type v} {Pred : Type w} {EPosts : Type z}
+    [CompleteLattice Pred] [CompleteLattice EPosts] [WP Prog Value Pred EPosts]
+    (x : Prog)
+    : Prop :=
   WP.IsConjunctive x
 
 end Std.WP

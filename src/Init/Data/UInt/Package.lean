@@ -12,8 +12,8 @@ import Init.Data.UInt.Lemmas
 
 open Std
 
-public instance : Std.LinearOrderPackage UInt8 := .ofLE _ { }
-public instance : Std.LinearOrderPackage UInt16 := .ofLE _ { }
-public instance : Std.LinearOrderPackage UInt32 := .ofLE _ { }
-public instance : Std.LinearOrderPackage UInt64 := .ofLE _ { }
-public instance : Std.LinearOrderPackage USize := .ofLE _ { }
+public instance : Std.LinearOrderPackage UInt8 := .ofLE _ {}
+public instance : Std.LinearOrderPackage UInt16 := .ofLE _ {}
+public instance : Std.LinearOrderPackage UInt32 := .ofLE _ {}
+public instance : Std.LinearOrderPackage UInt64 := .ofLE _ {}
+public instance : Std.LinearOrderPackage USize := .ofLE _ {}

@@ -14,7 +14,10 @@ namespace Lean.Elab.Tactic.Do.ProofMode
 open Std.Do SPred.Tactic
 open Lean Elab Tactic Meta
 
-partial def mIntro [Monad m] [MonadControlT MetaM m] [MonadLiftT MetaM m] (goal : MGoal) (ident : TSyntax ``binderIdent) (k : MGoal → m Expr) : m Expr := do
+partial def mIntro
+    [Monad m] [MonadControlT MetaM m] [MonadLiftT MetaM m]
+    (goal : MGoal) (ident : TSyntax ``binderIdent) (k : MGoal → m Expr)
+    : m Expr := do
   if let some (σs, H, T) := goal.target.app3? ``SPred.imp then
     let (name, ref) ← liftMetaM <| getFreshHypName ident
     let uniq ← liftMetaM mkFreshId
@@ -27,9 +30,10 @@ partial def mIntro [Monad m] [MonadControlT MetaM m] [MonadLiftT MetaM m] (goal 
     let prf := mkApp7 (mkConst ``Intro.intro [goal.u]) σs P Q H T hand prf
     return prf
   else if let .letE name type val body _nondep := goal.target then
-    let name ← match ident with
-    | `(binderIdent| $name:ident) => pure name.getId
-    | `(binderIdent| $_) => liftMetaM <| mkFreshUserName name
+    let name ←
+      match ident with
+      | `(binderIdent| $name:ident) => pure name.getId
+      | `(binderIdent| $_) => liftMetaM <| mkFreshUserName name
     -- Even if `_nondep = true` we want to retain the value of the let binding for the proof.
     withLetDecl name type val (nondep := false) fun val => do
       let prf ← k { goal with target := body.instantiate1 val }
@@ -39,26 +43,33 @@ partial def mIntro [Monad m] [MonadControlT MetaM m] [MonadLiftT MetaM m] (goal 
     liftMetaM <| throwError "Target not an implication or let-binding {goal.target}"
 
 -- This is regular MVar.intro, but it takes care not to leave the proof mode by preserving metadata
-partial def mIntroForall [Monad m] [MonadControlT MetaM m] [MonadLiftT MetaM m] (goal : MGoal) (ident : TSyntax ``binderIdent) (k : MGoal → m Expr) : m Expr :=
+partial def mIntroForall
+    [Monad m] [MonadControlT MetaM m] [MonadLiftT MetaM m]
+    (goal : MGoal) (ident : TSyntax ``binderIdent) (k : MGoal → m Expr)
+    : m Expr :=
   controlAt MetaM fun map => do
-  let some (_type, σ, σs') := (← whnf goal.σs).app3? ``List.cons | liftMetaM <| throwError "Ambient state list not a cons {goal.σs}"
-  let name ← match ident with
-  | `(binderIdent| $name:ident) => pure name.getId
-  | `(binderIdent| $_) => liftMetaM <| mkFreshUserName `s
-  withLocalDeclD name σ fun s => do
-    addLocalVarInfo ident (← getLCtx) s σ (isBinder := true)
-    let H := pushForallContextIntoHyps σs' (mkApp goal.hyps s)
-    let T := goal.target.betaRev #[s]
-    map do
-      let prf ← k { u := goal.u, σs:=σs', hyps:=H, target:=T }
-      let prf ← mkLambdaFVars #[s] prf
-      return mkApp5 (mkConst ``SPred.entails_cons_intro [goal.u]) σs' σ goal.hyps goal.target prf
+    let some (_type, σ, σs') := (← whnf goal.σs).app3? ``List.cons
+      | liftMetaM <| throwError "Ambient state list not a cons {goal.σs}"
+    let name ←
+      match ident with
+      | `(binderIdent| $name:ident) => pure name.getId
+      | `(binderIdent| $_) => liftMetaM <| mkFreshUserName `s
+    withLocalDeclD name σ fun s => do
+      addLocalVarInfo ident (← getLCtx) s σ (isBinder := true)
+      let H := pushForallContextIntoHyps σs' (mkApp goal.hyps s)
+      let T := goal.target.betaRev #[s]
+      map do
+        let prf ← k { u := goal.u, σs := σs', hyps := H, target := T }
+        let prf ← mkLambdaFVars #[s] prf
+        return mkApp5 (mkConst ``SPred.entails_cons_intro [goal.u]) σs' σ goal.hyps goal.target prf
 
-def mIntroForallN [Monad m] [MonadControlT MetaM m] [MonadLiftT MetaM m] (goal : MGoal) (n : Nat) (k : MGoal → m Expr) : m Expr :=
+def mIntroForallN
+    [Monad m] [MonadControlT MetaM m] [MonadLiftT MetaM m]
+    (goal : MGoal) (n : Nat) (k : MGoal → m Expr)
+    : m Expr :=
   match n with
   | 0 => k goal
-  | n+1 => do mIntroForall goal (← liftMetaM `(binderIdent| _)) fun g =>
-              mIntroForallN g n k
+  | n + 1 => do mIntroForall goal (← liftMetaM `(binderIdent| _)) fun g => mIntroForallN g n k
 
 macro_rules
   | `(tactic| mintro $pat₁ $pat₂ $pats:mintroPat*) => `(tactic| mintro $pat₁; mintro $pat₂ $pats*)
@@ -74,19 +85,19 @@ def elabMIntro : Tactic
   | `(tactic| mintro $ident:binderIdent) => do
     let (mvar, goal) ← mStartMainGoal
     mvar.withContext do
-    let goals ← IO.mkRef []
-    mvar.assign (← mIntro goal ident fun newGoal => do
-      let m ← mkFreshExprSyntheticOpaqueMVar newGoal.toExpr
-      goals.modify (m.mvarId! :: ·)
-      return m)
-    replaceMainGoal (← goals.get)
+      let goals ← IO.mkRef []
+      mvar.assign (← mIntro goal ident fun newGoal => do
+        let m ← mkFreshExprSyntheticOpaqueMVar newGoal.toExpr
+        goals.modify (m.mvarId! :: ·)
+        return m)
+      replaceMainGoal (← goals.get)
   | `(tactic| mintro ∀$ident:binderIdent) => do
     let (mvar, goal) ← mStartMainGoal
     mvar.withContext do
-    let goals ← IO.mkRef []
-    mvar.assign (← mIntroForall goal ident fun newGoal => do
-      let m ← mkFreshExprSyntheticOpaqueMVar newGoal.toExpr
-      goals.modify (m.mvarId! :: ·)
-      return m)
-    replaceMainGoal (← goals.get)
+      let goals ← IO.mkRef []
+      mvar.assign (← mIntroForall goal ident fun newGoal => do
+        let m ← mkFreshExprSyntheticOpaqueMVar newGoal.toExpr
+        goals.modify (m.mvarId! :: ·)
+        return m)
+      replaceMainGoal (← goals.get)
   | _ => throwUnsupportedSyntax

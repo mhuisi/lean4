@@ -29,12 +29,10 @@ variable {α : Type u} {β : Type v} {γ : Type w} {cmp : α → α → Ordering
 namespace Std.TreeMap.Raw
 
 @[inline, inherit_doc DTreeMap.Raw.filterMap]
-def filterMap (f : (a : α) → β → Option γ) (t : Raw α β cmp) : Raw α γ cmp :=
-  ⟨t.inner.filterMap f⟩
+def filterMap (f : (a : α) → β → Option γ) (t : Raw α β cmp) : Raw α γ cmp := ⟨t.inner.filterMap f⟩
 
 @[inline, inherit_doc DTreeMap.Raw.map]
-def map (f : α → β → γ) (t : Raw α β cmp) : Raw α γ cmp :=
-  ⟨t.inner.map f⟩
+def map (f : α → β → γ) (t : Raw α β cmp) : Raw α γ cmp := ⟨t.inner.map f⟩
 
 /-!
 We do not provide `get*GE`, `get*GT`, `get*LE` and `get*LT` functions for the raw trees.

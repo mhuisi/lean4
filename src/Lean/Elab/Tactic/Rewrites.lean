@@ -32,7 +32,7 @@ open Lean Elab Tactic
 @[builtin_tactic Lean.Parser.Tactic.rewrites?]
 def evalExact : Tactic := fun stx => do
   let `(tactic| rw?%$tk $[$loc]? $[[ $[-$forbidden],* ]]?) := stx
-        | throwUnsupportedSyntax
+    | throwUnsupportedSyntax
   let moduleRef ← createModuleTreeRef
   let forbidden : NameSet :=
     ((forbidden.getD #[]).map Syntax.getId).foldl (init := ∅) fun s n => s.insert n
@@ -40,7 +40,8 @@ def evalExact : Tactic := fun stx => do
   let goal ← getMainGoal
   withLocation (expandOptLocation (Lean.mkOptionalNode loc))
     fun f => do
-      let some a ← f.findDecl? | return
+      let some a ← f.findDecl?
+        | return
       if a.isImplementationDetail then return
       let target ← instantiateMVars (← f.getType)
       let hyps ← localHypotheses (except := [f])
@@ -48,10 +49,10 @@ def evalExact : Tactic := fun stx => do
       reportOutOfHeartbeats `rewrites tk
       if results.isEmpty then
         throwError "Could not find any lemmas which can rewrite the hypothesis {← f.getUserName}"
-      for r in results do withMCtx r.mctx do
-        Tactic.TryThis.addRewriteSuggestion tk [(r.expr, r.symm)]
-          (type? := .some r.result.eNew) (loc? := .some (.fvar f))
-          (origSpan? := ← getRef) (checkState? := (← saveState))
+      for r in results do
+        withMCtx r.mctx do
+          Tactic.TryThis.addRewriteSuggestion tk [(r.expr, r.symm)] (type? := .some r.result.eNew)
+            (loc? := .some (.fvar f)) (origSpan? := ← getRef) (checkState? := (← saveState))
       if let some r := results[0]? then
         setMCtx r.mctx
         let replaceResult ← goal.replaceLocalDecl f r.result.eNew r.result.eqProof

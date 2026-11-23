@@ -20,16 +20,14 @@ to itself.
 -/
 
 /-- Whether `c` is between `lo` and `hi`, inclusive. -/
-@[inline] def between (c lo hi : Char) : Bool :=
-  lo ≤ c && c ≤ hi
+@[inline]
+def between (c lo hi : Char) : Bool := lo ≤ c && c ≤ hi
 
 /-- The character `n` code points after `c`, as a string. -/
-@[inline] def shifted (c : Char) (n : Nat) : String :=
-  String.singleton (Char.ofNat (c.toNat + n))
+@[inline]
+def shifted (c : Char) (n : Nat) : String := String.singleton (Char.ofNat (c.toNat + n))
 
-/--
-The folding of `c`, when it is not `c` itself.
--/
+/-- The folding of `c`, when it is not `c` itself. -/
 def fold? (c : Char) : Option String :=
   -- The character is first located by its block of 256 code points and, within the Greek and
   -- Coptic block, by its row of 16, so that a lookup is a few comparisons. The groups follow
@@ -41,9 +39,12 @@ def fold? (c : Char) : Option String :=
     | 'Ÿ' => some "ÿ"
     | 'ſ' => some "s"
     | _ => none
-  | 0x03 => greek c
-  | 0x1E => if c == 'ẞ' then some "ss" else none
-  | 0x1F => polytonic c
+  | 0x03 =>
+    greek c
+  | 0x1E =>
+    if c == 'ẞ' then some "ss" else none
+  | 0x1F =>
+    polytonic c
   | 0x21 =>
     -- The Ohm, Kelvin, and Angstrom signs, as escapes because the literals look like `Ω`, `K`,
     -- and `Å`.
@@ -64,10 +65,11 @@ where
   `Ö` and `Ø`; the micro sign folds to Greek `μ`; and `ß` folds to `ss`.
   -/
   latin1 (c : Char) : Option String :=
-    if between c 'À' 'Ö' || between c 'Ø' 'Þ' then some (shifted c 0x20)
+    if between c 'À' 'Ö' || between c 'Ø' 'Þ' then
+      some (shifted c 0x20)
     else
       match c with
-      | '\u00B5' => some "μ"  -- the micro sign, as an escape because the literal looks like `μ`
+      | '\u00B5' => some "μ" -- the micro sign, as an escape because the literal looks like `μ`
       | 'ß' => some "ss"
       | _ => none
   /-- Greek and Coptic -/
@@ -98,10 +100,14 @@ where
     -- The alphabet `Α` to `Ϋ` folds 32 code points up, with a gap after `Ρ`, and `ΐ` folds to the
     -- bare vowel followed by the combining diaeresis and acute accent.
     | 0x39 | 0x3A =>
-      if between c 'Α' 'Ρ' || between c 'Σ' 'Ϋ' then some (shifted c 0x20)
-      else if c == 'ΐ' then some "ι\u0308\u0301"
-      else none
-    | 0x3B => if c == 'ΰ' then some "υ\u0308\u0301" else none
+      if between c 'Α' 'Ρ' || between c 'Σ' 'Ϋ' then
+        some (shifted c 0x20)
+      else if c == 'ΐ' then
+        some "ι\u0308\u0301"
+      else
+        none
+    | 0x3B =>
+      if c == 'ΰ' then some "υ\u0308\u0301" else none
     -- Final sigma, and the kai symbol.
     | 0x3C =>
       match c with
@@ -111,7 +117,8 @@ where
     -- The archaic and Coptic letters `Ϙ` to `Ϯ` are in upper and lower pairs, and the rows also
     -- hold symbol variants of letters.
     | 0x3D | 0x3E =>
-      if between c 'Ϙ' 'Ϯ' && c.val % 2 == 0 then some (shifted c 1)
+      if between c 'Ϙ' 'Ϯ' && c.val % 2 == 0 then
+        some (shifted c 1)
       else
         match c with
         | 'ϐ' => some "β"
@@ -168,7 +175,8 @@ other character is appended unchanged.
 public def pushCaseFolded (out : String) (c : Char) : String :=
   -- The micro sign U+00B5 is the first character past ASCII with a folding, so below it the
   -- folding is ASCII lowercasing.
-  if c.val < 0xB5 then out.push c.toLower
+  if c.val < 0xB5 then
+    out.push c.toLower
   else
     match fold? c with
     | some folded => out ++ folded

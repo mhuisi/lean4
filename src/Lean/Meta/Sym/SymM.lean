@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.AlphaShareCommon
 public import Lean.Meta.CongrTheorems
@@ -13,10 +14,7 @@ import Lean.Meta.AppBuilder
 public section
 namespace Lean.Meta.Sym
 
-register_builtin_option sym.debug : Bool := {
-  defValue := false
-  descr    := "check invariants"
-}
+register_builtin_option sym.debug : Bool := { defValue := false, descr := "check invariants" }
 
 builtin_initialize registerTraceClass `sym.issues
 
@@ -30,19 +28,22 @@ as `Grind.SolverExtension` in `Lean/Meta/Tactic/Grind/Types.lean`.
 
 /-- Opaque extension state type used to store type-erased extension values. -/
 opaque SymExtensionStateSpec : (α : Type) × Inhabited α := ⟨Unit, ⟨()⟩⟩
-@[expose] def SymExtensionState : Type := SymExtensionStateSpec.fst
+@[expose]
+def SymExtensionState : Type := SymExtensionStateSpec.fst
 instance : Inhabited SymExtensionState := SymExtensionStateSpec.snd
 
 /--
 A registered extension for `SymM`. Each extension gets a unique index into the
 extensions array in `Sym.State`. Can only be created via `registerSymExtension`.
 -/
-structure SymExtension (σ : Type) where private mk ::
-  id        : Nat
+structure SymExtension (σ : Type) where
+  private mk ::
+  id : Nat
   mkInitial : IO σ
-  deriving Inhabited
+deriving Inhabited
 
-private builtin_initialize symExtensionsRef : IO.Ref (Array (SymExtension SymExtensionState)) ← IO.mkRef #[]
+private builtin_initialize symExtensionsRef : IO.Ref (Array (SymExtension SymExtensionState)) ←
+  IO.mkRef #[]
 
 /--
 Registers a new `SymM` state extension. Extensions can only be registered during initialization.
@@ -50,7 +51,8 @@ Returns a handle for typed access to the extension's state.
 -/
 def registerSymExtension {σ : Type} (mkInitial : IO σ) : IO (SymExtension σ) := do
   unless (← initializing) do
-    throw (IO.userError "failed to register `Sym` extension, extensions can only be registered during initialization")
+    throw (IO.userError
+      "failed to register `Sym` extension, extensions can only be registered during initialization")
   let exts ← symExtensionsRef.get
   let id := exts.size
   let ext : SymExtension σ := { id, mkInitial }
@@ -71,10 +73,10 @@ to identify arguments that can be skipped or handled specially
 -/
 structure ProofInstArgInfo where
   /-- `true` if this argument is a proof (its type is a `Prop`). -/
-  isProof    : Bool
+  isProof : Bool
   /-- `true` if this argument is a type class instance. -/
   isInstance : Bool
-  deriving Inhabited
+deriving Inhabited
 
 /--
 Information about a function symbol. It stores which argument positions are proofs or instances,
@@ -84,7 +86,7 @@ such as skipping proof arguments or deferring instance synthesis.
 structure ProofInstInfo where
   /-- Information about each argument position. -/
   argsInfo : Array ProofInstArgInfo
-  deriving Inhabited
+deriving Inhabited
 
 /--
 Information on how to build congruence proofs for function applications.
@@ -131,13 +133,13 @@ inductive CongrInfo where
 
 /-- Pre-shared expressions for commonly used terms. -/
 structure SharedExprs where
-  trueExpr   : Expr
-  falseExpr  : Expr
-  natZExpr   : Expr
-  btrueExpr  : Expr
+  trueExpr : Expr
+  falseExpr : Expr
+  natZExpr : Expr
+  btrueExpr : Expr
   bfalseExpr : Expr
-  ordEqExpr  : Expr
-  intExpr    : Expr
+  ordEqExpr : Expr
+  intExpr : Expr
 
 /-- Configuration options for the symbolic computation framework. -/
 structure Config where
@@ -156,16 +158,16 @@ structure Config where
   `cbv` disables this check because it processes kernel projections natively.
   -/
   enforceFoldProjs : Bool := true
-  deriving Inhabited
+deriving Inhabited
 
 /-- Readonly context for the symbolic computation framework. -/
 structure Context where
   sharedExprs : SharedExprs
-  config      : Config := {}
+  config : Config := {}
 
 structure Canon.State where
   /-- Cache for value-level canonicalization (no type reductions applied). -/
-  cache       : Std.HashMap Expr Expr := {}
+  cache : Std.HashMap Expr Expr := {}
   /-- Cache for type-level canonicalization (reductions applied). -/
   cacheInType : Std.HashMap Expr Expr := {}
 
@@ -196,7 +198,9 @@ structure State where
   proofInstInfo : PHashMap Name (Option ProofInstInfo) := {}
   /-- `ProofInstInfo` of local declarations, see `getProofInstInfoOfExpr?`. -/
   proofInstInfoFVar : PHashMap FVarId (Option ProofInstInfo) := {}
-  /-- Maximally shared values of let-variables whose value in the local context is not, see `getLetValueS?`. -/
+  /--
+  Maximally shared values of let-variables whose value in the local context is not, see `getLetValueS?`.
+  -/
   letValue : PHashMap FVarId Expr := {}
   /--
   Cache for `inferType` results, keyed by pointer equality.
@@ -204,9 +208,7 @@ structure State where
   Remark: type inference is a bottleneck on `Meta.Tactic.Simp` simplifier.
   -/
   inferType : PHashMap ExprPtr Expr := {}
-  /--
-  Cache for `getLevel` results, keyed by pointer equality.
-  -/
+  /-- Cache for `getLevel` results, keyed by pointer equality. -/
   getLevel : PHashMap ExprPtr Level := {}
   congrInfo : PHashMap ExprPtr CongrInfo := {}
   /-- Cache for `isDefEqI` results -/
@@ -238,9 +240,12 @@ Auxiliary function for implementing `unfoldReducible` and `unfoldReducibleSimpro
 Performs a single step.
 -/
 def unfoldReducibleStep (e : Expr) : MetaM TransformStep := do
-  let .const declName _ := e.getAppFn | return .continue
-  unless isUnfoldReducibleCandidate (← getEnv) declName do return .continue
-  let some v ← unfoldDefinition? e | return .continue
+  let .const declName _ := e.getAppFn
+    | return .continue
+  unless isUnfoldReducibleCandidate (← getEnv) declName do
+    return .continue
+  let some v ← unfoldDefinition? e
+    | return .continue
   return .visit v
 
 def isUnfoldReducibleTarget (e : Expr) : CoreM Bool := do
@@ -267,10 +272,12 @@ terms; this preprocessing step folds them into projection function applications.
 def foldProjs (e : Expr) : MetaM Expr := do
   if Option.isNone <| e.find? fun e => e.isProj then return e
   let post (e : Expr) := do
-    let .proj structName idx s := e | return .done e
-    let some info := getStructureInfo? (← getEnv) structName |
-      trace[sym.issues] "found `Expr.proj` but `{structName}` is not marked as structure{indentExpr e}"
-      return .done e
+    let .proj structName idx s := e
+      | return .done e
+    let some info := getStructureInfo? (← getEnv) structName
+      | trace[sym.issues]
+          "found `Expr.proj` but `{structName}` is not marked as structure{indentExpr e}"
+        return .done e
     if h : idx < info.fieldNames.size then
       let fieldName := info.fieldNames[idx]
       /-
@@ -293,13 +300,13 @@ def foldProjs (e : Expr) : MetaM Expr := do
   Meta.transform e (post := post)
 
 private def mkSharedExprs : AlphaShareCommonM SharedExprs := do
-  let falseExpr  ← shareCommonAlphaInc <| mkConst ``False
-  let trueExpr   ← shareCommonAlphaInc  <| mkConst ``True
-  let bfalseExpr ← shareCommonAlphaInc  <| mkConst ``Bool.false
-  let btrueExpr  ← shareCommonAlphaInc  <| mkConst ``Bool.true
-  let natZExpr   ← shareCommonAlphaInc  <| mkNatLit 0
-  let ordEqExpr  ← shareCommonAlphaInc  <| mkConst ``Ordering.eq
-  let intExpr    ← shareCommonAlphaInc  <| Int.mkType
+  let falseExpr ← shareCommonAlphaInc <| mkConst ``False
+  let trueExpr ← shareCommonAlphaInc <| mkConst ``True
+  let bfalseExpr ← shareCommonAlphaInc <| mkConst ``Bool.false
+  let btrueExpr ← shareCommonAlphaInc <| mkConst ``Bool.true
+  let natZExpr ← shareCommonAlphaInc <| mkNatLit 0
+  let ordEqExpr ← shareCommonAlphaInc <| mkConst ``Ordering.eq
+  let intExpr ← shareCommonAlphaInc <| Int.mkType
   return { falseExpr, trueExpr, bfalseExpr, btrueExpr, natZExpr, ordEqExpr, intExpr }
 
 def SymM.run (x : SymM α) : MetaM α := do
@@ -312,30 +319,29 @@ def SymM.run (x : SymM α) : MetaM α := do
   x { sharedExprs } |>.run' { debug, share, extensions }
 
 /-- Returns maximally shared commonly used terms -/
-def getSharedExprs : SymM SharedExprs :=
-  return (← read).sharedExprs
+def getSharedExprs : SymM SharedExprs := return (← read).sharedExprs
 
-/-- Returns the internalized `True` constant.  -/
+/-- Returns the internalized `True` constant. -/
 def getTrueExpr : SymM Expr := return (← getSharedExprs).trueExpr
-/-- Returns `true` if `e` is the internalized `True` expression.  -/
+/-- Returns `true` if `e` is the internalized `True` expression. -/
 def isTrueExpr (e : Expr) : SymM Bool := return isSameExpr e (← getTrueExpr)
-/-- Returns the internalized `False` constant.  -/
+/-- Returns the internalized `False` constant. -/
 def getFalseExpr : SymM Expr := return (← getSharedExprs).falseExpr
-/-- Returns `true` if `e` is the internalized `False` expression.  -/
+/-- Returns `true` if `e` is the internalized `False` expression. -/
 def isFalseExpr (e : Expr) : SymM Bool := return isSameExpr e (← getFalseExpr)
-/-- Returns the internalized `Bool.true`.  -/
+/-- Returns the internalized `Bool.true`. -/
 def getBoolTrueExpr : SymM Expr := return (← getSharedExprs).btrueExpr
-/-- Returns `true` if `e` is the internalized `Bool.true` expression.  -/
+/-- Returns `true` if `e` is the internalized `Bool.true` expression. -/
 def isBoolTrueExpr (e : Expr) : SymM Bool := return isSameExpr e (← getBoolTrueExpr)
-/-- Returns the internalized `Bool.false`.  -/
+/-- Returns the internalized `Bool.false`. -/
 def getBoolFalseExpr : SymM Expr := return (← getSharedExprs).bfalseExpr
-/-- Returns `true` if `e` is the internalized `Bool.false` expression.  -/
+/-- Returns `true` if `e` is the internalized `Bool.false` expression. -/
 def isBoolFalseExpr (e : Expr) : SymM Bool := return isSameExpr e (← getBoolFalseExpr)
-/-- Returns the internalized `0 : Nat` numeral.  -/
+/-- Returns the internalized `0 : Nat` numeral. -/
 def getNatZeroExpr : SymM Expr := return (← getSharedExprs).natZExpr
-/-- Returns the internalized `Ordering.eq`.  -/
+/-- Returns the internalized `Ordering.eq`. -/
 def getOrderingEqExpr : SymM Expr := return (← getSharedExprs).ordEqExpr
-/-- Returns the internalized `Int`.  -/
+/-- Returns the internalized `Int`. -/
 def getIntExpr : SymM Expr := return (← getSharedExprs).intExpr
 
 /--
@@ -344,7 +350,8 @@ On a check violation, returns the cache accumulated before the failure as `.erro
 the terms hash-consed before the failure are kept in the state, since they
 individually satisfy the invariants.
 -/
-def runShareCommonM (k : AlphaShareCommonM α) (ctx : AlphaShareCommon.Context) : SymM (Except AlphaShareCommon.Cache α) := do
+def runShareCommonM (k : AlphaShareCommonM α) (ctx : AlphaShareCommon.Context)
+    : SymM (Except AlphaShareCommon.Cache α) := do
   let share ← modifyGet fun s => (s.share, { s with share := {} })
   match k ctx share with
   | .ok a share => modify fun s => { s with share }; return .ok a
@@ -357,20 +364,24 @@ invariant, e.g., a head reducer that exposes kernel projections in intermediate
 terms and restores the invariant in its final result.
 -/
 def withoutFoldProjsCheck [MonadWithReaderOf Context m] (x : m α) : m α :=
-  withTheReader Context (fun ctx => { ctx with
-    config.enforceFoldProjs := false }) x
+  withTheReader Context (fun ctx => { ctx with config.enforceFoldProjs := false }) x
 
 def withoutShareCommonChecks [MonadWithReaderOf Context m] (x : m α) : m α :=
-  withTheReader Context (fun ctx => { ctx with
-    config.enforceFoldProjs := false, config.enforceUnfoldReducible := false }) x
+  withTheReader Context
+    (fun ctx => {
+      ctx with
+      config.enforceFoldProjs := false
+      config.enforceUnfoldReducible := false
+    })
+    x
 
 /-- Returns the `AlphaShareCommon` context with the checks enabled by the current configuration. -/
 private def checkedShareCtx : SymM AlphaShareCommon.Context := do
   let config := (← readThe Context).config
   return {
-    env            := (← getEnv)
+    env := (← getEnv)
     checkReducible := config.enforceUnfoldReducible
-    checkProj      := config.enforceFoldProjs
+    checkProj := config.enforceFoldProjs
   }
 
 /--
@@ -405,7 +416,8 @@ Returns `true` if `e` is in the table of maximally shared terms. Only the root i
 enters the table only after its subterms.
 -/
 def isMaxShared (e : Expr) : SymM Bool := do
-  let some prev := (← get).share.set.find? { expr := e } | return false
+  let some prev := (← get).share.set.find? { expr := e }
+    | return false
   return isSameExpr prev.expr e
 
 /--
@@ -420,7 +432,8 @@ private def repairAndShare (e : Expr) (cache : AlphaShareCommon.Cache) : SymM Ex
   -- `unfoldReducible` and `foldProjs` enter binders using `Meta.transform`, which
   -- requires a closed term. Open terms are admitted without repair.
   -- assert! !e.hasLooseBVars
-  if e.hasLooseBVars then throwError "internal error, expression has loose bound variables at `shareCommon`{indentExpr e}"
+  if e.hasLooseBVars then
+    throwError "internal error, expression has loose bound variables at `shareCommon`{indentExpr e}"
   let e ← repairShareViolation e
   -- The repair only rebuilds the violating parts of the term, so the subterms visited
   -- by the interrupted run still occur in `e` and their cached results remain valid.
@@ -473,7 +486,8 @@ Returns the value of the let-variable `fvarId`, maximally shared. A local contex
 not preprocess, e.g., the one of a `grind` goal, may contain values that are not.
 -/
 def getLetValueS? (fvarId : FVarId) : SymM (Option Expr) := do
-  let some v ← fvarId.getValue? | return none
+  let some v ← fvarId.getValue?
+    | return none
   if (← isMaxShared v) then return some v
   if let some v := (← get).letValue.find? fvarId then return some v
   let v ← shareCommon v
@@ -481,15 +495,13 @@ def getLetValueS? (fvarId : FVarId) : SymM (Option Expr) := do
   return some v
 
 @[inherit_doc shareCommonInc]
-abbrev share (e : Expr) : SymM Expr :=
-  shareCommonInc e
+abbrev share (e : Expr) : SymM Expr := shareCommonInc e
 
 /-- Returns `true` if `sym.debug` is set -/
-@[inline] def isDebugEnabled : SymM Bool :=
-  return (← get).debug
+@[inline]
+def isDebugEnabled : SymM Bool := return (← get).debug
 
-def getConfig : SymM Config :=
-  return (← readThe Context).config
+def getConfig : SymM Config := return (← readThe Context).config
 
 /-- Adds an issue message to the issue tracker. -/
 def reportIssue (msg : MessageData) : SymM Unit := do
@@ -498,7 +510,8 @@ def reportIssue (msg : MessageData) : SymM Unit := do
   trace[sym.issues] msg
 
 /-- Reports an issue if `verbose` mode is enabled. Does nothing if `verbose` is `false`. -/
-@[inline] def reportIssueIfVerbose (msg : MessageData) : SymM Unit := do
+@[inline]
+def reportIssueIfVerbose (msg : MessageData) : SymM Unit := do
   if (← getConfig).verbose then
     reportIssue msg
 
@@ -507,11 +520,11 @@ private meta def expandReportIssueMacro (s : Syntax) : MacroM DoElem := do
   `(doElem| Sym.reportIssueIfVerbose $msg)
 
 /-- Reports an issue if `verbose` mode is enabled. -/
-macro "reportIssue!" s:(interpolatedStr(term) <|> term) : doElem => do
-  expandReportIssueMacro s.raw
+macro "reportIssue!" s:(interpolatedStr(term) <|> term) : doElem => do expandReportIssueMacro s.raw
 
 /-- Reports an issue if both `verbose` and `sym.debug` are enabled. Does nothing otherwise. -/
-@[inline] def reportDbgIssue (msg : MessageData) : SymM Unit := do
+@[inline]
+def reportDbgIssue (msg : MessageData) : SymM Unit := do
   if (← getConfig).verbose then
     if sym.debug.get (← getOptions) then
       reportIssue msg
@@ -521,12 +534,11 @@ meta def expandReportDbgIssueMacro (s : Syntax) : MacroM DoElem := do
   `(doElem| Sym.reportDbgIssue $msg)
 
 /-- Similar to `reportIssue!`, but only reports issue if `sym.debug` is set to `true`. -/
-macro "reportDbgIssue!" s:(interpolatedStr(term) <|> term) : doElem => do
-  expandReportDbgIssueMacro s.raw
+macro "reportDbgIssue!" s:(interpolatedStr(term) <|> term) : doElem =>
+  do expandReportDbgIssueMacro s.raw
 
 /-- Returns all accumulated issues without clearing them. -/
-def getIssues : SymM (List MessageData) :=
-  return (← get).issues
+def getIssues : SymM (List MessageData) := return (← get).issues
 
 /--
 Runs `x` with a fresh issue context. Issues reported during `x` are
@@ -551,17 +563,20 @@ instance : Inhabited (SymM α) where
 
 /-! ### SymExtension accessors -/
 
-private unsafe def SymExtension.getStateCoreImpl (ext : SymExtension σ) (extensions : Array SymExtensionState) : IO σ :=
+private unsafe def SymExtension.getStateCoreImpl
+    (ext : SymExtension σ) (extensions : Array SymExtensionState)
+    : IO σ :=
   return unsafeCast extensions[ext.id]!
 
 @[implemented_by SymExtension.getStateCoreImpl]
-opaque SymExtension.getStateCore (ext : SymExtension σ) (extensions : Array SymExtensionState) : IO σ
+opaque SymExtension.getStateCore (ext : SymExtension σ) (extensions : Array SymExtensionState)
+  : IO σ
 
-def SymExtension.getState (ext : SymExtension σ) : SymM σ := do
-  ext.getStateCore (← get).extensions
+def SymExtension.getState (ext : SymExtension σ) : SymM σ := do ext.getStateCore (← get).extensions
 
 private unsafe def SymExtension.modifyStateImpl (ext : SymExtension σ) (f : σ → σ) : SymM Unit := do
-  modify fun s => { s with
+  modify fun s => {
+    s with
     extensions := s.extensions.modify ext.id fun state => unsafeCast (f (unsafeCast state))
   }
 

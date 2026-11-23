@@ -22,9 +22,7 @@ namespace Async
 
 namespace Watchdog
 
-/--
-The state shared between a watchdog and the code that arms it.
--/
+/-- The state shared between a watchdog and the code that arms it. -/
 private structure State where
   /-- Whether a timed wait is in progress. -/
   waiting : Bool := false
@@ -49,9 +47,7 @@ private inductive Step where
   | park
   | sleep (ms : Nat)
 
-/--
-What the watchdog does next at time `now`, and the state it leaves behind.
--/
+/-- What the watchdog does next at time `now`, and the state it leaves behind. -/
 private def State.next (now : Nat) (s : State) : Step × State :=
   if s.fired then
     (.stop, s)
@@ -94,9 +90,7 @@ structure Watchdog where
 
 namespace Watchdog
 
-/--
-Marks the watchdog as fired and cancels its context.
--/
+/-- Marks the watchdog as fired and cancels its context. -/
 private def fire (wd : Watchdog) : BaseIO Unit := do
   wd.state.modify fun s => { s with fired := true, waiting := false, scheduled := none }
   wd.ctx.cancel .deadline
@@ -122,11 +116,12 @@ private partial def round (wd : Watchdog) : BaseIO Unit := do
   | .fire => wd.ctx.cancel .deadline
   | .park => BaseIO.chainTask wake.result? fun _ => round wd
   | .sleep ms =>
-    let started ← EIO.toBaseIO do
-      let timer ← Internal.UV.Timer.mk (.ofNatClamp ms) false
-      let elapsed ← timer.next
-      wd.timer.set (some timer)
-      BaseIO.chainTask (sync := true) elapsed.result? fun _ => wake.resolve ()
+    let started ←
+      EIO.toBaseIO do
+        let timer ← Internal.UV.Timer.mk (.ofNatClamp ms) false
+        let elapsed ← timer.next
+        wd.timer.set (some timer)
+        BaseIO.chainTask (sync := true) elapsed.result? fun _ => wake.resolve ()
     match started with
     -- A deadline that cannot be enforced is treated as passed.
     | .error _ => wd.fire
@@ -154,13 +149,13 @@ Sets the deadline of the current wait, unless the watchdog has fired or `epoch` 
 call has armed or ended a wait since.
 -/
 private def armUntilIf (wd : Watchdog) (epoch : Option Nat) (deadline : Nat) : BaseIO Unit := do
-  let wake ← wd.state.modifyGet fun s =>
-    if s.fired || epoch.any (· != s.epoch) then
-      (false, s)
-    else
-      -- Only a watchdog without a timer, or with one set for a later deadline, has to re-read it.
-      (s.scheduled.all (deadline < ·),
-        { s with waiting := true, deadline, epoch := s.epoch + 1 })
+  let wake ←
+    wd.state.modifyGet fun s =>
+      if s.fired || epoch.any (· != s.epoch) then
+        (false, s)
+      else
+        -- Only a watchdog without a timer, or with one set for a later deadline, has to re-read it.
+        (s.scheduled.all (deadline < ·), { s with waiting := true, deadline, epoch := s.epoch + 1 })
   if wake then
     (← wd.wake.get).resolve ()
 
@@ -168,19 +163,21 @@ private def armUntilIf (wd : Watchdog) (epoch : Option Nat) (deadline : Nat) : B
 Starts a wait that must end by `deadline`, a value of `IO.monoMsNow`. Arming again before `disarm`
 replaces the deadline. Does nothing once the watchdog has fired.
 -/
-def armUntil (wd : Watchdog) (deadline : Nat) : BaseIO Unit :=
-  wd.armUntilIf none deadline
+def armUntil (wd : Watchdog) (deadline : Nat) : BaseIO Unit := wd.armUntilIf none deadline
 
 /--
 Starts a wait that must end within `timeout` of `task` finishing, and that does not time out before
 then: a deadline set for the current wait is dropped. If the wait ends, or is armed again, before
 `task` finishes, nothing is armed. Does nothing once the watchdog has fired.
 -/
-def armAfter (wd : Watchdog) (task : Task α) (timeout : Std.Time.Millisecond.Offset) :
-    BaseIO Unit := do
-  let epoch ← wd.state.modifyGet fun s =>
-    if s.fired then (s.epoch, s)
-    else (s.epoch + 1, { s with waiting := false, epoch := s.epoch + 1 })
+def armAfter (wd : Watchdog) (task : Task α) (timeout : Std.Time.Millisecond.Offset)
+    : BaseIO Unit := do
+  let epoch ←
+    wd.state.modifyGet fun s =>
+      if s.fired then
+        (s.epoch, s)
+      else
+        (s.epoch + 1, { s with waiting := false, epoch := s.epoch + 1 })
   BaseIO.chainTask (sync := true) task fun _ => do
     wd.armUntilIf (some epoch) ((← IO.monoMsNow) + timeout.toInt.toNat)
 
@@ -209,13 +206,14 @@ def disarm (wd : Watchdog) : BaseIO Bool := do
   let now ← IO.monoMsNow
   -- The wait is checked here too, so that the verdict does not depend on the watchdog's own round
   -- having run, which needs a free worker of the task pool.
-  let late ← wd.state.modifyGet fun s =>
-    if s.fired then
-      (true, s)
-    else if s.waiting && now ≥ s.deadline then
-      (true, { s with fired := true, waiting := false, scheduled := none })
-    else
-      (false, { s with waiting := false, epoch := s.epoch + 1 })
+  let late ←
+    wd.state.modifyGet fun s =>
+      if s.fired then
+        (true, s)
+      else if s.waiting && now ≥ s.deadline then
+        (true, { s with fired := true, waiting := false, scheduled := none })
+      else
+        (false, { s with waiting := false, epoch := s.epoch + 1 })
   if late then wd.settle else return false
 
 /--

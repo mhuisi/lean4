@@ -30,16 +30,16 @@ open Assertion
 
 attribute [simp, grind norm, vcgen_simp] NondetFun.evalsTo_pure_eq NondetFun.evalsTo_apply
 
-attribute [simp, grind norm, vcgen_simp] Variant.evalsTo_ofMeasure
-  Variant.evalsBelow_ofMeasure_apply Variant.evalsBelow_ofMeasure_nat
+attribute [simp, grind norm, vcgen_simp]
+  Variant.evalsTo_ofMeasure Variant.evalsBelow_ofMeasure_apply Variant.evalsBelow_ofMeasure_nat
   Variant.evalsBelow_ofMeasure_lex
 
 end Std.WP
 
 /-! ## The built-in `vcgen_rintro` rule -/
 
-theorem Prod.forall_intro {α : Type _} {β : Type _} {G : α × β → Prop} (h : ∀ a b, G (a, b)) :
-    ∀ p, G p :=
-  fun (a, b) => h a b
+theorem Prod.forall_intro {α : Type _} {β : Type _} {G : α × β → Prop} (h : ∀ a b, G (a, b))
+    : ∀ p, G p := fun (a, b) =>
+  h a b
 
 end

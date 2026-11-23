@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Sym.SymM
 import Lean.Meta.Tactic.Intro
@@ -23,7 +24,8 @@ names are made inaccessible (fresh macro scopes); otherwise they are accessible 
 If the binders end at an assigned metavariable, e.g., `⊢ ?a` with `?a := p → q`, the binders of its
 value are introduced too.
 -/
-partial def introCore (mvarId : MVarId) (max : Nat) (names : Array Name) (hygienic : Bool) : SymM (Array FVarId × MVarId) := do
+partial def introCore (mvarId : MVarId) (max : Nat) (names : Array Name) (hygienic : Bool)
+    : SymM (Array FVarId × MVarId) := do
   if max == 0 then return (#[], mvarId)
   let mvarDecl ← mvarId.getDecl
   /-
@@ -32,12 +34,12 @@ partial def introCore (mvarId : MVarId) (max : Nat) (names : Array Name) (hygien
   let rec mkValueLoop (i : Nat) (type : Expr) (body : Expr) : Expr :=
     if i >= max then
       body
-    else match type with
+    else
+      match type with
       | .mdata _ type => mkValueLoop i type body
-      | .forallE name domain type bi =>
-         mkLambda name bi domain (mkValueLoop (i+1) type body)
+      | .forallE name domain type bi => mkLambda name bi domain (mkValueLoop (i + 1) type body)
       | .letE name valType value type c =>
-        mkLet name valType value (mkValueLoop (i+1) type body) c
+        mkLet name valType value (mkValueLoop (i + 1) type body) c
       | _ => body
   /-
   Constructs `e #(n-1) ... #0`. This is helper function for constructing a value to assign to `mvarId`.
@@ -45,17 +47,18 @@ partial def introCore (mvarId : MVarId) (max : Nat) (names : Array Name) (hygien
   let rec mkAppBVars (e : Expr) (n : Nat) : Expr :=
     match n with
     | 0 => e
-    | n+1 => mkAppBVars (mkApp e (mkBVar n)) n
-  /-
-  Constructs a value to assign to `mvarId` using `mkValueLoop` and `mkAppBVars`.
-  -/
+    | n + 1 => mkAppBVars (mkApp e (mkBVar n)) n
+  /- Constructs a value to assign to `mvarId` using `mkValueLoop` and `mkAppBVars`. -/
   let mkValueAndAssign (fvars : Array Expr) (mvarId' : MVarId) : MetaM Unit := do
-    let auxMVar ← mkFreshExprMVarAt mvarDecl.lctx mvarDecl.localInstances mvarDecl.type .syntheticOpaque
+    let auxMVar ←
+      mkFreshExprMVarAt mvarDecl.lctx mvarDecl.localInstances mvarDecl.type .syntheticOpaque
     let val := mkAppBVars auxMVar fvars.size
     let val := mkValueLoop 0 mvarDecl.type val
     assignDelayedMVar auxMVar.mvarId! fvars mvarId'
     mvarId.assign val
-  let finalize (lctx : LocalContext) (localInsts : LocalInstances) (fvars : Array Expr) (type : Expr) : SymM (Array Expr × MVarId) := do
+  let finalize
+      (lctx : LocalContext) (localInsts : LocalInstances) (fvars : Array Expr) (type : Expr)
+      : SymM (Array Expr × MVarId) := do
     if fvars.isEmpty then
       return (#[], mvarId)
     let type ← instantiateRevS type fvars
@@ -68,53 +71,59 @@ partial def introCore (mvarId : MVarId) (max : Nat) (names : Array Name) (hygien
       return names[i]
     else
       mkFreshBinderNameForTacticCore lctx binderName hygienic
-  let updateLocalInsts (localInsts : LocalInstances) (fvar : Expr) (type : Expr) : MetaM LocalInstances := do
+  let updateLocalInsts (localInsts : LocalInstances) (fvar : Expr) (type : Expr)
+      : MetaM LocalInstances := do
     if let some className ← isClass? type then
       return localInsts.push { fvar, className }
     else
       return localInsts
-  let rec visit (i : Nat) (lctx : LocalContext) (localInsts : LocalInstances) (fvars : Array Expr) (type : Expr) : SymM (Array Expr × MVarId) := do
+  let rec visit
+      (i : Nat) (lctx : LocalContext) (localInsts : LocalInstances) (fvars : Array Expr)
+      (type : Expr)
+      : SymM (Array Expr × MVarId) := do
     if i >= max then
       finalize lctx localInsts fvars type
-    else match type with
-    | .mdata _ type => visit i lctx localInsts fvars type
-    | .forallE n type body bi =>
-      let type       ← instantiateRevS type fvars
-      let fvarId     ← mkFreshFVarId
-      let userName   ← mkName lctx n i
-      let lctx       := lctx.mkLocalDecl fvarId userName type bi (.ofBinderName userName)
-      let fvar       ← mkFVarS fvarId
-      let fvars      := fvars.push fvar
-      let localInsts ← updateLocalInsts localInsts fvar type
-      visit (i+1) lctx localInsts fvars body
-    | .letE n type value body nondep =>
-      let type       ← instantiateRevS type fvars
-      let value      ← instantiateRevS value fvars
-      let fvarId     ← mkFreshFVarId
-      /-
-      We have both dependent and non-dependent `let` expressions result in dependent `ldecl`s.
-      This is fine here since we never revert them in the Sym framework.
-      **Note**: If `type` is a proposition we could use a `cdecl`.
-      -/
-      let userName   ← mkName lctx n i
-      let lctx       := lctx.mkLetDecl fvarId userName type value (kind := .ofBinderName userName)
-      let fvar       ← mkFVarS fvarId
-      let fvars      := fvars.push fvar
-      let localInsts ← updateLocalInsts localInsts fvar type
-      visit (i+1) lctx localInsts fvars body
-    | _ =>
-      if type.getAppFn.isMVar then
+    else
+      match type with
+      | .mdata _ type => visit i lctx localInsts fvars type
+      | .forallE n type body bi =>
         let type ← instantiateRevS type fvars
-        if let some type ← instantiateAssignedMVarHeadS? type then
-          -- Introduces the remaining binders from the value of the metavariable.
-          let mvarId ← if fvars.isEmpty then
-            mvarId.setType type
-            pure mvarId
-          else
-            pure (← finalize lctx localInsts fvars type).2
-          let (fvars', mvarId) ← introCore mvarId (max - i) (names.extract i names.size) hygienic
-          return (fvars ++ fvars'.map mkFVar, mvarId)
-      finalize lctx localInsts fvars type
+        let fvarId ← mkFreshFVarId
+        let userName ← mkName lctx n i
+        let lctx := lctx.mkLocalDecl fvarId userName type bi (.ofBinderName userName)
+        let fvar ← mkFVarS fvarId
+        let fvars := fvars.push fvar
+        let localInsts ← updateLocalInsts localInsts fvar type
+        visit (i + 1) lctx localInsts fvars body
+      | .letE n type value body nondep =>
+        let type ← instantiateRevS type fvars
+        let value ← instantiateRevS value fvars
+        let fvarId ← mkFreshFVarId
+        /-
+        We have both dependent and non-dependent `let` expressions result in dependent `ldecl`s.
+        This is fine here since we never revert them in the Sym framework.
+        **Note**: If `type` is a proposition we could use a `cdecl`.
+        -/
+        let userName ← mkName lctx n i
+        let lctx := lctx.mkLetDecl fvarId userName type value (kind := .ofBinderName userName)
+        let fvar ← mkFVarS fvarId
+        let fvars := fvars.push fvar
+        let localInsts ← updateLocalInsts localInsts fvar type
+        visit (i + 1) lctx localInsts fvars body
+      | _ =>
+        if type.getAppFn.isMVar then
+          let type ← instantiateRevS type fvars
+          if let some type ← instantiateAssignedMVarHeadS? type then
+            -- Introduces the remaining binders from the value of the metavariable.
+            let mvarId ←
+              if fvars.isEmpty then
+                mvarId.setType type
+                pure mvarId
+              else
+                pure (← finalize lctx localInsts fvars type).2
+            let (fvars', mvarId) ← introCore mvarId (max - i) (names.extract i names.size) hygienic
+            return (fvars ++ fvars'.map mkFVar, mvarId)
+        finalize lctx localInsts fvars type
   let (fvars, mvarId') ← visit 0 mvarDecl.lctx mvarDecl.localInstances #[] mvarDecl.type
   return (fvars.map (·.fvarId!), mvarId')
 
@@ -134,11 +143,13 @@ If `names` is empty, introduces all leading binders using names derived from the
 Returns `.goal newDecls mvarId` with new introduced free variable Ids and the updated goal.
 Returns `.failed` if no new declaration was introduced.
 -/
-public def intros (mvarId : MVarId) (names : Array Name := #[]) (hygienic : Bool := true) : SymM IntrosResult := do
-  let result ← if names.isEmpty then
-    introCore mvarId hugeNat #[] hygienic
-  else
-    introCore mvarId names.size names hygienic
+public def intros (mvarId : MVarId) (names : Array Name := #[]) (hygienic : Bool := true)
+    : SymM IntrosResult := do
+  let result ←
+    if names.isEmpty then
+      introCore mvarId hugeNat #[] hygienic
+    else
+      introCore mvarId names.size names hygienic
   if result.1.isEmpty then
     return .failed
   return .goal result.1 result.2

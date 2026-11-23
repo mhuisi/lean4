@@ -18,8 +18,7 @@ open Nat
 
 namespace Fin
 
-instance coeToNat : CoeOut (Fin n) Nat :=
-  ⟨fun v => v.val⟩
+instance coeToNat : CoeOut (Fin n) Nat := ⟨fun v => v.val⟩
 
 /--
 The type `Fin 0` is uninhabited, so it can be used to derive any result whatsoever.
@@ -40,8 +39,9 @@ Examples:
  * `(2 : Fin 3).succ = (3 : Fin 4)`
  * `(2 : Fin 3) + 1 = (0 : Fin 3)`
 -/
-@[implicit_reducible] def succ : Fin n → Fin (n + 1)
-  | ⟨i, h⟩ => ⟨i+1, Nat.succ_lt_succ h⟩
+@[implicit_reducible]
+def succ : Fin n → Fin (n + 1)
+  | ⟨i, h⟩ => ⟨i + 1, Nat.succ_lt_succ h⟩
 
 variable {n : Nat}
 
@@ -55,9 +55,10 @@ protected def ofNat (n : Nat) [NeZero n] (a : Nat) : Fin n :=
   ⟨a % n, Nat.mod_lt _ (pos_of_neZero n)⟩
 
 @[simp]
-theorem Internal.ofNat_eq_ofNat {n : Nat} {hn} {a : Nat} :
-  letI : NeZero n := ⟨Nat.pos_iff_ne_zero.1 hn⟩
-  Fin.Internal.ofNat n hn a = Fin.ofNat n a := rfl
+theorem Internal.ofNat_eq_ofNat {n : Nat} {hn} {a : Nat}
+    : letI : NeZero n := ⟨Nat.pos_iff_ne_zero.1 hn⟩
+      Fin.Internal.ofNat n hn a = Fin.ofNat n a :=
+  rfl
 
 -- We provide this because other similar types have a `toNat` function, but `simp` rewrites
 -- `i.toNat` to `i.val`.
@@ -68,15 +69,15 @@ This function is a synonym for `Fin.val`, which is the simp normal form. `Fin.va
 coercion, so values of type `Fin n` are automatically converted to `Nat`s as needed.
 -/
 @[inline]
-protected def toNat (i : Fin n) : Nat :=
-  i.val
+protected def toNat (i : Fin n) : Nat := i.val
 
-@[simp] theorem toNat_eq_val {i : Fin n} : i.toNat = i.val := rfl
+@[simp]
+theorem toNat_eq_val {i : Fin n} : i.toNat = i.val := rfl
 
 private theorem mlt {b : Nat} : {a : Nat} → a < n → b % n < n
-  | 0,   h => Nat.mod_lt _ h
-  | _+1, h =>
-    have : n > 0 := Nat.lt_trans (Nat.zero_lt_succ _) h;
+  | 0, h => Nat.mod_lt _ h
+  | _ + 1, h =>
+    have : n > 0 := Nat.lt_trans (Nat.zero_lt_succ _) h
     Nat.mod_lt _ this
 
 /--
@@ -168,23 +169,17 @@ The resulting value is that computed by the `%` operator on `Nat`.
 def modn : Fin n → Nat → Fin n
   | ⟨a, h⟩, m => ⟨a % m, by exact Nat.lt_of_le_of_lt (Nat.mod_le _ _) h⟩
 
-/--
-Bitwise and.
--/
+/-- Bitwise and. -/
 @[implicit_reducible]
 def land : Fin n → Fin n → Fin n
   | ⟨a, h⟩, ⟨b, _⟩ => ⟨(Nat.land a b) % n, by exact mlt h⟩
 
-/--
-Bitwise or.
--/
+/-- Bitwise or. -/
 @[implicit_reducible]
 def lor : Fin n → Fin n → Fin n
   | ⟨a, h⟩, ⟨b, _⟩ => ⟨(Nat.lor a b) % n, by exact mlt h⟩
 
-/--
-Bitwise xor (“exclusive or”).
--/
+/-- Bitwise xor (“exclusive or”). -/
 @[implicit_reducible]
 def xor : Fin n → Fin n → Fin n
   | ⟨a, h⟩, ⟨b, _⟩ => ⟨(Nat.xor a b) % n, by exact mlt h⟩
@@ -246,39 +241,35 @@ instance instOfNat {n : Nat} [NeZero n] {i : Nat} : OfNat (Fin n) i where
   ofNat := Fin.ofNat n i
 
 /-- If you actually have an element of `Fin n`, then the `n` is always positive -/
-protected theorem pos (i : Fin n) : 0 < n :=
-  Nat.lt_of_le_of_lt (Nat.zero_le _) i.2
+protected theorem pos (i : Fin n) : 0 < n := Nat.lt_of_le_of_lt (Nat.zero_le _) i.2
 
 /-- Negation on `Fin n` -/
-instance neg (n : Nat) : Neg (Fin n) :=
-  ⟨fun a => ⟨(n - a) % n, Nat.mod_lt _ a.pos⟩⟩
+instance neg (n : Nat) : Neg (Fin n) := ⟨fun a => ⟨(n - a) % n, Nat.mod_lt _ a.pos⟩⟩
 
 theorem neg_def (a : Fin n) : -a = ⟨(n - a) % n, Nat.mod_lt _ a.pos⟩ := rfl
 
 -- Later we give another version called `Fin.val_neg` that splits on `a = 0`.
-protected theorem val_neg' (a : Fin n) : ((-a : Fin n) : Nat) = (n - a) % n :=
-  rfl
+protected theorem val_neg' (a : Fin n) : ((-a : Fin n) : Nat) = (n - a) % n := rfl
 
 @[deprecated Fin.val_neg' (since := "2025-11-21")]
-protected theorem coe_neg (a : Fin n) : ((-a : Fin n) : Nat) = (n - a) % n :=
-  rfl
+protected theorem coe_neg (a : Fin n) : ((-a : Fin n) : Nat) = (n - a) % n := rfl
 
 instance instInhabited {n : Nat} [NeZero n] : Inhabited (Fin n) where
   default := 0
 
-@[simp] theorem zero_eta : (⟨0, Nat.zero_lt_succ _⟩ : Fin (n + 1)) = 0 := rfl
+@[simp]
+theorem zero_eta : (⟨0, Nat.zero_lt_succ _⟩ : Fin (n + 1)) = 0 := rfl
 
-theorem ne_of_val_ne {i j : Fin n} (h : val i ≠ val j) : i ≠ j :=
-  fun h' => absurd (val_eq_of_eq h') h
+theorem ne_of_val_ne {i j : Fin n} (h : val i ≠ val j) : i ≠ j := fun h' =>
+  absurd (val_eq_of_eq h') h
 
-theorem val_ne_of_ne {i j : Fin n} (h : i ≠ j) : val i ≠ val j :=
-  fun h' => absurd (eq_of_val_eq h') h
+theorem val_ne_of_ne {i j : Fin n} (h : i ≠ j) : val i ≠ val j := fun h' =>
+  absurd (eq_of_val_eq h') h
 
 theorem modn_lt : ∀ {m : Nat} (i : Fin n), m > 0 → (modn i m).val < m
-  | _, ⟨_, _⟩, hp =>  by simp [modn]; apply Nat.mod_lt; assumption
+  | _, ⟨_, _⟩, hp => by simp [modn]; apply Nat.mod_lt; assumption
 
-theorem val_lt_of_le (i : Fin b) (h : b ≤ n) : i.val < n :=
-  Nat.lt_of_lt_of_le i.isLt h
+theorem val_lt_of_le (i : Fin b) (h : b ≤ n) : i.val < n := Nat.lt_of_lt_of_le i.isLt h
 
 /--
 The greatest value of `Fin (n+1)`, namely `n`.
@@ -287,7 +278,8 @@ Examples:
  * `Fin.last 4 = (4 : Fin 5)`
  * `(Fin.last 0).val = (0 : Nat)`
 -/
-@[inline, implicit_reducible] def last (n : Nat) : Fin (n + 1) := ⟨n, n.lt_succ_self⟩
+@[inline, implicit_reducible]
+def last (n : Nat) : Fin (n + 1) := ⟨n, n.lt_succ_self⟩
 
 /--
 Replaces the bound with another that is suitable for the value.
@@ -305,7 +297,8 @@ example (i : Fin 10) : Fin 12 :=
     cases i; simp; omega
 ```
 -/
-@[inline, implicit_reducible] def castLT (i : Fin m) (h : i.1 < n) : Fin n := ⟨i.1, h⟩
+@[inline, implicit_reducible]
+def castLT (i : Fin m) (h : i.1 < n) : Fin n := ⟨i.1, h⟩
 
 /--
 Coarsens a bound to one at least as large.
@@ -313,14 +306,16 @@ Coarsens a bound to one at least as large.
 See also `Fin.castAdd` for a version that represents the larger bound with addition rather than an
 explicit inequality proof.
 -/
-@[inline, implicit_reducible] def castLE (h : n ≤ m) (i : Fin n) : Fin m := ⟨i, Nat.lt_of_lt_of_le i.2 h⟩
+@[inline, implicit_reducible]
+def castLE (h : n ≤ m) (i : Fin n) : Fin m := ⟨i, Nat.lt_of_lt_of_le i.2 h⟩
 
 /--
 Uses a proof that two bounds are equal to allow a value bounded by one to be used with the other.
 
 In other words, when `eq : n = m`, `Fin.cast eq i` converts `i : Fin n` into a `Fin m`.
 -/
-@[inline, implicit_reducible] protected def cast (eq : n = m) (i : Fin n) : Fin m := ⟨i, eq ▸ i.2⟩
+@[inline, implicit_reducible]
+protected def cast (eq : n = m) (i : Fin n) : Fin m := ⟨i, eq ▸ i.2⟩
 
 /--
 Coarsens a bound to one at least as large.
@@ -328,13 +323,12 @@ Coarsens a bound to one at least as large.
 See also `Fin.natAdd` and `Fin.addNat` for addition functions that increase the bound, and
 `Fin.castLE` for a version that uses an explicit inequality proof.
 -/
-@[inline, implicit_reducible] def castAdd (m) : Fin n → Fin (n + m) :=
-  castLE <| Nat.le_add_right n m
+@[inline, implicit_reducible]
+def castAdd (m) : Fin n → Fin (n + m) := castLE <| Nat.le_add_right n m
 
-/--
-Coarsens a bound by one.
--/
-@[inline, implicit_reducible] def castSucc : Fin n → Fin (n + 1) := castAdd 1
+/-- Coarsens a bound by one. -/
+@[inline, implicit_reducible]
+def castSucc : Fin n → Fin (n + 1) := castAdd 1
 
 /--
 Adds a natural number to a `Fin`, increasing the bound.
@@ -347,7 +341,6 @@ Examples:
  * `Fin.addNat (5 : Fin 8) 3 = (8 : Fin 11)`
  * `Fin.addNat (0 : Fin 8) 1 = (1 : Fin 9)`
  * `Fin.addNat (1 : Fin 8) 2 = (3 : Fin 10)`
-
 -/
 @[implicit_reducible]
 def addNat (i : Fin n) (m) : Fin (n + m) := ⟨i + m, Nat.add_lt_add_right i.2 _⟩
@@ -379,7 +372,8 @@ Examples:
  * `(0 : Fin 6).rev = (5 : Fin 6)`
  * `(2 : Fin 5).rev = (2 : Fin 5)`
 -/
-@[inline, implicit_reducible] def rev (i : Fin n) : Fin n := ⟨n - (i + 1), Nat.sub_lt i.pos (Nat.succ_pos _)⟩
+@[inline, implicit_reducible]
+def rev (i : Fin n) : Fin n := ⟨n - (i + 1), Nat.sub_lt i.pos (Nat.succ_pos _)⟩
 
 /--
 Subtraction of a natural number from a `Fin`, with the bound narrowed.
@@ -391,8 +385,8 @@ Examples:
  * `(5 : Fin 9).subNat 0 (by decide) = (5 : Fin 9)`
  * `(3 : Fin 9).subNat 3 (by decide) = (0 : Fin 6)`
 -/
-@[inline, implicit_reducible] def subNat (m) (i : Fin (n + m)) (h : m ≤ i) : Fin n :=
-  ⟨i - m, Nat.sub_lt_right_of_lt_add h i.2⟩
+@[inline, implicit_reducible]
+def subNat (m) (i : Fin (n + m)) (h : m ≤ i) : Fin n := ⟨i - m, Nat.sub_lt_right_of_lt_add h i.2⟩
 
 /--
 The predecessor of a non-zero element of `Fin (n+1)`, with the bound decreased.
@@ -401,13 +395,13 @@ Examples:
  * `(4 : Fin 8).pred (by decide) = (3 : Fin 7)`
  * `(1 : Fin 2).pred (by decide) = (0 : Fin 1)`
 -/
-@[inline, implicit_reducible] def pred {n : Nat} (i : Fin (n + 1)) (h : i ≠ 0) : Fin n :=
+@[inline, implicit_reducible]
+def pred {n : Nat} (i : Fin (n + 1)) (h : i ≠ 0) : Fin n :=
   subNat 1 i <| Nat.pos_of_ne_zero <| mt (Fin.eq_of_val_eq (j := 0)) h
 
 theorem val_inj {a b : Fin n} : a.1 = b.1 ↔ a = b := ⟨Fin.eq_of_val_eq, Fin.val_eq_of_eq⟩
 
-theorem val_congr {n : Nat} {a b : Fin n} (h : a = b) : (a : Nat) = (b : Nat) :=
-  Fin.val_inj.mpr h
+theorem val_congr {n : Nat} {a b : Fin n} (h : a = b) : (a : Nat) = (b : Nat) := Fin.val_inj.mpr h
 
 theorem val_le_of_le {n : Nat} {a b : Fin n} (h : a ≤ b) : (a : Nat) ≤ (b : Nat) := h
 
@@ -417,14 +411,15 @@ theorem val_add_one_le_of_lt {n : Nat} {a b : Fin n} (h : a < b) : (a : Nat) + 1
 
 theorem val_add_one_le_of_gt {n : Nat} {a b : Fin n} (h : a > b) : (b : Nat) + 1 ≤ (a : Nat) := h
 
-theorem exists_iff {p : Fin n → Prop} : (Exists fun i => p i) ↔ Exists fun i => Exists fun h => p ⟨i, h⟩ :=
+theorem exists_iff {p : Fin n → Prop}
+    : (Exists fun i => p i) ↔ Exists fun i => Exists fun h => p ⟨i, h⟩ :=
   ⟨fun ⟨⟨i, hi⟩, hpi⟩ => ⟨i, hi, hpi⟩, fun ⟨i, hi, hpi⟩ => ⟨⟨i, hi⟩, hpi⟩⟩
 
 /--
 Auxiliary theorem for proving that two `Fin` literals are different. `h` is `Eq.refl false`: the
 kernel evaluates `Nat.beq` on two numerals, and does not unfold the `DecidableEq` instance.
 -/
-theorem ne_of_val_beq_eq_false {a b : Fin n} (h : Nat.beq a.val b.val = false) : a ≠ b :=
-  fun h' => Nat.ne_of_beq_eq_false h (congrArg Fin.val h')
+theorem ne_of_val_beq_eq_false {a b : Fin n} (h : Nat.beq a.val b.val = false) : a ≠ b := fun h' =>
+  Nat.ne_of_beq_eq_false h (congrArg Fin.val h')
 
 end Fin

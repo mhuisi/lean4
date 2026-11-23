@@ -35,8 +35,10 @@ deriving Inhabited
 @[inline, Std.Internal.tree_tac]
 def delta : Nat := 3
 
-/-- The "ratio" parameter of the size-bounded tree. Controls how aggressive the rebalancing
-operations are. -/
+/--
+The "ratio" parameter of the size-bounded tree. Controls how aggressive the rebalancing
+operations are.
+-/
 @[inline, Std.Internal.tree_tac, implicit_reducible]
 def ratio : Nat := 2
 
@@ -57,8 +59,10 @@ def size : Impl α β → Nat
   | inner sz _ _ _ _ => sz
   | leaf => 0
 
-@[Std.Internal.tree_tac] theorem size_leaf : (Impl.leaf : Impl α β).size = 0 := rfl
-@[Std.Internal.tree_tac] theorem size_inner {sz k v l r} : (Impl.inner sz k v l r : Impl α β).size = sz := rfl
+@[Std.Internal.tree_tac]
+theorem size_leaf : (Impl.leaf : Impl α β).size = 0 := rfl
+@[Std.Internal.tree_tac]
+theorem size_inner {sz k v l r} : (Impl.inner sz k v l r : Impl α β).size = sz := rfl
 
 /-!
 ## `toListModel`
@@ -74,13 +78,14 @@ def toListModel : Impl α β → List ((a : α) × β a)
   | .leaf => []
   | .inner _ k v l r => l.toListModel ++ ⟨k, v⟩ :: r.toListModel
 
-@[simp] theorem toListModel_leaf : (.leaf : Impl α β).toListModel = [] := rfl
-@[simp] theorem toListModel_inner {sz k v l r} :
-  (.inner sz k v l r : Impl α β).toListModel = l.toListModel ++ ⟨k, v⟩ :: r.toListModel := rfl
+@[simp]
+theorem toListModel_leaf : (.leaf : Impl α β).toListModel = [] := rfl
+@[simp]
+theorem toListModel_inner {sz k v l r}
+    : (.inner sz k v l r : Impl α β).toListModel = l.toListModel ++ ⟨k, v⟩ :: r.toListModel :=
+  rfl
 
-/--
-  Computes the size of the tree. Used for verification of iterators.
--/
+/-- Computes the size of the tree. Used for verification of iterators. -/
 def treeSize : Internal.Impl α β → Nat
   | .leaf => 0
   | .inner _ _ _ l r => 1 + l.treeSize + treeSize r

@@ -15,8 +15,10 @@ public section
 
 namespace Lean.Meta
 
-unsafe def evalExprCore (α) (value : Expr) (checkType : Expr → MetaM Unit)
-    (safety := DefinitionSafety.safe) (checkMeta : Bool := true) : MetaM α :=
+unsafe def evalExprCore
+    (α) (value : Expr) (checkType : Expr → MetaM Unit)
+    (safety := DefinitionSafety.safe) (checkMeta : Bool := true)
+    : MetaM α :=
   withoutModifyingEnv do
     -- Avoid waiting for all prior compilation if only imported constants are referenced. This is a
     -- very common case for tactic configurations (`Lean.Elab.Tactic.Config`).
@@ -31,31 +33,39 @@ unsafe def evalExprCore (α) (value : Expr) (checkType : Expr → MetaM Unit)
       throwError "failed to evaluate expression, it contains metavariables{indentExpr value}"
     let type ← inferType value
     checkType type
-    let decl := Declaration.defnDecl {
-       name, levelParams := us.toList, type
-       value, hints := ReducibilityHints.opaque,
-       safety
-    }
+    let decl :=
+      Declaration.defnDecl {
+        name
+        levelParams := us.toList
+        type
+        value
+        hints := ReducibilityHints.opaque
+        safety
+      }
     modifyEnv (markMeta · name)
     -- compilation will invariably wait on `checked`
     let _ ← traceBlock "compiler env" (← getEnv).checked
     -- now that we've already waited, async would just introduce (minor) overhead and trigger
     -- `Task.get` blocking debug code
     withOptions (Elab.async.set · false) do
-    withOptions (Compiler.compiler.postponeCompile.set · false) do
-    withOptions (Compiler.compiler.relaxedMetaCheck.set · true) do
-      addAndCompile decl
-      evalConst (checkMeta := checkMeta) α name
+      withOptions (Compiler.compiler.postponeCompile.set · false) do
+        withOptions (Compiler.compiler.relaxedMetaCheck.set · true) do
+          addAndCompile decl
+          evalConst (checkMeta := checkMeta) α name
 
-unsafe def evalExpr' (α) (typeName : Name) (value : Expr) (safety := DefinitionSafety.safe)
-    (checkMeta : Bool := true) : MetaM α :=
+unsafe def evalExpr'
+    (α) (typeName : Name) (value : Expr)
+    (safety := DefinitionSafety.safe) (checkMeta : Bool := true)
+    : MetaM α :=
   evalExprCore (safety := safety) (checkMeta := checkMeta) α value fun type => do
     let type ← whnfD type
     unless type.isConstOf typeName do
       throwError "unexpected type at evalExpr{indentExpr type}"
 
-unsafe def evalExpr (α) (expectedType : Expr) (value : Expr) (safety := DefinitionSafety.safe)
-    (checkMeta : Bool := true) : MetaM α :=
+unsafe def evalExpr
+    (α) (expectedType : Expr) (value : Expr)
+    (safety := DefinitionSafety.safe) (checkMeta : Bool := true)
+    : MetaM α :=
   evalExprCore (safety := safety) (checkMeta := checkMeta) α value fun type => do
     unless ← isDefEq type expectedType do
       throwError "unexpected type at `evalExpr` {← mkHasTypeButIsExpectedMsg type expectedType}"

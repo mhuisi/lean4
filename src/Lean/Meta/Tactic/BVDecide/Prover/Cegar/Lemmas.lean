@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Henrik Böving
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.BVDecide.Prover.Cegar.Basic
 import Lean.Meta.Tactic.BVDecide.Normalize
@@ -28,10 +29,11 @@ public def Cegar.processNewHyps : CegarM ProcessHypResult := do
     let (normalized, unnormalized) := hypQueue.partition (·.isNormalized)
     let mut hypQueue := normalized.map (·.hyp)
     unless unnormalized.isEmpty do
-      let (solved, hyps) ← CegarM.liftPreProcessM do
-        let solved ← Normalize.bvNormalize <| unnormalized.map (·.hyp)
-        let hyps := (← get).hypotheses
-        return (solved, hyps)
+      let (solved, hyps) ←
+        CegarM.liftPreProcessM do
+          let solved ← Normalize.bvNormalize <| unnormalized.map (·.hyp)
+          let hyps := (← get).hypotheses
+          return (solved, hyps)
       if solved then return .solved
       hypQueue := hypQueue ++ hyps
     let mut sats := #[]
@@ -56,4 +58,3 @@ public def Cegar.processNewHyps : CegarM ProcessHypResult := do
     return .newHyps
 
 end Lean.Meta.Tactic.BVDecide
-

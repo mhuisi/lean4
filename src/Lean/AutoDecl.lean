@@ -30,18 +30,18 @@ def isAutoDeclOrPrivate_Internal (decl : Name) : CoreM Bool := do
   if isReservedName env decl then return true
   if let Name.str n s := decl then
     if (← isAutoDeclOrPrivate_Internal n) then return true
-    if s.startsWith "proof_"
-        || s.startsWith "match_"
-        || s.startsWith "unsafe_"
-        || s.startsWith "grind_"
-    then return true
+    if s.startsWith "proof_" || s.startsWith "match_" || s.startsWith "unsafe_"
+        || s.startsWith "grind_" then
+      return true
     if env.isConstructor n && s ∈ ["injEq", "inj", "sizeOf_spec", "elim", "noConfusion"] then
       return true
     if let ConstantInfo.inductInfo _ := env.find? n then
       if s.startsWith "brecOn_" || s.startsWith "below_" then return true
-      if s ∈ [casesOnSuffix, recOnSuffix, brecOnSuffix, belowSuffix,
+      if s ∈ [
+          casesOnSuffix, recOnSuffix, brecOnSuffix, belowSuffix,
           "ndrec", "ndrecOn", "noConfusionType", "noConfusion", "ofNat", "toCtorIdx", "ctorIdx",
-          "ctorElim", "ctorElimType"] then
+          "ctorElim", "ctorElimType"
+        ] then
         return true
       if let some _ := isSubobjectField? env n (.mkSimple s) then
         return true

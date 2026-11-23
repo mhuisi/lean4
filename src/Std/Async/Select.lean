@@ -31,8 +31,8 @@ at the same time. A `Task` can try to finish the waiter by calling `Waiter.race`
 -/
 structure Waiter (α : Type) where
   private mk ::
-    private finished : IO.Ref Bool
-    promise : IO.Promise (Except IO.Error α)
+  private finished : IO.Ref Bool
+  promise : IO.Promise (Except IO.Error α)
 
 /--
 Swap out the `IO.Promise` within the `Waiter`. Note that the part which determines whether the
@@ -48,8 +48,10 @@ with the internal `IO.Promise` of the `Waiter`. This promise must under all circ
 resolved by `win`. If the race is lost some cleanup work can be done in `lose`.
 -/
 @[specialize]
-def Waiter.race [Monad m] [MonadLiftT (ST IO.RealWorld) m] (w : Waiter α)
-    (lose : m β) (win : IO.Promise (Except IO.Error α) → m β) : m β := do
+def Waiter.race
+    [Monad m] [MonadLiftT (ST IO.RealWorld) m]
+    (w : Waiter α) (lose : m β) (win : IO.Promise (Except IO.Error α) → m β)
+    : m β := do
   let first ← w.finished.modifyGet fun s => (s == false, true)
   if first then
     win w.promise
@@ -81,9 +83,7 @@ structure Selector (α : Type) where
   prevent data loss.
   -/
   registerFn : Waiter α → Async Unit
-  /--
-  A cleanup function that is called once any `Selector` has won the `Selectable.one` race.
-  -/
+  /-- A cleanup function that is called once any `Selector` has won the `Selectable.one` race. -/
   unregisterFn : Async Unit
 
 /--
@@ -92,18 +92,13 @@ usually used together in conjunction with `Selectable.one`.
 -/
 structure Selectable (α : Type) where
   case ::
-    {β : Type}
-    /--
-    The event source.
-    -/
-    selector : Selector β
-    /--
-    The continuation that is called on results from the event source.
-    -/
-    cont : β → Async α
+  {β : Type}
+  /-- The event source. -/
+  selector : Selector β
+  /-- The continuation that is called on results from the event source. -/
+  cont : β → Async α
 
-private def shuffleIt {α : Type u} (xs : Array α) (gen : StdGen) : Array α × StdGen :=
-  go xs gen 0
+private def shuffleIt {α : Type u} (xs : Array α) (gen : StdGen) : Array α × StdGen := go xs gen 0
 where
   go (xs : Array α) (gen : StdGen) (i : Nat) : Array α × StdGen :=
     if _ : i < xs.size - 1 then
@@ -134,7 +129,6 @@ def Selectable.combine (selectables : Array (Selectable α)) : IO (Selector α) 
           return some (← selectable.cont val)
 
       return none
-
     registerFn := fun waiter => do
       let gen ← IO.stdGenRef.get
       let (selectables, gen) := shuffleIt selectables gen
@@ -154,8 +148,7 @@ def Selectable.combine (selectables : Array (Selectable α)) : IO (Selector α) 
 
         discard <| IO.bindTask (t := waiterPromise.result?) fun res? => do
           match res? with
-          | none =>
-            return (Task.pure (.ok ()))
+          | none => return (Task.pure (.ok ()))
           | some res =>
             let deliver : Async Unit :=
               try
@@ -165,7 +158,6 @@ def Selectable.combine (selectables : Array (Selectable α)) : IO (Selector α) 
                 waiter.promise.resolve (.error e)
 
             deliver.toBaseIO
-
     unregisterFn := do
       for selectable in selectables do
         try selectable.selector.unregisterFn catch _ => pure ()

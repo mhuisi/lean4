@@ -18,9 +18,8 @@ namespace Std
 open Std.Iterators
 
 @[always_inline, inline, inherit_doc IterM.stepSize]
-def Iter.stepSize [Iterator α Id β] [IteratorAccess α Id]
-    (it : Iter (α := α) β) (n : Nat) :
-    Iter (α := Types.StepSizeIterator α Id β) β :=
+def Iter.stepSize [Iterator α Id β] [IteratorAccess α Id] (it : Iter (α := α) β) (n : Nat)
+    : Iter (α := Types.StepSizeIterator α Id β) β :=
   (it.toIterM.stepSize n).toIter
 
 end Std

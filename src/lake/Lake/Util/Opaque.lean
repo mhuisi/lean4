@@ -21,12 +21,10 @@ public abbrev Opaque : Type := POpaque
 
 namespace POpaque
 
-public instance instNonempty : Nonempty POpaque := by
-  exact POpaque.nonemptyType.property
+public instance instNonempty : Nonempty POpaque := by exact POpaque.nonemptyType.property
 
 /-- Cast away a value's type and universe. -/
-public opaque mk.{v,u} {α : Type u} (a : α) : POpaque.{v} :=
-  unsafe unsafeCast a
+public opaque mk.{v, u} {α : Type u} (a : α) : POpaque.{v} := unsafe unsafeCast a
 
 /-- Cast away a value's type and universe. -/
 public abbrev _root_.Lake.Opaque.mk {α : Type u} (a : α) : Opaque := POpaque.mk a
@@ -38,9 +36,7 @@ This operation is unsafe because there is no guarantee that the opaque
 value is of type `α` or that its real value can soundly fit inside the
 opaque value's universe.
 -/
-public unsafe def cast {α : Type u} (self : POpaque.{v}) : α :=
-  unsafeCast self
+public unsafe def cast {α : Type u} (self : POpaque.{v}) : α := unsafeCast self
 
 /-- Like `cast`, but with an explicit type. -/
-public unsafe abbrev castTo (α : Type u) (self : POpaque.{v}) : α :=
-  self.cast
+public unsafe abbrev castTo (α : Type u) (self : POpaque.{v}) : α := self.cast

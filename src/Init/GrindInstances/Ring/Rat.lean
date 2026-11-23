@@ -48,10 +48,11 @@ instance : Field Rat where
   zpow_succ := Rat.pow_succ
   zpow_neg := Rat.zpow_neg
 
-instance : IsCharP Rat 0 := IsCharP.mk' _ _
-  (ofNat_eq_zero_iff := fun x => by
-    change ((x : Int) : Rat) = ((0 : Int) : Rat) ↔ _
-    simp)
+instance : IsCharP Rat 0 :=
+  IsCharP.mk' _ _
+    (ofNat_eq_zero_iff := fun x => by
+      change ((x : Int) : Rat) = ((0 : Int) : Rat) ↔ _
+      simp)
 
 instance : NoNatZeroDivisors Rat where
   no_nat_zero_divisors k a b h₁ h₂ := by

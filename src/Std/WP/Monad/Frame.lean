@@ -24,29 +24,31 @@ open Lean.Order Std.WP
 
 namespace Std.WP
 
-theorem MonadicWP.isLaxDistrib_withFrameClosure {m : Type v → Type w} [Monad m]
+theorem MonadicWP.isLaxDistrib_withFrameClosure
+    {m : Type v → Type w} [Monad m]
     {P : Type u} {E : Type z} [PartialOrder P] [PartialOrder E] [CompleteLattice P]
     [CompleteLattice E] [CompleteLattice.OrderEq P] [CompleteLattice.OrderEq E]
-    {R : Type t} (op : R → P → P) {opE : R → E → E} [FrameOp op E opE] {comp : R → R → R} {e : R}
-    (hact : ∀ r r' a, op (comp r r') a = op r (op r' a))
-    (hactE : ∀ r r' E', opE (comp r r') E' = opE r (opE r' E'))
-    (hunit : ∀ a, op e a = a) (hunitE : ∀ E', opE e E' = E')
-    [base : MonadicWP m P E] [hlax : MonadicWP.IsLaxDistrib m] :
-    @MonadicWP.IsLaxDistrib m P E _ _ _ ⟨fun α => WP.withFrameClosure op (base.toWP α)⟩ := by
+    {R : Type t} (op : R → P → P)
+    {opE : R → E → E} [FrameOp op E opE]
+    {comp : R → R → R} {e : R} (hact : ∀ r r' a, op (comp r r') a = op r (op r' a))
+    (hactE : ∀ r r' E', opE (comp r r') E' = opE r (opE r' E')) (hunit : ∀ a, op e a = a)
+    (hunitE : ∀ E', opE e E' = E')
+    [base : MonadicWP m P E] [hlax : MonadicWP.IsLaxDistrib m]
+    : @MonadicWP.IsLaxDistrib m P E _ _ _ ⟨fun α => WP.withFrameClosure op (base.toWP α)⟩ := by
   obtain ⟨hP⟩ := ‹CompleteLattice.OrderEq P›
   obtain ⟨hE⟩ := ‹CompleteLattice.OrderEq E›
   subst hP hE
-  refine @MonadicWP.IsLaxDistrib.mk m P E _ _ _
-    ⟨fun α => WP.withFrameClosure op (base.toWP α)⟩
-    (fun x post E' => ?_) (fun x f post E' => ?_)
-  · show (pure x : PredTrans _ _ _).apply post E' ⊑
-      (((base.toWP _).trans (pure x)).frameClosure op).apply post E'
+  refine @MonadicWP.IsLaxDistrib.mk m P E _ _ _ ⟨fun α => WP.withFrameClosure op (base.toWP α)⟩
+    (fun x post E' => ?_)
+    (fun x f post E' => ?_)
+  · show (pure x : PredTrans _ _ _).apply post E'
+      ⊑ (((base.toWP _).trans (pure x)).frameClosure op).apply post E'
     rw [PredTrans.apply_Pure_pure]
     refine (PredTrans.le_frameClosure_iff op _).mpr fun r => ?_
     exact MonadicWP.le_wp_pure (m := m) x (fun a => op r (post a)) (opE r E')
-  · show (((base.toWP _).trans x).frameClosure op >>= fun a =>
-          ((base.toWP _).trans (f a)).frameClosure op).apply post E' ⊑
-        (((base.toWP _).trans (x >>= f)).frameClosure op).apply post E'
+  · show (((base.toWP _).trans x).frameClosure op
+        >>= fun a => ((base.toWP _).trans (f a)).frameClosure op).apply post E'
+      ⊑ (((base.toWP _).trans (x >>= f)).frameClosure op).apply post E'
     rw [PredTrans.apply_Bind_bind]
     refine (PredTrans.le_frameClosure_iff op _).mpr fun r => ?_
     refine PartialOrder.rel_trans (PredTrans.frameClosure_frames op comp hact hactE _ _ _ r) ?_
@@ -57,17 +59,21 @@ theorem MonadicWP.isLaxDistrib_withFrameClosure {m : Type v → Type w} [Monad m
     exact PartialOrder.rel_trans (PredTrans.frameClosure_frames op comp hact hactE _ _ _ r)
       (PredTrans.frameClosure_le op e hunit hunitE _ _ _)
 
-
 section Deprecated
 
 set_option linter.missingDocs false
 
-@[deprecated "use `⟨fun α => WP.withFrameClosure op (base.toWP α)⟩`, and \
-  `MonadicWP.isLaxDistrib_withFrameClosure` for its laws" (since := "2026-11-18")]
-noncomputable abbrev WPMonad.withFrameClosure {m : Type v → Type w} {P : Type u} {E : Type z}
-    [PartialOrder P] [PartialOrder E] [CompleteLattice P] [CompleteLattice E]
-    [CompleteLattice.OrderEq P] [CompleteLattice.OrderEq E] {R : Type t} (op : R → P → P)
-    {opE : R → E → E} [FrameOp op E opE] (base : MonadicWP m P E) : MonadicWP m P E :=
+@[deprecated
+  "use `⟨fun α => WP.withFrameClosure op (base.toWP α)⟩`, and \
+    `MonadicWP.isLaxDistrib_withFrameClosure` for its laws"
+  (since := "2026-11-18")]
+noncomputable abbrev WPMonad.withFrameClosure
+    {m : Type v → Type w} {P : Type u} {E : Type z} [PartialOrder P] [PartialOrder E]
+    [CompleteLattice P] [CompleteLattice E] [CompleteLattice.OrderEq P] [CompleteLattice.OrderEq E]
+    {R : Type t} (op : R → P → P)
+    {opE : R → E → E} [FrameOp op E opE]
+    (base : MonadicWP m P E)
+    : MonadicWP m P E :=
   ⟨fun α => WP.withFrameClosure op (base.toWP α)⟩
 
 end Deprecated

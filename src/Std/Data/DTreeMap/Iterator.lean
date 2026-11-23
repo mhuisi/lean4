@@ -25,8 +25,7 @@ The iterator yields the elements of the map in order and then terminates.
 * `Productive` instance: always
 -/
 @[inline]
-public def iter {α : Type u} {β : α → Type v}
-    {cmp : α → α → Ordering} (m : DTreeMap α β cmp) :=
+public def iter {α : Type u} {β : α → Type v} {cmp : α → α → Ordering} (m : DTreeMap α β cmp) :=
   @Raw.iter _ _ cmp ⟨m.inner⟩
 
 /--
@@ -56,20 +55,23 @@ The key and value types must live in the same universe.
 * `Productive` instance: always
 -/
 @[inline]
-public def valuesIter {α : Type u} {β : Type u} {cmp : α → α → Ordering}
-    (m : DTreeMap α (fun _ => β) cmp) :=
-  @Raw.valuesIter _ _ cmp  ⟨m.inner⟩
+public def valuesIter
+    {α : Type u} {β : Type u} {cmp : α → α → Ordering} (m : DTreeMap α (fun _ => β) cmp) :=
+  @Raw.valuesIter _ _ cmp ⟨m.inner⟩
 
 @[simp]
-public theorem toList_iter {cmp : α → α → Ordering} (m : DTreeMap α β cmp) :
-    m.iter.toList = m.toList := Raw.toList_iter ⟨m.inner⟩
+public theorem toList_iter {cmp : α → α → Ordering} (m : DTreeMap α β cmp)
+    : m.iter.toList = m.toList :=
+  Raw.toList_iter ⟨m.inner⟩
 
 @[simp]
-public theorem keysIter_toList {cmp : α → α → Ordering} (m : DTreeMap α β cmp) :
-    m.keysIter.toList = m.keys := Raw.keysIter_toList ⟨m.inner⟩
+public theorem keysIter_toList {cmp : α → α → Ordering} (m : DTreeMap α β cmp)
+    : m.keysIter.toList = m.keys :=
+  Raw.keysIter_toList ⟨m.inner⟩
 
 @[simp]
-public theorem valuesIter_toList {cmp : α → α → Ordering} (m : DTreeMap α (fun _ => β) cmp) :
-    m.valuesIter.toList = m.values := Raw.valuesIter_toList ⟨m.inner⟩
+public theorem valuesIter_toList {cmp : α → α → Ordering} (m : DTreeMap α (fun _ => β) cmp)
+    : m.valuesIter.toList = m.values :=
+  Raw.valuesIter_toList ⟨m.inner⟩
 
 end Std.DTreeMap

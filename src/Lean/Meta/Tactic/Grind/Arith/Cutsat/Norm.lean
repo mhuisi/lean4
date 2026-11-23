@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 module
+
 prelude
 public import Lean.Meta.Tactic.Grind.Arith.Cutsat.Util
 public import Lean.Meta.IntInstTesters
@@ -19,36 +20,52 @@ and these expressions must be normalized inside of the cutsat module.
 **Note**: It is safe to use (the more efficient) structural instances tests here because `grind` uses the canonicalizer.
 -/
 open Structural in
-@[specialize] private partial def toLinearExprAux {m : Type → Type} [Monad m] [MonadLiftT MetaM m]
-    (toVar : Expr → Nat → m Int.Internal.Linear.Expr) (e : Expr) (generation : Nat) : m Int.Internal.Linear.Expr := do
+@[specialize]
+private partial def toLinearExprAux
+    {m : Type → Type} [Monad m] [MonadLiftT MetaM m]
+    (toVar : Expr → Nat → m Int.Internal.Linear.Expr) (e : Expr) (generation : Nat)
+    : m Int.Internal.Linear.Expr := do
   let mul (a b : Expr) := do
     match (← getIntValue? a) with
     | some k => return .mulL k (← toLinearExprAux toVar b 0)
-    | none => match (← getIntValue? b) with
+    | none =>
+      match (← getIntValue? b) with
       | some k => return .mulR (← toLinearExprAux toVar a 0) k
       | none => toVar e generation
   let t ← if e.hasExprMVar then instantiateMVarsIfMVarApp e else pure e
   match_expr (meta := false) t with
   | OfNat.ofNat _ _ _ =>
-    if let some n ← getIntValue? e then return .num n
-    else toVar e generation
+    if let some n ← getIntValue? e then
+      return .num n
+    else
+      toVar e generation
   | Neg.neg _ i a =>
-    if (← isInstNegInt i) then return .neg (← toLinearExprAux toVar a 0)
-    else toVar e generation
+    if (← isInstNegInt i) then
+      return .neg (← toLinearExprAux toVar a 0)
+    else
+      toVar e generation
   | HAdd.hAdd _ _ _ i a b =>
-    if (← isInstHAddInt i) then return .add (← toLinearExprAux toVar a 0) (← toLinearExprAux toVar b 0)
-    else toVar e generation
+    if (← isInstHAddInt i) then
+      return .add (← toLinearExprAux toVar a 0) (← toLinearExprAux toVar b 0)
+    else
+      toVar e generation
   | HSub.hSub _ _ _ i a b =>
-    if (← isInstHSubInt i) then return .sub (← toLinearExprAux toVar a 0) (← toLinearExprAux toVar b 0)
-    else toVar e generation
+    if (← isInstHSubInt i) then
+      return .sub (← toLinearExprAux toVar a 0) (← toLinearExprAux toVar b 0)
+    else
+      toVar e generation
   | HMul.hMul _ _ _ i a b =>
-    if (← isInstHMulInt i) then mul a b
-    else toVar e generation
+    if (← isInstHMulInt i) then
+      mul a b
+    else
+      toVar e generation
   | _ => toVar e generation
 
 /-- Reifies a linear integer expression using the caller's variables for opaque subterms. -/
-@[inline] def toLinearExprWith {m : Type → Type} [Monad m] [MonadLiftT MetaM m]
-    (toVar : Expr → m Var) (e : Expr) : m Int.Internal.Linear.Expr :=
+@[inline]
+def toLinearExprWith
+    {m : Type → Type} [Monad m] [MonadLiftT MetaM m] (toVar : Expr → m Var) (e : Expr)
+    : m Int.Internal.Linear.Expr :=
   toLinearExprAux (fun e _ => do return .var (← toVar e)) e 0
 
 /-- Converts the given integer expression into `Int.Internal.Linear.Expr`. -/

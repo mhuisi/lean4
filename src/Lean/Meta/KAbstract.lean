@@ -39,40 +39,43 @@ def kabstract (e : Expr) (p : Expr) (occs : Occurrences := .all) : MetaM Expr :=
     -- subterms. It does not depend on `offset`, which is only used to abstract a match, and candidate
     -- subterms have no loose bound variables.
     let rec visit (e : Expr) (offset : Nat) : StateRefT (Nat × Std.HashSet Expr) MetaM Expr := do
-      let cacheable := match e with
+      let cacheable :=
+        match e with
         | .app .. | .mdata .. | .proj .. | .letE .. | .lam .. | .forallE .. => true
         | _ => false
       if cacheable && (← get).2.contains e then return e
       let i := (← get).1
       let visitChildren : Unit → StateRefT (Nat × Std.HashSet Expr) MetaM Expr := fun _ => do
         match e with
-        | .app f a         => return e.updateApp! (← visit f offset) (← visit a offset)
-        | .mdata _ b       => return e.updateMData! (← visit b offset)
-        | .proj _ _ b      => return e.updateProj! (← visit b offset)
-        | .letE _ t v b _  => return e.updateLetE! (← visit t offset) (← visit v offset) (← visit b (offset+1))
-        | .lam _ d b _     => return e.updateLambdaE! (← visit d offset) (← visit b (offset+1))
-        | .forallE _ d b _ => return e.updateForallE! (← visit d offset) (← visit b (offset+1))
-        | e                => return e
-      let r ← if e.hasLooseBVars then
-        visitChildren ()
-      else if e.toHeadIndex != pHeadIdx || e.headNumArgs != pNumArgs then
-        visitChildren ()
-      else
-        -- We save the metavariable context here,
-        -- so that it can be rolled back unless `occs.contains i`.
-        let mctx ← getMCtx
-        if (← isDefEq e p) then
-          if occs.contains i then
-            set (i+1, ({} : Std.HashSet Expr))
-            return mkBVar offset
-          else
-            modify fun (_, s) => (i+1, s)
-            -- Revert the metavariable context,
-            -- so that other matches are still possible.
-            setMCtx mctx
-            visitChildren ()
-        else
+        | .app f a => return e.updateApp! (← visit f offset) (← visit a offset)
+        | .mdata _ b => return e.updateMData! (← visit b offset)
+        | .proj _ _ b => return e.updateProj! (← visit b offset)
+        | .letE _ t v b _ =>
+          return e.updateLetE! (← visit t offset) (← visit v offset) (← visit b (offset + 1))
+        | .lam _ d b _ => return e.updateLambdaE! (← visit d offset) (← visit b (offset + 1))
+        | .forallE _ d b _ => return e.updateForallE! (← visit d offset) (← visit b (offset + 1))
+        | e => return e
+      let r ←
+        if e.hasLooseBVars then
           visitChildren ()
+        else if e.toHeadIndex != pHeadIdx || e.headNumArgs != pNumArgs then
+          visitChildren ()
+        else
+          -- We save the metavariable context here,
+          -- so that it can be rolled back unless `occs.contains i`.
+          let mctx ← getMCtx
+          if (← isDefEq e p) then
+            if occs.contains i then
+              set (i + 1, ({} : Std.HashSet Expr))
+              return mkBVar offset
+            else
+              modify fun (_, s) => (i + 1, s)
+              -- Revert the metavariable context,
+              -- so that other matches are still possible.
+              setMCtx mctx
+              visitChildren ()
+          else
+            visitChildren ()
       if cacheable && (← get).1 == i then
         modify fun (i, s) => (i, s.insert e)
       return r

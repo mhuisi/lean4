@@ -30,35 +30,44 @@ namespace Formatter
 
 structure Context where
   options : Options
-  table   : Parser.TokenTable
-  /-- We need to store this `categoryParser` argument to deal with the implicit Pratt parser call in `trailingNode.formatter`. -/
-  cat     : Name := Name.anonymous
+  table : Parser.TokenTable
+  /--
+  We need to store this `categoryParser` argument to deal with the implicit Pratt parser call in `trailingNode.formatter`.
+  -/
+  cat : Name := Name.anonymous
 
 structure State where
-  stxTrav  : Syntax.Traverser
-  /-- Textual content of `stack` up to the first whitespace (not enclosed in an escaped ident). We assume that the textual
-  content of `stack` is modified only by `push` and `pushWhitespace`, so `leadWord` is adjusted there accordingly. -/
+  stxTrav : Syntax.Traverser
+  /--
+  Textual content of `stack` up to the first whitespace (not enclosed in an escaped ident). We assume that the textual
+  content of `stack` is modified only by `push` and `pushWhitespace`, so `leadWord` is adjusted there accordingly.
+  -/
   leadWord : String := ""
-  /-- When the `leadWord` is nonempty, whether it is an identifier. Identifiers get space inserted between them. -/
+  /--
+  When the `leadWord` is nonempty, whether it is an identifier. Identifiers get space inserted between them.
+  -/
   leadWordIdent : Bool := false
   /-- Whether the generated format begins with the result of an ungrouped category formatter. -/
   isUngrouped : Bool := false
-  /-- Whether the resulting format must be grouped when used in a category formatter.
-  If the flag is set to false, then categoryParser omits the fill+nest operation. -/
+  /--
+  Whether the resulting format must be grouped when used in a category formatter.
+  If the flag is set to false, then categoryParser omits the fill+nest operation.
+  -/
   mustBeGrouped : Bool := true
-  /-- Stack of generated Format objects, analogous to the Syntax stack in the parser.
-  Note, however, that the stack is reversed because of the right-to-left traversal. -/
-  stack    : Array Format := #[]
+  /--
+  Stack of generated Format objects, analogous to the Syntax stack in the parser.
+  Note, however, that the stack is reversed because of the right-to-left traversal.
+  -/
+  stack : Array Format := #[]
 
 end Formatter
 
 abbrev FormatterM := ReaderT Formatter.Context $ StateRefT Formatter.State CoreM
 
-@[inline] def FormatterM.orElse {α} (p₁ : FormatterM α) (p₂ : Unit → FormatterM α) : FormatterM α := do
+@[inline]
+def FormatterM.orElse {α} (p₁ : FormatterM α) (p₂ : Unit → FormatterM α) : FormatterM α := do
   let s ← get
-  catchInternalId backtrackExceptionId
-    p₁
-    (fun _ => do set s; p₂ ())
+  catchInternalId backtrackExceptionId p₁ (fun _ => do set s; p₂ ())
 
 instance {α} : OrElse (FormatterM α) := ⟨FormatterM.orElse⟩
 
@@ -73,10 +82,10 @@ formatting syntax of kind `k`.
 @[builtin_doc]
 unsafe builtin_initialize formatterAttribute : KeyedDeclsAttribute Formatter ←
   KeyedDeclsAttribute.init {
-    builtinName := `builtin_formatter,
-    name := `formatter,
-    descr := "Register a formatter for a parser.",
-    valueTypeName := `Lean.PrettyPrinter.Formatter,
+    builtinName := `builtin_formatter
+    name := `formatter
+    descr := "Register a formatter for a parser."
+    valueTypeName := `Lean.PrettyPrinter.Formatter
     evalKey := fun builtin stx => do
       let env ← getEnv
       let stx ← Attribute.Builtin.getIdent stx
@@ -103,8 +112,7 @@ accept parameters corresponding to (a prefix of) those of `c`, where `Parser` is
 -/
 @[builtin_doc]
 unsafe builtin_initialize combinatorFormatterAttribute : ParserCompiler.CombinatorAttribute ←
-  ParserCompiler.registerCombinatorAttribute
-    `combinator_formatter
+  ParserCompiler.registerCombinatorAttribute `combinator_formatter
     "Register a formatter for a parser combinator"
     `Lean.PrettyPrinter.mkCombinatorFormatterAttribute -- TODO (bootstrapping): remove if possible
 
@@ -117,13 +125,13 @@ namespace Formatter
 open Lean.Core
 open Lean.Parser
 
-def throwBacktrack {α} : FormatterM α :=
-  throw $ Exception.internal backtrackExceptionId
+def throwBacktrack {α} : FormatterM α := throw $ Exception.internal backtrackExceptionId
 
 instance : Syntax.MonadTraverser FormatterM := ⟨{
-  get       := State.stxTrav <$> get,
-  set       := fun t => modify (fun st => { st with stxTrav := t }),
-  modifyGet := fun f => modifyGet (fun st => let (a, t) := f st.stxTrav; (a, { st with stxTrav := t }))
+  get := State.stxTrav <$> get
+  set := fun t => modify (fun st => { st with stxTrav := t })
+  modifyGet := fun f =>
+    modifyGet (fun st => let (a, t) := f st.stxTrav; (a, { st with stxTrav := t }))
 }⟩
 
 open Syntax.MonadTraverser
@@ -133,11 +141,10 @@ def getStack : FormatterM (Array Format) := do
   pure st.stack
 
 def getStackSize : FormatterM Nat := do
-  let stack ← getStack;
+  let stack ← getStack
   pure stack.size
 
-def setStack (stack : Array Format) : FormatterM Unit :=
-  modify fun st => { st with stack := stack }
+def setStack (stack : Array Format) : FormatterM Unit := modify fun st => { st with stack := stack }
 
 def push (f : Format) : FormatterM Unit :=
   modify fun st => { st with stack := st.stack.push f, isUngrouped := false }
@@ -153,11 +160,9 @@ def pushWhitespace (f : Format) : FormatterM Unit := do
   push f
   modify fun st => { st with leadWord := "", leadWordIdent := false, isUngrouped := false }
 
-def pushLine : FormatterM Unit :=
-  pushWhitespace Format.line
+def pushLine : FormatterM Unit := pushWhitespace Format.line
 
-def pushAlign (force : Bool) : FormatterM Unit :=
-  pushWhitespace (.align force)
+def pushAlign (force : Bool) : FormatterM Unit := pushWhitespace (.align force)
 
 /--
 Execute `x` at the right-most child of the current node, if any, then advance to the left.
@@ -188,32 +193,41 @@ def indent (x : Formatter) (indent : Option Int := none) : Formatter := do
 
 def fill (x : Formatter) : Formatter := do
   concat x
-  modify fun st => { st with
+  modify fun st => {
+    st with
     stack := st.stack.modify (st.stack.size - 1) Format.fill
     isUngrouped := false
   }
 
 def group (x : Formatter) : Formatter := do
   concat x
-  modify fun st => { st with
+  modify fun st => {
+    st with
     stack := st.stack.modify (st.stack.size - 1) Format.group
     isUngrouped := false
   }
 
-/-- If `pos?` has a position, run `x` and tag its results with that position,
-if they are not already tagged. Otherwise just run `x`. -/
+/--
+If `pos?` has a position, run `x` and tag its results with that position,
+if they are not already tagged. Otherwise just run `x`.
+-/
 def withMaybeTag (pos? : Option String.Pos.Raw) (x : FormatterM Unit) : Formatter := do
   if let some p := pos? then
     concat x
     modify fun st => {
-      st with stack := st.stack.modify (st.stack.size - 1) fun fmt =>
-        if fmt matches Format.tag .. then fmt
-        else Format.tag p.byteIdx fmt
+      st with
+      stack :=
+        st.stack.modify (st.stack.size - 1) fun fmt =>
+          if fmt matches Format.tag .. then
+            fmt
+          else
+            Format.tag p.byteIdx fmt
     }
   else
     x
 
-@[combinator_formatter orelse, expose] partial def orelse.formatter (p1 p2 : Formatter) : Formatter := do
+@[combinator_formatter orelse, expose]
+partial def orelse.formatter (p1 p2 : Formatter) : Formatter := do
   let stx ← getCur
   -- `orelse` may produce `choice` nodes for antiquotations
   if stx.getKind == `choice then
@@ -238,7 +252,9 @@ def recover'.formatter (fmt : PrettyPrinter.Formatter) := fmt
 -- anyway.
 set_option compiler.ignoreBorrowAnnotation true in
 @[extern "lean_mk_antiquot_formatter"]
-opaque mkAntiquot.formatter' (name : String) (kind : SyntaxNodeKind) (anonymous := true) (isPseudoKind := false) : Formatter
+opaque mkAntiquot.formatter'
+  (name : String) (kind : SyntaxNodeKind) (anonymous := true) (isPseudoKind := false)
+  : Formatter
 
 -- break up big mutual recursion
 set_option compiler.ignoreBorrowAnnotation true in
@@ -287,33 +303,35 @@ def tokenWithAntiquot.formatter (p : Formatter) : Formatter := do
   else
     p
 
-def categoryFormatterCore (cat : Name) : Formatter := withReader ({ · with cat }) do
-  modify fun st => { st with mustBeGrouped := true, isUngrouped := false }
-  let stx ← getCur
-  trace[PrettyPrinter.format] "formatting {indentD (format stx)}"
-  if stx.getKind == `choice then
-    visitArgs do
-      -- format only last choice
-      -- TODO: We could use elaborator data here to format the chosen child when available
-      formatterForKind (← getCur).getKind
-  else if cat == `rawStx then
-    withAntiquot.formatter (mkAntiquot.formatter' cat.toString cat (isPseudoKind := true)) (push stx.formatStx *> goLeft)
-  else
-    withAntiquot.formatter (mkAntiquot.formatter' cat.toString cat (isPseudoKind := true)) (formatterForKind stx.getKind)
-  modify fun st => { st with mustBeGrouped := true, isUngrouped := !st.mustBeGrouped }
+def categoryFormatterCore (cat : Name) : Formatter :=
+  withReader ({ · with cat }) do
+    modify fun st => { st with mustBeGrouped := true, isUngrouped := false }
+    let stx ← getCur
+    trace[PrettyPrinter.format] "formatting {indentD (format stx)}"
+    if stx.getKind == `choice then
+      visitArgs do
+        -- format only last choice
+        -- TODO: We could use elaborator data here to format the chosen child when available
+        formatterForKind (← getCur).getKind
+    else if cat == `rawStx then
+      withAntiquot.formatter (mkAntiquot.formatter' cat.toString cat (isPseudoKind := true))
+        (push stx.formatStx *> goLeft)
+    else
+      withAntiquot.formatter (mkAntiquot.formatter' cat.toString cat (isPseudoKind := true))
+        (formatterForKind stx.getKind)
+    modify fun st => { st with mustBeGrouped := true, isUngrouped := !st.mustBeGrouped }
 
 @[combinator_formatter categoryParser, expose]
 def categoryParser.formatter (cat : Name) : Formatter := do
   concat <| categoryFormatterCore cat
   unless (← get).isUngrouped do
     let indent := Std.Format.getIndent (← read).options
-    modify fun st => { st with
-      stack := st.stack.modify (st.stack.size - 1) fun fmt =>
-        fmt.nest indent |>.fill
+    modify fun st => {
+      st with
+      stack := st.stack.modify (st.stack.size - 1) fun fmt => fmt.nest indent |>.fill
     }
 
-def categoryFormatter (cat : Name) : Formatter :=
-  fill <| indent <| categoryFormatterCore cat
+def categoryFormatter (cat : Name) : Formatter := fill <| indent <| categoryFormatterCore cat
 
 @[combinator_formatter parserOfStack, expose]
 def parserOfStack.formatter (offset : Nat) (_prec : Nat := 0) : Formatter := do
@@ -342,21 +360,22 @@ def checkKind (k : SyntaxNodeKind) : FormatterM Unit := do
 
 @[combinator_formatter node, expose]
 def node.formatter (k : SyntaxNodeKind) (p : Formatter) : Formatter := do
-  checkKind k;
+  checkKind k
   visitArgs p
 
 @[combinator_formatter withFn, expose]
 def withFn.formatter (_ : ParserFn → ParserFn) (p : Formatter) : Formatter := p
 
 @[combinator_formatter withForbiddens, expose]
-def withForbiddens.formatter (tks : Array Token) (p : Formatter) (_h : tks.toList.Nodup) :
-    Formatter := p
+def withForbiddens.formatter (tks : Array Token) (p : Formatter) (_h : tks.toList.Nodup)
+    : Formatter :=
+  p
 
 @[combinator_formatter trailingNode, expose]
 def trailingNode.formatter (k : SyntaxNodeKind) (_ _ : Nat) (p : Formatter) : Formatter := do
   checkKind k
   visitArgs do
-    p;
+    p
     -- leading term, not actually produced by `p`
     categoryParser.formatter (← read).cat
 
@@ -364,17 +383,14 @@ def parseTokenCore (s : String) (table : Parser.TokenTable) : CoreM ParserState 
   -- include comment tokens, e.g. when formatting `- -0`
   let ictx := .mk s "" (fileMap := FileMap.ofString "")
   return (Parser.andthenFn Parser.whitespace (Parser.tokenFn [])).run ictx
-    {
-      env := ← getEnv,
-      options := ← getOptions
-    } table (Parser.mkParserState s)
+    { env := ← getEnv, options := ← getOptions } table (Parser.mkParserState s)
 
-def parseToken (s : String) : FormatterM ParserState := do
-  parseTokenCore s (← read).table
+def parseToken (s : String) : FormatterM ParserState := do parseTokenCore s (← read).table
 
 /-- Whether adjoining `tk` and `leadWord` requires a space to keep their tokens separate. -/
-def needsTokenSeparator (tk leadWord : String) (ident leadWordIdent : Bool)
-    (table : Parser.TokenTable) : CoreM Bool := do
+def needsTokenSeparator
+    (tk leadWord : String) (ident leadWordIdent : Bool) (table : Parser.TokenTable)
+    : CoreM Bool := do
   if ident && leadWordIdent then
     return true
   let tk := tk.trimAsciiStart.copy
@@ -404,11 +420,19 @@ def pushToken (info : SourceInfo) (tk : String) (ident : Bool) : FormatterM Unit
     if !insertSpace then
       -- extend `leadWord` if not prefixed by whitespace
       push tk
-      modify fun st => { st with leadWord := if tk.trimAsciiStart == tk.toSlice then tk ++ st.leadWord else "", leadWordIdent := ident }
+      modify fun st => {
+        st with
+        leadWord := if tk.trimAsciiStart == tk.toSlice then tk ++ st.leadWord else ""
+        leadWordIdent := ident
+      }
     else
       pushLine
       push tk
-      modify fun st => { st with leadWord := if tk.trimAsciiStart == tk.toSlice then tk else "", leadWordIdent := ident }
+      modify fun st => {
+        st with
+        leadWord := if tk.trimAsciiStart == tk.toSlice then tk else ""
+        leadWordIdent := ident
+      }
   else
     -- already separated => use `tk` as is
     if st.leadWord == "" then
@@ -418,7 +442,11 @@ def pushToken (info : SourceInfo) (tk : String) (ident : Bool) : FormatterM Unit
       push tk.trimAsciiEnd.copy
     else
       push tk -- preserve special whitespace for tokens like ":=\n"
-    modify fun st => { st with leadWord := if tk.trimAsciiStart == tk.toSlice then tk else "", leadWordIdent := ident }
+    modify fun st => {
+      st with
+      leadWord := if tk.trimAsciiStart == tk.toSlice then tk else ""
+      leadWordIdent := ident
+    }
 
   if let SourceInfo.original ss _ _ _ := info then
     -- preserve non-whitespace content (comments)
@@ -428,7 +456,7 @@ def pushToken (info : SourceInfo) (tk : String) (ident : Bool) : FormatterM Unit
       let postNL := Substring.Raw.contains { ss with startPos := ss'.stopPos } '\n'
       -- Indentation is automatically increased when entering a category, but comments should be aligned
       -- with the actual token, so dedent
-      indent (indent := some (-Std.Format.getIndent (← getOptions))) do
+      indent (indent := some (- Std.Format.getIndent (← getOptions))) do
         if postNL then
           pushWhitespace "\n"
         else
@@ -446,27 +474,33 @@ def pushToken (info : SourceInfo) (tk : String) (ident : Bool) : FormatterM Unit
 def symbolNoAntiquot.formatter (sym : String) : Formatter := do
   let stx ← getCur
   if stx.isToken sym then
-    let (Syntax.atom info _) := stx | unreachable!
+    let (Syntax.atom info _) := stx
+      | unreachable!
     withMaybeTag (getExprPos? stx) <| pushToken info sym false
     goLeft
   else
-    trace[PrettyPrinter.format.backtrack] "unexpected syntax '{format stx}', expected symbol '{sym}'"
+    trace[PrettyPrinter.format.backtrack]
+      "unexpected syntax '{format stx}', expected symbol '{sym}'"
     throwBacktrack
 
-@[combinator_formatter nonReservedSymbolNoAntiquot, expose] def nonReservedSymbolNoAntiquot.formatter := symbolNoAntiquot.formatter
+@[combinator_formatter nonReservedSymbolNoAntiquot, expose]
+def nonReservedSymbolNoAntiquot.formatter := symbolNoAntiquot.formatter
 
-@[combinator_formatter rawCh, expose] def rawCh.formatter (ch : Char) (trailingWs : Bool := false) := do
+@[combinator_formatter rawCh, expose]
+def rawCh.formatter (ch : Char) (trailingWs : Bool := false) := do
   unless trailingWs do
     resetLeadWord
   symbolNoAntiquot.formatter ch.toString
 
 @[combinator_formatter unicodeSymbolNoAntiquot, expose]
-def unicodeSymbolNoAntiquot.formatter (sym asciiSym : String) (preserveForPP : Bool) : Formatter := do
+def unicodeSymbolNoAntiquot.formatter (sym asciiSym : String) (preserveForPP : Bool)
+    : Formatter := do
   let stx ← getCur
   let usesUnicode := stx.isToken sym
   let usesAscii := stx.isToken asciiSym
   if usesUnicode || usesAscii then
-    let (Syntax.atom info _) := stx | unreachable!
+    let (Syntax.atom info _) := stx
+      | unreachable!
     -- Use unicode version if pp.unicode is enabled and either preserveForPP is false or the syntax contains the unicode version
     if getPPUnicode (← getOptions) && (!preserveForPP || usesUnicode) then
       withMaybeTag (getExprPos? stx) <| pushToken info sym false
@@ -474,7 +508,8 @@ def unicodeSymbolNoAntiquot.formatter (sym asciiSym : String) (preserveForPP : B
       withMaybeTag (getExprPos? stx) <| pushToken info asciiSym false
     goLeft
   else
-    trace[PrettyPrinter.format.backtrack] "unexpected syntax '{format stx}', expected symbol '{sym}' or '{asciiSym}'"
+    trace[PrettyPrinter.format.backtrack]
+      "unexpected syntax '{format stx}', expected symbol '{sym}' or '{asciiSym}'"
     throwBacktrack
 
 @[combinator_formatter identNoAntiquot, expose]
@@ -488,14 +523,16 @@ def identNoAntiquot.formatter : Formatter := do
   withMaybeTag (getExprPos? stx) (pushToken info (id.toStringWithToken (isToken := isToken)) true)
   goLeft
 
-@[combinator_formatter rawIdentNoAntiquot, expose] def rawIdentNoAntiquot.formatter : Formatter := do
+@[combinator_formatter rawIdentNoAntiquot, expose]
+def rawIdentNoAntiquot.formatter : Formatter := do
   checkKind identKind
   let stx@(Syntax.ident info _ id _) ← getCur
     | throwError m!"not an ident: {← getCur}"
   withMaybeTag (getExprPos? stx) (pushToken info id.toString true)
   goLeft
 
-@[combinator_formatter identEq, expose] def identEq.formatter (_id : Name) := rawIdentNoAntiquot.formatter
+@[combinator_formatter identEq, expose]
+def identEq.formatter (_id : Name) := rawIdentNoAntiquot.formatter
 
 def visitAtom (k : SyntaxNodeKind) : Formatter := do
   let stx ← getCur
@@ -506,25 +543,33 @@ def visitAtom (k : SyntaxNodeKind) : Formatter := do
   pushToken info val false
   goLeft
 
-@[combinator_formatter charLitNoAntiquot, expose] def charLitNoAntiquot.formatter := visitAtom charLitKind
-@[combinator_formatter strLitNoAntiquot, expose] def strLitNoAntiquot.formatter := visitAtom strLitKind
-@[combinator_formatter nameLitNoAntiquot, expose] def nameLitNoAntiquot.formatter := visitAtom nameLitKind
-@[combinator_formatter numLitNoAntiquot, expose] def numLitNoAntiquot.formatter := visitAtom numLitKind
+@[combinator_formatter charLitNoAntiquot, expose]
+def charLitNoAntiquot.formatter := visitAtom charLitKind
+@[combinator_formatter strLitNoAntiquot, expose]
+def strLitNoAntiquot.formatter := visitAtom strLitKind
+@[combinator_formatter nameLitNoAntiquot, expose]
+def nameLitNoAntiquot.formatter := visitAtom nameLitKind
+@[combinator_formatter numLitNoAntiquot, expose]
+def numLitNoAntiquot.formatter := visitAtom numLitKind
 
-@[combinator_formatter scientificLitNoAntiquot, expose] def scientificLitNoAntiquot.formatter := visitAtom scientificLitKind
-@[combinator_formatter fieldIdx, expose] def fieldIdx.formatter := visitAtom fieldIdxKind
+@[combinator_formatter scientificLitNoAntiquot, expose]
+def scientificLitNoAntiquot.formatter := visitAtom scientificLitKind
+@[combinator_formatter fieldIdx, expose]
+def fieldIdx.formatter := visitAtom fieldIdxKind
 
 @[combinator_formatter manyNoAntiquot, expose]
 def manyNoAntiquot.formatter (p : Formatter) : Formatter := do
   let stx ← getCur
   visitArgs $ stx.getArgs.size.forM fun _ _ => p
 
-@[combinator_formatter many1NoAntiquot, expose] def many1NoAntiquot.formatter (p : Formatter) : Formatter := manyNoAntiquot.formatter p
+@[combinator_formatter many1NoAntiquot, expose]
+def many1NoAntiquot.formatter (p : Formatter) : Formatter := manyNoAntiquot.formatter p
 
 @[combinator_formatter optionalNoAntiquot, expose]
 def optionalNoAntiquot.formatter (p : Formatter) : Formatter := do
   let stx ← getCur
-  visitArgs <| unless stx.getArgs.isEmpty do p
+  visitArgs <| unless stx.getArgs.isEmpty do
+    p
 
 @[combinator_formatter many1Unbox, expose]
 def many1Unbox.formatter (p : Formatter) : Formatter := do
@@ -539,46 +584,66 @@ def sepByNoAntiquot.formatter (p pSep : Formatter) : Formatter := do
   let stx ← getCur
   visitArgs <| stx.getArgs.size.forRevM fun i _ => if i % 2 == 0 then p else pSep
 
-@[combinator_formatter sepBy1NoAntiquot, expose] def sepBy1NoAntiquot.formatter := sepByNoAntiquot.formatter
+@[combinator_formatter sepBy1NoAntiquot, expose]
+def sepBy1NoAntiquot.formatter := sepByNoAntiquot.formatter
 
-@[combinator_formatter withoutInfo, expose] def withoutInfo.formatter (p : Formatter) : Formatter := p
-@[combinator_formatter checkWsBefore, expose] def checkWsBefore.formatter : Formatter := do
+@[combinator_formatter withoutInfo, expose]
+def withoutInfo.formatter (p : Formatter) : Formatter := p
+@[combinator_formatter checkWsBefore, expose]
+def checkWsBefore.formatter : Formatter := do
   let st ← get
   if st.leadWord != "" then
     pushLine
 
-@[combinator_formatter checkPrec, expose] def checkPrec.formatter : Formatter := pure ()
-@[combinator_formatter checkLhsPrec, expose] def checkLhsPrec.formatter : Formatter := pure ()
-@[combinator_formatter setLhsPrec, expose] def setLhsPrec.formatter : Formatter := pure ()
-@[combinator_formatter checkStackTop, expose] def checkStackTop.formatter : Formatter := pure ()
-@[combinator_formatter checkNoWsBefore, expose] def checkNoWsBefore.formatter : Formatter :=
+@[combinator_formatter checkPrec, expose]
+def checkPrec.formatter : Formatter := pure ()
+@[combinator_formatter checkLhsPrec, expose]
+def checkLhsPrec.formatter : Formatter := pure ()
+@[combinator_formatter setLhsPrec, expose]
+def setLhsPrec.formatter : Formatter := pure ()
+@[combinator_formatter checkStackTop, expose]
+def checkStackTop.formatter : Formatter := pure ()
+@[combinator_formatter checkNoWsBefore, expose]
+def checkNoWsBefore.formatter : Formatter :=
   -- prevent automatic whitespace insertion
   resetLeadWord
-@[combinator_formatter checkLinebreakBefore, expose] def checkLinebreakBefore.formatter : Formatter := pure ()
-@[combinator_formatter checkTailWs, expose] def checkTailWs.formatter : Formatter := pure ()
-@[combinator_formatter checkColEq, expose] def checkColEq.formatter : Formatter := pure ()
-@[combinator_formatter checkColGe, expose] def checkColGe.formatter : Formatter := pure ()
-@[combinator_formatter checkColGt, expose] def checkColGt.formatter : Formatter := pure ()
-@[combinator_formatter checkLineEq, expose] def checkLineEq.formatter : Formatter := pure ()
+@[combinator_formatter checkLinebreakBefore, expose]
+def checkLinebreakBefore.formatter : Formatter := pure ()
+@[combinator_formatter checkTailWs, expose]
+def checkTailWs.formatter : Formatter := pure ()
+@[combinator_formatter checkColEq, expose]
+def checkColEq.formatter : Formatter := pure ()
+@[combinator_formatter checkColGe, expose]
+def checkColGe.formatter : Formatter := pure ()
+@[combinator_formatter checkColGt, expose]
+def checkColGt.formatter : Formatter := pure ()
+@[combinator_formatter checkLineEq, expose]
+def checkLineEq.formatter : Formatter := pure ()
 
-@[combinator_formatter eoi, expose] def eoi.formatter : Formatter := pure ()
-@[combinator_formatter checkNoImmediateColon, expose] def checkNoImmediateColon.formatter : Formatter := pure ()
-@[combinator_formatter skip, expose] def skip.formatter : Formatter := pure ()
+@[combinator_formatter eoi, expose]
+def eoi.formatter : Formatter := pure ()
+@[combinator_formatter checkNoImmediateColon, expose]
+def checkNoImmediateColon.formatter : Formatter := pure ()
+@[combinator_formatter skip, expose]
+def skip.formatter : Formatter := pure ()
 
-@[combinator_formatter pushNone, expose] def pushNone.formatter : Formatter := goLeft
-@[combinator_formatter hygieneInfoNoAntiquot, expose] def hygieneInfoNoAntiquot.formatter : Formatter := goLeft
+@[combinator_formatter pushNone, expose]
+def pushNone.formatter : Formatter := goLeft
+@[combinator_formatter hygieneInfoNoAntiquot, expose]
+def hygieneInfoNoAntiquot.formatter : Formatter := goLeft
 
 @[combinator_formatter interpolatedStr, expose]
 def interpolatedStr.formatter (p : Formatter) : Formatter := do
   visitArgs $ (← getCur).getArgs.reverse.forM fun chunk =>
     match chunk.isLit? interpolatedStrLitKind with
     | some str => push str *> goLeft
-    | none     => p
+    | none => p
 
-@[combinator_formatter hexnumNoAntiquot, expose] def hexnum.formatter := visitAtom hexnumKind
+@[combinator_formatter hexnumNoAntiquot, expose]
+def hexnum.formatter := visitAtom hexnumKind
 
-@[combinator_formatter _root_.ite, expose, macro_inline] def ite {_ : Type} (c : Prop) [Decidable c] (t e : Formatter) : Formatter :=
-  if c then t else e
+@[combinator_formatter _root_.ite, expose, macro_inline]
+def ite {_ : Type} (c : Prop) [Decidable c] (t e : Formatter) : Formatter := if c then t else e
 
 abbrev FormatterAliasValue := AliasValue Formatter
 
@@ -589,14 +654,16 @@ def registerAlias (aliasName : Name) (v : FormatterAliasValue) : IO Unit := do
 
 instance : Coe Formatter FormatterAliasValue := { coe := AliasValue.const }
 instance : Coe (Formatter → Formatter) FormatterAliasValue := { coe := AliasValue.unary }
-instance : Coe (Formatter → Formatter → Formatter) FormatterAliasValue := { coe := AliasValue.binary }
+instance : Coe (Formatter → Formatter → Formatter) FormatterAliasValue := {
+  coe := AliasValue.binary
+}
 
 end Formatter
 open Formatter
 
 register_builtin_option pp.oneline : Bool := {
   defValue := false
-  descr    := "(pretty printer) elide all but first line of pretty printer output"
+  descr := "(pretty printer) elide all but first line of pretty printer output"
 }
 
 namespace OneLine
@@ -634,9 +701,7 @@ instance : Std.Format.MonadPrettyFormat M where
     let acc := ended.foldl (init := (← get).line) fun acc (t, line') => line'.append (acc.tag t)
     modify fun st => { st with line := acc, tags := tags.drop num }
 
-/--
-Pretty prints `f` and creates a new `Format` of its first line. Preserves tags.
--/
+/-- Pretty prints `f` and creates a new `Format` of its first line. Preserves tags. -/
 def pretty (f : Format) (width : Nat) : Format :=
   let m : M Unit := Std.Format.prettyM f width
   match m.run {} with
