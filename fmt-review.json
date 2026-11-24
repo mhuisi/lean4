@@ -1,0 +1,2996 @@
+{
+ "version": 1,
+ "reference": {
+  "commit": "0f708979a3c571aae0c647bf70232f6b53e2de03",
+  "date": "2026-11-23",
+  "title": "chore: update stage0",
+  "reviewed": "2026-11-24"
+ },
+ "target": {
+  "commit": "0f708979a3c571aae0c647bf70232f6b53e2de03",
+  "date": "2026-11-23",
+  "title": "chore: update stage0",
+  "refreshed": "2026-11-24",
+  "commitCount": 0,
+  "local": []
+ },
+ "items": {},
+ "commits": {},
+ "missingNotes": {},
+ "log": [],
+ "missing": {
+  "Lake.DSL.buildDeclSig": {
+   "module": "Lake.DSL.Syntax",
+   "lines": [
+    201,
+    202
+   ],
+   "owner": "Lake.DSL.buildDeclSig",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtLibraryFacetDecl",
+    "Lake.Formatters.fmtModuleFacetDecl",
+    "Lake.Formatters.fmtPackageFacetDecl",
+    "Lake.Formatters.fmtTargetCommand",
+    "Lake.Formatters.fmtWithBuildDeclSig"
+   ]
+  },
+  "Lake.DSL.cmdDo": {
+   "module": "Lake.DSL.Syntax",
+   "lines": [
+    459,
+    464
+   ],
+   "owner": "Lake.DSL.cmdDo",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.MetaIf.mk",
+    "Lake.Formatters.deconstructMetaIf?",
+    "Lake.Formatters.fmtMetaIfBranch",
+    "Lake.Formatters.fmtMetaIfChain"
+   ]
+  },
+  "Lake.DSL.declValDo": {
+   "module": "Lake.DSL.DeclUtil",
+   "lines": [
+    66,
+    67
+   ],
+   "owner": "Lake.DSL.declValDo",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtPostUpdateDecl",
+    "Lake.Formatters.fmtScriptDecl"
+   ]
+  },
+  "Lake.DSL.declValStruct": {
+   "module": "Lake.DSL.DeclUtil",
+   "lines": [
+    69,
+    70
+   ],
+   "owner": "Lake.DSL.declValStruct",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtWithOptConfig"
+   ]
+  },
+  "Lake.DSL.declValWhere": {
+   "module": "Lake.DSL.DeclUtil",
+   "lines": [
+    72,
+    73
+   ],
+   "owner": "Lake.DSL.declValWhere",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtWithOptConfig"
+   ]
+  },
+  "Lake.DSL.depSpec": {
+   "module": "Lake.DSL.Syntax",
+   "lines": [
+    161,
+    162
+   ],
+   "owner": "Lake.DSL.depSpec",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtRequireDecl"
+   ]
+  },
+  "Lake.DSL.externLibDeclSpec": {
+   "module": "Lake.DSL.Syntax",
+   "lines": [
+    350,
+    351
+   ],
+   "owner": "Lake.DSL.externLibDeclSpec",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtExternLibCommand"
+   ]
+  },
+  "Lake.DSL.optConfig": {
+   "module": "Lake.DSL.DeclUtil",
+   "lines": [
+    78,
+    79
+   ],
+   "owner": "Lake.DSL.optConfig",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtInputDirCommand",
+    "Lake.Formatters.fmtInputFileCommand",
+    "Lake.Formatters.fmtLeanExeCommand",
+    "Lake.Formatters.fmtLeanLibCommand",
+    "Lake.Formatters.fmtPackageCommand",
+    "Lake.Formatters.fmtWithOptConfig"
+   ]
+  },
+  "Lake.DSL.scriptDeclSpec": {
+   "module": "Lake.DSL.Syntax",
+   "lines": [
+    396,
+    397
+   ],
+   "owner": "Lake.DSL.scriptDeclSpec",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtScriptDecl"
+   ]
+  },
+  "Lake.DSL.structVal": {
+   "module": "Lake.DSL.DeclUtil",
+   "lines": [
+    63,
+    64
+   ],
+   "owner": "Lake.DSL.structVal",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtWithOptConfig"
+   ]
+  },
+  "Lake.DSL.verClause": {
+   "module": "Lake.DSL.Syntax",
+   "lines": [
+    151,
+    156
+   ],
+   "owner": "Lake.DSL.verClause",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtRequireDecl"
+   ]
+  },
+  "Lean.Doc.Parser.Arg.anon": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    402,
+    404
+   ],
+   "owner": "Lean.Doc.Parser.Arg.anon",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Arg.flag_off": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    420,
+    423
+   ],
+   "owner": "Lean.Doc.Parser.Arg.flag_off",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Arg.flag_on": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    415,
+    418
+   ],
+   "owner": "Lean.Doc.Parser.Arg.flag_on",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Arg.named": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    406,
+    409
+   ],
+   "owner": "Lean.Doc.Parser.Arg.named",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Arg.named_no_paren": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    411,
+    413
+   ],
+   "owner": "Lean.Doc.Parser.Arg.named_no_paren",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.ArgVal.ident": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    383,
+    384
+   ],
+   "owner": "Lean.Doc.Parser.ArgVal.ident",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.ArgVal.num": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    386,
+    387
+   ],
+   "owner": "Lean.Doc.Parser.ArgVal.num",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.ArgVal.str": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    380,
+    381
+   ],
+   "owner": "Lean.Doc.Parser.ArgVal.str",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Block.blockquote": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    882,
+    886
+   ],
+   "owner": "Lean.Doc.Parser.Block.blockquote",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Block.codeblock": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    887,
+    917
+   ],
+   "owner": "Lean.Doc.Parser.Block.codeblock",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Block.command": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    974,
+    984
+   ],
+   "owner": "Lean.Doc.Parser.Block.command",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Block.directive": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    919,
+    950
+   ],
+   "owner": "Lean.Doc.Parser.Block.directive",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Block.dl": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    879,
+    881
+   ],
+   "owner": "Lean.Doc.Parser.Block.dl",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Block.footnote_ref": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    964,
+    968
+   ],
+   "owner": "Lean.Doc.Parser.Block.footnote_ref",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Block.header": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    951,
+    958
+   ],
+   "owner": "Lean.Doc.Parser.Block.header",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Block.link_ref": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    959,
+    963
+   ],
+   "owner": "Lean.Doc.Parser.Block.link_ref",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Block.metadata_block": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    969,
+    973
+   ],
+   "owner": "Lean.Doc.Parser.Block.metadata_block",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Block.ol": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    876,
+    878
+   ],
+   "owner": "Lean.Doc.Parser.Block.ol",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Block.para": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    870,
+    872
+   ],
+   "owner": "Lean.Doc.Parser.Block.para",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Block.ul": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    873,
+    875
+   ],
+   "owner": "Lean.Doc.Parser.Block.ul",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.DescItem.item": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    862,
+    864
+   ],
+   "owner": "Lean.Doc.Parser.DescItem.item",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Inline.bold": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    705,
+    713
+   ],
+   "owner": "Lean.Doc.Parser.Inline.bold",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Inline.code": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    714,
+    726
+   ],
+   "owner": "Lean.Doc.Parser.Inline.code",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Inline.display_math": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    730,
+    732
+   ],
+   "owner": "Lean.Doc.Parser.Inline.display_math",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Inline.emph": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    698,
+    704
+   ],
+   "owner": "Lean.Doc.Parser.Inline.emph",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Inline.footnote": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    749,
+    755
+   ],
+   "owner": "Lean.Doc.Parser.Inline.footnote",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Inline.image": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    739,
+    748
+   ],
+   "owner": "Lean.Doc.Parser.Inline.image",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Inline.inline_math": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    727,
+    729
+   ],
+   "owner": "Lean.Doc.Parser.Inline.inline_math",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Inline.linebreak": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    756,
+    756
+   ],
+   "owner": "Lean.Doc.Parser.Inline.linebreak",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Inline.link": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    733,
+    738
+   ],
+   "owner": "Lean.Doc.Parser.Inline.link",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Inline.role": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    757,
+    773
+   ],
+   "owner": "Lean.Doc.Parser.Inline.role",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.Inline.text": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    697,
+    697
+   ],
+   "owner": "Lean.Doc.Parser.Inline.text",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.LinkTarget.ref": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    444,
+    447
+   ],
+   "owner": "Lean.Doc.Parser.LinkTarget.ref",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.LinkTarget.url": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    439,
+    442
+   ],
+   "owner": "Lean.Doc.Parser.LinkTarget.url",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.ListItem.item": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    854,
+    856
+   ],
+   "owner": "Lean.Doc.Parser.ListItem.item",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.boldDelimiter": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    555,
+    557
+   ],
+   "owner": "Lean.Doc.Parser.boldDelimiter",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.codeBlockFence": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    568,
+    572
+   ],
+   "owner": "Lean.Doc.Parser.codeBlockFence",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.codeDelimiter": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    560,
+    565
+   ],
+   "owner": "Lean.Doc.Parser.codeDelimiter",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.directiveDelimiter": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    588,
+    590
+   ],
+   "owner": "Lean.Doc.Parser.directiveDelimiter",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.displayMathMarker": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    583,
+    585
+   ],
+   "owner": "Lean.Doc.Parser.displayMathMarker",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.document": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    992,
+    994
+   ],
+   "owner": "Lean.Doc.Parser.document",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.emphDelimiter": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    550,
+    552
+   ],
+   "owner": "Lean.Doc.Parser.emphDelimiter",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.headerMarker": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    518,
+    522
+   ],
+   "owner": "Lean.Doc.Parser.headerMarker",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.inlineMathMarker": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    575,
+    580
+   ],
+   "owner": "Lean.Doc.Parser.inlineMathMarker",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.listMarker": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    525,
+    530
+   ],
+   "owner": "Lean.Doc.Parser.listMarker",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.parseFailure": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "Lean.Doc.Parser.versoCode": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    85,
+    86
+   ],
+   "owner": "Lean.Doc.Parser.versoCode",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.versoCodeBlock": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    93,
+    94
+   ],
+   "owner": "Lean.Doc.Parser.versoCodeBlock",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.versoCodeLine": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    89,
+    90
+   ],
+   "owner": "Lean.Doc.Parser.versoCodeLine",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.versoImageAlt": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    81,
+    82
+   ],
+   "owner": "Lean.Doc.Parser.versoImageAlt",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.versoLinkRefUrl": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    77,
+    78
+   ],
+   "owner": "Lean.Doc.Parser.versoLinkRefUrl",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.versoLinkUrl": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    73,
+    74
+   ],
+   "owner": "Lean.Doc.Parser.versoLinkUrl",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.versoRef": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    69,
+    70
+   ],
+   "owner": "Lean.Doc.Parser.versoRef",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Doc.Parser.versoText": {
+   "module": "Lean.DocString.Syntax",
+   "lines": [
+    65,
+    66
+   ],
+   "owner": "Lean.Doc.Parser.versoText",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Elab.ConfigEval.configEntries": {
+   "module": "Lean.Elab.ConfigEval.Commands",
+   "lines": [
+    71,
+    71
+   ],
+   "owner": "Lean.Elab.ConfigEval.configEntries",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtDeclareCommandConfig",
+    "Lean.Fmt.fmtDeclareConfig",
+    "Lean.Fmt.fmtDeclareCoreConfigElab",
+    "Lean.Fmt.fmtDeclareTacticConfig",
+    "Lean.Fmt.fmtDeclareTermConfigElab",
+    "Lean.Fmt.fmtDefEvalConfigItemCmd",
+    "Lean.Fmt.fmtWithConfigEntries"
+   ]
+  },
+  "Lean.Html.Syntax.attr": {
+   "module": "Lean.Data.Html.Syntax",
+   "lines": [
+    407,
+    418
+   ],
+   "owner": "Lean.Html.Syntax.attr",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Html.Syntax.attrName": {
+   "module": "Lean.Data.Html.Syntax",
+   "lines": [
+    359,
+    368
+   ],
+   "owner": "Lean.Html.Syntax.attrName",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Html.Syntax.attrVal": {
+   "module": "Lean.Data.Html.Syntax",
+   "lines": [
+    378,
+    380
+   ],
+   "owner": "Lean.Html.Syntax.attrVal",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Html.Syntax.comment": {
+   "module": "Lean.Data.Html.Syntax",
+   "lines": [
+    320,
+    323
+   ],
+   "owner": "Lean.Html.Syntax.comment",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Html.Syntax.content": {
+   "module": "Lean.Data.Html.Syntax",
+   "lines": [
+    533,
+    538
+   ],
+   "owner": "Lean.Html.Syntax.content",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Html.Syntax.element": {
+   "module": "Lean.Data.Html.Syntax",
+   "lines": [
+    579,
+    587
+   ],
+   "owner": "Lean.Html.Syntax.element",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Html.Syntax.interp": {
+   "module": "Lean.Data.Html.Syntax",
+   "lines": [
+    181,
+    182
+   ],
+   "owner": "Lean.Html.Syntax.interp",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Html.Syntax.interpMany": {
+   "module": "Lean.Data.Html.Syntax",
+   "lines": [
+    185,
+    186
+   ],
+   "owner": "Lean.Html.Syntax.interpMany",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Html.Syntax.tagName": {
+   "module": "Lean.Data.Html.Syntax",
+   "lines": [
+    341,
+    349
+   ],
+   "owner": "Lean.Html.Syntax.tagName",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Html.Syntax.text": {
+   "module": "Lean.Data.Html.Syntax",
+   "lines": [
+    212,
+    223
+   ],
+   "owner": "Lean.Html.Syntax.text",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Html.Syntax.«html%»": {
+   "module": "Lean.Data.Html.Syntax",
+   "lines": [
+    652,
+    655
+   ],
+   "owner": "Lean.Html.Syntax.«html%»",
+   "categories": [
+    "term"
+   ],
+   "refs": []
+  },
+  "Lean.Parser.Command.InternalSyntax.end_local_scope": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    389,
+    395
+   ],
+   "owner": "Lean.Parser.Command.InternalSyntax.end_local_scope",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Parser.Command.InternalSyntax.without_check_deprecated": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    399,
+    401
+   ],
+   "owner": "Lean.Parser.Command.InternalSyntax.without_check_deprecated",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Parser.Command.commentBody": {
+   "module": "Lean.Parser.Term",
+   "lines": [
+    177,
+    178
+   ],
+   "owner": "Lean.Parser.Command.commentBody",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Parser.Command.contractDeclVal": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    210,
+    214
+   ],
+   "owner": "Lean.Parser.Command.contractDeclVal",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Parser.Command.declModifiers": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    100,
+    121
+   ],
+   "owner": "Lean.Parser.Command.declModifiers",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtConfigDecl",
+    "Lake.Formatters.fmtConfigField",
+    "Lean.Fmt.fmtClassAbbrev",
+    "Lean.Fmt.fmtComputedField",
+    "Lean.Fmt.fmtCtor",
+    "Lean.Fmt.fmtDeclWithDeclModifiers",
+    "Lean.Fmt.fmtDeclaration",
+    "Lean.Fmt.fmtInitialize",
+    "Lean.Fmt.fmtRegisterOption",
+    "Lean.Fmt.fmtStructCtor",
+    "Lean.Fmt.fmtStructExplicitBinder",
+    "Lean.Fmt.fmtStructImplicitBinder",
+    "Lean.Fmt.fmtStructInstBinder",
+    "Lean.Fmt.fmtStructSimpleBinder"
+   ]
+  },
+  "Lean.Parser.Command.declSig": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    128,
+    131
+   ],
+   "owner": "Lean.Parser.Command.declSig",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtConfigField",
+    "Lean.Fmt.fmtAxiom",
+    "Lean.Fmt.fmtInstance",
+    "Lean.Fmt.fmtOpaque",
+    "Lean.Fmt.fmtStructImplicitBinder",
+    "Lean.Fmt.fmtStructInstBinder",
+    "Lean.Fmt.fmtTheorem"
+   ]
+  },
+  "Lean.Parser.Command.declValEqns": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    194,
+    195
+   ],
+   "owner": "Lean.Parser.Command.declValEqns",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtCacheServiceCommand",
+    "Lean.Fmt.fmtAbbrev",
+    "Lean.Fmt.fmtDefinition",
+    "Lean.Fmt.fmtExample",
+    "Lean.Fmt.fmtInstance",
+    "Lean.Fmt.fmtRecallCmd",
+    "Lean.Fmt.fmtTheorem"
+   ]
+  },
+  "Lean.Parser.Command.declValSimple": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    192,
+    193
+   ],
+   "owner": "Lean.Parser.Command.declValSimple",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtCacheServiceCommand",
+    "Lake.Formatters.fmtExternLibCommand",
+    "Lake.Formatters.fmtPostUpdateDecl",
+    "Lake.Formatters.fmtScriptDecl",
+    "Lake.Formatters.fmtWithBuildDeclSig",
+    "Lean.Fmt.fmtAbbrev",
+    "Lean.Fmt.fmtDefinition",
+    "Lean.Fmt.fmtExample",
+    "Lean.Fmt.fmtInstance",
+    "Lean.Fmt.fmtOpaque",
+    "Lean.Fmt.fmtRecallCmd",
+    "Lean.Fmt.fmtTheorem"
+   ]
+  },
+  "Lean.Parser.Command.elabTail": {
+   "module": "Lean.Parser.Syntax",
+   "lines": [
+    126,
+    126
+   ],
+   "owner": "Lean.Parser.Command.elabTail",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtElab"
+   ]
+  },
+  "Lean.Parser.Command.ensuresClause": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    143,
+    145
+   ],
+   "owner": "Lean.Parser.Command.ensuresClause",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Parser.Command.givenClause": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    132,
+    137
+   ],
+   "owner": "Lean.Parser.Command.givenClause",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Parser.Command.grindPatternCnstrs": {
+   "module": "Lean.Meta.Tactic.Grind.Parser",
+   "lines": [
+    35,
+    35
+   ],
+   "owner": "Lean.Parser.Command.grindPatternCnstrs",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtGrindPattern"
+   ]
+  },
+  "Lean.Parser.Command.macroTail": {
+   "module": "Lean.Parser.Syntax",
+   "lines": [
+    118,
+    118
+   ],
+   "owner": "Lean.Parser.Command.macroTail",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtMacro"
+   ]
+  },
+  "Lean.Parser.Command.openHiding": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    811,
+    812
+   ],
+   "owner": "Lean.Parser.Command.openHiding",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtOpenDecl"
+   ]
+  },
+  "Lean.Parser.Command.openOnly": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    817,
+    818
+   ],
+   "owner": "Lean.Parser.Command.openOnly",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtOpenDecl"
+   ]
+  },
+  "Lean.Parser.Command.openRenaming": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    815,
+    816
+   ],
+   "owner": "Lean.Parser.Command.openRenaming",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtOpenDecl"
+   ]
+  },
+  "Lean.Parser.Command.openScoped": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    821,
+    822
+   ],
+   "owner": "Lean.Parser.Command.openScoped",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtOpenDecl"
+   ]
+  },
+  "Lean.Parser.Command.openSimple": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    819,
+    820
+   ],
+   "owner": "Lean.Parser.Command.openSimple",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtOpenDecl"
+   ]
+  },
+  "Lean.Parser.Command.optDeclSig": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    153,
+    158
+   ],
+   "owner": "Lean.Parser.Command.optDeclSig",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtAbbrev",
+    "Lean.Fmt.fmtClassInductive",
+    "Lean.Fmt.fmtCoinductive",
+    "Lean.Fmt.fmtCtor",
+    "Lean.Fmt.fmtDefinition",
+    "Lean.Fmt.fmtExample",
+    "Lean.Fmt.fmtInductive",
+    "Lean.Fmt.fmtRecallCmd",
+    "Lean.Fmt.fmtStructExplicitBinder",
+    "Lean.Fmt.fmtStructSimpleBinder",
+    "Lean.Fmt.fmtStructure"
+   ]
+  },
+  "Lean.Parser.Command.requiresClause": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    138,
+    142
+   ],
+   "owner": "Lean.Parser.Command.requiresClause",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Parser.Command.sectionHeader": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    336,
+    340
+   ],
+   "owner": "Lean.Parser.Command.sectionHeader",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtSection"
+   ]
+  },
+  "Lean.Parser.Command.structFields": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    295,
+    299
+   ],
+   "owner": "Lean.Parser.Command.structFields",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtStructure"
+   ]
+  },
+  "Lean.Parser.Command.throwsClause": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    146,
+    149
+   ],
+   "owner": "Lean.Parser.Command.throwsClause",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Parser.Command.versoCommentBody": {
+   "module": "Lean.Parser.Term",
+   "lines": [
+    115,
+    120
+   ],
+   "owner": "Lean.Parser.Command.versoCommentBody",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Parser.Command.whereStructInst": {
+   "module": "Lean.Parser.Command",
+   "lines": [
+    196,
+    198
+   ],
+   "owner": "Lean.Parser.Command.whereStructInst",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtCacheServiceCommand",
+    "Lean.Fmt.fmtAbbrev",
+    "Lean.Fmt.fmtDefinition",
+    "Lean.Fmt.fmtExample",
+    "Lean.Fmt.fmtInstance",
+    "Lean.Fmt.fmtRecallCmd",
+    "Lean.Fmt.fmtTheorem"
+   ]
+  },
+  "Lean.Parser.Tactic.SolveByElim.args": {
+   "module": "Init.Tactics",
+   "lines": [
+    1716,
+    1717
+   ],
+   "owner": "Lean.Parser.Tactic.SolveByElim.args",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtApplyAssumption",
+    "Lean.Fmt.fmtApplyRules",
+    "Lean.Fmt.fmtSolveByElim"
+   ]
+  },
+  "Lean.Parser.Tactic.SolveByElim.using_": {
+   "module": "Init.Tactics",
+   "lines": [
+    1718,
+    1719
+   ],
+   "owner": "Lean.Parser.Tactic.SolveByElim.using_",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtApplyAssumption",
+    "Lean.Fmt.fmtApplyRules",
+    "Lean.Fmt.fmtSolveByElim"
+   ]
+  },
+  "Lean.Parser.Tactic.dsimpArgs": {
+   "module": "Init.Tactics",
+   "lines": [
+    763,
+    764
+   ],
+   "owner": "Lean.Parser.Tactic.dsimpArgs",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtConvDSimpTrace",
+    "Lean.Fmt.fmtWithDSimpTraceArgsRest",
+    "Lean.Fmt.fmtWithSimpAllTraceArgsRest"
+   ]
+  },
+  "Lean.Parser.Tactic.dsimpTraceArgsRest": {
+   "module": "Init.Tactics",
+   "lines": [
+    794,
+    795
+   ],
+   "owner": "Lean.Parser.Tactic.dsimpTraceArgsRest",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtDSimpTrace",
+    "Lean.Fmt.fmtDSimpTraceBang",
+    "Lean.Fmt.fmtWithDSimpTraceArgsRest"
+   ]
+  },
+  "Lean.Parser.Tactic.frameAlt": {
+   "module": "Std.WP.Tactic",
+   "lines": [
+    62,
+    68
+   ],
+   "owner": "Lean.Parser.Tactic.frameAlt",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtFrameAlt",
+    "Lean.Fmt.fmtGrindVCGen",
+    "Lean.Fmt.fmtVCGen"
+   ]
+  },
+  "Lean.Parser.Tactic.grindNorm": {
+   "module": "Init.Grind.Tactics",
+   "lines": [
+    319,
+    331
+   ],
+   "owner": "Lean.Parser.Tactic.grindNorm",
+   "categories": [
+    "tactic"
+   ],
+   "refs": []
+  },
+  "Lean.Parser.Tactic.inductionAlt": {
+   "module": "Init.Tactics",
+   "lines": [
+    1008,
+    1012
+   ],
+   "owner": "Lean.Parser.Tactic.inductionAlt",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtInductionAlt",
+    "Lean.Fmt.fmtWithInductionAlts"
+   ]
+  },
+  "Lean.Parser.Tactic.inductionAlts": {
+   "module": "Init.Tactics",
+   "lines": [
+    1013,
+    1017
+   ],
+   "owner": "Lean.Parser.Tactic.inductionAlts",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtFunCases",
+    "Lean.Fmt.fmtFunInduction",
+    "Lean.Fmt.fmtInductionLike",
+    "Lean.Fmt.fmtTacticCases",
+    "Lean.Fmt.fmtTacticInduction",
+    "Lean.Fmt.fmtWithInductionAlts"
+   ]
+  },
+  "Lean.Parser.Tactic.invariantCaseAlt": {
+   "module": "Std.WP.Tactic",
+   "lines": [
+    41,
+    44
+   ],
+   "owner": "Lean.Parser.Tactic.invariantCaseAlt",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtInvariantAlt",
+    "Lean.Fmt.fmtInvariantAlts"
+   ]
+  },
+  "Lean.Parser.Tactic.invariantDotAlt": {
+   "module": "Std.WP.Tactic",
+   "lines": [
+    36,
+    39
+   ],
+   "owner": "Lean.Parser.Tactic.invariantDotAlt",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtInvariantAlt",
+    "Lean.Fmt.fmtInvariantAlts"
+   ]
+  },
+  "Lean.Parser.Tactic.locationHyp": {
+   "module": "Init.Tactics",
+   "lines": [
+    526,
+    530
+   ],
+   "owner": "Lean.Parser.Tactic.locationHyp",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtLocation"
+   ]
+  },
+  "Lean.Parser.Tactic.mrefinePats": {
+   "module": "Std.Tactic.Do.Syntax",
+   "lines": [
+    274,
+    274
+   ],
+   "owner": "Lean.Parser.Tactic.mrefinePats",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtMRefinePatTuple"
+   ]
+  },
+  "Lean.Parser.Tactic.optConfig": {
+   "module": "Init.Tactics",
+   "lines": [
+    30,
+    31
+   ],
+   "owner": "Lean.Parser.Tactic.optConfig",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtApply?",
+    "Lean.Fmt.fmtApplyAssumption",
+    "Lean.Fmt.fmtApplyRules",
+    "Lean.Fmt.fmtAssumptionModCast",
+    "Lean.Fmt.fmtBvCheck",
+    "Lean.Fmt.fmtBvDecide",
+    "Lean.Fmt.fmtBvNormalize",
+    "Lean.Fmt.fmtBvTrace",
+    "Lean.Fmt.fmtConstructor",
+    "Lean.Fmt.fmtConstructorBang",
+    "Lean.Fmt.fmtConvDSimp",
+    "Lean.Fmt.fmtConvDSimpTrace",
+    "Lean.Fmt.fmtConvErw",
+    "Lean.Fmt.fmtConvExtractLets",
+    "Lean.Fmt.fmtConvLiftLets",
+    "Lean.Fmt.fmtConvRewrite",
+    "Lean.Fmt.fmtConvRw",
+    "Lean.Fmt.fmtConvSimp",
+    "Lean.Fmt.fmtConvSimpTrace",
+    "Lean.Fmt.fmtCutsat",
+    "Lean.Fmt.fmtDSimp",
+    "Lean.Fmt.fmtDSimpAutoUnfold",
+    "Lean.Fmt.fmtDecide",
+    "Lean.Fmt.fmtDeclareSimpLikeTactic",
+    "Lean.Fmt.fmtEpr",
+    "Lean.Fmt.fmtErw",
+    "Lean.Fmt.fmtExact?",
+    "Lean.Fmt.fmtExtractLets",
+    "Lean.Fmt.fmtExtractLetsLike",
+    "Lean.Fmt.fmtGrindBvCheck",
+    "Lean.Fmt.fmtGrindBvDecide",
+    "Lean.Fmt.fmtGrindBvDecidePush",
+    "Lean.Fmt.fmtGrindBvNormalize",
+    "Lean.Fmt.fmtGrindBvTrace",
+    "Lean.Fmt.fmtGrindLinarithTactic",
+    "Lean.Fmt.fmtGrindOrder",
+    "Lean.Fmt.fmtGrindRw",
+    "Lean.Fmt.fmtGrindTactic",
+    "Lean.Fmt.fmtGrindTraceTactic",
+    "Lean.Fmt.fmtGrindVCGen",
+    "Lean.Fmt.fmtGrobner",
+    "Lean.Fmt.fmtImpossible",
+    "Lean.Fmt.fmtLiaTactic",
+    "Lean.Fmt.fmtLiftLets",
+    "Lean.Fmt.fmtLiftLetsLike",
+    "Lean.Fmt.fmtMVCGen",
+    "Lean.Fmt.fmtMVCGenHint",
+    "Lean.Fmt.fmtNativeDecide",
+    "Lean.Fmt.fmtNormCast",
+    "Lean.Fmt.fmtNormCast0",
+    "Lean.Fmt.fmtOmega",
+    "Lean.Fmt.fmtPushCast",
+    "Lean.Fmt.fmtRewrite",
+    "Lean.Fmt.fmtRw",
+    "Lean.Fmt.fmtRwLike",
+    "Lean.Fmt.fmtRwModCast",
+    "Lean.Fmt.fmtSimp",
+    "Lean.Fmt.fmtSimpAll",
+    "Lean.Fmt.fmtSimpAllArith",
+    "Lean.Fmt.fmtSimpAllArithBang",
+    "Lean.Fmt.fmtSimpAllAutoUnfold",
+    "Lean.Fmt.fmtSimpArith",
+    "Lean.Fmt.fmtSimpArithBang",
+    "Lean.Fmt.fmtSimpAutoUnfold",
+    "Lean.Fmt.fmtSimpLike",
+    "Lean.Fmt.fmtSimpaLike",
+    "Lean.Fmt.fmtSolveByElim",
+    "Lean.Fmt.fmtSymTactic",
+    "Lean.Fmt.fmtTryTrace",
+    "Lean.Fmt.fmtTryTraceWith",
+    "Lean.Fmt.fmtVCGen",
+    "Lean.Fmt.fmtVCGenHead",
+    "Lean.Fmt.fmtVCGenLike",
+    "Lean.Fmt.fmtWithDSimpTraceArgsRest",
+    "Lean.Fmt.fmtWithSimpAllTraceArgsRest",
+    "Lean.Fmt.fmtWithSimpTraceArgsRest",
+    "Lean.Fmt.fmtWithSimpaArgsRest",
+    "Lean.Fmt.fmtWithSimpaUsingBangArgsRest",
+    "Lean.Fmt.tacticOptConfigItems"
+   ]
+  },
+  "Lean.Parser.Tactic.seq1": {
+   "module": "Lean.Parser.Term.Basic",
+   "lines": [
+    95,
+    97
+   ],
+   "owner": "Lean.Parser.Tactic.seq1",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Parser.Tactic.simpAllTraceArgsRest": {
+   "module": "Init.Tactics",
+   "lines": [
+    785,
+    786
+   ],
+   "owner": "Lean.Parser.Tactic.simpAllTraceArgsRest",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtSimpAllTrace",
+    "Lean.Fmt.fmtSimpAllTraceBang",
+    "Lean.Fmt.fmtWithSimpAllTraceArgsRest"
+   ]
+  },
+  "Lean.Parser.Tactic.simpArgs": {
+   "module": "Init.Tactics",
+   "lines": [
+    754,
+    755
+   ],
+   "owner": "Lean.Parser.Tactic.simpArgs",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtConvSimpTrace",
+    "Lean.Fmt.fmtWithSimpTraceArgsRest",
+    "Lean.Fmt.fmtWithSimpaArgsRest",
+    "Lean.Fmt.fmtWithSimpaUsingBangArgsRest"
+   ]
+  },
+  "Lean.Parser.Tactic.simpTraceArgsRest": {
+   "module": "Init.Tactics",
+   "lines": [
+    766,
+    767
+   ],
+   "owner": "Lean.Parser.Tactic.simpTraceArgsRest",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtSimpTrace",
+    "Lean.Fmt.fmtSimpTraceBang",
+    "Lean.Fmt.fmtWithSimpTraceArgsRest"
+   ]
+  },
+  "Lean.Parser.Tactic.simpaArgsRest": {
+   "module": "Init.Tactics",
+   "lines": [
+    803,
+    804
+   ],
+   "owner": "Lean.Parser.Tactic.simpaArgsRest",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtSimpa",
+    "Lean.Fmt.fmtSimpaBang",
+    "Lean.Fmt.fmtSimpaQuestion",
+    "Lean.Fmt.fmtSimpaQuestionBang",
+    "Lean.Fmt.fmtWithSimpaArgsRest"
+   ]
+  },
+  "Lean.Parser.Tactic.simpaUsingBangArgsRest": {
+   "module": "Init.Tactics",
+   "lines": [
+    830,
+    833
+   ],
+   "owner": "Lean.Parser.Tactic.simpaUsingBangArgsRest",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtSimpaBangUsingBang",
+    "Lean.Fmt.fmtSimpaQuestionBangUsingBang",
+    "Lean.Fmt.fmtSimpaQuestionUsingBang",
+    "Lean.Fmt.fmtSimpaUsingBang",
+    "Lean.Fmt.fmtWithSimpaUsingBangArgsRest"
+   ]
+  },
+  "Lean.Parser.Tactic.tripleNotationMacro": {
+   "module": "Init.Tactics",
+   "lines": [
+    2543,
+    2546
+   ],
+   "owner": "Lean.Parser.Tactic.tripleNotationMacro",
+   "categories": [
+    "term"
+   ],
+   "refs": []
+  },
+  "Lean.Parser.Tactic.vcAlt": {
+   "module": "Std.Tactic.Do.Syntax",
+   "lines": [
+    391,
+    395
+   ],
+   "owner": "Lean.Parser.Tactic.vcAlt",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtVCAlt",
+    "Lean.Fmt.fmtVCAlts"
+   ]
+  },
+  "Lean.Parser.Term.basicFun": {
+   "module": "Lean.Parser.Term",
+   "lines": [
+    507,
+    508
+   ],
+   "owner": "Lean.Parser.Term.basicFun",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtFun"
+   ]
+  },
+  "Lean.Parser.Term.binderDefault": {
+   "module": "Lean.Parser.Term.Basic",
+   "lines": [
+    186,
+    187
+   ],
+   "owner": "Lean.Parser.Term.binderDefault",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtBracketedSimpleBinder",
+    "Lean.Fmt.BinderKind.classify",
+    "Lean.Fmt.fmtBinder",
+    "Lean.Fmt.fmtBracketedExplicitBinders",
+    "Lean.Fmt.fmtExplicitBinder",
+    "Lean.Fmt.fmtImplicitBinder",
+    "Lean.Fmt.fmtInstBinder",
+    "Lean.Fmt.fmtRIntroPatBinder",
+    "Lean.Fmt.fmtStrictImplicitBinder",
+    "Lean.Fmt.fmtStructExplicitBinder",
+    "Lean.Fmt.fmtStructImplicitBinder",
+    "Lean.Fmt.fmtStructInstBinder",
+    "Lean.Fmt.fmtStructSimpleBinder",
+    "Lean.Fmt.fmtUnbracketedExplicitBinders",
+    "Lean.Fmt.splitBinder"
+   ]
+  },
+  "Lean.Parser.Term.binderTactic": {
+   "module": "Lean.Parser.Term.Basic",
+   "lines": [
+    183,
+    185
+   ],
+   "owner": "Lean.Parser.Term.binderTactic",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtBracketedSimpleBinder",
+    "Lean.Fmt.BinderKind.classify",
+    "Lean.Fmt.fmtBinder",
+    "Lean.Fmt.fmtBracketedExplicitBinders",
+    "Lean.Fmt.fmtExplicitBinder",
+    "Lean.Fmt.fmtImplicitBinder",
+    "Lean.Fmt.fmtInstBinder",
+    "Lean.Fmt.fmtRIntroPatBinder",
+    "Lean.Fmt.fmtStrictImplicitBinder",
+    "Lean.Fmt.fmtStructExplicitBinder",
+    "Lean.Fmt.fmtStructImplicitBinder",
+    "Lean.Fmt.fmtStructInstBinder",
+    "Lean.Fmt.fmtStructSimpleBinder",
+    "Lean.Fmt.fmtUnbracketedExplicitBinders",
+    "Lean.Fmt.splitBinder"
+   ]
+  },
+  "Lean.Parser.Term.byTactic'": {
+   "module": "Lean.Parser.Term",
+   "lines": [
+    233,
+    241
+   ],
+   "owner": "Lean.Parser.Term.byTactic'",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtShow",
+    "Lean.Fmt.fmtSuffices",
+    "Lean.Fmt.fmtTacticSuffices"
+   ]
+  },
+  "Lean.Parser.Term.doAssertion": {
+   "module": "Lean.Parser.Do",
+   "lines": [
+    295,
+    302
+   ],
+   "owner": "Lean.Parser.Term.doAssertion",
+   "categories": [
+    "doElem"
+   ],
+   "refs": []
+  },
+  "Lean.Parser.Term.doCatch": {
+   "module": "Lean.Parser.Do",
+   "lines": [
+    233,
+    234
+   ],
+   "owner": "Lean.Parser.Term.doCatch",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtDoTry",
+    "Lean.Fmt.fmtTermTry",
+    "Lean.Fmt.fmtTryCatchFinally"
+   ]
+  },
+  "Lean.Parser.Term.doCatchMatch": {
+   "module": "Lean.Parser.Do",
+   "lines": [
+    235,
+    236
+   ],
+   "owner": "Lean.Parser.Term.doCatchMatch",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtDoTry",
+    "Lean.Fmt.fmtTermTry",
+    "Lean.Fmt.fmtTryCatchFinally"
+   ]
+  },
+  "Lean.Parser.Term.doErased": {
+   "module": "Lean.Parser.Do",
+   "lines": [
+    112,
+    114
+   ],
+   "owner": "Lean.Parser.Term.doErased",
+   "categories": [
+    "doElem"
+   ],
+   "refs": []
+  },
+  "Lean.Parser.Term.doErasedArrow": {
+   "module": "Lean.Parser.Do",
+   "lines": [
+    115,
+    117
+   ],
+   "owner": "Lean.Parser.Term.doErasedArrow",
+   "categories": [
+    "doElem"
+   ],
+   "refs": []
+  },
+  "Lean.Parser.Term.doFinally": {
+   "module": "Lean.Parser.Do",
+   "lines": [
+    237,
+    238
+   ],
+   "owner": "Lean.Parser.Term.doFinally",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtDoTry",
+    "Lean.Fmt.fmtTermTry",
+    "Lean.Fmt.fmtTryCatchFinally"
+   ]
+  },
+  "Lean.Parser.Term.doIdDecl": {
+   "module": "Lean.Parser.Do",
+   "lines": [
+    93,
+    95
+   ],
+   "owner": "Lean.Parser.Term.doIdDecl",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtDoLetArrow",
+    "Lean.Fmt.fmtDoReassignArrow",
+    "Lean.Fmt.fmtWithDoIdDecl"
+   ]
+  },
+  "Lean.Parser.Term.doIfLetBind": {
+   "module": "Lean.Parser.Do",
+   "lines": [
+    166,
+    166
+   ],
+   "owner": "Lean.Parser.Term.doIfLetBind",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtDoIfLet"
+   ]
+  },
+  "Lean.Parser.Term.doIfLetPure": {
+   "module": "Lean.Parser.Do",
+   "lines": [
+    165,
+    165
+   ],
+   "owner": "Lean.Parser.Term.doIfLetPure",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtDoIfLet"
+   ]
+  },
+  "Lean.Parser.Term.doLoopDecreasing": {
+   "module": "Lean.Parser.Do",
+   "lines": [
+    199,
+    207
+   ],
+   "owner": "Lean.Parser.Term.doLoopDecreasing",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Parser.Term.doLoopInvariant": {
+   "module": "Lean.Parser.Do",
+   "lines": [
+    187,
+    198
+   ],
+   "owner": "Lean.Parser.Term.doLoopInvariant",
+   "categories": [],
+   "refs": []
+  },
+  "Lean.Parser.Term.doPatDecl": {
+   "module": "Lean.Parser.Do",
+   "lines": [
+    96,
+    98
+   ],
+   "owner": "Lean.Parser.Term.doPatDecl",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtDoLetArrow",
+    "Lean.Fmt.fmtDoReassignArrow",
+    "Lean.Fmt.fmtWithDoPatDecl"
+   ]
+  },
+  "Lean.Parser.Term.doSeqItem": {
+   "module": "Lean.Parser.Do",
+   "lines": [
+    27,
+    28
+   ],
+   "owner": "Lean.Parser.Term.doSeqItem",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtDoSeqBracketed",
+    "Lean.Fmt.fmtDoSeqIndent",
+    "Lean.Fmt.fmtDoSeqItems"
+   ]
+  },
+  "Lean.Parser.Term.fromTerm": {
+   "module": "Lean.Parser.Term",
+   "lines": [
+    342,
+    343
+   ],
+   "owner": "Lean.Parser.Term.fromTerm",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtShow",
+    "Lean.Fmt.fmtSuffices",
+    "Lean.Fmt.fmtTacticSuffices"
+   ]
+  },
+  "Lean.Parser.Term.letRecDecl": {
+   "module": "Lean.Parser.Term",
+   "lines": [
+    837,
+    840
+   ],
+   "owner": "Lean.Parser.Term.letRecDecl",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtFullLetRecDecl.isSimpleDecl",
+    "Lean.Fmt.fmtLetRecDecl",
+    "Lean.Fmt.fmtLetRecDecls",
+    "Lean.Fmt.fmtLetrec.isSimpleDecl",
+    "Lean.Fmt.fmtWhereDecls"
+   ]
+  },
+  "Lean.Parser.Term.letRecDecls": {
+   "module": "Lean.Parser.Term",
+   "lines": [
+    841,
+    844
+   ],
+   "owner": "Lean.Parser.Term.letRecDecls",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtDoLetRec",
+    "Lean.Fmt.fmtFullLetRecDecl",
+    "Lean.Fmt.fmtFullLetRecDecl.isSimpleDecl",
+    "Lean.Fmt.fmtLetRecDecls",
+    "Lean.Fmt.fmtLetrec",
+    "Lean.Fmt.fmtLetrec.isSimpleDecl",
+    "Lean.Fmt.fmtTacticLetrec"
+   ]
+  },
+  "Lean.Parser.Term.local": {
+   "module": "Lean.Parser.Term",
+   "lines": [
+    708,
+    708
+   ],
+   "owner": "Lean.Parser.Term.local",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtAttrKind"
+   ]
+  },
+  "Lean.Parser.Term.macroDollarArg": {
+   "module": "Lean.Parser.Term",
+   "lines": [
+    1147,
+    1147
+   ],
+   "owner": "Lean.Parser.Term.macroDollarArg",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtStateRefT"
+   ]
+  },
+  "Lean.Parser.Term.matchAlt": {
+   "module": "Lean.Parser.Term",
+   "lines": [
+    389,
+    394
+   ],
+   "owner": "Lean.Parser.Term.matchAlt",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtFun.isSingleMatchAlt",
+    "Lean.Fmt.fmtMatchAlt",
+    "Lean.Fmt.fmtMatchAlts",
+    "Lean.Fmt.isComplexAlt"
+   ]
+  },
+  "Lean.Parser.Term.matchAltsWhereDecls": {
+   "module": "Lean.Parser.Term",
+   "lines": [
+    867,
+    869
+   ],
+   "owner": "Lean.Parser.Term.matchAltsWhereDecls",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtCacheServiceCommand",
+    "Lean.Fmt.fmtAbbrev",
+    "Lean.Fmt.fmtDefinition",
+    "Lean.Fmt.fmtExample",
+    "Lean.Fmt.fmtInstance",
+    "Lean.Fmt.fmtRecallCmd",
+    "Lean.Fmt.fmtTheorem"
+   ]
+  },
+  "Lean.Parser.Term.matchExprAlt": {
+   "module": "Lean.Parser.Term",
+   "lines": [
+    1174,
+    1174
+   ],
+   "owner": "Lean.Parser.Term.matchExprAlt",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtMatchExprAlt"
+   ]
+  },
+  "Lean.Parser.Term.matchExprElseAlt": {
+   "module": "Lean.Parser.Term",
+   "lines": [
+    1175,
+    1175
+   ],
+   "owner": "Lean.Parser.Term.matchExprElseAlt",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtMatchExprElseAlt"
+   ]
+  },
+  "Lean.Parser.Term.scoped": {
+   "module": "Lean.Parser.Term",
+   "lines": [
+    707,
+    707
+   ],
+   "owner": "Lean.Parser.Term.scoped",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtAttrKind"
+   ]
+  },
+  "Lean.Parser.Term.structInstFields": {
+   "module": "Lean.Parser.Term.Basic",
+   "lines": [
+    300,
+    301
+   ],
+   "owner": "Lean.Parser.Term.structInstFields",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtCacheServiceCommand",
+    "Lake.Formatters.fmtWithOptConfig",
+    "Lean.Fmt.fmtAbbrev",
+    "Lean.Fmt.fmtDefinition",
+    "Lean.Fmt.fmtExample",
+    "Lean.Fmt.fmtInstance",
+    "Lean.Fmt.fmtRecallCmd",
+    "Lean.Fmt.fmtStructInst",
+    "Lean.Fmt.fmtTheorem"
+   ]
+  },
+  "Lean.Parser.Term.sufficesDecl": {
+   "module": "Lean.Parser.Term",
+   "lines": [
+    345,
+    348
+   ],
+   "owner": "Lean.Parser.Term.sufficesDecl",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtSuffices",
+    "Lean.Fmt.fmtTacticSuffices"
+   ]
+  },
+  "Lean.Parser.Term.typeSpec": {
+   "module": "Lean.Parser.Term.Basic",
+   "lines": [
+    261,
+    262
+   ],
+   "owner": "Lean.Parser.Term.typeSpec",
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtConfigDecl",
+    "Lake.Formatters.fmtConfigField",
+    "Lake.Formatters.fmtWithBuildDeclSig",
+    "Lean.Fmt.fmtAbbrev",
+    "Lean.Fmt.fmtAxiom",
+    "Lean.Fmt.fmtClassInductive",
+    "Lean.Fmt.fmtCoinductive",
+    "Lean.Fmt.fmtCtor",
+    "Lean.Fmt.fmtDefinition",
+    "Lean.Fmt.fmtExample",
+    "Lean.Fmt.fmtForall",
+    "Lean.Fmt.fmtFun",
+    "Lean.Fmt.fmtInductive",
+    "Lean.Fmt.fmtInitialize",
+    "Lean.Fmt.fmtInstance",
+    "Lean.Fmt.fmtLetEqnsDecl",
+    "Lean.Fmt.fmtLetIdDecl",
+    "Lean.Fmt.fmtLetIdDeclNoBinders",
+    "Lean.Fmt.fmtLetPatDecl",
+    "Lean.Fmt.fmtOpaque",
+    "Lean.Fmt.fmtRecallCmd",
+    "Lean.Fmt.fmtStructExplicitBinder",
+    "Lean.Fmt.fmtStructImplicitBinder",
+    "Lean.Fmt.fmtStructInstBinder",
+    "Lean.Fmt.fmtStructInstField",
+    "Lean.Fmt.fmtStructSimpleBinder",
+    "Lean.Fmt.fmtStructure",
+    "Lean.Fmt.fmtTheorem",
+    "Lean.Fmt.fmtWithDoIdDecl",
+    "Lean.Fmt.fmtWithDoPatDecl"
+   ]
+  },
+  "Lean.Parser.Termination.decreasingBy": {
+   "module": "Lean.Parser.Term",
+   "lines": [
+    816,
+    826
+   ],
+   "owner": "Lean.Parser.Termination.decreasingBy",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtTerminationSuffix"
+   ]
+  },
+  "Lean.Widget.widgetInstanceSpec": {
+   "module": "Lean.Widget.Commands",
+   "lines": [
+    21,
+    21
+   ],
+   "owner": "Lean.Widget.widgetInstanceSpec",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtAddWidgetSpec",
+    "Lean.Fmt.fmtWidgetCmd"
+   ]
+  },
+  "Lean.calcSteps": {
+   "module": "Init.NotationExtra",
+   "lines": [
+    102,
+    102
+   ],
+   "owner": "Lean.calcSteps",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtCalc",
+    "Lean.Fmt.fmtCalcTactic",
+    "Lean.Fmt.fmtCalcTerm",
+    "Lean.Fmt.fmtConvCalc"
+   ]
+  },
+  "Lean.explicitBinders": {
+   "module": "Init.NotationExtra",
+   "lines": [
+    23,
+    23
+   ],
+   "owner": "Lean.explicitBinders",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.explicitBindersToGroup",
+    "Lean.Fmt.fmtExists",
+    "Lean.Fmt.fmtExistsKeyword",
+    "Lean.Fmt.fmtIInf",
+    "Lean.Fmt.fmtISup",
+    "Lean.Fmt.fmtPSigma",
+    "Lean.Fmt.fmtSigma"
+   ]
+  },
+  "Lean.reduceConfig": {
+   "module": "Init.Notation",
+   "lines": [
+    770,
+    771
+   ],
+   "owner": "Lean.reduceConfig",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtReduceCmd",
+    "Lean.Fmt.fmtReduceConfig"
+   ]
+  },
+  "Lean.unifConstraintElem": {
+   "module": "Init.NotationExtra",
+   "lines": [
+    67,
+    67
+   ],
+   "owner": "Lean.unifConstraintElem",
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtUnifHint"
+   ]
+  },
+  "antiquotName": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "antiquotNestedExpr": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "binderPred.quot": {
+   "module": "Init.BinderPredicates",
+   "lines": [
+    18,
+    22
+   ],
+   "owner": "Lean.binderPred.quot",
+   "categories": [],
+   "refs": []
+  },
+  "conv.quot": {
+   "module": "Init.Conv",
+   "lines": [
+    18,
+    23
+   ],
+   "owner": "Lean.Parser.Tactic.Conv.conv.quot",
+   "categories": [],
+   "refs": []
+  },
+  "grind.quot": {
+   "module": "Init.Grind.Interactive",
+   "lines": [
+    47,
+    49
+   ],
+   "owner": "Lean.Parser.Tactic.Grind.grind.quot",
+   "categories": [],
+   "refs": []
+  },
+  "grind_filter.quot": {
+   "module": "Init.Grind.Interactive",
+   "lines": [
+    29,
+    29
+   ],
+   "owner": "Lean.Parser.Tactic.Grind.grind_filter.quot",
+   "categories": [],
+   "refs": []
+  },
+  "grind_mod.quot": {
+   "module": "Init.Grind.Attr",
+   "lines": [
+    315,
+    316
+   ],
+   "owner": "Lean.Parser.Attr.grind_mod.quot",
+   "categories": [],
+   "refs": []
+  },
+  "grind_ref.quot": {
+   "module": "Init.Grind.Interactive",
+   "lines": [
+    115,
+    115
+   ],
+   "owner": "Lean.Parser.Tactic.Grind.grind_ref.quot",
+   "categories": [],
+   "refs": []
+  },
+  "group": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtBuiltinFacetCommand",
+    "Lake.Formatters.fmtGlobAndSubmodules",
+    "Lake.Formatters.fmtGlobSubmodules",
+    "Lake.Formatters.fmtMetaIfBranch",
+    "Lean.Fmt.BinderKind.classify",
+    "Lean.Fmt.fmtAttemptAll",
+    "Lean.Fmt.fmtAttemptAllPar",
+    "Lean.Fmt.fmtClassAbbrev",
+    "Lean.Fmt.fmtClassInductive",
+    "Lean.Fmt.fmtConvFirst",
+    "Lean.Fmt.fmtDeclareSimpLikeTactic",
+    "Lean.Fmt.fmtDoIf",
+    "Lean.Fmt.fmtDoLetRec",
+    "Lean.Fmt.fmtFirst",
+    "Lean.Fmt.fmtFirstPar",
+    "Lean.Fmt.fmtGetElemExclamation",
+    "Lean.Fmt.fmtGetElemQuestion",
+    "Lean.Fmt.fmtGrindFirst",
+    "Lean.Fmt.fmtInductionAltLHS",
+    "Lean.Fmt.fmtLetrec",
+    "Lean.Fmt.fmtMayThrowPostCond",
+    "Lean.Fmt.fmtNoThrowPostCond",
+    "Lean.Fmt.fmtReduceConfig",
+    "Lean.Fmt.fmtRegisterParserAlias",
+    "Lean.Fmt.fmtSolve",
+    "Lean.Fmt.fmtStop",
+    "Lean.Fmt.fmtStrictImplicitBinder",
+    "Lean.Fmt.fmtSuffices",
+    "Lean.Fmt.fmtTacticSuffices",
+    "Lean.Fmt.splitBinder",
+    "Lean.Fmt.transparentParserAliases"
+   ],
+   "generic": true
+  },
+  "ident": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtBracketedSimpleBinder",
+    "Lake.Formatters.fmtBuiltinFacetCommand",
+    "Lake.Formatters.fmtCacheServiceCommand",
+    "Lake.Formatters.fmtConfigDecl",
+    "Lake.Formatters.fmtConfigField",
+    "Lake.Formatters.fmtCustomDataDecl",
+    "Lake.Formatters.fmtDataTypeDecl",
+    "Lake.Formatters.fmtDeclField",
+    "Lake.Formatters.fmtFacetDataDecl",
+    "Lake.Formatters.fmtFacetSuffix",
+    "Lake.Formatters.fmtFamilyDef",
+    "Lake.Formatters.fmtGetConfig",
+    "Lake.Formatters.fmtHydrateOpaqueTypeCmd",
+    "Lake.Formatters.fmtIdentOrStr",
+    "Lake.Formatters.fmtLibraryDataDecl",
+    "Lake.Formatters.fmtModuleDataDecl",
+    "Lake.Formatters.fmtModuleTargetKeyLit",
+    "Lake.Formatters.fmtNonemptyTypeCmd",
+    "Lake.Formatters.fmtPackageDataDecl",
+    "Lake.Formatters.fmtPackageTargetKeyLit",
+    "Lake.Formatters.fmtPackageTargetLit",
+    "Lake.Formatters.fmtPostUpdateDecl",
+    "Lake.Formatters.fmtSimpleBinder",
+    "Lake.Formatters.toDeclarationBinders",
+    "Lean.Fmt.BinderKind.classify",
+    "Lean.Fmt.allowAppArgFill",
+    "Lean.Fmt.binderKinds",
+    "Lean.Fmt.convertBracketedBinders",
+    "Lean.Fmt.convertLetIdBinders",
+    "Lean.Fmt.convertStructInstFieldBinders",
+    "Lean.Fmt.deconstructPipeProj",
+    "Lean.Fmt.fmtAbbrev",
+    "Lean.Fmt.fmtAddDocString",
+    "Lean.Fmt.fmtAddWidgetSpec",
+    "Lean.Fmt.fmtAppDelab",
+    "Lean.Fmt.fmtAppLike",
+    "Lean.Fmt.fmtAppLike'",
+    "Lean.Fmt.fmtApplyAssumption",
+    "Lean.Fmt.fmtApplyRules",
+    "Lean.Fmt.fmtAssertNotExists",
+    "Lean.Fmt.fmtAssertNotImported",
+    "Lean.Fmt.fmtAssignmentDeclaration",
+    "Lean.Fmt.fmtAttributeCmd",
+    "Lean.Fmt.fmtAuxDef",
+    "Lean.Fmt.fmtAxiom",
+    "Lean.Fmt.fmtBinderIdent",
+    "Lean.Fmt.fmtBinderPredicate",
+    "Lean.Fmt.fmtBinop",
+    "Lean.Fmt.fmtBinopLazy",
+    "Lean.Fmt.fmtBinrel",
+    "Lean.Fmt.fmtBinrelNoProp",
+    "Lean.Fmt.fmtBuiltinCbvSimproc",
+    "Lean.Fmt.fmtBuiltinCbvSimprocDecl",
+    "Lean.Fmt.fmtBuiltinCbvSimprocPattern",
+    "Lean.Fmt.fmtBuiltinCommandCodeAction",
+    "Lean.Fmt.fmtBuiltinDSimproc",
+    "Lean.Fmt.fmtBuiltinDSimprocDecl",
+    "Lean.Fmt.fmtBuiltinEnvLinter",
+    "Lean.Fmt.fmtBuiltinGrindPropagator",
+    "Lean.Fmt.fmtBuiltinSimproc",
+    "Lean.Fmt.fmtBuiltinSimprocDecl",
+    "Lean.Fmt.fmtBuiltinSimprocPattern",
+    "Lean.Fmt.fmtBvTypes",
+    "Lean.Fmt.fmtByCases",
+    "Lean.Fmt.fmtCbvEval",
+    "Lean.Fmt.fmtCbvSimproc",
+    "Lean.Fmt.fmtCbvSimprocDecl",
+    "Lean.Fmt.fmtCbvSimprocPattern",
+    "Lean.Fmt.fmtClassAbbrev",
+    "Lean.Fmt.fmtClassInductive",
+    "Lean.Fmt.fmtClear",
+    "Lean.Fmt.fmtCoinductive",
+    "Lean.Fmt.fmtCommandCodeAction",
+    "Lean.Fmt.fmtCommandConfigElabLegacy",
+    "Lean.Fmt.fmtComputedField",
+    "Lean.Fmt.fmtConfigElabLegacy",
+    "Lean.Fmt.fmtConfigEntryHandlerKeyPrefix",
+    "Lean.Fmt.fmtConfigEntryOmit",
+    "Lean.Fmt.fmtConvDelta",
+    "Lean.Fmt.fmtConvExtractLets",
+    "Lean.Fmt.fmtConvTactic",
+    "Lean.Fmt.fmtConvUnfold",
+    "Lean.Fmt.fmtCtor",
+    "Lean.Fmt.fmtDSimpDeclareEvalBin",
+    "Lean.Fmt.fmtDSimpDeclareEvalBinBitwise",
+    "Lean.Fmt.fmtDSimpDeclareEvalBinBoolPred",
+    "Lean.Fmt.fmtDSimproc",
+    "Lean.Fmt.fmtDSimprocDecl",
+    "Lean.Fmt.fmtDeclId",
+    "Lean.Fmt.fmtDeclarationSignature",
+    "Lean.Fmt.fmtDeclareBitwiseIntTheorems",
+    "Lean.Fmt.fmtDeclareBitwiseUIntTheorems",
+    "Lean.Fmt.fmtDeclareCommandConfig",
+    "Lean.Fmt.fmtDeclareConfig",
+    "Lean.Fmt.fmtDeclareConfigElabLegacy",
+    "Lean.Fmt.fmtDeclareCoreConfigElab",
+    "Lean.Fmt.fmtDeclareDecidableIntQuantifiers",
+    "Lean.Fmt.fmtDeclareDecidableUIntQuantifiers",
+    "Lean.Fmt.fmtDeclareIntTheorems",
+    "Lean.Fmt.fmtDeclareSIntSimprocs",
+    "Lean.Fmt.fmtDeclareSimpLikeTactic",
+    "Lean.Fmt.fmtDeclareSyntaxCat",
+    "Lean.Fmt.fmtDeclareTacticConfig",
+    "Lean.Fmt.fmtDeclareTermConfigElab",
+    "Lean.Fmt.fmtDeclareUIntSimprocs",
+    "Lean.Fmt.fmtDeclareUIntTheorems",
+    "Lean.Fmt.fmtDefEvalConfigItemCmd",
+    "Lean.Fmt.fmtDefinition",
+    "Lean.Fmt.fmtDelta",
+    "Lean.Fmt.fmtDeprecated",
+    "Lean.Fmt.fmtDeprecatedArg",
+    "Lean.Fmt.fmtDeprecatedSyntax",
+    "Lean.Fmt.fmtDoElemTrace",
+    "Lean.Fmt.fmtDoElemTraceGoal",
+    "Lean.Fmt.fmtDoForDecl",
+    "Lean.Fmt.fmtDoIfProp",
+    "Lean.Fmt.fmtDocsToVerso",
+    "Lean.Fmt.fmtDotIdent",
+    "Lean.Fmt.fmtElab",
+    "Lean.Fmt.fmtElabRules",
+    "Lean.Fmt.fmtElabStxQuot",
+    "Lean.Fmt.fmtEnd",
+    "Lean.Fmt.fmtEraseAttr",
+    "Lean.Fmt.fmtEraseWidgetSpec",
+    "Lean.Fmt.fmtExact?",
+    "Lean.Fmt.fmtExample",
+    "Lean.Fmt.fmtExplicitBinder",
+    "Lean.Fmt.fmtExport",
+    "Lean.Fmt.fmtExportAttr",
+    "Lean.Fmt.fmtExternEntry",
+    "Lean.Fmt.fmtExtractLets",
+    "Lean.Fmt.fmtForall",
+    "Lean.Fmt.fmtFrameAlt",
+    "Lean.Fmt.fmtGenInjectiveTheorems",
+    "Lean.Fmt.fmtGeneralizeArg",
+    "Lean.Fmt.fmtGrindDSimp",
+    "Lean.Fmt.fmtGrindDefEq",
+    "Lean.Fmt.fmtGrindDepthLt",
+    "Lean.Fmt.fmtGrindEqCnstr",
+    "Lean.Fmt.fmtGrindErase",
+    "Lean.Fmt.fmtGrindFilterIdent",
+    "Lean.Fmt.fmtGrindHaveSilent",
+    "Lean.Fmt.fmtGrindIdentCnstr",
+    "Lean.Fmt.fmtGrindIdentLtCnstr",
+    "Lean.Fmt.fmtGrindIsGround",
+    "Lean.Fmt.fmtGrindIsStrictValue",
+    "Lean.Fmt.fmtGrindIsValue",
+    "Lean.Fmt.fmtGrindLintCheck",
+    "Lean.Fmt.fmtGrindLintInspect",
+    "Lean.Fmt.fmtGrindLintMute",
+    "Lean.Fmt.fmtGrindLintSkip",
+    "Lean.Fmt.fmtGrindNotDefEq",
+    "Lean.Fmt.fmtGrindNotStrictValue",
+    "Lean.Fmt.fmtGrindNotValue",
+    "Lean.Fmt.fmtGrindPattern",
+    "Lean.Fmt.fmtGrindPropagator",
+    "Lean.Fmt.fmtGrindPropagatorBuiltinAttr",
+    "Lean.Fmt.fmtGrindSetOption",
+    "Lean.Fmt.fmtGrindSimp",
+    "Lean.Fmt.fmtGrindSizeLt",
+    "Lean.Fmt.fmtGrindThmNs",
+    "Lean.Fmt.fmtHashMapSimpToModel",
+    "Lean.Fmt.fmtIdentPrec",
+    "Lean.Fmt.fmtImplicitBinder",
+    "Lean.Fmt.fmtImport",
+    "Lean.Fmt.fmtImportPath",
+    "Lean.Fmt.fmtInclude",
+    "Lean.Fmt.fmtInductionAltLHS",
+    "Lean.Fmt.fmtInductive",
+    "Lean.Fmt.fmtInductiveLike",
+    "Lean.Fmt.fmtInitGrindNorm",
+    "Lean.Fmt.fmtInitialize",
+    "Lean.Fmt.fmtInjection",
+    "Lean.Fmt.fmtInjections",
+    "Lean.Fmt.fmtInstBinder",
+    "Lean.Fmt.fmtInstance",
+    "Lean.Fmt.fmtIntros",
+    "Lean.Fmt.fmtJsonIdent",
+    "Lean.Fmt.fmtLeftact",
+    "Lean.Fmt.fmtLetId",
+    "Lean.Fmt.fmtLetIdDeclNoBinders",
+    "Lean.Fmt.fmtLetMVar",
+    "Lean.Fmt.fmtLetOptEq",
+    "Lean.Fmt.fmtLogNamedErrorAtMacro",
+    "Lean.Fmt.fmtLogNamedErrorMacro",
+    "Lean.Fmt.fmtLogNamedWarningAtMacro",
+    "Lean.Fmt.fmtLogNamedWarningMacro",
+    "Lean.Fmt.fmtMCases",
+    "Lean.Fmt.fmtMClear",
+    "Lean.Fmt.fmtMDup",
+    "Lean.Fmt.fmtMHave",
+    "Lean.Fmt.fmtMPure",
+    "Lean.Fmt.fmtMReplace",
+    "Lean.Fmt.fmtMRevertPatOne",
+    "Lean.Fmt.fmtMSpecialize",
+    "Lean.Fmt.fmtMSpecializePure",
+    "Lean.Fmt.fmtMacro",
+    "Lean.Fmt.fmtMacroArg",
+    "Lean.Fmt.fmtMacroAttr",
+    "Lean.Fmt.fmtMacroRules",
+    "Lean.Fmt.fmtMacroTrace",
+    "Lean.Fmt.fmtMatchDeclaration",
+    "Lean.Fmt.fmtMatchDiscr",
+    "Lean.Fmt.fmtMatchExprPat",
+    "Lean.Fmt.fmtNamedArgument",
+    "Lean.Fmt.fmtNamedName",
+    "Lean.Fmt.fmtNamedPattern",
+    "Lean.Fmt.fmtNamespace",
+    "Lean.Fmt.fmtNegConfigItem",
+    "Lean.Fmt.fmtNormCastAddElim",
+    "Lean.Fmt.fmtOmit",
+    "Lean.Fmt.fmtOpaque",
+    "Lean.Fmt.fmtOpenDecl",
+    "Lean.Fmt.fmtOpenRenamingItem",
+    "Lean.Fmt.fmtOptionRegistration",
+    "Lean.Fmt.fmtPosConfigItem",
+    "Lean.Fmt.fmtPostprocessStoredTracesCmd",
+    "Lean.Fmt.fmtPrint",
+    "Lean.Fmt.fmtPrintAxioms",
+    "Lean.Fmt.fmtPrintEqns",
+    "Lean.Fmt.fmtPrintSig",
+    "Lean.Fmt.fmtProj",
+    "Lean.Fmt.fmtRCasesPatOne",
+    "Lean.Fmt.fmtRecallCmd",
+    "Lean.Fmt.fmtRecallQuestionCmd",
+    "Lean.Fmt.fmtRecommendedSpelling",
+    "Lean.Fmt.fmtReduceConfig",
+    "Lean.Fmt.fmtRegisterBuiltinOption",
+    "Lean.Fmt.fmtRegisterErrorExplanationStx",
+    "Lean.Fmt.fmtRegisterGrindAttr",
+    "Lean.Fmt.fmtRegisterLabelAttr",
+    "Lean.Fmt.fmtRegisterLinterSet",
+    "Lean.Fmt.fmtRegisterOption",
+    "Lean.Fmt.fmtRegisterParserAlias",
+    "Lean.Fmt.fmtRegisterSimpAttr",
+    "Lean.Fmt.fmtRegisterSymDSimp",
+    "Lean.Fmt.fmtRegisterSymSimp",
+    "Lean.Fmt.fmtRegisterSymSimpAttr",
+    "Lean.Fmt.fmtRegisterTacticTag",
+    "Lean.Fmt.fmtRename",
+    "Lean.Fmt.fmtReprove",
+    "Lean.Fmt.fmtRightact",
+    "Lean.Fmt.fmtSeal",
+    "Lean.Fmt.fmtSection",
+    "Lean.Fmt.fmtSetOption",
+    "Lean.Fmt.fmtSimpDeclareEvalBin",
+    "Lean.Fmt.fmtSimpDeclareEvalBinBitwise",
+    "Lean.Fmt.fmtSimpDeclareEvalBinBoolPred",
+    "Lean.Fmt.fmtSimpToModelLike",
+    "Lean.Fmt.fmtSimpleAttr",
+    "Lean.Fmt.fmtSimproc",
+    "Lean.Fmt.fmtSimprocDecl",
+    "Lean.Fmt.fmtSimprocLike",
+    "Lean.Fmt.fmtSimprocPattern",
+    "Lean.Fmt.fmtSimprocPatternLike",
+    "Lean.Fmt.fmtSolveByElim",
+    "Lean.Fmt.fmtSpecializeAttr",
+    "Lean.Fmt.fmtStoreTracesAsCmd",
+    "Lean.Fmt.fmtStrictImplicitBinder",
+    "Lean.Fmt.fmtStructCtor",
+    "Lean.Fmt.fmtStructExplicitBinder",
+    "Lean.Fmt.fmtStructImplicitBinder",
+    "Lean.Fmt.fmtStructInstBinder",
+    "Lean.Fmt.fmtStructInstLVal",
+    "Lean.Fmt.fmtStructParent",
+    "Lean.Fmt.fmtStructSimpleBinder",
+    "Lean.Fmt.fmtStructure",
+    "Lean.Fmt.fmtStructureLike",
+    "Lean.Fmt.fmtSubtype",
+    "Lean.Fmt.fmtSuffices",
+    "Lean.Fmt.fmtSuggestFor",
+    "Lean.Fmt.fmtSymDSimpRewriteInline",
+    "Lean.Fmt.fmtSymSimpRewriteInline",
+    "Lean.Fmt.fmtSymSimpRewriteSet",
+    "Lean.Fmt.fmtSyntaxAbbrev",
+    "Lean.Fmt.fmtSyntaxBinary",
+    "Lean.Fmt.fmtSyntaxCat",
+    "Lean.Fmt.fmtSyntaxCmd",
+    "Lean.Fmt.fmtSyntaxUnary",
+    "Lean.Fmt.fmtSyntheticHole",
+    "Lean.Fmt.fmtTacticAltAttr",
+    "Lean.Fmt.fmtTacticExtension",
+    "Lean.Fmt.fmtTacticNameAttr",
+    "Lean.Fmt.fmtTacticNegConfigItem",
+    "Lean.Fmt.fmtTacticPosConfigItem",
+    "Lean.Fmt.fmtTacticSetOption",
+    "Lean.Fmt.fmtTacticSuffices",
+    "Lean.Fmt.fmtTacticTagAttr",
+    "Lean.Fmt.fmtTacticValConfigItem",
+    "Lean.Fmt.fmtTermSetOption",
+    "Lean.Fmt.fmtTerminationBy",
+    "Lean.Fmt.fmtTheorem",
+    "Lean.Fmt.fmtThrowNamedErrorAtMacro",
+    "Lean.Fmt.fmtThrowNamedErrorMacro",
+    "Lean.Fmt.fmtTreeMapSimpToModel",
+    "Lean.Fmt.fmtTripleExceptPost",
+    "Lean.Fmt.fmtTripleNotation",
+    "Lean.Fmt.fmtTryCatchFinally",
+    "Lean.Fmt.fmtUnfold",
+    "Lean.Fmt.fmtUnifHint",
+    "Lean.Fmt.fmtUnivOutParams",
+    "Lean.Fmt.fmtUniverse",
+    "Lean.Fmt.fmtUnop",
+    "Lean.Fmt.fmtUnseal",
+    "Lean.Fmt.fmtValConfigItem",
+    "Lean.Fmt.fmtValueOf",
+    "Lean.Fmt.fmtVariable",
+    "Lean.Fmt.fmtWaitIfContainsMVar",
+    "Lean.Fmt.fmtWaitIfTypeContainsMVar",
+    "Lean.Fmt.fmtWaitIfTypeMVar",
+    "Lean.Fmt.fmtWhereDeclaration",
+    "Lean.Fmt.fmtWidgetCmd",
+    "Lean.Fmt.fmtWidgetInstanceSpec",
+    "Lean.Fmt.fmtWithDeclName",
+    "Lean.Fmt.fmtWithDoIdDecl",
+    "Lean.Fmt.fmtWithWeakNamespace",
+    "Lean.Fmt.isAppArgsSparse",
+    "Lean.Fmt.splitBinder",
+    "Lean.Fmt.splitStructInstLValIdent",
+    "Lean.Fmt.splitStructInstLValRhs",
+    "Lean.Fmt.structInstLValKinds"
+   ],
+   "generic": true
+  },
+  "json.quot": {
+   "module": "Lean.Data.Json.Elab",
+   "lines": [
+    35,
+    36
+   ],
+   "owner": "Lean.Json.json.quot",
+   "categories": [],
+   "refs": []
+  },
+  "mcasesPat.quot": {
+   "module": "Std.Tactic.Do.Syntax",
+   "lines": [
+    225,
+    225
+   ],
+   "owner": "Lean.Parser.Tactic.mcasesPat.quot",
+   "categories": [],
+   "refs": []
+  },
+  "mintroPat.quot": {
+   "module": "Std.Tactic.Do.Syntax",
+   "lines": [
+    312,
+    312
+   ],
+   "owner": "Lean.Parser.Tactic.mintroPat.quot",
+   "categories": [],
+   "refs": []
+  },
+  "mrefinePat.quot": {
+   "module": "Std.Tactic.Do.Syntax",
+   "lines": [
+    272,
+    272
+   ],
+   "owner": "Lean.Parser.Tactic.mrefinePat.quot",
+   "categories": [],
+   "refs": []
+  },
+  "mrevertPat.quot": {
+   "module": "Std.Tactic.Do.Syntax",
+   "lines": [
+    331,
+    331
+   ],
+   "owner": "Lean.Parser.Tactic.mrevertPat.quot",
+   "categories": [],
+   "refs": []
+  },
+  "patternIgnore": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.transparentParserAliases"
+   ],
+   "generic": true
+  },
+  "rawStx.quot": {
+   "module": "Init.Notation",
+   "lines": [
+    608,
+    612
+   ],
+   "owner": "Lean.rawStx.quot",
+   "categories": [],
+   "refs": []
+  },
+  "rcasesPat.quot": {
+   "module": "Init.RCases",
+   "lines": [
+    65,
+    66
+   ],
+   "owner": "Lean.Parser.Tactic.rcasesPat.quot",
+   "categories": [],
+   "refs": []
+  },
+  "rintroPat.quot": {
+   "module": "Init.RCases",
+   "lines": [
+    90,
+    91
+   ],
+   "owner": "Lean.Parser.Tactic.rintroPat.quot",
+   "categories": [],
+   "refs": []
+  },
+  "sym_discharger.quot": {
+   "module": "Init.Sym.Simp.SimprocDSL",
+   "lines": [
+    44,
+    44
+   ],
+   "owner": "Lean.Parser.Sym.Simp.sym_discharger.quot",
+   "categories": [],
+   "refs": []
+  },
+  "sym_dsimp_field.quot": {
+   "module": "Init.Sym.DSimp.DSimprocDSL",
+   "lines": [
+    86,
+    86
+   ],
+   "owner": "Lean.Parser.Command.sym_dsimp_field.quot",
+   "categories": [],
+   "refs": []
+  },
+  "sym_dsimproc.quot": {
+   "module": "Init.Sym.DSimp.DSimprocDSL",
+   "lines": [
+    31,
+    31
+   ],
+   "owner": "Lean.Parser.Sym.DSimp.sym_dsimproc.quot",
+   "categories": [],
+   "refs": []
+  },
+  "sym_simp_field.quot": {
+   "module": "Init.Sym.Simp.SimprocDSL",
+   "lines": [
+    128,
+    128
+   ],
+   "owner": "Lean.Parser.Command.sym_simp_field.quot",
+   "categories": [],
+   "refs": []
+  },
+  "sym_simproc.quot": {
+   "module": "Init.Sym.Simp.SimprocDSL",
+   "lines": [
+    43,
+    43
+   ],
+   "owner": "Lean.Parser.Sym.Simp.sym_simproc.quot",
+   "categories": [],
+   "refs": []
+  },
+  "token.all": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.check": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.disch": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.discharger": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.drop": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.elim": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.error": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.exact": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.false": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtGrindSymIntro",
+    "Lean.Fmt.fmtGrindSymIntros",
+    "Lean.Fmt.fmtGuardMsgsSubstring"
+   ],
+   "generic": true
+  },
+  "token.info": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.lax": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.move": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.normalized": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.pass": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.sorted": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.squash": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.trace": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.true": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtGrindSymIntro",
+    "Lean.Fmt.fmtGrindSymIntros",
+    "Lean.Fmt.fmtGuardMsgsSubstring"
+   ],
+   "generic": true
+  },
+  "token.warning": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.« := »": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtConfigDecl"
+   ],
+   "generic": true
+  },
+  "token.« <-»": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.« check»": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.« sym»": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.« where »": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [
+    "Lake.Formatters.fmtConfigDecl"
+   ],
+   "generic": true
+  },
+  "token.« ←»": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.«*»": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [
+    "Lean.Fmt.fmtGrindDSimp"
+   ],
+   "generic": true
+  },
+  "token.«->»": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.«.»": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.«<-»": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.«<=»": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.«=>»": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.«invariants »": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.«invariants? »": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.«·»": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.«←»": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.«→»": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.«⇐»": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.«⇒»": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "token.«⊢»": {
+   "module": null,
+   "lines": null,
+   "owner": null,
+   "categories": [],
+   "refs": [],
+   "generic": true
+  },
+  "vcgenDischarge.quot": {
+   "module": "Std.WP.Tactic",
+   "lines": [
+    73,
+    79
+   ],
+   "owner": "Lean.Parser.Tactic.vcgenDischarge.quot",
+   "categories": [],
+   "refs": []
+  }
+ },
+ "privateKinds": 12,
+ "kindCount": 1669
+}
